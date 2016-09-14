@@ -3,10 +3,17 @@ language: cpp
 matrix:
     include:
         - os: linux
-          compiler: gcc
-
-        - os: linux
-          compiler: clang
+          env: COMPILER_NAME=gcc CXX=g++-5 CC=gcc-5
+          addons:
+              apt:
+                  sources:
+                        - ubuntu-toolchain-r-test
+                  packages:
+                        - g++-5
+          before_install:
+              - pip install --user cpp-coveralls
+          after_success:
+              - coveralls --exclude lib --exclude tests --gcov-options '\-lp'  
 
         - os: osx
           compiler: clang
