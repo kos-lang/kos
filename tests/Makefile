@@ -64,6 +64,8 @@ gcov_modules  = interpreter
 gcov_modules += lang
 gcov_modules += modules
 
+GCOV ?= gcov
+
 include ../build/rules.mk
 
 ifneq ($(UNAME), Windows)
@@ -131,7 +133,7 @@ define GCOV_RULE
 gcov.$1: simple_test
 	@echo Gcov $1
 	@rm -f ../$1/*.gcov
-	@cd ../$1 && gcov --object-directory $(out_dir)/$1 *.c* > /dev/null
+	@cd ../$1 && $GCOV --object-directory $(out_dir)/$1 *.c* > /dev/null
 endef
 
 $(foreach module, $(gcov_modules), $(eval $(call GCOV_RULE,$(module))))
