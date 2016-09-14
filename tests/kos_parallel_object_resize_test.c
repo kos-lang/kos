@@ -161,7 +161,7 @@ int main(void)
     /************************************************************************/
     /* This test writes and deletes unique properties from multiple threads, checking for consistency */
     {
-        const int           num_loops        = 1000;
+        const int           num_loops        = 1000 / (num_cpus > 100 ? 100 : num_cpus);
         const int           max_props_per_th = 100;
         struct _KOS_VECTOR  mem_buf;
         struct THREAD_DATA *thread_cookies;
