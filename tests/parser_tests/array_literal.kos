@@ -1,0 +1,83 @@
+# Empty array
+var a = [];     
+# Single element
+var b = [0];
+# Two elements
+var c = [ 1 , 2 ] ;
+# Spare comma
+var d=[3,4,5,];
+# Various element types
+var e=[f,"g",this,h[:],1.0,[],[void],void,];
+# Array in array in array
+var i = [[[]]];
+
+@ 0
+
+(scope 1 1
+    (assignment 2 7 =
+        (var 2 1 var (identifier 2 5 a))
+        (array 2 9 [)
+    )
+    (assignment 4 7 =
+        (var 4 1 var (identifier 4 5 b))
+        (array 4 9 [
+            (number 4 10 0)
+        )
+    )
+    (assignment 6 7 =
+        (var 6 1 var (identifier 6 5 c))
+        (array 6 9 [
+            (number 6 11 1)
+            (number 6 15 2)
+        )
+    )
+    (assignment 8 6 =
+        (var 8 1 var (identifier 8 5 d))
+        (array 8 7 [
+            (number 8 8 3)
+            (number 8 10 4)
+            (number 8 12 5)
+        )
+    )
+    (assignment 10 6 =
+        (var 10 1 var (identifier 10 5 e))
+        (array 10 7 [
+            (identifier 10 8 f)
+            (string 10 10 "g")
+            (this 10 14 this)
+            (slice 10 20 [
+                (identifier 10 19 h)
+                (void 10 22 ])
+                (void 10 22 ])
+            )
+            (number 10 24 1.0)
+            (array 10 28 [)
+            (array 10 31 [
+                (void 10 32 void)
+            )
+            (void 10 38 void)
+        )
+    )
+    (assignment 12 7 =
+        (var 12 1 var (identifier 12 5 i))
+        (array 12 9 [
+            (array 12 10 [
+                (array 12 11 [)
+    )))
+)
+
+@------------------------------------------------------------------------------
+a = [; # Missing member expression
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+a = [0; # Missing comma or end of array
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+a = [,]; # Missing member expression
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+a = [1,,]; # Missing member expression
+@ 10 1 8

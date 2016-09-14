@@ -1,0 +1,251 @@
+try {
+    if !a(1) {
+        throw "b";
+    }
+}
+catch var c {
+    throw c + "d";
+}
+{
+    d();
+}
+
+@ 0
+
+(scope 1 1
+    (try 1 1 try
+        (scope 1 5 {
+            (if 2 5 if
+                (operator 2 8 !
+                    (invocation 2 10 paren_open
+                        (identifier 2 9 a)
+                        (number 2 11 1)
+                ))
+                (scope 2 14 {
+                    (throw 3 9 throw (string 3 15 "b"))
+                )
+        ))
+        (catch 6 1 catch
+            (var 6 7 var (identifier 6 11 c))
+            (scope 6 13 {
+                (throw 7 5 throw
+                    (operator 7 13 +
+                        (identifier 7 11 c)
+                        (string 7 15 "d")
+        ))))
+        (empty 9 1 {)
+    )
+    (scope 9 1 {
+        (invocation 10 6 paren_open
+            (identifier 10 5 d)
+    ))
+)
+
+@------------------------------------------------------------------------------
+try {
+    if a() { }
+    else   { throw "b"; }
+}
+finally {
+    c();
+}
+
+@ 0
+
+(scope 1 1
+    (try 1 1 try
+        (scope 1 5 {
+            (if 2 5 if
+                (invocation 2 9 paren_open
+                    (identifier 2 8 a)
+                )
+                (scope 2 12 {)
+                (scope 3 12 {
+                    (throw 3 14 throw (string 3 20 "b"))
+        )))
+        (empty 5 1 finally)
+        (scope 5 9 {
+            (invocation 6 6 paren_open
+                (identifier 6 5 c)
+    )))
+)
+
+@------------------------------------------------------------------------------
+try {
+    a();
+}
+catch const e {
+    b(e);
+}
+finally {
+    c();
+}
+
+@ 0
+
+(scope 1 1
+    (try 1 1 try
+        (scope 1 5 {
+            (invocation 2 6 paren_open
+                (identifier 2 5 a)
+        ))
+        (catch 4 1 catch
+            (const 4 7 const (identifier 4 13 e))
+            (scope 4 15 {
+                (invocation 5 6 paren_open
+                    (identifier 5 5 b)
+                    (identifier 5 7 e)
+        )))
+        (scope 7 9 {
+            (invocation 8 6 paren_open
+                (identifier 8 5 c)
+    )))
+)
+
+@------------------------------------------------------------------------------
+try {} catch (const a) { throw a; }
+try {} catch (var b) { throw b; }
+
+@ 0
+
+(scope 1 1
+    (try 1 1 try
+        (scope 1 5 {)
+        (catch 1 8 catch
+            (const 1 15 const (identifier 1 21 a))
+            (scope 1 24 {
+                (throw 1 26 throw (identifier 1 32 a))
+        ))
+        (empty 2 1 try)
+    )
+    (try 2 1 try
+        (scope 2 5 {)
+        (catch 2 8 catch
+            (var 2 15 var (identifier 2 19 b))
+            (scope 2 22 {
+                (throw 2 24 throw (identifier 2 30 b))
+        ))
+        (empty 4 1)
+    )
+)
+
+@------------------------------------------------------------------------------
+throw; # Expression expected
+
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+throw 1, 2; # Semicolon expected
+
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+throw yield a ? b + c == d || e : f;
+
+@ 0
+
+(scope 1 1
+    (throw 1 1 throw
+        (yield 1 7 yield
+            (operator 1 15 ?:
+                (identifier 1 13 a)
+                (operator 1 28 ||
+                    (operator 1 23 ==
+                        (operator 1 19 +
+                            (identifier 1 17 b)
+                            (identifier 1 21 c)
+                        )
+                        (identifier 1 26 d)
+                    )
+                    (identifier 1 31 e)
+                )
+                (identifier 1 35 f)
+    )))
+)
+
+@------------------------------------------------------------------------------
+try a(b) catch const e { } # Open curly brace expected
+
+@ 10 1 5
+
+@------------------------------------------------------------------------------
+try { a(b); }
+throw c; # catch or finally expected
+
+@ 10 2 1
+
+@------------------------------------------------------------------------------
+try {} catch (var a) throw a; # Open curly brace expected
+
+@ 10 1 22
+
+@------------------------------------------------------------------------------
+try {} finally throw a; # Open curly brace expected
+
+@ 10 1 16
+
+@------------------------------------------------------------------------------
+try {} catch (a) {} # Need var or const
+
+@ 10 1 15
+
+@------------------------------------------------------------------------------
+try {} catch (var a=b) {} # Need closed parenthesis
+
+@ 10 1 20
+
+@------------------------------------------------------------------------------
+try {
+    throw "exception";
+}
+finally {
+}
+catch const e { # catch must precede finally
+}
+
+@ 10 6 1
+
+@------------------------------------------------------------------------------
+assert void;
+
+@ 0
+
+(scope 1 1
+    (assert 1 1 assert
+        (void 1 8 void)
+        (landmark 1 12 ;)
+    )
+)
+
+@------------------------------------------------------------------------------
+assert obj.func()+123 || other();
+
+@ 0
+
+(scope 1 1
+    (assert 1 1 assert
+        (operator 1 23 ||
+            (operator 1 18 +
+                (invocation 1 16 paren_open
+                    (refinement 1 11 .
+                        (identifier 1 8 obj)
+                        (string 1 12 func)
+                ))
+                (number 1 19 123)
+            )
+            (invocation 1 31 paren_open
+                (identifier 1 26 other)
+        ))
+        (landmark 1 33;)
+    )
+)
+
+@------------------------------------------------------------------------------
+assert ; # Expression expected
+
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+const a = assert 1; # Expression expected
+
+@ 10 1 11

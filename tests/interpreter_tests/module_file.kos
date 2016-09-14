@@ -1,0 +1,100 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+import file;
+import lang;
+
+fun expect_fail(function)
+{
+    var failed = false;
+    try {
+        function();
+    }
+    catch const e {
+        failed = true;
+    }
+    assert failed;
+}
+
+##############################################################################
+# file.open, file.is_file, file.remove
+
+{
+    assert typeof file.file           == "function";
+    assert typeof file.file.prototype == "object";
+}
+
+{
+    const name = "__test_file";
+    file.remove(name);
+    assert ! file.is_file(name);
+
+    {
+        const f = file.open(name, file.create);
+        assert typeof f == "object";
+
+        assert f.size == 0;
+
+        const init_buf = new lang.buffer(9);
+        for var i in lang.range(init_buf.size) {
+            init_buf[i] = i;
+        }
+
+        assert f.write(init_buf) == f;
+        assert f.write(init_buf).write(init_buf) == f;
+
+        assert f.size == 27;
+
+        f.close();
+
+        expect_fail(λ->(f.size));
+        expect_fail(λ->(f.read()));
+        expect_fail(λ->(f.write(init_buf)));
+    }
+
+    assert file.is_file(name);
+
+    with const f = file.open(name, file.ro) {
+        const buf = f.read();
+
+        assert typeof buf == "buffer";
+        assert buf.size   == 27;
+
+        for var i in lang.range(buf.size) {
+            assert (i % 9) == buf[i];
+        }
+
+        expect_fail(λ->(f.write(buf)));
+    }
+
+    assert file.remove(name);
+    assert ! file.remove(name);
+}
+
+##############################################################################
+# file.stdin, file.stdout, file.stderr
+
+{
+    assert file.stdin  instanceof file.file;
+    assert file.stdout instanceof file.file;
+    assert file.stderr instanceof file.file;
+}

@@ -1,0 +1,12 @@
+
+# Output directory
+Out*
+
+# Vim swap files
+.*.swp
+
+# Xcode project files
+*.xcodeproj
+
+# gcov files
+*.gcov

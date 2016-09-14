@@ -1,0 +1,258 @@
+# Correct refinement variants
+a = b[c]
+  + d.e
+  + f["s"]
+  + g[0];
+
+h = i[j:k]
+  + l[m:]
+  + n[:o]
+  + p[:];
+
+@ 0
+
+(scope 1 1
+    (assignment 2 3 =
+        (left_hand_side 2 3 = (identifier 2 1 a))
+            (operator 5 3 +
+                (operator 4 3 +
+                    (operator 3 3 +
+                        (refinement 2 6 [
+                            (identifier 2 5 b)
+                            (identifier 2 7 c)
+                        )
+                        (refinement 3 6 .
+                            (identifier 3 5 d)
+                            (string 3 7 e)
+                        )
+                    )
+                    (refinement 4 6 [
+                        (identifier 4 5 f)
+                        (string 4 7 "s")
+                    )
+                )
+                (refinement 5 6 [
+                    (identifier 5 5 g)
+                    (number 5 7 0)
+    )))
+    (assignment 7 3 =
+        (left_hand_side 7 3 = (identifier 7 1 h))
+        (operator 10 3 +
+            (operator 9 3 +
+                (operator 8 3 +
+                    (slice 7 6 [
+                        (identifier 7 5 i)
+                        (identifier 7 7 j)
+                        (identifier 7 9 k)
+                    )
+                    (slice 8 6 [
+                        (identifier 8 5 l)
+                        (identifier 8 7 m)
+                        (void 8 9 ])
+                    )
+                )
+                (slice 9 6 [
+                    (identifier 9 5 n)
+                    (void 9 8 o)
+                    (identifier 9 8 o)
+                )
+            )
+            (slice 10 6 [
+                (identifier 10 5 p)
+                (void 10 8 ])
+                (void 10 8 ])
+    )))
+)
+
+@------------------------------------------------------------------------------
+# Combinations of refinement with operators
+new a[0];
+new b.new;
+~c[!t];
+yield d[yield 1];
+
+@ 0
+
+(scope 1 1
+    (operator 2 1 new
+        (invocation 2 1 new
+            (refinement 2 6 [
+                (identifier 2 5 a)
+                (number 2 7 0)
+    )))
+    (operator 3 1 new
+        (invocation 3 1 new
+            (refinement 3 6 .
+               (identifier 3 5 b)
+               (string 3 7 new)
+    )))
+    (operator 4 1 ~
+        (refinement 4 3 [
+            (identifier 4 2 c)
+            (operator 4 4 !
+                (identifier 4 5 t)
+    )))
+    (yield 5 1 yield
+        (refinement 5 8 [
+            (identifier 5 7 d)
+            (yield 5 9 yield
+                (number 5 15 1)
+    )))
+)
+
+@------------------------------------------------------------------------------
+# Combination of refinement with ternary operator
+a[b?c:d];
+e[f?g:h:i?j:k];
+l.m[:n?o:p];
+
+@ 0
+
+(scope 1 1
+    (refinement 2 2 [
+        (identifier 2 1 a)
+        (operator 2 4 ?:
+            (identifier 2 3 b)
+            (identifier 2 5 c)
+            (identifier 2 7 d)
+        )
+    )
+    (slice 3 2 [
+        (identifier 3 1 e)
+        (operator 3 4 ?:
+            (identifier 3 3 f)
+            (identifier 3 5 g)
+            (identifier 3 7 h)
+        )
+        (operator 3 10 ?:
+            (identifier 3 9 i)
+            (identifier 3 11 j)
+            (identifier 3 13 k)
+        )
+    )
+    (slice 4 4 [
+        (refinement 4 2 .
+            (identifier 4 1 l)
+            (string 4 3 m)
+        )
+        (void 4 6 n)
+        (operator 4 7 ?:
+           (identifier 4 6 n)
+           (identifier 4 8 o)
+           (identifier 4 10 p)
+        )
+    )
+)
+
+@------------------------------------------------------------------------------
+a . b [ c : d ] ;
+
+@ 0
+
+(scope 1 1
+    (slice 1 7 [
+        (refinement 1 3 .
+            (identifier 1 1 a)
+            (string 1 5 b)
+        )
+        (identifier 1 9 c)
+        (identifier 1 13 d)
+    )
+)
+
+@------------------------------------------------------------------------------
+a."a"; # String as the property name
+
+@ 0
+
+(scope 1 1
+    (refinement 1 2 .
+        (identifier 1 1 a)
+        (string 1 3 "a")
+    )
+)
+
+@------------------------------------------------------------------------------
+a[1:2] = b; # Assignment to slice
+
+@0
+
+(scope 1 1
+    (assignment 1 8 =
+        (left_hand_side 1 8 =
+            (slice 1 2 [
+                (identifier 1 1 a)
+                (number 1 3 1)
+                (number 1 5 2)
+        ))
+        (identifier 1 10 b)
+))
+
+@------------------------------------------------------------------------------
+a[:] = void; # Assignment to slice
+
+@0
+
+(scope 1 1
+    (assignment 1 6 =
+        (left_hand_side 1 6 =
+            (slice 1 2 [
+                (identifier 1 1 a)
+                (void 1 4 ])
+                (void 1 4 ])
+        ))
+        (void 1 8 void)
+))
+
+@------------------------------------------------------------------------------
+a[9.9] = 0;
+
+@0
+
+(scope 1 1
+    (assignment 1 8 =
+        (left_hand_side 1 8 =
+            (refinement 1 2 [
+                (identifier 1 1 a)
+                (number 1 3 9.9)
+        ))
+        (number 1 10 0)
+))
+
+@------------------------------------------------------------------------------
+a.; # Missing identifier
+@ 10 1 3
+
+@------------------------------------------------------------------------------
+a[]; # Missing property name
+@ 10 1 3
+
+@------------------------------------------------------------------------------
+a[; # Missing member expression
+@ 10 1 3
+
+@------------------------------------------------------------------------------
+a[:; # Missing member expression
+@ 10 1 4
+
+@------------------------------------------------------------------------------
+a[::]; # Missing member expression
+@ 10 1 4
+
+@------------------------------------------------------------------------------
+a.:; # Missing member expression
+@ 10 1 3
+
+@------------------------------------------------------------------------------
+a..; # Missing semicolon
+@ 10 1 2
+
+@------------------------------------------------------------------------------
+a[void:void] += 1; # Invalid assignment operator
+
+@10 1 14
+
+@------------------------------------------------------------------------------
+a[:] =; # Expected RHS after assignment
+
+@10 1 7

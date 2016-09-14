@@ -1,0 +1,67 @@
+Compiling Kos from source
+=========================
+
+This document describes how to compile Kos from source on various platforms.
+
+If you are compiling Kos for Windows, please check the Windows section below
+before continuing.
+
+To compile Kos, simply run:
+
+    make
+
+To speed up the build, you can also add `-j 2` (replace 2 with the number of
+available CPUs or CPU cores).
+
+It is also recommended to test whether the build works correctly, by running:
+
+    make test
+
+
+Windows
+=======
+
+Kos for Windows is compiled with Visual C++ compiler, but the compilation is
+driven by GNU Make, which can be obtained with MSYS2 or Cygwin.
+
+Before you can compile Kos on Windows, you need to install:
+
+* Visual Studio, in particular the Visual C++ compiler (cl.exe)
+* MSYS2 or Cygwin
+
+Find the startup script which you use to start MSYS2 or Cygwin (e.g. msys2.bat
+or cygwin.bat), edit it and add the following line(s) near the beginning of
+the script:
+
+* For 64-bit toolchain, add:
+
+        call "%VC140COMNTOOLS%VCVarsQueryRegistry.bat" 64bit
+        call "%VCINSTALLDIR%vcvarsall.bat" amd64
+
+* For 32-bit toolchain, add:
+
+        call "%VC140COMNTOOLS%vcvars32.bat"
+
+Note: Examine your environment to find the right variable pointing to
+Common Tools directory, VC140COMNTOOLS is right for Visual Studio 2015.
+
+
+Cross-compiling
+===============
+
+If you're cross-compiling Kos, set up the following environment variables to
+point to your cross-toolchain:
+
+* **CC** - path to the C/C++ compiler
+* **LD** - path to the linker
+* **AR** - path to ar
+
+
+Optional configuration
+======================
+
+These optional settings can be either passed to make on the command line or
+set as environment variables:
+
+* **CONFIG_DEBUG=1** - Enables debug build (default is release).
+* **CONFIG_STRICT=1** - Enables strict warnings, treats warnings as errors.

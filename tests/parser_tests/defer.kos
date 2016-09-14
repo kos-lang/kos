@@ -1,0 +1,64 @@
+defer { }
+
+@ 0
+
+(scope 1 1
+    (scope 1 7 {)
+)
+
+@------------------------------------------------------------------------------
+defer { x; }
+
+@ 0
+
+(scope 1 1
+    (scope 1 7 {
+        (identifier 1 9 x)
+))
+
+@------------------------------------------------------------------------------
+{
+    defer { a(); b(); }
+    c();
+    defer { d(); }
+    defer { e(); }
+}
+
+@ 0
+
+(scope 1 1
+    (scope 1 1 {
+        (try 2 5 defer
+            (scope 2 5 defer
+                (invocation 3 6 paren_open
+                    (identifier 3 5 c)
+                )
+                (try 4 5 defer
+                    (scope 4 5 defer
+                        (scope 5 11 {
+                            (invocation 5 14 paren_open
+                                (identifier 5 13 e)
+                    )))
+                    (empty 4 5 defer)
+                    (scope 4 11 {
+                        (invocation 4 14 paren_open
+                            (identifier 4 13 d)
+            ))))
+            (empty 2 5 defer)
+            (scope 2 11 {
+                (invocation 2 14 paren_open
+                    (identifier 2 13 a)
+                )
+                (invocation 2 19 paren_open
+                    (identifier 2 18 b)
+)))))
+
+@------------------------------------------------------------------------------
+defer x { }
+
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+defer (x) { }
+
+@ 10 1 7

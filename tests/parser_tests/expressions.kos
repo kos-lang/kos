@@ -1,0 +1,641 @@
+# Mixed addition and multiplication operators
+a=b+c*d+e*f+g;
+
+@ 0
+
+(scope 1 1
+    (assignment 2 2 =
+        (left_hand_side 2 2 = (identifier 2 1 a))
+        (operator 2 12 +
+            (operator 2 8 +
+                (operator 2 4 +
+                    (identifier 2 3 b)
+                    (operator 2 6 *
+                        (identifier 2 5 c)
+                        (identifier 2 7 d)
+                    )
+                )
+                (operator 2 10 *
+                    (identifier 2 9 e)
+                    (identifier 2 11 f)
+                )
+            )
+            (identifier 2 13 g)
+)))
+
+@------------------------------------------------------------------------------
+# Mixed addition and subtraction operators
+a=b+c-d+e-f+g;
+
+@ 0
+
+(scope 1 1
+    (assignment 2 2 =
+        (left_hand_side 2 2 = (identifier 2 1 a))
+        (operator 2 12 +
+            (operator 2 10 -
+                (operator 2 8 +
+                    (operator 2 6 -
+                        (operator 2 4 +
+                            (identifier 2 3 b)
+                            (identifier 2 5 c)
+                        )
+                        (identifier 2 7 d)
+                    )
+                    (identifier 2 9 e)
+                )
+                (identifier 2 11 f)
+            )
+            (identifier 2 13 g)
+)))
+
+@------------------------------------------------------------------------------
+# Mixed multiplication, division and modulo operators
+a=b*c/d*e%f/g%h*i;
+
+@ 0
+
+(scope 1 1
+    (assignment 2 2 =
+        (left_hand_side 2 2 = (identifier 2 1 a))
+        (operator 2 16 *
+            (operator 2 14 %
+                (operator 2 12 /
+                    (operator 2 10 %
+                        (operator 2 8 *
+                            (operator 2 6 /
+                                (operator 2 4 *
+                                    (identifier 2 3 b)
+                                    (identifier 2 5 c)
+                                )
+                                (identifier 2 7 d)
+                            )
+                            (identifier 2 9 e)
+                        )
+                        (identifier 2 11 f)
+                    )
+                    (identifier 2 13 g)
+                )
+                (identifier 2 15 h)
+            )
+            (identifier 2 17 i)
+)))
+
+@------------------------------------------------------------------------------
+# Unary operators
+a=typeof 1+typeof 2*typeof 3;
+b=delete 4+delete 5*delete 6;
+c=+7++8*+9;
+d=-10+-11*-12;
+e=~13+~14*~15;
+f=!16+!17*!18;
+g=typeof delete+-~!19;
+h=!~-+delete typeof 20;
+
+@ 0
+
+(scope 1 1
+    (assignment 2 2 =
+        (left_hand_side 2 2 = (identifier 2 1 a))
+        (operator 2 11 +
+            (operator 2 3 typeof (number 2 10 1))
+            (operator 2 20 *
+                (operator 2 12 typeof (number 2 19 2))
+                (operator 2 21 typeof (number 2 28 3))
+    )))
+    (assignment 3 2 =
+        (left_hand_side 3 2 = (identifier 3 1 b))
+        (operator 3 11 +
+            (operator 3 3 delete (number 3 10 4))
+            (operator 3 20 *
+                (operator 3 12 delete (number 3 19 5))
+                (operator 3 21 delete (number 3 28 6))
+    )))
+    (assignment 4 2 =
+        (left_hand_side 4 2 = (identifier 4 1 c))
+        (operator 4 5 +
+            (operator 4 3 + (number 4 4 7))
+            (operator 4 8 *
+                (operator 4 6 + (number 4 7 8))
+                (operator 4 9 + (number 4 10 9))
+    )))
+    (assignment 5 2 =
+        (left_hand_side 5 2 = (identifier 5 1 d))
+        (operator 5 6 +
+            (operator 5 3 - (number 5 4 10))
+            (operator 5 10 *
+                (operator 5 7 - (number 5 8 11))
+                (operator 5 11 - (number 5 12 12))
+    )))
+    (assignment 6 2 =
+        (left_hand_side 6 2 = (identifier 6 1 e))
+        (operator 6 6 +
+            (operator 6 3 ~ (number 6 4 13))
+            (operator 6 10 *
+                (operator 6 7 ~ (number 6 8 14))
+                (operator 6 11 ~ (number 6 12 15))
+    )))
+    (assignment 7 2 =
+        (left_hand_side 7 2 = (identifier 7 1 f))
+        (operator 7 6 +
+            (operator 7 3 ! (number 7 4 16))
+            (operator 7 10 *
+                (operator 7 7 ! (number 7 8 17))
+                (operator 7 11 ! (number 7 12 18))
+    )))
+    (assignment 8 2 =
+        (left_hand_side 8 2 = (identifier 8 1 g))
+        (operator 8 3 typeof
+            (operator 8 10 delete
+                (operator 8 16 +
+                    (operator 8 17 -
+                        (operator 8 18 ~
+                            (operator 8 19 ! (number 8 20 19))
+    ))))))
+    (assignment 9 2 =
+        (left_hand_side 9 2 = (identifier 9 1 h))
+        (operator 9 3 !
+            (operator 9 4 ~
+                (operator 9 5 -
+                    (operator 9 6 +
+                        (operator 9 7 delete
+                            (operator 9 14 typeof (number 9 21 20))
+    ))))))
+)
+
+@------------------------------------------------------------------------------
+# Bitwise operators
+a=1&2&3&4;
+b=5|6|7|8;
+c=9^10^11^12;
+d=13<<14;
+e=15>>16;
+f=17>>>18;
+
+@ 0
+
+(scope 1 1
+    (assignment 2 2 =
+        (left_hand_side 2 2 = (identifier 2 1 a))
+        (operator 2 8 &
+            (operator 2 6 &
+                (operator 2 4 &
+                    (number 2 3 1)
+                    (number 2 5 2)
+                )
+                (number 2 7 3)
+            )
+            (number 2 9 4)
+        )
+    )
+    (assignment 3 2 =
+        (left_hand_side 3 2 = (identifier 3 1 b))
+        (operator 3 8 |
+            (operator 3 6 |
+                (operator 3 4 |
+                    (number 3 3 5)
+                    (number 3 5 6)
+                )
+                (number 3 7 7)
+            )
+            (number 3 9 8)
+        )
+    )
+    (assignment 4 2 =
+        (left_hand_side 4 2 = (identifier 4 1 c))
+        (operator 4 10 ^
+            (operator 4 7 ^
+                (operator 4 4 ^
+                    (number 4 3 9)
+                    (number 4 5 10)
+                )
+                (number 4 8 11)
+            )
+            (number 4 11 12)
+        )
+    )
+    (assignment 5 2 =
+        (left_hand_side 5 2 = (identifier 5 1 d))
+        (operator 5 5 <<
+            (number 5 3 13)
+            (number 5 7 14)
+        )
+    )
+    (assignment 6 2 =
+        (left_hand_side 6 2 = (identifier 6 1 e))
+        (operator 6 5 >>
+            (number 6 3 15)
+            (number 6 7 16)
+        )
+    )
+    (assignment 7 2 =
+        (left_hand_side 7 2 = (identifier 7 1 f))
+        (operator 7 5 >>>
+            (number 7 3 17)
+            (number 7 8 18)
+        )
+    )
+)
+
+@------------------------------------------------------------------------------
+# Comparison and boolean operators
+a=b==c&&d!=e&&f>g&&h<i&&j>=k&&l<=m;
+n=o in p||q instanceof r||true;
+
+@0
+
+(scope 1 1
+    (assignment 2 2 =
+        (left_hand_side 2 2 = (identifier 2 1 a))
+            (operator 2 7 &&
+                (operator 2 4 ==
+                    (identifier 2 3 b)
+                    (identifier 2 6 c)
+                )
+                (operator 2 13 &&
+                    (operator 2 10 !=
+                        (identifier 2 9 d)
+                        (identifier 2 12 e)
+                    )
+                    (operator 2 18 &&
+                        (operator 2 16 >
+                            (identifier 2 15 f)
+                            (identifier 2 17 g)
+                        )
+                        (operator 2 23 &&
+                            (operator 2 21 <
+                                (identifier 2 20 h)
+                                (identifier 2 22 i)
+                            )
+                            (operator 2 29 &&
+                                (operator 2 26 >=
+                                    (identifier 2 25 j)
+                                    (identifier 2 28 k)
+                                )
+                                (operator 2 32 <=
+                                    (identifier 2 31 l)
+                                    (identifier 2 34 m)
+    )))))))
+    (assignment 3 2 =
+        (left_hand_side 3 2 = (identifier 3 1 n))
+        (operator 3 9 ||
+            (operator 3 5 in
+                (identifier 3 8 p)
+                (identifier 3 3 o)
+            )
+            (operator 3 25 ||
+                (operator 3 13 instanceof
+                    (identifier 3 11 q)
+                    (identifier 3 24 r)
+                )
+                (bool 3 27 true)
+    )))
+)
+
+@------------------------------------------------------------------------------
+# Ternary operator
+a=b?c?d:e:f;
+g=h?i:j?k:l;
+m=(n?o:p)?q:r;
+
+@ 0
+
+(scope 1 1
+    (assignment 2 2 =
+        (left_hand_side 2 2 = (identifier 2 1 a))
+        (operator 2 4 ?:
+            (identifier 2 3 b)
+            (operator 2 6 ?:
+                (identifier 2 5 c)
+                (identifier 2 7 d)
+                (identifier 2 9 e)
+            )
+            (identifier 2 11 f)
+    ))
+    (assignment 3 2 =
+        (left_hand_side 3 2 = (identifier 3 1 g))
+        (operator 3 4 ?:
+            (identifier 3 3 h)
+            (identifier 3 5 i)
+            (operator 3 8 ?:
+                (identifier 3 7 j)
+                (identifier 3 9 k)
+                (identifier 3 11 l)
+    )))
+    (assignment 4 2 =
+        (left_hand_side 4 2 = (identifier 4 1 m))
+        (operator 4 10 ?:
+            (operator 4 5 ?:
+                (identifier 4 4 n)
+                (identifier 4 6 o)
+                (identifier 4 8 p)
+            )
+            (identifier 4 11 q)
+            (identifier 4 13 r)
+    ))
+)
+
+@------------------------------------------------------------------------------
+# Yield operator
+a=yield b<c&&d in f?g+h:i&&j&k;
+l=1+(yield 2);
+
+@ 0
+
+(scope 1 1
+    (assignment 2 2 =
+        (left_hand_side 2 2 = (identifier 2 1 a))
+        (yield 2 3 yield
+            (operator 2 20 ?:
+                (operator 2 12 &&
+                    (operator 2 10 <
+                        (identifier 2 9 b)
+                        (identifier 2 11 c)
+                    )
+                    (operator 2 16 in
+                        (identifier 2 19 f)
+                        (identifier 2 14 d)
+                    )
+                )
+                (operator 2 22 +
+                    (identifier 2 21 g)
+                    (identifier 2 23 h)
+                )
+                (operator 2 26 &&
+                    (identifier 2 25 i)
+                    (operator 2 29 &
+                        (identifier 2 28 j)
+                        (identifier 2 30 k)
+    )))))
+    (assignment 3 2 =
+        (left_hand_side 3 2 = (identifier 3 1 l))
+        (operator 3 4 +
+            (number 3 3 1)
+            (yield 3 6 yield
+                (number 3 12 2)
+    )))
+)
+
+@------------------------------------------------------------------------------
+a=b&c|d; # Mixed bitwise and and or
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+a=b&c^d; # Mixed bitwise and and xor
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+a=b|c^d; # Mixed bitwise or and xor
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+a=b&c<<d; # Mixed bitwise and and shift left
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+a=b << c << d; # Double shift left
+@ 10 1 10
+
+@------------------------------------------------------------------------------
+a=b+c&d; # Mixed plus and bitwise and
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+a=b+c==d&&e==f&g||h!=i; # Mixed logical and and or
+@ 10 1 17
+
+@------------------------------------------------------------------------------
+a=b==c==d; # Too many comparison operators
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+a=b in c instanceof d; # Mixed comparison operators
+@ 10 1 10
+
+@------------------------------------------------------------------------------
+# Arithmetic assignments
+ a += b & 10 ;
+ c -= d | 20 ;
+ e *= f ^ 30 ;
+ g /= h / 40 ;
+ i %= j % 50 ;
+ k &= l + 60 ;
+ m |= n - 70 ;
+ o ^= p * 80 ;
+ q <<= r & 90 ;
+ s >>= t | 100 ;
+ u >>>= v << 110 ;
+
+@ 0
+
+(scope 1 1
+    (assignment 2 4 +=
+        (left_hand_side 2 4 += (identifier 2 2 a))
+        (operator 2 9 &
+           (identifier 2 7 b)
+           (number 2 11 10)
+        )
+    )
+    (assignment 3 4 -=
+        (left_hand_side 3 4 -= (identifier 3 2 c))
+        (operator 3 9 |
+           (identifier 3 7 d)
+           (number 3 11 20)
+        )
+    )
+    (assignment 4 4 *=
+        (left_hand_side 4 4 *= (identifier 4 2 e))
+        (operator 4 9 ^
+           (identifier 4 7 f)
+           (number 4 11 30)
+        )
+    )
+    (assignment 5 4 /=
+        (left_hand_side 5 4 /= (identifier 5 2 g))
+        (operator 5 9 /
+           (identifier 5 7 h)
+           (number 5 11 40)
+        )
+    )
+    (assignment 6 4 %=
+        (left_hand_side 6 4 %= (identifier 6 2 i))
+        (operator 6 9 %
+           (identifier 6 7 j)
+           (number 6 11 50)
+        )
+    )
+    (assignment 7 4 &=
+        (left_hand_side 7 4 &= (identifier 7 2 k))
+        (operator 7 9 +
+           (identifier 7 7 l)
+           (number 7 11 60)
+        )
+    )
+    (assignment 8 4 |=
+        (left_hand_side 8 4 |= (identifier 8 2 m))
+        (operator 8 9 -
+           (identifier 8 7 n)
+           (number 8 11 70)
+        )
+    )
+    (assignment 9 4 ^=
+        (left_hand_side 9 4 ^= (identifier 9 2 o))
+        (operator 9 9 *
+           (identifier 9 7 p)
+           (number 9 11 80)
+        )
+    )
+    (assignment 10 4 <<=
+        (left_hand_side 10 4 <<= (identifier 10 2 q))
+        (operator 10 10 &
+           (identifier 10 8 r)
+           (number 10 12 90)
+        )
+    )
+    (assignment 11 4 >>=
+        (left_hand_side 11 4 >>= (identifier 11 2 s))
+        (operator 11 10 |
+           (identifier 11 8 t)
+           (number 11 12 100)
+        )
+    )
+    (assignment 12 4 >>>=
+        (left_hand_side 12 4 >>>= (identifier 12 2 u))
+        (operator 12 11 <<
+           (identifier 12 9 v)
+           (number 12 14 110)
+        )
+    )
+)
+
+@------------------------------------------------------------------------------
+a = b = c; # Double assignment
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+a += b -= c; # Double assignment
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+# Variable definition expression
+var   x = void;
+const y = (1 + 2) << 3;
+
+@ 0
+
+(scope 1 1
+    (assignment 2 9 =
+        (var 2 1 var
+            (identifier 2 7 x))
+        (void 2 11 void)
+    )
+    (assignment 3 9 =
+        (const 3 1 const
+            (identifier 3 7 y))
+        (operator 3 19 <<
+            (operator 3 14 +
+                (number 3 12 1)
+                (number 3 16 2)
+            )
+            (number 3 22 3)
+        )
+    )
+)
+
+@------------------------------------------------------------------------------
+var x; # Missing assignment
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+const x; # Missing assignment
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+var x += 1; # Incorrect operator
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+const x += 2; # Incorrect operator
+@ 10 1 9
+
+@------------------------------------------------------------------------------
+# Multiple assignment
+x,y,z = a + b + c;
+
+@ 0
+
+(scope 1 1
+    (multi_assignment 2 7 =
+        (left_hand_side 2 2 ,
+            (identifier 2 1 x)
+            (identifier 2 3 y)
+            (identifier 2 5 z)
+        )
+        (operator 2 15 +
+            (operator 2 11 +
+                (identifier 2 9 a)
+                (identifier 2 13 b)
+            )
+            (identifier 2 17 c)
+        )
+    )
+)
+
+@------------------------------------------------------------------------------
+# Multiple assignment to new variables
+var a , b , c = d;
+
+@ 0
+
+(scope 1 1
+    (multi_assignment 2 15 =
+        (var 2 1 var
+            (identifier 2 5 a)
+            (identifier 2 9 b)
+            (identifier 2 13 c)
+        )
+        (identifier 2 17 d)
+    )
+)
+
+@------------------------------------------------------------------------------
+var a = 1, b = 2; # Unsupported syntax
+@ 10 1 10
+
+@------------------------------------------------------------------------------
+var x = __line__ + 1;
+
+@ 0
+
+(scope 1 1
+    (assignment 1 7 =
+        (var 1 1 var
+            (identifier 1 5 x)
+        )
+        (operator 1 18 +
+            (line 1 9 __line__)
+            (number 1 20 1)
+    ))
+)
+
+@------------------------------------------------------------------------------
+{
+    __line__ = 2; # Semicolon expected
+}
+
+@ 10 2 14
+
+@------------------------------------------------------------------------------
+var var = 1; # Identifier expected
+
+@ 10 1 5
+
+@------------------------------------------------------------------------------
+var set = 1; # Identifier expected
+
+@ 10 1 5
+
+@------------------------------------------------------------------------------
+const a, = [1,2,3]; # Identifier expected
+
+@ 10 1 10

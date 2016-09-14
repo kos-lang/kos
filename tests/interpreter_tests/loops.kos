@@ -1,0 +1,706 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+{
+    var a = 1;
+    while a < 10 {
+        a = a + 1;
+    }
+    assert a == 10;
+}
+
+{
+    var a = 0;
+    var c = 0;
+    while a < 100 {
+        c = c + 1;
+        a = a + 6;
+    }
+    assert a == 102;
+    assert c == 17;
+}
+
+{
+    var a = 1;
+    do {
+        a = a - 1;
+    }
+    while a > -5;
+    assert a == -5;
+}
+
+{
+    var a = 20;
+    var c = 0;
+    do {
+        c = c + 1;
+        a = a - 3;
+    }
+    while a > 0;
+    assert a == -1;
+    assert c == 7;
+}
+
+{
+    var c = 0;
+    for var i = 0; i < 2; i += 1 {
+        c += 1;
+    }
+    assert c == 2;
+}
+
+{
+    var c = 0;
+    for const step1 = 2,
+        const step2 = 3,
+        var   c1    = 2,
+        var   c2    = 0
+            ;
+        c1 > c2
+            ;
+        c += 1 {
+
+        c1 += step1;
+        c2 += step2;
+    }
+    assert c == 2;
+}
+
+{
+    var i = 0;
+    for ; i < 10; { i+= 1; }
+    assert i == 10;
+}
+
+{
+    var sum = 0;
+    for var val in [3, 10, 700, 8000] {
+        sum += val;
+    }
+    assert sum == 8713;
+}
+
+{
+    fun values(a, b, c)
+    {
+        yield a;
+        yield b;
+        yield c;
+    }
+
+    var sum = 0;
+    for var val in values(800, 6, 20) {
+        sum += val;
+    }
+    assert sum == 826;
+}
+
+{
+    var   sum = 0;
+    const obj = { a: 9000, b: 7, c: 50, d: 300 };
+    for var key in obj {
+        const val = obj[key];
+        if typeof val == "integer" {
+            sum += val;
+        }
+    }
+    assert sum == 9357;
+}
+
+{
+    for var x in [] {
+        throw "Unexpected iteration";
+    }
+
+    fun no_yield
+    {
+        return void;
+        yield void;
+    }
+
+    for var x in no_yield() {
+        throw "Unexpected iteration";
+    }
+}
+
+{
+    var count = 0;
+    var sum   = 0;
+    var array = [1, 2, 3];
+    for var v in array {
+        sum   += v;
+        count += 1;
+        if v == 2 {
+            array.insert(array.size, 4);
+        }
+    }
+    assert count == 4;
+    assert sum   == 10;
+}
+
+{
+    var sum = 0;
+    var i   = 0;
+    do {
+        i += 1;
+        if i == 2 {
+            sum += 200 + i;
+            continue;
+        }
+        if i == 5 {
+            sum += 8000 + i;
+            continue;
+        }
+        if i == 7 {
+            break;
+        }
+        sum += 10;
+    }
+    while i < 100;
+
+    assert sum == 8247;
+}
+
+{
+    var sum = 0;
+    var i   = 0;
+    while i < 100 {
+        i += 1;
+        if i == 3 {
+            sum += 400 + i;
+            continue;
+        }
+        if i == 4 {
+            sum += 9000 + i;
+            continue;
+        }
+        if i == 6 {
+            break;
+        }
+        sum += 10;
+    }
+
+    assert sum == 9437;
+}
+
+{
+    var sum = 0;
+    for var i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {
+        if i == 2 {
+            sum += 100 + i;
+            continue;
+        }
+        if i == 5 {
+            sum += 6000 + i;
+            continue;
+        }
+        if i == 8 {
+            break;
+        }
+        sum += 10;
+    }
+
+    assert sum == 6157;
+}
+
+{
+    var sum = 0;
+    for var i = 1; i < 100; i += 1 {
+        if i == 3 {
+            sum += 500 + i;
+            continue;
+        }
+        if i == 6 {
+            sum += 7000 + i;
+            continue;
+        }
+        if i == 9 {
+            break;
+        }
+        sum += 10;
+    }
+
+    assert sum == 7569;
+}
+
+{
+    var status = 0;
+
+    try {
+        for var i=0; i < 1; i += 1 {
+            try {
+                continue;
+            }
+            catch const e {
+                status += 1;
+            }
+        }
+        throw void;
+    }
+    catch const e {
+        status += 10;
+    }
+
+    assert status == 10;
+}
+
+{
+    var status = 0;
+
+    try {
+        for var i=0; i < 100; i += 1 {
+            try {
+                break;
+            }
+            catch const e {
+                status += 1;
+            }
+            status += 1;
+        }
+        throw void;
+    }
+    catch const e {
+        status += 7000;
+    }
+    finally {
+        status *= 2;
+    }
+
+    assert status == 14000;
+}
+
+{
+    var a = 0;
+    var b = 0;
+    try {
+        a += 1;
+        try {
+            while a < 10 {
+                try {
+                    b = b * 10 + a;
+                    a += 1;
+                    if a == 4 {
+                        break;
+                    }
+                }
+                catch const e {
+                    a = 0;
+                    b = 0;
+                }
+            }
+            throw void;
+        }
+        catch const e {
+            a += 9000;
+        }
+    }
+    catch const e {
+        a = 100;
+        b = 100;
+    }
+
+    assert a == 9004;
+    assert b == 123;
+}
+
+{
+    var a = '';
+    try {
+        a += 'a';
+        try {
+            a += 'f:(';
+            for var fval in ['c', 'm', 'e'] {
+                a += '\(fval)[';
+                try {
+                    if fval == 'e' {
+                        a += 'F';
+                        break;
+                    }
+
+                    a += 'd:(';
+
+                    var c = 0;
+                    do {
+                        try {
+                            c += 1;
+                            a += 'c=\(c), w:(';
+
+                            while c < 20 {
+                                c += 3;
+                                try {
+                                    a += 'c=\(c)';
+                                    if c > 8 {
+                                        a += 'W';
+                                        break;
+                                    }
+                                    throw ', ';
+                                }
+                                catch const e {
+                                    a += e.value;
+                                }
+                            }
+
+                            a += '):w';
+
+                            throw ';';
+                            a = -1000;
+                        }
+                        catch const e {
+                            a += e.value;
+                        }
+
+                        if c > 9 {
+                            a += 'D';
+                            break;
+                        }
+                    }
+                    while c < 100;
+
+                    a += '):d';
+
+                    throw ' - ';
+                    a = -2000;
+                }
+                catch const e {
+                    a += e.value;
+                }
+                a += '*';
+            }
+            throw '_';
+        }
+        catch const e {
+            a += e.value;
+        }
+        a += '):f';
+    }
+    catch const e {
+        a = void;
+    }
+
+    assert a == "af:(c[d:(c=1, w:(c=4, c=7, c=10W):w;D):d - *m[d:(c=1, w:(c=4, c=7, c=10W):w;D):d - *e[F_):f";
+}
+
+{
+    fun throw_from_loop(x)
+    {
+        try {
+            for var i = 0; i < 100; i += 1 {
+                try {
+                    if i == 2 {
+                        break;
+                    }
+                }
+                catch const e {
+                    i = 100;
+                }
+            }
+            throw 5;
+        }
+        catch const e {
+            return x + e.value;
+        }
+        throw x * 2;
+    }
+
+    assert throw_from_loop(10) == 15;
+    assert throw_from_loop(20) == 25;
+}
+
+{
+    var i = 0;
+    var j = 0;
+    for ; i < 100; i += 1 {
+        try {
+            continue;
+        }
+        finally {
+            j += 1;
+        }
+        j -= 1;
+    }
+
+    assert j == 100;
+}
+
+{
+    var a = "";
+
+    fun try_break
+    {
+        try {
+            a += '1';
+            try {
+                a += '2';
+                const letters = ['a', 'b', 'c'];
+                for var i = 0; i < 100; i += 1 {
+                    try {
+                        a += letters[i];
+                        if i == 2 {
+                            break;
+                        }
+                    }
+                    finally {
+                        a += '3';
+                    }
+                }
+                a += '4';
+            }
+            finally {
+                a += '5';
+            }
+        }
+        finally {
+            a += '6';
+        }
+    }
+
+    try_break();
+
+    assert a == '12a3b3c3456';
+}
+
+{
+    var a = '';
+
+    fun try_break
+    {
+        try {
+            a += 'A';
+            for var i = 0; i < 100; i += 1 {
+                try {
+                    if i == 2 {
+                        break;
+                    }
+                    a += '\(i)';
+                }
+                finally {
+                    a += 'B';
+                }
+            }
+            a += 'C';
+            throw 'D';
+            a += 'E';
+        }
+        catch const e {
+            a += e.value;
+        }
+    }
+
+    try_break();
+
+    assert a == 'A0B1BBCD';
+}
+
+{
+    var a = '';
+
+    try {
+        for var i = 0; i < 100; i += 1 {
+            try {
+                a += 'a\(i) ' ;
+                try {
+                    a += 'b\(i) ';
+                    if i == 0 {
+                        continue;
+                    }
+                    else if i == 2 {
+                        break;
+                    }
+                    a += 'c';
+                }
+                finally {
+                    a += 'd';
+                }
+            }
+            finally {
+                a += 'e ';
+            }
+        }
+    }
+    catch const e {
+        a = '';
+    }
+
+    assert a == 'a0 b0 de a1 b1 cde a2 b2 de ';
+}
+
+{
+    var fail1 = true;
+    var fail2 = true;
+
+    fun run_loop
+    {
+        var i = 0;
+        var j = 0;
+        try {
+            for i = 0, j = 0; i < 10; i += 1 {
+                try {
+                    if i < 5 {
+                        continue;
+                    }
+                    else if i == 5 {
+                        break;
+                    }
+                    throw void;
+                }
+                finally {
+                    j += 1;
+                }
+            }
+        }
+        finally {
+            assert i == 5;
+            assert j == 6;
+            fail1 = false;
+        }
+    }
+
+    try {
+        run_loop();
+        assert ! fail1;
+    }
+    finally {
+        fail2 = false;
+    }
+
+    assert ! fail2;
+}
+
+{
+    var i = 0;
+
+    while i < 10 {
+        try {
+            try {
+                break;
+            }
+            finally {
+                throw void; // Cancel break
+            }
+        }
+        catch const e {
+            i += 1;
+        }
+    }
+
+    assert i == 10;
+}
+
+{
+    var i = 0;
+
+    for i = 0; i < 10; i += 1 {
+        try {
+            break;
+        }
+        finally {
+            continue; // Cancel break, override with continue
+        }
+        throw void;
+    }
+
+    assert i == 10;
+}
+
+{
+    var i = 0;
+
+    do {
+        try {
+            if i == 5 {
+                throw void;
+            }
+            i += 1;
+        }
+        catch const e {
+            break;
+        }
+    }
+    while i < 10;
+
+    assert i == 5;
+}
+
+{
+    var a = '';
+
+    for var c in ['a', 'b', 'c', 'd'] {
+        try {
+            if c == 'b' {
+                throw void;
+            }
+        }
+        catch const e {
+            continue;
+        }
+        a += c;
+    }
+
+    assert a == 'acd';
+}
+
+{
+    var a = '';
+
+    for var c in "xyza" {
+        assert typeof c == "string";
+        assert c.size == 1;
+        a += c;
+    }
+
+    assert a == "xyza";
+}
+
+{
+    var count = 0;
+    for var v in 4 {
+        assert typeof v == "integer";
+        assert v == 4;
+        count += 1;
+    }
+    assert count == 1;
+}
+
+{
+    var count = 0;
+    for var v in 8.5 {
+        assert typeof v == "float";
+        assert v == 8.5;
+        count += 1;
+    }
+    assert count == 1;
+}
+
+{
+    var count = 0;
+    for var v in false {
+        assert typeof v == "boolean";
+        assert v == false;
+        count += 1;
+    }
+    assert count == 1;
+}
+
+{
+    for var v in void {
+        throw "unexpected iteration";
+    }
+}

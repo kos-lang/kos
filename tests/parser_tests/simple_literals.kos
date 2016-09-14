@@ -1,0 +1,66 @@
+# Member expression - primary expression - literals, this, identifier
+var a = 1;          # decimal integer literal
+var b = 1.0;        # decimal floating-point literal
+var c = 0x1;        # hexadecimal integer literal
+var d = 0b1;        # binary integer literal
+var e = "1";        # string literal
+var f = true;       # boolean/true literal
+var g = false;      # boolean/false litereal
+var h = void;       # void literal
+var i = this;       # this
+var j = ident;      # identifier
+
+@ 0
+
+(scope 1 1
+    (assignment 2 7 =
+        (var 2 1 var
+            (identifier 2 5 a) )
+        (number 2 9 1)
+    )
+    (assignment 3 7 =
+        (var 3 1 var
+            (identifier 3 5 b) )
+        (number 3 9 1.0)
+    )
+    (assignment 4 7 =
+        (var 4 1 var
+            (identifier 4 5 c) )
+        (number 4 9 0x1)
+    )
+    (assignment 5 7 =
+        (var 5 1 var
+            (identifier 5 5 d) )
+        (number 5 9 0b1)
+    )
+    (assignment 6 7 =
+        (var 6 1 var
+            (identifier 6 5 e) )
+        (string 6 9 "1")
+    )
+    (assignment 7 7 =
+        (var 7 1 var
+            (identifier 7 5 f) )
+        (bool 7 9 true)
+    )
+    (assignment 8 7 =
+        (var 8 1 var
+            (identifier 8 5 g) )
+        (bool 8 9 false)
+    )
+    (assignment 9 7 =
+        (var 9 1 var
+            (identifier 9 5 h) )
+        (void 9 9 void)
+    )
+    (assignment 10 7 =
+        (var 10 1 var
+            (identifier 10 5 i) )
+        (this 10 9 this)
+    )
+    (assignment 11 7 =
+        (var 11 1 var
+            (identifier 11 5 j) )
+        (identifier 11 9 ident)
+    )
+)

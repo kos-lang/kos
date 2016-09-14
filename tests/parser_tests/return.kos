@@ -1,0 +1,73 @@
+fun a
+{
+    if b {
+        return typeof b == '';
+    }
+    return yield c || d;
+}
+
+return void;
+
+return e ? f : g;
+
+@ 0
+
+(scope 1 1
+    (assignment 1 1 fun
+        (const 1 1 fun (identifier 1 5 a))
+        (function 1 5 a
+            (parameters 2 1 {)
+            (landmark 2 1 {)
+            (scope 2 1 {
+                (if 3 5 if
+                    (identifier 3 8 b)
+                    (scope 3 10 {
+                        (return 4 9 return
+                            (operator 4 25 ==
+                                (operator 4 16 typeof
+                                    (identifier 4 23 b)
+                                )
+                                (string 4 28 '')
+                ))))
+                (return 6 5 return
+                    (yield 6 12 yield
+                        (operator 6 20 ||
+                            (identifier 6 18 c)
+                            (identifier 6 23 d)
+            ))))
+            (landmark 7 1 })
+    ))
+    (return 9 1 return (void 9 8 void))
+    (return 11 1 return
+        (operator 11 10 ?:
+            (identifier 11 8 e)
+            (identifier 11 12 f)
+            (identifier 11 16 g)
+        )
+    )
+)
+
+@------------------------------------------------------------------------------
+yield return 0; # Expression expected
+
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+fun { return; };
+
+@ 0
+
+(scope 1 1
+    (function 1 1 fun
+        (parameters 1 5 {)
+        (landmark 1 5 {)
+        (scope 1 5 {
+            (return 1 7 return)
+        )
+        (landmark 1 15 })
+))
+
+@------------------------------------------------------------------------------
+λ -> ( return a ); # Expression expected
+
+@ 10 1 8

@@ -1,0 +1,285 @@
+with a { }
+
+@ 0
+
+(scope 1 1
+    (scope 1 1 with
+        (assignment 1 6 a
+            (const 1 6 a
+                (identifier 1 6 1:6)
+            )
+            (identifier 1 6 a)
+        )
+        (if 1 6 1:6
+            (operator 1 6 1:6
+                (identifier 1 6 1:6)
+                (string 1 6 acquire)
+            )
+            (scope 1 8 {
+                (invocation 1 8 {
+                    (refinement 1 8 {
+                        (identifier 1 6 1:6)
+                        (string 1 6 acquire)
+        ))))
+        (try 1 8 {
+            (scope 1 8 {)
+            (empty 1 10 })
+            (scope 1 10 }
+                (invocation 1 10 }
+                    (refinement 1 10 }
+                        (identifier 1 6 1:6)
+                        (string 1 6 release)
+))))))
+
+@------------------------------------------------------------------------------
+with const a = b { a(); }
+
+@ 0
+
+(scope 1 1
+    (scope 1 1 with
+        (assignment 1 14 =
+            (const 1 6 const
+                (identifier 1 12 a)
+            )
+            (identifier 1 16 b)
+        )
+        (if 1 12 a
+            (operator 1 12 a
+                (identifier 1 12 a)
+                (string 1 12 acquire)
+            )
+            (scope 1 18 {
+                (invocation 1 18 {
+                    (refinement 1 18 {
+                        (identifier 1 12 a)
+                        (string 1 12 acquire)
+            )))
+        )
+        (try 1 18 {
+            (scope 1 18 {
+                (invocation 1 21 paren_open
+                    (identifier 1 20 a)
+            ))
+            (empty 1 25 })
+            (scope 1 25 }
+                (invocation 1 25 }
+                    (refinement 1 25 }
+                        (identifier 1 12 a)
+                        (string 1 12 release)
+))))))
+
+@------------------------------------------------------------------------------
+
+{
+    const lock = void;
+    with lock { }
+}
+
+@ 0
+
+(scope 1 1
+    (scope 2 1 {
+        (assignment 3 16 =
+            (const 3 5 const
+                (identifier 3 11 lock)
+            )
+            (void 3 18 void)
+        )
+        (scope 4 5 with
+            (assignment 4 10 lock
+                (const 4 10 lock
+                    (identifier 4 10 4:10)
+                )
+                (identifier 4 10 lock)
+            )
+            (if 4 10 4:10
+                (operator 4 10 4:10
+                    (identifier 4 10 4:10)
+                    (string 4 10 acquire)
+                )
+                (scope 4 15 {
+                    (invocation 4 15 {
+                        (refinement 4 15 {
+                            (identifier 4 10 4:10)
+                            (string 4 10 acquire)
+            ))))
+            (try 4 15 {
+                (scope 4 15 {)
+                (empty 4 17 })
+                (scope 4 17 }
+                    (invocation 4 17 }
+                        (refinement 4 17 }
+                            (identifier 4 10 4:10)
+                            (string 4 10 release)
+)))))))
+
+@------------------------------------------------------------------------------
+with a + b,
+     const c = d,
+     e,
+     const f = void {
+    a();
+}
+
+@ 0
+
+(scope 1 1
+    (scope 1 1 with
+        (assignment 1 6 a
+            (const 1 6 a
+                (identifier 1 6 1:6)
+            )
+            (operator 1 8 +
+                (identifier 1 6 a)
+                (identifier 1 10 b)
+        ))
+        (if 1 6 1:6
+            (operator 1 6 1:6
+                (identifier 1 6 1:6)
+                (string 1 6 acquire)
+            )
+            (scope 1 11 ,
+                (invocation 1 11 ,
+                    (refinement 1 11 ,
+                        (identifier 1 6 1:6)
+                        (string 1 6 acquire)
+        ))))
+        (try 1 11 ,
+            (scope 2 6 const
+                (assignment 2 14 =
+                    (const 2 6 const
+                        (identifier 2 12 c)
+                    )
+                    (identifier 2 16 d)
+                )
+                (if 2 12 c
+                    (operator 2 12 c
+                        (identifier 2 12 c)
+                        (string 2 12 acquire)
+                    )
+                    (scope 2 17 ,
+                        (invocation 2 17 ,
+                            (refinement 2 17 ,
+                                (identifier 2 12 c)
+                                (string 2 12 acquire)
+                ))))
+                (try 2 17 ,
+                    (scope 3 6 e
+                        (assignment 3 6 e
+                            (const 3 6 e
+                                (identifier 3 6 3:6)
+                            )
+                            (identifier 3 6 e)
+                        )
+                        (if 3 6 3:6
+                            (operator 3 6 3:6
+                                (identifier 3 6 3:6)
+                                (string 3 6 acquire)
+                            )
+                            (scope 3 7 ,
+                                (invocation 3 7 ,
+                                    (refinement 3 7 ,
+                                        (identifier 3 6 3:6)
+                                        (string 3 6 acquire)
+                        ))))
+                        (try 3 7 ,
+                            (scope 4 6 const
+                                (assignment 4 14 =
+                                    (const 4 6 const
+                                        (identifier 4 12 f)
+                                    )
+                                    (void 4 16 void)
+                                )
+                                (if 4 12 f
+                                    (operator 4 12 f
+                                        (identifier 4 12 f)
+                                        (string 4 12 acquire)
+                                    )
+                                    (scope 4 21 {
+                                        (invocation 4 21 {
+                                            (refinement 4 21 {
+                                                (identifier 4 12 f)
+                                                (string 4 12 acquire)
+                                ))))
+                                (try 4 21 {
+                                    (scope 4 21 {
+                                        (invocation 5 6 paren_open
+                                            (identifier 5 5 a)
+                                    ))
+                                    (empty 6 1 })
+                                    (scope 6 1 }
+                                        (invocation 6 1 }
+                                            (refinement 6 1 }
+                                                (identifier 4 12 f)
+                                                (string 4 12 release)
+                            )))))
+                            (empty 6 1 })
+                            (scope 6 1 }
+                                (invocation 6 1 }
+                                    (refinement 6 1 }
+                                        (identifier 3 6 3:6)
+                                        (string 3 6 release)
+                    )))))
+                    (empty 6 1 })
+                    (scope 6 1 }
+                        (invocation 6 1 }
+                            (refinement 6 1 }
+                                (identifier 2 12 c)
+                                (string 2 12 release)
+            )))))
+            (empty 6 1 })
+            (scope 6 1 }
+                (invocation 6 1 }
+                    (refinement 6 1 }
+                        (identifier 1 6 1:6)
+                        (string 1 6 release)
+))))))
+
+@------------------------------------------------------------------------------
+with { } return; # Expected compound statement
+
+@ 10 1 10
+
+@------------------------------------------------------------------------------
+with const a { } # Assignment expected
+
+@ 10 1 14
+
+@------------------------------------------------------------------------------
+with var a = 0 { } # Const expected
+
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+with const a,b=c { }
+
+@ 10 1 13
+
+@------------------------------------------------------------------------------
+with (a,
+      const a = b,
+      const c, d = e)
+{ }
+
+@ 10 3 14
+
+@------------------------------------------------------------------------------
+with () { }
+
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+with (a { }
+
+@ 10 1 9
+
+@------------------------------------------------------------------------------
+{ with ( { } } # Expected closing parenthesis
+
+@ 10 1 14
+
+@------------------------------------------------------------------------------
+with a, b, var c = d { }
+
+@ 10 1 12

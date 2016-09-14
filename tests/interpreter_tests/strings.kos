@@ -1,0 +1,162 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+fun expect_fail(function)
+{
+    var failed = false;
+    try {
+        function();
+    }
+    catch const e {
+        failed = true;
+    }
+    assert failed;
+}
+
+{
+    const str = "abc\(123)def";
+    assert str == "abc123def";
+}
+
+{
+    const a = 10;
+    const b = 200;
+    const c = 3000;
+    const t = true;
+    const v = void;
+    const str = "e1:\(a*b+c) e2:\(a+b+c) t:\(t) v:\(v)";
+    assert str == "e1:5000 e2:3210 t:true v:void";
+}
+
+{
+    const str = '"\(
+        1 + 2
+        )" "\(
+        3 + 4
+        )"';
+    assert str == '"3" "7"';
+}
+
+{
+    const str = '\( "\( '\( "\( 123 )" )' )" )';
+    assert str == "123";
+}
+
+{
+    const s = "";
+    assert s.size == 0;
+}
+
+{
+    const s = "abcdefgh";
+    assert s[0]  == "a";
+    assert s[1]  == "b";
+    assert s[7]  == "h";
+    assert s[-1] == "h";
+    assert s[-2] == "g";
+    assert s[-8] == "a";
+    expect_fail(λ->(s[8]));
+    expect_fail(λ->(s[-9]));
+
+    assert s.size == 8;
+
+    const b = s.slice(1, 4);
+    assert b == "bcd";
+    assert b.size == 3;
+
+    const e = s.slice(-4, -2);
+    assert e == "ef";
+    assert e.size == 2;
+
+    const a = s.slice(void, 3);
+    assert a == "abc";
+    assert a.size == 3;
+
+    const f = s.slice(-3, void);
+    assert f == "fgh";
+    assert f.size == 3;
+
+    const all = s.slice(-20, 20);
+    assert all == s;
+    assert all.size == 8;
+
+    const none = s.slice(20, -20);
+    assert none == "";
+    assert none.size == 0;
+}
+
+{
+    const s  = "ABCDEF";
+    const _0 = 0;
+    const _3 = 3;
+
+    const a = s[_0:_3];
+    assert a  == "ABC";
+    assert _0 == 0;
+    assert _3 == 3;
+
+    const b = s[-4:-1];
+    assert b == "CDE";
+
+    const c = s[:];
+    assert c == "ABCDEF";
+
+    const d = s[:-3.5];
+    assert d == "ABC";
+
+    const e = s[4.9:];
+    assert e == "EF";
+
+    fun value(idx)
+    {
+        const v = ["ijklmn", 2, -1];
+        return v[idx];
+    }
+
+    const f = value(0)[value(1):value(2)];
+    assert f == "klm";
+
+    const g = s[-1000000.1:999999.8];
+    assert g == "ABCDEF";
+
+    const h = s[77777777.9:-9999999];
+    assert h == "";
+
+    assert s[10:20].size == 0;
+}
+
+{
+    const a = ['m', 'n', 'o', 'p', 'q'];
+    var   i = 0;
+    for var c in "mnopq" {
+        assert i        <  a.size;
+        assert typeof c == "string";
+        assert c.size   == 1;
+        assert c        == a[i];
+        i += 1;
+    }
+}
+
+{
+    var a = 1;
+    a = "\(a)";
+    assert a == "1";
+}

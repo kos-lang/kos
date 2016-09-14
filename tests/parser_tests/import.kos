@@ -1,0 +1,82 @@
+# Valid import statements
+import     first;
+import     second . *;
+import     third.max;
+try import fourth;
+import     fifth;
+
+@ 0
+
+(scope 1 1 
+    (import 2 1 import
+        (identifier 2 12 first))
+    (import 3 1 import
+        (identifier 3 12 second)
+        (identifier 3 21 *))
+    (import 4 1 import
+        (identifier 4 12 third)
+        (identifier 4 18 max))
+    (try_import 5 5 import
+        (identifier 5 12 fourth))
+    (import 6 1 import
+        (identifier 6 12 fifth)))
+
+@------------------------------------------------------------------------------
+# Empty statements before and between imports are OK
+; ;
+; import module; ;
+import module;
+;
+; 0 ;; # The last empty statement is emitted
+
+@ 0
+
+(scope 1 1
+    (import 3 3 import
+        (identifier 3 10 module))
+    (import 4 1 import
+        (identifier 4 8 module))
+    (number 6 3 0)
+    (empty 6 6 ;))
+
+@------------------------------------------------------------------------------
+# Missing identifier after import
+import
+@ 10 3 1
+
+@------------------------------------------------------------------------------
+# Missing identifier after import
+import 0
+@ 10 2 8
+
+@------------------------------------------------------------------------------
+# Missing identifier after import
+import.
+@ 10 2 7
+
+@------------------------------------------------------------------------------
+# Missing identifier after import
+import;
+@ 10 2 7
+
+@------------------------------------------------------------------------------
+# Missing identifier after dot
+import
+module.;
+@ 10 3 8
+
+@------------------------------------------------------------------------------
+# Missing identifier after import
+try import 0;
+@ 10 2 12
+
+@------------------------------------------------------------------------------
+# Missing semicolon after module name
+try import module . *;
+@ 10 2 19
+
+@------------------------------------------------------------------------------
+# Some statement before import
+0;
+import module;
+@ 10 3 1

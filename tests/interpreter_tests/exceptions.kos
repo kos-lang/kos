@@ -1,0 +1,600 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+# passing assertions
+{
+    assert 1;
+    assert true;
+    assert "abc";
+
+    const a = 2;
+    assert false || a == 2;
+}
+
+# failing assertions
+{
+    var caught = false;
+    try {
+        assert false;
+    }
+    catch const e {
+        caught = true;
+    }
+    if ! caught {
+        throw "Missing assertion";
+    }
+}
+{
+    var caught = false;
+    try {
+        assert void == 1 || {} == [];
+    }
+    catch const e {
+        caught = true;
+    }
+    if ! caught {
+        throw "Missing assertion";
+    }
+}
+
+# try..catch
+{
+    var fail = false;
+    try {
+    }
+    catch const e {
+        fail = true;
+    }
+
+    assert ! fail;
+}
+
+# try..catch
+{
+    var fail = true;
+    try {
+        fail = false;
+    }
+    catch const e {
+        fail = true;
+    }
+
+    assert ! fail;
+}
+
+# throw..catch
+{
+    var fail = true;
+    try {
+        throw "exception";
+    }
+    catch const e {
+        fail = e.value != "exception";
+    }
+
+    assert ! fail;
+}
+
+# throw..finally
+{
+    var fail = 2;
+    try {
+        try {
+            throw "exception";
+        }
+        finally {
+            if fail == 2 {
+                fail = 1;
+            }
+        }
+    }
+    catch const e {
+        if fail == 1 {
+            fail = 0;
+        }
+    }
+
+    assert ! fail;
+}
+
+# try..finally
+{
+    var fail = 1;
+    try {
+    }
+    finally {
+        if fail == 1 {
+            fail = 0;
+        }
+    }
+
+    assert ! fail;
+}
+
+# try..finally
+{
+    var fail = 2;
+    try {
+        if fail == 2 {
+            fail = 1;
+        }
+    }
+    finally {
+        if fail == 1 {
+            fail = 0;
+        }
+    }
+
+    assert ! fail;
+}
+
+# throw..catch..finally
+{
+    var fail = 3;
+    try {
+        if fail == 3 {
+            fail = 2;
+        }
+        throw "exception";
+    }
+    catch const e {
+        if fail == 2 && e.value == "exception" {
+            fail = 1;
+        }
+    }
+    finally {
+        if fail == 1 {
+            fail = 0;
+        }
+    }
+
+    assert ! fail;
+}
+
+# throw through many finally statements
+{
+    var fail = 7;
+    try {
+        try {
+            try {
+                try {
+                    try {
+                        try {
+                            throw "exception";
+                        }
+                        finally {
+                            if fail == 7 {
+                                fail = 6;
+                            }
+                        }
+                    }
+                    finally {
+                        if fail == 6 {
+                            fail = 5;
+                        }
+                    }
+                }
+                finally {
+                    if fail == 5 {
+                        fail = 4;
+                    }
+                }
+            }
+            finally {
+                if fail == 4 {
+                    fail = 3;
+                }
+            }
+        }
+        finally {
+            if fail == 3 {
+                fail = 2;
+            }
+        }
+    }
+    catch const e {
+        if fail == 2 && e.value == "exception" {
+            fail = 1;
+        }
+    }
+    finally {
+        if fail == 1 {
+            fail = 0;
+        }
+    }
+
+    assert ! fail;
+}
+
+# throw through many catch statements
+{
+    var fail = 7;
+    try {
+        try {
+            try {
+                try {
+                    try {
+                        try {
+                            throw "exception";
+                        }
+                        catch const e {
+                            if fail == 7 && e.value == "exception" {
+                                fail = 6;
+                            }
+                            throw e;
+                        }
+                    }
+                    catch const e {
+                        if fail == 6 && e.value == "exception" {
+                            fail = 5;
+                        }
+                        throw e;
+                    }
+                }
+                catch const e {
+                    if fail == 5 && e.value == "exception" {
+                        fail = 4;
+                    }
+                    throw e;
+                }
+            }
+            catch const e {
+                if fail == 4 && e.value == "exception" {
+                    fail = 3;
+                }
+                throw e;
+            }
+        }
+        catch const e {
+            if fail == 3 && e.value == "exception" {
+                fail = 2;
+            }
+            throw e;
+        }
+    }
+    catch const e {
+        if fail == 2 && e.value == "exception" {
+            fail = 1;
+        }
+    }
+    finally {
+        if fail == 1 {
+            fail = 0;
+        }
+    }
+
+    assert ! fail;
+}
+
+{
+    var l1 = __line__ + 3;
+    fun throws
+    {
+        throw "xyz";
+    }
+
+    var l2 = void;
+
+    fun indirect
+    {
+        l2 = __line__; throws();
+    }
+
+    var l3   = void;
+    var fail = true;
+
+    try {
+        l3 = __line__; indirect();
+    }
+    catch const e {
+        assert e.value                 == "xyz";
+        assert e.backtrace.size        == 3;
+        assert e.backtrace[0].line     == l1;
+        assert e.backtrace[0].function == "throws";
+        assert e.backtrace[1].line     == l2;
+        assert e.backtrace[1].function == "indirect";
+        assert e.backtrace[2].line     == l3;
+        assert e.backtrace[2].function == "<global>";
+        fail = false;
+    }
+
+    assert ! fail;
+}
+
+{
+    var l1 = void;
+
+    fun native_callee_throws
+    {
+        l1 = __line__; [].resize.apply(0, []);
+    }
+
+    var l2   = void;
+    var fail = true;
+
+    try {
+        l2 = __line__; native_callee_throws();
+    }
+    catch const e {
+        assert e.backtrace.size        == 3;
+        assert e.backtrace[0].line     == 0;
+        assert e.backtrace[0].function == "<builtin>";
+        assert e.backtrace[1].line     == l1;
+        assert e.backtrace[1].function == "native_callee_throws";
+        assert e.backtrace[2].line     == l2;
+        assert e.backtrace[2].function == "<global>";
+        fail = false;
+    }
+
+    assert ! fail;
+}
+
+{
+    fun generator_throws
+    {
+        throw 123;
+        yield void;
+    }
+
+    generator_throws();
+}
+
+{
+    var l1 = void;
+
+    fun iterator_throws
+    {
+        l1 = __line__; throw 123;
+        yield void;
+    }
+
+    var l2   = void;
+    var fail = true;
+
+    try {
+        const iter = iterator_throws();
+        l2 = __line__; iter();
+    }
+    catch const e {
+        assert e.value                 == 123;
+        assert e.backtrace.size        == 2;
+        assert e.backtrace[0].line     == l1;
+        assert e.backtrace[0].function == "iterator_throws";
+        assert e.backtrace[1].line     == l2;
+        assert e.backtrace[1].function == "<global>";
+        fail = false;
+    }
+
+    assert ! fail;
+}
+
+{
+    var fail = true;
+
+    fun throws
+    {
+        try {
+            return;
+        }
+        finally {
+            fail = false;
+        }
+    }
+
+    throws();
+
+    assert ! fail;
+}
+
+{
+    fun early_return(early)
+    {
+        try {
+            if early {
+                return 10;
+            }
+        }
+        finally {
+        }
+        return 20;
+    }
+
+    assert early_return(true)  == 10;
+    assert early_return(false) == 20;
+}
+
+{
+    fun return_paths(x)
+    {
+        try {
+            if x == 1 {
+                return x + 10;
+            }
+            if x == 2 {
+                return x + 20;
+            }
+        }
+        finally {
+            if x == 2 {
+                return x + 40;
+            }
+            if x == 3 {
+                return x + 30;
+            }
+        }
+        return 100;
+    }
+
+    assert return_paths(1) == 11;
+    assert return_paths(2) == 42;
+    assert return_paths(3) == 33;
+    assert return_paths(4) == 100;
+}
+
+{
+    fun cancel_return(cancel)
+    {
+        try {
+            try {
+                return 1;
+            }
+            finally {
+                if cancel {
+                    throw void;
+                }
+            }
+        }
+        catch const e {
+        }
+        return 3;
+    }
+
+    assert cancel_return(false) == 1;
+    assert cancel_return(true)  == 3;
+}
+
+{
+    fun change_return(change)
+    {
+        try {
+            return 2;
+        }
+        finally {
+            if change {
+                return 4;
+            }
+        }
+    }
+    assert change_return(false) == 2;
+    assert change_return(true)  == 4;
+}
+
+{
+    var depth = 0;
+
+    fun deep_return_paths(x)
+    {
+        try {
+            depth += 1;
+            if x == 1 {
+                return x + 10;
+            }
+            try {
+                depth += 1;
+                try {
+                    depth += 1;
+                    if x == 2 {
+                        return x + 20;
+                    }
+                    if x == 3 {
+                        throw x + 30;
+                    }
+                    if x == 4 {
+                        return x + 40;
+                    }
+                    if x == 5 {
+                        return x + 50;
+                    }
+                }
+                finally {
+                    depth -= 1;
+                    if x == 4 {
+                        return x + 41;
+                    }
+                }
+            }
+            catch const e {
+                return e.value + 300;
+            }
+            finally {
+                depth -= 1;
+                if x == 4 {
+                    return x + 42;
+                }
+                if x == 5 {
+                    throw x + 51;
+                }
+            }
+        }
+        catch const e {
+            if e.value == 56 {
+                return e.value + 2;
+            }
+        }
+        finally {
+            depth -= 1;
+            if x == 4 {
+                return x + 43;
+            }
+        }
+        return x * 100;
+    }
+
+    assert deep_return_paths(1) == 11;
+    assert depth == 0;
+    assert deep_return_paths(2) == 22;
+    assert depth == 0;
+    assert deep_return_paths(3) == 333;
+    assert depth == 0;
+    assert deep_return_paths(4) == 47;
+    assert depth == 0;
+    assert deep_return_paths(5) == 58;
+    assert depth == 0;
+    assert deep_return_paths(6) == 600;
+    assert depth == 0;
+}
+
+{
+    var a = 1;
+    {
+        defer { a *= 3; }
+        a += 1;
+    }
+    assert a == 6;
+}
+
+{
+    var a = 0;
+    try {
+        defer { a = a * 10 + 1; }
+        throw 2;
+        a = 9000;
+    }
+    catch const e {
+        a = a * 10 + e.value;
+    }
+    assert a == 12;
+}
+
+{
+    var a = 0;
+    try {
+        defer { a = a * 10 + 1; }
+        defer { throw 2; }
+        defer { a = a * 10 + 3; }
+        a = a * 10 + 4;
+    }
+    catch const e {
+        a = a * 10 + e.value;
+    }
+    assert a == 4312;
+}

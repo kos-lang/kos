@@ -1,0 +1,207 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+fun test_lock(acquire, release)
+{
+    this.acquire_count = 0;
+    this.release_count = 0;
+    this.release       = release;
+    if acquire != void {
+        this.acquire = acquire;
+    }
+}
+
+fun test_full_lock
+{
+    test_lock.apply(this, [fun { this.acquire_count += 1; },
+                           fun { this.release_count += 1; }]);
+}
+
+fun test_release_lock
+{
+    test_lock.apply(this, [void, fun { this.release_count += 1; }]);
+}
+
+fun test_cancellable_lock
+{
+    test_lock.apply(this, [void, fun { if ! this.cancel { this.release_count += 1; } }]);
+    this.cancel = false;
+}
+
+{
+    const lock = new test_release_lock;
+
+    with lock {
+        lock.test = "x";
+    }
+
+    assert lock.acquire_count == 0;
+    assert lock.release_count == 1;
+    assert "test" in lock;
+    assert lock.test == "x";
+}
+
+{
+    const lock = new test_full_lock;
+
+    with lock {
+        lock.test = "y";
+    }
+
+    assert lock.acquire_count == 1;
+    assert lock.release_count == 1;
+    assert "test" in lock;
+    assert lock.test == "y";
+}
+
+{
+    var exception = false;
+    var lock      = new test_full_lock;
+
+    try {
+        with lock {
+            lock.a = "a";
+            throw 123;
+            lock.b = "b";
+        }
+    }
+    catch const e {
+        assert e.value == 123;
+        assert lock.acquire_count == 1;
+        assert lock.release_count == 1;
+        exception = true;
+    }
+
+    assert exception;
+    assert "a" in lock;
+    assert ! ("b" in lock);
+    assert lock.a == "a";
+}
+
+{
+    var exception = false;
+    var release   = false;
+
+    try {
+        with { release: fun { release = true; } } {
+            throw 234;
+        }
+    }
+    catch const e {
+        assert e.value == 234;
+        assert release == true;
+        exception = true;
+    }
+
+    assert exception;
+    assert release;
+}
+
+{
+    const lock = new test_cancellable_lock;
+
+    with lock { }
+
+    assert lock.release_count == 1;
+
+    with lock {
+        lock.cancel = true;
+    }
+
+    assert lock.release_count == 1;
+
+    with lock { }
+
+    assert lock.release_count == 1;
+
+    lock.cancel = false;
+
+    with lock { }
+
+    assert lock.release_count == 2;
+    assert lock.acquire_count == 0;
+}
+
+{
+    const lock1 = new test_full_lock;
+    const lock2 = new test_full_lock;
+    const lock3 = new test_lock(void, fun { throw void; });
+    const lock4 = new test_full_lock;
+    var exception = false;
+
+    try {
+        with lock1, lock2, lock3, lock4 { }
+    }
+    catch const e {
+        assert e.value == void;
+        exception = true;
+    }
+
+    assert exception;
+    assert lock1.acquire_count == 1;
+    assert lock1.release_count == 1;
+    assert lock2.acquire_count == 1;
+    assert lock2.release_count == 1;
+    assert lock3.acquire_count == 0;
+    assert lock3.release_count == 0;
+    assert lock4.acquire_count == 1;
+    assert lock4.release_count == 1;
+}
+
+{
+    const lock1 = new test_full_lock;
+    const lock2 = new test_lock(fun { throw void; }, fun { lock1.acquire_count -= 100; });
+    const lock3 = new test_full_lock;
+    var exception = false;
+
+    try {
+        with lock1, lock2, lock3 { lock1.acquire_count -= 1000; }
+    }
+    catch const e {
+        assert e.value == void;
+        exception = true;
+    }
+
+    assert exception;
+    assert lock1.acquire_count == 1;
+    assert lock1.release_count == 1;
+    assert lock2.acquire_count == 0;
+    assert lock2.release_count == 0;
+    assert lock3.acquire_count == 0;
+    assert lock3.release_count == 0;
+}
+
+{
+    const lock1 = new test_lock(void, fun { throw 10; });
+    const lock2 = new test_lock(fun { throw 20; }, fun { });
+    var exception = false;
+
+    try {
+        with lock1, lock2 { throw 30; }
+    }
+    catch const e {
+        assert e.value == 10;
+        exception = true;
+    }
+
+    assert exception;
+}

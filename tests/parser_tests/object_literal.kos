@@ -1,0 +1,141 @@
+# Empty object
+var a = {};
+# Single property
+var b = {c:d};
+# String as property name
+var e = {"xxx":f};
+# Keyword as property name
+var g = {new:this};
+# Multiple properties
+var h = {
+    i : 0 ,
+    j : 1 ,
+    k : 2 ,
+};
+# Empty scope
+{}
+# Empty scope in a scope
+{{}}
+# Object in a scope
+{{"x":3};}
+
+@ 0
+
+(scope 1 1
+    (assignment 2 7 =
+        (var 2 1 var (identifier 2 5 a))
+        (object 2 9 {)
+    )
+    (assignment 4 7 =
+        (var 4 1 var (identifier 4 5 b))
+        (object 4 9 {
+            (property 4 10 c
+                (string 4 10 c)
+                (identifier 4 12 d)
+    )))
+    (assignment 6 7 =
+        (var 6 1 var (identifier 6 5 e))
+        (object 6 9 {
+            (property 6 10 "xxx"
+                (string 6 10 "xxx")
+                (identifier 6 16 f)
+    )))
+    (assignment 8 7 =
+        (var 8 1 var (identifier 8 5 g))
+        (object 8 9 {
+            (property 8 10 new
+                (string 8 10 new)
+                (this 8 14 this)
+    )))
+    (assignment 10 7 =
+        (var 10 1 var (identifier 10 5 h))
+        (object 10 9 {
+            (property 11 5 i
+                (string 11 5 i)
+                (number 11 9 0)
+            )
+            (property 12 5 j
+                (string 12 5 j)
+                (number 12 9 1)
+            )
+            (property 13 5 k
+                (string 13 5 k)
+                (number 13 9 2)
+    )))
+    (scope 16 1 {)
+    (scope 18 1 {
+        (scope 18 2 {)
+    )
+    (scope 20 1 {
+        (object 20 2 {
+            (property 20 3 "x"
+                (string 20 3 "x")
+                (number 20 7 3)
+    )))
+)
+
+@------------------------------------------------------------------------------
+{a:}; # Missing member expression (property value)
+@ 10 1 4
+
+@------------------------------------------------------------------------------
+{:}; # This is a scope, missing member expression
+@ 10 1 2
+
+@------------------------------------------------------------------------------
+{,}; # This is a scope, missing member expression
+@ 10 1 2
+
+@------------------------------------------------------------------------------
+{,a:0}; # This is a scope, missing member expression
+@ 10 1 2
+
+@------------------------------------------------------------------------------
+{a:0,b:1,,}; # Missing property (double comma at end)
+@ 10 1 10
+
+@------------------------------------------------------------------------------
+{a:0,,b:1}; # Missing property (double comma)
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+{a:0,b:1]; # Missing comma or end of object literal
+@ 10 1 9
+
+@------------------------------------------------------------------------------
+# Random properties
+a = {this:this, new:{}, void:void, true:false, "string":"", array:[]};
+
+@ 0
+
+(scope 1 1
+    (assignment 2 3 =
+        (left_hand_side 2 3 = (identifier 2 1 a))
+        (object 2 5 {
+            (property 2 6 this
+                (string 2 6 this)
+                (this 2 11 this)
+            )
+            (property 2 17 new
+                (string 2 17 new)
+                (object 2 21 {)
+                    )
+            (property 2 25 void
+                (string 2 25 void)
+                (void 2 30 void)
+            )
+            (property 2 36 true
+                (string 2 36 true)
+                (bool 2 41 false)
+            )
+            (property 2 48 "string"
+                (string 2 48 "string")
+                (string 2 57 "")
+            )
+            (property 2 61 array
+                (string 2 61 array)
+                (array 2 67 [)
+            )
+        )
+    )
+)

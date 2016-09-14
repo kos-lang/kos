@@ -1,0 +1,1081 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+fun expect_fail(function)
+{
+    var failed = false;
+    try {
+        function();
+    }
+    catch const e {
+        failed = true;
+    }
+    assert failed;
+}
+
+##############################################################################
+# typeof
+assert typeof 0      == "integer";
+assert typeof 0.0    == "float";
+assert typeof 0e0    == "float";
+assert typeof ""     == "string";
+assert typeof void   == "void";
+assert typeof false  == "boolean";
+assert typeof {}     == "object";
+assert typeof []     == "array";
+assert typeof λ->(0) == "function";
+
+##############################################################################
+# +
+{
+    const a = 1;
+    const b = 2;
+    const c = a + b;
+    assert c == 3;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x7FFFFFFFFFFFFFFE;
+    const b = 1;
+    const c = a + b;
+    assert c == 0x7FFFFFFFFFFFFFFF;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x7FFFFFFFFFFFFFFF;
+    const b = 2;
+    const c = a + b;
+    assert c == -0x7FFFFFFFFFFFFFFF;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x7FFFFFFFFFFFFFFF;
+    const b = 1;
+    const c = a + b;
+    assert c == 0x8000000000000000;
+    assert typeof c == "integer";
+}
+{
+    const a = 1;
+    const b = 0.25;
+    const c = a + b;
+    assert c == 1.25;
+    assert typeof c == "float";
+}
+{
+    const a = 0.5;
+    const b = 2;
+    const c = a + b;
+    assert c == 2.5;
+    assert typeof c == "float";
+}
+{
+    const a = "abc";
+    const b = "def";
+    const c = a + b;
+    assert c == "abcdef";
+    assert typeof c == "string";
+    assert a == "abc";
+    assert b == "def";
+}
+expect_fail(fun {
+    const a = 1;
+    const b = "abc";
+    const c = a + b;
+});
+expect_fail(fun {
+    const a = 1;
+    const b = void;
+    const c = a + b;
+});
+expect_fail(fun {
+    const a = true;
+    const b = false;
+    const c = a + b;
+});
+
+##############################################################################
+# -
+{
+    const a = 1;
+    const b = 2;
+    const c = a - b;
+    assert c == -1;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x8000000000000000;
+    const b = 1;
+    const c = a - b;
+    assert c == 0x7FFFFFFFFFFFFFFF;
+    assert typeof c == "integer";
+}
+{
+    const a = 3;
+    const b = 2.0;
+    const c = a - b;
+    assert c == 1;
+    assert typeof c == "float";
+}
+{
+    const a = 3.0;
+    const b = 2;
+    const c = a - b;
+    assert c == 1;
+    assert typeof c == "float";
+    assert a == 3;
+    assert b == 2;
+}
+expect_fail(fun {
+    const a = "abc";
+    const b = "xyz";
+    const c = a - b;
+});
+expect_fail(fun {
+    const a = "abc";
+    const b = 0;
+    const c = a - b;
+});
+
+##############################################################################
+# *
+{
+    const a = 10;
+    const b = 2;
+    const c = a - b * 3;
+    assert c == 4;
+    assert typeof c == "integer";
+}
+{
+    const a = 1.0;
+    const b = 2;
+    const c = a * b;
+    assert c == 2;
+    assert typeof c == "float";
+}
+{
+    const a = 1;
+    const b = 2.0;
+    const c = a * b;
+    assert c == 2;
+    assert typeof c == "float";
+    assert a == 1;
+    assert b == 2;
+}
+expect_fail(fun {
+    const a = "a";
+    const b = 5;
+    const c = a * b;
+});
+
+##############################################################################
+# /
+{
+    const a = 10;
+    const b = 1;
+    const c = a / 2 + b;
+    assert c == 6;
+    assert typeof c == "integer";
+}
+{
+    const a = 10;
+    const b = 3;
+    const c = a / b;
+    assert c == 3;
+    assert typeof c == "integer";
+    assert a == 10;
+    assert b == 3;
+}
+{
+    const a = 10;
+    const b = 4.0;
+    const c = a / b;
+    assert c == 2.5;
+    assert typeof c == "float";
+}
+{
+    const a = 10.0;
+    const b = 4;
+    const c = a / b;
+    assert c == 2.5;
+    assert typeof c == "float";
+}
+{
+    const a  = 10;
+    const b  = 0;
+    var   ok = false;
+    try {
+        const c = a / b;
+    }
+    catch (const e) {
+        ok = true;
+    }
+    assert ok;
+}
+{
+    const a  = 10.0;
+    const b  = 0;
+    var   ok = false;
+    try {
+        const c = a / b;
+    }
+    catch (const e) {
+        ok = true;
+    }
+    assert ok;
+}
+{
+    const a  = 10;
+    const b  = 0.0;
+    var   ok = false;
+    try {
+        const c = a / b;
+    }
+    catch (const e) {
+        ok = true;
+    }
+    assert ok;
+}
+{
+    const a  = 1.0;
+    const b  = -0.0;
+    var   ok = false;
+    try {
+        const c = a / b;
+    }
+    catch (const e) {
+        ok = true;
+    }
+    assert ok;
+}
+
+##############################################################################
+# %
+{
+    const a = 10;
+    const b = 4;
+    const c = a % b;
+    assert c == 2;
+    assert typeof c == "integer";
+}
+{
+    const a = 10;
+    const b = 4.0;
+    const c = a % b;
+    assert c == 2;
+    assert typeof c == "float";
+    assert a == 10;
+    assert b == 4;
+}
+{
+    const a = 10.0;
+    const b = 4;
+    const c = a % b;
+    assert c == 2;
+    assert typeof c == "float";
+}
+{
+    const a  = 10;
+    const b  = 0;
+    var   ok = false;
+    try {
+        const c = a % b;
+    }
+    catch (const e) {
+        ok = true;
+    }
+    assert ok;
+}
+{
+    const a  = 10.0;
+    const b  = 0;
+    var   ok = false;
+    try {
+        const c = a % b;
+    }
+    catch (const e) {
+        ok = true;
+    }
+    assert ok;
+}
+{
+    const a  = 10;
+    const b  = 0.0;
+    var   ok = false;
+    try {
+        const c = a % b;
+    }
+    catch (const e) {
+        ok = true;
+    }
+    assert ok;
+}
+{
+    const a  = 1.0;
+    const b  = -0.0;
+    var   ok = false;
+    try {
+        const c = a % b;
+    }
+    catch (const e) {
+        ok = true;
+    }
+    assert ok;
+}
+
+##############################################################################
+# + * ()
+{
+    const a = 10;
+    const b = 1;
+    const c = (a + 1) * 2 + 3 * b;
+    assert c == 25;
+    assert typeof c == "integer";
+}
+
+{
+    var a = 2;
+    a = (a + a) * (a + 1) + a;
+    assert typeof a == "integer";
+    assert a        == 14;
+}
+
+##############################################################################
+# / *
+{
+    const a = 10;
+    const c = a / 2 * 3;
+    assert c == 15;
+    assert typeof c == "integer";
+}
+{
+    const a = 10;
+    const c = a / (2 * 3);
+    assert c == 1;
+    assert typeof c == "integer";
+}
+
+##############################################################################
+# ||
+{
+    const _void  = void;
+    const _false = false;
+    const _true  = true;
+    assert (_void || _false) == false;
+    assert (_void || _true)  == true;
+    assert (_false || _true) == true;
+    assert (_true || _false) == true;
+    assert (false || "abc")  == "abc";
+    assert _void  == void;
+    assert _false == false;
+    assert _true  == true;
+}
+
+{
+    const a = false;
+    const b = true;
+    assert a || b;
+    assert ! a;
+    assert b;
+}
+
+{
+    const a = true;
+    const b = false;
+    assert a || b;
+    assert a;
+    assert ! b;
+}
+
+{
+    fun invoked(status, ret)
+    {
+        assert status;
+        return ret;
+    }
+
+    const a = invoked(true, 8) || invoked(false, 9);
+    assert a == 8;
+    const b = invoked(true, 0) || invoked(true, 10);
+    assert b == 10;
+    const c = invoked(true, 0) || invoked(true, false);
+    assert c == false;
+}
+
+##############################################################################
+# &&
+{
+    const _false = false;
+    const _true  = true;
+    assert (_true && "xyz") == "xyz";
+    assert (_false && "xyz") == false;
+    assert _false == false;
+    assert _true  == true;
+}
+
+{
+    fun invoked(status, ret)
+    {
+        assert status;
+        return ret;
+    }
+
+    const a = invoked(true, 0) && invoked(false, 8);
+    assert a == 0;
+
+    const b = invoked(true, 9) && invoked(true, false);
+    assert b == false;
+
+    const c = invoked(true, 10) && invoked(true, 11);
+    assert c == 11;
+}
+
+##############################################################################
+# ?:
+{
+    const _false = false;
+    const _true  = true;
+    assert (_true ? 1 : 2) == 1;
+    assert (_false ? 1 : 2) == 2;
+    assert _false == false;
+    assert _true  == true;
+}
+
+{
+    const _false = false;
+    const a      = "a";
+    const b      = "b";
+    const c      = _false ? a : b;
+    assert c      == "b";
+    assert _false == false;
+    assert a      == "a";
+    assert b      == "b";
+}
+
+{
+    fun invoked(status, ret)
+    {
+        assert status;
+        return ret;
+    }
+
+    const a = invoked(true, true) ? invoked(true, 8) : invoked(false, 10);
+    assert a == 8;
+
+    const b = invoked(true, false) ? invoked(false, 6) : invoked(true, 7);
+    assert b == 7;
+}
+
+##############################################################################
+# & | ^ ~
+{
+    const a = 0x101;
+    const b = 0x011;
+    const c = a ^ b;
+    assert c == 0x110;
+    assert typeof c == "integer";
+    assert a == 0x101;
+    assert b == 0x011;
+}
+{
+    const a = 0x8F00000000000000;
+    const b = 0xC0F0000000000000;
+    const c = a ^ b;
+    assert c == 0x4FF0000000000000;
+    assert typeof c == "integer";
+}
+{
+    const a = 6.5;
+    const b = 3.2;
+    const c = a ^ b;
+    assert c == 5;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x101;
+    const b = 0x011;
+    const c = a | b;
+    assert c == 0x111;
+    assert typeof c == "integer";
+    assert a == 0x101;
+    assert b == 0x011;
+}
+{
+    const a = 1.5;
+    const b = -16.2;
+    const c = a | b;
+    assert c == 0xFFFFFFFFFFFFFFF1;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x4;
+    const b = -16;
+    const c = a | b;
+    assert c == 0xFFFFFFFFFFFFFFF4;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x1001;
+    const b = 0x1100;
+    const c = a & b;
+    assert c == 0x1000;
+    assert typeof c == "integer";
+    assert a == 0x1001;
+    assert b == 0x1100;
+}
+{
+    const a = -2;
+    const b = 0xF00000000000000F;
+    const c = a & b;
+    assert c == 0xF00000000000000E;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x100;
+    const b = -16.2;
+    const c = a & b;
+    assert c == 0x100;
+    assert typeof c == "integer";
+}
+{
+    const a = -2;
+    const c = ~a;
+    assert c == 1;
+    assert typeof c == "integer";
+}
+{
+    const a = 1.111;
+    const c = ~a;
+    assert c == -2;
+    assert typeof c == "integer";
+}
+{
+    const a = 0B10000000000000000000000000000001;
+    const b = 0b11111111111111111111111111111111;
+    const c = a ^ b;
+    assert typeof c == "integer";
+    assert c        == 0x7FFFFFFE;
+}
+
+##############################################################################
+# !
+{
+    const a = false;
+    const c = ! a;
+    assert c == true;
+    assert a == false;
+}
+{
+    const a = true;
+    const c = ! a;
+    assert c == false;
+}
+{
+    const a = 0;
+    const c = ! a;
+    assert c == true;
+    assert a == 0;
+}
+{
+    const a = 0e0;
+    const c = ! a;
+    assert c == true;
+}
+{
+    const a = 10;
+    const c = ! a;
+    assert c == false;
+}
+
+##############################################################################
+# <<
+{
+    const a = 1;
+    const b = 3;
+    const c = a << b;
+    assert c == 8;
+    assert typeof c == "integer";
+    assert a == 1;
+    assert b == 3;
+}
+{
+    const a = 0x1000000000000000;
+    const b = 3;
+    const c = a << b;
+    assert c == 0x8000000000000000;
+    assert typeof c == "integer";
+}
+{
+    const a = 1;
+    const b = 63;
+    const c = a << b;
+    assert c == 0x8000000000000000;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x1000000000000000;
+    const b = 4;
+    const c = a << b;
+    assert c == 0;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x101;
+    const b = 64;
+    const c = a << b;
+    assert c == 0;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x101;
+    const b = -1;
+    const c = a << b;
+    assert c == 0x80;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x8000000000000000;
+    const b = -15;
+    const c = a << b;
+    assert c == 0xFFFF000000000000;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x8000000000000000;
+    const b = -64;
+    const c = a << b;
+    assert c == -1;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x4000000000000000;
+    const b = -62;
+    const c = a << b;
+    assert c == 1;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x4000000000000000;
+    const b = -64;
+    const c = a << b;
+    assert c == 0;
+    assert typeof c == "integer";
+}
+{
+    const a = 3.01;
+    const b = 1.01;
+    const c = a << b;
+    assert c == 6;
+    assert typeof c == "integer";
+}
+{
+    const a = 3.99;
+    const b = 1.99;
+    const c = a << b;
+    assert c == 6;
+    assert typeof c == "integer";
+}
+{
+    const a = -3.1;
+    const b = 1.99;
+    const c = a << b;
+    assert c == -6;
+    assert typeof c == "integer";
+}
+
+##############################################################################
+# >>
+{
+    const a = 16;
+    const b = 2;
+    const c = a >> b;
+    assert c == 4;
+    assert typeof c == "integer";
+    assert a == 16;
+    assert b == 2;
+}
+{
+    const a = 0x8800000000000000;
+    const b = 4;
+    const c = a >> b;
+    assert c == 0xF880000000000000;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x8000000000000000;
+    const b = 62;
+    const c = a >> b;
+    assert c == -2;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x8000000000000000;
+    const b = 63;
+    const c = a >> b;
+    assert c == -1;
+    assert typeof c == "integer";
+}
+{
+    const a = 0x8000000000000000;
+    const b = 64;
+    const c = a >> b;
+    assert c == -1;
+    assert typeof c == "integer";
+}
+{
+    const a = 1;
+    const b = -62;
+    const c = a >> b;
+    assert c == 0x4000000000000000;
+    assert typeof c == "integer";
+}
+{
+    const a = 1;
+    const b = -63;
+    const c = a >> b;
+    assert c == 0x8000000000000000;
+    assert typeof c == "integer";
+}
+{
+    const a = 1;
+    const b = -64;
+    const c = a >> b;
+    assert c == 0;
+    assert typeof c == "integer";
+}
+{
+    const a = 6.5;
+    const b = 1.5;
+    const c = a >> b;
+    assert c == 3;
+    assert typeof c == "integer";
+}
+
+##############################################################################
+# >>>
+{
+    const a = 0x8001000000000000;
+    const b = 48;
+    const c = a >>> b;
+    assert c == 0x8001;
+    assert typeof c == "integer";
+    assert a == 0x8001000000000000;
+    assert b == 48;
+}
+{
+    const a = 0x8000000000000000;
+    const b = 64;
+    const c = a >>> b;
+    assert c == 0;
+    assert typeof c == "integer";
+}
+
+##############################################################################
+# ==, !=
+{
+    var different_values = [ void, false, true, 0, 1, -1, "", "0", [], [0], {}, {"0":0} ];
+    const len = different_values.size;
+    for var y = 0; y < len; y += 1 {
+        const a = different_values[y];
+        for var x = 0; x < len; x += 1 {
+            const b   = different_values[x];
+            const c   = x == y;
+            const eq  = a == b;
+            const neq = a != b;
+            assert eq == c;
+            assert neq == ! c;
+        }
+    }
+}
+
+{
+    const a = 1 + 2;
+    const b = 4 - 1;
+    assert a == b;
+    assert a == 3;
+    assert b == 3;
+}
+
+{
+    const a = 5 + 2;
+    const b = 10 - 1;
+    assert a != b;
+    assert a == 7;
+    assert b == 9;
+}
+
+##############################################################################
+# if, !
+{
+    var true_values  = [ true, 1, -1, 0x8000000000000000, "", "0", "false", [], [false], {} ];
+    const len = true_values.size;
+    for var i = 0; i < len; i+= 1 {
+        const value = true_values[i];
+        assert value;
+        assert !! value;
+        if ! value { assert false; }
+    }
+
+    assert ! void;
+    if void { assert false; }
+
+    assert ! false;
+    if false { assert false; }
+
+    assert ! 0;
+    if 0 { assert false; }
+
+    assert ! 0.0;
+    if 0.0 { assert false; }
+}
+
+##############################################################################
+# +=
+{
+    var   a = 1;
+    const b = 2;
+    a += b;
+    assert a == 3;
+    assert typeof a == "integer";
+    assert b == 2;
+}
+{
+    var   a = 0x7FFFFFFF;
+    const b = 1;
+    a += b;
+    assert a == 0x80000000;
+    assert typeof a == "integer";
+}
+{
+    var   a = -1;
+    const b = 1.0;
+    a += b;
+    assert a == 0;
+    assert typeof a == "float";
+}
+{
+    var   a = 20.0;
+    const b = -1;
+    a += b;
+    assert a == 19;
+    assert typeof a == "float";
+}
+{
+    var   a = "abc";
+    const b = "xyz";
+    a += b;
+    assert a == "abcxyz";
+    assert typeof a == "string";
+}
+{
+    const o = { b: 1 };
+    const p = "b";
+    o.b += 2;
+    assert o.b == 3;
+    assert typeof o.b == "integer";
+    o[p] += -1;
+    assert o.b == 2;
+
+    const a = [ 10 ];
+    a[0] += 5;
+    assert a[0] == 15;
+}
+
+##############################################################################
+# -=
+{
+    var   a = 1;
+    const b = 2;
+    a -= b;
+    assert a == -1;
+    assert typeof a == "integer";
+    assert b == 2;
+}
+{
+    var   a = 0x7FFFFFFF;
+    const b = -1;
+    a -= b;
+    assert a == 0x80000000;
+    assert typeof a == "integer";
+}
+{
+    var   a = -1;
+    const b = 1.0;
+    a -= b;
+    assert a == -2;
+    assert typeof a == "float";
+}
+{
+    var   a = 20.0;
+    const b = -1;
+    a -= b;
+    assert a == 21;
+    assert typeof a == "float";
+}
+expect_fail(fun {
+    var   a = "abc";
+    const b = "xyz";
+    a -= b;
+});
+{
+    const o = { b: 8 };
+    const p = "b";
+    o.b -= 2;
+    assert o.b == 6;
+    assert typeof o.b == "integer";
+    o[p] -= 1;
+    assert o.b == 5;
+
+    const a = [ 10 ];
+    a[0] -= 5;
+    assert a[0] == 5;
+}
+
+##############################################################################
+# *=
+{
+    var   a = 7;
+    const b = -5;
+    a *= b;
+    assert a == -35;
+    assert typeof a == "integer";
+    assert b == -5;
+}
+expect_fail(fun {
+    var a = "x";
+    a *= 5;
+});
+{
+    const o = { b: 3 };
+    const p = "b";
+    o.b *= 5;
+    assert o.b == 15;
+    assert typeof o.b == "integer";
+    o[p] *= 2;
+    assert o.b == 30;
+
+    const a = [ 6 ];
+    a[0] *= 8;
+    assert a[0] == 48;
+}
+
+##############################################################################
+# /=
+{
+    var   a = 10;
+    const b = 3;
+    a /= b;
+    assert a == 3;
+    assert typeof a == "integer";
+    assert b == 3;
+}
+{
+    var   a = 10;
+    const b = 4.0;
+    a /= b;
+    assert a == 2.5;
+    assert typeof a == "float";
+}
+
+##############################################################################
+# %=
+{
+    var   a = 10;
+    const b = 3;
+    a %= b;
+    assert a == 1;
+    assert typeof a == "integer";
+    assert b == 3;
+}
+{
+    var   a = 10;
+    const b = 3.0;
+    a %= b;
+    assert a == 1;
+    assert typeof a == "float";
+}
+
+##############################################################################
+# &=
+{
+    var   a = 0xABCB;
+    const b = 15;
+    a &= b;
+    assert a == 11;
+    assert typeof a == "integer";
+    assert b == 15;
+}
+
+##############################################################################
+# |=
+{
+    var   a = 1;
+    const b = 16.1;
+    a |= b;
+    assert a == 17;
+    assert typeof a == "integer";
+    assert b == 16.1;
+}
+
+##############################################################################
+# ^=
+{
+    var   a = 1.1;
+    const b = 3;
+    a ^= b;
+    assert a == 2;
+    assert typeof a == "integer";
+    assert b == 3;
+}
+
+##############################################################################
+# <<=
+{
+    var a = 1.1;
+    a <<= 10;
+    assert a == 1024;
+    assert typeof a == "integer";
+}
+
+##############################################################################
+# >>=
+{
+    var a = 1024*1024;
+    a >>= 10;
+    assert a == 1024;
+    assert typeof a == "integer";
+}
+{
+    var a = 0xFFFFFFFF00000000;
+    a >>= 17;
+    assert a == 0xFFFFFFFFFFFF8000;
+    assert typeof a == "integer";
+}
+
+##############################################################################
+# >>>=
+{
+    var a = -1;
+    a >>>= 32;
+    assert a == 0xFFFFFFFF;
+    assert typeof a == "integer";
+}

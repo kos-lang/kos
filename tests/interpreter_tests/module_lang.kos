@@ -1,0 +1,1162 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+import lang;
+import lang.void; # For lang.void test, see way below
+
+fun expect_fail(function)
+{
+    var failed = false;
+    try {
+        function();
+    }
+    catch const e {
+        failed = true;
+    }
+    assert failed;
+}
+
+##############################################################################
+# lang.number
+
+{
+    assert typeof lang.number           == "function";
+    assert typeof lang.number.prototype == "object";
+}
+
+{
+    const number = new lang.number;
+    assert typeof number == "integer";
+    assert number        == 0;
+}
+
+{
+    const number = new lang.number(101);
+    assert typeof number == "integer";
+    assert number        == 101;
+}
+
+{
+    const number = new lang.number(10.1);
+    assert typeof number == "float";
+    assert number        == 10.1;
+}
+
+{
+    expect_fail(λ->((1).times_three()));
+    expect_fail(λ->((1.5).times_three()));
+
+    lang.number.prototype.times_three = λ->(this*3);
+
+    const i = (5).times_three();
+    assert typeof i == "integer";
+    assert i        == 15;
+
+    const f = (5.0).times_three();
+    assert typeof f == "float";
+    assert f        == 15;
+}
+
+{
+    expect_fail(λ->(new lang.number("")));
+    expect_fail(λ->(new lang.number("a")));
+    expect_fail(λ->(new lang.number("e")));
+    expect_fail(λ->(new lang.number("123x")));
+    expect_fail(λ->(new lang.number("-")));
+    expect_fail(λ->(new lang.number("--")));
+    expect_fail(λ->(new lang.number("-E")));
+
+    const _1 = new lang.number("1");
+    assert typeof _1 == "integer";
+    assert _1        == 1;
+
+    const _2 = new lang.number("0x002");
+    assert typeof _2 == "integer";
+    assert _2        == 2;
+
+    const _3 = new lang.number("3.");
+    assert typeof _3 == "float";
+    assert _3        == 3;
+
+    const _0 = new lang.number(".");
+    assert typeof _0 == "float";
+    assert _0        == 0;
+
+    const _m0 = new lang.number("-.");
+    assert typeof _m0 == "float";
+    assert _m0        == 0;
+
+    const _0_5 = new lang.number(".5");
+    assert typeof _0_5 == "float";
+    assert _0_5        == 0.5;
+}
+
+##############################################################################
+# lang.integer
+
+{
+    assert typeof lang.integer           == "function";
+    assert typeof lang.integer.prototype == "object";
+}
+
+{
+    const number = new lang.integer;
+    assert typeof number == "integer";
+    assert number        == 0;
+}
+
+{
+    const number = new lang.integer(10);
+    assert typeof number == "integer";
+    assert number        == 10;
+}
+
+{
+    const number = new lang.integer(2.9);
+    assert typeof number == "integer";
+    assert number        == 2;
+}
+
+{
+    assert new lang.integer(2.1)  == 2;
+    assert new lang.integer(1.9)  == 1;
+    assert new lang.integer(-1.9) == -1;
+    assert new lang.integer(-2.1) == -2;
+    assert new lang.integer(-2.9) == -2;
+}
+
+{
+    expect_fail(λ->((3).square()));
+
+    lang.integer.prototype.square = λ->(this * this);
+
+    assert (3).square() == 9;
+
+    expect_fail(λ->((3.0).square()));
+}
+
+{
+    assert lang.integer()     == 0;
+    assert lang.integer(-5)   == -5;
+    assert lang.integer(8.25) == 8;
+}
+
+{
+    assert 0 instanceof lang.integer;
+    assert 1 instanceof lang.integer;
+    assert 0x7FFFFFFFFFFFFFFF instanceof lang.integer;
+    assert ! (0.0 instanceof lang.integer);
+}
+
+{
+    expect_fail(λ->(new lang.integer("")));
+    expect_fail(λ->(new lang.integer("a")));
+    expect_fail(λ->(new lang.integer("e")));
+    expect_fail(λ->(new lang.integer("123x")));
+    expect_fail(λ->(new lang.integer("-")));
+    expect_fail(λ->(new lang.integer("--")));
+    expect_fail(λ->(new lang.integer("-E")));
+    expect_fail(λ->(new lang.integer("3.")));
+    expect_fail(λ->(new lang.integer(".")));
+    expect_fail(λ->(new lang.integer("-.")));
+    expect_fail(λ->(new lang.integer(".5")));
+
+    const _1 = new lang.integer("1");
+    assert typeof _1 == "integer";
+    assert _1        == 1;
+
+    const _2 = new lang.integer("0x002");
+    assert typeof _2 == "integer";
+    assert _2        == 2;
+}
+
+##############################################################################
+# lang.float
+
+{
+    assert typeof lang.float           == "function";
+    assert typeof lang.float.prototype == "object";
+}
+
+{
+    const number = new lang.float;
+    assert typeof number == "float";
+    assert number        == 0;
+}
+
+{
+    const number = new lang.float(10);
+    assert typeof number == "float";
+    assert number        == 10;
+}
+
+{
+    const number = new lang.float(2.9);
+    assert typeof number == "float";
+    assert number        == 2.9;
+}
+
+{
+    expect_fail(λ->((3.0).square3()));
+
+    lang.float.prototype.square3 = λ->(this * this * this);
+
+    assert (3.0).square3() == 27;
+
+    expect_fail(λ->((3).square3()));
+}
+
+{
+    assert lang.float()     == 0;
+    assert lang.float(3)    == 3;
+    assert lang.float(-4.5) == -4.5;
+}
+
+{
+    assert 0.0 instanceof lang.float;
+    assert 0.5 instanceof lang.float;
+    assert ! (0 instanceof lang.float);
+}
+
+{
+    expect_fail(λ->(new lang.float("")));
+    expect_fail(λ->(new lang.float("a")));
+    expect_fail(λ->(new lang.float("e")));
+    expect_fail(λ->(new lang.float("123x")));
+    expect_fail(λ->(new lang.float("-")));
+    expect_fail(λ->(new lang.float("--")));
+    expect_fail(λ->(new lang.float("-E")));
+    expect_fail(λ->(new lang.float("0x002")));
+
+    const _1 = new lang.float("1");
+    assert typeof _1 == "float";
+    assert _1        == 1;
+
+    const _3 = new lang.float("3.");
+    assert typeof _3 == "float";
+    assert _3        == 3;
+
+    const _0 = new lang.float(".");
+    assert typeof _0 == "float";
+    assert _0        == 0;
+
+    const _m0 = new lang.float("-.");
+    assert typeof _m0 == "float";
+    assert _m0        == 0;
+
+    const _0_5 = new lang.float(".5");
+    assert typeof _0_5 == "float";
+    assert _0_5        == 0.5;
+}
+
+##############################################################################
+# lang.void
+
+{
+    assert typeof lang.void           == "function";
+    assert typeof lang.void.prototype == "object";
+}
+
+{
+    const v = new lang.void;
+    assert v == void;
+}
+
+{
+    expect_fail(λ->(void.bool()));
+    lang.void.prototype.bool = λ->(false);
+    assert void.bool() == false;
+}
+
+{
+    assert void instanceof lang.void;
+    assert ! (true  instanceof lang.void);
+    assert ! (false instanceof lang.void);
+}
+
+# Even though lang.void was imported directly (at the top), it's not accessible
+{
+    expect_fail(λ->(new void));
+    assert typeof void == "void";
+}
+
+##############################################################################
+# lang.boolean
+
+{
+    assert typeof lang.boolean           == "function";
+    assert typeof lang.boolean.prototype == "object";
+}
+
+{
+    assert new lang.boolean(true);
+    assert ! new lang.boolean(false);
+    assert new lang.boolean(3 + 4);
+    assert ! new lang.boolean(5 - 5);
+}
+
+{
+    expect_fail(λ->(false.negative()));
+    lang.boolean.prototype.negative = λ->(!this);
+    assert false.negative();
+    assert ! true.negative();
+}
+
+{
+    assert true  instanceof lang.boolean;
+    assert false instanceof lang.boolean;
+    assert ! (void instanceof lang.boolean);
+
+    const a = 10;
+    const b = 2 * 5;
+    assert (a == b) instanceof lang.boolean;
+}
+
+##############################################################################
+# lang.string
+
+{
+    assert typeof lang.string           == "function";
+    assert typeof lang.string.prototype == "object";
+}
+
+{
+    assert new lang.string()            == "";
+    assert new lang.string(123)         == "123";
+    assert new lang.string("x", 5, "z") == "x5z";
+    assert lang.string()                == "";
+    assert lang.string(8)               == "8";
+    assert lang.string(void, false)     == "voidfalse";
+}
+
+{
+    expect_fail(λ->("x".add_2("y")));
+    lang.string.prototype.add_2 = λ(x)->(this + x);
+    assert "x".add_2("y") == "xy";
+}
+
+{
+    const str = "123";
+    assert str instanceof lang.string;
+    assert str == "123";
+
+    assert "x\(1)y" instanceof lang.string;
+}
+
+##############################################################################
+# lang.object
+
+{
+    assert typeof lang.object           == "function";
+    assert typeof lang.object.prototype == "object";
+}
+
+{
+    const o = new lang.object;
+    assert typeof o == "object";
+
+    o.prop1 = "xyz";
+    assert o.prop1 == "xyz";
+}
+
+{
+    const o = lang.object();
+    assert typeof o == "object";
+
+    o.prop2 = "xyz";
+    assert o.prop2 == "xyz";
+}
+
+{
+    assert {} instanceof lang.object;
+    assert ! ({} instanceof lang.array);
+    assert ! ({} instanceof lang.function);
+    assert ! ({} instanceof lang.string);
+
+    const o = new lang.object;
+    assert o instanceof lang.object;
+}
+
+{
+    fun constr
+    {
+        this.c = 2;
+        this.d = 3;
+        this.e = 4;
+    }
+
+    constr.prototype.a = 0;
+    constr.prototype.b = 1;
+
+    const obj = new constr;
+
+    var values = ['a', 'b', 'c', 'd', 'e'];
+
+    for var key in lang.deep(obj) {
+        const value = obj[key];
+        if typeof value == "integer" && value >= 0 && value < values.size {
+            assert values[value] == key;
+            values[value] = void;
+        }
+    }
+
+    for var i = 0; i < values.size; i += 1 {
+        assert values[i] == void;
+    }
+
+    values = ['a', 'b', 'c', 'd', 'e'];
+
+    for var key in lang.shallow(obj) {
+        const value = obj[key];
+        assert typeof value == "integer";
+        assert value >= 0 && value < values.size;
+        assert values[value] == key;
+        values[value] = void;
+    }
+}
+
+{
+    const it = lang.shallow.apply({aaa:0}, [void]);
+    assert typeof it == "function";
+    for var x in it {
+        assert x == "aaa";
+    }
+
+    for var x in lang.shallow.apply(void, [void]) {
+        throw "unexpected property";
+    }
+}
+
+##############################################################################
+# lang.array
+
+{
+    assert typeof lang.array           == "function";
+    assert typeof lang.array.prototype == "object";
+}
+
+{
+    const a = new lang.array;
+    assert typeof a == "array";
+    assert a.size   == 0;
+}
+
+{
+    const a = new lang.array([8]);
+    assert typeof a == "array";
+    assert a.size   == 1;
+    assert a[0]     == 8;
+    expect_fail(λ->(a[1]));
+}
+
+{
+    const a = new lang.array("xy", [true]);
+    assert typeof a == "array";
+    assert a.size   == 3;
+    assert a[0]     == "x";
+    assert a[1]     == "y";
+    assert a[2]     == true;
+    expect_fail(λ->(a[3]));
+}
+
+{
+    const a = new lang.array(lang.range(4));
+    assert typeof a == "array";
+    assert a.size   == 4;
+    for var i = 0; i < 4; i += 1 {
+        assert a[i] == i;
+    }
+}
+
+{
+    const a = new lang.array(lang.shallow({a: void, b: void, c: void}));
+    assert typeof a == "array";
+    assert a.size   == 3;
+    const had = { 'a': false, 'b': false, 'c': false };
+    for var i = 0; i < a.size; i += 1 {
+        const value = a[i];
+        assert value == 'a' || value == 'b' || value == 'c';
+        assert had[value] == false;
+        had[value] = true;
+    }
+}
+
+{
+    expect_fail(fun {
+        lang.array.prototype = {};
+    });
+}
+
+{
+    const a = [ "a", "b", "c", "d", "e" ];
+
+    expect_fail(λ->(a.ret_elem_3()));
+
+    lang.array.prototype.ret_elem_3 = fun {
+        return this[3];
+    };
+
+    assert a.ret_elem_3() == "d";
+}
+
+{
+    const a = lang.array([10, 20], [30]);
+    assert a.size == 3;
+    assert a[0]     == 10;
+    assert a[1]     == 20;
+    assert a[2]     == 30;
+    expect_fail(λ->(a[3]));
+}
+
+{
+    assert [] instanceof lang.array;
+    assert [] instanceof lang.object;
+}
+
+{
+    const a = [1, 2, 100];
+    const b = new lang.array(a);
+    assert typeof b == "array";
+    assert b        != a;
+    assert b.size   == a.size;
+    for var i = 0; i < b.size; i += 1 {
+        assert b[i] == a[i];
+    }
+}
+
+{
+    fun fake_array
+    {
+    }
+
+    fake_array.prototype = lang.array.prototype;
+
+    const o = new fake_array;
+
+    assert typeof o == "object";
+    assert o instanceof lang.array;
+    expect_fail(λ->(o.size));
+    assert typeof o.resize == "function";
+    expect_fail(λ->(o.resize(10)));
+    expect_fail(λ->(o[0]));
+}
+
+{
+    const buf = lang.buffer(10);
+    for var i in lang.range(buf.size) {
+        buf[i] = i + 20;
+    }
+
+    const a = new lang.array(buf);
+
+    assert a.size == 10;
+
+    var count = 0;
+    for var elem in a {
+        assert elem == count + 20;
+        count += 1;
+    }
+    assert count == 10;
+}
+
+{
+    const a = new lang.array(new lang.buffer);
+
+    assert typeof a == "array";
+    assert a.size   == 0;
+}
+
+##############################################################################
+# lang.array.prototype.slice
+
+{
+    const a = [];
+    const b = a.slice(10, -20);
+
+    assert typeof b == "array";
+    assert b.size == 0;
+}
+
+{
+    const a = [1, 2, 3, 4];
+    const b = a.slice(1, -1);
+
+    assert typeof b == "array";
+    assert b.size == 2;
+    assert b[0] == 2;
+    assert b[1] == 3;
+}
+
+{
+    const a = ["a", "b", "c", "d", "e"];
+
+    {
+        const b = a.slice(void, void);
+        assert b.size == 5;
+        assert b[0] == "a";
+        assert b[-1] == "e";
+    }
+
+    {
+        const b = a.slice(2, void);
+        assert b.size == 3;
+        assert b[0] == "c";
+        assert b[-1] == "e";
+    }
+
+    {
+        const b = a.slice(void, -3);
+        assert b.size == 2;
+        assert b[0] == "a";
+        assert b[1] == "b";
+    }
+}
+
+##############################################################################
+# lang.array.prototype.insert_array
+
+{
+    const a = [1, 2, 3, 4];
+    const b = ['x', 'y'];
+    const c = a.insert_array(2, b);
+
+    assert a == c;
+    assert a.size == 6;
+    assert a[0] == 1;
+    assert a[1] == 2;
+    assert a[2] == 'x';
+    assert a[3] == 'y';
+    assert a[4] == 3;
+    assert a[5] == 4;
+}
+
+{
+    const a = [1, 2];
+    const c = a.insert_array(0, a);
+
+    assert a == c;
+    assert a.size == 4;
+    assert a[0] == 1;
+    assert a[1] == 2;
+    assert a[2] == 1;
+    assert a[3] == 2;
+}
+
+{
+    const a = [1, 2];
+    const c = a.insert_array(void, a);
+
+    assert a == c;
+    assert a.size == 4;
+    assert a[0] == 1;
+    assert a[1] == 2;
+    assert a[2] == 1;
+    assert a[3] == 2;
+}
+
+{
+    const testcases = [
+        { array: [ 1, 2, 3 ], args: [   -4,       []           ], result: [ 1, 2, 3 ]           },
+        { array: [ 1, 2, 3 ], args: [   -3,       []           ], result: [ 1, 2, 3 ]           },
+        { array: [ 1, 2, 3 ], args: [    0,       []           ], result: [ 1, 2, 3 ]           },
+        { array: [ 1, 2, 3 ], args: [    1,       []           ], result: [ 1, 2, 3 ]           },
+        { array: [ 1, 2, 3 ], args: [   -2,       []           ], result: [ 1, 2, 3 ]           },
+        { array: [ 1, 2, 3 ], args: [ void,       []           ], result: [ 1, 2, 3 ]           },
+        { array: [ 1, 2, 3 ], args: [    4,       []           ], result: [ 1, 2, 3 ]           },
+        { array: [ 1, 2, 3 ], args: [ void,    1, []           ], result: [ 2, 3 ]              },
+        { array: [ 1, 2, 3 ], args: [    1,    2, []           ], result: [ 1, 3 ]              },
+        { array: [ 1, 2, 3 ], args: [   -1, void, []           ], result: [ 1, 2 ]              },
+        { array: [ 1, 2, 3 ], args: [ void, void, []           ], result: [ ]                   },
+        { array: [ 1, 2, 3 ], args: [   -4,       [ 'x' ]      ], result: [ 'x', 1, 2, 3 ]      },
+        { array: [ 1, 2, 3 ], args: [   -3,       [ 'x' ]      ], result: [ 'x', 1, 2, 3 ]      },
+        { array: [ 1, 2, 3 ], args: [    0,       [ 'x' ]      ], result: [ 'x', 1, 2, 3 ]      },
+        { array: [ 1, 2, 3 ], args: [    1,       [ 'x' ]      ], result: [ 1, 'x', 2, 3 ]      },
+        { array: [ 1, 2, 3 ], args: [   -1,       [ 'x' ]      ], result: [ 1, 2, 'x', 3 ]      },
+        { array: [ 1, 2, 3 ], args: [ void,       [ 'x' ]      ], result: [ 1, 2, 3, 'x' ]      },
+        { array: [ 1, 2, 3 ], args: [    4,       [ 'x' ]      ], result: [ 1, 2, 3, 'x' ]      },
+        { array: [ 1, 2, 3 ], args: [   -4,    1, [ 'x' ]      ], result: [ 'x', 2, 3 ]         },
+        { array: [ 1, 2, 3 ], args: [ void,    1, [ 'x' ]      ], result: [ 'x', 2, 3 ]         },
+        { array: [ 1, 2, 3 ], args: [   -2,    2, [ 'x' ]      ], result: [ 1, 'x', 3 ]         },
+        { array: [ 1, 2, 3 ], args: [   -1, void, [ 'x' ]      ], result: [ 1, 2, 'x' ]         },
+        { array: [ 1, 2, 3 ], args: [ void,    2, [ 'x' ]      ], result: [ 'x', 3 ]            },
+        { array: [ 1, 2, 3 ], args: [    1, void, [ 'x' ]      ], result: [ 1, 'x' ]            },
+        { array: [ 1, 2, 3 ], args: [ void, void, [ 'x' ]      ], result: [ 'x' ]               },
+        { array: [ 1, 2, 3 ], args: [ void,    0, [ 'x', 'y' ] ], result: [ 'x', 'y', 1, 2, 3 ] },
+        { array: [ 1, 2, 3 ], args: [ void,    1, [ 'x', 'y' ] ], result: [ 'x', 'y', 2, 3 ]    },
+        { array: [ 1, 2, 3 ], args: [   -2,    2, [ 'x', 'y' ] ], result: [ 1, 'x', 'y', 3 ]    },
+        { array: [ 1, 2, 3 ], args: [   -1, void, [ 'x', 'y' ] ], result: [ 1, 2, 'x', 'y' ]    },
+        { array: [ 1, 2, 3 ], args: [   -1, void, [ 'x', 'y' ] ], result: [ 1, 2, 'x', 'y' ]    },
+        { array: [ 1, 2, 3 ], args: [ void,    2, [ 'x', 'y' ] ], result: [ 'x', 'y', 3 ]       },
+        { array: [ 1, 2, 3 ], args: [   -2, void, [ 'x', 'y' ] ], result: [ 1, 'x', 'y' ]       },
+        { array: [ 1, 2, 3 ], args: [ void, void, [ 'x', 'y' ] ], result: [ 'x', 'y' ]          },
+        { array: [ 1, 2, 3 ], args: [    0,       void         ], result: [ 1, 2, 3, 1, 2, 3 ]  },
+        { array: [ 1, 2, 3 ], args: [    1,       void         ], result: [ 1, 1, 2, 3, 2, 3 ]  },
+        { array: [ 1, 2, 3 ], args: [    2,       void         ], result: [ 1, 2, 1, 2, 3, 3 ]  },
+        { array: [ 1, 2, 3 ], args: [ void,       void         ], result: [ 1, 2, 3, 1, 2, 3 ]  },
+        { array: [ 1, 2, 3 ], args: [ void,    1, void         ], result: [ 1, 2, 3, 2, 3 ]     },
+        { array: [ 1, 2, 3 ], args: [    1,    2, void         ], result: [ 1, 1, 2, 3, 3 ]     },
+        { array: [ 1, 2, 3 ], args: [    2, void, void         ], result: [ 1, 2, 1, 2, 3 ]     },
+        { array: [ 1, 2, 3 ], args: [ void,    2, void         ], result: [ 1, 2, 3, 3 ]        },
+        { array: [ 1, 2, 3 ], args: [    1, void, void         ], result: [ 1, 1, 2, 3 ]        },
+        { array: [ 1, 2, 3 ], args: [ void, void, void         ], result: [ 1, 2, 3 ]           },
+    ];
+    for var test in testcases {
+        test.args[-1] = test.args[-1] || test.array;
+        const out = [].insert_array.apply(test.array, test.args);
+        assert out      == test.array;
+        assert out.size == test.result.size;
+        for var i in lang.range(out.size) {
+            assert out[i] == test.result[i];
+        }
+    }
+}
+
+##############################################################################
+# lang.array.prototype.insert
+
+{
+    const a = [];
+
+    a.insert(0, "abc");
+    assert a.size == 3;
+    assert a[0]   == "a";
+    assert a[2]   == "c";
+
+    a.insert(void, new lang.buffer);
+    assert a.size == 3;
+    assert a[0]   == "a";
+    assert a[2]   == "c";
+
+    const buf = new lang.buffer(4);
+    for var i in lang.range(buf.size) {
+        buf[i] = buf.size - i;
+    }
+
+    a.insert(void, buf);
+    assert a.size == 7;
+    assert a[2]   == "c";
+    assert a[3]   == 4;
+    assert a[6]   == 1;
+
+    for var i in lang.range(buf.size) {
+        buf[i] = 10 + i;
+    }
+
+    a[1:-1] = buf;
+    assert a.size == 6;
+    assert a[0]   == "a";
+    assert a[1]   == 10;
+    assert a[2]   == 11;
+    assert a[3]   == 12;
+    assert a[4]   == 13;
+    assert a[5]   == 1;
+}
+
+##############################################################################
+# lang.function
+
+{
+    const f = λ->(void);
+    assert f instanceof lang.function;
+    assert f instanceof lang.object;
+    assert ! (f instanceof lang.integer);
+    assert ! (f instanceof lang.string);
+    assert ! (f instanceof lang.array);
+}
+
+##############################################################################
+# lang.function.prototype.*statistics*
+
+{
+    assert "name"         in lang.function.prototype;
+    assert "registers"    in lang.function.prototype;
+    assert "instructions" in lang.function.prototype;
+    assert "size"         in lang.function.prototype;
+
+    expect_fail(λ->(lang.function.prototype.name));
+    expect_fail(λ->(lang.function.prototype.registers));
+    expect_fail(λ->(lang.function.prototype.instructions));
+    expect_fail(λ->(lang.function.prototype.size));
+
+    fun f { }
+
+    assert f.name         == "f";
+    assert f.registers    == 2;
+    assert f.instructions == 2; # LOAD.VOID, RETURN
+    assert f.size         == 5;
+
+    assert lang.function.name         == "<builtin>";
+    assert lang.function.registers    == 0;
+    assert lang.function.instructions == 0;
+    assert lang.function.size         == 0;
+}
+
+##############################################################################
+# lang.function.prototype.apply
+
+{
+    fun method(arg)
+    {
+        return this + arg;
+    }
+
+    assert method.apply(500, [70]) == 570;
+
+    expect_fail(λ->(method.apply(void, [])));
+    expect_fail(λ->(method.apply(void, void)));
+    expect_fail(λ->(method.apply(void)));
+    expect_fail(λ->(method.apply()));
+}
+
+{
+    fun method
+    {
+        throw "";
+    }
+
+    expect_fail(λ->(method.apply(void, [])));
+}
+
+##############################################################################
+# constructor selection
+
+{
+    fun new_type(type, args...)
+    {
+        return lang[type].apply(void, args);
+    }
+
+    const a = new_type("array", "xy", [2]);
+    assert typeof a == "array";
+    assert a.size   == 3;
+    assert a[0]     == 'x';
+    assert a[1]     == 'y';
+    assert a[2]     == 2;
+
+    const i = new_type("integer");
+    assert typeof i == "integer";
+    assert i        == 0;
+
+    const n = new_type("number", "1.5");
+    assert typeof n == "float";
+    assert n        == 1.5;
+
+    const o = new_type("object");
+    assert typeof o == "object";
+
+    const s = new_type("string", 1, "x", 2);
+    assert typeof s == "string";
+    assert s        == "1x2";
+
+    for var type in ["integer", "float", "string", "boolean", "void", "object", "array"] {
+        assert typeof new_type(type) == type;
+    }
+}
+
+##############################################################################
+# lang.shallow
+
+{
+    const obj  = { a: void, b: void, c: void };
+    const iter = lang.shallow(obj);
+
+    var key = iter();
+    assert key == "a" || key == "b" || key == "c";
+
+    key = iter();
+    assert key == "a" || key == "b" || key == "c";
+
+    key = iter();
+    assert key == "a" || key == "b" || key == "c";
+
+    expect_fail(λ->(iter()));
+}
+
+{
+    expect_fail(λ->(lang.shallow({})()));
+    expect_fail(λ->(lang.shallow([1])()));
+    expect_fail(λ->(lang.shallow(1)()));
+    expect_fail(λ->(lang.shallow("1")()));
+    expect_fail(λ->(lang.shallow(true)()));
+    expect_fail(λ->(lang.shallow(void)()));
+
+    var count = 0;
+    for var n in lang.shallow(λ->(void)) {
+        assert n == "prototype";
+        count += 1;
+    }
+    assert count == 1;
+
+    count = 0;
+    for var n in lang.shallow({xyz:void}) {
+        assert n == "xyz";
+        count += 1;
+    }
+    assert count == 1;
+}
+
+##############################################################################
+# lang.range
+
+{
+    expect_fail(lang.range);
+}
+
+{
+    const iter = lang.range(5);
+    assert iter() == 0;
+    assert iter() == 1;
+    assert iter() == 2;
+    assert iter() == 3;
+    assert iter() == 4;
+    expect_fail(iter);
+}
+
+{
+    const iter = lang.range(6, 9);
+    assert iter() == 6;
+    assert iter() == 7;
+    assert iter() == 8;
+    expect_fail(iter);
+}
+
+{
+    const iter = lang.range(-10, -5);
+    assert iter() == -10;
+    assert iter() == -9;
+    assert iter() == -8;
+    assert iter() == -7;
+    assert iter() == -6;
+    expect_fail(iter);
+}
+
+{
+    const iter = lang.range(10, 5);
+    expect_fail(iter);
+}
+
+{
+    const iter = lang.range(-2, 5, 2);
+    assert iter() == -2;
+    assert iter() == 0;
+    assert iter() == 2;
+    assert iter() == 4;
+    expect_fail(iter);
+}
+
+{
+    const iter = lang.range(10, 0, -3);
+    assert iter() == 10;
+    assert iter() == 7;
+    assert iter() == 4;
+    assert iter() == 1;
+    expect_fail(iter);
+}
+
+##############################################################################
+# lang.map
+
+{
+    var iter = lang.map([], λ->(void));
+    assert typeof iter == "function";
+    expect_fail(iter);
+}
+
+{
+    var iter = lang.map([2, 3, 4], λ(x)->(x*10));
+    assert typeof iter == "function";
+    assert iter()      == 20;
+    assert iter()      == 30;
+    assert iter()      == 40;
+    expect_fail(iter);
+}
+
+{
+    var iter = lang.map(lang.range(1, 3), λ(x)->(x+5));
+    assert typeof iter == "function";
+    assert iter()      == 6;
+    assert iter()      == 7;
+    expect_fail(iter);
+}
+
+{
+    var iter = [1, 2, 3].map(λ(x)->(-x));
+    assert typeof iter == "function";
+    assert iter()      == -1;
+    assert iter()      == -2;
+    assert iter()      == -3;
+    expect_fail(iter);
+}
+
+{
+    var iter = "mno".map(λ(x)->(x+"_"));
+    assert typeof iter == "function";
+    assert iter()      == "m_";
+    assert iter()      == "n_";
+    assert iter()      == "o_";
+    expect_fail(iter);
+}
+
+{
+    var iter = false.map(λ(x)->(!x));
+    assert typeof iter == "function";
+    assert iter()      == true;
+    expect_fail(iter);
+}
+
+##############################################################################
+# lang.filter
+
+{
+    var iter = lang.filter([], λ->(true));
+    expect_fail(iter);
+}
+
+{
+    var iter = lang.filter([1, 2, 3], λ->(false));
+    expect_fail(iter);
+}
+
+{
+    var iter = lang.filter(lang.range(10), λ(x)->(x&1));
+    assert typeof iter == "function";
+    assert iter()      == 1;
+    assert iter()      == 3;
+    assert iter()      == 5;
+    assert iter()      == 7;
+    assert iter()      == 9;
+    expect_fail(iter);
+}
+
+{
+    var iter = [5, 6, 7].filter(λ(x)->(x != 6));
+    assert typeof iter == "function";
+    assert iter()      == 5;
+    assert iter()      == 7;
+    expect_fail(iter);
+}
+
+##############################################################################
+# lang.reduce
+
+{
+    expect_fail(λ->(lang.reduce([], λ(x, y)->(x + y))));
+}
+
+{
+    var result = lang.reduce([10], λ(x, y)->(x + y));
+    assert result == 10;
+}
+
+{
+    var result = lang.reduce([2000, 300, 70, 5], λ(x, y)->(x + y));
+    assert result == 2375;
+}
+
+{
+    # 11th element of Fibonacci series
+    var prev = 0;
+    const result = lang.range(1, 12).reduce(fun(accum) {
+        const y = prev;
+        prev    = accum;
+        return accum + y;
+    });
+    assert result == 89;
+}
+
+{
+    const result = [1, 2, 3, 4].reduce(λ(x, y)->(x+y));
+    assert result == 10;
+}
+
+{
+    const count = [1, 2, 3, 1, 4, 5, 1, 6, 1, 7].reduce(0, λ(x, y)->(x + (y == 1 ? 1 : 0)));
+    assert count == 4;
+}
+
+##############################################################################
+# lang.count
+
+{
+    assert lang.count([],             void) == 0;
+    assert lang.count([1, 2],         ""  ) == 0;
+    assert lang.count(lang.range(10), 4   ) == 1;
+    assert lang.count("abcadefagh",   "a" ) == 3;
+
+    assert "Hello, World!".count("l") == 3;
+
+    assert {x: 8, _test_value: 8, y: 8}.count("_test_value") == 1;
+
+    assert lang.range(100).map(λ(x)->(x/4)).count(11) == 4;
+}
+
+##############################################################################
+# lang.curry
+
+{
+    fun sum_args(values...)
+    {
+        return values.reduce(0, λ(a, b)->(a+b));
+    }
+
+    assert sum_args(1, 2, 4) == 7;
+
+    assert lang.curry(sum_args, 8, 10)(1, 2000) == 2019;
+
+    var obj = {
+        val:  0,
+        add: fun(a, b) {
+            this.val += a + b;
+        }
+    };
+    obj.add100 = lang.curry(obj.add, 100);
+
+    assert obj.val == 0;
+    obj.add(2, 10);
+    assert obj.val == 12;
+    obj.add100(3);
+    assert obj.val == 115;
+}
+
+##############################################################################
+# lang.backtrace
+
+{
+    var line = __line__; var b = lang.backtrace();
+
+    assert b.size        == 1;
+    assert b[0].line     == line;
+    assert b[0].function == "<global>";
+
+    fun fff
+    {
+        line = __line__; b = lang.backtrace();
+    }
+
+    var line2 = __line__; fff();
+
+    assert b.size        == 2;
+    assert b[0].line     == line;
+    assert b[0].function == "fff";
+    assert b[1].line     == line2;
+    assert b[1].function == "<global>";
+}

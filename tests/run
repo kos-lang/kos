@@ -1,0 +1,102 @@
+#!/bin/sh
+
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+set -e
+
+UNAME=$(uname -s)
+
+if [ -z "$JOBS" ]; then
+    case "$UNAME" in
+        Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
+        Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
+        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ; UNAME="Windows" ;;
+        Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
+        *)                                       JOBS=2 ;;
+    esac
+fi
+
+echo "Using $JOBS jobs"
+
+# Parallel tests use this env var to run number of threads proportional to the number of CPUs
+export TEST_CPUS="$JOBS"
+
+runtests()
+{
+    echo "***************************************************************************"
+    local MODE
+    MODE="RELEASE"
+    [ "$CONFIG_DEBUG" = "1" ] && MODE="DEBUG"
+
+    local PRINT_CLANG
+    PRINT_CLANG=$(echo "$1" | tr 'c' 'C')
+
+    local PRINT_CPPLANG
+    PRINT_CPPLANG=$(echo "$2" | tr 'c' 'C')
+
+    local PRINT_LANG
+    if [ "$UNAME" = "Windows" ]; then
+        PRINT_LANG="C and C++"
+        echo "$1" | grep -q "c++" && PRINT_LANG="C++"
+    else
+        PRINT_LANG="$PRINT_CLANG and $PRINT_CPPLANG"
+        [ "$1" = "$2" ] && PRINT_LANG="$PRINT_CLANG"
+    fi
+
+    local WITH_TOOL
+    WITH_TOOL=""
+    [ -n "$CONFIG_TOOL" ] && WITH_TOOL=" with $CONFIG_TOOL"
+    [ -n "$CONFIG_GCOV" ] && WITH_TOOL=" with gcov"
+
+    echo "Testing $MODE as $PRINT_LANG$WITH_TOOL"
+    echo "***************************************************************************"
+
+    rm -rf Out
+    make -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 CONFIG_STRICT=1 --warn-undefined-variables
+}
+
+cd "$(dirname $0)"/..
+
+unset CONFIG_TOOL
+unset CONFIG_GCOV
+export CONFIG_DEBUG=1
+
+runtests c89   c++98
+runtests c++11 c++11
+
+if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>&1)" != "" ]; then
+    export CONFIG_TOOL="valgrind --error-exitcode=1 --track-origins=yes"
+    runtests c99 c++11
+    unset CONFIG_TOOL
+fi
+
+unset CONFIG_DEBUG
+runtests c11 c++11
+
+if [ "$UNAME" != "Windows" -a "$1" = "gcov" ]; then
+    export CONFIG_GCOV=1
+    export CONFIG_DEBUG=1
+    runtests c99 c++11
+    unset CONFIG_GCOV
+    unset CONFIG_DEBUG
+else
+    rm -rf Out
+fi

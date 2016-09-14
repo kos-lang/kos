@@ -1,0 +1,211 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+import lang.print;
+
+fun check(function, registers, instructions, size)
+{
+    fun check(function, value, prop)
+    {
+        const actual = function[prop];
+        if actual != value {
+            print("\(function.name).\(prop) is \(actual), but expected \(value)\n");
+            assert actual <= value;
+        }
+    }
+
+    check(function, registers,    "registers");
+    check(function, instructions, "instructions");
+    check(function, size,         "size");
+}
+
+#============================================================================#
+
+fun sum(a, b, c, d, e)
+{
+    return a + b + c + d + e;
+}
+
+assert sum(1, 2, 3, 4, 5) == 15;
+
+check(sum, 3, 10, 54);
+
+#============================================================================#
+
+fun return_this
+{
+    return this;
+}
+
+assert return_this.apply(123, []) == 123;
+
+check(return_this, 2, 1, 3);
+
+#============================================================================#
+
+fun args_to_array(args...)
+{
+    return args;
+}
+
+{
+    const a = args_to_array(8, void, -1.5);
+    assert typeof a == "array";
+    assert a.size   == 3;
+    assert a[0]     == 8;
+    assert a[1]     == void;
+    assert a[2]     == -1.5;
+}
+
+check(args_to_array, 2, 1, 3);
+
+#============================================================================#
+
+fun return_string
+{
+    return "string";
+}
+
+assert return_string() == "string";
+
+check(return_string, 2, 2, 9);
+
+#============================================================================#
+
+fun times_plus(a, b, c)
+{
+    return a * b + c;
+}
+
+assert times_plus(2, 3, 4) == 10;
+
+check(times_plus, 3, 6, 32);
+
+#============================================================================#
+
+fun plus_times(a, b, c)
+{
+    return a + b * c;
+}
+
+assert plus_times(2, 3, 4) == 14;
+
+check(plus_times, 4, 6, 32);
+
+#============================================================================#
+
+fun find_lowest(array)
+{
+    var lowest = 0x7FFFFFFFFFFFFFFF;
+    for var i in array {
+        if i < lowest {
+            lowest = i;
+        }
+    }
+    return lowest;
+}
+
+assert find_lowest([9, 10, -5, 245, -1000, 9000, -1]) == -1000;
+
+check(find_lowest, 5, 13, 67);
+
+#============================================================================#
+
+fun find_greatest(array)
+{
+    var   greatest = -0x8000000000000000;
+    const size     = array.size;
+    for var i = 0; i < size; i += 1 {
+        const value = array[i];
+        if value > greatest {
+            greatest = value;
+        }
+    }
+    return greatest;
+}
+
+assert find_greatest([-100, 90, -5, 400, 10, 15]) == 400;
+
+check(find_greatest, 8, 18, 86);
+
+#============================================================================#
+
+fun throw_exception(a)
+{
+    try {
+        throw a;
+    }
+    catch const e {
+        return e.value;
+    }
+}
+
+assert throw_exception(5) == 5;
+
+check(throw_exception, 3, 10, 37);
+
+#============================================================================#
+
+fun map_invoke(array, transform)
+{
+    return array.map(transform);
+}
+
+{
+    const iter = map_invoke([1, 7, -5], λ(x)->(x+5));
+    assert iter() == 6;
+    assert iter() == 12;
+    assert iter() == 0;
+}
+
+check(map_invoke, 5, 7, 39);
+
+#============================================================================#
+
+fun map(array, transform)
+{
+    for var elem in array {
+        yield transform(elem);
+    }
+}
+
+{
+    const iter = map([9, -0.5], λ(x)->(x+1));
+    assert iter() == 10;
+    assert iter() == 0.5;
+}
+
+check(map, 6, 16, 72);
+
+#============================================================================#
+
+fun multi_const(x)
+{
+    const multiply = 2 * 3 + 1;
+    const add      = 2 << 2;
+    return x * multiply + add + add;
+}
+
+{
+    assert multi_const(4) == 44;
+}
+
+check(multi_const, 5, 13, 49);

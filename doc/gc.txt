@@ -1,0 +1,60 @@
+Garbage Collector Design
+========================
+
+
+Assumptions
+-----------
+
+* Object space can be represented by a directed graph.  Each object is
+  represented by a node in the graph.  Each reference between two objects is
+  represented by a directed edge.
+
+* Object references are stored as pointers.  Parent nodes reference child
+  nodes, but child nodes do not store any information about their parents.
+
+* There is one or more root nodes, which are directly referenced by the
+  program.
+
+* Mutator is a thread which modifies the graph in the normal course of a
+  program.  A mutator can occasionally become a collector, e.g. when running
+  out of memory.  There may be more than one mutator.  Mutators are running
+  concurrently.
+
+* Mutator performs the following operations on the graph:
+  1. Add new nodes.
+  2. Create new edges.
+  3. Delete edges.
+
+* Collector is a thread which finds and removes nodes, which are unreachable
+  from root nodes.
+
+
+Collector algorithm
+-------------------
+
+1. Paint all nodes white.
+2. Paint root nodes black.
+3. Paint all direct children of root nodes gray.
+4. For all gray nodes, paint their white chidren gray.  Repeat until no gray
+   nodes are left.
+5. Recycle remaining white nodes.
+
+When mutators and collectors are running concurrently, there is a race
+condition between them.  The following activities of mutators must be
+addressed in order to avoid the race condition:
+
+1. Adding new nodes.  New nodes must be colored black.  If they were painted
+   white and were created when a collector is active, the collector could miss
+   any edges created to point to the new nodes and the collector would
+   inadvertently destroy them.  After a new node is created, it has to be
+   quickly referenced by another node to avoid a race.
+
+2. Creating new edges.  Nodes pointed to by the new edged must be colored
+   gray, so the collector will scan them.  There is still a race condition
+   there though when the collector is already past that node in step 4.
+
+3. Deleting edges.  This is straightforward - the only race condition is that
+   when the last reference to a node is destroyed when a collector is in
+   operation, the collector will potentially miss this node and not recycle
+   it.  However, the collector will pick it up for recycling on the next pass.
+

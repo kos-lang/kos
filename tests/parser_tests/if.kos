@@ -1,0 +1,93 @@
+if a {
+    b();
+}
+else if c {
+    d();
+}
+else if e {
+}
+else {
+    f();
+}
+
+@ 0
+
+(scope 1 1
+    (if 1 1 if
+        (identifier 1 4 a)
+        (scope 1 6 {
+            (invocation 2 6 paren_open
+                (identifier 2 5 b)
+        ))
+        (if 4 6 if
+            (identifier 4 9 c)
+            (scope 4 11 {
+                (invocation 5 6 paren_open
+                    (identifier 5 5 d)
+            ))
+            (if 7 6 if
+                (identifier 7 9 e)
+                (scope 7 11 {)
+                (scope 9 6 {
+                    (invocation 10 6 paren_open
+                        (identifier 10 5 f)
+    )))))
+)
+
+@------------------------------------------------------------------------------
+if (a)
+    throw b; # Expected curly brace
+
+@ 10 2 5
+
+@------------------------------------------------------------------------------
+if { a(); } # Colon expected after a
+
+/* Since an RHS expression is expected after the if keyword,
+   the opening curly brace opens an object literal. */
+
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+if (a) {
+    throw b;
+}
+if yield c?d:e {
+    throw f;
+}
+
+@ 0
+
+(scope 1 1
+    (if 1 1 if
+        (identifier 1 5 a)
+        (scope 1 8 {
+            (throw 2 5 throw
+                (identifier 2 11 b)
+    )))
+    (if 4 1 if
+        (yield 4 4 yield
+            (operator 4 11 ?:
+                (identifier 4 10 c)
+                (identifier 4 12 d)
+                (identifier 4 14 e)
+        ))
+        (scope 4 16 {
+            (throw 5 5 throw
+                (identifier 5 11 f)
+    )))
+)
+
+@------------------------------------------------------------------------------
+if (1) != void { }
+
+@ 0
+
+(scope 1 1
+    (if 1 1 if
+        (operator 1 8 !=
+            (number 1 5 1)
+            (void 1 11 void))
+        (scope 1 16 {)
+    )
+)

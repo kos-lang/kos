@@ -1,0 +1,376 @@
+# Function statement, no args, empty body
+fun a{}
+
+# Function statement, 0 args, empty body
+fun c(){}
+
+# Function statement, 1 arg, empty body
+fun e(f){}
+
+# Function statement, 2 args, empty body
+fun i(j,k){}
+
+@ 0
+
+(scope 1 1
+    (assignment 2 1 fun
+        (const 2 1 fun (identifier 2 5 a))
+        (function 2 5 a
+            (parameters 2 6 {)
+            (landmark 2 6 {)
+            (scope 2 6 {)
+            (landmark 2 7 })
+    ))
+    (assignment 5 1 fun
+        (const 5 1 fun (identifier 5 5 c))
+        (function 5 5 c
+            (parameters 5 6 paren_open)
+            (landmark 5 8 {)
+            (scope 5 8 {)
+            (landmark 5 9 })
+    ))
+    (assignment 8 1 fun
+        (const 8 1 fun (identifier 8 5 e))
+        (function 8 5 e
+            (parameters 8 6 paren_open
+                (identifier 8 7 f)
+            )
+            (landmark 8 9 {)
+            (scope 8 9 {)
+            (landmark 8 10 })
+    ))
+    (assignment 11 1 fun
+        (const 11 1 fun (identifier 11 5 i))
+        (function 11 5 i
+            (parameters 11 6 paren_open
+                (identifier 11 7 j)
+                (identifier 11 9 k)
+            )
+            (landmark 11 11 {)
+            (scope 11 11 {)
+            (landmark 11 12 })
+    ))
+)
+
+@------------------------------------------------------------------------------
+# Function literal, no args, empty body
+fun{};
+
+# Function literal, 0 args, empty body
+fun(){};
+
+# Function literal, 1 arg, empty body
+fun(a){};
+
+# Function literal, 2 args, empty body
+fun(c,d){};
+
+@ 0
+
+(scope 1 1
+    (function 2 1 fun
+        (parameters 2 4 {)
+        (landmark 2 4 {)
+        (scope 2 4 {)
+        (landmark 2 5 })
+    )
+    (function 5 1 fun
+        (parameters 5 4 paren_open)
+        (landmark 5 6 {)
+        (scope 5 6 {)
+        (landmark 5 7 })
+    )
+    (function 8 1 fun
+        (parameters 8 4 paren_open
+            (identifier 8 5 a)
+        )
+        (landmark 8 7 {)
+        (scope 8 7 {)
+        (landmark 8 8 })
+    )
+    (function 11 1 fun
+        (parameters 11 4 paren_open
+            (identifier 11 5 c)
+            (identifier 11 7 d)
+        )
+        (landmark 11 9 {)
+        (scope 11 9 {)
+        (landmark 11 10 })
+    )
+)
+
+@------------------------------------------------------------------------------
+# Function literal shorthand, no args
+fun->(0);
+λ->(1);
+
+# Function literal shorthand, 0 args
+fun()->(2);
+λ()->(3);
+
+# Function literal shorthand, 1 args
+fun(a)->(a+4);
+λ(b)->(b?5:6);
+
+# Function literal shorthand, 2 args
+fun(c,d)->(c+d*7);
+λ(e,f)->(e*(f+8));
+
+@ 0
+
+(scope 1 1
+    (function 2 1 fun
+        (parameters 2 4 ->)
+        (landmark 2 6 paren_open)
+        (scope 2 4 ->
+            (return 2 4 ->
+                (number 2 7 0)
+        ))
+        (landmark 2 8 paren_close)
+    )
+    (function 3 1 λ
+        (parameters 3 2 ->)
+        (landmark 3 4 paren_open)
+        (scope 3 2 ->
+            (return 3 2 ->
+                (number 3 5 1)
+        ))
+        (landmark 3 6 paren_close)
+    )
+    (function 6 1 fun
+        (parameters 6 4 paren_open)
+        (landmark 6 8 paren_open)
+        (scope 6 6 ->
+            (return 6 6 ->
+                (number 6 9 2)
+        ))
+        (landmark 6 10 paren_close)
+    )
+    (function 7 1 λ
+        (parameters 7 2 paren_open)
+        (landmark 7 6 paren_open)
+        (scope 7 4 ->
+            (return 7 4 ->
+                (number 7 7 3)
+        ))
+        (landmark 7 8 paren_close)
+    )
+    (function 10 1 fun
+        (parameters 10 4 paren_open
+            (identifier 10 5 a)
+        )
+        (landmark 10 9 paren_open)
+        (scope 10 7 ->
+            (return 10 7 ->
+                (operator 10 11 +
+                    (identifier 10 10 a)
+                    (number 10 12 4)
+        )))
+        (landmark 10 13 paren_close)
+    )
+    (function 11 1 λ
+        (parameters 11 2 paren_open
+            (identifier 11 3 b)
+        )
+        (landmark 11 7 paren_open)
+        (scope 11 5 ->
+            (return 11 5 ->
+                (operator 11 9 ?:
+                    (identifier 11 8 b)
+                    (number 11 10 5)
+                    (number 11 12 6)
+        )))
+        (landmark 11 13 paren_close)
+    )
+    (function 14 1 fun
+        (parameters 14 4 paren_open
+            (identifier 14 5 c)
+            (identifier 14 7 d)
+        )
+        (landmark 14 11 paren_open)
+        (scope 14 9 ->
+            (return 14 9 ->
+                (operator 14 13 +
+                    (identifier 14 12 c)
+                    (operator 14 15 *
+                        (identifier 14 14 d)
+                        (number 14 16 7)
+        ))))
+        (landmark 14 17 paren_close)
+    )
+    (function 15 1 λ
+        (parameters 15 2 paren_open
+            (identifier 15 3 e)
+            (identifier 15 5 f)
+        )
+        (landmark 15 9 paren_open)
+        (scope 15 7 ->
+            (return 15 7 ->
+                (operator 15 11 *
+                    (identifier 15 10 e)
+                    (operator 15 14 +
+                        (identifier 15 13 f)
+                        (number 15 15 8)
+        ))))
+        (landmark 15 17 paren_close)
+    )
+)
+
+@------------------------------------------------------------------------------
+fun Sum(a, b)
+{
+    return a + b;
+}
+
+var c = Sum(1, 2);
+
+@ 0
+
+(scope 1 1
+    (assignment 1 1 fun
+        (const 1 1 fun (identifier 1 5 Sum))
+        (function 1 5 Sum
+            (parameters 1 8 paren_open
+                (identifier 1 9 a)
+                (identifier 1 12 b)
+            )
+            (landmark 2 1 {)
+            (scope 2 1 {
+                (return 3 5 return
+                    (operator 3 14 +
+                        (identifier 3 12 a)
+                        (identifier 3 16 b)
+            )))
+            (landmark 4 1 })
+    ))
+    (assignment 6 7 =
+        (var 6 1 var (identifier 6 5 c))
+        (invocation 6 12 paren_open
+            (identifier 6 9 Sum)
+            (number 6 13 1)
+            (number 6 16 2)
+    ))
+)
+
+@------------------------------------------------------------------------------
+a = fun(b)
+{
+    return b + 1;
+}(2);
+
+c = λ(b)->(b+3)(4);
+
+@ 0
+
+(scope 1 1
+    (assignment 1 3 =
+        (left_hand_side 1 3 = (identifier 1 1 a))
+        (invocation 4 2 paren_open
+            (function 1 5 fun
+                (parameters 1 8 paren_open
+                    (identifier 1 9 b)
+                )
+                (landmark 2 1 {)
+                (scope 2 1 {
+                   (return 3 5 return
+                       (operator 3 14 +
+                           (identifier 3 12 b)
+                           (number 3 16 1)
+                )))
+                (landmark 4 1 })
+            )
+            (number 4 3 2)
+    ))
+    (assignment 6 3 =
+        (left_hand_side 6 3 = (identifier 6 1 c))
+        (invocation 6 16 paren_open
+            (function 6 5 λ
+                (parameters 6 6 paren_open
+                    (identifier 6 7 b)
+                )
+                (landmark 6 11 paren_open)
+                (scope 6 9 ->
+                    (return 6 9 ->
+                        (operator 6 13 +
+                            (identifier 6 12 b)
+                            (number 6 14 3)
+                )))
+                (landmark 6 15 paren_close)
+            )
+            (number 6 17 4)
+    ))
+)
+
+@------------------------------------------------------------------------------
+# Default arguments not supported
+f = fun(a=1, b=2+3*4, c=d?e:typeof "") { };
+
+@ 10 2 10
+
+@------------------------------------------------------------------------------
+# Ellipsis (...)
+fff = fun(a, b, c, d...) {
+    return b(a, c, d[1]);
+};
+
+@ 0
+
+(scope 1 1
+    (assignment 2 5 =
+        (left_hand_side 2 5 = (identifier 2 1 fff))
+        (function 2 7 fun
+            (parameters 2 10 paren_open
+                (identifier 2 11 a)
+                (identifier 2 14 b)
+                (identifier 2 17 c)
+                (ellipsis 2 21 ... (identifier 2 20 d))
+            )
+            (landmark 2 26 {)
+            (scope 2 26 {
+                (return 3 5 return
+                    (invocation 3 13 paren_open
+                        (identifier 3 12 b)
+                        (identifier 3 14 a)
+                        (identifier 3 17 c)
+                        (refinement 3 21 [
+                            (identifier 3 20 d)
+                            (number 3 22 1)
+            ))))
+            (landmark 4 1 })
+)))
+
+@------------------------------------------------------------------------------
+fun a->(0); # Function declaration requires compound statement
+@ 10 1 6
+
+@------------------------------------------------------------------------------
+fun a()->(0); # Function declaration requires compound statement
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+fun a b { } # Missing parentheses
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+fun a ( { } # Missing closing parenthesis
+@ 10 1 9
+
+@------------------------------------------------------------------------------
+fun a (a b) { } # Missing comma
+@ 10 1 10
+
+@------------------------------------------------------------------------------
+fun f(a+b) { } # Need comma, assignment or parenthesis
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+fun f(a..., b) { } # Ellipsis can only be last
+@ 10 1 11
+
+@------------------------------------------------------------------------------
+λ f(a, b) { } # Function declaration requires fun keyword
+@ 10 1 3
+
+@------------------------------------------------------------------------------
+λ(x){return x;}; # Compound function body requires fun keyword
+@ 10 1 5

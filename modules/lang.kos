@@ -1,0 +1,284 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+fun range(first_arg, args...)
+{
+    var start = 0;
+    var stop  = 0;
+    var step  = 1;
+
+    if args.size == 0 {
+        stop = first_arg;
+    }
+    else {
+        start = first_arg;
+        stop  = args[0];
+    }
+
+    if args.size > 1 {
+        step = args[1];
+    }
+
+    if step > 0 {
+        for var i = start; i < stop; i += step {
+            yield i;
+        }
+    }
+    else if step < 0 {
+        for var i = start; i > stop; i += step {
+            yield i;
+        }
+    }
+}
+
+object.prototype.iterator = fun
+{
+    if typeof this == "object" {
+        return deep(this);
+    }
+    else {
+        return fun(value) { yield value; } (this);
+    }
+};
+
+array.prototype.iterator = fun
+{
+    for var i = 0; i < this.size; i += 1 {
+        yield this[i];
+    }
+};
+
+string.prototype.iterator = array.prototype.iterator;
+
+buffer.prototype.iterator = array.prototype.iterator;
+
+function.prototype.iterator = λ->(this);
+
+array.prototype.insert = fun(first_arg, second_arg, args...)
+{
+    var begin    = first_arg;
+    var end      = begin;
+    var iterable = void;
+
+    if args.size == 0 {
+        iterable = second_arg;
+        if end == void {
+            begin = this.size;
+        }
+    }
+    else {
+        end      = second_arg;
+        iterable = args[0];
+    }
+
+    if typeof iterable == "array" {
+        return this.insert_array(begin, end, iterable);
+    }
+    else {
+        const size = this.size;
+        if begin == void {
+            begin = 0;
+        }
+        if end == void {
+            end = size;
+        }
+        if begin < 0 {
+            begin += size;
+        }
+        if end < 0 {
+            end += size;
+        }
+        if begin < 0 {
+            begin = 0;
+        }
+        if end > size {
+            end = size;
+        }
+        if end < begin {
+            end = begin;
+        }
+
+        const iterator = iterable.iterator();
+
+        if begin < end {
+            for var value in iterator {
+                this[begin] = value;
+                begin += 1;
+                if begin >= end {
+                    break;
+                }
+            }
+        }
+
+        return this.insert_array(begin, end, new array(iterator));
+    }
+};
+
+buffer.prototype.insert = fun(first_arg, second_arg, args...)
+{
+    var   begin    = first_arg;
+    var   end      = begin;
+    var   iterable = void;
+    const size     = this.size;
+
+    if args.size == 0 {
+        iterable = second_arg;
+        if end == void {
+            begin = size;
+        }
+    }
+    else {
+        end      = second_arg;
+        iterable = args[0];
+    }
+
+    if begin == void {
+        begin = 0;
+    }
+    if end == void {
+        end = size;
+    }
+    if begin < 0 {
+        begin += size;
+    }
+    if end < 0 {
+        end += size;
+    }
+    if begin < 0 {
+        begin = 0;
+    }
+    if end > size {
+        end = size;
+    }
+    if end < begin {
+        end = begin;
+    }
+
+    if typeof iterable != "buffer" {
+        iterable = new buffer(iterable.iterator());
+    }
+
+    const new_size = this.size + iterable.size + begin - end;
+    if new_size > size {
+        this.resize(new_size);
+    }
+    if end < size {
+        this.copy_buffer(begin + iterable.size, this, end);
+    }
+    if new_size < size {
+        this.resize(new_size);
+    }
+
+    if iterable.size {
+        return this.copy_buffer(begin, iterable);
+    }
+    else {
+        return this;
+    }
+};
+
+fun map(first_arg, second_arg)
+{
+    const source    = first_arg;
+    const transform = second_arg;
+    for var elem in source {
+        yield transform(elem);
+    }
+}
+
+fun filter(first_arg, second_arg)
+{
+    const source    = first_arg;
+    const condition = second_arg;
+    for var elem in source {
+        if condition(elem) {
+            yield elem;
+        }
+    }
+}
+
+fun reduce(first_arg, second_arg, args...)
+{
+    const source    = first_arg.iterator();
+    const have_init = args.size > 0;
+    const transform = have_init ? args[0]    : second_arg;
+    var   accum     = have_init ? second_arg : source();
+    for var elem in source {
+        accum = transform(accum, elem);
+    }
+    return accum;
+}
+
+fun count(source, second_arg)
+{
+    const value = second_arg;
+    var   count = 0;
+    for var elem in source {
+        if elem == value {
+            count += 1;
+        }
+    }
+    return count;
+}
+
+object.prototype.map = fun(transform)
+{
+    return map(this, transform);
+};
+
+object.prototype.filter = fun(transform)
+{
+    return filter(this, transform);
+};
+
+object.prototype.reduce = fun(first_arg, args...)
+{
+    if args.size > 0 {
+        return reduce(this, first_arg, args[0]);
+    }
+    else {
+        return reduce(this, first_arg);
+    }
+};
+
+object.prototype.count = fun(transform)
+{
+    return count(this, transform);
+};
+
+fun curry(function, args...)
+{
+    return fun(myargs...) {
+        return function.apply(this, array(args, myargs));
+    };
+}
+
+# TODO move to debug module
+fun backtrace
+{
+    try {
+        throw void;
+    }
+    catch const e {
+        return e.backtrace[1:];
+    }
+}

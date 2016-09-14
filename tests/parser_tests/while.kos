@@ -1,0 +1,69 @@
+while a == b || c
+{
+    d();
+}
+
+while (yield f())
+{
+    g();
+}
+
+@ 0
+
+(scope 1 1
+    (while 1 1 while
+        (operator 1 14 ||
+            (operator 1 9 ==
+                (identifier 1 7 a)
+                (identifier 1 12 b)
+            )
+            (identifier 1 17 c)
+        )
+        (scope 2 1 {
+            (invocation 3 6 paren_open (identifier 3 5 d))
+    ))
+    (while 6 1 while
+        (yield 6 8 yield
+            (invocation 6 15 paren_open (identifier 6 14 f))
+        )
+        (scope 7 1 {
+            (invocation 8 6 paren_open (identifier 8 5 g))
+    ))
+)
+
+@------------------------------------------------------------------------------
+while true {}
+while (false) {}
+
+@ 0
+
+(scope 1 1
+    (while 1 1 while
+        (bool 1 7 true)
+        (scope 1 12 {)
+    )
+    (while 2 1 while
+        (bool 2 8 false)
+        (scope 2 15 {)
+    )
+)
+
+@------------------------------------------------------------------------------
+while 1; # Curly brace expected
+
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+while (1) a(); # Curly brace expected
+
+@ 10 1 11
+
+@------------------------------------------------------------------------------
+while a = 1 { } # Curly brace expected
+
+@ 10 1 9
+
+@------------------------------------------------------------------------------
+while const a = 1 { } # Expression expected
+
+@ 10 1 7

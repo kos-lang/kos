@@ -1,0 +1,253 @@
+#
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+fun expect_fail(function)
+{
+    var failed = false;
+    try {
+        function();
+    }
+    catch const e {
+        failed = true;
+    }
+    assert failed;
+}
+
+expect_fail(λ->({}[""]));
+
+{
+    const a = {};
+    a[""] = 1;
+    assert a[""] == 1;
+}
+
+{
+    const a = {};
+    a.x = 0;
+    assert a.x == 0;
+}
+
+{
+    const a = { x: 1, y: 2 };
+    assert a.x == 1;
+    assert a.x == a["x"];
+    const yy = "y";
+    assert a[yy] == 2;
+    assert a.y == a["y"];
+    a["x"];
+}
+
+{
+    var a = { aa: 11, bb: 22 };
+    assert delete a.x == void;
+    assert a.aa == 11;
+    assert a.bb == 22;
+
+    assert delete a.bb == void;
+    assert a.aa == 11;
+    expect_fail(λ->(a.bb));
+
+    const aa = "aa";
+    assert delete a[aa] == void;
+    expect_fail(λ->(a.aa));
+}
+
+{
+    const o = {
+        "orange" : 0,
+        lemon    : 1,
+        "apple"  : 2,
+        pear     : 3,
+        "melon"  : 4,
+        peach    : 5
+    };
+
+    assert o.orange   == 0;
+    assert o["lemon"] == 1;
+    assert o.apple    == 2;
+    assert o["pear"]  == 3;
+    assert o.melon    == 4;
+    assert o["peach"] == 5;
+}
+
+{
+    fun constr
+    {
+        this.b = "b";
+    }
+
+    constr.prototype = { a: "a" };
+
+    const obj = new constr;
+    assert obj instanceof constr;
+    assert obj.a == "a";
+    assert obj.b == "b";
+
+    delete obj.a;
+    assert obj.a == "a";
+
+    obj.a = "x";
+    assert obj.a == "x";
+
+    delete obj.a;
+    assert obj.a == "a";
+
+    assert obj.b == "b";
+    delete obj.b;
+    expect_fail(λ->(obj.b));
+}
+
+{
+    fun constr(a)
+    {
+        this.a = a + 1;
+    }
+
+    expect_fail(λ->(new constr));
+
+    const obj = new constr(8);
+
+    assert obj.a == 9;
+}
+
+{
+    var obj = fun { this.a = 123; };
+    obj = new obj;
+    assert typeof obj == "object";
+    assert obj.a      == 123;
+}
+
+{
+    fun constr(a)
+    {
+        this.a = a + 2;
+    }
+
+    var obj = 10;
+    obj = new constr(obj);
+    assert typeof obj == "object";
+    assert obj.a      == 12;
+}
+
+{
+    const base = [void, void, void];
+
+    fun constr(a)
+    {
+        this.a = a * 2;
+    }
+
+    constr.prototype = base;
+
+    const obj = new constr(5);
+    assert obj instanceof constr;
+
+    assert obj.a == 10;
+    expect_fail(λ->(obj[0]));
+    expect_fail(λ->(obj.length));
+}
+
+{
+    const obj = {};
+    assert ! ("xyz" in obj);
+    obj.xyz = void;
+    assert "xyz" in obj;
+}
+
+{
+    const obj   = {};
+    const prop  = "xyz";
+    const value = 123;
+    assert ! (prop in obj);
+    obj[prop] = value;
+    assert prop in obj;
+    assert prop  == "xyz";
+    assert value == 123;
+}
+
+{
+    fun constr1(a)
+    {
+        this.a = a;
+    }
+
+    fun constr2
+    {
+        this.a = void;
+    }
+
+    const obj   = new constr1(42);
+    const other = { a: 42 };
+
+    assert obj != other;
+
+    assert obj instanceof constr1;
+    assert ! (other instanceof constr1);
+    assert ! (obj instanceof constr2);
+
+    assert obj.a   == 42;
+    assert other.a == 42;
+
+    constr1.prototype = {};
+
+    assert ! (obj instanceof constr1);
+}
+
+{
+    fun constr
+    {
+        this.c = 2;
+        this.d = 3;
+        this.e = 4;
+    }
+
+    constr.prototype.a = 0;
+    constr.prototype.b = 1;
+
+    const obj = new constr;
+
+    const values = ['a', 'b', 'c', 'd', 'e'];
+
+    for var key in obj {
+        const value = obj[key];
+        if typeof value == "integer" && value >= 0 && value < values.size {
+            assert values[value] == key;
+            values[value] = void;
+        }
+    }
+
+    for var i = 0; i < values.size; i += 1 {
+        assert values[i] == void;
+    }
+}
+
+{
+    fun get_constr
+    {
+        return fun { };
+    }
+
+    const o1 = new (get_constr())();
+    const o2 = new (get_constr())();
+
+    assert o1 instanceof get_constr();
+    assert o2 instanceof get_constr();
+}

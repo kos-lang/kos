@@ -1,0 +1,144 @@
+#!/bin/sh
+
+# Copyright (c) 2014-2016 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+set -e
+
+VERBOSE=""
+if [ "$1" = "-verbose" ]; then
+    VERBOSE="1"
+    shift
+fi
+
+if [ $# -ne 2 ]; then
+    echo "$0: Invalid arguments"
+    exit 1
+fi
+
+KOS="$1"
+DIR="$2/module_loading"
+
+rm -rf "$DIR"
+mkdir -p "$DIR"
+export KOSPATH="$DIR"
+
+kos()
+{
+    if [ -n "$VERBOSE" ]; then
+        echo "% $KOS" "$@"
+        "$KOS" "$@"
+    else
+        "$KOS" "$@" > /dev/null 2>&1
+    fi
+}
+
+note()
+{
+    if [ -n "$VERBOSE" ]; then
+        echo
+        echo --"$@"--
+    fi
+}
+
+note "test 1"
+if kos; then
+    echo "Failed: Interpreter exited successfuly without any modules"
+    exit 1
+fi
+
+note "test 2"
+if kos nomodule; then
+    echo "Failed: Interpreter exited successfuly with a non-existent module"
+    exit 1
+fi
+
+note "test 3"
+touch "$DIR/zero"
+if kos "$DIR/zero"; then
+    echo "Failed: Interpreter exited successfuly even if module lang is missing"
+    exit 1
+fi
+
+note "test 4"
+touch "$DIR/lang.kos"
+if ! kos "$DIR/lang.kos"; then
+    echo "Failed: Interpreter failed to load module lang"
+    exit 1
+fi
+
+note "test 5"
+if ! kos "$DIR/zero"; then
+    echo "Failed: Interpreter failed to load an empty module"
+    exit 1
+fi
+
+note "test 6"
+echo "import nomodule;" > "$DIR/nomodule.kos"
+if kos "$DIR/nomodule.kos"; then
+    echo "Failed: Interpreter exited successfuly even if module loads itself"
+    exit 1
+fi
+
+note "test 7"
+echo "import nonexistent;" > "$DIR/nomodule.kos"
+if kos "$DIR/nomodule.kos"; then
+    echo "Failed: Interpreter exited successfuly even if non existent module was imported"
+    exit 1
+fi
+
+note "test 8"
+echo "import zero;" >> "$DIR/nomodule.kos"
+if kos "$DIR/nomodule.kos"; then
+    echo "Failed: Interpreter exited successfuly even if imported module file is missing extension"
+    exit 1
+fi
+
+note "test 9"
+echo ""              >  "$DIR/empty.kos"
+echo "import empty;" >  "$DIR/twice.kos"
+echo "import empty;" >> "$DIR/twice.kos"
+if ! kos "$DIR/twice.kos"; then
+    echo "Failed: Interpreter failed when the same module was imported twice"
+    exit 1
+fi
+
+note "test 10"
+echo "import second;" > "$DIR/first.kos"
+echo "import third;"  > "$DIR/second.kos"
+echo "import first;"  > "$DIR/third.kos"
+if kos "$DIR/first.kos"; then
+    echo "Failed: Interpreter failed to detect a circular dependency"
+    exit 1
+fi
+
+note "test 11"
+echo "import first;" > "$DIR/lang.kos"
+if kos "$DIR/zero"; then
+    echo "Failed: Interpreter failed to detect a circular dependency"
+    exit 1
+fi
+
+note "test 12"
+echo "import empty;" > "$DIR/lang.kos"
+if ! kos "$DIR/zero"; then
+    echo "Failed: Interpreter failed to load empty module from lang"
+    exit 1
+fi
