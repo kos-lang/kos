@@ -3,13 +3,19 @@ language: cpp
 matrix:
     include:
         - os: linux
-          env: COMPILER_NAME=gcc CXX=g++-5 CC=gcc-5
+          compiler: gcc
+
+          # gcc 5
           addons:
               apt:
                   sources:
-                        - ubuntu-toolchain-r-test
+                      - ubuntu-toolchain-r-test
                   packages:
-                        - g++-5
+                      - g++-5
+          install:
+              - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
+
+          # coveralls.io
           before_install:
               - pip install --user cpp-coveralls
           after_success:
