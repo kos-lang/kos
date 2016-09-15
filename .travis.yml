@@ -20,7 +20,7 @@ matrix:
                     description: "Build submitted via Travis CI"
                 notification_email: chris@chris.dragan.name
                 build_command_prepend: "rm -rf Out"
-                build_command: "make -j $(grep -c ^processor /proc/cpuinfo)"
+                build_command: "make -j $(grep -c ^processor /proc/cpuinfo) CXX=c++ CC=cc"
                 branch_pattern: coverity_scan
         install:
           - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5" GCOV="gcov-5"; fi
