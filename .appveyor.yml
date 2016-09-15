@@ -11,5 +11,6 @@ build_script:
   - cmd: sh -c set
   - cmd: sh -c tests/run
 
-except:
-  - coverity_scan
+branches:
+    except:
+      - coverity_scan
