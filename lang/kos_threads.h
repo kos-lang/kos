@@ -30,6 +30,11 @@
 #define __STDC_NO_ATOMICS__
 #endif
 
+/* WAR bug in clang 6.0 */
+#if defined(__clang__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !__has_include(<stdatomic.h>)
+#define __STDC_NO_ATOMICS__
+#endif
+
 /*==========================================================================*/
 /* <atomic>                                                                 */
 /*==========================================================================*/
