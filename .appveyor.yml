@@ -1,0 +1,11 @@
+platform:
+  - x86
+# - x64
+
+install:
+  - ps: $env:PATH = 'C:\MinGW\bin;C:\MinGW\mingw32\bin;C:\MinGW\msys\1.0\bin;' + $env:PATH
+  - cmd: copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
+
+build_script:
+  - cmd: sh -c set
+  - cmd: sh -c tests/run

@@ -2,28 +2,28 @@ language: cpp
 
 matrix:
     include:
-        - os: linux
-          compiler: gcc
+      - os: linux
+        compiler: gcc
 
-          # gcc 5
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                  packages:
-                      - g++-5
-                      - valgrind
-          install:
-              - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5" GCOV="gcov-5"; fi
+        # add gcc 5 and valgrind
+        addons:
+            apt:
+                sources:
+                  - ubuntu-toolchain-r-test
+                packages:
+                  - g++-5
+                  - valgrind
+        install:
+          - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5" GCOV="gcov-5"; fi
 
-          # coveralls.io
-          before_install:
-              - pip install --user cpp-coveralls
-          after_success:
-              - coveralls --exclude lib --exclude tests --no-gcov
+        # coveralls.io
+        before_install:
+          - pip install --user cpp-coveralls
+        after_success:
+          - coveralls --exclude lib --exclude tests --no-gcov
 
-        - os: osx
-          compiler: clang
+      - os: osx
+        compiler: clang
 
 script:
-    - tests/run gcov
+  - tests/run gcov
