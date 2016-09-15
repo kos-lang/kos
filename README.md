@@ -1,7 +1,7 @@
 The Kos Programming Language
 ============================
 
-Kos is a general purpose scripting language with the design following goals:
+Kos is a general purpose scripting language with the following design goals:
 
 * Easy to learn and easy to use.
 
