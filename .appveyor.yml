@@ -1,8 +1,9 @@
 platform:
   - x86
-# - x64
+  - x64
 
 install:
+  - cmd: call "%VSSDK140INSTALL%..\VC\vcvarsall.bat" "%PLATFORM%"
   - ps: $env:PATH = 'C:\MinGW\bin;C:\MinGW\mingw32\bin;C:\MinGW\msys\1.0\bin;' + $env:PATH
   - cmd: copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
 
