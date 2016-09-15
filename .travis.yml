@@ -27,3 +27,20 @@ matrix:
 
 script:
   - tests/run gcov
+
+# Coverity
+env:
+    global:
+      - secure: "NQYyTds2bcp3VLb2mY8QAr+u04KUdgq00Ju+tEOk0z7tuztSLyv+kVXL3W59j4oxrrFwWSBqELgTp/ybj+WEwmJ7y9u/cA0gbiTJB/LpreP9PoxSK/zlpzsTLRFr6SzXpxoUpsKfmP7C2b08tnqb89PX5tU/sU4ooEkGCtXc/jZ7Fnu3MIv7sDrmOEAVpcDE5iCQOKxxVailuP1GglgZwcOjRfclmCdISyRjxOVXuWsar1AXiB5klMm1sUISY/UJm4NUnjkwkKLVW0+t46dYzvmOZIdvDaAnvIeXoVoaQw3s6BxYmbk9QqvigFK3RU72reshvxtuQFM0dmozOffx1vlTHFsXU2gGvGhBUO7toFc9hnFyiyumAlNnOmPcCq/ilz0NPJjHkcV0Xsf/XGlFLHpNYXpZ/nlGlO5jAQI3YQ8qVk/jOJYF4fqupH96faQZnsjpJ6u0cIMd1xBZ/nPm0HYrK7aub1mZcKtOlTpgATBqyjrBLxophm0sVa7JRdIKevndMijzNLHXSQaj+je+pNHsxql6HCvEFBaq9x4OOZVyFaWDbVdJoslP3e88SaL2hZRV1Qh6xZcM86sB2SMcDjpq5LmF9ydiJcg/Mhxkz+9/miUR82lPG4P3V/dmIKJz4oJbPy+G0F0zST0Zl/nxzcRJry500wcsSfs1aVOwIkg="
+      - coverity_scan_run_condition='"$CC" = gcc -a "$TRAVIS_OS_NAME" != osx'
+before_install:
+  - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+addons:
+    coverity_scan:
+        project:
+            name: "kos-lang/kos"
+            description: "Build submitted via Travis CI"
+        notification_email: chris@chris.dragan.name
+        build_command_prepend: "rm -rf Out"
+        build_command: "make -j $(grep -c ^processor /proc/cpuinfo)"
+        branch_pattern: coverity_scan
