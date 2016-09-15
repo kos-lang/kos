@@ -84,7 +84,13 @@ runtests c++11 c++11
 
 if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>&1)" != "" ]; then
     export CONFIG_TOOL="valgrind --error-exitcode=1 --track-origins=yes"
-    runtests c99 c++11
+
+    # Limit number of jobs to reduce memory pressure
+    VALGRIND_JOBS=$JOBS
+    [ $VALGRIND_JOBS -gt 8 ] && VALGRIND_JOBS=8
+
+    JOBS=$VALGRIND_JOBS runtests c99 c++11
+
     unset CONFIG_TOOL
 fi
 
