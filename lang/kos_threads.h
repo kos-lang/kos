@@ -27,12 +27,14 @@
 
 /* WAR bug in gcc 4.8 */
 #if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ == 8 && !defined(__cplusplus) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-#define __STDC_NO_ATOMICS__
+#   define __STDC_NO_ATOMICS__
 #endif
 
 /* WAR bug in clang 6.0 */
-#if defined(__clang__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !__has_include(<stdatomic.h>)
-#define __STDC_NO_ATOMICS__
+#if defined(__clang__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#   if !__has_include(<stdatomic.h>)
+#       define __STDC_NO_ATOMICS__
+#   endif
 #endif
 
 /*==========================================================================*/

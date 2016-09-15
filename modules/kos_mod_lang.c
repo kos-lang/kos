@@ -962,7 +962,7 @@ static int _pack_format_skip_spaces(KOS_CONTEXT *ctx,
         return KOS_SUCCESS;
 
     do
-        c = KOS_string_get_char_code(ctx, fmt_str, i++);
+        c = KOS_string_get_char_code(ctx, fmt_str, (int)i++);
     while (i < size && _is_whitespace(c));
 
     if (c != ~0U)
@@ -984,7 +984,7 @@ static unsigned _pack_format_get_count(KOS_CONTEXT *ctx,
 
     assert(i < size);
 
-    c = KOS_string_get_char_code(ctx, fmt_str, i++);
+    c = KOS_string_get_char_code(ctx, fmt_str, (int)i++);
 
     assert(c >= '0' && c <= '9');
 
@@ -992,7 +992,7 @@ static unsigned _pack_format_get_count(KOS_CONTEXT *ctx,
 
     while (i < size) {
 
-        c = KOS_string_get_char_code(ctx, fmt_str, i++);
+        c = KOS_string_get_char_code(ctx, fmt_str, (int)i++);
 
         if (c == ~0U) {
             count = ~0U;
@@ -1032,7 +1032,7 @@ static int _process_pack_format(KOS_CONTEXT             *ctx,
         if (i_fmt >= fmt_size)
             break;
 
-        c = KOS_string_get_char_code(ctx, fmt_str, i_fmt++);
+        c = KOS_string_get_char_code(ctx, fmt_str, (int)i_fmt++);
         if (c == ~0U)
             TRY(KOS_ERROR_EXCEPTION);
 
@@ -1050,7 +1050,7 @@ static int _process_pack_format(KOS_CONTEXT             *ctx,
                 TRY(KOS_ERROR_EXCEPTION);
             }
 
-            c = KOS_string_get_char_code(ctx, fmt_str, i_fmt++);
+            c = KOS_string_get_char_code(ctx, fmt_str, (int)i_fmt++);
             if (c == ~0U)
                 TRY(KOS_ERROR_EXCEPTION);
         }
@@ -1079,7 +1079,7 @@ static int _process_pack_format(KOS_CONTEXT             *ctx,
             case 's': {
                 unsigned next_c;
                 TRY(_pack_format_skip_spaces(ctx, fmt_str, &i_fmt));
-                next_c = (i_fmt < fmt_size) ? KOS_string_get_char_code(ctx, fmt_str, i_fmt) : ~0U;
+                next_c = (i_fmt < fmt_size) ? KOS_string_get_char_code(ctx, fmt_str, (int)i_fmt) : ~0U;
                 if (next_c >= '0' && next_c <= '9') {
                     size = _pack_format_get_count(ctx, fmt_str, &i_fmt);
                 }
@@ -1213,7 +1213,7 @@ static int _pack_format(KOS_CONTEXT             *ctx,
                 }
 
                 if (IS_SMALL_INT(value_obj))
-                    value = GET_SMALL_INT(value_obj);
+                    value = (double)GET_SMALL_INT(value_obj);
                 else if (GET_OBJ_TYPE(value_obj) == OBJ_INTEGER)
                     value = (double)OBJPTR(KOS_INTEGER, value_obj)->number;
                 else
@@ -1290,7 +1290,7 @@ static int _pack_format(KOS_CONTEXT             *ctx,
 
                 TRY(KOS_string_to_cstr_vec(ctx, value_obj, &str_buf));
 
-                copy_size = size > str_buf.size ? str_buf.size : size;
+                copy_size = size > str_buf.size ? (uint32_t)str_buf.size : size;
 
                 if (copy_size)
                     memcpy(dst, str_buf.buffer, copy_size);
