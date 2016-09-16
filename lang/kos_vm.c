@@ -710,10 +710,14 @@ static int _prepare_call(KOS_CONTEXT       *ctx,
 
                 assert(r < KOS_get_array_size(new_stack_frame->registers));
 
-                if (num_args)
-                    gen_regs[r] = KOS_array_read(ctx, args_obj, 0);
-                else
-                    gen_regs[r] = KOS_VOID;
+                assert(gen_regs);
+
+                if (gen_regs) {
+                    if (num_args)
+                        gen_regs[r] = KOS_array_read(ctx, args_obj, 0);
+                    else
+                        gen_regs[r] = KOS_VOID;
+                }
             }
 
             /* TODO perform CAS for thread safety */
@@ -737,8 +741,8 @@ static int _prepare_call(KOS_CONTEXT       *ctx,
 
         default:
             assert(0);
-            TRY(KOS_ERROR_INTERNAL);
-            break;
+            error = KOS_ERROR_INTERNAL;
+            goto _error;
     }
 
 _error:

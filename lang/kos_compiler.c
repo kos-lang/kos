@@ -1282,35 +1282,38 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
                program->addr2line_gen_buf.buffer + addr2line_start_offs,
                a2l_size);
 
-        _KOS_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs);
+        error = _KOS_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs);
 
-        /* Update addr2line offsets for this function */
-        {
-            struct _KOS_COMP_ADDR_TO_LINE *ptr =
-                (struct _KOS_COMP_ADDR_TO_LINE *)
-                    (program->addr2line_buf.buffer + a2l_new_offs);
-            struct _KOS_COMP_ADDR_TO_LINE *const end =
-                (struct _KOS_COMP_ADDR_TO_LINE *)
-                    (program->addr2line_buf.buffer + program->addr2line_buf.size);
+        if ( ! error) {
 
-            const uint32_t delta = (uint32_t)(fun_new_offs - fun_start_offs);
+            /* Update addr2line offsets for this function */
+            {
+                struct _KOS_COMP_ADDR_TO_LINE *ptr =
+                    (struct _KOS_COMP_ADDR_TO_LINE *)
+                        (program->addr2line_buf.buffer + a2l_new_offs);
+                struct _KOS_COMP_ADDR_TO_LINE *const end =
+                    (struct _KOS_COMP_ADDR_TO_LINE *)
+                        (program->addr2line_buf.buffer + program->addr2line_buf.size);
 
-            for ( ; ptr < end; ptr++)
-                ptr->offs += delta;
-        }
+                const uint32_t delta = (uint32_t)(fun_new_offs - fun_start_offs);
 
-        {
-            struct _KOS_VECTOR *buf = &program->addr2func_buf;
+                for ( ; ptr < end; ptr++)
+                    ptr->offs += delta;
+            }
 
-            struct _KOS_COMP_ADDR_TO_FUNC *ptr =
-                (struct _KOS_COMP_ADDR_TO_FUNC *)
-                    (buf->buffer + buf->size - sizeof(struct _KOS_COMP_ADDR_TO_FUNC));
+            {
+                struct _KOS_VECTOR *buf = &program->addr2func_buf;
 
-            ptr->offs      = (uint32_t)fun_new_offs;
-            ptr->line      = program->cur_frame->fun_token->pos.line;
-            ptr->str_idx   = (uint32_t)str_idx;
-            ptr->num_instr = program->cur_frame->num_instr;
-            ptr->code_size = (uint32_t)fun_size;
+                struct _KOS_COMP_ADDR_TO_FUNC *ptr =
+                    (struct _KOS_COMP_ADDR_TO_FUNC *)
+                        (buf->buffer + buf->size - sizeof(struct _KOS_COMP_ADDR_TO_FUNC));
+
+                ptr->offs      = (uint32_t)fun_new_offs;
+                ptr->line      = program->cur_frame->fun_token->pos.line;
+                ptr->str_idx   = (uint32_t)str_idx;
+                ptr->num_instr = program->cur_frame->num_instr;
+                ptr->code_size = (uint32_t)fun_size;
+            }
         }
     }
 
@@ -1360,40 +1363,43 @@ static int _insert_global_frame(struct _KOS_COMP_UNIT *program)
 
         error = _KOS_red_black_walk(program->scopes, _fix_frame_offsets, (void *)&global_scope_size);
 
-        /* Update addr2line offsets for functions */
-        {
-            struct _KOS_COMP_ADDR_TO_LINE *ptr =
-                (struct _KOS_COMP_ADDR_TO_LINE *)
-                    program->addr2line_buf.buffer;
-            struct _KOS_COMP_ADDR_TO_LINE *end =
-                (struct _KOS_COMP_ADDR_TO_LINE *)
-                    (program->addr2line_buf.buffer + program->addr2line_buf.size);
+        if ( ! error) {
 
-            for ( ; ptr < end; ptr++)
-                ptr->offs += (uint32_t)global_scope_size;
+            /* Update addr2line offsets for functions */
+            {
+                struct _KOS_COMP_ADDR_TO_LINE *ptr =
+                    (struct _KOS_COMP_ADDR_TO_LINE *)
+                        program->addr2line_buf.buffer;
+                struct _KOS_COMP_ADDR_TO_LINE *end =
+                    (struct _KOS_COMP_ADDR_TO_LINE *)
+                        (program->addr2line_buf.buffer + program->addr2line_buf.size);
+
+                for ( ; ptr < end; ptr++)
+                    ptr->offs += (uint32_t)global_scope_size;
+            }
+
+            {
+                struct _KOS_COMP_ADDR_TO_FUNC *ptr =
+                    (struct _KOS_COMP_ADDR_TO_FUNC *)
+                        program->addr2func_buf.buffer;
+                struct _KOS_COMP_ADDR_TO_FUNC *end =
+                    (struct _KOS_COMP_ADDR_TO_FUNC *)
+                        (program->addr2func_buf.buffer + program->addr2func_buf.size);
+
+                for ( ; ptr < end; ptr++)
+                    ptr->offs += (uint32_t)global_scope_size;
+            }
+
+            memmove(program->addr2line_buf.buffer + program->addr2line_gen_buf.size,
+                    program->addr2line_buf.buffer,
+                    funcs_a2l_size);
+
+            memcpy(program->addr2line_buf.buffer,
+                   program->addr2line_gen_buf.buffer,
+                   program->addr2line_gen_buf.size);
+
+            error = _KOS_vector_resize(&program->addr2line_gen_buf, 0);
         }
-
-        {
-            struct _KOS_COMP_ADDR_TO_FUNC *ptr =
-                (struct _KOS_COMP_ADDR_TO_FUNC *)
-                    program->addr2func_buf.buffer;
-            struct _KOS_COMP_ADDR_TO_FUNC *end =
-                (struct _KOS_COMP_ADDR_TO_FUNC *)
-                    (program->addr2func_buf.buffer + program->addr2func_buf.size);
-
-            for ( ; ptr < end; ptr++)
-                ptr->offs += (uint32_t)global_scope_size;
-        }
-
-        memmove(program->addr2line_buf.buffer + program->addr2line_gen_buf.size,
-                program->addr2line_buf.buffer,
-                funcs_a2l_size);
-
-        memcpy(program->addr2line_buf.buffer,
-               program->addr2line_gen_buf.buffer,
-               program->addr2line_gen_buf.size);
-
-        _KOS_vector_resize(&program->addr2line_gen_buf, 0);
     }
 
     return error;
@@ -2231,8 +2237,8 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
                 default:
                     program->error_token = &node->children->token;
                     program->error_str   = str_err_invalid_case;
-                    TRY(KOS_ERROR_COMPILE_FAILED);
-                    break;
+                    error = KOS_ERROR_COMPILE_FAILED;
+                    goto _error;
             }
 
             /* TODO ensure unique */
@@ -3312,9 +3318,9 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
     assert(reg1);
 
     node = node->next;
-    if (node) {
+    if (operands == 2) {
 
-        assert(operands == 2);
+        assert(node);
 
         TRY(_visit_node(program, node, &reg2));
         assert(reg2);
@@ -3322,7 +3328,7 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
         assert(!node->next);
     }
     else {
-        assert(operands == 1);
+        assert( ! node);
     }
 
     /* Reuse another temporary register */
@@ -3629,18 +3635,18 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
 
             if (assg_node->token.op == OT_SET) {
 
-                if (node_type == NT_ASSIGNMENT) {
+                if (node_type == NT_MULTI_ASSIGNMENT) {
+
+                    assert(reg != rhs);
+
+                    TRY(_gen_instr4(program, INSTR_CALL, reg->reg, rhs->reg, args_reg->reg, args_reg->reg));
+                }
+                else {
 
                     if (rhs != reg) {
                         TRY(_gen_instr2(program, INSTR_MOVE, reg->reg, rhs->reg));
                         _free_reg(program, rhs);
                     }
-                }
-                else {
-
-                    assert(reg != rhs);
-
-                    TRY(_gen_instr4(program, INSTR_CALL, reg->reg, rhs->reg, args_reg->reg, args_reg->reg));
                 }
             }
             else {

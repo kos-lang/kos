@@ -94,6 +94,7 @@ int _KOS_load_file(const char         *filename,
                    struct _KOS_VECTOR *buf)
 {
     int    error;
+    long   lsize;
     size_t size;
     FILE  *file = 0;
 
@@ -106,7 +107,10 @@ int _KOS_load_file(const char         *filename,
     if (0 != fseek(file, 0, SEEK_END))
         TRY(KOS_ERROR_CANNOT_READ_FILE);
 
-    size = (size_t)ftell(file);
+    lsize = ftell(file);
+    if (lsize < 0)
+        TRY(KOS_ERROR_CANNOT_READ_FILE);
+    size = (size_t)lsize;
     if (0 != fseek(file, 0, SEEK_SET))
         TRY(KOS_ERROR_CANNOT_READ_FILE);
 

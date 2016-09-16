@@ -165,7 +165,7 @@ static int _init_global_scope(struct _KOS_COMP_UNIT *program)
             }
             else {
                 error  = KOS_ERROR_OUT_OF_MEMORY;
-                global = 0;
+                break;
             }
         }
     }

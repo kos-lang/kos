@@ -284,6 +284,10 @@ static KOS_OBJ_PTR _get_file_size(KOS_CONTEXT *ctx,
     }
 
     orig_pos = ftell(file);
+    if (orig_pos < 0) {
+        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_get_size));
+        TRY(KOS_ERROR_EXCEPTION);
+    }
 
     if (fseek(file, 0, SEEK_END)) {
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_get_size));
@@ -291,6 +295,10 @@ static KOS_OBJ_PTR _get_file_size(KOS_CONTEXT *ctx,
     }
 
     size = ftell(file);
+    if (size < 0) {
+        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_get_size));
+        TRY(KOS_ERROR_EXCEPTION);
+    }
 
     if (fseek(file, orig_pos, SEEK_SET)) {
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_get_size));
@@ -330,7 +338,7 @@ static KOS_OBJ_PTR _get_file_pos(KOS_CONTEXT *ctx,
 
     pos = ftell(file);
 
-    if (pos == -1) {
+    if (pos < 0) {
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_get_position));
         TRY(KOS_ERROR_EXCEPTION);
     }

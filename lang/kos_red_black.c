@@ -210,12 +210,13 @@ void _KOS_red_black_insert(struct _KOS_RED_BLACK_NODE **root,
         new_node->red = 0;
 }
 
-void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
+void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
                            struct _KOS_RED_BLACK_NODE  *node)
 {
     struct _KOS_RED_BLACK_NODE *succ;
     struct _KOS_RED_BLACK_NODE *parent;
     struct _KOS_RED_BLACK_NODE  leaf = { 0, 0, 0, /*red=*/ 3 };
+    struct _KOS_RED_BLACK_NODE *root = *out_root;
 
     /* If deleted node has two children, swap it with the successor and delete the successor */
     if (node->left && node->right) {
@@ -255,7 +256,7 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
                 a->right = succ;
         }
         else
-            *root = succ;
+            root = succ;
 
         if (b != node) {
             if (b->left == succ)
@@ -289,7 +290,7 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
             parent->right = succ;
     }
     else
-        *root = succ;
+        root = succ;
 
     succ->parent = parent;
 
@@ -327,9 +328,9 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
         if (sibling->red) {
             assert( ! parent->red);
             if (sibling_left)
-                _right_rotate(root, parent);
+                _right_rotate(&root, parent);
             else
-                _left_rotate(root, parent);
+                _left_rotate(&root, parent);
             parent->red  = 1;
             sibling->red = 0;
         }
@@ -338,7 +339,7 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
             int right_red = sibling->right && sibling->right->red ? 1 : 0;
 
             if (sibling_left && left_red) {
-                _right_rotate(root, parent);
+                _right_rotate(&root, parent);
                 sibling->red       = parent->red;
                 parent->red        = 0;
                 sibling->left->red = 0;
@@ -346,7 +347,7 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
                 node               = parent;
             }
             else if (!sibling_left && right_red) {
-                _left_rotate(root, parent);
+                _left_rotate(&root, parent);
                 sibling->red        = parent->red;
                 parent->red         = 0;
                 sibling->right->red = 0;
@@ -356,12 +357,12 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
             else if (left_red) {
                 sibling->left->red = 0;
                 sibling->red       = 1;
-                _right_rotate(root, sibling);
+                _right_rotate(&root, sibling);
             }
             else if (right_red) {
                 sibling->right->red = 0;
                 sibling->red        = 1;
-                _left_rotate(root, sibling);
+                _left_rotate(&root, sibling);
             }
             else {
                 parent->red  = parent->red ? 0 : 2;
@@ -383,6 +384,8 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
                 parent->right = 0;
         }
         else
-            *root = 0;
+            root = 0;
     }
+
+    *out_root = root;
 }

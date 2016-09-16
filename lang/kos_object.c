@@ -267,7 +267,9 @@ static void _copy_table(KOS_CONTEXT            *ctx,
 
     last = KOS_atomic_add_i32(old_table->active_copies, -1) == 2;
 
-    KOS_atomic_cas_u32(old_table->all_salvaged, 0, 1);
+    if (KOS_atomic_cas_u32(old_table->all_salvaged, 0, 1)) {
+        /* yay! */
+    }
 
     if (last) {
         if (KOS_atomic_cas_ptr(props->props, (void *)old_table, (void *)new_table))

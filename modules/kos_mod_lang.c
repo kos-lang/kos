@@ -670,8 +670,8 @@ static KOS_OBJ_PTR _array_constructor(KOS_CONTEXT *ctx,
 
             default:
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_convert_to_array));
-                TRY(KOS_ERROR_EXCEPTION);
-                break;
+                error = KOS_ERROR_EXCEPTION;
+                goto _error;
         }
     }
 

@@ -920,8 +920,11 @@ KOS_OBJ_PTR _KOS_module_import(KOS_CONTEXT              *ctx,
 _error:
     if (search_path_set) {
         const uint32_t num_paths = KOS_get_array_size(TO_OBJPTR(&ctx->module_search_paths));
+        int            err;
         assert(num_paths > 0);
-        KOS_array_resize(ctx, TO_OBJPTR(&ctx->module_search_paths), num_paths-1);
+        err = KOS_array_resize(ctx, TO_OBJPTR(&ctx->module_search_paths), num_paths-1);
+        if ( ! error)
+            error = err;
     }
     if (compiler_init) {
         _KOS_parser_destroy(&parser);

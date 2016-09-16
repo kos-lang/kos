@@ -358,12 +358,11 @@ static unsigned _prefetch_next(struct _KOS_LEXER *lexer, const char **begin, con
                     const unsigned char c = (unsigned char)b[i];
                     if (lexem_types[c] != LT_UTF8_TAIL) {
                         lt = LT_INVALID_UTF8;
-                        e = b + i;
                         break;
                     }
                     code = (code << 6) | (c & 0x3F);
                 }
-                e = b + len;
+                e = b + i;
 
                 if (code == 0x00A0 || /* NBSP */
                     code == 0x2028 || /* line separator */

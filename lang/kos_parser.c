@@ -1972,16 +1972,20 @@ static int _for_expr_list(struct _KOS_PARSER      *parser,
                 switch (end_sep) {
                     case ST_SEMICOLON:
                         parser->error_str = str_err_expected_semicolon;
-                        TRY(KOS_ERROR_PARSE_FAILED);
+                        error = KOS_ERROR_PARSE_FAILED;
+                        goto _error;
                     case ST_CURLY_OPEN:
                         parser->error_str = str_err_expected_curly_open;
-                        TRY(KOS_ERROR_PARSE_FAILED);
+                        error = KOS_ERROR_PARSE_FAILED;
+                        goto _error;
                     case ST_PAREN_CLOSE:
                         parser->error_str = str_err_expected_paren_close;
-                        TRY(KOS_ERROR_PARSE_FAILED);
+                        error = KOS_ERROR_PARSE_FAILED;
+                        goto _error;
                     default:
                         assert(0);
-                        TRY(KOS_ERROR_INTERNAL);
+                        error = KOS_ERROR_INTERNAL;
+                        goto _error;
                 }
 
             TRY(_expr(parser, 0, allow_in, &node));
