@@ -731,13 +731,13 @@ static int _prepare_call(KOS_CONTEXT       *ctx,
 
         case KOS_GEN_RUNNING:
             KOS_raise_exception(ctx, TO_OBJPTR(&str_err_generator_running));
-            TRY(KOS_ERROR_EXCEPTION);
-            break;
+            error = KOS_ERROR_EXCEPTION;
+            goto _error;
 
         case KOS_GEN_DONE:
             KOS_raise_exception(ctx, TO_OBJPTR(&str_err_generator_end));
-            TRY(KOS_ERROR_EXCEPTION);
-            break;
+            error = KOS_ERROR_EXCEPTION;
+            goto _error;
 
         default:
             assert(0);

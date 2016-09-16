@@ -1245,6 +1245,7 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
                          int                    fun_start_offs,
                          size_t                 addr2line_start_offs)
 {
+    int          error;
     const size_t fun_end_offs = (size_t)program->cur_offs;
     const size_t fun_size     = fun_end_offs - fun_start_offs;
     const size_t fun_new_offs = program->code_buf.size;
@@ -1252,71 +1253,61 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
     const size_t a2l_new_offs = program->addr2line_buf.size;
     int          str_idx      = 0;
 
-    int error = _KOS_vector_resize(&program->code_buf,
-                                   fun_new_offs + fun_size);
+    TRY(_KOS_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
-    if (!error)
-        error = _KOS_vector_resize(&program->addr2line_buf,
-                                   a2l_new_offs + a2l_size);
+    TRY(_KOS_vector_resize(&program->addr2line_buf, a2l_new_offs + a2l_size));
 
-    if (!error)
-        error = _KOS_vector_resize(&program->addr2func_buf,
-                                   program->addr2func_buf.size + sizeof(struct _KOS_COMP_ADDR_TO_FUNC));
+    TRY(_KOS_vector_resize(&program->addr2func_buf,
+                           program->addr2func_buf.size + sizeof(struct _KOS_COMP_ADDR_TO_FUNC)));
 
-    if (!error)
-        error = _gen_str(program, program->cur_frame->fun_token, &str_idx);
+    TRY(_gen_str(program, program->cur_frame->fun_token, &str_idx));
 
-    if (!error) {
+    memcpy(program->code_buf.buffer + fun_new_offs,
+           program->code_gen_buf.buffer + fun_start_offs,
+           fun_size);
 
-        memcpy(program->code_buf.buffer + fun_new_offs,
-               program->code_gen_buf.buffer + fun_start_offs,
-               fun_size);
+    TRY(_KOS_vector_resize(&program->code_gen_buf, (size_t)fun_start_offs));
 
-        _KOS_vector_resize(&program->code_gen_buf, (size_t)fun_start_offs);
+    program->cur_offs = fun_start_offs;
 
-        program->cur_offs = fun_start_offs;
+    program->cur_frame->program_offs = (int)fun_new_offs;
 
-        program->cur_frame->program_offs = (int)fun_new_offs;
+    memcpy(program->addr2line_buf.buffer + a2l_new_offs,
+           program->addr2line_gen_buf.buffer + addr2line_start_offs,
+           a2l_size);
 
-        memcpy(program->addr2line_buf.buffer + a2l_new_offs,
-               program->addr2line_gen_buf.buffer + addr2line_start_offs,
-               a2l_size);
+    TRY(_KOS_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs));
 
-        error = _KOS_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs);
+    /* Update addr2line offsets for this function */
+    {
+        struct _KOS_COMP_ADDR_TO_LINE *ptr =
+            (struct _KOS_COMP_ADDR_TO_LINE *)
+                (program->addr2line_buf.buffer + a2l_new_offs);
+        struct _KOS_COMP_ADDR_TO_LINE *const end =
+            (struct _KOS_COMP_ADDR_TO_LINE *)
+                (program->addr2line_buf.buffer + program->addr2line_buf.size);
 
-        if ( ! error) {
+        const uint32_t delta = (uint32_t)(fun_new_offs - fun_start_offs);
 
-            /* Update addr2line offsets for this function */
-            {
-                struct _KOS_COMP_ADDR_TO_LINE *ptr =
-                    (struct _KOS_COMP_ADDR_TO_LINE *)
-                        (program->addr2line_buf.buffer + a2l_new_offs);
-                struct _KOS_COMP_ADDR_TO_LINE *const end =
-                    (struct _KOS_COMP_ADDR_TO_LINE *)
-                        (program->addr2line_buf.buffer + program->addr2line_buf.size);
-
-                const uint32_t delta = (uint32_t)(fun_new_offs - fun_start_offs);
-
-                for ( ; ptr < end; ptr++)
-                    ptr->offs += delta;
-            }
-
-            {
-                struct _KOS_VECTOR *buf = &program->addr2func_buf;
-
-                struct _KOS_COMP_ADDR_TO_FUNC *ptr =
-                    (struct _KOS_COMP_ADDR_TO_FUNC *)
-                        (buf->buffer + buf->size - sizeof(struct _KOS_COMP_ADDR_TO_FUNC));
-
-                ptr->offs      = (uint32_t)fun_new_offs;
-                ptr->line      = program->cur_frame->fun_token->pos.line;
-                ptr->str_idx   = (uint32_t)str_idx;
-                ptr->num_instr = program->cur_frame->num_instr;
-                ptr->code_size = (uint32_t)fun_size;
-            }
-        }
+        for ( ; ptr < end; ptr++)
+            ptr->offs += delta;
     }
 
+    {
+        struct _KOS_VECTOR *buf = &program->addr2func_buf;
+
+        struct _KOS_COMP_ADDR_TO_FUNC *ptr =
+            (struct _KOS_COMP_ADDR_TO_FUNC *)
+                (buf->buffer + buf->size - sizeof(struct _KOS_COMP_ADDR_TO_FUNC));
+
+        ptr->offs      = (uint32_t)fun_new_offs;
+        ptr->line      = program->cur_frame->fun_token->pos.line;
+        ptr->str_idx   = (uint32_t)str_idx;
+        ptr->num_instr = program->cur_frame->num_instr;
+        ptr->code_size = (uint32_t)fun_size;
+    }
+
+_error:
     return error;
 }
 
@@ -1336,72 +1327,67 @@ static int _insert_global_frame(struct _KOS_COMP_UNIT *program)
 {
     /* At this point code_buf contains bytecodes of all functions
      * and code_gen_buf contains global scope bytecode. */
+    int          error;
     const size_t global_scope_size = (size_t)program->cur_offs;
     const size_t functions_size    = program->code_buf.size;
     const size_t funcs_a2l_size    = program->addr2line_buf.size;
 
-    int error = _KOS_vector_resize(&program->code_buf,
-                                   functions_size + global_scope_size);
+    TRY(_KOS_vector_resize(&program->code_buf,
+                           functions_size + global_scope_size));
 
-    if (!error)
-        error = _KOS_vector_resize(&program->addr2line_buf,
-                                   program->addr2line_buf.size + program->addr2line_gen_buf.size);
+    TRY(_KOS_vector_resize(&program->addr2line_buf,
+                           program->addr2line_buf.size + program->addr2line_gen_buf.size));
 
-    if (!error) {
+    memmove(program->code_buf.buffer + global_scope_size,
+            program->code_buf.buffer,
+            functions_size);
 
-        memmove(program->code_buf.buffer + global_scope_size,
-                program->code_buf.buffer,
-                functions_size);
+    memcpy(program->code_buf.buffer,
+           program->code_gen_buf.buffer,
+           global_scope_size);
 
-        memcpy(program->code_buf.buffer,
-               program->code_gen_buf.buffer,
-               global_scope_size);
+    TRY(_KOS_vector_resize(&program->code_gen_buf, 0));
 
-        _KOS_vector_resize(&program->code_gen_buf, 0);
+    program->cur_offs = 0;
 
-        program->cur_offs = 0;
+    TRY(_KOS_red_black_walk(program->scopes, _fix_frame_offsets, (void *)&global_scope_size));
 
-        error = _KOS_red_black_walk(program->scopes, _fix_frame_offsets, (void *)&global_scope_size);
+    /* Update addr2line offsets for functions */
+    {
+        struct _KOS_COMP_ADDR_TO_LINE *ptr =
+            (struct _KOS_COMP_ADDR_TO_LINE *)
+                program->addr2line_buf.buffer;
+        struct _KOS_COMP_ADDR_TO_LINE *end =
+            (struct _KOS_COMP_ADDR_TO_LINE *)
+                (program->addr2line_buf.buffer + program->addr2line_buf.size);
 
-        if ( ! error) {
-
-            /* Update addr2line offsets for functions */
-            {
-                struct _KOS_COMP_ADDR_TO_LINE *ptr =
-                    (struct _KOS_COMP_ADDR_TO_LINE *)
-                        program->addr2line_buf.buffer;
-                struct _KOS_COMP_ADDR_TO_LINE *end =
-                    (struct _KOS_COMP_ADDR_TO_LINE *)
-                        (program->addr2line_buf.buffer + program->addr2line_buf.size);
-
-                for ( ; ptr < end; ptr++)
-                    ptr->offs += (uint32_t)global_scope_size;
-            }
-
-            {
-                struct _KOS_COMP_ADDR_TO_FUNC *ptr =
-                    (struct _KOS_COMP_ADDR_TO_FUNC *)
-                        program->addr2func_buf.buffer;
-                struct _KOS_COMP_ADDR_TO_FUNC *end =
-                    (struct _KOS_COMP_ADDR_TO_FUNC *)
-                        (program->addr2func_buf.buffer + program->addr2func_buf.size);
-
-                for ( ; ptr < end; ptr++)
-                    ptr->offs += (uint32_t)global_scope_size;
-            }
-
-            memmove(program->addr2line_buf.buffer + program->addr2line_gen_buf.size,
-                    program->addr2line_buf.buffer,
-                    funcs_a2l_size);
-
-            memcpy(program->addr2line_buf.buffer,
-                   program->addr2line_gen_buf.buffer,
-                   program->addr2line_gen_buf.size);
-
-            error = _KOS_vector_resize(&program->addr2line_gen_buf, 0);
-        }
+        for ( ; ptr < end; ptr++)
+            ptr->offs += (uint32_t)global_scope_size;
     }
 
+    {
+        struct _KOS_COMP_ADDR_TO_FUNC *ptr =
+            (struct _KOS_COMP_ADDR_TO_FUNC *)
+                program->addr2func_buf.buffer;
+        struct _KOS_COMP_ADDR_TO_FUNC *end =
+            (struct _KOS_COMP_ADDR_TO_FUNC *)
+                (program->addr2func_buf.buffer + program->addr2func_buf.size);
+
+        for ( ; ptr < end; ptr++)
+            ptr->offs += (uint32_t)global_scope_size;
+    }
+
+    memmove(program->addr2line_buf.buffer + program->addr2line_gen_buf.size,
+            program->addr2line_buf.buffer,
+            funcs_a2l_size);
+
+    memcpy(program->addr2line_buf.buffer,
+           program->addr2line_gen_buf.buffer,
+           program->addr2line_gen_buf.size);
+
+    TRY(_KOS_vector_resize(&program->addr2line_gen_buf, 0));
+
+_error:
     return error;
 }
 
@@ -3341,10 +3327,10 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
             TRY(_gen_reg(program, reg));
     }
 
-    if (operands == 1)
-        error = _gen_instr2(program, opcode, (*reg)->reg, reg1->reg);
-    else
+    if (operands == 2)
         error = _gen_instr3(program, opcode, (*reg)->reg, reg1->reg, reg2->reg);
+    else
+        error = _gen_instr2(program, opcode, (*reg)->reg, reg1->reg);
 
     if (*reg != reg1)
         _free_reg(program, reg1);

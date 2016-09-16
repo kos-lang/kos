@@ -280,6 +280,7 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
         succ = &leaf;
         leaf.left  = 0;
         leaf.right = 0;
+        leaf.red   = 0;
     }
 
     parent = node->parent;

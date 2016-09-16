@@ -305,11 +305,6 @@ static KOS_OBJ_PTR _get_file_size(KOS_CONTEXT *ctx,
         TRY(KOS_ERROR_EXCEPTION);
     }
 
-    if (size == -1) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_get_size));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
-
 _error:
     return error ? TO_OBJPTR(0) : KOS_new_int(ctx, (int64_t)size);
 }
