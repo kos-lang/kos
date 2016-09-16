@@ -34,6 +34,14 @@ Kos is currently in development.  Most language features are already usable.
 Refer to [Roadmap](doc/roadmap.md) for list of features planned.
 
 
+Branch health (master)
+======================
+
+[![Build Status](https://travis-ci.org/kos-lang/kos.svg?branch=master)](https://travis-ci.org/kos-lang/kos)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/kos-lang/kos?branch=master&svg=true)](https://ci.appveyor.com/project/cdragan/kos)
+[![Coverage Status](https://coveralls.io/repos/github/kos-lang/kos/badge.svg?branch=master)](https://coveralls.io/github/kos-lang/kos?branch=master)
+[![Coverity Scan](https://scan.coverity.com/projects/10189/badge.svg)](https://scan.coverity.com/projects/kos)
+
 Documentation
 =============
 
