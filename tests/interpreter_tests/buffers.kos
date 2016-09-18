@@ -91,6 +91,10 @@ fun buffer_from_array(a)
     assert b instanceof buffer;
 
     for var i in range(b.size) {
+        assert b[i] == 0;
+    }
+
+    for var i in range(b.size) {
         b[i] = i;
     }
 
