@@ -27,17 +27,15 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* BREAKPOINT */
     INSTR_BREAKPOINT,
 
-    /* TODO add variants with 8-bit operands for some instructions */
-
     /* LOAD.INT8 <r.dest>, <int8> */
     INSTR_LOAD_INT8,
     /* LOAD.INT32 <r.dest>, <int32> */
     INSTR_LOAD_INT32,
-    /* LOAD.INT64 <r.dest>, <low32>, <high32> */
+    /* LOAD.INT64 <r.dest>, <low.uint32>, <high.int32> */
     INSTR_LOAD_INT64,
-    /* LOAD.FLOAT <r.dest>, <low32>, <high32> */
+    /* LOAD.FLOAT <r.dest>, <low.uint32>, <high.uint32> */
     INSTR_LOAD_FLOAT,
-    /* LOAD.STR <r.dest>, <const.str.idx32> */
+    /* LOAD.STR <r.dest>, <str.idx.int32> */
     INSTR_LOAD_STR,
     /* LOAD.TRUE <r.dest> */
     INSTR_LOAD_TRUE,
@@ -66,9 +64,10 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_GET,
     /* GET.ELEM <r.dest>, <r.src>, <int32> */
     INSTR_GET_ELEM,
+    /* TODO GET.ELEM8 <r.dest>, <r.src>, <int8> */
     /* GET.RANGE <r.dest>, <r.src>, <r.begin>, <r.end> */
     INSTR_GET_RANGE,
-    /* GET.PROP <r.dest>, <r.src>, <const.str.idx32> */
+    /* GET.PROP <r.dest>, <r.src>, <str.idx.int32> */
     INSTR_GET_PROP,
     /* GET.GLOBAL <r.dest>, <int32> */
     INSTR_GET_GLOBAL,
@@ -81,14 +80,15 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_SET,
     /* SET.ELEM <r.dest>, <int32>, <r.src> */
     INSTR_SET_ELEM,
-    /* SET.PROP <r.dest>, <const.str.idx32>, <r.src> */
+    /* TODO SET.ELEM8 <r.dest>, <int8>, <r.src> */
+    /* SET.PROP <r.dest>, <str.idx.int32>, <r.src> */
     INSTR_SET_PROP,
     /* SET.GLOBAL <int32>, <r.src> */
     INSTR_SET_GLOBAL,
 
     /* DEL <r.dest>, <r.prop> */
     INSTR_DEL,
-    /* DEL.PROP <r.dest>, <const.str.idx32> */
+    /* DEL.PROP <r.dest>, <str.idx.int32> */
     INSTR_DEL_PROP,
 
     /* ADD <r.dest>, <r.src1>, <r.src2> */
@@ -134,7 +134,7 @@ typedef enum _KOS_BYTECODE_INSTR {
 
     /* HAS <r.dest>, <r.src>, <r.prop> */
     INSTR_HAS,
-    /* HAS.PROP <r.dest>, <r.src>, <const.str.idx32> */
+    /* HAS.PROP <r.dest>, <r.src>, <str.idx.int32> */
     INSTR_HAS_PROP,
     /* INSTANCEOF <r.dest>, <r.src>, <r.func> */
     INSTR_INSTANCEOF,
@@ -149,14 +149,16 @@ typedef enum _KOS_BYTECODE_INSTR {
      * Relative jump, taken only if r.src is falsy. */
     INSTR_JUMP_NOT_COND,
 
-    /* BIND <r.dest>, <slot.idx>, <r.src>
+    /* BIND <r.dest>, <slot.idx.uint8>, <r.src>
      * Bind an array to a function (closure). */
     INSTR_BIND,
-    /* BIND.SELF <r.dest>, <slot.idx> */
+    /* BIND.SELF <r.dest>, <slot.idx.uint8> */
     INSTR_BIND_SELF,
 
     /* CALL <r.dest>, <r.func>, <r.this>, <r.args> */
     INSTR_CALL,
+    /* TODO CALL.ARGS <r.dest>, <r.func>, <r.this>, <r.arg1>, <num.args.uint8> */
+    /* TODO CALL.FUN <r.dest>, <r.func>, <r.arg1>, <num.args.uint8> */
     /* CALL.GEN <r.dest>, <r.func>, <r.final>, <r.args> */
     /* Call generator which is "READY" or "ACTIVE".  r.final is set to false
      * if a subsequent value is yielded or true if the generator returned. */

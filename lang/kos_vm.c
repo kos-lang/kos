@@ -905,7 +905,7 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_LOAD_INT64: { /* <r.dest>, <low32>, <high32> */
+            case INSTR_LOAD_INT64: { /* <r.dest>, <low.uint32>, <high.int32> */
                 const uint32_t low   = _load_32(bytecode+2);
                 const uint32_t high  = _load_32(bytecode+6);
 
@@ -915,7 +915,7 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_LOAD_FLOAT: { /* <r.dest>, <low32>, <high32> */
+            case INSTR_LOAD_FLOAT: { /* <r.dest>, <low.uint32>, <high.uint32> */
                 const uint32_t low   = _load_32(bytecode+2);
                 const uint32_t high  = _load_32(bytecode+6);
 
@@ -932,7 +932,7 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_LOAD_STR: { /* <r.dest>, <const.str.idx32> */
+            case INSTR_LOAD_STR: { /* <r.dest>, <str.idx.int32> */
                 const int32_t  idx   = (int32_t)_load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1231,7 +1231,7 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_GET_PROP: { /* <r.dest>, <r.src>, <const.str.idx32> */
+            case INSTR_GET_PROP: { /* <r.dest>, <r.src>, <str.idx.int32> */
                 const unsigned rsrc = bytecode[2];
                 const int32_t  idx  = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_PTR    prop;
@@ -1353,7 +1353,7 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_SET_PROP: { /* <r.dest>, <const.str.idx32>, <r.src> */
+            case INSTR_SET_PROP: { /* <r.dest>, <str.idx.int32>, <r.src> */
                 const int32_t  idx  = (int32_t)_load_32(bytecode+2);
                 const unsigned rsrc = bytecode[6];
                 KOS_OBJ_PTR    prop;
@@ -1414,7 +1414,7 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_DEL_PROP: { /* <r.dest>, <const.str.idx32> */
+            case INSTR_DEL_PROP: { /* <r.dest>, <str.idx.int32> */
                 const int32_t  idx = (int32_t)_load_32(bytecode+2);
                 KOS_OBJ_PTR    prop;
 
@@ -2005,7 +2005,7 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_HAS_PROP: { /* <r.dest>, <r.src>, <const.str.idx32> */
+            case INSTR_HAS_PROP: { /* <r.dest>, <r.src>, <str.idx.int32> */
                 const unsigned rsrc  = bytecode[2];
                 const int32_t  idx   = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_PTR    prop;
@@ -2107,9 +2107,9 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_BIND_SELF: /* <r.dest>, <slot.idx> */
+            case INSTR_BIND_SELF: /* <r.dest>, <slot.idx.uint8> */
                 /* fall through */
-            case INSTR_BIND: { /* <r.dest>, <slot.idx>, <r.src> */
+            case INSTR_BIND: { /* <r.dest>, <slot.idx.uint8>, <r.src> */
                 const unsigned idx = bytecode[2];
 
                 KOS_OBJ_PTR dest;
