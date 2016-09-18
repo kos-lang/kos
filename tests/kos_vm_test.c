@@ -839,37 +839,37 @@ int main(void)
     /* LOAD.GEN, YIELD, CALL.GEN */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,      0, IMM32(100), 2, 3, 0,
-            INSTR_LOAD_ARRAY,    2, IMM32(2),
-            INSTR_LOAD_INT32,    1, IMM32(3),
+            INSTR_LOAD_GEN,      0, IMM32(80), 2, 3, 0,
+            INSTR_LOAD_ARRAY8,   2, 2,
+            INSTR_LOAD_INT8,     1, 3,
             INSTR_SET_ELEM,      2, IMM32(0), 1,    /* begin (3) */
-            INSTR_LOAD_INT32,    1, IMM32(6),
+            INSTR_LOAD_INT8,     1, 6,
             INSTR_SET_ELEM,      2, IMM32(1), 1,    /* end (6) */
             INSTR_LOAD_VOID,     1,
             INSTR_CALL,          0, 0, 1, 2,        /* instantiate generator */
 
-            INSTR_LOAD_ARRAY,    2, IMM32(0),
+            INSTR_LOAD_ARRAY8,   2, 0,
             INSTR_CALL,          3, 0, 1, 2,        /* yields 3 */
             INSTR_CALL,          4, 0, 1, 2,        /* yields 4 */
             INSTR_ADD,           3, 3, 4,
-            INSTR_CALL_GEN,      4, 0, 1, 2,        /* yields 5 */
+            INSTR_CALL_GEN,      4, 0, 1,           /* yields 5 */
             INSTR_ADD,           3, 3, 4,
-            INSTR_JUMP_NOT_COND, IMM32(6), 1,
-            INSTR_LOAD_INT32,    3, IMM32(0),
-            INSTR_CALL_GEN,      4, 0, 1, 2,        /* no more */
-            INSTR_JUMP_COND,     IMM32(6), 1,
-            INSTR_LOAD_INT32,    3, IMM32(0),
+            INSTR_JUMP_NOT_COND, IMM32(3), 1,
+            INSTR_LOAD_INT8,     3, 0,
+            INSTR_CALL_GEN,      4, 0, 1,           /* no more */
+            INSTR_JUMP_COND,     IMM32(3), 1,
+            INSTR_LOAD_INT8,     3, 0,
             INSTR_RETURN,        0, 3,
 
             INSTR_GET_ELEM,      1, 0, IMM32(1),    /* arg 1 - end   */
             INSTR_GET_ELEM,      0, 0, IMM32(0),    /* arg 0 - begin */
-            INSTR_JUMP,          IMM32(15),
+            INSTR_JUMP,          IMM32(12),
             INSTR_MOVE,          2, 0,
             INSTR_YIELD,         2,
-            INSTR_LOAD_INT32,    2, IMM32(1),
+            INSTR_LOAD_INT8,     2, 1,
             INSTR_ADD,           0, 0, 2,
             INSTR_CMP_LT,        2, 0, 1,
-            INSTR_JUMP_COND,     IMM32(-25), 2,
+            INSTR_JUMP_COND,     IMM32(-22), 2,
             INSTR_LOAD_VOID,     2,
             INSTR_RETURN,        0, 2
         };
@@ -991,12 +991,12 @@ int main(void)
     /* CALL.GEN - call beyond the end of generator */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(24), 0, 2, 0,
-            INSTR_LOAD_ARRAY, 1, IMM32(0),
+            INSTR_LOAD_GEN,   0, IMM32(19), 0, 2, 0,
+            INSTR_LOAD_ARRAY8,1, 0,
             INSTR_CALL,       0, 0, 1, 1, /* instantiate generator */
 
-            INSTR_CALL_GEN,   3, 0, 2, 1, /* returns 'true' in register 2 */
-            INSTR_CALL_GEN,   3, 0, 3, 1, /* raise exception */
+            INSTR_CALL_GEN,   3, 0, 2,    /* returns 'true' in register 2 */
+            INSTR_CALL_GEN,   3, 0, 3,    /* raise exception */
             INSTR_RETURN,     0, 2,
 
             INSTR_RETURN,     0, 1,
@@ -1028,14 +1028,14 @@ int main(void)
     /* CALL.GEN - put both return value and status in the same register */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(19), 0, 2, 0,
-            INSTR_LOAD_ARRAY, 1, IMM32(0),
+            INSTR_LOAD_GEN,   0, IMM32(15), 0, 2, 0,
+            INSTR_LOAD_ARRAY8,1, 0,
             INSTR_CALL,       0, 0, 1, 1, /* instantiate generator */
 
-            INSTR_CALL_GEN,   0, 0, 0, 1, /* invoke generator */
+            INSTR_CALL_GEN,   0, 0, 0,    /* invoke generator */
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_INT32, 0, IMM32(0),
+            INSTR_LOAD_INT8,  0, 0,
             INSTR_RETURN,     0, 0
         };
 
@@ -1047,14 +1047,14 @@ int main(void)
     /* CALL.GEN - put both return value and status in the same register */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(19), 0, 2, 0,
+            INSTR_LOAD_GEN,   0, IMM32(18), 0, 2, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(0),
             INSTR_CALL,       0, 0, 1, 1, /* instantiate generator */
 
-            INSTR_CALL_GEN,   0, 0, 0, 1, /* invoke generator */
+            INSTR_CALL_GEN,   0, 0, 0,    /* invoke generator */
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_INT32, 0, IMM32(0),
+            INSTR_LOAD_INT8,  0, 0,
             INSTR_YIELD,      0,
             INSTR_RETURN,     0, 0
         };

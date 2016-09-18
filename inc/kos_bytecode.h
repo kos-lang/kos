@@ -159,7 +159,7 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_CALL,
     /* TODO CALL.ARGS <r.dest>, <r.func>, <r.this>, <r.arg1>, <num.args.uint8> */
     /* TODO CALL.FUN <r.dest>, <r.func>, <r.arg1>, <num.args.uint8> */
-    /* CALL.GEN <r.dest>, <r.func>, <r.final>, <r.args> */
+    /* CALL.GEN <r.dest>, <r.func>, <r.final> */
     /* Call generator which is "READY" or "ACTIVE".  r.final is set to false
      * if a subsequent value is yielded or true if the generator returned. */
     INSTR_CALL_GEN,

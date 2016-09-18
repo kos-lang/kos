@@ -2156,12 +2156,12 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 /* fall through */
             case INSTR_CALL: /* <r.dest>, <r.func>, <r.this>, <r.args> */
                 /* fall through */
-            case INSTR_CALL_GEN: /* <r.dest>, <r.func>, <r.final>, <r.args> */
+            case INSTR_CALL_GEN: /* <r.dest>, <r.func>, <r.final> */
                 /* fall through */
             case INSTR_NEW: { /* <r.dest>, <r.func>, <r.args> */
                 const unsigned rfunc = bytecode[2];
                 unsigned       rthis = ~0U;
-                unsigned       rargs;
+                unsigned       rargs = ~0U;
 
                 KOS_OBJ_PTR func_obj;
                 KOS_OBJ_PTR this_obj;
@@ -2169,29 +2169,49 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
 
                 rdest = bytecode[1];
 
-                if (instr == INSTR_NEW) {
-                    rargs    = bytecode[3];
-                    this_obj = TO_OBJPTR(0);
-                }
-                else {
-                    rthis = bytecode[3];
-                    rargs = bytecode[4];
-                    assert(rthis < regs_array->length);
+                switch (instr) {
 
-                    this_obj = regs[rthis];
-                    assert( ! IS_BAD_PTR(this_obj));
+                    case INSTR_NEW:
+                        rargs    = bytecode[3];
+                        this_obj = TO_OBJPTR(0);
+                        break;
+
+                    case INSTR_CALL_GEN:
+                        rthis = bytecode[3];
+                        assert(rthis < regs_array->length);
+
+                        this_obj = regs[rthis];
+                        assert( ! IS_BAD_PTR(this_obj));
+                        break;
+
+                    default:
+                        rthis = bytecode[3];
+                        rargs = bytecode[4];
+                        assert(rthis < regs_array->length);
+
+                        this_obj = regs[rthis];
+                        assert( ! IS_BAD_PTR(this_obj));
+                        break;
                 }
 
                 assert(instr != INSTR_TAIL_CALL || rdest <= regs_array->length);
                 assert(rfunc < regs_array->length);
-                assert(rargs < regs_array->length);
 
                 func_obj = regs[rfunc];
-                args_obj = regs[rargs];
+
+                if (instr == INSTR_CALL_GEN)
+                    args_obj = KOS_new_array(ctx, 0);
+                else {
+                    assert(rargs < regs_array->length);
+                    args_obj = regs[rargs];
+                }
 
                 stack_frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
 
-                error = _prepare_call(ctx, instr, func_obj, &this_obj, args_obj);
+                if (IS_BAD_PTR(args_obj))
+                    error = KOS_ERROR_EXCEPTION;
+                else
+                    error = _prepare_call(ctx, instr, func_obj, &this_obj, args_obj);
 
                 if ( ! error) {
 
@@ -2247,6 +2267,7 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 }
 
                 switch (instr) {
+                    case INSTR_CALL_GEN:  delta = 4; break;
                     case INSTR_NEW:       delta = 4; break;
                     case INSTR_TAIL_CALL: delta = 0; break;
                     default:              delta = 5; break;

@@ -575,11 +575,11 @@ int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_HAS_PROP:            /* fall through */
         case INSTR_INSTANCEOF:          /* fall through */
         case INSTR_BIND:                /* fall through */
+        case INSTR_CALL_GEN:            /* fall through */
         case INSTR_NEW:
             return 3;
 
         case INSTR_CALL:                /* fall through */
-        case INSTR_CALL_GEN:            /* fall through */
         case INSTR_TAIL_CALL:           /* fall through */
         case INSTR_GET_RANGE:           /* fall through */
             return 4;
@@ -1989,9 +1989,7 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
 
     TRY(_gen_reg(program, &reg));
 
-    TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, reg->reg, 0));
-
-    TRY(_gen_instr4(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, reg->reg, reg->reg));
+    TRY(_gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, reg->reg));
 
     cond_jump_instr_offs = program->cur_offs;
     TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
