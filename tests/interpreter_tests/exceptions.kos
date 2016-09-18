@@ -352,7 +352,27 @@
     fun generator_throws
     {
         throw 123;
-        yield void;
+        yield void; # Unreachable, so not converted to generator
+    }
+
+    var thrown = true;
+    try {
+        generator_throws();
+    }
+    catch const e {
+        if e.value == 123 {
+            thrown = true;
+        }
+    }
+
+    assert thrown;
+}
+
+{
+    fun generator_throws
+    {
+        if false { yield void; }
+        throw 123;
     }
 
     generator_throws();
@@ -363,8 +383,8 @@
 
     fun iterator_throws
     {
+        if false { yield void; }
         l1 = __line__; throw 123;
-        yield void;
     }
 
     var l2   = void;
