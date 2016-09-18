@@ -47,8 +47,8 @@ Documentation
 
 To find out more about Kos, follow these links:
 
-* [Quick tutorial which will get you up to speed with Kos](doc/tutorial.md)
-* [Instructions on how to compile Kos from source](doc/building.md)
+* [Tutorial](doc/tutorial.md)
+* [How to compile Kos from source](doc/building.md)
 * [Principles and ideas which influenced Kos design](doc/design.md)
 * [List of possible ideas for future development](doc/proposals.md)
 * [Formal description of Kos syntax](doc/grammar.md)

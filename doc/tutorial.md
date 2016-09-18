@@ -1,13 +1,14 @@
-The Kos Programming Language - Tutorial
+﻿The Kos Programming Language - Tutorial
 =======================================
 
 Kos is a dynamically typed scripting language.  It is lightweight and easy to
 use.  Some use cases where it is useful include stand-alone scripts executable
-as programs and built-in scripting in applications.  Kos supports full
-multithreading, which makes it easy to be embedded in applications.
+as programs and built-in scripting in applications.  Kos also supports full
+multithreading, which makes it easy to be used in multithreaded applications.
 
 The reference Kos interpreter is written in C, giving it maximum portability.
 It also comes with C++ hooks, making it very easy to embed in C++ programs.
+
 
 Scripts
 -------
@@ -17,14 +18,20 @@ also applies to imported Kos modules.
 
 Kos scripts use UTF-8 character encoding, which is a superset of ASCII.
 
-On UNIX-like operating systems (e.g. Linux, OS X), the first line can start
-with a hash character, followed by an exclamation mark, followed by path to the
-interpreter.  This will allow the shell to automatically recognize that this is
-a script and run the correct interpreter for it.  Such runnable script does not
-have to have the `.kos` extension either.  Typically the first line of an
-executable stand-alone Kos script looks like this:
+On UNIX-like operating systems (e.g. Linux, OS X), the first line of a script
+can start with a hash character, followed by an exclamation mark, followed by
+path to the interpreter.  This will allow the shell to automatically recognize
+that this is a script and run the correct interpreter for it.  Such runnable
+script does not have to have the `.kos` extension.  Typically the first line
+of an executable stand-alone Kos script looks like this:
 
     #!/usr/bin/env kos
+
+Alternatively, a Kos script can be executed by directly invoking the Kos
+interpreter, like so:
+
+    kos myscript.kos
+
 
 Comments
 --------
@@ -44,6 +51,7 @@ Multi-line comments do not support nesting.
     /* This is a /* comment, but */
     this is a syntax error. */
 
+
 Variables
 ---------
 
@@ -62,17 +70,18 @@ Variables follow scope.  They can only be accessed in the scope where they were
 declared or its inner scopes.
 
     var d = 1;
-    {               // Open up a new, inner scope.
+    do {            // Inner scope.
         var e = d + 1;
     }
+    while false;
     d = e + 1;      // ERROR!!! Variable e was not declared in this scope.
 
 When variables are declared, they always must be assigned a value.
 
     var f;          // ERROR!!! Variable must be assigned a value.
 
-The `void` keyword can be used to assign an opaque "void" value when there is
-no value that makes sense to be assigned when the variable is declared.
+The `void` keyword can be used to assign an opaque "void" value when
+a variable needs to be declared, but a value for it is not known yet.
 
     var g = void;
 
@@ -93,28 +102,30 @@ the variable's contents can be modified.
     const i = ["a"];
     i[1]    = "b";  // OK, array can be modified.
 
+
 Types
 -----
 
-The following built-in data types exist in Kos:
+There are nine built-in data types in Kos.
+
+Immutable types:
 
 * Integer
 * Floating-point
 * String
 * Void
 * Boolean
+
+Mutable types:
+
 * Array
 * Buffer
 * Object
 * Function
 
-The integer, floating-point, string, void and boolean types are immutable.
-
-The array, buffer, object and function types are mutable.
-
-The `typeof` unary operator can be used to determine the type of data.
-The returned value is a string.  The `typeof` operator returns the following
-strings for respective data types:
+The `typeof` unary operator can be used to determine the type of data at run
+time.  The returned value is a string.  The `typeof` operator returns the
+following strings for respective data types:
 
 * "integer" - for integer numbers.
 * "float" - for floating-point numbers.
@@ -130,6 +141,7 @@ Example use of the `typeof` operator:
 
     var itype = typeof 42;     // "integer"
     var stype = typeof "word"; // "string"
+
 
 Numbers
 -------
@@ -153,6 +165,10 @@ Integer numbers can be specified in hexadecimal form, with prefix `0x` or `0X`:
     var max_hex  = 0x7FFFFFFFFFFFFFFF;
     var min_hex  = -0x8000000000000000;
 
+Integer numbers can also be specified in binary form, with prefix `0b` or `0B`:
+
+    var eleven = 0b1011;
+
 A floating-point numeric constant consists of a base followed by a mantissa,
 exponent or both.
 
@@ -162,10 +178,11 @@ exponent or both.
     var one_thousand  = 1e3;  // 1*10^3
     var one_hundredth = 1e-2; // 1*10^-2
 
+
 Operations on numbers
 ---------------------
 
-The following artithmetic operators are available for numeric types:
+The following binary artithmetic operators are available for numeric types:
 
 * `+` add
 * `-` subtract
@@ -191,22 +208,26 @@ also floating-point.
 
     var twopt5_flt = 5.0 / 2.0; // 2.5 (float)
 
-The following bitwise operators are available for integer numbers:
+The following binary bitwise operators are available for integer numbers:
 
-* `&` and
-* `|` or
-* `^` xor
-* `<<` shift left
-* `>>` shift right (signed)
-* `>>>` shift right (unsigned)
-
-The bitwise operators cannot be applied to floating-point numbers.
+* `&` bitwise and
+* `|` bitwise or
+* `^` bitwise xor
+* `<<` bitwise shift left
+* `>>` bitwise shift right (signed)
+* `>>>` bitwise shift right (unsigned)
 
 The `-` unary operator can be applied to any number to negate its sign.
 
 The `~` unary operator can be applied to an integer number to flip all bits.
 
-    var minus_one = ~0;     // -1, all bits set
+    var minus_one = ~0;         // -1, all bits set
+
+When any operand to the binary bitwise operators or to the unary `~` operator
+is a floating-point number, it is converted to an integer using round-to-zero
+mode.
+
+    var three = 1.1 ^ 2.9;
 
 All of the above operators can be paired with assignment operator `=` to
 modify the first operand in-place.
@@ -222,6 +243,7 @@ modify the first operand in-place.
     x     ^=  4;    // 6
     x     <<= 1;    // 12
     x     >>= 2;    // 3
+
 
 Operator precedence
 -------------------
@@ -250,7 +272,6 @@ bitwise operators can be chained, but the shift operators cannot be.
 
 In cases where multiple types of operators are used, parentheses are necessary.
 
-TODO: ! && ||
 
 Comparison operators
 --------------------
@@ -293,6 +314,29 @@ number is promoted to floating-point before the comparison.  If one of the
 numbers is NaN, every comparison operator returns `false`.  When two strings
 are being compared, they are compared according to the rules of the current
 locale settings.
+
+
+Boolean conversion
+------------------
+
+There are two values of boolean type, denoted by `true` and `false` literals.
+
+The following values are falsy, i.e. they are implicitly treated as `false`
+by logical operators and in the `if` statement:
+
+* `false`
+* `void`
+* integer zero `0`
+* floating-point zero `0.0`
+
+Any other values are truthy.
+
+
+Logical operators
+-----------------
+
+TODO: ! && || ?:
+
 
 Strings
 -------
@@ -339,6 +383,7 @@ obtain otherwise.
     var copyright    = "\xA9";      // Copyright sign
     var pi           = "\x{3C0}";   // Greek lowercase PI letter
 
+
 Arrays
 ------
 
@@ -359,6 +404,7 @@ Arrays
     var b = [ 1 ];
     v[3]  = 2;      // [ 1, void, void, 2 ]
 
+
 Objects
 -------
 
@@ -371,6 +417,7 @@ Objects
         center: { x: 10, y: 8 },
         radius: 3
     };
+
 
 Functions
 ---------
@@ -385,6 +432,7 @@ Functions
     };
 
     var sum = λ(x, y) -> (x + y);
+
 
 Constructors
 ------------
@@ -405,6 +453,7 @@ Constructors
     var v1     = new Vector(3, 4);
     var v1_len = v1.length();       // 5
 
+
 Built-in type constructors
 --------------------------
 
@@ -414,10 +463,12 @@ Built-in type constructors
     var float   = new lang.float("2");      // 2.0
     var string  = new lang.string(3);       // "3"
     var boolean = new lang.boolean(0);      // false
+    var _void   = new lang.void;
     var array   = new lang.array(void, 2);  // [ void, 2 ]
     var buffer  = new lang.buffer(10);      // buffer of 10 bytes
-    var object  = new lang.object();        // { }
+    var object  = new lang.object;          // { }
     var func    = new lang.function("x", "y", "return x+y;"); // λ(x,y)->(x+y);
+
 
 Buffers
 -------
@@ -426,28 +477,26 @@ Buffers in Kos are useful for efficiently handling and processing sequences and
 streams of bytes, such as file contents.
 
 A buffer is in many ways like an array, it works like an array in principle.
-However, unlike an array, a buffer only contains integer numbers within
-range 0 through 255, inclusive.  Only integer numbers can be assigned to
-the buffer elements, and the assigned integers are bitwise anded with 255.
+However, unlike an array, a buffer only contains integer numbers from 0 through
+255.  Only integer numbers can be assigned to the buffer elements
+(floating-point numbers are converted to integers using round-to-zero mode).
 
-A buffer can be created from a string and a buffer can be converted back to a
-string.
+Attempt to write a value less than 0 or greater than 255 triggers an exception.
 
-    var in_str  = "0123";
-    var buf     = in_str.to_buffer(); // [ 0x30, 0x31, 0x32, 0x33 ]
-    buf[1]      = 0x41;               // "A"
-    var out_str = buf.to_string();    // "0A23"
+To create a new buffer of size 100, filled with zeroes:
 
-Typically buffers are created when reading files or network sockets, but an
-empty buffer can also be created using the buffer constructor.
+    import lang;
+    var buf = new lang.buffer(100);
 
-    import lang.Buffer;
-    var empty_buf    = new Buffer;
-    var buf_from_str = new Buffer("abc");     // [ 0x61, 0x62, 0x63 ]
-    var buf_from_ary = new Buffer([1, 2, 3]); // [ 0x01, 0x02, 0x03 ]
+To load a file:
+
+    import file;
+    var buf = file.open("myfile").read();
+
 
 Exceptions
 ----------
+
 
 Generators
 ----------
