@@ -34,7 +34,9 @@ return e ? f : g;
                         (operator 6 20 ||
                             (identifier 6 18 c)
                             (identifier 6 23 d)
-            ))))
+                )))
+                (return 7 1 } (void 7 1 }))
+            )
             (landmark 7 1 })
     ))
     (return 9 1 return (void 9 8 void))
@@ -63,6 +65,7 @@ fun { return; };
         (landmark 1 5 {)
         (scope 1 5 {
             (return 1 7 return)
+            (return 1 15 } (void 1 15 }))
         )
         (landmark 1 15 })
 ))

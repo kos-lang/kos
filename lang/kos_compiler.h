@@ -62,10 +62,12 @@ struct _KOS_VAR {
     struct _KOS_REG         *reg;
     enum _KOS_VAR_TYPE       type;
     int                      is_const;
-    int                      local_assignments;
-    int                      local_reads;
+    int                      local_assignments; /* Number of writes to a local variable     */
+    int                      local_reads;       /* Number of reads from a local variable or */
+                                                /* number of accesses on a local argument   */
     int                      array_idx;
-    enum _KOS_VAR_ACTIVE     is_active; /* Becomes active/searchable after the node which declares it. */
+    enum _KOS_VAR_ACTIVE     is_active;         /* Becomes active/searchable after the node */
+                                                /* which declares it. */
 };
 
 struct _KOS_BREAK_OFFS {
@@ -228,16 +230,16 @@ int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
                                    const char            *name,
                                    int                    idx);
 
-int _KOS_compiler_compile(struct _KOS_COMP_UNIT      *program,
-                          const struct _KOS_AST_NODE *ast);
+int _KOS_compiler_compile(struct _KOS_COMP_UNIT *program,
+                          struct _KOS_AST_NODE  *ast);
 
 void _KOS_compiler_destroy(struct _KOS_COMP_UNIT *program);
 
 int _KOS_compiler_process_vars(struct _KOS_COMP_UNIT      *program,
                                const struct _KOS_AST_NODE *ast);
 
-int _KOS_optimize(struct _KOS_COMP_UNIT      *program,
-                  const struct _KOS_AST_NODE *ast);
+int _KOS_optimize(struct _KOS_COMP_UNIT *program,
+                  struct _KOS_AST_NODE  *ast);
 
 struct _KOS_VAR *_KOS_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
                                const struct _KOS_TOKEN    *token);

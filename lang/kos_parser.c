@@ -325,7 +325,6 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
         TRY(_right_hand_side_expr(parser, &node));
 
         _ast_push(return_node, node);
-        node = 0;
 
         TRY(_assume_separator(parser, ST_PAREN_CLOSE));
 
@@ -340,9 +339,12 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
         TRY(_compound_stmt(parser, &node));
 
         _ast_push(*ret, node);
-        node = 0;
 
         assert(parser->token.sep == ST_CURLY_CLOSE);
+
+        TRY(_push_node(parser, node, NT_RETURN, &node));
+
+        TRY(_push_node(parser, node, NT_VOID_LITERAL, 0));
 
         TRY(_push_node(parser, *ret, NT_LANDMARK, 0));
     }
@@ -1317,11 +1319,9 @@ static int _expr_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
 static int _compound_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
-    int error     = KOS_SUCCESS;
-    int reachable = 1;
+    int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node           = 0;
-    enum _KOS_NODE_TYPE   last_node_type = NT_EMPTY;
+    struct _KOS_AST_NODE *node = 0;
 
     TRY(_assume_separator(parser, ST_CURLY_OPEN));
 
@@ -1340,21 +1340,8 @@ static int _compound_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret
 
         TRY(_next_statement(parser, &node));
 
-        /* TODO improve scanning the previous node for return/throw/break */
-        if (reachable && (
-                last_node_type == NT_RETURN ||
-                last_node_type == NT_THROW  ||
-                last_node_type == NT_BREAK)) {
-
-            /* TODO emit message about unreachable code */
-            reachable = 0;
-        }
-
-        if (reachable)
-            _ast_push(*ret, node);
-
-        last_node_type = node->type;
-        node           = 0;
+        _ast_push(*ret, node);
+        node = 0;
 
         TRY(_next_token(parser));
     }

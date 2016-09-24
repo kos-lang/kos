@@ -1762,6 +1762,8 @@ static int _do(struct _KOS_COMP_UNIT      *program,
 
     test_instr_offs = program->cur_offs;
 
+    /* TODO don't generate jump if condition is always falsy */
+
     TRY(_visit_node(program, node, &reg));
     assert(reg);
 
@@ -3992,45 +3994,6 @@ _error:
     return error;
 }
 
-static int _fun_has_explicit_return(const struct _KOS_AST_NODE *node)
-{
-    switch (node->type) {
-
-        case NT_SCOPE:
-            if ( ! node->children)
-                return 0;
-
-            for (node = node->children; node; node = node->next)
-                if (_fun_has_explicit_return(node))
-                    return 1;
-
-            return 0;
-
-        case NT_RETURN:
-            /* fall through */
-        case NT_THROW:
-            return 1;
-
-        case NT_IF:
-            node = node->children;
-            assert(node);
-            node = node->next;
-            assert(node);
-
-            if (node->next) {
-                assert( ! node->next->next);
-                return _fun_has_explicit_return(node)
-                    && _fun_has_explicit_return(node->next);
-            }
-            return 0;
-
-        /* TODO do, while, for, switch */
-
-        default:
-            return 0;
-    }
-}
-
 static int _gen_closure_vars(struct _KOS_RED_BLACK_NODE *node,
                              void                       *cookie)
 {
@@ -4222,19 +4185,6 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     /* Generate code for function body */
     TRY(_visit_node(program, node, &scope_reg));
     assert(!scope_reg);
-
-    /* Generate return void if the last instruction wasn't a return or throw */
-    if ( ! _fun_has_explicit_return(node)) {
-
-        struct _KOS_REG *void_reg = 0;
-
-        TRY(_gen_reg(program, &void_reg));
-
-        TRY(_add_addr2line(program, &close_node->token, _KOS_FALSE));
-
-        TRY(_gen_instr1(program, INSTR_LOAD_VOID, void_reg->reg));
-        TRY(_gen_return(program, void_reg->reg));
-    }
 
     /* Move the function code to final code_buf */
     TRY(_append_frame(program, fun_start_offs, addr2line_start_offs));
@@ -4506,8 +4456,8 @@ void _KOS_compiler_init(struct _KOS_COMP_UNIT *program,
     _KOS_vector_init(&program->addr2func_buf);
 }
 
-int _KOS_compiler_compile(struct _KOS_COMP_UNIT      *program,
-                          const struct _KOS_AST_NODE *ast)
+int _KOS_compiler_compile(struct _KOS_COMP_UNIT *program,
+                          struct _KOS_AST_NODE  *ast)
 {
     int              error;
     struct _KOS_REG *reg = 0;
