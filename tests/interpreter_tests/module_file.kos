@@ -91,6 +91,47 @@ fun expect_fail(function)
 }
 
 ##############################################################################
+# file.size, file.position
+
+{
+    const name = "./__test_file";
+    file.remove(name);
+    assert ! file.is_file(name);
+
+    with const f = new file.file(name, file.create) {
+        const buf = new lang.buffer(100);
+        for var i in lang.range(buf.size) {
+            buf[i] = i + 100;
+        }
+        f.write(buf);
+    }
+
+    with const f = new file.file(name, file.ro) {
+        assert f.size     == 100;
+        assert f.position == 0;
+
+        f.seek(50);
+        assert f.position == 50;
+
+        const buf = f.read(2);
+        assert f.position == 52;
+        assert buf.size   == 2;
+        assert buf[0]     == 150;
+        assert buf[1]     == 151;
+
+        f.position = 200;
+        assert f.position == 200;
+
+        const buf2 = f.read(10);
+        assert f.position == 200;
+        #assert buf2.size  == 0;
+    }
+
+    assert file.remove(name);
+    assert ! file.is_file(name);
+}
+
+##############################################################################
 # file.stdin, file.stdout, file.stderr
 
 {

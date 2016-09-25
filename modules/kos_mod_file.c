@@ -472,8 +472,9 @@ int _KOS_module_file_init(KOS_MODULE *module)
     TRY_ADD_MEMBER_FUNCTION(module, proto, "release",  _close,         0);
     TRY_ADD_MEMBER_FUNCTION(module, proto, "read",     _read,          0);
     TRY_ADD_MEMBER_FUNCTION(module, proto, "write",    _write,         1);
+    TRY_ADD_MEMBER_FUNCTION(module, proto, "seek",     _set_file_pos,  1);
     TRY_ADD_MEMBER_PROPERTY(module, proto, "size",     _get_file_size, 0);
-    TRY_ADD_MEMBER_PROPERTY(module, proto, "position", _get_file_pos,  _set_file_pos);
+    TRY_ADD_MEMBER_PROPERTY(module, proto, "position", _get_file_pos,  0);
 
     TRY_ADD_FUNCTION(       module,        "is_file",  _is_file,       1);
     TRY_ADD_FUNCTION(       module,        "remove",   _remove,        1);
