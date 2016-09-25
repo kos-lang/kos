@@ -136,7 +136,7 @@ else
     STRICTFLAGS += -Wno-unused-parameter
 
     ifeq ($(UNAME), Linux)
-        CFLAGS  += -D_BSD_SOURCE
+        CFLAGS  += -D_BSD_SOURCE -D_DEFAULT_SOURCE
         LDFLAGS += -lpthread
     endif
 
