@@ -4110,7 +4110,6 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     const struct _KOS_AST_NODE *fun_node;
     const struct _KOS_AST_NODE *open_node;
-    const struct _KOS_AST_NODE *close_node;
 
     assert(frame);
 
@@ -4156,10 +4155,9 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     node = node->next;
     assert(node);
     assert(node->type == NT_SCOPE);
-    close_node = node->next;
-    assert(close_node);
-    assert(close_node->type == NT_LANDMARK);
-    assert(!close_node->next);
+    assert(node->next);
+    assert(node->next->type == NT_LANDMARK);
+    assert( ! node->next->next);
 
     TRY(_add_addr2line(program, &open_node->token, _KOS_TRUE));
 

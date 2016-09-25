@@ -78,9 +78,9 @@ static int _scope(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _if(struct _KOS_COMP_UNIT *program,
-               struct _KOS_AST_NODE  *node,
-               int                   *is_terminal)
+static int _if_stmt(struct _KOS_COMP_UNIT *program,
+                    struct _KOS_AST_NODE  *node,
+                    int                   *is_terminal)
 {
     int error = KOS_SUCCESS;
     int t1;
@@ -110,9 +110,9 @@ _error:
     return error;
 }
 
-static int _do(struct _KOS_COMP_UNIT *program,
-               struct _KOS_AST_NODE  *node,
-               int                   *is_terminal)
+static int _do_stmt(struct _KOS_COMP_UNIT *program,
+                    struct _KOS_AST_NODE  *node,
+                    int                   *is_terminal)
 {
     int error = KOS_SUCCESS;
 
@@ -137,9 +137,9 @@ _error:
     return error;
 }
 
-static int _while(struct _KOS_COMP_UNIT *program,
-                  struct _KOS_AST_NODE  *node,
-                  int                   *is_terminal)
+static int _while_stmt(struct _KOS_COMP_UNIT *program,
+                       struct _KOS_AST_NODE  *node,
+                       int                   *is_terminal)
 {
     int error = KOS_SUCCESS;
     int t;
@@ -165,9 +165,9 @@ _error:
     return error;
 }
 
-static int _for(struct _KOS_COMP_UNIT *program,
-                struct _KOS_AST_NODE  *node,
-                int                   *is_terminal)
+static int _for_stmt(struct _KOS_COMP_UNIT *program,
+                     struct _KOS_AST_NODE  *node,
+                     int                   *is_terminal)
 {
     int error = KOS_SUCCESS;
     int t;
@@ -195,9 +195,9 @@ _error:
     return error;
 }
 
-static int _try(struct _KOS_COMP_UNIT *program,
-                struct _KOS_AST_NODE  *node,
-                int                   *is_terminal)
+static int _try_stmt(struct _KOS_COMP_UNIT *program,
+                     struct _KOS_AST_NODE  *node,
+                     int                   *is_terminal)
 {
     int error = KOS_SUCCESS;
     int t1, t2, t3;
@@ -230,9 +230,9 @@ _error:
     return error;
 }
 
-static int _switch(struct _KOS_COMP_UNIT *program,
-                   struct _KOS_AST_NODE  *node,
-                   int                   *is_terminal)
+static int _switch_stmt(struct _KOS_COMP_UNIT *program,
+                        struct _KOS_AST_NODE  *node,
+                        int                   *is_terminal)
 {
     int error          = KOS_SUCCESS;
     int num_cases      = 0;
@@ -307,22 +307,22 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             error = _scope(program, node, is_terminal);
             break;
         case NT_IF:
-            error = _if(program, node, is_terminal);
+            error = _if_stmt(program, node, is_terminal);
             break;
         case NT_DO:
-            error = _do(program, node, is_terminal);
+            error = _do_stmt(program, node, is_terminal);
             break;
         case NT_WHILE:
-            error = _while(program, node, is_terminal);
+            error = _while_stmt(program, node, is_terminal);
             break;
         case NT_FOR:
-            error = _for(program, node, is_terminal);
+            error = _for_stmt(program, node, is_terminal);
             break;
         case NT_TRY:
-            error = _try(program, node, is_terminal);
+            error = _try_stmt(program, node, is_terminal);
             break;
         case NT_SWITCH:
-            error = _switch(program, node, is_terminal);
+            error = _switch_stmt(program, node, is_terminal);
             break;
 
         case NT_EMPTY:
