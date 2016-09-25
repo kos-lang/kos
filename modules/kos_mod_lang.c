@@ -708,7 +708,7 @@ static KOS_OBJ_PTR _buffer_constructor(KOS_CONTEXT *ctx,
     buffer = KOS_new_buffer(ctx, (uint32_t)size);
 
     if ( ! IS_BAD_PTR(buffer))
-        memset(KOS_buffer_data(ctx, buffer), 0, size);
+        memset(KOS_buffer_data(ctx, buffer), 0, (size_t)size);
 
 _error:
     return buffer;
