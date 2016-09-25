@@ -503,6 +503,29 @@ int main(void)
         }
     }
 
+    /************************************************************************/
+    /* Push/pop */
+    {
+        KOS_OBJ_PTR v;
+        KOS_OBJ_PTR a = KOS_new_array(&ctx, 0);
+        TEST(!IS_BAD_PTR(a));
+        TEST(KOS_get_array_size(a) == 0);
+
+        TEST(KOS_array_push(&ctx, a, TO_SMALL_INT(123)) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_array_size(a) == 1);
+
+        v = KOS_array_pop(&ctx, a);
+        TEST(v == TO_SMALL_INT(123));
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_array_size(a) == 0);
+
+        v = KOS_array_pop(&ctx, a);
+        TEST(IS_BAD_PTR(v));
+        TEST_EXCEPTION();
+        TEST(KOS_get_array_size(a) == 0);
+    }
+
     KOS_context_destroy(&ctx);
 
     return 0;
