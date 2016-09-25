@@ -120,6 +120,30 @@ try {
         TEST(x == 50);
     }
 
+    {
+        kos::object o = ctx.new_object();
+        o["i"] = 1.5;
+        o["f"] = int64_t(1) << 32;
+        o["s"] = "abc";
+#if __cplusplus >= 201103L
+        o["a"] = ctx.make_array(1, 2, 3, 4);
+#endif
+
+        const double i = o["i"];
+        TEST(i == 1.5);
+
+        const int64_t f = o["f"];
+        TEST(f == int64_t(1) << 32);
+
+        std::string s = o["s"];
+        TEST(s == "abc");
+
+#if __cplusplus >= 201103L
+        kos::array_obj a = o["a"];
+        TEST(a.size() == 4);
+#endif
+    }
+
     return 0;
 }
 catch (const std::exception& e) {
