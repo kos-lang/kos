@@ -28,6 +28,7 @@
 #include "../lang/kos_file.h"
 #include "../lang/kos_memory.h"
 #include <assert.h>
+#include <locale.h>
 #include <stdio.h>
 
 int main(int argc, char *argv[])
@@ -35,6 +36,8 @@ int main(int argc, char *argv[])
     int                error = KOS_SUCCESS;
     KOS_CONTEXT        ctx;
     struct _KOS_VECTOR cstr;
+
+    setlocale(LC_ALL, "");
 
     _KOS_vector_init(&cstr);
 
