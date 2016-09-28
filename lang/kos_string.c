@@ -725,9 +725,17 @@ int KOS_string_compare(KOS_OBJ_PTR objptr_a,
         uint32_t ca = 0;
         uint32_t cb = 0;
 
-        while (pa < pend8 && *(const uint64_t *)pa == *(const uint64_t *)pb) {
-            pa += 8;
-            pb += 8;
+        if (((uintptr_t)pa & 7U) == ((uintptr_t)pb & 7U)) {
+
+            while (((uintptr_t)pa & 7U) && *pa == *pb) {
+                ++pa;
+                ++pb;
+            }
+
+            while (pa < pend8 && *(const uint64_t *)pa == *(const uint64_t *)pb) {
+                pa += 8;
+                pb += 8;
+            }
         }
 
         switch (str_a->type) {
