@@ -41,11 +41,9 @@ endif
 clean:
 	rm -rf $(out_dir)
 
-build.interpreter: build.lang build.modules
+build.interpreter build.tests: build.lang build.modules
 
-build.tests: build.interpreter
-
-test: build.tests
+test: build.interpreter build.tests
 	@$(MAKE) -C tests $@
 
 cldep:
