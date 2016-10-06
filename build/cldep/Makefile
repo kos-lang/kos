@@ -24,6 +24,8 @@ module    = cldep
 depth     = build/cldep
 cpp_files = cldep.cpp
 
+out_dir ?= $(call inv_path, $(depth))/Out/cldep
+
 include ../rules.mk
 
 CL = cl

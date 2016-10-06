@@ -211,7 +211,7 @@ clean:
 
 ifeq ($(UNAME), Windows)
 
-CL = $(out_dir)/build/cldep/cldep$(exe_suffix)
+CL = $(out_dir)/../cldep/build/cldep/cldep$(exe_suffix)
 
 $(out_dir)/$(depth)/$(notdir %.obj): %.c
 ifeq (,$(filter c++%, $(CLANG_VER)))

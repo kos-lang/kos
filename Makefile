@@ -48,7 +48,7 @@ test: build.interpreter build.tests
 	@$(MAKE) -C tests $@
 
 cldep:
-	@$(MAKE) -C build/cldep
+	@$(MAKE) -C build/cldep CONFIG_DEBUG=0
 
 ifneq (,$(filter CYGWIN% MINGW% MSYS%, $(shell uname -s)))
 $(addprefix build., $(modules)): cldep
