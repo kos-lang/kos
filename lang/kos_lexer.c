@@ -688,10 +688,8 @@ static void _collect_operator(struct _KOS_LEXER *lexer, enum _KOS_OPERATOR_TYPE 
 
         c = _prefetch_next(lexer, &begin, &end);
 
-        if (c != LT_OPERATOR) {
-            cur = 0;
+        if (c != LT_OPERATOR)
             break;
-        }
 
         while (*begin > cur) {
             ++op_group;

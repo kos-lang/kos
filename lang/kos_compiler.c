@@ -3578,6 +3578,8 @@ static int _assign_member(struct _KOS_COMP_UNIT      *program,
 
     else if (_maybe_int(node, &idx)) {
 
+        assert(node->type == NT_NUMERIC_LITERAL);
+
         if (idx > INT_MAX || idx < INT_MIN) {
             program->error_token = &node->token;
             program->error_str   = str_err_invalid_index;

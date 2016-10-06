@@ -1346,6 +1346,7 @@ static int _unpack_format(KOS_CONTEXT             *ctx,
         case 'i':
             /* fall through */
         case 'u': {
+            assert(size == 1 || size == 2 || size == 4 || size == 8);
             for ( ; count; count--) {
                 uint64_t value = 0;
                 unsigned i;

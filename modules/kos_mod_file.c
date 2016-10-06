@@ -392,8 +392,6 @@ static KOS_OBJ_PTR _is_file(KOS_CONTEXT *ctx,
 
     _KOS_vector_init(&filename_cstr);
 
-    filename_obj = KOS_array_read(ctx, args_obj, 0);
-
     if (IS_BAD_PTR(filename_obj))
         TRY(KOS_ERROR_EXCEPTION);
 
@@ -419,8 +417,6 @@ static KOS_OBJ_PTR _remove(KOS_CONTEXT *ctx,
     struct _KOS_VECTOR filename_cstr;
 
     _KOS_vector_init(&filename_cstr);
-
-    filename_obj = KOS_array_read(ctx, args_obj, 0);
 
     if (IS_BAD_PTR(filename_obj))
         TRY(KOS_ERROR_EXCEPTION);

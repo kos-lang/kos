@@ -940,17 +940,14 @@ _error:
         else if (error == KOS_ERROR_OUT_OF_MEMORY) {
             if ( ! KOS_is_exception_pending(ctx))
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_out_of_memory));
-            error = KOS_ERROR_EXCEPTION;
         }
         else if (error == KOS_ERROR_INVALID_UTF8_CHARACTER) {
             if ( ! KOS_is_exception_pending(ctx))
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_utf8));
-            error = KOS_ERROR_EXCEPTION;
         }
         else {
             if ( ! KOS_is_exception_pending(ctx))
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_internal));
-            error = KOS_ERROR_EXCEPTION;
         }
         module_obj = TO_OBJPTR(0);
     }
