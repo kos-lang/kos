@@ -29,6 +29,24 @@
 #include <stdlib.h>
 #include <time.h>
 
+int _KOS_is_integer(const char *begin,
+                    const char *end)
+{
+    int ret = 1;
+
+    for ( ; begin < end; begin++) {
+        const char c = *begin;
+        if (c == 'x' || c == 'X' || c == 'b' || c == 'B')
+            break;
+        if (c == '.' || c == 'e' || c == 'E') {
+            ret = 0;
+            break;
+        }
+    }
+
+    return ret;
+}
+
 int _KOS_parse_int(const char *begin,
                    const char *end,
                    int64_t    *value)
@@ -40,6 +58,8 @@ int _KOS_parse_int(const char *begin,
     int         idx;
 
     if (minus)
+        ++begin;
+    else if (begin < end && *begin == '+')
         ++begin;
 
     if (begin + 2 < end && begin[0] == '0') {
@@ -277,6 +297,10 @@ int _KOS_parse_double(const char *begin,
             decimal_exponent += (int)e;
         }
 
+        /* Ignore decimal exponent if mantissa contains all zeroes */
+        if ( ! mantissa)
+            decimal_exponent = 0;
+
         /* Apply decimal exponent */
         while (decimal_exponent) {
 
@@ -333,6 +357,28 @@ int _KOS_parse_double(const char *begin,
                       | ((mantissa >> 11) & (((uint64_t)1U << 52)-1));
 
 _error:
+    return error;
+}
+
+int _KOS_parse_numeric(const char          *begin,
+                       const char          *end,
+                       struct _KOS_NUMERIC *value)
+{
+    int error;
+
+    value->type = KOS_NON_NUMERIC;
+
+    if (_KOS_is_integer(begin, end)) {
+        error = _KOS_parse_int(begin, end, &value->u.i);
+        if ( ! error)
+            value->type = KOS_INTEGER_VALUE;
+    }
+    else {
+        error = _KOS_parse_double(begin, end, &value->u.d);
+        if ( ! error)
+            value->type = KOS_FLOAT_VALUE;
+    }
+
     return error;
 }
 

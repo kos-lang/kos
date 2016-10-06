@@ -129,7 +129,7 @@ expect_fail(λ->([][0]));
     assert d[0]   == 'a';
     assert d[1]   == 'b';
 
-    const e = a[-3.9:];
+    const e = a[-2.9:];
     assert e      != a;
     assert e.size == 3;
     assert e[0]   == 'd';

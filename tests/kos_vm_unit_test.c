@@ -593,7 +593,7 @@ int main(void)
     TEST_INSTR INSTR_GET_RANGE,  { V_STR1,    0, 0,        "gh"        }, { { V_STR0,  0, 0,        "abcdefgh"  }, { V_INT32, (uint32_t)-2  }, { V_VOID } } END
     TEST_INSTR INSTR_GET_RANGE,  { V_STR1,    0, 0,        "xyz"       }, { { V_STR0,  0, 0,        "xyz"       }, { V_INT32, (uint32_t)-99 }, { V_INT32, 99 } } END
     TEST_INSTR INSTR_GET_RANGE,  { V_STR1,    0, 0,        ""          }, { { V_STR0,  0, 0,        "xyz"       }, { V_INT32, 99  }, { V_INT32, (uint32_t)-99 } } END
-    TEST_INSTR INSTR_GET_RANGE,  { V_STR1,    0, 0,        "rst"       }, { { V_STR0,  0, 0,        "pqrstuv"   }, { V_FLOAT, ~0U, 0x40021111U }, { V_FLOAT, ~0U, 0xC0044444U } } END
+    TEST_INSTR INSTR_GET_RANGE,  { V_STR1,    0, 0,        "rs"        }, { { V_STR0,  0, 0,        "pqrstuv"   }, { V_FLOAT, ~0U, 0x40021111U }, { V_FLOAT, ~0U, 0xC0044444U } } END
     TEST_INSTR INSTR_GET_RANGE,  { V_STR1,    0, 0,        "mnop"      }, { { V_STR0,  0, 0,        "mnop"      }, { V_VOID       }, { V_VOID          } } END
     TEST_INSTR INSTR_GET_RANGE,  { V_EXCEPT                            }, { { V_STR0,  0, 0,        "abc"       }, { V_FALSE      }, { V_VOID          } } END
     TEST_INSTR INSTR_GET_RANGE,  { V_EXCEPT                            }, { { V_STR0,  0, 0,        "abc"       }, { V_VOID       }, { V_FALSE         } } END

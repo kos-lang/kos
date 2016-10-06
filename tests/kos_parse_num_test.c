@@ -77,8 +77,10 @@ int main(void)
     /* Integers */
     test_int("0",                              0, 0x00000000U, KOS_SUCCESS);
     test_int("-0",                             0, 0x00000000U, KOS_SUCCESS);
+    test_int("+0",                             0, 0x00000000U, KOS_SUCCESS);
     test_int("1",                              0, 0x00000001U, KOS_SUCCESS);
     test_int("-1",                   0xFFFFFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
+    test_int("+10",                            0, 0x0000000AU, KOS_SUCCESS);
     test_int("2147483647",                     0, 0x7FFFFFFFU, KOS_SUCCESS);
     test_int("-2147483648",          0xFFFFFFFFU, 0x80000000U, KOS_SUCCESS);
     test_int("0x7FFFFFFF",                     0, 0x7FFFFFFFU, KOS_SUCCESS);
@@ -94,6 +96,14 @@ int main(void)
     test_int("-0x8000000000000000",  0x80000000U,           0, KOS_SUCCESS);
     test_int("0xFFFFFFFFFFFFFFFF",   0xFFFFFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
     test_int("-0xFFFFFFFFFFFFFFFF",            0,           1, KOS_SUCCESS);
+    test_int("-",                              0,           0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("--",                             0,           0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("--1",                            0,           0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("1-",                             0,           0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("+",                              0,           0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("++",                             0,           0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("++1",                            0,           0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("1+",                             0,           0, KOS_ERROR_INTEGER_EXPECTED);
     test_int("0x10000000000000000",            0,           0, KOS_ERROR_INTEGER_EXPECTED);
     test_int("0x10000000000000001",            0,           0, KOS_ERROR_INTEGER_EXPECTED);
     test_int("-0x10000000000000000",           0,           0, KOS_ERROR_INTEGER_EXPECTED);
@@ -200,6 +210,7 @@ int main(void)
     test_double("4503599627370495",        0x432FFFFFU, 0xFFFFFFFEU, KOS_SUCCESS);
     test_double("9007199254740991",        0x433FFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
     test_double("9223372036854775807",     0x43E00000U, 0x00000000U, KOS_SUCCESS);
+    test_double("-0.00000E0",              0x80000000U, 0x00000000U, KOS_SUCCESS);
 
     return status;
 }

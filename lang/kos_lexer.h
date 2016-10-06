@@ -51,7 +51,8 @@ enum _KOS_TOKEN_TYPE {
     TT_STRING_OPEN_SQ,
     TT_STRING_OPEN_DQ,
     TT_OPERATOR,
-    TT_SEPARATOR
+    TT_SEPARATOR,
+    TT_NUMERIC_BINARY /* used during optimization, not emitted by lexer */
 };
 
 enum _KOS_KEYWORD_TYPE {
@@ -149,7 +150,7 @@ enum _KOS_OPERATOR_TYPE {
     OT_SETXOR         = 0x18, /* 0001 1000 */
     OT_SETSHL         = 0x19, /* 0001 1001 */
     OT_SETSHR         = 0x1A, /* 0001 1010 */
-    OT_SETSSR         = 0x1B  /* 0001 1011 */
+    OT_SETSSR         = 0x1B  /* 0001 1011 */ /* TODO rename SSR to SHRU everywhere */
 };
 
 enum _KOS_SEPARATOR_TYPE {

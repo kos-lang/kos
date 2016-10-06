@@ -99,17 +99,17 @@ assert typeof λ->(0) == "function";
 }
 expect_fail(fun {
     const a = 1;
-    const b = "abc";
+    const b = λ->("abc")();
     const c = a + b;
 });
 expect_fail(fun {
     const a = 1;
-    const b = void;
+    const b = λ->(void)();
     const c = a + b;
 });
 expect_fail(fun {
-    const a = true;
-    const b = false;
+    const a = λ->(true)();
+    const b = λ->(false)();
     const c = a + b;
 });
 
@@ -146,12 +146,12 @@ expect_fail(fun {
     assert b == 2;
 }
 expect_fail(fun {
-    const a = "abc";
-    const b = "xyz";
+    const a = λ->("abc")();
+    const b = λ->("xyz")();
     const c = a - b;
 });
 expect_fail(fun {
-    const a = "abc";
+    const a = λ->("abc")();
     const b = 0;
     const c = a - b;
 });
@@ -182,7 +182,7 @@ expect_fail(fun {
     assert b == 2;
 }
 expect_fail(fun {
-    const a = "a";
+    const a = λ->("a")();
     const b = 5;
     const c = a * b;
 });
@@ -221,7 +221,7 @@ expect_fail(fun {
 }
 {
     const a  = 10;
-    const b  = 0;
+    const b  = λ->(0)();
     var   ok = false;
     try {
         const c = a / b;
@@ -233,7 +233,7 @@ expect_fail(fun {
 }
 {
     const a  = 10.0;
-    const b  = 0;
+    const b  = λ->(0)();
     var   ok = false;
     try {
         const c = a / b;
@@ -245,7 +245,7 @@ expect_fail(fun {
 }
 {
     const a  = 10;
-    const b  = 0.0;
+    const b  = λ->(0.0)();
     var   ok = false;
     try {
         const c = a / b;
@@ -257,7 +257,7 @@ expect_fail(fun {
 }
 {
     const a  = 1.0;
-    const b  = -0.0;
+    const b  = λ->(-0.0)();
     var   ok = false;
     try {
         const c = a / b;
@@ -295,7 +295,7 @@ expect_fail(fun {
 }
 {
     const a  = 10;
-    const b  = 0;
+    const b  = λ->(0)();
     var   ok = false;
     try {
         const c = a % b;
@@ -307,7 +307,7 @@ expect_fail(fun {
 }
 {
     const a  = 10.0;
-    const b  = 0;
+    const b  = λ->(0)();
     var   ok = false;
     try {
         const c = a % b;
@@ -319,7 +319,7 @@ expect_fail(fun {
 }
 {
     const a  = 10;
-    const b  = 0.0;
+    const b  = λ->(0.0)();
     var   ok = false;
     try {
         const c = a % b;
@@ -331,7 +331,7 @@ expect_fail(fun {
 }
 {
     const a  = 1.0;
-    const b  = -0.0;
+    const b  = λ->(-0.0)();
     var   ok = false;
     try {
         const c = a % b;
@@ -521,7 +521,7 @@ expect_fail(fun {
 }
 {
     const a = 1.5;
-    const b = -16.2;
+    const b = -15.2;
     const c = a | b;
     assert c == 0xFFFFFFFFFFFFFFF1;
     assert typeof c == "integer";
@@ -695,7 +695,7 @@ expect_fail(fun {
     assert typeof c == "integer";
 }
 {
-    const a = -3.1;
+    const a = -2.1;
     const b = 1.99;
     const c = a << b;
     assert c == -6;
@@ -933,7 +933,7 @@ expect_fail(fun {
 }
 expect_fail(fun {
     var   a = "abc";
-    const b = "xyz";
+    const b = λ->("xyz")();
     a -= b;
 });
 {

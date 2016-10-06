@@ -139,9 +139,9 @@ fun expect_fail(function)
 {
     assert new lang.integer(2.1)  == 2;
     assert new lang.integer(1.9)  == 1;
-    assert new lang.integer(-1.9) == -1;
-    assert new lang.integer(-2.1) == -2;
-    assert new lang.integer(-2.9) == -2;
+    assert new lang.integer(-0.9) == -1;
+    assert new lang.integer(-1.1) == -2;
+    assert new lang.integer(-1.9) == -2;
 }
 
 {

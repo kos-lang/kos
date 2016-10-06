@@ -135,10 +135,10 @@ fun buffer_from_array(a)
     b[1] = 255.9;
     assert b[1] == 255;
 
-    b[-8.1] = -0.01;
+    b[-7.1] = 0.01;
     assert b[2] == 0;
 
-    b[-7] = -0.99;
+    b[-7] = 0.99;
     assert b[3] == 0;
 
     expect_fail(fun { b[10]  = 0;     });

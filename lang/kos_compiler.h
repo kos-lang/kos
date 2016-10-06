@@ -57,17 +57,19 @@ enum _KOS_VAR_ACTIVE {
 struct _KOS_VAR {
     struct _KOS_RED_BLACK_NODE rb_tree_node;
 
-    struct _KOS_VAR         *next;
-    const struct _KOS_TOKEN *token;
-    struct _KOS_REG         *reg;
-    enum _KOS_VAR_TYPE       type;
-    int                      is_const;
-    int                      local_assignments; /* Number of writes to a local variable     */
-    int                      local_reads;       /* Number of reads from a local variable or */
-                                                /* number of accesses on a local argument   */
-    int                      array_idx;
-    enum _KOS_VAR_ACTIVE     is_active;         /* Becomes active/searchable after the node */
-                                                /* which declares it. */
+    struct _KOS_VAR            *next;
+    const struct _KOS_TOKEN    *token;
+    struct _KOS_REG            *reg;
+    enum _KOS_VAR_TYPE          type;
+    const struct _KOS_AST_NODE *value;
+    int                         is_const;
+    int                         num_reads;         /* Number of reads from a variable (including closures) */
+    int                         num_assignments;   /* Number of writes to a variable (including closures)  */
+    int                         local_reads;       /* Number of local reads from a variable                */
+    int                         local_assignments; /* Number of local writes to a variable                 */
+    int                         array_idx;
+    enum _KOS_VAR_ACTIVE        is_active;         /* Becomes active/searchable after the node */
+                                                   /* which declares it. */
 };
 
 struct _KOS_BREAK_OFFS {
@@ -121,7 +123,6 @@ struct _KOS_SCOPE {
     int                         num_indep_vars;
     int                         num_args;
     int                         num_indep_args;
-    int                         num_accessed_args;
     int                         uses_this;
     struct _KOS_CATCH_REF       catch_ref; /* For catch references between scopes */
 };
@@ -186,6 +187,9 @@ struct _KOS_COMP_UNIT {
     const struct _KOS_TOKEN    *error_token;
     const char                 *error_str;
 
+    int                         optimize;
+    int                         num_optimizations;
+
     int                         file_id;
     int                         cur_offs;
     struct _KOS_FRAME          *cur_frame;
@@ -235,6 +239,15 @@ int _KOS_compiler_compile(struct _KOS_COMP_UNIT *program,
 
 void _KOS_compiler_destroy(struct _KOS_COMP_UNIT *program);
 
+const struct _KOS_AST_NODE *_KOS_get_const(struct _KOS_COMP_UNIT      *program,
+                                           const struct _KOS_AST_NODE *node);
+
+int _KOS_node_is_truthy(struct _KOS_COMP_UNIT      *program,
+                        const struct _KOS_AST_NODE *node);
+
+int _KOS_node_is_falsy(struct _KOS_COMP_UNIT      *program,
+                       const struct _KOS_AST_NODE *node);
+
 int _KOS_compiler_process_vars(struct _KOS_COMP_UNIT      *program,
                                const struct _KOS_AST_NODE *ast);
 
@@ -251,6 +264,9 @@ void _KOS_activate_new_vars(struct _KOS_COMP_UNIT      *program,
                             const struct _KOS_AST_NODE *node);
 
 void _KOS_deactivate_vars(struct _KOS_SCOPE *scope);
+
+int _KOS_scope_compare_item(void                       *what,
+                            struct _KOS_RED_BLACK_NODE *node);
 
 struct _KOS_SCOPE_REF *_KOS_find_scope_ref(struct _KOS_FRAME *frame,
                                            struct _KOS_SCOPE *closure);

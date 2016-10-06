@@ -552,22 +552,12 @@ int KOS_get_integer(KOS_CONTEXT *ctx,
 
         case OBJ_FLOAT: {
             const double number = OBJPTR(KOS_FLOAT, obj)->number;
-            if (number < 0) {
-                if (number <= -9223372036854775808.0) {
-                    KOS_raise_exception(ctx, TO_OBJPTR(&str_err_number_out_of_range));
-                    error = KOS_ERROR_EXCEPTION;
-                }
-                else
-                    *ret = (int64_t)ceil(number);
+            if (number <= -9223372036854775808.0 || number >= 9223372036854775808.0) {
+                KOS_raise_exception(ctx, TO_OBJPTR(&str_err_number_out_of_range));
+                error = KOS_ERROR_EXCEPTION;
             }
-            else {
-                if (number >= 9223372036854775808.0) {
-                    KOS_raise_exception(ctx, TO_OBJPTR(&str_err_number_out_of_range));
-                    error = KOS_ERROR_EXCEPTION;
-                }
-                else
-                    *ret = (int64_t)floor(number);
-            }
+            else
+                *ret = (int64_t)floor(number);
             break;
         }
 

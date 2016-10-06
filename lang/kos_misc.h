@@ -27,6 +27,25 @@
 
 #define MAX_INT64 ( (int64_t)(((uint64_t)((int64_t)-1))>>1) )
 
+enum _KOS_NUMERIC_TYPE {
+    KOS_NON_NUMERIC,
+    KOS_INTEGER_VALUE,
+    KOS_FLOAT_VALUE
+};
+
+union _KOS_NUMERIC_VALUE {
+    int64_t i;
+    double  d;
+};
+
+struct _KOS_NUMERIC {
+    enum _KOS_NUMERIC_TYPE   type;
+    union _KOS_NUMERIC_VALUE u;
+};
+
+int _KOS_is_integer(const char *begin,
+                    const char *end);
+
 int _KOS_parse_int(const char *begin,
                    const char *end,
                    int64_t    *value);
@@ -34,6 +53,10 @@ int _KOS_parse_int(const char *begin,
 int _KOS_parse_double(const char *begin,
                       const char *end,
                       double     *value);
+
+int _KOS_parse_numeric(const char          *begin,
+                       const char          *end,
+                       struct _KOS_NUMERIC *value);
 
 uint64_t _KOS_double_to_uint64_t(double value);
 

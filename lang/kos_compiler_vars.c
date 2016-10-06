@@ -126,14 +126,12 @@ static struct _KOS_VAR *_alloc_var(struct _KOS_COMP_UNIT      *program,
         _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_VAR));
 
     if (var) {
-        var->token             = &node->token;
-        var->reg               = 0;
-        var->type              = VAR_LOCAL;
-        var->is_const          = is_const;
-        var->local_assignments = 0;
-        var->local_reads       = 0;
-        var->array_idx         = 0;
-        var->is_active         = VAR_ALWAYS_ACTIVE;
+        memset(var, 0, sizeof(*var));
+
+        var->token           = &node->token;
+        var->type            = VAR_LOCAL;
+        var->is_const        = is_const;
+        var->is_active       = VAR_ALWAYS_ACTIVE;
 
         _KOS_red_black_insert(&program->scope_stack->vars,
                               (struct _KOS_RED_BLACK_NODE *)var,
@@ -204,62 +202,9 @@ static int _push_scope(struct _KOS_COMP_UNIT      *program,
     return error;
 }
 
-static int _count_indep_vars(struct _KOS_RED_BLACK_NODE *node,
-                             void                       *cookie)
-{
-    struct _KOS_VAR *var = (struct _KOS_VAR *)node;
-
-    int *count = (int *)cookie;
-
-    if (var->type & VAR_INDEPENDENT)
-        ++(*count);
-
-    return KOS_SUCCESS;
-}
-
-static int _count_read_vars(struct _KOS_RED_BLACK_NODE *node,
-                            void                       *cookie)
-{
-    struct _KOS_VAR *var = (struct _KOS_VAR *)node;
-
-    int *count = (int *)cookie;
-
-    if (var->local_reads)
-        ++(*count);
-
-    return KOS_SUCCESS;
-}
-
 static void _pop_scope(struct _KOS_COMP_UNIT *program)
 {
-    struct _KOS_SCOPE *scope = program->scope_stack;
-
-    assert(scope);
-
-    if (scope->is_function) {
-
-        struct _KOS_VAR *ellipsis = scope->ellipsis;
-
-        _KOS_red_black_walk(scope->vars, _count_indep_vars, &scope->num_indep_args);
-        _KOS_red_black_walk(scope->vars, _count_read_vars,  &scope->num_accessed_args);
-
-        if (ellipsis && (ellipsis->type & VAR_INDEPENDENT)) {
-            assert(ellipsis->type == VAR_INDEPENDENT_LOCAL);
-            --scope->num_indep_args;
-            ++scope->num_indep_vars;
-        }
-    }
-    else {
-
-        _KOS_red_black_walk(scope->vars, _count_indep_vars, &scope->num_indep_vars);
-
-        if (scope->next) {
-            scope->next->num_vars       += scope->num_vars;
-            scope->next->num_indep_vars += scope->num_indep_vars;
-        }
-    }
-
-    program->scope_stack = scope->next;
+    program->scope_stack = program->scope_stack->next;
 }
 
 static int _push_function(struct _KOS_COMP_UNIT      *program,
@@ -390,11 +335,9 @@ static int _lookup_and_mark_var(struct _KOS_COMP_UNIT      *program,
     if (var) {
         if (var->type & VAR_LOCALS_AND_ARGS) {
 
-            /* Mark own args as read */
-            if (scope == local_fun_scope) {
-                ++var->local_reads;
-            }
-            else {
+            /* Ignore own args */
+            if (scope != local_fun_scope) {
+
                 struct _KOS_SCOPE *closure = scope;
 
                 if (var->type & VAR_LOCAL)
@@ -462,8 +405,6 @@ static int _define_local_var(struct _KOS_COMP_UNIT      *program,
         program->globals = var;
     }
     else {
-        ++program->scope_stack->num_vars;
-
         scope = program->scope_stack;
         while (scope->next && ! scope->is_function)
             scope = scope->next;
@@ -618,9 +559,7 @@ static int _left_hand_side(struct _KOS_COMP_UNIT      *program,
 
             struct _KOS_VAR *var = 0;
 
-            if (_lookup_local_var(program, &node->token, &var) == KOS_SUCCESS)
-                ++var->local_assignments;
-            else
+            if (_lookup_local_var(program, &node->token, &var) != KOS_SUCCESS)
                 TRY(_lookup_and_mark_var(program, node, &var));
 
             if (var->is_const) {
@@ -645,9 +584,7 @@ static int _identifier(struct _KOS_COMP_UNIT      *program,
     int              error = KOS_SUCCESS;
     struct _KOS_VAR *var;
 
-    if (_lookup_local_var(program, &node->token, &var) == KOS_SUCCESS)
-        ++var->local_reads;
-    else
+    if (_lookup_local_var(program, &node->token, &var) != KOS_SUCCESS)
         TRY(_lookup_and_mark_var(program, node, &var));
 
 _error:
@@ -712,9 +649,6 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
             var->array_idx = i;
         }
     }
-
-    program->scope_stack->num_args = program->scope_stack->num_vars - ellipsis;
-    program->scope_stack->num_vars = ellipsis;
 
     node = node->next;
     assert(node);

@@ -119,7 +119,7 @@ fun expect_fail(function)
     const c = s[:];
     assert c == "ABCDEF";
 
-    const d = s[:-3.5];
+    const d = s[:-2.5];
     assert d == "ABC";
 
     const e = s[4.9:];
