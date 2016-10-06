@@ -59,7 +59,7 @@ int _KOS_init_array(KOS_CONTEXT *ctx, KOS_ARRAY *array, unsigned capacity)
 
     if (array->buffer) {
         KOS_ATOMIC(KOS_OBJ_PTR) *ptr = &((ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer))->buf[0];
-        KOS_ATOMIC(KOS_OBJ_PTR) *end = ptr + array->capacity;
+        KOS_ATOMIC(KOS_OBJ_PTR) *end = &ptr[array->capacity];
 
         for ( ; ptr != end; ++ptr)
             KOS_atomic_write_ptr(*ptr, KOS_VOID);
