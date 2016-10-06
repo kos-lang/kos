@@ -40,6 +40,7 @@ endif
 
 clean:
 	rm -rf $(out_dir)
+	rm -rf */*.gcov
 
 build.interpreter build.tests: build.lang build.modules
 
