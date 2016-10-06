@@ -71,7 +71,7 @@ try {
     }
 
     {
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
         kos::function_obj add = ctx.NEW_FUNCTION(&add_func);
 #else
         kos::function_obj add = ctx.new_function<int64_t (*)(bool, int, int64_t), add_func>();
@@ -84,7 +84,7 @@ try {
     }
 
     {
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
         kos::function_obj set = ctx.NEW_FUNCTION(&set_global);
 #else
         kos::function_obj set = ctx.new_function<void (*)(const std::string&), set_global>();
@@ -96,7 +96,7 @@ try {
     {
         test_class        myobj(42, "42");
         kos::object       o  = ctx.new_object(&myobj);
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
         kos::function_obj fa = ctx.NEW_FUNCTION(&test_class::get_a);
         kos::function_obj fb = ctx.NEW_FUNCTION(&test_class::get_b);
         kos::function_obj fx = ctx.NEW_FUNCTION(&test_class::add_a);
@@ -125,7 +125,7 @@ try {
         o["i"] = 1.5;
         o["f"] = int64_t(1) << 32;
         o["s"] = "abc";
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
         o["a"] = ctx.make_array(1, 2, 3, 4);
 #endif
 
@@ -138,7 +138,7 @@ try {
         std::string s = o["s"];
         TEST(s == "abc");
 
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
         kos::array_obj a = o["a"];
         TEST(a.size() == 4);
 #endif

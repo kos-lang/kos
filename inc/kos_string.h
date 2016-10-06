@@ -44,7 +44,7 @@ static inline unsigned KOS_get_string_length(KOS_OBJ_PTR objptr)
 
 #endif
 
-#if defined(__cplusplus) && __cplusplus >= 201103L
+#ifdef KOS_CPP11
 
 #define KOS_ASCII_STRING(var, s) KOS_STRING var(s, sizeof(s)-1)
 
@@ -54,7 +54,7 @@ static inline void _KOS_init_const_ascii_string(KOS_STRING* obj, const char* s, 
 {
     obj->type     = OBJ_STRING_8;
     obj->flags    = KOS_STRING_PTR;
-    obj->length   = static_cast<uint32_t>(len);
+    obj->length   = static_cast<uint16_t>(len);
     obj->hash     = 0;
     obj->data.ptr = s;
 }

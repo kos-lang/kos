@@ -170,7 +170,7 @@ typedef struct _KOS_STRING {
         char                buf[24];
         struct _KOS_STR_REF ref;
     }                       data;
-#if defined(__cplusplus) && __cplusplus >= 201103L
+#ifdef KOS_CPP11
     _KOS_STRING() { }
     _KOS_STRING(const char* s, uint16_t length)
         : type(OBJ_STRING_8),
@@ -336,6 +336,9 @@ typedef union _KOS_ANY_OBJECT {
     KOS_DYNAMIC_PROP       dynamic_prop;
     KOS_OBJECT_WALK        walk;
     KOS_SPECIAL            special;
+#ifdef KOS_CPP11
+    _KOS_ANY_OBJECT() = delete;
+#endif
 } KOS_ANY_OBJECT;
 
 #ifdef __cplusplus

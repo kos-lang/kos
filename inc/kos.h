@@ -131,7 +131,7 @@ class context
 
         buffer_obj new_buffer(unsigned size);
 
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
         template<typename... Args>
         array_obj make_array(Args... args);
 #endif
@@ -156,7 +156,7 @@ class context
         template<typename T, T fun>
         function_obj new_function();
 
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
         template<typename Ret, typename... Args>
         KOS_OBJ_PTR invoke_native(Ret (*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args);
 
@@ -480,7 +480,7 @@ class buffer_obj: public object
         /* TODO C++ iterators */
 };
 
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
 inline void unpack_args(array_obj args_obj, int idx)
 {
 }
@@ -518,7 +518,7 @@ class function_obj: public object
             return objptr_converter(*_ctx, _ctx->call(_objptr, this_obj, args));
         }
 
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
         template<typename... Args>
         objptr_converter operator()(Args... args) const {
             return call_v(_ctx->make_array(args...));
@@ -680,7 +680,7 @@ T* get_priv(KOS_OBJ_PTR obj)
     return static_cast<T*>(KOS_object_get_private(*OBJPTR(KOS_OBJECT, obj)));
 }
 
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
 template<int...>
 struct seq
 {
@@ -1030,7 +1030,7 @@ KOS_OBJ_PTR context::invoke_native(T fun, KOS_OBJ_PTR this_obj, array_obj args)
 }
 #endif
 
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
 template<typename Ret, typename... Args>
 constexpr int num_args(Ret (*)(Args...))
 {
@@ -1249,7 +1249,7 @@ function_obj value_from_object_ptr<function_obj>(context& ctx, KOS_OBJ_PTR objpt
 
 } // namespace kos
 
-#if __cplusplus >= 201103L
+#ifdef KOS_CPP11
 #define NEW_FUNCTION(fun) new_function<decltype(fun), (fun)>()
 #endif
 
