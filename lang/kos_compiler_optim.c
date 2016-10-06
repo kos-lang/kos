@@ -949,16 +949,15 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT      *program,
             break;
 
         case OT_SSR:
+            /* fall through */
+        default:
+            assert(op == OT_SSR);
             if (numeric_b.u.i > 63 || numeric_b.u.i < -63)
                 numeric_a.u.i = 0;
             else if (numeric_b.u.i < 0)
                 numeric_a.u.i <<= -numeric_b.u.i;
             else
                 numeric_a.u.i = (int64_t)((uint64_t)numeric_a.u.i >> numeric_b.u.i);
-            break;
-
-        default:
-            assert(0);
             break;
     }
 
@@ -1009,11 +1008,10 @@ static int _optimize_unary_op(struct _KOS_COMP_UNIT      *program,
             break;
 
         case OT_NOT:
-            numeric_a.u.i = ~numeric_a.u.i;
-            break;
-
+            /* fall through */
         default:
-            assert(0);
+            assert(op == OT_NOT);
+            numeric_a.u.i = ~numeric_a.u.i;
             break;
     }
 
@@ -1525,6 +1523,9 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             break;
 
         case NT_LINE_LITERAL:
+            /* fall through */
+        default:
+            assert(node->type == NT_LINE_LITERAL);
             error = _line(program, node);
             break;
 
@@ -1574,13 +1575,6 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             /* fall through */
         case NT_OBJECT_LITERAL:
             error = _visit_child_nodes(program, node);
-            break;
-
-        default:
-            /* TODO to cheat coverage reports: look for all such places
-             *      move the default clause to another case with a single element
-             *      and assert on that element */
-            assert(0);
             break;
     }
 

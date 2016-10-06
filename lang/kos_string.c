@@ -919,11 +919,10 @@ KOS_OBJ_PTR KOS_object_to_string(KOS_CONTEXT *ctx,
             break;
 
         case OBJ_FUNCTION:
-            ret = TO_OBJPTR(&str_function);
-            break;
-
+            /* fall through */
         default:
-            assert(0);
+            assert(GET_OBJ_TYPE(obj) == OBJ_FUNCTION);
+            ret = TO_OBJPTR(&str_function);
             break;
     }
 

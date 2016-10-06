@@ -382,12 +382,10 @@ static int _compare_integer(KOS_BYTECODE_INSTR instr,
             break;
 
         case INSTR_CMP_GE:
-            ret = a >= b;
-            break;
-
+            /* fall through*/
         default:
-            assert(0);
-            ret = 0;
+            assert(instr == INSTR_CMP_GE);
+            ret = a >= b;
             break;
     }
 
@@ -447,12 +445,10 @@ static int _compare_float(KOS_BYTECODE_INSTR instr,
                 break;
 
             case INSTR_CMP_GE:
-                ret = a >= b;
-                break;
-
+                /* fall through */
             default:
-                assert(0);
-                ret = 0;
+                assert(instr == INSTR_CMP_GE);
+                ret = a >= b;
                 break;
         }
     }
@@ -493,12 +489,10 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
                 break;
 
             case INSTR_CMP_NE:
-                ret = !! str_cmp;
-                break;
-
+                /* fall through */
             default:
-                assert(0);
-                ret = 0;
+                assert(instr == INSTR_CMP_NE);
+                ret = !! str_cmp;
                 break;
         }
     }
@@ -735,13 +729,11 @@ static int _prepare_call(KOS_CONTEXT       *ctx,
             goto _error;
 
         case KOS_GEN_DONE:
+            /* fall through */
+        default:
+            assert(gen_state == KOS_GEN_DONE);
             KOS_raise_exception(ctx, TO_OBJPTR(&str_err_generator_end));
             error = KOS_ERROR_EXCEPTION;
-            goto _error;
-
-        default:
-            assert(0);
-            error = KOS_ERROR_INTERNAL;
             goto _error;
     }
 
@@ -2341,16 +2333,16 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 break;
             }
 
-            case INSTR_CATCH_CANCEL: {
-                stack_frame->catch_offs = KOS_NO_CATCH;
-
-                delta = 1;
-                break;
-            }
-
+            case INSTR_CATCH_CANCEL:
+                /* fall through */
             default: {
-                assert(0);
-                KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_instruction));
+                assert(instr == INSTR_CATCH_CANCEL);
+                if (instr == INSTR_CATCH_CANCEL) {
+                    stack_frame->catch_offs = KOS_NO_CATCH;
+                    delta = 1;
+                }
+                else
+                    KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_instruction));
                 break;
             }
         }

@@ -516,7 +516,9 @@ int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
     switch (instr) {
 
         case INSTR_BREAKPOINT:          /* fall through */
-        case INSTR_CATCH_CANCEL:
+        case INSTR_CATCH_CANCEL:        /* fall through */
+        default:
+            assert(instr == INSTR_BREAKPOINT || instr == INSTR_CATCH_CANCEL);
             return 0;
 
         case INSTR_LOAD_TRUE:           /* fall through */
@@ -590,10 +592,6 @@ int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_FUN:            /* fall through */
         case INSTR_LOAD_GEN:
             return 5;
-
-        default:
-            assert(0);
-            return 0;
     }
 }
 
@@ -3345,6 +3343,9 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
     switch (op) {
 
         case OT_LOGNOT:
+            /* fall through */
+        default:
+            assert(op == OT_LOGNOT);
             return _log_not(program, node, reg);
 
         case OT_LOGAND:
@@ -3380,12 +3381,11 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
                     break;
 
                 case KW_INSTANCEOF:
+                    /* fall through */
+                default:
+                    assert(kw == KW_INSTANCEOF);
                     opcode   = INSTR_INSTANCEOF;
                     operands = 2;
-                    break;
-
-                default:
-                    assert(0);
                     break;
             }
             break;
@@ -3420,10 +3420,6 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
         case OT_GT:  opcode = INSTR_CMP_GT; operands = 2; break;
         case OT_LE:  opcode = INSTR_CMP_LE; operands = 2; break;
         case OT_LT:  opcode = INSTR_CMP_LT; operands = 2; break;
-
-        default:
-            assert(0);
-            break;
     }
 
     node = node->children;
@@ -3546,11 +3542,11 @@ static int _assign_instr(enum _KOS_OPERATOR_TYPE op)
         case OT_SETXOR: return INSTR_XOR;
         case OT_SETSHL: return INSTR_SHL;
         case OT_SETSHR: return INSTR_SHR;
-        case OT_SETSSR: return INSTR_SSR;
-        default:        break;
+        case OT_SETSSR:
+            /* fall through */
+        default:        assert(op == OT_SETSSR);
+                        return INSTR_SSR;
     }
-    assert(0);
-    return -1;
 }
 
 static int _assign_member(struct _KOS_COMP_UNIT      *program,
@@ -4584,10 +4580,10 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             error = _array_literal(program, node, reg);
             break;
         case NT_OBJECT_LITERAL:
-            error = _object_literal(program, node, reg);
-            break;
+            /* fall through */
         default:
-            assert(0);
+            assert(node->type == NT_OBJECT_LITERAL);
+            error = _object_literal(program, node, reg);
             break;
     }
 

@@ -92,6 +92,9 @@ static KOS_OBJ_PTR _print(KOS_CONTEXT *ctx,
             else switch (GET_OBJ_TYPE(obj)) {
 
                 case OBJ_INTEGER:
+                    /* fall through */
+                default:
+                    assert(GET_OBJ_TYPE(obj) == OBJ_INTEGER);
                     printf("%" PRId64, OBJPTR(KOS_INTEGER, obj)->number);
                     break;
 
@@ -142,10 +145,6 @@ static KOS_OBJ_PTR _print(KOS_CONTEXT *ctx,
                 case OBJ_FUNCTION:
                     /* TODO print module, name, line, offset */
                     printf("<function>");
-                    break;
-
-                default:
-                    assert(0);
                     break;
             }
         }
@@ -1274,7 +1273,10 @@ static int _pack_format(KOS_CONTEXT             *ctx,
             break;
         }
 
-        case 's': {
+        case 's':
+            /* fall through */
+        default: {
+            assert(value_fmt == 's');
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data)) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_enough_pack_values));
                 TRY(KOS_ERROR_EXCEPTION);
@@ -1305,8 +1307,6 @@ static int _pack_format(KOS_CONTEXT             *ctx,
             }
             break;
         }
-
-        default: assert(0);
     }
 
 _error:
@@ -1334,8 +1334,8 @@ static int _unpack_format(KOS_CONTEXT             *ctx,
 
     data += fmt->idx;
 
-    switch (value_fmt)
-    {
+    switch (value_fmt) {
+
         case 'x':
             assert(size == 1);
             data += size * count;
@@ -1409,7 +1409,10 @@ static int _unpack_format(KOS_CONTEXT             *ctx,
             break;
         }
 
-        case 's': {
+        case 's':
+            /* fall through */
+        default: {
+            assert(value_fmt == 's');
             for ( ; count; count--) {
                 obj = KOS_new_string(ctx, (char *)data, size);
 
@@ -1422,10 +1425,6 @@ static int _unpack_format(KOS_CONTEXT             *ctx,
             }
             break;
         }
-
-        default:
-            assert(0);
-            break;
     }
 
     fmt->idx = (int)(data - KOS_buffer_data(ctx, buffer_obj));

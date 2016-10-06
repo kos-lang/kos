@@ -147,12 +147,11 @@ static int _assume_separator(struct _KOS_PARSER *parser, enum _KOS_SEPARATOR_TYP
                     error = KOS_ERROR_PARSE_FAILED;
                     break;
                 case ST_SQUARE_CLOSE:
+                    /* fall through */
+                default:
+                    assert(sep == ST_SQUARE_CLOSE);
                     parser->error_str = str_err_expected_square_close;
                     error = KOS_ERROR_PARSE_FAILED;
-                    break;
-                default:
-                    assert(0);
-                    error = KOS_ERROR_INTERNAL;
                     break;
             }
         }
@@ -1981,12 +1980,11 @@ static int _for_expr_list(struct _KOS_PARSER      *parser,
                         error = KOS_ERROR_PARSE_FAILED;
                         goto _error;
                     case ST_PAREN_CLOSE:
+                        /* fall through */
+                    default:
+                        assert(end_sep == ST_PAREN_CLOSE);
                         parser->error_str = str_err_expected_paren_close;
                         error = KOS_ERROR_PARSE_FAILED;
-                        goto _error;
-                    default:
-                        assert(0);
-                        error = KOS_ERROR_INTERNAL;
                         goto _error;
                 }
 

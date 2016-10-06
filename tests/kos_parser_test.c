@@ -381,6 +381,9 @@ int main(int argc, char *argv[])
         switch (error) {
 
             case KOS_SUCCESS:
+                /* fall through */
+            default:
+                assert( ! error);
                 break;
 
             case KOS_ERROR_CANNOT_OPEN_FILE:
@@ -394,9 +397,6 @@ int main(int argc, char *argv[])
             case KOS_ERROR_OUT_OF_MEMORY:
                 printf("Failed to allocate memory\n");
                 return 1;
-
-            default:
-                assert(0);
         }
     }
 

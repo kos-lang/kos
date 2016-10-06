@@ -767,6 +767,9 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
 
     switch (node->type) {
         case NT_IMPORT:
+            /* fall through */
+        default:
+            assert(node->type == NT_IMPORT);
             error = _import(program, node);
             break;
         case NT_YIELD:
@@ -872,10 +875,6 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             /* fall through */
         case NT_OBJECT_LITERAL:
             error = _visit_child_nodes(program, node);
-            break;
-
-        default:
-            assert(0);
             break;
     }
 
