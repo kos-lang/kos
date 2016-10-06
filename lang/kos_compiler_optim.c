@@ -784,7 +784,6 @@ static int _assignment(struct _KOS_COMP_UNIT *program,
             }
         }
         else {
-            int t;
             assert(node->type != NT_LINE_LITERAL && node->type != NT_THIS_LITERAL);
             TRY(_visit_node(program, node, &t));
         }
