@@ -294,6 +294,7 @@ type, the `==` operator evaluates to `false` and the `!=` operator evaluates to
 (except for integer vs. floating-point).
 
 If the compared objects are of the same, non-numeric type, then:
+
 * For strings, the strings are actually compared.  The `==` operator returns
   `true` if the strings are the same and `false` otherwise.
 * For voids, the `==` operator returns `true`.

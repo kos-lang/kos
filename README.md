@@ -21,10 +21,6 @@ Kos is a general purpose scripting language with the following design goals:
 
 * Robust support for native multithreading.
 
-* High quality code achieved with the help of the highest levels of warnings
-  and every change tested in multiple ways, including full test suite running
-  on Windows, Linux and MacOSX, Coverity and 100% test coverage.
-
 
 Status
 ======
