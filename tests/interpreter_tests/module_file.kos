@@ -90,6 +90,36 @@ fun expect_fail(function)
     assert ! file.remove(name);
 }
 
+{
+    var failed = true;
+    try {
+        file.open("", void);
+    }
+    catch const e {
+        failed = false;
+    }
+    assert ! failed;
+}
+
+##############################################################################
+# file.close
+
+{
+    const name = "__test_file";
+    var failed = true;
+    var f = file.open(name, file.create);
+    try {
+        f.close.apply(void, []);
+    }
+    catch const e {
+        failed = false;
+    }
+    finally {
+        f.close();
+    }
+    assert ! failed;
+}
+
 ##############################################################################
 # file.size, file.position
 

@@ -129,11 +129,11 @@ static uint32_t _parse_escape_sequence(const char **str_ptr,
                         if (str >= end)
                             break;
                         v = (uint32_t)_hex_map[(uint8_t)c];
-                        if (v > 16)
-                            break;
-                        if (gather > 0x0FFFFFFFU)
+                        if (v > 15)
                             break;
                         gather = (gather << 4) | v;
+                        if (gather > 0x00FFFFFFU)
+                            break;
                     }
                 }
                 else {
@@ -191,10 +191,14 @@ unsigned _KOS_utf8_get_len(const char           *str,
 
         if (escape && code == '\\') {
             code = _parse_escape_sequence(&str, end);
+
             if (code == ~0U) {
                 count = ~0U;
                 break;
             }
+
+            if (code > max_c)
+                max_c = code;
         }
     }
 

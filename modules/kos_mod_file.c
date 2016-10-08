@@ -42,6 +42,7 @@
 #   include <unistd.h>
 #endif
 
+static KOS_ASCII_STRING(str_err_bad_flags,           "incorrect file open flags");
 static KOS_ASCII_STRING(str_err_file_not_open,       "file not open");
 static KOS_ASCII_STRING(str_err_cannot_get_position, "unable to obtain file position");
 static KOS_ASCII_STRING(str_err_cannot_get_size,     "unable to obtain file size");
@@ -88,8 +89,13 @@ static KOS_OBJ_PTR _open(KOS_CONTEXT *ctx,
     if (KOS_get_array_size(args_obj) > 1) {
         KOS_OBJ_PTR flags_obj = KOS_array_read(ctx, args_obj, 1);
 
-        if (IS_BAD_PTR(flags_obj))
+        assert( ! IS_BAD_PTR(flags_obj));
+
+        if (IS_BAD_PTR(flags_obj) || ! IS_STRING_OBJ(flags_obj)) {
+            if ( ! IS_BAD_PTR(flags_obj))
+                KOS_raise_exception(ctx, TO_OBJPTR(&str_err_bad_flags));
             TRY(KOS_ERROR_EXCEPTION);
+        }
 
         TRY(KOS_string_to_cstr_vec(ctx, flags_obj, &flags_cstr));
     }

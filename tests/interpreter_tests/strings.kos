@@ -32,6 +32,10 @@ fun expect_fail(function)
 }
 
 {
+    const str = "\0a\x0a\x{0}\x{80}\x{ffFFff}";
+}
+
+{
     const str = "abc\(123)def";
     assert str == "abc123def";
 }

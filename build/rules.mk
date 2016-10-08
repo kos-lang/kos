@@ -143,7 +143,7 @@ else
     # Configure gcov
     CONFIG_GCOV ?= 0
     ifneq ($(CONFIG_GCOV), 0)
-        CFLAGS  += -fprofile-arcs -ftest-coverage
+        CFLAGS  += -fprofile-arcs -ftest-coverage -fno-inline
         LDFLAGS += -fprofile-arcs -ftest-coverage
     endif
 endif

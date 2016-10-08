@@ -26,6 +26,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../lang/kos_object_internal.h"
+#include "../lang/kos_utf8.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -38,6 +39,30 @@ int main(void)
     KOS_CONTEXT ctx;
 
     TEST(KOS_context_init(&ctx) == KOS_SUCCESS);
+
+    /************************************************************************/
+    {
+        const char     src[]    = { '\\', 'x', '{', '0', '0' };
+        uint32_t       max_code = 0;
+        const unsigned len      = _KOS_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
+        TEST(len == ~0U);
+    }
+
+    /************************************************************************/
+    {
+        const char     src[]    = { '\\', 'x', '{', '\0', '\0', '}' };
+        uint32_t       max_code = 0;
+        const unsigned len      = _KOS_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
+        TEST(len == ~0U);
+    }
+
+    /************************************************************************/
+    {
+        const char     src[]    = { '\\', 'x', '{', '1', '0', '0', '0', '0', '0', '0', '}' };
+        uint32_t       max_code = 0;
+        const unsigned len      = _KOS_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
+        TEST(len == ~0U);
+    }
 
     /************************************************************************/
     {
@@ -234,6 +259,22 @@ int main(void)
 
     /************************************************************************/
     {
+        const char src[] = { '\xC0', '\x80', '\xC2', '\x80' };
+        char buf[4] = { '\xFF', '\xFF', '\xFF', '\xFF' };
+
+        const KOS_OBJ_PTR s = KOS_new_string(&ctx, src, sizeof(src));
+        TEST(!IS_BAD_PTR(s));
+        TEST(!IS_SMALL_INT(s));
+        TEST(KOS_string_to_utf8(s, 0,   0) == 3);
+        TEST(KOS_string_to_utf8(s, buf, 3) == 3);
+        TEST(buf[0] == '\x00');
+        TEST(buf[1] == '\xC2');
+        TEST(buf[2] == '\x80');
+        TEST(buf[3] == '\xFF');
+    }
+
+    /************************************************************************/
+    {
         const char src[] = { '\x80' };
         TEST(IS_BAD_PTR(KOS_new_string(&ctx, src, sizeof(src))));
         TEST_EXCEPTION();
@@ -263,6 +304,20 @@ int main(void)
     /************************************************************************/
     {
         const char src[] = { '\xF8', '\x80', '\x80', '\x80', '\x80' };
+        TEST(IS_BAD_PTR(KOS_new_string(&ctx, src, sizeof(src))));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        const char src[] = { '\xE8', '\x80', '\xC0' };
+        TEST(IS_BAD_PTR(KOS_new_string(&ctx, src, sizeof(src))));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        const char src[] = { '\xF1', '\x80', '\x80', '\xC0' };
         TEST(IS_BAD_PTR(KOS_new_string(&ctx, src, sizeof(src))));
         TEST_EXCEPTION();
     }
@@ -503,6 +558,22 @@ int main(void)
         TEST(buf[18] == '\xBF');
         TEST(buf[19] == '\xBF');
         TEST(buf[20] == '\xFF');
+    }
+
+    /************************************************************************/
+    {
+        const uint32_t src[] = { 0x00200000U };
+        char buf[4] = { '\xFF', '\xFF', '\xFF', '\xFF' };
+        const KOS_OBJ_PTR s = KOS_new_const_string(&ctx, src, sizeof(src)/4, OBJ_STRING_32);
+        TEST(!IS_BAD_PTR(s));
+        TEST(!IS_SMALL_INT(s));
+        TEST(KOS_string_to_utf8(s, 0, 0) == ~0U);
+        TEST(KOS_string_to_utf8(s, buf, 4) == ~0U);
+        TEST_NO_EXCEPTION();
+        TEST(buf[0] == '\xFF');
+        TEST(buf[1] == '\xFF');
+        TEST(buf[2] == '\xFF');
+        TEST(buf[3] == '\xFF');
     }
 
     /************************************************************************/

@@ -58,57 +58,55 @@ note()
     fi
 }
 
+die()
+{
+    echo "$@" >&2
+    exit 1
+}
+
 note "test 1"
 if kos; then
-    echo "Failed: Interpreter exited successfuly without any modules"
-    exit 1
+    die "Failed: Interpreter exited successfuly without any modules"
 fi
 
 note "test 2"
 if kos nomodule; then
-    echo "Failed: Interpreter exited successfuly with a non-existent module"
-    exit 1
+    die "Failed: Interpreter exited successfuly with a non-existent module"
 fi
 
 note "test 3"
 touch "$DIR/zero"
 if kos "$DIR/zero"; then
-    echo "Failed: Interpreter exited successfuly even if module lang is missing"
-    exit 1
+    die "Failed: Interpreter exited successfuly even if module lang is missing"
 fi
 
 note "test 4"
 touch "$DIR/lang.kos"
 if ! kos "$DIR/lang.kos"; then
-    echo "Failed: Interpreter failed to load module lang"
-    exit 1
+    die "Failed: Interpreter failed to load module lang"
 fi
 
 note "test 5"
 if ! kos "$DIR/zero"; then
-    echo "Failed: Interpreter failed to load an empty module"
-    exit 1
+    die "Failed: Interpreter failed to load an empty module"
 fi
 
 note "test 6"
 echo "import nomodule;" > "$DIR/nomodule.kos"
 if kos "$DIR/nomodule.kos"; then
-    echo "Failed: Interpreter exited successfuly even if module loads itself"
-    exit 1
+    die "Failed: Interpreter exited successfuly even if module loads itself"
 fi
 
 note "test 7"
 echo "import nonexistent;" > "$DIR/nomodule.kos"
 if kos "$DIR/nomodule.kos"; then
-    echo "Failed: Interpreter exited successfuly even if non existent module was imported"
-    exit 1
+    die "Failed: Interpreter exited successfuly even if non existent module was imported"
 fi
 
 note "test 8"
 echo "import zero;" >> "$DIR/nomodule.kos"
 if kos "$DIR/nomodule.kos"; then
-    echo "Failed: Interpreter exited successfuly even if imported module file is missing extension"
-    exit 1
+    die "Failed: Interpreter exited successfuly even if imported module file is missing extension"
 fi
 
 note "test 9"
@@ -116,8 +114,7 @@ echo ""              >  "$DIR/empty.kos"
 echo "import empty;" >  "$DIR/twice.kos"
 echo "import empty;" >> "$DIR/twice.kos"
 if ! kos "$DIR/twice.kos"; then
-    echo "Failed: Interpreter failed when the same module was imported twice"
-    exit 1
+    die "Failed: Interpreter failed when the same module was imported twice"
 fi
 
 note "test 10"
@@ -125,20 +122,35 @@ echo "import second;" > "$DIR/first.kos"
 echo "import third;"  > "$DIR/second.kos"
 echo "import first;"  > "$DIR/third.kos"
 if kos "$DIR/first.kos"; then
-    echo "Failed: Interpreter failed to detect a circular dependency"
-    exit 1
+    die "Failed: Interpreter failed to detect a circular dependency"
 fi
 
 note "test 11"
 echo "import first;" > "$DIR/lang.kos"
 if kos "$DIR/zero"; then
-    echo "Failed: Interpreter failed to detect a circular dependency"
-    exit 1
+    die "Failed: Interpreter failed to detect a circular dependency"
 fi
 
 note "test 12"
 echo "import empty;" > "$DIR/lang.kos"
 if ! kos "$DIR/zero"; then
-    echo "Failed: Interpreter failed to load empty module from lang"
-    exit 1
+    die "Failed: Interpreter failed to load empty module from lang"
+fi
+
+note "test 13"
+chmod 000 "$DIR/lang.kos"
+if kos "$DIR/zero"; then
+    die "Failed: Interpreter loaded unreadable file lang.kos"
+fi
+
+note "test 14"
+rm -f "$DIR/lang.kos"
+mkdir "$DIR/lang.kos"
+if kos "$DIR/zero"; then
+    die "Failed: Interpreter failed to detect lang.kos being a directory"
+fi
+
+note "test 15"
+if kos "/../bad/path"; then
+    die "Failed: Interpreter succeeded with badly formatted path"
 fi

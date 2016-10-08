@@ -881,9 +881,9 @@ expect_fail(fun {
 }
 {
     var   a = "abc";
-    const b = "xyz";
+    const b = "xyz\x{FFFF}";
     a += b;
-    assert a == "abcxyz";
+    assert a == "abcxyz￿";
     assert typeof a == "string";
 }
 {
