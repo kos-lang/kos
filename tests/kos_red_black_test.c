@@ -20,12 +20,14 @@
  * IN THE SOFTWARE.
  */
 
-#include <stdlib.h>
-#include <time.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "../inc/kos_error.h"
 #include "../lang/kos_malloc.h"
+#include "../lang/kos_misc.h"
 #include "../lang/kos_red_black.h"
 
 struct MYNODE {
@@ -91,7 +93,7 @@ static int check_node_order(struct _KOS_RED_BLACK_NODE *node, void *cookie)
 
 static int check_walk_order(struct MYNODE *n)
 {
-    intptr_t prev = -1;
+    intptr_t prev = INTPTR_MIN;
 
     return _KOS_red_black_walk((struct _KOS_RED_BLACK_NODE *)n, check_node_order, &prev);
 }
@@ -153,7 +155,7 @@ static int print_tree_node(struct _KOS_RED_BLACK_NODE *node, void *cookie)
 {
     struct MYNODE *n     = (struct MYNODE *)node;
     const intptr_t value = n->value;
-    printf(" %08x", (int)value);
+    printf(" %08" PRIx64, (int64_t)value);
     return KOS_SUCCESS;
 }
 
@@ -167,10 +169,10 @@ static void print_tree(struct MYNODE *root)
 int main(int argc, char *argv[])
 {
     int            i;
-    int            j;
     int            size;
     intptr_t      *values;
     struct MYNODE *root = 0;
+    struct KOS_RNG rng;
     int            total = 0;
     int            error = 0;
 
@@ -181,11 +183,11 @@ int main(int argc, char *argv[])
 
     values = (intptr_t *)_KOS_malloc(size * sizeof(intptr_t));
 
-    srand((unsigned)time(0));
+    _KOS_rng_init(&rng);
 
     for (i = 0; i < size; i++) {
-        const intptr_t v = rand();
-        values[i]        = v != -1 ? v : 0;
+        const intptr_t v = (intptr_t)_KOS_rng_random(&rng);
+        values[i]        = v == INTPTR_MIN ? 0 : v;
     }
 
     for (i = 0; i < size*2; i++) {
@@ -214,10 +216,11 @@ int main(int argc, char *argv[])
 
     error = check_tree(root);
 
-    for (i = 0, j = rand(); i < total*4; i++, j += rand()) {
+    for (i = 0 ; i < total*4; i++) {
+        const uint64_t idx  = _KOS_rng_random(&rng);
         struct MYNODE *node = (struct MYNODE *)_KOS_red_black_find(
                 (struct _KOS_RED_BLACK_NODE *)root,
-                (void *)values[(unsigned)j % size],
+                (void *)values[(unsigned)idx % size],
                 cmp_value);
 
         if (node) {
