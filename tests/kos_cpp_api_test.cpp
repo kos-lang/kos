@@ -136,7 +136,7 @@ try {
         bool exception = false;
         try {
             const kos::array_obj a = from_object_ptr(ctx, TO_SMALL_INT(0));
-            TEST(a[0]);
+            TEST(static_cast<bool>(a[0]));
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "Source type is not an array")
@@ -156,7 +156,7 @@ try {
         bool exception = false;
         try {
             const kos::object a = from_object_ptr(ctx, TO_SMALL_INT(0));
-            TEST(a[""]);
+            TEST(static_cast<bool>(a[""]));
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "Source type is not an object")
@@ -169,7 +169,7 @@ try {
         bool exception = false;
         try {
             const kos::function_obj a = from_object_ptr(ctx, TO_SMALL_INT(0));
-            TEST(a());
+            TEST(static_cast<bool>(a()));
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "Source type is not a function")
