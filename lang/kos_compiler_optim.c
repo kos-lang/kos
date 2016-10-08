@@ -1247,14 +1247,16 @@ static int _operator(struct _KOS_COMP_UNIT *program,
 
         case OT_LOGTRI: {
             assert(b);
-            if (_KOS_node_is_truthy(program, ca)) {
+            if (_KOS_node_is_truthy(program, ca) && b) {
                 _promote(node, b);
                 ++program->num_optimizations;
             }
-            else if (_KOS_node_is_falsy(program, ca)) {
+            else if (_KOS_node_is_falsy(program, ca) && b) {
                 assert(b->next);
-                _promote(node, b->next);
-                ++program->num_optimizations;
+                if (b->next) {
+                    _promote(node, b->next);
+                    ++program->num_optimizations;
+                }
             }
             break;
         }
