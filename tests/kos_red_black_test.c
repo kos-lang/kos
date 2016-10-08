@@ -93,7 +93,7 @@ static int check_node_order(struct _KOS_RED_BLACK_NODE *node, void *cookie)
 
 static int check_walk_order(struct MYNODE *n)
 {
-    intptr_t prev = INTPTR_MIN;
+    intptr_t prev = (intptr_t)1 << (sizeof(intptr_t)*8-1);
 
     return _KOS_red_black_walk((struct _KOS_RED_BLACK_NODE *)n, check_node_order, &prev);
 }
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < size; i++) {
         const intptr_t v = (intptr_t)_KOS_rng_random(&rng);
-        values[i]        = v == INTPTR_MIN ? 0 : v;
+        values[i]        = v == ((intptr_t)1 << (sizeof(intptr_t)*8-1)) ? 0 : v;
     }
 
     for (i = 0; i < size*2; i++) {
