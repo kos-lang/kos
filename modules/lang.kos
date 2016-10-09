@@ -53,7 +53,7 @@ fun range(first_arg, args...)
 object.prototype.iterator = fun
 {
     if typeof this == "object" {
-        return deep(this);
+        return shallow(this);
     }
     else {
         return fun(value) { yield value; } (this);

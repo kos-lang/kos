@@ -214,17 +214,17 @@ expect_fail(λ->({}[""]));
 {
     fun constr
     {
-        this.c = 2;
-        this.d = 3;
-        this.e = 4;
+        this.c = 0;
+        this.d = 1;
+        this.e = 2;
     }
 
-    constr.prototype.a = 0;
-    constr.prototype.b = 1;
+    constr.prototype.a = 10;
+    constr.prototype.b = 11;
 
     const obj = new constr;
 
-    const values = ['a', 'b', 'c', 'd', 'e'];
+    const values = ['c', 'd', 'e'];
 
     for var key in obj {
         const value = obj[key];
