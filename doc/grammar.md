@@ -169,7 +169,6 @@ The following reserved keywords are defined:
 * `in`
 * `instanceof`
 * `new`
-* `only` (reserved)
 * `private` (reserved)
 * `prototype` (reserved)
 * `public` (reserved)
@@ -199,7 +198,7 @@ types.
 
     VOID_LITERAL    ::= "v" "o" "i" "d"
 
-Three keywords are currently reserved - `get`, `only`, `private`, `prototype`,
+Three keywords are currently reserved - `get`, `private`, `prototype`,
 `public` and `set`.
 
 The `λ` keyword is the unicode Greek letter "lambda", code U+03BB, which in

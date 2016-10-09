@@ -78,7 +78,6 @@ enum _KOS_KEYWORD_TYPE {
     KW_IN,
     KW_INSTANCEOF,
     KW_NEW,
-    KW_ONLY,
     KW_PRIVATE,
     KW_PROTOTYPE,
     KW_PUBLIC,

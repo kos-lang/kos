@@ -307,7 +307,6 @@ static const char *const keywords[] = {
     "in",
     "instanceof",
     "new",
-    "only",
     "private",
     "prototype",
     "public",

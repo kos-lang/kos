@@ -24,11 +24,6 @@
         myobj.prop = set fun { };
         myobj.prop = get fun { };
 
-* 'only' keyword
-
-        if ("x" only in obj)
-        for (var prop,val only in obj)
-
 * Invocation with explicit argument names, e.g.:
 
         var f = file.open(name="xyz", flags="r");
