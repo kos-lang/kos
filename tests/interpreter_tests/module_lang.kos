@@ -836,6 +836,22 @@ fun expect_fail(function)
     expect_fail(λ->(method.apply(void, [])));
 }
 
+{
+    fun method(args...)
+    {
+        args.resize(1);
+        args[0] = 123;
+    }
+
+    const args = [1, 2, 3];
+    method.apply(void, args);
+
+    assert args.size == 3;
+    assert args[0]   == 1;
+    assert args[1]   == 2;
+    assert args[2]   == 3;
+}
+
 ##############################################################################
 # constructor selection
 

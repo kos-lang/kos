@@ -739,12 +739,15 @@ static KOS_OBJ_PTR _apply(KOS_CONTEXT *ctx,
                           KOS_OBJ_PTR  this_obj,
                           KOS_OBJ_PTR  args_obj)
 {
-    KOS_OBJ_PTR    ret      = TO_OBJPTR(0);
-    KOS_OBJ_PTR    arg_this = KOS_array_read(ctx, args_obj, 0);
-    KOS_OBJ_PTR    arg_args = TO_OBJPTR(0);
+    KOS_OBJ_PTR ret      = TO_OBJPTR(0);
+    KOS_OBJ_PTR arg_this = KOS_array_read(ctx, args_obj, 0);
+    KOS_OBJ_PTR arg_args = TO_OBJPTR(0);
 
     if ( ! IS_BAD_PTR(arg_this))
         arg_args = KOS_array_read(ctx, args_obj, 1);
+
+    if ( ! IS_BAD_PTR(arg_args))
+        arg_args = KOS_array_slice(ctx, arg_args, 0, MAX_INT64);
 
     if ( ! IS_BAD_PTR(arg_args))
         ret = KOS_call_function(ctx, this_obj, arg_this, arg_args);
