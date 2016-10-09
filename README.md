@@ -43,6 +43,7 @@ Documentation
 
 To find out more about Kos, follow these links:
 
+* [Quick Start](doc/quickstart.md)
 * [Tutorial](doc/tutorial.md)
 * [How to compile Kos from source](doc/building.md)
 * [Principles and ideas which influenced Kos design](doc/design.md)

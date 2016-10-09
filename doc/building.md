@@ -11,9 +11,12 @@ To compile Kos, simply run:
     make
 
 To speed up the build, you can also add `-j 2` (replace 2 with the number of
-available CPUs or CPU cores).
+available CPUs or CPU cores).  For example:
 
-It is also recommended to test whether the build works correctly, by running:
+    make -j 2
+
+It is also recommended to test whether the build works correctly, by running
+the Kos test suite:
 
     make test
 
@@ -29,7 +32,7 @@ Before you can compile Kos on Windows, you need to install:
 * Visual Studio, in particular the Visual C++ compiler (cl.exe)
 * MSYS2 or Cygwin
 
-Find the startup script which you use to start MSYS2 or Cygwin (e.g. msys2.bat
+Find the startup script which you use to start MSYS2 or Cygwin (e.g. msys.bat
 or cygwin.bat), edit it and add the following line(s) near the beginning of
 the script:
 
