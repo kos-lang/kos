@@ -196,18 +196,16 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     }
 };
 
-fun map(first_arg, second_arg)
+fun map(source, second_arg)
 {
-    const source    = first_arg;
     const transform = second_arg;
     for var elem in source {
         yield transform(elem);
     }
 }
 
-fun filter(first_arg, second_arg)
+fun filter(source, second_arg)
 {
-    const source    = first_arg;
     const condition = second_arg;
     for var elem in source {
         if condition(elem) {
