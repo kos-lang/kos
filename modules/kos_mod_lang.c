@@ -1280,6 +1280,8 @@ static int _pack_format(KOS_CONTEXT             *ctx,
             /* fall through */
         default: {
             assert(value_fmt == 's');
+            /* TODO add support for packing variable size string
+             *      calculate size from UTF-8 */
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data)) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_enough_pack_values));
                 TRY(KOS_ERROR_EXCEPTION);

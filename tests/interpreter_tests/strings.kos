@@ -36,6 +36,11 @@ fun expect_fail(function)
 }
 
 {
+    const str = "\xff";
+    assert λ->("\X{0FF}")() == str;
+}
+
+{
     const str = "abc\(123)def";
     assert str == "abc123def";
 }

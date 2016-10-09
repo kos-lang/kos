@@ -169,3 +169,60 @@ fun expect_fail(function)
     assert file.stdout instanceof file.file;
     assert file.stderr instanceof file.file;
 }
+
+##############################################################################
+# file.read_lines
+
+{
+    const name = "./__text_file";
+    file.remove(name);
+    assert ! file.is_file(name);
+
+    with const f = file.open(name, file.create) {
+        const lines = "abc\n\ndef\n\rxyz";
+        f.write((new lang.buffer).pack("s\(lines.size)", lines));
+    }
+
+    with const f = file.open(name, file.ro) {
+        const lines = f.read_lines();
+        assert lines() == "abc\n";
+        assert lines() == "\n";
+        assert lines() == "def\n";
+        assert lines() == "\r";
+        assert lines() == "xyz";
+        expect_fail(λ->(lines()));
+    }
+
+    with const f = file.open(name, file.ro) {
+        const lines = f.read_lines(1);
+        assert lines() == "abc\n";
+        assert lines() == "\n";
+        assert lines() == "def\n";
+        assert lines() == "\r";
+        assert lines() == "xyz";
+        expect_fail(λ->(lines()));
+    }
+
+    # TODO test multibyte sequences, but first need support for strings passed
+    #      to buffer constructors
+
+    with const f = file.open(name, file.create) {
+        const lines = "xy\r\nzA\n";
+        f.write((new lang.buffer).pack("s\(lines.size)", lines));
+    }
+
+    with const f = file.open(name, file.ro) {
+        var a = [];
+        for var line in f.read_lines() {
+            const i = a.size;
+            a.resize(i + 1);
+            a[i] = line;
+        }
+        assert a.size == 2;
+        assert a[0]   == "xy\r\n";
+        assert a[1]   == "z\x41\n";
+    }
+
+    assert file.remove(name);
+    assert ! file.is_file(name);
+}

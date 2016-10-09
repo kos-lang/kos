@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 #
 
+import lang.buffer;
+
 # Flags for open() and for file constructor
 const ro     = "rb";  # open read-only, file must exist
 const rw     = "r+b"; # open read-write, file must exist
@@ -31,3 +33,61 @@ fun open(filename, args...)
     const flags = args.size > 0 ? args[0] : rw;
     return new file(filename, flags);
 }
+
+file.prototype.read = fun(args...)
+{
+    const size     = args.size > 0 ? args[0] : 0x7FFFFFFFFFFFFFFF;
+    const buf      = args.size > 1 ? args[1] : new buffer;
+    var   num_read = 0;
+
+    while ! this.eof && num_read < size {
+        const prev_size = buf.size;
+        const to_read   = size - num_read;
+
+        this.read_some(to_read > 0x10000 ? 0x10000 : to_read, buf);
+
+        const actual_read = buf.size - prev_size;
+        if ! actual_read {
+            break;
+        }
+
+        num_read += actual_read;
+    }
+
+    return buf;
+};
+
+file.prototype.read_lines = fun(args...)
+{
+    const gran = (args.size > 0 && args[0] > 0) ? args[0] : 0x10000;
+    const buf  = new buffer;
+    var   pos    = 0;
+
+    do {
+        this.read_some(gran, buf);
+
+        if pos > 0 && buf[pos-1] == 13 {
+            pos -= 1;
+        }
+
+        for ; pos < buf.size; pos += 1 {
+            const c = buf[pos];
+            if c == 10 || (c == 13 && pos+1 < buf.size && buf[pos+1] != 10) {
+                const end = pos + 1;
+
+                # TODO add buffer unpack at offset
+                yield buf[0:end].unpack("s\(end)")[0];
+
+                buf.copy_buffer(0, buf, end);
+                buf.resize(buf.size - end);
+
+                pos -= end;
+            }
+        }
+    }
+    while pos < buf.size || ! this.eof;
+
+    if pos > 0 {
+        yield buf.unpack("s\(buf.size)")[0];
+    }
+};
