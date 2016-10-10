@@ -1470,23 +1470,42 @@ static KOS_OBJ_PTR _unpack(KOS_CONTEXT *ctx,
     int                     error;
     struct _KOS_PACK_FORMAT fmt;
 
+    assert( ! IS_BAD_PTR(this_obj));
+
+    if ( ! IS_BUFFER_OBJ(this_obj)) {
+        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
+        TRY(KOS_ERROR_EXCEPTION);
+    }
+
     fmt.fmt_str = KOS_array_read(ctx, args_obj, 0);
     fmt.data    = KOS_new_array(ctx, 0);
     fmt.idx     = 0;
     fmt.big_end = 0;
 
-    assert( ! IS_BAD_PTR(fmt.fmt_str));
+    TRY_OBJPTR(fmt.fmt_str);
+    TRY_OBJPTR(fmt.data);
 
-    if (IS_BAD_PTR(fmt.data))
-        error = KOS_ERROR_EXCEPTION;
-    else
-        if (IS_STRING_OBJ(fmt.fmt_str))
-            error = _process_pack_format(ctx, this_obj, _unpack_format, &fmt);
-        else {
-            KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_string));
-            error = KOS_ERROR_EXCEPTION;
-        }
+    if (IS_NUMERIC_OBJ(fmt.fmt_str)) {
+        int64_t idx = 0;
 
+        TRY(KOS_get_integer(ctx, fmt.fmt_str, &idx));
+
+        idx = _KOS_fix_index(idx, KOS_get_buffer_size(this_obj));
+
+        fmt.idx = (int)idx;
+
+        fmt.fmt_str = KOS_array_read(ctx, args_obj, 1);
+        TRY_OBJPTR(fmt.fmt_str);
+    }
+
+    if ( ! IS_STRING_OBJ(fmt.fmt_str)) {
+        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_string));
+        TRY(KOS_ERROR_EXCEPTION);
+    }
+
+    TRY(_process_pack_format(ctx, this_obj, _unpack_format, &fmt));
+
+_error:
     return error ? TO_OBJPTR(0) : fmt.data;
 }
 
