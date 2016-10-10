@@ -25,4 +25,6 @@
 
 #define TRY(code) do { if (0 != (error = (code))) goto _error; } while (0)
 
+#define TRY_OBJPTR(objptr) do { if (IS_BAD_PTR(objptr)) { error = KOS_ERROR_EXCEPTION; goto _error; } } while (0)
+
 #endif
