@@ -72,6 +72,7 @@ static KOS_OBJ_PTR _print(KOS_CONTEXT *ctx,
                           KOS_OBJ_PTR  this_obj,
                           KOS_OBJ_PTR  args_obj)
 {
+    int                error = KOS_SUCCESS;
     uint32_t           len;
     uint32_t           i;
     struct _KOS_VECTOR cstr;
@@ -82,77 +83,80 @@ static KOS_OBJ_PTR _print(KOS_CONTEXT *ctx,
 
     for (i = 0; i < len; i++) {
         KOS_OBJ_PTR obj = KOS_array_read(ctx, args_obj, (int)i);
-        if (!IS_BAD_PTR(obj)) {
-            if (i > 0)
-                printf(" ");
-            if (IS_SMALL_INT(obj)) {
-                const int64_t value = GET_SMALL_INT(obj);
-                printf("%" PRId64, value);
-            }
-            else switch (GET_OBJ_TYPE(obj)) {
 
-                case OBJ_INTEGER:
-                    /* fall through */
-                default:
-                    assert(GET_OBJ_TYPE(obj) == OBJ_INTEGER);
-                    printf("%" PRId64, OBJPTR(KOS_INTEGER, obj)->number);
-                    break;
+        TRY_OBJPTR(obj);
 
-                case OBJ_FLOAT:
-                    printf("%f", OBJPTR(KOS_FLOAT, obj)->number);
-                    break;
+        if (i > 0)
+            printf(" ");
 
-                case OBJ_STRING_8:
-                    /* fall through */
-                case OBJ_STRING_16:
-                    /* fall through */
-                case OBJ_STRING_32: {
-                    if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, obj, &cstr)) {
-                        assert(cstr.size > 0);
-                        printf("%.*s", (int)cstr.size-1, cstr.buffer);
-                    }
-                    else
-                        i = len;
-                    break;
+        if (IS_SMALL_INT(obj)) {
+            const int64_t value = GET_SMALL_INT(obj);
+            printf("%" PRId64, value);
+        }
+        else switch (GET_OBJ_TYPE(obj)) {
+
+            case OBJ_INTEGER:
+                /* fall through */
+            default:
+                assert(GET_OBJ_TYPE(obj) == OBJ_INTEGER);
+                printf("%" PRId64, OBJPTR(KOS_INTEGER, obj)->number);
+                break;
+
+            case OBJ_FLOAT:
+                printf("%f", OBJPTR(KOS_FLOAT, obj)->number);
+                break;
+
+            case OBJ_STRING_8:
+                /* fall through */
+            case OBJ_STRING_16:
+                /* fall through */
+            case OBJ_STRING_32: {
+                if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, obj, &cstr)) {
+                    assert(cstr.size > 0);
+                    printf("%.*s", (int)cstr.size-1, cstr.buffer);
                 }
-
-                case OBJ_VOID:
-                    printf("void");
-                    break;
-
-                case OBJ_BOOLEAN:
-                    if (KOS_get_bool(obj))
-                        printf("true");
-                    else
-                        printf("false");
-                    break;
-
-                case OBJ_ARRAY:
-                    /* TODO */
-                    printf("<array>");
-                    break;
-
-                case OBJ_BUFFER:
-                    /* TODO */
-                    printf("<buffer>");
-                    break;
-
-                case OBJ_OBJECT:
-                    /* TODO */
-                    printf("<object>");
-                    break;
-
-                case OBJ_FUNCTION:
-                    /* TODO print module, name, line, offset */
-                    printf("<function>");
-                    break;
+                else
+                    i = len;
+                break;
             }
+
+            case OBJ_VOID:
+                printf("void");
+                break;
+
+            case OBJ_BOOLEAN:
+                if (KOS_get_bool(obj))
+                    printf("true");
+                else
+                    printf("false");
+                break;
+
+            case OBJ_ARRAY:
+                /* TODO */
+                printf("<array>");
+                break;
+
+            case OBJ_BUFFER:
+                /* TODO */
+                printf("<buffer>");
+                break;
+
+            case OBJ_OBJECT:
+                /* TODO */
+                printf("<object>");
+                break;
+
+            case OBJ_FUNCTION:
+                /* TODO print module, name, line, offset */
+                printf("<function>");
+                break;
         }
     }
 
+_error:
     _KOS_vector_destroy(&cstr);
 
-    return KOS_VOID;
+    return error ? TO_OBJPTR(0) : KOS_VOID;
 }
 
 static KOS_OBJ_PTR _object_iterator(KOS_CONTEXT               *ctx,
@@ -165,19 +169,20 @@ static KOS_OBJ_PTR _object_iterator(KOS_CONTEXT               *ctx,
     KOS_OBJECT_WALK_ELEM elem = { TO_OBJPTR(0), TO_OBJPTR(0) };
 
     assert( ! IS_BAD_PTR(regs_obj));
-    if (IS_SMALL_INT(regs_obj) || GET_OBJ_TYPE(regs_obj) != OBJ_ARRAY ||
-            KOS_get_array_size(regs_obj) == 0) {
+    TRY_OBJPTR(regs_obj);
+
+    if ( ! IS_TYPE(OBJ_ARRAY, regs_obj) || KOS_get_array_size(regs_obj) == 0) {
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_bad_obj_iter));
         TRY(KOS_ERROR_EXCEPTION);
     }
 
     walk = KOS_array_read(ctx, regs_obj, 0);
     assert( ! IS_BAD_PTR(walk));
+    TRY_OBJPTR(walk);
 
-    if (IS_SMALL_INT(walk) || GET_OBJ_TYPE(walk) != OBJ_OBJECT_WALK) {
+    if ( ! IS_TYPE(OBJ_OBJECT_WALK, walk)) {
         walk = KOS_new_object_walk(ctx, walk, deep);
-        if (IS_BAD_PTR(walk))
-            TRY(KOS_ERROR_EXCEPTION);
+        TRY_OBJPTR(walk);
 
         TRY(KOS_array_write(ctx, regs_obj, 0, walk));
     }
@@ -226,27 +231,23 @@ static int _create_constructor(KOS_CONTEXT         *ctx,
     int         error    = KOS_SUCCESS;
     KOS_OBJ_PTR func_obj = KOS_new_function(ctx, KOS_VOID);
 
-    if (IS_BAD_PTR(func_obj)) {
-        assert(KOS_is_exception_pending(ctx));
-        error = KOS_ERROR_EXCEPTION;
-    }
-    else {
-        OBJPTR(KOS_FUNCTION, func_obj)->handler = constructor;
-        OBJPTR(KOS_FUNCTION, func_obj)->module  = module_obj;
+    TRY_OBJPTR(func_obj);
 
-        error = KOS_module_add_global(OBJPTR(KOS_MODULE, module_obj),
-                                      str_name,
-                                      func_obj,
-                                      0);
+    OBJPTR(KOS_FUNCTION, func_obj)->handler = constructor;
+    OBJPTR(KOS_FUNCTION, func_obj)->module  = module_obj;
 
-        if ( ! error)
-            error = KOS_set_builtin_dynamic_property(ctx,
-                                                     func_obj,
-                                                     TO_OBJPTR(&str_prototype),
-                                                     get_prototype,
-                                                     _set_prototype);
-    }
+    TRY(KOS_module_add_global(OBJPTR(KOS_MODULE, module_obj),
+                              str_name,
+                              func_obj,
+                              0));
 
+    TRY(KOS_set_builtin_dynamic_property(ctx,
+                                         func_obj,
+                                         TO_OBJPTR(&str_prototype),
+                                         get_prototype,
+                                         _set_prototype));
+
+_error:
     return error;
 }
 
@@ -1487,7 +1488,7 @@ static KOS_OBJ_PTR _unpack(KOS_CONTEXT *ctx,
 
     assert( ! IS_BAD_PTR(this_obj));
 
-    if ( ! IS_BUFFER_OBJ(this_obj)) {
+    if ( ! IS_TYPE(OBJ_BUFFER, this_obj)) {
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
         TRY(KOS_ERROR_EXCEPTION);
     }

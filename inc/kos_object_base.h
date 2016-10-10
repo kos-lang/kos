@@ -110,9 +110,18 @@ static inline bool IS_NUMERIC_OBJ(KOS_OBJ_PTR objptr) {
 static inline bool IS_STRING_OBJ(KOS_OBJ_PTR objptr) {
     return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) <= OBJ_STRING_32);
 }
-static inline bool IS_BUFFER_OBJ(KOS_OBJ_PTR objptr) {
-    return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) == OBJ_BUFFER);
+template<enum KOS_OBJECT_TYPE type>
+bool KOS_is_type(KOS_OBJ_PTR objptr) {
+#ifdef KOS_CPP11
+    static_assert(type != OBJ_INTEGER   &&
+                  type != OBJ_FLOAT     &&
+                  type != OBJ_STRING_8  &&
+                  type != OBJ_STRING_16 &&
+                  type != OBJ_STRING_32, "Unsupported type specified");
+#endif
+    return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) == type);
 }
+#define IS_TYPE(type, objptr) KOS_is_type<type>(objptr)
 static inline bool HAS_PROPERTIES(KOS_OBJ_PTR objptr) {
     return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) >= 'a');
 }
@@ -128,7 +137,7 @@ static inline bool HAS_PROPERTIES(KOS_OBJ_PTR objptr) {
 #define GET_OBJ_TYPE(objptr)  ( OBJPTR(KOS_ANY_OBJECT, (objptr))->type            )
 #define IS_NUMERIC_OBJ(objptr)( IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) == OBJ_INTEGER || GET_OBJ_TYPE(objptr) == OBJ_FLOAT )
 #define IS_STRING_OBJ(objptr) ( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) <= OBJ_STRING_32) )
-#define IS_BUFFER_OBJ(objptr) ( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) == OBJ_BUFFER   ) )
+#define IS_TYPE(type, objptr) ( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) == (type)       ) )
 #define HAS_PROPERTIES(objptr)( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) >= 'a'          ) )
 
 #endif

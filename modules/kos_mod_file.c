@@ -79,6 +79,8 @@ static KOS_OBJ_PTR _open(KOS_CONTEXT *ctx,
     _KOS_vector_init(&filename_cstr);
     _KOS_vector_init(&flags_cstr);
 
+    TRY_OBJPTR(filename_obj);
+
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
     _fix_path_separators(&filename_cstr);
@@ -88,11 +90,10 @@ static KOS_OBJ_PTR _open(KOS_CONTEXT *ctx,
     if (KOS_get_array_size(args_obj) > 1) {
         KOS_OBJ_PTR flags_obj = KOS_array_read(ctx, args_obj, 1);
 
-        assert( ! IS_BAD_PTR(flags_obj));
+        TRY_OBJPTR(flags_obj);
 
-        if (IS_BAD_PTR(flags_obj) || ! IS_STRING_OBJ(flags_obj)) {
-            if ( ! IS_BAD_PTR(flags_obj))
-                KOS_raise_exception(ctx, TO_OBJPTR(&str_err_bad_flags));
+        if ( ! IS_STRING_OBJ(flags_obj)) {
+            KOS_raise_exception(ctx, TO_OBJPTR(&str_err_bad_flags));
             TRY(KOS_ERROR_EXCEPTION);
         }
 
@@ -103,8 +104,7 @@ static KOS_OBJ_PTR _open(KOS_CONTEXT *ctx,
 
     ret = KOS_new_object_with_prototype(ctx, this_obj);
 
-    if (IS_BAD_PTR(ret))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(ret);
 
     KOS_object_set_private(*OBJPTR(KOS_OBJECT, ret), file);
     file = 0;
@@ -125,7 +125,10 @@ static int _get_file_object(KOS_CONTEXT *ctx,
 {
     assert( ! IS_BAD_PTR(this_obj));
 
-    if (IS_SMALL_INT(this_obj) || GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
+    if (IS_BAD_PTR(this_obj))
+        return KOS_ERROR_EXCEPTION;
+
+    if ( ! IS_TYPE(OBJ_OBJECT, this_obj)) {
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_file_not_open));
         return KOS_ERROR_EXCEPTION;
     }
@@ -182,8 +185,7 @@ static KOS_OBJ_PTR _read_some(KOS_CONTEXT *ctx,
     if (KOS_get_array_size(args_obj) > 0) {
         KOS_OBJ_PTR arg = KOS_array_read(ctx, args_obj, 0);
 
-        if (IS_BAD_PTR(arg))
-            TRY(KOS_ERROR_EXCEPTION);
+        TRY_OBJPTR(arg);
 
         TRY(KOS_get_integer(ctx, arg, &to_read));
     }
@@ -196,10 +198,9 @@ static KOS_OBJ_PTR _read_some(KOS_CONTEXT *ctx,
     if (KOS_get_array_size(args_obj) > 1) {
         buf = KOS_array_read(ctx, args_obj, 1);
 
-        if (IS_BAD_PTR(buf))
-            TRY(KOS_ERROR_EXCEPTION);
+        TRY_OBJPTR(buf);
 
-        if (IS_SMALL_INT(buf) || GET_OBJ_TYPE(buf) != OBJ_BUFFER) {
+        if ( ! IS_TYPE(OBJ_BUFFER, buf)) {
             KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
             TRY(KOS_ERROR_EXCEPTION);
         }
@@ -244,10 +245,9 @@ static KOS_OBJ_PTR _write(KOS_CONTEXT *ctx,
 
     arg = KOS_array_read(ctx, args_obj, 0);
 
-    if (IS_BAD_PTR(arg))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(arg);
 
-    if (IS_SMALL_INT(arg) || GET_OBJ_TYPE(arg) != OBJ_BUFFER) {
+    if ( ! IS_TYPE(OBJ_BUFFER, arg)) {
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
         TRY(KOS_ERROR_EXCEPTION);
     }
@@ -363,8 +363,7 @@ static KOS_OBJ_PTR _set_file_pos(KOS_CONTEXT *ctx,
 
     arg = KOS_array_read(ctx, args_obj, 0);
 
-    if (IS_BAD_PTR(arg))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(arg);
 
     TRY(KOS_get_integer(ctx, arg, &pos));
 
@@ -388,8 +387,7 @@ static KOS_OBJ_PTR _is_file(KOS_CONTEXT *ctx,
 
     _KOS_vector_init(&filename_cstr);
 
-    if (IS_BAD_PTR(filename_obj))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(filename_obj);
 
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
@@ -414,8 +412,7 @@ static KOS_OBJ_PTR _remove(KOS_CONTEXT *ctx,
 
     _KOS_vector_init(&filename_cstr);
 
-    if (IS_BAD_PTR(filename_obj))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(filename_obj);
 
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
@@ -438,14 +435,18 @@ static int _add_std_file(KOS_MODULE *module,
                          KOS_STRING *str_name,
                          FILE*       file)
 {
+    int error = KOS_SUCCESS;
+
     KOS_OBJ_PTR obj = KOS_new_object_with_prototype(module->context, proto);
 
-    if (IS_BAD_PTR(obj))
-        return KOS_ERROR_EXCEPTION;
+    TRY_OBJPTR(obj);
 
     KOS_object_set_private(*OBJPTR(KOS_OBJECT, obj), file);
 
-    return KOS_module_add_global(module, TO_OBJPTR(str_name), obj, 0);
+    error = KOS_module_add_global(module, TO_OBJPTR(str_name), obj, 0);
+
+_error:
+    return error;
 }
 
 #define TRY_ADD_STD_FILE(module, proto, name, file)           \
