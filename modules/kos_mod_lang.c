@@ -1088,6 +1088,9 @@ static int _process_pack_format(KOS_CONTEXT             *ctx,
                 if (next_c >= '0' && next_c <= '9') {
                     size = _pack_format_get_count(ctx, fmt_str, &i_fmt);
                 }
+                else if (c == 's') {
+                    size = ~0U;
+                }
                 else {
                     KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_pack_format));
                     TRY(KOS_ERROR_EXCEPTION);
@@ -1117,7 +1120,7 @@ static int _pack_format(KOS_CONTEXT             *ctx,
 {
     int                error = KOS_SUCCESS;
     int                big_end;
-    uint8_t           *dst;
+    uint8_t           *dst   = 0;
     struct _KOS_VECTOR str_buf;
 
     _KOS_vector_init(&str_buf);
@@ -1138,9 +1141,13 @@ static int _pack_format(KOS_CONTEXT             *ctx,
         }
     }
 
-    dst = KOS_buffer_make_room(ctx, buffer_obj, size * count);
-    if ( ! dst)
-        TRY(KOS_ERROR_EXCEPTION);
+    assert(size != ~0U || value_fmt == 's');
+
+    if (size != ~0U) {
+        dst = KOS_buffer_make_room(ctx, buffer_obj, size * count);
+        if ( ! dst)
+            TRY(KOS_ERROR_EXCEPTION);
+    }
 
     big_end = fmt->big_end;
 
@@ -1280,8 +1287,6 @@ static int _pack_format(KOS_CONTEXT             *ctx,
             /* fall through */
         default: {
             assert(value_fmt == 's');
-            /* TODO add support for packing variable size string
-             *      calculate size from UTF-8 */
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data)) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_enough_pack_values));
                 TRY(KOS_ERROR_EXCEPTION);
@@ -1300,15 +1305,20 @@ static int _pack_format(KOS_CONTEXT             *ctx,
 
                 TRY(KOS_string_to_cstr_vec(ctx, value_obj, &str_buf));
 
-                copy_size = size > str_buf.size ? (uint32_t)str_buf.size : size;
+                copy_size = size > str_buf.size-1 ? (uint32_t)str_buf.size-1 : size;
+
+                if (size == ~0U)
+                    dst = KOS_buffer_make_room(ctx, buffer_obj, copy_size);
 
                 if (copy_size)
                     memcpy(dst, str_buf.buffer, copy_size);
 
-                if (copy_size < size)
-                    memset(dst + copy_size, 0, size - copy_size);
+                if (size != ~0U) {
+                    if (copy_size < size)
+                        memset(dst + copy_size, 0, size - copy_size);
 
-                dst += size;
+                    dst += size;
+                }
             }
             break;
         }
@@ -1331,6 +1341,11 @@ static int _unpack_format(KOS_CONTEXT             *ctx,
     const uint32_t data_size = KOS_get_buffer_size(buffer_obj);
     int            big_end   = fmt->big_end;
     KOS_OBJ_PTR    obj;
+
+    if (size == ~0U) {
+        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_pack_format));
+        return KOS_ERROR_EXCEPTION;
+    }
 
     if (fmt->idx + size * count > data_size) {
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_unpack_buf_too_short));

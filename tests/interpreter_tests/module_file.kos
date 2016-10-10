@@ -203,12 +203,9 @@ fun expect_fail(function)
         expect_fail(λ->(lines()));
     }
 
-    # TODO test multibyte sequences, but first need support for strings passed
-    #      to buffer constructors
-
     with const f = file.open(name, file.create) {
-        const lines = "xy\r\nzA\n";
-        f.write((new lang.buffer).pack("s\(lines.size)", lines));
+        const lines = "xy\r\nz\x{FF}\n";
+        f.write((new lang.buffer).pack("s", lines));
     }
 
     with const f = file.open(name, file.ro) {
@@ -220,7 +217,7 @@ fun expect_fail(function)
         }
         assert a.size == 2;
         assert a[0]   == "xy\r\n";
-        assert a[1]   == "z\x41\n";
+        assert a[1]   == "z\xFF\n";
     }
 
     assert file.remove(name);

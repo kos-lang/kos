@@ -599,6 +599,31 @@ fun buffer_from_array(a)
 }
 
 {
+    const b = new buffer;
+    b.pack("s", "\x{AA}\x{55555}");
+
+    assert b.size == 6;
+    assert b[0]   == 0xC2;
+    assert b[1]   == 0xAA;
+    assert b[2]   == 0xF1;
+    assert b[3]   == 0x95;
+    assert b[4]   == 0x95;
+    assert b[5]   == 0x95;
+}
+
+{
+    const b = new buffer;
+    b.pack("> 2s i1", "\x80", "\x{7FF}", 10);
+
+    assert b.size == 5;
+    assert b[0]   == 0xC2;
+    assert b[1]   == 0x80;
+    assert b[2]   == 0xDF;
+    assert b[3]   == 0xBF;
+    assert b[4]   == 10;
+}
+
+{
     expect_fail(λ->((new buffer).pack()));
     expect_fail(λ->((new buffer).pack("1", 0)));
     expect_fail(λ->((new buffer).pack("u", 0)));
@@ -607,7 +632,7 @@ fun buffer_from_array(a)
     expect_fail(λ->((new buffer).pack("f2", 0)));
     expect_fail(λ->((new buffer).pack("u2", "")));
     expect_fail(λ->((new buffer).pack("s2", 0)));
-    expect_fail(λ->((new buffer).pack("s", "")));
+    expect_fail(λ->((new buffer).pack("b", "")));
     expect_fail(λ->((new buffer).pack("u1 1", 1)));
     expect_fail(λ->((new buffer).pack("2 u1", 1)));
     expect_fail(λ->((new buffer).pack("i1 i2", 1)));
@@ -772,4 +797,8 @@ fun buffer_from_array(a)
     assert a[0]        == 3;
     assert a[1]        == 0x504;
     assert a[2]        == 6;
+}
+
+{
+    expect_fail(λ->((new buffer(100)).unpack("s")));
 }
