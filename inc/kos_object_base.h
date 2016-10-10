@@ -108,7 +108,10 @@ static inline bool IS_NUMERIC_OBJ(KOS_OBJ_PTR objptr) {
     return IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) == OBJ_INTEGER || GET_OBJ_TYPE(objptr) == OBJ_FLOAT;
 }
 static inline bool IS_STRING_OBJ(KOS_OBJ_PTR objptr) {
-    return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) <= '4');
+    return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) <= OBJ_STRING_32);
+}
+static inline bool IS_BUFFER_OBJ(KOS_OBJ_PTR objptr) {
+    return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) == OBJ_BUFFER);
 }
 static inline bool HAS_PROPERTIES(KOS_OBJ_PTR objptr) {
     return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) >= 'a');
@@ -124,8 +127,9 @@ static inline bool HAS_PROPERTIES(KOS_OBJ_PTR objptr) {
 #define TO_OBJPTR(ptr)        ( (KOS_OBJ_PTR) ((intptr_t)(ptr) + 1)               )
 #define GET_OBJ_TYPE(objptr)  ( OBJPTR(KOS_ANY_OBJECT, (objptr))->type            )
 #define IS_NUMERIC_OBJ(objptr)( IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) == OBJ_INTEGER || GET_OBJ_TYPE(objptr) == OBJ_FLOAT )
-#define IS_STRING_OBJ(objptr) ( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) <= '4') )
-#define HAS_PROPERTIES(objptr)( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) >= 'a') )
+#define IS_STRING_OBJ(objptr) ( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) <= OBJ_STRING_32) )
+#define IS_BUFFER_OBJ(objptr) ( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) == OBJ_BUFFER   ) )
+#define HAS_PROPERTIES(objptr)( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) >= 'a'          ) )
 
 #endif
 
