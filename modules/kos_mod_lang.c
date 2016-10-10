@@ -1486,6 +1486,11 @@ static KOS_OBJ_PTR _unpack(KOS_CONTEXT *ctx,
     int                     error;
     struct _KOS_PACK_FORMAT fmt;
 
+    fmt.fmt_str = TO_OBJPTR(0);
+    fmt.data    = TO_OBJPTR(0);
+    fmt.idx     = 0;
+    fmt.big_end = 0;
+
     assert( ! IS_BAD_PTR(this_obj));
 
     if ( ! IS_TYPE(OBJ_BUFFER, this_obj)) {
@@ -1495,8 +1500,6 @@ static KOS_OBJ_PTR _unpack(KOS_CONTEXT *ctx,
 
     fmt.fmt_str = KOS_array_read(ctx, args_obj, 0);
     fmt.data    = KOS_new_array(ctx, 0);
-    fmt.idx     = 0;
-    fmt.big_end = 0;
 
     TRY_OBJPTR(fmt.fmt_str);
     TRY_OBJPTR(fmt.data);
