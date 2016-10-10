@@ -75,8 +75,7 @@ file.prototype.read_lines = fun(args...)
             if c == 10 || (c == 13 && pos+1 < buf.size && buf[pos+1] != 10) {
                 const end = pos + 1;
 
-                # TODO add buffer unpack at offset
-                yield buf[0:end].unpack("s\(end)")[0];
+                yield buf.unpack("s\(end)")[0];
 
                 buf.copy_buffer(0, buf, end);
                 buf.resize(buf.size - end);
