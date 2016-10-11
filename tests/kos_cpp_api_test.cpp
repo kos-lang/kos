@@ -75,7 +75,7 @@ try {
             TEST(a == 2);
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "Source type is not a number")
+            if (std::string(e.what()) == "source type is not a number")
                 exception = true;
         }
         TEST(exception);
@@ -88,7 +88,7 @@ try {
             TEST(a == true);
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "Source type is not a boolean")
+            if (std::string(e.what()) == "source type is not a boolean")
                 exception = true;
         }
         TEST(exception);
@@ -101,45 +101,46 @@ try {
             TEST(a == "2");
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "Source type is not a string")
+            if (std::string(e.what()) == "source type is not a string")
                 exception = true;
         }
         TEST(exception);
     }
 
     {
-        const kos::string_obj str = from_object_ptr(ctx, to_object_ptr(ctx, "uv"));
+        const kos::string str = from_object_ptr(ctx, to_object_ptr(ctx, "uv"));
         TEST(std::string(str) == "uv");
     }
 
     {
         bool exception = false;
         try {
-            const kos::string_obj a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const kos::string a = from_object_ptr(ctx, TO_SMALL_INT(0));
             TEST(std::string(a) == "2");
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "Source type is not a string")
+            if (std::string(e.what()) == "source type is not a string")
                 exception = true;
         }
         TEST(exception);
     }
 
     {
-        kos::array_obj a = ctx.new_array(1);
+        kos::array a = ctx.new_array(2);
         a[0] = 100;
-        kos::array_obj a2 = from_object_ptr(ctx, a);
+        a[1] = kos::void_();
+        kos::array a2 = from_object_ptr(ctx, a);
         TEST(static_cast<int>(a2[0]) == 100);
     }
 
     {
         bool exception = false;
         try {
-            const kos::array_obj a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const kos::array a = from_object_ptr(ctx, TO_SMALL_INT(0));
             TEST(static_cast<bool>(a[0]));
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "Source type is not an array")
+            if (std::string(e.what()) == "source type is not an array")
                 exception = true;
         }
         TEST(exception);
@@ -159,7 +160,7 @@ try {
             TEST(static_cast<bool>(a[""]));
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "Source type is not an object")
+            if (std::string(e.what()) == "source type is not an object")
                 exception = true;
         }
         TEST(exception);
@@ -168,11 +169,11 @@ try {
     {
         bool exception = false;
         try {
-            const kos::function_obj a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const kos::function a = from_object_ptr(ctx, TO_SMALL_INT(0));
             TEST(static_cast<bool>(a()));
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "Source type is not a function")
+            if (std::string(e.what()) == "source type is not a function")
                 exception = true;
         }
         TEST(exception);
@@ -184,7 +185,7 @@ try {
     }
 
     {
-        kos::array_obj a = ctx.new_array(100);
+        kos::array a = ctx.new_array(100);
         TEST(a.size() == 100);
         TEST(static_cast<KOS_OBJ_PTR>(a[0] ) == KOS_VOID);
         TEST(static_cast<KOS_OBJ_PTR>(a[99]) == KOS_VOID);
@@ -192,9 +193,9 @@ try {
 
     {
 #ifdef KOS_CPP11
-        kos::function_obj add = ctx.NEW_FUNCTION(&add_func);
+        kos::function add = ctx.NEW_FUNCTION(&add_func);
 #else
-        kos::function_obj add = ctx.new_function<int64_t (*)(bool, int, int64_t), add_func>();
+        kos::function add = ctx.new_function<int64_t(bool, int, int64_t), add_func>();
 #endif
         const int a6 = add(false, 5, 10);
         TEST(a6 == 6);
@@ -205,9 +206,9 @@ try {
 
     {
 #ifdef KOS_CPP11
-        kos::function_obj set = ctx.NEW_FUNCTION(&set_global);
+        kos::function set = ctx.NEW_FUNCTION(set_global);
 #else
-        kos::function_obj set = ctx.new_function<void (*)(const std::string&), set_global>();
+        kos::function set = ctx.new_function<void(const std::string&), set_global>();
 #endif
         set("some string");
         TEST(global_str == "some string");
@@ -217,27 +218,27 @@ try {
         test_class        myobj(42, "42");
         kos::object       o  = ctx.new_object(&myobj);
 #ifdef KOS_CPP11
-        kos::function_obj fa = ctx.NEW_FUNCTION(&test_class::get_a);
-        kos::function_obj fb = ctx.NEW_FUNCTION(&test_class::get_b);
-        kos::function_obj fx = ctx.NEW_FUNCTION(&test_class::add_a);
+        kos::function fa = ctx.NEW_FUNCTION(&test_class::get_a);
+        kos::function fb = ctx.NEW_FUNCTION(&test_class::get_b);
+        kos::function fx = ctx.NEW_FUNCTION(&test_class::add_a);
 #else
-        kos::function_obj fa = ctx.new_function<int                (test_class::*)() const,    &test_class::get_a>();
-        kos::function_obj fb = ctx.new_function<const std::string& (test_class::*)() const,    &test_class::get_b>();
-        kos::function_obj fx = ctx.new_function<int64_t            (test_class::*)(bool, int), &test_class::add_a>();
+        kos::function fa = ctx.new_function<int                (test_class::*)() const,    &test_class::get_a>();
+        kos::function fb = ctx.new_function<const std::string& (test_class::*)() const,    &test_class::get_b>();
+        kos::function fx = ctx.new_function<int64_t            (test_class::*)(bool, int), &test_class::add_a>();
 #endif
-        kos::function_obj fy = from_object_ptr(ctx, fx);
+        kos::function fy = from_object_ptr(ctx, fx);
 
-        const int a = fa.invoke(o);
+        const int a = fa.apply(o);
         TEST(a == 42);
 
-        const std::string b = fb.invoke(o);
+        const std::string b = fb.apply(o);
         TEST(b == "42");
 
-        int x = fy.invoke(o, true, 1);
+        int x = fy.apply(o, true, 1);
         TEST(x == 43);
-        x = fy.invoke(o, false, 1);
+        x = fy.apply(o, false, 1);
         TEST(x == 43);
-        x = fy.invoke(o, true, 7);
+        x = fy.apply(o, true, 7);
         TEST(x == 50);
     }
 
@@ -260,7 +261,7 @@ try {
         TEST(s == "abc");
 
 #ifdef KOS_CPP11
-        kos::array_obj a = o["a"];
+        kos::array a = o["a"];
         TEST(a.size() == 4);
 #endif
     }

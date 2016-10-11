@@ -40,10 +40,10 @@
 
 namespace kos {
 
-class array_obj;
-class buffer_obj;
+class array;
+class buffer;
 class context;
-class function_obj;
+class function;
 class object;
 
 template<typename T>
@@ -86,12 +86,12 @@ class context
         context() {
             int error = KOS_context_init(&_ctx);
             if (error)
-                throw std::runtime_error("Failed to initialize Kos context");
+                throw std::runtime_error("failed to initialize Kos context");
 
             error = KOS_modules_init(&_ctx);
             if (error) {
                 KOS_context_destroy(&_ctx);
-                throw std::runtime_error("Failed to initialize Kos modules");
+                throw std::runtime_error("failed to initialize Kos modules");
             }
         }
 
@@ -119,6 +119,8 @@ class context
 
         void signal_error();
 
+        void raise(const char* desc);
+
         // Object creation
         // ===============
 
@@ -127,13 +129,13 @@ class context
         template<typename T>
         object new_object(T* priv);
 
-        array_obj new_array(unsigned length);
+        array new_array(unsigned length);
 
-        buffer_obj new_buffer(unsigned size);
+        buffer new_buffer(unsigned size);
 
 #ifdef KOS_CPP11
         template<typename... Args>
-        array_obj make_array(Args... args);
+        array make_array(Args... args);
 #endif
 
         // Invoke Kos function from C++
@@ -150,24 +152,24 @@ class context
         // Register C++ function in Kos
         // ============================
 
-        function_obj new_function(KOS_FUNCTION_HANDLER handler, int min_args);
+        function new_function(KOS_FUNCTION_HANDLER handler, int min_args);
 
         // Something like N3601 (automatic template arg deduction) would simplify this interface
         template<typename T, T fun>
-        function_obj new_function();
+        function new_function();
 
 #ifdef KOS_CPP11
         template<typename Ret, typename... Args>
-        KOS_OBJ_PTR invoke_native(Ret (*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args);
+        KOS_OBJ_PTR invoke_native(Ret (*fun)(Args...), KOS_OBJ_PTR this_obj, array args);
 
         template<typename T, typename Ret, typename... Args>
-        KOS_OBJ_PTR invoke_native(Ret (T::*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args);
+        KOS_OBJ_PTR invoke_native(Ret (T::*fun)(Args...), KOS_OBJ_PTR this_obj, array args);
 
         template<typename T, typename Ret, typename... Args>
-        KOS_OBJ_PTR invoke_native(Ret (T::*fun)(Args...) const, KOS_OBJ_PTR this_obj, array_obj args);
+        KOS_OBJ_PTR invoke_native(Ret (T::*fun)(Args...) const, KOS_OBJ_PTR this_obj, array args);
 #else
         template<typename T>
-        KOS_OBJ_PTR invoke_native(T fun, KOS_OBJ_PTR this_obj, array_obj args);
+        KOS_OBJ_PTR invoke_native(T fun, KOS_OBJ_PTR this_obj, array args);
 #endif
 
     private:
@@ -193,16 +195,16 @@ class object_base
         KOS_OBJ_PTR _objptr;
 };
 
-class integer_obj: public object_base
+class integer: public object_base
 {
     public:
-        integer_obj(KOS_OBJ_PTR objptr)
+        integer(KOS_OBJ_PTR objptr)
         : object_base(objptr)
         {
             assert(IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) == OBJ_INTEGER);
         }
 
-        integer_obj(int v)
+        integer(int v)
         : object_base(TO_SMALL_INT(v))
         {
         }
@@ -215,10 +217,10 @@ class integer_obj: public object_base
         }
 };
 
-class float_obj: public object_base
+class floating: public object_base
 {
     public:
-        float_obj(KOS_OBJ_PTR objptr)
+        floating(KOS_OBJ_PTR objptr)
         : object_base(objptr)
         {
             assert( ! IS_SMALL_INT(objptr) && GET_OBJ_TYPE(objptr) == OBJ_FLOAT);
@@ -229,16 +231,16 @@ class float_obj: public object_base
         }
 };
 
-class string_obj: public object_base
+class string: public object_base
 {
     public:
-        string_obj(KOS_OBJ_PTR objptr)
+        string(KOS_OBJ_PTR objptr)
         : object_base(objptr)
         {
             assert(IS_STRING_OBJ(objptr));
         }
 
-        string_obj(KOS_STRING& v)
+        string(KOS_STRING& v)
         : object_base(TO_OBJPTR(&v))
         {
         }
@@ -252,16 +254,16 @@ class string_obj: public object_base
         }
 };
 
-class boolean_obj: public object_base
+class boolean: public object_base
 {
     public:
-        boolean_obj(KOS_OBJ_PTR objptr)
+        boolean(KOS_OBJ_PTR objptr)
         : object_base(objptr)
         {
             assert( ! IS_SMALL_INT(objptr) && GET_OBJ_TYPE(objptr) == OBJ_BOOLEAN);
         }
 
-        boolean_obj(bool v)
+        boolean(bool v)
         : object_base(KOS_BOOL(static_cast<int>(v)))
         {
         }
@@ -275,16 +277,16 @@ class boolean_obj: public object_base
         }
 };
 
-class void_obj: public object_base
+class void_: public object_base
 {
     public:
-        void_obj(KOS_OBJ_PTR objptr)
+        void_(KOS_OBJ_PTR objptr)
         : object_base(objptr)
         {
             assert( ! IS_SMALL_INT(objptr) && GET_OBJ_TYPE(objptr) == OBJ_VOID);
         }
 
-        void_obj()
+        void_()
         : object_base(KOS_VOID)
         {
         }
@@ -302,7 +304,7 @@ class object: public object_base
         class property
         {
             public:
-                property(context* ctx, KOS_OBJ_PTR objptr, const string_obj key)
+                property(context* ctx, KOS_OBJ_PTR objptr, const string key)
                 : _ctx(ctx),
                   _objptr(objptr),
                   _key(key)
@@ -325,9 +327,9 @@ class object: public object_base
                 }
 
             private:
-                context*         _ctx;
-                KOS_OBJ_PTR      _objptr;
-                const string_obj _key;
+                context*     _ctx;
+                KOS_OBJ_PTR  _objptr;
+                const string _key;
         };
 
         template<typename T>
@@ -346,10 +348,10 @@ class object: public object_base
         context* _ctx;
 };
 
-class array_obj: public object
+class array: public object
 {
     public:
-        array_obj(context& ctx, KOS_OBJ_PTR objptr)
+        array(context& ctx, KOS_OBJ_PTR objptr)
         : object(ctx, objptr)
         {
             assert(GET_OBJ_TYPE(objptr) == OBJ_ARRAY);
@@ -402,17 +404,17 @@ class array_obj: public object
             return element(_ctx, _objptr, idx);
         }
 
-        array_obj slice(int64_t begin, int64_t end) const {
-            return array_obj(*_ctx, _ctx->check_error(KOS_array_slice(*_ctx, _objptr, begin, end)));
+        array slice(int64_t begin, int64_t end) const {
+            return array(*_ctx, _ctx->check_error(KOS_array_slice(*_ctx, _objptr, begin, end)));
         }
 
         /* TODO C++ iterators */
 };
 
-class buffer_obj: public object
+class buffer: public object
 {
     public:
-        buffer_obj(context& ctx, KOS_OBJ_PTR objptr)
+        buffer(context& ctx, KOS_OBJ_PTR objptr)
         : object(ctx, objptr)
         {
             assert(GET_OBJ_TYPE(objptr) == OBJ_BUFFER);
@@ -443,9 +445,8 @@ class buffer_obj: public object
                 operator char() const {
                     const uint32_t size = KOS_get_buffer_size(_objptr);
                     const uint32_t idx = static_cast<uint32_t>(_idx < 0 ? (_idx + static_cast<int>(size)) : _idx);
-                    if (idx >= size) {
+                    if (idx >= size)
                         throw std::out_of_range("buffer index out of range");
-                    }
                     uint8_t* const buf = KOS_buffer_data(*_ctx, _objptr);
                     assert(buf);
                     return static_cast<char>(buf[idx]);
@@ -454,9 +455,8 @@ class buffer_obj: public object
                 element& operator=(char v) {
                     const uint32_t size = KOS_get_buffer_size(_objptr);
                     const uint32_t idx = static_cast<uint32_t>(_idx < 0 ? (_idx + static_cast<int>(size)) : _idx);
-                    if (idx >= size) {
+                    if (idx >= size)
                         throw std::out_of_range("buffer index out of range");
-                    }
                     uint8_t* const buf = KOS_buffer_data(*_ctx, _objptr);
                     assert(buf);
                     buf[idx] = static_cast<uint8_t>(v);
@@ -481,40 +481,40 @@ class buffer_obj: public object
 };
 
 #ifdef KOS_CPP11
-inline void unpack_args(array_obj args_obj, int idx)
+inline void unpack_args(array args_obj, int idx)
 {
 }
 
 template<typename Arg1, typename... Args>
-void unpack_args(array_obj args_obj, int idx, Arg1 arg1, Args... args)
+void unpack_args(array args_obj, int idx, Arg1 arg1, Args... args)
 {
     args_obj[idx] = arg1;
     unpack_args(args_obj, idx+1, args...);
 }
 
 template<typename... Args>
-array_obj context::make_array(Args... args)
+array context::make_array(Args... args)
 {
-    array_obj array(new_array(static_cast<unsigned>(sizeof...(args))));
+    array array(new_array(static_cast<unsigned>(sizeof...(args))));
     unpack_args(array, 0, args...);
     return array;
 }
 #endif
 
-class function_obj: public object
+class function: public object
 {
     public:
-        function_obj(context& ctx, KOS_OBJ_PTR objptr)
+        function(context& ctx, KOS_OBJ_PTR objptr)
         : object(ctx, objptr)
         {
             assert(GET_OBJ_TYPE(objptr) == OBJ_FUNCTION);
         }
 
-        objptr_converter call_v(array_obj args) const {
+        objptr_converter call_v(array args) const {
             return objptr_converter(*_ctx, _ctx->call_v(_objptr, args));
         }
 
-        objptr_converter call(object_base this_obj, array_obj args) const {
+        objptr_converter call(object_base this_obj, array args) const {
             return objptr_converter(*_ctx, _ctx->call(_objptr, this_obj, args));
         }
 
@@ -525,7 +525,7 @@ class function_obj: public object
         }
 
         template<typename... Args>
-        objptr_converter invoke(object_base this_obj, Args... args) const {
+        objptr_converter apply(object_base this_obj, Args... args) const {
             return call(this_obj, _ctx->make_array(args...));
         }
 #else
@@ -535,14 +535,14 @@ class function_obj: public object
 
         template<typename T1>
         objptr_converter operator()(T1 arg1) const {
-            array_obj args(_ctx->new_array(1));
+            array args(_ctx->new_array(1));
             args[0] = arg1;
             return call_v(args);
         }
 
         template<typename T1, typename T2>
         objptr_converter operator()(T1 arg1, T2 arg2) const {
-            array_obj args(_ctx->new_array(2));
+            array args(_ctx->new_array(2));
             args[0] = arg1;
             args[1] = arg2;
             return call_v(args);
@@ -550,7 +550,7 @@ class function_obj: public object
 
         template<typename T1, typename T2, typename T3>
         objptr_converter operator()(T1 arg1, T2 arg2, T3 arg3) const {
-            array_obj args(_ctx->new_array(3));
+            array args(_ctx->new_array(3));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -559,7 +559,7 @@ class function_obj: public object
 
         template<typename T1, typename T2, typename T3, typename T4>
         objptr_converter operator()(T1 arg1, T2 arg2, T3 arg3, T4 arg4) const {
-            array_obj args(_ctx->new_array(4));
+            array args(_ctx->new_array(4));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -567,28 +567,28 @@ class function_obj: public object
             return call_v(args);
         }
 
-        objptr_converter invoke(object_base this_obj) const {
+        objptr_converter apply(object_base this_obj) const {
             return call(this_obj, _ctx->new_array(0));
         }
 
         template<typename T1>
-        objptr_converter invoke(object_base this_obj, T1 arg1) const {
-            array_obj args(_ctx->new_array(1));
+        objptr_converter apply(object_base this_obj, T1 arg1) const {
+            array args(_ctx->new_array(1));
             args[0] = arg1;
             return call(this_obj, args);
         }
 
         template<typename T1, typename T2>
-        objptr_converter invoke(object_base this_obj, T1 arg1, T2 arg2) const {
-            array_obj args(_ctx->new_array(2));
+        objptr_converter apply(object_base this_obj, T1 arg1, T2 arg2) const {
+            array args(_ctx->new_array(2));
             args[0] = arg1;
             args[1] = arg2;
             return call(this_obj, args);
         }
 
         template<typename T1, typename T2, typename T3>
-        objptr_converter invoke(object_base this_obj, T1 arg1, T2 arg2, T3 arg3) const {
-            array_obj args(_ctx->new_array(3));
+        objptr_converter apply(object_base this_obj, T1 arg1, T2 arg2, T3 arg3) const {
+            array args(_ctx->new_array(3));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -596,8 +596,8 @@ class function_obj: public object
         }
 
         template<typename T1, typename T2, typename T3, typename T4>
-        objptr_converter invoke(object_base this_obj, T1 arg1, T2 arg2, T3 arg3, T4 arg4) const {
-            array_obj args(_ctx->new_array(4));
+        objptr_converter apply(object_base this_obj, T1 arg1, T2 arg2, T3 arg3, T4 arg4) const {
+            array args(_ctx->new_array(4));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -645,14 +645,14 @@ object context::new_object(T* priv)
     return obj;
 }
 
-inline array_obj context::new_array(unsigned length)
+inline array context::new_array(unsigned length)
 {
-    return array_obj(*this, check_error(KOS_new_array(&_ctx, length)));
+    return array(*this, check_error(KOS_new_array(&_ctx, length)));
 }
 
-inline function_obj context::new_function(KOS_FUNCTION_HANDLER handler, int min_args)
+inline function context::new_function(KOS_FUNCTION_HANDLER handler, int min_args)
 {
-    return function_obj(*this, check_error(KOS_new_builtin_function(&_ctx, handler, min_args)));
+    return function(*this, check_error(KOS_new_builtin_function(&_ctx, handler, min_args)));
 }
 
 template<typename T>
@@ -668,7 +668,7 @@ struct remove_reference<T&>
 };
 
 template<int i, typename T>
-typename remove_reference<T>::type extract_arg(context& ctx, array_obj& args_obj)
+typename remove_reference<T>::type extract_arg(context& ctx, array& args_obj)
 {
     return from_object_ptr(ctx, args_obj[i]);
 }
@@ -704,14 +704,14 @@ void unused(T&)
 }
 
 template<typename Ret, typename... Args, int... indices>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args, seq<indices...>)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(Args...), KOS_OBJ_PTR this_obj, array args, seq<indices...>)
 {
     unused(args);
     return to_object_ptr(ctx, fun(extract_arg<indices, Args>(ctx, args)...));
 }
 
 template<typename... Args, int... indices>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args, seq<indices...>)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(Args...), KOS_OBJ_PTR this_obj, array args, seq<indices...>)
 {
     unused(args);
     fun(extract_arg<indices, Args>(ctx, args)...);
@@ -719,7 +719,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(Args...), KOS_OBJ_PTR this
 }
 
 template<typename T, typename Ret, typename... Args, int... indices>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args, seq<indices...>)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(Args...), KOS_OBJ_PTR this_obj, array args, seq<indices...>)
 {
     unused(args);
     T* const obj = get_priv<T>(this_obj);
@@ -727,7 +727,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(Args...), KOS_OBJ_PTR th
 }
 
 template<typename T, typename... Args, int... indices>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args, seq<indices...>)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(Args...), KOS_OBJ_PTR this_obj, array args, seq<indices...>)
 {
     unused(args);
     T* const obj = get_priv<T>(this_obj);
@@ -736,7 +736,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(Args...), KOS_OBJ_PTR t
 }
 
 template<typename T, typename Ret, typename... Args, int... indices>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(Args...) const, KOS_OBJ_PTR this_obj, array_obj args, seq<indices...>)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(Args...) const, KOS_OBJ_PTR this_obj, array args, seq<indices...>)
 {
     unused(args);
     T* const obj = get_priv<T>(this_obj);
@@ -744,7 +744,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(Args...) const, KOS_OBJ_
 }
 
 template<typename T, typename... Args, int... indices>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(Args...) const, KOS_OBJ_PTR this_obj, array_obj args, seq<indices...>)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(Args...) const, KOS_OBJ_PTR this_obj, array args, seq<indices...>)
 {
     unused(args);
     T* const obj = get_priv<T>(this_obj);
@@ -753,47 +753,47 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(Args...) const, KOS_OBJ
 }
 
 template<typename Ret, typename... Args>
-KOS_OBJ_PTR context::invoke_native(Ret (*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR context::invoke_native(Ret (*fun)(Args...), KOS_OBJ_PTR this_obj, array args)
 {
     unused(args);
     return invoke_internal(*this, fun, this_obj, args, typename idx_seq<sizeof...(Args)>::type());
 }
 
 template<typename T, typename Ret, typename... Args>
-KOS_OBJ_PTR context::invoke_native(Ret (T::*fun)(Args...), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR context::invoke_native(Ret (T::*fun)(Args...), KOS_OBJ_PTR this_obj, array args)
 {
     unused(args);
     return invoke_internal(*this, fun, this_obj, args, typename idx_seq<sizeof...(Args)>::type());
 }
 
 template<typename T, typename Ret, typename... Args>
-KOS_OBJ_PTR context::invoke_native(Ret (T::*fun)(Args...) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR context::invoke_native(Ret (T::*fun)(Args...) const, KOS_OBJ_PTR this_obj, array args)
 {
     unused(args);
     return invoke_internal(*this, fun, this_obj, args, typename idx_seq<sizeof...(Args)>::type());
 }
 #else
 template<typename Ret>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(), KOS_OBJ_PTR this_obj, array args)
 {
     return to_object_ptr(ctx, fun());
 }
 
 template<typename Ret, typename T1>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1), KOS_OBJ_PTR this_obj, array args)
 {
     return to_object_ptr(ctx, fun(extract_arg<0, T1>(ctx, args)));
 }
 
 template<typename Ret, typename T1, typename T2>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1, T2), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1, T2), KOS_OBJ_PTR this_obj, array args)
 {
     return to_object_ptr(ctx, fun(extract_arg<0, T1>(ctx, args),
                                   extract_arg<1, T2>(ctx, args)));
 }
 
 template<typename Ret, typename T1, typename T2, typename T3>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1, T2, T3), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1, T2, T3), KOS_OBJ_PTR this_obj, array args)
 {
     return to_object_ptr(ctx, fun(extract_arg<0, T1>(ctx, args),
                                   extract_arg<1, T2>(ctx, args),
@@ -801,7 +801,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1, T2, T3), KOS_OBJ_PTR th
 }
 
 template<typename Ret, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1, T2, T3, T4), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1, T2, T3, T4), KOS_OBJ_PTR this_obj, array args)
 {
     return to_object_ptr(ctx, fun(extract_arg<0, T1>(ctx, args),
                                   extract_arg<1, T2>(ctx, args),
@@ -809,21 +809,21 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (*fun)(T1, T2, T3, T4), KOS_OBJ_PT
                                   extract_arg<3, T4>(ctx, args)));
 }
 
-inline KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(), KOS_OBJ_PTR this_obj, array_obj args)
+inline KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(), KOS_OBJ_PTR this_obj, array args)
 {
     fun();
     return KOS_VOID;
 }
 
 template<typename T1>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1), KOS_OBJ_PTR this_obj, array args)
 {
     fun(extract_arg<0, T1>(ctx, args));
     return KOS_VOID;
 }
 
 template<typename T1, typename T2>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2), KOS_OBJ_PTR this_obj, array args)
 {
     fun(extract_arg<0, T1>(ctx, args),
         extract_arg<1, T2>(ctx, args));
@@ -831,7 +831,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2), KOS_OBJ_PTR this_
 }
 
 template<typename T1, typename T2, typename T3>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2, T3), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2, T3), KOS_OBJ_PTR this_obj, array args)
 {
     fun(extract_arg<0, T1>(ctx, args),
         extract_arg<1, T2>(ctx, args),
@@ -840,7 +840,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2, T3), KOS_OBJ_PTR t
 }
 
 template<typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2, T3, T4), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2, T3, T4), KOS_OBJ_PTR this_obj, array args)
 {
     fun(extract_arg<0, T1>(ctx, args),
         extract_arg<1, T2>(ctx, args),
@@ -850,21 +850,21 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (*fun)(T1, T2, T3, T4), KOS_OBJ_P
 }
 
 template<typename T, typename Ret>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)());
 }
 
 template<typename T, typename Ret, typename T1>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -872,7 +872,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2), KOS_OBJ_PTR thi
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -881,7 +881,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3), KOS_OBJ_PTR
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3, T4), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3, T4), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -891,7 +891,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3, T4), KOS_OBJ
 }
 
 template<typename T>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)();
@@ -899,7 +899,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(), KOS_OBJ_PTR this_obj
 }
 
 template<typename T, typename T1>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args));
@@ -907,7 +907,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1), KOS_OBJ_PTR this_o
 }
 
 template<typename T, typename T1, typename T2>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -916,7 +916,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2), KOS_OBJ_PTR th
 }
 
 template<typename T, typename T1, typename T2, typename T3>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -926,7 +926,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3), KOS_OBJ_PT
 }
 
 template<typename T, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3, T4), KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3, T4), KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -937,21 +937,21 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3, T4), KOS_OB
 }
 
 template<typename T, typename Ret>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)() const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)() const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)());
 }
 
 template<typename T, typename Ret, typename T1>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1) const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2) const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -959,7 +959,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2) const, KOS_OBJ_P
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3) const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -968,7 +968,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3) const, KOS_O
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -978,7 +978,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, Ret (T::*fun)(T1, T2, T3, T4) const, K
 }
 
 template<typename T>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)() const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)() const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)();
@@ -986,7 +986,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)() const, KOS_OBJ_PTR th
 }
 
 template<typename T, typename T1>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1) const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args));
@@ -994,7 +994,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1) const, KOS_OBJ_PTR 
 }
 
 template<typename T, typename T1, typename T2>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2) const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -1003,7 +1003,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2) const, KOS_OBJ_
 }
 
 template<typename T, typename T1, typename T2, typename T3>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3) const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -1013,7 +1013,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3) const, KOS_
 }
 
 template<typename T, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_PTR this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
@@ -1024,7 +1024,7 @@ KOS_OBJ_PTR invoke_internal(context& ctx, void (T::*fun)(T1, T2, T3, T4) const, 
 }
 
 template<typename T>
-KOS_OBJ_PTR context::invoke_native(T fun, KOS_OBJ_PTR this_obj, array_obj args)
+KOS_OBJ_PTR context::invoke_native(T fun, KOS_OBJ_PTR this_obj, array args)
 {
     return invoke_internal(*this, fun, this_obj, args);
 }
@@ -1144,12 +1144,12 @@ template<typename T, T fun>
 KOS_OBJ_PTR wrapper(KOS_CONTEXT* ctx_ptr, KOS_OBJ_PTR this_obj, KOS_OBJ_PTR args_obj)
 {
     context& ctx = *reinterpret_cast<context*>(ctx_ptr);
-    array_obj args(ctx, args_obj);
+    array args(ctx, args_obj);
     return ctx.invoke_native(fun, this_obj, args);
 }
 
 template<typename T, T fun>
-function_obj context::new_function()
+function context::new_function()
 {
     return new_function(wrapper<T, fun>, num_args(fun));
 }
@@ -1167,50 +1167,50 @@ inline object_base to_object_ptr(context& ctx, objptr_converter objptr)
     return static_cast<KOS_OBJ_PTR>(objptr);
 }
 
-inline integer_obj to_object_ptr(context& ctx, int v)
+inline integer to_object_ptr(context& ctx, int v)
 {
     return ctx.check_error(KOS_new_int(ctx, v));
 }
 
-inline integer_obj to_object_ptr(context& ctx, unsigned v)
+inline integer to_object_ptr(context& ctx, unsigned v)
 {
     return ctx.check_error(KOS_new_int(ctx, static_cast<int64_t>(v)));
 }
 
-inline integer_obj to_object_ptr(context& ctx, int64_t v)
+inline integer to_object_ptr(context& ctx, int64_t v)
 {
     return ctx.check_error(KOS_new_int(ctx, v));
 }
 
-inline float_obj to_object_ptr(context& ctx, double v)
+inline floating to_object_ptr(context& ctx, double v)
 {
     return ctx.check_error(KOS_new_float(ctx, v));
 }
 
-inline string_obj to_object_ptr(context& ctx, const char* v)
+inline string to_object_ptr(context& ctx, const char* v)
 {
     return ctx.check_error(KOS_new_cstring(ctx, v));
 }
 
-inline string_obj to_object_ptr(context& ctx, const std::string& v)
+inline string to_object_ptr(context& ctx, const std::string& v)
 {
     return ctx.check_error(KOS_new_string(ctx, v.c_str(), (unsigned)v.length()));
 }
 
-inline string_obj to_object_ptr(context& ctx, KOS_STRING& v)
+inline string to_object_ptr(context& ctx, KOS_STRING& v)
 {
-    return string_obj(v);
+    return string(v);
 }
 
-inline boolean_obj to_object_ptr(context& ctx, bool v)
+inline boolean to_object_ptr(context& ctx, bool v)
 {
-    return boolean_obj(v);
+    return boolean(v);
 }
 
 template<typename T>
-array_obj to_object_ptr(context& ctx, const std::vector<T>& v)
+array to_object_ptr(context& ctx, const std::vector<T>& v)
 {
-    array_obj array(ctx, ctx.check_error(KOS_new_array(ctx, (unsigned)v.size())));
+    array array(ctx, ctx.check_error(KOS_new_array(ctx, (unsigned)v.size())));
     ctx.check_error(KOS_array_resize(ctx, array, (uint32_t)v.size()));
     for (size_t i = 0; i < v.size(); i++)
         ctx.check_error(KOS_array_write(ctx, array, static_cast<int>(i), to_object_ptr(ctx, v[i])));
@@ -1236,16 +1236,19 @@ template<>
 std::string value_from_object_ptr<std::string>(context& ctx, KOS_OBJ_PTR objptr);
 
 template<>
-string_obj value_from_object_ptr<string_obj>(context& ctx, KOS_OBJ_PTR objptr);
+string value_from_object_ptr<string>(context& ctx, KOS_OBJ_PTR objptr);
 
 template<>
 object value_from_object_ptr<object>(context& ctx, KOS_OBJ_PTR objptr);
 
 template<>
-array_obj value_from_object_ptr<array_obj>(context& ctx, KOS_OBJ_PTR objptr);
+array value_from_object_ptr<array>(context& ctx, KOS_OBJ_PTR objptr);
 
 template<>
-function_obj value_from_object_ptr<function_obj>(context& ctx, KOS_OBJ_PTR objptr);
+buffer value_from_object_ptr<buffer>(context& ctx, KOS_OBJ_PTR objptr);
+
+template<>
+function value_from_object_ptr<function>(context& ctx, KOS_OBJ_PTR objptr);
 
 } // namespace kos
 

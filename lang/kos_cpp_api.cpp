@@ -50,9 +50,7 @@ T numeric_from_object_ptr(context& ctx, KOS_OBJ_PTR objptr)
         }
 
         default: {
-            static KOS_ASCII_STRING(str_err_invalid_type, "Source type is not a number");
-            KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_type));
-            ctx.signal_error();
+            ctx.raise("source type is not a number");
             break;
         }
     }
@@ -82,11 +80,8 @@ template<>
 bool value_from_object_ptr<bool>(context& ctx, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
-    if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BOOLEAN) {
-        static KOS_ASCII_STRING(str_err_invalid_type, "Source type is not a boolean");
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_type));
-        ctx.signal_error();
-    }
+    if ( ! IS_TYPE(OBJ_BOOLEAN, objptr))
+        ctx.raise("source type is not a boolean");
 
     return !! KOS_get_bool(objptr);
 }
@@ -95,11 +90,8 @@ template<>
 std::string value_from_object_ptr<std::string>(context& ctx, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
-    if ( ! IS_STRING_OBJ(objptr)) {
-        static KOS_ASCII_STRING(str_err_invalid_type, "Source type is not a string");
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_type));
-        ctx.signal_error();
-    }
+    if ( ! IS_STRING_OBJ(objptr))
+        ctx.raise("source type is not a string");
 
     const unsigned len = KOS_string_to_utf8(objptr, 0, 0);
     std::string    str(static_cast<size_t>(len), '\0');
@@ -109,55 +101,59 @@ std::string value_from_object_ptr<std::string>(context& ctx, KOS_OBJ_PTR objptr)
 }
 
 template<>
-string_obj value_from_object_ptr<string_obj>(context& ctx, KOS_OBJ_PTR objptr)
+string value_from_object_ptr<string>(context& ctx, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
-    if ( ! IS_STRING_OBJ(objptr)) {
-        static KOS_ASCII_STRING(str_err_invalid_type, "Source type is not a string");
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_type));
-        ctx.signal_error();
-    }
+    if ( ! IS_STRING_OBJ(objptr))
+        ctx.raise("source type is not a string");
 
-    return string_obj(objptr);
+    return string(objptr);
 }
 
 template<>
 object value_from_object_ptr<object>(context& ctx, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
-    if ( ! HAS_PROPERTIES(objptr)) {
-        static KOS_ASCII_STRING(str_err_invalid_type, "Source type is not an object");
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_type));
-        ctx.signal_error();
-    }
+    if ( ! HAS_PROPERTIES(objptr))
+        ctx.raise("source type is not an object");
 
     return object(ctx, objptr);
 }
 
 template<>
-array_obj value_from_object_ptr<array_obj>(context& ctx, KOS_OBJ_PTR objptr)
+array value_from_object_ptr<array>(context& ctx, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
-    if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY) {
-        static KOS_ASCII_STRING(str_err_invalid_type, "Source type is not an array");
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_type));
-        ctx.signal_error();
-    }
+    if ( ! IS_TYPE(OBJ_ARRAY, objptr))
+        ctx.raise("source type is not an array");
 
-    return array_obj(ctx, objptr);
+    return array(ctx, objptr);
 }
 
 template<>
-function_obj value_from_object_ptr<function_obj>(context& ctx, KOS_OBJ_PTR objptr)
+buffer value_from_object_ptr<buffer>(context& ctx, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
-    if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_FUNCTION) {
-        static KOS_ASCII_STRING(str_err_invalid_type, "Source type is not a function");
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_type));
-        ctx.signal_error();
-    }
+    if ( ! IS_TYPE(OBJ_BUFFER, objptr))
+        ctx.raise("source type is not a buffer");
 
-    return function_obj(ctx, objptr);
+    return buffer(ctx, objptr);
+}
+
+template<>
+function value_from_object_ptr<function>(context& ctx, KOS_OBJ_PTR objptr)
+{
+    assert( ! IS_BAD_PTR(objptr));
+    if ( ! IS_TYPE(OBJ_FUNCTION, objptr))
+        ctx.raise("source type is not a function");
+
+    return function(ctx, objptr);
+}
+
+void context::raise(const char* desc)
+{
+    KOS_raise_exception(&_ctx, KOS_new_cstring(&_ctx, desc));
+    signal_error();
 }
 
 std::string exception::get_exception_string(context& ctx)
