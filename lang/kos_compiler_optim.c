@@ -1222,7 +1222,7 @@ static int _operator(struct _KOS_COMP_UNIT *program,
         }
 
         case OT_LOGAND: {
-            if (_KOS_node_is_truthy(program, ca)) {
+            if (_KOS_node_is_truthy(program, ca) && b) {
                 _promote(node, b);
                 ++program->num_optimizations;
             }
@@ -1238,7 +1238,7 @@ static int _operator(struct _KOS_COMP_UNIT *program,
                 _promote(node, a);
                 ++program->num_optimizations;
             }
-            else if (_KOS_node_is_falsy(program, ca)) {
+            else if (_KOS_node_is_falsy(program, ca) && b) {
                 _promote(node, b);
                 ++program->num_optimizations;
             }

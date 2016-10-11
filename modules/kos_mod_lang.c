@@ -1144,11 +1144,8 @@ static int _pack_format(KOS_CONTEXT             *ctx,
 
     assert(size != ~0U || value_fmt == 's');
 
-    if (size != ~0U) {
+    if (size != ~0U)
         dst = KOS_buffer_make_room(ctx, buffer_obj, size * count);
-        if ( ! dst)
-            TRY(KOS_ERROR_EXCEPTION);
-    }
 
     big_end = fmt->big_end;
 
@@ -1156,20 +1153,30 @@ static int _pack_format(KOS_CONTEXT             *ctx,
 
         case 'x':
             assert(size == 1);
+
+            if ( ! dst)
+                TRY(KOS_ERROR_EXCEPTION);
+
             memset(dst, 0, size * count);
             break;
 
         case 'u':
             /* fall through */
         case 'i': {
+
+            if ( ! dst)
+                TRY(KOS_ERROR_EXCEPTION);
+
             if (size != 1 && size != 2 && size != 4 && size != 8) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_pack_format));
                 TRY(KOS_ERROR_EXCEPTION);
             }
+
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data)) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_enough_pack_values));
                 TRY(KOS_ERROR_EXCEPTION);
             }
+
             for ( ; count; count--) {
                 unsigned    i;
                 int64_t     value;
@@ -1200,14 +1207,20 @@ static int _pack_format(KOS_CONTEXT             *ctx,
         }
 
         case 'f': {
+
+            if ( ! dst)
+                TRY(KOS_ERROR_EXCEPTION);
+
             if (size != 4 && size != 8) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_pack_format));
                 TRY(KOS_ERROR_EXCEPTION);
             }
+
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data)) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_enough_pack_values));
                 TRY(KOS_ERROR_EXCEPTION);
             }
+
             for ( ; count; count--) {
                 unsigned    i;
                 KOS_OBJ_PTR value_obj = KOS_array_read(ctx, fmt->data, fmt->idx++);
@@ -1249,10 +1262,15 @@ static int _pack_format(KOS_CONTEXT             *ctx,
         }
 
         case 'b': {
+
+            if ( ! dst)
+                TRY(KOS_ERROR_EXCEPTION);
+
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data)) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_enough_pack_values));
                 TRY(KOS_ERROR_EXCEPTION);
             }
+
             for ( ; count; count--) {
                 KOS_OBJ_PTR value_obj = KOS_array_read(ctx, fmt->data, fmt->idx++);
                 uint8_t    *data;
@@ -1287,11 +1305,14 @@ static int _pack_format(KOS_CONTEXT             *ctx,
         case 's':
             /* fall through */
         default: {
+
             assert(value_fmt == 's');
+
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data)) {
                 KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_enough_pack_values));
                 TRY(KOS_ERROR_EXCEPTION);
             }
+
             for ( ; count; count--) {
                 KOS_OBJ_PTR value_obj = KOS_array_read(ctx, fmt->data, fmt->idx++);
                 uint32_t    copy_size;
