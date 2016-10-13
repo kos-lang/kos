@@ -53,7 +53,6 @@ static KOS_ASCII_STRING(str_format_colon,       ":");
 static KOS_ASCII_STRING(str_format_error,       ": error: ");
 static KOS_ASCII_STRING(str_global,             "<global>");
 static KOS_ASCII_STRING(str_path_sep,           KOS_PATH_SEPARATOR_STR);
-static KOS_ASCII_STRING(str_prototype,          "prototype");
 static KOS_ASCII_STRING(str_script_ext,         ".kos");
 
 struct _KOS_MODULE_LOAD_CHAIN {
@@ -1065,9 +1064,8 @@ int KOS_module_add_constructor(KOS_MODULE          *module,
                                       0);
 
         if ( ! error) {
-            *ret_proto = KOS_get_property(ctx, func_obj, TO_OBJPTR(&str_prototype));
-            if (IS_BAD_PTR(*ret_proto))
-                error = KOS_ERROR_EXCEPTION;
+            *ret_proto = OBJPTR(KOS_FUNCTION, func_obj)->prototype;
+            assert( ! IS_BAD_PTR(*ret_proto));
         }
     }
 

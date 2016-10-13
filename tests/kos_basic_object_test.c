@@ -68,8 +68,8 @@ int main(void)
         TEST(!IS_STRING_OBJ(small_int0));
         TEST(!IS_STRING_OBJ(small_int_max));
 
-        TEST(!HAS_PROPERTIES(small_int0));
-        TEST(!HAS_PROPERTIES(small_int_max));
+        TEST(!IS_TYPE(OBJ_OBJECT, small_int0));
+        TEST(!IS_TYPE(OBJ_OBJECT, small_int_max));
     }
 
     /************************************************************************/
@@ -89,8 +89,8 @@ int main(void)
         TEST(!IS_STRING_OBJ(integer_a));
         TEST(!IS_STRING_OBJ(integer_b));
 
-        TEST(!HAS_PROPERTIES(integer_a));
-        TEST(!HAS_PROPERTIES(integer_b));
+        TEST(!IS_TYPE(OBJ_OBJECT, integer_a));
+        TEST(!IS_TYPE(OBJ_OBJECT, integer_b));
 
         TEST(GET_OBJ_TYPE(integer_a) == OBJ_INTEGER);
         TEST(GET_OBJ_TYPE(integer_b) == OBJ_INTEGER);
@@ -119,8 +119,8 @@ int main(void)
         TEST(!IS_STRING_OBJ(integer_a));
         TEST(!IS_STRING_OBJ(integer_b));
 
-        TEST(!HAS_PROPERTIES(integer_a));
-        TEST(!HAS_PROPERTIES(integer_b));
+        TEST(!IS_TYPE(OBJ_OBJECT, integer_a));
+        TEST(!IS_TYPE(OBJ_OBJECT, integer_b));
 
         TEST(GET_OBJ_TYPE(integer_a) == OBJ_INTEGER);
         TEST(GET_OBJ_TYPE(integer_b) == OBJ_INTEGER);
@@ -141,7 +141,7 @@ int main(void)
 
         TEST(!IS_STRING_OBJ(number));
 
-        TEST(!HAS_PROPERTIES(number));
+        TEST(!IS_TYPE(OBJ_OBJECT, number));
 
         TEST(GET_OBJ_TYPE(number) == OBJ_FLOAT);
 
@@ -160,7 +160,7 @@ int main(void)
 
         TEST(!IS_STRING_OBJ(boolean));
 
-        TEST(!HAS_PROPERTIES(boolean));
+        TEST(!IS_TYPE(OBJ_OBJECT, boolean));
 
         TEST(GET_OBJ_TYPE(boolean) == OBJ_BOOLEAN);
 
@@ -179,7 +179,7 @@ int main(void)
 
         TEST(!IS_STRING_OBJ(a_void));
 
-        TEST(!HAS_PROPERTIES(a_void));
+        TEST(!IS_TYPE(OBJ_OBJECT, a_void));
 
         TEST(GET_OBJ_TYPE(a_void) == OBJ_VOID);
     }
@@ -197,7 +197,7 @@ int main(void)
 
         TEST(IS_STRING_OBJ(obj));
 
-        TEST(!HAS_PROPERTIES(obj));
+        TEST(!IS_TYPE(OBJ_OBJECT, obj));
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_STRING_8);
 
@@ -217,7 +217,7 @@ int main(void)
 
         TEST(IS_STRING_OBJ(obj));
 
-        TEST(!HAS_PROPERTIES(obj));
+        TEST(!IS_TYPE(OBJ_OBJECT, obj));
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_STRING_16);
 
@@ -237,7 +237,7 @@ int main(void)
 
         TEST(IS_STRING_OBJ(obj));
 
-        TEST(!HAS_PROPERTIES(obj));
+        TEST(!IS_TYPE(OBJ_OBJECT, obj));
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_STRING_32);
 
@@ -256,7 +256,7 @@ int main(void)
 
         TEST(!IS_STRING_OBJ(obj));
 
-        TEST(!HAS_PROPERTIES(obj));
+        TEST(!IS_TYPE(OBJ_OBJECT, obj));
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
 
@@ -275,7 +275,7 @@ int main(void)
 
         TEST(!IS_STRING_OBJ(obj));
 
-        TEST(HAS_PROPERTIES(obj));
+        TEST(IS_TYPE(OBJ_OBJECT, obj));
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
     }

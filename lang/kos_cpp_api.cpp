@@ -114,7 +114,7 @@ template<>
 object value_from_object_ptr<object>(context& ctx, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
-    if ( ! HAS_PROPERTIES(objptr))
+    if ( ! IS_TYPE(OBJ_OBJECT, objptr))
         ctx.raise("source type is not an object");
 
     return object(ctx, objptr);

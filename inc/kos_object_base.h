@@ -79,7 +79,6 @@ typedef struct _KOS_OBJECT_PLACEHOLDER *KOS_OBJ_PTR;
 #define GET_OBJ_TYPE    KOS_get_object_type
 #define IS_NUMERIC_OBJ  KOS_is_numeric_object
 #define IS_STRING_OBJ   KOS_is_string_object
-#define HAS_PROPERTIES  KOS_has_properties
 
 static inline bool IS_SMALL_INT(KOS_OBJ_PTR objptr) {
     return ! (reinterpret_cast<intptr_t>(objptr) & 1);
@@ -122,9 +121,6 @@ bool KOS_is_type(KOS_OBJ_PTR objptr) {
     return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) == type);
 }
 #define IS_TYPE(type, objptr) KOS_is_type<type>(objptr)
-static inline bool HAS_PROPERTIES(KOS_OBJ_PTR objptr) {
-    return ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) >= 'a');
-}
 
 #else
 
@@ -138,7 +134,6 @@ static inline bool HAS_PROPERTIES(KOS_OBJ_PTR objptr) {
 #define IS_NUMERIC_OBJ(objptr)( IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) == OBJ_INTEGER || GET_OBJ_TYPE(objptr) == OBJ_FLOAT )
 #define IS_STRING_OBJ(objptr) ( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) <= OBJ_STRING_32) )
 #define IS_TYPE(type, objptr) ( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) == (type)       ) )
-#define HAS_PROPERTIES(objptr)( ! IS_SMALL_INT(objptr) && (GET_OBJ_TYPE(objptr) >= 'a'          ) )
 
 #endif
 
@@ -209,6 +204,7 @@ typedef struct _KOS_OBJECT {
     KOS_ATOMIC(void *) props;
     KOS_OBJ_PTR        prototype;
     void              *priv;
+    /* TODO add _finalize callback, to be used e.g. by file */
 } KOS_OBJECT;
 
 typedef struct _KOS_ARRAY {
@@ -244,7 +240,7 @@ typedef struct _KOS_FUNCTION {
     uint8_t                   min_args;
     uint8_t                   num_regs;
     uint8_t                   args_reg;
-    KOS_ATOMIC(void *)        props;
+    KOS_OBJ_PTR               prototype;
     KOS_OBJ_PTR               closures;
     KOS_OBJ_PTR               module;
     KOS_FUNCTION_HANDLER      handler;

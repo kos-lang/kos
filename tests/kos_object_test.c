@@ -82,7 +82,7 @@ int main(void)
         const KOS_OBJ_PTR o = KOS_new_object(&ctx);
         TEST(!IS_BAD_PTR(o));
         TEST(!IS_SMALL_INT(o));
-        TEST(HAS_PROPERTIES(o));
+        TEST(IS_TYPE(OBJ_OBJECT, o));
         TEST(GET_OBJ_TYPE(o) == OBJ_OBJECT);
 
         /* Can delete non-existent property */

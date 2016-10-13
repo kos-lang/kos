@@ -91,10 +91,20 @@ expect_fail(λ->({}[""]));
 {
     fun constr
     {
+    }
+
+    expect_fail(fun {
+        constr.prototype = {};
+    });
+}
+
+{
+    fun constr
+    {
         this.b = "b";
     }
 
-    constr.prototype = { a: "a" };
+    constr.set_prototype({ a: "a" });
 
     const obj = new constr;
     assert obj instanceof constr;
@@ -155,7 +165,7 @@ expect_fail(λ->({}[""]));
         this.a = a * 2;
     }
 
-    constr.prototype = base;
+    constr.set_prototype(base);
 
     const obj = new constr(5);
     assert obj instanceof constr;
@@ -206,7 +216,7 @@ expect_fail(λ->({}[""]));
     assert obj.a   == 42;
     assert other.a == 42;
 
-    constr1.prototype = {};
+    constr1.set_prototype({});
 
     assert ! (obj instanceof constr1);
 }

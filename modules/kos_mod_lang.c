@@ -54,7 +54,6 @@ static KOS_ASCII_STRING(str_err_not_function,              "object is not a func
 static KOS_ASCII_STRING(str_err_not_string,                "object is not a string");
 static KOS_ASCII_STRING(str_err_unpack_buf_too_short,      "unpacked buffer too short");
 static KOS_ASCII_STRING(str_err_unsup_operand_types,       "unsupported operand types");
-static KOS_ASCII_STRING(str_prototype,                     "prototype");
 
 #define TRY_CREATE_CONSTRUCTOR(name)                   \
 do {                                                   \
@@ -63,7 +62,7 @@ do {                                                   \
                             TO_OBJPTR(module),         \
                             TO_OBJPTR(&str_name),      \
                             _##name##_constructor,     \
-                            _get_##name##_prototype)); \
+                            TO_OBJPTR(&module->context->name##_prototype))); \
 } while (0)
 
 #define PROTO(type) (TO_OBJPTR(&module->context->type##_prototype))
@@ -215,22 +214,14 @@ static KOS_OBJ_PTR _iterator(KOS_CONTEXT *ctx,
     return TO_OBJPTR(0);
 }
 
-static KOS_OBJ_PTR _set_prototype(KOS_CONTEXT *ctx,
-                                  KOS_OBJ_PTR  this_obj,
-                                  KOS_OBJ_PTR  args_obj)
-{
-    KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_override_prototype));
-    return TO_OBJPTR(0);
-}
-
 static int _create_constructor(KOS_CONTEXT         *ctx,
                                KOS_OBJ_PTR          module_obj,
                                KOS_OBJ_PTR          str_name,
                                KOS_FUNCTION_HANDLER constructor,
-                               KOS_FUNCTION_HANDLER get_prototype)
+                               KOS_OBJ_PTR          prototype)
 {
     int         error    = KOS_SUCCESS;
-    KOS_OBJ_PTR func_obj = KOS_new_function(ctx, KOS_VOID);
+    KOS_OBJ_PTR func_obj = KOS_new_function(ctx, prototype);
 
     TRY_OBJPTR(func_obj);
 
@@ -241,12 +232,6 @@ static int _create_constructor(KOS_CONTEXT         *ctx,
                               str_name,
                               func_obj,
                               0));
-
-    TRY(KOS_set_builtin_dynamic_property(ctx,
-                                         func_obj,
-                                         TO_OBJPTR(&str_prototype),
-                                         get_prototype,
-                                         _set_prototype));
 
 _error:
     return error;
@@ -316,13 +301,6 @@ static KOS_OBJ_PTR _number_constructor(KOS_CONTEXT *ctx,
     return ret;
 }
 
-static KOS_OBJ_PTR _get_number_prototype(KOS_CONTEXT *ctx,
-                                         KOS_OBJ_PTR  this_obj,
-                                         KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->number_prototype);
-}
-
 static KOS_OBJ_PTR _integer_constructor(KOS_CONTEXT *ctx,
                                         KOS_OBJ_PTR  this_obj,
                                         KOS_OBJ_PTR  args_obj)
@@ -370,13 +348,6 @@ static KOS_OBJ_PTR _integer_constructor(KOS_CONTEXT *ctx,
     }
 
     return ret;
-}
-
-static KOS_OBJ_PTR _get_integer_prototype(KOS_CONTEXT *ctx,
-                                          KOS_OBJ_PTR  this_obj,
-                                          KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->integer_prototype);
 }
 
 static KOS_OBJ_PTR _float_constructor(KOS_CONTEXT *ctx,
@@ -446,13 +417,6 @@ static KOS_OBJ_PTR _float_constructor(KOS_CONTEXT *ctx,
     return ret;
 }
 
-static KOS_OBJ_PTR _get_float_prototype(KOS_CONTEXT *ctx,
-                                        KOS_OBJ_PTR  this_obj,
-                                        KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->float_prototype);
-}
-
 static KOS_OBJ_PTR _boolean_constructor(KOS_CONTEXT *ctx,
                                         KOS_OBJ_PTR  this_obj,
                                         KOS_OBJ_PTR  args_obj)
@@ -472,25 +436,11 @@ static KOS_OBJ_PTR _boolean_constructor(KOS_CONTEXT *ctx,
     return ret;
 }
 
-static KOS_OBJ_PTR _get_boolean_prototype(KOS_CONTEXT *ctx,
-                                          KOS_OBJ_PTR  this_obj,
-                                          KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->boolean_prototype);
-}
-
 static KOS_OBJ_PTR _void_constructor(KOS_CONTEXT *ctx,
                                      KOS_OBJ_PTR  this_obj,
                                      KOS_OBJ_PTR  args_obj)
 {
     return KOS_VOID;
-}
-
-static KOS_OBJ_PTR _get_void_prototype(KOS_CONTEXT *ctx,
-                                       KOS_OBJ_PTR  this_obj,
-                                       KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->void_prototype);
 }
 
 static KOS_OBJ_PTR _string_constructor(KOS_CONTEXT *ctx,
@@ -540,25 +490,11 @@ static KOS_OBJ_PTR _string_constructor(KOS_CONTEXT *ctx,
     return ret;
 }
 
-static KOS_OBJ_PTR _get_string_prototype(KOS_CONTEXT *ctx,
-                                         KOS_OBJ_PTR  this_obj,
-                                         KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->string_prototype);
-}
-
 static KOS_OBJ_PTR _object_constructor(KOS_CONTEXT *ctx,
                                        KOS_OBJ_PTR  this_obj,
                                        KOS_OBJ_PTR  args_obj)
 {
     return KOS_new_object(ctx);
-}
-
-static KOS_OBJ_PTR _get_object_prototype(KOS_CONTEXT *ctx,
-                                         KOS_OBJ_PTR  this_obj,
-                                         KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->object_prototype);
 }
 
 static KOS_OBJ_PTR _array_constructor(KOS_CONTEXT *ctx,
@@ -661,13 +597,6 @@ _error:
     return error ? TO_OBJPTR(0) : array;
 }
 
-static KOS_OBJ_PTR _get_array_prototype(KOS_CONTEXT *ctx,
-                                        KOS_OBJ_PTR  this_obj,
-                                        KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->array_prototype);
-}
-
 static KOS_OBJ_PTR _buffer_constructor(KOS_CONTEXT *ctx,
                                        KOS_OBJ_PTR  this_obj,
                                        KOS_OBJ_PTR  args_obj)
@@ -696,26 +625,12 @@ _error:
     return buffer;
 }
 
-static KOS_OBJ_PTR _get_buffer_prototype(KOS_CONTEXT *ctx,
-                                         KOS_OBJ_PTR  this_obj,
-                                         KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->buffer_prototype);
-}
-
 static KOS_OBJ_PTR _function_constructor(KOS_CONTEXT *ctx,
                                          KOS_OBJ_PTR  this_obj,
                                          KOS_OBJ_PTR  args_obj)
 {
     /* TODO copy function object */
     return TO_OBJPTR(0);
-}
-
-static KOS_OBJ_PTR _get_function_prototype(KOS_CONTEXT *ctx,
-                                           KOS_OBJ_PTR  this_obj,
-                                           KOS_OBJ_PTR  args_obj)
-{
-    return TO_OBJPTR(&ctx->function_prototype);
 }
 
 static KOS_OBJ_PTR _apply(KOS_CONTEXT *ctx,
@@ -740,6 +655,45 @@ static KOS_OBJ_PTR _apply(KOS_CONTEXT *ctx,
 
 _error:
     return error ? TO_OBJPTR(0) : ret;
+}
+
+static KOS_OBJ_PTR _set_prototype(KOS_CONTEXT *ctx,
+                                  KOS_OBJ_PTR  this_obj,
+                                  KOS_OBJ_PTR  args_obj)
+{
+    KOS_OBJ_PTR ret = TO_OBJPTR(0);
+
+    assert( ! IS_BAD_PTR(this_obj));
+
+    if (IS_TYPE(OBJ_FUNCTION, this_obj)) {
+
+        KOS_OBJ_PTR                arg     = KOS_array_read(ctx, args_obj, 0);
+        const KOS_FUNCTION_HANDLER handler = OBJPTR(KOS_FUNCTION, this_obj)->handler;
+
+        if (handler == _array_constructor    ||
+            handler == _boolean_constructor  ||
+            handler == _buffer_constructor   ||
+            handler == _float_constructor    ||
+            handler == _function_constructor ||
+            handler == _integer_constructor  ||
+            handler == _number_constructor   ||
+            handler == _object_constructor   ||
+            handler == _string_constructor   ||
+            handler == _void_constructor) {
+
+            KOS_raise_exception(ctx, TO_OBJPTR(&str_err_cannot_override_prototype));
+            arg = TO_OBJPTR(0);
+        }
+
+        if ( ! IS_BAD_PTR(arg)) {
+            OBJPTR(KOS_FUNCTION, this_obj)->prototype = arg;
+            ret = this_obj;
+        }
+    }
+    else
+        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_function));
+
+    return ret;
 }
 
 static KOS_OBJ_PTR _slice(KOS_CONTEXT *ctx,
@@ -1849,6 +1803,28 @@ static KOS_OBJ_PTR _get_code_size(KOS_CONTEXT *ctx,
     return ret;
 }
 
+static KOS_OBJ_PTR _get_prototype(KOS_CONTEXT *ctx,
+                                  KOS_OBJ_PTR  this_obj,
+                                  KOS_OBJ_PTR  args_obj)
+{
+    KOS_OBJ_PTR ret;
+
+    if (IS_TYPE(OBJ_FUNCTION, this_obj)) {
+
+        KOS_FUNCTION *const func = OBJPTR(KOS_FUNCTION, this_obj);
+
+        ret = func->prototype;
+
+        assert( ! IS_BAD_PTR(ret));
+    }
+    else {
+        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_function));
+        ret = TO_OBJPTR(0);
+    }
+
+    return ret;
+}
+
 static KOS_OBJ_PTR _get_registers(KOS_CONTEXT *ctx,
                                   KOS_OBJ_PTR  this_obj,
                                   KOS_OBJ_PTR  args_obj)
@@ -1888,31 +1864,33 @@ int _KOS_module_lang_init(KOS_MODULE *module)
     TRY_CREATE_CONSTRUCTOR(string);
     TRY_CREATE_CONSTRUCTOR(void);
 
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(array),    "insert_array", _insert_array,      2);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(array),    "reserve",      _reserve,           1);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(array),    "resize",       _resize,            1);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(array),    "slice",        _slice,             2);
-    TRY_ADD_MEMBER_PROPERTY( module, PROTO(array),    "size",         _get_array_size,    0);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(array),    "insert_array",  _insert_array,      2);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(array),    "reserve",       _reserve,           1);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(array),    "resize",        _resize,            1);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(array),    "slice",         _slice,             2);
+    TRY_ADD_MEMBER_PROPERTY( module, PROTO(array),    "size",          _get_array_size,    0);
 
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "copy_buffer",  _copy_buffer,       1);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "fill",         _fill,              1);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "pack",         _pack,              1);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "reserve",      _reserve,           1);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "resize",       _resize,            1);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "slice",        _slice,             2);
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "unpack",       _unpack,            1);
-    TRY_ADD_MEMBER_PROPERTY( module, PROTO(buffer),   "size",         _get_buffer_size,   0);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "copy_buffer",   _copy_buffer,       1);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "fill",          _fill,              1);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "pack",          _pack,              1);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "reserve",       _reserve,           1);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "resize",        _resize,            1);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "slice",         _slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(buffer),   "unpack",        _unpack,            1);
+    TRY_ADD_MEMBER_PROPERTY( module, PROTO(buffer),   "size",          _get_buffer_size,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(function), "apply",        _apply,             2);
-    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "instructions", _get_instructions,  0);
-    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "name",         _get_function_name, 0);
-    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "registers",    _get_registers,     0);
-    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "size",         _get_code_size,     0);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(function), "apply",         _apply,             2);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(function), "set_prototype", _set_prototype,     1);
+    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "instructions",  _get_instructions,  0);
+    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "name",          _get_function_name, 0);
+    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "prototype",     _get_prototype,     0);
+    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "registers",     _get_registers,     0);
+    TRY_ADD_MEMBER_PROPERTY( module, PROTO(function), "size",          _get_code_size,     0);
 
-    TRY_ADD_MEMBER_FUNCTION( module, PROTO(string),   "slice",        _slice,             2);
-    TRY_ADD_MEMBER_PROPERTY( module, PROTO(string),   "size",         _get_string_size,   0);
+    TRY_ADD_MEMBER_FUNCTION( module, PROTO(string),   "slice",         _slice,             2);
+    TRY_ADD_MEMBER_PROPERTY( module, PROTO(string),   "size",          _get_string_size,   0);
 
-    TRY_ADD_MEMBER_GENERATOR(module, PROTO(void),     "iterator",     _iterator,          0);
+    TRY_ADD_MEMBER_GENERATOR(module, PROTO(void),     "iterator",      _iterator,          0);
 
 _error:
     return error;

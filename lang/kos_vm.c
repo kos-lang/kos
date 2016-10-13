@@ -48,10 +48,10 @@ static KOS_ASCII_STRING(str_err_invalid_instruction, "invalid instruction");
 static KOS_ASCII_STRING(str_err_invalid_string,      "invalid string index");
 static KOS_ASCII_STRING(str_err_new_with_generator,  "new invoked a generator");
 static KOS_ASCII_STRING(str_err_not_callable,        "object is not callable");
+static KOS_ASCII_STRING(str_err_not_function,        "argument to instanceof operator is not a function");
 static KOS_ASCII_STRING(str_err_not_generator,       "function is not a generator");
 static KOS_ASCII_STRING(str_err_too_few_args,        "not enough arguments passed to a function");
 static KOS_ASCII_STRING(str_err_unsup_operand_types, "unsupported operand types");
-static KOS_ASCII_STRING(str_proto,                   "prototype");
 
 static int _exec_function(KOS_STACK_FRAME *stack_frame);
 
@@ -594,11 +594,8 @@ static int _prepare_call(KOS_CONTEXT       *ctx,
         /* Regular function */
         case KOS_NOT_GEN: {
             if (instr == INSTR_NEW) {
-                KOS_OBJ_PTR proto = KOS_get_property(ctx,
-                                                     func_obj,
-                                                     TO_OBJPTR(&str_proto));
-                if (IS_BAD_PTR(proto))
-                    TRY(KOS_ERROR_EXCEPTION);
+                KOS_OBJ_PTR proto = OBJPTR(KOS_FUNCTION, func_obj)->prototype;
+                assert( ! IS_BAD_PTR(proto));
 
                 if (func->handler)
                     *this_obj = proto;
@@ -627,10 +624,9 @@ static int _prepare_call(KOS_CONTEXT       *ctx,
             KOS_FUNCTION *dest;
             KOS_OBJ_PTR   ret;
             KOS_OBJ_PTR   stack_frame = ctx->stack_frame;
-            KOS_OBJ_PTR   proto_obj   = KOS_get_property(ctx, func_obj, TO_OBJPTR(&str_proto));
+            KOS_OBJ_PTR   proto_obj   = OBJPTR(KOS_FUNCTION, func_obj)->prototype;
 
-            if (IS_BAD_PTR(proto_obj))
-                TRY(KOS_ERROR_EXCEPTION);
+            assert( ! IS_BAD_PTR(proto_obj));
 
             ret = KOS_new_function(ctx, proto_obj);
             if (IS_BAD_PTR(ret))
@@ -2025,15 +2021,21 @@ static int _exec_function(KOS_STACK_FRAME *stack_frame)
                 const unsigned rfunc = bytecode[3];
 
                 KOS_OBJ_PTR constr;
-                KOS_OBJ_PTR proto;
-                KOS_OBJ_PTR ret = KOS_FALSE;
+                KOS_OBJ_PTR proto    = TO_OBJPTR(0);
+                KOS_OBJ_PTR ret      = KOS_FALSE;
 
                 assert(rsrc  < regs_array->length);
                 assert(rfunc < regs_array->length);
 
                 rdest  = bytecode[1];
                 constr = regs[rfunc];
-                proto  = KOS_get_property(ctx, constr, TO_OBJPTR(&str_proto));
+
+                if (IS_TYPE(OBJ_FUNCTION, constr)) {
+                    proto = OBJPTR(KOS_FUNCTION, constr)->prototype;
+                    assert( ! IS_BAD_PTR(proto));
+                }
+                else
+                    KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_function));
 
                 if ( ! IS_BAD_PTR(proto) && ! IS_SMALL_INT(proto) && GET_OBJ_TYPE(proto) == OBJ_DYNAMIC_PROP) {
                     KOS_OBJ_PTR args;

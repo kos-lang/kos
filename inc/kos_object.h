@@ -64,6 +64,10 @@ int KOS_delete_property(KOS_CONTEXT *ctx,
                         KOS_OBJ_PTR  obj,
                         KOS_OBJ_PTR  prop);
 
+KOS_OBJ_PTR KOS_new_builtin_dynamic_property(KOS_CONTEXT         *ctx,
+                                             KOS_FUNCTION_HANDLER getter,
+                                             KOS_FUNCTION_HANDLER setter);
+
 int KOS_set_builtin_dynamic_property(KOS_CONTEXT         *ctx,
                                      KOS_OBJ_PTR          obj,
                                      KOS_OBJ_PTR          prop,

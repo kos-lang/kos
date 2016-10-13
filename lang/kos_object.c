@@ -139,7 +139,7 @@ static struct _KOS_PROPERTIES *_get_properties(KOS_OBJ_PTR obj)
 {
     struct _KOS_PROPERTIES *props = 0;
 
-    if (HAS_PROPERTIES(obj))
+    if (IS_TYPE(OBJ_OBJECT, obj))
         props = OBJPTR(struct _KOS_PROPERTIES, obj);
 
     return props;
@@ -503,7 +503,7 @@ int _KOS_object_copy_prop_table(KOS_CONTEXT *ctx,
 
     assert( ! IS_BAD_PTR(obj));
     assert( ! IS_SMALL_INT(obj));
-    assert(HAS_PROPERTIES(obj));
+    assert(IS_TYPE(OBJ_OBJECT, obj));
 
     props = _get_properties(obj);
 
@@ -522,7 +522,7 @@ int KOS_set_property(KOS_CONTEXT *ctx,
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(prop) || ! IS_STRING_OBJ(prop))
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_string));
-    else if ( ! HAS_PROPERTIES(obj))
+    else if ( ! IS_TYPE(OBJ_OBJECT, obj))
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_no_own_properties));
     else {
         struct _KOS_PROPERTIES *props = _get_properties(obj);
@@ -669,30 +669,25 @@ int KOS_delete_property(KOS_CONTEXT *ctx,
         KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_string));
         return KOS_ERROR_EXCEPTION;
     }
-    else if (!IS_BAD_PTR(obj) && !HAS_PROPERTIES(obj))
+    else if ( ! IS_BAD_PTR(obj) &&  ! IS_TYPE(OBJ_OBJECT, obj))
         return KOS_SUCCESS;
     else
         return KOS_set_property(ctx, obj, prop, TOMBSTONE);
 }
 
-int KOS_set_builtin_dynamic_property(KOS_CONTEXT         *ctx,
-                                     KOS_OBJ_PTR          obj,
-                                     KOS_OBJ_PTR          prop,
-                                     KOS_FUNCTION_HANDLER getter,
-                                     KOS_FUNCTION_HANDLER setter)
+KOS_OBJ_PTR KOS_new_builtin_dynamic_property(KOS_CONTEXT         *ctx,
+                                             KOS_FUNCTION_HANDLER getter,
+                                             KOS_FUNCTION_HANDLER setter)
 {
-    int         error   = KOS_SUCCESS;
-    KOS_OBJ_PTR get_obj = KOS_new_function(ctx, KOS_VOID);
+    int         error    = KOS_SUCCESS;
+    KOS_OBJ_PTR dyn_prop = TO_OBJPTR(0);
+    KOS_OBJ_PTR get_obj  = KOS_new_function(ctx, KOS_VOID);
     KOS_OBJ_PTR set_obj;
-    KOS_OBJ_PTR dyn_prop;
 
-    if ( ! get_obj)
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(get_obj);
 
     set_obj = KOS_new_function(ctx, KOS_VOID);
-
-    if ( ! set_obj)
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(set_obj);
 
     OBJPTR(KOS_FUNCTION, get_obj)->min_args = 0;
     OBJPTR(KOS_FUNCTION, get_obj)->handler  = getter;
@@ -701,11 +696,24 @@ int KOS_set_builtin_dynamic_property(KOS_CONTEXT         *ctx,
     OBJPTR(KOS_FUNCTION, set_obj)->handler  = setter;
 
     dyn_prop = KOS_new_dynamic_prop(ctx, get_obj, set_obj);
+    TRY_OBJPTR(dyn_prop);
 
-    if ( ! dyn_prop)
-        TRY(KOS_ERROR_EXCEPTION);
+_error:
+    return error ? TO_OBJPTR(0) : dyn_prop;
+}
 
-    error = KOS_set_property(ctx, obj, prop, dyn_prop);
+int KOS_set_builtin_dynamic_property(KOS_CONTEXT         *ctx,
+                                     KOS_OBJ_PTR          obj,
+                                     KOS_OBJ_PTR          prop,
+                                     KOS_FUNCTION_HANDLER getter,
+                                     KOS_FUNCTION_HANDLER setter)
+{
+    int         error    = KOS_SUCCESS;
+    KOS_OBJ_PTR dyn_prop = KOS_new_builtin_dynamic_property(ctx, getter, setter);
+
+    TRY_OBJPTR(dyn_prop);
+
+    TRY(KOS_set_property(ctx, obj, prop, dyn_prop));
 
 _error:
     return error;

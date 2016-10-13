@@ -502,7 +502,7 @@ fun expect_fail(function)
 
 {
     expect_fail(fun {
-        lang.array.prototype = {};
+        lang.array.set_prototype({});
     });
 }
 
@@ -548,7 +548,7 @@ fun expect_fail(function)
     {
     }
 
-    fake_array.prototype = lang.array.prototype;
+    fake_array.set_prototype(lang.array.prototype);
 
     const o = new fake_array;
 
@@ -917,10 +917,9 @@ fun expect_fail(function)
 
     var count = 0;
     for var n in lang.shallow(λ->(void)) {
-        assert n == "prototype";
         count += 1;
     }
-    assert count == 1;
+    assert count == 0;
 
     count = 0;
     for var n in lang.shallow({xyz:void}) {

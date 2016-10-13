@@ -76,24 +76,13 @@ KOS_OBJ_PTR KOS_new_function(KOS_CONTEXT *ctx, KOS_OBJ_PTR proto_obj)
         obj->function.min_args              = 0;
         obj->function.num_regs              = 0;
         obj->function.args_reg              = 0;
+        obj->function.prototype             = proto_obj;
         obj->function.closures              = KOS_VOID;
         obj->function.module                = TO_OBJPTR(0);
         obj->function.handler               = 0;
         obj->function.generator_stack_frame = KOS_VOID;
         obj->function.instr_offs            = ~0U;
         obj->function.generator_state       = KOS_NOT_GEN;
-
-        _KOS_init_properties(&obj->properties);
-
-        {
-            static KOS_ASCII_STRING(str_proto, "prototype");
-            const int error = KOS_set_property(ctx,
-                                               TO_OBJPTR(obj),
-                                               TO_OBJPTR(&str_proto),
-                                               proto_obj);
-            if (error)
-                obj = 0; /* object is garbage-collected */
-        }
     }
 
     return TO_OBJPTR(obj);

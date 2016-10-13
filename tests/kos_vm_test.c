@@ -598,49 +598,6 @@ int main(void)
     /************************************************************************/
     /* NEW */
     {
-        KOS_STRING str[3];
-
-        const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(17),
-
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
-            INSTR_SET_PROP,   1, IMM32(0), 0,
-            INSTR_RETURN,     0, 0,
-
-            INSTR_LOAD_FUN,   0, IMM32(-26), 1, 2, 0,
-            INSTR_LOAD_OBJ,   1,                /* create prototype object */
-            INSTR_LOAD_INT32, 2, IMM32(0xBA5EU),
-            INSTR_SET_PROP,   1, IMM32(1), 2,   /* set property of the prototype */
-            INSTR_SET_PROP,   0, IMM32(2), 1,   /* set prototype on the function */
-            INSTR_LOAD_ARRAY, 1, IMM32(1),      /* create arguments array        */
-            INSTR_LOAD_INT32, 2, IMM32(0xC0DEU),
-            INSTR_SET_ELEM,   1, IMM32(0), 2,   /* set argument */
-            INSTR_NEW,        0, 0, 1,
-            INSTR_RETURN,     0, 0
-        };
-
-        KOS_OBJ_PTR ret;
-
-        KOS_init_const_ascii_string(&str[0], "own property");
-        KOS_init_const_ascii_string(&str[1], "base property");
-        KOS_init_const_ascii_string(&str[2], "prototype");
-
-        ret = _run_code(&ctx, &code[0], sizeof(code), 3, &str[0]);
-        TEST_NO_EXCEPTION();
-
-        TEST(!IS_SMALL_INT(ret));
-        TEST(GET_OBJ_TYPE(ret) == OBJ_OBJECT);
-        TEST(KOS_get_property(&ctx, ret, TO_OBJPTR(&str[0])) == TO_SMALL_INT(0xC0DEU));
-        TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(&ctx, ret, TO_OBJPTR(&str[1])) == TO_SMALL_INT(0xBA5EU));
-        TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(&ctx, ret, TO_OBJPTR(&str[2])) == TO_OBJPTR(0));
-        TEST_EXCEPTION();
-    }
-
-    /************************************************************************/
-    /* NEW */
-    {
         KOS_ASCII_STRING(str, "own property");
         const uint8_t code[] = {
             INSTR_JUMP,       IMM32(23),
