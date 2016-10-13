@@ -1194,7 +1194,7 @@ inline string to_object_ptr(context& ctx, const char* v)
 
 inline string to_object_ptr(context& ctx, const std::string& v)
 {
-    return ctx.check_error(KOS_new_string(ctx, v.c_str(), (unsigned)v.length()));
+    return ctx.check_error(KOS_new_string(ctx, v.c_str(), static_cast<unsigned>(v.length())));
 }
 
 inline string to_object_ptr(context& ctx, KOS_STRING& v)
@@ -1210,8 +1210,8 @@ inline boolean to_object_ptr(context& ctx, bool v)
 template<typename T>
 array to_object_ptr(context& ctx, const std::vector<T>& v)
 {
-    array array(ctx, ctx.check_error(KOS_new_array(ctx, (unsigned)v.size())));
-    ctx.check_error(KOS_array_resize(ctx, array, (uint32_t)v.size()));
+    array array(ctx, ctx.check_error(KOS_new_array(ctx, static_cast<unsigned>(v.size()))));
+    ctx.check_error(KOS_array_resize(ctx, array, static_cast<uint32_t>(v.size())));
     for (size_t i = 0; i < v.size(); i++)
         ctx.check_error(KOS_array_write(ctx, array, static_cast<int>(i), to_object_ptr(ctx, v[i])));
     return array;
