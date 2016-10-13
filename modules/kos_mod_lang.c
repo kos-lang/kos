@@ -1226,7 +1226,7 @@ static int _pack_format(KOS_CONTEXT             *ctx,
             for ( ; count; count--) {
                 unsigned    i;
                 KOS_OBJ_PTR value_obj = KOS_array_read(ctx, fmt->data, fmt->idx++);
-                double      value;
+                double      value     = 0;
                 uint64_t    out_val;
 
                 TRY_OBJPTR(value_obj);
