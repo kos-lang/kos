@@ -195,7 +195,7 @@ try {
 #ifdef KOS_CPP11
         kos::function add = ctx.NEW_FUNCTION(&add_func);
 #else
-        kos::function add = ctx.new_function<int64_t(bool, int, int64_t), add_func>();
+        kos::function add = ctx.new_function<int64_t (*)(bool, int, int64_t), add_func>();
 #endif
         const int a6 = add(false, 5, 10);
         TEST(a6 == 6);
@@ -208,7 +208,7 @@ try {
 #ifdef KOS_CPP11
         kos::function set = ctx.NEW_FUNCTION(set_global);
 #else
-        kos::function set = ctx.new_function<void(const std::string&), set_global>();
+        kos::function set = ctx.new_function<void (*)(const std::string&), set_global>();
 #endif
         set("some string");
         TEST(global_str == "some string");
