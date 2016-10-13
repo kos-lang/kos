@@ -206,7 +206,7 @@ try {
 
     {
 #ifdef KOS_CPP11
-        kos::function set = ctx.NEW_FUNCTION(set_global);
+        kos::function set = ctx.NEW_FUNCTION(&set_global);
 #else
         kos::function set = ctx.new_function<void (*)(const std::string&), set_global>();
 #endif
