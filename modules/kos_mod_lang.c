@@ -1734,7 +1734,7 @@ static KOS_OBJ_PTR _insert_array(KOS_CONTEXT *ctx,
 
     if (IS_NUMERIC_OBJ(begin_obj))
         TRY(KOS_get_integer(ctx, begin_obj, &begin));
-    else if ( ! IS_TYPE(OBJ_VOID, begin) && num_args == 2)
+    else if ( ! IS_TYPE(OBJ_VOID, begin_obj) && num_args == 2)
         begin = MAX_INT64;
 
     if (IS_NUMERIC_OBJ(end_obj))
