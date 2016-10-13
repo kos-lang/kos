@@ -8,6 +8,9 @@ All variables in Kos must be declared before the first use.  A variable
 declared in a particular scope is only visible in that scope and its
 child scopes.
 
+Scopes provide a natural mechanism for grouping code into sections in imperative
+languages.
+
 A variable can only be declared once, therefore there is no risk of mistakenly
 redeclaring a variable in a different way.
 
@@ -26,8 +29,9 @@ Const
 -----
 
 Variables can be declared as `const`, which prevents them from being ever
-assigned to.  Constants of mutable types (object, array, buffer, function)
-can still be modified, but cannot be changed to reference another object.
+assigned to again.  Constants of mutable types (object, array, buffer,
+function) can still be modified, but cannot be changed to reference another
+object.
 
 
 Immutable types
@@ -57,13 +61,13 @@ still allowed in string literals and comments.
 Operator precedence
 -------------------
 
-It is impossible to mix certain types of operators.  For example, binary
-arithmetic (such as `+`) and bitwise (such as `&`) operators cannot be mixed
-together, they require parentheses to specify their correct order in
-an expression.
+It is impossible to mix certain types of operators in Kos.  For example,
+binary arithmetic (such as `+`) and bitwise (such as `&`) operators cannot be
+mixed together, they require parentheses to explicitly specify their correct
+order in an expression.
 
-Binary bitwise operators: `&`, `|`, `^`, `<<` and `>>` cannot be mixed in
-a single expression without parentheses.  The same applies to logical
+Binary bitwise operators: `&`, `|`, `^`, `<<`, `>>` and `>>>` cannot be mixed
+in a single expression without parentheses.  The same applies to logical
 operators: `&&` and `||`.  Otherwise, precedence of these operators would not
 be immediately apparent to most programmers.
 
@@ -81,9 +85,9 @@ possibilities of writing unreadable code.
 Clear order of expression evaluation
 ------------------------------------
 
-There are no operators in Kos, which modify a variable in place, such as `++`.
-The `+=` operator can be used to increment a value.  This reduces chances of
-writing unreadable code, such as:
+There are no operators in Kos, which modify a variable in place, such as `++`
+and `--`.  The `+=` operator can be used to increment a value.  This reduces
+chances of writing unreadable code, such as:
 
     b = ++a + 2 * ++a; // What is the order of evaluation?
 
@@ -113,3 +117,59 @@ modules.
 
 Any functions or variables declared in any inner (non-global) scope are
 internal and invisible to other modules.
+
+
+Prototypal inheritance and object hierarchy
+-------------------------------------------
+
+Everything in Kos is an object.  This applies to all built-in types.
+
+Every object has a prototype.  If a property is read from an object,
+but it does not exist in the object itself, it is then read from the
+prototype.
+
+A prototype is an object itself, and can further have its own prototype.
+
+Here is how to obtain access to prototypes of individual types:
+
+    import lang;
+
+    const integer_prototype  = lang.integer.prototype;
+    const float_prototype    = lang.float.prototype;
+    const boolean_prototype  = lang.boolean.prototype;
+    const void_prototype     = lang.void.prototype;
+    const string_prototype   = lang.string.prototype;
+    const array_prototype    = lang.array.prototype;
+    const buffer_prototype   = lang.buffer.prototype;
+    const function_prototype = lang.function.prototype;
+    const object_prototype   = lang.object.prototype;
+
+Most of the above objects have `lang.object.prototype` as their prototype,
+except integer and float prototype, which have number prototype as their
+common prototype:
+
+    const number_prototype   = lang.number.prototype;
+
+
+Iterators
+---------
+
+The `for`..`in` loop in Kos invokes `iterator()` function on an object in
+order to retrieve the generator for the object's contents, then performs
+iteration until the generator is exhausted.
+
+Objects of various types provide their own `iterator()` function:
+
+* Integer, float, boolean, void: their `iterator()` function generates the
+  object's own value.
+
+* String, array, buffer: their `iterator()` function generates all of their
+  elements.
+
+* Function's `iterator()` returns the function itself, so that a generator's
+  return value, which is also a function, can be passed to the `for`..`in`
+  loop.  A regular function passed to `for`..`in` loop triggers an exception.
+
+* Object's `iterator()` function generates shallow object keys, excluding
+  keys found only in the object's prototypes.
+

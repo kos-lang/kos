@@ -208,6 +208,10 @@ also floating-point.
 
     var twopt5_flt = 5.0 / 2.0; // 2.5 (float)
 
+The promotion from integer to floating-point is lossy.  Very high and very low
+integers which require more than 53 bits to represent (excluding sign) loose
+precision when converted to a floating-point value.
+
 The following binary bitwise operators are available for integer numbers:
 
 * `&` bitwise and
@@ -317,6 +321,20 @@ are being compared, they are compared according to the rules of the current
 locale settings.
 
 
+Number conversion
+-----------------
+
+Floating-point numbers are automatically converted to integers using the
+`floor` rounding mode in the following situations:
+
+* Referencing an array, buffer or string element.
+* Referencing a range using slice operator.
+* Passing a floating-point number to a bitwise operator: `~`, `&`, `|`, `^`,
+  `<<`, `>>` or `>>>`.
+* Various module functions convert floating-point numbers to integers using
+  this method, for example array `resize()`, file `set_file_pos()`, etc.
+
+
 Boolean conversion
 ------------------
 
@@ -348,12 +366,12 @@ it.
 
 Strings can contain any characters, including any Unicode characters.
 
-Strings are immutable.  The only way to modify a string is to create a new,
-modified one.
-
     var s = "abc";
     var t = 'def';
     var u = '"ghi"';     // The double quotes are part of the string.
+
+Strings are immutable.  The only way to modify a string is to create a new,
+modified one.
 
 Individual characters can be extracted from a string using the array operator.
 There is also the slicing operator, which allows extracting ranges of
@@ -432,7 +450,7 @@ Functions
         return x + y;
     };
 
-    var sum = λ(x, y) -> (x + y);
+    var sum = fun(x, y) -> (x + y);
 
 
 Constructors

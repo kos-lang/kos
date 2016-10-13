@@ -1,7 +1,18 @@
 ﻿Enhancement proposals
 =====================
 
-* U+221E infinity symbol
+* Syntax for currying functions and a curry instruction.
+    - The instruction would simply set up the additional args and then jump
+      to the actual function being curried.  It would also automatically
+      look at the required number of args of the destination function
+      during setup.
+
+    - It is possible without special syntax or special instruction:
+
+            fun add_2(a, b) { return a + b; }
+            fun add_2(a) { return add_1(1, a); }
+
+    - Nope, we should probably just rely on TAIL.CALL.
 
 * Stream operator ->
 
@@ -14,19 +25,6 @@
         }
 
 * ? Support multi-line strings the Python way or the C way?
-
-* set/get:
-
-        var myobj = {
-            prop: set fun { },
-            prop: get fun { }
-        };
-        myobj.prop = set fun { };
-        myobj.prop = get fun { };
-
-* Invocation with explicit argument names, e.g.:
-
-        var f = file.open(name="xyz", flags="r");
 
 * Semicolon insertion
     - statements affected:
@@ -47,15 +45,14 @@
             var a = b       # No semicolon
             [1,2,3].map(a)  # [ treated as refinement
 
-* Spread operator
+* set/get:
 
-        var str = "hello";
-        var a   = [ str ... ]; // [ 'h', 'e', 'l', 'l', 'o' ]
-        some_func(str, a ...); // some_func(str, 'h', 'e', 'l', 'l', 'o');
-
-* Range spread operator
-
-        var a = [ 0 ... 5 ]; // [ 0, 1, 2, 3, 4, 5 ]
+        var myobj = {
+            prop: set fun { },
+            prop: get fun { }
+        };
+        myobj.prop = set fun { };
+        myobj.prop = get fun { };
 
 * Class-like prototypes
     - local variables become this members
@@ -86,3 +83,19 @@
     - Private var/fun in prototype becomes a constructor's local variable,
       also with all side effects.
     - Maybe public should be default and private should be explicit?
+
+* U+221E infinity symbol
+
+* Spread operator
+
+        var str = "hello";
+        var a   = [ str ... ]; // [ 'h', 'e', 'l', 'l', 'o' ]
+        some_func(str, a ...); // some_func(str, 'h', 'e', 'l', 'l', 'o');
+
+* Range spread operator
+
+        var a = [ 0 ... 5 ]; // [ 0, 1, 2, 3, 4, 5 ]
+
+* Invocation with explicit argument names, e.g.:
+
+        var f = file.open(name="xyz", flags="r");
