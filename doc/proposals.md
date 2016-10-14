@@ -36,14 +36,35 @@
       - ReturnStatement
       - ThrowStatement
     - if required, before EOL, EOF or }
-    - EOL after return just treated as semicolon?
-    - no semicolon insertion inside for header
-    - no semicolon should be inserted for a function call split across lines: `my_func<LF>(some, args);`
-    - watch the `-` operator starting on a new line!!!
-    - problem: array literal starting on new line can be treated as refinement!
+    - any code following 'return' keyword on new line should be treated as
+      expression for the return statement
+    - (proposed) no semicolon insertion inside `for` header
+    - problems:
 
-            var a = b       # No semicolon
-            [1,2,3].map(a)  # [ treated as refinement
+            # Split function call
+            func
+            (my, args)
+
+            # Even worse
+            var f = fun { }
+            (fun() { })()
+
+            # Another example of split function call
+            a + b
+            (c())
+
+            # Split expression
+            a = b
+            - c
+
+            # Array literal stariting on new line treated as refinement
+            var a = b
+            [1, 2, 3].map(a)
+
+    - proposed solution: if EOL is encountered where a semicolon could be and
+      the next token is `(`, `[`, `+` or `-`, just treat the EOL as a
+      semicolon and emit a warning; not sure about `+` and `-` though, maybe
+      they should be part of the expression...
 
 * set/get:
 
