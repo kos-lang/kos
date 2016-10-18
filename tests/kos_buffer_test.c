@@ -97,6 +97,94 @@ int main(void)
         TEST_NO_EXCEPTION();
     }
 
+    /************************************************************************/
+    {
+        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
+        TEST( ! IS_BAD_PTR(buf));
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_buffer_reserve(frame, buf, 0) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 0);
+
+        TEST(KOS_buffer_reserve(frame, buf, 1) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 0);
+
+        TEST(KOS_buffer_reserve(frame, buf, 128) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 0);
+
+        TEST(KOS_buffer_reserve(frame, buf, 64) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 0);
+
+        TEST(KOS_buffer_resize(frame, buf, 16) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        TEST(KOS_buffer_resize(frame, buf, 5) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 5);
+    }
+
+
+    /************************************************************************/
+    {
+        uint8_t *data;
+        int      i;
+
+        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
+        TEST( ! IS_BAD_PTR(buf));
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_buffer_fill(frame, buf, -100, 100, 64) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_buffer_resize(frame, buf, 128) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 128);
+
+        TEST(KOS_buffer_fill(frame, buf, 0, -1, 0x55) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        data = KOS_buffer_data(frame, buf);
+        TEST(data);
+
+        for (i = 0; i < 127; i++)
+            TEST(data[i] == 0x55);
+        TEST(data[127] == 0);
+
+        TEST(KOS_buffer_resize(frame, buf, 90) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 90);
+
+        TEST(KOS_buffer_resize(frame, buf, 512) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 512);
+
+        data = KOS_buffer_data(frame, buf);
+        TEST(data);
+
+        for (i = 0; i < 90; i++)
+            TEST(data[i] == 0x55);
+
+        TEST(KOS_buffer_fill(frame, buf, -500, 50, 0xAA) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        data = KOS_buffer_data(frame, buf);
+        TEST(data);
+
+        for (i = 0; i < 12; i++)
+            TEST(data[i] == 0x55);
+
+        for (i = 12; i < 50; i++)
+            TEST(data[i] == 0xAA);
+
+        for (i = 50; i < 90; i++)
+            TEST(data[i] == 0x55);
+    }
+
     KOS_context_destroy(&ctx);
 
     return 0;
