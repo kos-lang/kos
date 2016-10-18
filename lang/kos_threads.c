@@ -104,7 +104,7 @@ static DWORD WINAPI _thread_proc(LPVOID thread_obj)
 {
     KOS_THREAD_ROOT thread_root;
 
-    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_obj) == KOS_SUCCESS)
+    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_root) == KOS_SUCCESS)
         ((_KOS_THREAD)thread_obj)->proc(&thread_root.frame, ((_KOS_THREAD)thread_obj)->cookie);
 
     if (KOS_is_exception_pending(&thread_root.frame)) {
