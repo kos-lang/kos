@@ -25,7 +25,7 @@
 namespace kos {
 
 template<typename T>
-T numeric_from_object_ptr(context& ctx, KOS_OBJ_PTR objptr)
+T numeric_from_object_ptr(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     T ret = 0;
 
@@ -50,7 +50,7 @@ T numeric_from_object_ptr(context& ctx, KOS_OBJ_PTR objptr)
         }
 
         default: {
-            ctx.raise("source type is not a number");
+            frame.raise("source type is not a number");
             break;
         }
     }
@@ -59,39 +59,39 @@ T numeric_from_object_ptr(context& ctx, KOS_OBJ_PTR objptr)
 }
 
 template<>
-int value_from_object_ptr<int>(context& ctx, KOS_OBJ_PTR objptr)
+int value_from_object_ptr<int>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
-    return numeric_from_object_ptr<int>(ctx, objptr);
+    return numeric_from_object_ptr<int>(frame, objptr);
 }
 
 template<>
-int64_t value_from_object_ptr<int64_t>(context& ctx, KOS_OBJ_PTR objptr)
+int64_t value_from_object_ptr<int64_t>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
-    return numeric_from_object_ptr<int64_t>(ctx, objptr);
+    return numeric_from_object_ptr<int64_t>(frame, objptr);
 }
 
 template<>
-double value_from_object_ptr<double>(context& ctx, KOS_OBJ_PTR objptr)
+double value_from_object_ptr<double>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
-    return numeric_from_object_ptr<double>(ctx, objptr);
+    return numeric_from_object_ptr<double>(frame, objptr);
 }
 
 template<>
-bool value_from_object_ptr<bool>(context& ctx, KOS_OBJ_PTR objptr)
+bool value_from_object_ptr<bool>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
     if ( ! IS_TYPE(OBJ_BOOLEAN, objptr))
-        ctx.raise("source type is not a boolean");
+        frame.raise("source type is not a boolean");
 
     return !! KOS_get_bool(objptr);
 }
 
 template<>
-std::string value_from_object_ptr<std::string>(context& ctx, KOS_OBJ_PTR objptr)
+std::string value_from_object_ptr<std::string>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
     if ( ! IS_STRING_OBJ(objptr))
-        ctx.raise("source type is not a string");
+        frame.raise("source type is not a string");
 
     const unsigned len = KOS_string_to_utf8(objptr, 0, 0);
     std::string    str(static_cast<size_t>(len), '\0');
@@ -101,80 +101,80 @@ std::string value_from_object_ptr<std::string>(context& ctx, KOS_OBJ_PTR objptr)
 }
 
 template<>
-string value_from_object_ptr<string>(context& ctx, KOS_OBJ_PTR objptr)
+string value_from_object_ptr<string>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
     if ( ! IS_STRING_OBJ(objptr))
-        ctx.raise("source type is not a string");
+        frame.raise("source type is not a string");
 
     return string(objptr);
 }
 
 template<>
-object value_from_object_ptr<object>(context& ctx, KOS_OBJ_PTR objptr)
+object value_from_object_ptr<object>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
     if ( ! IS_TYPE(OBJ_OBJECT, objptr))
-        ctx.raise("source type is not an object");
+        frame.raise("source type is not an object");
 
-    return object(ctx, objptr);
+    return object(frame, objptr);
 }
 
 template<>
-array value_from_object_ptr<array>(context& ctx, KOS_OBJ_PTR objptr)
+array value_from_object_ptr<array>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
     if ( ! IS_TYPE(OBJ_ARRAY, objptr))
-        ctx.raise("source type is not an array");
+        frame.raise("source type is not an array");
 
-    return array(ctx, objptr);
+    return array(frame, objptr);
 }
 
 template<>
-buffer value_from_object_ptr<buffer>(context& ctx, KOS_OBJ_PTR objptr)
+buffer value_from_object_ptr<buffer>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
     if ( ! IS_TYPE(OBJ_BUFFER, objptr))
-        ctx.raise("source type is not a buffer");
+        frame.raise("source type is not a buffer");
 
-    return buffer(ctx, objptr);
+    return buffer(frame, objptr);
 }
 
 template<>
-function value_from_object_ptr<function>(context& ctx, KOS_OBJ_PTR objptr)
+function value_from_object_ptr<function>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     assert( ! IS_BAD_PTR(objptr));
     if ( ! IS_TYPE(OBJ_FUNCTION, objptr))
-        ctx.raise("source type is not a function");
+        frame.raise("source type is not a function");
 
-    return function(ctx, objptr);
+    return function(frame, objptr);
 }
 
-void context::raise(const char* desc)
+void stack_frame::raise(const char* desc)
 {
-    KOS_raise_exception(&_ctx, KOS_new_cstring(&_ctx, desc));
+    KOS_raise_exception(_frame, KOS_new_cstring(_frame, desc));
     signal_error();
 }
 
-std::string exception::get_exception_string(context& ctx)
+std::string exception::get_exception_string(stack_frame frame)
 {
-    KOS_OBJ_PTR obj = KOS_get_exception(ctx);
+    KOS_OBJ_PTR obj = KOS_get_exception(frame);
     assert( ! IS_BAD_PTR(obj));
 
     if ( ! IS_STRING_OBJ(obj)) {
 
         static KOS_ASCII_STRING(str_value, "value");
 
-        obj = KOS_get_property(ctx, obj, TO_OBJPTR(&str_value));
+        obj = KOS_get_property(frame, obj, TO_OBJPTR(&str_value));
 
         assert( ! IS_BAD_PTR(obj));
 
-        obj = KOS_object_to_string(ctx, obj);
+        obj = KOS_object_to_string(frame, obj);
 
         assert( ! IS_BAD_PTR(obj));
     }
 
-    return from_object_ptr(ctx, obj);
+    return from_object_ptr(frame, obj);
 }
 
 } // namespace kos

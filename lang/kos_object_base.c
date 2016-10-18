@@ -22,7 +22,7 @@
 
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_array.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "kos_object_alloc.h"
@@ -36,13 +36,13 @@ struct _KOS_BOOLEAN kos_static_object_true  = { OBJ_BOOLEAN, 1 };
 struct _KOS_BOOLEAN kos_static_object_false = { OBJ_BOOLEAN, 0 };
 struct _KOS_VOID    kos_static_object_void  = { OBJ_VOID       };
 
-KOS_OBJ_PTR KOS_new_int(KOS_CONTEXT *ctx, int64_t value)
+KOS_OBJ_PTR KOS_new_int(KOS_STACK_FRAME *frame, int64_t value)
 {
     KOS_OBJ_PTR objptr = TO_SMALL_INT((intptr_t)value);
 
     if (GET_SMALL_INT(objptr) != value) {
 
-        KOS_ANY_OBJECT *obj = _KOS_alloc_object(ctx, KOS_INTEGER);
+        KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_INTEGER);
 
         if (obj) {
             obj->type           = OBJ_INTEGER;
@@ -55,9 +55,9 @@ KOS_OBJ_PTR KOS_new_int(KOS_CONTEXT *ctx, int64_t value)
     return objptr;
 }
 
-KOS_OBJ_PTR KOS_new_float(KOS_CONTEXT *ctx, double value)
+KOS_OBJ_PTR KOS_new_float(KOS_STACK_FRAME *frame, double value)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(ctx, KOS_FLOAT);
+    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_FLOAT);
 
     if (obj) {
         obj->type           = OBJ_FLOAT;
@@ -67,9 +67,9 @@ KOS_OBJ_PTR KOS_new_float(KOS_CONTEXT *ctx, double value)
     return TO_OBJPTR(obj);
 }
 
-KOS_OBJ_PTR KOS_new_function(KOS_CONTEXT *ctx, KOS_OBJ_PTR proto_obj)
+KOS_OBJ_PTR KOS_new_function(KOS_STACK_FRAME *frame, KOS_OBJ_PTR proto_obj)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(ctx, KOS_FUNCTION);
+    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_FUNCTION);
 
     if (obj) {
         obj->type                           = OBJ_FUNCTION;
@@ -78,7 +78,7 @@ KOS_OBJ_PTR KOS_new_function(KOS_CONTEXT *ctx, KOS_OBJ_PTR proto_obj)
         obj->function.args_reg              = 0;
         obj->function.prototype             = proto_obj;
         obj->function.closures              = KOS_VOID;
-        obj->function.module                = TO_OBJPTR(0);
+        obj->function.module                = frame->module;
         obj->function.handler               = 0;
         obj->function.generator_stack_frame = KOS_VOID;
         obj->function.instr_offs            = ~0U;
@@ -88,16 +88,16 @@ KOS_OBJ_PTR KOS_new_function(KOS_CONTEXT *ctx, KOS_OBJ_PTR proto_obj)
     return TO_OBJPTR(obj);
 }
 
-KOS_OBJ_PTR KOS_new_builtin_function(KOS_CONTEXT         *ctx,
+KOS_OBJ_PTR KOS_new_builtin_function(KOS_STACK_FRAME     *frame,
                                      KOS_FUNCTION_HANDLER handler,
                                      int                  min_args)
 {
     KOS_OBJ_PTR func_obj  = TO_OBJPTR(0);
-    KOS_OBJ_PTR proto_obj = KOS_gen_prototype(ctx, (void *)(intptr_t)handler);
+    KOS_OBJ_PTR proto_obj = KOS_gen_prototype(frame, (void *)(intptr_t)handler);
 
     if ( ! IS_BAD_PTR(proto_obj)) {
 
-        func_obj = KOS_new_function(ctx, proto_obj);
+        func_obj = KOS_new_function(frame, proto_obj);
 
         if ( ! IS_BAD_PTR(func_obj)) {
             assert(min_args >= 0 && min_args < 256);
@@ -110,11 +110,11 @@ KOS_OBJ_PTR KOS_new_builtin_function(KOS_CONTEXT         *ctx,
     return func_obj;
 }
 
-KOS_OBJ_PTR KOS_new_dynamic_prop(KOS_CONTEXT *ctx,
-                                 KOS_OBJ_PTR  getter,
-                                 KOS_OBJ_PTR  setter)
+KOS_OBJ_PTR KOS_new_dynamic_prop(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_PTR      getter,
+                                 KOS_OBJ_PTR      setter)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(ctx, KOS_DYNAMIC_PROP);
+    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_DYNAMIC_PROP);
 
     if (obj) {
         obj->type                = OBJ_DYNAMIC_PROP;
@@ -125,54 +125,60 @@ KOS_OBJ_PTR KOS_new_dynamic_prop(KOS_CONTEXT *ctx,
     return TO_OBJPTR(obj);
 }
 
-void _KOS_stack_frame_init(KOS_STACK_FRAME *frame)
+void _KOS_init_stack_frame(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_PTR      module,
+                           uint32_t         instr_offs,
+                           uint32_t         num_regs)
 {
+    assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
+    assert( ! IS_BAD_PTR(module));
+    assert(OBJPTR(KOS_MODULE, module)->context);
+
     frame->type       = OBJ_STACK_FRAME;
     frame->catch_reg  = 0;
-    frame->instr_offs = 0;
     frame->registers  = TO_OBJPTR(0);
-    frame->module     = TO_OBJPTR(0);
-    frame->retval     = TO_OBJPTR(0);
+    frame->module     = module;
+    frame->allocator  = &OBJPTR(KOS_MODULE, module)->context->allocator;
+    frame->exception  = TO_OBJPTR(0);
+    frame->retval     = KOS_VOID;
     frame->parent     = TO_OBJPTR(0);
+    frame->instr_offs = instr_offs;
     frame->yield_reg  = KOS_CANNOT_YIELD;
     frame->catch_offs = KOS_NO_CATCH;
+
+    if (num_regs < 256)
+        frame->registers = KOS_new_array(frame, num_regs);
 }
 
-KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_CONTEXT *ctx,
-                                       KOS_OBJ_PTR  module,
-                                       uint32_t     instr_offs,
-                                       uint32_t     num_regs)
+KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_STACK_FRAME *frame,
+                                       KOS_OBJ_PTR      module,
+                                       uint32_t         instr_offs,
+                                       uint32_t         num_regs)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(ctx, KOS_STACK_FRAME);
+    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_STACK_FRAME);
 
     if (obj) {
 
         assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
+        assert( ! IS_BAD_PTR(module));
+        assert(OBJPTR(KOS_MODULE, frame->module)->context == OBJPTR(KOS_MODULE, module)->context);
 
-        obj->type                   = OBJ_STACK_FRAME;
-        obj->stack_frame.catch_reg  = 0;
-        obj->stack_frame.registers  = num_regs > 255 ? TO_OBJPTR(0) : KOS_new_array(ctx, num_regs);
-        obj->stack_frame.module     = module;
-        obj->stack_frame.retval     = KOS_VOID;
-        obj->stack_frame.parent     = ctx->stack_frame;
-        obj->stack_frame.instr_offs = instr_offs;
-        obj->stack_frame.yield_reg  = KOS_CANNOT_YIELD;
-        obj->stack_frame.catch_offs = KOS_NO_CATCH;
+        _KOS_init_stack_frame(&obj->stack_frame, module, instr_offs, num_regs);
+
+        obj->stack_frame.parent = TO_OBJPTR(frame);
 
         if (num_regs < 256 && IS_BAD_PTR(obj->stack_frame.registers))
             obj = 0; /* object is garbage-collected */
-        else
-            ctx->stack_frame = TO_OBJPTR(obj);
     }
 
     return &obj->stack_frame;
 }
 
-KOS_STACK_FRAME *_KOS_stack_frame_push_func(KOS_CONTEXT  *ctx,
-                                            KOS_FUNCTION *func)
+KOS_STACK_FRAME *_KOS_stack_frame_push_func(KOS_STACK_FRAME *frame,
+                                            KOS_FUNCTION    *func)
 {
     const int no_regs = func->generator_state == KOS_GEN_INIT && func->handler;
-    return _KOS_stack_frame_push(ctx,
+    return _KOS_stack_frame_push(frame,
                                  func->module,
                                  func->instr_offs,
                                  no_regs ? ~0U : func->num_regs);

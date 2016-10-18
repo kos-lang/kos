@@ -51,27 +51,28 @@ class test_class {
 
 int main()
 try {
-    kos::context ctx;
+    kos::context     ctx;
+    kos::stack_frame frame(ctx);
 
     {
-        const int a = from_object_ptr(ctx, TO_SMALL_INT(123));
+        const int a = from_object_ptr(frame, TO_SMALL_INT(123));
         TEST(a == 123);
     }
 
     {
-        const int64_t a = from_object_ptr(ctx, to_object_ptr(ctx, (int64_t)1 << 62));
+        const int64_t a = from_object_ptr(frame, to_object_ptr(frame, (int64_t)1 << 62));
         TEST(a == (int64_t)1 << 62);
     }
 
     {
-        const double a = from_object_ptr(ctx, to_object_ptr(ctx, 1.0));
+        const double a = from_object_ptr(frame, to_object_ptr(frame, 1.0));
         TEST(a == 1);
     }
 
     {
         bool exception = false;
         try {
-            const double a = from_object_ptr(ctx, to_object_ptr(ctx, "1.0"));
+            const double a = from_object_ptr(frame, to_object_ptr(frame, "1.0"));
             TEST(a == 2);
         }
         catch (const kos::exception& e) {
@@ -84,7 +85,7 @@ try {
     {
         bool exception = false;
         try {
-            const bool a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const bool a = from_object_ptr(frame, TO_SMALL_INT(0));
             TEST(a == true);
         }
         catch (const kos::exception& e) {
@@ -97,7 +98,7 @@ try {
     {
         bool exception = false;
         try {
-            const std::string a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const std::string a = from_object_ptr(frame, TO_SMALL_INT(0));
             TEST(a == "2");
         }
         catch (const kos::exception& e) {
@@ -108,14 +109,14 @@ try {
     }
 
     {
-        const kos::string str = from_object_ptr(ctx, to_object_ptr(ctx, "uv"));
+        const kos::string str = from_object_ptr(frame, to_object_ptr(frame, "uv"));
         TEST(std::string(str) == "uv");
     }
 
     {
         bool exception = false;
         try {
-            const kos::string a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const kos::string a = from_object_ptr(frame, TO_SMALL_INT(0));
             TEST(std::string(a) == "2");
         }
         catch (const kos::exception& e) {
@@ -126,17 +127,17 @@ try {
     }
 
     {
-        kos::array a = ctx.new_array(2);
+        kos::array a = frame.new_array(2);
         a[0] = 100;
         a[1] = kos::void_();
-        kos::array a2 = from_object_ptr(ctx, a);
+        kos::array a2 = from_object_ptr(frame, a);
         TEST(static_cast<int>(a2[0]) == 100);
     }
 
     {
         bool exception = false;
         try {
-            const kos::array a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const kos::array a = from_object_ptr(frame, TO_SMALL_INT(0));
             TEST(static_cast<bool>(a[0]));
         }
         catch (const kos::exception& e) {
@@ -147,16 +148,16 @@ try {
     }
 
     {
-        kos::object o = ctx.new_object();
+        kos::object o = frame.new_object();
         o[std::string("a")] = 24;
-        kos::object o2 = from_object_ptr(ctx, o);
+        kos::object o2 = from_object_ptr(frame, o);
         TEST(static_cast<int>(o2["a"]) == 24);
     }
 
     {
         bool exception = false;
         try {
-            const kos::object a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const kos::object a = from_object_ptr(frame, TO_SMALL_INT(0));
             TEST(static_cast<bool>(a[""]));
         }
         catch (const kos::exception& e) {
@@ -169,7 +170,7 @@ try {
     {
         bool exception = false;
         try {
-            const kos::function a = from_object_ptr(ctx, TO_SMALL_INT(0));
+            const kos::function a = from_object_ptr(frame, TO_SMALL_INT(0));
             TEST(static_cast<bool>(a()));
         }
         catch (const kos::exception& e) {
@@ -180,12 +181,12 @@ try {
     }
 
     {
-        const std::string a = from_object_ptr(ctx, to_object_ptr(ctx, "abc"));
+        const std::string a = from_object_ptr(frame, to_object_ptr(frame, "abc"));
         TEST(a == "abc");
     }
 
     {
-        kos::array a = ctx.new_array(100);
+        kos::array a = frame.new_array(100);
         TEST(a.size() == 100);
         TEST(static_cast<KOS_OBJ_PTR>(a[0] ) == KOS_VOID);
         TEST(static_cast<KOS_OBJ_PTR>(a[99]) == KOS_VOID);
@@ -193,9 +194,9 @@ try {
 
     {
 #ifdef KOS_CPP11
-        kos::function add = ctx.NEW_FUNCTION(&add_func);
+        kos::function add = frame.NEW_FUNCTION(&add_func);
 #else
-        kos::function add = ctx.new_function<int64_t (*)(bool, int, int64_t), add_func>();
+        kos::function add = frame.new_function<int64_t (*)(bool, int, int64_t), add_func>();
 #endif
         const int a6 = add(false, 5, 10);
         TEST(a6 == 6);
@@ -206,9 +207,9 @@ try {
 
     {
 #ifdef KOS_CPP11
-        kos::function set = ctx.NEW_FUNCTION(&set_global);
+        kos::function set = frame.NEW_FUNCTION(&set_global);
 #else
-        kos::function set = ctx.new_function<void (*)(const std::string&), set_global>();
+        kos::function set = frame.new_function<void (*)(const std::string&), set_global>();
 #endif
         set("some string");
         TEST(global_str == "some string");
@@ -216,17 +217,17 @@ try {
 
     {
         test_class        myobj(42, "42");
-        kos::object       o  = ctx.new_object(&myobj);
+        kos::object       o  = frame.new_object(&myobj);
 #ifdef KOS_CPP11
-        kos::function fa = ctx.NEW_FUNCTION(&test_class::get_a);
-        kos::function fb = ctx.NEW_FUNCTION(&test_class::get_b);
-        kos::function fx = ctx.NEW_FUNCTION(&test_class::add_a);
+        kos::function fa = frame.NEW_FUNCTION(&test_class::get_a);
+        kos::function fb = frame.NEW_FUNCTION(&test_class::get_b);
+        kos::function fx = frame.NEW_FUNCTION(&test_class::add_a);
 #else
-        kos::function fa = ctx.new_function<int                (test_class::*)() const,    &test_class::get_a>();
-        kos::function fb = ctx.new_function<const std::string& (test_class::*)() const,    &test_class::get_b>();
-        kos::function fx = ctx.new_function<int64_t            (test_class::*)(bool, int), &test_class::add_a>();
+        kos::function fa = frame.new_function<int                (test_class::*)() const,    &test_class::get_a>();
+        kos::function fb = frame.new_function<const std::string& (test_class::*)() const,    &test_class::get_b>();
+        kos::function fx = frame.new_function<int64_t            (test_class::*)(bool, int), &test_class::add_a>();
 #endif
-        kos::function fy = from_object_ptr(ctx, fx);
+        kos::function fy = from_object_ptr(frame, fx);
 
         const int a = fa.apply(o);
         TEST(a == 42);
@@ -243,12 +244,12 @@ try {
     }
 
     {
-        kos::object o = ctx.new_object();
+        kos::object o = frame.new_object();
         o["i"] = 1.5;
         o["f"] = int64_t(1) << 32;
         o["s"] = "abc";
 #ifdef KOS_CPP11
-        o["a"] = ctx.make_array(1, 2, 3, 4);
+        o["a"] = frame.make_array(1, 2, 3, 4);
 #endif
 
         const double i = o["i"];
@@ -269,10 +270,10 @@ try {
     {
         bool exception = false;
         try {
-            kos::object o = ctx.new_object();
+            kos::object o = frame.new_object();
             o["value"] = "hello, world!";
-            KOS_raise_exception(ctx, o);
-            throw kos::exception(ctx);
+            KOS_raise_exception(frame, o);
+            throw kos::exception(frame);
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "hello, world!")

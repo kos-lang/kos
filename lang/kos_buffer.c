@@ -35,15 +35,15 @@ typedef struct _KOS_BUFFER_DATA BUFFER_DATA;
 
 #define KOS_buffer_alloc_size(cap) (sizeof(BUFFER_DATA) + ((cap) - 1U))
 
-static BUFFER_DATA *_alloc_buffer(KOS_CONTEXT *ctx, unsigned capacity)
+static BUFFER_DATA *_alloc_buffer(KOS_STACK_FRAME *frame, unsigned capacity)
 {
-    return (BUFFER_DATA *)_KOS_alloc_buffer(ctx, KOS_buffer_alloc_size(capacity));
+    return (BUFFER_DATA *)_KOS_alloc_buffer(frame, KOS_buffer_alloc_size(capacity));
 }
 
-KOS_OBJ_PTR KOS_new_buffer(KOS_CONTEXT *ctx,
-                           unsigned     size)
+KOS_OBJ_PTR KOS_new_buffer(KOS_STACK_FRAME *frame,
+                           unsigned         size)
 {
-    KOS_ANY_OBJECT *obj      = _KOS_alloc_object(ctx, KOS_BUFFER);
+    KOS_ANY_OBJECT *obj      = _KOS_alloc_object(frame, KOS_BUFFER);
     const unsigned  capacity = (size + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);
 
     if (obj) {
@@ -54,7 +54,7 @@ KOS_OBJ_PTR KOS_new_buffer(KOS_CONTEXT *ctx,
         buffer->size = size;
 
         if (capacity) {
-            BUFFER_DATA *data = _alloc_buffer(ctx, capacity);
+            BUFFER_DATA *data = _alloc_buffer(frame, capacity);
 
             if (data) {
                 data->capacity = capacity;
@@ -70,18 +70,18 @@ KOS_OBJ_PTR KOS_new_buffer(KOS_CONTEXT *ctx,
     return TO_OBJPTR(obj);
 }
 
-int KOS_buffer_reserve(KOS_CONTEXT *ctx,
-                       KOS_OBJ_PTR  objptr,
-                       unsigned     new_capacity)
+int KOS_buffer_reserve(KOS_STACK_FRAME *frame,
+                       KOS_OBJ_PTR      objptr,
+                       unsigned         new_capacity)
 {
     int error = KOS_ERROR_EXCEPTION;
 
     new_capacity = (new_capacity + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BUFFER)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER *const buffer = OBJPTR(KOS_BUFFER, objptr);
 
@@ -92,14 +92,14 @@ int KOS_buffer_reserve(KOS_CONTEXT *ctx,
             if (new_capacity > capacity) {
 
                 uint32_t           size;
-                BUFFER_DATA *const buf = _alloc_buffer(ctx, new_capacity);
+                BUFFER_DATA *const buf = _alloc_buffer(frame, new_capacity);
                 if ( ! buf)
                     break;
 
                 size = KOS_atomic_read_u32(buffer->size);
 
                 if (size > capacity) {
-                    _KOS_free_buffer(ctx, buf, KOS_buffer_alloc_size(new_capacity));
+                    _KOS_free_buffer(frame, buf, KOS_buffer_alloc_size(new_capacity));
                     continue;
                 }
 
@@ -108,13 +108,13 @@ int KOS_buffer_reserve(KOS_CONTEXT *ctx,
                     memcpy(&buf->buf[0], &old_buf->buf[0], size);
 
                 if ( ! KOS_atomic_cas_ptr(buffer->data, (void *)old_buf, (void *)buf)) {
-                    _KOS_free_buffer(ctx, buf, KOS_buffer_alloc_size(new_capacity));
+                    _KOS_free_buffer(frame, buf, KOS_buffer_alloc_size(new_capacity));
                     continue;
                 }
 
                 /* TODO another thread may still be using it */
                 if (old_buf)
-                    _KOS_free_buffer(ctx, old_buf, KOS_buffer_alloc_size(capacity));
+                    _KOS_free_buffer(frame, old_buf, KOS_buffer_alloc_size(capacity));
             }
 
             error = KOS_SUCCESS;
@@ -125,16 +125,16 @@ int KOS_buffer_reserve(KOS_CONTEXT *ctx,
     return error;
 }
 
-int KOS_buffer_resize(KOS_CONTEXT *ctx,
-                      KOS_OBJ_PTR  objptr,
-                      unsigned     size)
+int KOS_buffer_resize(KOS_STACK_FRAME *frame,
+                      KOS_OBJ_PTR      objptr,
+                      unsigned         size)
 {
     int error = KOS_ERROR_EXCEPTION;
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BUFFER)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER *const buffer   = OBJPTR(KOS_BUFFER, objptr);
         const uint32_t    old_size = KOS_atomic_read_u32(buffer->size);
@@ -148,7 +148,7 @@ int KOS_buffer_resize(KOS_CONTEXT *ctx,
 
             if (size > capacity) {
                 const uint32_t new_capacity = size > capacity * 2 ? size : capacity * 2;
-                error = KOS_buffer_reserve(ctx, objptr, new_capacity);
+                error = KOS_buffer_reserve(frame, objptr, new_capacity);
             }
         }
 
@@ -159,17 +159,17 @@ int KOS_buffer_resize(KOS_CONTEXT *ctx,
     return error;
 }
 
-uint8_t *KOS_buffer_make_room(KOS_CONTEXT *ctx,
-                              KOS_OBJ_PTR  objptr,
-                              unsigned     size_delta)
+uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
+                              KOS_OBJ_PTR      objptr,
+                              unsigned         size_delta)
 {
     int      error = KOS_ERROR_EXCEPTION;
     uint8_t *ret   = 0;
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BUFFER)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER *const buffer   = OBJPTR(KOS_BUFFER, objptr);
         const uint32_t    old_size = KOS_atomic_read_u32(buffer->size);
@@ -184,28 +184,28 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT *ctx,
 
             if (new_size > capacity) {
                 const uint32_t new_capacity = new_size > capacity * 2 ? new_size : capacity * 2;
-                error = KOS_buffer_reserve(ctx, objptr, new_capacity);
+                error = KOS_buffer_reserve(frame, objptr, new_capacity);
             }
         }
 
         if ( ! error) {
             KOS_atomic_swap_u32(buffer->size, new_size);
-            ret = KOS_buffer_data(ctx, objptr) + old_size;
+            ret = KOS_buffer_data(frame, objptr) + old_size;
         }
     }
 
     return ret;
 }
 
-uint8_t *KOS_buffer_data(KOS_CONTEXT *ctx,
-                         KOS_OBJ_PTR  objptr)
+uint8_t *KOS_buffer_data(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_PTR      objptr)
 {
     uint8_t *ret = 0;
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BUFFER)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER  *const buffer = OBJPTR(KOS_BUFFER, objptr);
         BUFFER_DATA *const data   = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
@@ -221,18 +221,18 @@ uint8_t *KOS_buffer_data(KOS_CONTEXT *ctx,
     return ret;
 }
 
-int KOS_buffer_fill(KOS_CONTEXT *ctx,
-                    KOS_OBJ_PTR  objptr,
-                    int64_t      begin,
-                    int64_t      end,
-                    uint8_t      value)
+int KOS_buffer_fill(KOS_STACK_FRAME *frame,
+                    KOS_OBJ_PTR      objptr,
+                    int64_t          begin,
+                    int64_t          end,
+                    uint8_t          value)
 {
     int error = KOS_ERROR_EXCEPTION;
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BUFFER)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER  *const buffer = OBJPTR(KOS_BUFFER, objptr);
         BUFFER_DATA *const data   = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
@@ -250,20 +250,20 @@ int KOS_buffer_fill(KOS_CONTEXT *ctx,
     return error;
 }
 
-int KOS_buffer_copy(KOS_CONTEXT *ctx,
-                    KOS_OBJ_PTR  destptr,
-                    int64_t      dest_begin,
-                    KOS_OBJ_PTR  srcptr,
-                    int64_t      src_begin,
-                    int64_t      src_end)
+int KOS_buffer_copy(KOS_STACK_FRAME *frame,
+                    KOS_OBJ_PTR      destptr,
+                    int64_t          dest_begin,
+                    KOS_OBJ_PTR      srcptr,
+                    int64_t          src_begin,
+                    int64_t          src_end)
 {
     int error = KOS_ERROR_EXCEPTION;
 
     if (IS_BAD_PTR(destptr) || IS_BAD_PTR(srcptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(destptr) || GET_OBJ_TYPE(destptr) != OBJ_BUFFER ||
              IS_SMALL_INT(srcptr)  || GET_OBJ_TYPE(srcptr)  != OBJ_BUFFER)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER  *const dest_buffer = OBJPTR(KOS_BUFFER, destptr);
         BUFFER_DATA *const dest_data   = (BUFFER_DATA *)KOS_atomic_read_ptr(dest_buffer->data);
@@ -294,17 +294,17 @@ int KOS_buffer_copy(KOS_CONTEXT *ctx,
     return error;
 }
 
-KOS_OBJ_PTR KOS_buffer_slice(KOS_CONTEXT *ctx,
-                             KOS_OBJ_PTR  objptr,
-                             int64_t      begin,
-                             int64_t      end)
+KOS_OBJ_PTR KOS_buffer_slice(KOS_STACK_FRAME *frame,
+                             KOS_OBJ_PTR      objptr,
+                             int64_t          begin,
+                             int64_t          end)
 {
     KOS_OBJ_PTR ret = TO_OBJPTR(0);
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BUFFER)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_buffer));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER *const  src_buf  = OBJPTR(KOS_BUFFER, objptr);
         BUFFER_DATA *const src_data = (BUFFER_DATA *)KOS_atomic_read_ptr(src_buf->data);
@@ -325,7 +325,7 @@ KOS_OBJ_PTR KOS_buffer_slice(KOS_CONTEXT *ctx,
             assert(new_size_64 <= 0xFFFFFFFF);
             new_size = (uint32_t)new_size_64;
 
-            ret = KOS_new_buffer(ctx, new_size);
+            ret = KOS_new_buffer(frame, new_size);
 
             if (new_size && ! IS_BAD_PTR(ret)) {
                 KOS_BUFFER *const  dst_buf  = OBJPTR(KOS_BUFFER, ret);
@@ -334,17 +334,17 @@ KOS_OBJ_PTR KOS_buffer_slice(KOS_CONTEXT *ctx,
             }
         }
         else
-            ret = KOS_new_buffer(ctx, 0);
+            ret = KOS_new_buffer(frame, 0);
     }
 
     return ret;
 }
 
-int KOS_buffer_rotate(KOS_CONTEXT *ctx,
-                      KOS_OBJ_PTR  objptr,
-                      int64_t      begin,
-                      int64_t      mid,
-                      int64_t      end)
+int KOS_buffer_rotate(KOS_STACK_FRAME *frame,
+                      KOS_OBJ_PTR      objptr,
+                      int64_t          begin,
+                      int64_t          mid,
+                      int64_t          end)
 {
     /* TODO */
     return KOS_ERROR_INTERNAL;

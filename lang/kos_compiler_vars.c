@@ -441,7 +441,7 @@ static int _import(struct _KOS_COMP_UNIT      *program,
     assert(node);
 
     assert(program->import_module);
-    TRY(program->import_module(program->ctx,
+    TRY(program->import_module(program->frame,
                                node->token.begin,
                                node->token.length,
                                KOS_COMP_MANDATORY,

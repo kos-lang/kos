@@ -29,29 +29,32 @@
 extern "C" {
 #endif
 
-int KOS_module_add_global(KOS_MODULE *module,
-                          KOS_OBJ_PTR name,
-                          KOS_OBJ_PTR value,
-                          unsigned   *idx);
+int KOS_load_module(KOS_STACK_FRAME *frame,
+                    const char      *module);
 
-int KOS_module_get_global(KOS_MODULE  *module,
-                          KOS_OBJ_PTR  name,
-                          KOS_OBJ_PTR *value,
-                          unsigned    *idx);
+int KOS_module_add_global(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_PTR      name,
+                          KOS_OBJ_PTR      value,
+                          unsigned        *idx);
 
-int KOS_module_add_function(KOS_MODULE               *module,
+int KOS_module_get_global(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_PTR      name,
+                          KOS_OBJ_PTR     *value,
+                          unsigned        *idx);
+
+int KOS_module_add_function(KOS_STACK_FRAME          *frame,
                             KOS_STRING               *str_name,
                             KOS_FUNCTION_HANDLER      handler,
                             int                       min_args,
                             enum _KOS_GENERATOR_STATE gen_state);
 
-int KOS_module_add_constructor(KOS_MODULE          *module,
+int KOS_module_add_constructor(KOS_STACK_FRAME     *frame,
                                KOS_STRING          *str_name,
                                KOS_FUNCTION_HANDLER handler,
                                int                  min_args,
                                KOS_OBJ_PTR         *ret_proto);
 
-int KOS_module_add_member_function(KOS_MODULE               *module,
+int KOS_module_add_member_function(KOS_STACK_FRAME          *frame,
                                    KOS_OBJ_PTR               proto_obj,
                                    KOS_STRING               *str_name,
                                    KOS_FUNCTION_HANDLER      handler,
@@ -77,40 +80,40 @@ uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
 }
 #endif
 
-#define TRY_ADD_FUNCTION(module, name, handler, min_args)                                  \
+#define TRY_ADD_FUNCTION(frame, name, handler, min_args)                                  \
+do {                                                                                      \
+    static KOS_ASCII_STRING(str_name, (name));                                            \
+    TRY(KOS_module_add_function((frame), &str_name, (handler), (min_args), KOS_NOT_GEN)); \
+} while (0)
+
+#define TRY_ADD_GENERATOR(frame, name, handler, min_args)                                  \
 do {                                                                                       \
     static KOS_ASCII_STRING(str_name, (name));                                             \
-    TRY(KOS_module_add_function((module), &str_name, (handler), (min_args), KOS_NOT_GEN)); \
+    TRY(KOS_module_add_function((frame), &str_name, (handler), (min_args), KOS_GEN_INIT)); \
 } while (0)
 
-#define TRY_ADD_GENERATOR(module, name, handler, min_args)                                  \
-do {                                                                                        \
-    static KOS_ASCII_STRING(str_name, (name));                                              \
-    TRY(KOS_module_add_function((module), &str_name, (handler), (min_args), KOS_GEN_INIT)); \
+#define TRY_ADD_CONSTRUCTOR(frame, name, handler, min_args, ret_proto)                       \
+do {                                                                                         \
+    static KOS_ASCII_STRING(str_name, (name));                                               \
+    TRY(KOS_module_add_constructor((frame), &str_name, (handler), (min_args), (ret_proto))); \
 } while (0)
 
-#define TRY_ADD_CONSTRUCTOR(module, name, handler, min_args, ret_proto)                       \
-do {                                                                                          \
-    static KOS_ASCII_STRING(str_name, (name));                                                \
-    TRY(KOS_module_add_constructor((module), &str_name, (handler), (min_args), (ret_proto))); \
+#define TRY_ADD_MEMBER_FUNCTION(frame, proto, name, handler, min_args)                                    \
+do {                                                                                                      \
+    static KOS_ASCII_STRING(str_name, (name));                                                            \
+    TRY(KOS_module_add_member_function((frame), (proto), &str_name, (handler), (min_args), KOS_NOT_GEN)); \
 } while (0)
 
-#define TRY_ADD_MEMBER_FUNCTION(module, proto, name, handler, min_args)                                    \
+#define TRY_ADD_MEMBER_GENERATOR(frame, proto, name, handler, min_args)                                    \
 do {                                                                                                       \
     static KOS_ASCII_STRING(str_name, (name));                                                             \
-    TRY(KOS_module_add_member_function((module), (proto), &str_name, (handler), (min_args), KOS_NOT_GEN)); \
+    TRY(KOS_module_add_member_function((frame), (proto), &str_name, (handler), (min_args), KOS_GEN_INIT)); \
 } while (0)
 
-#define TRY_ADD_MEMBER_GENERATOR(module, proto, name, handler, min_args)                                    \
-do {                                                                                                        \
-    static KOS_ASCII_STRING(str_name, (name));                                                              \
-    TRY(KOS_module_add_member_function((module), (proto), &str_name, (handler), (min_args), KOS_GEN_INIT)); \
-} while (0)
-
-#define TRY_ADD_MEMBER_PROPERTY(module, proto, name, getter, setter)                                             \
-do {                                                                                                             \
-    static KOS_ASCII_STRING(str_name, (name));                                                                   \
-    TRY(KOS_set_builtin_dynamic_property((module)->context, (proto), TO_OBJPTR(&str_name), (getter), (setter))); \
+#define TRY_ADD_MEMBER_PROPERTY(frame, proto, name, getter, setter)                                    \
+do {                                                                                                   \
+    static KOS_ASCII_STRING(str_name, (name));                                                         \
+    TRY(KOS_set_builtin_dynamic_property((frame), (proto), TO_OBJPTR(&str_name), (getter), (setter))); \
 } while (0)
 
 #endif

@@ -33,8 +33,8 @@
 #include <time.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(&ctx)); KOS_clear_exception(&ctx); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(&ctx))
+#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(frame)); KOS_clear_exception(frame); } while (0)
+#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(frame))
 
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
@@ -51,7 +51,9 @@ struct THREAD_DATA {
     int               rand_init;
 };
 
-static int _write_props_inner(struct TEST_DATA *test, int rand_init)
+static int _write_props_inner(KOS_STACK_FRAME  *frame,
+                              struct TEST_DATA *test,
+                              int               rand_init)
 {
     size_t   i;
     unsigned n = (unsigned)rand_init;
@@ -60,10 +62,10 @@ static int _write_props_inner(struct TEST_DATA *test, int rand_init)
         KOS_OBJ_PTR key   = TO_OBJPTR(&test->prop_names[n % test->num_props]);
         KOS_OBJ_PTR value = TO_SMALL_INT((int)((n % 32) - 16));
         if (!((n & 0xF00U)))
-            TEST(KOS_delete_property(test->ctx, test->object, key) == KOS_SUCCESS);
+            TEST(KOS_delete_property(frame, test->object, key) == KOS_SUCCESS);
         else
-            TEST(KOS_set_property(test->ctx, test->object, key, value) == KOS_SUCCESS);
-        TEST(!KOS_is_exception_pending(test->ctx));
+            TEST(KOS_set_property(frame, test->object, key, value) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
 
         n = n * 0x8088405 + 1;
     }
@@ -71,29 +73,32 @@ static int _write_props_inner(struct TEST_DATA *test, int rand_init)
     return 0;
 }
 
-static void _write_props(void *cookie)
+static void _write_props(KOS_STACK_FRAME *frame,
+                         void            *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
     while (!KOS_atomic_read_u32(test->test->go))
         KOS_atomic_full_barrier();
-    if (_write_props_inner(test->test, test->rand_init))
+    if (_write_props_inner(frame, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
 }
 
-static int _read_props_inner(struct TEST_DATA *test, int rand_init)
+static int _read_props_inner(KOS_STACK_FRAME  *frame,
+                             struct TEST_DATA *test,
+                             int               rand_init)
 {
     size_t   i;
     unsigned n = (unsigned)rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
         KOS_OBJ_PTR key   = TO_OBJPTR(&test->prop_names[n % test->num_props]);
-        KOS_OBJ_PTR value = KOS_get_property(test->ctx, test->object, key);
+        KOS_OBJ_PTR value = KOS_get_property(frame, test->object, key);
         if (IS_BAD_PTR(value)) {
-            TEST(KOS_is_exception_pending(test->ctx));
-            KOS_clear_exception(test->ctx);
+            TEST(KOS_is_exception_pending(frame));
+            KOS_clear_exception(frame);
         }
         else {
-            TEST(!KOS_is_exception_pending(test->ctx));
+            TEST(!KOS_is_exception_pending(frame));
             TEST(IS_SMALL_INT(value));
             TEST(GET_SMALL_INT(value) >= -16 && GET_SMALL_INT(value) < 16);
         }
@@ -104,19 +109,21 @@ static int _read_props_inner(struct TEST_DATA *test, int rand_init)
     return 0;
 }
 
-static void _read_props(void *cookie)
+static void _read_props(KOS_STACK_FRAME *frame,
+                        void            *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
     while (!KOS_atomic_read_u32(test->test->go))
         KOS_atomic_full_barrier();
-    if (_read_props_inner(test->test, test->rand_init))
+    if (_read_props_inner(frame, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
 }
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
-    int         num_cpus = 2; /* By default behave as if there were 2 CPUs */
+    KOS_CONTEXT      ctx;
+    KOS_STACK_FRAME *frame;
+    int              num_cpus = 2; /* By default behave as if there were 2 CPUs */
 
     {
         struct _KOS_VECTOR cstr;
@@ -133,7 +140,7 @@ int main(void)
         _KOS_vector_destroy(&cstr);
     }
 
-    TEST(KOS_context_init(&ctx) == KOS_SUCCESS);
+    TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
     /************************************************************************/
     /* This test grows objects from multiple threads, causing lots of collisions */
@@ -182,7 +189,7 @@ int main(void)
         data.error      = KOS_SUCCESS;
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
-            KOS_OBJ_PTR o = KOS_new_object(&ctx);
+            KOS_OBJ_PTR o = KOS_new_object(frame);
             data.object   = o;
             data.go       = 0;
 
@@ -196,21 +203,22 @@ int main(void)
 
             i = rand();
             KOS_atomic_write_u32(data.go, 1);
-            TEST(_write_props_inner(&data, i) == KOS_SUCCESS);
+            TEST(_write_props_inner(frame, &data, i) == KOS_SUCCESS);
+            TEST_NO_EXCEPTION();
 
-            for (i = 0; i < num_threads; i++)
-                _KOS_thread_join(threads[i]);
+            for (i = 0; i < num_threads; i++) {
+                _KOS_thread_join(frame, threads[i]);
+                TEST_NO_EXCEPTION();
+            }
 
             TEST(data.error == KOS_SUCCESS);
 
             for (i = 0; i < (int)(sizeof(props)/sizeof(props[0])); i++) {
-                KOS_OBJ_PTR value = KOS_get_property(&ctx, o, TO_OBJPTR(&props[i]));
-                if (IS_BAD_PTR(value)) {
-                    TEST(KOS_is_exception_pending(&ctx));
-                    KOS_clear_exception(&ctx);
-                }
+                KOS_OBJ_PTR value = KOS_get_property(frame, o, TO_OBJPTR(&props[i]));
+                if (IS_BAD_PTR(value))
+                    TEST_EXCEPTION();
                 else {
-                    TEST(!KOS_is_exception_pending(&ctx));
+                    TEST_NO_EXCEPTION();
                     TEST(IS_SMALL_INT(value));
                     TEST(GET_SMALL_INT(value) >= -16 && GET_SMALL_INT(value) < 16);
                 }

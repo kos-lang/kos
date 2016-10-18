@@ -47,47 +47,47 @@ static inline uint32_t KOS_get_buffer_size(KOS_OBJ_PTR objptr)
 extern "C" {
 #endif
 
-KOS_OBJ_PTR KOS_new_buffer(KOS_CONTEXT *ctx,
-                           unsigned     size);
+KOS_OBJ_PTR KOS_new_buffer(KOS_STACK_FRAME *frame,
+                           unsigned         size);
 
-int KOS_buffer_reserve(KOS_CONTEXT *ctx,
-                       KOS_OBJ_PTR  objptr,
-                       unsigned     capacity);
+int KOS_buffer_reserve(KOS_STACK_FRAME *frame,
+                       KOS_OBJ_PTR      objptr,
+                       unsigned         capacity);
 
-int KOS_buffer_resize(KOS_CONTEXT *ctx,
-                      KOS_OBJ_PTR  objptr,
-                      unsigned     size);
+int KOS_buffer_resize(KOS_STACK_FRAME *frame,
+                      KOS_OBJ_PTR      objptr,
+                      unsigned         size);
 
-uint8_t *KOS_buffer_make_room(KOS_CONTEXT *ctx,
-                              KOS_OBJ_PTR  objptr,
-                              unsigned     size_delta);
+uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
+                              KOS_OBJ_PTR      objptr,
+                              unsigned         size_delta);
 
-uint8_t *KOS_buffer_data(KOS_CONTEXT *ctx,
-                         KOS_OBJ_PTR  objptr);
+uint8_t *KOS_buffer_data(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_PTR      objptr);
 
-int KOS_buffer_fill(KOS_CONTEXT *ctx,
-                    KOS_OBJ_PTR  objptr,
-                    int64_t      begin,
-                    int64_t      end,
-                    uint8_t      value);
+int KOS_buffer_fill(KOS_STACK_FRAME *frame,
+                    KOS_OBJ_PTR      objptr,
+                    int64_t          begin,
+                    int64_t          end,
+                    uint8_t          value);
 
-int KOS_buffer_copy(KOS_CONTEXT *ctx,
-                    KOS_OBJ_PTR  destptr,
-                    int64_t      dest_begin,
-                    KOS_OBJ_PTR  srcptr,
-                    int64_t      src_begin,
+int KOS_buffer_copy(KOS_STACK_FRAME *frame,
+                    KOS_OBJ_PTR      destptr,
+                    int64_t          dest_begin,
+                    KOS_OBJ_PTR      srcptr,
+                    int64_t          src_begin,
                     int64_t      src_end);
 
-KOS_OBJ_PTR KOS_buffer_slice(KOS_CONTEXT *ctx,
-                             KOS_OBJ_PTR  objptr,
-                             int64_t      begin,
-                             int64_t      end);
+KOS_OBJ_PTR KOS_buffer_slice(KOS_STACK_FRAME *frame,
+                             KOS_OBJ_PTR      objptr,
+                             int64_t          begin,
+                             int64_t          end);
 
-int KOS_buffer_rotate(KOS_CONTEXT *ctx,
-                      KOS_OBJ_PTR  objptr,
-                      int64_t      begin,
-                      int64_t      mid,
-                      int64_t      end);
+int KOS_buffer_rotate(KOS_STACK_FRAME *frame,
+                      KOS_OBJ_PTR      objptr,
+                      int64_t          begin,
+                      int64_t          mid,
+                      int64_t          end);
 
 #ifdef __cplusplus
 }

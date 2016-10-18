@@ -28,7 +28,10 @@
 struct _KOS_THREAD_OBJECT;
 typedef struct _KOS_THREAD_OBJECT *_KOS_THREAD;
 
-typedef void (*_KOS_THREAD_PROC)(void *cookie);
+struct _KOS_STACK_FRAME;
+
+typedef void (*_KOS_THREAD_PROC)(struct _KOS_STACK_FRAME *frame,
+                                 void                    *cookie);
 
 #ifdef _WIN32
 typedef uint32_t _KOS_TLS_KEY;

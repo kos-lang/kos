@@ -86,8 +86,8 @@ struct _KOS_OBJECT_STATS {
 struct _KOS_OBJECT_STATS _KOS_get_object_stats();
 #endif
 
-int _KOS_object_copy_prop_table(KOS_CONTEXT *ctx,
-                                KOS_OBJ_PTR  obj);
+int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_PTR      obj);
 
 int _KOS_is_truthy(KOS_OBJ_PTR obj);
 
@@ -95,7 +95,7 @@ int _KOS_is_truthy(KOS_OBJ_PTR obj);
 /* KOS_ARRAY                                                                */
 /*==========================================================================*/
 
-int _KOS_init_array(KOS_CONTEXT *ctx, KOS_ARRAY *array, unsigned capacity);
+int _KOS_init_array(KOS_STACK_FRAME *frame, KOS_ARRAY *array, unsigned capacity);
 
 #define KOS_MIN_ARRAY_CAPACITY  4U
 #define KOS_ARRAY_CAPACITY_STEP 4096U
@@ -152,18 +152,20 @@ static inline const void* _KOS_get_string_buffer(KOS_STRING *str)
 /* KOS_STACK_FRAME                                                          */
 /*==========================================================================*/
 
-void _KOS_stack_frame_init(KOS_STACK_FRAME *frame);
+void _KOS_init_stack_frame(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_PTR      module,
+                           uint32_t         instr_offs,
+                           uint32_t         num_regs);
 
-KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_CONTEXT *ctx,
-                                       KOS_OBJ_PTR  module,
-                                       uint32_t     instr_offs,
-                                       uint32_t     num_regs);
+KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_STACK_FRAME *frame,
+                                       KOS_OBJ_PTR      module,
+                                       uint32_t         instr_offs,
+                                       uint32_t         num_regs);
 
-KOS_STACK_FRAME *_KOS_stack_frame_push_func(KOS_CONTEXT  *ctx,
-                                            KOS_FUNCTION *func);
+KOS_STACK_FRAME *_KOS_stack_frame_push_func(KOS_STACK_FRAME *frame,
+                                            KOS_FUNCTION    *func);
 
-void _KOS_wrap_exception(KOS_CONTEXT     *ctx,
-                         KOS_STACK_FRAME *stack_frame);
+void _KOS_wrap_exception(KOS_STACK_FRAME *frame);
 
 /*==========================================================================*/
 /* KOS_MODULE                                                               */
@@ -180,7 +182,7 @@ enum _KOS_MODULE_REQUIRED {
     KOS_MODULE_MANDATORY
 };
 
-KOS_OBJ_PTR _KOS_module_import(KOS_CONTEXT              *ctx,
+KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
                                const char               *module, /* Module name or path, ASCII or UTF-8    */
                                unsigned                  length, /* Length of module name or path in bytes */
                                enum _KOS_MODULE_REQUIRED required,

@@ -527,7 +527,8 @@ int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
                        void                *cookie,
                        _KOS_THREAD         *thread);
 
-void _KOS_thread_join(_KOS_THREAD thread);
+void _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
+                      _KOS_THREAD              thread);
 
 int   _KOS_tls_create(_KOS_TLS_KEY *key);
 void  _KOS_tls_destroy(_KOS_TLS_KEY key);

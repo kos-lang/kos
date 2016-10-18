@@ -41,19 +41,19 @@ static KOS_ASCII_STRING(str_err_null_ptr,      "null pointer");
 
 typedef struct _KOS_ARRAY_BUFFER ARRAY_BUF;
 
-static ARRAY_BUF *_alloc_buffer(KOS_CONTEXT *ctx, unsigned capacity)
+static ARRAY_BUF *_alloc_buffer(KOS_STACK_FRAME *frame, unsigned capacity)
 {
-    return (ARRAY_BUF *)_KOS_alloc_buffer(ctx, KOS_buffer_alloc_size(capacity));
+    return (ARRAY_BUF *)_KOS_alloc_buffer(frame, KOS_buffer_alloc_size(capacity));
 }
 
-int _KOS_init_array(KOS_CONTEXT *ctx, KOS_ARRAY *array, unsigned capacity)
+int _KOS_init_array(KOS_STACK_FRAME *frame, KOS_ARRAY *array, unsigned capacity)
 {
     int error = KOS_SUCCESS;
 
     capacity = KOS_max(capacity, KOS_MIN_ARRAY_CAPACITY);
 
     array->type     = OBJ_ARRAY;
-    array->buffer   = _alloc_buffer(ctx, capacity);
+    array->buffer   = _alloc_buffer(frame, capacity);
     array->capacity = capacity;
     array->length   = 0;
 
@@ -70,11 +70,11 @@ int _KOS_init_array(KOS_CONTEXT *ctx, KOS_ARRAY *array, unsigned capacity)
     return error;
 }
 
-KOS_OBJ_PTR KOS_new_array(KOS_CONTEXT *ctx, unsigned length)
+KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame, unsigned length)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(ctx, KOS_ARRAY);
+    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_ARRAY);
 
-    if (obj && KOS_SUCCESS == _KOS_init_array(ctx, &obj->array, length))
+    if (obj && KOS_SUCCESS == _KOS_init_array(frame, &obj->array, length))
         obj->array.length = length;
     else
         obj = 0;
@@ -82,16 +82,16 @@ KOS_OBJ_PTR KOS_new_array(KOS_CONTEXT *ctx, unsigned length)
     return TO_OBJPTR(obj);
 }
 
-KOS_OBJ_PTR KOS_array_read(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, int idx)
+KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx)
 {
     /* TODO rewrite lock-free */
 
     KOS_OBJ_PTR elem = TO_OBJPTR(0);
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array  = OBJPTR(KOS_ARRAY, objptr);
         const uint32_t   length = array->length;
@@ -102,22 +102,22 @@ KOS_OBJ_PTR KOS_array_read(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, int idx)
             elem                 = (KOS_OBJ_PTR)KOS_atomic_read_ptr(buf->buf[bufidx]);
         }
         else
-            KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_index));
+            KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
     }
 
     return elem;
 }
 
-int KOS_array_write(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, int idx, KOS_OBJ_PTR value)
+int KOS_array_write(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KOS_OBJ_PTR value)
 {
     /* TODO rewrite lock-free */
 
     int error = KOS_ERROR_EXCEPTION;
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array  = OBJPTR(KOS_ARRAY, objptr);
         const uint32_t   length = array->length;
@@ -129,29 +129,29 @@ int KOS_array_write(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, int idx, KOS_OBJ_PTR v
             error = KOS_SUCCESS;
         }
         else
-            KOS_raise_exception(ctx, TO_OBJPTR(&str_err_invalid_index));
+            KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
     }
 
     return error;
 }
 
-int KOS_array_reserve(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, uint32_t new_capacity)
+int KOS_array_reserve(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t new_capacity)
 {
     /* TODO rewrite lock-free */
 
     int error = KOS_ERROR_EXCEPTION;
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array    = OBJPTR(KOS_ARRAY, objptr);
         const uint32_t   capacity = KOS_atomic_read_u32(array->capacity);
 
         if (new_capacity > capacity) {
             const uint32_t           length  = KOS_atomic_read_u32(array->length);
-            ARRAY_BUF *const         buf     = _alloc_buffer(ctx, new_capacity);
+            ARRAY_BUF *const         buf     = _alloc_buffer(frame, new_capacity);
             ARRAY_BUF *const         old_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
             KOS_ATOMIC(KOS_OBJ_PTR) *ptr     = &buf->buf[length];
             KOS_ATOMIC(KOS_OBJ_PTR) *end     = &buf->buf[0] + new_capacity;
@@ -172,7 +172,7 @@ int KOS_array_reserve(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, uint32_t new_capacit
             KOS_atomic_write_ptr(array->buffer,   (void *)buf);
             KOS_atomic_write_u32(array->capacity, new_capacity);
 
-            _KOS_free_buffer(ctx, old_buf, KOS_buffer_alloc_size(capacity));
+            _KOS_free_buffer(frame, old_buf, KOS_buffer_alloc_size(capacity));
         }
 
         error = KOS_SUCCESS;
@@ -181,16 +181,16 @@ int KOS_array_reserve(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, uint32_t new_capacit
     return error;
 }
 
-int KOS_array_resize(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, uint32_t length)
+int KOS_array_resize(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t length)
 {
     /* TODO rewrite lock-free */
 
     int error = KOS_ERROR_EXCEPTION;
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array    = OBJPTR(KOS_ARRAY, objptr);
         const uint32_t   capacity = KOS_atomic_read_u32(array->capacity);
@@ -201,7 +201,7 @@ int KOS_array_resize(KOS_CONTEXT *ctx, KOS_OBJ_PTR objptr, uint32_t length)
             const uint32_t max_step = KOS_ARRAY_CAPACITY_STEP / sizeof(KOS_OBJ_PTR);
             const uint32_t cap_x2   = KOS_min(capacity * 2, KOS_align_up(capacity + max_step - 1, max_step));
             const uint32_t new_cap  = KOS_max(cap_x2, length);
-            TRY(KOS_array_reserve(ctx, objptr, new_cap));
+            TRY(KOS_array_reserve(frame, objptr, new_cap));
         }
         else {
             ARRAY_BUF *const buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
@@ -219,19 +219,19 @@ _error:
     return error;
 }
 
-KOS_OBJ_PTR KOS_array_slice(KOS_CONTEXT *ctx,
-                            KOS_OBJ_PTR  objptr,
-                            int64_t      begin,
-                            int64_t      end)
+KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
+                            KOS_OBJ_PTR      objptr,
+                            int64_t          begin,
+                            int64_t          end)
 {
     /* TODO rewrite lock-free */
 
     KOS_OBJ_PTR ret = TO_OBJPTR(0);
 
     if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array = OBJPTR(KOS_ARRAY, objptr);
         const uint32_t   len   = KOS_get_array_size(objptr);
@@ -251,7 +251,7 @@ KOS_OBJ_PTR KOS_array_slice(KOS_CONTEXT *ctx,
             assert(new_len_64 <= 0xFFFFFFFF);
             new_len = (uint32_t)new_len_64;
 
-            ret = KOS_new_array(ctx, new_len);
+            ret = KOS_new_array(frame, new_len);
 
             if (new_len && ! IS_BAD_PTR(ret)) {
                 KOS_ARRAY *const new_array = OBJPTR(KOS_ARRAY, ret);
@@ -271,19 +271,19 @@ KOS_OBJ_PTR KOS_array_slice(KOS_CONTEXT *ctx,
             }
         }
         else
-            ret = KOS_new_array(ctx, 0);
+            ret = KOS_new_array(frame, 0);
     }
 
     return ret;
 }
 
-int KOS_array_insert(KOS_CONTEXT *ctx,
-                     KOS_OBJ_PTR  dest_objptr,
-                     int64_t      dest_begin,
-                     int64_t      dest_end,
-                     KOS_OBJ_PTR  src_objptr,
-                     int64_t      src_begin,
-                     int64_t      src_end)
+int KOS_array_insert(KOS_STACK_FRAME *frame,
+                     KOS_OBJ_PTR      dest_objptr,
+                     int64_t          dest_begin,
+                     int64_t          dest_end,
+                     KOS_OBJ_PTR      src_objptr,
+                     int64_t          src_begin,
+                     int64_t          src_end)
 {
     /* TODO rewrite lock-free */
 
@@ -296,19 +296,19 @@ int KOS_array_insert(KOS_CONTEXT *ctx,
     uint32_t   src_delta;
 
     if (IS_BAD_PTR(dest_objptr)) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
         TRY(KOS_ERROR_EXCEPTION);
     }
     else if (IS_SMALL_INT(dest_objptr) || GET_OBJ_TYPE(dest_objptr) != OBJ_ARRAY) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
         TRY(KOS_ERROR_EXCEPTION);
     }
     else if (src_begin != src_end && IS_BAD_PTR(src_objptr)) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
         TRY(KOS_ERROR_EXCEPTION);
     }
     else if (src_begin != src_end && (IS_SMALL_INT(src_objptr) || GET_OBJ_TYPE(src_objptr) != OBJ_ARRAY)) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
         TRY(KOS_ERROR_EXCEPTION);
     }
 
@@ -334,7 +334,7 @@ int KOS_array_insert(KOS_CONTEXT *ctx,
     src_delta = (uint32_t)(src_end - src_begin);
 
     if (src_delta > dest_delta)
-        TRY(KOS_array_resize(ctx, dest_objptr, dest_len - dest_delta + src_delta));
+        TRY(KOS_array_resize(frame, dest_objptr, dest_len - dest_delta + src_delta));
 
     dest_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(OBJPTR(KOS_ARRAY, dest_objptr)->buffer);
     if (src_begin != src_end)
@@ -387,26 +387,26 @@ int KOS_array_insert(KOS_CONTEXT *ctx,
     }
 
     if (src_delta < dest_delta)
-        TRY(KOS_array_resize(ctx, dest_objptr, dest_len - dest_delta + src_delta));
+        TRY(KOS_array_resize(frame, dest_objptr, dest_len - dest_delta + src_delta));
 
 _error:
     return error;
 }
 
-int KOS_array_rotate(KOS_CONTEXT *ctx,
-                     KOS_OBJ_PTR  objptr,
-                     int64_t      begin,
-                     int64_t      mid,
-                     int64_t      end)
+int KOS_array_rotate(KOS_STACK_FRAME *frame,
+                     KOS_OBJ_PTR      objptr,
+                     int64_t          begin,
+                     int64_t          mid,
+                     int64_t          end)
 {
     /* TODO */
     assert(0);
     return KOS_ERROR_INTERNAL;
 }
 
-int KOS_array_push(KOS_CONTEXT *ctx,
-                   KOS_OBJ_PTR  objptr,
-                   KOS_OBJ_PTR  value)
+int KOS_array_push(KOS_STACK_FRAME *frame,
+                   KOS_OBJ_PTR      objptr,
+                   KOS_OBJ_PTR      value)
 {
     /* TODO rewrite lock-free */
 
@@ -414,26 +414,26 @@ int KOS_array_push(KOS_CONTEXT *ctx,
     uint32_t len;
 
     if (IS_BAD_PTR(objptr)) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
         TRY(KOS_ERROR_EXCEPTION);
     }
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
         TRY(KOS_ERROR_EXCEPTION);
     }
 
     len = KOS_get_array_size(objptr);
 
-    TRY(KOS_array_resize(ctx, objptr, len + 1));
+    TRY(KOS_array_resize(frame, objptr, len + 1));
 
-    TRY(KOS_array_write(ctx, objptr, (int)len, value));
+    TRY(KOS_array_write(frame, objptr, (int)len, value));
 
 _error:
     return error;
 }
 
-KOS_OBJ_PTR KOS_array_pop(KOS_CONTEXT *ctx,
-                          KOS_OBJ_PTR  objptr)
+KOS_OBJ_PTR KOS_array_pop(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_PTR      objptr)
 {
     /* TODO rewrite lock-free */
 
@@ -442,26 +442,26 @@ KOS_OBJ_PTR KOS_array_pop(KOS_CONTEXT *ctx,
     KOS_OBJ_PTR ret = TO_OBJPTR(0);
 
     if (IS_BAD_PTR(objptr)) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
         TRY(KOS_ERROR_EXCEPTION);
     }
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_not_array));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
         TRY(KOS_ERROR_EXCEPTION);
     }
 
     len = KOS_get_array_size(objptr);
 
     if (len == 0) {
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_empty));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_empty));
         TRY(KOS_ERROR_EXCEPTION);
     }
 
-    ret = KOS_array_read(ctx, objptr, (int)len-1);
+    ret = KOS_array_read(frame, objptr, (int)len-1);
     if (IS_BAD_PTR(ret))
         TRY(KOS_ERROR_EXCEPTION);
 
-    error = KOS_array_resize(ctx, objptr, len-1);
+    error = KOS_array_resize(frame, objptr, len-1);
 
 _error:
     return error ? TO_OBJPTR(0) : ret;

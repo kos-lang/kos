@@ -26,18 +26,18 @@
 #include "../inc/kos_object_base.h"
 #include <stddef.h>
 
-#define _KOS_alloc_object(ctx, type) (sizeof(type) <= 16  ? _KOS_alloc_16(ctx)  : \
-                                      sizeof(type) <= 32  ? _KOS_alloc_32(ctx)  : \
-                                      sizeof(type) <= 64  ? _KOS_alloc_64(ctx)  : \
-                                      sizeof(type) <= 128 ? _KOS_alloc_128(ctx) : 0)
+#define _KOS_alloc_object(frame, type) (sizeof(type) <= 16  ? _KOS_alloc_16(frame)  : \
+                                        sizeof(type) <= 32  ? _KOS_alloc_32(frame)  : \
+                                        sizeof(type) <= 64  ? _KOS_alloc_64(frame)  : \
+                                        sizeof(type) <= 128 ? _KOS_alloc_128(frame) : 0)
 
 int             _KOS_alloc_init(KOS_CONTEXT *ctx);
 void            _KOS_alloc_destroy(KOS_CONTEXT *ctx);
-KOS_ANY_OBJECT *_KOS_alloc_16(KOS_CONTEXT *ctx);
-KOS_ANY_OBJECT *_KOS_alloc_32(KOS_CONTEXT *ctx);
-KOS_ANY_OBJECT *_KOS_alloc_64(KOS_CONTEXT *ctx);
-KOS_ANY_OBJECT *_KOS_alloc_128(KOS_CONTEXT *ctx);
-void           *_KOS_alloc_buffer(KOS_CONTEXT *ctx, size_t size);
-void            _KOS_free_buffer(KOS_CONTEXT *ctx, void *ptr, size_t size);
+KOS_ANY_OBJECT *_KOS_alloc_16(KOS_STACK_FRAME *frame);
+KOS_ANY_OBJECT *_KOS_alloc_32(KOS_STACK_FRAME *frame);
+KOS_ANY_OBJECT *_KOS_alloc_64(KOS_STACK_FRAME *frame);
+KOS_ANY_OBJECT *_KOS_alloc_128(KOS_STACK_FRAME *frame);
+void           *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size);
+void            _KOS_free_buffer(KOS_STACK_FRAME *frame, void *ptr, size_t size);
 
 #endif

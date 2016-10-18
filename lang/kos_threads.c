@@ -97,16 +97,20 @@ struct _KOS_THREAD_OBJECT {
     KOS_CONTEXT     *ctx;
     _KOS_THREAD_PROC proc;
     void            *cookie;
+    KOS_OBJ_PTR      exception;
 };
 
 static DWORD WINAPI _thread_proc(LPVOID thread_obj)
 {
-    ((_KOS_THREAD)thread_obj)->proc(((_KOS_THREAD)thread_obj)->cookie);
+    KOS_THREAD_ROOT thread_root;
 
-    assert(!KOS_is_exception_pending(((_KOS_THREAD)thread_obj)->ctx));
+    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_obj) == KOS_SUCCESS)
+        ((_KOS_THREAD)thread_obj)->proc(&thread_root.frame, ((_KOS_THREAD)thread_obj)->cookie);
 
-    if (KOS_is_exception_pending(((_KOS_THREAD)thread_obj)->ctx))
+    if (KOS_is_exception_pending(&thread_root.frame)) {
+        ((_KOS_THREAD)thread_obj)->exception = KOS_get_exception(&thread_root.frame);
         return 1;
+    }
 
     return 0;
 }
@@ -120,14 +124,16 @@ int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
-        new_thread->ctx    = ctx;
-        new_thread->proc   = proc;
-        new_thread->cookie = cookie;
+        new_thread->ctx       = ctx;
+        new_thread->proc      = proc;
+        new_thread->cookie    = cookie;
+        new_thread->exception = TO_OBJPTR(0);
 
         new_thread->thread_handle = CreateThread(0, 0, _thread_proc, new_thread, 0, 0);
 
         if (!new_thread->thread_handle) {
             _KOS_free(new_thread);
+            /* TODO raise exception */
             error = KOS_ERROR_CANNOT_CREATE_THREAD;
         }
         else
@@ -139,11 +145,16 @@ int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
     return error;
 }
 
-void _KOS_thread_join(_KOS_THREAD thread)
+void _KOS_thread_join(KOS_STACK_FRAME *frame,
+                      _KOS_THREAD      thread)
 {
     if (thread) {
         WaitForSingleObject(thread->thread_handle, INFINITE);
         CloseHandle(thread->thread_handle);
+
+        if ( ! IS_BAD_PTR(thread->exception))
+            KOS_raise_exception(frame, thread->exception);
+
         _KOS_free(thread);
     }
 }
@@ -187,12 +198,13 @@ struct _KOS_THREAD_OBJECT {
 
 static void *_thread_proc(void *thread_obj)
 {
-    ((_KOS_THREAD)thread_obj)->proc(((_KOS_THREAD)thread_obj)->cookie);
+    KOS_THREAD_ROOT thread_root;
 
-    assert(!KOS_is_exception_pending(((_KOS_THREAD)thread_obj)->ctx));
+    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_root) == KOS_SUCCESS)
+        ((_KOS_THREAD)thread_obj)->proc(&thread_root.frame, ((_KOS_THREAD)thread_obj)->cookie);
 
-    if (KOS_is_exception_pending(((_KOS_THREAD)thread_obj)->ctx))
-        return OBJPTR(void, KOS_get_exception(((_KOS_THREAD)thread_obj)->ctx));
+    if (KOS_is_exception_pending(&thread_root.frame))
+        return OBJPTR(void, KOS_get_exception(&thread_root.frame));
 
     return 0;
 }
@@ -212,6 +224,7 @@ int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
 
         if (pthread_create(&new_thread->thread_handle, 0, _thread_proc, new_thread)) {
             _KOS_free(new_thread);
+            /* TODO raise exception */
             error = KOS_ERROR_CANNOT_CREATE_THREAD;
         }
         else
@@ -223,10 +236,16 @@ int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
     return error;
 }
 
-void _KOS_thread_join(_KOS_THREAD thread)
+void _KOS_thread_join(KOS_STACK_FRAME *frame,
+                      _KOS_THREAD      thread)
 {
     if (thread) {
-        pthread_join(thread->thread_handle, 0);
+        void *ret = 0;
+        pthread_join(thread->thread_handle, &ret);
+
+        if (ret)
+            KOS_raise_exception(frame, TO_OBJPTR(ret));
+
         _KOS_free(thread);
     }
 }

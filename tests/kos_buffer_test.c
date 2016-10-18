@@ -27,36 +27,37 @@
 #include <stdio.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(&ctx)); KOS_clear_exception(&ctx); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(&ctx))
+#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(frame)); KOS_clear_exception(frame); } while (0)
+#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(frame))
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
+    KOS_CONTEXT      ctx;
+    KOS_STACK_FRAME *frame;
 
-    TEST(KOS_context_init(&ctx) == KOS_SUCCESS);
+    TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
     /************************************************************************/
     /* Cannot invoke buffer functions on non-buffer objects */
     {
         KOS_ASCII_STRING(str, "str");
 
-        TEST(KOS_buffer_reserve(&ctx, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_reserve(frame, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(&ctx, TO_OBJPTR(&str), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_reserve(frame, TO_OBJPTR(&str), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_resize(&ctx, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_resize(frame, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_resize(&ctx, TO_OBJPTR(&str), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_resize(frame, TO_OBJPTR(&str), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_data(&ctx, TO_SMALL_INT(1)) == 0);
+        TEST(KOS_buffer_data(frame, TO_SMALL_INT(1)) == 0);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_data(&ctx, TO_OBJPTR(&str)) == 0);
+        TEST(KOS_buffer_data(frame, TO_OBJPTR(&str)) == 0);
         TEST_EXCEPTION();
     }
 
@@ -64,34 +65,34 @@ int main(void)
     {
         uint8_t *data;
 
-        KOS_OBJ_PTR buf = KOS_new_buffer(&ctx, 0);
+        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
         TEST(!IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_buffer_size(buf) == 0);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(&ctx, buf);
+        data = KOS_buffer_data(frame, buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(&ctx, buf, 10) == KOS_SUCCESS);
+        TEST(KOS_buffer_reserve(frame, buf, 10) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_buffer_size(buf) == 0);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(&ctx, buf);
+        data = KOS_buffer_data(frame, buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_buffer_resize(&ctx, buf, 100) == KOS_SUCCESS);
+        TEST(KOS_buffer_resize(frame, buf, 100) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_buffer_size(buf) == 100);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(&ctx, buf);
+        data = KOS_buffer_data(frame, buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
     }

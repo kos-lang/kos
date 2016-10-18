@@ -47,51 +47,51 @@ static inline uint32_t KOS_get_array_size(KOS_OBJ_PTR objptr)
 extern "C" {
 #endif
 
-KOS_OBJ_PTR KOS_new_array(KOS_CONTEXT *ctx,
-                          unsigned     length);
+KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame,
+                          unsigned         length);
 
-KOS_OBJ_PTR KOS_array_read(KOS_CONTEXT *ctx,
-                           KOS_OBJ_PTR  objptr,
-                           int          idx);
+KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_PTR      objptr,
+                           int              idx);
 
-int KOS_array_write(KOS_CONTEXT *ctx,
-                    KOS_OBJ_PTR  objptr,
-                    int          idx,
-                    KOS_OBJ_PTR  value);
+int KOS_array_write(KOS_STACK_FRAME *frame,
+                    KOS_OBJ_PTR      objptr,
+                    int              idx,
+                    KOS_OBJ_PTR      value);
 
-int KOS_array_reserve(KOS_CONTEXT *ctx,
-                      KOS_OBJ_PTR  objptr,
-                      uint32_t     capacity);
+int KOS_array_reserve(KOS_STACK_FRAME *frame,
+                      KOS_OBJ_PTR      objptr,
+                      uint32_t         capacity);
 
-int KOS_array_resize(KOS_CONTEXT *ctx,
-                     KOS_OBJ_PTR  objptr,
-                     uint32_t     length);
+int KOS_array_resize(KOS_STACK_FRAME *frame,
+                     KOS_OBJ_PTR      objptr,
+                     uint32_t         length);
 
-KOS_OBJ_PTR KOS_array_slice(KOS_CONTEXT *ctx,
-                            KOS_OBJ_PTR  objptr,
-                            int64_t      begin,
-                            int64_t      end);
+KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
+                            KOS_OBJ_PTR      objptr,
+                            int64_t          begin,
+                            int64_t          end);
 
-int KOS_array_insert(KOS_CONTEXT *ctx,
-                     KOS_OBJ_PTR  dest_objptr,
-                     int64_t      dest_begin,
-                     int64_t      dest_end,
-                     KOS_OBJ_PTR  src_objptr,
-                     int64_t      src_begin,
-                     int64_t      src_end);
+int KOS_array_insert(KOS_STACK_FRAME *frame,
+                     KOS_OBJ_PTR      dest_objptr,
+                     int64_t          dest_begin,
+                     int64_t          dest_end,
+                     KOS_OBJ_PTR      src_objptr,
+                     int64_t          src_begin,
+                     int64_t          src_end);
 
-int KOS_array_rotate(KOS_CONTEXT *ctx,
-                     KOS_OBJ_PTR  objptr,
-                     int64_t      begin,
-                     int64_t      mid,
-                     int64_t      end);
+int KOS_array_rotate(KOS_STACK_FRAME *frame,
+                     KOS_OBJ_PTR      objptr,
+                     int64_t          begin,
+                     int64_t          mid,
+                     int64_t          end);
 
-int KOS_array_push(KOS_CONTEXT *ctx,
-                   KOS_OBJ_PTR  objptr,
-                   KOS_OBJ_PTR  value);
+int KOS_array_push(KOS_STACK_FRAME *frame,
+                   KOS_OBJ_PTR      objptr,
+                   KOS_OBJ_PTR      value);
 
-KOS_OBJ_PTR KOS_array_pop(KOS_CONTEXT *ctx,
-                          KOS_OBJ_PTR  objptr);
+KOS_OBJ_PTR KOS_array_pop(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_PTR      objptr);
 
 #ifdef __cplusplus
 }

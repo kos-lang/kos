@@ -203,7 +203,7 @@ struct _KOS_COMP_UNIT {
     struct _KOS_VAR            *globals;
     int                         num_globals;
 
-    void                       *ctx;
+    void                       *frame;
     KOS_COMP_IMPORT_MODULE      import_module;
     KOS_COMP_GET_GLOBAL_IDX     get_global_idx;
 

@@ -29,6 +29,8 @@
 struct _KOS_CONTEXT;
 typedef struct _KOS_CONTEXT KOS_CONTEXT;
 
+struct _KOS_ALLOC_DEBUG;
+
 enum KOS_OBJECT_TYPE {
     /* Official types, visible in the language */
     OBJ_INTEGER         = 0x49, /* 'I' */
@@ -222,9 +224,32 @@ typedef struct _KOS_BUFFER {
     KOS_ATOMIC(void *)   data;
 } KOS_BUFFER;
 
-typedef KOS_OBJ_PTR (*KOS_FUNCTION_HANDLER)(KOS_CONTEXT *ctx,
-                                            KOS_OBJ_PTR  this_obj,
-                                            KOS_OBJ_PTR  args_obj);
+enum _KOS_YIELD_STATE {
+    KOS_CANNOT_YIELD = 0x1000000U, /* indicates a regular function */
+    KOS_CAN_YIELD    = 0x2000000U  /* indicates a generator        */
+};
+
+enum _KOS_CATCH_STATE {
+    KOS_NO_CATCH = 0x7FFFFFFFU
+};
+
+typedef struct _KOS_STACK_FRAME {
+    _KOS_TYPE_STORAGE        type; /* OBJ_STACK_FRAME */
+    uint8_t                  catch_reg;
+    uint32_t                 instr_offs;
+    KOS_OBJ_PTR              registers;
+    KOS_OBJ_PTR              module;
+    struct _KOS_ALLOC_DEBUG *allocator;
+    KOS_OBJ_PTR              exception;
+    KOS_OBJ_PTR              retval;
+    KOS_OBJ_PTR              parent;
+    uint32_t                 yield_reg;    /* index of the yield register */
+    uint32_t                 catch_offs;
+} KOS_STACK_FRAME;
+
+typedef KOS_OBJ_PTR (*KOS_FUNCTION_HANDLER)(KOS_STACK_FRAME *frame,
+                                            KOS_OBJ_PTR      this_obj,
+                                            KOS_OBJ_PTR      args_obj);
 
 enum _KOS_GENERATOR_STATE {
     KOS_NOT_GEN,        /* not a generator, regular function                    */
@@ -248,27 +273,6 @@ typedef struct _KOS_FUNCTION {
     uint32_t                  instr_offs;
     enum _KOS_GENERATOR_STATE generator_state;
 } KOS_FUNCTION;
-
-enum _KOS_YIELD_STATE {
-    KOS_CANNOT_YIELD = 0x1000000U, /* indicates a regular function */
-    KOS_CAN_YIELD    = 0x2000000U  /* indicates a generator        */
-};
-
-enum _KOS_CATCH_STATE {
-    KOS_NO_CATCH = 0x7FFFFFFFU
-};
-
-typedef struct _KOS_STACK_FRAME {
-    _KOS_TYPE_STORAGE type; /* OBJ_STACK_FRAME */
-    uint8_t           catch_reg;
-    uint32_t          instr_offs;
-    KOS_OBJ_PTR       registers;
-    KOS_OBJ_PTR       module;
-    KOS_OBJ_PTR       retval;
-    KOS_OBJ_PTR       parent;
-    uint32_t          yield_reg;    /* index of the yield register */
-    uint32_t          catch_offs;
-} KOS_STACK_FRAME;
 
 enum _KOS_MODULE_FLAGS {
     KOS_MODULE_OWN_BYTECODE   = 1,
@@ -354,22 +358,22 @@ typedef union _KOS_ANY_OBJECT {
 extern "C" {
 #endif
 
-KOS_OBJ_PTR KOS_new_int(KOS_CONTEXT *ctx,
-                        int64_t      value);
+KOS_OBJ_PTR KOS_new_int(KOS_STACK_FRAME *frame,
+                        int64_t          value);
 
-KOS_OBJ_PTR KOS_new_float(KOS_CONTEXT *ctx,
-                          double       value);
+KOS_OBJ_PTR KOS_new_float(KOS_STACK_FRAME *frame,
+                          double           value);
 
-KOS_OBJ_PTR KOS_new_function(KOS_CONTEXT *ctx,
-                             KOS_OBJ_PTR  proto_obj);
+KOS_OBJ_PTR KOS_new_function(KOS_STACK_FRAME *frame,
+                             KOS_OBJ_PTR      proto_obj);
 
-KOS_OBJ_PTR KOS_new_builtin_function(KOS_CONTEXT         *ctx,
+KOS_OBJ_PTR KOS_new_builtin_function(KOS_STACK_FRAME     *frame,
                                      KOS_FUNCTION_HANDLER handler,
                                      int                  min_args);
 
-KOS_OBJ_PTR KOS_new_dynamic_prop(KOS_CONTEXT *ctx,
-                                 KOS_OBJ_PTR  getter,
-                                 KOS_OBJ_PTR  setter);
+KOS_OBJ_PTR KOS_new_dynamic_prop(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_PTR      getter,
+                                 KOS_OBJ_PTR      setter);
 
 extern struct _KOS_BOOLEAN kos_static_object_true;
 extern struct _KOS_BOOLEAN kos_static_object_false;

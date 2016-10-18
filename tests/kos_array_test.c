@@ -30,36 +30,37 @@
 #include <time.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(&ctx)); KOS_clear_exception(&ctx); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(&ctx))
+#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(frame)); KOS_clear_exception(frame); } while (0)
+#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(frame))
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
+    KOS_CONTEXT      ctx;
+    KOS_STACK_FRAME *frame;
 
-    TEST(KOS_context_init(&ctx) == KOS_SUCCESS);
+    TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
     /************************************************************************/
     /* Cannot read from a non-array */
     {
         KOS_ASCII_STRING(str, "str");
 
-        TEST(KOS_array_read(&ctx, TO_OBJPTR(0), 0) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, TO_OBJPTR(0), 0) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, TO_SMALL_INT(1), 0) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, TO_SMALL_INT(1), 0) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, TO_OBJPTR(&str), 0) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, TO_OBJPTR(&str), 0) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, KOS_TRUE, 0) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, KOS_TRUE, 0) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, KOS_VOID, 0) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, KOS_VOID, 0) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, KOS_new_object(&ctx), 0) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, KOS_new_object(frame), 0) == TO_OBJPTR(0));
         TEST_EXCEPTION();
     }
 
@@ -68,22 +69,22 @@ int main(void)
     {
         KOS_ASCII_STRING(str, "str");
 
-        TEST(KOS_array_write(&ctx, TO_OBJPTR(0), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, TO_OBJPTR(0), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, TO_SMALL_INT(1), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, TO_SMALL_INT(1), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, TO_OBJPTR(&str), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, TO_OBJPTR(&str), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, KOS_FALSE, 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, KOS_FALSE, 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, KOS_VOID, 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, KOS_VOID, 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, KOS_new_object(&ctx), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, KOS_new_object(frame), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
     }
 
@@ -92,22 +93,22 @@ int main(void)
     {
         KOS_ASCII_STRING(str, "str");
 
-        TEST(KOS_array_reserve(&ctx, TO_OBJPTR(0), 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_reserve(frame, TO_OBJPTR(0), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_reserve(&ctx, TO_SMALL_INT(1), 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_reserve(frame, TO_SMALL_INT(1), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_reserve(&ctx, TO_OBJPTR(&str), 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_reserve(frame, TO_OBJPTR(&str), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_reserve(&ctx, KOS_TRUE, 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_reserve(frame, KOS_TRUE, 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_reserve(&ctx, KOS_VOID, 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_reserve(frame, KOS_VOID, 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_reserve(&ctx, KOS_new_object(&ctx), 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_reserve(frame, KOS_new_object(frame), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
     }
 
@@ -116,84 +117,84 @@ int main(void)
     {
         KOS_ASCII_STRING(str, "str");
 
-        TEST(KOS_array_resize(&ctx, TO_OBJPTR(0), 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_resize(frame, TO_OBJPTR(0), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, TO_SMALL_INT(1), 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_resize(frame, TO_SMALL_INT(1), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, TO_OBJPTR(&str), 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_resize(frame, TO_OBJPTR(&str), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, KOS_TRUE, 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_resize(frame, KOS_TRUE, 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, KOS_VOID, 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_resize(frame, KOS_VOID, 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, KOS_new_object(&ctx), 128) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_resize(frame, KOS_new_object(frame), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* Allocate empty array */
     {
-        KOS_OBJ_PTR a = KOS_new_array(&ctx, 0);
+        KOS_OBJ_PTR a = KOS_new_array(frame, 0);
         TEST(!IS_BAD_PTR(a));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(a) == OBJ_ARRAY);
 
         TEST(KOS_get_array_size(a) == 0);
 
-        TEST(KOS_array_read(&ctx, a, 0) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, 0) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, a, 0, TO_SMALL_INT(5)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, a, 0, TO_SMALL_INT(5)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* Resize array to 1 element and read it */
     {
-        KOS_OBJ_PTR a = KOS_new_array(&ctx, 0);
+        KOS_OBJ_PTR a = KOS_new_array(frame, 0);
         TEST(!IS_BAD_PTR(a));
 
-        TEST(KOS_array_resize(&ctx, a, 1) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, 1) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_array_size(a) == 1);
 
-        TEST(KOS_array_read(&ctx, a, 0) == KOS_VOID);
+        TEST(KOS_array_read(frame, a, 0) == KOS_VOID);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, -1) == KOS_VOID);
+        TEST(KOS_array_read(frame, a, -1) == KOS_VOID);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, 1) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, 1) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, -2) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, -2) == TO_OBJPTR(0));
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* Resize array to 1 element and write to it */
     {
-        KOS_OBJ_PTR a = KOS_new_array(&ctx, 0);
+        KOS_OBJ_PTR a = KOS_new_array(frame, 0);
         TEST(!IS_BAD_PTR(a));
 
-        TEST(KOS_array_resize(&ctx, a, 1) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, 1) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_array_size(a) == 1);
 
-        TEST(KOS_array_read(&ctx, a, 0) == KOS_VOID);
+        TEST(KOS_array_read(frame, a, 0) == KOS_VOID);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, a, 0, TO_SMALL_INT(5)) == KOS_SUCCESS);
+        TEST(KOS_array_write(frame, a, 0, TO_SMALL_INT(5)) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, 0) == TO_SMALL_INT(5));
+        TEST(KOS_array_read(frame, a, 0) == TO_SMALL_INT(5));
         TEST_NO_EXCEPTION();
     }
 
@@ -202,51 +203,51 @@ int main(void)
     {
         int i;
 
-        KOS_OBJ_PTR a = KOS_new_array(&ctx, 5);
+        KOS_OBJ_PTR a = KOS_new_array(frame, 5);
         TEST(!IS_BAD_PTR(a));
 
         TEST(KOS_get_array_size(a) == 5);
 
         for (i = 0; i < 5; i++) {
-            TEST(KOS_array_write(&ctx, a, i, TO_SMALL_INT(i)) == KOS_SUCCESS);
+            TEST(KOS_array_write(frame, a, i, TO_SMALL_INT(i)) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i = 0; i < 5; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
-        TEST(KOS_array_read(&ctx, a, 5) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, 5) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, a, 3) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, 3) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         for (i = 0; i < 3; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
-        TEST(KOS_array_read(&ctx, a, 3) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, 3) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, a, 5) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, 5) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_array_size(a) == 5);
 
         for (i = 0; i < 3; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
         for (i = 3; i < 5; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == KOS_VOID);
+            TEST(KOS_array_read(frame, a, i) == KOS_VOID);
             TEST_NO_EXCEPTION();
         }
 
-        TEST(KOS_array_resize(&ctx, a, 5) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, 5) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
     }
 
@@ -255,51 +256,51 @@ int main(void)
     {
         int i;
 
-        KOS_OBJ_PTR a = KOS_new_array(&ctx, 5);
+        KOS_OBJ_PTR a = KOS_new_array(frame, 5);
         TEST(!IS_BAD_PTR(a));
 
         TEST(KOS_get_array_size(a) == 5);
 
         for (i = 0; i < 5; i++) {
-            TEST(KOS_array_write(&ctx, a, i, TO_SMALL_INT(i)) == KOS_SUCCESS);
+            TEST(KOS_array_write(frame, a, i, TO_SMALL_INT(i)) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i = 0; i < 5; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
-        TEST(KOS_array_read(&ctx, a, 5) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, 5) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, a, 3) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, 3) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         for (i = 0; i < 3; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
-        TEST(KOS_array_read(&ctx, a, 3) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, 3) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_resize(&ctx, a, 10) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, 10) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_array_size(a) == 10);
 
         for (i = 0; i < 3; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
         for (i = 3; i < 10; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == KOS_VOID);
+            TEST(KOS_array_read(frame, a, i) == KOS_VOID);
             TEST_NO_EXCEPTION();
         }
 
-        TEST(KOS_array_resize(&ctx, a, 10) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, 10) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
     }
 
@@ -310,7 +311,7 @@ int main(void)
         int const num_items = 5;
 
         /* Allocate array of a particular size */
-        KOS_OBJ_PTR a = KOS_new_array(&ctx, num_items);
+        KOS_OBJ_PTR a = KOS_new_array(frame, num_items);
         TEST(!IS_BAD_PTR(a));
         TEST_NO_EXCEPTION();
 
@@ -318,82 +319,82 @@ int main(void)
 
         /* Set all array elements */
         for (i = 0; i < num_items; i++) {
-            TEST(KOS_array_write(&ctx, a, i, TO_SMALL_INT(i)) == KOS_SUCCESS);
+            TEST(KOS_array_write(frame, a, i, TO_SMALL_INT(i)) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         /* Check all array elements */
         for (i = 0; i < num_items; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
 
-            TEST(KOS_array_read(&ctx, a, i-num_items) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i-num_items) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
         /* Check boundary accesses */
 
-        TEST(KOS_array_read(&ctx, a, num_items) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, num_items) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, -(int)num_items-1) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, -(int)num_items-1) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, a, num_items, TO_SMALL_INT(100)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, a, num_items, TO_SMALL_INT(100)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(&ctx, a, -(int)num_items-1, TO_SMALL_INT(100)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_write(frame, a, -(int)num_items-1, TO_SMALL_INT(100)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Check that reserve of a smaller capacity does not affect the array */
 
-        TEST(KOS_array_reserve(&ctx, a, 2) == KOS_SUCCESS);
+        TEST(KOS_array_reserve(frame, a, 2) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_array_size(a) == (unsigned)num_items);
 
-        TEST(KOS_array_read(&ctx, a, num_items-1) == TO_SMALL_INT(4));
+        TEST(KOS_array_read(frame, a, num_items-1) == TO_SMALL_INT(4));
         TEST_NO_EXCEPTION();
 
         /* Check that reserve of a larger capacity does not affect the array */
 
-        TEST(KOS_array_reserve(&ctx, a, num_items*10) == KOS_SUCCESS);
+        TEST(KOS_array_reserve(frame, a, num_items*10) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_array_size(a) == (unsigned)num_items);
 
         for (i = 0; i < num_items; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
-        TEST(KOS_array_read(&ctx, a, num_items) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, num_items) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
         /* Resize array to 10 times its size */
 
-        TEST(KOS_array_resize(&ctx, a, num_items*10) == KOS_SUCCESS);
+        TEST(KOS_array_resize(frame, a, num_items*10) == KOS_SUCCESS);
 
         TEST(KOS_get_array_size(a) == num_items*10U);
 
         for (i = 0; i < num_items; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
 
-        TEST(KOS_array_read(&ctx, a, num_items) == KOS_VOID);
+        TEST(KOS_array_read(frame, a, num_items) == KOS_VOID);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, num_items*10-1) == KOS_VOID);
+        TEST(KOS_array_read(frame, a, num_items*10-1) == KOS_VOID);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, -(int)num_items*10) == TO_SMALL_INT(0));
+        TEST(KOS_array_read(frame, a, -(int)num_items*10) == TO_SMALL_INT(0));
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, num_items*10) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, num_items*10) == TO_OBJPTR(0));
         TEST_EXCEPTION();
 
-        TEST(KOS_array_read(&ctx, a, -(int)num_items*10-1) == TO_OBJPTR(0));
+        TEST(KOS_array_read(frame, a, -(int)num_items*10-1) == TO_OBJPTR(0));
         TEST_EXCEPTION();
     }
 
@@ -403,30 +404,30 @@ int main(void)
         int       i;
         int const num_items = 1024;
 
-        KOS_OBJ_PTR a = KOS_new_array(&ctx, 0);
+        KOS_OBJ_PTR a = KOS_new_array(frame, 0);
         TEST(!IS_BAD_PTR(a));
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_array_size(a) == 0);
 
         for (i = 0; i < num_items; i++) {
-            TEST(KOS_array_resize(&ctx, a, (unsigned)(i+1)) == KOS_SUCCESS);
+            TEST(KOS_array_resize(frame, a, (unsigned)(i+1)) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             TEST(KOS_get_array_size(a) == (unsigned)(i+1));
 
-            TEST(KOS_array_write(&ctx, a, i, TO_SMALL_INT(i)) == KOS_SUCCESS);
+            TEST(KOS_array_write(frame, a, i, TO_SMALL_INT(i)) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
-            TEST(KOS_array_read(&ctx, a, i+1) == TO_OBJPTR(0));
+            TEST(KOS_array_read(frame, a, i+1) == TO_OBJPTR(0));
             TEST_EXCEPTION();
         }
 
         for (i = 0; i < num_items; i++) {
-            TEST(KOS_array_read(&ctx, a, i) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
 
-            TEST(KOS_array_read(&ctx, a, i-num_items) == TO_SMALL_INT(i));
+            TEST(KOS_array_read(frame, a, i-num_items) == TO_SMALL_INT(i));
             TEST_NO_EXCEPTION();
         }
     }
@@ -434,55 +435,55 @@ int main(void)
     /************************************************************************/
     /* Slice */
     {
-        KOS_OBJ_PTR a1 = KOS_new_array(&ctx, 10);
+        KOS_OBJ_PTR a1 = KOS_new_array(frame, 10);
         int         i;
 
         for (i = 0; i < 10; i++) {
-            TEST(KOS_array_write(&ctx, a1, i, TO_SMALL_INT(i*10)) == KOS_SUCCESS);
+            TEST(KOS_array_write(frame, a1, i, TO_SMALL_INT(i*10)) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         {
-            KOS_OBJ_PTR a2 = KOS_array_slice(&ctx, a1, 0, 10);
+            KOS_OBJ_PTR a2 = KOS_array_slice(frame, a1, 0, 10);
             TEST_NO_EXCEPTION();
             TEST(!IS_BAD_PTR(a2));
 
             TEST(KOS_get_array_size(a2) == 10);
 
             for (i = 0; i < 10; i++) {
-                TEST(KOS_array_read(&ctx, a2, i) == TO_SMALL_INT(i*10));
+                TEST(KOS_array_read(frame, a2, i) == TO_SMALL_INT(i*10));
                 TEST_NO_EXCEPTION();
             }
         }
 
         {
-            KOS_OBJ_PTR a2 = KOS_array_slice(&ctx, a1, 2, 8);
+            KOS_OBJ_PTR a2 = KOS_array_slice(frame, a1, 2, 8);
             TEST_NO_EXCEPTION();
             TEST(!IS_BAD_PTR(a2));
 
             TEST(KOS_get_array_size(a2) == 6);
 
             for (i = 0; i < 6; i++) {
-                TEST(KOS_array_read(&ctx, a2, i) == TO_SMALL_INT((i+2)*10));
+                TEST(KOS_array_read(frame, a2, i) == TO_SMALL_INT((i+2)*10));
                 TEST_NO_EXCEPTION();
             }
         }
 
         {
-            KOS_OBJ_PTR a2 = KOS_array_slice(&ctx, a1, -8, -2);
+            KOS_OBJ_PTR a2 = KOS_array_slice(frame, a1, -8, -2);
             TEST_NO_EXCEPTION();
             TEST(!IS_BAD_PTR(a2));
 
             TEST(KOS_get_array_size(a2) == 6);
 
             for (i = 0; i < 6; i++) {
-                TEST(KOS_array_read(&ctx, a2, i) == TO_SMALL_INT((i+2)*10));
+                TEST(KOS_array_read(frame, a2, i) == TO_SMALL_INT((i+2)*10));
                 TEST_NO_EXCEPTION();
             }
         }
 
         {
-            KOS_OBJ_PTR a2 = KOS_array_slice(&ctx, a1, -2, -8);
+            KOS_OBJ_PTR a2 = KOS_array_slice(frame, a1, -2, -8);
             TEST_NO_EXCEPTION();
             TEST(!IS_BAD_PTR(a2));
 
@@ -490,14 +491,14 @@ int main(void)
         }
 
         {
-            KOS_OBJ_PTR a2 = KOS_array_slice(&ctx, a1, -20, 20);
+            KOS_OBJ_PTR a2 = KOS_array_slice(frame, a1, -20, 20);
             TEST_NO_EXCEPTION();
             TEST(!IS_BAD_PTR(a2));
 
             TEST(KOS_get_array_size(a2) == 10);
 
             for (i = 0; i < 10; i++) {
-                TEST(KOS_array_read(&ctx, a2, i) == TO_SMALL_INT(i*10));
+                TEST(KOS_array_read(frame, a2, i) == TO_SMALL_INT(i*10));
                 TEST_NO_EXCEPTION();
             }
         }
@@ -507,20 +508,20 @@ int main(void)
     /* Push/pop */
     {
         KOS_OBJ_PTR v;
-        KOS_OBJ_PTR a = KOS_new_array(&ctx, 0);
+        KOS_OBJ_PTR a = KOS_new_array(frame, 0);
         TEST(!IS_BAD_PTR(a));
         TEST(KOS_get_array_size(a) == 0);
 
-        TEST(KOS_array_push(&ctx, a, TO_SMALL_INT(123)) == KOS_SUCCESS);
+        TEST(KOS_array_push(frame, a, TO_SMALL_INT(123)) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_array_size(a) == 1);
 
-        v = KOS_array_pop(&ctx, a);
+        v = KOS_array_pop(frame, a);
         TEST(v == TO_SMALL_INT(123));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_array_size(a) == 0);
 
-        v = KOS_array_pop(&ctx, a);
+        v = KOS_array_pop(frame, a);
         TEST(IS_BAD_PTR(v));
         TEST_EXCEPTION();
         TEST(KOS_get_array_size(a) == 0);

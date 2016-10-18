@@ -48,32 +48,32 @@ void _KOS_alloc_destroy(KOS_CONTEXT *ctx)
     }
 }
 
-KOS_ANY_OBJECT *_KOS_alloc_16(KOS_CONTEXT *ctx)
+KOS_ANY_OBJECT *_KOS_alloc_16(KOS_STACK_FRAME *frame)
 {
-    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(ctx, 16);
+    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 16);
 }
 
-KOS_ANY_OBJECT *_KOS_alloc_32(KOS_CONTEXT *ctx)
+KOS_ANY_OBJECT *_KOS_alloc_32(KOS_STACK_FRAME *frame)
 {
-    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(ctx, 32);
+    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 32);
 }
 
-KOS_ANY_OBJECT *_KOS_alloc_64(KOS_CONTEXT *ctx)
+KOS_ANY_OBJECT *_KOS_alloc_64(KOS_STACK_FRAME *frame)
 {
-    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(ctx, 64);
+    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 64);
 }
 
-KOS_ANY_OBJECT *_KOS_alloc_128(KOS_CONTEXT *ctx)
+KOS_ANY_OBJECT *_KOS_alloc_128(KOS_STACK_FRAME *frame)
 {
-    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(ctx, 128);
+    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 128);
 }
 
-void *_KOS_alloc_buffer(KOS_CONTEXT *ctx, size_t size)
+void *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size)
 {
     uint64_t *obj = (uint64_t *)_KOS_malloc(size+sizeof(uint64_t));
 
     if (obj) {
-        struct _KOS_ALLOC_DEBUG *allocator = &ctx->allocator;
+        struct _KOS_ALLOC_DEBUG *allocator = frame->allocator;
 
         void **ptr = (void **)obj;
 
@@ -87,12 +87,12 @@ void *_KOS_alloc_buffer(KOS_CONTEXT *ctx, size_t size)
         ++obj;
     }
     else
-        KOS_raise_exception(ctx, TO_OBJPTR(&str_err_out_of_memory));
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
 
     return (KOS_ANY_OBJECT *)obj;
 }
 
-void _KOS_free_buffer(KOS_CONTEXT *ctx, void *ptr, size_t size)
+void _KOS_free_buffer(KOS_STACK_FRAME *frame, void *ptr, size_t size)
 {
 }
 

@@ -295,27 +295,19 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     module.instr_offs    = 0;
     module.num_regs      = regs;
 
-    ctx->root_stack_frame.module    = TO_OBJPTR(&module);
-    ctx->root_stack_frame.registers = KOS_new_array(ctx, regs);
-
-    if (_KOS_vm_run_module(&module) == KOS_SUCCESS)
-        ret = OBJPTR(KOS_STACK_FRAME, ctx->stack_frame)->retval;
-    else
-        ret = TO_OBJPTR(0);
-
-    ctx->stack_frame = TO_OBJPTR(&ctx->root_stack_frame);
+    error = _KOS_vm_run_module(&module, &ret);
 
     if (ret_val->value == V_EXCEPT) {
-        if (KOS_is_exception_pending(ctx))
-            KOS_clear_exception(ctx);
-        else {
+        if (error != KOS_ERROR_EXCEPTION) {
             printf("Failed: line %d: expected exception\n", line);
             error = KOS_ERROR_EXCEPTION;
         }
+        else
+            error = KOS_SUCCESS;
     }
-    else if (KOS_is_exception_pending(ctx)) {
+    else if (error) {
+        assert(error == KOS_ERROR_EXCEPTION);
         printf("Failed: line %d: unexpected exception\n", line);
-        error = KOS_ERROR_EXCEPTION;
     }
     else switch (ret_val->value) {
 
@@ -463,9 +455,10 @@ static int _test_instr(KOS_CONTEXT         *ctx,
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
+    KOS_CONTEXT      ctx;
+    KOS_STACK_FRAME *frame;
 
-    TEST(KOS_context_init(&ctx) == KOS_SUCCESS);
+    TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
     /*========================================================================*/
     /* LOAD.VOID */

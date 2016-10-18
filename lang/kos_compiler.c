@@ -1196,7 +1196,7 @@ static int _import(struct _KOS_COMP_UNIT      *program,
         assert(program->import_module);
         assert(program->get_global_idx);
 
-        TRY(program->import_module(program->ctx,
+        TRY(program->import_module(program->frame,
                                    node->token.begin,
                                    node->token.length,
                                    KOS_COMP_MANDATORY,
@@ -1217,7 +1217,7 @@ static int _import(struct _KOS_COMP_UNIT      *program,
 
             assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-            TRY(program->get_global_idx(program->ctx,
+            TRY(program->get_global_idx(program->frame,
                                         module_idx,
                                         node->token.begin,
                                         node->token.length,
@@ -2636,7 +2636,7 @@ static int _refinement_module(struct _KOS_COMP_UNIT      *program,
         _get_token_str(&node->token, &begin, &length);
 
         assert(program->get_global_idx);
-        error = program->get_global_idx(program->ctx, module_var->array_idx, begin, length, &global_idx);
+        error = program->get_global_idx(program->frame, module_var->array_idx, begin, length, &global_idx);
         if (error) {
             program->error_token = &node->token;
             program->error_str   = str_err_no_such_module_variable;
@@ -3899,7 +3899,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT      *program,
     static const char str_string[] = "string";
 
     assert(program->get_global_idx);
-    error = program->get_global_idx(program->ctx, 0, str_string, sizeof(str_string)-1, &string_idx);
+    error = program->get_global_idx(program->frame, 0, str_string, sizeof(str_string)-1, &string_idx);
     if (error) {
         program->error_token = &node->token;
         program->error_str   = str_err_no_such_module_variable;
