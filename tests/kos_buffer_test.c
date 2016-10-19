@@ -41,11 +41,15 @@ int main(void)
     /* Cannot invoke buffer functions on non-buffer objects */
     {
         KOS_ASCII_STRING(str, "str");
+        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 1);
 
         TEST(KOS_buffer_reserve(frame, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_reserve(frame, TO_OBJPTR(&str), 10) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_reserve(frame, TO_OBJPTR(0), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_resize(frame, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
@@ -54,14 +58,85 @@ int main(void)
         TEST(KOS_buffer_resize(frame, TO_OBJPTR(&str), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
+        TEST(KOS_buffer_resize(frame, TO_OBJPTR(0), 10) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
         TEST(KOS_buffer_data(frame, TO_SMALL_INT(1)) == 0);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_data(frame, TO_OBJPTR(&str)) == 0);
         TEST_EXCEPTION();
+
+        TEST(KOS_buffer_data(frame, TO_OBJPTR(0)) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_make_room(frame, TO_SMALL_INT(1), 1U) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_make_room(frame, TO_OBJPTR(&str), 1U) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_make_room(frame, TO_OBJPTR(0), 1U) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_fill(frame, TO_SMALL_INT(1), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_fill(frame, TO_OBJPTR(&str), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_fill(frame, TO_OBJPTR(0), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_copy(frame, TO_SMALL_INT(1), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_copy(frame, TO_OBJPTR(&str), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_copy(frame, TO_OBJPTR(0), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_copy(frame, buf, 0, TO_SMALL_INT(1), 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_copy(frame, buf, 0, TO_OBJPTR(&str), 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_copy(frame, buf, 0, TO_OBJPTR(0), 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_slice(frame, TO_SMALL_INT(1), 1, 2) == TO_OBJPTR(0));
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_slice(frame, TO_OBJPTR(&str), 1, 2) == TO_OBJPTR(0));
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_slice(frame, TO_OBJPTR(0), 1, 2) == TO_OBJPTR(0));
+        TEST_EXCEPTION();
     }
 
     /************************************************************************/
+    /* Allocate non-zero buffer size */
+    {
+        uint8_t *data;
+        int      i;
+
+        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 128);
+        TEST(!IS_BAD_PTR(buf));
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_get_buffer_size(buf) == 128);
+        TEST_NO_EXCEPTION();
+
+        data = KOS_buffer_data(frame, buf);
+
+        for (i = 0; i < 128; i++)
+            data[0] = (uint8_t)i;
+    }
+
+    /************************************************************************/
+    /* Reserve/resize */
     {
         uint8_t *data;
 
@@ -98,6 +173,7 @@ int main(void)
     }
 
     /************************************************************************/
+    /* Reserve/resize */
     {
         KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
         TEST( ! IS_BAD_PTR(buf));
@@ -128,8 +204,8 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 5);
     }
 
-
     /************************************************************************/
+    /* KOS_buffer_fill */
     {
         uint8_t *data;
         int      i;
@@ -183,6 +259,155 @@ int main(void)
 
         for (i = 50; i < 90; i++)
             TEST(data[i] == 0x55);
+    }
+
+    /************************************************************************/
+    /* KOS_buffer_make_room */
+    {
+        uint8_t *data;
+
+        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
+        TEST( ! IS_BAD_PTR(buf));
+        TEST_NO_EXCEPTION();
+
+        data = KOS_buffer_make_room(frame, buf, 2);
+        TEST(data);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 2);
+
+        data[0] = 0x51;
+        data[1] = 0x52;
+
+        data = KOS_buffer_make_room(frame, buf, 1);
+        TEST(data);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 3);
+
+        data[0] = 0x40;
+
+        data = KOS_buffer_data(frame, buf);
+        TEST(data[0] == 0x51);
+        TEST(data[1] == 0x52);
+        TEST(data[2] == 0x40);
+    }
+
+    /************************************************************************/
+    /* KOS_buffer_copy */
+    {
+        uint8_t *data;
+        int      i;
+
+        KOS_OBJ_PTR buf1 = KOS_new_buffer(frame, 10);
+        KOS_OBJ_PTR buf2;
+        TEST( ! IS_BAD_PTR(buf1));
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf1) == 10);
+
+        buf2 = KOS_new_buffer(frame, 5);
+        TEST( ! IS_BAD_PTR(buf2));
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf2) == 5);
+
+        TEST(KOS_buffer_fill(frame, buf1, 0, 10, 1) == KOS_SUCCESS);
+        TEST(KOS_buffer_fill(frame, buf2, 0, 5, 2) == KOS_SUCCESS);
+
+        TEST(KOS_buffer_copy(frame, buf1, 2, buf2, -4, 4) == KOS_SUCCESS);
+
+        data = KOS_buffer_data(frame, buf1);
+        for (i = 0; i < 2; i++)
+            TEST(data[i] == 1);
+        for (i = 2; i < 5; i++)
+            TEST(data[i] == 2);
+        for (i = 5; i < 10; i++)
+            TEST(data[i] == 1);
+
+        TEST(KOS_buffer_copy(frame, buf1, -2, buf2, -100, 100) == KOS_SUCCESS);
+
+        data = KOS_buffer_data(frame, buf1);
+        for (i = 0; i < 2; i++)
+            TEST(data[i] == 1);
+        for (i = 2; i < 5; i++)
+            TEST(data[i] == 2);
+        for (i = 5; i < 8; i++)
+            TEST(data[i] == 1);
+        for (i = 8; i < 10; i++)
+            TEST(data[i] == 2);
+
+        data = KOS_buffer_data(frame, buf2);
+        for (i = 0; i < 5; i++)
+            TEST(data[i] == 2);
+
+        for (i = 0; i < 5; i++)
+            data[i] = (uint8_t)i;
+
+        TEST(KOS_buffer_copy(frame, buf2, 0, buf2, -3, 100) == KOS_SUCCESS);
+
+        TEST(data[0] == 2);
+        TEST(data[1] == 3);
+        TEST(data[2] == 4);
+        TEST(data[3] == 3);
+        TEST(data[4] == 4);
+
+        for (i = 0; i < 5; i++)
+            data[i] = (uint8_t)i;
+
+        TEST(KOS_buffer_copy(frame, buf2, -2, buf2, 0, 100) == KOS_SUCCESS);
+
+        TEST(data[0] == 0);
+        TEST(data[1] == 1);
+        TEST(data[2] == 2);
+        TEST(data[3] == 0);
+        TEST(data[4] == 1);
+    }
+
+    /************************************************************************/
+    /* KOS_buffer_slice */
+    {
+        uint8_t *data;
+        int      i;
+
+        KOS_OBJ_PTR buf1 = KOS_new_buffer(frame, 10);
+        KOS_OBJ_PTR buf2;
+        TEST( ! IS_BAD_PTR(buf1));
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf1) == 10);
+
+        data = KOS_buffer_data(frame, buf1);
+        for (i = 0; i < 10; i++)
+            data[i] = (uint8_t)i;
+
+        buf2 = KOS_buffer_slice(frame, buf1, 5, -5);
+        TEST( ! IS_BAD_PTR(buf2));
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf2) == 0);
+
+        buf2 = KOS_buffer_slice(frame, buf1, -4, 1000);
+        TEST( ! IS_BAD_PTR(buf2));
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf2) == 4);
+
+        data = KOS_buffer_data(frame, buf2);
+
+        TEST(data[0] == 6);
+        TEST(data[1] == 7);
+        TEST(data[2] == 8);
+        TEST(data[3] == 9);
+
+        buf2 = KOS_buffer_slice(frame, buf1, 5, -6);
+        TEST( ! IS_BAD_PTR(buf2));
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf2) == 0);
+
+        buf1 = KOS_buffer_slice(frame, buf2, 5, -6);
+        TEST( ! IS_BAD_PTR(buf1));
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf1) == 0);
+    }
+
+    /************************************************************************/
+    /* KOS_buffer_rotate */
+    {
+        /* TODO */
     }
 
     KOS_context_destroy(&ctx);

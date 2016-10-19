@@ -41,9 +41,11 @@ static BUFFER_DATA *_alloc_buffer(KOS_STACK_FRAME *frame, unsigned capacity)
             _KOS_alloc_buffer(frame, KOS_buffer_alloc_size(capacity));
 
 #ifndef NDEBUG
-    // The caller is supposed to fill it out completely and reliably.
-    // Therefore in debug builds, we fill it with random data to trigger
-    // any bugs more easily.
+    /*
+     * The caller is supposed to fill it out completely and reliably.
+     * Therefore in debug builds, we fill it with random data to trigger
+     * any bugs more easily.
+     */
     {
         static struct KOS_RNG rng;
         static int            init = 0;

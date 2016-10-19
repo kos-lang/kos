@@ -138,7 +138,10 @@ endef
 
 $(foreach module, $(gcov_modules), $(eval $(call GCOV_RULE,$(module))))
 
-gcov: $(addprefix gcov., $(gcov_modules))
+gcov.all: $(addprefix gcov., $(gcov_modules))
+
+gcov: gcov.all
+	@find $(out_dir)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
 
 # Execute parallel tests last, make them depend on each other so that they are executed alone
 # Don't run parallel tests with valgrind, since they are slow
@@ -157,4 +160,4 @@ ifneq ($(CONFIG_GCOV), 0)
 test: gcov
 endif
 
-.PHONY: all test simple_test gcov $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) module_loading $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov gcov.all $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) module_loading $(interpreter_test_list) $(interpreter_fail_test_list)
