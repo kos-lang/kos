@@ -229,7 +229,6 @@ int main(void)
 
         for (i = 0; i < 127; i++)
             TEST(data[i] == 0x55);
-        TEST(data[127] == 0);
 
         TEST(KOS_buffer_resize(frame, buf, 90) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
