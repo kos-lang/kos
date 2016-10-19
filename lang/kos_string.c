@@ -54,36 +54,33 @@ static KOS_STRING *_new_empty_string(KOS_STACK_FRAME *frame, unsigned length, en
     KOS_STRING *str;
 
     assert(length <= 0xFFFFU);
+    assert(length > 0U);
 
-    if (length) {
-        str = &_KOS_alloc_object(frame, KOS_STRING)->string;
+    str = &_KOS_alloc_object(frame, KOS_STRING)->string;
 
-        assert(type == OBJ_STRING_8 || type == OBJ_STRING_16 || type == OBJ_STRING_32);
+    assert(type == OBJ_STRING_8 || type == OBJ_STRING_16 || type == OBJ_STRING_32);
 
-        if (str) {
+    if (str) {
 
-            const int shift = type - OBJ_STRING_8;
+        const int shift = type - OBJ_STRING_8;
 
-            str->type   = (_KOS_TYPE_STORAGE)type;
-            str->hash   = 0;
-            str->length = (uint16_t)length;
+        str->type   = (_KOS_TYPE_STORAGE)type;
+        str->hash   = 0;
+        str->length = (uint16_t)length;
 
-            if ((length << shift) > sizeof(str->data)) {
-                void *ptr     = _KOS_alloc_buffer(frame, (length << shift));
-                str->data.ptr = ptr;
-                str->flags    = KOS_STRING_BUFFER;
+        if ((length << shift) > sizeof(str->data)) {
+            void *ptr     = _KOS_alloc_buffer(frame, (length << shift));
+            str->data.ptr = ptr;
+            str->flags    = KOS_STRING_BUFFER;
 
-                if (!ptr) {
-                    str->length = 0;
-                    str         = 0; /* object is garbage-collected */
-                }
+            if (!ptr) {
+                str->length = 0;
+                str         = 0; /* object is garbage-collected */
             }
-            else
-                str->flags = KOS_STRING_LOCAL;
         }
+        else
+            str->flags = KOS_STRING_LOCAL;
     }
-    else
-        str = &_empty_string;
 
     return str;
 }
@@ -228,14 +225,10 @@ unsigned KOS_string_to_utf8(KOS_OBJ_PTR objptr,
             /* Fill out the buffer. */
             if (buf) {
                 assert(num_out <= buf_size);
-                if (num_out <= buf_size) {
-                    if (num_out == str->length)
-                        memcpy(buf, src_buf, num_out);
-                    else
-                        _KOS_utf8_encode_8((const uint8_t *)src_buf, str->length, pdest);
-                }
+                if (num_out == str->length)
+                    memcpy(buf, src_buf, num_out);
                 else
-                    num_out = ~0U;
+                    _KOS_utf8_encode_8((const uint8_t *)src_buf, str->length, pdest);
             }
             break;
         }
@@ -249,37 +242,25 @@ unsigned KOS_string_to_utf8(KOS_OBJ_PTR objptr,
             /* Fill out the buffer. */
             if (buf) {
                 assert(num_out <= buf_size);
-                if (num_out <= buf_size)
-                    _KOS_utf8_encode_16((const uint16_t *)src_buf, str->length, pdest);
-                else
-                    num_out = ~0U;
+                _KOS_utf8_encode_16((const uint16_t *)src_buf, str->length, pdest);
             }
             break;
         }
 
-        case OBJ_STRING_32: {
+        default: {
             assert(str->type == OBJ_STRING_32);
             src_buf = _KOS_get_string_buffer(str);
 
             /* Calculate how many bytes we need. */
             num_out = _KOS_utf8_calc_buf_size_32((const uint32_t *)src_buf, str->length);
-            if (num_out == ~0U) {
-                /* TODO - raise exception? */
-            }
 
             /* Fill out the buffer. */
-            else if (buf) {
+            if (buf && num_out != ~0U) {
                 assert(num_out <= buf_size);
-                if (num_out <= buf_size)
-                    _KOS_utf8_encode_32((const uint32_t *)src_buf, str->length, pdest);
-                else
-                    num_out = ~0U;
+                _KOS_utf8_encode_32((const uint32_t *)src_buf, str->length, pdest);
             }
             break;
         }
-
-        default:
-            break;
     }
 
     return num_out;
@@ -289,44 +270,38 @@ int KOS_string_to_cstr_vec(KOS_STACK_FRAME    *frame,
                            KOS_OBJ_PTR         objptr,
                            struct _KOS_VECTOR *str_vec)
 {
-    int error = KOS_SUCCESS;
+    int      error   = KOS_SUCCESS;
+    unsigned str_len = 0;
 
-    if (!IS_BAD_PTR(objptr) && IS_STRING_OBJ(objptr) && KOS_get_string_length(objptr) == 0) {
-        error = _KOS_vector_resize(str_vec, 1);
-        if (error) {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
-            error = KOS_ERROR_EXCEPTION;
-        }
-        else
-            str_vec->buffer[0] = 0;
+    assert( ! IS_BAD_PTR(objptr));
+
+    if ( ! IS_STRING_OBJ(objptr)) {
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_string));
+        return KOS_ERROR_EXCEPTION;
     }
-    else {
 
-        const unsigned str_len = KOS_string_to_utf8(objptr, 0, 0);
+    if (KOS_get_string_length(objptr) > 0) {
 
+        str_len = KOS_string_to_utf8(objptr, 0, 0);
         assert(str_len > 0);
 
         if (str_len == ~0U) {
             KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_string));
-            error = KOS_ERROR_EXCEPTION;
-        }
-        else {
-            error = _KOS_vector_resize(str_vec, str_len+1);
-            if (error) {
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
-                error = KOS_ERROR_EXCEPTION;
-            }
-            else {
-                const unsigned str_len2 = KOS_string_to_utf8(objptr, str_vec->buffer, str_len);
-                if (str_len2 == str_len)
-                    str_vec->buffer[str_len] = 0;
-                else {
-                    KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_string));
-                    error = KOS_ERROR_EXCEPTION;
-                }
-            }
+            return KOS_ERROR_EXCEPTION;
         }
     }
+
+    error = _KOS_vector_resize(str_vec, str_len+1);
+
+    if (error) {
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    if (str_len)
+        KOS_string_to_utf8(objptr, str_vec->buffer, str_len);
+
+    str_vec->buffer[str_len] = 0;
 
     return error;
 }
@@ -374,7 +349,7 @@ static void _init_empty_string(KOS_STRING *dest,
                 }
                 else {
                     uint32_t *pdest = (uint32_t *)dest_buf + offs;
-                    uint16_t *psrc  = (uint16_t  *)src_buf;
+                    uint16_t *psrc  = (uint16_t *)src_buf;
                     uint16_t *pend  = psrc + len;
                     for ( ; psrc != pend; ++pdest, ++psrc)
                         *pdest = *psrc;
@@ -435,7 +410,7 @@ KOS_OBJ_PTR KOS_string_add_many(KOS_STACK_FRAME         *frame,
         if (new_len) {
             new_str = _new_empty_string(frame, new_len, type);
 
-            if (new_len) {
+            if (new_str) {
                 unsigned pos = 0;
                 for (cur_ptr = objptr_array; cur_ptr != end; ++cur_ptr) {
                     KOS_OBJ_PTR    str_obj = (KOS_OBJ_PTR)KOS_atomic_read_ptr(*cur_ptr);
@@ -870,6 +845,8 @@ KOS_OBJ_PTR KOS_object_to_string(KOS_STACK_FRAME *frame,
 {
     char        buf[64];
     KOS_OBJ_PTR ret = TO_OBJPTR(0);
+
+    assert( ! IS_BAD_PTR(obj));
 
     if (IS_SMALL_INT(obj)) {
         const int64_t value = GET_SMALL_INT(obj);
