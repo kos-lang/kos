@@ -66,7 +66,7 @@ static int _errno_to_error(void)
 }
 
 #ifdef _WIN32
-int _is_file(const char *filename)
+static int _is_file(const char *filename)
 {
     const DWORD attr = GetFileAttributes(filename);
 
@@ -74,7 +74,7 @@ int _is_file(const char *filename)
            ? KOS_SUCCESS : KOS_ERROR_NOT_FOUND;
 }
 #else
-int _is_file(const char *filename)
+static int _is_file(const char *filename)
 {
     int         error = KOS_SUCCESS;
     struct stat statbuf;
