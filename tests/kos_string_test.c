@@ -1387,7 +1387,7 @@ int main(void)
         TEST(KOS_get_string_length(str) == size);
 
         for (i = 0; i < size; i++)
-            TEST(KOS_string_get_char_code(frame, str, i) == (unsigned)expected[i]);
+            TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
     }
 
     /************************************************************************/
@@ -1408,7 +1408,7 @@ int main(void)
         TEST(KOS_get_string_length(str) == size);
 
         for (i = 0; i < size; i++)
-            TEST(KOS_string_get_char_code(frame, str, i) == (unsigned)expected[i]);
+            TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
     }
 
     /************************************************************************/
@@ -1433,7 +1433,7 @@ int main(void)
         TEST(KOS_get_string_length(str) == size);
 
         for (i = 0; i < size; i++)
-            TEST(KOS_string_get_char_code(frame, str, i) == (unsigned)expected[i]);
+            TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
     }
 
     /************************************************************************/
@@ -1449,7 +1449,7 @@ int main(void)
         TEST(KOS_get_string_length(str) == size);
 
         for (i = 0; i < size; i++)
-            TEST(KOS_string_get_char_code(frame, str, i) == (unsigned)expected[i]);
+            TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
     }
 
     /************************************************************************/
@@ -1465,7 +1465,7 @@ int main(void)
         TEST(KOS_get_string_length(str) == size);
 
         for (i = 0; i < size; i++)
-            TEST(KOS_string_get_char_code(frame, str, i) == (unsigned)expected[i]);
+            TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
     }
 
     KOS_context_destroy(&ctx);
