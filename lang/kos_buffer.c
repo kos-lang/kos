@@ -37,7 +37,30 @@ typedef struct _KOS_BUFFER_DATA BUFFER_DATA;
 
 static BUFFER_DATA *_alloc_buffer(KOS_STACK_FRAME *frame, unsigned capacity)
 {
-    return (BUFFER_DATA *)_KOS_alloc_buffer(frame, KOS_buffer_alloc_size(capacity));
+    BUFFER_DATA *const data = (BUFFER_DATA *)
+            _KOS_alloc_buffer(frame, KOS_buffer_alloc_size(capacity));
+
+#ifndef NDEBUG
+    // The caller is supposed to fill it out completely and reliably.
+    // Therefore in debug builds, we fill it with random data to trigger
+    // any bugs more easily.
+    {
+        static struct KOS_RNG rng;
+        static int            init = 0;
+        uint64_t             *buf = (uint64_t *)data;
+        uint64_t             *end = buf + capacity / sizeof(uint64_t);
+
+        if ( ! init) {
+            _KOS_rng_init(&rng);
+            init = 1;
+        }
+
+        while (buf < end)
+            *(buf++) = _KOS_rng_random(&rng);
+    }
+#endif
+
+    return data;
 }
 
 KOS_OBJ_PTR KOS_new_buffer(KOS_STACK_FRAME *frame,
