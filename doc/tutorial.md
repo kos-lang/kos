@@ -115,13 +115,13 @@ Immutable types:
 * String
 * Void
 * Boolean
+* Function
 
 Mutable types:
 
 * Array
 * Buffer
 * Object
-* Function
 
 The `typeof` unary operator can be used to determine the type of data at run
 time.  The returned value is a string.  The `typeof` operator returns the

@@ -61,10 +61,10 @@
             var a = b
             [1, 2, 3].map(a)
 
-    - proposed solution: if EOL is encountered where a semicolon could be and
-      the next token is `(`, `[`, `+` or `-`, just treat the EOL as a
-      semicolon and emit a warning; not sure about `+` and `-` though, maybe
-      they should be part of the expression...
+    - Proposed solution: if EOL is encountered where a semicolon could be and
+      the next token is `(`, `[`, `+` or `-`, fail compilation complaining that
+      the notation is ambiguous and indicate that the code should be changed
+      to remove the ambiguity.
 
 * set/get:
 

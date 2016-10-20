@@ -2263,6 +2263,8 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
 
                 /* TODO identifier -> const */
 
+                /* TODO allow functions (immutable) */
+
                 default:
                     program->error_token = &node->children->token;
                     program->error_str   = str_err_invalid_case;

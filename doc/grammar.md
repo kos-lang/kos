@@ -714,7 +714,7 @@ The right-hand-side expression is evaluated at compile time and it must
 evaluate to a constant.
 
 The resulting constant can only be of immutable type: integer, float, string,
-boolean or void.
+boolean, void or function.
 
 The resulting evaluated constant value cannot repeat again in that switch
 statement.

@@ -29,17 +29,16 @@ Const
 -----
 
 Variables can be declared as `const`, which prevents them from being ever
-assigned to again.  Constants of mutable types (object, array, buffer,
-function) can still be modified, but cannot be changed to reference another
-object.
+assigned to again.  Constants of mutable types (object, array, buffer)
+can still be modified, but cannot be changed to reference another object.
 
 
 Immutable types
 ---------------
 
-Integer, float, string, boolean and void types are immutable, meaning that
-value of a variable of these types cannot be modified.  A variable holding
-a value of any of these types can only be assigned a new value.
+Integer, float, string, boolean, void and function types are immutable,
+meaning that value of a variable of these types cannot be modified.  A variable
+holding a value of any of these types can only be assigned a new value.
 
 Their prototypes, however, can still be modified.
 

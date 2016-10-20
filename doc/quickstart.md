@@ -38,12 +38,12 @@ These constants are of immutable types:
     const boolean  = true;
     const string   = "Hello!";
     const _void_   = void; # void is a keyword, cannot name a variable 'void'
+    const function = fun { };
 
 These are mutable types:
 
-    const array    = [ 1, 2, "string" ];
     const object   = { prop1: 1, prop2: 2, "prop 3": 3 };
-    const function = fun { };
+    const array    = [ 1, 2, "string" ];
     const buffer   = new lang.buffer; # Refer to the tutorial for details
 
 
@@ -75,6 +75,32 @@ expression which is treated like a return statement.
     const subtract_two_numbers = fun(a, b) -> (a - b);
 
     lang.print(subtract_two_numbers(7, 5), "\n"); # Prints: 2
+
+
+Properties and elements
+-----------------------
+
+Object properties can be accessed in two ways:
+
+    const obj  = { };
+    obj.one    = 1;
+    obj["two"] = 2;
+    lang.print("one:", obj["one"], ", two:", obj.two, "\n");
+    # Prints: one: 1, two: 2
+
+Everything is an object, so integers, functions, booleans and arrays also have
+properties (from their prototype).  Any property can be accessed as a string.
+However, properties can only be added or modified in object type.
+
+In addition to that, arrays, strings and buffers have elements, indexable with
+a number.  The first element always has index zero.
+
+    const array = [ 'a', 'b', 'c' ];
+    lang.print("element 0:", array[0], "\n");
+    # Prints: element 0: a
+
+A number can be used to index only arrays, strings and buffers.  Attempting
+to index any other type with a number results in an exception.
 
 
 Control flow
