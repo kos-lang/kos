@@ -355,35 +355,35 @@ int KOS_array_insert(KOS_STACK_FRAME *frame,
                                  (KOS_ATOMIC(void *) *)&src_buf->buf[src_begin],
                                  src_delta);
     }
-    else {
+    else if (dest_delta >= src_delta) {
 
-        int64_t mid = dest_end - dest_delta + src_delta;
-
-        mid = KOS_min(mid, src_end);
-
-        if (dest_delta >= src_delta)
+        if (src_begin != dest_begin)
             _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_begin],
                                  (KOS_ATOMIC(void *) *)&dest_buf->buf[src_begin],
                                  src_delta);
 
-        if (src_delta != dest_delta && dest_end < dest_len)
-            _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_end - dest_delta + src_delta],
+        if (dest_end < dest_len)
+            _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_begin + src_delta],
                                  (KOS_ATOMIC(void *) *)&dest_buf->buf[dest_end],
                                  (unsigned)(dest_len - dest_end));
+    }
+    else {
 
-        if (dest_delta < src_delta) {
+        const int64_t mid = KOS_min(dest_begin + src_delta, src_end);
 
-            const int64_t part_size = mid - src_begin;
+        if (dest_end < dest_len)
+            _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_begin + src_delta],
+                                 (KOS_ATOMIC(void *) *)&dest_buf->buf[dest_end],
+                                 (unsigned)(dest_len - dest_end));
+        if (mid > src_begin)
+            _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_begin],
+                                 (KOS_ATOMIC(void *) *)&dest_buf->buf[src_begin],
+                                 (unsigned)(mid - src_begin));
 
-            if (mid > src_begin)
-                _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_begin],
-                                     (KOS_ATOMIC(void *) *)&dest_buf->buf[src_begin],
-                                     (unsigned)(mid - src_begin));
-            if (mid < src_end)
-                _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_begin + part_size],
-                                     (KOS_ATOMIC(void *) *)&dest_buf->buf[src_begin + part_size],
-                                     (unsigned)(src_end - mid));
-        }
+        if (mid < src_end)
+            _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_begin + mid - src_begin],
+                                 (KOS_ATOMIC(void *) *)&dest_buf->buf[mid + src_delta - dest_delta],
+                                 (unsigned)(src_end - mid));
     }
 
     if (src_delta < dest_delta)
