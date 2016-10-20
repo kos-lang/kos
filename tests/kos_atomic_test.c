@@ -20,6 +20,9 @@
  * IN THE SOFTWARE.
  */
 
+#include "../inc/kos_context.h"
+#include "../inc/kos_error.h"
+#include "../inc/kos_object_base.h"
 #include "../lang/kos_threads.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -32,6 +35,22 @@ static void *_ptr(int value)
     const uintptr_t lo = value & 0xFFU;
     const uintptr_t v  = (hi << (sizeof(uintptr_t) * 8 - 8)) | lo;
     return (void *)v;
+}
+
+struct _THREAD_DATA
+{
+    KOS_ATOMIC(uint32_t) lock;
+    KOS_OBJ_PTR          value;
+};
+
+static void _thread(KOS_STACK_FRAME *frame,
+                    void            *cookie)
+{
+    struct _THREAD_DATA *thread_data = (struct _THREAD_DATA *)cookie;
+
+    KOS_raise_exception(frame, TO_SMALL_INT(GET_SMALL_INT(thread_data->value) + 1));
+
+    _KOS_spin_unlock(&thread_data->lock);
 }
 
 int main(void)
@@ -128,6 +147,35 @@ int main(void)
             TEST(KOS_atomic_cas_ptr(value, oldv, newv));
             TEST(KOS_atomic_read_ptr(value) == newv);
         }
+    }
+
+    /* Basic thread test */
+    {
+        KOS_CONTEXT         ctx;
+        KOS_STACK_FRAME    *frame;
+        struct _THREAD_DATA thread_data;
+        _KOS_THREAD         thread;
+
+        thread_data.lock  = 0;
+        thread_data.value = TO_SMALL_INT(44);
+
+        TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
+
+        _KOS_spin_lock(&thread_data.lock);
+
+        TEST(_KOS_thread_create(&ctx, _thread, &thread_data, &thread) == KOS_SUCCESS);
+
+        _KOS_spin_lock(&thread_data.lock);
+
+        _KOS_thread_join(frame, thread);
+
+        _KOS_spin_unlock(&thread_data.lock);
+
+        TEST(KOS_is_exception_pending(frame));
+
+        TEST(KOS_get_exception(frame) == TO_SMALL_INT(45));
+
+        KOS_context_destroy(&ctx);
     }
 
     return 0;
