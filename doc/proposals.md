@@ -14,15 +14,13 @@
 
     - Nope, we should probably just rely on TAIL.CALL.
 
-* Stream operator ->
+* Stream composition operator ->
 
-        for var i in range(100) -> map(λ(x)->(x+1)) -> filter(λ(x)->(x & 1)) {
-            print i;
-        }
-
-        for var line in file.open("myfile.txt") -> file.read_lines -> strip {
+        for var line in file.read_lines("myfile.txt") -> map(λ(line) -> (line.strip())) {
             print line;
         }
+
+        for var line in os.shell("ls") -> sed.filter("a.*b") -> map(λ(line)->(line[0]=='\t'?line[1:]:line))
 
 * ? Support multi-line strings the Python way or the C way?
 
