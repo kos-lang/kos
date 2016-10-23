@@ -44,6 +44,7 @@ static const char str_err_module_dereference[]        = "module is not an object
 static const char str_err_no_such_module_variable[]   = "no such global in module";
 static const char str_err_operand_not_numeric[]       = "operand is not a numeric constant";
 static const char str_err_operand_not_string[]        = "operand is not a string";
+static const char str_err_return_in_generator[]       = "complex return statement in a generator function, return value always ignored";
 
 enum _KOS_BOOL {
     _KOS_FALSE,
@@ -1606,6 +1607,15 @@ _error:
     return error;
 }
 
+static int _is_generator(struct _KOS_COMP_UNIT *program)
+{
+    struct _KOS_SCOPE *scope = program->scope_stack;
+
+    for ( ; scope && ! scope->is_function; scope = scope->next);
+
+    return scope && scope->is_function && scope->frame->yield_token;
+}
+
 static int _return(struct _KOS_COMP_UNIT      *program,
                    const struct _KOS_AST_NODE *node)
 {
@@ -1617,6 +1627,12 @@ static int _return(struct _KOS_COMP_UNIT      *program,
         reg = try_scope->catch_ref.catch_reg;
 
     if (node->children) {
+
+        if (node->children->type != NT_VOID_LITERAL && _is_generator(program)) {
+            program->error_token = &node->token;
+            program->error_str   = str_err_return_in_generator;
+            TRY(KOS_ERROR_COMPILE_FAILED);
+        }
 
         /* TODO - tail recursion (INSTR_TAIL_CALL) if there are no pending catches */
 
@@ -4353,7 +4369,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     /* Generate LOAD.FUN/LOAD.GEN instruction in the parent frame */
     TRY(_gen_reg(program, reg));
     TRY(_gen_instr5(program,
-                    frame->is_generator ? INSTR_LOAD_GEN : INSTR_LOAD_FUN,
+                    frame->yield_token ? INSTR_LOAD_GEN : INSTR_LOAD_FUN,
                     (*reg)->reg,
                     0,
                     scope->num_args,

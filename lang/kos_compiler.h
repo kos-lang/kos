@@ -94,8 +94,8 @@ struct _KOS_FRAME {
     struct _KOS_BREAK_OFFS     *break_offs;
     struct _KOS_RETURN_OFFS    *return_offs; /* For return statements inside finally */
     struct _KOS_SCOPE          *last_try_scope;
+    const struct _KOS_TOKEN    *yield_token;
     int                         num_regs;
-    int                         is_generator;
     int                         program_offs;
     int                         load_offs;
     uint32_t                    num_instr;

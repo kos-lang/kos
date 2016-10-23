@@ -517,7 +517,8 @@ static int _yield(struct _KOS_COMP_UNIT      *program,
     for (scope = program->scope_stack; scope && ! scope->is_function; scope = scope->next);
 
     if (scope) {
-        scope->frame->is_generator = 1;
+        if ( ! scope->frame->yield_token)
+            scope->frame->yield_token = &node->token;
         error = KOS_SUCCESS;
     }
     else {

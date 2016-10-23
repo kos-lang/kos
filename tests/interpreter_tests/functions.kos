@@ -251,7 +251,7 @@ var global_b = "b";
         a = yield a;
         b = yield a + b;
         c = yield b + c;
-        return c;
+        return void;
     }
 
     const iter = gen(2, 3, 4);
@@ -267,7 +267,7 @@ var global_b = "b";
         var a = yield 10;
         a = yield a;
         yield a;
-        return 1;
+        return void;
     }
 
     const iter = gen();
@@ -301,7 +301,7 @@ var global_b = "b";
     {
         yield 2;
         yield 4;
-        return 6;
+        throw 6;
     }
 
     const iter = gen();
