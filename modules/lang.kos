@@ -196,79 +196,111 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     }
 };
 
-fun map(source, second_arg)
+fun map(op, args...)
 {
-    const transform = second_arg;
-    for var elem in source {
-        yield transform(elem);
-    }
-}
+    assert typeof op == "function";
 
-fun filter(source, second_arg)
-{
-    const condition = second_arg;
-    for var elem in source {
-        if condition(elem) {
-            yield elem;
+    fun map_f(source)
+    {
+        const transform = op;
+        for var elem in source {
+            yield transform(elem);
         }
     }
-}
 
-fun reduce(first_arg, second_arg, args...)
-{
-    const source    = first_arg.iterator();
-    const have_init = args.size > 0;
-    const transform = have_init ? args[0]    : second_arg;
-    var   accum     = have_init ? second_arg : source();
-    for var elem in source {
-        accum = transform(accum, elem);
+    if args.size > 0 {
+        return map_f(args[0]);
     }
-    return accum;
+    else {
+        return map_f;
+    }
 }
 
-fun count(source, second_arg)
+fun filter(op, args...)
 {
-    const value = second_arg;
-    var   count = 0;
-    for var elem in source {
-        if elem == value {
-            count += 1;
+    assert typeof op == "function";
+
+    fun filter_f(source)
+    {
+        const condition = op;
+        for var elem in source {
+            if condition(elem) {
+                yield elem;
+            }
         }
     }
-    return count;
+
+    if args.size > 0 {
+        return filter_f(args[0]);
+    }
+    else {
+        return filter_f;
+    }
+}
+
+fun reduce(op, init, args...)
+{
+    assert typeof op == "function";
+
+    fun reduce_f(source)
+    {
+        const fold  = op;
+        var   accum = init;
+        for var elem in source {
+            accum = fold(accum, elem);
+        }
+        return accum;
+    }
+
+    if args.size > 0 {
+        return reduce_f(args[0]);
+    }
+    else {
+        return reduce_f;
+    }
+}
+
+fun count(value, args...)
+{
+    fun count_f(source)
+    {
+        const val   = value;
+        var   count = 0;
+        for var elem in source {
+            if elem == val {
+                count += 1;
+            }
+        }
+        return count;
+    }
+
+    if args.size > 0 {
+        return count_f(args[0]);
+    }
+    else {
+        return count_f;
+    }
 }
 
 object.prototype.map = fun(transform)
 {
-    return map(this, transform);
+    return map(transform, this);
 };
 
 object.prototype.filter = fun(transform)
 {
-    return filter(this, transform);
+    return filter(transform, this);
 };
 
-object.prototype.reduce = fun(first_arg, args...)
+object.prototype.reduce = fun(transform, init)
 {
-    if args.size > 0 {
-        return reduce(this, first_arg, args[0]);
-    }
-    else {
-        return reduce(this, first_arg);
-    }
+    return reduce(transform, init, this);
 };
 
 object.prototype.count = fun(transform)
 {
-    return count(this, transform);
+    return count(transform, this);
 };
-
-fun curry(function, args...)
-{
-    return fun(myargs...) {
-        return function.apply(this, array(args, myargs));
-    };
-}
 
 # TODO move to debug module
 fun backtrace
