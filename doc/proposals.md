@@ -1,27 +1,6 @@
 ﻿Enhancement proposals
 =====================
 
-* Syntax for currying functions and a curry instruction.
-    - The instruction would simply set up the additional args and then jump
-      to the actual function being curried.  It would also automatically
-      look at the required number of args of the destination function
-      during setup.
-
-    - It is possible without special syntax or special instruction:
-
-            fun add_2(a, b) { return a + b; }
-            fun add_2(a) { return add_1(1, a); }
-
-    - Nope, we should probably just rely on TAIL.CALL.
-
-* Stream composition operator ->
-
-        for var line in file.read_lines("myfile.txt") -> map(λ(line) -> (line.strip())) {
-            print line;
-        }
-
-        for var line in os.shell("ls") -> sed.filter("a.*b") -> map(λ(line)->(line[0]=='\t'?line[1:]:line))
-
 * ? Support multi-line strings the Python way or the C way?
 
 * Semicolon insertion

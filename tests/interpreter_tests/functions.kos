@@ -775,3 +775,27 @@ assert global == 1;
     assert a1[0]     == void;
     assert a1[1]     == "m";
 }
+
+{
+    fun add_5(source)
+    {
+        for var elem in source {
+            yield elem + 5;
+        }
+    }
+
+    fun mul_3(source)
+    {
+        for var elem in source {
+            yield elem * 3;
+        }
+    }
+
+    const iter = [4, -2, 1] -> mul_3 -> add_5;
+
+    assert typeof iter == "function";
+    assert iter()      == 17;
+    assert iter()      == -1;
+    assert iter()      == 8;
+    expect_fail(iter);
+}

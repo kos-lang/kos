@@ -1080,6 +1080,18 @@ fun expect_fail(function)
     expect_fail(iter);
 }
 
+{
+    const result = [];
+    for var elem in lang.range(5) ->
+                    lang.map(λ(x)->((x-2) * 10)) ->
+                    lang.filter(λ(x)->(x>0)) {
+        result.insert(result.size, elem);
+    }
+    assert result.size == 2;
+    assert result[0]   == 10;
+    assert result[1]   == 20;
+}
+
 ##############################################################################
 # lang.reduce
 

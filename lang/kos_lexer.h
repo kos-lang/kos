@@ -129,7 +129,7 @@ enum _KOS_OPERATOR_TYPE {
     OT_LOGTRI         = 0x06, /* 0000 0110 */
     OT_DOT            = 0x07, /* 0000 0111 */
     OT_MORE           = 0x08, /* 0000 1000 */
-    OT_FUN            = 0x09, /* 0000 1001 */
+    OT_ARROW          = 0x09, /* 0000 1001 */
 
     OT_EQ             = 0x28, /* 0010 1000 */
     OT_NE             = 0x29, /* 0010 1001 */

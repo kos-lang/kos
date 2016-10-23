@@ -956,8 +956,10 @@ Expressions
 
     RHSExpression ::= YieldExpression
 
-    YieldExpression ::= ConditionalExpression
-                      | ( "yield" ConditionalExpression )
+    YieldExpression ::= StreamExpression
+                      | ( "yield" StreamExpression )
+
+    StreamExpression ::= [ StreamExpression "->" ] ConditionalExpression
 
     ConditionalExpression ::= LogicalExpression
                               [ ConditionalOperator ConditionalExpression

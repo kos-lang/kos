@@ -296,12 +296,12 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
     else
         TRY(_push_node(parser, *ret, NT_PARAMETERS, &args));
 
-    if (lambda && parser->token.op != OT_FUN) {
+    if (lambda && parser->token.op != OT_ARROW) {
         parser->error_str = str_err_expected_lambda_form;
         TRY(KOS_ERROR_PARSE_FAILED);
     }
 
-    if (parser->token.op == OT_FUN) {
+    if (parser->token.op == OT_ARROW) {
 
         struct _KOS_AST_NODE *return_node;
 
@@ -900,13 +900,41 @@ static int _conditional_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **
         TRY(_conditional_expr(parser, &node));
 
         _ast_push(*ret, node);
-        node = 0;
     }
     else {
         parser->unget = 1;
         *ret = node;
-        node = 0;
     }
+
+_error:
+    return error;
+}
+
+static int _stream_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+{
+    int error = KOS_SUCCESS;
+
+    TRY(_conditional_expr(parser, ret));
+
+    TRY(_next_token(parser));
+
+    while (parser->token.op == OT_ARROW) {
+
+        struct _KOS_AST_NODE *node = *ret;
+
+        TRY(_new_node(parser, ret, NT_STREAM));
+
+        _ast_push(*ret, node);
+        node = 0;
+
+        TRY(_conditional_expr(parser, &node));
+
+        _ast_push(*ret, node);
+
+        TRY(_next_token(parser));
+    }
+
+    parser->unget = 1;
 
 _error:
     return error;
@@ -924,7 +952,7 @@ static int _right_hand_side_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NOD
 
         TRY(_new_node(parser, ret, NT_YIELD));
 
-        TRY(_conditional_expr(parser, &node));
+        TRY(_stream_expr(parser, &node));
 
         _ast_push(*ret, node);
         node = 0;
@@ -933,7 +961,7 @@ static int _right_hand_side_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NOD
 
         parser->unget = 1;
 
-        TRY(_conditional_expr(parser, ret));
+        TRY(_stream_expr(parser, ret));
     }
 
 _error:
