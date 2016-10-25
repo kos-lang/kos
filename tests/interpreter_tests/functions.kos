@@ -501,9 +501,9 @@ var global_b = "b";
     fun plus_six(x)
     {
         return
-        x + 5
-        + 3
-        - 2;
+        x + 5 +
+        3 -
+        2;
     }
 
     assert plus_six(3) == 9;

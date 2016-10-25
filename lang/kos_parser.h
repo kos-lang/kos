@@ -38,6 +38,7 @@ struct _KOS_PARSER {
     int                  had_eol;
     int                  allow_break;
     int                  require_semicolons; /* Not ready for prime time */
+    int                  unary_depth;        /* For detecting ambiguous syntax */
 };
 
 void _KOS_parser_init(struct _KOS_PARSER  *parser,

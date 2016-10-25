@@ -30,6 +30,9 @@
 #include <string.h>
 
 static const char str_err_duplicate_default[]         = "multiple 'default' labels in one switch";
+static const char str_err_eol_before_par[]            = "ambiguous syntax: end of line before '(' - consider adding a ';'";
+static const char str_err_eol_before_sq[]             = "ambiguous syntax: end of line before '[' - consider adding a ';'";
+static const char str_err_eol_before_op[]             = "ambiguous syntax: end of line before operator - consider adding a ';'";
 static const char str_err_expected_catch[]            = "expected 'catch' or 'finally'";
 static const char str_err_expected_colon[]            = "expected ':'";
 static const char str_err_expected_comma[]            = "expected ','";
@@ -82,9 +85,9 @@ static int _next_token(struct _KOS_PARSER *parser)
 
             type = parser->token.type;
 
-            /* TODO detect EOL inside multi-line comments */
-
-            if (type == TT_EOL)
+            if (type == TT_COMMENT && parser->token.pos.line < parser->lexer.pos.line)
+                had_eol = 1;
+            else if (type == TT_EOL)
                 had_eol = 1;
             else if (type > TT_COMMENT)
                 break;
@@ -234,10 +237,12 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
     struct _KOS_AST_NODE *node = 0;
     struct _KOS_AST_NODE *args;
 
-    const int lambda = parser->token.keyword == KW_LAMBDA;
-
+    const int lambda            = parser->token.keyword == KW_LAMBDA;
+    const int saved_unary_depth = parser->unary_depth;
     const int saved_allow_break = parser->allow_break;
-    parser->allow_break         = 0;
+
+    parser->unary_depth = 0;
+    parser->allow_break = 0;
 
     TRY(_new_node(parser, ret, NT_FUNCTION_LITERAL));
 
@@ -310,6 +315,8 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
             TRY(KOS_ERROR_PARSE_FAILED);
         }
 
+        parser->unary_depth = 1;
+
         TRY(_new_node(parser, &node, NT_SCOPE));
 
         TRY(_push_node(parser, node, NT_RETURN, &return_node));
@@ -328,6 +335,8 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
         TRY(_assume_separator(parser, ST_PAREN_CLOSE));
 
         TRY(_push_node(parser, *ret, NT_LANDMARK, 0));
+
+        assert(parser->unary_depth == 1);
     }
     else {
 
@@ -346,9 +355,12 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
         TRY(_push_node(parser, node, NT_VOID_LITERAL, 0));
 
         TRY(_push_node(parser, *ret, NT_LANDMARK, 0));
+
+        assert(parser->unary_depth == 0);
     }
 
 _error:
+    parser->unary_depth = saved_unary_depth;
     parser->allow_break = saved_allow_break;
 
     return error;
@@ -498,7 +510,10 @@ _error:
 
 static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
-    int error = _next_token(parser);
+    int       error             = _next_token(parser);
+    const int saved_unary_depth = parser->unary_depth;
+
+    ++parser->unary_depth;
 
     if (!error) {
         const struct _KOS_TOKEN *token = &parser->token;
@@ -568,21 +583,26 @@ static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
         }
     }
 
+    assert(parser->unary_depth == saved_unary_depth + 1);
+    parser->unary_depth = saved_unary_depth;
+
     return error;
 }
 
 static int _unary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
-    int error = KOS_SUCCESS;
-
-    struct _KOS_AST_NODE *node       = 0;
-    struct _KOS_AST_NODE *invocation = 0;
+    int                   error             = KOS_SUCCESS;
+    const int             saved_unary_depth = parser->unary_depth;
+    struct _KOS_AST_NODE *node              = 0;
+    struct _KOS_AST_NODE *invocation        = 0;
 
     TRY(_next_token(parser));
 
-    if (((parser->token.op & OT_UNARY))    ||
+    if ((parser->token.op & OT_UNARY)      ||
         parser->token.keyword == KW_TYPEOF ||
         parser->token.keyword == KW_DELETE) {
+
+        ++parser->unary_depth;
 
         TRY(_new_node(parser, ret, NT_OPERATOR));
 
@@ -590,6 +610,8 @@ static int _unary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
         _ast_push(*ret, node);
         node = 0;
+
+        assert(parser->unary_depth == saved_unary_depth + 1);
     }
     else if (parser->token.keyword == KW_NEW) {
 
@@ -607,15 +629,21 @@ static int _unary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
         _ast_push(*ret, node);
         node = 0;
+
+        assert(parser->unary_depth == saved_unary_depth);
     }
     else {
 
         parser->unget = 1;
 
         TRY(_member_expr(parser, ret));
+
+        assert(parser->unary_depth == saved_unary_depth);
     }
 
 _error:
+    parser->unary_depth = saved_unary_depth;
+
     return error;
 }
 
@@ -634,6 +662,13 @@ static int _arithm_bitwise_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE
 
         enum _KOS_OPERATOR_TYPE last_op = parser->token.op;
 
+        if ((last_op == OT_ADD || last_op == OT_SUB)
+            && parser->had_eol && parser->unary_depth == 0)
+        {
+            parser->error_str = str_err_eol_before_op;
+            TRY(KOS_ERROR_PARSE_FAILED);
+        }
+
         TRY(_new_node(parser, ret, NT_OPERATOR));
 
         _ast_push(*ret, node);
@@ -646,6 +681,11 @@ static int _arithm_bitwise_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE
         for (;;) {
 
             if (parser->token.op == OT_ADD || parser->token.op == OT_SUB) {
+
+                if (parser->had_eol && parser->unary_depth == 0) {
+                    parser->error_str = str_err_eol_before_op;
+                    TRY(KOS_ERROR_PARSE_FAILED);
+                }
 
                 _ast_push(*ret, node);
                 node = *ret;
@@ -875,9 +915,9 @@ _error:
 
 static int _conditional_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
-    int error = KOS_SUCCESS;
-
-    struct _KOS_AST_NODE *node = 0;
+    int                   error             = KOS_SUCCESS;
+    struct _KOS_AST_NODE *node              = 0;
+    const int             saved_unary_depth = parser->unary_depth;
 
     TRY(_logical_expr(parser, &node));
 
@@ -890,7 +930,11 @@ static int _conditional_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **
         _ast_push(*ret, node);
         node = 0;
 
+        ++parser->unary_depth;
+
         TRY(_conditional_expr(parser, &node));
+
+        --parser->unary_depth;
 
         _ast_push(*ret, node);
         node = 0;
@@ -906,7 +950,11 @@ static int _conditional_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **
         *ret = node;
     }
 
+    assert(parser->unary_depth == saved_unary_depth);
+
 _error:
+    parser->unary_depth = saved_unary_depth;
+
     return error;
 }
 
@@ -1123,7 +1171,12 @@ _error:
 
 static int _member_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
-    int error = _primary_expr(parser, ret);
+    int       error;
+    const int saved_unary_depth = parser->unary_depth;
+
+    error = _primary_expr(parser, ret);
+
+    ++parser->unary_depth;
 
     while (!error) {
         error = _next_token(parser);
@@ -1134,18 +1187,31 @@ static int _member_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             if (token->op == OT_DOT)
                 error = _refinement_identifier(parser, ret);
 
-            else if (token->sep == ST_SQUARE_OPEN)
-                error = _refinement_expr(parser, ret);
-
-            else if (token->sep == ST_PAREN_OPEN)
-                error = _invocation(parser, ret);
-
+            else if (token->sep == ST_SQUARE_OPEN) {
+                if (parser->had_eol && parser->unary_depth == 1) {
+                    parser->error_str = str_err_eol_before_sq;
+                    error = KOS_ERROR_PARSE_FAILED;
+                }
+                else
+                    error = _refinement_expr(parser, ret);
+            }
+            else if (token->sep == ST_PAREN_OPEN) {
+                if (parser->had_eol && parser->unary_depth == 1) {
+                    parser->error_str = str_err_eol_before_par;
+                    error = KOS_ERROR_PARSE_FAILED;
+                }
+                else
+                    error = _invocation(parser, ret);
+            }
             else {
                 parser->unget = 1;
                 break;
             }
         }
     }
+
+    assert(parser->unary_depth == saved_unary_depth + 1);
+    parser->unary_depth = saved_unary_depth;
 
     return error;
 }
@@ -1252,7 +1318,9 @@ static int _expr_no_var(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     TRY(_next_token(parser));
 
     if (parser->token.sep == ST_SEMICOLON || parser->token.sep == ST_PAREN_CLOSE
-        || (node_type != NT_IDENTIFIER && node_type != NT_REFINEMENT && node_type != NT_SLICE)) {
+        || (node_type != NT_IDENTIFIER && node_type != NT_REFINEMENT && node_type != NT_SLICE)
+        || (parser->token.sep != ST_COMMA && parser->token.op != OT_ASSIGNMENT && parser->had_eol))
+    {
 
         parser->unget = 1;
 
@@ -1928,6 +1996,8 @@ static int _do_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
         TRY(KOS_ERROR_PARSE_FAILED);
     }
 
+    assert(parser->unary_depth == 0);
+
     TRY(_right_hand_side_expr(parser, &node));
 
     _ast_push(*ret, node);
@@ -2093,7 +2163,12 @@ static int _for_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             _ast_push(for_node, node);
             node = 0;
 
-            TRY(_assume_separator(parser, ST_SEMICOLON));
+            TRY(_next_token(parser));
+
+            if (parser->token.sep != ST_SEMICOLON) {
+                parser->error_str = str_err_expected_semicolon;
+                TRY(KOS_ERROR_PARSE_FAILED);
+            }
         }
 
         TRY(_next_token(parser));
@@ -2228,6 +2303,25 @@ _error:
     return error;
 }
 
+static int _end_of_return(const struct _KOS_PARSER *parser)
+{
+    const struct _KOS_TOKEN *token = &parser->token;
+
+    if (token->sep == ST_SEMICOLON)
+        return 1;
+
+    if (parser->require_semicolons)
+        return 0;
+
+    if (token->sep == ST_CURLY_CLOSE)
+        return 1;
+
+    if (token->type == TT_EOF)
+        return 1;
+
+    return 0;
+}
+
 static int _return_throw_assert_stmt(struct _KOS_PARSER    *parser,
                                      enum _KOS_NODE_TYPE    type,
                                      struct _KOS_AST_NODE **ret)
@@ -2240,10 +2334,11 @@ static int _return_throw_assert_stmt(struct _KOS_PARSER    *parser,
 
     TRY(_next_token(parser));
 
-    if (type == NT_RETURN && _is_implicit_semicolon(parser))
-        parser->unget = 1;
-
-    else if (parser->token.sep != ST_SEMICOLON || type != NT_RETURN) {
+    if (type == NT_RETURN && _end_of_return(parser)) {
+        if (parser->token.sep != ST_SEMICOLON)
+            parser->unget = 1;
+    }
+    else {
 
         parser->unget = 1;
 
@@ -2310,6 +2405,8 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
 
     if (!error) {
         const struct _KOS_TOKEN *token = &parser->token;
+
+        assert(parser->unary_depth == 0);
 
         switch (token->keyword) {
             case KW_FUN:
@@ -2456,7 +2553,8 @@ void _KOS_parser_init(struct _KOS_PARSER  *parser,
     parser->unget              = 0;
     parser->had_eol            = 0;
     parser->allow_break        = 0;
-    parser->require_semicolons = 1;
+    parser->require_semicolons = 0;
+    parser->unary_depth        = 0;
 
     parser->token.length  = 0;
     parser->token.pos     = parser->lexer.pos;

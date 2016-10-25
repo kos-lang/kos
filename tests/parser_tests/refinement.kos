@@ -1,22 +1,22 @@
 # Correct refinement variants
-a = b[c]
-  + d.e
-  + f["s"]
-  + g[0];
+a = b[c]   +
+    d.e    +
+    f["s"] +
+    g[0];
 
-h = i[j:k]
-  + l[m:]
-  + n[:o]
-  + p[:];
+h = i[j:k] +
+    l[m:]  +
+    n[:o]  +
+    p[:];
 
 @ 0
 
 (scope 1 1
     (assignment 2 3 =
         (left_hand_side 2 3 = (identifier 2 1 a))
-            (operator 5 3 +
-                (operator 4 3 +
-                    (operator 3 3 +
+            (operator 4 12 +
+                (operator 3 12 +
+                    (operator 2 12 +
                         (refinement 2 6 [
                             (identifier 2 5 b)
                             (identifier 2 7 c)
@@ -37,9 +37,9 @@ h = i[j:k]
     )))
     (assignment 7 3 =
         (left_hand_side 7 3 = (identifier 7 1 h))
-        (operator 10 3 +
-            (operator 9 3 +
-                (operator 8 3 +
+        (operator 9 12 +
+            (operator 8 12 +
+                (operator 7 12 +
                     (slice 7 6 [
                         (identifier 7 5 i)
                         (identifier 7 7 j)
