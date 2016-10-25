@@ -1,6 +1,7 @@
 ﻿Lexical grammar
 ===============
 
+
 Program
 -------
 
@@ -11,6 +12,7 @@ Each module can import more modules at the beginning of its source file.
 Modules are executed when they are imported.
 
 If a module is imported multiple times, it is executed only the first time.
+
 
 Module
 ------
@@ -32,6 +34,7 @@ Module's global scope is executed the first time the module is imported.
 If a module is imported several times by multiple modules, its global
 scope is not executed again.
 
+
 Lexer input
 -----------
 
@@ -40,10 +43,12 @@ The input to the lexer is a source file, which consists of UTF-8 characters.
 If the first character of the source file is byte order mark U+FEFF
 (bytes 0xEF 0xBB 0xBF), it is ignored.
 
+
 Lexer output
 ------------
 
 The output of the lexer consists of a list of tokens.
+
 
 Token types
 -----------
@@ -61,6 +66,7 @@ The lexer recognizes and outputs the following types of tokens:
 * String
 * Separator
 * Operator
+
 
 Whitespaces
 -----------
@@ -91,6 +97,7 @@ character sequence is either `LF`, `CR-LF`, or `CR`, if it's not followed by
 
     WHITESPACE_LITERAL ::= ( WhitespaceChar ( WhitespaceChar )* ) | Eol
 
+
 Comments
 --------
 
@@ -113,6 +120,7 @@ sequence.  It can include EOL characters.
     BlockComment     ::= "/" "*" BlockCommentChar "*" "/"
 
     COMMENT_LITERAL  ::= LineComment | HashLineComment | BlockComment
+
 
 Identifiers
 -----------
@@ -141,6 +149,7 @@ as a keyword token.
     AlphanumOrUnderscore ::= Letter | DecimalDigit | Underscore
 
     IDENTIFIER_NAME      ::= LetterOrUnderscore ( AlphanumOrUnderscore )*
+
 
 Keywords
 --------
@@ -209,6 +218,7 @@ The main difference between keywords and non-keyword literals is that keywords
 cannot be used as variable names.  However, keywords can still be used as
 object property names.
 
+
 Decimal numbers
 ---------------
 
@@ -247,6 +257,7 @@ If `p` or `P` is specified, the exponent is a power of 2.
 
     DEC_FLOAT_LITERAL    ::= Base [ Mantissa ] [ Exponent ]
 
+
 Hexadecimal numbers
 -------------------
 
@@ -263,6 +274,7 @@ least one hexadecimal digit.
 
     HEX_INTEGER_LITERAL  ::= "0" ( "x" | "X" ) HexDigit ( HexDigit )*
 
+
 Binary numbers
 --------------
 
@@ -272,6 +284,7 @@ least one binary digit.
     BinaryDigit         ::= "0" | "1"
 
     BIN_INTEGER_LITERAL ::= "0" ( "b" | "B" ) BinaryDigit ( BinaryDigit )*
+
 
 Strings
 -------
@@ -330,6 +343,7 @@ lexer, but it is a trade-off for a very useful syntax.
 
     D_Q_STRING_LITERAL_END   ::= ( StringChar | "'" )* """
 
+
 Separators
 ----------
 
@@ -344,6 +358,7 @@ A separator is a single character from the separator set specified below:
                         | ","
                         | ";"
                         | ":"
+
 
 Operators
 ---------
@@ -394,8 +409,10 @@ treat it as either `<<` or `<=` operator.
                        | ( "|" "|" )
                        | ( "-" ">" )
 
+
 Syntax
 ======
+
 
 Parser operation
 ----------------
@@ -407,6 +424,7 @@ meaningless for syntactic analysis.
 
 The remaining tokens are parsed according to the following rules.
 
+
 Module source file
 ------------------
 
@@ -417,6 +435,7 @@ An empty source file or a source file which contains only spaces or comments
 is still a valid source file.
 
     SourceFile ::= ( ImportStatement )* ( Statement )*
+
 
 Statement
 ---------
@@ -438,14 +457,30 @@ Statement
                 | ThrowStatement
                 | AssertStatement
 
+
+Semicolons
+----------
+
+Many statements are terminated with semicolons, but the semicolons are
+optional in most cases.  The parser tries to parse as many tokens as it can,
+but when it encounters a non-whitespace, non-comment token which cannot be
+part of the parsed expression, and that token is first on the line, the
+parser treats the preceding end of line as a semicolon.
+
+    OptSemicolon ::= ";"
+                   | WHITESPACE_LITERAL containing Eol
+                   | COMMENT_LITERAL containing Eol
+
+
 Import statement
 ----------------
 
-    ImportStatement ::= ( MandatoryImport | TryImport ) ";"
+    ImportStatement ::= ( MandatoryImport | TryImport ) OptSemicolon
 
     MandatoryImport ::= "import" Identifier [ "." ( Identifier | "*" ) ]
 
     TryImport       ::= "try" "import" Identifier
+
 
 Compound statement
 ------------------
@@ -455,6 +490,7 @@ braces.
 
     CompoundStatement ::= "{" ( Statement )* "}"
 
+
 Empty statement
 ---------------
 
@@ -462,12 +498,14 @@ Empty statement consists of a sole semicolon.
 
     EmptyStatement ::= ";"
 
+
 Expression statement
 --------------------
 
 Expression statement is an expression followed by a semicolon.
 
-    ExpressionStatement ::= Expression ";"
+    ExpressionStatement ::= Expression OptSemicolon
+
 
 Function statement
 ------------------
@@ -494,6 +532,7 @@ The following statements are equivalent:
     };
 
     const Sum = λ(x,y)->(x+y);
+
 
 Function arguments
 ------------------
@@ -523,6 +562,7 @@ Argument variables are assignable inside the function body.
 
     ListParameter       ::= Identifier "..."
 
+
 If statement
 ------------
 
@@ -544,6 +584,7 @@ if all of the preceding conditions were falsy.
     IfStatement ::= "if" RHSExpression CompoundStatement
                     ( "else" "if" RHSExpression CompoundStatement )*
                     [ "else" CompoundStatement ]
+
 
 Try statement
 -------------
@@ -580,6 +621,7 @@ An exception can be rethrown using the throw statement in the catch block.
                          | ( "(" CatchExceptionInner ")" )
 
     CatchExceptionInner ::= ( "var" | "const" ) Identifier
+
 
 Defer statement
 ---------------
@@ -620,6 +662,7 @@ The following two examples are equivalent:
             b();
         }
     }
+
 
 With statement
 --------------
@@ -696,6 +739,7 @@ The following three examples are equivalent:
         }
     }
             
+
 Switch statement
 ----------------
 
@@ -750,7 +794,8 @@ the right-hand-side expression (or ellipsis `...`) for that section matched.
     CaseStatement   ::= ( CompoundStatement [ Fallthrough ] )
                         | Fallthrough
 
-    Fallthrough     ::= "fallthrough" ";"
+    Fallthrough     ::= "fallthrough" OptSemicolon
+
 
 Do-while statement
 ------------------
@@ -763,7 +808,8 @@ The parentheses around the condition expression are optional - they are part
 of the expression.
 
     DoWhileStatement ::= "do" CompoundStatement
-                         "while" RHSExpression ";"
+                         "while" RHSExpression OptSemicolon
+
 
 While statement
 ---------------
@@ -776,6 +822,7 @@ The parentheses around the condition expression are optional - they are part
 of the expression.
 
     WhileStatement ::= "while" RHSExpression CompoundStatement
+
 
 For statement
 -------------
@@ -801,6 +848,8 @@ condition and a step expression.
     ExpressionList        ::= Expression ( "," Expression )*
 
     ForStepExpressionList ::= ForStepExpression ( "," ForStepExpression )*
+
+The semicolons in the `for` condition are mandatory.
 
 The initialization expression list is executed once before the loop.
 
@@ -842,6 +891,7 @@ an exception is thrown.
 
     ForInExpression ::= VarList "in" RHSExpression
 
+
 Continue statement
 ------------------
 
@@ -852,7 +902,8 @@ statements, it will produce a compilation error.
 The statement causes a jump to the end of the compound statement of
 the innermost loop when executed.
 
-    ContinueStatement ::= "continue" ";"
+    ContinueStatement ::= "continue" OptSemicolon
+
 
 Break statement
 ---------------
@@ -864,7 +915,8 @@ statements, it will produce a compilation error.
 If used in a loop, the statement interrupts the loop as if it ended
 immediately, no matter what the loop condition is.
 
-    BreakStatement ::= "break" ";"
+    BreakStatement ::= "break" OptSemicolon
+
 
 Return statement
 ----------------
@@ -889,7 +941,8 @@ instead of the new object/this by the new expression. If the
 right-hand-side expression is of a non-object type, the new object/this
 will be returned by the new expression.
 
-    ReturnStatement ::= "return" [ RHSExpression ] ";"
+    ReturnStatement ::= "return" [ RHSExpression ] OptSemicolon
+
 
 Throw statement
 ---------------
@@ -910,7 +963,8 @@ If an exception is thrown inside an iterator function and not caught
 inside it, it is propagated to the caller. The caller sees the iterator
 throw the exception.
 
-    ThrowStatement ::= "throw" RHSExpression ";"
+    ThrowStatement ::= "throw" RHSExpression OptSemicolon
+
 
 Assert statement
 ----------------
@@ -918,7 +972,7 @@ Assert statement
 The assert statement checks a condition expression, and if the condition is
 not truthy, it throws an exception.
 
-    AssertStatement :== "assert" RHSExpression ";"
+    AssertStatement :== "assert" RHSExpression OptSemicolon
 
 The following two pieces of code are equivalent:
 
@@ -927,6 +981,7 @@ The following two pieces of code are equivalent:
     if ! (n > 0) {
         throw "Assertion failed: n > 0";
     }
+
 
 Expressions
 -----------
@@ -1002,6 +1057,10 @@ Expressions
     AdditiveExpression ::= MultiplicativeExpression
                            ( AdditiveOperator MultiplicativeExpression )*
 
+To avoid ambiguities, the `AdditiveOperator` cannot be the first non-whitespace,
+non-comment token on the line if the `AdditiveExpression` is part of the
+outermost `RHSExpression`.
+
     MultiplicativeExpression ::= UnaryExpression
                                  ( MultiplicativeOperator UnaryExpression )*
 
@@ -1011,6 +1070,7 @@ Expressions
     UnaryOperatorExpression ::= ( UnaryOperator )* MemberExpression
 
     NewExpression ::= "new" MemberExpression
+
 
 Operators
 ---------
@@ -1068,6 +1128,7 @@ Operators
                               | "~"
                               | "!"
 
+
 Member specification
 --------------------
 
@@ -1086,6 +1147,10 @@ Member specification
 
     Invocation ::= "(" [ ArgumentList ] ")"
 
+To avoid ambiguities, the opening parenthesis `(` cannot be the first
+non-whitespace, non-comment token on the line if the `Invocation` is
+part of the outermost `MemberExpression`.
+
     ArgumentList ::= Argument ( "," Argument )*
 
     Argument ::= RHSExpression
@@ -1094,6 +1159,10 @@ Member specification
                  | ( "[" [ RHSExpression ] ":" [ RHSExpression ] "]" )
                  | ( "." Identifier )
                  | ( "." StringLiteral )
+
+To avoid ambiguities, the opening square bracket `[` cannot be the first
+non-whitespace, non-comment token on the line if the `Refinement` is
+part of the outermost `MemberExpression`.
 
     PrimaryExpression ::= "this"
                         | "__line__"

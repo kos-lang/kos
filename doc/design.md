@@ -1,6 +1,15 @@
 ﻿Design of Kos
 =============
 
+No surprises
+------------
+
+The main goal behind Kos design is to avoid surprises both in the language and
+in the library, as much as possible.  Any language or library feature, which is
+ambiguous, or can be understood by the programmer in different ways, would lead
+to bugs.
+
+
 Scope
 -----
 
@@ -172,3 +181,25 @@ Objects of various types provide their own `iterator()` function:
 * Object's `iterator()` function generates shallow object keys, excluding
   keys found only in the object's prototypes.
 
+
+Optional semicolons
+-------------------
+
+Although semicolons are part of the Kos syntax, in most places semicolons are
+not required to mark end of statements.  The Kos parser deduces semicolons from
+line breaks.
+
+It is not possible to create a program which will be ambiguous, because any
+ambiguity is signaled by the parser as error.
+
+For example, if the `return` keyword occurs alone on the line, but it is
+followed by an expression in the next line, that expression is treated as part
+of the `return` statement, otherwise it does not make any sense to put any code
+behind the `return` statement as it would be unreachable.
+
+Another example is when the `-`, `+`, `[` or `(` character occurs as first
+non-whitespace character on a new line, but it could be interpreted as part
+of the expression in the previous line.  In this case the parser signals an
+error, because such expression would be ambiguous.
+
+In order to avoid surprises, Kos eliminates situations which could be ambiguous.
