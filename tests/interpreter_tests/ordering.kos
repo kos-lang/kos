@@ -19,92 +19,92 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang.print;
+import lang.print
 
 fun test_order
 {
     fun tester_func
     {
-        var expected = 1;
-        var v        = yield 0;
+        var expected = 1
+        var v        = yield 0
         for ;; {
             if v != expected {
-                print("unexpected value: \(v) (expected \(expected))\n");
+                print("unexpected value: \(v) (expected \(expected))\n")
             }
-            assert v == expected;
-            v = yield v;
-            expected += 1;
+            assert v == expected
+            v = yield v
+            expected += 1
         }
     }
 
-    const tester = tester_func();
-    tester(); # prime the generator
-    return tester;
+    const tester = tester_func()
+    tester() # prime the generator
+    return tester
 }
 
 {
-    const order = test_order();
+    const order = test_order()
 
-    const result1 = order(1) + order(2) * order(3);
-    assert result1 == 7;
+    const result1 = order(1) + order(2) * order(3)
+    assert result1 == 7
 
-    const result2 = order(4) * order(5) + order(6);
-    assert result2 == 26;
+    const result2 = order(4) * order(5) + order(6)
+    assert result2 == 26
 
-    const result3 = order(7) ^ order(8);
-    assert result3 == 15;
+    const result3 = order(7) ^ order(8)
+    assert result3 == 15
 }
 
 {
-    const order = test_order();
+    const order = test_order()
 
-    var array = [void, void];
-    array[order(2)-5+order(3)] =  order(1);             # array[0] = 1
-    array[order(5)-4]          =  array[4-order(4)];    # array[1] = 1
-    array[order(7)-7]          += array[order(6)-5];    # array[0] = 2
+    var array = [void, void]
+    array[order(2)-5+order(3)] =  order(1)             # array[0] = 1
+    array[order(5)-4]          =  array[4-order(4)]    # array[1] = 1
+    array[order(7)-7]          += array[order(6)-5]    # array[0] = 2
 
     fun get_array
     {
-        return array;
+        return array
     }
 
-    get_array(order(9))[1] *= order(8);                 # array[1] = 8
+    get_array(order(9))[1] *= order(8)                 # array[1] = 8
 
-    assert array[0] == 2;
-    assert array[1] == 8;
+    assert array[0] == 2
+    assert array[1] == 8
 }
 
 {
-    const order = test_order();
+    const order = test_order()
 
-    const result1 = order(1) || order(10);
-    assert result1 == 1;
+    const result1 = order(1) || order(10)
+    assert result1 == 1
 
-    const result2 = order(2) && order(3);
-    assert result2 == 3;
+    const result2 = order(2) && order(3)
+    assert result2 == 3
 
-    const result3 = order(4) == 4 ? order(5) : order(10);
-    assert result3 == 5;
+    const result3 = order(4) == 4 ? order(5) : order(10)
+    assert result3 == 5
 
-    const result4 = order(6) == 0 ? order(10) : order(7);
-    assert result4 == 7;
+    const result4 = order(6) == 0 ? order(10) : order(7)
+    assert result4 == 7
 
-    const result5 = order(8) + order(9) * order(10);
-    assert result5 == 98;
+    const result5 = order(8) + order(9) * order(10)
+    assert result5 == 98
 
-    const result6 = order(11) * order(12) + order(13);
-    assert result6 == 145;
+    const result6 = order(11) * order(12) + order(13)
+    assert result6 == 145
 }
 
 {
-    const order = test_order();
+    const order = test_order()
 
-    var array = [void, "xyz"];
-    array[order(4)-4:order(5)-3] = array[order(1)][order(2)-2:order(3)];
-    assert array.size == 3;
-    assert array[0]   == "x";
-    assert array[1]   == "y";
-    assert array[2]   == "z";
+    var array = [void, "xyz"]
+    array[order(4)-4:order(5)-3] = array[order(1)][order(2)-2:order(3)]
+    assert array.size == 3
+    assert array[0]   == "x"
+    assert array[1]   == "y"
+    assert array[2]   == "z"
 }
 
 {
@@ -112,44 +112,44 @@ fun test_order
     {
     }
 
-    const order = test_order();
+    const order = test_order()
 
-    ignore_args(order(1), order(2), order(3), order(4));
+    ignore_args(order(1), order(2), order(3), order(4))
 }
 
 {
     fun order(i)
     {
         if i == 1 {
-            return fun(x, y) -> (x + 2 * y);
+            return fun(x, y) -> (x + 2 * y)
         }
         else if i == 2 {
-            return 5;
+            return 5
         }
         else if i == 3 {
-            return 1;
+            return 1
         }
         else if i == 4 {
-            return 7;
+            return 7
         }
-        throw "Unexpected value";
+        throw "Unexpected value"
     }
 
-    assert order(1)(order(2), order(3)) == order(4);
-    assert order(4) == 7;
+    assert order(1)(order(2), order(3)) == order(4)
+    assert order(4) == 7
 }
 
 {
-    const order = test_order();
+    const order = test_order()
 
-    var a = [ -1, -1, -1, -1, -1, -1 ];
+    var a = [ -1, -1, -1, -1, -1, -1 ]
 
-    a[order(4)], a[order(5)] = [ order(1), order(2), order(3) ];
+    a[order(4)], a[order(5)] = [ order(1), order(2), order(3) ]
 
-    assert a[0] == -1;
-    assert a[1] == -1;
-    assert a[2] == -1;
-    assert a[3] == -1;
-    assert a[4] == 1;
-    assert a[5] == 2;
+    assert a[0] == -1
+    assert a[1] == -1
+    assert a[2] == -1
+    assert a[3] == -1
+    assert a[4] == 1
+    assert a[5] == 2
 }

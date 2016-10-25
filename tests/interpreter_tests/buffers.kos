@@ -19,225 +19,225 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang.buffer;
-import lang.integer;
-import lang.print;
-import lang.range;
+import lang.buffer
+import lang.integer
+import lang.print
+import lang.range
 
 fun expect_fail(function)
 {
-    var failed = false;
+    var failed = false
     try {
-        function();
+        function()
     }
     catch const e {
-        failed = true;
+        failed = true
     }
-    assert failed;
+    assert failed
 }
 
 {
-    assert typeof buffer           == "function";
-    assert typeof buffer.prototype == "object";
+    assert typeof buffer           == "function"
+    assert typeof buffer.prototype == "object"
 }
 
 {
-    const b = buffer();
+    const b = buffer()
 
-    assert typeof b == "buffer";
-    assert b.size   == 0;
-    assert b instanceof buffer;
+    assert typeof b == "buffer"
+    assert b.size   == 0
+    assert b instanceof buffer
 
-    b.reserve(100);
-    assert b.size == 0;
+    b.reserve(100)
+    assert b.size == 0
 
-    expect_fail(λ->(b[0]));
-    expect_fail(λ->(b[-1]));
+    expect_fail(λ->(b[0]))
+    expect_fail(λ->(b[-1]))
 }
 
 # TODO add support for converting array of numbers to buffer through buffer constructor
 fun buffer_from_array(a)
 {
-    const b = new buffer(a.size);
+    const b = new buffer(a.size)
     for var i in range(a.size) {
-        b[i] = a[i];
+        b[i] = a[i]
     }
-    return b;
+    return b
 }
 
 {
-    const b = buffer();
-    assert b instanceof buffer;
+    const b = buffer()
+    assert b instanceof buffer
 
-    expect_fail(fun { buffer.prototype = {}; });
-    assert typeof buffer.prototype == "object";
+    expect_fail(fun { buffer.prototype = {} })
+    assert typeof buffer.prototype == "object"
 
-    assert b instanceof buffer;
+    assert b instanceof buffer
 }
 
 {
-    const b = new buffer;
+    const b = new buffer
 
-    assert typeof b == "buffer";
-    assert b.size   == 0;
-    assert b instanceof buffer;
+    assert typeof b == "buffer"
+    assert b.size   == 0
+    assert b instanceof buffer
 }
 
 {
-    const b = new buffer(10);
+    const b = new buffer(10)
 
-    assert typeof b == "buffer";
-    assert b.size   == 10;
-    assert b instanceof buffer;
+    assert typeof b == "buffer"
+    assert b.size   == 10
+    assert b instanceof buffer
 
     for var i in range(b.size) {
-        assert b[i] == 0;
+        assert b[i] == 0
     }
 
     for var i in range(b.size) {
-        b[i] = i;
+        b[i] = i
     }
 
-    assert b[0]   == 0;
-    assert b[5]   == 5;
-    assert b[9]   == 9;
-    assert b[-1]  == 9;
-    assert b[-5]  == 5;
-    assert b[-10] == 0;
+    assert b[0]   == 0
+    assert b[5]   == 5
+    assert b[9]   == 9
+    assert b[-1]  == 9
+    assert b[-5]  == 5
+    assert b[-10] == 0
 
-    expect_fail(λ->(b[10]));
-    expect_fail(λ->(b[-11]));
+    expect_fail(λ->(b[10]))
+    expect_fail(λ->(b[-11]))
 
-    b.reserve(512);
+    b.reserve(512)
 
-    assert b.size == 10;
+    assert b.size == 10
 
-    assert b[0]   == 0;
-    assert b[5]   == 5;
-    assert b[9]   == 9;
-    assert b[-1]  == 9;
-    assert b[-5]  == 5;
-    assert b[-10] == 0;
+    assert b[0]   == 0
+    assert b[5]   == 5
+    assert b[9]   == 9
+    assert b[-1]  == 9
+    assert b[-5]  == 5
+    assert b[-10] == 0
 
-    expect_fail(λ->(b[10]));
-    expect_fail(λ->(b[-11]));
+    expect_fail(λ->(b[10]))
+    expect_fail(λ->(b[-11]))
 
-    assert b[integer("3")]  == 3;
-    assert b[integer("-2")] == 8;
-    assert b[9.9]           == 9;
+    assert b[integer("3")]  == 3
+    assert b[integer("-2")] == 8
+    assert b[9.9]           == 9
 
-    b[-3] = 100;
-    assert b[-3] == 100;
+    b[-3] = 100
+    assert b[-3] == 100
 
-    b[5] = 200.5;
-    assert b[-5] == 200;
+    b[5] = 200.5
+    assert b[-5] == 200
 
-    b[1] = 255.9;
-    assert b[1] == 255;
+    b[1] = 255.9
+    assert b[1] == 255
 
-    b[-7.1] = 0.01;
-    assert b[2] == 0;
+    b[-7.1] = 0.01
+    assert b[2] == 0
 
-    b[-7] = 0.99;
-    assert b[3] == 0;
+    b[-7] = 0.99
+    assert b[3] == 0
 
-    expect_fail(fun { b[10]  = 0;     });
-    expect_fail(fun { b[-11] = 0;     });
-    expect_fail(fun { b[0]   = -1;    });
-    expect_fail(fun { b[0]   = 256;   });
-    expect_fail(fun { b[0]   = 256.1; });
-    expect_fail(fun { b[0]   = -1.01; });
+    expect_fail(fun { b[10]  = 0     })
+    expect_fail(fun { b[-11] = 0     })
+    expect_fail(fun { b[0]   = -1    })
+    expect_fail(fun { b[0]   = 256   })
+    expect_fail(fun { b[0]   = 256.1 })
+    expect_fail(fun { b[0]   = -1.01 })
 
-    expect_fail(fun { b[:]   = 0;     });
-    expect_fail(fun { b[1:2] = 0;     });
+    expect_fail(fun { b[:]   = 0     })
+    expect_fail(fun { b[1:2] = 0     })
 
-    expect_fail(fun { b[5] = void;    });
-    expect_fail(fun { b[5] = true;    });
-    expect_fail(fun { b[5] = false;   });
-    expect_fail(fun { b[5] = "";      });
-    expect_fail(fun { b[5] = "0";     });
-    expect_fail(fun { b[5] = [];      });
-    expect_fail(fun { b[5] = [0];     });
-    expect_fail(fun { b[5] = buffer();});
-    expect_fail(fun { b[5] = buffer(1); });
+    expect_fail(fun { b[5] = void    })
+    expect_fail(fun { b[5] = true    })
+    expect_fail(fun { b[5] = false   })
+    expect_fail(fun { b[5] = ""      })
+    expect_fail(fun { b[5] = "0"     })
+    expect_fail(fun { b[5] = []      })
+    expect_fail(fun { b[5] = [0]     })
+    expect_fail(fun { b[5] = buffer()})
+    expect_fail(fun { b[5] = buffer(1) })
 
-    assert b.size == 10;
-    assert b[0]   == 0;
-    assert b[1]   == 255;
-    assert b[2]   == 0;
-    assert b[3]   == 0;
-    assert b[4]   == 4;
-    assert b[5]   == 200;
-    assert b[6]   == 6;
-    assert b[7]   == 100;
-    assert b[8]   == 8;
-    assert b[9]   == 9;
+    assert b.size == 10
+    assert b[0]   == 0
+    assert b[1]   == 255
+    assert b[2]   == 0
+    assert b[3]   == 0
+    assert b[4]   == 4
+    assert b[5]   == 200
+    assert b[6]   == 6
+    assert b[7]   == 100
+    assert b[8]   == 8
+    assert b[9]   == 9
 }
 
 {
-    const b = buffer(17);
-    assert b.size == 17;
+    const b = buffer(17)
+    assert b.size == 17
     for var i in range(b.size) {
-        b[i] = i + 100;
+        b[i] = i + 100
     }
 
-    var count = 0;
+    var count = 0
     for var i in b {
-        assert i == count + 100;
-        count += 1;
+        assert i == count + 100
+        count += 1
     }
-    assert count == 17;
+    assert count == 17
 }
 
 ##############################################################################
 # lang.buffer.prototype.fill
 
 {
-    const b = buffer(32);
+    const b = buffer(32)
 
-    b.fill(1);
+    b.fill(1)
     for var i = 0; i < b.size; i += 1 {
-        assert b[i] == 1;
+        assert b[i] == 1
     }
 
-    b.fill(50);
+    b.fill(50)
     for var i = 0; i < b.size; i += 1 {
-        assert b[i] == 50;
+        assert b[i] == 50
     }
 
-    b.fill(24, 100);
+    b.fill(24, 100)
     for var i = 0; i < b.size; i += 1 {
         if i < 24 {
-            assert b[i] == 50;
+            assert b[i] == 50
         }
         else {
-            assert b[i] == 100;
+            assert b[i] == 100
         }
     }
 
-    b.fill(10, 20, 17);
+    b.fill(10, 20, 17)
     for var i = 0; i < b.size; i += 1 {
         if i < 10 {
-            assert b[i] == 50;
+            assert b[i] == 50
         }
         else if i < 20 {
-            assert b[i] == 17;
+            assert b[i] == 17
         }
         else if i < 24 {
-            assert b[i] == 50;
+            assert b[i] == 50
         }
         else {
-            assert b[i] == 100;
+            assert b[i] == 100
         }
     }
 
-    b.fill(-24, void, 255.0);
+    b.fill(-24, void, 255.0)
     for var i = 0; i < b.size; i += 1 {
         if i < 8 {
-            assert b[i] == 50;
+            assert b[i] == 50
         }
         else {
-            assert b[i] == 255;
+            assert b[i] == 255
         }
     }
 }
@@ -246,90 +246,90 @@ fun buffer_from_array(a)
 # lang.buffer.prototype.copy_buffer
 
 {
-    const b1 = buffer(10);
-    const b2 = buffer(5);
-    const b3 = buffer(15);
-    const b4 = buffer(3);
+    const b1 = buffer(10)
+    const b2 = buffer(5)
+    const b3 = buffer(15)
+    const b4 = buffer(3)
 
-    b1.fill(1);
-    b2.fill(2);
-    b3.fill(3);
-    b4.fill(4);
+    b1.fill(1)
+    b2.fill(2)
+    b3.fill(3)
+    b4.fill(4)
 
     fun check_b1(contents...)
     {
-        assert b1.size == contents.size;
+        assert b1.size == contents.size
         for var i = 0; i < b1.size; i += 1 {
-            assert b1[i] == contents[i];
+            assert b1[i] == contents[i]
         }
     }
 
-    b1.copy_buffer(b2);
-    check_b1(2, 2, 2, 2, 2, 1, 1, 1, 1, 1);
+    b1.copy_buffer(b2)
+    check_b1(2, 2, 2, 2, 2, 1, 1, 1, 1, 1)
 
-    b1.copy_buffer(b3);
-    check_b1(3, 3, 3, 3, 3, 3, 3, 3, 3, 3);
+    b1.copy_buffer(b3)
+    check_b1(3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
 
-    b1.copy_buffer(5, b2);
-    check_b1(3, 3, 3, 3, 3, 2, 2, 2, 2, 2);
+    b1.copy_buffer(5, b2)
+    check_b1(3, 3, 3, 3, 3, 2, 2, 2, 2, 2)
 
-    b1.copy_buffer(11, b4);
-    check_b1(3, 3, 3, 3, 3, 2, 2, 2, 2, 2);
+    b1.copy_buffer(11, b4)
+    check_b1(3, 3, 3, 3, 3, 2, 2, 2, 2, 2)
 
-    b1.copy_buffer(void, b4);
-    check_b1(4, 4, 4, 3, 3, 2, 2, 2, 2, 2);
+    b1.copy_buffer(void, b4)
+    check_b1(4, 4, 4, 3, 3, 2, 2, 2, 2, 2)
 
-    b1.copy_buffer(b2, 1);
-    check_b1(2, 2, 2, 2, 3, 2, 2, 2, 2, 2);
+    b1.copy_buffer(b2, 1)
+    check_b1(2, 2, 2, 2, 3, 2, 2, 2, 2, 2)
 
-    b1.copy_buffer(b4, void);
-    check_b1(4, 4, 4, 2, 3, 2, 2, 2, 2, 2);
+    b1.copy_buffer(b4, void)
+    check_b1(4, 4, 4, 2, 3, 2, 2, 2, 2, 2)
 
-    b1.fill(0);
-    b1.copy_buffer(2, b2, -3);
-    check_b1(0, 0, 2, 2, 2, 0, 0, 0, 0, 0);
+    b1.fill(0)
+    b1.copy_buffer(2, b2, -3)
+    check_b1(0, 0, 2, 2, 2, 0, 0, 0, 0, 0)
 
-    b1.copy_buffer(void, b4, void);
-    check_b1(4, 4, 4, 2, 2, 0, 0, 0, 0, 0);
+    b1.copy_buffer(void, b4, void)
+    check_b1(4, 4, 4, 2, 2, 0, 0, 0, 0, 0)
 
-    b1.copy_buffer(-4, b3, -2);
-    check_b1(4, 4, 4, 2, 2, 0, 3, 3, 0, 0);
+    b1.copy_buffer(-4, b3, -2)
+    check_b1(4, 4, 4, 2, 2, 0, 3, 3, 0, 0)
 
-    expect_fail(fun { b1.copy_buffer(0, 1, b3); });
-    check_b1(4, 4, 4, 2, 2, 0, 3, 3, 0, 0);
+    expect_fail(fun { b1.copy_buffer(0, 1, b3) })
+    check_b1(4, 4, 4, 2, 2, 0, 3, 3, 0, 0)
 
-    b1.fill(0);
-    b1.copy_buffer(void, b2, void, void);
-    check_b1(2, 2, 2, 2, 2, 0, 0, 0, 0, 0);
+    b1.fill(0)
+    b1.copy_buffer(void, b2, void, void)
+    check_b1(2, 2, 2, 2, 2, 0, 0, 0, 0, 0)
 
-    b1.copy_buffer(-100, b4, -100, 100);
-    check_b1(4, 4, 4, 2, 2, 0, 0, 0, 0, 0);
+    b1.copy_buffer(-100, b4, -100, 100)
+    check_b1(4, 4, 4, 2, 2, 0, 0, 0, 0, 0)
 
-    expect_fail(fun { b1.copy_buffer(b4, 0, 1, 2); });
-    expect_fail(fun { b1.copy_buffer(0, 1, b4, 0); });
-    expect_fail(fun { b1.copy_buffer(0, 1, 2, b4); });
-    check_b1(4, 4, 4, 2, 2, 0, 0, 0, 0, 0);
+    expect_fail(fun { b1.copy_buffer(b4, 0, 1, 2) })
+    expect_fail(fun { b1.copy_buffer(0, 1, b4, 0) })
+    expect_fail(fun { b1.copy_buffer(0, 1, 2, b4) })
+    check_b1(4, 4, 4, 2, 2, 0, 0, 0, 0, 0)
 
-    b1.copy_buffer(-4, b3, 0, 3);
-    check_b1(4, 4, 4, 2, 2, 0, 3, 3, 3, 0);
+    b1.copy_buffer(-4, b3, 0, 3)
+    check_b1(4, 4, 4, 2, 2, 0, 3, 3, 3, 0)
 
-    b1.copy_buffer(-2, b1, 2);
-    check_b1(4, 4, 4, 2, 2, 0, 3, 3, 4, 2);
+    b1.copy_buffer(-2, b1, 2)
+    check_b1(4, 4, 4, 2, 2, 0, 3, 3, 4, 2)
 
     for var i = 0; i < b1.size; i += 1 {
-        b1[i] = i;
+        b1[i] = i
     }
-    b1.copy_buffer(-6, b1);
-    check_b1(0, 1, 2, 3, 0, 1, 2, 3, 4, 5); 
+    b1.copy_buffer(-6, b1)
+    check_b1(0, 1, 2, 3, 0, 1, 2, 3, 4, 5) 
 
     for var i = 0; i < b2.size; i += 1 {
-        assert b2[i] == 2;
+        assert b2[i] == 2
     }
     for var i = 0; i < b3.size; i += 1 {
-        assert b3[i] == 3;
+        assert b3[i] == 3
     }
     for var i = 0; i < b4.size; i += 1 {
-        assert b4[i] == 4;
+        assert b4[i] == 4
     }
 }
 
@@ -337,39 +337,39 @@ fun buffer_from_array(a)
 # lang.buffer.prototype.insert
 
 {
-    const b1 = new buffer;
-    const b2 = new buffer(20);
+    const b1 = new buffer
+    const b2 = new buffer(20)
 
-    b1.fill(1);
-    b2.fill(2);
+    b1.fill(1)
+    b2.fill(2)
 
-    assert b1.size == 0;
+    assert b1.size == 0
 
-    b1[:] = b2;
+    b1[:] = b2
 
-    assert b1.size == 20;
+    assert b1.size == 20
     for var v in b1 {
-        assert v == 2;
+        assert v == 2
     }
 }
 
 {
-    const b1 = new buffer(6);
-    const b2 = new buffer(4);
+    const b1 = new buffer(6)
+    const b2 = new buffer(4)
 
     for var i in range(b1.size) {
-        b1[i] = i;
+        b1[i] = i
     }
     for var i in range(b2.size) {
-        b2[i] = i + 10;
+        b2[i] = i + 10
     }
 
-    b1[2:-1] = b2;
+    b1[2:-1] = b2
 
-    const expected = [0, 1, 10, 11, 12, 13, 5];
-    assert b1.size == expected.size;
+    const expected = [0, 1, 10, 11, 12, 13, 5]
+    assert b1.size == expected.size
     for var i in range(b1.size) {
-        assert b1[i] == expected[i];
+        assert b1[i] == expected[i]
     }
 }
 
@@ -377,81 +377,81 @@ fun buffer_from_array(a)
 # lang.buffer.prototype.slice
 
 {
-    const b1 = new buffer(20);
+    const b1 = new buffer(20)
 
     for var i in range(b1.size) {
-        b1[i] = i;
+        b1[i] = i
     }
 
-    var b2 = b1[:];
+    var b2 = b1[:]
 
-    assert typeof b2 == "buffer";
-    assert b1.size == 20;
-    assert b2.size == 20;
-    assert b1 != b2;
+    assert typeof b2 == "buffer"
+    assert b1.size == 20
+    assert b2.size == 20
+    assert b1 != b2
 
     for var i in range(b1.size) {
-        assert b1[i] == i;
-        assert b2[i] == i;
+        assert b1[i] == i
+        assert b2[i] == i
     }
 
-    b2 = b1[-100:100];
+    b2 = b1[-100:100]
 
-    assert typeof b2 == "buffer";
-    assert b1.size == 20;
-    assert b2.size == 20;
-    assert b1 != b2;
+    assert typeof b2 == "buffer"
+    assert b1.size == 20
+    assert b2.size == 20
+    assert b1 != b2
 
-    b2 = b1.slice(void, void);
+    b2 = b1.slice(void, void)
 
-    assert typeof b2 == "buffer";
-    assert b1.size == 20;
-    assert b2.size == 20;
-    assert b1 != b2;
+    assert typeof b2 == "buffer"
+    assert b1.size == 20
+    assert b2.size == 20
+    assert b1 != b2
 
     for var i in range(b1.size) {
-        assert b1[i] == i;
-        assert b2[i] == i;
+        assert b1[i] == i
+        assert b2[i] == i
     }
 
-    b2 = b1[10:];
+    b2 = b1[10:]
 
-    assert typeof b2 == "buffer";
-    assert b2.size == 10;
+    assert typeof b2 == "buffer"
+    assert b2.size == 10
     for var i in range(b2.size) {
-        assert b2[i] == i + 10;
+        assert b2[i] == i + 10
     }
 
-    b2 = b1[-10:];
+    b2 = b1[-10:]
 
-    assert typeof b2 == "buffer";
-    assert b2.size == 10;
+    assert typeof b2 == "buffer"
+    assert b2.size == 10
     for var i in range(b2.size) {
-        assert b2[i] == i + 10;
+        assert b2[i] == i + 10
     }
 
-    b2 = b1[-15:-5];
+    b2 = b1[-15:-5]
 
-    assert typeof b2 == "buffer";
-    assert b2.size == 10;
+    assert typeof b2 == "buffer"
+    assert b2.size == 10
     for var i in range(b2.size) {
-        assert b2[i] == i + 5;
+        assert b2[i] == i + 5
     }
 
-    b2 = b1.slice(-5, void);
+    b2 = b1.slice(-5, void)
 
-    assert typeof b2 == "buffer";
-    assert b2.size == 5;
+    assert typeof b2 == "buffer"
+    assert b2.size == 5
     for var i in range(b2.size) {
-        assert b2[i] == i + 15;
+        assert b2[i] == i + 15
     }
 
-    b2 = b1.slice(6, -10);
+    b2 = b1.slice(6, -10)
 
-    assert typeof b2 == "buffer";
-    assert b2.size == 4;
+    assert typeof b2 == "buffer"
+    assert b2.size == 4
     for var i in range(b2.size) {
-        assert b2[i] == i + 6;
+        assert b2[i] == i + 6
     }
 }
 
@@ -459,15 +459,15 @@ fun buffer_from_array(a)
 # lang.buffer.prototype.pack
 
 {
-    const b  = new buffer;
-    const b3 = new buffer(3);
-    const b5 = new buffer(5);
+    const b  = new buffer
+    const b3 = new buffer(3)
+    const b5 = new buffer(5)
 
     for var i in range(b3.size) {
-        b3[i] = 0x30 + i;
+        b3[i] = 0x30 + i
     }
     for var i in range(b5.size) {
-        b5[i] = 0x50 + i;
+        b5[i] = 0x50 + i
     }
 
     b.pack("u1 u2 u4 u8 i1 i2 i4 i8 f4 f8 b4 b4 s4 s4",
@@ -484,7 +484,7 @@ fun buffer_from_array(a)
             b3,
             b5,
             "abc",
-            "defgh");
+            "defgh")
 
     const expected = [ 0x81, 0x03, 0x84, 0x05, 0x06, 0x07, 0x88, 0x01,
                        0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x88, 0x81,
@@ -493,312 +493,312 @@ fun buffer_from_array(a)
                        0x80, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x00, 0x40, 0x30, 0x31, 0x32, 0x00, 0x50, 0x51,
                        0x52, 0x53, 0x61, 0x62, 0x63, 0x00, 0x64, 0x65,
-                       0x66, 0x67 ];
+                       0x66, 0x67 ]
 
-    assert b.size == expected.size;
+    assert b.size == expected.size
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n");
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
         }
-        assert b[i] == expected[i];
+        assert b[i] == expected[i]
     }
 }
 
 {
-    const b = new buffer(2);
-    b[0] = 255;
-    b[1] = 254;
+    const b = new buffer(2)
+    b[0] = 255
+    b[1] = 254
     b.pack("<u2 >u2 <u2 >u2 <f4 >f4 <f8 >f8",
             0x1234, 0x4567, 0x89AB, 0xCDEF,
-            1.0, 2.0, 3.0, 4.0);
+            1.0, 2.0, 3.0, 4.0)
 
     const expected = [ 0xFF, 0xFE, 0x34, 0x12, 0x45, 0x67, 0xAB, 0x89, 0xCD, 0xEF,
                        0x00, 0x00, 0x80, 0x3F, 0x40, 0x00, 0x00, 0x00,
                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x40,
-                       0x40, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ];
+                       0x40, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ]
 
-    assert b.size == expected.size;
+    assert b.size == expected.size
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n");
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
         }
-        assert b[i] == expected[i];
+        assert b[i] == expected[i]
     }
 }
 
 {
-    const a = new buffer(3);
-    a[0] = 1;
-    a[1] = 2;
-    a[2] = 3;
+    const a = new buffer(3)
+    a[0] = 1
+    a[1] = 2
+    a[2] = 3
 
-    const b = new buffer;
-    b.pack("<b3 x >b3 x", a, a);
+    const b = new buffer
+    b.pack("<b3 x >b3 x", a, a)
 
-    const expected = [ 1, 2, 3, 0, 1, 2, 3, 0 ];
+    const expected = [ 1, 2, 3, 0, 1, 2, 3, 0 ]
 
-    assert b.size == expected.size;
+    assert b.size == expected.size
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n");
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
         }
-        assert b[i] == expected[i];
+        assert b[i] == expected[i]
     }
 }
 
 {
-    const b = new buffer;
+    const b = new buffer
     b.pack("    2     i      4   < >   <     > < > <><><>>>>> <<<<",
-           1, 2);
+           1, 2)
 
-    const expected = [ 1, 0, 0, 0, 2, 0, 0, 0 ];
+    const expected = [ 1, 0, 0, 0, 2, 0, 0, 0 ]
 
-    assert b.size == expected.size;
+    assert b.size == expected.size
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n");
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
         }
-        assert b[i] == expected[i];
+        assert b[i] == expected[i]
     }
 }
 
 {
-    const b = new buffer;
+    const b = new buffer
     b.pack("< 1 s 2 0 u 4 0 s 4 > 3 x 2 s 4",
-           "abcdef", "ABCDEF", "xz");
+           "abcdef", "ABCDEF", "xz")
 
-    const expected = [ 0x61, 0x62, 0x00, 0x00, 0x00, 0x41, 0x42, 0x43, 0x44, 0x78, 0x7A, 0x00, 0x00 ];
+    const expected = [ 0x61, 0x62, 0x00, 0x00, 0x00, 0x41, 0x42, 0x43, 0x44, 0x78, 0x7A, 0x00, 0x00 ]
 
-    assert b.size == expected.size;
+    assert b.size == expected.size
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n");
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
         }
-        assert b[i] == expected[i];
+        assert b[i] == expected[i]
     }
 }
 
 {
-    const b = new buffer;
-    b.pack("", 1, 2, 3);
+    const b = new buffer
+    b.pack("", 1, 2, 3)
 
-    assert b.size == 0;
+    assert b.size == 0
 
-    b.pack("");
+    b.pack("")
 
-    assert b.size == 0;
+    assert b.size == 0
 
-    b.pack("s0", "abc");
+    b.pack("s0", "abc")
 
-    assert b.size == 0;
+    assert b.size == 0
 }
 
 {
-    const b = new buffer;
-    b.pack("s", "\x{AA}\x{55555}");
+    const b = new buffer
+    b.pack("s", "\x{AA}\x{55555}")
 
-    assert b.size == 6;
-    assert b[0]   == 0xC2;
-    assert b[1]   == 0xAA;
-    assert b[2]   == 0xF1;
-    assert b[3]   == 0x95;
-    assert b[4]   == 0x95;
-    assert b[5]   == 0x95;
+    assert b.size == 6
+    assert b[0]   == 0xC2
+    assert b[1]   == 0xAA
+    assert b[2]   == 0xF1
+    assert b[3]   == 0x95
+    assert b[4]   == 0x95
+    assert b[5]   == 0x95
 }
 
 {
-    const b = new buffer;
-    b.pack("> 2s i1", "\x80", "\x{7FF}", 10);
+    const b = new buffer
+    b.pack("> 2s i1", "\x80", "\x{7FF}", 10)
 
-    assert b.size == 5;
-    assert b[0]   == 0xC2;
-    assert b[1]   == 0x80;
-    assert b[2]   == 0xDF;
-    assert b[3]   == 0xBF;
-    assert b[4]   == 10;
+    assert b.size == 5
+    assert b[0]   == 0xC2
+    assert b[1]   == 0x80
+    assert b[2]   == 0xDF
+    assert b[3]   == 0xBF
+    assert b[4]   == 10
 }
 
 {
-    expect_fail(λ->((new buffer).pack()));
-    expect_fail(λ->((new buffer).pack("1", 0)));
-    expect_fail(λ->((new buffer).pack("u", 0)));
-    expect_fail(λ->((new buffer).pack("u3", 0)));
-    expect_fail(λ->((new buffer).pack("i7", 0)));
-    expect_fail(λ->((new buffer).pack("f2", 0)));
-    expect_fail(λ->((new buffer).pack("u2", "")));
-    expect_fail(λ->((new buffer).pack("s2", 0)));
-    expect_fail(λ->((new buffer).pack("b", "")));
-    expect_fail(λ->((new buffer).pack("u1 1", 1)));
-    expect_fail(λ->((new buffer).pack("2 u1", 1)));
-    expect_fail(λ->((new buffer).pack("i1 i2", 1)));
-    expect_fail(λ->((new buffer).pack("2 f4", 1)));
-    expect_fail(λ->((new buffer).pack("2 s4", "")));
-    expect_fail(λ->((new buffer).pack("2 b4", new buffer)));
-    expect_fail(λ->((new buffer).pack("2 b4")));
+    expect_fail(λ->((new buffer).pack()))
+    expect_fail(λ->((new buffer).pack("1", 0)))
+    expect_fail(λ->((new buffer).pack("u", 0)))
+    expect_fail(λ->((new buffer).pack("u3", 0)))
+    expect_fail(λ->((new buffer).pack("i7", 0)))
+    expect_fail(λ->((new buffer).pack("f2", 0)))
+    expect_fail(λ->((new buffer).pack("u2", "")))
+    expect_fail(λ->((new buffer).pack("s2", 0)))
+    expect_fail(λ->((new buffer).pack("b", "")))
+    expect_fail(λ->((new buffer).pack("u1 1", 1)))
+    expect_fail(λ->((new buffer).pack("2 u1", 1)))
+    expect_fail(λ->((new buffer).pack("i1 i2", 1)))
+    expect_fail(λ->((new buffer).pack("2 f4", 1)))
+    expect_fail(λ->((new buffer).pack("2 s4", "")))
+    expect_fail(λ->((new buffer).pack("2 b4", new buffer)))
+    expect_fail(λ->((new buffer).pack("2 b4")))
 }
 
 ##############################################################################
 # lang.buffer.prototype.unpack
 
 {
-    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7 ]);
-    const a = b.unpack("u4 x i2");
+    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7 ])
+    const a = b.unpack("u4 x i2")
 
-    assert typeof a == "array";
-    assert a.size == 2;
-    assert typeof a[0] == "integer";
-    assert typeof a[1] == "integer";
-    assert a[0] == 0x04030201;
-    assert a[1] == 0x0706;
+    assert typeof a == "array"
+    assert a.size == 2
+    assert typeof a[0] == "integer"
+    assert typeof a[1] == "integer"
+    assert a[0] == 0x04030201
+    assert a[1] == 0x0706
 }
 
 {
     const b = buffer_from_array([ 1, 2,
                                   3, 4, 5, 6,
                                   7, 8, 9, 10, 11, 12, 13, 14,
-                                  15, 1, 2, 3, 4, 5, 6, 7, 15, 2, 3, 4, 5, 6, 7, 8 ]);
-    const a = b.unpack("<u1 >u1 <u2 >u2 <u4 >u4 <u8 >u8");
+                                  15, 1, 2, 3, 4, 5, 6, 7, 15, 2, 3, 4, 5, 6, 7, 8 ])
+    const a = b.unpack("<u1 >u1 <u2 >u2 <u4 >u4 <u8 >u8")
 
-    assert typeof a == "array";
-    assert a.size == 8;
-    assert typeof a[0] == "integer";
-    assert typeof a[1] == "integer";
-    assert typeof a[2] == "integer";
-    assert typeof a[3] == "integer";
-    assert typeof a[4] == "integer";
-    assert typeof a[5] == "integer";
-    assert typeof a[6] == "integer";
-    assert typeof a[7] == "integer";
-    assert a[0] == 1;
-    assert a[1] == 2;
-    assert a[2] == 0x0403;
-    assert a[3] == 0x0506;
-    assert a[4] == 0x0A090807;
-    assert a[5] == 0x0B0C0D0E;
-    assert a[6] == 0x070605040302010F;
-    assert a[7] == 0x0F02030405060708;
+    assert typeof a == "array"
+    assert a.size == 8
+    assert typeof a[0] == "integer"
+    assert typeof a[1] == "integer"
+    assert typeof a[2] == "integer"
+    assert typeof a[3] == "integer"
+    assert typeof a[4] == "integer"
+    assert typeof a[5] == "integer"
+    assert typeof a[6] == "integer"
+    assert typeof a[7] == "integer"
+    assert a[0] == 1
+    assert a[1] == 2
+    assert a[2] == 0x0403
+    assert a[3] == 0x0506
+    assert a[4] == 0x0A090807
+    assert a[5] == 0x0B0C0D0E
+    assert a[6] == 0x070605040302010F
+    assert a[7] == 0x0F02030405060708
 }
 
 {
     const b = buffer_from_array([ 1, 2,
                                   3, 4, 5, 6,
                                   7, 8, 9, 10, 11, 12, 13, 14,
-                                  15, 1, 2, 3, 4, 5, 6, 7, 15, 2, 3, 4, 5, 6, 7, 8 ]);
-    const a = b.unpack("<i1 >i1 <i2 >i2 <i4 >i4 <i8 >i8");
+                                  15, 1, 2, 3, 4, 5, 6, 7, 15, 2, 3, 4, 5, 6, 7, 8 ])
+    const a = b.unpack("<i1 >i1 <i2 >i2 <i4 >i4 <i8 >i8")
 
-    assert typeof a == "array";
-    assert a.size == 8;
-    assert typeof a[0] == "integer";
-    assert typeof a[1] == "integer";
-    assert typeof a[2] == "integer";
-    assert typeof a[3] == "integer";
-    assert typeof a[4] == "integer";
-    assert typeof a[5] == "integer";
-    assert typeof a[6] == "integer";
-    assert typeof a[7] == "integer";
-    assert a[0] == 1;
-    assert a[1] == 2;
-    assert a[2] == 0x0403;
-    assert a[3] == 0x0506;
-    assert a[4] == 0x0A090807;
-    assert a[5] == 0x0B0C0D0E;
-    assert a[6] == 0x070605040302010F;
-    assert a[7] == 0x0F02030405060708;
+    assert typeof a == "array"
+    assert a.size == 8
+    assert typeof a[0] == "integer"
+    assert typeof a[1] == "integer"
+    assert typeof a[2] == "integer"
+    assert typeof a[3] == "integer"
+    assert typeof a[4] == "integer"
+    assert typeof a[5] == "integer"
+    assert typeof a[6] == "integer"
+    assert typeof a[7] == "integer"
+    assert a[0] == 1
+    assert a[1] == 2
+    assert a[2] == 0x0403
+    assert a[3] == 0x0506
+    assert a[4] == 0x0A090807
+    assert a[5] == 0x0B0C0D0E
+    assert a[6] == 0x070605040302010F
+    assert a[7] == 0x0F02030405060708
 }
 
 {
     const b = buffer_from_array([ 0x81, 0x82,
                                   0xFD, 0xFF, 0xFF, 0xFE,
                                   7, 8, 9, 0x80, 0x80, 12, 13, 14,
-                                  15, 1, 2, 3, 4, 5, 6, 0x80, 0x80, 2, 3, 4, 5, 6, 7, 8 ]);
-    const a = b.unpack("<i1 >i1 <i2 >i2 <i4 >i4 <i8 >i8");
+                                  15, 1, 2, 3, 4, 5, 6, 0x80, 0x80, 2, 3, 4, 5, 6, 7, 8 ])
+    const a = b.unpack("<i1 >i1 <i2 >i2 <i4 >i4 <i8 >i8")
 
-    assert typeof a == "array";
-    assert a.size == 8;
-    assert typeof a[0] == "integer";
-    assert typeof a[1] == "integer";
-    assert typeof a[2] == "integer";
-    assert typeof a[3] == "integer";
-    assert typeof a[4] == "integer";
-    assert typeof a[5] == "integer";
-    assert typeof a[6] == "integer";
-    assert typeof a[7] == "integer";
-    assert a[0] == -0x7F;
-    assert a[1] == -0x7E;
-    assert a[2] == -3;
-    assert a[3] == -2;
-    assert a[4] == 0xFFFFFFFF80090807;
-    assert a[5] == 0xFFFFFFFF800C0D0E;
-    assert a[6] == 0x800605040302010F;
-    assert a[7] == 0x8002030405060708;
+    assert typeof a == "array"
+    assert a.size == 8
+    assert typeof a[0] == "integer"
+    assert typeof a[1] == "integer"
+    assert typeof a[2] == "integer"
+    assert typeof a[3] == "integer"
+    assert typeof a[4] == "integer"
+    assert typeof a[5] == "integer"
+    assert typeof a[6] == "integer"
+    assert typeof a[7] == "integer"
+    assert a[0] == -0x7F
+    assert a[1] == -0x7E
+    assert a[2] == -3
+    assert a[3] == -2
+    assert a[4] == 0xFFFFFFFF80090807
+    assert a[5] == 0xFFFFFFFF800C0D0E
+    assert a[6] == 0x800605040302010F
+    assert a[7] == 0x8002030405060708
 }
 
 {
     const b = buffer_from_array([ 0, 0, 0x80, 0x3F,
                                   0x40, 0, 0, 0,
                                   0, 0, 0, 0, 0, 0, 0x08, 0x40,
-                                  0x40, 0x10, 0, 0, 0, 0, 0, 0 ]);
-    const a = b.unpack("<f4 >f4 <f8 >f8");
+                                  0x40, 0x10, 0, 0, 0, 0, 0, 0 ])
+    const a = b.unpack("<f4 >f4 <f8 >f8")
 
-    assert typeof a == "array";
-    assert a.size == 4;
-    assert typeof a[0] == "float";
-    assert typeof a[1] == "float";
-    assert typeof a[2] == "float";
-    assert typeof a[3] == "float";
-    assert a[0] == 1;
-    assert a[1] == 2;
-    assert a[2] == 3;
-    assert a[3] == 4;
+    assert typeof a == "array"
+    assert a.size == 4
+    assert typeof a[0] == "float"
+    assert typeof a[1] == "float"
+    assert typeof a[2] == "float"
+    assert typeof a[3] == "float"
+    assert a[0] == 1
+    assert a[1] == 2
+    assert a[2] == 3
+    assert a[3] == 4
 }
 
 {
-    const b = buffer_from_array([0, 0x61, 0x62, 0x63]);
-    const a = b.unpack("x s3");
+    const b = buffer_from_array([0, 0x61, 0x62, 0x63])
+    const a = b.unpack("x s3")
 
-    assert typeof a == "array";
-    assert a.size == 1;
-    assert typeof a[0] == "string";
-    assert a[0] == "abc";
+    assert typeof a == "array"
+    assert a.size == 1
+    assert typeof a[0] == "string"
+    assert a[0] == "abc"
 }
 
 {
-    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7 ]);
-    const a = b.unpack("2 b3");
+    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7 ])
+    const a = b.unpack("2 b3")
 
-    assert typeof a == "array";
-    assert a.size == 2;
-    assert typeof a[0] == "buffer";
-    assert typeof a[1] == "buffer";
-    assert a[0].size == 3;
-    assert a[1].size == 3;
-    assert a[0][0] == 1;
-    assert a[0][1] == 2;
-    assert a[0][2] == 3;
-    assert a[1][0] == 4;
-    assert a[1][1] == 5;
-    assert a[1][2] == 6;
+    assert typeof a == "array"
+    assert a.size == 2
+    assert typeof a[0] == "buffer"
+    assert typeof a[1] == "buffer"
+    assert a[0].size == 3
+    assert a[1].size == 3
+    assert a[0][0] == 1
+    assert a[0][1] == 2
+    assert a[0][2] == 3
+    assert a[1][0] == 4
+    assert a[1][1] == 5
+    assert a[1][2] == 6
 }
 
 {
-    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7, 8 ]);
-    const a = b.unpack(2, "i1 i2 i1");
+    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7, 8 ])
+    const a = b.unpack(2, "i1 i2 i1")
 
-    assert typeof a    == "array";
-    assert a.size      == 3;
-    assert typeof a[0] == "integer";
-    assert typeof a[1] == "integer";
-    assert typeof a[2] == "integer";
-    assert a[0]        == 3;
-    assert a[1]        == 0x504;
-    assert a[2]        == 6;
+    assert typeof a    == "array"
+    assert a.size      == 3
+    assert typeof a[0] == "integer"
+    assert typeof a[1] == "integer"
+    assert typeof a[2] == "integer"
+    assert a[0]        == 3
+    assert a[1]        == 0x504
+    assert a[2]        == 6
 }
 
 {
-    expect_fail(λ->((new buffer(100)).unpack("s")));
+    expect_fail(λ->((new buffer(100)).unpack("s")))
 }

@@ -19,16 +19,16 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang.array;
-import lang.range;
+import lang.array
+import lang.range
 
 {
-    const a = new array(range(10));
+    const a = new array(range(10))
 
-    assert typeof a == "array";
-    assert a.size == 10;
+    assert typeof a == "array"
+    assert a.size == 10
 
     for var i in range(10) {
-        assert i == a[i];
+        assert i == a[i]
     }
 }

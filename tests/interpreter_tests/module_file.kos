@@ -20,206 +20,206 @@
 # IN THE SOFTWARE.
 #
 
-import file;
-import lang;
+import file
+import lang
 
 fun expect_fail(function)
 {
-    var failed = false;
+    var failed = false
     try {
-        function();
+        function()
     }
     catch const e {
-        failed = true;
+        failed = true
     }
-    assert failed;
+    assert failed
 }
 
 ##############################################################################
 # file.open, file.is_file, file.remove
 
 {
-    assert typeof file.file           == "function";
-    assert typeof file.file.prototype == "object";
+    assert typeof file.file           == "function"
+    assert typeof file.file.prototype == "object"
 }
 
 {
-    const name = "__test_file";
-    file.remove(name);
-    assert ! file.is_file(name);
+    const name = "__test_file"
+    file.remove(name)
+    assert ! file.is_file(name)
 
     {
-        const f = file.open(name, file.create);
-        assert typeof f == "object";
+        const f = file.open(name, file.create)
+        assert typeof f == "object"
 
-        assert f.size == 0;
+        assert f.size == 0
 
-        const init_buf = new lang.buffer(9);
+        const init_buf = new lang.buffer(9)
         for var i in lang.range(init_buf.size) {
-            init_buf[i] = i;
+            init_buf[i] = i
         }
 
-        assert f.write(init_buf) == f;
-        assert f.write(init_buf).write(init_buf) == f;
+        assert f.write(init_buf) == f
+        assert f.write(init_buf).write(init_buf) == f
 
-        assert f.size == 27;
+        assert f.size == 27
 
-        f.close();
+        f.close()
 
-        expect_fail(λ->(f.size));
-        expect_fail(λ->(f.read()));
-        expect_fail(λ->(f.write(init_buf)));
+        expect_fail(λ->(f.size))
+        expect_fail(λ->(f.read()))
+        expect_fail(λ->(f.write(init_buf)))
     }
 
-    assert file.is_file(name);
+    assert file.is_file(name)
 
     with const f = file.open(name, file.ro) {
-        const buf = f.read();
+        const buf = f.read()
 
-        assert typeof buf == "buffer";
-        assert buf.size   == 27;
+        assert typeof buf == "buffer"
+        assert buf.size   == 27
 
         for var i in lang.range(buf.size) {
-            assert (i % 9) == buf[i];
+            assert (i % 9) == buf[i]
         }
 
-        expect_fail(λ->(f.write(buf)));
+        expect_fail(λ->(f.write(buf)))
     }
 
-    assert file.remove(name);
-    assert ! file.remove(name);
+    assert file.remove(name)
+    assert ! file.remove(name)
 }
 
 {
-    var failed = true;
+    var failed = true
     try {
-        file.open("", void);
+        file.open("", void)
     }
     catch const e {
-        failed = false;
+        failed = false
     }
-    assert ! failed;
+    assert ! failed
 }
 
 ##############################################################################
 # file.close
 
 {
-    const name = "__test_file";
-    var failed = true;
-    var f = file.open(name, file.create);
+    const name = "__test_file"
+    var failed = true
+    var f = file.open(name, file.create)
     try {
-        f.close.apply(void, []);
+        f.close.apply(void, [])
     }
     catch const e {
-        failed = false;
+        failed = false
     }
     finally {
-        f.close();
+        f.close()
     }
-    assert ! failed;
+    assert ! failed
 }
 
 ##############################################################################
 # file.size, file.position
 
 {
-    const name = "./__test_file";
-    file.remove(name);
-    assert ! file.is_file(name);
+    const name = "./__test_file"
+    file.remove(name)
+    assert ! file.is_file(name)
 
     with const f = new file.file(name, file.create) {
-        const buf = new lang.buffer(100);
+        const buf = new lang.buffer(100)
         for var i in lang.range(buf.size) {
-            buf[i] = i + 100;
+            buf[i] = i + 100
         }
-        f.write(buf);
+        f.write(buf)
     }
 
     with const f = new file.file(name, file.ro) {
-        assert f.size     == 100;
-        assert f.position == 0;
+        assert f.size     == 100
+        assert f.position == 0
 
-        f.seek(50);
-        assert f.position == 50;
+        f.seek(50)
+        assert f.position == 50
 
-        const buf = f.read(2);
-        assert f.position == 52;
-        assert buf.size   == 2;
-        assert buf[0]     == 150;
-        assert buf[1]     == 151;
+        const buf = f.read(2)
+        assert f.position == 52
+        assert buf.size   == 2
+        assert buf[0]     == 150
+        assert buf[1]     == 151
 
-        f.position = 200;
-        assert f.position == 200;
+        f.position = 200
+        assert f.position == 200
 
-        const buf2 = f.read(10);
-        assert f.position == 200;
-        #assert buf2.size  == 0;
+        const buf2 = f.read(10)
+        assert f.position == 200
+        #assert buf2.size  == 0
     }
 
-    assert file.remove(name);
-    assert ! file.is_file(name);
+    assert file.remove(name)
+    assert ! file.is_file(name)
 }
 
 ##############################################################################
 # file.stdin, file.stdout, file.stderr
 
 {
-    assert file.stdin  instanceof file.file;
-    assert file.stdout instanceof file.file;
-    assert file.stderr instanceof file.file;
+    assert file.stdin  instanceof file.file
+    assert file.stdout instanceof file.file
+    assert file.stderr instanceof file.file
 }
 
 ##############################################################################
 # file.read_lines
 
 {
-    const name = "./__text_file";
-    file.remove(name);
-    assert ! file.is_file(name);
+    const name = "./__text_file"
+    file.remove(name)
+    assert ! file.is_file(name)
 
     with const f = file.open(name, file.create) {
-        const lines = "abc\n\ndef\n\rxyz";
-        f.write((new lang.buffer).pack("s\(lines.size)", lines));
+        const lines = "abc\n\ndef\n\rxyz"
+        f.write((new lang.buffer).pack("s\(lines.size)", lines))
     }
 
     with const f = file.open(name, file.ro) {
-        const lines = f.read_lines();
-        assert lines() == "abc\n";
-        assert lines() == "\n";
-        assert lines() == "def\n";
-        assert lines() == "\r";
-        assert lines() == "xyz";
-        expect_fail(λ->(lines()));
+        const lines = f.read_lines()
+        assert lines() == "abc\n"
+        assert lines() == "\n"
+        assert lines() == "def\n"
+        assert lines() == "\r"
+        assert lines() == "xyz"
+        expect_fail(λ->(lines()))
     }
 
     with const f = file.open(name, file.ro) {
-        const lines = f.read_lines(1);
-        assert lines() == "abc\n";
-        assert lines() == "\n";
-        assert lines() == "def\n";
-        assert lines() == "\r";
-        assert lines() == "xyz";
-        expect_fail(λ->(lines()));
+        const lines = f.read_lines(1)
+        assert lines() == "abc\n"
+        assert lines() == "\n"
+        assert lines() == "def\n"
+        assert lines() == "\r"
+        assert lines() == "xyz"
+        expect_fail(λ->(lines()))
     }
 
     with const f = file.open(name, file.create) {
-        const lines = "xy\r\nz\x{FF}\n";
-        f.write((new lang.buffer).pack("s", lines));
+        const lines = "xy\r\nz\x{FF}\n"
+        f.write((new lang.buffer).pack("s", lines))
     }
 
     with const f = file.open(name, file.ro) {
-        var a = [];
+        var a = []
         for var line in f.read_lines() {
-            const i = a.size;
-            a.resize(i + 1);
-            a[i] = line;
+            const i = a.size
+            a.resize(i + 1)
+            a[i] = line
         }
-        assert a.size == 2;
-        assert a[0]   == "xy\r\n";
-        assert a[1]   == "z\xFF\n";
+        assert a.size == 2
+        assert a[0]   == "xy\r\n"
+        assert a[1]   == "z\xFF\n"
     }
 
-    assert file.remove(name);
-    assert ! file.is_file(name);
+    assert file.remove(name)
+    assert ! file.is_file(name)
 }

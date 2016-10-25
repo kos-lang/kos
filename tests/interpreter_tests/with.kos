@@ -22,186 +22,186 @@
 
 fun test_lock(acquire, release)
 {
-    this.acquire_count = 0;
-    this.release_count = 0;
-    this.release       = release;
+    this.acquire_count = 0
+    this.release_count = 0
+    this.release       = release
     if acquire != void {
-        this.acquire = acquire;
+        this.acquire = acquire
     }
 }
 
 fun test_full_lock
 {
-    test_lock.apply(this, [fun { this.acquire_count += 1; },
-                           fun { this.release_count += 1; }]);
+    test_lock.apply(this, [fun { this.acquire_count += 1 },
+                           fun { this.release_count += 1 }])
 }
 
 fun test_release_lock
 {
-    test_lock.apply(this, [void, fun { this.release_count += 1; }]);
+    test_lock.apply(this, [void, fun { this.release_count += 1 }])
 }
 
 fun test_cancellable_lock
 {
-    test_lock.apply(this, [void, fun { if ! this.cancel { this.release_count += 1; } }]);
-    this.cancel = false;
+    test_lock.apply(this, [void, fun { if ! this.cancel { this.release_count += 1 } }])
+    this.cancel = false
 }
 
 {
-    const lock = new test_release_lock;
+    const lock = new test_release_lock
 
     with lock {
-        lock.test = "x";
+        lock.test = "x"
     }
 
-    assert lock.acquire_count == 0;
-    assert lock.release_count == 1;
-    assert "test" in lock;
-    assert lock.test == "x";
+    assert lock.acquire_count == 0
+    assert lock.release_count == 1
+    assert "test" in lock
+    assert lock.test == "x"
 }
 
 {
-    const lock = new test_full_lock;
+    const lock = new test_full_lock
 
     with lock {
-        lock.test = "y";
+        lock.test = "y"
     }
 
-    assert lock.acquire_count == 1;
-    assert lock.release_count == 1;
-    assert "test" in lock;
-    assert lock.test == "y";
+    assert lock.acquire_count == 1
+    assert lock.release_count == 1
+    assert "test" in lock
+    assert lock.test == "y"
 }
 
 {
-    var exception = false;
-    var lock      = new test_full_lock;
+    var exception = false
+    var lock      = new test_full_lock
 
     try {
         with lock {
-            lock.a = "a";
-            throw 123;
-            lock.b = "b";
+            lock.a = "a"
+            throw 123
+            lock.b = "b"
         }
     }
     catch const e {
-        assert e.value == 123;
-        assert lock.acquire_count == 1;
-        assert lock.release_count == 1;
-        exception = true;
+        assert e.value == 123
+        assert lock.acquire_count == 1
+        assert lock.release_count == 1
+        exception = true
     }
 
-    assert exception;
-    assert "a" in lock;
-    assert ! ("b" in lock);
-    assert lock.a == "a";
+    assert exception
+    assert "a" in lock
+    assert ! ("b" in lock)
+    assert lock.a == "a"
 }
 
 {
-    var exception = false;
-    var release   = false;
+    var exception = false
+    var release   = false
 
     try {
-        with { release: fun { release = true; } } {
-            throw 234;
+        with { release: fun { release = true } } {
+            throw 234
         }
     }
     catch const e {
-        assert e.value == 234;
-        assert release == true;
-        exception = true;
+        assert e.value == 234
+        assert release == true
+        exception = true
     }
 
-    assert exception;
-    assert release;
+    assert exception
+    assert release
 }
 
 {
-    const lock = new test_cancellable_lock;
+    const lock = new test_cancellable_lock
 
     with lock { }
 
-    assert lock.release_count == 1;
+    assert lock.release_count == 1
 
     with lock {
-        lock.cancel = true;
+        lock.cancel = true
     }
 
-    assert lock.release_count == 1;
+    assert lock.release_count == 1
 
     with lock { }
 
-    assert lock.release_count == 1;
+    assert lock.release_count == 1
 
-    lock.cancel = false;
+    lock.cancel = false
 
     with lock { }
 
-    assert lock.release_count == 2;
-    assert lock.acquire_count == 0;
+    assert lock.release_count == 2
+    assert lock.acquire_count == 0
 }
 
 {
-    const lock1 = new test_full_lock;
-    const lock2 = new test_full_lock;
-    const lock3 = new test_lock(void, fun { throw void; });
-    const lock4 = new test_full_lock;
-    var exception = false;
+    const lock1 = new test_full_lock
+    const lock2 = new test_full_lock
+    const lock3 = new test_lock(void, fun { throw void })
+    const lock4 = new test_full_lock
+    var exception = false
 
     try {
         with lock1, lock2, lock3, lock4 { }
     }
     catch const e {
-        assert e.value == void;
-        exception = true;
+        assert e.value == void
+        exception = true
     }
 
-    assert exception;
-    assert lock1.acquire_count == 1;
-    assert lock1.release_count == 1;
-    assert lock2.acquire_count == 1;
-    assert lock2.release_count == 1;
-    assert lock3.acquire_count == 0;
-    assert lock3.release_count == 0;
-    assert lock4.acquire_count == 1;
-    assert lock4.release_count == 1;
+    assert exception
+    assert lock1.acquire_count == 1
+    assert lock1.release_count == 1
+    assert lock2.acquire_count == 1
+    assert lock2.release_count == 1
+    assert lock3.acquire_count == 0
+    assert lock3.release_count == 0
+    assert lock4.acquire_count == 1
+    assert lock4.release_count == 1
 }
 
 {
-    const lock1 = new test_full_lock;
-    const lock2 = new test_lock(fun { throw void; }, fun { lock1.acquire_count -= 100; });
-    const lock3 = new test_full_lock;
-    var exception = false;
+    const lock1 = new test_full_lock
+    const lock2 = new test_lock(fun { throw void }, fun { lock1.acquire_count -= 100 })
+    const lock3 = new test_full_lock
+    var exception = false
 
     try {
-        with lock1, lock2, lock3 { lock1.acquire_count -= 1000; }
+        with lock1, lock2, lock3 { lock1.acquire_count -= 1000 }
     }
     catch const e {
-        assert e.value == void;
-        exception = true;
+        assert e.value == void
+        exception = true
     }
 
-    assert exception;
-    assert lock1.acquire_count == 1;
-    assert lock1.release_count == 1;
-    assert lock2.acquire_count == 0;
-    assert lock2.release_count == 0;
-    assert lock3.acquire_count == 0;
-    assert lock3.release_count == 0;
+    assert exception
+    assert lock1.acquire_count == 1
+    assert lock1.release_count == 1
+    assert lock2.acquire_count == 0
+    assert lock2.release_count == 0
+    assert lock3.acquire_count == 0
+    assert lock3.release_count == 0
 }
 
 {
-    const lock1 = new test_lock(void, fun { throw 10; });
-    const lock2 = new test_lock(fun { throw 20; }, fun { });
-    var exception = false;
+    const lock1 = new test_lock(void, fun { throw 10 })
+    const lock2 = new test_lock(fun { throw 20 }, fun { })
+    var exception = false
 
     try {
-        with lock1, lock2 { throw 30; }
+        with lock1, lock2 { throw 30 }
     }
     catch const e {
-        assert e.value == 10;
-        exception = true;
+        assert e.value == 10
+        exception = true
     }
 
-    assert exception;
+    assert exception
 }

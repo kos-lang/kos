@@ -20,12 +20,12 @@
 # IN THE SOFTWARE.
 #
 
-assert __line__ == 23;
+assert __line__ == 23
 
 const x = 1 +
           __line__
-          * 2;
+          * 2
 
-assert x == 53;
+assert x == 53
 
-assert typeof x == "integer";
+assert typeof x == "integer"

@@ -21,14 +21,14 @@
 #
 fun expect_fail(function)
 {
-    var failed = false;
+    var failed = false
     try {
-        function();
+        function()
     }
     catch const e {
-        failed = true;
+        failed = true
     }
-    assert failed;
+    assert failed
 }
 
 {
@@ -36,179 +36,179 @@ fun expect_fail(function)
     {
     }
 
-    assert no_work() == void;
-    assert typeof no_work() == "void";
+    assert no_work() == void
+    assert typeof no_work() == "void"
 }
 
 {
     fun zero_args
     {
-        return 123;
+        return 123
     }
 
-    assert typeof zero_args == "function";
+    assert typeof zero_args == "function"
 
-    const a = zero_args();
+    const a = zero_args()
 
-    assert a == 123;
+    assert a == 123
 }
 
 {
     fun one_arg(a)
     {
-        return a + 3;
+        return a + 3
     }
 
-    const a = one_arg(-10);
+    const a = one_arg(-10)
 
-    assert a == -7;
+    assert a == -7
 
-    expect_fail(λ->(one_arg()));
+    expect_fail(λ->(one_arg()))
 }
 
 {
     fun two_args(a, b)
     {
-        return a + 2 * b;
+        return a + 2 * b
     }
 
-    const a = two_args(5, 10);
+    const a = two_args(5, 10)
 
-    assert a == 25;
+    assert a == 25
 
-    expect_fail(λ->(two_args(1)));
+    expect_fail(λ->(two_args(1)))
 }
 
 {
-    var a = 1;
+    var a = 1
 
-    fun(b) { a = a + b; } (3);
+    fun(b) { a = a + b } (3)
 
-    assert a == 4;
+    assert a == 4
 }
 
 {
     fun make(x)
     {
-        var a = x + 1;
+        var a = x + 1
         return fun(y) {
-            a += y;
-            return a;
-        };
+            a += y
+            return a
+        }
     }
 
-    const next = make(10);
-    assert typeof next == "function";
-    assert next(0) == 11;
-    assert next(9) == 20;
-    assert next(3) == 23;
-    assert next(-20) == 3;
+    const next = make(10)
+    assert typeof next == "function"
+    assert next(0) == 11
+    assert next(9) == 20
+    assert next(3) == 23
+    assert next(-20) == 3
 }
 
-var global_a = "a";
-var global_b = "b";
+var global_a = "a"
+var global_b = "b"
 
 {
-    var indep_c = "c";
-    var indep_d = "d";
+    var indep_c = "c"
+    var indep_d = "d"
 
     fun depth1(x)
     {
-        var indep_level1_e = x + "e";
-        var indep_level1_f = x + "f";
+        var indep_level1_e = x + "e"
+        var indep_level1_f = x + "f"
 
         fun depth2(x)
         {
-            var indep_level2_g = x + "g";
-            var indep_level2_h = x + "h";
+            var indep_level2_g = x + "g"
+            var indep_level2_h = x + "h"
 
             fun depth3(x)
             {
-                global_a =  x + "A";
-                global_b += x;
+                global_a =  x + "A"
+                global_b += x
 
-                indep_c =  x + "C";
-                indep_d += x;
+                indep_c =  x + "C"
+                indep_d += x
 
-                indep_level1_e =  x + "E";
-                indep_level1_f += x;
+                indep_level1_e =  x + "E"
+                indep_level1_f += x
 
-                indep_level2_g =  x + "G";
-                indep_level2_h += x;
+                indep_level2_g =  x + "G"
+                indep_level2_h += x
 
                 return [ indep_level1_e,
                          indep_level1_f,
                          indep_level2_g,
-                         indep_level2_h ];
+                         indep_level2_h ]
             }
 
-            return depth3;
+            return depth3
         }
 
-        return depth2;
+        return depth2
     }
 
     {
-        const d2 = depth1("%");
-        const d3 = d2("^");
+        const d2 = depth1("%")
+        const d3 = d2("^")
 
-        assert global_a == "a";
-        assert global_b == "b";
-        assert indep_c  == "c";
-        assert indep_d  == "d";
+        assert global_a == "a"
+        assert global_b == "b"
+        assert indep_c  == "c"
+        assert indep_d  == "d"
 
-        const test1 = d3("$");
-        assert global_a == "$A";
-        assert global_b == "b$";
-        assert indep_c  == "$C";
-        assert indep_d  == "d$";
-        assert test1[0] == "$E";
-        assert test1[1] == "%f$";
-        assert test1[2] == "$G";
-        assert test1[3] == "^h$";
+        const test1 = d3("$")
+        assert global_a == "$A"
+        assert global_b == "b$"
+        assert indep_c  == "$C"
+        assert indep_d  == "d$"
+        assert test1[0] == "$E"
+        assert test1[1] == "%f$"
+        assert test1[2] == "$G"
+        assert test1[3] == "^h$"
 
-        const test2 = d3("@");
-        assert global_a == "@A";
-        assert global_b == "b$@";
-        assert indep_c  == "@C";
-        assert indep_d  == "d$@";
-        assert test2[0] == "@E";
-        assert test2[1] == "%f$@";
-        assert test2[2] == "@G";
-        assert test2[3] == "^h$@";
+        const test2 = d3("@")
+        assert global_a == "@A"
+        assert global_b == "b$@"
+        assert indep_c  == "@C"
+        assert indep_d  == "d$@"
+        assert test2[0] == "@E"
+        assert test2[1] == "%f$@"
+        assert test2[2] == "@G"
+        assert test2[3] == "^h$@"
     }
 
     {
-        const d2 = depth1("#");
-        const d3 = d2("!");
+        const d2 = depth1("#")
+        const d3 = d2("!")
 
-        assert global_a == "@A";
-        assert global_b == "b$@";
-        assert indep_c  == "@C";
-        assert indep_d  == "d$@";
+        assert global_a == "@A"
+        assert global_b == "b$@"
+        assert indep_c  == "@C"
+        assert indep_d  == "d$@"
 
-        const test3 = d3("&");
-        assert global_a == "&A";
-        assert global_b == "b$@&";
-        assert indep_c  == "&C";
-        assert indep_d  == "d$@&";
-        assert test3[0] == "&E";
-        assert test3[1] == "#f&";
-        assert test3[2] == "&G";
-        assert test3[3] == "!h&";
+        const test3 = d3("&")
+        assert global_a == "&A"
+        assert global_b == "b$@&"
+        assert indep_c  == "&C"
+        assert indep_d  == "d$@&"
+        assert test3[0] == "&E"
+        assert test3[1] == "#f&"
+        assert test3[2] == "&G"
+        assert test3[3] == "!h&"
 
         {
-            const d3 = d2("*");
+            const d3 = d2("*")
 
-            const test4 = d3("?");
-            assert global_a == "?A";
-            assert global_b == "b$@&?";
-            assert indep_c  == "?C";
-            assert indep_d  == "d$@&?";
-            assert test4[0] == "?E";
-            assert test4[1] == "#f&?";
-            assert test4[2] == "?G";
-            assert test4[3] == "*h?";
+            const test4 = d3("?")
+            assert global_a == "?A"
+            assert global_b == "b$@&?"
+            assert indep_c  == "?C"
+            assert indep_d  == "d$@&?"
+            assert test4[0] == "?E"
+            assert test4[1] == "#f&?"
+            assert test4[2] == "?G"
+            assert test4[3] == "*h?"
         }
     }
 }
@@ -216,285 +216,285 @@ var global_b = "b";
 {
     fun gen
     {
-        yield 100;
-        yield 200;
-        yield 300;
+        yield 100
+        yield 200
+        yield 300
     }
 
-    const iter = gen();
-    assert iter() == 100;
-    assert iter() == 200;
-    assert iter() == 300;
-    expect_fail(iter);
+    const iter = gen()
+    assert iter() == 100
+    assert iter() == 200
+    assert iter() == 300
+    expect_fail(iter)
 }
 
 {
     fun gen(x)
     {
-        yield x+1;
-        yield x+2;
+        yield x+1
+        yield x+2
     }
 
-    const iter1 = gen(8);
-    const iter2 = gen(20);
-    assert iter1() == 9;
-    assert iter2() == 21;
-    assert iter1() == 10;
-    assert iter2() == 22;
-    expect_fail(iter1);
-    expect_fail(iter2);
+    const iter1 = gen(8)
+    const iter2 = gen(20)
+    assert iter1() == 9
+    assert iter2() == 21
+    assert iter1() == 10
+    assert iter2() == 22
+    expect_fail(iter1)
+    expect_fail(iter2)
 }
 
 {
     fun gen(a, b, c)
     {
-        a = yield a;
-        b = yield a + b;
-        c = yield b + c;
-        return void;
+        a = yield a
+        b = yield a + b
+        c = yield b + c
+        return void
     }
 
-    const iter = gen(2, 3, 4);
-    assert iter() == 2;
-    assert iter(10) == 13;
-    assert iter(20) == 24;
-    expect_fail(iter);
+    const iter = gen(2, 3, 4)
+    assert iter() == 2
+    assert iter(10) == 13
+    assert iter(20) == 24
+    expect_fail(iter)
 }
 
 {
     fun gen
     {
-        var a = yield 10;
-        a = yield a;
-        yield a;
-        return void;
+        var a = yield 10
+        a = yield a
+        yield a
+        return void
     }
 
-    const iter = gen();
-    expect_fail(λ->(iter(0)));
-    expect_fail(λ->(iter(1)));
-    assert iter() == 10;
-    assert iter() == void;
-    assert iter(20) == 20;
-    expect_fail(iter);
+    const iter = gen()
+    expect_fail(λ->(iter(0)))
+    expect_fail(λ->(iter(1)))
+    assert iter() == 10
+    assert iter() == void
+    assert iter(20) == 20
+    expect_fail(iter)
 }
 
 {
     fun gen(a)
     {
         for ;; {
-            a = yield a + 1;
+            a = yield a + 1
         }
     }
 
-    expect_fail(gen);
+    expect_fail(gen)
 
-    const iter = gen(7);
-    assert iter() == 8;
-    assert iter(1) == 2;
-    assert iter(-7) == -6;
-    assert iter(9) == 10;
+    const iter = gen(7)
+    assert iter() == 8
+    assert iter(1) == 2
+    assert iter(-7) == -6
+    assert iter(9) == 10
 }
 
 {
     fun gen
     {
-        yield 2;
-        yield 4;
-        throw 6;
+        yield 2
+        yield 4
+        throw 6
     }
 
-    const iter = gen();
-    assert iter() == 2;
-    assert iter() == 4;
+    const iter = gen()
+    assert iter() == 2
+    assert iter() == 4
 
     try {
-        iter();
-        throw "Unexpected value yielded";
+        iter()
+        throw "Unexpected value yielded"
     }
     catch const e {
-        assert e.value == 6;
+        assert e.value == 6
     }
 
-    var thrown = false;
+    var thrown = false
     try {
-        iter();
+        iter()
     }
     catch const e {
-        thrown = true;
-        assert e.value == "generator";
+        thrown = true
+        assert e.value == "generator"
     }
-    assert thrown;
+    assert thrown
 }
 
 {
     fun gen
     {
-        yield 2;
-        throw 3;
-        yield 5;
-        return 4;
+        yield 2
+        throw 3
+        yield 5
+        return 4
     }
 
-    const iter = gen();
-    assert iter() == 2;
+    const iter = gen()
+    assert iter() == 2
 
-    var thrown = false;
+    var thrown = false
     try {
-        iter();
+        iter()
     }
     catch const e {
-        thrown = true;
-        assert e.value == 3;
+        thrown = true
+        assert e.value == 3
     }
-    assert thrown;
+    assert thrown
 
-    thrown = false;
+    thrown = false
     try {
-        iter();
+        iter()
     }
     catch const e {
-        thrown = true;
-        assert e.value == "generator";
+        thrown = true
+        assert e.value == "generator"
     }
-    assert thrown;
+    assert thrown
 }
 
 {
-    var type = void;
-    var size = void;
+    var type = void
+    var size = void
 
     fun with_ellipsis(a, b, c...)
     {
-        type = typeof c;
-        size = c.size;
+        type = typeof c
+        size = c.size
     }
 
-    with_ellipsis(1, 2, 3, 4, 5, 6);
-    assert type == "array";
-    assert size == 4;
+    with_ellipsis(1, 2, 3, 4, 5, 6)
+    assert type == "array"
+    assert size == 4
 
-    with_ellipsis('x', 'y');
-    assert type == "array";
-    assert size == 0;
+    with_ellipsis('x', 'y')
+    assert type == "array"
+    assert size == 0
 }
 
 {
     fun add_all(a...)
     {
-        var sum = 0;
+        var sum = 0
         for var i in a {
-            sum += i;
+            sum += i
         }
-        return sum;
+        return sum
     }
 
-    assert add_all()                        == 0;
-    assert add_all(-10)                     == -10;
-    assert add_all(2000, 30)                == 2030;
-    assert add_all(70, 8000, 40000, 3, 900) == 48973;
+    assert add_all()                        == 0
+    assert add_all(-10)                     == -10
+    assert add_all(2000, 30)                == 2030
+    assert add_all(70, 8000, 40000, 3, 900) == 48973
 }
 
 {
     fun add_all(x, y, a...)
     {
-        var sum = x + y;
+        var sum = x + y
         for var i in a {
-            sum += i;
+            sum += i
         }
-        return sum;
+        return sum
     }
 
-    expect_fail(add_all);
-    expect_fail(λ->(add_all(100)));
-    assert add_all(10, 2)                   == 12;
-    assert add_all(70, 8000, 40000, 3, 900) == 48973;
+    expect_fail(add_all)
+    expect_fail(λ->(add_all(100)))
+    assert add_all(10, 2)                   == 12
+    assert add_all(70, 8000, 40000, 3, 900) == 48973
 }
 
 {
     fun args_len(a...)
     {
-        return a.size;
+        return a.size
     }
 
-    assert args_len()                 == 0;
-    assert args_len(void, void, void) == 3;
+    assert args_len()                 == 0
+    assert args_len(void, void, void) == 3
 }
 
 {
     fun args_len(x, y, z, a...)
     {
-        return a.size;
+        return a.size
     }
 
-    assert args_len(void, void, void)             == 0;
-    assert args_len(void, void, void, void, void) == 2;
+    assert args_len(void, void, void)             == 0
+    assert args_len(void, void, void, void, void) == 2
 }
 
 {
     fun get_index(idx, a...)
     {
-        return a[idx];
+        return a[idx]
     }
 
-    assert get_index(0,  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'a';
-    assert get_index(-1, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'h';
-    assert get_index(5,  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'f';
+    assert get_index(0,  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'a'
+    assert get_index(-1, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'h'
+    assert get_index(5,  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'f'
 }
 
 {
     fun number(a)
     {
         for (;;) {
-            yield a;
+            yield a
         }
     }
 
-    const one = number(1);
-    const two = number(2);
-    const six = number(6);
-    assert one() == 1;
-    assert two() == 2;
-    assert six() == 6;
-    assert two() == 2;
-    assert one() == 1;
-    assert six() == 6;
+    const one = number(1)
+    const two = number(2)
+    const six = number(6)
+    assert one() == 1
+    assert two() == 2
+    assert six() == 6
+    assert two() == 2
+    assert one() == 1
+    assert six() == 6
 }
 
 {
     fun number(a)
     {
-        const value = a;
+        const value = a
         for (;;) {
-            yield value;
+            yield value
         }
     }
 
-    const one = number(1);
-    const two = number(2);
-    const six = number(6);
-    assert one() == 1;
-    assert two() == 2;
-    assert six() == 6;
-    assert two() == 2;
-    assert one() == 1;
-    assert six() == 6;
+    const one = number(1)
+    const two = number(2)
+    const six = number(6)
+    assert one() == 1
+    assert two() == 2
+    assert six() == 6
+    assert two() == 2
+    assert one() == 1
+    assert six() == 6
 }
 
 {
-    var idx = 0;
+    var idx = 0
 
     fun arg(cur)
     {
-        assert idx == cur;
-        idx += 1;
+        assert idx == cur
+        idx += 1
     }
 
     fun noop
     {
     }
 
-    noop(arg(0), arg(1), arg(2), arg(3), arg(4), arg(5), arg(6));
+    noop(arg(0), arg(1), arg(2), arg(3), arg(4), arg(5), arg(6))
 }
 
 {
@@ -503,39 +503,39 @@ var global_b = "b";
         return
         x + 5 +
         3 -
-        2;
+        2
     }
 
-    assert plus_six(3) == 9;
+    assert plus_six(3) == 9
 }
 
 {
     fun three_args(a, b, c)
     {
-        return a + b + c;
+        return a + b + c
     }
 
-    var prev = 0;
+    var prev = 0
 
     fun order(pos)
     {
-        assert pos > prev;
-        prev = pos;
-        return pos;
+        assert pos > prev
+        prev = pos
+        return pos
     }
 
-    three_args(order(1), order(2), order(prev * 3 + 10 > 0 ? prev * 10 : 0));
+    three_args(order(1), order(2), order(prev * 3 + 10 > 0 ? prev * 10 : 0))
 
-    prev = 0;
+    prev = 0
 
-    three_args(order(prev + 1 * 8 < 0 ? 1 : prev + 2), order(3), order(4));
+    three_args(order(prev + 1 * 8 < 0 ? 1 : prev + 2), order(3), order(4))
 }
 
 # Deep expression
 {
     fun add_1(x)
     {
-        return x + 1;
+        return x + 1
     }
 
     fun expr
@@ -603,7 +603,7 @@ var global_b = "b";
               61 + 2 * add_1(
               62 + 2 * add_1(
               63 + 2 * add_1(
-              64)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+              64)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
     }
     #          64 + 2 * add_1(
     #          65 + 2 * add_1(
@@ -642,160 +642,160 @@ var global_b = "b";
     #          98 + 2 * add_1(
     #          99 + 2 * add_1(
     #          100
-    #          )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+    #          )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
     #}
 
     fun recursive(x, stop)
     {
         if x == stop {
-            return stop;
+            return stop
         }
-        return x + 2 * add_1(recursive(x+1, stop));
+        return x + 2 * add_1(recursive(x+1, stop))
     }
 
-    assert expr() == recursive(1, 64);
+    assert expr() == recursive(1, 64)
 }
 
 {
     fun add(x, y)
     {
-        return x + y;
+        return x + y
     }
 
-    var accum = 1;
-    accum     = add(accum, 2);
+    var accum = 1
+    accum     = add(accum, 2)
 
-    assert accum == 3;
+    assert accum == 3
 }
 
 {
-    var obj = fun(x, y) { return x + y; };
-    obj     = obj(4, -1);
+    var obj = fun(x, y) { return x + y }
+    obj     = obj(4, -1)
 
-    assert obj == 3;
+    assert obj == 3
 }
 
 {
     var obj = {
         a: 12,
         f: λ->(this.a + 1)
-    };
-    obj = obj.f();
-    assert obj == 13;
+    }
+    obj = obj.f()
+    assert obj == 13
 }
 
-var global = 1;
+var global = 1
 {
-    var global = global + 9;
-    assert global == 10;
+    var global = global + 9
+    assert global == 10
     fun f
     {
-        var global = global + 10;
-        assert global == 20;
-        var count = 0;
+        var global = global + 10
+        assert global == 20
+        var count = 0
         for var global = global + 10; global == 30; global += 1 {
             try {
-                assert global == 30;
+                assert global == 30
                 {
-                    const global = global + 10;
-                    assert global == 40;
+                    const global = global + 10
+                    assert global == 40
                 }
-                assert global == 30;
-                count += 1;
-                throw global + 5;
-                count += 1;
+                assert global == 30
+                count += 1
+                throw global + 5
+                count += 1
             }
             catch const global {
-                assert global.value == 35;
+                assert global.value == 35
             }
             finally {
-                global += 3;
+                global += 3
             }
-            assert global == 33;
+            assert global == 33
         }
-        assert count  == 1;
-        assert global == 20;
+        assert count  == 1
+        assert global == 20
     }
-    f();
-    assert global == 10;
-    f();
+    f()
+    assert global == 10
+    f()
 }
-assert global == 1;
+assert global == 1
 
 {
     # The only case when using the variable in the expression is allowed
     const recurse = fun(level) {
         if level == 0 {
-            return recurse(1) * 10;
+            return recurse(1) * 10
         }
-        return 2;
-    };
-    assert recurse(0) == 20;
+        return 2
+    }
+    assert recurse(0) == 20
 }
 
 {
     fun outer(a, b)
     {
         return fun {
-            return b;
-        };
+            return b
+        }
     }
 
-    assert outer(1, 2)()      == 2;
-    assert outer(void, "x")() == "x";
+    assert outer(1, 2)()      == 2
+    assert outer(void, "x")() == "x"
 }
 
 {
     fun outer(a...)
     {
         return fun {
-            return a;
-        };
+            return a
+        }
     }
 
-    const a1 = outer(1, 2, 3)();
-    assert typeof a1 == "array";
-    assert a1.size   == 3;
-    assert a1[0]     == 1;
-    assert a1[1]     == 2;
-    assert a1[2]     == 3;
+    const a1 = outer(1, 2, 3)()
+    assert typeof a1 == "array"
+    assert a1.size   == 3
+    assert a1[0]     == 1
+    assert a1[1]     == 2
+    assert a1[2]     == 3
 }
 
 {
     fun outer(x, a...)
     {
         return fun {
-            return a;
-        };
+            return a
+        }
     }
 
-    const a1 = outer("skip", void, "m")();
-    assert typeof a1 == "array";
-    assert a1.size   == 2;
-    assert a1[0]     == void;
-    assert a1[1]     == "m";
+    const a1 = outer("skip", void, "m")()
+    assert typeof a1 == "array"
+    assert a1.size   == 2
+    assert a1[0]     == void
+    assert a1[1]     == "m"
 }
 
 {
     fun add_5(source)
     {
         for var elem in source {
-            yield elem + 5;
+            yield elem + 5
         }
     }
 
     fun mul_3(source)
     {
         for var elem in source {
-            yield elem * 3;
+            yield elem * 3
         }
     }
 
-    const iter = [4, -2, 1] -> mul_3 -> add_5;
+    const iter = [4, -2, 1] -> mul_3 -> add_5
 
-    assert typeof iter == "function";
-    assert iter()      == 17;
-    assert iter()      == -1;
-    assert iter()      == 8;
-    expect_fail(iter);
+    assert typeof iter == "function"
+    assert iter()      == 17
+    assert iter()      == -1
+    assert iter()      == 8
+    expect_fail(iter)
 }
