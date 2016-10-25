@@ -105,8 +105,7 @@ static int _is_implicit_semicolon(struct _KOS_PARSER *parser)
 {
     const struct _KOS_TOKEN *token = &parser->token;
 
-    return (token->sep != ST_SEMICOLON   &&
-            ! parser->require_semicolons &&
+    return (token->sep != ST_SEMICOLON &&
             (parser->had_eol || token->sep == ST_CURLY_CLOSE || token->type == TT_EOF))
            ? 1 : 0;
 }
@@ -1319,7 +1318,7 @@ static int _expr_no_var(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     if (parser->token.sep == ST_SEMICOLON || parser->token.sep == ST_PAREN_CLOSE
         || (node_type != NT_IDENTIFIER && node_type != NT_REFINEMENT && node_type != NT_SLICE)
-        || (parser->token.sep != ST_COMMA && parser->token.op != OT_ASSIGNMENT && parser->had_eol))
+        || (parser->token.sep != ST_COMMA && ! (parser->token.op & OT_ASSIGNMENT) && parser->had_eol))
     {
 
         parser->unget = 1;
@@ -2307,16 +2306,10 @@ static int _end_of_return(const struct _KOS_PARSER *parser)
 {
     const struct _KOS_TOKEN *token = &parser->token;
 
-    if (token->sep == ST_SEMICOLON)
-        return 1;
+    if (token->sep  == ST_SEMICOLON   ||
+        token->sep  == ST_CURLY_CLOSE ||
+        token->type == TT_EOF)
 
-    if (parser->require_semicolons)
-        return 0;
-
-    if (token->sep == ST_CURLY_CLOSE)
-        return 1;
-
-    if (token->type == TT_EOF)
         return 1;
 
     return 0;
@@ -2548,13 +2541,12 @@ void _KOS_parser_init(struct _KOS_PARSER  *parser,
 {
     _KOS_lexer_init(&parser->lexer, file_id, begin, end);
 
-    parser->ast_buf            = mempool;
-    parser->error_str          = 0;
-    parser->unget              = 0;
-    parser->had_eol            = 0;
-    parser->allow_break        = 0;
-    parser->require_semicolons = 0;
-    parser->unary_depth        = 0;
+    parser->ast_buf       = mempool;
+    parser->error_str     = 0;
+    parser->unget         = 0;
+    parser->had_eol       = 0;
+    parser->allow_break   = 0;
+    parser->unary_depth   = 0;
 
     parser->token.length  = 0;
     parser->token.pos     = parser->lexer.pos;
