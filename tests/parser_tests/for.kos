@@ -295,3 +295,13 @@ for var a,b in c, d;;{} # Open curly brace expected
 for (var a in b;;) {} # Close parenthesis expected
 
 @ 10 1 16
+
+@------------------------------------------------------------------------------
+for var a = 0; ; a += 1 : # Open curly brace expected
+
+@ 10 1 25
+
+@------------------------------------------------------------------------------
+for (var a = 0; ; a += 1 : # Close parenthesis expected
+
+@ 10 1 26

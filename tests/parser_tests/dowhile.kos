@@ -78,3 +78,8 @@ do {} while _ = 1; # Semicolon expected
 do { } while const a = 1; # Expression expected
 
 @ 10 1 14
+
+@------------------------------------------------------------------------------
+do { } ; # 'while' expected
+
+@ 10 1 8

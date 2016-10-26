@@ -234,3 +234,8 @@ switch a = b { } # Need curly brace instead of assignment
 switch { } { 0: } # Open curly brace expected
 
 @ 10 1 15
+
+@------------------------------------------------------------------------------
+switch a {
+
+@ 10 3 1

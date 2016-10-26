@@ -249,3 +249,9 @@ assert ; # Expression expected
 const a = assert 1; # Expression expected
 
 @ 10 1 11
+
+@------------------------------------------------------------------------------
+try {}
+catch var {}
+
+@ 10 2 11
