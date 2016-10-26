@@ -84,6 +84,11 @@ fun expect_fail(function)
     expect_fail(λ->(new lang.number("-")))
     expect_fail(λ->(new lang.number("--")))
     expect_fail(λ->(new lang.number("-E")))
+    expect_fail(λ->(new lang.number({})))
+    expect_fail(λ->(new lang.number([])))
+    expect_fail(λ->(new lang.number(λ->(void))))
+    expect_fail(λ->(new lang.number(false)))
+    expect_fail(λ->(new lang.number(void)))
 
     const _1 = new lang.number("1")
     assert typeof _1 == "integer"
@@ -179,6 +184,11 @@ fun expect_fail(function)
     expect_fail(λ->(new lang.integer(".")))
     expect_fail(λ->(new lang.integer("-.")))
     expect_fail(λ->(new lang.integer(".5")))
+    expect_fail(λ->(new lang.integer({})))
+    expect_fail(λ->(new lang.integer([])))
+    expect_fail(λ->(new lang.integer(λ->(void))))
+    expect_fail(λ->(new lang.integer(false)))
+    expect_fail(λ->(new lang.integer(void)))
 
     const _1 = new lang.integer("1")
     assert typeof _1 == "integer"
@@ -216,6 +226,12 @@ fun expect_fail(function)
 }
 
 {
+    const number = new lang.float(4611686018427387904)
+    assert typeof number == "float"
+    assert number        == 4611686018427387904
+}
+
+{
     expect_fail(λ->((3.0).square3()))
 
     lang.float.prototype.square3 = λ->(this * this * this)
@@ -246,6 +262,11 @@ fun expect_fail(function)
     expect_fail(λ->(new lang.float("--")))
     expect_fail(λ->(new lang.float("-E")))
     expect_fail(λ->(new lang.float("0x002")))
+    expect_fail(λ->(new lang.float({})))
+    expect_fail(λ->(new lang.float([])))
+    expect_fail(λ->(new lang.float(λ->(void))))
+    expect_fail(λ->(new lang.float(false)))
+    expect_fail(λ->(new lang.float(void)))
 
     const _1 = new lang.float("1")
     assert typeof _1 == "float"
@@ -360,6 +381,18 @@ fun expect_fail(function)
     assert str == "123"
 
     assert "x\(1)y" instanceof lang.string
+}
+
+{
+    fun constructor
+    {
+    }
+
+    constructor.set_prototype(lang.string.prototype)
+
+    const o = new constructor
+
+    expect_fail(λ->(o.size))
 }
 
 ##############################################################################
@@ -479,6 +512,12 @@ fun expect_fail(function)
 }
 
 {
+    expect_fail(λ->(new lang.array(1)))
+    expect_fail(λ->(new lang.array(1.0)))
+    expect_fail(λ->(new lang.array(λ->(void))))
+}
+
+{
     const a = new lang.array(lang.range(4))
     assert typeof a == "array"
     assert a.size   == 4
@@ -585,6 +624,15 @@ fun expect_fail(function)
     assert a.size   == 0
 }
 
+{
+    expect_fail(fun { [].reserve(-1) })
+    expect_fail(fun { lang.array.prototype.reserve(void, [0]) })
+
+    const a = []
+    a.reserve(100)
+    assert a.size == 0
+}
+
 ##############################################################################
 # lang.array.prototype.slice
 
@@ -628,6 +676,11 @@ fun expect_fail(function)
         assert b.size == 2
         assert b[0] == "a"
         assert b[1] == "b"
+    }
+
+    {
+        expect_fail(λ->([].slice(0, false)))
+        expect_fail(λ->([].slice(false, 0)))
     }
 }
 
@@ -730,6 +783,12 @@ fun expect_fail(function)
     test_case({ array: [ 1, 2, 3 ], args: [ void, void, void         ], result: [ 1, 2, 3 ]           })
 }
 
+{
+    expect_fail(λ->([].insert_array(0, 1, {})))
+    expect_fail(λ->([].insert_array("", 0, [])))
+    expect_fail(λ->([].insert_array(0, "", [])))
+}
+
 ##############################################################################
 # lang.array.prototype.insert
 
@@ -781,6 +840,28 @@ fun expect_fail(function)
     assert ! (f instanceof lang.integer)
     assert ! (f instanceof lang.string)
     assert ! (f instanceof lang.array)
+}
+
+##############################################################################
+# lang.function.prototype.set_prototype
+
+{
+    expect_fail(λ->(lang.function.set_prototype.apply(void, [void])))
+}
+
+##############################################################################
+# lang.function.prototype.prototype
+
+{
+    fun constructor
+    {
+    }
+
+    constructor.set_prototype(lang.function.prototype)
+
+    const o = new constructor
+
+    expect_fail(λ->(o.prototype))
 }
 
 ##############################################################################
@@ -850,6 +931,14 @@ fun expect_fail(function)
     assert args[0]   == 1
     assert args[1]   == 2
     assert args[2]   == 3
+}
+
+##############################################################################
+# resize
+
+{
+    expect_fail(λ->([].resize(-1)))
+    expect_fail(λ->((new lang.buffer).resize(-1)))
 }
 
 ##############################################################################

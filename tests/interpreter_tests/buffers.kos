@@ -76,6 +76,10 @@ fun buffer_from_array(a)
 }
 
 {
+    expect_fail(λ->(new buffer(-1)))
+}
+
+{
     const b = new buffer
 
     assert typeof b == "buffer"
@@ -160,6 +164,7 @@ fun buffer_from_array(a)
     expect_fail(fun { b[5] = [0]     })
     expect_fail(fun { b[5] = buffer()})
     expect_fail(fun { b[5] = buffer(1) })
+    expect_fail(fun { (new buffer).reserve(-1) })
 
     assert b.size == 10
     assert b[0]   == 0
@@ -240,6 +245,22 @@ fun buffer_from_array(a)
             assert b[i] == 255
         }
     }
+
+    b.resize(4)
+    b.fill(void, void, 5)
+    for var i = 0; i < b.size; i += 1 {
+        assert b[i] == 5
+    }
+
+    b.fill(void, 6)
+    for var i = 0; i < b.size; i += 1 {
+        assert b[i] == 6
+    }
+
+    expect_fail(λ->(b.fill(false, void, 0)))
+    expect_fail(λ->(b.fill(void, false, 0)))
+    expect_fail(λ->(b.fill(false, 0)))
+    expect_fail(λ->(b.fill(void, void, 256)))
 }
 
 ##############################################################################
@@ -308,6 +329,8 @@ fun buffer_from_array(a)
     expect_fail(fun { b1.copy_buffer(b4, 0, 1, 2) })
     expect_fail(fun { b1.copy_buffer(0, 1, b4, 0) })
     expect_fail(fun { b1.copy_buffer(0, 1, 2, b4) })
+    expect_fail(fun { b1.copy_buffer(b4, 2, b4) })
+    expect_fail(fun { b1.copy_buffer(b4, b4) })
     check_b1(4, 4, 4, 2, 2, 0, 0, 0, 0, 0)
 
     b1.copy_buffer(-4, b3, 0, 3)
@@ -321,6 +344,9 @@ fun buffer_from_array(a)
     }
     b1.copy_buffer(-6, b1)
     check_b1(0, 1, 2, 3, 0, 1, 2, 3, 4, 5) 
+
+    b1.copy_buffer(b1, 5, 10)
+    check_b1(1, 2, 3, 4, 5, 1, 2, 3, 4, 5) 
 
     for var i = 0; i < b2.size; i += 1 {
         assert b2[i] == 2
@@ -457,6 +483,22 @@ fun buffer_from_array(a)
 
 ##############################################################################
 # lang.buffer.prototype.pack
+
+{
+    const b = new buffer
+    b.pack("")
+
+    assert b.size == 0
+}
+
+{
+    const b = new buffer
+    b.pack(" i 1 i 1 ", 101, 102)
+
+    assert b.size == 2
+    assert b[0]   == 101
+    assert b[1]   == 102
+}
 
 {
     const b  = new buffer
@@ -624,12 +666,41 @@ fun buffer_from_array(a)
 }
 
 {
+    const b = new buffer
+    b.pack("i2 u2", [ 0x8000, 0x8101 ])
+
+    assert b.size == 4
+    assert b[0]   == 0x00
+    assert b[1]   == 0x80
+    assert b[2]   == 0x01
+    assert b[3]   == 0x81
+}
+
+{
+    const b = new buffer
+    b.pack("f4 f4", 1, 0x4000000000000000);
+
+    assert b.size == 8
+    assert b[0]   == 0x00
+    assert b[1]   == 0x00
+    assert b[2]   == 0x80
+    assert b[3]   == 0x3F
+    assert b[4]   == 0x00
+    assert b[5]   == 0x00
+    assert b[6]   == 0x80
+    assert b[7]   == 0x5e
+}
+
+{
+    expect_fail(λ->((new buffer).pack(1)))
     expect_fail(λ->((new buffer).pack()))
     expect_fail(λ->((new buffer).pack("1", 0)))
     expect_fail(λ->((new buffer).pack("u", 0)))
+    expect_fail(λ->((new buffer).pack("r1", 0)))
     expect_fail(λ->((new buffer).pack("u3", 0)))
     expect_fail(λ->((new buffer).pack("i7", 0)))
     expect_fail(λ->((new buffer).pack("f2", 0)))
+    expect_fail(λ->((new buffer).pack("f4", "x")))
     expect_fail(λ->((new buffer).pack("u2", "")))
     expect_fail(λ->((new buffer).pack("s2", 0)))
     expect_fail(λ->((new buffer).pack("b", "")))
@@ -640,6 +711,7 @@ fun buffer_from_array(a)
     expect_fail(λ->((new buffer).pack("2 s4", "")))
     expect_fail(λ->((new buffer).pack("2 b4", new buffer)))
     expect_fail(λ->((new buffer).pack("2 b4")))
+    expect_fail(λ->((new buffer).pack("b4", 0)))
 }
 
 ##############################################################################
@@ -800,5 +872,8 @@ fun buffer_from_array(a)
 }
 
 {
+    expect_fail(λ->(buffer.prototype.unpack.apply(void, [""])))
+    expect_fail(λ->((new buffer(100)).unpack(void)))
     expect_fail(λ->((new buffer(100)).unpack("s")))
+    expect_fail(λ->((new buffer).unpack("u1")))
 }
