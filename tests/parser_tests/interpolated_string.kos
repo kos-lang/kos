@@ -142,3 +142,7 @@ const a = "bb\(c)dd'; # Unexpected EOF - double quote needed to end the string
 const a = "bb\(c;)dd";
 
 @ 9 1 17
+
+@------------------------------------------------------------------------------
+const a = "\(0
+@ 9 2 1

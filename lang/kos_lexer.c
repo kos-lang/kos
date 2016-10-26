@@ -23,6 +23,7 @@
 #include "kos_lexer.h"
 #include "../inc/kos_error.h"
 #include "kos_utf8.h"
+#include <assert.h>
 #include <string.h>
 
 static const char str_err_bin[]                 = "unexpected character, binary digit expected";
@@ -340,13 +341,11 @@ static unsigned _prefetch_next(struct _KOS_LEXER *lexer, const char **begin, con
         lt = lexem_types[(unsigned char)*b];
 
         if ((lt & LT_UTF8_MULTI) != 0) {
-            unsigned len = lt & LT_UTF8_MASK;
+            const unsigned len = lt & LT_UTF8_MASK;
 
-            if (len == 0) {
-                lt = LT_INVALID_UTF8;
-                e  = b + 1;
-            }
-            else if (b + len > lexer->buf_end) {
+            assert(len > 0);
+
+            if (b + len > lexer->buf_end) {
                 lt = LT_INVALID_UTF8;
                 e  = lexer->buf_end;
             }
@@ -465,6 +464,7 @@ static int _collect_escape(struct _KOS_LEXER *lexer, int *format)
                     if (c == LT_EOF) {
                         lexer->error_str = str_err_eof_esc;
                         error = KOS_ERROR_SCANNING_FAILED;
+                        break;
                     }
                     else if (*begin == '}')
                         break;
@@ -927,8 +927,12 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
     token->begin  = begin;
     token->length = (unsigned)(end - begin);
 
-    if (error)
-        lexer->pos.column--;
+    if (error) {
+        if (lexer->pos.column == 1)
+            _retract(lexer, lexer->prefetch_end);
+        else
+            lexer->pos.column--;
+    }
 
     return error;
 }
