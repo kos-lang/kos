@@ -777,6 +777,27 @@ assert global == 1
 }
 
 {
+    fun add_21(x)
+    {
+        return x + 21
+    }
+
+    fun shl_1(x)
+    {
+        return x << 1
+    }
+
+    fun to_str(x)
+    {
+        return "\(x)";
+    }
+
+    const result = 5.1 -> shl_1 -> add_21 -> to_str
+
+    assert result == "31"
+}
+
+{
     fun add_5(source)
     {
         for var elem in source {

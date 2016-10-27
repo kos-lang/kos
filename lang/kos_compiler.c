@@ -1680,47 +1680,6 @@ _error:
     return error;
 }
 
-static int _invoke_get_iterator(struct _KOS_COMP_UNIT *program,
-                                struct _KOS_REG      **reg)
-{
-    int               error          = KOS_SUCCESS;
-    int               str_idx;
-    struct _KOS_REG  *func_reg       = 0;
-    struct _KOS_REG  *args_reg       = 0;
-    struct _KOS_REG  *obj_reg        = *reg;
-    struct _KOS_TOKEN token;
-    static const char str_iterator[] = "iterator";
-
-    if ( ! (*reg)->tmp) {
-        _free_reg(program, *reg);
-        *reg = 0;
-
-        TRY(_gen_reg(program, reg));
-    }
-
-    TRY(_gen_reg(program, &func_reg));
-    TRY(_gen_reg(program, &args_reg));
-
-    memset(&token, 0, sizeof(token));
-    token.begin  = str_iterator;
-    token.length = sizeof(str_iterator) - 1;
-    token.type   = TT_IDENTIFIER;
-
-    TRY(_gen_str(program, &token, &str_idx));
-
-    TRY(_gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
-
-    TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, args_reg->reg, 0));
-
-    TRY(_gen_instr4(program, INSTR_CALL, (*reg)->reg, func_reg->reg, obj_reg->reg, args_reg->reg));
-
-    _free_reg(program, args_reg);
-    _free_reg(program, func_reg);
-
-_error:
-    return error;
-}
-
 static int _stream(struct _KOS_COMP_UNIT      *program,
                    const struct _KOS_AST_NODE *node,
                    struct _KOS_REG           **reg)
@@ -1738,9 +1697,6 @@ static int _stream(struct _KOS_COMP_UNIT      *program,
     assert(node);
 
     TRY(_visit_node(program, node, &src_reg));
-
-    if (node->type != NT_STREAM)
-        TRY(_invoke_get_iterator(program, &src_reg));
 
     node = node->next;
     assert(node);
@@ -2070,6 +2026,47 @@ static int _for(struct _KOS_COMP_UNIT      *program,
     _finish_break_continue(program, step_instr_offs, old_break_offs);
 
     program->cur_frame->last_try_scope = prev_try_scope;
+
+_error:
+    return error;
+}
+
+static int _invoke_get_iterator(struct _KOS_COMP_UNIT *program,
+                                struct _KOS_REG      **reg)
+{
+    int               error          = KOS_SUCCESS;
+    int               str_idx;
+    struct _KOS_REG  *func_reg       = 0;
+    struct _KOS_REG  *args_reg       = 0;
+    struct _KOS_REG  *obj_reg        = *reg;
+    struct _KOS_TOKEN token;
+    static const char str_iterator[] = "iterator";
+
+    if ( ! (*reg)->tmp) {
+        _free_reg(program, *reg);
+        *reg = 0;
+
+        TRY(_gen_reg(program, reg));
+    }
+
+    TRY(_gen_reg(program, &func_reg));
+    TRY(_gen_reg(program, &args_reg));
+
+    memset(&token, 0, sizeof(token));
+    token.begin  = str_iterator;
+    token.length = sizeof(str_iterator) - 1;
+    token.type   = TT_IDENTIFIER;
+
+    TRY(_gen_str(program, &token, &str_idx));
+
+    TRY(_gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
+
+    TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, args_reg->reg, 0));
+
+    TRY(_gen_instr4(program, INSTR_CALL, (*reg)->reg, func_reg->reg, obj_reg->reg, args_reg->reg));
+
+    _free_reg(program, args_reg);
+    _free_reg(program, func_reg);
 
 _error:
     return error;

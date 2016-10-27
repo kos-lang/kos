@@ -523,3 +523,8 @@ Exceptions
 
 Generators
 ----------
+
+
+Function composition with stream operator
+-----------------------------------------
+
