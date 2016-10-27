@@ -1,0 +1,9 @@
+fun test
+{
+    if true {
+        return 10
+    }
+    else {
+        yield 10
+    }
+}

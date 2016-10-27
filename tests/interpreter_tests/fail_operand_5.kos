@@ -1,0 +1,3 @@
+import lang
+
+lang.print(5 -> 10)

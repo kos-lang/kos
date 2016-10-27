@@ -1632,7 +1632,8 @@ static int _return(struct _KOS_COMP_UNIT      *program,
         if (node->children->type != NT_VOID_LITERAL && _is_generator(program)) {
             program->error_token = &node->token;
             program->error_str   = str_err_return_in_generator;
-            TRY(KOS_ERROR_COMPILE_FAILED);
+            error = KOS_ERROR_COMPILE_FAILED;
+            goto _error;
         }
 
         /* TODO - tail recursion (INSTR_TAIL_CALL) if there are no pending catches */
@@ -2735,7 +2736,8 @@ static int _refinement_module(struct _KOS_COMP_UNIT      *program,
         if (error) {
             program->error_token = &node->token;
             program->error_str   = str_err_no_such_module_variable;
-            TRY(KOS_ERROR_COMPILE_FAILED);
+            error = KOS_ERROR_COMPILE_FAILED;
+            goto _error;
         }
 
         TRY(_gen_reg(program, reg));
@@ -2832,7 +2834,8 @@ static int _refinement_object(struct _KOS_COMP_UNIT      *program,
         if (idx > INT_MAX || idx < INT_MIN) {
             program->error_token = &node->token;
             program->error_str   = str_err_invalid_index;
-            TRY(KOS_ERROR_COMPILE_FAILED);
+            error = KOS_ERROR_COMPILE_FAILED;
+            goto _error;
         }
 
         TRY(_gen_instr3(program, INSTR_GET_ELEM, (*reg)->reg, obj->reg, (int)idx));
@@ -3371,7 +3374,8 @@ static int _delete(struct _KOS_COMP_UNIT      *program,
     if (node->children->type != NT_REFINEMENT) {
         program->error_token = &node->children->token;
         program->error_str   = str_err_expected_refinement;
-        TRY(KOS_ERROR_COMPILE_FAILED);
+        error = KOS_ERROR_COMPILE_FAILED;
+        goto _error;
     }
 
     node = node->children;
@@ -3397,7 +3401,8 @@ static int _delete(struct _KOS_COMP_UNIT      *program,
 
         program->error_token = &node->token;
         program->error_str   = str_err_expected_refinement_ident;
-        TRY(KOS_ERROR_COMPILE_FAILED);
+        error = KOS_ERROR_COMPILE_FAILED;
+        goto _error;
     }
     else {
 
@@ -3678,7 +3683,8 @@ static int _assign_member(struct _KOS_COMP_UNIT      *program,
         if (idx > INT_MAX || idx < INT_MIN) {
             program->error_token = &node->token;
             program->error_str   = str_err_invalid_index;
-            TRY(KOS_ERROR_COMPILE_FAILED);
+            error = KOS_ERROR_COMPILE_FAILED;
+            goto _error;
         }
     }
     else {
@@ -3963,7 +3969,8 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
             else {
                 program->error_token = &assg_node->token;
                 program->error_str   = str_err_invalid_assignment;
-                TRY(KOS_ERROR_COMPILE_FAILED);
+                error = KOS_ERROR_COMPILE_FAILED;
+                goto _error;
             }
 
             if (reg)
@@ -3998,7 +4005,8 @@ static int _interpolated_string(struct _KOS_COMP_UNIT      *program,
     if (error) {
         program->error_token = &node->token;
         program->error_str   = str_err_no_such_module_variable;
-        TRY(KOS_ERROR_COMPILE_FAILED);
+        error = KOS_ERROR_COMPILE_FAILED;
+        goto _error;
     }
 
     TRY(_gen_array(program, node->children, &args));
@@ -4539,7 +4547,8 @@ static int _object_literal(struct _KOS_COMP_UNIT      *program,
         if (_KOS_red_black_find(prop_str_idcs, (void *)(intptr_t)str_idx, _prop_compare_item)) {
             program->error_token = &prop_node->token;
             program->error_str   = str_err_duplicate_property;
-            TRY(KOS_ERROR_COMPILE_FAILED);
+            error = KOS_ERROR_COMPILE_FAILED;
+            goto _error;
         }
         else {
             struct _KOS_OBJECT_PROP_DUPE *new_node = (struct _KOS_OBJECT_PROP_DUPE *)

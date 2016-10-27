@@ -127,7 +127,17 @@ module_loading:
 	@echo Test module_loading
 	@interpreter_tests/module_loading $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
-simple_test: $(filter-out kos_parallel%, $(standalone_tests) $(parser_test_list) module_loading $(interpreter_test_list) $(interpreter_fail_test_list))
+disasm:
+	@echo Test disasm
+	@env KOSPATH=../modules interpreter_tests/disasm $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
+
+simple_tests = $(filter-out kos_parallel%, $(standalone_tests) $(parser_test_list) module_loading disasm $(interpreter_test_list) $(interpreter_fail_test_list))
+
+simple_test: $(simple_tests)
+
+ifneq ($(CONFIG_GCOV), 0)
+$(simple_tests): gcov.pre.clean
+endif
 
 define GCOV_RULE
 gcov.$1: simple_test
@@ -141,6 +151,9 @@ $(foreach module, $(gcov_modules), $(eval $(call GCOV_RULE,$(module))))
 gcov.all: $(addprefix gcov., $(gcov_modules))
 
 gcov: gcov.all
+	@find $(out_dir)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
+
+gcov.pre.clean:
 	@find $(out_dir)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
 
 # Execute parallel tests last, make them depend on each other so that they are executed alone
@@ -160,4 +173,4 @@ ifneq ($(CONFIG_GCOV), 0)
 test: gcov
 endif
 
-.PHONY: all test simple_test gcov gcov.all $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) module_loading $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov gcov.all $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) module_loading disasm $(interpreter_test_list) $(interpreter_fail_test_list)

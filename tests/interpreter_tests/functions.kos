@@ -820,3 +820,9 @@ assert global == 1
     assert iter()      == 8
     expect_fail(iter)
 }
+
+{
+    const a = 10;
+    const result = a -> λ(x)->(x/2)
+    assert result == 5
+}
