@@ -22,12 +22,6 @@
 
 set -e
 
-VERBOSE=""
-if [ "$1" = "-verbose" ]; then
-    VERBOSE="1"
-    shift
-fi
-
 if [ $# -ne 2 ]; then
     echo "$0: Invalid arguments"
     exit 1
@@ -36,22 +30,6 @@ fi
 KOS="$1"
 DIR="$2"
 
-kos()
-{
-    if [ -n "$VERBOSE" ]; then
-        echo "% $KOS" "$@"
-        "$KOS" "$@"
-    else
-        "$KOS" "$@"
-    fi
-}
-
-die()
-{
-    echo "$@" >&2
-    exit 1
-}
-
-KOSDISASM=1 kos "$(dirname "$0")"/disasm.kos | sed "1,/Disassembling module disasm/ d" > "$DIR"/disasm.txt
+env KOSDISASM=1 "$KOS" "$(dirname "$0")"/disasm.kos | sed "1,/Disassembling module disasm/ d" > "$DIR"/disasm.txt
 
 diff "$DIR"/disasm.txt "$(dirname "$0")"/disasm.txt
