@@ -387,6 +387,45 @@ expect_fail(fun {
 }
 
 ##############################################################################
+# mixed types
+{
+    const a = 2.0 * λ->(0x4000000000000000)()
+    const b = λ->(0x4000000000000000)()
+    const c = 0x4000000000000000
+    const d = (a + b) / c
+    assert typeof d == "float"
+    assert d        == 3
+}
+{
+    const a = 2.0 * λ->(0x4000000000000000)()
+    const b = 0x4000000000000000
+    const c = a - b
+    assert typeof c == "float"
+    assert 0x4000000000000000 == c
+}
+{
+    const a = λ->(42)()
+    const b = 0x4000000000000000
+    const c = a % b
+    assert typeof c == "integer"
+    assert c        == 42
+}
+{
+    const a = λ->(123.25)()
+    const b = 0x4000000000000000
+    const c = a % b
+    assert typeof c == "float"
+    assert c        == 123.25
+}
+{
+    const a = λ->(0x4000000000000005)()
+    const b = 16
+    const c = a % b
+    assert typeof c == "integer"
+    assert c        == 5
+}
+
+##############################################################################
 # ||
 {
     const _void  = void
@@ -672,7 +711,21 @@ expect_fail(fun {
     assert typeof c == "integer"
 }
 {
+    const a = λ->(0x8000000000000000)()
+    const b = -15
+    const c = a << b
+    assert c == 0xFFFF000000000000
+    assert typeof c == "integer"
+}
+{
     const a = 0x8000000000000000
+    const b = -64
+    const c = a << b
+    assert c == -1
+    assert typeof c == "integer"
+}
+{
+    const a = λ->(0x8000000000000000)()
     const b = -64
     const c = a << b
     assert c == -1
@@ -754,7 +807,21 @@ expect_fail(fun {
     assert typeof c == "integer"
 }
 {
+    const a = λ->(0x8000000000000000)()
+    const b = 64
+    const c = a >> b
+    assert c == -1
+    assert typeof c == "integer"
+}
+{
     const a = 1
+    const b = -62
+    const c = a >> b
+    assert c == 0x4000000000000000
+    assert typeof c == "integer"
+}
+{
+    const a = λ->(1)()
     const b = -62
     const c = a >> b
     assert c == 0x4000000000000000
@@ -799,6 +866,20 @@ expect_fail(fun {
     const c = a >>> b
     assert c == 0
     assert typeof c == "integer"
+}
+{
+    const a = λ->(0x8000000000000000)()
+    const b = 64
+    const c = a >>> b
+    assert c == 0
+    assert typeof c == "integer"
+}
+{
+    const a = λ->(0x8000000000000001)()
+    const b = -1
+    const c = a >>> b
+    assert typeof c == "integer"
+    assert c        == 2
 }
 
 ##############################################################################

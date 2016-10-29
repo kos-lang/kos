@@ -48,7 +48,6 @@ static KOS_ASCII_STRING(str_err_invalid_instruction, "invalid instruction");
 static KOS_ASCII_STRING(str_err_invalid_string,      "invalid string index");
 static KOS_ASCII_STRING(str_err_new_with_generator,  "new invoked a generator");
 static KOS_ASCII_STRING(str_err_not_callable,        "object is not callable");
-static KOS_ASCII_STRING(str_err_not_function,        "argument to instanceof operator is not a function");
 static KOS_ASCII_STRING(str_err_not_generator,       "function is not a generator");
 static KOS_ASCII_STRING(str_err_too_few_args,        "not enough arguments passed to a function");
 static KOS_ASCII_STRING(str_err_unsup_operand_types, "unsupported operand types");
@@ -461,43 +460,41 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
                            KOS_OBJ_PTR        bobj)
 {
     int ret;
+    int str_cmp;
 
-    if (IS_STRING_OBJ(bobj)) {
+    assert(IS_STRING_OBJ(aobj) && IS_STRING_OBJ(bobj));
 
-        const int str_cmp = KOS_string_compare(aobj, bobj);
+    str_cmp = KOS_string_compare(aobj, bobj);
 
-        switch (instr) {
+    switch (instr) {
 
-            case INSTR_CMP_EQ:
-                ret = ! str_cmp;
-                break;
+        case INSTR_CMP_EQ:
+            ret = ! str_cmp;
+            break;
 
-            case INSTR_CMP_GE:
-                ret = str_cmp >= 0;
-                break;
+        case INSTR_CMP_GE:
+            ret = str_cmp >= 0;
+            break;
 
-            case INSTR_CMP_GT:
-                ret = str_cmp > 0;
-                break;
+        case INSTR_CMP_GT:
+            ret = str_cmp > 0;
+            break;
 
-            case INSTR_CMP_LE:
-                ret = str_cmp <= 0;
-                break;
+        case INSTR_CMP_LE:
+            ret = str_cmp <= 0;
+            break;
 
-            case INSTR_CMP_LT:
-                ret = str_cmp < 0;
-                break;
+        case INSTR_CMP_LT:
+            ret = str_cmp < 0;
+            break;
 
-            case INSTR_CMP_NE:
-                /* fall through */
-            default:
-                assert(instr == INSTR_CMP_NE);
-                ret = !! str_cmp;
-                break;
-        }
+        case INSTR_CMP_NE:
+            /* fall through */
+        default:
+            assert(instr == INSTR_CMP_NE);
+            ret = !! str_cmp;
+            break;
     }
-    else
-        ret = 0;
 
     return ret;
 }
@@ -534,15 +531,12 @@ static int _init_registers(KOS_STACK_FRAME *frame,
 
         for (i=0; i < src_len; i++) {
             KOS_OBJ_PTR obj = KOS_array_read(frame, closures, (int)i);
-            if (IS_BAD_PTR(obj)) {
-                error = KOS_ERROR_EXCEPTION;
-                break;
-            }
-            else
-                new_regs[reg++] = obj;
+            TRY_OBJPTR(obj);
+            new_regs[reg++] = obj;
         }
     }
 
+_error:
     return error;
 }
 
@@ -605,20 +599,13 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
                     *this_obj = proto;
                 else {
                     *this_obj = KOS_new_object_with_prototype(frame, proto);
-                    if (IS_BAD_PTR(*this_obj)) {
-                        error = KOS_ERROR_EXCEPTION;
-                        goto _error;
-                    }
+                    TRY_OBJPTR(*this_obj);
                 }
 
             }
 
             new_stack_frame = _KOS_stack_frame_push_func(frame, func);
-            if ( ! new_stack_frame) {
-                assert(KOS_is_exception_pending(frame));
-                error = KOS_ERROR_EXCEPTION;
-                goto _error;
-            }
+            TRY_OBJPTR(TO_OBJPTR(new_stack_frame));
 
             if ( ! func->handler)
                 TRY(_init_registers(new_stack_frame, func, new_stack_frame->registers, args_obj, *this_obj, func->closures));
@@ -635,10 +622,7 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
             assert( ! IS_BAD_PTR(proto_obj));
 
             ret = KOS_new_function(frame, proto_obj);
-            if (IS_BAD_PTR(ret)) {
-                error = KOS_ERROR_EXCEPTION;
-                goto _error;
-            }
+            TRY_OBJPTR(ret);
 
             dest = OBJPTR(KOS_FUNCTION, ret);
 
@@ -651,10 +635,7 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
             dest->generator_state = KOS_GEN_READY;
 
             new_stack_frame = _KOS_stack_frame_push_func(frame, func);
-            if ( ! new_stack_frame) {
-                error = KOS_ERROR_EXCEPTION;
-                goto _error;
-            }
+            TRY_OBJPTR(TO_OBJPTR(new_stack_frame));
 
             if (func->handler)
                 new_stack_frame->registers = args_obj;
@@ -692,18 +673,7 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
             else
                 *this_obj = new_stack_frame->registers;
 
-            /* TODO remove these checks? */
-            if (gen_state == KOS_GEN_READY && num_args) {
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_too_few_args));
-                error = KOS_ERROR_EXCEPTION;
-                goto _error;
-            }
-            else if (num_args > 1) {
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_too_few_args));
-                error = KOS_ERROR_EXCEPTION;
-                goto _error;
-            }
-            else if (gen_state == KOS_GEN_ACTIVE) {
+            if (gen_state == KOS_GEN_ACTIVE) {
 
                 const uint32_t r = new_stack_frame->yield_reg;
 
@@ -2057,21 +2027,9 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                     assert( ! IS_BAD_PTR(proto));
                 }
                 else
-                    KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_function));
+                    KOS_raise_exception(frame, KOS_VOID);
 
-                if ( ! IS_BAD_PTR(proto) && ! IS_SMALL_INT(proto) && GET_OBJ_TYPE(proto) == OBJ_DYNAMIC_PROP) {
-                    KOS_OBJ_PTR args;
-                    frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
-                    proto = OBJPTR(KOS_DYNAMIC_PROP, proto)->getter;
-                    args  = KOS_new_array(frame, 0);
-                    if (IS_BAD_PTR(args))
-                        error = KOS_ERROR_EXCEPTION;
-                    else {
-                        proto = KOS_call_function(frame, proto, constr, args);
-                        if (IS_BAD_PTR(proto))
-                            proto = TO_OBJPTR(0);
-                    }
-                }
+                assert(IS_BAD_PTR(proto) || IS_SMALL_INT(proto) || GET_OBJ_TYPE(proto) != OBJ_DYNAMIC_PROP);
 
                 if (IS_BAD_PTR(proto))
                     KOS_clear_exception(frame);

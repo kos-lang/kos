@@ -177,6 +177,7 @@ fun expect_fail(function)
     assert 1 instanceof lang.integer
     assert 0x7FFFFFFFFFFFFFFF instanceof lang.integer
     assert ! (0.0 instanceof lang.integer)
+    assert ! (0 instanceof 0)
 }
 
 {

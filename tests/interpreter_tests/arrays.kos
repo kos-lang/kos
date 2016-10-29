@@ -309,3 +309,21 @@ expect_fail(λ->([][0]))
     }
     assert found
 }
+
+# Invalid index
+{
+    const a = []
+
+    fun elem(e)
+    {
+        return a[e]
+    }
+
+    fun set_elem(e)
+    {
+        a[e] = 0
+    }
+
+    expect_fail(λ->(elem(0x8000000000000000)))
+    expect_fail(λ->(set_elem(0x8000000000000000)))
+}

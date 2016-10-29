@@ -883,8 +883,8 @@ int main(void)
             INSTR_YIELD,      1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_OBJPTR(0));
-        TEST_EXCEPTION();
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_VOID);
+        TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/

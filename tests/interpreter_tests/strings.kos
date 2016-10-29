@@ -169,3 +169,9 @@ fun expect_fail(function)
     a = "\(a)"
     assert a == "1"
 }
+
+{
+    const a = λ->("ab")()
+    const b = "abc\x{100}"
+    assert a < b
+}

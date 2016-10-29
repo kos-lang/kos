@@ -271,9 +271,7 @@ var global_b = "b"
     }
 
     const iter = gen()
-    expect_fail(λ->(iter(0)))
-    expect_fail(λ->(iter(1)))
-    assert iter() == 10
+    assert iter(0) == 10
     assert iter() == void
     assert iter(20) == 20
     expect_fail(iter)
@@ -855,4 +853,19 @@ assert global == 1
     assert iter() == 42
     expect_fail(λ->(iter()))
     expect_fail(λ->(iter()))
+}
+
+# call non-generator function like a generator
+{
+    fun not_gen
+    {
+    }
+
+    expect_fail(fun {
+        var a = 0
+        for var i in not_gen {
+            a += i
+        }
+        return a
+    })
 }
