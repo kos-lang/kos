@@ -496,9 +496,8 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
                 break;
         }
     }
-    else {
+    else
         ret = 0;
-    }
 
     return ret;
 }
@@ -563,12 +562,14 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
 
     if (IS_SMALL_INT(func_obj) || GET_OBJ_TYPE(func_obj) != OBJ_FUNCTION) {
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_callable));
-        TRY(KOS_ERROR_EXCEPTION);
+        error = KOS_ERROR_EXCEPTION;
+        goto _error;
     }
 
     if (IS_SMALL_INT(args_obj) || GET_OBJ_TYPE(args_obj) != OBJ_ARRAY) {
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_args_not_array));
-        TRY(KOS_ERROR_EXCEPTION);
+        error = KOS_ERROR_EXCEPTION;
+        goto _error;
     }
 
     func      = OBJPTR(KOS_FUNCTION, func_obj);
@@ -576,17 +577,20 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
 
     if (KOS_get_array_size(args_obj) < func->min_args) {
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_too_few_args));
-        TRY(KOS_ERROR_EXCEPTION);
+        error = KOS_ERROR_EXCEPTION;
+        goto _error;
     }
 
     if (instr == INSTR_NEW && gen_state != KOS_NOT_GEN) {
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_new_with_generator));
-        TRY(KOS_ERROR_EXCEPTION);
+        error = KOS_ERROR_EXCEPTION;
+        goto _error;
     }
 
     if (instr == INSTR_CALL_GEN && gen_state < KOS_GEN_READY) {
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_generator));
-        TRY(KOS_ERROR_EXCEPTION);
+        error = KOS_ERROR_EXCEPTION;
+        goto _error;
     }
 
     switch (gen_state) {
@@ -601,8 +605,10 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
                     *this_obj = proto;
                 else {
                     *this_obj = KOS_new_object_with_prototype(frame, proto);
-                    if (IS_BAD_PTR(*this_obj))
-                        TRY(KOS_ERROR_EXCEPTION);
+                    if (IS_BAD_PTR(*this_obj)) {
+                        error = KOS_ERROR_EXCEPTION;
+                        goto _error;
+                    }
                 }
 
             }
@@ -610,7 +616,8 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
             new_stack_frame = _KOS_stack_frame_push_func(frame, func);
             if ( ! new_stack_frame) {
                 assert(KOS_is_exception_pending(frame));
-                TRY(KOS_ERROR_EXCEPTION);
+                error = KOS_ERROR_EXCEPTION;
+                goto _error;
             }
 
             if ( ! func->handler)
@@ -628,8 +635,10 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
             assert( ! IS_BAD_PTR(proto_obj));
 
             ret = KOS_new_function(frame, proto_obj);
-            if (IS_BAD_PTR(ret))
-                TRY(KOS_ERROR_EXCEPTION);
+            if (IS_BAD_PTR(ret)) {
+                error = KOS_ERROR_EXCEPTION;
+                goto _error;
+            }
 
             dest = OBJPTR(KOS_FUNCTION, ret);
 
@@ -642,8 +651,10 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
             dest->generator_state = KOS_GEN_READY;
 
             new_stack_frame = _KOS_stack_frame_push_func(frame, func);
-            if ( ! new_stack_frame)
-                TRY(KOS_ERROR_EXCEPTION);
+            if ( ! new_stack_frame) {
+                error = KOS_ERROR_EXCEPTION;
+                goto _error;
+            }
 
             if (func->handler)
                 new_stack_frame->registers = args_obj;
@@ -684,11 +695,13 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
             /* TODO remove these checks? */
             if (gen_state == KOS_GEN_READY && num_args) {
                 KOS_raise_exception(frame, TO_OBJPTR(&str_err_too_few_args));
-                TRY(KOS_ERROR_EXCEPTION);
+                error = KOS_ERROR_EXCEPTION;
+                goto _error;
             }
             else if (num_args > 1) {
                 KOS_raise_exception(frame, TO_OBJPTR(&str_err_too_few_args));
-                TRY(KOS_ERROR_EXCEPTION);
+                error = KOS_ERROR_EXCEPTION;
+                goto _error;
             }
             else if (gen_state == KOS_GEN_ACTIVE) {
 
@@ -828,7 +841,8 @@ static int _write_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KO
 
     if (byte_value < 0 || byte_value > 255) {
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_byte_value));
-        TRY(KOS_ERROR_EXCEPTION);
+        error = KOS_ERROR_EXCEPTION;
+        goto _error;
     }
 
     buffer = OBJPTR(KOS_BUFFER, objptr);
@@ -840,7 +854,8 @@ static int _write_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KO
 
     if ((uint32_t)idx >= size)  {
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
-        TRY(KOS_ERROR_EXCEPTION);
+        error = KOS_ERROR_EXCEPTION;
+        goto _error;
     }
 
     data->buf[idx] = (uint8_t)byte_value;

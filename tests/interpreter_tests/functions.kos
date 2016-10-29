@@ -843,3 +843,16 @@ assert global == 1
     const result = a -> λ(x)->(x/2)
     assert result == 5
 }
+
+# call finished generator
+{
+    fun gen
+    {
+        yield 42
+    }
+
+    const iter = gen()
+    assert iter() == 42
+    expect_fail(λ->(iter()))
+    expect_fail(λ->(iter()))
+}

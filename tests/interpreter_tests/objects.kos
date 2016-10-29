@@ -261,3 +261,15 @@ expect_fail(λ->({}[""]))
     assert o1 instanceof get_constr()
     assert o2 instanceof get_constr()
 }
+
+{
+    fun constr
+    {
+        # Turn it into a generator
+        if false {
+            yield void
+        }
+    }
+
+    expect_fail(λ->(new constr))
+}
