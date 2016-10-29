@@ -121,3 +121,20 @@
 
     assert sum == 1367
 }
+
+{
+    fun select(a)
+    {
+        const x = 1
+        const y = 2
+        switch (a) {
+            x { return 7 }
+            y { return 14 }
+        }
+        return 0
+    }
+
+    assert select(1) == 7
+    assert select(2) == 14
+    assert select(3) == 0
+}

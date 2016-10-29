@@ -2012,10 +2012,7 @@ static int _for(struct _KOS_COMP_UNIT      *program,
     step_instr_offs = program->cur_offs;
 
     TRY(_visit_node(program, step_node, &reg));
-    if (reg) {
-        _free_reg(program, reg);
-        reg = 0;
-    }
+    assert( ! reg);
 
     final_jump_instr_offs = program->cur_offs;
     TRY(_gen_instr1(program, INSTR_JUMP, 0));
@@ -2338,13 +2335,19 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
 
         if (node->type == NT_CASE) {
 
-            struct _KOS_REG *case_reg   = 0;
-            struct _KOS_REG *result_reg = 0;
+            struct _KOS_REG            *case_reg   = 0;
+            struct _KOS_REG            *result_reg = 0;
+            const struct _KOS_AST_NODE *case_node;
 
             assert(node->children);
             assert(node->children->type != NT_EMPTY);
 
-            switch (node->children->type) {
+            case_node = _KOS_get_const(program, node->children);
+
+            if ( ! case_node)
+                case_node = node->children;
+
+            switch (case_node->type) {
 
                 case NT_NUMERIC_LITERAL:
                     /* fall-through */

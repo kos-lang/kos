@@ -97,6 +97,12 @@ assert typeof λ->(0) == "function"
     assert a == "abc"
     assert b == "def"
 }
+{
+    const a = λ->(1)()
+    const b = +(2 + a)
+    assert b == 3
+    assert a == 1
+}
 expect_fail(fun {
     const a = 1
     const b = λ->("abc")()
@@ -144,6 +150,12 @@ expect_fail(fun {
     assert typeof c == "float"
     assert a == 3
     assert b == 2
+}
+{
+    const a = λ->(1)()
+    const b = -(a + 2)
+    assert b == -3
+    assert a == 1
 }
 expect_fail(fun {
     const a = λ->("abc")()

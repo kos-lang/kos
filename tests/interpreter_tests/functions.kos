@@ -443,6 +443,23 @@ var global_b = "b"
 }
 
 {
+    fun elem(x, a...)
+    {
+        if a.size == 0 {
+            a = [1]
+        }
+        else {
+            a = elem(1, 2)
+        }
+        return a[x]
+    }
+
+    const result = elem(0)
+    assert typeof result == "integer"
+    assert result        == 1
+}
+
+{
     fun number(a)
     {
         for (;;) {

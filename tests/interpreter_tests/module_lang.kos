@@ -115,6 +115,13 @@ fun expect_fail(function)
     assert _0_5        == 0.5
 }
 
+{
+    const number = "number"
+    const value  = new lang[number](5)
+    assert value        == 5
+    assert typeof value == "integer"
+}
+
 ##############################################################################
 # lang.integer
 
