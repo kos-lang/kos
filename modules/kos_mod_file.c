@@ -92,10 +92,8 @@ static KOS_OBJ_PTR _open(KOS_STACK_FRAME *frame,
 
         TRY_OBJPTR(flags_obj);
 
-        if ( ! IS_STRING_OBJ(flags_obj)) {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_bad_flags));
-            TRY(KOS_ERROR_EXCEPTION);
-        }
+        if ( ! IS_STRING_OBJ(flags_obj))
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_bad_flags));
 
         TRY(KOS_string_to_cstr_vec(frame, flags_obj, &flags_cstr));
     }
@@ -123,24 +121,20 @@ static int _get_file_object(KOS_STACK_FRAME *frame,
                             FILE           **file,
                             int              must_be_open)
 {
+    int error = KOS_SUCCESS;
+
     assert( ! IS_BAD_PTR(this_obj));
 
-    if (IS_BAD_PTR(this_obj))
-        return KOS_ERROR_EXCEPTION;
-
-    if ( ! IS_TYPE(OBJ_OBJECT, this_obj)) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_file_not_open));
-        return KOS_ERROR_EXCEPTION;
-    }
+    if ( ! IS_TYPE(OBJ_OBJECT, this_obj))
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_not_open));
 
     *file = (FILE *)KOS_object_get_private(*OBJPTR(KOS_OBJECT, this_obj));
 
-    if (must_be_open && ! *file) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_file_not_open));
-        return KOS_ERROR_EXCEPTION;
-    }
+    if (must_be_open && ! *file)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_not_open));
 
-    return KOS_SUCCESS;
+_error:
+    return error;
 }
 
 static KOS_OBJ_PTR _close(KOS_STACK_FRAME *frame,
@@ -200,10 +194,8 @@ static KOS_OBJ_PTR _read_some(KOS_STACK_FRAME *frame,
 
         TRY_OBJPTR(buf);
 
-        if ( ! IS_TYPE(OBJ_BUFFER, buf)) {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
-            TRY(KOS_ERROR_EXCEPTION);
-        }
+        if ( ! IS_TYPE(OBJ_BUFFER, buf))
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_buffer));
     }
     else
         buf = KOS_new_buffer(frame, 0);
@@ -220,10 +212,8 @@ static KOS_OBJ_PTR _read_some(KOS_STACK_FRAME *frame,
 
     TRY(KOS_buffer_resize(frame, buf, (unsigned)(offset + num_read)));
 
-    if (num_read < (size_t)to_read && ferror(file)) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_file_read));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (num_read < (size_t)to_read && ferror(file))
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_read));
 
 _error:
     return error ? TO_OBJPTR(0) : buf;
@@ -247,18 +237,14 @@ static KOS_OBJ_PTR _write(KOS_STACK_FRAME *frame,
 
     TRY_OBJPTR(arg);
 
-    if ( ! IS_TYPE(OBJ_BUFFER, arg)) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if ( ! IS_TYPE(OBJ_BUFFER, arg))
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_buffer));
 
     to_write = (size_t)KOS_get_buffer_size(arg);
     num_writ = fwrite(KOS_buffer_data(frame, arg), 1, to_write, file);
 
-    if (num_writ < to_write) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_file_write));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (num_writ < to_write)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_write));
 
 _error:
     return error ? TO_OBJPTR(0) : this_obj;
@@ -304,26 +290,18 @@ static KOS_OBJ_PTR _get_file_size(KOS_STACK_FRAME *frame,
     TRY(_get_file_object(frame, this_obj, &file, 1));
 
     orig_pos = ftell(file);
-    if (orig_pos < 0) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_get_size));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (orig_pos < 0)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_size));
 
-    if (fseek(file, 0, SEEK_END)) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_get_size));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (fseek(file, 0, SEEK_END))
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_size));
 
     size = ftell(file);
-    if (size < 0) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_get_size));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (size < 0)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_size));
 
-    if (fseek(file, orig_pos, SEEK_SET)) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_get_size));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (fseek(file, orig_pos, SEEK_SET))
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_size));
 
 _error:
     return error ? TO_OBJPTR(0) : KOS_new_int(frame, (int64_t)size);
@@ -334,19 +312,17 @@ static KOS_OBJ_PTR _get_file_pos(KOS_STACK_FRAME *frame,
                                  KOS_OBJ_PTR      args_obj)
 {
     FILE *file  = 0;
-    int   error = _get_file_object(frame, this_obj, &file, 1);
+    int   error = KOS_SUCCESS;
     long  pos   = 0;
 
-    if ( ! error) {
+    TRY(_get_file_object(frame, this_obj, &file, 1));
 
-        pos = ftell(file);
+    pos = ftell(file);
 
-        if (pos < 0) {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_get_position));
-            error = KOS_ERROR_EXCEPTION;
-        }
-    }
+    if (pos < 0)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_position));
 
+_error:
     return error ? TO_OBJPTR(0) : KOS_new_int(frame, (int64_t)pos);
 }
 
@@ -367,10 +343,8 @@ static KOS_OBJ_PTR _set_file_pos(KOS_STACK_FRAME *frame,
 
     TRY(KOS_get_integer(frame, arg, &pos));
 
-    if (fseek(file, (long)pos, SEEK_SET)) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_set_position));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (fseek(file, (long)pos, SEEK_SET))
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_set_position));
 
 _error:
     return error ? TO_OBJPTR(0) : KOS_VOID;

@@ -554,38 +554,23 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
     assert( ! IS_BAD_PTR(func_obj));
     assert( ! IS_BAD_PTR(args_obj));
 
-    if (IS_SMALL_INT(func_obj) || GET_OBJ_TYPE(func_obj) != OBJ_FUNCTION) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_callable));
-        error = KOS_ERROR_EXCEPTION;
-        goto _error;
-    }
+    if (IS_SMALL_INT(func_obj) || GET_OBJ_TYPE(func_obj) != OBJ_FUNCTION)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_callable));
 
-    if (IS_SMALL_INT(args_obj) || GET_OBJ_TYPE(args_obj) != OBJ_ARRAY) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_args_not_array));
-        error = KOS_ERROR_EXCEPTION;
-        goto _error;
-    }
+    if (IS_SMALL_INT(args_obj) || GET_OBJ_TYPE(args_obj) != OBJ_ARRAY)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_args_not_array));
 
     func      = OBJPTR(KOS_FUNCTION, func_obj);
     gen_state = func->generator_state;
 
-    if (KOS_get_array_size(args_obj) < func->min_args) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_too_few_args));
-        error = KOS_ERROR_EXCEPTION;
-        goto _error;
-    }
+    if (KOS_get_array_size(args_obj) < func->min_args)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_too_few_args));
 
-    if (instr == INSTR_NEW && gen_state != KOS_NOT_GEN) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_new_with_generator));
-        error = KOS_ERROR_EXCEPTION;
-        goto _error;
-    }
+    if (instr == INSTR_NEW && gen_state != KOS_NOT_GEN)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_new_with_generator));
 
-    if (instr == INSTR_CALL_GEN && gen_state < KOS_GEN_READY) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_generator));
-        error = KOS_ERROR_EXCEPTION;
-        goto _error;
-    }
+    if (instr == INSTR_CALL_GEN && gen_state < KOS_GEN_READY)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_generator));
 
     switch (gen_state) {
 
@@ -700,17 +685,11 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
         }
 
         case KOS_GEN_RUNNING:
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_generator_running));
-            error = KOS_ERROR_EXCEPTION;
-            goto _error;
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_generator_running));
 
-        case KOS_GEN_DONE:
-            /* fall through */
         default:
             assert(gen_state == KOS_GEN_DONE);
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_generator_end));
-            error = KOS_ERROR_EXCEPTION;
-            goto _error;
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_generator_end));
     }
 
 _error:
@@ -809,11 +788,8 @@ static int _write_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KO
 
     TRY(KOS_get_integer(frame, value, &byte_value));
 
-    if (byte_value < 0 || byte_value > 255) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_byte_value));
-        error = KOS_ERROR_EXCEPTION;
-        goto _error;
-    }
+    if (byte_value < 0 || byte_value > 255)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_byte_value));
 
     buffer = OBJPTR(KOS_BUFFER, objptr);
     size   = KOS_atomic_read_u32(buffer->size);
@@ -822,11 +798,8 @@ static int _write_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KO
     if (idx < 0)
         idx += (int)size;
 
-    if ((uint32_t)idx >= size)  {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
-        error = KOS_ERROR_EXCEPTION;
-        goto _error;
-    }
+    if ((uint32_t)idx >= size)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_index));
 
     data->buf[idx] = (uint8_t)byte_value;
 

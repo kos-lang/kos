@@ -186,7 +186,7 @@ int _KOS_parse_double(const char *begin,
     assert(begin <= end);
 
     if (begin == end)
-        TRY(KOS_ERROR_INVALID_NUMBER);
+        RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
 
     /* Parse sign */
     if (*begin == '-') {
@@ -195,7 +195,7 @@ int _KOS_parse_double(const char *begin,
     }
 
     if (begin == end)
-        TRY(KOS_ERROR_INVALID_NUMBER);
+        RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
 
     /* Discard leading zeroes */
     while (begin < end && *begin == '0')
@@ -226,7 +226,7 @@ int _KOS_parse_double(const char *begin,
 
             /* Position the first digit in mantissa */
             if (c < '0' || c > '9')
-                TRY(KOS_ERROR_INVALID_NUMBER);
+                RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
 
             mantissa = (unsigned)(c - '0');
             if (mantissa > 7)
@@ -256,7 +256,7 @@ int _KOS_parse_double(const char *begin,
                 uint64_t digit;
 
                 if (c < '0' || c > '9')
-                    TRY(KOS_ERROR_INVALID_NUMBER);
+                    RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
 
                 /* Parse digit */
                 digit = (unsigned)(c - '0');
@@ -264,7 +264,7 @@ int _KOS_parse_double(const char *begin,
                 _multiply_by_10(&mantissa, &exponent);
 
                 if (exponent > 63)
-                    TRY(KOS_ERROR_TOO_MANY_DIGITS);
+                    RAISE_ERROR(KOS_ERROR_TOO_MANY_DIGITS);
 
                 mantissa += digit << (63 - exponent);
 
@@ -284,15 +284,15 @@ int _KOS_parse_double(const char *begin,
             ++begin;
 
             if (begin == end)
-                TRY(KOS_ERROR_INVALID_EXPONENT);
+                RAISE_ERROR(KOS_ERROR_INVALID_EXPONENT);
 
             error = _KOS_parse_int(begin, end, &e);
 
             if (error)
-                TRY(KOS_ERROR_INVALID_EXPONENT);
+                RAISE_ERROR(KOS_ERROR_INVALID_EXPONENT);
 
             if (e > 308 || e < -324)
-                TRY(KOS_ERROR_EXPONENT_OUT_OF_RANGE);
+                RAISE_ERROR(KOS_ERROR_EXPONENT_OUT_OF_RANGE);
 
             decimal_exponent += (int)e;
         }
@@ -318,7 +318,7 @@ int _KOS_parse_double(const char *begin,
     }
 
     if (exponent > 0x3FF)
-        TRY(KOS_ERROR_NUMBER_TOO_BIG);
+        RAISE_ERROR(KOS_ERROR_NUMBER_TOO_BIG);
 
     /* Adjust exponent for denormalized numbers */
     while (exponent < -0x3FF) {

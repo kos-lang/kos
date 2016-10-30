@@ -811,7 +811,7 @@ int KOS_object_walk_init(KOS_STACK_FRAME           *frame,
     KOS_OBJ_PTR key_table_obj = KOS_new_object(frame);
 
     if (IS_BAD_PTR(key_table_obj))
-        TRY(KOS_ERROR_OUT_OF_MEMORY);
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     walk->type          = OBJ_OBJECT_WALK;
     walk->obj           = obj;

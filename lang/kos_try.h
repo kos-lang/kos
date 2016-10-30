@@ -27,4 +27,8 @@
 
 #define TRY_OBJPTR(objptr) do { if (IS_BAD_PTR(objptr)) { error = KOS_ERROR_EXCEPTION; goto _error; } } while (0)
 
+#define RAISE_EXCEPTION(err_obj) do { KOS_raise_exception(frame, (err_obj)); error = KOS_ERROR_EXCEPTION; goto _error; } while (0)
+
+#define RAISE_ERROR(code) do { error = (code); goto _error; } while (0)
+
 #endif

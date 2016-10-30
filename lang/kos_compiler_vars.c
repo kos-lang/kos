@@ -394,7 +394,7 @@ static int _define_local_var(struct _KOS_COMP_UNIT      *program,
 
     var = _alloc_var(program, is_const, node);
     if (!var)
-        TRY(KOS_ERROR_OUT_OF_MEMORY);
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     *out_var = var;
 
@@ -456,13 +456,13 @@ static int _import(struct _KOS_COMP_UNIT      *program,
             if (var->type != VAR_MODULE) {
                 program->error_token = &node->token;
                 program->error_str   = str_err_module_global_conflict;
-                TRY(KOS_ERROR_COMPILE_FAILED);
+                RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
             }
         }
         else {
             var = _alloc_var(program, 1, node);
             if (!var)
-                TRY(KOS_ERROR_OUT_OF_MEMORY);
+                RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
             var->type        = VAR_MODULE;
             var->array_idx   = module_idx;
@@ -566,7 +566,7 @@ static int _left_hand_side(struct _KOS_COMP_UNIT      *program,
             if (var->is_const) {
                 program->error_token = &node->token;
                 program->error_str   = str_err_const_assignment;
-                TRY(KOS_ERROR_COMPILE_FAILED);
+                RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
             }
         }
         else {

@@ -102,22 +102,22 @@ int _KOS_load_file(const char         *filename,
 
     file = fopen(filename, "rb");
     if (!file)
-        TRY(KOS_ERROR_CANNOT_OPEN_FILE);
+        RAISE_ERROR(KOS_ERROR_CANNOT_OPEN_FILE);
 
     if (0 != fseek(file, 0, SEEK_END))
-        TRY(KOS_ERROR_CANNOT_READ_FILE);
+        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
 
     lsize = ftell(file);
     if (lsize < 0)
-        TRY(KOS_ERROR_CANNOT_READ_FILE);
+        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
     size = (size_t)lsize;
     if (0 != fseek(file, 0, SEEK_SET))
-        TRY(KOS_ERROR_CANNOT_READ_FILE);
+        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
 
     TRY(_KOS_vector_resize(buf, size));
 
     if (size != fread(buf->buffer, 1, size, file))
-        TRY(KOS_ERROR_CANNOT_READ_FILE);
+        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
 
 _error:
     if (file)

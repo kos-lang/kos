@@ -888,14 +888,14 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT      *program,
             if (numeric_a.type == KOS_INTEGER_VALUE) {
                 if ( ! numeric_b.u.i) {
                     _announce_div_by_zero(program, node);
-                    TRY(KOS_ERROR_COMPILE_FAILED);
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
                 }
                 numeric_a.u.i /= numeric_b.u.i;
             }
             else {
                 if (numeric_b.u.d == 0) {
                     _announce_div_by_zero(program, node);
-                    TRY(KOS_ERROR_COMPILE_FAILED);
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
                 }
                 numeric_a.u.d /= numeric_b.u.d;
             }
@@ -905,14 +905,14 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT      *program,
             if (numeric_a.type == KOS_INTEGER_VALUE) {
                 if ( ! numeric_b.u.i) {
                     _announce_div_by_zero(program, node);
-                    TRY(KOS_ERROR_COMPILE_FAILED);
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
                 }
                 numeric_a.u.i %= numeric_b.u.i;
             }
             else {
                 if (numeric_b.u.d == 0) {
                     _announce_div_by_zero(program, node);
-                    TRY(KOS_ERROR_COMPILE_FAILED);
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
                 }
                 numeric_a.u.d = fmod(numeric_a.u.d, numeric_b.u.d);
             }

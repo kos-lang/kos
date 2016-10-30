@@ -119,11 +119,10 @@ static int _find_module(KOS_STACK_FRAME *frame,
         TRY(_KOS_get_absolute_path(&cpath));
 
         if (!_KOS_does_file_exist(cpath.buffer))
-            TRY(KOS_ERROR_NOT_FOUND);
+            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
         path = KOS_new_string(frame, cpath.buffer, (unsigned)(cpath.size-1));
-        if (IS_BAD_PTR(path))
-            TRY(KOS_ERROR_EXCEPTION);
+        TRY_OBJPTR(path);
 
         /* Find and skip last path separator */
         i = _rfind_path(cpath.buffer, (unsigned)(cpath.size-1), '/');
@@ -131,8 +130,7 @@ static int _find_module(KOS_STACK_FRAME *frame,
             --i;
 
         dir = KOS_new_string(frame, cpath.buffer, i);
-        if (IS_BAD_PTR(dir))
-            TRY(KOS_ERROR_EXCEPTION);
+        TRY_OBJPTR(dir);
     }
     else {
 
@@ -146,21 +144,19 @@ static int _find_module(KOS_STACK_FRAME *frame,
         num_paths = KOS_get_array_size(TO_OBJPTR(&ctx->module_search_paths));
 
         if (!num_paths)
-            TRY(KOS_ERROR_NOT_FOUND);
+            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
         for (i = 0; i < num_paths; i++) {
             KOS_ATOMIC(KOS_OBJ_PTR) components[4];
 
             components[0] = KOS_array_read(frame, TO_OBJPTR(&ctx->module_search_paths), (int)i);
-            if (IS_BAD_PTR(components[0]))
-                TRY(KOS_ERROR_EXCEPTION);
+            TRY_OBJPTR(components[0]);
             components[1] = TO_OBJPTR(&str_path_sep);
             components[2] = module_name;
             components[3] = TO_OBJPTR(&str_script_ext);
 
             path = KOS_string_add_many(frame, components, sizeof(components)/sizeof(components[0]));
-            if (IS_BAD_PTR(path))
-                TRY(KOS_ERROR_EXCEPTION);
+            TRY_OBJPTR(path);
 
             TRY(KOS_string_to_cstr_vec(frame, path, &cpath));
 
@@ -263,9 +259,7 @@ static int _load_file(KOS_STACK_FRAME    *frame,
             break;
 
         case KOS_ERROR_OUT_OF_MEMORY:
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
-            error = KOS_ERROR_EXCEPTION;
-            break;
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_out_of_memory));
 
         default:
             break;
@@ -328,8 +322,7 @@ static int _alloc_globals(KOS_STACK_FRAME       *frame,
 
     for (var = program->globals; var; var = var->next) {
         KOS_OBJ_PTR name = KOS_new_string(frame, var->token->begin, var->token->length);
-        if (IS_BAD_PTR(name))
-            TRY(KOS_ERROR_EXCEPTION);
+        TRY_OBJPTR(name);
         assert(var->array_idx < program->num_globals);
         TRY(KOS_set_property(frame, module->global_names, name, TO_SMALL_INT(var->array_idx)));
     }
@@ -432,7 +425,7 @@ static int _alloc_strings(KOS_STACK_FRAME       *frame,
     struct _KOS_COMP_STRING *str = 0;
 
     if (size == ~0U)
-        TRY(KOS_ERROR_INVALID_UTF8_CHARACTER);
+        RAISE_ERROR(KOS_ERROR_INVALID_UTF8_CHARACTER);
 
     if (!error) {
         module->strings = (KOS_STRING *)_KOS_alloc_buffer(frame, size);
@@ -443,7 +436,7 @@ static int _alloc_strings(KOS_STACK_FRAME       *frame,
             buf           =  (char *)module->strings + program->num_strings * sizeof(KOS_STRING);
         }
         else
-            TRY(KOS_ERROR_OUT_OF_MEMORY);
+            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     }
 
     for ( ; str; str = str->next) {
@@ -589,47 +582,39 @@ static KOS_OBJ_PTR _format_error(KOS_STACK_FRAME          *frame,
     _KOS_vector_init(&cstr);
 
     parts[0] = KOS_get_file_name(frame, OBJPTR(KOS_MODULE, module_obj)->path);
-    if (IS_BAD_PTR(parts[0]))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(parts[0]);
 
     parts[1] = TO_OBJPTR(&str_format_colon);
 
     parts[2] = KOS_object_to_string(frame, TO_SMALL_INT((int)pos.line));
-    if (IS_BAD_PTR(parts[2]))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(parts[2]);
 
     parts[3] = TO_OBJPTR(&str_format_colon);
 
     parts[4] = KOS_object_to_string(frame, TO_SMALL_INT((int)pos.column));
-    if (IS_BAD_PTR(parts[4]))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(parts[4]);
 
     parts[5] = TO_OBJPTR(&str_format_error);
 
     parts[6] = KOS_new_const_ascii_cstring(frame, error_str);
-    if (IS_BAD_PTR(parts[6]))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(parts[6]);
 
     parts[7] = TO_OBJPTR(&str_eol);
 
     parts[8] = _get_line(frame, file_buf, pos.line);
-    if (IS_BAD_PTR(parts[8]))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(parts[8]);
 
     parts[9] = TO_OBJPTR(&str_eol);
 
     error = _KOS_vector_resize(&cstr, pos.column);
-    if (error) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (error)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_out_of_memory));
 
     memset(cstr.buffer, ' ', pos.column-1);
     cstr.buffer[pos.column-1] = '^';
 
     parts[10] = KOS_new_string(frame, cstr.buffer, pos.column);
-    if (IS_BAD_PTR(parts[10]))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(parts[10]);
 
     ret = KOS_string_add_many(frame, parts, sizeof(parts)/sizeof(parts[0]));
 
@@ -687,15 +672,13 @@ static int _get_global_idx(void       *vframe,
     TRY(_decode_utf8_to_local(name, length, &str, &str_storage));
 
     module_obj = KOS_array_read(frame, TO_OBJPTR(&ctx->modules), module_idx);
-    if (IS_BAD_PTR(module_obj))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(module_obj);
 
     assert(!IS_SMALL_INT(module_obj));
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
     glob_idx_obj = KOS_get_property(frame, OBJPTR(KOS_MODULE, module_obj)->global_names, TO_OBJPTR(&str));
-    if (IS_BAD_PTR(glob_idx_obj))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(glob_idx_obj);
 
     assert(IS_SMALL_INT(glob_idx_obj));
 
@@ -746,8 +729,7 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
     /* Determine actual module name */
     actual_module_name = KOS_new_string(frame, loading.module_name, loading.length);
-    if (IS_BAD_PTR(actual_module_name))
-        TRY(KOS_ERROR_EXCEPTION);
+    TRY_OBJPTR(actual_module_name);
 
     /* Find module source file */
     error = _find_module(frame, actual_module_name, module_name, length, &module_dir, &module_path);
@@ -778,8 +760,7 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
         search_path_set = 1;
 
         lang_obj = _KOS_module_import(frame, lang, sizeof(lang)-1, KOS_MODULE_MANDATORY, &lang_idx);
-        if (IS_BAD_PTR(lang_obj))
-            TRY(KOS_ERROR_EXCEPTION);
+        TRY_OBJPTR(lang_obj);
         assert(lang_idx == 0);
     }
 
@@ -794,7 +775,7 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
                 KOS_OBJ_PTR name_str = KOS_new_string(frame, module_name, length);
                 if (!IS_BAD_PTR(name_str))
                     _raise_3(frame, TO_OBJPTR(&str_err_circular_deps), name_str, TO_OBJPTR(&str_err_end));
-                TRY(KOS_ERROR_EXCEPTION);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
     }
@@ -820,10 +801,7 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
     /* Allocate module object */
     module_obj = _alloc_module(frame, actual_module_name);
-    if (IS_BAD_PTR(module_obj)) {
-        assert(KOS_is_exception_pending(frame));
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    TRY_OBJPTR(module_obj);
     OBJPTR(KOS_MODULE, module_obj)->path = module_path;
 
     /* Load module file */
@@ -1022,7 +1000,7 @@ int KOS_module_add_global(KOS_STACK_FRAME *frame,
 
     if ( ! IS_BAD_PTR(prop)) {
         _raise_3(frame, TO_OBJPTR(&str_err_duplicate_global), name, TO_OBJPTR(&str_err_end));
-        TRY(KOS_ERROR_EXCEPTION);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
     /* TODO improve thread safety */
