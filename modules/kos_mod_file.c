@@ -474,9 +474,9 @@ int _KOS_module_file_init(KOS_STACK_FRAME *frame)
     TRY_ADD_FUNCTION(       frame,        "is_file",   _is_file,        1);
     TRY_ADD_FUNCTION(       frame,        "remove",    _remove,         1);
 
+    TRY_ADD_STD_FILE(       frame, proto, "stderr",    stderr);
     TRY_ADD_STD_FILE(       frame, proto, "stdin",     stdin);
     TRY_ADD_STD_FILE(       frame, proto, "stdout",    stdout);
-    TRY_ADD_STD_FILE(       frame, proto, "stderr",    stderr);
 
 _error:
     return error;
