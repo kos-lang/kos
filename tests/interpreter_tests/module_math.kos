@@ -20,13 +20,43 @@
 # IN THE SOFTWARE.
 #
 
-module = kos_modules
-depth  = modules
+import math
 
-c_files  = kos_mod_file.c
-c_files += kos_mod_lang.c
-c_files += kos_mod_math.c
-c_files += kos_modules_init.c
+fun expect_fail(function)
+{
+    var failed = false
+    try {
+        function()
+    }
+    catch const e {
+        failed = true
+    }
+    assert failed
+}
 
-include ../build/rules.mk
-include ../build/lib.mk
+{
+    assert math.pi == 3.141592653589793238
+    assert math.e  == 2.718281828459045235
+
+    assert math.ceil(4)                  == 4
+    assert math.ceil(0x4000000000000000) == 0x4000000000000000
+    assert math.ceil(math.pi)            == 4
+    expect_fail(λ->(math.ceil(void)))
+
+    assert math.floor(4)                  == 4
+    assert math.floor(0x4000000000000000) == 0x4000000000000000
+    assert math.floor(math.pi)            == 3
+    expect_fail(λ->(math.floor(void)))
+
+    assert math.abs(-10)  == 10
+    assert math.abs(10)   == 10
+    assert math.abs(-5.6) == 5.6
+    assert math.abs(4.7)  == 4.7
+}
+
+{
+    assert math.sqrt(16)                 == 4
+    assert math.sqrt(49.0)               == 7
+    assert math.sqrt(0x4000000000000000) == 0x80000000
+    expect_fail(λ->(math.sqrt(void)))
+}

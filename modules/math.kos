@@ -20,13 +20,10 @@
 # IN THE SOFTWARE.
 #
 
-module = kos_modules
-depth  = modules
+const pi = 3.141592653589793238
+const e  = 2.718281828459045235
 
-c_files  = kos_mod_file.c
-c_files += kos_mod_lang.c
-c_files += kos_mod_math.c
-c_files += kos_modules_init.c
-
-include ../build/rules.mk
-include ../build/lib.mk
+fun abs(x)
+{
+    return x < 0 ? -x : x
+}
