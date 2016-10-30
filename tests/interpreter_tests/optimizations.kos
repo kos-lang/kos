@@ -557,3 +557,20 @@ fun check(function, registers, instructions, size)
 
     check(collapse_interpolated_strings_2, 2, 2, 9)
 }
+
+#============================================================================#
+
+{
+    fun collapse_if_numeric(a, b)
+    {
+        if (1 + 2) {
+            return a
+        }
+        else {
+            return b
+        }
+    }
+    assert collapse_if_numeric(10, 20) == 10
+
+    check(collapse_if_numeric, 2, 2, 10)
+}

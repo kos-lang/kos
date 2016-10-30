@@ -24,6 +24,7 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
+#include "../lang/kos_object_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -92,6 +93,10 @@ int main(void)
 
         /* Cannot retrieve non-existent property */
         TEST(IS_BAD_PTR(KOS_get_property(frame, o, TO_OBJPTR(&non_existent))));
+        TEST_EXCEPTION();
+
+        /* Invalid property pointer */
+        TEST(KOS_delete_property(frame, o, TO_OBJPTR(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
     }
 
@@ -590,6 +595,29 @@ int main(void)
 
             TEST(_walk_object(frame, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
         }
+    }
+
+    /************************************************************************/
+    {
+        KOS_ASCII_STRING(abc, "abc");
+        KOS_ASCII_STRING(cde, "cde");
+        KOS_ASCII_STRING(efg, "efg");
+        KOS_ASCII_STRING(ghi, "ghi");
+
+        KOS_OBJ_PTR obj = KOS_new_object(frame);
+        TEST( ! IS_BAD_PTR(obj));
+
+        TEST(KOS_set_property(frame, obj, TO_OBJPTR(&abc), TO_SMALL_INT(1)) == KOS_SUCCESS);
+        TEST(KOS_set_property(frame, obj, TO_OBJPTR(&cde), TO_SMALL_INT(2)) == KOS_SUCCESS);
+        TEST(KOS_set_property(frame, obj, TO_OBJPTR(&efg), TO_SMALL_INT(3)) == KOS_SUCCESS);
+        TEST(KOS_set_property(frame, obj, TO_OBJPTR(&ghi), TO_SMALL_INT(4)) == KOS_SUCCESS);
+
+        TEST(_KOS_object_copy_prop_table(frame, obj) == KOS_SUCCESS);
+
+        TEST(KOS_get_property(frame, obj, TO_OBJPTR(&abc)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(frame, obj, TO_OBJPTR(&cde)) == TO_SMALL_INT(2));
+        TEST(KOS_get_property(frame, obj, TO_OBJPTR(&efg)) == TO_SMALL_INT(3));
+        TEST(KOS_get_property(frame, obj, TO_OBJPTR(&ghi)) == TO_SMALL_INT(4));
     }
 
     KOS_context_destroy(&ctx);
