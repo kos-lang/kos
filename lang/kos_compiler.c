@@ -36,7 +36,6 @@
 static const char str_err_duplicate_property[]        = "duplicate object property";
 static const char str_err_expected_refinement[]       = "expected .identifier or '[' in argument to 'delete'";
 static const char str_err_expected_refinement_ident[] = "expected identifier";
-static const char str_err_invalid_assignment[]        = "expression on the left of '=' is not assignable";
 static const char str_err_invalid_case[]              = "case expression does not resolve to an immutable constant";
 static const char str_err_invalid_index[]             = "index out of range";
 static const char str_err_invalid_numeric_literal[]   = "invalid numeric literal";
@@ -3963,17 +3962,12 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
             else if (node->type == NT_IDENTIFIER)
                 TRY(_assign_non_local(program, assg_node->token.op, node, reg));
 
-            else if (node->type == NT_SLICE) {
+            else {
 
+                assert(node->type == NT_SLICE);
                 assert(assg_node->token.op == OT_SET);
                 TRY(_assign_slice(program, node, reg));
                 reg = 0; /* _assign_slice frees the register */
-            }
-            else {
-                program->error_token = &assg_node->token;
-                program->error_str   = str_err_invalid_assignment;
-                error = KOS_ERROR_COMPILE_FAILED;
-                goto _error;
             }
 
             if (reg)

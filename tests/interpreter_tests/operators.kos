@@ -472,6 +472,13 @@ expect_fail(fun {
     assert c == false
 }
 
+{
+    var   a = 0
+    const b = λ->(42)()
+    a = a || b
+    assert a == 42
+}
+
 ##############################################################################
 # &&
 {
@@ -585,6 +592,12 @@ expect_fail(fun {
     assert typeof c == "integer"
 }
 {
+    const a = λ->(8)()
+    const b = 10
+    const c = a | b
+    assert c == 10
+}
+{
     const a = 0x1001
     const b = 0x1100
     const c = a & b
@@ -625,6 +638,11 @@ expect_fail(fun {
     const c = a ^ b
     assert typeof c == "integer"
     assert c        == 0x7FFFFFFE
+}
+{
+    var a = λ->(0xFFFFFFFFFFFFFFFE)()
+    a = ~a
+    assert a == 1
 }
 
 ##############################################################################
