@@ -34,6 +34,7 @@
 #   pragma warning( push )
 #   pragma warning( disable : 4255 4668 )
 #   include <windows.h>
+#   include <wincrypt.h>
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #   pragma comment( lib, "advapi32.lib" )
@@ -471,7 +472,7 @@ static void _get_entropy(uint8_t *bytes)
 static uint32_t _pcg_random(struct KOS_RNG_PCG32 *pcg)
 {
     uint32_t xorshifted;
-    uint32_t rot;
+    int      rot;
 
     const uint64_t state = pcg->state;
 
@@ -480,7 +481,7 @@ static uint32_t _pcg_random(struct KOS_RNG_PCG32 *pcg)
     pcg->state = state * multiplier + pcg->stream;
 
     xorshifted = (uint32_t)(((state >> 18U) ^ state) >> 27U);
-    rot        = (uint32_t)(state >> 59U);
+    rot        = (int)(state >> 59U);
 
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
