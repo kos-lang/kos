@@ -29,6 +29,20 @@
 #include <stdlib.h>
 #include <time.h>
 
+#ifdef _WIN32
+#   define WIN32_LEAN_AND_MEAN
+#   pragma warning( push )
+#   pragma warning( disable : 4255 4668 )
+#   include <windows.h>
+#   pragma warning( pop )
+#   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
+#   pragma comment( lib, "advapi32.lib" )
+#else
+#   include <fcntl.h>
+#   include <sys/types.h>
+#   include <unistd.h>
+#endif
+
 int _KOS_is_integer(const char *begin,
                     const char *end)
 {
@@ -402,33 +416,98 @@ uint32_t _KOS_float_to_uint32_t(float value)
     return conv.u;
 }
 
+static void _get_entropy_fallback(uint8_t *bytes)
+{
+    uint32_t t = (uint32_t)time(0);
+
+    uint8_t *const end = bytes + 32;
+
+    for ( ; bytes < end; bytes += 4) {
+        bytes[0] = (uint8_t)(t & 0xFFU);
+        bytes[1] = 0;
+        bytes[2] = 0;
+        bytes[3] = 0;
+
+        t >>= 8;
+    }
+}
+
+#ifdef _WIN32
+static void _get_entropy(uint8_t *bytes)
+{
+    HCRYPTPROV crypt_prov;
+
+    if (CryptAcquireContext(&crypt_prov, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+
+        if ( ! CryptGenRandom(crypt_prov, 32, bytes))
+            _get_entropy_fallback(bytes);
+
+        CryptReleaseContext(crypt_prov, 0);
+    }
+    else
+        _get_entropy_fallback(bytes);
+}
+#else
+static void _get_entropy(uint8_t *bytes)
+{
+    const int fd = open("/dev/urandom", O_RDONLY);
+
+    if (fd == -1)
+        _get_entropy_fallback(bytes);
+
+    else {
+
+        const ssize_t num_read = read(fd, bytes, 32);
+
+        if (num_read != 32)
+            _get_entropy_fallback(bytes);
+
+        close(fd);
+    }
+}
+#endif
+
+/* The PCG XSH RR 32 algorithm by Melissa O'Neill, http://www.pcg-random.org */
+static uint32_t _pcg_random(struct KOS_RNG_PCG32 *pcg)
+{
+    uint32_t xorshifted;
+    uint32_t rot;
+
+    const uint64_t state = pcg->state;
+
+    const uint64_t multiplier = ((uint64_t)0x5851F42DU << 32) | (uint64_t)0x4C957F2D;
+
+    pcg->state = state * multiplier + pcg->stream;
+
+    xorshifted = (uint32_t)(((state >> 18U) ^ state) >> 27U);
+    rot        = (uint32_t)(state >> 59U);
+
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+static void _pcg_init(struct KOS_RNG_PCG32 *pcg,
+                      uint64_t              init_state,
+                      uint64_t              init_stream)
+{
+    pcg->stream = (init_stream << 1) | 1U;
+    pcg->state  = pcg->stream + init_state;
+    _pcg_random(pcg);
+}
+
 void _KOS_rng_init(struct KOS_RNG *rng)
 {
-    int i;
+    uint64_t entropy[4];
+    _get_entropy((uint8_t *)&entropy);
 
-    srand((unsigned)time(0));
-
-    rng->seed[0] = 0;
-    rng->seed[1] = 0;
-
-    for (i = 0; i < 16; i++) {
-        const int sel   = i >> 3;
-        const int shift = (i & 7) << 3;
-        rng->seed[sel] |= (uint64_t)(rand() & 0xFFU) << shift;
-    }
+    _pcg_init(&rng->low,  entropy[0], entropy[1]);
+    _pcg_init(&rng->high, entropy[2], entropy[3]);
 }
 
 uint64_t _KOS_rng_random(struct KOS_RNG *rng)
 {
-    /* xorshift+ algorithm */
-    uint64_t       x = rng->seed[0];
-    const uint64_t y = rng->seed[1];
-
-    rng->seed[0] = y;
-    x           ^= x << 23;
-    x            = x ^ y ^ (x >> 17) ^ (y >> 26);
-    rng->seed[1] = x;
-    return x + y;
+    const uint64_t low  = _pcg_random(&rng->low);
+    const uint64_t high = _pcg_random(&rng->high);
+    return (high << 32U) | low;
 }
 
 int64_t _KOS_fix_index(int64_t idx, unsigned length)

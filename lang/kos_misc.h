@@ -62,8 +62,14 @@ uint64_t _KOS_double_to_uint64_t(double value);
 
 uint32_t _KOS_float_to_uint32_t(float value);
 
+struct KOS_RNG_PCG32 {
+    uint64_t state;
+    uint64_t stream;
+};
+
 struct KOS_RNG {
-    uint64_t seed[2];
+    struct KOS_RNG_PCG32 low;
+    struct KOS_RNG_PCG32 high;
 };
 
 void     _KOS_rng_init(struct KOS_RNG *rng);
