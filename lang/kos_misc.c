@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <limits.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 #ifdef _WIN32
@@ -418,16 +417,19 @@ uint32_t _KOS_float_to_uint32_t(float value)
     return conv.u;
 }
 
-static void _get_entropy_fallback(uint8_t *bytes)
+void _KOS_get_entropy_fallback(uint8_t *bytes)
 {
-    uint32_t t = (uint32_t)time(0);
+    const uint32_t multiplier = 0x8088405U;
+    uint32_t       state      = (uint32_t)time(0);
+    uint8_t *const end        = bytes + 32;
 
-    uint8_t *const end = bytes + 32;
+    /* Trivial LCG to init the state from time */
+    for ( ; bytes < end; bytes++) {
 
-    memset(bytes, 0, 32);
+        state = state * multiplier + 1;
 
-    for ( ; bytes < end; bytes += 8, t >>= 8)
-        bytes[0] = (uint8_t)(t & 0xFFU);
+        *bytes = (uint8_t)(state >> 24);
+    }
 }
 
 #ifdef _WIN32
@@ -438,12 +440,12 @@ static void _get_entropy(uint8_t *bytes)
     if (CryptAcquireContext(&crypt_prov, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
 
         if ( ! CryptGenRandom(crypt_prov, 32, bytes))
-            _get_entropy_fallback(bytes);
+            _KOS_get_entropy_fallback(bytes);
 
         CryptReleaseContext(crypt_prov, 0);
     }
     else
-        _get_entropy_fallback(bytes);
+        _KOS_get_entropy_fallback(bytes);
 }
 #else
 static void _get_entropy(uint8_t *bytes)
@@ -451,14 +453,14 @@ static void _get_entropy(uint8_t *bytes)
     const int fd = open("/dev/urandom", O_RDONLY);
 
     if (fd == -1)
-        _get_entropy_fallback(bytes);
+        _KOS_get_entropy_fallback(bytes);
 
     else {
 
         const ssize_t num_read = read(fd, bytes, 32);
 
         if (num_read != 32)
-            _get_entropy_fallback(bytes);
+            _KOS_get_entropy_fallback(bytes);
 
         close(fd);
     }

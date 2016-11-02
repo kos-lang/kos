@@ -74,6 +74,7 @@ struct KOS_RNG {
 
 void     _KOS_rng_init(struct KOS_RNG *rng);
 uint64_t _KOS_rng_random(struct KOS_RNG *rng);
+void     _KOS_get_entropy_fallback(uint8_t *bytes);
 
 int64_t _KOS_fix_index(int64_t idx, unsigned length);
 
