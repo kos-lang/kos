@@ -62,8 +62,8 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
         KOS_atomic_full_barrier();
 
     for (i = 0; i < test->num_loops; i++) {
-        const int rnd_num   = (int)(_KOS_rng_random(&data->rng) & 0xFFFFU);
-        const int num_props = (3 * test->num_props / 4) + (rnd_num % (test->num_props / 4));
+        const int rnd_num   = (int)_KOS_rng_random_range(&data->rng, ((unsigned)test->num_props / 4U) - 1U);
+        const int num_props = (3 * test->num_props / 4) + rnd_num;
         const int end_prop  = first_prop + num_props;
         int       i_prop;
 
@@ -189,7 +189,7 @@ int main(void)
 
             for (k = 0; k < str->length; k++)
                 if (k + 4U < str->length)
-                    str->data.buf[k] = (char)_KOS_rng_random(&thread_cookies->rng);
+                    str->data.buf[k] = (char)_KOS_rng_random_range(&thread_cookies->rng, 255U);
                 else
                     str->data.buf[k] = (char)(i >> ((str->length - 1 - k) * 8));
         }

@@ -208,7 +208,7 @@ int main(void)
 
             for (k = 0; k < str->length; k++)
                 if (k + 4U < str->length)
-                    str->data.buf[k] = (char)_KOS_rng_random(&rng);
+                    str->data.buf[k] = (char)_KOS_rng_random_range(&rng, 255U);
                 else
                     str->data.buf[k] = (char)(i >> ((str->length - 1 - k) * 8));
         }

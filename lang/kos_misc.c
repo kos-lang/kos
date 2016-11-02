@@ -499,15 +499,49 @@ void _KOS_rng_init(struct KOS_RNG *rng)
     uint64_t entropy[4];
     _get_entropy((uint8_t *)&entropy);
 
-    _pcg_init(&rng->low,  entropy[0], entropy[1]);
-    _pcg_init(&rng->high, entropy[2], entropy[3]);
+    _pcg_init(&rng->pcg[0], entropy[0], entropy[1]);
+    _pcg_init(&rng->pcg[1], entropy[2], entropy[3]);
 }
 
 uint64_t _KOS_rng_random(struct KOS_RNG *rng)
 {
-    const uint64_t low  = _pcg_random(&rng->low);
-    const uint64_t high = _pcg_random(&rng->high);
+    const uint64_t low  = _pcg_random(&rng->pcg[0]);
+    const uint64_t high = _pcg_random(&rng->pcg[1]);
     return (high << 32U) | low;
+}
+
+uint64_t _KOS_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
+{
+    if (max_value == (uint64_t)(int64_t)-1)
+        return _KOS_rng_random(rng);
+
+    if (max_value == (uint32_t)(int32_t)-1)
+        return _pcg_random(&rng->pcg[0]);
+
+    if (max_value <= (uint32_t)(int32_t)-1) {
+
+        const uint32_t mask      = (uint32_t)max_value + 1U;
+        const uint32_t threshold = -mask % mask;
+        int            sel       = 0;
+
+        for (;; sel ^= 1) {
+            const uint32_t r = _pcg_random(&rng->pcg[sel]);
+            if (r >= threshold)
+                return r % mask;
+        }
+    }
+    else {
+
+        const uint64_t mask      = max_value + 1U;
+        const uint64_t threshold = -mask % mask;
+        int            sel       = 0;
+
+        for (;; sel ^= 1) {
+            const uint64_t r = _KOS_rng_random(rng);
+            if (r >= threshold)
+                return r % mask;
+        }
+    }
 }
 
 int64_t _KOS_fix_index(int64_t idx, unsigned length)
