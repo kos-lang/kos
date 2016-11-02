@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #ifdef _WIN32
@@ -423,14 +424,10 @@ static void _get_entropy_fallback(uint8_t *bytes)
 
     uint8_t *const end = bytes + 32;
 
-    for ( ; bytes < end; bytes += 4) {
-        bytes[0] = (uint8_t)(t & 0xFFU);
-        bytes[1] = 0;
-        bytes[2] = 0;
-        bytes[3] = 0;
+    memset(bytes, 0, 32);
 
-        t >>= 8;
-    }
+    for ( ; bytes < end; bytes += 8, t >>= 8)
+        bytes[0] = (uint8_t)(t & 0xFFU);
 }
 
 #ifdef _WIN32

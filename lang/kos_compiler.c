@@ -1703,28 +1703,29 @@ static int _stream(struct _KOS_COMP_UNIT      *program,
 
     const_node = _KOS_get_const(program, node);
 
-    switch (const_node->type) {
+    if (const_node)
+        switch (const_node->type) {
 
-        case NT_NUMERIC_LITERAL:
-            /* fall through */
-        case NT_STRING_LITERAL:
-            /* fall through */
-        case NT_LINE_LITERAL:
-            /* fall through */
-        case NT_BOOL_LITERAL:
-            /* fall through */
-        case NT_VOID_LITERAL:
-            /* fall through */
-        case NT_ARRAY_LITERAL:
-            /* fall through */
-        case NT_OBJECT_LITERAL:
-            program->error_token = &arrow_node->token;
-            program->error_str   = str_err_stream_dest_not_func;
-            RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+            case NT_NUMERIC_LITERAL:
+                /* fall through */
+            case NT_STRING_LITERAL:
+                /* fall through */
+            case NT_LINE_LITERAL:
+                /* fall through */
+            case NT_BOOL_LITERAL:
+                /* fall through */
+            case NT_VOID_LITERAL:
+                /* fall through */
+            case NT_ARRAY_LITERAL:
+                /* fall through */
+            case NT_OBJECT_LITERAL:
+                program->error_token = &arrow_node->token;
+                program->error_str   = str_err_stream_dest_not_func;
+                RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
 
-        default:
-            break;
-    }
+            default:
+                break;
+        }
 
     TRY(_visit_node(program, node, &func_reg));
 
