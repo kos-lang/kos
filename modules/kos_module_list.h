@@ -27,3 +27,4 @@
 MODULE_DEF(file)
 MODULE_DEF(lang)
 MODULE_DEF(math)
+MODULE_DEF(random)

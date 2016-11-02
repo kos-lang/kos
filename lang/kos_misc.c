@@ -494,6 +494,12 @@ static void _pcg_init(struct KOS_RNG_PCG32 *pcg,
     _pcg_random(pcg);
 }
 
+void _KOS_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
+{
+    _pcg_init(&rng->pcg[0], seed & 0xFFFFU, (seed >> 16) & 0xFFFFU);
+    _pcg_init(&rng->pcg[1], (seed >> 32) & 0xFFFFU, (seed >> 48) & 0xFFFFU);
+}
+
 void _KOS_rng_init(struct KOS_RNG *rng)
 {
     uint64_t entropy[4];
