@@ -60,3 +60,29 @@ fun expect_fail(function)
     assert math.sqrt(0x4000000000000000) == 0x80000000
     expect_fail(λ->(math.sqrt(void)))
 }
+
+{
+    const inf = λ->(math.infinity)()
+    assert inf > 0
+    assert inf > 0x4000000000000000
+    assert inf > 1.7976931348623157e308
+    assert inf == math.infinity
+    const not = inf != math.infinity
+    assert ! not
+}
+
+{
+    const nan = λ->(math.nan)()
+    assert nan != 0
+    assert nan != 2
+    assert nan != 1.7976931348623157e308
+    assert nan != math.infinity
+    assert ! (nan == math.nan)
+    assert nan != math.nan
+    assert ! (-nan < math.nan)
+    assert ! (-nan > math.nan)
+    assert ! (nan < 0)
+    assert ! (nan > 0)
+    assert ! (nan < 1)
+    assert ! (nan > 1)
+}

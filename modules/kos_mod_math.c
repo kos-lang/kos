@@ -26,6 +26,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
+#include "../lang/kos_misc.h"
 #include "../lang/kos_try.h"
 #include <math.h>
 
@@ -119,6 +120,20 @@ static KOS_OBJ_PTR _sqrt(KOS_STACK_FRAME *frame,
 int _KOS_module_math_init(KOS_STACK_FRAME *frame)
 {
     int error = KOS_SUCCESS;
+
+    {
+        static KOS_ASCII_STRING(str_infinity, "infinity");
+        union _KOS_NUMERIC_VALUE value;
+        value.i = (uint64_t)0x7FF00000U << 32;
+        TRY(KOS_module_add_global(frame, TO_OBJPTR(&str_infinity), KOS_new_float(frame, value.d), 0));
+    }
+
+    {
+        static KOS_ASCII_STRING(str_nan, "nan");
+        union _KOS_NUMERIC_VALUE value;
+        value.i = ((uint64_t)0x7FF00000U << 32) | 1U;
+        TRY(KOS_module_add_global(frame, TO_OBJPTR(&str_nan), KOS_new_float(frame, value.d), 0));
+    }
 
     TRY_ADD_FUNCTION(frame, "ceil",  _ceil,  1);
     TRY_ADD_FUNCTION(frame, "floor", _floor, 1);
