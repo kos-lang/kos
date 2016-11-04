@@ -71,14 +71,18 @@ void _KOS_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
 
 void _KOS_spin_lock(KOS_ATOMIC(uint32_t) *lock)
 {
-    while (!KOS_atomic_cas_u32(*lock, 0, 1))
+    while (KOS_atomic_swap_u32(*lock, 1))
         _KOS_yield();
 }
 
 void _KOS_spin_unlock(KOS_ATOMIC(uint32_t) *lock)
 {
-    while (!KOS_atomic_cas_u32(*lock, 1, 0))
-        _KOS_yield();
+#ifdef NDEBUG
+    KOS_atomic_swap_u32(*lock, 0);
+#else
+    const uint32_t old = KOS_atomic_swap_u32(*lock, 0);
+    assert(old == 1);
+#endif
 }
 
 void _KOS_yield(void)
