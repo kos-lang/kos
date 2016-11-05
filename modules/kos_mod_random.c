@@ -130,7 +130,7 @@ static KOS_OBJ_PTR _rand_integer(KOS_STACK_FRAME *frame,
 {
     struct _KOS_RNG_CONTAINER *rng       = 0;
     int                        error     = KOS_SUCCESS;
-    int64_t                    value;
+    int64_t                    value     = 0;
     int                        min_max   = 0;
     int64_t                    min_value = 0;
     int64_t                    max_value = 0;
@@ -189,15 +189,15 @@ static KOS_OBJ_PTR _rand_float(KOS_STACK_FRAME *frame,
 
     _KOS_spin_lock(&rng->lock);
 
-    value.i = _KOS_rng_random(&rng->rng);
+    value.i = (int64_t)_KOS_rng_random(&rng->rng);
 
     _KOS_spin_unlock(&rng->lock);
 
     /* Set sign bit to 0 and exponent field to 0x3FF, which corresponds to
      * exponent value 0, making this value uniformly distributed
      * from 1.0 to 2.0, with 1.0 being in the range and 2.0 never in the range. */
-    value.i = (value.i & ~((uint64_t)0xFFF00000U << 32))
-            | ((uint64_t)0x3FF00000U << 32);
+    value.i = (value.i & ~((int64_t)0xFFF00000U << 32))
+            | ((int64_t)0x3FF00000U << 32);
 
 _error:
     return error ? TO_OBJPTR(0) : KOS_new_float(frame, value.d - 1.0);

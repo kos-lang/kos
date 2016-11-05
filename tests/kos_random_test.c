@@ -26,7 +26,7 @@
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 
-int main()
+int main(void)
 {
     struct KOS_RNG rng;
 
