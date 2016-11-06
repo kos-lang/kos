@@ -476,6 +476,8 @@ static int _gen_assert_str(struct _KOS_COMP_UNIT      *program,
     begin = node->token.begin;
     end   = node->children->next->token.begin;
 
+    /* TODO skip comments */
+
     /* Skip assert keyword */
     assert(begin + 6 < end);
     assert(begin[0] == 'a' && begin[5] == 't');

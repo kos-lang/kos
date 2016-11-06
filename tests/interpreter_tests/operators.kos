@@ -157,6 +157,21 @@ expect_fail(fun {
     assert b == -3
     assert a == 1
 }
+
+# positive zero equals negative zero
+{
+    const positive = 0.0
+    assert typeof positive == "float"
+
+    const negative = λ(x)->(-x)(positive)
+    assert typeof negative == "float"
+
+    assert positive == negative
+
+    const not_equal = positive != negative
+    assert ! not_equal
+}
+
 expect_fail(fun {
     const a = λ->("abc")()
     const b = λ->("xyz")()
@@ -352,6 +367,52 @@ expect_fail(fun {
         ok = true
     }
     assert ok
+}
+{
+    const a = -1e-100
+    const b = 1e100
+    const c = a % b
+    assert c == a
+}
+{
+    const a = λ->(-1e-100)()
+    const b = 1e100
+    const c = a % b
+    assert c == a
+}
+{
+    const a = 5.0 % -4.0
+    assert a == 1
+
+    const b = -5.0 % 4.0
+    assert b == -1
+}
+{
+    const a = λ->(5.0)()
+    const b = a % -4.0
+    assert b == 1
+}
+{
+    const a = λ->(-5.0)()
+    const b = a % 4.0
+    assert b == -1
+}
+{
+    const a = 5 % -4
+    assert a == 1
+
+    const b = -5 % 4
+    assert b == -1
+}
+{
+    const a = λ->(5)()
+    const b = a % -4
+    assert b == 1
+}
+{
+    const a = λ->(-5)()
+    const b = a % 4
+    assert b == -1
 }
 
 ##############################################################################

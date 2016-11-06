@@ -34,33 +34,55 @@ fun expect_fail(function)
     assert failed
 }
 
+# math constants
 {
     assert math.pi == 3.141592653589793238
     assert math.e  == 2.718281828459045235
+}
 
+# math.ceil
+{
     assert math.ceil(4)                  == 4
     assert math.ceil(0x4000000000000000) == 0x4000000000000000
     assert math.ceil(math.pi)            == 4
     expect_fail(λ->(math.ceil(void)))
+}
 
+# math.floor
+{
     assert math.floor(4)                  == 4
     assert math.floor(0x4000000000000000) == 0x4000000000000000
     assert math.floor(math.pi)            == 3
     expect_fail(λ->(math.floor(void)))
+}
 
+# math.abs
+{
     assert math.abs(-10)  == 10
     assert math.abs(10)   == 10
     assert math.abs(-5.6) == 5.6
     assert math.abs(4.7)  == 4.7
+
+    for var shift in [62, 61, 60, 31, 30, 29, 28] {
+        const positive = 1 << shift
+        const negative = ~positive + 1
+        assert positive == -negative
+        assert math.abs(positive) == positive
+        assert math.abs(negative) == positive
+    }
 }
 
+# math.sqrt
 {
     assert math.sqrt(16)                 == 4
     assert math.sqrt(49.0)               == 7
     assert math.sqrt(0x4000000000000000) == 0x80000000
     expect_fail(λ->(math.sqrt(void)))
+    expect_fail(λ->(math.sqrt(-1)))
+    expect_fail(λ->(math.sqrt(-0.5)))
 }
 
+# math.infinity
 {
     const inf = λ->(math.infinity)()
     assert inf > 0
@@ -69,8 +91,10 @@ fun expect_fail(function)
     assert inf == math.infinity
     const not = inf != math.infinity
     assert ! not
+    assert math.abs(-inf) == math.infinity
 }
 
+# math.nan
 {
     const nan = λ->(math.nan)()
     assert nan != 0
@@ -85,4 +109,92 @@ fun expect_fail(function)
     assert ! (nan > 0)
     assert ! (nan < 1)
     assert ! (nan > 1)
+}
+
+# math.is_infinity
+{
+    assert ! math.is_infinity(0)
+    assert ! math.is_infinity(0.0)
+    assert ! math.is_infinity(0x8000000000000000)
+    assert ! math.is_infinity(1.7976931348623157e308)
+    assert ! math.is_infinity(math.nan)
+    assert ! math.is_infinity(false)
+    assert ! math.is_infinity(void)
+    assert ! math.is_infinity({})
+    assert math.is_infinity(math.infinity)
+    assert math.is_infinity(-math.infinity)
+}
+
+# math.is_nan
+{
+    assert ! math.is_nan(0)
+    assert ! math.is_nan(0.0)
+    assert ! math.is_nan(0x8000000000000000)
+    assert ! math.is_nan(1.7976931348623157e308)
+    assert ! math.is_nan(math.infinity)
+    assert ! math.is_nan(-math.infinity)
+    assert ! math.is_nan(false)
+    assert ! math.is_nan(void)
+    assert ! math.is_nan({})
+    assert math.is_nan(math.nan)
+}
+
+# math.exp
+{
+    expect_fail(λ->(math.exp(void)))
+    expect_fail(λ->(math.exp(false)))
+    expect_fail(λ->(math.exp({})))
+
+    const e   = math.e
+    const err = 1e-10
+
+    assert math.abs(math.exp(2)   - e * e)     < err
+    assert math.abs(math.exp(3.0) - e * e * e) < err
+    assert math.abs(math.exp(-1)  - 1 / e)     < err
+}
+
+# math.expm1
+{
+    expect_fail(λ->(math.expm1(void)))
+    expect_fail(λ->(math.expm1(false)))
+    expect_fail(λ->(math.expm1({})))
+
+    const e   = math.e
+    const err = 1e-10
+
+    assert math.abs(math.expm1(2)   - e * e + 1)     < err
+    assert math.abs(math.expm1(3.0) - e * e * e + 1) < err
+    assert math.abs(math.expm1(-1)  - 1 / e + 1)     < err
+}
+
+# math.pow
+{
+    expect_fail(λ->(math.pow(1, void)))
+    expect_fail(λ->(math.pow(1, false)))
+    expect_fail(λ->(math.pow(1, {})))
+    expect_fail(λ->(math.pow(void,  1)))
+    expect_fail(λ->(math.pow(false, 1)))
+    expect_fail(λ->(math.pow({},    1)))
+    expect_fail(λ->(math.pow(-0.5, -0.5)))
+
+    assert math.pow(2,   5)   == 32
+    assert math.pow(2.5, 2.0) == 6.25
+    assert math.pow(4,   0.5) == 2
+    assert math.pow(-2,  3)   == -8
+
+    assert math.pow(1, 0)              == 1
+    assert math.pow(1, 1e100)          == 1
+    assert math.pow(1, math.infinity)  == 1
+    assert math.pow(1, -1.e100)        == 1
+    assert math.pow(1, -math.infinity) == 1
+    assert math.pow(1, math.nan)       == 1
+
+    assert math.pow(0, 0)              == 1
+    assert math.pow(0, 1e100)          == 1
+    assert math.pow(0, math.infinity)  == 1
+    assert math.pow(0, -1e100)         == 1
+    assert math.pow(0, -math.infinity) == 1
+    assert math.pow(0, math.nan)       == 1
+
+    assert math.pow(1.7976931348623157e308, 2) == math.infinity
 }
