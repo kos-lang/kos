@@ -226,7 +226,9 @@ static KOS_OBJ_PTR _pow(KOS_STACK_FRAME *frame,
         assert(arg2.type == KOS_FLOAT_VALUE);
     }
 
-    if (arg2.u.d == 1 || arg1.u.d == 0)
+    if (arg1.u.d == 0 && arg2.u.d != 0)
+        ret = TO_SMALL_INT(0);
+    else if (arg1.u.d == 1 || arg2.u.d == 0)
         ret = TO_SMALL_INT(1);
     else if (arg1.u.d < 0 && ceil(arg2.u.d) != arg2.u.d)
         RAISE_EXCEPTION(TO_OBJPTR(&str_err_negative_root));

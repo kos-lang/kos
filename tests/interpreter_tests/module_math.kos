@@ -190,11 +190,17 @@ fun expect_fail(function)
     assert math.pow(1, math.nan)       == 1
 
     assert math.pow(0, 0)              == 1
-    assert math.pow(0, 1e100)          == 1
-    assert math.pow(0, math.infinity)  == 1
-    assert math.pow(0, -1e100)         == 1
-    assert math.pow(0, -math.infinity) == 1
-    assert math.pow(0, math.nan)       == 1
+    assert math.pow(0, 1e100)          == 0
+    assert math.pow(0, math.infinity)  == 0
+    assert math.pow(0, -1e100)         == 0
+    assert math.pow(0, -math.infinity) == 0
+    assert math.pow(0, math.nan)       == 0
+
+    assert math.pow(1e100,          0) == 1
+    assert math.pow(math.infinity,  0) == 1
+    assert math.pow(-1e100,         0) == 1
+    assert math.pow(-math.infinity, 0) == 1
+    assert math.pow(math.nan,       0) == 1
 
     assert math.pow(1.7976931348623157e308, 2) == math.infinity
 }
