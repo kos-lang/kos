@@ -26,6 +26,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include "../lang/kos_misc.h"
 #include "../lang/kos_try.h"
 #include <errno.h>
@@ -39,36 +40,19 @@ static KOS_OBJ_PTR _abs(KOS_STACK_FRAME *frame,
                         KOS_OBJ_PTR      args_obj)
 {
     KOS_OBJ_PTR ret = TO_OBJPTR(0);
-    KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+    KOS_NUMERIC numeric;
 
-    assert( ! IS_BAD_PTR(arg));
+    if (KOS_get_numeric_arg(frame, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
-    if (IS_SMALL_INT(arg)) {
-        const int64_t value = GET_SMALL_INT(arg);
-        ret                 = value < 0 ? KOS_new_int(frame, -value) : arg;
-    }
-    else switch (GET_OBJ_TYPE(arg)) {
+        if (numeric.type == KOS_INTEGER_VALUE)
+            ret = KOS_new_int(frame, numeric.u.i < 0 ? -numeric.u.i : numeric.u.i);
+        else {
+            assert(numeric.type == KOS_FLOAT_VALUE);
 
-        case OBJ_INTEGER: {
-            const int64_t value = OBJPTR(KOS_INTEGER, arg)->number;
-            ret                 = value < 0 ? KOS_new_int(frame, -value) : arg;
-            break;
+            numeric.u.i &= ~((int64_t)1 << 63);
+
+            ret = KOS_new_float(frame, numeric.u.d);
         }
-
-        case OBJ_FLOAT: {
-
-            union _KOS_NUMERIC_VALUE value;
-
-            value.d = OBJPTR(KOS_FLOAT, arg)->number;
-            value.i &= ~((int64_t)1 << 63);
-
-            ret = KOS_new_float(frame, value.d);
-            break;
-        }
-
-        default:
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_number));
-            break;
     }
 
     return ret;
@@ -108,25 +92,17 @@ static KOS_OBJ_PTR _exp(KOS_STACK_FRAME *frame,
                         KOS_OBJ_PTR      args_obj)
 {
     KOS_OBJ_PTR ret = TO_OBJPTR(0);
-    KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+    KOS_NUMERIC numeric;
 
-    assert( ! IS_BAD_PTR(arg));
+    if (KOS_get_numeric_arg(frame, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
-    if (IS_SMALL_INT(arg))
-        ret = KOS_new_float(frame, exp((double)GET_SMALL_INT(arg)));
-    else switch (GET_OBJ_TYPE(arg)) {
+        if (numeric.type == KOS_INTEGER_VALUE)
+            numeric.u.d = (double)numeric.u.i;
+        else {
+            assert(numeric.type == KOS_FLOAT_VALUE);
+        }
 
-        case OBJ_INTEGER:
-            ret = KOS_new_float(frame, exp((double)OBJPTR(KOS_INTEGER, arg)->number));
-            break;
-
-        case OBJ_FLOAT:
-            ret = KOS_new_float(frame, exp(OBJPTR(KOS_FLOAT, arg)->number));
-            break;
-
-        default:
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_number));
-            break;
+        ret = KOS_new_float(frame, exp(numeric.u.d));
     }
 
     return ret;
@@ -137,25 +113,17 @@ static KOS_OBJ_PTR _expm1(KOS_STACK_FRAME *frame,
                           KOS_OBJ_PTR      args_obj)
 {
     KOS_OBJ_PTR ret = TO_OBJPTR(0);
-    KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+    KOS_NUMERIC numeric;
 
-    assert( ! IS_BAD_PTR(arg));
+    if (KOS_get_numeric_arg(frame, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
-    if (IS_SMALL_INT(arg))
-        ret = KOS_new_float(frame, expm1((double)GET_SMALL_INT(arg)));
-    else switch (GET_OBJ_TYPE(arg)) {
+        if (numeric.type == KOS_INTEGER_VALUE)
+            numeric.u.d = (double)numeric.u.i;
+        else {
+            assert(numeric.type == KOS_FLOAT_VALUE);
+        }
 
-        case OBJ_INTEGER:
-            ret = KOS_new_float(frame, expm1((double)OBJPTR(KOS_INTEGER, arg)->number));
-            break;
-
-        case OBJ_FLOAT:
-            ret = KOS_new_float(frame, expm1(OBJPTR(KOS_FLOAT, arg)->number));
-            break;
-
-        default:
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_number));
-            break;
+        ret = KOS_new_float(frame, expm1(numeric.u.d));
     }
 
     return ret;
@@ -238,87 +206,62 @@ static KOS_OBJ_PTR _pow(KOS_STACK_FRAME *frame,
                         KOS_OBJ_PTR      this_obj,
                         KOS_OBJ_PTR      args_obj)
 {
-    KOS_OBJ_PTR ret = TO_OBJPTR(0);
-    KOS_OBJ_PTR arg1;
-    KOS_OBJ_PTR arg2;
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_PTR ret   = TO_OBJPTR(0);
+    KOS_NUMERIC arg1;
+    KOS_NUMERIC arg2;
 
-    arg1 = KOS_array_read(frame, args_obj, 0);
-    assert( ! IS_BAD_PTR(arg1));
+    TRY(KOS_get_numeric_arg(frame, args_obj, 0, &arg1));
+    TRY(KOS_get_numeric_arg(frame, args_obj, 1, &arg2));
 
-    arg2 = KOS_array_read(frame, args_obj, 1);
-    assert( ! IS_BAD_PTR(arg2));
-
-    if ( ! IS_NUMERIC_OBJ(arg1) || ! IS_NUMERIC_OBJ(arg2))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_number));
-
+    if (arg1.type == KOS_INTEGER_VALUE)
+        arg1.u.d = (double)arg1.u.i;
     else {
-
-        double a;
-        double b;
-
-        if (IS_SMALL_INT(arg1))
-            a = (double)GET_SMALL_INT(arg1);
-        else if (GET_OBJ_TYPE(arg1) == OBJ_INTEGER)
-            a = (double)OBJPTR(KOS_INTEGER, arg1)->number;
-        else {
-            assert(GET_OBJ_TYPE(arg1) == OBJ_FLOAT);
-            a = OBJPTR(KOS_FLOAT, arg1)->number;
-        }
-
-        if (IS_SMALL_INT(arg2))
-            b = (double)GET_SMALL_INT(arg2);
-        else if (GET_OBJ_TYPE(arg2) == OBJ_INTEGER)
-            b = (double)OBJPTR(KOS_INTEGER, arg2)->number;
-        else {
-            assert(GET_OBJ_TYPE(arg2) == OBJ_FLOAT);
-            b = OBJPTR(KOS_FLOAT, arg2)->number;
-        }
-
-        if (b == 1 || a == 0)
-            ret = TO_SMALL_INT(1);
-        else if (a < 0 && ceil(b) != b)
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_negative_root));
-        else
-            ret = KOS_new_float(frame, pow(a, b));
+        assert(arg1.type == KOS_FLOAT_VALUE);
     }
 
-    return ret;
+    if (arg2.type == KOS_INTEGER_VALUE)
+        arg2.u.d = (double)arg2.u.i;
+    else {
+        assert(arg2.type == KOS_FLOAT_VALUE);
+    }
+
+    if (arg2.u.d == 1 || arg1.u.d == 0)
+        ret = TO_SMALL_INT(1);
+    else if (arg1.u.d < 0 && ceil(arg2.u.d) != arg2.u.d)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_negative_root));
+    else
+        ret = KOS_new_float(frame, pow(arg1.u.d, arg2.u.d));
+
+_error:
+    return error ? TO_OBJPTR(0) : ret;
 }
 
 static KOS_OBJ_PTR _sqrt(KOS_STACK_FRAME *frame,
                          KOS_OBJ_PTR      this_obj,
                          KOS_OBJ_PTR      args_obj)
 {
-    KOS_OBJ_PTR ret = TO_OBJPTR(0);
-    KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_PTR ret   = TO_OBJPTR(0);
+    KOS_NUMERIC numeric;
 
-    assert( ! IS_BAD_PTR(arg));
+    TRY(KOS_get_numeric_arg(frame, args_obj, 0, &numeric));
 
-    if (IS_SMALL_INT(arg) || GET_OBJ_TYPE(arg) == OBJ_INTEGER) {
-        int64_t value;
-
-        if (IS_SMALL_INT(arg))
-            value = GET_SMALL_INT(arg);
-        else
-            value = OBJPTR(KOS_INTEGER, arg)->number;
-
-        if (value <= 0)
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_negative_root));
-        else
-            ret = KOS_new_float(frame, sqrt((double)value));
+    if (numeric.type == KOS_INTEGER_VALUE) {
+        if (numeric.u.i < 0)
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_negative_root));
+        numeric.u.d = (double)numeric.u.i;
     }
-    else if (GET_OBJ_TYPE(arg) == OBJ_FLOAT) {
-        const double value = OBJPTR(KOS_FLOAT, arg)->number;
-
-        if (value <= 0)
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_negative_root));
-        else
-            ret = KOS_new_float(frame, sqrt(value));
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        if (numeric.u.d < 0)
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_negative_root));
     }
-    else
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_number));
 
-    return ret;
+    ret = KOS_new_float(frame, sqrt(numeric.u.d));
+
+_error:
+    return error ? TO_OBJPTR(0) : ret;
 }
 
 int _KOS_module_math_init(KOS_STACK_FRAME *frame)
