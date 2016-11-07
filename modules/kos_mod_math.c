@@ -34,6 +34,7 @@
 
 static KOS_ASCII_STRING(str_err_negative_root, "invalid base");
 static KOS_ASCII_STRING(str_err_not_number,    "object is not a number");
+static KOS_ASCII_STRING(str_err_pow_0_0,       "0 to the power of 0");
 
 static KOS_OBJ_PTR _abs(KOS_STACK_FRAME *frame,
                         KOS_OBJ_PTR      this_obj,
@@ -226,8 +227,12 @@ static KOS_OBJ_PTR _pow(KOS_STACK_FRAME *frame,
         assert(arg2.type == KOS_FLOAT_VALUE);
     }
 
-    if (arg1.u.d == 0 && arg2.u.d != 0)
-        ret = TO_SMALL_INT(0);
+    if (arg1.u.d == 0) {
+        if (arg2.u.d == 0)
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_pow_0_0));
+        else
+            ret = TO_SMALL_INT(0);
+    }
     else if (arg1.u.d == 1 || arg2.u.d == 0)
         ret = TO_SMALL_INT(1);
     else if (arg1.u.d < 0 && ceil(arg2.u.d) != arg2.u.d)

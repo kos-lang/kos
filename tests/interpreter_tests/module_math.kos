@@ -176,6 +176,7 @@ fun expect_fail(function)
     expect_fail(λ->(math.pow(false, 1)))
     expect_fail(λ->(math.pow({},    1)))
     expect_fail(λ->(math.pow(-0.5, -0.5)))
+    expect_fail(λ->(math.pow(0,     0)))
 
     assert math.pow(2,   5)   == 32
     assert math.pow(2.5, 2.0) == 6.25
@@ -189,7 +190,6 @@ fun expect_fail(function)
     assert math.pow(1, -math.infinity) == 1
     assert math.pow(1, math.nan)       == 1
 
-    assert math.pow(0, 0)              == 1
     assert math.pow(0, 1e100)          == 0
     assert math.pow(0, math.infinity)  == 0
     assert math.pow(0, -1e100)         == 0
