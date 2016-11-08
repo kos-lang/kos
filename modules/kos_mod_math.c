@@ -29,7 +29,6 @@
 #include "../inc/kos_utils.h"
 #include "../lang/kos_misc.h"
 #include "../lang/kos_try.h"
-#include <errno.h>
 #include <math.h>
 
 static KOS_ASCII_STRING(str_err_negative_root, "invalid base");
