@@ -266,9 +266,18 @@ abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789;
 @ 9 2 3
 
 @------------------------------------------------------------------------------
-# Invalid escape sequence
-"\a"
-@ 9 2 1
+# Not escape sequences
+"\w"
+"\$"
+"\<"
+
+@ 0
+
+(scope 1 1
+    (string 2 1 "\w")
+    (string 3 1 "\$")
+    (string 4 1 "\<")
+)
 
 @------------------------------------------------------------------------------
 # Invalid escape sequence

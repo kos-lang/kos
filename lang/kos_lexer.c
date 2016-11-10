@@ -37,7 +37,6 @@ static const char str_err_eof_str[]             = "unexpected end of file, unfin
 static const char str_err_hex[]                 = "hexadecimal digit expected";
 static const char str_err_invalid_char[]        = "invalid character";
 static const char str_err_invalid_dec[]         = "invalid decimal literal";
-static const char str_err_invalid_esc[]         = "unsupported escape sequence";
 static const char str_err_invalid_utf8[]        = "invalid UTF-8 character sequence";
 static const char str_err_no_hex_digits[]       = "invalid escape sequence, no hex digits specified";
 static const char str_err_too_many_hex_digits[] = "invalid escape sequence, more than 6 hex digits specified";
@@ -501,10 +500,6 @@ static int _collect_escape(struct _KOS_LEXER *lexer, int *format)
         }
         else if (esc_type == KOS_ET_INTERPOLATE)
             *format = 1;
-        else if (esc_type == KOS_ET_INVALID) {
-            lexer->error_str = str_err_invalid_esc;
-            error = KOS_ERROR_SCANNING_FAILED;
-        }
     }
 
     return error;

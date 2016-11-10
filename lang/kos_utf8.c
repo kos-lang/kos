@@ -106,11 +106,14 @@ static const char _hex_map[256] = {
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16
 };
 
+#define KOS_INVALID_ESC (~0U)
+#define KOS_NOT_ESC     (~0U - 1U)
+
 static uint32_t _parse_escape_sequence(const char **str_ptr,
                                        const char  *end)
 {
     const char *str  = *str_ptr;
-    uint32_t    code = ~0U;
+    uint32_t    code = KOS_INVALID_ESC;
 
     if (str < end) {
         const char esc_type = _KOS_escape_sequence_map[(uint8_t)*(str++)];
@@ -146,7 +149,11 @@ static uint32_t _parse_escape_sequence(const char **str_ptr,
         }
         else if (esc_type == '0')
             code = 0;
-        else if (esc_type != KOS_ET_INVALID && esc_type != KOS_ET_INTERPOLATE)
+        else if (esc_type == KOS_ET_INVALID) {
+            --str;
+            code = KOS_NOT_ESC;
+        }
+        else if (esc_type != KOS_ET_INTERPOLATE)
             code = (uint8_t)esc_type;
     }
 
@@ -192,12 +199,12 @@ unsigned _KOS_utf8_get_len(const char           *str,
         if (escape && code == '\\') {
             code = _parse_escape_sequence(&str, end);
 
-            if (code == ~0U) {
+            if (code == KOS_INVALID_ESC) {
                 count = ~0U;
                 break;
             }
 
-            if (code > max_c)
+            if (code != KOS_NOT_ESC && code > max_c)
                 max_c = code;
         }
     }
@@ -238,8 +245,10 @@ int _KOS_utf8_decode_8(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE e
 
         if (escape && c == '\\') {
             const uint32_t c32 = _parse_escape_sequence(&str, end);
-            assert(c32 < 0x100U);
-            c = (uint8_t)c32;
+            if (c32 != KOS_NOT_ESC) {
+                assert(c32 < 0x100U);
+                c = (uint8_t)c32;
+            }
         }
 
         *(out++) = c;
@@ -276,8 +285,10 @@ int _KOS_utf8_decode_16(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE 
 
         if (escape && c == '\\') {
             const uint32_t c32 = _parse_escape_sequence(&str, end);
-            assert(c32 < 0x10000U);
-            c = (uint16_t)c32;
+            if (c32 != KOS_NOT_ESC) {
+                assert(c32 < 0x10000U);
+                c = (uint16_t)c32;
+            }
         }
 
         *(out++) = c;
@@ -313,8 +324,11 @@ int _KOS_utf8_decode_32(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE 
         }
 
         if (escape && c == '\\') {
-            c = _parse_escape_sequence(&str, end);
-            assert(c != ~0U);
+            const uint32_t c32 = _parse_escape_sequence(&str, end);
+            if (c32 != KOS_NOT_ESC) {
+                assert(c32 != KOS_INVALID_ESC);
+                c = c32;
+            }
         }
 
         *(out++) = c;

@@ -175,3 +175,15 @@ fun expect_fail(function)
     const b = "abc\x{100}"
     assert a < b
 }
+
+# These looks like escape sequences, but they are not.  Used e.g. in regexes.
+{
+    const s = "\\(\w\)"
+    assert s.size == 6
+    assert s[0]   == '\\'
+    assert s[1]   == '('
+    assert s[2]   == '\\'
+    assert s[3]   == 'w'
+    assert s[4]   == '\\'
+    assert s[5]   == ')'
+}
