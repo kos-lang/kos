@@ -202,13 +202,16 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
         assert(!IS_BAD_PTR(module_obj));
         if (IS_BAD_PTR(module_obj))
             KOS_clear_exception(frame);
-        else {
+        else if (IS_TYPE(OBJ_MODULE, module_obj)) {
             if ((OBJPTR(KOS_MODULE, module_obj)->flags & KOS_MODULE_OWN_BYTECODE))
                 _KOS_free((void *)OBJPTR(KOS_MODULE, module_obj)->bytecode);
             if ((OBJPTR(KOS_MODULE, module_obj)->flags & KOS_MODULE_OWN_LINE_ADDRS))
                 _KOS_free((void *)OBJPTR(KOS_MODULE, module_obj)->line_addrs);
             if ((OBJPTR(KOS_MODULE, module_obj)->flags & KOS_MODULE_OWN_FUNC_ADDRS))
                 _KOS_free((void *)OBJPTR(KOS_MODULE, module_obj)->func_addrs);
+        }
+        else {
+            assert(IS_TYPE(OBJ_VOID, module_obj)); /* failed e.g. during compilation */
         }
     }
 
