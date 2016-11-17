@@ -69,7 +69,7 @@ CONFIG_DEBUG ?= 0
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(CONFIG_DEBUG), 0)
-        CFLAGS   += -O1 -DNDEBUG -Gy -GL -MT
+        CFLAGS   += -O2 -DNDEBUG -Gy -GL -MT
         LDFLAGS  += -LTCG
         LIBFLAGS += -LTCG
     else
@@ -97,7 +97,7 @@ ifeq ($(UNAME), Windows)
     CONFIG_GCOV := 0
 else
     ifeq ($(CONFIG_DEBUG), 0)
-        CFLAGS += -Os -DNDEBUG -ffunction-sections -fdata-sections
+        CFLAGS += -O3 -DNDEBUG -ffunction-sections -fdata-sections
         STRIP  += strip
         ifeq ($(UNAME), Linux)
             LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
