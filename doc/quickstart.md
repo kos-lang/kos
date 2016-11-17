@@ -25,22 +25,23 @@ This is a variable:
 
     var a = 0
     a += 1         # Variables can be modified.
+    a =  "two"     # Variables can be reassigned.
 
 This is a constant:
 
     const c = 1    # Cannot be assigned to again.
     c = 2          # BOOM! This will not compile.
 
-These constants are of immutable types:
+These constants are of immutable types (cannot be modified):
 
     const integer  = 42
     const float    = 42.0
     const boolean  = true
     const string   = "Hello!"
-    const _void_   = void # void is a keyword, cannot name a variable 'void'
-    const function = fun { }
+    const _void_   = void    # void is a keyword, cannot name a variable 'void'
+    const function = fun { } # Note: immutable, but can set prototype
 
-These are mutable types:
+These are mutable types (can be modified, but not reassigned):
 
     const object   = { prop1: 1, prop2: 2, "prop 3": 3 }
     const array    = [ 1, 2, "string" ]
@@ -50,9 +51,8 @@ These are mutable types:
 Functions
 ---------
 
-This is the most common way to declare functions.  Please note that
-`add_two_numbers` has the same status as any other variable would have at this
-spot.  Functions declared in this manner are not treated in any special way.
+This is the most common way to declare functions.  Please note that the
+`add_two_numbers` identifier is really just a constant.
 
     fun add_two_numbers(a, b)
     {
@@ -61,15 +61,14 @@ spot.  Functions declared in this manner are not treated in any special way.
 
     lang.print(add_two_numbers(1, 5), "\n") # Prints: 6
 
-This function is declared in an alternative way.  Functions are just objects,
-like everything else.
+And here is a function declared in an alternative way.  Functions are just
+objects, like everything else.  Function identifiers are really constants.
 
     const multiply_two_numbers = fun(a, b) { return a * b }
-    # Notice the semicolon denoting end of expression
 
     lang.print(multiply_two_numbers(3, 4), "\n") # Prints: 12
 
-This is the third way to declare functions.  The parentheses contain the
+And this is the third way to declare functions.  The parentheses contain the
 expression which is treated like a return statement.
 
     const subtract_two_numbers = fun(a, b) -> (a - b)
@@ -83,7 +82,7 @@ Semicolons are optional
 Semicolons can be used to mark ends of statements, but they are optional
 in most situations.
 
-Semicolons are only required inside the `for` loop header(see below) and in
+Semicolons are only required inside the `for` loop header (see below) and in
 rare cases where you want to cram multiple statements into one line.
 
 In cases where there is an ambiguity, Kos will refuse to compile the code
