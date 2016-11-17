@@ -66,10 +66,11 @@ inv_path = $(subst $(space),/,$(patsubst %,..,$(subst /,$(space),$1)))
 CFLAGS  ?=
 LDFLAGS ?=
 CONFIG_DEBUG ?= 0
+CONFIG_NATIVE ?= 0
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(CONFIG_DEBUG), 0)
-        CFLAGS   += -O2 -DNDEBUG -Gy -GL -MT
+        CFLAGS   += -O2 -DNDEBUG -Gs4096 -GL -MT
         LDFLAGS  += -LTCG
         LIBFLAGS += -LTCG
     else
@@ -104,6 +105,10 @@ else
         endif
         ifeq ($(UNAME), Darwin)
             LDFLAGS += -Wl,-dead_strip
+        endif
+        ifeq ($(CONFIG_NATIVE), 1)
+            CFLAGS  += -march=native
+            LDFLAGS += -march=native
         endif
 
         # Configure LTO, if available

@@ -39,6 +39,9 @@ echo "Using $JOBS jobs"
 # Parallel tests use this env var to run number of threads proportional to the number of CPUs
 export TEST_CPUS="$JOBS"
 
+# Optimize for the current architecture
+export CONFIG_NATIVE=1
+
 runtests()
 {
     echo "***************************************************************************"

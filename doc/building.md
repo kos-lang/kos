@@ -68,3 +68,5 @@ set as environment variables:
 
 * **CONFIG_DEBUG=1** - Enables debug build (default is release).
 * **CONFIG_STRICT=1** - Enables strict warnings, treats warnings as errors.
+* **CONFIG_NATIVE=1** - (Non-Windows platforms) Enables optimizations for the
+current system; the produced executables may not work on other, older systems.
