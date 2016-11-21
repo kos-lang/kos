@@ -169,7 +169,8 @@ kos_parallel_object_overwrite_test:   kos_parallel_object_resize_test
 kos_parallel_object_rapid_grow_test:  kos_parallel_object_overwrite_test
 test:                                 kos_parallel_object_rapid_grow_test
 else
-test: simple_test
+kos_parallel_object_rapid_grow_test:  simple_test
+test:                                 kos_parallel_object_rapid_grow_test
 endif
 
 ifneq ($(CONFIG_GCOV), 0)

@@ -80,6 +80,7 @@ fun expect_fail(function)
 # random.seed
 {
     expect_fail(λ->(new random.random(void)))
+    expect_fail(λ->(new random.random(10e19)))
 
     const seed = random.rand_integer()
 
