@@ -156,8 +156,12 @@ int _KOS_parse_int(const char *begin,
             v = v * radix + digit;
         }
 
-        if (!error)
-            *value = minus ? -(int64_t)v : (int64_t)v;
+        if ( ! error) {
+            if (minus)
+                *value = (int64_t)((uint64_t)0U - v);
+            else
+                *value = (int64_t)v;
+        }
     }
 
     return error;

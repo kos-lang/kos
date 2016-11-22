@@ -196,7 +196,7 @@ static KOS_OBJ_PTR _rand_float(KOS_STACK_FRAME *frame,
     /* Set sign bit to 0 and exponent field to 0x3FF, which corresponds to
      * exponent value 0, making this value uniformly distributed
      * from 1.0 to 2.0, with 1.0 being in the range and 2.0 never in the range. */
-    value.i = (value.i & ~((int64_t)0xFFF00000U << 32))
+    value.i = (value.i & (int64_t)~((uint64_t)0xFFF00000U << 32))
             | ((int64_t)0x3FF00000U << 32);
 
 _error:

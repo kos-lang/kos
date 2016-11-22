@@ -895,7 +895,7 @@ void _KOS_disassemble(const uint8_t                       *bytecode,
             assert(opsize == 1 || opsize == 4);
 
             for (i = 0; i < opsize; i++)
-                value |= (int32_t)bytecode[instr_size+i] << (8*i);
+                value |= (int32_t)((uint32_t)bytecode[instr_size+i] << (8*i));
 
             tail = _get_offset_operand_tail((enum _KOS_BYTECODE_INSTR)opcode, iop);
             if (tail >= 0)

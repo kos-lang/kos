@@ -49,7 +49,7 @@ static KOS_OBJ_PTR _abs(KOS_STACK_FRAME *frame,
         else {
             assert(numeric.type == KOS_FLOAT_VALUE);
 
-            numeric.u.i &= ~((int64_t)1 << 63);
+            numeric.u.i &= (int64_t)~((uint64_t)1U << 63);
 
             ret = KOS_new_float(frame, numeric.u.d);
         }
@@ -174,7 +174,7 @@ static KOS_OBJ_PTR _is_infinity(KOS_STACK_FRAME *frame,
         union _KOS_NUMERIC_VALUE value;
 
         value.d = OBJPTR(KOS_FLOAT, arg)->number;
-        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ! (value.i << 12));
+        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
     }
 
     return ret;
@@ -196,7 +196,7 @@ static KOS_OBJ_PTR _is_nan(KOS_STACK_FRAME *frame,
         union _KOS_NUMERIC_VALUE value;
 
         value.d = OBJPTR(KOS_FLOAT, arg)->number;
-        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && (value.i << 12));
+        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
     }
 
     return ret;
