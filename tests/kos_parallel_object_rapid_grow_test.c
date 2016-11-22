@@ -135,9 +135,6 @@ int main(void)
                 printf("Failed: Invalid value in TEST_CPUS env var!\n");
                 return 1;
             }
-            /* cap number of CPUs to avoid blowing up test time */
-            if (num_cpus > 8)
-                num_cpus = 8;
         }
 
         _KOS_vector_destroy(&cstr);

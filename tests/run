@@ -92,7 +92,7 @@ if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>&1)" != "" ]; then
     VALGRIND_JOBS=$JOBS
     [ $VALGRIND_JOBS -gt 8 ] && VALGRIND_JOBS=8
 
-    JOBS=$VALGRIND_JOBS runtests c99 c++11
+    JOBS=$VALGRIND_JOBS TEST_CPUS=2 runtests c99 c++11
 
     unset CONFIG_TOOL
 fi
