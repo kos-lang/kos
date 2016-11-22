@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < size; i++) {
         const uintptr_t v = (uintptr_t)_KOS_rng_random(&rng);
-        values[i]         = v == ((uintptr_t)1U << (sizeof(intptr_t)*8-1)) ? 0 : v;
+        values[i]         = v == ((uintptr_t)1U << (sizeof(intptr_t)*8-1)) ? 0 : (intptr_t)v;
     }
 
     for (i = 0; i < size*2; i++) {
