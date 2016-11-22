@@ -163,14 +163,21 @@ gcov.pre.clean:
 # Don't run parallel tests with valgrind, since they are slow
 
 ifeq ($(CONFIG_TOOL)$(CONFIG_GCOV), 0)
+# Normal testing
 kos_parallel_object_consistency_test: simple_test
 kos_parallel_object_resize_test:      kos_parallel_object_consistency_test
 kos_parallel_object_overwrite_test:   kos_parallel_object_resize_test
 kos_parallel_object_rapid_grow_test:  kos_parallel_object_overwrite_test
 test:                                 kos_parallel_object_rapid_grow_test
 else
+  ifeq ($(CONFIG_GCOV), 0)
+# Valgrind
+test:                                 simple_test
+  else
+# gcov
 kos_parallel_object_rapid_grow_test:  simple_test
 test:                                 kos_parallel_object_rapid_grow_test
+  endif
 endif
 
 ifneq ($(CONFIG_GCOV), 0)
