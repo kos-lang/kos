@@ -123,10 +123,6 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_CMP_EQ,
     /* CMP.NE <r.dest>, <r.src1>, <r.src2> */
     INSTR_CMP_NE,
-    /* CMP.GE <r.dest>, <r.src1>, <r.src2> */
-    INSTR_CMP_GE,
-    /* CMP.GT <r.dest>, <r.src1>, <r.src2> */
-    INSTR_CMP_GT,
     /* CMP.LE <r.dest>, <r.src1>, <r.src2> */
     INSTR_CMP_LE,
     /* CMP.LT <r.dest>, <r.src1>, <r.src2> */

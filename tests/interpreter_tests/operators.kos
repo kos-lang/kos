@@ -996,6 +996,85 @@ expect_fail(fun {
 }
 
 ##############################################################################
+# ==
+{
+    assert 2     == λ->(2)()
+    assert 3.0   == λ->(3)()
+    assert 4.0   == λ->(4.0)()
+    assert "abc" == λ->("abc")()
+    assert void  == λ->(void)()
+    assert false == λ->(false)()
+    assert true  == λ->(true)()
+
+    const array = fun { const a = [ 1, 2, 3 ] ; return λ->(a) } ()
+    assert typeof array() == "array"
+    assert array().size   == 3
+    assert array()[1]     == 2
+    assert array()        == array()
+}
+
+##############################################################################
+# !=
+{
+    assert 2     != λ->(3)()
+    assert 3.0   != λ->(4)()
+    assert 4.0   != λ->(5.0)()
+    assert "abc" != λ->("Abc")()
+    assert void  != λ->(true)()
+    assert false != λ->(true)()
+    assert []    != λ->([])()
+    assert {}    != λ->({})()
+}
+
+##############################################################################
+# <
+{
+    assert 1     < λ->(2)()
+    assert 3.0   < λ->(4)()
+    assert 5     < λ->(6.0)()
+    assert "aa"  < λ->("aaa")()
+    assert false < true
+}
+
+##############################################################################
+# <=
+{
+    assert 1     <= λ->(2)()
+    assert 3.0   <= λ->(4)()
+    assert 5     <= λ->(6.0)()
+    assert "aa"  <= λ->("aaa")()
+    assert "bb"  <= λ->("bb")()
+    assert false <= λ->(true)()
+    assert true  <= λ->(true)()
+    assert false <= λ->(false)()
+    assert void  <= λ->(void)()
+}
+
+##############################################################################
+# >
+{
+    assert 2     > λ->(1)()
+    assert 4.0   > λ->(3)()
+    assert 6     > λ->(5.0)()
+    assert "aaa" > λ->("aa")()
+    assert true  > false
+}
+
+##############################################################################
+# >=
+{
+    assert 2     >= λ->(1)()
+    assert 4.0   >= λ->(3)()
+    assert 6     >= λ->(5.0)()
+    assert "aaa" >= λ->("aa")()
+    assert "bb"  >= λ->("bb")()
+    assert true  >= λ->(false)()
+    assert true  >= λ->(true)()
+    assert false >= λ->(false)()
+    assert void  >= λ->(void)()
+}
+
+##############################################################################
 # if, !
 {
     var true_values  = [ true, 1, -1, 0x8000000000000000, "", "0", "false", [], [false], {} ]

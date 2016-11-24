@@ -361,6 +361,9 @@ static int _compare_integer(KOS_BYTECODE_INSTR instr,
     switch (instr) {
 
         case INSTR_CMP_EQ:
+            /* fall through*/
+        default:
+            assert(instr == INSTR_CMP_EQ);
             ret = a == b;
             break;
 
@@ -374,17 +377,6 @@ static int _compare_integer(KOS_BYTECODE_INSTR instr,
 
         case INSTR_CMP_LE:
             ret = a <= b;
-            break;
-
-        case INSTR_CMP_GT:
-            ret = a > b;
-            break;
-
-        case INSTR_CMP_GE:
-            /* fall through*/
-        default:
-            assert(instr == INSTR_CMP_GE);
-            ret = a >= b;
             break;
     }
 
@@ -424,6 +416,9 @@ static int _compare_float(KOS_BYTECODE_INSTR instr,
         switch (instr) {
 
             case INSTR_CMP_EQ:
+                /* fall through */
+            default:
+                assert(instr == INSTR_CMP_EQ);
                 ret = a == b;
                 break;
 
@@ -437,17 +432,6 @@ static int _compare_float(KOS_BYTECODE_INSTR instr,
 
             case INSTR_CMP_LE:
                 ret = a <= b;
-                break;
-
-            case INSTR_CMP_GT:
-                ret = a > b;
-                break;
-
-            case INSTR_CMP_GE:
-                /* fall through */
-            default:
-                assert(instr == INSTR_CMP_GE);
-                ret = a >= b;
                 break;
         }
     }
@@ -469,15 +453,14 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
     switch (instr) {
 
         case INSTR_CMP_EQ:
+            /* fall through */
+        default:
+            assert(instr == INSTR_CMP_EQ);
             ret = ! str_cmp;
             break;
 
-        case INSTR_CMP_GE:
-            ret = str_cmp >= 0;
-            break;
-
-        case INSTR_CMP_GT:
-            ret = str_cmp > 0;
+        case INSTR_CMP_NE:
+            ret = !! str_cmp;
             break;
 
         case INSTR_CMP_LE:
@@ -486,13 +469,6 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
 
         case INSTR_CMP_LT:
             ret = str_cmp < 0;
-            break;
-
-        case INSTR_CMP_NE:
-            /* fall through */
-        default:
-            assert(instr == INSTR_CMP_NE);
-            ret = !! str_cmp;
             break;
     }
 
@@ -1856,10 +1832,6 @@ static int _exec_function(KOS_STACK_FRAME *frame)
             case INSTR_CMP_EQ: /* <r.dest>, <r.src1>, <r.src2> */
                 /* fall through */
             case INSTR_CMP_NE: /* <r.dest>, <r.src1>, <r.src2> */
-                /* fall through */
-            case INSTR_CMP_GE: /* <r.dest>, <r.src1>, <r.src2> */
-                /* fall through */
-            case INSTR_CMP_GT: /* <r.dest>, <r.src1>, <r.src2> */
                 /* fall through */
             case INSTR_CMP_LE: /* <r.dest>, <r.src1>, <r.src2> */
                 /* fall through */

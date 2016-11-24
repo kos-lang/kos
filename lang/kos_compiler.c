@@ -575,8 +575,6 @@ int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_XOR:                 /* fall through */
         case INSTR_CMP_EQ:              /* fall through */
         case INSTR_CMP_NE:              /* fall through */
-        case INSTR_CMP_GE:              /* fall through */
-        case INSTR_CMP_GT:              /* fall through */
         case INSTR_CMP_LE:              /* fall through */
         case INSTR_CMP_LT:              /* fall through */
         case INSTR_HAS:                 /* fall through */
@@ -830,8 +828,6 @@ void _KOS_disassemble(const uint8_t                       *bytecode,
         "TYPE",
         "CMP.EQ",
         "CMP.NE",
-        "CMP.GE",
-        "CMP.GT",
         "CMP.LE",
         "CMP.LT",
         "HAS",
@@ -3434,6 +3430,7 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
     struct _KOS_REG              *reg2     = 0;
     int                           opcode   = 0;
     int                           operands = 0;
+    int                           swap     = 0;
 
     assert(node);
     assert(node->children);
@@ -3514,8 +3511,8 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
         case OT_SSR: opcode = INSTR_SSR;    operands = 2; break;
         case OT_EQ:  opcode = INSTR_CMP_EQ; operands = 2; break;
         case OT_NE:  opcode = INSTR_CMP_NE; operands = 2; break;
-        case OT_GE:  opcode = INSTR_CMP_GE; operands = 2; break;
-        case OT_GT:  opcode = INSTR_CMP_GT; operands = 2; break;
+        case OT_GE:  opcode = INSTR_CMP_LE; operands = 2; swap = 1; break;
+        case OT_GT:  opcode = INSTR_CMP_LT; operands = 2; swap = 1; break;
         case OT_LE:  opcode = INSTR_CMP_LE; operands = 2; break;
         case OT_LT:  opcode = INSTR_CMP_LT; operands = 2; break;
     }
@@ -3613,10 +3610,18 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
             TRY(_gen_reg(program, reg));
     }
 
-    if (operands == 2)
+    if (operands == 2) {
+        if (swap) {
+            struct _KOS_REG *tmp = reg1;
+            reg1                 = reg2;
+            reg2                 = tmp;
+        }
         error = _gen_instr3(program, opcode, (*reg)->reg, reg1->reg, reg2->reg);
-    else
+    }
+    else {
+        assert( ! swap);
         error = _gen_instr2(program, opcode, (*reg)->reg, reg1->reg);
+    }
 
     if (*reg != reg1)
         _free_reg(program, reg1);
