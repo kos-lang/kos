@@ -1316,9 +1316,9 @@ expect_fail(fun {
     assert typeof a == "integer"
 }
 {
-    var a = 0xFFFFFFFF00000000
+    var a = 0xFFFF_FFFF_0000_0000
     a >>= 17
-    assert a == 0xFFFFFFFFFFFF8000
+    assert a == 0xFFFF_FFFF_FFFF_8000
     assert typeof a == "integer"
 }
 
@@ -1329,4 +1329,12 @@ expect_fail(fun {
     a >>>= 32
     assert a == 0xFFFFFFFF
     assert typeof a == "integer"
+}
+
+##############################################################################
+# Numeric literals with underscores
+{
+    assert 0b____1000__0000_0000_0000____ == 0x___80__00___
+    const _1024 = 1___024__
+    assert _1024 == 1___.___00_0_00E___3_ + 24
 }

@@ -97,7 +97,8 @@ int _KOS_parse_int(const char *begin,
             const char c = *s;
             if ((c < '0' || c > '9') &&
                 (c < 'a' || c > 'f') &&
-                (c < 'A' || c > 'F'))
+                (c < 'A' || c > 'F') &&
+                (c != '_'))
                 break;
         }
     }
@@ -109,7 +110,7 @@ int _KOS_parse_int(const char *begin,
 
         for (s = begin; s < end; ++s) {
             const char c = *s;
-            if (c != '0' && c != '1')
+            if (c != '0' && c != '1' && c != '_')
                 break;
         }
     }
@@ -119,7 +120,7 @@ int _KOS_parse_int(const char *begin,
 
         for (s = begin; s < end; ++s) {
             const char c = *s;
-            if (c < '0' || c > '9')
+            if ((c < '0' || c > '9') && c != '_')
                 break;
         }
     }
@@ -143,6 +144,10 @@ int _KOS_parse_int(const char *begin,
             const char c = *s;
             const unsigned digit = (unsigned)((c <= '9') ? (c - '0') :
                                               (c < 'a')  ? (c - 'A' + 10) : (c - 'a' + 10));
+
+            if (c == '_')
+                continue;
+
             if (v > vmax[idx]) {
                 error = KOS_ERROR_INTEGER_EXPECTED;
                 break;
@@ -216,8 +221,8 @@ int _KOS_parse_double(const char *begin,
     if (begin == end)
         RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
 
-    /* Discard leading zeroes */
-    while (begin < end && *begin == '0')
+    /* Discard leading zeroes and underscores */
+    while (begin < end && (*begin == '0' || *begin == '_'))
         ++begin;
 
     /* Parse leading decimal point */
@@ -228,8 +233,8 @@ int _KOS_parse_double(const char *begin,
 
         ++begin;
 
-        /* Skip zeroes */
-        while (begin < end && *begin == '0') {
+        /* Skip zeroes and underscores */
+        while (begin < end && (*begin == '0' || *begin == '_')) {
             ++begin;
             --decimal_exponent;
         }
@@ -264,6 +269,9 @@ int _KOS_parse_double(const char *begin,
                *begin != 'E') {
 
             c = *(begin++);
+
+            if (c == '_')
+                continue;
 
             /* Parse decimal point */
             if (c == '.') {

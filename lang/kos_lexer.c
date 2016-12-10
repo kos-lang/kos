@@ -55,6 +55,7 @@ enum _KOS_LEXEM_TYPE {
     LT_ALPHANUMERIC = 0x10,
     LT_DIGIT        = 0x10,
     LT_LETTER       = 0x11,
+    LT_UNDERSCORE   = 0x12,
 
     LT_EOL          = 0x20,
     LT_EOF          = 0x21,
@@ -144,7 +145,7 @@ static const unsigned char lexem_types[] = {
     /* 94(^) */
     LT_OPERATOR,
     /* 95(_) */
-    LT_LETTER,
+    LT_UNDERSCORE,
     /* 96(`) */
     LT_INVALID,
     /* 97(a)..106(g) */
@@ -431,9 +432,14 @@ static int _char_is_hex(char c)
     return hex_and_operator_map[(unsigned char)c] == OMI_HEX;
 }
 
-static int _char_is_bin(char c)
+static int _char_is_hex_or_underscore(char c)
 {
-    return c == '0' || c == '1';
+    return hex_and_operator_map[(unsigned char)c] == OMI_HEX || c == '_';
+}
+
+static int _char_is_bin_or_underscore(char c)
+{
+    return c == '0' || c == '1' || c == '_';
 }
 
 static int _collect_escape(struct _KOS_LEXER *lexer, int *format)
@@ -568,6 +574,11 @@ static void _collect_block_comment(struct _KOS_LEXER *lexer)
     }
 }
 
+static int _is_digit_or_underscore(unsigned c)
+{
+    return c == LT_DIGIT || c == LT_UNDERSCORE;
+}
+
 static int _collect_decimal(struct _KOS_LEXER *lexer)
 {
     const char *begin, *end;
@@ -577,7 +588,7 @@ static int _collect_decimal(struct _KOS_LEXER *lexer)
     if (*lexer->prefetch_begin != '0') {
         do
             c = _prefetch_next(lexer, &begin, &end);
-        while (c == LT_DIGIT);
+        while (_is_digit_or_underscore(c));
     }
     else
         c = _prefetch_next(lexer, &begin, &end);
@@ -585,7 +596,7 @@ static int _collect_decimal(struct _KOS_LEXER *lexer)
     if (c == LT_OPERATOR && *begin == '.')
         do
             c = _prefetch_next(lexer, &begin, &end);
-        while (c == LT_DIGIT);
+        while (_is_digit_or_underscore(c));
 
     if (c == LT_LETTER && (*begin == 'e' || *begin == 'E' || *begin == 'p' || *begin == 'P')) {
         c = _prefetch_next(lexer, &begin, &end);
@@ -593,11 +604,11 @@ static int _collect_decimal(struct _KOS_LEXER *lexer)
         if (c == LT_OPERATOR && (*begin == '+' || *begin == '-'))
             c = _prefetch_next(lexer, &begin, &end);
 
-        if (c == LT_DIGIT) {
+        if (_is_digit_or_underscore(c)) {
             if (*begin != '0') {
                 do
                     c = _prefetch_next(lexer, &begin, &end);
-                while (c == LT_DIGIT);
+                while (_is_digit_or_underscore(c));
             }
             else
                 c = _prefetch_next(lexer, &begin, &end);
@@ -627,14 +638,14 @@ static int _collect_hex(struct _KOS_LEXER *lexer)
         lexer->error_str = str_err_eof_hex;
         error = KOS_ERROR_SCANNING_FAILED;
     }
-    else if (!_char_is_hex(*begin)) {
+    else if (!_char_is_hex_or_underscore(*begin)) {
         lexer->error_str = str_err_hex;
         error = KOS_ERROR_SCANNING_FAILED;
     }
     else {
         do
             c = _prefetch_next(lexer, &begin, &end);
-        while (c != LT_EOF && _char_is_hex(*begin));
+        while (c != LT_EOF && _char_is_hex_or_underscore(*begin));
         _retract(lexer, begin);
     }
 
@@ -652,14 +663,14 @@ static int _collect_bin(struct _KOS_LEXER *lexer)
         lexer->error_str = str_err_eof_bin;
         error = KOS_ERROR_SCANNING_FAILED;
     }
-    else if (!_char_is_bin(*begin)) {
+    else if (!_char_is_bin_or_underscore(*begin)) {
         lexer->error_str = str_err_bin;
         error = KOS_ERROR_SCANNING_FAILED;
     }
     else {
         do
             c = _prefetch_next(lexer, &begin, &end);
-        while (c != LT_EOF && _char_is_bin(*begin));
+        while (c != LT_EOF && _char_is_bin_or_underscore(*begin));
         _retract(lexer, begin);
     }
 
@@ -806,6 +817,8 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
                 token->type = TT_EOL;
                 break;
             case LT_LETTER:
+                /* fall through */
+            case LT_UNDERSCORE:
                 _collect_identifier(lexer);
                 end = lexer->prefetch_end;
                 _find_keyword(begin, end, &token->keyword);

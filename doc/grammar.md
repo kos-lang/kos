@@ -239,23 +239,23 @@ followed by a decimal number.
 If `e` or `E` is specified, the exponent is a power of 10.
 If `p` or `P` is specified, the exponent is a power of 2.
 
-    NonZeroDecimalDigit  ::= "1" .. "9"
+    NonZeroDecimalDigit      ::= "1" .. "9"
 
-    NonZeroDecimalNumber ::= NonZeroDecimalDigit ( DecimalDigit )*
+    NonZeroDecimalNumber     ::= NonZeroDecimalDigit ( DecimalDigit | Underscore )*
 
-    DecimalNumber        ::= "0" | NonZeroDecimalNumber
+    DecimalNumber            ::= "0" | NonZeroDecimalNumber
 
-    Base                 ::= DecimalNumber
+    Base                     ::= DecimalNumber
 
-    Mantissa             ::= "." ( DecimalDigit )*
+    Mantissa                 ::= "." ( DecimalDigit | Underscore )*
 
-    ExponentSpecifier    ::= "e" | "E" | "p" | "P"
+    ExponentSpecifier        ::= "e" | "E" | "p" | "P"
 
-    Exponent             ::= ExponentSpecifier [ "+" | "-" ] DecimalNumber
+    Exponent                 ::= ExponentSpecifier [ "+" | "-" ] DecimalNumber
 
-    DEC_INTEGER_LITERAL  ::= Base
+    DEC_INTEGER_LITERAL      ::= Base
 
-    DEC_FLOAT_LITERAL    ::= Base [ Mantissa ] [ Exponent ]
+    DEC_FLOAT_LITERAL        ::= Base [ Mantissa ] [ Exponent ]
 
 
 Hexadecimal numbers
@@ -271,6 +271,7 @@ least one hexadecimal digit.
     HexDigit             ::= DecimalDigit
                            | LowercaseHexDigit
                            | UppercaseHexDigitExt
+                           | Underscore
 
     HEX_INTEGER_LITERAL  ::= "0" ( "x" | "X" ) HexDigit ( HexDigit )*
 
@@ -281,9 +282,12 @@ Binary numbers
 A binary number consists of a `0` followed by `b` or `B`, followed by at
 least one binary digit.
 
-    BinaryDigit         ::= "0" | "1"
+    BinaryDigit             ::= "0" | "1"
 
-    BIN_INTEGER_LITERAL ::= "0" ( "b" | "B" ) BinaryDigit ( BinaryDigit )*
+    BinaryDigitOrUnderscore ::= BinaryDigit | Underscore
+
+    BIN_INTEGER_LITERAL     ::= "0" ( "b" | "B" ) BinaryDigitOrUnderscore
+                                ( BinaryDigitOrUnderscore )*
 
 
 Strings

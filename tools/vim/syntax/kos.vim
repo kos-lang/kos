@@ -33,7 +33,7 @@ syn region  kosStrFmt           start="\v\\\(\s*" end="\v\s*\)" contained contai
 syn match   kosStrInFmt         "\v\w+(\(\))?" contained containedin=kosStrFmt
 syn match   kosTab              "\t"
 
-syn match   kosNumber           "-\=\<\d\+L\=\>\|0[bB][01]\+\|0[xX][0-9a-fA-F]\+\>"
+syn match   kosNumber           "\<\([1-9][0-9_]*\|0\)\(\.[0-9_]*\)\=\([eEpP][+-]\=[0-9_]\+\)\=\>\|0[bB][01_]\+\|0[xX][0-9a-fA-F_]\+\>"
 
 syn keyword kosConditional      if else switch
 syn keyword kosRepeat           while for do
