@@ -79,6 +79,11 @@ in a single expression without parentheses.  The same applies to logical
 operators: `&&` and `||`.  Otherwise, precedence of these operators would not
 be immediately apparent to most programmers.
 
+Unlike in many C-like languages, in Kos, the following expression works in
+a predictable manner without parentheses:
+
+    if value & mask != 0 { }
+
 
 One assignment per expression, only in expression statements
 ------------------------------------------------------------

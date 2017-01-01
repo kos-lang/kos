@@ -1,6 +1,8 @@
 ﻿Enhancement proposals
 =====================
 
+* Replace do-while with repeat-while and use do for stand-alone scope.
+
 * ? Support multi-line strings the Python way or the C way?
 
 * set/get:

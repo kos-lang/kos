@@ -51,13 +51,13 @@ These are mutable types (can be modified, but not reassigned):
 Functions
 ---------
 
-This is the most common way to declare functions.  Please note that the
-`add_two_numbers` identifier is really just a constant.
+This is the most common way to declare functions.  Please note that
+`add_two_numbers` identifier is just a constant of `function` type.
 
     fun add_two_numbers(a, b)
     {
         return a + b
-    } # No semicolon needed here
+    }
 
     lang.print(add_two_numbers(1, 5), "\n") # Prints: 6
 
@@ -85,14 +85,14 @@ in most situations.
 Semicolons are only required inside the `for` loop header (see below) and in
 rare cases where you want to cram multiple statements into one line.
 
-In cases where there is an ambiguity, Kos will refuse to compile the code
-and exit with an error.  For example, when `-`, `+`, `(` or `[` occurs on
+In cases where there is an ambiguity, Kos will refuse to compile the program
+and will exit with an error.  For example, when `-`, `+`, `(` or `[` occurs on
 a new line, but could be part of the previous statement:
 
     fun my_func(b)
     {
         const a = b
-        [0]   # Ambiguous: it could be an array or part of previous line
+        [0]   # Ambiguous: it could be a new array or it could be b[0]
     }
 
 Another example:
