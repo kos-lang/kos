@@ -83,7 +83,7 @@ unset CONFIG_GCOV
 export CONFIG_DEBUG=1
 
 runtests c89   c++98
-runtests c++11 c++11
+runtests c++14 c++14
 
 if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>&1)" != "" ]; then
     export CONFIG_TOOL="valgrind --error-exitcode=1 --track-origins=yes"
@@ -92,7 +92,7 @@ if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>&1)" != "" ]; then
     VALGRIND_JOBS=$JOBS
     [ $VALGRIND_JOBS -gt 8 ] && VALGRIND_JOBS=8
 
-    JOBS=$VALGRIND_JOBS TEST_CPUS=2 runtests c99 c++11
+    JOBS=$VALGRIND_JOBS TEST_CPUS=2 runtests c99 c++14
 
     unset CONFIG_TOOL
 fi
@@ -103,7 +103,7 @@ runtests c11 c++11
 if [ "$UNAME" != "Windows" -a "$1" = "gcov" ]; then
     export CONFIG_GCOV=1
     export CONFIG_DEBUG=1
-    runtests c99 c++11
+    runtests c99 c++14
     unset CONFIG_GCOV
     unset CONFIG_DEBUG
 else
