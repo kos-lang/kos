@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 Chris Dragan
+ * Copyright (c) 2014-2017 Chris Dragan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
