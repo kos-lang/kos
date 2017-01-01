@@ -71,7 +71,7 @@ fun a(b)
     try {
         continue; # Unexpected continue
     }
-    finally {
+    catch var e {
     }
 }
 

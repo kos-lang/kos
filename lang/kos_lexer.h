@@ -69,7 +69,6 @@ enum _KOS_KEYWORD_TYPE {
     KW_ELSE,
     KW_FALLTHROUGH,
     KW_FALSE,
-    KW_FINALLY,
     KW_FOR,
     KW_FUN,
     KW_GET,

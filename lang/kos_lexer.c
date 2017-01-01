@@ -299,7 +299,6 @@ static const char *const keywords[] = {
     "else",
     "fallthrough",
     "false",
-    "finally",
     "for",
     "fun",
     "get",

@@ -19,6 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
+import lang.print
 {
     var a = 1
     while a < 10 {
@@ -281,6 +282,9 @@
     var status = 0
 
     try {
+        defer {
+            status += 2
+        }
         for var i=0; i < 100; i += 1 {
             try {
                 break
@@ -295,11 +299,8 @@
     catch const e {
         status += 7000
     }
-    finally {
-        status *= 2
-    }
 
-    assert status == 14000
+    assert status == 7002
 }
 
 {
@@ -443,12 +444,10 @@
     var i = 0
     var j = 0
     for ; i < 100; i += 1 {
-        try {
-            continue
-        }
-        finally {
+        defer {
             j += 1
         }
+        continue
         j -= 1
     }
 
@@ -460,31 +459,25 @@
 
     fun try_break
     {
-        try {
-            a += '1'
-            try {
-                a += '2'
-                const letters = ['a', 'b', 'c']
-                for var i = 0; i < 100; i += 1 {
-                    try {
-                        a += letters[i]
-                        if i == 2 {
-                            break
-                        }
-                    }
-                    finally {
-                        a += '3'
-                    }
-                }
-                a += '4'
-            }
-            finally {
-                a += '5'
-            }
-        }
-        finally {
+        defer {
             a += '6'
         }
+        a += '1'
+        defer {
+            a += '5'
+        }
+        a += '2'
+        const letters = ['a', 'b', 'c']
+        for var i = 0; i < 100; i += 1 {
+            defer {
+                a += '3'
+            }
+            a += letters[i]
+            if i == 2 {
+                break
+            }
+        }
+        a += '4'
     }
 
     try_break()
@@ -500,15 +493,13 @@
         try {
             a += 'A'
             for var i = 0; i < 100; i += 1 {
-                try {
-                    if i == 2 {
-                        break
-                    }
-                    a += '\(i)'
-                }
-                finally {
+                defer {
                     a += 'B'
                 }
+                if i == 2 {
+                    break
+                }
+                a += '\(i)'
             }
             a += 'C'
             throw 'D'
@@ -529,25 +520,21 @@
 
     try {
         for var i = 0; i < 100; i += 1 {
-            try {
-                a += 'a\(i) ' 
-                try {
-                    a += 'b\(i) '
-                    if i == 0 {
-                        continue
-                    }
-                    else if i == 2 {
-                        break
-                    }
-                    a += 'c'
-                }
-                finally {
-                    a += 'd'
-                }
-            }
-            finally {
+            defer {
                 a += 'e '
             }
+            a += 'a\(i) ' 
+            defer {
+                a += 'd'
+            }
+            a += 'b\(i) '
+            if i == 0 {
+                continue
+            }
+            else if i == 2 {
+                break
+            }
+            a += 'c'
         }
     }
     catch const e {
@@ -565,35 +552,31 @@
     {
         var i = 0
         var j = 0
-        try {
-            for i = 0, j = 0; i < 10; i += 1 {
-                try {
-                    if i < 5 {
-                        continue
-                    }
-                    else if i == 5 {
-                        break
-                    }
-                    throw void
-                }
-                finally {
-                    j += 1
-                }
-            }
-        }
-        finally {
+        defer {
             assert i == 5
             assert j == 6
             fail1 = false
         }
+        for i = 0, j = 0; i < 10; i += 1 {
+            defer {
+                j += 1
+            }
+            if i < 5 {
+                continue
+            }
+            else if i == 5 {
+                break
+            }
+            throw void
+        }
     }
 
-    try {
+    {
+        defer {
+            fail2 = false
+        }
         run_loop()
         assert ! fail1
-    }
-    finally {
-        fail2 = false
     }
 
     assert ! fail2
@@ -604,12 +587,10 @@
 
     while i < 10 {
         try {
-            try {
-                break
-            }
-            finally {
+            defer {
                 throw void // Cancel break
             }
+            break
         }
         catch const e {
             i += 1
@@ -623,12 +604,10 @@
     var i = 0
 
     for i = 0; i < 10; i += 1 {
-        try {
-            break
-        }
-        finally {
+        defer {
             continue // Cancel break, override with continue
         }
+        break
         throw void
     }
 

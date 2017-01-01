@@ -169,7 +169,6 @@ The following reserved keywords are defined:
 * `else`
 * `fallthrough`
 * `false`
-* `finally`
 * `for`
 * `fun`
 * `get` (reserved)
@@ -593,33 +592,20 @@ if all of the preceding conditions were falsy.
 Try statement
 -------------
 
-The try statement wraps a compound statement, followed by a catch block and/or
-a finally block.
-
-If the try block completes successfuly without an exception thrown out of it,
-the finally block is executed (if it exists).
+The try statement wraps a compound statement, followed by a catch block.
 
 If an exception is thrown inside the try block and is not caught inside it,
-the catch block is executed (if it exists).  The exception object is assigned
-to the variable declared by the catch block.  The parentheses around the
-variable declaration are optional.  The lifetime of that variable is limited
-to the catch block.  After the catch block finishes, the finally block is
-executed (if it exists).
-
-If there is an unhandled or thrown exception or return statement in the try
-block or in the catch block, the finally block will be executed (if it exists).
+the catch block is executed.  The exception object is assigned to the variable
+declared by the catch block.  The parentheses around the variable declaration
+are optional.  The lifetime of that variable is limited to the catch block.
 
 An exception can be rethrown using the throw statement in the catch block.
 
-    TryStatement        ::= ( TryClause CatchClause )
-                          | ( TryClause CatchClause FinallyClause )
-                          | ( TryClause FinallyClause )
+    TryStatement        ::= TryClause CatchClause
 
     TryClause           ::= "try" CompoundStatement
 
     CatchClause         ::= "catch" CatchExceptionSpec CompoundStatement
-
-    FinallyClause       ::= "finally" CompoundStatement
 
     CatchExceptionSpec  ::= CatchExceptionInner
                          | ( "(" CatchExceptionInner ")" )
@@ -637,35 +623,8 @@ via return, break or continue statement or via exception.
 
     DeferStatement ::= "defer" CompoundStatement
 
-If there are multiple defer statements in a scope, all of them are executed.
-
-Conceptually, the defer statement is equivalent to a finally section.
-
-The following two examples are equivalent:
-
-    {
-        a();
-        defer { b(); }
-        c();
-        defer { d(); }
-        e();
-    }
-
-    {
-        a();
-        try {
-            c();
-            try {
-                e();
-            }
-            finally {
-                d();
-            }
-        }
-        finally {
-            b();
-        }
-    }
+If there are multiple defer statements in a scope, all of them are executed
+in the reverse order of declaration.
 
 
 With statement
@@ -699,7 +658,7 @@ thrown.
 
     WithObjExpression  ::= [ "const" Identifier "=" ] RHSExpression
 
-The following three examples are equivalent:
+The following examples are equivalent:
 
     with lock, const f = file.open(filename) {
         // ...
@@ -721,28 +680,6 @@ The following three examples are equivalent:
         // ...
     }
 
-    // Effectively the same, but using try/finally
-    {
-        if "acquire" in lock {
-            lock.acquire();
-        }
-        try {
-            const f = file.open(filename);
-            if "acquire" in f {
-                f.acquire();
-            }
-            try {
-                // ...
-            }
-            finally {
-                f.release();
-            }
-        }
-        finally {
-            lock.release();
-        }
-    }
-            
 
 Switch statement
 ----------------

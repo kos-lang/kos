@@ -109,13 +109,13 @@ fun expect_fail(function)
     var failed = true
     var f = file.open(name, file.create)
     try {
+        defer {
+            f.close()
+        }
         f.close.apply(void, [])
     }
     catch const e {
         failed = false
-    }
-    finally {
-        f.close()
     }
     assert ! failed
 }

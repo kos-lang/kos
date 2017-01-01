@@ -368,12 +368,10 @@ fun check(function, registers, instructions, size)
     fun unreachable_try()
     {
         try {
-            try {
-                return 1
-            }
-            finally {
+            defer {
                 throw "cancel return"
             }
+            return 1
             # unreachable
             return 2
         }

@@ -710,6 +710,9 @@ var global = 1
         var count = 0
         for var global = global + 10; global == 30; global += 1 {
             try {
+                defer {
+                    global += 3
+                }
                 assert global == 30
                 {
                     const global = global + 10
@@ -722,9 +725,6 @@ var global = 1
             }
             catch const global {
                 assert global.value == 35
-            }
-            finally {
-                global += 3
             }
             assert global == 33
         }

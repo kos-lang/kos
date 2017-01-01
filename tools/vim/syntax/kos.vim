@@ -39,7 +39,7 @@ syn keyword kosConditional      if else switch
 syn keyword kosRepeat           while for do
 syn keyword kosBranch           break continue fallthrough
 syn keyword kosOperator         new delete instanceof typeof yield in
-syn keyword kosStatement        return with import try catch finally defer
+syn keyword kosStatement        return with import try catch defer
 syn keyword kosBoolean          true false
 syn keyword kosNull             void
 syn keyword kosIdentifier       __line__ this var const

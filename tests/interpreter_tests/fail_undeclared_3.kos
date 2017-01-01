@@ -26,7 +26,5 @@ fun f
     }
     catch const e {
     }
-    finally {
-        e.value = 0;
-    }
+    e.value = 0
 }

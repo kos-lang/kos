@@ -33,7 +33,7 @@ static const char str_err_duplicate_default[]         = "multiple 'default' labe
 static const char str_err_eol_before_par[]            = "ambiguous syntax: end of line before '(' - consider adding a ';'";
 static const char str_err_eol_before_sq[]             = "ambiguous syntax: end of line before '[' - consider adding a ';'";
 static const char str_err_eol_before_op[]             = "ambiguous syntax: end of line before operator - consider adding a ';'";
-static const char str_err_expected_catch[]            = "expected 'catch' or 'finally'";
+static const char str_err_expected_catch[]            = "expected 'catch'";
 static const char str_err_expected_colon[]            = "expected ':'";
 static const char str_err_expected_comma[]            = "expected ','";
 static const char str_err_expected_const_or_expr[]    = "expected 'const' or expression";
@@ -1560,7 +1560,7 @@ static int _try_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     TRY(_next_token(parser));
 
-    if (parser->token.keyword != KW_CATCH && parser->token.keyword != KW_FINALLY) {
+    if (parser->token.keyword != KW_CATCH) {
         parser->error_str = str_err_expected_catch;
         error = KOS_ERROR_PARSE_FAILED;
         goto _error;
@@ -1613,19 +1613,9 @@ static int _try_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
         TRY(_push_node(parser, *ret, NT_EMPTY, 0));
     }
 
-    if (parser->token.keyword == KW_FINALLY) {
+    TRY(_push_node(parser, *ret, NT_EMPTY, 0));
 
-        TRY(_compound_stmt(parser, &node));
-
-        _ast_push(*ret, node);
-        node = 0;
-    }
-    else {
-
-        TRY(_push_node(parser, *ret, NT_EMPTY, 0));
-
-        parser->unget = 1;
-    }
+    parser->unget = 1;
 
 _error:
     return error;

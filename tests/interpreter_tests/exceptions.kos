@@ -94,74 +94,18 @@
     assert ! fail
 }
 
-# throw..finally
+# throw..defer
 {
     var fail = 2
     try {
-        try {
-            throw "exception"
-        }
-        finally {
+        defer {
             if fail == 2 {
                 fail = 1
             }
         }
-    }
-    catch const e {
-        if fail == 1 {
-            fail = 0
-        }
-    }
-
-    assert ! fail
-}
-
-# try..finally
-{
-    var fail = 1
-    try {
-    }
-    finally {
-        if fail == 1 {
-            fail = 0
-        }
-    }
-
-    assert ! fail
-}
-
-# try..finally
-{
-    var fail = 2
-    try {
-        if fail == 2 {
-            fail = 1
-        }
-    }
-    finally {
-        if fail == 1 {
-            fail = 0
-        }
-    }
-
-    assert ! fail
-}
-
-# throw..catch..finally
-{
-    var fail = 3
-    try {
-        if fail == 3 {
-            fail = 2
-        }
         throw "exception"
     }
     catch const e {
-        if fail == 2 && e.value == "exception" {
-            fail = 1
-        }
-    }
-    finally {
         if fail == 1 {
             fail = 0
         }
@@ -170,55 +114,72 @@
     assert ! fail
 }
 
-# throw through many finally statements
+# throw..catch and defer
+{
+    var fail = 3
+    {
+        defer {
+            if fail == 1 {
+                fail = 0
+            }
+        }
+        try {
+            if fail == 3 {
+                fail = 2
+            }
+            throw "exception"
+        }
+        catch const e {
+            if fail == 2 && e.value == "exception" {
+                fail = 1
+            }
+        }
+    }
+
+    assert ! fail
+}
+
+# throw through many defer statements
 {
     var fail = 7
-    try {
+    {
+        defer {
+            if fail == 1 {
+                fail = 0
+            }
+        }
         try {
-            try {
-                try {
-                    try {
-                        try {
-                            throw "exception"
-                        }
-                        finally {
-                            if fail == 7 {
-                                fail = 6
-                            }
-                        }
-                    }
-                    finally {
-                        if fail == 6 {
-                            fail = 5
-                        }
-                    }
-                }
-                finally {
-                    if fail == 5 {
-                        fail = 4
-                    }
+            defer {
+                if fail == 3 {
+                    fail = 2
                 }
             }
-            finally {
+            defer {
                 if fail == 4 {
                     fail = 3
                 }
             }
-        }
-        finally {
-            if fail == 3 {
-                fail = 2
+            defer {
+                if fail == 5 {
+                    fail = 4
+                }
             }
+            defer {
+                if fail == 6 {
+                    fail = 5
+                }
+            }
+            defer {
+                if fail == 7 {
+                    fail = 6
+                }
+            }
+            throw "exception"
         }
-    }
-    catch const e {
-        if fail == 2 && e.value == "exception" {
-            fail = 1
-        }
-    }
-    finally {
-        if fail == 1 {
-            fail = 0
+        catch const e {
+            if fail == 2 && e.value == "exception" {
+                fail = 1
+            }
         }
     }
 
@@ -228,57 +189,59 @@
 # throw through many catch statements
 {
     var fail = 7
-    try {
+    {
+        defer {
+            if fail == 1 {
+                fail = 0
+            }
+        }
         try {
             try {
                 try {
                     try {
                         try {
-                            throw "exception"
+                            try {
+                                throw "exception"
+                            }
+                            catch const e {
+                                if fail == 7 && e.value == "exception" {
+                                    fail = 6
+                                }
+                                throw e
+                            }
                         }
                         catch const e {
-                            if fail == 7 && e.value == "exception" {
-                                fail = 6
+                            if fail == 6 && e.value == "exception" {
+                                fail = 5
                             }
                             throw e
                         }
                     }
                     catch const e {
-                        if fail == 6 && e.value == "exception" {
-                            fail = 5
+                        if fail == 5 && e.value == "exception" {
+                            fail = 4
                         }
                         throw e
                     }
                 }
                 catch const e {
-                    if fail == 5 && e.value == "exception" {
-                        fail = 4
+                    if fail == 4 && e.value == "exception" {
+                        fail = 3
                     }
                     throw e
                 }
             }
             catch const e {
-                if fail == 4 && e.value == "exception" {
-                    fail = 3
+                if fail == 3 && e.value == "exception" {
+                    fail = 2
                 }
                 throw e
             }
         }
         catch const e {
-            if fail == 3 && e.value == "exception" {
-                fail = 2
+            if fail == 2 && e.value == "exception" {
+                fail = 1
             }
-            throw e
-        }
-    }
-    catch const e {
-        if fail == 2 && e.value == "exception" {
-            fail = 1
-        }
-    }
-    finally {
-        if fail == 1 {
-            fail = 0
         }
     }
 
@@ -410,17 +373,14 @@
 {
     var fail = true
 
-    fun throws
+    fun only_defer
     {
-        try {
-            return
-        }
-        finally {
+        defer {
             fail = false
         }
     }
 
-    throws()
+    only_defer()
 
     assert ! fail
 }
@@ -428,12 +388,12 @@
 {
     fun early_return(early)
     {
-        try {
+        {
+            defer {
+            }
             if early {
                 return 10
             }
-        }
-        finally {
         }
         return 20
     }
@@ -445,20 +405,20 @@
 {
     fun return_paths(x)
     {
-        try {
+        {
+            defer {
+                if x == 2 {
+                    return x + 40
+                }
+                if x == 3 {
+                    return x + 30
+                }
+            }
             if x == 1 {
                 return x + 10
             }
             if x == 2 {
                 return x + 20
-            }
-        }
-        finally {
-            if x == 2 {
-                return x + 40
-            }
-            if x == 3 {
-                return x + 30
             }
         }
         return 100
@@ -474,14 +434,12 @@
     fun cancel_return(cancel)
     {
         try {
-            try {
-                return 1
-            }
-            finally {
+            defer {
                 if cancel {
                     throw void
                 }
             }
+            return 1
         }
         catch const e {
         }
@@ -495,14 +453,12 @@
 {
     fun change_return(change)
     {
-        try {
-            return 2
-        }
-        finally {
+        defer {
             if change {
                 return 4
             }
         }
+        return 2
     }
     assert change_return(false) == 2
     assert change_return(true)  == 4
@@ -513,57 +469,59 @@
 
     fun deep_return_paths(x)
     {
-        try {
-            depth += 1
-            if x == 1 {
-                return x + 10
+        {
+            defer {
+                depth -= 1
+                if x == 4 {
+                    return x + 43
+                }
             }
             try {
                 depth += 1
-                try {
-                    depth += 1
-                    if x == 2 {
-                        return x + 20
-                    }
-                    if x == 3 {
-                        throw x + 30
-                    }
-                    if x == 4 {
-                        return x + 40
-                    }
-                    if x == 5 {
-                        return x + 50
-                    }
+                if x == 1 {
+                    return x + 10
                 }
-                finally {
+                defer {
                     depth -= 1
                     if x == 4 {
-                        return x + 41
+                        return x + 42
                     }
+                    if x == 5 {
+                        throw x + 51
+                    }
+                }
+                try {
+                    depth += 1
+                    {
+                        defer {
+                            depth -= 1
+                            if x == 4 {
+                                return x + 41
+                            }
+                        }
+                        depth += 1
+                        if x == 2 {
+                            return x + 20
+                        }
+                        if x == 3 {
+                            throw x + 30
+                        }
+                        if x == 4 {
+                            return x + 40
+                        }
+                        if x == 5 {
+                            return x + 50
+                        }
+                    }
+                }
+                catch const e {
+                    return e.value + 300
                 }
             }
             catch const e {
-                return e.value + 300
-            }
-            finally {
-                depth -= 1
-                if x == 4 {
-                    return x + 42
+                if e.value == 56 {
+                    return e.value + 2
                 }
-                if x == 5 {
-                    throw x + 51
-                }
-            }
-        }
-        catch const e {
-            if e.value == 56 {
-                return e.value + 2
-            }
-        }
-        finally {
-            depth -= 1
-            if x == 4 {
-                return x + 43
             }
         }
         return x * 100

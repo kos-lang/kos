@@ -42,67 +42,6 @@ catch var c {
 )
 
 @------------------------------------------------------------------------------
-try {
-    if a() { }
-    else   { throw "b"; }
-}
-finally {
-    c();
-}
-
-@ 0
-
-(scope 1 1
-    (try 1 1 try
-        (scope 1 5 {
-            (if 2 5 if
-                (invocation 2 9 paren_open
-                    (identifier 2 8 a)
-                )
-                (scope 2 12 {)
-                (scope 3 12 {
-                    (throw 3 14 throw (string 3 20 "b"))
-        )))
-        (empty 5 1 finally)
-        (scope 5 9 {
-            (invocation 6 6 paren_open
-                (identifier 6 5 c)
-    )))
-)
-
-@------------------------------------------------------------------------------
-try {
-    a();
-}
-catch const e {
-    b(e);
-}
-finally {
-    c();
-}
-
-@ 0
-
-(scope 1 1
-    (try 1 1 try
-        (scope 1 5 {
-            (invocation 2 6 paren_open
-                (identifier 2 5 a)
-        ))
-        (catch 4 1 catch
-            (const 4 7 const (identifier 4 13 e))
-            (scope 4 15 {
-                (invocation 5 6 paren_open
-                    (identifier 5 5 b)
-                    (identifier 5 7 e)
-        )))
-        (scope 7 9 {
-            (invocation 8 6 paren_open
-                (identifier 8 5 c)
-    )))
-)
-
-@------------------------------------------------------------------------------
 try {} catch (const a) { throw a; }
 try {} catch (var b) { throw b; }
 
@@ -170,7 +109,7 @@ try a(b) catch const e { } # Open curly brace expected
 
 @------------------------------------------------------------------------------
 try { a(b); }
-throw c; # catch or finally expected
+throw c; # catch expected
 
 @ 10 2 1
 
@@ -178,11 +117,6 @@ throw c; # catch or finally expected
 try {} catch (var a) throw a; # Open curly brace expected
 
 @ 10 1 22
-
-@------------------------------------------------------------------------------
-try {} finally throw a; # Open curly brace expected
-
-@ 10 1 16
 
 @------------------------------------------------------------------------------
 try {} catch (a) {} # Need var or const
@@ -193,17 +127,6 @@ try {} catch (a) {} # Need var or const
 try {} catch (var a=b) {} # Need closed parenthesis
 
 @ 10 1 20
-
-@------------------------------------------------------------------------------
-try {
-    throw "exception";
-}
-finally {
-}
-catch const e { # catch must precede finally
-}
-
-@ 10 6 1
 
 @------------------------------------------------------------------------------
 assert void;

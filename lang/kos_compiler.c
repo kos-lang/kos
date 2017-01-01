@@ -2481,7 +2481,6 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     int                         error;
     int                         jump_end_offs;
     int                         catch_offs;
-    int                         finally_offs = 0;
     struct _KOS_REG            *except_reg   = 0;
     struct _KOS_VAR            *except_var   = 0;
     struct _KOS_RETURN_OFFS    *return_offs  = program->cur_frame->return_offs;
@@ -2503,6 +2502,8 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
         struct _KOS_AST_NODE *variable;
 
+        assert(finally_node->type == NT_EMPTY);
+
         node = catch_node->children;
         assert(node);
         assert(node->type == NT_VAR || node->type == NT_CONST);
@@ -2523,21 +2524,25 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
         assert(except_reg);
 
         except_var->is_active = VAR_INACTIVE;
+
+        scope->catch_ref.catch_reg = except_reg;
     }
-    else
+    else {
+
+        assert(catch_node->type == NT_EMPTY);
+        assert(finally_node->type == NT_SCOPE);
+
         TRY(_gen_reg(program, &except_reg));
 
-    scope->catch_ref.catch_reg = except_reg;
+        scope->catch_ref.catch_reg = except_reg;
 
-    if (finally_node->type == NT_SCOPE) {
         scope->catch_ref.finally_active = 1;
         program->cur_frame->return_offs = 0;
+
+        TRY(_gen_instr1(program, INSTR_LOAD_VOID, except_reg->reg));
     }
 
     /* Try section */
-
-    if (catch_node->type != NT_CATCH && finally_node->type == NT_SCOPE)
-        TRY(_gen_instr1(program, INSTR_LOAD_VOID, except_reg->reg));
 
     catch_offs = program->cur_offs;
     TRY(_gen_instr2(program, INSTR_CATCH, except_reg->reg, 0));
@@ -2556,13 +2561,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
     _update_jump_offs(program, catch_offs, program->cur_offs);
 
-    if (catch_node->type == NT_CATCH && finally_node->type == NT_SCOPE) {
-
-        finally_offs = program->cur_offs;
-        TRY(_gen_instr2(program, INSTR_CATCH, except_reg->reg, 0));
-    }
-    else
-        TRY(_restore_parent_scope_catch(program, 1));
+    TRY(_restore_parent_scope_catch(program, 1));
 
     if (catch_node->type == NT_CATCH) {
 
@@ -2577,12 +2576,6 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
         TRY(_scope(program, node));
 
         except_var->is_active = VAR_INACTIVE;
-
-        if (finally_node->type == NT_SCOPE)
-            TRY(_gen_instr1(program, INSTR_LOAD_VOID, except_reg->reg));
-    }
-    else {
-        assert(catch_node->type == NT_EMPTY);
     }
 
     /* Finally section */
@@ -2598,15 +2591,6 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
             program->cur_frame->return_offs = return_offs;
             return_offs                     = tmp;
             scope->catch_ref.finally_active = 0;
-        }
-
-        if (finally_offs) {
-
-            _update_child_scope_catch(program);
-
-            _update_jump_offs(program, finally_offs, program->cur_offs);
-
-            TRY(_restore_parent_scope_catch(program, 2));
         }
 
         TRY(_scope(program, finally_node));
@@ -2698,9 +2682,6 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
         }
 
         _update_jump_offs(program, skip_throw_offs, program->cur_offs);
-    }
-    else {
-        assert(finally_node->type == NT_EMPTY);
     }
 
     _free_reg(program, except_reg);
