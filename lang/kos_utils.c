@@ -25,8 +25,10 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
+#include "kos_memory.h"
 #include "kos_try.h"
 #include <assert.h>
+#include <stdio.h>
 
 static KOS_ASCII_STRING(str_err_not_number,    "object is not a number");
 
@@ -68,4 +70,58 @@ int KOS_get_numeric_arg(KOS_STACK_FRAME *frame,
 
 _error:
     return error;
+}
+
+void KOS_print_exception(KOS_STACK_FRAME *frame)
+{
+    struct _KOS_VECTOR cstr;
+    KOS_OBJ_PTR        exception;
+
+    _KOS_vector_init(&cstr);
+
+    exception = KOS_get_exception(frame);
+    assert(!IS_BAD_PTR(exception));
+
+    if (!IS_SMALL_INT(exception) && IS_STRING_OBJ(exception)) {
+        KOS_clear_exception(frame);
+        if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, exception, &cstr))
+            fprintf(stderr, "%s\n", cstr.buffer);
+    }
+    else {
+        KOS_OBJ_PTR formatted;
+
+        KOS_clear_exception(frame);
+        formatted = KOS_format_exception(frame, exception);
+        if (IS_BAD_PTR(formatted)) {
+            KOS_OBJ_PTR str;
+
+            KOS_clear_exception(frame);
+
+            str = KOS_object_to_string(frame, exception);
+
+            KOS_clear_exception(frame);
+
+            if (IS_BAD_PTR(str) || KOS_string_to_cstr_vec(frame, str, &cstr))
+                fprintf(stderr, "Exception: <unable to format>\n");
+            else
+                fprintf(stderr, "%s\n", cstr.buffer);
+        }
+        else {
+            uint32_t i;
+            uint32_t lines;
+
+            assert(!IS_SMALL_INT(formatted) && GET_OBJ_TYPE(formatted) == OBJ_ARRAY);
+
+            lines = KOS_get_array_size(formatted);
+
+            for (i = 0; i < lines; i++) {
+                KOS_OBJ_PTR line = KOS_array_read(frame, formatted, (int)i);
+                assert(!KOS_is_exception_pending(frame));
+                if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, line, &cstr))
+                    fprintf(stderr, "%s\n", cstr.buffer);
+            }
+        }
+    }
+
+    _KOS_vector_destroy(&cstr);
 }

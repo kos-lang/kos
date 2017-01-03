@@ -37,6 +37,8 @@ int KOS_get_numeric_arg(KOS_STACK_FRAME *frame,
                         int              idx,
                         KOS_NUMERIC     *numeric);
 
+void KOS_print_exception(KOS_STACK_FRAME *frame);
+
 #ifdef __cplusplus
 }
 #endif

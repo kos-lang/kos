@@ -21,11 +21,10 @@
  */
 
 #include "../inc/kos_context.h"
-#include "../inc/kos_array.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_modules_init.h"
-#include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include "../lang/kos_file.h"
 #include "../lang/kos_memory.h"
 #include "../lang/kos_try.h"
@@ -75,52 +74,7 @@ int main(int argc, char *argv[])
 
     if (error) {
         assert(error == KOS_ERROR_EXCEPTION);
-
-        /* TODO move this to a function KOS_print_exception(frame) */
-        if (error == KOS_ERROR_EXCEPTION) {
-            KOS_OBJ_PTR exception = KOS_get_exception(frame);
-            assert(!IS_BAD_PTR(exception));
-            if (!IS_SMALL_INT(exception) && IS_STRING_OBJ(exception)) {
-                KOS_clear_exception(frame);
-                if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, exception, &cstr))
-                    fprintf(stderr, "%s\n", cstr.buffer);
-            }
-            else {
-                KOS_OBJ_PTR formatted;
-
-                KOS_clear_exception(frame);
-                formatted = KOS_format_exception(frame, exception);
-                if (IS_BAD_PTR(formatted)) {
-                    KOS_OBJ_PTR str;
-
-                    KOS_clear_exception(frame);
-
-                    str = KOS_object_to_string(frame, exception);
-
-                    KOS_clear_exception(frame);
-
-                    if (IS_BAD_PTR(str) || KOS_string_to_cstr_vec(frame, str, &cstr))
-                        fprintf(stderr, "Exception: <unable to format>\n");
-                    else
-                        fprintf(stderr, "%s\n", cstr.buffer);
-                }
-                else {
-                    uint32_t i;
-                    uint32_t lines;
-
-                    assert(!IS_SMALL_INT(formatted) && GET_OBJ_TYPE(formatted) == OBJ_ARRAY);
-
-                    lines = KOS_get_array_size(formatted);
-
-                    for (i = 0; i < lines; i++) {
-                        KOS_OBJ_PTR line = KOS_array_read(frame, formatted, (int)i);
-                        assert(!KOS_is_exception_pending(frame));
-                        if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, line, &cstr))
-                            fprintf(stderr, "%s\n", cstr.buffer);
-                    }
-                }
-            }
-        }
+        KOS_print_exception(frame);
     }
 
 _error:
