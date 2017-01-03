@@ -32,4 +32,14 @@ all: $(out_dir)/interpreter/kos$(exe_suffix)
 $(out_dir)/interpreter/kos$(exe_suffix): $(out_dir)/interpreter/kos$(o_suffix) $(out_dir)/modules/libkos_modules$(a_suffix) $(out_dir)/lang/libkos_lang$(a_suffix)
 	$(call LINK,$@,$^)
 
-.PHONY: all
+install: $(out_dir)/interpreter/kos$(exe_suffix) $(wildcard ../modules/*.kos)
+	@./install.sh $(out_dir) $(DESTDIR)
+
+ifeq ($(UNAME), Windows)
+DESTDIR ?= c:/Program\ Files
+else
+DESTDIR ?= /usr
+CFLAGS += "-DCONFIG_MODULE_PATH=\"../share/kos/modules\""
+endif
+
+.PHONY: all install

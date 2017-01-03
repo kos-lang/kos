@@ -24,11 +24,15 @@
 #define __KOS_FILE_H
 
 #ifdef _WIN32
-#   define KOS_PATH_SEPARATOR     '\\'
-#   define KOS_PATH_SEPARATOR_STR "\\"
+#   define KOS_PATH_SEPARATOR          '\\'
+#   define KOS_PATH_SEPARATOR_STR      "\\"
+#   define KOS_PATH_LIST_SEPARATOR     ';'
+#   define KOS_PATH_LIST_SEPARATOR_STR ";"
 #else
-#   define KOS_PATH_SEPARATOR     '/'
-#   define KOS_PATH_SEPARATOR_STR "/"
+#   define KOS_PATH_SEPARATOR          '/'
+#   define KOS_PATH_SEPARATOR_STR      "/"
+#   define KOS_PATH_LIST_SEPARATOR     ':'
+#   define KOS_PATH_LIST_SEPARATOR_STR ":"
 #endif
 
 struct _KOS_VECTOR;

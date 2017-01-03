@@ -54,4 +54,7 @@ ifneq (,$(filter CYGWIN% MINGW% MSYS%, $(shell uname -s)))
 $(addprefix build., $(modules)): cldep
 endif
 
+install: build.interpreter
+	@$(MAKE) -C interpreter $@
+
 .PHONY: cldep test

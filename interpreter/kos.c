@@ -31,6 +31,9 @@
 #include <assert.h>
 #include <locale.h>
 #include <stdio.h>
+#include <string.h>
+
+static int _add_module_search_paths(KOS_STACK_FRAME *frame, const char *kos_exe);
 
 int main(int argc, char *argv[])
 {
@@ -58,6 +61,13 @@ int main(int argc, char *argv[])
 
     ctx_ok = 1;
 
+    error = _add_module_search_paths(frame, argv[0]);
+
+    if (error) {
+        fprintf(stderr, "Failed to setup module search paths\n");
+        TRY(error);
+    }
+
     error = KOS_modules_init(&ctx);
 
     if (error) {
@@ -84,4 +94,36 @@ _error:
     _KOS_vector_destroy(&cstr);
 
     return (error == KOS_SUCCESS) ? 0 : 1;
+}
+
+#ifndef CONFIG_MODULE_PATH
+#define CONFIG_MODULE_PATH "modules"
+#endif
+
+static int _add_module_search_paths(KOS_STACK_FRAME *frame, const char *kos_exe)
+{
+    struct _KOS_VECTOR cstr;
+    int                error;
+    static const char  rel_module_path[] = CONFIG_MODULE_PATH;
+    const char        *kos_exe_end       = kos_exe + strlen(kos_exe) - 1;
+    size_t             kos_exe_len;
+
+    _KOS_vector_init(&cstr);
+
+    while (kos_exe_end >= kos_exe && *kos_exe_end != KOS_PATH_SEPARATOR)
+        --kos_exe_end;
+    ++kos_exe_end;
+
+    kos_exe_len = (size_t)(kos_exe_end - kos_exe);
+
+    TRY(_KOS_vector_resize(&cstr, kos_exe_len + sizeof(rel_module_path)));
+    memcpy(cstr.buffer, kos_exe, kos_exe_len);
+    memcpy(cstr.buffer + kos_exe_len, rel_module_path, sizeof(rel_module_path));
+
+    TRY(KOS_context_add_path(frame, cstr.buffer));
+
+_error:
+    _KOS_vector_destroy(&cstr);
+
+    return error;
 }

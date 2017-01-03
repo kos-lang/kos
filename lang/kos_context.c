@@ -38,28 +38,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifndef CONFIG_VERSION_STR
-#define CONFIG_VERSION_STR "0"
-#endif
-
-#ifdef _WIN32
-#define CONFIG_PATH_SEP_STR ";"
-#define CONFIG_PATH_SEP_CHR ';'
-#else
-#define CONFIG_PATH_SEP_STR ":"
-#define CONFIG_PATH_SEP_CHR ':'
-#endif
-
-#ifndef CONFIG_MODULE_PATH
-#if defined(__linux__)
-#define CONFIG_MODULE_PATH "/usr/lib/kos/" CONFIG_VERSION_STR CONFIG_PATH_SEP_STR \
-                           "/usr/local/lib/kos/" CONFIG_VERSION_STR
-#elif defined(__APPLE__)
-#define CONFIG_MODULE_PATH "/System/Library/Frameworks/Kos.framework/" CONFIG_VERSION_STR CONFIG_PATH_SEP_STR \
-                           "/Library/Kos/" CONFIG_VERSION_STR
-#endif
-#endif
-
 static KOS_ASCII_STRING(str_init,                    "init");
 static KOS_ASCII_STRING(str_backtrace,               "backtrace");
 static KOS_ASCII_STRING(str_builtin,                 "<builtin>");
@@ -96,7 +74,7 @@ static int _add_multiple_paths(KOS_STACK_FRAME *frame, struct _KOS_VECTOR *cpath
     char *buf   = cpaths->buffer;
 
     while ( ! error) {
-        char *end = strchr(buf, CONFIG_PATH_SEP_CHR);
+        char *end = strchr(buf, KOS_PATH_LIST_SEPARATOR);
 
         if (end)
             *end = '\0';
@@ -114,6 +92,9 @@ static int _add_multiple_paths(KOS_STACK_FRAME *frame, struct _KOS_VECTOR *cpath
 
 static int _init_search_paths(KOS_STACK_FRAME *frame)
 {
+#ifdef CONFIG_DISABLE_KOSPATH
+    return KOS_SUCCESS;
+#else
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cpaths;
 
@@ -122,20 +103,10 @@ static int _init_search_paths(KOS_STACK_FRAME *frame)
     if (_KOS_get_env("KOSPATH", &cpaths) == KOS_SUCCESS)
         error = _add_multiple_paths(frame, &cpaths);
 
-#ifdef CONFIG_MODULE_PATH
-    if ( ! error) {
-        static const char module_path[] = CONFIG_MODULE_PATH;
-        error = _KOS_vector_resize(&cpaths, sizeof(module_path));
-        if ( ! error) {
-            memcpy(cpaths.buffer, module_path, sizeof(module_path));
-            error = _add_multiple_paths(frame, &cpaths);
-        }
-    }
-#endif
-
     _KOS_vector_destroy(&cpaths);
 
     return error;
+#endif
 }
 
 int KOS_context_init(KOS_CONTEXT      *ctx,

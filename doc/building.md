@@ -21,6 +21,38 @@ the Kos test suite:
     make test
 
 
+Installation
+============
+
+To install Kos compiled from source in its target location, run:
+
+    make install
+
+This installs Kos in /usr on non-Windows systems.  It may be necessary
+to run `make` with `sudo`:
+
+    sudo make install
+
+To specify a different installation directory than the default, especially
+when only installing for the current user, use the `DESTDIR` variable,
+like so:
+
+    make install DESTDIR=../mydir
+
+Both absolute and relative directories are supported.  If directory names
+contain spaces, double quotes must be used and the spaces must be escaped
+with a backslash:
+
+    make install "DESTDIR=../my\ dir"
+
+The Kos executable is installed in $DESTDIR/bin and Kos modules are installed
+in $DESTDIR/share/kos/modules.
+
+Finally, if Kos is installed in non-default directory, the PATH environment
+variable must be updated in shell startup scripts to point to the Kos
+executable directory.
+
+
 Windows
 =======
 
@@ -48,6 +80,13 @@ the script:
 Note: Examine your environment to find the right variable pointing to
 Common Tools directory, VC140COMNTOOLS is right for Visual Studio 2015.
 
+When installing Kos on Windows, DESTDIR defaults to `C:\Program Files`
+directory, Kos executable is installed in `C:\Program Files\Kos` and
+modules are installed in `C:\Program Files\Kos\modules`.
+
+The registry can be updated on Windows to associate the `kos` extension
+with the Kos executable.
+
 
 Cross-compiling
 ===============
@@ -70,3 +109,4 @@ set as environment variables:
 * **CONFIG_STRICT=1** - Enables strict warnings, treats warnings as errors.
 * **CONFIG_NATIVE=1** - (Non-Windows platforms) Enables optimizations for the
 current system; the produced executables may not work on other, older systems.
+* **DESTDIR=path** - Specifies installation directory, relative or absolute.
