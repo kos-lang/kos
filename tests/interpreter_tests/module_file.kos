@@ -171,6 +171,39 @@ fun expect_fail(function)
 }
 
 ##############################################################################
+# file.read_line
+
+{
+    const name = "./__text_line"
+    file.remove(name)
+    assert ! file.is_file(name)
+
+    with const f = file.open(name, file.create) {
+        const lines = "abcdefg\nhijklm\nnop";
+        f.write((new lang.buffer).pack("s\(lines.size)", lines))
+    }
+
+    with const f = file.open(name, file.ro) {
+        expect_fail(λ->(f.read_line(-1)))
+        expect_fail(λ->(f.read_line(0)))
+        var line = f.read_line(1)
+        assert line == "abcdefg\n"
+        line = f.read_line()
+        assert line == "hijklm\n"
+        line = f.read_line()
+        assert line == "nop"
+        assert f.eof
+        assert ! f.error
+        assert f.read_line() == ""
+        assert f.eof
+        assert ! f.error
+    }
+
+    assert file.remove(name)
+    assert ! file.remove(name)
+}
+
+##############################################################################
 # file.read_lines
 
 {
@@ -191,6 +224,8 @@ fun expect_fail(function)
         assert lines() == "\r"
         assert lines() == "xyz"
         expect_fail(λ->(lines()))
+        assert f.eof
+        assert ! f.error
     }
 
     with const f = file.open(name, file.ro) {
@@ -201,6 +236,8 @@ fun expect_fail(function)
         assert lines() == "\r"
         assert lines() == "xyz"
         expect_fail(λ->(lines()))
+        assert f.eof
+        assert ! f.error
     }
 
     with const f = file.open(name, file.create) {
@@ -218,6 +255,8 @@ fun expect_fail(function)
         assert a.size == 2
         assert a[0]   == "xy\r\n"
         assert a[1]   == "z\xFF\n"
+        assert f.eof
+        assert ! f.error
     }
 
     assert file.remove(name)

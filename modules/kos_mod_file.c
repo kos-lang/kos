@@ -30,7 +30,9 @@
 #include "../lang/kos_file.h"
 #include "../lang/kos_memory.h"
 #include "../lang/kos_try.h"
+#include <limits.h>
 #include <stdio.h>
+#include <string.h>
 #ifdef _WIN32
 #   define WIN32_LEAN_AND_MEAN
 #   pragma warning( push )
@@ -49,6 +51,7 @@ static KOS_ASCII_STRING(str_err_cannot_get_size,     "unable to obtain file size
 static KOS_ASCII_STRING(str_err_cannot_set_position, "unable to update file position");
 static KOS_ASCII_STRING(str_err_file_read,           "file read error");
 static KOS_ASCII_STRING(str_err_file_write,          "file write error");
+static KOS_ASCII_STRING(str_err_invalid_buffer_size, "buffer size out of range");
 static KOS_ASCII_STRING(str_err_not_buffer,          "argument to file write is not a buffer");
 
 static void _fix_path_separators(struct _KOS_VECTOR *buf)
@@ -150,6 +153,76 @@ static KOS_OBJ_PTR _close(KOS_STACK_FRAME *frame,
     }
 
     return error ? TO_OBJPTR(0) : KOS_VOID;
+}
+
+static int _is_eol(char c)
+{
+    return c == '\n' || c == '\r';
+}
+
+/*
+ *      input: predicted buffer size for the line (optional, defaults to 4096)
+ *      output: string containing a line read from the file, including EOL character.
+ */
+
+static KOS_OBJ_PTR _read_line(KOS_STACK_FRAME *frame,
+                              KOS_OBJ_PTR      this_obj,
+                              KOS_OBJ_PTR      args_obj)
+{
+    int                error      = KOS_SUCCESS;
+    FILE              *file       = 0;
+    int                size_delta = 4096;
+    int                last_size  = 0;
+    int                num_read;
+    struct _KOS_VECTOR buf;
+    KOS_OBJ_PTR        line       = TO_OBJPTR(0);
+
+    _KOS_vector_init(&buf);
+
+    TRY(_get_file_object(frame, this_obj, &file, 1));
+
+    if (KOS_get_array_size(args_obj) > 0) {
+
+        int64_t iarg = 0;
+
+        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+
+        TRY_OBJPTR(arg);
+
+        TRY(KOS_get_integer(frame, arg, &iarg));
+
+        if (iarg <= 0 || iarg > INT_MAX-1)
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_buffer_size));
+
+        size_delta = (int)iarg + 1;
+    }
+
+    do {
+        char *ret;
+
+        TRY(_KOS_vector_resize(&buf, (size_t)(last_size + size_delta)));
+
+        ret = fgets(buf.buffer + last_size, size_delta, file);
+
+        if ( ! ret) {
+            if (ferror(file))
+                RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_read));
+            else
+                break;
+        }
+
+        num_read = (int)strlen(buf.buffer + last_size);
+
+        last_size += num_read;
+    } while (num_read != 0 &&
+             num_read+1 == size_delta &&
+             ! _is_eol(buf.buffer[last_size-1]));
+
+    line = KOS_new_string(frame, buf.buffer, (unsigned)last_size);
+
+_error:
+    _KOS_vector_destroy(&buf);
+    return error ? TO_OBJPTR(0) : line;
 }
 
 /*
@@ -436,6 +509,7 @@ int _KOS_module_file_init(KOS_STACK_FRAME *frame)
 
     TRY_ADD_CONSTRUCTOR(    frame,        "file",      _open,           1, &proto);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "close",     _close,          0);
+    TRY_ADD_MEMBER_FUNCTION(frame, proto, "read_line", _read_line,      0);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "read_some", _read_some,      0);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "release",   _close,          0);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "seek",      _set_file_pos,   1);
