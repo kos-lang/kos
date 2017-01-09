@@ -44,16 +44,24 @@ class Handle {
             close();
         }
 
-        bool duplicate(const Handle& h) {
+        Handle& operator=(HANDLE handle) {
             close();
+            _handle = handle;
+            return *this;
+        }
+
+        bool duplicate(const Handle& h) {
             const HANDLE process = GetCurrentProcess();
+            HANDLE new_handle    = INVALID_HANDLE_VALUE;
             if (!DuplicateHandle(process, h._handle,
-                                 process, &_handle,
+                                 process, &new_handle,
                                  0, TRUE, DUPLICATE_SAME_ACCESS)) {
                 _handle = INVALID_HANDLE_VALUE;
                 printf("Error: Failed to duplicate handle\n");
                 return false;
             }
+            close();
+            _handle = new_handle;
             return true;
         }
 
@@ -68,11 +76,6 @@ class Handle {
             return _handle;
         }
 
-        HANDLE* get_ptr() {
-            close();
-            return &_handle;
-        }
-
     private:
         HANDLE _handle;
 };
@@ -84,16 +87,21 @@ bool create_pipe(Handle* read, Handle* write)
     sa.lpSecurityDescriptor = 0;
     sa.bInheritHandle       = TRUE;
 
-    if (!CreatePipe(read->get_ptr(), write->get_ptr(), &sa, 0)) {
+    HANDLE read_handle  = INVALID_HANDLE_VALUE;
+    HANDLE write_handle = INVALID_HANDLE_VALUE;
+
+    if (!CreatePipe(&read_handle, &write_handle, &sa, 0)) {
         printf("Error: Failed to create pipe\n");
         return false;
     }
+
+    *read  = read_handle;
+    *write = write_handle;
 
     return true;
 }
 
 class DepGenerator {
-
     public:
         DepGenerator(HANDLE        console,
                      HANDLE        dep_file,
@@ -103,8 +111,8 @@ class DepGenerator {
               _dep_file(     dep_file),
               _dep_file_name(dep_file_name),
               _obj_file_name(obj_file_name),
-              _cygwin       (false),
-              _line_num     (0)
+              _cygwin(       false),
+              _line_num(     0)
         {
             char buf[8] = { };
             GetEnvironmentVariable("OSTYPE", buf, sizeof(buf));
@@ -139,10 +147,10 @@ class DepGenerator {
                     if (c == '\r' || c == '\n')
                         break;
                     switch (c) {
-                        case '\\':  rule += '/';   break;
-                        case ' ':   rule += "\\ "; break;
-                        case ':':   rule += "\\:"; break;
-                        default:    rule += c;     break;
+                        case '\\': rule += '/';   break;
+                        case ' ':  rule += "\\ "; break;
+                        case ':':  rule += "\\:"; break;
+                        default:   rule += c;     break;
                     }
                 }
 
@@ -189,7 +197,6 @@ class DepGenerator {
 };
 
 class FileDeletor {
-
     public:
         FileDeletor(HANDLE handle, const string& file_name)
             : _handle(handle),
@@ -201,7 +208,7 @@ class FileDeletor {
                 DeleteFile(_file_name.c_str());
             }
         }
-        void Cancel() {
+        void cancel() {
             _handle = INVALID_HANDLE_VALUE;
         }
 
@@ -322,7 +329,7 @@ int main(int argc, char *argv[])
             for ( ; i < num_read; i++) {
                 if (buf[i] == '\n') {
                     line.append(&buf[pos], i+1-pos);
-                    pos  =  i + 1;
+                    pos = i + 1;
 
                     if (!gen.process_line(line))
                         return (int)GetLastError();
@@ -345,7 +352,7 @@ int main(int argc, char *argv[])
     }
 
     if (exit_code == 0) {
-        delete_file.Cancel();
+        delete_file.cancel();
         CloseHandle(dep_file);
     }
 
