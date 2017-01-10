@@ -137,6 +137,9 @@ to index any other type with a number results in an exception.
 Control flow
 ------------
 
+The control flow statements are quite similar to equivalent statements in
+many other programming languages.
+
 `if` statement:
 
     fun compare(a, b)
@@ -151,6 +154,15 @@ Control flow
             return 0
         }
     }
+
+The expressions executed conditionally and governed by the if statement must
+always be enclosed in curly braces.  The following example shows incorrect
+code:
+
+    if a < b
+        return -1 # ERROR: missing curly braces
+
+Curly braces are also required in all the other control flow statements below.
 
 `switch` statement:
 
@@ -180,8 +192,7 @@ Control flow
     do {
         lang.print(a, "\n")
         a -= 10
-    }
-    while a > 0
+    } while a > 0
     # Prints: 42 32 22 12 2 (in consecutive lines)
 
 `for` loop:
@@ -208,7 +219,7 @@ clean.  In order to do something useful, modules must be imported explicitly.
 
 This applies even to the `lang` module, which is conceptually like a standard
 library.  In other languages, several built-in symbols are readily available
-in every script.  In Kos, the `lang` module has to be importent explicitly.
+in every script.  In Kos, the `lang` module has to be imported explicitly.
 
 Each module is executed only once.  For example, if another module imports
 `lang`, it is setup once and another module will only reference its symbols,
@@ -382,7 +393,7 @@ An exception can be thrown and caught, like so:
         throw "Hello, exception!\n"
     }
     catch const e {
-        print(e.value, "\n") # Prints: Hello, exception!
+        print(e.value) # Prints: Hello, exception!
     }
 
 
@@ -433,7 +444,7 @@ Constructors and prototypal inheritance
     ctr.add(3)
     ctr.print()                # Prints: 8
 
-Every object of class `counter`<D-r> has a unique property `count`, but it also
+Every object of class `counter` has a unique property `count`, but it also
 inherits all properties from the `counter.prototype`, which is common for
 all objects constructed with `counter`.
 

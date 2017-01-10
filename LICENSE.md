@@ -1,7 +1,7 @@
 Introduction
 ------------
 
-To ensure that Kos is as much useful as possible, it is distributed on the
+To ensure that Kos is as useful as possible, it is distributed on the
 MIT license.  This means that you can integrate Kos with your project
 regardless of whether your project is open source or closed source.
 
