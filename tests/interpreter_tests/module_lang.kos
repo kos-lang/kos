@@ -181,6 +181,17 @@ fun expect_fail(function)
 }
 
 {
+    const value = λ->(42)()
+    assert value instanceof lang.integer
+    assert value instanceof lang.number
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.float)
+    assert ! (value instanceof lang.string)
+    assert ! (value instanceof lang.boolean)
+    assert ! (value instanceof lang.void)
+}
+
+{
     expect_fail(λ->(new lang.integer("")))
     expect_fail(λ->(new lang.integer("a")))
     expect_fail(λ->(new lang.integer("e")))
@@ -262,6 +273,17 @@ fun expect_fail(function)
 }
 
 {
+    const value = λ->(42.0)()
+    assert value instanceof lang.float
+    assert value instanceof lang.number
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.integer)
+    assert ! (value instanceof lang.string)
+    assert ! (value instanceof lang.boolean)
+    assert ! (value instanceof lang.void)
+}
+
+{
     expect_fail(λ->(new lang.float("")))
     expect_fail(λ->(new lang.float("a")))
     expect_fail(λ->(new lang.float("e")))
@@ -322,6 +344,17 @@ fun expect_fail(function)
     assert ! (false instanceof lang.void)
 }
 
+{
+    const value = λ->(void)()
+    assert value instanceof lang.void
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.integer)
+    assert ! (value instanceof lang.float)
+    assert ! (value instanceof lang.number)
+    assert ! (value instanceof lang.string)
+    assert ! (value instanceof lang.boolean)
+}
+
 # Even though lang.void was imported directly (at the top), it's not accessible
 {
     expect_fail(λ->(new void))
@@ -360,6 +393,17 @@ fun expect_fail(function)
     assert (a == b) instanceof lang.boolean
 }
 
+{
+    const value = λ->(false)()
+    assert value instanceof lang.boolean
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.integer)
+    assert ! (value instanceof lang.float)
+    assert ! (value instanceof lang.number)
+    assert ! (value instanceof lang.string)
+    assert ! (value instanceof lang.void)
+}
+
 ##############################################################################
 # lang.string
 
@@ -389,6 +433,17 @@ fun expect_fail(function)
     assert str == "123"
 
     assert "x\(1)y" instanceof lang.string
+}
+
+{
+    const value = λ->("abc")()
+    assert value instanceof lang.string
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.integer)
+    assert ! (value instanceof lang.float)
+    assert ! (value instanceof lang.number)
+    assert ! (value instanceof lang.boolean)
+    assert ! (value instanceof lang.void)
 }
 
 {
@@ -435,6 +490,18 @@ fun expect_fail(function)
 
     const o = new lang.object
     assert o instanceof lang.object
+}
+
+{
+    const value = λ->({})()
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.integer)
+    assert ! (value instanceof lang.float)
+    assert ! (value instanceof lang.number)
+    assert ! (value instanceof lang.boolean)
+    assert ! (value instanceof lang.void)
+    assert ! (value instanceof lang.string)
+    assert ! (value instanceof lang.array)
 }
 
 {
@@ -577,6 +644,18 @@ fun expect_fail(function)
 {
     assert [] instanceof lang.array
     assert [] instanceof lang.object
+}
+
+{
+    const value = λ->([])()
+    assert value instanceof lang.array
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.integer)
+    assert ! (value instanceof lang.float)
+    assert ! (value instanceof lang.number)
+    assert ! (value instanceof lang.boolean)
+    assert ! (value instanceof lang.void)
+    assert ! (value instanceof lang.string)
 }
 
 {
@@ -850,6 +929,19 @@ fun expect_fail(function)
     assert ! (f instanceof lang.array)
 }
 
+{
+    const value = λ->(void)
+    assert value instanceof lang.function
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.integer)
+    assert ! (value instanceof lang.float)
+    assert ! (value instanceof lang.number)
+    assert ! (value instanceof lang.boolean)
+    assert ! (value instanceof lang.void)
+    assert ! (value instanceof lang.string)
+    assert ! (value instanceof lang.array)
+}
+
 ##############################################################################
 # lang.function.prototype.set_prototype
 
@@ -939,6 +1031,22 @@ fun expect_fail(function)
     assert args[0]   == 1
     assert args[1]   == 2
     assert args[2]   == 3
+}
+
+##############################################################################
+# instanceof buffer
+
+{
+    const value = new lang.buffer
+    assert value instanceof lang.buffer
+    assert value instanceof lang.object
+    assert ! (value instanceof lang.integer)
+    assert ! (value instanceof lang.float)
+    assert ! (value instanceof lang.number)
+    assert ! (value instanceof lang.boolean)
+    assert ! (value instanceof lang.void)
+    assert ! (value instanceof lang.string)
+    assert ! (value instanceof lang.array)
 }
 
 ##############################################################################
