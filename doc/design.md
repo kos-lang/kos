@@ -84,6 +84,13 @@ a predictable manner without parentheses:
 
     if value & mask != 0 { }
 
+In many programming languages, the above expression is computes as
+`value & (mask != 0)` and it effectively tests no bits or bit 0, depending
+on `mask`.  In Kos, it is evaluated as `(value & mask) != 0`.  Moreover,
+in Kos, boolean values cannot be be promoted to numbers, so attempting to
+perform an arithmetic or binary operation on a boolean would result with
+an exception.
+
 
 One assignment per expression, only in expression statements
 ------------------------------------------------------------
@@ -93,6 +100,10 @@ expression, which allows only a single assignment and does not produce any
 value.  So every assignment must be performed as a separate, distinct
 expression.  This prevents mistakenly using `=` instead of `==` and reduces
 possibilities of writing unreadable code.
+
+The following code is rejected by Kos during compilation with a syntax error:
+
+    if value = 0 { }
 
 
 Clear order of expression evaluation
@@ -157,9 +168,8 @@ Here is how to obtain access to prototypes of individual types:
     const function_prototype = lang.function.prototype;
     const object_prototype   = lang.object.prototype;
 
-Most of the above objects have `lang.object.prototype` as their prototype,
-except integer and float prototype, which have number prototype as their
-common prototype:
+`lang.object.prototype` is an indirect prototype for all types of objects.
+In addition to that, integer and float objects also have a common prototype:
 
     const number_prototype   = lang.number.prototype;
 
@@ -184,7 +194,7 @@ Objects of various types provide their own `iterator()` function:
   loop.  A regular function passed to `for`..`in` loop triggers an exception.
 
 * Object's `iterator()` function generates shallow object keys, excluding
-  keys found only in the object's prototypes.
+  keys only found in the object's prototypes.
 
 
 Optional semicolons
@@ -194,8 +204,9 @@ Although semicolons are part of the Kos syntax, in most places semicolons are
 not required to mark end of statements.  The Kos parser deduces semicolons from
 line breaks.
 
-It is not possible to create a program which will be ambiguous, because any
-ambiguity is signaled by the parser as error.
+It is safe to omit semicolons in Kos programs.  It is not possible to create
+a program which will be ambiguous, because any ambiguity is signaled by
+the parser as error.
 
 For example, if the `return` keyword occurs alone on the line, but it is
 followed by an expression in the next line, that expression is treated as part
@@ -206,5 +217,3 @@ Another example is when the `-`, `+`, `[` or `(` character occurs as first
 non-whitespace character on a new line, but it could be interpreted as part
 of the expression in the previous line.  In this case the parser signals an
 error, because such expression would be ambiguous.
-
-In order to avoid surprises, Kos eliminates situations which could be ambiguous.
