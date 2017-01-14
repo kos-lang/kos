@@ -514,7 +514,7 @@ static int _gen_assert_str(struct _KOS_COMP_UNIT      *program,
     return error;
 }
 
-int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
+static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
 {
     switch (instr) {
 
@@ -1442,8 +1442,8 @@ _error:
 static int _scope(struct _KOS_COMP_UNIT      *program,
                   const struct _KOS_AST_NODE *node)
 {
-    int error  = KOS_SUCCESS;
-    int global = program->scope_stack == 0;
+    int       error  = KOS_SUCCESS;
+    const int global = program->scope_stack == 0;
 
     const struct _KOS_AST_NODE *child = node->children;
 
