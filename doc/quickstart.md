@@ -1,3 +1,7 @@
+TODO Rewrite this to construct an example script step by step, showing off all
+features.
+
+
 Kos is straightforward
 ======================
 

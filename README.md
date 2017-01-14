@@ -1,7 +1,8 @@
 The Kos Programming Language
 ============================
 
-Kos is a general purpose scripting language with the following design goals:
+Kos is a general purpose scripting language, which builds on top of the most
+successful scripting languages, but is designed with usability in mind.
 
 * Easy to learn and easy to use.
 
@@ -37,6 +38,7 @@ Branch health (master)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/kos-lang/kos?branch=master&svg=true)](https://ci.appveyor.com/project/cdragan/kos)
 [![Coverage Status](https://coveralls.io/repos/github/kos-lang/kos/badge.svg?branch=master)](https://coveralls.io/github/kos-lang/kos?branch=master)
 [![Coverity Scan](https://scan.coverity.com/projects/10189/badge.svg)](https://scan.coverity.com/projects/kos)
+
 
 Documentation
 =============
