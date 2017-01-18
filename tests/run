@@ -85,7 +85,7 @@ export CONFIG_DEBUG=1
 runtests c89   c++98
 runtests c++14 c++14
 
-if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>&1)" != "" ]; then
+if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
     export CONFIG_TOOL="valgrind --error-exitcode=1 --track-origins=yes"
 
     # Limit number of jobs to reduce memory pressure
