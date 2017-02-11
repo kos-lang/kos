@@ -1150,6 +1150,7 @@ static int _operator(struct _KOS_COMP_UNIT *program,
     int                           t;
     struct _KOS_AST_NODE         *a     = node->children;
     struct _KOS_AST_NODE         *b;
+    struct _KOS_AST_NODE         *c     = 0;
     const struct _KOS_AST_NODE   *ca;
     const struct _KOS_AST_NODE   *cb    = 0;
     enum _KOS_NODE_TYPE           a_type;
@@ -1164,6 +1165,13 @@ static int _operator(struct _KOS_COMP_UNIT *program,
     if (b) {
         TRY(_visit_node(program, b, &t));
         assert(t == TERM_NONE);
+
+        c = b->next;
+        if (c) {
+            assert( ! c->next);
+            TRY(_visit_node(program, c, &t));
+            assert(t == TERM_NONE);
+        }
     }
 
     if ( ! program->optimize)

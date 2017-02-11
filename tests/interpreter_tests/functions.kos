@@ -941,20 +941,20 @@ assert global == 1
     assert a[0] == 10
 }
 
-# test for arguments overwrite bug
+# test for correct processing of ?: with arguments
 {
     fun f(x)
     {
         return ! x ? void :
             fun(arg)
             {
-                arg[0] = x # generated code overwrites arguments
+                arg[0] = x
             }
     }
 
     const a = [ 0 ]
-#    f(10)(a)
+    f(10)(a)
     assert typeof a == "array"
     assert a.size == 1
-#    assert a[0] == 10
+    assert a[0] == 10
 }
