@@ -399,7 +399,7 @@ void _KOS_wrap_exception(KOS_STACK_FRAME *frame)
         TRY(KOS_set_property(frame, frame_desc, TO_OBJPTR(&str_module),   module_name));
         TRY(KOS_set_property(frame, frame_desc, TO_OBJPTR(&str_file),     module_path));
         TRY(KOS_set_property(frame, frame_desc, TO_OBJPTR(&str_line),     TO_SMALL_INT((int)line)));
-        TRY(KOS_set_property(frame, frame_desc, TO_OBJPTR(&str_offset),   TO_SMALL_INT((int)frame->instr_offs)));
+        TRY(KOS_set_property(frame, frame_desc, TO_OBJPTR(&str_offset),   TO_SMALL_INT((int)next_frame->instr_offs)));
         TRY(KOS_set_property(frame, frame_desc, TO_OBJPTR(&str_function), func_name));
 
         ++depth;
