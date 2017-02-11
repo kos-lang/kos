@@ -196,6 +196,12 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     }
 }
 
+array.prototype.indexes = fun { return range(this.size) }
+
+string.prototype.indexes = array.prototype.indexes
+
+buffer.prototype.indexes = array.prototype.indexes
+
 fun map(op, args...)
 {
     assert typeof op == "function"
@@ -260,25 +266,104 @@ fun reduce(op, init, args...)
     }
 }
 
-fun count(value, args...)
+fun count(op, args...)
 {
-    fun count_f(source)
-    {
-        const val   = value
-        var   count = 0
-        for var elem in source {
-            if elem == val {
-                count += 1
+    var count_f = typeof op == "function" ?
+        fun(source)
+        {
+            const test  = op
+            var   count = 0
+            for var elem in source {
+                if test(elem) {
+                    count += 1
+                }
             }
+            return count
         }
-        return count
-    }
+        :                               # LOAD.FUN        r3, 000009F2, 0, 6, 0 <-- should be 1, 6, 0 !!! (1 arg)
+        fun(source)                     # BIND            r3, 0, r0 <- r0 is op
+        {
+            const val   = op            # GET.ELEM        r0, r2, 0  <-- overwrites arg!!! r0 should be reserved
+            var   count = 0             # LOAD.INT8       r1, 0
+            for var elem in source {    # GET.ELEM        r3, r0, 0
+                if elem == val {        # TODO: callstack has invalid bytecode offsets
+                    count += 1
+                }
+            }
+            return count
+        }
 
     if args.size > 0 {
         return count_f(args[0])
     }
     else {
         return count_f
+    }
+}
+
+fun all(op, args...)
+{
+    var all_f = typeof op == "function" ?
+        fun(source)
+        {
+            const test = op
+            for var elem in source {
+                if ! test(elem) {
+                    return false
+                }
+            }
+            return true
+        }
+        :
+        fun(source)
+        {
+            const val = op
+            for var elem in source {
+                if elem != val {
+                    return false
+                }
+            }
+            return true
+        }
+
+    if args.size > 0 {
+        return all_f(args[0])
+    }
+    else {
+        return all_f
+    }
+}
+
+fun any(op, args...)
+{
+    var any_f = typeof op == "function" ?
+        fun(source)
+        {
+            const test = op
+            for var elem in source {
+                if test(elem) {
+                    return true
+                }
+            }
+            return false
+        }
+        :
+        fun(source)
+        {
+            const val = op
+            for var elem in source {
+                if elem == val {
+                    return true
+                }
+            }
+            return false
+        }
+
+    if args.size > 0 {
+        return any_f(args[0])
+    }
+    else {
+        return any_f
     }
 }
 
@@ -300,6 +385,16 @@ object.prototype.reduce = fun(transform, init)
 object.prototype.count = fun(transform)
 {
     return count(transform, this)
+}
+
+object.prototype.all = fun(transform)
+{
+    return all(transform, this)
+}
+
+object.prototype.any = fun(transform)
+{
+    return any(transform, this)
 }
 
 # TODO move to debug module

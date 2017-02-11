@@ -918,6 +918,33 @@ fun expect_fail(function)
 }
 
 ##############################################################################
+# lang.array.prototype.indexes
+
+{
+    const it = [ true, void, -2 ].indexes()
+    assert it() == 0
+    assert it() == 1
+    assert it() == 2
+    expect_fail(λ->(it()))
+}
+
+##############################################################################
+# lang.string.prototype.indexes
+
+{
+    const it = "".indexes()
+    expect_fail(λ->(it()))
+}
+{
+    const it = "abcd".indexes()
+    assert it() == 0
+    assert it() == 1
+    assert it() == 2
+    assert it() == 3
+    expect_fail(λ->(it()))
+}
+
+##############################################################################
 # lang.function
 
 {
@@ -1369,6 +1396,29 @@ fun expect_fail(function)
     assert {x: 8, _test_value: 8, y: 8}.count("_test_value") == 1
 
     assert lang.range(100).map(λ(x)->(x/4)).count(11) == 4
+
+    assert lang.count(λ(x)->(x > 5), [ 1, 7, 2, 6, 5 ]) == 2
+}
+
+##############################################################################
+# lang.all
+
+{
+    assert lang.all(1, [1, 1.0, 1]) == true
+    assert lang.all(1, [0, 1, 2])   == false
+    assert lang.all(λ(x)->(x > 2), [ 4, 3, 5 ]) == true
+    assert lang.all(λ(x)->(x > 2), [ 4, 2, 5 ]) == false
+}
+
+##############################################################################
+# lang.any
+
+{
+    assert lang.any(1, [ 0, 2, 3, 4 ]) == false
+    assert lang.any(2, [ 0, 2, 3, 4 ]) == true
+    assert lang.any(2, [ 0, 2, 3, 2 ]) == true
+    assert lang.any(λ(x)->(x == void), [ 1, 2, 3, 4 ]) == false
+    assert lang.any(λ(x)->(x == 3),    [ 1, 2, 3, 4 ]) == true
 }
 
 ##############################################################################
