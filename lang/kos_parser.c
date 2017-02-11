@@ -1984,6 +1984,34 @@ _error:
     return error;
 }
 
+static int _loop_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+{
+    int error = KOS_SUCCESS;
+
+    struct _KOS_AST_NODE *node = 0;
+
+    TRY(_new_node(parser, ret, NT_WHILE));
+
+    TRY(_push_node(parser, *ret, NT_BOOL_LITERAL, &node));
+
+    node->token.type    = TT_KEYWORD;
+    node->token.keyword = KW_TRUE;
+
+    node = 0;
+
+    ++parser->allow_break;
+
+    TRY(_compound_stmt(parser, &node));
+
+    --parser->allow_break;
+
+    _ast_push(*ret, node);
+    node = 0;
+
+_error:
+    return error;
+}
+
 static int _do_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
@@ -2438,6 +2466,9 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
                 break;
             case KW_SWITCH:
                 error = _switch_stmt(parser, ret);
+                break;
+            case KW_LOOP:
+                error = _loop_stmt(parser, ret);
                 break;
             case KW_DO:
                 error = _do_stmt(parser, ret);

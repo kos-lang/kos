@@ -176,6 +176,7 @@ The following reserved keywords are defined:
 * `import`
 * `in`
 * `instanceof`
+* `loop`
 * `new`
 * `private` (reserved)
 * `prototype` (reserved)
@@ -451,7 +452,8 @@ Statement
                 | DeferStatement
                 | WithStatement
                 | SwitchStatement
-                | DoStatement
+                | LoopStatement
+                | DoWhileStatement
                 | WhileStatement
                 | ForStatement
                 | ContinueStatement
@@ -736,6 +738,15 @@ the right-hand-side expression (or ellipsis `...`) for that section matched.
                         | Fallthrough
 
     Fallthrough     ::= "fallthrough" OptSemicolon
+
+
+Loop statement
+--------------
+
+The loop statement has a compound statement, which is exectued forever in
+a loop.  The loop can be interrupted with `break` or `continue`.
+
+    LoopStatement ::= "loop" CompoundStatement
 
 
 Do-while statement

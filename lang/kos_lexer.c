@@ -306,6 +306,7 @@ static const char *const keywords[] = {
     "import",
     "in",
     "instanceof",
+    "loop",
     "new",
     "private",
     "prototype",

@@ -76,6 +76,7 @@ enum _KOS_KEYWORD_TYPE {
     KW_IMPORT,
     KW_IN,
     KW_INSTANCEOF,
+    KW_LOOP,
     KW_NEW,
     KW_PRIVATE,
     KW_PROTOTYPE,
