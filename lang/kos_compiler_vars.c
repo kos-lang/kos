@@ -38,8 +38,8 @@ static const char str_err_unexpected_yield[]       = "'yield' not allowed in glo
 static int _visit_node(struct _KOS_COMP_UNIT      *program,
                        const struct _KOS_AST_NODE *node);
 
-static int _scope_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                               struct _KOS_RED_BLACK_NODE *b)
+int _KOS_scope_compare_node(struct _KOS_RED_BLACK_NODE *a,
+                            struct _KOS_RED_BLACK_NODE *b)
 {
     const struct _KOS_SCOPE *scope_a = (const struct _KOS_SCOPE *)a;
     const struct _KOS_SCOPE *scope_b = (const struct _KOS_SCOPE *)b;
@@ -190,7 +190,7 @@ static int _push_scope(struct _KOS_COMP_UNIT      *program,
 
         _KOS_red_black_insert(&program->scopes,
                               (struct _KOS_RED_BLACK_NODE *)scope,
-                              _scope_compare_node);
+                              _KOS_scope_compare_node);
 
         scope->next          = program->scope_stack;
         program->scope_stack = scope;

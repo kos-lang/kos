@@ -265,6 +265,9 @@ void _KOS_activate_new_vars(struct _KOS_COMP_UNIT      *program,
 
 void _KOS_deactivate_vars(struct _KOS_SCOPE *scope);
 
+int _KOS_scope_compare_node(struct _KOS_RED_BLACK_NODE *a,
+                            struct _KOS_RED_BLACK_NODE *b);
+
 int _KOS_scope_compare_item(void                       *what,
                             struct _KOS_RED_BLACK_NODE *node);
 

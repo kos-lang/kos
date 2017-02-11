@@ -88,9 +88,27 @@ static int _collapse_numeric(struct _KOS_COMP_UNIT     *program,
     return error;
 }
 
-static void _promote(struct _KOS_AST_NODE       *node,
+static void _promote(struct _KOS_COMP_UNIT      *program,
+                     struct _KOS_AST_NODE       *node,
                      const struct _KOS_AST_NODE *child)
 {
+    struct _KOS_SCOPE *scope = (struct _KOS_SCOPE *)
+            _KOS_red_black_find(program->scopes, (void *)child, _KOS_scope_compare_item);
+
+    assert( ! _KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item));
+
+    if (scope) {
+
+        _KOS_red_black_delete(&program->scopes, (struct _KOS_RED_BLACK_NODE *)scope);
+
+        assert(scope->scope_node == child);
+        scope->scope_node = node;
+
+        _KOS_red_black_insert(&program->scopes,
+                              (struct _KOS_RED_BLACK_NODE *)scope,
+                              _KOS_scope_compare_node);
+    }
+
     node->children   = child->children;
     node->last_child = child->last_child;
     node->token      = child->token;
@@ -1039,7 +1057,7 @@ static int _add_strings(struct _KOS_COMP_UNIT      *program,
     a_length -= a_type == TT_STRING ? 2U : 3U;
     b_length -= b_type == TT_STRING ? 2U : 3U;
 
-    _promote(node, a);
+    _promote(program, node, a);
 
     str = (char *)_KOS_mempool_alloc(&program->allocator, a_length + b_length + 2U);
 
@@ -1223,11 +1241,11 @@ static int _operator(struct _KOS_COMP_UNIT *program,
 
         case OT_LOGAND: {
             if (_KOS_node_is_truthy(program, ca) && b) {
-                _promote(node, b);
+                _promote(program, node, b);
                 ++program->num_optimizations;
             }
             else if (_KOS_node_is_falsy(program, ca)) {
-                _promote(node, a);
+                _promote(program, node, a);
                 ++program->num_optimizations;
             }
             break;
@@ -1235,11 +1253,11 @@ static int _operator(struct _KOS_COMP_UNIT *program,
 
         case OT_LOGOR: {
             if (_KOS_node_is_truthy(program, ca)) {
-                _promote(node, a);
+                _promote(program, node, a);
                 ++program->num_optimizations;
             }
             else if (_KOS_node_is_falsy(program, ca) && b) {
-                _promote(node, b);
+                _promote(program, node, b);
                 ++program->num_optimizations;
             }
             break;
@@ -1248,13 +1266,13 @@ static int _operator(struct _KOS_COMP_UNIT *program,
         case OT_LOGTRI: {
             assert(b);
             if (_KOS_node_is_truthy(program, ca) && b) {
-                _promote(node, b);
+                _promote(program, node, b);
                 ++program->num_optimizations;
             }
             else if (_KOS_node_is_falsy(program, ca) && b) {
                 assert(b->next);
                 if (b->next) {
-                    _promote(node, b->next);
+                    _promote(program, node, b->next);
                     ++program->num_optimizations;
                 }
             }
@@ -1425,7 +1443,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT *program,
     assert(node->children);
 
     if ( ! node->children->next)
-        _promote(node, node->children);
+        _promote(program, node, node->children);
 
 _error:
     return error;

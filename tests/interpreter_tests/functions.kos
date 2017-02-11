@@ -921,3 +921,40 @@ assert global == 1
     const z = y(1000)
     assert z == 1420
 }
+
+# function node promoted during optimization
+{
+    fun f(x)
+    {
+        return false ? void :
+            fun(arg)
+            {
+                const op = x
+                arg[0] = op
+            }
+    }
+
+    const a = [ 0 ]
+    f(10)(a)
+    assert typeof a == "array"
+    assert a.size == 1
+    assert a[0] == 10
+}
+
+# test for arguments overwrite bug
+{
+    fun f(x)
+    {
+        return ! x ? void :
+            fun(arg)
+            {
+                arg[0] = x # generated code overwrites arguments
+            }
+    }
+
+    const a = [ 0 ]
+#    f(10)(a)
+    assert typeof a == "array"
+    assert a.size == 1
+#    assert a[0] == 10
+}
