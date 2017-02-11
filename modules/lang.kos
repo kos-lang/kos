@@ -22,30 +22,30 @@
 
 fun range(first_arg, args...)
 {
-    var start = 0;
-    var stop  = 0;
-    var step  = 1;
+    var start = 0
+    var stop  = 0
+    var step  = 1
 
     if args.size == 0 {
-        stop = first_arg;
+        stop = first_arg
     }
     else {
-        start = first_arg;
-        stop  = args[0];
+        start = first_arg
+        stop  = args[0]
     }
 
     if args.size > 1 {
-        step = args[1];
+        step = args[1]
     }
 
     if step > 0 {
         for var i = start; i < stop; i += step {
-            yield i;
+            yield i
         }
     }
     else if step < 0 {
         for var i = start; i > stop; i += step {
-            yield i;
+            yield i
         }
     }
 }
@@ -53,210 +53,210 @@ fun range(first_arg, args...)
 object.prototype.iterator = fun
 {
     if typeof this == "object" {
-        return shallow(this);
+        return shallow(this)
     }
     else {
-        return fun(value) { yield value; } (this);
+        return fun(value) { yield value } (this)
     }
-};
+}
 
 array.prototype.iterator = fun
 {
     for var i = 0; i < this.size; i += 1 {
-        yield this[i];
+        yield this[i]
     }
-};
+}
 
-string.prototype.iterator = array.prototype.iterator;
+string.prototype.iterator = array.prototype.iterator
 
-buffer.prototype.iterator = array.prototype.iterator;
+buffer.prototype.iterator = array.prototype.iterator
 
-function.prototype.iterator = λ->(this);
+function.prototype.iterator = λ->(this)
 
 array.prototype.insert = fun(first_arg, second_arg, args...)
 {
-    var begin    = first_arg;
-    var end      = begin;
-    var iterable = void;
+    var begin    = first_arg
+    var end      = begin
+    var iterable = void
 
     if args.size == 0 {
-        iterable = second_arg;
+        iterable = second_arg
         if end == void {
-            begin = this.size;
+            begin = this.size
         }
     }
     else {
-        end      = second_arg;
-        iterable = args[0];
+        end      = second_arg
+        iterable = args[0]
     }
 
     if typeof iterable == "array" {
-        return this.insert_array(begin, end, iterable);
+        return this.insert_array(begin, end, iterable)
     }
     else {
-        const size = this.size;
+        const size = this.size
         if begin == void {
-            begin = 0;
+            begin = 0
         }
         if end == void {
-            end = size;
+            end = size
         }
         if begin < 0 {
-            begin += size;
+            begin += size
         }
         if end < 0 {
-            end += size;
+            end += size
         }
         if begin < 0 {
-            begin = 0;
+            begin = 0
         }
         if end > size {
-            end = size;
+            end = size
         }
         if end < begin {
-            end = begin;
+            end = begin
         }
 
-        const iterator = iterable.iterator();
+        const iterator = iterable.iterator()
 
         if begin < end {
             for var value in iterator {
-                this[begin] = value;
-                begin += 1;
+                this[begin] = value
+                begin += 1
                 if begin >= end {
-                    break;
+                    break
                 }
             }
         }
 
-        return this.insert_array(begin, end, new array(iterator));
+        return this.insert_array(begin, end, new array(iterator))
     }
-};
+}
 
 buffer.prototype.insert = fun(first_arg, second_arg, args...)
 {
-    var   begin    = first_arg;
-    var   end      = begin;
-    var   iterable = void;
-    const size     = this.size;
+    var   begin    = first_arg
+    var   end      = begin
+    var   iterable = void
+    const size     = this.size
 
     if args.size == 0 {
-        iterable = second_arg;
+        iterable = second_arg
         if end == void {
-            begin = size;
+            begin = size
         }
     }
     else {
-        end      = second_arg;
-        iterable = args[0];
+        end      = second_arg
+        iterable = args[0]
     }
 
     if begin == void {
-        begin = 0;
+        begin = 0
     }
     if end == void {
-        end = size;
+        end = size
     }
     if begin < 0 {
-        begin += size;
+        begin += size
     }
     if end < 0 {
-        end += size;
+        end += size
     }
     if begin < 0 {
-        begin = 0;
+        begin = 0
     }
     if end > size {
-        end = size;
+        end = size
     }
     if end < begin {
-        end = begin;
+        end = begin
     }
 
     if typeof iterable != "buffer" {
-        iterable = new buffer(iterable.iterator());
+        iterable = new buffer(iterable.iterator())
     }
 
-    const new_size = this.size + iterable.size + begin - end;
+    const new_size = this.size + iterable.size + begin - end
     if new_size > size {
-        this.resize(new_size);
+        this.resize(new_size)
     }
     if end < size {
-        this.copy_buffer(begin + iterable.size, this, end);
+        this.copy_buffer(begin + iterable.size, this, end)
     }
     if new_size < size {
-        this.resize(new_size);
+        this.resize(new_size)
     }
 
     if iterable.size {
-        return this.copy_buffer(begin, iterable);
+        return this.copy_buffer(begin, iterable)
     }
     else {
-        return this;
+        return this
     }
-};
+}
 
 fun map(op, args...)
 {
-    assert typeof op == "function";
+    assert typeof op == "function"
 
     fun map_f(source)
     {
-        const transform = op;
+        const transform = op
         for var elem in source {
-            yield transform(elem);
+            yield transform(elem)
         }
     }
 
     if args.size > 0 {
-        return map_f(args[0]);
+        return map_f(args[0])
     }
     else {
-        return map_f;
+        return map_f
     }
 }
 
 fun filter(op, args...)
 {
-    assert typeof op == "function";
+    assert typeof op == "function"
 
     fun filter_f(source)
     {
-        const condition = op;
+        const condition = op
         for var elem in source {
             if condition(elem) {
-                yield elem;
+                yield elem
             }
         }
     }
 
     if args.size > 0 {
-        return filter_f(args[0]);
+        return filter_f(args[0])
     }
     else {
-        return filter_f;
+        return filter_f
     }
 }
 
 fun reduce(op, init, args...)
 {
-    assert typeof op == "function";
+    assert typeof op == "function"
 
     fun reduce_f(source)
     {
-        const fold  = op;
-        var   accum = init;
+        const fold  = op
+        var   accum = init
         for var elem in source {
-            accum = fold(accum, elem);
+            accum = fold(accum, elem)
         }
-        return accum;
+        return accum
     }
 
     if args.size > 0 {
-        return reduce_f(args[0]);
+        return reduce_f(args[0])
     }
     else {
-        return reduce_f;
+        return reduce_f
     }
 }
 
@@ -264,51 +264,51 @@ fun count(value, args...)
 {
     fun count_f(source)
     {
-        const val   = value;
-        var   count = 0;
+        const val   = value
+        var   count = 0
         for var elem in source {
             if elem == val {
-                count += 1;
+                count += 1
             }
         }
-        return count;
+        return count
     }
 
     if args.size > 0 {
-        return count_f(args[0]);
+        return count_f(args[0])
     }
     else {
-        return count_f;
+        return count_f
     }
 }
 
 object.prototype.map = fun(transform)
 {
-    return map(transform, this);
-};
+    return map(transform, this)
+}
 
 object.prototype.filter = fun(transform)
 {
-    return filter(transform, this);
-};
+    return filter(transform, this)
+}
 
 object.prototype.reduce = fun(transform, init)
 {
-    return reduce(transform, init, this);
-};
+    return reduce(transform, init, this)
+}
 
 object.prototype.count = fun(transform)
 {
-    return count(transform, this);
-};
+    return count(transform, this)
+}
 
 # TODO move to debug module
 fun backtrace
 {
     try {
-        throw void;
+        throw void
     }
     catch const e {
-        return e.backtrace[1:];
+        return e.backtrace[1:]
     }
 }
