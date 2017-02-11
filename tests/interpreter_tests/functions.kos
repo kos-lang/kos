@@ -280,7 +280,7 @@ do {
 do {
     fun gen(a)
     {
-        for ;; {
+        loop {
             a = yield a + 1
         }
     }
@@ -460,7 +460,7 @@ do {
 do {
     fun number(a)
     {
-        for (;;) {
+        loop {
             yield a
         }
     }
@@ -480,7 +480,7 @@ do {
     fun number(a)
     {
         const value = a
-        for (;;) {
+        loop {
             yield value
         }
     }

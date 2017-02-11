@@ -27,7 +27,7 @@ fun test_order
     {
         var expected = 1
         var v        = yield 0
-        for ;; {
+        loop {
             if v != expected {
                 print("unexpected value: \(v) (expected \(expected))\n")
             }
