@@ -63,7 +63,7 @@ file.prototype.read_lines = fun(args...)
     const buf  = new buffer
     var   pos  = 0
 
-    do {
+    repeat {
         this.read_some(gran, buf)
 
         if pos > 0 && buf[pos-1] == 13 {

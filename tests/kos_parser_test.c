@@ -38,7 +38,7 @@ static const char *const node_types[] = {
     "if",
     "try",
     "switch",
-    "do",
+    "repeat",
     "while",
     "for",
     "for_in",

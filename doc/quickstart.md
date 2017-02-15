@@ -190,10 +190,10 @@ Curly braces are also required in all the other control flow statements below.
     }
     # Prints: 42 32 22 12 2 (in consecutive lines)
 
-`do`..`while` loop:
+`repeat`..`while` loop:
 
     var a = 42
-    do {
+    repeat {
         lang.print(a, "\n")
         a -= 10
     } while a > 0
@@ -213,6 +213,17 @@ Curly braces are also required in all the other control flow statements below.
         lang.print(number, "\n")
     }
     # Prints: 1 2 4 (in consecutive lines)
+
+`loop` loop:
+
+    var i = 0
+    loop {
+        if i >= 5 {
+            break
+        }
+        lang.print(i, "\n")
+    }
+    # Prints: 0 1 2 3 4
 
 
 Modules

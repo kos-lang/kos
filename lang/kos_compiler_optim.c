@@ -449,9 +449,9 @@ _error:
     return error;
 }
 
-static int _do_stmt(struct _KOS_COMP_UNIT *program,
-                    struct _KOS_AST_NODE  *node,
-                    int                   *is_terminal)
+static int _repeat_stmt(struct _KOS_COMP_UNIT *program,
+                        struct _KOS_AST_NODE  *node,
+                        int                   *is_terminal)
 {
     int error = KOS_SUCCESS;
 
@@ -1504,8 +1504,8 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
         case NT_IF:
             error = _if_stmt(program, node, is_terminal);
             break;
-        case NT_DO:
-            error = _do_stmt(program, node, is_terminal);
+        case NT_REPEAT:
+            error = _repeat_stmt(program, node, is_terminal);
             break;
         case NT_WHILE:
             error = _while_stmt(program, node, is_terminal);

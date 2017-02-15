@@ -311,6 +311,7 @@ static const char *const keywords[] = {
     "private",
     "prototype",
     "public",
+    "repeat",
     "return",
     "set",
     "switch",

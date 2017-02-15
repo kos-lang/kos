@@ -1,9 +1,9 @@
-do {
+repeat {
     a();
 }
 while b || c;
 
-do {
+repeat {
     d();
 }
 while typeof e == "";
@@ -11,8 +11,8 @@ while typeof e == "";
 @ 0
 
 (scope 1 1
-    (do 1 1 do
-        (scope 1 4 {
+    (repeat 1 1 repeat
+        (scope 1 8 {
             (invocation 2 6 paren_open (identifier 2 5 a))
         )
         (operator 4 9 ||
@@ -20,8 +20,8 @@ while typeof e == "";
             (identifier 4 12 c)
         )
     )
-    (do 6 1 do
-        (scope 6 4 {
+    (repeat 6 1 repeat
+        (scope 6 8 {
             (invocation 7 6 paren_open (identifier 7 5 d))
         )
         (operator 9 16 ==
@@ -33,36 +33,36 @@ while typeof e == "";
 )
 
 @------------------------------------------------------------------------------
-do {} while true;
-do {} while (1);
+repeat {} while true;
+repeat {} while (1);
 
 @ 0
 
 (scope 1 1
-    (do 1 1 do
-        (scope 1 4 {)
-        (bool 1 13 true)
+    (repeat 1 1 repeat
+        (scope 1 8 {)
+        (bool 1 17 true)
     )
-    (do 2 1 do
-        (scope 2 4 {)
-        (number 2 14 1)
+    (repeat 2 1 repeat
+        (scope 2 8 {)
+        (number 2 18 1)
     )
 )
 
 @------------------------------------------------------------------------------
-do
+repeat
     a();
 while true; # Open curly brace expected
 
 @ 10 2 5
 
 @------------------------------------------------------------------------------
-do; while true; # Open curly brace expected
+repeat; while true; # Open curly brace expected
 
-@ 10 1 3
+@ 10 1 7
 
 @------------------------------------------------------------------------------
-do {
+repeat {
     a();
 }
 while; # Expression expected
@@ -70,16 +70,16 @@ while; # Expression expected
 @ 10 4 6
 
 @------------------------------------------------------------------------------
-do {} while _ = 1; # Semicolon expected
+repeat {} while _ = 1; # Semicolon expected
 
-@ 10 1 15
-
-@------------------------------------------------------------------------------
-do { } while const a = 1; # Expression expected
-
-@ 10 1 14
+@ 10 1 19
 
 @------------------------------------------------------------------------------
-do { } ; # 'while' expected
+repeat { } while const a = 1; # Expression expected
 
-@ 10 1 8
+@ 10 1 18
+
+@------------------------------------------------------------------------------
+repeat { } ; # 'while' expected
+
+@ 10 1 12

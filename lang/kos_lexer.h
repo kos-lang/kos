@@ -81,6 +81,7 @@ enum _KOS_KEYWORD_TYPE {
     KW_PRIVATE,
     KW_PROTOTYPE,
     KW_PUBLIC,
+    KW_REPEAT,
     KW_RETURN,
     KW_SET,
     KW_SWITCH,

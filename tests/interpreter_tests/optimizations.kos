@@ -279,13 +279,12 @@ fun check(function, registers, instructions, size)
 {
     fun unreachable_do(a)
     {
-        do {
+        repeat {
             return 10
             # unreachable
             const b = a + 1
             return b
-        }
-        while false
+        } while false
         # unreachable
         return 20
     }

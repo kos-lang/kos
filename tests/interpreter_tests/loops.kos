@@ -41,21 +41,19 @@ import lang.print
 
 {
     var a = 1
-    do {
+    repeat {
         a = a - 1
-    }
-    while a > -5
+    } while a > -5
     assert a == -5
 }
 
 {
     var a = 20
     var c = 0
-    do {
+    repeat {
         c = c + 1
         a = a - 3
-    }
-    while a > 0
+    } while a > 0
     assert a == -1
     assert c == 7
 }
@@ -175,7 +173,7 @@ import lang.print
 {
     var sum = 0
     var i   = 0
-    do {
+    repeat {
         i += 1
         if i == 2 {
             sum += 200 + i
@@ -189,8 +187,7 @@ import lang.print
             break
         }
         sum += 10
-    }
-    while i < 100
+    } while i < 100
 
     assert sum == 8247
 }
@@ -354,7 +351,7 @@ import lang.print
                     a += 'd:('
 
                     var c = 0
-                    do {
+                    repeat {
                         try {
                             c += 1
                             a += 'c=\(c), w:('
@@ -387,8 +384,7 @@ import lang.print
                             a += 'D'
                             break
                         }
-                    }
-                    while c < 100
+                    } while c < 100
 
                     a += '):d'
 
@@ -617,7 +613,7 @@ import lang.print
 {
     var i = 0
 
-    do {
+    repeat {
         try {
             if i == 5 {
                 throw void
@@ -627,8 +623,7 @@ import lang.print
         catch const e {
             break
         }
-    }
-    while i < 10
+    } while i < 10
 
     assert i == 5
 }

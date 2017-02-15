@@ -70,10 +70,9 @@ Variables follow scope.  They can only be accessed in the scope where they were
 declared or its inner scopes.
 
     var d = 1
-    do {           // Inner scope.
+    repeat {           // Inner scope.
         var e = d + 1
-    }
-    while false
+    } while false
     d = e + 1      // ERROR!!! Variable e was not declared in this scope.
 
 When variables are declared, they always must be assigned a value.

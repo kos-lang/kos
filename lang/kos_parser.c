@@ -2012,13 +2012,13 @@ _error:
     return error;
 }
 
-static int _do_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _repeat_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
     struct _KOS_AST_NODE *node = 0;
 
-    TRY(_new_node(parser, ret, NT_DO));
+    TRY(_new_node(parser, ret, NT_REPEAT));
 
     ++parser->allow_break;
 
@@ -2470,8 +2470,8 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
             case KW_LOOP:
                 error = _loop_stmt(parser, ret);
                 break;
-            case KW_DO:
-                error = _do_stmt(parser, ret);
+            case KW_REPEAT:
+                error = _repeat_stmt(parser, ret);
                 break;
             case KW_WHILE:
                 error = _while_stmt(parser, ret);

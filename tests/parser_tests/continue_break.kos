@@ -1,4 +1,4 @@
-do {
+repeat {
     if a() { break;    }
     else   { continue; }
 }
@@ -17,8 +17,8 @@ for (;;) {
 @ 0
 
 (scope 1 1
-    (do 1 1 do
-        (scope 1 4 {
+    (repeat 1 1 repeat
+        (scope 1 8 {
             (if 2 5 if
                 (invocation 2 9 paren_open (identifier 2 8 a))
                 (scope 2 12 { (break 2 14 break))

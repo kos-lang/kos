@@ -181,6 +181,7 @@ The following reserved keywords are defined:
 * `private` (reserved)
 * `prototype` (reserved)
 * `public` (reserved)
+* `repeat`
 * `return`
 * `set` (reserved)
 * `switch`
@@ -453,7 +454,7 @@ Statement
                 | WithStatement
                 | SwitchStatement
                 | LoopStatement
-                | DoWhileStatement
+                | RepeatWhileStatement
                 | WhileStatement
                 | ForStatement
                 | ContinueStatement
@@ -749,18 +750,18 @@ a loop.  The loop can be interrupted with `break` or `continue`.
     LoopStatement ::= "loop" CompoundStatement
 
 
-Do-while statement
+Repeat-while statement
 ------------------
 
-The do-while statement consists of a compound statement and a condition.
+The repeat-while statement consists of a compound statement and a condition.
 It executes the compound statement as long as the condition is truthy.
 The condition is evaluated after each iteration of the compound statement.
 
 The parentheses around the condition expression are optional - they are part
 of the expression.
 
-    DoWhileStatement ::= "do" CompoundStatement
-                         "while" RHSExpression OptSemicolon
+    RepeatWhileStatement ::= "repeat" CompoundStatement
+                             "while" RHSExpression OptSemicolon
 
 
 While statement
@@ -847,8 +848,8 @@ an exception is thrown.
 Continue statement
 ------------------
 
-The continue statement is legal only inside for, while or do-while loops.
-If used in the global scope or in a function outside of the loop
+The continue statement is legal only inside for, loop, while or repeat-while
+loops.  If used in the global scope or in a function outside of the loop
 statements, it will produce a compilation error.
 
 The statement causes a jump to the end of the compound statement of
@@ -860,8 +861,8 @@ the innermost loop when executed.
 Break statement
 ---------------
 
-The break statement is legal only inside for, while or do-while loops.
-If used in the global scope or in a function outside of the loop
+The break statement is legal only inside for, loop, while or repeat-while
+loops.  If used in the global scope or in a function outside of the loop
 statements, it will produce a compilation error.
 
 If used in a loop, the statement interrupts the loop as if it ended

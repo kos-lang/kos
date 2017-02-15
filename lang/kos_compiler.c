@@ -1847,8 +1847,8 @@ static struct _KOS_SCOPE *_push_try_scope(struct _KOS_COMP_UNIT *program)
     return prev_try_scope;
 }
 
-static int _do(struct _KOS_COMP_UNIT      *program,
-               const struct _KOS_AST_NODE *node)
+static int _repeat(struct _KOS_COMP_UNIT      *program,
+                   const struct _KOS_AST_NODE *node)
 {
     int                     error;
     int                     jump_instr_offs;
@@ -4594,8 +4594,8 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
         case NT_ASSERT:
             error = _assert(program, node);
             break;
-        case NT_DO:
-            error = _do(program, node);
+        case NT_REPEAT:
+            error = _repeat(program, node);
             break;
         case NT_WHILE:
             error = _while(program, node);
