@@ -20,7 +20,8 @@
 # IN THE SOFTWARE.
 #
 import lang.print
-{
+
+do {
     var a = 1
     while a < 10 {
         a = a + 1
@@ -28,7 +29,7 @@ import lang.print
     assert a == 10
 }
 
-{
+do {
     var a = 0
     var c = 0
     while a < 100 {
@@ -39,7 +40,7 @@ import lang.print
     assert c == 17
 }
 
-{
+do {
     var a = 1
     repeat {
         a = a - 1
@@ -47,7 +48,7 @@ import lang.print
     assert a == -5
 }
 
-{
+do {
     var a = 20
     var c = 0
     repeat {
@@ -58,7 +59,7 @@ import lang.print
     assert c == 7
 }
 
-{
+do {
     var c = 0
     for var i = 0; i < 2; i += 1 {
         c += 1
@@ -66,7 +67,7 @@ import lang.print
     assert c == 2
 }
 
-{
+do {
     var c = 0
     for const step1 = 2,
         const step2 = 3,
@@ -83,13 +84,13 @@ import lang.print
     assert c == 2
 }
 
-{
+do {
     var i = 0
     for ; i < 10; { i+=1 }
     assert i == 10
 }
 
-{
+do {
     var i = 0
     fun inc
     {
@@ -104,7 +105,7 @@ import lang.print
     assert x == 11
 }
 
-{
+do {
     var sum = 0
     for var val in [3, 10, 700, 8000] {
         sum += val
@@ -112,7 +113,7 @@ import lang.print
     assert sum == 8713
 }
 
-{
+do {
     fun values(a, b, c)
     {
         yield a
@@ -127,7 +128,7 @@ import lang.print
     assert sum == 826
 }
 
-{
+do {
     var   sum = 0
     const obj = { a: 9000, b: 7, c: 50, d: 300 }
     for var key in obj {
@@ -139,7 +140,7 @@ import lang.print
     assert sum == 9357
 }
 
-{
+do {
     for var x in [] {
         throw "Unexpected iteration"
     }
@@ -155,7 +156,7 @@ import lang.print
     }
 }
 
-{
+do {
     var count = 0
     var sum   = 0
     var array = [1, 2, 3]
@@ -170,7 +171,7 @@ import lang.print
     assert sum   == 10
 }
 
-{
+do {
     var sum = 0
     var i   = 0
     repeat {
@@ -192,7 +193,7 @@ import lang.print
     assert sum == 8247
 }
 
-{
+do {
     var sum = 0
     var i   = 0
     while i < 100 {
@@ -214,7 +215,7 @@ import lang.print
     assert sum == 9437
 }
 
-{
+do {
     var sum = 0
     for var i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {
         if i == 2 {
@@ -234,7 +235,7 @@ import lang.print
     assert sum == 6157
 }
 
-{
+do {
     var sum = 0
     for var i = 1; i < 100; i += 1 {
         if i == 3 {
@@ -254,7 +255,7 @@ import lang.print
     assert sum == 7569
 }
 
-{
+do {
     var status = 0
 
     try {
@@ -275,7 +276,7 @@ import lang.print
     assert status == 10
 }
 
-{
+do {
     var status = 0
 
     try {
@@ -300,7 +301,7 @@ import lang.print
     assert status == 7002
 }
 
-{
+do {
     var a = 0
     var b = 0
     try {
@@ -334,7 +335,7 @@ import lang.print
     assert b == 123
 }
 
-{
+do {
     var a = ''
     try {
         a += 'a'
@@ -410,7 +411,7 @@ import lang.print
     assert a == "af:(c[d:(c=1, w:(c=4, c=7, c=10W):w;D):d - *m[d:(c=1, w:(c=4, c=7, c=10W):w;D):d - *e[F_):f"
 }
 
-{
+do {
     fun throw_from_loop(x)
     {
         try {
@@ -436,7 +437,7 @@ import lang.print
     assert throw_from_loop(20) == 25
 }
 
-{
+do {
     var i = 0
     var j = 0
     for ; i < 100; i += 1 {
@@ -450,7 +451,7 @@ import lang.print
     assert j == 100
 }
 
-{
+do {
     var a = ""
 
     fun try_break
@@ -481,7 +482,7 @@ import lang.print
     assert a == '12a3b3c3456'
 }
 
-{
+do {
     var a = ''
 
     fun try_break
@@ -511,7 +512,7 @@ import lang.print
     assert a == 'A0B1BBCD'
 }
 
-{
+do {
     var a = ''
 
     try {
@@ -540,7 +541,7 @@ import lang.print
     assert a == 'a0 b0 de a1 b1 cde a2 b2 de '
 }
 
-{
+do {
     var fail1 = true
     var fail2 = true
 
@@ -567,7 +568,7 @@ import lang.print
         }
     }
 
-    {
+    do {
         defer {
             fail2 = false
         }
@@ -578,7 +579,7 @@ import lang.print
     assert ! fail2
 }
 
-{
+do {
     var i = 0
 
     while i < 10 {
@@ -596,7 +597,7 @@ import lang.print
     assert i == 10
 }
 
-{
+do {
     var i = 0
 
     for i = 0; i < 10; i += 1 {
@@ -610,7 +611,7 @@ import lang.print
     assert i == 10
 }
 
-{
+do {
     var i = 0
 
     repeat {
@@ -628,7 +629,7 @@ import lang.print
     assert i == 5
 }
 
-{
+do {
     var a = ''
 
     for var c in ['a', 'b', 'c', 'd'] {
@@ -646,7 +647,7 @@ import lang.print
     assert a == 'acd'
 }
 
-{
+do {
     var a = ''
 
     for var c in "xyza" {
@@ -658,7 +659,7 @@ import lang.print
     assert a == "xyza"
 }
 
-{
+do {
     var count = 0
     for var v in 4 {
         assert typeof v == "integer"
@@ -668,7 +669,7 @@ import lang.print
     assert count == 1
 }
 
-{
+do {
     var count = 0
     for var v in 8.5 {
         assert typeof v == "float"
@@ -678,7 +679,7 @@ import lang.print
     assert count == 1
 }
 
-{
+do {
     var count = 0
     for var v in false {
         assert typeof v == "boolean"
@@ -688,13 +689,13 @@ import lang.print
     assert count == 1
 }
 
-{
+do {
     for var v in void {
         throw "unexpected iteration"
     }
 }
 
-{
+do {
     var i = 0
     loop {
         i += 1

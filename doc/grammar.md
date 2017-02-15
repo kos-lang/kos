@@ -448,6 +448,7 @@ Statement
     Statement ::= EmptyStatement
                 | ExpressionStatement
                 | FunctionDeclaration
+                | DoStatement
                 | IfStatement
                 | TryStatement
                 | DeferStatement
@@ -567,6 +568,16 @@ Argument variables are assignable inside the function body.
     Parameter           ::= Identifier
 
     ListParameter       ::= Identifier "..."
+
+
+Do statement
+------------
+
+The `do` statement can be used between other statements inside a compound
+statement to create an individual sub-scope.  Variables declared inside this
+internal scope will not be visible outside of it.
+
+    DoStatement ::= "do" CompoundStatement
 
 
 If statement

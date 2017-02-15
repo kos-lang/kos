@@ -31,21 +31,21 @@ fun expect_fail(function)
     assert failed
 }
 
-{
+do {
     const str = "\0a\x0a\x{0}\x{80}\x{ffFFff}"
 }
 
-{
+do {
     const str = "\xff"
     assert λ->("\X{0FF}")() == str
 }
 
-{
+do {
     const str = "abc\(123)def"
     assert str == "abc123def"
 }
 
-{
+do {
     const a = 10
     const b = 200
     const c = 3000
@@ -55,7 +55,7 @@ fun expect_fail(function)
     assert str == "e1:5000 e2:3210 t:true v:void"
 }
 
-{
+do {
     const str = '"\(
         1 + 2
         )" "\(
@@ -64,17 +64,17 @@ fun expect_fail(function)
     assert str == '"3" "7"'
 }
 
-{
+do {
     const str = '\( "\( '\( "\( 123 )" )' )" )'
     assert str == "123"
 }
 
-{
+do {
     const s = ""
     assert s.size == 0
 }
 
-{
+do {
     const s = "abcdefgh"
     assert s[0]  == "a"
     assert s[1]  == "b"
@@ -112,7 +112,7 @@ fun expect_fail(function)
     assert none.size == 0
 }
 
-{
+do {
     const s  = "ABCDEF"
     const _0 = 0
     const _3 = 3
@@ -152,7 +152,7 @@ fun expect_fail(function)
     assert s[10:20].size == 0
 }
 
-{
+do {
     const a = ['m', 'n', 'o', 'p', 'q']
     var   i = 0
     for var c in "mnopq" {
@@ -164,20 +164,20 @@ fun expect_fail(function)
     }
 }
 
-{
+do {
     var a = 1
     a = "\(a)"
     assert a == "1"
 }
 
-{
+do {
     const a = λ->("ab")()
     const b = "abc\x{100}"
     assert a < b
 }
 
 # These looks like escape sequences, but they are not.  Used e.g. in regexes.
-{
+do {
     const s = "\\(\w\)"
     assert s.size == 6
     assert s[0]   == '\\'

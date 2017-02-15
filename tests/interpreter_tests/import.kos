@@ -22,7 +22,7 @@
 import lang.array
 import lang.range
 
-{
+do {
     const a = new array(range(10))
 
     assert typeof a == "array"

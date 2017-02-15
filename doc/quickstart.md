@@ -352,7 +352,7 @@ or an exception occurs inside it.
 
 Another way to clean up explicitly is to use the `defer` statement:
 
-    {
+    do { # Start a new, inner scope
         const f = file.open("myfile")
         defer {
             f.close() # This will be executed at the end of current scope

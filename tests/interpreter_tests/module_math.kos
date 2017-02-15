@@ -35,13 +35,13 @@ fun expect_fail(function)
 }
 
 # math constants
-{
+do {
     assert math.pi == 3.141592653589793238
     assert math.e  == 2.718281828459045235
 }
 
 # math.ceil
-{
+do {
     assert math.ceil(4)                  == 4
     assert math.ceil(0x4000000000000000) == 0x4000000000000000
     assert math.ceil(math.pi)            == 4
@@ -49,7 +49,7 @@ fun expect_fail(function)
 }
 
 # math.floor
-{
+do {
     assert math.floor(4)                  == 4
     assert math.floor(0x4000000000000000) == 0x4000000000000000
     assert math.floor(math.pi)            == 3
@@ -57,7 +57,7 @@ fun expect_fail(function)
 }
 
 # math.abs
-{
+do {
     assert math.abs(-10)  == 10
     assert math.abs(10)   == 10
     assert math.abs(-5.6) == 5.6
@@ -73,7 +73,7 @@ fun expect_fail(function)
 }
 
 # math.sqrt
-{
+do {
     assert math.sqrt(16)                 == 4
     assert math.sqrt(49.0)               == 7
     assert math.sqrt(0x4000000000000000) == 0x80000000
@@ -83,7 +83,7 @@ fun expect_fail(function)
 }
 
 # math.infinity
-{
+do {
     const inf = λ->(math.infinity)()
     assert inf > 0
     assert inf > 0x4000000000000000
@@ -95,7 +95,7 @@ fun expect_fail(function)
 }
 
 # math.nan
-{
+do {
     const nan = λ->(math.nan)()
     assert nan != 0
     assert nan != 2
@@ -112,7 +112,7 @@ fun expect_fail(function)
 }
 
 # math.is_infinity
-{
+do {
     assert ! math.is_infinity(0)
     assert ! math.is_infinity(0.0)
     assert ! math.is_infinity(0x8000000000000000)
@@ -126,7 +126,7 @@ fun expect_fail(function)
 }
 
 # math.is_nan
-{
+do {
     assert ! math.is_nan(0)
     assert ! math.is_nan(0.0)
     assert ! math.is_nan(0x8000000000000000)
@@ -140,7 +140,7 @@ fun expect_fail(function)
 }
 
 # math.exp
-{
+do {
     expect_fail(λ->(math.exp(void)))
     expect_fail(λ->(math.exp(false)))
     expect_fail(λ->(math.exp({})))
@@ -154,7 +154,7 @@ fun expect_fail(function)
 }
 
 # math.expm1
-{
+do {
     expect_fail(λ->(math.expm1(void)))
     expect_fail(λ->(math.expm1(false)))
     expect_fail(λ->(math.expm1({})))
@@ -168,7 +168,7 @@ fun expect_fail(function)
 }
 
 # math.pow
-{
+do {
     expect_fail(λ->(math.pow(1, void)))
     expect_fail(λ->(math.pow(1, false)))
     expect_fail(λ->(math.pow(1, {})))

@@ -46,49 +46,49 @@ assert typeof λ->(0) == "function"
 
 ##############################################################################
 # +
-{
+do {
     const a = 1
     const b = 2
     const c = a + b
     assert c == 3
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x7FFFFFFFFFFFFFFE
     const b = 1
     const c = a + b
     assert c == 0x7FFFFFFFFFFFFFFF
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x7FFFFFFFFFFFFFFF
     const b = 2
     const c = a + b
     assert c == -0x7FFFFFFFFFFFFFFF
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x7FFFFFFFFFFFFFFF
     const b = 1
     const c = a + b
     assert c == 0x8000000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = 1
     const b = 0.25
     const c = a + b
     assert c == 1.25
     assert typeof c == "float"
 }
-{
+do {
     const a = 0.5
     const b = 2
     const c = a + b
     assert c == 2.5
     assert typeof c == "float"
 }
-{
+do {
     const a = "abc"
     const b = "def"
     const c = a + b
@@ -97,7 +97,7 @@ assert typeof λ->(0) == "function"
     assert a == "abc"
     assert b == "def"
 }
-{
+do {
     const a = λ->(1)()
     const b = +(2 + a)
     assert b == 3
@@ -121,28 +121,28 @@ expect_fail(fun {
 
 ##############################################################################
 # -
-{
+do {
     const a = 1
     const b = 2
     const c = a - b
     assert c == -1
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x8000000000000000
     const b = 1
     const c = a - b
     assert c == 0x7FFFFFFFFFFFFFFF
     assert typeof c == "integer"
 }
-{
+do {
     const a = 3
     const b = 2.0
     const c = a - b
     assert c == 1
     assert typeof c == "float"
 }
-{
+do {
     const a = 3.0
     const b = 2
     const c = a - b
@@ -151,7 +151,7 @@ expect_fail(fun {
     assert a == 3
     assert b == 2
 }
-{
+do {
     const a = λ->(1)()
     const b = -(a + 2)
     assert b == -3
@@ -159,7 +159,7 @@ expect_fail(fun {
 }
 
 # positive zero equals negative zero
-{
+do {
     const positive = 0.0
     assert typeof positive == "float"
 
@@ -185,21 +185,21 @@ expect_fail(fun {
 
 ##############################################################################
 # *
-{
+do {
     const a = 10
     const b = 2
     const c = a - b * 3
     assert c == 4
     assert typeof c == "integer"
 }
-{
+do {
     const a = 1.0
     const b = 2
     const c = a * b
     assert c == 2
     assert typeof c == "float"
 }
-{
+do {
     const a = 1
     const b = 2.0
     const c = a * b
@@ -216,14 +216,14 @@ expect_fail(fun {
 
 ##############################################################################
 # /
-{
+do {
     const a = 10
     const b = 1
     const c = a / 2 + b
     assert c == 6
     assert typeof c == "integer"
 }
-{
+do {
     const a = 10
     const b = 3
     const c = a / b
@@ -232,21 +232,21 @@ expect_fail(fun {
     assert a == 10
     assert b == 3
 }
-{
+do {
     const a = 10
     const b = 4.0
     const c = a / b
     assert c == 2.5
     assert typeof c == "float"
 }
-{
+do {
     const a = 10.0
     const b = 4
     const c = a / b
     assert c == 2.5
     assert typeof c == "float"
 }
-{
+do {
     const a  = 10
     const b  = λ->(0)()
     var   ok = false
@@ -258,7 +258,7 @@ expect_fail(fun {
     }
     assert ok
 }
-{
+do {
     const a  = 10.0
     const b  = λ->(0)()
     var   ok = false
@@ -270,7 +270,7 @@ expect_fail(fun {
     }
     assert ok
 }
-{
+do {
     const a  = 10
     const b  = λ->(0.0)()
     var   ok = false
@@ -282,7 +282,7 @@ expect_fail(fun {
     }
     assert ok
 }
-{
+do {
     const a  = 1.0
     const b  = λ->(-0.0)()
     var   ok = false
@@ -297,14 +297,14 @@ expect_fail(fun {
 
 ##############################################################################
 # %
-{
+do {
     const a = 10
     const b = 4
     const c = a % b
     assert c == 2
     assert typeof c == "integer"
 }
-{
+do {
     const a = 10
     const b = 4.0
     const c = a % b
@@ -313,14 +313,14 @@ expect_fail(fun {
     assert a == 10
     assert b == 4
 }
-{
+do {
     const a = 10.0
     const b = 4
     const c = a % b
     assert c == 2
     assert typeof c == "float"
 }
-{
+do {
     const a  = 10
     const b  = λ->(0)()
     var   ok = false
@@ -332,7 +332,7 @@ expect_fail(fun {
     }
     assert ok
 }
-{
+do {
     const a  = 10.0
     const b  = λ->(0)()
     var   ok = false
@@ -344,7 +344,7 @@ expect_fail(fun {
     }
     assert ok
 }
-{
+do {
     const a  = 10
     const b  = λ->(0.0)()
     var   ok = false
@@ -356,7 +356,7 @@ expect_fail(fun {
     }
     assert ok
 }
-{
+do {
     const a  = 1.0
     const b  = λ->(-0.0)()
     var   ok = false
@@ -368,48 +368,48 @@ expect_fail(fun {
     }
     assert ok
 }
-{
+do {
     const a = -1e-100
     const b = 1e100
     const c = a % b
     assert c == a
 }
-{
+do {
     const a = λ->(-1e-100)()
     const b = 1e100
     const c = a % b
     assert c == a
 }
-{
+do {
     const a = 5.0 % -4.0
     assert a == 1
 
     const b = -5.0 % 4.0
     assert b == -1
 }
-{
+do {
     const a = λ->(5.0)()
     const b = a % -4.0
     assert b == 1
 }
-{
+do {
     const a = λ->(-5.0)()
     const b = a % 4.0
     assert b == -1
 }
-{
+do {
     const a = 5 % -4
     assert a == 1
 
     const b = -5 % 4
     assert b == -1
 }
-{
+do {
     const a = λ->(5)()
     const b = a % -4
     assert b == 1
 }
-{
+do {
     const a = λ->(-5)()
     const b = a % 4
     assert b == -1
@@ -417,7 +417,7 @@ expect_fail(fun {
 
 ##############################################################################
 # + * ()
-{
+do {
     const a = 10
     const b = 1
     const c = (a + 1) * 2 + 3 * b
@@ -425,7 +425,7 @@ expect_fail(fun {
     assert typeof c == "integer"
 }
 
-{
+do {
     var a = 2
     a = (a + a) * (a + 1) + a
     assert typeof a == "integer"
@@ -434,13 +434,13 @@ expect_fail(fun {
 
 ##############################################################################
 # / *
-{
+do {
     const a = 10
     const c = a / 2 * 3
     assert c == 15
     assert typeof c == "integer"
 }
-{
+do {
     const a = 10
     const c = a / (2 * 3)
     assert c == 1
@@ -449,7 +449,7 @@ expect_fail(fun {
 
 ##############################################################################
 # mixed types
-{
+do {
     const a = 2.0 * λ->(0x4000000000000000)()
     const b = λ->(0x4000000000000000)()
     const c = 0x4000000000000000
@@ -457,28 +457,28 @@ expect_fail(fun {
     assert typeof d == "float"
     assert d        == 3
 }
-{
+do {
     const a = 2.0 * λ->(0x4000000000000000)()
     const b = 0x4000000000000000
     const c = a - b
     assert typeof c == "float"
     assert 0x4000000000000000 == c
 }
-{
+do {
     const a = λ->(42)()
     const b = 0x4000000000000000
     const c = a % b
     assert typeof c == "integer"
     assert c        == 42
 }
-{
+do {
     const a = λ->(123.25)()
     const b = 0x4000000000000000
     const c = a % b
     assert typeof c == "float"
     assert c        == 123.25
 }
-{
+do {
     const a = λ->(0x4000000000000005)()
     const b = 16
     const c = a % b
@@ -488,7 +488,7 @@ expect_fail(fun {
 
 ##############################################################################
 # ||
-{
+do {
     const _void  = void
     const _false = false
     const _true  = true
@@ -502,7 +502,7 @@ expect_fail(fun {
     assert _true  == true
 }
 
-{
+do {
     const a = false
     const b = true
     assert a || b
@@ -510,7 +510,7 @@ expect_fail(fun {
     assert b
 }
 
-{
+do {
     const a = true
     const b = false
     assert a || b
@@ -518,7 +518,7 @@ expect_fail(fun {
     assert ! b
 }
 
-{
+do {
     fun invoked(status, ret)
     {
         assert status
@@ -533,7 +533,7 @@ expect_fail(fun {
     assert c == false
 }
 
-{
+do {
     var   a = 0
     const b = λ->(42)()
     a = a || b
@@ -542,7 +542,7 @@ expect_fail(fun {
 
 ##############################################################################
 # &&
-{
+do {
     const _false = false
     const _true  = true
     assert (_true && "xyz") == "xyz"
@@ -551,7 +551,7 @@ expect_fail(fun {
     assert _true  == true
 }
 
-{
+do {
     fun invoked(status, ret)
     {
         assert status
@@ -570,7 +570,7 @@ expect_fail(fun {
 
 ##############################################################################
 # ?:
-{
+do {
     const _false = false
     const _true  = true
     assert (_true ? 1 : 2) == 1
@@ -579,7 +579,7 @@ expect_fail(fun {
     assert _true  == true
 }
 
-{
+do {
     const _false = false
     const a      = "a"
     const b      = "b"
@@ -590,7 +590,7 @@ expect_fail(fun {
     assert b      == "b"
 }
 
-{
+do {
     fun invoked(status, ret)
     {
         assert status
@@ -606,7 +606,7 @@ expect_fail(fun {
 
 ##############################################################################
 # & | ^ ~
-{
+do {
     const a = 0x101
     const b = 0x011
     const c = a ^ b
@@ -615,21 +615,21 @@ expect_fail(fun {
     assert a == 0x101
     assert b == 0x011
 }
-{
+do {
     const a = 0x8F00000000000000
     const b = 0xC0F0000000000000
     const c = a ^ b
     assert c == 0x4FF0000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = 6.5
     const b = 3.2
     const c = a ^ b
     assert c == 5
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x101
     const b = 0x011
     const c = a | b
@@ -638,27 +638,27 @@ expect_fail(fun {
     assert a == 0x101
     assert b == 0x011
 }
-{
+do {
     const a = 1.5
     const b = -15.2
     const c = a | b
     assert c == 0xFFFFFFFFFFFFFFF1
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x4
     const b = -16
     const c = a | b
     assert c == 0xFFFFFFFFFFFFFFF4
     assert typeof c == "integer"
 }
-{
+do {
     const a = λ->(8)()
     const b = 10
     const c = a | b
     assert c == 10
 }
-{
+do {
     const a = 0x1001
     const b = 0x1100
     const c = a & b
@@ -667,40 +667,40 @@ expect_fail(fun {
     assert a == 0x1001
     assert b == 0x1100
 }
-{
+do {
     const a = -2
     const b = 0xF00000000000000F
     const c = a & b
     assert c == 0xF00000000000000E
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x100
     const b = -16.2
     const c = a & b
     assert c == 0x100
     assert typeof c == "integer"
 }
-{
+do {
     const a = -2
     const c = ~a
     assert c == 1
     assert typeof c == "integer"
 }
-{
+do {
     const a = 1.111
     const c = ~a
     assert c == -2
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0B10000000000000000000000000000001
     const b = 0b11111111111111111111111111111111
     const c = a ^ b
     assert typeof c == "integer"
     assert c        == 0x7FFFFFFE
 }
-{
+do {
     var a = λ->(0xFFFFFFFFFFFFFFFE)()
     a = ~a
     assert a == 1
@@ -708,29 +708,29 @@ expect_fail(fun {
 
 ##############################################################################
 # !
-{
+do {
     const a = false
     const c = ! a
     assert c == true
     assert a == false
 }
-{
+do {
     const a = true
     const c = ! a
     assert c == false
 }
-{
+do {
     const a = 0
     const c = ! a
     assert c == true
     assert a == 0
 }
-{
+do {
     const a = 0e0
     const c = ! a
     assert c == true
 }
-{
+do {
     const a = 10
     const c = ! a
     assert c == false
@@ -738,7 +738,7 @@ expect_fail(fun {
 
 ##############################################################################
 # <<
-{
+do {
     const a = 1
     const b = 3
     const c = a << b
@@ -747,98 +747,98 @@ expect_fail(fun {
     assert a == 1
     assert b == 3
 }
-{
+do {
     const a = 0x1000000000000000
     const b = 3
     const c = a << b
     assert c == 0x8000000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = 1
     const b = 63
     const c = a << b
     assert c == 0x8000000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x1000000000000000
     const b = 4
     const c = a << b
     assert c == 0
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x101
     const b = 64
     const c = a << b
     assert c == 0
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x101
     const b = -1
     const c = a << b
     assert c == 0x80
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x8000000000000000
     const b = -15
     const c = a << b
     assert c == 0xFFFF000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = λ->(0x8000000000000000)()
     const b = -15
     const c = a << b
     assert c == 0xFFFF000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x8000000000000000
     const b = -64
     const c = a << b
     assert c == -1
     assert typeof c == "integer"
 }
-{
+do {
     const a = λ->(0x8000000000000000)()
     const b = -64
     const c = a << b
     assert c == -1
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x4000000000000000
     const b = -62
     const c = a << b
     assert c == 1
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x4000000000000000
     const b = -64
     const c = a << b
     assert c == 0
     assert typeof c == "integer"
 }
-{
+do {
     const a = 3.01
     const b = 1.01
     const c = a << b
     assert c == 6
     assert typeof c == "integer"
 }
-{
+do {
     const a = 3.99
     const b = 1.99
     const c = a << b
     assert c == 6
     assert typeof c == "integer"
 }
-{
+do {
     const a = -2.1
     const b = 1.99
     const c = a << b
@@ -848,7 +848,7 @@ expect_fail(fun {
 
 ##############################################################################
 # >>
-{
+do {
     const a = 16
     const b = 2
     const c = a >> b
@@ -857,70 +857,70 @@ expect_fail(fun {
     assert a == 16
     assert b == 2
 }
-{
+do {
     const a = 0x8800000000000000
     const b = 4
     const c = a >> b
     assert c == 0xF880000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x8000000000000000
     const b = 62
     const c = a >> b
     assert c == -2
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x8000000000000000
     const b = 63
     const c = a >> b
     assert c == -1
     assert typeof c == "integer"
 }
-{
+do {
     const a = 0x8000000000000000
     const b = 64
     const c = a >> b
     assert c == -1
     assert typeof c == "integer"
 }
-{
+do {
     const a = λ->(0x8000000000000000)()
     const b = 64
     const c = a >> b
     assert c == -1
     assert typeof c == "integer"
 }
-{
+do {
     const a = 1
     const b = -62
     const c = a >> b
     assert c == 0x4000000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = λ->(1)()
     const b = -62
     const c = a >> b
     assert c == 0x4000000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = 1
     const b = -63
     const c = a >> b
     assert c == 0x8000000000000000
     assert typeof c == "integer"
 }
-{
+do {
     const a = 1
     const b = -64
     const c = a >> b
     assert c == 0
     assert typeof c == "integer"
 }
-{
+do {
     const a = 6.5
     const b = 1.5
     const c = a >> b
@@ -930,7 +930,7 @@ expect_fail(fun {
 
 ##############################################################################
 # >>>
-{
+do {
     const a = 0x8001000000000000
     const b = 48
     const c = a >>> b
@@ -939,21 +939,21 @@ expect_fail(fun {
     assert a == 0x8001000000000000
     assert b == 48
 }
-{
+do {
     const a = 0x8000000000000000
     const b = 64
     const c = a >>> b
     assert c == 0
     assert typeof c == "integer"
 }
-{
+do {
     const a = λ->(0x8000000000000000)()
     const b = 64
     const c = a >>> b
     assert c == 0
     assert typeof c == "integer"
 }
-{
+do {
     const a = λ->(0x8000000000000001)()
     const b = -1
     const c = a >>> b
@@ -963,7 +963,7 @@ expect_fail(fun {
 
 ##############################################################################
 # ==, !=
-{
+do {
     var different_values = [ void, false, true, 0, 1, -1, "", "0", [], [0], {}, {"0":0} ]
     const len = different_values.size
     for var y = 0; y < len; y += 1 {
@@ -979,7 +979,7 @@ expect_fail(fun {
     }
 }
 
-{
+do {
     const a = 1 + 2
     const b = 4 - 1
     assert a == b
@@ -987,7 +987,7 @@ expect_fail(fun {
     assert b == 3
 }
 
-{
+do {
     const a = 5 + 2
     const b = 10 - 1
     assert a != b
@@ -997,7 +997,7 @@ expect_fail(fun {
 
 ##############################################################################
 # ==
-{
+do {
     assert 2     == λ->(2)()
     assert 3.0   == λ->(3)()
     assert 4.0   == λ->(4.0)()
@@ -1015,7 +1015,7 @@ expect_fail(fun {
 
 ##############################################################################
 # !=
-{
+do {
     assert 2     != λ->(3)()
     assert 3.0   != λ->(4)()
     assert 4.0   != λ->(5.0)()
@@ -1028,7 +1028,7 @@ expect_fail(fun {
 
 ##############################################################################
 # <
-{
+do {
     assert 1     < λ->(2)()
     assert 3.0   < λ->(4)()
     assert 5     < λ->(6.0)()
@@ -1038,7 +1038,7 @@ expect_fail(fun {
 
 ##############################################################################
 # <=
-{
+do {
     assert 1     <= λ->(2)()
     assert 3.0   <= λ->(4)()
     assert 5     <= λ->(6.0)()
@@ -1052,7 +1052,7 @@ expect_fail(fun {
 
 ##############################################################################
 # >
-{
+do {
     assert 2     > λ->(1)()
     assert 4.0   > λ->(3)()
     assert 6     > λ->(5.0)()
@@ -1062,7 +1062,7 @@ expect_fail(fun {
 
 ##############################################################################
 # >=
-{
+do {
     assert 2     >= λ->(1)()
     assert 4.0   >= λ->(3)()
     assert 6     >= λ->(5.0)()
@@ -1076,7 +1076,7 @@ expect_fail(fun {
 
 ##############################################################################
 # if, !
-{
+do {
     var true_values  = [ true, 1, -1, 0x8000000000000000, "", "0", "false", [], [false], {} ]
     const len = true_values.size
     for var i = 0; i < len; i+= 1 {
@@ -1101,7 +1101,7 @@ expect_fail(fun {
 
 ##############################################################################
 # +=
-{
+do {
     var   a = 1
     const b = 2
     a += b
@@ -1109,35 +1109,35 @@ expect_fail(fun {
     assert typeof a == "integer"
     assert b == 2
 }
-{
+do {
     var   a = 0x7FFFFFFF
     const b = 1
     a += b
     assert a == 0x80000000
     assert typeof a == "integer"
 }
-{
+do {
     var   a = -1
     const b = 1.0
     a += b
     assert a == 0
     assert typeof a == "float"
 }
-{
+do {
     var   a = 20.0
     const b = -1
     a += b
     assert a == 19
     assert typeof a == "float"
 }
-{
+do {
     var   a = "abc"
     const b = "xyz\x{FFFF}"
     a += b
     assert a == "abcxyz￿"
     assert typeof a == "string"
 }
-{
+do {
     const o = { b: 1 }
     const p = "b"
     o.b += 2
@@ -1153,7 +1153,7 @@ expect_fail(fun {
 
 ##############################################################################
 # -=
-{
+do {
     var   a = 1
     const b = 2
     a -= b
@@ -1161,21 +1161,21 @@ expect_fail(fun {
     assert typeof a == "integer"
     assert b == 2
 }
-{
+do {
     var   a = 0x7FFFFFFF
     const b = -1
     a -= b
     assert a == 0x80000000
     assert typeof a == "integer"
 }
-{
+do {
     var   a = -1
     const b = 1.0
     a -= b
     assert a == -2
     assert typeof a == "float"
 }
-{
+do {
     var   a = 20.0
     const b = -1
     a -= b
@@ -1187,7 +1187,7 @@ expect_fail(fun {
     const b = λ->("xyz")()
     a -= b
 })
-{
+do {
     const o = { b: 8 }
     const p = "b"
     o.b -= 2
@@ -1203,7 +1203,7 @@ expect_fail(fun {
 
 ##############################################################################
 # *=
-{
+do {
     var   a = 7
     const b = -5
     a *= b
@@ -1215,7 +1215,7 @@ expect_fail(fun {
     var a = "x"
     a *= 5
 })
-{
+do {
     const o = { b: 3 }
     const p = "b"
     o.b *= 5
@@ -1231,7 +1231,7 @@ expect_fail(fun {
 
 ##############################################################################
 # /=
-{
+do {
     var   a = 10
     const b = 3
     a /= b
@@ -1239,7 +1239,7 @@ expect_fail(fun {
     assert typeof a == "integer"
     assert b == 3
 }
-{
+do {
     var   a = 10
     const b = 4.0
     a /= b
@@ -1249,7 +1249,7 @@ expect_fail(fun {
 
 ##############################################################################
 # %=
-{
+do {
     var   a = 10
     const b = 3
     a %= b
@@ -1257,7 +1257,7 @@ expect_fail(fun {
     assert typeof a == "integer"
     assert b == 3
 }
-{
+do {
     var   a = 10
     const b = 3.0
     a %= b
@@ -1267,7 +1267,7 @@ expect_fail(fun {
 
 ##############################################################################
 # &=
-{
+do {
     var   a = 0xABCB
     const b = 15
     a &= b
@@ -1278,7 +1278,7 @@ expect_fail(fun {
 
 ##############################################################################
 # |=
-{
+do {
     var   a = 1
     const b = 16.1
     a |= b
@@ -1289,7 +1289,7 @@ expect_fail(fun {
 
 ##############################################################################
 # ^=
-{
+do {
     var   a = 1.1
     const b = 3
     a ^= b
@@ -1300,7 +1300,7 @@ expect_fail(fun {
 
 ##############################################################################
 # <<=
-{
+do {
     var a = 1.1
     a <<= 10
     assert a == 1024
@@ -1309,13 +1309,13 @@ expect_fail(fun {
 
 ##############################################################################
 # >>=
-{
+do {
     var a = 1024*1024
     a >>= 10
     assert a == 1024
     assert typeof a == "integer"
 }
-{
+do {
     var a = 0xFFFF_FFFF_0000_0000
     a >>= 17
     assert a == 0xFFFF_FFFF_FFFF_8000
@@ -1324,7 +1324,7 @@ expect_fail(fun {
 
 ##############################################################################
 # >>>=
-{
+do {
     var a = -1
     a >>>= 32
     assert a == 0xFFFFFFFF
@@ -1333,7 +1333,7 @@ expect_fail(fun {
 
 ##############################################################################
 # Numeric literals with underscores
-{
+do {
     assert 0b____1000__0000_0000_0000____ == 0x___80__00___
     const _1024 = 1___024__
     assert _1024 == 1___.___00_0_00E___3_ + 24

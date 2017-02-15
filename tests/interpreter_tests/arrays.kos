@@ -31,7 +31,7 @@ fun expect_fail(function)
     assert failed
 }
 
-{
+do {
     assert ['a', 'b', 'c'][0]  == 'a'
     assert ['a', 'b', 'c'][1]  == 'b'
     assert ['a', 'b', 'c'][-1] == 'c'
@@ -39,17 +39,17 @@ fun expect_fail(function)
 
 expect_fail(λ->([][0]))
 
-{
+do {
     const a = []
     assert a.size == 0
 }
 
-{
+do {
     const a = [[], [], []]
     assert a.size == 3
 }
 
-{
+do {
     const a = [1, 2]
     assert a.size == 2
     assert a[0]   == 1
@@ -76,7 +76,7 @@ expect_fail(λ->([][0]))
     expect_fail(λ->(a[-4]))
 }
 
-{
+do {
     const a = [1, 2, 3, 4]
     assert a.size    == 4
     assert a["size"] == 4
@@ -87,7 +87,7 @@ expect_fail(λ->([][0]))
     }
 }
 
-{
+do {
     const a = [1, 2, 3, 4, 5]
     assert a.size == 5
 
@@ -101,13 +101,13 @@ expect_fail(λ->([][0]))
     assert a[5]   == void
 }
 
-{
+do {
     const a = [1, 2, 3]
     expect_fail(fun { a.size = 4 })
     assert a.size == 3
 }
 
-{
+do {
     const a = [  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,
                 10,  11,  12,  13,  14,  15,  16,  17,  18,  19,
                 20,  21,  22,  23,  24,  25,  26,  27,  28,  29,
@@ -145,7 +145,7 @@ expect_fail(λ->([][0]))
     }
 }
 
-{
+do {
     const a = ['a', 'b', void, 'd', true, 'f']
 
     const b = a[:]
@@ -185,7 +185,7 @@ expect_fail(λ->([][0]))
     assert a[10:20].size == 0
 }
 
-{
+do {
     var a = 123
     a = [a]
     assert typeof a    == "array"
@@ -194,7 +194,7 @@ expect_fail(λ->([][0]))
     assert a[0]        == 123
 }
 
-{
+do {
     var a = [1, 2, 3, 4]
     a[1:3] = [5]
     assert a.size == 3
@@ -203,7 +203,7 @@ expect_fail(λ->([][0]))
     assert a[2]   == 4
 }
 
-{
+do {
     var a = [5]
     a.resize(100)
     assert a.size == 100
@@ -218,7 +218,7 @@ expect_fail(λ->([][0]))
     assert a[2]     == "z"
 }
 
-{
+do {
     var a = [5]
     a.resize(100)
     assert a.size == 100
@@ -233,7 +233,7 @@ expect_fail(λ->([][0]))
     assert a[2]     == "z"
 }
 
-{
+do {
     fun gen {
         for var i = 10; i < 15; i += 1 {
             yield i
@@ -248,14 +248,14 @@ expect_fail(λ->([][0]))
     }
 }
 
-{
+do {
     const a = [1, 2, 3, 4]
     a[:] = []
     assert typeof a == "array"
     assert a.size   == 0
 }
 
-{
+do {
     const a = [10, 11, 12]
     a[1:1] = -2
     assert a.size == 4
@@ -274,28 +274,28 @@ expect_fail(λ->([][0]))
     assert a[-1]  == 22
 }
 
-{
+do {
     var a = ""
     expect_fail(fun { a[:] = [] })
 }
 
-{
+do {
     var a = {}
     expect_fail(fun { a[:] = [] })
 }
 
-{
+do {
     var a = 2
     expect_fail(fun { a[:] = [] })
 }
 
-{
+do {
     # These don't make sense, but are correct
     [1, 2, 3][0] = void;
     [1, 2, 3][:] = []
 }
 
-{
+do {
     var a = []
     a[:] = { abc: void }
     assert a.size >= 1
@@ -311,7 +311,7 @@ expect_fail(λ->([][0]))
 }
 
 # Invalid index
-{
+do {
     const a = []
 
     fun elem(e)

@@ -6,7 +6,7 @@ try {
 catch var c {
     throw c + "d";
 }
-{
+do {
     d();
 }
 
@@ -33,9 +33,9 @@ catch var c {
                         (identifier 7 11 c)
                         (string 7 15 "d")
         ))))
-        (empty 9 1 {)
+        (empty 9 1 do)
     )
-    (scope 9 1 {
+    (scope 9 4 {
         (invocation 10 6 paren_open
             (identifier 10 5 d)
     ))

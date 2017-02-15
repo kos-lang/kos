@@ -31,7 +31,7 @@ fun expect_fail(function)
     assert failed
 }
 
-{
+do {
     fun no_work
     {
     }
@@ -40,7 +40,7 @@ fun expect_fail(function)
     assert typeof no_work() == "void"
 }
 
-{
+do {
     fun zero_args
     {
         return 123
@@ -53,7 +53,7 @@ fun expect_fail(function)
     assert a == 123
 }
 
-{
+do {
     fun one_arg(a)
     {
         return a + 3
@@ -66,7 +66,7 @@ fun expect_fail(function)
     expect_fail(λ->(one_arg()))
 }
 
-{
+do {
     fun two_args(a, b)
     {
         return a + 2 * b
@@ -79,7 +79,7 @@ fun expect_fail(function)
     expect_fail(λ->(two_args(1)))
 }
 
-{
+do {
     var a = 1
 
     fun(b) { a = a + b } (3)
@@ -87,7 +87,7 @@ fun expect_fail(function)
     assert a == 4
 }
 
-{
+do {
     fun make(x)
     {
         var a = x + 1
@@ -108,7 +108,7 @@ fun expect_fail(function)
 var global_a = "a"
 var global_b = "b"
 
-{
+do {
     var indep_c = "c"
     var indep_d = "d"
 
@@ -148,7 +148,7 @@ var global_b = "b"
         return depth2
     }
 
-    {
+    do {
         const d2 = depth1("%")
         const d3 = d2("^")
 
@@ -178,7 +178,7 @@ var global_b = "b"
         assert test2[3] == "^h$@"
     }
 
-    {
+    do {
         const d2 = depth1("#")
         const d3 = d2("!")
 
@@ -197,7 +197,7 @@ var global_b = "b"
         assert test3[2] == "&G"
         assert test3[3] == "!h&"
 
-        {
+        do {
             const d3 = d2("*")
 
             const test4 = d3("?")
@@ -213,7 +213,7 @@ var global_b = "b"
     }
 }
 
-{
+do {
     fun gen
     {
         yield 100
@@ -228,7 +228,7 @@ var global_b = "b"
     expect_fail(iter)
 }
 
-{
+do {
     fun gen(x)
     {
         yield x+1
@@ -245,7 +245,7 @@ var global_b = "b"
     expect_fail(iter2)
 }
 
-{
+do {
     fun gen(a, b, c)
     {
         a = yield a
@@ -261,7 +261,7 @@ var global_b = "b"
     expect_fail(iter)
 }
 
-{
+do {
     fun gen
     {
         var a = yield 10
@@ -277,7 +277,7 @@ var global_b = "b"
     expect_fail(iter)
 }
 
-{
+do {
     fun gen(a)
     {
         for ;; {
@@ -294,7 +294,7 @@ var global_b = "b"
     assert iter(9) == 10
 }
 
-{
+do {
     fun gen
     {
         yield 2
@@ -325,7 +325,7 @@ var global_b = "b"
     assert thrown
 }
 
-{
+do {
     fun gen
     {
         yield 2
@@ -358,7 +358,7 @@ var global_b = "b"
     assert thrown
 }
 
-{
+do {
     var type = void
     var size = void
 
@@ -377,7 +377,7 @@ var global_b = "b"
     assert size == 0
 }
 
-{
+do {
     fun add_all(a...)
     {
         var sum = 0
@@ -393,7 +393,7 @@ var global_b = "b"
     assert add_all(70, 8000, 40000, 3, 900) == 48973
 }
 
-{
+do {
     fun add_all(x, y, a...)
     {
         var sum = x + y
@@ -409,7 +409,7 @@ var global_b = "b"
     assert add_all(70, 8000, 40000, 3, 900) == 48973
 }
 
-{
+do {
     fun args_len(a...)
     {
         return a.size
@@ -419,7 +419,7 @@ var global_b = "b"
     assert args_len(void, void, void) == 3
 }
 
-{
+do {
     fun args_len(x, y, z, a...)
     {
         return a.size
@@ -429,7 +429,7 @@ var global_b = "b"
     assert args_len(void, void, void, void, void) == 2
 }
 
-{
+do {
     fun get_index(idx, a...)
     {
         return a[idx]
@@ -440,7 +440,7 @@ var global_b = "b"
     assert get_index(5,  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'f'
 }
 
-{
+do {
     fun elem(x, a...)
     {
         if a.size == 0 {
@@ -457,7 +457,7 @@ var global_b = "b"
     assert result        == 1
 }
 
-{
+do {
     fun number(a)
     {
         for (;;) {
@@ -476,7 +476,7 @@ var global_b = "b"
     assert six() == 6
 }
 
-{
+do {
     fun number(a)
     {
         const value = a
@@ -496,7 +496,7 @@ var global_b = "b"
     assert six() == 6
 }
 
-{
+do {
     var idx = 0
 
     fun arg(cur)
@@ -512,7 +512,7 @@ var global_b = "b"
     noop(arg(0), arg(1), arg(2), arg(3), arg(4), arg(5), arg(6))
 }
 
-{
+do {
     fun plus_six(x)
     {
         return
@@ -524,7 +524,7 @@ var global_b = "b"
     assert plus_six(3) == 9
 }
 
-{
+do {
     fun three_args(a, b, c)
     {
         return a + b + c
@@ -547,7 +547,7 @@ var global_b = "b"
 }
 
 # Deep expression
-{
+do {
     fun add_1(x)
     {
         return x + 1
@@ -671,7 +671,7 @@ var global_b = "b"
     assert expr() == recursive(1, 64)
 }
 
-{
+do {
     fun add(x, y)
     {
         return x + y
@@ -683,14 +683,14 @@ var global_b = "b"
     assert accum == 3
 }
 
-{
+do {
     var obj = fun(x, y) { return x + y }
     obj     = obj(4, -1)
 
     assert obj == 3
 }
 
-{
+do {
     var obj = {
         a: 12,
         f: λ->(this.a + 1)
@@ -700,7 +700,7 @@ var global_b = "b"
 }
 
 var global = 1
-{
+do {
     var global = global + 9
     assert global == 10
     fun f
@@ -714,7 +714,7 @@ var global = 1
                     global += 3
                 }
                 assert global == 30
-                {
+                do {
                     const global = global + 10
                     assert global == 40
                 }
@@ -737,7 +737,7 @@ var global = 1
 }
 assert global == 1
 
-{
+do {
     # The only case when using the variable in the expression is allowed
     const recurse = fun(level) {
         if level == 0 {
@@ -748,7 +748,7 @@ assert global == 1
     assert recurse(0) == 20
 }
 
-{
+do {
     fun outer(a, b)
     {
         return fun {
@@ -760,7 +760,7 @@ assert global == 1
     assert outer(void, "x")() == "x"
 }
 
-{
+do {
     fun outer(a...)
     {
         return fun {
@@ -776,7 +776,7 @@ assert global == 1
     assert a1[2]     == 3
 }
 
-{
+do {
     fun outer(x, a...)
     {
         return fun {
@@ -791,7 +791,7 @@ assert global == 1
     assert a1[1]     == "m"
 }
 
-{
+do {
     fun add_21(x)
     {
         return x + 21
@@ -812,7 +812,7 @@ assert global == 1
     assert result == "31"
 }
 
-{
+do {
     fun add_5(source)
     {
         for var elem in source {
@@ -836,14 +836,14 @@ assert global == 1
     expect_fail(iter)
 }
 
-{
+do {
     const a = 10;
     const result = a -> λ(x)->(x/2)
     assert result == 5
 }
 
 # call finished generator
-{
+do {
     fun gen
     {
         yield 42
@@ -856,7 +856,7 @@ assert global == 1
 }
 
 # call non-generator function like a generator
-{
+do {
     fun not_gen
     {
     }
@@ -871,7 +871,7 @@ assert global == 1
 }
 
 # lots of arguments
-{
+do {
     fun lots_of_args(a0, args...)
     {
         var prev = a0
@@ -903,7 +903,7 @@ assert global == 1
 }
 
 # independent argument from two functions up
-{
+do {
     fun f1(a)
     {
         fun f2(b)
@@ -923,7 +923,7 @@ assert global == 1
 }
 
 # function node promoted during optimization
-{
+do {
     fun f(x)
     {
         return false ? void :
@@ -942,7 +942,7 @@ assert global == 1
 }
 
 # test for correct processing of ?: with arguments
-{
+do {
     fun f(x)
     {
         return ! x ? void :

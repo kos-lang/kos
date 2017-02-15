@@ -13,11 +13,11 @@ var h = {
     k : 2 ,
 };
 # Empty scope
-{}
+do{}
 # Empty scope in a scope
-{{}}
+do{do{}}
 # Object in a scope
-{{"x":3};}
+do{{"x":3}}
 
 @ 0
 
@@ -62,15 +62,15 @@ var h = {
                 (string 13 5 k)
                 (number 13 9 2)
     )))
-    (scope 16 1 {)
-    (scope 18 1 {
-        (scope 18 2 {)
+    (scope 16 3 {)
+    (scope 18 3 {
+        (scope 18 6 {)
     )
-    (scope 20 1 {
-        (object 20 2 {
-            (property 20 3 "x"
-                (string 20 3 "x")
-                (number 20 7 3)
+    (scope 20 3 {
+        (object 20 4 {
+            (property 20 5 "x"
+                (string 20 5 "x")
+                (number 20 9 3)
     )))
 )
 
@@ -144,3 +144,22 @@ a = {this:this, new:{}, void:void, true:false, "string":"", array:[]};
 { a: 0, 0: 1 }
 
 @ 10 1 9
+
+@------------------------------------------------------------------------------
+{ }
+
+@ 0
+
+(scope 1 1
+    (object 1 1 {)
+)
+
+@------------------------------------------------------------------------------
+{ c() }
+
+@ 10 1 4 # Expected colon
+
+@------------------------------------------------------------------------------
+{ c = 1 }
+
+@ 10 1 5 # Expected colon

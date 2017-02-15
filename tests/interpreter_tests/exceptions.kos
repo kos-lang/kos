@@ -21,7 +21,7 @@
 #
 
 # passing assertions
-{
+do {
     assert 1
     assert true
     assert "abc"
@@ -31,7 +31,7 @@
 }
 
 # failing assertions
-{
+do {
     var caught = false
     try {
         assert false
@@ -43,7 +43,7 @@
         throw "Missing assertion"
     }
 }
-{
+do {
     var caught = false
     try {
         assert void == 1 || {} == []
@@ -57,7 +57,7 @@
 }
 
 # try..catch
-{
+do {
     var fail = false
     try {
     }
@@ -69,7 +69,7 @@
 }
 
 # try..catch
-{
+do {
     var fail = true
     try {
         fail = false
@@ -82,7 +82,7 @@
 }
 
 # throw..catch
-{
+do {
     var fail = true
     try {
         throw "exception"
@@ -95,7 +95,7 @@
 }
 
 # throw..defer
-{
+do {
     var fail = 2
     try {
         defer {
@@ -115,9 +115,9 @@
 }
 
 # throw..catch and defer
-{
+do {
     var fail = 3
-    {
+    do {
         defer {
             if fail == 1 {
                 fail = 0
@@ -140,9 +140,9 @@
 }
 
 # throw through many defer statements
-{
+do {
     var fail = 7
-    {
+    do {
         defer {
             if fail == 1 {
                 fail = 0
@@ -187,9 +187,9 @@
 }
 
 # throw through many catch statements
-{
+do {
     var fail = 7
-    {
+    do {
         defer {
             if fail == 1 {
                 fail = 0
@@ -248,7 +248,7 @@
     assert ! fail
 }
 
-{
+do {
     var l1 = __line__ + 3
     fun throws
     {
@@ -283,7 +283,7 @@
     assert ! fail
 }
 
-{
+do {
     var l1 = void
 
     fun native_callee_throws
@@ -311,7 +311,7 @@
     assert ! fail
 }
 
-{
+do {
     fun generator_throws
     {
         throw 123
@@ -331,7 +331,7 @@
     assert thrown
 }
 
-{
+do {
     fun generator_throws
     {
         if false { yield void }
@@ -341,7 +341,7 @@
     generator_throws()
 }
 
-{
+do {
     var l1 = void
 
     fun iterator_throws
@@ -370,7 +370,7 @@
     assert ! fail
 }
 
-{
+do {
     var fail = true
 
     fun only_defer
@@ -385,10 +385,10 @@
     assert ! fail
 }
 
-{
+do {
     fun early_return(early)
     {
-        {
+        do {
             defer {
             }
             if early {
@@ -402,10 +402,10 @@
     assert early_return(false) == 20
 }
 
-{
+do {
     fun return_paths(x)
     {
-        {
+        do {
             defer {
                 if x == 2 {
                     return x + 40
@@ -430,7 +430,7 @@
     assert return_paths(4) == 100
 }
 
-{
+do {
     fun cancel_return(cancel)
     {
         try {
@@ -450,7 +450,7 @@
     assert cancel_return(true)  == 3
 }
 
-{
+do {
     fun change_return(change)
     {
         defer {
@@ -464,12 +464,12 @@
     assert change_return(true)  == 4
 }
 
-{
+do {
     var depth = 0
 
     fun deep_return_paths(x)
     {
-        {
+        do {
             defer {
                 depth -= 1
                 if x == 4 {
@@ -492,7 +492,7 @@
                 }
                 try {
                     depth += 1
-                    {
+                    do {
                         defer {
                             depth -= 1
                             if x == 4 {
@@ -541,16 +541,16 @@
     assert depth == 0
 }
 
-{
+do {
     var a = 1
-    {
+    do {
         defer { a *= 3 }
         a += 1
     }
     assert a == 6
 }
 
-{
+do {
     var a = 0
     try {
         defer { a = a * 10 + 1 }
@@ -563,7 +563,7 @@
     assert a == 12
 }
 
-{
+do {
     var a = 0
     try {
         defer { a = a * 10 + 1 }

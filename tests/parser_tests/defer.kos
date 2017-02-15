@@ -17,7 +17,7 @@ defer { x; }
 ))
 
 @------------------------------------------------------------------------------
-{
+do {
     defer { a(); b(); }
     c();
     defer { d(); }
@@ -27,7 +27,7 @@ defer { x; }
 @ 0
 
 (scope 1 1
-    (scope 1 1 {
+    (scope 1 4 {
         (try 2 5 defer
             (scope 2 5 defer
                 (invocation 3 6 paren_open

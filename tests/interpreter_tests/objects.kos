@@ -33,19 +33,19 @@ fun expect_fail(function)
 
 expect_fail(λ->({}[""]))
 
-{
+do {
     const a = {}
     a[""] = 1
     assert a[""] == 1
 }
 
-{
+do {
     const a = {}
     a.x = 0
     assert a.x == 0
 }
 
-{
+do {
     const a = { x: 1, y: 2 }
     assert a.x == 1
     assert a.x == a["x"]
@@ -55,7 +55,7 @@ expect_fail(λ->({}[""]))
     a["x"]
 }
 
-{
+do {
     var a = { aa: 11, bb: 22 }
     assert delete a.x == void
     assert a.aa == 11
@@ -70,7 +70,7 @@ expect_fail(λ->({}[""]))
     expect_fail(λ->(a.aa))
 }
 
-{
+do {
     const o = {
         "orange" : 0,
         lemon    : 1,
@@ -88,7 +88,7 @@ expect_fail(λ->({}[""]))
     assert o["peach"] == 5
 }
 
-{
+do {
     fun constr
     {
     }
@@ -98,7 +98,7 @@ expect_fail(λ->({}[""]))
     })
 }
 
-{
+do {
     fun constr
     {
         this.b = "b"
@@ -125,7 +125,7 @@ expect_fail(λ->({}[""]))
     expect_fail(λ->(obj.b))
 }
 
-{
+do {
     fun constr(a)
     {
         this.a = a + 1
@@ -138,14 +138,14 @@ expect_fail(λ->({}[""]))
     assert obj.a == 9
 }
 
-{
+do {
     var obj = fun { this.a = 123 }
     obj = new obj
     assert typeof obj == "object"
     assert obj.a      == 123
 }
 
-{
+do {
     fun constr(a)
     {
         this.a = a + 2
@@ -157,7 +157,7 @@ expect_fail(λ->({}[""]))
     assert obj.a      == 12
 }
 
-{
+do {
     const base = [void, void, void]
 
     fun constr(a)
@@ -175,14 +175,14 @@ expect_fail(λ->({}[""]))
     expect_fail(λ->(obj.length))
 }
 
-{
+do {
     const obj = {}
     assert ! ("xyz" in obj)
     obj.xyz = void
     assert "xyz" in obj
 }
 
-{
+do {
     const obj   = {}
     const prop  = "xyz"
     const value = 123
@@ -193,7 +193,7 @@ expect_fail(λ->({}[""]))
     assert value == 123
 }
 
-{
+do {
     fun constr1(a)
     {
         this.a = a
@@ -221,7 +221,7 @@ expect_fail(λ->({}[""]))
     assert ! (obj instanceof constr1)
 }
 
-{
+do {
     fun constr
     {
         this.c = 0
@@ -249,7 +249,7 @@ expect_fail(λ->({}[""]))
     }
 }
 
-{
+do {
     fun get_constr
     {
         return fun { }
@@ -262,7 +262,7 @@ expect_fail(λ->({}[""]))
     assert o2 instanceof get_constr()
 }
 
-{
+do {
     fun constr
     {
         # Turn it into a generator

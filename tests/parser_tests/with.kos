@@ -71,7 +71,7 @@ with const a = b { a(); }
 
 @------------------------------------------------------------------------------
 
-{
+do {
     const lock = void;
     with lock { }
 }
@@ -79,7 +79,7 @@ with const a = b { a(); }
 @ 0
 
 (scope 1 1
-    (scope 2 1 {
+    (scope 2 4 {
         (assignment 3 16 =
             (const 3 5 const
                 (identifier 3 11 lock)
@@ -275,9 +275,9 @@ with (a { }
 @ 10 1 9
 
 @------------------------------------------------------------------------------
-{ with ( { } } # Expected closing parenthesis
+do { with ( { } } # Expected closing parenthesis
 
-@ 10 1 14
+@ 10 1 17
 
 @------------------------------------------------------------------------------
 with a, b, var c = d { }

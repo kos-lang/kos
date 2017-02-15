@@ -38,17 +38,17 @@ fun expect_fail(function)
 ##############################################################################
 # file.open, file.is_file, file.remove
 
-{
+do {
     assert typeof file.file           == "function"
     assert typeof file.file.prototype == "object"
 }
 
-{
+do {
     const name = "__test_file"
     file.remove(name)
     assert ! file.is_file(name)
 
-    {
+    do {
         const f = file.open(name, file.create)
         assert typeof f == "object"
 
@@ -90,7 +90,7 @@ fun expect_fail(function)
     assert ! file.remove(name)
 }
 
-{
+do {
     var failed = true
     try {
         file.open("", void)
@@ -104,7 +104,7 @@ fun expect_fail(function)
 ##############################################################################
 # file.close
 
-{
+do {
     const name = "__test_file"
     var failed = true
     var f = file.open(name, file.create)
@@ -123,7 +123,7 @@ fun expect_fail(function)
 ##############################################################################
 # file.size, file.position
 
-{
+do {
     const name = "./__test_file"
     file.remove(name)
     assert ! file.is_file(name)
@@ -164,7 +164,7 @@ fun expect_fail(function)
 ##############################################################################
 # file.stdin, file.stdout, file.stderr
 
-{
+do {
     assert file.stdin  instanceof file.file
     assert file.stdout instanceof file.file
     assert file.stderr instanceof file.file
@@ -173,7 +173,7 @@ fun expect_fail(function)
 ##############################################################################
 # file.read_line
 
-{
+do {
     const name = "./__text_line"
     file.remove(name)
     assert ! file.is_file(name)
@@ -206,7 +206,7 @@ fun expect_fail(function)
 ##############################################################################
 # file.read_lines
 
-{
+do {
     const name = "./__text_file"
     file.remove(name)
     assert ! file.is_file(name)

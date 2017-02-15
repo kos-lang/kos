@@ -33,21 +33,21 @@ fun expect_fail(function)
     assert failed
 }
 
-{
+do {
     var a, b, c = "xyz1234"
     assert a == "x"
     assert b == "y"
     assert c == "z"
 }
 
-{
+do {
     var a, b, c = [ 1, 5, 7, 10, 9 ]
     assert a == 1
     assert b == 5
     assert c == 7
 }
 
-{
+do {
     var a, b, c = range(100)
     assert a == 0
     assert b == 1
@@ -59,7 +59,7 @@ expect_fail(fun {
 })
 
 var global = void
-{
+do {
     const obj   = {}
     const array = [void, void]
     var   val   = void
@@ -105,7 +105,7 @@ var global = void
     assert array[0] == "a"
 }
 
-{
+do {
     var count = 0
     for var x, y, z = range(3); x < y; x += 1 {
         assert x == 0
@@ -116,7 +116,7 @@ var global = void
     assert count == 1
 }
 
-{
+do {
     var a = [void, void, void]
     var i = 10
 
@@ -128,7 +128,7 @@ var global = void
     assert a[2] == 10
 }
 
-{
+do {
     var count = 0
     for var x, y, z in [ [1, 2, 3, 10], [4, 5, 6] ] {
         if count == 0 {
@@ -146,7 +146,7 @@ var global = void
     assert count == 2
 }
 
-{
+do {
     var failed = true
     try {
         for var x, y, z in [ [1, 2, 3], [3, 4] ] {

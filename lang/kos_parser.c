@@ -1501,6 +1501,11 @@ _error:
     return error;
 }
 
+static int _do_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+{
+    return _compound_stmt(parser, ret);
+}
+
 static int _if_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
@@ -2402,43 +2407,6 @@ _error:
     return error;
 }
 
-static int _expr_or_compound_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
-{
-    struct _KOS_TOKEN saved_token = parser->token;
-
-    int error   = KOS_SUCCESS;
-    int is_expr = 0;
-
-    TRY(_next_token(parser));
-
-    if (parser->token.type == TT_EOF) {
-        parser->error_str = str_err_expected_expr_or_curly;
-        error = KOS_ERROR_PARSE_FAILED;
-        goto _error;
-    }
-
-    if (parser->token.type == TT_STRING     ||
-        parser->token.type == TT_IDENTIFIER ||
-        parser->token.type == TT_KEYWORD) {
-
-        TRY(_next_token(parser));
-
-        if (parser->token.sep == ST_COLON)
-            is_expr = 1;
-    }
-
-    _KOS_lexer_unget_token(&parser->lexer, &saved_token);
-    parser->unget = 0;
-
-    if (is_expr)
-        TRY(_expr_stmt(parser, ret));
-    else
-        TRY(_compound_stmt(parser, ret));
-
-_error:
-    return error;
-}
-
 static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
     int error = _next_token(parser);
@@ -2451,6 +2419,9 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
         switch (token->keyword) {
             case KW_FUN:
                 error = _function_stmt(parser, ret);
+                break;
+            case KW_DO:
+                error = _do_stmt(parser, ret);
                 break;
             case KW_IF:
                 error = _if_stmt(parser, ret);
@@ -2501,10 +2472,6 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
             case KW_NONE:
                 if (token->sep == ST_SEMICOLON) {
                     error = _new_node(parser, ret, NT_EMPTY);
-                    break;
-                }
-                else if (token->sep == ST_CURLY_OPEN) {
-                    error = _expr_or_compound_stmt(parser, ret);
                     break;
                 }
                 else if (token->type == TT_EOF) {

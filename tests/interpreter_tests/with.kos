@@ -47,7 +47,7 @@ fun test_cancellable_lock
     this.cancel = false
 }
 
-{
+do {
     const lock = new test_release_lock
 
     with lock {
@@ -60,7 +60,7 @@ fun test_cancellable_lock
     assert lock.test == "x"
 }
 
-{
+do {
     const lock = new test_full_lock
 
     with lock {
@@ -73,7 +73,7 @@ fun test_cancellable_lock
     assert lock.test == "y"
 }
 
-{
+do {
     var exception = false
     var lock      = new test_full_lock
 
@@ -97,7 +97,7 @@ fun test_cancellable_lock
     assert lock.a == "a"
 }
 
-{
+do {
     var exception = false
     var release   = false
 
@@ -116,7 +116,7 @@ fun test_cancellable_lock
     assert release
 }
 
-{
+do {
     const lock = new test_cancellable_lock
 
     with lock { }
@@ -141,7 +141,7 @@ fun test_cancellable_lock
     assert lock.acquire_count == 0
 }
 
-{
+do {
     const lock1 = new test_full_lock
     const lock2 = new test_full_lock
     const lock3 = new test_lock(void, fun { throw void })
@@ -167,7 +167,7 @@ fun test_cancellable_lock
     assert lock4.release_count == 1
 }
 
-{
+do {
     const lock1 = new test_full_lock
     const lock2 = new test_lock(fun { throw void }, fun { lock1.acquire_count -= 100 })
     const lock3 = new test_full_lock
@@ -190,7 +190,7 @@ fun test_cancellable_lock
     assert lock3.release_count == 0
 }
 
-{
+do {
     const lock1 = new test_lock(void, fun { throw 10 })
     const lock2 = new test_lock(fun { throw 20 }, fun { })
     var exception = false

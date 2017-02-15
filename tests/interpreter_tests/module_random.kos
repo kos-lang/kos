@@ -35,7 +35,7 @@ fun expect_fail(function)
 }
 
 # random.rand_integer
-{
+do {
     var sum = 0
     for var i = 0; i < 0x1000; i += 1 {
         sum += random.rand_integer() >> 13
@@ -52,7 +52,7 @@ fun expect_fail(function)
         assert value <= 50
     }
 
-    {
+    do {
         const v = random.rand_integer(0, 1)
         assert v == 0 || v == 1
     }
@@ -63,7 +63,7 @@ fun expect_fail(function)
 }
 
 # random.rand_float
-{
+do {
     for var i = 0; i < 0x1000; i += 1 {
         const r = random.rand_float()
         assert r >= 0
@@ -72,13 +72,13 @@ fun expect_fail(function)
 }
 
 # random.random.prototype.integer
-{
+do {
     expect_fail(λ->(random.random.prototype.integer.apply(void, [])))
     expect_fail(λ->(random.random.prototype.integer.apply({}, [])))
 }
 
 # random.seed
-{
+do {
     expect_fail(λ->(new random.random(void)))
     expect_fail(λ->(new random.random(10e19)))
 
@@ -86,7 +86,7 @@ fun expect_fail(function)
 
     const a = []
 
-    {
+    do {
         const rand = new random.random(seed)
 
         a.resize(256)
@@ -96,7 +96,7 @@ fun expect_fail(function)
         }
     }
 
-    {
+    do {
         const rand = new random.random(seed)
 
         for var i = 0; i < 256; i += 1 {

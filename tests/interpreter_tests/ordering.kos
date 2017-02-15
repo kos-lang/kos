@@ -42,7 +42,7 @@ fun test_order
     return tester
 }
 
-{
+do {
     const order = test_order()
 
     const result1 = order(1) + order(2) * order(3)
@@ -55,7 +55,7 @@ fun test_order
     assert result3 == 15
 }
 
-{
+do {
     const order = test_order()
 
     var array = [void, void]
@@ -74,7 +74,7 @@ fun test_order
     assert array[1] == 8
 }
 
-{
+do {
     const order = test_order()
 
     const result1 = order(1) || order(10)
@@ -96,7 +96,7 @@ fun test_order
     assert result6 == 145
 }
 
-{
+do {
     const order = test_order()
 
     var array = [void, "xyz"]
@@ -107,7 +107,7 @@ fun test_order
     assert array[2]   == "z"
 }
 
-{
+do {
     fun ignore_args
     {
     }
@@ -117,7 +117,7 @@ fun test_order
     ignore_args(order(1), order(2), order(3), order(4))
 }
 
-{
+do {
     fun order(i)
     {
         if i == 1 {
@@ -139,7 +139,7 @@ fun test_order
     assert order(4) == 7
 }
 
-{
+do {
     const order = test_order()
 
     var a = [ -1, -1, -1, -1, -1, -1 ]

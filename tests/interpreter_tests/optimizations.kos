@@ -39,7 +39,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun empty
     {
     }
@@ -50,7 +50,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun sum(a, b, c, d, e)
     {
         return a + b + c + d + e
@@ -63,7 +63,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun return_this
     {
         return this
@@ -76,13 +76,13 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun args_to_array(args...)
     {
         return args
     }
 
-    {
+    do {
         const a = args_to_array(8, void, -1.5)
         assert typeof a == "array"
         assert a.size   == 3
@@ -96,7 +96,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun return_string
     {
         return "string"
@@ -109,7 +109,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun times_plus(a, b, c)
     {
         return a * b + c
@@ -122,7 +122,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun plus_times(a, b, c)
     {
         return a + b * c
@@ -135,7 +135,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun find_lowest(array)
     {
         var lowest = 0x7FFFFFFFFFFFFFFF
@@ -154,7 +154,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun find_greatest(array)
     {
         var   greatest = -0x8000000000000000
@@ -175,7 +175,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun throw_exception(a)
     {
         try {
@@ -193,13 +193,13 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun map_invoke(array, transform)
     {
         return array.map(transform)
     }
 
-    {
+    do {
         const iter = map_invoke([1, 7, -5], λ(x)->(x+5))
         assert iter() == 6
         assert iter() == 12
@@ -211,7 +211,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun map(array, transform)
     {
         for var elem in array {
@@ -219,7 +219,7 @@ fun check(function, registers, instructions, size)
         }
     }
 
-    {
+    do {
         const iter = map([9, -0.5], λ(x)->(x+1))
         assert iter() == 10
         assert iter() == 0.5
@@ -230,7 +230,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun multi_const(x)
     {
         const multiply = 2 * 3 + 1
@@ -238,7 +238,7 @@ fun check(function, registers, instructions, size)
         return x * multiply + add + add
     }
 
-    {
+    do {
         assert multi_const(4) == 44
     }
 
@@ -247,7 +247,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun unreachable_if(cond)
     {
         if cond {
@@ -261,7 +261,7 @@ fun check(function, registers, instructions, size)
         return cond ? a : 0
     }
     assert unreachable_if(false) == 2
-    {
+    do {
         var caught = void
         try {
             caught = unreachable_if(true)
@@ -276,7 +276,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun unreachable_do(a)
     {
         repeat {
@@ -295,7 +295,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun unreachable_while(a)
     {
         while true {
@@ -313,7 +313,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun break_inside_while(a)
     {
         var b = a
@@ -332,7 +332,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun falsy_while(a)
     {
         while false {
@@ -348,7 +348,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun falsy_for(a)
     {
         for ; false; a += 1 {
@@ -363,7 +363,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun unreachable_try()
     {
         try {
@@ -385,7 +385,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun unreachable_if_from_const
     {
         const truthy = "abc"
@@ -403,7 +403,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun var_to_const_while_true(a)
     {
         var b = a
@@ -426,7 +426,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun var_to_const_while_false(a)
     {
         var x = 0e0
@@ -447,7 +447,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_logical_or_true(a)
     {
         return "xyz" || a
@@ -459,7 +459,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_logical_or_false(a)
     {
         return ! "xyz" || a
@@ -471,7 +471,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_logical_and_true(a)
     {
         return "xyz" && a
@@ -483,7 +483,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_logical_and_false(a)
     {
         return 0e0 && a
@@ -497,7 +497,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_logical_tri_true(a)
     {
         return [] ? a : a + 1
@@ -509,7 +509,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_logical_tri_false(a)
     {
         return void ? a + 2 : a
@@ -521,7 +521,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_add
     {
         return 2 + 3
@@ -533,7 +533,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_interpolated_strings_1
     {
         return "this\( " is " )test"
@@ -545,7 +545,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_interpolated_strings_2(a...)
     {
         return "\( typeof { x: a } ) \( void ) \( false ) \( 0.000E+0 ) \( 0x10 + (16) )"
@@ -557,7 +557,7 @@ fun check(function, registers, instructions, size)
 
 #============================================================================#
 
-{
+do {
     fun collapse_if_numeric(a, b)
     {
         if (1 + 2) {
