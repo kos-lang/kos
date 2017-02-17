@@ -540,9 +540,12 @@ static KOS_OBJ_PTR _array_constructor(KOS_STACK_FRAME *frame,
             case OBJ_BUFFER: {
                 const uint32_t size = KOS_get_buffer_size(elem);
                 uint32_t       i;
-                uint8_t *const buf  = KOS_buffer_data(frame, elem);
+                uint8_t       *buf  = 0;
 
-                assert(buf);
+                if (size) {
+                    buf = KOS_buffer_data(elem);
+                    assert(buf);
+                }
 
                 TRY(KOS_array_resize(frame, array, cur_size + size));
 
@@ -612,7 +615,8 @@ static KOS_OBJ_PTR _buffer_constructor(KOS_STACK_FRAME *frame,
     buffer = KOS_new_buffer(frame, (uint32_t)size);
     TRY_OBJPTR(buffer);
 
-    memset(KOS_buffer_data(frame, buffer), 0, (size_t)size);
+    if (size)
+        memset(KOS_buffer_data(buffer), 0, (size_t)size);
 
 _error:
     return buffer;
@@ -1189,7 +1193,7 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
 
             for ( ; count; count--) {
                 KOS_OBJ_PTR value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
-                uint8_t    *data;
+                uint8_t    *data      = 0;
                 uint32_t    data_size;
                 uint32_t    copy_size;
 
@@ -1198,8 +1202,9 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
                 if ( ! IS_TYPE(OBJ_BUFFER, value_obj))
                     RAISE_EXCEPTION(TO_OBJPTR(&str_err_bad_pack_value));
 
-                data      = KOS_buffer_data(frame, value_obj);
                 data_size = KOS_get_buffer_size(value_obj);
+                if (data_size)
+                    data = KOS_buffer_data(value_obj);
 
                 copy_size = size > data_size ? data_size : size;
 
@@ -1267,7 +1272,7 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
                           unsigned                 count)
 {
     int            error     = KOS_SUCCESS;
-    uint8_t       *data      = KOS_buffer_data(frame, buffer_obj);
+    uint8_t       *data      = 0;
     const uint32_t data_size = KOS_get_buffer_size(buffer_obj);
     int            big_end   = fmt->big_end;
     KOS_OBJ_PTR    obj;
@@ -1277,6 +1282,10 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
 
     if (fmt->idx + size * count > data_size)
         RAISE_EXCEPTION(TO_OBJPTR(&str_err_unpack_buf_too_short));
+
+    assert(data_size);
+    data = KOS_buffer_data(buffer_obj);
+    assert(data);
 
     data += fmt->idx;
 
@@ -1345,7 +1354,8 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
 
                 TRY_OBJPTR(obj);
 
-                memcpy(KOS_buffer_data(frame, obj), data, size);
+                if (size)
+                    memcpy(KOS_buffer_data(obj), data, size);
 
                 TRY(KOS_array_push(frame, fmt->data, obj));
 
@@ -1371,7 +1381,7 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
         }
     }
 
-    fmt->idx = (int)(data - KOS_buffer_data(frame, buffer_obj));
+    fmt->idx = (int)(data - KOS_buffer_data(buffer_obj));
 
 _error:
     return error;

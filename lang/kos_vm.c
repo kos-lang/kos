@@ -724,18 +724,14 @@ static KOS_OBJ_PTR _finish_call(KOS_STACK_FRAME           *frame,
 
 static KOS_OBJ_PTR _read_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx)
 {
-    KOS_BUFFER              *buffer;
-    struct _KOS_BUFFER_DATA *data;
-    uint32_t                 size;
-    KOS_OBJ_PTR              ret;
+    uint32_t    size;
+    KOS_OBJ_PTR ret;
 
     assert( ! IS_BAD_PTR(objptr));
     assert( ! IS_SMALL_INT(objptr));
     assert(GET_OBJ_TYPE(objptr) == OBJ_BUFFER);
 
-    buffer = OBJPTR(KOS_BUFFER, objptr);
-    size   = KOS_atomic_read_u32(buffer->size);
-    data   = (struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
+    size = KOS_get_buffer_size(objptr);
 
     if (idx < 0)
         idx += (int)size;
@@ -744,19 +740,19 @@ static KOS_OBJ_PTR _read_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int 
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
         ret = KOS_VOID;
     }
-    else
-        ret = TO_SMALL_INT((int)data->buf[idx]);
+    else {
+        uint8_t *const buf = KOS_buffer_data(objptr);
+        ret = TO_SMALL_INT((int)buf[idx]);
+    }
 
     return ret;
 }
 
 static int _write_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KOS_OBJ_PTR value)
 {
-    int                      error;
-    KOS_BUFFER              *buffer;
-    struct _KOS_BUFFER_DATA *data;
-    uint32_t                 size;
-    int64_t                  byte_value;
+    int      error;
+    uint32_t size;
+    int64_t  byte_value;
 
     assert( ! IS_BAD_PTR(objptr));
     assert( ! IS_SMALL_INT(objptr));
@@ -767,17 +763,17 @@ static int _write_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KO
     if (byte_value < 0 || byte_value > 255)
         RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_byte_value));
 
-    buffer = OBJPTR(KOS_BUFFER, objptr);
-    size   = KOS_atomic_read_u32(buffer->size);
-    data   = (struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
+    size = KOS_get_buffer_size(objptr);
 
     if (idx < 0)
         idx += (int)size;
 
     if ((uint32_t)idx >= size)
         RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_index));
-
-    data->buf[idx] = (uint8_t)byte_value;
+    else {
+        uint8_t *const buf = KOS_buffer_data(objptr);
+        buf[idx] = (uint8_t)byte_value;
+    }
 
 _error:
     return error;

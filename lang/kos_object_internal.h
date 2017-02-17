@@ -124,12 +124,6 @@ static inline KOS_ATOMIC(KOS_OBJ_PTR) *_KOS_get_array_buffer(KOS_ARRAY *array)
 
 #define KOS_BUFFER_CAPACITY_ALIGN 64U
 
-struct _KOS_BUFFER_DATA {
-    uint32_t capacity;
-    uint32_t _align;
-    uint8_t  buf[1];
-};
-
 /*==========================================================================*/
 /* KOS_STRING                                                               */
 /*==========================================================================*/

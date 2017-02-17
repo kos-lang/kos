@@ -27,6 +27,12 @@
 #include "../lang/kos_threads.h"
 #include <assert.h>
 
+struct _KOS_BUFFER_DATA {
+    uint32_t capacity;
+    uint32_t _align;
+    uint8_t  buf[1];
+};
+
 #ifdef __cplusplus
 
 static inline uint32_t KOS_get_buffer_size(KOS_OBJ_PTR objptr)
@@ -37,9 +43,20 @@ static inline uint32_t KOS_get_buffer_size(KOS_OBJ_PTR objptr)
     return KOS_atomic_read_u32(buffer->size);
 }
 
+static inline uint8_t *KOS_buffer_data(KOS_OBJ_PTR objptr)
+{
+    struct _KOS_BUFFER_DATA *data = 0;
+    assert( ! IS_SMALL_INT(objptr) && ! IS_BAD_PTR(objptr));
+    KOS_BUFFER *const buffer = OBJPTR(KOS_BUFFER, objptr);
+    assert(buffer->type == OBJ_BUFFER);
+    data = (struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
+    return &data->buf[0];
+}
+
 #else
 
 #define KOS_get_buffer_size(objptr) (KOS_atomic_read_u32(OBJPTR(KOS_BUFFER, (objptr))->size))
+#define KOS_buffer_data(objptr) (&((struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(OBJPTR(KOS_BUFFER, (objptr))->data))->buf[0])
 
 #endif
 
@@ -62,9 +79,6 @@ uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
                               KOS_OBJ_PTR      objptr,
                               unsigned         size_delta);
 
-uint8_t *KOS_buffer_data(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      objptr);
-
 int KOS_buffer_fill(KOS_STACK_FRAME *frame,
                     KOS_OBJ_PTR      objptr,
                     int64_t          begin,
@@ -76,7 +90,7 @@ int KOS_buffer_copy(KOS_STACK_FRAME *frame,
                     int64_t          dest_begin,
                     KOS_OBJ_PTR      srcptr,
                     int64_t          src_begin,
-                    int64_t      src_end);
+                    int64_t          src_end);
 
 KOS_OBJ_PTR KOS_buffer_slice(KOS_STACK_FRAME *frame,
                              KOS_OBJ_PTR      objptr,

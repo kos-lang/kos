@@ -279,7 +279,7 @@ static KOS_OBJ_PTR _read_some(KOS_STACK_FRAME *frame,
 
     TRY(KOS_buffer_resize(frame, buf, (unsigned)(offset + to_read)));
 
-    num_read = fread(KOS_buffer_data(frame, buf)+offset, 1, (size_t)to_read, file);
+    num_read = fread(KOS_buffer_data(buf)+offset, 1, (size_t)to_read, file);
 
     assert(num_read <= (size_t)to_read);
 
@@ -296,11 +296,11 @@ static KOS_OBJ_PTR _write(KOS_STACK_FRAME *frame,
                           KOS_OBJ_PTR      this_obj,
                           KOS_OBJ_PTR      args_obj)
 {
-    int         error = KOS_SUCCESS;
-    FILE       *file  = 0;
+    int         error    = KOS_SUCCESS;
+    FILE       *file     = 0;
     KOS_OBJ_PTR arg;
     size_t      to_write;
-    size_t      num_writ;
+    size_t      num_writ = 0;
 
     TRY(_get_file_object(frame, this_obj, &file, 1));
 
@@ -314,7 +314,8 @@ static KOS_OBJ_PTR _write(KOS_STACK_FRAME *frame,
         RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_buffer));
 
     to_write = (size_t)KOS_get_buffer_size(arg);
-    num_writ = fwrite(KOS_buffer_data(frame, arg), 1, to_write, file);
+    if (to_write > 0)
+        num_writ = fwrite(KOS_buffer_data(arg), 1, to_write, file);
 
     if (num_writ < to_write)
         RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_write));

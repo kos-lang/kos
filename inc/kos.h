@@ -487,7 +487,7 @@ class buffer: public object
                     const uint32_t idx = static_cast<uint32_t>(_idx < 0 ? (_idx + static_cast<int>(size)) : _idx);
                     if (idx >= size)
                         throw std::out_of_range("buffer index out of range");
-                    uint8_t* const buf = KOS_buffer_data(_frame, _objptr);
+                    uint8_t* const buf = KOS_buffer_data(_objptr);
                     assert(buf);
                     return static_cast<char>(buf[idx]);
                 }
@@ -497,7 +497,7 @@ class buffer: public object
                     const uint32_t idx = static_cast<uint32_t>(_idx < 0 ? (_idx + static_cast<int>(size)) : _idx);
                     if (idx >= size)
                         throw std::out_of_range("buffer index out of range");
-                    uint8_t* const buf = KOS_buffer_data(_frame, _objptr);
+                    uint8_t* const buf = KOS_buffer_data(_objptr);
                     assert(buf);
                     buf[idx] = static_cast<uint8_t>(v);
                     return *this;

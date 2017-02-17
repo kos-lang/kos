@@ -61,15 +61,6 @@ int main(void)
         TEST(KOS_buffer_resize(frame, TO_OBJPTR(0), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_data(frame, TO_SMALL_INT(1)) == 0);
-        TEST_EXCEPTION();
-
-        TEST(KOS_buffer_data(frame, TO_OBJPTR(&str)) == 0);
-        TEST_EXCEPTION();
-
-        TEST(KOS_buffer_data(frame, TO_OBJPTR(0)) == 0);
-        TEST_EXCEPTION();
-
         TEST(KOS_buffer_make_room(frame, TO_SMALL_INT(1), 1U) == 0);
         TEST_EXCEPTION();
 
@@ -129,7 +120,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 128);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(frame, buf);
+        data = KOS_buffer_data(buf);
 
         for (i = 0; i < 128; i++)
             data[0] = (uint8_t)i;
@@ -147,7 +138,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 0);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(frame, buf);
+        data = KOS_buffer_data(buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
 
@@ -157,7 +148,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 0);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(frame, buf);
+        data = KOS_buffer_data(buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
 
@@ -167,7 +158,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 100);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(frame, buf);
+        data = KOS_buffer_data(buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
     }
@@ -224,7 +215,7 @@ int main(void)
         TEST(KOS_buffer_fill(frame, buf, 0, -1, 0x55) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(frame, buf);
+        data = KOS_buffer_data(buf);
         TEST(data);
 
         for (i = 0; i < 127; i++)
@@ -238,7 +229,7 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 512);
 
-        data = KOS_buffer_data(frame, buf);
+        data = KOS_buffer_data(buf);
         TEST(data);
 
         for (i = 0; i < 90; i++)
@@ -247,7 +238,7 @@ int main(void)
         TEST(KOS_buffer_fill(frame, buf, -500, 50, 0xAA) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(frame, buf);
+        data = KOS_buffer_data(buf);
         TEST(data);
 
         for (i = 0; i < 12; i++)
@@ -284,7 +275,7 @@ int main(void)
 
         data[0] = 0x40;
 
-        data = KOS_buffer_data(frame, buf);
+        data = KOS_buffer_data(buf);
         TEST(data[0] == 0x51);
         TEST(data[1] == 0x52);
         TEST(data[2] == 0x40);
@@ -312,7 +303,7 @@ int main(void)
 
         TEST(KOS_buffer_copy(frame, buf1, 2, buf2, -4, 4) == KOS_SUCCESS);
 
-        data = KOS_buffer_data(frame, buf1);
+        data = KOS_buffer_data(buf1);
         for (i = 0; i < 2; i++)
             TEST(data[i] == 1);
         for (i = 2; i < 5; i++)
@@ -322,7 +313,7 @@ int main(void)
 
         TEST(KOS_buffer_copy(frame, buf1, -2, buf2, -100, 100) == KOS_SUCCESS);
 
-        data = KOS_buffer_data(frame, buf1);
+        data = KOS_buffer_data(buf1);
         for (i = 0; i < 2; i++)
             TEST(data[i] == 1);
         for (i = 2; i < 5; i++)
@@ -332,7 +323,7 @@ int main(void)
         for (i = 8; i < 10; i++)
             TEST(data[i] == 2);
 
-        data = KOS_buffer_data(frame, buf2);
+        data = KOS_buffer_data(buf2);
         for (i = 0; i < 5; i++)
             TEST(data[i] == 2);
 
@@ -371,7 +362,7 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf1) == 10);
 
-        data = KOS_buffer_data(frame, buf1);
+        data = KOS_buffer_data(buf1);
         for (i = 0; i < 10; i++)
             data[i] = (uint8_t)i;
 
@@ -385,7 +376,7 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf2) == 4);
 
-        data = KOS_buffer_data(frame, buf2);
+        data = KOS_buffer_data(buf2);
 
         TEST(data[0] == 6);
         TEST(data[1] == 7);

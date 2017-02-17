@@ -215,31 +215,7 @@ uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
 
         if ( ! error) {
             KOS_atomic_swap_u32(buffer->size, new_size);
-            ret = KOS_buffer_data(frame, objptr) + old_size;
-        }
-    }
-
-    return ret;
-}
-
-uint8_t *KOS_buffer_data(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      objptr)
-{
-    uint8_t *ret = 0;
-
-    if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BUFFER)
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
-    else {
-        KOS_BUFFER  *const buffer = OBJPTR(KOS_BUFFER, objptr);
-        BUFFER_DATA *const data   = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
-
-        if (data)
-            ret = &data->buf[0];
-        else {
-            static uint8_t buf[4] = { 0, 0, 0, 0 };
-            ret = buf;
+            ret = KOS_buffer_data(objptr) + old_size;
         }
     }
 
