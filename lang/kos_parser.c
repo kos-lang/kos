@@ -39,7 +39,6 @@ static const char str_err_expected_comma[]            = "expected ','";
 static const char str_err_expected_const_or_expr[]    = "expected 'const' or expression";
 static const char str_err_expected_curly_close[]      = "expected '}'";
 static const char str_err_expected_curly_open[]       = "expected '{'";
-static const char str_err_expected_expr_or_curly[]    = "expected expression or '{'";
 static const char str_err_expected_expression[]       = "expected expression";
 static const char str_err_expected_ident_or_str[]     = "expected identifier or string literal";
 static const char str_err_expected_identifier[]       = "expected identifier";
