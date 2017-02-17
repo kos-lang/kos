@@ -265,7 +265,7 @@ typedef struct _KOS_FUNCTION {
     uint8_t                   min_args;
     uint8_t                   num_regs;
     uint8_t                   args_reg;
-    KOS_OBJ_PTR               prototype;
+    KOS_ATOMIC(void *)        prototype; /* actual type: KOS_OBJ_PTR */
     KOS_OBJ_PTR               closures;
     KOS_OBJ_PTR               module;
     KOS_FUNCTION_HANDLER      handler;

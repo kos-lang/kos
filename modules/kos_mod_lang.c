@@ -679,7 +679,8 @@ static KOS_OBJ_PTR _set_prototype(KOS_STACK_FRAME *frame,
         }
 
         if ( ! IS_BAD_PTR(arg)) {
-            OBJPTR(KOS_FUNCTION, this_obj)->prototype = arg;
+            KOS_FUNCTION *func = OBJPTR(KOS_FUNCTION, this_obj);
+            KOS_atomic_write_ptr(func->prototype, (void *)arg);
             ret = this_obj;
         }
     }
@@ -1741,7 +1742,7 @@ static KOS_OBJ_PTR _get_prototype(KOS_STACK_FRAME *frame,
 
         KOS_FUNCTION *const func = OBJPTR(KOS_FUNCTION, this_obj);
 
-        ret = func->prototype;
+        ret = (KOS_OBJ_PTR)KOS_atomic_read_ptr(func->prototype);
 
         assert( ! IS_BAD_PTR(ret));
     }

@@ -1092,7 +1092,7 @@ int KOS_module_add_constructor(KOS_STACK_FRAME     *frame,
                               func_obj,
                               0));
 
-    *ret_proto = OBJPTR(KOS_FUNCTION, func_obj)->prototype;
+    *ret_proto = (KOS_OBJ_PTR)KOS_atomic_read_ptr(OBJPTR(KOS_FUNCTION, func_obj)->prototype);
     assert( ! IS_BAD_PTR(*ret_proto));
 
 _error:

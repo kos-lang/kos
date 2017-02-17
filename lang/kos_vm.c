@@ -553,13 +553,13 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
         /* Regular function */
         case KOS_NOT_GEN: {
             if (instr == INSTR_NEW) {
-                KOS_OBJ_PTR proto = OBJPTR(KOS_FUNCTION, func_obj)->prototype;
-                assert( ! IS_BAD_PTR(proto));
+                const KOS_OBJ_PTR proto_obj = (KOS_OBJ_PTR)KOS_atomic_read_ptr(func->prototype);
+                assert( ! IS_BAD_PTR(proto_obj));
 
                 if (func->handler)
-                    *this_obj = proto;
+                    *this_obj = proto_obj;
                 else {
-                    *this_obj = KOS_new_object_with_prototype(frame, proto);
+                    *this_obj = KOS_new_object_with_prototype(frame, proto_obj);
                     TRY_OBJPTR(*this_obj);
                 }
 
@@ -576,9 +576,9 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
 
         /* Instantiate a generator function */
         case KOS_GEN_INIT: {
-            KOS_FUNCTION *dest;
-            KOS_OBJ_PTR   ret;
-            KOS_OBJ_PTR   proto_obj   = OBJPTR(KOS_FUNCTION, func_obj)->prototype;
+            KOS_FUNCTION     *dest;
+            KOS_OBJ_PTR       ret;
+            const KOS_OBJ_PTR proto_obj = (KOS_OBJ_PTR)KOS_atomic_read_ptr(func->prototype);
 
             assert( ! IS_BAD_PTR(proto_obj));
 
@@ -1957,38 +1957,41 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rfunc = bytecode[3];
 
-                KOS_OBJ_PTR constr;
-                KOS_OBJ_PTR proto    = TO_OBJPTR(0);
-                KOS_OBJ_PTR ret      = KOS_FALSE;
+                KOS_OBJ_PTR constr_obj;
+                KOS_OBJ_PTR proto_obj      = TO_OBJPTR(0);
+                KOS_OBJ_PTR ret            = KOS_FALSE;
+                int         constr_is_func = 1;
 
                 assert(rsrc  < regs_array->length);
                 assert(rfunc < regs_array->length);
 
-                rdest  = bytecode[1];
-                constr = regs[rfunc];
+                rdest      = bytecode[1];
+                constr_obj = regs[rfunc];
 
-                if (IS_TYPE(OBJ_FUNCTION, constr)) {
-                    proto = OBJPTR(KOS_FUNCTION, constr)->prototype;
-                    assert( ! IS_BAD_PTR(proto));
+                if (IS_TYPE(OBJ_FUNCTION, constr_obj)) {
+                    KOS_FUNCTION *const constr = OBJPTR(KOS_FUNCTION, constr_obj);
+                    proto_obj = (KOS_OBJ_PTR)KOS_atomic_read_ptr(constr->prototype);
+                    assert( ! IS_BAD_PTR(proto_obj));
                 }
                 else
-                    KOS_raise_exception(frame, KOS_VOID);
+                    constr_is_func = 0;
 
-                assert(IS_BAD_PTR(proto) || IS_SMALL_INT(proto) || GET_OBJ_TYPE(proto) != OBJ_DYNAMIC_PROP);
+                assert(IS_BAD_PTR(proto_obj) || IS_SMALL_INT(proto_obj) || GET_OBJ_TYPE(proto_obj) != OBJ_DYNAMIC_PROP);
 
-                if (IS_BAD_PTR(proto))
-                    KOS_clear_exception(frame);
-                else {
+                if ( ! IS_BAD_PTR(proto_obj)) {
                     KOS_OBJ_PTR obj = regs[rsrc];
                     do {
                         obj = KOS_get_prototype(frame, obj);
-                        if (obj == proto) {
+                        if (obj == proto_obj) {
                             ret = KOS_TRUE;
                             break;
                         }
                     }
                     while (!IS_BAD_PTR(obj));
                 }
+                else
+                    if (constr_is_func)
+                        KOS_clear_exception(frame);
 
                 out   = ret;
                 delta = 4;
