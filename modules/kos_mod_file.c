@@ -53,6 +53,7 @@ static KOS_ASCII_STRING(str_err_file_read,           "file read error");
 static KOS_ASCII_STRING(str_err_file_write,          "file write error");
 static KOS_ASCII_STRING(str_err_invalid_buffer_size, "buffer size out of range");
 static KOS_ASCII_STRING(str_err_not_buffer,          "argument to file write is not a buffer");
+static KOS_ASCII_STRING(str_err_too_many_to_read,    "requested read size exceeds buffer size limit");
 
 static void _fix_path_separators(struct _KOS_VECTOR *buf)
 {
@@ -275,7 +276,8 @@ static KOS_OBJ_PTR _read_some(KOS_STACK_FRAME *frame,
 
     offset = KOS_get_buffer_size(buf);
 
-    /* TODO Check if offset + to_read does not exceed uint32_t */
+    if (to_read > (int64_t)(0xFFFFFFFFU - offset))
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_too_many_to_read));
 
     TRY(KOS_buffer_resize(frame, buf, (unsigned)(offset + to_read)));
 
@@ -314,6 +316,7 @@ static KOS_OBJ_PTR _write(KOS_STACK_FRAME *frame,
         RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_buffer));
 
     to_write = (size_t)KOS_get_buffer_size(arg);
+
     if (to_write > 0)
         num_writ = fwrite(KOS_buffer_data(arg), 1, to_write, file);
 

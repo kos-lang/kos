@@ -154,6 +154,7 @@ do {
 
         const buf2 = f.read(10)
         assert f.position == 200
+        # TODO ???
         #assert buf2.size  == 0
     }
 
@@ -257,6 +258,35 @@ do {
         assert a[1]   == "z\xFF\n"
         assert f.eof
         assert ! f.error
+    }
+
+    assert file.remove(name)
+    assert ! file.is_file(name)
+}
+
+##############################################################################
+# file.read_some size too large
+
+do {
+    const name = "./__text_file"
+    file.remove(name)
+    assert ! file.is_file(name)
+
+    with const f = file.open(name, file.create) {
+        var exception = false
+        var buf       = new lang.buffer(1024)
+        var ret       = void
+        assert buf.size == 1024
+        try {
+            ret = f.read_some(0xFFFFFF00, buf) # Exceeds buffer size limit (uint32_t)
+        }
+        catch const e {
+            exception = true
+        }
+        assert exception
+        assert typeof ret == "void"
+        assert typeof buf == "buffer"
+        assert buf.size   == 1024
     }
 
     assert file.remove(name)

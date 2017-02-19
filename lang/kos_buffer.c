@@ -28,8 +28,9 @@
 #include "kos_misc.h"
 #include <string.h>
 
-static KOS_ASCII_STRING(str_err_not_buffer, "object is not a buffer");
-static KOS_ASCII_STRING(str_err_null_ptr,   "null pointer");
+static KOS_ASCII_STRING(str_err_make_room_size, "buffer size limit exceeded");
+static KOS_ASCII_STRING(str_err_not_buffer,     "object is not a buffer");
+static KOS_ASCII_STRING(str_err_null_ptr,       "null pointer");
 
 typedef struct _KOS_BUFFER_DATA BUFFER_DATA;
 
@@ -198,24 +199,30 @@ uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
     else {
         KOS_BUFFER *const buffer   = OBJPTR(KOS_BUFFER, objptr);
         const uint32_t    old_size = KOS_atomic_read_u32(buffer->size);
-        const uint32_t    new_size = old_size + size_delta;
 
-        error = KOS_SUCCESS;
+        if (size_delta > 0xFFFFFFFFU - old_size)
+            KOS_raise_exception(frame, TO_OBJPTR(&str_err_make_room_size));
+        else {
 
-        if (new_size > old_size) {
+            const uint32_t new_size = old_size + size_delta;
 
-            BUFFER_DATA *const data     = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
-            const uint32_t     capacity = data ? data->capacity : 0;
+            error = KOS_SUCCESS;
 
-            if (new_size > capacity) {
-                const uint32_t new_capacity = new_size > capacity * 2 ? new_size : capacity * 2;
-                error = KOS_buffer_reserve(frame, objptr, new_capacity);
+            if (new_size > old_size) {
+
+                BUFFER_DATA *const data     = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
+                const uint32_t     capacity = data ? data->capacity : 0;
+
+                if (new_size > capacity) {
+                    const uint32_t new_capacity = new_size > capacity * 2 ? new_size : capacity * 2;
+                    error = KOS_buffer_reserve(frame, objptr, new_capacity);
+                }
             }
-        }
 
-        if ( ! error) {
-            KOS_atomic_swap_u32(buffer->size, new_size);
-            ret = KOS_buffer_data(objptr) + old_size;
+            if ( ! error) {
+                KOS_atomic_swap_u32(buffer->size, new_size);
+                ret = KOS_buffer_data(objptr) + old_size;
+            }
         }
     }
 

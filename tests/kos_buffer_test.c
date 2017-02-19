@@ -275,6 +275,11 @@ int main(void)
 
         data[0] = 0x40;
 
+        data = KOS_buffer_make_room(frame, buf, 0xFFFFFFFDU);
+        TEST(data == 0);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 3);
+
         data = KOS_buffer_data(buf);
         TEST(data[0] == 0x51);
         TEST(data[1] == 0x52);
