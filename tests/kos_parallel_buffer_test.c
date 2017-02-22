@@ -29,13 +29,8 @@
 #include "../lang/kos_misc.h"
 #include "../lang/kos_object_internal.h"
 #include "../lang/kos_threads.h"
+#include "kos_parallel.h"
 #include <memory.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(frame)); KOS_clear_exception(frame); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(frame))
 
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
@@ -103,22 +98,7 @@ int main(void)
 {
     KOS_CONTEXT      ctx;
     KOS_STACK_FRAME *frame;
-    int              num_cpus = 2; /* By default behave as if there were 2 CPUs */
-
-    {
-        struct _KOS_VECTOR cstr;
-        _KOS_vector_init(&cstr);
-
-        if (_KOS_get_env("TEST_CPUS", &cstr) == KOS_SUCCESS) {
-            num_cpus = (int)strtol(cstr.buffer, 0, 10);
-            if (num_cpus < 1) {
-                printf("Failed: Invalid value in TEST_CPUS env var!\n");
-                return 1;
-            }
-        }
-
-        _KOS_vector_destroy(&cstr);
-    }
+    const int        num_cpus = _get_num_cpus();
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
@@ -135,7 +115,9 @@ int main(void)
         int                 i_loop;
         int                 i;
 
-        num_threads = num_cpus * 2;
+        num_threads = num_cpus;
+        if (num_threads < 2)
+            num_threads = 2;
 
         _KOS_vector_init(&mem_buf);
         TEST(_KOS_vector_resize(&mem_buf,
