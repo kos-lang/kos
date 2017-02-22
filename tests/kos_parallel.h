@@ -28,7 +28,7 @@
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(frame)); KOS_clear_exception(frame); } while (0)
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(frame))
 
-static int _get_num_cpus()
+static int _get_num_cpus(void)
 {
     int                num_cpus = 2; /* By default behave as if there were 2 CPUs */
     struct _KOS_VECTOR cstr;

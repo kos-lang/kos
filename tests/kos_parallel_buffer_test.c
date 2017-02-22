@@ -147,12 +147,12 @@ int main(void)
 
             /* Fill buffer with expected data */
             {
-                uint8_t       *data = KOS_buffer_data(buf);
-                uint8_t *const end  = data + size;
-                int            i    = 0;
+                uint8_t       *b   = KOS_buffer_data(buf);
+                uint8_t *const end = b + size;
+                int            i   = 0;
 
-                while (data < end)
-                    *(data++) = i++;
+                while (b < end)
+                    *(b++) = i++;
             }
 
             /* Start with 1, because 0 is for the main thread, which participates */
@@ -173,12 +173,12 @@ int main(void)
             /* Check buffer contents */
             {
                 const size_t   endsize = KOS_get_buffer_size(buf);
-                uint8_t       *data   = KOS_buffer_data(buf);
-                uint8_t *const end    = data + endsize;
-                unsigned       i      = 0;
+                uint8_t       *b       = KOS_buffer_data(buf);
+                uint8_t *const end     = b + endsize;
+                unsigned       i       = 0;
 
-                for ( ; data < end; i++, data++) {
-                    const uint8_t v = *data;
+                for ( ; b < end; i++, b++) {
+                    const uint8_t v = *b;
                     if (i < size - 8U)
                         TEST(v == i);
                     else if (i < size)
