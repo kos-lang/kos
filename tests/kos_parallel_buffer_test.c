@@ -130,7 +130,7 @@ int main(void)
             _KOS_rng_init(&thread_cookies[i].rng);
             thread_cookies[i].test = &data;
             thread_cookies[i].id   = (uint8_t)(unsigned)((i & 0x1F) + 0x80);
-            TEST((thread_cookies[i].id >= 0x80U) && (thread_cookies[i].id < 0x9FU));
+            TEST((thread_cookies[i].id >= 0x80U) && (thread_cookies[i].id <= 0x9FU));
         }
 
         data.ctx        = &ctx;
@@ -182,7 +182,7 @@ int main(void)
                     if (i < size - 8U)
                         TEST(v == i);
                     else if (i < size)
-                        TEST((v == i) || (v < 8U) || ((v >= 0x80U) && (v < 0x9FU)));
+                        TEST((v == i) || (v < 8U) || ((v >= 0x80U) && (v <= 0x9FU)));
 /*
     NOTE: This test is racy in nature.  In particular, one thread can be filling
     the buffer after KOS_buffer_make_room() returned and not be finished, while
@@ -190,7 +190,7 @@ int main(void)
     thread write to the old buffer and the new buffer retains garbage.
     For this reason, the check below does not make sense.
                     else
-                        TEST((v < 8U) || ((v >= 0x80U) && (v < 0x9FU)));
+                        TEST((v < 8U) || ((v >= 0x80U) && (v <= 0x9FU)));
 */
                 }
             }
