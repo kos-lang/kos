@@ -170,6 +170,7 @@ int main(void)
 
             TEST(data.error == KOS_SUCCESS);
 
+#if 0
             /* Check buffer contents */
             {
                 const size_t   endsize = KOS_get_buffer_size(buf);
@@ -194,6 +195,7 @@ int main(void)
 */
                 }
             }
+#endif
         }
 
         _KOS_vector_destroy(&mem_buf);
