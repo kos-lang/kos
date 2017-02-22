@@ -149,8 +149,8 @@ int main(void)
             {
                 uint8_t       *b   = KOS_buffer_data(buf);
                 uint8_t *const end = b + size;
-                int            i   = 0;
 
+                i = 0;
                 while (b < end)
                     *(b++) = i++;
             }
@@ -176,14 +176,13 @@ int main(void)
                 const size_t   endsize = KOS_get_buffer_size(buf);
                 uint8_t       *b       = KOS_buffer_data(buf);
                 uint8_t *const end     = b + endsize;
-                unsigned       i       = 0;
 
-                for ( ; b < end; i++, b++) {
+                for (i = 0 ; b < end; i++, b++) {
                     const uint8_t v = *b;
-                    if (i < size - 8U)
-                        TEST(v == i);
-                    else if (i < size)
-                        TEST((v == i) || (v < 8U) || ((v >= 0x80U) && (v <= 0x9FU)));
+                    if ((unsigned)i < size - 8U)
+                        TEST((int)v == i);
+                    else if ((unsigned)i < size)
+                        TEST(((int)v == i) || (v < 8U) || ((v >= 0x80U) && (v <= 0x9FU)));
 /*
     NOTE: This test is racy in nature.  In particular, one thread can be filling
     the buffer after KOS_buffer_make_room() returned and not be finished, while
