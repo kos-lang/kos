@@ -152,7 +152,7 @@ int main(void)
 
                 i = 0;
                 while (b < end)
-                    *(b++) = i++;
+                    *(b++) = (uint8_t)i++;
             }
 
             /* Start with 1, because 0 is for the main thread, which participates */
