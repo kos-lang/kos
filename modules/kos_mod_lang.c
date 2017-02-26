@@ -1087,8 +1087,11 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
 
     assert(size != ~0U || value_fmt == 's');
 
-    if (size != ~0U)
+    if (size != ~0U && size && count) {
         dst = KOS_buffer_make_room(frame, buffer_obj, size * count);
+        if ( ! dst)
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
     big_end = fmt->big_end;
 
@@ -1097,18 +1100,13 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
         case 'x':
             assert(size == 1);
 
-            if ( ! dst)
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
-
-            memset(dst, 0, size * count);
+            if (count)
+                memset(dst, 0, size * count);
             break;
 
         case 'u':
             /* fall through */
         case 'i': {
-
-            if ( ! dst)
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
             if (size != 1 && size != 2 && size != 4 && size != 8)
                 RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
@@ -1140,9 +1138,6 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
         }
 
         case 'f': {
-
-            if ( ! dst)
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
             if (size != 4 && size != 8)
                 RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
@@ -1184,9 +1179,6 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
         }
 
         case 'b': {
-
-            if ( ! dst)
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
                 RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_enough_pack_values));

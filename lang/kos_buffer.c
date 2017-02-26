@@ -189,39 +189,39 @@ uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
                               KOS_OBJ_PTR      objptr,
                               unsigned         size_delta)
 {
-    int      error = KOS_ERROR_EXCEPTION;
-    uint8_t *ret   = 0;
+    uint8_t *ret = 0;
 
     if (IS_BAD_PTR(objptr))
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
     else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_BUFFER)
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
-        KOS_BUFFER *const buffer   = OBJPTR(KOS_BUFFER, objptr);
-        const uint32_t    old_size = KOS_atomic_read_u32(buffer->size);
+        KOS_BUFFER *const buffer = OBJPTR(KOS_BUFFER, objptr);
 
-        if (size_delta > 0xFFFFFFFFU - old_size)
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_make_room_size));
-        else {
+        if (size_delta == 0)
+            return 0;
 
-            const uint32_t new_size = old_size + size_delta;
+        for (;;) {
+            const uint32_t     old_size = KOS_atomic_read_u32(buffer->size);
+            const uint32_t     new_size = old_size + size_delta;
+            BUFFER_DATA *const data     = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
+            const uint32_t     capacity = data ? data->capacity : 0;
 
-            error = KOS_SUCCESS;
-
-            if (new_size > old_size) {
-
-                BUFFER_DATA *const data     = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
-                const uint32_t     capacity = data ? data->capacity : 0;
-
-                if (new_size > capacity) {
-                    const uint32_t new_capacity = new_size > capacity * 2 ? new_size : capacity * 2;
-                    error = KOS_buffer_reserve(frame, objptr, new_capacity);
-                }
+            if (size_delta > 0xFFFFFFFFU - old_size) {
+                KOS_raise_exception(frame, TO_OBJPTR(&str_err_make_room_size));
+                return 0;
             }
 
-            if ( ! error) {
-                KOS_atomic_swap_u32(buffer->size, new_size);
+            if (new_size > capacity) {
+                const uint32_t new_capacity = new_size > capacity * 2 ? new_size : capacity * 2;
+                const int      error        = KOS_buffer_reserve(frame, objptr, new_capacity);
+                if (error)
+                    return 0;
+            }
+
+            if (KOS_atomic_cas_u32(buffer->size, old_size, new_size)) {
                 ret = KOS_buffer_data(objptr) + old_size;
+                break;
             }
         }
     }
@@ -243,8 +243,8 @@ int KOS_buffer_fill(KOS_STACK_FRAME *frame,
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER  *const buffer = OBJPTR(KOS_BUFFER, objptr);
-        BUFFER_DATA *const data   = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
         uint32_t           size   = KOS_atomic_read_u32(buffer->size);
+        BUFFER_DATA *const data   = (BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
 
         begin = _KOS_fix_index(begin, size);
         end   = _KOS_fix_index(end,   size);
@@ -274,12 +274,12 @@ int KOS_buffer_copy(KOS_STACK_FRAME *frame,
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER  *const dest_buffer = OBJPTR(KOS_BUFFER, destptr);
-        BUFFER_DATA *const dest_data   = (BUFFER_DATA *)KOS_atomic_read_ptr(dest_buffer->data);
         uint32_t           dest_size   = KOS_atomic_read_u32(dest_buffer->size);
+        BUFFER_DATA *const dest_data   = (BUFFER_DATA *)KOS_atomic_read_ptr(dest_buffer->data);
 
         KOS_BUFFER  *const src_buffer  = OBJPTR(KOS_BUFFER, srcptr);
-        BUFFER_DATA *const src_data    = (BUFFER_DATA *)KOS_atomic_read_ptr(src_buffer->data);
         uint32_t           src_size    = KOS_atomic_read_u32(src_buffer->size);
+        BUFFER_DATA *const src_data    = (BUFFER_DATA *)KOS_atomic_read_ptr(src_buffer->data);
 
         dest_begin = _KOS_fix_index(dest_begin, dest_size);
         src_begin  = _KOS_fix_index(src_begin, src_size);
@@ -315,8 +315,8 @@ KOS_OBJ_PTR KOS_buffer_slice(KOS_STACK_FRAME *frame,
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_buffer));
     else {
         KOS_BUFFER *const  src_buf  = OBJPTR(KOS_BUFFER, objptr);
-        BUFFER_DATA *const src_data = (BUFFER_DATA *)KOS_atomic_read_ptr(src_buf->data);
         uint32_t           src_size = KOS_atomic_read_u32(src_buf->size);
+        BUFFER_DATA *const src_data = (BUFFER_DATA *)KOS_atomic_read_ptr(src_buf->data);
 
         if (src_size) {
 

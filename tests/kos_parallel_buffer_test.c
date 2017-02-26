@@ -105,7 +105,7 @@ int main(void)
     /************************************************************************/
     /* This test performs buffer make_room, fill and copy from multiple threads */
     {
-        const int           num_loops        = 64;
+        const int           num_loops        = 128;
         const int           num_thread_loops = 32;
         struct _KOS_VECTOR  mem_buf;
         struct THREAD_DATA *thread_cookies;
@@ -170,7 +170,6 @@ int main(void)
 
             TEST(data.error == KOS_SUCCESS);
 
-#if 0
             /* Check buffer contents */
             {
                 const size_t   endsize = KOS_get_buffer_size(buf);
@@ -194,7 +193,6 @@ int main(void)
 */
                 }
             }
-#endif
         }
 
         _KOS_vector_destroy(&mem_buf);
