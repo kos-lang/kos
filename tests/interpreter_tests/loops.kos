@@ -705,3 +705,15 @@ do {
     }
     assert i == 10
 }
+
+do {
+    var x = 0
+    fun set_x(value)
+    {
+        x = value
+    }
+    for var x = set_x(1) ; false ; {
+        x = 2
+    }
+    assert x == 1
+}

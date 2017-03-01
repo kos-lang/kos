@@ -427,6 +427,34 @@ do {
 #============================================================================#
 
 do {
+    fun truthy_while
+    {
+        loop {
+            return 88
+            # TODO optimize-out the jump at the end
+        }
+    }
+    assert truthy_while() == 88
+
+    check(truthy_while, { registers: 2, instructions: 3, size: 11 })
+}
+
+#============================================================================#
+
+do {
+    fun stuck_forever
+    {
+        loop {
+        }
+        # TODO optimize-out the trailing return
+    }
+
+    check(stuck_forever, { registers: 2, instructions: 3, size: 10 })
+}
+
+#============================================================================#
+
+do {
     fun var_to_const_while_false(a)
     {
         var x = 0e0
