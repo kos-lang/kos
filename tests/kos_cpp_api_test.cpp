@@ -47,6 +47,12 @@ class test_class {
         std::string _b;
 };
 
+void throw_string(const std::string& str)
+{
+    if (!str.empty())
+        throw std::runtime_error(str);
+}
+
 #define TEST(test) do { if ( ! (test)) { std::cout << "Failed: line " << __LINE__ << ": " << #test "\n"; return 1; } } while (0)
 
 int main()
@@ -277,6 +283,23 @@ try {
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "hello, world!")
+                exception = true;
+        }
+        TEST(exception);
+    }
+
+    {
+        kos::function f = frame.new_function<void (*)(const std::string&), throw_string>();
+
+        kos::void_ v = f("");
+        TEST(v.type() == OBJ_VOID);
+
+        bool exception = false;
+        try {
+            f("stuff");
+        }
+        catch (const kos::exception& e) {
+            if (std::string(e.what()) == "stuff")
                 exception = true;
         }
         TEST(exception);

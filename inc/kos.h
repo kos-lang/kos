@@ -73,6 +73,11 @@ class stack_frame
 
         void raise(const char* desc);
 
+        void raise_and_signal_error(const char* desc) {
+            raise(desc);
+            signal_error();
+        }
+
         // Object creation
         // ===============
 
@@ -1185,7 +1190,19 @@ KOS_OBJ_PTR wrapper(KOS_STACK_FRAME* frame_ptr, KOS_OBJ_PTR this_obj, KOS_OBJ_PT
 {
     stack_frame frame = frame_ptr;
     array args(frame, args_obj);
-    return frame.invoke_native(fun, this_obj, args);
+    try {
+        return frame.invoke_native(fun, this_obj, args);
+    }
+    catch (exception& e) {
+        assert(KOS_is_exception_pending(frame_ptr));
+    }
+    catch (std::exception& e) {
+        frame.raise(e.what());
+    }
+    catch (...) {
+        frame.raise("native exception");
+    }
+    return TO_OBJPTR(0);
 }
 
 template<typename T, T fun>
@@ -1277,6 +1294,9 @@ std::string value_from_object_ptr<std::string>(stack_frame frame, KOS_OBJ_PTR ob
 
 template<>
 string value_from_object_ptr<string>(stack_frame frame, KOS_OBJ_PTR objptr);
+
+template<>
+void_ value_from_object_ptr<void_>(stack_frame frame, KOS_OBJ_PTR objptr);
 
 template<>
 object value_from_object_ptr<object>(stack_frame frame, KOS_OBJ_PTR objptr);
