@@ -255,7 +255,7 @@ try {
         o["f"] = int64_t(1) << 32;
         o["s"] = "abc";
 #ifdef KOS_CPP11
-        o["a"] = frame.make_array(1, 2, 3, 4);
+        o["a"] = frame.make_array(true, 2, 3, 4);
 #endif
 
         const double i = o["i"];
@@ -270,6 +270,10 @@ try {
 #ifdef KOS_CPP11
         kos::array a = o["a"];
         TEST(a.size() == 4);
+        const bool a0 = a[0];
+        TEST(a0);
+        const int a1 = a[1];
+        TEST(a1 == 2);
 #endif
     }
 
