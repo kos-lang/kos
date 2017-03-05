@@ -87,6 +87,7 @@ ifeq ($(UNAME), Windows)
     CFLAGS += -wd4061 # enumerator 'x' in switch of enum 'y' is not explicitly handled by a case label
     CFLAGS += -wd4464 # relative path contains '..'
     CFLAGS += -wd4514 # unreferenced inline function has been removed
+    CFLAGS += -wd4571 # catch(...): structured exceptions (SEH) are no longer caught
     CFLAGS += -wd4625 # copy constructor was implicitly defined as deleted
     CFLAGS += -wd4626 # assignment operator was implicitly defined as deleted
     CFLAGS += -wd4710 # 'snprintf': function not inlined

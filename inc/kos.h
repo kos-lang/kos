@@ -1193,7 +1193,7 @@ KOS_OBJ_PTR wrapper(KOS_STACK_FRAME* frame_ptr, KOS_OBJ_PTR this_obj, KOS_OBJ_PT
     try {
         return frame.invoke_native(fun, this_obj, args);
     }
-    catch (exception& e) {
+    catch (exception&) {
         assert(KOS_is_exception_pending(frame_ptr));
     }
     catch (std::exception& e) {
