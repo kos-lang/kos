@@ -607,7 +607,7 @@ static KOS_OBJ_PTR _buffer_constructor(KOS_STACK_FRAME *frame,
     if (num_args > 0)
         TRY(KOS_get_integer(frame, KOS_array_read(frame, args_obj, 0), &size));
 
-    if (size < 0 || size > UINT_MAX) {
+    if (size < 0 || size > INT_MAX) {
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_buffer_size));
         return TO_OBJPTR(0);
     }
@@ -789,7 +789,7 @@ static KOS_OBJ_PTR _resize(KOS_STACK_FRAME *frame,
     assert( ! IS_BAD_PTR(this_obj));
 
     if (IS_TYPE(OBJ_BUFFER, this_obj)) {
-        if (size < 0 || size > UINT_MAX) {
+        if (size < 0 || size > INT_MAX) {
             KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_buffer_size));
             return TO_OBJPTR(0);
         }
@@ -797,7 +797,7 @@ static KOS_OBJ_PTR _resize(KOS_STACK_FRAME *frame,
         TRY(KOS_buffer_resize(frame, this_obj, (uint32_t)size));
     }
     else {
-        if (size < 0 || size > UINT_MAX) {
+        if (size < 0 || size > INT_MAX) {
             KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_array_size));
             return TO_OBJPTR(0);
         }
@@ -1573,13 +1573,13 @@ static KOS_OBJ_PTR _reserve(KOS_STACK_FRAME *frame,
     TRY(KOS_get_integer(frame, size_obj, &size));
 
     if (IS_TYPE(OBJ_BUFFER, this_obj)) {
-        if (size < 0 || size > UINT_MAX)
+        if (size < 0 || size > INT_MAX)
             RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_buffer_size));
 
         TRY(KOS_buffer_reserve(frame, this_obj, (uint32_t)size));
     }
     else {
-        if (size < 0 || size > UINT_MAX)
+        if (size < 0 || size > INT_MAX)
             RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_array_size));
 
         TRY(KOS_array_reserve(frame, this_obj, (uint32_t)size));
@@ -1638,6 +1638,62 @@ static KOS_OBJ_PTR _insert_array(KOS_STACK_FRAME *frame,
     src_len = MAX_INT64;
 
     TRY(KOS_array_insert(frame, this_obj, begin, end, src_obj, 0, src_len));
+
+_error:
+    return error ? TO_OBJPTR(0) : this_obj;
+}
+
+static KOS_OBJ_PTR _pop(KOS_STACK_FRAME *frame,
+                        KOS_OBJ_PTR      this_obj,
+                        KOS_OBJ_PTR      args_obj)
+{
+    int            error    = KOS_SUCCESS;
+    KOS_OBJ_PTR    ret      = TO_OBJPTR(0);
+    const uint32_t num_args = KOS_get_array_size(args_obj);
+
+    if (num_args == 0)
+        ret = KOS_array_pop(frame, this_obj);
+
+    else {
+        int64_t     num = 0;
+        int         idx;
+        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+        TRY_OBJPTR(arg);
+
+        TRY(KOS_get_integer(frame, arg, &num));
+
+        if (num < 0 || num > INT_MAX)
+            RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_array_size));
+
+        ret = KOS_new_array(frame, (unsigned)num);
+        TRY_OBJPTR(ret);
+
+        for (idx = (int)(num - 1); idx >= 0; idx--) {
+            arg = KOS_array_pop(frame, this_obj);
+            TRY_OBJPTR(arg);
+
+            TRY(KOS_array_write(frame, ret, idx, arg));
+        }
+    }
+
+_error:
+    return error ? TO_OBJPTR(0) : ret;
+}
+
+static KOS_OBJ_PTR _push(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_PTR      this_obj,
+                         KOS_OBJ_PTR      args_obj)
+{
+    int            error    = KOS_SUCCESS;
+    const uint32_t num_args = KOS_get_array_size(args_obj);
+    uint32_t       i;
+
+    for (i = 0; i < num_args; i++) {
+        KOS_OBJ_PTR elem_obj = KOS_array_read(frame, args_obj, (int)i);
+        TRY_OBJPTR(elem_obj);
+
+        TRY(KOS_array_push(frame, this_obj, elem_obj));
+    }
 
 _error:
     return error ? TO_OBJPTR(0) : this_obj;
@@ -1796,6 +1852,8 @@ int _KOS_module_lang_init(KOS_STACK_FRAME *frame)
     TRY_CREATE_CONSTRUCTOR(void);
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "insert_array",  _insert_array,      2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "pop",           _pop,               0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "push",          _push,              1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "reserve",       _reserve,           1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "resize",        _resize,            1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "slice",         _slice,             2);

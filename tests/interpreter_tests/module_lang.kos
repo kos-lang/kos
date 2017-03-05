@@ -720,6 +720,55 @@ do {
     assert a.size == 0
 }
 
+do {
+    expect_fail(fun { lang.array.prototype.push(0) })
+    expect_fail(fun { lang.array.prototype.pop() })
+    expect_fail(fun { [].push.apply("", ["a"]) })
+    expect_fail(fun { [].pop.apply("a", []) })
+
+    const a = []
+    a.push(1)
+    a.push(2, 3, 4)
+    a.push(5).push(6)
+    expect_fail(λ->(a.push()))
+
+    assert a.size == 6
+    assert a[0]   == 1
+    assert a[1]   == 2
+    assert a[2]   == 3
+    assert a[3]   == 4
+    assert a[4]   == 5
+    assert a[5]   == 6
+
+    assert a.pop() == 6
+    assert a.size  == 5
+    assert a[0]    == 1
+    assert a[4]    == 5
+
+    const b = a.pop(3)
+    assert typeof b == "array"
+    assert b.size   == 3
+    assert b[0]     == 3
+    assert b[1]     == 4
+    assert b[2]     == 5
+    assert a.size   == 2
+    assert a[0]     == 1
+    assert a[1]     == 2
+
+    const c = a.pop(0)
+    assert typeof c == "array"
+    assert c.size   == 0
+    assert a.size   == 2
+
+    expect_fail(λ->(a.pop(3)))
+    assert a.size == 0
+
+    assert [1, 2].pop() == 2
+
+    expect_fail(λ->([].pop()))
+    expect_fail(λ->([1].pop(2)))
+}
+
 ##############################################################################
 # lang.array.prototype.slice
 
