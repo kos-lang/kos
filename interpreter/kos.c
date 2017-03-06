@@ -37,15 +37,12 @@ static int _add_module_search_paths(KOS_STACK_FRAME *frame, const char *kos_exe)
 
 int main(int argc, char *argv[])
 {
-    int                error  = KOS_SUCCESS;
-    int                ctx_ok = 0;
-    KOS_CONTEXT        ctx;
-    KOS_STACK_FRAME   *frame;
-    struct _KOS_VECTOR cstr;
+    int              error  = KOS_SUCCESS;
+    int              ctx_ok = 0;
+    KOS_CONTEXT      ctx;
+    KOS_STACK_FRAME *frame;
 
     setlocale(LC_ALL, "");
-
-    _KOS_vector_init(&cstr);
 
     if (argc != 2) {
         fprintf(stderr, "Usage: kos <program>\n");
@@ -61,6 +58,19 @@ int main(int argc, char *argv[])
 
     ctx_ok = 1;
 
+    /* KOSDISASM=1 turns on disassembly */
+    {
+        struct _KOS_VECTOR cstr;
+
+        _KOS_vector_init(&cstr);
+
+        if (!_KOS_get_env("KOSDISASM", &cstr) &&
+                cstr.size == 2 && cstr.buffer[0] == '1' && cstr.buffer[1] == 0)
+            ctx.flags |= KOS_CTX_DEBUG;
+
+        _KOS_vector_destroy(&cstr);
+    }
+
     error = _add_module_search_paths(frame, argv[0]);
 
     if (error) {
@@ -75,11 +85,6 @@ int main(int argc, char *argv[])
         TRY(error);
     }
 
-    /* KOSDISASM=1 turns on disassembly */
-    if (!_KOS_get_env("KOSDISASM", &cstr) &&
-            cstr.size == 2 && cstr.buffer[0] == '1' && cstr.buffer[1] == 0)
-        ctx.flags |= KOS_CTX_DEBUG;
-
     error = KOS_load_module(frame, argv[1]);
 
     if (error) {
@@ -90,8 +95,6 @@ int main(int argc, char *argv[])
 _error:
     if (ctx_ok)
         KOS_context_destroy(&ctx);
-
-    _KOS_vector_destroy(&cstr);
 
     return (error == KOS_SUCCESS) ? 0 : 1;
 }
