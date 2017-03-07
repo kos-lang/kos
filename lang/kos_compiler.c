@@ -777,12 +777,17 @@ static int _is_signed_op(enum _KOS_BYTECODE_INSTR instr, int op)
     return 0;
 }
 
-void _KOS_disassemble(const uint8_t                       *bytecode,
+void _KOS_disassemble(const char                          *filename,
+                      const uint8_t                       *bytecode,
                       uint32_t                             size,
                       const struct _KOS_COMP_ADDR_TO_LINE *line_addrs,
-                      uint32_t                             num_line_addrs)
+                      uint32_t                             num_line_addrs,
+                      const char                   *const *func_names,
+                      const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs,
+                      uint32_t                             num_func_addrs)
 {
     const struct _KOS_COMP_ADDR_TO_LINE *line_addrs_end = line_addrs + num_line_addrs;
+    const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs_end = func_addrs + num_func_addrs;
 
     static const char *str_instr[] = {
         "BREAKPOINT",
@@ -865,11 +870,25 @@ void _KOS_disassemble(const uint8_t                       *bytecode,
 
         assert(line_addrs == line_addrs_end ||
                offs <= line_addrs->offs);
+        assert(func_addrs == func_addrs_end ||
+               offs <= func_addrs->offs);
 
+        if (func_addrs < func_addrs_end &&
+            offs == func_addrs->offs) {
+
+            printf("\n");
+            if (func_names) {
+                printf("-- %s() --\n", *func_names);
+                ++func_names;
+            }
+            else
+                printf("-- fun() --\n");
+            ++func_addrs;
+        }
         if (line_addrs < line_addrs_end &&
             offs == line_addrs->offs) {
 
-            printf("@%u:\n", line_addrs->line);
+            printf("@%s:%u:\n", filename, line_addrs->line);
             ++line_addrs;
         }
 

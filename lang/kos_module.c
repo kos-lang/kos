@@ -908,19 +908,92 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
         module->num_regs = (unsigned)program.cur_frame->num_regs;
 
+        /* Disassemble */
         if (ctx->flags & KOS_CTX_DEBUG) {
             struct _KOS_VECTOR cname;
+            struct _KOS_VECTOR ptrs;
+            const char *const *func_names = 0;
+            size_t             i_filename = 0;
+            const char        *filename   = "";
+            static const char  divider[]  =
+                    "==============================================================================";
 
             _KOS_vector_init(&cname);
+            _KOS_vector_init(&ptrs);
+
             error = KOS_string_to_cstr_vec(frame, module->name, &cname);
+            printf("\n");
+            printf("%s\n", divider);
+            if (!error) {
+                printf("Disassembling module: %s\n", cname.buffer);
+                printf("%s\n", divider);
+
+                error = KOS_string_to_cstr_vec(frame, module->path, &cname);
+                if (!error) {
+                    size_t i;
+                    for (i = cname.size - 2; i > 0 && cname.buffer[i-1] != '/'; i--);
+                    i_filename = i;
+                }
+            }
+
             if (!error)
-                printf("Disassembling module %s:\n", cname.buffer);
+                error = _KOS_vector_resize(&ptrs, module->num_func_addrs * sizeof(void *));
+            if (!error) {
+                struct _KOS_VECTOR buf;
+                uint32_t           i;
+                size_t             total_size = 0;
+                char              *names      = 0;
+
+                _KOS_vector_init(&buf);
+
+                for (i = 0; i < module->num_func_addrs; i++) {
+                    const uint32_t idx = module->func_addrs[i].str_idx;
+                    error = KOS_string_to_cstr_vec(frame, TO_OBJPTR(module->strings+idx), &buf);
+                    if (error)
+                        break;
+                    total_size += buf.size;
+                }
+
+                if (!error) {
+                    const size_t base = cname.size;
+                    error = _KOS_vector_resize(&cname, base + total_size);
+                    if (!error)
+                        names = cname.buffer + base;
+                }
+
+                if (!error) {
+                    const char **func_names_new = (const char **)ptrs.buffer;
+                    for (i = 0; i < module->num_func_addrs; i++) {
+                        const uint32_t idx = module->func_addrs[i].str_idx;
+                        error = KOS_string_to_cstr_vec(frame, TO_OBJPTR(module->strings+idx), &buf);
+                        if (error)
+                            break;
+                        func_names_new[i] = names;
+                        memcpy(names, buf.buffer, buf.size);
+                        names += buf.size;
+                    }
+                }
+
+                _KOS_vector_destroy(&buf);
+            }
+
+            if (!error) {
+                filename   = &cname.buffer[i_filename];
+                func_names = (const char *const *)ptrs.buffer;
+            }
+
+            _KOS_disassemble(filename,
+                             module->bytecode,
+                             module->bytecode_size,
+                             (struct _KOS_COMP_ADDR_TO_LINE *)module->line_addrs,
+                             module->num_line_addrs,
+                             func_names,
+                             (struct _KOS_COMP_ADDR_TO_FUNC *)module->func_addrs,
+                             module->num_func_addrs);
+
+            _KOS_vector_destroy(&ptrs);
             _KOS_vector_destroy(&cname);
             TRY(error);
-
-            _KOS_disassemble(module->bytecode, module->bytecode_size,
-                             (struct _KOS_COMP_ADDR_TO_LINE *)module->line_addrs,
-                             module->num_line_addrs);
         }
     }
 

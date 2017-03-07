@@ -274,9 +274,13 @@ int _KOS_scope_compare_item(void                       *what,
 struct _KOS_SCOPE_REF *_KOS_find_scope_ref(struct _KOS_FRAME *frame,
                                            struct _KOS_SCOPE *closure);
 
-void _KOS_disassemble(const uint8_t                       *bytecode,
+void _KOS_disassemble(const char                          *filename,
+                      const uint8_t                       *bytecode,
                       uint32_t                             size,
                       const struct _KOS_COMP_ADDR_TO_LINE *line_addrs,
-                      uint32_t                             num_line_addrs);
+                      uint32_t                             num_line_addrs,
+                      const char                   *const *func_names,
+                      const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs,
+                      uint32_t                             num_func_addrs);
 
 #endif
