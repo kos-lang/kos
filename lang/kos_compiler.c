@@ -519,9 +519,9 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
     switch (instr) {
 
         case INSTR_BREAKPOINT:          /* fall through */
-        case INSTR_CATCH_CANCEL:        /* fall through */
+        case INSTR_CANCEL:              /* fall through */
         default:
-            assert(instr == INSTR_BREAKPOINT || instr == INSTR_CATCH_CANCEL);
+            assert(instr == INSTR_BREAKPOINT || instr == INSTR_CANCEL);
             return 0;
 
         case INSTR_LOAD_TRUE:           /* fall through */
@@ -846,7 +846,7 @@ void _KOS_disassemble(const uint8_t                       *bytecode,
         "YIELD",
         "THROW",
         "CATCH",
-        "CATCH.CANCEL"
+        "CANCEL"
     };
     uint32_t offs = 0;
 
@@ -2197,7 +2197,7 @@ static int _restore_catch(struct _KOS_COMP_UNIT *program,
         error = _gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
     }
     else
-        error = _gen_instr(program, 0, INSTR_CATCH_CANCEL);
+        error = _gen_instr(program, 0, INSTR_CANCEL);
 
     return error;
 }

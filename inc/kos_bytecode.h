@@ -171,8 +171,8 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_THROW,
     /* CATCH <r.dest>, <delta32> */
     INSTR_CATCH,
-    /* CATCH.CANCEL */
-    INSTR_CATCH_CANCEL
+    /* CANCEL */
+    INSTR_CANCEL
 } KOS_BYTECODE_INSTR;
 
 #endif

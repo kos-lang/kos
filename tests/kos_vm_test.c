@@ -1072,7 +1072,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_CATCH,      0, IMM32(7),
-            INSTR_CATCH_CANCEL,
+            INSTR_CANCEL,
             INSTR_LOAD_FALSE, 0,
             INSTR_LOAD_TRUE,  1,
             INSTR_THROW,      1,

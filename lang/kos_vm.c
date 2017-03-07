@@ -2262,11 +2262,11 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 break;
             }
 
-            case INSTR_CATCH_CANCEL:
+            case INSTR_CANCEL:
                 /* fall through */
             default: {
-                assert(instr == INSTR_CATCH_CANCEL);
-                if (instr == INSTR_CATCH_CANCEL) {
+                assert(instr == INSTR_CANCEL);
+                if (instr == INSTR_CANCEL) {
                     frame->catch_offs = KOS_NO_CATCH;
                     delta = 1;
                 }
