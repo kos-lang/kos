@@ -1077,11 +1077,7 @@ int KOS_module_add_global(KOS_STACK_FRAME *frame,
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    /* TODO improve thread safety */
-
-    new_idx = KOS_get_array_size(module->globals);
-    TRY(KOS_array_resize(frame, module->globals, new_idx+1));
-    TRY(KOS_array_write(frame, module->globals, (int)new_idx, value));
+    TRY(KOS_array_push(frame, module->globals, value, &new_idx));
     TRY(KOS_set_property(frame, module->global_names, name, TO_SMALL_INT((int)new_idx)));
 
     if (idx)
