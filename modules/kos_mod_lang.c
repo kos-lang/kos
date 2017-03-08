@@ -573,7 +573,7 @@ static KOS_OBJ_PTR _array_constructor(KOS_STACK_FRAME *frame,
                         KOS_OBJ_PTR ret = KOS_call_function(frame, elem, KOS_VOID, gen_args);
                         if (IS_BAD_PTR(ret)) /* end of iterator */
                             break;
-                        TRY(KOS_array_push(frame, array, ret));
+                        TRY(KOS_array_push(frame, array, ret, 0));
                     }
                 }
                 break;
@@ -1333,7 +1333,7 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
 
                 TRY_OBJPTR(obj);
 
-                TRY(KOS_array_push(frame, fmt->data, obj));
+                TRY(KOS_array_push(frame, fmt->data, obj, 0));
 
                 data += size;
             }
@@ -1349,7 +1349,7 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
                 if (size)
                     memcpy(KOS_buffer_data(obj), data, size);
 
-                TRY(KOS_array_push(frame, fmt->data, obj));
+                TRY(KOS_array_push(frame, fmt->data, obj, 0));
 
                 data += size;
             }
@@ -1365,7 +1365,7 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
 
                 TRY_OBJPTR(obj);
 
-                TRY(KOS_array_push(frame, fmt->data, obj));
+                TRY(KOS_array_push(frame, fmt->data, obj, 0));
 
                 data += size;
             }
@@ -1686,17 +1686,24 @@ static KOS_OBJ_PTR _push(KOS_STACK_FRAME *frame,
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
+    KOS_OBJ_PTR    ret      = KOS_VOID;
     uint32_t       i;
 
     for (i = 0; i < num_args; i++) {
+        uint32_t    idx      = ~0U;
         KOS_OBJ_PTR elem_obj = KOS_array_read(frame, args_obj, (int)i);
         TRY_OBJPTR(elem_obj);
 
-        TRY(KOS_array_push(frame, this_obj, elem_obj));
+        TRY(KOS_array_push(frame, this_obj, elem_obj, &idx));
+
+        if (i == 0) {
+            ret = KOS_new_int(frame, (int64_t)idx);
+            TRY_OBJPTR(ret);
+        }
     }
 
 _error:
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? TO_OBJPTR(0) : ret;
 }
 
 static KOS_OBJ_PTR _get_string_size(KOS_STACK_FRAME *frame,

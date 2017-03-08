@@ -398,7 +398,8 @@ int KOS_array_rotate(KOS_STACK_FRAME *frame,
 
 int KOS_array_push(KOS_STACK_FRAME *frame,
                    KOS_OBJ_PTR      objptr,
-                   KOS_OBJ_PTR      value)
+                   KOS_OBJ_PTR      value,
+                   uint32_t        *idx)
 {
     /* TODO rewrite lock-free */
 
@@ -415,6 +416,9 @@ int KOS_array_push(KOS_STACK_FRAME *frame,
     TRY(KOS_array_resize(frame, objptr, len + 1));
 
     TRY(KOS_array_write(frame, objptr, (int)len, value));
+
+    if (idx)
+        *idx = len;
 
 _error:
     return error;

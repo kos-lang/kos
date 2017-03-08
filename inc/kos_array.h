@@ -88,7 +88,8 @@ int KOS_array_rotate(KOS_STACK_FRAME *frame,
 
 int KOS_array_push(KOS_STACK_FRAME *frame,
                    KOS_OBJ_PTR      objptr,
-                   KOS_OBJ_PTR      value);
+                   KOS_OBJ_PTR      value,
+                   uint32_t        *idx);
 
 KOS_OBJ_PTR KOS_array_pop(KOS_STACK_FRAME *frame,
                           KOS_OBJ_PTR      objptr);

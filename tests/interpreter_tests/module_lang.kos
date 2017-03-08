@@ -727,9 +727,10 @@ do {
     expect_fail(fun { [].pop.apply("a", []) })
 
     const a = []
-    a.push(1)
-    a.push(2, 3, 4)
-    a.push(5).push(6)
+    assert a.push(1)       == 0
+    assert a.push(2, 3, 4) == 1
+    assert a.push(5)       == 4
+    assert a.push(6)       == 5
     expect_fail(λ->(a.push()))
 
     assert a.size == 6

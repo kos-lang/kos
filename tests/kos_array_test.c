@@ -207,25 +207,32 @@ int main(void)
     /************************************************************************/
     /* Cannot push to a non-array */
     {
+        uint32_t idx = ~0U;
         KOS_ASCII_STRING(str, "str");
 
-        TEST(KOS_array_push(frame, TO_OBJPTR(0), TO_SMALL_INT(42)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_push(frame, TO_OBJPTR(0), TO_SMALL_INT(42), &idx) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
+        TEST(idx == ~0U);
 
-        TEST(KOS_array_push(frame, TO_SMALL_INT(1), TO_SMALL_INT(42)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_push(frame, TO_SMALL_INT(1), TO_SMALL_INT(42), &idx) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
+        TEST(idx == ~0U);
 
-        TEST(KOS_array_push(frame, TO_OBJPTR(&str), TO_SMALL_INT(42)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_push(frame, TO_OBJPTR(&str), TO_SMALL_INT(42), &idx) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
+        TEST(idx == ~0U);
 
-        TEST(KOS_array_push(frame, KOS_TRUE, TO_SMALL_INT(42)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_push(frame, KOS_TRUE, TO_SMALL_INT(42), &idx) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
+        TEST(idx == ~0U);
 
-        TEST(KOS_array_push(frame, KOS_VOID, TO_SMALL_INT(42)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_push(frame, KOS_VOID, TO_SMALL_INT(42), &idx) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
+        TEST(idx == ~0U);
 
-        TEST(KOS_array_push(frame, KOS_new_object(frame), TO_SMALL_INT(42)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_array_push(frame, KOS_new_object(frame), TO_SMALL_INT(42), &idx) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
+        TEST(idx == ~0U);
     }
 
     /************************************************************************/
@@ -719,13 +726,15 @@ int main(void)
     /************************************************************************/
     /* Push/pop */
     {
+        uint32_t    idx = ~0U;
         KOS_OBJ_PTR v;
-        KOS_OBJ_PTR a = KOS_new_array(frame, 0);
+        KOS_OBJ_PTR a   = KOS_new_array(frame, 0);
         TEST(!IS_BAD_PTR(a));
         TEST(KOS_get_array_size(a) == 0);
 
-        TEST(KOS_array_push(frame, a, TO_SMALL_INT(123)) == KOS_SUCCESS);
+        TEST(KOS_array_push(frame, a, TO_SMALL_INT(123), &idx) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
+        TEST(idx == 0);
         TEST(KOS_get_array_size(a) == 1);
 
         v = KOS_array_pop(frame, a);

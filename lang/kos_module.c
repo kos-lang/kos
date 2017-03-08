@@ -930,8 +930,9 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
                 error = KOS_string_to_cstr_vec(frame, module->path, &cname);
                 if (!error) {
-                    size_t i;
-                    for (i = cname.size - 2; i > 0 && cname.buffer[i-1] != '/'; i--);
+                    size_t i = cname.size - 2;
+                    while (i > 0 && cname.buffer[i-1] != KOS_PATH_SEPARATOR)
+                        --i;
                     i_filename = i;
                 }
             }
