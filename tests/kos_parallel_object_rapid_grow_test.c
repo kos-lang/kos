@@ -125,7 +125,7 @@ int main(void)
     /************************************************************************/
     /* This test grows objects from multiple threads, causing lots of collisions */
     {
-        const int           num_loops   = 1000;
+        const int           num_loops   = 100;
         const int           num_props   = 128;
         struct _KOS_VECTOR  mem_buf;
         _KOS_THREAD        *threads     = 0;
