@@ -27,7 +27,7 @@ fun check(function, expected)
     {
         const actual = function[prop]
         if actual != value {
-            print("\(function.name).\(prop) is \(actual), but expected \(value)\n")
+            print("\(function.name).\(prop) is \(actual), but expected \(value)")
             assert actual <= value
         }
     }

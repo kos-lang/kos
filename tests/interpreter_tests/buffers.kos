@@ -541,7 +541,7 @@ do {
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])")
         }
         assert b[i] == expected[i]
     }
@@ -564,7 +564,7 @@ do {
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])")
         }
         assert b[i] == expected[i]
     }
@@ -585,7 +585,7 @@ do {
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])")
         }
         assert b[i] == expected[i]
     }
@@ -602,7 +602,7 @@ do {
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])")
         }
         assert b[i] == expected[i]
     }
@@ -619,7 +619,7 @@ do {
 
     for var i in range(b.size) {
         if b[i] != expected[i] {
-            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])\n")
+            print("invalid value at position \(i) - expected: \(expected[i]) actual: \(b[i])")
         }
         assert b[i] == expected[i]
     }

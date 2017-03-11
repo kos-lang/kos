@@ -34,7 +34,7 @@ Example:
 
     const a = [ 1, 2, 3 ]
     for var elem in a {
-        print("\( elem )\n")
+        print("\( elem )")
     }
 
 Output:
@@ -47,9 +47,9 @@ Example:
 
     const a    = [ 4, 5, 6 ]
     const iter = a.iterator()
-    print("\( iter() )\n")
-    print("\( iter() )\n")
-    print("\( iter() )\n")
+    print("\( iter() )")
+    print("\( iter() )")
+    print("\( iter() )")
 
 Output:
 

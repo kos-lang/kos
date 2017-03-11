@@ -64,32 +64,32 @@ This program prints "Hello, World!":
     #!/usr/bin/env kos
     import lang.print;
 
-    print("Hello, World!\n");
+    print("Hello, World!");
 
 This program prints 30 terms of the Fibonacci series:
 
     #!/usr/bin/env kos
-    import lang.print;
+    import lang.print_;
 
     const terms = 30;
     var   a     = 0;
     var   b     = 1;
 
-    print("Fib series: \(a)");
+    print_("Fib series: \(a)");
 
     for (var i = 0; i < terms; i += 1) {
-        print(" \(b)");
+        print_(" \(b)");
         const c = a + b;
         a = b;
         b = c;
     }
 
-    print("\n");
+    print_("\n");
 
 This program prints the first 1000 prime numbers:
 
     #!/usr/bin/env kos
-    import lang.print;
+    import lang.print_;
 
     # Prime number generator with a fixed-size sieve
     fun primes(max_number)
@@ -121,13 +121,13 @@ This program prints the first 1000 prime numbers:
         }
     }
 
-    print("Prime numbers:");
+    print_("Prime numbers:");
 
     var count = 0;
 
     for (var value in primes(7920)) {
-        print(" \(value)");
+        print_(" \(value)");
         count += 1;
     }
 
-    print("\nPrinted \(count) primes\n");
+    print_("\nPrinted \(count) primes\n");

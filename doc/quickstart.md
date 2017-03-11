@@ -63,21 +63,21 @@ This is the most common way to declare functions.  Please note that
         return a + b
     }
 
-    lang.print(add_two_numbers(1, 5), "\n") # Prints: 6
+    lang.print(add_two_numbers(1, 5)) # Prints: 6
 
 And here is a function declared in an alternative way.  Functions are just
 objects, like everything else.  Function identifiers are really constants.
 
     const multiply_two_numbers = fun(a, b) { return a * b }
 
-    lang.print(multiply_two_numbers(3, 4), "\n") # Prints: 12
+    lang.print(multiply_two_numbers(3, 4)) # Prints: 12
 
 And this is the third way to declare functions.  The parentheses contain the
 expression which is treated like a return statement.
 
     const subtract_two_numbers = fun(a, b) -> (a - b)
 
-    lang.print(subtract_two_numbers(7, 5), "\n") # Prints: 2
+    lang.print(subtract_two_numbers(7, 5)) # Prints: 2
 
 
 Semicolons are optional
@@ -120,7 +120,7 @@ Object properties can be accessed in two ways:
     const obj  = { }
     obj.one    = 1
     obj["two"] = 2
-    lang.print("one:", obj["one"], ", two:", obj.two, "\n")
+    lang.print("one:", obj["one"], ", two:", obj.two)
     # Prints: one: 1, two: 2
 
 Everything is an object, so integers, functions, booleans and arrays also have
@@ -131,7 +131,7 @@ In addition to that, arrays, strings and buffers have elements, indexable with
 a number.  The first element always has index zero.
 
     const array = [ 'a', 'b', 'c' ]
-    lang.print("element 0:", array[0], "\n")
+    lang.print("element 0:", array[0])
     # Prints: element 0: a
 
 A number can be used to index only arrays, strings and buffers.  Attempting
@@ -185,7 +185,7 @@ Curly braces are also required in all the other control flow statements below.
 
     var a = 42
     while a > 0 {
-        lang.print(a, "\n")
+        lang.print(a)
         a -= 10
     }
     # Prints: 42 32 22 12 2 (in consecutive lines)
@@ -194,7 +194,7 @@ Curly braces are also required in all the other control flow statements below.
 
     var a = 42
     repeat {
-        lang.print(a, "\n")
+        lang.print(a)
         a -= 10
     } while a > 0
     # Prints: 42 32 22 12 2 (in consecutive lines)
@@ -202,7 +202,7 @@ Curly braces are also required in all the other control flow statements below.
 `for` loop:
 
     for var i = 0; i < 10; i += 1 {
-        lang.print(i, "\n")
+        lang.print(i)
     }
     # Prints consecutive integers from 0 to 9, inclusive
 
@@ -210,7 +210,7 @@ Curly braces are also required in all the other control flow statements below.
 
     const a = [ 1, 2, 4 ]
     for var number in a {
-        lang.print(number, "\n")
+        lang.print(number)
     }
     # Prints: 1 2 4 (in consecutive lines)
 
@@ -221,7 +221,7 @@ Curly braces are also required in all the other control flow statements below.
         if i >= 5 {
             break
         }
-        lang.print(i, "\n")
+        lang.print(i)
     }
     # Prints: 0 1 2 3 4
 
@@ -242,7 +242,7 @@ but will not cause the `lang` module to be reloaded.
 
     import lang
 
-    lang.print("Hello, World!\n")
+    lang.print("Hello, World!)
 
 You can explicitly import individual symbols, rather than the entire module:
 
@@ -250,7 +250,7 @@ You can explicitly import individual symbols, rather than the entire module:
     import lang.range
 
     for var i in range(5) {
-        print(i, "\n")
+        print(i)
     }
     # Prints: 0 1 2 3 4 (in consecutive lines)
 
@@ -264,7 +264,7 @@ Interpolated strings make it easy to convert anything to a string:
 
     const a = 1
     const b = true
-    print("One=\(a), Two=\(a+1), True=\(b)\n")
+    print("One=\(a), Two=\(a+1), True=\(b)")
     # Prints: One=1, Two=2, True=true
 
 Converting between integers, floats and strings:
@@ -306,11 +306,11 @@ multiple times to obtain subsequent values, for example:
     import lang.print
 
     const iterator = odd_numbers(7)
-    print(iterator(), "\n")  # Prints: 1
-    print(iterator(), "\n")  # Prints: 3
-    print(iterator(), "\n")  # Prints: 5
-    print(iterator(), "\n")  # Prints: 7
-    iterator()               # Throws an exception!
+    print(iterator())  # Prints: 1
+    print(iterator())  # Prints: 3
+    print(iterator())  # Prints: 5
+    print(iterator())  # Prints: 7
+    iterator()         # Throws an exception!
 
 After the generator finishes, attempting to call the iterator function
 again will throw an exception.
@@ -318,7 +318,7 @@ again will throw an exception.
 Another way to use a generator is to use the `for`..`in` loop:
 
     for var value in odd_numbers(7) {
-        print(value, "\n")
+        print(value)
     }
     # Prints: 1 3 5 7 (in consecutive lines)
 
@@ -405,7 +405,7 @@ An exception can be thrown and caught, like so:
     import lang.print
 
     try {
-        throw "Hello, exception!\n"
+        throw "Hello, exception!"
     }
     catch const e {
         print(e.value) # Prints: Hello, exception!
@@ -426,11 +426,11 @@ Objects in Kos can have methods:
         add:       fun(n) { this.count += n }
     }
 
-    print(counter.get(), "\n")     # Prints: 0
+    print(counter.get())     # Prints: 0
     counter.increment()
-    print(counter.get(), "\n")     # Prints: 1
+    print(counter.get())     # Prints: 1
     counter.add(5)
-    print(counter.get(), "\n")     # Prints: 6
+    print(counter.get())     # Prints: 6
 
 
 Constructors and prototypal inheritance
@@ -446,7 +446,7 @@ Constructors and prototypal inheritance
 
     counter.prototype.print = fun
     {
-        print(this.count, "\n")
+        print(this.count)
     }
 
     counter.prototype.add = fun(n)
