@@ -397,6 +397,11 @@ object.prototype.any = fun(transform)
     return any(transform, this)
 }
 
+fun method(obj, func)
+{
+    return fun(args...) -> (func.apply(obj, args))
+}
+
 # TODO move to debug module
 fun backtrace
 {
