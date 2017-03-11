@@ -50,7 +50,6 @@ static KOS_ASCII_STRING(str_err_not_buffer,                "object is not a buff
 static KOS_ASCII_STRING(str_err_not_enough_pack_values,    "insufficient number of packed values");
 static KOS_ASCII_STRING(str_err_not_function,              "object is not a function");
 static KOS_ASCII_STRING(str_err_not_string,                "object is not a string");
-static KOS_ASCII_STRING(str_err_out_of_memory,             "out of memory");
 static KOS_ASCII_STRING(str_err_unpack_buf_too_short,      "unpacked buffer too short");
 static KOS_ASCII_STRING(str_err_unsup_operand_types,       "unsupported operand types");
 
@@ -71,41 +70,17 @@ static KOS_OBJ_PTR _print(KOS_STACK_FRAME *frame,
                           KOS_OBJ_PTR      args_obj)
 {
     int                error = KOS_SUCCESS;
-    uint32_t           len;
-    uint32_t           i;
     struct _KOS_VECTOR cstr;
 
     _KOS_vector_init(&cstr);
 
-    len = KOS_get_array_size(args_obj);
-
-    if (len)
-        TRY(_KOS_vector_reserve(&cstr, 128));
-
-    for (i = 0; i < len; i++) {
-        KOS_OBJ_PTR obj = KOS_array_read(frame, args_obj, (int)i);
-        TRY_OBJPTR(obj);
-
-        if (i > 0) {
-            const size_t pos = cstr.size;
-            TRY(_KOS_vector_resize(&cstr, pos + 1));
-            cstr.buffer[pos-1] = ' ';
-            cstr.buffer[pos]   = 0;
-        }
-
-        TRY(KOS_object_to_string_or_cstr_vec(frame, obj, 0, &cstr));
-    }
+    TRY(KOS_print_to_cstr_vec(frame, args_obj, &cstr, " ", 1));
 
     if (cstr.size)
         printf("%.*s", (int)cstr.size-1, cstr.buffer);
 
 _error:
     _KOS_vector_destroy(&cstr);
-
-    if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
-        error = KOS_ERROR_EXCEPTION;
-    }
 
     return error ? TO_OBJPTR(0) : KOS_VOID;
 }

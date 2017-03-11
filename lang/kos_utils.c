@@ -35,6 +35,7 @@
 
 static KOS_ASCII_STRING(str_array,              "<array>");
 static KOS_ASCII_STRING(str_err_invalid_string, "invalid string");
+static KOS_ASCII_STRING(str_err_not_array,      "object is not an array");
 static KOS_ASCII_STRING(str_err_not_number,     "object is not a number");
 static KOS_ASCII_STRING(str_err_out_of_memory,  "out of memory");
 static KOS_ASCII_STRING(str_false,              "false");
@@ -164,6 +165,11 @@ static int _int_to_str(KOS_STACK_FRAME    *frame,
     }
 
 _error:
+    if (error == KOS_ERROR_OUT_OF_MEMORY) {
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+        error = KOS_ERROR_EXCEPTION;
+    }
+
     return error;
 }
 
@@ -195,6 +201,11 @@ static int _float_to_str(KOS_STACK_FRAME    *frame,
     }
 
 _error:
+    if (error == KOS_ERROR_OUT_OF_MEMORY) {
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+        error = KOS_ERROR_EXCEPTION;
+    }
+
     return error;
 }
 
@@ -258,6 +269,9 @@ int KOS_object_to_string_or_cstr_vec(KOS_STACK_FRAME    *frame,
     assert( ! IS_BAD_PTR(obj));
     assert(str || cstr_vec);
     assert( ! str || ! cstr_vec);
+
+    if (IS_BAD_PTR(obj))
+        return KOS_ERROR_EXCEPTION;
 
     if (IS_SMALL_INT(obj))
         error = _int_to_str(frame, GET_SMALL_INT(obj), str, cstr_vec);
@@ -343,4 +357,51 @@ KOS_OBJ_PTR KOS_object_to_string(KOS_STACK_FRAME *frame,
     const int   error = KOS_object_to_string_or_cstr_vec(frame, obj, &ret, 0);
 
     return error ? TO_OBJPTR(0) : ret;
+}
+
+int KOS_print_to_cstr_vec(KOS_STACK_FRAME    *frame,
+                          KOS_OBJ_PTR         array,
+                          struct _KOS_VECTOR *cstr_vec,
+                          const char         *sep,
+                          unsigned            sep_len)
+{
+    int      error = KOS_SUCCESS;
+    uint32_t len;
+    uint32_t i;
+    uint32_t first_sep_i;
+
+    assert(cstr_vec);
+    assert( ! IS_BAD_PTR(array));
+    assert(IS_TYPE(OBJ_ARRAY, array));
+
+    if (IS_BAD_PTR(array) || ! IS_TYPE(OBJ_ARRAY, array))
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_array));
+
+    first_sep_i = cstr_vec->size ? 0U : 1U;
+
+    len = KOS_get_array_size(array);
+
+    if (len)
+        TRY(_KOS_vector_reserve(cstr_vec, cstr_vec->size + 128U));
+
+    for (i = 0; i < len; i++) {
+        KOS_OBJ_PTR obj = KOS_array_read(frame, array, (int)i);
+        TRY_OBJPTR(obj);
+
+        if (i >= first_sep_i) {
+            const size_t pos = cstr_vec->size;
+            TRY(_KOS_vector_resize(cstr_vec, pos + sep_len));
+            memcpy(&cstr_vec->buffer[pos-1], sep, sep_len+1);
+        }
+
+        TRY(KOS_object_to_string_or_cstr_vec(frame, obj, 0, cstr_vec));
+    }
+
+_error:
+    if (error == KOS_ERROR_OUT_OF_MEMORY) {
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+        error = KOS_ERROR_EXCEPTION;
+    }
+
+    return error;
 }
