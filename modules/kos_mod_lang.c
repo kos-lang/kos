@@ -78,6 +78,8 @@ static KOS_OBJ_PTR _print(KOS_STACK_FRAME *frame,
 
     if (cstr.size)
         printf("%.*s\n", (int)cstr.size-1, cstr.buffer);
+    else
+        printf("\n");
 
 _error:
     _KOS_vector_destroy(&cstr);

@@ -1,0 +1,3 @@
+void true false abc -10 
+
+xyz false void true 4096 1.200000

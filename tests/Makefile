@@ -99,7 +99,7 @@ endef
 
 $(foreach test, $(parser_test_list), $(eval $(call PARSER_TEST,$(test))))
 
-interpreter_test_list = $(filter-out interpreter_tests/fail_%, $(wildcard interpreter_tests/*.kos))
+interpreter_test_list = $(filter-out interpreter_tests/fail_% interpreter_tests/module_lang_print.kos, $(wildcard interpreter_tests/*.kos))
 
 define INTERPRETER_TEST
 $1:
@@ -135,7 +135,11 @@ disasm:
 	@echo Test disasm
 	@env KOSPATH=../modules interpreter_tests/disasm $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
-simple_tests = $(filter-out kos_parallel%, $(standalone_tests) $(parser_test_list) module_loading disasm $(interpreter_test_list) $(interpreter_fail_test_list))
+module_lang_print:
+	@echo Test module_lang_print
+	@env KOSPATH=../modules interpreter_tests/module_lang_print $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
+
+simple_tests = $(filter-out kos_parallel%, $(standalone_tests) $(parser_test_list) module_loading disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list))
 
 simple_test: $(simple_tests)
 
@@ -187,4 +191,4 @@ ifneq ($(CONFIG_GCOV), 0)
 test: gcov
 endif
 
-.PHONY: all test simple_test gcov gcov.all $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) module_loading disasm $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov gcov.all $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) module_loading disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list)
