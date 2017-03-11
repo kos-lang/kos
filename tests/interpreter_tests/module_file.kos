@@ -292,3 +292,43 @@ do {
     assert file.remove(name)
     assert ! file.is_file(name)
 }
+
+##############################################################################
+# file.print, file.print_
+
+do {
+    const name = "./__text_file"
+    file.remove(name)
+    assert ! file.is_file(name)
+
+    with const f = file.open(name, file.create) {
+        f.print_(false, void)
+        f.print_()
+        f.print_(":")
+        f.print()
+        f.print("Hello,", "World!")
+        f.print("END")
+    }
+
+    with const f = file.open(name, file.ro) {
+        const expected = [ "false void:",
+                           "Hello, World!",
+                           "END" ]
+        var i = 0
+        for var line in f.read_lines() {
+            assert line.size > expected[i].size
+            const delta = line.size - expected[i].size
+            assert line[:-delta] == expected[i]
+            assert line[-1] == "\n"
+            assert delta <= 2
+            if delta == 2 {
+                assert line[-2] == "\r"
+            }
+            i += 1
+        }
+        assert i == expected.size
+    }
+
+    assert file.remove(name)
+    assert ! file.is_file(name)
+}

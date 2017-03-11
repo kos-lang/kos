@@ -27,6 +27,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include "../lang/kos_file.h"
 #include "../lang/kos_memory.h"
 #include "../lang/kos_try.h"
@@ -154,6 +155,56 @@ static KOS_OBJ_PTR _close(KOS_STACK_FRAME *frame,
     }
 
     return error ? TO_OBJPTR(0) : KOS_VOID;
+}
+
+static KOS_OBJ_PTR _print(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_PTR      this_obj,
+                          KOS_OBJ_PTR      args_obj)
+{
+    FILE              *file  = 0;
+    int                error = _get_file_object(frame, this_obj, &file, 0);
+    struct _KOS_VECTOR cstr;
+
+    _KOS_vector_init(&cstr);
+
+    if ( ! error && file) {
+
+        TRY(KOS_print_to_cstr_vec(frame, args_obj, &cstr, " ", 1));
+
+        if (cstr.size)
+            fprintf(file, "%.*s\n", (int)cstr.size-1, cstr.buffer);
+        else
+            fprintf(file, "\n");
+    }
+
+_error:
+    _KOS_vector_destroy(&cstr);
+
+    return error ? TO_OBJPTR(0) : this_obj;
+}
+
+static KOS_OBJ_PTR _print_(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_PTR      this_obj,
+                           KOS_OBJ_PTR      args_obj)
+{
+    FILE              *file  = 0;
+    int                error = _get_file_object(frame, this_obj, &file, 0);
+    struct _KOS_VECTOR cstr;
+
+    _KOS_vector_init(&cstr);
+
+    if ( ! error && file) {
+
+        TRY(KOS_print_to_cstr_vec(frame, args_obj, &cstr, " ", 1));
+
+        if (cstr.size)
+            fprintf(file, "%.*s", (int)cstr.size-1, cstr.buffer);
+    }
+
+_error:
+    _KOS_vector_destroy(&cstr);
+
+    return error ? TO_OBJPTR(0) : this_obj;
 }
 
 static int _is_eol(char c)
@@ -513,6 +564,8 @@ int _KOS_module_file_init(KOS_STACK_FRAME *frame)
 
     TRY_ADD_CONSTRUCTOR(    frame,        "file",      _open,           1, &proto);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "close",     _close,          0);
+    TRY_ADD_MEMBER_FUNCTION(frame, proto, "print",     _print,          0);
+    TRY_ADD_MEMBER_FUNCTION(frame, proto, "print_",    _print_,         0);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "read_line", _read_line,      0);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "read_some", _read_some,      0);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "release",   _close,          0);
