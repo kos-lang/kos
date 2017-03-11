@@ -30,24 +30,16 @@
 #include "kos_unicode.h"
 #include "kos_utf8.h"
 #include <assert.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
 static KOS_ASCII_STRING(_empty_string,          "");
-static KOS_ASCII_STRING(str_array,              "<array>");
 static KOS_ASCII_STRING(str_err_invalid_index,  "string index is out of range");
 static KOS_ASCII_STRING(str_err_invalid_string, "invalid string");
 static KOS_ASCII_STRING(str_err_invalid_utf8,   "invalid UTF-8 sequence");
 static KOS_ASCII_STRING(str_err_not_string,     "object is not a string");
 static KOS_ASCII_STRING(str_err_null_pointer,   "null pointer");
 static KOS_ASCII_STRING(str_err_out_of_memory,  "out of memory");
-static KOS_ASCII_STRING(str_false,              "false");
-static KOS_ASCII_STRING(str_function,           "<function>");
-static KOS_ASCII_STRING(str_object,             "<object>");
-static KOS_ASCII_STRING(str_true,               "true");
-static KOS_ASCII_STRING(str_void,               "void");
 
 static KOS_STRING *_new_empty_string(KOS_STACK_FRAME *frame, unsigned length, enum KOS_OBJECT_TYPE type)
 {
@@ -838,70 +830,4 @@ uint32_t KOS_string_get_hash(KOS_OBJ_PTR objptr)
     }
 
     return hash;
-}
-
-KOS_OBJ_PTR KOS_object_to_string(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      obj)
-{
-    char        buf[64];
-    KOS_OBJ_PTR ret = TO_OBJPTR(0);
-
-    assert( ! IS_BAD_PTR(obj));
-
-    if (IS_SMALL_INT(obj)) {
-        const int64_t value = GET_SMALL_INT(obj);
-        snprintf(buf, sizeof(buf), "%" PRId64, value);
-        ret = KOS_new_cstring(frame, buf);
-    }
-    else switch (GET_OBJ_TYPE(obj)) {
-
-        case OBJ_INTEGER:
-            snprintf(buf, sizeof(buf), "%" PRId64, OBJPTR(KOS_INTEGER, obj)->number);
-            ret = KOS_new_cstring(frame, buf);
-            break;
-
-        case OBJ_FLOAT:
-            /* TODO don't print trailing zeroes, print with variable precision */
-            snprintf(buf, sizeof(buf), "%f", OBJPTR(KOS_FLOAT, obj)->number);
-            ret = KOS_new_cstring(frame, buf);
-            break;
-
-        case OBJ_STRING_8:
-            /* fall through */
-        case OBJ_STRING_16:
-            /* fall through */
-        case OBJ_STRING_32:
-            ret = obj;
-            break;
-
-        case OBJ_VOID:
-            ret = TO_OBJPTR(&str_void);
-            break;
-
-        case OBJ_BOOLEAN:
-            if (KOS_get_bool(obj))
-                ret = TO_OBJPTR(&str_true);
-            else
-                ret = TO_OBJPTR(&str_false);
-            break;
-
-        case OBJ_ARRAY:
-            /* TODO */
-            ret = TO_OBJPTR(&str_array);
-            break;
-
-        case OBJ_OBJECT:
-            /* TODO */
-            ret = TO_OBJPTR(&str_object);
-            break;
-
-        case OBJ_FUNCTION:
-            /* fall through */
-        default:
-            assert(GET_OBJ_TYPE(obj) == OBJ_FUNCTION);
-            ret = TO_OBJPTR(&str_function);
-            break;
-    }
-
-    return ret;
 }

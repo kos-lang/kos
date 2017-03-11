@@ -28,9 +28,20 @@
 #include "kos_memory.h"
 #include "kos_try.h"
 #include <assert.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
 
-static KOS_ASCII_STRING(str_err_not_number,    "object is not a number");
+static KOS_ASCII_STRING(str_array,              "<array>");
+static KOS_ASCII_STRING(str_err_invalid_string, "invalid string");
+static KOS_ASCII_STRING(str_err_not_number,     "object is not a number");
+static KOS_ASCII_STRING(str_err_out_of_memory,  "out of memory");
+static KOS_ASCII_STRING(str_false,              "false");
+static KOS_ASCII_STRING(str_function,           "<function>");
+static KOS_ASCII_STRING(str_object,             "<object>");
+static KOS_ASCII_STRING(str_true,               "true");
+static KOS_ASCII_STRING(str_void,               "void");
 
 int KOS_get_numeric_arg(KOS_STACK_FRAME *frame,
                         KOS_OBJ_PTR      args_obj,
@@ -124,4 +135,212 @@ void KOS_print_exception(KOS_STACK_FRAME *frame)
     }
 
     _KOS_vector_destroy(&cstr);
+}
+
+static int _int_to_str(KOS_STACK_FRAME    *frame,
+                       int64_t             value,
+                       KOS_OBJ_PTR        *str,
+                       struct _KOS_VECTOR *cstr_vec)
+{
+    int     error = KOS_SUCCESS;
+    uint8_t buf[64];
+    char   *ptr   = (char *)buf;
+
+    if (cstr_vec) {
+        TRY(_KOS_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
+        ptr = &cstr_vec->buffer[cstr_vec->size ? cstr_vec->size - 1 : 0];
+    }
+
+    snprintf(ptr, sizeof(buf), "%" PRId64, value);
+
+    if (cstr_vec) {
+        TRY(_KOS_vector_resize(cstr_vec, cstr_vec->size + strlen(ptr) +
+                    (cstr_vec->size ? 0 : 1)));
+    }
+    else {
+        KOS_OBJ_PTR ret = KOS_new_cstring(frame, ptr);
+        TRY_OBJPTR(ret);
+        *str = ret;
+    }
+
+_error:
+    return error;
+}
+
+static int _float_to_str(KOS_STACK_FRAME    *frame,
+                         double              value,
+                         KOS_OBJ_PTR        *str,
+                         struct _KOS_VECTOR *cstr_vec)
+{
+    int     error = KOS_SUCCESS;
+    uint8_t buf[64];
+    char   *ptr   = (char *)buf;
+
+    if (cstr_vec) {
+        TRY(_KOS_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
+        ptr = &cstr_vec->buffer[cstr_vec->size ? cstr_vec->size - 1 : 0];
+    }
+
+    /* TODO don't print trailing zeroes, print with variable precision */
+    snprintf(ptr, sizeof(buf), "%f", value);
+
+    if (cstr_vec) {
+        TRY(_KOS_vector_resize(cstr_vec, cstr_vec->size + strlen(ptr) +
+                    (cstr_vec->size ? 0 : 1)));
+    }
+    else {
+        KOS_OBJ_PTR ret = KOS_new_cstring(frame, ptr);
+        TRY_OBJPTR(ret);
+        *str = ret;
+    }
+
+_error:
+    return error;
+}
+
+static int _vector_append_cstr(KOS_STACK_FRAME    *frame,
+                               struct _KOS_VECTOR *cstr_vec,
+                               const char         *str,
+                               size_t              len)
+{
+    const size_t pos   = cstr_vec->size;
+    int          error = _KOS_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
+
+    if (error) {
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+        error = KOS_ERROR_EXCEPTION;
+    }
+    else
+        memcpy(&cstr_vec->buffer[pos ? pos - 1 : pos], str, len + 1);
+
+    return error;
+}
+
+static int _vector_append_str(KOS_STACK_FRAME    *frame,
+                              struct _KOS_VECTOR *cstr_vec,
+                              KOS_OBJ_PTR         obj)
+{
+    unsigned str_len = 0;
+    size_t   pos     = cstr_vec->size;
+    int      error;
+
+    if (KOS_get_string_length(obj) > 0) {
+
+        str_len = KOS_string_to_utf8(obj, 0, 0);
+        assert(str_len > 0);
+
+        if (str_len == ~0U) {
+            KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_string));
+            return KOS_ERROR_EXCEPTION;
+        }
+    }
+
+    error = _KOS_vector_resize(cstr_vec, pos + str_len + (pos ? 0 : 1));
+
+    if (error) {
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    if (str_len)
+        KOS_string_to_utf8(obj, &cstr_vec->buffer[pos ? pos - 1 : pos], str_len);
+
+    return KOS_SUCCESS;
+}
+
+int KOS_object_to_string_or_cstr_vec(KOS_STACK_FRAME    *frame,
+                                     KOS_OBJ_PTR         obj,
+                                     KOS_OBJ_PTR        *str,
+                                     struct _KOS_VECTOR *cstr_vec)
+{
+    int error = KOS_SUCCESS;
+
+    assert( ! IS_BAD_PTR(obj));
+    assert(str || cstr_vec);
+    assert( ! str || ! cstr_vec);
+
+    if (IS_SMALL_INT(obj))
+        error = _int_to_str(frame, GET_SMALL_INT(obj), str, cstr_vec);
+
+    else switch (GET_OBJ_TYPE(obj)) {
+
+        case OBJ_INTEGER:
+            error  =_int_to_str(frame, OBJPTR(KOS_INTEGER, obj)->number, str, cstr_vec);
+            break;
+
+        case OBJ_FLOAT:
+            error = _float_to_str(frame, OBJPTR(KOS_FLOAT, obj)->number, str, cstr_vec);
+            break;
+
+        case OBJ_STRING_8:
+            /* fall through */
+        case OBJ_STRING_16:
+            /* fall through */
+        case OBJ_STRING_32:
+            if (cstr_vec)
+                error = _vector_append_str(frame, cstr_vec, obj);
+            else
+                *str = obj;
+            break;
+
+        case OBJ_VOID:
+            if (cstr_vec)
+                error = _vector_append_cstr(frame, cstr_vec, "void", 4);
+            else
+                *str = TO_OBJPTR(&str_void);
+            break;
+
+        case OBJ_BOOLEAN:
+            if (KOS_get_bool(obj)) {
+                if (cstr_vec)
+                    error = _vector_append_cstr(frame, cstr_vec, "true", 4);
+                else
+                    *str = TO_OBJPTR(&str_true);
+            }
+            else {
+                if (cstr_vec)
+                    error = _vector_append_cstr(frame, cstr_vec, "false", 5);
+                else
+                    *str = TO_OBJPTR(&str_false);
+            }
+            break;
+
+        case OBJ_ARRAY:
+            /* TODO */
+            if (cstr_vec)
+                error = _vector_append_cstr(frame, cstr_vec, "<array>", 7);
+            else
+                *str = TO_OBJPTR(&str_array);
+            break;
+
+        case OBJ_OBJECT:
+            /* TODO */
+            if (cstr_vec)
+                error = _vector_append_cstr(frame, cstr_vec, "<object>", 8);
+            else
+                *str = TO_OBJPTR(&str_object);
+            break;
+
+        case OBJ_FUNCTION:
+            /* fall through */
+        default:
+            assert(GET_OBJ_TYPE(obj) == OBJ_FUNCTION);
+            /* TODO */
+            if (cstr_vec)
+                error = _vector_append_cstr(frame, cstr_vec, "<function>", 10);
+            else
+                *str = TO_OBJPTR(&str_function);
+            break;
+    }
+
+    return error;
+}
+
+KOS_OBJ_PTR KOS_object_to_string(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_PTR      obj)
+{
+    KOS_OBJ_PTR ret   = TO_OBJPTR(0);
+    const int   error = KOS_object_to_string_or_cstr_vec(frame, obj, &ret, 0);
+
+    return error ? TO_OBJPTR(0) : ret;
 }

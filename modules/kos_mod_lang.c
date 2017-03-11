@@ -26,13 +26,12 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include "../lang/kos_memory.h"
 #include "../lang/kos_misc.h"
 #include "../lang/kos_object_internal.h"
 #include "../lang/kos_try.h"
 #include <assert.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #include <limits.h>
 #include <memory.h>
 #include <stdio.h>
@@ -51,6 +50,7 @@ static KOS_ASCII_STRING(str_err_not_buffer,                "object is not a buff
 static KOS_ASCII_STRING(str_err_not_enough_pack_values,    "insufficient number of packed values");
 static KOS_ASCII_STRING(str_err_not_function,              "object is not a function");
 static KOS_ASCII_STRING(str_err_not_string,                "object is not a string");
+static KOS_ASCII_STRING(str_err_out_of_memory,             "out of memory");
 static KOS_ASCII_STRING(str_err_unpack_buf_too_short,      "unpacked buffer too short");
 static KOS_ASCII_STRING(str_err_unsup_operand_types,       "unsupported operand types");
 
@@ -79,81 +79,33 @@ static KOS_OBJ_PTR _print(KOS_STACK_FRAME *frame,
 
     len = KOS_get_array_size(args_obj);
 
+    if (len)
+        TRY(_KOS_vector_reserve(&cstr, 128));
+
     for (i = 0; i < len; i++) {
         KOS_OBJ_PTR obj = KOS_array_read(frame, args_obj, (int)i);
-
         TRY_OBJPTR(obj);
 
-        if (i > 0)
-            printf(" ");
-
-        if (IS_SMALL_INT(obj)) {
-            const int64_t value = GET_SMALL_INT(obj);
-            printf("%" PRId64, value);
+        if (i > 0) {
+            const size_t pos = cstr.size;
+            TRY(_KOS_vector_resize(&cstr, pos + 1));
+            cstr.buffer[pos-1] = ' ';
+            cstr.buffer[pos]   = 0;
         }
-        else switch (GET_OBJ_TYPE(obj)) {
 
-            case OBJ_INTEGER:
-                /* fall through */
-            default:
-                assert(GET_OBJ_TYPE(obj) == OBJ_INTEGER);
-                printf("%" PRId64, OBJPTR(KOS_INTEGER, obj)->number);
-                break;
-
-            case OBJ_FLOAT:
-                /* TODO sync with KOS_object_to_string */
-                printf("%f", OBJPTR(KOS_FLOAT, obj)->number);
-                break;
-
-            case OBJ_STRING_8:
-                /* fall through */
-            case OBJ_STRING_16:
-                /* fall through */
-            case OBJ_STRING_32: {
-                if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, obj, &cstr)) {
-                    assert(cstr.size > 0);
-                    printf("%.*s", (int)cstr.size-1, cstr.buffer);
-                }
-                else
-                    i = len;
-                break;
-            }
-
-            case OBJ_VOID:
-                printf("void");
-                break;
-
-            case OBJ_BOOLEAN:
-                if (KOS_get_bool(obj))
-                    printf("true");
-                else
-                    printf("false");
-                break;
-
-            case OBJ_ARRAY:
-                /* TODO */
-                printf("<array>");
-                break;
-
-            case OBJ_BUFFER:
-                /* TODO */
-                printf("<buffer>");
-                break;
-
-            case OBJ_OBJECT:
-                /* TODO */
-                printf("<object>");
-                break;
-
-            case OBJ_FUNCTION:
-                /* TODO print module, name, line, offset */
-                printf("<function>");
-                break;
-        }
+        TRY(KOS_object_to_string_or_cstr_vec(frame, obj, 0, &cstr));
     }
+
+    if (cstr.size)
+        printf("%.*s", (int)cstr.size-1, cstr.buffer);
 
 _error:
     _KOS_vector_destroy(&cstr);
+
+    if (error == KOS_ERROR_OUT_OF_MEMORY) {
+        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+        error = KOS_ERROR_EXCEPTION;
+    }
 
     return error ? TO_OBJPTR(0) : KOS_VOID;
 }

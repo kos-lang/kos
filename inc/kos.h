@@ -30,6 +30,7 @@
 #include "kos_object_base.h"
 #include "kos_object.h"
 #include "kos_string.h"
+#include "kos_utils.h"
 
 #ifdef __cplusplus
 

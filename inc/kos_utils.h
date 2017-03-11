@@ -27,6 +27,7 @@
 #include "../lang/kos_misc.h"
 
 typedef struct _KOS_NUMERIC KOS_NUMERIC;
+struct _KOS_VECTOR;
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,6 +39,14 @@ int KOS_get_numeric_arg(KOS_STACK_FRAME *frame,
                         KOS_NUMERIC     *numeric);
 
 void KOS_print_exception(KOS_STACK_FRAME *frame);
+
+int KOS_object_to_string_or_cstr_vec(KOS_STACK_FRAME    *frame,
+                                     KOS_OBJ_PTR         obj,
+                                     KOS_OBJ_PTR        *str,
+                                     struct _KOS_VECTOR *cstr_vec);
+
+KOS_OBJ_PTR KOS_object_to_string(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_PTR      obj);
 
 #ifdef __cplusplus
 }

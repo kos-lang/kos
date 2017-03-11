@@ -25,6 +25,7 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_utils.h"
 #include "../lang/kos_memory.h"
 #include "../lang/kos_object_internal.h"
 #include "../lang/kos_utf8.h"

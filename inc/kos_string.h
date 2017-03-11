@@ -64,13 +64,12 @@ static inline void _KOS_init_const_ascii_string(KOS_STRING* obj, const char* s, 
 #define KOS_ASCII_STRING(var, s) KOS_STRING var = { OBJ_STRING_8, KOS_STRING_PTR, sizeof(s)-1, 0, { s } }
 
 #define KOS_init_const_ascii_string(obj, s) do { \
-    (obj)->type     = OBJ_STRING_8;                \
-    (obj)->flags    = KOS_STRING_PTR;              \
-    (obj)->length   = (uint32_t)(sizeof(s)-1);     \
-    (obj)->hash     = 0;                           \
-    (obj)->data.ptr = s;                           \
-}                                                \
-while (0)
+    (obj)->type     = OBJ_STRING_8;              \
+    (obj)->flags    = KOS_STRING_PTR;            \
+    (obj)->length   = (uint32_t)(sizeof(s)-1);   \
+    (obj)->hash     = 0;                         \
+    (obj)->data.ptr = s;                         \
+} while (0)
 
 #endif
 
@@ -130,9 +129,6 @@ int KOS_string_compare(KOS_OBJ_PTR objptr_a,
                        KOS_OBJ_PTR objptr_b);
 
 uint32_t KOS_string_get_hash(KOS_OBJ_PTR objptr);
-
-KOS_OBJ_PTR KOS_object_to_string(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      obj);
 
 #ifdef __cplusplus
 }

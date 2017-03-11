@@ -26,6 +26,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include "kos_compiler.h"
 #include "kos_file.h"
 #include "kos_malloc.h"
