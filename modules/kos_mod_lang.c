@@ -1042,6 +1042,8 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
         if ( ! dst)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
+    else if (size == ~0U && value_fmt != 's')
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
 
     big_end = fmt->big_end;
 
