@@ -45,6 +45,7 @@ static KOS_ASCII_STRING(str_err_invalid_array_size,        "array size out of ra
 static KOS_ASCII_STRING(str_err_invalid_byte_value,        "buffer element value out of range");
 static KOS_ASCII_STRING(str_err_invalid_buffer_size,       "buffer size out of range");
 static KOS_ASCII_STRING(str_err_invalid_pack_format,       "invalid pack format");
+static KOS_ASCII_STRING(str_err_invalid_string_idx,        "string index is out of range");
 static KOS_ASCII_STRING(str_err_not_array,                 "object is not an array");
 static KOS_ASCII_STRING(str_err_not_buffer,                "object is not a buffer");
 static KOS_ASCII_STRING(str_err_not_enough_pack_values,    "insufficient number of packed values");
@@ -1655,6 +1656,33 @@ _error:
     return error ? TO_OBJPTR(0) : ret;
 }
 
+static KOS_OBJ_PTR _get_char_code(KOS_STACK_FRAME *frame,
+                                  KOS_OBJ_PTR      this_obj,
+                                  KOS_OBJ_PTR      args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_PTR ret   = TO_OBJPTR(0);
+    KOS_OBJ_PTR arg   = KOS_array_read(frame, args_obj, 0);
+    int64_t     idx;
+    unsigned    code;
+
+    TRY_OBJPTR(arg);
+
+    TRY(KOS_get_integer(frame, arg, &idx));
+
+    if (idx < INT_MIN || idx > INT_MAX)
+        RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_string_idx));
+
+    code = KOS_string_get_char_code(frame, this_obj, (int)idx);
+    if (code == ~0U)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+    ret = KOS_new_int(frame, (int64_t)code);
+
+_error:
+    return error ? TO_OBJPTR(0) : ret;
+}
+
 static KOS_OBJ_PTR _get_string_size(KOS_STACK_FRAME *frame,
                                     KOS_OBJ_PTR      this_obj,
                                     KOS_OBJ_PTR      args_obj)
@@ -1833,6 +1861,7 @@ int _KOS_module_lang_init(KOS_STACK_FRAME *frame)
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function), "registers",     _get_registers,     0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function), "size",          _get_code_size,     0);
 
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),   "get_char_code", _get_char_code,     1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),   "slice",         _slice,             2);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(string),   "size",          _get_string_size,   0);
 
