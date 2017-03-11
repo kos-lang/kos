@@ -49,7 +49,7 @@ do {
     assert ! file.is_file(name)
 
     do {
-        const f = file.open(name, file.create)
+        const f = file.create(name)
         assert typeof f == "object"
 
         assert f.size == 0
@@ -107,7 +107,7 @@ do {
 do {
     const name = "__test_file"
     var failed = true
-    var f = file.open(name, file.create)
+    var f = file.create(name)
     try {
         defer {
             f.close()
@@ -128,7 +128,7 @@ do {
     file.remove(name)
     assert ! file.is_file(name)
 
-    with const f = new file.file(name, file.create) {
+    with const f = new file.file(name, file.create_flag) {
         const buf = new lang.buffer(100)
         for var i in lang.range(buf.size) {
             buf[i] = i + 100
@@ -179,7 +179,7 @@ do {
     file.remove(name)
     assert ! file.is_file(name)
 
-    with const f = file.open(name, file.create) {
+    with const f = file.create(name) {
         const lines = "abcdefg\nhijklm\nnop";
         f.write((new lang.buffer).pack("s\(lines.size)", lines))
     }
@@ -212,7 +212,7 @@ do {
     file.remove(name)
     assert ! file.is_file(name)
 
-    with const f = file.open(name, file.create) {
+    with const f = file.create(name) {
         const lines = "abc\n\ndef\n\rxyz"
         f.write((new lang.buffer).pack("s\(lines.size)", lines))
     }
@@ -241,7 +241,7 @@ do {
         assert ! f.error
     }
 
-    with const f = file.open(name, file.create) {
+    with const f = file.create(name) {
         const lines = "xy\r\nz\x{FF}\n"
         f.write((new lang.buffer).pack("s", lines))
     }
@@ -272,7 +272,7 @@ do {
     file.remove(name)
     assert ! file.is_file(name)
 
-    with const f = file.open(name, file.create) {
+    with const f = file.create(name) {
         var exception = false
         var buf       = new lang.buffer(1024)
         var ret       = void
@@ -301,7 +301,7 @@ do {
     file.remove(name)
     assert ! file.is_file(name)
 
-    with const f = file.open(name, file.create) {
+    with const f = file.create(name) {
         f.print_(false, void)
         f.print_()
         f.print_(":")

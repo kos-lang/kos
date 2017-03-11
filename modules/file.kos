@@ -23,15 +23,25 @@
 import lang.buffer
 
 # Flags for open() and for file constructor
-const ro     = "rb"  # open read-only, file must exist
-const rw     = "r+b" # open read-write, file must exist
-const create = "w+b" # create new or truncate existing, read-write
-const append = "a+b" # create new or append at the end of existing, read-write
+const ro          = "rb"  # open read-only, file must exist
+const rw          = "r+b" # open read-write, file must exist
+const create_flag = "w+b" # create new or truncate existing, read-write
+const append_flag = "a+b" # create new or append at the end of existing, read-write
 
 fun open(filename, args...)
 {
     const flags = args.size > 0 ? args[0] : rw
     return new file(filename, flags)
+}
+
+fun create(filename)
+{
+    return new file(filename, create_flag)
+}
+
+fun append(filename)
+{
+    return new file(filename, append_flag)
 }
 
 file.prototype.read = fun(args...)

@@ -380,7 +380,7 @@ This writes 256 bytes with values of 0 through 255 to a newly created file:
         buf[i] = i
     }
 
-    with const f = file.open("newfile", file.create) {
+    with const f = file.create("newfile") {
         f.write(buf)
     }
 
