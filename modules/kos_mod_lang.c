@@ -85,6 +85,26 @@ _error:
     return error ? TO_OBJPTR(0) : KOS_VOID;
 }
 
+static KOS_OBJ_PTR _print_(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_PTR      this_obj,
+                           KOS_OBJ_PTR      args_obj)
+{
+    int                error = KOS_SUCCESS;
+    struct _KOS_VECTOR cstr;
+
+    _KOS_vector_init(&cstr);
+
+    TRY(KOS_print_to_cstr_vec(frame, args_obj, &cstr, " ", 1));
+
+    if (cstr.size)
+        printf("%.*s", (int)cstr.size-1, cstr.buffer);
+
+_error:
+    _KOS_vector_destroy(&cstr);
+
+    return error ? TO_OBJPTR(0) : KOS_VOID;
+}
+
 static KOS_OBJ_PTR _object_iterator(KOS_STACK_FRAME           *frame,
                                     KOS_OBJ_PTR                regs_obj,
                                     KOS_OBJ_PTR                args_obj,
@@ -1771,6 +1791,7 @@ int _KOS_module_lang_init(KOS_STACK_FRAME *frame)
     int error = KOS_SUCCESS;
 
     TRY_ADD_FUNCTION( frame, "print",   _print,   0);
+    TRY_ADD_FUNCTION( frame, "print_",  _print_,  0);
     TRY_ADD_GENERATOR(frame, "deep",    _deep,    1);
     TRY_ADD_GENERATOR(frame, "shallow", _shallow, 1);
 
