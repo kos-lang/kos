@@ -69,18 +69,25 @@ runtests()
     [ -n "$CONFIG_TOOL" ] && WITH_TOOL=" with $CONFIG_TOOL"
     [ -n "$CONFIG_GCOV" ] && WITH_TOOL=" with gcov"
 
-    local EXTRA_FLAGS
-    EXTRA_FLAGS=""
     if [ -n "$SANITIZER" ]; then
-        EXTRA_FLAGS="CFLAGS=-fsanitize=$SANITIZER LDFLAGS=-fsanitize=$SANITIZER"
+        local CFLAGS
+        local LDFLAGS
+        CFLAGS="-fsanitize=$SANITIZER"
+        LDFLAGS="-fsanitize=$SANITIZER"
+        if [ "$UNAME" = "Linux" ]; then
+            # gcc bug WAR
+            LDFLAGS="$LDFLAGS -fuse-ld=gold"
+        fi
+        export CFLAGS
+        export LDFLAGS
         WITH_TOOL="$WITH_TOOL with $SANITIZER sanitizer"
     fi
 
     echo "Testing $MODE as $PRINT_LANG$WITH_TOOL"
     echo "***************************************************************************"
 
-    rm -rf Out
-    make -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 CONFIG_STRICT=1 --warn-undefined-variables $EXTRA_FLAGS
+    [ "$3" = "noclean" ] || rm -rf Out
+    make -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 CONFIG_STRICT=1 --warn-undefined-variables
 }
 
 cd "$(dirname $0)"/..
@@ -92,14 +99,6 @@ export CONFIG_DEBUG=1
 
 runtests c89 c++98
 
-if [ "$UNAME" = "Darwin" ]; then
-    export SANITIZER="address"
-fi
-
-runtests c++14 c++14
-
-unset SANITIZER
-
 if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
     export CONFIG_TOOL="valgrind --error-exitcode=1 --track-origins=yes"
 
@@ -107,10 +106,18 @@ if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
     VALGRIND_JOBS=$JOBS
     [ $VALGRIND_JOBS -gt 8 ] && VALGRIND_JOBS=8
 
-    JOBS=$VALGRIND_JOBS TEST_CPUS=2 runtests c99 c++14
+    JOBS=$VALGRIND_JOBS TEST_CPUS=2 runtests c89 c++98 noclean
 
     unset CONFIG_TOOL
 fi
+
+if [ "$UNAME" = "Darwin" -o "$UNAME" = "Linux" ]; then
+    export SANITIZER="address"
+fi
+
+runtests c++14 c++14
+
+unset SANITIZER
 
 unset CONFIG_DEBUG
 runtests c11 c++11
