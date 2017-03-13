@@ -852,6 +852,7 @@ typedef int (*_KOS_PACK_FORMAT_FUNC)(KOS_STACK_FRAME         *frame,
 static int _is_whitespace(unsigned char_code)
 {
     return char_code == 0      || /* NUL */
+           char_code == 9      || /* TAB */
            char_code == 11     || /* VTAB */
            char_code == 12     || /* FF */
            char_code == 32     || /* space */
