@@ -27,10 +27,20 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
+#include <stdio.h>
 
 static KOS_ASCII_STRING(str_err_out_of_memory, "out of memory");
 
 #if CONFIG_ALLOCATOR == 0xDEB
+
+#ifdef CONFIG_ALLOC_STATS
+static KOS_ATOMIC(int32_t) num_16  = 0;
+static KOS_ATOMIC(int32_t) num_32  = 0;
+static KOS_ATOMIC(int32_t) num_64  = 0;
+static KOS_ATOMIC(int32_t) num_128 = 0;
+static KOS_ATOMIC(int32_t) num_buf = 0;
+static KOS_ATOMIC(int32_t) total   = 0;
+#endif
 
 int _KOS_alloc_init(KOS_CONTEXT *ctx)
 {
@@ -46,25 +56,50 @@ void _KOS_alloc_destroy(KOS_CONTEXT *ctx)
         objects   = *(void **)objects;
         _KOS_free(del);
     }
+
+#ifdef CONFIG_ALLOC_STATS
+    printf(" 16B - %u\n", KOS_atomic_read_u32(num_16));
+    printf(" 32B - %u\n", KOS_atomic_read_u32(num_32));
+    printf(" 64B - %u\n", KOS_atomic_read_u32(num_64));
+    printf("128B - %u\n", KOS_atomic_read_u32(num_128));
+    printf("buf  - %uB\n", KOS_atomic_read_u32(num_buf) -
+                           KOS_atomic_read_u32(num_16) -
+                           KOS_atomic_read_u32(num_32) -
+                           KOS_atomic_read_u32(num_64) -
+                           KOS_atomic_read_u32(num_128));
+    printf("mem  - %uB\n", KOS_atomic_read_u32(total));
+#endif
 }
 
 KOS_ANY_OBJECT *_KOS_alloc_16(KOS_STACK_FRAME *frame)
 {
+#ifdef CONFIG_ALLOC_STATS
+    KOS_atomic_add_i32(num_16, 1);
+#endif
     return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 16);
 }
 
 KOS_ANY_OBJECT *_KOS_alloc_32(KOS_STACK_FRAME *frame)
 {
+#ifdef CONFIG_ALLOC_STATS
+    KOS_atomic_add_i32(num_32, 1);
+#endif
     return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 32);
 }
 
 KOS_ANY_OBJECT *_KOS_alloc_64(KOS_STACK_FRAME *frame)
 {
+#ifdef CONFIG_ALLOC_STATS
+    KOS_atomic_add_i32(num_64, 1);
+#endif
     return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 64);
 }
 
 KOS_ANY_OBJECT *_KOS_alloc_128(KOS_STACK_FRAME *frame)
 {
+#ifdef CONFIG_ALLOC_STATS
+    KOS_atomic_add_i32(num_128, 1);
+#endif
     return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 128);
 }
 
@@ -74,6 +109,11 @@ void *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size)
 
     if (obj) {
         struct _KOS_ALLOC_DEBUG *allocator = frame->allocator;
+
+#ifdef CONFIG_ALLOC_STATS
+        KOS_atomic_add_i32(num_buf, 1);
+        KOS_atomic_add_i32(total, size);
+#endif
 
         void **ptr = (void **)obj;
 
