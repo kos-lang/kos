@@ -142,7 +142,7 @@ if ! kos "$DIR/zero"; then
     die "Failed: Interpreter failed to load empty module from lang"
 fi
 
-if [ "$UNAME" != "Windows" ]; then
+if [ "$UNAME" != "Windows" -a "$UNAME" != "Haiku" ]; then
     note "test 13"
     chmod 000 "$DIR/lang.kos"
     if kos "$DIR/zero"; then
