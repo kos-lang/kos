@@ -21,7 +21,7 @@
 #
 
 module = kos_lang
-depth  = lang
+depth  = core
 
 c_files  = kos_array.c
 c_files += kos_buffer.c

@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "../lang/kos_memory.h"
+#include "../core/kos_memory.h"
 #include <stdio.h>
 #include <stdlib.h>
 

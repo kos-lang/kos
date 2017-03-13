@@ -21,7 +21,7 @@
 #
 
 modules  = interpreter
-modules += lang
+modules += core
 modules += modules
 modules += tests
 
@@ -42,7 +42,7 @@ clean:
 	rm -rf $(out_dir)
 	rm -f */*.gcov */*.gcda */*.gcno
 
-build.interpreter build.tests: build.lang build.modules
+build.interpreter build.tests: build.core build.modules
 
 test: build.interpreter build.tests
 	@$(MAKE) -C tests $@

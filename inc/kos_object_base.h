@@ -24,7 +24,7 @@
 #define __KOS_OBJECT_BASE_H
 
 #include <stdint.h>
-#include "../lang/kos_threads.h"
+#include "../core/kos_threads.h"
 
 struct _KOS_CONTEXT;
 typedef struct _KOS_CONTEXT KOS_CONTEXT;

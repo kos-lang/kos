@@ -26,9 +26,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "../inc/kos_error.h"
-#include "../lang/kos_malloc.h"
-#include "../lang/kos_misc.h"
-#include "../lang/kos_red_black.h"
+#include "../core/kos_malloc.h"
+#include "../core/kos_misc.h"
+#include "../core/kos_red_black.h"
 
 struct MYNODE {
     struct _KOS_RED_BLACK_NODE node;

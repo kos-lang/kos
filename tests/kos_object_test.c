@@ -24,7 +24,7 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
-#include "../lang/kos_object_internal.h"
+#include "../core/kos_object_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

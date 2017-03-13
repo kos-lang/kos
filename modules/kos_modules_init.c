@@ -24,7 +24,7 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object_base.h"
-#include "../lang/kos_try.h"
+#include "../core/kos_try.h"
 
 #define MODULE_DEF(module) int _KOS_module_##module##_init(KOS_STACK_FRAME *frame);
 #include "kos_module_list.h"

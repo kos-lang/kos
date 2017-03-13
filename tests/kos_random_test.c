@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "../lang/kos_misc.h"
+#include "../core/kos_misc.h"
 #include <stdio.h>
 #include <string.h>
 

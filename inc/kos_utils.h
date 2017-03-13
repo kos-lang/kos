@@ -24,7 +24,7 @@
 #define __KOS_UTILS_H
 
 #include "kos_object_base.h"
-#include "../lang/kos_misc.h"
+#include "../core/kos_misc.h"
 
 typedef struct _KOS_NUMERIC KOS_NUMERIC;
 struct _KOS_VECTOR;

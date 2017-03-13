@@ -26,9 +26,9 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
-#include "../lang/kos_object_internal.h"
-#include "../lang/kos_misc.h"
-#include "../lang/kos_vm.h"
+#include "../core/kos_object_internal.h"
+#include "../core/kos_misc.h"
+#include "../core/kos_vm.h"
 #include <stdio.h>
 #include <string.h>
 

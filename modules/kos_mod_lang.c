@@ -27,10 +27,10 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
-#include "../lang/kos_memory.h"
-#include "../lang/kos_misc.h"
-#include "../lang/kos_object_internal.h"
-#include "../lang/kos_try.h"
+#include "../core/kos_memory.h"
+#include "../core/kos_misc.h"
+#include "../core/kos_object_internal.h"
+#include "../core/kos_try.h"
 #include <assert.h>
 #include <limits.h>
 #include <memory.h>

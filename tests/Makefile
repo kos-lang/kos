@@ -65,7 +65,7 @@ c_files += kos_vm_unit_test.c
 cpp_files += kos_cpp_api_test.cpp
 
 gcov_modules  = interpreter
-gcov_modules += lang
+gcov_modules += core
 gcov_modules += modules
 
 GCOV ?= gcov
@@ -83,7 +83,7 @@ all: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/tests/, $(all_tests)))
 CONFIG_TOOL ?=
 
 define LINK_TEST
-$(out_dir)/tests/$1$(exe_suffix): $(out_dir)/tests/$1$(o_suffix) $(out_dir)/modules/libkos_modules$(a_suffix) $(out_dir)/lang/libkos_lang$(a_suffix)
+$(out_dir)/tests/$1$(exe_suffix): $(out_dir)/tests/$1$(o_suffix) $(out_dir)/modules/libkos_modules$(a_suffix) $(out_dir)/core/libkos_lang$(a_suffix)
 	$(call LINK,$$@,$$^)
 endef
 
@@ -152,7 +152,7 @@ gcov.$1: simple_test
 	@echo Gcov $1
 	@rm -f ../$1/*.gcov
 	@cd ../$1 && $(GCOV) --object-directory $(out_dir)/$1 *.c* > /dev/null
-	@rm -f ../lang/kos.h.gcov # gcov does not find anything in this file
+	@rm -f ../core/kos.h.gcov # gcov does not find anything in this file
 endef
 
 $(foreach module, $(gcov_modules), $(eval $(call GCOV_RULE,$(module))))
