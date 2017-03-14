@@ -41,25 +41,27 @@ static KOS_ASCII_STRING(str_err_null_ptr,      "null pointer");
 
 typedef struct _KOS_ARRAY_BUFFER ARRAY_BUF;
 
-static ARRAY_BUF *_alloc_buffer(KOS_STACK_FRAME *frame, unsigned capacity)
+static ARRAY_BUF *_alloc_buffer(KOS_STACK_FRAME *frame, uint32_t capacity)
 {
-    return (ARRAY_BUF *)_KOS_alloc_buffer(frame, KOS_buffer_alloc_size(capacity));
+    ARRAY_BUF *buf = (ARRAY_BUF *)_KOS_alloc_buffer(frame, KOS_buffer_alloc_size(capacity));
+    buf->capacity = capacity;
+    return buf;
 }
 
-int _KOS_init_array(KOS_STACK_FRAME *frame, KOS_ARRAY *array, unsigned capacity)
+int _KOS_init_array(KOS_STACK_FRAME *frame, KOS_ARRAY *array, uint32_t capacity)
 {
     int error = KOS_SUCCESS;
 
     capacity = KOS_max(capacity, KOS_MIN_ARRAY_CAPACITY);
 
-    array->type     = OBJ_ARRAY;
-    array->buffer   = _alloc_buffer(frame, capacity);
-    array->capacity = capacity;
-    array->size     = 0;
+    array->type = OBJ_ARRAY;
+    KOS_atomic_write_u32(array->size, 0U);
+    KOS_atomic_write_ptr(array->buffer, _alloc_buffer(frame, capacity));
 
     if (array->buffer) {
-        KOS_ATOMIC(KOS_OBJ_PTR) *ptr = &((ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer))->buf[0];
-        KOS_ATOMIC(KOS_OBJ_PTR) *end = ptr + (size_t)array->capacity;
+        ARRAY_BUF         *const buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+        KOS_ATOMIC(KOS_OBJ_PTR) *ptr = &buf->buf[0];
+        KOS_ATOMIC(KOS_OBJ_PTR) *end = ptr + capacity;
 
         for ( ; ptr != end; ++ptr)
             KOS_atomic_write_ptr(*ptr, KOS_VOID);
@@ -70,12 +72,12 @@ int _KOS_init_array(KOS_STACK_FRAME *frame, KOS_ARRAY *array, unsigned capacity)
     return error;
 }
 
-KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame, unsigned size)
+KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame, uint32_t size)
 {
     KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_ARRAY);
 
     if (obj && KOS_SUCCESS == _KOS_init_array(frame, &obj->array, size))
-        obj->array.size = size;
+        KOS_atomic_write_u32(obj->array.size, size);
     else
         obj = 0;
 
@@ -84,8 +86,6 @@ KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame, unsigned size)
 
 KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx)
 {
-    /* TODO rewrite lock-free */
-
     KOS_OBJ_PTR elem = TO_OBJPTR(0);
 
     if (IS_BAD_PTR(objptr))
@@ -94,8 +94,8 @@ KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx)
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array  = OBJPTR(KOS_ARRAY, objptr);
-        const uint32_t   size   = array->size;
-        const unsigned   bufidx = (idx < 0) ? ((unsigned)idx + size) : (unsigned)idx;
+        const uint32_t   size   = KOS_atomic_read_u32(array->size);
+        const uint32_t   bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
 
         if (bufidx < size) {
             ARRAY_BUF *const buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
@@ -110,8 +110,6 @@ KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx)
 
 int KOS_array_write(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KOS_OBJ_PTR value)
 {
-    /* TODO rewrite lock-free */
-
     int error = KOS_ERROR_EXCEPTION;
 
     if (IS_BAD_PTR(objptr))
@@ -120,8 +118,8 @@ int KOS_array_write(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KOS_OBJ
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array  = OBJPTR(KOS_ARRAY, objptr);
-        const uint32_t   size   = array->size;
-        const unsigned   bufidx = (idx < 0) ? ((unsigned)idx + size) : (unsigned)idx;
+        const uint32_t   size   = KOS_atomic_read_u32(array->size);
+        const uint32_t   bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
 
         if (bufidx < size) {
             ARRAY_BUF *const buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
@@ -147,14 +145,14 @@ int KOS_array_reserve(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t new_c
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array    = OBJPTR(KOS_ARRAY, objptr);
-        const uint32_t   capacity = KOS_atomic_read_u32(array->capacity);
+        ARRAY_BUF *const old_buf  = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+        const uint32_t   capacity = old_buf->capacity;
 
         if (new_capacity > capacity) {
-            const uint32_t           size    = KOS_atomic_read_u32(array->size);
-            ARRAY_BUF *const         buf     = _alloc_buffer(frame, new_capacity);
-            ARRAY_BUF *const         old_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
-            KOS_ATOMIC(KOS_OBJ_PTR) *ptr     = &buf->buf[size];
-            KOS_ATOMIC(KOS_OBJ_PTR) *end     = &buf->buf[0] + new_capacity;
+            const uint32_t           size = KOS_atomic_read_u32(array->size);
+            ARRAY_BUF *const         buf  = _alloc_buffer(frame, new_capacity);
+            KOS_ATOMIC(KOS_OBJ_PTR) *ptr  = &buf->buf[size];
+            KOS_ATOMIC(KOS_OBJ_PTR) *end  = &buf->buf[0] + new_capacity;
             KOS_ATOMIC(KOS_OBJ_PTR) *src;
 
             for ( ; ptr != end; ++ptr)
@@ -169,8 +167,7 @@ int KOS_array_reserve(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t new_c
                 KOS_atomic_write_ptr(*ptr, value);
             }
 
-            KOS_atomic_write_ptr(array->buffer,   (void *)buf);
-            KOS_atomic_write_u32(array->capacity, new_capacity);
+            KOS_atomic_write_ptr(array->buffer, (void *)buf);
 
             _KOS_free_buffer(frame, old_buf, KOS_buffer_alloc_size(capacity));
         }
@@ -193,7 +190,8 @@ int KOS_array_resize(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t size)
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
     else {
         KOS_ARRAY *const array    = OBJPTR(KOS_ARRAY, objptr);
-        const uint32_t   capacity = KOS_atomic_read_u32(array->capacity);
+        ARRAY_BUF *const buf      = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+        const uint32_t   capacity = buf->capacity;
 
         assert(capacity > 0);
 
@@ -204,8 +202,7 @@ int KOS_array_resize(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t size)
             TRY(KOS_array_reserve(frame, objptr, new_cap));
         }
         else {
-            ARRAY_BUF *const buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
-            uint32_t i           = KOS_atomic_read_u32(array->size);
+            uint32_t i = KOS_atomic_read_u32(array->size);
             for ( ; i < size; i++)
                 KOS_atomic_write_ptr(buf->buf[i], KOS_VOID);
         }

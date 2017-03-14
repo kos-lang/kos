@@ -64,9 +64,9 @@ static KOS_ASCII_STRING(str_err_not_string,        "property name is not a strin
 static KOS_ASCII_STRING(str_err_no_property,       "no such property");
 static KOS_ASCII_STRING(str_err_no_own_properties, "object has no own properties");
 
-static KOS_SPECIAL _tombstone = { OBJ_SPECIAL, { 0, 0, 0 }, 0 };
-static KOS_SPECIAL _closed    = { OBJ_SPECIAL, { 0, 0, 0 }, 0 };
-static KOS_SPECIAL _reserved  = { OBJ_SPECIAL, { 0, 0, 0 }, 0 };
+static KOS_SPECIAL _tombstone = { OBJ_SPECIAL, 0 };
+static KOS_SPECIAL _closed    = { OBJ_SPECIAL, 0 };
+static KOS_SPECIAL _reserved  = { OBJ_SPECIAL, 0 };
 
 /* When a key is deleted, it remains in the table, but its value is marked
  * as TOMBSTONE. */

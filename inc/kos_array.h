@@ -48,7 +48,7 @@ extern "C" {
 #endif
 
 KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame,
-                          unsigned         size);
+                          uint32_t         size);
 
 KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame,
                            KOS_OBJ_PTR      objptr,
