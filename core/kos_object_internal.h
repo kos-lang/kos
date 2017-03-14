@@ -62,15 +62,6 @@ struct _KOS_PROPERTY_BUF {
 #define KOS_MAX_PROP_REPROBES  8U
 #define KOS_SPEED_GROW_BELOW   64U
 
-#ifdef __cplusplus
-static inline void _KOS_init_properties(struct _KOS_PROPERTIES *properties)
-{
-    KOS_atomic_write_ptr(properties->props, (void *)0);
-}
-#else
-#define _KOS_init_properties(properties) KOS_atomic_write_ptr((properties)->props, 0)
-#endif
-
 void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_PTR prototype);
 
 #ifdef CONFIG_OBJECT_STATS

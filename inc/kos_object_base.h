@@ -193,12 +193,7 @@ typedef struct _KOS_STRING {
 #endif
 } KOS_STRING;
 
-/* Common "base" for object and function */
-struct _KOS_PROPERTIES {
-    _KOS_TYPE_STORAGE  type; /* OBJ_OBJECT, OBJ_FUNCTION */
-    uint8_t            _align[3]; /* 7 on 64-bit */
-    KOS_ATOMIC(void *) props;
-};
+typedef void (*KOS_FINALIZE)(void *priv);
 
 typedef struct _KOS_OBJECT {
     _KOS_TYPE_STORAGE  type; /* OBJ_OBJECT */
@@ -206,7 +201,7 @@ typedef struct _KOS_OBJECT {
     KOS_ATOMIC(void *) props;
     KOS_OBJ_PTR        prototype;
     void              *priv;
-    /* TODO add _finalize callback, to be used e.g. by file */
+    KOS_FINALIZE       finalize;
 } KOS_OBJECT;
 
 typedef struct _KOS_ARRAY {
@@ -344,7 +339,6 @@ typedef union _KOS_ANY_OBJECT {
     KOS_STRING             string;
     struct _KOS_BOOLEAN    boolean;
     struct _KOS_VOID       a_void;
-    struct _KOS_PROPERTIES properties;
     KOS_OBJECT             object;
     KOS_ARRAY              array;
     KOS_BUFFER             buffer;

@@ -137,12 +137,12 @@ KOS_OBJ_PTR KOS_new_object_with_prototype(KOS_STACK_FRAME *frame,
     return TO_OBJPTR(obj);
 }
 
-static struct _KOS_PROPERTIES *_get_properties(KOS_OBJ_PTR obj)
+static KOS_OBJECT *_get_properties(KOS_OBJ_PTR obj)
 {
-    struct _KOS_PROPERTIES *props = 0;
+    KOS_OBJECT *props = 0;
 
     if (IS_TYPE(OBJ_OBJECT, obj))
-        props = OBJPTR(struct _KOS_PROPERTIES, obj);
+        props = OBJPTR(KOS_OBJECT, obj);
 
     return props;
 }
@@ -163,8 +163,9 @@ void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_PTR prototype)
     obj->type      = OBJ_OBJECT;
     obj->prototype = prototype;
     obj->priv      = 0;
+    obj->finalize  = 0;
 
-    _KOS_init_properties((struct _KOS_PROPERTIES *)obj);
+    KOS_atomic_write_ptr(obj->props, (void *)0);
 }
 
 static int _is_key_equal(KOS_OBJ_PTR key,
@@ -247,7 +248,7 @@ static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_
 }
 
 static void _copy_table(KOS_STACK_FRAME        *frame,
-                        struct _KOS_PROPERTIES *props,
+                        KOS_OBJECT *props,
                         KOS_PBUF               *old_table,
                         KOS_PBUF               *new_table)
 {
@@ -325,8 +326,8 @@ static int _resize_prop_table(KOS_STACK_FRAME *frame,
                               KOS_PBUF        *old_table,
                               uint32_t         grow_factor)
 {
-    int                     error = KOS_SUCCESS;
-    struct _KOS_PROPERTIES *props = _get_properties(obj);
+    int         error = KOS_SUCCESS;
+    KOS_OBJECT *props = _get_properties(obj);
 
     const uint32_t old_capacity = old_table ? old_table->capacity : 0U;
     const uint32_t new_capacity = old_capacity ? old_capacity * grow_factor : KOS_MIN_PROPS_CAPACITY;
@@ -393,7 +394,7 @@ KOS_OBJ_PTR KOS_get_property(KOS_STACK_FRAME *frame,
     else if (IS_SMALL_INT(prop) || ! IS_STRING_OBJ(prop))
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_string));
     else {
-        struct _KOS_PROPERTIES *props = _get_properties(obj);
+        KOS_OBJECT *props = _get_properties(obj);
 
         /* Find non-empty property table in this object or in a prototype */
         while ( ! props || ! KOS_atomic_read_ptr(props->props)) {
@@ -501,7 +502,7 @@ KOS_OBJ_PTR KOS_get_property(KOS_STACK_FRAME *frame,
 int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
                                 KOS_OBJ_PTR      obj)
 {
-    struct _KOS_PROPERTIES *props;
+    KOS_OBJECT *props;
 
     assert( ! IS_BAD_PTR(obj));
     assert( ! IS_SMALL_INT(obj));
@@ -527,7 +528,7 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
     else if ( ! IS_TYPE(OBJ_OBJECT, obj))
         KOS_raise_exception(frame, TO_OBJPTR(&str_err_no_own_properties));
     else {
-        struct _KOS_PROPERTIES *props = _get_properties(obj);
+        KOS_OBJECT *props = _get_properties(obj);
 
         /* Check if property table is non-empty */
         if ( ! KOS_atomic_read_ptr(props->props)) {
@@ -824,7 +825,7 @@ int KOS_object_walk_init(KOS_STACK_FRAME           *frame,
         KOS_PITEM *cur_item;
         KOS_PITEM *items_end;
 
-        struct _KOS_PROPERTIES *props = _get_properties(obj);
+        KOS_OBJECT *props = _get_properties(obj);
 
         obj = KOS_get_prototype(frame, obj);
 

@@ -60,15 +60,6 @@ static KOS_ASCII_STRING(str_module,                  "module");
 static KOS_ASCII_STRING(str_offset,                  "offset");
 static KOS_ASCII_STRING(str_value,                   "value");
 
-void _KOS_init_prototype(KOS_OBJECT *obj, KOS_OBJECT *base_proto)
-{
-    obj->type      = OBJ_OBJECT;
-    obj->prototype = TO_OBJPTR(base_proto);
-    obj->priv      = 0;
-
-    _KOS_init_properties((struct _KOS_PROPERTIES *)obj);
-}
-
 static int _add_multiple_paths(KOS_STACK_FRAME *frame, struct _KOS_VECTOR *cpaths)
 {
     int   error = KOS_SUCCESS;
@@ -119,16 +110,16 @@ int KOS_context_init(KOS_CONTEXT      *ctx,
 
     memset(ctx, 0, sizeof(*ctx));
 
-    _KOS_init_prototype(&ctx->object_prototype,   0);
-    _KOS_init_prototype(&ctx->number_prototype,   &ctx->object_prototype);
-    _KOS_init_prototype(&ctx->integer_prototype,  &ctx->number_prototype);
-    _KOS_init_prototype(&ctx->float_prototype,    &ctx->number_prototype);
-    _KOS_init_prototype(&ctx->string_prototype,   &ctx->object_prototype);
-    _KOS_init_prototype(&ctx->boolean_prototype,  &ctx->object_prototype);
-    _KOS_init_prototype(&ctx->void_prototype,     &ctx->object_prototype);
-    _KOS_init_prototype(&ctx->array_prototype,    &ctx->object_prototype);
-    _KOS_init_prototype(&ctx->buffer_prototype,   &ctx->object_prototype);
-    _KOS_init_prototype(&ctx->function_prototype, &ctx->object_prototype);
+    _KOS_init_object(&ctx->object_prototype,   TO_OBJPTR((void *)0));
+    _KOS_init_object(&ctx->number_prototype,   TO_OBJPTR(&ctx->object_prototype));
+    _KOS_init_object(&ctx->integer_prototype,  TO_OBJPTR(&ctx->number_prototype));
+    _KOS_init_object(&ctx->float_prototype,    TO_OBJPTR(&ctx->number_prototype));
+    _KOS_init_object(&ctx->string_prototype,   TO_OBJPTR(&ctx->object_prototype));
+    _KOS_init_object(&ctx->boolean_prototype,  TO_OBJPTR(&ctx->object_prototype));
+    _KOS_init_object(&ctx->void_prototype,     TO_OBJPTR(&ctx->object_prototype));
+    _KOS_init_object(&ctx->array_prototype,    TO_OBJPTR(&ctx->object_prototype));
+    _KOS_init_object(&ctx->buffer_prototype,   TO_OBJPTR(&ctx->object_prototype));
+    _KOS_init_object(&ctx->function_prototype, TO_OBJPTR(&ctx->object_prototype));
 
     TRY(_KOS_alloc_init(ctx));
     alloc_ok = 1;
