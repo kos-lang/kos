@@ -13,34 +13,31 @@
         myobj.prop = get fun { };
 
 * Class-like prototypes
-    - local variables become this members
-    - no const local variables (can be circumvented through 'this')
 
-            prototype Constructor(x) {
-                var a = void;
-                var b = "str";
-                var c = 10;
-                fun d(x) { return c + x; }
-            }
-            typeof Constructor == "function";
-            var c = new Constructor;
+    - A class object is essentially a function object, with the 'constructor'
+      function being the body of the function.  All the remaining functions
+      declared become members of the prototype.
 
-            prototype Base {
-                private var x = 0;
-                private fun GetX() { return x; }
-                fun GetXP1() { return GetX() + 1; }
-            }
-            prototype Derived(y) : Base {
-                var y = y;
-                fun GetXP1() { return this.y + 1; }
+            class Base {
+                constructor(x, y) {
+                    this.x = x
+                    this.y = y
+                }
+                get_x -> (this.x)
+                get_y -> (this.y)
             }
 
-* Private and public prototype and module members.  What should be default?
-    - Private global var in module becomes just a local var, with all side
-      effects, including closures.
-    - Private var/fun in prototype becomes a constructor's local variable,
-      also with all side effects.
-    - Maybe public should be default and private should be explicit?
+            assert typeof Base == "function"
+            var b = new Base(1, 2)
+            print("\(b.get_x()) \(b.get_y())")
+
+            class Derived : Base {
+                // how to call base class constructor?
+                set_xy(x, y) { this.x = x; this.y = y }
+            }
+
+    - Add static?
+    - Add super?
 
 * Spread operator
 

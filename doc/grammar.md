@@ -161,7 +161,9 @@ The following reserved keywords are defined:
 * `assert`
 * `break`
 * `catch`
+* `class` (reserved)
 * `const`
+* `constructor` (reserved)
 * `continue`
 * `delete`
 * `defer`
@@ -178,12 +180,10 @@ The following reserved keywords are defined:
 * `instanceof`
 * `loop`
 * `new`
-* `private` (reserved)
-* `prototype` (reserved)
-* `public` (reserved)
 * `repeat`
 * `return`
 * `set` (reserved)
+* `static` (reserved)
 * `switch`
 * `this`
 * `throw`
@@ -208,8 +208,8 @@ types.
 
     VOID_LITERAL    ::= "v" "o" "i" "d"
 
-Three keywords are currently reserved - `get`, `private`, `prototype`,
-`public` and `set`.
+Five keywords are currently reserved - `class`, `constructor`, `get`, `static`
+and `set`.
 
 The `λ` keyword is the unicode Greek letter "lambda", code U+03BB, which in
 UTF-8 consists of two bytes: `0xCE 0xBB`.  This keyword can be used in place

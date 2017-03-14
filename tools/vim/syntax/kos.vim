@@ -44,7 +44,7 @@ syn keyword kosBoolean          true false
 syn keyword kosNull             void
 syn keyword kosIdentifier       __line__ this var const
 syn keyword kosException        throw assert
-syn keyword kosReserved         set get only private prototype public
+syn keyword kosReserved         set get only class constructor static
 
 if exists("kos_fold")
     syn match   kosFunction     "\<fun\>\|λ"

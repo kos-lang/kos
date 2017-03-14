@@ -447,13 +447,13 @@ do {
 }
 
 do {
-    fun constructor
+    fun ctor
     {
     }
 
-    constructor.set_prototype(lang.string.prototype)
+    ctor.set_prototype(lang.string.prototype)
 
-    const o = new constructor
+    const o = new ctor
 
     expect_fail(λ->(o.size))
 }
@@ -1030,13 +1030,13 @@ do {
 # lang.function.prototype.prototype
 
 do {
-    fun constructor
+    fun ctor
     {
     }
 
-    constructor.set_prototype(lang.function.prototype)
+    ctor.set_prototype(lang.function.prototype)
 
-    const o = new constructor
+    const o = new ctor
 
     expect_fail(λ->(o.prototype))
 }
