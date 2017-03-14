@@ -954,7 +954,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
             case INSTR_MOVE: { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
 
-                assert(rsrc  < regs_array->length);
+                assert(rsrc  < regs_array->size);
 
                 rdest = bytecode[1];
                 out   = regs[rsrc];
@@ -975,7 +975,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const int32_t  idx  = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
-                assert(rsrc < regs_array->length);
+                assert(rsrc < regs_array->size);
 
                 error = KOS_array_write(frame, module->globals, idx, regs[rsrc]);
                 delta = 6;
@@ -987,7 +987,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const unsigned rglob      = bytecode[6];
                 KOS_OBJ_PTR    module_obj = KOS_array_read(frame, TO_OBJPTR(&module->context->modules), mod_idx);
 
-                assert(rglob < regs_array->length);
+                assert(rglob < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1037,8 +1037,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_PTR    src;
                 KOS_OBJ_PTR    prop;
 
-                assert(rsrc  < regs_array->length);
-                assert(rprop < regs_array->length);
+                assert(rsrc  < regs_array->size);
+                assert(rprop < regs_array->size);
 
                 rdest = bytecode[1];
                 src   = regs[rsrc];
@@ -1094,7 +1094,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_PTR          src;
                 enum KOS_OBJECT_TYPE type;
 
-                assert(rsrc  < regs_array->length);
+                assert(rsrc  < regs_array->size);
 
                 rdest = bytecode[1];
                 src   = regs[rsrc];
@@ -1122,9 +1122,9 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 int64_t        begin_idx;
                 int64_t        end_idx = 0;
 
-                assert(rsrc   < regs_array->length);
-                assert(rbegin < regs_array->length);
-                assert(rend   < regs_array->length);
+                assert(rsrc   < regs_array->size);
+                assert(rbegin < regs_array->size);
+                assert(rend   < regs_array->size);
 
                 rdest = bytecode[1];
                 src   = regs[rsrc];
@@ -1161,7 +1161,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const int32_t  idx  = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_PTR    prop;
 
-                assert(rsrc  < regs_array->length);
+                assert(rsrc  < regs_array->size);
 
                 rdest = bytecode[1];
                 prop  = _make_string(frame, module, idx);
@@ -1199,9 +1199,9 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->length);
-                assert(rprop < regs_array->length);
-                assert(rsrc  < regs_array->length);
+                assert(rdest < regs_array->size);
+                assert(rprop < regs_array->size);
+                assert(rsrc  < regs_array->size);
 
                 prop = regs[rprop];
 
@@ -1264,8 +1264,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->length);
-                assert(rsrc  < regs_array->length);
+                assert(rdest < regs_array->size);
+                assert(rsrc  < regs_array->size);
 
                 dest = regs[rdest];
 
@@ -1285,8 +1285,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->length);
-                assert(rsrc  < regs_array->length);
+                assert(rdest < regs_array->size);
+                assert(rsrc  < regs_array->size);
 
                 prop = _make_string(frame, module, idx);
 
@@ -1330,8 +1330,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->length);
-                assert(rprop < regs_array->length);
+                assert(rdest < regs_array->size);
+                assert(rprop < regs_array->size);
 
                 KOS_delete_property(frame, regs[rdest], regs[rprop]);
 
@@ -1345,7 +1345,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->length);
+                assert(rdest < regs_array->size);
 
                 prop = _make_string(frame, module, idx);
 
@@ -1363,8 +1363,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_PTR src1;
                 KOS_OBJ_PTR src2;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1419,8 +1419,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_PTR src1;
                 KOS_OBJ_PTR src2;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1463,8 +1463,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_PTR src1;
                 KOS_OBJ_PTR src2;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1507,8 +1507,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_PTR src1;
                 KOS_OBJ_PTR src2;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1551,8 +1551,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_PTR src1;
                 KOS_OBJ_PTR src2;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1594,8 +1594,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1622,8 +1622,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1650,8 +1650,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1676,7 +1676,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const unsigned rsrc = bytecode[2];
                 int64_t        a;
 
-                assert(rsrc  < regs_array->length);
+                assert(rsrc  < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1695,8 +1695,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1717,8 +1717,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1739,8 +1739,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1769,7 +1769,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const unsigned rsrc  = bytecode[2];
                 KOS_OBJ_PTR    src;
 
-                assert(rsrc  < regs_array->length);
+                assert(rsrc  < regs_array->size);
 
                 rdest = bytecode[1];
                 src   = regs[rsrc];
@@ -1841,8 +1841,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 enum KOS_OBJECT_TYPE src1_type;
                 enum KOS_OBJECT_TYPE src2_type;
 
-                assert(rsrc1 < regs_array->length);
-                assert(rsrc2 < regs_array->length);
+                assert(rsrc1 < regs_array->size);
+                assert(rsrc2 < regs_array->size);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1913,8 +1913,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                 KOS_OBJ_PTR obj;
 
-                assert(rsrc  < regs_array->length);
-                assert(rprop < regs_array->length);
+                assert(rsrc  < regs_array->size);
+                assert(rprop < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1931,7 +1931,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const int32_t  idx   = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_PTR    prop;
 
-                assert(rsrc  < regs_array->length);
+                assert(rsrc  < regs_array->size);
 
                 rdest = bytecode[1];
 
@@ -1958,8 +1958,8 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_PTR ret            = KOS_FALSE;
                 int         constr_is_func = 1;
 
-                assert(rsrc  < regs_array->length);
-                assert(rfunc < regs_array->length);
+                assert(rsrc  < regs_array->size);
+                assert(rfunc < regs_array->size);
 
                 rdest      = bytecode[1];
                 constr_obj = regs[rfunc];
@@ -2003,7 +2003,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const int32_t  offs = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
-                assert(rsrc < regs_array->length);
+                assert(rsrc < regs_array->size);
 
                 delta = 6;
 
@@ -2016,7 +2016,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const int32_t  offs = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
-                assert(rsrc < regs_array->length);
+                assert(rsrc < regs_array->size);
 
                 delta = 6;
 
@@ -2032,7 +2032,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                 KOS_OBJ_PTR dest;
                 rdest = bytecode[1];
-                assert(rdest < regs_array->length);
+                assert(rdest < regs_array->size);
                 dest = regs[rdest];
 
                 if (IS_SMALL_INT(dest) || GET_OBJ_TYPE(dest) != OBJ_FUNCTION)
@@ -2043,7 +2043,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                     if (instr == INSTR_BIND) {
                         const unsigned rsrc = bytecode[3];
-                        assert(rsrc < regs_array->length);
+                        assert(rsrc < regs_array->size);
                         regs_obj = regs[rsrc];
                     }
                     else
@@ -2098,7 +2098,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                     case INSTR_CALL_GEN:
                         rthis = bytecode[3];
-                        assert(rthis < regs_array->length);
+                        assert(rthis < regs_array->size);
 
                         this_obj = regs[rthis];
                         assert( ! IS_BAD_PTR(this_obj));
@@ -2107,22 +2107,22 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                     default:
                         rthis = bytecode[3];
                         rargs = bytecode[4];
-                        assert(rthis < regs_array->length);
+                        assert(rthis < regs_array->size);
 
                         this_obj = regs[rthis];
                         assert( ! IS_BAD_PTR(this_obj));
                         break;
                 }
 
-                assert(instr != INSTR_TAIL_CALL || rdest <= regs_array->length);
-                assert(rfunc < regs_array->length);
+                assert(instr != INSTR_TAIL_CALL || rdest <= regs_array->size);
+                assert(rfunc < regs_array->size);
 
                 func_obj = regs[rfunc];
 
                 if (instr == INSTR_CALL_GEN)
                     args_obj = KOS_new_array(frame, 0);
                 else {
-                    assert(rargs < regs_array->length);
+                    assert(rargs < regs_array->size);
                     args_obj = regs[rargs];
                 }
 
@@ -2180,7 +2180,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                             if (rthis == rdest)
                                 out = result;
                             else {
-                                assert(rthis < regs_array->length);
+                                assert(rthis < regs_array->size);
                                 regs[rthis] = result;
                             }
                         }
@@ -2200,12 +2200,12 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 const unsigned closure_size = bytecode[1];
                 const unsigned rsrc         = bytecode[2];
 
-                assert(closure_size <= regs_array->length);
-                assert(rsrc         <  regs_array->length);
+                assert(closure_size <= regs_array->size);
+                assert(rsrc         <  regs_array->size);
 
                 frame->retval = regs[rsrc];
 
-                regs_array->length = closure_size;
+                regs_array->size = closure_size;
 
                 error = KOS_SUCCESS_RETURN;
                 break;
@@ -2214,7 +2214,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
             case INSTR_YIELD: { /* <r.src> */
                 const unsigned rsrc = bytecode[1];
 
-                assert(rsrc < regs_array->length);
+                assert(rsrc < regs_array->size);
 
                 if (frame->yield_reg == KOS_CANNOT_YIELD)
                     KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_yield));
@@ -2238,7 +2238,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
             case INSTR_THROW: { /* <r.src> */
                 const unsigned rsrc = bytecode[1];
 
-                assert(rsrc < regs_array->length);
+                assert(rsrc < regs_array->size);
 
                 KOS_raise_exception(frame, regs[rsrc]);
 
@@ -2252,7 +2252,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest  < regs_array->length);
+                assert(rdest  < regs_array->size);
                 assert(offset < module->bytecode_size);
 
                 frame->catch_reg  = (uint8_t)rdest;
@@ -2278,7 +2278,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
 
         if ( ! KOS_is_exception_pending(frame)) {
             if ( ! IS_BAD_PTR(out)) {
-                assert(rdest < regs_array->length);
+                assert(rdest < regs_array->size);
                 regs[rdest] = out;
             }
         }
@@ -2292,7 +2292,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
             if (frame->catch_offs != KOS_NO_CATCH) {
                 const unsigned rexc = frame->catch_reg;
 
-                assert(rexc < regs_array->length);
+                assert(rexc < regs_array->size);
 
                 regs[rexc] = KOS_get_exception(frame);
                 delta      = 0;

@@ -34,12 +34,12 @@ static inline uint32_t KOS_get_array_size(KOS_OBJ_PTR objptr)
     assert( ! IS_SMALL_INT(objptr) && ! IS_BAD_PTR(objptr));
     KOS_ARRAY *const array = OBJPTR(KOS_ARRAY, objptr);
     assert(array->type == OBJ_ARRAY);
-    return KOS_atomic_read_u32(array->length);
+    return KOS_atomic_read_u32(array->size);
 }
 
 #else
 
-#define KOS_get_array_size(objptr) (KOS_atomic_read_u32(OBJPTR(KOS_ARRAY, (objptr))->length))
+#define KOS_get_array_size(objptr) (KOS_atomic_read_u32(OBJPTR(KOS_ARRAY, (objptr))->size))
 
 #endif
 
@@ -48,7 +48,7 @@ extern "C" {
 #endif
 
 KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame,
-                          unsigned         length);
+                          unsigned         size);
 
 KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame,
                            KOS_OBJ_PTR      objptr,
@@ -65,7 +65,7 @@ int KOS_array_reserve(KOS_STACK_FRAME *frame,
 
 int KOS_array_resize(KOS_STACK_FRAME *frame,
                      KOS_OBJ_PTR      objptr,
-                     uint32_t         length);
+                     uint32_t         size);
 
 KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
                             KOS_OBJ_PTR      objptr,

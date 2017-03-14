@@ -212,7 +212,7 @@ typedef struct _KOS_OBJECT {
 typedef struct _KOS_ARRAY {
     _KOS_TYPE_STORAGE    type; /* OBJ_ARRAY */
     uint8_t              _align[3];
-    KOS_ATOMIC(uint32_t) length;
+    KOS_ATOMIC(uint32_t) size;
     KOS_ATOMIC(void *)   buffer;
     KOS_ATOMIC(uint32_t) capacity;
 } KOS_ARRAY;
@@ -236,6 +236,7 @@ enum _KOS_CATCH_STATE {
 typedef struct _KOS_STACK_FRAME {
     _KOS_TYPE_STORAGE        type; /* OBJ_STACK_FRAME */
     uint8_t                  catch_reg;
+    uint8_t                  _align[2];
     uint32_t                 instr_offs;
     KOS_OBJ_PTR              registers;
     KOS_OBJ_PTR              module;
@@ -297,6 +298,7 @@ typedef struct _KOS_FUNC_ADDR {
 typedef struct _KOS_MODULE {
     _KOS_TYPE_STORAGE    type; /* OBJ_MODULE */
     uint8_t              flags;
+    uint8_t              _align[2];
     KOS_OBJ_PTR          name;
     KOS_OBJ_PTR          path;
     KOS_CONTEXT         *context;
@@ -315,12 +317,14 @@ typedef struct _KOS_MODULE {
 
 typedef struct _KOS_DYNAMIC_PROP {
     _KOS_TYPE_STORAGE type; /* OBJ_DYNAMIC_PROP */
+    uint32_t          _align[3];
     KOS_OBJ_PTR       getter;
     KOS_OBJ_PTR       setter;
 } KOS_DYNAMIC_PROP;
 
 typedef struct _KOS_OBJECT_WALK {
     _KOS_TYPE_STORAGE    type; /* OBJ_OBJECT_WALK */
+    uint8_t              _align[3];
     KOS_OBJ_PTR          obj;
     KOS_OBJ_PTR          key_table_obj;
     void                *key_table;
@@ -329,6 +333,7 @@ typedef struct _KOS_OBJECT_WALK {
 
 typedef struct _KOS_SPECIAL {
     _KOS_TYPE_STORAGE type; /* OBJ_SPECIAL */
+    uint8_t           _align[3];
     void             *value;
 } KOS_SPECIAL;
 
