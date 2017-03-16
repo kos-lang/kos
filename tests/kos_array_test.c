@@ -277,27 +277,37 @@ int main(void)
     }
 
     /************************************************************************/
-    /* Resize array to 1 element and read it */
+    /* Resize array 100 times by 1 element and read it each time */
     {
+        int i;
+
         KOS_OBJ_PTR a = KOS_new_array(frame, 0);
         TEST(!IS_BAD_PTR(a));
 
-        TEST(KOS_array_resize(frame, a, 1) == KOS_SUCCESS);
-        TEST_NO_EXCEPTION();
+        for (i = 1; i < 101; i++) {
+            TEST(KOS_array_resize(frame, a, i) == KOS_SUCCESS);
+            TEST_NO_EXCEPTION();
 
-        TEST(KOS_get_array_size(a) == 1);
+            TEST(KOS_get_array_size(a) == (uint32_t)i);
 
-        TEST(KOS_array_read(frame, a, 0) == KOS_VOID);
-        TEST_NO_EXCEPTION();
+            TEST(KOS_array_read(frame, a, 0) == KOS_VOID);
+            TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(frame, a, -1) == KOS_VOID);
-        TEST_NO_EXCEPTION();
+            TEST(KOS_array_read(frame, a, i-1) == KOS_VOID);
+            TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(frame, a, 1) == TO_OBJPTR(0));
-        TEST_EXCEPTION();
+            TEST(KOS_array_read(frame, a, -1) == KOS_VOID);
+            TEST_NO_EXCEPTION();
 
-        TEST(KOS_array_read(frame, a, -2) == TO_OBJPTR(0));
-        TEST_EXCEPTION();
+            TEST(KOS_array_read(frame, a, -i) == KOS_VOID);
+            TEST_NO_EXCEPTION();
+
+            TEST(KOS_array_read(frame, a, i) == TO_OBJPTR(0));
+            TEST_EXCEPTION();
+
+            TEST(KOS_array_read(frame, a, -i-1) == TO_OBJPTR(0));
+            TEST_EXCEPTION();
+        }
     }
 
     /************************************************************************/
@@ -319,6 +329,37 @@ int main(void)
 
         TEST(KOS_array_read(frame, a, 0) == TO_SMALL_INT(5));
         TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* Resize array to 100 elements and read them */
+    {
+        int i;
+
+        KOS_OBJ_PTR a = KOS_new_array(frame, 0);
+        TEST(!IS_BAD_PTR(a));
+
+        TEST(KOS_array_resize(frame, a, 100) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_get_array_size(a) == 100);
+
+        for (i = 0; i < 100; i++) {
+            TEST(KOS_array_read(frame, a, i) == KOS_VOID);
+            TEST_NO_EXCEPTION();
+        }
+
+        TEST(KOS_array_read(frame, a, -1) == KOS_VOID);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_array_read(frame, a, -100) == KOS_VOID);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_array_read(frame, a, 100) == TO_OBJPTR(0));
+        TEST_EXCEPTION();
+
+        TEST(KOS_array_read(frame, a, -101) == TO_OBJPTR(0));
+        TEST_EXCEPTION();
     }
 
     /************************************************************************/

@@ -83,13 +83,16 @@ int _KOS_is_truthy(KOS_OBJ_PTR obj);
 /* KOS_ARRAY                                                                */
 /*==========================================================================*/
 
-int _KOS_init_array(KOS_STACK_FRAME *frame, KOS_ARRAY *array, uint32_t capacity);
+int _KOS_init_array(KOS_STACK_FRAME *frame,
+                    KOS_ARRAY       *array,
+                    uint32_t         size);
 
 #define KOS_MIN_ARRAY_CAPACITY  4U
 #define KOS_ARRAY_CAPACITY_STEP 4096U
 
 struct _KOS_ARRAY_BUFFER {
     uint32_t                capacity;
+    KOS_ATOMIC(void *)      next;
     KOS_ATOMIC(KOS_OBJ_PTR) buf[1];
 };
 
