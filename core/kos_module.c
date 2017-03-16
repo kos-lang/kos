@@ -666,6 +666,7 @@ static int _get_global_idx(void       *vframe,
 
     assert( ! IS_BAD_PTR(frame->module));
     assert(OBJPTR(KOS_MODULE, frame->module)->context);
+    assert(module_idx >= 0);
 
     ctx = OBJPTR(KOS_MODULE, frame->module)->context;
 
@@ -702,7 +703,7 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 {
     static const char             lang[]          = "lang";
     int                           error           = KOS_SUCCESS;
-    int                           module_idx      = 0;
+    int                           module_idx      = -1;
     KOS_OBJ_PTR                   module_obj      = TO_OBJPTR(0);
     KOS_OBJ_PTR                   actual_module_name;
     KOS_OBJ_PTR                   module_dir      = TO_OBJPTR(0);
@@ -791,14 +792,20 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
             module_obj = KOS_array_read(frame, TO_OBJPTR(&ctx->modules), (int)GET_SMALL_INT(module_idx_obj));
             if (IS_BAD_PTR(module_obj))
                 error = KOS_ERROR_EXCEPTION;
+            else
+                module_idx = (int)GET_SMALL_INT(module_idx_obj);
             goto _error;
         }
     }
     KOS_clear_exception(frame);
 
     /* Make room for the new module and allocate index */
-    module_idx = (int)KOS_get_array_size(TO_OBJPTR(&ctx->modules));
-    TRY(KOS_array_resize(frame, TO_OBJPTR(&ctx->modules), (uint32_t)module_idx+1));
+    {
+        uint32_t u_idx = 0;
+        TRY(KOS_array_push(frame, TO_OBJPTR(&ctx->modules), KOS_VOID, &u_idx));
+        module_idx = (int)u_idx;
+        assert(module_idx >= 0);
+    }
 
     /* Allocate module object */
     module_obj = _alloc_module(frame, actual_module_name);
