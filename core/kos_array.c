@@ -91,7 +91,7 @@ int _KOS_init_array(KOS_STACK_FRAME *frame,
 
     /* TODO don't allocate buffer if array is empty */
     buf = _alloc_buffer(frame, capacity);
-    KOS_atomic_write_ptr(array->buffer, buf);
+    KOS_atomic_write_ptr(array->buffer, (void *)buf);
     if (!array->buffer)
         error = KOS_ERROR_EXCEPTION;
     capacity = buf->capacity;
@@ -228,7 +228,7 @@ static void _copy_buf(KOS_STACK_FRAME *frame,
         ++dst;
     }
 
-    if (KOS_atomic_cas_ptr(array->buffer, old_buf, new_buf))
+    if (KOS_atomic_cas_ptr(array->buffer, (void *)old_buf, (void *)new_buf))
         _KOS_free_buffer(frame, old_buf, KOS_buffer_alloc_size(capacity));
 }
 
@@ -251,7 +251,7 @@ int KOS_array_reserve(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t new_c
 
             _atomic_fill_ptr(&new_buf->buf[0], new_buf->capacity, TOMBSTONE);
 
-            if (KOS_atomic_cas_ptr(old_buf->next, 0, new_buf))
+            if (KOS_atomic_cas_ptr(old_buf->next, (void *)0, (void *)new_buf))
 
                 _copy_buf(frame, array, old_buf, new_buf);
 
