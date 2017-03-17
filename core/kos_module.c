@@ -207,6 +207,7 @@ static void _get_module_name(const char                    *module,
 static KOS_OBJ_PTR _alloc_module(KOS_STACK_FRAME *frame,
                                  KOS_OBJ_PTR      module_name)
 {
+    /* TODO alloc in another way, this is the only type which requires 128B alloc */
     KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_MODULE);
     if (obj) {
         assert( ! IS_BAD_PTR(frame->module));
