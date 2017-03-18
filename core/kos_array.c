@@ -306,14 +306,13 @@ int KOS_array_resize(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t size)
             const uint32_t cap_x2   = KOS_min(capacity * 2, aligned);
             const uint32_t new_cap  = KOS_max(cap_x2, size);
             TRY(KOS_array_reserve(frame, objptr, new_cap));
+
+            buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
         }
 
         old_size = KOS_atomic_swap_u32(array->size, size);
 
         if (size != old_size) {
-
-            ARRAY_BUF *buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
-
             if (size > old_size) {
                 KOS_ATOMIC(KOS_OBJ_PTR) *ptr = &buf->buf[old_size];
                 KOS_ATOMIC(KOS_OBJ_PTR) *end = &buf->buf[size];
