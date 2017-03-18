@@ -285,7 +285,7 @@ int main(void)
         TEST(!IS_BAD_PTR(a));
 
         for (i = 1; i < 101; i++) {
-            TEST(KOS_array_resize(frame, a, i) == KOS_SUCCESS);
+            TEST(KOS_array_resize(frame, a, (uint32_t)i) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             TEST(KOS_get_array_size(a) == (uint32_t)i);
