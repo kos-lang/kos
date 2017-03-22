@@ -31,6 +31,7 @@ standalone_tests += kos_cpp_api_test
 standalone_tests += kos_object_test
 standalone_tests += kos_random_test
 standalone_tests += kos_red_black_test
+standalone_tests += kos_parallel_array_resize_test
 standalone_tests += kos_parallel_buffer_test
 standalone_tests += kos_parallel_object_consistency_test
 standalone_tests += kos_parallel_object_overwrite_test
@@ -51,6 +52,7 @@ c_files += kos_buffer_test.c
 c_files += kos_object_test.c
 c_files += kos_random_test.c
 c_files += kos_red_black_test.c
+c_files += kos_parallel_array_resize_test.c
 c_files += kos_parallel_buffer_test.c
 c_files += kos_parallel_object_consistency_test.c
 c_files += kos_parallel_object_overwrite_test.c
@@ -175,7 +177,8 @@ kos_parallel_object_resize_test:      kos_parallel_object_consistency_test
 kos_parallel_object_overwrite_test:   kos_parallel_object_resize_test
 kos_parallel_object_rapid_grow_test:  kos_parallel_object_overwrite_test
 kos_parallel_buffer_test:             kos_parallel_object_rapid_grow_test
-test:                                 kos_parallel_buffer_test
+kos_parallel_array_resize_test:       kos_parallel_buffer_test
+test:                                 kos_parallel_array_resize_test
 else
   ifeq ($(CONFIG_GCOV), 0)
 # Valgrind
@@ -183,7 +186,8 @@ test:                                 simple_test
   else
 # gcov
 kos_parallel_object_rapid_grow_test:  simple_test
-test:                                 kos_parallel_object_rapid_grow_test
+kos_parallel_array_resize_test:       kos_parallel_object_rapid_grow_test
+test:                                 kos_parallel_array_resize_test
   endif
 endif
 

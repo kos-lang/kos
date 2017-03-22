@@ -511,7 +511,7 @@ int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
     props = _get_properties(obj);
 
     return _resize_prop_table(frame, obj,
-            props ? 0 : (KOS_PBUF *)KOS_atomic_read_ptr(props->props), 1U);
+            props ? (KOS_PBUF *)KOS_atomic_read_ptr(props->props) : 0, 1U);
 }
 
 int KOS_set_property(KOS_STACK_FRAME *frame,

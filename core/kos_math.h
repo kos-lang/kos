@@ -42,10 +42,12 @@ static inline T KOS_max(T a, T b)
 template<typename T>
 static inline bool KOS_is_power_of_2(T step)
 {
-    while (step && ! ((step & 1))) {
-        step >>= 1;
-    }
-    return step == 1;
+    if (step == 0)
+        return false;
+    if (step == 1)
+        return true;
+    const T mask = ~((step - 1) << 1);
+    return (step & mask) == 0;
 }
 
 template<typename T>

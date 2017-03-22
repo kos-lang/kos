@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "../inc/kos_object.h"
+#include "../inc/kos_array.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
@@ -34,8 +34,7 @@
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
     KOS_OBJ_PTR          object;
-    KOS_STRING          *prop_names;
-    int                  num_props;
+    int                  num_idcs;
     KOS_ATOMIC(uint32_t) stage;
     KOS_ATOMIC(uint32_t) done;
     KOS_ATOMIC(uint32_t) error;
@@ -43,7 +42,7 @@ struct TEST_DATA {
 
 struct THREAD_DATA {
     struct TEST_DATA    *test;
-    int                  first_prop;
+    int                  first_idx;
     KOS_ATOMIC(uint32_t) num_loops;
 };
 
@@ -55,12 +54,12 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
     for (;;) {
 
         KOS_OBJ_PTR object;
-        int         i_prop;
-        const int   first_prop = data->first_prop;
-        const int   end_prop   = first_prop + test->num_props;
+        int         idx;
+        const int   first_idx = data->first_idx;
+        const int   end_idx   = first_idx + test->num_idcs;
 
         for (;;) {
-            const uint32_t cur_stage = (uint32_t)KOS_atomic_add_i32(test->stage, 0);
+            const uint32_t cur_stage = KOS_atomic_read_u32(test->stage);
 
             if (cur_stage > stage) {
                 stage = cur_stage;
@@ -74,45 +73,31 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
 
         object = test->object;
 
-        for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
-            const KOS_OBJ_PTR key   = TO_OBJPTR(&test->prop_names[i_prop]);
-            const KOS_OBJ_PTR value = TO_SMALL_INT(i_prop);
+        for (idx = first_idx; idx < end_idx; idx++) {
+            const KOS_OBJ_PTR value = TO_SMALL_INT(idx);
 
-            TEST(KOS_set_property(frame, object, key, value) == KOS_SUCCESS);
+            TEST(KOS_array_write(frame, object, idx, value) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
-        for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
-            const KOS_OBJ_PTR key      = TO_OBJPTR(&test->prop_names[i_prop-1]);
-            const KOS_OBJ_PTR expected = TO_SMALL_INT(i_prop-1);
-            const KOS_OBJ_PTR actual   = KOS_get_property(frame, object, key);
-            const KOS_OBJ_PTR new_val  = TO_SMALL_INT(-(i_prop-1));
+        for (idx = end_idx; idx > first_idx; idx--) {
+            const KOS_OBJ_PTR expected = TO_SMALL_INT(idx-1);
+            const KOS_OBJ_PTR actual   = KOS_array_read(frame, object, idx-1);
+            const KOS_OBJ_PTR new_val  = TO_SMALL_INT(-(idx-1));
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
 
-            TEST(KOS_set_property(frame, object, key, new_val) == KOS_SUCCESS);
+            TEST(KOS_array_write(frame, object, idx-1, new_val) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
-        for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
-            const KOS_OBJ_PTR key      = TO_OBJPTR(&test->prop_names[i_prop]);
-            const KOS_OBJ_PTR expected = TO_SMALL_INT(-i_prop);
-            const KOS_OBJ_PTR actual   = KOS_get_property(frame, object, key);
+        for (idx = first_idx; idx < end_idx; idx++) {
+            const KOS_OBJ_PTR expected = TO_SMALL_INT(-idx);
+            const KOS_OBJ_PTR actual   = KOS_array_read(frame, object, idx);
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
-
-            TEST(KOS_delete_property(frame, object, key) == KOS_SUCCESS);
-            TEST_NO_EXCEPTION();
-        }
-
-        for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
-            const KOS_OBJ_PTR key   = TO_OBJPTR(&test->prop_names[i_prop-1]);
-            const KOS_OBJ_PTR value = KOS_get_property(frame, object, key);
-
-            TEST(IS_BAD_PTR(value));
-            TEST_EXCEPTION();
         }
 
         KOS_atomic_add_i32(test->done,      1);
@@ -142,71 +127,50 @@ int main(void)
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
     /************************************************************************/
-    /* This test writes and deletes unique properties from multiple threads, checking for consistency */
+    /* This test overwrites array indices from multiple threads while the array
+     * storage is being reallocated. */
     {
-        const int           num_loops        = 1000 / (num_cpus > 100 ? 100 : num_cpus);
-        const int           max_props_per_th = 100;
+        const int           num_loops       = 1000 / (num_cpus > 100 ? 100 : num_cpus);
+        const int           max_idcs_per_th = 100;
         struct _KOS_VECTOR  mem_buf;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
-        _KOS_THREAD        *threads          = 0;
-        int                 num_threads      = 0;
-        int                 num_props;
-        KOS_STRING         *props;
-        struct KOS_RNG      rng;
-        KOS_OBJ_PTR         obj              = KOS_new_object(frame);
+        _KOS_THREAD        *threads         = 0;
+        int                 num_threads     = 0;
+        int                 num_idcs;
+        KOS_OBJ_PTR         obj;
         int                 i_loop;
         int                 i;
-
-        TEST( ! IS_BAD_PTR(obj));
 
         num_threads = num_cpus;
 
         if (num_threads > 2)
             --num_threads;
 
-        num_props = num_threads * max_props_per_th;
+        num_idcs = num_threads * max_idcs_per_th;
 
-        _KOS_rng_init(&rng);
+        obj = KOS_new_array(frame, num_idcs);
+        TEST( ! IS_BAD_PTR(obj));
 
         _KOS_vector_init(&mem_buf);
         TEST(_KOS_vector_resize(&mem_buf,
                 num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
-                + num_props * sizeof(KOS_STRING)
             ) == KOS_SUCCESS);
-        props          = (KOS_STRING *)mem_buf.buffer;
-        thread_cookies = (struct THREAD_DATA *)(props + num_props);
+        thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
         threads        = (_KOS_THREAD *)(thread_cookies + num_threads);
 
         for (i = 0; i < num_threads; i++) {
-            thread_cookies[i].test       = &data;
-            thread_cookies[i].first_prop = i * max_props_per_th;
-            thread_cookies[i].num_loops  = 0;
+            thread_cookies[i].test      = &data;
+            thread_cookies[i].first_idx = i * max_idcs_per_th;
+            thread_cookies[i].num_loops = 0;
         }
 
-        for (i = 0; i < num_props; i++) {
-            unsigned k;
-
-            KOS_STRING *str = props + i;
-            str->type       = OBJ_STRING_8;
-            str->flags      = KOS_STRING_LOCAL;
-            str->length     = 8U;
-            str->hash       = 0;
-
-            for (k = 0; k < str->length; k++)
-                if (k + 4U < str->length)
-                    str->data.buf[k] = (char)_KOS_rng_random_range(&rng, 255U);
-                else
-                    str->data.buf[k] = (char)(i >> ((str->length - 1 - k) * 8));
-        }
-
-        data.ctx        = &ctx;
-        data.object     = obj;
-        data.prop_names = props;
-        data.num_props  = max_props_per_th;
-        data.stage      = 0U;
-        data.done       = 0U;
-        data.error      = KOS_SUCCESS;
+        data.ctx      = &ctx;
+        data.object   = obj;
+        data.num_idcs = max_idcs_per_th;
+        data.stage    = 0U;
+        data.done     = 0U;
+        data.error    = KOS_SUCCESS;
 
         for (i = 0; i < num_threads; i++)
             TEST(_KOS_thread_create(&ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
@@ -215,7 +179,7 @@ int main(void)
             KOS_atomic_add_i32(data.stage, 1);
 
             do {
-                TEST(_KOS_object_copy_prop_table(frame, obj) == KOS_SUCCESS);
+                TEST(_KOS_array_copy_storage(frame, obj) == KOS_SUCCESS);
                 _KOS_yield();
             } while (KOS_atomic_read_u32(data.done) != (uint32_t)num_threads);
 
@@ -223,10 +187,10 @@ int main(void)
 
             TEST( ! data.error);
 
-            for (i = 0; i < num_props; i++) {
-                KOS_OBJ_PTR value = KOS_get_property(frame, obj, TO_OBJPTR(&props[i]));
-                TEST(IS_BAD_PTR(value));
-                TEST_EXCEPTION();
+            for (i = 0; i < num_idcs; i++) {
+                KOS_OBJ_PTR value = KOS_array_read(frame, obj, i);
+                TEST_NO_EXCEPTION();
+                TEST(value == TO_SMALL_INT(-i));
             }
         }
 
@@ -244,18 +208,6 @@ int main(void)
     }
 
     KOS_context_destroy(&ctx);
-
-#ifdef CONFIG_OBJECT_STATS
-    {
-        const struct _KOS_OBJECT_STATS stats = _KOS_get_object_stats();
-        printf("num_successful_resizes: %u\n", (unsigned)stats.num_successful_resizes);
-        printf("num_failed_resizes:     %u\n", (unsigned)stats.num_failed_resizes);
-        printf("num_successful_writes:  %u\n", (unsigned)stats.num_successful_writes);
-        printf("num_failed_writes:      %u\n", (unsigned)stats.num_failed_writes);
-        printf("num_successful_reads:   %u\n", (unsigned)stats.num_successful_reads);
-        printf("num_failed_reads:       %u\n", (unsigned)stats.num_failed_reads);
-    }
-#endif
 
     return 0;
 }

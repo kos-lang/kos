@@ -88,10 +88,11 @@ int _KOS_init_array(KOS_STACK_FRAME *frame,
                     uint32_t         size);
 
 #define KOS_MIN_ARRAY_CAPACITY  4U
-#define KOS_ARRAY_CAPACITY_STEP 4096U
+#define KOS_ARRAY_CAPACITY_STEP 1024U
 
 struct _KOS_ARRAY_BUFFER {
     uint32_t                capacity;
+    KOS_ATOMIC(uint32_t)    slots_left;
     KOS_ATOMIC(void *)      next;
     KOS_ATOMIC(KOS_OBJ_PTR) buf[1];
 };
@@ -109,6 +110,9 @@ static inline KOS_ATOMIC(KOS_OBJ_PTR) *_KOS_get_array_buffer(KOS_ARRAY *array)
 #define _KOS_get_array_buffer(array) (&((struct _KOS_ARRAY_BUFFER *)KOS_atomic_read_ptr((array)->buffer))->buf[0])
 
 #endif
+
+int _KOS_array_copy_storage(KOS_STACK_FRAME *frame,
+                            KOS_OBJ_PTR      objptr);
 
 /*==========================================================================*/
 /* KOS_BUFFER                                                               */

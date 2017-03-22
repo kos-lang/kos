@@ -80,12 +80,6 @@ int KOS_array_insert(KOS_STACK_FRAME *frame,
                      int64_t          src_begin,
                      int64_t          src_end);
 
-int KOS_array_rotate(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_PTR      objptr,
-                     int64_t          begin,
-                     int64_t          mid,
-                     int64_t          end);
-
 int KOS_array_push(KOS_STACK_FRAME *frame,
                    KOS_OBJ_PTR      objptr,
                    KOS_OBJ_PTR      value,
