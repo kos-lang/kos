@@ -378,7 +378,7 @@ static int _resize_prop_table(KOS_STACK_FRAME *frame,
             }
     }
     else
-        error = KOS_ERROR_OUT_OF_MEMORY; /* TODO throw exception */
+        error = KOS_ERROR_EXCEPTION;
 
     return error;
 }

@@ -36,7 +36,6 @@ static KOS_ASCII_STRING(str_err_empty,         "array is empty");
 static KOS_ASCII_STRING(str_err_invalid_index, "array index is out of range");
 static KOS_ASCII_STRING(str_err_not_array,     "object is not an array");
 static KOS_ASCII_STRING(str_err_null_ptr,      "null pointer");
-static KOS_ASCII_STRING(str_err_out_of_memory, "out of memory");
 
 static KOS_SPECIAL _tombstone = { OBJ_SPECIAL, 0 };
 static KOS_SPECIAL _closed    = { OBJ_SPECIAL, 0 };
@@ -75,8 +74,6 @@ static ARRAY_BUF *_alloc_buffer(KOS_STACK_FRAME *frame, uint32_t capacity)
         KOS_atomic_write_u32(buf->slots_left, capacity);
         KOS_atomic_write_ptr(buf->next,       (void *)0);
     }
-    else
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
 
     return buf;
 }
@@ -283,10 +280,8 @@ static int _resize_storage(KOS_STACK_FRAME *frame,
     ARRAY_BUF       *old_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
     ARRAY_BUF *const new_buf = _alloc_buffer(frame, new_capacity);
 
-    if ( ! new_buf) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+    if ( ! new_buf)
         return KOS_ERROR_EXCEPTION;
-    }
 
     _atomic_fill_ptr(&new_buf->buf[0], new_buf->capacity, TOMBSTONE);
 
@@ -418,9 +413,8 @@ KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
 
         if (len && ! IS_BAD_PTR(ret)) {
 
-            ARRAY_BUF *dest_buf;
-            uint32_t   new_len;
-            int64_t    new_len_64;
+            uint32_t new_len;
+            int64_t  new_len_64;
 
             begin = _KOS_fix_index(begin, len);
             end   = _KOS_fix_index(end, len);
@@ -432,45 +426,48 @@ KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
             assert(new_len_64 <= 0xFFFFFFFF);
             new_len = (uint32_t)new_len_64;
 
-            dest_buf = _alloc_buffer(frame, new_len);
+            if (new_len) {
 
-            if (dest_buf && ! IS_BAD_PTR(ret)) {
-                KOS_ARRAY *const new_array = OBJPTR(KOS_ARRAY, ret);
-                ARRAY_BUF       *src_buf   = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
-                uint32_t         idx       = 0;
+                ARRAY_BUF *dest_buf = _alloc_buffer(frame, new_len);
 
-                KOS_ATOMIC(KOS_OBJ_PTR) *dest = &dest_buf->buf[0];
+                if (dest_buf && ! IS_BAD_PTR(ret)) {
+                    KOS_ARRAY *const new_array = OBJPTR(KOS_ARRAY, ret);
+                    ARRAY_BUF       *src_buf   = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+                    uint32_t         idx       = 0;
 
-                KOS_atomic_write_ptr(new_array->buffer, (void *)dest_buf);
+                    KOS_ATOMIC(KOS_OBJ_PTR) *dest = &dest_buf->buf[0];
 
-                while (idx < new_len) {
+                    KOS_atomic_write_ptr(new_array->buffer, (void *)dest_buf);
 
-                    const KOS_OBJ_PTR value =
-                        (KOS_OBJ_PTR)KOS_atomic_read_ptr(src_buf->buf[begin + idx]);
+                    while (idx < new_len) {
 
-                    if (value == TOMBSTONE) {
-                        new_len = idx;
-                        break;
+                        const KOS_OBJ_PTR value =
+                            (KOS_OBJ_PTR)KOS_atomic_read_ptr(src_buf->buf[begin + idx]);
+
+                        if (value == TOMBSTONE) {
+                            new_len = idx;
+                            break;
+                        }
+
+                        if (value == CLOSED) {
+                            src_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(src_buf->next);
+                            continue;
+                        }
+
+                        KOS_atomic_write_ptr(*(dest++), value);
+                        ++idx;
                     }
 
-                    if (value == CLOSED) {
-                        src_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(src_buf->next);
-                        continue;
-                    }
+                    KOS_atomic_write_u32(new_array->size, new_len);
 
-                    KOS_atomic_write_ptr(*(dest++), value);
-                    ++idx;
+                    if (new_len < dest_buf->capacity)
+                        _atomic_fill_ptr(&dest_buf->buf[new_len],
+                                         dest_buf->capacity - new_len,
+                                         TOMBSTONE);
                 }
-
-                KOS_atomic_write_u32(new_array->size, new_len);
-
-                if (new_len < dest_buf->capacity)
-                    _atomic_fill_ptr(&dest_buf->buf[new_len],
-                                     dest_buf->capacity - new_len,
-                                     TOMBSTONE);
+                else
+                    ret = TO_OBJPTR(0);
             }
-            else
-                ret = TO_OBJPTR(0);
         }
     }
 
