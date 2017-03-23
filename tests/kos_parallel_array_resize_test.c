@@ -149,7 +149,7 @@ int main(void)
 
         num_idcs = num_threads * max_idcs_per_th;
 
-        obj = KOS_new_array(frame, num_idcs);
+        obj = KOS_new_array(frame, (uint32_t)num_idcs);
         TEST( ! IS_BAD_PTR(obj));
 
         _KOS_vector_init(&mem_buf);
