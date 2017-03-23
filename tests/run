@@ -111,13 +111,19 @@ if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
     unset CONFIG_TOOL
 fi
 
+ORIG_JOBS=$JOBS
 if [ "$UNAME" = "Darwin" -o "$UNAME" = "Linux" ]; then
-    export SANITIZER="address"
+    if [ -a "$1" != "nosan" ]; then
+        export SANITIZER="address"
+        JOBS=$(($JOBS / 2))
+        [[ $JOBS = 0 ]] && JOBS=1
+    fi
 fi
 
 runtests c++14 c++14
 
 unset SANITIZER
+JOBS=$ORIG_JOBS
 
 unset CONFIG_DEBUG
 runtests c11 c++11
