@@ -42,6 +42,9 @@ export TEST_CPUS="$JOBS"
 # Optimize for the current architecture
 export CONFIG_NATIVE=1
 
+# Save for overriding
+ORIG_JOBS=$JOBS
+
 runtests()
 {
     echo "***************************************************************************"
@@ -103,15 +106,15 @@ if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
     export CONFIG_TOOL="valgrind --error-exitcode=1 --track-origins=yes"
 
     # Limit number of jobs to reduce memory pressure
-    VALGRIND_JOBS=$JOBS
-    [ $VALGRIND_JOBS -gt 8 ] && VALGRIND_JOBS=8
+    JOBS=$(($JOBS / 2))
+    [ $JOBS -gt 8 ] && JOBS=8
 
-    JOBS=$VALGRIND_JOBS TEST_CPUS=2 runtests c89 c++98 noclean
+    TEST_CPUS=2 runtests c89 c++98 noclean
 
     unset CONFIG_TOOL
+    JOBS=$ORIG_JOBS
 fi
 
-ORIG_JOBS=$JOBS
 if [ "$UNAME" = "Darwin" -o "$UNAME" = "Linux" ]; then
     if [ -a "$1" != "nosan" ]; then
         export SANITIZER="address"
