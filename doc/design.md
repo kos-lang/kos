@@ -6,7 +6,7 @@ No surprises
 
 The main goal behind Kos design is to avoid surprises both in the language and
 in the library, as much as possible.  Any language or library feature, which is
-ambiguous, or can be understood by the programmer in different ways, would lead
+ambiguous or can be understood by the programmer in different ways, would lead
 to bugs.
 
 
@@ -46,8 +46,9 @@ Immutable types
 ---------------
 
 Integer, float, string, boolean, void and function types are immutable,
-meaning that value of a variable of these types cannot be modified.  A variable
-holding a value of any of these types can only be assigned a new value.
+meaning that value of a variable of these types cannot be modified.
+A non-const variable holding a value of any of these types can only be
+reassigned to with a new value.
 
 Their prototypes, however, can still be modified.
 
@@ -84,7 +85,7 @@ a predictable manner without parentheses:
 
     if value & mask != 0 { }
 
-In many programming languages, the above expression is computes as
+In many programming languages, the above expression is computed as
 `value & (mask != 0)` and it effectively tests no bits or bit 0, depending
 on `mask`.  In Kos, it is evaluated as `(value & mask) != 0`.  Moreover,
 in Kos, boolean values cannot be be promoted to numbers, so attempting to
@@ -136,7 +137,7 @@ contains "built-in" functionality.  This way the global scope is not polluted
 with unnecessary and potentially unwanted variables.
 
 While variables and functions declared in the global scope of a module can
-be read from other modules, they cannot be explcitly assigned to from other
+be read from other modules, they cannot be explicitly assigned to from other
 modules.
 
 Any functions or variables declared in any inner (non-global) scope are
@@ -183,8 +184,10 @@ iteration until the generator is exhausted.
 
 Objects of various types provide their own `iterator()` function:
 
-* Integer, float, boolean, void: their `iterator()` function generates the
+* Integer, float, boolean: their `iterator()` function generates the
   object's own value.
+
+* Void: its `iterator()` function returns an "empty" generator.
 
 * String, array, buffer: their `iterator()` function generates all of their
   elements.
@@ -213,7 +216,7 @@ followed by an expression in the next line, that expression is treated as part
 of the `return` statement, otherwise it does not make any sense to put any code
 behind the `return` statement as it would be unreachable.
 
-Another example is when the `-`, `+`, `[` or `(` character occurs as first
+Another example is when a `-`, `+`, `[` or `(` character occurs as first
 non-whitespace character on a new line, but it could be interpreted as part
 of the expression in the previous line.  In this case the parser signals an
 error, because such expression would be ambiguous.

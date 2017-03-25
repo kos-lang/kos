@@ -12,7 +12,7 @@ There are several ways in which you can contribute to Kos development:
 Reporting bugs and enhancements proposals
 =========================================
 
-Please use GitHub Issues to report bugs and enhancements proposals.
+Please use GitHub Issues to report bugs and enhancement proposals.
 
 When reporting bugs, in most cases please provide a minimal example code which
 reproduces the bug.  This will help to diagnose the issue quickly.
