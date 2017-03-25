@@ -49,8 +49,8 @@ typedef struct _KOS_PROPERTY_BUF *KOS_PBUF_PTR;
 struct _KOS_PROPERTY_BUF {
     uint32_t                 capacity;
     KOS_ATOMIC(uint32_t)     num_slots_used;
+    KOS_ATOMIC(uint32_t)     num_slots_open;
     KOS_ATOMIC(uint32_t)     active_copies;
-    KOS_ATOMIC(uint32_t)     all_salvaged;
     KOS_ATOMIC(KOS_PBUF_PTR) new_prop_table;
     KOS_PITEM                items[1];
 };
@@ -60,19 +60,6 @@ struct _KOS_PROPERTY_BUF {
 #define KOS_SPEED_GROW_BELOW   64U
 
 void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_PTR prototype);
-
-#ifdef CONFIG_OBJECT_STATS
-struct _KOS_OBJECT_STATS {
-    uint32_t num_successful_resizes;
-    uint32_t num_failed_resizes;
-    uint32_t num_successful_writes;
-    uint32_t num_failed_writes;
-    uint32_t num_successful_reads;
-    uint32_t num_failed_reads;
-};
-
-struct _KOS_OBJECT_STATS _KOS_get_object_stats();
-#endif
 
 int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
                                 KOS_OBJ_PTR      obj);
@@ -92,7 +79,7 @@ int _KOS_init_array(KOS_STACK_FRAME *frame,
 
 struct _KOS_ARRAY_BUFFER {
     uint32_t                capacity;
-    KOS_ATOMIC(uint32_t)    slots_left;
+    KOS_ATOMIC(uint32_t)    num_slots_open;
     KOS_ATOMIC(void *)      next;
     KOS_ATOMIC(KOS_OBJ_PTR) buf[1];
 };

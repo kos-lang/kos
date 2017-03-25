@@ -32,6 +32,7 @@
 #include "kos_memory.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
+#include "kos_perf.h"
 #include "kos_threads.h"
 #include "kos_try.h"
 #include <assert.h>
@@ -59,6 +60,13 @@ static KOS_ASCII_STRING(str_line,                    "line");
 static KOS_ASCII_STRING(str_module,                  "module");
 static KOS_ASCII_STRING(str_offset,                  "offset");
 static KOS_ASCII_STRING(str_value,                   "value");
+
+#ifdef CONFIG_PERF
+struct _KOS_PERF _kos_perf = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0
+};
+#endif
 
 static int _add_multiple_paths(KOS_STACK_FRAME *frame, struct _KOS_VECTOR *cpaths)
 {
@@ -185,6 +193,37 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
 
     _KOS_alloc_destroy(ctx);
     memset(ctx, 0, sizeof(*ctx));
+
+#ifdef CONFIG_PERF
+#   define PERF_RATIO(a, b) {                                     \
+        const uint32_t va = KOS_atomic_read_u32(_kos_perf.a);     \
+        const uint32_t vb = KOS_atomic_read_u32(_kos_perf.b);     \
+        uint32_t       total = va + vb;                           \
+        if (total == 0) total = 1;                                \
+        printf("    " #a "\t %u (%u%%)\n", va, va * 100 / total); \
+        printf("    " #b "\t %u (%u%%)\n", vb, vb * 100 / total); \
+    }
+#   define PERF_VALUE(a) {                                        \
+        const uint32_t va = KOS_atomic_read_u32(_kos_perf.a);     \
+        printf("    " #a "\t %u\n", va);                          \
+    }
+    printf("Performance stats:\n");
+    PERF_RATIO(object_get_success, object_get_fail);
+    PERF_RATIO(object_set_success, object_set_fail);
+    PERF_RATIO(object_delete_success, object_delete_fail);
+    PERF_RATIO(object_resize_success, object_resize_fail);
+    PERF_RATIO(object_salvage_success, object_salvage_fail);
+    PERF_RATIO(array_salvage_success, array_salvage_fail);
+    PERF_VALUE(alloc_object_16);
+    PERF_VALUE(alloc_object_32);
+    PERF_VALUE(alloc_object_64);
+    PERF_VALUE(alloc_buffer);
+    {
+        const uint32_t v = KOS_atomic_read_u32(_kos_perf.alloc_buffer_total);
+        const uint32_t n = KOS_atomic_read_u32(_kos_perf.alloc_buffer);
+        printf("    alloc_buffer_total %u B (avg %u B)\n", v, v/(n ? n : 1));
+    }
+#endif
 }
 
 int KOS_context_add_path(KOS_STACK_FRAME *frame, const char *module_search_path)

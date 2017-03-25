@@ -212,10 +212,14 @@ int main(void)
             TEST(_KOS_thread_create(&ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
+            /* Limit number of copies made to avoid running out of memory */
+            int copies_left = 1000;
+
             KOS_atomic_add_i32(data.stage, 1);
 
             do {
-                TEST(_KOS_object_copy_prop_table(frame, obj) == KOS_SUCCESS);
+                if (copies_left-- > 0)
+                    TEST(_KOS_object_copy_prop_table(frame, obj) == KOS_SUCCESS);
                 _KOS_yield();
             } while (KOS_atomic_read_u32(data.done) != (uint32_t)num_threads);
 

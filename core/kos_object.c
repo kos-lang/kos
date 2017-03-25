@@ -27,6 +27,7 @@
 #include "../inc/kos_string.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
+#include "kos_perf.h"
 #include "kos_threads.h"
 #include "kos_try.h"
 
@@ -77,41 +78,6 @@ static KOS_SPECIAL _reserved  = { OBJ_SPECIAL, 0 };
 /* During resize operation, slots in the new table are marked as reserved,
  * which is part of strategy to avoid race conditions. */
 #define RESERVED  TO_OBJPTR(&_reserved)
-
-#ifdef CONFIG_OBJECT_STATS
-#ifdef __cplusplus
-static KOS_ATOMIC(uint32_t) _stat_num_successful_resizes(0);
-static KOS_ATOMIC(uint32_t) _stat_num_failed_resizes    (0);
-static KOS_ATOMIC(uint32_t) _stat_num_successful_writes (0);
-static KOS_ATOMIC(uint32_t) _stat_num_failed_writes     (0);
-static KOS_ATOMIC(uint32_t) _stat_num_successful_reads  (0);
-static KOS_ATOMIC(uint32_t) _stat_num_failed_reads      (0);
-#else
-static KOS_ATOMIC(uint32_t) _stat_num_successful_resizes = 0;
-static KOS_ATOMIC(uint32_t) _stat_num_failed_resizes     = 0;
-static KOS_ATOMIC(uint32_t) _stat_num_successful_writes  = 0;
-static KOS_ATOMIC(uint32_t) _stat_num_failed_writes      = 0;
-static KOS_ATOMIC(uint32_t) _stat_num_successful_reads   = 0;
-static KOS_ATOMIC(uint32_t) _stat_num_failed_reads       = 0;
-#endif
-
-struct _KOS_OBJECT_STATS _KOS_get_object_stats()
-{
-    struct _KOS_OBJECT_STATS stats;
-    stats.num_successful_resizes = KOS_atomic_read_u32(_stat_num_successful_resizes);
-    stats.num_failed_resizes     = KOS_atomic_read_u32(_stat_num_failed_resizes);
-    stats.num_successful_writes  = KOS_atomic_read_u32(_stat_num_successful_writes);
-    stats.num_failed_writes      = KOS_atomic_read_u32(_stat_num_failed_writes);
-    stats.num_successful_reads   = KOS_atomic_read_u32(_stat_num_successful_reads);
-    stats.num_failed_reads       = KOS_atomic_read_u32(_stat_num_failed_reads);
-    return stats;
-}
-
-#define UPDATE_STATS(stat) KOS_atomic_add_i32(_stat_##stat, 1)
-
-#else
-#   define UPDATE_STATS(stat) (void)0
-#endif
 
 typedef struct _KOS_PROPERTY_BUF KOS_PBUF;
 
@@ -193,6 +159,7 @@ static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_
     const uint32_t mask = new_capacity - 1;
     uint32_t       hash;
     uint32_t       idx;
+    int            ret;
 
     /* Attempt to close an empty or deleted slot early */
     if (KOS_atomic_cas_ptr(old_item->value, TOMBSTONE, CLOSED))
@@ -237,52 +204,63 @@ static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_
 
     /* Get the value from the old table and close the slot */
     value = (KOS_OBJ_PTR)KOS_atomic_swap_ptr(old_item->value, CLOSED);
-    if (value == CLOSED)
-        /* Another thread closed this slot,
-         * we will attempt to mark the slot in the new table as closed. */
+    if (value == CLOSED) {
+        /* While this thread has reserved a slot in the new table,
+         * another thread went the fast path at the top of this function
+         * and closed the slot quickly.  Now we will attempt to mark
+         * the slot as deleted in the new table. */
         value = TOMBSTONE;
+        ret   = 0;
+    }
+    else
+        ret = 1; /* Slot successfuly closed */
 
-    /* Store the value in the new table, unless another thread salvaged
-     * this slot */
-    return KOS_atomic_cas_ptr(new_item->value, RESERVED, value);
+    /* Store the value in the new table, unless another thread already
+     * wrote something newer */
+    KOS_atomic_cas_ptr(new_item->value, RESERVED, value);
+
+    return ret;
 }
 
-static void _copy_table(KOS_STACK_FRAME        *frame,
-                        KOS_OBJECT *props,
-                        KOS_PBUF               *old_table,
-                        KOS_PBUF               *new_table)
+static void _copy_table(KOS_STACK_FRAME *frame,
+                        KOS_OBJECT      *props,
+                        KOS_PBUF        *old_table,
+                        KOS_PBUF        *new_table)
 {
     const uint32_t old_capacity = old_table->capacity;
     const uint32_t new_capacity = new_table->capacity;
     const uint32_t mask         = old_capacity - 1;
-    const uint32_t fuzz         = 64U * (uint32_t)(KOS_atomic_add_i32(old_table->active_copies, 1) - 1);
+    const uint32_t fuzz         = 64U * (old_capacity - KOS_atomic_read_u32(old_table->num_slots_open));
     uint32_t       i            = fuzz & mask;
-    const uint32_t end          = i;
-    int            last;
 
-    do {
-        if ( ! _salvage_item(old_table->items + i, new_table, new_capacity))
-            /* Early exit if another thread has finished salvaging */
-            if (KOS_atomic_read_u32(old_table->all_salvaged))
+    KOS_atomic_add_i32(old_table->active_copies, 1);
+
+    for (;;) {
+        if (_salvage_item(old_table->items + i, new_table, new_capacity)) {
+            KOS_PERF_CNT(object_salvage_success);
+            if (KOS_atomic_add_i32(old_table->num_slots_open, -1) == 1)
                 break;
+        }
+        /* Early exit if another thread has finished salvaging */
+        else {
+            KOS_PERF_CNT(object_salvage_fail);
+            if ( ! KOS_atomic_read_u32(old_table->num_slots_open))
+                break;
+        }
+
+        /* Next slot */
         i = (i + 1) & mask;
-    } while (i != end);
-
-    last = KOS_atomic_add_i32(old_table->active_copies, -1) == 2;
-
-    if (KOS_atomic_cas_u32(old_table->all_salvaged, 0, 1)) {
-        /* yay! */
     }
 
-    if (last) {
-        if (KOS_atomic_cas_ptr(props->props, (void *)old_table, (void *)new_table))
-            KOS_atomic_add_i32(old_table->active_copies, -1);
-    }
-    else
+    /* Avoid race when one thread marks a slot as reserved in the new
+     * table while another thread deletes the original item and
+     * closes the source slot. */
+    if (KOS_atomic_add_i32(old_table->active_copies, -1) > 1) {
         while (KOS_atomic_read_u32(old_table->active_copies))
             _KOS_yield();
+    }
 
-    if (last) {
+    if (KOS_atomic_cas_ptr(props->props, (void *)old_table, (void *)new_table)) {
 #ifndef NDEBUG
         for (i = 0; i < old_capacity; i++) {
             KOS_PITEM  *item  = old_table->items + i;
@@ -290,8 +268,6 @@ static void _copy_table(KOS_STACK_FRAME        *frame,
             assert(value == CLOSED);
         }
 #endif
-
-        /* TODO what if someone still uses it? !!! */
         _free_buffer(frame, old_table);
     }
 }
@@ -331,54 +307,68 @@ static int _resize_prop_table(KOS_STACK_FRAME *frame,
 
     const uint32_t old_capacity = old_table ? old_table->capacity : 0U;
     const uint32_t new_capacity = old_capacity ? old_capacity * grow_factor : KOS_MIN_PROPS_CAPACITY;
-    KOS_PBUF      *new_table    = _alloc_buffer(frame, new_capacity);
+    KOS_PBUF      *new_table    = 0;
+
+    if (old_table)
+        new_table = (KOS_PBUF_PTR)KOS_atomic_read_ptr(old_table->new_prop_table);
 
     assert(props);
 
     if (new_table) {
-        unsigned i;
+        /* Another thread is already resizing the property table, help it */
+        _copy_table(frame, props, old_table, new_table);
 
-        new_table->num_slots_used = 0;
-        new_table->capacity       = new_capacity;
-        new_table->active_copies  = 1;
-        new_table->all_salvaged   = 0;
-        new_table->new_prop_table = (KOS_PBUF_PTR)0;
+        KOS_PERF_CNT(object_resize_success);
+    }
+    else {
 
-        for (i = 0; i < new_capacity; i++) {
-            new_table->items[i].key       = TO_OBJPTR(0);
-            new_table->items[i].hash.hash = 0;
-            new_table->items[i].value     = TOMBSTONE;
-        }
+        new_table = _alloc_buffer(frame, new_capacity);
 
-        if (old_table) {
-            if (KOS_atomic_cas_ptr(old_table->new_prop_table, (KOS_PBUF_PTR)0, new_table)) {
+        if (new_table) {
+            unsigned i;
 
-                _copy_table(frame, props, old_table, new_table);
+            new_table->num_slots_used = 0;
+            new_table->capacity       = new_capacity;
+            new_table->num_slots_open = new_capacity;
+            new_table->active_copies  = 0;
+            new_table->new_prop_table = (KOS_PBUF_PTR)0;
 
-                UPDATE_STATS(num_successful_resizes);
+            for (i = 0; i < new_capacity; i++) {
+                new_table->items[i].key       = TO_OBJPTR(0);
+                new_table->items[i].hash.hash = 0;
+                new_table->items[i].value     = TOMBSTONE;
             }
-            else {
-                /* Somebody already resized it */
-                _free_buffer(frame, new_table);
 
-                /* Help copy the new table if it is still being resized */
-                if (KOS_atomic_read_u32(old_table->active_copies)) {
-                    new_table = (KOS_PBUF *)KOS_atomic_read_ptr(old_table->new_prop_table);
+            if (old_table) {
+                if (KOS_atomic_cas_ptr(old_table->new_prop_table, (KOS_PBUF_PTR)0, new_table)) {
+
                     _copy_table(frame, props, old_table, new_table);
-                }
 
-                UPDATE_STATS(num_failed_resizes);
+                    KOS_PERF_CNT(object_resize_success);
+                }
+                else {
+                    /* Somebody already resized it */
+                    _free_buffer(frame, new_table);
+
+                    /* Help copy the new table if it is still being resized */
+                    if (KOS_atomic_read_u32(old_table->active_copies)) {
+                        new_table = (KOS_PBUF *)KOS_atomic_read_ptr(old_table->new_prop_table);
+                        _copy_table(frame, props, old_table, new_table);
+                    }
+
+                    KOS_PERF_CNT(object_resize_fail);
+                }
             }
+            else
+                if ( ! KOS_atomic_cas_ptr(props->props, (void *)0, (void *)new_table)) {
+                    /* Somebody already resized it */
+                    _free_buffer(frame, new_table);
+                    KOS_PERF_CNT(object_resize_fail);
+                }
         }
         else
-            if ( ! KOS_atomic_cas_ptr(props->props, (void *)0, (void *)new_table)) {
-                /* Somebody already resized it */
-                _free_buffer(frame, new_table);
-                UPDATE_STATS(num_failed_resizes);
-            }
+            error = KOS_ERROR_EXCEPTION;
     }
-    else
-        error = KOS_ERROR_EXCEPTION;
 
     return error;
 }
@@ -492,9 +482,9 @@ KOS_OBJ_PTR KOS_get_property(KOS_STACK_FRAME *frame,
     }
 
     if (IS_BAD_PTR(retval))
-        UPDATE_STATS(num_failed_reads);
+        KOS_PERF_CNT(object_get_fail);
     else
-        UPDATE_STATS(num_successful_reads);
+        KOS_PERF_CNT(object_get_success);
 
     return retval;
 }
@@ -652,10 +642,18 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
         }
     }
 
-    if (error)
-        UPDATE_STATS(num_failed_writes);
-    else
-        UPDATE_STATS(num_successful_writes);
+    if (value == TOMBSTONE) {
+        if (error)
+            KOS_PERF_CNT(object_delete_fail);
+        else
+            KOS_PERF_CNT(object_delete_success);
+    }
+    else {
+        if (error)
+            KOS_PERF_CNT(object_set_fail);
+        else
+            KOS_PERF_CNT(object_set_success);
+    }
 
     return error;
 }

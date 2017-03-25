@@ -28,6 +28,7 @@
 #include "kos_misc.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
+#include "kos_perf.h"
 #include "kos_threads.h"
 #include "kos_try.h"
 #include <assert.h>
@@ -71,8 +72,8 @@ static ARRAY_BUF *_alloc_buffer(KOS_STACK_FRAME *frame, uint32_t capacity)
 
     if (buf) {
         buf->capacity = capacity;
-        KOS_atomic_write_u32(buf->slots_left, capacity);
-        KOS_atomic_write_ptr(buf->next,       (void *)0);
+        KOS_atomic_write_u32(buf->num_slots_open, capacity);
+        KOS_atomic_write_ptr(buf->next,           (void *)0);
     }
 
     return buf;
@@ -141,7 +142,7 @@ static void _copy_buf(KOS_STACK_FRAME *frame,
     KOS_ATOMIC(KOS_OBJ_PTR) *src      = &old_buf->buf[0];
     KOS_ATOMIC(KOS_OBJ_PTR) *dst      = &new_buf->buf[0];
     const uint32_t           capacity = old_buf->capacity;
-    const uint32_t           fuzz     = KOS_atomic_read_u32(old_buf->slots_left);
+    const uint32_t           fuzz     = KOS_atomic_read_u32(old_buf->num_slots_open);
     uint32_t                 i        = (capacity - fuzz) % capacity;
 
     for (;;) {
@@ -170,12 +171,17 @@ static void _copy_buf(KOS_STACK_FRAME *frame,
             /* If failed to close, someone wrote a new value, try again */
         }
 
+        if (salvaged)
+            KOS_PERF_CNT(array_salvage_success);
+        else
+            KOS_PERF_CNT(array_salvage_fail);
+
         /* Exit early if another thread finished it */
-        if ( ! salvaged && KOS_atomic_read_u32(old_buf->slots_left) == 0)
+        if ( ! salvaged && KOS_atomic_read_u32(old_buf->num_slots_open) == 0)
             break;
 
         /* Update number of closed slots */
-        if (salvaged && KOS_atomic_add_i32(old_buf->slots_left, -1) == 1)
+        if (salvaged && KOS_atomic_add_i32(old_buf->num_slots_open, -1) == 1)
             break;
 
         /* Try next slot */

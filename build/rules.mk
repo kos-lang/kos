@@ -154,10 +154,10 @@ else
     endif
 endif
 
-CONFIG_OBJECT_STATS ?= 0
+CONFIG_PERF ?= 0
 
-ifneq ($(CONFIG_OBJECT_STATS), 0)
-    CFLAGS += -DCONFIG_OBJECT_STATS
+ifneq ($(CONFIG_PERF), 0)
+    CFLAGS += -DCONFIG_PERF
 endif
 
 ##############################################################################
