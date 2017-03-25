@@ -68,12 +68,17 @@ static void _fix_path_separators(struct _KOS_VECTOR *buf)
     }
 }
 
+static void _finalize(KOS_STACK_FRAME *frame,
+                      void            *priv)
+{
+    if (priv)
+        fclose((FILE *)priv);
+}
+
 static KOS_OBJ_PTR _open(KOS_STACK_FRAME *frame,
                          KOS_OBJ_PTR      this_obj,
                          KOS_OBJ_PTR      args_obj)
 {
-    /* TODO add finalize function */
-
     int                error        = KOS_SUCCESS;
     KOS_OBJ_PTR        ret          = TO_OBJPTR(0);
     FILE              *file         = 0;
@@ -105,9 +110,12 @@ static KOS_OBJ_PTR _open(KOS_STACK_FRAME *frame,
 
     file = fopen(filename_cstr.buffer, flags_cstr.size ? flags_cstr.buffer : "r+b");
 
-    ret = KOS_new_object_with_prototype(frame, this_obj);
+    /* TODO raise exception if ! file */
 
+    ret = KOS_new_object_with_prototype(frame, this_obj);
     TRY_OBJPTR(ret);
+
+    OBJPTR(KOS_OBJECT, ret)->finalize = _finalize;
 
     KOS_object_set_private(*OBJPTR(KOS_OBJECT, ret), file);
     file = 0;

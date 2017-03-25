@@ -193,28 +193,6 @@ typedef struct _KOS_STRING {
 #endif
 } KOS_STRING;
 
-typedef void (*KOS_FINALIZE)(void *priv);
-
-typedef struct _KOS_OBJECT {
-    _KOS_TYPE_STORAGE  type; /* OBJ_OBJECT */
-    KOS_ATOMIC(void *) props;
-    KOS_OBJ_PTR        prototype;
-    void              *priv;
-    KOS_FINALIZE       finalize;
-} KOS_OBJECT;
-
-typedef struct _KOS_ARRAY {
-    _KOS_TYPE_STORAGE    type; /* OBJ_ARRAY */
-    KOS_ATOMIC(uint32_t) size;
-    KOS_ATOMIC(void *)   buffer;
-} KOS_ARRAY;
-
-typedef struct _KOS_BUFFER {
-    _KOS_TYPE_STORAGE    type; /* OBJ_BUFFER */
-    KOS_ATOMIC(uint32_t) size;
-    KOS_ATOMIC(void *)   data;
-} KOS_BUFFER;
-
 enum _KOS_YIELD_STATE {
     KOS_CANNOT_YIELD = 0x1000000U, /* indicates a regular function */
     KOS_CAN_YIELD    = 0x2000000U  /* indicates a generator        */
@@ -237,6 +215,29 @@ typedef struct _KOS_STACK_FRAME {
     uint32_t                 yield_reg;    /* index of the yield register */
     uint32_t                 catch_offs;
 } KOS_STACK_FRAME;
+
+typedef void (*KOS_FINALIZE)(KOS_STACK_FRAME *frame,
+                             void            *priv);
+
+typedef struct _KOS_OBJECT {
+    _KOS_TYPE_STORAGE  type; /* OBJ_OBJECT */
+    KOS_ATOMIC(void *) props;
+    KOS_OBJ_PTR        prototype;
+    void              *priv;
+    KOS_FINALIZE       finalize;
+} KOS_OBJECT;
+
+typedef struct _KOS_ARRAY {
+    _KOS_TYPE_STORAGE    type; /* OBJ_ARRAY */
+    KOS_ATOMIC(uint32_t) size;
+    KOS_ATOMIC(void *)   buffer;
+} KOS_ARRAY;
+
+typedef struct _KOS_BUFFER {
+    _KOS_TYPE_STORAGE    type; /* OBJ_BUFFER */
+    KOS_ATOMIC(uint32_t) size;
+    KOS_ATOMIC(void *)   data;
+} KOS_BUFFER;
 
 typedef KOS_OBJ_PTR (*KOS_FUNCTION_HANDLER)(KOS_STACK_FRAME *frame,
                                             KOS_OBJ_PTR      this_obj,
