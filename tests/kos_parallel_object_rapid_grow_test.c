@@ -213,17 +213,5 @@ int main(void)
 
     KOS_context_destroy(&ctx);
 
-#ifdef CONFIG_OBJECT_STATS
-    {
-        const struct _KOS_OBJECT_STATS stats = _KOS_get_object_stats();
-        printf("num_successful_resizes: %u\n", (unsigned)stats.num_successful_resizes);
-        printf("num_failed_resizes:     %u\n", (unsigned)stats.num_failed_resizes);
-        printf("num_successful_writes:  %u\n", (unsigned)stats.num_successful_writes);
-        printf("num_failed_writes:      %u\n", (unsigned)stats.num_failed_writes);
-        printf("num_successful_reads:   %u\n", (unsigned)stats.num_successful_reads);
-        printf("num_failed_reads:       %u\n", (unsigned)stats.num_failed_reads);
-    }
-#endif
-
     return 0;
 }
