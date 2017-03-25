@@ -20,8 +20,6 @@
 # IN THE SOFTWARE.
 #
 
-import lang.print
-
 const rand_integer, rand_float = fun {
 
     const rand = new random
