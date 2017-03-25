@@ -29,7 +29,7 @@
 #include "../inc/kos_string.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_misc.h"
-#include "../core/kos_object_alloc.h" /* TODO until we have finalize */
+#include "../core/kos_object_alloc.h" /* TODO until we have GC */
 #include "../core/kos_try.h"
 #include <math.h>
 
@@ -44,19 +44,26 @@ struct _KOS_RNG_CONTAINER {
     struct KOS_RNG       rng;
 };
 
+static void _finalize(KOS_STACK_FRAME *frame,
+                      void            *priv)
+{
+    if (priv)
+        _KOS_free_buffer(frame, priv, sizeof(struct _KOS_RNG_CONTAINER));
+}
+
 static KOS_OBJ_PTR _random(KOS_STACK_FRAME *frame,
                            KOS_OBJ_PTR      this_obj,
                            KOS_OBJ_PTR      args_obj)
 {
-    /* TODO add finalize */
-
     int                        error    = KOS_SUCCESS;
-    struct _KOS_RNG_CONTAINER *rng;
+    struct _KOS_RNG_CONTAINER *rng      = 0;
     KOS_OBJ_PTR                ret;
     KOS_OBJ_PTR                seed_obj = TO_OBJPTR(0);
 
     ret = KOS_new_object_with_prototype(frame, this_obj);
     TRY_OBJPTR(ret);
+
+    OBJPTR(KOS_OBJECT, ret)->finalize = _finalize;
 
     if (KOS_get_array_size(args_obj) > 0) {
 
@@ -69,7 +76,7 @@ static KOS_OBJ_PTR _random(KOS_STACK_FRAME *frame,
             RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_seed));
     }
 
-    /* TODO malloc when we have finalize */
+    /* TODO malloc when we have GC */
     /*
     rng = (struct _KOS_RNG_CONTAINER *)_KOS_malloc(sizeof(struct _KOS_RNG_CONTAINER));
     */
@@ -86,21 +93,18 @@ static KOS_OBJ_PTR _random(KOS_STACK_FRAME *frame,
 
         int64_t seed;
 
-        error = KOS_get_integer(frame, seed_obj, &seed);
-
-        if (error) {
-            /* TODO enable when whe have finalize
-            _KOS_free(rng);
-            */
-            goto _error;
-        }
+        TRY(KOS_get_integer(frame, seed_obj, &seed));
 
         _KOS_rng_init_seed(&rng->rng, (uint64_t)seed);
     }
 
     KOS_object_set_private(*OBJPTR(KOS_OBJECT, ret), rng);
+    rng = 0;
 
 _error:
+    if (rng)
+        _KOS_free_buffer(frame, rng, sizeof(struct _KOS_RNG_CONTAINER));
+
     return error ? TO_OBJPTR(0) : ret;
 }
 
