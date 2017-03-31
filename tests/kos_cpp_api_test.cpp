@@ -292,7 +292,7 @@ try {
             TEST(a_it == b_it);
 
             const std::string key   = kos::string(it->key);
-            const int         value = kos::integer(it->value);
+            const int         value = static_cast<int>(kos::integer(it->value));
 
             sum += value;
 
@@ -309,7 +309,7 @@ try {
         sum = 0;
         for (const auto& kv : o) {
             const std::string key   = kos::string(kv.key);
-            const int         value = kos::integer(kv.value);
+            const int         value = static_cast<int>(kos::integer(kv.value));
 
             sum += value;
 
