@@ -278,6 +278,53 @@ try {
     }
 
     {
+        kos::object o = frame.new_object();
+        o["1"] = 1;
+        o["2"] = 2;
+        o["3"] = 3;
+
+        int sum = 0;
+        for (kos::object::const_iterator it = o.begin(); it != o.end(); ++it) {
+            kos::object::const_iterator a_it = it;
+            kos::object::const_iterator b_it = a_it++;
+            TEST(a_it != b_it);
+            ++b_it;
+            TEST(a_it == b_it);
+
+            const std::string key   = kos::string(it->key);
+            const int         value = kos::integer(it->value);
+
+            sum += value;
+
+            switch (value) {
+                case 1:  TEST(key == "1"); break;
+                case 2:  TEST(key == "2"); break;
+                case 3:  TEST(key == "3"); break;
+                default: TEST(false);      break;
+            }
+        }
+        TEST(sum == 6);
+
+#ifdef KOS_CPP11
+        sum = 0;
+        for (const auto& kv : o) {
+            const std::string key   = kos::string(kv.key);
+            const int         value = kos::integer(kv.value);
+
+            sum += value;
+
+            switch (value) {
+                case 1:  TEST(key == "1"); break;
+                case 2:  TEST(key == "2"); break;
+                case 3:  TEST(key == "3"); break;
+                default: TEST(false);      break;
+            }
+        }
+        TEST(sum == 6);
+#endif
+    }
+
+    {
         bool exception = false;
         try {
             kos::object o = frame.new_object();

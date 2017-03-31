@@ -388,7 +388,69 @@ class object: public object_base
             return property(_frame, _objptr, to_object_ptr(_frame, key));
         }
 
-        /* TODO C++ iterators */
+        class const_iterator
+        {
+            public:
+                typedef std::forward_iterator_tag iterator_category;
+                typedef KOS_OBJECT_WALK_ELEM      value_type;
+                typedef void                      difference_type;
+                typedef const value_type*         pointer;
+                typedef const value_type&         reference;
+
+                const_iterator()
+                    : _frame(0)
+                {
+                    _walk[0]    = OBJ_SPECIAL;
+                    _elem.key   = TO_OBJPTR(0);
+                    _elem.value = TO_OBJPTR(0);
+                }
+
+                const_iterator(stack_frame frame, KOS_OBJ_PTR objptr, KOS_OBJECT_WALK_DEPTH depth)
+                    : _frame(frame)
+                {
+                    _elem.key   = TO_OBJPTR(0);
+                    _elem.value = TO_OBJPTR(0);
+                    frame.check_error(KOS_object_walk_init(frame, walk(), objptr, depth));
+                    _elem = KOS_object_walk(_frame, walk());
+                }
+
+                bool operator==(const const_iterator& it) const {
+                    return _elem.key == it._elem.key;
+                }
+
+                bool operator!=(const const_iterator& it) const {
+                    return ! (_elem.key == it._elem.key);
+                }
+
+                const_iterator& operator++() {
+                    _elem = KOS_object_walk(_frame, walk());
+                    return *this;
+                }
+
+                const_iterator operator++(int) {
+                    const_iterator tmp(*this);
+                    operator++();
+                    return tmp;
+                }
+
+                reference operator*() const {
+                    return _elem;
+                }
+
+                pointer operator->() const {
+                    return &_elem;
+                }
+
+            private:
+                KOS_OBJECT_WALK* walk() { return reinterpret_cast<KOS_OBJECT_WALK*>(_walk); }
+
+                mutable stack_frame  _frame;
+                char                 _walk[sizeof(KOS_OBJECT_WALK)];
+                KOS_OBJECT_WALK_ELEM _elem;
+        };
+
+        const_iterator begin() const { return const_iterator(_frame, _objptr, KOS_SHALLOW); }
+        const_iterator end()   const { return const_iterator(); }
 
     protected:
         mutable stack_frame _frame;
