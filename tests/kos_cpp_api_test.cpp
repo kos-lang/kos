@@ -199,6 +199,109 @@ try {
     }
 
     {
+        kos::array a = frame.new_array(5);
+        for (int i = 0; i < 5; i++) {
+            a[i] = i + 10;
+        }
+
+        const kos::array& ca = a;
+
+        {
+            kos::array::const_iterator it = ca.begin();
+            TEST(static_cast<int>(*(it++)) == 10);
+            TEST(static_cast<int>(*(it--)) == 11);
+
+            kos::array::const_iterator it3 = it  + 3;
+            kos::array::const_iterator it1 = it3 - 2;
+            TEST(static_cast<int>(*it1) == 11);
+            TEST(static_cast<int>(*it3) == 13);
+            TEST(it3 - it1 == 2);
+
+            TEST(static_cast<int>(*(it += 4)) == 14);
+            TEST(static_cast<int>(*(it -= 2)) == 12);
+        }
+
+        {
+            kos::array::iterator it = a.begin();
+            TEST(static_cast<int>(*(it++)) == 10);
+            TEST(static_cast<int>(*(it--)) == 11);
+
+            kos::array::iterator it3 = it  + 3;
+            kos::array::iterator it1 = it3 - 2;
+            TEST(static_cast<int>(*it1) == 11);
+            TEST(static_cast<int>(*it3) == 13);
+
+            TEST(static_cast<int>(*(it += 4)) == 14);
+            TEST(static_cast<int>(*(it -= 2)) == 12);
+
+            kos::array::const_iterator cit = it;
+            TEST(static_cast<int>(*cit) == 12);
+        }
+
+        int i = 0;
+        for (kos::array::const_iterator it = a.begin(); it != a.end(); ++it, ++i) {
+            TEST(static_cast<int>(*it) == i + 10);
+        }
+
+        i = 0;
+        for (kos::array::const_iterator it = ca.begin(); it != ca.end(); ++it, ++i) {
+            TEST(static_cast<int>(*it) == i + 10);
+        }
+
+        i = 0;
+        for (kos::array::iterator it = a.begin(); it != a.end(); ++it, ++i) {
+            *it = i + 20;
+            TEST(static_cast<int>(*it) == i + 20);
+        }
+
+        i = 4;
+        for (kos::array::const_reverse_iterator it = ca.rbegin(); it != ca.rend(); ++it, --i) {
+            TEST(static_cast<int>(*it) == i + 20);
+        }
+
+        i = 4;
+        for (kos::array::reverse_iterator it = a.rbegin(); it != a.rend(); ++it, --i) {
+            TEST(static_cast<int>(*it) == i + 20);
+        }
+
+#ifdef KOS_CPP11
+        i = 0;
+        for (const auto& elem : ca) {
+            TEST(static_cast<int>(elem) == (i++ + 20));
+        }
+
+        i = 0;
+        for (auto& elem : a) {
+            elem = i + 30;
+            TEST(static_cast<int>(elem) == (i + 30));
+            ++i;
+        }
+#endif
+    }
+
+    {
+        kos::buffer b = frame.new_buffer(10);
+
+        for (unsigned i = 0; i < b.size(); i++) {
+            b[i] = static_cast<char>(0xF0 + i);
+        }
+
+        for (unsigned i = 0; i < b.size(); i++) {
+            TEST(b[i] == static_cast<char>(0xF0 + i));
+        }
+
+        int i = 0;
+        for (kos::buffer::const_iterator it = b.begin(); it != b.end(); ++it, ++i) {
+            TEST(*it == static_cast<char>(0xF0 + i));
+        }
+
+        i = 9;
+        for (kos::buffer::const_reverse_iterator it = b.rbegin(); it != b.rend(); ++it, --i) {
+            TEST(*it == static_cast<char>(0xF0 + i));
+        }
+    }
+
+    {
 #ifdef KOS_CPP11
         kos::function add = frame.NEW_FUNCTION(&add_func);
 #else

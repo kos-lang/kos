@@ -46,6 +46,30 @@ class buffer;
 class function;
 class object;
 
+template<typename T>
+struct remove_reference
+{
+    typedef T type;
+};
+
+template<typename T>
+struct remove_reference<T&>
+{
+    typedef T type;
+};
+
+template<typename T>
+struct remove_const
+{
+    typedef T type;
+};
+
+template<typename T>
+struct remove_const<const T>
+{
+    typedef T type;
+};
+
 class stack_frame
 {
     public:
@@ -87,7 +111,7 @@ class stack_frame
         template<typename T>
         object new_object(T* priv);
 
-        array new_array(unsigned length);
+        array new_array(unsigned size);
 
         buffer new_buffer(unsigned size);
 
@@ -247,6 +271,7 @@ class integer: public object_base
         integer(KOS_OBJ_PTR objptr)
             : object_base(objptr)
         {
+            assert( ! IS_BAD_PTR(objptr));
             assert(IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) == OBJ_INTEGER);
         }
 
@@ -269,6 +294,7 @@ class floating: public object_base
         floating(KOS_OBJ_PTR objptr)
             : object_base(objptr)
         {
+            assert( ! IS_BAD_PTR(objptr));
             assert( ! IS_SMALL_INT(objptr) && GET_OBJ_TYPE(objptr) == OBJ_FLOAT);
         }
 
@@ -283,6 +309,7 @@ class string: public object_base
         string(KOS_OBJ_PTR objptr)
             : object_base(objptr)
         {
+            assert( ! IS_BAD_PTR(objptr));
             assert(IS_STRING_OBJ(objptr));
         }
 
@@ -306,7 +333,8 @@ class boolean: public object_base
         boolean(KOS_OBJ_PTR objptr)
             : object_base(objptr)
         {
-            assert( ! IS_SMALL_INT(objptr) && GET_OBJ_TYPE(objptr) == OBJ_BOOLEAN);
+            assert( ! IS_BAD_PTR(objptr));
+            assert(IS_TYPE(OBJ_BOOLEAN, objptr));
         }
 
         boolean(bool v)
@@ -329,7 +357,8 @@ class void_: public object_base
         void_(KOS_OBJ_PTR objptr)
             : object_base(objptr)
         {
-            assert( ! IS_SMALL_INT(objptr) && GET_OBJ_TYPE(objptr) == OBJ_VOID);
+            assert( ! IS_BAD_PTR(objptr));
+            assert(IS_TYPE(OBJ_VOID, objptr));
         }
 
         void_()
@@ -449,11 +478,123 @@ class object: public object_base
                 KOS_OBJECT_WALK_ELEM _elem;
         };
 
-        const_iterator begin() const { return const_iterator(_frame, _objptr, KOS_SHALLOW); }
-        const_iterator end()   const { return const_iterator(); }
+        const_iterator begin()  const { return const_iterator(_frame, _objptr, KOS_SHALLOW); }
+        const_iterator end()    const { return const_iterator(); }
+        const_iterator cbegin() const { return const_iterator(_frame, _objptr, KOS_SHALLOW); }
+        const_iterator cend()   const { return const_iterator(); }
 
     protected:
         mutable stack_frame _frame;
+};
+
+template<typename element_type>
+class random_access_iterator
+{
+    public:
+        typedef std::random_access_iterator_tag           iterator_category;
+        typedef typename remove_const<element_type>::type value_type;
+        typedef int                                       difference_type;
+        typedef element_type*                             pointer;
+        typedef element_type&                             reference;
+
+        random_access_iterator()
+            : _elem(0, TO_OBJPTR(0), 0)
+        {
+        }
+
+        random_access_iterator(stack_frame frame, KOS_OBJ_PTR objptr, int idx)
+            : _elem(frame, objptr, idx)
+        {
+        }
+
+        operator random_access_iterator<const value_type>() const {
+            return random_access_iterator<const value_type>(_elem.frame(), _elem.object(), _elem.index());
+        }
+
+        random_access_iterator& operator++() {
+            ++_elem;
+            return *this;
+        }
+
+        random_access_iterator& operator--() {
+            --_elem;
+            return *this;
+        }
+
+        random_access_iterator operator++(int) {
+            random_access_iterator tmp(_elem.frame(), _elem.object(), _elem.index());
+            operator++();
+            return tmp;
+        }
+
+        random_access_iterator operator--(int) {
+            random_access_iterator tmp(_elem.frame(), _elem.object(), _elem.index());
+            operator--();
+            return tmp;
+        }
+
+        random_access_iterator operator+(int delta) const {
+            return random_access_iterator(_elem.frame(), _elem.object(), _elem.index() + delta);
+        }
+
+        random_access_iterator operator-(int delta) const {
+            return random_access_iterator(_elem.frame(), _elem.object(), _elem.index() - delta);
+        }
+
+        random_access_iterator& operator+=(int delta) {
+            _elem += delta;
+            return *this;
+        }
+
+        random_access_iterator& operator-=(int delta) {
+            _elem -= delta;
+            return *this;
+        }
+
+        difference_type operator-(const random_access_iterator& it) const {
+            return _elem.index() - it._elem.index();
+        }
+
+        bool operator==(const random_access_iterator& it) const {
+            return _elem.object() == it._elem.object() &&
+                   _elem.index()  == it._elem.index();
+        }
+
+        bool operator!=(const random_access_iterator& it) const {
+            return _elem.object() != it._elem.object() ||
+                   _elem.index()  != it._elem.index();
+        }
+
+        bool operator<(const random_access_iterator& it) const {
+            return _elem.object() == it._elem.object() &&
+                   _elem.index()  <  it._elem.index();
+        }
+
+        bool operator>(const random_access_iterator& it) const {
+            return _elem.object() == it._elem.object() &&
+                   _elem.index()  >  it._elem.index();
+        }
+
+        bool operator<=(const random_access_iterator& it) const {
+            return _elem.object() == it._elem.object() &&
+                   _elem.index()  <= it._elem.index();
+        }
+
+        bool operator>=(const random_access_iterator& it) const {
+            return _elem.object() == it._elem.object() &&
+                   _elem.index()  >= it._elem.index();
+        }
+
+        reference operator*() const {
+            return _elem;
+        }
+
+        pointer operator->() const {
+            return &_elem;
+        }
+
+    private:
+        mutable value_type _elem;
 };
 
 class array: public object
@@ -462,7 +603,8 @@ class array: public object
         array(stack_frame frame, KOS_OBJ_PTR objptr)
             : object(frame, objptr)
         {
-            assert(GET_OBJ_TYPE(objptr) == OBJ_ARRAY);
+            assert( ! IS_BAD_PTR(objptr));
+            assert(IS_TYPE(OBJ_ARRAY, objptr));
         }
 
         void reserve(uint32_t capacity) {
@@ -498,6 +640,38 @@ class array: public object
                     return *this;
                 }
 
+                stack_frame frame() const {
+                    return _frame;
+                }
+
+                KOS_OBJ_PTR object() const {
+                    return _objptr;
+                }
+
+                int index() const {
+                    return _idx;
+                }
+
+                element& operator++() {
+                    ++_idx;
+                    return *this;
+                }
+
+                element& operator--() {
+                    --_idx;
+                    return *this;
+                }
+
+                element& operator+=(int delta) {
+                    _idx += delta;
+                    return *this;
+                }
+
+                element& operator-=(int delta) {
+                    _idx -= delta;
+                    return *this;
+                }
+
             private:
                 mutable stack_frame _frame;
                 KOS_OBJ_PTR         _objptr;
@@ -516,7 +690,25 @@ class array: public object
             return array(_frame, _frame.check_error(KOS_array_slice(_frame, _objptr, begin, end)));
         }
 
-        /* TODO C++ iterators */
+        typedef random_access_iterator<element>       iterator;
+        typedef random_access_iterator<const element> const_iterator;
+
+        iterator       begin()        { return iterator(_frame, _objptr, 0); }
+        iterator       end()          { return iterator(_frame, _objptr, static_cast<int>(size())); }
+        const_iterator begin()  const { return cbegin(); }
+        const_iterator end()    const { return cend(); }
+        const_iterator cbegin() const { return const_iterator(_frame, _objptr, 0); }
+        const_iterator cend()   const { return const_iterator(_frame, _objptr, static_cast<int>(size())); }
+
+        typedef std::reverse_iterator<iterator>       reverse_iterator;
+        typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+
+        reverse_iterator       rbegin()        { return reverse_iterator(end()); }
+        reverse_iterator       rend()          { return reverse_iterator(begin()); }
+        const_reverse_iterator rbegin()  const { return const_reverse_iterator(cend()); }
+        const_reverse_iterator rend()    const { return const_reverse_iterator(cbegin()); }
+        const_reverse_iterator crbegin() const { return const_reverse_iterator(cend()); }
+        const_reverse_iterator crend()   const { return const_reverse_iterator(cbegin()); }
 };
 
 class buffer: public object
@@ -525,7 +717,8 @@ class buffer: public object
         buffer(stack_frame frame, KOS_OBJ_PTR objptr)
             : object(frame, objptr)
         {
-            assert(GET_OBJ_TYPE(objptr) == OBJ_BUFFER);
+            assert( ! IS_BAD_PTR(objptr));
+            assert(IS_TYPE(OBJ_BUFFER, objptr));
         }
 
         void reserve(uint32_t capacity) {
@@ -571,6 +764,38 @@ class buffer: public object
                     return *this;
                 }
 
+                stack_frame frame() const {
+                    return _frame;
+                }
+
+                KOS_OBJ_PTR object() const {
+                    return _objptr;
+                }
+
+                int index() const {
+                    return _idx;
+                }
+
+                element& operator++() {
+                    ++_idx;
+                    return *this;
+                }
+
+                element& operator--() {
+                    --_idx;
+                    return *this;
+                }
+
+                element& operator+=(int delta) {
+                    _idx += delta;
+                    return *this;
+                }
+
+                element& operator-=(int delta) {
+                    _idx -= delta;
+                    return *this;
+                }
+
             private:
                 stack_frame _frame;
                 KOS_OBJ_PTR _objptr;
@@ -585,7 +810,25 @@ class buffer: public object
             return element(_frame, _objptr, idx);
         }
 
-        /* TODO C++ iterators */
+        typedef random_access_iterator<element>       iterator;
+        typedef random_access_iterator<const element> const_iterator;
+
+        iterator       begin()        { return iterator(_frame, _objptr, 0); }
+        iterator       end()          { return iterator(_frame, _objptr, static_cast<int>(size())); }
+        const_iterator begin()  const { return cbegin(); }
+        const_iterator end()    const { return cend(); }
+        const_iterator cbegin() const { return const_iterator(_frame, _objptr, 0); }
+        const_iterator cend()   const { return const_iterator(_frame, _objptr, static_cast<int>(size())); }
+
+        typedef std::reverse_iterator<iterator>       reverse_iterator;
+        typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+
+        reverse_iterator       rbegin()        { return reverse_iterator(end()); }
+        reverse_iterator       rend()          { return reverse_iterator(begin()); }
+        const_reverse_iterator rbegin()  const { return const_reverse_iterator(cend()); }
+        const_reverse_iterator rend()    const { return const_reverse_iterator(cbegin()); }
+        const_reverse_iterator crbegin() const { return const_reverse_iterator(cend()); }
+        const_reverse_iterator crend()   const { return const_reverse_iterator(cbegin()); }
 };
 
 #ifdef KOS_CPP11
@@ -615,7 +858,8 @@ class function: public object
         function(stack_frame frame, KOS_OBJ_PTR objptr)
             : object(frame, objptr)
         {
-            assert(GET_OBJ_TYPE(objptr) == OBJ_FUNCTION);
+            assert( ! IS_BAD_PTR(objptr));
+            assert(IS_TYPE(OBJ_FUNCTION, objptr));
         }
 
         objptr_converter call(array args) const {
@@ -753,27 +997,20 @@ object stack_frame::new_object(T* priv)
     return obj;
 }
 
-inline array stack_frame::new_array(unsigned length)
+inline array stack_frame::new_array(unsigned size)
 {
-    return array(*this, check_error(KOS_new_array(_frame, length)));
+    return array(*this, check_error(KOS_new_array(_frame, size)));
+}
+
+inline buffer stack_frame::new_buffer(unsigned size)
+{
+    return buffer(*this, check_error(KOS_new_buffer(_frame, size)));
 }
 
 inline function stack_frame::new_function(KOS_FUNCTION_HANDLER handler, int min_args)
 {
     return function(*this, check_error(KOS_new_builtin_function(_frame, handler, min_args)));
 }
-
-template<typename T>
-struct remove_reference
-{
-    typedef T type;
-};
-
-template<typename T>
-struct remove_reference<T&>
-{
-    typedef T type;
-};
 
 template<int i, typename T>
 typename remove_reference<T>::type extract_arg(stack_frame frame, array& args_obj)
