@@ -71,9 +71,29 @@ int64_t value_from_object_ptr<int64_t>(stack_frame frame, KOS_OBJ_PTR objptr)
 }
 
 template<>
+integer value_from_object_ptr<integer>(stack_frame frame, KOS_OBJ_PTR objptr)
+{
+    assert( ! IS_BAD_PTR(objptr));
+    if ( ! IS_SMALL_INT(objptr) && GET_OBJ_TYPE(objptr) != OBJ_INTEGER)
+        frame.raise_and_signal_error("source type is not an integer");
+
+    return integer(objptr);
+}
+
+template<>
 double value_from_object_ptr<double>(stack_frame frame, KOS_OBJ_PTR objptr)
 {
     return numeric_from_object_ptr<double>(frame, objptr);
+}
+
+template<>
+floating value_from_object_ptr<floating>(stack_frame frame, KOS_OBJ_PTR objptr)
+{
+    assert( ! IS_BAD_PTR(objptr));
+    if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_FLOAT)
+        frame.raise_and_signal_error("source type is not a float");
+
+    return floating(objptr);
 }
 
 template<>
@@ -84,6 +104,16 @@ bool value_from_object_ptr<bool>(stack_frame frame, KOS_OBJ_PTR objptr)
         frame.raise_and_signal_error("source type is not a boolean");
 
     return !! KOS_get_bool(objptr);
+}
+
+template<>
+boolean value_from_object_ptr<boolean>(stack_frame frame, KOS_OBJ_PTR objptr)
+{
+    assert( ! IS_BAD_PTR(objptr));
+    if ( ! IS_TYPE(OBJ_BOOLEAN, objptr))
+        frame.raise_and_signal_error("source type is not a boolean");
+
+    return boolean(objptr);
 }
 
 template<>
