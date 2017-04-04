@@ -60,8 +60,8 @@ KOS_OBJ_PTR KOS_new_float(KOS_STACK_FRAME *frame, double value)
     KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_FLOAT);
 
     if (obj) {
-        obj->type           = OBJ_FLOAT;
-        obj->floatpt.number = value;
+        obj->type          = OBJ_FLOAT;
+        obj->float_.number = value;
     }
 
     return TO_OBJPTR(obj);

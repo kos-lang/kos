@@ -327,10 +327,10 @@ typedef struct _KOS_SPECIAL {
 typedef union _KOS_ANY_OBJECT {
     _KOS_TYPE_STORAGE      type;
     KOS_INTEGER            integer;
-    KOS_FLOAT              floatpt;
+    KOS_FLOAT              float_;
     KOS_STRING             string;
     struct _KOS_BOOLEAN    boolean;
-    struct _KOS_VOID       a_void;
+    struct _KOS_VOID       void_;
     KOS_OBJECT             object;
     KOS_ARRAY              array;
     KOS_BUFFER             buffer;
