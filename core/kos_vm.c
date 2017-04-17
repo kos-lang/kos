@@ -448,6 +448,15 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
 
     assert(IS_STRING_OBJ(aobj) && IS_STRING_OBJ(bobj));
 
+    if (instr == INSTR_CMP_EQ) {
+        if (KOS_string_get_hash(aobj) != KOS_string_get_hash(bobj))
+            return 0;
+    }
+    else if (instr == INSTR_CMP_NE) {
+        if (KOS_string_get_hash(aobj) != KOS_string_get_hash(bobj))
+            return 1;
+    }
+
     str_cmp = KOS_string_compare(aobj, bobj);
 
     switch (instr) {
