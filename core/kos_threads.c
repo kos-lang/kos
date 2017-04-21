@@ -101,7 +101,7 @@ struct _KOS_THREAD_OBJECT {
     KOS_CONTEXT     *ctx;
     _KOS_THREAD_PROC proc;
     void            *cookie;
-    KOS_OBJ_PTR      exception;
+    KOS_OBJ_ID       exception;
 };
 
 static DWORD WINAPI _thread_proc(LPVOID thread_obj)
