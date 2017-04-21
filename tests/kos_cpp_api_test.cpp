@@ -284,11 +284,11 @@ try {
     {
         kos::buffer b = frame.new_buffer(10);
 
-        for (unsigned i = 0; i < b.size(); i++) {
+        for (int i = 0; i < static_cast<int>(b.size()); i++) {
             b[i] = static_cast<char>(0xF0 + i);
         }
 
-        for (unsigned i = 0; i < b.size(); i++) {
+        for (int i = 0; i < static_cast<int>(b.size()); i++) {
             TEST(b[i] == static_cast<char>(0xF0 + i));
         }
 

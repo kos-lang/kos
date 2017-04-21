@@ -52,7 +52,7 @@ static KOS_OBJ_ID _run_code(KOS_CONTEXT     *ctx,
                             unsigned         num_regs,
                             KOS_OBJ_ID       string)
 {
-    KOS_OBJ_ID ret;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
     int        error = KOS_SUCCESS;
 
     struct _KOS_MODULE module;
@@ -76,12 +76,13 @@ static KOS_OBJ_ID _run_code(KOS_CONTEXT     *ctx,
             error = KOS_array_write(frame, module.strings, 0, string);
     }
 
-    if ( ! error)
+    if ( ! error) {
         error = _KOS_vm_run_module(&module, &ret);
 
-    if (error) {
-        KOS_raise_exception(frame, ret);
-        ret = KOS_BADPTR;
+        if (error) {
+            KOS_raise_exception(frame, ret);
+            ret = KOS_BADPTR;
+        }
     }
 
     return ret;
