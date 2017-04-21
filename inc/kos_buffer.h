@@ -35,28 +35,26 @@ struct _KOS_BUFFER_DATA {
 
 #ifdef __cplusplus
 
-static inline uint32_t KOS_get_buffer_size(KOS_OBJ_PTR objptr)
+static inline uint32_t KOS_get_buffer_size(KOS_OBJ_ID obj_id)
 {
-    assert( ! IS_SMALL_INT(objptr) && ! IS_BAD_PTR(objptr));
-    KOS_BUFFER *const buffer = OBJPTR(KOS_BUFFER, objptr);
-    assert(buffer->type == OBJ_BUFFER);
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
+    KOS_BUFFER *const buffer = OBJPTR(BUFFER, obj_id);
     return KOS_atomic_read_u32(buffer->size);
 }
 
-static inline uint8_t *KOS_buffer_data(KOS_OBJ_PTR objptr)
+static inline uint8_t *KOS_buffer_data(KOS_OBJ_ID obj_id)
 {
     struct _KOS_BUFFER_DATA *data = 0;
-    assert( ! IS_SMALL_INT(objptr) && ! IS_BAD_PTR(objptr));
-    KOS_BUFFER *const buffer = OBJPTR(KOS_BUFFER, objptr);
-    assert(buffer->type == OBJ_BUFFER);
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
+    KOS_BUFFER *const buffer = OBJPTR(BUFFER, obj_id);
     data = (struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
     return &data->buf[0];
 }
 
 #else
 
-#define KOS_get_buffer_size(objptr) (KOS_atomic_read_u32(OBJPTR(KOS_BUFFER, (objptr))->size))
-#define KOS_buffer_data(objptr) (&((struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(OBJPTR(KOS_BUFFER, (objptr))->data))->buf[0])
+#define KOS_get_buffer_size(obj_id) (KOS_atomic_read_u32(OBJPTR(BUFFER, (obj_id))->size))
+#define KOS_buffer_data(obj_id) (&((struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(OBJPTR(BUFFER, (obj_id))->data))->buf[0])
 
 #endif
 
@@ -64,41 +62,41 @@ static inline uint8_t *KOS_buffer_data(KOS_OBJ_PTR objptr)
 extern "C" {
 #endif
 
-KOS_OBJ_PTR KOS_new_buffer(KOS_STACK_FRAME *frame,
-                           unsigned         size);
+KOS_OBJ_ID KOS_new_buffer(KOS_STACK_FRAME *frame,
+                          unsigned         size);
 
 int KOS_buffer_reserve(KOS_STACK_FRAME *frame,
-                       KOS_OBJ_PTR      objptr,
+                       KOS_OBJ_ID       obj_id,
                        unsigned         capacity);
 
 int KOS_buffer_resize(KOS_STACK_FRAME *frame,
-                      KOS_OBJ_PTR      objptr,
+                      KOS_OBJ_ID       obj_id,
                       unsigned         size);
 
 uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_PTR      objptr,
+                              KOS_OBJ_ID       obj_id,
                               unsigned         size_delta);
 
 int KOS_buffer_fill(KOS_STACK_FRAME *frame,
-                    KOS_OBJ_PTR      objptr,
+                    KOS_OBJ_ID       obj_id,
                     int64_t          begin,
                     int64_t          end,
                     uint8_t          value);
 
 int KOS_buffer_copy(KOS_STACK_FRAME *frame,
-                    KOS_OBJ_PTR      destptr,
+                    KOS_OBJ_ID       destptr,
                     int64_t          dest_begin,
-                    KOS_OBJ_PTR      srcptr,
+                    KOS_OBJ_ID       srcptr,
                     int64_t          src_begin,
                     int64_t          src_end);
 
-KOS_OBJ_PTR KOS_buffer_slice(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_PTR      objptr,
-                             int64_t          begin,
-                             int64_t          end);
+KOS_OBJ_ID KOS_buffer_slice(KOS_STACK_FRAME *frame,
+                            KOS_OBJ_ID       obj_id,
+                            int64_t          begin,
+                            int64_t          end);
 
 int KOS_buffer_rotate(KOS_STACK_FRAME *frame,
-                      KOS_OBJ_PTR      objptr,
+                      KOS_OBJ_ID       obj_id,
                       int64_t          begin,
                       int64_t          mid,
                       int64_t          end);

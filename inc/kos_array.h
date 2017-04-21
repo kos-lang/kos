@@ -29,17 +29,16 @@
 
 #ifdef __cplusplus
 
-static inline uint32_t KOS_get_array_size(KOS_OBJ_PTR objptr)
+static inline uint32_t KOS_get_array_size(KOS_OBJ_ID obj_id)
 {
-    assert( ! IS_SMALL_INT(objptr) && ! IS_BAD_PTR(objptr));
-    KOS_ARRAY *const array = OBJPTR(KOS_ARRAY, objptr);
-    assert(array->type == OBJ_ARRAY);
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
+    KOS_ARRAY *const array = OBJPTR(ARRAY, obj_id);
     return KOS_atomic_read_u32(array->size);
 }
 
 #else
 
-#define KOS_get_array_size(objptr) (KOS_atomic_read_u32(OBJPTR(KOS_ARRAY, (objptr))->size))
+#define KOS_get_array_size(obj_id) (KOS_atomic_read_u32(OBJPTR(ARRAY, (obj_id))->size))
 
 #endif
 
@@ -47,46 +46,46 @@ static inline uint32_t KOS_get_array_size(KOS_OBJ_PTR objptr)
 extern "C" {
 #endif
 
-KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame,
-                          uint32_t         size);
+KOS_OBJ_ID KOS_new_array(KOS_STACK_FRAME *frame,
+                         uint32_t         size);
 
-KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      objptr,
-                           int              idx);
+KOS_OBJ_ID KOS_array_read(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_ID       obj_id,
+                          int              idx);
 
 int KOS_array_write(KOS_STACK_FRAME *frame,
-                    KOS_OBJ_PTR      objptr,
+                    KOS_OBJ_ID       obj_id,
                     int              idx,
-                    KOS_OBJ_PTR      value);
+                    KOS_OBJ_ID       value);
 
 int KOS_array_reserve(KOS_STACK_FRAME *frame,
-                      KOS_OBJ_PTR      objptr,
+                      KOS_OBJ_ID       obj_id,
                       uint32_t         capacity);
 
 int KOS_array_resize(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_PTR      objptr,
+                     KOS_OBJ_ID       obj_id,
                      uint32_t         size);
 
-KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_PTR      objptr,
-                            int64_t          begin,
-                            int64_t          end);
+KOS_OBJ_ID KOS_array_slice(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_ID       obj_id,
+                           int64_t          begin,
+                           int64_t          end);
 
 int KOS_array_insert(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_PTR      dest_objptr,
+                     KOS_OBJ_ID       dest_obj_id,
                      int64_t          dest_begin,
                      int64_t          dest_end,
-                     KOS_OBJ_PTR      src_objptr,
+                     KOS_OBJ_ID       src_obj_id,
                      int64_t          src_begin,
                      int64_t          src_end);
 
 int KOS_array_push(KOS_STACK_FRAME *frame,
-                   KOS_OBJ_PTR      objptr,
-                   KOS_OBJ_PTR      value,
+                   KOS_OBJ_ID       obj_id,
+                   KOS_OBJ_ID       value,
                    uint32_t        *idx);
 
-KOS_OBJ_PTR KOS_array_pop(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      objptr);
+KOS_OBJ_ID KOS_array_pop(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_ID       obj_id);
 
 #ifdef __cplusplus
 }

@@ -33,7 +33,7 @@
 
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
-    KOS_OBJ_PTR          object;
+    KOS_OBJ_ID           object;
     KOS_STRING          *prop_names;
     size_t               num_props;
     size_t               num_loops;
@@ -54,8 +54,8 @@ static int _write_props_inner(KOS_STACK_FRAME  *frame,
     unsigned n = (unsigned)rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
-        KOS_OBJ_PTR key   = TO_OBJPTR(&test->prop_names[n % test->num_props]);
-        KOS_OBJ_PTR value = TO_SMALL_INT((int)((n % 32) - 16));
+        KOS_OBJ_ID key   = OBJID(STRING, &test->prop_names[n % test->num_props]);
+        KOS_OBJ_ID value = TO_SMALL_INT((int)((n % 32) - 16));
         if (!((n & 0xF00U)))
             TEST(KOS_delete_property(frame, test->object, key) == KOS_SUCCESS);
         else
@@ -86,8 +86,8 @@ static int _read_props_inner(KOS_STACK_FRAME  *frame,
     unsigned n = (unsigned)rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
-        KOS_OBJ_PTR key   = TO_OBJPTR(&test->prop_names[n % test->num_props]);
-        KOS_OBJ_PTR value = KOS_get_property(frame, test->object, key);
+        KOS_OBJ_ID key   = OBJID(STRING, &test->prop_names[n % test->num_props]);
+        KOS_OBJ_ID value = KOS_get_property(frame, test->object, key);
         if (IS_BAD_PTR(value)) {
             TEST(KOS_is_exception_pending(frame));
             KOS_clear_exception(frame);
@@ -156,7 +156,7 @@ int main(void)
             unsigned k;
 
             KOS_STRING *str = props + i;
-            str->type       = OBJ_STRING_8;
+            str->elem_size  = KOS_STRING_ELEM_8;
             str->flags      = KOS_STRING_LOCAL;
             str->length     = 3U;
             str->hash       = 0;
@@ -172,9 +172,9 @@ int main(void)
         data.error      = KOS_SUCCESS;
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
-            KOS_OBJ_PTR o = KOS_new_object(frame);
-            data.object   = o;
-            data.go       = 0;
+            KOS_OBJ_ID o = KOS_new_object(frame);
+            data.object  = o;
+            data.go      = 0;
 
             TEST(!IS_BAD_PTR(o));
 
@@ -197,7 +197,7 @@ int main(void)
             TEST(data.error == KOS_SUCCESS);
 
             for (i = 0; i < (int)(sizeof(props)/sizeof(props[0])); i++) {
-                KOS_OBJ_PTR value = KOS_get_property(frame, o, TO_OBJPTR(&props[i]));
+                KOS_OBJ_ID value = KOS_get_property(frame, o, OBJID(STRING, &props[i]));
                 if (IS_BAD_PTR(value))
                     TEST_EXCEPTION();
                 else {

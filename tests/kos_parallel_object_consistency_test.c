@@ -33,7 +33,7 @@
 
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
-    KOS_OBJ_PTR          object;
+    KOS_OBJ_ID           object;
     KOS_STRING          *prop_names;
     int                  num_props;
     int                  num_loops;
@@ -63,18 +63,18 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
         int       i_prop;
 
         for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
-            const KOS_OBJ_PTR key   = TO_OBJPTR(&test->prop_names[i_prop]);
-            const KOS_OBJ_PTR value = TO_SMALL_INT(i_prop);
+            const KOS_OBJ_ID key   = OBJID(STRING, &test->prop_names[i_prop]);
+            const KOS_OBJ_ID value = TO_SMALL_INT(i_prop);
 
             TEST(KOS_set_property(frame, test->object, key, value) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
-            const KOS_OBJ_PTR key      = TO_OBJPTR(&test->prop_names[i_prop-1]);
-            const KOS_OBJ_PTR expected = TO_SMALL_INT(i_prop-1);
-            const KOS_OBJ_PTR actual   = KOS_get_property(frame, test->object, key);
-            const KOS_OBJ_PTR new_val  = TO_SMALL_INT(-(i_prop-1));
+            const KOS_OBJ_ID key      = OBJID(STRING, &test->prop_names[i_prop-1]);
+            const KOS_OBJ_ID expected = TO_SMALL_INT(i_prop-1);
+            const KOS_OBJ_ID actual   = KOS_get_property(frame, test->object, key);
+            const KOS_OBJ_ID new_val  = TO_SMALL_INT(-(i_prop-1));
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
@@ -84,9 +84,9 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
         }
 
         for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
-            const KOS_OBJ_PTR key      = TO_OBJPTR(&test->prop_names[i_prop]);
-            const KOS_OBJ_PTR expected = TO_SMALL_INT(-i_prop);
-            const KOS_OBJ_PTR actual   = KOS_get_property(frame, test->object, key);
+            const KOS_OBJ_ID key      = OBJID(STRING, &test->prop_names[i_prop]);
+            const KOS_OBJ_ID expected = TO_SMALL_INT(-i_prop);
+            const KOS_OBJ_ID actual   = KOS_get_property(frame, test->object, key);
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
@@ -96,8 +96,8 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
         }
 
         for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
-            const KOS_OBJ_PTR key   = TO_OBJPTR(&test->prop_names[i_prop-1]);
-            const KOS_OBJ_PTR value = KOS_get_property(frame, test->object, key);
+            const KOS_OBJ_ID key   = OBJID(STRING, &test->prop_names[i_prop-1]);
+            const KOS_OBJ_ID value = KOS_get_property(frame, test->object, key);
 
             TEST(IS_BAD_PTR(value));
             TEST_EXCEPTION();
@@ -165,7 +165,7 @@ int main(void)
             unsigned k;
 
             KOS_STRING *str = props + i;
-            str->type       = OBJ_STRING_8;
+            str->elem_size  = KOS_STRING_ELEM_8;
             str->flags      = KOS_STRING_LOCAL;
             str->length     = 8U;
             str->hash       = 0;
@@ -184,9 +184,9 @@ int main(void)
         data.error      = KOS_SUCCESS;
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
-            KOS_OBJ_PTR o = KOS_new_object(frame);
-            data.object   = o;
-            data.go       = 0;
+            KOS_OBJ_ID o = KOS_new_object(frame);
+            data.object  = o;
+            data.go      = 0;
 
             TEST(!IS_BAD_PTR(o));
 
@@ -206,7 +206,7 @@ int main(void)
             TEST(data.error == KOS_SUCCESS);
 
             for (i = 0; i < num_props; i++) {
-                KOS_OBJ_PTR value = KOS_get_property(frame, o, TO_OBJPTR(&props[i]));
+                KOS_OBJ_ID value = KOS_get_property(frame, o, OBJID(STRING, &props[i]));
                 TEST(IS_BAD_PTR(value));
                 TEST_EXCEPTION();
             }

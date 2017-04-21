@@ -33,7 +33,7 @@
 
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
-    KOS_OBJ_PTR          object;
+    KOS_OBJ_ID           object;
     int                  num_idcs;
     KOS_ATOMIC(uint32_t) stage;
     KOS_ATOMIC(uint32_t) done;
@@ -53,10 +53,10 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
 
     for (;;) {
 
-        KOS_OBJ_PTR object;
-        int         idx;
-        const int   first_idx = data->first_idx;
-        const int   end_idx   = first_idx + test->num_idcs;
+        KOS_OBJ_ID object;
+        int        idx;
+        const int  first_idx = data->first_idx;
+        const int  end_idx   = first_idx + test->num_idcs;
 
         for (;;) {
             const uint32_t cur_stage = KOS_atomic_read_u32(test->stage);
@@ -74,16 +74,16 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
         object = test->object;
 
         for (idx = first_idx; idx < end_idx; idx++) {
-            const KOS_OBJ_PTR value = TO_SMALL_INT(idx);
+            const KOS_OBJ_ID value = TO_SMALL_INT(idx);
 
             TEST(KOS_array_write(frame, object, idx, value) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (idx = end_idx; idx > first_idx; idx--) {
-            const KOS_OBJ_PTR expected = TO_SMALL_INT(idx-1);
-            const KOS_OBJ_PTR actual   = KOS_array_read(frame, object, idx-1);
-            const KOS_OBJ_PTR new_val  = TO_SMALL_INT(-(idx-1));
+            const KOS_OBJ_ID expected = TO_SMALL_INT(idx-1);
+            const KOS_OBJ_ID actual   = KOS_array_read(frame, object, idx-1);
+            const KOS_OBJ_ID new_val  = TO_SMALL_INT(-(idx-1));
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
@@ -93,8 +93,8 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
         }
 
         for (idx = first_idx; idx < end_idx; idx++) {
-            const KOS_OBJ_PTR expected = TO_SMALL_INT(-idx);
-            const KOS_OBJ_PTR actual   = KOS_array_read(frame, object, idx);
+            const KOS_OBJ_ID expected = TO_SMALL_INT(-idx);
+            const KOS_OBJ_ID actual   = KOS_array_read(frame, object, idx);
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
@@ -138,7 +138,7 @@ int main(void)
         _KOS_THREAD        *threads         = 0;
         int                 num_threads     = 0;
         int                 num_idcs;
-        KOS_OBJ_PTR         obj;
+        KOS_OBJ_ID          obj;
         int                 i_loop;
         int                 i;
 
@@ -188,7 +188,7 @@ int main(void)
             TEST( ! data.error);
 
             for (i = 0; i < num_idcs; i++) {
-                KOS_OBJ_PTR value = KOS_array_read(frame, obj, i);
+                KOS_OBJ_ID value = KOS_array_read(frame, obj, i);
                 TEST_NO_EXCEPTION();
                 TEST(value == TO_SMALL_INT(-i));
             }

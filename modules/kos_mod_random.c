@@ -33,11 +33,11 @@
 #include "../core/kos_try.h"
 #include <math.h>
 
-static KOS_ASCII_STRING(str_err_invalid_range, "invalid range");
-static KOS_ASCII_STRING(str_err_invalid_seed,  "invalid seed");
-static KOS_ASCII_STRING(str_err_no_max_value,  "max argument missing");
-static KOS_ASCII_STRING(str_err_not_random,    "invalid this");
-static KOS_ASCII_STRING(str_err_out_of_memory, "out of memory");
+static const char str_err_invalid_range[] = "invalid range";
+static const char str_err_invalid_seed[]  = "invalid seed";
+static const char str_err_no_max_value[]  = "max argument missing";
+static const char str_err_not_random[]    = "invalid this";
+static const char str_err_out_of_memory[] = "out of memory";
 
 struct _KOS_RNG_CONTAINER {
     KOS_ATOMIC(uint32_t) lock;
@@ -51,29 +51,29 @@ static void _finalize(KOS_STACK_FRAME *frame,
         _KOS_free_buffer(frame, priv, sizeof(struct _KOS_RNG_CONTAINER));
 }
 
-static KOS_OBJ_PTR _random(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      this_obj,
-                           KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _random(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_ID       this_obj,
+                          KOS_OBJ_ID       args_obj)
 {
     int                        error    = KOS_SUCCESS;
     struct _KOS_RNG_CONTAINER *rng      = 0;
-    KOS_OBJ_PTR                ret;
-    KOS_OBJ_PTR                seed_obj = TO_OBJPTR(0);
+    KOS_OBJ_ID                 ret;
+    KOS_OBJ_ID                 seed_obj = KOS_BADPTR;
 
     ret = KOS_new_object_with_prototype(frame, this_obj);
-    TRY_OBJPTR(ret);
+    TRY_OBJID(ret);
 
-    OBJPTR(KOS_OBJECT, ret)->finalize = _finalize;
+    OBJPTR(OBJECT, ret)->finalize = _finalize;
 
     if (KOS_get_array_size(args_obj) > 0) {
 
         seed_obj = KOS_array_read(frame, args_obj, 0);
-        TRY_OBJPTR(seed_obj);
+        TRY_OBJID(seed_obj);
 
         assert( ! IS_BAD_PTR(seed_obj));
 
         if ( ! IS_NUMERIC_OBJ(seed_obj))
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_seed));
+            RAISE_EXCEPTION(str_err_invalid_seed);
     }
 
     /* TODO malloc when we have GC */
@@ -83,7 +83,7 @@ static KOS_OBJ_PTR _random(KOS_STACK_FRAME *frame,
     rng = (struct _KOS_RNG_CONTAINER *)_KOS_alloc_buffer(frame, sizeof(struct _KOS_RNG_CONTAINER));
 
     if ( ! rng)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_out_of_memory));
+        RAISE_EXCEPTION(str_err_out_of_memory);
 
     rng->lock = 0;
 
@@ -98,39 +98,39 @@ static KOS_OBJ_PTR _random(KOS_STACK_FRAME *frame,
         _KOS_rng_init_seed(&rng->rng, (uint64_t)seed);
     }
 
-    KOS_object_set_private(*OBJPTR(KOS_OBJECT, ret), rng);
+    KOS_object_set_private(*OBJPTR(OBJECT, ret), rng);
     rng = 0;
 
 _error:
     if (rng)
         _KOS_free_buffer(frame, rng, sizeof(struct _KOS_RNG_CONTAINER));
 
-    return error ? TO_OBJPTR(0) : ret;
+    return error ? KOS_BADPTR : ret;
 }
 
 static int _get_rng(KOS_STACK_FRAME            *frame,
-                    KOS_OBJ_PTR                 this_obj,
+                    KOS_OBJ_ID                  this_obj,
                     struct _KOS_RNG_CONTAINER **rng)
 {
     int error = KOS_SUCCESS;
 
     assert( ! IS_BAD_PTR(this_obj));
 
-    if ( ! IS_TYPE(OBJ_OBJECT, this_obj))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_random));
+    if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT)
+        RAISE_EXCEPTION(str_err_not_random);
 
-    *rng = (struct _KOS_RNG_CONTAINER *)KOS_object_get_private(*OBJPTR(KOS_OBJECT, this_obj));
+    *rng = (struct _KOS_RNG_CONTAINER *)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
 
     if ( ! *rng)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_random));
+        RAISE_EXCEPTION(str_err_not_random);
 
 _error:
     return error;
 }
 
-static KOS_OBJ_PTR _rand_integer(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      this_obj,
-                                 KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _rand_integer(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       this_obj,
+                                KOS_OBJ_ID       args_obj)
 {
     struct _KOS_RNG_CONTAINER *rng       = 0;
     int                        error     = KOS_SUCCESS;
@@ -142,24 +142,24 @@ static KOS_OBJ_PTR _rand_integer(KOS_STACK_FRAME *frame,
     TRY(_get_rng(frame, this_obj, &rng));
 
     if (KOS_get_array_size(args_obj) == 1)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_no_max_value));
+        RAISE_EXCEPTION(str_err_no_max_value);
 
     if (KOS_get_array_size(args_obj) > 1) {
 
-        KOS_OBJ_PTR arg;
+        KOS_OBJ_ID arg;
 
         arg = KOS_array_read(frame, args_obj, 0);
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         TRY(KOS_get_integer(frame, arg, &min_value));
 
         arg = KOS_array_read(frame, args_obj, 1);
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         TRY(KOS_get_integer(frame, arg, &max_value));
 
         if (min_value >= max_value)
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_range));
+            RAISE_EXCEPTION(str_err_invalid_range);
 
         min_max = 1;
     }
@@ -176,12 +176,12 @@ static KOS_OBJ_PTR _rand_integer(KOS_STACK_FRAME *frame,
     _KOS_spin_unlock(&rng->lock);
 
 _error:
-    return error ? TO_OBJPTR(0) : KOS_new_int(frame, value);
+    return error ? KOS_BADPTR : KOS_new_int(frame, value);
 }
 
-static KOS_OBJ_PTR _rand_float(KOS_STACK_FRAME *frame,
-                               KOS_OBJ_PTR      this_obj,
-                               KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _rand_float(KOS_STACK_FRAME *frame,
+                              KOS_OBJ_ID       this_obj,
+                              KOS_OBJ_ID       args_obj)
 {
     struct _KOS_RNG_CONTAINER *rng       = 0;
     int                        error     = KOS_SUCCESS;
@@ -204,13 +204,13 @@ static KOS_OBJ_PTR _rand_float(KOS_STACK_FRAME *frame,
             | ((int64_t)0x3FF00000U << 32);
 
 _error:
-    return error ? TO_OBJPTR(0) : KOS_new_float(frame, value.d - 1.0);
+    return error ? KOS_BADPTR : KOS_new_float(frame, value.d - 1.0);
 }
 
 int _KOS_module_random_init(KOS_STACK_FRAME *frame)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_PTR proto;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID proto;
 
     TRY_ADD_CONSTRUCTOR(    frame,        "random",  _random,       0, &proto);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "integer", _rand_integer, 0);

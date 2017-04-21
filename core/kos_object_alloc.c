@@ -30,7 +30,7 @@
 #include "../inc/kos_string.h"
 #include <stdio.h>
 
-static KOS_ASCII_STRING(str_err_out_of_memory, "out of memory");
+static const char str_err_out_of_memory[] = "out of memory";
 
 #if CONFIG_ALLOCATOR == 0xDEB
 
@@ -50,33 +50,33 @@ void _KOS_alloc_destroy(KOS_CONTEXT *ctx)
     }
 }
 
-KOS_ANY_OBJECT *_KOS_alloc_16(KOS_STACK_FRAME *frame)
+void *_KOS_alloc_16(KOS_STACK_FRAME *frame)
 {
     KOS_PERF_CNT(alloc_object_16);
-    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 16);
+    return _KOS_alloc_buffer(frame, 16);
 }
 
-KOS_ANY_OBJECT *_KOS_alloc_32(KOS_STACK_FRAME *frame)
+void *_KOS_alloc_32(KOS_STACK_FRAME *frame)
 {
     KOS_PERF_CNT(alloc_object_32);
-    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 32);
+    return _KOS_alloc_buffer(frame, 32);
 }
 
-KOS_ANY_OBJECT *_KOS_alloc_64(KOS_STACK_FRAME *frame)
+void *_KOS_alloc_64(KOS_STACK_FRAME *frame)
 {
     KOS_PERF_CNT(alloc_object_64);
-    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 64);
+    return _KOS_alloc_buffer(frame, 64);
 }
 
-KOS_ANY_OBJECT *_KOS_alloc_128(KOS_STACK_FRAME *frame)
+void *_KOS_alloc_128(KOS_STACK_FRAME *frame)
 {
     KOS_PERF_CNT(alloc_object_64);
-    return (KOS_ANY_OBJECT *)_KOS_alloc_buffer(frame, 128);
+    return _KOS_alloc_buffer(frame, 128);
 }
 
 void *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size)
 {
-    uint64_t *obj = (uint64_t *)_KOS_malloc(size+sizeof(uint64_t));
+    uint64_t *obj = (uint64_t *)_KOS_malloc(size+2*sizeof(uint64_t));
 
     if (obj) {
         struct _KOS_ALLOC_DEBUG *allocator = frame->allocator;
@@ -93,12 +93,12 @@ void *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size)
                 break;
         }
 
-        ++obj;
+        obj += 2;
     }
     else
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
+        KOS_raise_exception_cstring(frame, str_err_out_of_memory);
 
-    return (KOS_ANY_OBJECT *)obj;
+    return (void *)obj;
 }
 
 void _KOS_free_buffer(KOS_STACK_FRAME *frame, void *ptr, size_t size)

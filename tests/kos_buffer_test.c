@@ -32,78 +32,81 @@
 
 int main(void)
 {
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
+    KOS_CONTEXT       ctx;
+    KOS_STACK_FRAME  *frame;
+    static const char cstr[] = "str";
+    KOS_OBJ_ID        str;
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
+
+    str = KOS_context_get_cstring(frame, cstr);
 
     /************************************************************************/
     /* Cannot invoke buffer functions on non-buffer objects */
     {
-        KOS_ASCII_STRING(str, "str");
-        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 1);
+        KOS_OBJ_ID buf = KOS_new_buffer(frame, 1);
 
         TEST(KOS_buffer_reserve(frame, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(frame, TO_OBJPTR(&str), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_reserve(frame, str, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(frame, TO_OBJPTR(0), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_reserve(frame, KOS_BADPTR, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_resize(frame, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_resize(frame, TO_OBJPTR(&str), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_resize(frame, str, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_resize(frame, TO_OBJPTR(0), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_resize(frame, KOS_BADPTR, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_make_room(frame, TO_SMALL_INT(1), 1U) == 0);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_make_room(frame, TO_OBJPTR(&str), 1U) == 0);
+        TEST(KOS_buffer_make_room(frame, str, 1U) == 0);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_make_room(frame, TO_OBJPTR(0), 1U) == 0);
+        TEST(KOS_buffer_make_room(frame, KOS_BADPTR, 1U) == 0);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_fill(frame, TO_SMALL_INT(1), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_fill(frame, TO_OBJPTR(&str), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_fill(frame, str, 1, 2, 3U) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_fill(frame, TO_OBJPTR(0), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_fill(frame, KOS_BADPTR, 1, 2, 3U) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_copy(frame, TO_SMALL_INT(1), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(frame, TO_OBJPTR(&str), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(frame, str, 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(frame, TO_OBJPTR(0), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(frame, KOS_BADPTR, 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_copy(frame, buf, 0, TO_SMALL_INT(1), 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(frame, buf, 0, TO_OBJPTR(&str), 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(frame, buf, 0, str, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(frame, buf, 0, TO_OBJPTR(0), 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(frame, buf, 0, KOS_BADPTR, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_slice(frame, TO_SMALL_INT(1), 1, 2) == TO_OBJPTR(0));
+        TEST(KOS_buffer_slice(frame, TO_SMALL_INT(1), 1, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_slice(frame, TO_OBJPTR(&str), 1, 2) == TO_OBJPTR(0));
+        TEST(KOS_buffer_slice(frame, str, 1, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_slice(frame, TO_OBJPTR(0), 1, 2) == TO_OBJPTR(0));
+        TEST(KOS_buffer_slice(frame, KOS_BADPTR, 1, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -113,7 +116,7 @@ int main(void)
         uint8_t *data;
         int      i;
 
-        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 128);
+        KOS_OBJ_ID buf = KOS_new_buffer(frame, 128);
         TEST(!IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
@@ -131,7 +134,7 @@ int main(void)
     {
         uint8_t *data;
 
-        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
+        KOS_OBJ_ID buf = KOS_new_buffer(frame, 0);
         TEST(!IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
@@ -166,7 +169,7 @@ int main(void)
     /************************************************************************/
     /* Reserve/resize */
     {
-        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
+        KOS_OBJ_ID buf = KOS_new_buffer(frame, 0);
         TEST( ! IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
@@ -201,7 +204,7 @@ int main(void)
         uint8_t *data;
         int      i;
 
-        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
+        KOS_OBJ_ID buf = KOS_new_buffer(frame, 0);
         TEST( ! IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
@@ -256,7 +259,7 @@ int main(void)
     {
         uint8_t *data;
 
-        KOS_OBJ_PTR buf = KOS_new_buffer(frame, 0);
+        KOS_OBJ_ID buf = KOS_new_buffer(frame, 0);
         TEST( ! IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
@@ -292,8 +295,8 @@ int main(void)
         uint8_t *data;
         int      i;
 
-        KOS_OBJ_PTR buf1 = KOS_new_buffer(frame, 10);
-        KOS_OBJ_PTR buf2;
+        KOS_OBJ_ID buf1 = KOS_new_buffer(frame, 10);
+        KOS_OBJ_ID buf2;
         TEST( ! IS_BAD_PTR(buf1));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf1) == 10);
@@ -361,8 +364,8 @@ int main(void)
         uint8_t *data;
         int      i;
 
-        KOS_OBJ_PTR buf1 = KOS_new_buffer(frame, 10);
-        KOS_OBJ_PTR buf2;
+        KOS_OBJ_ID buf1 = KOS_new_buffer(frame, 10);
+        KOS_OBJ_ID buf2;
         TEST( ! IS_BAD_PTR(buf1));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf1) == 10);

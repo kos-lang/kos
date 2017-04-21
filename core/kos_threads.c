@@ -131,7 +131,7 @@ int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
         new_thread->ctx       = ctx;
         new_thread->proc      = proc;
         new_thread->cookie    = cookie;
-        new_thread->exception = TO_OBJPTR(0);
+        new_thread->exception = KOS_BADPTR;
 
         new_thread->thread_handle = CreateThread(0, 0, _thread_proc, new_thread, 0, 0);
 
@@ -208,7 +208,7 @@ static void *_thread_proc(void *thread_obj)
         ((_KOS_THREAD)thread_obj)->proc(&thread_root.frame, ((_KOS_THREAD)thread_obj)->cookie);
 
     if (KOS_is_exception_pending(&thread_root.frame))
-        return OBJPTR(void, KOS_get_exception(&thread_root.frame));
+        return (void *)KOS_get_exception(&thread_root.frame);
 
     return 0;
 }
@@ -248,7 +248,7 @@ void _KOS_thread_join(KOS_STACK_FRAME *frame,
         pthread_join(thread->thread_handle, &ret);
 
         if (ret)
-            KOS_raise_exception(frame, TO_OBJPTR(ret));
+            KOS_raise_exception(frame, (KOS_OBJ_ID)ret);
 
         _KOS_free(thread);
     }

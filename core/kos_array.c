@@ -33,28 +33,25 @@
 #include "kos_try.h"
 #include <assert.h>
 
-static KOS_ASCII_STRING(str_err_empty,         "array is empty");
-static KOS_ASCII_STRING(str_err_invalid_index, "array index is out of range");
-static KOS_ASCII_STRING(str_err_not_array,     "object is not an array");
-static KOS_ASCII_STRING(str_err_null_ptr,      "null pointer");
-
-static KOS_SPECIAL _tombstone = { OBJ_SPECIAL, 0 };
-static KOS_SPECIAL _closed    = { OBJ_SPECIAL, 0 };
+static const char str_err_empty[]         = "array is empty";
+static const char str_err_invalid_index[] = "array index is out of range";
+static const char str_err_not_array[]     = "object is not an array";
+static const char str_err_null_ptr[]      = "null pointer";
 
 /* TOMBSTONE indicates that an array element has been deleted due to a resize. */
-#define TOMBSTONE TO_OBJPTR(&_tombstone)
+#define TOMBSTONE ((KOS_OBJ_ID)(intptr_t)0xA001)
 /* CLOSED indicates that an array element has been moved to a new buffer. */
-#define CLOSED    TO_OBJPTR(&_closed)
+#define CLOSED    ((KOS_OBJ_ID)(intptr_t)0xA101)
 
-#define KOS_buffer_alloc_size(cap) (sizeof(ARRAY_BUF) + ((cap) - 1) * sizeof(KOS_OBJ_PTR))
+#define KOS_buffer_alloc_size(cap) (sizeof(ARRAY_BUF) + ((cap) - 1) * sizeof(KOS_OBJ_ID))
 
 typedef struct _KOS_ARRAY_BUFFER ARRAY_BUF;
 
-void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_PTR) *dest,
-                      unsigned                 count,
-                      KOS_OBJ_PTR              value)
+void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
+                      unsigned                count,
+                      KOS_OBJ_ID              value)
 {
-    KOS_ATOMIC(KOS_OBJ_PTR) *const end = dest + count;
+    KOS_ATOMIC(KOS_OBJ_ID) *const end = dest + count;
     while (dest < end) {
         KOS_atomic_write_ptr(*dest, value);
         ++dest;
@@ -64,7 +61,7 @@ void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_PTR) *dest,
 static ARRAY_BUF *_alloc_buffer(KOS_STACK_FRAME *frame, uint32_t capacity)
 {
     ARRAY_BUF     *buf;
-    const uint32_t max_step = KOS_ARRAY_CAPACITY_STEP / sizeof(KOS_OBJ_PTR);
+    const uint32_t max_step = KOS_ARRAY_CAPACITY_STEP / sizeof(KOS_OBJ_ID);
 
     capacity = KOS_align_up(capacity, max_step);
 
@@ -81,7 +78,7 @@ static ARRAY_BUF *_alloc_buffer(KOS_STACK_FRAME *frame, uint32_t capacity)
 
 static uint32_t _double_capacity(uint32_t capacity)
 {
-    const uint32_t max_step = KOS_ARRAY_CAPACITY_STEP / sizeof(KOS_OBJ_PTR);
+    const uint32_t max_step = KOS_ARRAY_CAPACITY_STEP / sizeof(KOS_OBJ_ID);
     const uint32_t aligned  = KOS_align_up(capacity + max_step - 1, max_step);
     return KOS_min(capacity * 2, aligned);
 }
@@ -96,12 +93,11 @@ int _KOS_init_array(KOS_STACK_FRAME *frame,
 
     capacity = KOS_max(size, KOS_MIN_ARRAY_CAPACITY);
 
-    array->type = OBJ_ARRAY;
     KOS_atomic_write_u32(array->size, size);
 
     if (size) {
         buf = _alloc_buffer(frame, capacity);
-        KOS_atomic_write_ptr(array->buffer, (void *)buf);
+        KOS_atomic_write_ptr(array->data, (void *)buf);
 
         if (buf) {
             capacity = buf->capacity;
@@ -119,19 +115,19 @@ int _KOS_init_array(KOS_STACK_FRAME *frame,
             error = KOS_ERROR_EXCEPTION;
     }
     else
-        KOS_atomic_write_ptr(array->buffer, (void *)0);
+        KOS_atomic_write_ptr(array->data, (void *)0);
 
     return error;
 }
 
-KOS_OBJ_PTR KOS_new_array(KOS_STACK_FRAME *frame, uint32_t size)
+KOS_OBJ_ID KOS_new_array(KOS_STACK_FRAME *frame, uint32_t size)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_ARRAY);
+    KOS_ARRAY *array = (KOS_ARRAY *)_KOS_alloc_object(frame, KOS_ARRAY);
 
-    if (obj && KOS_SUCCESS != _KOS_init_array(frame, &obj->array, size))
-        obj = 0;
+    if (array && KOS_SUCCESS != _KOS_init_array(frame, array, size))
+        array = 0;
 
-    return TO_OBJPTR(obj);
+    return OBJID(ARRAY, array);
 }
 
 static void _copy_buf(KOS_STACK_FRAME *frame,
@@ -139,19 +135,19 @@ static void _copy_buf(KOS_STACK_FRAME *frame,
                       ARRAY_BUF       *old_buf,
                       ARRAY_BUF       *new_buf)
 {
-    KOS_ATOMIC(KOS_OBJ_PTR) *src      = &old_buf->buf[0];
-    KOS_ATOMIC(KOS_OBJ_PTR) *dst      = &new_buf->buf[0];
-    const uint32_t           capacity = old_buf->capacity;
-    const uint32_t           fuzz     = KOS_atomic_read_u32(old_buf->num_slots_open);
-    uint32_t                 i        = (capacity - fuzz) % capacity;
+    KOS_ATOMIC(KOS_OBJ_ID) *src      = &old_buf->buf[0];
+    KOS_ATOMIC(KOS_OBJ_ID) *dst      = &new_buf->buf[0];
+    const uint32_t          capacity = old_buf->capacity;
+    const uint32_t          fuzz     = KOS_atomic_read_u32(old_buf->num_slots_open);
+    uint32_t                i        = (capacity - fuzz) % capacity;
 
     for (;;) {
-        KOS_OBJ_PTR in_dst   = TOMBSTONE;
-        int         salvaged = 0;
+        KOS_OBJ_ID in_dst   = TOMBSTONE;
+        int        salvaged = 0;
 
         /* Salvage item to the new buffer */
         for (;;) {
-            const KOS_OBJ_PTR value = (KOS_OBJ_PTR)KOS_atomic_read_ptr(src[i]);
+            const KOS_OBJ_ID value = (KOS_OBJ_ID)KOS_atomic_read_ptr(src[i]);
 
             /* Another thread copied it */
             if (value == CLOSED)
@@ -190,32 +186,32 @@ static void _copy_buf(KOS_STACK_FRAME *frame,
             i = 0;
     }
 
-    if (KOS_atomic_cas_ptr(array->buffer, (void *)old_buf, (void *)new_buf))
+    if (KOS_atomic_cas_ptr(array->data, (void *)old_buf, (void *)new_buf))
         _KOS_free_buffer(frame, old_buf, KOS_buffer_alloc_size(capacity));
 }
 
-KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx)
+KOS_OBJ_ID KOS_array_read(KOS_STACK_FRAME *frame, KOS_OBJ_ID obj_id, int idx)
 {
-    KOS_OBJ_PTR elem = TO_OBJPTR(0);
+    KOS_OBJ_ID elem = KOS_BADPTR;
 
-    if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
+    if (IS_BAD_PTR(obj_id))
+        KOS_raise_exception_cstring(frame, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+        KOS_raise_exception_cstring(frame, str_err_not_array);
     else {
-        KOS_ARRAY *const array  = OBJPTR(KOS_ARRAY, objptr);
+        KOS_ARRAY *const array  = OBJPTR(ARRAY, obj_id);
         const uint32_t   size   = KOS_atomic_read_u32(array->size);
         const uint32_t   bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
 
         if (bufidx < size) {
-            ARRAY_BUF *buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+            ARRAY_BUF *buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
 
             for (;;) {
-                elem = (KOS_OBJ_PTR)KOS_atomic_read_ptr(buf->buf[bufidx]);
+                elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(buf->buf[bufidx]);
 
                 if (elem == TOMBSTONE) {
-                    KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
-                    elem = TO_OBJPTR(0);
+                    KOS_raise_exception_cstring(frame, str_err_invalid_index);
+                    elem = KOS_BADPTR;
                     break;
                 }
 
@@ -226,35 +222,35 @@ KOS_OBJ_PTR KOS_array_read(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx)
             }
         }
         else
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
+            KOS_raise_exception_cstring(frame, str_err_invalid_index);
     }
 
     return elem;
 }
 
-int KOS_array_write(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KOS_OBJ_PTR value)
+int KOS_array_write(KOS_STACK_FRAME *frame, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID value)
 {
     int error = KOS_ERROR_EXCEPTION;
 
-    if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
+    if (IS_BAD_PTR(obj_id))
+        KOS_raise_exception_cstring(frame, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+        KOS_raise_exception_cstring(frame, str_err_not_array);
     else {
-        KOS_ARRAY *const array  = OBJPTR(KOS_ARRAY, objptr);
+        KOS_ARRAY *const array  = OBJPTR(ARRAY, obj_id);
         const uint32_t   size   = KOS_atomic_read_u32(array->size);
         const uint32_t   bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
 
         if (bufidx < size) {
 
-            ARRAY_BUF *buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+            ARRAY_BUF *buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
 
             for (;;) {
 
-                KOS_OBJ_PTR cur = (KOS_OBJ_PTR)KOS_atomic_read_ptr(buf->buf[bufidx]);
+                KOS_OBJ_ID cur = (KOS_OBJ_ID)KOS_atomic_read_ptr(buf->buf[bufidx]);
 
                 if (cur == TOMBSTONE) {
-                    KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
+                    KOS_raise_exception_cstring(frame, str_err_invalid_index);
                     break;
                 }
 
@@ -272,18 +268,18 @@ int KOS_array_write(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, int idx, KOS_OBJ
             }
         }
         else
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_index));
+            KOS_raise_exception_cstring(frame, str_err_invalid_index);
     }
 
     return error;
 }
 
 static int _resize_storage(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      objptr,
+                           KOS_OBJ_ID       obj_id,
                            uint32_t         new_capacity)
 {
-    KOS_ARRAY *const array   = OBJPTR(KOS_ARRAY, objptr);
-    ARRAY_BUF       *old_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+    KOS_ARRAY *const array   = OBJPTR(ARRAY, obj_id);
+    ARRAY_BUF       *old_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
     ARRAY_BUF *const new_buf = _alloc_buffer(frame, new_capacity);
 
     if ( ! new_buf)
@@ -292,7 +288,7 @@ static int _resize_storage(KOS_STACK_FRAME *frame,
     _atomic_fill_ptr(&new_buf->buf[0], new_buf->capacity, TOMBSTONE);
 
     if (!old_buf)
-        KOS_atomic_cas_ptr(array->buffer, (void *)0, (void *)new_buf);
+        KOS_atomic_cas_ptr(array->data, (void *)0, (void *)new_buf);
     else if (KOS_atomic_cas_ptr(old_buf->next, (void *)0, (void *)new_buf))
         _copy_buf(frame, array, old_buf, new_buf);
     else {
@@ -309,43 +305,43 @@ static int _resize_storage(KOS_STACK_FRAME *frame,
 }
 
 int _KOS_array_copy_storage(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_PTR      objptr)
+                            KOS_OBJ_ID       obj_id)
 {
     KOS_ARRAY *array;
     ARRAY_BUF *buf;
     uint32_t   capacity;
 
-    assert( ! IS_BAD_PTR(objptr));
-    assert(IS_TYPE(OBJ_ARRAY, objptr));
+    assert( ! IS_BAD_PTR(obj_id));
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
 
-    array    = OBJPTR(KOS_ARRAY, objptr);
-    buf      = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+    array    = OBJPTR(ARRAY, obj_id);
+    buf      = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
     capacity = buf ? buf->capacity : 0U;
 
-    return _resize_storage(frame, objptr, capacity);
+    return _resize_storage(frame, obj_id, capacity);
 }
 
-int KOS_array_reserve(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t new_capacity)
+int KOS_array_reserve(KOS_STACK_FRAME *frame, KOS_OBJ_ID obj_id, uint32_t new_capacity)
 {
     int error = KOS_ERROR_EXCEPTION;
 
-    if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
+    if (IS_BAD_PTR(obj_id))
+        KOS_raise_exception_cstring(frame, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+        KOS_raise_exception_cstring(frame, str_err_not_array);
     else {
-        KOS_ARRAY *const array    = OBJPTR(KOS_ARRAY, objptr);
-        ARRAY_BUF       *old_buf  = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+        KOS_ARRAY *const array    = OBJPTR(ARRAY, obj_id);
+        ARRAY_BUF       *old_buf  = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
         uint32_t         capacity = old_buf ? old_buf->capacity : 0U;
 
         error = KOS_SUCCESS;
 
         while (new_capacity > capacity) {
-            error = _resize_storage(frame, objptr, new_capacity);
+            error = _resize_storage(frame, obj_id, new_capacity);
             if (error)
                 break;
 
-            old_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+            old_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
             assert(old_buf);
             capacity = old_buf->capacity;
         }
@@ -354,40 +350,40 @@ int KOS_array_reserve(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t new_c
     return error;
 }
 
-int KOS_array_resize(KOS_STACK_FRAME *frame, KOS_OBJ_PTR objptr, uint32_t size)
+int KOS_array_resize(KOS_STACK_FRAME *frame, KOS_OBJ_ID obj_id, uint32_t size)
 {
     int error = KOS_ERROR_EXCEPTION;
 
-    if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
+    if (IS_BAD_PTR(obj_id))
+        KOS_raise_exception_cstring(frame, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+        KOS_raise_exception_cstring(frame, str_err_not_array);
     else {
-        KOS_ARRAY *const array    = OBJPTR(KOS_ARRAY, objptr);
-        ARRAY_BUF       *buf      = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+        KOS_ARRAY *const array    = OBJPTR(ARRAY, obj_id);
+        ARRAY_BUF       *buf      = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
         const uint32_t   capacity = buf ? buf->capacity : 0U;
         uint32_t         old_size;
 
         if (size > capacity) {
             const uint32_t new_cap = KOS_max(_double_capacity(capacity), size);
-            TRY(KOS_array_reserve(frame, objptr, new_cap));
+            TRY(KOS_array_reserve(frame, obj_id, new_cap));
 
-            buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+            buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
         }
 
         old_size = KOS_atomic_swap_u32(array->size, size);
 
         if (size != old_size) {
             if (size > old_size) {
-                KOS_ATOMIC(KOS_OBJ_PTR) *ptr = &buf->buf[old_size];
-                KOS_ATOMIC(KOS_OBJ_PTR) *end = &buf->buf[size];
+                KOS_ATOMIC(KOS_OBJ_ID) *ptr = &buf->buf[old_size];
+                KOS_ATOMIC(KOS_OBJ_ID) *end = &buf->buf[size];
                 while (ptr < end)
                     KOS_atomic_cas_ptr(*(ptr++), TOMBSTONE, KOS_VOID);
             }
             else {
                 /* TODO improve this */
-                KOS_ATOMIC(KOS_OBJ_PTR) *ptr = &buf->buf[size];
-                KOS_ATOMIC(KOS_OBJ_PTR) *end = &buf->buf[old_size];
+                KOS_ATOMIC(KOS_OBJ_ID) *ptr = &buf->buf[size];
+                KOS_ATOMIC(KOS_OBJ_ID) *end = &buf->buf[old_size];
                 while (ptr < end)
                     KOS_atomic_write_ptr(*(ptr++), TOMBSTONE);
             }
@@ -400,20 +396,20 @@ _error:
     return error;
 }
 
-KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_PTR      objptr,
-                            int64_t          begin,
-                            int64_t          end)
+KOS_OBJ_ID KOS_array_slice(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_ID       obj_id,
+                           int64_t          begin,
+                           int64_t          end)
 {
-    KOS_OBJ_PTR ret = TO_OBJPTR(0);
+    KOS_OBJ_ID ret = KOS_BADPTR;
 
-    if (IS_BAD_PTR(objptr))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
+    if (IS_BAD_PTR(obj_id))
+        KOS_raise_exception_cstring(frame, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+        KOS_raise_exception_cstring(frame, str_err_not_array);
     else {
-        KOS_ARRAY *const array = OBJPTR(KOS_ARRAY, objptr);
-        const uint32_t   len   = KOS_get_array_size(objptr);
+        KOS_ARRAY *const array = OBJPTR(ARRAY, obj_id);
+        const uint32_t   len   = KOS_get_array_size(obj_id);
 
         ret = KOS_new_array(frame, 0);
 
@@ -437,18 +433,18 @@ KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
                 ARRAY_BUF *dest_buf = _alloc_buffer(frame, new_len);
 
                 if (dest_buf && ! IS_BAD_PTR(ret)) {
-                    KOS_ARRAY *const new_array = OBJPTR(KOS_ARRAY, ret);
-                    ARRAY_BUF       *src_buf   = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+                    KOS_ARRAY *const new_array = OBJPTR(ARRAY, ret);
+                    ARRAY_BUF       *src_buf   = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
                     uint32_t         idx       = 0;
 
-                    KOS_ATOMIC(KOS_OBJ_PTR) *dest = &dest_buf->buf[0];
+                    KOS_ATOMIC(KOS_OBJ_ID) *dest = &dest_buf->buf[0];
 
-                    KOS_atomic_write_ptr(new_array->buffer, (void *)dest_buf);
+                    KOS_atomic_write_ptr(new_array->data, (void *)dest_buf);
 
                     while (idx < new_len) {
 
-                        const KOS_OBJ_PTR value =
-                            (KOS_OBJ_PTR)KOS_atomic_read_ptr(src_buf->buf[begin + idx]);
+                        const KOS_OBJ_ID value =
+                            (KOS_OBJ_ID)KOS_atomic_read_ptr(src_buf->buf[begin + idx]);
 
                         if (value == TOMBSTONE) {
                             new_len = idx;
@@ -472,7 +468,7 @@ KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
                                          TOMBSTONE);
                 }
                 else
-                    ret = TO_OBJPTR(0);
+                    ret = KOS_BADPTR;
             }
         }
     }
@@ -481,10 +477,10 @@ KOS_OBJ_PTR KOS_array_slice(KOS_STACK_FRAME *frame,
 }
 
 int KOS_array_insert(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_PTR      dest_objptr,
+                     KOS_OBJ_ID       dest_obj_id,
                      int64_t          dest_begin,
                      int64_t          dest_end,
-                     KOS_OBJ_PTR      src_objptr,
+                     KOS_OBJ_ID       src_obj_id,
                      int64_t          src_begin,
                      int64_t          src_end)
 {
@@ -498,16 +494,16 @@ int KOS_array_insert(KOS_STACK_FRAME *frame,
     uint32_t   dest_delta;
     uint32_t   src_delta;
 
-    if (IS_BAD_PTR(dest_objptr))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(dest_objptr) || GET_OBJ_TYPE(dest_objptr) != OBJ_ARRAY)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_array));
-    else if (src_begin != src_end && IS_BAD_PTR(src_objptr))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_null_ptr));
-    else if (src_begin != src_end && (IS_SMALL_INT(src_objptr) || GET_OBJ_TYPE(src_objptr) != OBJ_ARRAY))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_array));
+    if (IS_BAD_PTR(dest_obj_id))
+        RAISE_EXCEPTION(str_err_null_ptr);
+    else if (GET_OBJ_TYPE(dest_obj_id) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
+    else if (src_begin != src_end && IS_BAD_PTR(src_obj_id))
+        RAISE_EXCEPTION(str_err_null_ptr);
+    else if (src_begin != src_end && GET_OBJ_TYPE(src_obj_id) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
 
-    dest_len = KOS_get_array_size(dest_objptr);
+    dest_len = KOS_get_array_size(dest_obj_id);
 
     dest_begin = _KOS_fix_index(dest_begin, dest_len);
     dest_end   = _KOS_fix_index(dest_end, dest_len);
@@ -518,7 +514,7 @@ int KOS_array_insert(KOS_STACK_FRAME *frame,
     dest_delta = (uint32_t)(dest_end - dest_begin);
 
     if (src_begin != src_end) {
-        src_len   = KOS_get_array_size(src_objptr);
+        src_len   = KOS_get_array_size(src_obj_id);
         src_begin = _KOS_fix_index(src_begin, src_len);
         src_end   = _KOS_fix_index(src_end, src_len);
 
@@ -529,20 +525,20 @@ int KOS_array_insert(KOS_STACK_FRAME *frame,
     src_delta = (uint32_t)(src_end - src_begin);
 
     if (src_delta > dest_delta)
-        TRY(KOS_array_resize(frame, dest_objptr, dest_len - dest_delta + src_delta));
+        TRY(KOS_array_resize(frame, dest_obj_id, dest_len - dest_delta + src_delta));
 
-    dest_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(OBJPTR(KOS_ARRAY, dest_objptr)->buffer);
+    dest_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(OBJPTR(ARRAY, dest_obj_id)->data);
     if (src_begin != src_end)
-        src_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(OBJPTR(KOS_ARRAY, src_objptr)->buffer);
+        src_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(OBJPTR(ARRAY, src_obj_id)->data);
 
-    if (src_objptr != dest_objptr || src_end <= dest_begin || src_begin >= dest_end || ! src_delta) {
+    if (src_obj_id != dest_obj_id || src_end <= dest_begin || src_begin >= dest_end || ! src_delta) {
 
         if (src_delta != dest_delta && dest_end < dest_len)
             _KOS_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_end - dest_delta + src_delta],
                                  (KOS_ATOMIC(void *) *)&dest_buf->buf[dest_end],
                                  (unsigned)(dest_len - dest_end));
 
-        if (src_objptr == dest_objptr && src_begin >= dest_end)
+        if (src_obj_id == dest_obj_id && src_begin >= dest_end)
             src_begin += src_delta - dest_delta;
 
         if (src_delta)
@@ -582,41 +578,41 @@ int KOS_array_insert(KOS_STACK_FRAME *frame,
     }
 
     if (src_delta < dest_delta)
-        TRY(KOS_array_resize(frame, dest_objptr, dest_len - dest_delta + src_delta));
+        TRY(KOS_array_resize(frame, dest_obj_id, dest_len - dest_delta + src_delta));
 
 _error:
     return error;
 }
 
 int KOS_array_push(KOS_STACK_FRAME *frame,
-                   KOS_OBJ_PTR      objptr,
-                   KOS_OBJ_PTR      value,
+                   KOS_OBJ_ID       obj_id,
+                   KOS_OBJ_ID       value,
                    uint32_t        *idx)
 {
     int        error = KOS_SUCCESS;
-    KOS_ARRAY *array = OBJPTR(KOS_ARRAY, objptr);
+    KOS_ARRAY *array = OBJPTR(ARRAY, obj_id);
     ARRAY_BUF *buf;
     uint32_t   len;
 
-    if (IS_BAD_PTR(objptr))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_array));
+    if (IS_BAD_PTR(obj_id))
+        RAISE_EXCEPTION(str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
 
-    buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+    buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
 
     /* Increment index */
     for (;;) {
 
         const uint32_t capacity = buf ? buf->capacity : 0;
 
-        len = KOS_get_array_size(objptr);
+        len = KOS_get_array_size(obj_id);
 
         if (len >= capacity) {
             const uint32_t new_cap = KOS_max(capacity * 2, len + 1);
-            TRY(KOS_array_reserve(frame, objptr, new_cap));
+            TRY(KOS_array_reserve(frame, obj_id, new_cap));
 
-            buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->buffer);
+            buf = (ARRAY_BUF *)KOS_atomic_read_ptr(array->data);
             continue;
         }
 
@@ -629,7 +625,7 @@ int KOS_array_push(KOS_STACK_FRAME *frame,
     /* Write new value */
     for (;;) {
 
-        const KOS_OBJ_PTR cur_value = KOS_atomic_read_ptr(buf->buf[len]);
+        const KOS_OBJ_ID cur_value = KOS_atomic_read_ptr(buf->buf[len]);
 
         if (cur_value == CLOSED) {
             buf = (ARRAY_BUF *)KOS_atomic_read_ptr(buf->next);
@@ -649,30 +645,30 @@ _error:
     return error;
 }
 
-KOS_OBJ_PTR KOS_array_pop(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      objptr)
+KOS_OBJ_ID KOS_array_pop(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_ID       obj_id)
 {
     /* TODO rewrite lock-free */
 
-    int         error = KOS_SUCCESS;
-    uint32_t    len;
-    KOS_OBJ_PTR ret = TO_OBJPTR(0);
+    int        error = KOS_SUCCESS;
+    uint32_t   len;
+    KOS_OBJ_ID ret = KOS_BADPTR;
 
-    if (IS_BAD_PTR(objptr))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(objptr) || GET_OBJ_TYPE(objptr) != OBJ_ARRAY)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_array));
+    if (IS_BAD_PTR(obj_id))
+        RAISE_EXCEPTION(str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
 
-    len = KOS_get_array_size(objptr);
+    len = KOS_get_array_size(obj_id);
 
     if (len == 0)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_empty));
+        RAISE_EXCEPTION(str_err_empty);
 
-    ret = KOS_array_read(frame, objptr, (int)len-1);
-    TRY_OBJPTR(ret);
+    ret = KOS_array_read(frame, obj_id, (int)len-1);
+    TRY_OBJID(ret);
 
-    error = KOS_array_resize(frame, objptr, len-1);
+    error = KOS_array_resize(frame, obj_id, len-1);
 
 _error:
-    return error ? TO_OBJPTR(0) : ret;
+    return error ? KOS_BADPTR : ret;
 }

@@ -32,68 +32,59 @@
 #include <string.h>
 #include <assert.h>
 
-struct _KOS_BOOLEAN kos_static_object_true  = { OBJ_BOOLEAN, 1 };
-struct _KOS_BOOLEAN kos_static_object_false = { OBJ_BOOLEAN, 0 };
-struct _KOS_VOID    kos_static_object_void  = { OBJ_VOID       };
-
-KOS_OBJ_PTR KOS_new_int(KOS_STACK_FRAME *frame, int64_t value)
+KOS_OBJ_ID KOS_new_int(KOS_STACK_FRAME *frame, int64_t value)
 {
-    KOS_OBJ_PTR objptr = TO_SMALL_INT((intptr_t)value);
+    KOS_OBJ_ID obj_id = TO_SMALL_INT((intptr_t)value);
 
-    if (GET_SMALL_INT(objptr) != value) {
+    if (GET_SMALL_INT(obj_id) != value) {
 
-        KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_INTEGER);
+        KOS_INTEGER *integer = (KOS_INTEGER *)_KOS_alloc_object(frame, KOS_INTEGER);
 
-        if (obj) {
-            obj->type           = OBJ_INTEGER;
-            obj->integer.number = value;
-        }
+        if (integer)
+            *integer = value;
 
-        objptr = TO_OBJPTR(obj);
+        obj_id = OBJID(INTEGER, integer);
     }
 
-    return objptr;
+    return obj_id;
 }
 
-KOS_OBJ_PTR KOS_new_float(KOS_STACK_FRAME *frame, double value)
+KOS_OBJ_ID KOS_new_float(KOS_STACK_FRAME *frame, double value)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_FLOAT);
+    KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(frame, KOS_FLOAT);
 
-    if (obj) {
-        obj->type          = OBJ_FLOAT;
-        obj->float_.number = value;
+    if (number)
+        *number = value;
+
+    return OBJID(FLOAT, number);
+}
+
+KOS_OBJ_ID KOS_new_function(KOS_STACK_FRAME *frame, KOS_OBJ_ID proto_obj)
+{
+    KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(frame, KOS_FUNCTION);
+
+    if (func) {
+        func->min_args              = 0;
+        func->num_regs              = 0;
+        func->args_reg              = 0;
+        func->prototype             = proto_obj;
+        func->closures              = KOS_VOID;
+        func->module                = frame->module;
+        func->handler               = 0;
+        func->generator_stack_frame = 0;
+        func->instr_offs            = ~0U;
+        func->generator_state       = KOS_NOT_GEN;
     }
 
-    return TO_OBJPTR(obj);
+    return OBJID(FUNCTION, func);
 }
 
-KOS_OBJ_PTR KOS_new_function(KOS_STACK_FRAME *frame, KOS_OBJ_PTR proto_obj)
+KOS_OBJ_ID KOS_new_builtin_function(KOS_STACK_FRAME     *frame,
+                                    KOS_FUNCTION_HANDLER handler,
+                                    int                  min_args)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_FUNCTION);
-
-    if (obj) {
-        obj->type                           = OBJ_FUNCTION;
-        obj->function.min_args              = 0;
-        obj->function.num_regs              = 0;
-        obj->function.args_reg              = 0;
-        obj->function.prototype             = proto_obj;
-        obj->function.closures              = KOS_VOID;
-        obj->function.module                = frame->module;
-        obj->function.handler               = 0;
-        obj->function.generator_stack_frame = KOS_VOID;
-        obj->function.instr_offs            = ~0U;
-        obj->function.generator_state       = KOS_NOT_GEN;
-    }
-
-    return TO_OBJPTR(obj);
-}
-
-KOS_OBJ_PTR KOS_new_builtin_function(KOS_STACK_FRAME     *frame,
-                                     KOS_FUNCTION_HANDLER handler,
-                                     int                  min_args)
-{
-    KOS_OBJ_PTR func_obj  = TO_OBJPTR(0);
-    KOS_OBJ_PTR proto_obj = KOS_gen_prototype(frame, (void *)(intptr_t)handler);
+    KOS_OBJ_ID func_obj  = KOS_BADPTR;
+    KOS_OBJ_ID proto_obj = KOS_gen_prototype(frame, (void *)(intptr_t)handler);
 
     if ( ! IS_BAD_PTR(proto_obj)) {
 
@@ -102,46 +93,45 @@ KOS_OBJ_PTR KOS_new_builtin_function(KOS_STACK_FRAME     *frame,
         if ( ! IS_BAD_PTR(func_obj)) {
             assert(min_args >= 0 && min_args < 256);
 
-            OBJPTR(KOS_FUNCTION, func_obj)->min_args = (uint8_t)min_args;
-            OBJPTR(KOS_FUNCTION, func_obj)->handler  = handler;
+            OBJPTR(FUNCTION, func_obj)->min_args = (uint8_t)min_args;
+            OBJPTR(FUNCTION, func_obj)->handler  = handler;
         }
     }
 
     return func_obj;
 }
 
-KOS_OBJ_PTR KOS_new_dynamic_prop(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      getter,
-                                 KOS_OBJ_PTR      setter)
+KOS_OBJ_ID KOS_new_dynamic_prop(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       getter,
+                                KOS_OBJ_ID       setter)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_DYNAMIC_PROP);
+    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(frame, KOS_DYNAMIC_PROP);
 
-    if (obj) {
-        obj->type                = OBJ_DYNAMIC_PROP;
-        obj->dynamic_prop.getter = getter;
-        obj->dynamic_prop.setter = setter;
+    if (dyn_prop) {
+        dyn_prop->type   = OBJ_DYNAMIC_PROP;
+        dyn_prop->getter = getter;
+        dyn_prop->setter = setter;
     }
 
-    return TO_OBJPTR(obj);
+    return OBJID(DYNAMIC_PROP, dyn_prop);
 }
 
 void _KOS_init_stack_frame(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      module,
+                           KOS_MODULE      *module,
                            uint32_t         instr_offs,
                            uint32_t         num_regs)
 {
     assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
-    assert( ! IS_BAD_PTR(module));
-    assert(OBJPTR(KOS_MODULE, module)->context);
+    assert(module);
+    assert(module->context);
 
-    frame->type       = OBJ_STACK_FRAME;
     frame->catch_reg  = 0;
-    frame->registers  = TO_OBJPTR(0);
+    frame->registers  = KOS_BADPTR;
     frame->module     = module;
-    frame->allocator  = &OBJPTR(KOS_MODULE, module)->context->allocator;
-    frame->exception  = TO_OBJPTR(0);
+    frame->allocator  = &module->context->allocator;
+    frame->exception  = KOS_BADPTR;
     frame->retval     = KOS_VOID;
-    frame->parent     = TO_OBJPTR(0);
+    frame->parent     = 0;
     frame->instr_offs = instr_offs;
     frame->yield_reg  = KOS_CANNOT_YIELD;
     frame->catch_offs = KOS_NO_CATCH;
@@ -151,27 +141,27 @@ void _KOS_init_stack_frame(KOS_STACK_FRAME *frame,
 }
 
 KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_PTR      module,
+                                       KOS_MODULE      *module,
                                        uint32_t         instr_offs,
                                        uint32_t         num_regs)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_STACK_FRAME);
+    KOS_STACK_FRAME *new_frame = (KOS_STACK_FRAME *)_KOS_alloc_object(frame, KOS_STACK_FRAME);
 
-    if (obj) {
+    if (new_frame) {
 
         assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
-        assert( ! IS_BAD_PTR(module));
-        assert(OBJPTR(KOS_MODULE, frame->module)->context == OBJPTR(KOS_MODULE, module)->context);
+        assert(module);
+        assert(frame->module->context == module->context);
 
-        _KOS_init_stack_frame(&obj->stack_frame, module, instr_offs, num_regs);
+        _KOS_init_stack_frame(new_frame, module, instr_offs, num_regs);
 
-        obj->stack_frame.parent = TO_OBJPTR(frame);
+        new_frame->parent = frame;
 
-        if (num_regs < 256 && IS_BAD_PTR(obj->stack_frame.registers))
-            obj = 0; /* object is garbage-collected */
+        if (num_regs < 256 && IS_BAD_PTR(new_frame->registers))
+            new_frame = 0; /* object is garbage-collected */
     }
 
-    return &obj->stack_frame;
+    return new_frame;
 }
 
 KOS_STACK_FRAME *_KOS_stack_frame_push_func(KOS_STACK_FRAME *frame,
@@ -184,29 +174,35 @@ KOS_STACK_FRAME *_KOS_stack_frame_push_func(KOS_STACK_FRAME *frame,
                                  no_regs ? ~0U : func->num_regs);
 }
 
-int _KOS_is_truthy(KOS_OBJ_PTR obj)
+int _KOS_is_truthy(KOS_OBJ_ID obj_id)
 {
     int ret;
 
-    if (IS_SMALL_INT(obj))
-        ret = !! obj;
+    if (IS_NUMERIC_OBJ(obj_id)) {
 
-    else switch (GET_OBJ_TYPE(obj)) {
+        switch (GET_NUMERIC_TYPE(obj_id)) {
 
-        case OBJ_INTEGER:
-            ret = !! OBJPTR(KOS_INTEGER, obj)->number;
-            break;
+            case OBJ_NUM_INTEGER:
+                ret = !! *OBJPTR(INTEGER, obj_id);
+                break;
 
-        case OBJ_FLOAT:
-            ret = OBJPTR(KOS_FLOAT, obj)->number != 0.0;
+            case OBJ_NUM_FLOAT:
+                ret = *OBJPTR(FLOAT, obj_id) != 0.0;
+                break;
+
+            default:
+                ret = !! obj_id;
+                break;
+        }
+    }
+    else switch ((enum KOS_OBJECT_IMMEDIATE)(intptr_t)obj_id) {
+
+        case OBJ_FALSE:
+            ret = 0;
             break;
 
         case OBJ_VOID:
             ret = 0;
-            break;
-
-        case OBJ_BOOLEAN:
-            ret = !! KOS_get_bool(obj);
             break;
 
         default:

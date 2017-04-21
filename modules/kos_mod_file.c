@@ -45,16 +45,16 @@
 #   include <unistd.h>
 #endif
 
-static KOS_ASCII_STRING(str_err_bad_flags,           "incorrect file open flags");
-static KOS_ASCII_STRING(str_err_file_not_open,       "file not open");
-static KOS_ASCII_STRING(str_err_cannot_get_position, "unable to obtain file position");
-static KOS_ASCII_STRING(str_err_cannot_get_size,     "unable to obtain file size");
-static KOS_ASCII_STRING(str_err_cannot_set_position, "unable to update file position");
-static KOS_ASCII_STRING(str_err_file_read,           "file read error");
-static KOS_ASCII_STRING(str_err_file_write,          "file write error");
-static KOS_ASCII_STRING(str_err_invalid_buffer_size, "buffer size out of range");
-static KOS_ASCII_STRING(str_err_not_buffer,          "argument to file write is not a buffer");
-static KOS_ASCII_STRING(str_err_too_many_to_read,    "requested read size exceeds buffer size limit");
+static const char str_err_bad_flags[]           = "incorrect file open flags";
+static const char str_err_file_not_open[]       = "file not open";
+static const char str_err_cannot_get_position[] = "unable to obtain file position";
+static const char str_err_cannot_get_size[]     = "unable to obtain file size";
+static const char str_err_cannot_set_position[] = "unable to update file position";
+static const char str_err_file_read[]           = "file read error";
+static const char str_err_file_write[]          = "file write error";
+static const char str_err_invalid_buffer_size[] = "buffer size out of range";
+static const char str_err_not_buffer[]          = "argument to file write is not a buffer";
+static const char str_err_too_many_to_read[]    = "requested read size exceeds buffer size limit";
 
 static void _fix_path_separators(struct _KOS_VECTOR *buf)
 {
@@ -75,21 +75,21 @@ static void _finalize(KOS_STACK_FRAME *frame,
         fclose((FILE *)priv);
 }
 
-static KOS_OBJ_PTR _open(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      this_obj,
-                         KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _open(KOS_STACK_FRAME *frame,
+                        KOS_OBJ_ID       this_obj,
+                        KOS_OBJ_ID       args_obj)
 {
     int                error        = KOS_SUCCESS;
-    KOS_OBJ_PTR        ret          = TO_OBJPTR(0);
+    KOS_OBJ_ID         ret          = KOS_BADPTR;
     FILE              *file         = 0;
-    KOS_OBJ_PTR        filename_obj = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID         filename_obj = KOS_array_read(frame, args_obj, 0);
     struct _KOS_VECTOR filename_cstr;
     struct _KOS_VECTOR flags_cstr;
 
     _KOS_vector_init(&filename_cstr);
     _KOS_vector_init(&flags_cstr);
 
-    TRY_OBJPTR(filename_obj);
+    TRY_OBJID(filename_obj);
 
     TRY(KOS_string_to_cstr_vec(frame, filename_obj, &filename_cstr));
 
@@ -98,12 +98,12 @@ static KOS_OBJ_PTR _open(KOS_STACK_FRAME *frame,
     /* TODO use own flags */
 
     if (KOS_get_array_size(args_obj) > 1) {
-        KOS_OBJ_PTR flags_obj = KOS_array_read(frame, args_obj, 1);
+        KOS_OBJ_ID flags_obj = KOS_array_read(frame, args_obj, 1);
 
-        TRY_OBJPTR(flags_obj);
+        TRY_OBJID(flags_obj);
 
-        if ( ! IS_STRING_OBJ(flags_obj))
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_bad_flags));
+        if (GET_OBJ_TYPE(flags_obj) != OBJ_STRING)
+            RAISE_EXCEPTION(str_err_bad_flags);
 
         TRY(KOS_string_to_cstr_vec(frame, flags_obj, &flags_cstr));
     }
@@ -113,11 +113,11 @@ static KOS_OBJ_PTR _open(KOS_STACK_FRAME *frame,
     /* TODO raise exception if ! file */
 
     ret = KOS_new_object_with_prototype(frame, this_obj);
-    TRY_OBJPTR(ret);
+    TRY_OBJID(ret);
 
-    OBJPTR(KOS_OBJECT, ret)->finalize = _finalize;
+    OBJPTR(OBJECT, ret)->finalize = _finalize;
 
-    KOS_object_set_private(*OBJPTR(KOS_OBJECT, ret), file);
+    KOS_object_set_private(*OBJPTR(OBJECT, ret), file);
     file = 0;
 
 _error:
@@ -130,7 +130,7 @@ _error:
 }
 
 static int _get_file_object(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_PTR      this_obj,
+                            KOS_OBJ_ID       this_obj,
                             FILE           **file,
                             int              must_be_open)
 {
@@ -138,36 +138,36 @@ static int _get_file_object(KOS_STACK_FRAME *frame,
 
     assert( ! IS_BAD_PTR(this_obj));
 
-    if ( ! IS_TYPE(OBJ_OBJECT, this_obj))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_not_open));
+    if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT)
+        RAISE_EXCEPTION(str_err_file_not_open);
 
-    *file = (FILE *)KOS_object_get_private(*OBJPTR(KOS_OBJECT, this_obj));
+    *file = (FILE *)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
 
     if (must_be_open && ! *file)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_not_open));
+        RAISE_EXCEPTION(str_err_file_not_open);
 
 _error:
     return error;
 }
 
-static KOS_OBJ_PTR _close(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      this_obj,
-                          KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _close(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_ID       this_obj,
+                         KOS_OBJ_ID       args_obj)
 {
     FILE *file  = 0;
     int   error = _get_file_object(frame, this_obj, &file, 0);
 
     if ( ! error && file) {
         fclose(file);
-        KOS_object_set_private(*OBJPTR(KOS_OBJECT, this_obj), (void *)0);
+        KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)0);
     }
 
-    return error ? TO_OBJPTR(0) : KOS_VOID;
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_PTR _print(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      this_obj,
-                          KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _print(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_ID       this_obj,
+                         KOS_OBJ_ID       args_obj)
 {
     FILE              *file  = 0;
     int                error = _get_file_object(frame, this_obj, &file, 0);
@@ -188,12 +188,12 @@ static KOS_OBJ_PTR _print(KOS_STACK_FRAME *frame,
 _error:
     _KOS_vector_destroy(&cstr);
 
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_PTR _print_(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      this_obj,
-                           KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _print_(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_ID       this_obj,
+                          KOS_OBJ_ID       args_obj)
 {
     FILE              *file  = 0;
     int                error = _get_file_object(frame, this_obj, &file, 0);
@@ -212,7 +212,7 @@ static KOS_OBJ_PTR _print_(KOS_STACK_FRAME *frame,
 _error:
     _KOS_vector_destroy(&cstr);
 
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
 static int _is_eol(char c)
@@ -225,9 +225,9 @@ static int _is_eol(char c)
  *      output: string containing a line read from the file, including EOL character.
  */
 
-static KOS_OBJ_PTR _read_line(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_PTR      this_obj,
-                              KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _read_line(KOS_STACK_FRAME *frame,
+                             KOS_OBJ_ID       this_obj,
+                             KOS_OBJ_ID       args_obj)
 {
     int                error      = KOS_SUCCESS;
     FILE              *file       = 0;
@@ -235,7 +235,7 @@ static KOS_OBJ_PTR _read_line(KOS_STACK_FRAME *frame,
     int                last_size  = 0;
     int                num_read;
     struct _KOS_VECTOR buf;
-    KOS_OBJ_PTR        line       = TO_OBJPTR(0);
+    KOS_OBJ_ID         line       = KOS_BADPTR;
 
     _KOS_vector_init(&buf);
 
@@ -245,14 +245,14 @@ static KOS_OBJ_PTR _read_line(KOS_STACK_FRAME *frame,
 
         int64_t iarg = 0;
 
-        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
 
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         TRY(KOS_get_integer(frame, arg, &iarg));
 
         if (iarg <= 0 || iarg > INT_MAX-1)
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_buffer_size));
+            RAISE_EXCEPTION(str_err_invalid_buffer_size);
 
         size_delta = (int)iarg + 1;
     }
@@ -266,7 +266,7 @@ static KOS_OBJ_PTR _read_line(KOS_STACK_FRAME *frame,
 
         if ( ! ret) {
             if (ferror(file))
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_read));
+                RAISE_EXCEPTION(str_err_file_read);
             else
                 break;
         }
@@ -282,7 +282,7 @@ static KOS_OBJ_PTR _read_line(KOS_STACK_FRAME *frame,
 
 _error:
     _KOS_vector_destroy(&buf);
-    return error ? TO_OBJPTR(0) : line;
+    return error ? KOS_BADPTR : line;
 }
 
 /*
@@ -296,23 +296,23 @@ _error:
  *      Reads as much as possible in one shot.  Returns as much as was read.
  *      The returned buffer's size can be from 0 to the size entered as input.
  */
-static KOS_OBJ_PTR _read_some(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_PTR      this_obj,
-                              KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _read_some(KOS_STACK_FRAME *frame,
+                             KOS_OBJ_ID       this_obj,
+                             KOS_OBJ_ID       args_obj)
 {
-    int         error = KOS_SUCCESS;
-    FILE       *file  = 0;
-    KOS_OBJ_PTR buf   = TO_OBJPTR(0);
-    uint32_t    offset;
-    int64_t     to_read;
-    size_t      num_read;
+    int        error = KOS_SUCCESS;
+    FILE      *file  = 0;
+    KOS_OBJ_ID buf   = KOS_BADPTR;
+    uint32_t   offset;
+    int64_t    to_read;
+    size_t     num_read;
 
     TRY(_get_file_object(frame, this_obj, &file, 1));
 
     if (KOS_get_array_size(args_obj) > 0) {
-        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
 
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         TRY(KOS_get_integer(frame, arg, &to_read));
     }
@@ -325,10 +325,10 @@ static KOS_OBJ_PTR _read_some(KOS_STACK_FRAME *frame,
     if (KOS_get_array_size(args_obj) > 1) {
         buf = KOS_array_read(frame, args_obj, 1);
 
-        TRY_OBJPTR(buf);
+        TRY_OBJID(buf);
 
-        if ( ! IS_TYPE(OBJ_BUFFER, buf))
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_buffer));
+        if (GET_OBJ_TYPE(buf) != OBJ_BUFFER)
+            RAISE_EXCEPTION(str_err_not_buffer);
     }
     else
         buf = KOS_new_buffer(frame, 0);
@@ -336,7 +336,7 @@ static KOS_OBJ_PTR _read_some(KOS_STACK_FRAME *frame,
     offset = KOS_get_buffer_size(buf);
 
     if (to_read > (int64_t)(0xFFFFFFFFU - offset))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_too_many_to_read));
+        RAISE_EXCEPTION(str_err_too_many_to_read);
 
     TRY(KOS_buffer_resize(frame, buf, (unsigned)(offset + to_read)));
 
@@ -347,21 +347,21 @@ static KOS_OBJ_PTR _read_some(KOS_STACK_FRAME *frame,
     TRY(KOS_buffer_resize(frame, buf, (unsigned)(offset + num_read)));
 
     if (num_read < (size_t)to_read && ferror(file))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_read));
+        RAISE_EXCEPTION(str_err_file_read);
 
 _error:
-    return error ? TO_OBJPTR(0) : buf;
+    return error ? KOS_BADPTR : buf;
 }
 
-static KOS_OBJ_PTR _write(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      this_obj,
-                          KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _write(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_ID       this_obj,
+                         KOS_OBJ_ID       args_obj)
 {
-    int         error    = KOS_SUCCESS;
-    FILE       *file     = 0;
-    KOS_OBJ_PTR arg;
-    size_t      to_write;
-    size_t      num_writ = 0;
+    int        error    = KOS_SUCCESS;
+    FILE      *file     = 0;
+    KOS_OBJ_ID arg;
+    size_t     to_write;
+    size_t     num_writ = 0;
 
     TRY(_get_file_object(frame, this_obj, &file, 1));
 
@@ -369,10 +369,10 @@ static KOS_OBJ_PTR _write(KOS_STACK_FRAME *frame,
 
     arg = KOS_array_read(frame, args_obj, 0);
 
-    TRY_OBJPTR(arg);
+    TRY_OBJID(arg);
 
-    if ( ! IS_TYPE(OBJ_BUFFER, arg))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_buffer));
+    if (GET_OBJ_TYPE(arg) != OBJ_BUFFER)
+        RAISE_EXCEPTION(str_err_not_buffer);
 
     to_write = (size_t)KOS_get_buffer_size(arg);
 
@@ -380,15 +380,15 @@ static KOS_OBJ_PTR _write(KOS_STACK_FRAME *frame,
         num_writ = fwrite(KOS_buffer_data(arg), 1, to_write, file);
 
     if (num_writ < to_write)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_file_write));
+        RAISE_EXCEPTION(str_err_file_write);
 
 _error:
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_PTR _get_file_eof(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      this_obj,
-                                 KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_file_eof(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       this_obj,
+                                KOS_OBJ_ID       args_obj)
 {
     FILE *file   = 0;
     int   error  = _get_file_object(frame, this_obj, &file, 1);
@@ -397,12 +397,12 @@ static KOS_OBJ_PTR _get_file_eof(KOS_STACK_FRAME *frame,
     if ( ! error)
         status = feof(file);
 
-    return error ? TO_OBJPTR(0) : KOS_BOOL(status);
+    return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
-static KOS_OBJ_PTR _get_file_error(KOS_STACK_FRAME *frame,
-                                   KOS_OBJ_PTR      this_obj,
-                                   KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_file_error(KOS_STACK_FRAME *frame,
+                                  KOS_OBJ_ID       this_obj,
+                                  KOS_OBJ_ID       args_obj)
 {
     FILE *file   = 0;
     int   error  = _get_file_object(frame, this_obj, &file, 1);
@@ -411,12 +411,12 @@ static KOS_OBJ_PTR _get_file_error(KOS_STACK_FRAME *frame,
     if ( ! error)
         status = ferror(file);
 
-    return error ? TO_OBJPTR(0) : KOS_BOOL(status);
+    return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
-static KOS_OBJ_PTR _get_file_size(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_PTR      this_obj,
-                                  KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_file_size(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_ID       this_obj,
+                                 KOS_OBJ_ID       args_obj)
 {
     int   error = KOS_SUCCESS;
     FILE *file  = 0;
@@ -427,25 +427,25 @@ static KOS_OBJ_PTR _get_file_size(KOS_STACK_FRAME *frame,
 
     orig_pos = ftell(file);
     if (orig_pos < 0)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_size));
+        RAISE_EXCEPTION(str_err_cannot_get_size);
 
     if (fseek(file, 0, SEEK_END))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_size));
+        RAISE_EXCEPTION(str_err_cannot_get_size);
 
     size = ftell(file);
     if (size < 0)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_size));
+        RAISE_EXCEPTION(str_err_cannot_get_size);
 
     if (fseek(file, orig_pos, SEEK_SET))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_size));
+        RAISE_EXCEPTION(str_err_cannot_get_size);
 
 _error:
-    return error ? TO_OBJPTR(0) : KOS_new_int(frame, (int64_t)size);
+    return error ? KOS_BADPTR : KOS_new_int(frame, (int64_t)size);
 }
 
-static KOS_OBJ_PTR _get_file_pos(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      this_obj,
-                                 KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_file_pos(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       this_obj,
+                                KOS_OBJ_ID       args_obj)
 {
     FILE *file  = 0;
     int   error = KOS_SUCCESS;
@@ -456,48 +456,48 @@ static KOS_OBJ_PTR _get_file_pos(KOS_STACK_FRAME *frame,
     pos = ftell(file);
 
     if (pos < 0)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_get_position));
+        RAISE_EXCEPTION(str_err_cannot_get_position);
 
 _error:
-    return error ? TO_OBJPTR(0) : KOS_new_int(frame, (int64_t)pos);
+    return error ? KOS_BADPTR : KOS_new_int(frame, (int64_t)pos);
 }
 
-static KOS_OBJ_PTR _set_file_pos(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      this_obj,
-                                 KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _set_file_pos(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       this_obj,
+                                KOS_OBJ_ID       args_obj)
 {
-    int         error = KOS_SUCCESS;
-    FILE       *file  = 0;
-    int64_t     pos;
-    KOS_OBJ_PTR arg;
+    int        error = KOS_SUCCESS;
+    FILE      *file  = 0;
+    int64_t    pos;
+    KOS_OBJ_ID arg;
 
     TRY(_get_file_object(frame, this_obj, &file, 1));
 
     arg = KOS_array_read(frame, args_obj, 0);
 
-    TRY_OBJPTR(arg);
+    TRY_OBJID(arg);
 
     TRY(KOS_get_integer(frame, arg, &pos));
 
     if (fseek(file, (long)pos, SEEK_SET))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_cannot_set_position));
+        RAISE_EXCEPTION(str_err_cannot_set_position);
 
 _error:
-    return error ? TO_OBJPTR(0) : KOS_VOID;
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_PTR _is_file(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_PTR      this_obj,
-                            KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _is_file(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_ID       this_obj,
+                           KOS_OBJ_ID       args_obj)
 {
     int                error        = KOS_SUCCESS;
-    KOS_OBJ_PTR        ret          = TO_OBJPTR(0);
-    KOS_OBJ_PTR        filename_obj = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID         ret          = KOS_BADPTR;
+    KOS_OBJ_ID         filename_obj = KOS_array_read(frame, args_obj, 0);
     struct _KOS_VECTOR filename_cstr;
 
     _KOS_vector_init(&filename_cstr);
 
-    TRY_OBJPTR(filename_obj);
+    TRY_OBJID(filename_obj);
 
     TRY(KOS_string_to_cstr_vec(frame, filename_obj, &filename_cstr));
 
@@ -511,18 +511,18 @@ _error:
     return ret;
 }
 
-static KOS_OBJ_PTR _remove(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      this_obj,
-                           KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _remove(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_ID       this_obj,
+                          KOS_OBJ_ID       args_obj)
 {
     int                error        = KOS_SUCCESS;
-    KOS_OBJ_PTR        ret          = TO_OBJPTR(0);
-    KOS_OBJ_PTR        filename_obj = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID         ret          = KOS_BADPTR;
+    KOS_OBJ_ID         filename_obj = KOS_array_read(frame, args_obj, 0);
     struct _KOS_VECTOR filename_cstr;
 
     _KOS_vector_init(&filename_cstr);
 
-    TRY_OBJPTR(filename_obj);
+    TRY_OBJID(filename_obj);
 
     TRY(KOS_string_to_cstr_vec(frame, filename_obj, &filename_cstr));
 
@@ -541,34 +541,35 @@ _error:
 }
 
 static int _add_std_file(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      proto,
-                         KOS_STRING      *str_name,
+                         KOS_OBJ_ID       proto,
+                         KOS_OBJ_ID       str_name,
                          FILE*            file)
 {
     int error = KOS_SUCCESS;
 
-    KOS_OBJ_PTR obj = KOS_new_object_with_prototype(frame, proto);
+    KOS_OBJ_ID obj = KOS_new_object_with_prototype(frame, proto);
 
-    TRY_OBJPTR(obj);
+    TRY_OBJID(obj);
 
-    KOS_object_set_private(*OBJPTR(KOS_OBJECT, obj), file);
+    KOS_object_set_private(*OBJPTR(OBJECT, obj), file);
 
-    error = KOS_module_add_global(frame, TO_OBJPTR(str_name), obj, 0);
+    error = KOS_module_add_global(frame, str_name, obj, 0);
 
 _error:
     return error;
 }
 
-#define TRY_ADD_STD_FILE(frame, proto, name, file)           \
-do {                                                          \
-    static KOS_ASCII_STRING(str_name, name);                  \
-    TRY(_add_std_file((frame), (proto), &str_name, (file))); \
+#define TRY_ADD_STD_FILE(frame, proto, name, file)                             \
+do {                                                                           \
+    static const char str_name[] = name;                                       \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name); \
+    TRY(_add_std_file((frame), (proto), str, (file)));                         \
 } while (0)
 
 int _KOS_module_file_init(KOS_STACK_FRAME *frame)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_PTR proto;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID proto;
 
     TRY_ADD_CONSTRUCTOR(    frame,        "file",      _open,           1, &proto);
     TRY_ADD_MEMBER_FUNCTION(frame, proto, "close",     _close,          0);

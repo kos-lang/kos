@@ -34,7 +34,7 @@
 
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
-    KOS_OBJ_PTR          buf;
+    KOS_OBJ_ID           buf;
     int                  num_loops;
     KOS_ATOMIC(uint32_t) go;
     KOS_ATOMIC(uint32_t) error;
@@ -139,7 +139,7 @@ int main(void)
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             const unsigned size = 64;
-            KOS_OBJ_PTR    buf  = KOS_new_buffer(frame, size);
+            KOS_OBJ_ID     buf  = KOS_new_buffer(frame, size);
             data.buf            = buf;
             data.go             = 0;
 

@@ -49,7 +49,7 @@
  *                 v            v            |
  *              {0, C}       {K, C} <--------+
  *
- *  0 - TO_OBJPTR(0), indicates an empty/unused slot
+ *  0 - KOS_BADPTR, indicates an empty/unused slot
  *  T - TOMBSTONE, indicates a deleted property
  *  C - CLOSED, indicates that the property's value was salvaged to new table
  *      during resize
@@ -60,55 +60,51 @@
  *      TOMBSTONE is written as a value.
  */
 
-static KOS_ASCII_STRING(str_err_null_ptr,          "null pointer");
-static KOS_ASCII_STRING(str_err_not_string,        "property name is not a string");
-static KOS_ASCII_STRING(str_err_no_property,       "no such property");
-static KOS_ASCII_STRING(str_err_no_own_properties, "object has no own properties");
-
-static KOS_SPECIAL _tombstone = { OBJ_SPECIAL, 0 };
-static KOS_SPECIAL _closed    = { OBJ_SPECIAL, 0 };
-static KOS_SPECIAL _reserved  = { OBJ_SPECIAL, 0 };
+static const char str_err_null_ptr[]          = "null pointer";
+static const char str_err_not_string[]        = "property name is not a string";
+static const char str_err_no_property[]       = "no such property";
+static const char str_err_no_own_properties[] = "object has no own properties";
 
 /* When a key is deleted, it remains in the table, but its value is marked
  * as TOMBSTONE. */
-#define TOMBSTONE TO_OBJPTR(&_tombstone)
+#define TOMBSTONE ((KOS_OBJ_ID)(intptr_t)0xB001)
 /* When the hash table is too small and is being resized, values moved to the
  * new table are marked as CLOSED in the old table. */
-#define CLOSED    TO_OBJPTR(&_closed)
+#define CLOSED    ((KOS_OBJ_ID)(intptr_t)0xB101)
 /* During resize operation, slots in the new table are marked as reserved,
  * which is part of strategy to avoid race conditions. */
-#define RESERVED  TO_OBJPTR(&_reserved)
+#define RESERVED  ((KOS_OBJ_ID)(intptr_t)0xB201)
 
 typedef struct _KOS_PROPERTY_BUF KOS_PBUF;
 
-KOS_OBJ_PTR KOS_new_object(KOS_STACK_FRAME *frame)
+KOS_OBJ_ID KOS_new_object(KOS_STACK_FRAME *frame)
 {
     KOS_CONTEXT *ctx;
 
-    assert( ! IS_BAD_PTR(frame->module));
-    assert(OBJPTR(KOS_MODULE, frame->module)->context);
+    assert(frame->module);
+    assert(frame->module->context);
 
-    ctx = OBJPTR(KOS_MODULE, frame->module)->context;
-    return KOS_new_object_with_prototype(frame, TO_OBJPTR(&ctx->object_prototype));
+    ctx = frame->module->context;
+    return KOS_new_object_with_prototype(frame, ctx->object_prototype);
 }
 
-KOS_OBJ_PTR KOS_new_object_with_prototype(KOS_STACK_FRAME *frame,
-                                          KOS_OBJ_PTR      prototype)
+KOS_OBJ_ID KOS_new_object_with_prototype(KOS_STACK_FRAME *frame,
+                                         KOS_OBJ_ID       prototype)
 {
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_OBJECT);
+    KOS_OBJECT *obj = (KOS_OBJECT *)_KOS_alloc_object(frame, KOS_OBJECT);
 
     if (obj)
-        _KOS_init_object(&obj->object, prototype);
+        _KOS_init_object(obj, prototype);
 
-    return TO_OBJPTR(obj);
+    return OBJID(OBJECT, obj);
 }
 
-static KOS_OBJECT *_get_properties(KOS_OBJ_PTR obj)
+static KOS_OBJECT *_get_properties(KOS_OBJ_ID obj_id)
 {
     KOS_OBJECT *props = 0;
 
-    if (IS_TYPE(OBJ_OBJECT, obj))
-        props = OBJPTR(KOS_OBJECT, obj);
+    if (GET_OBJ_TYPE(obj_id) == OBJ_OBJECT)
+        props = OBJPTR(OBJECT, obj_id);
 
     return props;
 }
@@ -124,9 +120,8 @@ static void _free_buffer(KOS_STACK_FRAME *frame, KOS_PBUF *buf)
     _KOS_free_buffer(frame, buf, sizeof(KOS_PBUF) + (buf->capacity - 1) * sizeof(KOS_PITEM));
 }
 
-void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_PTR prototype)
+void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
 {
-    obj->type      = OBJ_OBJECT;
     obj->prototype = prototype;
     obj->priv      = 0;
     obj->finalize  = 0;
@@ -134,10 +129,10 @@ void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_PTR prototype)
     KOS_atomic_write_ptr(obj->props, (void *)0);
 }
 
-static int _is_key_equal(KOS_OBJ_PTR key,
-                         uint32_t    hash,
-                         KOS_OBJ_PTR prop_key,
-                         KOS_PITEM  *prop_item)
+static int _is_key_equal(KOS_OBJ_ID key,
+                         uint32_t   hash,
+                         KOS_OBJ_ID prop_key,
+                         KOS_PITEM *prop_item)
 {
     if (key == prop_key)
         return 1;
@@ -153,8 +148,8 @@ static int _is_key_equal(KOS_OBJ_PTR key,
 
 static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_capacity)
 {
-    KOS_OBJ_PTR    key;
-    KOS_OBJ_PTR    value;
+    KOS_OBJ_ID     key;
+    KOS_OBJ_ID     value;
     KOS_PITEM     *new_item;
     const uint32_t mask = new_capacity - 1;
     uint32_t       hash;
@@ -165,11 +160,11 @@ static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_
     if (KOS_atomic_cas_ptr(old_item->value, TOMBSTONE, CLOSED))
         return 1;
 
-    value = (KOS_OBJ_PTR)KOS_atomic_read_ptr(old_item->value);
+    value = (KOS_OBJ_ID)KOS_atomic_read_ptr(old_item->value);
     if (value == CLOSED)
         return 0;
 
-    key  = (KOS_OBJ_PTR)KOS_atomic_read_ptr(old_item->key);
+    key  = (KOS_OBJ_ID)KOS_atomic_read_ptr(old_item->key);
     assert( ! IS_BAD_PTR(key));
     hash = KOS_atomic_read_u32(old_item->hash.hash);
     idx  = hash & mask;
@@ -177,18 +172,18 @@ static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_
     /* Claim a slot in the new table */
     for (;;) {
 
-        KOS_OBJ_PTR dest_key;
+        KOS_OBJ_ID dest_key;
 
         new_item = new_table->items + idx;
 
-        if (KOS_atomic_cas_ptr(new_item->key, TO_OBJPTR(0), key)) {
+        if (KOS_atomic_cas_ptr(new_item->key, KOS_BADPTR, key)) {
             KOS_atomic_write_u32(new_item->hash.hash, hash);
             KOS_atomic_add_i32(new_table->num_slots_used, 1);
             break;
         }
 
         /* This slot in the new table is already taken */
-        dest_key = (KOS_OBJ_PTR)KOS_atomic_read_ptr(new_item->key);
+        dest_key = (KOS_OBJ_ID)KOS_atomic_read_ptr(new_item->key);
         assert( ! IS_BAD_PTR(dest_key));
         if (_is_key_equal(key, hash, dest_key, new_item))
             /* Someone already wrote this key to the new table */
@@ -203,7 +198,7 @@ static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_
         return 0;
 
     /* Get the value from the old table and close the slot */
-    value = (KOS_OBJ_PTR)KOS_atomic_swap_ptr(old_item->value, CLOSED);
+    value = (KOS_OBJ_ID)KOS_atomic_swap_ptr(old_item->value, CLOSED);
     if (value == CLOSED) {
         /* While this thread has reserved a slot in the new table,
          * another thread went the fast path at the top of this function
@@ -263,8 +258,8 @@ static void _copy_table(KOS_STACK_FRAME *frame,
     if (KOS_atomic_cas_ptr(props->props, (void *)old_table, (void *)new_table)) {
 #ifndef NDEBUG
         for (i = 0; i < old_capacity; i++) {
-            KOS_PITEM  *item  = old_table->items + i;
-            KOS_OBJ_PTR value = (KOS_OBJ_PTR)KOS_atomic_read_ptr(item->value);
+            KOS_PITEM *item  = old_table->items + i;
+            KOS_OBJ_ID value = (KOS_OBJ_ID)KOS_atomic_read_ptr(item->value);
             assert(value == CLOSED);
         }
 #endif
@@ -298,12 +293,12 @@ static int _need_resize(KOS_PBUF *table, unsigned num_reprobes)
 }
 
 static int _resize_prop_table(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_PTR      obj,
+                              KOS_OBJ_ID       obj_id,
                               KOS_PBUF        *old_table,
                               uint32_t         grow_factor)
 {
     int         error = KOS_SUCCESS;
-    KOS_OBJECT *props = _get_properties(obj);
+    KOS_OBJECT *props = _get_properties(obj_id);
 
     const uint32_t old_capacity = old_table ? old_table->capacity : 0U;
     const uint32_t new_capacity = old_capacity ? old_capacity * grow_factor : KOS_MIN_PROPS_CAPACITY;
@@ -334,7 +329,7 @@ static int _resize_prop_table(KOS_STACK_FRAME *frame,
             new_table->new_prop_table = (KOS_PBUF_PTR)0;
 
             for (i = 0; i < new_capacity; i++) {
-                new_table->items[i].key       = TO_OBJPTR(0);
+                new_table->items[i].key       = KOS_BADPTR;
                 new_table->items[i].hash.hash = 0;
                 new_table->items[i].value     = TOMBSTONE;
             }
@@ -373,29 +368,29 @@ static int _resize_prop_table(KOS_STACK_FRAME *frame,
     return error;
 }
 
-KOS_OBJ_PTR KOS_get_property(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_PTR      obj,
-                             KOS_OBJ_PTR      prop)
+KOS_OBJ_ID KOS_get_property(KOS_STACK_FRAME *frame,
+                            KOS_OBJ_ID       obj_id,
+                            KOS_OBJ_ID       prop)
 {
-    KOS_OBJ_PTR retval = TO_OBJPTR(0);
+    KOS_OBJ_ID retval = KOS_BADPTR;
 
-    if (IS_BAD_PTR(obj) || IS_BAD_PTR(prop))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(prop) || ! IS_STRING_OBJ(prop))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_string));
+    if (IS_BAD_PTR(obj_id) || IS_BAD_PTR(prop))
+        KOS_raise_exception_cstring(frame, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(prop) != OBJ_STRING)
+        KOS_raise_exception_cstring(frame, str_err_not_string);
     else {
-        KOS_OBJECT *props = _get_properties(obj);
+        KOS_OBJECT *props = _get_properties(obj_id);
 
         /* Find non-empty property table in this object or in a prototype */
         while ( ! props || ! KOS_atomic_read_ptr(props->props)) {
-            obj = KOS_get_prototype(frame, obj);
+            obj_id = KOS_get_prototype(frame, obj_id);
 
-            if (IS_BAD_PTR(obj)) {
+            if (IS_BAD_PTR(obj_id)) {
                 props = 0;
                 break;
             }
 
-            props = _get_properties(obj);
+            props = _get_properties(obj_id);
         }
 
         if (props) {
@@ -407,9 +402,9 @@ KOS_OBJ_PTR KOS_get_property(KOS_STACK_FRAME *frame,
             unsigned       mask         = num_reprobes - 1;
 
             for (;;) {
-                KOS_PITEM *const  cur_item  = items + (idx &= mask);
-                KOS_OBJ_PTR       cur_key   = (KOS_OBJ_PTR)KOS_atomic_read_ptr(cur_item->key);
-                const KOS_OBJ_PTR cur_value = (KOS_OBJ_PTR)KOS_atomic_read_ptr(cur_item->value);
+                KOS_PITEM *const cur_item  = items + (idx &= mask);
+                KOS_OBJ_ID       cur_key   = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->key);
+                const KOS_OBJ_ID cur_value = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->value);
 
                 /* Object property table is being resized, so read value from the new table */
                 if (cur_value == CLOSED) {
@@ -437,29 +432,29 @@ KOS_OBJ_PTR KOS_get_property(KOS_STACK_FRAME *frame,
                     }
 
                     /* Key deleted or write incomplete, will look in prototype */
-                    cur_key = TO_OBJPTR(0);
+                    cur_key = KOS_BADPTR;
                 }
 
                 /* Assume key not found if too many reprobes */
                 if ( ! num_reprobes)
-                    cur_key = TO_OBJPTR(0);
+                    cur_key = KOS_BADPTR;
 
                 /* If no such key, look in prototypes */
                 if (IS_BAD_PTR(cur_key)) {
 
                     /* Find non-empty property table in a prototype */
                     do {
-                        obj = KOS_get_prototype(frame, obj);
+                        obj_id = KOS_get_prototype(frame, obj_id);
 
-                        if (IS_BAD_PTR(obj)) /* end of prototype chain */
+                        if (IS_BAD_PTR(obj_id)) /* end of prototype chain */
                             break;
 
-                        props = _get_properties(obj);
+                        props = _get_properties(obj_id);
                     }
                     while ( ! props || ! props->props);
 
-                    if (IS_BAD_PTR(obj)) {
-                        KOS_raise_exception(frame, TO_OBJPTR(&str_err_no_property));
+                    if (IS_BAD_PTR(obj_id)) {
+                        KOS_raise_exception_cstring(frame, str_err_no_property);
                         break;
                     }
                     assert(props);
@@ -478,7 +473,7 @@ KOS_OBJ_PTR KOS_get_property(KOS_STACK_FRAME *frame,
             }
         }
         else
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_no_property));
+            KOS_raise_exception_cstring(frame, str_err_no_property);
     }
 
     if (IS_BAD_PTR(retval))
@@ -490,35 +485,34 @@ KOS_OBJ_PTR KOS_get_property(KOS_STACK_FRAME *frame,
 }
 
 int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_PTR      obj)
+                                KOS_OBJ_ID       obj_id)
 {
     KOS_OBJECT *props;
 
-    assert( ! IS_BAD_PTR(obj));
-    assert( ! IS_SMALL_INT(obj));
-    assert(IS_TYPE(OBJ_OBJECT, obj));
+    assert( ! IS_BAD_PTR(obj_id));
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
-    props = _get_properties(obj);
+    props = _get_properties(obj_id);
 
-    return _resize_prop_table(frame, obj,
+    return _resize_prop_table(frame, obj_id,
             props ? (KOS_PBUF *)KOS_atomic_read_ptr(props->props) : 0, 1U);
 }
 
 int KOS_set_property(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_PTR      obj,
-                     KOS_OBJ_PTR      prop,
-                     KOS_OBJ_PTR      value)
+                     KOS_OBJ_ID       obj_id,
+                     KOS_OBJ_ID       prop,
+                     KOS_OBJ_ID       value)
 {
     int error = KOS_ERROR_EXCEPTION;
 
-    if (IS_BAD_PTR(obj) || IS_BAD_PTR(prop) || IS_BAD_PTR(value))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
-    else if (IS_SMALL_INT(prop) || ! IS_STRING_OBJ(prop))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_string));
-    else if ( ! IS_TYPE(OBJ_OBJECT, obj))
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_no_own_properties));
+    if (IS_BAD_PTR(obj_id) || IS_BAD_PTR(prop) || IS_BAD_PTR(value))
+        KOS_raise_exception_cstring(frame, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(prop) != OBJ_STRING)
+        KOS_raise_exception_cstring(frame, str_err_not_string);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_OBJECT)
+        KOS_raise_exception_cstring(frame, str_err_no_own_properties);
     else {
-        KOS_OBJECT *props = _get_properties(obj);
+        KOS_OBJECT *props = _get_properties(obj_id);
 
         /* Check if property table is non-empty */
         if ( ! KOS_atomic_read_ptr(props->props)) {
@@ -530,7 +524,7 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
             }
             /* Allocate property table */
             else {
-                const int rerror = _resize_prop_table(frame, obj, 0, 0U);
+                const int rerror = _resize_prop_table(frame, obj_id, 0, 0U);
                 if (rerror) {
                     assert(KOS_is_exception_pending(frame));
                     error = rerror;
@@ -551,9 +545,9 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
             mask  = prop_table->capacity - 1;
 
             for (;;) {
-                KOS_PITEM  *cur_item = items + (idx &= mask);
-                KOS_OBJ_PTR cur_key  = (KOS_OBJ_PTR)KOS_atomic_read_ptr(cur_item->key);
-                KOS_OBJ_PTR oldval;
+                KOS_PITEM *cur_item = items + (idx &= mask);
+                KOS_OBJ_ID cur_key  = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->key);
+                KOS_OBJ_ID oldval;
 
                 /* Found a new empty slot */
                 if (IS_BAD_PTR(cur_key)) {
@@ -565,7 +559,7 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
                     }
 
                     /* Attempt to write the new key */
-                    if ( ! KOS_atomic_cas_ptr(cur_item->key, TO_OBJPTR(0), prop))
+                    if ( ! KOS_atomic_cas_ptr(cur_item->key, KOS_BADPTR, prop))
                         /* Reprobe the slot if another thread has written a key */
                         continue;
 
@@ -577,7 +571,7 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
 
                     /* Resize if property table is full */
                     if (num_reprobes > KOS_MAX_PROP_REPROBES) {
-                        error = _resize_prop_table(frame, obj, prop_table, 2U);
+                        error = _resize_prop_table(frame, obj_id, prop_table, 2U);
                         if (error)
                             break;
 
@@ -596,14 +590,14 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
                 }
 
                 /* Read value at this slot */
-                oldval = (KOS_OBJ_PTR)KOS_atomic_read_ptr(cur_item->value);
+                oldval = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->value);
 
                 /* We will use the new table if it was copied */
                 if (oldval != CLOSED) {
 
                     /* If this is a dynamic property, throw it */
-                    if ( ! IS_BAD_PTR(oldval) && ! IS_SMALL_INT(oldval) &&
-                        GET_OBJ_TYPE(oldval) == OBJ_DYNAMIC_PROP &&
+                    if ( ! IS_BAD_PTR(oldval) &&
+                        GET_OBJ_SUBTYPE(oldval) == OBJ_DYNAMIC_PROP &&
                         value != TOMBSTONE) {
 
                         KOS_raise_exception(frame, oldval);
@@ -614,7 +608,7 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
                     /* It's OK if someone else wrote in the mean time */
                     if ( ! KOS_atomic_cas_ptr(cur_item->value, oldval, value))
                         /* Re-read in case it was moved to the new table */
-                        oldval = (KOS_OBJ_PTR)KOS_atomic_read_ptr(cur_item->value);
+                        oldval = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->value);
                 }
 
                 /* Another thread is resizing the table - use new property table */
@@ -638,7 +632,7 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
 
             /* Check if we need to resize the table */
             if ( ! error && _need_resize(prop_table, num_reprobes))
-                error = _resize_prop_table(frame, obj, prop_table, 2U);
+                error = _resize_prop_table(frame, obj_id, prop_table, 2U);
         }
     }
 
@@ -659,138 +653,138 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
 }
 
 int KOS_delete_property(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_PTR      obj,
-                        KOS_OBJ_PTR      prop)
+                        KOS_OBJ_ID       obj_id,
+                        KOS_OBJ_ID       prop)
 {
     if (IS_BAD_PTR(prop)) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_null_ptr));
+        KOS_raise_exception_cstring(frame, str_err_null_ptr);
         return KOS_ERROR_EXCEPTION;
     }
-    else if (IS_SMALL_INT(prop) || ! IS_STRING_OBJ(prop)) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_string));
+    else if (GET_OBJ_TYPE(prop) != OBJ_STRING) {
+        KOS_raise_exception_cstring(frame, str_err_not_string);
         return KOS_ERROR_EXCEPTION;
     }
-    else if ( ! IS_BAD_PTR(obj) &&  ! IS_TYPE(OBJ_OBJECT, obj))
+    else if ( ! IS_BAD_PTR(obj_id) && GET_OBJ_TYPE(obj_id) != OBJ_OBJECT)
         return KOS_SUCCESS;
     else
-        return KOS_set_property(frame, obj, prop, TOMBSTONE);
+        return KOS_set_property(frame, obj_id, prop, TOMBSTONE);
 }
 
-KOS_OBJ_PTR KOS_new_builtin_dynamic_property(KOS_STACK_FRAME     *frame,
-                                             KOS_FUNCTION_HANDLER getter,
-                                             KOS_FUNCTION_HANDLER setter)
+KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_STACK_FRAME     *frame,
+                                            KOS_FUNCTION_HANDLER getter,
+                                            KOS_FUNCTION_HANDLER setter)
 {
-    int         error    = KOS_SUCCESS;
-    KOS_OBJ_PTR dyn_prop = TO_OBJPTR(0);
-    KOS_OBJ_PTR get_obj  = KOS_new_function(frame, KOS_VOID);
-    KOS_OBJ_PTR set_obj;
+    int        error    = KOS_SUCCESS;
+    KOS_OBJ_ID dyn_prop = KOS_BADPTR;
+    KOS_OBJ_ID get_obj  = KOS_new_function(frame, KOS_VOID);
+    KOS_OBJ_ID set_obj;
 
-    TRY_OBJPTR(get_obj);
+    TRY_OBJID(get_obj);
 
     set_obj = KOS_new_function(frame, KOS_VOID);
-    TRY_OBJPTR(set_obj);
+    TRY_OBJID(set_obj);
 
-    OBJPTR(KOS_FUNCTION, get_obj)->min_args = 0;
-    OBJPTR(KOS_FUNCTION, get_obj)->handler  = getter;
+    OBJPTR(FUNCTION, get_obj)->min_args = 0;
+    OBJPTR(FUNCTION, get_obj)->handler  = getter;
 
-    OBJPTR(KOS_FUNCTION, set_obj)->min_args = 1;
-    OBJPTR(KOS_FUNCTION, set_obj)->handler  = setter;
+    OBJPTR(FUNCTION, set_obj)->min_args = 1;
+    OBJPTR(FUNCTION, set_obj)->handler  = setter;
 
     dyn_prop = KOS_new_dynamic_prop(frame, get_obj, set_obj);
-    TRY_OBJPTR(dyn_prop);
+    TRY_OBJID(dyn_prop);
 
 _error:
-    return error ? TO_OBJPTR(0) : dyn_prop;
+    return error ? KOS_BADPTR : dyn_prop;
 }
 
 int KOS_set_builtin_dynamic_property(KOS_STACK_FRAME     *frame,
-                                     KOS_OBJ_PTR          obj,
-                                     KOS_OBJ_PTR          prop,
+                                     KOS_OBJ_ID           obj_id,
+                                     KOS_OBJ_ID           prop,
                                      KOS_FUNCTION_HANDLER getter,
                                      KOS_FUNCTION_HANDLER setter)
 {
-    int         error    = KOS_SUCCESS;
-    KOS_OBJ_PTR dyn_prop = KOS_new_builtin_dynamic_property(frame, getter, setter);
+    int        error    = KOS_SUCCESS;
+    KOS_OBJ_ID dyn_prop = KOS_new_builtin_dynamic_property(frame, getter, setter);
 
-    TRY_OBJPTR(dyn_prop);
+    TRY_OBJID(dyn_prop);
 
-    TRY(KOS_set_property(frame, obj, prop, dyn_prop));
+    TRY(KOS_set_property(frame, obj_id, prop, dyn_prop));
 
 _error:
     return error;
 }
 
-KOS_OBJ_PTR KOS_get_prototype(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_PTR      obj)
+KOS_OBJ_ID KOS_get_prototype(KOS_STACK_FRAME *frame,
+                             KOS_OBJ_ID       obj_id)
 {
-    KOS_OBJ_PTR  ret = TO_OBJPTR(0);
+    KOS_OBJ_ID   ret = KOS_BADPTR;
     KOS_CONTEXT *ctx;
 
-    assert( ! IS_BAD_PTR(frame->module));
-    assert(OBJPTR(KOS_MODULE, frame->module)->context);
+    assert(frame->module);
+    assert(frame->module->context);
 
-    ctx = OBJPTR(KOS_MODULE, frame->module)->context;
+    ctx = frame->module->context;
 
-    if (IS_SMALL_INT(obj))
-        ret = TO_OBJPTR(&ctx->integer_prototype);
-    else switch (GET_OBJ_TYPE(obj)) {
+    if (IS_NUMERIC_OBJ(obj_id)) {
 
-        case OBJ_INTEGER:
-            ret = TO_OBJPTR(&ctx->integer_prototype);
+        switch (GET_NUMERIC_TYPE(obj_id)) {
+
+            case OBJ_FLOAT:
+                ret = ctx->float_prototype;
+                break;
+
+            default:
+                ret = ctx->integer_prototype;
+                break;
+        }
+    }
+    else switch (GET_OBJ_TYPE(obj_id)) {
+
+        case OBJ_OBJECT:
+            ret = OBJPTR(OBJECT, obj_id)->prototype;
             break;
 
-        case OBJ_FLOAT:
-            ret = TO_OBJPTR(&ctx->float_prototype);
-            break;
-
-        case OBJ_BOOLEAN:
-            ret = TO_OBJPTR(&ctx->boolean_prototype);
-            break;
-
-        case OBJ_VOID:
-            ret = TO_OBJPTR(&ctx->void_prototype);
-            break;
-
-        case OBJ_STRING_8:
-            /* fall through */
-        case OBJ_STRING_16:
-            /* fall through */
-        case OBJ_STRING_32:
-            ret = TO_OBJPTR(&ctx->string_prototype);
+        case OBJ_STRING:
+            ret = ctx->string_prototype;
             break;
 
         case OBJ_ARRAY:
-            ret = TO_OBJPTR(&ctx->array_prototype);
+            ret = ctx->array_prototype;
             break;
 
         case OBJ_BUFFER:
-            ret = TO_OBJPTR(&ctx->buffer_prototype);
+            ret = ctx->buffer_prototype;
             break;
 
         case OBJ_FUNCTION:
-            ret = TO_OBJPTR(&ctx->function_prototype);
+            ret = ctx->function_prototype;
             break;
 
-        case OBJ_OBJECT:
-            ret = OBJPTR(KOS_OBJECT, obj)->prototype;
+        case OBJ_IMMEDIATE:
+            if (obj_id == KOS_FALSE || obj_id == KOS_TRUE)
+                ret = ctx->boolean_prototype;
+            else {
+                assert(obj_id == KOS_VOID);
+                ret = ctx->void_prototype;
+            }
             break;
 
         default:
-            ret = TO_OBJPTR(&ctx->object_prototype);
+            ret = ctx->object_prototype;
             break;
     }
 
     return ret;
 }
 
-KOS_OBJ_PTR KOS_new_object_walk(KOS_STACK_FRAME           *frame,
-                                KOS_OBJ_PTR                obj,
-                                enum KOS_OBJECT_WALK_DEPTH deep)
+KOS_OBJ_ID KOS_new_object_walk(KOS_STACK_FRAME           *frame,
+                               KOS_OBJ_ID                 obj_id,
+                               enum KOS_OBJECT_WALK_DEPTH deep)
 {
-    KOS_ANY_OBJECT *walk = _KOS_alloc_object(frame, KOS_OBJECT_WALK);
+    KOS_OBJECT_WALK *walk = (KOS_OBJECT_WALK *)_KOS_alloc_object(frame, KOS_OBJECT_WALK);
 
-    if (obj) {
-        const int error = KOS_object_walk_init(frame, &walk->walk, obj, deep);
+    if (obj_id) {
+        const int error = KOS_object_walk_init(frame, walk, obj_id, deep);
 
         if (error) {
             assert(KOS_is_exception_pending(frame));
@@ -798,22 +792,22 @@ KOS_OBJ_PTR KOS_new_object_walk(KOS_STACK_FRAME           *frame,
         }
     }
 
-    return TO_OBJPTR(walk);
+    return OBJID(OBJECT_WALK, walk);
 }
 
 int KOS_object_walk_init(KOS_STACK_FRAME           *frame,
                          KOS_OBJECT_WALK           *walk,
-                         KOS_OBJ_PTR                obj,
+                         KOS_OBJ_ID                 obj_id,
                          enum KOS_OBJECT_WALK_DEPTH deep)
 {
-    int         error         = KOS_SUCCESS;
-    KOS_OBJ_PTR key_table_obj = KOS_new_object(frame);
+    int        error         = KOS_SUCCESS;
+    KOS_OBJ_ID key_table_obj = KOS_new_object(frame);
 
     if (IS_BAD_PTR(key_table_obj))
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     walk->type          = OBJ_OBJECT_WALK;
-    walk->obj           = obj;
+    walk->obj           = obj_id;
     walk->key_table_obj = key_table_obj;
     walk->key_table     = (void *)0;
     walk->index         = 0;
@@ -823,9 +817,9 @@ int KOS_object_walk_init(KOS_STACK_FRAME           *frame,
         KOS_PITEM *cur_item;
         KOS_PITEM *items_end;
 
-        KOS_OBJECT *props = _get_properties(obj);
+        KOS_OBJECT *props = _get_properties(obj_id);
 
-        obj = KOS_get_prototype(frame, obj);
+        obj_id = KOS_get_prototype(frame, obj_id);
 
         if ( ! props)
             continue;
@@ -839,8 +833,8 @@ int KOS_object_walk_init(KOS_STACK_FRAME           *frame,
         items_end = cur_item + prop_table->capacity;
 
         for ( ; cur_item < items_end; cur_item++) {
-            const KOS_OBJ_PTR key   = (KOS_OBJ_PTR)KOS_atomic_read_ptr(cur_item->key);
-            const KOS_OBJ_PTR value = (KOS_OBJ_PTR)KOS_atomic_read_ptr(cur_item->value);
+            const KOS_OBJ_ID key   = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->key);
+            const KOS_OBJ_ID value = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->value);
 
             if (IS_BAD_PTR(key) || value == TOMBSTONE)
                 continue;
@@ -848,7 +842,7 @@ int KOS_object_walk_init(KOS_STACK_FRAME           *frame,
             TRY(KOS_set_property(frame, key_table_obj, key, KOS_VOID));
         }
     }
-    while ( ! IS_BAD_PTR(obj) && deep);
+    while ( ! IS_BAD_PTR(obj_id) && deep);
 
     walk->key_table = (KOS_PBUF *)KOS_atomic_read_ptr(_get_properties(key_table_obj)->props);
 
@@ -859,7 +853,7 @@ _error:
 KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_STACK_FRAME *frame,
                                      KOS_OBJECT_WALK *walk)
 {
-    KOS_OBJECT_WALK_ELEM elem     = { TO_OBJPTR(0), TO_OBJPTR(0) };
+    KOS_OBJECT_WALK_ELEM elem     = { KOS_BADPTR, KOS_BADPTR };
     uint32_t             capacity = 0;
     KOS_PITEM           *table    = 0;
 
@@ -872,17 +866,17 @@ KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_STACK_FRAME *frame,
 
     for (;;) {
 
-        KOS_OBJ_PTR   key;
+        KOS_OBJ_ID    key;
         const int32_t index = KOS_atomic_add_i32(walk->index, 1);
 
         if ((uint32_t)index >= capacity)
             break;
 
-        key = (KOS_OBJ_PTR)KOS_atomic_read_ptr(table[index].key);
+        key = (KOS_OBJ_ID)KOS_atomic_read_ptr(table[index].key);
 
         if ( ! IS_BAD_PTR(key)) {
 
-            const KOS_OBJ_PTR value = KOS_get_property(frame, walk->obj, key);
+            const KOS_OBJ_ID value = KOS_get_property(frame, walk->obj, key);
 
             if (IS_BAD_PTR(value))
                 KOS_clear_exception(frame);

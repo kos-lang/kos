@@ -34,22 +34,22 @@ extern "C" {
 #endif
 
 int KOS_get_numeric_arg(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_PTR      args_obj,
+                        KOS_OBJ_ID       args_obj,
                         int              idx,
                         KOS_NUMERIC     *numeric);
 
 void KOS_print_exception(KOS_STACK_FRAME *frame);
 
 int KOS_object_to_string_or_cstr_vec(KOS_STACK_FRAME    *frame,
-                                     KOS_OBJ_PTR         obj,
-                                     KOS_OBJ_PTR        *str,
+                                     KOS_OBJ_ID          obj,
+                                     KOS_OBJ_ID         *str,
                                      struct _KOS_VECTOR *cstr_vec);
 
-KOS_OBJ_PTR KOS_object_to_string(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      obj);
+KOS_OBJ_ID KOS_object_to_string(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       obj);
 
 int KOS_print_to_cstr_vec(KOS_STACK_FRAME    *frame,
-                          KOS_OBJ_PTR         array,
+                          KOS_OBJ_ID          array,
                           struct _KOS_VECTOR *cstr_vec,
                           const char         *sep,
                           unsigned            sep_len);

@@ -27,6 +27,7 @@
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_object_internal.h"
+#include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_vm.h"
 #include <stdio.h>
@@ -88,16 +89,33 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     uint8_t            code[64]        = { 0 };
     uint32_t           parms[MAX_ARGS] = { 0 };
     struct _KOS_MODULE module;
-    KOS_STRING         strings[3];
+    KOS_STACK_FRAME   *frame           = &ctx->main_thread.frame;
+    const char        *cstrings[]      = { "aaa", "bbb", "ccc" };
+    KOS_OBJ_ID         strings;
     uint8_t            regs            = 0;
     unsigned           words           = 0;
     int                error           = KOS_SUCCESS;
     int                i;
-    KOS_OBJ_PTR        ret;
+    KOS_OBJ_ID         ret;
 
-    KOS_init_const_ascii_string(&strings[0], "aaa");
-    KOS_init_const_ascii_string(&strings[1], "bbb");
-    KOS_init_const_ascii_string(&strings[2], "ccc");
+    strings = KOS_new_array(frame, 3);
+    if (IS_BAD_PTR(strings)) {
+        printf("Failed: Unable to allocate strings!\n");
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    for (i = 0; i < 3; i++) {
+        KOS_OBJ_ID str = KOS_new_cstring(frame, cstrings[i]);
+        if (IS_BAD_PTR(str)) {
+            printf("Failed: Unable to allocate strings!\n");
+            return KOS_ERROR_EXCEPTION;
+        }
+        error = KOS_array_write(frame, strings, i, str);
+        if (error) {
+            printf("Failed: Unable to allocate strings!\n");
+            return error;
+        }
+    }
 
     for (i=0; i < MAX_ARGS; i++) {
 
@@ -179,8 +197,16 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 code[words++] = 0;
                 parms[i]      = regs++;
                 if (args[i].str) {
-                    strings[0].length   = (uint16_t)strlen(args[i].str);
-                    strings[0].data.ptr = args[i].str;
+                    KOS_OBJ_ID str = KOS_new_cstring(frame, args[i].str);
+                    if (IS_BAD_PTR(str)) {
+                        printf("Failed: Unable to allocate strings!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
+                    error = KOS_array_write(frame, strings, 0, str);
+                    if (error) {
+                        printf("Failed: Unable to allocate strings!\n");
+                        return error;
+                    }
                 }
                 break;
 
@@ -193,8 +219,16 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 code[words++] = 0;
                 parms[i]      = regs++;
                 if (args[i].str) {
-                    strings[1].length   = (uint16_t)strlen(args[i].str);
-                    strings[1].data.ptr = args[i].str;
+                    KOS_OBJ_ID str = KOS_new_cstring(frame, args[i].str);
+                    if (IS_BAD_PTR(str)) {
+                        printf("Failed: Unable to allocate strings!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
+                    error = KOS_array_write(frame, strings, 1, str);
+                    if (error) {
+                        printf("Failed: Unable to allocate strings!\n");
+                        return error;
+                    }
                 }
                 break;
 
@@ -207,8 +241,16 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 code[words++] = 0;
                 parms[i]      = regs++;
                 if (args[i].str) {
-                    strings[2].length   = (uint16_t)strlen(args[i].str);
-                    strings[2].data.ptr = args[i].str;
+                    KOS_OBJ_ID str = KOS_new_cstring(frame, args[i].str);
+                    if (IS_BAD_PTR(str)) {
+                        printf("Failed: Unable to allocate strings!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
+                    error = KOS_array_write(frame, strings, 2, str);
+                    if (error) {
+                        printf("Failed: Unable to allocate strings!\n");
+                        return error;
+                    }
                 }
                 break;
 
@@ -289,7 +331,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
 
     module.type          = OBJ_MODULE;
     module.context       = ctx;
-    module.strings       = &strings[0];
+    module.strings       = strings;
     module.bytecode      = &code[0];
     module.bytecode_size = words;
     module.instr_offs    = 0;
@@ -317,7 +359,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
         case V_VOID:
             if (IS_BAD_PTR(ret)   ||
                 IS_SMALL_INT(ret) ||
-                GET_OBJ_TYPE(ret) != OBJ_VOID) {
+                ret != KOS_VOID) {
 
                 printf("Failed: line %d: expected void\n", line);
                 error = KOS_ERROR_EXCEPTION;
@@ -325,9 +367,9 @@ static int _test_instr(KOS_CONTEXT         *ctx,
             break;
 
         case V_FALSE:
-            if (IS_BAD_PTR(ret)                  ||
-                IS_SMALL_INT(ret)                ||
-                GET_OBJ_TYPE(ret) != OBJ_BOOLEAN ||
+            if (IS_BAD_PTR(ret)                       ||
+                IS_SMALL_INT(ret)                     ||
+                (ret != KOS_FALSE && ret != KOS_TRUE) ||
                 KOS_get_bool(ret) != 0) {
 
                 printf("Failed: line %d: expected false\n", line);
@@ -336,9 +378,9 @@ static int _test_instr(KOS_CONTEXT         *ctx,
             break;
 
         case V_TRUE:
-            if (IS_BAD_PTR(ret)                  ||
-                IS_SMALL_INT(ret)                ||
-                GET_OBJ_TYPE(ret) != OBJ_BOOLEAN ||
+            if (IS_BAD_PTR(ret)                       ||
+                IS_SMALL_INT(ret)                     ||
+                (ret != KOS_FALSE && ret != KOS_TRUE) ||
                 KOS_get_bool(ret) == 0) {
 
                 printf("Failed: line %d: expected true\n", line);
@@ -347,7 +389,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
             break;
 
         case V_INTEGER:
-            if (IS_BAD_PTR(ret) || (!IS_SMALL_INT(ret) && GET_OBJ_TYPE(ret) != OBJ_INTEGER)) {
+            if (IS_BAD_PTR(ret) || (!IS_SMALL_INT(ret) && GET_NUMERIC_TYPE(ret) != OBJ_NUM_INTEGER)) {
                 printf("Failed: line %d: expected integer\n", line);
                 error = KOS_ERROR_EXCEPTION;
             }
@@ -356,7 +398,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 if (IS_SMALL_INT(ret))
                     value = GET_SMALL_INT(ret);
                 else
-                    value = OBJPTR(KOS_INTEGER, ret)->number;
+                    value = *OBJPTR(INTEGER, ret);
                 if ((uint32_t)(value >> 32) != ret_val->high ||
                     (uint32_t)value         != ret_val->low) {
 
@@ -371,13 +413,13 @@ static int _test_instr(KOS_CONTEXT         *ctx,
         case V_FLOAT:
             if (IS_BAD_PTR(ret)   ||
                 IS_SMALL_INT(ret) ||
-                GET_OBJ_TYPE(ret) != OBJ_FLOAT) {
+                GET_NUMERIC_TYPE(ret) != OBJ_NUM_FLOAT) {
 
                 printf("Failed: line %d: expected float\n", line);
                 error = KOS_ERROR_EXCEPTION;
             }
             else {
-                uint64_t value = _KOS_double_to_uint64_t(OBJPTR(KOS_FLOAT, ret)->number);
+                uint64_t value = _KOS_double_to_uint64_t(*OBJPTR(FLOAT, ret));
                 if ((uint32_t)(value >> 32) != ret_val->high ||
                     (uint32_t)value         != ret_val->low) {
 
@@ -393,25 +435,41 @@ static int _test_instr(KOS_CONTEXT         *ctx,
         case V_STR1:
         case V_STR2:
             if (IS_BAD_PTR(ret) ||
-                !IS_STRING_OBJ(ret)) {
+                GET_OBJ_TYPE(ret) != OBJ_STRING) {
 
                 printf("Failed: line %d: expected string\n", line);
                 error = KOS_ERROR_EXCEPTION;
             }
             else {
-                int idx;
+                KOS_OBJ_ID expected;
+                int        idx;
                 if (ret_val->value == V_STR0)
                     idx = 0;
                 else if (ret_val->value == V_STR1)
                     idx = 1;
                 else
                     idx = 2;
-                if (ret_val->str) {
-                    strings[idx].length   = (uint16_t)strlen(ret_val->str);
-                    strings[idx].data.ptr = ret_val->str;
+                if (ret_val->str)
+                    expected = KOS_new_cstring(frame, ret_val->str);
+                else
+                    expected = KOS_array_read(frame, strings, idx);
+                if (IS_BAD_PTR(expected)) {
+                    printf("Failed: Unable to allocate strings\n");
+                    error = KOS_ERROR_EXCEPTION;
                 }
-                if (KOS_string_compare(ret, TO_OBJPTR(&strings[idx]))) {
-                    printf("Failed: line %d: expected string \"%s\"\n", line, (const char *)strings[idx].data.ptr);
+                if ( ! error && KOS_string_compare(ret, expected)) {
+                    struct _KOS_VECTOR cstr;
+
+                    _KOS_vector_init(&cstr);
+                    KOS_clear_exception(frame);
+
+                    error = KOS_string_to_cstr_vec(frame, expected, &cstr);
+                    if (error)
+                        printf("Failed: line %d: expected string ?\n", line);
+                    else
+                        printf("Failed: line %d: expected string \"%s\"\n", line, cstr.buffer);
+
+                    _KOS_vector_destroy(&cstr);
                     error = KOS_ERROR_EXCEPTION;
                 }
             }
@@ -1301,26 +1359,26 @@ int main(void)
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_VOID                            } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_INT32, 0                        } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_FLOAT, 0,           0           } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FALSE                           }, { V_STR0,  0, 0,        ""          } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FALSE                           }, { V_ARRAY, 0                        } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_STR0,  0, 0,        ""          } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_ARRAY, 0                        } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_FLOAT, ~0U,         ~0U         } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_INT32, 1                        } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_INT32, 2                        } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_FLOAT, 0,           0x3FF00000U } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_TRUE                            }, { V_STR0,  0, 0,        "0"         } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_TRUE                            }, { V_ARRAY, 1                        } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_STR0,  0, 0,        "0"         } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_ARRAY, 1                        } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_OBJECT                          } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_INT32, 0                        }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_INT32, 0                        }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FLOAT, 0,           0           }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FLOAT, 0,           0           }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_STR0,  0, 0,        ""          }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_STR0,  0, 0,        ""          }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_STR1,  0, 0,        "0"         }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_STR1,  0, 0,        "0"         }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_ARRAY, 0                        }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_ARRAY, 1                        }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_ARRAY, 0                        }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_STR1,  0, 0,        "0"         }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_STR1,  0, 0,        "0"         }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_ARRAY, 0                        }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_ARRAY, 1                        }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_ARRAY, 0                        }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_OBJECT                          }, { V_TRUE                            } } END
 
     /*========================================================================*/
@@ -1349,26 +1407,26 @@ int main(void)
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_VOID                            } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_INT32, 0                        } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_FLOAT, 0,           0           } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FALSE                           }, { V_STR0,  0, 0,        ""          } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FALSE                           }, { V_ARRAY, 0                        } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_STR0,  0, 0,        ""          } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_ARRAY, 0                        } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_FLOAT, ~0U,         ~0U         } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_INT32, 1                        } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_INT32, 2                        } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_FLOAT, 0,           0x3FF00000U } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_TRUE                            }, { V_STR0,  0, 0,        "0"         } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_TRUE                            }, { V_ARRAY, 1                        } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_STR0,  0, 0,        "0"         } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_ARRAY, 1                        } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_OBJECT                          } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_INT32, 0                        }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_INT32, 0                        }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FLOAT, 0,           0           }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FLOAT, 0,           0           }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_STR0,  0, 0,        ""          }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_STR0,  0, 0,        ""          }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_STR1,  0, 0,        "0"         }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_STR1,  0, 0,        "0"         }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_ARRAY, 0                        }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_ARRAY, 1                        }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_ARRAY, 0                        }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR1,  0, 0,        "0"         }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR1,  0, 0,        "0"         }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_ARRAY, 0                        }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_ARRAY, 1                        }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_ARRAY, 0                        }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_OBJECT                          }, { V_TRUE                            } } END
 
 

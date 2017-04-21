@@ -33,8 +33,8 @@
 
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
-    KOS_OBJ_PTR          object;
-    KOS_OBJ_PTR         *prop_names;
+    KOS_OBJ_ID           object;
+    KOS_OBJ_ID          *prop_names;
     size_t               num_props;
     size_t               num_loops;
     KOS_ATOMIC(uint32_t) go;
@@ -54,8 +54,8 @@ static int _write_props_inner(KOS_STACK_FRAME  *frame,
     unsigned n = (unsigned)rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
-        KOS_OBJ_PTR key   = test->prop_names[n % test->num_props];
-        KOS_OBJ_PTR value = TO_SMALL_INT((int)((n % 32) - 16));
+        KOS_OBJ_ID key   = test->prop_names[n % test->num_props];
+        KOS_OBJ_ID value = TO_SMALL_INT((int)((n % 32) - 16));
         if (!((n & 0xF00U)))
             TEST(KOS_delete_property(frame, test->object, key) == KOS_SUCCESS);
         else
@@ -86,8 +86,8 @@ static int _read_props_inner(KOS_STACK_FRAME  *frame,
     unsigned n = (unsigned)rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
-        KOS_OBJ_PTR key   = test->prop_names[n % test->num_props];
-        KOS_OBJ_PTR value = KOS_get_property(frame, test->object, key);
+        KOS_OBJ_ID key   = test->prop_names[n % test->num_props];
+        KOS_OBJ_ID value = KOS_get_property(frame, test->object, key);
         if (IS_BAD_PTR(value))
             TEST_EXCEPTION();
         else {
@@ -126,13 +126,13 @@ int main(void)
         struct _KOS_VECTOR  mem_buf;
         _KOS_THREAD        *threads     = 0;
         int                 num_threads = 0;
-        KOS_OBJ_PTR         o           = KOS_new_object(frame);
+        KOS_OBJ_ID          o           = KOS_new_object(frame);
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
         int                 i;
 
         /* These strings cause lots of collisions in the hash table */
-        KOS_OBJ_PTR props[4];
+        KOS_OBJ_ID props[4];
         props[0] = KOS_new_const_ascii_string(frame, "\x00", 1);
         props[1] = KOS_new_const_ascii_string(frame, "\x80", 1);
         props[2] = KOS_new_const_ascii_string(frame, "\x01", 1);
@@ -183,7 +183,7 @@ int main(void)
         TEST(data.error == KOS_SUCCESS);
 
         for (i = 0; i < (int)(sizeof(props)/sizeof(props[0])); i++) {
-            KOS_OBJ_PTR value = KOS_get_property(frame, o, props[i]);
+            KOS_OBJ_ID value = KOS_get_property(frame, o, props[i]);
             if (IS_BAD_PTR(value)) {
                 TEST(KOS_is_exception_pending(frame));
                 KOS_clear_exception(frame);

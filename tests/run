@@ -116,7 +116,7 @@ if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
 fi
 
 if [ "$UNAME" = "Darwin" -o "$UNAME" = "Linux" ]; then
-    if [ -a "$1" != "nosan" ]; then
+    if [ "$1" != "nosan" ]; then
         export SANITIZER="address"
         JOBS=$(($JOBS / 2))
         [[ $JOBS = 0 ]] && JOBS=1

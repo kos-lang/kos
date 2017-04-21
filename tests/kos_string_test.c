@@ -69,65 +69,65 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_cstring(frame, "");
+        const KOS_OBJ_ID s = KOS_new_cstring(frame, "");
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_cstring(frame, 0);
+        const KOS_OBJ_ID s = KOS_new_cstring(frame, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_string(frame, 0, 0);
+        const KOS_OBJ_ID s = KOS_new_string(frame, 0, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_string(frame, "\0", 1);
+        const KOS_OBJ_ID s = KOS_new_string(frame, "\0", 1);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_string(frame, "\x01", 1);
+        const KOS_OBJ_ID s = KOS_new_string(frame, "\x01", 1);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 1);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_cstring(frame, "\t\n\r 09AZaz~\x7F");
+        const KOS_OBJ_ID s = KOS_new_cstring(frame, "\t\n\r 09AZaz~\x7F");
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 12);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 12);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s,  0) ==   9);
         TEST(KOS_string_get_char_code(frame, s,  1) ==  10);
         TEST(KOS_string_get_char_code(frame, s,  2) ==  13);
@@ -154,12 +154,12 @@ int main(void)
             '\xF0', '\x80', '\x80', '\x80',    /* u0000 */
             '\xF0', '\x80', '\x81', '\xBF'     /* u007F */
         };
-        const KOS_OBJ_PTR s = KOS_new_string(frame, src, sizeof(src));
+        const KOS_OBJ_ID s = KOS_new_string(frame, src, sizeof(src));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 8);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 8);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s,  0) == 0x0000);
         TEST(KOS_string_get_char_code(frame, s,  1) == 0x007F);
         TEST(KOS_string_get_char_code(frame, s,  2) == 0x0000);
@@ -189,12 +189,12 @@ int main(void)
             '\xF0', '\x80', '\x81', '\xBF',  /* u007F */
             '\xF0', '\x8F', '\xBF', '\xBF'   /* uFFFF */
         };
-        const KOS_OBJ_PTR s = KOS_new_string(frame, src, sizeof(src));
+        const KOS_OBJ_ID s = KOS_new_string(frame, src, sizeof(src));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_16);
-        TEST(KOS_get_string_length(s)    == 15);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_16);
+        TEST(KOS_get_string_length(s)     == 15);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s,  0) == 0x0000);
         TEST(KOS_string_get_char_code(frame, s,  1) == 0x007F);
         TEST(KOS_string_get_char_code(frame, s,  2) == 0x0000);
@@ -234,12 +234,12 @@ int main(void)
             '\xF0', '\xBF', '\xBF', '\xBF',  /* u03FFFF */
             '\xF7', '\xBF', '\xBF', '\xBF'   /* u1FFFFF */
         };
-        const KOS_OBJ_PTR s = KOS_new_string(frame, src, sizeof(src));
+        const KOS_OBJ_ID s = KOS_new_string(frame, src, sizeof(src));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_32);
-        TEST(KOS_get_string_length(s)    == 18);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(s)     == 18);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s,  0) == 0x000000);
         TEST(KOS_string_get_char_code(frame, s,  1) == 0x00007F);
         TEST(KOS_string_get_char_code(frame, s,  2) == 0x000000);
@@ -265,7 +265,7 @@ int main(void)
         const char src[] = { '\xC0', '\x80', '\xC2', '\x80' };
         char buf[4] = { '\xFF', '\xFF', '\xFF', '\xFF' };
 
-        const KOS_OBJ_PTR s = KOS_new_string(frame, src, sizeof(src));
+        const KOS_OBJ_ID s = KOS_new_string(frame, src, sizeof(src));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(KOS_string_to_utf8(s, 0,   0) == 3);
@@ -327,33 +327,33 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_const_ascii_cstring(frame, "");
+        const KOS_OBJ_ID s = KOS_new_const_ascii_cstring(frame, "");
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_const_ascii_cstring(frame, 0);
+        const KOS_OBJ_ID s = KOS_new_const_ascii_cstring(frame, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_const_ascii_cstring(frame, "\x01~\x7F\x80\xFF");
+        const KOS_OBJ_ID s = KOS_new_const_ascii_cstring(frame, "\x01~\x7F\x80\xFF");
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 5);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 5);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0x01);
         TEST(KOS_string_get_char_code(frame, s, 1) == 0x7E);
         TEST(KOS_string_get_char_code(frame, s, 2) == 0x7F);
@@ -363,58 +363,58 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_const_ascii_string(frame, 0, 0);
+        const KOS_OBJ_ID s = KOS_new_const_ascii_string(frame, 0, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, 0, 0, OBJ_STRING_8);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, 0, 0, KOS_STRING_ELEM_8);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, 0, 0, OBJ_STRING_16);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, 0, 0, KOS_STRING_ELEM_16);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        /* OBJ_STRING_8 is just because of the implementation,
+        /* KOS_STRING_ELEM_8 is just because of the implementation,
            it could be something else. */
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, 0, 0, OBJ_STRING_32);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, 0, 0, KOS_STRING_ELEM_32);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        /* OBJ_STRING_8 is just because of the implementation,
+        /* KOS_STRING_ELEM_8 is just because of the implementation,
            it could be something else. */
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
         const uint16_t src[] = { 0x00U, 0x7FU };
 
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src)/2, OBJ_STRING_16);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src)/2, KOS_STRING_ELEM_16);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_16);
-        TEST(KOS_get_string_length(s)    == 2);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_16);
+        TEST(KOS_get_string_length(s)     == 2);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0x0000);
         TEST(KOS_string_get_char_code(frame, s, 1) == 0x007F);
     }
@@ -423,12 +423,12 @@ int main(void)
     {
         const uint16_t src[] = { 0x0000, 0x0100, 0x1000, 0x7FFF, 0x8000, 0xFFFF };
 
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src)/2, OBJ_STRING_16);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src)/2, KOS_STRING_ELEM_16);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_16);
-        TEST(KOS_get_string_length(s)    == 6);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_16);
+        TEST(KOS_get_string_length(s)     == 6);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0x0000);
         TEST(KOS_string_get_char_code(frame, s, 1) == 0x0100);
         TEST(KOS_string_get_char_code(frame, s, 2) == 0x1000);
@@ -441,12 +441,12 @@ int main(void)
     {
         const uint32_t src[] = { 0x00U, 0x7FU };
 
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src)/4, OBJ_STRING_32);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src)/4, KOS_STRING_ELEM_32);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_32);
-        TEST(KOS_get_string_length(s)    == 2);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(s)     == 2);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0x0000);
         TEST(KOS_string_get_char_code(frame, s, 1) == 0x007F);
     }
@@ -455,12 +455,12 @@ int main(void)
     {
         const uint32_t src[] = { 0x00000000U, 0x00010000U, 0x7FFFFFFFU, 0x80000000U, 0xFFFFFFFFU};
 
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src)/4, OBJ_STRING_32);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src)/4, KOS_STRING_ELEM_32);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_32);
-        TEST(KOS_get_string_length(s)    == 5);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(s)     == 5);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0x00000000U);
         TEST(KOS_string_get_char_code(frame, s, 1) == 0x00010000U);
         TEST(KOS_string_get_char_code(frame, s, 2) == 0x7FFFFFFFU);
@@ -473,7 +473,7 @@ int main(void)
         const char src[] = { '\x00', '\x40', '\x7F' };
         char buf[4] = { '\xFF', '\xFF', '\xFF', '\xFF' };
 
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src), OBJ_STRING_8);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src), KOS_STRING_ELEM_8);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(KOS_string_to_utf8(s, 0,   0) == 3);
@@ -489,7 +489,7 @@ int main(void)
         const char src[] = { '\x80', '\xFF' };
         char buf[5] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF' };
 
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src), OBJ_STRING_8);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src), KOS_STRING_ELEM_8);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(KOS_string_to_utf8(s, 0,   0) == 4);
@@ -507,7 +507,7 @@ int main(void)
         char buf[13] = { '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF',
                          '\xFF', '\xFF', '\xFF', '\xFF', '\xFF' };
 
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src)/2, OBJ_STRING_16);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src)/2, KOS_STRING_ELEM_16);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(KOS_string_to_utf8(s, 0,    0) == 12);
@@ -535,7 +535,7 @@ int main(void)
                          '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF', '\xFF',
                          '\xFF', '\xFF', '\xFF', '\xFF', '\xFF' };
 
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src)/4, OBJ_STRING_32);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src)/4, KOS_STRING_ELEM_32);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(KOS_string_to_utf8(s, 0,    0) == 20);
@@ -567,7 +567,7 @@ int main(void)
     {
         const uint32_t src[] = { 0x00200000U };
         char buf[4] = { '\xFF', '\xFF', '\xFF', '\xFF' };
-        const KOS_OBJ_PTR s = KOS_new_const_string(frame, src, sizeof(src)/4, OBJ_STRING_32);
+        const KOS_OBJ_ID s = KOS_new_const_string(frame, src, sizeof(src)/4, KOS_STRING_ELEM_32);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(KOS_string_to_utf8(s, 0, 0) == ~0U);
@@ -581,46 +581,46 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR s = KOS_string_add_many(frame, 0, 0);
+        const KOS_OBJ_ID s = KOS_string_add_many(frame, 0, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_PTR) src[1];
-        KOS_OBJ_PTR             s;
+        KOS_ATOMIC(KOS_OBJ_ID) src[1];
+        KOS_OBJ_ID             s;
         src[0] = KOS_new_const_ascii_cstring(frame, "");
         s      = KOS_string_add_many(frame, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_PTR) src[3];
-        KOS_OBJ_PTR             s;
+        KOS_ATOMIC(KOS_OBJ_ID) src[3];
+        KOS_OBJ_ID             s;
         src[0] = KOS_new_const_ascii_cstring(frame, "");
         src[1] = KOS_new_const_ascii_cstring(frame, "");
         src[2] = KOS_new_const_ascii_cstring(frame, "");
         s      = KOS_string_add_many(frame, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_PTR) src[1];
-        KOS_OBJ_PTR             s;
+        KOS_ATOMIC(KOS_OBJ_ID) src[1];
+        KOS_OBJ_ID             s;
         src[0] = KOS_new_cstring(frame, "abc\xDF\xBF");
         s      = KOS_string_add_many(frame, src, sizeof(src)/sizeof(src[0]));
         TEST(s == src[0]);
@@ -628,8 +628,8 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_PTR) src[1];
-        KOS_OBJ_PTR             s;
+        KOS_ATOMIC(KOS_OBJ_ID) src[1];
+        KOS_OBJ_ID             s;
         src[0] = KOS_new_cstring(frame, "this is a very long 32-bit string \xF7\xBF\xBF\xBF");
         s      = KOS_string_add_many(frame, src, sizeof(src)/sizeof(src[0]));
         TEST(s == src[0]);
@@ -637,33 +637,33 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_PTR) src[3];
-        KOS_OBJ_PTR             s;
+        KOS_ATOMIC(KOS_OBJ_ID) src[3];
+        KOS_OBJ_ID             s;
         src[0] = KOS_new_const_ascii_cstring(frame, "one ");
         src[1] = KOS_new_const_ascii_cstring(frame, "two ");
         src[2] = KOS_new_const_ascii_cstring(frame, "three");
         s      = KOS_string_add_many(frame, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 13);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
-        TEST(memcmp(_KOS_get_string_buffer(OBJPTR(KOS_STRING, s)), "one two three", 13) == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 13);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
+        TEST(memcmp(_KOS_get_string_buffer(OBJPTR(STRING, s)), "one two three", 13) == 0);
     }
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_PTR) src[3];
-        KOS_OBJ_PTR             s;
+        KOS_ATOMIC(KOS_OBJ_ID) src[3];
+        KOS_OBJ_ID             s;
         src[0] = KOS_new_const_ascii_cstring(frame, "a");
         src[1] = KOS_new_cstring(frame, "\xDF\xBF");
         src[2] = KOS_new_const_ascii_cstring(frame, "b");
         s      = KOS_string_add_many(frame, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_16);
-        TEST(KOS_get_string_length(s)    == 3);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_16);
+        TEST(KOS_get_string_length(s)     == 3);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'a');
         TEST(KOS_string_get_char_code(frame, s, 1) == 0x7FFU);
         TEST(KOS_string_get_char_code(frame, s, 2) == 'b');
@@ -671,8 +671,8 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_PTR) src[5];
-        KOS_OBJ_PTR             s;
+        KOS_ATOMIC(KOS_OBJ_ID) src[5];
+        KOS_OBJ_ID             s;
         src[0] = KOS_new_const_ascii_cstring(frame, "abcdefghijklmnopqrstuvwxyz");
         src[1] = KOS_new_cstring(frame, "\xC4\x80");
         src[2] = KOS_new_cstring(frame, "\xF0\x90\x80\x82");
@@ -681,9 +681,9 @@ int main(void)
         s      = KOS_string_add_many(frame, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_32);
-        TEST(KOS_get_string_length(s)    == 29);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(s)     == 29);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s,  0) == 'a');
         TEST(KOS_string_get_char_code(frame, s,  1) == 'b');
         TEST(KOS_string_get_char_code(frame, s, 25) == 'z');
@@ -694,16 +694,16 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src[2];
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src[2];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(frame, "abc");
         src[1] = KOS_new_const_ascii_cstring(frame, "def");
         s      = KOS_string_add(frame, src[0], src[1]);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 6);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 6);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'a');
         TEST(KOS_string_get_char_code(frame, s, 1) == 'b');
         TEST(KOS_string_get_char_code(frame, s, 2) == 'c');
@@ -714,15 +714,15 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_const_ascii_cstring(frame, "abcdef");
         s   = KOS_string_slice(frame, src, 1, -1);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 4);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 4);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'b');
         TEST(KOS_string_get_char_code(frame, s, 1) == 'c');
         TEST(KOS_string_get_char_code(frame, s, 2) == 'd');
@@ -731,30 +731,30 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_cstring(frame, "abcdef\xC4\x80");
         s   = KOS_string_slice(frame, src, -3, -1);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_16);
-        TEST(KOS_get_string_length(s)    == 2);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_16);
+        TEST(KOS_get_string_length(s)     == 2);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'e');
         TEST(KOS_string_get_char_code(frame, s, 1) == 'f');
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_cstring(frame, "\xF0\x90\x80\x80@#$");
         s   = KOS_string_slice(frame, src, -1000, 1000);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_32);
-        TEST(KOS_get_string_length(s)    == 4);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(s)     == 4);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0x10000U);
         TEST(KOS_string_get_char_code(frame, s, 1) == '@');
         TEST(KOS_string_get_char_code(frame, s, 2) == '#');
@@ -763,96 +763,96 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_cstring(frame, "\xF0\x90\x80\x81@#$");
         s   = KOS_string_slice(frame, src, 1000, -1000);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        /* OBJ_STRING_8 is just because of the implementation,
+        /* KOS_STRING_ELEM_8 is just because of the implementation,
            it could be something else. */
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_cstring(frame, "a");
         s   = KOS_string_slice(frame, src, 0, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        /* OBJ_STRING_8 is just because of the implementation,
+        /* KOS_STRING_ELEM_8 is just because of the implementation,
            it could be something else. */
-        TEST(OBJPTR(KOS_STRING, s)->type   == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)      == 0);
-        TEST(OBJPTR(KOS_STRING, s)->hash   == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 0);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_cstring(frame, "abc\xC4\x81$de");
         s   = KOS_string_get_char(frame, src, -4);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_16);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_16);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0x101);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_cstring(frame, "abcd");
         s   = KOS_string_get_char(frame, src, 2);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'c');
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_cstring(frame, "\xF0\x90\x80\x82@#$");
         s   = KOS_string_get_char(frame, src, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_32);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 0x10002U);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR src;
-        KOS_OBJ_PTR s;
+        KOS_OBJ_ID src;
+        KOS_OBJ_ID s;
         src = KOS_new_const_ascii_cstring(frame, "xyz");
 
         s = KOS_string_get_char(frame, src, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'x');
 
         s = KOS_string_get_char(frame, src, 2);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'z');
 
         TEST(IS_BAD_PTR(KOS_string_get_char(frame, src, 3)));
@@ -861,17 +861,17 @@ int main(void)
         s = KOS_string_get_char(frame, src, -1);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'z');
 
         s = KOS_string_get_char(frame, src, -3);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(OBJPTR(KOS_STRING, s)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(s)    == 1);
-        TEST(OBJPTR(KOS_STRING, s)->hash == 0);
+        TEST(OBJPTR(STRING, s)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(s)     == 1);
+        TEST(OBJPTR(STRING, s)->hash      == 0);
         TEST(KOS_string_get_char_code(frame, s, 0) == 'x');
 
         TEST(IS_BAD_PTR(KOS_string_get_char(frame, src, -4)));
@@ -893,36 +893,36 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_const_ascii_cstring(frame, "");
-        KOS_OBJ_PTR s2 = KOS_new_const_ascii_cstring(frame, "");
+        KOS_OBJ_ID s1 = KOS_new_const_ascii_cstring(frame, "");
+        KOS_OBJ_ID s2 = KOS_new_const_ascii_cstring(frame, "");
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_const_ascii_cstring(frame, "0123456701234567xyz");
-        KOS_OBJ_PTR s2 = KOS_new_const_ascii_cstring(frame, "0123456701234567abcd");
+        KOS_OBJ_ID s1 = KOS_new_const_ascii_cstring(frame, "0123456701234567xyz");
+        KOS_OBJ_ID s2 = KOS_new_const_ascii_cstring(frame, "0123456701234567abcd");
         TEST(KOS_string_compare(s1, s2) > 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_const_ascii_cstring(frame, "0123456701234567A");
-        KOS_OBJ_PTR s2 = KOS_new_const_ascii_cstring(frame, "0123456701234567abcd");
+        KOS_OBJ_ID s1 = KOS_new_const_ascii_cstring(frame, "0123456701234567A");
+        KOS_OBJ_ID s2 = KOS_new_const_ascii_cstring(frame, "0123456701234567abcd");
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_const_ascii_cstring(frame, "0123456701234567a");
-        KOS_OBJ_PTR s2 = KOS_new_const_ascii_cstring(frame, "0123456701234567a");
+        KOS_OBJ_ID s1 = KOS_new_const_ascii_cstring(frame, "0123456701234567a");
+        KOS_OBJ_ID s2 = KOS_new_const_ascii_cstring(frame, "0123456701234567a");
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_cstring(frame, "\xF0\x80\x81\x81");
-        KOS_OBJ_PTR s2 = KOS_new_cstring(frame, "A");
+        KOS_OBJ_ID s1 = KOS_new_cstring(frame, "\xF0\x80\x81\x81");
+        KOS_OBJ_ID s2 = KOS_new_cstring(frame, "A");
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
@@ -930,8 +930,8 @@ int main(void)
     {
         const uint16_t src1[] = { 4,4,0xFFFFU,4, 0x8000U, 1 };
         const uint16_t src2[] = { 4,4,0xFFFFU,4, 0x8000U, 1 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_16);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_16);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_16);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_16);
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
@@ -939,8 +939,8 @@ int main(void)
     {
         const uint16_t src1[] = { 4,0xFFFFU,4,4, 0x8001U, 2 };
         const uint16_t src2[] = { 4,0xFFFFU,4,4, 0x8001U, 1 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_16);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_16);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_16);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_16);
         TEST(KOS_string_compare(s1, s2) > 0);
     }
 
@@ -948,8 +948,8 @@ int main(void)
     {
         const uint16_t src1[] = { 4,4,0xFFFFU,4, 0xFFFFU, 2 };
         const uint16_t src2[] = { 4,4,0xFFFFU,4, 0xFFFFU, 2, 0 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_16);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_16);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_16);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_16);
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
@@ -957,8 +957,8 @@ int main(void)
     {
         const uint32_t src1[] = { ~1U,~2U, 0x80000000U, 10 };
         const uint32_t src2[] = { ~1U,~2U, 0x80000000U, 10 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_32);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_32);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
@@ -966,8 +966,8 @@ int main(void)
     {
         const uint32_t src1[] = { ~1U,~2U, 0x80000001U, 101 };
         const uint32_t src2[] = { ~1U,~2U, 0x80000001U, 100 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_32);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_32);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) > 0);
     }
 
@@ -975,8 +975,8 @@ int main(void)
     {
         const uint32_t src1[] = { ~1U,~2U, ~0U, 66 };
         const uint32_t src2[] = { ~1U,~2U, ~0U, 66, 0 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_32);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_32);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
@@ -984,8 +984,8 @@ int main(void)
     {
         const uint32_t src1[] = { 1, 2, 3, 4, 5 };
         const uint16_t src2[] = { 1, 2, 3, 4, 5 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_32);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_16);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_32);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_16);
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
@@ -993,8 +993,8 @@ int main(void)
     {
         const uint32_t src1[] = { 1, 2, 3, 4, 5 };
         const uint16_t src2[] = { 1, 2, 3, 6, 5 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_32);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_16);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_32);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_16);
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
@@ -1002,8 +1002,8 @@ int main(void)
     {
         const uint16_t src1[] = { 1, 2, 3, 4, 5 };
         const uint32_t src2[] = { 1, 2, 3 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_16);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_16);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) > 0);
     }
 
@@ -1011,8 +1011,8 @@ int main(void)
     {
         const uint32_t src1[] = { 6, 2, 3, 4, 5 };
         const uint8_t  src2[] = { 6, 2, 3, 4, 5 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_32);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_8);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_32);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_8);
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
@@ -1020,8 +1020,8 @@ int main(void)
     {
         const uint8_t  src1[] = { 6, 2, 3, 4, 5 };
         const uint32_t src2[] = { 6, 2, 8, 4, 5 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_8);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_8);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
@@ -1029,8 +1029,8 @@ int main(void)
     {
         const uint8_t  src1[] = { 6, 2, 3 };
         const uint32_t src2[] = { 6, 2, 3, 4, 5 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_8);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_8);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
@@ -1038,8 +1038,8 @@ int main(void)
     {
         const uint8_t  src1[] = { 6, 2, 3, 4, 5 };
         const uint16_t src2[] = { 6, 2, 3, 4, 5 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_8);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_16);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_8);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_16);
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
@@ -1047,8 +1047,8 @@ int main(void)
     {
         const uint16_t src1[] = { 6, 2, 3, 4 };
         const uint8_t  src2[] = { 6, 2, 3, 4, 5 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_16);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_8);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_16);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_8);
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
@@ -1056,8 +1056,8 @@ int main(void)
     {
         const uint16_t src1[] = { 6, 2, 3, 4, 7 };
         const uint8_t  src2[] = { 6, 2, 3, 4, 5 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_16);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_8);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_16);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_8);
         TEST(KOS_string_compare(s1, s2) > 0);
     }
 
@@ -1065,8 +1065,8 @@ int main(void)
     {
         const uint8_t  src1[] = { 10, 11, 12, 13 };
         const uint32_t src2[] = { 10, 11, 12 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_8);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_8);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) > 0);
     }
 
@@ -1074,8 +1074,8 @@ int main(void)
     {
         const uint8_t  src1[] = { 10, 11, 12, 13 };
         const uint32_t src2[] = { 10, 11, 12, 14 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_8);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_8);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
@@ -1083,42 +1083,42 @@ int main(void)
     {
         const uint8_t  src1[] = { 10, 11, 12, 100 };
         const uint32_t src2[] = { 10, 11, 12, 100 };
-        KOS_OBJ_PTR s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_8);
-        KOS_OBJ_PTR s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_32);
+        KOS_OBJ_ID s1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_8);
+        KOS_OBJ_ID s2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_32);
         TEST(KOS_string_compare(s1, s2) == 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_cstring(frame, "xyabc");
-        KOS_OBJ_PTR s2 = KOS_new_cstring(frame, "xyąbc");
+        KOS_OBJ_ID s1 = KOS_new_cstring(frame, "xyabc");
+        KOS_OBJ_ID s2 = KOS_new_cstring(frame, "xyąbc");
         TEST(KOS_string_compare(s1, s2) < 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_cstring(frame, "xyąbc");
-        KOS_OBJ_PTR s2 = KOS_new_cstring(frame, "xybbc");
+        KOS_OBJ_ID s1 = KOS_new_cstring(frame, "xyąbc");
+        KOS_OBJ_ID s2 = KOS_new_cstring(frame, "xybbc");
         TEST(KOS_string_compare(s1, s2) != 0); /* No consistent ordering with wcscoll */
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_cstring(frame, "000abcdefghijklmnopqrstuvwxyz");
-        KOS_OBJ_PTR s2 = KOS_string_slice(frame, s1, 3, 28);
-        KOS_OBJ_PTR s3 = KOS_string_slice(frame, s1, 3, 29);
+        KOS_OBJ_ID s1 = KOS_new_cstring(frame, "000abcdefghijklmnopqrstuvwxyz");
+        KOS_OBJ_ID s2 = KOS_string_slice(frame, s1, 3, 28);
+        KOS_OBJ_ID s3 = KOS_string_slice(frame, s1, 3, 29);
         TEST(KOS_string_compare(s2, s3) < 0);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR s1 = KOS_new_const_ascii_cstring(frame, "");
-        KOS_OBJ_PTR s2 = KOS_new_const_ascii_cstring(frame, "abc");
-        KOS_OBJ_PTR s3 = KOS_new_const_ascii_cstring(frame, "acb");
-        KOS_OBJ_PTR s4 = KOS_new_const_ascii_cstring(frame, "abcd");
-        KOS_OBJ_PTR s5 = KOS_new_const_ascii_cstring(frame, "abd");
-        KOS_OBJ_PTR s6 = KOS_new_const_ascii_cstring(frame, "acd");
-        KOS_OBJ_PTR s7 = KOS_new_const_ascii_cstring(frame, "cba");
+        KOS_OBJ_ID s1 = KOS_new_const_ascii_cstring(frame, "");
+        KOS_OBJ_ID s2 = KOS_new_const_ascii_cstring(frame, "abc");
+        KOS_OBJ_ID s3 = KOS_new_const_ascii_cstring(frame, "acb");
+        KOS_OBJ_ID s4 = KOS_new_const_ascii_cstring(frame, "abcd");
+        KOS_OBJ_ID s5 = KOS_new_const_ascii_cstring(frame, "abd");
+        KOS_OBJ_ID s6 = KOS_new_const_ascii_cstring(frame, "acd");
+        KOS_OBJ_ID s7 = KOS_new_const_ascii_cstring(frame, "cba");
         const uint32_t h1 = KOS_string_get_hash(s1);
         const uint32_t h2 = KOS_string_get_hash(s2);
         const uint32_t h3 = KOS_string_get_hash(s3);
@@ -1162,23 +1162,23 @@ int main(void)
         uint16_t src2[] = { 1, 100, 200 };
         uint32_t src3[] = { 1, 100, 200 };
 
-        KOS_OBJ_PTR str1;
-        KOS_OBJ_PTR str2;
-        KOS_OBJ_PTR str3;
+        KOS_OBJ_ID str1;
+        KOS_OBJ_ID str2;
+        KOS_OBJ_ID str3;
 
         uint32_t hash1;
         uint32_t hash2;
         uint32_t hash3;
 
-        str1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), OBJ_STRING_8);
+        str1 = KOS_new_const_string(frame, src1, sizeof(src1)/sizeof(src1[0]), KOS_STRING_ELEM_8);
         TEST( ! IS_BAD_PTR(str1));
         TEST_NO_EXCEPTION();
 
-        str2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), OBJ_STRING_16);
+        str2 = KOS_new_const_string(frame, src2, sizeof(src2)/sizeof(src2[0]), KOS_STRING_ELEM_16);
         TEST( ! IS_BAD_PTR(str1));
         TEST_NO_EXCEPTION();
 
-        str3 = KOS_new_const_string(frame, src3, sizeof(src3)/sizeof(src3[0]), OBJ_STRING_32);
+        str3 = KOS_new_const_string(frame, src3, sizeof(src3)/sizeof(src3[0]), KOS_STRING_ELEM_32);
         TEST( ! IS_BAD_PTR(str1));
         TEST_NO_EXCEPTION();
 
@@ -1192,51 +1192,63 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ASCII_STRING(str, "str");
+        KOS_OBJ_ID empty = KOS_context_get_empty_string(frame);
 
-        TEST(KOS_string_add(frame, TO_OBJPTR(&str), TO_OBJPTR(0)) == TO_OBJPTR(0));
+        TEST(!IS_BAD_PTR(empty));
+        TEST(GET_OBJ_TYPE(empty) == OBJ_STRING);
+        TEST(KOS_get_string_length(empty) == 0);
+    }
+
+    /************************************************************************/
+    {
+        static const char str[] = "str";
+
+        KOS_OBJ_ID str_str = KOS_context_get_cstring(frame, str);
+        TEST(!IS_BAD_PTR(str_str));
+        TEST(GET_OBJ_TYPE(str_str) == OBJ_STRING);
+
+        TEST(KOS_string_add(frame, str_str, KOS_BADPTR) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(frame, TO_SMALL_INT(1), TO_OBJPTR(&str)) == TO_OBJPTR(0));
+        TEST(KOS_string_add(frame, TO_SMALL_INT(1), str_str) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(frame, TO_OBJPTR(&str), KOS_TRUE) == TO_OBJPTR(0));
+        TEST(KOS_string_add(frame, str_str, KOS_TRUE) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(frame, KOS_VOID, TO_OBJPTR(&str)) == TO_OBJPTR(0));
+        TEST(KOS_string_add(frame, KOS_VOID, str_str) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(frame, TO_OBJPTR(&str), KOS_new_array(frame, 8)) == TO_OBJPTR(0));
+        TEST(KOS_string_add(frame, str_str, KOS_new_array(frame, 8)) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(frame, KOS_new_object(frame), TO_OBJPTR(&str)) == TO_OBJPTR(0));
+        TEST(KOS_string_add(frame, KOS_new_object(frame), str_str) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     {
-        TEST(KOS_string_slice(frame, TO_OBJPTR(0), 0, 1) == TO_OBJPTR(0));
+        TEST(KOS_string_slice(frame, KOS_BADPTR, 0, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_slice(frame, TO_SMALL_INT(1), 0, 1) == TO_OBJPTR(0));
+        TEST(KOS_string_slice(frame, TO_SMALL_INT(1), 0, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_slice(frame, KOS_FALSE, 0, 1) == TO_OBJPTR(0));
+        TEST(KOS_string_slice(frame, KOS_FALSE, 0, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_slice(frame, KOS_VOID, 0, 1) == TO_OBJPTR(0));
+        TEST(KOS_string_slice(frame, KOS_VOID, 0, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     {
-        KOS_ASCII_STRING(src, "");
-
-        KOS_OBJ_PTR str = KOS_string_slice(frame, TO_OBJPTR(&src), 0, 1);
+        KOS_OBJ_ID str = KOS_string_slice(frame, KOS_context_get_empty_string(frame), 0, 1);
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_8);
-        TEST(KOS_get_string_length(str) == 0);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(str)     == 0);
     }
 
     /************************************************************************/
@@ -1245,17 +1257,19 @@ int main(void)
 
         const uint32_t src[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 
-        KOS_OBJ_PTR str = KOS_new_const_string(frame, src, sizeof(src)/sizeof(src[0]), OBJ_STRING_32);
+        KOS_OBJ_ID str = KOS_new_const_string(frame, src, sizeof(src)/sizeof(src[0]), KOS_STRING_ELEM_32);
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_32);
-        TEST(KOS_get_string_length(str) == 16);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(str)     == 16);
 
         str = KOS_string_slice(frame, str, 1, -6);
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_32);
-        TEST(KOS_get_string_length(str) == 9);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(str)     == 9);
         for (i = 0; i < 9; i++)
             TEST(KOS_string_get_char_code(frame, str, i) == (unsigned)i+2U);
     }
@@ -1264,17 +1278,19 @@ int main(void)
     {
         int i;
 
-        KOS_OBJ_PTR str = KOS_new_cstring(frame, "\xF4\x80\x80\x80" "12345678");
+        KOS_OBJ_ID str = KOS_new_cstring(frame, "\xF4\x80\x80\x80" "12345678");
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_32);
-        TEST(KOS_get_string_length(str) == 9);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(str)     == 9);
 
         str = KOS_string_slice(frame, str, -1000, 1000);
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_32);
-        TEST(KOS_get_string_length(str) == 9);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(str)     == 9);
         TEST(KOS_string_get_char_code(frame, str, 0) == 0x100000U);
         for (i = 1; i < 9; i++)
             TEST(KOS_string_get_char_code(frame, str, i) == (unsigned)i+0x30U);
@@ -1282,22 +1298,22 @@ int main(void)
 
     /************************************************************************/
     {
-        TEST(KOS_string_get_char(frame, TO_OBJPTR(0), 0) == TO_OBJPTR(0));
+        TEST(KOS_string_get_char(frame, KOS_BADPTR, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_get_char(frame, TO_SMALL_INT(2), 0) == TO_OBJPTR(0));
+        TEST(KOS_string_get_char(frame, TO_SMALL_INT(2), 0) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_get_char(frame, KOS_TRUE, 0) == TO_OBJPTR(0));
+        TEST(KOS_string_get_char(frame, KOS_TRUE, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_get_char(frame, KOS_VOID, 0) == TO_OBJPTR(0));
+        TEST(KOS_string_get_char(frame, KOS_VOID, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     {
-        TEST(KOS_string_get_char_code(frame, TO_OBJPTR(0), 0) == ~0U);
+        TEST(KOS_string_get_char_code(frame, KOS_BADPTR, 0) == ~0U);
         TEST_EXCEPTION();
 
         TEST(KOS_string_get_char_code(frame, TO_SMALL_INT(2), 0) == ~0U);
@@ -1314,15 +1330,15 @@ int main(void)
     {
         uint32_t           src_ok[]      = { 0x1FFFFFU };
         uint32_t           src_invalid[] = { 0x200000U };
-        KOS_OBJ_PTR        str;
+        KOS_OBJ_ID         str;
         struct _KOS_VECTOR vec;
 
         _KOS_vector_init(&vec);
 
         str = KOS_new_cstring(frame, "");
         TEST( ! IS_BAD_PTR(str));
-        TEST(OBJPTR(KOS_STRING, str)->type == OBJ_STRING_8);
-        TEST(KOS_get_string_length(str)    == 0);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(str)     == 0);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_string_to_cstr_vec(frame, TO_SMALL_INT(1), &vec) == KOS_ERROR_EXCEPTION);
@@ -1333,19 +1349,19 @@ int main(void)
         TEST(vec.size == 1);
         TEST(vec.buffer[0] == 0);
 
-        str = KOS_new_const_string(frame, src_invalid, sizeof(src_invalid)/sizeof(src_invalid[0]), OBJ_STRING_32);
+        str = KOS_new_const_string(frame, src_invalid, sizeof(src_invalid)/sizeof(src_invalid[0]), KOS_STRING_ELEM_32);
         TEST( ! IS_BAD_PTR(str));
-        TEST(OBJPTR(KOS_STRING, str)->type == OBJ_STRING_32);
-        TEST(KOS_get_string_length(str)    == 1);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(str)     == 1);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_string_to_cstr_vec(frame, str, &vec) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        str = KOS_new_const_string(frame, src_ok, sizeof(src_ok)/sizeof(src_ok[0]), OBJ_STRING_32);
+        str = KOS_new_const_string(frame, src_ok, sizeof(src_ok)/sizeof(src_ok[0]), KOS_STRING_ELEM_32);
         TEST( ! IS_BAD_PTR(str));
-        TEST(OBJPTR(KOS_STRING, str)->type == OBJ_STRING_32);
-        TEST(KOS_get_string_length(str)    == 1);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_32);
+        TEST(KOS_get_string_length(str)     == 1);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_string_to_cstr_vec(frame, str, &vec) == KOS_SUCCESS);
@@ -1362,30 +1378,30 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR str = KOS_object_to_string(frame, TO_SMALL_INT(1));
+        KOS_OBJ_ID str = KOS_object_to_string(frame, TO_SMALL_INT(1));
         TEST( ! IS_BAD_PTR(str));
-        TEST(IS_STRING_OBJ(str));
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_8);
-        TEST(KOS_get_string_length(str) == 1);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(str)     == 1);
         TEST(KOS_string_get_char_code(frame, str, 0) == 0x31);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR str;
+        KOS_OBJ_ID  str;
         const char *expected = "4611686018427387904";
         unsigned    size     = (unsigned)strlen(expected);
         unsigned    i;
 
-        KOS_OBJ_PTR v = KOS_new_int(frame, ((int64_t)1) << 62);
+        KOS_OBJ_ID v = KOS_new_int(frame, ((int64_t)1) << 62);
         TEST( ! IS_BAD_PTR(v));
         TEST( ! IS_SMALL_INT(v));
         TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
 
         str = KOS_object_to_string(frame, v);
-        TEST(IS_STRING_OBJ(str));
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_8);
-        TEST(KOS_get_string_length(str) == size);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(str)     == size);
 
         for (i = 0; i < size; i++)
             TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
@@ -1393,20 +1409,20 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR str;
+        KOS_OBJ_ID  str;
         const char *expected = "1.000000";
         unsigned    size     = (unsigned)strlen(expected);
         unsigned    i;
 
-        KOS_OBJ_PTR v = KOS_new_float(frame, 1);
+        KOS_OBJ_ID v = KOS_new_float(frame, 1);
         TEST( ! IS_BAD_PTR(v));
         TEST( ! IS_SMALL_INT(v));
         TEST(GET_OBJ_TYPE(v) == OBJ_FLOAT);
 
         str = KOS_object_to_string(frame, v);
-        TEST(IS_STRING_OBJ(str));
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_8);
-        TEST(KOS_get_string_length(str) == size);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(str)     == size);
 
         for (i = 0; i < size; i++)
             TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
@@ -1414,24 +1430,26 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ASCII_STRING(src, "abc");
+        static const char src[] = "abc";
 
-        KOS_OBJ_PTR str = KOS_object_to_string(frame, TO_OBJPTR(&src));
+        KOS_OBJ_ID str_src = KOS_context_get_cstring(frame, src);
 
-        TEST(str == TO_OBJPTR(&src));
+        KOS_OBJ_ID str = KOS_object_to_string(frame, str_src);
+
+        TEST(str == str_src);
     }
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR str;
+        KOS_OBJ_ID  str;
         const char *expected = "void";
         unsigned    size     = (unsigned)strlen(expected);
         unsigned    i;
 
         str = KOS_object_to_string(frame, KOS_VOID);
-        TEST(IS_STRING_OBJ(str));
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_8);
-        TEST(KOS_get_string_length(str) == size);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(str)     == size);
 
         for (i = 0; i < size; i++)
             TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
@@ -1439,15 +1457,15 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR str;
+        KOS_OBJ_ID  str;
         const char *expected = "true";
         unsigned    size     = (unsigned)strlen(expected);
         unsigned    i;
 
         str = KOS_object_to_string(frame, KOS_TRUE);
-        TEST(IS_STRING_OBJ(str));
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_8);
-        TEST(KOS_get_string_length(str) == size);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(str)     == size);
 
         for (i = 0; i < size; i++)
             TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
@@ -1455,15 +1473,15 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_PTR str;
+        KOS_OBJ_ID  str;
         const char *expected = "false";
         unsigned    size     = (unsigned)strlen(expected);
         unsigned    i;
 
         str = KOS_object_to_string(frame, KOS_FALSE);
-        TEST(IS_STRING_OBJ(str));
-        TEST(GET_OBJ_TYPE(str) == OBJ_STRING_8);
-        TEST(KOS_get_string_length(str) == size);
+        TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
+        TEST(OBJPTR(STRING, str)->elem_size == KOS_STRING_ELEM_8);
+        TEST(KOS_get_string_length(str)     == size);
 
         for (i = 0; i < size; i++)
             TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);

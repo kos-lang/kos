@@ -53,25 +53,27 @@ typedef struct _KOS_THREAD_ROOT KOS_THREAD_ROOT;
 struct _KOS_CONTEXT {
     uint32_t                       flags;
 
-    KOS_OBJECT                     object_prototype;
-    KOS_OBJECT                     number_prototype;
-    KOS_OBJECT                     integer_prototype;
-    KOS_OBJECT                     float_prototype;
-    KOS_OBJECT                     string_prototype;
-    KOS_OBJECT                     boolean_prototype;
-    KOS_OBJECT                     void_prototype;
-    KOS_OBJECT                     array_prototype;
-    KOS_OBJECT                     buffer_prototype;
-    KOS_OBJECT                     function_prototype;
+    KOS_OBJ_ID                     empty_string;
+
+    KOS_OBJ_ID                     object_prototype;
+    KOS_OBJ_ID                     number_prototype;
+    KOS_OBJ_ID                     integer_prototype;
+    KOS_OBJ_ID                     float_prototype;
+    KOS_OBJ_ID                     string_prototype;
+    KOS_OBJ_ID                     boolean_prototype;
+    KOS_OBJ_ID                     void_prototype;
+    KOS_OBJ_ID                     array_prototype;
+    KOS_OBJ_ID                     buffer_prototype;
+    KOS_OBJ_ID                     function_prototype;
 
     KOS_ATOMIC(void *)             prototypes;
     KOS_ATOMIC(uint32_t)           prototypes_lock;
 
     _KOS_TLS_KEY                   thread_key;
 
-    KOS_ARRAY                      module_search_paths;
-    KOS_OBJECT                     module_names;
-    KOS_ARRAY                      modules;
+    KOS_OBJ_ID                     module_search_paths;
+    KOS_OBJ_ID                     module_names;
+    KOS_OBJ_ID                     modules;
 
     KOS_MODULE                     init_module;
     KOS_THREAD_ROOT                main_thread;
@@ -104,6 +106,11 @@ int KOS_context_register_builtin(KOS_STACK_FRAME *frame,
 
 int KOS_context_register_thread(KOS_CONTEXT *ctx, KOS_THREAD_ROOT *thread_root);
 
+KOS_OBJ_ID KOS_context_get_cstring(KOS_STACK_FRAME *frame,
+                                   const char      *cstr);
+
+KOS_OBJ_ID KOS_context_get_empty_string(KOS_STACK_FRAME *frame);
+
 #ifdef NDEBUG
 #define KOS_context_validate(frame) ((void)0)
 #else
@@ -111,33 +118,36 @@ void KOS_context_validate(KOS_STACK_FRAME *frame);
 #endif
 
 void KOS_raise_exception(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      exception_obj);
+                         KOS_OBJ_ID       exception_obj);
+
+void KOS_raise_exception_cstring(KOS_STACK_FRAME *frame,
+                                 const char      *cstr);
 
 void KOS_clear_exception(KOS_STACK_FRAME *frame);
 
 int KOS_is_exception_pending(KOS_STACK_FRAME *frame);
 
-KOS_OBJ_PTR KOS_get_exception(KOS_STACK_FRAME *frame);
+KOS_OBJ_ID KOS_get_exception(KOS_STACK_FRAME *frame);
 
-KOS_OBJ_PTR KOS_format_exception(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      exception);
+KOS_OBJ_ID KOS_format_exception(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       exception);
 
 /* TODO find a better place */
-KOS_OBJ_PTR KOS_get_file_name(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_PTR      full_path);
+KOS_OBJ_ID KOS_get_file_name(KOS_STACK_FRAME *frame,
+                             KOS_OBJ_ID       full_path);
 
 /* TODO find a better place */
 int KOS_get_integer(KOS_STACK_FRAME *frame,
-                    KOS_OBJ_PTR      obj,
+                    KOS_OBJ_ID       obj_id,
                     int64_t         *ret);
 
-KOS_OBJ_PTR KOS_gen_prototype(KOS_STACK_FRAME *frame,
-                              const void      *ptr);
+KOS_OBJ_ID KOS_gen_prototype(KOS_STACK_FRAME *frame,
+                             const void      *ptr);
 
-KOS_OBJ_PTR KOS_call_function(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_PTR      func_obj,
-                              KOS_OBJ_PTR      this_obj,
-                              KOS_OBJ_PTR      args_obj);
+KOS_OBJ_ID KOS_call_function(KOS_STACK_FRAME *frame,
+                             KOS_OBJ_ID       func_obj,
+                             KOS_OBJ_ID       this_obj,
+                             KOS_OBJ_ID       args_obj);
 
 #ifdef __cplusplus
 }

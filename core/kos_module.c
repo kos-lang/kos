@@ -40,22 +40,21 @@
 #include <stdio.h>
 #include <string.h>
 
-static KOS_ASCII_STRING(str_eol,                  "\n");
-static KOS_ASCII_STRING(str_err_circular_deps,    "circular dependencies detected for module \"");
-static KOS_ASCII_STRING(str_err_duplicate_global, "duplicate global \"");
-static KOS_ASCII_STRING(str_err_end,              "\"");
-static KOS_ASCII_STRING(str_err_internal,         "internal error");
-static KOS_ASCII_STRING(str_err_invalid_utf8,     "invalid UTF-8 character");
-static KOS_ASCII_STRING(str_err_module,           "module \"");
-static KOS_ASCII_STRING(str_err_not_found,        "\" not found");
-static KOS_ASCII_STRING(str_err_out_of_memory,    "out of memory");
-static KOS_ASCII_STRING(str_err_unable_to_open,   "unable to open file \"");
-static KOS_ASCII_STRING(str_err_unable_to_read,   "unable to read file \"");
-static KOS_ASCII_STRING(str_format_colon,         ":");
-static KOS_ASCII_STRING(str_format_error,         ": error: ");
-static KOS_ASCII_STRING(str_global,               "<global>");
-static KOS_ASCII_STRING(str_path_sep,             KOS_PATH_SEPARATOR_STR);
-static KOS_ASCII_STRING(str_script_ext,           ".kos");
+static const char str_eol[]                  = "\n";
+static const char str_err_circular_deps[]    = "circular dependencies detected for module \"";
+static const char str_err_duplicate_global[] = "duplicate global \"";
+static const char str_err_end[]              = "\"";
+static const char str_err_internal[]         = "internal error";
+static const char str_err_module[]           = "module \"";
+static const char str_err_not_found[]        = "\" not found";
+static const char str_err_out_of_memory[]    = "out of memory";
+static const char str_err_unable_to_open[]   = "unable to open file \"";
+static const char str_err_unable_to_read[]   = "unable to read file \"";
+static const char str_format_colon[]         = ":";
+static const char str_format_error[]         = ": error: ";
+static const char str_global[]               = "<global>";
+static const char str_path_sep[]             = KOS_PATH_SEPARATOR_STR;
+static const char str_script_ext[]           = ".kos";
 
 struct _KOS_MODULE_LOAD_CHAIN {
     struct _KOS_MODULE_LOAD_CHAIN *next;
@@ -64,12 +63,12 @@ struct _KOS_MODULE_LOAD_CHAIN {
 };
 
 static void _raise_3(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_PTR      s1,
-                     KOS_OBJ_PTR      s2,
-                     KOS_OBJ_PTR      s3)
+                     KOS_OBJ_ID       s1,
+                     KOS_OBJ_ID       s2,
+                     KOS_OBJ_ID       s3)
 {
-    KOS_OBJ_PTR             str_err_full;
-    KOS_ATOMIC(KOS_OBJ_PTR) str_err[3];
+    KOS_OBJ_ID             str_err_full;
+    KOS_ATOMIC(KOS_OBJ_ID) str_err[3];
 
     str_err[0] = s1;
     str_err[1] = s2;
@@ -97,15 +96,15 @@ static unsigned _rfind_path(const char *path,
 }
 
 static int _find_module(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_PTR      module_name,
+                        KOS_OBJ_ID       module_name,
                         const char      *maybe_path,
                         unsigned         length,
-                        KOS_OBJ_PTR     *out_abs_dir,
-                        KOS_OBJ_PTR     *out_abs_path)
+                        KOS_OBJ_ID      *out_abs_dir,
+                        KOS_OBJ_ID      *out_abs_path)
 {
     int                error = KOS_ERROR_INTERNAL;
-    KOS_OBJ_PTR        path  = TO_OBJPTR(0);
-    KOS_OBJ_PTR        dir   = TO_OBJPTR(0);
+    KOS_OBJ_ID         path  = KOS_BADPTR;
+    KOS_OBJ_ID         dir   = KOS_BADPTR;
     struct _KOS_VECTOR cpath;
     unsigned           i;
 
@@ -123,7 +122,7 @@ static int _find_module(KOS_STACK_FRAME *frame,
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
         path = KOS_new_string(frame, cpath.buffer, (unsigned)(cpath.size-1));
-        TRY_OBJPTR(path);
+        TRY_OBJID(path);
 
         /* Find and skip last path separator */
         i = _rfind_path(cpath.buffer, (unsigned)(cpath.size-1), '/');
@@ -131,33 +130,33 @@ static int _find_module(KOS_STACK_FRAME *frame,
             --i;
 
         dir = KOS_new_string(frame, cpath.buffer, i);
-        TRY_OBJPTR(dir);
+        TRY_OBJID(dir);
     }
     else {
 
         KOS_CONTEXT *ctx;
         uint32_t    num_paths;
 
-        assert( ! IS_BAD_PTR(frame->module));
-        assert(OBJPTR(KOS_MODULE, frame->module)->context);
+        assert(frame->module);
+        assert(frame->module->context);
 
-        ctx       = OBJPTR(KOS_MODULE, frame->module)->context;
-        num_paths = KOS_get_array_size(TO_OBJPTR(&ctx->module_search_paths));
+        ctx       = frame->module->context;
+        num_paths = KOS_get_array_size(ctx->module_search_paths);
 
         if (!num_paths)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
         for (i = 0; i < num_paths; i++) {
-            KOS_ATOMIC(KOS_OBJ_PTR) components[4];
+            KOS_ATOMIC(KOS_OBJ_ID) components[4];
 
-            components[0] = KOS_array_read(frame, TO_OBJPTR(&ctx->module_search_paths), (int)i);
-            TRY_OBJPTR(components[0]);
-            components[1] = TO_OBJPTR(&str_path_sep);
+            components[0] = KOS_array_read(frame, ctx->module_search_paths, (int)i);
+            TRY_OBJID(components[0]);
+            components[1] = KOS_context_get_cstring(frame, str_path_sep);
             components[2] = module_name;
-            components[3] = TO_OBJPTR(&str_script_ext);
+            components[3] = KOS_context_get_cstring(frame, str_script_ext);
 
             path = KOS_string_add_many(frame, components, sizeof(components)/sizeof(components[0]));
-            TRY_OBJPTR(path);
+            TRY_OBJID(path);
 
             TRY(KOS_string_to_cstr_vec(frame, path, &cpath));
 
@@ -204,40 +203,40 @@ static void _get_module_name(const char                    *module,
     loading->length      = length;
 }
 
-static KOS_OBJ_PTR _alloc_module(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      module_name)
+static KOS_OBJ_ID _alloc_module(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       module_name)
 {
     /* TODO alloc in another way, this is the only type which requires 128B alloc */
-    KOS_ANY_OBJECT *obj = _KOS_alloc_object(frame, KOS_MODULE);
-    if (obj) {
-        assert( ! IS_BAD_PTR(frame->module));
-        assert(OBJPTR(KOS_MODULE, frame->module)->context);
+    KOS_MODULE *module = (KOS_MODULE *)_KOS_alloc_object(frame, KOS_MODULE);
+    if (module) {
+        assert(frame->module);
+        assert(frame->module->context);
 
-        obj->type                 = OBJ_MODULE;
-        obj->module.flags         = 0;
-        obj->module.name          = module_name;
-        obj->module.context       = OBJPTR(KOS_MODULE, frame->module)->context;
-        obj->module.strings       = 0;
-        obj->module.bytecode      = 0;
-        obj->module.bytecode_size = 0;
-        obj->module.instr_offs    = 0;
-        obj->module.num_regs      = 0;
+        module->type          = OBJ_MODULE;
+        module->flags         = 0;
+        module->name          = module_name;
+        module->context       = frame->module->context;
+        module->strings       = 0;
+        module->bytecode      = 0;
+        module->bytecode_size = 0;
+        module->instr_offs    = 0;
+        module->num_regs      = 0;
 
-        obj->module.global_names = KOS_new_object(frame);
-        if (IS_BAD_PTR(obj->module.global_names))
-            obj = 0; /* object is garbage-collected */
+        module->global_names = KOS_new_object(frame);
+        if (IS_BAD_PTR(module->global_names))
+            module = 0; /* object is garbage-collected */
         else {
-            obj->module.globals = KOS_new_array(frame, 0);
-            if (IS_BAD_PTR(obj->module.globals))
-                obj = 0; /* object is garbage-collected */
+            module->globals = KOS_new_array(frame, 0);
+            if (IS_BAD_PTR(module->globals))
+                module = 0; /* object is garbage-collected */
         }
     }
 
-    return TO_OBJPTR(obj);
+    return OBJID(MODULE, module);
 }
 
 static int _load_file(KOS_STACK_FRAME    *frame,
-                      KOS_OBJ_PTR         path,
+                      KOS_OBJ_ID          path,
                       struct _KOS_VECTOR *file_buf)
 {
     int                error = KOS_SUCCESS;
@@ -251,17 +250,17 @@ static int _load_file(KOS_STACK_FRAME    *frame,
     switch (error) {
 
         case KOS_ERROR_CANNOT_OPEN_FILE:
-            _raise_3(frame, TO_OBJPTR(&str_err_unable_to_open), path, TO_OBJPTR(&str_err_end));
+            _raise_3(frame, KOS_context_get_cstring(frame, str_err_unable_to_open), path, KOS_context_get_cstring(frame, str_err_end));
             error = KOS_ERROR_EXCEPTION;
             break;
 
         case KOS_ERROR_CANNOT_READ_FILE:
-            _raise_3(frame, TO_OBJPTR(&str_err_unable_to_read), path, TO_OBJPTR(&str_err_end));
+            _raise_3(frame, KOS_context_get_cstring(frame, str_err_unable_to_read), path, KOS_context_get_cstring(frame, str_err_end));
             error = KOS_ERROR_EXCEPTION;
             break;
 
         case KOS_ERROR_OUT_OF_MEMORY:
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_out_of_memory));
+            RAISE_EXCEPTION(str_err_out_of_memory);
 
         default:
             break;
@@ -276,7 +275,7 @@ _error:
 static int _module_init_compare(void                       *what,
                                 struct _KOS_RED_BLACK_NODE *node)
 {
-    KOS_OBJ_PTR module_name = (KOS_OBJ_PTR)what;
+    KOS_OBJ_ID module_name = (KOS_OBJ_ID)what;
 
     struct _KOS_MODULE_INIT *mod_init = (struct _KOS_MODULE_INIT *)node;
 
@@ -285,7 +284,7 @@ static int _module_init_compare(void                       *what,
 
 static int _predefine_globals(KOS_STACK_FRAME       *frame,
                               struct _KOS_COMP_UNIT *program,
-                              KOS_OBJ_PTR            global_names)
+                              KOS_OBJ_ID             global_names)
 {
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cpath;
@@ -300,7 +299,7 @@ static int _predefine_globals(KOS_STACK_FRAME       *frame,
         if (IS_BAD_PTR(elem.key))
             break;
 
-        assert(!IS_BAD_PTR(elem.value) && IS_SMALL_INT(elem.value));
+        assert(IS_SMALL_INT(elem.value));
 
         TRY(KOS_string_to_cstr_vec(frame, elem.key, &cpath));
 
@@ -323,8 +322,8 @@ static int _alloc_globals(KOS_STACK_FRAME       *frame,
     TRY(KOS_array_resize(frame, module->globals, (uint32_t)program->num_globals));
 
     for (var = program->globals; var; var = var->next) {
-        KOS_OBJ_PTR name = KOS_new_string(frame, var->token->begin, var->token->length);
-        TRY_OBJPTR(name);
+        KOS_OBJ_ID name = KOS_new_string(frame, var->token->begin, var->token->length);
+        TRY_OBJID(name);
         assert(var->array_idx < program->num_globals);
         TRY(KOS_set_property(frame, module->global_names, name, TO_SMALL_INT(var->array_idx)));
     }
@@ -333,174 +332,57 @@ _error:
     return error;
 }
 
-static int _decode_utf8_to_local(const char         *cstr,
-                                 unsigned            length,
-                                 KOS_STRING         *string,
-                                 struct _KOS_VECTOR *storage)
+static uint32_t _count_strings(struct _KOS_COMP_UNIT *program)
 {
-    int            error;
-    uint32_t       max_code;
-    const unsigned len      = _KOS_utf8_get_len(cstr, length, KOS_UTF8_WITH_ESCAPE, &max_code);
-    unsigned       byte_len = len;
-    char          *buf;
-
-    assert(len < 0xFFFFU);
-
-    if (max_code > 0xFFFFU)
-        byte_len <<= 2;
-    else if (max_code > 0xFFU)
-        byte_len <<= 1;
-
-    if (byte_len <= sizeof(string->data)) {
-        buf           = string->data.buf;
-        string->flags = KOS_STRING_LOCAL;
-    }
-    else {
-        byte_len = (byte_len + 7) & ~7U;
-        TRY(_KOS_vector_resize(storage, byte_len));
-
-        buf              =  storage->buffer;
-        string->data.ptr =  buf;
-        string->flags    =  KOS_STRING_PTR;
-    }
-
-    string->length = (uint16_t)len;
-    string->hash   = 0;
-
-    if (max_code > 0xFFFFU) {
-        string->type = OBJ_STRING_32;
-        TRY(_KOS_utf8_decode_32(cstr, length, KOS_UTF8_WITH_ESCAPE, (uint32_t *)buf));
-    }
-    else if (max_code > 0XFFU) {
-        string->type = OBJ_STRING_16;
-        TRY(_KOS_utf8_decode_16(cstr, length, KOS_UTF8_WITH_ESCAPE, (uint16_t *)buf));
-    }
-    else {
-        string->type = OBJ_STRING_8;
-        TRY(_KOS_utf8_decode_8(cstr, length, KOS_UTF8_WITH_ESCAPE, (uint8_t *)buf));
-    }
-
-_error:
-    return error;
-}
-
-static size_t _calc_strings_storage(struct _KOS_COMP_UNIT *program)
-{
-    size_t size = program->num_strings * sizeof(KOS_STRING);
+    uint32_t i;
 
     struct _KOS_COMP_STRING *str = program->string_list;
 
-    for ( ; str; str = str->next) {
+    for (i = 0; str; str = str->next, ++i);
 
-        uint32_t max_code;
-        unsigned len = _KOS_utf8_get_len(str->str, str->length, str->escape, &max_code);
-
-        if (len == ~0U) {
-            size = ~0U;
-            break;
-        }
-
-        if (max_code > 0xFFFFU)
-            len <<= 2;
-        else if (max_code > 0xFFU)
-            len <<= 1;
-
-        if (len <= sizeof(((KOS_STRING *)0)->data))
-            len = 0;
-        else
-            len = (len + 7) & ~7U;
-
-        size += len;
-    }
-
-    return size;
+    return i;
 }
 
 static int _alloc_strings(KOS_STACK_FRAME       *frame,
                           struct _KOS_COMP_UNIT *program,
                           KOS_MODULE            *module)
 {
-    int          error = KOS_SUCCESS;
-    const size_t size  = _calc_strings_storage(program);
-    char        *buf   = 0;
+    int            error       = KOS_SUCCESS;
+    const uint32_t num_strings = _count_strings(program);
+    int            i;
 
-    struct _KOS_COMP_STRING *str = 0;
+    /* TODO allocate from permanent pool */
 
-    if (size == ~0U)
-        RAISE_ERROR(KOS_ERROR_INVALID_UTF8_CHARACTER);
+    struct _KOS_COMP_STRING *str = program->string_list;
 
-    if (!error) {
-        module->strings = (KOS_STRING *)_KOS_alloc_buffer(frame, size);
-        if (module->strings) {
-            memset(module->strings, 0, size);
-            module->flags |= KOS_MODULE_OWN_STRINGS;
-            str           =  program->string_list;
-            buf           =  (char *)module->strings + program->num_strings * sizeof(KOS_STRING);
-        }
-        else
-            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
-    }
+    module->strings = KOS_new_array(frame, num_strings);
+    TRY_OBJID(module->strings);
 
-    for ( ; str; str = str->next) {
+    for (i = 0; str; str = str->next, ++i) {
 
-        uint32_t       max_code;
-        const unsigned len      = _KOS_utf8_get_len(str->str, str->length, str->escape, &max_code);
-        unsigned       byte_len = len;
-        KOS_STRING    *string   = module->strings + str->index;
-        char          *storage;
+        const KOS_OBJ_ID str_obj = str->escape == KOS_UTF8_WITH_ESCAPE
+                ? KOS_new_string_esc(frame, str->str, str->length)
+                : KOS_new_string(frame, str->str, str->length);
 
-        assert(len < 0xFFFFU);
-        assert(str->index < program->num_strings);
+        TRY_OBJID(str_obj);
 
-        if (max_code > 0xFFFFU)
-            byte_len <<= 2;
-        else if (max_code > 0xFFU)
-            byte_len <<= 1;
-
-        if (byte_len <= sizeof(string->data)) {
-            storage       = string->data.buf;
-            string->flags = KOS_STRING_LOCAL;
-        }
-        else {
-            byte_len         =  (byte_len + 7) & ~7U;
-            storage          =  buf;
-            string->data.ptr =  buf;
-            string->flags    =  KOS_STRING_PTR;
-            buf              += byte_len;
-            assert(buf <= (char*)module->strings + size);
-        }
-
-        string->length = (uint16_t)len;
-        string->hash   = 0;
-
-        if (max_code > 0xFFFFU) {
-            string->type = OBJ_STRING_32;
-            TRY(_KOS_utf8_decode_32(str->str, str->length, str->escape, (uint32_t *)storage));
-        }
-        else if (max_code > 0xFFU) {
-            string->type = OBJ_STRING_16;
-            TRY(_KOS_utf8_decode_16(str->str, str->length, str->escape, (uint16_t *)storage));
-        }
-        else {
-            string->type = OBJ_STRING_8;
-            TRY(_KOS_utf8_decode_8(str->str, str->length, str->escape, (uint8_t *)storage));
-        }
+        TRY(KOS_array_write(frame, module->strings, i, str_obj));
     }
 
 _error:
     return error;
 }
 
-static KOS_OBJ_PTR _get_line(KOS_STACK_FRAME          *frame,
-                             const struct _KOS_VECTOR *file_buf,
-                             unsigned                  line)
+static KOS_OBJ_ID _get_line(KOS_STACK_FRAME          *frame,
+                            const struct _KOS_VECTOR *file_buf,
+                            unsigned                  line)
 {
     const char        *buf       = file_buf->buffer;
     const char        *const end = buf + file_buf->size;
     const char        *begin;
     unsigned           len       = 0;
     struct _KOS_VECTOR line_buf;
-    KOS_OBJ_PTR        ret       = TO_OBJPTR(0);
+    KOS_OBJ_ID         ret       = KOS_BADPTR;
 
     _KOS_vector_init(&line_buf);
 
@@ -570,59 +452,59 @@ static KOS_OBJ_PTR _get_line(KOS_STACK_FRAME          *frame,
     return ret;
 }
 
-static KOS_OBJ_PTR _format_error(KOS_STACK_FRAME          *frame,
-                                 KOS_OBJ_PTR               module_obj,
-                                 const struct _KOS_VECTOR *file_buf,
-                                 const char               *error_str,
-                                 struct _KOS_FILE_POS      pos)
+static KOS_OBJ_ID _format_error(KOS_STACK_FRAME          *frame,
+                                KOS_OBJ_ID                module_obj,
+                                const struct _KOS_VECTOR *file_buf,
+                                const char               *error_str,
+                                struct _KOS_FILE_POS      pos)
 {
-    int                     error = KOS_SUCCESS;
-    KOS_OBJ_PTR             ret   = TO_OBJPTR(0);
-    KOS_ATOMIC(KOS_OBJ_PTR) parts[11];
-    struct _KOS_VECTOR      cstr;
+    int                    error = KOS_SUCCESS;
+    KOS_OBJ_ID             ret   = KOS_BADPTR;
+    KOS_ATOMIC(KOS_OBJ_ID) parts[11];
+    struct _KOS_VECTOR     cstr;
 
     _KOS_vector_init(&cstr);
 
-    parts[0] = KOS_get_file_name(frame, OBJPTR(KOS_MODULE, module_obj)->path);
-    TRY_OBJPTR(parts[0]);
+    parts[0] = KOS_get_file_name(frame, OBJPTR(MODULE, module_obj)->path);
+    TRY_OBJID(parts[0]);
 
-    parts[1] = TO_OBJPTR(&str_format_colon);
+    parts[1] = KOS_context_get_cstring(frame, str_format_colon);
 
     parts[2] = KOS_object_to_string(frame, TO_SMALL_INT((int)pos.line));
-    TRY_OBJPTR(parts[2]);
+    TRY_OBJID(parts[2]);
 
-    parts[3] = TO_OBJPTR(&str_format_colon);
+    parts[3] = KOS_context_get_cstring(frame, str_format_colon);
 
     parts[4] = KOS_object_to_string(frame, TO_SMALL_INT((int)pos.column));
-    TRY_OBJPTR(parts[4]);
+    TRY_OBJID(parts[4]);
 
-    parts[5] = TO_OBJPTR(&str_format_error);
+    parts[5] = KOS_context_get_cstring(frame, str_format_error);
 
     parts[6] = KOS_new_const_ascii_cstring(frame, error_str);
-    TRY_OBJPTR(parts[6]);
+    TRY_OBJID(parts[6]);
 
-    parts[7] = TO_OBJPTR(&str_eol);
+    parts[7] = KOS_context_get_cstring(frame, str_eol);
 
     parts[8] = _get_line(frame, file_buf, pos.line);
-    TRY_OBJPTR(parts[8]);
+    TRY_OBJID(parts[8]);
 
-    parts[9] = TO_OBJPTR(&str_eol);
+    parts[9] = KOS_context_get_cstring(frame, str_eol);
 
     error = _KOS_vector_resize(&cstr, pos.column);
     if (error)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_out_of_memory));
+        RAISE_EXCEPTION(str_err_out_of_memory);
 
     memset(cstr.buffer, ' ', pos.column-1);
     cstr.buffer[pos.column-1] = '^';
 
     parts[10] = KOS_new_string(frame, cstr.buffer, pos.column);
-    TRY_OBJPTR(parts[10]);
+    TRY_OBJID(parts[10]);
 
     ret = KOS_string_add_many(frame, parts, sizeof(parts)/sizeof(parts[0]));
 
 _error:
     if (error)
-        ret = TO_OBJPTR(0);
+        ret = KOS_BADPTR;
 
     _KOS_vector_destroy(&cstr);
 
@@ -631,8 +513,8 @@ _error:
 
 int KOS_load_module(KOS_STACK_FRAME *frame, const char *path)
 {
-    int         idx;
-    KOS_OBJ_PTR module = _KOS_module_import(frame, path, (unsigned)strlen(path), KOS_MODULE_MANDATORY, &idx);
+    int        idx;
+    KOS_OBJ_ID module = _KOS_module_import(frame, path, (unsigned)strlen(path), KOS_MODULE_MANDATORY, &idx);
 
     return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
@@ -644,7 +526,7 @@ static int _import_module(void                   *vframe,
                           int                     *module_idx)
 {
     KOS_STACK_FRAME *frame = (KOS_STACK_FRAME *)vframe;
-    KOS_OBJ_PTR      module_obj;
+    KOS_OBJ_ID       module_obj;
 
     module_obj = _KOS_module_import(frame, name, length, (enum _KOS_MODULE_REQUIRED)required, module_idx);
 
@@ -657,38 +539,36 @@ static int _get_global_idx(void       *vframe,
                            unsigned    length,
                            int        *global_idx)
 {
-    int                error;
-    KOS_STRING         str;
-    struct _KOS_VECTOR str_storage;
-    KOS_STACK_FRAME   *frame = (KOS_STACK_FRAME *)vframe;
-    KOS_CONTEXT       *ctx;
-    KOS_OBJ_PTR        module_obj;
-    KOS_OBJ_PTR        glob_idx_obj;
+    int              error = KOS_SUCCESS;
+    KOS_OBJ_ID       str;
+    KOS_STACK_FRAME *frame = (KOS_STACK_FRAME *)vframe;
+    KOS_CONTEXT     *ctx;
+    KOS_OBJ_ID       module_obj;
+    KOS_OBJ_ID       glob_idx_obj;
 
-    assert( ! IS_BAD_PTR(frame->module));
-    assert(OBJPTR(KOS_MODULE, frame->module)->context);
+    assert(frame->module);
+    assert(frame->module->context);
     assert(module_idx >= 0);
 
-    ctx = OBJPTR(KOS_MODULE, frame->module)->context;
+    ctx = frame->module->context;
 
-    _KOS_vector_init(&str_storage);
-    TRY(_decode_utf8_to_local(name, length, &str, &str_storage));
+    str = KOS_new_string(frame, name, length);
+    TRY_OBJID(str);
 
-    module_obj = KOS_array_read(frame, TO_OBJPTR(&ctx->modules), module_idx);
-    TRY_OBJPTR(module_obj);
+    module_obj = KOS_array_read(frame, ctx->modules, module_idx);
+    TRY_OBJID(module_obj);
 
-    assert(!IS_SMALL_INT(module_obj));
-    assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
+    assert(GET_OBJ_TYPE(module_obj) == OBJ_INTERNAL);
+    assert(OBJPTR(MODULE, module_obj)->type == OBJ_MODULE);
 
-    glob_idx_obj = KOS_get_property(frame, OBJPTR(KOS_MODULE, module_obj)->global_names, TO_OBJPTR(&str));
-    TRY_OBJPTR(glob_idx_obj);
+    glob_idx_obj = KOS_get_property(frame, OBJPTR(MODULE, module_obj)->global_names, str);
+    TRY_OBJID(glob_idx_obj);
 
     assert(IS_SMALL_INT(glob_idx_obj));
 
     *global_idx = (int)GET_SMALL_INT(glob_idx_obj);
 
 _error:
-    _KOS_vector_destroy(&str_storage);
     if (error) {
         KOS_clear_exception(frame);
         error = KOS_ERROR_NOT_FOUND;
@@ -696,20 +576,20 @@ _error:
     return error;
 }
 
-KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
-                               const char               *module_name,
-                               unsigned                  length,
-                               enum _KOS_MODULE_REQUIRED required,
-                               int                      *out_module_idx)
+KOS_OBJ_ID _KOS_module_import(KOS_STACK_FRAME          *frame,
+                              const char               *module_name,
+                              unsigned                  length,
+                              enum _KOS_MODULE_REQUIRED required,
+                              int                      *out_module_idx)
 {
     static const char             lang[]          = "lang";
     int                           error           = KOS_SUCCESS;
     int                           module_idx      = -1;
-    KOS_OBJ_PTR                   module_obj      = TO_OBJPTR(0);
-    KOS_OBJ_PTR                   actual_module_name;
-    KOS_OBJ_PTR                   module_dir      = TO_OBJPTR(0);
-    KOS_OBJ_PTR                   module_path     = TO_OBJPTR(0);
-    KOS_OBJ_PTR                   ret;
+    KOS_OBJ_ID                    module_obj      = KOS_BADPTR;
+    KOS_OBJ_ID                    actual_module_name;
+    KOS_OBJ_ID                    module_dir      = KOS_BADPTR;
+    KOS_OBJ_ID                    module_path     = KOS_BADPTR;
+    KOS_OBJ_ID                    ret;
     KOS_CONTEXT                  *ctx;
     struct _KOS_MODULE_LOAD_CHAIN loading         = { 0, 0, 0 };
     struct _KOS_MODULE_INIT      *mod_init;
@@ -721,10 +601,10 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
     int                           chain_init      = 0;
     int                           compiler_init   = 0;
 
-    assert( ! IS_BAD_PTR(frame->module));
-    assert(OBJPTR(KOS_MODULE, frame->module)->context);
+    assert(frame->module);
+    assert(frame->module->context);
 
-    ctx = OBJPTR(KOS_MODULE, frame->module)->context;
+    ctx = frame->module->context;
 
     _KOS_vector_init(&file_buf);
 
@@ -732,14 +612,14 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
     /* Determine actual module name */
     actual_module_name = KOS_new_string(frame, loading.module_name, loading.length);
-    TRY_OBJPTR(actual_module_name);
+    TRY_OBJID(actual_module_name);
 
     /* Find module source file */
     error = _find_module(frame, actual_module_name, module_name, length, &module_dir, &module_path);
     if (error) {
         if (error == KOS_ERROR_NOT_FOUND) {
             if (required == KOS_MODULE_MANDATORY) {
-                _raise_3(frame, TO_OBJPTR(&str_err_module), actual_module_name, TO_OBJPTR(&str_err_not_found));
+                _raise_3(frame, KOS_context_get_cstring(frame, str_err_module), actual_module_name, KOS_context_get_cstring(frame, str_err_not_found));
                 error = KOS_ERROR_EXCEPTION;
             }
             else
@@ -751,19 +631,19 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
     /* TODO use global mutex for thread safety */
 
     /* Load lang module first, so that it ends up at index 0 */
-    if (KOS_get_array_size(TO_OBJPTR(&ctx->modules)) == 0 && module_name != lang) {
-        int         lang_idx;
-        KOS_OBJ_PTR path_array;
-        KOS_OBJ_PTR lang_obj;
+    if (KOS_get_array_size(ctx->modules) == 0 && module_name != lang) {
+        int        lang_idx;
+        KOS_OBJ_ID path_array;
+        KOS_OBJ_ID lang_obj;
 
         /* Add search path - path of the topmost module being loaded */
         path_array = KOS_new_array(frame, 1);
         TRY(KOS_array_write(frame, path_array, 0, module_dir));
-        TRY(KOS_array_insert(frame, TO_OBJPTR(&ctx->module_search_paths), 0, 0, path_array, 0, 1));
+        TRY(KOS_array_insert(frame, ctx->module_search_paths, 0, 0, path_array, 0, 1));
         search_path_set = 1;
 
         lang_obj = _KOS_module_import(frame, lang, sizeof(lang)-1, KOS_MODULE_MANDATORY, &lang_idx);
-        TRY_OBJPTR(lang_obj);
+        TRY_OBJID(lang_obj);
         assert(lang_idx == 0);
     }
 
@@ -775,9 +655,9 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
             if (loading.length == chain->length &&
                     0 == memcmp(loading.module_name, chain->module_name, loading.length)) {
 
-                KOS_OBJ_PTR name_str = KOS_new_string(frame, module_name, length);
+                KOS_OBJ_ID name_str = KOS_new_string(frame, module_name, length);
                 if (!IS_BAD_PTR(name_str))
-                    _raise_3(frame, TO_OBJPTR(&str_err_circular_deps), name_str, TO_OBJPTR(&str_err_end));
+                    _raise_3(frame, KOS_context_get_cstring(frame, str_err_circular_deps), name_str, KOS_context_get_cstring(frame, str_err_end));
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -787,10 +667,10 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
     /* Return the module object if it was already loaded */
     {
-        KOS_OBJ_PTR module_idx_obj = KOS_get_property(frame, TO_OBJPTR(&ctx->module_names), actual_module_name);
+        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->module_names, actual_module_name);
         if (!IS_BAD_PTR(module_idx_obj)) {
             assert(IS_SMALL_INT(module_idx_obj));
-            module_obj = KOS_array_read(frame, TO_OBJPTR(&ctx->modules), (int)GET_SMALL_INT(module_idx_obj));
+            module_obj = KOS_array_read(frame, ctx->modules, (int)GET_SMALL_INT(module_idx_obj));
             if (IS_BAD_PTR(module_obj))
                 error = KOS_ERROR_EXCEPTION;
             else
@@ -803,18 +683,18 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
     /* Make room for the new module and allocate index */
     {
         uint32_t u_idx = 0;
-        TRY(KOS_array_push(frame, TO_OBJPTR(&ctx->modules), KOS_VOID, &u_idx));
+        TRY(KOS_array_push(frame, ctx->modules, KOS_VOID, &u_idx));
         module_idx = (int)u_idx;
         assert(module_idx >= 0);
     }
 
     /* Allocate module object */
     module_obj = _alloc_module(frame, actual_module_name);
-    TRY_OBJPTR(module_obj);
-    OBJPTR(KOS_MODULE, module_obj)->path = module_path;
+    TRY_OBJID(module_obj);
+    OBJPTR(MODULE, module_obj)->path = module_path;
 
     /* Load module file */
-    TRY(_load_file(frame, OBJPTR(KOS_MODULE, module_obj)->path, &file_buf));
+    TRY(_load_file(frame, OBJPTR(MODULE, module_obj)->path, &file_buf));
 
     /* Run built-in module initialization */
     mod_init = (struct _KOS_MODULE_INIT *)_KOS_red_black_find(ctx->module_inits,
@@ -822,7 +702,7 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
                                                               _module_init_compare);
     if (mod_init) {
         KOS_STACK_FRAME *mod_frame = _KOS_stack_frame_push(frame,
-                                                           module_obj,
+                                                           OBJPTR(MODULE, module_obj),
                                                            0,
                                                            0);
         TRY(mod_init->init(mod_frame));
@@ -845,11 +725,11 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
         const struct _KOS_FILE_POS pos = (error == KOS_ERROR_SCANNING_FAILED)
                                          ? parser.lexer.pos : parser.token.pos;
-        KOS_OBJ_PTR error_obj = _format_error(frame,
-                                              module_obj,
-                                              &file_buf,
-                                              parser.error_str,
-                                              pos);
+        KOS_OBJ_ID error_obj = _format_error(frame,
+                                             module_obj,
+                                             &file_buf,
+                                             parser.error_str,
+                                             pos);
         if (IS_BAD_PTR(error_obj)) {
             assert(KOS_is_exception_pending(frame));
         }
@@ -863,24 +743,24 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
     /* Save lang module index */
     if (module_idx == 0)
-        TRY(KOS_array_write(frame, TO_OBJPTR(&ctx->modules), module_idx, module_obj));
+        TRY(KOS_array_write(frame, ctx->modules, module_idx, module_obj));
 
     /* Prepare compiler */
     program.frame          = frame;
     program.import_module  = _import_module;
     program.get_global_idx = _get_global_idx;
-    TRY(_predefine_globals(frame, &program, OBJPTR(KOS_MODULE, module_obj)->global_names));
+    TRY(_predefine_globals(frame, &program, OBJPTR(MODULE, module_obj)->global_names));
 
     /* Compile source code into bytecode */
     error = _KOS_compiler_compile(&program, ast);
 
     if (error == KOS_ERROR_COMPILE_FAILED) {
 
-        KOS_OBJ_PTR error_obj = _format_error(frame,
-                                              module_obj,
-                                              &file_buf,
-                                              program.error_str,
-                                              program.error_token->pos);
+        KOS_OBJ_ID error_obj = _format_error(frame,
+                                             module_obj,
+                                             &file_buf,
+                                             program.error_str,
+                                             program.error_token->pos);
         if (IS_BAD_PTR(error_obj)) {
             assert(KOS_is_exception_pending(frame));
         }
@@ -890,12 +770,12 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
     TRY(error);
 
-    TRY(_alloc_globals(frame, &program, OBJPTR(KOS_MODULE, module_obj)));
-    TRY(_alloc_strings(frame, &program, OBJPTR(KOS_MODULE, module_obj)));
+    TRY(_alloc_globals(frame, &program, OBJPTR(MODULE, module_obj)));
+    TRY(_alloc_strings(frame, &program, OBJPTR(MODULE, module_obj)));
 
     /* Move compiled program to module */
     {
-        KOS_MODULE         *module       = OBJPTR(KOS_MODULE, module_obj);
+        KOS_MODULE         *module       = OBJPTR(MODULE, module_obj);
         struct _KOS_VECTOR *code_buf     = &program.code_buf;
         struct _KOS_VECTOR *addr_to_line = &program.addr2line_buf;
         struct _KOS_VECTOR *addr_to_func = &program.addr2func_buf;
@@ -957,8 +837,13 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
                 _KOS_vector_init(&buf);
 
                 for (i = 0; i < module->num_func_addrs; i++) {
-                    const uint32_t idx = module->func_addrs[i].str_idx;
-                    error = KOS_string_to_cstr_vec(frame, TO_OBJPTR(module->strings+idx), &buf);
+                    const uint32_t   idx = module->func_addrs[i].str_idx;
+                    const KOS_OBJ_ID str = KOS_array_read(frame, module->strings, (int)idx);
+                    if (IS_BAD_PTR(str)) {
+                        error = KOS_ERROR_EXCEPTION;
+                        break;
+                    }
+                    error = KOS_string_to_cstr_vec(frame, str, &buf);
                     if (error)
                         break;
                     total_size += buf.size;
@@ -974,8 +859,13 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
                 if (!error) {
                     const char **func_names_new = (const char **)ptrs.buffer;
                     for (i = 0; i < module->num_func_addrs; i++) {
-                        const uint32_t idx = module->func_addrs[i].str_idx;
-                        error = KOS_string_to_cstr_vec(frame, TO_OBJPTR(module->strings+idx), &buf);
+                        const uint32_t   idx = module->func_addrs[i].str_idx;
+                        const KOS_OBJ_ID str = KOS_array_read(frame, module->strings, (int)idx);
+                        if (IS_BAD_PTR(str)) {
+                            error = KOS_ERROR_EXCEPTION;
+                            break;
+                        }
+                        error = KOS_string_to_cstr_vec(frame, str, &buf);
                         if (error)
                             break;
                         func_names_new[i] = names;
@@ -1012,11 +902,11 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
     compiler_init = 0;
 
     /* Put module on the list */
-    TRY(KOS_array_write(frame, TO_OBJPTR(&ctx->modules), module_idx, module_obj));
-    TRY(KOS_set_property(frame, TO_OBJPTR(&ctx->module_names), actual_module_name, TO_SMALL_INT(module_idx)));
+    TRY(KOS_array_write(frame, ctx->modules, module_idx, module_obj));
+    TRY(KOS_set_property(frame, ctx->module_names, actual_module_name, TO_SMALL_INT(module_idx)));
 
     /* Run module */
-    error = _KOS_vm_run_module(OBJPTR(KOS_MODULE, module_obj), &ret);
+    error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
 
     if (error) {
         assert(error == KOS_ERROR_EXCEPTION);
@@ -1025,10 +915,10 @@ KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
 
 _error:
     if (search_path_set) {
-        const uint32_t num_paths = KOS_get_array_size(TO_OBJPTR(&ctx->module_search_paths));
+        const uint32_t num_paths = KOS_get_array_size(ctx->module_search_paths);
         int            err;
         assert(num_paths > 0);
-        err = KOS_array_resize(frame, TO_OBJPTR(&ctx->module_search_paths), num_paths-1);
+        err = KOS_array_resize(frame, ctx->module_search_paths, num_paths-1);
         if ( ! error)
             error = err;
     }
@@ -1045,17 +935,13 @@ _error:
             assert(KOS_is_exception_pending(frame));
         else if (error == KOS_ERROR_OUT_OF_MEMORY) {
             if ( ! KOS_is_exception_pending(frame))
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_out_of_memory));
-        }
-        else if (error == KOS_ERROR_INVALID_UTF8_CHARACTER) {
-            if ( ! KOS_is_exception_pending(frame))
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_utf8));
+                KOS_raise_exception_cstring(frame, str_err_out_of_memory);
         }
         else {
             if ( ! KOS_is_exception_pending(frame))
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_internal));
+                KOS_raise_exception_cstring(frame, str_err_internal);
         }
-        module_obj = TO_OBJPTR(0);
+        module_obj = KOS_BADPTR;
     }
     else {
         *out_module_idx = module_idx;
@@ -1066,14 +952,14 @@ _error:
 }
 
 int KOS_module_add_global(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      name,
-                          KOS_OBJ_PTR      value,
+                          KOS_OBJ_ID       name,
+                          KOS_OBJ_ID       value,
                           unsigned        *idx)
 {
     int         error;
     uint32_t    new_idx;
-    KOS_OBJ_PTR prop;
-    KOS_MODULE *module = OBJPTR(KOS_MODULE, frame->module);
+    KOS_OBJ_ID  prop;
+    KOS_MODULE *module = frame->module;
 
     assert(module);
 
@@ -1082,7 +968,7 @@ int KOS_module_add_global(KOS_STACK_FRAME *frame,
     KOS_clear_exception(frame);
 
     if ( ! IS_BAD_PTR(prop)) {
-        _raise_3(frame, TO_OBJPTR(&str_err_duplicate_global), name, TO_OBJPTR(&str_err_end));
+        _raise_3(frame, KOS_context_get_cstring(frame, str_err_duplicate_global), name, KOS_context_get_cstring(frame, str_err_end));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -1097,24 +983,24 @@ _error:
 }
 
 int KOS_module_get_global(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      name,
-                          KOS_OBJ_PTR     *value,
+                          KOS_OBJ_ID       name,
+                          KOS_OBJ_ID      *value,
                           unsigned        *idx)
 {
     int         error  = KOS_SUCCESS;
-    KOS_OBJ_PTR idx_obj;
-    KOS_OBJ_PTR ret;
-    KOS_MODULE *module = OBJPTR(KOS_MODULE, frame->module);
+    KOS_OBJ_ID  idx_obj;
+    KOS_OBJ_ID  ret;
+    KOS_MODULE *module = frame->module;
 
     assert(module);
 
     idx_obj = KOS_get_property(frame, module->global_names, name);
-    TRY_OBJPTR(idx_obj);
+    TRY_OBJID(idx_obj);
 
     assert(IS_SMALL_INT(idx_obj));
 
     ret = KOS_array_read(frame, module->globals, (int)GET_SMALL_INT(idx_obj));
-    TRY_OBJPTR(ret);
+    TRY_OBJID(ret);
 
     *value = ret;
     if (idx)
@@ -1125,24 +1011,24 @@ _error:
 }
 
 int KOS_module_add_function(KOS_STACK_FRAME          *frame,
-                            KOS_STRING               *str_name,
+                            KOS_OBJ_ID                str_name,
                             KOS_FUNCTION_HANDLER      handler,
                             int                       min_args,
                             enum _KOS_GENERATOR_STATE gen_state)
 {
     int         error    = KOS_SUCCESS;
-    KOS_OBJ_PTR func_obj = KOS_new_builtin_function(frame, handler, min_args);
-    KOS_MODULE *module   = OBJPTR(KOS_MODULE, frame->module);
+    KOS_OBJ_ID  func_obj = KOS_new_builtin_function(frame, handler, min_args);
+    KOS_MODULE *module   = frame->module;
 
     assert(module);
 
-    TRY_OBJPTR(func_obj);
+    TRY_OBJID(func_obj);
 
-    OBJPTR(KOS_FUNCTION, func_obj)->module          = TO_OBJPTR(module);
-    OBJPTR(KOS_FUNCTION, func_obj)->generator_state = gen_state;
+    OBJPTR(FUNCTION, func_obj)->module          = module;
+    OBJPTR(FUNCTION, func_obj)->generator_state = gen_state;
 
     TRY(KOS_module_add_global(frame,
-                              TO_OBJPTR(str_name),
+                              str_name,
                               func_obj,
                               0));
 
@@ -1151,27 +1037,27 @@ _error:
 }
 
 int KOS_module_add_constructor(KOS_STACK_FRAME     *frame,
-                               KOS_STRING          *str_name,
+                               KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLER handler,
                                int                  min_args,
-                               KOS_OBJ_PTR         *ret_proto)
+                               KOS_OBJ_ID          *ret_proto)
 {
     int         error    = KOS_SUCCESS;
-    KOS_OBJ_PTR func_obj = KOS_new_builtin_function(frame, handler, min_args);
-    KOS_MODULE *module   = OBJPTR(KOS_MODULE, frame->module);
+    KOS_OBJ_ID  func_obj = KOS_new_builtin_function(frame, handler, min_args);
+    KOS_MODULE *module   = frame->module;
 
     assert(module);
 
-    TRY_OBJPTR(func_obj);
+    TRY_OBJID(func_obj);
 
-    OBJPTR(KOS_FUNCTION, func_obj)->module = TO_OBJPTR(module);
+    OBJPTR(FUNCTION, func_obj)->module = module;
 
     TRY(KOS_module_add_global(frame,
-                              TO_OBJPTR(str_name),
+                              str_name,
                               func_obj,
                               0));
 
-    *ret_proto = (KOS_OBJ_PTR)KOS_atomic_read_ptr(OBJPTR(KOS_FUNCTION, func_obj)->prototype);
+    *ret_proto = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(FUNCTION, func_obj)->prototype);
     assert( ! IS_BAD_PTR(*ret_proto));
 
 _error:
@@ -1179,24 +1065,24 @@ _error:
 }
 
 int KOS_module_add_member_function(KOS_STACK_FRAME          *frame,
-                                   KOS_OBJ_PTR               proto_obj,
-                                   KOS_STRING               *str_name,
+                                   KOS_OBJ_ID                proto_obj,
+                                   KOS_OBJ_ID                str_name,
                                    KOS_FUNCTION_HANDLER      handler,
                                    int                       min_args,
                                    enum _KOS_GENERATOR_STATE gen_state)
 {
     int          error    = KOS_SUCCESS;
-    KOS_OBJ_PTR  func_obj = KOS_new_builtin_function(frame, handler, min_args);
-    KOS_MODULE  *module   = OBJPTR(KOS_MODULE, frame->module);
+    KOS_OBJ_ID   func_obj = KOS_new_builtin_function(frame, handler, min_args);
+    KOS_MODULE  *module   = frame->module;
 
     assert(module);
 
-    TRY_OBJPTR(func_obj);
+    TRY_OBJID(func_obj);
 
-    OBJPTR(KOS_FUNCTION, func_obj)->module          = TO_OBJPTR(module);
-    OBJPTR(KOS_FUNCTION, func_obj)->generator_state = gen_state;
+    OBJPTR(FUNCTION, func_obj)->module          = module;
+    OBJPTR(FUNCTION, func_obj)->generator_state = gen_state;
 
-    TRY(KOS_set_property(frame, proto_obj, TO_OBJPTR(str_name), func_obj));
+    TRY(KOS_set_property(frame, proto_obj, str_name, func_obj));
 
 _error:
     return error;
@@ -1283,18 +1169,19 @@ unsigned KOS_module_addr_to_func_line(KOS_MODULE *module,
     return line;
 }
 
-KOS_OBJ_PTR KOS_module_addr_to_func_name(KOS_MODULE *module,
-                                         uint32_t    offs)
+KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_MODULE *module,
+                                        uint32_t    offs)
 {
     const KOS_FUNC_ADDR *addr2func = _addr_to_func(module, offs);
 
-    KOS_OBJ_PTR ret = TO_OBJPTR(0);
+    KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (addr2func) {
+        KOS_STACK_FRAME *frame = &module->context->main_thread.frame;
         if (addr2func->str_idx == ~0U)
-            ret = TO_OBJPTR(&str_global);
+            ret = KOS_context_get_cstring(frame, str_global);
         else
-            ret = TO_OBJPTR(module->strings + addr2func->str_idx);
+            ret = KOS_array_read(frame, module->strings, (int)addr2func->str_idx);
     }
 
     return ret;

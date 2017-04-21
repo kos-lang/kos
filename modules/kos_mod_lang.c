@@ -36,39 +36,40 @@
 #include <memory.h>
 #include <stdio.h>
 
-static KOS_ASCII_STRING(str_builtin,                       "<builtin>");
-static KOS_ASCII_STRING(str_err_bad_number,                "number parse failed");
-static KOS_ASCII_STRING(str_err_bad_pack_value,            "invalid value type for pack format");
-static KOS_ASCII_STRING(str_err_cannot_convert_to_array,   "unsupported type passed to array constructor");
-static KOS_ASCII_STRING(str_err_cannot_override_prototype, "cannot override prototype");
-static KOS_ASCII_STRING(str_err_invalid_array_size,        "array size out of range");
-static KOS_ASCII_STRING(str_err_invalid_byte_value,        "buffer element value out of range");
-static KOS_ASCII_STRING(str_err_invalid_buffer_size,       "buffer size out of range");
-static KOS_ASCII_STRING(str_err_invalid_pack_format,       "invalid pack format");
-static KOS_ASCII_STRING(str_err_invalid_string_idx,        "string index is out of range");
-static KOS_ASCII_STRING(str_err_not_array,                 "object is not an array");
-static KOS_ASCII_STRING(str_err_not_buffer,                "object is not a buffer");
-static KOS_ASCII_STRING(str_err_not_enough_pack_values,    "insufficient number of packed values");
-static KOS_ASCII_STRING(str_err_not_function,              "object is not a function");
-static KOS_ASCII_STRING(str_err_not_string,                "object is not a string");
-static KOS_ASCII_STRING(str_err_unpack_buf_too_short,      "unpacked buffer too short");
-static KOS_ASCII_STRING(str_err_unsup_operand_types,       "unsupported operand types");
+static const char str_builtin[]                       = "<builtin>";
+static const char str_err_bad_number[]                = "number parse failed";
+static const char str_err_bad_pack_value[]            = "invalid value type for pack format";
+static const char str_err_cannot_convert_to_array[]   = "unsupported type passed to array constructor";
+static const char str_err_cannot_override_prototype[] = "cannot override prototype";
+static const char str_err_invalid_array_size[]        = "array size out of range";
+static const char str_err_invalid_byte_value[]        = "buffer element value out of range";
+static const char str_err_invalid_buffer_size[]       = "buffer size out of range";
+static const char str_err_invalid_pack_format[]       = "invalid pack format";
+static const char str_err_invalid_string_idx[]        = "string index is out of range";
+static const char str_err_not_array[]                 = "object is not an array";
+static const char str_err_not_buffer[]                = "object is not a buffer";
+static const char str_err_not_enough_pack_values[]    = "insufficient number of packed values";
+static const char str_err_not_function[]              = "object is not a function";
+static const char str_err_not_string[]                = "object is not a string";
+static const char str_err_unpack_buf_too_short[]      = "unpacked buffer too short";
+static const char str_err_unsup_operand_types[]       = "unsupported operand types";
 
-#define TRY_CREATE_CONSTRUCTOR(name)                               \
-do {                                                               \
-    static KOS_ASCII_STRING(str_name, #name);                      \
-    KOS_CONTEXT *ctx = OBJPTR(KOS_MODULE, frame->module)->context; \
-    TRY(_create_constructor(frame,                                 \
-                            TO_OBJPTR(&str_name),                  \
-                            _##name##_constructor,                 \
-                            TO_OBJPTR(&ctx->name##_prototype)));   \
+#define TRY_CREATE_CONSTRUCTOR(name)                                         \
+do {                                                                         \
+    static const char str_name[] = #name;                                    \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring(frame, str_name); \
+    KOS_CONTEXT      *ctx        = frame->module->context;                   \
+    TRY(_create_constructor(frame,                                           \
+                            str,                                             \
+                            _##name##_constructor,                           \
+                            ctx->name##_prototype));                         \
 } while (0)
 
-#define PROTO(type) (TO_OBJPTR(&OBJPTR(KOS_MODULE, frame->module)->context->type##_prototype))
+#define PROTO(type) (frame->module->context->type##_prototype)
 
-static KOS_OBJ_PTR _print(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      this_obj,
-                          KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _print(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_ID       this_obj,
+                         KOS_OBJ_ID       args_obj)
 {
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cstr;
@@ -85,12 +86,12 @@ static KOS_OBJ_PTR _print(KOS_STACK_FRAME *frame,
 _error:
     _KOS_vector_destroy(&cstr);
 
-    return error ? TO_OBJPTR(0) : KOS_VOID;
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_PTR _print_(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      this_obj,
-                           KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _print_(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_ID       this_obj,
+                          KOS_OBJ_ID       args_obj)
 {
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cstr;
@@ -105,76 +106,76 @@ static KOS_OBJ_PTR _print_(KOS_STACK_FRAME *frame,
 _error:
     _KOS_vector_destroy(&cstr);
 
-    return error ? TO_OBJPTR(0) : KOS_VOID;
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_PTR _object_iterator(KOS_STACK_FRAME           *frame,
-                                    KOS_OBJ_PTR                regs_obj,
-                                    KOS_OBJ_PTR                args_obj,
-                                    enum KOS_OBJECT_WALK_DEPTH deep)
+static KOS_OBJ_ID _object_iterator(KOS_STACK_FRAME           *frame,
+                                   KOS_OBJ_ID                 regs_obj,
+                                   KOS_OBJ_ID                 args_obj,
+                                   enum KOS_OBJECT_WALK_DEPTH deep)
 {
     int                  error = KOS_SUCCESS;
-    KOS_OBJ_PTR          walk;
-    KOS_OBJECT_WALK_ELEM elem = { TO_OBJPTR(0), TO_OBJPTR(0) };
+    KOS_OBJ_ID           walk;
+    KOS_OBJECT_WALK_ELEM elem = { KOS_BADPTR, KOS_BADPTR };
 
     assert( ! IS_BAD_PTR(regs_obj));
-    TRY_OBJPTR(regs_obj);
+    TRY_OBJID(regs_obj);
 
-    assert(IS_TYPE(OBJ_ARRAY, regs_obj));
+    assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
     assert(KOS_get_array_size(regs_obj) > 0);
 
     walk = KOS_array_read(frame, regs_obj, 0);
     assert( ! IS_BAD_PTR(walk));
-    TRY_OBJPTR(walk);
+    TRY_OBJID(walk);
 
-    if ( ! IS_TYPE(OBJ_OBJECT_WALK, walk)) {
+    if (GET_OBJ_SUBTYPE(walk) != OBJ_OBJECT_WALK) {
         walk = KOS_new_object_walk(frame, walk, deep);
-        TRY_OBJPTR(walk);
+        TRY_OBJID(walk);
 
         TRY(KOS_array_write(frame, regs_obj, 0, walk));
     }
 
-    elem = KOS_object_walk(frame, OBJPTR(KOS_OBJECT_WALK, walk));
+    elem = KOS_object_walk(frame, OBJPTR(OBJECT_WALK, walk));
 
 _error:
     return elem.key;
 }
 
-static KOS_OBJ_PTR _shallow(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_PTR      regs_obj,
-                            KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _shallow(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_ID       regs_obj,
+                           KOS_OBJ_ID       args_obj)
 {
     return _object_iterator(frame, regs_obj, args_obj, KOS_SHALLOW);
 }
 
-static KOS_OBJ_PTR _deep(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      regs_obj,
-                         KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _deep(KOS_STACK_FRAME *frame,
+                        KOS_OBJ_ID       regs_obj,
+                        KOS_OBJ_ID       args_obj)
 {
     return _object_iterator(frame, regs_obj, args_obj, KOS_DEEP);
 }
 
-static KOS_OBJ_PTR _iterator(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_PTR      regs_obj,
-                             KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _iterator(KOS_STACK_FRAME *frame,
+                            KOS_OBJ_ID       regs_obj,
+                            KOS_OBJ_ID       args_obj)
 {
-    return TO_OBJPTR(0);
+    return KOS_BADPTR;
 }
 
 static int _create_constructor(KOS_STACK_FRAME     *frame,
-                               KOS_OBJ_PTR          str_name,
+                               KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLER constructor,
-                               KOS_OBJ_PTR          prototype)
+                               KOS_OBJ_ID           prototype)
 {
-    int         error    = KOS_SUCCESS;
-    KOS_OBJ_PTR func_obj = KOS_new_function(frame, prototype);
+    int        error    = KOS_SUCCESS;
+    KOS_OBJ_ID func_obj = KOS_new_function(frame, prototype);
 
-    TRY_OBJPTR(func_obj);
+    TRY_OBJID(func_obj);
 
-    assert( ! IS_BAD_PTR(frame->module));
+    assert(frame->module);
 
-    OBJPTR(KOS_FUNCTION, func_obj)->handler = constructor;
-    OBJPTR(KOS_FUNCTION, func_obj)->module  = frame->module;
+    OBJPTR(FUNCTION, func_obj)->handler = constructor;
+    OBJPTR(FUNCTION, func_obj)->module  = frame->module;
 
     TRY(KOS_module_add_global(frame,
                               str_name,
@@ -185,195 +186,170 @@ _error:
     return error;
 }
 
-static KOS_OBJ_PTR _number_constructor(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_PTR      this_obj,
-                                       KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _number_constructor(KOS_STACK_FRAME *frame,
+                                      KOS_OBJ_ID       this_obj,
+                                      KOS_OBJ_ID       args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    ret      = TO_OBJPTR(0);
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
 
     if (num_args == 0)
         ret = TO_SMALL_INT(0);
     else {
-        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
 
-        if (IS_SMALL_INT(arg))
+        if (IS_NUMERIC_OBJ(arg))
             ret = arg;
-        else switch (GET_OBJ_TYPE(arg)) {
+        else if (GET_OBJ_TYPE(arg) == OBJ_STRING) {
+            struct _KOS_VECTOR cstr;
+            _KOS_vector_init(&cstr);
 
-            case OBJ_INTEGER:
-                /* fall through */
-            case OBJ_FLOAT:
-                ret = arg;
-                break;
+            if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, arg, &cstr)) {
 
-            case OBJ_STRING_8:
-                /* fall through */
-            case OBJ_STRING_16:
-                /* fall through */
-            case OBJ_STRING_32: {
-                struct _KOS_VECTOR cstr;
-                _KOS_vector_init(&cstr);
+                const char         *begin = cstr.buffer;
+                const char         *end   = begin + cstr.size - 1;
+                struct _KOS_NUMERIC numeric;
 
-                if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, arg, &cstr)) {
+                assert(begin <= end);
 
-                    const char         *begin = cstr.buffer;
-                    const char         *end   = begin + cstr.size - 1;
-                    struct _KOS_NUMERIC numeric;
+                if (KOS_SUCCESS == _KOS_parse_numeric(begin, end, &numeric)) {
 
-                    assert(begin <= end);
-
-                    if (KOS_SUCCESS == _KOS_parse_numeric(begin, end, &numeric)) {
-
-                        if (numeric.type == KOS_INTEGER_VALUE)
-                            ret = KOS_new_int(frame, numeric.u.i);
-                        else {
-                            assert(numeric.type == KOS_FLOAT_VALUE);
-                            ret = KOS_new_float(frame, numeric.u.d);
-                        }
+                    if (numeric.type == KOS_INTEGER_VALUE)
+                        ret = KOS_new_int(frame, numeric.u.i);
+                    else {
+                        assert(numeric.type == KOS_FLOAT_VALUE);
+                        ret = KOS_new_float(frame, numeric.u.d);
                     }
-                    else
-                        KOS_raise_exception(frame, TO_OBJPTR(&str_err_bad_number));
                 }
-
-                _KOS_vector_destroy(&cstr);
-                break;
+                else
+                    KOS_raise_exception_cstring(frame, str_err_bad_number);
             }
 
-            default:
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_unsup_operand_types));
-                break;
+            _KOS_vector_destroy(&cstr);
         }
+        else
+            KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _integer_constructor(KOS_STACK_FRAME *frame,
-                                        KOS_OBJ_PTR      this_obj,
-                                        KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _integer_constructor(KOS_STACK_FRAME *frame,
+                                       KOS_OBJ_ID       this_obj,
+                                       KOS_OBJ_ID       args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    ret      = TO_OBJPTR(0);
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
 
     if (num_args == 0)
         ret = TO_SMALL_INT(0);
     else {
-        int64_t     value;
-        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+        int64_t    value;
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
 
-        if ( ! IS_BAD_PTR(arg)) {
-            if (IS_NUMERIC_OBJ(arg)) {
-                if (KOS_get_integer(frame, arg, &value) == KOS_SUCCESS)
+        if (IS_NUMERIC_OBJ(arg)) {
+            if (KOS_get_integer(frame, arg, &value) == KOS_SUCCESS)
+                ret = KOS_new_int(frame, value);
+        }
+        else if (GET_OBJ_TYPE(arg) == OBJ_STRING) {
+
+            struct _KOS_VECTOR cstr;
+            _KOS_vector_init(&cstr);
+
+            if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, arg, &cstr)) {
+
+                const char *begin = cstr.buffer;
+                const char *end   = begin + cstr.size - 1;
+                int         error;
+
+                assert(begin <= end);
+
+                error = _KOS_parse_int(begin, end, &value);
+
+                if (error)
+                    KOS_raise_exception_cstring(frame, str_err_bad_number);
+                else
                     ret = KOS_new_int(frame, value);
             }
-            else if (IS_STRING_OBJ(arg)) {
 
-                struct _KOS_VECTOR cstr;
-                _KOS_vector_init(&cstr);
-
-                if (KOS_SUCCESS == KOS_string_to_cstr_vec(frame, arg, &cstr)) {
-
-                    const char *begin = cstr.buffer;
-                    const char *end   = begin + cstr.size - 1;
-                    int         error;
-
-                    assert(begin <= end);
-
-                    error = _KOS_parse_int(begin, end, &value);
-
-                    if (error)
-                        KOS_raise_exception(frame, TO_OBJPTR(&str_err_bad_number));
-                    else
-                        ret = KOS_new_int(frame, value);
-                }
-
-                _KOS_vector_destroy(&cstr);
-            }
-            else
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_unsup_operand_types));
+            _KOS_vector_destroy(&cstr);
         }
+        else if ( ! IS_BAD_PTR(arg))
+            KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _float_constructor(KOS_STACK_FRAME *frame,
-                                      KOS_OBJ_PTR      this_obj,
-                                      KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _float_constructor(KOS_STACK_FRAME *frame,
+                                     KOS_OBJ_ID       this_obj,
+                                     KOS_OBJ_ID       args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    ret      = TO_OBJPTR(0);
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
 
     if (num_args == 0)
         ret = KOS_new_float(frame, 0);
     else {
-        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
 
-        if ( ! IS_BAD_PTR(arg)) {
-            if (IS_SMALL_INT(arg))
-                ret = KOS_new_float(frame, (double)GET_SMALL_INT(arg));
-            else switch (GET_OBJ_TYPE(arg)) {
+        if (IS_NUMERIC_OBJ(arg)) {
 
-                case OBJ_INTEGER: {
-                    ret = KOS_new_float(frame, (double)OBJPTR(KOS_INTEGER, arg)->number);
-                    break;
-                }
-
-                case OBJ_FLOAT: {
-                    ret = arg;
-                    break;
-                }
-
-                case OBJ_STRING_8:
-                    /* fall through */
-                case OBJ_STRING_16:
-                    /* fall through */
-                case OBJ_STRING_32: {
-
-                    struct _KOS_VECTOR cstr;
-                    _KOS_vector_init(&cstr);
-
-                    if (KOS_string_to_cstr_vec(frame, arg, &cstr) == KOS_SUCCESS) {
-
-                        const char *begin = cstr.buffer;
-                        const char *end   = begin + cstr.size - 1;
-                        double      value;
-                        int         error;
-
-                        assert(begin <= end);
-
-                        error = _KOS_parse_double(begin, end, &value);
-
-                        if (error)
-                            KOS_raise_exception(frame, TO_OBJPTR(&str_err_bad_number));
-                        else
-                            ret = KOS_new_float(frame, value);
-                    }
-
-                    _KOS_vector_destroy(&cstr);
-                    break;
-                }
+            switch (GET_NUMERIC_TYPE(arg)) {
 
                 default:
-                    KOS_raise_exception(frame, TO_OBJPTR(&str_err_unsup_operand_types));
+                    ret = KOS_new_float(frame, (double)GET_SMALL_INT(arg));
+                    break;
+
+                case OBJ_NUM_INTEGER:
+                    ret = KOS_new_float(frame, (double)*OBJPTR(INTEGER, arg));
+                    break;
+
+                case OBJ_NUM_FLOAT:
+                    ret = arg;
                     break;
             }
         }
+        else if (GET_OBJ_TYPE(arg) == OBJ_STRING) {
+
+            struct _KOS_VECTOR cstr;
+            _KOS_vector_init(&cstr);
+
+            if (KOS_string_to_cstr_vec(frame, arg, &cstr) == KOS_SUCCESS) {
+
+                const char *begin = cstr.buffer;
+                const char *end   = begin + cstr.size - 1;
+                double      value;
+                int         error;
+
+                assert(begin <= end);
+
+                error = _KOS_parse_double(begin, end, &value);
+
+                if (error)
+                    KOS_raise_exception_cstring(frame, str_err_bad_number);
+                else
+                    ret = KOS_new_float(frame, value);
+            }
+
+            _KOS_vector_destroy(&cstr);
+        }
+        else if ( ! IS_BAD_PTR(arg))
+            KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _boolean_constructor(KOS_STACK_FRAME *frame,
-                                        KOS_OBJ_PTR      this_obj,
-                                        KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _boolean_constructor(KOS_STACK_FRAME *frame,
+                                       KOS_OBJ_ID       this_obj,
+                                       KOS_OBJ_ID       args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    ret      = TO_OBJPTR(0);
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
 
     if (num_args > 0) {
-        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
 
         if ( ! IS_BAD_PTR(arg))
             ret = KOS_BOOL(_KOS_is_truthy(arg));
@@ -384,28 +360,28 @@ static KOS_OBJ_PTR _boolean_constructor(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_PTR _void_constructor(KOS_STACK_FRAME *frame,
-                                     KOS_OBJ_PTR      this_obj,
-                                     KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _void_constructor(KOS_STACK_FRAME *frame,
+                                    KOS_OBJ_ID       this_obj,
+                                    KOS_OBJ_ID       args_obj)
 {
     return KOS_VOID;
 }
 
-static KOS_OBJ_PTR _string_constructor(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_PTR     this_obj,
-                                       KOS_OBJ_PTR     args_obj)
+static KOS_OBJ_ID _string_constructor(KOS_STACK_FRAME *frame,
+                                      KOS_OBJ_ID      this_obj,
+                                      KOS_OBJ_ID      args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    ret      = TO_OBJPTR(0);
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
 
     if (num_args == 0)
         ret = KOS_new_string(frame, 0, 0);
 
     else if (num_args == 1) {
 
-        KOS_OBJ_PTR obj = KOS_array_read(frame, args_obj, 0);
-        TRY_OBJPTR(obj);
+        KOS_OBJ_ID obj = KOS_array_read(frame, args_obj, 0);
+        TRY_OBJID(obj);
 
         ret = KOS_object_to_string(frame, obj);
     }
@@ -414,55 +390,50 @@ static KOS_OBJ_PTR _string_constructor(KOS_STACK_FRAME *frame,
         uint32_t i;
 
         for (i=0; i < num_args; i++) {
-            KOS_OBJ_PTR obj = KOS_array_read(frame, args_obj, (int)i);
-            TRY_OBJPTR(obj);
+            KOS_OBJ_ID obj = KOS_array_read(frame, args_obj, (int)i);
+            TRY_OBJID(obj);
 
-            if ( ! IS_STRING_OBJ(obj)) {
+            if (GET_OBJ_TYPE(obj) != OBJ_STRING) {
 
                 obj = KOS_object_to_string(frame, obj);
-                TRY_OBJPTR(obj);
+                TRY_OBJID(obj);
 
                 TRY(KOS_array_write(frame, args_obj, (int)i, obj));
             }
         }
 
         if (i == num_args)
-            ret = KOS_string_add_many(frame, _KOS_get_array_buffer(OBJPTR(KOS_ARRAY, args_obj)), num_args);
+            ret = KOS_string_add_many(frame, _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)), num_args);
     }
 
 _error:
-    return error ? TO_OBJPTR(0) : ret;
+    return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_PTR _object_constructor(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_PTR      this_obj,
-                                       KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _object_constructor(KOS_STACK_FRAME *frame,
+                                      KOS_OBJ_ID       this_obj,
+                                      KOS_OBJ_ID       args_obj)
 {
     return KOS_new_object(frame);
 }
 
-static KOS_OBJ_PTR _array_constructor(KOS_STACK_FRAME *frame,
-                                      KOS_OBJ_PTR      this_obj,
-                                      KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _array_constructor(KOS_STACK_FRAME *frame,
+                                     KOS_OBJ_ID       this_obj,
+                                     KOS_OBJ_ID       args_obj)
 {
     int            error    = KOS_SUCCESS;
-    KOS_OBJ_PTR    array    = KOS_new_array(frame, 0);
+    KOS_OBJ_ID     array    = KOS_new_array(frame, 0);
     const uint32_t num_args = KOS_get_array_size(args_obj);
     uint32_t       i_arg;
 
-    TRY_OBJPTR(array);
+    TRY_OBJID(array);
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
 
         const uint32_t cur_size = KOS_get_array_size(array);
 
-        KOS_OBJ_PTR elem = KOS_array_read(frame, args_obj, (int)i_arg);
-        TRY_OBJPTR(elem);
-
-        if (IS_SMALL_INT(elem)) {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_convert_to_array));
-            return TO_OBJPTR(0);
-        }
+        KOS_OBJ_ID elem = KOS_array_read(frame, args_obj, (int)i_arg);
+        TRY_OBJID(elem);
 
         switch (GET_OBJ_TYPE(elem)) {
 
@@ -471,17 +442,15 @@ static KOS_OBJ_PTR _array_constructor(KOS_STACK_FRAME *frame,
                                      elem, 0, (int32_t)KOS_get_array_size(elem)));
                 break;
 
-            case OBJ_STRING_8:
-            case OBJ_STRING_16:
-            case OBJ_STRING_32: {
+            case OBJ_STRING: {
                 const uint32_t len = KOS_get_string_length(elem);
                 uint32_t       i;
 
                 TRY(KOS_array_resize(frame, array, cur_size + len));
 
                 for (i = 0; i < len; i++) {
-                    KOS_OBJ_PTR ch = KOS_string_get_char(frame, elem, (int)i);
-                    TRY_OBJPTR(ch);
+                    KOS_OBJ_ID ch = KOS_string_get_char(frame, elem, (int)i);
+                    TRY_OBJID(ch);
                     TRY(KOS_array_write(frame, array, (int)(cur_size + i), ch));
                 }
                 break;
@@ -500,27 +469,27 @@ static KOS_OBJ_PTR _array_constructor(KOS_STACK_FRAME *frame,
                 TRY(KOS_array_resize(frame, array, cur_size + size));
 
                 for (i = 0; i < size; i++) {
-                    const KOS_OBJ_PTR byte = TO_SMALL_INT((int)buf[i]);
+                    const KOS_OBJ_ID byte = TO_SMALL_INT((int)buf[i]);
                     TRY(KOS_array_write(frame, array, (int)(cur_size + i), byte));
                 }
                 break;
             }
 
             case OBJ_FUNCTION: {
-                KOS_OBJ_PTR               gen_args;
-                enum _KOS_GENERATOR_STATE state = OBJPTR(KOS_FUNCTION, elem)->generator_state;
+                KOS_OBJ_ID                gen_args;
+                enum _KOS_GENERATOR_STATE state = OBJPTR(FUNCTION, elem)->generator_state;
 
                 if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE) {
-                    KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_convert_to_array));
-                    return TO_OBJPTR(0);
+                    KOS_raise_exception_cstring(frame, str_err_cannot_convert_to_array);
+                    return KOS_BADPTR;
                 }
 
                 gen_args = KOS_new_array(frame, 0);
-                TRY_OBJPTR(gen_args);
+                TRY_OBJID(gen_args);
 
                 if (state != KOS_GEN_DONE) {
                     for (;;) {
-                        KOS_OBJ_PTR ret = KOS_call_function(frame, elem, KOS_VOID, gen_args);
+                        KOS_OBJ_ID ret = KOS_call_function(frame, elem, KOS_VOID, gen_args);
                         if (IS_BAD_PTR(ret)) /* end of iterator */
                             break;
                         TRY(KOS_array_push(frame, array, ret, 0));
@@ -534,23 +503,23 @@ static KOS_OBJ_PTR _array_constructor(KOS_STACK_FRAME *frame,
                 break;
 
             default:
-                KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_convert_to_array));
-                return TO_OBJPTR(0);
+                KOS_raise_exception_cstring(frame, str_err_cannot_convert_to_array);
+                return KOS_BADPTR;
         }
     }
 
 _error:
-    return error ? TO_OBJPTR(0) : array;
+    return error ? KOS_BADPTR : array;
 }
 
-static KOS_OBJ_PTR _buffer_constructor(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_PTR      this_obj,
-                                       KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _buffer_constructor(KOS_STACK_FRAME *frame,
+                                      KOS_OBJ_ID       this_obj,
+                                      KOS_OBJ_ID       args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
     int64_t        size     = 0;
-    KOS_OBJ_PTR    buffer   = TO_OBJPTR(0);
+    KOS_OBJ_ID     buffer   = KOS_BADPTR;
 
     /* TODO handle multiple inputs: array of numbers, string, generator */
 
@@ -558,12 +527,12 @@ static KOS_OBJ_PTR _buffer_constructor(KOS_STACK_FRAME *frame,
         TRY(KOS_get_integer(frame, KOS_array_read(frame, args_obj, 0), &size));
 
     if (size < 0 || size > INT_MAX) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_buffer_size));
-        return TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_invalid_buffer_size);
+        return KOS_BADPTR;
     }
 
     buffer = KOS_new_buffer(frame, (uint32_t)size);
-    TRY_OBJPTR(buffer);
+    TRY_OBJID(buffer);
 
     if (size)
         memset(KOS_buffer_data(buffer), 0, (size_t)size);
@@ -572,50 +541,50 @@ _error:
     return buffer;
 }
 
-static KOS_OBJ_PTR _function_constructor(KOS_STACK_FRAME *frame,
-                                         KOS_OBJ_PTR      this_obj,
-                                         KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _function_constructor(KOS_STACK_FRAME *frame,
+                                        KOS_OBJ_ID       this_obj,
+                                        KOS_OBJ_ID       args_obj)
 {
     /* TODO copy function object */
-    return TO_OBJPTR(0);
+    return KOS_BADPTR;
 }
 
-static KOS_OBJ_PTR _apply(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      this_obj,
-                          KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _apply(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_ID       this_obj,
+                         KOS_OBJ_ID       args_obj)
 {
-    int         error    = KOS_SUCCESS;
-    KOS_OBJ_PTR ret      = TO_OBJPTR(0);
-    KOS_OBJ_PTR arg_args = TO_OBJPTR(0);
-    KOS_OBJ_PTR arg_this;
+    int        error    = KOS_SUCCESS;
+    KOS_OBJ_ID ret      = KOS_BADPTR;
+    KOS_OBJ_ID arg_args = KOS_BADPTR;
+    KOS_OBJ_ID arg_this;
 
     arg_this = KOS_array_read(frame, args_obj, 0);
-    TRY_OBJPTR(arg_this);
+    TRY_OBJID(arg_this);
 
     arg_args = KOS_array_read(frame, args_obj, 1);
-    TRY_OBJPTR(arg_args);
+    TRY_OBJID(arg_args);
 
     arg_args = KOS_array_slice(frame, arg_args, 0, MAX_INT64);
-    TRY_OBJPTR(arg_args);
+    TRY_OBJID(arg_args);
 
     ret = KOS_call_function(frame, this_obj, arg_this, arg_args);
 
 _error:
-    return error ? TO_OBJPTR(0) : ret;
+    return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_PTR _set_prototype(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_PTR      this_obj,
-                                  KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _set_prototype(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_ID       this_obj,
+                                 KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret = TO_OBJPTR(0);
+    KOS_OBJ_ID ret = KOS_BADPTR;
 
     assert( ! IS_BAD_PTR(this_obj));
 
-    if (IS_TYPE(OBJ_FUNCTION, this_obj)) {
+    if (GET_OBJ_TYPE(this_obj) == OBJ_FUNCTION) {
 
-        KOS_OBJ_PTR                arg     = KOS_array_read(frame, args_obj, 0);
-        const KOS_FUNCTION_HANDLER handler = OBJPTR(KOS_FUNCTION, this_obj)->handler;
+        KOS_OBJ_ID                 arg     = KOS_array_read(frame, args_obj, 0);
+        const KOS_FUNCTION_HANDLER handler = OBJPTR(FUNCTION, this_obj)->handler;
 
         if (handler == _array_constructor    ||
             handler == _boolean_constructor  ||
@@ -628,60 +597,60 @@ static KOS_OBJ_PTR _set_prototype(KOS_STACK_FRAME *frame,
             handler == _string_constructor   ||
             handler == _void_constructor) {
 
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_cannot_override_prototype));
-            arg = TO_OBJPTR(0);
+            KOS_raise_exception_cstring(frame, str_err_cannot_override_prototype);
+            arg = KOS_BADPTR;
         }
 
         if ( ! IS_BAD_PTR(arg)) {
-            KOS_FUNCTION *func = OBJPTR(KOS_FUNCTION, this_obj);
+            KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
             KOS_atomic_write_ptr(func->prototype, (void *)arg);
             ret = this_obj;
         }
     }
     else
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_function));
+        KOS_raise_exception_cstring(frame, str_err_not_function);
 
     return ret;
 }
 
-static KOS_OBJ_PTR _slice(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_PTR      this_obj,
-                          KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _slice(KOS_STACK_FRAME *frame,
+                         KOS_OBJ_ID       this_obj,
+                         KOS_OBJ_ID       args_obj)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_PTR ret   = TO_OBJPTR(0);
-    KOS_OBJ_PTR a_obj;
-    KOS_OBJ_PTR b_obj;
-    int64_t     idx_a = 0;
-    int64_t     idx_b = 0;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
+    KOS_OBJ_ID a_obj;
+    KOS_OBJ_ID b_obj;
+    int64_t    idx_a = 0;
+    int64_t    idx_b = 0;
 
     a_obj = KOS_array_read(frame, args_obj, 0);
-    TRY_OBJPTR(a_obj);
+    TRY_OBJID(a_obj);
 
     b_obj = KOS_array_read(frame, args_obj, 1);
-    TRY_OBJPTR(b_obj);
+    TRY_OBJID(b_obj);
 
     if (IS_NUMERIC_OBJ(a_obj))
         TRY(KOS_get_integer(frame, a_obj, &idx_a));
-    else if (IS_TYPE(OBJ_VOID, a_obj))
+    else if (a_obj == KOS_VOID)
         idx_a = 0;
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_unsup_operand_types));
-        return TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
+        return KOS_BADPTR;
     }
 
     if (IS_NUMERIC_OBJ(b_obj))
         TRY(KOS_get_integer(frame, b_obj, &idx_b));
-    else if (IS_TYPE(OBJ_VOID, b_obj))
+    else if (b_obj == KOS_VOID)
         idx_b = MAX_INT64;
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_unsup_operand_types));
-        return TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
+        return KOS_BADPTR;
     }
 
-    if (IS_STRING_OBJ(this_obj))
+    if (GET_OBJ_TYPE(this_obj) == OBJ_STRING)
         ret = KOS_string_slice(frame, this_obj, idx_a, idx_b);
-    else if (IS_TYPE(OBJ_BUFFER, this_obj))
+    else if (GET_OBJ_TYPE(this_obj) == OBJ_BUFFER)
         ret = KOS_buffer_slice(frame, this_obj, idx_a, idx_b);
     else
         ret = KOS_array_slice(frame, this_obj, idx_a, idx_b);
@@ -690,82 +659,85 @@ _error:
     return ret;
 }
 
-static KOS_OBJ_PTR _get_array_size(KOS_STACK_FRAME *frame,
-                                   KOS_OBJ_PTR      this_obj,
-                                   KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_array_size(KOS_STACK_FRAME *frame,
+                                  KOS_OBJ_ID       this_obj,
+                                  KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret;
+    KOS_OBJ_ID ret;
 
     assert( ! IS_BAD_PTR(this_obj));
 
-    if (IS_TYPE(OBJ_ARRAY, this_obj))
+    if (GET_OBJ_TYPE(this_obj) == OBJ_ARRAY)
         ret = KOS_new_int(frame, (int64_t)KOS_get_array_size(this_obj));
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_array));
-        ret = TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_not_array);
+        ret = KOS_BADPTR;
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _get_buffer_size(KOS_STACK_FRAME *frame,
-                                    KOS_OBJ_PTR      this_obj,
-                                    KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_buffer_size(KOS_STACK_FRAME *frame,
+                                   KOS_OBJ_ID       this_obj,
+                                   KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret = TO_OBJPTR(0);
+    KOS_OBJ_ID ret = KOS_BADPTR;
 
     assert( ! IS_BAD_PTR(this_obj));
-    assert(IS_TYPE(OBJ_BUFFER, this_obj));
 
-    if (IS_TYPE(OBJ_BUFFER, this_obj))
+    if (GET_OBJ_TYPE(this_obj) == OBJ_BUFFER)
         ret = KOS_new_int(frame, (int64_t)KOS_get_buffer_size(this_obj));
+    else {
+        KOS_raise_exception_cstring(frame, str_err_not_buffer);
+        ret = KOS_BADPTR;
+    }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _resize(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      this_obj,
-                           KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _resize(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_ID       this_obj,
+                          KOS_OBJ_ID       args_obj)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_PTR size_obj;
-    int64_t     size;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID size_obj;
+    int64_t    size;
 
     size_obj = KOS_array_read(frame, args_obj, 0);
-    TRY_OBJPTR(size_obj);
+    TRY_OBJID(size_obj);
 
     TRY(KOS_get_integer(frame, size_obj, &size));
 
     assert( ! IS_BAD_PTR(this_obj));
 
-    if (IS_TYPE(OBJ_BUFFER, this_obj)) {
+    if (GET_OBJ_TYPE(this_obj) == OBJ_BUFFER) {
         if (size < 0 || size > INT_MAX) {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_buffer_size));
-            return TO_OBJPTR(0);
+            KOS_raise_exception_cstring(frame, str_err_invalid_buffer_size);
+            return KOS_BADPTR;
         }
 
         TRY(KOS_buffer_resize(frame, this_obj, (uint32_t)size));
     }
     else {
         if (size < 0 || size > INT_MAX) {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_array_size));
-            return TO_OBJPTR(0);
+            KOS_raise_exception_cstring(frame, str_err_invalid_array_size);
+            return KOS_BADPTR;
         }
 
         TRY(KOS_array_resize(frame, this_obj, (uint32_t)size));
     }
 
 _error:
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_PTR _fill(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      this_obj,
-                         KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _fill(KOS_STACK_FRAME *frame,
+                        KOS_OBJ_ID       this_obj,
+                        KOS_OBJ_ID       args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    arg      = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID     arg      = KOS_array_read(frame, args_obj, 0);
     int64_t        begin    = 0;
     int64_t        end      = 0;
     int64_t        value;
@@ -774,27 +746,27 @@ static KOS_OBJ_PTR _fill(KOS_STACK_FRAME *frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &begin));
-        else if (IS_TYPE(OBJ_VOID, arg))
+        else if (arg == KOS_VOID)
             begin = 0;
         else {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_unsup_operand_types));
-            return TO_OBJPTR(0);
+            KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
+            return KOS_BADPTR;
         }
 
         arg = KOS_array_read(frame, args_obj, 1);
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &end));
-        else if (IS_TYPE(OBJ_VOID, arg))
+        else if (arg == KOS_VOID)
             end = MAX_INT64;
         else {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_unsup_operand_types));
-            return TO_OBJPTR(0);
+            KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
+            return KOS_BADPTR;
         }
 
         arg = KOS_array_read(frame, args_obj, 2);
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         TRY(KOS_get_integer(frame, arg, &value));
     }
@@ -802,17 +774,17 @@ static KOS_OBJ_PTR _fill(KOS_STACK_FRAME *frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &begin));
-        else if (IS_TYPE(OBJ_VOID, arg))
+        else if (arg == KOS_VOID)
             begin = 0;
         else {
-            KOS_raise_exception(frame, TO_OBJPTR(&str_err_unsup_operand_types));
-            return TO_OBJPTR(0);
+            KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
+            return KOS_BADPTR;
         }
 
         end = MAX_INT64;
 
         arg = KOS_array_read(frame, args_obj, 1);
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         TRY(KOS_get_integer(frame, arg, &value));
     }
@@ -825,26 +797,26 @@ static KOS_OBJ_PTR _fill(KOS_STACK_FRAME *frame,
     }
 
     if (value < 0 || value > 255) {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_invalid_byte_value));
-        return TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_invalid_byte_value);
+        return KOS_BADPTR;
     }
 
     error = KOS_buffer_fill(frame, this_obj, begin, end, (uint8_t)value);
 
 _error:
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
 struct _KOS_PACK_FORMAT {
-    KOS_OBJ_PTR fmt_str;
-    KOS_OBJ_PTR data;
-    int         idx;
-    int         big_end;
+    KOS_OBJ_ID fmt_str;
+    KOS_OBJ_ID data;
+    int        idx;
+    int        big_end;
 };
 
 typedef int (*_KOS_PACK_FORMAT_FUNC)(KOS_STACK_FRAME         *frame,
                                      struct _KOS_PACK_FORMAT *fmt,
-                                     KOS_OBJ_PTR              buffer_obj,
+                                     KOS_OBJ_ID               buffer_obj,
                                      char                     value_fmt,
                                      unsigned                 size,
                                      unsigned                 count);
@@ -863,7 +835,7 @@ static int _is_whitespace(unsigned char_code)
 }
 
 static void _pack_format_skip_spaces(KOS_STACK_FRAME *frame,
-                                     KOS_OBJ_PTR      fmt_str,
+                                     KOS_OBJ_ID       fmt_str,
                                      unsigned        *i_ptr)
 {
     const unsigned size = KOS_get_string_length(fmt_str);
@@ -886,7 +858,7 @@ static void _pack_format_skip_spaces(KOS_STACK_FRAME *frame,
 }
 
 static unsigned _pack_format_get_count(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_PTR      fmt_str,
+                                       KOS_OBJ_ID       fmt_str,
                                        unsigned        *i_ptr)
 {
     const unsigned size  = KOS_get_string_length(fmt_str);
@@ -921,12 +893,12 @@ static unsigned _pack_format_get_count(KOS_STACK_FRAME *frame,
 }
 
 static int _process_pack_format(KOS_STACK_FRAME         *frame,
-                                KOS_OBJ_PTR              buffer_obj,
+                                KOS_OBJ_ID               buffer_obj,
                                 _KOS_PACK_FORMAT_FUNC    handler,
                                 struct _KOS_PACK_FORMAT *fmt)
 {
     int            error    = KOS_SUCCESS;
-    KOS_OBJ_PTR    fmt_str  = fmt->fmt_str;
+    KOS_OBJ_ID     fmt_str  = fmt->fmt_str;
     const unsigned fmt_size = KOS_get_string_length(fmt_str);
     unsigned       i_fmt    = 0;
 
@@ -952,7 +924,7 @@ static int _process_pack_format(KOS_STACK_FRAME         *frame,
             _pack_format_skip_spaces(frame, fmt_str, &i_fmt);
 
             if (i_fmt >= fmt_size)
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
+                RAISE_EXCEPTION(str_err_invalid_pack_format);
 
             c = KOS_string_get_char_code(frame, fmt_str, (int)i_fmt++);
             assert(c != ~0U);
@@ -990,12 +962,12 @@ static int _process_pack_format(KOS_STACK_FRAME         *frame,
                     size = ~0U;
                 }
                 else
-                    RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
+                    RAISE_EXCEPTION(str_err_invalid_pack_format);
                 break;
             }
 
             default:
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
+                RAISE_EXCEPTION(str_err_invalid_pack_format);
         }
 
         if (c != '<' && c != '>')
@@ -1008,7 +980,7 @@ _error:
 
 static int _pack_format(KOS_STACK_FRAME         *frame,
                         struct _KOS_PACK_FORMAT *fmt,
-                        KOS_OBJ_PTR              buffer_obj,
+                        KOS_OBJ_ID               buffer_obj,
                         char                     value_fmt,
                         unsigned                 size,
                         unsigned                 count)
@@ -1021,7 +993,7 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
     _KOS_vector_init(&str_buf);
 
     if (fmt->idx < 0) {
-        KOS_OBJ_PTR obj = fmt->data;
+        KOS_OBJ_ID obj = fmt->data;
 
         fmt->idx = 1;
 
@@ -1029,7 +1001,7 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
 
             obj = KOS_array_read(frame, obj, 1);
 
-            if (IS_TYPE(OBJ_ARRAY, obj)) {
+            if (GET_OBJ_TYPE(obj) == OBJ_ARRAY) {
                 fmt->data = obj;
                 fmt->idx  = 0;
             }
@@ -1044,7 +1016,7 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     else if (size == ~0U && value_fmt != 's')
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
+        RAISE_EXCEPTION(str_err_invalid_pack_format);
 
     big_end = fmt->big_end;
 
@@ -1062,20 +1034,20 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
         case 'i': {
 
             if (size != 1 && size != 2 && size != 4 && size != 8)
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
+                RAISE_EXCEPTION(str_err_invalid_pack_format);
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_enough_pack_values));
+                RAISE_EXCEPTION(str_err_not_enough_pack_values);
 
             for ( ; count; count--) {
-                unsigned    i;
-                int64_t     value;
-                KOS_OBJ_PTR value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
+                unsigned   i;
+                int64_t    value;
+                KOS_OBJ_ID value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
 
-                TRY_OBJPTR(value_obj);
+                TRY_OBJID(value_obj);
 
                 if ( ! IS_NUMERIC_OBJ(value_obj))
-                    RAISE_EXCEPTION(TO_OBJPTR(&str_err_bad_pack_value));
+                    RAISE_EXCEPTION(str_err_bad_pack_value);
 
                 TRY(KOS_get_integer(frame, value_obj, &value));
 
@@ -1093,27 +1065,27 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
         case 'f': {
 
             if (size != 4 && size != 8)
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
+                RAISE_EXCEPTION(str_err_invalid_pack_format);
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_enough_pack_values));
+                RAISE_EXCEPTION(str_err_not_enough_pack_values);
 
             for ( ; count; count--) {
-                unsigned    i;
-                KOS_OBJ_PTR value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
-                double      value     = 0;
-                uint64_t    out_val;
+                unsigned   i;
+                KOS_OBJ_ID value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
+                double     value     = 0;
+                uint64_t   out_val;
 
-                TRY_OBJPTR(value_obj);
+                TRY_OBJID(value_obj);
 
                 if (IS_SMALL_INT(value_obj))
                     value = (double)GET_SMALL_INT(value_obj);
                 else if (GET_OBJ_TYPE(value_obj) == OBJ_INTEGER)
-                    value = (double)OBJPTR(KOS_INTEGER, value_obj)->number;
+                    value = (double)*OBJPTR(INTEGER, value_obj);
                 else if (GET_OBJ_TYPE(value_obj) == OBJ_FLOAT)
-                    value = OBJPTR(KOS_FLOAT, value_obj)->number;
+                    value = *OBJPTR(FLOAT, value_obj);
                 else
-                    RAISE_EXCEPTION(TO_OBJPTR(&str_err_bad_pack_value));
+                    RAISE_EXCEPTION(str_err_bad_pack_value);
 
                 if (size == 4)
                     out_val = _KOS_float_to_uint32_t((float)value);
@@ -1134,18 +1106,18 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
         case 'b': {
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_enough_pack_values));
+                RAISE_EXCEPTION(str_err_not_enough_pack_values);
 
             for ( ; count; count--) {
-                KOS_OBJ_PTR value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
-                uint8_t    *data      = 0;
-                uint32_t    data_size;
-                uint32_t    copy_size;
+                KOS_OBJ_ID value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
+                uint8_t   *data      = 0;
+                uint32_t   data_size;
+                uint32_t   copy_size;
 
-                TRY_OBJPTR(value_obj);
+                TRY_OBJID(value_obj);
 
-                if ( ! IS_TYPE(OBJ_BUFFER, value_obj))
-                    RAISE_EXCEPTION(TO_OBJPTR(&str_err_bad_pack_value));
+                if (GET_OBJ_TYPE(value_obj) != OBJ_BUFFER)
+                    RAISE_EXCEPTION(str_err_bad_pack_value);
 
                 data_size = KOS_get_buffer_size(value_obj);
                 if (data_size)
@@ -1172,16 +1144,16 @@ static int _pack_format(KOS_STACK_FRAME         *frame,
             assert(value_fmt == 's');
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_enough_pack_values));
+                RAISE_EXCEPTION(str_err_not_enough_pack_values);
 
             for ( ; count; count--) {
-                KOS_OBJ_PTR value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
-                uint32_t    copy_size;
+                KOS_OBJ_ID value_obj = KOS_array_read(frame, fmt->data, fmt->idx++);
+                uint32_t   copy_size;
 
-                TRY_OBJPTR(value_obj);
+                TRY_OBJID(value_obj);
 
-                if ( ! IS_STRING_OBJ(value_obj))
-                    RAISE_EXCEPTION(TO_OBJPTR(&str_err_bad_pack_value));
+                if (GET_OBJ_TYPE(value_obj) != OBJ_STRING)
+                    RAISE_EXCEPTION(str_err_bad_pack_value);
 
                 TRY(KOS_string_to_cstr_vec(frame, value_obj, &str_buf));
 
@@ -1211,7 +1183,7 @@ _error:
 
 static int _unpack_format(KOS_STACK_FRAME         *frame,
                           struct _KOS_PACK_FORMAT *fmt,
-                          KOS_OBJ_PTR              buffer_obj,
+                          KOS_OBJ_ID               buffer_obj,
                           char                     value_fmt,
                           unsigned                 size,
                           unsigned                 count)
@@ -1220,13 +1192,13 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
     uint8_t       *data      = 0;
     const uint32_t data_size = KOS_get_buffer_size(buffer_obj);
     int            big_end   = fmt->big_end;
-    KOS_OBJ_PTR    obj;
+    KOS_OBJ_ID     obj;
 
     if (size == ~0U)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_pack_format));
+        RAISE_EXCEPTION(str_err_invalid_pack_format);
 
     if (fmt->idx + size * count > data_size)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_unpack_buf_too_short));
+        RAISE_EXCEPTION(str_err_unpack_buf_too_short);
 
     assert(data_size);
     data = KOS_buffer_data(buffer_obj);
@@ -1284,7 +1256,7 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
                 else
                     obj = KOS_new_int(frame, (int64_t)value);
 
-                TRY_OBJPTR(obj);
+                TRY_OBJID(obj);
 
                 TRY(KOS_array_push(frame, fmt->data, obj, 0));
 
@@ -1297,7 +1269,7 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
             for ( ; count; count--) {
                 obj = KOS_new_buffer(frame, size);
 
-                TRY_OBJPTR(obj);
+                TRY_OBJID(obj);
 
                 if (size)
                     memcpy(KOS_buffer_data(obj), data, size);
@@ -1316,7 +1288,7 @@ static int _unpack_format(KOS_STACK_FRAME         *frame,
             for ( ; count; count--) {
                 obj = KOS_new_string(frame, (char *)data, size);
 
-                TRY_OBJPTR(obj);
+                TRY_OBJID(obj);
 
                 TRY(KOS_array_push(frame, fmt->data, obj, 0));
 
@@ -1332,9 +1304,9 @@ _error:
     return error;
 }
 
-static KOS_OBJ_PTR _pack(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      this_obj,
-                         KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _pack(KOS_STACK_FRAME *frame,
+                        KOS_OBJ_ID       this_obj,
+                        KOS_OBJ_ID       args_obj)
 {
     int                     error;
     struct _KOS_PACK_FORMAT fmt;
@@ -1346,38 +1318,38 @@ static KOS_OBJ_PTR _pack(KOS_STACK_FRAME *frame,
 
     assert( ! IS_BAD_PTR(fmt.fmt_str));
 
-    if (IS_STRING_OBJ(fmt.fmt_str))
+    if (GET_OBJ_TYPE(fmt.fmt_str) == OBJ_STRING)
         error = _process_pack_format(frame, this_obj, _pack_format, &fmt);
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_string));
+        KOS_raise_exception_cstring(frame, str_err_not_string);
         error = KOS_ERROR_EXCEPTION;
     }
 
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_PTR _unpack(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      this_obj,
-                           KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _unpack(KOS_STACK_FRAME *frame,
+                          KOS_OBJ_ID       this_obj,
+                          KOS_OBJ_ID       args_obj)
 {
     int                     error;
     struct _KOS_PACK_FORMAT fmt;
 
-    fmt.fmt_str = TO_OBJPTR(0);
-    fmt.data    = TO_OBJPTR(0);
+    fmt.fmt_str = KOS_BADPTR;
+    fmt.data    = KOS_BADPTR;
     fmt.idx     = 0;
     fmt.big_end = 0;
 
     assert( ! IS_BAD_PTR(this_obj));
 
-    if ( ! IS_TYPE(OBJ_BUFFER, this_obj))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_buffer));
+    if (GET_OBJ_TYPE(this_obj) != OBJ_BUFFER)
+        RAISE_EXCEPTION(str_err_not_buffer);
 
     fmt.fmt_str = KOS_array_read(frame, args_obj, 0);
     fmt.data    = KOS_new_array(frame, 0);
 
-    TRY_OBJPTR(fmt.fmt_str);
-    TRY_OBJPTR(fmt.data);
+    TRY_OBJID(fmt.fmt_str);
+    TRY_OBJID(fmt.data);
 
     if (IS_NUMERIC_OBJ(fmt.fmt_str)) {
         int64_t idx = 0;
@@ -1389,61 +1361,61 @@ static KOS_OBJ_PTR _unpack(KOS_STACK_FRAME *frame,
         fmt.idx = (int)idx;
 
         fmt.fmt_str = KOS_array_read(frame, args_obj, 1);
-        TRY_OBJPTR(fmt.fmt_str);
+        TRY_OBJID(fmt.fmt_str);
     }
 
-    if ( ! IS_STRING_OBJ(fmt.fmt_str))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_string));
+    if (GET_OBJ_TYPE(fmt.fmt_str) != OBJ_STRING)
+        RAISE_EXCEPTION(str_err_not_string);
 
     TRY(_process_pack_format(frame, this_obj, _unpack_format, &fmt));
 
 _error:
-    return error ? TO_OBJPTR(0) : fmt.data;
+    return error ? KOS_BADPTR : fmt.data;
 }
 
-static KOS_OBJ_PTR _copy_buffer(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_PTR      this_obj,
-                                KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _copy_buffer(KOS_STACK_FRAME *frame,
+                               KOS_OBJ_ID       this_obj,
+                               KOS_OBJ_ID       args_obj)
 {
     int            error      = KOS_SUCCESS;
     const uint32_t num_args   = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    arg        = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID     arg        = KOS_array_read(frame, args_obj, 0);
     int64_t        dest_begin = 0;
     int64_t        src_begin  = 0;
     int64_t        src_end    = MAX_INT64;
-    KOS_OBJ_PTR    src;
+    KOS_OBJ_ID     src;
 
     if (num_args > 3) {
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &dest_begin));
-        else if ( ! IS_TYPE(OBJ_VOID, arg))
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_unsup_operand_types));
+        else if (arg != KOS_VOID)
+            RAISE_EXCEPTION(str_err_unsup_operand_types);
 
         src = KOS_array_read(frame, args_obj, 1);
-        TRY_OBJPTR(src);
+        TRY_OBJID(src);
 
         arg = KOS_array_read(frame, args_obj, 2);
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &src_begin));
-        else if ( ! IS_TYPE(OBJ_VOID, arg))
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_unsup_operand_types));
+        else if (arg != KOS_VOID)
+            RAISE_EXCEPTION(str_err_unsup_operand_types);
 
         arg = KOS_array_read(frame, args_obj, 3);
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &src_end));
-        else if ( ! IS_TYPE(OBJ_VOID, arg))
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_unsup_operand_types));
+        else if (arg != KOS_VOID)
+            RAISE_EXCEPTION(str_err_unsup_operand_types);
     }
     else if (num_args > 2) {
 
         int arg_idx = 1;
 
-        if (IS_NUMERIC_OBJ(arg) || GET_OBJ_TYPE(arg) == OBJ_VOID) {
+        if (IS_NUMERIC_OBJ(arg) || arg == KOS_VOID) {
 
             arg_idx = 2;
 
@@ -1451,51 +1423,51 @@ static KOS_OBJ_PTR _copy_buffer(KOS_STACK_FRAME *frame,
                 TRY(KOS_get_integer(frame, arg, &dest_begin));
 
             src = KOS_array_read(frame, args_obj, 1);
-            TRY_OBJPTR(src);
+            TRY_OBJID(src);
         }
         else
             src = arg;
 
         arg = KOS_array_read(frame, args_obj, arg_idx);
-        TRY_OBJPTR(arg);
+        TRY_OBJID(arg);
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &src_begin));
-        else if ( ! IS_TYPE(OBJ_VOID, arg))
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_unsup_operand_types));
+        else if (arg != KOS_VOID)
+            RAISE_EXCEPTION(str_err_unsup_operand_types);
 
         if (arg_idx == 1) {
 
             arg = KOS_array_read(frame, args_obj, arg_idx+1);
-            TRY_OBJPTR(arg);
+            TRY_OBJID(arg);
 
             if (IS_NUMERIC_OBJ(arg))
                 TRY(KOS_get_integer(frame, arg, &src_end));
-            else if ( ! IS_TYPE(OBJ_VOID, arg))
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_unsup_operand_types));
+            else if (arg != KOS_VOID)
+                RAISE_EXCEPTION(str_err_unsup_operand_types);
         }
     }
     else if (num_args > 1) {
 
-        if (IS_NUMERIC_OBJ(arg) || GET_OBJ_TYPE(arg) == OBJ_VOID) {
+        if (IS_NUMERIC_OBJ(arg) || arg == KOS_VOID) {
 
             if (IS_NUMERIC_OBJ(arg))
                 TRY(KOS_get_integer(frame, arg, &dest_begin));
 
             src = KOS_array_read(frame, args_obj, 1);
-            TRY_OBJPTR(src);
+            TRY_OBJID(src);
         }
         else {
 
             src = arg;
 
             arg = KOS_array_read(frame, args_obj, 1);
-            TRY_OBJPTR(arg);
+            TRY_OBJID(arg);
 
             if (IS_NUMERIC_OBJ(arg))
                 TRY(KOS_get_integer(frame, arg, &src_begin));
-            else if ( ! IS_TYPE(OBJ_VOID, arg))
-                RAISE_EXCEPTION(TO_OBJPTR(&str_err_unsup_operand_types));
+            else if (arg != KOS_VOID)
+                RAISE_EXCEPTION(str_err_unsup_operand_types);
         }
     }
     else {
@@ -1509,172 +1481,172 @@ static KOS_OBJ_PTR _copy_buffer(KOS_STACK_FRAME *frame,
     error = KOS_buffer_copy(frame, this_obj, dest_begin, src, src_begin, src_end);
 
 _error:
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_PTR _reserve(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_PTR      this_obj,
-                            KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _reserve(KOS_STACK_FRAME *frame,
+                           KOS_OBJ_ID       this_obj,
+                           KOS_OBJ_ID       args_obj)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_PTR size_obj;
-    int64_t     size;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID size_obj;
+    int64_t    size;
 
     size_obj = KOS_array_read(frame, args_obj, 0);
-    TRY_OBJPTR(size_obj);
+    TRY_OBJID(size_obj);
 
     TRY(KOS_get_integer(frame, size_obj, &size));
 
-    if (IS_TYPE(OBJ_BUFFER, this_obj)) {
+    if (GET_OBJ_TYPE(this_obj) == OBJ_BUFFER) {
         if (size < 0 || size > INT_MAX)
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_buffer_size));
+            RAISE_EXCEPTION(str_err_invalid_buffer_size);
 
         TRY(KOS_buffer_reserve(frame, this_obj, (uint32_t)size));
     }
     else {
         if (size < 0 || size > INT_MAX)
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_array_size));
+            RAISE_EXCEPTION(str_err_invalid_array_size);
 
         TRY(KOS_array_reserve(frame, this_obj, (uint32_t)size));
     }
 
 _error:
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_PTR _insert_array(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_PTR      this_obj,
-                                 KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _insert_array(KOS_STACK_FRAME *frame,
+                                KOS_OBJ_ID       this_obj,
+                                KOS_OBJ_ID       args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    begin_obj;
-    KOS_OBJ_PTR    end_obj;
-    KOS_OBJ_PTR    src_obj;
+    KOS_OBJ_ID     begin_obj;
+    KOS_OBJ_ID     end_obj;
+    KOS_OBJ_ID     src_obj;
     int64_t        begin    = 0;
     int64_t        end      = 0;
     int64_t        src_len;
 
     begin_obj = KOS_array_read(frame, args_obj, 0);
-    TRY_OBJPTR(begin_obj);
+    TRY_OBJID(begin_obj);
 
     end_obj = KOS_array_read(frame, args_obj, 1);
-    TRY_OBJPTR(end_obj);
+    TRY_OBJID(end_obj);
 
     if (num_args > 2) {
         src_obj = KOS_array_read(frame, args_obj, 2);
-        TRY_OBJPTR(src_obj);
+        TRY_OBJID(src_obj);
     }
     else {
         src_obj = end_obj;
         end_obj = begin_obj;
     }
 
-    if ( ! IS_TYPE(OBJ_ARRAY, this_obj) ||
-         ! IS_TYPE(OBJ_ARRAY, src_obj))
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_not_array));
+    if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY ||
+        GET_OBJ_TYPE(src_obj)  != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
 
     if (IS_NUMERIC_OBJ(begin_obj))
         TRY(KOS_get_integer(frame, begin_obj, &begin));
-    else if (IS_TYPE(OBJ_VOID, begin_obj))
+    else if (begin_obj == KOS_VOID)
         begin = num_args == 2 ? MAX_INT64 : 0;
     else
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_unsup_operand_types));
+        RAISE_EXCEPTION(str_err_unsup_operand_types);
 
     if (IS_NUMERIC_OBJ(end_obj))
         TRY(KOS_get_integer(frame, end_obj, &end));
-    else if (IS_TYPE(OBJ_VOID, end_obj))
+    else if (end_obj == KOS_VOID)
         end = MAX_INT64;
     else
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_unsup_operand_types));
+        RAISE_EXCEPTION(str_err_unsup_operand_types);
 
     src_len = MAX_INT64;
 
     TRY(KOS_array_insert(frame, this_obj, begin, end, src_obj, 0, src_len));
 
 _error:
-    return error ? TO_OBJPTR(0) : this_obj;
+    return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_PTR _pop(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_PTR      this_obj,
-                        KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _pop(KOS_STACK_FRAME *frame,
+                       KOS_OBJ_ID       this_obj,
+                       KOS_OBJ_ID       args_obj)
 {
     int            error    = KOS_SUCCESS;
-    KOS_OBJ_PTR    ret      = TO_OBJPTR(0);
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
     const uint32_t num_args = KOS_get_array_size(args_obj);
 
     if (num_args == 0)
         ret = KOS_array_pop(frame, this_obj);
 
     else {
-        int64_t     num = 0;
-        int         idx;
-        KOS_OBJ_PTR arg = KOS_array_read(frame, args_obj, 0);
-        TRY_OBJPTR(arg);
+        int64_t    num = 0;
+        int        idx;
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
+        TRY_OBJID(arg);
 
         TRY(KOS_get_integer(frame, arg, &num));
 
         if (num < 0 || num > INT_MAX)
-            RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_array_size));
+            RAISE_EXCEPTION(str_err_invalid_array_size);
 
         ret = KOS_new_array(frame, (unsigned)num);
-        TRY_OBJPTR(ret);
+        TRY_OBJID(ret);
 
         for (idx = (int)(num - 1); idx >= 0; idx--) {
             arg = KOS_array_pop(frame, this_obj);
-            TRY_OBJPTR(arg);
+            TRY_OBJID(arg);
 
             TRY(KOS_array_write(frame, ret, idx, arg));
         }
     }
 
 _error:
-    return error ? TO_OBJPTR(0) : ret;
+    return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_PTR _push(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_PTR      this_obj,
-                         KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _push(KOS_STACK_FRAME *frame,
+                        KOS_OBJ_ID       this_obj,
+                        KOS_OBJ_ID       args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_PTR    ret      = KOS_VOID;
+    KOS_OBJ_ID     ret      = KOS_VOID;
     uint32_t       i;
 
     for (i = 0; i < num_args; i++) {
-        uint32_t    idx      = ~0U;
-        KOS_OBJ_PTR elem_obj = KOS_array_read(frame, args_obj, (int)i);
-        TRY_OBJPTR(elem_obj);
+        uint32_t   idx      = ~0U;
+        KOS_OBJ_ID elem_obj = KOS_array_read(frame, args_obj, (int)i);
+        TRY_OBJID(elem_obj);
 
         TRY(KOS_array_push(frame, this_obj, elem_obj, &idx));
 
         if (i == 0) {
             ret = KOS_new_int(frame, (int64_t)idx);
-            TRY_OBJPTR(ret);
+            TRY_OBJID(ret);
         }
     }
 
 _error:
-    return error ? TO_OBJPTR(0) : ret;
+    return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_PTR _get_char_code(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_PTR      this_obj,
-                                  KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_char_code(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_ID       this_obj,
+                                 KOS_OBJ_ID       args_obj)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_PTR ret   = TO_OBJPTR(0);
-    KOS_OBJ_PTR arg   = KOS_array_read(frame, args_obj, 0);
-    int64_t     idx;
-    unsigned    code;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
+    KOS_OBJ_ID arg   = KOS_array_read(frame, args_obj, 0);
+    int64_t    idx;
+    unsigned   code;
 
-    TRY_OBJPTR(arg);
+    TRY_OBJID(arg);
 
     TRY(KOS_get_integer(frame, arg, &idx));
 
     if (idx < INT_MIN || idx > INT_MAX)
-        RAISE_EXCEPTION(TO_OBJPTR(&str_err_invalid_string_idx));
+        RAISE_EXCEPTION(str_err_invalid_string_idx);
 
     code = KOS_string_get_char_code(frame, this_obj, (int)idx);
     if (code == ~0U)
@@ -1683,137 +1655,137 @@ static KOS_OBJ_PTR _get_char_code(KOS_STACK_FRAME *frame,
     ret = KOS_new_int(frame, (int64_t)code);
 
 _error:
-    return error ? TO_OBJPTR(0) : ret;
+    return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_PTR _get_string_size(KOS_STACK_FRAME *frame,
-                                    KOS_OBJ_PTR      this_obj,
-                                    KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_string_size(KOS_STACK_FRAME *frame,
+                                   KOS_OBJ_ID       this_obj,
+                                   KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret;
+    KOS_OBJ_ID ret;
 
-    if (IS_STRING_OBJ(this_obj))
+    if (GET_OBJ_TYPE(this_obj) == OBJ_STRING)
         ret = KOS_new_int(frame, (int64_t)KOS_get_string_length(this_obj));
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_string));
-        ret = TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_not_string);
+        ret = KOS_BADPTR;
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _get_function_name(KOS_STACK_FRAME *frame,
-                                      KOS_OBJ_PTR      this_obj,
-                                      KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_function_name(KOS_STACK_FRAME *frame,
+                                     KOS_OBJ_ID       this_obj,
+                                     KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret;
+    KOS_OBJ_ID ret;
 
-    if (IS_TYPE(OBJ_FUNCTION, this_obj)) {
+    if (GET_OBJ_TYPE(this_obj) == OBJ_FUNCTION) {
 
-        KOS_FUNCTION *const func = OBJPTR(KOS_FUNCTION, this_obj);
+        KOS_FUNCTION *const func = OBJPTR(FUNCTION, this_obj);
 
         /* TODO add builtin function name */
-        if (IS_BAD_PTR(func->module) || func->instr_offs == ~0U)
-            ret = TO_OBJPTR(&str_builtin);
+        if ( ! func->module || func->instr_offs == ~0U)
+            ret = KOS_context_get_cstring(frame, str_builtin);
         else
-            ret = KOS_module_addr_to_func_name(OBJPTR(KOS_MODULE, func->module),
+            ret = KOS_module_addr_to_func_name(func->module,
                                                func->instr_offs);
     }
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_function));
-        ret = TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_not_function);
+        ret = KOS_BADPTR;
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _get_instructions(KOS_STACK_FRAME *frame,
-                                     KOS_OBJ_PTR      this_obj,
-                                     KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_instructions(KOS_STACK_FRAME *frame,
+                                    KOS_OBJ_ID       this_obj,
+                                    KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret;
+    KOS_OBJ_ID ret;
 
-    if (IS_TYPE(OBJ_FUNCTION, this_obj)) {
+    if (GET_OBJ_TYPE(this_obj) == OBJ_FUNCTION) {
 
-        KOS_FUNCTION *const func      = OBJPTR(KOS_FUNCTION, this_obj);
+        KOS_FUNCTION *const func      = OBJPTR(FUNCTION, this_obj);
         uint32_t            num_instr = 0;
 
-        if ( ! IS_BAD_PTR(func->module))
-            num_instr = KOS_module_func_get_num_instr(OBJPTR(KOS_MODULE, func->module),
+        if (func->module)
+            num_instr = KOS_module_func_get_num_instr(func->module,
                                                       func->instr_offs);
 
         ret = KOS_new_int(frame, (int64_t)num_instr);
     }
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_function));
-        ret = TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_not_function);
+        ret = KOS_BADPTR;
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _get_code_size(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_PTR      this_obj,
-                                  KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_code_size(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_ID       this_obj,
+                                 KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret;
+    KOS_OBJ_ID ret;
 
-    if (IS_TYPE(OBJ_FUNCTION, this_obj)) {
+    if (GET_OBJ_TYPE(this_obj) == OBJ_FUNCTION) {
 
-        KOS_FUNCTION *const func      = OBJPTR(KOS_FUNCTION, this_obj);
+        KOS_FUNCTION *const func      = OBJPTR(FUNCTION, this_obj);
         uint32_t            code_size = 0;
 
-        if ( ! IS_BAD_PTR(func->module))
-            code_size = KOS_module_func_get_code_size(OBJPTR(KOS_MODULE, func->module),
+        if (func->module)
+            code_size = KOS_module_func_get_code_size(func->module,
                                                       func->instr_offs);
 
         ret = KOS_new_int(frame, (int64_t)code_size);
     }
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_function));
-        ret = TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_not_function);
+        ret = KOS_BADPTR;
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _get_prototype(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_PTR      this_obj,
-                                  KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_prototype(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_ID       this_obj,
+                                 KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret;
+    KOS_OBJ_ID ret;
 
-    if (IS_TYPE(OBJ_FUNCTION, this_obj)) {
+    if (GET_OBJ_TYPE(this_obj) == OBJ_FUNCTION) {
 
-        KOS_FUNCTION *const func = OBJPTR(KOS_FUNCTION, this_obj);
+        KOS_FUNCTION *const func = OBJPTR(FUNCTION, this_obj);
 
-        ret = (KOS_OBJ_PTR)KOS_atomic_read_ptr(func->prototype);
+        ret = (KOS_OBJ_ID)KOS_atomic_read_ptr(func->prototype);
 
         assert( ! IS_BAD_PTR(ret));
     }
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_function));
-        ret = TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_not_function);
+        ret = KOS_BADPTR;
     }
 
     return ret;
 }
 
-static KOS_OBJ_PTR _get_registers(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_PTR      this_obj,
-                                  KOS_OBJ_PTR      args_obj)
+static KOS_OBJ_ID _get_registers(KOS_STACK_FRAME *frame,
+                                 KOS_OBJ_ID       this_obj,
+                                 KOS_OBJ_ID       args_obj)
 {
-    KOS_OBJ_PTR ret;
+    KOS_OBJ_ID ret;
 
-    if (IS_TYPE(OBJ_FUNCTION, this_obj)) {
+    if (GET_OBJ_TYPE(this_obj) == OBJ_FUNCTION) {
 
-        KOS_FUNCTION *const func = OBJPTR(KOS_FUNCTION, this_obj);
+        KOS_FUNCTION *const func = OBJPTR(FUNCTION, this_obj);
 
         ret = KOS_new_int(frame, (int64_t)func->num_regs);
     }
     else {
-        KOS_raise_exception(frame, TO_OBJPTR(&str_err_not_function));
-        ret = TO_OBJPTR(0);
+        KOS_raise_exception_cstring(frame, str_err_not_function);
+        ret = KOS_BADPTR;
     }
 
     return ret;

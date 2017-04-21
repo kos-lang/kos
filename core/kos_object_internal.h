@@ -34,13 +34,13 @@
 
 union _KOS_HASH_ALIGN {
     KOS_ATOMIC(uint32_t) hash;
-    KOS_OBJ_PTR          align;
+    KOS_OBJ_ID           align;
 };
 
 typedef struct _KOS_PROPERTY_ITEM {
-    KOS_ATOMIC(KOS_OBJ_PTR) key;
-    union _KOS_HASH_ALIGN   hash;
-    KOS_ATOMIC(KOS_OBJ_PTR) value;
+    KOS_ATOMIC(KOS_OBJ_ID) key;
+    union _KOS_HASH_ALIGN  hash;
+    KOS_ATOMIC(KOS_OBJ_ID) value;
 } KOS_PITEM;
 
 struct _KOS_PROPERTY_BUF;
@@ -59,12 +59,12 @@ struct _KOS_PROPERTY_BUF {
 #define KOS_MAX_PROP_REPROBES  8U
 #define KOS_SPEED_GROW_BELOW   64U
 
-void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_PTR prototype);
+void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype);
 
 int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_PTR      obj);
+                                KOS_OBJ_ID       obj_id);
 
-int _KOS_is_truthy(KOS_OBJ_PTR obj);
+int _KOS_is_truthy(KOS_OBJ_ID obj_id);
 
 /*==========================================================================*/
 /* KOS_ARRAY                                                                */
@@ -78,28 +78,28 @@ int _KOS_init_array(KOS_STACK_FRAME *frame,
 #define KOS_ARRAY_CAPACITY_STEP 1024U
 
 struct _KOS_ARRAY_BUFFER {
-    uint32_t                capacity;
-    KOS_ATOMIC(uint32_t)    num_slots_open;
-    KOS_ATOMIC(void *)      next;
-    KOS_ATOMIC(KOS_OBJ_PTR) buf[1];
+    uint32_t               capacity;
+    KOS_ATOMIC(uint32_t)   num_slots_open;
+    KOS_ATOMIC(void *)     next;
+    KOS_ATOMIC(KOS_OBJ_ID) buf[1];
 };
 
 #ifdef __cplusplus
 
-static inline KOS_ATOMIC(KOS_OBJ_PTR) *_KOS_get_array_buffer(KOS_ARRAY *array)
+static inline KOS_ATOMIC(KOS_OBJ_ID) *_KOS_get_array_buffer(KOS_ARRAY *array)
 {
-    struct _KOS_ARRAY_BUFFER *const buf = (struct _KOS_ARRAY_BUFFER *)KOS_atomic_read_ptr(array->buffer);
+    struct _KOS_ARRAY_BUFFER *const buf = (struct _KOS_ARRAY_BUFFER *)KOS_atomic_read_ptr(array->data);
     return &buf->buf[0];
 }
 
 #else
 
-#define _KOS_get_array_buffer(array) (&((struct _KOS_ARRAY_BUFFER *)KOS_atomic_read_ptr((array)->buffer))->buf[0])
+#define _KOS_get_array_buffer(array) (&((struct _KOS_ARRAY_BUFFER *)KOS_atomic_read_ptr((array)->data))->buf[0])
 
 #endif
 
 int _KOS_array_copy_storage(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_PTR      objptr);
+                            KOS_OBJ_ID       obj_id);
 
 /*==========================================================================*/
 /* KOS_BUFFER                                                               */
@@ -115,7 +115,6 @@ int _KOS_array_copy_storage(KOS_STACK_FRAME *frame,
 
 static inline const void* _KOS_get_string_buffer(KOS_STRING *str)
 {
-    assert(str->type >= OBJ_STRING_8 && str->type <= OBJ_STRING_32);
     return (str->flags == KOS_STRING_LOCAL) ? &str->data.buf : str->data.ptr;
 }
 
@@ -130,12 +129,12 @@ static inline const void* _KOS_get_string_buffer(KOS_STRING *str)
 /*==========================================================================*/
 
 void _KOS_init_stack_frame(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_PTR      module,
+                           KOS_MODULE      *module,
                            uint32_t         instr_offs,
                            uint32_t         num_regs);
 
 KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_PTR      module,
+                                       KOS_MODULE      *module,
                                        uint32_t         instr_offs,
                                        uint32_t         num_regs);
 
@@ -150,7 +149,7 @@ void _KOS_wrap_exception(KOS_STACK_FRAME *frame);
 
 struct _KOS_MODULE_INIT {
     struct _KOS_RED_BLACK_NODE rb_tree_node;
-    KOS_OBJ_PTR                name;
+    KOS_OBJ_ID                 name;
     KOS_BUILTIN_INIT           init;
 };
 
@@ -159,10 +158,10 @@ enum _KOS_MODULE_REQUIRED {
     KOS_MODULE_MANDATORY
 };
 
-KOS_OBJ_PTR _KOS_module_import(KOS_STACK_FRAME          *frame,
-                               const char               *module, /* Module name or path, ASCII or UTF-8    */
-                               unsigned                  length, /* Length of module name or path in bytes */
-                               enum _KOS_MODULE_REQUIRED required,
-                               int                      *module_idx);
+KOS_OBJ_ID _KOS_module_import(KOS_STACK_FRAME          *frame,
+                              const char               *module, /* Module name or path, ASCII or UTF-8    */
+                              unsigned                  length, /* Length of module name or path in bytes */
+                              enum _KOS_MODULE_REQUIRED required,
+                              int                      *module_idx);
 
 #endif

@@ -25,9 +25,9 @@
 
 #define TRY(code) do { if (0 != (error = (code))) goto _error; } while (0)
 
-#define TRY_OBJPTR(objptr) do { if (IS_BAD_PTR(objptr)) { error = KOS_ERROR_EXCEPTION; goto _error; } } while (0)
+#define TRY_OBJID(obj_id) do { if (IS_BAD_PTR(obj_id)) RAISE_ERROR(KOS_ERROR_EXCEPTION); } while (0)
 
-#define RAISE_EXCEPTION(err_obj) do { KOS_raise_exception(frame, (err_obj)); error = KOS_ERROR_EXCEPTION; goto _error; } while (0)
+#define RAISE_EXCEPTION(err_obj) do { KOS_raise_exception(frame, KOS_context_get_cstring(frame, (err_obj))); RAISE_ERROR(KOS_ERROR_EXCEPTION); } while (0)
 
 #define RAISE_ERROR(code) do { error = (code); goto _error; } while (0)
 

@@ -32,7 +32,7 @@
 
 int main(void)
 {
-    const intptr_t max_small_int = GET_SMALL_INT((KOS_OBJ_PTR)(~((uintptr_t)0) >> 1));
+    const intptr_t max_small_int = GET_SMALL_INT((KOS_OBJ_ID)(~((uintptr_t)0) >> 1));
     const intptr_t min_small_int = -max_small_int - 1;
 
     KOS_CONTEXT      ctx;
@@ -47,9 +47,9 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR small_int0    = TO_SMALL_INT(0);
-        const KOS_OBJ_PTR small_int_min = TO_SMALL_INT(min_small_int);
-        const KOS_OBJ_PTR small_int_max = TO_SMALL_INT(max_small_int);
+        const KOS_OBJ_ID small_int0    = TO_SMALL_INT(0);
+        const KOS_OBJ_ID small_int_min = TO_SMALL_INT(min_small_int);
+        const KOS_OBJ_ID small_int_max = TO_SMALL_INT(max_small_int);
 
         TEST(!IS_BAD_PTR(small_int0));
         TEST(!IS_BAD_PTR(small_int_min));
@@ -66,17 +66,17 @@ int main(void)
         TEST(IS_NUMERIC_OBJ(small_int0));
         TEST(IS_NUMERIC_OBJ(small_int_max));
 
-        TEST(!IS_STRING_OBJ(small_int0));
-        TEST(!IS_STRING_OBJ(small_int_max));
+        TEST(GET_OBJ_TYPE(small_int0) != OBJ_STRING);
+        TEST(GET_OBJ_TYPE(small_int_max) != OBJ_STRING);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, small_int0));
-        TEST(!IS_TYPE(OBJ_OBJECT, small_int_max));
+        TEST(GET_OBJ_TYPE(small_int0) != OBJ_OBJECT);
+        TEST(GET_OBJ_TYPE(small_int_max) != OBJ_OBJECT);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR integer_a = KOS_new_int(frame, min_small_int-1);
-        const KOS_OBJ_PTR integer_b = KOS_new_int(frame, max_small_int+1);
+        const KOS_OBJ_ID integer_a = KOS_new_int(frame, min_small_int-1);
+        const KOS_OBJ_ID integer_b = KOS_new_int(frame, max_small_int+1);
 
         TEST(!IS_BAD_PTR(integer_a));
         TEST(!IS_BAD_PTR(integer_b));
@@ -87,17 +87,17 @@ int main(void)
         TEST(IS_NUMERIC_OBJ(integer_a));
         TEST(IS_NUMERIC_OBJ(integer_b));
 
-        TEST(!IS_STRING_OBJ(integer_a));
-        TEST(!IS_STRING_OBJ(integer_b));
+        TEST(GET_OBJ_TYPE(integer_a) != OBJ_STRING);
+        TEST(GET_OBJ_TYPE(integer_b) != OBJ_STRING);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, integer_a));
-        TEST(!IS_TYPE(OBJ_OBJECT, integer_b));
+        TEST(GET_OBJ_TYPE(integer_a) != OBJ_OBJECT);
+        TEST(GET_OBJ_TYPE(integer_b) != OBJ_OBJECT);
 
         TEST(GET_OBJ_TYPE(integer_a) == OBJ_INTEGER);
         TEST(GET_OBJ_TYPE(integer_b) == OBJ_INTEGER);
 
-        TEST(OBJPTR(KOS_INTEGER, integer_a)->number == min_small_int-1);
-        TEST(OBJPTR(KOS_INTEGER, integer_b)->number == max_small_int+1);
+        TEST(*OBJPTR(INTEGER, integer_a) == min_small_int-1);
+        TEST(*OBJPTR(INTEGER, integer_b) == max_small_int+1);
     }
 
     /************************************************************************/
@@ -105,8 +105,8 @@ int main(void)
         const intptr_t max_int = (intptr_t)(~(uintptr_t)0 >> 1);
         const intptr_t min_int = -max_int - 1;
 
-        const KOS_OBJ_PTR integer_a = KOS_new_int(frame, min_int);
-        const KOS_OBJ_PTR integer_b = KOS_new_int(frame, max_int);
+        const KOS_OBJ_ID integer_a = KOS_new_int(frame, min_int);
+        const KOS_OBJ_ID integer_b = KOS_new_int(frame, max_int);
 
         TEST(!IS_BAD_PTR(integer_a));
         TEST(!IS_BAD_PTR(integer_b));
@@ -117,22 +117,22 @@ int main(void)
         TEST(IS_NUMERIC_OBJ(integer_a));
         TEST(IS_NUMERIC_OBJ(integer_b));
 
-        TEST(!IS_STRING_OBJ(integer_a));
-        TEST(!IS_STRING_OBJ(integer_b));
+        TEST(GET_OBJ_TYPE(integer_a) != OBJ_STRING);
+        TEST(GET_OBJ_TYPE(integer_b) != OBJ_STRING);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, integer_a));
-        TEST(!IS_TYPE(OBJ_OBJECT, integer_b));
+        TEST(GET_OBJ_TYPE(integer_a) != OBJ_OBJECT);
+        TEST(GET_OBJ_TYPE(integer_b) != OBJ_OBJECT);
 
         TEST(GET_OBJ_TYPE(integer_a) == OBJ_INTEGER);
         TEST(GET_OBJ_TYPE(integer_b) == OBJ_INTEGER);
 
-        TEST(OBJPTR(KOS_INTEGER, integer_a)->number == min_int);
-        TEST(OBJPTR(KOS_INTEGER, integer_b)->number == max_int);
+        TEST(*OBJPTR(INTEGER, integer_a) == min_int);
+        TEST(*OBJPTR(INTEGER, integer_b) == max_int);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR number = KOS_new_float(frame, 1.5);
+        const KOS_OBJ_ID number = KOS_new_float(frame, 1.5);
 
         TEST(!IS_BAD_PTR(number));
 
@@ -140,18 +140,18 @@ int main(void)
 
         TEST(IS_NUMERIC_OBJ(number));
 
-        TEST(!IS_STRING_OBJ(number));
+        TEST(GET_OBJ_TYPE(number) != OBJ_STRING);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, number));
+        TEST(GET_OBJ_TYPE(number) != OBJ_OBJECT);
 
         TEST(GET_OBJ_TYPE(number) == OBJ_FLOAT);
 
-        TEST(OBJPTR(KOS_FLOAT, number)->number == 1.5);
+        TEST(*OBJPTR(FLOAT, number) == 1.5);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR boolean = KOS_TRUE;
+        const KOS_OBJ_ID boolean = KOS_TRUE;
 
         TEST(!IS_BAD_PTR(boolean));
 
@@ -159,18 +159,18 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(boolean));
 
-        TEST(!IS_STRING_OBJ(boolean));
+        TEST(GET_OBJ_TYPE(boolean) == OBJ_IMMEDIATE);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, boolean));
+        TEST(GET_OBJ_TYPE(boolean) != OBJ_STRING);
 
-        TEST(GET_OBJ_TYPE(boolean) == OBJ_BOOLEAN);
+        TEST(GET_OBJ_TYPE(boolean) != OBJ_OBJECT);
 
         TEST(KOS_get_bool(boolean));
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR a_void = KOS_VOID;
+        const KOS_OBJ_ID a_void = KOS_VOID;
 
         TEST(!IS_BAD_PTR(a_void));
 
@@ -178,17 +178,17 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(a_void));
 
-        TEST(!IS_STRING_OBJ(a_void));
+        TEST(GET_OBJ_TYPE(a_void) == OBJ_IMMEDIATE);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, a_void));
+        TEST(GET_OBJ_TYPE(a_void) != OBJ_STRING);
 
-        TEST(GET_OBJ_TYPE(a_void) == OBJ_VOID);
+        TEST(GET_OBJ_TYPE(a_void) != OBJ_OBJECT);
     }
 
     /************************************************************************/
     {
-        KOS_ASCII_STRING(str, "str");
-        const KOS_OBJ_PTR obj = TO_OBJPTR(&str);
+        const uint8_t    str[] = { 1, 0, 3 };
+        const KOS_OBJ_ID obj   = KOS_new_const_string(frame, str, sizeof(str), KOS_STRING_ELEM_8);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -196,19 +196,17 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(obj));
 
-        TEST(IS_STRING_OBJ(obj));
+        TEST(GET_OBJ_TYPE(obj) == OBJ_STRING);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, obj));
-
-        TEST(GET_OBJ_TYPE(obj) == OBJ_STRING_8);
+        TEST(GET_OBJ_TYPE(obj) != OBJ_OBJECT);
 
         TEST(KOS_get_string_length(obj) == 3);
     }
 
     /************************************************************************/
     {
-        const uint16_t    str[] = { 1 };
-        const KOS_OBJ_PTR obj   = KOS_new_const_string(frame, str, sizeof(str)/2, OBJ_STRING_16);
+        const uint16_t   str[] = { 1 };
+        const KOS_OBJ_ID obj   = KOS_new_const_string(frame, str, sizeof(str)/2, KOS_STRING_ELEM_16);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -216,19 +214,17 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(obj));
 
-        TEST(IS_STRING_OBJ(obj));
+        TEST(GET_OBJ_TYPE(obj) == OBJ_STRING);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, obj));
-
-        TEST(GET_OBJ_TYPE(obj) == OBJ_STRING_16);
+        TEST(GET_OBJ_TYPE(obj) != OBJ_OBJECT);
 
         TEST(KOS_get_string_length(obj) == 1);
     }
 
     /************************************************************************/
     {
-        const uint32_t    str[] = { 2, 3 };
-        const KOS_OBJ_PTR obj   = KOS_new_const_string(frame, str, sizeof(str)/4, OBJ_STRING_32);
+        const uint32_t   str[] = { 2, 3 };
+        const KOS_OBJ_ID obj   = KOS_new_const_string(frame, str, sizeof(str)/4, KOS_STRING_ELEM_32);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -236,18 +232,16 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(obj));
 
-        TEST(IS_STRING_OBJ(obj));
+        TEST(GET_OBJ_TYPE(obj) == OBJ_STRING);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, obj));
-
-        TEST(GET_OBJ_TYPE(obj) == OBJ_STRING_32);
+        TEST(GET_OBJ_TYPE(obj) != OBJ_OBJECT);
 
         TEST(KOS_get_string_length(obj) == 2);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR obj = KOS_new_array(frame, 16);
+        const KOS_OBJ_ID obj = KOS_new_array(frame, 16);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -255,9 +249,9 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(obj));
 
-        TEST(!IS_STRING_OBJ(obj));
+        TEST(GET_OBJ_TYPE(obj) != OBJ_STRING);
 
-        TEST(!IS_TYPE(OBJ_OBJECT, obj));
+        TEST(GET_OBJ_TYPE(obj) != OBJ_OBJECT);
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
 
@@ -266,7 +260,7 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_PTR obj = KOS_new_object(frame);
+        const KOS_OBJ_ID obj = KOS_new_object(frame);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -274,9 +268,9 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(obj));
 
-        TEST(!IS_STRING_OBJ(obj));
+        TEST(GET_OBJ_TYPE(obj) != OBJ_STRING);
 
-        TEST(IS_TYPE(OBJ_OBJECT, obj));
+        TEST(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
     }

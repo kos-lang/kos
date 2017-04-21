@@ -43,17 +43,17 @@
 #define IMMPART(val,shift) ((uint8_t)((uint32_t)(val) >> shift))
 #define IMM32(val) IMMPART(val, 0), IMMPART(val, 8), IMMPART(val, 16), IMMPART(val, 24)
 
-static KOS_ASCII_STRING(str_value, "value");
+static const char str_value[] = "value";
 
-static KOS_OBJ_PTR _run_code(KOS_CONTEXT     *ctx,
-                             KOS_STACK_FRAME *frame,
-                             const uint8_t   *bytecode,
-                             unsigned         bytecode_size,
-                             unsigned         num_regs,
-                             KOS_STRING      *strings)
+static KOS_OBJ_ID _run_code(KOS_CONTEXT     *ctx,
+                            KOS_STACK_FRAME *frame,
+                            const uint8_t   *bytecode,
+                            unsigned         bytecode_size,
+                            unsigned         num_regs,
+                            KOS_OBJ_ID       string)
 {
-    KOS_OBJ_PTR ret;
-    int         error;
+    KOS_OBJ_ID ret;
+    int        error = KOS_SUCCESS;
 
     struct _KOS_MODULE module;
 
@@ -61,17 +61,27 @@ static KOS_OBJ_PTR _run_code(KOS_CONTEXT     *ctx,
 
     module.type          = OBJ_MODULE;
     module.context       = ctx;
-    module.strings       = strings;
+    module.strings       = IS_BAD_PTR(string) ? KOS_BADPTR : KOS_new_array(frame, 1);
     module.bytecode      = bytecode;
     module.bytecode_size = bytecode_size;
     module.instr_offs    = 0;
     module.num_regs      = num_regs;
 
-    error = _KOS_vm_run_module(&module, &ret);
+    if ( ! IS_BAD_PTR(string)) {
+
+        if (IS_BAD_PTR(module.strings))
+            error = KOS_ERROR_EXCEPTION;
+
+        if ( ! error)
+            error = KOS_array_write(frame, module.strings, 0, string);
+    }
+
+    if ( ! error)
+        error = _KOS_vm_run_module(&module, &ret);
 
     if (error) {
         KOS_raise_exception(frame, ret);
-        ret = TO_OBJPTR(0);
+        ret = KOS_BADPTR;
     }
 
     return ret;
@@ -87,7 +97,8 @@ int main(void)
     /************************************************************************/
     /* SET, GET.PROP */
     {
-        KOS_ASCII_STRING(prop1, "prop1");
+        static const char prop1[]  = "prop1";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,   0,
             INSTR_LOAD_STR,   1, IMM32(0),/*"prop1"*/
@@ -98,14 +109,15 @@ int main(void)
             INSTR_RETURN,     0, 3
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, &prop1) == TO_SMALL_INT(-6));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, str_prop) == TO_SMALL_INT(-6));
         TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/
     /* SET.PROP, GET */
     {
-        KOS_ASCII_STRING(prop2, "prop2");
+        static const char prop2[] = "prop2";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop2);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,   0,
             INSTR_LOAD_INT32, 1, IMM32(-7),
@@ -115,7 +127,7 @@ int main(void)
             INSTR_RETURN,     0, 1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, &prop2) == TO_SMALL_INT(-7));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == TO_SMALL_INT(-7));
         TEST_NO_EXCEPTION();
     }
 
@@ -154,7 +166,8 @@ int main(void)
     /************************************************************************/
     /* SET - invalid object type */
     {
-        KOS_ASCII_STRING(prop1, "prop1");
+        static const char prop1[]  = "prop1";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_STR,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT32, 1, IMM32(-6),
@@ -162,7 +175,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, &prop1) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -177,7 +190,7 @@ int main(void)
             INSTR_RETURN,    0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -191,14 +204,15 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* SET.PROP - invalid object type */
     {
-        KOS_ASCII_STRING(prop1, "prop1");
+        static const char prop1[]  = "prop1";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_STR,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT32, 1, IMM32(-6),
@@ -206,14 +220,15 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, &prop1) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* SET.ELEM - invalid object type */
     {
-        KOS_ASCII_STRING(prop1, "prop1");
+        static const char prop1[]  = "prop1";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_STR,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT32, 1, IMM32(-6),
@@ -221,14 +236,15 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, &prop1) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* SET.ELEM - index out of range */
     {
-        KOS_ASCII_STRING(prop1, "prop1");
+        static const char prop1[]  = "prop1";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_ARRAY, 0, IMM32(1),
             INSTR_LOAD_STR,   1, IMM32(0),/*"prop1"*/
@@ -236,28 +252,30 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, &prop1) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* SET.ELEM - invalid index type for array */
     {
-        KOS_ASCII_STRING(prop1, "prop1");
+        static const char prop1[]  = "prop1";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_STR,   0, IMM32(0),/*"prop1"*/
             INSTR_SET_ELEM,   0, IMM32(0), 0,
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 1, &prop1) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 1, str_prop) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* SET.PROP, HAS.PROP */
     {
-        KOS_ASCII_STRING(prop5, "prop5");
+        static const char prop5[]  = "prop5";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop5);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,   0,
             INSTR_LOAD_INT32, 1, IMM32(-9),
@@ -266,14 +284,15 @@ int main(void)
             INSTR_RETURN,     0, 2
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, &prop5) == KOS_TRUE);
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop) == KOS_TRUE);
         TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/
     /* DEL.PROP */
     {
-        KOS_ASCII_STRING(prop6, "prop6");
+        static const char prop6[]  = "prop6";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop6);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,   0,
             INSTR_LOAD_INT32, 1, IMM32(-10),
@@ -283,14 +302,15 @@ int main(void)
             INSTR_RETURN,     0, 1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, &prop6) == KOS_FALSE);
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_FALSE);
         TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/
     /* DEL.PROP - delete non-existent property */
     {
-        KOS_ASCII_STRING(prop6, "prop6");
+        static const char prop6[]  = "prop6";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop6);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ, 0,
             INSTR_DEL_PROP, 0, IMM32(0),/*"prop6"*/
@@ -298,14 +318,15 @@ int main(void)
             INSTR_RETURN,   0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 1, &prop6) == KOS_FALSE);
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 1, str_prop) == KOS_FALSE);
         TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/
     /* DEL */
     {
-        KOS_ASCII_STRING(prop7, "prop7");
+        static const char prop7[]  = "prop7";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop7);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,   0,
             INSTR_LOAD_INT32, 1, IMM32(-10),
@@ -316,14 +337,15 @@ int main(void)
             INSTR_RETURN,     0, 1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, &prop7) == KOS_FALSE);
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_FALSE);
         TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/
     /* DEL - delete non-existent property */
     {
-        KOS_ASCII_STRING(prop7, "prop7");
+        static const char prop7[]  = "prop7";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop7);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ, 0,
             INSTR_LOAD_STR, 1, IMM32(0),/*"prop7*/
@@ -332,7 +354,7 @@ int main(void)
             INSTR_RETURN,   0, 1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, &prop7) == KOS_FALSE);
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_FALSE);
         TEST_NO_EXCEPTION();
     }
 
@@ -366,7 +388,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        KOS_OBJ_PTR ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, 0);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, 0);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_BAD_PTR(ret));
@@ -434,7 +456,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        KOS_OBJ_PTR ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
         TEST_NO_EXCEPTION();
 
         TEST(IS_SMALL_INT(ret));
@@ -460,7 +482,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        KOS_OBJ_PTR ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
         TEST_NO_EXCEPTION();
 
         TEST(IS_SMALL_INT(ret));
@@ -522,14 +544,15 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* CALL - args not an array */
     {
-        KOS_ASCII_STRING(str, "str");
+        static const char str[]    = "str";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
         const uint8_t code[] = {
             INSTR_JUMP,       IMM32(10),
 
@@ -543,7 +566,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, &str) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -563,14 +586,15 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
     /************************************************************************/
     /* NEW */
     {
-        KOS_ASCII_STRING(str, "own property");
+        static const char str[]    = "own property";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
         const uint8_t code[] = {
             INSTR_JUMP,       IMM32(17),
 
@@ -586,19 +610,20 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        KOS_OBJ_PTR ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, &str);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_SMALL_INT(ret));
         TEST(GET_OBJ_TYPE(ret) == OBJ_OBJECT);
-        TEST(KOS_get_property(frame, ret, TO_OBJPTR(&str)) == TO_SMALL_INT(0xC0DEU));
+        TEST(KOS_get_property(frame, ret, KOS_context_get_cstring(frame, str)) == TO_SMALL_INT(0xC0DEU));
         TEST_NO_EXCEPTION();
     }
 
     /************************************************************************/
     /* NEW */
     {
-        KOS_ASCII_STRING(str, "own property");
+        static const char str[]    = "own property";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
         const uint8_t code[] = {
             INSTR_JUMP,       IMM32(23),
 
@@ -615,12 +640,12 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        KOS_OBJ_PTR ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, &str);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_SMALL_INT(ret));
         TEST(GET_OBJ_TYPE(ret) == OBJ_OBJECT);
-        TEST(KOS_get_property(frame, ret, TO_OBJPTR(&str)) == TO_SMALL_INT(0xC0DEU));
+        TEST(KOS_get_property(frame, ret, KOS_context_get_cstring(frame, str)) == TO_SMALL_INT(0xC0DEU));
         TEST_NO_EXCEPTION();
     }
 
@@ -724,14 +749,14 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        KOS_OBJ_PTR ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_BAD_PTR(ret));
         TEST(!IS_SMALL_INT(ret));
         TEST(GET_OBJ_TYPE(ret) == OBJ_FUNCTION);
-        TEST(OBJPTR(KOS_FUNCTION, ret)->generator_state == KOS_GEN_READY);
-        TEST(OBJPTR(KOS_FUNCTION, ret)->generator_stack_frame != TO_OBJPTR(0));
+        TEST(OBJPTR(FUNCTION, ret)->generator_state == KOS_GEN_READY);
+        TEST(OBJPTR(FUNCTION, ret)->generator_stack_frame != 0);
     }
 
     /************************************************************************/
@@ -848,7 +873,7 @@ int main(void)
             INSTR_YIELD,      1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -865,7 +890,7 @@ int main(void)
             INSTR_YIELD,      1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -915,7 +940,7 @@ int main(void)
             INSTR_JUMP,       IMM32(-11)
         };
 
-        KOS_OBJ_PTR ret = _run_code(&ctx, frame, &code[0], sizeof(code), 5, 0);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 5, 0);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_BAD_PTR(ret));
@@ -940,7 +965,7 @@ int main(void)
             INSTR_RETURN,     0, 1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -960,7 +985,7 @@ int main(void)
             INSTR_JUMP,       IMM32(-8)
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -977,7 +1002,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -1044,10 +1069,10 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        KOS_OBJ_PTR obj = _run_code(&ctx, frame, &code[0], sizeof(code), 2, 0);
+        KOS_OBJ_ID obj = _run_code(&ctx, frame, &code[0], sizeof(code), 2, 0);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_get_property(frame, obj, TO_OBJPTR(&str_value)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(frame, obj, KOS_context_get_cstring(frame, str_value)) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
     }
 
@@ -1079,7 +1104,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -1100,10 +1125,10 @@ int main(void)
             INSTR_RETURN,     0, 1
         };
 
-        KOS_OBJ_PTR obj = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
+        KOS_OBJ_ID obj = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_get_property(frame, obj, TO_OBJPTR(&str_value)) == TO_SMALL_INT(42));
+        TEST(KOS_get_property(frame, obj, KOS_context_get_cstring(frame, str_value)) == TO_SMALL_INT(42));
         TEST_NO_EXCEPTION();
     }
 
@@ -1150,7 +1175,7 @@ int main(void)
             INSTR_THROW,      0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, &str_value) == TO_SMALL_INT(4));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, KOS_context_get_cstring(frame, str_value)) == TO_SMALL_INT(4));
         TEST_NO_EXCEPTION();
     }
 
@@ -1230,7 +1255,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -1243,7 +1268,7 @@ int main(void)
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_OBJPTR(0));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 

@@ -40,7 +40,7 @@ static void *_ptr(int value)
 struct _THREAD_DATA
 {
     KOS_ATOMIC(uint32_t) lock;
-    KOS_OBJ_PTR          value;
+    KOS_OBJ_ID           value;
 };
 
 static void _thread(KOS_STACK_FRAME *frame,
