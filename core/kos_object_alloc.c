@@ -94,7 +94,7 @@ void *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size)
         }
 
         obj += sizeof(void *);
-        obj += 0x10 - (int)(uintptr_t)obj & 0xF;
+        obj += 0x10 - ((int)(uintptr_t)obj & 0xF);
     }
     else
         KOS_raise_exception_cstring(frame, str_err_out_of_memory);
