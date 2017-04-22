@@ -47,31 +47,26 @@ class function;
 class object;
 
 template<typename T>
-struct remove_reference
-{
+struct remove_reference {
     typedef T type;
 };
 
 template<typename T>
-struct remove_reference<T&>
-{
+struct remove_reference<T&> {
     typedef T type;
 };
 
 template<typename T>
-struct remove_const
-{
+struct remove_const {
     typedef T type;
 };
 
 template<typename T>
-struct remove_const<const T>
-{
+struct remove_const<const T> {
     typedef T type;
 };
 
-class stack_frame
-{
+class stack_frame {
     public:
         stack_frame(KOS_STACK_FRAME* frame)
             : _frame(frame) { }
@@ -168,8 +163,7 @@ inline KOS_OBJ_ID value_from_object_ptr<KOS_OBJ_ID>(stack_frame frame, KOS_OBJ_I
     return obj_id;
 }
 
-class obj_id_converter
-{
+class obj_id_converter {
     public:
         obj_id_converter(stack_frame frame, KOS_OBJ_ID obj_id)
             : _frame(frame), _obj_id(obj_id) { }
@@ -189,8 +183,7 @@ inline obj_id_converter from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
     return obj_id_converter(frame, obj_id);
 }
 
-class context
-{
+class context {
     public:
         context() {
             KOS_STACK_FRAME *frame;
@@ -226,8 +219,7 @@ class context
         KOS_CONTEXT _ctx;
 };
 
-class thread_root
-{
+class thread_root {
     public:
         thread_root(context& ctx) {
             KOS_context_register_thread(ctx, &_thread_root);
@@ -241,8 +233,7 @@ class thread_root
         KOS_THREAD_ROOT _thread_root;
 };
 
-class object_base
-{
+class object_base {
     public:
         object_base(KOS_OBJ_ID obj_id)
             : _obj_id(obj_id)
@@ -265,8 +256,7 @@ class object_base
         KOS_OBJ_ID _obj_id;
 };
 
-class integer: public object_base
-{
+class integer: public object_base {
     public:
         integer(KOS_OBJ_ID obj_id)
             : object_base(obj_id)
@@ -287,8 +277,7 @@ class integer: public object_base
         }
 };
 
-class floating: public object_base
-{
+class floating: public object_base {
     public:
         floating(KOS_OBJ_ID obj_id)
             : object_base(obj_id)
@@ -301,8 +290,7 @@ class floating: public object_base
         }
 };
 
-class string: public object_base
-{
+class string: public object_base {
     public:
         string(KOS_OBJ_ID obj_id)
             : object_base(obj_id)
@@ -324,8 +312,7 @@ class string: public object_base
         }
 };
 
-class boolean: public object_base
-{
+class boolean: public object_base {
     public:
         boolean(KOS_OBJ_ID obj_id)
             : object_base(obj_id)
@@ -347,8 +334,7 @@ class boolean: public object_base
         }
 };
 
-class void_: public object_base
-{
+class void_: public object_base {
     public:
         void_(KOS_OBJ_ID obj_id)
             : object_base(obj_id)
@@ -362,8 +348,7 @@ class void_: public object_base
         }
 };
 
-class object: public object_base
-{
+class object: public object_base {
     public:
         object(stack_frame frame, KOS_OBJ_ID obj_id)
             : object_base(obj_id),
@@ -371,8 +356,7 @@ class object: public object_base
         {
         }
 
-        class const_property
-        {
+        class const_property {
             public:
                 const_property(stack_frame frame, KOS_OBJ_ID obj_id, const string& key)
                     : _frame(frame),
@@ -396,8 +380,7 @@ class object: public object_base
                 const string        _key;
         };
 
-        class property: public const_property
-        {
+        class property: public const_property {
             public:
                 property(stack_frame frame, KOS_OBJ_ID obj_id, const string& key)
                     : const_property(frame, obj_id, key)
@@ -421,8 +404,7 @@ class object: public object_base
             return property(_frame, _obj_id, to_object_ptr(_frame, key));
         }
 
-        class const_iterator
-        {
+        class const_iterator {
             public:
                 typedef std::forward_iterator_tag iterator_category;
                 typedef KOS_OBJECT_WALK_ELEM      value_type;
@@ -492,8 +474,7 @@ class object: public object_base
 };
 
 template<typename element_type>
-class random_access_iterator
-{
+class random_access_iterator {
     public:
         typedef std::random_access_iterator_tag           iterator_category;
         typedef typename remove_const<element_type>::type value_type;
@@ -605,8 +586,7 @@ class random_access_iterator
         mutable value_type _elem;
 };
 
-class array: public object
-{
+class array: public object {
     public:
         array(stack_frame frame, KOS_OBJ_ID obj_id)
             : object(frame, obj_id)
@@ -626,8 +606,7 @@ class array: public object
             return KOS_get_array_size(_obj_id);
         }
 
-        class const_element
-        {
+        class const_element {
             public:
                 const_element(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
                     : _frame(frame),
@@ -687,8 +666,7 @@ class array: public object
 #endif
         };
 
-        class element: public const_element
-        {
+        class element: public const_element {
             public:
                 element(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
                     : const_element(frame, obj_id, idx)
@@ -755,8 +733,7 @@ class array: public object
         const_reverse_iterator crend()   const { return const_reverse_iterator(cbegin()); }
 };
 
-class buffer: public object
-{
+class buffer: public object {
     public:
         buffer(stack_frame frame, KOS_OBJ_ID obj_id)
             : object(frame, obj_id)
@@ -776,8 +753,7 @@ class buffer: public object
             return KOS_get_buffer_size(_obj_id);
         }
 
-        class const_element
-        {
+        class const_element {
             public:
                 const_element(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
                     : _frame(frame),
@@ -842,8 +818,7 @@ class buffer: public object
 #endif
         };
 
-        class element: public const_element
-        {
+        class element: public const_element {
             public:
                 element(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
                     : const_element(frame, obj_id, idx)
@@ -932,8 +907,7 @@ array stack_frame::make_array(Args... args)
 }
 #endif
 
-class function: public object
-{
+class function: public object {
     public:
         function(stack_frame frame, KOS_OBJ_ID obj_id)
             : object(frame, obj_id)
@@ -1038,8 +1012,7 @@ class function: public object
 #endif
 };
 
-class exception: public std::runtime_error
-{
+class exception: public std::runtime_error {
     public:
         explicit exception(stack_frame frame)
             : std::runtime_error(get_exception_string(frame)),
@@ -1106,18 +1079,15 @@ T* get_priv(KOS_OBJ_ID obj)
 
 #ifdef KOS_CPP11
 template<int...>
-struct seq
-{
+struct seq {
 };
 
 template<int n, int... indices>
-struct idx_seq: idx_seq<n-1, n-1, indices...>
-{
+struct idx_seq: idx_seq<n-1, n-1, indices...> {
 };
 
 template<int... indices>
-struct idx_seq<0, indices...>
-{
+struct idx_seq<0, indices...> {
     typedef seq<indices...> type;
 };
 

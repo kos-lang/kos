@@ -37,8 +37,7 @@ static void *_ptr(int value)
     return (void *)v;
 }
 
-struct _THREAD_DATA
-{
+struct _THREAD_DATA {
     KOS_ATOMIC(uint32_t) lock;
     KOS_OBJ_ID           value;
 };
