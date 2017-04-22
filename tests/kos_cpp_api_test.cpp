@@ -254,7 +254,7 @@ try {
             TEST(static_cast<int>(*it) == i + 20);
         }
 
-        /* TODO crashes with clang+optimization
+        /* TODO make reference to actual element, otherwise reverse operator references temporary
         i = 4;
         for (kos::array::const_reverse_iterator it = ca.rbegin(); it != ca.rend(); ++it, --i) {
             TEST(static_cast<int>(*it) == i + 20);
@@ -297,7 +297,7 @@ try {
             TEST(*it == static_cast<char>(0xF0 + i));
         }
 
-        /* TODO crashes with clang+optimization
+        /* TODO make reference to actual element, otherwise reverse operator references temporary
         i = 9;
         for (kos::buffer::const_reverse_iterator it = b.rbegin(); it != b.rend(); ++it, --i) {
             TEST(*it == static_cast<char>(0xF0 + i));

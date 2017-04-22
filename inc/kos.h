@@ -498,8 +498,8 @@ class random_access_iterator
         typedef std::random_access_iterator_tag           iterator_category;
         typedef typename remove_const<element_type>::type value_type;
         typedef int                                       difference_type;
-        typedef element_type*                             pointer;
-        typedef element_type&                             reference;
+        typedef element_type*                             pointer;   // TODO pointer to actual element
+        typedef element_type&                             reference; // TODO reference to actual element
 
         random_access_iterator()
             : _elem(0, KOS_BADPTR, 0)
@@ -595,14 +595,10 @@ class random_access_iterator
                    _elem.index()  >= it._elem.index();
         }
 
+        // TODO reference to actual element
         reference operator*() const {
             assert(static_cast<KOS_STACK_FRAME*>(_elem.frame()));
             return _elem;
-        }
-
-        pointer operator->() const {
-            assert(static_cast<KOS_STACK_FRAME*>(_elem.frame()));
-            return &_elem;
         }
 
     private:
@@ -681,6 +677,14 @@ class array: public object
                 mutable stack_frame _frame;
                 KOS_OBJ_ID          _obj_id;
                 int                 _idx;
+
+#ifdef KOS_CPP11
+            public:
+                const_element() = delete;
+#else
+            private:
+                const_element();
+#endif
         };
 
         class element: public const_element
@@ -828,6 +832,14 @@ class buffer: public object
                 stack_frame _frame;
                 KOS_OBJ_ID  _obj_id;
                 int         _idx;
+
+#ifdef KOS_CPP11
+            public:
+                const_element() = delete;
+#else
+            private:
+                const_element();
+#endif
         };
 
         class element: public const_element
