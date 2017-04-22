@@ -53,7 +53,7 @@ static KOS_STRING *_new_empty_string(KOS_STACK_FRAME           *frame,
 
     if (str) {
 
-        str->elem_size = elem_size;
+        str->elem_size = (uint8_t)elem_size;
         str->hash      = 0;
         str->length    = (uint16_t)length;
 
@@ -107,7 +107,7 @@ static KOS_OBJ_ID _new_string(KOS_STACK_FRAME      *frame,
             else
                 elem_size = KOS_STRING_ELEM_8;
 
-            str->elem_size = elem_size;
+            str->elem_size = (uint8_t)elem_size;
             str->hash      = 0;
             str->length    = (uint16_t)count;
 
@@ -192,7 +192,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_STACK_FRAME           *frame,
         str = (KOS_STRING *)_KOS_alloc_object(frame, KOS_STRING);
 
         if (str) {
-            str->elem_size = elem_size;
+            str->elem_size = (uint8_t)elem_size;
             str->flags     = KOS_STRING_PTR;
             str->length    = (uint16_t)length;
             str->hash      = 0;
@@ -479,7 +479,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_STACK_FRAME *frame,
                     new_str = OBJPTR(STRING, KOS_new_const_string(frame, buf, new_len, elem_size));
                 else {
                     new_str               = (KOS_STRING *)_KOS_alloc_object(frame, KOS_STRING);
-                    new_str->elem_size    = elem_size;
+                    new_str->elem_size    = (uint8_t)elem_size;
                     new_str->flags        = KOS_STRING_REF;
                     new_str->length       = (uint16_t)new_len;
                     new_str->hash         = 0;

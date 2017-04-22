@@ -76,7 +76,7 @@ void *_KOS_alloc_128(KOS_STACK_FRAME *frame)
 
 void *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size)
 {
-    uint64_t *obj = (uint64_t *)_KOS_malloc(size+2*sizeof(uint64_t));
+    uint8_t *obj = (uint8_t *)_KOS_malloc(size + sizeof(uint64_t) + 0x10);
 
     if (obj) {
         struct _KOS_ALLOC_DEBUG *allocator = frame->allocator;
@@ -93,7 +93,8 @@ void *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size)
                 break;
         }
 
-        obj += 2;
+        obj += sizeof(void *);
+        obj += 0x10 - (int)(uintptr_t)obj & 0xF;
     }
     else
         KOS_raise_exception_cstring(frame, str_err_out_of_memory);

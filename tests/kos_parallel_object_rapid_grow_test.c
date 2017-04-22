@@ -26,6 +26,7 @@
 #include "../inc/kos_string.h"
 #include "../core/kos_file.h"
 #include "../core/kos_memory.h"
+#include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_threads.h"
 #include "kos_parallel.h"
@@ -34,7 +35,7 @@
 struct TEST_DATA {
     KOS_CONTEXT         *ctx;
     KOS_OBJ_ID           object;
-    KOS_STRING          *prop_names;
+    KOS_OBJ_ID          *prop_names;
     size_t               num_props;
     size_t               num_loops;
     KOS_ATOMIC(uint32_t) go;
@@ -43,18 +44,18 @@ struct TEST_DATA {
 
 struct THREAD_DATA {
     struct TEST_DATA *test;
-    int               rand_init;
+    unsigned          rand_init;
 };
 
 static int _write_props_inner(KOS_STACK_FRAME  *frame,
                               struct TEST_DATA *test,
-                              int               rand_init)
+                              unsigned          rand_init)
 {
     size_t   i;
-    unsigned n = (unsigned)rand_init;
+    unsigned n = rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
-        KOS_OBJ_ID key   = OBJID(STRING, &test->prop_names[n % test->num_props]);
+        KOS_OBJ_ID key   = test->prop_names[n % test->num_props];
         KOS_OBJ_ID value = TO_SMALL_INT((int)((n % 32) - 16));
         if (!((n & 0xF00U)))
             TEST(KOS_delete_property(frame, test->object, key) == KOS_SUCCESS);
@@ -80,13 +81,13 @@ static void _write_props(KOS_STACK_FRAME *frame,
 
 static int _read_props_inner(KOS_STACK_FRAME  *frame,
                              struct TEST_DATA *test,
-                             int               rand_init)
+                             unsigned          rand_init)
 {
     size_t   i;
-    unsigned n = (unsigned)rand_init;
+    unsigned n = rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
-        KOS_OBJ_ID key   = OBJID(STRING, &test->prop_names[n % test->num_props]);
+        KOS_OBJ_ID key   = test->prop_names[n % test->num_props];
         KOS_OBJ_ID value = KOS_get_property(frame, test->object, key);
         if (IS_BAD_PTR(value)) {
             TEST(KOS_is_exception_pending(frame));
@@ -132,7 +133,8 @@ int main(void)
         int                 num_threads = 0;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
-        KOS_STRING         *props;
+        struct KOS_RNG      rng;
+        KOS_OBJ_ID         *props;
         int                 i_loop;
         int                 i;
 
@@ -144,25 +146,23 @@ int main(void)
         _KOS_vector_init(&mem_buf);
         TEST(_KOS_vector_resize(&mem_buf,
                 num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
-                + num_props * sizeof(KOS_STRING)
+                + num_props * sizeof(KOS_OBJ_ID)
             ) == KOS_SUCCESS);
-        props          = (KOS_STRING *)mem_buf.buffer;
+        props          = (KOS_OBJ_ID *)mem_buf.buffer;
         thread_cookies = (struct THREAD_DATA *)(props + num_props);
         threads        = (_KOS_THREAD *)(thread_cookies + num_threads);
 
-        srand((unsigned)time(0));
+        _KOS_rng_init(&rng);
 
         for (i = 0; i < num_props; i++) {
+            char     buf[3];
             unsigned k;
 
-            KOS_STRING *str = props + i;
-            str->elem_size  = KOS_STRING_ELEM_8;
-            str->flags      = KOS_STRING_LOCAL;
-            str->length     = 3U;
-            str->hash       = 0;
+            for (k = 0; k < sizeof(buf); k++)
+                buf[k] = (char)_KOS_rng_random_range(&rng, 127U);
 
-            for (k = 0; k < str->length; k++)
-                str->data.buf[k] = (char)rand();
+            props[i] = KOS_new_string(frame, buf, sizeof(buf));
+            TEST( ! IS_BAD_PTR(props[i]));
         }
 
         data.ctx        = &ctx;
@@ -180,13 +180,13 @@ int main(void)
 
             for (i = 0; i < num_threads; i++) {
                 thread_cookies[i].test      = &data;
-                thread_cookies[i].rand_init = rand();
+                thread_cookies[i].rand_init = (unsigned)_KOS_rng_random_range(&rng, 0xFFFFFFFFU);
                 TEST(_KOS_thread_create(&ctx, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
             }
 
-            i = rand();
+            i = (int)_KOS_rng_random_range(&rng, 0x7FFFFFFF);
             KOS_atomic_write_u32(data.go, 1);
-            TEST(_write_props_inner(frame, &data, i) == KOS_SUCCESS);
+            TEST(_write_props_inner(frame, &data, (unsigned)i) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             for (i = 0; i < num_threads; i++) {
@@ -196,8 +196,8 @@ int main(void)
 
             TEST(data.error == KOS_SUCCESS);
 
-            for (i = 0; i < (int)(sizeof(props)/sizeof(props[0])); i++) {
-                KOS_OBJ_ID value = KOS_get_property(frame, o, OBJID(STRING, &props[i]));
+            for (i = 0; i < num_props; i++) {
+                KOS_OBJ_ID value = KOS_get_property(frame, o, props[i]);
                 if (IS_BAD_PTR(value))
                     TEST_EXCEPTION();
                 else {
