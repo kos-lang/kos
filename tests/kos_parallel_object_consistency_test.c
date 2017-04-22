@@ -190,7 +190,7 @@ int main(void)
 
             /* Start with 1, because 0 is for the main thread, which participates */
             for (i = 1; i < num_threads; i++)
-                TEST(_KOS_thread_create(&ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(_KOS_thread_create(frame, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
             KOS_atomic_write_u32(data.go, 1);
             TEST(_run_test(frame, thread_cookies) == KOS_SUCCESS);

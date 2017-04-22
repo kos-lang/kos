@@ -165,7 +165,7 @@ int main(void)
         for (i = 0; i < num_threads; i++) {
             thread_cookies[i].test      = &data;
             thread_cookies[i].rand_init = rand();
-            TEST(_KOS_thread_create(&ctx, ((i & 1)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+            TEST(_KOS_thread_create(frame, ((i & 1)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
         }
 
         i = rand();

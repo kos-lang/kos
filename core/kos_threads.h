@@ -522,10 +522,10 @@ void _KOS_yield(void);
 
 struct _KOS_CONTEXT;
 
-int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
-                       _KOS_THREAD_PROC     proc,
-                       void                *cookie,
-                       _KOS_THREAD         *thread);
+int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
+                       _KOS_THREAD_PROC         proc,
+                       void                    *cookie,
+                       _KOS_THREAD             *thread);
 
 void _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
                       _KOS_THREAD              thread);

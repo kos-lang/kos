@@ -173,7 +173,7 @@ int main(void)
         data.error    = KOS_SUCCESS;
 
         for (i = 0; i < num_threads; i++)
-            TEST(_KOS_thread_create(&ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+            TEST(_KOS_thread_create(frame, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             KOS_atomic_add_i32(data.stage, 1);

@@ -181,7 +181,7 @@ int main(void)
             for (i = 0; i < num_threads; i++) {
                 thread_cookies[i].test      = &data;
                 thread_cookies[i].rand_init = (unsigned)_KOS_rng_random_range(&rng, 0xFFFFFFFFU);
-                TEST(_KOS_thread_create(&ctx, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(_KOS_thread_create(frame, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
             }
 
             i = (int)_KOS_rng_random_range(&rng, 0x7FFFFFFF);

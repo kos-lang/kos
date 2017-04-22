@@ -162,7 +162,7 @@ int main(void)
 
         _KOS_spin_lock(&thread_data.lock);
 
-        TEST(_KOS_thread_create(&ctx, _thread, &thread_data, &thread) == KOS_SUCCESS);
+        TEST(_KOS_thread_create(frame, _thread, &thread_data, &thread) == KOS_SUCCESS);
 
         _KOS_spin_lock(&thread_data.lock);
 

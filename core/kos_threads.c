@@ -37,6 +37,8 @@
 #   include <sched.h>
 #endif
 
+static const char str_err_thread[] = "failed to create thread";
+
 void _KOS_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
                           KOS_ATOMIC(void *) *src,
                           unsigned            ptr_count)
@@ -119,16 +121,18 @@ static DWORD WINAPI _thread_proc(LPVOID thread_obj)
     return 0;
 }
 
-int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
-                       _KOS_THREAD_PROC     proc,
-                       void                *cookie,
-                       _KOS_THREAD         *thread)
+int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
+                       _KOS_THREAD_PROC         proc,
+                       void                    *cookie,
+                       _KOS_THREAD             *thread)
 {
     int         error      = KOS_SUCCESS;
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
-        new_thread->ctx       = ctx;
+        assert(frame->module);
+        assert(frame->module->context);
+        new_thread->ctx       = frame->module->context;
         new_thread->proc      = proc;
         new_thread->cookie    = cookie;
         new_thread->exception = KOS_BADPTR;
@@ -137,8 +141,8 @@ int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
 
         if (!new_thread->thread_handle) {
             _KOS_free(new_thread);
-            /* TODO raise exception */
-            error = KOS_ERROR_CANNOT_CREATE_THREAD;
+            KOS_raise_exception_cstring(frame, str_err_thread);
+            error = KOS_ERROR_EXCEPTION;
         }
         else
             *thread = new_thread;
@@ -213,23 +217,25 @@ static void *_thread_proc(void *thread_obj)
     return 0;
 }
 
-int _KOS_thread_create(struct _KOS_CONTEXT *ctx,
-                       _KOS_THREAD_PROC     proc,
-                       void                *cookie,
-                       _KOS_THREAD         *thread)
+int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
+                       _KOS_THREAD_PROC         proc,
+                       void                    *cookie,
+                       _KOS_THREAD             *thread)
 {
     int         error      = KOS_SUCCESS;
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
-        new_thread->ctx    = ctx;
+        assert(frame->module);
+        assert(frame->module->context);
+        new_thread->ctx    = frame->module->context;
         new_thread->proc   = proc;
         new_thread->cookie = cookie;
 
         if (pthread_create(&new_thread->thread_handle, 0, _thread_proc, new_thread)) {
             _KOS_free(new_thread);
-            /* TODO raise exception */
-            error = KOS_ERROR_CANNOT_CREATE_THREAD;
+            KOS_raise_exception_cstring(frame, str_err_thread);
+            error = KOS_ERROR_EXCEPTION;
         }
         else
             *thread = new_thread;
