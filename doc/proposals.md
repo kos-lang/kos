@@ -3,6 +3,12 @@
 
 * ? Support multi-line strings the Python way or the C way?
 
+* Partial application:
+
+        const sum3 = fun(a, b, c) -> ( a + b + c )
+        const sum2 = add3(0)    # sum2 is fun(b, c) -> ( 0 + b + c )
+        const add1 = add3(0, 1) # add1 is fun(c) -> ( 0 + 1 + c )
+
 * set/get:
 
         var myobj = {
