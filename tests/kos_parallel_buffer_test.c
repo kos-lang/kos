@@ -46,7 +46,7 @@ struct THREAD_DATA {
     uint8_t           id;
 };
 
-static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
+static int _run_test(KOS_FRAME frame, struct THREAD_DATA *data)
 {
     struct TEST_DATA *test = data->test;
     int               i;
@@ -85,8 +85,8 @@ static int _run_test(KOS_STACK_FRAME *frame, struct THREAD_DATA *data)
     return 0;
 }
 
-static void _test_thread_func(KOS_STACK_FRAME *frame,
-                              void            *cookie)
+static void _test_thread_func(KOS_FRAME frame,
+                              void     *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
 
@@ -96,9 +96,9 @@ static void _test_thread_func(KOS_STACK_FRAME *frame,
 
 int main(void)
 {
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
-    const int        num_cpus = _get_num_cpus();
+    KOS_CONTEXT ctx;
+    KOS_FRAME   frame;
+    const int   num_cpus = _get_num_cpus();
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 

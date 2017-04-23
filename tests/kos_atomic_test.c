@@ -42,8 +42,8 @@ struct _THREAD_DATA {
     KOS_OBJ_ID           value;
 };
 
-static void _thread(KOS_STACK_FRAME *frame,
-                    void            *cookie)
+static void _thread(KOS_FRAME frame,
+                    void     *cookie)
 {
     struct _THREAD_DATA *thread_data = (struct _THREAD_DATA *)cookie;
 
@@ -151,7 +151,7 @@ int main(void)
     /* Basic thread test */
     {
         KOS_CONTEXT         ctx;
-        KOS_STACK_FRAME    *frame;
+        KOS_FRAME           frame;
         struct _THREAD_DATA thread_data;
         _KOS_THREAD         thread;
 

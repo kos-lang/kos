@@ -33,7 +33,7 @@
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(frame)); KOS_clear_exception(frame); } while (0)
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(frame))
 
-static int _walk_object(KOS_STACK_FRAME           *frame,
+static int _walk_object(KOS_FRAME                  frame,
                         KOS_OBJ_ID                 obj,
                         KOS_OBJECT_WALK_ELEM      *expected,
                         unsigned                   num_expected,
@@ -72,8 +72,8 @@ static int _walk_object(KOS_STACK_FRAME           *frame,
 
 int main(void)
 {
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
+    KOS_CONTEXT ctx;
+    KOS_FRAME   frame;
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 

@@ -36,7 +36,7 @@ typedef struct _KOS_BUFFER_DATA BUFFER_DATA;
 
 #define KOS_buffer_alloc_size(cap) (sizeof(BUFFER_DATA) + ((cap) - 1U))
 
-static BUFFER_DATA *_alloc_buffer(KOS_STACK_FRAME *frame, unsigned capacity)
+static BUFFER_DATA *_alloc_buffer(KOS_FRAME frame, unsigned capacity)
 {
     BUFFER_DATA *const data = (BUFFER_DATA *)
             _KOS_alloc_buffer(frame, KOS_buffer_alloc_size(capacity));
@@ -66,8 +66,8 @@ static BUFFER_DATA *_alloc_buffer(KOS_STACK_FRAME *frame, unsigned capacity)
     return data;
 }
 
-KOS_OBJ_ID KOS_new_buffer(KOS_STACK_FRAME *frame,
-                          unsigned         size)
+KOS_OBJ_ID KOS_new_buffer(KOS_FRAME frame,
+                          unsigned  size)
 {
     KOS_BUFFER     *buffer   = (KOS_BUFFER *)_KOS_alloc_object(frame, KOS_BUFFER);
     const unsigned  capacity = (size + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);
@@ -93,9 +93,9 @@ KOS_OBJ_ID KOS_new_buffer(KOS_STACK_FRAME *frame,
     return OBJID(BUFFER, buffer);
 }
 
-int KOS_buffer_reserve(KOS_STACK_FRAME *frame,
-                       KOS_OBJ_ID       obj_id,
-                       unsigned         new_capacity)
+int KOS_buffer_reserve(KOS_FRAME  frame,
+                       KOS_OBJ_ID obj_id,
+                       unsigned   new_capacity)
 {
     int error = KOS_ERROR_EXCEPTION;
 
@@ -148,9 +148,9 @@ int KOS_buffer_reserve(KOS_STACK_FRAME *frame,
     return error;
 }
 
-int KOS_buffer_resize(KOS_STACK_FRAME *frame,
-                      KOS_OBJ_ID       obj_id,
-                      unsigned         size)
+int KOS_buffer_resize(KOS_FRAME  frame,
+                      KOS_OBJ_ID obj_id,
+                      unsigned   size)
 {
     int error = KOS_ERROR_EXCEPTION;
 
@@ -182,9 +182,9 @@ int KOS_buffer_resize(KOS_STACK_FRAME *frame,
     return error;
 }
 
-uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_ID       obj_id,
-                              unsigned         size_delta)
+uint8_t *KOS_buffer_make_room(KOS_FRAME  frame,
+                              KOS_OBJ_ID obj_id,
+                              unsigned   size_delta)
 {
     uint8_t *ret = 0;
 
@@ -226,11 +226,11 @@ uint8_t *KOS_buffer_make_room(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-int KOS_buffer_fill(KOS_STACK_FRAME *frame,
-                    KOS_OBJ_ID       obj_id,
-                    int64_t          begin,
-                    int64_t          end,
-                    uint8_t          value)
+int KOS_buffer_fill(KOS_FRAME  frame,
+                    KOS_OBJ_ID obj_id,
+                    int64_t    begin,
+                    int64_t    end,
+                    uint8_t    value)
 {
     int error = KOS_ERROR_EXCEPTION;
 
@@ -255,12 +255,12 @@ int KOS_buffer_fill(KOS_STACK_FRAME *frame,
     return error;
 }
 
-int KOS_buffer_copy(KOS_STACK_FRAME *frame,
-                    KOS_OBJ_ID       destptr,
-                    int64_t          dest_begin,
-                    KOS_OBJ_ID       srcptr,
-                    int64_t          src_begin,
-                    int64_t          src_end)
+int KOS_buffer_copy(KOS_FRAME  frame,
+                    KOS_OBJ_ID destptr,
+                    int64_t    dest_begin,
+                    KOS_OBJ_ID srcptr,
+                    int64_t    src_begin,
+                    int64_t    src_end)
 {
     int error = KOS_ERROR_EXCEPTION;
 
@@ -299,10 +299,10 @@ int KOS_buffer_copy(KOS_STACK_FRAME *frame,
     return error;
 }
 
-KOS_OBJ_ID KOS_buffer_slice(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_ID       obj_id,
-                            int64_t          begin,
-                            int64_t          end)
+KOS_OBJ_ID KOS_buffer_slice(KOS_FRAME  frame,
+                            KOS_OBJ_ID obj_id,
+                            int64_t    begin,
+                            int64_t    end)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -345,11 +345,11 @@ KOS_OBJ_ID KOS_buffer_slice(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-int KOS_buffer_rotate(KOS_STACK_FRAME *frame,
-                      KOS_OBJ_ID       obj_id,
-                      int64_t          begin,
-                      int64_t          mid,
-                      int64_t          end)
+int KOS_buffer_rotate(KOS_FRAME  frame,
+                      KOS_OBJ_ID obj_id,
+                      int64_t    begin,
+                      int64_t    mid,
+                      int64_t    end)
 {
     /* TODO */
     return KOS_ERROR_INTERNAL;

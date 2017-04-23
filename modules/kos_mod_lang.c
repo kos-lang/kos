@@ -67,9 +67,9 @@ do {                                                                         \
 
 #define PROTO(type) (frame->module->context->type##_prototype)
 
-static KOS_OBJ_ID _print(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       this_obj,
-                         KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _print(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
 {
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cstr;
@@ -89,9 +89,9 @@ _error:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_ID _print_(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       this_obj,
-                          KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _print_(KOS_FRAME  frame,
+                          KOS_OBJ_ID this_obj,
+                          KOS_OBJ_ID args_obj)
 {
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cstr;
@@ -109,7 +109,7 @@ _error:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_ID _object_iterator(KOS_STACK_FRAME           *frame,
+static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
                                    KOS_OBJ_ID                 regs_obj,
                                    KOS_OBJ_ID                 args_obj,
                                    enum KOS_OBJECT_WALK_DEPTH deep)
@@ -141,28 +141,28 @@ _error:
     return elem.key;
 }
 
-static KOS_OBJ_ID _shallow(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_ID       regs_obj,
-                           KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _shallow(KOS_FRAME  frame,
+                           KOS_OBJ_ID regs_obj,
+                           KOS_OBJ_ID args_obj)
 {
     return _object_iterator(frame, regs_obj, args_obj, KOS_SHALLOW);
 }
 
-static KOS_OBJ_ID _deep(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       regs_obj,
-                        KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _deep(KOS_FRAME  frame,
+                        KOS_OBJ_ID regs_obj,
+                        KOS_OBJ_ID args_obj)
 {
     return _object_iterator(frame, regs_obj, args_obj, KOS_DEEP);
 }
 
-static KOS_OBJ_ID _iterator(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_ID       regs_obj,
-                            KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _iterator(KOS_FRAME  frame,
+                            KOS_OBJ_ID regs_obj,
+                            KOS_OBJ_ID args_obj)
 {
     return KOS_BADPTR;
 }
 
-static int _create_constructor(KOS_STACK_FRAME     *frame,
+static int _create_constructor(KOS_FRAME            frame,
                                KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLER constructor,
                                KOS_OBJ_ID           prototype)
@@ -186,9 +186,9 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _number_constructor(KOS_STACK_FRAME *frame,
-                                      KOS_OBJ_ID       this_obj,
-                                      KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _number_constructor(KOS_FRAME  frame,
+                                      KOS_OBJ_ID this_obj,
+                                      KOS_OBJ_ID args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -234,9 +234,9 @@ static KOS_OBJ_ID _number_constructor(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _integer_constructor(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_ID       this_obj,
-                                       KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _integer_constructor(KOS_FRAME  frame,
+                                       KOS_OBJ_ID this_obj,
+                                       KOS_OBJ_ID args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -281,9 +281,9 @@ static KOS_OBJ_ID _integer_constructor(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _float_constructor(KOS_STACK_FRAME *frame,
-                                     KOS_OBJ_ID       this_obj,
-                                     KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _float_constructor(KOS_FRAME  frame,
+                                     KOS_OBJ_ID this_obj,
+                                     KOS_OBJ_ID args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -341,9 +341,9 @@ static KOS_OBJ_ID _float_constructor(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _boolean_constructor(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_ID       this_obj,
-                                       KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _boolean_constructor(KOS_FRAME  frame,
+                                       KOS_OBJ_ID this_obj,
+                                       KOS_OBJ_ID args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -360,16 +360,16 @@ static KOS_OBJ_ID _boolean_constructor(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _void_constructor(KOS_STACK_FRAME *frame,
-                                    KOS_OBJ_ID       this_obj,
-                                    KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _void_constructor(KOS_FRAME  frame,
+                                    KOS_OBJ_ID this_obj,
+                                    KOS_OBJ_ID args_obj)
 {
     return KOS_VOID;
 }
 
-static KOS_OBJ_ID _string_constructor(KOS_STACK_FRAME *frame,
-                                      KOS_OBJ_ID      this_obj,
-                                      KOS_OBJ_ID      args_obj)
+static KOS_OBJ_ID _string_constructor(KOS_FRAME  frame,
+                                      KOS_OBJ_ID this_obj,
+                                      KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
@@ -410,16 +410,16 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_ID _object_constructor(KOS_STACK_FRAME *frame,
-                                      KOS_OBJ_ID       this_obj,
-                                      KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _object_constructor(KOS_FRAME  frame,
+                                      KOS_OBJ_ID this_obj,
+                                      KOS_OBJ_ID args_obj)
 {
     return KOS_new_object(frame);
 }
 
-static KOS_OBJ_ID _array_constructor(KOS_STACK_FRAME *frame,
-                                     KOS_OBJ_ID       this_obj,
-                                     KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
+                                     KOS_OBJ_ID this_obj,
+                                     KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
     KOS_OBJ_ID     array    = KOS_new_array(frame, 0);
@@ -512,9 +512,9 @@ _error:
     return error ? KOS_BADPTR : array;
 }
 
-static KOS_OBJ_ID _buffer_constructor(KOS_STACK_FRAME *frame,
-                                      KOS_OBJ_ID       this_obj,
-                                      KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _buffer_constructor(KOS_FRAME  frame,
+                                      KOS_OBJ_ID this_obj,
+                                      KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
@@ -541,17 +541,17 @@ _error:
     return buffer;
 }
 
-static KOS_OBJ_ID _function_constructor(KOS_STACK_FRAME *frame,
-                                        KOS_OBJ_ID       this_obj,
-                                        KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _function_constructor(KOS_FRAME  frame,
+                                        KOS_OBJ_ID this_obj,
+                                        KOS_OBJ_ID args_obj)
 {
     /* TODO copy function object */
     return KOS_BADPTR;
 }
 
-static KOS_OBJ_ID _apply(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       this_obj,
-                         KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _apply(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID ret      = KOS_BADPTR;
@@ -573,9 +573,9 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_ID _set_prototype(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_ID       this_obj,
-                                 KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
+                                 KOS_OBJ_ID this_obj,
+                                 KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -613,9 +613,9 @@ static KOS_OBJ_ID _set_prototype(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _slice(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       this_obj,
-                         KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _slice(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
@@ -659,9 +659,9 @@ _error:
     return ret;
 }
 
-static KOS_OBJ_ID _get_array_size(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_ID       this_obj,
-                                  KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_array_size(KOS_FRAME  frame,
+                                  KOS_OBJ_ID this_obj,
+                                  KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -677,9 +677,9 @@ static KOS_OBJ_ID _get_array_size(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _get_buffer_size(KOS_STACK_FRAME *frame,
-                                   KOS_OBJ_ID       this_obj,
-                                   KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_buffer_size(KOS_FRAME  frame,
+                                   KOS_OBJ_ID this_obj,
+                                   KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -695,9 +695,9 @@ static KOS_OBJ_ID _get_buffer_size(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _resize(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       this_obj,
-                          KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _resize(KOS_FRAME  frame,
+                          KOS_OBJ_ID this_obj,
+                          KOS_OBJ_ID args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID size_obj;
@@ -731,9 +731,9 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_ID _fill(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       this_obj,
-                        KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _fill(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
@@ -814,7 +814,7 @@ struct _KOS_PACK_FORMAT {
     int        big_end;
 };
 
-typedef int (*_KOS_PACK_FORMAT_FUNC)(KOS_STACK_FRAME         *frame,
+typedef int (*_KOS_PACK_FORMAT_FUNC)(KOS_FRAME                frame,
                                      struct _KOS_PACK_FORMAT *fmt,
                                      KOS_OBJ_ID               buffer_obj,
                                      char                     value_fmt,
@@ -834,9 +834,9 @@ static int _is_whitespace(unsigned char_code)
            char_code == 0xFEFF;   /* BOM */
 }
 
-static void _pack_format_skip_spaces(KOS_STACK_FRAME *frame,
-                                     KOS_OBJ_ID       fmt_str,
-                                     unsigned        *i_ptr)
+static void _pack_format_skip_spaces(KOS_FRAME  frame,
+                                     KOS_OBJ_ID fmt_str,
+                                     unsigned  *i_ptr)
 {
     const unsigned size = KOS_get_string_length(fmt_str);
     unsigned       i    = *i_ptr;
@@ -857,9 +857,9 @@ static void _pack_format_skip_spaces(KOS_STACK_FRAME *frame,
     *i_ptr = i;
 }
 
-static unsigned _pack_format_get_count(KOS_STACK_FRAME *frame,
-                                       KOS_OBJ_ID       fmt_str,
-                                       unsigned        *i_ptr)
+static unsigned _pack_format_get_count(KOS_FRAME  frame,
+                                       KOS_OBJ_ID fmt_str,
+                                       unsigned  *i_ptr)
 {
     const unsigned size  = KOS_get_string_length(fmt_str);
     unsigned       i     = *i_ptr;
@@ -892,7 +892,7 @@ static unsigned _pack_format_get_count(KOS_STACK_FRAME *frame,
     return count;
 }
 
-static int _process_pack_format(KOS_STACK_FRAME         *frame,
+static int _process_pack_format(KOS_FRAME                frame,
                                 KOS_OBJ_ID               buffer_obj,
                                 _KOS_PACK_FORMAT_FUNC    handler,
                                 struct _KOS_PACK_FORMAT *fmt)
@@ -978,7 +978,7 @@ _error:
     return error;
 }
 
-static int _pack_format(KOS_STACK_FRAME         *frame,
+static int _pack_format(KOS_FRAME                frame,
                         struct _KOS_PACK_FORMAT *fmt,
                         KOS_OBJ_ID               buffer_obj,
                         char                     value_fmt,
@@ -1181,7 +1181,7 @@ _error:
     return error;
 }
 
-static int _unpack_format(KOS_STACK_FRAME         *frame,
+static int _unpack_format(KOS_FRAME                frame,
                           struct _KOS_PACK_FORMAT *fmt,
                           KOS_OBJ_ID               buffer_obj,
                           char                     value_fmt,
@@ -1304,9 +1304,9 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _pack(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       this_obj,
-                        KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _pack(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
 {
     int                     error;
     struct _KOS_PACK_FORMAT fmt;
@@ -1328,9 +1328,9 @@ static KOS_OBJ_ID _pack(KOS_STACK_FRAME *frame,
     return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_ID _unpack(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       this_obj,
-                          KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _unpack(KOS_FRAME  frame,
+                          KOS_OBJ_ID this_obj,
+                          KOS_OBJ_ID args_obj)
 {
     int                     error;
     struct _KOS_PACK_FORMAT fmt;
@@ -1373,9 +1373,9 @@ _error:
     return error ? KOS_BADPTR : fmt.data;
 }
 
-static KOS_OBJ_ID _copy_buffer(KOS_STACK_FRAME *frame,
-                               KOS_OBJ_ID       this_obj,
-                               KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _copy_buffer(KOS_FRAME  frame,
+                               KOS_OBJ_ID this_obj,
+                               KOS_OBJ_ID args_obj)
 {
     int            error      = KOS_SUCCESS;
     const uint32_t num_args   = KOS_get_array_size(args_obj);
@@ -1484,9 +1484,9 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_ID _reserve(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_ID       this_obj,
-                           KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _reserve(KOS_FRAME  frame,
+                           KOS_OBJ_ID this_obj,
+                           KOS_OBJ_ID args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID size_obj;
@@ -1514,9 +1514,9 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_ID _insert_array(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       this_obj,
-                                KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _insert_array(KOS_FRAME  frame,
+                                KOS_OBJ_ID this_obj,
+                                KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
@@ -1568,9 +1568,9 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_ID _pop(KOS_STACK_FRAME *frame,
-                       KOS_OBJ_ID       this_obj,
-                       KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _pop(KOS_FRAME  frame,
+                       KOS_OBJ_ID this_obj,
+                       KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -1605,9 +1605,9 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_ID _push(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       this_obj,
-                        KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _push(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
@@ -1631,9 +1631,9 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_ID _get_char_code(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_ID       this_obj,
-                                 KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_char_code(KOS_FRAME  frame,
+                                 KOS_OBJ_ID this_obj,
+                                 KOS_OBJ_ID args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
@@ -1658,9 +1658,9 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_ID _get_string_size(KOS_STACK_FRAME *frame,
-                                   KOS_OBJ_ID       this_obj,
-                                   KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_string_size(KOS_FRAME  frame,
+                                   KOS_OBJ_ID this_obj,
+                                   KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -1674,9 +1674,9 @@ static KOS_OBJ_ID _get_string_size(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _get_function_name(KOS_STACK_FRAME *frame,
-                                     KOS_OBJ_ID       this_obj,
-                                     KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_function_name(KOS_FRAME  frame,
+                                     KOS_OBJ_ID this_obj,
+                                     KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -1699,9 +1699,9 @@ static KOS_OBJ_ID _get_function_name(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _get_instructions(KOS_STACK_FRAME *frame,
-                                    KOS_OBJ_ID       this_obj,
-                                    KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_instructions(KOS_FRAME  frame,
+                                    KOS_OBJ_ID this_obj,
+                                    KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -1724,9 +1724,9 @@ static KOS_OBJ_ID _get_instructions(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _get_code_size(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_ID       this_obj,
-                                 KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_code_size(KOS_FRAME  frame,
+                                 KOS_OBJ_ID this_obj,
+                                 KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -1749,9 +1749,9 @@ static KOS_OBJ_ID _get_code_size(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _get_prototype(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_ID       this_obj,
-                                 KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_prototype(KOS_FRAME  frame,
+                                 KOS_OBJ_ID this_obj,
+                                 KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -1771,9 +1771,9 @@ static KOS_OBJ_ID _get_prototype(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _get_registers(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_ID       this_obj,
-                                 KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_registers(KOS_FRAME  frame,
+                                 KOS_OBJ_ID this_obj,
+                                 KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -1791,7 +1791,7 @@ static KOS_OBJ_ID _get_registers(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-int _KOS_module_lang_init(KOS_STACK_FRAME *frame)
+int _KOS_module_lang_init(KOS_FRAME frame)
 {
     int error = KOS_SUCCESS;
 

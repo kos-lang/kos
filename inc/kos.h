@@ -68,10 +68,10 @@ struct remove_const<const T> {
 
 class stack_frame {
     public:
-        stack_frame(KOS_STACK_FRAME* frame)
+        stack_frame(KOS_FRAME frame)
             : _frame(frame) { }
 
-        operator KOS_STACK_FRAME*() const {
+        operator KOS_FRAME() const {
             return _frame;
         }
 
@@ -146,7 +146,7 @@ class stack_frame {
 #endif
 
     private:
-        KOS_STACK_FRAME* _frame;
+        KOS_FRAME _frame;
 };
 
 template<typename T>
@@ -186,7 +186,7 @@ inline obj_id_converter from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
 class context {
     public:
         context() {
-            KOS_STACK_FRAME *frame;
+            KOS_FRAME frame;
 
             int error = KOS_context_init(&_ctx, &frame);
             if (error)
@@ -207,7 +207,7 @@ class context {
             return &_ctx;
         }
 
-        operator KOS_STACK_FRAME*() {
+        operator KOS_FRAME() {
             return &_ctx.main_thread.frame;
         }
 
@@ -225,7 +225,7 @@ class thread_root {
             KOS_context_register_thread(ctx, &_thread_root);
         }
 
-        operator KOS_STACK_FRAME*() {
+        operator KOS_FRAME() {
             return &_thread_root.frame;
         }
 
@@ -578,7 +578,7 @@ class random_access_iterator {
 
         // TODO reference to actual element
         reference operator*() const {
-            assert(static_cast<KOS_STACK_FRAME*>(_elem.frame()));
+            assert(static_cast<KOS_FRAME>(_elem.frame()));
             return _elem;
         }
 
@@ -1535,7 +1535,7 @@ int num_args(Ret (T::*)(T1, T2, T3, T4) const)
 #endif
 
 template<typename T, T fun>
-KOS_OBJ_ID wrapper(KOS_STACK_FRAME* frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj)
+KOS_OBJ_ID wrapper(KOS_FRAME frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj)
 {
     stack_frame frame = frame_ptr;
     array args(frame, args_obj);

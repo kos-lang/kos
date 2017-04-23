@@ -130,9 +130,7 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
-        assert(frame->module);
-        assert(frame->module->context);
-        new_thread->ctx       = frame->module->context;
+        new_thread->ctx       = KOS_context_from_frame(frame);
         new_thread->proc      = proc;
         new_thread->cookie    = cookie;
         new_thread->exception = KOS_BADPTR;
@@ -153,8 +151,8 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     return error;
 }
 
-void _KOS_thread_join(KOS_STACK_FRAME *frame,
-                      _KOS_THREAD      thread)
+void _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
+                      _KOS_THREAD              thread)
 {
     if (thread) {
         WaitForSingleObject(thread->thread_handle, INFINITE);
@@ -226,9 +224,7 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
-        assert(frame->module);
-        assert(frame->module->context);
-        new_thread->ctx    = frame->module->context;
+        new_thread->ctx    = KOS_context_from_frame(frame);
         new_thread->proc   = proc;
         new_thread->cookie = cookie;
 
@@ -246,8 +242,8 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     return error;
 }
 
-void _KOS_thread_join(KOS_STACK_FRAME *frame,
-                      _KOS_THREAD      thread)
+void _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
+                      _KOS_THREAD              thread)
 {
     if (thread) {
         void *ret = 0;

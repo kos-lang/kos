@@ -33,14 +33,14 @@
 #include <stdio.h>
 #include <string.h>
 
-static int _add_module_search_paths(KOS_STACK_FRAME *frame, const char *kos_exe);
+static int _add_module_search_paths(KOS_FRAME frame, const char *kos_exe);
 
 int main(int argc, char *argv[])
 {
-    int              error  = KOS_SUCCESS;
-    int              ctx_ok = 0;
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
+    int         error  = KOS_SUCCESS;
+    int         ctx_ok = 0;
+    KOS_CONTEXT ctx;
+    KOS_FRAME   frame;
 
     setlocale(LC_ALL, "");
 
@@ -103,7 +103,7 @@ _error:
 #define CONFIG_MODULE_PATH "modules"
 #endif
 
-static int _add_module_search_paths(KOS_STACK_FRAME *frame, const char *kos_exe)
+static int _add_module_search_paths(KOS_FRAME frame, const char *kos_exe)
 {
     struct _KOS_VECTOR cstr;
     int                error;

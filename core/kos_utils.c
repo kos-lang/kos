@@ -44,10 +44,10 @@ static const char str_object[]             = "<object>";
 static const char str_true[]               = "true";
 static const char str_void[]               = "void";
 
-int KOS_get_numeric_arg(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       args_obj,
-                        int              idx,
-                        KOS_NUMERIC     *numeric)
+int KOS_get_numeric_arg(KOS_FRAME    frame,
+                        KOS_OBJ_ID   args_obj,
+                        int          idx,
+                        KOS_NUMERIC *numeric)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID arg;
@@ -85,7 +85,7 @@ _error:
     return error;
 }
 
-void KOS_print_exception(KOS_STACK_FRAME *frame)
+void KOS_print_exception(KOS_FRAME frame)
 {
     struct _KOS_VECTOR cstr;
     KOS_OBJ_ID         exception;
@@ -139,7 +139,7 @@ void KOS_print_exception(KOS_STACK_FRAME *frame)
     _KOS_vector_destroy(&cstr);
 }
 
-static int _int_to_str(KOS_STACK_FRAME    *frame,
+static int _int_to_str(KOS_FRAME           frame,
                        int64_t             value,
                        KOS_OBJ_ID         *str,
                        struct _KOS_VECTOR *cstr_vec)
@@ -174,7 +174,7 @@ _error:
     return error;
 }
 
-static int _float_to_str(KOS_STACK_FRAME    *frame,
+static int _float_to_str(KOS_FRAME           frame,
                          double              value,
                          KOS_OBJ_ID         *str,
                          struct _KOS_VECTOR *cstr_vec)
@@ -210,7 +210,7 @@ _error:
     return error;
 }
 
-static int _vector_append_cstr(KOS_STACK_FRAME    *frame,
+static int _vector_append_cstr(KOS_FRAME           frame,
                                struct _KOS_VECTOR *cstr_vec,
                                const char         *str,
                                size_t              len)
@@ -228,7 +228,7 @@ static int _vector_append_cstr(KOS_STACK_FRAME    *frame,
     return error;
 }
 
-static int _vector_append_str(KOS_STACK_FRAME    *frame,
+static int _vector_append_str(KOS_FRAME           frame,
                               struct _KOS_VECTOR *cstr_vec,
                               KOS_OBJ_ID          obj)
 {
@@ -260,7 +260,7 @@ static int _vector_append_str(KOS_STACK_FRAME    *frame,
     return KOS_SUCCESS;
 }
 
-int KOS_object_to_string_or_cstr_vec(KOS_STACK_FRAME    *frame,
+int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
                                      KOS_OBJ_ID          obj_id,
                                      KOS_OBJ_ID         *str,
                                      struct _KOS_VECTOR *cstr_vec)
@@ -351,8 +351,8 @@ int KOS_object_to_string_or_cstr_vec(KOS_STACK_FRAME    *frame,
     return error;
 }
 
-KOS_OBJ_ID KOS_object_to_string(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       obj)
+KOS_OBJ_ID KOS_object_to_string(KOS_FRAME  frame,
+                                KOS_OBJ_ID obj)
 {
     KOS_OBJ_ID ret   = KOS_BADPTR;
     const int  error = KOS_object_to_string_or_cstr_vec(frame, obj, &ret, 0);
@@ -360,7 +360,7 @@ KOS_OBJ_ID KOS_object_to_string(KOS_STACK_FRAME *frame,
     return error ? KOS_BADPTR : ret;
 }
 
-int KOS_print_to_cstr_vec(KOS_STACK_FRAME    *frame,
+int KOS_print_to_cstr_vec(KOS_FRAME           frame,
                           KOS_OBJ_ID          array,
                           struct _KOS_VECTOR *cstr_vec,
                           const char         *sep,

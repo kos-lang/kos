@@ -25,5 +25,7 @@
 
 #define _KOS_BUF_ALLOC_SIZE     4096
 #define _KOS_VEC_MAX_INC_SIZE   262144
+#define _KOS_AREA_SIZE          4096
+#define _KOS_AREAS_POOL_SIZE    16
 
 #endif

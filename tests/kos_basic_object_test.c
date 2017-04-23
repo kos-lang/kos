@@ -35,8 +35,8 @@ int main(void)
     const intptr_t max_small_int = GET_SMALL_INT((KOS_OBJ_ID)(~((uintptr_t)0) >> 1));
     const intptr_t min_small_int = -max_small_int - 1;
 
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
+    KOS_CONTEXT ctx;
+    KOS_FRAME   frame;
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 

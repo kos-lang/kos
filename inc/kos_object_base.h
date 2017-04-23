@@ -175,7 +175,11 @@ static inline KOS_OBJECT_SUBTYPE GET_OBJ_SUBTYPE(KOS_OBJ_ID obj_id) {
 struct _KOS_CONTEXT;
 typedef struct _KOS_CONTEXT KOS_CONTEXT;
 
-struct _KOS_ALLOC_DEBUG;
+struct _KOS_ALLOCATOR;
+
+struct _KOS_STACK_FRAME;
+
+typedef struct _KOS_STACK_FRAME *KOS_FRAME;
 
 typedef int64_t KOS_INTEGER;
 
@@ -211,30 +215,8 @@ typedef struct _KOS_STRING {
     }                       data;
 } KOS_STRING;
 
-enum _KOS_YIELD_STATE {
-    KOS_CANNOT_YIELD = 0x1000000U, /* indicates a regular function */
-    KOS_CAN_YIELD    = 0x2000000U  /* indicates a generator        */
-};
-
-enum _KOS_CATCH_STATE {
-    KOS_NO_CATCH = 0x7FFFFFFFU
-};
-
-typedef struct _KOS_STACK_FRAME {
-    uint8_t                  catch_reg;
-    uint32_t                 instr_offs;
-    KOS_OBJ_ID               registers;
-    struct _KOS_MODULE      *module;
-    struct _KOS_ALLOC_DEBUG *allocator;
-    KOS_OBJ_ID               exception;
-    KOS_OBJ_ID               retval;
-    struct _KOS_STACK_FRAME *parent;
-    uint32_t                 yield_reg;    /* index of the yield register */
-    uint32_t                 catch_offs;
-} KOS_STACK_FRAME;
-
-typedef void (*KOS_FINALIZE)(KOS_STACK_FRAME *frame,
-                             void            *priv);
+typedef void (*KOS_FINALIZE)(KOS_FRAME frame,
+                             void     *priv);
 
 typedef struct _KOS_OBJECT {
     KOS_ATOMIC(void *) props;
@@ -250,9 +232,9 @@ typedef struct _KOS_BUFFER {
 
 typedef struct _KOS_BUFFER KOS_ARRAY;
 
-typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_STACK_FRAME *frame,
-                                           KOS_OBJ_ID       this_obj,
-                                           KOS_OBJ_ID       args_obj);
+typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_FRAME  frame,
+                                           KOS_OBJ_ID this_obj,
+                                           KOS_OBJ_ID args_obj);
 
 enum _KOS_GENERATOR_STATE {
     KOS_NOT_GEN,        /* not a generator, regular function                    */
@@ -264,15 +246,15 @@ enum _KOS_GENERATOR_STATE {
 };
 
 typedef struct _KOS_FUNCTION {
-    uint8_t                   min_args;
-    uint8_t                   num_regs;
-    uint8_t                   args_reg;
-    KOS_ATOMIC(void *)        prototype; /* actual type: KOS_OBJ_ID */
-    KOS_OBJ_ID                closures;
-    struct _KOS_MODULE       *module;
-    KOS_FUNCTION_HANDLER      handler;
-    KOS_STACK_FRAME          *generator_stack_frame;
-    uint32_t                  instr_offs;
+    uint8_t              min_args;
+    uint8_t              num_regs;
+    uint8_t              args_reg;
+    KOS_ATOMIC(void *)   prototype; /* actual type: KOS_OBJ_ID */
+    KOS_OBJ_ID           closures;
+    struct _KOS_MODULE  *module;
+    KOS_FUNCTION_HANDLER handler;
+    KOS_FRAME            generator_stack_frame;
+    uint32_t             instr_offs;
     enum _KOS_GENERATOR_STATE generator_state;
 } KOS_FUNCTION;
 
@@ -342,22 +324,22 @@ typedef union _KOS_INTERNAL_OBJECT {
 extern "C" {
 #endif
 
-KOS_OBJ_ID KOS_new_int(KOS_STACK_FRAME *frame,
-                       int64_t          value);
+KOS_OBJ_ID KOS_new_int(KOS_FRAME frame,
+                       int64_t   value);
 
-KOS_OBJ_ID KOS_new_float(KOS_STACK_FRAME *frame,
-                         double           value);
+KOS_OBJ_ID KOS_new_float(KOS_FRAME frame,
+                         double    value);
 
-KOS_OBJ_ID KOS_new_function(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_ID       proto_obj);
+KOS_OBJ_ID KOS_new_function(KOS_FRAME  frame,
+                            KOS_OBJ_ID proto_obj);
 
-KOS_OBJ_ID KOS_new_builtin_function(KOS_STACK_FRAME     *frame,
+KOS_OBJ_ID KOS_new_builtin_function(KOS_FRAME            frame,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args);
 
-KOS_OBJ_ID KOS_new_dynamic_prop(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       getter,
-                                KOS_OBJ_ID       setter);
+KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
+                                KOS_OBJ_ID getter,
+                                KOS_OBJ_ID setter);
 
 #ifdef __cplusplus
 }

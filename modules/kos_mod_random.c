@@ -44,16 +44,16 @@ struct _KOS_RNG_CONTAINER {
     struct KOS_RNG       rng;
 };
 
-static void _finalize(KOS_STACK_FRAME *frame,
-                      void            *priv)
+static void _finalize(KOS_FRAME frame,
+                      void     *priv)
 {
     if (priv)
         _KOS_free_buffer(frame, priv, sizeof(struct _KOS_RNG_CONTAINER));
 }
 
-static KOS_OBJ_ID _random(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       this_obj,
-                          KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _random(KOS_FRAME  frame,
+                          KOS_OBJ_ID this_obj,
+                          KOS_OBJ_ID args_obj)
 {
     int                        error    = KOS_SUCCESS;
     struct _KOS_RNG_CONTAINER *rng      = 0;
@@ -108,7 +108,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _get_rng(KOS_STACK_FRAME            *frame,
+static int _get_rng(KOS_FRAME                   frame,
                     KOS_OBJ_ID                  this_obj,
                     struct _KOS_RNG_CONTAINER **rng)
 {
@@ -128,9 +128,9 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _rand_integer(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       this_obj,
-                                KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _rand_integer(KOS_FRAME  frame,
+                                KOS_OBJ_ID this_obj,
+                                KOS_OBJ_ID args_obj)
 {
     struct _KOS_RNG_CONTAINER *rng       = 0;
     int                        error     = KOS_SUCCESS;
@@ -179,9 +179,9 @@ _error:
     return error ? KOS_BADPTR : KOS_new_int(frame, value);
 }
 
-static KOS_OBJ_ID _rand_float(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_ID       this_obj,
-                              KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _rand_float(KOS_FRAME  frame,
+                              KOS_OBJ_ID this_obj,
+                              KOS_OBJ_ID args_obj)
 {
     struct _KOS_RNG_CONTAINER *rng       = 0;
     int                        error     = KOS_SUCCESS;
@@ -207,7 +207,7 @@ _error:
     return error ? KOS_BADPTR : KOS_new_float(frame, value.d - 1.0);
 }
 
-int _KOS_module_random_init(KOS_STACK_FRAME *frame)
+int _KOS_module_random_init(KOS_FRAME frame)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID proto;

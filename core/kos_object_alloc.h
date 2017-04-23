@@ -26,6 +26,13 @@
 #include "../inc/kos_object_base.h"
 #include <stddef.h>
 
+enum _KOS_AREA_TYPE {
+    KOS_AREA_FREE,
+    KOS_AREA_RECLAIMABLE,
+    KOS_AREA_FIXED,
+    KOS_AREA_STACK
+};
+
 #define _KOS_alloc_object(frame, type) (sizeof(type) <= 16  ? _KOS_alloc_16(frame)  : \
                                         sizeof(type) <= 32  ? _KOS_alloc_32(frame)  : \
                                         sizeof(type) <= 64  ? _KOS_alloc_64(frame)  : \
@@ -33,11 +40,13 @@
 
 int   _KOS_alloc_init(KOS_CONTEXT *ctx);
 void  _KOS_alloc_destroy(KOS_CONTEXT *ctx);
-void *_KOS_alloc_16(KOS_STACK_FRAME *frame);
-void *_KOS_alloc_32(KOS_STACK_FRAME *frame);
-void *_KOS_alloc_64(KOS_STACK_FRAME *frame);
-void *_KOS_alloc_128(KOS_STACK_FRAME *frame);
-void *_KOS_alloc_buffer(KOS_STACK_FRAME *frame, size_t size);
-void  _KOS_free_buffer(KOS_STACK_FRAME *frame, void *ptr, size_t size);
+void  _KOS_alloc_set_mode(KOS_FRAME frame, enum _KOS_AREA_TYPE alloc_mode);
+enum _KOS_AREA_TYPE _KOS_alloc_get_mode(KOS_FRAME frame);
+void *_KOS_alloc_16(KOS_FRAME frame);
+void *_KOS_alloc_32(KOS_FRAME frame);
+void *_KOS_alloc_64(KOS_FRAME frame);
+void *_KOS_alloc_128(KOS_FRAME frame);
+void *_KOS_alloc_buffer(KOS_FRAME frame, size_t size);
+void  _KOS_free_buffer(KOS_FRAME frame, void *ptr, size_t size);
 
 #endif

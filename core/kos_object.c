@@ -77,19 +77,15 @@ static const char str_err_no_own_properties[] = "object has no own properties";
 
 typedef struct _KOS_PROPERTY_BUF KOS_PBUF;
 
-KOS_OBJ_ID KOS_new_object(KOS_STACK_FRAME *frame)
+KOS_OBJ_ID KOS_new_object(KOS_FRAME frame)
 {
-    KOS_CONTEXT *ctx;
+    KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
 
-    assert(frame->module);
-    assert(frame->module->context);
-
-    ctx = frame->module->context;
     return KOS_new_object_with_prototype(frame, ctx->object_prototype);
 }
 
-KOS_OBJ_ID KOS_new_object_with_prototype(KOS_STACK_FRAME *frame,
-                                         KOS_OBJ_ID       prototype)
+KOS_OBJ_ID KOS_new_object_with_prototype(KOS_FRAME  frame,
+                                         KOS_OBJ_ID prototype)
 {
     KOS_OBJECT *obj = (KOS_OBJECT *)_KOS_alloc_object(frame, KOS_OBJECT);
 
@@ -109,13 +105,13 @@ static KOS_OBJECT *_get_properties(KOS_OBJ_ID obj_id)
     return props;
 }
 
-static KOS_PBUF *_alloc_buffer(KOS_STACK_FRAME *frame, unsigned capacity)
+static KOS_PBUF *_alloc_buffer(KOS_FRAME frame, unsigned capacity)
 {
     return (KOS_PBUF *)_KOS_alloc_buffer(frame,
            sizeof(KOS_PBUF) + (capacity - 1) * sizeof(KOS_PITEM));
 }
 
-static void _free_buffer(KOS_STACK_FRAME *frame, KOS_PBUF *buf)
+static void _free_buffer(KOS_FRAME frame, KOS_PBUF *buf)
 {
     _KOS_free_buffer(frame, buf, sizeof(KOS_PBUF) + (buf->capacity - 1) * sizeof(KOS_PITEM));
 }
@@ -217,10 +213,10 @@ static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_
     return ret;
 }
 
-static void _copy_table(KOS_STACK_FRAME *frame,
-                        KOS_OBJECT      *props,
-                        KOS_PBUF        *old_table,
-                        KOS_PBUF        *new_table)
+static void _copy_table(KOS_FRAME   frame,
+                        KOS_OBJECT *props,
+                        KOS_PBUF   *old_table,
+                        KOS_PBUF   *new_table)
 {
     const uint32_t old_capacity = old_table->capacity;
     const uint32_t new_capacity = new_table->capacity;
@@ -292,10 +288,10 @@ static int _need_resize(KOS_PBUF *table, unsigned num_reprobes)
     return 1;
 }
 
-static int _resize_prop_table(KOS_STACK_FRAME *frame,
-                              KOS_OBJ_ID       obj_id,
-                              KOS_PBUF        *old_table,
-                              uint32_t         grow_factor)
+static int _resize_prop_table(KOS_FRAME  frame,
+                              KOS_OBJ_ID obj_id,
+                              KOS_PBUF  *old_table,
+                              uint32_t   grow_factor)
 {
     int         error = KOS_SUCCESS;
     KOS_OBJECT *props = _get_properties(obj_id);
@@ -368,9 +364,9 @@ static int _resize_prop_table(KOS_STACK_FRAME *frame,
     return error;
 }
 
-KOS_OBJ_ID KOS_get_property(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_ID       obj_id,
-                            KOS_OBJ_ID       prop)
+KOS_OBJ_ID KOS_get_property(KOS_FRAME  frame,
+                            KOS_OBJ_ID obj_id,
+                            KOS_OBJ_ID prop)
 {
     KOS_OBJ_ID retval = KOS_BADPTR;
 
@@ -484,8 +480,8 @@ KOS_OBJ_ID KOS_get_property(KOS_STACK_FRAME *frame,
     return retval;
 }
 
-int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       obj_id)
+int _KOS_object_copy_prop_table(KOS_FRAME  frame,
+                                KOS_OBJ_ID obj_id)
 {
     KOS_OBJECT *props;
 
@@ -498,10 +494,10 @@ int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
             props ? (KOS_PBUF *)KOS_atomic_read_ptr(props->props) : 0, 1U);
 }
 
-int KOS_set_property(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_ID       obj_id,
-                     KOS_OBJ_ID       prop,
-                     KOS_OBJ_ID       value)
+int KOS_set_property(KOS_FRAME  frame,
+                     KOS_OBJ_ID obj_id,
+                     KOS_OBJ_ID prop,
+                     KOS_OBJ_ID value)
 {
     int error = KOS_ERROR_EXCEPTION;
 
@@ -652,9 +648,9 @@ int KOS_set_property(KOS_STACK_FRAME *frame,
     return error;
 }
 
-int KOS_delete_property(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       obj_id,
-                        KOS_OBJ_ID       prop)
+int KOS_delete_property(KOS_FRAME  frame,
+                        KOS_OBJ_ID obj_id,
+                        KOS_OBJ_ID prop)
 {
     if (IS_BAD_PTR(prop)) {
         KOS_raise_exception_cstring(frame, str_err_null_ptr);
@@ -670,7 +666,7 @@ int KOS_delete_property(KOS_STACK_FRAME *frame,
         return KOS_set_property(frame, obj_id, prop, TOMBSTONE);
 }
 
-KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_STACK_FRAME     *frame,
+KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_FRAME            frame,
                                             KOS_FUNCTION_HANDLER getter,
                                             KOS_FUNCTION_HANDLER setter)
 {
@@ -697,7 +693,7 @@ _error:
     return error ? KOS_BADPTR : dyn_prop;
 }
 
-int KOS_set_builtin_dynamic_property(KOS_STACK_FRAME     *frame,
+int KOS_set_builtin_dynamic_property(KOS_FRAME            frame,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop,
                                      KOS_FUNCTION_HANDLER getter,
@@ -714,16 +710,11 @@ _error:
     return error;
 }
 
-KOS_OBJ_ID KOS_get_prototype(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_ID       obj_id)
+KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
+                             KOS_OBJ_ID obj_id)
 {
     KOS_OBJ_ID   ret = KOS_BADPTR;
-    KOS_CONTEXT *ctx;
-
-    assert(frame->module);
-    assert(frame->module->context);
-
-    ctx = frame->module->context;
+    KOS_CONTEXT *ctx = KOS_context_from_frame(frame);
 
     if (IS_NUMERIC_OBJ(obj_id)) {
 
@@ -777,7 +768,7 @@ KOS_OBJ_ID KOS_get_prototype(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-KOS_OBJ_ID KOS_new_object_walk(KOS_STACK_FRAME           *frame,
+KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,
                                KOS_OBJ_ID                 obj_id,
                                enum KOS_OBJECT_WALK_DEPTH deep)
 {
@@ -795,7 +786,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_STACK_FRAME           *frame,
     return OBJID(OBJECT_WALK, walk);
 }
 
-int KOS_object_walk_init(KOS_STACK_FRAME           *frame,
+int KOS_object_walk_init(KOS_FRAME                  frame,
                          KOS_OBJECT_WALK           *walk,
                          KOS_OBJ_ID                 obj_id,
                          enum KOS_OBJECT_WALK_DEPTH deep)
@@ -850,7 +841,7 @@ _error:
     return error;
 }
 
-KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_STACK_FRAME *frame,
+KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_FRAME        frame,
                                      KOS_OBJECT_WALK *walk)
 {
     KOS_OBJECT_WALK_ELEM elem     = { KOS_BADPTR, KOS_BADPTR };

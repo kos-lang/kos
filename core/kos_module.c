@@ -62,10 +62,10 @@ struct _KOS_MODULE_LOAD_CHAIN {
     unsigned                       length;
 };
 
-static void _raise_3(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_ID       s1,
-                     KOS_OBJ_ID       s2,
-                     KOS_OBJ_ID       s3)
+static void _raise_3(KOS_FRAME  frame,
+                     KOS_OBJ_ID s1,
+                     KOS_OBJ_ID s2,
+                     KOS_OBJ_ID s3)
 {
     KOS_OBJ_ID             str_err_full;
     KOS_ATOMIC(KOS_OBJ_ID) str_err[3];
@@ -95,12 +95,12 @@ static unsigned _rfind_path(const char *path,
     return i;
 }
 
-static int _find_module(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       module_name,
-                        const char      *maybe_path,
-                        unsigned         length,
-                        KOS_OBJ_ID      *out_abs_dir,
-                        KOS_OBJ_ID      *out_abs_path)
+static int _find_module(KOS_FRAME   frame,
+                        KOS_OBJ_ID  module_name,
+                        const char *maybe_path,
+                        unsigned    length,
+                        KOS_OBJ_ID *out_abs_dir,
+                        KOS_OBJ_ID *out_abs_path)
 {
     int                error = KOS_ERROR_INTERNAL;
     KOS_OBJ_ID         path  = KOS_BADPTR;
@@ -134,14 +134,8 @@ static int _find_module(KOS_STACK_FRAME *frame,
     }
     else {
 
-        KOS_CONTEXT *ctx;
-        uint32_t    num_paths;
-
-        assert(frame->module);
-        assert(frame->module->context);
-
-        ctx       = frame->module->context;
-        num_paths = KOS_get_array_size(ctx->module_search_paths);
+        KOS_CONTEXT *ctx       = KOS_context_from_frame(frame);
+        uint32_t     num_paths = KOS_get_array_size(ctx->module_search_paths);
 
         if (!num_paths)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
@@ -203,19 +197,20 @@ static void _get_module_name(const char                    *module,
     loading->length      = length;
 }
 
-static KOS_OBJ_ID _alloc_module(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       module_name)
+static KOS_OBJ_ID _alloc_module(KOS_FRAME  frame,
+                                KOS_OBJ_ID module_name)
 {
-    /* TODO alloc in another way, this is the only type which requires 128B alloc */
-    KOS_MODULE *module = (KOS_MODULE *)_KOS_alloc_object(frame, KOS_MODULE);
-    if (module) {
-        assert(frame->module);
-        assert(frame->module->context);
+    const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
+    KOS_MODULE               *module;
 
+    _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
+
+    module = (KOS_MODULE *)_KOS_alloc_object(frame, KOS_MODULE);
+    if (module) {
         module->type          = OBJ_MODULE;
         module->flags         = 0;
         module->name          = module_name;
-        module->context       = frame->module->context;
+        module->context       = KOS_context_from_frame(frame);
         module->strings       = 0;
         module->bytecode      = 0;
         module->bytecode_size = 0;
@@ -224,18 +219,20 @@ static KOS_OBJ_ID _alloc_module(KOS_STACK_FRAME *frame,
 
         module->global_names = KOS_new_object(frame);
         if (IS_BAD_PTR(module->global_names))
-            module = 0; /* object is garbage-collected */
+            module = 0;
         else {
             module->globals = KOS_new_array(frame, 0);
             if (IS_BAD_PTR(module->globals))
-                module = 0; /* object is garbage-collected */
+                module = 0;
         }
     }
+
+    _KOS_alloc_set_mode(frame, alloc_mode);
 
     return OBJID(MODULE, module);
 }
 
-static int _load_file(KOS_STACK_FRAME    *frame,
+static int _load_file(KOS_FRAME           frame,
                       KOS_OBJ_ID          path,
                       struct _KOS_VECTOR *file_buf)
 {
@@ -282,7 +279,7 @@ static int _module_init_compare(void                       *what,
     return KOS_string_compare(module_name, mod_init->name);
 }
 
-static int _predefine_globals(KOS_STACK_FRAME       *frame,
+static int _predefine_globals(KOS_FRAME              frame,
                               struct _KOS_COMP_UNIT *program,
                               KOS_OBJ_ID             global_names)
 {
@@ -312,17 +309,23 @@ _error:
     return error;
 }
 
-static int _alloc_globals(KOS_STACK_FRAME       *frame,
+static int _alloc_globals(KOS_FRAME              frame,
                           struct _KOS_COMP_UNIT *program,
                           KOS_MODULE            *module)
 {
-    int              error;
-    struct _KOS_VAR *var;
+    int                       error;
+    struct _KOS_VAR          *var;
+    const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
 
     TRY(KOS_array_resize(frame, module->globals, (uint32_t)program->num_globals));
 
     for (var = program->globals; var; var = var->next) {
-        KOS_OBJ_ID name = KOS_new_string(frame, var->token->begin, var->token->length);
+        KOS_OBJ_ID name;
+
+        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
+        name = KOS_new_string(frame, var->token->begin, var->token->length);
+        _KOS_alloc_set_mode(frame, alloc_mode);
+
         TRY_OBJID(name);
         assert(var->array_idx < program->num_globals);
         TRY(KOS_set_property(frame, module->global_names, name, TO_SMALL_INT(var->array_idx)));
@@ -343,26 +346,31 @@ static uint32_t _count_strings(struct _KOS_COMP_UNIT *program)
     return i;
 }
 
-static int _alloc_strings(KOS_STACK_FRAME       *frame,
+static int _alloc_strings(KOS_FRAME              frame,
                           struct _KOS_COMP_UNIT *program,
                           KOS_MODULE            *module)
 {
-    int            error       = KOS_SUCCESS;
-    const uint32_t num_strings = _count_strings(program);
-    int            i;
+    int                       error       = KOS_SUCCESS;
+    const uint32_t            num_strings = _count_strings(program);
+    const enum _KOS_AREA_TYPE alloc_mode  = _KOS_alloc_get_mode(frame);
+    struct _KOS_COMP_STRING  *str         = program->string_list;
+    int                       i;
 
-    /* TODO allocate from permanent pool */
-
-    struct _KOS_COMP_STRING *str = program->string_list;
-
+    _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
     module->strings = KOS_new_array(frame, num_strings);
+    _KOS_alloc_set_mode(frame, alloc_mode);
+
     TRY_OBJID(module->strings);
 
     for (i = 0; str; str = str->next, ++i) {
 
-        const KOS_OBJ_ID str_obj = str->escape == KOS_UTF8_WITH_ESCAPE
+        KOS_OBJ_ID str_obj;
+
+        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
+        str_obj = str->escape == KOS_UTF8_WITH_ESCAPE
                 ? KOS_new_string_esc(frame, str->str, str->length)
                 : KOS_new_string(frame, str->str, str->length);
+        _KOS_alloc_set_mode(frame, alloc_mode);
 
         TRY_OBJID(str_obj);
 
@@ -373,7 +381,7 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _get_line(KOS_STACK_FRAME          *frame,
+static KOS_OBJ_ID _get_line(KOS_FRAME                 frame,
                             const struct _KOS_VECTOR *file_buf,
                             unsigned                  line)
 {
@@ -452,7 +460,7 @@ static KOS_OBJ_ID _get_line(KOS_STACK_FRAME          *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _format_error(KOS_STACK_FRAME          *frame,
+static KOS_OBJ_ID _format_error(KOS_FRAME                 frame,
                                 KOS_OBJ_ID                module_obj,
                                 const struct _KOS_VECTOR *file_buf,
                                 const char               *error_str,
@@ -511,7 +519,7 @@ _error:
     return ret;
 }
 
-int KOS_load_module(KOS_STACK_FRAME *frame, const char *path)
+int KOS_load_module(KOS_FRAME frame, const char *path)
 {
     int        idx;
     KOS_OBJ_ID module = _KOS_module_import(frame, path, (unsigned)strlen(path), KOS_MODULE_MANDATORY, &idx);
@@ -525,8 +533,8 @@ static int _import_module(void                   *vframe,
                           enum _KOS_COMP_REQUIRED required,
                           int                     *module_idx)
 {
-    KOS_STACK_FRAME *frame = (KOS_STACK_FRAME *)vframe;
-    KOS_OBJ_ID       module_obj;
+    KOS_FRAME  frame = (KOS_FRAME)vframe;
+    KOS_OBJ_ID module_obj;
 
     module_obj = _KOS_module_import(frame, name, length, (enum _KOS_MODULE_REQUIRED)required, module_idx);
 
@@ -539,18 +547,14 @@ static int _get_global_idx(void       *vframe,
                            unsigned    length,
                            int        *global_idx)
 {
-    int              error = KOS_SUCCESS;
-    KOS_OBJ_ID       str;
-    KOS_STACK_FRAME *frame = (KOS_STACK_FRAME *)vframe;
-    KOS_CONTEXT     *ctx;
-    KOS_OBJ_ID       module_obj;
-    KOS_OBJ_ID       glob_idx_obj;
+    int          error = KOS_SUCCESS;
+    KOS_OBJ_ID   str;
+    KOS_FRAME    frame = (KOS_FRAME)vframe;
+    KOS_CONTEXT *ctx   = KOS_context_from_frame(frame);
+    KOS_OBJ_ID   module_obj;
+    KOS_OBJ_ID   glob_idx_obj;
 
-    assert(frame->module);
-    assert(frame->module->context);
     assert(module_idx >= 0);
-
-    ctx = frame->module->context;
 
     str = KOS_new_string(frame, name, length);
     TRY_OBJID(str);
@@ -576,7 +580,7 @@ _error:
     return error;
 }
 
-KOS_OBJ_ID _KOS_module_import(KOS_STACK_FRAME          *frame,
+KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                               const char               *module_name,
                               unsigned                  length,
                               enum _KOS_MODULE_REQUIRED required,
@@ -590,7 +594,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_STACK_FRAME          *frame,
     KOS_OBJ_ID                    module_dir      = KOS_BADPTR;
     KOS_OBJ_ID                    module_path     = KOS_BADPTR;
     KOS_OBJ_ID                    ret;
-    KOS_CONTEXT                  *ctx;
+    KOS_CONTEXT                  *ctx             = KOS_context_from_frame(frame);
     struct _KOS_MODULE_LOAD_CHAIN loading         = { 0, 0, 0 };
     struct _KOS_MODULE_INIT      *mod_init;
     struct _KOS_VECTOR            file_buf;
@@ -600,11 +604,6 @@ KOS_OBJ_ID _KOS_module_import(KOS_STACK_FRAME          *frame,
     int                           search_path_set = 0;
     int                           chain_init      = 0;
     int                           compiler_init   = 0;
-
-    assert(frame->module);
-    assert(frame->module->context);
-
-    ctx = frame->module->context;
 
     _KOS_vector_init(&file_buf);
 
@@ -701,10 +700,10 @@ KOS_OBJ_ID _KOS_module_import(KOS_STACK_FRAME          *frame,
                                                               actual_module_name,
                                                               _module_init_compare);
     if (mod_init) {
-        KOS_STACK_FRAME *mod_frame = _KOS_stack_frame_push(frame,
-                                                           OBJPTR(MODULE, module_obj),
-                                                           0,
-                                                           0);
+        KOS_FRAME mod_frame = _KOS_stack_frame_push(frame,
+                                                    OBJPTR(MODULE, module_obj),
+                                                    0,
+                                                    0);
         TRY(mod_init->init(mod_frame));
     }
 
@@ -951,10 +950,10 @@ _error:
     return module_obj;
 }
 
-int KOS_module_add_global(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       name,
-                          KOS_OBJ_ID       value,
-                          unsigned        *idx)
+int KOS_module_add_global(KOS_FRAME  frame,
+                          KOS_OBJ_ID name,
+                          KOS_OBJ_ID value,
+                          unsigned  *idx)
 {
     int         error;
     uint32_t    new_idx;
@@ -982,10 +981,10 @@ _error:
     return error;
 }
 
-int KOS_module_get_global(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       name,
-                          KOS_OBJ_ID      *value,
-                          unsigned        *idx)
+int KOS_module_get_global(KOS_FRAME   frame,
+                          KOS_OBJ_ID  name,
+                          KOS_OBJ_ID *value,
+                          unsigned   *idx)
 {
     int         error  = KOS_SUCCESS;
     KOS_OBJ_ID  idx_obj;
@@ -1010,7 +1009,7 @@ _error:
     return error;
 }
 
-int KOS_module_add_function(KOS_STACK_FRAME          *frame,
+int KOS_module_add_function(KOS_FRAME                 frame,
                             KOS_OBJ_ID                str_name,
                             KOS_FUNCTION_HANDLER      handler,
                             int                       min_args,
@@ -1036,7 +1035,7 @@ _error:
     return error;
 }
 
-int KOS_module_add_constructor(KOS_STACK_FRAME     *frame,
+int KOS_module_add_constructor(KOS_FRAME            frame,
                                KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLER handler,
                                int                  min_args,
@@ -1064,7 +1063,7 @@ _error:
     return error;
 }
 
-int KOS_module_add_member_function(KOS_STACK_FRAME          *frame,
+int KOS_module_add_member_function(KOS_FRAME                 frame,
                                    KOS_OBJ_ID                proto_obj,
                                    KOS_OBJ_ID                str_name,
                                    KOS_FUNCTION_HANDLER      handler,
@@ -1177,7 +1176,7 @@ KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_MODULE *module,
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (addr2func) {
-        KOS_STACK_FRAME *frame = &module->context->main_thread.frame;
+        KOS_FRAME frame = &module->context->main_thread.frame;
         if (addr2func->str_idx == ~0U)
             ret = KOS_context_get_cstring(frame, str_global);
         else

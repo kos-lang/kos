@@ -47,25 +47,25 @@ static inline unsigned KOS_get_string_length(KOS_OBJ_ID obj_id)
 extern "C" {
 #endif
 
-KOS_OBJ_ID KOS_new_cstring(KOS_STACK_FRAME *frame,
-                           const char      *utf8_str);
+KOS_OBJ_ID KOS_new_cstring(KOS_FRAME   frame,
+                           const char *utf8_str);
 
-KOS_OBJ_ID KOS_new_string(KOS_STACK_FRAME *frame,
-                          const char      *utf8_str,
-                          unsigned         length);
+KOS_OBJ_ID KOS_new_string(KOS_FRAME   frame,
+                          const char *utf8_str,
+                          unsigned    length);
 
-KOS_OBJ_ID KOS_new_string_esc(KOS_STACK_FRAME *frame,
-                              const char      *utf8_str,
-                              unsigned         length);
+KOS_OBJ_ID KOS_new_string_esc(KOS_FRAME   frame,
+                              const char *utf8_str,
+                              unsigned    length);
 
-KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_STACK_FRAME *frame,
-                                       const char      *ascii_str);
+KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_FRAME   frame,
+                                       const char *ascii_str);
 
-KOS_OBJ_ID KOS_new_const_ascii_string(KOS_STACK_FRAME *frame,
-                                      const char      *ascii_str,
-                                      unsigned         length);
+KOS_OBJ_ID KOS_new_const_ascii_string(KOS_FRAME   frame,
+                                      const char *ascii_str,
+                                      unsigned    length);
 
-KOS_OBJ_ID KOS_new_const_string(KOS_STACK_FRAME           *frame,
+KOS_OBJ_ID KOS_new_const_string(KOS_FRAME                  frame,
                                 const void                *str,
                                 unsigned                   length,
                                 enum _KOS_STRING_ELEM_SIZE elem_size);
@@ -74,30 +74,30 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
                             void      *buf,
                             unsigned   buf_size);
 
-int KOS_string_to_cstr_vec(KOS_STACK_FRAME    *frame,
+int KOS_string_to_cstr_vec(KOS_FRAME           frame,
                            KOS_OBJ_ID          obj_id,
                            struct _KOS_VECTOR *str_vec);
 
-KOS_OBJ_ID KOS_string_add(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       obj_id_a,
-                          KOS_OBJ_ID       obj_id_b);
+KOS_OBJ_ID KOS_string_add(KOS_FRAME  frame,
+                          KOS_OBJ_ID obj_id_a,
+                          KOS_OBJ_ID obj_id_b);
 
-KOS_OBJ_ID KOS_string_add_many(KOS_STACK_FRAME        *frame,
+KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
                                KOS_ATOMIC(KOS_OBJ_ID) *obj_id_array,
                                unsigned                num_strings);
 
-KOS_OBJ_ID KOS_string_slice(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_ID       obj_id,
-                            int64_t          idx_a,
-                            int64_t          idx_b);
+KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
+                            KOS_OBJ_ID obj_id,
+                            int64_t    idx_a,
+                            int64_t    idx_b);
 
-KOS_OBJ_ID KOS_string_get_char(KOS_STACK_FRAME *frame,
-                               KOS_OBJ_ID       obj_id,
-                               int              idx);
+KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
+                               KOS_OBJ_ID obj_id,
+                               int        idx);
 
-unsigned KOS_string_get_char_code(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_ID       obj_id,
-                                  int              idx);
+unsigned KOS_string_get_char_code(KOS_FRAME  frame,
+                                  KOS_OBJ_ID obj_id,
+                                  int        idx);
 
 int KOS_string_compare(KOS_OBJ_ID obj_id_a,
                        KOS_OBJ_ID obj_id_b);

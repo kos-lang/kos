@@ -45,12 +45,12 @@
 
 static const char str_value[] = "value";
 
-static KOS_OBJ_ID _run_code(KOS_CONTEXT     *ctx,
-                            KOS_STACK_FRAME *frame,
-                            const uint8_t   *bytecode,
-                            unsigned         bytecode_size,
-                            unsigned         num_regs,
-                            KOS_OBJ_ID       string)
+static KOS_OBJ_ID _run_code(KOS_CONTEXT   *ctx,
+                            KOS_FRAME      frame,
+                            const uint8_t *bytecode,
+                            unsigned       bytecode_size,
+                            unsigned       num_regs,
+                            KOS_OBJ_ID     string)
 {
     KOS_OBJ_ID ret   = KOS_BADPTR;
     int        error = KOS_SUCCESS;
@@ -90,8 +90,8 @@ static KOS_OBJ_ID _run_code(KOS_CONTEXT     *ctx,
 
 int main(void)
 {
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
+    KOS_CONTEXT ctx;
+    KOS_FRAME   frame;
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 

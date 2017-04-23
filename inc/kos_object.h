@@ -46,47 +46,47 @@ static inline void* KOS_object_get_private(KOS_OBJECT& obj)
 extern "C" {
 #endif
 
-KOS_OBJ_ID KOS_new_object(KOS_STACK_FRAME *frame);
+KOS_OBJ_ID KOS_new_object(KOS_FRAME frame);
 
-KOS_OBJ_ID KOS_new_object_with_prototype(KOS_STACK_FRAME *frame,
-                                         KOS_OBJ_ID       prototype);
+KOS_OBJ_ID KOS_new_object_with_prototype(KOS_FRAME  frame,
+                                         KOS_OBJ_ID prototype);
 
-KOS_OBJ_ID KOS_get_property(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_ID       obj_id,
-                            KOS_OBJ_ID       prop);
+KOS_OBJ_ID KOS_get_property(KOS_FRAME  frame,
+                            KOS_OBJ_ID obj_id,
+                            KOS_OBJ_ID prop);
 
-int KOS_set_property(KOS_STACK_FRAME *frame,
-                     KOS_OBJ_ID       obj_id,
-                     KOS_OBJ_ID       prop,
-                     KOS_OBJ_ID       value);
+int KOS_set_property(KOS_FRAME  frame,
+                     KOS_OBJ_ID obj_id,
+                     KOS_OBJ_ID prop,
+                     KOS_OBJ_ID value);
 
-int KOS_delete_property(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       obj_id,
-                        KOS_OBJ_ID       prop);
+int KOS_delete_property(KOS_FRAME  frame,
+                        KOS_OBJ_ID obj_id,
+                        KOS_OBJ_ID prop);
 
-KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_STACK_FRAME     *frame,
+KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_FRAME            frame,
                                             KOS_FUNCTION_HANDLER getter,
                                             KOS_FUNCTION_HANDLER setter);
 
-int KOS_set_builtin_dynamic_property(KOS_STACK_FRAME     *frame,
+int KOS_set_builtin_dynamic_property(KOS_FRAME            frame,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop,
                                      KOS_FUNCTION_HANDLER getter,
                                      KOS_FUNCTION_HANDLER setter);
 
-KOS_OBJ_ID KOS_get_prototype(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_ID       obj_id);
+KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
+                             KOS_OBJ_ID obj_id);
 
 enum KOS_OBJECT_WALK_DEPTH {
     KOS_SHALLOW,
     KOS_DEEP
 };
 
-KOS_OBJ_ID KOS_new_object_walk(KOS_STACK_FRAME           *frame,
+KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,
                                KOS_OBJ_ID                 obj_id,
                                enum KOS_OBJECT_WALK_DEPTH deep);
 
-int KOS_object_walk_init(KOS_STACK_FRAME           *frame,
+int KOS_object_walk_init(KOS_FRAME                  frame,
                          KOS_OBJECT_WALK           *walk,
                          KOS_OBJ_ID                 obj_id,
                          enum KOS_OBJECT_WALK_DEPTH deep);
@@ -99,7 +99,7 @@ typedef struct _KOS_OBJECT_WALK_ELEM {
     KOS_OBJ_ID value;
 } KOS_OBJECT_WALK_ELEM;
 
-KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_STACK_FRAME *frame,
+KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_FRAME        frame,
                                      KOS_OBJECT_WALK *walk);
 
 #ifdef __cplusplus

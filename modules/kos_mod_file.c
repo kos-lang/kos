@@ -68,16 +68,16 @@ static void _fix_path_separators(struct _KOS_VECTOR *buf)
     }
 }
 
-static void _finalize(KOS_STACK_FRAME *frame,
-                      void            *priv)
+static void _finalize(KOS_FRAME frame,
+                      void     *priv)
 {
     if (priv)
         fclose((FILE *)priv);
 }
 
-static KOS_OBJ_ID _open(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       this_obj,
-                        KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _open(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
 {
     int                error        = KOS_SUCCESS;
     KOS_OBJ_ID         ret          = KOS_BADPTR;
@@ -129,10 +129,10 @@ _error:
     return ret;
 }
 
-static int _get_file_object(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_ID       this_obj,
-                            FILE           **file,
-                            int              must_be_open)
+static int _get_file_object(KOS_FRAME  frame,
+                            KOS_OBJ_ID this_obj,
+                            FILE     **file,
+                            int        must_be_open)
 {
     int error = KOS_SUCCESS;
 
@@ -150,9 +150,9 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _close(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       this_obj,
-                         KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _close(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
 {
     FILE *file  = 0;
     int   error = _get_file_object(frame, this_obj, &file, 0);
@@ -165,9 +165,9 @@ static KOS_OBJ_ID _close(KOS_STACK_FRAME *frame,
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_ID _print(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       this_obj,
-                         KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _print(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
 {
     FILE              *file  = 0;
     int                error = _get_file_object(frame, this_obj, &file, 0);
@@ -191,9 +191,9 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_ID _print_(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       this_obj,
-                          KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _print_(KOS_FRAME  frame,
+                          KOS_OBJ_ID this_obj,
+                          KOS_OBJ_ID args_obj)
 {
     FILE              *file  = 0;
     int                error = _get_file_object(frame, this_obj, &file, 0);
@@ -225,9 +225,9 @@ static int _is_eol(char c)
  *      output: string containing a line read from the file, including EOL character.
  */
 
-static KOS_OBJ_ID _read_line(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_ID       this_obj,
-                             KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _read_line(KOS_FRAME  frame,
+                             KOS_OBJ_ID this_obj,
+                             KOS_OBJ_ID args_obj)
 {
     int                error      = KOS_SUCCESS;
     FILE              *file       = 0;
@@ -296,9 +296,9 @@ _error:
  *      Reads as much as possible in one shot.  Returns as much as was read.
  *      The returned buffer's size can be from 0 to the size entered as input.
  */
-static KOS_OBJ_ID _read_some(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_ID       this_obj,
-                             KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _read_some(KOS_FRAME  frame,
+                             KOS_OBJ_ID this_obj,
+                             KOS_OBJ_ID args_obj)
 {
     int        error = KOS_SUCCESS;
     FILE      *file  = 0;
@@ -353,9 +353,9 @@ _error:
     return error ? KOS_BADPTR : buf;
 }
 
-static KOS_OBJ_ID _write(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       this_obj,
-                         KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _write(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
 {
     int        error    = KOS_SUCCESS;
     FILE      *file     = 0;
@@ -386,9 +386,9 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-static KOS_OBJ_ID _get_file_eof(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       this_obj,
-                                KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_file_eof(KOS_FRAME  frame,
+                                KOS_OBJ_ID this_obj,
+                                KOS_OBJ_ID args_obj)
 {
     FILE *file   = 0;
     int   error  = _get_file_object(frame, this_obj, &file, 1);
@@ -400,9 +400,9 @@ static KOS_OBJ_ID _get_file_eof(KOS_STACK_FRAME *frame,
     return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
-static KOS_OBJ_ID _get_file_error(KOS_STACK_FRAME *frame,
-                                  KOS_OBJ_ID       this_obj,
-                                  KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_file_error(KOS_FRAME  frame,
+                                  KOS_OBJ_ID this_obj,
+                                  KOS_OBJ_ID args_obj)
 {
     FILE *file   = 0;
     int   error  = _get_file_object(frame, this_obj, &file, 1);
@@ -414,9 +414,9 @@ static KOS_OBJ_ID _get_file_error(KOS_STACK_FRAME *frame,
     return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
-static KOS_OBJ_ID _get_file_size(KOS_STACK_FRAME *frame,
-                                 KOS_OBJ_ID       this_obj,
-                                 KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_file_size(KOS_FRAME  frame,
+                                 KOS_OBJ_ID this_obj,
+                                 KOS_OBJ_ID args_obj)
 {
     int   error = KOS_SUCCESS;
     FILE *file  = 0;
@@ -443,9 +443,9 @@ _error:
     return error ? KOS_BADPTR : KOS_new_int(frame, (int64_t)size);
 }
 
-static KOS_OBJ_ID _get_file_pos(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       this_obj,
-                                KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _get_file_pos(KOS_FRAME  frame,
+                                KOS_OBJ_ID this_obj,
+                                KOS_OBJ_ID args_obj)
 {
     FILE *file  = 0;
     int   error = KOS_SUCCESS;
@@ -462,9 +462,9 @@ _error:
     return error ? KOS_BADPTR : KOS_new_int(frame, (int64_t)pos);
 }
 
-static KOS_OBJ_ID _set_file_pos(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       this_obj,
-                                KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _set_file_pos(KOS_FRAME  frame,
+                                KOS_OBJ_ID this_obj,
+                                KOS_OBJ_ID args_obj)
 {
     int        error = KOS_SUCCESS;
     FILE      *file  = 0;
@@ -486,9 +486,9 @@ _error:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_ID _is_file(KOS_STACK_FRAME *frame,
-                           KOS_OBJ_ID       this_obj,
-                           KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _is_file(KOS_FRAME  frame,
+                           KOS_OBJ_ID this_obj,
+                           KOS_OBJ_ID args_obj)
 {
     int                error        = KOS_SUCCESS;
     KOS_OBJ_ID         ret          = KOS_BADPTR;
@@ -511,9 +511,9 @@ _error:
     return ret;
 }
 
-static KOS_OBJ_ID _remove(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       this_obj,
-                          KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _remove(KOS_FRAME  frame,
+                          KOS_OBJ_ID this_obj,
+                          KOS_OBJ_ID args_obj)
 {
     int                error        = KOS_SUCCESS;
     KOS_OBJ_ID         ret          = KOS_BADPTR;
@@ -540,10 +540,10 @@ _error:
     return ret;
 }
 
-static int _add_std_file(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       proto,
-                         KOS_OBJ_ID       str_name,
-                         FILE*            file)
+static int _add_std_file(KOS_FRAME  frame,
+                         KOS_OBJ_ID proto,
+                         KOS_OBJ_ID str_name,
+                         FILE      *file)
 {
     int error = KOS_SUCCESS;
 
@@ -566,7 +566,7 @@ do {                                                                           \
     TRY(_add_std_file((frame), (proto), str, (file)));                         \
 } while (0)
 
-int _KOS_module_file_init(KOS_STACK_FRAME *frame)
+int _KOS_module_file_init(KOS_FRAME frame)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID proto;

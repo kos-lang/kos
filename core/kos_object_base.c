@@ -32,7 +32,7 @@
 #include <string.h>
 #include <assert.h>
 
-KOS_OBJ_ID KOS_new_int(KOS_STACK_FRAME *frame, int64_t value)
+KOS_OBJ_ID KOS_new_int(KOS_FRAME frame, int64_t value)
 {
     KOS_OBJ_ID obj_id = TO_SMALL_INT((intptr_t)value);
 
@@ -49,7 +49,7 @@ KOS_OBJ_ID KOS_new_int(KOS_STACK_FRAME *frame, int64_t value)
     return obj_id;
 }
 
-KOS_OBJ_ID KOS_new_float(KOS_STACK_FRAME *frame, double value)
+KOS_OBJ_ID KOS_new_float(KOS_FRAME frame, double value)
 {
     KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(frame, KOS_FLOAT);
 
@@ -59,7 +59,7 @@ KOS_OBJ_ID KOS_new_float(KOS_STACK_FRAME *frame, double value)
     return OBJID(FLOAT, number);
 }
 
-KOS_OBJ_ID KOS_new_function(KOS_STACK_FRAME *frame, KOS_OBJ_ID proto_obj)
+KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
 {
     KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(frame, KOS_FUNCTION);
 
@@ -79,7 +79,7 @@ KOS_OBJ_ID KOS_new_function(KOS_STACK_FRAME *frame, KOS_OBJ_ID proto_obj)
     return OBJID(FUNCTION, func);
 }
 
-KOS_OBJ_ID KOS_new_builtin_function(KOS_STACK_FRAME     *frame,
+KOS_OBJ_ID KOS_new_builtin_function(KOS_FRAME            frame,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args)
 {
@@ -101,9 +101,9 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_STACK_FRAME     *frame,
     return func_obj;
 }
 
-KOS_OBJ_ID KOS_new_dynamic_prop(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       getter,
-                                KOS_OBJ_ID       setter)
+KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
+                                KOS_OBJ_ID getter,
+                                KOS_OBJ_ID setter)
 {
     KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(frame, KOS_DYNAMIC_PROP);
 
@@ -116,15 +116,17 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_STACK_FRAME *frame,
     return OBJID(DYNAMIC_PROP, dyn_prop);
 }
 
-void _KOS_init_stack_frame(KOS_STACK_FRAME *frame,
-                           KOS_MODULE      *module,
-                           uint32_t         instr_offs,
-                           uint32_t         num_regs)
+void _KOS_init_stack_frame(KOS_FRAME           frame,
+                           KOS_MODULE         *module,
+                           enum _KOS_AREA_TYPE alloc_mode,
+                           uint32_t            instr_offs,
+                           uint32_t            num_regs)
 {
     assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
     assert(module);
     assert(module->context);
 
+    frame->alloc_mode = (uint8_t)alloc_mode;
     frame->catch_reg  = 0;
     frame->registers  = KOS_BADPTR;
     frame->module     = module;
@@ -140,20 +142,20 @@ void _KOS_init_stack_frame(KOS_STACK_FRAME *frame,
         frame->registers = KOS_new_array(frame, num_regs);
 }
 
-KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_STACK_FRAME *frame,
-                                       KOS_MODULE      *module,
-                                       uint32_t         instr_offs,
-                                       uint32_t         num_regs)
+KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
+                                KOS_MODULE *module,
+                                uint32_t    instr_offs,
+                                uint32_t    num_regs)
 {
-    KOS_STACK_FRAME *new_frame = (KOS_STACK_FRAME *)_KOS_alloc_object(frame, KOS_STACK_FRAME);
+    KOS_FRAME new_frame = (KOS_FRAME)_KOS_alloc_object(frame, struct _KOS_STACK_FRAME);
 
     if (new_frame) {
 
         assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
         assert(module);
-        assert(frame->module->context == module->context);
+        assert(KOS_context_from_frame(frame) == module->context);
 
-        _KOS_init_stack_frame(new_frame, module, instr_offs, num_regs);
+        _KOS_init_stack_frame(new_frame, module, KOS_AREA_RECLAIMABLE, instr_offs, num_regs);
 
         new_frame->parent = frame;
 
@@ -164,8 +166,8 @@ KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_STACK_FRAME *frame,
     return new_frame;
 }
 
-KOS_STACK_FRAME *_KOS_stack_frame_push_func(KOS_STACK_FRAME *frame,
-                                            KOS_FUNCTION    *func)
+KOS_FRAME _KOS_stack_frame_push_func(KOS_FRAME     frame,
+                                     KOS_FUNCTION *func)
 {
     const int no_regs = func->generator_state == KOS_GEN_INIT && func->handler;
     return _KOS_stack_frame_push(frame,

@@ -35,9 +35,9 @@ static const char str_err_negative_root[] = "invalid base";
 static const char str_err_not_number[]    = "object is not a number";
 static const char str_err_pow_0_0[]       = "0 to the power of 0";
 
-static KOS_OBJ_ID _abs(KOS_STACK_FRAME *frame,
-                       KOS_OBJ_ID       this_obj,
-                       KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _abs(KOS_FRAME  frame,
+                       KOS_OBJ_ID this_obj,
+                       KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
@@ -58,9 +58,9 @@ static KOS_OBJ_ID _abs(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _ceil(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       this_obj,
-                        KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _ceil(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
@@ -90,9 +90,9 @@ static KOS_OBJ_ID _ceil(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _exp(KOS_STACK_FRAME *frame,
-                       KOS_OBJ_ID       this_obj,
-                       KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _exp(KOS_FRAME  frame,
+                       KOS_OBJ_ID this_obj,
+                       KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID  ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
@@ -111,9 +111,9 @@ static KOS_OBJ_ID _exp(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _expm1(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       this_obj,
-                         KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _expm1(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID  ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
@@ -132,9 +132,9 @@ static KOS_OBJ_ID _expm1(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _floor(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       this_obj,
-                         KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _floor(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
@@ -164,9 +164,9 @@ static KOS_OBJ_ID _floor(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _is_infinity(KOS_STACK_FRAME *frame,
-                               KOS_OBJ_ID       this_obj,
-                               KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _is_infinity(KOS_FRAME  frame,
+                               KOS_OBJ_ID this_obj,
+                               KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
@@ -186,9 +186,9 @@ static KOS_OBJ_ID _is_infinity(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _is_nan(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       this_obj,
-                          KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _is_nan(KOS_FRAME  frame,
+                          KOS_OBJ_ID this_obj,
+                          KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
@@ -208,9 +208,9 @@ static KOS_OBJ_ID _is_nan(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _pow(KOS_STACK_FRAME *frame,
-                       KOS_OBJ_ID       this_obj,
-                       KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _pow(KOS_FRAME  frame,
+                       KOS_OBJ_ID this_obj,
+                       KOS_OBJ_ID args_obj)
 {
     int         error = KOS_SUCCESS;
     KOS_OBJ_ID  ret   = KOS_BADPTR;
@@ -249,9 +249,9 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_ID _sqrt(KOS_STACK_FRAME *frame,
-                        KOS_OBJ_ID       this_obj,
-                        KOS_OBJ_ID       args_obj)
+static KOS_OBJ_ID _sqrt(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
 {
     int         error = KOS_SUCCESS;
     KOS_OBJ_ID  ret   = KOS_BADPTR;
@@ -276,7 +276,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-int _KOS_module_math_init(KOS_STACK_FRAME *frame)
+int _KOS_module_math_init(KOS_FRAME frame)
 {
     int error = KOS_SUCCESS;
 

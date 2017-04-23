@@ -51,18 +51,18 @@ static const char str_err_not_generator[]       = "function is not a generator";
 static const char str_err_too_few_args[]        = "not enough arguments passed to a function";
 static const char str_err_unsup_operand_types[] = "unsupported operand types";
 
-static int _exec_function(KOS_STACK_FRAME *stack_frame);
+static int _exec_function(KOS_FRAME stack_frame);
 
-static KOS_OBJ_ID _make_string(KOS_STACK_FRAME    *frame,
+static KOS_OBJ_ID _make_string(KOS_FRAME           frame,
                                struct _KOS_MODULE *module,
                                int                 idx)
 {
     return KOS_array_read(frame, module->strings, idx);
 }
 
-static KOS_OBJ_ID _add_integer(KOS_STACK_FRAME *frame,
-                               int64_t          a,
-                               KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _add_integer(KOS_FRAME  frame,
+                               int64_t    a,
+                               KOS_OBJ_ID bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -91,9 +91,9 @@ static KOS_OBJ_ID _add_integer(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _add_float(KOS_STACK_FRAME *frame,
-                             double           a,
-                             KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _add_float(KOS_FRAME  frame,
+                             double     a,
+                             KOS_OBJ_ID bobj)
 {
     if (IS_NUMERIC_OBJ(bobj)) {
 
@@ -122,9 +122,9 @@ static KOS_OBJ_ID _add_float(KOS_STACK_FRAME *frame,
     }
 }
 
-static KOS_OBJ_ID _sub_integer(KOS_STACK_FRAME *frame,
-                               int64_t          a,
-                               KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _sub_integer(KOS_FRAME  frame,
+                               int64_t    a,
+                               KOS_OBJ_ID bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -153,9 +153,9 @@ static KOS_OBJ_ID _sub_integer(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _sub_float(KOS_STACK_FRAME *frame,
-                             double           a,
-                             KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _sub_float(KOS_FRAME  frame,
+                             double     a,
+                             KOS_OBJ_ID bobj)
 {
     if (IS_NUMERIC_OBJ(bobj)) {
 
@@ -184,9 +184,9 @@ static KOS_OBJ_ID _sub_float(KOS_STACK_FRAME *frame,
     }
 }
 
-static KOS_OBJ_ID _mul_integer(KOS_STACK_FRAME *frame,
-                               int64_t          a,
-                               KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _mul_integer(KOS_FRAME  frame,
+                               int64_t    a,
+                               KOS_OBJ_ID bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -215,9 +215,9 @@ static KOS_OBJ_ID _mul_integer(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _mul_float(KOS_STACK_FRAME *frame,
-                             double           a,
-                             KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _mul_float(KOS_FRAME  frame,
+                             double     a,
+                             KOS_OBJ_ID bobj)
 {
     if (IS_NUMERIC_OBJ(bobj)) {
 
@@ -246,9 +246,9 @@ static KOS_OBJ_ID _mul_float(KOS_STACK_FRAME *frame,
     }
 }
 
-static KOS_OBJ_ID _div_integer(KOS_STACK_FRAME *frame,
-                               int64_t          a,
-                               KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _div_integer(KOS_FRAME  frame,
+                               int64_t    a,
+                               KOS_OBJ_ID bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -292,9 +292,9 @@ static KOS_OBJ_ID _div_integer(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _div_float(KOS_STACK_FRAME *frame,
-                             double           a,
-                             KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _div_float(KOS_FRAME  frame,
+                             double     a,
+                             KOS_OBJ_ID bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -332,9 +332,9 @@ static KOS_OBJ_ID _div_float(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _mod_integer(KOS_STACK_FRAME *frame,
-                               int64_t          a,
-                               KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _mod_integer(KOS_FRAME  frame,
+                               int64_t    a,
+                               KOS_OBJ_ID bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -378,9 +378,9 @@ static KOS_OBJ_ID _mod_integer(KOS_STACK_FRAME *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _mod_float(KOS_STACK_FRAME *frame,
-                             double           a,
-                             KOS_OBJ_ID       bobj)
+static KOS_OBJ_ID _mod_float(KOS_FRAME  frame,
+                             double     a,
+                             KOS_OBJ_ID bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -552,12 +552,12 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
     return ret;
 }
 
-static int _init_registers(KOS_STACK_FRAME *frame,
-                           KOS_FUNCTION    *func,
-                           KOS_OBJ_ID       regs,
-                           KOS_OBJ_ID       args_obj,
-                           KOS_OBJ_ID       this_obj,
-                           KOS_OBJ_ID       closures)
+static int _init_registers(KOS_FRAME     stack_frame,
+                           KOS_FUNCTION *func,
+                           KOS_OBJ_ID    regs,
+                           KOS_OBJ_ID    args_obj,
+                           KOS_OBJ_ID    this_obj,
+                           KOS_OBJ_ID    closures)
 {
     int error = KOS_SUCCESS;
 
@@ -581,7 +581,7 @@ static int _init_registers(KOS_STACK_FRAME *frame,
         assert(reg + src_len <= KOS_get_array_size(regs));
 
         for (i=0; i < src_len; i++) {
-            KOS_OBJ_ID obj = KOS_array_read(frame, closures, (int)i);
+            KOS_OBJ_ID obj = KOS_array_read(stack_frame, closures, (int)i);
             TRY_OBJID(obj);
             new_regs[reg++] = obj;
         }
@@ -591,16 +591,16 @@ _error:
     return error;
 }
 
-static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
-                                      KOS_BYTECODE_INSTR instr,
-                                      KOS_OBJ_ID         func_obj,
-                                      KOS_OBJ_ID        *this_obj,
-                                      KOS_OBJ_ID         args_obj)
+static KOS_FRAME _prepare_call(KOS_FRAME          frame,
+                               KOS_BYTECODE_INSTR instr,
+                               KOS_OBJ_ID         func_obj,
+                               KOS_OBJ_ID        *this_obj,
+                               KOS_OBJ_ID         args_obj)
 {
     int                       error           = KOS_SUCCESS;
     KOS_FUNCTION             *func;
     enum _KOS_GENERATOR_STATE gen_state;
-    KOS_STACK_FRAME          *new_stack_frame = 0;
+    KOS_FRAME                 new_stack_frame = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
     assert( ! IS_BAD_PTR(args_obj));
@@ -645,7 +645,12 @@ static KOS_STACK_FRAME *_prepare_call(KOS_STACK_FRAME   *frame,
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
             if ( ! func->handler)
-                TRY(_init_registers(new_stack_frame, func, new_stack_frame->registers, args_obj, *this_obj, func->closures));
+                TRY(_init_registers(new_stack_frame,
+                                    func,
+                                    new_stack_frame->registers,
+                                    args_obj,
+                                    *this_obj,
+                                    func->closures));
 
             break;
         }
@@ -747,11 +752,11 @@ _error:
     return error ? 0 : new_stack_frame;
 }
 
-static KOS_OBJ_ID _finish_call(KOS_STACK_FRAME           *frame,
+static KOS_OBJ_ID _finish_call(KOS_FRAME                  frame,
                                KOS_BYTECODE_INSTR         instr,
                                KOS_FUNCTION              *func,
                                KOS_OBJ_ID                 this_obj,
-                               KOS_STACK_FRAME           *new_stack_frame,
+                               KOS_FRAME                  new_stack_frame,
                                enum _KOS_GENERATOR_STATE *gen_state)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
@@ -797,7 +802,7 @@ static KOS_OBJ_ID _finish_call(KOS_STACK_FRAME           *frame,
     return ret;
 }
 
-static KOS_OBJ_ID _read_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_ID objptr, int idx)
+static KOS_OBJ_ID _read_buffer(KOS_FRAME frame, KOS_OBJ_ID objptr, int idx)
 {
     uint32_t   size;
     KOS_OBJ_ID ret;
@@ -821,7 +826,7 @@ static KOS_OBJ_ID _read_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_ID objptr, int id
     return ret;
 }
 
-static int _write_buffer(KOS_STACK_FRAME *frame, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID value)
+static int _write_buffer(KOS_FRAME frame, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID value)
 {
     int      error;
     uint32_t size;
@@ -858,7 +863,7 @@ static uint32_t _load_32(const uint8_t *bytecode)
            ((uint32_t)bytecode[3] << 24);
 }
 
-static int _exec_function(KOS_STACK_FRAME *frame)
+static int _exec_function(KOS_FRAME frame)
 {
     KOS_ARRAY              *regs_array = OBJPTR(ARRAY, frame->registers);
     KOS_ATOMIC(KOS_OBJ_ID) *regs       = _KOS_get_array_buffer(regs_array);
@@ -2120,7 +2125,7 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                 KOS_OBJ_ID this_obj;
                 KOS_OBJ_ID args_obj;
 
-                KOS_STACK_FRAME *new_stack_frame = 0;
+                KOS_FRAME new_stack_frame = 0;
 
                 rdest = bytecode[1];
 
@@ -2186,7 +2191,9 @@ static int _exec_function(KOS_STACK_FRAME *frame)
                         /* TODO INSTR_TAIL_CALL */
 
                         if (func->handler)  {
-                            const KOS_OBJ_ID ret_val = func->handler(new_stack_frame, this_obj, args_obj);
+                            const KOS_OBJ_ID ret_val = func->handler(new_stack_frame,
+                                                                     this_obj,
+                                                                     args_obj);
 
                             /* Avoid detecting as end of iterator in the code below */
                             if (gen_state != KOS_NOT_GEN && ! IS_BAD_PTR(ret_val))
@@ -2357,15 +2364,15 @@ static int _exec_function(KOS_STACK_FRAME *frame)
     return error;
 }
 
-KOS_OBJ_ID KOS_call_function(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_ID       func_obj,
-                             KOS_OBJ_ID       this_obj,
-                             KOS_OBJ_ID       args_obj)
+KOS_OBJ_ID KOS_call_function(KOS_FRAME  frame,
+                             KOS_OBJ_ID func_obj,
+                             KOS_OBJ_ID this_obj,
+                             KOS_OBJ_ID args_obj)
 {
-    int              error = KOS_SUCCESS;
-    KOS_OBJ_ID       ret   = KOS_BADPTR;
-    KOS_FUNCTION    *func;
-    KOS_STACK_FRAME *new_stack_frame;
+    int           error = KOS_SUCCESS;
+    KOS_OBJ_ID    ret   = KOS_BADPTR;
+    KOS_FUNCTION *func;
+    KOS_FRAME     new_stack_frame;
 
     KOS_context_validate(frame);
 
@@ -2383,7 +2390,9 @@ KOS_OBJ_ID KOS_call_function(KOS_STACK_FRAME *frame,
         enum _KOS_GENERATOR_STATE gen_state = func->generator_state;
 
         if (func->handler)  {
-            const KOS_OBJ_ID retval = func->handler(new_stack_frame, this_obj, args_obj);
+            const KOS_OBJ_ID retval = func->handler(new_stack_frame,
+                                                    this_obj,
+                                                    args_obj);
 
             /* Avoid detecting as end of iterator */
             if (gen_state != KOS_NOT_GEN && ! IS_BAD_PTR(retval))
@@ -2416,10 +2425,10 @@ KOS_OBJ_ID KOS_call_function(KOS_STACK_FRAME *frame,
 
 int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
 {
-    KOS_STACK_FRAME frame;
-    int             error;
+    struct _KOS_STACK_FRAME frame;
+    int                     error;
 
-    _KOS_init_stack_frame(&frame, module, module->instr_offs, module->num_regs);
+    _KOS_init_stack_frame(&frame, module, KOS_AREA_RECLAIMABLE, module->instr_offs, module->num_regs);
 
     KOS_context_validate(&frame);
 

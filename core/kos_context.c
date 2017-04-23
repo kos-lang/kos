@@ -68,7 +68,37 @@ struct _KOS_PERF _kos_perf = {
 };
 #endif
 
-static int _add_multiple_paths(KOS_STACK_FRAME *frame, struct _KOS_VECTOR *cpaths)
+static int _register_thread(KOS_CONTEXT        *ctx,
+                            KOS_THREAD_ROOT    *thread_root,
+                            enum _KOS_AREA_TYPE alloc_mode)
+{
+    int error = KOS_SUCCESS;
+
+    _KOS_init_stack_frame(&thread_root->frame, &ctx->init_module, alloc_mode, 0, 0);
+
+    if (_KOS_tls_get(ctx->thread_key)) {
+
+        KOS_OBJ_ID err;
+
+        assert( ! _KOS_tls_get(ctx->thread_key));
+
+        err = KOS_context_get_cstring(&thread_root->frame, str_err_thread_registered);
+        KOS_raise_exception(&thread_root->frame, err);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    _KOS_tls_set(ctx->thread_key, thread_root);
+
+_error:
+    return error;
+}
+
+int KOS_context_register_thread(KOS_CONTEXT *ctx, KOS_THREAD_ROOT *thread_root)
+{
+    return _register_thread(ctx, thread_root, KOS_AREA_RECLAIMABLE);
+}
+
+static int _add_multiple_paths(KOS_FRAME frame, struct _KOS_VECTOR *cpaths)
 {
     int   error = KOS_SUCCESS;
     char *buf   = cpaths->buffer;
@@ -90,7 +120,7 @@ static int _add_multiple_paths(KOS_STACK_FRAME *frame, struct _KOS_VECTOR *cpath
     return error;
 }
 
-static int _init_search_paths(KOS_STACK_FRAME *frame)
+static int _init_search_paths(KOS_FRAME frame)
 {
 #ifdef CONFIG_DISABLE_KOSPATH
     return KOS_SUCCESS;
@@ -109,7 +139,7 @@ static int _init_search_paths(KOS_STACK_FRAME *frame)
 #endif
 }
 
-static KOS_OBJ_ID _alloc_empty_string(KOS_STACK_FRAME *frame)
+static KOS_OBJ_ID _alloc_empty_string(KOS_FRAME frame)
 {
     KOS_STRING *str = (KOS_STRING *)_KOS_alloc_object(frame, KOS_STRING);
 
@@ -123,20 +153,32 @@ static KOS_OBJ_ID _alloc_empty_string(KOS_STACK_FRAME *frame)
     return OBJID(STRING, str);
 }
 
-int KOS_context_init(KOS_CONTEXT      *ctx,
-                     KOS_STACK_FRAME **out_frame)
+int KOS_context_init(KOS_CONTEXT *ctx,
+                     KOS_FRAME   *out_frame)
 {
-    int              error;
-    int              alloc_ok = 0;
-    int              tls_ok   = 0;
-    KOS_STACK_FRAME *frame    = &ctx->main_thread.frame;
+    int       error;
+    int       alloc_ok = 0;
+    int       tls_ok   = 0;
+    KOS_FRAME frame    = &ctx->main_thread.frame;
 
     memset(ctx, 0, sizeof(*ctx));
+
+    TRY(_KOS_tls_create(&ctx->thread_key));
+    tls_ok = 1;
 
     TRY(_KOS_alloc_init(ctx));
     alloc_ok = 1;
 
-    frame->allocator = &ctx->allocator;
+    ctx->init_module.type         = OBJ_MODULE;
+    ctx->init_module.name         = KOS_BADPTR;
+    ctx->init_module.context      = ctx;
+    ctx->init_module.global_names = KOS_BADPTR;
+    ctx->init_module.globals      = KOS_BADPTR;
+    ctx->module_names             = KOS_BADPTR;
+    ctx->modules                  = KOS_BADPTR;
+    ctx->module_search_paths      = KOS_BADPTR;
+
+    TRY(_register_thread(ctx, &ctx->main_thread, KOS_AREA_FIXED));
 
     ctx->empty_string = _alloc_empty_string(frame);
     TRY_OBJID(ctx->empty_string);
@@ -152,40 +194,32 @@ int KOS_context_init(KOS_CONTEXT      *ctx,
     TRY_OBJID(ctx->buffer_prototype   = KOS_new_object_with_prototype(frame, ctx->object_prototype));
     TRY_OBJID(ctx->function_prototype = KOS_new_object_with_prototype(frame, ctx->object_prototype));
 
-    TRY(_KOS_tls_create(&ctx->thread_key));
-    tls_ok = 1;
-
-    ctx->init_module.type         = OBJ_MODULE;
-    ctx->init_module.name         = KOS_context_get_cstring(frame, str_init);
-    ctx->init_module.context      = ctx;
-    ctx->init_module.global_names = KOS_BADPTR;
-    ctx->init_module.globals      = KOS_BADPTR;
-
-    TRY(KOS_context_register_thread(ctx, &ctx->main_thread));
-
+    ctx->init_module.name    = KOS_context_get_cstring(frame, str_init);
     ctx->module_names        = KOS_new_object(frame);
     ctx->modules             = KOS_new_array(frame, 0);
     ctx->module_search_paths = KOS_new_array(frame, 0);
 
     TRY(_init_search_paths(frame));
 
+    _KOS_alloc_set_mode(frame, KOS_AREA_RECLAIMABLE);
+
     *out_frame = frame;
 
 _error:
-    if (error && tls_ok)
-        _KOS_tls_destroy(ctx->thread_key);
-
     if (error && alloc_ok)
         _KOS_alloc_destroy(ctx);
+
+    if (error && tls_ok)
+        _KOS_tls_destroy(ctx->thread_key);
 
     return error;
 }
 
 void KOS_context_destroy(KOS_CONTEXT *ctx)
 {
-    uint32_t         i;
-    uint32_t         num_modules = KOS_get_array_size(ctx->modules);
-    KOS_STACK_FRAME *frame       = &ctx->main_thread.frame;
+    uint32_t  i;
+    uint32_t  num_modules = KOS_get_array_size(ctx->modules);
+    KOS_FRAME frame       = &ctx->main_thread.frame;
 
     for (i = 0; i < num_modules; i++) {
         KOS_OBJ_ID module_obj = KOS_array_read(frame, ctx->modules, (int)i);
@@ -208,9 +242,10 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
     if (ctx->prototypes)
         _KOS_free(ctx->prototypes);
 
+    _KOS_alloc_destroy(ctx);
+
     _KOS_tls_destroy(ctx->thread_key);
 
-    _KOS_alloc_destroy(ctx);
     memset(ctx, 0, sizeof(*ctx));
 
 #ifdef CONFIG_PERF
@@ -245,19 +280,17 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
 #endif
 }
 
-int KOS_context_add_path(KOS_STACK_FRAME *frame, const char *module_search_path)
+int KOS_context_add_path(KOS_FRAME frame, const char *module_search_path)
 {
-    int          error;
-    uint32_t     len;
-    KOS_OBJ_ID   path_str;
-    KOS_CONTEXT *ctx;
+    int                       error;
+    uint32_t                  len;
+    KOS_OBJ_ID                path_str;
+    KOS_CONTEXT              *ctx        = KOS_context_from_frame(frame);
+    const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
 
-    assert(frame->module);
-    assert(frame->module->context);
-
-    ctx = frame->module->context;
-
+    _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
     path_str = KOS_new_cstring(frame, module_search_path);
+    _KOS_alloc_set_mode(frame, alloc_mode);
     TRY_OBJID(path_str);
 
     len = KOS_get_array_size(ctx->module_search_paths);
@@ -277,19 +310,14 @@ static int _module_init_compare(struct _KOS_RED_BLACK_NODE *a,
     return KOS_string_compare(init_a->name, init_b->name);
 }
 
-int KOS_context_register_builtin(KOS_STACK_FRAME *frame,
+int KOS_context_register_builtin(KOS_FRAME        frame,
                                  const char      *module,
                                  KOS_BUILTIN_INIT init)
 {
     int                      error = KOS_SUCCESS;
     struct _KOS_MODULE_INIT *mod_init;
-    KOS_CONTEXT             *ctx;
+    KOS_CONTEXT             *ctx   = KOS_context_from_frame(frame);
     KOS_OBJ_ID               module_name;
-
-    assert(frame->module);
-    assert(frame->module->context);
-
-    ctx = frame->module->context;
 
     module_name = KOS_new_cstring(frame, module);
     TRY_OBJID(module_name);
@@ -306,57 +334,18 @@ _error:
     return error;
 }
 
-int KOS_context_register_thread(KOS_CONTEXT *ctx, KOS_THREAD_ROOT *thread_root)
-{
-    int error = KOS_SUCCESS;
-
-    _KOS_init_stack_frame(&thread_root->frame, &ctx->init_module, 0, 0);
-
-    if (_KOS_tls_get(ctx->thread_key)) {
-
-        KOS_OBJ_ID err;
-
-        assert( ! _KOS_tls_get(ctx->thread_key));
-
-        err = KOS_context_get_cstring(&thread_root->frame, str_err_thread_registered);
-        KOS_raise_exception(&thread_root->frame, err);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
-
-    _KOS_tls_set(ctx->thread_key, thread_root);
-
-_error:
-    return error;
-}
-
-KOS_OBJ_ID KOS_context_get_cstring(KOS_STACK_FRAME *frame,
-                                   const char      *cstr)
+KOS_OBJ_ID KOS_context_get_cstring(KOS_FRAME   frame,
+                                   const char *cstr)
 {
     /* TODO lookup in array */
     return KOS_new_const_ascii_cstring(frame, cstr);
 }
 
-KOS_OBJ_ID KOS_context_get_empty_string(KOS_STACK_FRAME *frame)
-{
-    assert(frame->module);
-    assert(frame->module->context);
-    return frame->module->context->empty_string;
-}
-
 #ifndef NDEBUG
-void KOS_context_validate(KOS_STACK_FRAME *frame)
+void KOS_context_validate(KOS_FRAME frame)
 {
-    KOS_MODULE      *module;
-    KOS_CONTEXT     *ctx;
+    KOS_CONTEXT     *ctx = KOS_context_from_frame(frame);
     KOS_THREAD_ROOT *thread_root;
-
-    assert(frame);
-
-    module = frame->module;
-
-    assert(module);
-
-    ctx = module->context;
 
     assert(ctx);
 
@@ -366,8 +355,8 @@ void KOS_context_validate(KOS_STACK_FRAME *frame)
 }
 #endif
 
-void KOS_raise_exception(KOS_STACK_FRAME *frame,
-                         KOS_OBJ_ID       exception_obj)
+void KOS_raise_exception(KOS_FRAME  frame,
+                         KOS_OBJ_ID exception_obj)
 {
     /* Nested exceptions are not allowed. */
     /* This can only happen if there is a bug and an exception has been ignored. */
@@ -377,35 +366,35 @@ void KOS_raise_exception(KOS_STACK_FRAME *frame,
         frame->exception = exception_obj;
 }
 
-void KOS_raise_exception_cstring(KOS_STACK_FRAME *frame,
-                                 const char      *cstr)
+void KOS_raise_exception_cstring(KOS_FRAME   frame,
+                                 const char *cstr)
 {
     KOS_raise_exception(frame, KOS_context_get_cstring(frame, cstr));
 }
 
-void KOS_clear_exception(KOS_STACK_FRAME *frame)
+void KOS_clear_exception(KOS_FRAME frame)
 {
     frame->exception = KOS_BADPTR;
 }
 
-int KOS_is_exception_pending(KOS_STACK_FRAME *frame)
+int KOS_is_exception_pending(KOS_FRAME frame)
 {
     return ! IS_BAD_PTR(frame->exception);
 }
 
-KOS_OBJ_ID KOS_get_exception(KOS_STACK_FRAME *frame)
+KOS_OBJ_ID KOS_get_exception(KOS_FRAME frame)
 {
     return frame->exception;
 }
 
-void _KOS_wrap_exception(KOS_STACK_FRAME *frame)
+void _KOS_wrap_exception(KOS_FRAME frame)
 {
-    int              error;
-    unsigned         depth;
-    KOS_OBJ_ID       exception;
-    KOS_OBJ_ID       backtrace;
-    KOS_OBJ_ID       thrown_object = frame->exception;
-    KOS_STACK_FRAME *next_frame;
+    int        error;
+    unsigned   depth;
+    KOS_OBJ_ID exception;
+    KOS_OBJ_ID backtrace;
+    KOS_OBJ_ID thrown_object = frame->exception;
+    KOS_FRAME  next_frame;
 
     assert(!IS_BAD_PTR(thrown_object));
 
@@ -484,8 +473,8 @@ _error:
     (void)0;
 }
 
-KOS_OBJ_ID KOS_get_file_name(KOS_STACK_FRAME *frame,
-                             KOS_OBJ_ID       full_path)
+KOS_OBJ_ID KOS_get_file_name(KOS_FRAME  frame,
+                             KOS_OBJ_ID full_path)
 {
     int      error = KOS_SUCCESS;
     unsigned i;
@@ -511,8 +500,8 @@ _error:
     return KOS_string_slice(frame, full_path, i, len);
 }
 
-KOS_OBJ_ID KOS_format_exception(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       exception)
+KOS_OBJ_ID KOS_format_exception(KOS_FRAME  frame,
+                                KOS_OBJ_ID exception)
 {
     int        error;
     unsigned   i;
@@ -603,9 +592,9 @@ _error:
     return array;
 }
 
-int KOS_get_integer(KOS_STACK_FRAME *frame,
-                    KOS_OBJ_ID       obj_id,
-                    int64_t         *ret)
+int KOS_get_integer(KOS_FRAME  frame,
+                    KOS_OBJ_ID obj_id,
+                    int64_t   *ret)
 {
     int error = KOS_SUCCESS;
 
@@ -672,19 +661,14 @@ static uint32_t _calc_proto_id_hash(uintptr_t id)
     return hash;
 }
 
-KOS_OBJ_ID KOS_gen_prototype(KOS_STACK_FRAME *frame,
-                             const void      *ptr)
+KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
+                             const void *ptr)
 {
     const uintptr_t id         = (uintptr_t)ptr;
     KOS_OBJ_ID      ret        = KOS_BADPTR;
     const uint32_t  hash       = _calc_proto_id_hash(id);
     KOS_PROTOTYPES  prototypes;
-    KOS_CONTEXT    *ctx;
-
-    assert(frame->module);
-    assert(frame->module->context);
-
-    ctx = frame->module->context;
+    KOS_CONTEXT    *ctx        = KOS_context_from_frame(frame);
 
     prototypes = (KOS_PROTOTYPES)KOS_atomic_read_ptr(ctx->prototypes);
 
@@ -730,7 +714,11 @@ KOS_OBJ_ID KOS_gen_prototype(KOS_STACK_FRAME *frame,
 
             if (prototypes == (KOS_PROTOTYPES)KOS_atomic_read_ptr(ctx->prototypes)) {
 
+                const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
+
+                _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
                 ret = KOS_new_object(frame);
+                _KOS_alloc_set_mode(frame, alloc_mode);
 
                 if ( ! IS_BAD_PTR(ret)) {
                     KOS_atomic_write_ptr(cur_item->prototype, ret);

@@ -26,7 +26,7 @@
 #include "../inc/kos_object_base.h"
 #include "../core/kos_try.h"
 
-#define MODULE_DEF(module) int _KOS_module_##module##_init(KOS_STACK_FRAME *frame);
+#define MODULE_DEF(module) int _KOS_module_##module##_init(KOS_FRAME frame);
 #include "kos_module_list.h"
 #undef MODULE_DEF
 

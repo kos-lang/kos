@@ -33,7 +33,7 @@
 int main(void)
 {
     KOS_CONTEXT       ctx;
-    KOS_STACK_FRAME  *frame;
+    KOS_FRAME         frame;
     static const char cstr[] = "str";
     KOS_OBJ_ID        str;
 

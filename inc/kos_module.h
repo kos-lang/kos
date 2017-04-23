@@ -29,32 +29,32 @@
 extern "C" {
 #endif
 
-int KOS_load_module(KOS_STACK_FRAME *frame,
-                    const char      *module);
+int KOS_load_module(KOS_FRAME   frame,
+                    const char *module);
 
-int KOS_module_add_global(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       name,
-                          KOS_OBJ_ID       value,
-                          unsigned        *idx);
+int KOS_module_add_global(KOS_FRAME  frame,
+                          KOS_OBJ_ID name,
+                          KOS_OBJ_ID value,
+                          unsigned  *idx);
 
-int KOS_module_get_global(KOS_STACK_FRAME *frame,
-                          KOS_OBJ_ID       name,
-                          KOS_OBJ_ID      *value,
-                          unsigned        *idx);
+int KOS_module_get_global(KOS_FRAME   frame,
+                          KOS_OBJ_ID  name,
+                          KOS_OBJ_ID *value,
+                          unsigned   *idx);
 
-int KOS_module_add_function(KOS_STACK_FRAME          *frame,
+int KOS_module_add_function(KOS_FRAME                 frame,
                             KOS_OBJ_ID                str_name,
                             KOS_FUNCTION_HANDLER      handler,
                             int                       min_args,
                             enum _KOS_GENERATOR_STATE gen_state);
 
-int KOS_module_add_constructor(KOS_STACK_FRAME     *frame,
+int KOS_module_add_constructor(KOS_FRAME            frame,
                                KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLER handler,
                                int                  min_args,
                                KOS_OBJ_ID          *ret_proto);
 
-int KOS_module_add_member_function(KOS_STACK_FRAME          *frame,
+int KOS_module_add_member_function(KOS_FRAME                 frame,
                                    KOS_OBJ_ID                proto_obj,
                                    KOS_OBJ_ID                str_name,
                                    KOS_FUNCTION_HANDLER      handler,

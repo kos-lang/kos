@@ -47,7 +47,7 @@ struct THREAD_DATA {
     unsigned          rand_init;
 };
 
-static int _write_props_inner(KOS_STACK_FRAME  *frame,
+static int _write_props_inner(KOS_FRAME         frame,
                               struct TEST_DATA *test,
                               unsigned          rand_init)
 {
@@ -69,8 +69,8 @@ static int _write_props_inner(KOS_STACK_FRAME  *frame,
     return 0;
 }
 
-static void _write_props(KOS_STACK_FRAME *frame,
-                         void            *cookie)
+static void _write_props(KOS_FRAME frame,
+                         void     *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
     while (!KOS_atomic_read_u32(test->test->go))
@@ -79,7 +79,7 @@ static void _write_props(KOS_STACK_FRAME *frame,
         KOS_atomic_add_i32(test->test->error, 1);
 }
 
-static int _read_props_inner(KOS_STACK_FRAME  *frame,
+static int _read_props_inner(KOS_FRAME         frame,
                              struct TEST_DATA *test,
                              unsigned          rand_init)
 {
@@ -105,8 +105,8 @@ static int _read_props_inner(KOS_STACK_FRAME  *frame,
     return 0;
 }
 
-static void _read_props(KOS_STACK_FRAME *frame,
-                        void            *cookie)
+static void _read_props(KOS_FRAME frame,
+                        void     *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
     while (!KOS_atomic_read_u32(test->test->go))
@@ -117,9 +117,9 @@ static void _read_props(KOS_STACK_FRAME *frame,
 
 int main(void)
 {
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
-    const int        num_cpus = _get_num_cpus();
+    KOS_CONTEXT ctx;
+    KOS_FRAME   frame;
+    const int   num_cpus = _get_num_cpus();
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 

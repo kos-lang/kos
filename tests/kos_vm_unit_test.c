@@ -89,7 +89,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     uint8_t            code[64]        = { 0 };
     uint32_t           parms[MAX_ARGS] = { 0 };
     struct _KOS_MODULE module;
-    KOS_STACK_FRAME   *frame           = &ctx->main_thread.frame;
+    KOS_FRAME          frame           = &ctx->main_thread.frame;
     const char        *cstrings[]      = { "aaa", "bbb", "ccc" };
     KOS_OBJ_ID         strings;
     uint8_t            regs            = 0;
@@ -513,8 +513,8 @@ static int _test_instr(KOS_CONTEXT         *ctx,
 
 int main(void)
 {
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
+    KOS_CONTEXT ctx;
+    KOS_FRAME   frame;
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 

@@ -26,6 +26,7 @@
 #include "kos_threads.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_string.h"
+#include "kos_object_alloc.h"
 #include "kos_red_black.h"
 
 /*==========================================================================*/
@@ -61,8 +62,8 @@ struct _KOS_PROPERTY_BUF {
 
 void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype);
 
-int _KOS_object_copy_prop_table(KOS_STACK_FRAME *frame,
-                                KOS_OBJ_ID       obj_id);
+int _KOS_object_copy_prop_table(KOS_FRAME  frame,
+                                KOS_OBJ_ID obj_id);
 
 int _KOS_is_truthy(KOS_OBJ_ID obj_id);
 
@@ -70,9 +71,9 @@ int _KOS_is_truthy(KOS_OBJ_ID obj_id);
 /* KOS_ARRAY                                                                */
 /*==========================================================================*/
 
-int _KOS_init_array(KOS_STACK_FRAME *frame,
-                    KOS_ARRAY       *array,
-                    uint32_t         size);
+int _KOS_init_array(KOS_FRAME  frame,
+                    KOS_ARRAY *array,
+                    uint32_t   size);
 
 #define KOS_MIN_ARRAY_CAPACITY  4U
 #define KOS_ARRAY_CAPACITY_STEP 1024U
@@ -98,8 +99,8 @@ static inline KOS_ATOMIC(KOS_OBJ_ID) *_KOS_get_array_buffer(KOS_ARRAY *array)
 
 #endif
 
-int _KOS_array_copy_storage(KOS_STACK_FRAME *frame,
-                            KOS_OBJ_ID       obj_id);
+int _KOS_array_copy_storage(KOS_FRAME  frame,
+                            KOS_OBJ_ID obj_id);
 
 /*==========================================================================*/
 /* KOS_BUFFER                                                               */
@@ -125,23 +126,24 @@ static inline const void* _KOS_get_string_buffer(KOS_STRING *str)
 #endif
 
 /*==========================================================================*/
-/* KOS_STACK_FRAME                                                          */
+/* KOS_FRAME                                                                */
 /*==========================================================================*/
 
-void _KOS_init_stack_frame(KOS_STACK_FRAME *frame,
-                           KOS_MODULE      *module,
-                           uint32_t         instr_offs,
-                           uint32_t         num_regs);
+void _KOS_init_stack_frame(KOS_FRAME           frame,
+                           KOS_MODULE         *module,
+                           enum _KOS_AREA_TYPE alloc_mode,
+                           uint32_t            instr_offs,
+                           uint32_t            num_regs);
 
-KOS_STACK_FRAME *_KOS_stack_frame_push(KOS_STACK_FRAME *frame,
-                                       KOS_MODULE      *module,
-                                       uint32_t         instr_offs,
-                                       uint32_t         num_regs);
+KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
+                                KOS_MODULE *module,
+                                uint32_t    instr_offs,
+                                uint32_t    num_regs);
 
-KOS_STACK_FRAME *_KOS_stack_frame_push_func(KOS_STACK_FRAME *frame,
-                                            KOS_FUNCTION    *func);
+KOS_FRAME _KOS_stack_frame_push_func(KOS_FRAME     frame,
+                                     KOS_FUNCTION *func);
 
-void _KOS_wrap_exception(KOS_STACK_FRAME *frame);
+void _KOS_wrap_exception(KOS_FRAME frame);
 
 /*==========================================================================*/
 /* KOS_MODULE                                                               */
@@ -158,7 +160,7 @@ enum _KOS_MODULE_REQUIRED {
     KOS_MODULE_MANDATORY
 };
 
-KOS_OBJ_ID _KOS_module_import(KOS_STACK_FRAME          *frame,
+KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                               const char               *module, /* Module name or path, ASCII or UTF-8    */
                               unsigned                  length, /* Length of module name or path in bytes */
                               enum _KOS_MODULE_REQUIRED required,

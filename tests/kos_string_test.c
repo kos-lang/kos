@@ -38,8 +38,8 @@
 
 int main(void)
 {
-    KOS_CONTEXT      ctx;
-    KOS_STACK_FRAME *frame;
+    KOS_CONTEXT ctx;
+    KOS_FRAME   frame;
 
     TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
@@ -1192,7 +1192,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID empty = KOS_context_get_empty_string(frame);
+        KOS_OBJ_ID empty = KOS_context_from_frame(frame)->empty_string;
 
         TEST(!IS_BAD_PTR(empty));
         TEST(GET_OBJ_TYPE(empty) == OBJ_STRING);
@@ -1243,7 +1243,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID str = KOS_string_slice(frame, KOS_context_get_empty_string(frame), 0, 1);
+        KOS_OBJ_ID str = KOS_string_slice(frame, KOS_context_from_frame(frame)->empty_string, 0, 1);
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
