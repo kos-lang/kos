@@ -2264,7 +2264,7 @@ static int _exec_function(KOS_FRAME frame)
                     assert(frame->yield_reg == KOS_CAN_YIELD);
 
                     frame->retval    = regs[rsrc];
-                    frame->yield_reg = rsrc;
+                    frame->yield_reg = (uint16_t)rsrc;
 
                     /* Move bytecode pointer here, because at the end of the loop
                        we test !error, but error is set to KOS_SUCCESS_RETURN */
