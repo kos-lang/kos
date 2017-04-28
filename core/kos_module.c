@@ -1024,7 +1024,7 @@ int KOS_module_add_function(KOS_FRAME                 frame,
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module          = module;
-    OBJPTR(FUNCTION, func_obj)->generator_state = gen_state;
+    OBJPTR(FUNCTION, func_obj)->generator_state = (uint8_t)gen_state;
 
     TRY(KOS_module_add_global(frame,
                               str_name,
@@ -1079,7 +1079,7 @@ int KOS_module_add_member_function(KOS_FRAME                 frame,
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module          = module;
-    OBJPTR(FUNCTION, func_obj)->generator_state = gen_state;
+    OBJPTR(FUNCTION, func_obj)->generator_state = (uint8_t)gen_state;
 
     TRY(KOS_set_property(frame, proto_obj, str_name, func_obj));
 

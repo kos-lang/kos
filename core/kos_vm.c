@@ -785,7 +785,7 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                  frame,
                 const enum _KOS_GENERATOR_STATE end_state = func->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
 
                 *gen_state            = end_state;
-                func->generator_state = end_state;
+                func->generator_state = (uint8_t)end_state;
             }
         }
     }
