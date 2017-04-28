@@ -65,7 +65,7 @@ static KOS_OBJ_ID _run_code(KOS_CONTEXT   *ctx,
     module.bytecode      = bytecode;
     module.bytecode_size = bytecode_size;
     module.instr_offs    = 0;
-    module.num_regs      = num_regs;
+    module.num_regs      = (uint16_t)num_regs;
 
     if ( ! IS_BAD_PTR(string)) {
 

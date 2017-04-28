@@ -100,7 +100,7 @@ struct _RANDOM_OBJECT
     int      size_pot;
 };
 
-int main()
+int main(void)
 {
     KOS_CONTEXT ctx;
     KOS_FRAME   frame;
