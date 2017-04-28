@@ -26,8 +26,9 @@
 #include "kos_threads.h"
 
 #ifdef CONFIG_PERF
-#   define KOS_PERF_CNT(stat) KOS_atomic_add_i32(_kos_perf.stat, 1)
-#   define KOS_PERF_ADD(stat, num) KOS_atomic_add_i32(_kos_perf.stat, (num))
+#   define KOS_PERF_CNT(stat)            KOS_atomic_add_i32(_kos_perf.stat, 1)
+#   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_i32(_kos_perf.stat[(idx)-3], 1)
+#   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_i32(_kos_perf.stat, (num))
 
 struct _KOS_PERF {
     KOS_ATOMIC(uint32_t) object_get_success;
@@ -44,9 +45,7 @@ struct _KOS_PERF {
     KOS_ATOMIC(uint32_t) array_salvage_success;
     KOS_ATOMIC(uint32_t) array_salvage_fail;
 
-    KOS_ATOMIC(uint32_t) alloc_object_16;
-    KOS_ATOMIC(uint32_t) alloc_object_32;
-    KOS_ATOMIC(uint32_t) alloc_object_64;
+    KOS_ATOMIC(uint32_t) alloc_object[5];
     KOS_ATOMIC(uint32_t) alloc_buffer;
     KOS_ATOMIC(uint32_t) alloc_buffer_total;
 };
@@ -54,8 +53,9 @@ struct _KOS_PERF {
 extern struct _KOS_PERF _kos_perf;
 
 #else
-#   define KOS_PERF_CNT(stat) (void)0
-#   define KOS_PERF_ADD(stat, num) (void)0
+#   define KOS_PERF_CNT(stat)            (void)0
+#   define KOS_PERF_CNT_ARRAY(stat, idx) (void)0
+#   define KOS_PERF_ADD(stat, num)       (void)0
 #endif
 
 #endif

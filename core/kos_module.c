@@ -205,7 +205,7 @@ static KOS_OBJ_ID _alloc_module(KOS_FRAME  frame,
 
     _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
 
-    module = (KOS_MODULE *)_KOS_alloc_object(frame, KOS_MODULE);
+    module = (KOS_MODULE *)_KOS_alloc_object(frame, MODULE);
     if (module) {
         module->type          = OBJ_MODULE;
         module->flags         = 0;

@@ -59,10 +59,10 @@ enum KOS_OBJECT_IMMEDIATE {
 };
 
 enum KOS_OBJECT_SUBTYPE {
-    OBJ_SUBTYPE,
-    OBJ_DYNAMIC_PROP,
-    OBJ_OBJECT_WALK,
-    OBJ_MODULE
+    OBJ_SUBTYPE      = 0x1F,
+    OBJ_DYNAMIC_PROP = 0x2F,
+    OBJ_OBJECT_WALK  = 0x3F,
+    OBJ_MODULE       = 0x4F
 };
 
 enum KOS_OBJECT_TYPE_TO_TAG {
@@ -142,7 +142,8 @@ static inline KOS_OBJ_ID KOS_object_id(T *ptr) {
     if (ptr) {
         const KOS_OBJ_ID obj_id =
             reinterpret_cast<KOS_OBJ_ID>(reinterpret_cast<intptr_t>(ptr) + tag);
-        assert(GET_OBJ_TYPE(obj_id) == static_cast<KOS_OBJECT_TAG>(tag));
+        assert((IS_NUMERIC_OBJ(obj_id) && GET_NUMERIC_TYPE(obj_id) == static_cast<KOS_NUMERIC_TAG>(tag))
+               || (GET_OBJ_TYPE(obj_id) == static_cast<KOS_OBJECT_TAG>(tag)));
         return obj_id;
     }
     else
@@ -249,13 +250,13 @@ typedef struct _KOS_FUNCTION {
     uint8_t              min_args;
     uint8_t              num_regs;
     uint8_t              args_reg;
+    uint8_t              generator_state;
+    uint32_t             instr_offs;
     KOS_ATOMIC(void *)   prototype; /* actual type: KOS_OBJ_ID */
     KOS_OBJ_ID           closures;
     struct _KOS_MODULE  *module;
     KOS_FUNCTION_HANDLER handler;
     KOS_FRAME            generator_stack_frame;
-    uint32_t             instr_offs;
-    enum _KOS_GENERATOR_STATE generator_state;
 } KOS_FUNCTION;
 
 enum _KOS_MODULE_FLAGS {
@@ -280,6 +281,8 @@ typedef struct _KOS_FUNC_ADDR {
 typedef struct _KOS_MODULE {
     KOS_SUBTYPE          type; /* OBJ_MODULE */
     uint8_t              flags;
+    uint16_t             num_regs;
+    uint32_t             instr_offs;
     KOS_OBJ_ID           name;
     KOS_OBJ_ID           path;
     KOS_CONTEXT         *context;
@@ -289,11 +292,9 @@ typedef struct _KOS_MODULE {
     const uint8_t       *bytecode;
     const KOS_LINE_ADDR *line_addrs;
     const KOS_FUNC_ADDR *func_addrs;
-    uint32_t             bytecode_size;
     uint32_t             num_line_addrs;
     uint32_t             num_func_addrs;
-    uint32_t             instr_offs;
-    uint32_t             num_regs;
+    uint32_t             bytecode_size;
 } KOS_MODULE;
 
 typedef struct _KOS_DYNAMIC_PROP {
@@ -304,10 +305,10 @@ typedef struct _KOS_DYNAMIC_PROP {
 
 typedef struct _KOS_OBJECT_WALK {
     KOS_SUBTYPE          type; /* OBJ_OBJECT_WALK */
+    KOS_ATOMIC(uint32_t) index;
     KOS_OBJ_ID           obj;
     KOS_OBJ_ID           key_table_obj;
     void                *key_table;
-    KOS_ATOMIC(uint32_t) index;
 } KOS_OBJECT_WALK;
 
 typedef union _KOS_INTERNAL_OBJECT {

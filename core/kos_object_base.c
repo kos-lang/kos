@@ -38,7 +38,7 @@ KOS_OBJ_ID KOS_new_int(KOS_FRAME frame, int64_t value)
 
     if (GET_SMALL_INT(obj_id) != value) {
 
-        KOS_INTEGER *integer = (KOS_INTEGER *)_KOS_alloc_object(frame, KOS_INTEGER);
+        KOS_INTEGER *integer = (KOS_INTEGER *)_KOS_alloc_object(frame, INTEGER);
 
         if (integer)
             *integer = value;
@@ -51,7 +51,7 @@ KOS_OBJ_ID KOS_new_int(KOS_FRAME frame, int64_t value)
 
 KOS_OBJ_ID KOS_new_float(KOS_FRAME frame, double value)
 {
-    KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(frame, KOS_FLOAT);
+    KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(frame, FLOAT);
 
     if (number)
         *number = value;
@@ -61,7 +61,7 @@ KOS_OBJ_ID KOS_new_float(KOS_FRAME frame, double value)
 
 KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
 {
-    KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(frame, KOS_FUNCTION);
+    KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(frame, FUNCTION);
 
     if (func) {
         func->min_args              = 0;
@@ -105,7 +105,7 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
                                 KOS_OBJ_ID getter,
                                 KOS_OBJ_ID setter)
 {
-    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(frame, KOS_DYNAMIC_PROP);
+    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(frame, DYNAMIC_PROP);
 
     if (dyn_prop) {
         dyn_prop->type   = OBJ_DYNAMIC_PROP;
@@ -142,12 +142,16 @@ void _KOS_init_stack_frame(KOS_FRAME           frame,
         frame->registers = KOS_new_array(frame, num_regs);
 }
 
+typedef struct _KOS_STACK_FRAME KOS_STACK_FRAME;
+
+#define OBJ_STACK_FRAME 0xF
+
 KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
                                 KOS_MODULE *module,
                                 uint32_t    instr_offs,
                                 uint32_t    num_regs)
 {
-    KOS_FRAME new_frame = (KOS_FRAME)_KOS_alloc_object(frame, struct _KOS_STACK_FRAME);
+    KOS_FRAME new_frame = (KOS_FRAME)_KOS_alloc_object(frame, STACK_FRAME);
 
     if (new_frame) {
 

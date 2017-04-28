@@ -64,7 +64,7 @@ static const char str_value[]                   = "value";
 #ifdef CONFIG_PERF
 struct _KOS_PERF _kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0
+    0, 0, { 0, 0, 0, 0, 0 }, 0
 };
 #endif
 
@@ -141,7 +141,7 @@ static int _init_search_paths(KOS_FRAME frame)
 
 static KOS_OBJ_ID _alloc_empty_string(KOS_FRAME frame)
 {
-    KOS_STRING *str = (KOS_STRING *)_KOS_alloc_object(frame, KOS_STRING);
+    KOS_STRING *str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
 
     if (str) {
         str->elem_size = KOS_STRING_ELEM_8;
@@ -254,12 +254,12 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
         const uint32_t vb = KOS_atomic_read_u32(_kos_perf.b);     \
         uint32_t       total = va + vb;                           \
         if (total == 0) total = 1;                                \
-        printf("    " #a "\t %u (%u%%)\n", va, va * 100 / total); \
-        printf("    " #b "\t %u (%u%%)\n", vb, vb * 100 / total); \
+        printf("    " #a "\t%u (%u%%)\n", va, va * 100 / total); \
+        printf("    " #b "\t%u (%u%%)\n", vb, vb * 100 / total); \
     }
 #   define PERF_VALUE(a) {                                        \
         const uint32_t va = KOS_atomic_read_u32(_kos_perf.a);     \
-        printf("    " #a "\t %u\n", va);                          \
+        printf("    " #a "\t%u\n", va);                          \
     }
     printf("Performance stats:\n");
     PERF_RATIO(object_get_success, object_get_fail);
@@ -268,14 +268,16 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
     PERF_RATIO(object_resize_success, object_resize_fail);
     PERF_RATIO(object_salvage_success, object_salvage_fail);
     PERF_RATIO(array_salvage_success, array_salvage_fail);
-    PERF_VALUE(alloc_object_16);
-    PERF_VALUE(alloc_object_32);
-    PERF_VALUE(alloc_object_64);
+    PERF_VALUE(alloc_object[0]);
+    PERF_VALUE(alloc_object[1]);
+    PERF_VALUE(alloc_object[2]);
+    PERF_VALUE(alloc_object[3]);
+    PERF_VALUE(alloc_object[4]);
     PERF_VALUE(alloc_buffer);
     {
         const uint32_t v = KOS_atomic_read_u32(_kos_perf.alloc_buffer_total);
         const uint32_t n = KOS_atomic_read_u32(_kos_perf.alloc_buffer);
-        printf("    alloc_buffer_total %u B (avg %u B)\n", v, v/(n ? n : 1));
+        printf("    alloc_buffer_total\t%u B (avg %u B)\n", v, v/(n ? n : 1));
     }
 #endif
 }

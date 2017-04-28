@@ -30,7 +30,9 @@
 struct _KOS_MODULE_LOAD_CHAIN;
 struct _KOS_RED_BLACK_NODE;
 
-#if 1
+#define OLD_ALLOC_NOT
+
+#ifdef OLD_ALLOC
 
 struct _KOS_ALLOCATOR {
     KOS_ATOMIC(void *) objects;
@@ -38,18 +40,14 @@ struct _KOS_ALLOCATOR {
 
 #else
 
-struct _KOS_AREA;
-
-struct _KOS_FIXED_AREA;
-
-struct _KOS_FREE_AREA;
-
 struct _KOS_ALLOCATOR {
     KOS_ATOMIC(uint32_t) lock;
-    KOS_ATOMIC(void *)  *areas_free;
-    KOS_ATOMIC(void *)  *areas_fixed;
+    KOS_ATOMIC(void *)   areas_free;
+    KOS_ATOMIC(void *)   areas_fixed;
     /* TODO add areas_stack */
-    KOS_ATOMIC(void *)  *areas[4]; /* By element size: 8, 16, 32, 64 */
+    KOS_ATOMIC(void *)   areas[4]; /* By element size: 8, 16, 32, 64 */
+    KOS_ATOMIC(void *)   buffers;  /* TODO buddy allocator for buffers + freed list */
+    uint8_t              de_bruijn_bit_pos[32];
 };
 
 #endif

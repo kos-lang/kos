@@ -123,7 +123,7 @@ int _KOS_init_array(KOS_FRAME  frame,
 KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
                          uint32_t  size)
 {
-    KOS_ARRAY *array = (KOS_ARRAY *)_KOS_alloc_object(frame, KOS_ARRAY);
+    KOS_ARRAY *array = (KOS_ARRAY *)_KOS_alloc_object(frame, ARRAY);
 
     if (array && KOS_SUCCESS != _KOS_init_array(frame, array, size))
         array = 0;

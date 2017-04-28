@@ -477,7 +477,8 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
 
             case OBJ_FUNCTION: {
                 KOS_OBJ_ID                gen_args;
-                enum _KOS_GENERATOR_STATE state = OBJPTR(FUNCTION, elem)->generator_state;
+                enum _KOS_GENERATOR_STATE state =
+                        (enum _KOS_GENERATOR_STATE)OBJPTR(FUNCTION, elem)->generator_state;
 
                 if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE) {
                     KOS_raise_exception_cstring(frame, str_err_cannot_convert_to_array);
@@ -1078,12 +1079,23 @@ static int _pack_format(KOS_FRAME                frame,
 
                 TRY_OBJID(value_obj);
 
-                if (IS_SMALL_INT(value_obj))
-                    value = (double)GET_SMALL_INT(value_obj);
-                else if (GET_OBJ_TYPE(value_obj) == OBJ_INTEGER)
-                    value = (double)*OBJPTR(INTEGER, value_obj);
-                else if (GET_OBJ_TYPE(value_obj) == OBJ_FLOAT)
-                    value = *OBJPTR(FLOAT, value_obj);
+                if (IS_NUMERIC_OBJ(value_obj)) {
+
+                    switch (GET_NUMERIC_TYPE(value_obj)) {
+
+                        default:
+                            value = (double)GET_SMALL_INT(value_obj);
+                            break;
+
+                        case OBJ_NUM_INTEGER:
+                            value = (double)*OBJPTR(INTEGER, value_obj);
+                            break;
+
+                        case OBJ_NUM_FLOAT:
+                            value = *OBJPTR(FLOAT, value_obj);
+                            break;
+                    }
+                }
                 else
                     RAISE_EXCEPTION(str_err_bad_pack_value);
 

@@ -93,8 +93,11 @@ int main(void)
         TEST(GET_OBJ_TYPE(integer_a) != OBJ_OBJECT);
         TEST(GET_OBJ_TYPE(integer_b) != OBJ_OBJECT);
 
-        TEST(GET_OBJ_TYPE(integer_a) == OBJ_INTEGER);
-        TEST(GET_OBJ_TYPE(integer_b) == OBJ_INTEGER);
+        TEST(IS_NUMERIC_OBJ(integer_a));
+        TEST(IS_NUMERIC_OBJ(integer_b));
+
+        TEST(GET_NUMERIC_TYPE(integer_a) == OBJ_NUM_INTEGER);
+        TEST(GET_NUMERIC_TYPE(integer_b) == OBJ_NUM_INTEGER);
 
         TEST(*OBJPTR(INTEGER, integer_a) == min_small_int-1);
         TEST(*OBJPTR(INTEGER, integer_b) == max_small_int+1);
@@ -123,8 +126,11 @@ int main(void)
         TEST(GET_OBJ_TYPE(integer_a) != OBJ_OBJECT);
         TEST(GET_OBJ_TYPE(integer_b) != OBJ_OBJECT);
 
-        TEST(GET_OBJ_TYPE(integer_a) == OBJ_INTEGER);
-        TEST(GET_OBJ_TYPE(integer_b) == OBJ_INTEGER);
+        TEST(IS_NUMERIC_OBJ(integer_a));
+        TEST(IS_NUMERIC_OBJ(integer_b));
+
+        TEST(GET_NUMERIC_TYPE(integer_a) == OBJ_NUM_INTEGER);
+        TEST(GET_NUMERIC_TYPE(integer_b) == OBJ_NUM_INTEGER);
 
         TEST(*OBJPTR(INTEGER, integer_a) == min_int);
         TEST(*OBJPTR(INTEGER, integer_b) == max_int);
@@ -144,7 +150,9 @@ int main(void)
 
         TEST(GET_OBJ_TYPE(number) != OBJ_OBJECT);
 
-        TEST(GET_OBJ_TYPE(number) == OBJ_FLOAT);
+        TEST(IS_NUMERIC_OBJ(number));
+
+        TEST(GET_NUMERIC_TYPE(number) == OBJ_NUM_FLOAT);
 
         TEST(*OBJPTR(FLOAT, number) == 1.5);
     }

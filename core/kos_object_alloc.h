@@ -33,20 +33,38 @@ enum _KOS_AREA_TYPE {
     KOS_AREA_STACK
 };
 
-#define _KOS_alloc_object(frame, type) (sizeof(type) <= 16  ? _KOS_alloc_16(frame)  : \
-                                        sizeof(type) <= 32  ? _KOS_alloc_32(frame)  : \
-                                        sizeof(type) <= 64  ? _KOS_alloc_64(frame)  : \
-                                        sizeof(type) <= 128 ? _KOS_alloc_128(frame) : 0)
+enum _KOS_AREA_ELEM_SIZE {
+    KOS_AREA_NONE = 0,
+    KOS_AREA_8    = 3,
+    KOS_AREA_16   = 4,
+    KOS_AREA_32   = 5,
+    KOS_AREA_64   = 6,
+    KOS_AREA_128  = 7
+};
+
+#define _KOS_POT_FROM_TYPE(type) ((OBJ_ ## type & 1)   == 0   ? KOS_AREA_8   : \
+                                  sizeof(KOS_ ## type) <= 16  ? KOS_AREA_16  : \
+                                  sizeof(KOS_ ## type) <= 32  ? KOS_AREA_32  : \
+                                  sizeof(KOS_ ## type) <= 64  ? KOS_AREA_64  : \
+                                  sizeof(KOS_ ## type) <= 128 ? KOS_AREA_128 : KOS_AREA_NONE)
+
+#define _KOS_alloc_object(frame, type) (_KOS_alloc_object_internal(frame, _KOS_POT_FROM_TYPE(type), (int)sizeof(KOS_ ## type)))
 
 int   _KOS_alloc_init(KOS_CONTEXT *ctx);
+
 void  _KOS_alloc_destroy(KOS_CONTEXT *ctx);
-void  _KOS_alloc_set_mode(KOS_FRAME frame, enum _KOS_AREA_TYPE alloc_mode);
+
+void  _KOS_alloc_set_mode(KOS_FRAME           frame,
+                          enum _KOS_AREA_TYPE alloc_mode);
+
 enum _KOS_AREA_TYPE _KOS_alloc_get_mode(KOS_FRAME frame);
-void *_KOS_alloc_16(KOS_FRAME frame);
-void *_KOS_alloc_32(KOS_FRAME frame);
-void *_KOS_alloc_64(KOS_FRAME frame);
-void *_KOS_alloc_128(KOS_FRAME frame);
+
+void *_KOS_alloc_object_internal(KOS_FRAME                frame,
+                                 enum _KOS_AREA_ELEM_SIZE elem_size_pot,
+                                 int                      elem_size);
+
 void *_KOS_alloc_buffer(KOS_FRAME frame, size_t size);
+
 void  _KOS_free_buffer(KOS_FRAME frame, void *ptr, size_t size);
 
 #endif

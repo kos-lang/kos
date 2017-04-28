@@ -612,7 +612,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
         RAISE_EXCEPTION(str_err_args_not_array);
 
     func      = OBJPTR(FUNCTION, func_obj);
-    gen_state = func->generator_state;
+    gen_state = (enum _KOS_GENERATOR_STATE)func->generator_state;
 
     if (KOS_get_array_size(args_obj) < func->min_args)
         RAISE_EXCEPTION(str_err_too_few_args);
@@ -2184,7 +2184,8 @@ static int _exec_function(KOS_FRAME frame)
                         out = this_obj;
 
                     else {
-                        enum _KOS_GENERATOR_STATE gen_state = func->generator_state;
+                        enum _KOS_GENERATOR_STATE gen_state =
+                                (enum _KOS_GENERATOR_STATE)func->generator_state;
 
                         assert(new_stack_frame);
 
@@ -2387,7 +2388,8 @@ KOS_OBJ_ID KOS_call_function(KOS_FRAME  frame,
         ret = this_obj;
 
     else {
-        enum _KOS_GENERATOR_STATE gen_state = func->generator_state;
+        enum _KOS_GENERATOR_STATE gen_state =
+                (enum _KOS_GENERATOR_STATE)func->generator_state;
 
         if (func->handler)  {
             const KOS_OBJ_ID retval = func->handler(new_stack_frame,

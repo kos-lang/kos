@@ -49,7 +49,7 @@ static KOS_STRING *_new_empty_string(KOS_FRAME                  frame,
     assert(length <= 0xFFFFU);
     assert(length > 0U);
 
-    str = (KOS_STRING *)_KOS_alloc_object(frame, KOS_STRING);
+    str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
 
     if (str) {
 
@@ -87,7 +87,7 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
 
         if (count != ~0U) {
             assert(count <= 0xFFFFU);
-            str = (KOS_STRING *)_KOS_alloc_object(frame, KOS_STRING);
+            str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
         }
         else {
             KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
@@ -189,7 +189,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_FRAME                  frame,
     assert(length <= 0xFFFFU);
 
     if (length) {
-        str = (KOS_STRING *)_KOS_alloc_object(frame, KOS_STRING);
+        str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
 
         if (str) {
             str->elem_size = (uint8_t)elem_size;
@@ -478,7 +478,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
                 else if (str->flags == KOS_STRING_PTR)
                     new_str = OBJPTR(STRING, KOS_new_const_string(frame, buf, new_len, elem_size));
                 else {
-                    new_str               = (KOS_STRING *)_KOS_alloc_object(frame, KOS_STRING);
+                    new_str               = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
                     new_str->elem_size    = (uint8_t)elem_size;
                     new_str->flags        = KOS_STRING_REF;
                     new_str->length       = (uint16_t)new_len;

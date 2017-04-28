@@ -87,7 +87,7 @@ KOS_OBJ_ID KOS_new_object(KOS_FRAME frame)
 KOS_OBJ_ID KOS_new_object_with_prototype(KOS_FRAME  frame,
                                          KOS_OBJ_ID prototype)
 {
-    KOS_OBJECT *obj = (KOS_OBJECT *)_KOS_alloc_object(frame, KOS_OBJECT);
+    KOS_OBJECT *obj = (KOS_OBJECT *)_KOS_alloc_object(frame, OBJECT);
 
     if (obj)
         _KOS_init_object(obj, prototype);
@@ -772,7 +772,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,
                                KOS_OBJ_ID                 obj_id,
                                enum KOS_OBJECT_WALK_DEPTH deep)
 {
-    KOS_OBJECT_WALK *walk = (KOS_OBJECT_WALK *)_KOS_alloc_object(frame, KOS_OBJECT_WALK);
+    KOS_OBJECT_WALK *walk = (KOS_OBJECT_WALK *)_KOS_alloc_object(frame, OBJECT_WALK);
 
     if (obj_id) {
         const int error = KOS_object_walk_init(frame, walk, obj_id, deep);

@@ -1396,7 +1396,8 @@ int main(void)
         KOS_OBJ_ID v = KOS_new_int(frame, ((int64_t)1) << 62);
         TEST( ! IS_BAD_PTR(v));
         TEST( ! IS_SMALL_INT(v));
-        TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
+        TEST(IS_NUMERIC_OBJ(v));
+        TEST(GET_NUMERIC_TYPE(v) == OBJ_NUM_INTEGER);
 
         str = KOS_object_to_string(frame, v);
         TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);
@@ -1417,7 +1418,8 @@ int main(void)
         KOS_OBJ_ID v = KOS_new_float(frame, 1);
         TEST( ! IS_BAD_PTR(v));
         TEST( ! IS_SMALL_INT(v));
-        TEST(GET_OBJ_TYPE(v) == OBJ_FLOAT);
+        TEST(IS_NUMERIC_OBJ(v));
+        TEST(GET_NUMERIC_TYPE(v) == OBJ_NUM_FLOAT);
 
         str = KOS_object_to_string(frame, v);
         TEST(GET_OBJ_TYPE(str)              == OBJ_STRING);

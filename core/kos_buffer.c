@@ -69,7 +69,7 @@ static BUFFER_DATA *_alloc_buffer(KOS_FRAME frame, unsigned capacity)
 KOS_OBJ_ID KOS_new_buffer(KOS_FRAME frame,
                           unsigned  size)
 {
-    KOS_BUFFER     *buffer   = (KOS_BUFFER *)_KOS_alloc_object(frame, KOS_BUFFER);
+    KOS_BUFFER     *buffer   = (KOS_BUFFER *)_KOS_alloc_object(frame, BUFFER);
     const unsigned  capacity = (size + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);
 
     if (buffer) {
