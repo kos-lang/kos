@@ -34,72 +34,6 @@
 
 static const char str_err_out_of_memory[] = "out of memory";
 
-#ifdef OLD_ALLOC
-
-int _KOS_alloc_init(KOS_CONTEXT *ctx)
-{
-    return KOS_SUCCESS;
-}
-
-void _KOS_alloc_destroy(KOS_CONTEXT *ctx)
-{
-    void *objects = ctx->allocator.objects;
-
-    while (objects) {
-        void *del = objects;
-        objects   = *(void **)objects;
-        _KOS_free(del);
-    }
-}
-
-void *_KOS_alloc_object_internal(KOS_FRAME                frame,
-                                 enum _KOS_AREA_ELEM_SIZE elem_size_pot,
-                                 int                      elem_size)
-{
-    assert((int)elem_size_pot >= 3 && (int)elem_size_pot <= 7);
-    assert(elem_size <= (1 << (int)elem_size_pot));
-    assert(_KOS_alloc_get_mode(frame) != KOS_AREA_FREE);
-    assert((int)elem_size_pot < 7 || _KOS_alloc_get_mode(frame) == KOS_AREA_FIXED);
-
-    KOS_PERF_CNT_ARRAY(alloc_object, (int)elem_size_pot);
-
-    return _KOS_alloc_buffer(frame, elem_size);
-}
-
-void *_KOS_alloc_buffer(KOS_FRAME frame, size_t size)
-{
-    uint8_t *obj = (uint8_t *)_KOS_malloc(size + sizeof(uint64_t) + 0x10);
-
-    if (obj) {
-        struct _KOS_ALLOCATOR *allocator = frame->allocator;
-
-        void **ptr = (void **)obj;
-
-        KOS_PERF_CNT(alloc_buffer);
-        KOS_PERF_ADD(alloc_buffer_total, (uint32_t)size);
-
-        for (;;) {
-            void *next = allocator->objects;
-            *ptr       = next;
-            if (KOS_atomic_cas_ptr(allocator->objects, next, (void *)obj))
-                break;
-        }
-
-        obj += sizeof(void *);
-        obj += 0x10 - ((int)(uintptr_t)obj & 0xF);
-    }
-    else
-        KOS_raise_exception_cstring(frame, str_err_out_of_memory);
-
-    return (void *)obj;
-}
-
-void _KOS_free_buffer(KOS_FRAME frame, void *ptr, size_t size)
-{
-}
-
-#else
-
 struct _KOS_AREA {
     KOS_ATOMIC(void *)   next;
     uint8_t              type;
@@ -418,8 +352,6 @@ void _KOS_free_buffer(KOS_FRAME frame, void *ptr, size_t size)
 {
     /* TODO put on freed list */
 }
-
-#endif
 
 void _KOS_alloc_set_mode(KOS_FRAME frame, enum _KOS_AREA_TYPE alloc_mode)
 {
