@@ -64,7 +64,7 @@ fun buffer_from_array(a)
     }
     return b
 }
-/*
+
 do {
     const b = buffer()
     assert b instanceof buffer
@@ -499,7 +499,7 @@ do {
     assert b[0]   == 101
     assert b[1]   == 102
 }
-*/
+
 do {
     const b  = new buffer
     const b3 = new buffer(3)
