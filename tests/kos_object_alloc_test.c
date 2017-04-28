@@ -203,7 +203,7 @@ int main(void)
             else
                 TEST(((intptr_t)objects[j] & 15) == 0);
 
-            memset(objects[j], (uint8_t)j, size);
+            memset(objects[j], (uint8_t)j, (size_t)size);
         }
 
         for (j = 0; j < NUM_OBJECTS; j++) {
@@ -255,7 +255,7 @@ int main(void)
                                        size);
             TEST(objects[j].obj);
 
-            memset(objects[j].obj, (uint8_t)j, size);
+            memset(objects[j].obj, (uint8_t)j, (size_t)size);
         }
 
         for (j = 0; j < NUM_OBJECTS; j++) {
@@ -307,7 +307,7 @@ int main(void)
 
             TEST(((intptr_t)objects[j].obj & 15) == 0);
 
-            memset(objects[j].obj, (uint8_t)j, size);
+            memset(objects[j].obj, (uint8_t)j, (size_t)size);
         }
 
         for (j = 0; j < NUM_OBJECTS; j++) {
