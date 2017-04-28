@@ -794,7 +794,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
         module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
         addr_to_func->buffer   = 0;
 
-        module->num_regs = (unsigned)program.cur_frame->num_regs;
+        module->num_regs = (uint16_t)program.cur_frame->num_regs;
 
         /* Disassemble */
         if (ctx->flags & KOS_CTX_DEBUG) {
