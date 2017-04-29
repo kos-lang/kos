@@ -96,6 +96,9 @@ int main(void)
     test_int("-0x8000000000000000",  0x80000000U,           0, KOS_SUCCESS);
     test_int("0xFFFFFFFFFFFFFFFF",   0xFFFFFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
     test_int("-0xFFFFFFFFFFFFFFFF",            0,           1, KOS_SUCCESS);
+    test_int("____1___2___",                   0,        0xCU, KOS_SUCCESS);
+    test_int("0X__A___",                       0,        0xAU, KOS_SUCCESS);
+    test_int("0B___1__0__",                    0,           2, KOS_SUCCESS);
     test_int("-",                              0,           0, KOS_ERROR_INTEGER_EXPECTED);
     test_int("--",                             0,           0, KOS_ERROR_INTEGER_EXPECTED);
     test_int("--1",                            0,           0, KOS_ERROR_INTEGER_EXPECTED);
@@ -109,6 +112,7 @@ int main(void)
     test_int("-0x10000000000000000",           0,           0, KOS_ERROR_INTEGER_EXPECTED);
     test_int("9223372036854775808",            0,           0, KOS_ERROR_INTEGER_EXPECTED);
     test_int("-9223372036854775809",           0,           0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("0x12G",                          0,           0, KOS_ERROR_INTEGER_EXPECTED);
 
     test_int("0b0111111111111111111111111111111111111111111111111111111111111111",   0x7FFFFFFFU, ~0U, KOS_SUCCESS);
     test_int("0b1000000000000000000000000000000000000000000000000000000000000000",   0x80000000U,  0U, KOS_SUCCESS);
@@ -117,6 +121,7 @@ int main(void)
     test_int("-0b01111111111111111111111111111111111111111111111111111111111111111",           0,  1U, KOS_SUCCESS);
     test_int("0b10000000000000000000000000000000000000000000000000000000000000000",            0,   0, KOS_ERROR_INTEGER_EXPECTED);
     test_int("-0b10000000000000000000000000000000000000000000000000000000000000000",           0,   0, KOS_ERROR_INTEGER_EXPECTED);
+    test_int("0b12",                                                                           0,   0, KOS_ERROR_INTEGER_EXPECTED);
 
     /* Zero */
     test_double("0",                       0x00000000U, 0x00000000U, KOS_SUCCESS);
@@ -211,6 +216,12 @@ int main(void)
     test_double("9007199254740991",        0x433FFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
     test_double("9223372036854775807",     0x43E00000U, 0x00000000U, KOS_SUCCESS);
     test_double("-0.00000E0",              0x80000000U, 0x00000000U, KOS_SUCCESS);
+
+    /* Formatting errors */
+    test_double("1e1A",                              0,           0, KOS_ERROR_INVALID_EXPONENT);
+    test_double("1e309",                             0,           0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
+    test_double("1e-325",                            0,           0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
+    test_double("9999999999999999999e308",           0,           0, KOS_ERROR_NUMBER_TOO_BIG);
 
     return status;
 }
