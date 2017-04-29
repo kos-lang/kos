@@ -1001,6 +1001,8 @@ do {
     assert 2     == λ->(2)()
     assert 3.0   == λ->(3)()
     assert 4.0   == λ->(4.0)()
+    assert 5.0   == λ->(5)()
+    assert 6     == λ->(6.0)()
     assert "abc" == λ->("abc")()
     assert void  == λ->(void)()
     assert false == λ->(false)()

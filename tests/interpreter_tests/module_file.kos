@@ -145,6 +145,7 @@ do {
     with const f = new file.file(name, file.ro) {
         assert f.size     == 100
         assert f.position == 0
+        assert typeof f.position == "integer"
 
         f.seek(50)
         assert f.position == 50
