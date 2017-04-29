@@ -1930,13 +1930,6 @@ static int _exec_function(KOS_FRAME frame)
                                 ret = _compare_integer(instr, src1_type, src2_type);
                             break;
 
-                        case OBJ_STRING:
-                            if (src2_type == OBJ_STRING)
-                                ret = _compare_string(instr, src1, src2);
-                            else
-                                ret = _compare_integer(instr, src1_type, src2_type);
-                            break;
-
                         default:
                             ret = _compare_integer(instr, src1_type, src2_type);
                             break;
