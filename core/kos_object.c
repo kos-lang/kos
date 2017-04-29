@@ -208,7 +208,8 @@ static int _salvage_item(KOS_PITEM *old_item, KOS_PBUF *new_table, uint32_t new_
 
     /* Store the value in the new table, unless another thread already
      * wrote something newer */
-    KOS_atomic_cas_ptr(new_item->value, RESERVED, value);
+    if (KOS_atomic_cas_ptr(new_item->value, RESERVED, value))
+        return ret;
 
     return ret;
 }
@@ -632,6 +633,7 @@ int KOS_set_property(KOS_FRAME  frame,
         }
     }
 
+#ifdef CONFIG_PERF
     if (value == TOMBSTONE) {
         if (error)
             KOS_PERF_CNT(object_delete_fail);
@@ -644,6 +646,7 @@ int KOS_set_property(KOS_FRAME  frame,
         else
             KOS_PERF_CNT(object_set_success);
     }
+#endif
 
     return error;
 }

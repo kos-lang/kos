@@ -102,14 +102,10 @@ int _KOS_init_array(KOS_FRAME  frame,
         if (buf) {
             capacity = buf->capacity;
 
-            if (size) {
-                _atomic_fill_ptr(&buf->buf[0], size, KOS_VOID);
+            _atomic_fill_ptr(&buf->buf[0], size, KOS_VOID);
 
-                if (size < capacity)
-                    _atomic_fill_ptr(&buf->buf[size], capacity - size, TOMBSTONE);
-            }
-            else
-                _atomic_fill_ptr(&buf->buf[0], capacity, TOMBSTONE);
+            if (size < capacity)
+                _atomic_fill_ptr(&buf->buf[size], capacity - size, TOMBSTONE);
         }
         else
             error = KOS_ERROR_EXCEPTION;
@@ -288,8 +284,10 @@ static int _resize_storage(KOS_FRAME  frame,
 
     _atomic_fill_ptr(&new_buf->buf[0], new_buf->capacity, TOMBSTONE);
 
-    if (!old_buf)
-        KOS_atomic_cas_ptr(array->data, (void *)0, (void *)new_buf);
+    if (!old_buf) {
+        if ( ! KOS_atomic_cas_ptr(array->data, (void *)0, (void *)new_buf))
+            _KOS_free_buffer(frame, new_buf, KOS_buffer_alloc_size(new_buf->capacity));
+    }
     else if (KOS_atomic_cas_ptr(old_buf->next, (void *)0, (void *)new_buf))
         _copy_buf(frame, array, old_buf, new_buf);
     else {
@@ -376,13 +374,14 @@ int KOS_array_resize(KOS_FRAME frame, KOS_OBJ_ID obj_id, uint32_t size)
 
         if (size != old_size) {
             if (size > old_size) {
+                /* TODO try to improve this */
                 KOS_ATOMIC(KOS_OBJ_ID) *ptr = &buf->buf[old_size];
                 KOS_ATOMIC(KOS_OBJ_ID) *end = &buf->buf[size];
                 while (ptr < end)
-                    KOS_atomic_cas_ptr(*(ptr++), TOMBSTONE, KOS_VOID);
+                    KOS_atomic_write_ptr(*(ptr++), KOS_VOID);
             }
             else {
-                /* TODO improve this */
+                /* TODO try to improve this */
                 KOS_ATOMIC(KOS_OBJ_ID) *ptr = &buf->buf[size];
                 KOS_ATOMIC(KOS_OBJ_ID) *end = &buf->buf[old_size];
                 while (ptr < end)
