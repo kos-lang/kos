@@ -46,15 +46,25 @@
 #endif
 
 static const char str_err_bad_flags[]           = "incorrect file open flags";
-static const char str_err_file_not_open[]       = "file not open";
 static const char str_err_cannot_get_position[] = "unable to obtain file position";
 static const char str_err_cannot_get_size[]     = "unable to obtain file size";
+static const char str_err_cannot_open_file[]    = "unable to open file";
 static const char str_err_cannot_set_position[] = "unable to update file position";
+static const char str_err_file_not_open[]       = "file not open";
 static const char str_err_file_read[]           = "file read error";
 static const char str_err_file_write[]          = "file write error";
 static const char str_err_invalid_buffer_size[] = "buffer size out of range";
 static const char str_err_not_buffer[]          = "argument to file write is not a buffer";
 static const char str_err_too_many_to_read[]    = "requested read size exceeds buffer size limit";
+static const char str_position[]                = "position";
+
+static KOS_OBJ_ID _get_file_pos(KOS_FRAME  frame,
+                                KOS_OBJ_ID this_obj,
+                                KOS_OBJ_ID args_obj);
+
+static KOS_OBJ_ID _set_file_pos(KOS_FRAME  frame,
+                                KOS_OBJ_ID this_obj,
+                                KOS_OBJ_ID args_obj);
 
 static void _fix_path_separators(struct _KOS_VECTOR *buf)
 {
@@ -110,10 +120,17 @@ static KOS_OBJ_ID _open(KOS_FRAME  frame,
 
     file = fopen(filename_cstr.buffer, flags_cstr.size ? flags_cstr.buffer : "r+b");
 
-    /* TODO raise exception if ! file */
+    if ( ! file)
+        RAISE_EXCEPTION(str_err_cannot_open_file);
 
     ret = KOS_new_object_with_prototype(frame, this_obj);
     TRY_OBJID(ret);
+
+    TRY(KOS_set_builtin_dynamic_property(frame,
+                                         ret,
+                                         KOS_context_get_cstring(frame, str_position),
+                                         _get_file_pos,
+                                         _set_file_pos));
 
     OBJPTR(OBJECT, ret)->finalize = _finalize;
 

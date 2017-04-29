@@ -102,6 +102,12 @@ do {
 }
 
 ##############################################################################
+# file.file - open non-existent file
+do {
+    expect_fail(λ->(new file.file("_#non_existent#_*?", file.ro)))
+}
+
+##############################################################################
 # file.close
 
 do {
@@ -151,11 +157,28 @@ do {
 
         f.position = 200
         assert f.position == 200
+        assert f.size     == 100
 
         const buf2 = f.read(10)
         assert f.position == 200
-        # TODO ???
-        #assert buf2.size  == 0
+        assert buf2.size  == 0
+
+        f.position = 70
+        assert f.position == 70
+
+        const buf3 = f.read(2)
+        assert f.position == 72
+        assert buf3.size  == 2
+        assert buf3[0]    == 170
+        assert buf3[1]    == 171
+
+        f[λ->("position")()] = 31
+        assert f[λ->("position")()] == 31
+
+        const buf4 = f.read(1)
+        assert f.position == 32
+        assert buf4.size  == 1
+        assert buf4[0]    == 131
     }
 
     assert file.remove(name)
