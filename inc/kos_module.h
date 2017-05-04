@@ -122,4 +122,11 @@ do {                                                                            
     TRY(KOS_set_builtin_dynamic_property((frame), (proto), str, (getter), (setter))); \
 } while (0)
 
+#define TRY_ADD_INTEGER_CONSTANT(frame, name, value)                           \
+do {                                                                           \
+    static const char str_name[] = name;                                       \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name); \
+    TRY(KOS_module_add_global((frame), str, TO_SMALL_INT((int)(value)), 0));   \
+} while (0)
+
 #endif

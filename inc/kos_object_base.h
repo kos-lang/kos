@@ -62,7 +62,8 @@ enum KOS_OBJECT_SUBTYPE {
     OBJ_SUBTYPE      = 0x1F,
     OBJ_DYNAMIC_PROP = 0x2F,
     OBJ_OBJECT_WALK  = 0x3F,
-    OBJ_MODULE       = 0x4F
+    OBJ_MODULE       = 0x4F,
+    OBJ_CUSTOM       = 0x5F
 };
 
 enum KOS_OBJECT_TYPE_TO_TAG {
@@ -76,7 +77,8 @@ enum KOS_OBJECT_TYPE_TO_TAG {
     OBJ_TAG_SUBTYPE      = OBJ_INTERNAL,
     OBJ_TAG_DYNAMIC_PROP = OBJ_INTERNAL,
     OBJ_TAG_OBJECT_WALK  = OBJ_INTERNAL,
-    OBJ_TAG_MODULE       = OBJ_INTERNAL
+    OBJ_TAG_MODULE       = OBJ_INTERNAL,
+    OBJ_TAG_CUSTOM       = OBJ_INTERNAL
 };
 
 struct _KOS_OBJECT_PLACEHOLDER;
@@ -311,6 +313,14 @@ typedef struct _KOS_OBJECT_WALK {
     void                *key_table;
 } KOS_OBJECT_WALK;
 
+/* Typically used by built-in generators */
+typedef struct _KOS_CUSTOM {
+    KOS_SUBTYPE          type; /* OBJ_CUSTOM */
+    uint8_t              _reserved[7];
+    KOS_OBJ_ID           owned;
+    KOS_FINALIZE         finalize;
+} KOS_CUSTOM;
+
 typedef union _KOS_INTERNAL_OBJECT {
     KOS_SUBTYPE          type;
     KOS_DYNAMIC_PROP     dynamic_prop;
@@ -341,6 +351,8 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_FRAME            frame,
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
                                 KOS_OBJ_ID getter,
                                 KOS_OBJ_ID setter);
+
+KOS_OBJ_ID KOS_new_custom(KOS_FRAME frame, size_t custom_size);
 
 #ifdef __cplusplus
 }
