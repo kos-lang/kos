@@ -20,15 +20,37 @@
 # IN THE SOFTWARE.
 #
 
-module = kos_modules
-depth  = modules
+import lang
+import kos
 
-c_files  = kos_mod_file.c
-c_files += kos_mod_kos.c
-c_files += kos_mod_lang.c
-c_files += kos_mod_math.c
-c_files += kos_mod_random.c
-c_files += kos_modules_init.c
+fun expect_fail(function)
+{
+    var failed = false
+    try {
+        function()
+    }
+    catch const e {
+        failed = true
+    }
+    assert failed
+}
 
-include ../build/rules.mk
-include ../build/lib.mk
+do {
+    const buf = lang.buffer();
+    buf.pack("s", "try/*comment*/+0=0x44")
+    const expected = [ [  1, "token_keyword",  "try"         ],
+                       [  4, "token_comment",  "/*comment*/" ],
+                       [ 15, "token_operator", "+"           ],
+                       [ 16, "token_numeric",  "0"           ],
+                       [ 17, "token_operator", "="           ],
+                       [ 18, "token_numeric",  "0x44"        ] ]
+    var idx = 0
+
+    for var token in kos.lexer(buf) {
+        assert token.line   == 1
+        assert token.column == expected[idx][0]
+        assert token.type   == kos[expected[idx][1]]
+        assert token.token  == expected[idx][2]
+        idx += 1
+    }
+}
