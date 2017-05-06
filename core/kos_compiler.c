@@ -672,6 +672,7 @@ static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
 
     assert(opcode == INSTR_LOAD_FUN  ||
            opcode == INSTR_LOAD_GEN  ||
+           opcode == INSTR_LOAD_CTOR ||
            opcode == INSTR_CATCH     ||
            opcode == INSTR_JUMP      ||
            opcode == INSTR_JUMP_COND ||
@@ -680,14 +681,19 @@ static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
     switch (opcode) {
         case INSTR_LOAD_FUN:
             /* fall through */
-        case INSTR_LOAD_GEN: jump_instr_size = 9; break;
-        case INSTR_JUMP:     jump_instr_size = 5; break;
-        default:             jump_instr_size = 6; break;
+        case INSTR_LOAD_GEN:
+            /* fall through */
+        case INSTR_LOAD_CTOR: jump_instr_size = 9; break;
+        case INSTR_JUMP:      jump_instr_size = 5; break;
+        default:              jump_instr_size = 6; break;
     }
 
     jump_offs = target_offs - (jump_instr_offs + jump_instr_size);
 
-    buf += (opcode == INSTR_LOAD_FUN || opcode == INSTR_LOAD_GEN || opcode == INSTR_CATCH) ? 2 : 1;
+    buf += (opcode == INSTR_LOAD_FUN
+         || opcode == INSTR_LOAD_GEN
+         || opcode == INSTR_LOAD_CTOR
+         || opcode == INSTR_CATCH) ? 2 : 1;
 
     for (end = buf+4; buf < end; ++buf) {
         *buf      =   (uint8_t)jump_offs;
@@ -2619,43 +2625,6 @@ _error:
     return error;
 }
 
-static int _new(struct _KOS_COMP_UNIT      *program,
-                const struct _KOS_AST_NODE *node,
-                struct _KOS_REG           **reg)
-{
-    int              error;
-    struct _KOS_REG *fun  = 0;
-    struct _KOS_REG *args = _is_var_used(program, node, *reg) ? 0 : *reg;
-
-    assert(node->children);
-
-    node = node->children;
-    assert(node->type == NT_INVOCATION);
-    assert(!node->next);
-
-    node = node->children;
-    assert(node);
-
-    TRY(_visit_node(program, node, &fun));
-    assert(fun);
-
-    node = node->next;
-
-    TRY(_gen_array(program, node, &args));
-
-    if ( ! *reg)
-        *reg = args;
-
-    TRY(_gen_instr3(program, INSTR_NEW, (*reg)->reg, fun->reg, args->reg));
-
-    _free_reg(program, fun);
-    if (args != *reg)
-        _free_reg(program, args);
-
-_error:
-    return error;
-}
-
 enum _CHECK_TYPE {
     CHECK_NUMERIC           = 1,
     CHECK_STRING            = 2,
@@ -2691,6 +2660,8 @@ static int _check_const_literal(struct _KOS_COMP_UNIT      *program,
         case NT_VOID_LITERAL:
             /* fall through */
         case NT_FUNCTION_LITERAL:
+            /* fall through */
+        case NT_CONSTRUCTOR_LITERAL:
             /* fall through */
         case NT_ARRAY_LITERAL:
             /* fall through */
@@ -3011,9 +2982,6 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
 
         case OT_NONE:
             switch (kw) {
-
-                case KW_NEW:
-                    return _new(program, node, reg);
 
                 case KW_TYPEOF:
                     opcode   = INSTR_TYPE;
@@ -3572,7 +3540,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT      *program,
 
     TRY(_gen_instr3(program, INSTR_GET_MOD_ELEM, func_reg->reg, 0, string_idx));
 
-    TRY(_gen_instr3(program, INSTR_NEW, (*reg)->reg, func_reg->reg, args->reg));
+    TRY(_gen_instr4(program, INSTR_CALL, (*reg)->reg, func_reg->reg, args->reg, args->reg));
 
     _free_reg(program, func_reg);
     if (args != *reg)
@@ -3922,12 +3890,12 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     size_t             addr2line_start_offs;
     struct _BIND_ARGS  bind_args;
 
-    const struct _KOS_AST_NODE *fun_node;
+    const struct _KOS_AST_NODE *fun_node = node;
     const struct _KOS_AST_NODE *open_node;
 
     assert(frame);
 
-    frame->fun_token    = &node->token;
+    frame->fun_token    = &fun_node->token;
     frame->parent_frame = last_frame;
     frame->program_offs = program->cur_offs; /* Temp, for load_offs, overwritten in _append_frame() */
     frame->load_offs    = program->cur_offs - last_frame->program_offs;
@@ -3958,8 +3926,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     fun_start_offs       = program->cur_offs;
     addr2line_start_offs = program->addr2line_gen_buf.size;
 
-    fun_node = node;
-    node = node->children;
+    node = fun_node->children;
     assert(node);
     assert(node->type == NT_PARAMETERS);
     node = node->next;
@@ -4005,10 +3972,12 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     TRY(_add_addr2line(program, &fun_node->token, _KOS_FALSE));
 
-    /* Generate LOAD.FUN/LOAD.GEN instruction in the parent frame */
+    /* Generate LOAD.FUN/LOAD.GEN/LOAD.CTOR instruction in the parent frame */
     TRY(_gen_reg(program, reg));
     TRY(_gen_instr5(program,
-                    frame->yield_token ? INSTR_LOAD_GEN : INSTR_LOAD_FUN,
+                    fun_node->type == NT_CONSTRUCTOR_LITERAL
+                        ? INSTR_LOAD_CTOR
+                        : frame->yield_token ? INSTR_LOAD_GEN : INSTR_LOAD_FUN,
                     (*reg)->reg,
                     0,
                     scope->num_args,
@@ -4236,6 +4205,8 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             error = _void_literal(program, node, reg);
             break;
         case NT_FUNCTION_LITERAL:
+            /* fall through */
+        case NT_CONSTRUCTOR_LITERAL:
             error = _function_literal(program, node, reg);
             break;
         case NT_ARRAY_LITERAL:

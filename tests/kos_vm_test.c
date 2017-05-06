@@ -592,7 +592,7 @@ int main(void)
     }
 
     /************************************************************************/
-    /* NEW */
+    /* CALL constructor */
     {
         static const char str[]    = "own property";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
@@ -603,11 +603,11 @@ int main(void)
             INSTR_SET_PROP,   1, IMM32(0), 0,
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-26), 1, 2, 0,
+            INSTR_LOAD_CTOR,  0, IMM32(-26), 1, 2, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(1),      /* create arguments array */
             INSTR_LOAD_INT32, 2, IMM32(0xC0DEU),
             INSTR_SET_ELEM,   1, IMM32(0), 2,   /* set argument */
-            INSTR_NEW,        0, 0, 1,
+            INSTR_CALL,       0, 0, 1, 1,
             INSTR_RETURN,     0, 0
         };
 
@@ -621,7 +621,7 @@ int main(void)
     }
 
     /************************************************************************/
-    /* NEW */
+    /* CALL constructor */
     {
         static const char str[]    = "own property";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
@@ -633,11 +633,11 @@ int main(void)
             INSTR_LOAD_INT32, 0, IMM32(0),      /* return value is ignored */
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-32), 1, 2, 0,
+            INSTR_LOAD_CTOR,  0, IMM32(-32), 1, 2, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(1),      /* create arguments array */
             INSTR_LOAD_INT32, 2, IMM32(0xC0DEU),
             INSTR_SET_ELEM,   1, IMM32(0), 2,   /* set argument */
-            INSTR_NEW,        0, 0, 1,
+            INSTR_CALL,       0, 0, 1, 1,
             INSTR_RETURN,     0, 0
         };
 
@@ -658,9 +658,9 @@ int main(void)
 
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-12), 0, 2, 0,
+            INSTR_LOAD_CTOR,  0, IMM32(-12), 0, 2, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(0),
-            INSTR_NEW,        1, 0, 1,
+            INSTR_CALL,       1, 0, 1, 1,
 
             INSTR_INSTANCEOF, 0, 1, 0,
             INSTR_RETURN,     0, 0
@@ -680,10 +680,10 @@ int main(void)
             INSTR_RETURN,        0, 0,
 
             INSTR_LOAD_ARRAY,    1, IMM32(0),
-            INSTR_LOAD_FUN,      2, IMM32(-18), 0, 2, 0,
-            INSTR_LOAD_FUN,      3, IMM32(-27), 0, 2, 0,
-            INSTR_NEW,           4, 2, 1,
-            INSTR_NEW,           5, 3, 1,
+            INSTR_LOAD_CTOR,     2, IMM32(-18), 0, 2, 0,
+            INSTR_LOAD_CTOR,     3, IMM32(-27), 0, 2, 0,
+            INSTR_CALL,          4, 2, 2, 1,
+            INSTR_CALL,          5, 3, 3, 1,
 
             INSTR_LOAD_FALSE,    0,
             INSTR_INSTANCEOF,    1, 4, 2,
@@ -715,10 +715,10 @@ int main(void)
             INSTR_RETURN,        0, 0,
 
             INSTR_LOAD_ARRAY,    1, IMM32(0),
-            INSTR_LOAD_FUN,      2, IMM32(-21), 0, 2, 0,
-            INSTR_LOAD_FUN,      3, IMM32(-27), 0, 2, 0,
-            INSTR_NEW,           4, 2, 1,
-            INSTR_NEW,           5, 3, 1,
+            INSTR_LOAD_CTOR,     2, IMM32(-21), 0, 2, 0,
+            INSTR_LOAD_CTOR,     3, IMM32(-27), 0, 2, 0,
+            INSTR_CALL,          4, 2, 2, 1,
+            INSTR_CALL,          5, 3, 3, 1,
 
             INSTR_LOAD_FALSE,    0,
             INSTR_INSTANCEOF,    1, 4, 2,
@@ -756,7 +756,7 @@ int main(void)
         TEST(!IS_BAD_PTR(ret));
         TEST(!IS_SMALL_INT(ret));
         TEST(GET_OBJ_TYPE(ret) == OBJ_FUNCTION);
-        TEST(OBJPTR(FUNCTION, ret)->generator_state == KOS_GEN_READY);
+        TEST(OBJPTR(FUNCTION, ret)->state == KOS_GEN_READY);
         TEST(OBJPTR(FUNCTION, ret)->generator_stack_frame != 0);
     }
 

@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-fun test_lock(acquire, release)
+constructor test_lock(acquire, release)
 {
     this.acquire_count = 0
     this.release_count = 0
@@ -30,25 +30,25 @@ fun test_lock(acquire, release)
     }
 }
 
-fun test_full_lock
+constructor test_full_lock
 {
     test_lock.apply(this, [fun { this.acquire_count += 1 },
                            fun { this.release_count += 1 }])
 }
 
-fun test_release_lock
+constructor test_release_lock
 {
     test_lock.apply(this, [void, fun { this.release_count += 1 }])
 }
 
-fun test_cancellable_lock
+constructor test_cancellable_lock
 {
     test_lock.apply(this, [void, fun { if ! this.cancel { this.release_count += 1 } }])
     this.cancel = false
 }
 
 do {
-    const lock = new test_release_lock
+    const lock = test_release_lock()
 
     with lock {
         lock.test = "x"
@@ -61,7 +61,7 @@ do {
 }
 
 do {
-    const lock = new test_full_lock
+    const lock = test_full_lock()
 
     with lock {
         lock.test = "y"
@@ -75,7 +75,7 @@ do {
 
 do {
     var exception = false
-    var lock      = new test_full_lock
+    var lock      = test_full_lock()
 
     try {
         with lock {
@@ -117,7 +117,7 @@ do {
 }
 
 do {
-    const lock = new test_cancellable_lock
+    const lock = test_cancellable_lock()
 
     with lock { }
 
@@ -142,10 +142,10 @@ do {
 }
 
 do {
-    const lock1 = new test_full_lock
-    const lock2 = new test_full_lock
-    const lock3 = new test_lock(void, fun { throw void })
-    const lock4 = new test_full_lock
+    const lock1 = test_full_lock()
+    const lock2 = test_full_lock()
+    const lock3 = test_lock(void, fun { throw void })
+    const lock4 = test_full_lock()
     var exception = false
 
     try {
@@ -168,9 +168,9 @@ do {
 }
 
 do {
-    const lock1 = new test_full_lock
-    const lock2 = new test_lock(fun { throw void }, fun { lock1.acquire_count -= 100 })
-    const lock3 = new test_full_lock
+    const lock1 = test_full_lock()
+    const lock2 = test_lock(fun { throw void }, fun { lock1.acquire_count -= 100 })
+    const lock3 = test_full_lock()
     var exception = false
 
     try {
@@ -191,8 +191,8 @@ do {
 }
 
 do {
-    const lock1 = new test_lock(void, fun { throw 10 })
-    const lock2 = new test_lock(fun { throw 20 }, fun { })
+    const lock1 = test_lock(void, fun { throw 10 })
+    const lock2 = test_lock(fun { throw 20 }, fun { })
     var exception = false
 
     try {

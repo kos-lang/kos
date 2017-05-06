@@ -18,28 +18,10 @@
         myobj.prop = set fun { };
         myobj.prop = get fun { };
 
-* Real constructor functions
+* Constructor functions
 
-        constructor Base(a)
-        {
-            this.a = a
-            # return with arguments is a syntax error, except return this
-        }
-        var x = Base(1)    # No new operator, implicit
-
-        var y = {}         # Self-constructed
-        Base.apply(y, [2]) # Initialize, but prototype not reset!
-
-    - Remove `new` operator.
-    - In JS the ability of invoking a constructor function like a regular
-      functions only seems to serve the purpose of initializing another
-      object by the constructor function, like in the above example.  This is
-      useful in poor man's inheritance idiom in JS.
-    - With the above approach the `new` operator is not needed.
-    - Advantage of this new approach: now constructor functions can be used in
-      map operations.
+    - Write test to use constructors with map function.
     - Determine interaction with generators and iterators.
-    - Should `typeof` return `"constructor"` instead of `"function"`?
 
 * Class-like prototypes in conjunction with real constructor functions
 
@@ -57,7 +39,7 @@
             }
 
             assert typeof Base == "function"
-            var b = new Base(1, 2)
+            var b = Base(1, 2)
             print("\(b.get_x()) \(b.get_y())")
 
             class Derived : Base {

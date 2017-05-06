@@ -99,14 +99,14 @@ do {
 }
 
 do {
-    fun constr
+    constructor constr
     {
         this.b = "b"
     }
 
     constr.set_prototype({ a: "a" })
 
-    const obj = new constr
+    const obj = constr()
     assert obj instanceof constr
     assert obj.a == "a"
     assert obj.b == "b"
@@ -126,33 +126,33 @@ do {
 }
 
 do {
-    fun constr(a)
+    constructor constr(a)
     {
         this.a = a + 1
     }
 
-    expect_fail(λ->(new constr))
+    expect_fail(λ->(constr()))
 
-    const obj = new constr(8)
+    const obj = constr(8)
 
     assert obj.a == 9
 }
 
 do {
-    var obj = fun { this.a = 123 }
-    obj = new obj
+    var obj = constructor { this.a = 123 }
+    obj = obj()
     assert typeof obj == "object"
     assert obj.a      == 123
 }
 
 do {
-    fun constr(a)
+    constructor constr(a)
     {
         this.a = a + 2
     }
 
     var obj = 10
-    obj = new constr(obj)
+    obj = constr(obj)
     assert typeof obj == "object"
     assert obj.a      == 12
 }
@@ -160,14 +160,14 @@ do {
 do {
     const base = [void, void, void]
 
-    fun constr(a)
+    constructor constr(a)
     {
         this.a = a * 2
     }
 
     constr.set_prototype(base)
 
-    const obj = new constr(5)
+    const obj = constr(5)
     assert obj instanceof constr
 
     assert obj.a == 10
@@ -194,17 +194,17 @@ do {
 }
 
 do {
-    fun constr1(a)
+    constructor constr1(a)
     {
         this.a = a
     }
 
-    fun constr2
+    constructor constr2
     {
         this.a = void
     }
 
-    const obj   = new constr1(42)
+    const obj   = constr1(42)
     const other = { a: 42 }
 
     assert obj != other
@@ -222,7 +222,7 @@ do {
 }
 
 do {
-    fun constr
+    constructor constr
     {
         this.c = 0
         this.d = 1
@@ -232,7 +232,7 @@ do {
     constr.prototype.a = 10
     constr.prototype.b = 11
 
-    const obj = new constr
+    const obj =  constr()
 
     const values = ['c', 'd', 'e']
 
@@ -252,24 +252,12 @@ do {
 do {
     fun get_constr
     {
-        return fun { }
+        return constructor { }
     }
 
-    const o1 = new (get_constr())()
-    const o2 = new (get_constr())()
+    const o1 = get_constr()()
+    const o2 = get_constr()()
 
     assert o1 instanceof get_constr()
     assert o2 instanceof get_constr()
-}
-
-do {
-    fun constr
-    {
-        # Turn it into a generator
-        if false {
-            yield void
-        }
-    }
-
-    expect_fail(λ->(new constr))
 }

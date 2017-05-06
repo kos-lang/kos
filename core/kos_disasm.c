@@ -93,8 +93,7 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_HAS_PROP:            /* fall through */
         case INSTR_INSTANCEOF:          /* fall through */
         case INSTR_BIND:                /* fall through */
-        case INSTR_CALL_GEN:            /* fall through */
-        case INSTR_NEW:
+        case INSTR_CALL_GEN:
             return 3;
 
         case INSTR_CALL:                /* fall through */
@@ -103,7 +102,8 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
             return 4;
 
         case INSTR_LOAD_FUN:            /* fall through */
-        case INSTR_LOAD_GEN:
+        case INSTR_LOAD_GEN:            /* fall through */
+        case INSTR_LOAD_CTOR:
             return 5;
     }
 }
@@ -148,6 +148,8 @@ int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_GEN:
             /* fall through */
+        case INSTR_LOAD_CTOR:
+            /* fall through */
         case INSTR_GET_MOD:
             /* fall through */
         case INSTR_SET_ELEM:
@@ -190,6 +192,8 @@ static int _get_offset_operand_tail(enum _KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_FUN:
             /* fall through */
         case INSTR_LOAD_GEN:
+            /* fall through */
+        case INSTR_LOAD_CTOR:
             if (op == 1)
                 return 3;
             break;
@@ -222,6 +226,8 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_FUN:
             /* fall through */
         case INSTR_LOAD_GEN:
+            /* fall through */
+        case INSTR_LOAD_CTOR:
             /* fall through */
         case INSTR_LOAD_ARRAY8:
             /* fall through */
@@ -313,6 +319,7 @@ void _KOS_disassemble(const char                          *filename,
         "LOAD.VOID",
         "LOAD.FUN",
         "LOAD.GEN",
+        "LOAD.CTOR",
         "LOAD.ARRAY8",
         "LOAD.ARRAY",
         "LOAD.OBJ",
@@ -357,7 +364,6 @@ void _KOS_disassemble(const char                          *filename,
         "BIND.SELF",
         "CALL",
         "CALL.GEN",
-        "NEW",
         "RETURN",
         "TAIL.CALL",
         "YIELD",

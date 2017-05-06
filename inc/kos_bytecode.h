@@ -49,6 +49,9 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* LOAD.GEN <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg>
      * Create a generator object with the specified code. */
     INSTR_LOAD_GEN,
+    /* LOAD.CTOR <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg>
+     * Create a constructor function object with the specified code. */
+    INSTR_LOAD_CTOR,
     /* LOAD.ARRAY8 <r.dest>, <int.size8> */
     INSTR_LOAD_ARRAY8,
     /* LOAD.ARRAY <r.dest>, <int.size32> */
@@ -159,8 +162,6 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* Call generator which is "READY" or "ACTIVE".  r.final is set to false
      * if a subsequent value is yielded or true if the generator returned. */
     INSTR_CALL_GEN,
-    /* NEW <r.dest>, <r.func>, <r.args> */
-    INSTR_NEW,
     /* RETURN <closure.size.int>, <r.src> */
     INSTR_RETURN,
     /* TAIL.CALL <closure.size.int>, <r.func>, <r.this>, <r.args> */

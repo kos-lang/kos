@@ -77,6 +77,7 @@ static const char *const node_types[] = {
     "bool",
     "void",
     "function",
+    "constructor",
     "array",
     "object"
 };

@@ -50,6 +50,7 @@ static const char str_err_expected_paren_open[]       = "expected '('";
 static const char str_err_expected_semicolon[]        = "expected ';'";
 static const char str_err_expected_square_close[]     = "expected ']'";
 static const char str_err_expected_string[]           = "unexpected interpolated string";
+static const char str_err_expected_this[]             = "expected 'this' inside a constructor function";
 static const char str_err_expected_var[]              = "expected 'var'";
 static const char str_err_expected_var_or_const[]     = "expected 'var' or 'const'";
 static const char str_err_expected_var_assignment[]   = "expected '=' in variable declaration";
@@ -59,6 +60,7 @@ static const char str_err_unexpected_break[]          = "unexpected 'break' stat
 static const char str_err_unexpected_continue[]       = "unexpected 'continue' statement; can only be used inside a loop";
 static const char str_err_unexpected_import[]         = "unexpected 'import' statement";
 static const char str_err_unsupported_slice_assign[]  = "unsupported assignment to slice, expected '='";
+static const char str_err_yield_in_constructor[]      = "'yield' not allowed in constructors";
 
 static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
 static int _member_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
@@ -223,21 +225,28 @@ static int _fetch_optional_paren(struct _KOS_PARSER *parser, int *was_paren)
     return error;
 }
 
-static int _function_literal(struct _KOS_PARSER *parser, int need_compound, struct _KOS_AST_NODE **ret)
+static int _function_literal(struct _KOS_PARSER    *parser,
+                             enum _KOS_KEYWORD_TYPE keyword,
+                             int                    need_compound,
+                             struct _KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
     struct _KOS_AST_NODE *node = 0;
     struct _KOS_AST_NODE *args;
 
-    const int lambda            = parser->token.keyword == KW_LAMBDA;
+    const int lambda            = keyword == KW_LAMBDA;
+    const int constructor       = keyword == KW_CONSTRUCTOR;
     const int saved_unary_depth = parser->unary_depth;
     const int saved_allow_break = parser->allow_break;
+    const int saved_constructor = parser->in_constructor;
 
-    parser->unary_depth = 0;
-    parser->allow_break = 0;
+    parser->unary_depth    = 0;
+    parser->allow_break    = 0;
+    parser->in_constructor = constructor;
 
-    TRY(_new_node(parser, ret, NT_FUNCTION_LITERAL));
+    TRY(_new_node(parser, ret,
+                  constructor ? NT_CONSTRUCTOR_LITERAL : NT_FUNCTION_LITERAL));
 
     TRY(_next_token(parser));
 
@@ -305,7 +314,7 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
 
         struct _KOS_AST_NODE *return_node;
 
-        if (need_compound) {
+        if (need_compound || constructor) {
             parser->error_str = str_err_expected_curly_open;
             error = KOS_ERROR_PARSE_FAILED;
             goto _error;
@@ -348,7 +357,7 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
 
         TRY(_push_node(parser, node, NT_RETURN, &node));
 
-        TRY(_push_node(parser, node, NT_VOID_LITERAL, 0));
+        TRY(_push_node(parser, node, constructor ? NT_THIS_LITERAL : NT_VOID_LITERAL, 0));
 
         TRY(_push_node(parser, *ret, NT_LANDMARK, 0));
 
@@ -356,8 +365,9 @@ static int _function_literal(struct _KOS_PARSER *parser, int need_compound, stru
     }
 
 _error:
-    parser->unary_depth = saved_unary_depth;
-    parser->allow_break = saved_allow_break;
+    parser->unary_depth    = saved_unary_depth;
+    parser->allow_break    = saved_allow_break;
+    parser->in_constructor = saved_constructor;
 
     return error;
 }
@@ -525,6 +535,7 @@ static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
                 error = _new_node(parser, ret, NT_STRING_LITERAL);
                 break;
             case TT_STRING_OPEN_SQ:
+                /* fall through */
             case TT_STRING_OPEN_DQ:
                 error = _interpolated_string(parser, ret);
                 break;
@@ -534,8 +545,11 @@ static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             case TT_KEYWORD:
                 switch (token->keyword) {
                     case KW_FUN:
+                        /* fall through */
                     case KW_LAMBDA:
-                        error = _function_literal(parser, 0, ret);
+                        /* fall through */
+                    case KW_CONSTRUCTOR:
+                        error = _function_literal(parser, token->keyword, 0, ret);
                         break;
                     case KW_THIS:
                         error = _new_node(parser, ret, NT_THIS_LITERAL);
@@ -544,6 +558,7 @@ static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
                         error = _new_node(parser, ret, NT_LINE_LITERAL);
                         break;
                     case KW_TRUE:
+                        /* fall through */
                     case KW_FALSE:
                         error = _new_node(parser, ret, NT_BOOL_LITERAL);
                         break;
@@ -593,7 +608,6 @@ static int _unary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     int                   error             = KOS_SUCCESS;
     const int             saved_unary_depth = parser->unary_depth;
     struct _KOS_AST_NODE *node              = 0;
-    struct _KOS_AST_NODE *invocation        = 0;
 
     TRY(_next_token(parser));
 
@@ -611,25 +625,6 @@ static int _unary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
         node = 0;
 
         assert(parser->unary_depth == saved_unary_depth + 1);
-    }
-    else if (parser->token.keyword == KW_NEW) {
-
-        TRY(_new_node(parser, ret, NT_OPERATOR));
-
-        TRY(_new_node(parser, &invocation, NT_INVOCATION));
-
-        TRY(_member_expr(parser, &node));
-
-        if (node->type != NT_INVOCATION) {
-            _ast_push(invocation, node);
-            node       = invocation;
-            invocation = 0;
-        }
-
-        _ast_push(*ret, node);
-        node = 0;
-
-        assert(parser->unary_depth == saved_unary_depth);
     }
     else {
 
@@ -1001,6 +996,12 @@ static int _right_hand_side_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NOD
     TRY(_next_token(parser));
 
     if (parser->token.keyword == KW_YIELD) {
+
+        if (parser->in_constructor) {
+            parser->error_str = str_err_yield_in_constructor;
+            error = KOS_ERROR_PARSE_FAILED;
+            goto _error;
+        }
 
         TRY(_new_node(parser, ret, NT_YIELD));
 
@@ -1464,34 +1465,35 @@ _error:
 
 static int _function_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
-    int                   error = KOS_SUCCESS;
-    struct _KOS_AST_NODE *const_node;
-    struct _KOS_AST_NODE *fun_node    = 0;
-    struct _KOS_TOKEN     fun_keyword = parser->token;
+    int                    error        = KOS_SUCCESS;
+    struct _KOS_AST_NODE  *const_node;
+    struct _KOS_AST_NODE  *fun_node     = 0;
+    struct _KOS_TOKEN      fun_kw_token = parser->token;
+    enum _KOS_KEYWORD_TYPE fun_keyword  = fun_kw_token.keyword;
 
     TRY(_next_token(parser));
 
     if (parser->token.type == TT_IDENTIFIER) {
 
         /* To simplify operator selection in the compiler */
-        fun_keyword.op = OT_SET;
+        fun_kw_token.op = OT_SET;
 
         TRY(_new_node(parser, ret, NT_ASSIGNMENT));
-        (*ret)->token = fun_keyword;
+        (*ret)->token = fun_kw_token;
 
         TRY(_push_node(parser, *ret, NT_CONST, &const_node));
-        const_node->token = fun_keyword;
+        const_node->token = fun_kw_token;
 
         TRY(_push_node(parser, const_node, NT_IDENTIFIER, 0));
 
-        TRY(_function_literal(parser, 1, &fun_node));
+        TRY(_function_literal(parser, fun_keyword, 1, &fun_node));
 
         _ast_push(*ret, fun_node);
         fun_node = 0;
     }
     else {
 
-        _KOS_lexer_unget_token(&parser->lexer, &fun_keyword);
+        _KOS_lexer_unget_token(&parser->lexer, &fun_kw_token);
         parser->unget = 0;
         TRY(_expr_stmt(parser, ret));
     }
@@ -2378,10 +2380,22 @@ static int _return_throw_assert_stmt(struct _KOS_PARSER    *parser,
     TRY(_next_token(parser));
 
     if (type == NT_RETURN && _end_of_return(parser)) {
+
+        if (parser->in_constructor) {
+            TRY(_push_node(parser, *ret, NT_THIS_LITERAL, &node));
+            node->token = (*ret)->token;
+        }
+
         if (parser->token.sep != ST_SEMICOLON)
             parser->unget = 1;
     }
     else {
+
+        if (parser->in_constructor && parser->token.keyword != KW_THIS) {
+            parser->error_str = str_err_expected_this;
+            error = KOS_ERROR_PARSE_FAILED;
+            goto _error;
+        }
 
         parser->unget = 1;
 
@@ -2417,6 +2431,8 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
 
         switch (token->keyword) {
             case KW_FUN:
+                /* fall through */
+            case KW_CONSTRUCTOR:
                 error = _function_stmt(parser, ret);
                 break;
             case KW_DO:
@@ -2557,19 +2573,20 @@ void _KOS_parser_init(struct _KOS_PARSER  *parser,
 {
     _KOS_lexer_init(&parser->lexer, file_id, begin, end);
 
-    parser->ast_buf       = mempool;
-    parser->error_str     = 0;
-    parser->unget         = 0;
-    parser->had_eol       = 0;
-    parser->allow_break   = 0;
-    parser->unary_depth   = 0;
+    parser->ast_buf        = mempool;
+    parser->error_str      = 0;
+    parser->unget          = 0;
+    parser->had_eol        = 0;
+    parser->allow_break    = 0;
+    parser->in_constructor = 0;
+    parser->unary_depth    = 0;
 
-    parser->token.length  = 0;
-    parser->token.pos     = parser->lexer.pos;
-    parser->token.type    = TT_EOF;
-    parser->token.keyword = KW_NONE;
-    parser->token.op      = OT_NONE;
-    parser->token.sep     = ST_NONE;
+    parser->token.length   = 0;
+    parser->token.pos      = parser->lexer.pos;
+    parser->token.type     = TT_EOF;
+    parser->token.keyword  = KW_NONE;
+    parser->token.op       = OT_NONE;
+    parser->token.sep      = ST_NONE;
 }
 
 int _KOS_parser_parse(struct _KOS_PARSER    *parser,

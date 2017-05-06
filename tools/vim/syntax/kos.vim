@@ -38,25 +38,25 @@ syn match   kosNumber           "\<\([1-9][0-9_]*\|0\)\(\.[0-9_]*\)\=\([eEpP][+-
 syn keyword kosConditional      if else switch
 syn keyword kosRepeat           while for repeat loop
 syn keyword kosBranch           break continue fallthrough
-syn keyword kosOperator         new delete instanceof typeof yield in
+syn keyword kosOperator         delete instanceof typeof yield in
 syn keyword kosStatement        return with import try catch defer do
 syn keyword kosBoolean          true false
 syn keyword kosNull             void
 syn keyword kosIdentifier       __line__ this var const
 syn keyword kosException        throw assert
-syn keyword kosReserved         set get only class constructor static
+syn keyword kosReserved         set get only class static
 
 if exists("kos_fold")
-    syn match   kosFunction     "\<fun\>\|λ"
-    syn region  kosFunctionFold start="\(\<fun\>\|λ\).*[^};]$" end="^\z1}.*$" transparent fold keepend
+    syn match   kosFunction     "\<fun\>\|λ\|\<constructor\>"
+    syn region  kosFunctionFold start="\(\<fun\>\|λ\|\<constructor\>\).*[^};]$" end="^\z1}.*$" transparent fold keepend
 
-    syn sync match kosSync      grouphere kosFunctionFold "\<fun\>\|λ"
+    syn sync match kosSync      grouphere kosFunctionFold "\<fun\>\|λ\|\<constructor\>"
     syn sync match kosSync      grouphere NONE "^}"
 
     setlocal foldmethod=syntax
     setlocal foldtext=getline(v:foldstart)
 else
-    syn keyword kosFunction     fun λ
+    syn keyword kosFunction     fun λ constructor
     syn match   kosBraces       "[{}\[\]]"
     syn match   kosParens       "[()]"
 endif

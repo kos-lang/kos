@@ -44,19 +44,19 @@ do {
 }
 
 do {
-    const number = new lang.number
+    const number = lang.number()
     assert typeof number == "integer"
     assert number        == 0
 }
 
 do {
-    const number = new lang.number(101)
+    const number = lang.number(101)
     assert typeof number == "integer"
     assert number        == 101
 }
 
 do {
-    const number = new lang.number(10.1)
+    const number = lang.number(10.1)
     assert typeof number == "float"
     assert number        == 10.1
 }
@@ -77,47 +77,47 @@ do {
 }
 
 do {
-    expect_fail(λ->(new lang.number("")))
-    expect_fail(λ->(new lang.number("a")))
-    expect_fail(λ->(new lang.number("e")))
-    expect_fail(λ->(new lang.number("123x")))
-    expect_fail(λ->(new lang.number("-")))
-    expect_fail(λ->(new lang.number("--")))
-    expect_fail(λ->(new lang.number("-E")))
-    expect_fail(λ->(new lang.number({})))
-    expect_fail(λ->(new lang.number([])))
-    expect_fail(λ->(new lang.number(λ->(void))))
-    expect_fail(λ->(new lang.number(false)))
-    expect_fail(λ->(new lang.number(void)))
+    expect_fail(λ->(lang.number("")))
+    expect_fail(λ->(lang.number("a")))
+    expect_fail(λ->(lang.number("e")))
+    expect_fail(λ->(lang.number("123x")))
+    expect_fail(λ->(lang.number("-")))
+    expect_fail(λ->(lang.number("--")))
+    expect_fail(λ->(lang.number("-E")))
+    expect_fail(λ->(lang.number({})))
+    expect_fail(λ->(lang.number([])))
+    expect_fail(λ->(lang.number(λ->(void))))
+    expect_fail(λ->(lang.number(false)))
+    expect_fail(λ->(lang.number(void)))
 
-    const _1 = new lang.number("1")
+    const _1 = lang.number("1")
     assert typeof _1 == "integer"
     assert _1        == 1
 
-    const _2 = new lang.number("0x002")
+    const _2 = lang.number("0x002")
     assert typeof _2 == "integer"
     assert _2        == 2
 
-    const _3 = new lang.number("3.")
+    const _3 = lang.number("3.")
     assert typeof _3 == "float"
     assert _3        == 3
 
-    const _0 = new lang.number(".")
+    const _0 = lang.number(".")
     assert typeof _0 == "float"
     assert _0        == 0
 
-    const _m0 = new lang.number("-.")
+    const _m0 = lang.number("-.")
     assert typeof _m0 == "float"
     assert _m0        == 0
 
-    const _0_5 = new lang.number(".5")
+    const _0_5 = lang.number(".5")
     assert typeof _0_5 == "float"
     assert _0_5        == 0.5
 }
 
 do {
     const number = "number"
-    const value  = new lang[number](5)
+    const value  = lang[number](5)
     assert value        == 5
     assert typeof value == "integer"
 }
@@ -131,29 +131,29 @@ do {
 }
 
 do {
-    const number = new lang.integer
+    const number = lang.integer()
     assert typeof number == "integer"
     assert number        == 0
 }
 
 do {
-    const number = new lang.integer(10)
+    const number = lang.integer(10)
     assert typeof number == "integer"
     assert number        == 10
 }
 
 do {
-    const number = new lang.integer(2.9)
+    const number = lang.integer(2.9)
     assert typeof number == "integer"
     assert number        == 2
 }
 
 do {
-    assert new lang.integer(2.1)  == 2
-    assert new lang.integer(1.9)  == 1
-    assert new lang.integer(-0.9) == -1
-    assert new lang.integer(-1.1) == -2
-    assert new lang.integer(-1.9) == -2
+    assert lang.integer(2.1)  == 2
+    assert lang.integer(1.9)  == 1
+    assert lang.integer(-0.9) == -1
+    assert lang.integer(-1.1) == -2
+    assert lang.integer(-1.9) == -2
 }
 
 do {
@@ -192,28 +192,28 @@ do {
 }
 
 do {
-    expect_fail(λ->(new lang.integer("")))
-    expect_fail(λ->(new lang.integer("a")))
-    expect_fail(λ->(new lang.integer("e")))
-    expect_fail(λ->(new lang.integer("123x")))
-    expect_fail(λ->(new lang.integer("-")))
-    expect_fail(λ->(new lang.integer("--")))
-    expect_fail(λ->(new lang.integer("-E")))
-    expect_fail(λ->(new lang.integer("3.")))
-    expect_fail(λ->(new lang.integer(".")))
-    expect_fail(λ->(new lang.integer("-.")))
-    expect_fail(λ->(new lang.integer(".5")))
-    expect_fail(λ->(new lang.integer({})))
-    expect_fail(λ->(new lang.integer([])))
-    expect_fail(λ->(new lang.integer(λ->(void))))
-    expect_fail(λ->(new lang.integer(false)))
-    expect_fail(λ->(new lang.integer(void)))
+    expect_fail(λ->(lang.integer("")))
+    expect_fail(λ->(lang.integer("a")))
+    expect_fail(λ->(lang.integer("e")))
+    expect_fail(λ->(lang.integer("123x")))
+    expect_fail(λ->(lang.integer("-")))
+    expect_fail(λ->(lang.integer("--")))
+    expect_fail(λ->(lang.integer("-E")))
+    expect_fail(λ->(lang.integer("3.")))
+    expect_fail(λ->(lang.integer(".")))
+    expect_fail(λ->(lang.integer("-.")))
+    expect_fail(λ->(lang.integer(".5")))
+    expect_fail(λ->(lang.integer({})))
+    expect_fail(λ->(lang.integer([])))
+    expect_fail(λ->(lang.integer(λ->(void))))
+    expect_fail(λ->(lang.integer(false)))
+    expect_fail(λ->(lang.integer(void)))
 
-    const _1 = new lang.integer("1")
+    const _1 = lang.integer("1")
     assert typeof _1 == "integer"
     assert _1        == 1
 
-    const _2 = new lang.integer("0x002")
+    const _2 = lang.integer("0x002")
     assert typeof _2 == "integer"
     assert _2        == 2
 }
@@ -227,25 +227,25 @@ do {
 }
 
 do {
-    const number = new lang.float
+    const number = lang.float()
     assert typeof number == "float"
     assert number        == 0
 }
 
 do {
-    const number = new lang.float(10)
+    const number = lang.float(10)
     assert typeof number == "float"
     assert number        == 10
 }
 
 do {
-    const number = new lang.float(2.9)
+    const number = lang.float(2.9)
     assert typeof number == "float"
     assert number        == 2.9
 }
 
 do {
-    const number = new lang.float(4611686018427387904)
+    const number = lang.float(4611686018427387904)
     assert typeof number == "float"
     assert number        == 4611686018427387904
 }
@@ -284,37 +284,37 @@ do {
 }
 
 do {
-    expect_fail(λ->(new lang.float("")))
-    expect_fail(λ->(new lang.float("a")))
-    expect_fail(λ->(new lang.float("e")))
-    expect_fail(λ->(new lang.float("123x")))
-    expect_fail(λ->(new lang.float("-")))
-    expect_fail(λ->(new lang.float("--")))
-    expect_fail(λ->(new lang.float("-E")))
-    expect_fail(λ->(new lang.float("0x002")))
-    expect_fail(λ->(new lang.float({})))
-    expect_fail(λ->(new lang.float([])))
-    expect_fail(λ->(new lang.float(λ->(void))))
-    expect_fail(λ->(new lang.float(false)))
-    expect_fail(λ->(new lang.float(void)))
+    expect_fail(λ->(lang.float("")))
+    expect_fail(λ->(lang.float("a")))
+    expect_fail(λ->(lang.float("e")))
+    expect_fail(λ->(lang.float("123x")))
+    expect_fail(λ->(lang.float("-")))
+    expect_fail(λ->(lang.float("--")))
+    expect_fail(λ->(lang.float("-E")))
+    expect_fail(λ->(lang.float("0x002")))
+    expect_fail(λ->(lang.float({})))
+    expect_fail(λ->(lang.float([])))
+    expect_fail(λ->(lang.float(λ->(void))))
+    expect_fail(λ->(lang.float(false)))
+    expect_fail(λ->(lang.float(void)))
 
-    const _1 = new lang.float("1")
+    const _1 = lang.float("1")
     assert typeof _1 == "float"
     assert _1        == 1
 
-    const _3 = new lang.float("3.")
+    const _3 = lang.float("3.")
     assert typeof _3 == "float"
     assert _3        == 3
 
-    const _0 = new lang.float(".")
+    const _0 = lang.float(".")
     assert typeof _0 == "float"
     assert _0        == 0
 
-    const _m0 = new lang.float("-.")
+    const _m0 = lang.float("-.")
     assert typeof _m0 == "float"
     assert _m0        == 0
 
-    const _0_5 = new lang.float(".5")
+    const _0_5 = lang.float(".5")
     assert typeof _0_5 == "float"
     assert _0_5        == 0.5
 }
@@ -328,7 +328,7 @@ do {
 }
 
 do {
-    const v = new lang.void
+    const v = lang.void()
     assert v == void
 }
 
@@ -357,7 +357,7 @@ do {
 
 # Even though lang.void was imported directly (at the top), it's not accessible
 do {
-    expect_fail(λ->(new void))
+    expect_fail(λ->(void()))
     assert typeof void == "void"
 }
 
@@ -370,10 +370,10 @@ do {
 }
 
 do {
-    assert new lang.boolean(true)
-    assert ! new lang.boolean(false)
-    assert new lang.boolean(3 + 4)
-    assert ! new lang.boolean(5 - 5)
+    assert lang.boolean(true)
+    assert ! lang.boolean(false)
+    assert lang.boolean(3 + 4)
+    assert ! lang.boolean(5 - 5)
 }
 
 do {
@@ -413,12 +413,12 @@ do {
 }
 
 do {
-    assert new lang.string()            == ""
-    assert new lang.string(123)         == "123"
-    assert new lang.string("x", 5, "z") == "x5z"
-    assert lang.string()                == ""
-    assert lang.string(8)               == "8"
-    assert lang.string(void, false)     == "voidfalse"
+    assert lang.string()            == ""
+    assert lang.string(123)         == "123"
+    assert lang.string("x", 5, "z") == "x5z"
+    assert lang.string()            == ""
+    assert lang.string(8)           == "8"
+    assert lang.string(void, false) == "voidfalse"
 }
 
 do {
@@ -447,13 +447,13 @@ do {
 }
 
 do {
-    fun ctor
+    constructor ctor
     {
     }
 
     ctor.set_prototype(lang.string.prototype)
 
-    const o = new ctor
+    const o = ctor()
 
     expect_fail(λ->(o.size))
 }
@@ -467,7 +467,7 @@ do {
 }
 
 do {
-    const o = new lang.object
+    const o = lang.object()
     assert typeof o == "object"
 
     o.prop1 = "xyz"
@@ -488,7 +488,7 @@ do {
     assert ! ({} instanceof lang.function)
     assert ! ({} instanceof lang.string)
 
-    const o = new lang.object
+    const o = lang.object()
     assert o instanceof lang.object
 }
 
@@ -505,7 +505,7 @@ do {
 }
 
 do {
-    fun constr
+    constructor constr
     {
         this.c = 2
         this.d = 3
@@ -515,7 +515,7 @@ do {
     constr.prototype.a = 0
     constr.prototype.b = 1
 
-    const obj = new constr
+    const obj = constr()
 
     var values = ['a', 'b', 'c', 'd', 'e']
 
@@ -563,13 +563,13 @@ do {
 }
 
 do {
-    const a = new lang.array
+    const a = lang.array()
     assert typeof a == "array"
     assert a.size   == 0
 }
 
 do {
-    const a = new lang.array([8])
+    const a = lang.array([8])
     assert typeof a == "array"
     assert a.size   == 1
     assert a[0]     == 8
@@ -577,7 +577,7 @@ do {
 }
 
 do {
-    const a = new lang.array("xy", [true])
+    const a = lang.array("xy", [true])
     assert typeof a == "array"
     assert a.size   == 3
     assert a[0]     == "x"
@@ -587,13 +587,13 @@ do {
 }
 
 do {
-    expect_fail(λ->(new lang.array(1)))
-    expect_fail(λ->(new lang.array(1.0)))
-    expect_fail(λ->(new lang.array(λ->(void))))
+    expect_fail(λ->(lang.array(1)))
+    expect_fail(λ->(lang.array(1.0)))
+    expect_fail(λ->(lang.array(λ->(void))))
 }
 
 do {
-    const a = new lang.array(lang.range(4))
+    const a = lang.array(lang.range(4))
     assert typeof a == "array"
     assert a.size   == 4
     for var i = 0; i < 4; i += 1 {
@@ -602,7 +602,7 @@ do {
 }
 
 do {
-    const a = new lang.array(lang.shallow({a: void, b: void, c: void}))
+    const a = lang.array(lang.shallow({a: void, b: void, c: void}))
     assert typeof a == "array"
     assert a.size   == 3
     const had = { 'a': false, 'b': false, 'c': false }
@@ -660,7 +660,7 @@ do {
 
 do {
     const a = [1, 2, 100]
-    const b = new lang.array(a)
+    const b = lang.array(a)
     assert typeof b == "array"
     assert b        != a
     assert b.size   == a.size
@@ -670,13 +670,13 @@ do {
 }
 
 do {
-    fun fake_array
+    constructor fake_array
     {
     }
 
     fake_array.set_prototype(lang.array.prototype)
 
-    const o = new fake_array
+    const o = fake_array()
 
     assert typeof o == "object"
     assert o instanceof lang.array
@@ -692,7 +692,7 @@ do {
         buf[i] = i + 20
     }
 
-    const a = new lang.array(buf)
+    const a = lang.array(buf)
 
     assert a.size == 10
 
@@ -705,7 +705,7 @@ do {
 }
 
 do {
-    const a = new lang.array(new lang.buffer)
+    const a = lang.array(lang.buffer())
 
     assert typeof a == "array"
     assert a.size   == 0
@@ -937,12 +937,12 @@ do {
     assert a[0]   == "a"
     assert a[2]   == "c"
 
-    a.insert(void, new lang.buffer)
+    a.insert(void, lang.buffer())
     assert a.size == 3
     assert a[0]   == "a"
     assert a[2]   == "c"
 
-    const buf = new lang.buffer(4)
+    const buf = lang.buffer(4)
     for var i in lang.range(buf.size) {
         buf[i] = buf.size - i
     }
@@ -1030,13 +1030,13 @@ do {
 # lang.function.prototype.prototype
 
 do {
-    fun ctor
+    constructor ctor
     {
     }
 
     ctor.set_prototype(lang.function.prototype)
 
-    const o = new ctor
+    const o = ctor()
 
     expect_fail(λ->(o.prototype))
 }
@@ -1110,11 +1110,49 @@ do {
     assert args[2]   == 3
 }
 
+do {
+    constructor ctor
+    {
+        this.a = 42
+    }
+    ctor.prototype.x = -1
+
+    assert typeof ctor == "function"
+
+    const co = ctor()
+    assert typeof co == "object"
+    assert "a" in co
+    assert "x" in co
+    assert co.a == 42
+    assert co.x == -1
+    assert co instanceof ctor
+
+    const o = { b: 39 }
+    assert typeof o == "object"
+    assert ! ("a" in o)
+    assert o.b == 39
+    assert ! (o instanceof ctor)
+
+    const ret = ctor.apply(o, [])
+    assert ret == o
+    assert "a" in o
+    assert "b" in o
+    assert ! ("x" in o)
+    assert o.a == 42
+    assert o.b == 39
+    assert ret.a == 42
+    assert ret.b == 39
+    assert ! (o instanceof ctor)
+    assert ! (ret instanceof ctor)
+    expect_fail(λ->(o.x))
+    expect_fail(λ->(ret.x))
+}
+
 ##############################################################################
 # instanceof buffer
 
 do {
-    const value = new lang.buffer
+    const value = lang.buffer()
     assert value instanceof lang.buffer
     assert value instanceof lang.object
     assert ! (value instanceof lang.integer)
@@ -1131,7 +1169,7 @@ do {
 
 do {
     expect_fail(λ->([].resize(-1)))
-    expect_fail(λ->((new lang.buffer).resize(-1)))
+    expect_fail(λ->((lang.buffer()).resize(-1)))
 }
 
 ##############################################################################

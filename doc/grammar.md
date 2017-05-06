@@ -163,7 +163,7 @@ The following reserved keywords are defined:
 * `catch`
 * `class` (reserved)
 * `const`
-* `constructor` (reserved)
+* `constructor`
 * `continue`
 * `delete`
 * `defer`
@@ -179,7 +179,6 @@ The following reserved keywords are defined:
 * `in`
 * `instanceof`
 * `loop`
-* `new`
 * `repeat`
 * `return`
 * `set` (reserved)
@@ -448,6 +447,7 @@ Statement
     Statement ::= EmptyStatement
                 | ExpressionStatement
                 | FunctionDeclaration
+                | ConstructorDeclaration
                 | DoStatement
                 | IfStatement
                 | TryStatement
@@ -539,6 +539,29 @@ The following statements are equivalent:
     };
 
     const Sum = λ(x,y)->(x+y);
+
+
+Constructor statement
+---------------------
+
+Constructor function is a special type of function which serves the purpose of
+creating new objects.
+
+When a constructor function is invoked, a new object is created and bound to
+`this`, even if the construction function is invoked on an object, with the
+exception of the `apply` function.  If the `apply` function is invoked on
+a constructor function, the new object is not created, but `this` is bound
+to the first argument of `apply`.
+
+The constructor statement is mostly identical to function statement, except it
+uses the `constructor` keyword instead of the `fun` keyword.
+
+    ConstructorDeclaration ::= "constructor" Identifier [ ParameterList ] CompoundStatement
+
+The `return` statement inside a constructor function can only return `this`
+or nothing.  No other value can be returned.
+
+The `yield` operator is not allowed inside a constructor function.
 
 
 Function arguments
@@ -896,6 +919,9 @@ is evaluated and it's outcome is used as the function's return value.
 If the expression is omitted, the return value of the function is
 `void`.
 
+The optional right-hand-side expression can only be `this` if it is
+inside a constructor function.
+
 If the optional right-hand-side expression occurs in a generator function,
 its value is ignored.
 
@@ -1029,11 +1055,8 @@ outermost `RHSExpression`.
                                  ( MultiplicativeOperator UnaryExpression )*
 
     UnaryExpression ::= UnaryOperatorExpression
-                      | NewExpression
 
     UnaryOperatorExpression ::= ( UnaryOperator )* MemberExpression
-
-    NewExpression ::= "new" MemberExpression
 
 
 Operators
@@ -1097,17 +1120,20 @@ Member specification
 --------------------
 
     MemberExpression ::= PrimaryExpression
-                       | FunctionExpression
+                       | FunctionLiteral
+                       | ConstructorLiteral
                        | ( MemberExpression Invocation )
                        | ( MemberExpression Refinement )
 
-    FunctionExpression         ::= SimpleFunctionExpression
-                                 | CompoundFunctionExpression
+    FunctionLiteral ::= SimpleFunctionLiteral
+                      | CompoundFunctionLiteral
 
-    SimpleFunctionExpression   ::= ( "fun" | "λ" ) [ ParameterList ]
+    SimpleFunctionLiteral   ::= ( "fun" | "λ" ) [ ParameterList ]
                                    "->" "(" RHSExpression ")"
 
-    CompoundFunctionExpression ::= "fun" [ ParameterList ] CompoundStatement
+    CompoundFunctionLiteral ::= "fun" [ ParameterList ] CompoundStatement
+
+    ConstructorLiteral ::= "constructor" [ ParameterList ] CompoundStatement
 
     Invocation ::= "(" [ ArgumentList ] ")"
 

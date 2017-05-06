@@ -79,7 +79,6 @@ enum _KOS_KEYWORD_TYPE {
     KW_IN,
     KW_INSTANCEOF,
     KW_LOOP,
-    KW_NEW,
     KW_REPEAT,
     KW_RETURN,
     KW_SET,

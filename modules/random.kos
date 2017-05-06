@@ -22,7 +22,7 @@
 
 const rand_integer, rand_float = fun {
 
-    const rand = new random
+    const rand = random()
 
     return [
         fun(args...) { return rand.integer.apply(rand, args) },

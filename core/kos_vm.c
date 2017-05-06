@@ -45,11 +45,13 @@ static const char str_err_generator_running[]   = "generator is running";
 static const char str_err_invalid_byte_value[]  = "buffer element value out of range";
 static const char str_err_invalid_index[]       = "index out of range";
 static const char str_err_invalid_instruction[] = "invalid instruction";
-static const char str_err_new_with_generator[]  = "new invoked a generator";
 static const char str_err_not_callable[]        = "object is not callable";
+static const char str_err_not_function[]        = "object is not a function";
 static const char str_err_not_generator[]       = "function is not a generator";
 static const char str_err_too_few_args[]        = "not enough arguments passed to a function";
 static const char str_err_unsup_operand_types[] = "unsupported operand types";
+
+#define NEW_THIS ((KOS_OBJ_ID)(intptr_t)0xC001)
 
 static int _exec_function(KOS_FRAME stack_frame);
 
@@ -597,10 +599,10 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
                                KOS_OBJ_ID        *this_obj,
                                KOS_OBJ_ID         args_obj)
 {
-    int                       error           = KOS_SUCCESS;
-    KOS_FUNCTION             *func;
-    enum _KOS_GENERATOR_STATE gen_state;
-    KOS_FRAME                 new_stack_frame = 0;
+    int                      error           = KOS_SUCCESS;
+    KOS_FUNCTION            *func;
+    enum _KOS_FUNCTION_STATE state;
+    KOS_FRAME                new_stack_frame = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
     assert( ! IS_BAD_PTR(args_obj));
@@ -611,23 +613,20 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
     if (GET_OBJ_TYPE(args_obj) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_args_not_array);
 
-    func      = OBJPTR(FUNCTION, func_obj);
-    gen_state = (enum _KOS_GENERATOR_STATE)func->generator_state;
+    func  = OBJPTR(FUNCTION, func_obj);
+    state = (enum _KOS_FUNCTION_STATE)func->state;
 
     if (KOS_get_array_size(args_obj) < func->min_args)
         RAISE_EXCEPTION(str_err_too_few_args);
 
-    if (instr == INSTR_NEW && gen_state != KOS_NOT_GEN)
-        RAISE_EXCEPTION(str_err_new_with_generator);
-
-    if (instr == INSTR_CALL_GEN && gen_state < KOS_GEN_READY)
+    if (instr == INSTR_CALL_GEN && state < KOS_GEN_READY)
         RAISE_EXCEPTION(str_err_not_generator);
 
-    switch (gen_state) {
+    switch (state) {
 
-        /* Regular function */
-        case KOS_NOT_GEN: {
-            if (instr == INSTR_NEW) {
+        /* Constructor function */
+        case KOS_CTOR:
+            if (*this_obj == NEW_THIS) {
                 const KOS_OBJ_ID proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(func->prototype);
                 assert( ! IS_BAD_PTR(proto_obj));
 
@@ -637,9 +636,11 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
                     *this_obj = KOS_new_object_with_prototype(frame, proto_obj);
                     TRY_OBJID(*this_obj);
                 }
-
             }
+            /* fall through */
 
+        /* Regular function */
+        case KOS_FUN: {
             new_stack_frame = _KOS_stack_frame_push_func(frame, func);
             if ( ! new_stack_frame)
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -668,13 +669,13 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
             dest = OBJPTR(FUNCTION, ret);
 
-            dest->min_args        = 0;
-            dest->num_regs        = func->num_regs;
-            dest->instr_offs      = func->instr_offs;
-            dest->closures        = func->closures;
-            dest->module          = func->module;
-            dest->handler         = func->handler;
-            dest->generator_state = KOS_GEN_READY;
+            dest->min_args   = 0;
+            dest->num_regs   = func->num_regs;
+            dest->instr_offs = func->instr_offs;
+            dest->closures   = func->closures;
+            dest->module     = func->module;
+            dest->handler    = func->handler;
+            dest->state      = KOS_GEN_READY;
 
             new_stack_frame = _KOS_stack_frame_push_func(frame, func);
             if ( ! new_stack_frame)
@@ -714,7 +715,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             else
                 *this_obj = new_stack_frame->registers;
 
-            if (gen_state == KOS_GEN_ACTIVE) {
+            if (state == KOS_GEN_ACTIVE) {
 
                 const uint32_t r = new_stack_frame->yield_reg;
 
@@ -733,7 +734,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             }
 
             /* TODO perform CAS for thread safety */
-            func->generator_state = KOS_GEN_RUNNING;
+            func->state = KOS_GEN_RUNNING;
 
             new_stack_frame->parent    = frame;
             new_stack_frame->yield_reg = KOS_CAN_YIELD;
@@ -744,7 +745,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             RAISE_EXCEPTION(str_err_generator_running);
 
         default:
-            assert(gen_state == KOS_GEN_DONE);
+            assert(state == KOS_GEN_DONE);
             RAISE_EXCEPTION(str_err_generator_end);
     }
 
@@ -752,12 +753,12 @@ _error:
     return error ? 0 : new_stack_frame;
 }
 
-static KOS_OBJ_ID _finish_call(KOS_FRAME                  frame,
-                               KOS_BYTECODE_INSTR         instr,
-                               KOS_FUNCTION              *func,
-                               KOS_OBJ_ID                 this_obj,
-                               KOS_FRAME                  new_stack_frame,
-                               enum _KOS_GENERATOR_STATE *gen_state)
+static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
+                               KOS_BYTECODE_INSTR        instr,
+                               KOS_FUNCTION             *func,
+                               KOS_OBJ_ID                this_obj,
+                               KOS_FRAME                 new_stack_frame,
+                               enum _KOS_FUNCTION_STATE *state)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -765,15 +766,15 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                  frame,
 
     if ( ! KOS_is_exception_pending(new_stack_frame)) {
 
-        if (instr == INSTR_NEW && ! func->handler)
+        if (*state == KOS_CTOR && ! func->handler)
             ret = this_obj;
         else
             ret = new_stack_frame->retval;
 
-        if (*gen_state != KOS_NOT_GEN) {
+        if (*state >= KOS_GEN_INIT) {
             if (new_stack_frame->yield_reg == KOS_CAN_YIELD) {
-                *gen_state            = KOS_GEN_DONE;
-                func->generator_state = KOS_GEN_DONE;
+                *state  = KOS_GEN_DONE;
+                func->state = KOS_GEN_DONE;
                 if (instr != INSTR_CALL_GEN) {
                     if (IS_BAD_PTR(new_stack_frame->retval))
                         KOS_raise_exception_cstring(frame, str_err_generator_end);
@@ -782,17 +783,17 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                  frame,
                 }
             }
             else {
-                const enum _KOS_GENERATOR_STATE end_state = func->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
+                const enum _KOS_FUNCTION_STATE end_state = func->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
 
-                *gen_state            = end_state;
-                func->generator_state = (uint8_t)end_state;
+                *state      = end_state;
+                func->state = (uint8_t)end_state;
             }
         }
     }
     else {
-        if (*gen_state != KOS_NOT_GEN) {
-            *gen_state            = KOS_GEN_DONE;
-            func->generator_state = KOS_GEN_DONE;
+        if (*state >= KOS_GEN_INIT) {
+            *state  = KOS_GEN_DONE;
+            func->state = KOS_GEN_DONE;
         }
         frame->exception = new_stack_frame->exception;
     }
@@ -907,8 +908,8 @@ static int _exec_function(KOS_FRAME frame)
             }
 
             case INSTR_LOAD_INT64: { /* <r.dest>, <low.uint32>, <high.int32> */
-                const uint32_t low   = _load_32(bytecode+2);
-                const uint32_t high  = _load_32(bytecode+6);
+                const uint32_t low  = _load_32(bytecode+2);
+                const uint32_t high = _load_32(bytecode+6);
 
                 rdest = bytecode[1];
                 out   = KOS_new_int(frame, (int64_t)(((uint64_t)high << 32) | low));
@@ -917,8 +918,8 @@ static int _exec_function(KOS_FRAME frame)
             }
 
             case INSTR_LOAD_FLOAT: { /* <r.dest>, <low.uint32>, <high.uint32> */
-                const uint32_t low   = _load_32(bytecode+2);
-                const uint32_t high  = _load_32(bytecode+6);
+                const uint32_t low  = _load_32(bytecode+2);
+                const uint32_t high = _load_32(bytecode+6);
 
                 union {
                     uint64_t ui64;
@@ -934,7 +935,7 @@ static int _exec_function(KOS_FRAME frame)
             }
 
             case INSTR_LOAD_STR: { /* <r.dest>, <str.idx.int32> */
-                const int32_t  idx   = (int32_t)_load_32(bytecode+2);
+                const int32_t idx = (int32_t)_load_32(bytecode+2);
 
                 rdest = bytecode[1];
                 out   = _make_string(frame, module, idx);
@@ -965,19 +966,22 @@ static int _exec_function(KOS_FRAME frame)
 
             case INSTR_LOAD_FUN: /* <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg> */
                 /* fall through */
-            case INSTR_LOAD_GEN: { /* <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg> */
-                const int32_t  fun_offs = (int32_t)_load_32(bytecode+2);
-                const uint8_t  min_args = bytecode[6];
-                const uint8_t  num_regs = bytecode[7];
-                const uint8_t  args_reg = bytecode[8];
+            case INSTR_LOAD_GEN: /* <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg> */
+                /* fall through */
+            case INSTR_LOAD_CTOR: { /* <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg> */
+                const int32_t  fun_offs  = (int32_t)_load_32(bytecode+2);
+                const uint8_t  min_args  = bytecode[6];
+                const uint8_t  num_regs  = bytecode[7];
+                const uint8_t  args_reg  = bytecode[8];
 
-                const uint32_t offset   = (uint32_t)((bytecode + 9 + fun_offs) - module->bytecode);
-                KOS_OBJ_ID     fun_obj  = KOS_BADPTR;
-                KOS_OBJ_ID     proto_obj;
+                const uint32_t offset    = (uint32_t)((bytecode + 9 + fun_offs) - module->bytecode);
+                KOS_OBJ_ID     fun_obj   = KOS_BADPTR;
+                KOS_OBJ_ID     proto_obj = KOS_VOID;
 
                 assert(offset < module->bytecode_size);
 
-                proto_obj = KOS_gen_prototype(frame, bytecode + 9 + fun_offs);
+                if (instr == INSTR_LOAD_CTOR)
+                    proto_obj = KOS_gen_prototype(frame, bytecode + 9 + fun_offs);
 
                 if ( ! IS_BAD_PTR(proto_obj))
                     fun_obj = KOS_new_function(frame, proto_obj);
@@ -993,7 +997,9 @@ static int _exec_function(KOS_FRAME frame)
                     fun->module     = module;
 
                     if (instr == INSTR_LOAD_GEN)
-                        fun->generator_state = KOS_GEN_INIT;
+                        fun->state = KOS_GEN_INIT;
+                    else if (instr == INSTR_LOAD_CTOR)
+                        fun->state = KOS_CTOR;
                 }
 
                 rdest = bytecode[1];
@@ -2107,9 +2113,7 @@ static int _exec_function(KOS_FRAME frame)
                 /* fall through */
             case INSTR_CALL: /* <r.dest>, <r.func>, <r.this>, <r.args> */
                 /* fall through */
-            case INSTR_CALL_GEN: /* <r.dest>, <r.func>, <r.final> */
-                /* fall through */
-            case INSTR_NEW: { /* <r.dest>, <r.func>, <r.args> */
+            case INSTR_CALL_GEN: { /* <r.dest>, <r.func>, <r.final> */
                 const unsigned rfunc = bytecode[2];
                 unsigned       rthis = ~0U;
                 unsigned       rargs = ~0U;
@@ -2123,11 +2127,6 @@ static int _exec_function(KOS_FRAME frame)
                 rdest = bytecode[1];
 
                 switch (instr) {
-
-                    case INSTR_NEW:
-                        rargs    = bytecode[3];
-                        this_obj = KOS_BADPTR;
-                        break;
 
                     case INSTR_CALL_GEN:
                         rthis = bytecode[3];
@@ -2164,6 +2163,9 @@ static int _exec_function(KOS_FRAME frame)
                 if (IS_BAD_PTR(args_obj))
                     error = KOS_ERROR_EXCEPTION;
                 else {
+                    if (GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION
+                            && OBJPTR(FUNCTION, func_obj)->state == KOS_CTOR)
+                        this_obj = NEW_THIS;
                     new_stack_frame = _prepare_call(frame, instr, func_obj, &this_obj, args_obj);
                     if ( ! new_stack_frame)
                         error = KOS_ERROR_EXCEPTION;
@@ -2173,12 +2175,12 @@ static int _exec_function(KOS_FRAME frame)
 
                     KOS_FUNCTION *func = OBJPTR(FUNCTION, func_obj);
 
-                    if (func->generator_state == KOS_GEN_INIT)
+                    if (func->state == KOS_GEN_INIT)
                         out = this_obj;
 
                     else {
-                        enum _KOS_GENERATOR_STATE gen_state =
-                                (enum _KOS_GENERATOR_STATE)func->generator_state;
+                        enum _KOS_FUNCTION_STATE state =
+                                (enum _KOS_FUNCTION_STATE)func->state;
 
                         assert(new_stack_frame);
 
@@ -2190,7 +2192,7 @@ static int _exec_function(KOS_FRAME frame)
                                                                      args_obj);
 
                             /* Avoid detecting as end of iterator in the code below */
-                            if (gen_state != KOS_NOT_GEN && ! IS_BAD_PTR(ret_val))
+                            if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(ret_val))
                                 new_stack_frame->yield_reg = 0;
 
                             new_stack_frame->retval = ret_val;
@@ -2201,7 +2203,7 @@ static int _exec_function(KOS_FRAME frame)
                                 _KOS_wrap_exception(new_stack_frame);
                             }
                             else {
-                                assert(gen_state > KOS_GEN_INIT || ! IS_BAD_PTR(ret_val));
+                                assert(state > KOS_GEN_INIT || ! IS_BAD_PTR(ret_val));
                             }
                         }
                         else {
@@ -2209,10 +2211,10 @@ static int _exec_function(KOS_FRAME frame)
                             assert( ! error || KOS_is_exception_pending(new_stack_frame));
                         }
 
-                        out = _finish_call(frame, instr, func, this_obj, new_stack_frame, &gen_state);
+                        out = _finish_call(frame, instr, func, this_obj, new_stack_frame, &state);
 
                         if (instr == INSTR_CALL_GEN) {
-                            const KOS_OBJ_ID result = KOS_BOOL(gen_state == KOS_GEN_DONE);
+                            const KOS_OBJ_ID result = KOS_BOOL(state == KOS_GEN_DONE);
                             if (rthis == rdest)
                                 out = result;
                             else {
@@ -2225,7 +2227,6 @@ static int _exec_function(KOS_FRAME frame)
 
                 switch (instr) {
                     case INSTR_CALL_GEN:  delta = 4; break;
-                    case INSTR_NEW:       delta = 4; break;
                     case INSTR_TAIL_CALL: delta = 0; break;
                     default:              delta = 5; break;
                 }
@@ -2358,10 +2359,11 @@ static int _exec_function(KOS_FRAME frame)
     return error;
 }
 
-KOS_OBJ_ID KOS_call_function(KOS_FRAME  frame,
-                             KOS_OBJ_ID func_obj,
-                             KOS_OBJ_ID this_obj,
-                             KOS_OBJ_ID args_obj)
+KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
+                              KOS_OBJ_ID            func_obj,
+                              KOS_OBJ_ID            this_obj,
+                              KOS_OBJ_ID            args_obj,
+                              enum _KOS_CALL_FLAVOR call_flavor)
 {
     int           error = KOS_SUCCESS;
     KOS_OBJ_ID    ret   = KOS_BADPTR;
@@ -2370,19 +2372,29 @@ KOS_OBJ_ID KOS_call_function(KOS_FRAME  frame,
 
     KOS_context_validate(frame);
 
+    assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
+
+    if (GET_OBJ_TYPE(func_obj) != OBJ_FUNCTION) {
+        KOS_raise_exception_cstring(frame, str_err_not_function);
+        return KOS_BADPTR;
+    }
+
+    func = OBJPTR(FUNCTION, func_obj);
+
+    if (func->state == KOS_CTOR && call_flavor == KOS_CALL_FUNCTION)
+        this_obj = NEW_THIS;
+
     new_stack_frame = _prepare_call(frame, INSTR_CALL, func_obj, &this_obj, args_obj);
 
     if ( ! new_stack_frame)
         return KOS_BADPTR;
 
-    func = OBJPTR(FUNCTION, func_obj);
-
-    if (func->generator_state == KOS_GEN_INIT)
+    if (func->state == KOS_GEN_INIT)
         ret = this_obj;
 
     else {
-        enum _KOS_GENERATOR_STATE gen_state =
-                (enum _KOS_GENERATOR_STATE)func->generator_state;
+        enum _KOS_FUNCTION_STATE state =
+                (enum _KOS_FUNCTION_STATE)func->state;
 
         if (func->handler)  {
             const KOS_OBJ_ID retval = func->handler(new_stack_frame,
@@ -2390,7 +2402,7 @@ KOS_OBJ_ID KOS_call_function(KOS_FRAME  frame,
                                                     args_obj);
 
             /* Avoid detecting as end of iterator */
-            if (gen_state != KOS_NOT_GEN && ! IS_BAD_PTR(retval))
+            if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(retval))
                 new_stack_frame->yield_reg = 0;
 
             new_stack_frame->retval = retval;
@@ -2401,7 +2413,7 @@ KOS_OBJ_ID KOS_call_function(KOS_FRAME  frame,
                 _KOS_wrap_exception(new_stack_frame);
             }
             else {
-                assert(gen_state > KOS_GEN_INIT || ! IS_BAD_PTR(retval));
+                assert(state > KOS_GEN_INIT || ! IS_BAD_PTR(retval));
             }
         }
         else {
@@ -2409,9 +2421,9 @@ KOS_OBJ_ID KOS_call_function(KOS_FRAME  frame,
             assert( ! error || KOS_is_exception_pending(new_stack_frame));
         }
 
-        ret = _finish_call(frame, INSTR_CALL_GEN, func, this_obj, new_stack_frame, &gen_state);
+        ret = _finish_call(frame, INSTR_CALL_GEN, func, this_obj, new_stack_frame, &state);
 
-        if (gen_state == KOS_GEN_DONE)
+        if (state == KOS_GEN_DONE)
             ret = KOS_BADPTR;
     }
 

@@ -237,10 +237,11 @@ int _KOS_node_is_truthy(struct _KOS_COMP_UNIT      *program,
     if ((node->type == NT_BOOL_LITERAL    && node->token.keyword == KW_TRUE) ||
         (node->type == NT_NUMERIC_LITERAL && node->token.length == 1 && *node->token.begin != '0') ||
         (node->type == NT_NUMERIC_LITERAL && _is_nonzero(&node->token)) ||
-        (node->type == NT_STRING_LITERAL)   ||
-        (node->type == NT_FUNCTION_LITERAL) ||
-        (node->type == NT_ARRAY_LITERAL)    ||
-        (node->type == NT_OBJECT_LITERAL)   ||
+        (node->type == NT_STRING_LITERAL)      ||
+        (node->type == NT_FUNCTION_LITERAL)    ||
+        (node->type == NT_CONSTRUCTOR_LITERAL) ||
+        (node->type == NT_ARRAY_LITERAL)       ||
+        (node->type == NT_OBJECT_LITERAL)      ||
         (node->type == NT_INTERPOLATED_STRING)) {
 
         return 1;
@@ -1122,6 +1123,8 @@ static void _collapse_typeof(struct _KOS_COMP_UNIT      *program,
             break;
 
         case NT_FUNCTION_LITERAL:
+            /* fall through */
+        case NT_CONSTRUCTOR_LITERAL:
             type = "\"function\"";
             break;
 
@@ -1523,6 +1526,8 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             error = _switch_stmt(program, node, is_terminal);
             break;
         case NT_FUNCTION_LITERAL:
+            /* fall through */
+        case NT_CONSTRUCTOR_LITERAL:
             error = _function_literal(program, node);
             break;
 

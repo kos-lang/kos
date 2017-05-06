@@ -727,7 +727,9 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
     assert(node);
     assert(node->next);
 
-    if (node->type == NT_CONST && node->next->type == NT_FUNCTION_LITERAL) {
+    if (node->type == NT_CONST &&
+            (node->next->type == NT_FUNCTION_LITERAL
+          || node->next->type == NT_CONSTRUCTOR_LITERAL)) {
 
         struct _KOS_VAR *var;
 
@@ -786,6 +788,8 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             error = _this_literal(program, node);
             break;
         case NT_FUNCTION_LITERAL:
+            /* fall through */
+        case NT_CONSTRUCTOR_LITERAL:
             error = _function_literal(program, node);
             break;
         case NT_ASSIGNMENT:

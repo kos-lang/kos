@@ -66,37 +66,23 @@ h = i[j:k] +
 
 @------------------------------------------------------------------------------
 # Combinations of refinement with operators
-new a[0];
-new b.new;
 ~c[!t];
 yield d[yield 1];
 
 @ 0
 
 (scope 1 1
-    (operator 2 1 new
-        (invocation 2 1 new
-            (refinement 2 6 [
-                (identifier 2 5 a)
-                (number 2 7 0)
+    (operator 2 1 ~
+        (refinement 2 3 [
+            (identifier 2 2 c)
+            (operator 2 4 !
+                (identifier 2 5 t)
     )))
-    (operator 3 1 new
-        (invocation 3 1 new
-            (refinement 3 6 .
-               (identifier 3 5 b)
-               (string 3 7 new)
-    )))
-    (operator 4 1 ~
-        (refinement 4 3 [
-            (identifier 4 2 c)
-            (operator 4 4 !
-                (identifier 4 5 t)
-    )))
-    (yield 5 1 yield
-        (refinement 5 8 [
-            (identifier 5 7 d)
-            (yield 5 9 yield
-                (number 5 15 1)
+    (yield 3 1 yield
+        (refinement 3 8 [
+            (identifier 3 7 d)
+            (yield 3 9 yield
+                (number 3 15 1)
     )))
 )
 

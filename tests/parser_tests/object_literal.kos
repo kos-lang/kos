@@ -5,7 +5,7 @@ var b = {c:d};
 # String as property name
 var e = {"xxx":f};
 # Keyword as property name
-var g = {new:this};
+var g = {constructor:this};
 # Multiple properties
 var h = {
     i : 0 ,
@@ -43,9 +43,9 @@ do{{"x":3}}
     (assignment 8 7 =
         (var 8 1 var (identifier 8 5 g))
         (object 8 9 {
-            (property 8 10 new
-                (string 8 10 new)
-                (this 8 14 this)
+            (property 8 10 constructor
+                (string 8 10 constructor)
+                (this 8 22 this)
     )))
     (assignment 10 7 =
         (var 10 1 var (identifier 10 5 h))

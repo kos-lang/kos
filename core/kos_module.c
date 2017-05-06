@@ -1009,11 +1009,11 @@ _error:
     return error;
 }
 
-int KOS_module_add_function(KOS_FRAME                 frame,
-                            KOS_OBJ_ID                str_name,
-                            KOS_FUNCTION_HANDLER      handler,
-                            int                       min_args,
-                            enum _KOS_GENERATOR_STATE gen_state)
+int KOS_module_add_function(KOS_FRAME                frame,
+                            KOS_OBJ_ID               str_name,
+                            KOS_FUNCTION_HANDLER     handler,
+                            int                      min_args,
+                            enum _KOS_FUNCTION_STATE state)
 {
     int         error    = KOS_SUCCESS;
     KOS_OBJ_ID  func_obj = KOS_new_builtin_function(frame, handler, min_args);
@@ -1023,8 +1023,8 @@ int KOS_module_add_function(KOS_FRAME                 frame,
 
     TRY_OBJID(func_obj);
 
-    OBJPTR(FUNCTION, func_obj)->module          = module;
-    OBJPTR(FUNCTION, func_obj)->generator_state = (uint8_t)gen_state;
+    OBJPTR(FUNCTION, func_obj)->module = module;
+    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)state;
 
     TRY(KOS_module_add_global(frame,
                               str_name,
@@ -1050,6 +1050,7 @@ int KOS_module_add_constructor(KOS_FRAME            frame,
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module = module;
+    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)KOS_CTOR;
 
     TRY(KOS_module_add_global(frame,
                               str_name,
@@ -1063,12 +1064,12 @@ _error:
     return error;
 }
 
-int KOS_module_add_member_function(KOS_FRAME                 frame,
-                                   KOS_OBJ_ID                proto_obj,
-                                   KOS_OBJ_ID                str_name,
-                                   KOS_FUNCTION_HANDLER      handler,
-                                   int                       min_args,
-                                   enum _KOS_GENERATOR_STATE gen_state)
+int KOS_module_add_member_function(KOS_FRAME                frame,
+                                   KOS_OBJ_ID               proto_obj,
+                                   KOS_OBJ_ID               str_name,
+                                   KOS_FUNCTION_HANDLER     handler,
+                                   int                      min_args,
+                                   enum _KOS_FUNCTION_STATE state)
 {
     int          error    = KOS_SUCCESS;
     KOS_OBJ_ID   func_obj = KOS_new_builtin_function(frame, handler, min_args);
@@ -1078,8 +1079,8 @@ int KOS_module_add_member_function(KOS_FRAME                 frame,
 
     TRY_OBJID(func_obj);
 
-    OBJPTR(FUNCTION, func_obj)->module          = module;
-    OBJPTR(FUNCTION, func_obj)->generator_state = (uint8_t)gen_state;
+    OBJPTR(FUNCTION, func_obj)->module = module;
+    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)state;
 
     TRY(KOS_set_property(frame, proto_obj, str_name, func_obj));
 

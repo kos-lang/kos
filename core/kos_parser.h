@@ -37,6 +37,7 @@ struct _KOS_PARSER {
     int                  unget;
     int                  had_eol;
     int                  allow_break;
+    int                  in_constructor;
     int                  unary_depth; /* For detecting ambiguous syntax */
 };
 

@@ -79,15 +79,15 @@ do {
 
 # random.seed
 do {
-    expect_fail(λ->(new random.random(void)))
-    expect_fail(λ->(new random.random(10e19)))
+    expect_fail(λ->(random.random(void)))
+    expect_fail(λ->(random.random(10e19)))
 
     const seed = random.rand_integer()
 
     const a = []
 
     do {
-        const rand = new random.random(seed)
+        const rand = random.random(seed)
 
         a.resize(256)
 
@@ -97,7 +97,7 @@ do {
     }
 
     do {
-        const rand = new random.random(seed)
+        const rand = random.random(seed)
 
         for var i = 0; i < 256; i += 1 {
             assert a[i] == rand.integer()

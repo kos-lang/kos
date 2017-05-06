@@ -309,7 +309,6 @@ static const char *const keywords[] = {
     "in",
     "instanceof",
     "loop",
-    "new",
     "repeat",
     "return",
     "set",

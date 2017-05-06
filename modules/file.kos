@@ -31,23 +31,23 @@ const append_flag = "a+b" # create new or append at the end of existing, read-wr
 fun open(filename, args...)
 {
     const flags = args.size > 0 ? args[0] : rw
-    return new file(filename, flags)
+    return file(filename, flags)
 }
 
 fun create(filename)
 {
-    return new file(filename, create_flag)
+    return file(filename, create_flag)
 }
 
 fun append(filename)
 {
-    return new file(filename, append_flag)
+    return file(filename, append_flag)
 }
 
 file.prototype.read = fun(args...)
 {
     const size     = args.size > 0 ? args[0] : 0x7FFFFFFFFFFFFFFF
-    const buf      = args.size > 1 ? args[1] : new buffer
+    const buf      = args.size > 1 ? args[1] : buffer()
     var   num_read = 0
 
     while ! this.eof && num_read < size {
@@ -70,7 +70,7 @@ file.prototype.read = fun(args...)
 file.prototype.read_lines = fun(args...)
 {
     const gran = (args.size > 0 && args[0] > 0) ? args[0] : 0x10000
-    const buf  = new buffer
+    const buf  = buffer()
     var   pos  = 0
 
     repeat {

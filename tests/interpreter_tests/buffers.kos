@@ -58,7 +58,7 @@ do {
 # TODO add support for converting array of numbers to buffer through buffer constructor
 fun buffer_from_array(a)
 {
-    const b = new buffer(a.size)
+    const b = buffer(a.size)
     for var i in range(a.size) {
         b[i] = a[i]
     }
@@ -76,11 +76,11 @@ do {
 }
 
 do {
-    expect_fail(λ->(new buffer(-1)))
+    expect_fail(λ->(buffer(-1)))
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
 
     assert typeof b == "buffer"
     assert b.size   == 0
@@ -88,7 +88,7 @@ do {
 }
 
 do {
-    const b = new buffer(10)
+    const b = buffer(10)
 
     assert typeof b == "buffer"
     assert b.size   == 10
@@ -164,7 +164,7 @@ do {
     expect_fail(fun { b[5] = [0]     })
     expect_fail(fun { b[5] = buffer()})
     expect_fail(fun { b[5] = buffer(1) })
-    expect_fail(fun { (new buffer).reserve(-1) })
+    expect_fail(fun { buffer().reserve(-1) })
 
     assert b.size == 10
     assert b[0]   == 0
@@ -363,8 +363,8 @@ do {
 # lang.buffer.prototype.insert
 
 do {
-    const b1 = new buffer
-    const b2 = new buffer(20)
+    const b1 = buffer()
+    const b2 = buffer(20)
 
     b1.fill(1)
     b2.fill(2)
@@ -380,8 +380,8 @@ do {
 }
 
 do {
-    const b1 = new buffer(6)
-    const b2 = new buffer(4)
+    const b1 = buffer(6)
+    const b2 = buffer(4)
 
     for var i in range(b1.size) {
         b1[i] = i
@@ -403,7 +403,7 @@ do {
 # lang.buffer.prototype.slice
 
 do {
-    const b1 = new buffer(20)
+    const b1 = buffer(20)
 
     for var i in range(b1.size) {
         b1[i] = i
@@ -485,14 +485,14 @@ do {
 # lang.buffer.prototype.pack
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack("")
 
     assert b.size == 0
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack(" i 1 i 1 ", 101, 102)
 
     assert b.size == 2
@@ -501,9 +501,9 @@ do {
 }
 
 do {
-    const b  = new buffer
-    const b3 = new buffer(3)
-    const b5 = new buffer(5)
+    const b  = buffer()
+    const b3 = buffer(3)
+    const b5 = buffer(5)
 
     for var i in range(b3.size) {
         b3[i] = 0x30 + i
@@ -548,7 +548,7 @@ do {
 }
 
 do {
-    const b = new buffer(2)
+    const b = buffer(2)
     b[0] = 255
     b[1] = 254
     b.pack("<u2 >u2 <u2 >u2 <f4 >f4 <f8 >f8",
@@ -571,12 +571,12 @@ do {
 }
 
 do {
-    const a = new buffer(3)
+    const a = buffer(3)
     a[0] = 1
     a[1] = 2
     a[2] = 3
 
-    const b = new buffer
+    const b = buffer()
     b.pack("<b3 x >b3 x", a, a)
 
     const expected = [ 1, 2, 3, 0, 1, 2, 3, 0 ]
@@ -592,7 +592,7 @@ do {
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack("    2     i      4   < >   <     > < > <><><>>>>> <<<<",
            1, 2)
 
@@ -609,7 +609,7 @@ do {
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack("< 1 s 2 0 u 4 0 s 4 > 3 x 2 s 4",
            "abcdef", "ABCDEF", "xz")
 
@@ -626,7 +626,7 @@ do {
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack("", 1, 2, 3)
 
     assert b.size == 0
@@ -641,7 +641,7 @@ do {
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack("s", "\x{AA}\x{55555}")
 
     assert b.size == 6
@@ -654,7 +654,7 @@ do {
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack("> 2s i1", "\x80", "\x{7FF}", 10)
 
     assert b.size == 5
@@ -666,7 +666,7 @@ do {
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack("i2 u2", [ 0x8000, 0x8101 ])
 
     assert b.size == 4
@@ -677,7 +677,7 @@ do {
 }
 
 do {
-    const b = new buffer
+    const b = buffer()
     b.pack("f4 f4", 1, 0x4000000000000000);
 
     assert b.size == 8
@@ -692,26 +692,26 @@ do {
 }
 
 do {
-    expect_fail(λ->((new buffer).pack(1)))
-    expect_fail(λ->((new buffer).pack()))
-    expect_fail(λ->((new buffer).pack("1", 0)))
-    expect_fail(λ->((new buffer).pack("u", 0)))
-    expect_fail(λ->((new buffer).pack("r1", 0)))
-    expect_fail(λ->((new buffer).pack("u3", 0)))
-    expect_fail(λ->((new buffer).pack("i7", 0)))
-    expect_fail(λ->((new buffer).pack("f2", 0)))
-    expect_fail(λ->((new buffer).pack("f4", "x")))
-    expect_fail(λ->((new buffer).pack("u2", "")))
-    expect_fail(λ->((new buffer).pack("s2", 0)))
-    expect_fail(λ->((new buffer).pack("b", "")))
-    expect_fail(λ->((new buffer).pack("u1 1", 1)))
-    expect_fail(λ->((new buffer).pack("2 u1", 1)))
-    expect_fail(λ->((new buffer).pack("i1 i2", 1)))
-    expect_fail(λ->((new buffer).pack("2 f4", 1)))
-    expect_fail(λ->((new buffer).pack("2 s4", "")))
-    expect_fail(λ->((new buffer).pack("2 b4", new buffer)))
-    expect_fail(λ->((new buffer).pack("2 b4")))
-    expect_fail(λ->((new buffer).pack("b4", 0)))
+    expect_fail(λ->(buffer().pack(1)))
+    expect_fail(λ->(buffer().pack()))
+    expect_fail(λ->(buffer().pack("1", 0)))
+    expect_fail(λ->(buffer().pack("u", 0)))
+    expect_fail(λ->(buffer().pack("r1", 0)))
+    expect_fail(λ->(buffer().pack("u3", 0)))
+    expect_fail(λ->(buffer().pack("i7", 0)))
+    expect_fail(λ->(buffer().pack("f2", 0)))
+    expect_fail(λ->(buffer().pack("f4", "x")))
+    expect_fail(λ->(buffer().pack("u2", "")))
+    expect_fail(λ->(buffer().pack("s2", 0)))
+    expect_fail(λ->(buffer().pack("b", "")))
+    expect_fail(λ->(buffer().pack("u1 1", 1)))
+    expect_fail(λ->(buffer().pack("2 u1", 1)))
+    expect_fail(λ->(buffer().pack("i1 i2", 1)))
+    expect_fail(λ->(buffer().pack("2 f4", 1)))
+    expect_fail(λ->(buffer().pack("2 s4", "")))
+    expect_fail(λ->(buffer().pack("2 b4", buffer())))
+    expect_fail(λ->(buffer().pack("2 b4")))
+    expect_fail(λ->(buffer().pack("b4", 0)))
 }
 
 ##############################################################################
@@ -873,7 +873,7 @@ do {
 
 do {
     expect_fail(λ->(buffer.prototype.unpack.apply(void, [""])))
-    expect_fail(λ->((new buffer(100)).unpack(void)))
-    expect_fail(λ->((new buffer(100)).unpack("s")))
-    expect_fail(λ->((new buffer).unpack("u1")))
+    expect_fail(λ->(buffer(100).unpack(void)))
+    expect_fail(λ->(buffer(100).unpack("s")))
+    expect_fail(λ->(buffer().unpack("u1")))
 }

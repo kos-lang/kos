@@ -239,8 +239,9 @@ typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_FRAME  frame,
                                            KOS_OBJ_ID this_obj,
                                            KOS_OBJ_ID args_obj);
 
-enum _KOS_GENERATOR_STATE {
-    KOS_NOT_GEN,        /* not a generator, regular function                    */
+enum _KOS_FUNCTION_STATE {
+    KOS_FUN,            /* regular function                                     */
+    KOS_CTOR,           /* constructor function                                 */
     KOS_GEN_INIT,       /* generator initializer object                         */
     KOS_GEN_READY,      /* initialized generator function, but not executed yet */
     KOS_GEN_ACTIVE,     /* generator function halted in the middle of execution */
@@ -252,7 +253,7 @@ typedef struct _KOS_FUNCTION {
     uint8_t              min_args;
     uint8_t              num_regs;
     uint8_t              args_reg;
-    uint8_t              generator_state;
+    uint8_t              state;
     uint32_t             instr_offs;
     KOS_ATOMIC(void *)   prototype; /* actual type: KOS_OBJ_ID */
     KOS_OBJ_ID           closures;
@@ -305,6 +306,7 @@ typedef struct _KOS_DYNAMIC_PROP {
     KOS_OBJ_ID           setter;
 } KOS_DYNAMIC_PROP;
 
+/* TODO use KOS_CUSTOM instead of this, make this not an object */
 typedef struct _KOS_OBJECT_WALK {
     KOS_SUBTYPE          type; /* OBJ_OBJECT_WALK */
     KOS_ATOMIC(uint32_t) index;
@@ -352,7 +354,7 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
                                 KOS_OBJ_ID getter,
                                 KOS_OBJ_ID setter);
 
-KOS_OBJ_ID KOS_new_custom(KOS_FRAME frame, size_t custom_size);
+KOS_OBJ_ID KOS_new_custom(KOS_FRAME frame, unsigned custom_size);
 
 #ifdef __cplusplus
 }

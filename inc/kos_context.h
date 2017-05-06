@@ -165,11 +165,11 @@ KOS_OBJ_ID KOS_get_exception(KOS_FRAME frame);
 KOS_OBJ_ID KOS_format_exception(KOS_FRAME  frame,
                                 KOS_OBJ_ID exception);
 
-/* TODO find a better place */
+/* TODO move to utils */
 KOS_OBJ_ID KOS_get_file_name(KOS_FRAME  frame,
                              KOS_OBJ_ID full_path);
 
-/* TODO find a better place */
+/* TODO move to utils */
 int KOS_get_integer(KOS_FRAME  frame,
                     KOS_OBJ_ID obj_id,
                     int64_t   *ret);
@@ -177,10 +177,22 @@ int KOS_get_integer(KOS_FRAME  frame,
 KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
                              const void *ptr);
 
-KOS_OBJ_ID KOS_call_function(KOS_FRAME  frame,
-                             KOS_OBJ_ID func_obj,
-                             KOS_OBJ_ID this_obj,
-                             KOS_OBJ_ID args_obj);
+enum _KOS_CALL_FLAVOR {
+    KOS_CALL_FUNCTION,
+    KOS_APPLY_FUNCTION
+};
+
+KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
+                              KOS_OBJ_ID            func_obj,
+                              KOS_OBJ_ID            this_obj,
+                              KOS_OBJ_ID            args_obj,
+                              enum _KOS_CALL_FLAVOR call_flavor);
+
+#define KOS_call_function(frame, func_obj, this_obj, args_obj) \
+    _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
+
+#define KOS_apply_function(frame, func_obj, this_obj, args_obj) \
+    _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
 
 #ifdef __cplusplus
 }

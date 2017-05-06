@@ -77,7 +77,7 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
         if (GET_OBJ_TYPE(init_arg) != OBJ_BUFFER)
             RAISE_EXCEPTION(str_err_not_buffer);
 
-        lexer_obj_id = KOS_new_custom(frame, sizeof(struct _KOS_LEXER_OBJECT));
+        lexer_obj_id = KOS_new_custom(frame, (unsigned)sizeof(struct _KOS_LEXER_OBJECT));
         TRY_OBJID(lexer_obj_id);
 
         lexer = (struct _KOS_LEXER_OBJECT *)OBJPTR(CUSTOM, lexer_obj_id);
@@ -239,7 +239,6 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_in",           KW_IN);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_instanceof",   KW_INSTANCEOF);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_loop",         KW_LOOP);
-    TRY_ADD_INTEGER_CONSTANT(frame, "keyword_new",          KW_NEW);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_repeat",       KW_REPEAT);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_return",       KW_RETURN);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_set",          KW_SET);

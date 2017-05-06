@@ -476,9 +476,9 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
             }
 
             case OBJ_FUNCTION: {
-                KOS_OBJ_ID                gen_args;
-                enum _KOS_GENERATOR_STATE state =
-                        (enum _KOS_GENERATOR_STATE)OBJPTR(FUNCTION, elem)->generator_state;
+                KOS_OBJ_ID               gen_args;
+                enum _KOS_FUNCTION_STATE state =
+                        (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, elem)->state;
 
                 if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE) {
                     KOS_raise_exception_cstring(frame, str_err_cannot_convert_to_array);
@@ -568,7 +568,7 @@ static KOS_OBJ_ID _apply(KOS_FRAME  frame,
     arg_args = KOS_array_slice(frame, arg_args, 0, MAX_INT64);
     TRY_OBJID(arg_args);
 
-    ret = KOS_call_function(frame, this_obj, arg_this, arg_args);
+    ret = KOS_apply_function(frame, this_obj, arg_this, arg_args);
 
 _error:
     return error ? KOS_BADPTR : ret;

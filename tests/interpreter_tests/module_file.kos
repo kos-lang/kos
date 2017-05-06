@@ -54,7 +54,7 @@ do {
 
         assert f.size == 0
 
-        const init_buf = new lang.buffer(9)
+        const init_buf = lang.buffer(9)
         for var i in lang.range(init_buf.size) {
             init_buf[i] = i
         }
@@ -104,7 +104,7 @@ do {
 ##############################################################################
 # file.file - open non-existent file
 do {
-    expect_fail(λ->(new file.file("_#non_existent#_*?", file.ro)))
+    expect_fail(λ->(file.file("_#non_existent#_*?", file.ro)))
 }
 
 ##############################################################################
@@ -134,15 +134,15 @@ do {
     file.remove(name)
     assert ! file.is_file(name)
 
-    with const f = new file.file(name, file.create_flag) {
-        const buf = new lang.buffer(100)
+    with const f = file.file(name, file.create_flag) {
+        const buf = lang.buffer(100)
         for var i in lang.range(buf.size) {
             buf[i] = i + 100
         }
         f.write(buf)
     }
 
-    with const f = new file.file(name, file.ro) {
+    with const f = file.file(name, file.ro) {
         assert f.size     == 100
         assert f.position == 0
         assert typeof f.position == "integer"
@@ -205,7 +205,7 @@ do {
 
     with const f = file.create(name) {
         const lines = "abcdefg\nhijklm\nnop";
-        f.write((new lang.buffer).pack("s\(lines.size)", lines))
+        f.write(lang.buffer().pack("s\(lines.size)", lines))
     }
 
     with const f = file.open(name, file.ro) {
@@ -238,7 +238,7 @@ do {
 
     with const f = file.create(name) {
         const lines = "abc\n\ndef\n\rxyz"
-        f.write((new lang.buffer).pack("s\(lines.size)", lines))
+        f.write(lang.buffer().pack("s\(lines.size)", lines))
     }
 
     with const f = file.open(name, file.ro) {
@@ -267,7 +267,7 @@ do {
 
     with const f = file.create(name) {
         const lines = "xy\r\nz\x{FF}\n"
-        f.write((new lang.buffer).pack("s", lines))
+        f.write(lang.buffer().pack("s", lines))
     }
 
     with const f = file.open(name, file.ro) {
@@ -298,7 +298,7 @@ do {
 
     with const f = file.create(name) {
         var exception = false
-        var buf       = new lang.buffer(1024)
+        var buf       = lang.buffer(1024)
         var ret       = void
         assert buf.size == 1024
         try {

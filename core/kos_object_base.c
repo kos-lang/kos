@@ -75,7 +75,7 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         func->handler               = 0;
         func->generator_stack_frame = 0;
         func->instr_offs            = ~0U;
-        func->generator_state       = KOS_NOT_GEN;
+        func->state                 = KOS_FUN;
     }
 
     return OBJID(FUNCTION, func);
@@ -118,7 +118,7 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
     return OBJID(DYNAMIC_PROP, dyn_prop);
 }
 
-KOS_OBJ_ID KOS_new_custom(KOS_FRAME frame, size_t custom_size)
+KOS_OBJ_ID KOS_new_custom(KOS_FRAME frame, unsigned custom_size)
 {
     KOS_CUSTOM *custom = 0;
 
@@ -193,7 +193,7 @@ KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
 KOS_FRAME _KOS_stack_frame_push_func(KOS_FRAME     frame,
                                      KOS_FUNCTION *func)
 {
-    const int no_regs = func->generator_state == KOS_GEN_INIT && func->handler;
+    const int no_regs = func->state == KOS_GEN_INIT && func->handler;
     return _KOS_stack_frame_push(frame,
                                  func->module,
                                  func->instr_offs,

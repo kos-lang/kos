@@ -461,7 +461,7 @@ Constructors
 
     import math
 
-    fun Vector(x, y)
+    constructor Vector(x, y)
     {
         this.x = x
         this.y = y
@@ -472,7 +472,7 @@ Constructors
         return math.sqrt(this.x * this.x + this.y * this.y)
     }
 
-    var v1     = new Vector(3, 4)
+    var v1     = Vector(3, 4)
     var v1_len = v1.length()       // 5
 
 
@@ -481,15 +481,15 @@ Built-in type constructors
 
     import lang
 
-    var integer = new lang.integer("1")    // 1
-    var float   = new lang.float("2")      // 2.0
-    var string  = new lang.string(3)       // "3"
-    var boolean = new lang.boolean(0)      // false
-    var _void   = new lang.void
-    var array   = new lang.array(void, 2)  // [ void, 2 ]
-    var buffer  = new lang.buffer(10)      // buffer of 10 bytes
-    var object  = new lang.object          // { }
-    var func    = new lang.function(λ(x,y)->(x+y))
+    var integer = lang.integer("1")    // 1
+    var float   = lang.float("2")      // 2.0
+    var string  = lang.string(3)       // "3"
+    var boolean = lang.boolean(0)      // false
+    var _void   = lang.void
+    var array   = lang.array(void, 2)  // [ void, 2 ]
+    var buffer  = lang.buffer(10)      // buffer of 10 bytes
+    var object  = lang.object          // { }
+    var func    = lang.function(λ(x,y)->(x+y))
 
 
 Buffers
@@ -508,7 +508,7 @@ Attempt to write a value less than 0 or greater than 255 triggers an exception.
 To create a new buffer of size 100, filled with zeroes:
 
     import lang
-    var buf = new lang.buffer(100)
+    var buf = lang.buffer(100)
 
 To load a file:
 

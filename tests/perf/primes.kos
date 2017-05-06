@@ -12,7 +12,7 @@ fun primes(max_number)
     # We set size to half of the max number checked, because
     # we ignore even numbers and only check odd numbers.
     const len   = max_number >> 1
-    const sieve = new buffer(len)
+    const sieve = buffer(len)
 
     for var value = 3; value < max_number; value += 2 {
 

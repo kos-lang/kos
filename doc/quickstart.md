@@ -49,7 +49,7 @@ These are mutable types (can be modified, but not reassigned):
 
     const object   = { prop1: 1, prop2: 2, "prop 3": 3 }
     const array    = [ 1, 2, "string" ]
-    const buffer   = new lang.buffer # Refer to the tutorial for details
+    const buffer   = lang.buffer # Refer to the tutorial for details
 
 
 Functions
@@ -280,13 +280,6 @@ Converting between integers, floats and strings:
     const string_50  = string(50)
     const string_60  = string(60.0)
 
-In the case of the type constructors from the `lang` module, they can also
-be used with the `new` operator:
-
-    const integer_70 = new integer("70")
-    const float_80   = new float("80")
-    const string_90  = new string(90)
-
 
 Generators
 ----------
@@ -374,7 +367,7 @@ This writes 256 bytes with values of 0 through 255 to a newly created file:
     import lang.buffer
     import lang.range
 
-    const buf = new buffer(256) # Buffer of size 256, filled with 0s
+    const buf = buffer(256) # Buffer of size 256, filled with 0s
 
     for var i in range(256) {
         buf[i] = i
@@ -438,8 +431,7 @@ Constructors and prototypal inheritance
 
     import lang.print
 
-    # Conceptually a constructor
-    fun counter(init)
+    constructor counter(init)
     {
         this.count = init
     }
@@ -454,7 +446,7 @@ Constructors and prototypal inheritance
         this.count += n
     }
 
-    const ctr = new counter(5)
+    const ctr = counter(5)
     ctr.print()                # Prints: 5
     ctr.add(3)
     ctr.print()                # Prints: 8
