@@ -1,3 +1,6 @@
 void true false abc -10 
 
 xyz false void true 4096 1.200000
+Exception: raised
+  #0  0x11F in 'thrower' in module_lang_print.kos:37
+  #1  0xF9 in '<global>' in module_lang_print.kos:41

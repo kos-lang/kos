@@ -547,6 +547,21 @@ static KOS_OBJ_ID _function_constructor(KOS_FRAME  frame,
                                         KOS_OBJ_ID args_obj)
 {
     /* TODO copy function object */
+    KOS_raise_exception_cstring(frame, str_err_not_function);
+    return KOS_BADPTR;
+}
+
+static KOS_OBJ_ID _exception_constructor(KOS_FRAME  frame,
+                                         KOS_OBJ_ID this_obj,
+                                         KOS_OBJ_ID args_obj)
+{
+    KOS_OBJ_ID     exception = KOS_VOID;
+    const uint32_t num_args  = KOS_get_array_size(args_obj);
+
+    if (num_args > 0)
+        exception = KOS_array_read(frame, args_obj, 0);
+
+    KOS_raise_exception(frame, exception);
     return KOS_BADPTR;
 }
 
@@ -1803,6 +1818,39 @@ static KOS_OBJ_ID _get_registers(KOS_FRAME  frame,
     return ret;
 }
 
+static KOS_OBJ_ID _print_exception(KOS_FRAME  frame,
+                                   KOS_OBJ_ID this_obj,
+                                   KOS_OBJ_ID args_obj)
+{
+    int                error;
+    KOS_OBJ_ID         ret       = KOS_BADPTR;
+    uint32_t           i;
+    uint32_t           lines;
+    KOS_OBJ_ID         formatted = KOS_format_exception(frame, this_obj);
+    struct _KOS_VECTOR cstr;
+
+    _KOS_vector_init(&cstr);
+
+    TRY_OBJID(formatted);
+
+    assert(GET_OBJ_TYPE(formatted) == OBJ_ARRAY);
+
+    lines = KOS_get_array_size(formatted);
+
+    for (i = 0; i < lines; i++) {
+        KOS_OBJ_ID line = KOS_array_read(frame, formatted, (int)i);
+        TRY_OBJID(line);
+        TRY(KOS_string_to_cstr_vec(frame, line, &cstr));
+        printf("%s\n", cstr.buffer);
+    }
+
+    ret = this_obj;
+
+_error:
+    _KOS_vector_destroy(&cstr);
+    return ret;
+}
+
 int _KOS_module_lang_init(KOS_FRAME frame)
 {
     int error = KOS_SUCCESS;
@@ -1822,37 +1870,40 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(object);
     TRY_CREATE_CONSTRUCTOR(string);
     TRY_CREATE_CONSTRUCTOR(void);
+    TRY_CREATE_CONSTRUCTOR(exception);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "insert_array",  _insert_array,      2);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "pop",           _pop,               0);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "push",          _push,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "reserve",       _reserve,           1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "resize",        _resize,            1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),    "slice",         _slice,             2);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(array),    "size",          _get_array_size,    0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "insert_array",  _insert_array,      2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "pop",           _pop,               0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "push",          _push,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "reserve",       _reserve,           1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "resize",        _resize,            1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "slice",         _slice,             2);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(array),     "size",          _get_array_size,    0);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),   "copy_buffer",   _copy_buffer,       1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),   "fill",          _fill,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),   "pack",          _pack,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),   "reserve",       _reserve,           1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),   "resize",        _resize,            1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),   "slice",         _slice,             2);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),   "unpack",        _unpack,            1);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(buffer),   "size",          _get_buffer_size,   0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "copy_buffer",   _copy_buffer,       1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "fill",          _fill,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "pack",          _pack,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "reserve",       _reserve,           1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "resize",        _resize,            1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "slice",         _slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "unpack",        _unpack,            1);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(buffer),    "size",          _get_buffer_size,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function), "apply",         _apply,             2);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function), "set_prototype", _set_prototype,     1);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function), "instructions",  _get_instructions,  0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function), "name",          _get_function_name, 0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function), "prototype",     _get_prototype,     0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function), "registers",     _get_registers,     0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function), "size",          _get_code_size,     0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),  "apply",         _apply,             2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),  "set_prototype", _set_prototype,     1);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "instructions",  _get_instructions,  0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "name",          _get_function_name, 0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "prototype",     _get_prototype,     0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "registers",     _get_registers,     0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "size",          _get_code_size,     0);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),   "get_char_code", _get_char_code,     1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),   "slice",         _slice,             2);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(string),   "size",          _get_string_size,   0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "get_char_code", _get_char_code,     1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "slice",         _slice,             2);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(string),    "size",          _get_string_size,   0);
 
-    TRY_ADD_MEMBER_GENERATOR(frame, PROTO(void),     "iterator",      _iterator,          0);
+    TRY_ADD_MEMBER_GENERATOR(frame, PROTO(void),      "iterator",      _iterator,          0);
+
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(exception), "print",         _print_exception,   0);
 
 _error:
     return error;

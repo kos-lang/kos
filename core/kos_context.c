@@ -183,16 +183,17 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     ctx->empty_string = _alloc_empty_string(frame);
     TRY_OBJID(ctx->empty_string);
 
-    TRY_OBJID(ctx->object_prototype   = KOS_new_object_with_prototype(frame, KOS_BADPTR));
-    TRY_OBJID(ctx->number_prototype   = KOS_new_object_with_prototype(frame, ctx->object_prototype));
-    TRY_OBJID(ctx->integer_prototype  = KOS_new_object_with_prototype(frame, ctx->number_prototype));
-    TRY_OBJID(ctx->float_prototype    = KOS_new_object_with_prototype(frame, ctx->number_prototype));
-    TRY_OBJID(ctx->string_prototype   = KOS_new_object_with_prototype(frame, ctx->object_prototype));
-    TRY_OBJID(ctx->boolean_prototype  = KOS_new_object_with_prototype(frame, ctx->object_prototype));
-    TRY_OBJID(ctx->void_prototype     = KOS_new_object_with_prototype(frame, ctx->object_prototype));
-    TRY_OBJID(ctx->array_prototype    = KOS_new_object_with_prototype(frame, ctx->object_prototype));
-    TRY_OBJID(ctx->buffer_prototype   = KOS_new_object_with_prototype(frame, ctx->object_prototype));
-    TRY_OBJID(ctx->function_prototype = KOS_new_object_with_prototype(frame, ctx->object_prototype));
+    TRY_OBJID(ctx->object_prototype    = KOS_new_object_with_prototype(frame, KOS_BADPTR));
+    TRY_OBJID(ctx->number_prototype    = KOS_new_object(frame));
+    TRY_OBJID(ctx->integer_prototype   = KOS_new_object_with_prototype(frame, ctx->number_prototype));
+    TRY_OBJID(ctx->float_prototype     = KOS_new_object_with_prototype(frame, ctx->number_prototype));
+    TRY_OBJID(ctx->string_prototype    = KOS_new_object(frame));
+    TRY_OBJID(ctx->boolean_prototype   = KOS_new_object(frame));
+    TRY_OBJID(ctx->void_prototype      = KOS_new_object(frame));
+    TRY_OBJID(ctx->array_prototype     = KOS_new_object(frame));
+    TRY_OBJID(ctx->buffer_prototype    = KOS_new_object(frame));
+    TRY_OBJID(ctx->function_prototype  = KOS_new_object(frame));
+    TRY_OBJID(ctx->exception_prototype = KOS_new_object(frame));
 
     ctx->init_module.name    = KOS_context_get_cstring(frame, str_init);
     ctx->module_names        = KOS_new_object(frame);
@@ -391,34 +392,34 @@ KOS_OBJ_ID KOS_get_exception(KOS_FRAME frame)
 
 void _KOS_wrap_exception(KOS_FRAME frame)
 {
-    int        error;
-    unsigned   depth;
-    KOS_OBJ_ID exception;
-    KOS_OBJ_ID backtrace;
-    KOS_OBJ_ID thrown_object = frame->exception;
-    KOS_FRAME  next_frame;
+    int                error         = KOS_SUCCESS;
+    unsigned           depth;
+    KOS_OBJ_ID         exception;
+    KOS_OBJ_ID         backtrace;
+    KOS_OBJ_ID         thrown_object = frame->exception;
+    KOS_FRAME          next_frame;
+    KOS_CONTEXT *const ctx           = KOS_context_from_frame(frame);
+    int                partial_wrap  = 0;
 
     assert(!IS_BAD_PTR(thrown_object));
 
     if (GET_OBJ_TYPE(thrown_object) == OBJ_OBJECT) {
 
-        KOS_OBJ_ID obj = KOS_get_property(frame, thrown_object, KOS_context_get_cstring(frame, str_backtrace));
-        if ( ! IS_BAD_PTR(obj)) {
-            obj = KOS_get_property(frame, thrown_object, KOS_context_get_cstring(frame, str_value));
+        const KOS_OBJ_ID proto = KOS_get_prototype(frame, thrown_object);
 
-            /* If both value and backtrace properties exist, restore the
-               original thrown object. */
-            if ( ! IS_BAD_PTR(obj))
-                TRY(KOS_SUCCESS_RETURN);
-        }
+        if (proto == ctx->exception_prototype)
+            /* Exception already wrapped */
+            return;
 
         KOS_clear_exception(frame);
     }
 
-    exception = KOS_new_object(frame);
+    exception = KOS_new_object_with_prototype(frame, ctx->exception_prototype);
     TRY_OBJID(exception);
 
     TRY(KOS_set_property(frame, exception, KOS_context_get_cstring(frame, str_value), thrown_object));
+
+    partial_wrap = 1;
 
     depth      = 0;
     next_frame = frame;
@@ -472,7 +473,8 @@ void _KOS_wrap_exception(KOS_FRAME frame)
     frame->exception = exception;
 
 _error:
-    (void)0;
+    if (error)
+        frame->exception = partial_wrap ? exception : thrown_object;
 }
 
 KOS_OBJ_ID KOS_get_file_name(KOS_FRAME  frame,

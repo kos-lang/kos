@@ -1149,6 +1149,42 @@ do {
 }
 
 ##############################################################################
+# lang.exception
+
+do {
+    assert typeof lang.exception == "function"
+}
+
+do {
+    var line      = void
+    var exception = void
+    assert ! exception
+    try {
+        line = __line__ ; lang.exception()
+        assert false
+    }
+    catch const e {
+        exception = e
+    }
+    assert exception
+    assert exception instanceof lang.exception
+    assert exception.backtrace.size    == 2
+    assert exception.backtrace[1].line == line
+}
+
+do {
+    var exception = void
+    assert ! (exception instanceof lang.exception)
+    try {
+        throw void
+    }
+    catch const e {
+        exception = e
+    }
+    assert exception instanceof lang.exception
+}
+
+##############################################################################
 # instanceof buffer
 
 do {

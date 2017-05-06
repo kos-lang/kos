@@ -30,3 +30,17 @@ print_(void, true, false, "abc", -10, "\n")
 print()
 
 print("xyz", false, void, true, 0x1000, 1.2)
+
+do {
+    fun thrower
+    {
+        throw "raised"
+    }
+
+    try {
+        thrower()
+    }
+    catch const e {
+        e.print()
+    }
+}
