@@ -599,3 +599,18 @@ do {
 
     check(collapse_if_numeric, { registers: 2, instructions: 2, size: 10 })
 }
+
+#============================================================================#
+
+do {
+    fun optimization_side_effect(func)
+    {
+        return typeof [ func() ]
+    }
+
+    # The function is never invoked
+    # TODO should the side-effect be performed and not optimized-out???
+    assert optimization_side_effect(fun { throw void }) == "array"
+
+    check(optimization_side_effect, { registers: 2, instructions: 2, size: 9 })
+}

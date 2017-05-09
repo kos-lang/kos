@@ -870,6 +870,21 @@ do {
     })
 }
 
+# call constructor function like a generator
+do {
+    constructor not_gen
+    {
+    }
+
+    expect_fail(fun {
+        var a = 0
+        for var i in not_gen {
+            a += i
+        }
+        return a
+    })
+}
+
 # lots of arguments
 do {
     fun lots_of_args(a0, args...)
@@ -922,6 +937,26 @@ do {
     assert z == 1420
 }
 
+# bind to a variable and access it later (JS's setTimeout pitfall)
+do {
+    fun n_times(n)
+    {
+        var later = []
+        for var i = 0; i < n; i += 1 {
+            later.push(λ->(i))
+        }
+        return later
+    }
+
+    const later = n_times(4)
+
+    assert later.size == 4
+    assert later[0]() == 4
+    assert later[1]() == 4
+    assert later[2]() == 4
+    assert later[3]() == 4
+}
+
 # function node promoted during optimization
 do {
     fun f(x)
@@ -957,4 +992,25 @@ do {
     assert typeof a == "array"
     assert a.size == 1
     assert a[0] == 10
+}
+
+# mix tail call optimization with independent variables
+do {
+    fun outer(a)
+    {
+        const b = a + 1
+        fun inner
+        {
+            return λ->( a * b )
+        }
+        return inner()
+    }
+
+    assert outer(5)()  == 30
+    assert outer(-7)() == 42
+}
+
+# call a non-callable
+do {
+    expect_fail(λ->(λ->(3)()()))
 }
