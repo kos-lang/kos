@@ -2109,7 +2109,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_TAIL_CALL: /* <closure.size.int>, <r.func>, <r.this>, <r.args> */
+            case INSTR_TAIL_CALL: /* <closure.size.uint8>, <r.func>, <r.this>, <r.args> */
                 /* fall through */
             case INSTR_CALL: /* <r.dest>, <r.func>, <r.this>, <r.args> */
                 /* fall through */
@@ -2184,7 +2184,7 @@ static int _exec_function(KOS_FRAME frame)
 
                         assert(new_stack_frame);
 
-                        /* TODO INSTR_TAIL_CALL */
+                        /* TODO optimize INSTR_TAIL_CALL */
 
                         if (func->handler)  {
                             const KOS_OBJ_ID ret_val = func->handler(new_stack_frame,
@@ -2213,7 +2213,7 @@ static int _exec_function(KOS_FRAME frame)
 
                         out = _finish_call(frame, instr, func, this_obj, new_stack_frame, &state);
 
-                        if (instr == INSTR_CALL_GEN) {
+                        if (instr == INSTR_CALL_GEN && ! error) {
                             const KOS_OBJ_ID result = KOS_BOOL(state == KOS_GEN_DONE);
                             if (rthis == rdest)
                                 out = result;
@@ -2223,17 +2223,23 @@ static int _exec_function(KOS_FRAME frame)
                             }
                         }
                     }
+
+                    if (instr == INSTR_TAIL_CALL && ! error) {
+                        frame->retval    = out;
+                        out              = KOS_BADPTR;
+                        regs_array->size = rdest; /* closure size */
+                        error            = KOS_SUCCESS_RETURN;
+                    }
                 }
 
-                switch (instr) {
-                    case INSTR_CALL_GEN:  delta = 4; break;
-                    case INSTR_TAIL_CALL: delta = 0; break;
-                    default:              delta = 5; break;
-                }
+                if (instr == INSTR_CALL)
+                    delta = 5;
+                else if (instr == INSTR_CALL_GEN)
+                    delta = 4;
                 break;
             }
 
-            case INSTR_RETURN: { /* <closure.size.int>, <r.src> */
+            case INSTR_RETURN: { /* <closure.size.uint8>, <r.src> */
                 const unsigned closure_size = bytecode[1];
                 const unsigned rsrc         = bytecode[2];
 

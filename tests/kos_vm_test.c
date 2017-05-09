@@ -1047,6 +1047,26 @@ int main(void)
     }
 
     /************************************************************************/
+    /* TAIL.CALL */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_FUN,   0, IMM32(13), 0, 2, 0,
+            INSTR_LOAD_ARRAY8,1, 0,
+            INSTR_TAIL_CALL,  0, 0, 0, 1,
+
+            /* unreachable */
+            INSTR_LOAD_VOID,  0,
+            INSTR_RETURN,     0, 0,
+
+            INSTR_LOAD_INT8,  0, 42,
+            INSTR_RETURN,     0, 0
+        };
+
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_SMALL_INT(42));
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
     /* CATCH - nothing is thrown */
     {
         const uint8_t code[] = {

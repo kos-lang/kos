@@ -162,9 +162,9 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* Call generator which is "READY" or "ACTIVE".  r.final is set to false
      * if a subsequent value is yielded or true if the generator returned. */
     INSTR_CALL_GEN,
-    /* RETURN <closure.size.int>, <r.src> */
+    /* RETURN <closure.size.uint8>, <r.src> */
     INSTR_RETURN,
-    /* TAIL.CALL <closure.size.int>, <r.func>, <r.this>, <r.args> */
+    /* TAIL.CALL <closure.size.uint8>, <r.func>, <r.this>, <r.args> */
     INSTR_TAIL_CALL,
     /* YIELD <r.src> */
     INSTR_YIELD,

@@ -55,6 +55,12 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
                        const struct _KOS_AST_NODE *node,
                        struct _KOS_REG           **reg);
 
+static int _invocation(struct _KOS_COMP_UNIT      *program,
+                       const struct _KOS_AST_NODE *node,
+                       struct _KOS_REG           **reg,
+                       enum _KOS_BYTECODE_INSTR    instr,
+                       unsigned                    tail_closure_size);
+
 static int _gen_reg(struct _KOS_COMP_UNIT *program,
                     struct _KOS_REG      **out_reg)
 {
@@ -1142,6 +1148,23 @@ static struct _KOS_SCOPE *_find_try_scope(struct _KOS_SCOPE *scope)
     return scope;
 }
 
+static int _get_closure_size(struct _KOS_COMP_UNIT *program)
+{
+    int                closure_size;
+    struct _KOS_SCOPE *scope;
+
+    scope = program->scope_stack;
+    while (scope->next && ! scope->is_function)
+        scope = scope->next;
+
+    closure_size = scope->num_indep_vars;
+    if (scope->num_indep_args)
+        ++closure_size;
+
+    assert(closure_size <= 255);
+    return closure_size;
+}
+
 static int _gen_return(struct _KOS_COMP_UNIT *program,
                        int                    reg)
 {
@@ -1170,19 +1193,8 @@ static int _gen_return(struct _KOS_COMP_UNIT *program,
 
         TRY(_gen_instr1(program, INSTR_JUMP, 0));
     }
-    else {
-        int closure_size;
-
-        scope = program->scope_stack;
-        while (scope->next && ! scope->is_function)
-            scope = scope->next;
-
-        closure_size = scope->num_indep_vars;
-        if (scope->num_indep_args)
-            ++closure_size;
-
-        TRY(_gen_instr2(program, INSTR_RETURN, closure_size, reg));
-    }
+    else
+        TRY(_gen_instr2(program, INSTR_RETURN, _get_closure_size(program), reg));
 
 _error:
     return error;
@@ -1203,6 +1215,7 @@ static int _return(struct _KOS_COMP_UNIT      *program,
     int                error;
     struct _KOS_REG   *reg       = 0;
     struct _KOS_SCOPE *try_scope = _find_try_scope(program->scope_stack);
+    int                tail_call = 0;
 
     if (try_scope)
         reg = try_scope->catch_ref.catch_reg;
@@ -1215,20 +1228,33 @@ static int _return(struct _KOS_COMP_UNIT      *program,
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
         }
 
-        /* TODO - tail recursion (INSTR_TAIL_CALL) if there are no pending catches */
-
-        TRY(_visit_node(program, node->children, &reg));
-        assert(reg);
+        if ( ! try_scope && node->children->type == NT_INVOCATION) {
+            const int closure_size = _get_closure_size(program);
+            tail_call = 1;
+            TRY(_invocation(program, node->children, &reg, INSTR_TAIL_CALL, closure_size));
+            assert( ! reg);
+        }
+        else {
+            TRY(_visit_node(program, node->children, &reg));
+            assert(reg);
+        }
     }
     else {
         TRY(_gen_reg(program, &reg));
         TRY(_gen_instr1(program, INSTR_LOAD_VOID, reg->reg));
     }
 
-    error = _gen_return(program, reg->reg);
+    if (tail_call) {
+        assert( ! try_scope);
+        assert( ! reg);
+    }
+    else {
 
-    if ( ! try_scope || reg != try_scope->catch_ref.catch_reg)
-        _free_reg(program, reg);
+        error = _gen_return(program, reg->reg);
+
+        if ( ! try_scope || reg != try_scope->catch_ref.catch_reg)
+            _free_reg(program, reg);
+    }
 
 _error:
     return error;
@@ -2583,12 +2609,17 @@ _error:
 
 static int _invocation(struct _KOS_COMP_UNIT      *program,
                        const struct _KOS_AST_NODE *node,
-                       struct _KOS_REG           **reg)
+                       struct _KOS_REG           **reg,
+                       enum _KOS_BYTECODE_INSTR    instr,
+                       unsigned                    tail_closure_size)
 {
     int              error;
-    struct _KOS_REG *obj  = 0;
-    struct _KOS_REG *fun  = 0;
-    struct _KOS_REG *args = _is_var_used(program, node, *reg) ? 0 : *reg;
+    struct _KOS_REG *obj   = 0;
+    struct _KOS_REG *fun   = 0;
+    struct _KOS_REG *args  = _is_var_used(program, node, *reg) ? 0 : *reg;
+    int32_t          rdest = (int32_t)tail_closure_size;
+
+    assert(tail_closure_size <= 255U);
 
     node = node->children;
     assert(node);
@@ -2606,7 +2637,7 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
 
     TRY(_gen_array(program, node, &args));
 
-    if ( ! *reg)
+    if ( ! *reg && instr == INSTR_CALL)
         *reg = args;
 
     if (!obj) {
@@ -2614,7 +2645,10 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
         TRY(_gen_instr1(program, INSTR_LOAD_VOID, obj->reg));
     }
 
-    TRY(_gen_instr4(program, INSTR_CALL, (*reg)->reg, fun->reg, obj->reg, args->reg));
+    if (instr == INSTR_CALL)
+        rdest = (*reg)->reg;
+
+    TRY(_gen_instr4(program, instr, rdest, fun->reg, obj->reg, args->reg));
 
     _free_reg(program, fun);
     _free_reg(program, obj);
@@ -3721,10 +3755,10 @@ static int _void_literal(struct _KOS_COMP_UNIT      *program,
     return error;
 }
 
-int _gen_arg_list(struct _KOS_COMP_UNIT *program,
-                  struct _KOS_VAR       *ellipsis_var,
-                  struct _KOS_REG       *args_reg,
-                  int                    num_args)
+static int _gen_arg_list(struct _KOS_COMP_UNIT *program,
+                         struct _KOS_VAR       *ellipsis_var,
+                         struct _KOS_REG       *args_reg,
+                         int                    num_args)
 {
     int               error    = KOS_SUCCESS;
     int               str_idx;
@@ -4170,7 +4204,7 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             error = _slice(program, node, reg);
             break;
         case NT_INVOCATION:
-            error = _invocation(program, node, reg);
+            error = _invocation(program, node, reg, INSTR_CALL, 0);
             break;
         case NT_OPERATOR:
             error = _operator(program, node, reg);

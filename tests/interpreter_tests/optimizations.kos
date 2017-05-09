@@ -206,7 +206,7 @@ do {
         assert iter() == 0
     }
 
-    check(map_invoke, { registers: 5, instructions: 7, size: 39 })
+    check(map_invoke, { registers: 5, instructions: 6, size: 36 })
 }
 
 #============================================================================#
