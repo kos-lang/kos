@@ -85,14 +85,14 @@ void *_KOS_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size)
 
 void _KOS_vector_init(struct _KOS_VECTOR *vector)
 {
-    vector->buffer   = 0;
+    vector->buffer   = (char *)vector->_local_buffer;
     vector->size     = 0;
-    vector->capacity = 0;
+    vector->capacity = sizeof(vector->_local_buffer);
 }
 
 void _KOS_vector_destroy(struct _KOS_VECTOR *vector)
 {
-    if (vector->buffer)
+    if (vector->capacity > sizeof(vector->_local_buffer))
         _KOS_free(vector->buffer);
 }
 
@@ -104,11 +104,11 @@ int _KOS_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity)
 
         char *const new_buf = (char *)_KOS_malloc(capacity);
 
-        if (vector->buffer) {
-            if (vector->size)
-                memcpy(new_buf, vector->buffer, vector->size);
+        if (vector->size)
+            memcpy(new_buf, vector->buffer, vector->size);
+
+        if (vector->capacity > sizeof(vector->_local_buffer))
             _KOS_free(vector->buffer);
-        }
 
         vector->buffer = new_buf;
 

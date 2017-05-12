@@ -42,6 +42,7 @@ struct _KOS_VECTOR {
     char  *buffer;
     size_t size;
     size_t capacity;
+    double _local_buffer[2];
 };
 
 void _KOS_vector_init(struct _KOS_VECTOR *vector);
