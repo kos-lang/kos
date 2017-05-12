@@ -2323,30 +2323,28 @@ static int _import_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             goto _error;
         }
     }
+    else if (parser->token.sep == ST_COLON) {
+
+        do {
+
+            TRY(_next_token(parser));
+
+            if (parser->token.type != TT_IDENTIFIER && parser->token.type != TT_KEYWORD) {
+                parser->error_str = str_err_expected_identifier;
+                error = KOS_ERROR_PARSE_FAILED;
+                goto _error;
+            }
+
+            TRY(_push_node(parser, *ret, NT_IDENTIFIER, 0));
+
+            TRY(_next_token(parser));
+
+        } while (parser->token.sep == ST_COMMA);
+
+        parser->unget = 1;
+    }
     else
         parser->unget = 1;
-
-    TRY(_assume_separator(parser, ST_SEMICOLON));
-
-_error:
-    return error;
-}
-
-static int _try_import_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
-{
-    int error = KOS_SUCCESS;
-
-    TRY(_new_node(parser, ret, NT_TRY_IMPORT));
-
-    TRY(_next_token(parser));
-
-    if (parser->token.type != TT_IDENTIFIER) {
-        parser->error_str = str_err_expected_identifier;
-        error = KOS_ERROR_PARSE_FAILED;
-        goto _error;
-    }
-
-    TRY(_push_node(parser, *ret, NT_IDENTIFIER, 0));
 
     TRY(_assume_separator(parser, ST_SEMICOLON));
 
@@ -2520,35 +2518,6 @@ static int _handle_imports(struct _KOS_PARSER *parser, struct _KOS_AST_NODE *roo
 
             if (!error)
                 _ast_push(root, node);
-            else
-                break;
-        }
-        else if (token->keyword == KW_TRY) {
-
-            struct _KOS_TOKEN saved_token = parser->token;
-
-            error = _next_token(parser);
-
-            if (!error) {
-
-                if (parser->token.keyword == KW_IMPORT) {
-
-                    struct _KOS_AST_NODE *node = 0;
-
-                    error = _try_import_stmt(parser, &node);
-
-                    if (!error)
-                        _ast_push(root, node);
-                    else
-                        break;
-                }
-                else {
-
-                    _KOS_lexer_unget_token(&parser->lexer, &saved_token);
-                    parser->unget = 0;
-                    break;
-                }
-            }
             else
                 break;
         }

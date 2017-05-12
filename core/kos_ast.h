@@ -28,7 +28,6 @@
 enum _KOS_NODE_TYPE {
     NT_EMPTY,
     NT_IMPORT,
-    NT_TRY_IMPORT,
     NT_SCOPE,               /* compound statement */
     NT_IF,
     NT_TRY,

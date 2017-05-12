@@ -482,11 +482,15 @@ parser treats the preceding end of line as a semicolon.
 Import statement
 ----------------
 
-    ImportStatement ::= ( MandatoryImport | TryImport ) OptSemicolon
+    ImportStatement  ::= "import" ( ImportModule | ImportGlobal | ImportAllGlobals | ImportList ) OptSemicolon
 
-    MandatoryImport ::= "import" Identifier [ "." ( Identifier | "*" ) ]
+    ImportModule     ::= Identifier
 
-    TryImport       ::= "try" "import" Identifier
+    ImportGlobal     ::= Identifier "." Identifier
+
+    ImportAllGlobals ::= Identifier "." "*"
+
+    ImportList       ::= Identifier ":" Identifier ( "," Identifier )*
 
 
 Compound statement

@@ -480,12 +480,14 @@ static int _import(struct _KOS_COMP_UNIT      *program,
             error = KOS_ERROR_INTERNAL;
         }
         else {
+            for ( ; node; node = node->next) {
 
-            struct _KOS_VAR *var;
+                struct _KOS_VAR *var;
 
-            assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
+                assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-            error = _define_local_var(program, 1, node, &var);
+                error = _define_local_var(program, 1, node, &var);
+            }
         }
     }
 

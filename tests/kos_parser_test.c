@@ -33,7 +33,6 @@
 static const char *const node_types[] = {
     "empty",
     "import",
-    "try_import",
     "scope",
     "if",
     "try",

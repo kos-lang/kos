@@ -2,8 +2,9 @@
 import     first;
 import     second . *;
 import     third.max;
-try import fourth;
-import     fifth;
+import     fourth;
+import     fifth : one
+import     sixth : one , two
 
 @ 0
 
@@ -16,10 +17,15 @@ import     fifth;
     (import 4 1 import
         (identifier 4 12 third)
         (identifier 4 18 max))
-    (try_import 5 5 import
+    (import 5 1 import
         (identifier 5 12 fourth))
     (import 6 1 import
-        (identifier 6 12 fifth)))
+        (identifier 6 12 fifth)
+        (identifier 6 20 one))
+    (import 7 1 import
+        (identifier 7 12 sixth)
+        (identifier 7 20 one)
+        (identifier 7 26 two)))
 
 @------------------------------------------------------------------------------
 # Empty statements before and between imports are OK
@@ -66,17 +72,12 @@ module.;
 @ 10 3 8
 
 @------------------------------------------------------------------------------
-# Missing identifier after import
-try import 0;
-@ 10 2 12
-
-@------------------------------------------------------------------------------
-# Missing semicolon after module name
-try import module . *;
-@ 10 2 19
-
-@------------------------------------------------------------------------------
 # Some statement before import
 0;
 import module;
 @ 10 3 1
+
+@------------------------------------------------------------------------------
+# Missing comma
+import mod:v x
+@ 10 2 14

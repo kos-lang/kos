@@ -799,30 +799,33 @@ static int _import(struct _KOS_COMP_UNIT      *program,
         }
         else {
 
-            int              global_idx;
-            struct _KOS_VAR *var;
-            struct _KOS_REG *reg = 0;
+            for ( ; node; node = node->next) {
 
-            assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
+                int              global_idx;
+                struct _KOS_VAR *var;
+                struct _KOS_REG *reg = 0;
 
-            TRY(program->get_global_idx(program->frame,
-                                        module_idx,
-                                        node->token.begin,
-                                        node->token.length,
-                                        &global_idx));
+                assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-            var = _KOS_find_var(program->scope_stack->vars, &node->token);
+                TRY(program->get_global_idx(program->frame,
+                                            module_idx,
+                                            node->token.begin,
+                                            node->token.length,
+                                            &global_idx));
 
-            assert(var);
-            assert(var->type == VAR_GLOBAL);
+                var = _KOS_find_var(program->scope_stack->vars, &node->token);
 
-            TRY(_gen_reg(program, &reg));
+                assert(var);
+                assert(var->type == VAR_GLOBAL);
 
-            TRY(_gen_instr3(program, INSTR_GET_MOD_ELEM, reg->reg, module_idx, global_idx));
+                TRY(_gen_reg(program, &reg));
 
-            TRY(_gen_instr2(program, INSTR_SET_GLOBAL, var->array_idx, reg->reg));
+                TRY(_gen_instr3(program, INSTR_GET_MOD_ELEM, reg->reg, module_idx, global_idx));
 
-            _free_reg(program, reg);
+                TRY(_gen_instr2(program, INSTR_SET_GLOBAL, var->array_idx, reg->reg));
+
+                _free_reg(program, reg);
+            }
         }
     }
 
