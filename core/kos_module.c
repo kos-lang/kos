@@ -636,7 +636,7 @@ static int _walk_globals(void                          *vframe,
         TRY(KOS_string_to_cstr_vec(frame, elem.key, &name));
 
         TRY(callback(name.buffer,
-                     name.size - 1,
+                     (unsigned)name.size - 1U,
                      module_idx,
                      (int)GET_SMALL_INT(elem.value),
                      cookie));
