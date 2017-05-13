@@ -38,9 +38,9 @@ static int _is_option(const char *arg,
                       const char *short_opt,
                       const char *long_opt);
 
-static void _print_usage();
+static void _print_usage(void);
 
-static void _print_version();
+static void _print_version(void);
 
 static int _add_module_search_paths(KOS_FRAME frame, const char *kos_exe);
 
@@ -123,6 +123,10 @@ int main(int argc, char *argv[])
     }
 
     /* TODO add script arguments */
+    if (i_first_arg) {
+        fprintf(stderr, "Script arguments not supported\n");
+        TRY(KOS_ERROR_EXCEPTION);
+    }
 
     error = KOS_modules_init(&ctx);
 
@@ -176,12 +180,12 @@ static int _is_option(const char *arg,
     return 0;
 }
 
-static void _print_usage()
+static void _print_usage(void)
 {
     printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
 }
 
-static void _print_version()
+static void _print_version(void)
 {
     printf("Kos 0.1\n");
 }
