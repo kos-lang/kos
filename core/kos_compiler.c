@@ -1276,7 +1276,7 @@ static int _return(struct _KOS_COMP_UNIT      *program,
         if ( ! try_scope && node->children->type == NT_INVOCATION) {
             const int closure_size = _get_closure_size(program);
             tail_call = 1;
-            TRY(_invocation(program, node->children, &reg, INSTR_TAIL_CALL, closure_size));
+            TRY(_invocation(program, node->children, &reg, INSTR_TAIL_CALL, (unsigned)closure_size));
             assert( ! reg);
         }
         else {
