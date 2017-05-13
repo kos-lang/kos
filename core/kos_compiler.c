@@ -769,6 +769,47 @@ static void _pop_scope(struct _KOS_COMP_UNIT *program)
     program->scope_stack = program->scope_stack->next;
 }
 
+struct _IMPORT_INFO {
+    struct _KOS_COMP_UNIT *program;
+    struct _KOS_FILE_POS   pos;
+};
+
+static int _import_global(const char *global_name,
+                          unsigned    global_length,
+                          int         module_idx,
+                          int         global_idx,
+                          void       *cookie)
+{
+    int                  error = KOS_SUCCESS;
+    struct _IMPORT_INFO *info  = (struct _IMPORT_INFO *)cookie;
+    struct _KOS_REG     *reg   = 0;
+    struct _KOS_VAR     *var;
+    struct _KOS_TOKEN    token;
+
+    memset(&token, 0, sizeof(token));
+
+    token.begin  = global_name;
+    token.length = global_length;
+    token.pos    = info->pos;
+    token.type   = TT_IDENTIFIER;
+
+    var = _KOS_find_var(info->program->scope_stack->vars, &token);
+
+    assert(var);
+    assert(var->type == VAR_GLOBAL);
+
+    TRY(_gen_reg(info->program, &reg));
+
+    TRY(_gen_instr3(info->program, INSTR_GET_MOD_ELEM, reg->reg, module_idx, global_idx));
+
+    TRY(_gen_instr2(info->program, INSTR_SET_GLOBAL, var->array_idx, reg->reg));
+
+    _free_reg(info->program, reg);
+
+_error:
+    return error;
+}
+
 static int _import(struct _KOS_COMP_UNIT      *program,
                    const struct _KOS_AST_NODE *node)
 {
@@ -779,10 +820,14 @@ static int _import(struct _KOS_COMP_UNIT      *program,
 
     if (node->next) {
 
-        int module_idx;
+        int                 module_idx;
+        struct _IMPORT_INFO info;
+
+        info.program = program;
 
         assert(program->import_module);
         assert(program->get_global_idx);
+        assert(program->walk_globals);
 
         TRY(program->import_module(program->frame,
                                    node->token.begin,
@@ -793,17 +838,19 @@ static int _import(struct _KOS_COMP_UNIT      *program,
         node = node->next;
 
         if (node->token.op == OT_MUL) {
-            /* TODO import all globals */
-            assert(0);
-            error = KOS_ERROR_INTERNAL;
+
+            info.pos = node->token.pos;
+
+            error = program->walk_globals(program->frame,
+                                          module_idx,
+                                          _import_global,
+                                          &info);
         }
         else {
 
             for ( ; node; node = node->next) {
 
-                int              global_idx;
-                struct _KOS_VAR *var;
-                struct _KOS_REG *reg = 0;
+                int global_idx;
 
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
@@ -813,18 +860,13 @@ static int _import(struct _KOS_COMP_UNIT      *program,
                                             node->token.length,
                                             &global_idx));
 
-                var = _KOS_find_var(program->scope_stack->vars, &node->token);
+                info.pos = node->token.pos;
 
-                assert(var);
-                assert(var->type == VAR_GLOBAL);
-
-                TRY(_gen_reg(program, &reg));
-
-                TRY(_gen_instr3(program, INSTR_GET_MOD_ELEM, reg->reg, module_idx, global_idx));
-
-                TRY(_gen_instr2(program, INSTR_SET_GLOBAL, var->array_idx, reg->reg));
-
-                _free_reg(program, reg);
+                TRY(_import_global(node->token.begin,
+                                   node->token.length,
+                                   module_idx,
+                                   global_idx,
+                                   &info));
             }
         }
     }

@@ -171,17 +171,28 @@ enum _KOS_COMP_REQUIRED {
     KOS_COMP_MANDATORY
 };
 
-typedef int (*KOS_COMP_IMPORT_MODULE)(void                   *ctx,
+typedef int (*KOS_COMP_IMPORT_MODULE)(void                   *vframe,
                                       const char             *name,
                                       unsigned                length,
                                       enum _KOS_COMP_REQUIRED required,
                                       int                    *module_idx);
 
-typedef int (*KOS_COMP_GET_GLOBAL_IDX)(void       *ctx,
+typedef int (*KOS_COMP_GET_GLOBAL_IDX)(void       *vframe,
                                        int         module_idx,
                                        const char *name,
                                        unsigned    length,
                                        int        *global_idx);
+
+typedef int (*KOS_COMP_WALL_GLOBALS_CALLBACK)(const char *global_name,
+                                              unsigned    global_length,
+                                              int         module_idx,
+                                              int         global_idx,
+                                              void       *cookie);
+
+typedef int (*KOS_COMP_WALK_GLOBALS)(void                          *vframe,
+                                     int                            module_idx,
+                                     KOS_COMP_WALL_GLOBALS_CALLBACK callback,
+                                     void                          *cookie);
 
 struct _KOS_COMP_UNIT {
     const struct _KOS_TOKEN    *error_token;
@@ -206,6 +217,7 @@ struct _KOS_COMP_UNIT {
     void                       *frame;
     KOS_COMP_IMPORT_MODULE      import_module;
     KOS_COMP_GET_GLOBAL_IDX     get_global_idx;
+    KOS_COMP_WALK_GLOBALS       walk_globals;
 
     struct _KOS_VAR            *modules;
     int                         num_modules;

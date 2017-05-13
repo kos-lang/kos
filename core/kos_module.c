@@ -580,6 +580,50 @@ _error:
     return error;
 }
 
+static int _walk_globals(void                          *vframe,
+                         int                            module_idx,
+                         KOS_COMP_WALL_GLOBALS_CALLBACK callback,
+                         void                          *cookie)
+{
+    int                error = KOS_SUCCESS;
+    KOS_FRAME          frame = (KOS_FRAME)vframe;
+    KOS_CONTEXT       *ctx   = KOS_context_from_frame(frame);
+    struct _KOS_VECTOR name;
+    KOS_OBJECT_WALK    walk;
+    KOS_OBJ_ID         module_obj;
+
+    _KOS_vector_init(&name);
+
+    module_obj = KOS_array_read(frame, ctx->modules, module_idx);
+    TRY_OBJID(module_obj);
+
+    assert(GET_OBJ_TYPE(module_obj) == OBJ_INTERNAL);
+    assert(OBJPTR(MODULE, module_obj)->type == OBJ_MODULE);
+
+    TRY(KOS_object_walk_init_shallow(frame, &walk, OBJPTR(MODULE, module_obj)->global_names));
+
+    for (;;) {
+        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(frame, &walk);
+        if (IS_BAD_PTR(elem.key))
+            break;
+
+        assert(IS_SMALL_INT(elem.value));
+
+        TRY(KOS_string_to_cstr_vec(frame, elem.key, &name));
+
+        TRY(callback(name.buffer,
+                     name.size - 1,
+                     module_idx,
+                     (int)GET_SMALL_INT(elem.value),
+                     cookie));
+    }
+
+_error:
+    _KOS_vector_destroy(&name);
+
+    return error;
+}
+
 KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                               const char               *module_name,
                               unsigned                  length,
@@ -748,6 +792,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
     program.frame          = frame;
     program.import_module  = _import_module;
     program.get_global_idx = _get_global_idx;
+    program.walk_globals   = _walk_globals;
     TRY(_predefine_globals(frame, &program, OBJPTR(MODULE, module_obj)->global_names));
 
     /* Compile source code into bytecode */

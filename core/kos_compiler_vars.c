@@ -428,6 +428,46 @@ static int _visit_child_nodes(struct _KOS_COMP_UNIT      *program,
     return error;
 }
 
+struct _IMPORT_INFO {
+    struct _KOS_COMP_UNIT      *program;
+    const struct _KOS_AST_NODE *node;
+};
+
+static int _import_global(const char *global_name,
+                          unsigned    global_length,
+                          int         module_idx,
+                          int         global_idx,
+                          void       *cookie)
+{
+    int                         error  = KOS_SUCCESS;
+    struct _IMPORT_INFO        *info   = (struct _IMPORT_INFO *)cookie;
+    struct _KOS_AST_NODE *const g_node = (struct _KOS_AST_NODE *)
+        _KOS_mempool_alloc(&info->program->allocator, sizeof(struct _KOS_AST_NODE) + global_length);
+
+    if (g_node) {
+
+        struct _KOS_TOKEN *token = &g_node->token;
+        struct _KOS_VAR   *var;
+
+        memset(g_node, 0, sizeof(*g_node));
+
+        token->begin    = (char *)g_node + sizeof(struct _KOS_AST_NODE);
+        token->length   = global_length;
+        token->pos      = info->node->token.pos;
+        token->type     = TT_IDENTIFIER;
+
+        memcpy((void *)token->begin, global_name, global_length);
+
+        g_node->type = NT_IDENTIFIER;
+
+        error = _define_local_var(info->program, 1, g_node, &var);
+    }
+    else
+        error = KOS_ERROR_OUT_OF_MEMORY;
+
+    return error;
+}
+
 static int _import(struct _KOS_COMP_UNIT      *program,
                    const struct _KOS_AST_NODE *node)
 {
@@ -475,9 +515,15 @@ static int _import(struct _KOS_COMP_UNIT      *program,
 
     if (node) {
         if (node->token.op == OT_MUL) {
-            /* TODO import all globals */
-            assert(0);
-            error = KOS_ERROR_INTERNAL;
+            struct _IMPORT_INFO info;
+            info.program = program;
+            info.node    = node;
+
+            assert(program->walk_globals);
+            error = program->walk_globals(program->frame,
+                                          module_idx,
+                                          _import_global,
+                                          &info);
         }
         else {
             for ( ; node; node = node->next) {
