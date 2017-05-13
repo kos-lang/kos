@@ -32,6 +32,10 @@ extern "C" {
 int KOS_load_module(KOS_FRAME   frame,
                     const char *module);
 
+int KOS_load_module_from_memory(KOS_FRAME   frame,
+                                const char *buf,
+                                unsigned    buf_size);
+
 int KOS_module_add_global(KOS_FRAME  frame,
                           KOS_OBJ_ID name,
                           KOS_OBJ_ID value,

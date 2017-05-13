@@ -381,12 +381,12 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _get_line(KOS_FRAME                 frame,
-                            const struct _KOS_VECTOR *file_buf,
-                            unsigned                  line)
+static KOS_OBJ_ID _get_line(KOS_FRAME   frame,
+                            const char *buf,
+                            unsigned    buf_size,
+                            unsigned    line)
 {
-    const char        *buf       = file_buf->buffer;
-    const char        *const end = buf + file_buf->size;
+    const char        *const end = buf + buf_size;
     const char        *begin;
     unsigned           len       = 0;
     struct _KOS_VECTOR line_buf;
@@ -462,7 +462,8 @@ static KOS_OBJ_ID _get_line(KOS_FRAME                 frame,
 
 static KOS_OBJ_ID _format_error(KOS_FRAME                 frame,
                                 KOS_OBJ_ID                module_obj,
-                                const struct _KOS_VECTOR *file_buf,
+                                const char               *data,
+                                unsigned                  data_size,
                                 const char               *error_str,
                                 struct _KOS_FILE_POS      pos)
 {
@@ -493,7 +494,7 @@ static KOS_OBJ_ID _format_error(KOS_FRAME                 frame,
 
     parts[7] = KOS_context_get_cstring(frame, str_eol);
 
-    parts[8] = _get_line(frame, file_buf, pos.line);
+    parts[8] = _get_line(frame, data, data_size, pos.line);
     TRY_OBJID(parts[8]);
 
     parts[9] = KOS_context_get_cstring(frame, str_eol);
@@ -522,7 +523,30 @@ _error:
 int KOS_load_module(KOS_FRAME frame, const char *path)
 {
     int        idx;
-    KOS_OBJ_ID module = _KOS_module_import(frame, path, (unsigned)strlen(path), KOS_MODULE_MANDATORY, &idx);
+    KOS_OBJ_ID module = _KOS_module_import(frame,
+                                           path,
+                                           (unsigned)strlen(path),
+                                           0,
+                                           0,
+                                           KOS_MODULE_MANDATORY,
+                                           &idx);
+
+    return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+}
+
+int KOS_load_module_from_memory(KOS_FRAME   frame,
+                                const char *buf,
+                                unsigned    buf_size)
+{
+    static const char name[] = "<main>";
+    int               idx;
+    KOS_OBJ_ID        module = _KOS_module_import(frame,
+                                                  name,
+                                                  (unsigned)sizeof(name) - 1U,
+                                                  buf,
+                                                  buf_size,
+                                                  KOS_MODULE_MANDATORY,
+                                                  &idx);
 
     return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
@@ -531,12 +555,12 @@ static int _import_module(void                   *vframe,
                           const char             *name,
                           unsigned                length,
                           enum _KOS_COMP_REQUIRED required,
-                          int                     *module_idx)
+                          int                    *module_idx)
 {
     KOS_FRAME  frame = (KOS_FRAME)vframe;
     KOS_OBJ_ID module_obj;
 
-    module_obj = _KOS_module_import(frame, name, length, (enum _KOS_MODULE_REQUIRED)required, module_idx);
+    module_obj = _KOS_module_import(frame, name, length, 0, 0, (enum _KOS_MODULE_REQUIRED)required, module_idx);
 
     return IS_BAD_PTR(module_obj) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
@@ -626,7 +650,9 @@ _error:
 
 KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                               const char               *module_name,
-                              unsigned                  length,
+                              unsigned                  name_size,
+                              const char               *data,
+                              unsigned                  data_size,
                               enum _KOS_MODULE_REQUIRED required,
                               int                      *out_module_idx)
 {
@@ -651,18 +677,31 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
 
     _KOS_vector_init(&file_buf);
 
-    _get_module_name(module_name, length, &loading);
+    _get_module_name(module_name, name_size, &loading);
 
     /* Determine actual module name */
     actual_module_name = KOS_new_string(frame, loading.module_name, loading.length);
     TRY_OBJID(actual_module_name);
 
     /* Find module source file */
-    error = _find_module(frame, actual_module_name, module_name, length, &module_dir, &module_path);
+    if (data) {
+        module_dir  = ctx->empty_string;
+        module_path = ctx->empty_string;
+    }
+    else
+        error = _find_module(frame,
+                             actual_module_name,
+                             module_name,
+                             name_size,
+                             &module_dir,
+                             &module_path);
     if (error) {
         if (error == KOS_ERROR_NOT_FOUND) {
             if (required == KOS_MODULE_MANDATORY) {
-                _raise_3(frame, KOS_context_get_cstring(frame, str_err_module), actual_module_name, KOS_context_get_cstring(frame, str_err_not_found));
+                _raise_3(frame,
+                         KOS_context_get_cstring(frame, str_err_module),
+                         actual_module_name,
+                         KOS_context_get_cstring(frame, str_err_not_found));
                 error = KOS_ERROR_EXCEPTION;
             }
             else
@@ -685,7 +724,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
         TRY(KOS_array_insert(frame, ctx->module_search_paths, 0, 0, path_array, 0, 1));
         search_path_set = 1;
 
-        lang_obj = _KOS_module_import(frame, lang, sizeof(lang)-1, KOS_MODULE_MANDATORY, &lang_idx);
+        lang_obj = _KOS_module_import(frame, lang, sizeof(lang)-1, 0, 0, KOS_MODULE_MANDATORY, &lang_idx);
         TRY_OBJID(lang_obj);
         assert(lang_idx == 0);
     }
@@ -698,7 +737,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
             if (loading.length == chain->length &&
                     0 == memcmp(loading.module_name, chain->module_name, loading.length)) {
 
-                KOS_OBJ_ID name_str = KOS_new_string(frame, module_name, length);
+                KOS_OBJ_ID name_str = KOS_new_string(frame, module_name, name_size);
                 if (!IS_BAD_PTR(name_str))
                     _raise_3(frame, KOS_context_get_cstring(frame, str_err_circular_deps), name_str, KOS_context_get_cstring(frame, str_err_end));
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -737,7 +776,11 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
     OBJPTR(MODULE, module_obj)->path = module_path;
 
     /* Load module file */
-    TRY(_load_file(frame, OBJPTR(MODULE, module_obj)->path, &file_buf));
+    if ( ! data) {
+        TRY(_load_file(frame, OBJPTR(MODULE, module_obj)->path, &file_buf));
+        data      = file_buf.buffer;
+        data_size = (unsigned)file_buf.size;
+    }
 
     /* Run built-in module initialization */
     mod_init = (struct _KOS_MODULE_INIT *)_KOS_red_black_find(ctx->module_inits,
@@ -756,8 +799,8 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
     _KOS_parser_init(&parser,
                      &program.allocator,
                      (unsigned)module_idx,
-                     file_buf.buffer,
-                     file_buf.buffer + file_buf.size);
+                     data,
+                     data + data_size);
     compiler_init = 1;
 
     /* Construct AST from source code */
@@ -770,7 +813,8 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                                          ? parser.lexer.pos : parser.token.pos;
         KOS_OBJ_ID error_obj = _format_error(frame,
                                              module_obj,
-                                             &file_buf,
+                                             data,
+                                             data_size,
                                              parser.error_str,
                                              pos);
         if (IS_BAD_PTR(error_obj)) {
@@ -802,7 +846,8 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
 
         KOS_OBJ_ID error_obj = _format_error(frame,
                                              module_obj,
-                                             &file_buf,
+                                             data,
+                                             data_size,
                                              program.error_str,
                                              program.error_token->pos);
         if (IS_BAD_PTR(error_obj)) {

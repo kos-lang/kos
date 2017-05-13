@@ -161,8 +161,10 @@ enum _KOS_MODULE_REQUIRED {
 };
 
 KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
-                              const char               *module, /* Module name or path, ASCII or UTF-8    */
-                              unsigned                  length, /* Length of module name or path in bytes */
+                              const char               *name,      /* Module name or path, ASCII or UTF-8    */
+                              unsigned                  name_size, /* Length of module name or path in bytes */
+                              const char               *data,      /* Module data or 0 if load from file     */
+                              unsigned                  data_size, /* Data length if data is not 0           */
                               enum _KOS_MODULE_REQUIRED required,
                               int                      *module_idx);
 

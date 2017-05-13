@@ -31,22 +31,66 @@
 #include <assert.h>
 #include <locale.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+static int _is_option(const char *arg,
+                      const char *short_opt,
+                      const char *long_opt);
+
+static void _print_usage();
+
+static void _print_version();
 
 static int _add_module_search_paths(KOS_FRAME frame, const char *kos_exe);
 
 int main(int argc, char *argv[])
 {
-    int         error  = KOS_SUCCESS;
-    int         ctx_ok = 0;
+    int         error       = KOS_SUCCESS;
+    int         ctx_ok      = 0;
+    int         is_script   = 0;
+    int         i_module    = 0;
+    int         i_first_arg = 0;
     KOS_CONTEXT ctx;
     KOS_FRAME   frame;
 
     setlocale(LC_ALL, "");
 
-    if (argc != 2) {
-        fprintf(stderr, "Usage: kos <program>\n");
+    if (argc == 2 && _is_option(argv[1], "h", "help")) {
+        _print_usage();
+        goto _error;
+    }
+
+#ifdef _WIN32
+    if (argc == 2 && _is_option(argv[1], "?", 0)) {
+        _print_usage();
+        goto _error;
+    }
+#endif
+
+    if (argc == 2 && _is_option(argv[1], 0, "version")) {
+        _print_version();
+        goto _error;
+    }
+
+    if (argc < 2) {
+        /* TODO implement interactive shell */
+        fprintf(stderr, "Arguments missing\n");
+        printf("\n");
+        _print_usage();
         TRY(KOS_ERROR_EXCEPTION);
+    }
+
+    if (argc > 2 && _is_option(argv[1], "c", "command")) {
+        is_script = 1;
+        i_module  = 2;
+        if (argc > 3)
+            i_first_arg = 3;
+    }
+    else {
+        i_module = 1;
+        if (argc > 2)
+            i_first_arg = 2;
     }
 
     error = KOS_context_init(&ctx, &frame);
@@ -78,6 +122,8 @@ int main(int argc, char *argv[])
         TRY(error);
     }
 
+    /* TODO add script arguments */
+
     error = KOS_modules_init(&ctx);
 
     if (error) {
@@ -85,7 +131,12 @@ int main(int argc, char *argv[])
         TRY(error);
     }
 
-    error = KOS_load_module(frame, argv[1]);
+    if (is_script)
+        error = KOS_load_module_from_memory(frame,
+                                            argv[i_module],
+                                            (unsigned)strlen(argv[i_module]));
+    else
+        error = KOS_load_module(frame, argv[i_module]);
 
     if (error) {
         assert(error == KOS_ERROR_EXCEPTION);
@@ -96,7 +147,43 @@ _error:
     if (ctx_ok)
         KOS_context_destroy(&ctx);
 
-    return (error == KOS_SUCCESS) ? 0 : 1;
+    return error ? EXIT_FAILURE : EXIT_SUCCESS;
+}
+
+static int _is_option(const char *arg,
+                      const char *short_opt,
+                      const char *long_opt)
+{
+#ifdef _WIN32
+    if (arg[0] != '=' && arg[0] != '/')
+#else
+    if (arg[0] != '-')
+#endif
+        return 0;
+
+    if (long_opt) {
+
+        if (arg[1] == '-')
+            return ! strcmp(arg + 2, long_opt);
+
+        if ( ! strcmp(arg + 1, long_opt))
+            return 1;
+    }
+
+    if (short_opt)
+        return ! strcmp(arg + 1, short_opt);
+
+    return 0;
+}
+
+static void _print_usage()
+{
+    printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
+}
+
+static void _print_version()
+{
+    printf("Kos 0.1\n");
 }
 
 #ifndef CONFIG_MODULE_PATH
