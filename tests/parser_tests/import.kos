@@ -81,3 +81,8 @@ import module;
 # Missing comma
 import mod:v x
 @ 10 2 14
+
+@------------------------------------------------------------------------------
+# Missing symbol to import
+import some :
+@ 10 3 1
