@@ -3104,22 +3104,22 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
             operands = 2;
             break;
 
-        case OT_MUL: opcode = INSTR_MUL;    operands = 2; break;
-        case OT_DIV: opcode = INSTR_DIV;    operands = 2; break;
-        case OT_MOD: opcode = INSTR_MOD;    operands = 2; break;
-        case OT_NOT: opcode = INSTR_NOT;    operands = 1; break;
-        case OT_AND: opcode = INSTR_AND;    operands = 2; break;
-        case OT_OR:  opcode = INSTR_OR;     operands = 2; break;
-        case OT_XOR: opcode = INSTR_XOR;    operands = 2; break;
-        case OT_SHL: opcode = INSTR_SHL;    operands = 2; break;
-        case OT_SHR: opcode = INSTR_SHR;    operands = 2; break;
-        case OT_SSR: opcode = INSTR_SSR;    operands = 2; break;
-        case OT_EQ:  opcode = INSTR_CMP_EQ; operands = 2; break;
-        case OT_NE:  opcode = INSTR_CMP_NE; operands = 2; break;
-        case OT_GE:  opcode = INSTR_CMP_LE; operands = 2; swap = 1; break;
-        case OT_GT:  opcode = INSTR_CMP_LT; operands = 2; swap = 1; break;
-        case OT_LE:  opcode = INSTR_CMP_LE; operands = 2; break;
-        case OT_LT:  opcode = INSTR_CMP_LT; operands = 2; break;
+        case OT_MUL:  opcode = INSTR_MUL;    operands = 2; break;
+        case OT_DIV:  opcode = INSTR_DIV;    operands = 2; break;
+        case OT_MOD:  opcode = INSTR_MOD;    operands = 2; break;
+        case OT_NOT:  opcode = INSTR_NOT;    operands = 1; break;
+        case OT_AND:  opcode = INSTR_AND;    operands = 2; break;
+        case OT_OR:   opcode = INSTR_OR;     operands = 2; break;
+        case OT_XOR:  opcode = INSTR_XOR;    operands = 2; break;
+        case OT_SHL:  opcode = INSTR_SHL;    operands = 2; break;
+        case OT_SHR:  opcode = INSTR_SHR;    operands = 2; break;
+        case OT_SHRU: opcode = INSTR_SHRU;   operands = 2; break;
+        case OT_EQ:   opcode = INSTR_CMP_EQ; operands = 2; break;
+        case OT_NE:   opcode = INSTR_CMP_NE; operands = 2; break;
+        case OT_GE:   opcode = INSTR_CMP_LE; operands = 2; swap = 1; break;
+        case OT_GT:   opcode = INSTR_CMP_LT; operands = 2; swap = 1; break;
+        case OT_LE:   opcode = INSTR_CMP_LE; operands = 2; break;
+        case OT_LT:   opcode = INSTR_CMP_LT; operands = 2; break;
     }
 
     node = node->children;
@@ -3177,7 +3177,7 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
             /* fall through */
         case OT_SHR:
             /* fall through */
-        case OT_SSR:
+        case OT_SHRU:
             TRY(_check_const_literal(program, node, CHECK_NUMERIC));
 
             if (node->next)
@@ -3250,10 +3250,10 @@ static int _assign_instr(enum _KOS_OPERATOR_TYPE op)
         case OT_SETXOR: return INSTR_XOR;
         case OT_SETSHL: return INSTR_SHL;
         case OT_SETSHR: return INSTR_SHR;
-        case OT_SETSSR:
+        case OT_SETSHRU:
             /* fall through */
-        default:        assert(op == OT_SETSSR);
-                        return INSTR_SSR;
+        default:        assert(op == OT_SETSHRU);
+                        return INSTR_SHRU;
     }
 }
 

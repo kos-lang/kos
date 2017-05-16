@@ -1106,37 +1106,37 @@ int main(void)
     TEST_INSTR INSTR_SHR,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_OBJECT                          } } END
 
     /*========================================================================*/
-    /* SSR */
-    TEST_INSTR INSTR_SSR,        { V_INTEGER, 0x01234567U, 0x0FEDCBA0U }, { { V_INT64, 0x12345678U, 0xFEDCBA00U }, { V_INT32, 4                        } } END
-    TEST_INSTR INSTR_SSR,        { V_INTEGER, 0x00000040U, 0           }, { { V_FLOAT, 0x55555555U, 0x40700555U }, { V_FLOAT, 0xAAAAAAAAU, 0x4002AAAAU } } END
-    TEST_INSTR INSTR_SSR,        { V_INTEGER, 4,           0           }, { { V_FLOAT, 0,           0x40100000U }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_INTEGER, 1,           0           }, { { V_FLOAT, 0,           0x43D00000U }, { V_INT32, 62                       } } END
+    /* SHRU */
+    TEST_INSTR INSTR_SHRU,       { V_INTEGER, 0x01234567U, 0x0FEDCBA0U }, { { V_INT64, 0x12345678U, 0xFEDCBA00U }, { V_INT32, 4                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_INTEGER, 0x00000040U, 0           }, { { V_FLOAT, 0x55555555U, 0x40700555U }, { V_FLOAT, 0xAAAAAAAAU, 0x4002AAAAU } } END
+    TEST_INSTR INSTR_SHRU,       { V_INTEGER, 4,           0           }, { { V_FLOAT, 0,           0x40100000U }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_INTEGER, 1,           0           }, { { V_FLOAT, 0,           0x43D00000U }, { V_INT32, 62                       } } END
     /* wrong types */
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_VOID                            } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_STR0                            } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_ARRAY, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_OBJECT                          } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_VOID                            }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_FALSE                           }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_STR0                            }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_ARRAY, 0                        }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_VOID                            } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_STR0                            } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_ARRAY, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_OBJECT                          } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_VOID                            }, { V_FLOAT, 0,           0           } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_FALSE                           }, { V_FLOAT, 0,           0           } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_STR0                            }, { V_FLOAT, 0,           0           } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_ARRAY, 0                        }, { V_FLOAT, 0,           0           } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_FLOAT, 0,           0           } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_VOID                            }, { V_VOID                            } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_FALSE                           }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_STR0                            }, { V_STR1                            } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_ARRAY, 0                        }, { V_ARRAY, 0                        } } END
-    TEST_INSTR INSTR_SSR,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_OBJECT                          } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_VOID                            } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_STR0                            } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_ARRAY, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_INT32, 0                        }, { V_OBJECT                          } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_VOID                            }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_FALSE                           }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_STR0                            }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_ARRAY, 0                        }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_OBJECT                          }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_VOID                            } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_STR0                            } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_ARRAY, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_FLOAT, 0,           0           }, { V_OBJECT                          } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_VOID                            }, { V_FLOAT, 0,           0           } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_FALSE                           }, { V_FLOAT, 0,           0           } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_STR0                            }, { V_FLOAT, 0,           0           } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_ARRAY, 0                        }, { V_FLOAT, 0,           0           } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_OBJECT                          }, { V_FLOAT, 0,           0           } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_VOID                            }, { V_VOID                            } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_FALSE                           }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_STR0                            }, { V_STR1                            } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_ARRAY, 0                        }, { V_ARRAY, 0                        } } END
+    TEST_INSTR INSTR_SHRU,       { V_EXCEPT                            }, { { V_OBJECT                          }, { V_OBJECT                          } } END
 
     /*========================================================================*/
     /* NOT */

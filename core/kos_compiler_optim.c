@@ -967,10 +967,10 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT      *program,
                 numeric_a.u.i >>= numeric_b.u.i;
             break;
 
-        case OT_SSR:
+        case OT_SHRU:
             /* fall through */
         default:
-            assert(op == OT_SSR);
+            assert(op == OT_SHRU);
             if (numeric_b.u.i > 63 || numeric_b.u.i < -63)
                 numeric_a.u.i = 0;
             else if (numeric_b.u.i < 0)
@@ -1225,7 +1225,7 @@ static int _operator(struct _KOS_COMP_UNIT *program,
             /* fall through */
         case OT_SHR:
             /* fall through */
-        case OT_SSR: {
+        case OT_SHRU: {
             if (a_type == NT_NUMERIC_LITERAL && b_type == NT_NUMERIC_LITERAL)
                 error = _optimize_binary_op(program, node, ca, cb);
             break;

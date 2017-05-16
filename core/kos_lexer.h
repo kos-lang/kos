@@ -123,7 +123,7 @@ enum _KOS_OPERATOR_TYPE {
 
     OT_SHL            = 0x01, /* 0000 0001 */
     OT_SHR            = 0x02, /* 0000 0010 */
-    OT_SSR            = 0x03, /* 0000 0011 */
+    OT_SHRU           = 0x03, /* 0000 0011 */
     OT_LOGAND         = 0x04, /* 0000 0100 */
     OT_LOGOR          = 0x05, /* 0000 0101 */
     OT_LOGTRI         = 0x06, /* 0000 0110 */
@@ -149,7 +149,7 @@ enum _KOS_OPERATOR_TYPE {
     OT_SETXOR         = 0x18, /* 0001 1000 */
     OT_SETSHL         = 0x19, /* 0001 1001 */
     OT_SETSHR         = 0x1A, /* 0001 1010 */
-    OT_SETSSR         = 0x1B  /* 0001 1011 */ /* TODO rename SSR to SHRU everywhere */
+    OT_SETSHRU        = 0x1B  /* 0001 1011 */
 };
 
 enum _KOS_SEPARATOR_TYPE {

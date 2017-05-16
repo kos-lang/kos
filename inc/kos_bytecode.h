@@ -43,18 +43,18 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_LOAD_FALSE,
     /* LOAD.VOID <r.dest> */
     INSTR_LOAD_VOID,
-    /* LOAD.FUN <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg>
+    /* LOAD.FUN <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg>
      * Create a function object with the specified code. */
     INSTR_LOAD_FUN,
-    /* LOAD.GEN <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg>
+    /* LOAD.GEN <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg>
      * Create a generator object with the specified code. */
     INSTR_LOAD_GEN,
-    /* LOAD.CTOR <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg>
+    /* LOAD.CTOR <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg>
      * Create a constructor function object with the specified code. */
     INSTR_LOAD_CTOR,
-    /* LOAD.ARRAY8 <r.dest>, <int.size8> */
+    /* LOAD.ARRAY8 <r.dest>, <size.int8> */
     INSTR_LOAD_ARRAY8,
-    /* LOAD.ARRAY <r.dest>, <int.size32> */
+    /* LOAD.ARRAY <r.dest>, <size.int32> */
     INSTR_LOAD_ARRAY,
     /* LOAD.OBJ <r.dest> */
     INSTR_LOAD_OBJ,
@@ -108,8 +108,8 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_SHL,
     /* SHR <r.dest>, <r.src1>, <r.src2> */
     INSTR_SHR,
-    /* SSR <r.dest>, <r.src1>, <r.src2> */
-    INSTR_SSR,
+    /* SHRU <r.dest>, <r.src1>, <r.src2> */
+    INSTR_SHRU,
     /* NOT <r.dest>, <r.src> */
     INSTR_NOT,
     /* AND <r.dest>, <r.src1>, <r.src2> */
@@ -138,13 +138,13 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* INSTANCEOF <r.dest>, <r.src>, <r.func> */
     INSTR_INSTANCEOF,
 
-    /* JUMP <delta32>
+    /* JUMP <delta.int32>
      * Relative, unconditional jump. */
     INSTR_JUMP,
-    /* JUMP.COND <delta32>, <r.src>
+    /* JUMP.COND <delta.int32>, <r.src>
      * Relative jump, taken only if r.src is truthy. */
     INSTR_JUMP_COND,
-    /* JUMP.NOT.COND <delta32>, <r.src>
+    /* JUMP.NOT.COND <delta.int32>, <r.src>
      * Relative jump, taken only if r.src is falsy. */
     INSTR_JUMP_NOT_COND,
 
@@ -170,7 +170,7 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_YIELD,
     /* THROW <r.src> */
     INSTR_THROW,
-    /* CATCH <r.dest>, <delta32> */
+    /* CATCH <r.dest>, <delta.int32> */
     INSTR_CATCH,
     /* CANCEL */
     INSTR_CANCEL

@@ -113,7 +113,7 @@ const struct OPERATOR_MAP operators[] = {
     { OT_XOR,        "^"      },
     { OT_SHL,        "<<"     },
     { OT_SHR,        ">>"     },
-    { OT_SSR,        ">>>"    },
+    { OT_SHRU,       ">>>"    },
     { OT_LOGAND,     "&&"     },
     { OT_LOGOR,      "||"     },
     { OT_LOGTRI,     "?:"     },
@@ -137,7 +137,7 @@ const struct OPERATOR_MAP operators[] = {
     { OT_SETXOR,     "^="     },
     { OT_SETSHL,     "<<="    },
     { OT_SETSHR,     ">>="    },
-    { OT_SETSSR,     ">>>="   },
+    { OT_SETSHRU,    ">>>="   },
     { OT_NONE,       "none"   }
 };
 

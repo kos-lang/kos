@@ -964,11 +964,11 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_FUN: /* <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg> */
+            case INSTR_LOAD_FUN: /* <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg> */
                 /* fall through */
-            case INSTR_LOAD_GEN: /* <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg> */
+            case INSTR_LOAD_GEN: /* <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg> */
                 /* fall through */
-            case INSTR_LOAD_CTOR: { /* <r.dest>, <delta32>, <min.args>, <num.regs>, <args.reg> */
+            case INSTR_LOAD_CTOR: { /* <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg> */
                 const int32_t  fun_offs  = (int32_t)_load_32(bytecode+2);
                 const uint8_t  min_args  = bytecode[6];
                 const uint8_t  num_regs  = bytecode[7];
@@ -1008,7 +1008,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_ARRAY8: { /* <r.dest>, <int.size8> */
+            case INSTR_LOAD_ARRAY8: { /* <r.dest>, <size.int8> */
                 const uint8_t size = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1017,7 +1017,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_ARRAY: { /* <r.dest>, <int.size32> */
+            case INSTR_LOAD_ARRAY: { /* <r.dest>, <size.int32> */
                 const uint32_t size = _load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1697,7 +1697,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_SSR: { /* <r.dest>, <r.src1>, <r.src2> */
+            case INSTR_SHRU: { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -1916,30 +1916,12 @@ static int _exec_function(KOS_FRAME frame)
                             ret = _compare_string(instr, src1, src2);
                             break;
 
-                        case OBJ_IMMEDIATE:
-                            ret = _compare_integer(instr,
-                                                   (int64_t)(intptr_t)src1 >> 4,
-                                                   (int64_t)(intptr_t)src2 >> 4);
-                            break;
-
                         default:
                             ret = _compare_integer(instr, (int64_t)(intptr_t)src1, (int64_t)(intptr_t)src2);
                             break;
                     }
                 else
-                    switch (src1_type) {
-
-                        case OBJ_INTEGER:
-                            if (src2_type == OBJ_INTEGER)
-                                ret = _compare_float(instr, src1, src2);
-                            else
-                                ret = _compare_integer(instr, src1_type, src2_type);
-                            break;
-
-                        default:
-                            ret = _compare_integer(instr, src1_type, src2_type);
-                            break;
-                    }
+                    ret = _compare_integer(instr, src1_type, src2_type);
 
                 out   = KOS_BOOL(ret);
                 delta = 4;
@@ -2033,12 +2015,12 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_JUMP: { /* <delta32> */
+            case INSTR_JUMP: { /* <delta.int32> */
                 delta = 5 + (int32_t)_load_32(bytecode+1);
                 break;
             }
 
-            case INSTR_JUMP_COND: { /* <delta32>, <r.src> */
+            case INSTR_JUMP_COND: { /* <delta.int32>, <r.src> */
                 const int32_t  offs = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
@@ -2051,7 +2033,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_JUMP_NOT_COND: { /* <delta32>, <r.src> */
+            case INSTR_JUMP_NOT_COND: { /* <delta.int32>, <r.src> */
                 const int32_t  offs = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
@@ -2289,7 +2271,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_CATCH: { /* <r.dest>, <delta32> */
+            case INSTR_CATCH: { /* <r.dest>, <delta.int32> */
                 const int32_t  rel_offs = (int32_t)_load_32(bytecode+2);
                 const uint32_t offset   = (uint32_t)((bytecode + 6 + rel_offs) - module->bytecode);
 

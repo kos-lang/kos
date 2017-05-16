@@ -81,7 +81,7 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_MOD:                 /* fall through */
         case INSTR_SHL:                 /* fall through */
         case INSTR_SHR:                 /* fall through */
-        case INSTR_SSR:                 /* fall through */
+        case INSTR_SHRU:                /* fall through */
         case INSTR_AND:                 /* fall through */
         case INSTR_OR:                  /* fall through */
         case INSTR_XOR:                 /* fall through */
@@ -344,7 +344,7 @@ void _KOS_disassemble(const char                          *filename,
         "MOD",
         "SHL",
         "SHR",
-        "SSR",
+        "SHRU",
         "NOT",
         "AND",
         "OR",

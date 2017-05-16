@@ -276,7 +276,7 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "op_xor",               OT_XOR);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_shl",               OT_SHL);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_shr",               OT_SHR);
-    TRY_ADD_INTEGER_CONSTANT(frame, "op_ssr",               OT_SSR);
+    TRY_ADD_INTEGER_CONSTANT(frame, "op_shru",              OT_SHRU);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_logand",            OT_LOGAND);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_logor",             OT_LOGOR);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_logtri",            OT_LOGTRI);
@@ -300,7 +300,7 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "op_setxor",            OT_SETXOR);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_setshl",            OT_SETSHL);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_setshr",            OT_SETSHR);
-    TRY_ADD_INTEGER_CONSTANT(frame, "op_setssr",            OT_SETSSR);
+    TRY_ADD_INTEGER_CONSTANT(frame, "op_setshru",           OT_SETSHRU);
 
     TRY_ADD_INTEGER_CONSTANT(frame, "sep_none",             ST_NONE);
     TRY_ADD_INTEGER_CONSTANT(frame, "sep_paren_open",       ST_PAREN_OPEN);

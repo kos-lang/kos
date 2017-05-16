@@ -776,7 +776,7 @@ static int _arithm_bitwise_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE
             const enum _KOS_OPERATOR_TYPE next_op = parser->token.op;
             if ((next_op & OT_MASK) == OT_BITWISE     ||
                 (next_op & OT_MASK) == OT_ARITHMETIC ||
-                next_op == OT_SHL || next_op == OT_SHR || next_op == OT_SSR) {
+                next_op == OT_SHL || next_op == OT_SHR || next_op == OT_SHRU) {
 
                 parser->error_str = str_err_mixed_operators;
                 error = KOS_ERROR_PARSE_FAILED;
@@ -786,7 +786,7 @@ static int _arithm_bitwise_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE
 
         parser->unget = 1;
     }
-    else if (parser->token.op == OT_SHL || parser->token.op == OT_SHR || parser->token.op == OT_SSR) {
+    else if (parser->token.op == OT_SHL || parser->token.op == OT_SHR || parser->token.op == OT_SHRU) {
 
         TRY(_new_node(parser, ret, NT_OPERATOR));
 

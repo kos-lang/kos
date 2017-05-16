@@ -278,7 +278,7 @@ static const struct _KOS_OP_SPECIFIER operator_map[][7] = {
     { { "/", OT_DIV    }, { "/=",  OT_SETDIV }, { 0,     OT_NONE   } },
     { { "<", OT_LT     }, { "<<",  OT_SHL    }, { "<<=", OT_SETSHL }, { "<=",  OT_LE     }, { 0,     OT_NONE } },
     { { "=", OT_SET    }, { "==",  OT_EQ     }, { 0,     OT_NONE } },
-    { { ">", OT_GT     }, { ">=",  OT_GE     }, { ">>",  OT_SHR    }, { ">>=", OT_SETSHR }, { ">>>", OT_SSR  }, { ">>>=", OT_SETSSR }, { 0, OT_NONE } },
+    { { ">", OT_GT     }, { ">=",  OT_GE     }, { ">>",  OT_SHR    }, { ">>=", OT_SETSHR }, { ">>>", OT_SHRU }, { ">>>=", OT_SETSHRU }, { 0, OT_NONE } },
     { { "?", OT_LOGTRI }, { 0,     OT_NONE   } },
     { { "^", OT_XOR    }, { "^=",  OT_SETXOR }, { 0,     OT_NONE   } },
     { { "|", OT_OR     }, { "|=",  OT_SETOR  }, { "||",  OT_LOGOR  }, { 0,     OT_NONE   } },
