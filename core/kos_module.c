@@ -789,7 +789,7 @@ static int _compile_module(KOS_FRAME   frame,
 
             TRY(_append_buf(&module->bytecode, module->bytecode_size,
                             (const uint8_t *)code_buf->buffer, (uint32_t)code_buf->size));
-            module->bytecode_size += code_buf->size;
+            module->bytecode_size += (uint32_t)code_buf->size;
 
             TRY(_append_buf((const uint8_t **)&module->line_addrs, module->num_line_addrs * sizeof(KOS_LINE_ADDR),
                             (const uint8_t *)addr_to_line->buffer, (uint32_t)addr_to_line->size));
