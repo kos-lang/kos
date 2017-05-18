@@ -27,14 +27,27 @@ if [ $# -ne 2 ]; then
     exit 1
 fi
 
-"$1" -c 'print_("Hello, ")
-print("Kos!")
-' > "$2/dash_c"
+KOS="$1"
+OUTPUT="$2/dash_c"
 
-CONTENTS=`cat "$2/dash_c"`
+"$KOS" -c 'print_("Hello, ")
+print("Kos!")
+' > "$OUTPUT"
+
+CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != 'Hello, Kos!' ]; then
     echo "Expected output to contain: \"Hello, Kos\!\", but it is different" >&2
-    cat "$2/dash_c"
+    cat "$OUTPUT"
+    exit 1
+fi
+
+"$KOS" -c "print(integer(args[0]) + integer(args[1]))" 20 -5 > "$OUTPUT"
+
+CONTENTS=`cat "$OUTPUT"`
+
+if [ "$CONTENTS" != "15" ]; then
+    echo "Expected output to contain: \"15\", but it is different" >&2
+    cat "$OUTPUT"
     exit 1
 fi

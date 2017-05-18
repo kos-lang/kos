@@ -177,6 +177,7 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     ctx->module_names             = KOS_BADPTR;
     ctx->modules                  = KOS_BADPTR;
     ctx->module_search_paths      = KOS_BADPTR;
+    ctx->args                     = KOS_BADPTR;
 
     TRY(_register_thread(ctx, &ctx->main_thread, KOS_AREA_FIXED));
 
@@ -199,6 +200,7 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     ctx->module_names        = KOS_new_object(frame);
     ctx->modules             = KOS_new_array(frame, 0);
     ctx->module_search_paths = KOS_new_array(frame, 0);
+    ctx->args                = KOS_new_array(frame, 0);
 
     TRY(_init_search_paths(frame));
 
@@ -301,6 +303,37 @@ int KOS_context_add_path(KOS_FRAME frame, const char *module_search_path)
     TRY(KOS_array_write(frame, ctx->module_search_paths, (int)len, path_str));
 
 _error:
+    return error;
+}
+
+int KOS_context_set_args(KOS_FRAME frame,
+                         int       argc,
+                         char    **argv)
+{
+    int                       error;
+    int                       i;
+    KOS_CONTEXT              *ctx        = KOS_context_from_frame(frame);
+    const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
+
+    assert(argc >= 0);
+
+    if (argc <= 0)
+        return KOS_SUCCESS;
+
+    _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
+
+    TRY(KOS_array_resize(frame, ctx->args, (uint32_t)argc));
+
+    for (i = 0; i < argc; i++) {
+        KOS_OBJ_ID arg_str = KOS_new_cstring(frame, argv[i]);
+        TRY_OBJID(arg_str);
+
+        TRY(KOS_array_write(frame, ctx->args, i, arg_str));
+    }
+
+_error:
+    _KOS_alloc_set_mode(frame, alloc_mode);
+
     return error;
 }
 

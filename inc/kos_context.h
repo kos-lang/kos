@@ -103,6 +103,8 @@ struct _KOS_CONTEXT {
     KOS_OBJ_ID                     module_names;
     KOS_OBJ_ID                     modules;
 
+    KOS_OBJ_ID                     args;
+
     KOS_MODULE                     init_module;
     KOS_THREAD_ROOT                main_thread;
 
@@ -133,6 +135,10 @@ void KOS_context_destroy(KOS_CONTEXT *ctx);
 
 int KOS_context_add_path(KOS_FRAME   frame,
                          const char *module_search_path);
+
+int KOS_context_set_args(KOS_FRAME frame,
+                         int       argc,
+                         char    **argv);
 
 typedef int (*KOS_BUILTIN_INIT)(KOS_FRAME frame);
 

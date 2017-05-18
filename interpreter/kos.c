@@ -124,10 +124,14 @@ int main(int argc, char *argv[])
         TRY(error);
     }
 
-    /* TODO add script arguments */
     if (i_first_arg) {
-        fprintf(stderr, "Script arguments not supported\n");
-        TRY(KOS_ERROR_EXCEPTION);
+
+        error = KOS_context_set_args(frame, argc - i_first_arg, &argv[i_first_arg]);
+
+        if (error) {
+            fprintf(stderr, "Failed to setup command line arguments\n");
+            TRY(error);
+        }
     }
 
     error = KOS_modules_init(&ctx);

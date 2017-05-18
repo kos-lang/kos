@@ -36,6 +36,7 @@
 #include <memory.h>
 #include <stdio.h>
 
+static const char str_args[]                          = "args";
 static const char str_builtin[]                       = "<builtin>";
 static const char str_err_bad_number[]                = "number parse failed";
 static const char str_err_bad_pack_value[]            = "invalid value type for pack format";
@@ -1855,10 +1856,14 @@ int _KOS_module_lang_init(KOS_FRAME frame)
 {
     int error = KOS_SUCCESS;
 
+    KOS_CONTEXT *ctx = KOS_context_from_frame(frame);
+
     TRY_ADD_FUNCTION( frame, "print",   _print,   0);
     TRY_ADD_FUNCTION( frame, "print_",  _print_,  0);
     TRY_ADD_GENERATOR(frame, "deep",    _deep,    1);
     TRY_ADD_GENERATOR(frame, "shallow", _shallow, 1);
+
+    TRY(KOS_module_add_global(frame, KOS_context_get_cstring(frame, str_args), ctx->args, 0));
 
     TRY_CREATE_CONSTRUCTOR(array);
     TRY_CREATE_CONSTRUCTOR(boolean);
