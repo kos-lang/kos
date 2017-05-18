@@ -29,6 +29,7 @@
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
+#include "../inc/kos_version.h"
 #include "../core/kos_lexer.h"
 #include "../core/kos_object_alloc.h"
 #include "../core/kos_try.h"
@@ -202,6 +203,9 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     int error = KOS_SUCCESS;
 
     TRY_ADD_GENERATOR(frame, "lexer", _lexer, 1);
+
+    TRY_ADD_INTEGER_CONSTANT(frame, "version_major",        KOS_VERSION_MAJOR);
+    TRY_ADD_INTEGER_CONSTANT(frame, "version_minor",        KOS_VERSION_MINOR);
 
     TRY_ADD_INTEGER_CONSTANT(frame, "token_whitespace",     TT_WHITESPACE);
     TRY_ADD_INTEGER_CONSTANT(frame, "token_eol",            TT_EOL);
