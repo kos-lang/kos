@@ -168,7 +168,7 @@ static int _is_option(const char *arg,
                       const char *long_opt)
 {
 #ifdef _WIN32
-    if (arg[0] != '=' && arg[0] != '/')
+    if (arg[0] != '-' && arg[0] != '/')
 #else
     if (arg[0] != '-')
 #endif
