@@ -36,6 +36,7 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op);
 int _KOS_is_signed_op(enum _KOS_BYTECODE_INSTR instr, int op);
 
 void _KOS_disassemble(const char                          *filename,
+                      uint32_t                             offs,
                       const uint8_t                       *bytecode,
                       uint32_t                             size,
                       const struct _KOS_COMP_ADDR_TO_LINE *line_addrs,

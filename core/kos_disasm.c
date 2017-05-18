@@ -296,6 +296,7 @@ int _KOS_is_signed_op(enum _KOS_BYTECODE_INSTR instr, int op)
 }
 
 void _KOS_disassemble(const char                          *filename,
+                      uint32_t                             offs,
                       const uint8_t                       *bytecode,
                       uint32_t                             size,
                       const struct _KOS_COMP_ADDR_TO_LINE *line_addrs,
@@ -371,7 +372,15 @@ void _KOS_disassemble(const char                          *filename,
         "CATCH",
         "CANCEL"
     };
-    uint32_t offs = 0;
+
+    bytecode += offs;
+    size     -= offs;
+
+    while (line_addrs < line_addrs_end && line_addrs->offs < offs)
+        ++line_addrs;
+
+    while (func_addrs < func_addrs_end && func_addrs->offs < offs)
+        ++func_addrs;
 
     while (size) {
         int           i;

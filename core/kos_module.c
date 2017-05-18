@@ -28,6 +28,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "kos_compiler.h"
+#include "kos_disasm.h"
 #include "kos_file.h"
 #include "kos_malloc.h"
 #include "kos_object_alloc.h"
@@ -689,9 +690,10 @@ static int _compile_module(KOS_FRAME   frame,
                            const char *data,
                            unsigned    data_size)
 {
-    int                   error  = KOS_SUCCESS;
-    KOS_MODULE     *const module = OBJPTR(MODULE, module_obj);
-    KOS_CONTEXT    *const ctx    = KOS_context_from_frame(frame);
+    int                   error              = KOS_SUCCESS;
+    KOS_MODULE     *const module             = OBJPTR(MODULE, module_obj);
+    KOS_CONTEXT    *const ctx                = KOS_context_from_frame(frame);
+    const uint32_t        old_bytecode_size  = module->bytecode_size;
     struct _KOS_PARSER    parser;
     struct _KOS_COMP_UNIT program;
     struct _KOS_AST_NODE *ast;
@@ -763,6 +765,83 @@ static int _compile_module(KOS_FRAME   frame,
     TRY(_alloc_globals(frame, &program, module));
     TRY(_alloc_strings(frame, &program, module));
 
+    /* Move compiled program to module */
+    {
+        struct _KOS_VECTOR *code_buf     = &program.code_buf;
+        struct _KOS_VECTOR *addr_to_line = &program.addr2line_buf;
+        struct _KOS_VECTOR *addr_to_func = &program.addr2func_buf;
+
+        const uint32_t old_num_line_addrs = module->num_line_addrs;
+        const uint32_t old_num_func_addrs = module->num_func_addrs;
+
+        /* REPL within the bounds of a module */
+        if (old_bytecode_size) {
+
+            KOS_LINE_ADDR *line_addr;
+            KOS_LINE_ADDR *end_line_addr;
+            KOS_FUNC_ADDR *func_addr;
+            KOS_FUNC_ADDR *end_func_addr;
+
+            assert(module->line_addrs);
+
+            module->instr_offs = old_bytecode_size;
+
+            TRY(_append_buf(&module->bytecode, module->bytecode_size,
+                            (const uint8_t *)code_buf->buffer, (uint32_t)code_buf->size));
+            module->bytecode_size += code_buf->size;
+
+            TRY(_append_buf((const uint8_t **)&module->line_addrs, module->num_line_addrs * sizeof(KOS_LINE_ADDR),
+                            (const uint8_t *)addr_to_line->buffer, (uint32_t)addr_to_line->size));
+            module->num_line_addrs += (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
+
+            if (old_num_func_addrs) {
+                TRY(_append_buf((const uint8_t **)&module->func_addrs, module->num_func_addrs * sizeof(KOS_FUNC_ADDR),
+                                (const uint8_t *)addr_to_func->buffer, (uint32_t)addr_to_func->size));
+                module->num_func_addrs += (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
+            }
+            else if (addr_to_func->size) {
+                module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
+                module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
+                module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
+                addr_to_func->buffer   = 0;
+            }
+
+            line_addr     = (KOS_LINE_ADDR *)module->line_addrs + old_num_line_addrs;
+            end_line_addr = (KOS_LINE_ADDR *)module->line_addrs + module->num_line_addrs;
+            for ( ; line_addr < end_line_addr; ++line_addr)
+                line_addr->offs += old_bytecode_size;
+
+            func_addr     = (KOS_FUNC_ADDR *)module->func_addrs + old_num_func_addrs;
+            end_func_addr = (KOS_FUNC_ADDR *)module->func_addrs + module->num_func_addrs;
+            for ( ; func_addr < end_func_addr; ++func_addr)
+                func_addr->offs += old_bytecode_size;
+        }
+        /* New module */
+        else {
+
+            module->bytecode      = (uint8_t *)code_buf->buffer;
+            module->bytecode_size = (uint32_t)code_buf->size;
+            module->flags        |= KOS_MODULE_OWN_BYTECODE;
+            code_buf->buffer      = 0;
+
+            if (addr_to_line->size) {
+                module->line_addrs     = (KOS_LINE_ADDR *)addr_to_line->buffer;
+                module->num_line_addrs = (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
+                module->flags         |= KOS_MODULE_OWN_LINE_ADDRS;
+                addr_to_line->buffer   = 0;
+            }
+
+            if (addr_to_func->size) {
+                module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
+                module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
+                module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
+                addr_to_func->buffer   = 0;
+            }
+        }
+
+        module->num_regs = (uint16_t)program.cur_frame->num_regs;
+    }
+
     /* Disassemble */
     if (ctx->flags & KOS_CTX_DEBUG) {
         struct _KOS_VECTOR   cname;
@@ -773,8 +852,8 @@ static int _compile_module(KOS_FRAME   frame,
         static const char    divider[]  =
                 "==============================================================================";
 
-        const KOS_FUNC_ADDR *const func_addrs     = (const KOS_FUNC_ADDR *)program.addr2func_buf.buffer;
-        const uint32_t             num_func_addrs = (uint32_t)(program.addr2func_buf.size / sizeof(KOS_FUNC_ADDR));
+        const KOS_FUNC_ADDR *const func_addrs     = module->func_addrs;
+        const uint32_t             num_func_addrs = module->num_func_addrs;
 
         _KOS_vector_init(&cname);
         _KOS_vector_init(&ptrs);
@@ -858,10 +937,11 @@ static int _compile_module(KOS_FRAME   frame,
         }
 
         _KOS_disassemble(filename,
-                         (const uint8_t *)program.code_buf.buffer,
-                         (uint32_t)program.code_buf.size,
-                         (struct _KOS_COMP_ADDR_TO_LINE *)program.addr2line_buf.buffer,
-                         (uint32_t)(program.addr2line_buf.size / sizeof(KOS_LINE_ADDR)),
+                         old_bytecode_size,
+                         module->bytecode,
+                         module->bytecode_size,
+                         (struct _KOS_COMP_ADDR_TO_LINE *)module->line_addrs,
+                         module->num_line_addrs,
                          func_names,
                          (struct _KOS_COMP_ADDR_TO_FUNC *)func_addrs,
                          num_func_addrs);
@@ -869,81 +949,6 @@ static int _compile_module(KOS_FRAME   frame,
         _KOS_vector_destroy(&ptrs);
         _KOS_vector_destroy(&cname);
         TRY(error);
-    }
-
-    /* Move compiled program to module */
-    {
-        struct _KOS_VECTOR *code_buf     = &program.code_buf;
-        struct _KOS_VECTOR *addr_to_line = &program.addr2line_buf;
-        struct _KOS_VECTOR *addr_to_func = &program.addr2func_buf;
-
-        const uint32_t old_bytecode_size  = module->bytecode_size;
-        const uint32_t old_num_line_addrs = module->num_line_addrs;
-        const uint32_t old_num_func_addrs = module->num_func_addrs;
-
-        /* REPL within the bounds of a module */
-        if (old_bytecode_size) {
-
-            KOS_LINE_ADDR *line_addr;
-            KOS_FUNC_ADDR *func_addr;
-            uint32_t       i;
-
-            assert(module->line_addrs);
-
-            module->instr_offs = old_bytecode_size;
-
-            TRY(_append_buf(&module->bytecode, module->bytecode_size,
-                            (const uint8_t *)code_buf->buffer, (uint32_t)code_buf->size));
-            module->bytecode_size += code_buf->size;
-
-            TRY(_append_buf((const uint8_t **)&module->line_addrs, module->num_line_addrs,
-                            (const uint8_t *)addr_to_line->buffer, (uint32_t)addr_to_line->size));
-            module->num_line_addrs += (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
-
-            if (old_num_func_addrs) {
-                TRY(_append_buf((const uint8_t **)&module->func_addrs, module->num_func_addrs,
-                                (const uint8_t *)addr_to_func->buffer, (uint32_t)addr_to_func->size));
-                module->num_func_addrs += (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-            }
-            else if (addr_to_func->size) {
-                module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
-                module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-                module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
-                addr_to_func->buffer   = 0;
-            }
-
-            line_addr = (KOS_LINE_ADDR *)module->line_addrs;
-            for (i = old_num_line_addrs; i < module->num_line_addrs; ++i, ++line_addr)
-                line_addr->offs += old_bytecode_size;
-
-            func_addr = (KOS_FUNC_ADDR *)module->func_addrs;
-            for (i = old_num_func_addrs; i < module->num_func_addrs; ++i, ++func_addr)
-                func_addr->offs += old_bytecode_size;
-        }
-        /* New module */
-        else {
-
-            module->bytecode      = (uint8_t *)code_buf->buffer;
-            module->bytecode_size = (uint32_t)code_buf->size;
-            module->flags        |= KOS_MODULE_OWN_BYTECODE;
-            code_buf->buffer      = 0;
-
-            if (addr_to_line->size) {
-                module->line_addrs     = (KOS_LINE_ADDR *)addr_to_line->buffer;
-                module->num_line_addrs = (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
-                module->flags         |= KOS_MODULE_OWN_LINE_ADDRS;
-                addr_to_line->buffer   = 0;
-            }
-
-            if (addr_to_func->size) {
-                module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
-                module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-                module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
-                addr_to_func->buffer   = 0;
-            }
-        }
-
-        module->num_regs = (uint16_t)program.cur_frame->num_regs;
     }
 
 _error:
@@ -986,7 +991,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
     /* Find module source file */
     if (data) {
         module_dir  = ctx->empty_string;
-        module_path = ctx->empty_string;
+        module_path = actual_module_name;
     }
     else
         error = _find_module(frame,
