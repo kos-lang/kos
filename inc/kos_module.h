@@ -36,6 +36,10 @@ int KOS_load_module_from_memory(KOS_FRAME   frame,
                                 const char *buf,
                                 unsigned    buf_size);
 
+int KOS_repl(KOS_FRAME   frame,
+             const char *buf,
+             unsigned    buf_size);
+
 int KOS_module_add_global(KOS_FRAME  frame,
                           KOS_OBJ_ID name,
                           KOS_OBJ_ID value,

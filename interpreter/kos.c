@@ -54,6 +54,8 @@ int main(int argc, char *argv[])
     KOS_CONTEXT ctx;
     KOS_FRAME   frame;
 
+    static const char str_import_lang[] = "import lang.*";
+
     setlocale(LC_ALL, "");
 
     if (argc == 2 && _is_option(argv[1], "h", "help")) {
@@ -135,10 +137,12 @@ int main(int argc, char *argv[])
         TRY(error);
     }
 
-    if (is_script)
-        error = KOS_load_module_from_memory(frame,
-                                            argv[i_module],
-                                            (unsigned)strlen(argv[i_module]));
+    if (is_script) {
+        error = KOS_load_module_from_memory(frame, str_import_lang, sizeof(str_import_lang));
+
+        if ( ! error)
+            error = KOS_repl(frame, argv[i_module], (unsigned)strlen(argv[i_module]));
+    }
     else
         error = KOS_load_module(frame, argv[i_module]);
 

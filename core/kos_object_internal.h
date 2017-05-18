@@ -168,4 +168,10 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                               enum _KOS_MODULE_REQUIRED required,
                               int                      *module_idx);
 
+int _KOS_module_eval(KOS_FRAME                 frame,
+                     const char               *name,      /* Module name, ASCII or UTF-8    */
+                     unsigned                  name_size, /* Length of module name in bytes */
+                     const char               *data,      /* Source code to execute         */
+                     unsigned                  data_size);/* Length of source code in bytes */
+
 #endif

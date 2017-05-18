@@ -47,12 +47,19 @@ export KOSPATH="$DIR"
 
 kos()
 {
+    local RET
+    RET=0
+
     if [ -n "$VERBOSE" ]; then
         echo "% $KOS" "$@"
-        "$KOS" "$@"
+        "$KOS" "$@" || RET=$?
     else
-        "$KOS" "$@" > /dev/null 2>&1
+        "$KOS" "$@" > /dev/null 2>&1 || RET=$?
     fi
+
+    [ $RET -eq 0 ] || [ $RET -eq 1 ] || die "Unexpected exit code $RET"
+
+    return $RET
 }
 
 note()

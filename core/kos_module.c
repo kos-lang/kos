@@ -53,6 +53,7 @@ static const char str_err_unable_to_read[]   = "unable to read file \"";
 static const char str_format_colon[]         = ":";
 static const char str_format_error[]         = ": error: ";
 static const char str_global[]               = "<global>";
+static const char str_memory_module[]        = "<main>";
 static const char str_path_sep[]             = KOS_PATH_SEPARATOR_STR;
 static const char str_script_ext[]           = ".kos";
 
@@ -207,15 +208,12 @@ static KOS_OBJ_ID _alloc_module(KOS_FRAME  frame,
 
     module = (KOS_MODULE *)_KOS_alloc_object(frame, MODULE);
     if (module) {
-        module->type          = OBJ_MODULE;
-        module->flags         = 0;
-        module->name          = module_name;
-        module->context       = KOS_context_from_frame(frame);
-        module->strings       = 0;
-        module->bytecode      = 0;
-        module->bytecode_size = 0;
-        module->instr_offs    = 0;
-        module->num_regs      = 0;
+
+        memset(module, 0, sizeof(*module));
+
+        module->type    = OBJ_MODULE;
+        module->name    = module_name;
+        module->context = KOS_context_from_frame(frame);
 
         module->global_names = KOS_new_object(frame);
         if (IS_BAD_PTR(module->global_names))
@@ -538,17 +536,27 @@ int KOS_load_module_from_memory(KOS_FRAME   frame,
                                 const char *buf,
                                 unsigned    buf_size)
 {
-    static const char name[] = "<main>";
-    int               idx;
-    KOS_OBJ_ID        module = _KOS_module_import(frame,
-                                                  name,
-                                                  (unsigned)sizeof(name) - 1U,
-                                                  buf,
-                                                  buf_size,
-                                                  KOS_MODULE_MANDATORY,
-                                                  &idx);
+    int        idx;
+    KOS_OBJ_ID module = _KOS_module_import(frame,
+                                           str_memory_module,
+                                           (unsigned)sizeof(str_memory_module) - 1U,
+                                           buf,
+                                           buf_size,
+                                           KOS_MODULE_MANDATORY,
+                                           &idx);
 
     return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+}
+
+int KOS_repl(KOS_FRAME   frame,
+             const char *buf,
+             unsigned    buf_size)
+{
+    return _KOS_module_eval(frame,
+                            str_memory_module,
+                            (unsigned)sizeof(str_memory_module) - 1U,
+                            buf,
+                            buf_size);
 }
 
 static int _import_module(void                   *vframe,
@@ -648,6 +656,302 @@ _error:
     return error;
 }
 
+static int _append_buf(const uint8_t **dest,
+                       uint32_t        dest_size,
+                       const uint8_t  *src,
+                       uint32_t        src_size)
+{
+    uint8_t *new_buf;
+
+    assert(dest);
+    assert(*dest);
+    assert(dest_size);
+    assert(src);
+    assert(src_size);
+
+    new_buf = (uint8_t *)_KOS_malloc(dest_size + src_size);
+    if ( ! new_buf)
+        return KOS_ERROR_OUT_OF_MEMORY;
+
+    memcpy(new_buf, *dest, dest_size);
+    memcpy(new_buf + dest_size, src, src_size);
+
+    _KOS_free((void *)*dest);
+
+    *dest = new_buf;
+
+    return KOS_SUCCESS;
+}
+
+static int _compile_module(KOS_FRAME   frame,
+                           KOS_OBJ_ID  module_obj,
+                           int         module_idx,
+                           const char *data,
+                           unsigned    data_size)
+{
+    int                   error  = KOS_SUCCESS;
+    KOS_MODULE     *const module = OBJPTR(MODULE, module_obj);
+    KOS_CONTEXT    *const ctx    = KOS_context_from_frame(frame);
+    struct _KOS_PARSER    parser;
+    struct _KOS_COMP_UNIT program;
+    struct _KOS_AST_NODE *ast;
+
+    /* Initialize parser and compiler */
+    _KOS_compiler_init(&program, module_idx);
+    _KOS_parser_init(&parser,
+                     &program.allocator,
+                     (unsigned)module_idx,
+                     data,
+                     data + data_size);
+
+    /* Construct AST from source code */
+    error = _KOS_parser_parse(&parser, &ast);
+
+    if (error == KOS_ERROR_SCANNING_FAILED ||
+        error == KOS_ERROR_PARSE_FAILED) {
+
+        const struct _KOS_FILE_POS pos = (error == KOS_ERROR_SCANNING_FAILED)
+                                         ? parser.lexer.pos : parser.token.pos;
+        KOS_OBJ_ID error_obj = _format_error(frame,
+                                             module_obj,
+                                             data,
+                                             data_size,
+                                             parser.error_str,
+                                             pos);
+        if (IS_BAD_PTR(error_obj)) {
+            assert(KOS_is_exception_pending(frame));
+        }
+        else
+            KOS_raise_exception(frame, error_obj);
+
+        error = KOS_ERROR_EXCEPTION;
+    }
+    TRY(error);
+
+    /* Save lang module index */
+    if (module_idx == 0)
+        TRY(KOS_array_write(frame, ctx->modules, module_idx, module_obj));
+
+    /* Prepare compiler */
+    program.frame          = frame;
+    program.import_module  = _import_module;
+    program.get_global_idx = _get_global_idx;
+    program.walk_globals   = _walk_globals;
+    TRY(_predefine_globals(frame, &program, module->global_names));
+
+    /* Compile source code into bytecode */
+    error = _KOS_compiler_compile(&program, ast);
+
+    if (error == KOS_ERROR_COMPILE_FAILED) {
+
+        KOS_OBJ_ID error_obj = _format_error(frame,
+                                             module_obj,
+                                             data,
+                                             data_size,
+                                             program.error_str,
+                                             program.error_token->pos);
+        if (IS_BAD_PTR(error_obj)) {
+            assert(KOS_is_exception_pending(frame));
+        }
+        else
+            KOS_raise_exception(frame, error_obj);
+
+        error = KOS_ERROR_EXCEPTION;
+    }
+    TRY(error);
+
+    TRY(_alloc_globals(frame, &program, module));
+    TRY(_alloc_strings(frame, &program, module));
+
+    /* Disassemble */
+    if (ctx->flags & KOS_CTX_DEBUG) {
+        struct _KOS_VECTOR   cname;
+        struct _KOS_VECTOR   ptrs;
+        const char *const   *func_names = 0;
+        size_t               i_filename = 0;
+        const char          *filename   = "";
+        static const char    divider[]  =
+                "==============================================================================";
+
+        const KOS_FUNC_ADDR *const func_addrs     = (const KOS_FUNC_ADDR *)program.addr2func_buf.buffer;
+        const uint32_t             num_func_addrs = (uint32_t)(program.addr2func_buf.size / sizeof(KOS_FUNC_ADDR));
+
+        _KOS_vector_init(&cname);
+        _KOS_vector_init(&ptrs);
+
+        error = KOS_string_to_cstr_vec(frame, module->name, &cname);
+        printf("\n");
+        printf("%s\n", divider);
+        if (!error) {
+            printf("Disassembling module: %s\n", cname.buffer);
+            printf("%s\n", divider);
+
+            if (GET_OBJ_TYPE(module->path) == OBJ_STRING
+                && KOS_get_string_length(module->path) > 0) {
+
+                error = KOS_string_to_cstr_vec(frame, module->path, &cname);
+                if (!error) {
+                    size_t i = cname.size - 2;
+                    while (i > 0 && cname.buffer[i-1] != KOS_PATH_SEPARATOR)
+                        --i;
+                    i_filename = i;
+                }
+            }
+            else
+                i_filename = 0;
+        }
+
+        if (!error)
+            error = _KOS_vector_resize(&ptrs, num_func_addrs * sizeof(void *));
+        if (!error) {
+            struct _KOS_VECTOR buf;
+            uint32_t           i;
+            size_t             total_size = 0;
+            char              *names      = 0;
+
+            _KOS_vector_init(&buf);
+
+            for (i = 0; i < num_func_addrs; i++) {
+                const uint32_t   idx = func_addrs[i].str_idx;
+                const KOS_OBJ_ID str = KOS_array_read(frame, module->strings, (int)idx);
+                if (IS_BAD_PTR(str)) {
+                    error = KOS_ERROR_EXCEPTION;
+                    break;
+                }
+                error = KOS_string_to_cstr_vec(frame, str, &buf);
+                if (error)
+                    break;
+                total_size += buf.size;
+            }
+
+            if (!error) {
+                const size_t base = cname.size;
+                error = _KOS_vector_resize(&cname, base + total_size);
+                if (!error)
+                    names = cname.buffer + base;
+            }
+
+            if (!error) {
+                const char **func_names_new = (const char **)ptrs.buffer;
+                for (i = 0; i < num_func_addrs; i++) {
+                    const uint32_t   idx = func_addrs[i].str_idx;
+                    const KOS_OBJ_ID str = KOS_array_read(frame, module->strings, (int)idx);
+                    if (IS_BAD_PTR(str)) {
+                        error = KOS_ERROR_EXCEPTION;
+                        break;
+                    }
+                    error = KOS_string_to_cstr_vec(frame, str, &buf);
+                    if (error)
+                        break;
+                    func_names_new[i] = names;
+                    memcpy(names, buf.buffer, buf.size);
+                    names += buf.size;
+                }
+            }
+
+            _KOS_vector_destroy(&buf);
+        }
+
+        if (!error) {
+            filename   = &cname.buffer[i_filename];
+            func_names = (const char *const *)ptrs.buffer;
+        }
+
+        _KOS_disassemble(filename,
+                         (const uint8_t *)program.code_buf.buffer,
+                         (uint32_t)program.code_buf.size,
+                         (struct _KOS_COMP_ADDR_TO_LINE *)program.addr2line_buf.buffer,
+                         (uint32_t)(program.addr2line_buf.size / sizeof(KOS_LINE_ADDR)),
+                         func_names,
+                         (struct _KOS_COMP_ADDR_TO_FUNC *)func_addrs,
+                         num_func_addrs);
+
+        _KOS_vector_destroy(&ptrs);
+        _KOS_vector_destroy(&cname);
+        TRY(error);
+    }
+
+    /* Move compiled program to module */
+    {
+        struct _KOS_VECTOR *code_buf     = &program.code_buf;
+        struct _KOS_VECTOR *addr_to_line = &program.addr2line_buf;
+        struct _KOS_VECTOR *addr_to_func = &program.addr2func_buf;
+
+        const uint32_t old_bytecode_size  = module->bytecode_size;
+        const uint32_t old_num_line_addrs = module->num_line_addrs;
+        const uint32_t old_num_func_addrs = module->num_func_addrs;
+
+        /* REPL within the bounds of a module */
+        if (old_bytecode_size) {
+
+            KOS_LINE_ADDR *line_addr;
+            KOS_FUNC_ADDR *func_addr;
+            uint32_t       i;
+
+            assert(module->line_addrs);
+
+            module->instr_offs = old_bytecode_size;
+
+            TRY(_append_buf(&module->bytecode, module->bytecode_size,
+                            (const uint8_t *)code_buf->buffer, (uint32_t)code_buf->size));
+            module->bytecode_size += code_buf->size;
+
+            TRY(_append_buf((const uint8_t **)&module->line_addrs, module->num_line_addrs,
+                            (const uint8_t *)addr_to_line->buffer, (uint32_t)addr_to_line->size));
+            module->num_line_addrs += (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
+
+            if (old_num_func_addrs) {
+                TRY(_append_buf((const uint8_t **)&module->func_addrs, module->num_func_addrs,
+                                (const uint8_t *)addr_to_func->buffer, (uint32_t)addr_to_func->size));
+                module->num_func_addrs += (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
+            }
+            else if (addr_to_func->size) {
+                module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
+                module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
+                module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
+                addr_to_func->buffer   = 0;
+            }
+
+            line_addr = (KOS_LINE_ADDR *)module->line_addrs;
+            for (i = old_num_line_addrs; i < module->num_line_addrs; ++i, ++line_addr)
+                line_addr->offs += old_bytecode_size;
+
+            func_addr = (KOS_FUNC_ADDR *)module->func_addrs;
+            for (i = old_num_func_addrs; i < module->num_func_addrs; ++i, ++func_addr)
+                func_addr->offs += old_bytecode_size;
+        }
+        /* New module */
+        else {
+
+            module->bytecode      = (uint8_t *)code_buf->buffer;
+            module->bytecode_size = (uint32_t)code_buf->size;
+            module->flags        |= KOS_MODULE_OWN_BYTECODE;
+            code_buf->buffer      = 0;
+
+            if (addr_to_line->size) {
+                module->line_addrs     = (KOS_LINE_ADDR *)addr_to_line->buffer;
+                module->num_line_addrs = (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
+                module->flags         |= KOS_MODULE_OWN_LINE_ADDRS;
+                addr_to_line->buffer   = 0;
+            }
+
+            if (addr_to_func->size) {
+                module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
+                module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
+                module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
+                addr_to_func->buffer   = 0;
+            }
+        }
+
+        module->num_regs = (uint16_t)program.cur_frame->num_regs;
+    }
+
+_error:
+    _KOS_parser_destroy(&parser);
+    _KOS_compiler_destroy(&program);
+    return error;
+}
+
 KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                               const char               *module_name,
                               unsigned                  name_size,
@@ -668,12 +972,8 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
     struct _KOS_MODULE_LOAD_CHAIN loading         = { 0, 0, 0 };
     struct _KOS_MODULE_INIT      *mod_init;
     struct _KOS_VECTOR            file_buf;
-    struct _KOS_PARSER            parser;
-    struct _KOS_COMP_UNIT         program;
-    struct _KOS_AST_NODE         *ast;
     int                           search_path_set = 0;
     int                           chain_init      = 0;
-    int                           compiler_init   = 0;
 
     _KOS_vector_init(&file_buf);
 
@@ -794,201 +1094,8 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
         TRY(mod_init->init(mod_frame));
     }
 
-    /* Initialize parser and compiler */
-    _KOS_compiler_init(&program, module_idx);
-    _KOS_parser_init(&parser,
-                     &program.allocator,
-                     (unsigned)module_idx,
-                     data,
-                     data + data_size);
-    compiler_init = 1;
-
-    /* Construct AST from source code */
-    error = _KOS_parser_parse(&parser, &ast);
-
-    if (error == KOS_ERROR_SCANNING_FAILED ||
-        error == KOS_ERROR_PARSE_FAILED) {
-
-        const struct _KOS_FILE_POS pos = (error == KOS_ERROR_SCANNING_FAILED)
-                                         ? parser.lexer.pos : parser.token.pos;
-        KOS_OBJ_ID error_obj = _format_error(frame,
-                                             module_obj,
-                                             data,
-                                             data_size,
-                                             parser.error_str,
-                                             pos);
-        if (IS_BAD_PTR(error_obj)) {
-            assert(KOS_is_exception_pending(frame));
-        }
-        else
-            KOS_raise_exception(frame, error_obj);
-
-        error = KOS_ERROR_EXCEPTION;
-    }
-
-    TRY(error);
-
-    /* Save lang module index */
-    if (module_idx == 0)
-        TRY(KOS_array_write(frame, ctx->modules, module_idx, module_obj));
-
-    /* Prepare compiler */
-    program.frame          = frame;
-    program.import_module  = _import_module;
-    program.get_global_idx = _get_global_idx;
-    program.walk_globals   = _walk_globals;
-    TRY(_predefine_globals(frame, &program, OBJPTR(MODULE, module_obj)->global_names));
-
-    /* Compile source code into bytecode */
-    error = _KOS_compiler_compile(&program, ast);
-
-    if (error == KOS_ERROR_COMPILE_FAILED) {
-
-        KOS_OBJ_ID error_obj = _format_error(frame,
-                                             module_obj,
-                                             data,
-                                             data_size,
-                                             program.error_str,
-                                             program.error_token->pos);
-        if (IS_BAD_PTR(error_obj)) {
-            assert(KOS_is_exception_pending(frame));
-        }
-        else
-            KOS_raise_exception(frame, error_obj);
-    }
-
-    TRY(error);
-
-    TRY(_alloc_globals(frame, &program, OBJPTR(MODULE, module_obj)));
-    TRY(_alloc_strings(frame, &program, OBJPTR(MODULE, module_obj)));
-
-    /* Move compiled program to module */
-    {
-        KOS_MODULE         *module       = OBJPTR(MODULE, module_obj);
-        struct _KOS_VECTOR *code_buf     = &program.code_buf;
-        struct _KOS_VECTOR *addr_to_line = &program.addr2line_buf;
-        struct _KOS_VECTOR *addr_to_func = &program.addr2func_buf;
-
-        module->bytecode      = (uint8_t *)code_buf->buffer;
-        module->bytecode_size = (uint32_t)code_buf->size;
-        module->flags        |= KOS_MODULE_OWN_BYTECODE;
-        code_buf->buffer      = 0;
-
-        module->line_addrs     = (KOS_LINE_ADDR *)addr_to_line->buffer;
-        module->num_line_addrs = (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
-        module->flags         |= KOS_MODULE_OWN_LINE_ADDRS;
-        addr_to_line->buffer   = 0;
-
-        module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
-        module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-        module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
-        addr_to_func->buffer   = 0;
-
-        module->num_regs = (uint16_t)program.cur_frame->num_regs;
-
-        /* Disassemble */
-        if (ctx->flags & KOS_CTX_DEBUG) {
-            struct _KOS_VECTOR cname;
-            struct _KOS_VECTOR ptrs;
-            const char *const *func_names = 0;
-            size_t             i_filename = 0;
-            const char        *filename   = "";
-            static const char  divider[]  =
-                    "==============================================================================";
-
-            _KOS_vector_init(&cname);
-            _KOS_vector_init(&ptrs);
-
-            error = KOS_string_to_cstr_vec(frame, module->name, &cname);
-            printf("\n");
-            printf("%s\n", divider);
-            if (!error) {
-                printf("Disassembling module: %s\n", cname.buffer);
-                printf("%s\n", divider);
-
-                error = KOS_string_to_cstr_vec(frame, module->path, &cname);
-                if (!error) {
-                    size_t i = cname.size - 2;
-                    while (i > 0 && cname.buffer[i-1] != KOS_PATH_SEPARATOR)
-                        --i;
-                    i_filename = i;
-                }
-            }
-
-            if (!error)
-                error = _KOS_vector_resize(&ptrs, module->num_func_addrs * sizeof(void *));
-            if (!error) {
-                struct _KOS_VECTOR buf;
-                uint32_t           i;
-                size_t             total_size = 0;
-                char              *names      = 0;
-
-                _KOS_vector_init(&buf);
-
-                for (i = 0; i < module->num_func_addrs; i++) {
-                    const uint32_t   idx = module->func_addrs[i].str_idx;
-                    const KOS_OBJ_ID str = KOS_array_read(frame, module->strings, (int)idx);
-                    if (IS_BAD_PTR(str)) {
-                        error = KOS_ERROR_EXCEPTION;
-                        break;
-                    }
-                    error = KOS_string_to_cstr_vec(frame, str, &buf);
-                    if (error)
-                        break;
-                    total_size += buf.size;
-                }
-
-                if (!error) {
-                    const size_t base = cname.size;
-                    error = _KOS_vector_resize(&cname, base + total_size);
-                    if (!error)
-                        names = cname.buffer + base;
-                }
-
-                if (!error) {
-                    const char **func_names_new = (const char **)ptrs.buffer;
-                    for (i = 0; i < module->num_func_addrs; i++) {
-                        const uint32_t   idx = module->func_addrs[i].str_idx;
-                        const KOS_OBJ_ID str = KOS_array_read(frame, module->strings, (int)idx);
-                        if (IS_BAD_PTR(str)) {
-                            error = KOS_ERROR_EXCEPTION;
-                            break;
-                        }
-                        error = KOS_string_to_cstr_vec(frame, str, &buf);
-                        if (error)
-                            break;
-                        func_names_new[i] = names;
-                        memcpy(names, buf.buffer, buf.size);
-                        names += buf.size;
-                    }
-                }
-
-                _KOS_vector_destroy(&buf);
-            }
-
-            if (!error) {
-                filename   = &cname.buffer[i_filename];
-                func_names = (const char *const *)ptrs.buffer;
-            }
-
-            _KOS_disassemble(filename,
-                             module->bytecode,
-                             module->bytecode_size,
-                             (struct _KOS_COMP_ADDR_TO_LINE *)module->line_addrs,
-                             module->num_line_addrs,
-                             func_names,
-                             (struct _KOS_COMP_ADDR_TO_FUNC *)module->func_addrs,
-                             module->num_func_addrs);
-
-            _KOS_vector_destroy(&ptrs);
-            _KOS_vector_destroy(&cname);
-            TRY(error);
-        }
-    }
-
-    _KOS_parser_destroy(&parser);
-    _KOS_compiler_destroy(&program);
-    compiler_init = 0;
+    /* Compile module source to bytecode */
+    TRY(_compile_module(frame, module_obj, module_idx, data, data_size));
 
     /* Put module on the list */
     TRY(KOS_array_write(frame, ctx->modules, module_idx, module_obj));
@@ -1010,10 +1117,6 @@ _error:
         err = KOS_array_resize(frame, ctx->module_search_paths, num_paths-1);
         if ( ! error)
             error = err;
-    }
-    if (compiler_init) {
-        _KOS_parser_destroy(&parser);
-        _KOS_compiler_destroy(&program);
     }
     if (chain_init)
         ctx->module_load_chain = loading.next;
@@ -1038,6 +1141,69 @@ _error:
     }
 
     return module_obj;
+}
+
+int _KOS_module_eval(KOS_FRAME   frame,
+                     const char *module_name,
+                     unsigned    name_size,
+                     const char *data,
+                     unsigned    data_size)
+{
+    int          error       = KOS_SUCCESS;
+    int          module_idx  = -1;
+    KOS_OBJ_ID   module_obj  = KOS_BADPTR;
+    KOS_OBJ_ID   module_name_str;
+    KOS_OBJ_ID   ret;
+    KOS_CONTEXT *ctx         = KOS_context_from_frame(frame);
+
+    module_name_str = KOS_new_string(frame, module_name, name_size);
+    TRY_OBJID(module_name_str);
+
+    /* Find module object */
+    {
+        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->module_names, module_name_str);
+        if (IS_BAD_PTR(module_idx_obj)) {
+            _raise_3(frame,
+                     KOS_context_get_cstring(frame, str_err_module),
+                     module_name_str,
+                     KOS_context_get_cstring(frame, str_err_not_found));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        assert(IS_SMALL_INT(module_idx_obj));
+        module_obj = KOS_array_read(frame, ctx->modules, (int)GET_SMALL_INT(module_idx_obj));
+        TRY_OBJID(module_obj);
+        module_idx = (int)GET_SMALL_INT(module_idx_obj);
+    }
+
+    /* Compile evaluated source to bytecode */
+    TRY(_compile_module(frame, module_obj, module_idx, data, data_size));
+
+    /* Run module */
+    error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
+
+    if (error) {
+        assert(error == KOS_ERROR_EXCEPTION);
+        KOS_raise_exception(frame, ret);
+    }
+
+_error:
+    if (error) {
+        if (error == KOS_ERROR_EXCEPTION)
+            assert(KOS_is_exception_pending(frame));
+        else if (error == KOS_ERROR_OUT_OF_MEMORY) {
+            if ( ! KOS_is_exception_pending(frame))
+                KOS_raise_exception_cstring(frame, str_err_out_of_memory);
+        }
+        else {
+            if ( ! KOS_is_exception_pending(frame))
+                KOS_raise_exception_cstring(frame, str_err_internal);
+        }
+    }
+    else {
+        assert(!KOS_is_exception_pending(frame));
+    }
+
+    return error;
 }
 
 int KOS_module_add_global(KOS_FRAME  frame,
