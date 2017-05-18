@@ -54,6 +54,7 @@ int main(int argc, char *argv[])
     KOS_CONTEXT ctx;
     KOS_FRAME   frame;
 
+    static const char str_cmdline[]     = "<commandline>";
     static const char str_import_lang[] = "import lang.*";
 
     setlocale(LC_ALL, "");
@@ -142,10 +143,10 @@ int main(int argc, char *argv[])
     }
 
     if (is_script) {
-        error = KOS_load_module_from_memory(frame, str_import_lang, sizeof(str_import_lang));
+        error = KOS_load_module_from_memory(frame, str_cmdline, str_import_lang, sizeof(str_import_lang));
 
         if ( ! error)
-            error = KOS_repl(frame, argv[i_module], (unsigned)strlen(argv[i_module]));
+            error = KOS_repl(frame, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
     }
     else
         error = KOS_load_module(frame, argv[i_module]);

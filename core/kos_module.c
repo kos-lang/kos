@@ -54,7 +54,6 @@ static const char str_err_unable_to_read[]   = "unable to read file \"";
 static const char str_format_colon[]         = ":";
 static const char str_format_error[]         = ": error: ";
 static const char str_global[]               = "<global>";
-static const char str_memory_module[]        = "<main>";
 static const char str_path_sep[]             = KOS_PATH_SEPARATOR_STR;
 static const char str_script_ext[]           = ".kos";
 
@@ -534,13 +533,14 @@ int KOS_load_module(KOS_FRAME frame, const char *path)
 }
 
 int KOS_load_module_from_memory(KOS_FRAME   frame,
+                                const char *module_name,
                                 const char *buf,
                                 unsigned    buf_size)
 {
     int        idx;
     KOS_OBJ_ID module = _KOS_module_import(frame,
-                                           str_memory_module,
-                                           (unsigned)sizeof(str_memory_module) - 1U,
+                                           module_name,
+                                           (unsigned)strlen(module_name),
                                            buf,
                                            buf_size,
                                            KOS_MODULE_MANDATORY,
@@ -550,12 +550,13 @@ int KOS_load_module_from_memory(KOS_FRAME   frame,
 }
 
 int KOS_repl(KOS_FRAME   frame,
+             const char *module_name,
              const char *buf,
              unsigned    buf_size)
 {
     return _KOS_module_eval(frame,
-                            str_memory_module,
-                            (unsigned)sizeof(str_memory_module) - 1U,
+                            module_name,
+                            (unsigned)strlen(module_name),
                             buf,
                             buf_size);
 }

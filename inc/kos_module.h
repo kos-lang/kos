@@ -33,10 +33,12 @@ int KOS_load_module(KOS_FRAME   frame,
                     const char *module);
 
 int KOS_load_module_from_memory(KOS_FRAME   frame,
+                                const char *module_name,
                                 const char *buf,
                                 unsigned    buf_size);
 
 int KOS_repl(KOS_FRAME   frame,
+             const char *module_name,
              const char *buf,
              unsigned    buf_size);
 
