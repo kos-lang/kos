@@ -25,6 +25,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_modules_init.h"
 #include "../inc/kos_utils.h"
+#include "../inc/kos_version.h"
 #include "../core/kos_file.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_try.h"
@@ -194,9 +195,12 @@ static void _print_usage(void)
     printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
 }
 
+#define TO_STR_INTERNAL(x) #x
+#define TO_STR(x) TO_STR_INTERNAL(x)
+
 static void _print_version(void)
 {
-    printf("Kos 0.1\n");
+    printf("Kos " TO_STR(KOS_VERSION_MAJOR) "." TO_STR(KOS_VERSION_MINOR) "\n");
 }
 
 #ifndef CONFIG_MODULE_PATH
