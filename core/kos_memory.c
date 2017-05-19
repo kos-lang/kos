@@ -92,8 +92,11 @@ void _KOS_vector_init(struct _KOS_VECTOR *vector)
 
 void _KOS_vector_destroy(struct _KOS_VECTOR *vector)
 {
-    if (vector->capacity > sizeof(vector->_local_buffer))
+    if (vector->capacity > sizeof(vector->_local_buffer)) {
         _KOS_free(vector->buffer);
+
+        _KOS_vector_init(vector);
+    }
 }
 
 int _KOS_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity)

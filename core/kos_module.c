@@ -28,6 +28,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "kos_compiler.h"
+#include "kos_config.h"
 #include "kos_disasm.h"
 #include "kos_file.h"
 #include "kos_malloc.h"
@@ -49,6 +50,7 @@ static const char str_err_internal[]         = "internal error";
 static const char str_err_module[]           = "module \"";
 static const char str_err_not_found[]        = "\" not found";
 static const char str_err_out_of_memory[]    = "out of memory";
+static const char str_err_stdin[]            = "failed reading from stdin";
 static const char str_err_unable_to_open[]   = "unable to open file \"";
 static const char str_err_unable_to_read[]   = "unable to read file \"";
 static const char str_format_colon[]         = ":";
@@ -549,18 +551,6 @@ int KOS_load_module_from_memory(KOS_FRAME   frame,
     return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 
-int KOS_repl(KOS_FRAME   frame,
-             const char *module_name,
-             const char *buf,
-             unsigned    buf_size)
-{
-    return _KOS_module_eval(frame,
-                            module_name,
-                            (unsigned)strlen(module_name),
-                            buf,
-                            buf_size);
-}
-
 static int _import_module(void                   *vframe,
                           const char             *name,
                           unsigned                length,
@@ -958,6 +948,20 @@ _error:
     return error;
 }
 
+static void _handle_interpreter_error(KOS_FRAME frame, int error)
+{
+    if (error == KOS_ERROR_EXCEPTION)
+        assert(KOS_is_exception_pending(frame));
+    else if (error == KOS_ERROR_OUT_OF_MEMORY) {
+        if ( ! KOS_is_exception_pending(frame))
+            KOS_raise_exception_cstring(frame, str_err_out_of_memory);
+    }
+    else {
+        if ( ! KOS_is_exception_pending(frame))
+            KOS_raise_exception_cstring(frame, str_err_internal);
+    }
+}
+
 KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                               const char               *module_name,
                               unsigned                  name_size,
@@ -1103,6 +1107,9 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
     /* Compile module source to bytecode */
     TRY(_compile_module(frame, module_obj, module_idx, data, data_size));
 
+    /* Free file buffer */
+    _KOS_vector_destroy(&file_buf);
+
     /* Put module on the list */
     TRY(KOS_array_write(frame, ctx->modules, module_idx, module_obj));
     TRY(KOS_set_property(frame, ctx->module_names, actual_module_name, TO_SMALL_INT(module_idx)));
@@ -1129,16 +1136,7 @@ _error:
     _KOS_vector_destroy(&file_buf);
 
     if (error) {
-        if (error == KOS_ERROR_EXCEPTION)
-            assert(KOS_is_exception_pending(frame));
-        else if (error == KOS_ERROR_OUT_OF_MEMORY) {
-            if ( ! KOS_is_exception_pending(frame))
-                KOS_raise_exception_cstring(frame, str_err_out_of_memory);
-        }
-        else {
-            if ( ! KOS_is_exception_pending(frame))
-                KOS_raise_exception_cstring(frame, str_err_internal);
-        }
+        _handle_interpreter_error(frame, error);
         module_obj = KOS_BADPTR;
     }
     else {
@@ -1149,11 +1147,10 @@ _error:
     return module_obj;
 }
 
-int _KOS_module_eval(KOS_FRAME   frame,
-                     const char *module_name,
-                     unsigned    name_size,
-                     const char *data,
-                     unsigned    data_size)
+int KOS_repl(KOS_FRAME   frame,
+             const char *module_name,
+             const char *buf,
+             unsigned    buf_size)
 {
     int          error       = KOS_SUCCESS;
     int          module_idx  = -1;
@@ -1162,7 +1159,7 @@ int _KOS_module_eval(KOS_FRAME   frame,
     KOS_OBJ_ID   ret;
     KOS_CONTEXT *ctx         = KOS_context_from_frame(frame);
 
-    module_name_str = KOS_new_string(frame, module_name, name_size);
+    module_name_str = KOS_new_cstring(frame, module_name);
     TRY_OBJID(module_name_str);
 
     /* Find module object */
@@ -1182,7 +1179,7 @@ int _KOS_module_eval(KOS_FRAME   frame,
     }
 
     /* Compile evaluated source to bytecode */
-    TRY(_compile_module(frame, module_obj, module_idx, data, data_size));
+    TRY(_compile_module(frame, module_obj, module_idx, buf, buf_size));
 
     /* Run module */
     error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
@@ -1193,21 +1190,104 @@ int _KOS_module_eval(KOS_FRAME   frame,
     }
 
 _error:
-    if (error) {
-        if (error == KOS_ERROR_EXCEPTION)
-            assert(KOS_is_exception_pending(frame));
-        else if (error == KOS_ERROR_OUT_OF_MEMORY) {
-            if ( ! KOS_is_exception_pending(frame))
-                KOS_raise_exception_cstring(frame, str_err_out_of_memory);
-        }
-        else {
-            if ( ! KOS_is_exception_pending(frame))
-                KOS_raise_exception_cstring(frame, str_err_internal);
-        }
-    }
+    if (error)
+        _handle_interpreter_error(frame, error);
     else {
         assert(!KOS_is_exception_pending(frame));
     }
+
+    return error;
+}
+
+static int _load_stdin(KOS_FRAME frame, struct _KOS_VECTOR *buf)
+{
+    int error = KOS_SUCCESS;
+
+    TRY(_KOS_vector_resize(buf, 0));
+
+    for (;;) {
+        const size_t last_size = buf->size;
+        size_t       num_read;
+
+        TRY(_KOS_vector_resize(buf, last_size + _KOS_BUF_ALLOC_SIZE));
+
+        num_read = fread(buf->buffer + last_size, 1, _KOS_BUF_ALLOC_SIZE, stdin);
+
+        if (num_read < _KOS_BUF_ALLOC_SIZE) {
+
+            TRY(_KOS_vector_resize(buf, last_size + num_read));
+
+            if (ferror(stdin)) {
+                KOS_raise_exception_cstring(frame, str_err_stdin);
+                error = KOS_ERROR_EXCEPTION;
+            }
+            else {
+                assert(feof(stdin));
+            }
+            break;
+        }
+    }
+
+_error:
+    return error;
+}
+
+int KOS_repl_stdin(KOS_FRAME   frame,
+                   const char *module_name)
+{
+    int                error       = KOS_SUCCESS;
+    int                module_idx  = -1;
+    KOS_OBJ_ID         module_obj  = KOS_BADPTR;
+    KOS_OBJ_ID         module_name_str;
+    KOS_OBJ_ID         ret;
+    KOS_CONTEXT       *ctx         = KOS_context_from_frame(frame);
+    struct _KOS_VECTOR buf;
+
+    _KOS_vector_init(&buf);
+
+    TRY(_load_stdin(frame, &buf));
+
+    module_name_str = KOS_new_cstring(frame, module_name);
+    TRY_OBJID(module_name_str);
+
+    /* Find module object */
+    {
+        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->module_names, module_name_str);
+        if (IS_BAD_PTR(module_idx_obj)) {
+            _raise_3(frame,
+                     KOS_context_get_cstring(frame, str_err_module),
+                     module_name_str,
+                     KOS_context_get_cstring(frame, str_err_not_found));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        assert(IS_SMALL_INT(module_idx_obj));
+        module_obj = KOS_array_read(frame, ctx->modules, (int)GET_SMALL_INT(module_idx_obj));
+        TRY_OBJID(module_obj);
+        module_idx = (int)GET_SMALL_INT(module_idx_obj);
+    }
+
+    /* Compile evaluated source to bytecode */
+    TRY(_compile_module(frame, module_obj, module_idx, buf.buffer, (unsigned)buf.size));
+
+    /* Free the buffer */
+    _KOS_vector_destroy(&buf);
+
+    /* Run module */
+    error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
+
+    if (error) {
+        assert(error == KOS_ERROR_EXCEPTION);
+        KOS_raise_exception(frame, ret);
+    }
+
+_error:
+    if (error)
+        _handle_interpreter_error(frame, error);
+    else {
+        assert(!KOS_is_exception_pending(frame));
+    }
+
+    _KOS_vector_destroy(&buf);
 
     return error;
 }

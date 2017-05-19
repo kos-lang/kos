@@ -34,6 +34,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#   include <io.h>
+#else
+#   include <unistd.h>
+#endif
 
 static int _is_option(const char *arg,
                       const char *short_opt,
@@ -57,6 +62,7 @@ int main(int argc, char *argv[])
 
     static const char str_cmdline[]     = "<commandline>";
     static const char str_import_lang[] = "import lang.*";
+    static const char str_stdin[]       = "<stdin>";
 
     setlocale(LC_ALL, "");
 
@@ -77,25 +83,22 @@ int main(int argc, char *argv[])
         goto _error;
     }
 
-    if (argc < 2) {
-        /* TODO implement interactive shell */
-        fprintf(stderr, "Arguments missing\n");
-        printf("\n");
-        _print_usage();
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (argc > 1 && strcmp(argv[1], "-")) {
 
-    if (argc > 2 && _is_option(argv[1], "c", "command")) {
-        is_script = 1;
-        i_module  = 2;
-        if (argc > 3)
-            i_first_arg = 3;
+        if (argc > 2 && _is_option(argv[1], "c", "command")) {
+            is_script = 1;
+            i_module  = 2;
+            if (argc > 3)
+                i_first_arg = 3;
+        }
+        else if (argc == 2 && strcmp(argv[1], "-")) {
+            i_module = 1;
+            if (argc > 2)
+                i_first_arg = 2;
+        }
     }
-    else {
-        i_module = 1;
-        if (argc > 2)
-            i_first_arg = 2;
-    }
+    else if (argc > 1)
+        i_first_arg = strcmp(argv[1], "-") ? 1 : (argc > 2) ? 2 : 0;
 
     error = KOS_context_init(&ctx, &frame);
 
@@ -143,14 +146,37 @@ int main(int argc, char *argv[])
         TRY(error);
     }
 
-    if (is_script) {
-        error = KOS_load_module_from_memory(frame, str_cmdline, str_import_lang, sizeof(str_import_lang));
+    if (i_module) {
 
-        if ( ! error)
-            error = KOS_repl(frame, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
+        if (is_script) {
+            error = KOS_load_module_from_memory(frame, str_cmdline, str_import_lang, sizeof(str_import_lang));
+
+            if ( ! error)
+                error = KOS_repl(frame, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
+        }
+        else
+            error = KOS_load_module(frame, argv[i_module]);
     }
-    else
-        error = KOS_load_module(frame, argv[i_module]);
+    else {
+
+#ifdef _WIN32
+        const int interactive = _isatty(_fileno(stdin));
+#else
+        const int interactive = isatty(fileno(stdin));
+#endif
+        error = KOS_load_module_from_memory(frame, str_stdin, str_import_lang, sizeof(str_import_lang));
+
+        if ( ! error) {
+
+            if (interactive) {
+                /* TODO REPL */
+                fprintf(stderr, "Interactive prompt not implemented yet\n");
+                goto _error;
+            }
+            else
+                error = KOS_repl_stdin(frame, str_stdin);
+        }
+    }
 
     if (error) {
         assert(error == KOS_ERROR_EXCEPTION);

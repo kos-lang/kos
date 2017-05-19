@@ -42,6 +42,9 @@ int KOS_repl(KOS_FRAME   frame,
              const char *buf,
              unsigned    buf_size);
 
+int KOS_repl_stdin(KOS_FRAME   frame,
+                   const char *module_name);
+
 int KOS_module_add_global(KOS_FRAME  frame,
                           KOS_OBJ_ID name,
                           KOS_OBJ_ID value,

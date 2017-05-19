@@ -51,3 +51,23 @@ if [ "$CONTENTS" != "15" ]; then
     cat "$OUTPUT"
     exit 1
 fi
+
+echo 'print("From stdin")' | "$KOS" > "$OUTPUT"
+
+CONTENTS=`cat "$OUTPUT"`
+
+if [ "$CONTENTS" != "From stdin" ]; then
+    echo "Expected output to contain: \"From stdin\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+echo 'print(integer(args[0]) + 1)' | "$KOS" - 17 > "$OUTPUT"
+
+CONTENTS=`cat "$OUTPUT"`
+
+if [ "$CONTENTS" != "18" ]; then
+    echo "Expected output to contain: \"18\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
