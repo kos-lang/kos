@@ -71,8 +71,28 @@ try {
     }
 
     {
+        const kos::integer a = from_object_ptr(frame, to_object_ptr(frame, (int64_t)1 << 62));
+        TEST(static_cast<int64_t>(a) == (int64_t)1 << 62);
+    }
+
+    {
         const double a = from_object_ptr(frame, to_object_ptr(frame, 1.0));
         TEST(a == 1);
+    }
+
+    {
+        const kos::floating a = from_object_ptr(frame, to_object_ptr(frame, 1.5));
+        TEST(static_cast<double>(a) == 1.5);
+    }
+
+    {
+        const kos::boolean a = from_object_ptr(frame, to_object_ptr(frame, true));
+        TEST(static_cast<bool>(a));
+    }
+
+    {
+        const kos::buffer a = from_object_ptr(frame, KOS_new_buffer(frame, 0));
+        TEST(a.type() == OBJ_BUFFER);
     }
 
     {
@@ -96,6 +116,19 @@ try {
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "source type is not a boolean")
+                exception = true;
+        }
+        TEST(exception);
+    }
+
+    {
+        bool exception = false;
+        try {
+            const kos::void_ a = from_object_ptr(frame, TO_SMALL_INT(0));
+            TEST(a.type() == OBJ_IMMEDIATE);
+        }
+        catch (const kos::exception& e) {
+            if (std::string(e.what()) == "source type is not a void")
                 exception = true;
         }
         TEST(exception);
@@ -148,6 +181,19 @@ try {
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "source type is not an array")
+                exception = true;
+        }
+        TEST(exception);
+    }
+
+    {
+        bool exception = false;
+        try {
+            const kos::buffer a = from_object_ptr(frame, TO_SMALL_INT(0));
+            TEST(static_cast<bool>(a[0]));
+        }
+        catch (const kos::exception& e) {
+            if (std::string(e.what()) == "source type is not a buffer")
                 exception = true;
         }
         TEST(exception);
@@ -462,6 +508,18 @@ try {
                 exception = true;
         }
         TEST(exception);
+    }
+
+    {
+        kos::string name = to_object_ptr(frame, "my_global");
+
+        frame.add_global(name, TO_SMALL_INT(42));
+
+        unsigned idx = ~0U;
+        kos::integer value = frame.get_global(name, &idx);
+
+        TEST(idx == 0);
+        TEST(value == 42);
     }
 
     return 0;

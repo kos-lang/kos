@@ -1250,7 +1250,6 @@ int KOS_module_get_global(KOS_FRAME   frame,
 {
     int         error  = KOS_SUCCESS;
     KOS_OBJ_ID  idx_obj;
-    KOS_OBJ_ID  ret;
     KOS_MODULE *module = frame->module;
 
     assert(module);
@@ -1260,10 +1259,13 @@ int KOS_module_get_global(KOS_FRAME   frame,
 
     assert(IS_SMALL_INT(idx_obj));
 
-    ret = KOS_array_read(frame, module->globals, (int)GET_SMALL_INT(idx_obj));
-    TRY_OBJID(ret);
+    if (value) {
+        KOS_OBJ_ID ret = KOS_array_read(frame, module->globals, (int)GET_SMALL_INT(idx_obj));
+        TRY_OBJID(ret);
 
-    *value = ret;
+        *value = ret;
+    }
+
     if (idx)
         *idx = (unsigned)GET_SMALL_INT(idx_obj);
 

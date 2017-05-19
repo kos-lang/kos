@@ -26,6 +26,7 @@
 #include "kos_array.h"
 #include "kos_buffer.h"
 #include "kos_context.h"
+#include "kos_module.h"
 #include "kos_modules_init.h"
 #include "kos_object_base.h"
 #include "kos_object.h"
@@ -115,6 +116,19 @@ class stack_frame {
         template<typename... Args>
         array make_array(Args... args);
 #endif
+
+        // Globals
+        // =======
+
+        void add_global(KOS_OBJ_ID name, KOS_OBJ_ID value, unsigned* idx = 0) {
+            check_error(KOS_module_add_global(_frame, name, value, idx));
+        }
+
+        KOS_OBJ_ID get_global(KOS_OBJ_ID name, unsigned* idx = 0) {
+            KOS_OBJ_ID ret = KOS_BADPTR;
+            check_error(KOS_module_get_global(_frame, name, &ret, idx));
+            return ret;
+        }
 
         // Invoke Kos function from C++
         // ============================

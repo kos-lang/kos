@@ -196,11 +196,13 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY_OBJID(ctx->function_prototype  = KOS_new_object(frame));
     TRY_OBJID(ctx->exception_prototype = KOS_new_object(frame));
 
-    ctx->init_module.name    = KOS_context_get_cstring(frame, str_init);
-    ctx->module_names        = KOS_new_object(frame);
-    ctx->modules             = KOS_new_array(frame, 0);
-    ctx->module_search_paths = KOS_new_array(frame, 0);
-    ctx->args                = KOS_new_array(frame, 0);
+    ctx->init_module.name         = KOS_context_get_cstring(frame, str_init);
+    ctx->init_module.globals      = KOS_new_array(frame, 0);
+    ctx->init_module.global_names = KOS_new_object(frame);
+    ctx->module_names             = KOS_new_object(frame);
+    ctx->modules                  = KOS_new_array(frame, 0);
+    ctx->module_search_paths      = KOS_new_array(frame, 0);
+    ctx->args                     = KOS_new_array(frame, 0);
 
     TRY(_init_search_paths(frame));
 
