@@ -37,7 +37,7 @@
 
 struct _KOS_VECTOR;
 
-int _KOS_is_stdin_interactive();
+int _KOS_is_stdin_interactive(void);
 
 int _KOS_load_file(const char         *filename,
                    struct _KOS_VECTOR *buf);

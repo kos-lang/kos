@@ -66,7 +66,7 @@ static int _errno_to_error(void)
     return error;
 }
 
-int _KOS_is_stdin_interactive()
+int _KOS_is_stdin_interactive(void)
 {
 #ifdef _WIN32
     return _isatty(_fileno(stdin));
