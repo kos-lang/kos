@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
+#   include <io.h>
 #   define WIN32_LEAN_AND_MEAN
 #   pragma warning( push )
 #   pragma warning( disable : 4255 4668 )
@@ -63,6 +64,15 @@ static int _errno_to_error(void)
     }
 
     return error;
+}
+
+int _KOS_is_stdin_interactive()
+{
+#ifdef _WIN32
+    return _isatty(_fileno(stdin));
+#else
+    return isatty(fileno(stdin));
+#endif
 }
 
 #ifdef _WIN32

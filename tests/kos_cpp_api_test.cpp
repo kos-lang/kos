@@ -177,7 +177,7 @@ try {
         bool exception = false;
         try {
             const kos::array a = from_object_ptr(frame, TO_SMALL_INT(0));
-            TEST(static_cast<bool>(a[0]));
+            TEST(static_cast<int64_t>(a[0]) == 0);
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "source type is not an array")
@@ -190,7 +190,7 @@ try {
         bool exception = false;
         try {
             const kos::buffer a = from_object_ptr(frame, TO_SMALL_INT(0));
-            TEST(static_cast<bool>(a[0]));
+            TEST(static_cast<char>(a[0]));
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "source type is not a buffer")

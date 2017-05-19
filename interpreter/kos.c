@@ -34,11 +34,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#   include <io.h>
-#else
-#   include <unistd.h>
-#endif
 
 static int _is_option(const char *arg,
                       const char *short_opt,
@@ -159,16 +154,11 @@ int main(int argc, char *argv[])
     }
     else {
 
-#ifdef _WIN32
-        const int interactive = _isatty(_fileno(stdin));
-#else
-        const int interactive = isatty(fileno(stdin));
-#endif
         error = KOS_load_module_from_memory(frame, str_stdin, str_import_lang, sizeof(str_import_lang));
 
         if ( ! error) {
 
-            if (interactive) {
+            if (_KOS_is_stdin_interactive()) {
                 /* TODO REPL */
                 fprintf(stderr, "Interactive prompt not implemented yet\n");
                 goto _error;
