@@ -174,7 +174,7 @@ int _KOS_getline(struct _KOS_GETLINE *state,
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
         }
 
-        if ( ! fgets(buf->buffer + old_size, increment, stdin)) {
+        if ( ! fgets(buf->buffer + old_size, (int)increment, stdin)) {
 
             buf->size = old_size;
 
