@@ -158,10 +158,9 @@ int _KOS_getline(struct _KOS_GETLINE *state,
 {
     int error = KOS_SUCCESS;
 
-    if (state->interactive) {
-        printf(prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
-                                           : str_prompt_subsequent_line);
-    }
+    if (state->interactive)
+        printf("%s", prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
+                                                 : str_prompt_subsequent_line);
 
     /* TODO hook SIGINT to return empty line */
 
