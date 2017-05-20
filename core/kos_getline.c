@@ -34,7 +34,48 @@ static const char str_prompt_subsequent_line[] = "_ ";
 
 #ifdef CONFIG_READLINE
 
-#error "Not implemented"
+#include <readline/readline.h>
+#include <readline/history.h>
+#include <stdlib.h>
+
+int _KOS_getline_init(struct _KOS_GETLINE *state)
+{
+    rl_initialize();
+    return KOS_SUCCESS;
+}
+
+int _KOS_getline(struct _KOS_GETLINE *state,
+                 enum _KOS_PROMPT     prompt,
+                 struct _KOS_VECTOR  *buf)
+{
+    int         error;
+    const char* str_prompt = prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
+                                                         : str_prompt_subsequent_line;
+
+    char *line = readline(str_prompt);
+
+    /* TODO hook SIGINT to return empty line */
+
+    if (line) {
+        const size_t num_read = strlen(line);
+
+        if (num_read)
+            add_history(line);
+
+        error = _KOS_vector_resize(buf, num_read);
+
+        if (error)
+            fprintf(stderr, "Out of memory\n");
+        else
+            memcpy(buf->buffer, line, num_read);
+
+        free(line);
+    }
+    else
+        error = KOS_SUCCESS_RETURN;
+
+    return error;
+}
 
 #elif defined(CONFIG_EDITLINE)
 

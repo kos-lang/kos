@@ -25,7 +25,15 @@
 
 #ifdef CONFIG_READLINE
 
-#error "Not implemented"
+struct _KOS_GETLINE {
+    char dummy;
+};
+
+struct _KOS_VECTOR;
+
+int _KOS_getline_init(struct _KOS_GETLINE *state);
+
+#define _KOS_getline_destroy(state) ((void)0)
 
 #elif defined(CONFIG_EDITLINE)
 

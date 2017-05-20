@@ -151,6 +151,11 @@ else
         LDFLAGS += -ledit -ltermcap
     endif
 
+    ifeq ($(UNAME), Linux)
+        CFLAGS  += -DCONFIG_READLINE
+        LDFLAGS += -lreadline
+    endif
+
     # Configure gcov
     CONFIG_GCOV ?= 0
     ifneq ($(CONFIG_GCOV), 0)

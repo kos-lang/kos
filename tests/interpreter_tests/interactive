@@ -84,7 +84,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with a single line of input ending with EOL
 
-"$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" > "$OUTPUT"
+"$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -103,7 +103,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with two lines of input and several EOLs
 
-"$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" > "$OUTPUT"
+"$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
     echo "Expected first line to have interactive interpreter signature" >&2
