@@ -28,7 +28,10 @@ if [ $# -ne 2 ]; then
 fi
 
 KOS="$1"
-OUTPUT="$2/dash_c"
+OUTPUT="$2/interactive"
+
+##############################################################################
+# Test -c with a script which prints one line in two statements
 
 "$KOS" -c 'print_("Hello, ")
 print("Kos!")
@@ -42,6 +45,9 @@ if [ "$CONTENTS" != 'Hello, Kos!' ]; then
     exit 1
 fi
 
+##############################################################################
+# Test -c in conjunction with script arguments
+
 "$KOS" -c "print(integer(args[0]) + integer(args[1]))" 20 -5 > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
@@ -51,6 +57,9 @@ if [ "$CONTENTS" != "15" ]; then
     cat "$OUTPUT"
     exit 1
 fi
+
+##############################################################################
+# Test script read from stdin pipe
 
 echo 'print("From stdin")' | "$KOS" > "$OUTPUT"
 
@@ -68,6 +77,52 @@ CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != "18" ]; then
     echo "Expected output to contain: \"18\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+##############################################################################
+# Test interactive interpreter with a single line of input ending with EOL
+
+"$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" > "$OUTPUT"
+
+if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+    echo "Expected first line to have interactive interpreter signature" >&2
+    head -n "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed "1 d" "$OUTPUT"`
+
+if [ "$CONTENTS" != "true" ]; then
+    echo "Expected output to contain: \"true\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+##############################################################################
+# Test interactive interpreter with two lines of input and several EOLs
+
+"$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" > "$OUTPUT"
+
+if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+    echo "Expected first line to have interactive interpreter signature" >&2
+    head -n "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "2 p" "$OUTPUT"`
+
+if [ "$CONTENTS" != "true" ]; then
+    echo "Expected second line of output to contain: \"true\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "3 p" "$OUTPUT"`
+
+if [ "$CONTENTS" != "void" ]; then
+    echo "Expected third line of output to contain: \"void\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi

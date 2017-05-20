@@ -146,6 +146,11 @@ else
         LDFLAGS += -lpthread
     endif
 
+    ifeq ($(UNAME), Darwin)
+        CFLAGS  += -DCONFIG_EDITLINE
+        LDFLAGS += -ledit -ltermcap
+    endif
+
     # Configure gcov
     CONFIG_GCOV ?= 0
     ifneq ($(CONFIG_GCOV), 0)

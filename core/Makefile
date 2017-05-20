@@ -31,6 +31,7 @@ c_files += kos_compiler_optim.c
 c_files += kos_compiler_vars.c
 c_files += kos_disasm.c
 c_files += kos_file.c
+c_files += kos_getline.c
 c_files += kos_lexer.c
 c_files += kos_malloc.c
 c_files += kos_memory.c
