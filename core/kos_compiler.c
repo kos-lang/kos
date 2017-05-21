@@ -190,7 +190,8 @@ static int _lookup_local_var_even_inactive(struct _KOS_COMP_UNIT   *program,
 
             if ( ! var->reg) {
                 error = _gen_reg(program, &var->reg);
-                var->reg->tmp = 0;
+                if ( ! error)
+                    var->reg->tmp = 0;
             }
 
             *reg = var->reg;

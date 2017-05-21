@@ -139,10 +139,6 @@ interactive:
 	@echo Test interactive
 	@env KOSPATH=../modules interpreter_tests/interactive $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
-sequential_fail:
-	@echo Test sequential fail
-	@env KOSPATH=../modules interpreter_tests/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
-
 disasm:
 	@echo Test disasm
 	@env KOSPATH=../modules interpreter_tests/disasm $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
@@ -153,11 +149,28 @@ module_lang_print:
 
 simple_tests = $(filter-out kos_parallel%, $(standalone_tests) $(parser_test_list) module_loading interactive disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list))
 
-ifneq ($(CONFIG_SEQFAIL), 0)
-    simple_tests += sequential_fail
-endif
-
 simple_test: $(simple_tests)
+
+sequential_test_list =
+
+define SEQFAIL_RULE
+sequential_fail.$1:
+	@echo Test sequential fail $1
+	@env KOSPATH=../modules interpreter_tests/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests $1 500
+
+sequential_test_list += sequential_fail.$1
+endef
+
+$(eval $(call SEQFAIL_RULE,0))
+$(eval $(call SEQFAIL_RULE,500))
+$(eval $(call SEQFAIL_RULE,1000))
+$(eval $(call SEQFAIL_RULE,1500))
+$(eval $(call SEQFAIL_RULE,2000))
+$(eval $(call SEQFAIL_RULE,2500))
+
+ifneq ($(CONFIG_SEQFAIL), 0)
+simple_test: $(sequential_test_list)
+endif
 
 ifneq ($(CONFIG_GCOV), 0)
 $(simple_tests): gcov.pre.clean
@@ -209,4 +222,4 @@ ifneq ($(CONFIG_GCOV), 0)
 test: gcov
 endif
 
-.PHONY: all test simple_test gcov gcov.all $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) module_loading interactive sequential_fail disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov gcov.all $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list)

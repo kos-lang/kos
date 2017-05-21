@@ -21,10 +21,11 @@
  */
 
 #include "kos_memory.h"
+#include "../inc/kos_error.h"
+#include "kos_config.h"
+#include "kos_debug.h"
 #include "kos_malloc.h"
 #include "kos_threads.h"
-#include "kos_config.h"
-#include "../inc/kos_error.h"
 #include <string.h>
 #include <assert.h>
 
@@ -55,7 +56,7 @@ void _KOS_mempool_destroy(struct _KOS_MEMPOOL *mempool)
 void *_KOS_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size)
 {
     uint8_t                    *obj = 0;
-    struct _KOS_MEMPOOL_BUFFER *buf;
+    struct _KOS_MEMPOOL_BUFFER *buf = 0;
 
     size = (size + 7U) & ~7U;
 
@@ -69,7 +70,7 @@ void *_KOS_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size)
             mempool->free_size = _KOS_BUF_ALLOC_SIZE - sizeof(struct _KOS_MEMPOOL_BUFFER);
         }
     }
-    else
+    else if ( ! _KOS_seq_fail())
         buf = (struct _KOS_MEMPOOL_BUFFER *)(mempool->buffers);
 
     if (buf) {
