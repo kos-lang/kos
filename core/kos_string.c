@@ -473,18 +473,23 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
 
                 if (str->flags == KOS_STRING_LOCAL || (new_len << elem_size) <= sizeof(str->data)) {
                     new_str = _new_empty_string(frame, new_len, elem_size);
-                    memcpy((void *)_KOS_get_string_buffer(new_str), buf, new_len << elem_size);
+                    if (new_str)
+                        memcpy((void *)_KOS_get_string_buffer(new_str), buf, new_len << elem_size);
                 }
                 else if (str->flags == KOS_STRING_PTR)
                     new_str = OBJPTR(STRING, KOS_new_const_string(frame, buf, new_len, elem_size));
                 else {
-                    new_str               = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
-                    new_str->elem_size    = (uint8_t)elem_size;
-                    new_str->flags        = KOS_STRING_REF;
-                    new_str->length       = (uint16_t)new_len;
-                    new_str->hash         = 0;
-                    new_str->data.ref.ptr = buf;
-                    new_str->data.ref.str = OBJID(STRING, str);
+
+                    new_str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
+
+                    if (new_str) {
+                        new_str->elem_size    = (uint8_t)elem_size;
+                        new_str->flags        = KOS_STRING_REF;
+                        new_str->length       = (uint16_t)new_len;
+                        new_str->hash         = 0;
+                        new_str->data.ref.ptr = buf;
+                        new_str->data.ref.str = OBJID(STRING, str);
+                    }
                 }
             }
             else
@@ -522,22 +527,25 @@ KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
 
             new_str = _new_empty_string(frame, 1, elem_size);
 
-            new_buf = (uint8_t *)_KOS_get_string_buffer(new_str);
+            if (new_str) {
 
-            switch (elem_size) {
+                new_buf = (uint8_t *)_KOS_get_string_buffer(new_str);
 
-                case KOS_STRING_ELEM_8:
-                    *new_buf = *buf;
-                    break;
+                switch (elem_size) {
 
-                case KOS_STRING_ELEM_16:
-                    *(uint16_t *)new_buf = *(const uint16_t *)buf;
-                    break;
+                    case KOS_STRING_ELEM_8:
+                        *new_buf = *buf;
+                        break;
 
-                default: /* KOS_STRING_ELEM_32 */
-                    assert(elem_size == KOS_STRING_ELEM_32);
-                    *(uint32_t *)new_buf = *(const uint32_t *)buf;
-                    break;
+                    case KOS_STRING_ELEM_16:
+                        *(uint16_t *)new_buf = *(const uint16_t *)buf;
+                        break;
+
+                    default: /* KOS_STRING_ELEM_32 */
+                        assert(elem_size == KOS_STRING_ELEM_32);
+                        *(uint32_t *)new_buf = *(const uint32_t *)buf;
+                        break;
+                }
             }
         }
         else
