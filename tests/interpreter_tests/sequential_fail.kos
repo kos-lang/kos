@@ -22,16 +22,48 @@
 
 import lang.*
 
-fun expect_fail(function)
-{
-    var failed = false
+do {
+    var caught = false
     try {
-        function()
+        throw "hello"
     }
     catch const e {
-        failed = true
+        caught = e.value
     }
-    assert failed
+    assert caught
 }
 
-expect_fail(fun { throw void })
+do {
+    var i = 1
+    for var elem in [ 1, 2, 3 ] {
+        assert elem == i
+        i += 1
+    }
+}
+
+do {
+    const obj = { a : 0, b : 1 }
+    for var key in shallow(obj) {
+        switch (key) {
+            'a' { assert obj[key] == 0 + 0 }
+            'b' { assert obj[key] == 1 + 0 }
+            ... { throw "invalid key" }
+        }
+    }
+}
+
+do {
+    var idx = void
+
+    fun gen
+    {
+        for var i = 0; i < 3; i += 1 {
+            idx = i
+            yield i
+        }
+    }
+
+    for var value in gen() {
+        assert idx == value
+    }
+}

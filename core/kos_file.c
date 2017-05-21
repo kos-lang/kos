@@ -22,6 +22,7 @@
 
 #include "kos_file.h"
 #include "../inc/kos_error.h"
+#include "kos_debug.h"
 #include "kos_memory.h"
 #include "kos_try.h"
 #include <errno.h>
@@ -80,7 +81,9 @@ static int _is_file(const char *filename)
 {
     const DWORD attr = GetFileAttributes(filename);
 
-    return (attr != INVALID_FILE_ATTRIBUTES && 0 == (attr & FILE_ATTRIBUTE_DIRECTORY))
+    return (attr != INVALID_FILE_ATTRIBUTES
+                && 0 == (attr & FILE_ATTRIBUTE_DIRECTORY)
+                && ! _KOS_seq_fail())
            ? KOS_SUCCESS : KOS_ERROR_NOT_FOUND;
 }
 #else
@@ -90,7 +93,7 @@ static int _is_file(const char *filename)
     struct stat statbuf;
 
     if (0 == stat(filename, &statbuf)) {
-        if ((statbuf.st_mode & S_IFMT) == S_IFDIR)
+        if ((statbuf.st_mode & S_IFMT) == S_IFDIR || _KOS_seq_fail())
             error = KOS_ERROR_NOT_FOUND;
     }
     else
@@ -111,10 +114,10 @@ int _KOS_load_file(const char         *filename,
     TRY(_is_file(filename));
 
     file = fopen(filename, "rb");
-    if (!file)
+    if (!file || _KOS_seq_fail())
         RAISE_ERROR(KOS_ERROR_CANNOT_OPEN_FILE);
 
-    if (0 != fseek(file, 0, SEEK_END))
+    if (0 != fseek(file, 0, SEEK_END) || _KOS_seq_fail())
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
 
     lsize = ftell(file);

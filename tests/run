@@ -118,7 +118,7 @@ fi
 if [ "$UNAME" = "Darwin" -o "$UNAME" = "Linux" ]; then
     if [ "$1" != "nosan" ]; then
         export SANITIZER="address"
-        JOBS=$(($JOBS / 2))
+        [[ $JOBS -gt 2 ]] && JOBS=$(($JOBS / 2))
         [[ $JOBS = 0 ]] && JOBS=1
     fi
 fi

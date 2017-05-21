@@ -777,7 +777,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,
 {
     KOS_OBJECT_WALK *walk = (KOS_OBJECT_WALK *)_KOS_alloc_object(frame, OBJECT_WALK);
 
-    if (obj_id) {
+    if (walk) {
         const int error = KOS_object_walk_init(frame, walk, obj_id, deep);
 
         if (error) {
@@ -798,7 +798,7 @@ int KOS_object_walk_init(KOS_FRAME                  frame,
     KOS_OBJ_ID key_table_obj = KOS_new_object(frame);
 
     if (IS_BAD_PTR(key_table_obj))
-        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
     walk->type          = OBJ_OBJECT_WALK;
     walk->obj           = obj_id;

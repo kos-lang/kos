@@ -711,10 +711,8 @@ static int _compile_module(KOS_FRAME   frame,
                                              data_size,
                                              parser.error_str,
                                              pos);
-        if (IS_BAD_PTR(error_obj)) {
-            assert(KOS_is_exception_pending(frame));
-        }
-        else
+        assert( ! IS_BAD_PTR(error_obj) || KOS_is_exception_pending(frame));
+        if ( ! IS_BAD_PTR(error_obj))
             KOS_raise_exception(frame, error_obj);
 
         error = KOS_ERROR_EXCEPTION;
@@ -743,10 +741,8 @@ static int _compile_module(KOS_FRAME   frame,
                                              data_size,
                                              program.error_str,
                                              program.error_token->pos);
-        if (IS_BAD_PTR(error_obj)) {
-            assert(KOS_is_exception_pending(frame));
-        }
-        else
+        assert( ! IS_BAD_PTR(error_obj) || KOS_is_exception_pending(frame));
+        if ( ! IS_BAD_PTR(error_obj))
             KOS_raise_exception(frame, error_obj);
 
         error = KOS_ERROR_EXCEPTION;
