@@ -20,19 +20,17 @@
  * IN THE SOFTWARE.
  */
 
-#include "kos_malloc.h"
-#include "kos_debug.h"
-#include <stdlib.h>
+#ifndef __KOS_DEBUG_H
+#define __KOS_DEBUG_H
 
-void *_KOS_malloc(size_t size)
-{
-    if (_KOS_seq_fail())
-        return 0;
+#ifdef CONFIG_SEQFAIL
 
-    return malloc(size);
-}
+int _KOS_seq_fail(void);
 
-void _KOS_free(void *ptr)
-{
-    free(ptr);
-}
+#else
+
+#define _KOS_seq_fail() 0
+
+#endif
+
+#endif

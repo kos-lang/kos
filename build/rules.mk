@@ -170,6 +170,12 @@ ifneq ($(CONFIG_PERF), 0)
     CFLAGS += -DCONFIG_PERF
 endif
 
+CONFIG_SEQFAIL ?= 0
+
+ifneq ($(CONFIG_SEQFAIL), 0)
+    CFLAGS += -DCONFIG_SEQFAIL
+endif
+
 ##############################################################################
 # Optionally treat warnings as errors and add more checks
 

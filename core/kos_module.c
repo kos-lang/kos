@@ -1035,6 +1035,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
 
         /* Add search path - path of the topmost module being loaded */
         path_array = KOS_new_array(frame, 1);
+        TRY_OBJID(path_array);
         TRY(KOS_array_write(frame, path_array, 0, module_dir));
         TRY(KOS_array_insert(frame, ctx->module_search_paths, 0, 0, path_array, 0, 1));
         search_path_set = 1;
@@ -1106,7 +1107,15 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
                                                     OBJPTR(MODULE, module_obj),
                                                     0,
                                                     0);
-        TRY(mod_init->init(mod_frame));
+        if ( ! mod_frame)
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+        error = mod_init->init(mod_frame);
+        if (error) {
+            assert( ! IS_BAD_PTR(mod_frame->exception));
+            frame->exception = mod_frame->exception;
+            goto _error;
+        }
     }
 
     /* Compile module source to bytecode */

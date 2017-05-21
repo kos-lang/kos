@@ -129,11 +129,11 @@ static inline const void* _KOS_get_string_buffer(KOS_STRING *str)
 /* KOS_FRAME                                                                */
 /*==========================================================================*/
 
-void _KOS_init_stack_frame(KOS_FRAME           frame,
-                           KOS_MODULE         *module,
-                           enum _KOS_AREA_TYPE alloc_mode,
-                           uint32_t            instr_offs,
-                           uint32_t            num_regs);
+int _KOS_init_stack_frame(KOS_FRAME           frame,
+                          KOS_MODULE         *module,
+                          enum _KOS_AREA_TYPE alloc_mode,
+                          uint32_t            instr_offs,
+                          uint32_t            num_regs);
 
 KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
                                 KOS_MODULE *module,

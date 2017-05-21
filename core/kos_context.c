@@ -45,6 +45,7 @@ static const char str_backtrace[]               = "backtrace";
 static const char str_builtin[]                 = "<builtin>";
 static const char str_err_not_array[]           = "object is not an array";
 static const char str_err_number_out_of_range[] = "number out of range";
+static const char str_err_out_of_memory[]       = "out of memory";
 static const char str_err_unsup_operand_types[] = "unsupported operand types";
 static const char str_err_thread_registered[]   = "thread already registered";
 static const char str_file[]                    = "file";
@@ -68,13 +69,46 @@ struct _KOS_PERF _kos_perf = {
 };
 #endif
 
+#ifdef CONFIG_SEQFAIL
+static int                  _kos_seq_init      = 0;
+static KOS_ATOMIC(uint32_t) _kos_seq;
+static uint32_t             _kos_seq_threshold = ~0U;
+
+int _KOS_seq_fail(void)
+{
+    if ( ! _kos_seq_init) {
+
+        struct _KOS_VECTOR cstr;
+        int64_t            value = -1;
+
+        _KOS_vector_init(&cstr);
+
+        if (_KOS_get_env("KOSSEQFAIL", &cstr) == KOS_SUCCESS
+                && cstr.size > 0
+                && _KOS_parse_int(cstr.buffer, cstr.buffer + cstr.size - 1, &value) == KOS_SUCCESS)
+            _kos_seq_threshold = (uint32_t)value;
+
+        _KOS_vector_destroy(&cstr);
+
+        KOS_atomic_write_u32(_kos_seq, 0);
+
+        _kos_seq_init = 1;
+    }
+
+    if ((uint32_t)KOS_atomic_add_i32(_kos_seq, 1) >= _kos_seq_threshold)
+        return KOS_ERROR_INTERNAL;
+
+    return KOS_SUCCESS;
+}
+#endif
+
 static int _register_thread(KOS_CONTEXT        *ctx,
                             KOS_THREAD_ROOT    *thread_root,
                             enum _KOS_AREA_TYPE alloc_mode)
 {
     int error = KOS_SUCCESS;
 
-    _KOS_init_stack_frame(&thread_root->frame, &ctx->init_module, alloc_mode, 0, 0);
+    TRY(_KOS_init_stack_frame(&thread_root->frame, &ctx->init_module, alloc_mode, 0, 0));
 
     if (_KOS_tls_get(ctx->thread_key)) {
 
@@ -184,6 +218,12 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     ctx->empty_string = _alloc_empty_string(frame);
     TRY_OBJID(ctx->empty_string);
 
+    {
+        KOS_OBJ_ID str = KOS_new_cstring(frame, str_err_out_of_memory);
+        TRY_OBJID(str);
+        ctx->allocator.str_oom_id = str;
+    }
+
     TRY_OBJID(ctx->object_prototype    = KOS_new_object_with_prototype(frame, KOS_BADPTR));
     TRY_OBJID(ctx->number_prototype    = KOS_new_object(frame));
     TRY_OBJID(ctx->integer_prototype   = KOS_new_object_with_prototype(frame, ctx->number_prototype));
@@ -196,13 +236,13 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY_OBJID(ctx->function_prototype  = KOS_new_object(frame));
     TRY_OBJID(ctx->exception_prototype = KOS_new_object(frame));
 
-    ctx->init_module.name         = KOS_context_get_cstring(frame, str_init);
-    ctx->init_module.globals      = KOS_new_array(frame, 0);
-    ctx->init_module.global_names = KOS_new_object(frame);
-    ctx->module_names             = KOS_new_object(frame);
-    ctx->modules                  = KOS_new_array(frame, 0);
-    ctx->module_search_paths      = KOS_new_array(frame, 0);
-    ctx->args                     = KOS_new_array(frame, 0);
+    TRY_OBJID(ctx->init_module.name         = KOS_context_get_cstring(frame, str_init));
+    TRY_OBJID(ctx->init_module.globals      = KOS_new_array(frame, 0));
+    TRY_OBJID(ctx->init_module.global_names = KOS_new_object(frame));
+    TRY_OBJID(ctx->module_names             = KOS_new_object(frame));
+    TRY_OBJID(ctx->modules                  = KOS_new_array(frame, 0));
+    TRY_OBJID(ctx->module_search_paths      = KOS_new_array(frame, 0));
+    TRY_OBJID(ctx->args                     = KOS_new_array(frame, 0));
 
     TRY(_init_search_paths(frame));
 
@@ -267,12 +307,12 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
         printf("    " #a "\t%u\n", va);                          \
     }
     printf("Performance stats:\n");
-    PERF_RATIO(object_get_success, object_get_fail);
-    PERF_RATIO(object_set_success, object_set_fail);
-    PERF_RATIO(object_delete_success, object_delete_fail);
-    PERF_RATIO(object_resize_success, object_resize_fail);
+    PERF_RATIO(object_get_success,     object_get_fail);
+    PERF_RATIO(object_set_success,     object_set_fail);
+    PERF_RATIO(object_delete_success,  object_delete_fail);
+    PERF_RATIO(object_resize_success,  object_resize_fail);
     PERF_RATIO(object_salvage_success, object_salvage_fail);
-    PERF_RATIO(array_salvage_success, array_salvage_fail);
+    PERF_RATIO(array_salvage_success,  array_salvage_fail);
     PERF_VALUE(alloc_object[0]);
     PERF_VALUE(alloc_object[1]);
     PERF_VALUE(alloc_object[2]);
@@ -362,6 +402,8 @@ int KOS_context_register_builtin(KOS_FRAME        frame,
 
     /* TODO alloc from context's one-way buffer */
     mod_init = (struct _KOS_MODULE_INIT *)_KOS_alloc_buffer(frame, sizeof(struct _KOS_MODULE_INIT));
+    if ( ! mod_init)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
     mod_init->name = module_name;
     mod_init->init = init;
@@ -376,7 +418,14 @@ KOS_OBJ_ID KOS_context_get_cstring(KOS_FRAME   frame,
                                    const char *cstr)
 {
     /* TODO lookup in array */
-    return KOS_new_const_ascii_cstring(frame, cstr);
+    KOS_OBJ_ID str = KOS_new_const_ascii_cstring(frame, cstr);
+
+    if (IS_BAD_PTR(str)) {
+        KOS_clear_exception(frame);
+        str = KOS_VOID;
+    }
+
+    return str;
 }
 
 #ifndef NDEBUG
@@ -445,9 +494,9 @@ void _KOS_wrap_exception(KOS_FRAME frame)
         if (proto == ctx->exception_prototype)
             /* Exception already wrapped */
             return;
-
-        KOS_clear_exception(frame);
     }
+
+    KOS_clear_exception(frame);
 
     exception = KOS_new_object_with_prototype(frame, ctx->exception_prototype);
     TRY_OBJID(exception);
@@ -781,8 +830,10 @@ KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
                     sizeof(struct _KOS_PROTOTYPE_ITEM) * (new_capacity - 1));
             KOS_PROTO_ITEM *new_items      = new_prototypes->items;
 
-            if ( ! new_prototypes)
+            if ( ! new_prototypes) {
+                KOS_raise_exception_cstring(frame, str_err_out_of_memory);
                 break;
+            }
 
             new_prototypes->capacity = new_capacity;
 

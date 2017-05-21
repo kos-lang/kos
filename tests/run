@@ -123,9 +123,12 @@ if [ "$UNAME" = "Darwin" -o "$UNAME" = "Linux" ]; then
     fi
 fi
 
+export CONFIG_SEQFAIL=1
+
 runtests c++14 c++14
 
 unset SANITIZER
+unset CONFIG_SEQFAIL
 JOBS=$ORIG_JOBS
 
 unset CONFIG_DEBUG
@@ -134,9 +137,11 @@ runtests c11 c++11
 if [ "$UNAME" != "Windows" -a "$1" = "gcov" ]; then
     export CONFIG_GCOV=1
     export CONFIG_DEBUG=1
+    export CONFIG_SEQFAIL=1
     runtests c99 c++14
     unset CONFIG_GCOV
     unset CONFIG_DEBUG
+    unset CONFIG_SEQFAIL
 else
     rm -rf Out
 fi

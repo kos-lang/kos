@@ -2423,20 +2423,26 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
     struct _KOS_STACK_FRAME frame;
     int                     error;
 
-    _KOS_init_stack_frame(&frame, module, KOS_AREA_RECLAIMABLE, module->instr_offs, module->num_regs);
-
-    KOS_context_validate(&frame);
-
-    error = _exec_function(&frame);
-
-    assert( ! KOS_is_exception_pending(&frame) || error == KOS_ERROR_EXCEPTION);
+    error = _KOS_init_stack_frame(&frame, module, KOS_AREA_RECLAIMABLE, module->instr_offs, module->num_regs);
 
     if (error)
         *ret = frame.exception;
-    else
-        *ret = frame.retval;
 
-    assert( ! IS_BAD_PTR(*ret));
+    else {
+
+        KOS_context_validate(&frame);
+
+        error = _exec_function(&frame);
+
+        assert( ! KOS_is_exception_pending(&frame) || error == KOS_ERROR_EXCEPTION);
+
+        if (error)
+            *ret = frame.exception;
+        else
+            *ret = frame.retval;
+
+        assert( ! IS_BAD_PTR(*ret));
+    }
 
     return error;
 }

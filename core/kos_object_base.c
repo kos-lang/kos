@@ -22,6 +22,7 @@
 
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
@@ -136,12 +137,14 @@ KOS_OBJ_ID KOS_new_custom(KOS_FRAME frame, unsigned custom_size)
     return OBJID(CUSTOM, custom);
 }
 
-void _KOS_init_stack_frame(KOS_FRAME           frame,
-                           KOS_MODULE         *module,
-                           enum _KOS_AREA_TYPE alloc_mode,
-                           uint32_t            instr_offs,
-                           uint32_t            num_regs)
+int _KOS_init_stack_frame(KOS_FRAME           frame,
+                          KOS_MODULE         *module,
+                          enum _KOS_AREA_TYPE alloc_mode,
+                          uint32_t            instr_offs,
+                          uint32_t            num_regs)
 {
+    int error = KOS_SUCCESS;
+
     assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
     assert(module);
     assert(module->context);
@@ -158,8 +161,13 @@ void _KOS_init_stack_frame(KOS_FRAME           frame,
     frame->yield_reg  = KOS_CANNOT_YIELD;
     frame->catch_offs = KOS_NO_CATCH;
 
-    if (num_regs < 256)
+    if (num_regs < 256) {
         frame->registers = KOS_new_array(frame, num_regs);
+        if (IS_BAD_PTR(frame->registers))
+            error = KOS_ERROR_EXCEPTION;
+    }
+
+    return error;
 }
 
 typedef struct _KOS_STACK_FRAME KOS_STACK_FRAME;
@@ -179,12 +187,13 @@ KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
         assert(module);
         assert(KOS_context_from_frame(frame) == module->context);
 
-        _KOS_init_stack_frame(new_frame, module, KOS_AREA_RECLAIMABLE, instr_offs, num_regs);
-
-        new_frame->parent = frame;
-
-        if (num_regs < 256 && IS_BAD_PTR(new_frame->registers))
-            new_frame = 0; /* object is garbage-collected */
+        if (_KOS_init_stack_frame(new_frame, module, KOS_AREA_RECLAIMABLE, instr_offs, num_regs)) {
+            assert( ! IS_BAD_PTR(new_frame->exception));
+            frame->exception = new_frame->exception;
+            new_frame        = 0; /* object is garbage-collected */
+        }
+        else
+            new_frame->parent = frame;
     }
 
     return new_frame;

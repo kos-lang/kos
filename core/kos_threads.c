@@ -23,6 +23,7 @@
 #include "kos_threads.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
+#include "kos_debug.h"
 #include "kos_malloc.h"
 #include <assert.h>
 
@@ -135,7 +136,10 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
         new_thread->cookie    = cookie;
         new_thread->exception = KOS_BADPTR;
 
-        new_thread->thread_handle = CreateThread(0, 0, _thread_proc, new_thread, 0, 0);
+        if (_KOS_seq_fail())
+            new_thread->thread_handle = 0;
+        else
+            new_thread->thread_handle = CreateThread(0, 0, _thread_proc, new_thread, 0, 0);
 
         if (!new_thread->thread_handle) {
             _KOS_free(new_thread);
@@ -167,8 +171,13 @@ void _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
 
 int _KOS_tls_create(_KOS_TLS_KEY *key)
 {
-    int         error   = KOS_SUCCESS;
-    const DWORD new_key = TlsAlloc();
+    int   error   = KOS_SUCCESS;
+    DWORD new_key;
+
+    if (_KOS_seq_fail())
+        new_key = TLS_OUT_OF_INDEXES;
+    else
+        new_key = TlsAlloc();
 
     if (new_key == TLS_OUT_OF_INDEXES)
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -228,7 +237,7 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
         new_thread->proc   = proc;
         new_thread->cookie = cookie;
 
-        if (pthread_create(&new_thread->thread_handle, 0, _thread_proc, new_thread)) {
+        if (_KOS_seq_fail() || pthread_create(&new_thread->thread_handle, 0, _thread_proc, new_thread)) {
             _KOS_free(new_thread);
             KOS_raise_exception_cstring(frame, str_err_thread);
             error = KOS_ERROR_EXCEPTION;
@@ -266,7 +275,7 @@ int _KOS_tls_create(_KOS_TLS_KEY *key)
     _KOS_TLS_KEY new_key = (_KOS_TLS_KEY)_KOS_malloc(sizeof(struct _KOS_TLS_OBJECT));
 
     if (new_key) {
-        if (pthread_key_create(&new_key->key, 0)) {
+        if (_KOS_seq_fail() || pthread_key_create(&new_key->key, 0)) {
             _KOS_free(new_key);
             error = KOS_ERROR_OUT_OF_MEMORY;
         }

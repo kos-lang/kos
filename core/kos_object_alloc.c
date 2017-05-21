@@ -22,6 +22,7 @@
 
 #include "kos_object_alloc.h"
 #include "kos_config.h"
+#include "kos_debug.h"
 #include "kos_malloc.h"
 #include "kos_memory.h"
 #include "kos_perf.h"
@@ -31,8 +32,6 @@
 #include "../inc/kos_string.h"
 #include <stdio.h>
 #include <string.h>
-
-static const char str_err_out_of_memory[] = "out of memory";
 
 struct _KOS_AREA {
     KOS_ATOMIC(void *)   next;
@@ -188,6 +187,8 @@ int _KOS_alloc_init(KOS_CONTEXT *ctx)
 
     memcpy(allocator->de_bruijn_bit_pos, de_bruijn_bit_pos, sizeof(de_bruijn_bit_pos));
 
+    allocator->str_oom_id = KOS_VOID;
+
     return _alloc_areas(allocator);
 }
 
@@ -210,6 +211,11 @@ void *_KOS_alloc_object_internal(KOS_FRAME                frame,
     struct _KOS_ALLOCATOR *const allocator  = frame->allocator;
     KOS_ATOMIC(void *)          *area_ptr;
     void                        *ret        = 0;
+
+    if (_KOS_seq_fail()) {
+        KOS_raise_exception(frame, allocator->str_oom_id);
+        return 0;
+    }
 
     assert((int)elem_size_pot >= 3 && (int)elem_size_pot <= 7);
     assert(elem_size <= (1 << (int)elem_size_pot));
@@ -305,7 +311,7 @@ void *_KOS_alloc_object_internal(KOS_FRAME                frame,
         error = _alloc_area(allocator, alloc_mode, elem_size_pot);
 
         if (error) {
-            KOS_raise_exception_cstring(frame, str_err_out_of_memory);
+            KOS_raise_exception(frame, allocator->str_oom_id);
             return 0;
         }
     }
@@ -343,7 +349,7 @@ void *_KOS_alloc_buffer(KOS_FRAME frame, size_t size)
         KOS_PERF_ADD(alloc_buffer_total, (uint32_t)size);
     }
     else
-        KOS_raise_exception_cstring(frame, str_err_out_of_memory);
+        KOS_raise_exception(frame, frame->allocator->str_oom_id);
 
     return buf;
 }

@@ -107,15 +107,20 @@ int _KOS_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity)
 
         char *const new_buf = (char *)_KOS_malloc(capacity);
 
-        if (vector->size)
-            memcpy(new_buf, vector->buffer, vector->size);
+        if (new_buf) {
 
-        if (vector->capacity > sizeof(vector->_local_buffer))
-            _KOS_free(vector->buffer);
+            if (vector->size)
+                memcpy(new_buf, vector->buffer, vector->size);
 
-        vector->buffer = new_buf;
+            if (vector->capacity > sizeof(vector->_local_buffer))
+                _KOS_free(vector->buffer);
 
-        vector->capacity = capacity;
+            vector->buffer = new_buf;
+
+            vector->capacity = capacity;
+        }
+        else
+            error = KOS_ERROR_OUT_OF_MEMORY;
     }
 
     return error;

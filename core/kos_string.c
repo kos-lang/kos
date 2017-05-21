@@ -166,8 +166,8 @@ KOS_OBJ_ID KOS_new_string_esc(KOS_FRAME frame, const char *s, unsigned length)
     return _new_string(frame, s, length, KOS_UTF8_WITH_ESCAPE);
 }
 
-KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_FRAME    frame,
-                                        const char *s)
+KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_FRAME   frame,
+                                       const char *s)
 {
     return KOS_new_const_string(frame, s, s ? (unsigned)strlen(s) : 0U, KOS_STRING_ELEM_8);
 }
