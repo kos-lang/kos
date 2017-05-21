@@ -93,14 +93,14 @@ int main(int argc, char *argv[])
             if (argc > 3)
                 i_first_arg = 3;
         }
-        else if (argc == 2 && strcmp(argv[1], "-")) {
+        else {
             i_module = 1;
             if (argc > 2)
                 i_first_arg = 2;
         }
     }
     else if (argc > 1)
-        i_first_arg = strcmp(argv[1], "-") ? 1 : (argc > 2) ? 2 : 0;
+        i_first_arg = (argc > 2) ? 2 : 0;
 
     error = KOS_context_init(&ctx, &frame);
 
