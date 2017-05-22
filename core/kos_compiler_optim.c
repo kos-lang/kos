@@ -133,7 +133,7 @@ static int _is_nonzero(const struct _KOS_TOKEN *token)
 
         const char c = *token->begin;
 
-        assert(token->type == TT_NUMERIC || token->type == TT_NUMERIC_BINARY);
+        assert(token->type == TT_NUMERIC);
 
         if (c >= '1' && c <= '9')
             return 1;

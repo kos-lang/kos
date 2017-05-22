@@ -147,7 +147,9 @@ module_lang_print:
 	@echo Test module_lang_print
 	@env KOSPATH=../modules interpreter_tests/module_lang_print $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
-simple_tests = $(filter-out kos_parallel%, $(standalone_tests) $(parser_test_list) module_loading interactive disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list))
+all_tests = $(standalone_tests) $(parser_test_list) module_loading interactive disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list)
+
+simple_tests = $(filter-out kos_parallel%, $(all_tests))
 
 simple_test: $(simple_tests)
 
@@ -172,10 +174,6 @@ ifneq ($(CONFIG_SEQFAIL), 0)
 simple_test: $(sequential_test_list)
 endif
 
-ifneq ($(CONFIG_GCOV), 0)
-$(simple_tests): gcov.pre.clean
-endif
-
 define GCOV_RULE
 gcov.$1: simple_test
 	@echo Gcov $1
@@ -186,9 +184,7 @@ endef
 
 $(foreach module, $(gcov_modules), $(eval $(call GCOV_RULE,$(module))))
 
-gcov.all: $(addprefix gcov., $(gcov_modules))
-
-gcov: gcov.all
+gcov: $(addprefix gcov., $(gcov_modules))
 	@find $(out_dir)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
 
 gcov.pre.clean:
@@ -197,7 +193,7 @@ gcov.pre.clean:
 # Execute parallel tests last, make them depend on each other so that they are executed alone
 # Don't run parallel tests with valgrind, since they are slow
 
-ifeq ($(CONFIG_TOOL)$(CONFIG_GCOV), 0)
+ifeq ($(CONFIG_TOOL), 0)
 # Normal testing
 kos_parallel_object_consistency_test: simple_test
 kos_parallel_object_resize_test:      kos_parallel_object_consistency_test
@@ -207,19 +203,16 @@ kos_parallel_buffer_test:             kos_parallel_object_rapid_grow_test
 kos_parallel_array_resize_test:       kos_parallel_buffer_test
 test:                                 kos_parallel_array_resize_test
 else
-  ifeq ($(CONFIG_GCOV), 0)
 # Valgrind
 test:                                 simple_test
-  else
-# gcov
-kos_parallel_object_rapid_grow_test:  simple_test
-kos_parallel_array_resize_test:       kos_parallel_object_rapid_grow_test
-test:                                 kos_parallel_array_resize_test
-  endif
 endif
 
 ifneq ($(CONFIG_GCOV), 0)
 test: gcov
+
+$(all_tests): gcov.pre.clean
+
+$(addprefix gcov., $(gcov_modules)): $(all_tests)
 endif
 
-.PHONY: all test simple_test gcov gcov.all $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list)

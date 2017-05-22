@@ -277,7 +277,7 @@ do {
 #============================================================================#
 
 do {
-    fun unreachable_do(a)
+    fun unreachable_repeat(a)
     {
         repeat {
             return 10
@@ -288,9 +288,42 @@ do {
         # unreachable
         return 20
     }
-    assert unreachable_do(1) == 10
+    assert unreachable_repeat(1) == 10
 
-    check(unreachable_do, { registers: 2, instructions: 2, size: 6 })
+    check(unreachable_repeat, { registers: 2, instructions: 2, size: 6 })
+}
+
+#============================================================================#
+
+do {
+    fun early_return_from_repeat
+    {
+        repeat {
+            return 8
+        } while true
+        return 1
+    }
+
+    assert early_return_from_repeat() == 8
+
+    check(early_return_from_repeat, { registers: 2, instructions: 2, size: 6 })
+}
+
+#============================================================================#
+
+do {
+    fun early_break_from_repeat
+    {
+        repeat {
+            break
+            return 1
+        } while true
+        return 8
+    }
+
+    assert early_break_from_repeat() == 8
+
+    check(early_break_from_repeat, { registers: 2, instructions: 3, size: 11 })
 }
 
 #============================================================================#
@@ -613,4 +646,41 @@ do {
     assert optimization_side_effect(fun { throw void }) == "array"
 
     check(optimization_side_effect, { registers: 2, instructions: 2, size: 9 })
+}
+
+#============================================================================#
+
+do {
+    fun unused_variable(func)
+    {
+        var x = func()
+    }
+
+    var value = void
+    unused_variable(fun { value = 100 })
+    assert(value == 100)
+
+    check(unused_variable, { registers: 5, instructions: 6, size: 22 })
+}
+
+#============================================================================#
+
+do {
+    fun demote_indep_vars(a)
+    {
+        var v      = a + 1
+        return fun {
+            if false {
+                return a + v
+            }
+            else {
+                return 42
+            }
+        }
+        # TODO optimize-out the bind instructions
+    }
+
+    assert demote_indep_vars(1)() == 42
+
+    check(demote_indep_vars, { registers: 4, instructions: 7, size: 33 })
 }
