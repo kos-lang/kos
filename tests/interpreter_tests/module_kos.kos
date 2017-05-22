@@ -31,6 +31,9 @@ fun expect_fail(function)
     }
     catch const e {
         failed = true
+        if lang.args.size > 0 && lang.args[0] == "-print" {
+            e.print()
+        }
     }
     assert failed
 }
@@ -52,5 +55,19 @@ do {
         assert token.type   == kos[expected[idx][1]]
         assert token.token  == expected[idx][2]
         idx += 1
+        if idx == 3 {
+            buf.reserve(1024)
+        }
     }
+
+    assert idx == 6
+}
+
+do {
+    expect_fail(fun {
+        const buf = lang.buffer()
+        buf.pack("s", '"')
+        const it = kos.lexer(buf)
+        it()
+    })
 }

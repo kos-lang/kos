@@ -68,3 +68,13 @@ do {
         assert idx == value
     }
 }
+
+do {
+    const values = [ 1, 1.0, [], {}, λ->(void) ];
+    fun val(i)
+    {
+        return values[i]
+    }
+    const str = "\(val(0)) \(val(1)) \(val(2)) \(val(3)) \(val(4))"
+    assert str == "1 1.000000 <array> <object> <function>"
+}
