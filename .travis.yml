@@ -36,11 +36,14 @@ matrix:
         after_success:
           - coveralls --exclude lib --exclude tests --no-gcov
 
+        script:
+          - tests/run gcov
+
       - os: osx
         compiler: clang
 
-script:
-  - tests/run gcov
+        script:
+          - tests/run
 
 # Coverity
 env:
