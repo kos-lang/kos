@@ -155,6 +155,31 @@ static int _is_nonzero(const struct _KOS_TOKEN *token)
     }
 }
 
+static void _update_scope_ref(struct _KOS_COMP_UNIT *program,
+                              enum _KOS_VAR_TYPE     var_type,
+                              struct _KOS_SCOPE     *closure)
+{
+    struct _KOS_SCOPE *scope;
+
+    /* Find function owning the variable's scope */
+    while (closure->next && ! closure->is_function)
+        closure = closure->next;
+
+    /* Reference the function in all inner scopes which use it */
+    for (scope = program->scope_stack; scope != closure; scope = scope->next)
+        if (scope->is_function) {
+
+            struct _KOS_SCOPE_REF *ref = _KOS_find_scope_ref(scope->frame, closure);
+
+            assert(ref);
+
+            if (var_type == VAR_INDEPENDENT_ARGUMENT)
+                ++ref->exported_args;
+            else
+                ++ref->exported_locals;
+        }
+}
+
 static void _lookup_var(struct _KOS_COMP_UNIT   *program,
                         const struct _KOS_TOKEN *token,
                         int                      only_active,
@@ -200,7 +225,7 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
         var = _KOS_find_var(scope->vars, token);
 
         if (var && var->is_active) {
-            *is_local = scope == fun_scope ? 1 : 0; /* current func's arguments are "local" */
+            *is_local = scope == fun_scope || ! scope->next ? 1 : 0; /* current func's arguments are "local" */
             break;
         }
 
@@ -208,6 +233,11 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
     }
 
     assert(var);
+
+    if ( ! *is_local) {
+        assert(var->type == VAR_INDEPENDENT_LOCAL || var->type == VAR_INDEPENDENT_ARGUMENT);
+        _update_scope_ref(program, var->type, scope);
+    }
 
     *out_var = var;
 }
@@ -285,6 +315,17 @@ static int _reset_var_state(struct _KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
+static int _clear_scope_ref(struct _KOS_RED_BLACK_NODE *node,
+                            void                       *cookie)
+{
+    struct _KOS_SCOPE_REF *const ref = (struct _KOS_SCOPE_REF *)node;
+
+    ref->exported_locals = 0;
+    ref->exported_args   = 0;
+
+    return 0;
+}
+
 static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT      *program,
                                       const struct _KOS_AST_NODE *node)
 {
@@ -303,6 +344,9 @@ static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT      *program,
     scope->num_indep_vars = 0;
     scope->num_args       = 0;
     scope->num_indep_args = 0;
+
+    if (scope->frame)
+        _KOS_red_black_walk(scope->frame->closures, _clear_scope_ref, 0);
 
     return scope;
 }

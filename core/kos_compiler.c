@@ -287,7 +287,12 @@ static int _lookup_var(struct _KOS_COMP_UNIT   *program,
             ref = _KOS_find_scope_ref(program->cur_frame, scope);
 
             assert(ref);
-            assert((ref->exported_types & var->type) == var->type);
+            if (var->type == VAR_INDEPENDENT_LOCAL) {
+                assert(ref->exported_locals);
+            }
+            else {
+                assert(ref->exported_args);
+            }
 
             if (reg) {
                 if (is_var)
@@ -3853,7 +3858,7 @@ static int _gen_closure_vars(struct _KOS_RED_BLACK_NODE *node,
     struct _KOS_SCOPE_REF *ref     = (struct _KOS_SCOPE_REF *)node;
     struct _KOS_COMP_UNIT *program = (struct _KOS_COMP_UNIT *)cookie;
 
-    if ((ref->exported_types & VAR_INDEPENDENT_ARGUMENT) == VAR_INDEPENDENT_ARGUMENT) {
+    if (ref->exported_args) {
         error = _gen_reg(program, &ref->args_reg);
         if (!error) {
             assert(ref->args_reg->reg >= 2 + program->scope_stack->num_indep_vars);
@@ -3861,7 +3866,7 @@ static int _gen_closure_vars(struct _KOS_RED_BLACK_NODE *node,
         }
     }
 
-    if (!error && (ref->exported_types & VAR_INDEPENDENT_LOCAL) == VAR_INDEPENDENT_LOCAL) {
+    if ( ! error && ref->exported_locals) {
         error = _gen_reg(program, &ref->vars_reg);
         if (!error) {
             assert(ref->vars_reg->reg >= 2 + program->scope_stack->num_indep_vars);
@@ -3892,7 +3897,7 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
     if (program->scope_stack->next)
         delta += 2; /* args and this, but not in global scope */
 
-    if ((ref->exported_types & VAR_INDEPENDENT_ARGUMENT) == VAR_INDEPENDENT_ARGUMENT) {
+    if (ref->exported_args) {
 
         struct _KOS_REG *reg;
 
@@ -3918,7 +3923,7 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
                         reg->reg));
     }
 
-    if ((ref->exported_types & VAR_INDEPENDENT_LOCAL) == VAR_INDEPENDENT_LOCAL) {
+    if (ref->exported_locals) {
 
         assert(ref->vars_reg);
         assert(ref->vars_reg->reg >= delta);

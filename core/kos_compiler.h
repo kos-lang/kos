@@ -133,7 +133,8 @@ struct _KOS_SCOPE_REF {
     struct _KOS_SCOPE         *closure;
     struct _KOS_REG           *args_reg;
     struct _KOS_REG           *vars_reg;
-    int                        exported_types;
+    unsigned                   exported_locals;
+    unsigned                   exported_args;
 };
 
 struct _KOS_COMP_STRING {

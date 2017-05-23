@@ -642,7 +642,7 @@ do {
     }
 
     # The function is never invoked
-    # TODO should the side-effect be performed and not optimized-out???
+    # TODO the side-effect should be performed and not optimized-out
     assert optimization_side_effect(fun { throw void }) == "array"
 
     check(optimization_side_effect, { registers: 2, instructions: 2, size: 9 })
@@ -668,7 +668,7 @@ do {
 do {
     fun demote_indep_vars(a)
     {
-        var v      = a + 1
+        var v = a + 1
         return fun {
             if false {
                 return a + v
@@ -677,10 +677,9 @@ do {
                 return 42
             }
         }
-        # TODO optimize-out the bind instructions
     }
 
     assert demote_indep_vars(1)() == 42
 
-    check(demote_indep_vars, { registers: 4, instructions: 7, size: 33 })
+    check(demote_indep_vars, { registers: 4, instructions: 5, size: 26 })
 }

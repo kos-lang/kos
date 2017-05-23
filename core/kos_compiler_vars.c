@@ -280,20 +280,18 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
 
     ref = _KOS_find_scope_ref(inner_scope->frame, outer_closure);
 
-    if (ref)
-        ref->exported_types |= var_type;
-
-    else {
+    if ( ! ref) {
 
         ref = (struct _KOS_SCOPE_REF *)
             _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_SCOPE_REF));
 
         if (ref) {
 
-            ref->closure        = outer_closure;
-            ref->args_reg       = 0;
-            ref->vars_reg       = 0;
-            ref->exported_types = var_type;
+            ref->closure         = outer_closure;
+            ref->args_reg        = 0;
+            ref->vars_reg        = 0;
+            ref->exported_locals = 0;
+            ref->exported_args   = 0;
 
             _KOS_red_black_insert(&inner_scope->frame->closures,
                                   (struct _KOS_RED_BLACK_NODE *)ref,
@@ -301,6 +299,15 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
         }
         else
             error = KOS_ERROR_OUT_OF_MEMORY;
+    }
+
+    if (ref) {
+        if (var_type == VAR_INDEPENDENT_LOCAL)
+            ++ref->exported_locals;
+        else {
+            assert(var_type == VAR_INDEPENDENT_ARGUMENT);
+            ++ref->exported_args;
+        }
     }
 
     return error;
