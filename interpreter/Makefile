@@ -39,7 +39,7 @@ ifeq ($(UNAME), Windows)
 DESTDIR ?= c:/Program\ Files
 else
 DESTDIR ?= /usr
-CFLAGS += "-DCONFIG_MODULE_PATH=\"../share/kos/modules\""
+CFLAGS += "-DCONFIG_MODULE_PATH=\"$(DESTDIR)/share/kos/modules\""
 endif
 
 .PHONY: all install
