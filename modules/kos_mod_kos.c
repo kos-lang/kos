@@ -61,7 +61,6 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
     KOS_OBJ_ID                lexer_obj_id;
     struct _KOS_LEXER_OBJECT *lexer;
     struct _KOS_TOKEN         token;
-    uint32_t                  buf_size;
     uint8_t                  *buf_data;
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
@@ -74,6 +73,7 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
     if (GET_OBJ_SUBTYPE(lexer_obj_id) != OBJ_CUSTOM) {
 
         KOS_OBJ_ID init_arg = lexer_obj_id;
+        uint32_t   buf_size;
 
         if (GET_OBJ_TYPE(init_arg) != OBJ_BUFFER)
             RAISE_EXCEPTION(str_err_not_buffer);
@@ -100,7 +100,6 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
     else {
         lexer = (struct _KOS_LEXER_OBJECT *)OBJPTR(CUSTOM, lexer_obj_id);
 
-        buf_size = KOS_get_buffer_size(lexer->custom.owned);
         buf_data = KOS_buffer_data(lexer->custom.owned);
 
         /* Update pointers if the buffer's data storage was reallocated */

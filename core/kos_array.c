@@ -295,8 +295,6 @@ static int _resize_storage(KOS_FRAME  frame,
 
         _copy_buf(frame, array, old_buf, buf);
 
-        old_buf  = buf;
-
         _KOS_free_buffer(frame, new_buf, KOS_buffer_alloc_size(new_buf->capacity));
     }
 
