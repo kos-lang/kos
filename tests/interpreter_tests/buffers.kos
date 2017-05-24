@@ -869,8 +869,37 @@ do {
 }
 
 do {
+    const b = buffer(3)
+    b[0] = 0x30
+    b[1] = 0
+    b[2] = 0x41
+
+    const s = b.unpack("s")[0]
+    assert typeof s == "string"
+    assert s.size == 3
+    assert s[0] == "0"
+    assert s[1] == "\0"
+    assert s[2] == "A"
+}
+
+do {
+    const b = buffer(10)
+    for var i in b.indexes() {
+        b[i] = 0x41 + i;
+    }
+
+    const contents = [ "A", "B", "C", "D", "E", "F", "G", "H", "I", "J" ]
+
+    const s = b.unpack_string()
+    assert typeof s == "string"
+    assert s.size == 10
+    for var i in s.indexes() {
+        assert s[i] == contents[i]
+    }
+}
+
+do {
     expect_fail(λ->(buffer.prototype.unpack.apply(void, [""])))
     expect_fail(λ->(buffer(100).unpack(void)))
-    expect_fail(λ->(buffer(100).unpack("s")))
     expect_fail(λ->(buffer().unpack("u1")))
 }

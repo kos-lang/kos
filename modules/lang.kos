@@ -196,6 +196,11 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     }
 }
 
+buffer.prototype.unpack_string = fun(args...)
+{
+    return this.unpack("s")[0]
+}
+
 array.prototype.indexes = fun { return range(this.size) }
 
 string.prototype.indexes = array.prototype.indexes

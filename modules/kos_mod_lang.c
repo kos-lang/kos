@@ -1222,8 +1222,12 @@ static int _unpack_format(KOS_FRAME                frame,
     int            big_end   = fmt->big_end;
     KOS_OBJ_ID     obj;
 
-    if (size == ~0U)
-        RAISE_EXCEPTION(str_err_invalid_pack_format);
+    if (size == ~0U) {
+        if (value_fmt != 's' || count != 1)
+            RAISE_EXCEPTION(str_err_invalid_pack_format);
+
+        size = data_size - fmt->idx;
+    }
 
     if (fmt->idx + size * count > data_size)
         RAISE_EXCEPTION(str_err_unpack_buf_too_short);
