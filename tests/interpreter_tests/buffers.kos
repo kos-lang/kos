@@ -884,7 +884,7 @@ do {
 
 do {
     const b = buffer(10)
-    for var i in b.indexes() {
+    for var i in b.indices() {
         b[i] = 0x41 + i;
     }
 
@@ -893,7 +893,7 @@ do {
     const s = b.unpack_string()
     assert typeof s == "string"
     assert s.size == 10
-    for var i in s.indexes() {
+    for var i in s.indices() {
         assert s[i] == contents[i]
     }
 }

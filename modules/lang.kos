@@ -201,11 +201,18 @@ buffer.prototype.unpack_string = fun(args...)
     return this.unpack("s")[0]
 }
 
-array.prototype.indexes = fun { return range(this.size) }
+do {
+    fun indices
+    {
+        return range(this.size)
+    }
 
-string.prototype.indexes = array.prototype.indexes
+    array.prototype.indices = indices
 
-buffer.prototype.indexes = array.prototype.indexes
+    string.prototype.indices = indices
+
+    buffer.prototype.indices = indices
+}
 
 fun map(op, args...)
 {

@@ -968,10 +968,10 @@ do {
 }
 
 ##############################################################################
-# lang.array.prototype.indexes
+# lang.array.prototype.indices
 
 do {
-    const it = [ true, void, -2 ].indexes()
+    const it = [ true, void, -2 ].indices()
     assert it() == 0
     assert it() == 1
     assert it() == 2
@@ -979,14 +979,14 @@ do {
 }
 
 ##############################################################################
-# lang.string.prototype.indexes
+# lang.string.prototype.indices
 
 do {
-    const it = "".indexes()
+    const it = "".indices()
     expect_fail(λ->(it()))
 }
 do {
-    const it = "abcd".indexes()
+    const it = "abcd".indices()
     assert it() == 0
     assert it() == 1
     assert it() == 2
