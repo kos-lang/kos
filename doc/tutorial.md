@@ -363,15 +363,12 @@ TODO
 Strings
 -------
 
-Strings in Kos are delimited by either `"` or `'` characters.  The same
-character must be used to close the string as the one, which was used to open
-it.
+Strings in Kos are delimited by `"` characters.
 
 Strings can contain any characters, including any Unicode characters.
 
     var s = "abc"
-    var t = 'def'
-    var u = '"ghi"'     // The double quotes are part of the string.
+    var t = "\"def\""  // Double quotes inside a string
 
 Strings are immutable.  The only way to modify a string is to create a new,
 modified one.
@@ -380,7 +377,7 @@ Individual characters can be extracted from a string using the array operator.
 There is also the slicing operator, which allows extracting ranges of
 characters.  Negative indexes indicate counting from the end of the string.
 
-    var hello_world = 'Hello, World!'
+    var hello_world = "Hello, World!"
     var h           = hello_world[0]    // "H"
     var bang        = hello_world[-1]   // "!"
     var w           = hello_world[7]    // "W"
@@ -413,7 +410,7 @@ Arrays
     var five_numbers = [ 3, 5, 7, 11, 13 ]
     var three_items  = [ "abc", 1, false ]
 
-    var letters = [ 'a', 'b', 'c', 'd', 'e', 'f' ]
+    var letters = [ "a", "b", "c", "d", "e", "f" ]
     var a       = letters[0]
     var f       = letters[-1]
     var def     = letters[3:]

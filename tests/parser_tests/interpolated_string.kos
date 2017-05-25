@@ -46,37 +46,37 @@ f="ff\((g+h(i*(j+k))*(l+m)))nn";
 )
 
 @------------------------------------------------------------------------------
-const a = 'bb\(c+'dd\(e+'ff\(g)hh'+i)jj'+k)ll';
+const a = "bb\(c+"dd\(e+"ff\(g)hh"+i)jj"+k)ll";
 
 @ 0
 
 (scope 1 1
     (assignment 1 9 =
         (const 1 1 const (identifier 1 7 a))
-        (interpolated_string 1 11 'bb\(
-            (string 1 11 'bb\()
+        (interpolated_string 1 11 "bb\(
+            (string 1 11 "bb\()
             (operator 1 41 +
                 (operator 1 17 +
                     (identifier 1 16 c)
-                    (interpolated_string 1 18 'dd\(
-                        (string 1 18 'dd\()
+                    (interpolated_string 1 18 "dd\(
+                        (string 1 18 "dd\()
                         (operator 1 35 +
                             (operator 1 24 +
                                 (identifier 1 23 e)
-                                (interpolated_string 1 25 'ff\(
-                                    (string 1 25 'ff\()
+                                (interpolated_string 1 25 "ff\(
+                                    (string 1 25 "ff\()
                                     (identifier 1 30 g)
-                                    (string 1 31 )hh')
+                                    (string 1 31 )hh")
                                 )
                             )
                             (identifier 1 36 i)
                         )
-                        (string 1 37 )jj')
+                        (string 1 37 )jj")
                     )
                 )
                 (identifier 1 42 k)
             )
-            (string 1 43 )ll')
+            (string 1 43 )ll")
 )))
 
 @------------------------------------------------------------------------------

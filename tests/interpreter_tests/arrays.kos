@@ -32,9 +32,9 @@ fun expect_fail(function)
 }
 
 do {
-    assert ['a', 'b', 'c'][0]  == 'a'
-    assert ['a', 'b', 'c'][1]  == 'b'
-    assert ['a', 'b', 'c'][-1] == 'c'
+    assert ["a", "b", "c"][0]  == "a"
+    assert ["a", "b", "c"][1]  == "b"
+    assert ["a", "b", "c"][-1] == "c"
 }
 
 expect_fail(λ->([][0]))
@@ -146,33 +146,33 @@ do {
 }
 
 do {
-    const a = ['a', 'b', void, 'd', true, 'f']
+    const a = ["a", "b", void, "d", true, "f"]
 
     const b = a[:]
     assert b      != a
     assert b.size == 6
-    assert b[0]   == 'a'
+    assert b[0]   == "a"
     assert b[2]   == void
-    assert b[-1]  == 'f'
+    assert b[-1]  == "f"
 
     const c = a[-4:-2]
     assert c      != a
     assert c.size == 2
     assert c[0]   == void
-    assert c[1]   == 'd'
+    assert c[1]   == "d"
 
     const d = a[:2.5]
     assert d      != a
     assert d.size == 2
-    assert d[0]   == 'a'
-    assert d[1]   == 'b'
+    assert d[0]   == "a"
+    assert d[1]   == "b"
 
     const e = a[-2.9:]
     assert e      != a
     assert e.size == 3
-    assert e[0]   == 'd'
+    assert e[0]   == "d"
     assert e[1]   == true
-    assert e[2]   == 'f'
+    assert e[2]   == "f"
 
     const f = a[-10:10]
     assert a.size == f.size

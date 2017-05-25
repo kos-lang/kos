@@ -372,7 +372,7 @@ do {
     assert type == "array"
     assert size == 4
 
-    with_ellipsis('x', 'y')
+    with_ellipsis("x", "y")
     assert type == "array"
     assert size == 0
 }
@@ -435,9 +435,9 @@ do {
         return a[idx]
     }
 
-    assert get_index(0,  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'a'
-    assert get_index(-1, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'h'
-    assert get_index(5,  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h') == 'f'
+    assert get_index(0,  "a", "b", "c", "d", "e", "f", "g", "h") == "a"
+    assert get_index(-1, "a", "b", "c", "d", "e", "f", "g", "h") == "h"
+    assert get_index(5,  "a", "b", "c", "d", "e", "f", "g", "h") == "f"
 }
 
 do {

@@ -103,7 +103,7 @@ static const unsigned char lexem_types[] = {
     /* 37(%) 38(&) */
     LT_OPERATOR, LT_OPERATOR,
     /* 39(') */
-    LT_STRING,
+    LT_INVALID,
     /* 40"(" */
     LT_SEPARATOR,
     /* 41")" */
@@ -511,7 +511,7 @@ static int _collect_escape(struct _KOS_LEXER *lexer, int *format)
     return error;
 }
 
-static int _collect_string(struct _KOS_LEXER *lexer, char delim)
+static int _collect_string(struct _KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
@@ -520,8 +520,7 @@ static int _collect_string(struct _KOS_LEXER *lexer, char delim)
     unsigned   c      = _prefetch_next(lexer, &begin, &end);
     int        format = 0;
 
-    while ((c != LT_EOF) && (c != LT_INVALID_UTF8) &&
-           (c != LT_STRING || *(end - 1) != delim)) {
+    while ((c != LT_EOF) && (c != LT_INVALID_UTF8) && (c != LT_STRING)) {
 
         if (c == LT_BACKSLASH) {
             error = _collect_escape(lexer, &format);
@@ -793,14 +792,10 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
             error               = KOS_ERROR_SCANNING_FAILED;
         }
         else {
-            error = _collect_string(lexer, mode == NT_SINGLE_Q_STRING ? '\'' : '"');
+            error = _collect_string(lexer);
             end   = lexer->prefetch_end;
-            if (*(end-1) == '(') {
-                if (mode == NT_SINGLE_Q_STRING)
-                    token->type = TT_STRING_OPEN_SQ;
-                else
-                    token->type = TT_STRING_OPEN_DQ;
-            }
+            if (*(end-1) == '(')
+                token->type = TT_STRING_OPEN;
         }
     }
     else {
@@ -836,14 +831,10 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
                 break;
             case LT_STRING:
                 token->type = TT_STRING;
-                error = _collect_string(lexer, *begin);
+                error = _collect_string(lexer);
                 end = lexer->prefetch_end;
-                if (*(end-1) == '(') {
-                    if (*begin == '"')
-                        token->type = TT_STRING_OPEN_DQ;
-                    else
-                        token->type = TT_STRING_OPEN_SQ;
-                }
+                if (*(end-1) == '(')
+                    token->type = TT_STRING_OPEN;
                 break;
             case LT_DIGIT:
                 token->type = TT_NUMERIC;

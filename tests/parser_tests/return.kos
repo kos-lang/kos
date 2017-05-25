@@ -1,7 +1,7 @@
 fun a
 {
     if b {
-        return typeof b == '';
+        return typeof b == "";
     }
     return yield c || d;
 }
@@ -27,7 +27,7 @@ return e ? f : g;
                                 (operator 4 16 typeof
                                     (identifier 4 23 b)
                                 )
-                                (string 4 28 '')
+                                (string 4 28 "")
                 ))))
                 (return 6 5 return
                     (yield 6 12 yield

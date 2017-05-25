@@ -234,7 +234,7 @@ do {
 
     const obj =  constr()
 
-    const values = ['c', 'd', 'e']
+    const values = ["c", "d", "e"]
 
     for var key in obj {
         const value = obj[key]

@@ -378,9 +378,6 @@ static int _interpolated_string(struct _KOS_PARSER    *parser,
     int                             error       = KOS_SUCCESS;
     struct _KOS_AST_NODE           *node        = 0;
     const enum _KOS_TOKEN_TYPE      token_type  = parser->token.type;
-    const enum _KOS_NEXT_TOKEN_MODE string_mode =
-            token_type == TT_STRING_OPEN_SQ
-            ? NT_SINGLE_Q_STRING : NT_DOUBLE_Q_STRING;
 
     TRY(_new_node(parser, ret, NT_INTERPOLATED_STRING));
 
@@ -399,7 +396,7 @@ static int _interpolated_string(struct _KOS_PARSER    *parser,
         _KOS_lexer_unget_token(&parser->lexer, &parser->token);
         parser->unget = 0;
 
-        TRY(_KOS_lexer_next_token(&parser->lexer, string_mode, &parser->token));
+        TRY(_KOS_lexer_next_token(&parser->lexer, NT_CONTINUE_STRING, &parser->token));
         parser->unget = 0;
 
         assert(parser->token.type == token_type ||
@@ -490,7 +487,7 @@ static int _object_literal(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
 
         if (parser->token.type == TT_STRING)
             TRY(_push_node(parser, prop, NT_STRING_LITERAL, 0));
-        else if (parser->token.type == TT_STRING_OPEN_SQ || parser->token.type == TT_STRING_OPEN_DQ) {
+        else if (parser->token.type == TT_STRING_OPEN) {
             parser->error_str = str_err_expected_string;
             error = KOS_ERROR_PARSE_FAILED;
             goto _error;
@@ -534,9 +531,7 @@ static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             case TT_STRING:
                 error = _new_node(parser, ret, NT_STRING_LITERAL);
                 break;
-            case TT_STRING_OPEN_SQ:
-                /* fall through */
-            case TT_STRING_OPEN_DQ:
+            case TT_STRING_OPEN:
                 error = _interpolated_string(parser, ret);
                 break;
             case TT_IDENTIFIER:
@@ -1035,7 +1030,7 @@ static int _refinement_identifier(struct _KOS_PARSER *parser, struct _KOS_AST_NO
 
     TRY(_next_token(parser));
 
-    if (parser->token.type == TT_STRING_OPEN_SQ || parser->token.type == TT_STRING_OPEN_DQ) {
+    if (parser->token.type == TT_STRING_OPEN) {
         parser->error_str = str_err_expected_string;
         error = KOS_ERROR_PARSE_FAILED;
         goto _error;

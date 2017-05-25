@@ -336,45 +336,45 @@ do {
 }
 
 do {
-    var a = ''
+    var a = ""
     try {
-        a += 'a'
+        a += "a"
         try {
-            a += 'f:('
-            for var fval in ['c', 'm', 'e'] {
-                a += '\(fval)['
+            a += "f:("
+            for var fval in ["c", "m", "e"] {
+                a += "\(fval)["
                 try {
-                    if fval == 'e' {
-                        a += 'F'
+                    if fval == "e" {
+                        a += "F"
                         break
                     }
 
-                    a += 'd:('
+                    a += "d:("
 
                     var c = 0
                     repeat {
                         try {
                             c += 1
-                            a += 'c=\(c), w:('
+                            a += "c=\(c), w:("
 
                             while c < 20 {
                                 c += 3
                                 try {
-                                    a += 'c=\(c)'
+                                    a += "c=\(c)"
                                     if c > 8 {
-                                        a += 'W'
+                                        a += "W"
                                         break
                                     }
-                                    throw ', '
+                                    throw ", "
                                 }
                                 catch const e {
                                     a += e.value
                                 }
                             }
 
-                            a += '):w'
+                            a += "):w"
 
-                            throw ';'
+                            throw ";"
                             a = -1000
                         }
                         catch const e {
@@ -382,27 +382,27 @@ do {
                         }
 
                         if c > 9 {
-                            a += 'D'
+                            a += "D"
                             break
                         }
                     } while c < 100
 
-                    a += '):d'
+                    a += "):d"
 
-                    throw ' - '
+                    throw " - "
                     a = -2000
                 }
                 catch const e {
                     a += e.value
                 }
-                a += '*'
+                a += "*"
             }
-            throw '_'
+            throw "_"
         }
         catch const e {
             a += e.value
         }
-        a += '):f'
+        a += "):f"
     }
     catch const e {
         a = void
@@ -457,50 +457,50 @@ do {
     fun try_break
     {
         defer {
-            a += '6'
+            a += "6"
         }
-        a += '1'
+        a += "1"
         defer {
-            a += '5'
+            a += "5"
         }
-        a += '2'
-        const letters = ['a', 'b', 'c']
+        a += "2"
+        const letters = ["a", "b", "c"]
         for var i = 0; i < 100; i += 1 {
             defer {
-                a += '3'
+                a += "3"
             }
             a += letters[i]
             if i == 2 {
                 break
             }
         }
-        a += '4'
+        a += "4"
     }
 
     try_break()
 
-    assert a == '12a3b3c3456'
+    assert a == "12a3b3c3456"
 }
 
 do {
-    var a = ''
+    var a = ""
 
     fun try_break
     {
         try {
-            a += 'A'
+            a += "A"
             for var i = 0; i < 100; i += 1 {
                 defer {
-                    a += 'B'
+                    a += "B"
                 }
                 if i == 2 {
                     break
                 }
-                a += '\(i)'
+                a += "\(i)"
             }
-            a += 'C'
-            throw 'D'
-            a += 'E'
+            a += "C"
+            throw "D"
+            a += "E"
         }
         catch const e {
             a += e.value
@@ -509,36 +509,36 @@ do {
 
     try_break()
 
-    assert a == 'A0B1BBCD'
+    assert a == "A0B1BBCD"
 }
 
 do {
-    var a = ''
+    var a = ""
 
     try {
         for var i = 0; i < 100; i += 1 {
             defer {
-                a += 'e '
+                a += "e "
             }
-            a += 'a\(i) ' 
+            a += "a\(i) " 
             defer {
-                a += 'd'
+                a += "d"
             }
-            a += 'b\(i) '
+            a += "b\(i) "
             if i == 0 {
                 continue
             }
             else if i == 2 {
                 break
             }
-            a += 'c'
+            a += "c"
         }
     }
     catch const e {
-        a = ''
+        a = ""
     }
 
-    assert a == 'a0 b0 de a1 b1 cde a2 b2 de '
+    assert a == "a0 b0 de a1 b1 cde a2 b2 de "
 }
 
 do {
@@ -630,11 +630,11 @@ do {
 }
 
 do {
-    var a = ''
+    var a = ""
 
-    for var c in ['a', 'b', 'c', 'd'] {
+    for var c in ["a", "b", "c", "d"] {
         try {
-            if c == 'b' {
+            if c == "b" {
                 throw void
             }
         }
@@ -644,11 +644,11 @@ do {
         a += c
     }
 
-    assert a == 'acd'
+    assert a == "acd"
 }
 
 do {
-    var a = ''
+    var a = ""
 
     for var c in "xyza" {
         assert typeof c == "string"

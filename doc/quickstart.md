@@ -130,7 +130,7 @@ However, properties can only be added or modified in object type.
 In addition to that, arrays, strings and buffers have elements, indexable with
 a number.  The first element always has index zero.
 
-    const array = [ 'a', 'b', 'c' ]
+    const array = [ "a", "b", "c" ]
     lang.print("element 0:", array[0])
     # Prints: element 0: a
 

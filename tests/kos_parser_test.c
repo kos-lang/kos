@@ -240,9 +240,9 @@ static int _walk_tree(const struct _KOS_AST_NODE *node,
         append_str(&out, end, " ");
         append_str(&out, end, separators[token->sep]);
     }
-    else if (token->type == TT_NUMERIC        || token->type == TT_IDENTIFIER ||
-             token->type == TT_STRING_OPEN_SQ || token->type == TT_STRING     ||
-             token->type == TT_STRING_OPEN_DQ || token->type == TT_KEYWORD) {
+    else if (token->type == TT_NUMERIC     || token->type == TT_IDENTIFIER ||
+             token->type == TT_STRING_OPEN || token->type == TT_STRING     ||
+             token->type == TT_KEYWORD) {
         append_str(&out, end, " ");
         append_str_len(&out, end, token->begin, token->length);
     }

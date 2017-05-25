@@ -1093,10 +1093,10 @@ static int _add_strings(struct _KOS_COMP_UNIT      *program,
     unsigned                   b_length = b->token.length;
 
     assert(a->type == NT_STRING_LITERAL);
-    assert(a_type == TT_STRING || a_type == TT_STRING_OPEN_SQ || a_type == TT_STRING_OPEN_DQ);
+    assert(a_type == TT_STRING || a_type == TT_STRING_OPEN);
     assert((a_type == TT_STRING && a_length >= 2U) || a_length >= 3U);
     assert(b->type == NT_STRING_LITERAL);
-    assert(b_type == TT_STRING || b_type == TT_STRING_OPEN_SQ || b_type == TT_STRING_OPEN_DQ);
+    assert(b_type == TT_STRING || b_type == TT_STRING_OPEN);
     assert((b_type == TT_STRING && b_length >= 2U) || b_length >= 3U);
 
     a_length -= a_type == TT_STRING ? 2U : 3U;

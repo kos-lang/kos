@@ -330,9 +330,8 @@ static void _get_token_str(const struct _KOS_TOKEN *token,
     unsigned    length = token->length;
 
     if (token->type >= TT_STRING) { /* TT_STRING* */
-        assert(token->type == TT_STRING         ||
-               token->type == TT_STRING_OPEN_SQ ||
-               token->type == TT_STRING_OPEN_DQ);
+        assert(token->type == TT_STRING ||
+               token->type == TT_STRING_OPEN);
         ++begin;
         length -= 2;
         if (token->type > TT_STRING) /* TT_STRING_OPEN_* */

@@ -48,8 +48,7 @@ enum _KOS_TOKEN_TYPE {
     TT_KEYWORD,
     TT_NUMERIC,
     TT_STRING,
-    TT_STRING_OPEN_SQ,
-    TT_STRING_OPEN_DQ,
+    TT_STRING_OPEN,
     TT_OPERATOR,
     TT_SEPARATOR,
     TT_NUMERIC_BINARY /* used during optimization, not emitted by lexer */
@@ -177,8 +176,7 @@ struct _KOS_TOKEN {
 
 enum _KOS_NEXT_TOKEN_MODE {
     NT_ANY,             /* Next token can be of any type */
-    NT_SINGLE_Q_STRING, /* Next token continues a single-quoted string */
-    NT_DOUBLE_Q_STRING  /* Next token continues a double-quoted string */
+    NT_CONTINUE_STRING  /* Next token continues a string */
 };
 
 void _KOS_lexer_init(struct _KOS_LEXER *lexer,

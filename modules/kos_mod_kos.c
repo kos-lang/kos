@@ -214,8 +214,7 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "token_keyword",        TT_KEYWORD);
     TRY_ADD_INTEGER_CONSTANT(frame, "token_numeric",        TT_NUMERIC);
     TRY_ADD_INTEGER_CONSTANT(frame, "token_string",         TT_STRING);
-    TRY_ADD_INTEGER_CONSTANT(frame, "token_string_open_sq", TT_STRING_OPEN_SQ);
-    TRY_ADD_INTEGER_CONSTANT(frame, "token_string_open_dq", TT_STRING_OPEN_DQ);
+    TRY_ADD_INTEGER_CONSTANT(frame, "token_string_open",    TT_STRING_OPEN);
     TRY_ADD_INTEGER_CONSTANT(frame, "token_operator",       TT_OPERATOR);
     TRY_ADD_INTEGER_CONSTANT(frame, "token_separator",      TT_SEPARATOR);
 

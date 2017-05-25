@@ -53,8 +53,8 @@
 * Spread operator
 
         var str = "hello";
-        var a   = [ str ... ]; // [ 'h', 'e', 'l', 'l', 'o' ]
-        some_func(str, a ...); // some_func(str, 'h', 'e', 'l', 'l', 'o');
+        var a   = [ str ... ]; // [ "h", "e", "l", "l", "o" ]
+        some_func(str, a ...); // some_func(str, "h", "e", "l", "l", "o");
 
 * Range spread operator
 

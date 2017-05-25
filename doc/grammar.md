@@ -293,8 +293,8 @@ least one binary digit.
 Strings
 -------
 
-A string is delimited by `"` or `'` characters.  Both the beginning and the end
-of the string must be delimited by the same character.
+A string is delimited by `"` characters.  Both the beginning and the end
+of the string must be delimited by the `"` character.
 
 UTF-8 characters with code greater than 127 are legal string components.
 
@@ -307,7 +307,6 @@ sequence.
                            | "t"
                            | "v"
                            | "\"
-                           | "'"
                            | """
                            | "0"
                            | ( "x" HexDigit HexDigit )
@@ -315,15 +314,11 @@ sequence.
 
     EscapedChar          ::= "\" EscapeSequence
 
-    UnescapedStringChar  ::= UTF8_CHARACTER except ( "'" |  """ | "\" )
+    UnescapedStringChar  ::= UTF8_CHARACTER except ( """ | "\" )
 
     StringChar           ::= UnescapedStringChar | EscapedChar
 
-    SingleQStringLiteral ::= "'" ( StringChar | """ )* "'"
-
-    DoubleQStringLiteral ::= """ ( StringChar | "'" )* """
-
-    STRING_LITERAL       ::= SingleQStringLiteral | DoubleQStringLiteral
+    STRING_LITERAL       ::= """ ( StringChar )* """
 
 An escaped opening parenthesis begins a string interpolation expression.  The
 lexer stops fetching further characters and returns the current token as a
@@ -335,17 +330,11 @@ lexer that all further characters are a continuation of a string.
 The string interpolation syntax creates a dependency between the parser and the
 lexer, but it is a trade-off for a very useful syntax.
 
-    S_Q_STRING_LITERAL_BEGIN ::= "'" ( StringChar | """ )* "\" "("
+    STRING_LITERAL_BEGIN ::= """ ( StringChar )* "\" "("
 
-    S_Q_STRING_LITERAL_CONT  ::= ( StringChar | """ )* "\" "("
+    STRING_LITERAL_CONT  ::= ( StringChar )* "\" "("
 
-    S_Q_STRING_LITERAL_END   ::= ( StringChar | """ )* "'"
-
-    D_Q_STRING_LITERAL_BEGIN ::= """ ( StringChar | "'" )* "\" "("
-
-    D_Q_STRING_LITERAL_CONT  ::= ( StringChar | "'" )* "\" "("
-
-    D_Q_STRING_LITERAL_END   ::= ( StringChar | "'" )* """
+    STRING_LITERAL_END   ::= ( StringChar )* """
 
 
 Separators
@@ -1188,16 +1177,10 @@ part of the outermost `MemberExpression`.
                    | Identifier
 
     StringLiteral ::= STRING_LITERAL
-                    | FormattedSingleQuotedString
                     | FormattedDoubleQuotedString
 
-    FormattedSingleQuotedString ::= S_Q_STRING_LITERAL_BEGIN
+    FormattedDoubleQuotedString ::= STRING_LITERAL_BEGIN
                                     RHSExpression
-                                    ( ")" S_Q_STRING_LITERAL_CONT RHSExpression )*
-                                    ")" S_Q_STRING_LITERAL_END
-
-    FormattedDoubleQuotedString ::= D_Q_STRING_LITERAL_BEGIN
-                                    RHSExpression
-                                    ( ")" D_Q_STRING_LITERAL_CONT RHSExpression )*
-                                    ")" D_Q_STRING_LITERAL_END
+                                    ( ")" STRING_LITERAL_CONT RHSExpression )*
+                                    ")" STRING_LITERAL_END
 
