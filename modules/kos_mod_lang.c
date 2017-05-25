@@ -79,8 +79,10 @@ static KOS_OBJ_ID _print(KOS_FRAME  frame,
 
     TRY(KOS_print_to_cstr_vec(frame, args_obj, &cstr, " ", 1));
 
-    if (cstr.size)
-        printf("%.*s\n", (int)cstr.size-1, cstr.buffer);
+    if (cstr.size) {
+        cstr.buffer[cstr.size - 1] = '\n';
+        fwrite(cstr.buffer, 1, cstr.size, stdout);
+    }
     else
         printf("\n");
 
@@ -101,8 +103,8 @@ static KOS_OBJ_ID _print_(KOS_FRAME  frame,
 
     TRY(KOS_print_to_cstr_vec(frame, args_obj, &cstr, " ", 1));
 
-    if (cstr.size)
-        printf("%.*s", (int)cstr.size-1, cstr.buffer);
+    if (cstr.size > 1)
+        fwrite(cstr.buffer, 1, cstr.size - 1, stdout);
 
 _error:
     _KOS_vector_destroy(&cstr);
@@ -1846,7 +1848,12 @@ static KOS_OBJ_ID _print_exception(KOS_FRAME  frame,
         KOS_OBJ_ID line = KOS_array_read(frame, formatted, (int)i);
         TRY_OBJID(line);
         TRY(KOS_string_to_cstr_vec(frame, line, &cstr));
-        printf("%s\n", cstr.buffer);
+        if (cstr.size) {
+            cstr.buffer[cstr.size - 1] = '\n';
+            fwrite(cstr.buffer, 1, cstr.size, stdout);
+        }
+        else
+            printf("\n");
     }
 
     ret = this_obj;
