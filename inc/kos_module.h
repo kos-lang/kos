@@ -37,13 +37,13 @@ int KOS_load_module_from_memory(KOS_FRAME   frame,
                                 const char *buf,
                                 unsigned    buf_size);
 
-int KOS_repl(KOS_FRAME   frame,
-             const char *module_name,
-             const char *buf,
-             unsigned    buf_size);
+KOS_OBJ_ID KOS_repl(KOS_FRAME   frame,
+                    const char *module_name,
+                    const char *buf,
+                    unsigned    buf_size);
 
-int KOS_repl_stdin(KOS_FRAME   frame,
-                   const char *module_name);
+KOS_OBJ_ID KOS_repl_stdin(KOS_FRAME   frame,
+                          const char *module_name);
 
 int KOS_module_add_global(KOS_FRAME  frame,
                           KOS_OBJ_ID name,

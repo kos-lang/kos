@@ -1057,14 +1057,18 @@ static int _patch_fun_loads(struct _KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
-static int _finish_global_scope(struct _KOS_COMP_UNIT *program)
+static int _finish_global_scope(struct _KOS_COMP_UNIT *program,
+                                struct _KOS_REG       *reg)
 {
-    int              error;
-    struct _KOS_REG *reg = 0;
+    int error;
 
-    TRY(_gen_reg(program, &reg));
-    TRY(_gen_instr1(program, INSTR_LOAD_VOID, reg->reg));
+    if ( ! reg) {
+        TRY(_gen_reg(program, &reg));
+        TRY(_gen_instr1(program, INSTR_LOAD_VOID, reg->reg));
+    }
+
     TRY(_gen_instr2(program, INSTR_RETURN, program->scope_stack->num_indep_vars, reg->reg));
+
     _free_reg(program, reg);
     reg = 0;
 
@@ -1088,6 +1092,8 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
 
     if (child || global) {
 
+        struct _KOS_REG *reg = 0;
+
         _push_scope(program, node);
 
         /* Init global scope */
@@ -1110,18 +1116,20 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
         /* Process inner nodes */
         for ( ; child; child = child->next) {
 
-            struct _KOS_REG *reg = 0;
-
             TRY(_add_addr2line(program, &child->token, _KOS_FALSE));
 
-            TRY(_visit_node(program, child, &reg));
-
-            if (reg)
+            if (reg) {
                 _free_reg(program, reg);
+                reg = 0;
+            }
+
+            TRY(_visit_node(program, child, &reg));
         }
 
         if (global)
-            TRY(_finish_global_scope(program));
+            TRY(_finish_global_scope(program, reg));
+        else if (reg)
+            _free_reg(program, reg);
 
         _pop_scope(program);
     }

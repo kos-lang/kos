@@ -20,6 +20,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "../inc/kos_array.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
@@ -159,8 +160,11 @@ int main(int argc, char *argv[])
         if (is_script) {
             error = KOS_load_module_from_memory(frame, str_cmdline, str_import_lang, sizeof(str_import_lang));
 
-            if ( ! error)
-                error = KOS_repl(frame, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
+            if ( ! error) {
+                KOS_OBJ_ID ret = KOS_repl(frame, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
+                if (IS_BAD_PTR(ret))
+                    error = KOS_ERROR_EXCEPTION;
+            }
         }
         /* Load script from a file */
         else
@@ -194,13 +198,33 @@ int main(int argc, char *argv[])
                     error = _KOS_getline(&state, PROMPT_FIRST_LINE, &buf);
                     /* TODO parse check if more lines need to be read */
                     if ( ! error && buf.size) {
-                        error = KOS_repl(frame, str_stdin, buf.buffer, (unsigned)buf.size);
+                        KOS_OBJ_ID ret = KOS_repl(frame, str_stdin, buf.buffer, (unsigned)buf.size);
                         buf.size = 0;
 
-                        if (error == KOS_ERROR_EXCEPTION) {
+                        if (IS_BAD_PTR(ret)) {
                             KOS_print_exception(frame);
                             KOS_clear_exception(frame);
                             error = KOS_SUCCESS;
+                        }
+                        else if (ret != KOS_VOID) {
+                            KOS_OBJ_ID array = KOS_new_array(frame, 1);
+                            if (IS_BAD_PTR(array))
+                                error = KOS_ERROR_EXCEPTION;
+
+                            if ( ! error)
+                                error = KOS_array_write(frame, array, 0, ret);
+
+                            if ( ! error)
+                                error = KOS_print_to_cstr_vec(frame,
+                                                              array,
+                                                              &buf,
+                                                              "",
+                                                              0);
+
+                            if ( ! error)
+                                printf("%.*s\n", (int)buf.size-1, buf.buffer);
+
+                            buf.size = 0;
                         }
                     }
                 } while ( ! error);
@@ -216,8 +240,11 @@ int main(int argc, char *argv[])
                     goto _error;
             }
             /* Load script from stdin */
-            else
-                error = KOS_repl_stdin(frame, str_stdin);
+            else {
+                KOS_OBJ_ID ret = KOS_repl_stdin(frame, str_stdin);
+                if (IS_BAD_PTR(ret))
+                    error = KOS_ERROR_EXCEPTION;
+            }
         }
     }
 

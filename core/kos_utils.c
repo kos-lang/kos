@@ -234,7 +234,7 @@ static int _vector_append_str(KOS_FRAME           frame,
 {
     unsigned str_len = 0;
     size_t   pos     = cstr_vec->size;
-    int      error;
+    int      error   = KOS_SUCCESS;
 
     if (KOS_get_string_length(obj) > 0) {
 
@@ -247,6 +247,9 @@ static int _vector_append_str(KOS_FRAME           frame,
         }
     }
 
+    if ( ! str_len)
+        return KOS_SUCCESS;
+
     error = _KOS_vector_resize(cstr_vec, pos + str_len + (pos ? 0 : 1));
 
     if (error) {
@@ -254,8 +257,8 @@ static int _vector_append_str(KOS_FRAME           frame,
         return KOS_ERROR_EXCEPTION;
     }
 
-    if (str_len)
-        KOS_string_to_utf8(obj, &cstr_vec->buffer[pos ? pos - 1 : pos], str_len);
+    KOS_string_to_utf8(obj, &cstr_vec->buffer[pos ? pos - 1 : pos], str_len);
+    cstr_vec->buffer[pos + str_len + (pos ? 0 : 1)] = 0;
 
     return KOS_SUCCESS;
 }

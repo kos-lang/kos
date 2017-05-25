@@ -375,9 +375,8 @@ _error:
 static int _interpolated_string(struct _KOS_PARSER    *parser,
                                 struct _KOS_AST_NODE **ret)
 {
-    int                             error       = KOS_SUCCESS;
-    struct _KOS_AST_NODE           *node        = 0;
-    const enum _KOS_TOKEN_TYPE      token_type  = parser->token.type;
+    int                   error = KOS_SUCCESS;
+    struct _KOS_AST_NODE *node  = 0;
 
     TRY(_new_node(parser, ret, NT_INTERPOLATED_STRING));
 
@@ -399,7 +398,7 @@ static int _interpolated_string(struct _KOS_PARSER    *parser,
         TRY(_KOS_lexer_next_token(&parser->lexer, NT_CONTINUE_STRING, &parser->token));
         parser->unget = 0;
 
-        assert(parser->token.type == token_type ||
+        assert(parser->token.type == TT_STRING_OPEN ||
                parser->token.type == TT_STRING);
 
         TRY(_new_node(parser, &node, NT_STRING_LITERAL));

@@ -786,16 +786,18 @@ static int _compile_module(KOS_FRAME   frame,
                 module->num_line_addrs += (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
             }
 
-            if (old_num_func_addrs) {
-                TRY(_append_buf((const uint8_t **)&module->func_addrs, module->num_func_addrs * sizeof(KOS_FUNC_ADDR),
-                                (const uint8_t *)addr_to_func->buffer, (uint32_t)addr_to_func->size));
-                module->num_func_addrs += (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-            }
-            else if (addr_to_func->size) {
-                module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
-                module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-                module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
-                addr_to_func->buffer   = 0;
+            if (addr_to_func->size) {
+                if (old_num_func_addrs) {
+                    TRY(_append_buf((const uint8_t **)&module->func_addrs, module->num_func_addrs * sizeof(KOS_FUNC_ADDR),
+                                    (const uint8_t *)addr_to_func->buffer, (uint32_t)addr_to_func->size));
+                    module->num_func_addrs += (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
+                }
+                else {
+                    module->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
+                    module->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
+                    module->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
+                    addr_to_func->buffer   = 0;
+                }
             }
 
             line_addr     = (KOS_LINE_ADDR *)module->line_addrs + old_num_line_addrs;
@@ -1157,16 +1159,16 @@ _error:
     return module_obj;
 }
 
-int KOS_repl(KOS_FRAME   frame,
-             const char *module_name,
-             const char *buf,
-             unsigned    buf_size)
+KOS_OBJ_ID KOS_repl(KOS_FRAME   frame,
+                    const char *module_name,
+                    const char *buf,
+                    unsigned    buf_size)
 {
     int          error       = KOS_SUCCESS;
     int          module_idx  = -1;
     KOS_OBJ_ID   module_obj  = KOS_BADPTR;
     KOS_OBJ_ID   module_name_str;
-    KOS_OBJ_ID   ret;
+    KOS_OBJ_ID   ret         = KOS_BADPTR;
     KOS_CONTEXT *ctx         = KOS_context_from_frame(frame);
 
     module_name_str = KOS_new_cstring(frame, module_name);
@@ -1206,7 +1208,7 @@ _error:
         assert(!KOS_is_exception_pending(frame));
     }
 
-    return error;
+    return error ? KOS_BADPTR : ret;
 }
 
 static int _load_stdin(KOS_FRAME frame, struct _KOS_VECTOR *buf)
@@ -1242,14 +1244,14 @@ _error:
     return error;
 }
 
-int KOS_repl_stdin(KOS_FRAME   frame,
-                   const char *module_name)
+KOS_OBJ_ID KOS_repl_stdin(KOS_FRAME   frame,
+                          const char *module_name)
 {
     int                error       = KOS_SUCCESS;
     int                module_idx  = -1;
     KOS_OBJ_ID         module_obj  = KOS_BADPTR;
     KOS_OBJ_ID         module_name_str;
-    KOS_OBJ_ID         ret;
+    KOS_OBJ_ID         ret         = KOS_BADPTR;
     KOS_CONTEXT       *ctx         = KOS_context_from_frame(frame);
     struct _KOS_VECTOR buf;
 
@@ -1299,7 +1301,7 @@ _error:
 
     _KOS_vector_destroy(&buf);
 
-    return error;
+    return error ? KOS_BADPTR : ret;
 }
 
 int KOS_module_add_global(KOS_FRAME  frame,

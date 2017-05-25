@@ -32,4 +32,4 @@ DIR="$2"
 
 env KOSDISASM=1 "$KOS" "$(dirname "$0")"/disasm.kos | sed "1,/Disassembling module: disasm/ d" > "$DIR"/disasm.txt
 
-diff -w "$DIR"/disasm.txt "$(dirname "$0")"/disasm.txt
+diff -w "$(dirname "$0")"/disasm.txt "$DIR"/disasm.txt
