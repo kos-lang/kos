@@ -406,7 +406,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
             break;
 
         case OBJ_STRING:
-            if (cstr_vec && ! quote_str)
+            if ( ! str)
                 error = _vector_append_str(frame, cstr_vec, obj_id, quote_str);
             else if (quote_str)
                 error = _make_quoted_str(frame, obj_id, str, cstr_vec);

@@ -126,3 +126,46 @@ if [ "$CONTENTS" != "void" ]; then
     cat "$OUTPUT"
     exit 1
 fi
+
+##############################################################################
+# Test various outputs from interactive interpreter
+
+"$KOS" -c 'print_("true\nvoid\n1\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
+
+if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+    echo "Expected first line to have interactive interpreter signature" >&2
+    head -n "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "2 p" "$OUTPUT"`
+
+if [ "$CONTENTS" != "true" ]; then
+    echo "Expected line 2 of output to contain: \"true\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "3 p" "$OUTPUT"`
+
+if [ "$CONTENTS" != "1" ]; then
+    echo "Expected line 3 of output to contain: \"1\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "4 p" "$OUTPUT"`
+
+if [ "$CONTENTS" != "\"\"" ]; then
+    echo "Expected line 4 of output to contain: \"\"\"\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "5 p" "$OUTPUT"`
+
+if [ "$CONTENTS" != "\"x\"" ]; then
+    echo "Expected line 5 of output to contain: \"\"x\"\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
