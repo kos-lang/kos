@@ -178,14 +178,16 @@ do {
 
 # These look like escape sequences, but they are not.  Used e.g. in regexes.
 do {
-    const s = "\\(\w\)"
-    assert s.size == 6
+    const s = "\\(\w\)\'"
+    assert s.size == 8
     assert s[0]   == "\\"
     assert s[1]   == "("
     assert s[2]   == "\\"
     assert s[3]   == "w"
     assert s[4]   == "\\"
     assert s[5]   == ")"
+    assert s[6]   == "\\"
+    assert s[7]   == "'"
 }
 
 do {
