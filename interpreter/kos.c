@@ -330,6 +330,7 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
 
         TRY(KOS_print_to_cstr_vec(frame,
                                   print_args,
+                                  KOS_QUOTE_STRINGS,
                                   buf,
                                   "",
                                   0));

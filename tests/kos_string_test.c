@@ -1489,6 +1489,95 @@ int main(void)
             TEST(KOS_string_get_char_code(frame, str, (int)i) == (unsigned)expected[i]);
     }
 
+    /************************************************************************/
+    {
+        KOS_OBJ_ID         str;
+        struct _KOS_VECTOR vec;
+
+        _KOS_vector_init(&vec);
+
+        str = KOS_new_cstring(frame, "");
+        TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == 0);
+
+        TEST(KOS_object_to_string_or_cstr_vec(frame, str, KOS_QUOTE_STRINGS, &str, &vec) == KOS_SUCCESS);
+
+        _KOS_vector_destroy(&vec);
+
+        TEST(GET_OBJ_TYPE(str)                       == OBJ_STRING);
+        TEST(KOS_get_string_length(str)              == 2);
+        TEST(KOS_string_get_char_code(frame, str, 0) == 34);
+        TEST(KOS_string_get_char_code(frame, str, 1) == 34);
+    }
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID         str;
+        struct _KOS_VECTOR vec;
+
+        _KOS_vector_init(&vec);
+
+        str = KOS_new_cstring(frame, "\\\"\n\x1f\x7f");
+        TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == 5);
+
+        TEST(KOS_object_to_string_or_cstr_vec(frame, str, KOS_QUOTE_STRINGS, &str, &vec) == KOS_SUCCESS);
+
+        _KOS_vector_destroy(&vec);
+
+        TEST(GET_OBJ_TYPE(str)                        == OBJ_STRING);
+        TEST(KOS_get_string_length(str)               == 18);
+        TEST(KOS_string_get_char_code(frame, str, 0)  == (unsigned)'"');
+        TEST(KOS_string_get_char_code(frame, str, 1)  == (unsigned)'\\');
+        TEST(KOS_string_get_char_code(frame, str, 2)  == (unsigned)'\\');
+        TEST(KOS_string_get_char_code(frame, str, 3)  == (unsigned)'\\');
+        TEST(KOS_string_get_char_code(frame, str, 4)  == (unsigned)'"');
+        TEST(KOS_string_get_char_code(frame, str, 5)  == (unsigned)'\\');
+        TEST(KOS_string_get_char_code(frame, str, 6)  == (unsigned)'x');
+        TEST(KOS_string_get_char_code(frame, str, 7)  == (unsigned)'0');
+        TEST(KOS_string_get_char_code(frame, str, 8)  == (unsigned)'a');
+        TEST(KOS_string_get_char_code(frame, str, 9)  == (unsigned)'\\');
+        TEST(KOS_string_get_char_code(frame, str, 10) == (unsigned)'x');
+        TEST(KOS_string_get_char_code(frame, str, 11) == (unsigned)'1');
+        TEST(KOS_string_get_char_code(frame, str, 12) == (unsigned)'f');
+        TEST(KOS_string_get_char_code(frame, str, 13) == (unsigned)'\\');
+        TEST(KOS_string_get_char_code(frame, str, 14) == (unsigned)'x');
+        TEST(KOS_string_get_char_code(frame, str, 15) == (unsigned)'7');
+        TEST(KOS_string_get_char_code(frame, str, 16) == (unsigned)'f');
+        TEST(KOS_string_get_char_code(frame, str, 17) == (unsigned)'"');
+    }
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID         str;
+        struct _KOS_VECTOR vec;
+
+        _KOS_vector_init(&vec);
+
+        TEST(_KOS_vector_resize(&vec, 1) == KOS_SUCCESS);
+        vec.buffer[0] = 0;
+
+        str = KOS_new_cstring(frame, "\t");
+        TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == 1);
+
+        TEST(KOS_object_to_string_or_cstr_vec(frame, str, KOS_QUOTE_STRINGS, &str, &vec) == KOS_SUCCESS);
+
+        TEST(vec.size      == 1);
+        TEST(vec.buffer[0] == 0);
+
+        _KOS_vector_destroy(&vec);
+
+        TEST(GET_OBJ_TYPE(str)                       == OBJ_STRING);
+        TEST(KOS_get_string_length(str)              == 6);
+        TEST(KOS_string_get_char_code(frame, str, 0) == (unsigned)'"');
+        TEST(KOS_string_get_char_code(frame, str, 1) == (unsigned)'\\');
+        TEST(KOS_string_get_char_code(frame, str, 2) == (unsigned)'x');
+        TEST(KOS_string_get_char_code(frame, str, 3) == (unsigned)'0');
+        TEST(KOS_string_get_char_code(frame, str, 4) == (unsigned)'9');
+        TEST(KOS_string_get_char_code(frame, str, 5) == (unsigned)'"');
+    }
+
     KOS_context_destroy(&ctx);
 
     return 0;

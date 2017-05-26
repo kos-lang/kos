@@ -230,11 +230,15 @@ static int _vector_append_cstr(KOS_FRAME           frame,
 
 static int _vector_append_str(KOS_FRAME           frame,
                               struct _KOS_VECTOR *cstr_vec,
-                              KOS_OBJ_ID          obj)
+                              KOS_OBJ_ID          obj,
+                              enum _KOS_QUOTE_STR quote_str)
 {
     unsigned str_len = 0;
     size_t   pos     = cstr_vec->size;
     int      error   = KOS_SUCCESS;
+
+    if (pos)
+        --pos;
 
     if (KOS_get_string_length(obj) > 0) {
 
@@ -247,24 +251,131 @@ static int _vector_append_str(KOS_FRAME           frame,
         }
     }
 
-    if ( ! str_len)
+    if ( ! str_len && ! quote_str)
         return KOS_SUCCESS;
 
-    error = _KOS_vector_resize(cstr_vec, pos + str_len + (pos ? 0 : 1));
+    error = _KOS_vector_resize(cstr_vec, pos + str_len + 1 + (quote_str ? 2 : 0));
 
     if (error) {
         KOS_raise_exception_cstring(frame, str_err_out_of_memory);
         return KOS_ERROR_EXCEPTION;
     }
 
-    KOS_string_to_utf8(obj, &cstr_vec->buffer[pos ? pos - 1 : pos], str_len);
-    cstr_vec->buffer[pos + str_len + (pos ? 0 : 1)] = 0;
+    if (quote_str) {
+        cstr_vec->buffer[pos] = '"';
+        ++pos;
+    }
+
+    if (str_len)
+        KOS_string_to_utf8(obj, &cstr_vec->buffer[pos], str_len);
+
+    if (quote_str) {
+
+        unsigned i;
+        unsigned extra_len = 0;
+
+        for (i = 0; i < str_len; i++) {
+            const char c = cstr_vec->buffer[pos + i];
+
+            if (c == '"' || c == '\\')
+                ++extra_len;
+
+            else if ((unsigned char)c < 0x20 || c == '\x7f')
+                extra_len += 3;
+
+            /* TODO escape UTF-8 codes >=0x80 */
+        }
+
+        if (extra_len) {
+
+            char *src;
+            char *dst;
+
+            error = _KOS_vector_resize(cstr_vec, cstr_vec->size + extra_len);
+
+            if (error) {
+                KOS_raise_exception_cstring(frame, str_err_out_of_memory);
+                return KOS_ERROR_EXCEPTION;
+            }
+
+            src = &cstr_vec->buffer[pos + str_len];
+            dst = src + extra_len;
+
+            while (src < dst) {
+
+                const char c = *(--src);
+
+                if (c == '"' || c == '\\') {
+                    *(--dst) = c;
+                    *(--dst) = '\\';
+                }
+                else if ((unsigned char)c < 0x20 || c == '\x7f') {
+                    static const char hex_digits[] = "0123456789abcdef";
+
+                    const int lo = (int)c & 0xF;
+                    const int hi = (int)c >> 4;
+
+                    dst   -= 4;
+                    *dst   = '\\';
+                    dst[1] = 'x';
+                    dst[2] = hex_digits[hi];
+                    dst[3] = hex_digits[lo];
+                }
+                else
+                    *(--dst) = c;
+            }
+
+            pos += extra_len;
+        }
+    }
+
+    pos += str_len;
+
+    if (quote_str) {
+        cstr_vec->buffer[pos] = '"';
+        ++pos;
+    }
+
+    cstr_vec->buffer[pos] = 0;
 
     return KOS_SUCCESS;
 }
 
+static int _make_quoted_str(KOS_FRAME           frame,
+                            KOS_OBJ_ID          obj_id,
+                            KOS_OBJ_ID         *str,
+                            struct _KOS_VECTOR *cstr_vec)
+{
+    int    error;
+    size_t old_size;
+
+    assert(cstr_vec);
+
+    old_size = cstr_vec->size;
+
+    error = _vector_append_str(frame, cstr_vec, obj_id, KOS_QUOTE_STRINGS);
+
+    if ( ! error) {
+        const char  *buf  = &cstr_vec->buffer[old_size ? old_size - 1 : 0];
+        const size_t size = cstr_vec->size - old_size - (old_size ? 0 : 1);
+        KOS_OBJ_ID new_str = KOS_new_string(frame, buf, (unsigned)size);
+        if (IS_BAD_PTR(new_str))
+            error = KOS_ERROR_EXCEPTION;
+        else
+            *str = new_str;
+    }
+
+    cstr_vec->size = old_size;
+
+    if (old_size)
+        cstr_vec->buffer[old_size - 1] = 0;
+
+    return error;
+}
+
 int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
                                      KOS_OBJ_ID          obj_id,
+                                     enum _KOS_QUOTE_STR quote_str,
                                      KOS_OBJ_ID         *str,
                                      struct _KOS_VECTOR *cstr_vec)
 {
@@ -272,7 +383,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
 
     assert( ! IS_BAD_PTR(obj_id));
     assert(str || cstr_vec);
-    assert( ! str || ! cstr_vec);
+    assert( ! str || ! cstr_vec || quote_str);
 
     if (IS_BAD_PTR(obj_id))
         return KOS_ERROR_EXCEPTION;
@@ -285,7 +396,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
         case OBJ_INTEGER:
             /* fall through */
         case OBJ_INTEGER2:
-            error  =_int_to_str(frame, *OBJPTR(INTEGER, obj_id), str, cstr_vec);
+            error = _int_to_str(frame, *OBJPTR(INTEGER, obj_id), str, cstr_vec);
             break;
 
         case OBJ_FLOAT:
@@ -295,8 +406,10 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
             break;
 
         case OBJ_STRING:
-            if (cstr_vec)
-                error = _vector_append_str(frame, cstr_vec, obj_id);
+            if (cstr_vec && ! quote_str)
+                error = _vector_append_str(frame, cstr_vec, obj_id, quote_str);
+            else if (quote_str)
+                error = _make_quoted_str(frame, obj_id, str, cstr_vec);
             else
                 *str = obj_id;
             break;
@@ -358,13 +471,14 @@ KOS_OBJ_ID KOS_object_to_string(KOS_FRAME  frame,
                                 KOS_OBJ_ID obj)
 {
     KOS_OBJ_ID ret   = KOS_BADPTR;
-    const int  error = KOS_object_to_string_or_cstr_vec(frame, obj, &ret, 0);
+    const int  error = KOS_object_to_string_or_cstr_vec(frame, obj, KOS_DONT_QUOTE, &ret, 0);
 
     return error ? KOS_BADPTR : ret;
 }
 
 int KOS_print_to_cstr_vec(KOS_FRAME           frame,
                           KOS_OBJ_ID          array,
+                          enum _KOS_QUOTE_STR quote_str,
                           struct _KOS_VECTOR *cstr_vec,
                           const char         *sep,
                           unsigned            sep_len)
@@ -397,7 +511,7 @@ int KOS_print_to_cstr_vec(KOS_FRAME           frame,
             memcpy(&cstr_vec->buffer[pos-1], sep, sep_len+1);
         }
 
-        TRY(KOS_object_to_string_or_cstr_vec(frame, obj, 0, cstr_vec));
+        TRY(KOS_object_to_string_or_cstr_vec(frame, obj, quote_str, 0, cstr_vec));
     }
 
 _error:

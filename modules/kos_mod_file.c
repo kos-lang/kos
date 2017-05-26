@@ -194,7 +194,7 @@ static KOS_OBJ_ID _print(KOS_FRAME  frame,
 
     if ( ! error && file) {
 
-        TRY(KOS_print_to_cstr_vec(frame, args_obj, &cstr, " ", 1));
+        TRY(KOS_print_to_cstr_vec(frame, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
         if (cstr.size)
             fprintf(file, "%.*s\n", (int)cstr.size-1, cstr.buffer);
@@ -220,7 +220,7 @@ static KOS_OBJ_ID _print_(KOS_FRAME  frame,
 
     if ( ! error && file) {
 
-        TRY(KOS_print_to_cstr_vec(frame, args_obj, &cstr, " ", 1));
+        TRY(KOS_print_to_cstr_vec(frame, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
         if (cstr.size)
             fprintf(file, "%.*s", (int)cstr.size-1, cstr.buffer);
