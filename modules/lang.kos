@@ -60,16 +60,18 @@ object.prototype.iterator = fun
     }
 }
 
-array.prototype.iterator = fun
-{
-    for var i = 0; i < this.size; i += 1 {
-        yield this[i]
+do {
+    fun iterator
+    {
+        for var i = 0; i < this.size; i += 1 {
+            yield this[i]
+        }
     }
+
+    array.prototype.iterator  = iterator
+    string.prototype.iterator = iterator
+    buffer.prototype.iterator = iterator
 }
-
-string.prototype.iterator = array.prototype.iterator
-
-buffer.prototype.iterator = array.prototype.iterator
 
 function.prototype.iterator = λ->(this)
 
@@ -207,10 +209,8 @@ do {
         return range(this.size)
     }
 
-    array.prototype.indices = indices
-
+    array.prototype.indices  = indices
     string.prototype.indices = indices
-
     buffer.prototype.indices = indices
 }
 
@@ -412,6 +412,33 @@ object.prototype.any = fun(transform)
 fun method(obj, func)
 {
     return fun(args...) -> (func.apply(obj, args))
+}
+
+do {
+    const hex_digits = [ 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+                         0x37, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66 ]
+    # TODO bug - the register used for hex_digits is reused after the end of this scope!
+
+    integer.prototype.hex = fun
+    {
+        const buf = buffer(18)
+        var i     = 15
+        var value = this
+
+        repeat {
+            print(typeof hex_digits)
+            print(hex_digits.size)
+            buf[i] = hex_digits[value & 15]
+            value >>>= 4
+            i       -= 1
+        } while value
+
+        buf[i] = 0x78
+        i -= 1
+        buf[i] = 0x30
+
+        return buf[i:].unpack_string()
+    }
 }
 
 # TODO move to debug module
