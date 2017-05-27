@@ -130,7 +130,7 @@ fi
 ##############################################################################
 # Test various outputs from interactive interpreter
 
-"$KOS" -c 'print_("true\nvoid\n1\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
+"$KOS" -c 'print_("true\nvoid\n1\n\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -156,16 +156,24 @@ fi
 
 CONTENTS=`sed -n "4 p" "$OUTPUT"`
 
-if [ "$CONTENTS" != "\"\"" ]; then
-    echo "Expected line 4 of output to contain: \"\"\"\", but it is different" >&2
+if [ "$CONTENTS" != "\"\\x7f\\xff\\x{100}\\x{fffff}\"" ]; then
+    echo "Expected line 4 of output to contain: \"\"\\\x7f\\\xff\\\x{100}\\\x{fffff}\"\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
 
 CONTENTS=`sed -n "5 p" "$OUTPUT"`
 
+if [ "$CONTENTS" != "\"\"" ]; then
+    echo "Expected line 5 of output to contain: \"\"\"\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "6 p" "$OUTPUT"`
+
 if [ "$CONTENTS" != "\"x\"" ]; then
-    echo "Expected line 5 of output to contain: \"\"x\"\", but it is different" >&2
+    echo "Expected line 6 of output to contain: \"\"x\"\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi

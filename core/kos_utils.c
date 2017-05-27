@@ -27,6 +27,7 @@
 #include "../inc/kos_string.h"
 #include "kos_memory.h"
 #include "kos_try.h"
+#include "kos_utf8.h"
 #include <assert.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -43,6 +44,34 @@ static const char str_function[]           = "<function>";
 static const char str_object[]             = "<object>";
 static const char str_true[]               = "true";
 static const char str_void[]               = "void";
+
+static const int8_t _extra_len[256] = {
+    /* 0 .. 127 */
+    3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
+    3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
+    0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  /* <- " */
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  /* <- backslash */
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  3,
+    /* 128 .. 191 */
+   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    /* 192 .. 223 */
+    3,  3,  3,  3,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,
+    6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,
+    /* 224 .. 239 */
+    7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+    /* 240 .. 247 */
+    8,  8,  8,  8,  8,  8,  8,  8,
+    /* 148 .. 255 */
+    3,  3,  3,  3,  3,  3,  3,  3
+};
+
+static const char _hex_digits[] = "0123456789abcdef";
 
 int KOS_get_numeric_arg(KOS_FRAME    frame,
                         KOS_OBJ_ID   args_obj,
@@ -275,21 +304,17 @@ static int _vector_append_str(KOS_FRAME           frame,
         unsigned extra_len = 0;
 
         for (i = 0; i < str_len; i++) {
-            const char c = cstr_vec->buffer[pos + i];
 
-            if (c == '"' || c == '\\')
-                ++extra_len;
+            const uint8_t c = (uint8_t)cstr_vec->buffer[pos + i];
 
-            else if ((unsigned char)c < 0x20 || c == '\x7f')
-                extra_len += 3;
-
-            /* TODO escape UTF-8 codes >=0x80 */
+            extra_len += _extra_len[c];
         }
 
         if (extra_len) {
 
             char *src;
             char *dst;
+            int   num_utf8_cont = 0;
 
             error = _KOS_vector_resize(cstr_vec, cstr_vec->size + extra_len);
 
@@ -303,26 +328,76 @@ static int _vector_append_str(KOS_FRAME           frame,
 
             while (src < dst) {
 
-                const char c = *(--src);
+                const uint8_t c = (uint8_t)*(--src);
 
-                if (c == '"' || c == '\\') {
-                    *(--dst) = c;
-                    *(--dst) = '\\';
+                const int extra_len = _extra_len[c];
+
+                switch (extra_len) {
+
+                    case -1:
+                        ++num_utf8_cont;
+                        break;
+
+                    case 0:
+                        *(--dst) = c;
+                        break;
+
+                    case 1:
+                        *(--dst) = c;
+                        *(--dst) = '\\';
+                        break;
+
+                    case 3: {
+
+                        uint32_t code = c;
+                        int      lo;
+                        int      hi;
+
+                        if (num_utf8_cont) {
+                            assert(num_utf8_cont == 1);
+
+                            _KOS_utf8_decode_32(src, num_utf8_cont + 1, KOS_UTF8_NO_ESCAPE, &code);
+
+                            num_utf8_cont = 0;
+                        }
+                        else
+                            code = c;
+
+                        lo = (int)code & 0xF;
+                        hi = (int)code >> 4;
+
+                        dst   -= 4;
+                        *dst   = '\\';
+                        dst[1] = 'x';
+                        dst[2] = _hex_digits[hi];
+                        dst[3] = _hex_digits[lo];
+
+                        break;
+                    }
+
+                    default: {
+                        uint32_t code;
+
+                        assert(num_utf8_cont < 5);
+
+                        _KOS_utf8_decode_32(src, num_utf8_cont + 1, KOS_UTF8_NO_ESCAPE, &code);
+
+                        *(--dst) = '}';
+
+                        for (i = extra_len - 3; i > 0; i--) {
+                            *(--dst) = _hex_digits[code & 0xFU];
+                            code   >>= 4;
+                        }
+
+                        dst   -= 3;
+                        *dst   = '\\';
+                        dst[1] = 'x';
+                        dst[2] = '{';
+
+                        num_utf8_cont = 0;
+                        break;
+                    }
                 }
-                else if ((unsigned char)c < 0x20 || c == '\x7f') {
-                    static const char hex_digits[] = "0123456789abcdef";
-
-                    const int lo = (int)c & 0xF;
-                    const int hi = (int)c >> 4;
-
-                    dst   -= 4;
-                    *dst   = '\\';
-                    dst[1] = 'x';
-                    dst[2] = hex_digits[hi];
-                    dst[3] = hex_digits[lo];
-                }
-                else
-                    *(--dst) = c;
             }
 
             pos += extra_len;
