@@ -209,23 +209,28 @@ static int _float_to_str(KOS_FRAME           frame,
                          struct _KOS_VECTOR *cstr_vec)
 {
     int     error = KOS_SUCCESS;
-    uint8_t buf[64];
+    uint8_t buf[32];
     char   *ptr   = (char *)buf;
+    char   *end;
 
     if (cstr_vec) {
         TRY(_KOS_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
         ptr = &cstr_vec->buffer[cstr_vec->size ? cstr_vec->size - 1 : 0];
     }
 
-    /* TODO don't print trailing zeroes, print with variable precision */
-    snprintf(ptr, sizeof(buf), "%f", value);
+    snprintf(ptr, sizeof(buf), "%.15f", value);
+
+    for (end = ptr + strlen(ptr) - 1; end > ptr && *end == '0'; --end);
+    if (*end == '.')
+        ++end;
+    ++end;
 
     if (cstr_vec) {
-        TRY(_KOS_vector_resize(cstr_vec, cstr_vec->size + strlen(ptr) +
+        TRY(_KOS_vector_resize(cstr_vec, cstr_vec->size + (end - ptr) +
                     (cstr_vec->size ? 0 : 1)));
     }
     else {
-        KOS_OBJ_ID ret = KOS_new_cstring(frame, ptr);
+        KOS_OBJ_ID ret = KOS_new_string(frame, ptr, (unsigned)(end - ptr));
         TRY_OBJID(ret);
         *str = ret;
     }

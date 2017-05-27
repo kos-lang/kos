@@ -1411,7 +1411,7 @@ int main(void)
     /************************************************************************/
     {
         KOS_OBJ_ID  str;
-        const char *expected = "1.000000";
+        const char *expected = "1.0";
         unsigned    size     = (unsigned)strlen(expected);
         unsigned    i;
 
