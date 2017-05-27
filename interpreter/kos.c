@@ -303,6 +303,8 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
     buf->size = 0;
 
     for (;;) {
+        KOS_OBJ_ID ret;
+
         error = _KOS_getline(&state, PROMPT_FIRST_LINE, buf);
         if (error) {
             assert(error == KOS_SUCCESS_RETURN || error == KOS_ERROR_OUT_OF_MEMORY);
@@ -314,7 +316,7 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
 
         /* TODO parse check if more lines need to be read */
 
-        KOS_OBJ_ID ret = KOS_repl(frame, str_stdin, buf->buffer, (unsigned)buf->size);
+        ret = KOS_repl(frame, str_stdin, buf->buffer, (unsigned)buf->size);
         buf->size = 0;
 
         if (IS_BAD_PTR(ret)) {
