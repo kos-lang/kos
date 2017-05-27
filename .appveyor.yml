@@ -9,7 +9,7 @@ install:
 build_script:
   - cmd: call "%VSSDK140INSTALL%..\VC\vcvarsall.bat" %PLATFORM%
   - cmd: sh -c set
-  - cmd: sh -c tests/run
+  - cmd: sh -c "tests/run seqfail"
 
 branches:
     except:

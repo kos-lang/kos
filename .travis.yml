@@ -37,7 +37,7 @@ matrix:
           - coveralls --exclude lib --exclude tests --no-gcov
 
         script:
-          - tests/run gcov
+          - tests/run gcov seqfail
 
       - os: osx
         compiler: clang

@@ -22,6 +22,20 @@
 
 set -e
 
+ARG_NOSAN=""
+ARG_GCOV=""
+ARG_SEQFAIL=""
+
+while [ $# -gt 0 ]; do
+    case $1 in
+        nosan)   ARG_NOSAN=$1   ;;
+        gcov)    ARG_GCOV=$1    ;;
+        seqfail) ARG_SEQFAIL=$1 ;;
+        *)       echo "Error: Unrecognized parameter - $1" >&2 ; exit 1
+    esac
+    shift
+done
+
 UNAME=$(uname -s)
 
 if [ -z "$JOBS" ]; then
@@ -98,6 +112,7 @@ cd "$(dirname $0)"/..
 unset SANITIZER
 unset CONFIG_TOOL
 unset CONFIG_GCOV
+unset CONFIG_SEQFAIL
 export CONFIG_DEBUG=1
 
 runtests c89 c++98
@@ -116,14 +131,16 @@ if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
 fi
 
 if [ "$UNAME" = "Darwin" -o "$UNAME" = "Linux" ]; then
-    if [ "$1" != "nosan" ]; then
+    if [ "$ARG_NOSAN" != "nosan" ]; then
         export SANITIZER="address"
         [[ $JOBS -gt 2 ]] && JOBS=$(($JOBS / 2))
         [[ $JOBS = 0 ]] && JOBS=1
     fi
 fi
 
-export CONFIG_SEQFAIL=1
+if [ "$ARG_SEQFAIL" = "seqfail" ]; then
+    export CONFIG_SEQFAIL=1
+fi
 
 runtests c++14 c++14
 
@@ -134,7 +151,7 @@ JOBS=$ORIG_JOBS
 unset CONFIG_DEBUG
 runtests c11 c++11
 
-if [ "$UNAME" != "Windows" -a "$1" = "gcov" ]; then
+if [ "$UNAME" != "Windows" -a "$ARG_GCOV" = "gcov" ]; then
     export CONFIG_GCOV=1
     export CONFIG_DEBUG=1
     export CONFIG_SEQFAIL=1
