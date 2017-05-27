@@ -317,9 +317,9 @@ static int _vector_append_str(KOS_FRAME           frame,
 
         if (extra_len) {
 
-            char *src;
-            char *dst;
-            int   num_utf8_cont = 0;
+            char    *src;
+            char    *dst;
+            unsigned num_utf8_cont = 0;
 
             error = _KOS_vector_resize(cstr_vec, cstr_vec->size + extra_len);
 
@@ -344,11 +344,11 @@ static int _vector_append_str(KOS_FRAME           frame,
                         break;
 
                     case 0:
-                        *(--dst) = c;
+                        *(--dst) = (char)c;
                         break;
 
                     case 1:
-                        *(--dst) = c;
+                        *(--dst) = (char)c;
                         *(--dst) = '\\';
                         break;
 
@@ -361,7 +361,7 @@ static int _vector_append_str(KOS_FRAME           frame,
                         if (num_utf8_cont) {
                             assert(num_utf8_cont == 1);
 
-                            _KOS_utf8_decode_32(src, num_utf8_cont + 1, KOS_UTF8_NO_ESCAPE, &code);
+                            _KOS_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code);
 
                             num_utf8_cont = 0;
                         }
@@ -385,11 +385,11 @@ static int _vector_append_str(KOS_FRAME           frame,
 
                         assert(num_utf8_cont < 5);
 
-                        _KOS_utf8_decode_32(src, num_utf8_cont + 1, KOS_UTF8_NO_ESCAPE, &code);
+                        _KOS_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code);
 
                         *(--dst) = '}';
 
-                        for (i = esc_len - 3; i > 0; i--) {
+                        for (i = (unsigned)esc_len - 3U; i > 0; i--) {
                             *(--dst) = _hex_digits[code & 0xFU];
                             code   >>= 4;
                         }
