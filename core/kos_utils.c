@@ -335,9 +335,9 @@ static int _vector_append_str(KOS_FRAME           frame,
 
                 const uint8_t c = (uint8_t)*(--src);
 
-                const int extra_len = _extra_len[c];
+                const int esc_len = _extra_len[c];
 
-                switch (extra_len) {
+                switch (esc_len) {
 
                     case -1:
                         ++num_utf8_cont;
@@ -389,7 +389,7 @@ static int _vector_append_str(KOS_FRAME           frame,
 
                         *(--dst) = '}';
 
-                        for (i = extra_len - 3; i > 0; i--) {
+                        for (i = esc_len - 3; i > 0; i--) {
                             *(--dst) = _hex_digits[code & 0xFU];
                             code   >>= 4;
                         }
