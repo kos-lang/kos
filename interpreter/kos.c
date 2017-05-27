@@ -279,6 +279,7 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
     int                 error;
     struct _KOS_GETLINE state;
     KOS_OBJ_ID          print_args;
+    int                 genline_init = 0;
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
@@ -299,6 +300,7 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
         fprintf(stderr, "Failed to initialize command line editor\n");
         goto _error;
     }
+    genline_init = 1;
 
     buf->size = 0;
 
@@ -351,7 +353,8 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
         error = KOS_SUCCESS;
 
 _error:
-    _KOS_getline_destroy(&state);
+    if (genline_init)
+        _KOS_getline_destroy(&state);
 
     return error;
 }
