@@ -198,7 +198,7 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     }
 }
 
-buffer.prototype.unpack_string = fun(args...)
+buffer.prototype.unpack_string = fun
 {
     return this.unpack("s")[0]
 }
@@ -417,18 +417,15 @@ fun method(obj, func)
 do {
     const hex_digits = [ 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
                          0x37, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66 ]
-    # TODO bug - the register used for hex_digits is reused after the end of this scope!
 
     integer.prototype.hex = fun
     {
         const buf = buffer(18)
-        var i     = 15
+        var i     = buf.size - 1
         var value = this
 
         repeat {
-            print(typeof hex_digits)
-            print(hex_digits.size)
-            buf[i] = hex_digits[value & 15]
+            buf[i]   = hex_digits[value & 15]
             value >>>= 4
             i       -= 1
         } while value

@@ -219,6 +219,17 @@ do {
 }
 
 ##############################################################################
+# lang.integer.prototype.hex
+
+do {
+    assert 0 .hex()   == "0x0"
+    assert 1 .hex()   == "0x1"
+    assert 18 .hex()  == "0x12"
+    assert (-1).hex() == "0xffffffffffffffff"
+    assert 0x7fffffffffffffff .hex() == "0x7fffffffffffffff"
+}
+
+##############################################################################
 # lang.float
 
 do {
