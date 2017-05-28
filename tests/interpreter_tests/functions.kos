@@ -1014,3 +1014,27 @@ do {
 do {
     expect_fail(λ->(λ->(3)()()))
 }
+
+# independent variable from inner scope must not be reused
+do {
+    fun test
+    {
+        const obj = { }
+
+        do {
+            const v = 42
+
+            obj.f = fun {
+                assert v == 42
+                return v + 1
+            }
+        }
+
+        do {
+            assert obj.f() == 43
+            assert obj.f() == 43
+        }
+    }
+
+    test()
+}

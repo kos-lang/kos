@@ -755,7 +755,7 @@ static int _free_scope_regs(struct _KOS_RED_BLACK_NODE *node,
     struct _KOS_VAR       *var     = (struct _KOS_VAR *)node;
     struct _KOS_COMP_UNIT *program = (struct _KOS_COMP_UNIT *)cookie;
 
-    if (var->reg) {
+    if (var->reg && var->type != VAR_INDEPENDENT_LOCAL) {
         var->reg->tmp = 1;
         _free_reg(program, var->reg);
         var->reg = 0;
