@@ -605,8 +605,15 @@ do {
 }
 
 do {
-    expect_fail(λ->(lang.array(1)))
-    expect_fail(λ->(lang.array(1.0)))
+    const a = lang.array(2.1)
+    assert a.size == 2
+    assert a[0]   == void
+    assert a[1]   == void
+}
+
+do {
+    expect_fail(λ->(lang.array(1, [])))
+    expect_fail(λ->(lang.array([], 1.0)))
     expect_fail(λ->(lang.array(λ->(void))))
 }
 

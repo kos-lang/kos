@@ -486,6 +486,19 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
         KOS_OBJ_ID elem = KOS_array_read(frame, args_obj, (int)i_arg);
         TRY_OBJID(elem);
 
+        if (i_arg == 0 && num_args == 1 && IS_NUMERIC_OBJ(elem)) {
+            int64_t value;
+
+            TRY(KOS_get_integer(frame, elem, &value));
+
+            if (value < 0 || value > INT_MAX)
+                RAISE_EXCEPTION(str_err_invalid_array_size);
+
+            TRY(KOS_array_resize(frame, array, (uint32_t)value));
+
+            continue;
+        }
+
         switch (GET_OBJ_TYPE(elem)) {
 
             case OBJ_ARRAY:

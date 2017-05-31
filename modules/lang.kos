@@ -420,21 +420,21 @@ do {
 
     integer.prototype.hex = fun
     {
-        const buf = buffer(18)
-        var i     = buf.size - 1
-        var value = this
+        const codes = array(18)
+        var i       = 17
+        var value   = this
 
         repeat {
-            buf[i]   = hex_digits[value & 15]
+            codes[i] = hex_digits[value & 15]
             value >>>= 4
             i       -= 1
         } while value
 
-        buf[i] = 0x78
-        i -= 1
-        buf[i] = 0x30
+        codes[i] = 0x78
+        i       -= 1
+        codes[i] = 0x30
 
-        return buf[i:].unpack_string()
+        return string(codes[i:])
     }
 }
 
