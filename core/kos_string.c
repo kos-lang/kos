@@ -217,7 +217,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
     uint32_t                   i;
     KOS_ATOMIC(KOS_OBJ_ID)    *codes_buf;
     enum _KOS_STRING_ELEM_SIZE elem_size = KOS_STRING_ELEM_8;
-    KOS_STRING                *ret;
+    KOS_STRING                *ret       = 0;
 
     assert(GET_OBJ_TYPE(codes) == OBJ_ARRAY);
 
