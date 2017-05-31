@@ -41,6 +41,7 @@ static const char str_builtin[]                       = "<builtin>";
 static const char str_err_bad_number[]                = "number parse failed";
 static const char str_err_bad_pack_value[]            = "invalid value type for pack format";
 static const char str_err_cannot_convert_to_array[]   = "unsupported type passed to array constructor";
+static const char str_err_cannot_convert_to_string[]  = "unsupported type passed to string constructor";
 static const char str_err_cannot_override_prototype[] = "cannot override prototype";
 static const char str_err_invalid_array_size[]        = "array size out of range";
 static const char str_err_invalid_byte_value[]        = "buffer element value out of range";
@@ -381,28 +382,75 @@ static KOS_OBJ_ID _string_constructor(KOS_FRAME  frame,
     if (num_args == 0)
         ret = KOS_new_string(frame, 0, 0);
 
-    else if (num_args == 1) {
-
-        KOS_OBJ_ID obj = KOS_array_read(frame, args_obj, 0);
-        TRY_OBJID(obj);
-
-        ret = KOS_object_to_string(frame, obj);
-    }
     else {
 
         uint32_t i;
 
-        for (i=0; i < num_args; i++) {
+        for (i = 0; i < num_args; i++) {
             KOS_OBJ_ID obj = KOS_array_read(frame, args_obj, (int)i);
             TRY_OBJID(obj);
 
-            if (GET_OBJ_TYPE(obj) != OBJ_STRING) {
-
+            if (IS_NUMERIC_OBJ(obj))
                 obj = KOS_object_to_string(frame, obj);
-                TRY_OBJID(obj);
 
-                TRY(KOS_array_write(frame, args_obj, (int)i, obj));
+            else switch (GET_OBJ_TYPE(obj)) {
+
+                case OBJ_STRING:
+                    break;
+
+                case OBJ_ARRAY:
+                    obj = KOS_new_string_from_codes(frame, obj);
+                    break;
+
+                case OBJ_BUFFER: {
+                    const uint32_t    size = KOS_get_buffer_size(obj);
+                    const char *const buf  = (char *)KOS_buffer_data(obj);
+
+                    obj = KOS_new_string(frame, buf, size);
+                    break;
+                }
+
+                default:
+                    RAISE_EXCEPTION(str_err_cannot_convert_to_string);
             }
+
+            TRY_OBJID(obj);
+
+            TRY(KOS_array_write(frame, args_obj, (int)i, obj));
+        }
+
+        if (i == num_args)
+            ret = KOS_string_add_many(frame, _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)), num_args);
+    }
+
+_error:
+    return error ? KOS_BADPTR : ret;
+}
+
+static KOS_OBJ_ID _stringize(KOS_FRAME  frame,
+                             KOS_OBJ_ID this_obj,
+                             KOS_OBJ_ID args_obj)
+{
+    int            error    = KOS_SUCCESS;
+    const uint32_t num_args = KOS_get_array_size(args_obj);
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
+
+    if (num_args == 0)
+        ret = KOS_new_string(frame, 0, 0);
+
+    else {
+
+        uint32_t i;
+
+        for (i = 0; i < num_args; i++) {
+
+            KOS_OBJ_ID obj = KOS_array_read(frame, args_obj, (int)i);
+            TRY_OBJID(obj);
+
+            obj = KOS_object_to_string(frame, obj);
+            TRY_OBJID(obj);
+
+            TRY(KOS_array_write(frame, args_obj, (int)i, obj));
         }
 
         if (i == num_args)
@@ -1867,10 +1915,11 @@ int _KOS_module_lang_init(KOS_FRAME frame)
 {
     int error = KOS_SUCCESS;
 
-    TRY_ADD_FUNCTION( frame, "print",   _print,   0);
-    TRY_ADD_FUNCTION( frame, "print_",  _print_,  0);
-    TRY_ADD_GENERATOR(frame, "deep",    _deep,    1);
-    TRY_ADD_GENERATOR(frame, "shallow", _shallow, 1);
+    TRY_ADD_FUNCTION( frame, "print",     _print,     0);
+    TRY_ADD_FUNCTION( frame, "print_",    _print_,    0);
+    TRY_ADD_FUNCTION( frame, "stringize", _stringize, 0);
+    TRY_ADD_GENERATOR(frame, "deep",      _deep,      1);
+    TRY_ADD_GENERATOR(frame, "shallow",   _shallow,   1);
 
     {
         KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);

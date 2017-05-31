@@ -3613,7 +3613,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT      *program,
     int               string_idx   = 0;
     struct _KOS_REG  *func_reg     = 0;
     struct _KOS_REG  *args         = *reg;
-    static const char str_string[] = "string";
+    static const char str_string[] = "stringize";
 
     assert(program->get_global_idx);
     error = program->get_global_idx(program->frame, 0, str_string, sizeof(str_string)-1, &string_idx);

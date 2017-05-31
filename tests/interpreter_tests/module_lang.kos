@@ -424,12 +424,19 @@ do {
 }
 
 do {
-    assert lang.string()            == ""
-    assert lang.string(123)         == "123"
-    assert lang.string("x", 5, "z") == "x5z"
-    assert lang.string()            == ""
-    assert lang.string(8)           == "8"
-    assert lang.string(void, false) == "voidfalse"
+    assert lang.string()             == ""
+    assert lang.string(123)          == "123"
+    assert lang.string("x", 5, "z")  == "x5z"
+    assert lang.string()             == ""
+    assert lang.string(8)            == "8"
+    assert lang.string([], [])       == ""
+    assert lang.string([0x30, 0x41]) == "0A"
+
+    expect_fail(λ->(lang.string([void])))
+    expect_fail(λ->(lang.string({})))
+    expect_fail(λ->(lang.string(void)))
+    expect_fail(λ->(lang.string(false)))
+    expect_fail(λ->(lang.string(λ->(void))))
 }
 
 do {
@@ -1581,6 +1588,22 @@ do {
 
     assert m(3) == 4
     assert o._i == 7
+}
+
+##############################################################################
+# lang.stringize
+
+do {
+    assert lang.stringize()      == ""
+    assert lang.stringize("a")   == "a"
+    assert lang.stringize(false) == "false"
+    assert lang.stringize(true)  == "true"
+    assert lang.stringize(void)  == "void"
+    assert lang.stringize(1)     == "1"
+    assert lang.stringize(1.5)   == "1.5"
+    assert lang.stringize([])    == "<array>"
+
+    assert lang.stringize(false, 2, "o") == "false2o"
 }
 
 ##############################################################################

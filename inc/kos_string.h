@@ -70,6 +70,9 @@ KOS_OBJ_ID KOS_new_const_string(KOS_FRAME                  frame,
                                 unsigned                   length,
                                 enum _KOS_STRING_ELEM_SIZE elem_size);
 
+KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
+                                     KOS_OBJ_ID codes);
+
 unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
                             void      *buf,
                             unsigned   buf_size);

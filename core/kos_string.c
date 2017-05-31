@@ -21,24 +21,28 @@
  */
 
 #include "../inc/kos_string.h"
+#include "../inc/kos_array.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "kos_memory.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_threads.h"
+#include "kos_try.h"
 #include "kos_unicode.h"
 #include "kos_utf8.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
-static const char str_err_invalid_index[]  = "string index is out of range";
-static const char str_err_invalid_string[] = "invalid string";
-static const char str_err_invalid_utf8[]   = "invalid UTF-8 sequence";
-static const char str_err_not_string[]     = "object is not a string";
-static const char str_err_null_pointer[]   = "null pointer";
-static const char str_err_out_of_memory[]  = "out of memory";
+static const char str_err_array_too_large[]   = "input array too large";
+static const char str_err_invalid_char_code[] = "invalid character code";
+static const char str_err_invalid_index[]     = "string index is out of range";
+static const char str_err_invalid_string[]    = "invalid string";
+static const char str_err_invalid_utf8[]      = "invalid UTF-8 sequence";
+static const char str_err_not_string[]        = "object is not a string";
+static const char str_err_null_pointer[]      = "null pointer";
+static const char str_err_out_of_memory[]     = "out of memory";
 
 static KOS_STRING *_new_empty_string(KOS_FRAME                  frame,
                                      unsigned                   length,
@@ -203,6 +207,109 @@ KOS_OBJ_ID KOS_new_const_string(KOS_FRAME                  frame,
         str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
 
     return OBJID(STRING, str);
+}
+
+KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
+                                     KOS_OBJ_ID codes)
+{
+    int                        error     = KOS_SUCCESS;
+    uint32_t                   length;
+    uint32_t                   i;
+    KOS_ATOMIC(KOS_OBJ_ID)    *codes_buf;
+    enum _KOS_STRING_ELEM_SIZE elem_size = KOS_STRING_ELEM_8;
+    KOS_STRING                *ret;
+
+    assert(GET_OBJ_TYPE(codes) == OBJ_ARRAY);
+
+    length = KOS_get_array_size(codes);
+
+    if (length > 0xFFFFU)
+        RAISE_EXCEPTION(str_err_array_too_large);
+
+    codes_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, codes));
+
+    for (i = 0; i < length; i++) {
+
+        const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+        int64_t          code;
+
+        if ( ! IS_NUMERIC_OBJ(elem))
+            RAISE_EXCEPTION(str_err_invalid_char_code);
+
+        TRY(KOS_get_integer(frame, elem, &code));
+
+        if (code < 0 || code > 0x1FFFFF)
+            RAISE_EXCEPTION(str_err_invalid_char_code);
+
+        if (code > 0xFF) {
+            if (code > 0xFFFF)
+                elem_size = KOS_STRING_ELEM_32;
+            else if (elem_size == KOS_STRING_ELEM_8)
+                elem_size = KOS_STRING_ELEM_16;
+        }
+    }
+
+    if (length) {
+        ret = _new_empty_string(frame, length, elem_size);
+        if ( ! ret)
+            goto _error;
+    }
+    else
+        ret = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
+
+    switch (elem_size) {
+
+        case KOS_STRING_ELEM_8: {
+            uint8_t *str_buf = (uint8_t *)_KOS_get_string_buffer(ret);
+
+            for (i = 0; i < length; i++) {
+
+                const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+                int64_t          code;
+
+                TRY(KOS_get_integer(frame, elem, &code));
+
+                str_buf[i] = (uint8_t)(uint64_t)code;
+            }
+
+            break;
+        }
+
+        case KOS_STRING_ELEM_16: {
+            uint16_t *str_buf = (uint16_t *)_KOS_get_string_buffer(ret);
+
+            for (i = 0; i < length; i++) {
+
+                const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+                int64_t          code;
+
+                TRY(KOS_get_integer(frame, elem, &code));
+
+                str_buf[i] = (uint16_t)(uint64_t)code;
+            }
+
+            break;
+        }
+
+        default: { /* KOS_STRING_ELEM_32 */
+            uint32_t *str_buf = (uint32_t *)_KOS_get_string_buffer(ret);
+
+            for (i = 0; i < length; i++) {
+
+                const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+                int64_t          code;
+
+                TRY(KOS_get_integer(frame, elem, &code));
+
+                str_buf[i] = (uint32_t)(uint64_t)code;
+            }
+
+            break;
+        }
+    }
+
+_error:
+    return error ? KOS_BADPTR : OBJID(STRING, ret);
 }
 
 unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
