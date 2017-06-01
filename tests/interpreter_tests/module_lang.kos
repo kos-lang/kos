@@ -227,6 +227,8 @@ do {
     assert 18 .hex()  == "0x12"
     assert (-1).hex() == "0xffffffffffffffff"
     assert 0x7fffffffffffffff .hex() == "0x7fffffffffffffff"
+
+    expect_fail(λ->(1.2.hex()))
 }
 
 ##############################################################################
@@ -1611,6 +1613,15 @@ do {
     assert lang.stringize([])    == "<array>"
 
     assert lang.stringize(false, 2, "o") == "false2o"
+}
+
+##############################################################################
+# lang.hex
+
+do {
+    assert lang.hex(42) == "0x2a"
+
+    expect_fail(λ->(lang.hex(3.5)))
 }
 
 ##############################################################################

@@ -420,7 +420,7 @@ do {
 
     integer.prototype.hex = fun
     {
-        const codes = array(18)
+        const codes = buffer(18)
         var i       = 17
         var value   = this
 
@@ -436,6 +436,11 @@ do {
 
         return string(codes[i:])
     }
+}
+
+fun hex(value)
+{
+    return value.hex()
 }
 
 # TODO move to debug module
