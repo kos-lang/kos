@@ -87,6 +87,12 @@ int KOS_array_push(KOS_FRAME  frame,
 KOS_OBJ_ID KOS_array_pop(KOS_FRAME  frame,
                          KOS_OBJ_ID obj_id);
 
+int KOS_array_fill(KOS_FRAME  frame,
+                   KOS_OBJ_ID obj_id,
+                   int64_t    begin,
+                   int64_t    end,
+                   KOS_OBJ_ID value);
+
 #ifdef __cplusplus
 }
 #endif

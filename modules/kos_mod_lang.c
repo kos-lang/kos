@@ -820,7 +820,6 @@ static KOS_OBJ_ID _fill(KOS_FRAME  frame,
     KOS_OBJ_ID     arg      = KOS_array_read(frame, args_obj, 0);
     int64_t        begin    = 0;
     int64_t        end      = 0;
-    int64_t        value;
 
     if (num_args > 2) {
 
@@ -847,8 +846,6 @@ static KOS_OBJ_ID _fill(KOS_FRAME  frame,
 
         arg = KOS_array_read(frame, args_obj, 2);
         TRY_OBJID(arg);
-
-        TRY(KOS_get_integer(frame, arg, &value));
     }
     else if (num_args > 1) {
 
@@ -865,23 +862,27 @@ static KOS_OBJ_ID _fill(KOS_FRAME  frame,
 
         arg = KOS_array_read(frame, args_obj, 1);
         TRY_OBJID(arg);
-
-        TRY(KOS_get_integer(frame, arg, &value));
     }
     else {
 
         begin = 0;
         end   = MAX_INT64;
+    }
+
+    if (GET_OBJ_TYPE(this_obj) == OBJ_ARRAY)
+        error = KOS_array_fill(frame, this_obj, begin, end, arg);
+
+    else {
+
+        int64_t        value;
 
         TRY(KOS_get_integer(frame, arg, &value));
-    }
 
-    if (value < 0 || value > 255) {
-        KOS_raise_exception_cstring(frame, str_err_invalid_byte_value);
-        return KOS_BADPTR;
-    }
+        if (value < 0 || value > 255)
+            RAISE_EXCEPTION(str_err_invalid_byte_value);
 
-    error = KOS_buffer_fill(frame, this_obj, begin, end, (uint8_t)value);
+        error = KOS_buffer_fill(frame, this_obj, begin, end, (uint8_t)value);
+    }
 
 _error:
     return error ? KOS_BADPTR : this_obj;
@@ -1952,6 +1953,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(exception);
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "insert_array",  _insert_array,      2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "fill",          _fill,              1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "pop",           _pop,               0);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "push",          _push,              1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "reserve",       _reserve,           1);

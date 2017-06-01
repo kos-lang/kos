@@ -47,9 +47,9 @@ static const char str_err_null_ptr[]      = "null pointer";
 
 typedef struct _KOS_ARRAY_BUFFER ARRAY_BUF;
 
-void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
-                      unsigned                count,
-                      KOS_OBJ_ID              value)
+static void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
+                             unsigned                count,
+                             KOS_OBJ_ID              value)
 {
     KOS_ATOMIC(KOS_OBJ_ID) *const end = dest + count;
     while (dest < end) {
@@ -669,4 +669,46 @@ KOS_OBJ_ID KOS_array_pop(KOS_FRAME  frame,
 
 _error:
     return error ? KOS_BADPTR : ret;
+}
+
+int KOS_array_fill(KOS_FRAME  frame,
+                   KOS_OBJ_ID obj_id,
+                   int64_t    begin,
+                   int64_t    end,
+                   KOS_OBJ_ID value)
+{
+    uint32_t   len;
+    ARRAY_BUF *buf;
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY) {
+        KOS_raise_exception_cstring(frame, str_err_not_array);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    len = KOS_get_array_size(obj_id);
+
+    begin = _KOS_fix_index(begin, len);
+    end   = _KOS_fix_index(end, len);
+
+    buf = (ARRAY_BUF *)KOS_atomic_read_ptr(OBJPTR(ARRAY, obj_id)->data);
+
+    while (begin < end) {
+
+        KOS_OBJ_ID cur = (KOS_OBJ_ID)KOS_atomic_read_ptr(buf->buf[begin]);
+
+        if (cur == TOMBSTONE)
+            break;
+
+        if (cur == CLOSED) {
+            ARRAY_BUF *new_buf = (ARRAY_BUF *)KOS_atomic_read_ptr(buf->next);
+            _copy_buf(frame, OBJPTR(ARRAY, obj_id), buf, new_buf);
+            buf = new_buf;
+        }
+        else {
+            if (KOS_atomic_cas_ptr(buf->buf[begin], cur, value))
+                ++begin;
+        }
+    }
+
+    return KOS_SUCCESS;
 }

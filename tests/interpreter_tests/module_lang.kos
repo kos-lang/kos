@@ -1006,6 +1006,56 @@ do {
 }
 
 ##############################################################################
+# lang.array.prototype.fill
+
+do {
+    const a = lang.array(10)
+
+    assert a.size == 10
+
+    for var e in a {
+        assert e == void
+    }
+
+    a.fill("abc")
+
+    for var e in a {
+        assert e == "abc"
+    }
+
+    a.fill(-3, 42)
+
+    for var i = 0; i < a.size; i += 1 {
+        if i < 7 {
+            assert a[i] == "abc"
+        }
+        else {
+            assert a[i] == 42
+        }
+    }
+
+    const obj = { x : 1, y : 2 }
+    a.fill(2, 8, obj)
+
+    for var i = 0; i < a.size; i += 1 {
+        if i < 2 {
+            assert a[i] == "abc"
+        }
+        else if i < 8 {
+            const e = a[i]
+            assert typeof e == "object"
+            assert e == obj
+        }
+        else {
+            assert a[i] == 42
+        }
+    }
+
+    expect_fail(λ->(lang.array.prototype.fill.apply(void, [1])))
+    expect_fail(λ->(a.fill()))
+}
+
+##############################################################################
 # lang.string.prototype.indices
 
 do {
