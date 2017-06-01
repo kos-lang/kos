@@ -26,12 +26,12 @@ fun range(first_arg, args...)
     var stop  = 0
     var step  = 1
 
-    if args.size == 0 {
-        stop = first_arg
-    }
-    else {
+    if args.size {
         start = first_arg
         stop  = args[0]
+    }
+    else {
+        stop = first_arg
     }
 
     if args.size > 1 {
@@ -81,15 +81,15 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
     var end      = begin
     var iterable = void
 
-    if args.size == 0 {
+    if args.size {
+        end      = second_arg
+        iterable = args[0]
+    }
+    else {
         iterable = second_arg
         if end == void {
             begin = this.size
         }
-    }
-    else {
-        end      = second_arg
-        iterable = args[0]
     }
 
     if typeof iterable == "array" {
@@ -142,15 +142,15 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     var   iterable = void
     const size     = this.size
 
-    if args.size == 0 {
+    if args.size {
+        end      = second_arg
+        iterable = args[0]
+    }
+    else {
         iterable = second_arg
         if end == void {
             begin = size
         }
-    }
-    else {
-        end      = second_arg
-        iterable = args[0]
     }
 
     if begin == void {
@@ -287,7 +287,7 @@ fun map(op, args...)
         }
     }
 
-    if args.size > 0 {
+    if args.size {
         return map_f(args[0])
     }
     else {
@@ -309,7 +309,7 @@ fun filter(op, args...)
         }
     }
 
-    if args.size > 0 {
+    if args.size {
         return filter_f(args[0])
     }
     else {
@@ -331,7 +331,7 @@ fun reduce(op, init, args...)
         return accum
     }
 
-    if args.size > 0 {
+    if args.size {
         return reduce_f(args[0])
     }
     else {
@@ -366,7 +366,7 @@ fun count(op, args...)
             return count
         }
 
-    if args.size > 0 {
+    if args.size {
         return count_f(args[0])
     }
     else {
@@ -399,7 +399,7 @@ fun all(op, args...)
             return true
         }
 
-    if args.size > 0 {
+    if args.size {
         return all_f(args[0])
     }
     else {
@@ -432,7 +432,7 @@ fun any(op, args...)
             return false
         }
 
-    if args.size > 0 {
+    if args.size {
         return any_f(args[0])
     }
     else {
