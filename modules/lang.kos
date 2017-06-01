@@ -214,6 +214,67 @@ do {
     buffer.prototype.indices = indices
 }
 
+do {
+    fun just_buf(ch, size)
+    {
+        const ord = ch.get_char_code(0)
+
+        const buf = ord < 0x80 ? buffer(size) : array(size)
+        return string(buf.fill(ord))
+    }
+
+    string.prototype.ljust = fun(size, args...)
+    {
+        if args.size {
+            assert typeof args[0] == "string"
+            assert args[0].size   == 1
+        }
+
+        if this.size >= size {
+            return this
+        }
+
+        return this + just_buf(args.size ? args[0] : " ", size - this.size)
+    }
+
+    string.prototype.rjust = fun(size, args...)
+    {
+        if args.size {
+            assert typeof args[0] == "string"
+            assert args[0].size   == 1
+        }
+
+        if this.size >= size {
+            return this
+        }
+
+        return just_buf(args.size ? args[0] : " ", size - this.size) + this
+    }
+
+    string.prototype.zfill = fun(size, args...)
+    {
+        if args.size {
+            assert typeof args[0] == "string"
+            assert args[0].size   == 1
+        }
+
+        if this.size >= size {
+            return this
+        }
+
+        const fill = just_buf(args.size ? args[0] : "0", size - this.size)
+
+        const sign = this.size ? this[0] : ""
+
+        if sign == "+" || sign == "-" {
+            return stringize(sign, fill, this[1:])
+        }
+        else {
+            return fill + this
+        }
+    }
+}
+
 fun map(op, args...)
 {
     assert typeof op == "function"

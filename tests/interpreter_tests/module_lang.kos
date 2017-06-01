@@ -1072,6 +1072,50 @@ do {
 }
 
 ##############################################################################
+# lang.string.prototype.ljust
+
+do {
+    assert "abcd".ljust(3)      == "abcd"
+    assert "abcd".ljust(4)      == "abcd"
+    assert "abcd".ljust(5)      == "abcd "
+    assert "abcd".ljust(6, "x") == "abcdxx"
+
+    expect_fail(λ->("abcd".ljust()))
+    expect_fail(λ->("abcd".ljust(1, "")))
+    expect_fail(λ->("abcd".ljust(1, "oo")))
+}
+
+##############################################################################
+# lang.string.prototype.rjust
+
+do {
+    assert "abcd".rjust(3)      == "abcd"
+    assert "abcd".rjust(4)      == "abcd"
+    assert "abcd".rjust(5)      == " abcd"
+    assert "abcd".rjust(6, "x") == "xxabcd"
+
+    expect_fail(λ->("abcd".rjust()))
+    expect_fail(λ->("abcd".rjust(1, "")))
+    expect_fail(λ->("abcd".rjust(1, "oo")))
+}
+
+##############################################################################
+# lang.string.prototype.zfill
+
+do {
+    assert "abcd".zfill(3)      == "abcd"
+    assert "abcd".zfill(4)      == "abcd"
+    assert "abcd".zfill(5)      == "0abcd"
+    assert "abcd".zfill(6, "x") == "xxabcd"
+    assert "--a".zfill(4, "*")  == "-*-a"
+    assert "++b".zfill(5, "#")  == "+##+b"
+
+    expect_fail(λ->("abcd".zfill()))
+    expect_fail(λ->("abcd".zfill(1, "")))
+    expect_fail(λ->("abcd".zfill(1, "oo")))
+}
+
+##############################################################################
 # lang.function
 
 do {
