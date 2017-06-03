@@ -273,6 +273,39 @@ int main(void)
     }
 
     /************************************************************************/
+    /* SET.DEFAULTS */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_ARRAY8,  0, 2,
+            INSTR_LOAD_INT8,    1, 100,
+            INSTR_SET_ELEM,     0, IMM32(0), 1,
+            INSTR_LOAD_INT8,    1, 101,
+            INSTR_SET_ELEM,     0, IMM32(1), 1,
+            INSTR_LOAD_ARRAY8,  1, 3,
+            INSTR_LOAD_INT8,    2, 5,
+            INSTR_SET_ELEM,     1, IMM32(0), 2,
+            INSTR_LOAD_INT8,    2, 7,
+            INSTR_SET_ELEM,     1, IMM32(1), 2,
+            INSTR_LOAD_INT8,    2, 9,
+            INSTR_SET_ELEM,     1, IMM32(2), 2,
+            INSTR_SET_DEFAULTS, 0, 1, 1,
+            INSTR_RETURN,       0, 0
+        };
+
+        KOS_OBJ_ID array = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
+
+        TEST( ! IS_BAD_PTR(array));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(array) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(array) == 4);
+        TEST(KOS_array_read(frame, array, 0) == TO_SMALL_INT(100));
+        TEST(KOS_array_read(frame, array, 1) == TO_SMALL_INT(101));
+        TEST(KOS_array_read(frame, array, 2) == TO_SMALL_INT(7));
+        TEST(KOS_array_read(frame, array, 3) == TO_SMALL_INT(9));
+    }
+
+    /************************************************************************/
     /* SET.PROP, HAS.PROP */
     {
         static const char prop5[]  = "prop5";

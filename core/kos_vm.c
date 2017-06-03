@@ -1405,6 +1405,21 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
+            case INSTR_SET_DEFAULTS: { /* <r.dest>, <uint8>, <r.src> */
+                const unsigned idx  = bytecode[2];
+                const unsigned rsrc = bytecode[3];
+
+                rdest = bytecode[1];
+
+                assert(rdest < regs_array->size);
+                assert(rsrc  < regs_array->size);
+
+                error = KOS_array_set_defaults(frame, regs[rdest], idx, regs[rsrc]);
+
+                delta = 4;
+                break;
+            }
+
             case INSTR_DEL: { /* <r.dest>, <r.prop> */
                 const unsigned rprop = bytecode[2];
 

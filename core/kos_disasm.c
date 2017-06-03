@@ -74,6 +74,7 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_SET:                 /* fall through */
         case INSTR_SET_ELEM:            /* fall through */
         case INSTR_SET_PROP:            /* fall through */
+        case INSTR_SET_DEFAULTS:        /* fall through */
         case INSTR_ADD:                 /* fall through */
         case INSTR_SUB:                 /* fall through */
         case INSTR_MUL:                 /* fall through */
@@ -257,6 +258,8 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_SET_PROP:
             /* fall through */
+        case INSTR_SET_DEFAULTS:
+            /* fall through */
         case INSTR_BIND:
             return op == 1 ? 0 : 1;
 
@@ -308,7 +311,7 @@ void _KOS_disassemble(const char                          *filename,
     const struct _KOS_COMP_ADDR_TO_LINE *line_addrs_end = line_addrs + num_line_addrs;
     const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs_end = func_addrs + num_func_addrs;
 
-    static const char *str_instr[] = {
+    static const char *const str_instr[] = {
         "BREAKPOINT",
         "LOAD.INT8",
         "LOAD.INT32",
@@ -336,6 +339,7 @@ void _KOS_disassemble(const char                          *filename,
         "SET.ELEM",
         "SET.PROP",
         "SET.GLOBAL",
+        "SET.DEFAULTS",
         "DEL",
         "DEL.PROP",
         "ADD",

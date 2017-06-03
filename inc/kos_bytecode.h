@@ -88,6 +88,8 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_SET_PROP,
     /* SET.GLOBAL <int32>, <r.src> */
     INSTR_SET_GLOBAL,
+    /* SET.DEFAULTS <r.dest>, <uint8>, <r.src> */
+    INSTR_SET_DEFAULTS,
 
     /* DEL <r.dest>, <r.prop> */
     INSTR_DEL,

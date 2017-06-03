@@ -750,9 +750,6 @@ int main(void)
     }
 
     /************************************************************************/
-    /* TODO KOS_array_rotate */
-
-    /************************************************************************/
     /* Push/pop */
     {
         uint32_t   idx = ~0U;
@@ -775,6 +772,60 @@ int main(void)
         TEST(IS_BAD_PTR(v));
         TEST_EXCEPTION();
         TEST(KOS_get_array_size(a) == 0);
+    }
+
+    /************************************************************************/
+    /* KOS_array_set_defaults */
+    {
+        KOS_OBJ_ID elems = KOS_new_array(frame, 1);
+        KOS_OBJ_ID a;
+
+        TEST(!IS_BAD_PTR(elems));
+        TEST(KOS_array_write(frame, elems, 0, KOS_TRUE) == KOS_SUCCESS);
+
+        TEST(KOS_array_set_defaults(frame, KOS_VOID, 0, elems) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        a = KOS_new_array(frame, 0);
+        TEST(GET_OBJ_TYPE(a) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(a) == 0);
+
+        TEST(KOS_array_set_defaults(frame, a, 0, KOS_VOID) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_array_set_defaults(frame, a, 1, elems) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_array_push(frame, elems, TO_SMALL_INT(42), 0) == KOS_SUCCESS);
+
+        TEST(KOS_array_set_defaults(frame, a, 0, elems) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_get_array_size(a) == 2);
+        TEST(KOS_array_read(frame, a, 0) == KOS_TRUE);
+        TEST(KOS_array_read(frame, a, 1) == TO_SMALL_INT(42));
+
+        TEST(KOS_array_push(frame, elems, TO_SMALL_INT(-100), 0) == KOS_SUCCESS);
+
+        TEST(KOS_array_set_defaults(frame, a, 1, elems) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_get_array_size(a) == 4);
+        TEST(KOS_array_read(frame, a, 0) == KOS_TRUE);
+        TEST(KOS_array_read(frame, a, 1) == TO_SMALL_INT(42));
+        TEST(KOS_array_read(frame, a, 2) == TO_SMALL_INT(42));
+        TEST(KOS_array_read(frame, a, 3) == TO_SMALL_INT(-100));
+
+        TEST(KOS_array_resize(frame, elems, 2) == KOS_SUCCESS);
+
+        TEST(KOS_array_set_defaults(frame, a, 1, elems) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_get_array_size(a) == 4);
+        TEST(KOS_array_read(frame, a, 0) == KOS_TRUE);
+        TEST(KOS_array_read(frame, a, 1) == TO_SMALL_INT(42));
+        TEST(KOS_array_read(frame, a, 2) == TO_SMALL_INT(42));
+        TEST(KOS_array_read(frame, a, 3) == TO_SMALL_INT(-100));
     }
 
     KOS_context_destroy(&ctx);

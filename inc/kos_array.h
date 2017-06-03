@@ -93,6 +93,11 @@ int KOS_array_fill(KOS_FRAME  frame,
                    int64_t    end,
                    KOS_OBJ_ID value);
 
+int KOS_array_set_defaults(KOS_FRAME  frame,
+                           KOS_OBJ_ID obj_id,
+                           uint32_t   idx,
+                           KOS_OBJ_ID src_id);
+
 #ifdef __cplusplus
 }
 #endif
