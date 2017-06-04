@@ -119,7 +119,7 @@ static int _alloc_frame(struct _KOS_COMP_UNIT *program)
 }
 
 static struct _KOS_VAR *_alloc_var(struct _KOS_COMP_UNIT      *program,
-                                   int                         is_const,
+                                   unsigned                    is_const,
                                    const struct _KOS_AST_NODE *node)
 {
     struct _KOS_VAR *var = (struct _KOS_VAR *)
@@ -380,7 +380,7 @@ _error:
 }
 
 static int _define_local_var(struct _KOS_COMP_UNIT      *program,
-                             int                         is_const,
+                             unsigned                    is_const,
                              const struct _KOS_AST_NODE *node,
                              struct _KOS_VAR           **out_var)
 {
@@ -593,7 +593,7 @@ static int _var(struct _KOS_COMP_UNIT      *program,
                 const struct _KOS_AST_NODE *node)
 {
     int              error    = KOS_SUCCESS;
-    const int        is_const = node->type == NT_CONST;
+    const unsigned   is_const = node->type == NT_CONST;
     struct _KOS_VAR *var;
 
     for (node = node->children; node; node = node->next) {
