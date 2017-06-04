@@ -156,7 +156,7 @@ static int _is_nonzero(const struct _KOS_TOKEN *token)
 }
 
 static void _update_scope_ref(struct _KOS_COMP_UNIT *program,
-                              enum _KOS_VAR_TYPE     var_type,
+                              int                    var_type,
                               struct _KOS_SCOPE     *closure)
 {
     struct _KOS_SCOPE *scope;

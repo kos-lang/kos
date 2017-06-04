@@ -66,11 +66,11 @@ struct _KOS_VAR {
     int                         local_reads;       /* Number of local reads from a variable                */
     int                         local_assignments; /* Number of local writes to a variable                 */
     int                         array_idx;
-    enum _KOS_VAR_TYPE          type         : 5;
-    enum _KOS_VAR_ACTIVE        is_active    : 2;  /* Becomes active/searchable after the node */
+    int                         type         : 6;
+    int                         is_active    : 3;  /* Becomes active/searchable after the node */
                                                    /* which declares it. */
-    int                         is_const     : 1;
-    int                         has_defaults : 1;
+    unsigned                    is_const     : 1;
+    unsigned                    has_defaults : 1;
 };
 
 struct _KOS_BREAK_OFFS {
@@ -124,8 +124,8 @@ struct _KOS_SCOPE {
     int                         num_args;
     int                         num_indep_args;
     struct _KOS_CATCH_REF       catch_ref; /* For catch references between scopes */
-    int                         is_function : 1;
-    int                         uses_this   : 1;
+    unsigned                    is_function : 1;
+    unsigned                    uses_this   : 1;
 };
 
 struct _KOS_SCOPE_REF {
