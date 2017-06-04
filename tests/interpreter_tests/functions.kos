@@ -87,6 +87,21 @@ do {
     assert a == 4
 }
 
+
+do {
+    var x = 0
+    fun get_x
+    {
+        return x
+    }
+
+    assert get_x() == 0
+
+    x = 500
+
+    assert get_x() == 500
+}
+
 do {
     fun make(x)
     {
@@ -1037,4 +1052,58 @@ do {
     }
 
     test()
+}
+
+# default arguments
+do {
+    fun defaults(a = 1, b = 10, c = 100, d = 1000)
+    {
+        return a + b + c + d
+    }
+
+    assert defaults()           == 1111
+    assert defaults(5)          == 1115
+    assert defaults(2, 2)       == 1104
+    assert defaults(3, 5, 7)    == 1015
+    assert defaults(2, 2, 2, 2) == 8
+}
+
+# mixture of default and non-default arguments
+do {
+    fun defaults(a, b=2, c=3, d...)
+    {
+        var sum = a + b + c
+        for var x in d {
+            sum += x
+        }
+        return sum
+    }
+
+    expect_fail(λ->(defaults()))
+
+    assert defaults(0)                == 5
+    assert defaults(1)                == 6
+    assert defaults(1, 20, 300)       == 321
+    assert defaults(0, 0, 0, 10, 200) == 210
+    assert defaults(1000, 200, 30, 4) == 1234
+}
+
+# mixture of default arguments and independent variables
+do {
+    fun defaults(a, b=2, c=void)
+    {
+        var d = a + b
+        fun {
+            if c != void {
+                d += c
+            }
+        } ()
+        return d
+    }
+
+    expect_fail(λ->(defaults()))
+
+    assert defaults(1)          == 3
+    assert defaults(20, 300)    == 320
+    assert defaults(100, 20, 3) == 123
 }

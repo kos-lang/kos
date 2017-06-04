@@ -128,10 +128,11 @@ static struct _KOS_VAR *_alloc_var(struct _KOS_COMP_UNIT      *program,
     if (var) {
         memset(var, 0, sizeof(*var));
 
-        var->token           = &node->token;
-        var->type            = VAR_LOCAL;
-        var->is_const        = is_const;
-        var->is_active       = VAR_ALWAYS_ACTIVE;
+        var->token        = &node->token;
+        var->type         = VAR_LOCAL;
+        var->is_const     = is_const;
+        var->is_active    = VAR_ALWAYS_ACTIVE;
+        var->has_defaults = 0;
 
         _KOS_red_black_insert(&program->scope_stack->vars,
                               (struct _KOS_RED_BLACK_NODE *)var,
@@ -684,25 +685,36 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     for (i = 0, arg_node = node->children; arg_node; i++, arg_node = arg_node->next) {
 
-        struct _KOS_VAR *var;
+        struct _KOS_VAR            *var;
+        const struct _KOS_AST_NODE *ident_node = arg_node;
 
         assert(arg_node->type == NT_IDENTIFIER ||
+               arg_node->type == NT_ASSIGNMENT ||
                (arg_node->type == NT_ELLIPSIS && ! arg_node->next));
 
-        if (arg_node->type == NT_ELLIPSIS) {
-            ellipsis = 1;
-            arg_node = arg_node->children;
+        if (arg_node->type == NT_ASSIGNMENT) {
+            ident_node = arg_node->children;
+            assert(ident_node);
+            assert(ident_node->type == NT_IDENTIFIER);
+        }
+        else if (arg_node->type == NT_ELLIPSIS) {
+            ellipsis   = 1;
+            arg_node   = arg_node->children;
+            ident_node = arg_node;
             assert( ! arg_node->next);
             assert(arg_node->type == NT_IDENTIFIER);
         }
 
-        TRY(_define_local_var(program, 0, arg_node, &var));
+        TRY(_define_local_var(program, 0, ident_node, &var));
 
         if (ellipsis)
             program->scope_stack->ellipsis = var;
         else {
             var->type      = VAR_ARGUMENT;
             var->array_idx = i;
+
+            if (arg_node->type == NT_ASSIGNMENT)
+                var->has_defaults = 1;
         }
     }
 

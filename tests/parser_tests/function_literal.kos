@@ -314,10 +314,112 @@ c = λ(b)->(b+3)(4);
 )
 
 @------------------------------------------------------------------------------
-# Default arguments not supported
+# Default arguments
 f = fun(a=1, b=2+3*4, c=d?e:typeof "") { };
 
-@ 10 2 10
+@ 0
+
+(scope 1 1
+    (assignment 2 3 =
+        (left_hand_side 2 3 =
+            (identifier 2 1 f)
+        )
+        (function 2 5 fun
+            (parameters 2 8 paren_open
+                (assignment 2 10 =
+                    (identifier 2 9 a)
+                    (number 2 11 1)
+                )
+                (assignment 2 15 =
+                    (identifier 2 14 b)
+                    (operator 2 17 +
+                        (number 2 16 2)
+                        (operator 2 19 *
+                            (number 2 18 3)
+                            (number 2 20 4)
+                )))
+                (assignment 2 24 =
+                    (identifier 2 23 c)
+                    (operator 2 26 ?:
+                        (identifier 2 25 d)
+                        (identifier 2 27 e)
+                        (operator 2 29 typeof
+                            (string 2 36 "")
+            ))))
+            (landmark 2 40 {)
+            (scope 2 40 {
+                (return 2 42 }
+                    (void 2 42 })
+            ))
+            (landmark 2 42 })
+    ))
+)
+
+@------------------------------------------------------------------------------
+# Mixed default and non-default arguments
+fun( a , b , c = true , d = void ) { }
+
+@ 0
+
+(scope 1 1
+    (function 2 1 fun
+        (parameters 2 4 paren_open
+            (identifier 2 6 a)
+            (identifier 2 10 b)
+            (assignment 2 16 =
+                (identifier 2 14 c)
+                (bool 2 18 true)
+            )
+            (assignment 2 27 =
+                (identifier 2 25 d)
+                (void 2 29 void)
+        ))
+        (landmark 2 36 {)
+        (scope 2 36 {
+            (return 2 38 }
+                (void 2 38 })
+        ))
+        (landmark 2 38 })
+    )
+)
+
+@------------------------------------------------------------------------------
+# Mixed default and non-default arguments
+fun ( a, b = [] , c ... ) { }
+
+@ 0
+
+(scope 1 1
+    (function 2 1 fun
+        (parameters 2 5 paren_open
+            (identifier 2 7 a)
+            (assignment 2 12 =
+                (identifier 2 10 b)
+                (array 2 14 [)
+            )
+            (ellipsis 2 21 ...
+                (identifier 2 19 c)
+        ))
+        (landmark 2 27 {)
+        (scope 2 27 {
+            (return 2 29 }
+                (void 2 29 })
+        ))
+        (landmark 2 29 })
+    )
+)
+
+@------------------------------------------------------------------------------
+# Non-default arguments coming after default arguments
+fun(x, y=0, z) { }
+
+@ 10 2 14
+
+@------------------------------------------------------------------------------
+# Non-default arguments coming after default arguments
+fun(x = void , y , z = void) { }
+
+@ 10 2 18
 
 @------------------------------------------------------------------------------
 # Ellipsis (...)

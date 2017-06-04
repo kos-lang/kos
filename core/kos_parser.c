@@ -45,6 +45,7 @@ static const char str_err_expected_identifier[]       = "expected identifier";
 static const char str_err_expected_lambda_form[]      = "expected '->'";
 static const char str_err_expected_member_expr[]      = "expected literal, identifier or '('";
 static const char str_err_expected_multi_assignment[] = "expected '=' after comma-separated variables or members";
+static const char str_err_expected_param_default[]    = "expected default value for parameter";
 static const char str_err_expected_paren_close[]      = "expected ')'";
 static const char str_err_expected_paren_open[]       = "expected '('";
 static const char str_err_expected_semicolon[]        = "expected ';'";
@@ -240,6 +241,7 @@ static int _function_literal(struct _KOS_PARSER    *parser,
     const int saved_unary_depth = parser->unary_depth;
     const int saved_allow_break = parser->allow_break;
     const int saved_constructor = parser->in_constructor;
+    int       has_defaults      = 0;
 
     parser->unary_depth    = 0;
     parser->allow_break    = 0;
@@ -264,7 +266,32 @@ static int _function_literal(struct _KOS_PARSER    *parser,
 
             TRY(_next_token(parser));
 
-            if (parser->token.op == OT_MORE) {
+            if (has_defaults &&
+                    (parser->token.sep == ST_COMMA || parser->token.sep == ST_PAREN_CLOSE)) {
+                parser->error_str = str_err_expected_param_default;
+                error = KOS_ERROR_PARSE_FAILED;
+                goto _error;
+            }
+
+            if (parser->token.op == OT_ASSIGNMENT) {
+
+                struct _KOS_AST_NODE *assign_node;
+
+                has_defaults = 1;
+
+                TRY(_push_node(parser, args, NT_ASSIGNMENT, &assign_node));
+
+                _ast_push(assign_node, node);
+                node = 0;
+
+                TRY(_right_hand_side_expr(parser, &node));
+
+                _ast_push(assign_node, node);
+                node = 0;
+
+                TRY(_next_token(parser));
+            }
+            else if (parser->token.op == OT_MORE) {
 
                 struct _KOS_AST_NODE *new_arg;
 

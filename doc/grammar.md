@@ -577,13 +577,19 @@ Argument variables are assignable inside the function body.
 
     ParameterList       ::= "(" [ OneOrMoreParameters ] ")"
 
-    OneOrMoreParameters ::= ListParameter | ManyParameters
+    OneOrMoreParameters ::= ListParameter                           |
+                            DefaultParameters [ "," ListParameter ] |
+                            Parameters [ "," DefaultParameters ] [ "," ListParameter ]
 
-    ManyParameters      ::= Parameter ( "," Parameter )* [ "," ListParameter ]
+    Parameters          ::= Parameter ( "," Parameter )*
+
+    DefaultParameters   ::= DefaultParameter ( "," DefaultParameter )*
+
+    DefaultParameter    ::= Parameter "=" RHSExpression
+
+    ListParameter       ::= Parameter "..."
 
     Parameter           ::= Identifier
-
-    ListParameter       ::= Identifier "..."
 
 
 Do statement

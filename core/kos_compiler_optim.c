@@ -1595,7 +1595,10 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             break;
 
         case NT_PARAMETERS:
-            /* fall through */
+            /* TODO default args */
+            error = KOS_SUCCESS;
+            break;
+
         case NT_IMPORT:
             error = KOS_SUCCESS;
             break;

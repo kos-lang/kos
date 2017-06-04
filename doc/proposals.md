@@ -3,20 +3,6 @@
 
 * ? Support multi-line strings the Python way or the C way?
 
-* Default function arguments
-
-        fun add(a, b = 0)
-        {
-            return a + b
-        }
-
-    - Args with default values cannot be followed by args without defaults
-    - Args with default values can be followed by args...
-    - Function's minimum number of args is limited to the args without defaults
-    - Compiler generates code to automatically push default args if not specified
-    - Probably need a new instruction
-    - Defaults must be expressions which evaluate to a constant
-
 * Partial application:
 
         const sum3 = fun(a, b, c) -> ( a + b + c )

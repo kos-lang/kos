@@ -55,21 +55,22 @@ enum _KOS_VAR_ACTIVE {
 };
 
 struct _KOS_VAR {
-    struct _KOS_RED_BLACK_NODE rb_tree_node;
+    struct _KOS_RED_BLACK_NODE  rb_tree_node;
 
     struct _KOS_VAR            *next;
     const struct _KOS_TOKEN    *token;
     struct _KOS_REG            *reg;
-    enum _KOS_VAR_TYPE          type;
     const struct _KOS_AST_NODE *value;
-    int                         is_const;
     int                         num_reads;         /* Number of reads from a variable (including closures) */
     int                         num_assignments;   /* Number of writes to a variable (including closures)  */
     int                         local_reads;       /* Number of local reads from a variable                */
     int                         local_assignments; /* Number of local writes to a variable                 */
     int                         array_idx;
-    enum _KOS_VAR_ACTIVE        is_active;         /* Becomes active/searchable after the node */
+    enum _KOS_VAR_TYPE          type         : 5;
+    enum _KOS_VAR_ACTIVE        is_active    : 2;  /* Becomes active/searchable after the node */
                                                    /* which declares it. */
+    int                         is_const     : 1;
+    int                         has_defaults : 1;
 };
 
 struct _KOS_BREAK_OFFS {
@@ -105,8 +106,8 @@ struct _KOS_CATCH_REF {
     struct _KOS_SCOPE *next;           /* Used by child_scopes */
     struct _KOS_SCOPE *child_scopes;   /* List of child scopes which need to update catch offset to this scope */
     struct _KOS_REG   *catch_reg;      /* Exception register used in this scope, or -1 if no catch */
-    int                finally_active; /* For return statements inside try/catch */
     int                catch_offs[5];  /* Catch instructions offsets in this scope, which update catch offsets for the parent scope */
+    int                finally_active; /* For return statements inside try/catch */
 };
 
 struct _KOS_SCOPE {
@@ -118,13 +119,13 @@ struct _KOS_SCOPE {
     struct _KOS_FRAME          *frame;
     struct _KOS_VAR            *fun_vars_list;
     struct _KOS_VAR            *ellipsis;
-    int                         is_function;
     int                         num_vars;
     int                         num_indep_vars;
     int                         num_args;
     int                         num_indep_args;
-    int                         uses_this;
     struct _KOS_CATCH_REF       catch_ref; /* For catch references between scopes */
+    int                         is_function : 1;
+    int                         uses_this   : 1;
 };
 
 struct _KOS_SCOPE_REF {

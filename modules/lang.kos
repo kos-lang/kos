@@ -223,46 +223,40 @@ do {
         return string(buf.fill(ord))
     }
 
-    string.prototype.ljust = fun(size, args...)
+    string.prototype.ljust = fun(size, fill = " ")
     {
-        if args.size {
-            assert typeof args[0] == "string"
-            assert args[0].size   == 1
-        }
+        assert typeof fill == "string"
+        assert fill.size   == 1
 
         if this.size >= size {
             return this
         }
 
-        return this + just_buf(args.size ? args[0] : " ", size - this.size)
+        return this + just_buf(fill, size - this.size)
     }
 
-    string.prototype.rjust = fun(size, args...)
+    string.prototype.rjust = fun(size, fill = " ")
     {
-        if args.size {
-            assert typeof args[0] == "string"
-            assert args[0].size   == 1
-        }
+        assert typeof fill == "string"
+        assert fill.size   == 1
 
         if this.size >= size {
             return this
         }
 
-        return just_buf(args.size ? args[0] : " ", size - this.size) + this
+        return just_buf(fill, size - this.size) + this
     }
 
-    string.prototype.zfill = fun(size, args...)
+    string.prototype.zfill = fun(size, fill = "0")
     {
-        if args.size {
-            assert typeof args[0] == "string"
-            assert args[0].size   == 1
-        }
+        assert typeof fill == "string"
+        assert fill.size   == 1
 
         if this.size >= size {
             return this
         }
 
-        const fill = just_buf(args.size ? args[0] : "0", size - this.size)
+        const fill = just_buf(fill, size - this.size)
 
         const sign = this.size ? this[0] : ""
 

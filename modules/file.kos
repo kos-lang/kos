@@ -28,9 +28,8 @@ const rw          = "r+b" # open read-write, file must exist
 const create_flag = "w+b" # create new or truncate existing, read-write
 const append_flag = "a+b" # create new or append at the end of existing, read-write
 
-fun open(filename, args...)
+fun open(filename, flags = rw)
 {
-    const flags = args.size > 0 ? args[0] : rw
     return file(filename, flags)
 }
 
@@ -44,10 +43,10 @@ fun append(filename)
     return file(filename, append_flag)
 }
 
-file.prototype.read = fun(args...)
+file.prototype.read = fun(in_size = 0x7FFFFFFFFFFFFFFF, in_buf = void)
 {
-    const size     = args.size > 0 ? args[0] : 0x7FFFFFFFFFFFFFFF
-    const buf      = args.size > 1 ? args[1] : buffer()
+    const size     = in_size
+    const buf      = in_buf || buffer()
     var   num_read = 0
 
     while ! this.eof && num_read < size {
@@ -67,9 +66,12 @@ file.prototype.read = fun(args...)
     return buf
 }
 
-file.prototype.read_lines = fun(args...)
+file.prototype.read_lines = fun(gran = 0x10000)
 {
-    const gran = (args.size > 0 && args[0] > 0) ? args[0] : 0x10000
+    if gran <= 0 {
+        gran = 0x10000
+    }
+
     const buf  = buffer()
     var   pos  = 0
 
