@@ -593,7 +593,7 @@ static int _var(struct _KOS_COMP_UNIT      *program,
                 const struct _KOS_AST_NODE *node)
 {
     int              error    = KOS_SUCCESS;
-    const unsigned   is_const = node->type == NT_CONST ? 1 : 0;
+    const unsigned   is_const = node->type == NT_CONST ? 1U : 0U;
     struct _KOS_VAR *var;
 
     for (node = node->children; node; node = node->next) {
