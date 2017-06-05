@@ -3968,8 +3968,8 @@ static int _is_any_var_used(struct _KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
-static int _any_arg_has_defaults(struct _KOS_RED_BLACK_NODE *node,
-                                 void                       *cookie)
+static int _any_used_arg_has_defaults(struct _KOS_RED_BLACK_NODE *node,
+                                      void                       *cookie)
 {
     struct _KOS_VAR *var = (struct _KOS_VAR *)node;
 
@@ -3979,30 +3979,27 @@ static int _any_arg_has_defaults(struct _KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
-static int _count_non_defaults(struct _KOS_RED_BLACK_NODE *node,
-                               void                       *cookie)
+struct _KOS_DEFAULTS
 {
-    struct _KOS_VAR *var         = (struct _KOS_VAR *)node;
-    int             *num_non_def = (int *)cookie;
-
-    if ( ! var->has_defaults && (var->type & VAR_ARGUMENT) == VAR_ARGUMENT)
-        ++(*num_non_def);
-
-    return KOS_SUCCESS;
-}
+    int num_non_def;
+    int num_def;
+};
 
 static int _count_defaults(struct _KOS_RED_BLACK_NODE *node,
                            void                       *cookie)
 {
-    struct _KOS_VAR *var     = (struct _KOS_VAR *)node;
-    int             *num_def = (int *)cookie;
+    struct _KOS_VAR      *var      = (struct _KOS_VAR *)node;
+    struct _KOS_DEFAULTS *defaults = (struct _KOS_DEFAULTS *)cookie;
 
     if (var->has_defaults) {
 
         assert((var->type & VAR_ARGUMENT) == VAR_ARGUMENT);
 
-        ++(*num_def);
+        ++defaults->num_def;
     }
+    else if ((var->type & VAR_ARGUMENT) == VAR_ARGUMENT) /* ellipsis is VAR_LOCAL, don't count it */
+        /* Note: ellipsis is marked as VAR_LOCAL */
+        ++defaults->num_non_def;
 
     return KOS_SUCCESS;
 }
@@ -4011,20 +4008,19 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
                              const struct _KOS_AST_NODE *node,
                              struct _KOS_REG           **reg)
 {
-    int                error         = KOS_SUCCESS;
-    struct _KOS_SCOPE *scope         = _push_scope(program, node);
-    struct _KOS_FRAME *frame         = scope->frame;
-    struct _KOS_FRAME *last_frame    = program->cur_frame;
+    int                error           = KOS_SUCCESS;
+    struct _KOS_SCOPE *scope           = _push_scope(program, node);
+    struct _KOS_FRAME *frame           = scope->frame;
+    struct _KOS_FRAME *last_frame      = program->cur_frame;
     struct _KOS_VAR   *var;
-    struct _KOS_REG   *scope_reg     = 0;
+    struct _KOS_REG   *scope_reg       = 0;
     int                fun_start_offs;
     size_t             addr2line_start_offs;
     struct _BIND_ARGS  bind_args;
 
-    struct _KOS_REG   *defaults_reg  = 0;
-    int                num_non_def   = 0;
-    int                num_def       = 0;
-    int                defaults_slot = 0; /* Slot index for defaults bind instr */
+    struct _KOS_REG     *defaults_reg  = 0;
+    struct _KOS_DEFAULTS def_counts    = { 0, 0 };
+    int                  defaults_slot = 0; /* Slot index for defaults bind instr */
 
     const struct _KOS_AST_NODE *fun_node = node;
     const struct _KOS_AST_NODE *open_node;
@@ -4064,15 +4060,13 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     assert(node);
     assert(node->type == NT_PARAMETERS);
     if ( ! frame->args_reg->tmp
-        && _KOS_red_black_walk(scope->vars, _any_arg_has_defaults, 0) == KOS_SUCCESS_RETURN) {
+        && _KOS_red_black_walk(scope->vars, _any_used_arg_has_defaults, 0) == KOS_SUCCESS_RETURN) {
 
         TRY(_gen_reg(program, &defaults_reg));
 
-        _KOS_red_black_walk(scope->vars, _count_non_defaults, &num_non_def);
-        _KOS_red_black_walk(scope->vars, _count_defaults, &num_def);
-
         defaults_slot = defaults_reg->reg - scope->num_indep_vars - 2;
     }
+    _KOS_red_black_walk(scope->vars, _count_defaults, &def_counts);
 
     node = node->next;
     assert(node);
@@ -4108,7 +4102,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     /* Set default arguments */
     if (defaults_reg) {
         TRY(_gen_instr3(program, INSTR_SET_DEFAULTS,
-                        frame->args_reg->reg, num_non_def, defaults_reg->reg));
+                        frame->args_reg->reg, def_counts.num_non_def, defaults_reg->reg));
         _free_reg(program, defaults_reg);
     }
 
@@ -4135,7 +4129,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
                         : frame->yield_token ? INSTR_LOAD_GEN : INSTR_LOAD_FUN,
                     (*reg)->reg,
                     0,
-                    scope->num_args - num_def,
+                    scope->num_args - def_counts.num_def,
                     frame->num_regs < 2 ? 2 : frame->num_regs,
                     scope->num_indep_vars));
 
@@ -4153,19 +4147,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     _free_all_regs(program, frame->used_regs);
     _free_all_regs(program, frame->free_regs);
 
-    /* Generate array with default args */
-    if (defaults_reg) {
-
-        int i;
-
-        defaults_reg = 0;
-        TRY(_gen_reg(program, &defaults_reg));
-
-        if (num_def < 256)
-            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, defaults_reg->reg, num_def));
-        else
-            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY, defaults_reg->reg, num_def));
-
+    if (def_counts.num_def) {
         node = fun_node->children;
         assert(node);
         node = node->children;
@@ -4175,6 +4157,20 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
                 break;
         }
         assert(node);
+    }
+
+    /* Generate array with default args */
+    if (defaults_reg) {
+
+        int i;
+
+        defaults_reg = 0;
+        TRY(_gen_reg(program, &defaults_reg));
+
+        if (def_counts.num_def < 256)
+            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, defaults_reg->reg, def_counts.num_def));
+        else
+            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY, defaults_reg->reg, def_counts.num_def));
 
         for (i = 0; node && node->type == NT_ASSIGNMENT; node = node->next, ++i) {
 
@@ -4198,6 +4194,44 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         TRY(_gen_instr3(program, INSTR_BIND, (*reg)->reg, defaults_slot, defaults_reg->reg));
 
         _free_reg(program, defaults_reg);
+    }
+    /* Generate code for unused non-constant defaults */
+    else if (def_counts.num_def) {
+
+        for ( ; node && node->type == NT_ASSIGNMENT; node = node->next) {
+
+            const struct _KOS_AST_NODE *def_node = node->children;
+            enum _KOS_NODE_TYPE         type;
+
+            assert(def_node);
+            assert(def_node->type == NT_IDENTIFIER);
+            def_node = def_node->next;
+            assert(def_node);
+            assert( ! def_node->next);
+
+            def_node = _KOS_get_const(program, def_node);
+
+            if ( ! def_node)
+                continue;
+
+            type = def_node->type;
+
+            if (type != NT_IDENTIFIER      &&
+                type != NT_NUMERIC_LITERAL &&
+                type != NT_STRING_LITERAL  &&
+                type != NT_THIS_LITERAL    &&
+                type != NT_LINE_LITERAL    &&
+                type != NT_BOOL_LITERAL    &&
+                type != NT_VOID_LITERAL) {
+
+                struct _KOS_REG *out = 0;
+
+                TRY(_visit_node(program, def_node, &out));
+                assert(out);
+
+                _free_reg(program, out);
+            }
+        }
     }
 
 _error:

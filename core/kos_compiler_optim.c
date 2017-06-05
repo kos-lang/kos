@@ -756,6 +756,36 @@ static int _for_in_stmt(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
+static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
+                               struct _KOS_AST_NODE  *node)
+{
+    int error = KOS_SUCCESS;
+
+    assert(node);
+    assert(node->type == NT_PARAMETERS);
+    node = node->children;
+
+    for ( ; node && node->type != NT_ELLIPSIS; node = node->next) {
+
+        if (node->type == NT_ASSIGNMENT) {
+
+            struct _KOS_AST_NODE *def_node = node->children;
+            int                   is_terminal;
+
+            assert(def_node);
+            assert(def_node->type == NT_IDENTIFIER);
+            def_node = def_node->next;
+            assert(def_node);
+            assert( ! def_node->next);
+
+            TRY(_visit_node(program, def_node, &is_terminal));
+        }
+    }
+
+_error:
+    return error;
+}
+
 static int _function_literal(struct _KOS_COMP_UNIT *program,
                              struct _KOS_AST_NODE  *node)
 {
@@ -766,6 +796,9 @@ static int _function_literal(struct _KOS_COMP_UNIT *program,
     error = _visit_child_nodes(program, node);
 
     _pop_scope(program);
+
+    if ( ! error)
+        error = _parameter_defaults(program, node->children);
 
     return error;
 }
@@ -1569,6 +1602,7 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
         case NT_SWITCH:
             error = _switch_stmt(program, node, is_terminal);
             break;
+
         case NT_FUNCTION_LITERAL:
             /* fall through */
         case NT_CONSTRUCTOR_LITERAL:
@@ -1595,10 +1629,7 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             break;
 
         case NT_PARAMETERS:
-            /* TODO default args */
-            error = KOS_SUCCESS;
-            break;
-
+            /* fall through */
         case NT_IMPORT:
             error = KOS_SUCCESS;
             break;
