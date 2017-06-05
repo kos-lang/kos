@@ -193,7 +193,7 @@ gcov.pre.clean:
 # Execute parallel tests last, make them depend on each other so that they are executed alone
 # Don't run parallel tests with valgrind, since they are slow
 
-ifeq ($(CONFIG_TOOL), 0)
+ifeq ($(CONFIG_TOOL), )
 # Normal testing
 kos_parallel_object_consistency_test: simple_test
 kos_parallel_object_resize_test:      kos_parallel_object_consistency_test
