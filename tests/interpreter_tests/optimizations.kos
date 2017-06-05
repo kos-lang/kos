@@ -683,3 +683,23 @@ do {
 
     check(demote_indep_vars, { registers: 4, instructions: 5, size: 26 })
 }
+
+#============================================================================#
+
+do {
+    fun optimize_default_args
+    {
+        fun ret_first_arg(c, b=2+3*4, a="x")
+        {
+            return c
+        }
+        return ret_first_arg
+    }
+
+    const f = optimize_default_args()
+    assert f(52)  == 52
+    assert f(-10) == -10
+
+    check(optimize_default_args, { registers: 2, instructions: 2, size: 12 })
+    check(f,                     { registers: 2, instructions: 2, size: 10 })
+}

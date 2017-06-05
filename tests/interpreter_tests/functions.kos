@@ -1107,3 +1107,37 @@ do {
     assert defaults(20, 300)    == 320
     assert defaults(100, 20, 3) == 123
 }
+
+# default arguments with side effects
+do {
+    var count = 0
+
+    fun increment
+    {
+        count += 1
+        return count
+    }
+
+    fun defaults(x = increment())
+    {
+        return x
+    }
+
+    assert defaults()     == 1
+    assert defaults()     == 1
+    assert defaults(void) == void
+    assert defaults()     == 1
+    count = 10
+    assert defaults()     == 1
+
+    fun unused_defaults(a, x = increment())
+    {
+        return a
+    }
+
+    assert count == 11
+    assert unused_defaults(4) == 4
+    assert count == 11
+    assert unused_defaults(5) == 5
+    assert count == 11
+}
