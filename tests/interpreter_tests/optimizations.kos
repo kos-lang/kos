@@ -609,9 +609,9 @@ do {
 do {
     fun collapse_interpolated_strings_2(a...)
     {
-        return "\( typeof { x: a } ) \( void ) \( false ) \( 0.000E+0 ) \( 0x10 + (16) )"
+        return "\( typeof (1 * 3) ) \( void ) \( false ) \( 0.000E+0 ) \( 0x10 + (16) )"
     }
-    assert collapse_interpolated_strings_2() == "object void false 0.0 32"
+    assert collapse_interpolated_strings_2() == "integer void false 0.0 32"
 
     check(collapse_interpolated_strings_2, { registers: 2, instructions: 2, size: 9 })
 }
@@ -631,21 +631,6 @@ do {
     assert collapse_if_numeric(10, 20) == 10
 
     check(collapse_if_numeric, { registers: 2, instructions: 2, size: 10 })
-}
-
-#============================================================================#
-
-do {
-    fun optimization_side_effect(func)
-    {
-        return typeof [ func() ]
-    }
-
-    # The function is never invoked
-    # TODO the side-effect should be performed and not optimized-out
-    assert optimization_side_effect(fun { throw void }) == "array"
-
-    check(optimization_side_effect, { registers: 2, instructions: 2, size: 9 })
 }
 
 #============================================================================#

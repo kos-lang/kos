@@ -1340,3 +1340,26 @@ do {
     const _1024 = 1___024__
     assert _1024 == 1___.___00_0_00E___3_ + 24
 }
+
+##############################################################################
+# typeof's arguments cannot be optimized-out
+do {
+    fun get_type()
+    {
+        var cnt = 0
+
+        fun increment
+        {
+            cnt += 1
+        }
+
+        const type = typeof [ increment() ]
+
+        return [ cnt, type ]
+    }
+
+    const cnt, type = get_type()
+
+    assert cnt  == 1
+    assert type == "array"
+}

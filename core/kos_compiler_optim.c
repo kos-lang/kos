@@ -1199,20 +1199,6 @@ static void _collapse_typeof(struct _KOS_COMP_UNIT      *program,
             type = "\"void\"";
             break;
 
-        case NT_FUNCTION_LITERAL:
-            /* fall through */
-        case NT_CONSTRUCTOR_LITERAL:
-            type = "\"function\"";
-            break;
-
-        case NT_ARRAY_LITERAL:
-            type = "\"array\"";
-            break;
-
-        case NT_OBJECT_LITERAL:
-            type = "\"object\"";
-            break;
-
         default:
             break;
     }
