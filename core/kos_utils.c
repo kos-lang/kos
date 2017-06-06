@@ -208,29 +208,24 @@ static int _float_to_str(KOS_FRAME           frame,
                          KOS_OBJ_ID         *str,
                          struct _KOS_VECTOR *cstr_vec)
 {
-    int     error = KOS_SUCCESS;
-    uint8_t buf[32];
-    char   *ptr   = (char *)buf;
-    char   *end;
+    int      error = KOS_SUCCESS;
+    uint8_t  buf[32];
+    char    *ptr   = (char *)buf;
+    unsigned size;
 
     if (cstr_vec) {
         TRY(_KOS_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
         ptr = &cstr_vec->buffer[cstr_vec->size ? cstr_vec->size - 1 : 0];
     }
 
-    snprintf(ptr, sizeof(buf), "%.15f", value);
-
-    for (end = ptr + strlen(ptr) - 1; end > ptr && *end == '0'; --end);
-    if (*end == '.')
-        ++end;
-    ++end;
+    size = _KOS_print_float(ptr, sizeof(buf), value);
 
     if (cstr_vec) {
-        TRY(_KOS_vector_resize(cstr_vec, cstr_vec->size + (end - ptr) +
+        TRY(_KOS_vector_resize(cstr_vec, cstr_vec->size + size +
                     (cstr_vec->size ? 0 : 1)));
     }
     else {
-        KOS_OBJ_ID ret = KOS_new_string(frame, ptr, (unsigned)(end - ptr));
+        KOS_OBJ_ID ret = KOS_new_string(frame, ptr, size);
         TRY_OBJID(ret);
         *str = ret;
     }

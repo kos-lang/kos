@@ -26,7 +26,9 @@
 #include <assert.h>
 #include <stdint.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #ifdef _WIN32
@@ -427,6 +429,20 @@ uint32_t _KOS_float_to_uint32_t(float value)
     } conv;
     conv.f = value;
     return conv.u;
+}
+
+unsigned _KOS_print_float(char *buf, unsigned size, double value)
+{
+    char *end;
+
+    snprintf(buf, size, "%.15f", value);
+
+    for (end = buf + strlen(buf) - 1; end > buf && *end == '0'; --end);
+    if (*end == '.')
+        ++end;
+    ++end;
+
+    return (unsigned)(end - buf);
 }
 
 void _KOS_get_entropy_fallback(uint8_t *bytes)

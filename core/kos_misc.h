@@ -62,6 +62,8 @@ uint64_t _KOS_double_to_uint64_t(double value);
 
 uint32_t _KOS_float_to_uint32_t(float value);
 
+unsigned _KOS_print_float(char *buf, unsigned size, double value);
+
 struct KOS_RNG_PCG32 {
     uint64_t state;
     uint64_t stream;

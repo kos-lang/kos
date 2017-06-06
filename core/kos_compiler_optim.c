@@ -1476,9 +1476,17 @@ static int _stringify(struct _KOS_COMP_UNIT       *program,
                 snprintf(store, max_size, "\"%" PRId64 "\"", numeric.u.i);
             }
             else {
+                unsigned size;
+
                 assert(numeric.type == KOS_FLOAT_VALUE);
-                /* TODO make this consistent with KOS_object_to_string */
-                snprintf(store, max_size, "\"%f\"", numeric.u.d);
+
+                store[0] = '"';
+
+                size = _KOS_print_float(store + 1, max_size - 1, numeric.u.d);
+                assert(size < max_size - 1);
+
+                store[size + 1] = '"';
+                store[size + 2] = 0;
             }
 
             tmp_node->token.begin  = store;
