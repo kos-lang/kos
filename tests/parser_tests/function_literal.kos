@@ -503,3 +503,115 @@ fun
 @------------------------------------------------------------------------------
 {
 @ 10 2 1
+
+@------------------------------------------------------------------------------
+# 255 non-default args and one default
+fun f(a000, a001, a002, a003, a004, a005, a006, a007, a008, a009,
+      a010, a011, a012, a013, a014, a015, a016, a017, a018, a019,
+      a020, a021, a022, a023, a024, a025, a026, a027, a028, a029,
+      a030, a031, a032, a033, a034, a035, a036, a037, a038, a039,
+      a040, a041, a042, a043, a044, a045, a046, a047, a048, a049,
+      a050, a051, a052, a053, a054, a055, a056, a057, a058, a059,
+      a060, a061, a062, a063, a064, a065, a066, a067, a068, a069,
+      a070, a071, a072, a073, a074, a075, a076, a077, a078, a079,
+      a080, a081, a082, a083, a084, a085, a086, a087, a088, a089,
+      a090, a091, a092, a093, a094, a095, a096, a097, a098, a099,
+      a100, a101, a102, a103, a104, a105, a106, a107, a108, a109,
+      a110, a111, a112, a113, a114, a115, a116, a117, a118, a119,
+      a120, a121, a122, a123, a124, a125, a126, a127, a128, a129,
+      a130, a131, a132, a133, a134, a135, a136, a137, a138, a139,
+      a140, a141, a142, a143, a144, a145, a146, a147, a148, a149,
+      a150, a151, a152, a153, a154, a155, a156, a157, a158, a159,
+      a160, a161, a162, a163, a164, a165, a166, a167, a168, a169,
+      a170, a171, a172, a173, a174, a175, a176, a177, a178, a179,
+      a180, a181, a182, a183, a184, a185, a186, a187, a188, a189,
+      a190, a191, a192, a193, a194, a195, a196, a197, a198, a199,
+      a200, a201, a202, a203, a204, a205, a206, a207, a208, a209,
+      a210, a211, a212, a213, a214, a215, a216, a217, a218, a219,
+      a220, a221, a222, a223, a224, a225, a226, a227, a228, a229,
+      a230, a231, a232, a233, a234, a235, a236, a237, a238, a239,
+      a240, a241, a242, a243, a244, a245, a246, a247, a248, a249,
+      a250, a251, a252, a253, a254, a255 = 1)
+{
+}
+
+@ 0
+
+(scope 1 1
+    (assignment 2 1 fun
+        (const 2 1 fun
+            (identifier 2 5 f)
+        )
+        (function 2 5 f
+            (parameters 2 6 paren_open
+                (identifier 2 7 a000) (identifier 2 13 a001) (identifier 2 19 a002) (identifier 2 25 a003) (identifier 2 31 a004) (identifier 2 37 a005) (identifier 2 43 a006) (identifier 2 49 a007) (identifier 2 55 a008) (identifier 2 61 a009)
+                (identifier 3 7 a010) (identifier 3 13 a011) (identifier 3 19 a012) (identifier 3 25 a013) (identifier 3 31 a014) (identifier 3 37 a015) (identifier 3 43 a016) (identifier 3 49 a017) (identifier 3 55 a018) (identifier 3 61 a019)
+                (identifier 4 7 a020) (identifier 4 13 a021) (identifier 4 19 a022) (identifier 4 25 a023) (identifier 4 31 a024) (identifier 4 37 a025) (identifier 4 43 a026) (identifier 4 49 a027) (identifier 4 55 a028) (identifier 4 61 a029)
+                (identifier 5 7 a030) (identifier 5 13 a031) (identifier 5 19 a032) (identifier 5 25 a033) (identifier 5 31 a034) (identifier 5 37 a035) (identifier 5 43 a036) (identifier 5 49 a037) (identifier 5 55 a038) (identifier 5 61 a039)
+                (identifier 6 7 a040) (identifier 6 13 a041) (identifier 6 19 a042) (identifier 6 25 a043) (identifier 6 31 a044) (identifier 6 37 a045) (identifier 6 43 a046) (identifier 6 49 a047) (identifier 6 55 a048) (identifier 6 61 a049)
+                (identifier 7 7 a050) (identifier 7 13 a051) (identifier 7 19 a052) (identifier 7 25 a053) (identifier 7 31 a054) (identifier 7 37 a055) (identifier 7 43 a056) (identifier 7 49 a057) (identifier 7 55 a058) (identifier 7 61 a059)
+                (identifier 8 7 a060) (identifier 8 13 a061) (identifier 8 19 a062) (identifier 8 25 a063) (identifier 8 31 a064) (identifier 8 37 a065) (identifier 8 43 a066) (identifier 8 49 a067) (identifier 8 55 a068) (identifier 8 61 a069)
+                (identifier 9 7 a070) (identifier 9 13 a071) (identifier 9 19 a072) (identifier 9 25 a073) (identifier 9 31 a074) (identifier 9 37 a075) (identifier 9 43 a076) (identifier 9 49 a077) (identifier 9 55 a078) (identifier 9 61 a079)
+                (identifier 10 7 a080) (identifier 10 13 a081) (identifier 10 19 a082) (identifier 10 25 a083) (identifier 10 31 a084) (identifier 10 37 a085) (identifier 10 43 a086) (identifier 10 49 a087) (identifier 10 55 a088) (identifier 10 61 a089)
+                (identifier 11 7 a090) (identifier 11 13 a091) (identifier 11 19 a092) (identifier 11 25 a093) (identifier 11 31 a094) (identifier 11 37 a095) (identifier 11 43 a096) (identifier 11 49 a097) (identifier 11 55 a098) (identifier 11 61 a099)
+                (identifier 12 7 a100) (identifier 12 13 a101) (identifier 12 19 a102) (identifier 12 25 a103) (identifier 12 31 a104) (identifier 12 37 a105) (identifier 12 43 a106) (identifier 12 49 a107) (identifier 12 55 a108) (identifier 12 61 a109)
+                (identifier 13 7 a110) (identifier 13 13 a111) (identifier 13 19 a112) (identifier 13 25 a113) (identifier 13 31 a114) (identifier 13 37 a115) (identifier 13 43 a116) (identifier 13 49 a117) (identifier 13 55 a118) (identifier 13 61 a119)
+                (identifier 14 7 a120) (identifier 14 13 a121) (identifier 14 19 a122) (identifier 14 25 a123) (identifier 14 31 a124) (identifier 14 37 a125) (identifier 14 43 a126) (identifier 14 49 a127) (identifier 14 55 a128) (identifier 14 61 a129)
+                (identifier 15 7 a130) (identifier 15 13 a131) (identifier 15 19 a132) (identifier 15 25 a133) (identifier 15 31 a134) (identifier 15 37 a135) (identifier 15 43 a136) (identifier 15 49 a137) (identifier 15 55 a138) (identifier 15 61 a139)
+                (identifier 16 7 a140) (identifier 16 13 a141) (identifier 16 19 a142) (identifier 16 25 a143) (identifier 16 31 a144) (identifier 16 37 a145) (identifier 16 43 a146) (identifier 16 49 a147) (identifier 16 55 a148) (identifier 16 61 a149)
+                (identifier 17 7 a150) (identifier 17 13 a151) (identifier 17 19 a152) (identifier 17 25 a153) (identifier 17 31 a154) (identifier 17 37 a155) (identifier 17 43 a156) (identifier 17 49 a157) (identifier 17 55 a158) (identifier 17 61 a159)
+                (identifier 18 7 a160) (identifier 18 13 a161) (identifier 18 19 a162) (identifier 18 25 a163) (identifier 18 31 a164) (identifier 18 37 a165) (identifier 18 43 a166) (identifier 18 49 a167) (identifier 18 55 a168) (identifier 18 61 a169)
+                (identifier 19 7 a170) (identifier 19 13 a171) (identifier 19 19 a172) (identifier 19 25 a173) (identifier 19 31 a174) (identifier 19 37 a175) (identifier 19 43 a176) (identifier 19 49 a177) (identifier 19 55 a178) (identifier 19 61 a179)
+                (identifier 20 7 a180) (identifier 20 13 a181) (identifier 20 19 a182) (identifier 20 25 a183) (identifier 20 31 a184) (identifier 20 37 a185) (identifier 20 43 a186) (identifier 20 49 a187) (identifier 20 55 a188) (identifier 20 61 a189)
+                (identifier 21 7 a190) (identifier 21 13 a191) (identifier 21 19 a192) (identifier 21 25 a193) (identifier 21 31 a194) (identifier 21 37 a195) (identifier 21 43 a196) (identifier 21 49 a197) (identifier 21 55 a198) (identifier 21 61 a199)
+                (identifier 22 7 a200) (identifier 22 13 a201) (identifier 22 19 a202) (identifier 22 25 a203) (identifier 22 31 a204) (identifier 22 37 a205) (identifier 22 43 a206) (identifier 22 49 a207) (identifier 22 55 a208) (identifier 22 61 a209)
+                (identifier 23 7 a210) (identifier 23 13 a211) (identifier 23 19 a212) (identifier 23 25 a213) (identifier 23 31 a214) (identifier 23 37 a215) (identifier 23 43 a216) (identifier 23 49 a217) (identifier 23 55 a218) (identifier 23 61 a219)
+                (identifier 24 7 a220) (identifier 24 13 a221) (identifier 24 19 a222) (identifier 24 25 a223) (identifier 24 31 a224) (identifier 24 37 a225) (identifier 24 43 a226) (identifier 24 49 a227) (identifier 24 55 a228) (identifier 24 61 a229)
+                (identifier 25 7 a230) (identifier 25 13 a231) (identifier 25 19 a232) (identifier 25 25 a233) (identifier 25 31 a234) (identifier 25 37 a235) (identifier 25 43 a236) (identifier 25 49 a237) (identifier 25 55 a238) (identifier 25 61 a239)
+                (identifier 26 7 a240) (identifier 26 13 a241) (identifier 26 19 a242) (identifier 26 25 a243) (identifier 26 31 a244) (identifier 26 37 a245) (identifier 26 43 a246) (identifier 26 49 a247) (identifier 26 55 a248) (identifier 26 61 a249)
+                (identifier 27 7 a250) (identifier 27 13 a251) (identifier 27 19 a252) (identifier 27 25 a253) (identifier 27 31 a254)
+                (assignment 27 42 =
+                    (identifier 27 37 a255)
+                    (number 27 44 1)
+            ))
+            (landmark 28 1 {)
+            (scope 28 1 {
+                (return 29 1 }
+                    (void 29 1 })
+            ))
+            (landmark 29 1 })
+    ))
+)
+
+@------------------------------------------------------------------------------
+# 256 non-default args and one default
+fun f(a000, a001, a002, a003, a004, a005, a006, a007, a008, a009,
+      a010, a011, a012, a013, a014, a015, a016, a017, a018, a019,
+      a020, a021, a022, a023, a024, a025, a026, a027, a028, a029,
+      a030, a031, a032, a033, a034, a035, a036, a037, a038, a039,
+      a040, a041, a042, a043, a044, a045, a046, a047, a048, a049,
+      a050, a051, a052, a053, a054, a055, a056, a057, a058, a059,
+      a060, a061, a062, a063, a064, a065, a066, a067, a068, a069,
+      a070, a071, a072, a073, a074, a075, a076, a077, a078, a079,
+      a080, a081, a082, a083, a084, a085, a086, a087, a088, a089,
+      a090, a091, a092, a093, a094, a095, a096, a097, a098, a099,
+      a100, a101, a102, a103, a104, a105, a106, a107, a108, a109,
+      a110, a111, a112, a113, a114, a115, a116, a117, a118, a119,
+      a120, a121, a122, a123, a124, a125, a126, a127, a128, a129,
+      a130, a131, a132, a133, a134, a135, a136, a137, a138, a139,
+      a140, a141, a142, a143, a144, a145, a146, a147, a148, a149,
+      a150, a151, a152, a153, a154, a155, a156, a157, a158, a159,
+      a160, a161, a162, a163, a164, a165, a166, a167, a168, a169,
+      a170, a171, a172, a173, a174, a175, a176, a177, a178, a179,
+      a180, a181, a182, a183, a184, a185, a186, a187, a188, a189,
+      a190, a191, a192, a193, a194, a195, a196, a197, a198, a199,
+      a200, a201, a202, a203, a204, a205, a206, a207, a208, a209,
+      a210, a211, a212, a213, a214, a215, a216, a217, a218, a219,
+      a220, a221, a222, a223, a224, a225, a226, a227, a228, a229,
+      a230, a231, a232, a233, a234, a235, a236, a237, a238, a239,
+      a240, a241, a242, a243, a244, a245, a246, a247, a248, a249,
+      a250, a251, a252, a253, a254, a255, a256 = 1)
+{
+}
+
+@ 10 27 48

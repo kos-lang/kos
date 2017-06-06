@@ -57,6 +57,7 @@ static const char str_err_expected_var_or_const[]     = "expected 'var' or 'cons
 static const char str_err_expected_var_assignment[]   = "expected '=' in variable declaration";
 static const char str_err_expected_while[]            = "expected 'while'";
 static const char str_err_mixed_operators[]           = "mixed operators, consider using parentheses";
+static const char str_err_too_many_non_default[]      = "too many non-default arguments (more than 255) preceding an argument with default value";
 static const char str_err_unexpected_break[]          = "unexpected 'break' statement; can only be used inside a loop";
 static const char str_err_unexpected_continue[]       = "unexpected 'continue' statement; can only be used inside a loop";
 static const char str_err_unexpected_import[]         = "unexpected 'import' statement";
@@ -241,7 +242,6 @@ static int _function_literal(struct _KOS_PARSER    *parser,
     const int saved_unary_depth = parser->unary_depth;
     const int saved_allow_break = parser->allow_break;
     const int saved_constructor = parser->in_constructor;
-    int       has_defaults      = 0;
 
     parser->unary_depth    = 0;
     parser->allow_break    = 0;
@@ -253,6 +253,9 @@ static int _function_literal(struct _KOS_PARSER    *parser,
     TRY(_next_token(parser));
 
     if (parser->token.sep == ST_PAREN_OPEN) {
+
+        int num_non_def  = 0;
+        int has_defaults = 0;
 
         TRY(_push_node(parser, *ret, NT_PARAMETERS, &args));
 
@@ -266,18 +269,17 @@ static int _function_literal(struct _KOS_PARSER    *parser,
 
             TRY(_next_token(parser));
 
-            if (has_defaults &&
-                    (parser->token.sep == ST_COMMA || parser->token.sep == ST_PAREN_CLOSE)) {
-                parser->error_str = str_err_expected_param_default;
-                error = KOS_ERROR_PARSE_FAILED;
-                goto _error;
-            }
-
             if (parser->token.op == OT_ASSIGNMENT) {
 
                 struct _KOS_AST_NODE *assign_node;
 
                 has_defaults = 1;
+
+                if (num_non_def > 255) {
+                    parser->error_str = str_err_too_many_non_default;
+                    error = KOS_ERROR_PARSE_FAILED;
+                    goto _error;
+                }
 
                 TRY(_push_node(parser, args, NT_ASSIGNMENT, &assign_node));
 
@@ -303,6 +305,15 @@ static int _function_literal(struct _KOS_PARSER    *parser,
                 node = 0;
 
                 TRY(_next_token(parser));
+            }
+            else {
+                ++num_non_def;
+
+                if (has_defaults) {
+                    parser->error_str = str_err_expected_param_default;
+                    error = KOS_ERROR_PARSE_FAILED;
+                    goto _error;
+                }
             }
 
             if (node) {

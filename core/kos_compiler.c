@@ -4101,6 +4101,9 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     /* Set default arguments */
     if (defaults_reg) {
+
+        assert(def_counts.num_non_def < 256);
+
         TRY(_gen_instr3(program, INSTR_SET_DEFAULTS,
                         frame->args_reg->reg, def_counts.num_non_def, defaults_reg->reg));
         _free_reg(program, defaults_reg);
