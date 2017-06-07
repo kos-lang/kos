@@ -349,22 +349,24 @@ static int _vector_append_str(KOS_FRAME           frame,
 
                     case 3: {
 
-                        uint32_t code = c;
+                        uint32_t code[1];
                         int      lo;
                         int      hi;
+
+                        code[0] = c;
 
                         if (num_utf8_cont) {
                             assert(num_utf8_cont == 1);
 
-                            _KOS_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code);
+                            _KOS_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code[0]);
 
                             num_utf8_cont = 0;
                         }
                         else
-                            code = c;
+                            code[0] = c;
 
-                        lo = (int)code & 0xF;
-                        hi = (int)code >> 4;
+                        lo = (int)code[0] & 0xF;
+                        hi = (int)code[0] >> 4;
 
                         dst   -= 4;
                         *dst   = '\\';
@@ -376,17 +378,17 @@ static int _vector_append_str(KOS_FRAME           frame,
                     }
 
                     default: {
-                        uint32_t code;
+                        uint32_t code[1];
 
                         assert(num_utf8_cont < 5);
 
-                        _KOS_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code);
+                        _KOS_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code[0]);
 
                         *(--dst) = '}';
 
                         for (i = (unsigned)esc_len - 3U; i > 0; i--) {
-                            *(--dst) = _hex_digits[code & 0xFU];
-                            code   >>= 4;
+                            *(--dst) = _hex_digits[code[0] & 0xFU];
+                            code[0]   >>= 4;
                         }
 
                         dst   -= 3;

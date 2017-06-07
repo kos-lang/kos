@@ -234,7 +234,7 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
 
     assert(var);
 
-    if ( ! *is_local) {
+    if ( ! *is_local && var) {
         assert(var->type == VAR_INDEPENDENT_LOCAL || var->type == VAR_INDEPENDENT_ARGUMENT);
         _update_scope_ref(program, var->type, scope);
     }
