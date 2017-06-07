@@ -439,6 +439,28 @@ do {
     expect_fail(λ->(lang.string(void)))
     expect_fail(λ->(lang.string(false)))
     expect_fail(λ->(lang.string(λ->(void))))
+    expect_fail(λ->(lang.string([0x200000])))
+    expect_fail(λ->(lang.string([-1])))
+}
+
+do {
+    const elements = [0x1FFFFF, 1, 2, 3, 4, 5]
+    const s        = lang.string(elements)
+    assert typeof s == "string"
+    assert s.size   == elements.size
+    for var i in lang.range(s.size) {
+        assert s.get_char_code(i) == elements[i]
+    }
+}
+
+do {
+    const elements = [0x1FFFFF, 1, 2, 3, 4, 5, 6]
+    const s        = lang.string(elements)
+    assert typeof s == "string"
+    assert s.size   == elements.size
+    for var i in lang.range(s.size) {
+        assert s.get_char_code(i) == elements[i]
+    }
 }
 
 do {
