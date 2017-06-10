@@ -138,3 +138,24 @@ do {
     assert select(2) == 14
     assert select(3) == 0
 }
+
+do {
+    var x = 2
+    fun select(a)
+    {
+        switch a + 1 {
+            0 fallthrough
+            1 fallthrough
+            2 { return a }
+            x * 2 { return 10 }
+        }
+    }
+
+    assert select(-2) == void
+    assert select(-1) == -1
+    assert select(0)  == 0
+    assert select(1)  == 1
+    assert select(2)  == void
+    assert select(3)  == 10
+    assert select(4)  == void
+}

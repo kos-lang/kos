@@ -731,15 +731,6 @@ Each new case section begins with a right-hand-side expression or with
 ellipsis `...`, and is followed by a compound statement, a fallthrough
 statement or both (in that order).
 
-The right-hand-side expression is evaluated at compile time and it must
-evaluate to a constant.
-
-The resulting constant can only be of immutable type: integer, float, string,
-boolean, void or function.
-
-The resulting evaluated constant value cannot repeat again in that switch
-statement.
-
 The ellipsis `...` case is optional.
 
 There can be only one ellipsis `...` case defined for a given switch statement.

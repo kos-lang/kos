@@ -36,7 +36,6 @@
 static const char str_err_duplicate_property[]        = "duplicate object property";
 static const char str_err_expected_refinement[]       = "expected .identifier or '[' in argument to 'delete'";
 static const char str_err_expected_refinement_ident[] = "expected identifier";
-static const char str_err_invalid_case[]              = "case expression does not resolve to an immutable constant";
 static const char str_err_invalid_index[]             = "index out of range";
 static const char str_err_invalid_numeric_literal[]   = "invalid numeric literal";
 static const char str_err_module_dereference[]        = "module is not an object";
@@ -2012,26 +2011,23 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
 
             switch (case_node->type) {
 
+                case NT_IDENTIFIER:
+                    /* fall-through */
                 case NT_NUMERIC_LITERAL:
                     /* fall-through */
                 case NT_STRING_LITERAL:
                     /* fall-through */
+                case NT_THIS_LITERAL:
+                    /* fall-through */
                 case NT_BOOL_LITERAL:
                     /* fall-through */
                 case NT_VOID_LITERAL:
+                    /* TODO ensure unique */
                     break;
 
-                /* TODO identifier -> const */
-
-                /* TODO allow functions (immutable) */
-
                 default:
-                    program->error_token = &node->children->token;
-                    program->error_str   = str_err_invalid_case;
-                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+                    break;
             }
-
-            /* TODO ensure unique */
 
             TRY(_visit_node(program, node->children, &case_reg));
             assert(case_reg);
