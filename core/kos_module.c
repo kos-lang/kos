@@ -837,7 +837,7 @@ static int _compile_module(KOS_FRAME   frame,
     }
 
     /* Disassemble */
-    if (ctx->flags & KOS_CTX_DEBUG) {
+    if (ctx->flags & KOS_CTX_DISASM) {
         struct _KOS_VECTOR   cname;
         struct _KOS_VECTOR   ptrs;
         const char *const   *func_names = 0;

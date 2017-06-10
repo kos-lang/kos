@@ -73,7 +73,7 @@ typedef struct _KOS_THREAD_ROOT KOS_THREAD_ROOT;
 enum _KOS_CONTEXT_FLAGS {
     KOS_CTX_NO_FLAGS = 0,
     KOS_CTX_VERBOSE  = 1,
-    KOS_CTX_DEBUG    = 2
+    KOS_CTX_DISASM   = 2
 };
 
 struct _KOS_CONTEXT {

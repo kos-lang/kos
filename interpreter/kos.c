@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
     int                i_module    = 0;
     int                i_first_arg = 0;
     int                interactive = -1;
+    uint32_t           flags       = 0;
     KOS_CONTEXT        ctx;
     KOS_FRAME          frame;
     struct _KOS_VECTOR buf;
@@ -89,22 +90,41 @@ int main(int argc, char *argv[])
         goto _error;
     }
 
-    if (argc > 1 && strcmp(argv[1], "-")) {
+    if (argc > 1) {
+        i_first_arg = 1;
 
-        if (argc > 2 && _is_option(argv[1], "c", "command")) {
-            is_script = 1;
-            i_module  = 2;
-            if (argc > 3)
-                i_first_arg = 3;
-        }
-        else {
-            i_module = 1;
-            if (argc > 2)
-                i_first_arg = 2;
+        while (i_first_arg < argc) {
+
+            const char *const arg = argv[i_first_arg];
+
+            if (strcmp(arg, "-") == 0) {
+                i_first_arg = (argc - i_first_arg) > 1 ? i_first_arg + 1 : 0;
+                break;
+            }
+
+            if (_is_option(arg, "c", "command")) {
+                if ((argc - i_first_arg) == 1) {
+                    fprintf(stderr, "Argument expected for the -c option\n");
+                    error = KOS_ERROR_NOT_FOUND;
+                    goto _error;
+                }
+                is_script   = 1;
+                i_module    = i_first_arg + 1;
+                i_first_arg = (argc - i_first_arg) > 2 ? i_first_arg + 2 : 0;
+                break;
+            }
+
+            if (_is_option(arg, "v", "verbose")) {
+                flags |= KOS_CTX_VERBOSE;
+                ++i_first_arg;
+            }
+            else {
+                i_module    = i_first_arg;
+                i_first_arg = (argc - i_first_arg) > 1 ? i_first_arg + 1 : 0;
+                break;
+            }
         }
     }
-    else if (argc > 1)
-        i_first_arg = (argc > 2) ? 2 : 0;
 
     error = KOS_context_init(&ctx, &frame);
 
@@ -119,7 +139,7 @@ int main(int argc, char *argv[])
         /* KOSDISASM=1 turns on disassembly */
         if (!_KOS_get_env("KOSDISASM", &buf) &&
                 buf.size == 2 && buf.buffer[0] == '1' && buf.buffer[1] == 0)
-            ctx.flags |= KOS_CTX_DEBUG;
+            flags |= KOS_CTX_DISASM;
 
         /* KOSINTERACTIVE=1 forces interactive prompt       */
         /* KOSINTERACTIVE=0 forces treating stdin as a file */
@@ -132,6 +152,8 @@ int main(int argc, char *argv[])
                 interactive = 1;
         }
     }
+
+    ctx.flags = flags;
 
     error = _add_module_search_paths(frame, argv[0]);
 
