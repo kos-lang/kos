@@ -158,17 +158,28 @@ sequential_test_list =
 define SEQFAIL_RULE
 sequential_fail.$1:
 	@echo Test sequential fail $1
-	@env KOSPATH=../modules interpreter_tests/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests $1 500
+	@env KOSPATH=../modules interpreter_tests/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests $1 200
 
 sequential_test_list += sequential_fail.$1
 endef
 
 $(eval $(call SEQFAIL_RULE,0))
-$(eval $(call SEQFAIL_RULE,500))
+$(eval $(call SEQFAIL_RULE,200))
+$(eval $(call SEQFAIL_RULE,400))
+$(eval $(call SEQFAIL_RULE,600))
+$(eval $(call SEQFAIL_RULE,800))
 $(eval $(call SEQFAIL_RULE,1000))
-$(eval $(call SEQFAIL_RULE,1500))
+$(eval $(call SEQFAIL_RULE,1200))
+$(eval $(call SEQFAIL_RULE,1400))
+$(eval $(call SEQFAIL_RULE,1600))
+$(eval $(call SEQFAIL_RULE,1800))
 $(eval $(call SEQFAIL_RULE,2000))
-$(eval $(call SEQFAIL_RULE,2500))
+$(eval $(call SEQFAIL_RULE,2200))
+$(eval $(call SEQFAIL_RULE,2400))
+$(eval $(call SEQFAIL_RULE,2600))
+$(eval $(call SEQFAIL_RULE,2800))
+$(eval $(call SEQFAIL_RULE,3000))
+$(eval $(call SEQFAIL_RULE,3200))
 
 ifneq ($(CONFIG_SEQFAIL), 0)
 simple_test: $(sequential_test_list)

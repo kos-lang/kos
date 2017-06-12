@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include <string.h>
 
+static const char str_cur_dir[]              = ".";
 static const char str_eol[]                  = "\n";
 static const char str_err_circular_deps[]    = "circular dependencies detected for module \"";
 static const char str_err_duplicate_global[] = "duplicate global \"";
@@ -648,6 +649,95 @@ _error:
     return error;
 }
 
+static void _print_search_paths(KOS_FRAME  frame,
+                                KOS_OBJ_ID paths)
+{
+    int                error = KOS_SUCCESS;
+    struct _KOS_VECTOR cstr;
+    uint32_t           num_paths;
+    uint32_t           i;
+
+    static const char str_paths[] = "Kos module search paths: ";
+
+    assert(GET_OBJ_TYPE(paths) == OBJ_ARRAY);
+
+    _KOS_vector_init(&cstr);
+
+    TRY(_KOS_vector_reserve(&cstr, 128));
+
+    TRY(_KOS_vector_resize(&cstr, sizeof(str_paths)));
+
+    memcpy(cstr.buffer, str_paths, sizeof(str_paths));
+
+    num_paths = KOS_get_array_size(paths);
+
+    for (i = 0; i < num_paths; i++) {
+
+        static const char str_comma[] = ", ";
+
+        KOS_OBJ_ID path = KOS_array_read(frame, paths, i);
+        TRY_OBJID(path);
+
+        assert(GET_OBJ_TYPE(path) == OBJ_STRING);
+
+        TRY(KOS_object_to_string_or_cstr_vec(frame, path, KOS_DONT_QUOTE, 0, &cstr));
+
+        if (i + 1 < num_paths) {
+            TRY(_KOS_vector_resize(&cstr, cstr.size + sizeof(str_comma) - 1));
+            memcpy(cstr.buffer + cstr.size - sizeof(str_comma), str_comma, sizeof(str_comma));
+        }
+    }
+
+_error:
+    if (error) {
+        KOS_clear_exception(frame);
+        printf("%sout of memory\n", str_paths);
+    }
+    else
+        printf("%s\n", cstr.buffer);
+
+    _KOS_vector_destroy(&cstr);
+}
+
+static void _print_load_info(KOS_FRAME  frame,
+                             KOS_OBJ_ID module_name,
+                             KOS_OBJ_ID module_path)
+{
+    int                error = KOS_SUCCESS;
+    struct _KOS_VECTOR cstr;
+
+    static const char str_loading[] = "Kos loading module ";
+    static const char str_from[]    = " from ";
+
+    assert(GET_OBJ_TYPE(module_name) == OBJ_STRING);
+    assert(GET_OBJ_TYPE(module_path) == OBJ_STRING);
+
+    _KOS_vector_init(&cstr);
+
+    TRY(_KOS_vector_reserve(&cstr, 128));
+
+    TRY(_KOS_vector_resize(&cstr, sizeof(str_loading)));
+
+    memcpy(cstr.buffer, str_loading, sizeof(str_loading));
+
+    TRY(KOS_object_to_string_or_cstr_vec(frame, module_name, KOS_DONT_QUOTE, 0, &cstr));
+
+    TRY(_KOS_vector_resize(&cstr, cstr.size + sizeof(str_from) - 1));
+    memcpy(cstr.buffer + cstr.size - sizeof(str_from), str_from, sizeof(str_from));
+
+    TRY(KOS_object_to_string_or_cstr_vec(frame, module_path, KOS_DONT_QUOTE, 0, &cstr));
+
+_error:
+    if (error) {
+        KOS_clear_exception(frame);
+        printf("%sout of memory\n", str_loading);
+    }
+    else
+        printf("%s\n", cstr.buffer);
+
+    _KOS_vector_destroy(&cstr);
+}
+
 static int _append_buf(const uint8_t **dest,
                        uint32_t        dest_size,
                        const uint8_t  *src,
@@ -985,7 +1075,6 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
     struct _KOS_MODULE_LOAD_CHAIN loading         = { 0, 0, 0 };
     struct _KOS_MODULE_INIT      *mod_init;
     struct _KOS_VECTOR            file_buf;
-    int                           search_path_set = 0;
     int                           chain_init      = 0;
 
     _KOS_vector_init(&file_buf);
@@ -1030,13 +1119,22 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
         int        lang_idx;
         KOS_OBJ_ID path_array;
         KOS_OBJ_ID lang_obj;
+        KOS_OBJ_ID dir;
 
         /* Add search path - path of the topmost module being loaded */
         path_array = KOS_new_array(frame, 1);
         TRY_OBJID(path_array);
-        TRY(KOS_array_write(frame, path_array, 0, module_dir));
+        if (KOS_get_string_length(module_dir) == 0) {
+            dir = KOS_context_get_cstring(frame, str_cur_dir);
+            TRY_OBJID(dir);
+        }
+        else
+            dir = module_dir;
+        TRY(KOS_array_write(frame, path_array, 0, dir));
         TRY(KOS_array_insert(frame, ctx->module_search_paths, 0, 0, path_array, 0, 1));
-        search_path_set = 1;
+
+        if (ctx->flags & KOS_CTX_VERBOSE)
+            _print_search_paths(frame, ctx->module_search_paths);
 
         lang_obj = _KOS_module_import(frame, lang, sizeof(lang)-1, 0, 0, KOS_MODULE_MANDATORY, &lang_idx);
         TRY_OBJID(lang_obj);
@@ -1075,6 +1173,9 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
         }
     }
     KOS_clear_exception(frame);
+
+    if (ctx->flags & KOS_CTX_VERBOSE)
+        _print_load_info(frame, actual_module_name, module_path);
 
     /* Make room for the new module and allocate index */
     {
@@ -1135,14 +1236,6 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME                 frame,
     }
 
 _error:
-    if (search_path_set) {
-        const uint32_t num_paths = KOS_get_array_size(ctx->module_search_paths);
-        int            err;
-        assert(num_paths > 0);
-        err = KOS_array_resize(frame, ctx->module_search_paths, num_paths-1);
-        if ( ! error)
-            error = err;
-    }
     if (chain_init)
         ctx->module_load_chain = loading.next;
     _KOS_vector_destroy(&file_buf);
