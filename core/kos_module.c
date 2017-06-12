@@ -675,7 +675,7 @@ static void _print_search_paths(KOS_FRAME  frame,
 
         static const char str_comma[] = ", ";
 
-        KOS_OBJ_ID path = KOS_array_read(frame, paths, i);
+        KOS_OBJ_ID path = KOS_array_read(frame, paths, (int)i);
         TRY_OBJID(path);
 
         assert(GET_OBJ_TYPE(path) == OBJ_STRING);
