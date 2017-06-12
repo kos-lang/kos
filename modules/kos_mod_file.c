@@ -196,8 +196,10 @@ static KOS_OBJ_ID _print(KOS_FRAME  frame,
 
         TRY(KOS_print_to_cstr_vec(frame, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
-        if (cstr.size)
-            fprintf(file, "%.*s\n", (int)cstr.size-1, cstr.buffer);
+        if (cstr.size) {
+            cstr.buffer[cstr.size - 1] = '\n';
+            fwrite(cstr.buffer, 1, cstr.size, file);
+        }
         else
             fprintf(file, "\n");
     }
@@ -223,7 +225,7 @@ static KOS_OBJ_ID _print_(KOS_FRAME  frame,
         TRY(KOS_print_to_cstr_vec(frame, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
         if (cstr.size)
-            fprintf(file, "%.*s", (int)cstr.size-1, cstr.buffer);
+            fwrite(cstr.buffer, 1, cstr.size - 1, file);
     }
 
 _error:
