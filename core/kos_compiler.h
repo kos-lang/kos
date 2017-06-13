@@ -151,6 +151,7 @@ struct _KOS_COMP_STRING {
 struct _KOS_PRE_GLOBAL {
     struct _KOS_PRE_GLOBAL *next;
     struct _KOS_AST_NODE    node;
+    enum _KOS_VAR_TYPE      type;
     int                     idx;
     char                    name_buf[1];
 };
@@ -168,16 +169,15 @@ struct _KOS_COMP_ADDR_TO_FUNC {
     uint32_t code_size;
 };
 
-enum _KOS_COMP_REQUIRED {
-    KOS_COMP_OPTIONAL,
-    KOS_COMP_MANDATORY
+enum _KOS_IMPORT_TYPE {
+    KOS_IMPORT_INDIRECT,
+    KOS_IMPORT_DIRECT
 };
 
-typedef int (*KOS_COMP_IMPORT_MODULE)(void                   *vframe,
-                                      const char             *name,
-                                      unsigned                length,
-                                      enum _KOS_COMP_REQUIRED required,
-                                      int                    *module_idx);
+typedef int (*KOS_COMP_IMPORT_MODULE)(void       *vframe,
+                                      const char *name,
+                                      unsigned    length,
+                                      int        *module_idx);
 
 typedef int (*KOS_COMP_GET_GLOBAL_IDX)(void       *vframe,
                                        int         module_idx,
@@ -245,6 +245,10 @@ void _KOS_compiler_init(struct _KOS_COMP_UNIT *program,
                         int                    file_id);
 
 int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
+                                   const char            *name,
+                                   int                    idx);
+
+int _KOS_compiler_predefine_module(struct _KOS_COMP_UNIT *program,
                                    const char            *name,
                                    int                    idx);
 

@@ -208,6 +208,7 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     ctx->init_module.context      = ctx;
     ctx->init_module.global_names = KOS_BADPTR;
     ctx->init_module.globals      = KOS_BADPTR;
+    ctx->init_module.module_names = KOS_BADPTR;
     ctx->module_names             = KOS_BADPTR;
     ctx->modules                  = KOS_BADPTR;
     ctx->module_search_paths      = KOS_BADPTR;
@@ -239,6 +240,7 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY_OBJID(ctx->init_module.name         = KOS_context_get_cstring(frame, str_init));
     TRY_OBJID(ctx->init_module.globals      = KOS_new_array(frame, 0));
     TRY_OBJID(ctx->init_module.global_names = KOS_new_object(frame));
+    TRY_OBJID(ctx->init_module.module_names = KOS_new_object(frame));
     TRY_OBJID(ctx->module_names             = KOS_new_object(frame));
     TRY_OBJID(ctx->modules                  = KOS_new_array(frame, 0));
     TRY_OBJID(ctx->module_search_paths      = KOS_new_array(frame, 0));

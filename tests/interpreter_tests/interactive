@@ -151,6 +151,25 @@ if [ "$CONTENTS" != "true" ]; then
 fi
 
 ##############################################################################
+# Test interactive interpreter with import statements
+
+"$KOS" -c 'print_("import file\nfile.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
+
+if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+    echo "Expected first line to have interactive interpreter signature" >&2
+    head -n "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed "1 d" "$OUTPUT"`
+
+if [ "$CONTENTS" != "123" ]; then
+    echo "Expected output to contain: \"123\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+##############################################################################
 # Test interactive interpreter with two lines of input and several EOLs
 
 "$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"

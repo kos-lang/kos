@@ -836,7 +836,6 @@ static int _import(struct _KOS_COMP_UNIT      *program,
         TRY(program->import_module(program->frame,
                                    node->token.begin,
                                    node->token.length,
-                                   KOS_COMP_MANDATORY,
                                    &module_idx));
 
         node = node->next;

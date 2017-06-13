@@ -156,7 +156,7 @@ static int _init_global_scope(struct _KOS_COMP_UNIT *program)
             struct _KOS_VAR *var = _alloc_var(program, 1, &global->node);
 
             if (var) {
-                var->type        = VAR_GLOBAL;
+                var->type        = global->type;
                 var->array_idx   = global->idx;
                 var->next        = program->globals;
                 program->globals = var;
@@ -492,7 +492,6 @@ static int _import(struct _KOS_COMP_UNIT      *program,
     TRY(program->import_module(program->frame,
                                node->token.begin,
                                node->token.length,
-                               KOS_COMP_MANDATORY,
                                &module_idx));
 
     if (!node->next) {
@@ -1012,9 +1011,10 @@ int _KOS_compiler_process_vars(struct _KOS_COMP_UNIT      *program,
     return _visit_node(program, ast);
 }
 
-int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
-                                   const char            *name,
-                                   int                    idx)
+static int _predefine_global(struct _KOS_COMP_UNIT *program,
+                             const char            *name,
+                             int                    idx,
+                             enum _KOS_VAR_TYPE     type)
 {
     int            error = KOS_SUCCESS;
     const unsigned len   = (unsigned)strlen(name);
@@ -1027,6 +1027,7 @@ int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
         memcpy(global->name_buf, name, len+1);
 
         global->next                   = program->pre_globals;
+        global->type                   = type;
         global->idx                    = idx;
         global->node.type              = NT_IDENTIFIER;
         global->node.token.begin       = global->name_buf;
@@ -1039,4 +1040,18 @@ int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
         error = KOS_ERROR_OUT_OF_MEMORY;
 
     return error;
+}
+
+int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
+                                   const char            *name,
+                                   int                    idx)
+{
+    return _predefine_global(program, name, idx, VAR_GLOBAL);
+}
+
+int _KOS_compiler_predefine_module(struct _KOS_COMP_UNIT *program,
+                                   const char            *name,
+                                   int                    idx)
+{
+    return _predefine_global(program, name, idx, VAR_MODULE);
 }
