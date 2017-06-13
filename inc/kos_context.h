@@ -137,9 +137,9 @@ void KOS_context_destroy(KOS_CONTEXT *ctx);
 int KOS_context_add_path(KOS_FRAME   frame,
                          const char *module_search_path);
 
-int KOS_context_set_args(KOS_FRAME frame,
-                         int       argc,
-                         char    **argv);
+int KOS_context_set_args(KOS_FRAME    frame,
+                         int          argc,
+                         const char **argv);
 
 typedef int (*KOS_BUILTIN_INIT)(KOS_FRAME frame);
 

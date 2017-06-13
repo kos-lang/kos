@@ -164,12 +164,27 @@ int main(int argc, char *argv[])
 
     if (i_first_arg) {
 
-        error = KOS_context_set_args(frame, argc - i_first_arg, &argv[i_first_arg]);
+        char *saved   = argv[i_first_arg - 1];
+        char  empty[] = "";
 
-        if (error) {
-            fprintf(stderr, "Failed to setup command line arguments\n");
-            goto _error;
-        }
+        argv[i_first_arg - 1] = i_module ? argv[i_module] : &empty[0];
+
+        error = KOS_context_set_args(frame,
+                                     1 + argc - i_first_arg,
+                                     (const char **)&argv[i_first_arg - 1]);
+
+        argv[i_first_arg - 1] = saved;
+    }
+    else if (i_module)
+        error = KOS_context_set_args(frame, 1, (const char**)&argv[i_module]);
+    else {
+        const char *empty_ptr[] = { "" };
+        error = KOS_context_set_args(frame, 1, empty_ptr);
+    }
+
+    if (error) {
+        fprintf(stderr, "Failed to setup command line arguments\n");
+        goto _error;
     }
 
     error = KOS_modules_init(&ctx);

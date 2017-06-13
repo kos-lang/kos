@@ -350,9 +350,9 @@ _error:
     return error;
 }
 
-int KOS_context_set_args(KOS_FRAME frame,
-                         int       argc,
-                         char    **argv)
+int KOS_context_set_args(KOS_FRAME    frame,
+                         int          argc,
+                         const char **argv)
 {
     int                       error;
     int                       i;
