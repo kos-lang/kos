@@ -20,6 +20,40 @@
 # IN THE SOFTWARE.
 #
 
+/*
+ *     range(stop)
+ *     range(start, stop, step = 1)
+ *
+ * A generator which generates an arithmetic progression of numbers.
+ *
+ * Returns an iterator function, which produces subsequent elements of
+ * the specified range.
+ *
+ * `start` specifies the first number returned by the iterator.  `start`
+ * defaults to `0`.
+ *
+ * `step` specified the increment which is added to subsequently returned
+ * numbers.  If `step` is greater than zero, the generated sequence is
+ * ascending.  If `step` is negative, the generated sequence is descending.
+ * If `step` is zero, no numbers are generated.
+ *
+ * `stop` specifies the number ending the sequence, but not included in it.
+ * The iterator terminates when it reaches or exceeds `stop`.
+ *
+ * Examples:
+ *
+ *     > array(range(5))
+ *     [0, 1, 2, 3, 4]
+ *     > array(range(1, 5))
+ *     [1, 2, 3, 4]
+ *     > array(range(0, 16, 4))
+ *     [0, 4, 8, 12]
+ *     > array(range(0))
+ *     []
+ *     > array(range(2, -8, -2))
+ *     [2, 0, -2, -4, -6]
+ */
+
 fun range(first_arg, args...)
 {
     var start = 0
@@ -49,6 +83,21 @@ fun range(first_arg, args...)
         }
     }
 }
+
+/*
+ *     object.prototype.iterator()
+ *
+ * A generator which generates shallow property names of an object.
+ *
+ * Returns an iterator function, which produces names of subsequent 
+ * properties of an object, without descending into the object's
+ * prototypes.
+ *
+ * Example:
+ *
+ *    > array({ red: 1, green: 10, blue: 100 }.iterator())
+ *    ["red", "green", "blue"]
+ */
 
 object.prototype.iterator = fun
 {
