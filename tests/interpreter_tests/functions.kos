@@ -19,6 +19,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
+
+import lang.generator_end
+
 fun expect_fail(function)
 {
     var failed = false
@@ -335,7 +338,7 @@ do {
     }
     catch const e {
         thrown = true
-        assert e.value == "generator"
+        assert e.value instanceof generator_end
     }
     assert thrown
 }
@@ -368,7 +371,7 @@ do {
     }
     catch const e {
         thrown = true
-        assert e.value == "generator"
+        assert e.value instanceof generator_end
     }
     assert thrown
 }

@@ -31,7 +31,9 @@ fun expect_fail(function)
     }
     catch const e {
         failed = true
-        e.print()
+        if lang.args.size > 1 && lang.args[1] == "-print" {
+            e.print()
+        }
     }
     assert failed
 }

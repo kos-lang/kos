@@ -225,17 +225,18 @@ int KOS_context_init(KOS_CONTEXT *ctx,
         ctx->allocator.str_oom_id = str;
     }
 
-    TRY_OBJID(ctx->object_prototype    = KOS_new_object_with_prototype(frame, KOS_BADPTR));
-    TRY_OBJID(ctx->number_prototype    = KOS_new_object(frame));
-    TRY_OBJID(ctx->integer_prototype   = KOS_new_object_with_prototype(frame, ctx->number_prototype));
-    TRY_OBJID(ctx->float_prototype     = KOS_new_object_with_prototype(frame, ctx->number_prototype));
-    TRY_OBJID(ctx->string_prototype    = KOS_new_object(frame));
-    TRY_OBJID(ctx->boolean_prototype   = KOS_new_object(frame));
-    TRY_OBJID(ctx->void_prototype      = KOS_new_object(frame));
-    TRY_OBJID(ctx->array_prototype     = KOS_new_object(frame));
-    TRY_OBJID(ctx->buffer_prototype    = KOS_new_object(frame));
-    TRY_OBJID(ctx->function_prototype  = KOS_new_object(frame));
-    TRY_OBJID(ctx->exception_prototype = KOS_new_object(frame));
+    TRY_OBJID(ctx->object_prototype        = KOS_new_object_with_prototype(frame, KOS_BADPTR));
+    TRY_OBJID(ctx->number_prototype        = KOS_new_object(frame));
+    TRY_OBJID(ctx->integer_prototype       = KOS_new_object_with_prototype(frame, ctx->number_prototype));
+    TRY_OBJID(ctx->float_prototype         = KOS_new_object_with_prototype(frame, ctx->number_prototype));
+    TRY_OBJID(ctx->string_prototype        = KOS_new_object(frame));
+    TRY_OBJID(ctx->boolean_prototype       = KOS_new_object(frame));
+    TRY_OBJID(ctx->void_prototype          = KOS_new_object(frame));
+    TRY_OBJID(ctx->array_prototype         = KOS_new_object(frame));
+    TRY_OBJID(ctx->buffer_prototype        = KOS_new_object(frame));
+    TRY_OBJID(ctx->function_prototype      = KOS_new_object(frame));
+    TRY_OBJID(ctx->exception_prototype     = KOS_new_object(frame));
+    TRY_OBJID(ctx->generator_end_prototype = KOS_new_object(frame));
 
     TRY_OBJID(ctx->init_module.name         = KOS_context_get_cstring(frame, str_init));
     TRY_OBJID(ctx->init_module.globals      = KOS_new_array(frame, 0));
@@ -680,6 +681,17 @@ _error:
         array = KOS_BADPTR;
 
     return array;
+}
+
+void KOS_raise_generator_end(KOS_FRAME frame)
+{
+    KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
+
+    const KOS_OBJ_ID exception =
+            KOS_new_object_with_prototype(frame, ctx->generator_end_prototype);
+
+    if ( ! IS_BAD_PTR(exception))
+        KOS_raise_exception(frame, exception);
 }
 
 int KOS_get_integer(KOS_FRAME  frame,

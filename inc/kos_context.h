@@ -94,6 +94,7 @@ struct _KOS_CONTEXT {
     KOS_OBJ_ID                     buffer_prototype;
     KOS_OBJ_ID                     function_prototype;
     KOS_OBJ_ID                     exception_prototype;
+    KOS_OBJ_ID                     generator_end_prototype;
 
     KOS_ATOMIC(void *)             prototypes;
     KOS_ATOMIC(uint32_t)           prototypes_lock;
@@ -172,6 +173,8 @@ KOS_OBJ_ID KOS_get_exception(KOS_FRAME frame);
 
 KOS_OBJ_ID KOS_format_exception(KOS_FRAME  frame,
                                 KOS_OBJ_ID exception);
+
+void KOS_raise_generator_end(KOS_FRAME frame);
 
 /* TODO move to utils */
 KOS_OBJ_ID KOS_get_file_name(KOS_FRAME  frame,

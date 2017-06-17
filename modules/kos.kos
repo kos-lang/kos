@@ -36,55 +36,48 @@ fun lexer(input)
         throw "\(token.line):\(token.column): \(str)"
     }
 
-    try {
-        loop {
-            var token = next()
+    loop {
+        var token = next()
 
-            switch token.sep {
+        switch token.sep {
 
-                sep_paren_open {
-                    save(token, sep_paren_close)
+            sep_paren_open {
+                save(token, sep_paren_close)
+            }
+
+            sep_square_open {
+                save(token, sep_square_close)
+            }
+
+            sep_curly_open {
+                save(token, sep_curly_close)
+            }
+
+            sep_paren_close  fallthrough
+            sep_square_close fallthrough
+            sep_curly_close {
+                if ! brackets.size {
+                    throw_token(token, "unexpected '\(token.token)'")
                 }
 
-                sep_square_open {
-                    save(token, sep_square_close)
+                const expected_sep, open_type = brackets.pop()
+
+                if token.sep != expected_sep {
+                    throw_token(token, "expected '\(expected_sep)'")
                 }
 
-                sep_curly_open {
-                    save(token, sep_curly_close)
-                }
-
-                sep_paren_close  fallthrough
-                sep_square_close fallthrough
-                sep_curly_close {
-                    if ! brackets.size {
-                        throw_token(token, "unexpected '\(token.token)'")
-                    }
-
-                    const expected_sep, open_type = brackets.pop()
-
-                    if token.sep != expected_sep {
-                        throw_token(token, "expected '\(expected_sep)'")
-                    }
-
-                    if open_type == token_string_open {
-                        token = next(continue_string)
-                    }
-                }
-
-                ... {
-                    if token.type == token_string_open {
-                        save(token, sep_paren_close)
-                    }
+                if open_type == token_string_open {
+                    token = next(continue_string)
                 }
             }
 
-            yield token
+            ... {
+                if token.type == token_string_open {
+                    save(token, sep_paren_close)
+                }
+            }
         }
-    }
-    catch const e {
-        if e.value != "generator" {
-            throw e
-        }
+
+        yield token
     }
 }

@@ -60,7 +60,7 @@ static const char str_err_unsup_operand_types[]       = "unsupported operand typ
 do {                                                                         \
     static const char str_name[] = #name;                                    \
     KOS_OBJ_ID        str        = KOS_context_get_cstring(frame, str_name); \
-    KOS_CONTEXT      *ctx        = frame->module->context;                   \
+    KOS_CONTEXT      *ctx        = KOS_context_from_frame(frame);            \
     TRY(_create_constructor(frame,                                           \
                             str,                                             \
                             _##name##_constructor,                           \
@@ -626,6 +626,14 @@ static KOS_OBJ_ID _exception_constructor(KOS_FRAME  frame,
         exception = KOS_array_read(frame, args_obj, 0);
 
     KOS_raise_exception(frame, exception);
+    return KOS_BADPTR;
+}
+
+static KOS_OBJ_ID _generator_end_constructor(KOS_FRAME  frame,
+                                             KOS_OBJ_ID this_obj,
+                                             KOS_OBJ_ID args_obj)
+{
+    KOS_raise_generator_end(frame);
     return KOS_BADPTR;
 }
 
@@ -1951,6 +1959,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(string);
     TRY_CREATE_CONSTRUCTOR(void);
     TRY_CREATE_CONSTRUCTOR(exception);
+    TRY_CREATE_CONSTRUCTOR(generator_end);
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "insert_array",  _insert_array,      2);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "fill",          _fill,              1);

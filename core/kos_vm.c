@@ -40,7 +40,6 @@
 static const char str_err_args_not_array[]      = "function arguments are not an array";
 static const char str_err_cannot_yield[]        = "function is not a generator";
 static const char str_err_div_by_zero[]         = "division by zero";
-static const char str_err_generator_end[]       = "generator";
 static const char str_err_generator_running[]   = "generator is running";
 static const char str_err_invalid_byte_value[]  = "buffer element value out of range";
 static const char str_err_invalid_index[]       = "index out of range";
@@ -50,6 +49,7 @@ static const char str_err_not_function[]        = "object is not a function";
 static const char str_err_not_generator[]       = "function is not a generator";
 static const char str_err_too_few_args[]        = "not enough arguments passed to a function";
 static const char str_err_unsup_operand_types[] = "unsupported operand types";
+static const char str_value[]                   = "value";
 
 #define NEW_THIS ((KOS_OBJ_ID)(intptr_t)0xC001)
 
@@ -554,6 +554,33 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
     return ret;
 }
 
+static int _is_generator_end_exception(KOS_FRAME frame)
+{
+    KOS_CONTEXT *const ctx       = KOS_context_from_frame(frame);
+    const KOS_OBJ_ID   exception = KOS_get_exception(frame);
+    KOS_OBJ_ID         value;
+
+    if (KOS_get_prototype(frame, exception) != ctx->exception_prototype)
+        return 0;
+
+    KOS_clear_exception(frame);
+
+    value = KOS_get_property(frame, exception, KOS_context_get_cstring(frame, str_value));
+
+    if (IS_BAD_PTR(value)) {
+        KOS_clear_exception(frame);
+        KOS_raise_exception(frame, exception);
+        return 0;
+    }
+
+    if (KOS_get_prototype(frame, value) != ctx->generator_end_prototype) {
+        KOS_raise_exception(frame, exception);
+        return 0;
+    }
+
+    return 1;
+}
+
 static int _init_registers(KOS_FRAME     stack_frame,
                            KOS_FUNCTION *func,
                            KOS_OBJ_ID    regs,
@@ -746,8 +773,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             RAISE_EXCEPTION(str_err_generator_running);
 
         default:
-            assert(state == KOS_GEN_DONE);
-            RAISE_EXCEPTION(str_err_generator_end);
+            assert(state == KOS_GEN_DONE); KOS_raise_generator_end(frame);
     }
 
 _error:
@@ -776,13 +802,8 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
             if (new_stack_frame->yield_reg == KOS_CAN_YIELD) {
                 *state  = KOS_GEN_DONE;
                 func->state = KOS_GEN_DONE;
-                if (instr != INSTR_CALL_GEN) {
-                    if (IS_BAD_PTR(new_stack_frame->retval))
-                        /* TODO use prototype */
-                        KOS_raise_exception_cstring(frame, str_err_generator_end);
-                    else
-                        KOS_raise_exception(frame, new_stack_frame->retval);
-                }
+                if (instr != INSTR_CALL_GEN)
+                    KOS_raise_generator_end(frame);
             }
             else {
                 const enum _KOS_FUNCTION_STATE end_state = func->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
@@ -2212,13 +2233,20 @@ static int _exec_function(KOS_FRAME frame)
 
                         out = _finish_call(frame, instr, func, this_obj, new_stack_frame, &state);
 
-                        if (instr == INSTR_CALL_GEN && ! error) {
-                            const KOS_OBJ_ID result = KOS_BOOL(state == KOS_GEN_DONE);
-                            if (rthis == rdest)
-                                out = result;
-                            else {
-                                assert(rthis < regs_array->size);
-                                regs[rthis] = result;
+                        if (instr == INSTR_CALL_GEN) {
+                            if (error == KOS_ERROR_EXCEPTION && state == KOS_GEN_DONE
+                                    && _is_generator_end_exception(frame)) {
+                                KOS_clear_exception(frame);
+                                error = KOS_SUCCESS;
+                            }
+                            if ( ! error) {
+                                const KOS_OBJ_ID result = KOS_BOOL(state == KOS_GEN_DONE);
+                                if (rthis == rdest)
+                                    out = result;
+                                else {
+                                    assert(rthis < regs_array->size);
+                                    regs[rthis] = result;
+                                }
                             }
                         }
                     }
