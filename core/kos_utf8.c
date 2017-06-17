@@ -149,11 +149,11 @@ static uint32_t _parse_escape_sequence(const char **str_ptr,
         }
         else if (esc_type == '0')
             code = 0;
-        else if (esc_type == KOS_ET_INVALID) {
+        else if (esc_type == KOS_ET_INVALID || esc_type == KOS_ET_INTERPOLATE) {
             --str;
             code = KOS_NOT_ESC;
         }
-        else if (esc_type != KOS_ET_INTERPOLATE)
+        else
             code = (uint8_t)esc_type;
     }
 

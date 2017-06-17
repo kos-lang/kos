@@ -36,6 +36,8 @@
 
 static const char str_column[]             = "column";
 static const char str_err_not_buffer[]     = "object is not a buffer";
+static const char str_err_not_paren[]      = "previous token was not ')'";
+static const char str_err_invalid_arg[]    = "invalid argument";
 static const char str_format_colon[]       = ":";
 static const char str_format_colon_space[] = ": ";
 static const char str_format_parse_error[] = "parse error ";
@@ -43,25 +45,34 @@ static const char str_keyword[]            = "keyword";
 static const char str_line[]               = "line";
 static const char str_op[]                 = "op";
 static const char str_sep[]                = "sep";
+static const char str_source[]             = "source";
 static const char str_token[]              = "token";
 static const char str_type[]               = "type";
 
-struct _KOS_LEXER_OBJECT {
-    KOS_CUSTOM         custom;
-    struct _KOS_LEXER *lexer;
-    uint8_t           *last_buf;
+struct _LEXER {
+    struct _KOS_LEXER lexer;
+    struct _KOS_TOKEN token;
+    uint8_t          *last_buf;
 };
+
+static void _finalize(KOS_FRAME frame,
+                      void     *priv)
+{
+    if (priv)
+        _KOS_free_buffer(frame, priv, sizeof(struct _LEXER));
+}
 
 static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
                          KOS_OBJ_ID regs_obj,
                          KOS_OBJ_ID args_obj)
 {
-    int                       error  = KOS_SUCCESS;
-    KOS_OBJ_ID                retval = KOS_BADPTR;
+    int                       error      = KOS_SUCCESS;
+    KOS_OBJ_ID                retval     = KOS_BADPTR;
     KOS_OBJ_ID                lexer_obj_id;
-    struct _KOS_LEXER_OBJECT *lexer;
-    struct _KOS_TOKEN         token;
+    KOS_OBJ_ID                source     = KOS_context_get_cstring(frame, str_source);
+    struct _LEXER            *lexer;
     uint8_t                  *buf_data;
+    enum _KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
 
@@ -69,55 +80,91 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
     assert( ! IS_BAD_PTR(lexer_obj_id));
     TRY_OBJID(lexer_obj_id);
 
-    /* On first invocation instantiate the lexer */
-    if (GET_OBJ_SUBTYPE(lexer_obj_id) != OBJ_CUSTOM) {
+    /* TODO improve passing args for the first time to built-in generators */
+
+    /* Instantiate the lexer on first invocation */
+    if (GET_OBJ_TYPE(lexer_obj_id) != OBJ_OBJECT ||
+        ! KOS_object_get_private(*OBJPTR(OBJECT, lexer_obj_id))) {
 
         KOS_OBJ_ID init_arg = lexer_obj_id;
         uint32_t   buf_size;
 
+        /* TODO support OBJ_STRING as argument */
+
         if (GET_OBJ_TYPE(init_arg) != OBJ_BUFFER)
             RAISE_EXCEPTION(str_err_not_buffer);
 
-        lexer_obj_id = KOS_new_custom(frame, (unsigned)sizeof(struct _KOS_LEXER_OBJECT));
+        lexer_obj_id = KOS_new_object(frame);
         TRY_OBJID(lexer_obj_id);
 
-        lexer = (struct _KOS_LEXER_OBJECT *)OBJPTR(CUSTOM, lexer_obj_id);
-
-        lexer->lexer = (struct _KOS_LEXER *)_KOS_alloc_buffer(frame, sizeof(struct _KOS_LEXER));
-        if (!lexer->lexer)
+        lexer = (struct _LEXER *)_KOS_alloc_buffer(frame, sizeof(struct _LEXER));
+        if (!lexer)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+        OBJPTR(OBJECT, lexer_obj_id)->finalize = _finalize;
+
+        KOS_object_set_private(*OBJPTR(OBJECT, lexer_obj_id), lexer);
 
         buf_size = KOS_get_buffer_size(init_arg);
         buf_data = KOS_buffer_data(init_arg);
 
-        _KOS_lexer_init(lexer->lexer, 0, (char *)buf_data, (char *)buf_data + buf_size);
+        _KOS_lexer_init(&lexer->lexer, 0, (char *)buf_data, (char *)buf_data + buf_size);
 
-        lexer->custom.owned = init_arg;
-        lexer->last_buf     = buf_data;
+        TRY(KOS_set_property(frame, lexer_obj_id, source, init_arg));
+
+        lexer->last_buf = buf_data;
 
         TRY(KOS_array_write(frame, regs_obj, 0, lexer_obj_id));
     }
     else {
-        lexer = (struct _KOS_LEXER_OBJECT *)OBJPTR(CUSTOM, lexer_obj_id);
+        KOS_OBJ_ID buf_obj_id;
 
-        buf_data = KOS_buffer_data(lexer->custom.owned);
+        assert(GET_OBJ_TYPE(lexer_obj_id) == OBJ_OBJECT);
+
+        buf_obj_id = KOS_get_property(frame, lexer_obj_id, source);
+        TRY_OBJID(buf_obj_id);
+
+        lexer = (struct _LEXER *)KOS_object_get_private(*OBJPTR(OBJECT, lexer_obj_id));
+
+        if (KOS_get_array_size(args_obj) > 0) {
+
+            int64_t    value;
+            KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
+
+            TRY_OBJID(arg);
+
+            TRY(KOS_get_integer(frame, arg, &value));
+
+            if (value != 0 && value != 1)
+                RAISE_EXCEPTION(str_err_invalid_arg);
+
+            if (value) {
+                next_token = NT_CONTINUE_STRING;
+
+                if (lexer->token.sep != ST_PAREN_CLOSE)
+                    RAISE_EXCEPTION(str_err_not_paren);
+
+                _KOS_lexer_unget_token(&lexer->lexer, &lexer->token);
+            }
+        }
+
+        buf_data = KOS_buffer_data(buf_obj_id);
 
         /* Update pointers if the buffer's data storage was reallocated */
         if (buf_data != lexer->last_buf) {
             const intptr_t delta = (intptr_t)(buf_data - lexer->last_buf);
 
-            lexer->lexer->buf            += delta;
-            lexer->lexer->buf_end        += delta;
-            lexer->lexer->prefetch_begin += delta;
-            lexer->lexer->prefetch_end   += delta;
-            lexer->last_buf              =  buf_data;
+            lexer->lexer.buf            += delta;
+            lexer->lexer.buf_end        += delta;
+            lexer->lexer.prefetch_begin += delta;
+            lexer->lexer.prefetch_end   += delta;
+            lexer->last_buf             =  buf_data;
         }
     }
 
-    assert( ! lexer->lexer->error_str);
+    assert( ! lexer->lexer.error_str);
 
-    /* TODO string continuations? */
-    error = _KOS_lexer_next_token(lexer->lexer, NT_ANY, &token);
+    error = _KOS_lexer_next_token(&lexer->lexer, next_token, &lexer->token);
 
     if (error) {
         KOS_ATOMIC(KOS_OBJ_ID) parts[6];
@@ -126,13 +173,13 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
         assert(error == KOS_ERROR_SCANNING_FAILED);
 
         parts[0] = KOS_context_get_cstring(frame, str_format_parse_error);
-        parts[1] = KOS_object_to_string(frame, TO_SMALL_INT((int)lexer->lexer->pos.line));
+        parts[1] = KOS_object_to_string(frame, TO_SMALL_INT((int)lexer->lexer.pos.line));
         TRY_OBJID(parts[1]);
         parts[2] = KOS_context_get_cstring(frame, str_format_colon);
-        parts[3] = KOS_object_to_string(frame, TO_SMALL_INT((int)lexer->lexer->pos.column));
+        parts[3] = KOS_object_to_string(frame, TO_SMALL_INT((int)lexer->lexer.pos.column));
         TRY_OBJID(parts[3]);
         parts[4] = KOS_context_get_cstring(frame, str_format_colon_space);
-        parts[5] = KOS_new_cstring(frame, lexer->lexer->error_str);
+        parts[5] = KOS_new_cstring(frame, lexer->lexer.error_str);
         TRY_OBJID(parts[5]);
 
         exception = KOS_string_add_many(frame, parts, sizeof(parts)/sizeof(parts[0]));
@@ -142,14 +189,15 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    if (token.type != TT_EOF) {
+    if (lexer->token.type != TT_EOF) {
 
-        KOS_OBJ_ID value;
+        struct _KOS_TOKEN *token = &lexer->token;
+        KOS_OBJ_ID         value;
 
         KOS_OBJ_ID token_obj = KOS_new_object(frame);
         TRY_OBJID(token_obj);
 
-        value = KOS_new_string_esc(frame, token.begin, token.length);
+        value = KOS_new_string_esc(frame, token->begin, token->length);
         TRY_OBJID(value);
 
         TRY(KOS_set_property(frame,
@@ -160,32 +208,32 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
         TRY(KOS_set_property(frame,
                              token_obj,
                              KOS_context_get_cstring(frame, str_line),
-                             TO_SMALL_INT((int)token.pos.line)));
+                             TO_SMALL_INT((int)token->pos.line)));
 
         TRY(KOS_set_property(frame,
                              token_obj,
                              KOS_context_get_cstring(frame, str_column),
-                             TO_SMALL_INT((int)token.pos.column)));
+                             TO_SMALL_INT((int)token->pos.column)));
 
         TRY(KOS_set_property(frame,
                              token_obj,
                              KOS_context_get_cstring(frame, str_type),
-                             TO_SMALL_INT((int)token.type)));
+                             TO_SMALL_INT((int)token->type)));
 
         TRY(KOS_set_property(frame,
                              token_obj,
                              KOS_context_get_cstring(frame, str_keyword),
-                             TO_SMALL_INT((int)token.keyword)));
+                             TO_SMALL_INT((int)token->keyword)));
 
         TRY(KOS_set_property(frame,
                              token_obj,
                              KOS_context_get_cstring(frame, str_op),
-                             TO_SMALL_INT((int)token.op)));
+                             TO_SMALL_INT((int)token->op)));
 
         TRY(KOS_set_property(frame,
                              token_obj,
                              KOS_context_get_cstring(frame, str_sep),
-                             TO_SMALL_INT((int)token.sep)));
+                             TO_SMALL_INT((int)token->sep)));
 
         retval = token_obj;
     }
@@ -201,7 +249,7 @@ int _KOS_module_kos_init(KOS_FRAME frame)
 {
     int error = KOS_SUCCESS;
 
-    TRY_ADD_GENERATOR(frame, "lexer", _lexer, 1);
+    TRY_ADD_GENERATOR(frame, "raw_lexer", _lexer, 1);
 
     TRY_ADD_INTEGER_CONSTANT(frame, "version_major",        KOS_VERSION_MAJOR);
     TRY_ADD_INTEGER_CONSTANT(frame, "version_minor",        KOS_VERSION_MINOR);
@@ -314,6 +362,9 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "sep_square_close",     ST_SQUARE_CLOSE);
     TRY_ADD_INTEGER_CONSTANT(frame, "sep_curly_open",       ST_CURLY_OPEN);
     TRY_ADD_INTEGER_CONSTANT(frame, "sep_curly_close",      ST_CURLY_CLOSE);
+
+    TRY_ADD_INTEGER_CONSTANT(frame, "any_token",            NT_ANY);
+    TRY_ADD_INTEGER_CONSTANT(frame, "continue_string",      NT_CONTINUE_STRING);
 
 _error:
     return error;

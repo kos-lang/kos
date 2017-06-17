@@ -31,9 +31,7 @@ fun expect_fail(function)
     }
     catch const e {
         failed = true
-        if lang.args.size > 0 && lang.args[0] == "-print" {
-            e.print()
-        }
+        e.print()
     }
     assert failed
 }
@@ -49,12 +47,14 @@ do {
                        [ 18, "token_numeric",  "0x44"        ] ]
     var idx = 0
 
-    for var token in kos.lexer(buf) {
+    for var token in kos.raw_lexer(buf) {
         assert token.line   == 1
         assert token.column == expected[idx][0]
         assert token.type   == kos[expected[idx][1]]
         assert token.token  == expected[idx][2]
         idx += 1
+
+        # Force buffer reallocation in the middle of parsing
         if idx == 3 {
             buf.reserve(1024)
         }
@@ -67,7 +67,91 @@ do {
     expect_fail(fun {
         const buf = lang.buffer()
         buf.pack("s", "'")
-        const it = kos.lexer(buf)
+        const it = kos.raw_lexer(buf)
         it()
     })
+}
+
+do {
+    const lexer = lang.buffer().pack("s", ")hello\"") -> kos.raw_lexer
+
+    const t1 = lexer()
+    assert t1.line   == 1
+    assert t1.column == 1
+    assert t1.type   == kos.token_separator
+    assert t1.sep    == kos.sep_paren_close
+    assert t1.token  == ")"
+
+    const t2 = lexer(kos.continue_string)
+    assert t2.line   == 1
+    assert t2.column == 1
+    assert t2.type   == kos.token_string
+    assert t2.token  == ")hello\""
+
+    expect_fail(lexer)
+}
+
+do {
+    const lexer = lang.buffer().pack("s", ")str\"") -> kos.raw_lexer
+    const t     = lexer(kos.continue_string)
+
+    assert t.type  == kos.token_separator
+    assert t.sep   == kos.sep_paren_close
+    assert t.token == ")"
+}
+
+do {
+    const lexer = lang.buffer().pack("s", "\"a\\()b\"") -> kos.raw_lexer
+
+    const t1 = lexer()
+    assert t1.line   == 1
+    assert t1.column == 1
+    assert t1.type   == kos.token_string_open
+    assert t1.token  == "\"a\\("
+
+    const t2 = lexer(kos.any_token)
+    assert t2.line   == 1
+    assert t2.column == 5
+    assert t2.type   == kos.token_separator
+    assert t2.sep    == kos.sep_paren_close
+    assert t2.token  == ")"
+
+    const t3 = lexer(kos.continue_string)
+    assert t3.line   == 1
+    assert t3.column == 5
+    assert t3.type   == kos.token_string
+    assert t3.token  == ")b\""
+}
+
+do {
+    const lexer = lang.buffer().pack("s", "(str\"") -> kos.raw_lexer
+
+    const t1 = lexer()
+    expect_fail(λ->(lexer(kos.continue_string)))
+}
+
+do {
+    const lexer = lang.buffer().pack("s", "{([\"\\()\"])}") -> kos.lexer
+
+    const expected = [ [  1, "token_separator",   "sep_curly_open",   "{"     ],
+                       [  2, "token_separator",   "sep_paren_open",   "("     ],
+                       [  3, "token_separator",   "sep_square_open",  "["     ],
+                       [  4, "token_string_open", "sep_none",         "\"\\(" ],
+                       [  7, "token_string",      "sep_none",         ")\""   ],
+                       [  9, "token_separator",   "sep_square_close", "]"     ],
+                       [ 10, "token_separator",   "sep_paren_close",  ")"     ],
+                       [ 11, "token_separator",   "sep_curly_close",  "}"     ] ]
+
+    var idx = 0
+
+    for var token in lexer {
+        assert token.line   == 1
+        assert token.column == expected[idx][0]
+        assert token.type   == kos[expected[idx][1]]
+        assert token.sep    == kos[expected[idx][2]]
+        assert token.token  == expected[idx][3]
+        idx += 1
+    }
+
+    assert idx == 8
 }
