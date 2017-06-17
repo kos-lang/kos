@@ -24,30 +24,30 @@
 #include "../inc/kos_error.h"
 #include <assert.h>
 
-static const uint8_t _utf8_len[256] = {
+static const uint8_t _utf8_len[32] = {
     /* 0 .. 127 */
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1,
+    1, 1,
+    1, 1,
+    1, 1,
+    1, 1,
+    1, 1,
+    1, 1,
+    1, 1,
     /* 128 .. 191 */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0,
+    0, 0,
+    0, 0,
+    0, 0,
     /* 192 .. 223 */
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    2, 2,
+    2, 2,
     /* 224 .. 239 */
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    3, 3,
     /* 240 .. 247 */
-    4, 4, 4, 4, 4, 4, 4, 4,
+    4,
     /* 148 .. 255 */
-    0, 0, 0, 0, 0, 0, 0, 0
+    0
 };
 
 const char _KOS_escape_sequence_map[256] = {
@@ -179,7 +179,7 @@ unsigned _KOS_utf8_get_len(const char           *str,
             code = c;
         else {
 
-            unsigned code_len = _utf8_len[c];
+            unsigned code_len = _utf8_len[c >> 3];
 
             if (code_len == 0 || str + code_len - 1 > end) {
                 count = ~0U;
@@ -226,7 +226,7 @@ int _KOS_utf8_decode_8(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE e
         uint8_t c = (uint8_t)*(str++);
 
         if (c > 0x7F) {
-            int code_len = _utf8_len[c];
+            int code_len = _utf8_len[c >> 3];
 
             c &= (0x80U >> code_len) - 1;
             --code_len;
@@ -266,7 +266,7 @@ int _KOS_utf8_decode_16(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE 
         uint16_t c = (uint8_t)*(str++);
 
         if (c > 0x7F) {
-            int code_len = _utf8_len[c];
+            int code_len = _utf8_len[c >> 3];
 
             c &= (0x80U >> code_len) - 1;
             --code_len;
@@ -306,7 +306,7 @@ int _KOS_utf8_decode_32(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE 
         uint32_t c = (uint8_t)*(str++);
 
         if (c > 0x7F) {
-            int code_len = _utf8_len[c];
+            int code_len = _utf8_len[c >> 3];
 
             c &= (0x80U >> code_len) - 1;
             --code_len;
