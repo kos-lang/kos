@@ -36,8 +36,7 @@ fun lexer(input)
         throw "\(token.line):\(token.column): \(str)"
     }
 
-    loop {
-        var token = next()
+    for var token in next {
 
         switch token.sep {
 
