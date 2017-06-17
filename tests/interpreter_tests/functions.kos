@@ -1141,3 +1141,23 @@ do {
     assert unused_defaults(5) == 5
     assert count == 11
 }
+
+# test correct placement of arguments for generator with independent variables
+do {
+    fun args_and_indep_vars(input)
+    {
+        const brackets = input + 1
+
+        fun save()
+        {
+            return brackets
+        }
+
+        yield input
+        yield save
+    }
+    const it = args_and_indep_vars(12)
+    assert it()   == 12
+    assert it()() == 13
+    expect_fail(it)
+}

@@ -671,6 +671,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
             dest->min_args   = 0;
             dest->num_regs   = func->num_regs;
+            dest->args_reg   = func->args_reg;
             dest->instr_offs = func->instr_offs;
             dest->closures   = func->closures;
             dest->module     = func->module;
@@ -710,10 +711,10 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
             new_stack_frame = func->generator_stack_frame;
 
-            if ( ! func->handler)
-                gen_regs = _KOS_get_array_buffer(OBJPTR(ARRAY, new_stack_frame->registers));
-            else
+            if (func->handler)
                 *this_obj = new_stack_frame->registers;
+            else
+                gen_regs = _KOS_get_array_buffer(OBJPTR(ARRAY, new_stack_frame->registers));
 
             if (state == KOS_GEN_ACTIVE) {
 
@@ -777,6 +778,7 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
                 func->state = KOS_GEN_DONE;
                 if (instr != INSTR_CALL_GEN) {
                     if (IS_BAD_PTR(new_stack_frame->retval))
+                        /* TODO use prototype */
                         KOS_raise_exception_cstring(frame, str_err_generator_end);
                     else
                         KOS_raise_exception(frame, new_stack_frame->retval);
