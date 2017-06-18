@@ -1766,7 +1766,7 @@ static KOS_OBJ_ID _ends_with(KOS_FRAME  frame,
             ? KOS_FALSE : KOS_TRUE;
 
 _error:
-    return ret;
+    return error ? KOS_BADPTR : ret;
 }
 
 static KOS_OBJ_ID _get_char_code(KOS_FRAME  frame,
@@ -1827,7 +1827,7 @@ static KOS_OBJ_ID _starts_with(KOS_FRAME  frame,
             ? KOS_FALSE : KOS_TRUE;
 
 _error:
-    return ret;
+    return error ? KOS_BADPTR : ret;
 }
 
 static KOS_OBJ_ID _get_string_size(KOS_FRAME  frame,

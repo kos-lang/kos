@@ -728,7 +728,7 @@ static int _strcmp_8_16(KOS_STRING *a,
             }
         }
         else {
-            result = a_len - b_len;
+            result = (int)(a_len - b_len);
             break;
         }
         ++pa;
@@ -761,7 +761,7 @@ static int _strcmp_8_32(KOS_STRING *a,
             }
         }
         else {
-            result = a_len - b_len;
+            result = (int)(a_len - b_len);
             break;
         }
         ++pa;
@@ -794,7 +794,7 @@ static int _strcmp_16_32(KOS_STRING *a,
             }
         }
         else {
-            result = a_len - b_len;
+            result = (int)(a_len - b_len);
             break;
         }
         ++pa;
