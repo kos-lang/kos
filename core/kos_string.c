@@ -24,6 +24,7 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
+#include "kos_math.h"
 #include "kos_memory.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
@@ -536,8 +537,8 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
 
 KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
                             KOS_OBJ_ID obj_id,
-                            int64_t    idx_a,
-                            int64_t    idx_b)
+                            int64_t    begin,
+                            int64_t    end)
 {
     KOS_STRING *new_str = 0;
 
@@ -552,29 +553,29 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
         const uint8_t                   *buf;
 
         if (len) {
-            if (idx_a < 0)
-                idx_a += len;
+            if (begin < 0)
+                begin += len;
 
-            if (idx_b < 0)
-                idx_b += len;
+            if (end < 0)
+                end += len;
 
-            if (idx_a < 0)
-                idx_a = 0;
+            if (begin < 0)
+                begin = 0;
 
-            if (idx_b > len)
-                idx_b = len;
+            if (end > len)
+                end = len;
 
-            if (idx_b < idx_a)
-                idx_b = idx_a;
+            if (end < begin)
+                end = begin;
 
             {
-                const int64_t new_len_64 = idx_b - idx_a;
+                const int64_t new_len_64 = end - begin;
                 assert(new_len_64 <= 0xFFFF);
                 new_len = (unsigned)new_len_64;
             }
 
             if (new_len) {
-                buf = (const uint8_t *)_KOS_get_string_buffer(str) + (idx_a << elem_size);
+                buf = (const uint8_t *)_KOS_get_string_buffer(str) + (begin << elem_size);
 
                 if (str->flags == KOS_STRING_LOCAL || (new_len << elem_size) <= sizeof(str->data)) {
                     new_str = _new_empty_string(frame, new_len, elem_size);
@@ -705,11 +706,15 @@ unsigned KOS_string_get_char_code(KOS_FRAME  frame,
 }
 
 static int _strcmp_8_16(KOS_STRING *a,
-                        KOS_STRING *b)
+                        unsigned    a_begin,
+                        unsigned    a_len,
+                        KOS_STRING *b,
+                        unsigned    b_begin,
+                        unsigned    b_len)
 {
-    const unsigned  cmp_len = a->length < b->length ? a->length : b->length;
-    const uint8_t  *pa      = (const uint8_t  *)_KOS_get_string_buffer(a);
-    const uint16_t *pb      = (const uint16_t *)_KOS_get_string_buffer(b);
+    const unsigned  cmp_len = KOS_min(a_len, b_len);
+    const uint8_t  *pa      = (const uint8_t  *)_KOS_get_string_buffer(a) + a_begin;
+    const uint16_t *pb      = (const uint16_t *)_KOS_get_string_buffer(b) + b_begin;
     const uint8_t  *pend    = pa + cmp_len;
     int             result  = 0;
 
@@ -723,7 +728,7 @@ static int _strcmp_8_16(KOS_STRING *a,
             }
         }
         else {
-            result = a->length - b->length;
+            result = a_len - b_len;
             break;
         }
         ++pa;
@@ -734,11 +739,15 @@ static int _strcmp_8_16(KOS_STRING *a,
 }
 
 static int _strcmp_8_32(KOS_STRING *a,
-                        KOS_STRING *b)
+                        unsigned    a_begin,
+                        unsigned    a_len,
+                        KOS_STRING *b,
+                        unsigned    b_begin,
+                        unsigned    b_len)
 {
-    const unsigned  cmp_len = a->length < b->length ? a->length : b->length;
-    const uint8_t  *pa      = (const uint8_t  *)_KOS_get_string_buffer(a);
-    const uint32_t *pb      = (const uint32_t *)_KOS_get_string_buffer(b);
+    const unsigned  cmp_len = KOS_min(a_len, b_len);
+    const uint8_t  *pa      = (const uint8_t  *)_KOS_get_string_buffer(a) + a_begin;
+    const uint32_t *pb      = (const uint32_t *)_KOS_get_string_buffer(b) + b_begin;
     const uint8_t  *pend    = pa + cmp_len;
     int             result  = 0;
 
@@ -752,7 +761,7 @@ static int _strcmp_8_32(KOS_STRING *a,
             }
         }
         else {
-            result = a->length - b->length;
+            result = a_len - b_len;
             break;
         }
         ++pa;
@@ -763,11 +772,15 @@ static int _strcmp_8_32(KOS_STRING *a,
 }
 
 static int _strcmp_16_32(KOS_STRING *a,
-                         KOS_STRING *b)
+                         unsigned    a_begin,
+                         unsigned    a_len,
+                         KOS_STRING *b,
+                         unsigned    b_begin,
+                         unsigned    b_len)
 {
-    const unsigned  cmp_len = a->length < b->length ? a->length : b->length;
-    const uint16_t *pa      = (const uint16_t *)_KOS_get_string_buffer(a);
-    const uint32_t *pb      = (const uint32_t *)_KOS_get_string_buffer(b);
+    const unsigned  cmp_len = KOS_min(a_len, b_len);
+    const uint16_t *pa      = (const uint16_t *)_KOS_get_string_buffer(a) + a_begin;
+    const uint32_t *pb      = (const uint32_t *)_KOS_get_string_buffer(b) + b_begin;
     const uint16_t *pend    = pa + cmp_len;
     int             result  = 0;
 
@@ -781,7 +794,7 @@ static int _strcmp_16_32(KOS_STRING *a,
             }
         }
         else {
-            result = a->length - b->length;
+            result = a_len - b_len;
             break;
         }
         ++pa;
@@ -791,24 +804,31 @@ static int _strcmp_16_32(KOS_STRING *a,
     return result;
 }
 
-int KOS_string_compare(KOS_OBJ_ID obj_id_a,
-                       KOS_OBJ_ID obj_id_b)
+static int _compare_slice(KOS_STRING *str_a,
+                          unsigned    a_begin,
+                          unsigned    a_end,
+                          KOS_STRING *str_b,
+                          unsigned    b_begin,
+                          unsigned    b_end)
 {
-    KOS_STRING *str_a  = OBJPTR(STRING, obj_id_a);
-    KOS_STRING *str_b  = OBJPTR(STRING, obj_id_b);
-    int         result = 0;
+    int      result      = 0;
+    unsigned a_len       = a_end - a_begin;
+    unsigned b_len       = b_end - b_begin;
+    unsigned a_elem_size = str_a->elem_size;
+    unsigned b_elem_size = str_b->elem_size;
 
-    assert(GET_OBJ_TYPE(obj_id_a) == OBJ_STRING);
-    assert(GET_OBJ_TYPE(obj_id_b) == OBJ_STRING);
+    assert(a_end   <= str_a->length);
+    assert(a_begin <= a_end);
+    assert(b_end   <= str_b->length);
+    assert(b_begin <= b_end);
 
-    if (str_a->elem_size == str_b->elem_size) {
+    if (a_elem_size == b_elem_size) {
 
-        const unsigned cmp_len =
-                str_a->length < str_b->length ? str_a->length : str_b->length;
+        const unsigned cmp_len = KOS_min(a_len, b_len);
 
-        const uint8_t *pa    = (const uint8_t *)_KOS_get_string_buffer(str_a);
-        const uint8_t *pb    = (const uint8_t *)_KOS_get_string_buffer(str_b);
-        const unsigned num_b = cmp_len << str_a->elem_size;
+        const uint8_t *pa    = (const uint8_t *)_KOS_get_string_buffer(str_a) + (a_begin << a_elem_size);
+        const uint8_t *pb    = (const uint8_t *)_KOS_get_string_buffer(str_b) + (b_begin << a_elem_size);
+        const unsigned num_b = cmp_len << a_elem_size;
         const uint8_t *pend  = pa + num_b;
         const uint8_t *pend8 = (const uint8_t *)((uintptr_t)pend & ~(uintptr_t)7);
 
@@ -828,7 +848,7 @@ int KOS_string_compare(KOS_OBJ_ID obj_id_a,
             }
         }
 
-        switch (str_a->elem_size) {
+        switch (a_elem_size) {
 
             case KOS_STRING_ELEM_8:
                 while (pa < pend && *pa == *pb) {
@@ -853,7 +873,7 @@ int KOS_string_compare(KOS_OBJ_ID obj_id_a,
                 break;
 
             default: /* KOS_STRING_ELEM_32 */
-                assert(str_a->elem_size == KOS_STRING_ELEM_32);
+                assert(a_elem_size == KOS_STRING_ELEM_32);
                 while (pa < pend && *(const uint32_t *)pa == *(const uint32_t *)pb) {
                     pa += 4;
                     pb += 4;
@@ -868,33 +888,112 @@ int KOS_string_compare(KOS_OBJ_ID obj_id_a,
         if (pa < pend)
             result = _KOS_unicode_compare(ca, cb);
         else
-            result = (int)str_a->length - (int)str_b->length;
+            result = (int)a_len - (int)b_len;
     }
     else {
-        const int neg = str_a->elem_size < str_b->elem_size ? 1 : -1;
+        const int neg = a_elem_size < b_elem_size ? 1 : -1;
         if (neg < 0) {
+            unsigned    utmp;
             KOS_STRING *tmp = str_a;
             str_a           = str_b;
             str_b           = tmp;
+
+            utmp    = a_begin;
+            a_begin = b_begin;
+            b_begin = utmp;
+
+            utmp  = a_len;
+            a_len = b_len;
+            b_len = utmp;
+
+            utmp        = a_elem_size;
+            a_elem_size = b_elem_size;
+            b_elem_size = utmp;
         }
 
-        if (str_a->elem_size == KOS_STRING_ELEM_8) {
-            if (str_b->elem_size == KOS_STRING_ELEM_16)
-                result = _strcmp_8_16(str_a, str_b);
+        if (a_elem_size == KOS_STRING_ELEM_8) {
+            if (b_elem_size == KOS_STRING_ELEM_16)
+                result = _strcmp_8_16(str_a, a_begin, a_len, str_b, b_begin, b_len);
             else {
-                assert(str_b->elem_size == KOS_STRING_ELEM_32);
-                result = _strcmp_8_32(str_a, str_b);
+                assert(b_elem_size == KOS_STRING_ELEM_32);
+                result = _strcmp_8_32(str_a, a_begin, a_len, str_b, b_begin, b_len);
             }
         }
         else {
-            assert(str_a->elem_size == KOS_STRING_ELEM_16 && str_b->elem_size == KOS_STRING_ELEM_32);
-            result = _strcmp_16_32(str_a, str_b);
+            assert(a_elem_size == KOS_STRING_ELEM_16 && b_elem_size == KOS_STRING_ELEM_32);
+            result = _strcmp_16_32(str_a, a_begin, a_len, str_b, b_begin, b_len);
         }
 
         result *= neg;
     }
 
     return result;
+}
+
+int KOS_string_compare(KOS_OBJ_ID obj_id_a,
+                       KOS_OBJ_ID obj_id_b)
+{
+    unsigned len_a;
+    unsigned len_b;
+
+    assert(GET_OBJ_TYPE(obj_id_a) == OBJ_STRING);
+    assert(GET_OBJ_TYPE(obj_id_b) == OBJ_STRING);
+
+    len_a = KOS_get_string_length(obj_id_a);
+    len_b = KOS_get_string_length(obj_id_b);
+
+    return _compare_slice(OBJPTR(STRING, obj_id_a),
+                          0,
+                          len_a,
+                          OBJPTR(STRING, obj_id_b),
+                          0,
+                          len_b);
+}
+
+int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
+                             int64_t    a_begin,
+                             int64_t    a_end,
+                             KOS_OBJ_ID obj_id_b,
+                             int64_t    b_begin,
+                             int64_t    b_end)
+{
+    int64_t len_a;
+    int64_t len_b;
+
+    assert(GET_OBJ_TYPE(obj_id_a) == OBJ_STRING);
+    assert(GET_OBJ_TYPE(obj_id_b) == OBJ_STRING);
+
+    len_a = (int64_t)KOS_get_string_length(obj_id_a);
+    len_b = (int64_t)KOS_get_string_length(obj_id_b);
+
+    if (a_begin < 0)
+        a_begin += len_a;
+    if (a_end < 0)
+        a_end += len_a;
+    if (a_begin < 0)
+        a_begin = 0;
+    if (a_end > len_a)
+        a_end = len_a;
+    if (a_end < a_begin)
+        a_end = a_begin;
+
+    if (b_begin < 0)
+        b_begin += len_b;
+    if (b_end < 0)
+        b_end += len_b;
+    if (b_begin < 0)
+        b_begin = 0;
+    if (b_end > len_b)
+        b_end = len_b;
+    if (b_end < b_begin)
+        b_end = b_begin;
+
+    return _compare_slice(OBJPTR(STRING, obj_id_a),
+                          (unsigned)a_begin,
+                          (unsigned)a_end,
+                          OBJPTR(STRING, obj_id_b),
+                          (unsigned)b_begin,
+                          (unsigned)b_end);
 }
 
 uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)

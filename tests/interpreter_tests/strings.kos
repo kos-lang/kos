@@ -200,3 +200,38 @@ do {
     expect_fail(λ->(s.get_char_code(-4)))
     expect_fail(λ->(s.get_char_code(0x100000000)))
 }
+
+do {
+    assert "".starts_with("")
+    assert "a".starts_with("")
+    assert "ab".starts_with("ab")
+    assert "ab".starts_with("a")
+    assert ! "XAAAAAAAA".starts_with("A")
+    assert "XYZ\x{100}".starts_with("XY")
+    assert ! "XYZ\x{100}".starts_with("YZ")
+    assert "X\x{100}YZ".starts_with("X\x{100}")
+    assert ! "Y\x{100}XZ".starts_with("X\x{100}")
+    assert "XYZ\x{10000}".starts_with("XY")
+    assert ! "XYZ\x{10000}".starts_with("YZ")
+    assert "X\x{200}Z\x{10000}".starts_with("X\x{200}")
+    assert ! "X\x{200}Z\x{10000}".starts_with("\x{200}Z")
+    assert "X\x{10000}YZ".starts_with("X\x{10000}")
+    assert ! "Y\x{10000}XZ".starts_with("X\x{10000}")
+
+    expect_fail(λ->("".starts_with.apply(void, [""])))
+    expect_fail(λ->("".starts_with(void)))
+    expect_fail(λ->("".starts_with()))
+}
+
+do {
+    assert "".ends_with("")
+    assert "a".ends_with("")
+    assert "ab".ends_with("ab")
+    assert "ab".ends_with("b")
+    assert ! "ab".ends_with("a")
+    assert ! "ab".ends_with("ba")
+
+    expect_fail(λ->("".ends_with.apply(void, [""])))
+    expect_fail(λ->("".ends_with(void)))
+    expect_fail(λ->("".ends_with()))
+}

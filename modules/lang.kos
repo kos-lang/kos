@@ -29,6 +29,8 @@
  * Returns an iterator function, which produces subsequent elements of
  * the specified range.
  *
+ * `start`, `stop` and `step` arguments are integers or floats.
+ *
  * `start` specifies the first number returned by the iterator.  `start`
  * defaults to `0`.
  *

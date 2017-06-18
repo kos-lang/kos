@@ -1735,6 +1735,40 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+static KOS_OBJ_ID _ends_with(KOS_FRAME  frame,
+                             KOS_OBJ_ID this_obj,
+                             KOS_OBJ_ID args_obj)
+{
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID arg;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
+    unsigned   this_len;
+    unsigned   arg_len;
+
+    arg = KOS_array_read(frame, args_obj, 0);
+    TRY_OBJID(arg);
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(arg) != OBJ_STRING)
+        RAISE_EXCEPTION(str_err_not_string);
+
+    this_len = KOS_get_string_length(this_obj);
+    arg_len  = KOS_get_string_length(arg);
+
+    if (arg_len > this_len)
+        ret = KOS_FALSE;
+    else
+        ret = KOS_string_compare_slice(this_obj,
+                                       this_len - arg_len,
+                                       this_len,
+                                       arg,
+                                       0,
+                                       arg_len)
+            ? KOS_FALSE : KOS_TRUE;
+
+_error:
+    return ret;
+}
+
 static KOS_OBJ_ID _get_char_code(KOS_FRAME  frame,
                                  KOS_OBJ_ID this_obj,
                                  KOS_OBJ_ID args_obj)
@@ -1760,6 +1794,40 @@ static KOS_OBJ_ID _get_char_code(KOS_FRAME  frame,
 
 _error:
     return error ? KOS_BADPTR : ret;
+}
+
+static KOS_OBJ_ID _starts_with(KOS_FRAME  frame,
+                               KOS_OBJ_ID this_obj,
+                               KOS_OBJ_ID args_obj)
+{
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID arg;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
+    unsigned   this_len;
+    unsigned   arg_len;
+
+    arg = KOS_array_read(frame, args_obj, 0);
+    TRY_OBJID(arg);
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(arg) != OBJ_STRING)
+        RAISE_EXCEPTION(str_err_not_string);
+
+    this_len = KOS_get_string_length(this_obj);
+    arg_len  = KOS_get_string_length(arg);
+
+    if (arg_len > this_len)
+        ret = KOS_FALSE;
+    else
+        ret = KOS_string_compare_slice(this_obj,
+                                       0,
+                                       arg_len,
+                                       arg,
+                                       0,
+                                       arg_len)
+            ? KOS_FALSE : KOS_TRUE;
+
+_error:
+    return ret;
 }
 
 static KOS_OBJ_ID _get_string_size(KOS_FRAME  frame,
@@ -1987,8 +2055,10 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "registers",     _get_registers,     0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "size",          _get_code_size,     0);
 
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "ends_with",     _ends_with,         1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "get_char_code", _get_char_code,     1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "slice",         _slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "starts_with",   _starts_with,       1);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(string),    "size",          _get_string_size,   0);
 
     TRY_ADD_MEMBER_GENERATOR(frame, PROTO(void),      "iterator",      _iterator,          0);

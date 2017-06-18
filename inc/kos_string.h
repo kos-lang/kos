@@ -91,8 +91,8 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
 
 KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
                             KOS_OBJ_ID obj_id,
-                            int64_t    idx_a,
-                            int64_t    idx_b);
+                            int64_t    begin,
+                            int64_t    end);
 
 KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
                                KOS_OBJ_ID obj_id,
@@ -104,6 +104,13 @@ unsigned KOS_string_get_char_code(KOS_FRAME  frame,
 
 int KOS_string_compare(KOS_OBJ_ID obj_id_a,
                        KOS_OBJ_ID obj_id_b);
+
+int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
+                             int64_t    a_begin,
+                             int64_t    a_end,
+                             KOS_OBJ_ID obj_id_b,
+                             int64_t    b_begin,
+                             int64_t    b_end);
 
 uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id);
 
