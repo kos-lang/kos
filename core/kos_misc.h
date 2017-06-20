@@ -23,25 +23,9 @@
 #ifndef __KOS_MISC_H
 #define __KOS_MISC_H
 
-#include <stdint.h>
+#include "../inc/kos_utils.h"
 
 #define MAX_INT64 ( (int64_t)(((uint64_t)((int64_t)-1))>>1) )
-
-enum _KOS_NUMERIC_TYPE {
-    KOS_NON_NUMERIC,
-    KOS_INTEGER_VALUE,
-    KOS_FLOAT_VALUE
-};
-
-union _KOS_NUMERIC_VALUE {
-    int64_t i;
-    double  d;
-};
-
-struct _KOS_NUMERIC {
-    enum _KOS_NUMERIC_TYPE   type;
-    union _KOS_NUMERIC_VALUE u;
-};
 
 int _KOS_is_integer(const char *begin,
                     const char *end);

@@ -26,6 +26,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "kos_memory.h"
+#include "kos_misc.h"
 #include "kos_try.h"
 #include "kos_utf8.h"
 #include <assert.h>

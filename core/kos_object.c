@@ -25,10 +25,10 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_threads.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
-#include "kos_threads.h"
 #include "kos_try.h"
 
 /*

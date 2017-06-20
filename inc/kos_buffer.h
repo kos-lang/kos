@@ -24,7 +24,7 @@
 #define __KOS_BUFFER_H
 
 #include "kos_object_base.h"
-#include "../core/kos_threads.h"
+#include "kos_threads.h"
 #include <assert.h>
 
 struct _KOS_BUFFER_DATA {

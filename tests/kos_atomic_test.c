@@ -23,7 +23,7 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object_base.h"
-#include "../core/kos_threads.h"
+#include "../inc/kos_threads.h"
 #include <stdint.h>
 #include <stdio.h>
 

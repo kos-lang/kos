@@ -26,6 +26,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
 #include "kos_file.h"
 #include "kos_malloc.h"
@@ -33,7 +34,6 @@
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
-#include "kos_threads.h"
 #include "kos_try.h"
 #include <assert.h>
 #include <math.h>

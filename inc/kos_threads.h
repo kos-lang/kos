@@ -23,7 +23,7 @@
 #ifndef __KOS_THREADS_H
 #define __KOS_THREADS_H
 
-#include "../inc/kos_thread_primitives.h"
+#include <stdint.h>
 
 /* WAR bug in gcc 4.8 */
 #if defined(__GNUC__) && __GNUC__ == 4 && __GNUC_MINOR__ == 8 && !defined(__cplusplus) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
@@ -44,6 +44,21 @@
 #   elif defined(_MSC_VER) && _MSC_VER >= 1900
 #       define KOS_CPP11 1
 #   endif
+#endif
+
+struct _KOS_THREAD_OBJECT;
+typedef struct _KOS_THREAD_OBJECT *_KOS_THREAD;
+
+struct _KOS_STACK_FRAME;
+
+typedef void (*_KOS_THREAD_PROC)(struct _KOS_STACK_FRAME *frame,
+                                 void                    *cookie);
+
+#ifdef _WIN32
+typedef uint32_t _KOS_TLS_KEY;
+#else
+struct _KOS_TLS_OBJECT;
+typedef struct _KOS_TLS_OBJECT *_KOS_TLS_KEY;
 #endif
 
 /*==========================================================================*/

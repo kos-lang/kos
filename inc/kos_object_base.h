@@ -25,7 +25,7 @@
 
 #include <assert.h>
 #include <stdint.h>
-#include "../core/kos_threads.h"
+#include "kos_threads.h"
 
 enum KOS_OBJECT_TAG {
     OBJ_SMALL_INTEGER = 0x0,  /*   00 */

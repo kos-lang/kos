@@ -24,7 +24,7 @@
 #define __KOS_CONTEXT_H
 
 #include "kos_object_base.h"
-#include "kos_thread_primitives.h"
+#include "kos_threads.h"
 #include <stddef.h>
 
 struct _KOS_MODULE_LOAD_CHAIN;

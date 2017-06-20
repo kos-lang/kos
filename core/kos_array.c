@@ -24,12 +24,12 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_threads.h"
 #include "kos_math.h"
 #include "kos_misc.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
-#include "kos_threads.h"
 #include "kos_try.h"
 #include <assert.h>
 

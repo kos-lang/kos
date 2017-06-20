@@ -22,10 +22,10 @@
 
 #include "kos_memory.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_threads.h"
 #include "kos_config.h"
 #include "kos_debug.h"
 #include "kos_malloc.h"
-#include "kos_threads.h"
 #include <string.h>
 #include <assert.h>
 

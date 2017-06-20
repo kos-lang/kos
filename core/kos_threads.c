@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "kos_threads.h"
+#include "../inc/kos_threads.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "kos_debug.h"

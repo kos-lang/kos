@@ -24,9 +24,26 @@
 #define __KOS_UTILS_H
 
 #include "kos_object_base.h"
-#include "../core/kos_misc.h"
+#include <stdint.h>
+
+enum _KOS_NUMERIC_TYPE {
+    KOS_NON_NUMERIC,
+    KOS_INTEGER_VALUE,
+    KOS_FLOAT_VALUE
+};
+
+union _KOS_NUMERIC_VALUE {
+    int64_t i;
+    double  d;
+};
+
+struct _KOS_NUMERIC {
+    enum _KOS_NUMERIC_TYPE   type;
+    union _KOS_NUMERIC_VALUE u;
+};
 
 typedef struct _KOS_NUMERIC KOS_NUMERIC;
+
 struct _KOS_VECTOR;
 
 #ifdef __cplusplus

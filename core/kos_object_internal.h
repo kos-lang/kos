@@ -23,9 +23,9 @@
 #ifndef __KOS_OBJECT_INTERNAL_H
 #define __KOS_OBJECT_INTERNAL_H
 
-#include "kos_threads.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_threads.h"
 #include "kos_object_alloc.h"
 #include "kos_red_black.h"
 

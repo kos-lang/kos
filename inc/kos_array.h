@@ -24,7 +24,7 @@
 #define __KOS_ARRAY_H
 
 #include "kos_object_base.h"
-#include "../core/kos_threads.h"
+#include "kos_threads.h"
 #include <assert.h>
 
 #ifdef __cplusplus

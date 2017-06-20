@@ -21,15 +21,15 @@
  */
 
 #include "kos_object_alloc.h"
+#include "../inc/kos_context.h"
+#include "../inc/kos_error.h"
+#include "../inc/kos_string.h"
+#include "../inc/kos_threads.h"
 #include "kos_config.h"
 #include "kos_debug.h"
 #include "kos_malloc.h"
 #include "kos_memory.h"
 #include "kos_perf.h"
-#include "kos_threads.h"
-#include "../inc/kos_context.h"
-#include "../inc/kos_error.h"
-#include "../inc/kos_string.h"
 #include <stdio.h>
 #include <string.h>
 
