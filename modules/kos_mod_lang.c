@@ -1769,6 +1769,38 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+static KOS_OBJ_ID _find(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
+{
+    int        error   = KOS_SUCCESS;
+    int        pos     = 0;
+    KOS_OBJ_ID pattern = KOS_array_read(frame, args_obj, 0);
+
+    TRY_OBJID(pattern);
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(pattern) != OBJ_STRING)
+        RAISE_EXCEPTION(str_err_not_string);
+
+    if (KOS_get_array_size(args_obj) > 1) {
+
+        int64_t        pos64;
+        const unsigned len = KOS_get_string_length(this_obj);
+
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 1);
+        TRY_OBJID(arg);
+
+        TRY(KOS_get_integer(frame, arg, &pos64));
+
+        pos = (int)_KOS_fix_index(pos64, len);
+    }
+
+    TRY(KOS_string_find(frame, this_obj, pattern, &pos));
+
+_error:
+    return error ? KOS_BADPTR : TO_SMALL_INT(pos);
+}
+
 static KOS_OBJ_ID _get_char_code(KOS_FRAME  frame,
                                  KOS_OBJ_ID this_obj,
                                  KOS_OBJ_ID args_obj)
@@ -2056,6 +2088,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "size",          _get_code_size,     0);
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "ends_with",     _ends_with,         1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "find",          _find,              1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "get_char_code", _get_char_code,     1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "slice",         _slice,             2);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "starts_with",   _starts_with,       1);

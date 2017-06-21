@@ -81,6 +81,8 @@ int KOS_string_to_cstr_vec(KOS_FRAME           frame,
                            KOS_OBJ_ID          obj_id,
                            struct _KOS_VECTOR *str_vec);
 
+uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id);
+
 KOS_OBJ_ID KOS_string_add(KOS_FRAME  frame,
                           KOS_OBJ_ID obj_id_a,
                           KOS_OBJ_ID obj_id_b);
@@ -112,7 +114,14 @@ int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
                              int64_t    b_begin,
                              int64_t    b_end);
 
-uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id);
+// *pos contains starting search position on input
+// and found position on output.
+// The function returns KOS_SUCCESS if pattern is not found and
+// *pos is set to -1.
+int KOS_string_find(KOS_FRAME  frame,
+                    KOS_OBJ_ID obj_id_text,
+                    KOS_OBJ_ID obj_id_pattern,
+                    int       *pos);
 
 #ifdef __cplusplus
 }

@@ -235,3 +235,25 @@ do {
     expect_fail(λ->("".ends_with(void)))
     expect_fail(λ->("".ends_with()))
 }
+
+do {
+    assert "".find("")         == 0
+    assert "ab".find("")       == 0
+    assert "cd".find("", 1)    == 1
+    assert "efg".find("e")     == 0
+    assert "efg".find("f")     == 1
+    assert "efg".find("h")     == -1
+    assert "ABB".find("B", -2) == 1
+    assert "ABB".find("B", -1) == 2
+    assert "ABB".find("B", 2)  == 2
+    assert "h".find("", 10)    == 1
+    assert "h".find("", -10)   == 0
+
+    assert "alamalamamalalamakotaipsa".find("alamakota") == 12
+    assert "alamalamamalalamakota".find("alamakota")     == 12
+    assert "alamalamamalalamakot".find("alamakota")      == -1
+
+    expect_fail(λ->("".find.apply(void, [""])))
+    expect_fail(λ->("".find()))
+    expect_fail(λ->("".find(void)))
+}

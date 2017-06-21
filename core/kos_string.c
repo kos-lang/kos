@@ -415,6 +415,65 @@ int KOS_string_to_cstr_vec(KOS_FRAME           frame,
     return error;
 }
 
+uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
+{
+    uint32_t hash;
+
+    KOS_STRING *str = OBJPTR(STRING, obj_id);
+
+    assert( ! IS_BAD_PTR(obj_id));
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_STRING);
+
+    hash = KOS_atomic_read_u32(str->hash);
+
+    if (!hash) {
+
+        const void *buf = _KOS_get_string_buffer(str);
+
+        /* djb2a algorithm */
+
+        hash = 5381;
+
+        switch (str->elem_size) {
+
+            case KOS_STRING_ELEM_8: {
+                const uint8_t *s   = (uint8_t *)buf;
+                const uint8_t *end = s + str->length;
+
+                while (s < end)
+                    hash = (hash * 33U) ^ (uint32_t)*(s++);
+                break;
+            }
+
+            case KOS_STRING_ELEM_16: {
+                const uint16_t *s   = (uint16_t *)buf;
+                const uint16_t *end = s + str->length;
+
+                while (s < end)
+                    hash = (hash * 33U) ^ (uint32_t)*(s++);
+                break;
+            }
+
+            default: /* KOS_STRING_ELEM_32 */
+                assert(str->elem_size == KOS_STRING_ELEM_32);
+                {
+                    const uint32_t *s   = (uint32_t *)buf;
+                    const uint32_t *end = s + str->length;
+
+                    while (s < end)
+                        hash = (hash * 33U) ^ (uint32_t)*(s++);
+                }
+                break;
+        }
+
+        assert(hash);
+
+        KOS_atomic_write_u32(str->hash, hash);
+    }
+
+    return hash;
+}
+
 static void _init_empty_string(KOS_STRING *dest,
                                unsigned    offs,
                                KOS_STRING *src,
@@ -996,61 +1055,133 @@ int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
                           (unsigned)b_end);
 }
 
-uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
+struct _KOS_STRING_MIN_MAX {
+    uint32_t min_code;
+    uint32_t max_code;
+};
+
+static struct _KOS_STRING_MIN_MAX _find_min_max_code(KOS_OBJ_ID obj_id)
 {
-    uint32_t hash;
+    KOS_STRING                *str     = OBJPTR(STRING, obj_id);
+    struct _KOS_STRING_MIN_MAX min_max = { ~0U, 0U };
+    int                        len;
 
-    KOS_STRING *str = OBJPTR(STRING, obj_id);
-
-    assert( ! IS_BAD_PTR(obj_id));
     assert(GET_OBJ_TYPE(obj_id) == OBJ_STRING);
 
-    hash = KOS_atomic_read_u32(str->hash);
+    len = (int)KOS_get_string_length(obj_id);
 
-    if (!hash) {
+    assert(len > 0);
 
-        const void *buf = _KOS_get_string_buffer(str);
+    switch (str->elem_size) {
 
-        /* djb2a algorithm */
-
-        hash = 5381;
-
-        switch (str->elem_size) {
-
-            case KOS_STRING_ELEM_8: {
-                const uint8_t *s   = (uint8_t *)buf;
-                const uint8_t *end = s + str->length;
-
-                while (s < end)
-                    hash = (hash * 33U) ^ (uint32_t)*(s++);
-                break;
+        case KOS_STRING_ELEM_8: {
+            const uint8_t *buf = (const uint8_t *)_KOS_get_string_buffer(str);
+            const uint8_t *end = buf + len;
+            while (buf < end) {
+                const uint32_t c = *(buf++);
+                min_max.min_code = KOS_min(c, min_max.min_code);
+                min_max.max_code = KOS_max(c, min_max.max_code);
             }
-
-            case KOS_STRING_ELEM_16: {
-                const uint16_t *s   = (uint16_t *)buf;
-                const uint16_t *end = s + str->length;
-
-                while (s < end)
-                    hash = (hash * 33U) ^ (uint32_t)*(s++);
-                break;
-            }
-
-            default: /* KOS_STRING_ELEM_32 */
-                assert(str->elem_size == KOS_STRING_ELEM_32);
-                {
-                    const uint32_t *s   = (uint32_t *)buf;
-                    const uint32_t *end = s + str->length;
-
-                    while (s < end)
-                        hash = (hash * 33U) ^ (uint32_t)*(s++);
-                }
-                break;
+            break;
         }
 
-        assert(hash);
+        case KOS_STRING_ELEM_16: {
+            const uint16_t *buf = (const uint16_t *)_KOS_get_string_buffer(str);
+            const uint16_t *end = buf + len;
+            while (buf < end) {
+                const uint32_t c = *(buf++);
+                min_max.min_code = KOS_min(c, min_max.min_code);
+                min_max.max_code = KOS_max(c, min_max.max_code);
+            }
+            break;
+        }
 
-        KOS_atomic_write_u32(str->hash, hash);
+        default: {
+            const uint32_t *buf = (const uint32_t *)_KOS_get_string_buffer(str);
+            const uint32_t *end = buf + len;
+            assert(str->elem_size == KOS_STRING_ELEM_32);
+            while (buf < end) {
+                const uint32_t c = *(buf++);
+                min_max.min_code = KOS_min(c, min_max.min_code);
+                min_max.max_code = KOS_max(c, min_max.max_code);
+            }
+            break;
+        }
     }
 
-    return hash;
+    return min_max;
+}
+
+static void _string_find_brute_force(KOS_OBJ_ID obj_id_text,
+                                     KOS_OBJ_ID obj_id_pattern,
+                                     int       *pos)
+{
+    const unsigned text_len     = KOS_get_string_length(obj_id_text);
+    const unsigned pat_len      = KOS_get_string_length(obj_id_pattern);
+    unsigned       text_pos     = *pos;
+    const unsigned max_text_pos = text_len - pat_len;
+
+    while (text_pos <= max_text_pos) {
+
+        if (_compare_slice(OBJPTR(STRING, obj_id_text), text_pos, text_pos + pat_len,
+                           OBJPTR(STRING, obj_id_pattern), 0, pat_len) == 0) {
+
+            *pos = (int)text_pos;
+            return;
+        }
+
+        ++text_pos;
+    }
+
+    *pos = -1;
+}
+
+int KOS_string_find(KOS_FRAME  frame,
+                    KOS_OBJ_ID obj_id_text,
+                    KOS_OBJ_ID obj_id_pattern,
+                    int       *pos)
+{
+    int                        text_len;
+    int                        pattern_len;
+    int                        cur_pos;
+    struct _KOS_STRING_MIN_MAX min_max_code;
+    uint32_t                   num_codes;
+
+    if (GET_OBJ_TYPE(obj_id_text) != OBJ_STRING ||
+        GET_OBJ_TYPE(obj_id_pattern) != OBJ_STRING) {
+
+        KOS_raise_exception_cstring(frame, str_err_not_string);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    pattern_len = (int)KOS_get_string_length(obj_id_pattern);
+
+    if (pattern_len == 0)
+        return KOS_SUCCESS;
+
+    cur_pos  = *pos;
+    text_len = (int)KOS_get_string_length(obj_id_text);
+
+    if (cur_pos < 0 || cur_pos + pattern_len > text_len) {
+        *pos = -1;
+        return KOS_SUCCESS;
+    }
+
+    /*
+    if (pattern_len == 1)
+        return KOS_string_scan(frame, obj_id_text, obj_id_pattern, pos);
+    */
+
+    min_max_code = _find_min_max_code(obj_id_pattern);
+    num_codes    = min_max_code.max_code - min_max_code.min_code + 1;
+
+    if (num_codes > 4096) {
+        _string_find_brute_force(obj_id_text, obj_id_pattern, pos);
+        return KOS_SUCCESS;
+    }
+
+    /* TODO Implement Boyer-Moore or better algorithm */
+
+    _string_find_brute_force(obj_id_text, obj_id_pattern, pos);
+    return KOS_SUCCESS;
 }
