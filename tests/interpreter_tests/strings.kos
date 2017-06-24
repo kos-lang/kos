@@ -248,6 +248,17 @@ do {
     assert "ABB".find("B", 2)  == 2
     assert "h".find("", 10)    == 1
     assert "h".find("", -10)   == 0
+    assert "h".find("j", 10)   == -1
+    assert "h".find("j", -10)  == -1
+
+    assert "abXYcdXXYefXYYgh".find("XY")      == 2
+    assert "abXYcdXXYefXYYgh".find("XY", -99) == 2
+    assert "abXYcdXXYefXYYgh".find("XY", 2)   == 2
+    assert "abXYcdXXYefXYYgh".find("XY", 3)   == 7
+    assert "abXYcdXXYefXYYgh".find("XY", 7)   == 7
+    assert "abXYcdXXYefXYYgh".find("XY", 8)   == 11
+    assert "abXYcdXXYefXYYgh".find("XY", 11)  == 11
+    assert "abXYcdXXYefXYYgh".find("XY", 12)  == -1
 
     assert "alamalamamalalamakotaipsa".find("alamakota") == 12
     assert "alamalamamalalamakota".find("alamakota")     == 12
@@ -256,4 +267,27 @@ do {
     expect_fail(λ->("".find.apply(void, [""])))
     expect_fail(λ->("".find()))
     expect_fail(λ->("".find(void)))
+}
+
+do {
+    assert "".rfind("")         == 0
+    assert "ab".rfind("")       == 2
+    assert "ab".rfind("", 1)    == 1
+    assert "ab".rfind("", 10)   == 2
+    assert "ab".rfind("", -10)  == 0
+    assert "ab".rfind("x", 10)  == -1
+    assert "ab".rfind("x", -10) == -1
+
+    assert "abXYcdXXYefXYYgh".rfind("XY")     == 11
+    assert "abXYcdXXYefXYYgh".rfind("XY", 99) == 11
+    assert "abXYcdXXYefXYYgh".rfind("XY", 11) == 11
+    assert "abXYcdXXYefXYYgh".rfind("XY", 10) == 7
+    assert "abXYcdXXYefXYYgh".rfind("XY", 7)  == 7
+    assert "abXYcdXXYefXYYgh".rfind("XY", 6)  == 2
+    assert "abXYcdXXYefXYYgh".rfind("XY", 2)  == 2
+    assert "abXYcdXXYefXYYgh".rfind("XY", 1)  == -1
+
+    expect_fail(λ->("".rfind.apply(void, [""])))
+    expect_fail(λ->("".rfind()))
+    expect_fail(λ->("".rfind(void)))
 }

@@ -114,14 +114,18 @@ int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
                              int64_t    b_begin,
                              int64_t    b_end);
 
-// *pos contains starting search position on input
-// and found position on output.
-// The function returns KOS_SUCCESS if pattern is not found and
-// *pos is set to -1.
-int KOS_string_find(KOS_FRAME  frame,
-                    KOS_OBJ_ID obj_id_text,
-                    KOS_OBJ_ID obj_id_pattern,
-                    int       *pos);
+enum _KOS_FIND_DIR {
+    KOS_FIND_FORWARD,
+    KOS_FIND_REVERSE
+};
+
+// *pos contains starting search position on input and found position on output.
+// If pattern is not found, returns KOS_SUCCESS and sets *pos to -1.
+int KOS_string_find(KOS_FRAME          frame,
+                    KOS_OBJ_ID         obj_id_text,
+                    KOS_OBJ_ID         obj_id_pattern,
+                    enum _KOS_FIND_DIR reverse,
+                    int               *pos);
 
 #ifdef __cplusplus
 }

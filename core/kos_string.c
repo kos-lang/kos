@@ -1112,16 +1112,18 @@ static struct _KOS_STRING_MIN_MAX _find_min_max_code(KOS_OBJ_ID obj_id)
     return min_max;
 }
 
-static void _string_find_brute_force(KOS_OBJ_ID obj_id_text,
-                                     KOS_OBJ_ID obj_id_pattern,
-                                     int       *pos)
+static void _string_find_brute_force(KOS_OBJ_ID         obj_id_text,
+                                     KOS_OBJ_ID         obj_id_pattern,
+                                     enum _KOS_FIND_DIR reverse,
+                                     int               *pos)
 {
     const unsigned text_len     = KOS_get_string_length(obj_id_text);
     const unsigned pat_len      = KOS_get_string_length(obj_id_pattern);
     unsigned       text_pos     = *pos;
-    const unsigned max_text_pos = text_len - pat_len;
+    const unsigned end_text_pos = reverse ? ~0U : text_len - pat_len + 1U;
+    const unsigned delta        = reverse ? ~0U : 1U;
 
-    while (text_pos <= max_text_pos) {
+    while (text_pos != end_text_pos) {
 
         if (_compare_slice(OBJPTR(STRING, obj_id_text), text_pos, text_pos + pat_len,
                            OBJPTR(STRING, obj_id_pattern), 0, pat_len) == 0) {
@@ -1130,16 +1132,17 @@ static void _string_find_brute_force(KOS_OBJ_ID obj_id_text,
             return;
         }
 
-        ++text_pos;
+        text_pos += delta;
     }
 
     *pos = -1;
 }
 
-int KOS_string_find(KOS_FRAME  frame,
-                    KOS_OBJ_ID obj_id_text,
-                    KOS_OBJ_ID obj_id_pattern,
-                    int       *pos)
+int KOS_string_find(KOS_FRAME          frame,
+                    KOS_OBJ_ID         obj_id_text,
+                    KOS_OBJ_ID         obj_id_pattern,
+                    enum _KOS_FIND_DIR reverse,
+                    int               *pos)
 {
     int                        text_len;
     int                        pattern_len;
@@ -1169,19 +1172,19 @@ int KOS_string_find(KOS_FRAME  frame,
 
     /*
     if (pattern_len == 1)
-        return KOS_string_scan(frame, obj_id_text, obj_id_pattern, pos);
+        return KOS_string_scan(frame, obj_id_text, obj_id_pattern, reverse, pos);
     */
 
     min_max_code = _find_min_max_code(obj_id_pattern);
     num_codes    = min_max_code.max_code - min_max_code.min_code + 1;
 
     if (num_codes > 4096) {
-        _string_find_brute_force(obj_id_text, obj_id_pattern, pos);
+        _string_find_brute_force(obj_id_text, obj_id_pattern, reverse, pos);
         return KOS_SUCCESS;
     }
 
     /* TODO Implement Boyer-Moore or better algorithm */
 
-    _string_find_brute_force(obj_id_text, obj_id_pattern, pos);
+    _string_find_brute_force(obj_id_text, obj_id_pattern, reverse, pos);
     return KOS_SUCCESS;
 }
