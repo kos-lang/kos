@@ -31,6 +31,7 @@
 #include "kos_file.h"
 #include "kos_malloc.h"
 #include "kos_memory.h"
+#include "kos_misc.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
