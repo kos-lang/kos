@@ -119,9 +119,17 @@ enum _KOS_FIND_DIR {
     KOS_FIND_REVERSE
 };
 
-// *pos contains starting search position on input and found position on output.
-// If pattern is not found, returns KOS_SUCCESS and sets *pos to -1.
+/* *pos contains starting search position on input and found position on output.
+ * If pattern is not found, returns KOS_SUCCESS and sets *pos to -1. */
 int KOS_string_find(KOS_FRAME          frame,
+                    KOS_OBJ_ID         obj_id_text,
+                    KOS_OBJ_ID         obj_id_pattern,
+                    enum _KOS_FIND_DIR reverse,
+                    int               *pos);
+
+/* *pos contains starting search position on input and found position on output.
+ * If pattern is not found, returns KOS_SUCCESS and sets *pos to -1. */
+int KOS_string_scan(KOS_FRAME          frame,
                     KOS_OBJ_ID         obj_id_text,
                     KOS_OBJ_ID         obj_id_pattern,
                     enum _KOS_FIND_DIR reverse,

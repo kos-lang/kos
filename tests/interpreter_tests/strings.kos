@@ -270,24 +270,150 @@ do {
 }
 
 do {
+    # LE: 01 02 03 00 00 00 00 00 02 03 00 00
+    const haystack = "\x{30201}\0\x{302}"
+    # LE: 02 03 00 00
+    const needle   = "\x{302}\x{10000}"[0] # force 32-bit elem_size
+    assert haystack.size             == 3
+    assert haystack.get_char_code(0) == 0x30201
+    assert haystack.get_char_code(1) == 0
+    assert haystack.get_char_code(2) == 0x302
+    assert needle.size               == 1
+    assert needle.get_char_code(0)   == 0x302
+    assert haystack.find(needle)     == 2
+    assert haystack.find(needle, 0)  == 2
+    assert haystack.find(needle, 1)  == 2
+}
+
+do {
     assert "".rfind("")         == 0
     assert "ab".rfind("")       == 2
     assert "ab".rfind("", 1)    == 1
     assert "ab".rfind("", 10)   == 2
-    assert "ab".rfind("", -10)  == 0
+    assert "ab".rfind("", -10)  == -1
     assert "ab".rfind("x", 10)  == -1
     assert "ab".rfind("x", -10) == -1
+    assert "ab".rfind("a", -10) == -1
 
-    assert "abXYcdXXYefXYYgh".rfind("XY")     == 11
-    assert "abXYcdXXYefXYYgh".rfind("XY", 99) == 11
-    assert "abXYcdXXYefXYYgh".rfind("XY", 11) == 11
-    assert "abXYcdXXYefXYYgh".rfind("XY", 10) == 7
-    assert "abXYcdXXYefXYYgh".rfind("XY", 7)  == 7
-    assert "abXYcdXXYefXYYgh".rfind("XY", 6)  == 2
-    assert "abXYcdXXYefXYYgh".rfind("XY", 2)  == 2
-    assert "abXYcdXXYefXYYgh".rfind("XY", 1)  == -1
+    assert "abXYcdXXYefXYYgh".rfind("XY")      == 11
+    assert "abXYcdXXYefXYYgh".rfind("XY", 99)  == 11
+    assert "abXYcdXXYefXYYgh".rfind("XY", 11)  == 11
+    assert "abXYcdXXYefXYYgh".rfind("XY", 10)  == 7
+    assert "abXYcdXXYefXYYgh".rfind("XY", 7)   == 7
+    assert "abXYcdXXYefXYYgh".rfind("XY", 6)   == 2
+    assert "abXYcdXXYefXYYgh".rfind("XY", 2)   == 2
+    assert "abXYcdXXYefXYYgh".rfind("XY", 1)   == -1
+    assert "abXYcdXXYefXYYgh".rfind("XY", -1)  == 11
+    assert "abXYcdXXYefXYYgh".rfind("XY", -10) == 2
+    assert "abXYcdXXYefXYYgh".rfind("XY", -20) == -1
 
     expect_fail(λ->("".rfind.apply(void, [""])))
     expect_fail(λ->("".rfind()))
     expect_fail(λ->("".rfind(void)))
+}
+
+do {
+    assert "alamakota".scan("a") == 0
+    const scans = [ [-99,  0],
+                    [-10,  0],
+                    [-9,   0],
+                    [-8,   2],
+                    [-7,   2],
+                    [-6,   4],
+                    [-2,   8],
+                    [-1,   8],
+                    [0,    0],
+                    [1,    2],
+                    [2,    2],
+                    [3,    4],
+                    [7,    8],
+                    [8,    8],
+                    [9,   -1],
+                    [100, -1] ]
+    for var idx, result in scans {
+        const actual = "alamakota".scan("a", idx)
+        if actual != result {
+            throw "scan failed at index \(idx), expected result \(result), actual \(actual)"
+        }
+    }
+}
+
+do {
+    assert "alamakota".rscan("a")  == 8
+    assert "abc".rscan("efghijkb") == 1
+    assert "\x00a\x00"[1].scan("a") == 0
+    assert "\x00a\x00"[1].scan("\x00") == -1
+    assert "\x00a\x00"[1].rscan("\x00") == -1
+    const scans = [ [-99, -1],
+                    [-10, -1],
+                    [-9,   0],
+                    [-8,   0],
+                    [-7,   2],
+                    [-6,   2],
+                    [-2,   4],
+                    [-1,   8],
+                    [0,    0],
+                    [1,    0],
+                    [2,    2],
+                    [3,    2],
+                    [7,    4],
+                    [8,    8],
+                    [9,    8],
+                    [100,  8] ]
+    for var idx, result in scans {
+        const actual = "alamakota".rscan("a", idx)
+        if actual != result {
+            throw "rscan failed at index \(idx), expected result \(result), actual \(actual)"
+        }
+    }
+}
+
+do {
+    const scans = [ [-7, 0],
+                    [-6, 0],
+                    [-4, 2],
+                    [-1, 5],
+                    [0,  0],
+                    [1,  2],
+                    [2,  2],
+                    [3,  5],
+                    [4,  5],
+                    [5,  5],
+                    [6, -1] ]
+    for var idx, result in scans {
+        const actual = "a#bXCc".scan("abcdefg", idx)
+        if actual != result {
+            throw "scan failed at index \(idx), expected result \(result), actual \(actual)"
+        }
+    }
+}
+
+do {
+    const scans = [ [-7, -1],
+                    [-6,  0],
+                    [-5,  0],
+                    [-4,  2],
+                    [-1,  5],
+                    [0,   0],
+                    [1,   0],
+                    [2,   2],
+                    [3,   2],
+                    [4,   2],
+                    [5,   5],
+                    [6,   5] ]
+    for var idx, result in scans {
+        const actual = "a#bXCc".rscan("abcdefg", idx)
+        if actual != result {
+            throw "rscan failed at index \(idx), expected result \(result), actual \(actual)"
+        }
+    }
+}
+
+do {
+    assert "\x01\x01\x01\x01\x{100}\x01".scan("\x{100}\x{100}\x{100}") == 4
+    assert "\x01\x01\x01\x01\x{100}\x01".rscan("\x{100}\x{100}\x{100}") == 4
+    assert "\x{100}\x{100}\x{100}\x01\x{100}".scan("\x01\x01\x01") == 3
+    assert "\x{100}\x{100}\x{100}\x01\x{100}".rscan("\x01\x01\x01") == 3
+    assert "\x{101}\x{101}\x{101}\x01\x{101}".scan("\x01\x01\x01") == 3
+    assert "\x{101}\x{101}\x{101}\x01\x{101}".rscan("\x01\x01\x01") == 3
 }

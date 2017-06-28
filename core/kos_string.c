@@ -1055,80 +1055,23 @@ int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
                           (unsigned)b_end);
 }
 
-struct _KOS_STRING_MIN_MAX {
-    uint32_t min_code;
-    uint32_t max_code;
-};
-
-static struct _KOS_STRING_MIN_MAX _find_min_max_code(KOS_OBJ_ID obj_id)
-{
-    KOS_STRING                *str     = OBJPTR(STRING, obj_id);
-    struct _KOS_STRING_MIN_MAX min_max = { ~0U, 0U };
-    int                        len;
-
-    assert(GET_OBJ_TYPE(obj_id) == OBJ_STRING);
-
-    len = (int)KOS_get_string_length(obj_id);
-
-    assert(len > 0);
-
-    switch (str->elem_size) {
-
-        case KOS_STRING_ELEM_8: {
-            const uint8_t *buf = (const uint8_t *)_KOS_get_string_buffer(str);
-            const uint8_t *end = buf + len;
-            while (buf < end) {
-                const uint32_t c = *(buf++);
-                min_max.min_code = KOS_min(c, min_max.min_code);
-                min_max.max_code = KOS_max(c, min_max.max_code);
-            }
-            break;
-        }
-
-        case KOS_STRING_ELEM_16: {
-            const uint16_t *buf = (const uint16_t *)_KOS_get_string_buffer(str);
-            const uint16_t *end = buf + len;
-            while (buf < end) {
-                const uint32_t c = *(buf++);
-                min_max.min_code = KOS_min(c, min_max.min_code);
-                min_max.max_code = KOS_max(c, min_max.max_code);
-            }
-            break;
-        }
-
-        default: {
-            const uint32_t *buf = (const uint32_t *)_KOS_get_string_buffer(str);
-            const uint32_t *end = buf + len;
-            assert(str->elem_size == KOS_STRING_ELEM_32);
-            while (buf < end) {
-                const uint32_t c = *(buf++);
-                min_max.min_code = KOS_min(c, min_max.min_code);
-                min_max.max_code = KOS_max(c, min_max.max_code);
-            }
-            break;
-        }
-    }
-
-    return min_max;
-}
-
 static void _string_find_brute_force(KOS_OBJ_ID         obj_id_text,
                                      KOS_OBJ_ID         obj_id_pattern,
                                      enum _KOS_FIND_DIR reverse,
                                      int               *pos)
 {
-    const unsigned text_len     = KOS_get_string_length(obj_id_text);
-    const unsigned pat_len      = KOS_get_string_length(obj_id_pattern);
-    unsigned       text_pos     = *pos;
-    const unsigned end_text_pos = reverse ? ~0U : text_len - pat_len + 1U;
-    const unsigned delta        = reverse ? ~0U : 1U;
+    const int text_len     = (int)KOS_get_string_length(obj_id_text);
+    const int pat_len      = (int)KOS_get_string_length(obj_id_pattern);
+    int       text_pos     = *pos;
+    const int end_text_pos = reverse ? -1 : text_len - pat_len + 1;
+    const int delta        = reverse ? -1 : 1;
 
     while (text_pos != end_text_pos) {
 
-        if (_compare_slice(OBJPTR(STRING, obj_id_text), text_pos, text_pos + pat_len,
-                           OBJPTR(STRING, obj_id_pattern), 0, pat_len) == 0) {
+        if (_compare_slice(OBJPTR(STRING, obj_id_text), (unsigned)text_pos, (unsigned)(text_pos + pat_len),
+                           OBJPTR(STRING, obj_id_pattern), 0, (unsigned)pat_len) == 0) {
 
-            *pos = (int)text_pos;
+            *pos = text_pos;
             return;
         }
 
@@ -1144,11 +1087,10 @@ int KOS_string_find(KOS_FRAME          frame,
                     enum _KOS_FIND_DIR reverse,
                     int               *pos)
 {
-    int                        text_len;
-    int                        pattern_len;
-    int                        cur_pos;
-    struct _KOS_STRING_MIN_MAX min_max_code;
-    uint32_t                   num_codes;
+    int     text_len;
+    int     pattern_len;
+    int     cur_pos;
+    uint8_t elem_size;
 
     if (GET_OBJ_TYPE(obj_id_text) != OBJ_STRING ||
         GET_OBJ_TYPE(obj_id_pattern) != OBJ_STRING) {
@@ -1175,16 +1117,161 @@ int KOS_string_find(KOS_FRAME          frame,
         return KOS_string_scan(frame, obj_id_text, obj_id_pattern, reverse, pos);
     */
 
-    min_max_code = _find_min_max_code(obj_id_pattern);
-    num_codes    = min_max_code.max_code - min_max_code.min_code + 1;
+    /* TODO Optimize */
 
-    if (num_codes > 4096) {
-        _string_find_brute_force(obj_id_text, obj_id_pattern, reverse, pos);
-        return KOS_SUCCESS;
+    elem_size = OBJPTR(STRING, obj_id_text)->elem_size;
+    if ( ! reverse && elem_size == OBJPTR(STRING, obj_id_pattern)->elem_size) {
+
+        const uint8_t *text     = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_text));
+        const uint8_t *pattern  = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_pattern));
+        const uint8_t *location = text + (cur_pos << elem_size);
+        const int      mask     = (1 << elem_size) - 1;
+        for (;;) {
+
+            const int size_left = (text_len - cur_pos) << elem_size;
+            int       idx;
+
+            location = (const uint8_t *)memmem(location, (size_t)size_left,
+                                               pattern, (size_t)(pattern_len << elem_size));
+
+            if ( ! location) {
+                *pos = -1;
+                return KOS_SUCCESS;
+            }
+
+            idx = (int)(location - text);
+
+            if ( ! (idx & mask)) {
+                *pos = idx >> elem_size;
+                return KOS_SUCCESS;
+            }
+
+            location += (1 << elem_size) - (idx & mask);
+        }
     }
-
-    /* TODO Implement Boyer-Moore or better algorithm */
 
     _string_find_brute_force(obj_id_text, obj_id_pattern, reverse, pos);
     return KOS_SUCCESS;
+}
+
+int KOS_string_scan(KOS_FRAME          frame,
+                    KOS_OBJ_ID         obj_id_text,
+                    KOS_OBJ_ID         obj_id_pattern,
+                    enum _KOS_FIND_DIR reverse,
+                    int               *pos)
+{
+    int     text_len;
+    int     pattern_len;
+    int     cur_pos;
+    uint8_t text_elem_size;
+    uint8_t pattern_elem_size;
+
+    if (GET_OBJ_TYPE(obj_id_text) != OBJ_STRING ||
+        GET_OBJ_TYPE(obj_id_pattern) != OBJ_STRING) {
+
+        KOS_raise_exception_cstring(frame, str_err_not_string);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    pattern_len = (int)KOS_get_string_length(obj_id_pattern);
+
+    if (pattern_len == 0)
+        return KOS_SUCCESS;
+
+    cur_pos  = *pos;
+    text_len = (int)KOS_get_string_length(obj_id_text);
+
+    if (cur_pos < 0 || cur_pos >= text_len) {
+        *pos = -1;
+        return KOS_SUCCESS;
+    }
+
+    /* TODO Optimize */
+
+    text_elem_size    = OBJPTR(STRING, obj_id_text)->elem_size;
+    pattern_elem_size = OBJPTR(STRING, obj_id_pattern)->elem_size;
+
+    if ( ! reverse && pattern_len == 1
+        && text_elem_size    == KOS_STRING_ELEM_8
+        && pattern_elem_size == KOS_STRING_ELEM_8) {
+
+        const uint8_t *text     = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_text));
+        const uint8_t *pattern  = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_pattern));
+        const uint8_t *location = text + cur_pos;
+
+        location = (const uint8_t *)memchr(location, (int)*pattern, (size_t)(text_len - cur_pos));
+
+        if ( ! location) {
+            *pos = -1;
+            return KOS_SUCCESS;
+        }
+
+        *pos = location ? (int)(location - text) : -1;
+        return KOS_SUCCESS;
+    }
+    else {
+        const uint8_t *text     = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_text));
+        const uint8_t *pattern  = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_pattern));
+        const uint8_t *location = text + (cur_pos << text_elem_size);
+        const uint8_t *text_end = reverse ? text - (1 << text_elem_size) : text + (text_len << text_elem_size);
+        const int      delta    = reverse ? (-1 << text_elem_size) : (1 << text_elem_size);
+        const int      idx_mask = (1 << pattern_elem_size) - 1;
+        const uint32_t c_mask   = (pattern_elem_size == KOS_STRING_ELEM_8)  ? ~0xFFU :
+                                  (pattern_elem_size == KOS_STRING_ELEM_16) ? ~0xFFFFU : 0U;
+
+        for ( ; location != text_end; location += delta) {
+
+            const uint8_t *found_pat = pattern;
+            union {
+                uint8_t    c8;
+                uint16_t   c16;
+                uint32_t   c32;
+            }              code;
+
+            switch (text_elem_size) {
+
+                case KOS_STRING_ELEM_8:
+                    code.c8 = *location;
+                    break;
+
+                case KOS_STRING_ELEM_16: {
+                    code.c16 = *(const uint16_t *)location;
+                    if ((uint32_t)code.c16 & c_mask)
+                        continue;
+                    break;
+                }
+
+                default:
+                    assert(text_elem_size == KOS_STRING_ELEM_32);
+                    code.c32 = *(const uint32_t *)location;
+                    if (code.c32 & c_mask)
+                        continue;
+                    break;
+            }
+
+            for (;;) {
+
+                const size_t size_left = (size_t)(pattern + (pattern_len << pattern_elem_size) - found_pat);
+                int          idx;
+
+                found_pat = (const uint8_t *)memmem(found_pat, size_left,
+                                                    &code, (size_t)(1 << pattern_elem_size));
+
+                if ( ! found_pat)
+                    break;
+
+                idx = (int)(found_pat - pattern);
+
+                if ( ! (idx & idx_mask)) {
+                    *pos = (int)(location - text) >> text_elem_size;
+                    return KOS_SUCCESS;
+                }
+
+                found_pat += (1 << pattern_elem_size) - (idx & idx_mask);
+            }
+        }
+
+        *pos = -1;
+        return KOS_SUCCESS;
+    }
 }
