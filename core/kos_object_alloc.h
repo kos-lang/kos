@@ -42,6 +42,9 @@ enum _KOS_AREA_ELEM_SIZE {
     KOS_AREA_128  = 7
 };
 
+/* TODO allocate array, buffer in 32-bit builds from KOS_AREA_8, but limit
+ * them to be allocated in even-index cells only. */
+
 #define _KOS_POT_FROM_TYPE(type) ((OBJ_ ## type & 1)   == 0   ? KOS_AREA_8   : \
                                   sizeof(KOS_ ## type) <= 16  ? KOS_AREA_16  : \
                                   sizeof(KOS_ ## type) <= 32  ? KOS_AREA_32  : \
