@@ -1964,13 +1964,13 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
 
     num_cases = _count_siblings(node);
 
-    if (num_cases) {
-        cases = (struct _KOS_SWITCH_CASE *)_KOS_mempool_alloc(
-                &program->allocator, sizeof(struct _KOS_SWITCH_CASE) * num_cases);
+    assert(num_cases);
 
-        if ( ! cases)
-            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
-    }
+    cases = (struct _KOS_SWITCH_CASE *)_KOS_mempool_alloc(
+            &program->allocator, sizeof(struct _KOS_SWITCH_CASE) * num_cases);
+
+    if ( ! cases)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     if (node->type == NT_DEFAULT && num_cases == 1) {
         node = node->children;
@@ -3274,7 +3274,6 @@ static int _assign_member(struct _KOS_COMP_UNIT      *program,
     int              str_idx = 0;
     int64_t          idx     = 0;
     struct _KOS_REG *obj     = 0;
-    struct _KOS_REG *prop    = 0;
     struct _KOS_REG *tmp_reg = 0;
 
     assert(node->type == NT_REFINEMENT);
@@ -3289,9 +3288,22 @@ static int _assign_member(struct _KOS_COMP_UNIT      *program,
     assert(node);
     assert(!node->next);
 
-    if (node->type == NT_STRING_LITERAL)
+    if (node->type == NT_STRING_LITERAL) {
         TRY(_gen_str(program, &node->token, &str_idx));
 
+        if (assg_op != OT_SET) {
+
+            TRY(_gen_reg(program, &tmp_reg));
+
+            TRY(_gen_instr3(program, INSTR_GET_PROP, tmp_reg->reg, obj->reg, str_idx));
+
+            TRY(_gen_instr3(program, _assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+
+            src = tmp_reg;
+        }
+
+        TRY(_gen_instr3(program, INSTR_SET_PROP, obj->reg, str_idx, src->reg));
+    }
     else if (_maybe_int(node, &idx)) {
 
         assert(node->type == NT_NUMERIC_LITERAL);
@@ -3301,42 +3313,42 @@ static int _assign_member(struct _KOS_COMP_UNIT      *program,
             program->error_str   = str_err_invalid_index;
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
         }
+
+        if (assg_op != OT_SET) {
+
+            TRY(_gen_reg(program, &tmp_reg));
+
+            TRY(_gen_instr3(program, INSTR_GET_ELEM, tmp_reg->reg, obj->reg, (int)idx));
+
+            TRY(_gen_instr3(program, _assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+
+            src = tmp_reg;
+        }
+
+        TRY(_gen_instr3(program, INSTR_SET_ELEM, obj->reg, (int)idx, src->reg));
     }
     else {
 
+        struct _KOS_REG *prop    = 0;
+
         TRY(_visit_node(program, node, &prop));
         assert(prop);
-    }
 
-    if (assg_op != OT_SET) {
+        if (assg_op != OT_SET) {
 
-        TRY(_gen_reg(program, &tmp_reg));
+            TRY(_gen_reg(program, &tmp_reg));
 
-        if (node->type == NT_STRING_LITERAL)
-            TRY(_gen_instr3(program, INSTR_GET_PROP, tmp_reg->reg, obj->reg, str_idx));
-
-        else if (node->type == NT_NUMERIC_LITERAL)
-            TRY(_gen_instr3(program, INSTR_GET_ELEM, tmp_reg->reg, obj->reg, (int)idx));
-
-        else
             TRY(_gen_instr3(program, INSTR_GET, tmp_reg->reg, obj->reg, prop->reg));
 
-        TRY(_gen_instr3(program, _assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+            TRY(_gen_instr3(program, _assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
-        src = tmp_reg;
-    }
+            src = tmp_reg;
+        }
 
-    if (node->type == NT_STRING_LITERAL)
-        TRY(_gen_instr3(program, INSTR_SET_PROP, obj->reg, str_idx, src->reg));
-
-    else if (node->type == NT_NUMERIC_LITERAL)
-
-        TRY(_gen_instr3(program, INSTR_SET_ELEM, obj->reg, (int)idx, src->reg));
-    else
         TRY(_gen_instr3(program, INSTR_SET, obj->reg, prop->reg, src->reg));
 
-    if (prop)
         _free_reg(program, prop);
+    }
 
     if (tmp_reg)
         _free_reg(program, tmp_reg);
