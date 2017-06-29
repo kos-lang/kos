@@ -1167,11 +1167,6 @@ int KOS_string_scan(KOS_FRAME          frame,
 
         location = (const uint8_t *)memchr(location, (int)*pattern, (size_t)(text_len - cur_pos));
 
-        if ( ! location) {
-            *pos = -1;
-            return KOS_SUCCESS;
-        }
-
         *pos = location ? (int)(location - text) : -1;
         return KOS_SUCCESS;
     }
