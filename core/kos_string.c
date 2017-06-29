@@ -1179,7 +1179,7 @@ int KOS_string_scan(KOS_FRAME          frame,
         const uint8_t *text     = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_text));
         const uint8_t *pattern  = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_pattern));
         const uint8_t *location = text + (cur_pos << text_elem_size);
-        const uint8_t *text_end = reverse ? text - (intptr_t)(1 << text_elem_size) : text + (intptr_t)(text_len << text_elem_size);
+        const uint8_t *text_end = reverse ? text + (-1 << text_elem_size) : text + (text_len << text_elem_size);
         const int      delta    = reverse ? (-1 << text_elem_size) : (1 << text_elem_size);
         const uint32_t c_mask   = (pattern_elem_size == KOS_STRING_ELEM_8)  ? ~0xFFU :
                                   (pattern_elem_size == KOS_STRING_ELEM_16) ? ~0xFFFFU : 0U;
@@ -1194,12 +1194,11 @@ int KOS_string_scan(KOS_FRAME          frame,
                     code = *location;
                     break;
 
-                case KOS_STRING_ELEM_16: {
+                case KOS_STRING_ELEM_16:
                     code = *(const uint16_t *)location;
                     if (code & c_mask)
                         continue;
                     break;
-                }
 
                 default:
                     assert(text_elem_size == KOS_STRING_ELEM_32);
