@@ -1920,22 +1920,25 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
-static KOS_OBJ_ID _get_char_code(KOS_FRAME  frame,
-                                 KOS_OBJ_ID this_obj,
-                                 KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _ord(KOS_FRAME  frame,
+                       KOS_OBJ_ID this_obj,
+                       KOS_OBJ_ID args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
-    KOS_OBJ_ID arg   = KOS_array_read(frame, args_obj, 0);
-    int64_t    idx;
+    int64_t    idx   = 0;
     unsigned   code;
 
-    TRY_OBJID(arg);
+    if (KOS_get_array_size(args_obj) > 0) {
 
-    TRY(KOS_get_integer(frame, arg, &idx));
+        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
+        TRY_OBJID(arg);
 
-    if (idx < INT_MIN || idx > INT_MAX)
-        RAISE_EXCEPTION(str_err_invalid_string_idx);
+        TRY(KOS_get_integer(frame, arg, &idx));
+
+        if (idx < INT_MIN || idx > INT_MAX)
+            RAISE_EXCEPTION(str_err_invalid_string_idx);
+    }
 
     code = KOS_string_get_char_code(frame, this_obj, (int)idx);
     if (code == ~0U)
@@ -2215,7 +2218,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "ends_with",     _ends_with,         1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "find",          _find,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "get_char_code", _get_char_code,     1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "ord",           _ord,               0);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "rfind",         _rfind,             1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "rscan",         _rscan,             1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "reverse",       _reverse,           0);

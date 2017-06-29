@@ -449,7 +449,7 @@ do {
     assert typeof s == "string"
     assert s.size   == elements.size
     for var i in lang.range(s.size) {
-        assert s.get_char_code(i) == elements[i]
+        assert s.ord(i) == elements[i]
     }
 }
 
@@ -459,7 +459,7 @@ do {
     assert typeof s == "string"
     assert s.size   == elements.size
     for var i in lang.range(s.size) {
-        assert s.get_char_code(i) == elements[i]
+        assert s.ord(i) == elements[i]
     }
 }
 

@@ -276,7 +276,7 @@ do {
 do {
     fun just_buf(ch, size)
     {
-        const ord = ch.get_char_code(0)
+        const ord = ch.ord()
 
         const buf = ord < 0x80 ? buffer(size) : array(size)
         return string(buf.fill(ord))

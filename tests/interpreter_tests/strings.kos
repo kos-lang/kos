@@ -192,13 +192,13 @@ do {
 
 do {
     const s = "a B"
-    assert s.get_char_code(0)     == 0x61
-    assert s.get_char_code(1)     == 0x20
-    assert s.get_char_code(2)     == 0x42
-    assert s.get_char_code(-1)    == 0x42
-    expect_fail(λ->(s.get_char_code(3)))
-    expect_fail(λ->(s.get_char_code(-4)))
-    expect_fail(λ->(s.get_char_code(0x100000000)))
+    assert s.ord(0)     == 0x61
+    assert s.ord(1)     == 0x20
+    assert s.ord(2)     == 0x42
+    assert s.ord(-1)    == 0x42
+    expect_fail(λ->(s.ord(3)))
+    expect_fail(λ->(s.ord(-4)))
+    expect_fail(λ->(s.ord(0x100000000)))
 }
 
 do {
@@ -274,15 +274,15 @@ do {
     const haystack = "\x{30201}\0\x{302}"
     # LE: 02 03 00 00
     const needle   = "\x{302}\x{10000}"[0] # force 32-bit elem_size
-    assert haystack.size             == 3
-    assert haystack.get_char_code(0) == 0x30201
-    assert haystack.get_char_code(1) == 0
-    assert haystack.get_char_code(2) == 0x302
-    assert needle.size               == 1
-    assert needle.get_char_code(0)   == 0x302
-    assert haystack.find(needle)     == 2
-    assert haystack.find(needle, 0)  == 2
-    assert haystack.find(needle, 1)  == 2
+    assert haystack.size            == 3
+    assert haystack.ord(0)          == 0x30201
+    assert haystack.ord(1)          == 0
+    assert haystack.ord(2)          == 0x302
+    assert needle.size              == 1
+    assert needle.ord(0)            == 0x302
+    assert haystack.find(needle)    == 2
+    assert haystack.find(needle, 0) == 2
+    assert haystack.find(needle, 1) == 2
 }
 
 do {
@@ -426,4 +426,13 @@ do {
     assert "0123456789".reverse() == "9876543210"
     assert "\x{FFFF}\0".reverse() == "\0\x{FFFF}"
     assert "\x{10000}a\0".reverse() == "\0a\x{10000}"
+}
+
+do {
+    assert "0".ord()        == 0x30
+    assert "\x{1002}".ord() == 0x1002
+    assert "ABCD".ord()     == 0x41
+    assert "ABCD".ord(1)    == 0x42
+    assert "ABCD".ord(-2)   == 0x43
+    assert "ABCD".ord(-1)   == 0x44
 }
