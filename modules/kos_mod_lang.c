@@ -674,16 +674,19 @@ static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
         KOS_OBJ_ID                 arg     = KOS_array_read(frame, args_obj, 0);
         const KOS_FUNCTION_HANDLER handler = OBJPTR(FUNCTION, this_obj)->handler;
 
-        if (handler == _array_constructor    ||
-            handler == _boolean_constructor  ||
-            handler == _buffer_constructor   ||
-            handler == _float_constructor    ||
-            handler == _function_constructor ||
-            handler == _integer_constructor  ||
-            handler == _number_constructor   ||
-            handler == _object_constructor   ||
-            handler == _string_constructor   ||
-            handler == _void_constructor) {
+        /* TODO forbid for all built-in functions? */
+        if (handler == _array_constructor     ||
+            handler == _boolean_constructor   ||
+            handler == _buffer_constructor    ||
+            handler == _float_constructor     ||
+            handler == _function_constructor  ||
+            handler == _integer_constructor   ||
+            handler == _number_constructor    ||
+            handler == _object_constructor    ||
+            handler == _string_constructor    ||
+            handler == _void_constructor      ||
+            handler == _exception_constructor ||
+            handler == _generator_end_constructor) {
 
             KOS_raise_exception_cstring(frame, str_err_cannot_override_prototype);
             arg = KOS_BADPTR;
