@@ -135,6 +135,9 @@ int KOS_string_scan(KOS_FRAME          frame,
                     enum _KOS_FIND_DIR reverse,
                     int               *pos);
 
+KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
+                              KOS_OBJ_ID obj_id);
+
 #ifdef __cplusplus
 }
 #endif

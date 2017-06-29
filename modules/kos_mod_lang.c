@@ -1994,6 +1994,13 @@ static KOS_OBJ_ID _get_string_size(KOS_FRAME  frame,
     return ret;
 }
 
+static KOS_OBJ_ID _reverse(KOS_FRAME  frame,
+                           KOS_OBJ_ID this_obj,
+                           KOS_OBJ_ID args_obj)
+{
+    return KOS_string_reverse(frame, this_obj);
+}
+
 static KOS_OBJ_ID _get_function_name(KOS_FRAME  frame,
                                      KOS_OBJ_ID this_obj,
                                      KOS_OBJ_ID args_obj)
@@ -2208,6 +2215,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "get_char_code", _get_char_code,     1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "rfind",         _rfind,             1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "rscan",         _rscan,             1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "reverse",       _reverse,           0);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "scan",          _scan,              1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "slice",         _slice,             2);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "starts_with",   _starts_with,       1);

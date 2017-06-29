@@ -1179,7 +1179,7 @@ int KOS_string_scan(KOS_FRAME          frame,
         const uint8_t *text     = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_text));
         const uint8_t *pattern  = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_pattern));
         const uint8_t *location = text + (cur_pos << text_elem_size);
-        const uint8_t *text_end = reverse ? text - (1 << text_elem_size) : text + (text_len << text_elem_size);
+        const uint8_t *text_end = reverse ? text - (intptr_t)(1 << text_elem_size) : text + (intptr_t)(text_len << text_elem_size);
         const int      delta    = reverse ? (-1 << text_elem_size) : (1 << text_elem_size);
         const uint32_t c_mask   = (pattern_elem_size == KOS_STRING_ELEM_8)  ? ~0xFFU :
                                   (pattern_elem_size == KOS_STRING_ELEM_16) ? ~0xFFFFU : 0U;
@@ -1253,4 +1253,61 @@ int KOS_string_scan(KOS_FRAME          frame,
         *pos = -1;
         return KOS_SUCCESS;
     }
+}
+
+KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
+                              KOS_OBJ_ID obj_id)
+{
+    KOS_STRING *ret;
+    KOS_STRING *str;
+    unsigned    len;
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
+        KOS_raise_exception_cstring(frame, str_err_not_string);
+        return KOS_BADPTR;
+    }
+
+    len = KOS_get_string_length(obj_id);
+
+    if (len < 2)
+        return obj_id;
+
+    str = OBJPTR(STRING, obj_id);
+
+    ret = _new_empty_string(frame, len, (enum _KOS_STRING_ELEM_SIZE)str->elem_size);
+    if ( ! ret)
+        return KOS_BADPTR;
+
+    switch (str->elem_size) {
+
+        case KOS_STRING_ELEM_8: {
+            const uint8_t *src  = (const uint8_t *)_KOS_get_string_buffer(str);
+            const uint8_t *end  = src + len;
+            uint8_t       *dest = (uint8_t *)_KOS_get_string_buffer(ret) + len - 1;
+            for ( ; src != end; ++src, --dest)
+                *dest = *src;
+            break;
+        }
+
+        case KOS_STRING_ELEM_16: {
+            const uint16_t *src  = (const uint16_t *)_KOS_get_string_buffer(str);
+            const uint16_t *end  = src + len;
+            uint16_t       *dest = (uint16_t *)_KOS_get_string_buffer(ret) + len - 1;
+            for ( ; src != end; ++src, --dest)
+                *dest = *src;
+            break;
+        }
+
+        default: {
+            const uint32_t *src  = (const uint32_t *)_KOS_get_string_buffer(str);
+            const uint32_t *end  = src + len;
+            uint32_t       *dest = (uint32_t *)_KOS_get_string_buffer(ret) + len - 1;
+            assert(str->elem_size == KOS_STRING_ELEM_32);
+            for ( ; src != end; ++src, --dest)
+                *dest = *src;
+            break;
+        }
+    }
+
+    return OBJID(STRING, ret);
 }

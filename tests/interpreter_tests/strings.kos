@@ -417,3 +417,13 @@ do {
     assert "\x{101}\x{101}\x{101}\x01\x{101}".scan("\x01\x01\x01") == 3
     assert "\x{101}\x{101}\x{101}\x01\x{101}".rscan("\x01\x01\x01") == 3
 }
+
+do {
+    assert "".reverse() == ""
+    assert "1".reverse() == "1"
+    assert "12".reverse() == "21"
+    assert "ABC".reverse() == "CBA"
+    assert "0123456789".reverse() == "9876543210"
+    assert "\x{FFFF}\0".reverse() == "\0\x{FFFF}"
+    assert "\x{10000}a\0".reverse() == "\0a\x{10000}"
+}
