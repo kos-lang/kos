@@ -95,10 +95,18 @@ fun range(first_arg, args...)
  * properties of an object, without descending into the object's
  * prototypes.
  *
+ * If the object is not of type `object`, namely it is an integer,
+ * a float, a boolean or a void, the generator produces the object itself.
+ * Prototypes of array, string, buffer and function override this generator.
+ *
  * Example:
  *
  *    > array({ red: 1, green: 10, blue: 100 }.iterator())
  *    ["red", "green", "blue"]
+ *    > array(1.5.iterator())
+ *    [1.5]
+ *    > array(true.iterator())
+ *    [true]
  */
 
 object.prototype.iterator = fun
@@ -547,6 +555,22 @@ do {
 fun hex(value)
 {
     return value.hex()
+}
+
+do {
+    fun reverse
+    {
+        var   dst = this.size
+        const obj = typeof this == "buffer" ? buffer(dst) : array(dst)
+        for var src = 0; dst; src += 1 {
+            dst -= 1
+            obj[dst] = this[src]
+        }
+        return obj
+    }
+
+    array.prototype.reverse  = reverse
+    buffer.prototype.reverse = reverse
 }
 
 # TODO move to debug module

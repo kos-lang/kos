@@ -361,3 +361,30 @@ do {
         assert a[i] == i
     }
 }
+
+# Reverse
+do {
+    const a = [ 2, true, 1.5, "str" ].reverse()
+    assert a.size == 4
+    assert a[0] == "str"
+    assert a[1] == 1.5
+    assert a[2] == true
+    assert a[3] == 2
+
+    const empty = []
+    const empty_r = empty.reverse()
+    assert typeof empty_r == "array"
+    assert empty_r.size == 0
+    empty_r.push({})
+    assert empty_r.size == 1
+    assert empty.size == 0
+
+    const one = [ 60 ]
+    const one_r = one.reverse()
+    assert typeof one_r == "array"
+    assert one_r.size == 1
+    assert one_r[0] == 60
+    one_r.push({})
+    assert one_r.size == 2
+    assert one.size == 1
+}
