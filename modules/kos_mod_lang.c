@@ -49,6 +49,7 @@ static const char str_err_invalid_buffer_size[]       = "buffer size out of rang
 static const char str_err_invalid_pack_format[]       = "invalid pack format";
 static const char str_err_invalid_string_idx[]        = "string index is out of range";
 static const char str_err_not_array[]                 = "object is not an array";
+static const char str_err_not_boolean[]               = "object is not a boolean";
 static const char str_err_not_buffer[]                = "object is not a buffer";
 static const char str_err_not_enough_pack_values[]    = "insufficient number of packed values";
 static const char str_err_not_function[]              = "object is not a function";
@@ -1850,9 +1851,10 @@ static KOS_OBJ_ID _scan(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
 {
-    int        error   = KOS_SUCCESS;
-    int        pos     = 0;
-    KOS_OBJ_ID pattern = KOS_array_read(frame, args_obj, 0);
+    int                    error   = KOS_SUCCESS;
+    int                    pos     = 0;
+    KOS_OBJ_ID             pattern = KOS_array_read(frame, args_obj, 0);
+    enum _KOS_SCAN_INCLUDE include = KOS_SCAN_INCLUDE;
 
     TRY_OBJID(pattern);
 
@@ -1867,12 +1869,29 @@ static KOS_OBJ_ID _scan(KOS_FRAME  frame,
         KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 1);
         TRY_OBJID(arg);
 
-        TRY(KOS_get_integer(frame, arg, &pos64));
+        if (arg == KOS_FALSE)
+            include = KOS_SCAN_EXCLUDE;
 
-        pos = (int)_KOS_fix_index(pos64, len);
+        else if (arg != KOS_TRUE) {
+
+            TRY(KOS_get_integer(frame, arg, &pos64));
+
+            pos = (int)_KOS_fix_index(pos64, len);
+
+            if (KOS_get_array_size(args_obj) > 2) {
+
+                arg = KOS_array_read(frame, args_obj, 2);
+                TRY_OBJID(arg);
+
+                if (arg == KOS_FALSE)
+                    include = KOS_SCAN_EXCLUDE;
+                else if (arg != KOS_TRUE)
+                    RAISE_EXCEPTION(str_err_not_boolean);
+            }
+        }
     }
 
-    TRY(KOS_string_scan(frame, this_obj, pattern, KOS_FIND_FORWARD, &pos));
+    TRY(KOS_string_scan(frame, this_obj, pattern, KOS_FIND_FORWARD, include, &pos));
 
 _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
@@ -1882,10 +1901,11 @@ static KOS_OBJ_ID _rscan(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
 {
-    int        error   = KOS_SUCCESS;
-    int        pos     = -1;
-    KOS_OBJ_ID pattern = KOS_array_read(frame, args_obj, 0);
-    unsigned   text_len;
+    int                    error   = KOS_SUCCESS;
+    int                    pos     = -1;
+    KOS_OBJ_ID             pattern = KOS_array_read(frame, args_obj, 0);
+    enum _KOS_SCAN_INCLUDE include = KOS_SCAN_INCLUDE;
+    unsigned               text_len;
 
     TRY_OBJID(pattern);
 
@@ -1902,19 +1922,36 @@ static KOS_OBJ_ID _rscan(KOS_FRAME  frame,
         KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 1);
         TRY_OBJID(arg);
 
-        TRY(KOS_get_integer(frame, arg, &pos64));
+        if (arg == KOS_FALSE)
+            include = KOS_SCAN_EXCLUDE;
 
-        if (pos64 < -(int64_t)text_len)
-            pos = -1;
-        else {
-            const int new_pos = (int)_KOS_fix_index(pos64, text_len);
+        else if (arg != KOS_TRUE) {
 
-            if (new_pos < pos)
-                pos = new_pos;
+            TRY(KOS_get_integer(frame, arg, &pos64));
+
+            if (pos64 < -(int64_t)text_len)
+                pos = -1;
+            else {
+                const int new_pos = (int)_KOS_fix_index(pos64, text_len);
+
+                if (new_pos < pos)
+                    pos = new_pos;
+            }
+
+            if (KOS_get_array_size(args_obj) > 2) {
+
+                arg = KOS_array_read(frame, args_obj, 2);
+                TRY_OBJID(arg);
+
+                if (arg == KOS_FALSE)
+                    include = KOS_SCAN_EXCLUDE;
+                else if (arg != KOS_TRUE)
+                    RAISE_EXCEPTION(str_err_not_boolean);
+            }
         }
     }
 
-    TRY(KOS_string_scan(frame, this_obj, pattern, KOS_FIND_REVERSE, &pos));
+    TRY(KOS_string_scan(frame, this_obj, pattern, KOS_FIND_REVERSE, include, &pos));
 
 _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);

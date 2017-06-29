@@ -436,3 +436,29 @@ do {
     assert "ABCD".ord(-2)   == 0x43
     assert "ABCD".ord(-1)   == 0x44
 }
+
+do {
+    assert "".lstrip() == ""
+    assert "".rstrip() == ""
+    assert "".strip()  == ""
+
+    assert " \r \n \t ".lstrip() == ""
+    assert " \r \n \t ".rstrip() == ""
+    assert " \r \n \t ".strip()  == ""
+
+    assert "abc".lstrip() == "abc"
+    assert "abc".rstrip() == "abc"
+    assert "abc".strip()  == "abc"
+
+    assert "   abc   ".lstrip() == "abc   "
+    assert "   abc   ".rstrip() == "   abc"
+    assert "   abc   ".strip()  == "abc"
+
+    assert "   abc   ".lstrip("abc") == "   abc   "
+    assert "   abc   ".rstrip("abc") == "   abc   "
+    assert "   abc   ".strip("abc")  == "   abc   "
+
+    assert "bca   bca".lstrip("abc") == "   bca"
+    assert "bca   bca".rstrip("abc") == "bca   "
+    assert "cab   cab".strip("abc")  == "   "
+}

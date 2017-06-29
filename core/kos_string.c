@@ -1112,7 +1112,7 @@ int KOS_string_find(KOS_FRAME          frame,
     }
 
     if (pattern_len == 1)
-        return KOS_string_scan(frame, obj_id_text, obj_id_pattern, reverse, pos);
+        return KOS_string_scan(frame, obj_id_text, obj_id_pattern, reverse, KOS_SCAN_INCLUDE, pos);
 
     /* TODO Optimize */
 
@@ -1120,11 +1120,12 @@ int KOS_string_find(KOS_FRAME          frame,
     return KOS_SUCCESS;
 }
 
-int KOS_string_scan(KOS_FRAME          frame,
-                    KOS_OBJ_ID         obj_id_text,
-                    KOS_OBJ_ID         obj_id_pattern,
-                    enum _KOS_FIND_DIR reverse,
-                    int               *pos)
+int KOS_string_scan(KOS_FRAME              frame,
+                    KOS_OBJ_ID             obj_id_text,
+                    KOS_OBJ_ID             obj_id_pattern,
+                    enum _KOS_FIND_DIR     reverse,
+                    enum _KOS_SCAN_INCLUDE include,
+                    int                   *pos)
 {
     int     text_len;
     int     pattern_len;
@@ -1157,7 +1158,7 @@ int KOS_string_scan(KOS_FRAME          frame,
     text_elem_size    = OBJPTR(STRING, obj_id_text)->elem_size;
     pattern_elem_size = OBJPTR(STRING, obj_id_pattern)->elem_size;
 
-    if ( ! reverse && pattern_len == 1
+    if ( ! reverse && include && pattern_len == 1
         && text_elem_size    == KOS_STRING_ELEM_8
         && pattern_elem_size == KOS_STRING_ELEM_8) {
 
@@ -1206,38 +1207,50 @@ int KOS_string_scan(KOS_FRAME          frame,
             switch (pattern_elem_size) {
 
                 case KOS_STRING_ELEM_8: {
-                    const uint8_t *pat_ptr = pattern;
-                    const uint8_t *pat_end = pat_ptr + pattern_len;
-                    for ( ; pat_ptr != pat_end; ++pat_ptr) {
+                    const uint8_t         *pat_ptr = pattern;
+                    const uint8_t         *pat_end = pat_ptr + pattern_len;
+                    enum _KOS_SCAN_INCLUDE match   = KOS_SCAN_EXCLUDE;
+                    for ( ; pat_ptr != pat_end; ++pat_ptr)
                         if (*pat_ptr == code) {
-                            *pos = (int)((location - text) >> text_elem_size);
-                            return KOS_SUCCESS;
+                            match = KOS_SCAN_INCLUDE;
+                            break;
                         }
+                    if (match == include) {
+                        *pos = (int)((location - text) >> text_elem_size);
+                        return KOS_SUCCESS;
                     }
                     break;
                 }
 
                 case KOS_STRING_ELEM_16: {
-                    const uint16_t *pat_ptr = (const uint16_t *)pattern;
-                    const uint16_t *pat_end = pat_ptr + pattern_len;
-                    for ( ; pat_ptr != pat_end; ++pat_ptr) {
+                    const uint16_t        *pat_ptr = (const uint16_t *)pattern;
+                    const uint16_t        *pat_end = pat_ptr + pattern_len;
+                    enum _KOS_SCAN_INCLUDE match   = KOS_SCAN_EXCLUDE;
+                    for ( ; pat_ptr != pat_end; ++pat_ptr)
                         if (*pat_ptr == code) {
-                            *pos = (int)((location - text) >> text_elem_size);
-                            return KOS_SUCCESS;
+                            match = KOS_SCAN_INCLUDE;
+                            break;
                         }
+                    if (match == include) {
+                        *pos = (int)((location - text) >> text_elem_size);
+                        return KOS_SUCCESS;
                     }
                     break;
                 }
 
                 default: {
-                    const uint32_t *pat_ptr = (const uint32_t *)pattern;
-                    const uint32_t *pat_end = pat_ptr + pattern_len;
+                    const uint32_t        *pat_ptr = (const uint32_t *)pattern;
+                    const uint32_t        *pat_end = pat_ptr + pattern_len;
+                    enum _KOS_SCAN_INCLUDE match   = KOS_SCAN_EXCLUDE;
                     assert(pattern_elem_size == KOS_STRING_ELEM_32);
-                    for ( ; pat_ptr != pat_end; ++pat_ptr) {
+                    for ( ; pat_ptr != pat_end; ++pat_ptr)
                         if (*pat_ptr == code) {
-                            *pos = (int)((location - text) >> text_elem_size);
-                            return KOS_SUCCESS;
+                            match = KOS_SCAN_INCLUDE;
+                            break;
                         }
+                    if (match == include) {
+                        *pos = (int)((location - text) >> text_elem_size);
+                        return KOS_SUCCESS;
                     }
                     break;
                 }

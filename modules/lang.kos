@@ -328,6 +328,35 @@ do {
     }
 }
 
+do {
+    const whitespace = " \r\n\t"
+
+    string.prototype.lstrip = fun(chars = whitespace)
+    {
+        const pos = this.scan(chars, false)
+        if pos != -1 {
+            return this[pos :]
+        }
+        return ""
+    }
+
+    string.prototype.rstrip = fun(chars = whitespace)
+    {
+        const pos = this.rscan(chars, false)
+        return this[: pos + 1]
+    }
+
+    string.prototype.strip = fun(chars = whitespace)
+    {
+        const lpos = this.scan(chars, false)
+        if lpos != -1 {
+            const rpos = this.rscan(chars, false)
+            return this[lpos : rpos + 1]
+        }
+        return ""
+    }
+}
+
 fun map(op, args...)
 {
     assert typeof op == "function"
