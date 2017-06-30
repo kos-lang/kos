@@ -52,7 +52,6 @@ static const char str_err_expected_semicolon[]        = "expected ';'";
 static const char str_err_expected_square_close[]     = "expected ']'";
 static const char str_err_expected_string[]           = "unexpected interpolated string";
 static const char str_err_expected_this[]             = "expected 'this' inside a constructor function";
-static const char str_err_expected_var[]              = "expected 'var'";
 static const char str_err_expected_var_or_const[]     = "expected 'var' or 'const'";
 static const char str_err_expected_var_assignment[]   = "expected '=' in variable declaration";
 static const char str_err_expected_while[]            = "expected 'while'";
@@ -1322,17 +1321,8 @@ static int _expr_var_const(struct _KOS_PARSER    *parser,
         goto _error;
     }
 
-    /* const is not allowed in for-in expression */
-    if (parser->token.keyword == KW_IN) {
+    if (parser->token.keyword == KW_IN)
         node_type = NT_IN;
-
-        if (const_token.keyword == KW_CONST) {
-            parser->token = const_token;
-            parser->error_str = str_err_expected_var;
-            error = KOS_ERROR_PARSE_FAILED;
-            goto _error;
-        }
-    }
 
     TRY(_new_node(parser, ret, node_type));
 

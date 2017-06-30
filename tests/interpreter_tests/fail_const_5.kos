@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 #
 do {
-    const a = 1;
-    a = 2;
+    const a = { }
+    for const k in a {
+        k = 1
+    }
 }

@@ -866,7 +866,7 @@ multiple variables, consecutive elements of the item are assigned to them using
 array indexing operator.  If the item does not support extracting elements,
 an exception is thrown.
 
-    ForInExpression ::= VarList "in" RHSExpression
+    ForInExpression ::= ( VarList | ConstList ) "in" RHSExpression
 
 
 Continue statement

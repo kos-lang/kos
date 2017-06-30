@@ -1,4 +1,4 @@
-{
+do {
     defer { a = 1; }
     var a = 0;
 }

@@ -1756,7 +1756,7 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
 
     var_node = node->children;
     assert(var_node);
-    assert(var_node->type == NT_VAR);
+    assert(var_node->type == NT_VAR || var_node->type == NT_CONST);
 
     expr_node = var_node->next;
     assert(expr_node);
