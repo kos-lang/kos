@@ -1303,6 +1303,12 @@ do {
     expect_fail(λ->(ret.x))
 }
 
+do {
+    expect_fail(fun {
+        λ->(void) . apply . apply(void, [])
+    })
+}
+
 ##############################################################################
 # lang.exception
 

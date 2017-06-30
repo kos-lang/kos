@@ -1164,3 +1164,89 @@ do {
     assert it()() == 13
     expect_fail(it)
 }
+
+# early end generator during a for-in loop
+do {
+    fun gen
+    {
+        yield 10
+        yield 20
+        fun break_from_gen
+        {
+            return void
+            yield 1
+        }
+        break_from_gen()()
+        yield 1
+        yield 2
+    }
+    var expected = 10
+    for var elem in gen() {
+        assert elem == expected
+        expected += 10
+    }
+    assert expected == 30
+}
+
+# end generator during for-in loop via modified exception
+do {
+    fun gen
+    {
+        yield "a"
+        yield "b"
+        try {
+            throw void
+        }
+        catch const e {
+            delete e.value
+            e.proof = "hello"
+            throw e
+        }
+        yield "c"
+    }
+
+    const items = []
+    var   ex    = void
+
+    try {
+        for const elem in gen() {
+            items.push(elem)
+        }
+    }
+    catch const e {
+        ex = e
+    }
+
+    assert items.size == 2
+    assert items[0]   == "a"
+    assert items[1]   == "b"
+    assert typeof ex  == "object"
+    assert ! ("value" in ex)
+    assert "proof" in ex
+    assert ex.proof == "hello"
+}
+
+# break generator with a exception during for-in loop
+do {
+    fun gen
+    {
+        yield 8
+        throw "finished"
+    }
+
+    const items = []
+    var   ex    = void
+
+    try {
+        for const elem in gen() {
+            items.push(elem)
+        }
+    }
+    catch const e {
+        ex = e
+    }
+
+    assert items.size == 1
+    assert items[0]   == 8
+    assert ex.value   == "finished"
+}
