@@ -561,8 +561,8 @@ do {
 
     var values = ["a", "b", "c", "d", "e"]
 
-    for var key in lang.deep(obj) {
-        const value = obj[key]
+    for const key, value in lang.deep(obj) {
+        assert value == obj[key]
         if typeof value == "integer" && value >= 0 && value < values.size {
             assert values[value] == key
             values[value] = void
@@ -575,9 +575,9 @@ do {
 
     values = ["a", "b", "c", "d", "e"]
 
-    for var key in lang.shallow(obj) {
-        const value = obj[key]
+    for const key, value in lang.shallow(obj) {
         assert typeof value == "integer"
+        assert value == obj[key]
         assert value >= 0 && value < values.size
         assert values[value] == key
         values[value] = void
@@ -587,11 +587,11 @@ do {
 do {
     const it = lang.shallow.apply({aaa:0}, [void])
     assert typeof it == "function"
-    for var x in it {
+    for const x, v in it {
         assert x == "aaa"
     }
 
-    for var x in lang.shallow.apply(void, [void]) {
+    for const x, v in lang.shallow.apply(void, [void]) {
         throw "unexpected property"
     }
 }
@@ -656,10 +656,10 @@ do {
     assert a.size   == 3
     const had = { "a": false, "b": false, "c": false }
     for var i = 0; i < a.size; i += 1 {
-        const value = a[i]
-        assert value == "a" || value == "b" || value == "c"
-        assert had[value] == false
-        had[value] = true
+        const key, value = a[i]
+        assert key == "a" || key == "b" || key == "c"
+        assert ! had[key]
+        had[key] = true
     }
 }
 
@@ -1382,7 +1382,7 @@ do {
     assert typeof s == "string"
     assert s        == "1x2"
 
-    for var type in ["integer", "float", "string", "boolean", "void", "object", "array"] {
+    for const type in ["integer", "float", "string", "boolean", "void", "object", "array"] {
         assert typeof new_type(type) == type
     }
 }
@@ -1391,17 +1391,20 @@ do {
 # lang.shallow
 
 do {
-    const obj  = { a: void, b: void, c: void }
+    const obj  = { a: 42, b: 43, c: 44 }
     const iter = lang.shallow(obj)
 
-    var key = iter()
+    var key, value = iter()
     assert key == "a" || key == "b" || key == "c"
+    assert value == 42 || value == 43 || value == 44
 
-    key = iter()
+    key, value = iter()
     assert key == "a" || key == "b" || key == "c"
+    assert value == 42 || value == 43 || value == 44
 
-    key = iter()
+    key, value = iter()
     assert key == "a" || key == "b" || key == "c"
+    assert value == 42 || value == 43 || value == 44
 
     expect_fail(λ->(iter()))
 }
@@ -1415,13 +1418,13 @@ do {
     expect_fail(λ->(lang.shallow(void)()))
 
     var count = 0
-    for var n in lang.shallow(λ->(void)) {
+    for const n in lang.shallow(λ->(void)) {
         count += 1
     }
     assert count == 0
 
     count = 0
-    for var n in lang.shallow({xyz:void}) {
+    for const n, v in lang.shallow({xyz:void}) {
         assert n == "xyz"
         count += 1
     }
@@ -1660,7 +1663,7 @@ do {
 
     assert "Hello, World!".count("l") == 3
 
-    assert {x: 8, _test_value: 8, y: 8}.count("_test_value") == 1
+    assert lang.first({x: 8, _test_value: 8, y: 8}).count("_test_value") == 1
 
     assert lang.range(100).map(λ(x)->(x/4)).count(11) == 4
 
@@ -1716,6 +1719,46 @@ do {
 }
 
 ##############################################################################
+# lang.first
+
+do {
+    fun gen
+    {
+        yield [40, -40]
+        yield [-40, 50]
+        yield [700, 8]
+    }
+
+    const it0 = gen()
+    assert it0()[0] == 40
+    assert it0()[0] == -40
+    assert it0()[0] == 700
+    expect_fail(it0)
+
+    const it = lang.first(gen())
+    assert it() == 40
+    assert it() == -40
+    assert it() == 700
+    expect_fail(it)
+}
+
+do {
+    const obj = { "0" : 10, "1" : 200, "2" : 3000, "3" : 4000 }
+    const a = [ false, false, false, false ]
+    for const key in lang.first(obj) {
+        assert typeof key == "string"
+        const value = lang.integer(key)
+        assert value >= 0 && value <= 3
+        assert ! a[value]
+        a[value] = true
+    }
+    for const value in a {
+        assert typeof value == "boolean"
+        assert value
+    }
+}
+
+##############################################################################
 # lang.stringize
 
 do {
@@ -1746,6 +1789,7 @@ do {
 do {
     assert typeof lang.args == "array"
     assert lang.args.size   == 1
+    assert lang.args[0].ends_with("module_lang.kos")
 }
 
 ##############################################################################

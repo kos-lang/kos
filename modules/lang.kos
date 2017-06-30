@@ -89,11 +89,11 @@ fun range(first_arg, args...)
 /*
  *     object.prototype.iterator()
  *
- * A generator which generates shallow property names of an object.
+ * A generator which generates shallow properties of an object.
  *
- * Returns an iterator function, which produces names of subsequent 
- * properties of an object, without descending into the object's
- * prototypes.
+ * Returns an iterator function, which produces 2-element arrays which are
+ * [key, value] pairs of subsequent properties of an object, without descending
+ * into the object's prototypes.
  *
  * If the object is not of type `object`, namely it is an integer,
  * a float, a boolean or a void, the generator produces the object itself.
@@ -102,7 +102,7 @@ fun range(first_arg, args...)
  * Example:
  *
  *    > array({ red: 1, green: 10, blue: 100 }.iterator())
- *    ["red", "green", "blue"]
+ *    [["red", 1], ["green", 10], ["blue", 100]]
  *    > array(1.5.iterator())
  *    [1.5]
  *    > array(true.iterator())
@@ -354,6 +354,13 @@ do {
             return this[lpos : rpos + 1]
         }
         return ""
+    }
+}
+
+fun first(iterable)
+{
+    for const x in iterable {
+        yield x[0]
     }
 }
 

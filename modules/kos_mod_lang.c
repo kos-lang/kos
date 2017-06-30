@@ -121,7 +121,7 @@ static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
 {
     int                  error = KOS_SUCCESS;
     KOS_OBJ_ID           walk;
-    KOS_OBJECT_WALK_ELEM elem = { KOS_BADPTR, KOS_BADPTR };
+    KOS_OBJ_ID           ret  = KOS_BADPTR;
 
     assert( ! IS_BAD_PTR(regs_obj));
     TRY_OBJID(regs_obj);
@@ -140,10 +140,25 @@ static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
         TRY(KOS_array_write(frame, regs_obj, 0, walk));
     }
 
-    elem = KOS_object_walk(frame, OBJPTR(OBJECT_WALK, walk));
+    {
+        KOS_OBJECT_WALK_ELEM elem;
+
+        KOS_OBJ_ID array = KOS_new_array(frame, 2);
+        TRY_OBJID(array);
+
+        elem = KOS_object_walk(frame, OBJPTR(OBJECT_WALK, walk));
+
+        TRY_OBJID(elem.key);
+        assert( ! IS_BAD_PTR(elem.value));
+
+        TRY(KOS_array_write(frame, array, 0, elem.key));
+        TRY(KOS_array_write(frame, array, 1, elem.value));
+
+        ret = array;
+    }
 
 _error:
-    return elem.key;
+    return ret;
 }
 
 static KOS_OBJ_ID _shallow(KOS_FRAME  frame,

@@ -236,7 +236,7 @@ do {
 
     const values = ["c", "d", "e"]
 
-    for var key in obj {
+    for const key, value in obj {
         const value = obj[key]
         if typeof value == "integer" && value >= 0 && value < values.size {
             assert values[value] == key

@@ -131,8 +131,7 @@ do {
 do {
     var   sum = 0
     const obj = { a: 9000, b: 7, c: 50, d: 300 }
-    for var key in obj {
-        const val = obj[key]
+    for const key, val in obj {
         if typeof val == "integer" {
             sum += val
         }

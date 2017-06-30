@@ -302,7 +302,8 @@ do {
 
     var found = false
     for var i = 0; i < a.size; i += 1 {
-        if a[i] == "abc" {
+        const k, v = a[i]
+        if k == "abc" {
             found = true
             break
         }
