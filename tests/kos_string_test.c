@@ -1112,6 +1112,13 @@ int main(void)
 
     /************************************************************************/
     {
+        KOS_OBJ_ID s1 = KOS_new_cstring(frame, "123_456");
+        TEST(KOS_string_compare_slice(s1, -5, -8, s1, -2, -1) < 0);
+        TEST(KOS_string_compare_slice(s1, -2, -1, s1, -5, -8) > 0);
+    }
+
+    /************************************************************************/
+    {
         KOS_OBJ_ID s1 = KOS_new_const_ascii_cstring(frame, "");
         KOS_OBJ_ID s2 = KOS_new_const_ascii_cstring(frame, "abc");
         KOS_OBJ_ID s3 = KOS_new_const_ascii_cstring(frame, "acb");
@@ -1576,6 +1583,21 @@ int main(void)
         TEST(KOS_string_get_char_code(frame, str, 3) == (unsigned)'0');
         TEST(KOS_string_get_char_code(frame, str, 4) == (unsigned)'9');
         TEST(KOS_string_get_char_code(frame, str, 5) == (unsigned)'"');
+    }
+
+    /************************************************************************/
+    {
+        int pos = 0;
+        TEST(KOS_string_find(frame, KOS_VOID, KOS_VOID, KOS_FIND_FORWARD, &pos) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+        TEST(pos == 0);
+
+        TEST(KOS_string_scan(frame, KOS_VOID, KOS_VOID, KOS_FIND_FORWARD, KOS_SCAN_INCLUDE, &pos) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+        TEST(pos == 0);
+
+        TEST(KOS_string_reverse(frame, KOS_VOID) == KOS_BADPTR);
+        TEST_EXCEPTION();
     }
 
     KOS_context_destroy(&ctx);

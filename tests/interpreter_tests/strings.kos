@@ -217,6 +217,7 @@ do {
     assert ! "X\x{200}Z\x{10000}".starts_with("\x{200}Z")
     assert "X\x{10000}YZ".starts_with("X\x{10000}")
     assert ! "Y\x{10000}XZ".starts_with("X\x{10000}")
+    assert ! "a".starts_with("aa")
 
     expect_fail(λ->("".starts_with.apply(void, [""])))
     expect_fail(λ->("".starts_with(void)))
@@ -230,6 +231,7 @@ do {
     assert "ab".ends_with("b")
     assert ! "ab".ends_with("a")
     assert ! "ab".ends_with("ba")
+    assert ! "a".ends_with("aa")
 
     expect_fail(λ->("".ends_with.apply(void, [""])))
     expect_fail(λ->("".ends_with(void)))
@@ -336,6 +338,12 @@ do {
             throw "scan failed at index \(idx), expected result \(result), actual \(actual)"
         }
     }
+
+    expect_fail(λ->("".scan.apply(void, [""])))
+    expect_fail(λ->("".scan(void)))
+
+    assert "abcDEF".scan("cba", 0, false) == 3
+    assert "abcd".scan("", 2) == 2
 }
 
 do {
@@ -366,6 +374,11 @@ do {
             throw "rscan failed at index \(idx), expected result \(result), actual \(actual)"
         }
     }
+
+    expect_fail(λ->("".rscan.apply(void, [""])))
+    expect_fail(λ->("".rscan(void)))
+
+    assert "abcDEF".rscan("FED", -1, false) == 2
 }
 
 do {
@@ -426,6 +439,7 @@ do {
     assert "0123456789".reverse() == "9876543210"
     assert "\x{FFFF}\0".reverse() == "\0\x{FFFF}"
     assert "\x{10000}a\0".reverse() == "\0a\x{10000}"
+    expect_fail(λ->("".reverse.apply(void, [])))
 }
 
 do {

@@ -192,6 +192,22 @@ do {
 }
 
 ##############################################################################
+# lang.buffer.prototype.size
+
+do {
+    constructor new_obj
+    {
+    }
+    new_obj.set_prototype(buffer())
+
+    const obj = new_obj()
+
+    assert typeof obj == "object"
+    assert "size" in obj
+    expect_fail(λ->(obj.size))
+}
+
+##############################################################################
 # lang.buffer.prototype.fill
 
 do {
@@ -904,6 +920,7 @@ do {
     expect_fail(λ->(buffer().unpack("u1")))
 }
 
+##############################################################################
 # Reverse
 do {
     const b = buffer(5)

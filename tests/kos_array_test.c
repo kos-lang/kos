@@ -828,6 +828,11 @@ int main(void)
         TEST(KOS_array_read(frame, a, 3) == TO_SMALL_INT(-100));
     }
 
+    {
+        TEST(KOS_array_fill(frame, KOS_VOID, 0, 0, KOS_VOID) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+    }
+
     KOS_context_destroy(&ctx);
 
     return 0;

@@ -433,6 +433,7 @@ do {
     assert lang.string(8)            == "8"
     assert lang.string([], [])       == ""
     assert lang.string([0x30, 0x41]) == "0A"
+    assert lang.string([0x100, 2])   == "\x{100}\x02"
 
     expect_fail(λ->(lang.string([void])))
     expect_fail(λ->(lang.string({})))
@@ -608,6 +609,16 @@ do {
     const a = lang.array()
     assert typeof a == "array"
     assert a.size   == 0
+}
+
+do {
+    const a = lang.array(1)
+    assert a.size == 1
+    assert a[0]   == void
+}
+
+do {
+    expect_fail(λ->(lang.array(-1)))
 }
 
 do {
@@ -817,6 +828,7 @@ do {
 
     expect_fail(λ->([].pop()))
     expect_fail(λ->([1].pop(2)))
+    expect_fail(λ->([1].pop(-1)))
 }
 
 ##############################################################################
@@ -1325,6 +1337,18 @@ do {
         exception = e
     }
     assert exception instanceof lang.exception
+}
+
+do {
+    var ex = void
+    try {
+        lang.exception(42.0)
+    }
+    catch const e {
+        ex = e.value
+    }
+    assert typeof ex == "float"
+    assert ex == 42
 }
 
 ##############################################################################
