@@ -1267,14 +1267,6 @@ static int _expr_var_const(struct _KOS_PARSER    *parser,
 
     enum _KOS_NODE_TYPE node_type = NT_ASSIGNMENT;
 
-    struct _KOS_TOKEN const_token;
-
-    /* Save token for const detection in for-in expression */
-    if (allow_in && parser->token.keyword == KW_CONST)
-        const_token = parser->token;
-    else
-        const_token.keyword = KW_NONE;
-
     TRY(_new_node(parser, &node, parser->token.keyword == KW_CONST ? NT_CONST : NT_VAR));
 
     TRY(_next_token(parser));
