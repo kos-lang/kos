@@ -443,7 +443,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static KOS_OBJ_ID _stringize(KOS_FRAME  frame,
+static KOS_OBJ_ID _stringify(KOS_FRAME  frame,
                              KOS_OBJ_ID this_obj,
                              KOS_OBJ_ID args_obj)
 {
@@ -2220,7 +2220,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
 
     TRY_ADD_FUNCTION( frame, "print",     _print,     0);
     TRY_ADD_FUNCTION( frame, "print_",    _print_,    0);
-    TRY_ADD_FUNCTION( frame, "stringize", _stringize, 0);
+    TRY_ADD_FUNCTION( frame, "stringify", _stringify, 0);
     TRY_ADD_GENERATOR(frame, "deep",      _deep,      1);
     TRY_ADD_GENERATOR(frame, "shallow",   _shallow,   1);
 

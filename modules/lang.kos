@@ -320,7 +320,7 @@ do {
         const sign = this.size ? this[0] : ""
 
         if sign == "+" || sign == "-" {
-            return stringize(sign, fill, this[1:])
+            return stringify(sign, fill, this[1:])
         }
         else {
             return fill + this
