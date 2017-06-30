@@ -33,8 +33,6 @@
 #include <string.h>
 #include <assert.h>
 
-static const char str_err_invalid_custom_size[] = "invalid custom object size";
-
 KOS_OBJ_ID KOS_new_int(KOS_FRAME frame, int64_t value)
 {
     KOS_OBJ_ID obj_id = TO_SMALL_INT((intptr_t)value);
@@ -117,24 +115,6 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
     }
 
     return OBJID(DYNAMIC_PROP, dyn_prop);
-}
-
-KOS_OBJ_ID KOS_new_custom(KOS_FRAME frame, unsigned custom_size)
-{
-    KOS_CUSTOM *custom = 0;
-
-    if (custom_size < sizeof(KOS_CUSTOM) || custom_size > 64)
-        KOS_raise_exception_cstring(frame, str_err_invalid_custom_size);
-    else
-        custom = (KOS_CUSTOM *)_KOS_alloc_object_internal(frame, KOS_AREA_64, (int)custom_size);
-
-    if (custom) {
-        custom->type     = OBJ_CUSTOM;
-        custom->owned    = KOS_VOID;
-        custom->finalize = 0;
-    }
-
-    return OBJID(CUSTOM, custom);
 }
 
 int _KOS_init_stack_frame(KOS_FRAME           frame,
