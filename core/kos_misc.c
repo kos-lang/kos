@@ -524,8 +524,15 @@ static void _pcg_init(struct KOS_RNG_PCG32 *pcg,
 
 void _KOS_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
 {
-    _pcg_init(&rng->pcg[0], seed & 0xFFFFU, (seed >> 16) & 0xFFFFU);
-    _pcg_init(&rng->pcg[1], (seed >> 32) & 0xFFFFU, (seed >> 48) & 0xFFFFU);
+#define BITS64_U64(x) ((x)<<60) | ((x)<<56) | ((x)<<52) | ((x)<<48) | \
+                      ((x)<<44) | ((x)<<40) | ((x)<<36) | ((x)<<32) | \
+                      ((x)<<28) | ((x)<<24) | ((x)<<20) | ((x)<<16) | \
+                      ((x)<<12) | ((x)<<8)  | ((x)<<4)  | ((x)<<0)
+#define BITS64(y) ((uint64_t)BITS64_U64((uint64_t)(y)))
+    _pcg_init(&rng->pcg[0], seed & BITS64(0x4U), seed & BITS64(0x1U));
+    _pcg_init(&rng->pcg[1], seed & BITS64(0x8U), seed & BITS64(0x2U));
+#undef BITS64
+#undef BITS64_U64
 }
 
 void _KOS_rng_init(struct KOS_RNG *rng)
@@ -552,7 +559,7 @@ uint64_t _KOS_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
     if (max_value == (uint32_t)(int32_t)-1)
         return _pcg_random(&rng->pcg[0]);
 
-    if (max_value <= (uint32_t)(int32_t)-1) {
+    if (max_value < (uint32_t)(int32_t)-1) {
 
         const uint32_t mask      = (uint32_t)max_value + 1U;
         const uint32_t threshold = (uint32_t)-(int32_t)mask % mask;
@@ -568,9 +575,8 @@ uint64_t _KOS_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
 
         const uint64_t mask      = max_value + 1U;
         const uint64_t threshold = (uint64_t)-(int64_t)mask % mask;
-        int            sel       = 0;
 
-        for (;; sel ^= 1) {
+        for (;;) {
             const uint64_t r = _KOS_rng_random(rng);
             if (r >= threshold)
                 return r % mask;
