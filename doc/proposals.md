@@ -1,6 +1,16 @@
 ﻿Enhancement proposals
 =====================
 
+* Change division to produce float, add integer division operator //
+
+* Add raw strings r"" and buffer strings b""
+
+* Empty array, buffer, string, object (shallow) are all falsy
+
+* Rename string.ord() to string.code()
+
+* if and switch variable declarations
+
 * ? Support multi-line strings the Python way or the C way?
 
 * Partial application:
@@ -50,16 +60,11 @@
     - Add static?
     - Add super?
 
-* Spread operator
-
-        var str = "hello";
-        var a   = [ str ... ]; // [ "h", "e", "l", "l", "o" ]
-        some_func(str, a ...); // some_func(str, "h", "e", "l", "l", "o");
-
-* Range spread operator
-
-        var a = [ 0 ... 5 ]; // [ 0, 1, 2, 3, 4, 5 ]
-
 * Invocation with explicit argument names, e.g.:
 
         var f = file.open(name="xyz", flags="r");
+
+* Optimizations:
+
+    - Find line where a variable is no longer used, release register.
+    - Don't reload constants if they are already in registers.
