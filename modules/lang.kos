@@ -561,6 +561,10 @@ object.prototype.any = fun(transform)
 
 fun method(obj, func)
 {
+    if typeof func == "string" {
+        func = obj[func]
+    }
+    assert typeof func == "function"
     return fun(args...) -> (func.apply(obj, args))
 }
 

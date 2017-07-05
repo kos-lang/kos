@@ -1727,13 +1727,15 @@ do {
 do {
     const o = {
         _i : 0,
-        add : fun(x) { const v = this._i ; this._i = v + x ; return v }
+        add : fun(x) { const v = this._i ; this._i = v + x ; return v },
+        sub : fun(x) { const v = this._i ; this._i = v - x ; return v }
     }
 
     assert o.add(1) == 0
     assert o._i     == 1
 
     const m = lang.method(o, o.add)
+    assert typeof m == "function"
 
     assert m(2) == 1
     assert o._i == 3
@@ -1746,6 +1748,19 @@ do {
 
     assert m(3) == 4
     assert o._i == 7
+
+    const ms = lang.method(o, "sub")
+    assert typeof ms == "function"
+
+    assert ms(1) == 7
+    assert o._i  == 6
+
+    assert ms(3) == 6
+    assert o._i  == 3
+
+    expect_fail(λ->(lang.method(o, "_i")))
+    expect_fail(λ->(lang.method(o, "non existent")))
+    expect_fail(λ->(lang.method(o, o._i)))
 }
 
 ##############################################################################
