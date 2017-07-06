@@ -545,6 +545,37 @@ static int _collect_string(struct _KOS_LEXER *lexer)
     return error;
 }
 
+static int _collect_raw_string(struct _KOS_LEXER *lexer)
+{
+    const char *begin, *end;
+
+    int error = KOS_SUCCESS;
+
+    unsigned c = _prefetch_next(lexer, &begin, &end);
+
+    while ((c != LT_EOF) && (c != LT_INVALID_UTF8) && (c != LT_STRING)) {
+
+        if (c == LT_BACKSLASH) {
+            c = _prefetch_next(lexer, &begin, &end);
+            if (c == LT_EOF || c == LT_INVALID_UTF8)
+                break;
+        }
+
+        c = _prefetch_next(lexer, &begin, &end);
+    }
+
+    if (c == LT_EOF) {
+        lexer->error_str = str_err_eof_str;
+        error = KOS_ERROR_SCANNING_FAILED;
+    }
+    else if (c == LT_INVALID_UTF8) {
+        lexer->error_str = str_err_invalid_utf8;
+        error = KOS_ERROR_SCANNING_FAILED;
+    }
+
+    return error;
+}
+
 static void _collect_identifier(struct _KOS_LEXER *lexer)
 {
     const char *begin, *end;
@@ -812,6 +843,19 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
                 token->type = TT_EOL;
                 break;
             case LT_LETTER:
+                if (*begin == 'r' || *begin == 'R')
+                {
+                    const char *end2;
+                    c = _prefetch_next(lexer, &end, &end2);
+                    if (c == LT_STRING) {
+                        token->type = TT_STRING;
+                        error = _collect_raw_string(lexer);
+                        end = lexer->prefetch_end;
+                        break;
+                    }
+                    else
+                        _retract(lexer, end);
+                }
                 /* fall through */
             case LT_UNDERSCORE:
                 _collect_identifier(lexer);

@@ -1114,6 +1114,21 @@ static int _optimize_unary_op(struct _KOS_COMP_UNIT      *program,
     return _collapse_numeric(program, node, &numeric_a);
 }
 
+static int _is_raw(const struct _KOS_AST_NODE *node)
+{
+    if (node->type == NT_STRING_LITERAL && node->token.type == TT_STRING) {
+        const char *const begin = node->token.begin;
+
+        if (*begin == 'r' || *begin == 'R') {
+            assert(begin[1] == '"');
+            assert(node->token.length >= 3U);
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 static int _add_strings(struct _KOS_COMP_UNIT      *program,
                         struct _KOS_AST_NODE       *node,
                         const struct _KOS_AST_NODE *a,
@@ -1122,8 +1137,13 @@ static int _add_strings(struct _KOS_COMP_UNIT      *program,
     char                      *str;
     const enum _KOS_TOKEN_TYPE a_type   = a->token.type;
     const enum _KOS_TOKEN_TYPE b_type   = b->token.type;
+    const char                *a_begin  = a->token.begin + 1;
+    const char                *b_begin  = b->token.begin + 1;
     unsigned                   a_length = a->token.length;
     unsigned                   b_length = b->token.length;
+    const int                  is_raw   = _is_raw(a);
+    unsigned                   pos;
+    unsigned                   new_length;
 
     assert(a->type == NT_STRING_LITERAL);
     assert(a_type == TT_STRING || a_type == TT_STRING_OPEN);
@@ -1131,25 +1151,41 @@ static int _add_strings(struct _KOS_COMP_UNIT      *program,
     assert(b->type == NT_STRING_LITERAL);
     assert(b_type == TT_STRING || b_type == TT_STRING_OPEN);
     assert((b_type == TT_STRING && b_length >= 2U) || b_length >= 3U);
+    assert(_is_raw(b) == is_raw);
 
     a_length -= a_type == TT_STRING ? 2U : 3U;
     b_length -= b_type == TT_STRING ? 2U : 3U;
 
+    if (is_raw) {
+        ++a_begin;
+        --a_length;
+        ++b_begin;
+        --b_length;
+    }
+
     _promote(program, node, a);
 
-    str = (char *)_KOS_mempool_alloc(&program->allocator, a_length + b_length + 2U);
+    new_length = a_length + b_length + (is_raw ? 3U : 2U);
+
+    str = (char *)_KOS_mempool_alloc(&program->allocator, new_length);
 
     if ( ! str)
         return KOS_ERROR_OUT_OF_MEMORY;
 
-    str[0] = '"';
-    memcpy(str + 1, a->token.begin + 1, a_length);
-    memcpy(str + 1 + a_length, b->token.begin + 1, b_length);
-    str[1+a_length+b_length] = '"';
+    pos = 0;
+    if (is_raw)
+        str[pos++] = 'r';
+    str[pos++] = '"';
+    memcpy(str + pos, a_begin, a_length);
+    pos += a_length;
+    memcpy(str + pos, b_begin, b_length);
+    pos += b_length;
+    str[pos++] = '"';
+    assert(pos == new_length);
 
     node->token.type   = TT_STRING;
     node->token.begin  = str;
-    node->token.length = a_length + b_length + 2;
+    node->token.length = new_length;
 
     ++program->num_optimizations;
 
@@ -1263,7 +1299,8 @@ static int _operator(struct _KOS_COMP_UNIT *program,
                     error = _optimize_binary_op(program, node, ca, cb);
 
                 else if (op == OT_ADD && a_type == NT_STRING_LITERAL && b_type == NT_STRING_LITERAL)
-                    error = _add_strings(program, node, ca, cb);
+                    if (_is_raw(ca) == _is_raw(cb))
+                        error = _add_strings(program, node, ca, cb);
             }
             else {
                 if (a_type == NT_NUMERIC_LITERAL)
@@ -1512,7 +1549,8 @@ static int _interpolated_string(struct _KOS_COMP_UNIT *program,
         cb = _KOS_get_const(program, next);
 
         if (ca && cb &&
-            _stringify(program, &ca, &sa) && _stringify(program, &cb, &sb)) {
+            _stringify(program, &ca, &sa) && _stringify(program, &cb, &sb) &&
+            _is_raw(ca) == _is_raw(cb)) {
 
             TRY(_add_strings(program, child, ca, cb));
 

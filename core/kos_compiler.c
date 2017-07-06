@@ -307,13 +307,18 @@ static int _lookup_var(struct _KOS_COMP_UNIT   *program,
     return var ? KOS_SUCCESS : KOS_ERROR_INTERNAL;
 }
 
-static int _compare_strings(const char *a, unsigned len_a,
-                            const char *b, unsigned len_b)
+static int _compare_strings(const char *a, unsigned len_a, enum _KOS_UTF8_ESCAPE escape_a,
+                            const char *b, unsigned len_b, enum _KOS_UTF8_ESCAPE escape_b)
 {
     const unsigned min_len = (len_a <= len_b) ? len_a : len_b;
+    int            result;
+
+    /* TODO compare escaped vs. non-escaped */
+    if (escape_a != escape_b)
+        return escape_a ? 1 : -1;
 
     /* TODO do proper unicode compare */
-    int result = memcmp(a, b, min_len);
+    result = memcmp(a, b, min_len);
 
     if (result == 0)
         result = (int)len_a - (int)len_b;
@@ -323,14 +328,22 @@ static int _compare_strings(const char *a, unsigned len_a,
 
 static void _get_token_str(const struct _KOS_TOKEN *token,
                            const char             **out_begin,
-                           unsigned                *out_length)
+                           unsigned                *out_length,
+                           enum _KOS_UTF8_ESCAPE   *out_escape)
 {
     const char *begin  = token->begin;
     unsigned    length = token->length;
 
+    *out_escape = KOS_UTF8_WITH_ESCAPE;
+
     if (token->type >= TT_STRING) { /* TT_STRING* */
         assert(token->type == TT_STRING ||
                token->type == TT_STRING_OPEN);
+        if (*begin == 'r' || *begin == 'R') {
+            *out_escape = KOS_UTF8_NO_ESCAPE;
+            ++begin;
+            --length;
+        }
         ++begin;
         length -= 2;
         if (token->type > TT_STRING) /* TT_STRING_OPEN_* */
@@ -354,11 +367,12 @@ static int _strings_compare_item(void                       *what,
     const struct _KOS_COMP_STRING *str   = (const struct _KOS_COMP_STRING *)node;
     const char                    *begin;
     unsigned                       length;
+    enum _KOS_UTF8_ESCAPE          escape;
 
-    _get_token_str(token, &begin, &length);
+    _get_token_str(token, &begin, &length, &escape);
 
-    return _compare_strings(begin,    length,
-                            str->str, str->length);
+    return _compare_strings(begin,    length,      escape,
+                            str->str, str->length, str->escape);
 }
 
 static int _strings_compare_node(struct _KOS_RED_BLACK_NODE *a,
@@ -367,8 +381,8 @@ static int _strings_compare_node(struct _KOS_RED_BLACK_NODE *a,
     const struct _KOS_COMP_STRING *str_a = (const struct _KOS_COMP_STRING *)a;
     const struct _KOS_COMP_STRING *str_b = (const struct _KOS_COMP_STRING *)b;
 
-    return _compare_strings(str_a->str, str_a->length,
-                            str_b->str, str_b->length);
+    return _compare_strings(str_a->str, str_a->length, str_a->escape,
+                            str_b->str, str_b->length, str_b->escape);
 }
 
 static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
@@ -390,10 +404,14 @@ static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
 
         if (str) {
 
-            const char *begin;
-            unsigned    length;
+            const char           *begin;
+            unsigned              length;
+            enum _KOS_UTF8_ESCAPE tok_escape;
 
-            _get_token_str(token, &begin, &length);
+            _get_token_str(token, &begin, &length, &tok_escape);
+
+            if (tok_escape == KOS_UTF8_NO_ESCAPE)
+                escape = KOS_UTF8_NO_ESCAPE;
 
             str->index  = program->num_strings++;
             str->next   = 0;
@@ -2366,11 +2384,13 @@ static int _refinement_module(struct _KOS_COMP_UNIT      *program,
 
     if (node->type == NT_STRING_LITERAL) {
 
-        int         global_idx;
-        const char *begin;
-        unsigned    length;
+        int                   global_idx;
+        const char           *begin;
+        unsigned              length;
+        enum _KOS_UTF8_ESCAPE escape;
 
-        _get_token_str(&node->token, &begin, &length);
+        /* TODO this does not work for escaped strings, get_global_idx assumes NO_ESCAPE */
+        _get_token_str(&node->token, &begin, &length, &escape);
 
         assert(program->get_global_idx);
         error = program->get_global_idx(program->frame, module_var->array_idx, begin, length, &global_idx);

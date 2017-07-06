@@ -318,7 +318,11 @@ sequence.
 
     StringChar           ::= UnescapedStringChar | EscapedChar
 
-    STRING_LITERAL       ::= """ ( StringChar )* """
+    EscapedStringLiteral ::= """ ( StringChar )* """
+
+    RawStringLiteral     ::= ( "r" | "R" ) """ ( UTF8_CHARACTER except """ ) """
+
+    STRING_LITERAL       ::= EscapedStringLiteral | RawStringLiteral
 
 An escaped opening parenthesis begins a string interpolation expression.  The
 lexer stops fetching further characters and returns the current token as a

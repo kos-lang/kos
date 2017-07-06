@@ -36,6 +36,42 @@ do {
 }
 
 do {
+    const str = "" + ""
+    assert str.size == 0
+}
+
+do {
+    const str = r"" + R""
+    assert str.size == 0
+}
+
+do {
+    const str = λ->( r"test\r\n\"" )()
+    assert str == "test\\r\\n\\\""
+
+    assert "\\\"" == r"\""
+
+    assert "\\r" + λ->(r"\n")() == R"\r" + λ->("\\n")()
+    assert "\\r" + r"\n" == R"\r" + "\\n"
+}
+
+do {
+    const str = "\r" + "\n"
+    assert str.size == 2
+    assert str[0] == "\r"
+    assert str[1] == "\n"
+}
+
+do {
+    const str = R"\r" + r"\n"
+    assert str.size == 4
+    assert str[0] == "\\"
+    assert str[1] == "r"
+    assert str[2] == "\\"
+    assert str[3] == "n"
+}
+
+do {
     const str = "\xff"
     assert λ->("\X{0FF}")() == str
 }
@@ -67,6 +103,20 @@ do {
 do {
     const str = "\( "\( "\( "\( 123 )" )" )" )"
     assert str == "123"
+}
+
+do {
+    const str = r"\"\("#")"
+    assert str.size == 4
+    assert str[0] == "\\"
+    assert str[1] == "\""
+    assert str[2] == "\\"
+    assert str[3] == "("
+}
+
+do {
+    const str = "\( r"" + R"" )"
+    assert str.size == 0
 }
 
 do {

@@ -9,6 +9,10 @@ var g = false;      # boolean/false litereal
 var h = void;       # void literal
 var i = this;       # this
 var j = ident;      # identifier
+var k = r"";        # raw string
+var l = R"";        # raw string
+var m = r"\"";      # raw string
+var n = R"\"";      # raw string
 
 @ 0
 
@@ -63,6 +67,26 @@ var j = ident;      # identifier
             (identifier 11 5 j) )
         (identifier 11 9 ident)
     )
+    (assignment 12 7 =
+        (var 12 1 var
+            (identifier 12 5 k) )
+        (string 12 9 r"")
+    )
+    (assignment 13 7 =
+        (var 13 1 var
+            (identifier 13 5 l) )
+        (string 13 9 R"")
+    )
+    (assignment 14 7 =
+        (var 14 1 var
+            (identifier 14 5 m) )
+        (string 14 9 r"\"")
+    )
+    (assignment 15 7 =
+        (var 15 1 var
+            (identifier 15 5 n) )
+        (string 15 9 R"\"")
+    )
 )
 
 @------------------------------------------------------------------------------
@@ -88,4 +112,13 @@ $
 @------------------------------------------------------------------------------
 耀
 
+@ 9 1 1
+
+@------------------------------------------------------------------------------
+r ""
+
+@ 10 1 3
+
+@------------------------------------------------------------------------------
+r"\"
 @ 9 1 1

@@ -3,7 +3,7 @@
 
 * Change division to produce float, add integer division operator //
 
-* Add raw strings r"" and buffer strings b""
+* Add buffer strings b""
 
 * Empty array, buffer, string, object (shallow) are all falsy
 
