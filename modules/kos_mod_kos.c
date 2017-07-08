@@ -32,6 +32,7 @@
 #include "../inc/kos_version.h"
 #include "../core/kos_lexer.h"
 #include "../core/kos_object_alloc.h"
+#include "../core/kos_object_internal.h"
 #include "../core/kos_try.h"
 
 static const char str_column[]             = "column";
@@ -53,6 +54,7 @@ struct _LEXER {
     struct _KOS_LEXER lexer;
     struct _KOS_TOKEN token;
     uint8_t          *last_buf;
+    int               ignore_errors;
 };
 
 static void _finalize(KOS_FRAME frame,
@@ -62,9 +64,9 @@ static void _finalize(KOS_FRAME frame,
         _KOS_free_buffer(frame, priv, sizeof(struct _LEXER));
 }
 
-static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
-                         KOS_OBJ_ID regs_obj,
-                         KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _raw_lexer(KOS_FRAME  frame,
+                             KOS_OBJ_ID regs_obj,
+                             KOS_OBJ_ID args_obj)
 {
     int                       error      = KOS_SUCCESS;
     KOS_OBJ_ID                retval     = KOS_BADPTR;
@@ -115,6 +117,16 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
         lexer->last_buf = buf_data;
 
         TRY(KOS_array_write(frame, regs_obj, 0, lexer_obj_id));
+
+        lexer->ignore_errors = 0;
+
+        if (KOS_get_array_size(regs_obj) > 1) {
+
+            const KOS_OBJ_ID arg = KOS_array_read(frame, regs_obj, 1);
+            TRY_OBJID(arg);
+
+            lexer->ignore_errors = _KOS_is_truthy(arg);
+        }
     }
     else {
         KOS_OBJ_ID buf_obj_id;
@@ -167,26 +179,41 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
     error = _KOS_lexer_next_token(&lexer->lexer, next_token, &lexer->token);
 
     if (error) {
-        KOS_ATOMIC(KOS_OBJ_ID) parts[6];
-        KOS_OBJ_ID             exception;
+        if (lexer->ignore_errors) {
 
-        assert(error == KOS_ERROR_SCANNING_FAILED);
+            struct _KOS_TOKEN *token = &lexer->token;
 
-        parts[0] = KOS_context_get_cstring(frame, str_format_parse_error);
-        parts[1] = KOS_object_to_string(frame, TO_SMALL_INT((int)lexer->lexer.pos.line));
-        TRY_OBJID(parts[1]);
-        parts[2] = KOS_context_get_cstring(frame, str_format_colon);
-        parts[3] = KOS_object_to_string(frame, TO_SMALL_INT((int)lexer->lexer.pos.column));
-        TRY_OBJID(parts[3]);
-        parts[4] = KOS_context_get_cstring(frame, str_format_colon_space);
-        parts[5] = KOS_new_cstring(frame, lexer->lexer.error_str);
-        TRY_OBJID(parts[5]);
+            lexer->lexer.error_str = 0;
 
-        exception = KOS_string_add_many(frame, parts, sizeof(parts)/sizeof(parts[0]));
-        TRY_OBJID(exception);
+            token->type    = TT_WHITESPACE;
+            token->keyword = KW_NONE;
+            token->op      = OT_NONE;
+            token->sep     = ST_NONE;
 
-        KOS_raise_exception(frame, exception);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            lexer->lexer.pos.column += token->length;
+        }
+        else {
+            KOS_ATOMIC(KOS_OBJ_ID) parts[6];
+            KOS_OBJ_ID             exception;
+
+            assert(error == KOS_ERROR_SCANNING_FAILED);
+
+            parts[0] = KOS_context_get_cstring(frame, str_format_parse_error);
+            parts[1] = KOS_object_to_string(frame, TO_SMALL_INT((int)lexer->lexer.pos.line));
+            TRY_OBJID(parts[1]);
+            parts[2] = KOS_context_get_cstring(frame, str_format_colon);
+            parts[3] = KOS_object_to_string(frame, TO_SMALL_INT((int)lexer->lexer.pos.column));
+            TRY_OBJID(parts[3]);
+            parts[4] = KOS_context_get_cstring(frame, str_format_colon_space);
+            parts[5] = KOS_new_cstring(frame, lexer->lexer.error_str);
+            TRY_OBJID(parts[5]);
+
+            exception = KOS_string_add_many(frame, parts, sizeof(parts)/sizeof(parts[0]));
+            TRY_OBJID(exception);
+
+            KOS_raise_exception(frame, exception);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
     }
 
     if (lexer->token.type != TT_EOF) {
@@ -197,7 +224,7 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
         KOS_OBJ_ID token_obj = KOS_new_object(frame);
         TRY_OBJID(token_obj);
 
-        value = KOS_new_string_esc(frame, token->begin, token->length);
+        value = KOS_new_string(frame, token->begin, token->length);
         TRY_OBJID(value);
 
         TRY(KOS_set_property(frame,
@@ -235,6 +262,10 @@ static KOS_OBJ_ID _lexer(KOS_FRAME  frame,
                              KOS_context_get_cstring(frame, str_sep),
                              TO_SMALL_INT((int)token->sep)));
 
+        if (lexer->token.type == TT_STRING || lexer->token.type == TT_STRING_OPEN) {
+            /* TODO parse string, raw/non-raw */
+        }
+
         retval = token_obj;
     }
 
@@ -249,7 +280,7 @@ int _KOS_module_kos_init(KOS_FRAME frame)
 {
     int error = KOS_SUCCESS;
 
-    TRY_ADD_GENERATOR(frame, "raw_lexer", _lexer, 1);
+    TRY_ADD_GENERATOR(frame, "raw_lexer", _raw_lexer, 1);
 
     TRY_ADD_INTEGER_CONSTANT(frame, "version_major",        KOS_VERSION_MAJOR);
     TRY_ADD_INTEGER_CONSTANT(frame, "version_minor",        KOS_VERSION_MINOR);

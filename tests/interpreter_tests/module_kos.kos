@@ -138,7 +138,7 @@ do {
     const expected = [ [  1, "token_separator",   "sep_curly_open",   "{"     ],
                        [  2, "token_separator",   "sep_paren_open",   "("     ],
                        [  3, "token_separator",   "sep_square_open",  "["     ],
-                       [  4, "token_string_open", "sep_none",         "\"\\(" ],
+                       [  4, "token_string_open", "sep_none",         "\"\\(" ], #)\"
                        [  7, "token_string",      "sep_none",         ")\""   ],
                        [  9, "token_separator",   "sep_square_close", "]"     ],
                        [ 10, "token_separator",   "sep_paren_close",  ")"     ],
@@ -156,4 +156,45 @@ do {
     }
 
     assert idx == 8
+}
+
+do {
+    const input = "+\\hello"
+    const buf   = lang.buffer().pack("s", input)
+
+    do {
+        const lexer = kos.raw_lexer(buf)
+        const token = lexer()
+        assert token.type  == kos.token_operator
+        assert token.token == "+"
+        assert token.op    == kos.op_add
+        expect_fail(lexer)
+        expect_fail(lexer)
+    }
+
+    const lexer = kos.raw_lexer(buf, true) # ignore_errors=true
+
+    const t1 = lexer()
+    assert t1.type   == kos.token_operator
+    assert t1.token  == "+"
+    assert t1.op     == kos.op_add
+    assert t1.line   == 1
+    assert t1.column == 1
+
+    const t2 = lexer()
+    assert t2.type    == kos.token_whitespace
+    assert t2.token   == "\\"
+    assert t2.keyword == kos.keyword_none
+    assert t2.op      == kos.op_none
+    assert t2.sep     == kos.sep_none
+    assert t2.line    == 1
+    assert t2.column  == 2
+
+    const t3 = lexer()
+    assert t3.type   == kos.token_identifier
+    assert t3.token  == "hello"
+    assert t3.line   == 1
+    assert t3.column == 3
+
+    expect_fail(lexer)
 }
