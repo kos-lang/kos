@@ -394,6 +394,7 @@ do {
 
     assert "abcDEF".scan("cba", 0, false) == 3
     assert "abcd".scan("", 2) == 2
+    assert " \r \n \t a".scan(" \r\n\t", 0, false) == 7
 }
 
 do {
@@ -525,4 +526,103 @@ do {
     assert "bca   bca".lstrip("abc") == "   bca"
     assert "bca   bca".rstrip("abc") == "bca   "
     assert "cab   cab".strip("abc")  == "   "
+}
+
+do {
+    const a = "".split()
+    assert typeof a == "function"
+    var count = 0
+    for const item in a {
+        count += 1
+    }
+    assert count == 0
+}
+
+do {
+    const a = "a".split()
+    assert typeof a == "function"
+    var count = 0
+    for const item in a {
+        assert item == "a"
+        count += 1
+    }
+    assert count == 1
+}
+
+do {
+    const a = "a".split(" ", 1)
+    assert typeof a == "function"
+    var count = 0
+    for const item in a {
+        assert item == "a"
+        count += 1
+    }
+    assert count == 1
+}
+
+do {
+    const a = "a".split(" ", 0)
+    assert typeof a == "function"
+    var count = 0
+    for const item in a {
+        count += 1
+    }
+    assert count == 0
+}
+
+do {
+    const a = "   \r   \t     \n    ".split()
+    assert typeof a == "function"
+    var count = 0
+    for const item in a {
+        count += 1
+    }
+    assert count == 0
+}
+
+do {
+    const a = "a    \r  \n  \t     b".split()
+    assert typeof a == "function"
+    var count = 0
+    for const item in a {
+        if count == 0 {
+            assert item == "a"
+        }
+        else {
+            assert item == "b"
+        }
+        count += 1
+    }
+    assert count == 2
+}
+
+do {
+    const a = "\t  \n  \r  a    \r  \n  \t     b\t  \r \n".split()
+    assert typeof a == "function"
+    var count = 0
+    for const item in a {
+        if count == 0 {
+            assert item == "a"
+        }
+        else {
+            assert item == "b"
+        }
+        count += 1
+    }
+    assert count == 2
+}
+
+do {
+    const a = "xxx xxxx\nxxx xyx".split("x", 3)
+    assert typeof a == "function"
+    var count = 0
+    for const item in a {
+        switch count {
+            0 { assert item == " " }
+            1 { assert item == "\n" }
+            2 { assert item == " xyx" }
+        }
+        count += 1
+    }
+    assert count == 3
 }

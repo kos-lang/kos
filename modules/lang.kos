@@ -355,6 +355,38 @@ do {
         }
         return ""
     }
+
+    string.prototype.split = fun(chars = whitespace, max_split = -1)
+    {
+        var splits_left = max_split
+        if splits_left == 0 {
+            return
+        }
+        if splits_left < 0 {
+            splits_left = 0x10000
+        }
+
+        var pos = this.scan(chars, false)
+        if pos == -1 {
+            return
+        }
+
+        for ; splits_left > 1; splits_left -= 1 {
+            const end = this.scan(chars, pos)
+            if end == -1 {
+                yield this[pos:]
+                return
+            }
+            yield this[pos:end]
+
+            pos = this.scan(chars, end, false)
+            if pos == -1 {
+                return
+            }
+        }
+
+        yield this[pos:]
+    }
 }
 
 fun first(iterable)
