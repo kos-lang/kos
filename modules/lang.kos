@@ -460,6 +460,15 @@ fun reduce(op, init, args...)
     }
 }
 
+fun sum(iterable, init = 0)
+{
+    var total = init
+    for const elem in iterable {
+        total += elem
+    }
+    return total
+}
+
 fun count(op, args...)
 {
     var count_f = typeof op == "function" ?

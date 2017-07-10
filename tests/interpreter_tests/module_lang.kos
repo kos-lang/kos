@@ -1683,6 +1683,21 @@ do {
 }
 
 ##############################################################################
+# lang.sum
+
+do {
+    assert lang.sum([]) == 0
+    assert lang.sum([], "") == ""
+    assert lang.sum(void) == 0
+    assert lang.sum([10, 200, 3, 4000]) == 4213
+    assert lang.sum([4.0, 2.0, 8.0]) == 14.0
+    assert lang.sum(["ab", "c", "def", "gh"], "") == "abcdefgh"
+
+    expect_fail(lang.sum)
+    expect_fail(λ->(lang.sum([1], "")))
+}
+
+##############################################################################
 # lang.count
 
 do {
