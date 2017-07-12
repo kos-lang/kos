@@ -20,7 +20,8 @@
 # IN THE SOFTWARE.
 #
 
-/*
+/* @item lang range()
+ *
  *     range(stop)
  *     range(start, stop, step = 1)
  *
@@ -86,7 +87,8 @@ fun range(first_arg, args...)
     }
 }
 
-/*
+/* @item lang object.prototype.iterator()
+ *
  *     object.prototype.iterator()
  *
  * A generator which generates shallow properties of an object.
@@ -328,9 +330,9 @@ do {
     }
 }
 
-do {
-    const whitespace = " \r\n\t"
+const whitespace = " \r\n\t\f\v\0\xA0\x{2028}\x{2029}\x{FEFF}"
 
+do {
     string.prototype.lstrip = fun(chars = whitespace)
     {
         const pos = this.scan(chars, false)
@@ -356,8 +358,10 @@ do {
         return ""
     }
 
-    string.prototype.split = fun(chars = whitespace, max_split = -1)
+    string.prototype.split = fun(sep = void, max_split = -1)
     {
+        assert sep != ""
+
         var splits_left = max_split
         if splits_left == 0 {
             return
@@ -366,26 +370,78 @@ do {
             splits_left = 0x10000
         }
 
-        var pos = this.scan(chars, false)
-        if pos == -1 {
-            return
-        }
+        if sep == void {
+            const chars = whitespace
 
-        for ; splits_left > 1; splits_left -= 1 {
-            const end = this.scan(chars, pos)
+            var pos = this.scan(chars, false)
+            if pos == -1 {
+                return
+            }
+
+            for ; splits_left > 1; splits_left -= 1 {
+                const end = this.scan(chars, pos)
+                if end == -1 {
+                    yield this[pos:]
+                    return
+                }
+                yield this[pos:end]
+
+                pos = this.scan(chars, end, false)
+                if pos == -1 {
+                    return
+                }
+            }
+
+            yield this[pos:]
+        }
+        else {
+            var pos = 0
+
+            for ; splits_left > 1; splits_left -= 1 {
+                const end = this.find(sep, pos)
+                if end == -1 {
+                    yield this[pos:]
+                    return
+                }
+                yield this[pos:end]
+
+                pos = end + sep.size
+            }
+
+            yield this[pos:]
+        }
+    }
+
+    string.prototype.split_lines = fun(keep_ends = false)
+    {
+        const eol = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
+
+        var   pos = 0
+        const len = this.size
+
+        loop {
+            if pos == len {
+                return
+            }
+
+            const end = this.scan(eol, pos)
             if end == -1 {
                 yield this[pos:]
                 return
             }
-            yield this[pos:end]
 
-            pos = this.scan(chars, end, false)
-            if pos == -1 {
-                return
+            const endp1 = end + 1
+            if this[end] == "\r" && endp1 < len && this[endp1] == "\n" {
+                const endp2 = end + 2
+                yield this[pos : keep_ends ? endp2 : end]
+                pos = endp2
+                continue
+            }
+            else {
+                yield this[pos : keep_ends ? endp1 : end]
+                pos = endp1
             }
         }
-
-        yield this[pos:]
     }
 }
 

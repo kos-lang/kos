@@ -19,6 +19,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
+import lang.print
+
 fun expect_fail(function)
 {
     var failed = false
@@ -528,101 +530,41 @@ do {
     assert "cab   cab".strip("abc")  == "   "
 }
 
-do {
-    const a = "".split()
-    assert typeof a == "function"
-    var count = 0
-    for const item in a {
-        count += 1
-    }
-    assert count == 0
-}
-
-do {
-    const a = "a".split()
-    assert typeof a == "function"
-    var count = 0
-    for const item in a {
-        assert item == "a"
-        count += 1
-    }
-    assert count == 1
-}
-
-do {
-    const a = "a".split(" ", 1)
-    assert typeof a == "function"
-    var count = 0
-    for const item in a {
-        assert item == "a"
-        count += 1
-    }
-    assert count == 1
-}
-
-do {
-    const a = "a".split(" ", 0)
-    assert typeof a == "function"
-    var count = 0
-    for const item in a {
-        count += 1
-    }
-    assert count == 0
-}
-
-do {
-    const a = "   \r   \t     \n    ".split()
-    assert typeof a == "function"
-    var count = 0
-    for const item in a {
-        count += 1
-    }
-    assert count == 0
-}
-
-do {
-    const a = "a    \r  \n  \t     b".split()
-    assert typeof a == "function"
-    var count = 0
-    for const item in a {
-        if count == 0 {
-            assert item == "a"
+fun expect_items(it, items)
+{
+    assert typeof it == "function"
+    var i = 0
+    for const item in it {
+        if item != items[i] {
+            print("invalid value, expected \"\(items[i])\", actual \"\(item)\"")
+            assert item == items[i]
         }
-        else {
-            assert item == "b"
-        }
-        count += 1
+        i += 1
     }
-    assert count == 2
+    assert i == items.size
 }
 
 do {
-    const a = "\t  \n  \r  a    \r  \n  \t     b\t  \r \n".split()
-    assert typeof a == "function"
-    var count = 0
-    for const item in a {
-        if count == 0 {
-            assert item == "a"
-        }
-        else {
-            assert item == "b"
-        }
-        count += 1
-    }
-    assert count == 2
+    expect_items("".split(),                      [])
+    expect_items("a".split(),                     ["a"])
+    expect_items("a".split(" ", 1),               ["a"])
+    expect_items("a".split(" ", 0),               [])
+    expect_items("   \r   \t     \n    ".split(), [])
+    expect_items("a    \r  \n  \t     b".split(), ["a", "b"])
+    expect_items(",,a, ,b ,,".split(","),         ["", "", "a", " ", "b ", "", ""])
+
+    expect_items("\t  \n  \r  a    \r  \n  \t     b\t  \r \n".split(), ["a", "b"])
+    expect_items(" A-B--C----D---E--F--G".split("--", 5), [" A-B", "C", "", "D", "-E--F--G"])
 }
 
 do {
-    const a = "xxx xxxx\nxxx xyx".split("x", 3)
-    assert typeof a == "function"
-    var count = 0
-    for const item in a {
-        switch count {
-            0 { assert item == " " }
-            1 { assert item == "\n" }
-            2 { assert item == " xyx" }
-        }
-        count += 1
-    }
-    assert count == 3
+    expect_items("\r\n\r\n".split_lines(),      ["", ""])
+    expect_items("\n\r".split_lines(true),      ["\n", "\r"])
+    expect_items("a b c\n d".split_lines(true), ["a b c\n", " d"])
+    expect_items("a b c\n d".split_lines(),     ["a b c", " d"])
+    expect_items("xyz".split_lines(),           ["xyz"])
+    expect_items("line\x1C".split_lines(),      ["line"])
+    expect_items("line\x1C".split_lines(true),  ["line\x1C"])
+    expect_items("".split_lines(),              [])
+    expect_items("".split_lines(true),          [])
 }
