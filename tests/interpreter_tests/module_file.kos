@@ -242,7 +242,7 @@ do {
     }
 
     with const f = file.open(name, file.ro) {
-        const lines = f.read_lines()
+        const lines = f.read_lines(true)
         assert lines() == "abc\n"
         assert lines() == "\n"
         assert lines() == "def\n"
@@ -254,7 +254,7 @@ do {
     }
 
     with const f = file.open(name, file.ro) {
-        const lines = f.read_lines(1)
+        const lines = f.read_lines(true, 1)
         assert lines() == "abc\n"
         assert lines() == "\n"
         assert lines() == "def\n"
@@ -272,7 +272,7 @@ do {
 
     with const f = file.open(name, file.ro) {
         var a = []
-        for var line in f.read_lines() {
+        for var line in f.read_lines(true) {
             const i = a.size
             a.resize(i + 1)
             a[i] = line
@@ -339,7 +339,7 @@ do {
                            "Hello, World!",
                            "END" ]
         var i = 0
-        for var line in f.read_lines() {
+        for var line in f.read_lines(true) {
             assert line.size > expected[i].size
             const delta = line.size - expected[i].size
             assert line[:-delta] == expected[i]
