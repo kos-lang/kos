@@ -2,14 +2,14 @@ platform:
   - x86
   - x64
 
-image:
-  - Visual Studio 2017
+install:
+  - ps: $env:PATH = 'C:\MinGW\bin;C:\MinGW\mingw32\bin;C:\MinGW\msys\1.0\bin;' + $env:PATH
+  - cmd: copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
 
 build_script:
-  - cmd: set
-  - cmd: call "%VSSDK150INSTALL%..\VC\vcvarsall.bat" %PLATFORM%
-  - cmd: C:\Cygwin\bin\bash -lc set
-  - cmd: C:\Cygwin\bin\bahs -lc "tests/run seqfail"
+  - cmd: call "%VSSDK140INSTALL%..\VC\vcvarsall.bat" %PLATFORM%
+  - cmd: sh -c set
+  - cmd: sh -c "tests/run seqfail"
 
 branches:
     except:
