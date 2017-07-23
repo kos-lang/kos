@@ -6,6 +6,7 @@ image:
   - Visual Studio 2017
 
 build_script:
+  - cmd: set
   - cmd: call "%VSSDK150INSTALL%..\VC\vcvarsall.bat" %PLATFORM%
   - cmd: C:\Cygwin\bin\bash -lc set
   - cmd: C:\Cygwin\bin\bahs -lc "tests/run seqfail"
