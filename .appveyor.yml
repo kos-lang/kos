@@ -7,7 +7,7 @@ install:
   - cmd: copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
 
 build_script:
-  - cmd: call "%VSSDK140INSTALL%..\VC\vcvarsall.bat" %PLATFORM%
+  - cmd: call "%VSSDK150INSTALL%..\VC\vcvarsall.bat" %PLATFORM%
   - cmd: sh -c set
   - cmd: sh -c "tests/run seqfail"
 
