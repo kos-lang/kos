@@ -331,6 +331,7 @@ do {
 }
 
 const whitespace = " \r\n\t\f\v\0\xA0\x{2028}\x{2029}\x{FEFF}"
+const eol        = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
 
 do {
     string.prototype.lstrip = fun(chars = whitespace)
@@ -414,17 +415,16 @@ do {
 
     string.prototype.split_lines = fun(keep_ends = false)
     {
-        const eol = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
-
-        var   pos = 0
-        const len = this.size
+        var   pos   = 0
+        const len   = this.size
+        const chars = eol
 
         loop {
             if pos == len {
                 return
             }
 
-            const end = this.scan(eol, pos)
+            const end = this.scan(chars, pos)
             if end == -1 {
                 yield this[pos:]
                 return
