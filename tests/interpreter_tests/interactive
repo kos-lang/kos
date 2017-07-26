@@ -34,7 +34,7 @@ OUTPUT="$2/interactive"
 # Test -c with a script which prints one line in two statements
 
 "$KOS" -c 'print_("Hello, ")
-print("Kos!")
+print("Kos")
 ' > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
