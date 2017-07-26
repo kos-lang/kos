@@ -2,12 +2,19 @@ platform:
   - x86
   - x64
 
+environment:
+  VSBUILD: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
+
 install:
-  - ps: $env:PATH = 'C:\MinGW\bin;C:\MinGW\mingw32\bin;C:\MinGW\msys\1.0\bin;' + $env:PATH
-  - cmd: copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
+  - ps: $env:PATH = 'C:\cygwin64\bin;' + $env:PATH
 
 build_script:
-  - cmd: call "%VSSDK140INSTALL%..\VC\vcvarsall.bat" %PLATFORM%
+  - cmd: dir "C:\\cygwin64"
+  - cmd: dir "C:\\cygwin64\\bin"
+  - cmd: dir "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community"
+  - cmd: set
+  - cmd: call "%VSBUILD%"\vcvarsall.bat %PLATFORM%
+  - cmd: set
   - cmd: sh -c set
   - cmd: sh -c "tests/run seqfail"
 
