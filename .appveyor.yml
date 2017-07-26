@@ -5,18 +5,13 @@ platform:
   - x64
 
 environment:
-  VSBUILD: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
+  MY_VSSDK150INSTALL: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VSSDK"
 
 install:
   - ps: $env:PATH = 'C:\cygwin64\bin;' + $env:PATH
 
 build_script:
-  - cmd: set
-  - cmd: dir C:\"Program Files (x86)"\"Microsoft Visual Studio"
-  - cmd: dir C:\"Program Files (x86)"\"Microsoft Visual Studio"\2017
-  - cmd: dir C:\"Program Files (x86)"\"Microsoft Visual Studio"\2017\Community
-  - cmd: dir "%VSBUILD%"
-  - cmd: call "%VSBUILD%"\vcvarsall.bat %PLATFORM%
+  - cmd: call "%MY_VSSDK150INSTALL%"\..\VC\Auxiliary\Build\vcvarsall.bat %PLATFORM%
   - cmd: set
   - cmd: sh -c set
   - cmd: sh -c "tests/run seqfail"
