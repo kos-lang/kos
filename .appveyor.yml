@@ -12,7 +12,6 @@ install:
 
 build_script:
   - cmd: call "%MY_VSSDK150INSTALL%"\..\VC\Auxiliary\Build\vcvarsall.bat %PLATFORM%
-  - cmd: set
   - cmd: sh -c set
   - cmd: sh -c "tests/run seqfail"
 
