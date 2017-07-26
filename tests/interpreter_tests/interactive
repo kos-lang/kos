@@ -22,10 +22,6 @@
 
 set -e
 
-case "$UNAME" in
-    CYGWIN*) export SHELLOPTS ; set -o igncr ;;
-esac
-
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <kos> <output_dir>"
     exit 1
@@ -39,13 +35,12 @@ OUTPUT="$2/interactive"
 
 "$KOS" -c 'print_("Hello, ")
 print("Kos")
-' > "$OUTPUT"
+' | tr -d '\r' > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != "Hello, Kos" ]; then
     echo "Expected output to contain: \"Hello, Kos\", but it is different" >&2
-    hexdump -Cv "$OUTPUT"
     cat "$OUTPUT"
     exit 1
 fi
@@ -53,7 +48,7 @@ fi
 ##############################################################################
 # Test -v
 
-"$KOS" -v -c 'print("Hello")' > "$OUTPUT"
+"$KOS" -v -c 'print("Hello")' | tr -d '\r' > "$OUTPUT"
 
 if ! grep -q "Kos module search paths: \., " "$OUTPUT"; then
     echo "Expected output to contain module search paths, but they are missing" >&2
@@ -69,7 +64,7 @@ fi
 ##############################################################################
 # Test -c in conjunction with script arguments
 
-"$KOS" --command "print(integer(args[1]) + integer(args[2]))" 20 -5 > "$OUTPUT"
+"$KOS" --command "print(integer(args[1]) + integer(args[2]))" 20 -5 | tr -d '\r' > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -83,7 +78,10 @@ fi
 # Test -c with missing argument
 
 RET=0
-"$KOS" -c > "$OUTPUT" 2> "$OUTPUT.err" || RET=$?
+"$KOS" -c > "$OUTPUT.out" 2> "$OUTPUT.err" || RET=$?
+
+tr -d '\r' < "$OUTPUT.out" > "$OUTPUT"
+rm "$OUTPUT.out"
 
 if [ $RET != "1" ]; then
     echo "Expected exit code 1, but it is $RET"
@@ -106,7 +104,7 @@ rm "$OUTPUT.err"
 ##############################################################################
 # Test script read from stdin pipe
 
-echo 'print("From stdin")' | "$KOS" > "$OUTPUT"
+echo 'print("From stdin")' | "$KOS" | tr -d '\r' > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -116,7 +114,7 @@ if [ "$CONTENTS" != "From stdin" ]; then
     exit 1
 fi
 
-echo 'print(args.size)' | "$KOS" - > "$OUTPUT"
+echo 'print(args.size)' | "$KOS" - | tr -d '\r' > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -126,7 +124,7 @@ if [ "$CONTENTS" != "1" ]; then
     exit 1
 fi
 
-echo 'print(integer(args[1]) + 1)' | "$KOS" - 17 > "$OUTPUT"
+echo 'print(integer(args[1]) + 1)' | "$KOS" - 17 | tr -d '\r' > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -139,7 +137,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with a single line of input ending with EOL
 
-"$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
+"$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -158,7 +156,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with import statements
 
-"$KOS" -c 'print_("import file\nfile.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
+"$KOS" -c 'print_("import file\nfile.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -177,7 +175,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with two lines of input and several EOLs
 
-"$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
+"$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -204,7 +202,7 @@ fi
 ##############################################################################
 # Test various outputs from interactive interpreter
 
-"$KOS" -c 'print_("true\nvoid\n1\n\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" > "$OUTPUT"
+"$KOS" -c 'print_("true\nvoid\n1\n\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
     echo "Expected first line to have interactive interpreter signature" >&2
