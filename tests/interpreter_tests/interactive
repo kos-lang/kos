@@ -22,6 +22,10 @@
 
 set -e
 
+case "$UNAME" in
+    CYGWIN*) set -o igncr ;;
+esac
+
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <kos> <output_dir>"
     exit 1
