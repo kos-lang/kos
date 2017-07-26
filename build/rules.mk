@@ -89,6 +89,7 @@ ifeq ($(UNAME), Windows)
     CFLAGS += -wd4464 # relative path contains '..'
     CFLAGS += -wd4514 # unreferenced inline function has been removed
     CFLAGS += -wd4571 # catch(...): structured exceptions (SEH) are no longer caught
+    CFLAGS += -wd4623 # __std_type_info_data': default constructor was implicitly defined as deleted (in MS headers)
     CFLAGS += -wd4625 # copy constructor was implicitly defined as deleted
     CFLAGS += -wd4626 # assignment operator was implicitly defined as deleted
     CFLAGS += -wd4668 # _M_HYBRID_X86_ARM64 is not defined (in MS headers)
