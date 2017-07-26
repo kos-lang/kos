@@ -85,14 +85,18 @@ ifeq ($(UNAME), Windows)
 
     # Disable warnings which don't make any sense for this project
     CFLAGS += -wd4061 # enumerator 'x' in switch of enum 'y' is not explicitly handled by a case label
+    CFLAGS += -wd4365 # conversion from 'x' to 'y' (in MS headers)
     CFLAGS += -wd4464 # relative path contains '..'
     CFLAGS += -wd4514 # unreferenced inline function has been removed
     CFLAGS += -wd4571 # catch(...): structured exceptions (SEH) are no longer caught
     CFLAGS += -wd4625 # copy constructor was implicitly defined as deleted
     CFLAGS += -wd4626 # assignment operator was implicitly defined as deleted
+    CFLAGS += -wd4668 # _M_HYBRID_X86_ARM64 is not defined (in MS headers)
     CFLAGS += -wd4710 # 'snprintf': function not inlined
     CFLAGS += -wd4711 # function 'x' selected for automatic inline expansion
+    CFLAGS += -wd4774 # _scprintf' : format string expected in argument 1 is not a string literal (in MS headers)
     CFLAGS += -wd4820 # 'x' bytes padding added after data member 'y'
+    CFLAGS += -wd4987 # nonstandard extension used (in MS headers)
     CFLAGS += -wd5026 # move constructor was implicitly defined as deleted
     CFLAGS += -wd5027 # move assignment operator was implicitly defined as deleted
 
