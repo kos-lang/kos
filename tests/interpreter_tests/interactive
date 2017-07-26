@@ -45,6 +45,7 @@ CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != "Hello, Kos" ]; then
     echo "Expected output to contain: \"Hello, Kos\", but it is different" >&2
+    hexdump -Cv "$OUTPUT"
     cat "$OUTPUT"
     exit 1
 fi
