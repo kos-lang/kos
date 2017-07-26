@@ -23,7 +23,7 @@
 set -e
 
 case "$UNAME" in
-    CYGWIN*) set -o igncr ;;
+    CYGWIN*) export SHELLOPTS ; set -o igncr ;;
 esac
 
 if [ $# -ne 2 ]; then
