@@ -1,0 +1,157 @@
+#!/usr/bin/env kos
+
+import file
+import kos
+import lang.*
+
+fun remove_indentation(lines)
+{
+    var min_spaces = 0x10000
+    for const s in lines {
+        const pos = s.scan(" \t", false)
+        if pos > -1 && pos < min_spaces {
+            min_spaces = pos
+        }
+    }
+
+    var num_stars = 0
+    for var i = 0; i < lines.size; i += 1 {
+        const s = lines[i][min_spaces:]
+
+        if s.starts_with("*") {
+            num_stars += 1
+        }
+
+        lines[i] = s
+    }
+
+    if num_stars == lines.size || (num_stars && ! lines[-1].size) {
+        for var i = 0; i < lines.size; i += 1 {
+            lines[i] = lines[i][1:]
+        }
+
+        return remove_indentation(lines)
+    }
+}
+
+fun scan_file(filename, f, docs)
+{
+    fun is_cpp
+    {
+        return filename.ends_with(".h")
+            || filename.ends_with(".c")
+            || filename.ends_with(".cpp")
+    }
+    const lexer =
+        is_cpp()                   ? kos.raw_lexer(f.read(), true) :
+        filename.ends_with(".kos") ? kos.lexer(f.read()) :
+        fun { throw "Unrecognized file type: '\(filename)'" }()
+
+    var   prev_line = -1
+    const comments  = []
+    for const token in lexer {
+        if token.type == kos.token_comment {
+            var comment = token.token
+            if comment.starts_with("#") {
+                comment = comment[1:]
+            }
+            else if comment.starts_with("/*") {
+                var star_offs = -1
+                var pos       = comment.scan("\n")
+                if pos > -1 {
+                    pos = comment.scan("\n", pos, false)
+                }
+                if pos > -1 && comment[pos] != " " {
+                    pos = -1
+                }
+                const next_line_pos = pos
+                if pos > -1 {
+                    pos = comment.scan(" ", pos, false)
+                }
+                if pos > -1 && comment[pos] == "*" {
+                    star_offs = pos - next_line_pos
+                }
+
+                comment = comment[2:-2]
+
+                if star_offs == token.column {
+                    comment = "*".rjust(star_offs + 1) + comment
+                }
+            }
+            else { # //
+                comment = comment[2:]
+            }
+
+            if token.line == prev_line + 1 {
+                comments[-1] = comments[-1] + "\n" + comment
+            }
+            else {
+                comments.push(comment)
+            }
+
+            prev_line = token.line
+        }
+    }
+
+    for var comment in comments {
+        comment = array(comment.split_lines())
+
+        remove_indentation(comment)
+
+        while comment.size && comment[0].scan(" \r\n\t", false) == -1 {
+            comment = comment[1:]
+        }
+
+        if ! comment.size || ! comment[0].lstrip().starts_with("@") {
+            continue
+        }
+
+        const loc = array(comment[0].split())
+
+        if loc.size < 2 {
+            continue
+        }
+
+        const type, topic, item = loc
+
+        comment = comment[1:]
+
+        while comment.size && comment[0].scan(" \r\n\t", false) == -1 {
+            comment = comment[1:]
+        }
+
+        if type == "@item" {
+            if ! (topic in docs) {
+                docs[topic] = { }
+            }
+            docs[topic][item] = comment
+        }
+    }
+}
+
+const docs = {}
+
+for const arg in args[1:] {
+    with const f = file.open(arg, file.ro) {
+        scan_file(arg, f, docs)
+    }
+}
+
+for const topic, items in docs {
+    print(topic)
+    print("=".repeat(topic.size))
+    print()
+    for const item, contents in items {
+        print(item)
+        print("-".repeat(item.size))
+        print()
+        var last_empty = false
+        for const line in contents {
+            print(line)
+            last_empty = line.size == 0
+        }
+        if ! last_empty {
+            print()
+        }
+    }
+}
