@@ -44,6 +44,7 @@ static const char str_err_invalid_utf8[]      = "invalid UTF-8 sequence";
 static const char str_err_not_string[]        = "object is not a string";
 static const char str_err_null_pointer[]      = "null pointer";
 static const char str_err_out_of_memory[]     = "out of memory";
+static const char str_err_too_many_repeats[]  = "repeated string too long";
 
 static KOS_STRING *_new_empty_string(KOS_FRAME                  frame,
                                      unsigned                   length,
@@ -1317,4 +1318,52 @@ KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
     }
 
     return OBJID(STRING, ret);
+}
+
+KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
+                             KOS_OBJ_ID obj_id,
+                             unsigned   num_repeat)
+{
+    unsigned                   len;
+    enum _KOS_STRING_ELEM_SIZE elem_size;
+    KOS_STRING                *in_str;
+    KOS_STRING                *new_str;
+    uint8_t                   *in_buf;
+    uint8_t                   *new_buf;
+    uint8_t                   *end_buf;
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
+        KOS_raise_exception_cstring(frame, str_err_not_string);
+        return KOS_BADPTR;
+    }
+
+    len = KOS_get_string_length(obj_id);
+
+    if (len == 0 || num_repeat == 0)
+        return KOS_context_from_frame(frame)->empty_string;
+
+    if ((len * num_repeat) > 0xFFFFU) {
+        KOS_raise_exception_cstring(frame, str_err_too_many_repeats);
+        return KOS_BADPTR;
+    }
+
+    in_str    = OBJPTR(STRING, obj_id);
+    elem_size = (enum _KOS_STRING_ELEM_SIZE)in_str->elem_size;
+    new_str   = _new_empty_string(frame, len * num_repeat, elem_size);
+    if ( ! new_str)
+        return KOS_BADPTR;
+
+    in_buf  = (uint8_t *)_KOS_get_string_buffer(in_str);
+    new_buf = (uint8_t *)_KOS_get_string_buffer(new_str);
+
+    len <<= elem_size;
+
+    end_buf = new_buf + (len * num_repeat);
+
+    while (new_buf < end_buf) {
+        memcpy(new_buf, in_buf, len);
+        new_buf += len;
+    }
+
+    return OBJID(STRING, new_str);
 }

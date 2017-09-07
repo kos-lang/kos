@@ -144,6 +144,10 @@ int KOS_string_scan(KOS_FRAME              frame,
 KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
                               KOS_OBJ_ID obj_id);
 
+KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
+                             KOS_OBJ_ID obj_id,
+                             unsigned   num_repeat);
+
 #ifdef __cplusplus
 }
 #endif

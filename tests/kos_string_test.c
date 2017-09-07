@@ -1600,6 +1600,58 @@ int main(void)
         TEST_EXCEPTION();
     }
 
+    /************************************************************************/
+    {
+        KOS_OBJ_ID str0 = KOS_new_cstring(frame, "");
+        KOS_OBJ_ID str2 = KOS_new_cstring(frame, "ab");
+        KOS_OBJ_ID str;
+
+        TEST(KOS_string_repeat(frame, KOS_VOID, 0) == KOS_BADPTR);
+        TEST_EXCEPTION();
+
+        str = KOS_string_repeat(frame, str0, 0);
+        TEST(str != KOS_BADPTR);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_string_length(str) == 0);
+
+        str = KOS_string_repeat(frame, str0, 0x10000U);
+        TEST(str != KOS_BADPTR);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_string_length(str) == 0);
+
+        str = KOS_string_repeat(frame, str2, 0);
+        TEST(str != KOS_BADPTR);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_string_length(str) == 0);
+
+        str = KOS_string_repeat(frame, str2, 0);
+        TEST(str != KOS_BADPTR);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_string_length(str) == 0);
+
+        str = KOS_string_repeat(frame, str2, 1);
+        TEST(str != KOS_BADPTR);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_string_length(str) == 2);
+        TEST(KOS_string_get_char_code(frame, str, 0) == (unsigned)'a');
+        TEST(KOS_string_get_char_code(frame, str, 1) == (unsigned)'b');
+
+        str = KOS_string_repeat(frame, str2, 3);
+        TEST(str != KOS_BADPTR);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_string_length(str) == 6);
+        TEST(KOS_string_get_char_code(frame, str, 0) == (unsigned)'a');
+        TEST(KOS_string_get_char_code(frame, str, 1) == (unsigned)'b');
+        TEST(KOS_string_get_char_code(frame, str, 2) == (unsigned)'a');
+        TEST(KOS_string_get_char_code(frame, str, 3) == (unsigned)'b');
+        TEST(KOS_string_get_char_code(frame, str, 4) == (unsigned)'a');
+        TEST(KOS_string_get_char_code(frame, str, 5) == (unsigned)'b');
+
+        str = KOS_string_repeat(frame, str2, 0x8000U);
+        TEST(str == KOS_BADPTR);
+        TEST_EXCEPTION();
+    }
+
     KOS_context_destroy(&ctx);
 
     return 0;

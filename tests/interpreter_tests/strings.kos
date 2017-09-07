@@ -551,6 +551,7 @@ do {
     expect_items("a".split(" ", 0),               [])
     expect_items("   \r   \t     \n    ".split(), [])
     expect_items("a    \r  \n  \t     b".split(), ["a", "b"])
+    expect_items("a\r\nb\nc".split("\r\n"),       ["a", "b\nc"])
     expect_items(",,a, ,b ,,".split(","),         ["", "", "a", " ", "b ", "", ""])
 
     expect_items("\t  \n  \r  a    \r  \n  \t     b\t  \r \n".split(), ["a", "b"])
@@ -567,4 +568,15 @@ do {
     expect_items("line\x1C".split_lines(true),  ["line\x1C"])
     expect_items("".split_lines(),              [])
     expect_items("".split_lines(true),          [])
+}
+
+do {
+    assert "".repeat(0)    == ""
+    assert "a".repeat(0)   == ""
+    assert "".repeat(1)    == ""
+    assert "a".repeat(1)   == "a"
+    assert "a".repeat(2)   == "aa"
+    assert "x".repeat(10)  == "xxxxxxxxxx"
+    assert "mno".repeat(2) == "mnomno"
+    expect_fail(λ->("x".repeat(0x10000)))
 }

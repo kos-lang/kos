@@ -54,6 +54,7 @@ static const char str_err_not_buffer[]                = "object is not a buffer"
 static const char str_err_not_enough_pack_values[]    = "insufficient number of packed values";
 static const char str_err_not_function[]              = "object is not a function";
 static const char str_err_not_string[]                = "object is not a string";
+static const char str_err_too_many_repeats[]          = "invalid string repeat count";
 static const char str_err_unpack_buf_too_short[]      = "unpacked buffer too short";
 static const char str_err_unsup_operand_types[]       = "unsupported operand types";
 
@@ -1788,6 +1789,34 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+static KOS_OBJ_ID _repeat(KOS_FRAME  frame,
+                          KOS_OBJ_ID this_obj,
+                          KOS_OBJ_ID args_obj)
+{
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID arg   = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID ret;
+    int64_t    num;
+    unsigned   text_len;
+
+    TRY_OBJID(arg);
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_STRING)
+        RAISE_EXCEPTION(str_err_not_string);
+
+    TRY(KOS_get_integer(frame, arg, &num));
+
+    text_len = KOS_get_string_length(this_obj);
+
+    if (num < 0 || num > 0xFFFFU || (num * text_len) > 0xFFFFU)
+        RAISE_EXCEPTION(str_err_too_many_repeats);
+
+    ret = KOS_string_repeat(frame, this_obj, (unsigned)num);
+
+_error:
+    return error ? KOS_BADPTR : ret;
+}
+
 static KOS_OBJ_ID _find(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -2271,6 +2300,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "ends_with",     _ends_with,         1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "find",          _find,              1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "ord",           _ord,               0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "repeat",        _repeat,            1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "rfind",         _rfind,             1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "rscan",         _rscan,             1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "reverse",       _reverse,           0);
