@@ -1795,7 +1795,7 @@ static KOS_OBJ_ID _repeat(KOS_FRAME  frame,
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID arg   = KOS_array_read(frame, args_obj, 0);
-    KOS_OBJ_ID ret;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
     int64_t    num;
     unsigned   text_len;
 
