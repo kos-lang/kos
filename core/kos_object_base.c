@@ -35,19 +35,18 @@
 
 KOS_OBJ_ID KOS_new_int(KOS_FRAME frame, int64_t value)
 {
-    KOS_OBJ_ID obj_id = TO_SMALL_INT((intptr_t)value);
+    KOS_OBJ_ID   obj_id = TO_SMALL_INT((intptr_t)value);
+    KOS_INTEGER *integer;
 
-    if (GET_SMALL_INT(obj_id) != value) {
+    if (GET_SMALL_INT(obj_id) == value)
+        return obj_id;
 
-        KOS_INTEGER *integer = (KOS_INTEGER *)_KOS_alloc_object(frame, INTEGER);
+    integer = (KOS_INTEGER *)_KOS_alloc_object(frame, INTEGER);
 
-        if (integer)
-            *integer = value;
+    if (integer)
+        *integer = value;
 
-        obj_id = OBJID(INTEGER, integer);
-    }
-
-    return obj_id;
+    return OBJID(INTEGER, integer);
 }
 
 KOS_OBJ_ID KOS_new_float(KOS_FRAME frame, double value)
@@ -193,31 +192,30 @@ int _KOS_is_truthy(KOS_OBJ_ID obj_id)
 {
     int ret;
 
-    if (IS_NUMERIC_OBJ(obj_id)) {
+    /* Quick path for boolean objects */
+    if ((KOS_OBJ_ID)((uintptr_t)obj_id & ~(uintptr_t)0x10U) == KOS_FALSE)
+        return !! ((int)(intptr_t)obj_id & 0x10);
 
-        switch (GET_NUMERIC_TYPE(obj_id)) {
+    /* Quick path for small integers */
+    if (IS_SMALL_INT(obj_id))
+        return obj_id != TO_SMALL_INT(0);
 
-            case OBJ_NUM_INTEGER:
-                ret = !! *OBJPTR(INTEGER, obj_id);
-                break;
+    switch (GET_OBJ_TYPE(obj_id)) {
 
-            case OBJ_NUM_FLOAT:
-                ret = *OBJPTR(FLOAT, obj_id) != 0.0;
-                break;
-
-            default:
-                ret = !! obj_id;
-                break;
-        }
-    }
-    else switch ((enum KOS_OBJECT_IMMEDIATE)(intptr_t)obj_id) {
-
-        case OBJ_FALSE:
-            ret = 0;
+        case OBJ_INTEGER:
+            /* fall through */
+        case OBJ_INTEGER2:
+            ret = !! *OBJPTR(INTEGER, obj_id);
             break;
 
-        case OBJ_VOID:
-            ret = 0;
+        case OBJ_FLOAT:
+            /* fall through */
+        case OBJ_FLOAT2:
+            ret = *OBJPTR(FLOAT, obj_id) != 0.0;
+            break;
+
+        case OBJ_IMMEDIATE:
+            ret = obj_id != KOS_VOID;
             break;
 
         default:

@@ -68,26 +68,26 @@ static KOS_OBJ_ID _add_integer(KOS_FRAME  frame,
 {
     KOS_OBJ_ID ret;
 
-    if (IS_NUMERIC_OBJ(bobj)) {
+    if (IS_SMALL_INT(bobj))
+        ret = KOS_new_int(frame, a + GET_SMALL_INT(bobj));
 
-        switch (GET_NUMERIC_TYPE(bobj)) {
+    else switch (GET_OBJ_TYPE(bobj)) {
 
-            default:
-                ret = KOS_new_int(frame, a + GET_SMALL_INT(bobj));
-                break;
+        case OBJ_INTEGER:
+            /* fall through */
+        case OBJ_INTEGER2:
+            ret = KOS_new_int(frame, a + *OBJPTR(INTEGER, bobj));
+            break;
 
-            case OBJ_NUM_INTEGER:
-                ret = KOS_new_int(frame, a + *OBJPTR(INTEGER, bobj));
-                break;
+        case OBJ_FLOAT:
+            /* fall through */
+        case OBJ_FLOAT2:
+            ret = KOS_new_float(frame, a + *OBJPTR(FLOAT, bobj));
+            break;
 
-            case OBJ_NUM_FLOAT:
-                ret = KOS_new_float(frame, a + *OBJPTR(FLOAT, bobj));
-                break;
-        }
-    }
-    else {
-        KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
-        ret = KOS_BADPTR;
+        default:
+            KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
+            ret = KOS_BADPTR;
     }
 
     return ret;
