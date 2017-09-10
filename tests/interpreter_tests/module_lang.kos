@@ -1844,6 +1844,166 @@ do {
 }
 
 ##############################################################################
+# lang.array.prototype.sort
+
+do {
+    const a = [].sort()
+    assert typeof a == "array"
+    assert a.size == 0
+}
+
+do {
+    const a = [8].sort()
+    assert typeof a == "array"
+    assert a.size == 1
+    assert a[0] == 8
+}
+
+do {
+    const a = [0, 1]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 2
+    assert b[0] == 0
+    assert b[1] == 1
+}
+
+do {
+    const a = [1, 0]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 2
+    assert b[0] == 0
+    assert b[1] == 1
+}
+
+do {
+    const a = [1, 1]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 2
+    assert b[0] == 1
+    assert b[1] == 1
+}
+
+do {
+    const a = [1, 2, 3]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 3
+    assert b[0] == 1
+    assert b[1] == 2
+    assert b[2] == 3
+}
+
+do {
+    const a = [3, 2, 1]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 3
+    assert b[0] == 1
+    assert b[1] == 2
+    assert b[2] == 3
+}
+
+do {
+    const a = [1, 3, 2]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 3
+    assert b[0] == 1
+    assert b[1] == 2
+    assert b[2] == 3
+}
+
+do {
+    const a = [3, 3, 2]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 3
+    assert b[0] == 2
+    assert b[1] == 3
+    assert b[2] == 3
+}
+
+do {
+    const a = [2, 2, 2]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 3
+    assert b[0] == 2
+    assert b[1] == 2
+    assert b[2] == 2
+}
+
+do {
+    constructor sortable(key)
+    {
+        this.key = key
+    }
+
+    const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]
+    a.sort(λ(x, y) -> (x.key < y.key))
+    assert a[0].key == 10
+    assert a[1].key == 20
+    assert a[2].key == 25
+    assert a[3].key == 30
+    assert a[4].key == 40
+}
+
+##############################################################################
+# lang.sort
+
+do {
+    const a = [ 5, 4, 2, 3, 1 ]
+    const s = lang.sort(a)
+    assert typeof s == "function"
+    assert s() == 1
+    assert s() == 2
+    assert s() == 3
+    assert s() == 4
+    assert s() == 5
+    expect_fail(s)
+    assert a.size == 5
+    assert a[0] == 5
+    assert a[1] == 4
+    assert a[2] == 2
+    assert a[3] == 3
+    assert a[4] == 1
+}
+
+do {
+    const s = lang.sort("foobar")
+    assert typeof s == "function"
+    assert s() == "a"
+    assert s() == "b"
+    assert s() == "f"
+    assert s() == "o"
+    assert s() == "o"
+    assert s() == "r"
+    expect_fail(s)
+}
+
+do {
+    const s = lang.sort("fooba", λ(x, y)->(x > y))
+    assert typeof s == "function"
+    assert s() == "o"
+    assert s() == "o"
+    assert s() == "f"
+    assert s() == "b"
+    assert s() == "a"
+    expect_fail(s)
+}
+
+##############################################################################
 # lang.args
 
 do {

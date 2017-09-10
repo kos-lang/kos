@@ -25,9 +25,9 @@
  *     range(stop)
  *     range(start, stop, step = 1)
  *
- * A generator which generates an arithmetic progression of numbers.
+ * A generator which produces an arithmetic progression of numbers.
  *
- * Returns an iterator function, which produces subsequent elements of
+ * Returns an iterator function, which produces subsequent numbers in
  * the specified range.
  *
  * `start`, `stop` and `step` arguments are integers or floats.
@@ -55,6 +55,9 @@
  *     []
  *     > array(range(2, -8, -2))
  *     [2, 0, -2, -4, -6]
+ *     > for const x in range(2) { print(x) }
+ *     0
+ *     1
  */
 
 fun range(first_arg, args...)
@@ -91,24 +94,31 @@ fun range(first_arg, args...)
  *
  *     object.prototype.iterator()
  *
- * A generator which generates shallow properties of an object.
+ * A generator which produces properties of an object in a shallow manner,
+ * i.e. without descending into prototypes.
  *
  * Returns an iterator function, which produces 2-element arrays which are
- * [key, value] pairs of subsequent properties of an object, without descending
- * into the object's prototypes.
+ * [key, value] pairs of subsequent properties of an object.  The elements
+ * returned are not in any particular order.
  *
- * If the object is not of type `object`, namely it is an integer,
+ * If the object is not of type `object`, e.g. if it is an integer,
  * a float, a boolean or a void, the generator produces the object itself.
  * Prototypes of array, string, buffer and function override this generator.
  *
- * Example:
+ * The `iterator` function is also implicitly invoked by the `for-in` loop
+ * statement.
  *
- *    > array({ red: 1, green: 10, blue: 100 }.iterator())
- *    [["red", 1], ["green", 10], ["blue", 100]]
- *    > array(1.5.iterator())
- *    [1.5]
- *    > array(true.iterator())
- *    [true]
+ * Examples:
+ *
+ *     > array({ red: 1, green: 10, blue: 100 }.iterator())
+ *     [["red", 1], ["green", 10], ["blue", 100]]
+ *     > array(1.5.iterator())
+ *     [1.5]
+ *     > array(true.iterator())
+ *     [true]
+ *     > for const k, v in { x: 10, y: -2 } { print(k, v) }
+ *     x 10
+ *     y -2
  */
 
 object.prototype.iterator = fun
@@ -129,13 +139,127 @@ do {
         }
     }
 
-    array.prototype.iterator  = iterator
+    /* @item lang array.prototype.iterator()
+     *
+     *     array.prototype.iterator()
+     *
+     * A generator which produces subsequent elements of an array.
+     *
+     * The `iterator` function is also implicitly invoked by the `for-in` loop
+     * statement.
+     *
+     * Example:
+     *
+     *     > for const v in [ 1, 2, 3 ] { print(v) }
+     *     1
+     *     2
+     *     3
+     */
+    array.prototype.iterator = iterator
+
+    /* @item lang string.prototype.iterator()
+     *
+     *     string.prototype.iterator()
+     *
+     * A generator which produces subsequent elements of a string.
+     *
+     * Returns an iterator function, which produces single-character strings
+     * containing subsequent characters of the string.
+     *
+     * The `iterator` function is also implicitly invoked by the `for-in` loop
+     * statement.
+     *
+     * Examples:
+     *
+     *     > array("koslang".iterator())
+     *     [ "k", "o", "s", "l", "a", "n", "g" ]
+     *     > for const v in "foo" { print(v) }
+     *     f
+     *     o
+     *     o
+     */
     string.prototype.iterator = iterator
+
+    /* @item lang buffer.prototype.iterator()
+     *
+     *     buffer.prototype.iterator()
+     *
+     * A generator which produces subsequent elements of a buffer.
+     *
+     * Returns an iterator function, which produces integers which are
+     * subsequent elements of the buffer.
+     *
+     * The `iterator` function is also implicitly invoked by the `for-in` loop
+     * statement.
+     *
+     * Examples:
+     *
+     *     > array(buffer([1, 2, 3]).iterator())
+     *     [ 1, 2, 3 ]
+     *     > for const v in buffer([10, 11, 12]) { print(v) }
+     *     10
+     *     11
+     *     12
+     */
     buffer.prototype.iterator = iterator
 }
 
+/* @item lang function.prototype.iterator()
+ *
+ *     function.prototype.iterator()
+ *
+ * Returns the function itself (this).
+ *
+ * The `iterator` function is also implicitly invoked by the `for-in` loop
+ * statement.
+ *
+ * This allows passing an iterator from an instantiated generator to be
+ * passed to a `for-in` loop.
+ *
+ * Examples:
+ *
+ *     > for const x in range(2) { print(x) }
+ *     0
+ *     1
+ */
 function.prototype.iterator = λ->(this)
 
+/* @item lang array.prototype.insert()
+ *
+ *     array.prototype.insert(pos, iterable)
+ *     array.prototype.insert(begin, end, iterable)
+ *
+ * Inserts elements into an array, possibly replacing existing elements.
+ *
+ * The array is modified in-place.
+ *
+ * Returns the array itself (this).
+ *
+ * `pos` specifies the array index at which elements are to be inserted.
+ * If `pos` is negative, it is relative to the array's size.
+ * If `pos` is `void`, elements are inserted at the end of the array.
+ *
+ * `begin` and `end` specify a range of elements to be removed from the
+ * array and replaced by the inserted elements.  A negative `begin` or
+ * `end` is relative to the array's size.  `begin` is the index of the
+ * first element to be removed and `end` is the index of the first element
+ * after the removed range which will stay.  If `begin` is equal to `end`,
+ * they are both equivalent to `pos`.
+ *
+ * `iterable` is an iterable object on which `iterator` function is invoked
+ * to obtain elements to be inserted into the array.
+ *
+ * Examples:
+ *
+ *     > [1, 2, 3].insert(0, "foo")
+ *     [ "foo", 1, 2, 3 ]
+ *     > [1, 2, 3].insert(-1, "foo")
+ *     [ 1, 2, "foo", 3 ]
+ *     > [1, 2, 3, 4].insert(1, 2, "foo")
+ *     [ 1, "foo", 3, 4]
+ *     > [1, 2, 3, 4].insert(0, 3, [])
+ *     [ 4 ]
+ */
 array.prototype.insert = fun(first_arg, second_arg, args...)
 {
     var begin    = first_arg
@@ -196,6 +320,32 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
     }
 }
 
+/* @item lang buffer.prototype.insert()
+ *
+ *     buffer.prototype.insert(pos, iterable)
+ *     buffer.prototype.insert(begin, end, iterable)
+ *
+ * Inserts elements into an buffer, possibly replacing existing elements.
+ *
+ * The buffer is modified in-place.
+ *
+ * Returns the buffer itself (this).
+ *
+ * `pos` specifies the buffer index at which elements are to be inserted.
+ * If `pos` is negative, it is relative to the buffer's size.
+ * If `pos` is `void`, elements are inserted at the end of the buffer.
+ *
+ * `begin` and `end` specify a range of elements to be removed from the
+ * buffer and replaced by the inserted elements.  A negative `begin` or
+ * `end` is relative to the buffer's size.  `begin` is the index of the
+ * first element to be removed and `end` is the index of the first element
+ * after the removed range which will stay.  If `begin` is equal to `end`,
+ * they are both equivalent to `pos`.
+ *
+ * `iterable` is an iterable object on which `iterator` function is invoked
+ * to obtain elements to be inserted into the buffer.  The elements to be
+ * inserted, produced by the iterator, must be numbers from 0 to 255.
+ */
 buffer.prototype.insert = fun(first_arg, second_arg, args...)
 {
     var   begin    = first_arg
@@ -259,6 +409,22 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     }
 }
 
+/* @item lang buffer.prototype.unpack_string()
+ *
+ *     buffer.prototype.unpack_string()
+ *
+ * Unpacks an UTF-8 string from a buffer.
+ *
+ * The buffer is assumed to contain subsequent bytes of an UTF-8 string,
+ * which is then unpacked.
+ *
+ * Returns the unpacked string.
+ *
+ * Example:
+ *
+ *     > print(buffer([110, 97, 195, 175, 118, 101]).unpack_string())
+ *     naïve
+ */
 buffer.prototype.unpack_string = fun
 {
     return this.unpack("s")[0]
@@ -270,63 +436,186 @@ do {
         return range(this.size)
     }
 
-    array.prototype.indices  = indices
+    /* @item lang array.prototype.indices()
+     *
+     *     array.prototype.indices()
+     *
+     * A generator which produces subsequent indices of array elements.
+     *
+     * Returns an iterator function, which produces subsequent indices of
+     * the array's elements in ascending order.
+     *
+     * `a.indices()` is equivalent to `range(a.size)`, where `a` is some
+     * array.
+     *
+     * Example:
+     *
+     *     > array([ "a", "b", "c" ].indices())
+     *     [ 0, 1, 2 ]
+     */
+    array.prototype.indices = indices
+
+    /* @item lang string.prototype.indices()
+     *
+     *     string.prototype.indices()
+     *
+     * A generator which produces subsequent indices of string elements.
+     *
+     * Returns an iterator function, which produces subsequent indices of
+     * the string's elements in ascending order.
+     *
+     * `s.indices()` is equivalent to `range(s.size)`, where `s` is some
+     * string.
+     *
+     * Example:
+     *
+     *     > array("foobar".indices())
+     *     [ 0, 1, 2, 3, 4, 5 ]
+     */
     string.prototype.indices = indices
+
+    /* @item lang buffer.prototype.indices()
+     *
+     *     buffer.prototype.indices()
+     *
+     * A generator which produces subsequent indices of buffer elements.
+     *
+     * Returns an iterator function, which produces subsequent indices of
+     * the buffer's elements in ascending order.
+     *
+     * `b.indices()` is equivalent to `range(b.size)`, where `b` is some
+     * buffer.
+     *
+     * Example:
+     *
+     *     > array(buffer(4).indices())
+     *     [ 0, 1, 2, 3 ]
+     */
     buffer.prototype.indices = indices
 }
 
-do {
-    fun just_buf(ch, size)
-    {
-        const ord = ch.ord()
+/* @item lang string.prototype.ljust()
+ *
+ *     string.prototype.ljust(size, fill = " ")
+ *
+ * Left-justifies a string.
+ *
+ * Returns a new, left-justified string of the requested size.
+ *
+ * `size` is the length of the returned string.  If `size` is less than
+ * the length of the current string, the current string is returned
+ * unmodified.
+ *
+ * `fill` is a string of length 1 containing the character to add on the right
+ * side of the string to justify it.  The function throws an exception if
+ * `fill` is not a string or has a different length than 1.  `fill` defaults
+ * to a space character.
+ *
+ * Examples:
+ *
+ *     > "abc".ljust(5)
+ *     "abc  "
+ *     > "abc".ljust(7, ".")
+ *     "abc...."
+ *     > "abc".ljust(1)
+ *     "abc"
+ */
+string.prototype.ljust = fun(size, fill = " ")
+{
+    assert typeof fill == "string"
+    assert fill.size   == 1
 
-        const buf = ord < 0x80 ? buffer(size) : array(size)
-        return string(buf.fill(ord))
+    if this.size >= size {
+        return this
     }
 
-    string.prototype.ljust = fun(size, fill = " ")
-    {
-        assert typeof fill == "string"
-        assert fill.size   == 1
+    return this + fill.repeat(size - this.size)
+}
 
-        if this.size >= size {
-            return this
-        }
+/* @item lang string.prototype.rjust()
+ *
+ *     string.prototype.rjust(size, fill = " ")
+ *
+ * Right-justifies a string.
+ *
+ * Returns a new, right-justified string of the requested size.
+ *
+ * `size` is the length of the returned string.  If `size` is less than
+ * the length of the current string, the current string is returned
+ * unmodified.
+ *
+ * `fill` is a string of length 1 containing the character to add on the left
+ * side of the string to justify it.  The function throws an exception if
+ * `fill` is not a string or has a different length than 1.  `fill` defaults
+ * to a space character.
+ *
+ * Examples:
+ *
+ *     > "abc".rjust(5)
+ *     "  abc"
+ *     > "abc".rjust(7, ".")
+ *     "....abc"
+ *     > "abc".rjust(1)
+ *     "abc"
+ */
+string.prototype.rjust = fun(size, fill = " ")
+{
+    assert typeof fill == "string"
+    assert fill.size   == 1
 
-        return this + just_buf(fill, size - this.size)
+    if this.size >= size {
+        return this
     }
 
-    string.prototype.rjust = fun(size, fill = " ")
-    {
-        assert typeof fill == "string"
-        assert fill.size   == 1
+    return fill.repeat(size - this.size) + this
+}
 
-        if this.size >= size {
-            return this
-        }
+/* @item lang string.prototype.zfill()
+ *
+ *     string.prototype.zfill(size, fill = "0")
+ *
+ * Zero-fills a string, assuming it contains a number.
+ *
+ * Returns a new string of the requested size.  If the original string starts
+ * with a `+` or `-` character, this character remains at the beginning of
+ * the returned string.
+ *
+ * `size` is the length of the returned string.  If `size` is less than
+ * the length of the current string, the current string is returned
+ * unmodified.
+ *
+ * `fill` is a string of length 1 containing the character to add on the left
+ * side of the string (after the `+` or `-` sign) to achieve the requested
+ * length.  The function throws an exception if `fill` is not a string or has
+ * a different length than 1.  `fill` defaults to `"0"`.
+ *
+ * Examples:
+ *
+ *     > "123".zfill(5)
+ *     "00123"
+ *     > "+123".zfill(7)
+ *     "+000123"
+ *     > "+abc".zfill(6, "-")
+ *     "+--abc"
+ */
+string.prototype.zfill = fun(size, fill = "0")
+{
+    assert typeof fill == "string"
+    assert fill.size   == 1
 
-        return just_buf(fill, size - this.size) + this
+    if this.size >= size {
+        return this
     }
 
-    string.prototype.zfill = fun(size, fill = "0")
-    {
-        assert typeof fill == "string"
-        assert fill.size   == 1
+    const fill = fill.repeat(size - this.size)
 
-        if this.size >= size {
-            return this
-        }
+    const sign = this.size ? this[0] : ""
 
-        const fill = just_buf(fill, size - this.size)
-
-        const sign = this.size ? this[0] : ""
-
-        if sign == "+" || sign == "-" {
-            return stringify(sign, fill, this[1:])
-        }
-        else {
-            return fill + this
-        }
+    if sign == "+" || sign == "-" {
+        return stringify(sign, fill, this[1:])
+    }
+    else {
+        return fill + this
     }
 }
 
@@ -708,6 +997,55 @@ do {
 
     array.prototype.reverse  = reverse
     buffer.prototype.reverse = reverse
+}
+
+fun aaa_default_sort(x, y) { return x < y }
+
+array.prototype.sort = fun(compare = aaa_default_sort)
+{
+    fun inner_sort(a, begin, end)
+    {
+        if begin + 1 >= end {
+            return
+        }
+
+        const test = compare
+        end -= 1
+        var pivot = a[end]
+        var mid   = begin - 1
+        var i     = begin
+        while i < end {
+            const v = a[i]
+            if test(v, pivot) {
+                mid += 1
+                a[i] = a[mid]
+                a[mid] = v
+                i += 1
+                continue
+            }
+            i += 1
+        }
+
+        mid += 1
+        if test(pivot, a[mid]) {
+            a[end] = a[mid]
+            a[mid] = pivot
+        }
+
+        inner_sort(a, begin, mid)
+        return inner_sort(a, mid + 1, end + 1)
+    }
+    inner_sort(this, 0, this.size)
+    return this
+}
+
+fun sort(iterable, compare = aaa_default_sort)
+{
+    const a = array(iterable.iterator())
+    if ! a.size {
+        return void.iterator()
+    }
+    return a.sort(compare).iterator()
 }
 
 # TODO move to debug module
