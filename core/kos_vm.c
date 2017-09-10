@@ -899,6 +899,8 @@ static int _exec_function(KOS_FRAME frame)
     assert(module->context);
     bytecode = module->bytecode + frame->instr_offs;
 
+    /* TODO add protection for infinite callstack depth */
+
     for (;;) { /* Exit condition at the end of the loop */
 
         const KOS_BYTECODE_INSTR instr = (KOS_BYTECODE_INSTR)*bytecode;
