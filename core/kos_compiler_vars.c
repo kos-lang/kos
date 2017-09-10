@@ -668,6 +668,35 @@ static int _this_literal(struct _KOS_COMP_UNIT      *program,
     return error;
 }
 
+static int _parameter_defaults(struct _KOS_COMP_UNIT      *program,
+                               const struct _KOS_AST_NODE *node)
+{
+    int error = KOS_SUCCESS;
+
+    assert(node);
+    assert(node->type == NT_PARAMETERS);
+    node = node->children;
+
+    for ( ; node && node->type != NT_ELLIPSIS; node = node->next) {
+
+        if (node->type == NT_ASSIGNMENT) {
+
+            struct _KOS_AST_NODE *def_node = node->children;
+
+            assert(def_node);
+            assert(def_node->type == NT_IDENTIFIER);
+            def_node = def_node->next;
+            assert(def_node);
+            assert( ! def_node->next);
+
+            TRY(_visit_node(program, def_node));
+        }
+    }
+
+_error:
+    return error;
+}
+
 static int _function_literal(struct _KOS_COMP_UNIT      *program,
                              const struct _KOS_AST_NODE *node)
 {
@@ -717,6 +746,8 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         }
     }
 
+    arg_node = node;
+
     node = node->next;
     assert(node);
     assert(node->type == NT_LANDMARK);
@@ -731,6 +762,8 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     assert(!node->next);
 
     _pop_scope(program);
+
+    TRY(_parameter_defaults(program, arg_node));
 
 _error:
     return error;

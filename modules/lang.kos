@@ -999,9 +999,7 @@ do {
     buffer.prototype.reverse = reverse
 }
 
-fun aaa_default_sort(x, y) { return x < y }
-
-array.prototype.sort = fun(compare = aaa_default_sort)
+array.prototype.sort = fun(compare = λ(x, y) -> (x < y))
 {
     fun inner_sort(a, begin, end)
     {
@@ -1039,7 +1037,7 @@ array.prototype.sort = fun(compare = aaa_default_sort)
     return this
 }
 
-fun sort(iterable, compare = aaa_default_sort)
+fun sort(iterable, compare = λ(x, y) -> (x < y))
 {
     const a = array(iterable.iterator())
     if ! a.size {
