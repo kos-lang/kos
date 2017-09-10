@@ -137,11 +137,16 @@ for const arg in args[1:] {
     }
 }
 
-for const topic, items in docs {
+fun sort_by_first(a, b)
+{
+    return a[0] < b[0]
+}
+
+for const topic, items in sort(docs, sort_by_first) {
     print(topic)
     print("=".repeat(topic.size))
     print()
-    for const item, contents in items {
+    for const item, contents in sort(items, sort_by_first) {
         print(item)
         print("-".repeat(item.size))
         print()
