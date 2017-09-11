@@ -172,7 +172,7 @@ do {
      * Examples:
      *
      *     > array("koslang".iterator())
-     *     [ "k", "o", "s", "l", "a", "n", "g" ]
+     *     ["k", "o", "s", "l", "a", "n", "g"]
      *     > for const v in "foo" { print(v) }
      *     f
      *     o
@@ -195,7 +195,7 @@ do {
      * Examples:
      *
      *     > array(buffer([1, 2, 3]).iterator())
-     *     [ 1, 2, 3 ]
+     *     [1, 2, 3]
      *     > for const v in buffer([10, 11, 12]) { print(v) }
      *     10
      *     11
@@ -251,14 +251,14 @@ function.prototype.iterator = λ->(this)
  *
  * Examples:
  *
- *     > [1, 2, 3].insert(0, "foo")
- *     [ "foo", 1, 2, 3 ]
- *     > [1, 2, 3].insert(-1, "foo")
- *     [ 1, 2, "foo", 3 ]
+ *     > [1, 2, 3].insert(0, ["foo"])
+ *     ["foo", 1, 2, 3]
+ *     > [1, 2, 3].insert(-1, ["foo"])
+ *     [1, 2, "foo", 3]
  *     > [1, 2, 3, 4].insert(1, 2, "foo")
- *     [ 1, "foo", 3, 4]
+ *     [1, "f", "o", "o", 3, 4]
  *     > [1, 2, 3, 4].insert(0, 3, [])
- *     [ 4 ]
+ *     [4]
  */
 array.prototype.insert = fun(first_arg, second_arg, args...)
 {
@@ -451,7 +451,7 @@ do {
      * Example:
      *
      *     > array([ "a", "b", "c" ].indices())
-     *     [ 0, 1, 2 ]
+     *     [0, 1, 2]
      */
     array.prototype.indices = indices
 
@@ -470,7 +470,7 @@ do {
      * Example:
      *
      *     > array("foobar".indices())
-     *     [ 0, 1, 2, 3, 4, 5 ]
+     *     [0, 1, 2, 3, 4, 5]
      */
     string.prototype.indices = indices
 
@@ -489,7 +489,7 @@ do {
      * Example:
      *
      *     > array(buffer(4).indices())
-     *     [ 0, 1, 2, 3 ]
+     *     [0, 1, 2, 3]
      */
     buffer.prototype.indices = indices
 }
