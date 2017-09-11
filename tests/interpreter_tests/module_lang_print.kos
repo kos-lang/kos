@@ -23,14 +23,6 @@
 import lang.print
 import lang.print_
 
-print_()
-
-print_(void, true, false, "abc", -10, "\n")
-
-print()
-
-print("xyz", false, void, true, 0x1000, 1.2)
-
 do {
     fun thrower
     {
@@ -44,3 +36,11 @@ do {
         e.print()
     }
 }
+
+print_()
+
+print_(void, true, false, "abc", -10, "\n")
+
+print()
+
+print("xyz", "", false, void, true, 0x1000, 1.2, ["a", 1])

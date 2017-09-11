@@ -549,9 +549,6 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
     assert(str || cstr_vec);
     assert( ! str || ! cstr_vec || quote_str);
 
-    if (IS_BAD_PTR(obj_id))
-        return KOS_ERROR_EXCEPTION;
-
     if (IS_SMALL_INT(obj_id))
         error = _int_to_str(frame, GET_SMALL_INT(obj_id), str, cstr_vec);
 
