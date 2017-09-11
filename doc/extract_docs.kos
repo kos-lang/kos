@@ -34,7 +34,11 @@ fun remove_indentation(lines)
     }
 }
 
-fun scan_file(filename, f, docs)
+constructor create_docs
+{
+}
+
+create_docs.prototype.scan_file = fun(filename, f)
 {
     fun is_cpp
     {
@@ -121,19 +125,19 @@ fun scan_file(filename, f, docs)
         }
 
         if type == "@item" {
-            if ! (topic in docs) {
-                docs[topic] = { }
+            if ! (topic in this) {
+                this[topic] = { }
             }
-            docs[topic][item] = comment
+            this[topic][item] = comment
         }
     }
 }
 
-const docs = {}
+const docs = create_docs()
 
 for const arg in args[1:] {
     with const f = file.open(arg, file.ro) {
-        scan_file(arg, f, docs)
+        docs.scan_file(arg, f)
     }
 }
 

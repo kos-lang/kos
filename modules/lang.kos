@@ -619,117 +619,181 @@ string.prototype.zfill = fun(size, fill = "0")
     }
 }
 
+/* @item lang whitespace
+ *
+ *     whitespace
+ *
+ * A string containing all characters considered as whitespace by some
+ * functions.
+ */
 const whitespace = " \r\n\t\f\v\0\xA0\x{2028}\x{2029}\x{FEFF}"
-const eol        = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
 
-do {
-    string.prototype.lstrip = fun(chars = whitespace)
-    {
-        const pos = this.scan(chars, false)
-        if pos != -1 {
-            return this[pos :]
-        }
-        return ""
+/* @item lang eol
+ *
+ *     eol
+ *
+ * A string containing all characters considered as end of line markers by
+ * some functions.
+ */
+const eol = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
+
+/* @item lang string.prototype.lstrip()
+ *
+ *     string.prototype.lstrip(chars = whitespace)
+ *
+ * Removes all leading whitespace characters from a string.
+ *
+ * Returns a new string with all whitespace characters removed from
+ * its beginning.
+ *
+ * `chars` is a string, which specifies the list of characters treated
+ * as whitespace.  It defaults to `lang.whitespace`.
+ *
+ * Example:
+ *
+ *     > "  foo  ".lstrip()
+ *     "foo  "
+ */
+string.prototype.lstrip = fun(chars = whitespace)
+{
+    const pos = this.scan(chars, false)
+    if pos != -1 {
+        return this[pos :]
+    }
+    return ""
+}
+
+/* @item lang string.prototype.rstrip()
+ *
+ *     string.prototype.rstrip(chars = whitespace)
+ *
+ * Removes all trailing whitespace characters from a string.
+ *
+ * Returns a new string with all whitespace characters removed from
+ * its end.
+ *
+ * `chars` is a string, which specifies the list of characters treated
+ * as whitespace.  It defaults to `lang.whitespace`.
+ *
+ * Example:
+ *
+ *     > "  foo  ".rstrip()
+ *     "  foo"
+ */
+string.prototype.rstrip = fun(chars = whitespace)
+{
+    const pos = this.rscan(chars, false)
+    return this[: pos + 1]
+}
+
+/* @item lang string.prototype.strip()
+ *
+ *     string.prototype.strip(chars = whitespace)
+ *
+ * Removes all leading and trailing whitespace characters from a string.
+ *
+ * Returns a new string with all whitespace characters removed from
+ * its beginning and end.
+ *
+ * `chars` is a string, which specifies the list of characters treated
+ * as whitespace.  It defaults to `lang.whitespace`.
+ *
+ * Example:
+ *
+ *     > "  foo  ".strip()
+ *     "foo"
+ */
+string.prototype.strip = fun(chars = whitespace)
+{
+    const lpos = this.scan(chars, false)
+    if lpos != -1 {
+        const rpos = this.rscan(chars, false)
+        return this[lpos : rpos + 1]
+    }
+    return ""
+}
+
+string.prototype.split = fun(sep = void, max_split = -1)
+{
+    assert sep != ""
+
+    var splits_left = max_split
+    if splits_left == 0 {
+        return
+    }
+    if splits_left < 0 {
+        splits_left = 0x10000
     }
 
-    string.prototype.rstrip = fun(chars = whitespace)
-    {
-        const pos = this.rscan(chars, false)
-        return this[: pos + 1]
-    }
+    if sep == void {
+        const chars = whitespace
 
-    string.prototype.strip = fun(chars = whitespace)
-    {
-        const lpos = this.scan(chars, false)
-        if lpos != -1 {
-            const rpos = this.rscan(chars, false)
-            return this[lpos : rpos + 1]
-        }
-        return ""
-    }
-
-    string.prototype.split = fun(sep = void, max_split = -1)
-    {
-        assert sep != ""
-
-        var splits_left = max_split
-        if splits_left == 0 {
+        var pos = this.scan(chars, false)
+        if pos == -1 {
             return
         }
-        if splits_left < 0 {
-            splits_left = 0x10000
-        }
 
-        if sep == void {
-            const chars = whitespace
-
-            var pos = this.scan(chars, false)
-            if pos == -1 {
-                return
-            }
-
-            for ; splits_left > 1; splits_left -= 1 {
-                const end = this.scan(chars, pos)
-                if end == -1 {
-                    yield this[pos:]
-                    return
-                }
-                yield this[pos:end]
-
-                pos = this.scan(chars, end, false)
-                if pos == -1 {
-                    return
-                }
-            }
-
-            yield this[pos:]
-        }
-        else {
-            var pos = 0
-
-            for ; splits_left > 1; splits_left -= 1 {
-                const end = this.find(sep, pos)
-                if end == -1 {
-                    yield this[pos:]
-                    return
-                }
-                yield this[pos:end]
-
-                pos = end + sep.size
-            }
-
-            yield this[pos:]
-        }
-    }
-
-    string.prototype.split_lines = fun(keep_ends = false)
-    {
-        var   pos   = 0
-        const len   = this.size
-        const chars = eol
-
-        loop {
-            if pos == len {
-                return
-            }
-
+        for ; splits_left > 1; splits_left -= 1 {
             const end = this.scan(chars, pos)
             if end == -1 {
                 yield this[pos:]
                 return
             }
+            yield this[pos:end]
 
-            const endp1 = end + 1
-            if this[end] == "\r" && endp1 < len && this[endp1] == "\n" {
-                const endp2 = end + 2
-                yield this[pos : keep_ends ? endp2 : end]
-                pos = endp2
-                continue
+            pos = this.scan(chars, end, false)
+            if pos == -1 {
+                return
             }
-            else {
-                yield this[pos : keep_ends ? endp1 : end]
-                pos = endp1
+        }
+
+        yield this[pos:]
+    }
+    else {
+        var pos = 0
+
+        for ; splits_left > 1; splits_left -= 1 {
+            const end = this.find(sep, pos)
+            if end == -1 {
+                yield this[pos:]
+                return
             }
+            yield this[pos:end]
+
+            pos = end + sep.size
+        }
+
+        yield this[pos:]
+    }
+}
+
+string.prototype.split_lines = fun(keep_ends = false)
+{
+    var   pos   = 0
+    const len   = this.size
+    const chars = eol
+
+    loop {
+        if pos == len {
+            return
+        }
+
+        const end = this.scan(chars, pos)
+        if end == -1 {
+            yield this[pos:]
+            return
+        }
+
+        const endp1 = end + 1
+        if this[end] == "\r" && endp1 < len && this[endp1] == "\n" {
+            const endp2 = end + 2
+            yield this[pos : keep_ends ? endp2 : end]
+            pos = endp2
+            continue
+        }
+        else {
+            yield this[pos : keep_ends ? endp1 : end]
+            pos = endp1
         }
     }
 }
