@@ -1822,14 +1822,17 @@ do {
 # lang.stringify
 
 do {
-    assert lang.stringify()      == ""
-    assert lang.stringify("a")   == "a"
-    assert lang.stringify(false) == "false"
-    assert lang.stringify(true)  == "true"
-    assert lang.stringify(void)  == "void"
-    assert lang.stringify(1)     == "1"
-    assert lang.stringify(1.5)   == "1.5"
-    assert lang.stringify([])    == "<array>"
+    assert lang.stringify()              == ""
+    assert lang.stringify("a")           == "a"
+    assert lang.stringify(false)         == "false"
+    assert lang.stringify(true)          == "true"
+    assert lang.stringify(void)          == "void"
+    assert lang.stringify(1)             == "1"
+    assert lang.stringify(1.5)           == "1.5"
+    assert lang.stringify([])            == "[]"
+    assert lang.stringify([1])           == "[1]"
+    assert lang.stringify([2, 33, 444])  == "[2, 33, 444]"
+    assert lang.stringify(["true",true]) == "[true, true]"
 
     assert lang.stringify(false, 2, "o") == "false2o"
 }

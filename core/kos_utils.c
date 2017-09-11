@@ -27,6 +27,7 @@
 #include "../inc/kos_string.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
+#include "kos_object_internal.h"
 #include "kos_try.h"
 #include "kos_utf8.h"
 #include <assert.h>
@@ -35,7 +36,10 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char str_array[]              = "<array>";
+static const char str_array_close[]        = "]";
+static const char str_array_comma[]        = ", ";
+static const char str_array_open[]         = "[";
+static const char str_empty_array[]        = "[]";
 static const char str_err_invalid_string[] = "invalid string";
 static const char str_err_not_array[]      = "object is not an array";
 static const char str_err_not_number[]     = "object is not a number";
@@ -451,6 +455,88 @@ static int _make_quoted_str(KOS_FRAME           frame,
     return error;
 }
 
+static int _vector_append_array(KOS_FRAME           frame,
+                                struct _KOS_VECTOR *cstr_vec,
+                                KOS_OBJ_ID          obj_id,
+                                enum _KOS_QUOTE_STR quote_str)
+{
+    int      error;
+    uint32_t length;
+    uint32_t i;
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
+
+    length = KOS_get_array_size(obj_id);
+
+    TRY(_vector_append_cstr(frame, cstr_vec, str_array_open, sizeof(str_array_open)-1));
+
+    for (i = 0; i < length; ) {
+
+        KOS_OBJ_ID val_id = KOS_array_read(frame, obj_id, i);
+        TRY_OBJID(val_id);
+
+        TRY(KOS_object_to_string_or_cstr_vec(frame, val_id, quote_str, 0, cstr_vec));
+
+        ++i;
+
+        if (i < length)
+            TRY(_vector_append_cstr(frame, cstr_vec, str_array_comma, sizeof(str_array_comma)-1));
+    }
+
+    TRY(_vector_append_cstr(frame, cstr_vec, str_array_close, sizeof(str_array_close)-1));
+
+_error:
+    return error;
+}
+
+static KOS_OBJ_ID _array_to_str(KOS_FRAME           frame,
+                                KOS_OBJ_ID          obj_id,
+                                enum _KOS_QUOTE_STR quote_str)
+{
+    int        error;
+    uint32_t   length;
+    uint32_t   i;
+    KOS_OBJ_ID ret       = KOS_BADPTR;
+    KOS_OBJ_ID aux_array_id;
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
+
+    length = KOS_get_array_size(obj_id);
+
+    if (length == 0)
+        return KOS_context_get_cstring(frame, str_empty_array);
+
+    aux_array_id = KOS_new_array(frame, length * 2 + 1);
+    TRY_OBJID(aux_array_id);
+
+    TRY(KOS_array_write(frame, aux_array_id, 0,
+                KOS_context_get_cstring(frame, str_array_open)));
+
+    for (i = 0; i < length; ) {
+
+        KOS_OBJ_ID val_id = KOS_array_read(frame, obj_id, i);
+        TRY_OBJID(val_id);
+
+        TRY(KOS_object_to_string_or_cstr_vec(frame, val_id, quote_str, &val_id, 0));
+
+        TRY(KOS_array_write(frame, aux_array_id, 1 + i * 2, val_id));
+
+        ++i;
+
+        if (i < length)
+            TRY(KOS_array_write(frame, aux_array_id, i * 2,
+                        KOS_context_get_cstring(frame, str_array_comma)));
+    }
+
+    TRY(KOS_array_write(frame, aux_array_id, length * 2,
+                KOS_context_get_cstring(frame, str_array_close)));
+
+    ret = KOS_string_add_many(frame, _KOS_get_array_buffer(OBJPTR(ARRAY, aux_array_id)), length * 2 + 1);
+
+_error:
+    return error ? KOS_BADPTR : ret;
+}
+
 int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
                                      KOS_OBJ_ID          obj_id,
                                      enum _KOS_QUOTE_STR quote_str,
@@ -493,33 +579,32 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
             break;
 
         case OBJ_IMMEDIATE:
-            if (obj_id == KOS_VOID) {
-                if (cstr_vec)
-                    error = _vector_append_cstr(frame, cstr_vec, "void", 4);
-                else
-                    *str = KOS_context_get_cstring(frame, str_void);
-            }
-            else if (obj_id == KOS_TRUE) {
+            if (obj_id == KOS_TRUE) {
                 if (cstr_vec)
                     error = _vector_append_cstr(frame, cstr_vec, "true", 4);
                 else
                     *str = KOS_context_get_cstring(frame, str_true);
             }
-            else {
-                assert(obj_id == KOS_FALSE);
+            else if (obj_id == KOS_FALSE) {
                 if (cstr_vec)
                     error = _vector_append_cstr(frame, cstr_vec, "false", 5);
                 else
                     *str = KOS_context_get_cstring(frame, str_false);
             }
+            else {
+                assert(obj_id == KOS_VOID);
+                if (cstr_vec)
+                    error = _vector_append_cstr(frame, cstr_vec, "void", 4);
+                else
+                    *str = KOS_context_get_cstring(frame, str_void);
+            }
             break;
 
         case OBJ_ARRAY:
-            /* TODO */
             if (cstr_vec)
-                error = _vector_append_cstr(frame, cstr_vec, "<array>", 7);
+                error = _vector_append_array(frame, cstr_vec, obj_id, quote_str);
             else
-                *str = KOS_context_get_cstring(frame, str_array);
+                *str = _array_to_str(frame, obj_id, quote_str);
             break;
 
         case OBJ_OBJECT:
