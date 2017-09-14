@@ -1342,7 +1342,7 @@ KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
     if (len == 0 || num_repeat == 0)
         return KOS_context_from_frame(frame)->empty_string;
 
-    if ((len * num_repeat) > 0xFFFFU) {
+    if (num_repeat > 0xFFFFU || (len * num_repeat) > 0xFFFFU) {
         KOS_raise_exception_cstring(frame, str_err_too_many_repeats);
         return KOS_BADPTR;
     }
