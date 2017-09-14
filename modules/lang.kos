@@ -27,7 +27,7 @@
  *
  * A generator which produces an arithmetic progression of numbers.
  *
- * Returns an iterator function, which produces subsequent numbers in
+ * Returns an iterator function, which yields subsequent numbers in
  * the specified range.
  *
  * `start`, `stop` and `step` arguments are integers or floats.
@@ -97,12 +97,12 @@ fun range(first_arg, args...)
  * A generator which produces properties of an object in a shallow manner,
  * i.e. without descending into prototypes.
  *
- * Returns an iterator function, which produces 2-element arrays which are
+ * Returns an iterator function, which yields 2-element arrays which are
  * [key, value] pairs of subsequent properties of an object.  The elements
  * returned are not in any particular order.
  *
  * If the object is not of type `object`, e.g. if it is an integer,
- * a float, a boolean or a void, the generator produces the object itself.
+ * a float, a boolean or a void, the iterator yields the object itself.
  * Prototypes of array, string, buffer and function override this generator.
  *
  * The `iterator` function is also implicitly invoked by the `for-in` loop
@@ -145,6 +145,8 @@ do {
      *
      * A generator which produces subsequent elements of an array.
      *
+     * Returns an iterator function, which yields subsequent elements.
+     *
      * The `iterator` function is also implicitly invoked by the `for-in` loop
      * statement.
      *
@@ -163,7 +165,7 @@ do {
      *
      * A generator which produces subsequent elements of a string.
      *
-     * Returns an iterator function, which produces single-character strings
+     * Returns an iterator function, which yields single-character strings
      * containing subsequent characters of the string.
      *
      * The `iterator` function is also implicitly invoked by the `for-in` loop
@@ -186,7 +188,7 @@ do {
      *
      * A generator which produces subsequent elements of a buffer.
      *
-     * Returns an iterator function, which produces integers which are
+     * Returns an iterator function, which yields integers, which are
      * subsequent elements of the buffer.
      *
      * The `iterator` function is also implicitly invoked by the `for-in` loop
@@ -344,7 +346,7 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
  *
  * `iterable` is an iterable object on which `iterator` function is invoked
  * to obtain elements to be inserted into the buffer.  The elements to be
- * inserted, produced by the iterator, must be numbers from 0 to 255.
+ * inserted, which are yielded by the iterator, must be numbers from 0 to 255.
  */
 buffer.prototype.insert = fun(first_arg, second_arg, args...)
 {
@@ -442,7 +444,7 @@ do {
      *
      * A generator which produces subsequent indices of array elements.
      *
-     * Returns an iterator function, which produces subsequent indices of
+     * Returns an iterator function, which yields subsequent indices of
      * the array's elements in ascending order.
      *
      * `a.indices()` is equivalent to `range(a.size)`, where `a` is some
@@ -461,7 +463,7 @@ do {
      *
      * A generator which produces subsequent indices of string elements.
      *
-     * Returns an iterator function, which produces subsequent indices of
+     * Returns an iterator function, which yields subsequent indices of
      * the string's elements in ascending order.
      *
      * `s.indices()` is equivalent to `range(s.size)`, where `s` is some
@@ -480,7 +482,7 @@ do {
      *
      * A generator which produces subsequent indices of buffer elements.
      *
-     * Returns an iterator function, which produces subsequent indices of
+     * Returns an iterator function, which yields subsequent indices of
      * the buffer's elements in ascending order.
      *
      * `b.indices()` is equivalent to `range(b.size)`, where `b` is some
@@ -713,6 +715,34 @@ string.prototype.strip = fun(chars = whitespace)
     return ""
 }
 
+/* @item lang string.prototype.split()
+ *
+ *     string.prototype.split(sep = void, max_split = -1)
+ *
+ * A generator which splits a string and produces subsequent parts.
+ *
+ * Returns an iterator function, which yields subsequent parts of
+ * the string.  The parts result from splitting the string using
+ * the `sep` separator.
+ *
+ * `sep` is a string which is used as a separator.  It must be non-empty.
+ * The source string is split into parts by finding any occurences of
+ * the separator.  The separator is not part of the resulting strings.
+ *
+ * `sep` defaults to `void`, which indicates that a sequence of whitespaces
+ * of any length should be used to split the string.
+ *
+ * `max_split` indicates the maximum number of parts into which the string
+ * is going to be split.  By default it is -1, in which case the number
+ * of resulting parts is unlimited.
+ *
+ * Examples:
+ *
+ *     > array("a  b    c     d".split())
+ *     ["a", "b", "c", "d"]
+ *     > array("a--b--c--d--e--f".split("--", 3))
+ *     ["a", "b", "c--d--e--f"]
+ */
 string.prototype.split = fun(sep = void, max_split = -1)
 {
     assert sep != ""
@@ -767,6 +797,28 @@ string.prototype.split = fun(sep = void, max_split = -1)
     }
 }
 
+/* @item lang string.prototype.split_lines()
+ *
+ *     string.prototype.split_lines(keep_ends = false)
+ *
+ * A generator which produces subsequent lines extracted from a string.
+ *
+ * Returns an iterator function, which yields strings, which are subsequent
+ * lines, resulting from splitting the string using EOL characters from
+ * `lang.eol`.
+ *
+ * Two subsequent EOL characters will yield an empty line, except if a CR
+ * characters is followed by an LF character, in which case they are kept
+ * together as one line separator.
+ *
+ * `keep_ends` is a boolean, which indicates whether the EOL characters
+ * should be kept at the ends of the lines.  It defaults to `false`.
+ *
+ * Examples:
+ *
+ *     > array("line1\nline2\nline3".split_lines())
+ *     ["line1", "line2", "line3"]
+ */
 string.prototype.split_lines = fun(keep_ends = false)
 {
     var   pos   = 0
@@ -798,13 +850,63 @@ string.prototype.split_lines = fun(keep_ends = false)
     }
 }
 
-fun first(iterable)
+/* @item lang first_elements()
+ *
+ *     first_elements(iterable)
+ *
+ * A generator which produces first elements of each element from an iterable
+ * object.
+ *
+ * Returns an iterator function, which iterates over the elements of an iterable
+ * object, then for each of the elements extracts its first sub-element and
+ * yields it.
+ *
+ * This is typically useful to iterator over keys of an object.  Normally
+ * iterating over an object yields pairs (two-element arrays) containing
+ * object keys and values.  The `first_elements` function can convert that
+ * sequence to just keys.
+ *
+ * Examples:
+ *
+ *     > array(first_elements({ A: 1, B: 2, C: 3}))
+ *     ["A", "C", "B"]
+ *     > array(first_elements(["kos", "lang", "first"]))
+ *     ["k", "l", "f"]
+ */
+fun first_elements(iterable)
 {
     for const x in iterable {
-        yield x[0]
+        yield x.iterator()()
     }
 }
 
+/* @item lang map()
+ *
+ *     map(op)
+ *     map(op, iterable)
+ *
+ * A generator which maps elements from an iterable object through a function.
+ *
+ * The first variant with one argument returns another function, which can
+ * then be applied on any iterable object to map it.
+ *
+ * The second variant applies the map function to the elements of the specified
+ * iterable object.  It returns an iterator function, which yields subsequent
+ * elements mapped through the `op` function.
+ *
+ * `op` is the function to invoke on each element of the iterable object.
+ *
+ * `iterable` is an object on which `iterator()` is invoked to obtain subsequent
+ * elements of it, which are then mapped.
+ *
+ * Examples:
+ *
+ *     > array(map(fun(x) -> (x*10), [1, 2, 3, 4]))
+ *     [10, 20, 30, 40]
+ *     > const plus2 = map(fun(x) -> (x+2))
+ *     > array(plus2([10, 11, 12, 13]))
+ *     [12, 13, 14, 15]
+ */
 fun map(op, args...)
 {
     assert typeof op == "function"
