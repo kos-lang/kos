@@ -1347,7 +1347,8 @@ static int _expr_no_var(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     if (parser->token.sep == ST_SEMICOLON || parser->token.sep == ST_PAREN_CLOSE
         || (node_type != NT_IDENTIFIER && node_type != NT_REFINEMENT && node_type != NT_SLICE)
-        || (parser->token.sep != ST_COMMA && ! (parser->token.op & OT_ASSIGNMENT) && parser->had_eol))
+        || (parser->token.sep != ST_COMMA && ! (parser->token.op & OT_ASSIGNMENT) && parser->had_eol)
+        || parser->token.type == TT_EOF)
     {
 
         parser->unget = 1;
