@@ -885,14 +885,14 @@ fun first_elements(iterable)
  *     map(op)
  *     map(op, iterable)
  *
- * A generator which maps elements from an iterable object through a function.
+ * A generator which applies a function to each element of an iterable object.
  *
  * The first variant with one argument returns another function, which can
  * then be applied on any iterable object to map it.
  *
- * The second variant applies the map function to the elements of the specified
- * iterable object.  It returns an iterator function, which yields subsequent
- * elements mapped through the `op` function.
+ * The second variant applies the provided function to the elements of
+ * the specified iterable object.  It returns an iterator function, which
+ * yields subsequent elements mapped through the `op` function.
  *
  * `op` is the function to invoke on each element of the iterable object.
  *
@@ -903,7 +903,7 @@ fun first_elements(iterable)
  *
  *     > array(map(fun(x) -> (x*10), [1, 2, 3, 4]))
  *     [10, 20, 30, 40]
- *     > const plus2 = map(fun(x) -> (x+2))
+ *     > const plus2 = map(fun(x) -> (x + 2))
  *     > array(plus2([10, 11, 12, 13]))
  *     [12, 13, 14, 15]
  */
@@ -927,6 +927,34 @@ fun map(op, args...)
     }
 }
 
+/* @item lang filter()
+ *
+ *     filter(op)
+ *     filter(op, iterable)
+ *
+ * A generator which filters elements of an iterable object using the provided
+ * function.
+ *
+ * The first variant with one argument returns another function, which can
+ * then be applied on any iterable object to filter it.
+ *
+ * The second variant uses the provided function on the elements of
+ * the specified iterable object.  It returns an iterator function, which
+ * yields subsequent elements for which the function returns a truthy value.
+ *
+ * `op` is the function to invoke on each element of the iterable object.
+ *
+ * `iterable` is an object on which `iterator()` is invoked to obtain subsequent
+ * elements of it, which are then filtered.
+ *
+ * Examples:
+ *
+ *     > array(filter(fun(x) -> (x < 0), [1, -2, 3, 4, -5, -6]))
+ *     [-2, -5, -6]
+ *     > const odd = filter(fun(x) -> (x & 1))
+ *     > array(odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]))
+ *     [9, 7, 5, 3, 1]
+ */
 fun filter(op, args...)
 {
     assert typeof op == "function"
