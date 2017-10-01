@@ -57,4 +57,9 @@ endif
 install: build.interpreter
 	@$(MAKE) -C interpreter $@
 
-.PHONY: cldep test
+doc: build.interpreter
+	@echo Extract docs
+	@mkdir -p "$(out_dir)/doc"
+	@env KOSPATH=modules $(out_dir)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/lang.kos modules/kos_mod_lang.c > "$(out_dir)/doc/lang.md"
+
+.PHONY: cldep doc install test

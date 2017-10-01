@@ -71,6 +71,19 @@ do {                                                                         \
 
 #define PROTO(type) (frame->module->context->type##_prototype)
 
+/* @item lang print()
+ *
+ *     print(values...)
+ *
+ * Converts all arguments to printable strings and prints them on stdout.
+ *
+ * Accepts zero or more arguments to print.
+ *
+ * Printed values are separated with a single space.
+ *
+ * After printing all values prints an EOL character.  If no values are
+ * provided, just prints an EOL character.
+ */
 static KOS_OBJ_ID _print(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -95,6 +108,18 @@ _error:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
+/* @item lang print_()
+ *
+ *     print_(values...)
+ *
+ * Converts all arguments to printable strings and prints them on stdout.
+ *
+ * Accepts zero or more arguments to print.
+ *
+ * Printed values are separated with a single space.
+ *
+ * Unlike `print()`, does not print an EOL character after finishing printing.
+ */
 static KOS_OBJ_ID _print_(KOS_FRAME  frame,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
