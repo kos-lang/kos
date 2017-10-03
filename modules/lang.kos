@@ -97,15 +97,18 @@ fun range(first_arg, args...)
  * A generator which produces properties of an object in a shallow manner,
  * i.e. without descending into prototypes.
  *
- * Returns an iterator function, which yields 2-element arrays which are
- * [key, value] pairs of subsequent properties of an object.  The elements
- * returned are not in any particular order.
+ * Returns an iterator function, which yields 2-element arrays, which are
+ * [key, value] pairs of subsequent properties of the object.
+ *
+ * The order of the elements yielded is unspecified.
+ *
+ * This is equivalent to `shallow()` function.
  *
  * If the object is not of type `object`, e.g. if it is an integer,
  * a float, a boolean or a void, the iterator yields the object itself.
  * Prototypes of array, string, buffer and function override this generator.
  *
- * The `iterator` function is also implicitly invoked by the `for-in` loop
+ * The `iterator()` function is also implicitly invoked by the `for-in` loop
  * statement.
  *
  * Examples:
@@ -147,7 +150,7 @@ do {
      *
      * Returns an iterator function, which yields subsequent elements.
      *
-     * The `iterator` function is also implicitly invoked by the `for-in` loop
+     * The `iterator()` function is also implicitly invoked by the `for-in` loop
      * statement.
      *
      * Example:
@@ -168,7 +171,7 @@ do {
      * Returns an iterator function, which yields single-character strings
      * containing subsequent characters of the string.
      *
-     * The `iterator` function is also implicitly invoked by the `for-in` loop
+     * The `iterator()` function is also implicitly invoked by the `for-in` loop
      * statement.
      *
      * Examples:
@@ -191,7 +194,7 @@ do {
      * Returns an iterator function, which yields integers, which are
      * subsequent elements of the buffer.
      *
-     * The `iterator` function is also implicitly invoked by the `for-in` loop
+     * The `iterator()` function is also implicitly invoked by the `for-in` loop
      * statement.
      *
      * Examples:
@@ -212,7 +215,7 @@ do {
  *
  * Returns the function itself (this).
  *
- * The `iterator` function is also implicitly invoked by the `for-in` loop
+ * The `iterator()` function is also implicitly invoked by the `for-in` loop
  * statement.
  *
  * This allows passing an iterator from an instantiated generator to be
@@ -248,7 +251,7 @@ function.prototype.iterator = λ->(this)
  * after the removed range which will stay.  If `begin` is equal to `end`,
  * they are both equivalent to `pos`.
  *
- * `iterable` is an iterable object on which `iterator` function is invoked
+ * `iterable` is an iterable object on which `iterator()` function is invoked
  * to obtain elements to be inserted into the array.
  *
  * Examples:
@@ -344,7 +347,7 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
  * after the removed range which will stay.  If `begin` is equal to `end`,
  * they are both equivalent to `pos`.
  *
- * `iterable` is an iterable object on which `iterator` function is invoked
+ * `iterable` is an iterable object on which `iterator()` function is invoked
  * to obtain elements to be inserted into the buffer.  The elements to be
  * inserted, which are yielded by the iterator, must be numbers from 0 to 255.
  */

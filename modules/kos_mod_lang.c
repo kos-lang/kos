@@ -187,6 +187,23 @@ _error:
     return ret;
 }
 
+/* @item lang shallow()
+ *
+ *     shallow(obj)
+ *
+ * A generator which produces properties of an object in a shallow manner,
+ * i.e. without descending into prototypes.
+ *
+ * Returns an iterator function, which yields 2-element arrays, which are
+ * [key, value] pairs of subsequent properties of the `obj` object.
+ *
+ * The order of the elements yielded is unspecified.
+ *
+ * Example:
+ *
+ *     > array(shallow({x:0, y:1}))
+ *     [["y", 1], ["x", 0]]
+ */
 static KOS_OBJ_ID _shallow(KOS_FRAME  frame,
                            KOS_OBJ_ID regs_obj,
                            KOS_OBJ_ID args_obj)
@@ -194,6 +211,24 @@ static KOS_OBJ_ID _shallow(KOS_FRAME  frame,
     return _object_iterator(frame, regs_obj, args_obj, KOS_SHALLOW);
 }
 
+/* @item lang deep()
+ *
+ *     deep(obj)
+ *
+ * A generator which produces properties of an object and all its prototypes.
+ *
+ * Returns an iterator function, which yields 2-element arrays, which are
+ * [key, value] pairs of subsequent properties of the `obj` object.
+ *
+ * The order of the elements yielded is unspecified.
+ *
+ * Example:
+ *
+ *     > array(deep({x:0, y:1}))
+ *     [["any", <function>], ["all", <function>], ["filter", <function>],
+ *      ["count", <function>], ["reduce", <function>], ["iterator", <function>],
+ *      ["map", <function>], ["y", 1], ["x", 0]]
+ */
 static KOS_OBJ_ID _deep(KOS_FRAME  frame,
                         KOS_OBJ_ID regs_obj,
                         KOS_OBJ_ID args_obj)
@@ -201,6 +236,15 @@ static KOS_OBJ_ID _deep(KOS_FRAME  frame,
     return _object_iterator(frame, regs_obj, args_obj, KOS_DEEP);
 }
 
+/* @item lang void.prototype.iterator()
+ *
+ *     void.prototype.iterator()
+ *
+ * A generator which does not produce any elements.
+ *
+ * Returns an iterator function which always terminates iteration on the
+ * first call.
+ */
 static KOS_OBJ_ID _iterator(KOS_FRAME  frame,
                             KOS_OBJ_ID regs_obj,
                             KOS_OBJ_ID args_obj)
@@ -232,6 +276,35 @@ _error:
     return error;
 }
 
+/* @item lang number()
+ *
+ *     number(value = 0)
+ *
+ * Numeric type constructor.
+ *
+ * The optional `value` argument can be an integer, a float or a string.
+ *
+ * If `value` is not provided, returns 0.
+ *
+ * If `value` is an integer or a float, returns `value`.
+ *
+ * If `value` is a string, parses it in the same manner numeric literals are
+ * parsed by the interpreter and returns the number as either an integer or
+ * a float, depending on the parsing result.
+ *
+ * Examples:
+ *
+ *     > number()
+ *     0
+ *     > number(10)
+ *     10
+ *     > number(10.0)
+ *     10.0
+ *     > number("123.000")
+ *     123.0
+ *     > number("0x100")
+ *     256
+ */
 static KOS_OBJ_ID _number_constructor(KOS_FRAME  frame,
                                       KOS_OBJ_ID this_obj,
                                       KOS_OBJ_ID args_obj)
