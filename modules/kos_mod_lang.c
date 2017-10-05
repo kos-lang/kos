@@ -291,6 +291,7 @@ _error:
  * If `value` is a string, parses it in the same manner numeric literals are
  * parsed by the interpreter and returns the number as either an integer or
  * a float, depending on the parsing result.
+ * Throws an exception if the string cannot be parsed.
  *
  * Examples:
  *
@@ -353,6 +354,37 @@ static KOS_OBJ_ID _number_constructor(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang integer()
+ *
+ *     integer(value = 0)
+ *
+ * Integer type constructor.
+ *
+ * The optional `value` argument can be an integer, a float or a string.
+ *
+ * If `value` is not provided, returns 0.
+ *
+ * If `value` is an integer, returns `value`.
+ *
+ * If `value` is a float, converts it to integer using floor mode and returns the
+ * converted value.
+ *
+ * If `value` is a string, parses it in the same manner numeric literals are
+ * parsed by the interpreter, requiring that the string is an integer literal.
+ * Throws an exception if the string is a floating-point literal or cannot be
+ * parsed.
+ *
+ * Examples:
+ *
+ *     > integer()
+ *     0
+ *     > integer(10)
+ *     10
+ *     > integer(4.2)
+ *     4
+ *     > integer("123")
+ *     123
+ */
 static KOS_OBJ_ID _integer_constructor(KOS_FRAME  frame,
                                        KOS_OBJ_ID this_obj,
                                        KOS_OBJ_ID args_obj)
@@ -400,6 +432,33 @@ static KOS_OBJ_ID _integer_constructor(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang float()
+ *
+ *     float(value = 0)
+ *
+ * Float type constructor.
+ *
+ * The optional `value` argument can be an integer, a float or a string.
+ *
+ * If `value` is not provided, returns 0.
+ *
+ * If `value` is an integer, converts it to a float and returns the converted value.
+ *
+ * If `value` is a float, returns `value`.
+ *
+ * If `value` is a string, parses it in the same manner numeric literals are
+ * parsed by the interpreter, assuming it is a floating-point literal.
+ * Throws an exception if the string cannot be parsed.
+ *
+ * Examples:
+ *
+ *     > float()
+ *     0.0
+ *     > float(10)
+ *     10.0
+ *     > float("123.5")
+ *     123.5
+ */
 static KOS_OBJ_ID _float_constructor(KOS_FRAME  frame,
                                      KOS_OBJ_ID this_obj,
                                      KOS_OBJ_ID args_obj)
@@ -460,6 +519,33 @@ static KOS_OBJ_ID _float_constructor(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang boolean()
+ *
+ *     boolean(value = false)
+ *
+ * Boolean type constructor.
+ *
+ * Returns the value converted to a boolean using standard truth detection
+ * rules.
+ *
+ * If `value` is `false`, `void`, integer `0` or float `0.0` returns `false`.
+ * Otherwise returns `true`.
+ *
+ * If `value` is not provided, returns `false`.
+ *
+ * Examples:
+ *
+ *     > boolean()
+ *     false
+ *     > boolean(0)
+ *     false
+ *     > boolean([])
+ *     true
+ *     > boolean("")
+ *     true
+ *     > boolean("false")
+ *     true
+ */
 static KOS_OBJ_ID _boolean_constructor(KOS_FRAME  frame,
                                        KOS_OBJ_ID this_obj,
                                        KOS_OBJ_ID args_obj)
@@ -479,6 +565,23 @@ static KOS_OBJ_ID _boolean_constructor(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang void()
+ *
+ *     void()
+ *
+ * Void type constructor.
+ *
+ * Returns `void`.
+ *
+ * Because `void` is a keyword, this constructor can only be referenced
+ * indirectly via the `lang` module, it cannot be referenced if it is
+ * imported directly into the current module.
+ *
+ * Example:
+ *
+ *     > lang.void()
+ *     void
+ */
 static KOS_OBJ_ID _void_constructor(KOS_FRAME  frame,
                                     KOS_OBJ_ID this_obj,
                                     KOS_OBJ_ID args_obj)
@@ -486,6 +589,41 @@ static KOS_OBJ_ID _void_constructor(KOS_FRAME  frame,
     return KOS_VOID;
 }
 
+/* @item lang string()
+ *
+ *     string(args...)
+ *
+ * String type constructor.
+ *
+ * Returns a new string created from converting all arguments to strings
+ * and concatenating them.
+ *
+ * If no arguments are provided, returns an empty string.
+ *
+ * Each argument can be a string, an integer, a float, an array or a buffer.
+ * Any other argument type triggers an exception.
+ *
+ * A string argument undergoes no conversion (concatenation still applies).
+ *
+ * An integer or a float argument is converted to a string by creating
+ * a string which can be parsed back to that number.
+ *
+ * An array argument must contain numbers, which are unicode code points
+ * in the range from 0 to 0x1FFFFF, inclusive.  Float numbers are converted
+ * to integers using floor operation.  Any array elements which are not
+ * numbers or exceed the above range trigger an exception.  The new string
+ * created from the array contains characters corresponding to the specified
+ * code points and the string length is equal to the length of the array.
+ *
+ * A buffer argument is treated as if contains an UTF-8 string and the
+ * string is decoded from it.  Any errors in the UTF-8 sequence trigger
+ * an exception.
+ *
+ * Example:
+ *
+ *     > string("kos", [108, 97, 110, 103], 32)
+ *     "koslang32"
+ */
 static KOS_OBJ_ID _string_constructor(KOS_FRAME  frame,
                                       KOS_OBJ_ID this_obj,
                                       KOS_OBJ_ID args_obj)
@@ -542,6 +680,34 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang stringify()
+ *
+ *     stringify(args...)
+ *
+ * Converts values to human-readable string representation.
+ *
+ * Returns a new string created from converting all arguments to strings
+ * and concatenating them.
+ *
+ * If no arguments are provided, returns an empty string.
+ *
+ * String arguments are treated literally without any conversion.
+ *
+ * Integer, float, boolean and void arguments are converted to their
+ * string representation, which is the same as in source code.
+ *
+ * Arrays and objects are converted to a human-readable representation
+ * similar to their apperance in source code, except all the conversion
+ * rules apply in the same way to their elements, so for example
+ * strings are not double-quoted.
+ *
+ * TODO describe buffer, function
+ *
+ * Example:
+ *
+ *     > stringify(true, "true", 42, [10, "str"])
+ *     "truetrue42[10, str]"
+ */
 static KOS_OBJ_ID _stringify(KOS_FRAME  frame,
                              KOS_OBJ_ID this_obj,
                              KOS_OBJ_ID args_obj)
@@ -576,6 +742,19 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang object()
+ *
+ *     object()
+ *
+ * Object type constructor.
+ *
+ * Returns an empty object.  Equivalent to empty object literal `{}`.
+ *
+ * Example:
+ *
+ *     > object()
+ *     {}
+ */
 static KOS_OBJ_ID _object_constructor(KOS_FRAME  frame,
                                       KOS_OBJ_ID this_obj,
                                       KOS_OBJ_ID args_obj)
@@ -789,7 +968,11 @@ static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
         KOS_OBJ_ID                 arg     = KOS_array_read(frame, args_obj, 0);
         const KOS_FUNCTION_HANDLER handler = OBJPTR(FUNCTION, this_obj)->handler;
 
-        /* TODO forbid for all built-in functions? */
+        /* TODO:
+         * - Forbid non-constructor functions?
+         * - Create a separate built-in constructor for constructor functions?
+         * - Forbid for all built-in functions?
+         */
         if (handler == _array_constructor     ||
             handler == _boolean_constructor   ||
             handler == _buffer_constructor    ||
