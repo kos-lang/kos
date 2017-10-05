@@ -33,6 +33,11 @@
 #include <stdio.h>
 #include <string.h>
 
+static const uint8_t de_bruijn_bit_pos[32] = {
+    0,   1, 28,  2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17,  4, 8,
+    31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18,  6, 11,  5, 10, 9
+};
+
 struct _KOS_AREA {
     KOS_ATOMIC(void *)   next;
     uint8_t              type;
@@ -178,14 +183,7 @@ int _KOS_alloc_init(KOS_CONTEXT *ctx)
 {
     struct _KOS_ALLOCATOR *allocator = &ctx->allocator;
 
-    static const uint8_t de_bruijn_bit_pos[32] = {
-        0,   1, 28,  2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17,  4, 8,
-        31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18,  6, 11,  5, 10, 9
-    };
-
     memset(allocator, 0, sizeof(*allocator));
-
-    memcpy(allocator->de_bruijn_bit_pos, de_bruijn_bit_pos, sizeof(de_bruijn_bit_pos));
 
     allocator->str_oom_id = KOS_VOID;
 
@@ -285,7 +283,7 @@ void *_KOS_alloc_object_internal(KOS_FRAME                frame,
                             /* Failed to grab this object, try another one */
                             continue;
 
-                        offs = allocator->de_bruijn_bit_pos[((~bits & new_bits) * 0x077CB531U) >> 27];
+                        offs = de_bruijn_bit_pos[((~bits & new_bits) * 0x077CB531U) >> 27];
 
                         offs = (lookup_offs << 5) + offs;
 

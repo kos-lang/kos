@@ -37,7 +37,6 @@ struct _KOS_ALLOCATOR {
     /* TODO add areas_stack */
     KOS_ATOMIC(void *)   areas[4]; /* By element size: 8, 16, 32, 64 */
     KOS_ATOMIC(void *)   buffers;  /* TODO buddy allocator for buffers + freed list */
-    uint8_t              de_bruijn_bit_pos[32];
     KOS_OBJ_ID           str_oom_id;
 };
 
