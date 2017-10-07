@@ -52,16 +52,6 @@ do {
     expect_fail(λ->(b[-1]))
 }
 
-# TODO add support for converting array of numbers to buffer through buffer constructor
-fun buffer_from_array(a)
-{
-    const b = buffer(a.size)
-    for var i in range(a.size) {
-        b[i] = a[i]
-    }
-    return b
-}
-
 do {
     const b = buffer()
     assert b instanceof buffer
@@ -149,9 +139,6 @@ do {
     expect_fail(fun { b[0]   = 256.1 })
     expect_fail(fun { b[0]   = -1.01 })
 
-    expect_fail(fun { b[:]   = 0     })
-    expect_fail(fun { b[1:2] = 0     })
-
     expect_fail(fun { b[5] = void    })
     expect_fail(fun { b[5] = true    })
     expect_fail(fun { b[5] = false   })
@@ -189,6 +176,42 @@ do {
         count += 1
     }
     assert count == 17
+}
+
+do {
+    const b = buffer([95, 96], "a", [], fun { yield 98; yield 99 } ())
+    assert b.size == 5
+    assert b[0]   == 95
+    assert b[1]   == 96
+    assert b[2]   == 97
+    assert b[3]   == 98
+    assert b[4]   == 99
+
+    expect_fail(fun { buffer({}) })
+    expect_fail(fun { buffer(1, 2, 3) })
+    expect_fail(fun { buffer(false) })
+    expect_fail(fun { buffer(void) })
+    expect_fail(fun { buffer([-1]) })
+    expect_fail(fun { buffer([256]) })
+
+    b[1:2] = 10
+    assert b.size == 5
+    assert b[0]   == 95
+    assert b[1]   == 10
+    assert b[2]   == 97
+    assert b[3]   == 98
+    assert b[4]   == 99
+
+    b[1:-1] = "K"
+    assert b.size == 3
+    assert b[0]   == 95
+    assert b[1]   == 75
+    assert b[2]   == 99
+
+    b[:] = fun { yield 10; yield 20 } ()
+    assert b.size == 2
+    assert b[0]   == 10
+    assert b[1]   == 20
 }
 
 ##############################################################################
@@ -731,7 +754,7 @@ do {
 # lang.buffer.prototype.unpack
 
 do {
-    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7 ])
+    const b = buffer([ 1, 2, 3, 4, 5, 6, 7 ])
     const a = b.unpack("u4 x i2")
 
     assert typeof a == "array"
@@ -743,10 +766,10 @@ do {
 }
 
 do {
-    const b = buffer_from_array([ 1, 2,
-                                  3, 4, 5, 6,
-                                  7, 8, 9, 10, 11, 12, 13, 14,
-                                  15, 1, 2, 3, 4, 5, 6, 7, 15, 2, 3, 4, 5, 6, 7, 8 ])
+    const b = buffer([ 1, 2,
+                       3, 4, 5, 6,
+                       7, 8, 9, 10, 11, 12, 13, 14,
+                       15, 1, 2, 3, 4, 5, 6, 7, 15, 2, 3, 4, 5, 6, 7, 8 ])
     const a = b.unpack("<u1 >u1 <u2 >u2 <u4 >u4 <u8 >u8")
 
     assert typeof a == "array"
@@ -770,10 +793,10 @@ do {
 }
 
 do {
-    const b = buffer_from_array([ 1, 2,
-                                  3, 4, 5, 6,
-                                  7, 8, 9, 10, 11, 12, 13, 14,
-                                  15, 1, 2, 3, 4, 5, 6, 7, 15, 2, 3, 4, 5, 6, 7, 8 ])
+    const b = buffer([ 1, 2,
+                       3, 4, 5, 6,
+                       7, 8, 9, 10, 11, 12, 13, 14,
+                       15, 1, 2, 3, 4, 5, 6, 7, 15, 2, 3, 4, 5, 6, 7, 8 ])
     const a = b.unpack("<i1 >i1 <i2 >i2 <i4 >i4 <i8 >i8")
 
     assert typeof a == "array"
@@ -797,10 +820,10 @@ do {
 }
 
 do {
-    const b = buffer_from_array([ 0x81, 0x82,
-                                  0xFD, 0xFF, 0xFF, 0xFE,
-                                  7, 8, 9, 0x80, 0x80, 12, 13, 14,
-                                  15, 1, 2, 3, 4, 5, 6, 0x80, 0x80, 2, 3, 4, 5, 6, 7, 8 ])
+    const b = buffer([ 0x81, 0x82,
+                       0xFD, 0xFF, 0xFF, 0xFE,
+                       7, 8, 9, 0x80, 0x80, 12, 13, 14,
+                       15, 1, 2, 3, 4, 5, 6, 0x80, 0x80, 2, 3, 4, 5, 6, 7, 8 ])
     const a = b.unpack("<i1 >i1 <i2 >i2 <i4 >i4 <i8 >i8")
 
     assert typeof a == "array"
@@ -824,10 +847,10 @@ do {
 }
 
 do {
-    const b = buffer_from_array([ 0, 0, 0x80, 0x3F,
-                                  0x40, 0, 0, 0,
-                                  0, 0, 0, 0, 0, 0, 0x08, 0x40,
-                                  0x40, 0x10, 0, 0, 0, 0, 0, 0 ])
+    const b = buffer([ 0, 0, 0x80, 0x3F,
+                       0x40, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0x08, 0x40,
+                       0x40, 0x10, 0, 0, 0, 0, 0, 0 ])
     const a = b.unpack("<f4 >f4 <f8 >f8")
 
     assert typeof a == "array"
@@ -843,7 +866,7 @@ do {
 }
 
 do {
-    const b = buffer_from_array([0, 0x61, 0x62, 0x63])
+    const b = buffer([0, 0x61, 0x62, 0x63])
     const a = b.unpack("x s3")
 
     assert typeof a == "array"
@@ -853,7 +876,7 @@ do {
 }
 
 do {
-    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7 ])
+    const b = buffer([ 1, 2, 3, 4, 5, 6, 7 ])
     const a = b.unpack("2 b3")
 
     assert typeof a == "array"
@@ -871,7 +894,7 @@ do {
 }
 
 do {
-    const b = buffer_from_array([ 1, 2, 3, 4, 5, 6, 7, 8 ])
+    const b = buffer([ 1, 2, 3, 4, 5, 6, 7, 8 ])
     const a = b.unpack(2, "i1\ti2\ti1")
 
     assert typeof a    == "array"

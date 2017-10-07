@@ -327,10 +327,10 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
 
 /* @item lang buffer.prototype.insert()
  *
- *     buffer.prototype.insert(pos, iterable)
- *     buffer.prototype.insert(begin, end, iterable)
+ *     buffer.prototype.insert(pos, obj)
+ *     buffer.prototype.insert(begin, end, obj)
  *
- * Inserts elements into an buffer, possibly replacing existing elements.
+ * Inserts elements into a buffer, possibly replacing existing elements.
  *
  * The buffer is modified in-place.
  *
@@ -392,7 +392,7 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     }
 
     if typeof iterable != "buffer" {
-        iterable = buffer(iterable.iterator())
+        iterable = buffer(typeof iterable == "string" ? iterable : iterable.iterator())
     }
 
     const new_size = this.size + iterable.size + begin - end
