@@ -607,7 +607,7 @@ static KOS_OBJ_ID _buffer_to_str(KOS_FRAME  frame,
 
     assert(cstr_vec.size > 1);
 
-    ret = KOS_new_string(frame, cstr_vec.buffer, cstr_vec.size - 1);
+    ret = KOS_new_string(frame, cstr_vec.buffer, (unsigned)cstr_vec.size - 1U);
 
 _error:
     _KOS_vector_destroy(&cstr_vec);
