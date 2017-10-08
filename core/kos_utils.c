@@ -22,6 +22,7 @@
 
 #include "../inc/kos_utils.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_buffer.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
@@ -39,7 +40,10 @@
 static const char str_array_close[]        = "]";
 static const char str_array_comma[]        = ", ";
 static const char str_array_open[]         = "[";
+static const char str_buffer_close[]       = ">";
+static const char str_buffer_open[]        = "<";
 static const char str_empty_array[]        = "[]";
+static const char str_empty_buffer[]       = "<>";
 static const char str_err_invalid_string[] = "invalid string";
 static const char str_err_not_array[]      = "object is not an array";
 static const char str_err_not_number[]     = "object is not a number";
@@ -537,6 +541,80 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+static int _vector_append_buffer(KOS_FRAME           frame,
+                                 struct _KOS_VECTOR *cstr_vec,
+                                 KOS_OBJ_ID          obj_id)
+{
+    int            error;
+    uint32_t       size;
+    const uint8_t *src;
+    const uint8_t *end;
+    char          *dest;
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
+
+    size = KOS_get_buffer_size(obj_id);
+
+    error = _KOS_vector_reserve(cstr_vec, cstr_vec->size + size * 3 + 2);
+    if (error)
+        RAISE_EXCEPTION(str_err_out_of_memory);
+    assert(sizeof(str_buffer_open)  == 2);
+    assert(sizeof(str_buffer_close) == 2);
+
+    TRY(_vector_append_cstr(frame, cstr_vec, str_buffer_open, sizeof(str_buffer_open)-1));
+
+    dest = cstr_vec->buffer + cstr_vec->size - 1;
+    src  = KOS_buffer_data(obj_id);
+    end  = src + size;
+
+    while (src < end) {
+
+        const uint8_t b = *(src++);
+
+        dest[0] = _hex_digits[b >> 4];
+        dest[1] = _hex_digits[b & 15];
+        dest[2] = ' ';
+
+        dest += 3;
+    }
+
+    if (size) {
+        *(--dest) = 0;
+        cstr_vec->size += size * 3 - 1;
+    }
+
+    TRY(_vector_append_cstr(frame, cstr_vec, str_buffer_close, sizeof(str_buffer_close)-1));
+
+_error:
+    return error;
+}
+
+static KOS_OBJ_ID _buffer_to_str(KOS_FRAME  frame,
+                                 KOS_OBJ_ID obj_id)
+{
+    int                error = KOS_SUCCESS;
+    KOS_OBJ_ID         ret   = KOS_BADPTR;
+    struct _KOS_VECTOR cstr_vec;
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
+
+    if (KOS_get_buffer_size(obj_id) == 0)
+        return KOS_context_get_cstring(frame, str_empty_buffer);
+
+    _KOS_vector_init(&cstr_vec);
+
+    TRY(_vector_append_buffer(frame, &cstr_vec, obj_id));
+
+    assert(cstr_vec.size > 1);
+
+    ret = KOS_new_string(frame, cstr_vec.buffer, cstr_vec.size - 1);
+
+_error:
+    _KOS_vector_destroy(&cstr_vec);
+
+    return error ? KOS_BADPTR : ret;
+}
+
 int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
                                      KOS_OBJ_ID          obj_id,
                                      enum _KOS_QUOTE_STR quote_str,
@@ -602,6 +680,13 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
                 error = _vector_append_array(frame, cstr_vec, obj_id, quote_str);
             else
                 *str = _array_to_str(frame, obj_id, quote_str);
+            break;
+
+        case OBJ_BUFFER:
+            if (cstr_vec)
+                error = _vector_append_buffer(frame, cstr_vec, obj_id);
+            else
+                *str = _buffer_to_str(frame, obj_id);
             break;
 
         case OBJ_OBJECT:
