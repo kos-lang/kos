@@ -184,6 +184,7 @@ $(eval $(call SEQFAIL_RULE,3400))
 $(eval $(call SEQFAIL_RULE,3600))
 $(eval $(call SEQFAIL_RULE,3800))
 $(eval $(call SEQFAIL_RULE,4000))
+$(eval $(call SEQFAIL_RULE,4200))
 
 ifneq ($(CONFIG_SEQFAIL), 0)
 simple_test: $(sequential_test_list)
