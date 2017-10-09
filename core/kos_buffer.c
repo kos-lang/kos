@@ -47,7 +47,7 @@ static BUFFER_DATA *_alloc_buffer(KOS_FRAME frame, unsigned capacity)
      * Therefore in debug builds, we fill it with random data to trigger
      * any bugs more easily.
      */
-    {
+    if (data) {
         static struct KOS_RNG rng;
         static int            init = 0;
         uint64_t             *buf = (uint64_t *)data;
