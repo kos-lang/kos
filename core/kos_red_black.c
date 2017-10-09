@@ -259,10 +259,8 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
             root = succ;
 
         if (b != node) {
-            if (b->left == succ)
-                b->left  = node;
-            else
-                b->right = node;
+            assert(b->left == succ);
+            b->left = node;
         }
 
         color     = node->red;
@@ -387,6 +385,9 @@ void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
         else
             root = 0;
     }
+
+    if (root)
+        root->red = 0;
 
     *out_root = root;
 }
