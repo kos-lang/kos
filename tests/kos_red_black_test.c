@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../inc/kos_error.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_misc.h"
@@ -130,16 +131,38 @@ static int check_black_nodes(struct MYNODE *n, int num_black)
     return e;
 }
 
+static void print_error(int error)
+{
+    switch (error) {
+        case ERROR_WRONG_NODE_ORDER:
+            printf("Error: Nodes are in incorrect order\n");
+            break;
+
+        case ERROR_TREE_NOT_BALANCED:
+            printf("Error: Tree is not balanced\n");
+            break;
+
+        case ERROR_WRONG_WALK_ORDER:
+            printf("Error: Nodes walked in wrong order\n");
+            break;
+
+        default:
+            break;
+    }
+}
+
 static int check_tree(struct MYNODE *n)
 {
-    int e = check_tree_order(n);
-    if (!e)
-        e = check_walk_order(n);
-    if (!e) {
+    int error = check_tree_order(n);
+    if (!error)
+        error = check_walk_order(n);
+    if (!error) {
         const int num_black = count_black_nodes(n);
-        e = check_black_nodes(n, num_black);
+        if (n && (n->node.left || n->node.right || n->node.red))
+            error = check_black_nodes(n, num_black);
     }
-    return e;
+    print_error(error);
+    return error;
 }
 
 static void free_tree(struct MYNODE *n)
@@ -166,96 +189,217 @@ static void print_tree(struct MYNODE *root)
     printf("\n");
 }
 
-int main(int argc, char *argv[])
+static int test_sequence(const int *insert_seq,
+                         const int *delete_seq,
+                         int        count)
 {
     int            i;
-    int            size;
-    intptr_t      *values;
     struct MYNODE *root = 0;
-    struct KOS_RNG rng;
-    int            total = 0;
-    int            error = 0;
+    struct MYNODE  nodes[31];
+
+    assert(count <= (int)(sizeof(nodes) / sizeof(nodes[0])));
+
+    memset(nodes, 0, sizeof(nodes));
+
+    for (i = 0; i < count; i++)
+        nodes[i].value = i;
+
+    for (i = 0; i < count; i++) {
+        int       error;
+        const int idx = insert_seq[i];
+
+        _KOS_red_black_insert((struct _KOS_RED_BLACK_NODE **)&root,
+                              (struct _KOS_RED_BLACK_NODE *)&nodes[idx],
+                              cmp_node);
+
+        error = check_tree(root);
+        print_error(error);
+        if (error)
+            return error;
+    }
+
+    i = 0;
+    for (;;) {
+        int       error;
+        const int idx = delete_seq[i];
+
+        _KOS_red_black_delete((struct _KOS_RED_BLACK_NODE **)&root,
+                              (struct _KOS_RED_BLACK_NODE *)&nodes[idx]);
+
+        if (++i == count)
+            break;
+
+        error = check_tree(root);
+        print_error(error);
+        if (error)
+            return error;
+    }
+
+    if (root) {
+        printf("Unexpected root\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    int error;
+    int size;
 
     if (argc < 1 || argc > 2)
         return 1;
 
-    size = argc == 2 ? atoi(argv[1]) : 100000;
+    size = argc == 2 ? atoi(argv[1]) : 10000;
 
-    values = (intptr_t *)_KOS_malloc(size * sizeof(intptr_t));
+    /* Ascending */
+    {
+        const int insert_seq[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+        const int delete_seq[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 
-    _KOS_rng_init(&rng);
-
-    for (i = 0; i < size; i++) {
-        const uintptr_t v = (uintptr_t)_KOS_rng_random(&rng);
-        values[i]         = v == ((uintptr_t)1U << (sizeof(intptr_t)*8-1)) ? 0 : (intptr_t)v;
+        error = test_sequence(insert_seq, delete_seq, 16);
+        if (error)
+            return error;
     }
 
-    for (i = 0; i < size*2; i++) {
-        struct MYNODE *node;
+    /* Descending */
+    {
+        const int insert_seq[16] = { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+        const int delete_seq[16] = { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
 
-        if (_KOS_red_black_find((struct _KOS_RED_BLACK_NODE *)root,
-                                (void *)values[i % size],
-                                cmp_value))
-            continue;
-
-        node = (struct MYNODE *)_KOS_malloc(sizeof(struct MYNODE));
-
-        node->value = values[i % size];
-
-        _KOS_red_black_insert((struct _KOS_RED_BLACK_NODE **)&root,
-                              (struct _KOS_RED_BLACK_NODE *)node,
-                              cmp_node);
-
-        ++total;
+        error = test_sequence(insert_seq, delete_seq, 16);
+        if (error)
+            return error;
     }
 
-    if (total > size) {
-        printf("Error: Inserted too many nodes\n");
-        return 1;
+    /* Ascending/descending */
+    {
+        const int insert_seq[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+        const int delete_seq[16] = { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+
+        error = test_sequence(insert_seq, delete_seq, 16);
+        if (error)
+            return error;
     }
 
-    error = check_tree(root);
+    /* Root-to-leaves */
+    {
+        const int insert_seq[15] = { 7, 3, 11, 1, 5, 9, 13, 0, 2, 4, 6, 8, 10, 12, 14 };
+        const int delete_seq[15] = { 7, 3, 11, 1, 5, 9, 13, 0, 2, 4, 6, 8, 10, 12, 14 };
 
-    for (i = 0 ; i < total*4; i++) {
-        const uint64_t idx  = _KOS_rng_random(&rng);
-        struct MYNODE *node = (struct MYNODE *)_KOS_red_black_find(
-                (struct _KOS_RED_BLACK_NODE *)root,
-                (void *)values[(unsigned)idx % size],
-                cmp_value);
+        error = test_sequence(insert_seq, delete_seq, 15);
+        if (error)
+            return error;
+    }
 
-        if (node) {
-            _KOS_red_black_delete((struct _KOS_RED_BLACK_NODE **)&root,
-                                  (struct _KOS_RED_BLACK_NODE *)node);
-            _KOS_free(node);
-            --total;
+    /* Leaves-to-root */
+    {
+        const int insert_seq[15] = { 0, 2, 4, 6, 8, 10, 12, 14, 1, 5, 9, 13, 3, 11, 7 };
+        const int delete_seq[15] = { 0, 2, 4, 6, 8, 10, 12, 14, 1, 5, 9, 13, 3, 11, 7 };
+
+        error = test_sequence(insert_seq, delete_seq, 15);
+        if (error)
+            return error;
+    }
+
+    /* Left side left-to right, then right side right-to-left */
+    {
+        const int insert_seq[15] = { 0, 1, 2, 3, 4, 5, 6, 7, 14, 13, 12, 11, 10, 9, 8 };
+        const int delete_seq[15] = { 0, 1, 2, 3, 4, 5, 6, 7, 14, 13, 12, 11, 10, 9, 8 };
+
+        error = test_sequence(insert_seq, delete_seq, 15);
+        if (error)
+            return error;
+    }
+
+    /* Right side right-to-left, then Left side left-to right */
+    {
+        const int insert_seq[15] = { 14, 13, 12, 11, 10, 9, 8, 7, 0, 1, 2, 3, 4, 5, 6 };
+        const int delete_seq[15] = { 14, 13, 12, 11, 10, 9, 8, 7, 0, 1, 2, 3, 4, 5, 6 };
+
+        error = test_sequence(insert_seq, delete_seq, 15);
+        if (error)
+            return error;
+    }
+
+    /* Levels in order: 0, 3, 1, 2 */
+    {
+        const int insert_seq[15] = { 7, 0, 2, 4, 6, 8, 10, 12, 14, 3, 11, 1, 5, 9, 13 };
+        const int delete_seq[15] = { 7, 0, 2, 4, 6, 8, 10, 12, 14, 3, 11, 1, 5, 9, 13 };
+
+        error = test_sequence(insert_seq, delete_seq, 15);
+        if (error)
+            return error;
+    }
+
+    /* Random test */
+    {
+        int            i;
+        int            total = 0;
+        struct KOS_RNG rng;
+        struct MYNODE *root   = 0;
+        intptr_t      *values = (intptr_t *)_KOS_malloc(size * sizeof(intptr_t));
+
+        _KOS_rng_init(&rng);
+
+        for (i = 0; i < size; i++) {
+            const uintptr_t v = (uintptr_t)_KOS_rng_random(&rng);
+            values[i]         = v == ((uintptr_t)1U << (sizeof(intptr_t)*8-1)) ? 0 : (intptr_t)v;
         }
-    }
 
-    i = check_tree(root);
-    if (i && !error)
-        error = i;
+        for (i = 0; i < size*2; i++) {
+            struct MYNODE *node;
 
-    if (total < 20)
-        print_tree(root);
+            if (_KOS_red_black_find((struct _KOS_RED_BLACK_NODE *)root,
+                                    (void *)values[i % size],
+                                    cmp_value))
+                continue;
 
-    free_tree(root);
-    _KOS_free(values);
+            node = (struct MYNODE *)_KOS_malloc(sizeof(struct MYNODE));
 
-    switch (error) {
-        case ERROR_WRONG_NODE_ORDER:
-            printf("Error: Nodes are in incorrect order\n");
-            break;
+            node->value = values[i % size];
 
-        case ERROR_TREE_NOT_BALANCED:
-            printf("Error: Tree is not balanced\n");
-            break;
+            _KOS_red_black_insert((struct _KOS_RED_BLACK_NODE **)&root,
+                                  (struct _KOS_RED_BLACK_NODE *)node,
+                                  cmp_node);
 
-        case ERROR_WRONG_WALK_ORDER:
-            printf("Error: Nodes walked in wrong order\n");
-            break;
+            ++total;
+        }
 
-        default:
-            break;
+        if (total > size) {
+            printf("Error: Inserted too many nodes\n");
+            return 1;
+        }
+
+        error = check_tree(root);
+
+        for (i = 0 ; i < total*4; i++) {
+            const uint64_t idx  = _KOS_rng_random(&rng);
+            struct MYNODE *node = (struct MYNODE *)_KOS_red_black_find(
+                    (struct _KOS_RED_BLACK_NODE *)root,
+                    (void *)values[(unsigned)idx % size],
+                    cmp_value);
+
+            if (node) {
+                _KOS_red_black_delete((struct _KOS_RED_BLACK_NODE **)&root,
+                                      (struct _KOS_RED_BLACK_NODE *)node);
+                _KOS_free(node);
+                --total;
+            }
+        }
+
+        i = check_tree(root);
+        if (i && !error)
+            error = i;
+
+        if (total < 20)
+            print_tree(root);
+
+        free_tree(root);
+        _KOS_free(values);
+
+        print_error(error);
     }
 
     return error;
