@@ -268,3 +268,22 @@ if [ "$CONTENTS" != "\"x\"" ]; then
     cat "$OUTPUT"
     exit 1
 fi
+
+##############################################################################
+# Test function declared through the interpreter
+
+"$KOS" -c 'print("fun f(a) { print(\"arg: \\(a)\") }") ; print("f(10)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+
+if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+    echo "Expected first line to have interactive interpreter signature" >&2
+    head -n "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "2 p" "$OUTPUT"`
+
+if [ "$CONTENTS" != "arg: 10" ]; then
+    echo "Expected line 2 of output to contain: \"arg: 10\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi

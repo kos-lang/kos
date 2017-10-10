@@ -217,6 +217,7 @@ static KOS_OBJ_ID _alloc_module(KOS_FRAME  frame,
         module->type    = OBJ_MODULE;
         module->name    = module_name;
         module->context = KOS_context_from_frame(frame);
+        module->strings = KOS_BADPTR;
 
         module->global_names = KOS_new_object(frame);
         if (IS_BAD_PTR(module->global_names))
@@ -404,15 +405,22 @@ static int _alloc_strings(KOS_FRAME              frame,
 {
     int                       error       = KOS_SUCCESS;
     const uint32_t            num_strings = _count_strings(program);
+    uint32_t                  base_idx    = 0;
     const enum _KOS_AREA_TYPE alloc_mode  = _KOS_alloc_get_mode(frame);
     struct _KOS_COMP_STRING  *str         = program->string_list;
     int                       i;
 
-    _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
-    module->strings = KOS_new_array(frame, num_strings);
-    _KOS_alloc_set_mode(frame, alloc_mode);
+    if (IS_BAD_PTR(module->strings)) {
+        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
+        module->strings = KOS_new_array(frame, num_strings);
+        _KOS_alloc_set_mode(frame, alloc_mode);
 
-    TRY_OBJID(module->strings);
+        TRY_OBJID(module->strings);
+    }
+    else {
+        base_idx = KOS_get_array_size(module->strings);
+        TRY(KOS_array_resize(frame, module->strings, base_idx + num_strings));
+    }
 
     for (i = 0; str; str = str->next, ++i) {
 
@@ -426,7 +434,7 @@ static int _alloc_strings(KOS_FRAME              frame,
 
         TRY_OBJID(str_obj);
 
-        TRY(KOS_array_write(frame, module->strings, i, str_obj));
+        TRY(KOS_array_write(frame, module->strings, base_idx + i, str_obj));
     }
 
 _error:
@@ -831,6 +839,8 @@ static int _compile_module(KOS_FRAME   frame,
 
     /* Initialize parser and compiler */
     _KOS_compiler_init(&program, module_idx);
+    if ( ! IS_BAD_PTR(module->strings))
+        program.num_strings = (int)KOS_get_array_size(module->strings);
     _KOS_parser_init(&parser,
                      &program.allocator,
                      (unsigned)module_idx,
