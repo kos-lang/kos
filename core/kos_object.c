@@ -751,7 +751,8 @@ KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
             break;
 
         case OBJ_FUNCTION: {
-            const enum _KOS_FUNCTION_STATE state = OBJPTR(FUNCTION, obj_id)->state;
+            const enum _KOS_FUNCTION_STATE state =
+                (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, obj_id)->state;
             if (state == KOS_FUN)
                 ret = ctx->function_prototype;
             else if (state == KOS_CTOR)
