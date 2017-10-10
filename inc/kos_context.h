@@ -96,6 +96,7 @@ struct _KOS_CONTEXT {
     KOS_OBJ_ID                     generator_prototype;
     KOS_OBJ_ID                     exception_prototype;
     KOS_OBJ_ID                     generator_end_prototype;
+    KOS_OBJ_ID                     thread_prototype;
 
     KOS_ATOMIC(void *)             prototypes;
     KOS_ATOMIC(uint32_t)           prototypes_lock;

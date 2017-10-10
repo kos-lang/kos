@@ -58,6 +58,9 @@ static const char str_err_not_string[]                = "object is not a string"
 static const char str_err_too_many_repeats[]          = "invalid string repeat count";
 static const char str_err_unpack_buf_too_short[]      = "unpacked buffer too short";
 static const char str_err_unsup_operand_types[]       = "unsupported operand types";
+static const char str_err_use_async[]                 = "use async to launch threads";
+static const char str_function[]                      = "function";
+static const char str_result[]                        = "result";
 
 #define TRY_CREATE_CONSTRUCTOR(name)                                         \
 do {                                                                         \
@@ -1062,6 +1065,14 @@ static KOS_OBJ_ID _generator_end_constructor(KOS_FRAME  frame,
     return KOS_BADPTR;
 }
 
+static KOS_OBJ_ID _thread_constructor(KOS_FRAME  frame,
+                                      KOS_OBJ_ID this_obj,
+                                      KOS_OBJ_ID args_obj)
+{
+    KOS_raise_exception_cstring(frame, str_err_use_async);
+    return KOS_BADPTR;
+}
+
 static KOS_OBJ_ID _apply(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -1086,6 +1097,74 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+static void _async_func(KOS_FRAME frame,
+                        void     *cookie)
+{
+    KOS_OBJECT *thread_obj = (KOS_OBJECT *)cookie;
+    KOS_OBJ_ID  func_obj;
+    KOS_OBJ_ID  args_obj;
+    KOS_OBJ_ID  ret_obj;
+
+    func_obj = KOS_get_property(frame, OBJID(OBJECT, thread_obj),
+                    KOS_context_get_cstring(frame, str_function));
+    if (IS_BAD_PTR(func_obj))
+        return;
+
+    args_obj = KOS_get_property(frame, OBJID(OBJECT, thread_obj),
+                    KOS_context_get_cstring(frame, str_args));
+    if (IS_BAD_PTR(args_obj))
+        return;
+
+    if (KOS_delete_property(frame, OBJID(OBJECT, thread_obj),
+                KOS_context_get_cstring(frame, str_args)) != KOS_SUCCESS)
+        return;
+
+    ret_obj = KOS_apply_function(frame, func_obj, OBJID(OBJECT, thread_obj), args_obj);
+    if (IS_BAD_PTR(ret_obj))
+        return;
+
+    KOS_set_property(frame, OBJID(OBJECT, thread_obj),
+            KOS_context_get_cstring(frame, str_result), ret_obj);
+}
+
+static void _thread_finalize(KOS_FRAME frame,
+                             void     *priv)
+{
+    _KOS_thread_join(frame, (_KOS_THREAD)priv);
+}
+
+static KOS_OBJ_ID _async(KOS_FRAME  frame,
+                         KOS_OBJ_ID this_obj,
+                         KOS_OBJ_ID args_obj)
+{
+    int         error      = KOS_SUCCESS;
+    KOS_OBJ_ID  thread_obj = KOS_BADPTR;
+    _KOS_THREAD thread;
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_FUNCTION) {
+        KOS_raise_exception_cstring(frame, str_err_not_function);
+        return KOS_BADPTR;
+    }
+
+    thread_obj = KOS_new_object_with_prototype(frame,
+            KOS_context_from_frame(frame)->thread_prototype);
+    TRY_OBJID(thread_obj);
+
+    TRY(KOS_set_property(frame, thread_obj,
+                KOS_context_get_cstring(frame, str_function), this_obj));
+    TRY(KOS_set_property(frame, thread_obj,
+                KOS_context_get_cstring(frame, str_args), args_obj));
+
+    OBJPTR(OBJECT, thread_obj)->finalize = _thread_finalize;
+
+    TRY(_KOS_thread_create(frame, _async_func, OBJPTR(OBJECT, thread_obj), &thread));
+
+    KOS_object_set_private(*OBJPTR(OBJECT, thread_obj), (void *)thread);
+
+_error:
+    return error ? KOS_BADPTR : thread_obj;
+}
+
 static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
                                  KOS_OBJ_ID this_obj,
                                  KOS_OBJ_ID args_obj)
@@ -1104,20 +1183,21 @@ static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
          * - Create a separate built-in constructor for constructor functions?
          * - Forbid for all built-in functions?
          */
-        if (handler == _array_constructor       ||
-            handler == _boolean_constructor     ||
-            handler == _buffer_constructor      ||
-            handler == _float_constructor       ||
-            handler == _function_constructor    ||
-            handler == _constructor_constructor ||
-            handler == _generator_constructor   ||
-            handler == _integer_constructor     ||
-            handler == _number_constructor      ||
-            handler == _object_constructor      ||
-            handler == _string_constructor      ||
-            handler == _void_constructor        ||
-            handler == _exception_constructor   ||
-            handler == _generator_end_constructor) {
+        if (handler == _array_constructor         ||
+            handler == _boolean_constructor       ||
+            handler == _buffer_constructor        ||
+            handler == _constructor_constructor   ||
+            handler == _exception_constructor     ||
+            handler == _float_constructor         ||
+            handler == _function_constructor      ||
+            handler == _generator_constructor     ||
+            handler == _generator_end_constructor ||
+            handler == _integer_constructor       ||
+            handler == _number_constructor        ||
+            handler == _object_constructor        ||
+            handler == _string_constructor        ||
+            handler == _thread_constructor        ||
+            handler == _void_constructor) {
 
             KOS_raise_exception_cstring(frame, str_err_cannot_override_prototype);
             arg = KOS_BADPTR;
@@ -2675,17 +2755,18 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(array);
     TRY_CREATE_CONSTRUCTOR(boolean);
     TRY_CREATE_CONSTRUCTOR(buffer);
+    TRY_CREATE_CONSTRUCTOR(constructor);
+    TRY_CREATE_CONSTRUCTOR(exception);
     TRY_CREATE_CONSTRUCTOR(float);
     TRY_CREATE_CONSTRUCTOR(function);
-    TRY_CREATE_CONSTRUCTOR(constructor);
     TRY_CREATE_CONSTRUCTOR(generator);
+    TRY_CREATE_CONSTRUCTOR(generator_end);
     TRY_CREATE_CONSTRUCTOR(integer);
     TRY_CREATE_CONSTRUCTOR(number);
     TRY_CREATE_CONSTRUCTOR(object);
     TRY_CREATE_CONSTRUCTOR(string);
+    TRY_CREATE_CONSTRUCTOR(thread);
     TRY_CREATE_CONSTRUCTOR(void);
-    TRY_CREATE_CONSTRUCTOR(exception);
-    TRY_CREATE_CONSTRUCTOR(generator_end);
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "insert_array",  _insert_array,      2);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "fill",          _fill,              1);
@@ -2708,6 +2789,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(constructor),"set_prototype",_set_prototype,     1);
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),  "apply",         _apply,             2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),  "async",         _async,             0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "instructions",  _get_instructions,  0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "name",          _get_function_name, 0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "prototype",     _get_prototype,     0);

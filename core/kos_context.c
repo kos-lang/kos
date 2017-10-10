@@ -240,6 +240,7 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY_OBJID(ctx->generator_prototype     = KOS_new_object_with_prototype(frame, ctx->function_prototype));
     TRY_OBJID(ctx->exception_prototype     = KOS_new_object(frame));
     TRY_OBJID(ctx->generator_end_prototype = KOS_new_object(frame));
+    TRY_OBJID(ctx->thread_prototype        = KOS_new_object(frame));
 
     TRY_OBJID(ctx->init_module.name         = KOS_context_get_cstring(frame, str_init));
     TRY_OBJID(ctx->init_module.globals      = KOS_new_array(frame, 0));
