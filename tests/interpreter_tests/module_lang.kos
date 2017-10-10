@@ -1310,6 +1310,36 @@ do {
 }
 
 ##############################################################################
+# function constuctors
+
+do {
+    fun f
+    {
+    }
+
+    constructor c
+    {
+    }
+
+    fun g
+    {
+        yield void
+    }
+
+    assert f instanceof lang.function
+    assert ! (f instanceof lang.constructor)
+    assert ! (f instanceof lang.generator)
+
+    assert c instanceof lang.function
+    assert c instanceof lang.constructor
+    assert ! (c instanceof lang.generator)
+
+    assert g instanceof lang.function
+    assert ! (g instanceof lang.constructor)
+    assert g instanceof lang.generator
+}
+
+##############################################################################
 # lang.exception
 
 do {

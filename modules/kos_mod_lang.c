@@ -1022,6 +1022,24 @@ static KOS_OBJ_ID _function_constructor(KOS_FRAME  frame,
     return KOS_BADPTR;
 }
 
+static KOS_OBJ_ID _constructor_constructor(KOS_FRAME  frame,
+                                          KOS_OBJ_ID this_obj,
+                                          KOS_OBJ_ID args_obj)
+{
+    /* TODO copy function object */
+    KOS_raise_exception_cstring(frame, str_err_not_function);
+    return KOS_BADPTR;
+}
+
+static KOS_OBJ_ID _generator_constructor(KOS_FRAME  frame,
+                                         KOS_OBJ_ID this_obj,
+                                         KOS_OBJ_ID args_obj)
+{
+    /* TODO copy function object */
+    KOS_raise_exception_cstring(frame, str_err_not_function);
+    return KOS_BADPTR;
+}
+
 static KOS_OBJ_ID _exception_constructor(KOS_FRAME  frame,
                                          KOS_OBJ_ID this_obj,
                                          KOS_OBJ_ID args_obj)
@@ -1086,17 +1104,19 @@ static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
          * - Create a separate built-in constructor for constructor functions?
          * - Forbid for all built-in functions?
          */
-        if (handler == _array_constructor     ||
-            handler == _boolean_constructor   ||
-            handler == _buffer_constructor    ||
-            handler == _float_constructor     ||
-            handler == _function_constructor  ||
-            handler == _integer_constructor   ||
-            handler == _number_constructor    ||
-            handler == _object_constructor    ||
-            handler == _string_constructor    ||
-            handler == _void_constructor      ||
-            handler == _exception_constructor ||
+        if (handler == _array_constructor       ||
+            handler == _boolean_constructor     ||
+            handler == _buffer_constructor      ||
+            handler == _float_constructor       ||
+            handler == _function_constructor    ||
+            handler == _constructor_constructor ||
+            handler == _generator_constructor   ||
+            handler == _integer_constructor     ||
+            handler == _number_constructor      ||
+            handler == _object_constructor      ||
+            handler == _string_constructor      ||
+            handler == _void_constructor        ||
+            handler == _exception_constructor   ||
             handler == _generator_end_constructor) {
 
             KOS_raise_exception_cstring(frame, str_err_cannot_override_prototype);
@@ -2657,6 +2677,8 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(buffer);
     TRY_CREATE_CONSTRUCTOR(float);
     TRY_CREATE_CONSTRUCTOR(function);
+    TRY_CREATE_CONSTRUCTOR(constructor);
+    TRY_CREATE_CONSTRUCTOR(generator);
     TRY_CREATE_CONSTRUCTOR(integer);
     TRY_CREATE_CONSTRUCTOR(number);
     TRY_CREATE_CONSTRUCTOR(object);
@@ -2683,8 +2705,9 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "unpack",        _unpack,            1);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(buffer),    "size",          _get_buffer_size,   0);
 
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(constructor),"set_prototype",_set_prototype,     1);
+
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),  "apply",         _apply,             2);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),  "set_prototype", _set_prototype,     1);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "instructions",  _get_instructions,  0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "name",          _get_function_name, 0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "prototype",     _get_prototype,     0);

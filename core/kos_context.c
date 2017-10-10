@@ -236,6 +236,8 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY_OBJID(ctx->array_prototype         = KOS_new_object(frame));
     TRY_OBJID(ctx->buffer_prototype        = KOS_new_object(frame));
     TRY_OBJID(ctx->function_prototype      = KOS_new_object(frame));
+    TRY_OBJID(ctx->constructor_prototype   = KOS_new_object_with_prototype(frame, ctx->function_prototype));
+    TRY_OBJID(ctx->generator_prototype     = KOS_new_object_with_prototype(frame, ctx->function_prototype));
     TRY_OBJID(ctx->exception_prototype     = KOS_new_object(frame));
     TRY_OBJID(ctx->generator_end_prototype = KOS_new_object(frame));
 

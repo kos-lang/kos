@@ -92,6 +92,8 @@ struct _KOS_CONTEXT {
     KOS_OBJ_ID                     array_prototype;
     KOS_OBJ_ID                     buffer_prototype;
     KOS_OBJ_ID                     function_prototype;
+    KOS_OBJ_ID                     constructor_prototype;
+    KOS_OBJ_ID                     generator_prototype;
     KOS_OBJ_ID                     exception_prototype;
     KOS_OBJ_ID                     generator_end_prototype;
 

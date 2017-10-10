@@ -1299,3 +1299,34 @@ do {
     assert add(5, 8) == 14
     assert add(-4, 4) == 1
 }
+
+# set prototype on constructor
+do {
+    constructor c1
+    {
+    }
+
+    const c2 = constructor { }
+
+    c1.set_prototype(c2)
+    c2.set_prototype(c1)
+}
+
+# set prototype on regular function
+do {
+    fun f
+    {
+    }
+
+    expect_fail(λ->(f.set_prototype({})))
+}
+
+# set prototype on generator
+do {
+    fun g
+    {
+        yield void
+    }
+
+    expect_fail(λ->(g.set_prototype({})))
+}
