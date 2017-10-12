@@ -1336,6 +1336,7 @@ object.prototype.reduce = fun(op, init)
 
 /* @item lang object.prototype.count()
  *
+ *     object.prototype.count()
  *     object.prototype.count(op)
  *
  * Counts elements of the object with a predicate.
@@ -1343,20 +1344,34 @@ object.prototype.reduce = fun(op, init)
  * Counts all elements of the object, retrieved through the `iterator()`
  * function, using `op` to test elements.
  *
+ * If `op` is not specified, counts all elements retrieved through the
+ * `iterator()` function.
+ *
  * If `op` is a function, applies it to every element and then counts for
  * how many elements the `op` function returns `true`.
  *
  * If `op` is not a function, counts how many elements equal to `op` by
  * comparing each element to `op` using `==` operator.
  *
- * Example:
+ * Examples:
  *
  *     > "monologue".count("o")
  *     3
+ *     > range(3, 43, 5).count()
+ *     8
  */
-object.prototype.count = fun(op)
+object.prototype.count = fun(args...)
 {
-    return count(op, this)
+    if args.size {
+        return count(args[0], this)
+    }
+    else {
+        var num = 0
+        for const elem in this {
+            num += 1
+        }
+        return num
+    }
 }
 
 /* @item lang object.prototype.all()

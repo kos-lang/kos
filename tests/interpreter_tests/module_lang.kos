@@ -1743,6 +1743,9 @@ do {
     assert lang.range(100).map(λ(x)->(x/4)).count(11) == 4
 
     assert lang.count(λ(x)->(x > 5), [ 1, 7, 2, 6, 5 ]) == 2
+
+    # Count lowercase letters
+    assert "ThIs Is A MiXeD StRiNg".filter(λ(x)->(x.ord() >= 97)).count() == 8
 }
 
 ##############################################################################
