@@ -1,0 +1,42 @@
+#!/usr/bin/env kos
+
+import lang.print
+
+const fib = {
+    prev: 1,
+    cur:  1,
+
+    get_prev: fun -> (this.prev),
+    get_cur:  fun -> (this.cur),
+
+    reset: fun {
+        this.prev = 1
+        this.cur  = 1
+    },
+
+    set_next: fun(next) {
+        this.prev = this.cur
+        this.cur  = next
+    },
+
+    advance: fun {
+        this.set_next( this.get_prev() + this.get_cur() )
+    },
+
+    execute: fun(n) {
+        for var i = 0; i < n; i += 1 {
+            this.advance()
+        }
+        const ret = this.get_cur()
+        this.reset()
+        return ret
+    }
+}
+
+const orig = fib.execute(50)
+
+for var i = 0; i < 10000; i += 1 {
+    assert orig == fib.execute(50)
+}
+
+print(orig)
