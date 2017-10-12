@@ -55,6 +55,7 @@ static const char str_err_not_buffer[]                = "object is not a buffer"
 static const char str_err_not_enough_pack_values[]    = "insufficient number of packed values";
 static const char str_err_not_function[]              = "object is not a function";
 static const char str_err_not_string[]                = "object is not a string";
+static const char str_err_not_thread[]                = "object is not a thread";
 static const char str_err_too_many_repeats[]          = "invalid string repeat count";
 static const char str_err_unpack_buf_too_short[]      = "unpacked buffer too short";
 static const char str_err_unsup_operand_types[]       = "unsupported operand types";
@@ -1130,7 +1131,8 @@ static void _async_func(KOS_FRAME frame,
 static void _thread_finalize(KOS_FRAME frame,
                              void     *priv)
 {
-    _KOS_thread_join(frame, (_KOS_THREAD)priv);
+    if (priv)
+        _KOS_thread_join(frame, (_KOS_THREAD)priv);
 }
 
 static KOS_OBJ_ID _async(KOS_FRAME  frame,
@@ -1163,6 +1165,38 @@ static KOS_OBJ_ID _async(KOS_FRAME  frame,
 
 _error:
     return error ? KOS_BADPTR : thread_obj;
+}
+
+static KOS_OBJ_ID _join(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    _KOS_THREAD thread;
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
+        KOS_raise_exception_cstring(frame, str_err_not_thread);
+        return KOS_BADPTR;
+    }
+
+    /* TODO check prototype */
+
+    thread = (_KOS_THREAD)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
+
+    error = _KOS_thread_join(frame, thread);
+
+    /* TODO survive join from multiple threads */
+    if (!error) {
+        KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)0);
+
+        ret = KOS_get_property(frame, this_obj,
+                KOS_context_get_cstring(frame, str_result));
+        if (IS_BAD_PTR(ret))
+            error = KOS_ERROR_EXCEPTION;
+    }
+
+    return error ? KOS_BADPTR : ret;
 }
 
 static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
@@ -2768,49 +2802,51 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(thread);
     TRY_CREATE_CONSTRUCTOR(void);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "insert_array",  _insert_array,      2);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "fill",          _fill,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "pop",           _pop,               0);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "push",          _push,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "reserve",       _reserve,           1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "resize",        _resize,            1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),     "slice",         _slice,             2);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(array),     "size",          _get_array_size,    0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "insert_array",  _insert_array,      2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "fill",          _fill,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "pop",           _pop,               0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "push",          _push,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "reserve",       _reserve,           1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "resize",        _resize,            1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "slice",         _slice,             2);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(array),      "size",          _get_array_size,    0);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "copy_buffer",   _copy_buffer,       1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "fill",          _fill,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "pack",          _pack,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "reserve",       _reserve,           1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "resize",        _resize,            1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "slice",         _slice,             2);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),    "unpack",        _unpack,            1);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(buffer),    "size",          _get_buffer_size,   0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "copy_buffer",   _copy_buffer,       1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "fill",          _fill,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "pack",          _pack,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "reserve",       _reserve,           1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "resize",        _resize,            1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "slice",         _slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "unpack",        _unpack,            1);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(buffer),     "size",          _get_buffer_size,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(constructor),"set_prototype",_set_prototype,     1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(constructor),"set_prototype", _set_prototype,     1);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),  "apply",         _apply,             2);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),  "async",         _async,             0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "instructions",  _get_instructions,  0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "name",          _get_function_name, 0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "prototype",     _get_prototype,     0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "registers",     _get_registers,     0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),  "size",          _get_code_size,     0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(exception),  "print",         _print_exception,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "ends_with",     _ends_with,         1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "find",          _find,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "ord",           _ord,               0);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "repeat",        _repeat,            1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "rfind",         _rfind,             1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "rscan",         _rscan,             1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "reverse",       _reverse,           0);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "scan",          _scan,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "slice",         _slice,             2);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),    "starts_with",   _starts_with,       1);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(string),    "size",          _get_string_size,   0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),   "apply",         _apply,             2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),   "async",         _async,             0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "instructions",  _get_instructions,  0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "name",          _get_function_name, 0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "prototype",     _get_prototype,     0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "registers",     _get_registers,     0);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "size",          _get_code_size,     0);
 
-    TRY_ADD_MEMBER_GENERATOR(frame, PROTO(void),      "iterator",      _iterator,          0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "ends_with",     _ends_with,         1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "find",          _find,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "ord",           _ord,               0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "repeat",        _repeat,            1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "rfind",         _rfind,             1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "rscan",         _rscan,             1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "reverse",       _reverse,           0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "scan",          _scan,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "slice",         _slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "starts_with",   _starts_with,       1);
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(string),     "size",          _get_string_size,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(exception), "print",         _print_exception,   0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(thread),     "join",          _join,              0);
+
+    TRY_ADD_MEMBER_GENERATOR(frame, PROTO(void),       "iterator",      _iterator,          0);
 
 _error:
     return error;
