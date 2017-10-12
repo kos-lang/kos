@@ -2082,6 +2082,125 @@ do {
 }
 
 ##############################################################################
+# lang.thread
+
+do {
+    const o = { t1: 0, t2: 0, done: false }
+
+    fun thread1
+    {
+        while ! o.t2 { }
+        o.t1 += 1
+    }
+
+    fun thread2
+    {
+        while ! o.done { }
+        o.t2 += 1
+        while ! o.t1 { }
+    }
+
+    const t1 = thread1.async()
+    const t2 = thread2.async()
+
+    assert t1 instanceof lang.thread
+    assert t1 instanceof lang.object
+    assert t2 instanceof lang.thread
+    assert t2 instanceof lang.object
+
+    o.done = true
+    t1.join()
+    t2.join()
+
+    assert o.t1 == 1
+    assert o.t2 == 1
+}
+
+do {
+    fun thread(a)
+    {
+        return a * 10
+    }
+
+    assert thread(-42) == -420
+
+    do {
+        const t = thread.async(2)
+        assert t.join() == 20
+    }
+
+    do {
+        const t = thread.async(123)
+        assert t.join() == 1230
+    }
+}
+
+do {
+    fun thread
+    {
+        throw "something"
+    }
+
+    const t = thread.async()
+    var   e = void
+    try {
+        t.join()
+    }
+    catch const exc {
+        e = exc
+    }
+    assert typeof e == "object"
+    assert e.value == "something"
+}
+
+do {
+    var t       = void
+    var done    = false
+    var success = false
+
+    fun thread(join)
+    {
+        defer { done = true }
+        while ! t { }
+        if join {
+            t.join()
+        }
+        success = true
+    }
+
+    # Normal invocation
+    t = thread.async(false)
+    assert t instanceof lang.thread
+    while ! done { }
+    t.join()
+    assert success
+    t       = void
+    success = false
+    done    = false
+
+    # Exception inside thread
+    t = thread.async(true)
+    assert t instanceof lang.thread
+    while ! done { }
+    var e = void
+    try { t.join() } catch const exc { e = exc }
+    assert ! success
+    assert e != void
+    t       = void
+    success = false
+    done    = false
+
+    # Incorrect number of args (not even called)
+    e = void
+    t = thread.async()
+    assert t instanceof lang.thread
+    try { t.join() } catch const exc { e = exc }
+    assert ! done
+    assert ! success
+    assert e != void
+}
+
+##############################################################################
 # lang.backtrace
 
 do {
