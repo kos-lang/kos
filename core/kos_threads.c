@@ -38,7 +38,8 @@
 #   include <sched.h>
 #endif
 
-static const char str_err_thread[] = "failed to create thread";
+static const char str_err_join_self[] = "thread cannot join itself";
+static const char str_err_thread[]    = "failed to create thread";
 
 void _KOS_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
                           KOS_ATOMIC(void *) *src,
@@ -101,6 +102,7 @@ void _KOS_yield(void)
 
 struct _KOS_THREAD_OBJECT {
     HANDLE           thread_handle;
+    DWORD            thread_id;
     KOS_CONTEXT     *ctx;
     _KOS_THREAD_PROC proc;
     void            *cookie;
@@ -131,6 +133,7 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
+        new_thread->thread_id = 0;
         new_thread->ctx       = KOS_context_from_frame(frame);
         new_thread->proc      = proc;
         new_thread->cookie    = cookie;
@@ -139,7 +142,12 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
         if (_KOS_seq_fail())
             new_thread->thread_handle = 0;
         else
-            new_thread->thread_handle = CreateThread(0, 0, _thread_proc, new_thread, 0, 0);
+            new_thread->thread_handle = CreateThread(0,
+                                                     0,
+                                                     _thread_proc,
+                                                     new_thread,
+                                                     0,
+                                                     &new_thread->thread_id);
 
         if (!new_thread->thread_handle) {
             _KOS_free(new_thread);
@@ -155,18 +163,29 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     return error;
 }
 
-void _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
-                      _KOS_THREAD              thread)
+int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
+                     _KOS_THREAD              thread)
 {
+    int error = KOS_SUCCESS;
+
     if (thread) {
+        if (GetCurrentThreadId() == thread->thread_id) {
+            KOS_raise_exception_cstring(frame, str_err_join_self);
+            return KOS_ERROR_EXCEPTION;
+        }
+
         WaitForSingleObject(thread->thread_handle, INFINITE);
         CloseHandle(thread->thread_handle);
 
-        if ( ! IS_BAD_PTR(thread->exception))
+        if ( ! IS_BAD_PTR(thread->exception)) {
             KOS_raise_exception(frame, thread->exception);
+            error = KOS_ERROR_EXCEPTION;
+        }
 
         _KOS_free(thread);
     }
+
+    return error;
 }
 
 int _KOS_tls_create(_KOS_TLS_KEY *key)
@@ -251,18 +270,30 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     return error;
 }
 
-void _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
-                      _KOS_THREAD              thread)
+int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
+                     _KOS_THREAD              thread)
 {
+    int error = KOS_SUCCESS;
+
     if (thread) {
-        void *ret = 0;
+        void *ret  = 0;
+
+        if (pthread_equal(pthread_self(), thread->thread_handle)) {
+            KOS_raise_exception_cstring(frame, str_err_join_self);
+            return KOS_ERROR_EXCEPTION;
+        }
+
         pthread_join(thread->thread_handle, &ret);
 
-        if (ret)
+        if (ret) {
             KOS_raise_exception(frame, (KOS_OBJ_ID)ret);
+            error = KOS_ERROR_EXCEPTION;
+        }
 
         _KOS_free(thread);
     }
+
+    return error;
 }
 
 struct _KOS_TLS_OBJECT {
