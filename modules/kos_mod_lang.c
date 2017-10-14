@@ -1118,10 +1118,6 @@ static void _async_func(KOS_FRAME frame,
     if (IS_BAD_PTR(args_obj))
         return;
 
-    if (KOS_delete_property(frame, OBJID(OBJECT, thread_obj),
-                KOS_context_get_cstring(frame, str_args)) != KOS_SUCCESS)
-        return;
-
     ret_obj = KOS_apply_function(frame, func_obj, OBJID(OBJECT, thread_obj), args_obj);
     if (IS_BAD_PTR(ret_obj))
         return;
@@ -1189,7 +1185,7 @@ static KOS_OBJ_ID _wait(KOS_FRAME  frame,
         return KOS_BADPTR;
     }
 
-    thread = (_KOS_THREAD)KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)0);
+    thread = (_KOS_THREAD)KOS_object_swap_private(*OBJPTR(OBJECT, this_obj), (void *)0);
 
     if ( ! thread) {
         KOS_raise_exception_cstring(frame, str_err_already_joined);

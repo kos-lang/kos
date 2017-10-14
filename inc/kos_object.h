@@ -27,10 +27,17 @@
 
 #ifdef __cplusplus
 template<typename T>
-void *KOS_object_set_private(KOS_OBJECT& obj,
-                             T*          value)
+void *KOS_object_swap_private(KOS_OBJECT& obj,
+                              T*          value)
 {
     return static_cast<T*>(KOS_atomic_swap_ptr(obj.priv, static_cast<void*>(value)));
+}
+
+template<typename T>
+void KOS_object_set_private(KOS_OBJECT& obj,
+                            T*          value)
+{
+    KOS_atomic_write_ptr(obj.priv, static_cast<void*>(value));
 }
 
 static inline void* KOS_object_get_private(KOS_OBJECT& obj)
@@ -38,8 +45,9 @@ static inline void* KOS_object_get_private(KOS_OBJECT& obj)
     return KOS_atomic_read_ptr(obj.priv);
 }
 #else
-#define KOS_object_set_private(obj, value) KOS_atomic_swap_ptr((obj).priv, value)
-#define KOS_object_get_private(obj)        KOS_atomic_read_ptr((obj).priv)
+#define KOS_object_swap_private(obj, value) KOS_atomic_swap_ptr((obj).priv, value)
+#define KOS_object_set_private(obj, value)  KOS_atomic_write_ptr((obj).priv, value)
+#define KOS_object_get_private(obj)         KOS_atomic_read_ptr((obj).priv)
 #endif
 
 #ifdef __cplusplus

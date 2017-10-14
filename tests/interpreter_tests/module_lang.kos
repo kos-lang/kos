@@ -2128,16 +2128,16 @@ do {
     const t = sum.async(10, 24);
 
     assert t instanceof lang.thread
-    assert t.function    == sum
-    assert typeof t.args == "array"
-    assert t.args.size   == 2
-    assert t.args[0]     == 10
-    assert t.args[1]     == 24
 
     const result = t.wait()
 
     assert result   == 34
     assert t.result == 34
+    assert t.function    == sum
+    assert typeof t.args == "array"
+    assert t.args.size   == 2
+    assert t.args[0]     == 10
+    assert t.args[1]     == 24
 
     expect_fail(λ->(t.wait()))
 }
