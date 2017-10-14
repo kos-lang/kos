@@ -169,7 +169,7 @@ int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
     int error = KOS_SUCCESS;
 
     if (thread) {
-        if (GetCurrentThreadId() == thread->thread_id) {
+        if (_KOS_is_current_thread(thread)) {
             KOS_raise_exception_cstring(frame, str_err_join_self);
             return KOS_ERROR_EXCEPTION;
         }
@@ -186,6 +186,13 @@ int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
     }
 
     return error;
+}
+
+int _KOS_is_current_thread(_KOS_THREAD thread)
+{
+    assert(thread);
+
+    return GetCurrentThreadId() == thread->thread_id ? 1 : 0;
 }
 
 int _KOS_tls_create(_KOS_TLS_KEY *key)
@@ -278,7 +285,7 @@ int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
     if (thread) {
         void *ret  = 0;
 
-        if (pthread_equal(pthread_self(), thread->thread_handle)) {
+        if (_KOS_is_current_thread(thread)) {
             KOS_raise_exception_cstring(frame, str_err_join_self);
             return KOS_ERROR_EXCEPTION;
         }
@@ -294,6 +301,13 @@ int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
     }
 
     return error;
+}
+
+int _KOS_is_current_thread(_KOS_THREAD thread)
+{
+    assert(thread);
+
+    return pthread_equal(pthread_self(), thread->thread_handle);
 }
 
 struct _KOS_TLS_OBJECT {
