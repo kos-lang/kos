@@ -2112,11 +2112,34 @@ do {
     assert t2 instanceof lang.object
 
     o.done = true
-    t1.join()
-    t2.join()
+    t1.wait()
+    t2.wait()
 
     assert o.t1 == 1
     assert o.t2 == 1
+}
+
+do {
+    fun sum(a, b)
+    {
+        return a + b
+    }
+
+    const t = sum.async(10, 24);
+
+    assert t instanceof lang.thread
+    assert t.function    == sum
+    assert typeof t.args == "array"
+    assert t.args.size   == 2
+    assert t.args[0]     == 10
+    assert t.args[1]     == 24
+
+    const result = t.wait()
+
+    assert result   == 34
+    assert t.result == 34
+
+    expect_fail(λ->(t.wait()))
 }
 
 do {
@@ -2129,12 +2152,12 @@ do {
 
     do {
         const t = thread.async(2)
-        assert t.join() == 20
+        assert t.wait() == 20
     }
 
     do {
         const t = thread.async(123)
-        assert t.join() == 1230
+        assert t.wait() == 1230
     }
 }
 
@@ -2147,7 +2170,7 @@ do {
     const t = thread.async()
     var   e = void
     try {
-        t.join()
+        t.wait()
     }
     catch const exc {
         e = exc
@@ -2161,12 +2184,12 @@ do {
     var done    = false
     var success = false
 
-    fun thread(join)
+    fun thread(wait)
     {
         defer { done = true }
         while ! t { }
-        if join {
-            t.join()
+        if wait {
+            t.wait()
         }
         success = true
     }
@@ -2175,7 +2198,7 @@ do {
     t = thread.async(false)
     assert t instanceof lang.thread
     while ! done { }
-    t.join()
+    t.wait()
     assert success
     t       = void
     success = false
@@ -2186,7 +2209,7 @@ do {
     assert t instanceof lang.thread
     while ! done { }
     var e = void
-    try { t.join() } catch const exc { e = exc }
+    try { t.wait() } catch const exc { e = exc }
     assert ! success
     assert e != void
     t       = void
@@ -2197,7 +2220,7 @@ do {
     e = void
     t = thread.async()
     assert t instanceof lang.thread
-    try { t.join() } catch const exc { e = exc }
+    try { t.wait() } catch const exc { e = exc }
     assert ! done
     assert ! success
     assert e != void

@@ -1133,6 +1133,7 @@ static void _async_func(KOS_FRAME frame,
 static void _thread_finalize(KOS_FRAME frame,
                              void     *priv)
 {
+    /* TODO don't block GC */
     if (priv)
         _KOS_thread_join(frame, (_KOS_THREAD)priv);
 }
@@ -1169,7 +1170,7 @@ _error:
     return error ? KOS_BADPTR : thread_obj;
 }
 
-static KOS_OBJ_ID _join(KOS_FRAME  frame,
+static KOS_OBJ_ID _wait(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
 {
@@ -2866,7 +2867,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "starts_with",   _starts_with,       1);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(string),     "size",          _get_string_size,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(thread),     "join",          _join,              0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(thread),     "wait",          _wait,              0);
 
     TRY_ADD_MEMBER_GENERATOR(frame, PROTO(void),       "iterator",      _iterator,          0);
 
