@@ -59,6 +59,11 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* LOAD.OBJ <r.dest> */
     INSTR_LOAD_OBJ,
 
+    /* TODO SAVE.ARRAY <r.dest>, <r.src>, <size.uint8>
+     * Save `size` registers starting with r.src into a new array. */
+    /* TODO RESTORE.ARRAY <r.dest>, <r.src>, <size.uint8>
+     * Populate `size` registers starting with r.dest with array from r.src. */
+
     /* MOVE <r.dest>, <r.src>
      * Move data from one local variable to another. */
     INSTR_MOVE,
