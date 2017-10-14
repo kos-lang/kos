@@ -2036,15 +2036,8 @@ static int _exec_function(KOS_FRAME frame)
                 assert(GET_OBJ_TYPE(proto_obj) != OBJ_INTERNAL);
 
                 if ( ! IS_BAD_PTR(proto_obj)) {
-                    KOS_OBJ_ID obj = regs[rsrc];
-                    do {
-                        obj = KOS_get_prototype(frame, obj);
-                        if (obj == proto_obj) {
-                            ret = KOS_TRUE;
-                            break;
-                        }
-                    }
-                    while (!IS_BAD_PTR(obj));
+                    if (KOS_has_prototype(frame, regs[rsrc], proto_obj))
+                        ret = KOS_TRUE;
                 }
                 else
                     if (constr_is_func)

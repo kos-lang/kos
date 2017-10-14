@@ -119,9 +119,9 @@ static void _free_buffer(KOS_FRAME frame, KOS_PBUF *buf)
 void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
 {
     obj->prototype = prototype;
-    obj->priv      = 0;
     obj->finalize  = 0;
 
+    KOS_atomic_write_ptr(obj->priv,  (void *)0);
     KOS_atomic_write_ptr(obj->props, (void *)0);
 }
 
@@ -777,6 +777,19 @@ KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
     }
 
     return ret;
+}
+
+int KOS_has_prototype(KOS_FRAME  frame,
+                      KOS_OBJ_ID obj_id,
+                      KOS_OBJ_ID proto_id)
+{
+    do {
+        obj_id = KOS_get_prototype(frame, obj_id);
+        if (obj_id == proto_id)
+            return 1;
+    } while ( ! IS_BAD_PTR(obj_id));
+
+    return 0;
 }
 
 KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,

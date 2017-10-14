@@ -222,7 +222,7 @@ typedef void (*KOS_FINALIZE)(KOS_FRAME frame,
 typedef struct _KOS_OBJECT {
     KOS_ATOMIC(void *) props;
     KOS_OBJ_ID         prototype;
-    void              *priv;
+    KOS_ATOMIC(void *) priv;
     KOS_FINALIZE       finalize;
 } KOS_OBJECT;
 
@@ -357,7 +357,7 @@ static inline int KOS_get_bool(KOS_OBJ_ID obj_id)
 
 #else
 
-#define KOS_get_bool(obj_id) (obj_id == KOS_TRUE)
+#define KOS_get_bool(obj_id) ((obj_id) == KOS_TRUE)
 
 #endif
 
