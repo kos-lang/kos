@@ -38,6 +38,7 @@
 
 static const char str_args[]                          = "args";
 static const char str_builtin[]                       = "<builtin>";
+static const char str_err_already_joined[]            = "thread already joined";
 static const char str_err_bad_number[]                = "number parse failed";
 static const char str_err_bad_pack_value[]            = "invalid value type for pack format";
 static const char str_err_cannot_convert_to_array[]   = "unsupported type passed to array constructor";
@@ -49,6 +50,7 @@ static const char str_err_invalid_byte_value[]        = "buffer element value ou
 static const char str_err_invalid_buffer_size[]       = "buffer size out of range";
 static const char str_err_invalid_pack_format[]       = "invalid pack format";
 static const char str_err_invalid_string_idx[]        = "string index is out of range";
+static const char str_err_join_self[]                 = "thread cannot join itself";
 static const char str_err_not_array[]                 = "object is not an array";
 static const char str_err_not_boolean[]               = "object is not a boolean";
 static const char str_err_not_buffer[]                = "object is not a buffer";
@@ -1171,25 +1173,45 @@ static KOS_OBJ_ID _join(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
-    _KOS_THREAD thread;
+    int                error = KOS_SUCCESS;
+    KOS_OBJ_ID         ret   = KOS_BADPTR;
+    KOS_CONTEXT *const ctx   = KOS_context_from_frame(frame);
+    _KOS_THREAD        thread;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
         KOS_raise_exception_cstring(frame, str_err_not_thread);
         return KOS_BADPTR;
     }
 
-    /* TODO check prototype */
+    if ( ! KOS_has_prototype(frame, this_obj, ctx->thread_prototype)) {
+        KOS_raise_exception_cstring(frame, str_err_not_thread);
+        return KOS_BADPTR;
+    }
 
-    thread = (_KOS_THREAD)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
+    thread = (_KOS_THREAD)KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)0);
+
+    if ( ! thread) {
+        KOS_raise_exception_cstring(frame, str_err_already_joined);
+        return KOS_BADPTR;
+    }
+
+    if (thread && _KOS_is_current_thread(thread)) {
+
+        /* NOTE: This causes ABA problem if a thread is trying to join itself.
+         *       Possible solution could be to use a special pointer to indicate
+         *       that the thread is being joined. */
+
+        KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)thread);
+
+        KOS_raise_exception_cstring(frame, str_err_join_self);
+        return KOS_BADPTR;
+    }
+
+    /* TODO don't block GC */
 
     error = _KOS_thread_join(frame, thread);
 
-    /* TODO survive join from multiple threads */
     if (!error) {
-        KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)0);
-
         ret = KOS_get_property(frame, this_obj,
                 KOS_context_get_cstring(frame, str_result));
         if (IS_BAD_PTR(ret))
