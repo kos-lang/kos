@@ -300,6 +300,8 @@ _error:
  * a float, depending on the parsing result.
  * Throws an exception if the string cannot be parsed.
  *
+ * The prototype of `number.prototype` is `object.prototype`.
+ *
  * Examples:
  *
  *     > number()
@@ -381,6 +383,8 @@ static KOS_OBJ_ID _number_constructor(KOS_FRAME  frame,
  * Throws an exception if the string is a floating-point literal or cannot be
  * parsed.
  *
+ * The prototype of `integer.prototype` is `number.prototype`.
+ *
  * Examples:
  *
  *     > integer()
@@ -456,6 +460,8 @@ static KOS_OBJ_ID _integer_constructor(KOS_FRAME  frame,
  * If `value` is a string, parses it in the same manner numeric literals are
  * parsed by the interpreter, assuming it is a floating-point literal.
  * Throws an exception if the string cannot be parsed.
+ *
+ * The prototype of `float.prototype` is `number.prototype`.
  *
  * Examples:
  *
@@ -540,6 +546,8 @@ static KOS_OBJ_ID _float_constructor(KOS_FRAME  frame,
  *
  * If `value` is not provided, returns `false`.
  *
+ * The prototype of `boolean.prototype` is `object.prototype`.
+ *
  * Examples:
  *
  *     > boolean()
@@ -584,6 +592,8 @@ static KOS_OBJ_ID _boolean_constructor(KOS_FRAME  frame,
  * indirectly via the `lang` module, it cannot be referenced if it is
  * imported directly into the current module.
  *
+ * The prototype of `void.prototype` is `object.prototype`.
+ *
  * Example:
  *
  *     > lang.void()
@@ -625,6 +635,8 @@ static KOS_OBJ_ID _void_constructor(KOS_FRAME  frame,
  * A buffer argument is treated as if contains an UTF-8 string and the
  * string is decoded from it.  Any errors in the UTF-8 sequence trigger
  * an exception.
+ *
+ * The prototype of `string.prototype` is `object.prototype`.
  *
  * Example:
  *
@@ -755,7 +767,9 @@ _error:
  *
  * Object type constructor.
  *
- * Returns an empty object.  Equivalent to empty object literal `{}`.
+ * Returns a new empty object.  Equivalent to empty object literal `{}`.
+ *
+ * `object.prototype` is directly or indirectly the prototype for all object types.
  *
  * Example:
  *
@@ -769,6 +783,50 @@ static KOS_OBJ_ID _object_constructor(KOS_FRAME  frame,
     return KOS_new_object(frame);
 }
 
+/* @item lang array()
+ *
+ *     array(size = 0)
+ *     array(args...)
+ *
+ * Array type constructor.
+ *
+ * The first variant constructs an array of the specified size.  `size` defaults
+ * to 0, in which case the result is equivalent to empty array literal `[]`.
+ * If size is greater than 0, the array is filled with `void` values.
+ *
+ * The second variant constructs an array from one or more non-numeric objects.
+ * Each of these input arguments is converted to an array and the resulting
+ * arrays are concatenated, producing the final array, which is returned
+ * by the constructor.  The following input types are supported:
+ *
+ *  * array    - An array is simply concatenated with other input arguments without
+ *               any transformation.
+ *               This can be used e.g. to make a shallow copy of an existing
+ *               array or to concatenate two arrays.
+ *  * string   - An array is produced containing individual characters of the
+ *               input string.  The array's elements are strings of size 1.
+ *  * buffer   - A buffer is converted into an array containing individual
+ *               elements of the buffer.
+ *  * function - If the function is an iterator (a primed generator), subsequent
+ *               elements are obtained from it and added to the array.
+ *               For non-iterator functions an exception is thrown.
+ *  * object   - TODO
+ *
+ * The prototype of `array.prototype` is `object.prototype`.
+ *
+ * Examples:
+ *
+ *     > array()
+ *     []
+ *     > array(5)
+ *     [void, void, void, void, void]
+ *     > array("hello")
+ *     ["h", "e", "l", "l", "o"]
+ *     > array(range(5))
+ *     [0, 1, 2, 3, 4]
+ *     > array(shallow({one: 1, two: 2, three: 3}))
+ *     [["one", 1], ["two", 2], ["three", 3]]
+ */
 static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
                                      KOS_OBJ_ID this_obj,
                                      KOS_OBJ_ID args_obj)
@@ -877,6 +935,50 @@ _error:
     return error ? KOS_BADPTR : array;
 }
 
+/* @item lang buffer()
+ *
+ *     buffer(size = 0)
+ *     buffer(args...)
+ *
+ * Buffer type constructor.
+ *
+ * The first variant constructs a buffer of the specified size.  `size` defaults
+ * to 0.  If size is greater than 0, the buffer is filled with zeroes.
+ *
+ * The second variant constructs a buffer from one or more non-numeric objects.
+ * Each of these input arguments is converted to a buffer and the resulting
+ * buffers are concatenated, producing the final buffer, which is returned
+ * by the constructor.  The following input types are supported:
+ *
+ *  * array    - The array must contain numbers from 0 to 255 (floor operation
+ *               is applied to floats).  Any other array elements trigger an
+ *               exception.  The array is converted to a buffer containing
+ *               bytes with values from the array.
+ *  * string   - The string is converted to an UTF-8 representation stored
+ *               into a buffer.
+ *  * buffer   - A buffer is simply concatenated with other input arguments without
+ *               any transformation.
+ *               This can be used to make a copy of a buffer.
+ *  * function - If the function is an iterator (a primed generator), subsequent
+ *               elements are obtained from it and added to the buffer.  The
+ *               values returned by the iterator must be numbers from 0 to 255
+ *               (floor operation is applied to floats), any other values trigger
+ *               an exception.
+ *               For non-iterator functions an exception is thrown.
+ *
+ * The prototype of `buffer.prototype` is `object.prototype`.
+ *
+ * Examples:
+ *
+ *     > buffer()
+ *     <>
+ *     > buffer(5)
+ *     <00 00 00 00 00>
+ *     > buffer("hello")
+ *     <68 65 6c 6c 6f>
+ *     > buffer(range(4))
+ *     <00 01 02 03>
+ */
 static KOS_OBJ_ID _buffer_constructor(KOS_FRAME  frame,
                                       KOS_OBJ_ID this_obj,
                                       KOS_OBJ_ID args_obj)
@@ -1019,18 +1121,44 @@ _error:
     return error ? KOS_BADPTR : buffer;
 }
 
+/* @item lang function()
+ *
+ *     function(func)
+ *
+ * Function type constructor.
+ *
+ * The argument is a function object which is returned by
+ * this constructor, no new object is created by it.
+ * Throws an exception if the argument is not a function.
+ *
+ * The prototype of `function.prototype` is `object.prototype`.
+ */
 static KOS_OBJ_ID _function_constructor(KOS_FRAME  frame,
                                         KOS_OBJ_ID this_obj,
                                         KOS_OBJ_ID args_obj)
 {
-    /* TODO copy function object */
-    KOS_raise_exception_cstring(frame, str_err_not_function);
-    return KOS_BADPTR;
+    KOS_OBJ_ID ret = KOS_BADPTR;
+
+    if (KOS_get_array_size(args_obj) != 1)
+        KOS_raise_exception_cstring(frame, str_err_not_function);
+
+    else {
+
+        ret = KOS_array_read(frame, args_obj, 0);
+        if ( ! IS_BAD_PTR(ret)) {
+            if (GET_OBJ_TYPE(ret) != OBJ_FUNCTION) {
+                KOS_raise_exception_cstring(frame, str_err_not_function);
+                ret = KOS_BADPTR;
+            }
+        }
+    }
+
+    return ret;
 }
 
 static KOS_OBJ_ID _constructor_constructor(KOS_FRAME  frame,
-                                          KOS_OBJ_ID this_obj,
-                                          KOS_OBJ_ID args_obj)
+                                           KOS_OBJ_ID this_obj,
+                                           KOS_OBJ_ID args_obj)
 {
     /* TODO copy function object */
     KOS_raise_exception_cstring(frame, str_err_not_function);
