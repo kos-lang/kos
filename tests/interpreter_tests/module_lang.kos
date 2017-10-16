@@ -1174,6 +1174,36 @@ do {
     assert ! (value instanceof lang.array)
 }
 
+do {
+    const f1 = fun(x) -> (x + 1)
+    const f2 = fun(x) -> (x + 1)
+    const f3 = lang.function(f1)
+    assert f1 == f3
+    assert f1 != f2
+    assert f2 != f3
+}
+
+do {
+    const f1 = fun { yield 0 }
+    const f2 = lang.function(f1)
+    assert f1 == f2
+}
+
+do {
+    const f1 = constructor { }
+    const f2 = lang.function(f1)
+    assert f1 == f2
+}
+
+do {
+    expect_fail(λ->(lang.function()))
+    expect_fail(λ->(lang.function(void)))
+    expect_fail(λ->(lang.function(0)))
+    expect_fail(λ->(lang.function("")))
+    expect_fail(λ->(lang.function([])))
+    expect_fail(λ->(lang.function({})))
+}
+
 ##############################################################################
 # lang.function.prototype.set_prototype
 
