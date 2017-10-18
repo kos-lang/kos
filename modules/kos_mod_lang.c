@@ -45,6 +45,8 @@ static const char str_err_cannot_convert_to_array[]   = "unsupported type passed
 static const char str_err_cannot_convert_to_buffer[]  = "unsupported type passed to buffer constructor";
 static const char str_err_cannot_convert_to_string[]  = "unsupported type passed to string constructor";
 static const char str_err_cannot_override_prototype[] = "cannot override prototype";
+static const char str_err_ctor_not_callable[]         = "constructor constructor is not not callable";
+static const char str_err_gen_not_callable[]          = "generator constructor is not not callable";
 static const char str_err_invalid_array_size[]        = "array size out of range";
 static const char str_err_invalid_byte_value[]        = "buffer element value out of range";
 static const char str_err_invalid_buffer_size[]       = "buffer size out of range";
@@ -1156,24 +1158,66 @@ static KOS_OBJ_ID _function_constructor(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang constructor()
+ *
+ *     constructor()
+ *
+ * Constructor for constructor functions.
+ *
+ * The purpose of this constructor is to be used with the `instanceof`
+ * operator to detect constructor functions.
+ *
+ * Calling this constructor function throws an exception.
+ *
+ * The prototype of `constructor.prototype` is `function.prototype`.
+ */
 static KOS_OBJ_ID _constructor_constructor(KOS_FRAME  frame,
                                            KOS_OBJ_ID this_obj,
                                            KOS_OBJ_ID args_obj)
 {
-    /* TODO copy function object */
-    KOS_raise_exception_cstring(frame, str_err_not_function);
+    KOS_raise_exception_cstring(frame, str_err_ctor_not_callable);
     return KOS_BADPTR;
 }
 
+/* @item lang generator()
+ *
+ *     generator()
+ *
+ * Constructor for generator functions.
+ *
+ * The purpose of this constructor is to be used with the `instanceof`
+ * operator to detect generator functions.
+ *
+ * Calling this constructor function throws an exception.
+ *
+ * The prototype of `generator.prototype` is `function.prototype`.
+ */
 static KOS_OBJ_ID _generator_constructor(KOS_FRAME  frame,
                                          KOS_OBJ_ID this_obj,
                                          KOS_OBJ_ID args_obj)
 {
-    /* TODO copy function object */
-    KOS_raise_exception_cstring(frame, str_err_not_function);
+    KOS_raise_exception_cstring(frame, str_err_gen_not_callable);
     return KOS_BADPTR;
 }
 
+/* @item lang exception()
+ *
+ *     exception([value])
+ *
+ * Exception object constructor.
+ *
+ * All caught exception objects have `exception.prototype` as their prototype.
+ * This constructor gives access to that prototype.
+ *
+ * Calling this constructor function throws an exception, it does not return
+ * an exception object.  The thrown exception's `value` property can be set
+ * to the optional `value` argument.  In other words, calling this constructor
+ * function is equivalent to throwing `value`.
+ *
+ * If `value` is not specified, `void` is thrown.
+ *
+ * The prototype of `exception.prototype` is `object.prototype`.
+ */
 static KOS_OBJ_ID _exception_constructor(KOS_FRAME  frame,
                                          KOS_OBJ_ID this_obj,
                                          KOS_OBJ_ID args_obj)
@@ -1188,6 +1232,21 @@ static KOS_OBJ_ID _exception_constructor(KOS_FRAME  frame,
     return KOS_BADPTR;
 }
 
+/* @item lang generator_end()
+ *
+ *     generator_end()
+ *
+ * Generator end object constructor.
+ *
+ * A generator end object is typically thrown when an iterator function is
+ * called but has no more values to yield.  In other words, a thrown generator
+ * end object indicates end of a generator.  The generator end object can
+ * be caught and it becomes the `value` of the exception object caught.
+ *
+ * Calling this constructor function throws an exception.
+ *
+ * The prototype of `generator_end.prototype` is `object.prototype`.
+ */
 static KOS_OBJ_ID _generator_end_constructor(KOS_FRAME  frame,
                                              KOS_OBJ_ID this_obj,
                                              KOS_OBJ_ID args_obj)
@@ -1196,6 +1255,21 @@ static KOS_OBJ_ID _generator_end_constructor(KOS_FRAME  frame,
     return KOS_BADPTR;
 }
 
+/* @item lang thread()
+ *
+ *     thread()
+ *
+ * Thread object constructor.
+ *
+ * Thread objects are created by calling `function.prototype.async()`.
+ *
+ * The purpose of this constructor is to be used with the `instanceof`
+ * operator to detect thread objects.
+ *
+ * Calling this constructor function throws an exception.
+ *
+ * The prototype of `thread.prototype` is `object.prototype`.
+ */
 static KOS_OBJ_ID _thread_constructor(KOS_FRAME  frame,
                                       KOS_OBJ_ID this_obj,
                                       KOS_OBJ_ID args_obj)
@@ -1204,6 +1278,26 @@ static KOS_OBJ_ID _thread_constructor(KOS_FRAME  frame,
     return KOS_BADPTR;
 }
 
+/* @item lang function.prototype.apply()
+ *
+ *     function.prototype.apply(this_object, args)
+ *
+ * Invokes a function with the specified this object and arguments.
+ *
+ * Returns the value returned by the function.
+ *
+ * The `this_object` argument is the object which is bound to the function as
+ * `this` for this invocation.  It can be any object or `void`.
+ *
+ * The `args` argument is an array (can be empty) containing arguments for
+ * the function.
+ *
+ * Example:
+ *
+ *     > fun f(a) { return this + a }
+ *     > f.apply(1, [2])
+ *     3
+ */
 static KOS_OBJ_ID _apply(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -1257,11 +1351,32 @@ static void _async_func(KOS_FRAME frame,
 static void _thread_finalize(KOS_FRAME frame,
                              void     *priv)
 {
-    /* TODO don't block GC */
+    /* TODO don't block GC: add detection for finished threads, put thread
+     *      on a list for GC to retry to join */
     if (priv)
         _KOS_thread_join(frame, (_KOS_THREAD)priv);
 }
 
+/* @item lang function.prototype.async()
+ *
+ *     function.prototype.async(args...)
+ *
+ * Invokes a function asynchronously on a new thread.
+ *
+ * Returns the created thread object.
+ *
+ * The returned thread object is also bound as `this` to the function
+ * being invoked on that thread.
+ *
+ * All the arguments are passed to the function.
+ *
+ * Example:
+ *
+ *     > fun f(a, b) { return a + b }
+ *     > const t = f.async(1, 2)
+ *     > t.wait()
+ *     3
+ */
 static KOS_OBJ_ID _async(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
