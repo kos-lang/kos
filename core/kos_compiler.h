@@ -153,6 +153,7 @@ struct _KOS_PRE_GLOBAL {
     struct _KOS_AST_NODE    node;
     enum _KOS_VAR_TYPE      type;
     int                     idx;
+    int                     is_const;
     char                    name_buf[1];
 };
 
@@ -246,7 +247,8 @@ void _KOS_compiler_init(struct _KOS_COMP_UNIT *program,
 
 int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
                                    const char            *name,
-                                   int                    idx);
+                                   int                    idx,
+                                   int                    is_const);
 
 int _KOS_compiler_predefine_module(struct _KOS_COMP_UNIT *program,
                                    const char            *name,

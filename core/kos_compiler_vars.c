@@ -153,7 +153,7 @@ static int _init_global_scope(struct _KOS_COMP_UNIT *program)
 
         for ( ; global; global = global->next) {
 
-            struct _KOS_VAR *var = _alloc_var(program, 1, &global->node);
+            struct _KOS_VAR *var = _alloc_var(program, global->is_const, &global->node);
 
             if (var) {
                 var->type        = global->type;
@@ -1047,6 +1047,7 @@ int _KOS_compiler_process_vars(struct _KOS_COMP_UNIT      *program,
 static int _predefine_global(struct _KOS_COMP_UNIT *program,
                              const char            *name,
                              int                    idx,
+                             int                    is_const,
                              enum _KOS_VAR_TYPE     type)
 {
     int            error = KOS_SUCCESS;
@@ -1062,6 +1063,7 @@ static int _predefine_global(struct _KOS_COMP_UNIT *program,
         global->next                   = program->pre_globals;
         global->type                   = type;
         global->idx                    = idx;
+        global->is_const               = is_const;
         global->node.type              = NT_IDENTIFIER;
         global->node.token.begin       = global->name_buf;
         global->node.token.length      = len;
@@ -1077,14 +1079,15 @@ static int _predefine_global(struct _KOS_COMP_UNIT *program,
 
 int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
                                    const char            *name,
-                                   int                    idx)
+                                   int                    idx,
+                                   int                    is_const)
 {
-    return _predefine_global(program, name, idx, VAR_GLOBAL);
+    return _predefine_global(program, name, idx, is_const, VAR_GLOBAL);
 }
 
 int _KOS_compiler_predefine_module(struct _KOS_COMP_UNIT *program,
                                    const char            *name,
                                    int                    idx)
 {
-    return _predefine_global(program, name, idx, VAR_MODULE);
+    return _predefine_global(program, name, idx, 1, VAR_MODULE);
 }

@@ -289,7 +289,8 @@ static int _module_init_compare(void                       *what,
 static int _predefine_globals(KOS_FRAME              frame,
                               struct _KOS_COMP_UNIT *program,
                               KOS_OBJ_ID             global_names,
-                              KOS_OBJ_ID             module_names)
+                              KOS_OBJ_ID             module_names,
+                              int                    is_repl)
 {
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cpath;
@@ -308,7 +309,10 @@ static int _predefine_globals(KOS_FRAME              frame,
 
         TRY(KOS_string_to_cstr_vec(frame, elem.key, &cpath));
 
-        TRY(_KOS_compiler_predefine_global(program, cpath.buffer, (int)GET_SMALL_INT(elem.value)));
+        TRY(_KOS_compiler_predefine_global(program,
+                                           cpath.buffer,
+                                           (int)GET_SMALL_INT(elem.value),
+                                           is_repl ? 0 : 1));
     }
 
     TRY(KOS_object_walk_init_shallow(frame, &walk, module_names));
@@ -827,7 +831,8 @@ static int _compile_module(KOS_FRAME   frame,
                            KOS_OBJ_ID  module_obj,
                            int         module_idx,
                            const char *data,
-                           unsigned    data_size)
+                           unsigned    data_size,
+                           int         is_repl)
 {
     int                   error              = KOS_SUCCESS;
     KOS_MODULE     *const module             = OBJPTR(MODULE, module_obj);
@@ -878,7 +883,7 @@ static int _compile_module(KOS_FRAME   frame,
     program.import_module  = _import_module;
     program.get_global_idx = _get_global_idx;
     program.walk_globals   = _walk_globals;
-    TRY(_predefine_globals(frame, &program, module->global_names, module->module_names));
+    TRY(_predefine_globals(frame, &program, module->global_names, module->module_names, is_repl));
 
     /* Compile source code into bytecode */
     error = _KOS_compiler_compile(&program, ast);
@@ -989,12 +994,12 @@ static int _compile_module(KOS_FRAME   frame,
 
     /* Disassemble */
     if (ctx->flags & KOS_CTX_DISASM) {
-        struct _KOS_VECTOR   cname;
-        struct _KOS_VECTOR   ptrs;
-        const char *const   *func_names = 0;
-        size_t               i_filename = 0;
-        const char          *filename   = "";
-        static const char    divider[]  =
+        struct _KOS_VECTOR cname;
+        struct _KOS_VECTOR ptrs;
+        const char *const *func_names = 0;
+        size_t             i_filename = 0;
+        const char        *filename   = "";
+        static const char  divider[]  =
                 "==============================================================================";
 
         const KOS_FUNC_ADDR *const func_addrs     = module->func_addrs;
@@ -1274,7 +1279,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
     }
 
     /* Compile module source to bytecode */
-    TRY(_compile_module(frame, module_obj, module_idx, data, data_size));
+    TRY(_compile_module(frame, module_obj, module_idx, data, data_size, 0));
 
     /* Free file buffer */
     _KOS_vector_destroy(&file_buf);
@@ -1340,7 +1345,7 @@ KOS_OBJ_ID KOS_repl(KOS_FRAME   frame,
     }
 
     /* Compile evaluated source to bytecode */
-    TRY(_compile_module(frame, module_obj, module_idx, buf, buf_size));
+    TRY(_compile_module(frame, module_obj, module_idx, buf, buf_size, 1));
 
     /* Run module */
     error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
@@ -1428,7 +1433,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_FRAME   frame,
     }
 
     /* Compile evaluated source to bytecode */
-    TRY(_compile_module(frame, module_obj, module_idx, buf.buffer, (unsigned)buf.size));
+    TRY(_compile_module(frame, module_obj, module_idx, buf.buffer, (unsigned)buf.size, 1));
 
     /* Free the buffer */
     _KOS_vector_destroy(&buf);
