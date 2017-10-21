@@ -1786,7 +1786,7 @@ static KOS_OBJ_ID _resize(KOS_FRAME  frame,
         TRY(KOS_buffer_resize(frame, this_obj, (uint32_t)size));
 
         if (size > old_size)
-            memset(KOS_buffer_data(this_obj) + old_size, 0, size - old_size);
+            memset(KOS_buffer_data(this_obj) + old_size, 0, (uint32_t)(size - old_size));
     }
     else {
         if (size < 0 || size > INT_MAX) {
