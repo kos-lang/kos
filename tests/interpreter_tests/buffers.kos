@@ -944,7 +944,27 @@ do {
 }
 
 ##############################################################################
-# Reverse
+# lang.buffer.prototype.resize()
+
+do {
+    const b = buffer([1, 2, 3, 4, 5])
+    assert b.size == 5
+    for var i = 0; i < 5; i += 1 {
+        assert b[i] == i + 1
+    }
+
+    b.resize(0)
+    assert b.size == 0
+
+    b.resize(5)
+    assert b.size == 5
+    for var i = 0; i < 5; i += 1 {
+        assert b[i] == 0
+    }
+}
+
+##############################################################################
+# lang.buffer.prototype.reverse()
 do {
     const b = buffer(5)
     for var i in range(5) {

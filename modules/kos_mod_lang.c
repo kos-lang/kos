@@ -1751,7 +1751,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_FRAME  frame,
  *
  * `size` is the new size of the buffer.
  *
- * If `size` is greater than the current buffer size, `void` elements are
+ * If `size` is greater than the current buffer size, `0` elements are
  * appended to expand the buffer.
  *
  * Example:
@@ -1776,12 +1776,17 @@ static KOS_OBJ_ID _resize(KOS_FRAME  frame,
     assert( ! IS_BAD_PTR(this_obj));
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_BUFFER) {
+        const uint32_t old_size = KOS_get_buffer_size(this_obj);
+
         if (size < 0 || size > INT_MAX) {
             KOS_raise_exception_cstring(frame, str_err_invalid_buffer_size);
             return KOS_BADPTR;
         }
 
         TRY(KOS_buffer_resize(frame, this_obj, (uint32_t)size));
+
+        if (size > old_size)
+            memset(KOS_buffer_data(this_obj) + old_size, 0, size - old_size);
     }
     else {
         if (size < 0 || size > INT_MAX) {
