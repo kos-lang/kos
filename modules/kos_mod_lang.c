@@ -1801,6 +1801,62 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item lang array.prototype.fill()
+ *
+ *     array.prototype.fill(value)
+ *     array.prototype.fill(begin, value)
+ *     array.prototype.fill(begin, end, value)
+ *
+ * Fill specified portion of the array with a value.
+ *
+ * Returns the array object being filled.
+ *
+ * `value` is the object to fill the array with.
+ *
+ * `begin` is the index at which to start filling the array.  `begin` defaults
+ * to `void`.  `void` is equivalent to index `0`.  If `begin` is negative, it
+ * is an offset from the end of the array.
+ *
+ * `end` is the index at which to stop filling the array, the element at this
+ * index will not be overwritten.  `end` defaults to `void`.  `void` is
+ * equivalent to the size of the array.  If `end` is negative, it is an offset
+ * from the end of the array.
+ *
+ * Example:
+ *
+ *     > const a = array(5)
+ *     > a.fill("foo")
+ *     ["foo", "foo", "foo", "foo", "foo"]
+ */
+
+/* @item lang buffer.prototype.fill()
+ *
+ *     buffer.prototype.fill(value)
+ *     buffer.prototype.fill(begin, value)
+ *     buffer.prototype.fill(begin, end, value)
+ *
+ * Fill specified portion of the buffer with a value.
+ *
+ * Returns the buffer object being filled.
+ *
+ * `value` is the byte value to fill the buffer with.  It must be a number from
+ * `0` to `255`, inclusive.  Float numbers are rounded using floor mode.
+ *
+ * `begin` is the index at which to start filling the buffer.  `begin` defaults
+ * to `void`.  `void` is equivalent to index `0`.  If `begin` is negative, it
+ * is an offset from the end of the buffer.
+ *
+ * `end` is the index at which to stop filling the buffer, the element at this
+ * index will not be overwritten.  `end` defaults to `void`.  `void` is
+ * equivalent to the size of the buffer.  If `end` is negative, it is an offset
+ * from the end of the buffer.
+ *
+ * Example:
+ *
+ *     > const b = buffer(5)
+ *     > b.fill(0x20)
+ *     <20 20 20 20 20>
+ */
 static KOS_OBJ_ID _fill(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -2459,6 +2515,48 @@ _error:
     return error ? KOS_BADPTR : fmt.data;
 }
 
+/* @item lang buffer.prototype.copy_buffer()
+ *
+ *     buffer.prototype.copy_buffer(src_buf)
+ *     buffer.prototype.copy_buffer(src_buf, src_begin)
+ *     buffer.prototype.copy_buffer(src_buf, src_begin, src_end)
+ *     buffer.prototype.copy_buffer(dst_begin, src_buf)
+ *     buffer.prototype.copy_buffer(dst_begin, src_buf, src_begin)
+ *     buffer.prototype.copy_buffer(dst_begin, src_buf, src_begin, src_end)
+ *
+ * Copies a range of bytes from source buffer to a buffer.
+ *
+ * Returns the destination buffer being modified.
+ *
+ * Stops copying once the last byte in the destination buffer is overwritten,
+ * the destination buffer is not grown even if more bytes from the source
+ * buffer could be copied.
+ *
+ * `dst_begin` is the position at which to start placing bytes from the source
+ * buffer.  `dst_begin` defaults to `0`.  If it is `void`, it is equivalent
+ * to `0`.  If it is negative, it is an offset from the end of the destination
+ * buffer.
+ *
+ * `src_buf` is the source buffer to copy from.
+ *
+ * `src_begin` is the offset of the first byte in the source buffer to start
+ * copying from.  `src_begin` defaults to `0`.  If it is `void`, it is
+ * equivalent to `0`.  If it is negative, it is an offset from the end of
+ * the source buffer.
+ *
+ * `src_end` is the offset of the byte at which to stop copying from the
+ * source buffer.  This byte is not copied.  `src_end` defaults to the size
+ * of the source buffer.  If it is `void`, it is equivalent to the size
+ * of the source buffer.  If it is negative, it is an offset from the end
+ * of the source buffer.
+ *
+ * Example:
+ *
+ *     > const dst = buffer([1, 1, 1, 1, 1])
+ *     > const src = buffer([2, 2, 2, 2, 2])
+ *     > dst.copy_buffer(2, src)
+ *     <01 01 02 02 02>
+ */
 static KOS_OBJ_ID _copy_buffer(KOS_FRAME  frame,
                                KOS_OBJ_ID this_obj,
                                KOS_OBJ_ID args_obj)
