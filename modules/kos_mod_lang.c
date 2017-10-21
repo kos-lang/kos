@@ -1409,6 +1409,24 @@ _error:
     return error ? KOS_BADPTR : thread_obj;
 }
 
+/* @item lang thread.prototype.wait()
+ *
+ *     thread.prototype.wait()
+ *
+ * Waits for thread to complete.
+ *
+ * Returns the return value returned from the thread function.
+ *
+ * If the thread function ended with an exception, rethrows that exception
+ * on the current thread.
+ *
+ * Example:
+ *
+ *     > fun f { return 42 }
+ *     > const t = f.async()
+ *     > t.wait()
+ *     42
+ */
 static KOS_OBJ_ID _wait(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -1511,6 +1529,94 @@ static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang string.prototype.slice()
+ *
+ *     string.prototype.slice(begin, end)
+ *
+ * Extracts substring from a string.
+ *
+ * Returns a new string, unless the entire string was selected, in which
+ * case returns the same string object.  (Note: strings are immutable.)
+ *
+ * `begin` and `end` specify the range of characters to extract in a new
+ * string.  `begin` is the index of the first character and `end` is the index
+ * of the character trailing the last character to extract.
+ * A negative index is an offset from the end, such that `-1` indicates the
+ * last character of the string.
+ * If `begin` is `void`, it is equivalent to `0`.  If `end` is `void`, it is
+ * equivalent to string size.
+ *
+ * This function is invoked by the slice operator.
+ *
+ * Examples:
+ *
+ *     > "language".slice(0, 4)
+ *     "lang"
+ *     > "language".slice(void, void)
+ *     "language"
+ *     > "language".slice(-5, -1)
+ *     "guag"
+ */
+
+/* @item lang array.prototype.slice()
+ *
+ *     array.prototype.slice(begin, end)
+ *
+ * Extracts a range of elements from an array.
+ *
+ * Returns a new array.
+ *
+ * It can be used to create a flat copy of an array.
+ *
+ * `begin` and `end` specify the range of elements to extract in a new
+ * array.  `begin` is the index of the first element and `end` is the index
+ * of the element trailing the last element to extract.
+ * A negative index is an offset from the end, such that `-1` indicates the
+ * last element of the array.
+ * If `begin` is `void`, it is equivalent to `0`.  If `end` is `void`, it is
+ * equivalent to array size.
+ *
+ * This function is invoked by the slice operator.
+ *
+ * Examples:
+ *
+ *     > [1, 2, 3, 4, 5, 6, 7, 8].slice(0, 4)
+ *     [1, 2, 3, 4]
+ *     > [1, 2, 3, 4, 5, 6, 7, 8].slice(void, void)
+ *     [1, 2, 3, 4, 5, 6, 7, 8]
+ *     > [1, 2, 3, 4, 5, 6, 7, 8].slice(-5, -1)
+ *     [4, 5, 6, 7]
+ */
+
+/* @item lang buffer.prototype.slice()
+ *
+ *     buffer.prototype.slice(begin, end)
+ *
+ * Extracts a range of elements from a buffer.
+ *
+ * Returns a new buffer.
+ *
+ * It can be used to create a flat copy of a buffer.
+ *
+ * `begin` and `end` specify the range of elements to extract in a new
+ * buffer.  `begin` is the index of the first element and `end` is the index
+ * of the element trailing the last element to extract.
+ * A negative index is an offset from the end, such that `-1` indicates the
+ * last element of the buffer.
+ * If `begin` is `void`, it is equivalent to `0`.  If `end` is `void`, it is
+ * equivalent to buffer size.
+ *
+ * This function is invoked by the slice operator.
+ *
+ * Examples:
+ *
+ *     > buffer([1, 2, 3, 4, 5, 6, 7, 8]).slice(0, 4)
+ *     <1, 2, 3, 4>
+ *     > buffer([1, 2, 3, 4, 5, 6, 7, 8]).slice(void, void)
+ *     <1, 2, 3, 4, 5, 6, 7, 8>
+ *     > buffer([1, 2, 3, 4, 5, 6, 7, 8]).slice(-5, -1)
+ *     <4, 5, 6, 7>
+ */
 static KOS_OBJ_ID _slice(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -1557,6 +1663,17 @@ _error:
     return ret;
 }
 
+/* @item lang array.prototype.size
+ *
+ *     array.prototype.size
+ *
+ * Read-only size of the array.
+ *
+ * Example:
+ *
+ *     > [1, 10, 100].size
+ *     3
+ */
 static KOS_OBJ_ID _get_array_size(KOS_FRAME  frame,
                                   KOS_OBJ_ID this_obj,
                                   KOS_OBJ_ID args_obj)
@@ -1575,6 +1692,17 @@ static KOS_OBJ_ID _get_array_size(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang buffer.prototype.size
+ *
+ *     buffer.prototype.size
+ *
+ * Read-only size of the buffer.
+ *
+ * Example:
+ *
+ *     > buffer([1, 10, 100]).size
+ *     3
+ */
 static KOS_OBJ_ID _get_buffer_size(KOS_FRAME  frame,
                                    KOS_OBJ_ID this_obj,
                                    KOS_OBJ_ID args_obj)
@@ -1593,6 +1721,45 @@ static KOS_OBJ_ID _get_buffer_size(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang array.prototype.resize()
+ *
+ *     array.prototype.resize(size)
+ *
+ * Resizes an array.
+ *
+ * Returns the array being resized.
+ *
+ * `size` is the new size of the array.
+ *
+ * If `size` is greater than the current array size, `void` elements are
+ * appended to expand the array.
+ *
+ * Example:
+ *
+ *     > const a = []
+ *     > a.resize(5)
+ *     [void, void, void, void, void]
+ */
+
+/* @item lang buffer.prototype.resize()
+ *
+ *     buffer.prototype.resize(size)
+ *
+ * Resizes a buffer.
+ *
+ * Returns the buffer being resized.
+ *
+ * `size` is the new size of the buffer.
+ *
+ * If `size` is greater than the current buffer size, `void` elements are
+ * appended to expand the buffer.
+ *
+ * Example:
+ *
+ *     > const a = buffer()
+ *     > b.resize(5)
+ *     <00 00 00 00 00>
+ */
 static KOS_OBJ_ID _resize(KOS_FRAME  frame,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
