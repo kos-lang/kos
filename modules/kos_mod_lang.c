@@ -1344,8 +1344,10 @@ static void _async_func(KOS_FRAME frame,
     if (IS_BAD_PTR(ret_obj))
         return;
 
-    KOS_set_property(frame, OBJID(OBJECT, thread_obj),
-            KOS_context_get_cstring(frame, str_result), ret_obj);
+    if (KOS_set_property(frame, OBJID(OBJECT, thread_obj),
+            KOS_context_get_cstring(frame, str_result), ret_obj) == KOS_ERROR_EXCEPTION) {
+        assert(KOS_is_exception_pending(frame));
+    }
 }
 
 static void _thread_finalize(KOS_FRAME frame,
