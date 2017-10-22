@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang: buffer, integer, print, range
+import lang: buffer, integer, print, string, range
 
 fun expect_fail(function)
 {
@@ -929,12 +929,14 @@ do {
 
     const contents = [ "A", "B", "C", "D", "E", "F", "G", "H", "I", "J" ]
 
-    const s = b.unpack_string()
-    assert typeof s == "string"
-    assert s.size == 10
-    for var i in s.indices() {
-        assert s[i] == contents[i]
+    const s1 = b.unpack("s")[0]
+    const s2 = string(b)
+    assert typeof s1 == "string"
+    assert s1.size == 10
+    for var i in s1.indices() {
+        assert s1[i] == contents[i]
     }
+    assert s1 == s2
 }
 
 do {

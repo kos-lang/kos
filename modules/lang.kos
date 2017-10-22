@@ -414,27 +414,6 @@ buffer.prototype.insert = fun(first_arg, second_arg, args...)
     }
 }
 
-/* @item lang buffer.prototype.unpack_string()
- *
- *     buffer.prototype.unpack_string()
- *
- * Unpacks an UTF-8 string from a buffer.
- *
- * The buffer is assumed to contain subsequent bytes of an UTF-8 string,
- * which is then unpacked.
- *
- * Returns the unpacked string.
- *
- * Example:
- *
- *     > print(buffer([110, 97, 195, 175, 118, 101]).unpack_string())
- *     naïve
- */
-buffer.prototype.unpack_string = fun
-{
-    return this.unpack("s")[0]
-}
-
 do {
     fun indices
     {
@@ -864,7 +843,7 @@ string.prototype.split_lines = fun(keep_ends = false)
  * object, then for each of the elements extracts its first sub-element and
  * yields it.
  *
- * This is typically useful to iterator over keys of an object.  Normally
+ * This is typically useful to iterate over keys of an object.  Normally
  * iterating over an object yields pairs (two-element arrays) containing
  * object keys and values.  The `first_elements` function can convert that
  * sequence to just keys.
