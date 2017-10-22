@@ -1,11 +1,18 @@
 ﻿Enhancement proposals
 =====================
 
+* Remove mandator parentheses from lambda body.
+
+* JS2-style lambdas with => operator:
+
+        map( x => x + 1 )
+        map( x => x.rjust(10) )
+
 * Change division to produce float, add integer division operator //
 
 * Add buffer strings b""
 
-* Empty array, buffer, string, object (shallow) are all falsy
+* ? Empty array, buffer, string, object (shallow) are all falsy
 
 * Rename string.ord() to string.code()
 

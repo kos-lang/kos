@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-fun lexer(input)
+fun lexer(filename, input)
 {
     const next = raw_lexer(input)
 
@@ -33,7 +33,7 @@ fun lexer(input)
 
     fun throw_token(token, str)
     {
-        throw "\(token.line):\(token.column): \(str)"
+        throw "\(filename):\(token.line):\(token.column): \(str)"
     }
 
     for var token in next {
@@ -62,11 +62,20 @@ fun lexer(input)
                 const expected_sep, open_type = brackets.pop()
 
                 if token.sep != expected_sep {
-                    throw_token(token, "expected '\(expected_sep)'")
+                    var actual_expected = expected_sep
+                    switch expected_sep {
+                        sep_paren_close  { actual_expected = ")" }
+                        sep_square_close { actual_expected = "]" }
+                        sep_curly_close  { actual_expected = "}" }
+                    }
+                    throw_token(token, "expected '\(actual_expected)'")
                 }
 
                 if open_type == token_string_open {
                     token = next(continue_string)
+                    if token.type == token_string_open {
+                        save(token, sep_paren_close)
+                    }
                 }
             }
 

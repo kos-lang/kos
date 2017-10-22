@@ -1,460 +1,1881 @@
-﻿Module lang
-===========
+lang
+====
 
-The `lang` module supplements the Kos programming language with essential
-functionality.
-
-
-array
+all()
 -----
 
-TODO
+    all(op)
+    all(op, iterable)
 
+Determines if all elements of an iterable object fulfill a condition.
 
-array.prototype.insert
+The first variant returns a function which can then be used with various
+iterable objects to test their elements.
+
+The second variant returns `true` if all elements of an iterable object,
+retrieved through the `iterator()` function, test positively against
+the `op` predicate and the test evaluates to a truthy value.
+Otherwise returns `false`.
+
+The function stops iterating over elements as soon as the `op` predicate
+evaluates to a falsy value.
+
+If the `op` predicate is a function, it is invoked for each element
+passed as an argument and then its return value is used as the result
+of the test.
+
+If `op` is not a function, the test is performed by comparing each element
+against each element using the `==` operator.
+
+Examples:
+
+    > all(fun(x) -> (x > 0), [1, 2, 3, 4])
+    true
+    > all(fun(x) -> (x > 0), [0, 1, 2, 3])
+    false
+    > const all_numbers = all(fun(x) -> (typeof x == "number"))
+    > all_numbers([1, 2, 3, 4])
+    true
+    > all_numbers([1, 2, "foo", 3])
+    false
+
+any()
+-----
+
+    any(op)
+    any(op, iterable)
+
+Determines if any elements of an iterable object fulfill a condition.
+
+The first variant returns a function which can then be used with various
+iterable objects to test their elements.
+
+The second variant returns `true` if one or more elements of an iterable object,
+retrieved through the `iterator()` function, test positively against
+the `op` predicate and the test evaluates to a truthy value.
+Otherwise returns `false`.
+
+The function stops iterating over elements as soon as the `op` predicate
+evaluates to a truthy value.
+
+If the `op` predicate is a function, it is invoked for each element
+passed as an argument and then its return value is used as the result
+of the test.
+
+If `op` is not a function, the test is performed by comparing each element
+against each element using the `==` operator.
+
+Examples:
+
+    > any(fun(x) -> (x > 0), [0, 20, -1, -20])
+    true
+    > any(fun(x) -> (x < 0), [0, 1, 2, 3])
+    false
+    > const any_numbers = any(fun(x) -> (typeof x == "number"))
+    > any_numbers(["a", "b", 1])
+    true
+    > any_numbers(["a", "b", "c"])
+    false
+
+array()
+-------
+
+    array(size = 0)
+    array(args...)
+
+Array type constructor.
+
+The first variant constructs an array of the specified size.  `size` defaults
+to 0, in which case the result is equivalent to empty array literal `[]`.
+If size is greater than 0, the array is filled with `void` values.
+
+The second variant constructs an array from one or more non-numeric objects.
+Each of these input arguments is converted to an array and the resulting
+arrays are concatenated, producing the final array, which is returned
+by the constructor.  The following input types are supported:
+
+ * array    - An array is simply concatenated with other input arguments without
+              any transformation.
+              This can be used e.g. to make a shallow copy of an existing
+              array or to concatenate two arrays.
+ * string   - An array is produced containing individual characters of the
+              input string.  The array's elements are strings of size 1.
+ * buffer   - A buffer is converted into an array containing individual
+              elements of the buffer.
+ * function - If the function is an iterator (a primed generator), subsequent
+              elements are obtained from it and added to the array.
+              For non-iterator functions an exception is thrown.
+ * object   - TODO
+
+The prototype of `array.prototype` is `object.prototype`.
+
+Examples:
+
+    > array()
+    []
+    > array(5)
+    [void, void, void, void, void]
+    > array("hello")
+    ["h", "e", "l", "l", "o"]
+    > array(range(5))
+    [0, 1, 2, 3, 4]
+    > array(shallow({one: 1, two: 2, three: 3}))
+    [["one", 1], ["two", 2], ["three", 3]]
+
+array.prototype.fill()
 ----------------------
 
-TODO
+    array.prototype.fill(value)
+    array.prototype.fill(begin, value)
+    array.prototype.fill(begin, end, value)
 
+Fill specified portion of the array with a value.
 
-array.prototype.insert_array
-----------------------------
+Returns the array object being filled (`this`).
 
-TODO
+`value` is the object to fill the array with.
 
+`begin` is the index at which to start filling the array.  `begin` defaults
+to `void`.  `void` is equivalent to index `0`.  If `begin` is negative, it
+is an offset from the end of the array.
 
-array.prototype.iterator
-------------------------
-
-Generator function, which yields subsequent elements of the array.
-
-Typically this function is invoked implcitly from the `for`..`in` loop.
+`end` is the index at which to stop filling the array, the element at this
+index will not be overwritten.  `end` defaults to `void`.  `void` is
+equivalent to the size of the array.  If `end` is negative, it is an offset
+from the end of the array.
 
 Example:
 
-    const a = [ 1, 2, 3 ]
-    for var elem in a {
-        print("\( elem )")
-    }
+    > const a = array(5)
+    > a.fill("foo")
+    ["foo", "foo", "foo", "foo", "foo"]
 
-Output:
+array.prototype.indices()
+-------------------------
 
+    array.prototype.indices()
+
+A generator which produces subsequent indices of array elements.
+
+Returns an iterator function, which yields subsequent indices of
+the array's elements in ascending order.
+
+`a.indices()` is equivalent to `range(a.size)`, where `a` is some
+array.
+
+Example:
+
+    > array([ "a", "b", "c" ].indices())
+    [0, 1, 2]
+
+array.prototype.insert()
+------------------------
+
+    array.prototype.insert(pos, iterable)
+    array.prototype.insert(begin, end, iterable)
+
+Inserts elements into an array, possibly replacing existing elements.
+
+The array is modified in-place.
+
+Returns the array itself (`this`).
+
+`pos` specifies the array index at which elements are to be inserted.
+If `pos` is negative, it is relative to the array's size.
+If `pos` is `void`, elements are inserted at the end of the array.
+
+`begin` and `end` specify a range of elements to be removed from the
+array and replaced by the inserted elements.  A negative `begin` or
+`end` is relative to the array's size.  `begin` is the index of the
+first element to be removed and `end` is the index of the first element
+after the removed range which will stay.  If `begin` is equal to `end`,
+they are both equivalent to `pos`.
+
+`iterable` is an iterable object on which `iterator()` function is invoked
+to obtain elements to be inserted into the array.
+
+Examples:
+
+    > [1, 2, 3].insert(0, ["foo"])
+    ["foo", 1, 2, 3]
+    > [1, 2, 3].insert(-1, ["foo"])
+    [1, 2, "foo", 3]
+    > [1, 2, 3, 4].insert(1, 2, "foo")
+    [1, "f", "o", "o", 3, 4]
+    > [1, 2, 3, 4].insert(0, 3, [])
+    [4]
+
+array.prototype.iterator()
+--------------------------
+
+    array.prototype.iterator()
+
+A generator which produces subsequent elements of an array.
+
+Returns an iterator function, which yields subsequent elements.
+
+The `iterator()` function is also implicitly invoked by the `for-in` loop
+statement.
+
+Example:
+
+    > for const v in [ 1, 2, 3 ] { print(v) }
     1
     2
     3
 
+array.prototype.pop()
+---------------------
+
+    array.prototype.pop(num_elements = 1)
+
+Removes elements from the end of array.
+
+`num_elements` is the number of elements to remove and it defaults to `1`.
+
+If `num_elements` is `1`, returns the element removed.
+If `num_elements` is `0`, returns `void`.
+If `num_elements` is greater than `1`, returns an array
+containing the elements removed.
+
+Throws if the array is empty or if more elements are being removed
+than the array already contains.
+
 Example:
 
-    const a    = [ 4, 5, 6 ]
-    const iter = a.iterator()
-    print("\( iter() )")
-    print("\( iter() )")
-    print("\( iter() )")
-
-Output:
-
-    4
+    > [1, 2, 3, 4, 5].pop()
     5
-    6
 
-
-array.prototype.reserve
------------------------
-
-TODO
-
-
-array.prototype.resize
+array.prototype.push()
 ----------------------
 
-TODO
+    array.prototype.push(values...)
 
+Appends every value argument to the array.
+
+Returns the old array size before the first element was inserted.
+If one or more elements are specified to insert, the returned value
+is equivalent to the index of the first element inserted.
+
+Example:
+
+    > [1, 1, 1].push(10, 20)
+    3
+
+array.prototype.reserve()
+-------------------------
+
+    array.prototype.reserve(size)
+
+Allocate array storage without resizing the array.
+
+The function has no visible effect, but can be used for optimization
+to avoid reallocating array storage when resizing it or continuously
+adding more elements.
+
+Returns the array object itself (`this`).
+
+array.prototype.resize()
+------------------------
+
+    array.prototype.resize(size)
+
+Resizes an array.
+
+Returns the array being resized (`this`).
+
+`size` is the new size of the array.
+
+If `size` is greater than the current array size, `void` elements are
+appended to expand the array.
+
+Example:
+
+    > const a = []
+    > a.resize(5)
+    [void, void, void, void, void]
+
+array.prototype.reverse()
+-------------------------
+
+    array.prototype.reverse()
+
+Returns a new array with elements in reverse order.
+
+Example:
+
+    > [1, 2, 3, 4].reverse()
+    [4, 3, 2, 1]
 
 array.prototype.size
 --------------------
 
-TODO
+    array.prototype.size
 
+Read-only size of the array (integer).
 
-array.prototype.slice
----------------------
+Example:
 
-TODO
+    > [1, 10, 100].size
+    3
 
-
-boolean
--------
-
-TODO
-
-
-buffer
-------
-
-TODO
-
-
-buffer.prototype.copy_buffer
-----------------------------
-
-TODO
-
-
-buffer.prototype.fill
----------------------
-
-TODO
-
-
-buffer.prototype.insert
+array.prototype.slice()
 -----------------------
 
-TODO
+    array.prototype.slice(begin, end)
 
+Extracts a range of elements from an array.
 
-buffer.prototype.iterator
+Returns a new array.
+
+It can be used to create a flat copy of an array.
+
+`begin` and `end` specify the range of elements to extract in a new
+array.  `begin` is the index of the first element and `end` is the index
+of the element trailing the last element to extract.
+A negative index is an offset from the end, such that `-1` indicates the
+last element of the array.
+If `begin` is `void`, it is equivalent to `0`.  If `end` is `void`, it is
+equivalent to array size.
+
+This function is invoked by the slice operator.
+
+Examples:
+
+    > [1, 2, 3, 4, 5, 6, 7, 8].slice(0, 4)
+    [1, 2, 3, 4]
+    > [1, 2, 3, 4, 5, 6, 7, 8].slice(void, void)
+    [1, 2, 3, 4, 5, 6, 7, 8]
+    > [1, 2, 3, 4, 5, 6, 7, 8].slice(-5, -1)
+    [4, 5, 6, 7]
+
+array.prototype.sort()
+----------------------
+
+    array.prototype.sort(compare = fun(x, y) -> (x < y))
+
+Sorts array in-place according to the ordering specified by `compare`.
+
+Returns the array itself.
+
+`compare` is a function which returns `true` if its first argument
+should come sorted before its second argument and returns `false`
+otherwise.  `compare` defaults to "less-than" operator.
+
+Example:
+
+    > [8, 5, 6, 0, 10, 2].sort()
+    [0, 2, 5, 6, 8, 10]
+
+boolean()
+---------
+
+    boolean(value = false)
+
+Boolean type constructor.
+
+Returns the value converted to a boolean using standard truth detection
+rules.
+
+If `value` is `false`, `void`, integer `0` or float `0.0` returns `false`.
+Otherwise returns `true`.
+
+If `value` is not provided, returns `false`.
+
+The prototype of `boolean.prototype` is `object.prototype`.
+
+Examples:
+
+    > boolean()
+    false
+    > boolean(0)
+    false
+    > boolean([])
+    true
+    > boolean("")
+    true
+    > boolean("false")
+    true
+
+buffer()
+--------
+
+    buffer(size = 0)
+    buffer(args...)
+
+Buffer type constructor.
+
+The first variant constructs a buffer of the specified size.  `size` defaults
+to 0.  If size is greater than 0, the buffer is filled with zeroes.
+
+The second variant constructs a buffer from one or more non-numeric objects.
+Each of these input arguments is converted to a buffer and the resulting
+buffers are concatenated, producing the final buffer, which is returned
+by the constructor.  The following input types are supported:
+
+ * array    - The array must contain numbers from 0 to 255 (floor operation
+              is applied to floats).  Any other array elements trigger an
+              exception.  The array is converted to a buffer containing
+              bytes with values from the array.
+ * string   - The string is converted to an UTF-8 representation stored
+              into a buffer.
+ * buffer   - A buffer is simply concatenated with other input arguments without
+              any transformation.
+              This can be used to make a copy of a buffer.
+ * function - If the function is an iterator (a primed generator), subsequent
+              elements are obtained from it and added to the buffer.  The
+              values returned by the iterator must be numbers from 0 to 255
+              (floor operation is applied to floats), any other values trigger
+              an exception.
+              For non-iterator functions an exception is thrown.
+
+The prototype of `buffer.prototype` is `object.prototype`.
+
+Examples:
+
+    > buffer()
+    <>
+    > buffer(5)
+    <00 00 00 00 00>
+    > buffer("hello")
+    <68 65 6c 6c 6f>
+    > buffer(range(4))
+    <00 01 02 03>
+
+buffer.prototype.copy_buffer()
+------------------------------
+
+    buffer.prototype.copy_buffer(src_buf)
+    buffer.prototype.copy_buffer(src_buf, src_begin)
+    buffer.prototype.copy_buffer(src_buf, src_begin, src_end)
+    buffer.prototype.copy_buffer(dst_begin, src_buf)
+    buffer.prototype.copy_buffer(dst_begin, src_buf, src_begin)
+    buffer.prototype.copy_buffer(dst_begin, src_buf, src_begin, src_end)
+
+Copies a range of bytes from source buffer to a buffer.
+
+Returns the destination buffer being modified (`this`).
+
+Stops copying once the last byte in the destination buffer is overwritten,
+the destination buffer is not grown even if more bytes from the source
+buffer could be copied.
+
+`dst_begin` is the position at which to start placing bytes from the source
+buffer.  `dst_begin` defaults to `0`.  If it is `void`, it is equivalent
+to `0`.  If it is negative, it is an offset from the end of the destination
+buffer.
+
+`src_buf` is the source buffer to copy from.
+
+`src_begin` is the offset of the first byte in the source buffer to start
+copying from.  `src_begin` defaults to `0`.  If it is `void`, it is
+equivalent to `0`.  If it is negative, it is an offset from the end of
+the source buffer.
+
+`src_end` is the offset of the byte at which to stop copying from the
+source buffer.  This byte is not copied.  `src_end` defaults to the size
+of the source buffer.  If it is `void`, it is equivalent to the size
+of the source buffer.  If it is negative, it is an offset from the end
+of the source buffer.
+
+Example:
+
+    > const dst = buffer([1, 1, 1, 1, 1])
+    > const src = buffer([2, 2, 2, 2, 2])
+    > dst.copy_buffer(2, src)
+    <01 01 02 02 02>
+
+buffer.prototype.fill()
+-----------------------
+
+    buffer.prototype.fill(value)
+    buffer.prototype.fill(begin, value)
+    buffer.prototype.fill(begin, end, value)
+
+Fill specified portion of the buffer with a value.
+
+Returns the buffer object being filled (`this`).
+
+`value` is the byte value to fill the buffer with.  It must be a number from
+`0` to `255`, inclusive.  Float numbers are rounded using floor mode.
+
+`begin` is the index at which to start filling the buffer.  `begin` defaults
+to `void`.  `void` is equivalent to index `0`.  If `begin` is negative, it
+is an offset from the end of the buffer.
+
+`end` is the index at which to stop filling the buffer, the element at this
+index will not be overwritten.  `end` defaults to `void`.  `void` is
+equivalent to the size of the buffer.  If `end` is negative, it is an offset
+from the end of the buffer.
+
+Example:
+
+    > const b = buffer(5)
+    > b.fill(0x20)
+    <20 20 20 20 20>
+
+buffer.prototype.indices()
+--------------------------
+
+    buffer.prototype.indices()
+
+A generator which produces subsequent indices of buffer elements.
+
+Returns an iterator function, which yields subsequent indices of
+the buffer's elements in ascending order.
+
+`b.indices()` is equivalent to `range(b.size)`, where `b` is some
+buffer.
+
+Example:
+
+    > array(buffer(4).indices())
+    [0, 1, 2, 3]
+
+buffer.prototype.insert()
 -------------------------
 
-TODO
+    buffer.prototype.insert(pos, obj)
+    buffer.prototype.insert(begin, end, obj)
 
+Inserts elements into a buffer, possibly replacing existing elements.
 
-buffer.prototype.pack
----------------------
+The buffer is modified in-place.
 
-TODO
+Returns the buffer itself (`this`).
 
+`pos` specifies the buffer index at which elements are to be inserted.
+If `pos` is negative, it is relative to the buffer's size.
+If `pos` is `void`, elements are inserted at the end of the buffer.
 
-buffer.prototype.reserve
-------------------------
+`begin` and `end` specify a range of elements to be removed from the
+buffer and replaced by the inserted elements.  A negative `begin` or
+`end` is relative to the buffer's size.  `begin` is the index of the
+first element to be removed and `end` is the index of the first element
+after the removed range which will stay.  If `begin` is equal to `end`,
+they are both equivalent to `pos`.
 
-TODO
+`iterable` is an iterable object on which `iterator()` function is invoked
+to obtain elements to be inserted into the buffer.  The elements to be
+inserted, which are yielded by the iterator, must be numbers from 0 to 255.
 
+buffer.prototype.iterator()
+---------------------------
 
-buffer.prototype.resize
+    buffer.prototype.iterator()
+
+A generator which produces subsequent elements of a buffer.
+
+Returns an iterator function, which yields integers, which are
+subsequent elements of the buffer.
+
+The `iterator()` function is also implicitly invoked by the `for-in` loop
+statement.
+
+Examples:
+
+    > array(buffer([1, 2, 3]).iterator())
+    [1, 2, 3]
+    > for const v in buffer([10, 11, 12]) { print(v) }
+    10
+    11
+    12
+
+buffer.prototype.pack()
 -----------------------
 
-TODO
+    buffer.prototype.pack(format, args...)
 
+Convert parameters to binary form and appends them to a buffer.
+
+Returns the buffer which has been modified.
+
+`format` is a string, which describes how values are to be packed.
+
+TODO - refine format
+
+buffer.prototype.reserve()
+--------------------------
+
+    buffer.prototype.reserve(size)
+
+Allocate buffer storage without resizing the buffer.
+
+The function has no visible effect, but can be used for optimization
+to avoid reallocating buffer storage when resizing it.
+
+Returns the buffer object itself (`this`).
+
+buffer.prototype.resize()
+-------------------------
+
+    buffer.prototype.resize(size)
+
+Resizes a buffer.
+
+Returns the buffer being resized (`this`).
+
+`size` is the new size of the buffer.
+
+If `size` is greater than the current buffer size, `0` elements are
+appended to expand the buffer.
+
+Example:
+
+    > const a = buffer()
+    > b.resize(5)
+    <00 00 00 00 00>
+
+buffer.prototype.reverse()
+--------------------------
+
+    buffer.prototype.reverse()
+
+Returns a new buffer with elements in reverse order.
+
+Example:
+
+    > buffer([10, 20, 30]).reverse()
+    buffer([30, 20, 10]) # TODO - do buffer display
 
 buffer.prototype.size
 ---------------------
 
-TODO
+    buffer.prototype.size
 
+Read-only size of the buffer (integer).
 
-buffer.prototype.slice
-----------------------
+Example:
 
-TODO
+    > buffer([1, 10, 100]).size
+    3
 
-
-buffer.prototype.unpack
------------------------
-
-TODO
-
-
-count
------
-
-TODO
-
-
-deep
-----
-
-TODO
-
-
-filter
-------
-
-TODO
-
-
-float
------
-
-TODO
-
-
-function
---------
-
-TODO
-
-
-function.prototype.apply
+buffer.prototype.slice()
 ------------------------
 
-TODO
+    buffer.prototype.slice(begin, end)
 
+Extracts a range of elements from a buffer.
 
-function.prototype.instructions
--------------------------------
+Returns a new buffer.
 
-TODO
+It can be used to create a flat copy of a buffer.
 
+`begin` and `end` specify the range of elements to extract in a new
+buffer.  `begin` is the index of the first element and `end` is the index
+of the element trailing the last element to extract.
+A negative index is an offset from the end, such that `-1` indicates the
+last element of the buffer.
+If `begin` is `void`, it is equivalent to `0`.  If `end` is `void`, it is
+equivalent to buffer size.
 
-function.prototype.iterator
----------------------------
+This function is invoked by the slice operator.
 
-TODO
+Examples:
 
+    > buffer([1, 2, 3, 4, 5, 6, 7, 8]).slice(0, 4)
+    <1, 2, 3, 4>
+    > buffer([1, 2, 3, 4, 5, 6, 7, 8]).slice(void, void)
+    <1, 2, 3, 4, 5, 6, 7, 8>
+    > buffer([1, 2, 3, 4, 5, 6, 7, 8]).slice(-5, -1)
+    <4, 5, 6, 7>
 
-function.prototype.name
------------------------
+buffer.prototype.unpack()
+-------------------------
 
-TODO
+    buffer.prototype.unpack(pos, format)
+    buffer.prototype.unpack(format)
 
+Unpacks values from their binary form from a buffer.
 
-function.prototype.prototype
-----------------------------
+Returns an array containing unpacked values.
 
-TODO
+`pos` is the position in the buffer at which to start extracting the values.
+`pos` defaults to `0`.
 
+`format` is a string, which describes how values are to be unpacked.
 
-function.prototype.registers
-----------------------------
+TODO - refine format
 
-TODO
+constructor()
+-------------
 
+    constructor()
 
-function.prototype.set_prototype
---------------------------------
+Constructor for constructor functions.
 
-TODO
+The purpose of this constructor is to be used with the `instanceof`
+operator to detect constructor functions.
 
+Because `constructor` is a keyword, this constructor can only be referenced
+indirectly via the lang module, it cannot be referenced if it is imported
+directly into the current module.
 
-function.prototype.size
------------------------
+Calling this constructor function throws an exception.
 
-TODO
+The prototype of `constructor.prototype` is `function.prototype`.
 
-
-integer
+count()
 -------
 
-TODO
+    count(op)
+    count(op, iterable)
 
+Counts elements of an iterable object with a predicate.
 
-map
+The first variant returns a function which can then be used with various
+iterable objects to count their elements.
+
+The second variant counts all elements of an iterable object, retrieved
+through the `iterator()` function, using `op` to test elements.
+
+If `op` is a function, applies it to every element and then counts for
+how many elements the `op` function returns `true`.
+
+If `op` is not a function, counts how many elements equal to `op` by
+comparing each element to `op` using `==` operator.
+
+Examples:
+
+    > count(fun(x) -> (x > 0), [-1, 1, 2, -3, 4])
+    3
+    > const count_numbers = count(fun(x) -> (x instanceof number))
+    > count_numbers([10, 2, "foo", 30, "bar", 4])
+    4
+    > count("o", "monologue")
+    3
+
+deep()
+------
+
+    deep(obj)
+
+A generator which produces properties of an object and all its prototypes.
+
+Returns an iterator function, which yields 2-element arrays, which are
+[key, value] pairs of subsequent properties of the `obj` object.
+
+The order of the elements yielded is unspecified.
+
+Example:
+
+    > array(deep({x:0, y:1}))
+    [["any", <function>], ["all", <function>], ["filter", <function>],
+     ["count", <function>], ["reduce", <function>], ["iterator", <function>],
+     ["map", <function>], ["y", 1], ["x", 0]]
+
+eol
 ---
 
-TODO
+    eol
 
+A string containing all characters considered as end of line markers by
+some functions.
 
-number
-------
+exception()
+-----------
 
-TODO
+    exception([value])
 
+Exception object constructor.
 
-object
-------
+All caught exception objects have `exception.prototype` as their prototype.
+This constructor gives access to that prototype.
 
-TODO
+Calling this constructor function throws an exception, it does not return
+an exception object.  The thrown exception's `value` property can be set
+to the optional `value` argument.  In other words, calling this constructor
+function is equivalent to throwing `value`.
 
+If `value` is not specified, `void` is thrown.
 
-object.prototype.iterator
--------------------------
+The prototype of `exception.prototype` is `object.prototype`.
 
-TODO
+filter()
+--------
 
+    filter(op)
+    filter(op, iterable)
 
-object.prototype.count
-----------------------
+A generator which filters elements of an iterable object using the provided
+function.
 
-TODO
+The first variant with one argument returns another function, which can
+then be applied on any iterable object to filter it.
 
+The second variant uses the provided function on the elements of
+the specified iterable object.  It returns an iterator function, which
+yields subsequent elements for which the function returns a truthy value.
 
-object.prototype.filter
------------------------
+`op` is the function to invoke on each element of the iterable object.
 
-TODO
+`iterable` is an object on which `iterator()` is invoked to obtain subsequent
+elements of it, which are then filtered.
 
+Examples:
 
-object.prototype.map
---------------------
+    > array(filter(fun(x) -> (x < 0), [1, -2, 3, 4, -5, -6]))
+    [-2, -5, -6]
+    > const odd = filter(fun(x) -> (x & 1))
+    > array(odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]))
+    [9, 7, 5, 3, 1]
 
-TODO
+first_elements()
+----------------
 
+    first_elements(iterable)
 
-object.prototype.reduce
------------------------
+A generator which produces first elements of each element from an iterable
+object.
 
-TODO
+Returns an iterator function, which iterates over the elements of an iterable
+object, then for each of the elements extracts its first sub-element and
+yields it.
 
+This is typically useful to iterate over keys of an object.  Normally
+iterating over an object yields pairs (two-element arrays) containing
+object keys and values.  The `first_elements` function can convert that
+sequence to just keys.
 
-print
------
+Examples:
 
-TODO
+    > array(first_elements({ A: 1, B: 2, C: 3}))
+    ["A", "C", "B"]
+    > array(first_elements(["kos", "lang", "first"]))
+    ["k", "l", "f"]
 
-
-range
------
-
-TODO
-
-
-reduce
-------
-
-TODO
-
-
-shallow
+float()
 -------
 
-TODO
+    float(value = 0)
 
+Float type constructor.
 
-string
-------
+The optional `value` argument can be an integer, a float or a string.
 
-TODO
+If `value` is not provided, returns 0.
 
+If `value` is an integer, converts it to a float and returns the converted value.
 
-string.prototype.iterator
+If `value` is a float, returns `value`.
+
+If `value` is a string, parses it in the same manner numeric literals are
+parsed by the interpreter, assuming it is a floating-point literal.
+Throws an exception if the string cannot be parsed.
+
+The prototype of `float.prototype` is `number.prototype`.
+
+Examples:
+
+    > float()
+    0.0
+    > float(10)
+    10.0
+    > float("123.5")
+    123.5
+
+function()
+----------
+
+    function(func)
+
+Function type constructor.
+
+The argument is a function object which is returned by
+this constructor, no new object is created by it.
+Throws an exception if the argument is not a function.
+
+The prototype of `function.prototype` is `object.prototype`.
+
+function.prototype.apply()
+--------------------------
+
+    function.prototype.apply(this_object, args_array)
+
+Invokes a function with the specified this object and arguments.
+
+Returns the value returned by the function.
+
+The `this_object` argument is the object which is bound to the function as
+`this` for this invocation.  It can be any object or `void`.
+
+The `args_array` argument is an array (can be empty) containing arguments for
+the function.
+
+Example:
+
+    > fun f(a) { return this + a }
+    > f.apply(1, [2])
+    3
+
+function.prototype.async()
+--------------------------
+
+    function.prototype.async(args...)
+
+Invokes a function asynchronously on a new thread.
+
+Returns the created thread object.
+
+The returned thread object is also bound as `this` to the function
+being invoked on that thread.
+
+All the arguments are passed to the function.
+
+Example:
+
+    > fun f(a, b) { return a + b }
+    > const t = f.async(1, 2)
+    > t.wait()
+    3
+
+function.prototype.iterator()
+-----------------------------
+
+    function.prototype.iterator()
+
+Returns the function itself (`this`).
+
+The `iterator()` function is also implicitly invoked by the `for-in` loop
+statement.
+
+This allows passing an iterator from an instantiated generator to be
+passed to a `for-in` loop.
+
+Examples:
+
+    > for const x in range(2) { print(x) }
+    0
+    1
+
+generator()
+-----------
+
+    generator()
+
+Constructor for generator functions.
+
+The purpose of this constructor is to be used with the `instanceof`
+operator to detect generator functions.
+
+Calling this constructor function throws an exception.
+
+The prototype of `generator.prototype` is `function.prototype`.
+
+generator_end()
+---------------
+
+    generator_end()
+
+Generator end object constructor.
+
+A generator end object is typically thrown when an iterator function is
+called but has no more values to yield.  In other words, a thrown generator
+end object indicates end of a generator.  The generator end object can
+be caught and it becomes the `value` of the exception object caught.
+
+Calling this constructor function throws an exception.
+
+The prototype of `generator_end.prototype` is `object.prototype`.
+
+hex()
+-----
+
+    hex(number)
+
+Converts an integer to a string containing hexadecimal representation of it.
+
+Example:
+
+    > hex(123)
+    "0x7b"
+
+integer()
+---------
+
+    integer(value = 0)
+
+Integer type constructor.
+
+The optional `value` argument can be an integer, a float or a string.
+
+If `value` is not provided, returns 0.
+
+If `value` is an integer, returns `value`.
+
+If `value` is a float, converts it to integer using floor mode and returns the
+converted value.
+
+If `value` is a string, parses it in the same manner numeric literals are
+parsed by the interpreter, requiring that the string is an integer literal.
+Throws an exception if the string is a floating-point literal or cannot be
+parsed.
+
+The prototype of `integer.prototype` is `number.prototype`.
+
+Examples:
+
+    > integer()
+    0
+    > integer(10)
+    10
+    > integer(4.2)
+    4
+    > integer("123")
+    123
+
+integer.prototype.hex()
+-----------------------
+
+    integer.prototype.hex()
+
+Converts the integer to a string containing hexadecimal representation of it.
+
+Example:
+
+    > 123 .hex()
+    "0x7b"
+
+map()
+-----
+
+    map(op)
+    map(op, iterable)
+
+A generator which applies a function to each element of an iterable object.
+
+The first variant with one argument returns another function, which can
+then be applied on any iterable object to map it.
+
+The second variant applies the provided function to the elements of
+the specified iterable object.  It returns an iterator function, which
+yields subsequent elements mapped through the `op` function.
+
+`op` is the function to invoke on each element of the iterable object.
+
+`iterable` is an object on which `iterator()` is invoked to obtain subsequent
+elements of it, which are then mapped.
+
+Examples:
+
+    > array(map(fun(x) -> (x*10), [1, 2, 3, 4]))
+    [10, 20, 30, 40]
+    > const plus2 = map(fun(x) -> (x + 2))
+    > array(plus2([10, 11, 12, 13]))
+    [12, 13, 14, 15]
+
+method()
+--------
+
+    method(obj, func)
+
+Memorizes an object and a function to be called on that object.
+
+Returns a new function, which when called, will call the specified
+function `func` with the specified object `obj` passed as `this`.
+
+`obj` is the object on which the function will be invoked.
+`func` is a function which is to be applied to the object.
+
+Example:
+
+    > const my_array = []
+    > const append = method(my_array, my_array.push)
+    > append(10)
+    0
+    > append(20)
+    1
+    > my_array
+    [10, 20]
+
+number()
+--------
+
+    number(value = 0)
+
+Numeric type constructor.
+
+The optional `value` argument can be an integer, a float or a string.
+
+If `value` is not provided, returns 0.
+
+If `value` is an integer or a float, returns `value`.
+
+If `value` is a string, parses it in the same manner numeric literals are
+parsed by the interpreter and returns the number as either an integer or
+a float, depending on the parsing result.
+Throws an exception if the string cannot be parsed.
+
+The prototype of `number.prototype` is `object.prototype`.
+
+Examples:
+
+    > number()
+    0
+    > number(10)
+    10
+    > number(10.0)
+    10.0
+    > number("123.000")
+    123.0
+    > number("0x100")
+    256
+
+object()
+--------
+
+    object()
+
+Object type constructor.
+
+Returns a new empty object.  Equivalent to empty object literal `{}`.
+
+`object.prototype` is directly or indirectly the prototype for all object types.
+
+Example:
+
+    > object()
+    {}
+
+object.prototype.all()
+----------------------
+
+    object.prototype.all(op)
+
+Determines if all elements of the object fulfill a condition.
+
+Returns `true` if all elements of the object,
+retrieved through the `iterator()` function, test positively against
+the `op` predicate and the test evaluates to a truthy value.
+Otherwise returns `false`.
+
+The function stops iterating over elements as soon as the `op` predicate
+evaluates to a falsy value.
+
+If the `op` predicate is a function, it is invoked for each element
+passed as an argument and then its return value is used as the result
+of the test.
+
+If `op` is not a function, the test is performed by comparing each element
+against each element using the `==` operator.
+
+Example:
+
+    > [0, 1, 2, 3].all(fun(x) -> (x > 0))
+    false
+
+object.prototype.any()
+----------------------
+
+    object.prototype.any(op)
+
+Determines if any elements of the object fulfill a condition.
+
+Returns `true` if one or more elements of the object,
+retrieved through the `iterator()` function, test positively against
+the `op` predicate and the test evaluates to a truthy value.
+Otherwise returns `false`.
+
+The function stops iterating over elements as soon as the `op` predicate
+evaluates to a truthy value.
+
+If the `op` predicate is a function, it is invoked for each element
+passed as an argument and then its return value is used as the result
+of the test.
+
+If `op` is not a function, the test is performed by comparing each element
+against each element using the `==` operator.
+
+Example:
+
+    > [1, 2, -1, 3, 4].any(fun(x) -> (x < 0))
+    true
+
+object.prototype.count()
+------------------------
+
+    object.prototype.count()
+    object.prototype.count(op)
+
+Counts elements of the object with a predicate.
+
+Counts all elements of the object, retrieved through the `iterator()`
+function, using `op` to test elements.
+
+If `op` is not specified, counts all elements retrieved through the
+`iterator()` function.
+
+If `op` is a function, applies it to every element and then counts for
+how many elements the `op` function returns `true`.
+
+If `op` is not a function, counts how many elements equal to `op` by
+comparing each element to `op` using `==` operator.
+
+Examples:
+
+    > "monologue".count("o")
+    3
+    > range(3, 43, 5).count()
+    8
+
+object.prototype.filter()
 -------------------------
 
-TODO
+    object.prototype.filter(op)
 
+A generator which filters object elements.
+
+Returns an iterator function, which yields elements of the object,
+for which the `op` function return a truthy value.  The elements are
+obtained through the `iterator()` function.
+
+Example:
+
+    > array([1, 2, 3, 4, 5, 6].filter(fun(x) -> (x & 1)))
+    [1, 3, 5]
+
+object.prototype.iterator()
+---------------------------
+
+    object.prototype.iterator()
+
+A generator which produces properties of an object in a shallow manner,
+i.e. without descending into prototypes.
+
+Returns an iterator function, which yields 2-element arrays, which are
+[key, value] pairs of subsequent properties of the object.
+
+The order of the elements yielded is unspecified.
+
+This is equivalent to `shallow()` function.
+
+If the object is not of type `object`, e.g. if it is an integer,
+a float, a boolean or a void, the iterator yields the object itself.
+Prototypes of array, string, buffer and function override this generator.
+
+The `iterator()` function is also implicitly invoked by the `for-in` loop
+statement.
+
+Examples:
+
+    > array({ red: 1, green: 10, blue: 100 }.iterator())
+    [["red", 1], ["green", 10], ["blue", 100]]
+    > array(1.5.iterator())
+    [1.5]
+    > array(true.iterator())
+    [true]
+    > for const k, v in { x: 10, y: -2 } { print(k, v) }
+    x 10
+    y -2
+
+object.prototype.map()
+----------------------
+
+    object.prototype.map(op)
+
+A generator which applies a function to each element of the object.
+
+Returns an iterator function, which yields values returned from the `op`
+function called on each subsequent element of the object.  Elements
+are obtained through the `iterator()` function.
+
+Example:
+
+    > array([1, 3, 5, 7].map(fun(x) -> (x * 2)))
+    [2, 6, 10, 14]
+
+object.prototype.reduce()
+-------------------------
+
+    object.prototype.reduce(op, init)
+
+Performs left fold operation on subsequent elements of the object,
+which are obtained through the `iterator()` function.
+
+The left fold operation is applied as follows (pseudo-code):
+
+    const a = [e1, e2, e3, ...]
+    const reduce = op(op(op(op(init, e1), e2), e3), ...)
+
+`op` is the function which is the reduction operator.
+
+`init` is the initial element to use for the fold.
+
+Example:
+
+    > [1, 3, 7, 4, 6].reduce(fun(x, y) -> (x + y), 0)
+    21
+
+print()
+-------
+
+    print(values...)
+
+Converts all arguments to printable strings and prints them on stdout.
+
+Accepts zero or more arguments to print.
+
+Printed values are separated with a single space.
+
+After printing all values prints an EOL character.  If no values are
+provided, just prints an EOL character.
+
+print_()
+--------
+
+    print_(values...)
+
+Converts all arguments to printable strings and prints them on stdout.
+
+Accepts zero or more arguments to print.
+
+Printed values are separated with a single space.
+
+Unlike `print()`, does not print an EOL character after finishing printing.
+
+range()
+-------
+
+    range(stop)
+    range(start, stop, step = 1)
+
+A generator which produces an arithmetic progression of numbers.
+
+Returns an iterator function, which yields subsequent numbers in
+the specified range.
+
+`start`, `stop` and `step` arguments are integers or floats.
+
+`start` specifies the first number returned by the iterator.  `start`
+defaults to `0`.
+
+`step` specified the increment which is added to subsequently returned
+numbers.  If `step` is greater than zero, the generated sequence is
+ascending.  If `step` is negative, the generated sequence is descending.
+If `step` is zero, no numbers are generated.
+
+`stop` specifies the number ending the sequence, but not included in it.
+The iterator terminates when it reaches or exceeds `stop`.
+
+Examples:
+
+    > array(range(5))
+    [0, 1, 2, 3, 4]
+    > array(range(1, 5))
+    [1, 2, 3, 4]
+    > array(range(0, 16, 4))
+    [0, 4, 8, 12]
+    > array(range(0))
+    []
+    > array(range(2, -8, -2))
+    [2, 0, -2, -4, -6]
+    > for const x in range(2) { print(x) }
+    0
+    1
+
+reduce()
+--------
+
+    reduce(op, init)
+    reduce(op, init, iterable)
+
+Performs left fold operation on subsequent elements of an iterable object.
+
+The first variant returns a function which can then be directly applied
+to any iterable object.
+
+The second variant performs the application of the left fold operation as
+follows:
+
+    const a = [e1, e2, e3, ...]
+    const reduce = op(op(op(op(init, e1), e2), e3), ...)
+
+`op` is the function which is the reduction operator.
+
+`init` is the initial element to use for the fold.
+
+`iterable` is an object on which `iterator()` is invoked to obtain subsequent
+elements of it, on which the reduction is performed.
+
+Examples:
+
+    > reduce(fun(x, y) -> (x + y), 0, [1, 1, 1, 2, 5])
+    10
+    > const count_non_zero = reduce(fun(x, y) -> (x + (y ? 1 : 0)), 0)
+    > count_non_zero([0, 0, 4, 0, 0, 5, 6, 0])
+    3
+
+shallow()
+---------
+
+    shallow(obj)
+
+A generator which produces properties of an object in a shallow manner,
+i.e. without descending into prototypes.
+
+Returns an iterator function, which yields 2-element arrays, which are
+[key, value] pairs of subsequent properties of the `obj` object.
+
+The order of the elements yielded is unspecified.
+
+Example:
+
+    > array(shallow({x:0, y:1}))
+    [["y", 1], ["x", 0]]
+
+sort()
+------
+
+    sort(iterable, compare = fun(x, y) -> (x < y))
+
+A generator which sorts elements from an iterable object.
+
+Returns an iterator function, which yields subsequent elements
+coming from an iterable object, but sorted according to the
+`compare` function.  The elements are retrieved from the iterable
+object through its `iterator()` function.
+
+`compare` is a function which returns `true` if its first argument
+should come sorted before its second argument and returns `false`
+otherwise.  `compare` defaults to "less-than" operator.
+
+Examples:
+
+    > array(sort("kos language"))
+    [" ", "a", "a", "e", "g", "g", "k", "l", "n", "o", "s", "u"]
+    > array(sort({ foo: 1, bar: 2, baz: 3 }, fun(x, y) -> (x[0] < y[0])))
+    [["bar", 2], ["baz", 3], ["foo", 1]]
+
+string()
+--------
+
+    string(args...)
+
+String type constructor.
+
+Returns a new string created from converting all arguments to strings
+and concatenating them.
+
+If no arguments are provided, returns an empty string.
+
+Each argument can be a string, an integer, a float, an array or a buffer.
+Any other argument type triggers an exception.
+
+A string argument undergoes no conversion (concatenation still applies).
+
+An integer or a float argument is converted to a string by creating
+a string which can be parsed back to that number.
+
+An array argument must contain numbers, which are unicode code points
+in the range from 0 to 0x1FFFFF, inclusive.  Float numbers are converted
+to integers using floor operation.  Any array elements which are not
+numbers or exceed the above range trigger an exception.  The new string
+created from the array contains characters corresponding to the specified
+code points and the string length is equal to the length of the array.
+
+A buffer argument is treated as if contains an UTF-8 string and the
+string is decoded from it.  Any errors in the UTF-8 sequence trigger
+an exception.
+
+The prototype of `string.prototype` is `object.prototype`.
+
+Example:
+
+    > string("kos", [108, 97, 110, 103], 32)
+    "koslang32"
+
+string.prototype.indices()
+--------------------------
+
+    string.prototype.indices()
+
+A generator which produces subsequent indices of string elements.
+
+Returns an iterator function, which yields subsequent indices of
+the string's elements in ascending order.
+
+`s.indices()` is equivalent to `range(s.size)`, where `s` is some
+string.
+
+Example:
+
+    > array("foobar".indices())
+    [0, 1, 2, 3, 4, 5]
+
+string.prototype.iterator()
+---------------------------
+
+    string.prototype.iterator()
+
+A generator which produces subsequent elements of a string.
+
+Returns an iterator function, which yields single-character strings
+containing subsequent characters of the string.
+
+The `iterator()` function is also implicitly invoked by the `for-in` loop
+statement.
+
+Examples:
+
+    > array("koslang".iterator())
+    ["k", "o", "s", "l", "a", "n", "g"]
+    > for const v in "foo" { print(v) }
+    f
+    o
+    o
+
+string.prototype.ljust()
+------------------------
+
+    string.prototype.ljust(size, fill = " ")
+
+Left-justifies a string.
+
+Returns a new, left-justified string of the requested size.
+
+`size` is the length of the returned string.  If `size` is less than
+the length of the current string, the current string is returned
+unmodified.
+
+`fill` is a string of length 1 containing the character to add on the right
+side of the string to justify it.  The function throws an exception if
+`fill` is not a string or has a different length than 1.  `fill` defaults
+to a space character.
+
+Examples:
+
+    > "abc".ljust(5)
+    "abc  "
+    > "abc".ljust(7, ".")
+    "abc...."
+    > "abc".ljust(1)
+    "abc"
+
+string.prototype.lstrip()
+-------------------------
+
+    string.prototype.lstrip(chars = whitespace)
+
+Removes all leading whitespace characters from a string.
+
+Returns a new string with all whitespace characters removed from
+its beginning.
+
+`chars` is a string, which specifies the list of characters treated
+as whitespace.  It defaults to `lang.whitespace`.
+
+Example:
+
+    > "  foo  ".lstrip()
+    "foo  "
+
+string.prototype.rjust()
+------------------------
+
+    string.prototype.rjust(size, fill = " ")
+
+Right-justifies a string.
+
+Returns a new, right-justified string of the requested size.
+
+`size` is the length of the returned string.  If `size` is less than
+the length of the current string, the current string is returned
+unmodified.
+
+`fill` is a string of length 1 containing the character to add on the left
+side of the string to justify it.  The function throws an exception if
+`fill` is not a string or has a different length than 1.  `fill` defaults
+to a space character.
+
+Examples:
+
+    > "abc".rjust(5)
+    "  abc"
+    > "abc".rjust(7, ".")
+    "....abc"
+    > "abc".rjust(1)
+    "abc"
+
+string.prototype.rstrip()
+-------------------------
+
+    string.prototype.rstrip(chars = whitespace)
+
+Removes all trailing whitespace characters from a string.
+
+Returns a new string with all whitespace characters removed from
+its end.
+
+`chars` is a string, which specifies the list of characters treated
+as whitespace.  It defaults to `lang.whitespace`.
+
+Example:
+
+    > "  foo  ".rstrip()
+    "  foo"
 
 string.prototype.size
 ---------------------
 
-TODO
+    string.prototype.size
 
+Read-only size of the string (integer).
 
-string.prototype.slice
-----------------------
+Example:
 
-TODO
+    > "rain\x{2601}".size
+    5
 
+string.prototype.slice()
+------------------------
 
-void
-----
+    string.prototype.slice(begin, end)
 
-TODO
+Extracts substring from a string.
 
+Returns a new string, unless the entire string was selected, in which
+case returns the same string object.  (Note: strings are immutable.)
 
-void.prototype.iterator
------------------------
+`begin` and `end` specify the range of characters to extract in a new
+string.  `begin` is the index of the first character and `end` is the index
+of the character trailing the last character to extract.
+A negative index is an offset from the end, such that `-1` indicates the
+last character of the string.
+If `begin` is `void`, it is equivalent to `0`.  If `end` is `void`, it is
+equivalent to string size.
 
-TODO
+This function is invoked by the slice operator.
 
+Examples:
 
-Module file
-===========
+    > "language".slice(0, 4)
+    "lang"
+    > "language".slice(void, void)
+    "language"
+    > "language".slice(-5, -1)
+    "guag"
 
-The `file` module provides file manipulation facilities.
+string.prototype.split()
+------------------------
 
+    string.prototype.split(sep = void, max_split = -1)
 
-file
-----
+A generator which splits a string and produces subsequent parts.
 
-TODO
+Returns an iterator function, which yields subsequent parts of
+the string.  The parts result from splitting the string using
+the `sep` separator.
 
+`sep` is a string which is used as a separator.  It must be non-empty.
+The source string is split into parts by finding any occurences of
+the separator.  The separator is not part of the resulting strings.
 
-file.eof
---------
+`sep` defaults to `void`, which indicates that a sequence of whitespaces
+of any length should be used to split the string.
 
-TODO
+`max_split` indicates the maximum number of parts into which the string
+is going to be split.  By default it is -1, in which case the number
+of resulting parts is unlimited.
 
+Examples:
 
-file.error
-----------
+    > array("a  b    c     d".split())
+    ["a", "b", "c", "d"]
+    > array("a--b--c--d--e--f".split("--", 3))
+    ["a", "b", "c--d--e--f"]
 
-TODO
+string.prototype.split_lines()
+------------------------------
 
+    string.prototype.split_lines(keep_ends = false)
 
-file.position
--------------
+A generator which produces subsequent lines extracted from a string.
 
-TODO
+Returns an iterator function, which yields strings, which are subsequent
+lines, resulting from splitting the string using EOL characters from
+`lang.eol`.
 
+Two subsequent EOL characters will yield an empty line, except if a CR
+characters is followed by an LF character, in which case they are kept
+together as one line separator.
 
-file.read
----------
+`keep_ends` is a boolean, which indicates whether the EOL characters
+should be kept at the ends of the lines.  It defaults to `false`.
 
-TODO
+Examples:
 
+    > array("line1\nline2\nline3".split_lines())
+    ["line1", "line2", "line3"]
 
-file.read_lines
----------------
+string.prototype.strip()
+------------------------
 
-TODO
+    string.prototype.strip(chars = whitespace)
 
+Removes all leading and trailing whitespace characters from a string.
 
-file.read_some
---------------
+Returns a new string with all whitespace characters removed from
+its beginning and end.
 
-TODO
+`chars` is a string, which specifies the list of characters treated
+as whitespace.  It defaults to `lang.whitespace`.
 
+Example:
 
-file.release
-------------
+    > "  foo  ".strip()
+    "foo"
 
-TODO
+string.prototype.zfill()
+------------------------
 
+    string.prototype.zfill(size, fill = "0")
 
-file.seek
----------
+Zero-fills a string, assuming it contains a number.
 
-TODO
+Returns a new string of the requested size.  If the original string starts
+with a `+` or `-` character, this character remains at the beginning of
+the returned string.
 
+`size` is the length of the returned string.  If `size` is less than
+the length of the current string, the current string is returned
+unmodified.
 
-file.size
----------
+`fill` is a string of length 1 containing the character to add on the left
+side of the string (after the `+` or `-` sign) to achieve the requested
+length.  The function throws an exception if `fill` is not a string or has
+a different length than 1.  `fill` defaults to `"0"`.
 
-TODO
+Examples:
 
+    > "123".zfill(5)
+    "00123"
+    > "+123".zfill(7)
+    "+000123"
+    > "+abc".zfill(6, "-")
+    "+--abc"
 
-file.write
-----------
+stringify()
+-----------
 
-TODO
+    stringify(args...)
 
+Converts values to human-readable string representation.
 
-file.close
-----------
+Returns a new string created from converting all arguments to strings
+and concatenating them.
 
-TODO
+If no arguments are provided, returns an empty string.
 
+String arguments are treated literally without any conversion.
 
-is_file
--------
+Integer, float, boolean and void arguments are converted to their
+string representation, which is the same as in source code.
 
-TODO
+Arrays and objects are converted to a human-readable representation
+similar to their apperance in source code, except all the conversion
+rules apply in the same way to their elements, so for example
+strings are not double-quoted.
 
+TODO describe buffer, function
 
-open
-----
+Example:
 
-TODO
+    > stringify(true, "true", 42, [10, "str"])
+    "truetrue42[10, str]"
 
-
-remove
-------
-
-TODO
-
-
-stderr
-------
-
-TODO
-
-
-stdin
+sum()
 -----
 
-TODO
+    sum(iterable, init = 0)
 
+Sums all elements of an iterable.
 
-stdout
+Performs an addition of all elements of the `iterable` object using the `+=`
+operator.  Elements are retrieved through the `iterator()` function.
+
+`init` is an optional initial value to which all subsequent elements are
+added and defaults to `0`.
+
+The function can also be used with strings, in which case `init` must be
+provided as a string.
+
+Examples:
+
+    > sum([10, 20, 11, 15])
+    56
+    > sum(["Hello", ", ", "World!"], "")
+    "Hello, World!"
+
+thread()
+--------
+
+    thread()
+
+Thread object constructor.
+
+Thread objects are created by calling `function.prototype.async()`.
+
+The purpose of this constructor is to be used with the `instanceof`
+operator to detect thread objects.
+
+Calling this constructor function throws an exception.
+
+The prototype of `thread.prototype` is `object.prototype`.
+
+thread.prototype.wait()
+-----------------------
+
+    thread.prototype.wait()
+
+Waits for thread to complete.
+
+Returns the return value returned from the thread function.
+
+If the thread function ended with an exception, rethrows that exception
+on the current thread.
+
+Example:
+
+    > fun f { return 42 }
+    > const t = f.async()
+    > t.wait()
+    42
+
+void()
 ------
 
-TODO
+    void()
+
+Void type constructor.
+
+Returns `void`.
+
+Because `void` is a keyword, this constructor can only be referenced
+indirectly via the `lang` module, it cannot be referenced if it is
+imported directly into the current module.
+
+The prototype of `void.prototype` is `object.prototype`.
+
+Example:
+
+    > lang.void()
+    void
+
+void.prototype.iterator()
+-------------------------
+
+    void.prototype.iterator()
+
+A generator which does not produce any elements.
+
+Returns an iterator function which always terminates iteration on the
+first call.
+
+whitespace
+----------
+
+    whitespace
+
+A string containing all characters considered as whitespace by some
+functions.
+

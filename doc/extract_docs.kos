@@ -48,7 +48,7 @@ create_docs.prototype.scan_file = fun(filename, f)
     }
     const lexer =
         is_cpp()                   ? kos.raw_lexer(f.read(), true) :
-        filename.ends_with(".kos") ? kos.lexer(f.read()) :
+        filename.ends_with(".kos") ? kos.lexer(filename, f.read()) :
         fun { throw "Unrecognized file type: '\(filename)'" }()
 
     var   prev_line = -1

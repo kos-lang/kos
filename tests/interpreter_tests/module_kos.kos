@@ -133,7 +133,7 @@ do {
 }
 
 do {
-    const lexer = lang.buffer().pack("s", "{([\"\\()\"])}") -> kos.lexer
+    const lexer = kos.lexer("filename", lang.buffer().pack("s", "{([\"\\()\"])}"))
 
     const expected = [ [  1, "token_separator",   "sep_curly_open",   "{"     ],
                        [  2, "token_separator",   "sep_paren_open",   "("     ],
