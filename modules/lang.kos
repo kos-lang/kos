@@ -59,7 +59,6 @@
  *     0
  *     1
  */
-
 fun range(first_arg, args...)
 {
     var start = 0
@@ -123,7 +122,6 @@ fun range(first_arg, args...)
  *     x 10
  *     y -2
  */
-
 object.prototype.iterator = fun
 {
     if typeof this == "object" {
@@ -213,7 +211,7 @@ do {
  *
  *     function.prototype.iterator()
  *
- * Returns the function itself (this).
+ * Returns the function itself (`this`).
  *
  * The `iterator()` function is also implicitly invoked by the `for-in` loop
  * statement.
@@ -238,7 +236,7 @@ function.prototype.iterator = λ->(this)
  *
  * The array is modified in-place.
  *
- * Returns the array itself (this).
+ * Returns the array itself (`this`).
  *
  * `pos` specifies the array index at which elements are to be inserted.
  * If `pos` is negative, it is relative to the array's size.
@@ -283,7 +281,7 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
     }
 
     if typeof iterable == "array" {
-        return this.insert_array(begin, end, iterable)
+        return this["_insert array"](begin, end, iterable)
     }
     else {
         const size = this.size
@@ -321,7 +319,7 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
             }
         }
 
-        return this.insert_array(begin, end, array(iterator))
+        return this["_insert array"](begin, end, array(iterator))
     }
 }
 
@@ -334,7 +332,7 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
  *
  * The buffer is modified in-place.
  *
- * Returns the buffer itself (this).
+ * Returns the buffer itself (`this`).
  *
  * `pos` specifies the buffer index at which elements are to be inserted.
  * If `pos` is negative, it is relative to the buffer's size.

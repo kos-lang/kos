@@ -1167,6 +1167,10 @@ static KOS_OBJ_ID _function_constructor(KOS_FRAME  frame,
  * The purpose of this constructor is to be used with the `instanceof`
  * operator to detect constructor functions.
  *
+ * Because `constructor` is a keyword, this constructor can only be referenced
+ * indirectly via the lang module, it cannot be referenced if it is imported
+ * directly into the current module.
+ *
  * Calling this constructor function throws an exception.
  *
  * The prototype of `constructor.prototype` is `function.prototype`.
@@ -1280,7 +1284,7 @@ static KOS_OBJ_ID _thread_constructor(KOS_FRAME  frame,
 
 /* @item lang function.prototype.apply()
  *
- *     function.prototype.apply(this_object, args)
+ *     function.prototype.apply(this_object, args_array)
  *
  * Invokes a function with the specified this object and arguments.
  *
@@ -1289,7 +1293,7 @@ static KOS_OBJ_ID _thread_constructor(KOS_FRAME  frame,
  * The `this_object` argument is the object which is bound to the function as
  * `this` for this invocation.  It can be any object or `void`.
  *
- * The `args` argument is an array (can be empty) containing arguments for
+ * The `args_array` argument is an array (can be empty) containing arguments for
  * the function.
  *
  * Example:
@@ -1669,7 +1673,7 @@ _error:
  *
  *     array.prototype.size
  *
- * Read-only size of the array.
+ * Read-only size of the array (integer).
  *
  * Example:
  *
@@ -1698,7 +1702,7 @@ static KOS_OBJ_ID _get_array_size(KOS_FRAME  frame,
  *
  *     buffer.prototype.size
  *
- * Read-only size of the buffer.
+ * Read-only size of the buffer (integer).
  *
  * Example:
  *
@@ -1729,7 +1733,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_FRAME  frame,
  *
  * Resizes an array.
  *
- * Returns the array being resized.
+ * Returns the array being resized (`this`).
  *
  * `size` is the new size of the array.
  *
@@ -1749,7 +1753,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_FRAME  frame,
  *
  * Resizes a buffer.
  *
- * Returns the buffer being resized.
+ * Returns the buffer being resized (`this`).
  *
  * `size` is the new size of the buffer.
  *
@@ -1811,7 +1815,7 @@ _error:
  *
  * Fill specified portion of the array with a value.
  *
- * Returns the array object being filled.
+ * Returns the array object being filled (`this`).
  *
  * `value` is the object to fill the array with.
  *
@@ -1839,7 +1843,7 @@ _error:
  *
  * Fill specified portion of the buffer with a value.
  *
- * Returns the buffer object being filled.
+ * Returns the buffer object being filled (`this`).
  *
  * `value` is the byte value to fill the buffer with.  It must be a number from
  * `0` to `255`, inclusive.  Float numbers are rounded using floor mode.
@@ -2448,6 +2452,18 @@ _error:
     return error;
 }
 
+/* @item lang buffer.prototype.pack()
+ *
+ *     buffer.prototype.pack(format, args...)
+ *
+ * Convert parameters to binary form and appends them to a buffer.
+ *
+ * Returns the buffer which has been modified.
+ *
+ * `format` is a string, which describes how values are to be packed.
+ *
+ * TODO - refine format
+ */
 static KOS_OBJ_ID _pack(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -2472,6 +2488,22 @@ static KOS_OBJ_ID _pack(KOS_FRAME  frame,
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item lang buffer.prototype.unpack()
+ *
+ *     buffer.prototype.unpack(pos, format)
+ *     buffer.prototype.unpack(format)
+ *
+ * Unpacks values from their binary form from a buffer.
+ *
+ * Returns an array containing unpacked values.
+ *
+ * `pos` is the position in the buffer at which to start extracting the values.
+ * `pos` defaults to `0`.
+ *
+ * `format` is a string, which describes how values are to be unpacked.
+ *
+ * TODO - refine format
+ */
 static KOS_OBJ_ID _unpack(KOS_FRAME  frame,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
@@ -2528,7 +2560,7 @@ _error:
  *
  * Copies a range of bytes from source buffer to a buffer.
  *
- * Returns the destination buffer being modified.
+ * Returns the destination buffer being modified (`this`).
  *
  * Stops copying once the last byte in the destination buffer is overwritten,
  * the destination buffer is not grown even if more bytes from the source
@@ -2670,6 +2702,30 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item lang array.prototype.reserve()
+ *
+ *     array.prototype.reserve(size)
+ *
+ * Allocate array storage without resizing the array.
+ *
+ * The function has no visible effect, but can be used for optimization
+ * to avoid reallocating array storage when resizing it or continuously
+ * adding more elements.
+ *
+ * Returns the array object itself (`this`).
+ */
+
+/* @item lang buffer.prototype.reserve()
+ *
+ *     buffer.prototype.reserve(size)
+ *
+ * Allocate buffer storage without resizing the buffer.
+ *
+ * The function has no visible effect, but can be used for optimization
+ * to avoid reallocating buffer storage when resizing it.
+ *
+ * Returns the buffer object itself (`this`).
+ */
 static KOS_OBJ_ID _reserve(KOS_FRAME  frame,
                            KOS_OBJ_ID this_obj,
                            KOS_OBJ_ID args_obj)
@@ -2754,6 +2810,27 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item lang array.prototype.pop()
+ *
+ *     array.prototype.pop(num_elements = 1)
+ *
+ * Removes elements from the end of array.
+ *
+ * `num_elements` is the number of elements to remove and it defaults to `1`.
+ *
+ * If `num_elements` is `1`, returns the element removed.
+ * If `num_elements` is `0`, returns `void`.
+ * If `num_elements` is greater than `1`, returns an array
+ * containing the elements removed.
+ *
+ * Throws if the array is empty or if more elements are being removed
+ * than the array already contains.
+ *
+ * Example:
+ *
+ *     > [1, 2, 3, 4, 5].pop()
+ *     5
+ */
 static KOS_OBJ_ID _pop(KOS_FRAME  frame,
                        KOS_OBJ_ID this_obj,
                        KOS_OBJ_ID args_obj)
@@ -2776,7 +2853,10 @@ static KOS_OBJ_ID _pop(KOS_FRAME  frame,
         if (num < 0 || num > INT_MAX)
             RAISE_EXCEPTION(str_err_invalid_array_size);
 
-        ret = KOS_new_array(frame, (unsigned)num);
+        if (num == 0)
+            ret = KOS_VOID;
+        else
+            ret = KOS_new_array(frame, (unsigned)num);
         TRY_OBJID(ret);
 
         for (idx = (int)(num - 1); idx >= 0; idx--) {
@@ -2791,14 +2871,39 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang array.prototype.push()
+ *
+ *     array.prototype.push(values...)
+ *
+ * Appends every value argument to the array.
+ *
+ * Returns the old array size before the first element was inserted.
+ * If one or more elements are specified to insert, the returned value
+ * is equivalent to the index of the first element inserted.
+ *
+ * Example:
+ *
+ *     > [1, 1, 1].push(10, 20)
+ *     3
+ */
 static KOS_OBJ_ID _push(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_ID     ret      = KOS_VOID;
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
     uint32_t       i;
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
+
+    ret = KOS_new_int(frame, (int64_t)KOS_get_array_size(this_obj));
+    TRY_OBJID(ret);
+
+    if (num_args > 1)
+        TRY(KOS_array_reserve(frame, this_obj,
+                    KOS_get_array_size(this_obj) + num_args));
 
     for (i = 0; i < num_args; i++) {
         uint32_t   idx      = ~0U;
@@ -3127,6 +3232,17 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang string.prototype.size
+ *
+ *     string.prototype.size
+ *
+ * Read-only size of the string (integer).
+ *
+ * Example:
+ *
+ *     > "rain\x{2601}".size
+ *     5
+ */
 static KOS_OBJ_ID _get_string_size(KOS_FRAME  frame,
                                    KOS_OBJ_ID this_obj,
                                    KOS_OBJ_ID args_obj)
@@ -3336,10 +3452,10 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(thread);
     TRY_CREATE_CONSTRUCTOR(void);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "insert_array",  _insert_array,      2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "_insert array", _insert_array,      2);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "fill",          _fill,              1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "pop",           _pop,               0);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "push",          _push,              1);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "push",          _push,              0);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "reserve",       _reserve,           1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "resize",        _resize,            1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "slice",         _slice,             2);
