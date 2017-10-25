@@ -2922,6 +2922,24 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang string.prototype.ends_with()
+ *
+ *     string.prototype.ends_with(str)
+ *
+ * Determines if a string ends with `str`.
+ *
+ * `str` is a string which is matched against the end of the current string
+ * (`this`).
+ *
+ * Returns `true` if the current string ends with `str` or `false` otherwise.
+ *
+ * Examples:
+ *
+ *     > "foobar".ends_with("bar")
+ *     true
+ *     > "foobar".ends_with("foo")
+ *     false
+ */
 static KOS_OBJ_ID _ends_with(KOS_FRAME  frame,
                              KOS_OBJ_ID this_obj,
                              KOS_OBJ_ID args_obj)
@@ -2956,6 +2974,23 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang string.prototype.repeat()
+ *
+ *     string.prototype.repeat(num)
+ *
+ * Creates a repeated string.
+ *
+ * `num` is a non-negative number of times to repeat the string.
+ *
+ * If `num` is a float, it is converted to integer using floor mode.
+ *
+ * Examples:
+ *
+ *     > "-".repeat(10)
+ *     "----------"
+ *     > "foo".repeat(5)
+ *     "foofoofoofoofoo"
+ */
 static KOS_OBJ_ID _repeat(KOS_FRAME  frame,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
@@ -3198,6 +3233,24 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang string.prototype.starts_with()
+ *
+ *     string.prototype.starts_with(str)
+ *
+ * Determines if a string begins with `str`.
+ *
+ * `str` is a string which is matched against the beginning of the current
+ * string (`this`).
+ *
+ * Returns `true` if the current string begins with `str` or `false` otherwise.
+ *
+ * Examples:
+ *
+ *     > "foobar".starts_with("foo")
+ *     true
+ *     > "foobar".starts_with("bar")
+ *     false
+ */
 static KOS_OBJ_ID _starts_with(KOS_FRAME  frame,
                                KOS_OBJ_ID this_obj,
                                KOS_OBJ_ID args_obj)
