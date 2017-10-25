@@ -634,7 +634,9 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
                 new_len = (unsigned)new_len_64;
             }
 
-            if (new_len) {
+            if (new_len == len)
+                new_str = OBJPTR(STRING, obj_id);
+            else if (new_len) {
                 buf = (const uint8_t *)_KOS_get_string_buffer(str) + (begin << elem_size);
 
                 if (str->flags == KOS_STRING_LOCAL || (new_len << elem_size) <= sizeof(str->data)) {
@@ -1341,6 +1343,9 @@ KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
 
     if (len == 0 || num_repeat == 0)
         return KOS_context_from_frame(frame)->empty_string;
+
+    if (num_repeat == 1)
+        return obj_id;
 
     if (num_repeat > 0xFFFFU || (len * num_repeat) > 0xFFFFU) {
         KOS_raise_exception_cstring(frame, str_err_too_many_repeats);
