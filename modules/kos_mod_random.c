@@ -51,6 +51,37 @@ static void _finalize(KOS_FRAME frame,
         _KOS_free_buffer(frame, priv, sizeof(struct _KOS_RNG_CONTAINER));
 }
 
+/* @item random random()
+ *
+ *     random([seed])
+ *
+ * Constructor for pseudo-random number generators.
+ *
+ * Returns a new pseudo-random generator object.
+ *
+ * If the optional argument `seed` is not specified, the random number
+ * generator is initialized from a system-specific entropy source.  For example,
+ * on Windows CryptGenRandom() is used, otherwise `/dev/urandom` is used if
+ * it is available.
+ *
+ * If `seed` is specified, it is used as seed for the pseudo-random number
+ * generator.  `seed` is either an integer or a float.  If `seed` is a float,
+ * it is converted to an integer using floor method.
+ *
+ * The underlying pseudo-random generator initialized by this constructor
+ * uses PCG XSH RR 32 algorithm.
+ *
+ * The quality of pseudo-random numbers produced by this generator is sufficient
+ * for most purposes, but it is not recommended for cryptographic applications.
+ *
+ * Example:
+ *
+ *     > const r = random.random(42)
+ *     > r.integer()
+ *     -6031299347323205752
+ *     > r.integer()
+ *     -474045495260715754
+ */
 static KOS_OBJ_ID _random(KOS_FRAME  frame,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
@@ -128,6 +159,30 @@ _error:
     return error;
 }
 
+/* @item random random.prototype.integer()
+ *
+ *     random.prototype.integer()
+ *     random.prototype.integer(min, max)
+ *
+ * Generates a pseudo-random integer with uniform distribution.
+ *
+ * Returns a random integer.
+ *
+ * The first variant generates any integer number.
+ *
+ * The second variant generates an integer between the chosen `min` and `max`
+ * values.  The `min` and `max` values are included in the possible range.
+ *
+ * Examples:
+ *
+ *     > const r = random.random(100)
+ *     > r.integer()
+ *     -5490786365174251167
+ *     > r.integer(0, 1)
+ *     0
+ *     > r.integer(-10, 10)
+ *     -2
+ */
 static KOS_OBJ_ID _rand_integer(KOS_FRAME  frame,
                                 KOS_OBJ_ID this_obj,
                                 KOS_OBJ_ID args_obj)
@@ -179,12 +234,28 @@ _error:
     return error ? KOS_BADPTR : KOS_new_int(frame, value);
 }
 
+/* @item random random.prototype.float()
+ *
+ *     random.prototype.float()
+ *
+ * Generates a pseudo-random float with uniform distribution from 0.0
+ * (inclusive) to 1.0 (exclusive).
+ *
+ * Returns a float in the range from 0.0 to 1.0, where 0.0 can be possibly
+ * produced and 1.0 is never produced.
+ *
+ * Example:
+ *
+ *     > const r = random.random(42)
+ *     > r.float()
+ *     0.782519239019594
+ */
 static KOS_OBJ_ID _rand_float(KOS_FRAME  frame,
                               KOS_OBJ_ID this_obj,
                               KOS_OBJ_ID args_obj)
 {
-    struct _KOS_RNG_CONTAINER *rng       = 0;
-    int                        error     = KOS_SUCCESS;
+    struct _KOS_RNG_CONTAINER *rng   = 0;
+    int                        error = KOS_SUCCESS;
     union _KOS_NUMERIC_VALUE   value;
 
     value.i = 0;
