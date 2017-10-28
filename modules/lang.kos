@@ -281,7 +281,7 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
     }
 
     if typeof iterable == "array" {
-        return this["_insert array"](begin, end, iterable)
+        return this["insert_array"](begin, end, iterable)
     }
     else {
         const size = this.size
@@ -319,7 +319,7 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
             }
         }
 
-        return this["_insert array"](begin, end, array(iterator))
+        return this["insert_array"](begin, end, array(iterator))
     }
 }
 

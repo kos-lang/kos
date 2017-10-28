@@ -447,13 +447,13 @@ static KOS_OBJ_ID _integer_constructor(KOS_FRAME  frame,
 
 /* @item lang float()
  *
- *     float(value = 0)
+ *     float(value = 0.0)
  *
  * Float type constructor.
  *
  * The optional `value` argument can be an integer, a float or a string.
  *
- * If `value` is not provided, returns 0.
+ * If `value` is not provided, returns `0.0`.
  *
  * If `value` is an integer, converts it to a float and returns the converted value.
  *
@@ -640,8 +640,10 @@ static KOS_OBJ_ID _void_constructor(KOS_FRAME  frame,
  *
  * The prototype of `string.prototype` is `object.prototype`.
  *
- * Example:
+ * Examples:
  *
+ *     > string(10.1)
+ *     "10.1"
  *     > string("kos", [108, 97, 110, 103], 32)
  *     "koslang32"
  */
@@ -2756,6 +2758,19 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item lang array.prototype.insert_array()
+ *
+ *     array.prototype.insert_array(pos, array)
+ *     array.prototype.insert_array(begin, end, array)
+ *
+ * Inserts elements from one array into `this` array, possibly replacing
+ * existing elements.
+ *
+ * This function is identical in behavior to `array.prototype.insert()`.  In
+ * most circumstances `array.prototype.insert()` is recommended instead.
+ * `array.prototype.insert_array()` requires the iterable argument to be
+ * an array.
+ */
 static KOS_OBJ_ID _insert_array(KOS_FRAME  frame,
                                 KOS_OBJ_ID this_obj,
                                 KOS_OBJ_ID args_obj)
@@ -3019,6 +3034,31 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang string.prototype.find()
+ *
+ *     string.prototype.find(substr, pos = 0)
+ *
+ * Searches for a substring in a string from left to right.
+ *
+ * Returns index of the first substring found or `-1` if the substring was not
+ * found.
+ *
+ * `substr` is the substring to search for.  The search is case sensitive and
+ * an exact match must be found.
+ *
+ * `pos` is the index in the string at which to begin the search.  It defaults
+ * to `0`.  If it is a float, it is converted to integer using floor mode.
+ * If it is negative, it is an offset from the end of the string.
+ *
+ * Examples:
+ *
+ *     > "kos".find("foo")
+ *     -1
+ *     > "language".find("gu")
+ *     3
+ *     > "language".find("g", -3)
+ *     6
+ */
 static KOS_OBJ_ID _find(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -3051,6 +3091,33 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
+/* @item lang string.prototype.rfind()
+ *
+ *     string.prototype.rfind(substr, pos = -1)
+ *
+ * Performs a reverse search for a substring in a string, i.e. from right to
+ * left.
+ *
+ * Returns index of the first substring found or `-1` if the substring was not
+ * found.
+ *
+ * `substr` is the substring to search for.  The search is case sensitive and
+ * an exact match must be found.
+ *
+ * `pos` is the index in the string at which to begin the search.  It defaults
+ * to `-1`, which means the search by default starts from the last character of
+ * the string.  If `pos` is a float, it is converted to integer using floor
+ * mode.  If it is negative, it is an offset from the end of the string.
+ *
+ * Examples:
+ *
+ *     > "kos".rfind("foo")
+ *     -1
+ *     > "language".rfind("a")
+ *     5
+ *     > "language".find("a", 4)
+ *     1
+ */
 static KOS_OBJ_ID _rfind(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -3203,6 +3270,26 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
+/* @item lang string.prototype.ord()
+ *
+ *     string.prototype.ord(pos = 0)
+ *
+ * Returns code point of a character at a given position in a string.
+ *
+ * `pos` is the position of the character for which the code point is returned.
+ * `pos` defaults to `0`.  If `pos` is a float, it is converted to integer
+ * using floor method.  If `pos` is negative, it is an offset from the end of
+ * the string.
+ *
+ * Examples:
+ *
+ *     > "a".ord()
+ *     97
+ *     > "kos".ord(2)
+ *     115
+ *     > "language".ord(-2)
+ *     103
+ */
 static KOS_OBJ_ID _ord(KOS_FRAME  frame,
                        KOS_OBJ_ID this_obj,
                        KOS_OBJ_ID args_obj)
@@ -3312,6 +3399,17 @@ static KOS_OBJ_ID _get_string_size(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang string.prototype.reverse()
+ *
+ *     string.prototype.reverse()
+ *
+ * Returns a reversed string.
+ *
+ * Example:
+ *
+ *     > "kos".reverse()
+ *     "sok"
+ */
 static KOS_OBJ_ID _reverse(KOS_FRAME  frame,
                            KOS_OBJ_ID this_obj,
                            KOS_OBJ_ID args_obj)
@@ -3505,7 +3603,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(thread);
     TRY_CREATE_CONSTRUCTOR(void);
 
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "_insert array", _insert_array,      2);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "insert_array",  _insert_array,      2);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "fill",          _fill,              1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "pop",           _pop,               0);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(array),      "push",          _push,              0);
