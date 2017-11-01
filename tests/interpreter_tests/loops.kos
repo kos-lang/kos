@@ -20,6 +20,7 @@
 # IN THE SOFTWARE.
 #
 import lang.print
+import lang.generator_end
 
 do {
     var a = 1
@@ -715,4 +716,20 @@ do {
         x = 2
     }
     assert x == 1
+}
+
+# custom iterator() function
+do {
+    const obj = {
+        iterator: fun {
+            yield 2
+            yield 10
+        }
+    }
+
+    var total = 0
+    for const v in obj {
+        total += v
+    }
+    assert total == 12
 }
