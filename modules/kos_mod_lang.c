@@ -275,6 +275,7 @@ static int _create_constructor(KOS_FRAME            frame,
 
     OBJPTR(FUNCTION, func_obj)->handler = constructor;
     OBJPTR(FUNCTION, func_obj)->module  = frame->module;
+    OBJPTR(FUNCTION, func_obj)->state   = (uint8_t)KOS_CTOR;
 
     TRY(KOS_module_add_global(frame,
                               str_name,
@@ -3160,6 +3161,37 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
+/* @item lang string.prototype.scan()
+ *
+ *     string.prototype.scan(chars, inclusive)
+ *     string.prototype.scan(chars, pos = 0, inclusive = true)
+ *
+ * Scans the string for any matching characters from left to right.
+ *
+ * Returns the position of the first matching character found or `-1` if no
+ * matching characters were found.
+ *
+ * `chars` is a string containing zero or more characters to be matched.
+ * The search starts at position `pos` and stops as soon as any character
+ * from `chars` is found.
+ *
+ * `pos` is the index in the string at which to begin the search.  It defaults
+ * to `0`.  If it is a float, it is converted to integer using floor mode.
+ * If it is negative, it is an offset from the end of the string.
+ *
+ * If `inclusive` is `true` (the default), characters in `chars` are sought.
+ * If `inclusive` is `false`, then the search stops as soon as any character
+ * *not* in `chars` is found.
+ *
+ * Examples:
+ *
+ *     > "kos".scan("")
+ *     0
+ *     > "kos".scan("s")
+ *     2
+ *     > "language".scan("uga", -5, false)
+ *     7
+ */
 static KOS_OBJ_ID _scan(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -3210,6 +3242,37 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
+/* @item lang string.prototype.rscan()
+ *
+ *     string.prototype.scan(chars, inclusive)
+ *     string.prototype.scan(chars, pos = 0, inclusive = true)
+ *
+ * Scans the string for any matching characters in reverse direction, i.e. from
+ * right to left.
+ *
+ * Returns the position of the first matching character found or `-1` if no
+ * matching characters were found.
+ *
+ * `chars` is a string containing zero or more characters to be matched.
+ * The search starts at position `pos` and stops as soon as any character
+ * from `chars` is found.
+ *
+ * `pos` is the index in the string at which to begin the search.  It defaults
+ * to `-1`, which means the search by default starts from the last character of
+ * the string.  If `pos` is a float, it is converted to integer using floor
+ * mode.  If it is negative, it is an offset from the end of the string.
+ *
+ * If `inclusive` is `true` (the default), characters in `chars` are sought.
+ * If `inclusive` is `false`, then the search stops as soon as any character
+ * *not* in `chars` is found.
+ *
+ * Examples:
+ *
+ *     > "language".rscan("g")
+ *     6
+ *     > "language".rscan("uga", -2, false)
+ *     2
+ */
 static KOS_OBJ_ID _rscan(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -3417,6 +3480,17 @@ static KOS_OBJ_ID _reverse(KOS_FRAME  frame,
     return KOS_string_reverse(frame, this_obj);
 }
 
+/* @item lang function.prototype.name
+ *
+ *     function.prototype.name
+ *
+ * Read-only function name.
+ *
+ * Example:
+ *
+ *     > count.name
+ *     "count"
+ */
 static KOS_OBJ_ID _get_function_name(KOS_FRAME  frame,
                                      KOS_OBJ_ID this_obj,
                                      KOS_OBJ_ID args_obj)
@@ -3442,6 +3516,19 @@ static KOS_OBJ_ID _get_function_name(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang function.prototype.instructions
+ *
+ *     function.prototype.instructions
+ *
+ * Read-only number of bytecode instructions generated for this function.
+ *
+ * Zero, if this is a built-in function.
+ *
+ * Example:
+ *
+ *     > count.instructions
+ *     26
+ */
 static KOS_OBJ_ID _get_instructions(KOS_FRAME  frame,
                                     KOS_OBJ_ID this_obj,
                                     KOS_OBJ_ID args_obj)
@@ -3467,6 +3554,19 @@ static KOS_OBJ_ID _get_instructions(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang function.prototype.size
+ *
+ *     function.prototype.size
+ *
+ * Read-only size of bytecode generated for this function, in bytes.
+ *
+ * Zero, if this is a built-in function.
+ *
+ * Example:
+ *
+ *     > count.size
+ *     133
+ */
 static KOS_OBJ_ID _get_code_size(KOS_FRAME  frame,
                                  KOS_OBJ_ID this_obj,
                                  KOS_OBJ_ID args_obj)
@@ -3492,6 +3592,12 @@ static KOS_OBJ_ID _get_code_size(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang constructor.prototype.prototype
+ *
+ *     constructor.prototype.prototype
+ *
+ * Read-only prototype used by the constructor function.
+ */
 static KOS_OBJ_ID _get_prototype(KOS_FRAME  frame,
                                  KOS_OBJ_ID this_obj,
                                  KOS_OBJ_ID args_obj)
@@ -3621,6 +3727,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "unpack",        _unpack,            1);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(buffer),     "size",          _get_buffer_size,   0);
 
+    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(constructor),"prototype",     _get_prototype,     0);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(constructor),"set_prototype", _set_prototype,     1);
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(exception),  "print",         _print_exception,   0);
@@ -3629,7 +3736,6 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(function),   "async",         _async,             0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "instructions",  _get_instructions,  0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "name",          _get_function_name, 0);
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "prototype",     _get_prototype,     0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "registers",     _get_registers,     0);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(function),   "size",          _get_code_size,     0);
 

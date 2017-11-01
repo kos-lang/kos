@@ -41,6 +41,8 @@ fun expect_fail(function)
 do {
     assert typeof lang.number           == "function"
     assert typeof lang.number.prototype == "object"
+    assert lang.number instanceof lang.function
+    assert lang.number instanceof lang.constructor
 }
 
 do {
@@ -128,6 +130,8 @@ do {
 do {
     assert typeof lang.integer           == "function"
     assert typeof lang.integer.prototype == "object"
+    assert lang.integer instanceof lang.function
+    assert lang.integer instanceof lang.constructor
 }
 
 do {
@@ -237,6 +241,8 @@ do {
 do {
     assert typeof lang.float           == "function"
     assert typeof lang.float.prototype == "object"
+    assert lang.float instanceof lang.function
+    assert lang.float instanceof lang.constructor
 }
 
 do {
@@ -338,6 +344,8 @@ do {
 do {
     assert typeof lang.void           == "function"
     assert typeof lang.void.prototype == "object"
+    assert lang.void instanceof lang.function
+    assert lang.void instanceof lang.constructor
 }
 
 do {
@@ -380,6 +388,8 @@ do {
 do {
     assert typeof lang.boolean           == "function"
     assert typeof lang.boolean.prototype == "object"
+    assert lang.boolean instanceof lang.function
+    assert lang.boolean instanceof lang.constructor
 }
 
 do {
@@ -423,6 +433,8 @@ do {
 do {
     assert typeof lang.string           == "function"
     assert typeof lang.string.prototype == "object"
+    assert lang.string instanceof lang.function
+    assert lang.string instanceof lang.constructor
 }
 
 do {
@@ -507,6 +519,8 @@ do {
 do {
     assert typeof lang.object           == "function"
     assert typeof lang.object.prototype == "object"
+    assert lang.object instanceof lang.function
+    assert lang.object instanceof lang.constructor
 }
 
 do {
@@ -603,6 +617,8 @@ do {
 do {
     assert typeof lang.array           == "function"
     assert typeof lang.array.prototype == "object"
+    assert lang.array instanceof lang.function
+    assert lang.array instanceof lang.constructor
 }
 
 do {
@@ -1152,6 +1168,61 @@ do {
 # lang.function
 
 do {
+    assert lang.function instanceof lang.function
+    assert lang.function instanceof lang.constructor
+    assert ! (lang.function instanceof lang.generator)
+
+    assert lang.constructor instanceof lang.function
+    assert lang.constructor instanceof lang.constructor
+    assert ! (lang.constructor instanceof lang.generator)
+
+    assert lang.generator instanceof lang.function
+    assert lang.generator instanceof lang.constructor
+    assert ! (lang.generator instanceof lang.generator)
+
+    fun regular_func
+    {
+    }
+
+    assert regular_func instanceof lang.function
+    assert ! (regular_func instanceof lang.constructor)
+    assert ! (regular_func instanceof lang.generator)
+
+    fun generator_func
+    {
+        yield void
+    }
+
+    assert generator_func instanceof lang.function
+    assert ! (generator_func instanceof lang.constructor)
+    assert generator_func instanceof lang.generator
+
+    constructor constructor_func
+    {
+    }
+
+    assert constructor_func instanceof lang.function
+    assert constructor_func instanceof lang.constructor
+    assert ! (constructor_func instanceof lang.generator)
+
+    assert ! ("prototype" in regular_func)
+    assert ! ("prototype" in generator_func)
+    assert "prototype" in constructor_func
+
+    assert typeof constructor_func.prototype == "object"
+    expect_fail(λ->(regular_func.prototype))
+    expect_fail(λ->(generator_func.prototype))
+
+    assert ! ("set_prototype" in regular_func)
+    assert ! ("set_prototype" in generator_func)
+    assert "set_prototype" in constructor_func
+
+    assert typeof constructor_func.set_prototype == "function"
+    expect_fail(λ->(regular_func.set_prototype))
+    expect_fail(λ->(generator_func.set_prototype))
+}
+
+do {
     const f = λ->(void)
     assert f instanceof lang.function
     assert f instanceof lang.object
@@ -1373,6 +1444,8 @@ do {
 
 do {
     assert typeof lang.exception == "function"
+    assert lang.exception instanceof lang.function
+    assert lang.exception instanceof lang.constructor
 }
 
 do {
@@ -1430,6 +1503,9 @@ do {
     assert ! (value instanceof lang.void)
     assert ! (value instanceof lang.string)
     assert ! (value instanceof lang.array)
+
+    assert lang.buffer instanceof lang.function
+    assert lang.buffer instanceof lang.constructor
 }
 
 ##############################################################################

@@ -701,7 +701,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
             /* fall through */
         default:
             assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION);
-            /* TODO */
+            /* TODO for iterators, iterate and print function signature otherwise */
             if (cstr_vec)
                 error = _vector_append_cstr(frame, cstr_vec, "<function>", 10);
             else
