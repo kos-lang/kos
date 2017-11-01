@@ -1621,6 +1621,37 @@ fun sort(iterable, compare = λ(x, y) -> (x < y))
     return a.sort(compare).iterator()
 }
 
+/* @item lang print_elements()
+ *
+ *     print_elements(iterable)
+ *
+ * Prints all elements from an iterable object on stdout.
+ *
+ * Elements are extracted from `iterable` object through its `iterator()`
+ * function, then printed using `lang.print_()` function.
+ *
+ * Examples:
+ *
+ *     > print_elements("kos")
+ *     k, o, s
+ *     > range(5) -> print_elements
+ *     0, 1, 2, 3, 4
+ */
+fun print_elements(iterable)
+{
+    var first = true
+    for const elem in iterable {
+        if first {
+            first = false
+        }
+        else {
+            print_(", ")
+        }
+        print_(elem)
+    }
+    print_("\n")
+}
+
 # TODO move to debug module
 /* @item lang backtrace()
  *

@@ -22,6 +22,7 @@
 
 import lang.print
 import lang.print_
+import lang.print_elements
 import lang.buffer
 
 do {
@@ -45,3 +46,7 @@ print_(void, true, false, "abc", -10, "\n")
 print()
 
 print("xyz", "", false, void, true, 0x1000, 1.2, ["a", 1], buffer([255, 0]))
+
+print_elements("kos")
+
+fun { yield 2; yield 3 ; yield 5 } () -> print_elements

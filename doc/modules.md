@@ -1431,6 +1431,23 @@ Printed values are separated with a single space.
 
 Unlike `print()`, does not print an EOL character after finishing printing.
 
+print_elements()
+----------------
+
+    print_elements(iterable)
+
+Prints all elements from an iterable object on stdout.
+
+Elements are extracted from `iterable` object through its `iterator()`
+function, then printed using `lang.print_()` function.
+
+Examples:
+
+    > print_elements("kos")
+    k, o, s
+    > range(5) -> print_elements
+    0, 1, 2, 3, 4
+
 range()
 -------
 

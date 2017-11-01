@@ -1,6 +1,8 @@
 Exception: raised
-  #0  0x193 in 'thrower' in module_lang_print.kos:30
-  #1  0x44 in '<global>' in module_lang_print.kos:34
+  #0  0x1EA in 'thrower' in module_lang_print.kos:31
+  #1  0x54 in '<global>' in module_lang_print.kos:35
 void true false abc -10 
 
 xyz  false void true 4096 1.2 [a, 1] <ff 00>
+k, o, s
+2, 3, 5
