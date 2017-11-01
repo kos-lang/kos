@@ -205,6 +205,20 @@ Examples:
     > [1, 2, 3, 4].insert(0, 3, [])
     [4]
 
+array.prototype.insert_array()
+------------------------------
+
+    array.prototype.insert_array(pos, array)
+    array.prototype.insert_array(begin, end, array)
+
+Inserts elements from one array into `this` array, possibly replacing
+existing elements.
+
+This function is identical in behavior to `array.prototype.insert()`.  In
+most circumstances `array.prototype.insert()` is recommended instead.
+`array.prototype.insert_array()` requires the iterable argument to be
+an array.
+
 array.prototype.iterator()
 --------------------------
 
@@ -715,6 +729,29 @@ Calling this constructor function throws an exception.
 
 The prototype of `constructor.prototype` is `function.prototype`.
 
+constructor.prototype.prototype
+-------------------------------
+
+    constructor.prototype.prototype
+
+Read-only prototype used by the constructor function.
+
+constructor.prototype.set_prototype()
+-------------------------------------
+
+    constructor.prototype.set_prototype(object)
+
+Sets prototype for the constructor function.
+
+Returns the construction function itself.
+
+`object` is the object which becomes the prototype used by the
+constructor function.  That object becomes the prototype of all objects
+created by the constructor function.
+
+The prototype can be retrieved using `constructor.prototype.prototype`
+property.
+
 count()
 -------
 
@@ -791,6 +828,13 @@ If `value` is not specified, `void` is thrown.
 
 The prototype of `exception.prototype` is `object.prototype`.
 
+exception.prototype.print()
+---------------------------
+
+    exception.prototype.print()
+
+Prints the exception object on stdout.
+
 filter()
 --------
 
@@ -847,13 +891,13 @@ Examples:
 float()
 -------
 
-    float(value = 0)
+    float(value = 0.0)
 
 Float type constructor.
 
 The optional `value` argument can be an integer, a float or a string.
 
-If `value` is not provided, returns 0.
+If `value` is not provided, returns `0.0`.
 
 If `value` is an integer, converts it to a float and returns the converted value.
 
@@ -929,6 +973,20 @@ Example:
     > t.wait()
     3
 
+function.prototype.instructions
+-------------------------------
+
+    function.prototype.instructions
+
+Read-only number of bytecode instructions generated for this function.
+
+Zero, if this is a built-in function.
+
+Example:
+
+    > count.instructions
+    26
+
 function.prototype.iterator()
 -----------------------------
 
@@ -947,6 +1005,46 @@ Examples:
     > for const x in range(2) { print(x) }
     0
     1
+
+function.prototype.name
+-----------------------
+
+    function.prototype.name
+
+Read-only function name.
+
+Example:
+
+    > count.name
+    "count"
+
+function.prototype.registers
+----------------------------
+
+    function.prototype.registers
+
+Read-only number of registers used by the function.
+
+Zero, if this is a built-in function.
+
+Example:
+
+    > count.registers
+    5
+
+function.prototype.size
+-----------------------
+
+    function.prototype.size
+
+Read-only size of bytecode generated for this function, in bytes.
+
+Zero, if this is a built-in function.
+
+Example:
+
+    > count.size
+    133
 
 generator()
 -----------
@@ -1479,10 +1577,57 @@ an exception.
 
 The prototype of `string.prototype` is `object.prototype`.
 
-Example:
+Examples:
 
+    > string(10.1)
+    "10.1"
     > string("kos", [108, 97, 110, 103], 32)
     "koslang32"
+
+string.prototype.ends_with()
+----------------------------
+
+    string.prototype.ends_with(str)
+
+Determines if a string ends with `str`.
+
+`str` is a string which is matched against the end of the current string
+(`this`).
+
+Returns `true` if the current string ends with `str` or `false` otherwise.
+
+Examples:
+
+    > "foobar".ends_with("bar")
+    true
+    > "foobar".ends_with("foo")
+    false
+
+string.prototype.find()
+-----------------------
+
+    string.prototype.find(substr, pos = 0)
+
+Searches for a substring in a string from left to right.
+
+Returns index of the first substring found or `-1` if the substring was not
+found.
+
+`substr` is the substring to search for.  The search is case sensitive and
+an exact match must be found.
+
+`pos` is the index in the string at which to begin the search.  It defaults
+to `0`.  If it is a float, it is converted to integer using floor mode.
+If it is negative, it is an offset from the end of the string.
+
+Examples:
+
+    > "kos".find("foo")
+    -1
+    > "language".find("gu")
+    3
+    > "language".find("g", -3)
+    6
 
 string.prototype.indices()
 --------------------------
@@ -1568,6 +1713,85 @@ Example:
 
     > "  foo  ".lstrip()
     "foo  "
+
+string.prototype.ord()
+----------------------
+
+    string.prototype.ord(pos = 0)
+
+Returns code point of a character at a given position in a string.
+
+`pos` is the position of the character for which the code point is returned.
+`pos` defaults to `0`.  If `pos` is a float, it is converted to integer
+using floor method.  If `pos` is negative, it is an offset from the end of
+the string.
+
+Examples:
+
+    > "a".ord()
+    97
+    > "kos".ord(2)
+    115
+    > "language".ord(-2)
+    103
+
+string.prototype.repeat()
+-------------------------
+
+    string.prototype.repeat(num)
+
+Creates a repeated string.
+
+`num` is a non-negative number of times to repeat the string.
+
+If `num` is a float, it is converted to integer using floor mode.
+
+Examples:
+
+    > "-".repeat(10)
+    "----------"
+    > "foo".repeat(5)
+    "foofoofoofoofoo"
+
+string.prototype.reverse()
+--------------------------
+
+    string.prototype.reverse()
+
+Returns a reversed string.
+
+Example:
+
+    > "kos".reverse()
+    "sok"
+
+string.prototype.rfind()
+------------------------
+
+    string.prototype.rfind(substr, pos = -1)
+
+Performs a reverse search for a substring in a string, i.e. from right to
+left.
+
+Returns index of the first substring found or `-1` if the substring was not
+found.
+
+`substr` is the substring to search for.  The search is case sensitive and
+an exact match must be found.
+
+`pos` is the index in the string at which to begin the search.  It defaults
+to `-1`, which means the search by default starts from the last character of
+the string.  If `pos` is a float, it is converted to integer using floor
+mode.  If it is negative, it is an offset from the end of the string.
+
+Examples:
+
+    > "kos".rfind("foo")
+    -1
+    > "language".rfind("a")
+    5
+    > "language".find("a", 4)
+    1
 
 string.prototype.rjust()
 ------------------------
@@ -1706,6 +1930,25 @@ Examples:
 
     > array("line1\nline2\nline3".split_lines())
     ["line1", "line2", "line3"]
+
+string.prototype.starts_with()
+------------------------------
+
+    string.prototype.starts_with(str)
+
+Determines if a string begins with `str`.
+
+`str` is a string which is matched against the beginning of the current
+string (`this`).
+
+Returns `true` if the current string begins with `str` or `false` otherwise.
+
+Examples:
+
+    > "foobar".starts_with("foo")
+    true
+    > "foobar".starts_with("bar")
+    false
 
 string.prototype.strip()
 ------------------------
@@ -1878,4 +2121,119 @@ whitespace
 
 A string containing all characters considered as whitespace by some
 functions.
+
+random
+======
+
+rand_float()
+------------
+
+    rand_float()
+
+Generates a pseudo-random float with uniform distribution from 0.0
+(inclusive) to 1.0 (exclusive).
+
+Returns a float in the range from 0.0 to 1.0, where 0.0 can be possibly
+produced and 1.0 is never produced.
+
+Example:
+
+    > random.rand_float()
+    0.05080192760294
+
+rand_integer()
+--------------
+
+    rand_integer()
+    rand_integer(min, max)
+
+Generates a pseudo-random integer with uniform distribution.
+
+Returns a random integer.
+
+The first variant generates any integer number.
+
+The second variant generates an integer between the chosen `min` and `max`
+values.  The `min` and `max` values are included in the possible range.
+
+Examples:
+
+    > random.rand_integer()
+    -3655836363997440814
+    > random.rand_integer(-100, 100)
+    42
+
+random()
+--------
+
+    random([seed])
+
+Constructor for pseudo-random number generators.
+
+Returns a new pseudo-random generator object.
+
+If the optional argument `seed` is not specified, the random number
+generator is initialized from a system-specific entropy source.  For example,
+on Windows CryptGenRandom() is used, otherwise `/dev/urandom` is used if
+it is available.
+
+If `seed` is specified, it is used as seed for the pseudo-random number
+generator.  `seed` is either an integer or a float.  If `seed` is a float,
+it is converted to an integer using floor method.
+
+The underlying pseudo-random generator initialized by this constructor
+uses PCG XSH RR 32 algorithm.
+
+The quality of pseudo-random numbers produced by this generator is sufficient
+for most purposes, but it is not recommended for cryptographic applications.
+
+Example:
+
+    > const r = random.random(42)
+    > r.integer()
+    -6031299347323205752
+    > r.integer()
+    -474045495260715754
+
+random.prototype.float()
+------------------------
+
+    random.prototype.float()
+
+Generates a pseudo-random float with uniform distribution from 0.0
+(inclusive) to 1.0 (exclusive).
+
+Returns a float in the range from 0.0 to 1.0, where 0.0 can be possibly
+produced and 1.0 is never produced.
+
+Example:
+
+    > const r = random.random(42)
+    > r.float()
+    0.782519239019594
+
+random.prototype.integer()
+--------------------------
+
+    random.prototype.integer()
+    random.prototype.integer(min, max)
+
+Generates a pseudo-random integer with uniform distribution.
+
+Returns a random integer.
+
+The first variant generates any integer number.
+
+The second variant generates an integer between the chosen `min` and `max`
+values.  The `min` and `max` values are included in the possible range.
+
+Examples:
+
+    > const r = random.random(100)
+    > r.integer()
+    -5490786365174251167
+    > r.integer(0, 1)
+    0
+    > r.integer(-10, 10)
+    -2
 

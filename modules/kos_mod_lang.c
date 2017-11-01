@@ -1488,6 +1488,21 @@ static KOS_OBJ_ID _wait(KOS_FRAME  frame,
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item lang constructor.prototype.set_prototype()
+ *
+ *     constructor.prototype.set_prototype(object)
+ *
+ * Sets prototype for the constructor function.
+ *
+ * Returns the construction function itself.
+ *
+ * `object` is the object which becomes the prototype used by the
+ * constructor function.  That object becomes the prototype of all objects
+ * created by the constructor function.
+ *
+ * The prototype can be retrieved using `constructor.prototype.prototype`
+ * property.
+ */
 static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
                                  KOS_OBJ_ID this_obj,
                                  KOS_OBJ_ID args_obj)
@@ -1501,11 +1516,7 @@ static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
         KOS_OBJ_ID                 arg     = KOS_array_read(frame, args_obj, 0);
         const KOS_FUNCTION_HANDLER handler = OBJPTR(FUNCTION, this_obj)->handler;
 
-        /* TODO:
-         * - Forbid non-constructor functions?
-         * - Create a separate built-in constructor for constructor functions?
-         * - Forbid for all built-in functions?
-         */
+        /* TODO Forbid for all built-in functions? */
         if (handler == _array_constructor         ||
             handler == _boolean_constructor       ||
             handler == _buffer_constructor        ||
@@ -3620,6 +3631,19 @@ static KOS_OBJ_ID _get_prototype(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang function.prototype.registers
+ *
+ *     function.prototype.registers
+ *
+ * Read-only number of registers used by the function.
+ *
+ * Zero, if this is a built-in function.
+ *
+ * Example:
+ *
+ *     > count.registers
+ *     5
+ */
 static KOS_OBJ_ID _get_registers(KOS_FRAME  frame,
                                  KOS_OBJ_ID this_obj,
                                  KOS_OBJ_ID args_obj)
@@ -3640,6 +3664,12 @@ static KOS_OBJ_ID _get_registers(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item lang exception.prototype.print()
+ *
+ *     exception.prototype.print()
+ *
+ * Prints the exception object on stdout.
+ */
 static KOS_OBJ_ID _print_exception(KOS_FRAME  frame,
                                    KOS_OBJ_ID this_obj,
                                    KOS_OBJ_ID args_obj)
