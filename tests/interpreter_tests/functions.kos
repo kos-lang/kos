@@ -1330,3 +1330,24 @@ do {
 
     expect_fail(λ->(g.set_prototype({})))
 }
+
+# dynamic prototype
+do {
+    const proto1 = { x: 1 }
+    const proto2 = { y: 2 }
+
+    fun obj_with_proto(proto)
+    {
+        constructor ctor
+        {
+        }
+        ctor.set_prototype(proto)
+        return ctor()
+    }
+
+    const o1 = obj_with_proto(proto1)
+    const o2 = obj_with_proto(proto2)
+
+    assert o1.x == 1
+    assert o2.y == 2
+}
