@@ -62,72 +62,72 @@ Examples
 This program prints "Hello, World!":
 
     #!/usr/bin/env kos
-    import lang.print;
+    import lang.print
 
-    print("Hello, World!");
+    print("Hello, World!")
 
 This program prints 30 terms of the Fibonacci series:
 
     #!/usr/bin/env kos
-    import lang.print_;
+    import lang.print_
 
-    const terms = 30;
-    var   a     = 0;
-    var   b     = 1;
+    const terms = 30
+    var   a     = 0
+    var   b     = 1
 
-    print_("Fib series: \(a)");
+    print_("Fib series: \(a)")
 
-    for (var i = 0; i < terms; i += 1) {
-        print_(" \(b)");
-        const c = a + b;
-        a = b;
-        b = c;
+    for var i in range(terms) {
+        print_(" \(b)")
+        const next = a + b
+        a = b
+        b = next
     }
 
-    print_("\n");
+    print_("\n")
 
 This program prints the first 1000 prime numbers:
 
     #!/usr/bin/env kos
-    import lang.print_;
+    import lang.print_
 
     # Prime number generator with a fixed-size sieve
     fun primes(max_number)
     {
-        yield 2; # Yield the only even prime number from the generator
+        yield 2 # Yield the only even prime number from the generator
 
-        const sieve = []; # Empty array
+        const sieve = [] # Empty array
 
-        # Set array size; fills with 'void' values.
+        # Set array size, fills with 'void' values.
         # We set to half of the max number checked, because
         # we ignore even numbers and only check odd numbers.
-        const len = max_number >> 1;
-        sieve.resize(len);
+        const len = max_number >> 1
+        sieve.resize(len)
 
-        for (var value = 3; value < max_number; value += 2) {
+        for var value = 3; value < max_number; value += 2 {
 
-            const idx = value >> 1;
+            const idx = value >> 1
 
             # Yield this number as prime if it hasn't been sieved-out
             if ( ! sieve[idx]) {
 
-                yield value;
+                yield value
 
                 # Mark all multiplicities of this prime as non-primes
-                for (var i = idx + value; i < len; i += value) {
-                    sieve[i] = true; # Mark a non-prime
+                for var i = idx + value; i < len; i += value {
+                    sieve[i] = true # Mark a non-prime
                 }
             }
         }
     }
 
-    print_("Prime numbers:");
+    print_("Prime numbers:")
 
-    var count = 0;
+    var count = 0
 
-    for (var value in primes(7920)) {
-        print_(" \(value)");
-        count += 1;
+    for var value in primes(7920) {
+        print_(" \(value)")
+        count += 1
     }
 
-    print_("\nPrinted \(count) primes\n");
+    print_("\nPrinted \(count) primes\n")
