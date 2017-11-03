@@ -85,6 +85,29 @@ static void _finalize(KOS_FRAME frame,
         fclose((FILE *)priv);
 }
 
+/* @item file file()
+ *
+ *     file(pathname, flags = rw)
+ *
+ * File object constructor.
+ *
+ * Returns opened file object.
+ *
+ * `pathname` is the path to the file.
+ *
+ * `flags` is a string, which specifies file open mode compatible with
+ * the C `fopen()` function.  It is normally recommended to use the
+ * shorthand flag constants: `file.ro`, `file.rw` or the auxiliary
+ * file functions `file.open()`, `file.create()` and `file.append()`
+ * instead of specifying the flags explicitly.
+ *
+ * It is recommended to use the `file.file` constructor in conjunction with
+ * the `with` statement.
+ *
+ * Example:
+ *
+ *     > with const f = file.file("my.txt", file.create_flag) { f.print("hello") }
+ */
 static KOS_OBJ_ID _open(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -167,6 +190,12 @@ _error:
     return error;
 }
 
+/* @item file file.prototype.close()
+ *
+ *     file.prototype.close()
+ *
+ * Closes the file object if it is still opened.
+ */
 static KOS_OBJ_ID _close(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -182,6 +211,21 @@ static KOS_OBJ_ID _close(KOS_FRAME  frame,
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
+/* @item file file.prototype.print()
+ *
+ *     file.prototype.print(values...)
+ *
+ * Converts all arguments to printable strings and writes them to the file.
+ *
+ * Returns the file object to which the strings were written.
+ *
+ * Accepts zero or more arguments to write.
+ *
+ * Written values are separated with a single space.
+ *
+ * After printing all values writes an EOL character.  If no values are
+ * provided, just writes an EOL character.
+ */
 static KOS_OBJ_ID _print(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -210,6 +254,20 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item file file.prototype.print_()
+ *
+ *     file.prototype.print_(values...)
+ *
+ * Converts all arguments to printable strings and writes them to the file.
+ *
+ * Returns the file object to which the strings were written.
+ *
+ * Accepts zero or more arguments to write.
+ *
+ * Written values are separated with a single space.
+ *
+ * Unlike `file.prototype.print()`, does not write an EOL character after finishing writing.
+ */
 static KOS_OBJ_ID _print_(KOS_FRAME  frame,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
@@ -239,11 +297,22 @@ static int _is_eol(char c)
     return c == '\n' || c == '\r';
 }
 
-/*
- *      input: predicted buffer size for the line (optional, defaults to 4096)
- *      output: string containing a line read from the file, including EOL character.
+/* @item file file.prototype.read_line()
+ *
+ *     file.prototype.read_line(reserved_size = 4096)
+ *
+ * Reads a single line of text from a file.
+ *
+ * Returns the string containing the line read, including EOL character sequence.
+ *
+ * `reserved_size` is the amount of bytes to reserve for the buffer into which
+ * the file is read.  If the line is longer than that, the buffer will be
+ * automatically resized.  This is an implementation detail and it may change
+ * in the future.
+ *
+ * This is a low-level function, `file.prototype.read_lines()` is a better choice
+ * in most cases.
  */
-
 static KOS_OBJ_ID _read_line(KOS_FRAME  frame,
                              KOS_OBJ_ID this_obj,
                              KOS_OBJ_ID args_obj)
@@ -304,16 +373,24 @@ _error:
     return error ? KOS_BADPTR : line;
 }
 
-/*
- *      input:  size as number (optional, defaults to 4096)
- *              buffer (optional)
- *      output: buffer
+/* @item file file.prototype.read_some()
  *
- *      If buffer is provided as second arg, read data is appended to it and
- *      this buffer is returned.
+ *     file.prototype.read_some(size = 4096 [, buffer])
  *
- *      Reads as much as possible in one shot.  Returns as much as was read.
- *      The returned buffer's size can be from 0 to the size entered as input.
+ * Reads a variable number of bytes from an opened file object.
+ *
+ * Returns a buffer containing the bytes read.
+ *
+ * Reads as many bytes as it can, up to the specified `size`.
+ *
+ * `size` is the maximum bytes to read.  `size` defaults to 4096.  Less
+ * bytes can be read if no more bytes are available.
+ *
+ * If `buffer` is specified, bytes are appended to it and that buffer is
+ * returned instead of creating a new buffer.
+ *
+ * This is a low-level function, `file.prototype.read()` is a better choice
+ * in most cases.
  */
 static KOS_OBJ_ID _read_some(KOS_FRAME  frame,
                              KOS_OBJ_ID this_obj,
@@ -372,6 +449,17 @@ _error:
     return error ? KOS_BADPTR : buf;
 }
 
+/* @item file file.prototype.write()
+ *
+ *     file.prototype.write(buffer)
+ *
+ * Writes a buffer containing bytes into an opened file object.
+ *
+ * Returns the file object to which bytes has been written.
+ *
+ * `buffer` is a buffer object.  Its size can be zero, in which case nothing
+ * is written.
+ */
 static KOS_OBJ_ID _write(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -405,6 +493,13 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item file file.prototype.eof
+ *
+ *     file.prototype.eof
+ *
+ * A boolean read-only flag indicating whether the read/write pointer has
+ * reached the end of the file object.
+ */
 static KOS_OBJ_ID _get_file_eof(KOS_FRAME  frame,
                                 KOS_OBJ_ID this_obj,
                                 KOS_OBJ_ID args_obj)
@@ -419,6 +514,13 @@ static KOS_OBJ_ID _get_file_eof(KOS_FRAME  frame,
     return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
+/* @item file file.prototype.error
+ *
+ *     file.prototype.error
+ *
+ * A boolean read-only flag indicating whether there was an error during the
+ * last file operation on the file object.
+ */
 static KOS_OBJ_ID _get_file_error(KOS_FRAME  frame,
                                   KOS_OBJ_ID this_obj,
                                   KOS_OBJ_ID args_obj)
@@ -433,6 +535,12 @@ static KOS_OBJ_ID _get_file_error(KOS_FRAME  frame,
     return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
+/* @item file file.prototype.size
+ *
+ *     file.prototype.size
+ *
+ * Read-only size of the opened file object.
+ */
 static KOS_OBJ_ID _get_file_size(KOS_FRAME  frame,
                                  KOS_OBJ_ID this_obj,
                                  KOS_OBJ_ID args_obj)
@@ -462,6 +570,12 @@ _error:
     return error ? KOS_BADPTR : KOS_new_int(frame, (int64_t)size);
 }
 
+/* @item file file.prototype.position
+ *
+ *     file.prototype.position
+ *
+ * Read-only position of the read/write pointer in the opened file object.
+ */
 static KOS_OBJ_ID _get_file_pos(KOS_FRAME  frame,
                                 KOS_OBJ_ID this_obj,
                                 KOS_OBJ_ID args_obj)
@@ -481,12 +595,27 @@ _error:
     return error ? KOS_BADPTR : KOS_new_int(frame, (int64_t)pos);
 }
 
+/* @item file file.prototype.seek()
+ *
+ *     file.prototype.seek(pos)
+ *
+ * Moves the read/write pointer to a different position in the file.
+ *
+ * Returns the file object for which the pointer has been moved.
+ *
+ * `pos` is the new, absolute position in the file where the pointer
+ * is moved.  If it is negative, the pointer is moved relative to the end of
+ * the file.  If it is a float, it is converted to integer using floor mode.
+ *
+ * Throws an exception if the pointer cannot be moved for whatever reason.
+ */
 static KOS_OBJ_ID _set_file_pos(KOS_FRAME  frame,
                                 KOS_OBJ_ID this_obj,
                                 KOS_OBJ_ID args_obj)
 {
-    int        error = KOS_SUCCESS;
-    FILE      *file  = 0;
+    int        error  = KOS_SUCCESS;
+    FILE      *file   = 0;
+    int        whence = SEEK_SET;
     int64_t    pos;
     KOS_OBJ_ID arg;
 
@@ -498,13 +627,24 @@ static KOS_OBJ_ID _set_file_pos(KOS_FRAME  frame,
 
     TRY(KOS_get_integer(frame, arg, &pos));
 
-    if (fseek(file, (long)pos, SEEK_SET))
+    if (pos < 0)
+        whence = SEEK_END;
+
+    if (fseek(file, (long)pos, whence))
         RAISE_EXCEPTION(str_err_cannot_set_position);
 
 _error:
-    return error ? KOS_BADPTR : KOS_VOID;
+    return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item file is_file()
+ *
+ *     is_file(pathname)
+ *
+ * Determines whether a file exists.
+ *
+ * Returns `true` if `pathname` exists and is a file, or `false` otherwise.
+ */
 static KOS_OBJ_ID _is_file(KOS_FRAME  frame,
                            KOS_OBJ_ID this_obj,
                            KOS_OBJ_ID args_obj)
@@ -530,6 +670,16 @@ _error:
     return ret;
 }
 
+/* @item file remove()
+ *
+ *     remove(pathname)
+ *
+ * Deletes a file `pathname`.
+ *
+ * Returns `true` if the file was successfuly deleted or `false` if
+ * the file could not be deleted or if it did not exist in the first
+ * place.
+ */
 static KOS_OBJ_ID _remove(KOS_FRAME  frame,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
@@ -559,6 +709,28 @@ _error:
     return ret;
 }
 
+/* @item file stdout
+ *
+ *     stdout
+ *
+ * Write-only file object corresponding to standard output.
+ *
+ * Calling `file.stdout.print()` is equivalent to `lang.print()`.
+ */
+
+/* @item file stderr
+ *
+ *     stderr
+ *
+ * Write-only file object corresponding to standard error.
+ */
+
+/* @item file stdin
+ *
+ *     stdin
+ *
+ * Read-only file object corresponding to standard input.
+ */
 static int _add_std_file(KOS_FRAME  frame,
                          KOS_OBJ_ID proto,
                          KOS_OBJ_ID str_name,

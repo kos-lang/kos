@@ -22,27 +22,135 @@
 
 import lang.buffer
 
-# Flags for open() and for file constructor
-const ro          = "rb"  # open read-only, file must exist
-const rw          = "r+b" # open read-write, file must exist
-const create_flag = "w+b" # create new or truncate existing, read-write
-const append_flag = "a+b" # create new or append at the end of existing, read-write
+/* @item file ro
+ *
+ *     ro
+ *
+ * Flag used with `file.file` and `file.open`.  Indicates that the file is to
+ * be opened for reading only.
+ *
+ * File must exist if this flag is used, or else exception is thrown.
+ */
+const ro = "rb"
 
+/* @item file rw
+ *
+ *     rw
+ *
+ * Flag used with `file.file` and `file.open`.  Indicates that the file is to
+ * be opened for reading and writing.
+ *
+ * File must exist if this flag is used, or else exception is thrown.
+ */
+const rw = "r+b"
+
+/* @item file create_flag
+ *
+ *     create_flag
+ *
+ * Flag used with `file.file` and `file.open`.  Indicates that the file is to
+ * be created if it does not exist or truncated if it exists and then opened
+ * for reading and writing.
+ */
+const create_flag = "w+b"
+
+/* @item file append_flag
+ *
+ *     append_flag
+ *
+ * Flag used with `file.file` and `file.open`.  Indicates that the file is to
+ * be created if it does not exist or opened at at the end for appending.
+ * The file is always opened for reading and writing with this flag.
+ */
+const append_flag = "a+b"
+
+/* @item file open()
+ *
+ *     open(filename, flags = rw)
+ *
+ * Opens a file.
+ *
+ * Returns opened file object.
+ *
+ * `filename` is the path to the file to open.
+ *
+ * Optional `flags` specify open mode.  `flags` default to `rw`.
+ *
+ * It is recommended to use the `file.open()` function in conjunction with
+ * the `with` statement.
+ *
+ * Example:
+ *
+ *     > with const f = file.open("my.txt", file.create_flag) { f.print("hello") }
+ */
 fun open(filename, flags = rw)
 {
     return file(filename, flags)
 }
 
+/* @item file create()
+ *
+ *     create(filename)
+ *
+ * Creates a new or truncates an existing file, opens for reading and writing.
+ *
+ * Returns opened file object.
+ *
+ * `filename` is the path to the file to create or truncate.
+ *
+ * It is recommended to use the `file.create()` function in conjunction with
+ * the `with` statement.
+ *
+ * Example:
+ *
+ *     > with const f = file.create("my.txt") { f.print("hello") }
+ */
 fun create(filename)
 {
     return file(filename, create_flag)
 }
 
+/* @item file append()
+ *
+ *     append(filename)
+ *
+ * Creates a new or opens an existing file in append mode, opens for reading
+ * and writing.
+ *
+ * Returns opened file object.
+ *
+ * `filename` is the path to the file to create or truncate.
+ *
+ * It is recommended to use the `file.append()` function in conjunction with
+ * the `with` statement.
+ *
+ * Example:
+ *
+ *     > with const f = file.append("my.txt") { f.print("hello") }
+ */
 fun append(filename)
 {
     return file(filename, append_flag)
 }
 
+/* @item file file.prototype.read()
+ *
+ *     file.prototype.read()
+ *     file.prototype.read(size [, buffer])
+ *
+ * Reads bytes from an opened file object.
+ *
+ * Returns a buffer containing the bytes read.
+ *
+ * The first variant reads as many bytes as it can, possibly until the end
+ * of file.
+ *
+ * The second variant reads up to `size` bytes, or less if the file does not
+ * have that many bytes.  It never reads more than `size` bytes.
+ *
+ * If `buffer` is specified, bytes are appended to it and that buffer is
+ * returned instead of creating a new buffer.
+ */
 file.prototype.read = fun(in_size = 0x7FFFFFFFFFFFFFFF, in_buf = void)
 {
     const size     = in_size
@@ -66,6 +174,22 @@ file.prototype.read = fun(in_size = 0x7FFFFFFFFFFFFFFF, in_buf = void)
     return buf
 }
 
+/* @item file file.prototype.read_lines()
+ *
+ *     file.prototype.read_lines(keep_ends = false, gran = 0x10000)
+ *
+ * A generator which produces subsequent lines of text read from a file.
+ *
+ * Returns an iterator function, which yields subsequent lines read
+ * from the file on subsequent invocations.  The lines returned by the
+ * iterator function are strings.
+ *
+ * `keep_ends` tells whether the EOL character sequences should be kept
+ * as part of the returned lines.  It defaults to `false`.
+ *
+ * `gran` is the internal granularity at which the file is read.  It
+ * defaults to 64KB.
+ */
 file.prototype.read_lines = fun(keep_ends = false, gran = 0x10000)
 {
     if gran <= 0 {

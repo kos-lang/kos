@@ -356,3 +356,20 @@ do {
     assert file.remove(name)
     assert ! file.is_file(name)
 }
+
+##############################################################################
+# file.seek, file.print return value
+
+do {
+    const name = "./__text_file"
+    file.remove(name)
+    assert ! file.is_file(name)
+
+    with const f = file.create(name) {
+        const data = lang.string(f.print_("abcdefghijklmnopqrstuvwxyz").seek(-8).read(4))
+        assert data == "stuv"
+    }
+
+    assert file.remove(name)
+    assert ! file.is_file(name)
+}

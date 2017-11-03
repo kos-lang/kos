@@ -1,3 +1,336 @@
+file
+====
+
+append()
+--------
+
+    append(filename)
+
+Creates a new or opens an existing file in append mode, opens for reading
+and writing.
+
+Returns opened file object.
+
+`filename` is the path to the file to create or truncate.
+
+It is recommended to use the `file.append()` function in conjunction with
+the `with` statement.
+
+Example:
+
+    > with const f = file.append("my.txt") { f.print("hello") }
+
+append_flag
+-----------
+
+    append_flag
+
+Flag used with `file.file` and `file.open`.  Indicates that the file is to
+be created if it does not exist or opened at at the end for appending.
+The file is always opened for reading and writing with this flag.
+
+create()
+--------
+
+    create(filename)
+
+Creates a new or truncates an existing file, opens for reading and writing.
+
+Returns opened file object.
+
+`filename` is the path to the file to create or truncate.
+
+It is recommended to use the `file.create()` function in conjunction with
+the `with` statement.
+
+Example:
+
+    > with const f = file.create("my.txt") { f.print("hello") }
+
+create_flag
+-----------
+
+    create_flag
+
+Flag used with `file.file` and `file.open`.  Indicates that the file is to
+be created if it does not exist or truncated if it exists and then opened
+for reading and writing.
+
+file()
+------
+
+    file(pathname, flags = rw)
+
+File object constructor.
+
+Returns opened file object.
+
+`pathname` is the path to the file.
+
+`flags` is a string, which specifies file open mode compatible with
+the C `fopen()` function.  It is normally recommended to use the
+shorthand flag constants: `file.ro`, `file.rw` or the auxiliary
+file functions `file.open()`, `file.create()` and `file.append()`
+instead of specifying the flags explicitly.
+
+It is recommended to use the `file.file` constructor in conjunction with
+the `with` statement.
+
+Example:
+
+    > with const f = file.file("my.txt", file.create_flag) { f.print("hello") }
+
+file.prototype.close()
+----------------------
+
+    file.prototype.close()
+
+Closes the file object if it is still opened.
+
+file.prototype.eof
+------------------
+
+    file.prototype.eof
+
+A boolean read-only flag indicating whether the read/write pointer has
+reached the end of the file object.
+
+file.prototype.error
+--------------------
+
+    file.prototype.error
+
+A boolean read-only flag indicating whether there was an error during the
+last file operation on the file object.
+
+file.prototype.position
+-----------------------
+
+    file.prototype.position
+
+Read-only position of the read/write pointer in the opened file object.
+
+file.prototype.print()
+----------------------
+
+    file.prototype.print(values...)
+
+Converts all arguments to printable strings and writes them to the file.
+
+Returns the file object to which the strings were written.
+
+Accepts zero or more arguments to write.
+
+Written values are separated with a single space.
+
+After printing all values writes an EOL character.  If no values are
+provided, just writes an EOL character.
+
+file.prototype.print_()
+-----------------------
+
+    file.prototype.print_(values...)
+
+Converts all arguments to printable strings and writes them to the file.
+
+Returns the file object to which the strings were written.
+
+Accepts zero or more arguments to write.
+
+Written values are separated with a single space.
+
+Unlike `file.prototype.print()`, does not write an EOL character after finishing writing.
+
+file.prototype.read()
+---------------------
+
+    file.prototype.read()
+    file.prototype.read(size [, buffer])
+
+Reads bytes from an opened file object.
+
+Returns a buffer containing the bytes read.
+
+The first variant reads as many bytes as it can, possibly until the end
+of file.
+
+The second variant reads up to `size` bytes, or less if the file does not
+have that many bytes.  It never reads more than `size` bytes.
+
+If `buffer` is specified, bytes are appended to it and that buffer is
+returned instead of creating a new buffer.
+
+file.prototype.read_line()
+--------------------------
+
+    file.prototype.read_line(reserved_size = 4096)
+
+Reads a single line of text from a file.
+
+Returns the string containing the line read, including EOL character sequence.
+
+`reserved_size` is the amount of bytes to reserve for the buffer into which
+the file is read.  If the line is longer than that, the buffer will be
+automatically resized.  This is an implementation detail and it may change
+in the future.
+
+This is a low-level function, `file.prototype.read_lines()` is a better choice
+in most cases.
+
+file.prototype.read_lines()
+---------------------------
+
+    file.prototype.read_lines(keep_ends = false, gran = 0x10000)
+
+A generator which produces subsequent lines of text read from a file.
+
+Returns an iterator function, which yields subsequent lines read
+from the file on subsequent invocations.  The lines returned by the
+iterator function are strings.
+
+`keep_ends` tells whether the EOL character sequences should be kept
+as part of the returned lines.  It defaults to `false`.
+
+`gran` is the internal granularity at which the file is read.  It
+defaults to 64KB.
+
+file.prototype.read_some()
+--------------------------
+
+    file.prototype.read_some(size = 4096 [, buffer])
+
+Reads a variable number of bytes from an opened file object.
+
+Returns a buffer containing the bytes read.
+
+Reads as many bytes as it can, up to the specified `size`.
+
+`size` is the maximum bytes to read.  `size` defaults to 4096.  Less
+bytes can be read if no more bytes are available.
+
+If `buffer` is specified, bytes are appended to it and that buffer is
+returned instead of creating a new buffer.
+
+This is a low-level function, `file.prototype.read()` is a better choice
+in most cases.
+
+file.prototype.seek()
+---------------------
+
+    file.prototype.seek(pos)
+
+Moves the read/write pointer to a different position in the file.
+
+Returns the file object for which the pointer has been moved.
+
+`pos` is the new, absolute position in the file where the pointer
+is moved.  If it is negative, the pointer is moved relative to the end of
+the file.  If it is a float, it is converted to integer using floor mode.
+
+Throws an exception if the pointer cannot be moved for whatever reason.
+
+file.prototype.size
+-------------------
+
+    file.prototype.size
+
+Read-only size of the opened file object.
+
+file.prototype.write()
+----------------------
+
+    file.prototype.write(buffer)
+
+Writes a buffer containing bytes into an opened file object.
+
+Returns the file object to which bytes has been written.
+
+`buffer` is a buffer object.  Its size can be zero, in which case nothing
+is written.
+
+is_file()
+---------
+
+    is_file(pathname)
+
+Determines whether a file exists.
+
+Returns `true` if `pathname` exists and is a file, or `false` otherwise.
+
+open()
+------
+
+    open(filename, flags = rw)
+
+Opens a file.
+
+Returns opened file object.
+
+`filename` is the path to the file to open.
+
+Optional `flags` specify open mode.  `flags` default to `rw`.
+
+It is recommended to use the `file.open()` function in conjunction with
+the `with` statement.
+
+Example:
+
+    > with const f = file.open("my.txt", file.create_flag) { f.print("hello") }
+
+remove()
+--------
+
+    remove(pathname)
+
+Deletes a file `pathname`.
+
+Returns `true` if the file was successfuly deleted or `false` if
+the file could not be deleted or if it did not exist in the first
+place.
+
+ro
+--
+
+    ro
+
+Flag used with `file.file` and `file.open`.  Indicates that the file is to
+be opened for reading only.
+
+File must exist if this flag is used, or else exception is thrown.
+
+rw
+--
+
+    rw
+
+Flag used with `file.file` and `file.open`.  Indicates that the file is to
+be opened for reading and writing.
+
+File must exist if this flag is used, or else exception is thrown.
+
+stderr
+------
+
+    stderr
+
+Write-only file object corresponding to standard error.
+
+stdin
+-----
+
+    stdin
+
+Read-only file object corresponding to standard input.
+
+stdout
+------
+
+    stdout
+
+Write-only file object corresponding to standard output.
+
+Calling `file.stdout.print()` is equivalent to `lang.print()`.
+
 lang
 ====
 
