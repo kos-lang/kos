@@ -450,9 +450,10 @@ unsigned _KOS_print_float(char *buf, unsigned size, double value)
         }
         else {
             static const char infinity[] = "-infinity";
-            const size_t      str_size   = sizeof(infinity) - (value < 0 ? 1 : 2);
+            const size_t      offs       = value < 0 ? 0 : 1;
+            const size_t      str_size   = sizeof(infinity) - offs - 1;
 
-            memcpy(buf, infinity + (value < 0 ? 0 : 1), str_size);
+            memcpy(buf, infinity + offs, str_size);
             end = buf + str_size;
         }
     }
