@@ -709,28 +709,6 @@ _error:
     return ret;
 }
 
-/* @item file stdout
- *
- *     stdout
- *
- * Write-only file object corresponding to standard output.
- *
- * Calling `file.stdout.print()` is equivalent to `lang.print()`.
- */
-
-/* @item file stderr
- *
- *     stderr
- *
- * Write-only file object corresponding to standard error.
- */
-
-/* @item file stdin
- *
- *     stdin
- *
- * Read-only file object corresponding to standard input.
- */
 static int _add_std_file(KOS_FRAME  frame,
                          KOS_OBJ_ID proto,
                          KOS_OBJ_ID str_name,
@@ -779,8 +757,30 @@ int _KOS_module_file_init(KOS_FRAME frame)
     TRY_ADD_FUNCTION(       frame,        "is_file",   _is_file,        1);
     TRY_ADD_FUNCTION(       frame,        "remove",    _remove,         1);
 
+    /* @item file stderr
+     *
+     *     stderr
+     *
+     * Write-only file object corresponding to standard error.
+     */
     TRY_ADD_STD_FILE(       frame, proto, "stderr",    stderr);
+
+    /* @item file stdin
+     *
+     *     stdin
+     *
+     * Read-only file object corresponding to standard input.
+     */
     TRY_ADD_STD_FILE(       frame, proto, "stdin",     stdin);
+
+    /* @item file stdout
+     *
+     *     stdout
+     *
+     * Write-only file object corresponding to standard output.
+     *
+     * Calling `file.stdout.print()` is equivalent to `lang.print()`.
+     */
     TRY_ADD_STD_FILE(       frame, proto, "stdout",    stdout);
 
 _error:

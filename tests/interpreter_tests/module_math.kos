@@ -21,6 +21,7 @@
 #
 
 import math
+import lang.string
 
 fun expect_fail(function)
 {
@@ -38,6 +39,10 @@ fun expect_fail(function)
 do {
     assert math.pi == 3.141592653589793238
     assert math.e  == 2.718281828459045235
+
+    assert string(math.infinity)  == "infinity"
+    assert string(-math.infinity) == "-infinity"
+    assert string(math.nan)       == "nan"
 }
 
 # math.ceil
@@ -62,6 +67,9 @@ do {
     assert math.abs(10)   == 10
     assert math.abs(-5.6) == 5.6
     assert math.abs(4.7)  == 4.7
+
+    assert math.abs(-math.infinity)         == math.infinity
+    assert string(math.abs(-math.infinity)) == "infinity"
 
     for var shift in [62, 61, 60, 31, 30, 29, 28] {
         const positive = 1 << shift
@@ -151,6 +159,8 @@ do {
     assert math.abs(math.exp(2)   - e * e)     < err
     assert math.abs(math.exp(3.0) - e * e * e) < err
     assert math.abs(math.exp(-1)  - 1 / e)     < err
+
+    assert math.exp(1) == e
 }
 
 # math.expm1

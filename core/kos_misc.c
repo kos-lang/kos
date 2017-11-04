@@ -435,12 +435,35 @@ unsigned _KOS_print_float(char *buf, unsigned size, double value)
 {
     char *end;
 
-    snprintf(buf, size, "%.15f", value);
+    union DOUBLE_TO_UINT64 {
+        double   d;
+        uint64_t u;
+    } conv;
 
-    for (end = buf + strlen(buf) - 1; end > buf && *end == '0'; --end);
-    if (*end == '.')
+    conv.d = value;
+
+    if (((conv.u >> 52) & 0x7FFU) == 0x7FFU) {
+        if (conv.u << 12) {
+            static const char nan[] = "nan";
+            memcpy(buf, nan, sizeof(nan) - 1);
+            end = buf + sizeof(nan) - 1;
+        }
+        else {
+            static const char infinity[] = "-infinity";
+            const size_t      size       = sizeof(infinity) - (value < 0 ? 1 : 2);
+
+            memcpy(buf, infinity + (value < 0 ? 0 : 1), size);
+            end = buf + size;
+        }
+    }
+    else {
+        snprintf(buf, size, "%.15f", value);
+
+        for (end = buf + strlen(buf) - 1; end > buf && *end == '0'; --end);
+        if (*end == '.')
+            ++end;
         ++end;
-    ++end;
+    }
 
     return (unsigned)(end - buf);
 }
@@ -450,8 +473,13 @@ void _KOS_get_entropy_fallback(uint8_t *bytes)
     const uint32_t multiplier = 0x8088405U;
     uint32_t       state      = (uint32_t)time(0);
     uint8_t *const end        = bytes + 32;
+    int            i;
 
     /* Trivial LCG to init the state from time */
+
+    for (i = 0; i < 4; i++)
+        state = state * multiplier + 1;
+
     for ( ; bytes < end; bytes++) {
 
         state = state * multiplier + 1;

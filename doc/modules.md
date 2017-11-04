@@ -2472,6 +2472,192 @@ whitespace
 A string containing all characters considered as whitespace by some
 functions.
 
+math
+====
+
+abs()
+-----
+
+    abs(number)
+
+Returns absolute value of `number`.
+
+Preserves the type of the input argument (integer or float).
+
+If `number` is an integer and it is the lowest possible integer value
+(`0x8000_0000_0000_0000`), then throws an exception.
+
+Examples:
+
+    > math.abs(-100)
+    100
+    > math.abs(-math.infinity)
+    infinity
+
+ceil()
+------
+
+    ceil(number)
+
+Rounds a number to the closest, but higher or equal integer value.
+
+Preserves the type of the input argument.  If `number` is an integer,
+returns that integer.  If `number` is a float, returns a rounded float.
+
+Examples:
+
+    > math.ceil(10.5)
+    11.0
+    > math.ceil(-0.1)
+    -0.0
+
+e
+-
+
+    e
+
+The mathematical constant e=2.7182... represented as float.
+
+exp()
+-----
+
+    exp(number)
+
+Returns Eulers number *e* raised to the power of `number`.
+
+The value returned is always a float.
+
+Examples:
+
+    > math.exp(1)
+    2.718281828459045
+    > math.exp(-1)
+    0.367879441171442
+
+expm1()
+-------
+
+    expm1(number)
+
+Returns Eulers number *e* raised to the power of `number` and subtracts `1`.
+
+The returned value returned is always a float.
+
+The returned value has a higher precision than `math.exp(number) - 1`.
+
+Example:
+
+    > math.expm1(2)
+    6.38905609893065
+
+floor()
+-------
+
+    floor(number)
+
+Rounds a number to the closest, but lower or equal integer value.
+
+Preserves the type of the input argument.  If `number` is an integer,
+returns that integer.  If `number` is a float, returns a rounded float.
+
+Examples:
+
+    > math.floor(0.1)
+    0.0
+    > math.floor(-0.1)
+    -1.0
+
+infinity
+--------
+
+    infinity
+
+Constant float value representing positive infinity.
+
+is_infinity()
+-------------
+
+    is_infinity(number)
+
+Returns `true` if the `number` is a float and its value is plus or minus
+infinity, otherwise returns `false`.
+
+Examples:
+
+    > math.is_infinity(math.infinity)
+    true
+    > math.is_infinity(math.nan)
+    false
+    > math.is_infinity(1e60)
+    false
+
+is_nan()
+--------
+
+    is_nan(number)
+
+Returns `true` if the `number` is a float and its value is a "not-a-number",
+otherwise returns `false`.
+
+Examples:
+
+    > math.is_nan(math.nan)
+    true
+    > math.is_nan(1.0)
+    false
+    > math.is_nan([])
+    false
+
+nan
+---
+
+    nan
+
+Constant float value representing "not-a-number".
+
+pi
+--
+
+    pi
+
+The mathematical constant π=3.1415... represented as float.
+
+pow()
+-----
+
+    pow(num, power)
+
+Returns `num` raised to `power`.
+
+The returned value is always a float.
+
+Throws an exception if `num` is negative and `power` is not an
+integer value (it can still be a float type, but its value must be
+mathematically an integer).
+
+Examples:
+
+    > math.pow(2, 2)
+    4.0
+    > math.pow(10, -2)
+    0.01
+
+sqrt()
+------
+
+    sqrt(number)
+
+Returns square root of `number`.
+
+The returned value is always a float.
+
+Throws an exception if `number` is negative.
+
+Example:
+
+    > math.sqrt(4)
+    2.0
+
 random
 ======
 

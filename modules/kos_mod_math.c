@@ -31,10 +31,29 @@
 #include "../core/kos_try.h"
 #include <math.h>
 
+static const char str_err_abs_minus_max[] = "cannot calculate abs of the lowest integer value";
 static const char str_err_negative_root[] = "invalid base";
 static const char str_err_not_number[]    = "object is not a number";
 static const char str_err_pow_0_0[]       = "0 to the power of 0";
 
+/* @item math abs()
+ *
+ *     abs(number)
+ *
+ * Returns absolute value of `number`.
+ *
+ * Preserves the type of the input argument (integer or float).
+ *
+ * If `number` is an integer and it is the lowest possible integer value
+ * (`0x8000_0000_0000_0000`), then throws an exception.
+ *
+ * Examples:
+ *
+ *     > math.abs(-100)
+ *     100
+ *     > math.abs(-math.infinity)
+ *     infinity
+ */
 static KOS_OBJ_ID _abs(KOS_FRAME  frame,
                        KOS_OBJ_ID this_obj,
                        KOS_OBJ_ID args_obj)
@@ -44,8 +63,12 @@ static KOS_OBJ_ID _abs(KOS_FRAME  frame,
 
     if (KOS_get_numeric_arg(frame, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
-        if (numeric.type == KOS_INTEGER_VALUE)
-            ret = KOS_new_int(frame, numeric.u.i < 0 ? -numeric.u.i : numeric.u.i);
+        if (numeric.type == KOS_INTEGER_VALUE) {
+            if (numeric.u.i == (int64_t)((uint64_t)1U << 63))
+                KOS_raise_exception_cstring(frame, str_err_abs_minus_max);
+            else
+                ret = KOS_new_int(frame, numeric.u.i < 0 ? -numeric.u.i : numeric.u.i);
+        }
         else {
             assert(numeric.type == KOS_FLOAT_VALUE);
 
@@ -58,6 +81,22 @@ static KOS_OBJ_ID _abs(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item math ceil()
+ *
+ *     ceil(number)
+ *
+ * Rounds a number to the closest, but higher or equal integer value.
+ *
+ * Preserves the type of the input argument.  If `number` is an integer,
+ * returns that integer.  If `number` is a float, returns a rounded float.
+ *
+ * Examples:
+ *
+ *     > math.ceil(10.5)
+ *     11.0
+ *     > math.ceil(-0.1)
+ *     -0.0
+ */
 static KOS_OBJ_ID _ceil(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -90,6 +129,21 @@ static KOS_OBJ_ID _ceil(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item math exp()
+ *
+ *     exp(number)
+ *
+ * Returns Eulers number *e* raised to the power of `number`.
+ *
+ * The value returned is always a float.
+ *
+ * Examples:
+ *
+ *     > math.exp(1)
+ *     2.718281828459045
+ *     > math.exp(-1)
+ *     0.367879441171442
+ */
 static KOS_OBJ_ID _exp(KOS_FRAME  frame,
                        KOS_OBJ_ID this_obj,
                        KOS_OBJ_ID args_obj)
@@ -111,6 +165,21 @@ static KOS_OBJ_ID _exp(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item math expm1()
+ *
+ *     expm1(number)
+ *
+ * Returns Eulers number *e* raised to the power of `number` and subtracts `1`.
+ *
+ * The returned value returned is always a float.
+ *
+ * The returned value has a higher precision than `math.exp(number) - 1`.
+ *
+ * Example:
+ *
+ *     > math.expm1(2)
+ *     6.38905609893065
+ */
 static KOS_OBJ_ID _expm1(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -132,6 +201,22 @@ static KOS_OBJ_ID _expm1(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item math floor()
+ *
+ *     floor(number)
+ *
+ * Rounds a number to the closest, but lower or equal integer value.
+ *
+ * Preserves the type of the input argument.  If `number` is an integer,
+ * returns that integer.  If `number` is a float, returns a rounded float.
+ *
+ * Examples:
+ *
+ *     > math.floor(0.1)
+ *     0.0
+ *     > math.floor(-0.1)
+ *     -1.0
+ */
 static KOS_OBJ_ID _floor(KOS_FRAME  frame,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
@@ -164,6 +249,22 @@ static KOS_OBJ_ID _floor(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item math is_infinity()
+ *
+ *     is_infinity(number)
+ *
+ * Returns `true` if the `number` is a float and its value is plus or minus
+ * infinity, otherwise returns `false`.
+ *
+ * Examples:
+ *
+ *     > math.is_infinity(math.infinity)
+ *     true
+ *     > math.is_infinity(math.nan)
+ *     false
+ *     > math.is_infinity(1e60)
+ *     false
+ */
 static KOS_OBJ_ID _is_infinity(KOS_FRAME  frame,
                                KOS_OBJ_ID this_obj,
                                KOS_OBJ_ID args_obj)
@@ -186,6 +287,22 @@ static KOS_OBJ_ID _is_infinity(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item math is_nan()
+ *
+ *     is_nan(number)
+ *
+ * Returns `true` if the `number` is a float and its value is a "not-a-number",
+ * otherwise returns `false`.
+ *
+ * Examples:
+ *
+ *     > math.is_nan(math.nan)
+ *     true
+ *     > math.is_nan(1.0)
+ *     false
+ *     > math.is_nan([])
+ *     false
+ */
 static KOS_OBJ_ID _is_nan(KOS_FRAME  frame,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
@@ -208,6 +325,25 @@ static KOS_OBJ_ID _is_nan(KOS_FRAME  frame,
     return ret;
 }
 
+/* @item math pow()
+ *
+ *     pow(num, power)
+ *
+ * Returns `num` raised to `power`.
+ *
+ * The returned value is always a float.
+ *
+ * Throws an exception if `num` is negative and `power` is not an
+ * integer value (it can still be a float type, but its value must be
+ * mathematically an integer).
+ *
+ * Examples:
+ *
+ *     > math.pow(2, 2)
+ *     4.0
+ *     > math.pow(10, -2)
+ *     0.01
+ */
 static KOS_OBJ_ID _pow(KOS_FRAME  frame,
                        KOS_OBJ_ID this_obj,
                        KOS_OBJ_ID args_obj)
@@ -249,6 +385,21 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item math sqrt()
+ *
+ *     sqrt(number)
+ *
+ * Returns square root of `number`.
+ *
+ * The returned value is always a float.
+ *
+ * Throws an exception if `number` is negative.
+ *
+ * Example:
+ *
+ *     > math.sqrt(4)
+ *     2.0
+ */
 static KOS_OBJ_ID _sqrt(KOS_FRAME  frame,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
@@ -280,6 +431,12 @@ int _KOS_module_math_init(KOS_FRAME frame)
 {
     int error = KOS_SUCCESS;
 
+    /* @item math infinity
+     *
+     *     infinity
+     *
+     * Constant float value representing positive infinity.
+     */
     {
         static const char str_infinity[] = "infinity";
         union _KOS_NUMERIC_VALUE value;
@@ -287,6 +444,12 @@ int _KOS_module_math_init(KOS_FRAME frame)
         TRY(KOS_module_add_global(frame, KOS_context_get_cstring(frame, str_infinity), KOS_new_float(frame, value.d), 0));
     }
 
+    /* @item math nan
+     *
+     *     nan
+     *
+     * Constant float value representing "not-a-number".
+     */
     {
         static const char str_nan[] = "nan";
         union _KOS_NUMERIC_VALUE value;

@@ -20,5 +20,18 @@
 # IN THE SOFTWARE.
 #
 
+/* @item math pi
+ *
+ *     pi
+ *
+ * The mathematical constant π=3.1415... represented as float.
+ */
 const pi = 3.141592653589793238
-const e  = 2.718281828459045235
+
+/* @item math e
+ *
+ *     e
+ *
+ * The mathematical constant e=2.7182... represented as float.
+ */
+const e = 2.718281828459045235
