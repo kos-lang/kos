@@ -843,8 +843,7 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
                 token->type = TT_EOL;
                 break;
             case LT_LETTER:
-                if (*begin == 'r' || *begin == 'R')
-                {
+                if (*begin == 'r' || *begin == 'R') {
                     const char *end2;
                     c = _prefetch_next(lexer, &end, &end2);
                     if (c == LT_STRING) {
