@@ -324,6 +324,13 @@ sequence.
 
     STRING_LITERAL       ::= EscapedStringLiteral | RawStringLiteral
 
+A raw string literal, starting with `r` or `R`, does not contain any escape
+sequences, the `\` character is treated literally.
+
+If a double quote `"` character follows the `\` backslash character inside
+a raw string literal, it is treated as part of the string lteral and does not
+terminate the string literal.
+
 An escaped opening parenthesis begins a string interpolation expression.  The
 lexer stops fetching further characters and returns the current token as a
 string.  The parser expects a right hand side expression to follow.  The right
