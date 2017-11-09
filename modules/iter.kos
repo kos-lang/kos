@@ -22,6 +22,25 @@
 
 import lang.array
 
+/* @item iter generator()
+ *
+ *     generator(iterable)
+ *
+ * Creates a generator function, which caches another generator.
+ *
+ * Returns a generator function, which can be instantiated many times.
+ *
+ * If `iterable` is a function, it is assumed to be a generator or an
+ * iterator, its elements are cached, so that the returned generator
+ * function can be instantiated multiple times.
+ *
+ * If the returned generator is instantiated twice and processed
+ * in parallel, the behavior is undefined.
+ *
+ * If `iterable` is not a function, the behavior of the returned
+ * generator upon instantiation will be equivalent to calling
+ * `iterable.iterator()`.
+ */
 fun generator(iterable)
 {
     if typeof iterable == "function" {
@@ -49,8 +68,40 @@ fun generator(iterable)
     }
 }
 
+/* @item iter empty()
+ *
+ *     empty()
+ *
+ * Empty generator.
+ *
+ * This generator, when instantiated, never yields any objects and
+ * terminates immediately.
+ */
 const empty = void.iterator
 
+/* @item iter iproduct()
+ *
+ *     iproduct(range_sizes...)
+ *
+ * A generator which produces permutations of multiple 0-based ranges.
+ *
+ * Returns an iterator function, which yields subsequent permutations
+ * of the specified ranges.
+ *
+ * The arguments of this function are integers, which specify how many
+ * elements each range contains.  The number of input arguments is equal
+ * to the number of ranges. The first range is innermost, the last range
+ * is outermost.
+ *
+ * `iter.iproduct(n, m)` is equivalent to `iter.product(range(n), range(m))`.
+ *
+ * Example:
+ *
+ *     > iter.iproduct(2, 3) -> print_elements
+ *     [0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2]
+ *     > iter.iproduct(3, 2) -> print_elements
+ *     [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
+ */
 fun iproduct(args...)
 {
     const dim = args.size
@@ -96,6 +147,24 @@ fun iproduct(args...)
     }
 }
 
+/* @item iter product()
+ *
+ *     product(iterables...)
+ *
+ * A generator which produces permutations of the output of multiple other
+ * generators.
+ *
+ * Returns an iterator function, which yields arrays containing subsequent
+ * permutations of values from input iterable objects.
+ *
+ * The arguments, `iterables`, are objects on which `iterator()` is invoked
+ * to obtain generators for each iterable object.
+ *
+ * Example:
+ *
+ *     > iter.product(range(5, 7), "xyz") -> print_elements
+ *     [5, x], [6, x], [5, y], [6, y], [5, z], [6, z]
+ */
 fun product(args...)
 {
     const dim = args.size
@@ -139,6 +208,22 @@ fun product(args...)
     return product_from_generators.apply(this, generators)
 }
 
+/* @item iter cycle()
+ *
+ *     cycle(iterable)
+ *
+ * A generator which cycles forever over elements of an interable object.
+ *
+ * Returns an iterator function, which yields subsequent elements of an
+ * iterable object cyclically, infinitely.  Once yielding the last element,
+ * it starts from the beginning and yields the first and subsequent elements
+ * again.
+ *
+ * `iterable` is an object on which `iterator()` is invoked to obtain subsequent
+ * elements of it.  It is wrapped with `iter.generator()`, so that when
+ * `iterable` is a function, the elements are cached, so they can be yielded
+ * again.
+ */
 fun cycle(iterable)
 {
     const gen = generator(iterable)
