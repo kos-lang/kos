@@ -2170,7 +2170,7 @@ do {
 }
 
 do {
-    const s = lang.sort("fooba", λ(x, y)->(x > y))
+    const s = lang.sort(λ(x, y)->(x > y), "fooba")
     assert typeof s == "function"
     assert s() == "o"
     assert s() == "o"
@@ -2178,6 +2178,26 @@ do {
     assert s() == "b"
     assert s() == "a"
     expect_fail(s)
+}
+
+do {
+    const s = [10, 11, 9, 8] -> lang.sort -> lang.array
+    assert typeof s == "array"
+    assert s.size == 4
+    assert s[0] == 8
+    assert s[1] == 9
+    assert s[2] == 10
+    assert s[3] == 11
+}
+
+do {
+    const s = [10, 11, 9, 8] -> lang.sort(λ(x, y) -> (x > y)) -> lang.array
+    assert typeof s == "array"
+    assert s.size == 4
+    assert s[0] == 11
+    assert s[1] == 10
+    assert s[2] == 9
+    assert s[3] == 8
 }
 
 ##############################################################################

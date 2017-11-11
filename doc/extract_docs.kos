@@ -146,11 +146,11 @@ fun sort_by_first(a, b)
     return a[0] < b[0]
 }
 
-for const topic, items in sort(docs, sort_by_first) {
+for const topic, items in sort(sort_by_first, docs) {
     print(topic)
     print("=".repeat(topic.size))
     print()
-    for const item, contents in sort(items, sort_by_first) {
+    for const item, contents in sort(sort_by_first, items) {
         print(item)
         print("-".repeat(item.size))
         print()

@@ -1967,24 +1967,32 @@ Example:
 sort()
 ------
 
-    sort(iterable, compare = fun(x, y) -> (x < y))
+    sort(compare = fun(x, y) -> (x < y))
+    sort(compare, iterable)
+    sort(iterable)
 
 A generator which sorts elements from an iterable object.
 
-Returns an iterator function, which yields subsequent elements
-coming from an iterable object, but sorted according to the
-`compare` function.  The elements are retrieved from the iterable
+The first variant returns a sort function, which can then be used
+to sort any iterable object and has a built-in compare predicate.
+The usage of the returned function is the same as the second and
+third variant.
+
+The second and third variant return an iterator function, which yields
+subsequent elements coming from an iterable object, but sorted according
+to the `compare` function.  The elements are retrieved from the iterable
 object through its `iterator()` function.
 
 `compare` is a function which returns `true` if its first argument
 should come sorted before its second argument and returns `false`
-otherwise.  `compare` defaults to "less-than" operator.
+otherwise.  `compare` defaults to `<` operator in the first and the
+third variant.
 
 Examples:
 
     > array(sort("kos language"))
     [" ", "a", "a", "e", "g", "g", "k", "l", "n", "o", "s", "u"]
-    > array(sort({ foo: 1, bar: 2, baz: 3 }, fun(x, y) -> (x[0] < y[0])))
+    > array(sort(fun(x, y) -> (x[0] < y[0]), { foo: 1, bar: 2, baz: 3 }))
     [["bar", 2], ["baz", 3], ["foo", 1]]
 
 string()
