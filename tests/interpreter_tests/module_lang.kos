@@ -462,7 +462,7 @@ do {
     assert typeof s == "string"
     assert s.size   == elements.size
     for var i in lang.range(s.size) {
-        assert s.ord(i) == elements[i]
+        assert s.code(i) == elements[i]
     }
 }
 
@@ -472,7 +472,7 @@ do {
     assert typeof s == "string"
     assert s.size   == elements.size
     for var i in lang.range(s.size) {
-        assert s.ord(i) == elements[i]
+        assert s.code(i) == elements[i]
     }
 }
 
@@ -1850,7 +1850,7 @@ do {
     assert lang.count(x => (x > 5), [ 1, 7, 2, 6, 5 ]) == 2
 
     # Count lowercase letters
-    assert "ThIs Is A MiXeD StRiNg".filter(x => (x.ord() >= 97)).count() == 8
+    assert "ThIs Is A MiXeD StRiNg".filter(x => (x.code() >= 97)).count() == 8
 }
 
 ##############################################################################

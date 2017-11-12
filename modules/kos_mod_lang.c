@@ -3344,9 +3344,9 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
-/* @item lang string.prototype.ord()
+/* @item lang string.prototype.code()
  *
- *     string.prototype.ord(pos = 0)
+ *     string.prototype.code(pos = 0)
  *
  * Returns code point of a character at a given position in a string.
  *
@@ -3357,16 +3357,16 @@ _error:
  *
  * Examples:
  *
- *     > "a".ord()
+ *     > "a".code()
  *     97
- *     > "kos".ord(2)
+ *     > "kos".code(2)
  *     115
- *     > "language".ord(-2)
+ *     > "language".code(-2)
  *     103
  */
-static KOS_OBJ_ID _ord(KOS_FRAME  frame,
-                       KOS_OBJ_ID this_obj,
-                       KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _code(KOS_FRAME  frame,
+                        KOS_OBJ_ID this_obj,
+                        KOS_OBJ_ID args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
@@ -3771,7 +3771,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "ends_with",     _ends_with,         1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "find",          _find,              1);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "ord",           _ord,               0);
+    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "code",          _code,              0);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "repeat",        _repeat,            1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "rfind",         _rfind,             1);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(string),     "rscan",         _rscan,             1);

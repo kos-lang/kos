@@ -2035,6 +2035,27 @@ Examples:
     > string("kos", [108, 97, 110, 103], 32)
     "koslang32"
 
+string.prototype.code()
+-----------------------
+
+    string.prototype.code(pos = 0)
+
+Returns code point of a character at a given position in a string.
+
+`pos` is the position of the character for which the code point is returned.
+`pos` defaults to `0`.  If `pos` is a float, it is converted to integer
+using floor method.  If `pos` is negative, it is an offset from the end of
+the string.
+
+Examples:
+
+    > "a".code()
+    97
+    > "kos".code(2)
+    115
+    > "language".code(-2)
+    103
+
 string.prototype.ends_with()
 ----------------------------
 
@@ -2164,27 +2185,6 @@ Example:
 
     > "  foo  ".lstrip()
     "foo  "
-
-string.prototype.ord()
-----------------------
-
-    string.prototype.ord(pos = 0)
-
-Returns code point of a character at a given position in a string.
-
-`pos` is the position of the character for which the code point is returned.
-`pos` defaults to `0`.  If `pos` is a float, it is converted to integer
-using floor method.  If `pos` is negative, it is an offset from the end of
-the string.
-
-Examples:
-
-    > "a".ord()
-    97
-    > "kos".ord(2)
-    115
-    > "language".ord(-2)
-    103
 
 string.prototype.repeat()
 -------------------------

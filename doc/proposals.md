@@ -7,8 +7,6 @@
 
 * ? Empty array, buffer, string, object (shallow) are all falsy
 
-* Rename string.ord() to string.code()
-
 * if and switch variable declarations
 
 * Spread operator for arguments in invocation:

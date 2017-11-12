@@ -244,13 +244,13 @@ do {
 
 do {
     const s = "a B"
-    assert s.ord(0)     == 0x61
-    assert s.ord(1)     == 0x20
-    assert s.ord(2)     == 0x42
-    assert s.ord(-1)    == 0x42
-    expect_fail(()=>(s.ord(3)))
-    expect_fail(()=>(s.ord(-4)))
-    expect_fail(()=>(s.ord(0x100000000)))
+    assert s.code(0)  == 0x61
+    assert s.code(1)  == 0x20
+    assert s.code(2)  == 0x42
+    assert s.code(-1) == 0x42
+    expect_fail(()=>(s.code(3)))
+    expect_fail(()=>(s.code(-4)))
+    expect_fail(()=>(s.code(0x100000000)))
 }
 
 do {
@@ -329,11 +329,11 @@ do {
     # LE: 02 03 00 00
     const needle   = "\x{302}\x{10000}"[0] # force 32-bit elem_size
     assert haystack.size            == 3
-    assert haystack.ord(0)          == 0x30201
-    assert haystack.ord(1)          == 0
-    assert haystack.ord(2)          == 0x302
+    assert haystack.code(0)         == 0x30201
+    assert haystack.code(1)         == 0
+    assert haystack.code(2)         == 0x302
     assert needle.size              == 1
-    assert needle.ord(0)            == 0x302
+    assert needle.code(0)           == 0x302
     assert haystack.find(needle)    == 2
     assert haystack.find(needle, 0) == 2
     assert haystack.find(needle, 1) == 2
@@ -496,12 +496,12 @@ do {
 }
 
 do {
-    assert "0".ord()        == 0x30
-    assert "\x{1002}".ord() == 0x1002
-    assert "ABCD".ord()     == 0x41
-    assert "ABCD".ord(1)    == 0x42
-    assert "ABCD".ord(-2)   == 0x43
-    assert "ABCD".ord(-1)   == 0x44
+    assert "0".code()        == 0x30
+    assert "\x{1002}".code() == 0x1002
+    assert "ABCD".code()     == 0x41
+    assert "ABCD".code(1)    == 0x42
+    assert "ABCD".code(-2)   == 0x43
+    assert "ABCD".code(-1)   == 0x44
 }
 
 do {
