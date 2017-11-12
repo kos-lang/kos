@@ -59,6 +59,7 @@ enum _KOS_KEYWORD_TYPE {
     KW_LINE,
     KW_ASSERT,
     KW_BREAK,
+    KW_CASE,
     KW_CATCH,
     KW_CLASS,
     KW_CONST,
@@ -92,8 +93,7 @@ enum _KOS_KEYWORD_TYPE {
     KW_VOID,
     KW_WHILE,
     KW_WITH,
-    KW_YIELD,
-    KW_LAMBDA
+    KW_YIELD
 };
 
 enum _KOS_OPERATOR_TYPE {
@@ -129,6 +129,7 @@ enum _KOS_OPERATOR_TYPE {
     OT_DOT            = 0x07, /* 0000 0111 */
     OT_MORE           = 0x08, /* 0000 1000 */
     OT_ARROW          = 0x09, /* 0000 1001 */
+    OT_LAMBDA         = 0x0A, /* 0000 1010 */
 
     OT_EQ             = 0x28, /* 0010 1000 */
     OT_NE             = 0x29, /* 0010 1001 */

@@ -40,21 +40,21 @@ fun lexer(filename, input)
 
         switch token.sep {
 
-            sep_paren_open {
+            case sep_paren_open {
                 save(token, sep_paren_close)
             }
 
-            sep_square_open {
+            case sep_square_open {
                 save(token, sep_square_close)
             }
 
-            sep_curly_open {
+            case sep_curly_open {
                 save(token, sep_curly_close)
             }
 
-            sep_paren_close  fallthrough
-            sep_square_close fallthrough
-            sep_curly_close {
+            case sep_paren_close  fallthrough
+            case sep_square_close fallthrough
+            case sep_curly_close {
                 if ! brackets.size {
                     throw_token(token, "unexpected '\(token.token)'")
                 }
@@ -64,9 +64,9 @@ fun lexer(filename, input)
                 if token.sep != expected_sep {
                     var actual_expected = expected_sep
                     switch expected_sep {
-                        sep_paren_close  { actual_expected = ")" }
-                        sep_square_close { actual_expected = "]" }
-                        sep_curly_close  { actual_expected = "}" }
+                        case sep_paren_close  { actual_expected = ")" }
+                        case sep_square_close { actual_expected = "]" }
+                        case sep_curly_close  { actual_expected = "}" }
                     }
                     throw_token(token, "expected '\(actual_expected)'")
                 }
@@ -79,7 +79,7 @@ fun lexer(filename, input)
                 }
             }
 
-            ... {
+            else {
                 if token.type == token_string_open {
                     save(token, sep_paren_close)
                 }

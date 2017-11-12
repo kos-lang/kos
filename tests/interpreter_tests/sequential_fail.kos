@@ -46,9 +46,9 @@ do {
     const obj  = { a : line, b : line + 1 }
     for const key, value in shallow(obj) {
         switch key {
-            "a" { assert value == line }
-            "b" { assert value == line + 1 }
-            ... { throw "invalid key" }
+            case "a" { assert value == line }
+            case "b" { assert value == line + 1 }
+            else     { throw "invalid key" }
         }
     }
 }
@@ -70,7 +70,7 @@ do {
 }
 
 do {
-    const values = [ 1, 2.0, ["x","y"], buffer([3, 4]), {}, λ->(void) ];
+    const values = [ 1, 2.0, ["x","y"], buffer([3, 4]), {}, ()=>(void) ];
     const str = stringify.apply(void, values)
     assert str == "12.0[x, y]<03 04><object><function>"
 }

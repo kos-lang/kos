@@ -120,6 +120,7 @@ const struct OPERATOR_MAP operators[] = {
     { OT_DOT,        "."      },
     { OT_MORE,       "..."    },
     { OT_ARROW,      "->"     },
+    { OT_LAMBDA,     "=>"     },
     { OT_EQ,         "=="     },
     { OT_NE,         "!="     },
     { OT_GE,         ">="     },

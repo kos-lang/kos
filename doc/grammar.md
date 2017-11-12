@@ -160,6 +160,7 @@ The following reserved keywords are defined:
 * `__line__`
 * `assert`
 * `break`
+* `case`
 * `catch`
 * `class` (reserved)
 * `const`
@@ -194,7 +195,6 @@ The following reserved keywords are defined:
 * `while`
 * `with`
 * `yield`
-* `λ`
 
 Keywords `true`, `false` and `void` are output by the lexer as special literal
 types.
@@ -209,10 +209,6 @@ types.
 
 Five keywords are currently reserved - `class`, `constructor`, `get`, `static`
 and `set`.
-
-The `λ` keyword is the unicode Greek letter "lambda", code U+03BB, which in
-UTF-8 consists of two bytes: `0xCE 0xBB`.  This keyword can be used in place
-of the `fun` keyword in function literals, but not in function statements.
 
 The main difference between keywords and non-keyword literals is that keywords
 cannot be used as variable names.  However, keywords can still be used as
@@ -412,6 +408,7 @@ treat it as either `<<` or `<=` operator.
                        | ( "&" "&" )
                        | ( "|" "|" )
                        | ( "-" ">" )
+                       | ( "=" ">" )
 
 
 Syntax
@@ -534,15 +531,15 @@ The following statements are equivalent:
 
     fun Sum(x, y)
     {
-        return x + y;
+        return x + y
     }
 
     const Sum = fun(x, y)
     {
-        return x + y;
-    };
+        return x + y
+    }
 
-    const Sum = λ(x,y)->(x+y);
+    const Sum = (x, y) => (x + y)
 
 
 Constructor statement
@@ -738,21 +735,21 @@ The switch statement consists of an expression and case sections executed
 depending on the value of that expression.  The parentheses around the
 expression are optional (they are treated as part of the expression).
 
-Each new case section begins with a right-hand-side expression or with
-ellipsis `...`, and is followed by a compound statement, a fallthrough
-statement or both (in that order).
+Each new case section begins with a "case" keyword followed by right-hand-side
+expression or with "else" keyword, and is followed by a compound statement, a
+fallthrough statement or both (in that order).
 
-The ellipsis `...` case is optional.
+The "else" case is optional.
 
-There can be only one ellipsis `...` case defined for a given switch statement.
+There can be only one "else" case defined for a given switch statement.
 
-The ellipsis `...` case does not have to be specified last.
+The "else" case does not have to be specified last.
 
 If the value of the switch expression is equal to one of the right-hand-side
 expressions, the corresponding compound statement is executed.
 
 If the value of the switch expressions does not match any right-hand-side
-expression, then the compound statement following the ellipsis `...` is
+expression, then the compound statement following `else` is
 executed, if it exists, otherwise the switch statement terminates.
 
 If there is no fallthrough statement following a compound statement, then
@@ -761,14 +758,14 @@ the switch statement terminates after that compound statement is executed.
 If a fallthrough statement is executed following a compound statement or
 following a matching right-hand-side expression, the switch statement does not
 terminate, but the execution continues in the next defined case section, as if
-the right-hand-side expression (or ellipsis `...`) for that section matched.
+the right-hand-side expression (or "else") for that section matched.
 
     SwitchStatement ::= "switch" RHSExpression
                         "{" ( SwitchCase )* [ DefaultCase ] ( SwitchCase )* "}"
 
-    SwitchCase      ::= RHSExpression CaseStatement
+    SwitchCase      ::= "case" RHSExpression CaseStatement
 
-    DefaultCase     ::= "..." CaseStatement
+    DefaultCase     ::= "else" CaseStatement
 
     CaseStatement   ::= ( CompoundStatement [ Fallthrough ] )
                         | Fallthrough
@@ -1129,8 +1126,7 @@ Member specification
     FunctionLiteral ::= SimpleFunctionLiteral
                       | CompoundFunctionLiteral
 
-    SimpleFunctionLiteral   ::= ( "fun" | "λ" ) [ ParameterList ]
-                                   "->" "(" RHSExpression ")"
+    SimpleFunctionLiteral   ::= ( Identifier | [ ParameterList] ) "=>" "(" RHSExpression ")"
 
     CompoundFunctionLiteral ::= "fun" [ ParameterList ] CompoundStatement
 

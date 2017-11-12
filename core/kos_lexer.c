@@ -277,7 +277,7 @@ static const struct _KOS_OP_SPECIFIER operator_map[][7] = {
     { { ".", OT_DOT    }, { "...", OT_MORE   }, { 0,     OT_NONE   } },
     { { "/", OT_DIV    }, { "/=",  OT_SETDIV }, { 0,     OT_NONE   } },
     { { "<", OT_LT     }, { "<<",  OT_SHL    }, { "<<=", OT_SETSHL }, { "<=",  OT_LE     }, { 0,     OT_NONE } },
-    { { "=", OT_SET    }, { "==",  OT_EQ     }, { 0,     OT_NONE } },
+    { { "=", OT_SET    }, { "==",  OT_EQ     }, { "=>",  OT_LAMBDA }, { 0,     OT_NONE } },
     { { ">", OT_GT     }, { ">=",  OT_GE     }, { ">>",  OT_SHR    }, { ">>=", OT_SETSHR }, { ">>>", OT_SHRU }, { ">>>=", OT_SETSHRU }, { 0, OT_NONE } },
     { { "?", OT_LOGTRI }, { 0,     OT_NONE   } },
     { { "^", OT_XOR    }, { "^=",  OT_SETXOR }, { 0,     OT_NONE   } },
@@ -290,6 +290,7 @@ static const char *const keywords[] = {
     "__line__",
     "assert",
     "break",
+    "case",
     "catch",
     "class",
     "const",
@@ -323,8 +324,7 @@ static const char *const keywords[] = {
     "void",
     "while",
     "with",
-    "yield",
-    "λ"
+    "yield"
 };
 
 static unsigned _prefetch_next(struct _KOS_LEXER *lexer, const char **begin, const char **end)

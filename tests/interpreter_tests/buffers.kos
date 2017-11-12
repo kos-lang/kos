@@ -48,8 +48,8 @@ do {
     b.reserve(100)
     assert b.size == 0
 
-    expect_fail(λ->(b[0]))
-    expect_fail(λ->(b[-1]))
+    expect_fail(()=>(b[0]))
+    expect_fail(()=>(b[-1]))
 }
 
 do {
@@ -63,7 +63,7 @@ do {
 }
 
 do {
-    expect_fail(λ->(buffer(-1)))
+    expect_fail(()=>(buffer(-1)))
 }
 
 do {
@@ -96,8 +96,8 @@ do {
     assert b[-5]  == 5
     assert b[-10] == 0
 
-    expect_fail(λ->(b[10]))
-    expect_fail(λ->(b[-11]))
+    expect_fail(()=>(b[10]))
+    expect_fail(()=>(b[-11]))
 
     b.reserve(512)
 
@@ -110,8 +110,8 @@ do {
     assert b[-5]  == 5
     assert b[-10] == 0
 
-    expect_fail(λ->(b[10]))
-    expect_fail(λ->(b[-11]))
+    expect_fail(()=>(b[10]))
+    expect_fail(()=>(b[-11]))
 
     assert b[integer("3")]  == 3
     assert b[integer("-2")] == 8
@@ -227,7 +227,7 @@ do {
 
     assert typeof obj == "object"
     assert "size" in obj
-    expect_fail(λ->(obj.size))
+    expect_fail(()=>(obj.size))
 }
 
 ##############################################################################
@@ -293,10 +293,10 @@ do {
         assert b[i] == 6
     }
 
-    expect_fail(λ->(b.fill(false, void, 0)))
-    expect_fail(λ->(b.fill(void, false, 0)))
-    expect_fail(λ->(b.fill(false, 0)))
-    expect_fail(λ->(b.fill(void, void, 256)))
+    expect_fail(()=>(b.fill(false, void, 0)))
+    expect_fail(()=>(b.fill(void, false, 0)))
+    expect_fail(()=>(b.fill(false, 0)))
+    expect_fail(()=>(b.fill(void, void, 256)))
 }
 
 ##############################################################################
@@ -728,26 +728,26 @@ do {
 }
 
 do {
-    expect_fail(λ->(buffer().pack(1)))
-    expect_fail(λ->(buffer().pack()))
-    expect_fail(λ->(buffer().pack("1", 0)))
-    expect_fail(λ->(buffer().pack("u", 0)))
-    expect_fail(λ->(buffer().pack("r1", 0)))
-    expect_fail(λ->(buffer().pack("u3", 0)))
-    expect_fail(λ->(buffer().pack("i7", 0)))
-    expect_fail(λ->(buffer().pack("f2", 0)))
-    expect_fail(λ->(buffer().pack("f4", "x")))
-    expect_fail(λ->(buffer().pack("u2", "")))
-    expect_fail(λ->(buffer().pack("s2", 0)))
-    expect_fail(λ->(buffer().pack("b", "")))
-    expect_fail(λ->(buffer().pack("u1 1", 1)))
-    expect_fail(λ->(buffer().pack("2 u1", 1)))
-    expect_fail(λ->(buffer().pack("i1 i2", 1)))
-    expect_fail(λ->(buffer().pack("2 f4", 1)))
-    expect_fail(λ->(buffer().pack("2 s4", "")))
-    expect_fail(λ->(buffer().pack("2 b4", buffer())))
-    expect_fail(λ->(buffer().pack("2 b4")))
-    expect_fail(λ->(buffer().pack("b4", 0)))
+    expect_fail(()=>(buffer().pack(1)))
+    expect_fail(()=>(buffer().pack()))
+    expect_fail(()=>(buffer().pack("1", 0)))
+    expect_fail(()=>(buffer().pack("u", 0)))
+    expect_fail(()=>(buffer().pack("r1", 0)))
+    expect_fail(()=>(buffer().pack("u3", 0)))
+    expect_fail(()=>(buffer().pack("i7", 0)))
+    expect_fail(()=>(buffer().pack("f2", 0)))
+    expect_fail(()=>(buffer().pack("f4", "x")))
+    expect_fail(()=>(buffer().pack("u2", "")))
+    expect_fail(()=>(buffer().pack("s2", 0)))
+    expect_fail(()=>(buffer().pack("b", "")))
+    expect_fail(()=>(buffer().pack("u1 1", 1)))
+    expect_fail(()=>(buffer().pack("2 u1", 1)))
+    expect_fail(()=>(buffer().pack("i1 i2", 1)))
+    expect_fail(()=>(buffer().pack("2 f4", 1)))
+    expect_fail(()=>(buffer().pack("2 s4", "")))
+    expect_fail(()=>(buffer().pack("2 b4", buffer())))
+    expect_fail(()=>(buffer().pack("2 b4")))
+    expect_fail(()=>(buffer().pack("b4", 0)))
 }
 
 ##############################################################################
@@ -940,9 +940,9 @@ do {
 }
 
 do {
-    expect_fail(λ->(buffer.prototype.unpack.apply(void, [""])))
-    expect_fail(λ->(buffer(100).unpack(void)))
-    expect_fail(λ->(buffer().unpack("u1")))
+    expect_fail(()=>(buffer.prototype.unpack.apply(void, [""])))
+    expect_fail(()=>(buffer(100).unpack(void)))
+    expect_fail(()=>(buffer().unpack("u1")))
 }
 
 ##############################################################################

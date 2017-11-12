@@ -129,7 +129,7 @@ do {
     const lexer = lang.buffer().pack("s", "(str\"") -> kos.raw_lexer
 
     const t1 = lexer()
-    expect_fail(λ->(lexer(kos.continue_string)))
+    expect_fail(()=>(lexer(kos.continue_string)))
 }
 
 do {

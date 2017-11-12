@@ -3,15 +3,15 @@ do {
     {
         switch a {
 
-            void  { return 1 }
+            case void  { return 1 }
 
-            true  { return 2 }
+            case true  { return 2 }
 
-            false { return 3 }
+            case false { return 3 }
 
-            "x"   { return 4 }
+            case "x"   { return 4 }
 
-            89    { return 5 }
+            case 89    { return 5 }
         }
         return void
     }
@@ -40,7 +40,7 @@ do {
     fun test(x)
     {
         switch x {
-            5 { return true }
+            case 5 { return true }
         }
         return false
     }
@@ -54,7 +54,7 @@ do {
     var a = 1
 
     switch 8 {
-        ... { a = 2 }
+        else { a = 2 }
     }
 
     assert a == 2
@@ -67,27 +67,27 @@ do {
 
         switch a + 1 {
 
-            1 {
+            case 1 {
                 ret += "a"
             }
 
-            2 {
+            case 2 {
                 ret += "b"
             }
             fallthrough
 
-            3 {
+            case 3 {
                 ret += "c"
             }
 
-            ... {
+            else {
                 ret += "d"
             }
 
-            4 fallthrough
-            5 fallthrough
+            case 4 fallthrough
+            case 5 fallthrough
 
-            6 {
+            case 6 {
                 ret += "e"
             }
         }
@@ -109,13 +109,13 @@ do {
     var sum = 0
     for var i = 1; i < 10; i += 1 {
         switch i {
-            2   fallthrough
-            4   fallthrough
-            5   { continue }
+            case 2 fallthrough
+            case 4 fallthrough
+            case 5 { continue }
 
-            ... { sum = sum * 10 + i }
+            else   { sum = sum * 10 + i }
 
-            8   { break }
+            case 8 { break }
         }
     }
 
@@ -128,8 +128,8 @@ do {
         const x = 1
         const y = 2
         switch (a) {
-            x { return 7 }
-            y { return 14 }
+            case x { return 7 }
+            case y { return 14 }
         }
         return 0
     }
@@ -144,10 +144,10 @@ do {
     fun select(a)
     {
         switch a + 1 {
-            0 fallthrough
-            1 fallthrough
-            2 { return a }
-            x * 2 { return 10 }
+            case 0 fallthrough
+            case 1 fallthrough
+            case 2 { return a }
+            case x * 2 { return 10 }
         }
     }
 

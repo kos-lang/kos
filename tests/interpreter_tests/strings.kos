@@ -48,12 +48,12 @@ do {
 }
 
 do {
-    const str = λ->( r"test\r\n\"" )()
+    const str = ()=>( r"test\r\n\"" )()
     assert str == "test\\r\\n\\\""
 
     assert "\\\"" == r"\""
 
-    assert "\\r" + λ->(r"\n")() == R"\r" + λ->("\\n")()
+    assert "\\r" + ()=>(r"\n")() == R"\r" + ()=>("\\n")()
     assert "\\r" + r"\n" == R"\r" + "\\n"
 }
 
@@ -75,7 +75,7 @@ do {
 
 do {
     const str = "\xff"
-    assert λ->("\X{0FF}")() == str
+    assert ()=>("\X{0FF}")() == str
 }
 
 do {
@@ -134,8 +134,8 @@ do {
     assert s[-1] == "h"
     assert s[-2] == "g"
     assert s[-8] == "a"
-    expect_fail(λ->(s[8]))
-    expect_fail(λ->(s[-9]))
+    expect_fail(()=>(s[8]))
+    expect_fail(()=>(s[-9]))
 
     assert s.size == 8
 
@@ -223,7 +223,7 @@ do {
 }
 
 do {
-    const a = λ->("ab")()
+    const a = ()=>("ab")()
     const b = "abc\x{100}"
     assert a < b
 }
@@ -248,9 +248,9 @@ do {
     assert s.ord(1)     == 0x20
     assert s.ord(2)     == 0x42
     assert s.ord(-1)    == 0x42
-    expect_fail(λ->(s.ord(3)))
-    expect_fail(λ->(s.ord(-4)))
-    expect_fail(λ->(s.ord(0x100000000)))
+    expect_fail(()=>(s.ord(3)))
+    expect_fail(()=>(s.ord(-4)))
+    expect_fail(()=>(s.ord(0x100000000)))
 }
 
 do {
@@ -271,9 +271,9 @@ do {
     assert ! "Y\x{10000}XZ".starts_with("X\x{10000}")
     assert ! "a".starts_with("aa")
 
-    expect_fail(λ->("".starts_with.apply(void, [""])))
-    expect_fail(λ->("".starts_with(void)))
-    expect_fail(λ->("".starts_with()))
+    expect_fail(()=>("".starts_with.apply(void, [""])))
+    expect_fail(()=>("".starts_with(void)))
+    expect_fail(()=>("".starts_with()))
 }
 
 do {
@@ -285,9 +285,9 @@ do {
     assert ! "ab".ends_with("ba")
     assert ! "a".ends_with("aa")
 
-    expect_fail(λ->("".ends_with.apply(void, [""])))
-    expect_fail(λ->("".ends_with(void)))
-    expect_fail(λ->("".ends_with()))
+    expect_fail(()=>("".ends_with.apply(void, [""])))
+    expect_fail(()=>("".ends_with(void)))
+    expect_fail(()=>("".ends_with()))
 }
 
 do {
@@ -318,9 +318,9 @@ do {
     assert "alamalamamalalamakota".find("alamakota")     == 12
     assert "alamalamamalalamakot".find("alamakota")      == -1
 
-    expect_fail(λ->("".find.apply(void, [""])))
-    expect_fail(λ->("".find()))
-    expect_fail(λ->("".find(void)))
+    expect_fail(()=>("".find.apply(void, [""])))
+    expect_fail(()=>("".find()))
+    expect_fail(()=>("".find(void)))
 }
 
 do {
@@ -361,9 +361,9 @@ do {
     assert "abXYcdXXYefXYYgh".rfind("XY", -10) == 2
     assert "abXYcdXXYefXYYgh".rfind("XY", -20) == -1
 
-    expect_fail(λ->("".rfind.apply(void, [""])))
-    expect_fail(λ->("".rfind()))
-    expect_fail(λ->("".rfind(void)))
+    expect_fail(()=>("".rfind.apply(void, [""])))
+    expect_fail(()=>("".rfind()))
+    expect_fail(()=>("".rfind(void)))
 }
 
 do {
@@ -391,8 +391,8 @@ do {
         }
     }
 
-    expect_fail(λ->("".scan.apply(void, [""])))
-    expect_fail(λ->("".scan(void)))
+    expect_fail(()=>("".scan.apply(void, [""])))
+    expect_fail(()=>("".scan(void)))
 
     assert "abcDEF".scan("cba", 0, false) == 3
     assert "abcd".scan("", 2) == 2
@@ -428,8 +428,8 @@ do {
         }
     }
 
-    expect_fail(λ->("".rscan.apply(void, [""])))
-    expect_fail(λ->("".rscan(void)))
+    expect_fail(()=>("".rscan.apply(void, [""])))
+    expect_fail(()=>("".rscan(void)))
 
     assert "abcDEF".rscan("FED", -1, false) == 2
 }
@@ -492,7 +492,7 @@ do {
     assert "0123456789".reverse() == "9876543210"
     assert "\x{FFFF}\0".reverse() == "\0\x{FFFF}"
     assert "\x{10000}a\0".reverse() == "\0a\x{10000}"
-    expect_fail(λ->("".reverse.apply(void, [])))
+    expect_fail(()=>("".reverse.apply(void, [])))
 }
 
 do {
@@ -578,5 +578,5 @@ do {
     assert "a".repeat(2)   == "aa"
     assert "x".repeat(10)  == "xxxxxxxxxx"
     assert "mno".repeat(2) == "mnomno"
-    expect_fail(λ->("x".repeat(0x10000)))
+    expect_fail(()=>("x".repeat(0x10000)))
 }

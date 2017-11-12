@@ -455,11 +455,11 @@ against each element using the `==` operator.
 
 Examples:
 
-    > all(fun(x) -> (x > 0), [1, 2, 3, 4])
+    > all(x => (x > 0), [1, 2, 3, 4])
     true
-    > all(fun(x) -> (x > 0), [0, 1, 2, 3])
+    > all(x => (x > 0), [0, 1, 2, 3])
     false
-    > const all_numbers = all(fun(x) -> (typeof x == "number"))
+    > const all_numbers = all(x => (typeof x == "number"))
     > all_numbers([1, 2, 3, 4])
     true
     > all_numbers([1, 2, "foo", 3])
@@ -493,11 +493,11 @@ against each element using the `==` operator.
 
 Examples:
 
-    > any(fun(x) -> (x > 0), [0, 20, -1, -20])
+    > any(x => (x > 0), [0, 20, -1, -20])
     true
-    > any(fun(x) -> (x < 0), [0, 1, 2, 3])
+    > any(x => (x < 0), [0, 1, 2, 3])
     false
-    > const any_numbers = any(fun(x) -> (typeof x == "number"))
+    > const any_numbers = any(x => (typeof x == "number"))
     > any_numbers(["a", "b", 1])
     true
     > any_numbers(["a", "b", "c"])
@@ -792,7 +792,7 @@ Examples:
 array.prototype.sort()
 ----------------------
 
-    array.prototype.sort(compare = fun(x, y) -> (x < y))
+    array.prototype.sort(compare = (x, y) => (x < y))
 
 Sorts array in-place according to the ordering specified by `compare`.
 
@@ -1200,9 +1200,9 @@ comparing each element to `op` using `==` operator.
 
 Examples:
 
-    > count(fun(x) -> (x > 0), [-1, 1, 2, -3, 4])
+    > count(x => (x > 0), [-1, 1, 2, -3, 4])
     3
-    > const count_numbers = count(fun(x) -> (x instanceof number))
+    > const count_numbers = count(x => (x instanceof number))
     > count_numbers([10, 2, "foo", 30, "bar", 4])
     4
     > count("o", "monologue")
@@ -1284,9 +1284,9 @@ elements of it, which are then filtered.
 
 Examples:
 
-    > array(filter(fun(x) -> (x < 0), [1, -2, 3, 4, -5, -6]))
+    > array(filter(x => (x < 0), [1, -2, 3, 4, -5, -6]))
     [-2, -5, -6]
-    > const odd = filter(fun(x) -> (x & 1))
+    > const odd = filter(x => (x & 1))
     > array(odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]))
     [9, 7, 5, 3, 1]
 
@@ -1582,9 +1582,9 @@ elements of it, which are then mapped.
 
 Examples:
 
-    > array(map(fun(x) -> (x*10), [1, 2, 3, 4]))
+    > array(map(x => (x*10), [1, 2, 3, 4]))
     [10, 20, 30, 40]
-    > const plus2 = map(fun(x) -> (x + 2))
+    > const plus2 = map(x => (x + 2))
     > array(plus2([10, 11, 12, 13]))
     [12, 13, 14, 15]
 
@@ -1685,7 +1685,7 @@ against each element using the `==` operator.
 
 Example:
 
-    > [0, 1, 2, 3].all(fun(x) -> (x > 0))
+    > [0, 1, 2, 3].all(x => (x > 0))
     false
 
 object.prototype.any()
@@ -1712,7 +1712,7 @@ against each element using the `==` operator.
 
 Example:
 
-    > [1, 2, -1, 3, 4].any(fun(x) -> (x < 0))
+    > [1, 2, -1, 3, 4].any(x => (x < 0))
     true
 
 object.prototype.count()
@@ -1755,7 +1755,7 @@ obtained through the `iterator()` function.
 
 Example:
 
-    > array([1, 2, 3, 4, 5, 6].filter(fun(x) -> (x & 1)))
+    > array([1, 2, 3, 4, 5, 6].filter(x => (x & 1)))
     [1, 3, 5]
 
 object.prototype.iterator()
@@ -1805,7 +1805,7 @@ are obtained through the `iterator()` function.
 
 Example:
 
-    > array([1, 3, 5, 7].map(fun(x) -> (x * 2)))
+    > array([1, 3, 5, 7].map(x => (x * 2)))
     [2, 6, 10, 14]
 
 object.prototype.reduce()
@@ -1827,7 +1827,7 @@ The left fold operation is applied as follows (pseudo-code):
 
 Example:
 
-    > [1, 3, 7, 4, 6].reduce(fun(x, y) -> (x + y), 0)
+    > [1, 3, 7, 4, 6].reduce((x, y) => (x + y), 0)
     21
 
 print()
@@ -1940,9 +1940,9 @@ elements of it, on which the reduction is performed.
 
 Examples:
 
-    > reduce(fun(x, y) -> (x + y), 0, [1, 1, 1, 2, 5])
+    > reduce((x, y) => (x + y), 0, [1, 1, 1, 2, 5])
     10
-    > const count_non_zero = reduce(fun(x, y) -> (x + (y ? 1 : 0)), 0)
+    > const count_non_zero = reduce((x, y) => (x + (y ? 1 : 0)), 0)
     > count_non_zero([0, 0, 4, 0, 0, 5, 6, 0])
     3
 
@@ -1967,7 +1967,7 @@ Example:
 sort()
 ------
 
-    sort(compare = fun(x, y) -> (x < y))
+    sort(compare = (x, y) => (x < y))
     sort(compare, iterable)
     sort(iterable)
 
@@ -1992,7 +1992,7 @@ Examples:
 
     > array(sort("kos language"))
     [" ", "a", "a", "e", "g", "g", "k", "l", "n", "o", "s", "u"]
-    > array(sort(fun(x, y) -> (x[0] < y[0]), { foo: 1, bar: 2, baz: 3 }))
+    > array(sort((x, y) => (x[0] < y[0]), { foo: 1, bar: 2, baz: 3 }))
     [["bar", 2], ["baz", 3], ["foo", 1]]
 
 string()

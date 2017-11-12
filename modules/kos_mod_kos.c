@@ -301,6 +301,7 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_line",         KW_LINE);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_assert",       KW_ASSERT);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_break",        KW_BREAK);
+    TRY_ADD_INTEGER_CONSTANT(frame, "keyword_case",         KW_CASE);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_catch",        KW_CATCH);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_class",        KW_CLASS);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_const",        KW_CONST);
@@ -335,7 +336,6 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_while",        KW_WHILE);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_with",         KW_WITH);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_yield",        KW_YIELD);
-    TRY_ADD_INTEGER_CONSTANT(frame, "keyword_lambda",       KW_LAMBDA);
 
     TRY_ADD_INTEGER_CONSTANT(frame, "op_none",              OT_NONE);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_mask",              OT_MASK);
@@ -364,6 +364,7 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "op_dot",               OT_DOT);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_more",              OT_MORE);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_arrow",             OT_ARROW);
+    TRY_ADD_INTEGER_CONSTANT(frame, "op_lambda",            OT_LAMBDA);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_eq",                OT_EQ);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_ne",                OT_NE);
     TRY_ADD_INTEGER_CONSTANT(frame, "op_ge",                OT_GE);

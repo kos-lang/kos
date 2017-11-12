@@ -1,22 +1,22 @@
 switch a ? b[c+2] : d
 {
-    true {
+    case true {
         print(1);
     }
-    void {
+    case void {
         print(2);
     }
-    "string" {
+    case "string" {
         print (3);
     }
     fallthrough;
-    1.1 {
+    case 1.1 {
         print(4);
     }
-    ... {
+    else {
         print(5);
     }
-    a||b||c {
+    case a||b||c {
         print(6);
     }
 }
@@ -35,51 +35,51 @@ switch a ? b[c+2] : d
             ))
             (identifier 1 21 d)
         )
-        (case 3 5 true
-            (bool 3 5 true)
-            (scope 3 10 {
+        (case 3 5 case
+            (bool 3 10 true)
+            (scope 3 15 {
                 (invocation 4 14 paren_open
                     (identifier 4 9 print)
                     (number 4 15 1)
         )))
-        (case 6 5 void
-            (void 6 5 void)
-            (scope 6 10 {
+        (case 6 5 case
+            (void 6 10 void)
+            (scope 6 15 {
                 (invocation 7 14 paren_open
                     (identifier 7 9 print)
                     (number 7 15 2)
         )))
-        (case 9 5 "string"
-            (string 9 5 "string")
-            (scope 9 14 {
+        (case 9 5 case
+            (string 9 10 "string")
+            (scope 9 19 {
                 (invocation 10 15 paren_open
                     (identifier 10 9 print)
                     (number 10 16 3)
             ))
             (fallthrough 12 5 fallthrough)
         )
-        (case 13 5 1.1
-            (number 13 5 1.1)
-            (scope 13 9 {
+        (case 13 5 case
+            (number 13 10 1.1)
+            (scope 13 14 {
                 (invocation 14 14 paren_open
                     (identifier 14 9 print)
                     (number 14 15 4)
         )))
-        (default 16 5 ...
-            (empty 16 5 ...)
-            (scope 16 9 {
+        (default 16 5 else
+            (empty 16 5 else)
+            (scope 16 10 {
                 (invocation 17 14 paren_open
                     (identifier 17 9 print)
                     (number 17 15 5)
         )))
-        (case 19 5 a
-            (operator 19 6 ||
-                (identifier 19 5 a)
-                (operator 19 9 ||
-                    (identifier 19 8 b)
-                    (identifier 19 11 c)
+        (case 19 5 case
+            (operator 19 11 ||
+                (identifier 19 10 a)
+                (operator 19 14 ||
+                    (identifier 19 13 b)
+                    (identifier 19 16 c)
             ))
-            (scope 19 13 {
+            (scope 19 18 {
                 (invocation 20 14 paren_open
                     (identifier 20 9 print)
                     (number 20 15 6)
@@ -89,12 +89,12 @@ switch a ? b[c+2] : d
 @------------------------------------------------------------------------------
 switch (a)
 {
-    b+c fallthrough;
-    d {
+    case b+c fallthrough;
+    case d {
     }
-    e {
+    case e {
     }
-    ... {
+    else {
     }
 }
 
@@ -103,37 +103,37 @@ switch (a)
 (scope 1 1
     (switch 1 1 switch
         (identifier 1 9 a)
-        (case 3 5 b
-            (operator 3 6 +
-                (identifier 3 5 b)
-                (identifier 3 7 c)
+        (case 3 5 case
+            (operator 3 11 +
+                (identifier 3 10 b)
+                (identifier 3 12 c)
             )
-            (fallthrough 3 9 fallthrough)
+            (fallthrough 3 14 fallthrough)
         )
-        (case 4 5 d
-            (identifier 4 5 d)
-            (scope 4 7 {)
+        (case 4 5 case
+            (identifier 4 10 d)
+            (scope 4 12 {)
         )
-        (case 6 5 e
-            (identifier 6 5 e)
-            (scope 6 7 {)
+        (case 6 5 case
+            (identifier 6 10 e)
+            (scope 6 12 {)
         )
-        (default 8 5 ...
-            (empty 8 5 ...)
-            (scope 8 9 {)
+        (default 8 5 else
+            (empty 8 5 else)
+            (scope 8 10 {)
         )
 ))
 
 @------------------------------------------------------------------------------
 switch a+b
 {
-    1 {
+    case 1 {
         e();
     }
-    2 {
+    case 2 {
         f();
     }
-    3 {
+    case 3 {
         g();
     }
 }
@@ -146,21 +146,21 @@ switch a+b
             (identifier 1 8 a)
             (identifier 1 10 b)
         )
-        (case 3 5 1
-            (number 3 5 1)
-            (scope 3 7 {
+        (case 3 5 case
+            (number 3 10 1)
+            (scope 3 12 {
                 (invocation 4 10 paren_open
                     (identifier 4 9 e)
         )))
-        (case 6 5 2
-            (number 6 5 2)
-            (scope 6 7 {
+        (case 6 5 case
+            (number 6 10 2)
+            (scope 6 12 {
                 (invocation 7 10 paren_open
                     (identifier 7 9 f)
         )))
-        (case 9 5 3
-            (number 9 5 3)
-            (scope 9 7 {
+        (case 9 5 case
+            (number 9 10 3)
+            (scope 9 12 {
                 (invocation 10 10 paren_open
                     (identifier 10 9 g)
         )))
@@ -177,25 +177,25 @@ switch x { }
 ))
 
 @------------------------------------------------------------------------------
-switch x { ... fallthrough; }
+switch x { else fallthrough; }
 
 @0
 
 (scope 1 1
     (switch 1 1 switch
         (identifier 1 8 x)
-        (default 1 12 ...
-            (empty 1 12 ...)
-            (fallthrough 1 16 fallthrough)
+        (default 1 12 else
+            (empty 1 12 else)
+            (fallthrough 1 17 fallthrough)
         )
 ))
 
 @------------------------------------------------------------------------------
 switch a
 {
-    ... { a(); }
-    1   { b(); }
-    ... { c(); } # Duplicate default
+    else   { a(); }
+    case 1 { b(); }
+    else   { c(); } # Duplicate default
 }
 
 @ 10 5 5
@@ -216,14 +216,14 @@ switch void { }
 ))
 
 @------------------------------------------------------------------------------
-switch this { true; } # Open curly brace expected
+switch this { case true; } # Open curly brace expected
 
-@ 10 1 19
+@ 10 1 24
 
 @------------------------------------------------------------------------------
-switch { } { { } } # Open curly brace expected
+switch { } { { } } # Case brace expected
 
-@ 10 1 18
+@ 10 1 14
 
 @------------------------------------------------------------------------------
 switch a = b { } # Need curly brace instead of assignment
@@ -231,9 +231,9 @@ switch a = b { } # Need curly brace instead of assignment
 @ 10 1 10
 
 @------------------------------------------------------------------------------
-switch { } { 0: } # Open curly brace expected
+switch { } { case 0: } # Open curly brace expected
 
-@ 10 1 15
+@ 10 1 20
 
 @------------------------------------------------------------------------------
 switch a {

@@ -31,7 +31,7 @@ fun expect_fail(function)
     assert failed
 }
 
-expect_fail(λ->({}[""]))
+expect_fail(()=>({}[""]))
 
 do {
     const a = {}
@@ -63,11 +63,11 @@ do {
 
     assert delete a.bb == void
     assert a.aa == 11
-    expect_fail(λ->(a.bb))
+    expect_fail(()=>(a.bb))
 
     const aa = "aa"
     assert delete a[aa] == void
-    expect_fail(λ->(a.aa))
+    expect_fail(()=>(a.aa))
 }
 
 do {
@@ -122,7 +122,7 @@ do {
 
     assert obj.b == "b"
     delete obj.b
-    expect_fail(λ->(obj.b))
+    expect_fail(()=>(obj.b))
 }
 
 do {
@@ -131,7 +131,7 @@ do {
         this.a = a + 1
     }
 
-    expect_fail(λ->(constr()))
+    expect_fail(()=>(constr()))
 
     const obj = constr(8)
 
@@ -171,8 +171,8 @@ do {
     assert obj instanceof constr
 
     assert obj.a == 10
-    expect_fail(λ->(obj[0]))
-    expect_fail(λ->(obj.length))
+    expect_fail(()=>(obj[0]))
+    expect_fail(()=>(obj.length))
 }
 
 do {

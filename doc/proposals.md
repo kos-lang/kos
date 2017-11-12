@@ -1,13 +1,6 @@
 ﻿Enhancement proposals
 =====================
 
-* Remove mandator parentheses from lambda body.
-
-* JS2-style lambdas with => operator:
-
-        map( x => x + 1 )
-        map( x => x.rjust(10) )
-
 * Change division to produce float, add integer division operator //
 
 * Add buffer strings b""
@@ -29,12 +22,6 @@
 * `private` keyword to make globals module-private
 
 * ? Support multi-line strings the Python way or the C way?
-
-* Partial application:
-
-        const sum3 = fun(a, b, c) -> ( a + b + c )
-        const sum2 = add3(0)    # sum2 is fun(b, c) -> ( 0 + b + c )
-        const add1 = add3(0, 1) # add1 is fun(c) -> ( 0 + 1 + c )
 
 * set/get:
 
@@ -61,8 +48,8 @@
                     this.x = x
                     this.y = y
                 }
-                get_x -> (this.x)
-                get_y -> (this.y)
+                get_x = () => (this.x)
+                get_y = () => (this.y)
             }
 
             assert typeof Base == "function"

@@ -75,7 +75,7 @@ objects, like everything else.  Function identifiers are really constants.
 And this is the third way to declare functions.  The parentheses contain the
 expression which is treated like a return statement.
 
-    const subtract_two_numbers = fun(a, b) -> (a - b)
+    const subtract_two_numbers = (a, b) => (a - b)
 
     lang.print(subtract_two_numbers(7, 5)) # Prints: 2
 
@@ -173,11 +173,11 @@ Curly braces are also required in all the other control flow statements below.
     fun select_color(num)
     {
         switch num {
-            0   { return "black" }
-            1   { return "green" }
-            2   fallthrough        # the same as 3
-            3   { return "blue"  }
-            ... { return "white" } # anything else, "default"
+            case 0 { return "black" }
+            case 1 { return "green" }
+            case 2 fallthrough        # the same as 3
+            case 3 { return "blue"  }
+            else   { return "white" } # anything else, "default"
         }
     }
 
@@ -414,7 +414,7 @@ Objects in Kos can have methods:
 
     const counter = {
         count:     0,
-        get:       fun -> (this.count),
+        get:       () =>  (this.count),
         increment: fun    { this.count += 1 },
         add:       fun(n) { this.count += n }
     }

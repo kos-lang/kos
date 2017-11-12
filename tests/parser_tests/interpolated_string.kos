@@ -108,7 +108,7 @@ const a = { "bb\(c)dd": 0 }; # Unexpected interpolated string
 
 @------------------------------------------------------------------------------
 switch (a) {
-    "bb\(c)dd" { # Unexpected interpolated string
+    case "bb\(c)dd" { # Unexpected interpolated string
         e = 1;
     }
 }
@@ -118,13 +118,13 @@ switch (a) {
 (scope 1 1
     (switch 1 1 switch
         (identifier 1 9 a)
-        (case 2 5 "bb\(
-            (interpolated_string 2 5 "bb\(
-                (string 2 5 "bb\()
-                (identifier 2 10 c)
-                (string 2 11 )dd")
+        (case 2 5 case
+            (interpolated_string 2 10 "bb\(
+                (string 2 10 "bb\()
+                (identifier 2 15 c)
+                (string 2 16 )dd")
             )
-            (scope 2 16 {
+            (scope 2 21 {
                 (assignment 3 11 =
                     (left_hand_side 3 11 =
                         (identifier 3 9 e)

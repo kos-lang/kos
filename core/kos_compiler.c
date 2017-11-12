@@ -336,9 +336,7 @@ static void _get_token_str(const struct _KOS_TOKEN *token,
 
     *out_escape = KOS_UTF8_WITH_ESCAPE;
 
-    if (token->type >= TT_STRING) { /* TT_STRING* */
-        assert(token->type == TT_STRING ||
-               token->type == TT_STRING_OPEN);
+    if (token->type == TT_STRING || token->type == TT_STRING_OPEN) { /* TT_STRING* */
         if (*begin == 'r' || *begin == 'R') {
             *out_escape = KOS_UTF8_NO_ESCAPE;
             ++begin;
@@ -353,7 +351,9 @@ static void _get_token_str(const struct _KOS_TOKEN *token,
         }
     }
     else {
-        assert(token->type == TT_IDENTIFIER || token->type == TT_KEYWORD);
+        assert(token->type == TT_IDENTIFIER ||
+               token->type == TT_KEYWORD    ||
+               token->op   == OT_LAMBDA);
     }
 
     *out_begin  = begin;

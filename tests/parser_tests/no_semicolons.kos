@@ -130,57 +130,57 @@ do {
         )))
 
 @------------------------------------------------------------------------------
-λ->(a
+()=>(a
 -b)
 
 @ 0
 
 (scope 1 1
-    (function 1 1 λ
-        (parameters 1 2 ->)
-        (landmark 1 4 paren_open)
-        (scope 1 2 ->
-            (return 1 2 ->
+    (function 1 3 =>
+        (parameters 1 1 paren_open)
+        (landmark 1 3 =>)
+        (scope 1 3 =>
+            (return 1 3 =>
                 (operator 2 1 -
-                    (identifier 1 5 a)
+                    (identifier 1 6 a)
                     (identifier 2 2 b)
                 )))
         (landmark 2 3 paren_close)
     ))
 
 @------------------------------------------------------------------------------
-λ->(a
+()=>(a
 (b))
 
 @ 0
 
 (scope 1 1
-    (function 1 1 λ
-        (parameters 1 2 ->)
-        (landmark 1 4 paren_open)
-        (scope 1 2 ->
-            (return 1 2 ->
+    (function 1 3 =>
+        (parameters 1 1 paren_open)
+        (landmark 1 3 =>)
+        (scope 1 3 =>
+            (return 1 3 =>
                 (invocation 2 1 paren_open
-                    (identifier 1 5 a)
+                    (identifier 1 6 a)
                     (identifier 2 2 b)
                 )))
         (landmark 2 4 paren_close)
     ))
 
 @------------------------------------------------------------------------------
-λ->(a
+()=>(a
 [b])
 
 @ 0
 
 (scope 1 1
-    (function 1 1 λ
-        (parameters 1 2 ->)
-        (landmark 1 4 paren_open)
-        (scope 1 2 ->
-            (return 1 2 ->
+    (function 1 3 =>
+        (parameters 1 1 paren_open)
+        (landmark 1 3 =>)
+        (scope 1 3 =>
+            (return 1 3 =>
                 (refinement 2 1 [
-                    (identifier 1 5 a)
+                    (identifier 1 6 a)
                     (identifier 2 2 b)
                 )))
         (landmark 2 4 paren_close)

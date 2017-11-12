@@ -37,7 +37,7 @@ do {
     assert ["a", "b", "c"][-1] == "c"
 }
 
-expect_fail(λ->([][0]))
+expect_fail(()=>([][0]))
 
 do {
     const a = []
@@ -61,8 +61,8 @@ do {
     assert a.size == 1
     assert a[0]   == 1
     assert a[-1]  == 1
-    expect_fail(λ->(a[1]))
-    expect_fail(λ->(a[-2]))
+    expect_fail(()=>(a[1]))
+    expect_fail(()=>(a[-2]))
 
     a.resize(3)
     assert a.size == 3
@@ -72,8 +72,8 @@ do {
     assert a[-1]  == void
     assert a[-2]  == void
     assert a[-3]  == 1
-    expect_fail(λ->(a[3]))
-    expect_fail(λ->(a[-4]))
+    expect_fail(()=>(a[3]))
+    expect_fail(()=>(a[-4]))
 }
 
 do {
@@ -325,8 +325,8 @@ do {
         a[e] = 0
     }
 
-    expect_fail(λ->(elem(0x8000000000000000)))
-    expect_fail(λ->(set_elem(0x8000000000000000)))
+    expect_fail(()=>(elem(0x8000000000000000)))
+    expect_fail(()=>(set_elem(0x8000000000000000)))
 }
 
 # Large array

@@ -10,8 +10,8 @@ constructor new_fib
 
 new_fib.set_prototype({
 
-    get_prev: fun -> (this.prev),
-    get_cur:  fun -> (this.cur),
+    get_prev: () => (this.prev),
+    get_cur:  () => (this.cur),
 
     reset: fun {
         this.prev = 1
