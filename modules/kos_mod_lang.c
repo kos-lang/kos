@@ -210,7 +210,7 @@ _error:
  *
  * Example:
  *
- *     > array(shallow({x:0, y:1}))
+ *     > shallow({x:0, y:1}) -> array
  *     [["y", 1], ["x", 0]]
  */
 static KOS_OBJ_ID _shallow(KOS_FRAME  frame,
@@ -233,7 +233,7 @@ static KOS_OBJ_ID _shallow(KOS_FRAME  frame,
  *
  * Example:
  *
- *     > array(deep({x:0, y:1}))
+ *     > deep({x:0, y:1}) -> array
  *     [["any", <function>], ["all", <function>], ["filter", <function>],
  *      ["count", <function>], ["reduce", <function>], ["iterator", <function>],
  *      ["map", <function>], ["y", 1], ["x", 0]]

@@ -591,8 +591,8 @@ array.
 
 Example:
 
-    > array([ "a", "b", "c" ].indices())
-    [0, 1, 2]
+    > [ "a", "b", "c" ].indices() -> print_elements
+    0, 1, 2
 
 array.prototype.insert()
 ------------------------
@@ -969,8 +969,8 @@ buffer.
 
 Example:
 
-    > array(buffer(4).indices())
-    [0, 1, 2, 3]
+    > buffer(4).indices() -> print_elements
+    0, 1, 2, 3
 
 buffer.prototype.insert()
 -------------------------
@@ -1014,8 +1014,8 @@ statement.
 
 Examples:
 
-    > array(buffer([1, 2, 3]).iterator())
-    [1, 2, 3]
+    > buffer([1, 2, 3]).iterator() -> print_elements
+    1, 2, 3
     > for const v in buffer([10, 11, 12]) { print(v) }
     10
     11
@@ -1222,7 +1222,7 @@ The order of the elements yielded is unspecified.
 
 Example:
 
-    > array(deep({x:0, y:1}))
+    > deep({x:0, y:1}) -> array
     [["any", <function>], ["all", <function>], ["filter", <function>],
      ["count", <function>], ["reduce", <function>], ["iterator", <function>],
      ["map", <function>], ["y", 1], ["x", 0]]
@@ -1284,11 +1284,11 @@ elements of it, which are then filtered.
 
 Examples:
 
-    > array(filter(x => (x < 0), [1, -2, 3, 4, -5, -6]))
-    [-2, -5, -6]
+    > filter(x => (x < 0), [1, -2, 3, 4, -5, -6]) -> print_elements
+    -2, -5, -6
     > const odd = filter(x => (x & 1))
-    > array(odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]))
-    [9, 7, 5, 3, 1]
+    > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> print_elements
+    9, 7, 5, 3, 1
 
 first_elements()
 ----------------
@@ -1309,10 +1309,10 @@ sequence to just keys.
 
 Examples:
 
-    > array(first_elements({ A: 1, B: 2, C: 3}))
-    ["A", "C", "B"]
-    > array(first_elements(["kos", "lang", "first"]))
-    ["k", "l", "f"]
+    > first_elements({ A: 1, B: 2, C: 3}) -> print_elements
+    A, C, B
+    > first_elements(["kos", "lang", "first"]) -> print_elements
+    k, l, f
 
 float()
 -------
@@ -1582,11 +1582,11 @@ elements of it, which are then mapped.
 
 Examples:
 
-    > array(map(x => (x*10), [1, 2, 3, 4]))
-    [10, 20, 30, 40]
+    > map(x => (x*10), [1, 2, 3, 4]) -> print_elements
+    10, 20, 30, 40
     > const plus2 = map(x => (x + 2))
-    > array(plus2([10, 11, 12, 13]))
-    [12, 13, 14, 15]
+    > plus2([10, 11, 12, 13]) -> print_elements
+    12, 13, 14, 15
 
 method()
 --------
@@ -1755,8 +1755,8 @@ obtained through the `iterator()` function.
 
 Example:
 
-    > array([1, 2, 3, 4, 5, 6].filter(x => (x & 1)))
-    [1, 3, 5]
+    > [1, 2, 3, 4, 5, 6].filter(x => (x & 1)) -> print_elements
+    1, 3, 5
 
 object.prototype.iterator()
 ---------------------------
@@ -1782,12 +1782,12 @@ statement.
 
 Examples:
 
-    > array({ red: 1, green: 10, blue: 100 }.iterator())
-    [["red", 1], ["green", 10], ["blue", 100]]
-    > array(1.5.iterator())
-    [1.5]
-    > array(true.iterator())
-    [true]
+    > { red: 1, green: 10, blue: 100 }.iterator() -> print_elements
+    ["red", 1], ["green", 10], ["blue", 100]
+    > 1.5.iterator() -> print_elements
+    1.5
+    > true.iterator() -> print_elements
+    true
     > for const k, v in { x: 10, y: -2 } { print(k, v) }
     x 10
     y -2
@@ -1805,8 +1805,8 @@ are obtained through the `iterator()` function.
 
 Example:
 
-    > array([1, 3, 5, 7].map(x => (x * 2)))
-    [2, 6, 10, 14]
+    > [1, 3, 5, 7].map(x => (x * 2)) -> print_elements
+    2, 6, 10, 14
 
 object.prototype.reduce()
 -------------------------
@@ -1900,16 +1900,16 @@ The iterator terminates when it reaches or exceeds `stop`.
 
 Examples:
 
-    > array(range(5))
-    [0, 1, 2, 3, 4]
-    > array(range(1, 5))
-    [1, 2, 3, 4]
-    > array(range(0, 16, 4))
-    [0, 4, 8, 12]
-    > array(range(0))
-    []
-    > array(range(2, -8, -2))
-    [2, 0, -2, -4, -6]
+    > range(5) -> print_elements
+    0, 1, 2, 3, 4
+    > range(1, 5) -> print_elements
+    1, 2, 3, 4
+    > range(0, 16, 4) -> print_elements
+    0, 4, 8, 12
+    > range(0) -> print_elements
+    
+    > range(2, -8, -2) -> print_elements
+    2, 0, -2, -4, -6
     > for const x in range(2) { print(x) }
     0
     1
@@ -1961,7 +1961,7 @@ The order of the elements yielded is unspecified.
 
 Example:
 
-    > array(shallow({x:0, y:1}))
+    > shallow({x:0, y:1}) -> array
     [["y", 1], ["x", 0]]
 
 sort()
@@ -1990,10 +1990,10 @@ third variant.
 
 Examples:
 
-    > array(sort("kos language"))
-    [" ", "a", "a", "e", "g", "g", "k", "l", "n", "o", "s", "u"]
-    > array(sort((x, y) => (x[0] < y[0]), { foo: 1, bar: 2, baz: 3 }))
-    [["bar", 2], ["baz", 3], ["foo", 1]]
+    > sort("kos language") -> print_elements
+     , a, a, e, g, g, k, l, n, o, s, u
+    > sort((x, y) => (x[0] < y[0]), { foo: 1, bar: 2, baz: 3 }) -> print_elements
+    [bar, 2], [baz, 3], [foo, 1]
 
 string()
 --------
@@ -2116,8 +2116,8 @@ string.
 
 Example:
 
-    > array("foobar".indices())
-    [0, 1, 2, 3, 4, 5]
+    > "foobar".indices() -> print_elements
+    0, 1, 2, 3, 4, 5
 
 string.prototype.iterator()
 ---------------------------
@@ -2134,8 +2134,8 @@ statement.
 
 Examples:
 
-    > array("koslang".iterator())
-    ["k", "o", "s", "l", "a", "n", "g"]
+    > "koslang".iterator() -> print_elements
+    k, o, s, l, a, n, g
     > for const v in "foo" { print(v) }
     f
     o
@@ -2354,10 +2354,10 @@ of resulting parts is unlimited.
 
 Examples:
 
-    > array("a  b    c     d".split())
-    ["a", "b", "c", "d"]
-    > array("a--b--c--d--e--f".split("--", 3))
-    ["a", "b", "c--d--e--f"]
+    > "a  b    c     d".split() -> print_elements
+    a, b, c, d
+    > "a--b--c--d--e--f".split("--", 3) -> print_elements
+    a, b, c--d--e--f
 
 string.prototype.split_lines()
 ------------------------------
@@ -2379,8 +2379,8 @@ should be kept at the ends of the lines.  It defaults to `false`.
 
 Examples:
 
-    > array("line1\nline2\nline3".split_lines())
-    ["line1", "line2", "line3"]
+    > "line1\nline2\nline3".split_lines() -> print_elements
+    line1, line2, line3
 
 string.prototype.starts_with()
 ------------------------------
