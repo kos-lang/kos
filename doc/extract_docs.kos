@@ -18,7 +18,7 @@ fun remove_indentation(lines)
     for var i = 0; i < lines.size; i += 1 {
         const s = lines[i][min_spaces:]
 
-        if s.starts_with("*") {
+        if s.starts_with("*") && (s.size < 2 || s[1] == " ") {
             num_stars += 1
         }
 
