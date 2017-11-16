@@ -694,6 +694,22 @@ int main(void)
 
     /************************************************************************/
     {
+        KOS_ATOMIC(KOS_OBJ_ID) src[5];
+        KOS_OBJ_ID             s;
+        src[0] = KOS_new_const_ascii_cstring(frame, "");
+        src[1] = KOS_new_const_ascii_cstring(frame, "");
+        src[2] = KOS_new_const_ascii_cstring(frame, "x");
+        src[3] = KOS_new_const_ascii_cstring(frame, "");
+        src[4] = KOS_new_const_ascii_cstring(frame, "");
+        s      = KOS_string_add_many(frame, src, sizeof(src)/sizeof(src[0]));
+        TEST(!IS_BAD_PTR(s));
+        TEST(!IS_SMALL_INT(s));
+        TEST(GET_OBJ_TYPE(s) == OBJ_STRING);
+        TEST(s == src[2]);
+    }
+
+    /************************************************************************/
+    {
         KOS_OBJ_ID src[2];
         KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(frame, "abc");

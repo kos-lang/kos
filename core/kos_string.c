@@ -550,8 +550,10 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
     else {
         enum _KOS_STRING_ELEM_SIZE  elem_size = KOS_STRING_ELEM_8;
         unsigned                    new_len   = 0;
-        KOS_ATOMIC(KOS_OBJ_ID)     *end      = obj_id_array + num_strings;
+        unsigned                    num_non_0 = 0;
+        KOS_ATOMIC(KOS_OBJ_ID)     *end       = obj_id_array + num_strings;
         KOS_ATOMIC(KOS_OBJ_ID)     *cur_ptr;
+        KOS_OBJ_ID                  non_0_str = KOS_VOID;
 
         new_str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
 
@@ -573,10 +575,19 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
 
             if (cur_elem_size > elem_size)
                 elem_size = cur_elem_size;
+
             new_len += cur_len;
+
+            if (cur_len) {
+                ++num_non_0;
+                non_0_str = cur_str;
+            }
         }
 
-        if (new_len) {
+        if (num_non_0 == 1 && new_len)
+            new_str = OBJPTR(STRING, non_0_str);
+
+        else if (new_len) {
             new_str = _new_empty_string(frame, new_len, elem_size);
 
             if (new_str) {
