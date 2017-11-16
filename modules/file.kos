@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-import lang.buffer
+import lang: buffer, string, eol
 
 /* @item file ro
  *
@@ -176,7 +176,7 @@ file.prototype.read = fun(in_size = 0x7FFFFFFFFFFFFFFF, in_buf = void)
 
 /* @item file file.prototype.read_lines()
  *
- *     file.prototype.read_lines(keep_ends = false, gran = 0x10000)
+ *     file.prototype.read_lines(keep_ends = false, gran = 0x1000)
  *
  * A generator which produces subsequent lines of text read from a file.
  *
@@ -188,56 +188,107 @@ file.prototype.read = fun(in_size = 0x7FFFFFFFFFFFFFFF, in_buf = void)
  * as part of the returned lines.  It defaults to `false`.
  *
  * `gran` is the internal granularity at which the file is read.  It
- * defaults to 64KB.
+ * defaults to 4KB.
  */
-file.prototype.read_lines = fun(keep_ends = false, gran = 0x10000)
+file.prototype.read_lines = fun(keep_ends = false, gran = 0x1000)
 {
     if gran <= 0 {
-        gran = 0x10000
+        gran = 0x1000
     }
 
     const buf  = buffer()
-    var   pos  = 0
-    var   crlf = 0
+    var   prev = ""
 
-    repeat {
-        this.read_some(gran, buf)
+    loop {
+        buf.resize(0)
 
-        if pos > 0 && buf[pos-1] == 13 {
-            pos -= 1
-        }
+        const str = string(this.read_some(gran, buf))
 
-        for ; pos < buf.size; pos += 1 {
-            var c = buf[pos]
-            if c == 13 {
-                const next = pos + 1
-                if next < buf.size && buf[next] != 10 {
-                    c    = 10
-                    crlf = 0
+        var pos = 0
+
+        if prev != "" && prev[-1] == "\r" {
+            var lf = str != "" && str[0] == "\n"
+            if lf {
+                pos = 1
+            }
+            if keep_ends {
+                if lf {
+                    yield prev + "\n"
                 }
                 else {
-                    crlf = 1
+                    yield prev
                 }
             }
             else {
-                crlf = 0
+                yield prev[:-1]
             }
-            if c == 10 {
-                const end = pos + 1
-
-                const strend = keep_ends ? end : pos - crlf
-
-                yield buf.unpack("s\(strend)")[0]
-
-                buf.copy_buffer(0, buf, end)
-                buf.resize(buf.size - end)
-
-                pos -= end
-            }
+            prev = ""
         }
-    } while pos < buf.size || ! this.eof
 
-    if pos > 0 {
-        yield buf.unpack("s\(buf.size)")[0]
+        if str == "" {
+            break
+        }
+
+        loop {
+            const eol_pos = str.scan(eol, pos)
+
+            if eol_pos == -1 {
+                prev += str[pos:]
+                break
+            }
+
+            var end = eol_pos + 1
+
+            if str[eol_pos] == "\r" {
+                if end == str.size {
+                    prev += str[pos:]
+                    break
+                }
+
+                if str[end] == "\n" {
+                    end += 1
+                }
+            }
+
+            yield prev + str[pos : keep_ends ? end : eol_pos]
+            prev = ""
+
+            pos = end
+        }
+    }
+
+    if prev != "" {
+        yield prev
+    }
+}
+
+/* @item file read_lines()
+ *
+ *     read_lines(filename, keep_ends = false, gran = 0x1000)
+ *
+ * A generator which produces subsequent lines of text read from a file.
+ *
+ * Returns an iterator function, which yields subsequent lines read
+ * from the file on subsequent invocations.  The lines returned by the
+ * iterator function are strings.
+ *
+ * `filename` is the path to the file to open.
+ *
+ * `keep_ends` tells whether the EOL character sequences should be kept
+ * as part of the returned lines.  It defaults to `false`.
+ *
+ * `gran` is the internal granularity at which the file is read.  It
+ * defaults to 4KB.
+ *
+ * Example:
+ *
+ *     > for const line in file.read_lines("README.txt") { print(line) }
+ */
+fun read_lines(filename, keep_ends = false, gran = 0x1000)
+{
+    with const f = open(filename, ro) {
+        for const line in f.read_lines(keep_ends, gran) {
+            yield line
+        }
     }
 }

@@ -180,7 +180,7 @@ in most cases.
 file.prototype.read_lines()
 ---------------------------
 
-    file.prototype.read_lines(keep_ends = false, gran = 0x10000)
+    file.prototype.read_lines(keep_ends = false, gran = 0x1000)
 
 A generator which produces subsequent lines of text read from a file.
 
@@ -192,7 +192,7 @@ iterator function are strings.
 as part of the returned lines.  It defaults to `false`.
 
 `gran` is the internal granularity at which the file is read.  It
-defaults to 64KB.
+defaults to 4KB.
 
 file.prototype.read_some()
 --------------------------
@@ -276,6 +276,29 @@ the `with` statement.
 Example:
 
     > with const f = file.open("my.txt", file.create_flag) { f.print("hello") }
+
+read_lines()
+------------
+
+    read_lines(filename, keep_ends = false, gran = 0x1000)
+
+A generator which produces subsequent lines of text read from a file.
+
+Returns an iterator function, which yields subsequent lines read
+from the file on subsequent invocations.  The lines returned by the
+iterator function are strings.
+
+`filename` is the path to the file to open.
+
+`keep_ends` tells whether the EOL character sequences should be kept
+as part of the returned lines.  It defaults to `false`.
+
+`gran` is the internal granularity at which the file is read.  It
+defaults to 4KB.
+
+Example:
+
+    > for const line in file.read_lines("README.txt") { print(line) }
 
 remove()
 --------
@@ -2271,6 +2294,38 @@ Examples:
     > "abc".rjust(1)
     "abc"
 
+string.prototype.rscan()
+------------------------
+
+    string.prototype.rscan(chars, inclusive)
+    string.prototype.rscan(chars, pos = 0, inclusive = true)
+
+Scans the string for any matching characters in reverse direction, i.e. from
+right to left.
+
+Returns the position of the first matching character found or `-1` if no
+matching characters were found.
+
+`chars` is a string containing zero or more characters to be matched.
+The search starts at position `pos` and stops as soon as any character
+from `chars` is found.
+
+`pos` is the index in the string at which to begin the search.  It defaults
+to `-1`, which means the search by default starts from the last character of
+the string.  If `pos` is a float, it is converted to integer using floor
+mode.  If it is negative, it is an offset from the end of the string.
+
+If `inclusive` is `true` (the default), characters in `chars` are sought.
+If `inclusive` is `false`, then the search stops as soon as any character
+*not* in `chars` is found.
+
+Examples:
+
+    > "language".rscan("g")
+    6
+    > "language".rscan("uga", -2, false)
+    2
+
 string.prototype.rstrip()
 -------------------------
 
@@ -2288,6 +2343,38 @@ Example:
 
     > "  foo  ".rstrip()
     "  foo"
+
+string.prototype.scan()
+-----------------------
+
+    string.prototype.scan(chars, inclusive)
+    string.prototype.scan(chars, pos = 0, inclusive = true)
+
+Scans the string for any matching characters from left to right.
+
+Returns the position of the first matching character found or `-1` if no
+matching characters were found.
+
+`chars` is a string containing zero or more characters to be matched.
+The search starts at position `pos` and stops as soon as any character
+from `chars` is found.
+
+`pos` is the index in the string at which to begin the search.  It defaults
+to `0`.  If it is a float, it is converted to integer using floor mode.
+If it is negative, it is an offset from the end of the string.
+
+If `inclusive` is `true` (the default), characters in `chars` are sought.
+If `inclusive` is `false`, then the search stops as soon as any character
+*not* in `chars` is found.
+
+Examples:
+
+    > "kos".scan("")
+    0
+    > "kos".scan("s")
+    2
+    > "language".scan("uga", -5, false)
+    7
 
 string.prototype.size
 ---------------------

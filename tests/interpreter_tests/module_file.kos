@@ -271,17 +271,35 @@ do {
     }
 
     with const f = file.open(name, file.ro) {
-        var a = []
-        for var line in f.read_lines(true) {
-            const i = a.size
-            a.resize(i + 1)
-            a[i] = line
-        }
+        const a = f.read_lines(true) -> lang.array
         assert a.size == 2
         assert a[0]   == "xy\r\n"
         assert a[1]   == "z\xFF\n"
         assert f.eof
         assert ! f.error
+    }
+
+    with const f = file.create(name) {
+        const lines = "ab\rcd\r\nef\ng"
+        f.write(lang.buffer(lines))
+    }
+
+    do {
+        const lines = [ "ab\r", "cd\r\n", "ef\n", "g" ]
+        for const gran in [1, 2, 3, 4, 5] {
+            for const keep_ends in [false, true] {
+                const a = file.read_lines(name, keep_ends, gran) -> lang.array
+                assert a.size == lines.size
+                for const i in lang.range(a.size) {
+                    const expected = keep_ends ? lines[i] : lines[i].strip()
+                    if a[i] != expected {
+                        lang.print("Failed keep_ends=\(keep_ends) gran=\(gran) line=\(i) expected='\(
+                                    lang.stringify(expected))' actual='\(lang.stringify(a[i]))'")
+                        assert a[i] == expected
+                    }
+                }
+            }
+        }
     }
 
     assert file.remove(name)
