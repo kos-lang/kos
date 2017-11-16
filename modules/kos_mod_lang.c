@@ -3255,8 +3255,8 @@ _error:
 
 /* @item lang string.prototype.rscan()
  *
- *     string.prototype.scan(chars, inclusive)
- *     string.prototype.scan(chars, pos = 0, inclusive = true)
+ *     string.prototype.rscan(chars, inclusive)
+ *     string.prototype.rscan(chars, pos = 0, inclusive = true)
  *
  * Scans the string for any matching characters in reverse direction, i.e. from
  * right to left.
