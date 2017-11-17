@@ -1596,17 +1596,19 @@ array.prototype.sort = fun(compare = (x, y) => (x < y))
  *     sort(compare, iterable)
  *     sort(iterable)
  *
- * A generator which sorts elements from an iterable object.
+ * Sorts elements from an iterable object.
+ *
+ * Returns an array with elements extracted from the iterable object and sorted.
  *
  * The first variant returns a sort function, which can then be used
  * to sort any iterable object and has a built-in compare predicate.
  * The usage of the returned function is the same as the second and
  * third variant.
  *
- * The second and third variant return an iterator function, which yields
- * subsequent elements coming from an iterable object, but sorted according
- * to the `compare` function.  The elements are retrieved from the iterable
- * object through its `iterator()` function.
+ * The second and third variant return an array containing elements extracted
+ * from an iterable object and sorted according to the `compare` function.  The
+ * elements are retrieved from the iterable object through its `iterator()`
+ * function.
  *
  * `compare` is a function which returns `true` if its first argument
  * should come sorted before its second argument and returns `false`
@@ -1632,9 +1634,9 @@ fun sort(compare = (x, y) => (x < y), args...)
     {
         const a = array(iterable.iterator())
         if ! a.size {
-            return void.iterator()
+            return a
         }
-        return a.sort(compare).iterator()
+        return a.sort(compare)
     }
 
     return args.size ? sort(args[0]) : sort

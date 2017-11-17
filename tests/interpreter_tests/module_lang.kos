@@ -2142,13 +2142,13 @@ do {
 do {
     const a = [ 5, 4, 2, 3, 1 ]
     const s = lang.sort(a)
-    assert typeof s == "function"
-    assert s() == 1
-    assert s() == 2
-    assert s() == 3
-    assert s() == 4
-    assert s() == 5
-    expect_fail(s)
+    assert typeof s == "array"
+    assert s.size == 5
+    assert s[0] == 1
+    assert s[1] == 2
+    assert s[2] == 3
+    assert s[3] == 4
+    assert s[4] == 5
     assert a.size == 5
     assert a[0] == 5
     assert a[1] == 4
@@ -2159,29 +2159,29 @@ do {
 
 do {
     const s = lang.sort("foobar")
-    assert typeof s == "function"
-    assert s() == "a"
-    assert s() == "b"
-    assert s() == "f"
-    assert s() == "o"
-    assert s() == "o"
-    assert s() == "r"
-    expect_fail(s)
+    assert typeof s == "array"
+    assert s.size == 6
+    assert s[0] == "a"
+    assert s[1] == "b"
+    assert s[2] == "f"
+    assert s[3] == "o"
+    assert s[4] == "o"
+    assert s[5] == "r"
 }
 
 do {
     const s = lang.sort((x, y) => (x > y), "fooba")
-    assert typeof s == "function"
-    assert s() == "o"
-    assert s() == "o"
-    assert s() == "f"
-    assert s() == "b"
-    assert s() == "a"
-    expect_fail(s)
+    assert typeof s == "array"
+    assert s.size == 5
+    assert s[0] == "o"
+    assert s[1] == "o"
+    assert s[2] == "f"
+    assert s[3] == "b"
+    assert s[4] == "a"
 }
 
 do {
-    const s = [10, 11, 9, 8] -> lang.sort -> lang.array
+    const s = [10, 11, 9, 8] -> lang.sort
     assert typeof s == "array"
     assert s.size == 4
     assert s[0] == 8
@@ -2191,13 +2191,23 @@ do {
 }
 
 do {
-    const s = [10, 11, 9, 8] -> lang.sort((x, y) => (x > y)) -> lang.array
+    const s = [10, 11, 9, 8] -> lang.sort((x, y) => (x > y))
     assert typeof s == "array"
     assert s.size == 4
     assert s[0] == 11
     assert s[1] == 10
     assert s[2] == 9
     assert s[3] == 8
+}
+
+do {
+    const it = [30, 1, 20, -2] -> lang.sort -> lang.map(x => (x + 1))
+    assert typeof it == "function"
+    assert it() == -1
+    assert it() == 2
+    assert it() == 21
+    assert it() == 31
+    expect_fail(it)
 }
 
 ##############################################################################
