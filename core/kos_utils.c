@@ -750,7 +750,7 @@ int KOS_print_to_cstr_vec(KOS_FRAME           frame,
         KOS_OBJ_ID obj = KOS_array_read(frame, array, (int)i);
         TRY_OBJID(obj);
 
-        if (i >= first_sep_i) {
+        if (i >= first_sep_i && sep_len) {
             const size_t pos = cstr_vec->size;
             TRY(_KOS_vector_resize(cstr_vec, pos + sep_len));
             memcpy(&cstr_vec->buffer[pos-1], sep, sep_len+1);
