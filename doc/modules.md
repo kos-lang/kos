@@ -1332,30 +1332,6 @@ Examples:
     > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> print_elements
     9, 7, 5, 3, 1
 
-first_elements()
-----------------
-
-    first_elements(iterable)
-
-A generator which produces first elements of each element from an iterable
-object.
-
-Returns an iterator function, which iterates over the elements of an iterable
-object, then for each of the elements extracts its first sub-element and
-yields it.
-
-This is typically useful to iterate over keys of an object.  Normally
-iterating over an object yields pairs (two-element arrays) containing
-object keys and values.  The `first_elements` function can convert that
-sequence to just keys.
-
-Examples:
-
-    > first_elements({ A: 1, B: 2, C: 3}) -> print_elements
-    A, C, B
-    > first_elements(["kos", "lang", "first"]) -> print_elements
-    k, l, f
-
 float()
 -------
 
@@ -1601,6 +1577,31 @@ Example:
 
     > 123 .hex()
     "0x7b"
+
+keys()
+------
+
+    keys(iterable)
+
+A generator which produces first elements of each element from an iterable
+object.  When iterating objects (including `lang.deep()` and
+`lang.shallow()`), object keys are yielded.
+
+Returns an iterator function, which iterates over the elements of an iterable
+object, then for each of the elements extracts its first sub-element and
+yields it.
+
+This is typically useful to iterate over keys of an object.  Normally
+iterating over an object yields pairs (two-element arrays) containing
+object keys and values.  The `keys` function can convert that
+sequence to just keys.
+
+Examples:
+
+    > keys({ A: 1, B: 2, C: 3}) -> print_elements
+    A, C, B
+    > keys(["kos", "lang", "first"]) -> print_elements
+    k, l, f
 
 map()
 -----

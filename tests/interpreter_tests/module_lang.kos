@@ -1843,7 +1843,7 @@ do {
 
     assert "Hello, World!".count("l") == 3
 
-    assert lang.first_elements({x: 8, _test_value: 8, y: 8}).count("_test_value") == 1
+    assert lang.keys({x: 8, _test_value: 8, y: 8}).count("_test_value") == 1
 
     assert lang.range(100).map(x => (x/4)).count(11) == 4
 
@@ -1917,7 +1917,7 @@ do {
 }
 
 ##############################################################################
-# lang.first_elements
+# lang.keys
 
 do {
     fun gen
@@ -1933,7 +1933,7 @@ do {
     assert it0()[0] == 700
     expect_fail(it0)
 
-    const it = lang.first_elements(gen())
+    const it = lang.keys(gen())
     assert it() == 40
     assert it() == -40
     assert it() == 700
@@ -1943,7 +1943,7 @@ do {
 do {
     const obj = { "0" : 10, "1" : 200, "2" : 3000, "3" : 4000 }
     const a = [ false, false, false, false ]
-    for const key in lang.first_elements(obj) {
+    for const key in lang.keys(obj) {
         assert typeof key == "string"
         const value = lang.integer(key)
         assert value >= 0 && value <= 3
@@ -1963,7 +1963,7 @@ do {
         loop { yield it }
     }
 
-    const it = lang.first_elements(gen())
+    const it = lang.keys(gen())
     assert it() == 0
     assert it() == 1
     assert it() == 2
@@ -1975,7 +1975,7 @@ do {
     const a  = [ lang.range(10, 20),
                  lang.range(5, 6),
                  lang.range(-100, -200, -1) ]
-    const it = lang.first_elements(a)
+    const it = lang.keys(a)
     assert it() == 10
     assert it() == 5
     assert it() == -100
@@ -1984,7 +1984,7 @@ do {
 
 do {
     const a = [ [1, 2], [3], [4, 5], [], [6] ]
-    const it = lang.first_elements(a)
+    const it = lang.keys(a)
     assert it() == 1
     assert it() == 3
     assert it() == 4

@@ -830,12 +830,13 @@ string.prototype.split_lines = fun(keep_ends = false)
     }
 }
 
-/* @item lang first_elements()
+/* @item lang keys()
  *
- *     first_elements(iterable)
+ *     keys(iterable)
  *
  * A generator which produces first elements of each element from an iterable
- * object.
+ * object.  When iterating objects (including `lang.deep()` and
+ * `lang.shallow()`), object keys are yielded.
  *
  * Returns an iterator function, which iterates over the elements of an iterable
  * object, then for each of the elements extracts its first sub-element and
@@ -843,17 +844,17 @@ string.prototype.split_lines = fun(keep_ends = false)
  *
  * This is typically useful to iterate over keys of an object.  Normally
  * iterating over an object yields pairs (two-element arrays) containing
- * object keys and values.  The `first_elements` function can convert that
+ * object keys and values.  The `keys` function can convert that
  * sequence to just keys.
  *
  * Examples:
  *
- *     > first_elements({ A: 1, B: 2, C: 3}) -> print_elements
+ *     > keys({ A: 1, B: 2, C: 3}) -> print_elements
  *     A, C, B
- *     > first_elements(["kos", "lang", "first"]) -> print_elements
+ *     > keys(["kos", "lang", "first"]) -> print_elements
  *     k, l, f
  */
-fun first_elements(iterable)
+fun keys(iterable)
 {
     for const x in iterable {
         yield x.iterator()()
