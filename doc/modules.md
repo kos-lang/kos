@@ -1231,6 +1231,25 @@ Examples:
     > count("o", "monologue")
     3
 
+count_elements()
+----------------
+
+    count_elements(iterable)
+
+Counts elements of an iterable object.
+
+Returns the number of elements retrieved from the iterable object.
+
+Elements are extracted from `iterable` object through its `iterator()`
+function and counted.
+
+Examples:
+
+    > count_elements([1, 10, 100, 1000])
+    4
+    > range(2, 10, 2) -> count_elements
+    4
+
 deep()
 ------
 
@@ -1883,19 +1902,52 @@ Unlike `print()`, does not print an EOL character after finishing printing.
 print_elements()
 ----------------
 
-    print_elements(iterable)
+    print_elements(iterable, separator = ", ", end = "\n")
 
 Prints all elements from an iterable object on stdout.
 
 Elements are extracted from `iterable` object through its `iterator()`
 function, then printed using `lang.print_()` function.
 
+The optional `separator` is a string to be printed between
+the items.  It defaults to a comma.
+
+The optional `end` is a string to be printed after the last item
+or if there are no items.  It defaults to a new line character.
+
 Examples:
 
     > print_elements("kos")
     k, o, s
+    > print_elements("kos", "\n", "")
+    k
+    o
+    s
     > range(5) -> print_elements
     0, 1, 2, 3, 4
+
+print_lines()
+-------------
+
+    print_lines(iterable)
+
+Prints all elements from an iterable object on stdout on separate lines.
+
+Elements are extracted from `iterable` object through its `iterator()`
+function, then printed using `lang.print()` function.
+
+If there are no elements, nothing is printed.
+
+Examples:
+
+    > print_lines("kos")
+    k
+    o
+    s
+    > range(3) -> print_lines
+    0
+    1
+    2
 
 range()
 -------
