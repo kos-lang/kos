@@ -349,12 +349,15 @@ do {
         f.print_(":")
         f.print()
         f.print("Hello,", "World!")
+        f.print_lines([1, 2, 3]);
+        ["a", "b", "c"] -> lang.method(f, f.print_lines)
         f.print("END")
     }
 
     with const f = file.open(name, file.ro) {
         const expected = [ "false void:",
                            "Hello, World!",
+                           "1", "2", "3", "a", "b", "c",
                            "END" ]
         var i = 0
         for var line in f.read_lines(true) {

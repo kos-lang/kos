@@ -141,6 +141,18 @@ Written values are separated with a single space.
 
 Unlike `file.prototype.print()`, does not write an EOL character after finishing writing.
 
+file.prototype.print_lines()
+----------------------------
+
+    file.prototype.print_lines(iterable)
+
+Prints all elements from an iterable object into the file on separate lines.
+
+Elements are extracted from `iterable` object through its `iterator()`
+function, then printed using `file.prototype.print()` function.
+
+If there are no elements, nothing is printed.
+
 file.prototype.read()
 ---------------------
 
