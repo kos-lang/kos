@@ -282,25 +282,31 @@ int _KOS_parse_double(const char *begin,
             }
             else {
 
-                uint64_t digit;
-
                 if (c < '0' || c > '9')
                     RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
 
-                /* Parse digit */
-                digit = (unsigned)(c - '0');
+                if (exponent + 4 > 63) {
 
-                _multiply_by_10(&mantissa, &exponent);
+                    while ((c == '0' || c == '_') && (begin < end))
+                        c = *(begin++);
 
-                if (exponent > 63)
-                    RAISE_ERROR(KOS_ERROR_TOO_MANY_DIGITS);
+                    if (c != '0' && c != '_' && c != 'e')
+                        RAISE_ERROR(KOS_ERROR_TOO_MANY_DIGITS);
+                }
+                else {
 
-                mantissa += digit << (63 - exponent);
+                    /* Parse digit */
+                    const uint64_t digit = (unsigned)(c - '0');
 
-                if (had_decimal_point)
-                    --decimal_exponent;
+                    _multiply_by_10(&mantissa, &exponent);
 
-                _renormalize(&mantissa, &exponent);
+                    mantissa += digit << (63 - exponent);
+
+                    if (had_decimal_point)
+                        --decimal_exponent;
+
+                    _renormalize(&mantissa, &exponent);
+                }
             }
         }
 
