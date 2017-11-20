@@ -217,7 +217,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
     int                        error     = KOS_SUCCESS;
     uint32_t                   length;
     uint32_t                   i;
-    KOS_ATOMIC(KOS_OBJ_ID)    *codes_buf;
+    KOS_ATOMIC(KOS_OBJ_ID)    *codes_buf = 0;
     enum _KOS_STRING_ELEM_SIZE elem_size = KOS_STRING_ELEM_8;
     KOS_STRING                *ret       = 0;
     void                      *str_buf;
@@ -229,30 +229,30 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
     if (length > 0xFFFFU)
         RAISE_EXCEPTION(str_err_array_too_large);
 
-    codes_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, codes));
-
-    for (i = 0; i < length; i++) {
-
-        const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
-        int64_t          code;
-
-        if ( ! IS_NUMERIC_OBJ(elem))
-            RAISE_EXCEPTION(str_err_invalid_char_code);
-
-        TRY(KOS_get_integer(frame, elem, &code));
-
-        if (code < 0 || code > 0x1FFFFF)
-            RAISE_EXCEPTION(str_err_invalid_char_code);
-
-        if (code > 0xFF) {
-            if (code > 0xFFFF)
-                elem_size = KOS_STRING_ELEM_32;
-            else if (elem_size == KOS_STRING_ELEM_8)
-                elem_size = KOS_STRING_ELEM_16;
-        }
-    }
-
     if (length) {
+        codes_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, codes));
+
+        for (i = 0; i < length; i++) {
+
+            const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+            int64_t          code;
+
+            if ( ! IS_NUMERIC_OBJ(elem))
+                RAISE_EXCEPTION(str_err_invalid_char_code);
+
+            TRY(KOS_get_integer(frame, elem, &code));
+
+            if (code < 0 || code > 0x1FFFFF)
+                RAISE_EXCEPTION(str_err_invalid_char_code);
+
+            if (code > 0xFF) {
+                if (code > 0xFFFF)
+                    elem_size = KOS_STRING_ELEM_32;
+                else if (elem_size == KOS_STRING_ELEM_8)
+                    elem_size = KOS_STRING_ELEM_16;
+            }
+        }
+
         ret = _new_empty_string(frame, length, elem_size);
         if ( ! ret)
             goto _error;

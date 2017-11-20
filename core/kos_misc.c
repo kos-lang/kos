@@ -597,7 +597,7 @@ uint64_t _KOS_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
     if (max_value < (uint32_t)(int32_t)-1) {
 
         const uint32_t mask      = (uint32_t)max_value + 1U;
-        const uint32_t threshold = (uint32_t)-(int32_t)mask % mask;
+        const uint32_t threshold = (~mask + 1U) % mask;
         int            sel       = 0;
 
         for (;; sel ^= 1) {
@@ -609,7 +609,7 @@ uint64_t _KOS_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
     else {
 
         const uint64_t mask      = max_value + 1U;
-        const uint64_t threshold = (uint64_t)-(int64_t)mask % mask;
+        const uint64_t threshold = (~mask + 1U) % mask;
 
         for (;;) {
             const uint64_t r = _KOS_rng_random(rng);

@@ -1701,7 +1701,7 @@ static int _exec_function(KOS_FRAME frame)
                         else if (b < 0)
                             out = KOS_new_int(frame, a >> -b);
                         else
-                            out = KOS_new_int(frame, a << b);
+                            out = KOS_new_int(frame, (int64_t)((uint64_t)a << b));
                     }
                 }
 
@@ -1727,7 +1727,7 @@ static int _exec_function(KOS_FRAME frame)
                         if (b > 63 || b < -63)
                             out = TO_SMALL_INT(a < 0 && b > 0 ? -1 : 0);
                         else if (b < 0)
-                            out = KOS_new_int(frame, a << -b);
+                            out = KOS_new_int(frame, (int64_t)((uint64_t)a << -b));
                         else
                             out = KOS_new_int(frame, a >> b);
                     }
@@ -1755,7 +1755,7 @@ static int _exec_function(KOS_FRAME frame)
                         if (b > 63 || b < -63)
                             out = TO_SMALL_INT(0);
                         else if (b < 0)
-                            out = KOS_new_int(frame, a << -b);
+                            out = KOS_new_int(frame, (int64_t)((uint64_t)a << -b));
                         else
                             out = KOS_new_int(frame, (int64_t)((uint64_t)a >> b));
                     }

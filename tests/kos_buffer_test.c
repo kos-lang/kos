@@ -141,10 +141,6 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 0);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(buf);
-        TEST(data != 0);
-        TEST_NO_EXCEPTION();
-
         TEST(KOS_buffer_reserve(frame, buf, 10) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
