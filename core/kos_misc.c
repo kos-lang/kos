@@ -46,6 +46,11 @@
 #   include <unistd.h>
 #endif
 
+union DOUBLE_TO_UINT64 {
+    double   d;
+    uint64_t u;
+};
+
 int _KOS_is_integer(const char *begin,
                     const char *end)
 {
@@ -192,7 +197,7 @@ static void _divide_by_10(uint64_t *mantissa, int *exponent)
 
 static void _renormalize(uint64_t *mantissa, int *exponent)
 {
-    while ( ! ((*mantissa & ((uint64_t)1U << 63) )) ) {
+    while ( ! (*mantissa & ((uint64_t)1U << 63)) ) {
         *mantissa <<= 1;
         --*exponent;
     }
@@ -207,7 +212,8 @@ int _KOS_parse_double(const char *begin,
     int      exponent          = 0;
     uint64_t mantissa          = 0;
     int      decimal_exponent  = 0;
-    int      had_decimal_point = 0;
+    int      num_digits        = 0;
+    int      dot_pos           = -1;
 
     assert(begin <= end);
 
@@ -219,96 +225,69 @@ int _KOS_parse_double(const char *begin,
         sign = 1;
         ++begin;
     }
+    else if (*begin == '+')
+        ++begin;
 
     if (begin == end)
         RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
 
     /* Discard leading zeroes and underscores */
-    while (begin < end && (*begin == '0' || *begin == '_'))
-        ++begin;
+    while (begin < end) {
 
-    /* Parse leading decimal point */
-    if (begin < end && *begin == '.') {
+        const char c = *(begin++);
 
-        decimal_exponent  = -1;
-        had_decimal_point = 1;
+        if (c == '_')
+            continue;
 
-        ++begin;
-
-        /* Skip zeroes and underscores */
-        while (begin < end && (*begin == '0' || *begin == '_')) {
-            ++begin;
-            --decimal_exponent;
+        if (c == '0') {
+            if (dot_pos >= 0)
+                --decimal_exponent;
+            continue;
         }
+
+        if (c == '.') {
+            dot_pos = 0;
+            continue;
+        }
+
+        --begin;
+        break;
     }
 
     if (begin < end) {
 
-        char c = *(begin++);
+        const char *first_digit = begin;
+        const char *exponent_pos;
 
-        if (c == 'e' || c == 'E')
-            --begin;
-        else {
+        /* Find decimal exponent */
+        while (begin < end) {
 
-            /* Position the first digit in mantissa */
-            if (c < '0' || c > '9')
-                RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
+            const char c = *(begin++);
 
-            mantissa = (unsigned)(c - '0');
-            if (mantissa > 7)
-                exponent += 3;
-            else if (mantissa > 3)
-                exponent += 2;
-            else if (mantissa > 1)
-                exponent += 1;
+            if (c >= '0' && c <= '9') {
+                ++num_digits;
+                continue;
+            }
 
-            mantissa <<= 63 - exponent;
-        }
-
-        /* Parse consecutive digits */
-        while (begin < end   &&
-               *begin != 'e' &&
-               *begin != 'E') {
-
-            c = *(begin++);
+            if (c == 'e' || c == 'E') {
+                --begin;
+                break;
+            }
 
             if (c == '_')
                 continue;
 
-            /* Parse decimal point */
             if (c == '.') {
-                assert(!had_decimal_point);
-                had_decimal_point = 1;
-            }
-            else {
-
-                if (c < '0' || c > '9')
+                if (dot_pos != -1)
                     RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
-
-                if (exponent + 4 > 63) {
-
-                    while ((c == '0' || c == '_') && (begin < end))
-                        c = *(begin++);
-
-                    if (c != '0' && c != '_' && c != 'e')
-                        RAISE_ERROR(KOS_ERROR_TOO_MANY_DIGITS);
-                }
-                else {
-
-                    /* Parse digit */
-                    const uint64_t digit = (unsigned)(c - '0');
-
-                    _multiply_by_10(&mantissa, &exponent);
-
-                    mantissa += digit << (63 - exponent);
-
-                    if (had_decimal_point)
-                        --decimal_exponent;
-
-                    _renormalize(&mantissa, &exponent);
-                }
+                dot_pos = num_digits;
+                continue;
             }
+
+            RAISE_ERROR(KOS_ERROR_INVALID_NUMBER);
         }
+
+        exponent_pos = begin;
 
         /* Parse decimal exponent */
         if (begin < end) {
@@ -332,23 +311,90 @@ int _KOS_parse_double(const char *begin,
             decimal_exponent += (int)e;
         }
 
+        begin = first_digit;
+        end   = exponent_pos;
+
+        /* Adjust decimal exponent based on the number of digits to consume */
+        if (dot_pos >= 0)
+            decimal_exponent += dot_pos - num_digits;
+    }
+
+    if (num_digits) {
+
+        int i_digit = 0;
+
+        /* Parse consecutive digits */
+        while (begin < end) {
+
+            uint64_t digit;
+            int      lost_precision;
+
+            char c = *(begin++);
+
+            if (c == '_' || c == '.')
+                continue;
+
+            assert(c >= '0' && c <= '9');
+
+            /* Place first digit */
+            if ( ! mantissa) {
+                mantissa = (unsigned)(c - '0');
+                if (mantissa > 7)
+                    exponent += 3;
+                else if (mantissa > 3)
+                    exponent += 2;
+                else if (mantissa > 1)
+                    exponent += 1;
+
+                mantissa <<= 63 - exponent;
+
+                ++i_digit;
+                continue;
+            }
+
+            /* Parse digit */
+            digit = (unsigned)(c - '0');
+
+            /* Detect loss of precision, ignore further digits */
+            lost_precision = (exponent > 53) ? 1 : 0;
+
+            _multiply_by_10(&mantissa, &exponent);
+
+            /* If we lost precision, round the last digit to nearest */
+            if (lost_precision)
+                digit = (digit >= 5) ? 10U : 5U;
+
+            mantissa += digit << (63 - exponent);
+
+            _renormalize(&mantissa, &exponent);
+
+            ++i_digit;
+
+            /* Upon loss of precision, stop parsing further digits */
+            if (lost_precision) {
+                decimal_exponent += num_digits - i_digit;
+                break;
+            }
+        }
+
         /* Ignore decimal exponent if mantissa contains all zeroes */
         if ( ! mantissa)
             decimal_exponent = 0;
 
         /* Apply decimal exponent */
-        while (decimal_exponent) {
-
-            if (decimal_exponent < 0) {
+        if (decimal_exponent < 0) {
+            while (decimal_exponent) {
                 _divide_by_10(&mantissa, &exponent);
+                _renormalize(&mantissa, &exponent);
                 ++decimal_exponent;
             }
-            else {
+        }
+        else if (decimal_exponent > 0) {
+            while (decimal_exponent) {
                 _multiply_by_10(&mantissa, &exponent);
+                _renormalize(&mantissa, &exponent);
                 --decimal_exponent;
             }
-
-            _renormalize(&mantissa, &exponent);
         }
     }
 
@@ -373,7 +419,7 @@ int _KOS_parse_double(const char *begin,
         exponent = -0x3FF;
 
     /* Round mantissa to nearest */
-    if ((mantissa & 0x7FFU) >= 0x400U) {
+    if (mantissa & 0x400U) {
 
         mantissa = (mantissa | 0x3FFU) + 1;
 
@@ -387,9 +433,15 @@ int _KOS_parse_double(const char *begin,
             ++exponent;
     }
 
-    *(uint64_t*)value = ((uint64_t)sign << 63)
-                      | ((uint64_t)(exponent + 0x3FF) << 52)
-                      | ((mantissa >> 11) & (((uint64_t)1U << 52)-1));
+    {
+        union DOUBLE_TO_UINT64 conv;
+
+        conv.u = ((uint64_t)sign << 63)
+               | ((uint64_t)(exponent + 0x3FFU) << 52)
+               | ((mantissa >> 11) & (((uint64_t)1U << 52)-1U));
+
+        *value = conv.d;
+    }
 
 _error:
     return error;
@@ -419,10 +471,7 @@ int _KOS_parse_numeric(const char          *begin,
 
 uint64_t _KOS_double_to_uint64_t(double value)
 {
-    union DOUBLE_TO_UINT64 {
-        double   d;
-        uint64_t u;
-    } conv;
+    union DOUBLE_TO_UINT64 conv;
     conv.d = value;
     return conv.u;
 }
@@ -441,10 +490,7 @@ unsigned _KOS_print_float(char *buf, unsigned size, double value)
 {
     char *end;
 
-    union DOUBLE_TO_UINT64 {
-        double   d;
-        uint64_t u;
-    } conv;
+    union DOUBLE_TO_UINT64 conv;
 
     conv.d = value;
 

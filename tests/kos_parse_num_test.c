@@ -23,10 +23,13 @@
 #include "../core/kos_misc.h"
 #include "../inc/kos_error.h"
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
 static int status = 0;
+
+static int reference = 0;
 
 static void test_int(const char *str, uint32_t hi, uint32_t lo, int error)
 {
@@ -69,11 +72,153 @@ static void test_double(const char *str, uint32_t high, uint32_t low, int error)
                    str, uval_high, uval_low, high, low);
             status = 1;
         }
+
+        if (reference) {
+            char        *endptr = 0;
+            const double conv_d = strtod(str, &endptr);
+
+            if (endptr != str + strlen(str)) {
+                printf("Failed: %s - strtod returned error\n", str);
+                status = 1;
+            }
+            else {
+                const uint64_t conv_u = _KOS_double_to_uint64_t(conv_d);
+                if (conv_u != uval) {
+                    printf("Failed: %s - value 0x%08X%08X, strtod 0x%08X%08X\n",
+                           str, uval_high, uval_low,
+                           (uint32_t)(conv_u >> 32), (uint32_t)conv_u);
+                    status = 1;
+                }
+            }
+        }
     }
 }
 
-int main(void)
+static void test_random_double()
 {
+    char           str[32];
+    struct KOS_RNG rng;
+    int            i_test;
+
+    _KOS_rng_init(&rng);
+
+    for (i_test = 0; i_test < 10240; i_test++) {
+
+        char*    pos        = str;
+        unsigned num_digits = 0;
+        unsigned dot_pos    = ~0U;
+        unsigned i_digit;
+        int      ret;
+        double   actual;
+        double   expected;
+        uint64_t actual_u;
+        uint64_t expected_u;
+        char*    endptr;
+
+        if (_KOS_rng_random_range(&rng, 1U))
+            *(pos++) = '-';
+
+        num_digits = (unsigned)_KOS_rng_random_range(&rng, 23U) + 1U;
+
+        if (_KOS_rng_random_range(&rng, 4U))
+            dot_pos = (unsigned)_KOS_rng_random_range(&rng, num_digits - 2U);
+
+        for (i_digit = 0; i_digit < num_digits; i_digit++) {
+
+            const char digit = '0' + (char)(unsigned)_KOS_rng_random_range(&rng, 9U);
+
+            *(pos++) = digit;
+
+            if (i_digit == dot_pos)
+                *(pos++) = '.';
+        }
+
+        if (_KOS_rng_random_range(&rng, 4U)) {
+
+            *(pos++) = _KOS_rng_random_range(&rng, 1U) ? 'e' : 'E';
+
+            if (_KOS_rng_random_range(&rng, 1U))
+                *(pos++) = '-';
+            else if (_KOS_rng_random_range(&rng, 1U))
+                *(pos++) = '+';
+
+            num_digits = (unsigned)((&str[0] + sizeof(str)) - pos) - 1U;
+            if (num_digits > 3)
+                num_digits = 3;
+            assert(num_digits > 0);
+
+            if (num_digits > 1U)
+                num_digits = 1U + (unsigned)_KOS_rng_random_range(&rng, num_digits - 1U);
+            else
+                num_digits = 1U;
+            assert(pos + num_digits + 1 <= &str[0] + sizeof(str));
+
+            for (i_digit = 0; i_digit < num_digits; i_digit++) {
+
+                unsigned max_digit = 9U;
+
+                if (i_digit == 0 && num_digits == 3)
+                    max_digit = 2U;
+
+                *(pos++) = '0' + (char)(unsigned)_KOS_rng_random_range(&rng, max_digit);
+            }
+        }
+
+        *pos = '\0';
+
+        ret = _KOS_parse_double(str, pos, &actual);
+
+        expected = strtod(str, &endptr);
+
+        if (ret != KOS_SUCCESS) {
+            printf("Failed: %s parse failed with error %d\n", str, ret);
+            status = 1;
+            continue;
+        }
+
+        if (endptr != pos) {
+            printf("Failed: %s failed to parse with strtod\n", str);
+            status = 1;
+            continue;
+        }
+
+        actual_u   = _KOS_double_to_uint64_t(actual);
+        expected_u = _KOS_double_to_uint64_t(expected);
+
+        if (actual_u != expected_u) {
+            char           diff_str[32];
+            const uint64_t diff = expected_u - actual_u;
+
+            if (diff == 1U)
+                diff_str[0] = '1', diff_str[1] = '\0';
+            else if ((diff + 1U) == 0U)
+                diff_str[0] = '-', diff_str[1] = '1', diff_str[2] = '\0';
+            else
+                snprintf(diff_str, sizeof(diff_str), "0x%08X%08X", (uint32_t)(diff >> 32), (uint32_t)diff);
+
+            printf("Failed: %32s - (%s) value 0x%08X%08X, expected 0x%08X%08X\n",
+                   str, diff_str, (uint32_t)(actual_u >> 32), (uint32_t)actual_u,
+                   (uint32_t)(expected_u >> 32), (uint32_t)expected_u);
+
+            status = 1;
+        }
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    int random = 0;
+
+    if (argc == 2) {
+        if (strcmp(argv[1], "-reference") == 0)
+            reference = 1;
+
+        else if (strcmp(argv[1], "-random") == 0) {
+            reference = 1;
+            random    = 1;
+        }
+    }
+
     /* Integers */
     test_int("0",                              0, 0x00000000U, KOS_SUCCESS);
     test_int("-0",                             0, 0x00000000U, KOS_SUCCESS);
@@ -143,7 +288,7 @@ int main(void)
     test_double("18014398509481984",       0x43500000U, 0x00000000U, KOS_SUCCESS);
     test_double("36028797018963968",       0x43600000U, 0x00000000U, KOS_SUCCESS);
     test_double("9223372036854775808",     0x43E00000U, 0x00000000U, KOS_SUCCESS);
-    test_double("18446744073709551616",    0x43600000U, 0x00000000U, KOS_ERROR_TOO_MANY_DIGITS);
+    test_double("18446744073709551616",    0x43F00000U, 0x00000000U, KOS_SUCCESS);
 
     /* Simple numbers */
     test_double("3",                       0x40080000U, 0x00000000U, KOS_SUCCESS);
@@ -163,10 +308,8 @@ int main(void)
     test_double("0.99999999999999994",     0x3FEFFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
     test_double("0.999999999999999944",    0x3FEFFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
     test_double("0.9999999999999999444",   0x3FEFFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
-    test_double("0.99999999999999994444",  0x3FEFFFFFU, 0xFFFFFFFFU, KOS_ERROR_TOO_MANY_DIGITS);
-    /*
+    test_double("0.99999999999999994444",  0x3FEFFFFFU, 0xFFFFFFFFU, KOS_SUCCESS);
     test_double("0.999999999999999946",    0x3FF00000U, 0x00000000U, KOS_SUCCESS);
-    */
     test_double("0.99999999999999995",     0x3FF00000U, 0x00000000U, KOS_SUCCESS);
     test_double("0.99999999999999996",     0x3FF00000U, 0x00000000U, KOS_SUCCESS);
 
@@ -218,12 +361,25 @@ int main(void)
     test_double("9223372036854775807.000", 0x43E00000U, 0x00000000U, KOS_SUCCESS);
     test_double("9223372036854775807.0e0", 0x43E00000U, 0x00000000U, KOS_SUCCESS);
     test_double("-0.00000E0",              0x80000000U, 0x00000000U, KOS_SUCCESS);
+    test_double("00009223372036854775808000000.00000000", 0x451E8480U, 0x00000000U, KOS_SUCCESS);
+    test_double("-830997868037328000251.946", 0xC4468634U, 0xBF150FEFU, KOS_SUCCESS);
+    test_double("205012068.401531294",     0x41A87078U, 0xC8CD9583U, KOS_SUCCESS);
+    test_double("26153245263757307e49",    0x4D83DE00U, 0x5BD620DFU, KOS_SUCCESS);
+    test_double("9e0306",                  0x7FA9A202U, 0x8368022EU, KOS_SUCCESS);
+    test_double("1e-324",                  0x00000000U, 0x00000000U, KOS_SUCCESS);
+    /*
+    test_double("8e-111",                  0x29133D40U, 0x32C2C7F5U, KOS_SUCCESS);
+    test_double("207499759360.469947e-2",  0x41DEEB7CU, 0xD666B365U, KOS_SUCCESS);
+    */
 
     /* Formatting errors */
     test_double("1e1A",                              0,           0, KOS_ERROR_INVALID_EXPONENT);
     test_double("1e309",                             0,           0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
     test_double("1e-325",                            0,           0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
     test_double("9999999999999999999e308",           0,           0, KOS_ERROR_NUMBER_TOO_BIG);
+
+    if (random)
+        test_random_double();
 
     return status;
 }

@@ -270,6 +270,11 @@ do {
 }
 
 do {
+    assert lang.float("+1") == 1
+    assert lang.float("1e0x10") == 10000000000000000
+}
+
+do {
     expect_fail(()=>((3.0).square3()))
 
     lang.float.prototype.square3 = () => (this * this * this)
@@ -316,6 +321,8 @@ do {
     expect_fail(()=>(lang.float(()=>(void))))
     expect_fail(()=>(lang.float(false)))
     expect_fail(()=>(lang.float(void)))
+
+    expect_fail(()=>(lang.float("1.1.1")))
 
     const _1 = lang.float("1")
     assert typeof _1 == "float"
