@@ -94,7 +94,7 @@ static void test_double(const char *str, uint32_t high, uint32_t low, int error)
     }
 }
 
-static void test_random_double()
+static void test_random_double(void)
 {
     char           str[32];
     struct KOS_RNG rng;
