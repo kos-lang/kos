@@ -189,10 +189,15 @@ static void test_random_double(void)
             char           diff_str[32];
             const uint64_t diff = expected_u - actual_u;
 
-            if (diff == 1U)
-                diff_str[0] = '1', diff_str[1] = '\0';
-            else if ((diff + 1U) == 0U)
-                diff_str[0] = '-', diff_str[1] = '1', diff_str[2] = '\0';
+            if (diff == 1U) {
+                diff_str[0] = '1';
+                diff_str[1] = '\0';
+            }
+            else if ((diff + 1U) == 0U) {
+                diff_str[0] = '-';
+                diff_str[1] = '1';
+                diff_str[2] = '\0';
+            }
             else
                 snprintf(diff_str, sizeof(diff_str), "0x%08X%08X", (uint32_t)(diff >> 32), (uint32_t)diff);
 
