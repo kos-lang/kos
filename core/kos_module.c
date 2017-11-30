@@ -346,15 +346,19 @@ static int _alloc_globals(KOS_FRAME              frame,
     TRY(KOS_array_resize(frame, module->globals, (uint32_t)program->num_globals));
 
     for (var = program->globals; var; var = var->next) {
-        KOS_OBJ_ID name;
 
-        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
-        name = KOS_new_string(frame, var->token->begin, var->token->length);
-        _KOS_alloc_set_mode(frame, alloc_mode);
+        if (var->type == VAR_GLOBAL) {
 
-        TRY_OBJID(name);
-        assert(var->array_idx < program->num_globals);
-        TRY(KOS_set_property(frame, module->global_names, name, TO_SMALL_INT(var->array_idx)));
+            KOS_OBJ_ID name;
+
+            _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
+            name = KOS_new_string(frame, var->token->begin, var->token->length);
+            _KOS_alloc_set_mode(frame, alloc_mode);
+
+            TRY_OBJID(name);
+            assert(var->array_idx < program->num_globals);
+            TRY(KOS_set_property(frame, module->global_names, name, TO_SMALL_INT(var->array_idx)));
+        }
     }
 
 _error:

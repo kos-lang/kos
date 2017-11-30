@@ -287,3 +287,22 @@ if [ "$CONTENTS" != "arg: 10" ]; then
     cat "$OUTPUT"
     exit 1
 fi
+
+##############################################################################
+# Refer to module twice
+
+"$KOS" -c 'print("import random"); print("var r = random.random()") ; print("r = random.random()")' | KOSINTERACTIVE=1 "$KOS" 2>&1 | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -ne 1 ]; then
+    echo "Expected one line of output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+if ! sed -n "1 p" "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+    echo "Expected first line to have interactive interpreter signature" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
