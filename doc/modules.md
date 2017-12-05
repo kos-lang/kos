@@ -737,6 +737,22 @@ Example:
     > [1, 1, 1].push(10, 20)
     3
 
+array.prototype.repeat()
+------------------------
+
+    array.prototype.repeat(num)
+
+Creates a repeated array.
+
+`num` is a non-negative number of times to repeat the array.
+
+If `num` is a float, it is converted to integer using floor mode.
+
+Example:
+
+    > [7, 8, 9].repeat(4)
+    [7, 8, 9, 7, 8, 9, 7, 8, 9, 7, 8, 9]
+
 array.prototype.reserve()
 -------------------------
 
@@ -1069,6 +1085,22 @@ Returns the buffer which has been modified.
 
 TODO - refine format
 
+buffer.prototype.repeat()
+-------------------------
+
+    buffer.prototype.repeat(num)
+
+Creates a repeated buffer.
+
+`num` is a non-negative number of times to repeat the buffer.
+
+If `num` is a float, it is converted to integer using floor mode.
+
+Example:
+
+    > buffer([7, 8, 9]).repeat(4)
+    <07, 08, 09, 07, 08, 09, 07, 08, 09, 07, 08, 09>
+
 buffer.prototype.reserve()
 --------------------------
 
@@ -1111,7 +1143,7 @@ Returns a new buffer with elements in reverse order.
 Example:
 
     > buffer([10, 20, 30]).reverse()
-    buffer([30, 20, 10]) # TODO - do buffer display
+    <30, 20, 10>
 
 buffer.prototype.size
 ---------------------
