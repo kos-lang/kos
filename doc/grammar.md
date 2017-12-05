@@ -207,8 +207,7 @@ types.
 
     VOID_LITERAL    ::= "v" "o" "i" "d"
 
-Five keywords are currently reserved - `class`, `constructor`, `get`, `static`
-and `set`.
+Four keywords are currently reserved - `class`, `get`, `static` and `set`.
 
 The main difference between keywords and non-keyword literals is that keywords
 cannot be used as variable names.  However, keywords can still be used as
