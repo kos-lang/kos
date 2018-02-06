@@ -1547,8 +1547,8 @@ template<typename T, T fun>
 KOS_OBJ_ID wrapper(KOS_FRAME frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj)
 {
     stack_frame frame = frame_ptr;
-    array args(frame, args_obj);
     try {
+        array args(frame, args_obj);
         return frame.invoke_native(fun, this_obj, args);
     }
     catch (exception&) {
