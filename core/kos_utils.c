@@ -96,28 +96,26 @@ int KOS_get_numeric_arg(KOS_FRAME    frame,
     arg = KOS_array_read(frame, args_obj, idx);
     TRY_OBJID(arg);
 
-    if (IS_NUMERIC_OBJ(arg)) {
-
-        switch (GET_NUMERIC_TYPE(arg)) {
-
-            default:
-                numeric->type = KOS_INTEGER_VALUE;
-                numeric->u.i  = GET_SMALL_INT(arg);
-                break;
-
-            case OBJ_NUM_INTEGER:
-                numeric->type = KOS_INTEGER_VALUE;
-                numeric->u.i  = *OBJPTR(INTEGER, arg);
-                break;
-
-            case OBJ_NUM_FLOAT:
-                numeric->type = KOS_FLOAT_VALUE;
-                numeric->u.d  = *OBJPTR(FLOAT, arg);
-                break;
-        }
+    if (IS_SMALL_INT(arg)) {
+        numeric->type = KOS_INTEGER_VALUE;
+        numeric->u.i  = GET_SMALL_INT(arg);
     }
-    else
-        RAISE_EXCEPTION(str_err_not_number);
+    else switch (READ_OBJ_TYPE(arg)) {
+
+        case OBJ_INTEGER:
+            numeric->type = KOS_INTEGER_VALUE;
+            numeric->u.i  = OBJPTR(INTEGER, arg)->value;
+            break;
+
+        case OBJ_FLOAT:
+            numeric->type = KOS_FLOAT_VALUE;
+            numeric->u.d  = OBJPTR(FLOAT, arg)->value;
+            break;
+
+        default:
+            RAISE_EXCEPTION(str_err_not_number);
+            break;
+    }
 
 _error:
     return error;
@@ -630,18 +628,14 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
     if (IS_SMALL_INT(obj_id))
         error = _int_to_str(frame, GET_SMALL_INT(obj_id), str, cstr_vec);
 
-    else switch (GET_OBJ_TYPE(obj_id)) {
+    else switch (READ_OBJ_TYPE(obj_id)) {
 
         case OBJ_INTEGER:
-            /* fall through */
-        case OBJ_INTEGER2:
-            error = _int_to_str(frame, *OBJPTR(INTEGER, obj_id), str, cstr_vec);
+            error = _int_to_str(frame, OBJPTR(INTEGER, obj_id)->value, str, cstr_vec);
             break;
 
         case OBJ_FLOAT:
-            /* fall through */
-        case OBJ_FLOAT2:
-            error = _float_to_str(frame, *OBJPTR(FLOAT, obj_id), str, cstr_vec);
+            error = _float_to_str(frame, OBJPTR(FLOAT, obj_id)->value, str, cstr_vec);
             break;
 
         case OBJ_STRING:
@@ -653,25 +647,28 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
                 *str = obj_id;
             break;
 
-        case OBJ_IMMEDIATE:
-            if (obj_id == KOS_TRUE) {
+        case OBJ_VOID:
+            /* fall through */
+        default:
+            assert(READ_OBJ_TYPE(obj_id) == OBJ_VOID);
+            if (cstr_vec)
+                error = _vector_append_cstr(frame, cstr_vec, "void", 4);
+            else
+                *str = KOS_context_get_cstring(frame, str_void);
+            break;
+
+        case OBJ_BOOLEAN:
+            if (KOS_get_bool(obj_id)) {
                 if (cstr_vec)
                     error = _vector_append_cstr(frame, cstr_vec, "true", 4);
                 else
                     *str = KOS_context_get_cstring(frame, str_true);
             }
-            else if (obj_id == KOS_FALSE) {
+            else {
                 if (cstr_vec)
                     error = _vector_append_cstr(frame, cstr_vec, "false", 5);
                 else
                     *str = KOS_context_get_cstring(frame, str_false);
-            }
-            else {
-                assert(obj_id == KOS_VOID);
-                if (cstr_vec)
-                    error = _vector_append_cstr(frame, cstr_vec, "void", 4);
-                else
-                    *str = KOS_context_get_cstring(frame, str_void);
             }
             break;
 
@@ -698,9 +695,6 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
             break;
 
         case OBJ_FUNCTION:
-            /* fall through */
-        default:
-            assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION);
             /* TODO print function signature */
             if (cstr_vec)
                 error = _vector_append_cstr(frame, cstr_vec, "<function>", 10);

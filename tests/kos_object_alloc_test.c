@@ -35,61 +35,57 @@
 
 static void *_alloc_integer(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, INTEGER);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_INTEGER, sizeof(KOS_INTEGER));
 }
 
 static void *_alloc_float(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, FLOAT);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_FLOAT, sizeof(KOS_FLOAT));
 }
 
 static void *_alloc_string(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, STRING);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_STRING, sizeof(KOS_STRING));
 }
 
 static void *_alloc_object(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, OBJECT);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_OBJECT, sizeof(KOS_OBJECT));
 }
 
 static void *_alloc_array(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, ARRAY);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_ARRAY, sizeof(KOS_ARRAY));
 }
 
 static void *_alloc_buffer(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, BUFFER);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_BUFFER, sizeof(KOS_BUFFER));
 }
 
 static void *_alloc_function(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, FUNCTION);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_FUNCTION, sizeof(KOS_FUNCTION));
 }
 
 static void *_alloc_dynamic_prop(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, DYNAMIC_PROP);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP));
 }
 
 static void *_alloc_object_walk(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, OBJECT_WALK);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_OBJECT_WALK, sizeof(KOS_OBJECT_WALK));
 }
 
 static void *_alloc_module(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, MODULE);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_MODULE, sizeof(KOS_MODULE));
 }
-
-typedef struct _KOS_STACK_FRAME *KOS_STACK_FRAME;
-
-#define OBJ_STACK_FRAME 0xF
 
 static void *_alloc_stack_frame(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, STACK_FRAME);
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_STACK_FRAME, sizeof(struct _KOS_STACK_FRAME));
 }
 
 typedef void *(* ALLOC_FUNC)(KOS_FRAME frame);
@@ -107,20 +103,21 @@ int main(void)
     size_t      i;
 
     const struct _ALLOC_FUNC {
-        ALLOC_FUNC alloc_func;
-        size_t     size;
+        ALLOC_FUNC           alloc_func;
+        enum KOS_OBJECT_TYPE type;
+        size_t               size;
     } alloc[] = {
-        { _alloc_integer,      sizeof(KOS_INTEGER)      },
-        { _alloc_float,        sizeof(KOS_FLOAT)        },
-        { _alloc_string,       sizeof(KOS_STRING)       },
-        { _alloc_object,       sizeof(KOS_OBJECT)       },
-        { _alloc_array,        sizeof(KOS_ARRAY)        },
-        { _alloc_buffer,       sizeof(KOS_BUFFER)       },
-        { _alloc_function,     sizeof(KOS_FUNCTION)     },
-        { _alloc_dynamic_prop, sizeof(KOS_DYNAMIC_PROP) },
-        { _alloc_object_walk,  sizeof(KOS_OBJECT_WALK)  },
-        { _alloc_module,       sizeof(KOS_MODULE)       },
-        { _alloc_stack_frame,  sizeof(KOS_STACK_FRAME)  }
+        { _alloc_integer,      OBJ_INTEGER,      sizeof(KOS_INTEGER)      },
+        { _alloc_float,        OBJ_FLOAT,        sizeof(KOS_FLOAT)        },
+        { _alloc_string,       OBJ_STRING,       sizeof(KOS_STRING)       },
+        { _alloc_object,       OBJ_OBJECT,       sizeof(KOS_OBJECT)       },
+        { _alloc_array,        OBJ_ARRAY,        sizeof(KOS_ARRAY)        },
+        { _alloc_buffer,       OBJ_BUFFER,       sizeof(KOS_BUFFER)       },
+        { _alloc_function,     OBJ_FUNCTION,     sizeof(KOS_FUNCTION)     },
+        { _alloc_dynamic_prop, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP) },
+        { _alloc_object_walk,  OBJ_OBJECT_WALK,  sizeof(KOS_OBJECT_WALK)  },
+        { _alloc_module,       OBJ_MODULE,       sizeof(KOS_MODULE)       },
+        { _alloc_stack_frame,  OBJ_STACK_FRAME,  sizeof(struct _KOS_STACK_FRAME) }
     };
 
     /************************************************************************/
@@ -131,12 +128,10 @@ int main(void)
 
         TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
-        if (alloc[i].size >= 64)
-            _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
-        else
-            TEST(_KOS_alloc_get_mode(frame) == KOS_AREA_RECLAIMABLE);
-
-        objects = (void **)_KOS_alloc_buffer(frame, NUM_OBJECTS * sizeof(void *));
+        objects = (void **)_KOS_alloc_object(frame,
+                                             KOS_ALLOC_DEFAULT,
+                                             OBJ_OPAQUE,
+                                             NUM_OBJECTS * sizeof(void *));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
@@ -144,10 +139,9 @@ int main(void)
             objects[j] = (*alloc[i].alloc_func)(frame);
             TEST(objects[j]);
 
-            if (i < 2) /* OBJ_INTEGER, OBJ_FLOAT */
-                TEST(((intptr_t)objects[j] & 7) == 0);
-            else
-                TEST(((intptr_t)objects[j] & 15) == 0);
+            TEST(*(uint8_t *)objects[j] == alloc[i].type);
+
+            TEST(((intptr_t)objects[j] & 7) == 0);
 
             memset(objects[j], (uint8_t)j, alloc[i].size);
         }
@@ -169,11 +163,6 @@ int main(void)
                 }
         }
 
-        if (alloc[i].size >= 64)
-            TEST(_KOS_alloc_get_mode(frame) == KOS_AREA_FIXED);
-        else
-            TEST(_KOS_alloc_get_mode(frame) == KOS_AREA_RECLAIMABLE);
-
         KOS_context_destroy(&ctx);
     }
 
@@ -186,22 +175,18 @@ int main(void)
 
         TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
-        TEST(_KOS_alloc_get_mode(frame) == KOS_AREA_RECLAIMABLE);
-
-        objects = (void **)_KOS_alloc_buffer(frame, NUM_OBJECTS * sizeof(void *));
+        objects = (void **)_KOS_alloc_object(frame,
+                                             KOS_ALLOC_DEFAULT,
+                                             OBJ_OPAQUE,
+                                             NUM_OBJECTS * sizeof(void *));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
 
-            objects[j] = _KOS_alloc_object_internal(frame,
-                                                    (enum _KOS_AREA_ELEM_SIZE)i,
-                                                    size);
+            objects[j] = _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
             TEST(objects[j]);
 
-            if (i == 3)
-                TEST(((intptr_t)objects[j] & 7) == 0);
-            else
-                TEST(((intptr_t)objects[j] & 15) == 0);
+            TEST(((intptr_t)objects[j] & 7) == 0);
 
             memset(objects[j], (uint8_t)j, (size_t)size);
         }
@@ -223,8 +208,6 @@ int main(void)
                 }
         }
 
-        TEST(_KOS_alloc_get_mode(frame) == KOS_AREA_RECLAIMABLE);
-
         KOS_context_destroy(&ctx);
     }
 
@@ -238,9 +221,10 @@ int main(void)
 
         TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
-        TEST(_KOS_alloc_get_mode(frame) == KOS_AREA_RECLAIMABLE);
-
-        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_buffer(frame, NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
+        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(frame,
+                                                             KOS_ALLOC_DEFAULT,
+                                                             OBJ_OPAQUE,
+                                                             NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
@@ -249,10 +233,7 @@ int main(void)
             const int size     = 1 << size_pot;
 
             objects[j].size_pot = size_pot;
-            objects[j].obj      = (uint8_t *)_KOS_alloc_object_internal(
-                                       frame,
-                                       (enum _KOS_AREA_ELEM_SIZE)size_pot,
-                                       size);
+            objects[j].obj      = (uint8_t *)_KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
             TEST(objects[j].obj);
 
             memset(objects[j].obj, (uint8_t)j, (size_t)size);
@@ -289,23 +270,21 @@ int main(void)
 
         TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
-        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
-
-        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_buffer(frame, NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
+        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(frame,
+                                                             KOS_ALLOC_DEFAULT,
+                                                             OBJ_OPAQUE,
+                                                             NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
 
-            const int size = 1 + (int)_KOS_rng_random_range(&rng, 127);
+            const int size = 9 + (int)_KOS_rng_random_range(&rng, 128 - 9);
 
             objects[j].size_pot = size;
-            objects[j].obj      = (uint8_t *)_KOS_alloc_object_internal(
-                                       frame,
-                                       KOS_AREA_128,
-                                       size);
+            objects[j].obj      = (uint8_t *)_KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
             TEST(objects[j].obj);
 
-            TEST(((intptr_t)objects[j].obj & 15) == 0);
+            TEST(((intptr_t)objects[j].obj & 7) == 0);
 
             memset(objects[j].obj, (uint8_t)j, (size_t)size);
         }

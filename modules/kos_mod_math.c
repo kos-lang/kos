@@ -106,25 +106,23 @@ static KOS_OBJ_ID _ceil(KOS_FRAME  frame,
 
     assert( ! IS_BAD_PTR(arg));
 
-    if (IS_NUMERIC_OBJ(arg)) {
+    if (IS_SMALL_INT(arg))
+        ret = arg;
 
-        switch (GET_NUMERIC_TYPE(arg)) {
+    else switch (READ_OBJ_TYPE(arg)) {
 
-            default:
-                ret = arg;
-                break;
+        case OBJ_INTEGER:
+            ret = arg;
+            break;
 
-            case OBJ_NUM_INTEGER:
-                ret = arg;
-                break;
+        case OBJ_FLOAT:
+            ret = KOS_new_float(frame, ceil(OBJPTR(FLOAT, arg)->value));
+            break;
 
-            case OBJ_NUM_FLOAT:
-                ret = KOS_new_float(frame, ceil(*OBJPTR(FLOAT, arg)));
-                break;
-        }
+        default:
+            KOS_raise_exception_cstring(frame, str_err_not_number);
+            break;
     }
-    else
-        KOS_raise_exception_cstring(frame, str_err_not_number);
 
     return ret;
 }
@@ -226,25 +224,23 @@ static KOS_OBJ_ID _floor(KOS_FRAME  frame,
 
     assert( ! IS_BAD_PTR(arg));
 
-    if (IS_NUMERIC_OBJ(arg)) {
+    if (IS_SMALL_INT(arg))
+        ret = arg;
 
-        switch (GET_NUMERIC_TYPE(arg)) {
+    else switch (READ_OBJ_TYPE(arg)) {
 
-            default:
-                ret = arg;
-                break;
+        case OBJ_INTEGER:
+            ret = arg;
+            break;
 
-            case OBJ_NUM_INTEGER:
-                ret = arg;
-                break;
+        case OBJ_FLOAT:
+            ret = KOS_new_float(frame, floor(OBJPTR(FLOAT, arg)->value));
+            break;
 
-            case OBJ_NUM_FLOAT:
-                ret = KOS_new_float(frame, floor(*OBJPTR(FLOAT, arg)));
-                break;
-        }
+        default:
+            KOS_raise_exception_cstring(frame, str_err_not_number);
+            break;
     }
-    else
-        KOS_raise_exception_cstring(frame, str_err_not_number);
 
     return ret;
 }
@@ -274,15 +270,15 @@ static KOS_OBJ_ID _is_infinity(KOS_FRAME  frame,
 
     assert( ! IS_BAD_PTR(arg));
 
-    if (GET_NUMERIC_TYPE(arg) == OBJ_NUM_FLOAT) {
+    if (GET_OBJ_TYPE(arg) == OBJ_FLOAT) {
 
         union _KOS_NUMERIC_VALUE value;
 
-        value.d = *OBJPTR(FLOAT, arg);
-        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
+        value.d = OBJPTR(FLOAT, arg)->value;
+        ret     = KOS_new_boolean(frame, ((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
     }
     else
-        ret = KOS_FALSE;
+        ret = KOS_new_boolean(frame, 0);
 
     return ret;
 }
@@ -312,15 +308,15 @@ static KOS_OBJ_ID _is_nan(KOS_FRAME  frame,
 
     assert( ! IS_BAD_PTR(arg));
 
-    if (GET_NUMERIC_TYPE(arg) == OBJ_NUM_FLOAT) {
+    if (GET_OBJ_TYPE(arg) == OBJ_FLOAT) {
 
         union _KOS_NUMERIC_VALUE value;
 
-        value.d = *OBJPTR(FLOAT, arg);
-        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
+        value.d = OBJPTR(FLOAT, arg)->value;
+        ret     = KOS_new_boolean(frame, ((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
     }
     else
-        ret = KOS_FALSE;
+        ret = KOS_new_boolean(frame, 0);
 
     return ret;
 }

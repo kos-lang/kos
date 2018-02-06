@@ -27,11 +27,11 @@
 #include "kos_threads.h"
 #include <assert.h>
 
-struct _KOS_BUFFER_DATA {
-    uint32_t capacity;
-    uint32_t _align;
-    uint8_t  buf[1];
-};
+typedef struct _KOS_BUFFER_STORAGE {
+    KOS_OBJ_HEADER header;
+    uint32_t       capacity;
+    uint8_t        buf[1];
+} KOS_BUFFER_STORAGE;
 
 #ifdef __cplusplus
 
@@ -44,17 +44,19 @@ static inline uint32_t KOS_get_buffer_size(KOS_OBJ_ID obj_id)
 
 static inline uint8_t *KOS_buffer_data(KOS_OBJ_ID obj_id)
 {
-    struct _KOS_BUFFER_DATA *data = 0;
     assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
-    KOS_BUFFER *const buffer = OBJPTR(BUFFER, obj_id);
-    data = (struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(buffer->data);
+    KOS_BUFFER         *const buffer  = OBJPTR(BUFFER, obj_id);
+    const KOS_OBJ_ID          buf_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(buffer->data);
+    KOS_BUFFER_STORAGE       *data;
+    assert( ! IS_BAD_PTR(buf_obj));
+    data = OBJPTR(BUFFER_STORAGE, buf_obj);
     return &data->buf[0];
 }
 
 #else
 
 #define KOS_get_buffer_size(obj_id) (KOS_atomic_read_u32(OBJPTR(BUFFER, (obj_id))->size))
-#define KOS_buffer_data(obj_id) (&((struct _KOS_BUFFER_DATA *)KOS_atomic_read_ptr(OBJPTR(BUFFER, (obj_id))->data))->buf[0])
+#define KOS_buffer_data(obj_id) (&OBJPTR(BUFFER_STORAGE, (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(BUFFER, (obj_id))->data))->buf[0])
 
 #endif
 

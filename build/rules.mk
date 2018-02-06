@@ -175,6 +175,15 @@ ifneq ($(CONFIG_PERF), 0)
     CFLAGS += -DCONFIG_PERF
 endif
 
+CONFIG_STRING ?= 8
+
+ifeq ($(CONFIG_STRING), 16)
+    CFLAGS += -DCONFIG_STRING16
+endif
+ifeq ($(CONFIG_STRING), 32)
+    CFLAGS += -DCONFIG_STRING32
+endif
+
 CONFIG_SEQFAIL ?= 0
 
 ifneq ($(CONFIG_SEQFAIL), 0)

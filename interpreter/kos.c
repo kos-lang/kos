@@ -320,16 +320,8 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
-    {
-        const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
-        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
-
-        print_args = KOS_new_array(frame, 1);
-
-        _KOS_alloc_set_mode(frame, alloc_mode);
-
-        TRY_OBJID(print_args);
-    }
+    print_args = KOS_new_array(frame, 1);
+    TRY_OBJID(print_args);
 
     error = _KOS_getline_init(&state);
     if (error) {
@@ -364,7 +356,7 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
             continue;
         }
 
-        if (ret == KOS_VOID)
+        if ( ! IS_SMALL_INT(ret) && GET_OBJ_TYPE(ret) == OBJ_VOID)
             continue;
 
         TRY(KOS_array_write(frame, print_args, 0, ret));

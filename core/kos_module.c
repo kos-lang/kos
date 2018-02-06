@@ -204,17 +204,18 @@ static void _get_module_name(const char                    *module,
 static KOS_OBJ_ID _alloc_module(KOS_FRAME  frame,
                                 KOS_OBJ_ID module_name)
 {
-    const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
-    KOS_MODULE               *module;
+    KOS_MODULE *module;
 
-    _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
-
-    module = (KOS_MODULE *)_KOS_alloc_object(frame, MODULE);
+    module = (KOS_MODULE *)_KOS_alloc_object(frame,
+                                             KOS_ALLOC_PERSISTENT,
+                                             OBJ_MODULE,
+                                             sizeof(KOS_MODULE));
     if (module) {
 
-        memset(module, 0, sizeof(*module));
+        memset(((uint8_t *)module) + sizeof(module->header), 0, sizeof(*module) - sizeof(module->header));
 
-        module->type    = OBJ_MODULE;
+        assert(module->header.type == OBJ_MODULE);
+
         module->name    = module_name;
         module->context = KOS_context_from_frame(frame);
         module->strings = KOS_BADPTR;
@@ -233,8 +234,6 @@ static KOS_OBJ_ID _alloc_module(KOS_FRAME  frame,
             }
         }
     }
-
-    _KOS_alloc_set_mode(frame, alloc_mode);
 
     return OBJID(MODULE, module);
 }
@@ -339,9 +338,8 @@ static int _alloc_globals(KOS_FRAME              frame,
                           struct _KOS_COMP_UNIT *program,
                           KOS_MODULE            *module)
 {
-    int                       error;
-    struct _KOS_VAR          *var;
-    const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
+    int              error;
+    struct _KOS_VAR *var;
 
     TRY(KOS_array_resize(frame, module->globals, (uint32_t)program->num_globals));
 
@@ -351,9 +349,7 @@ static int _alloc_globals(KOS_FRAME              frame,
 
             KOS_OBJ_ID name;
 
-            _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
             name = KOS_new_string(frame, var->token->begin, var->token->length);
-            _KOS_alloc_set_mode(frame, alloc_mode);
 
             TRY_OBJID(name);
             assert(var->array_idx < program->num_globals);
@@ -369,19 +365,16 @@ static int _save_direct_modules(KOS_FRAME              frame,
                                 struct _KOS_COMP_UNIT *program,
                                 KOS_MODULE            *module)
 {
-    int                       error      = KOS_SUCCESS;
+    int                       error = KOS_SUCCESS;
     struct _KOS_VAR          *var;
-    KOS_CONTEXT              *ctx        = KOS_context_from_frame(frame);
-    const enum _KOS_AREA_TYPE alloc_mode = _KOS_alloc_get_mode(frame);
+    KOS_CONTEXT              *ctx   = KOS_context_from_frame(frame);
 
     for (var = program->modules; var; var = var->next) {
 
         KOS_OBJ_ID name;
         KOS_OBJ_ID module_idx_obj;
 
-        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
         name = KOS_new_string(frame, var->token->begin, var->token->length);
-        _KOS_alloc_set_mode(frame, alloc_mode);
         TRY_OBJID(name);
 
         module_idx_obj = KOS_get_property(frame, ctx->module_names, name);
@@ -414,14 +407,11 @@ static int _alloc_strings(KOS_FRAME              frame,
     int                       error       = KOS_SUCCESS;
     const uint32_t            num_strings = _count_strings(program);
     uint32_t                  base_idx    = 0;
-    const enum _KOS_AREA_TYPE alloc_mode  = _KOS_alloc_get_mode(frame);
     struct _KOS_COMP_STRING  *str         = program->string_list;
     int                       i;
 
     if (IS_BAD_PTR(module->strings)) {
-        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
         module->strings = KOS_new_array(frame, num_strings);
-        _KOS_alloc_set_mode(frame, alloc_mode);
 
         TRY_OBJID(module->strings);
     }
@@ -434,11 +424,9 @@ static int _alloc_strings(KOS_FRAME              frame,
 
         KOS_OBJ_ID str_obj;
 
-        _KOS_alloc_set_mode(frame, KOS_AREA_FIXED);
         str_obj = str->escape == KOS_UTF8_WITH_ESCAPE
                 ? KOS_new_string_esc(frame, str->str, str->length)
                 : KOS_new_string(frame, str->str, str->length);
-        _KOS_alloc_set_mode(frame, alloc_mode);
 
         TRY_OBJID(str_obj);
 
@@ -653,8 +641,7 @@ static int _get_global_idx(void       *vframe,
     module_obj = KOS_array_read(frame, ctx->modules, module_idx);
     TRY_OBJID(module_obj);
 
-    assert(GET_OBJ_TYPE(module_obj) == OBJ_INTERNAL);
-    assert(OBJPTR(MODULE, module_obj)->type == OBJ_MODULE);
+    assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
     glob_idx_obj = KOS_get_property(frame, OBJPTR(MODULE, module_obj)->global_names, str);
     TRY_OBJID(glob_idx_obj);
@@ -688,8 +675,7 @@ static int _walk_globals(void                          *vframe,
     module_obj = KOS_array_read(frame, ctx->modules, module_idx);
     TRY_OBJID(module_obj);
 
-    assert(GET_OBJ_TYPE(module_obj) == OBJ_INTERNAL);
-    assert(OBJPTR(MODULE, module_obj)->type == OBJ_MODULE);
+    assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
     TRY(KOS_object_walk_init_shallow(frame, &walk, OBJPTR(MODULE, module_obj)->global_names));
 
@@ -1245,7 +1231,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
     /* Make room for the new module and allocate index */
     {
         uint32_t u_idx = 0;
-        TRY(KOS_array_push(frame, ctx->modules, KOS_VOID, &u_idx));
+        TRY(KOS_array_push(frame, ctx->modules, KOS_new_void(frame), &u_idx));
         module_idx = (int)u_idx;
         assert(module_idx >= 0);
     }
@@ -1470,7 +1456,7 @@ int KOS_module_add_global(KOS_FRAME  frame,
     int         error;
     uint32_t    new_idx;
     KOS_OBJ_ID  prop;
-    KOS_MODULE *module = frame->module;
+    KOS_MODULE *module = OBJPTR(MODULE, frame->module);
 
     assert(module);
 
@@ -1500,7 +1486,7 @@ int KOS_module_get_global(KOS_FRAME   frame,
 {
     int         error  = KOS_SUCCESS;
     KOS_OBJ_ID  idx_obj;
-    KOS_MODULE *module = frame->module;
+    KOS_MODULE *module = OBJPTR(MODULE, frame->module);
 
     assert(module);
 
@@ -1531,13 +1517,13 @@ int KOS_module_add_function(KOS_FRAME                frame,
 {
     int         error    = KOS_SUCCESS;
     KOS_OBJ_ID  func_obj = KOS_new_builtin_function(frame, handler, min_args);
-    KOS_MODULE *module   = frame->module;
+    KOS_MODULE *module   = OBJPTR(MODULE, frame->module);
 
     assert(module);
 
     TRY_OBJID(func_obj);
 
-    OBJPTR(FUNCTION, func_obj)->module = module;
+    OBJPTR(FUNCTION, func_obj)->module = OBJID(MODULE, module);
     OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)state;
 
     TRY(KOS_module_add_global(frame,
@@ -1557,13 +1543,13 @@ int KOS_module_add_constructor(KOS_FRAME            frame,
 {
     int         error    = KOS_SUCCESS;
     KOS_OBJ_ID  func_obj = KOS_new_builtin_function(frame, handler, min_args);
-    KOS_MODULE *module   = frame->module;
+    KOS_MODULE *module   = OBJPTR(MODULE, frame->module);
 
     assert(module);
 
     TRY_OBJID(func_obj);
 
-    OBJPTR(FUNCTION, func_obj)->module = module;
+    OBJPTR(FUNCTION, func_obj)->module = OBJID(MODULE, module);
     OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)KOS_CTOR;
 
     TRY(KOS_module_add_global(frame,
@@ -1587,13 +1573,13 @@ int KOS_module_add_member_function(KOS_FRAME                frame,
 {
     int          error    = KOS_SUCCESS;
     KOS_OBJ_ID   func_obj = KOS_new_builtin_function(frame, handler, min_args);
-    KOS_MODULE  *module   = frame->module;
+    KOS_MODULE  *module   = OBJPTR(MODULE, frame->module);
 
     assert(module);
 
     TRY_OBJID(func_obj);
 
-    OBJPTR(FUNCTION, func_obj)->module = module;
+    OBJPTR(FUNCTION, func_obj)->module = OBJID(MODULE, module);
     OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)state;
 
     TRY(KOS_set_property(frame, proto_obj, str_name, func_obj));
@@ -1607,7 +1593,7 @@ unsigned KOS_module_addr_to_line(KOS_MODULE *module,
 {
     unsigned ret = 0;
 
-    if (module && offs != ~0U) {
+    if (module && offs != ~0U && module->line_addrs) {
 
         const KOS_LINE_ADDR *ptr = module->line_addrs;
         const KOS_LINE_ADDR *end = ptr + module->num_line_addrs;
@@ -1643,7 +1629,7 @@ static const KOS_FUNC_ADDR *_addr_to_func(KOS_MODULE *module,
         0
     };
 
-    if (module && offs != ~0U) {
+    if (module && offs != ~0U && module->func_addrs) {
 
         const KOS_FUNC_ADDR *ptr = module->func_addrs;
         const KOS_FUNC_ADDR *end = ptr + module->num_func_addrs;

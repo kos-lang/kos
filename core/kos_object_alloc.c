@@ -33,150 +33,53 @@
 #include <stdio.h>
 #include <string.h>
 
-static const uint8_t de_bruijn_bit_pos[32] = {
-    0,   1, 28,  2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17,  4, 8,
-    31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18,  6, 11,  5, 10, 9
+typedef struct _KOS_SLOT_PLACEHOLDER {
+    uint8_t _dummy[1 << _KOS_OBJ_ALIGN_BITS];
+} _KOS_SLOT;
+
+struct _KOS_PAGE_HEADER {
+    KOS_ATOMIC(_KOS_PAGE *) next;
+    KOS_ATOMIC(_KOS_SLOT *) first_free_slot;
 };
 
-struct _KOS_AREA {
-    KOS_ATOMIC(void *)   next;
-    uint8_t              type;
-    uint8_t              elem_size_pot;
-    KOS_ATOMIC(uint32_t) free_lookup_offs;
-    KOS_ATOMIC(uint32_t) bitmap[1];
-};
+#define _KOS_PAGE_HDR_SIZE  (sizeof(struct _KOS_PAGE_HEADER))
+#define _KOS_SLOTS_PER_PAGE (((_KOS_PAGE_SIZE - _KOS_PAGE_HDR_SIZE) << 2) / \
+                             ((1 << (_KOS_OBJ_ALIGN_BITS + 2)) + 1))
+#define _KOS_BITMAP_SIZE    (((_KOS_SLOTS_PER_PAGE + 15) & ~15) >> 2)
+#define _KOS_BITMAP_OFFS    ((_KOS_PAGE_HDR_SIZE + 3) & ~3)
+#define _KOS_SLOTS_OFFS     (_KOS_PAGE_SIZE - (_KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS))
 
-struct _KOS_FIXED_AREA {
-    KOS_ATOMIC(void *)   next;
-    uint8_t              type;
-    KOS_ATOMIC(uint32_t) first_free_offs;
-};
-
-struct _KOS_FREE_AREA {
-    KOS_ATOMIC(void *)   next;
-    uint8_t              type;
-};
-
-#define AVAIL_AREA_SIZE (_KOS_AREA_SIZE - sizeof(struct _KOS_AREA) + sizeof(KOS_ATOMIC(uint32_t)))
-
-#define NUM_CHUNKS(size_pot) (AVAIL_AREA_SIZE * 64 / ((1 << ((size_pot)+6)) + 8))
-
-#define BITMAP_ELEMS(num_chunks) (((num_chunks) + 31) >> 5)
-
-#define AREA_FROM_OBJ_ID(obj_id) ((struct _KOS_AREA *)((intptr_t)(obj_id) & ~(intptr_t)(_KOS_AREA_SIZE - 1)))
-
-static void *_alloc_buffer(struct _KOS_ALLOCATOR *allocator, size_t size);
-
-static int _alloc_areas(struct _KOS_ALLOCATOR *allocator)
+static void _list_push(KOS_ATOMIC(void *) *list, void *new_ptr)
 {
-    uint8_t *pool = (uint8_t *)_alloc_buffer(allocator, _KOS_AREA_SIZE * _KOS_AREAS_POOL_SIZE);
+    for (;;) {
+        void *next = KOS_atomic_read_ptr(*list);
 
-    if (pool) {
+        KOS_atomic_write_ptr(*(KOS_ATOMIC(void *) *)new_ptr, next);
 
-        uint8_t *cur = pool + _KOS_AREA_SIZE * _KOS_AREAS_POOL_SIZE;
-
-        struct _KOS_FREE_AREA *prev   = 0;
-        KOS_ATOMIC(void *)    *hookup = &allocator->areas_free;
-
-        /* Align to pool size */
-        /* TODO see if _alloc_buffer can take care of alignment */
-        cur  = (uint8_t *)((intptr_t)cur & ~(intptr_t)(_KOS_AREA_SIZE - 1));
-        pool = (uint8_t *)(((intptr_t)pool + _KOS_AREA_SIZE - 1) & ~(intptr_t)(_KOS_AREA_SIZE - 1));
-
-        while (cur > pool) {
-
-            struct _KOS_FREE_AREA *const area = (struct _KOS_FREE_AREA *)(cur - _KOS_AREA_SIZE);
-
-            KOS_atomic_write_ptr(area->next, (void *)prev);
-            area->type = (uint8_t)KOS_AREA_FREE;
-            prev       = area;
-
-            cur = (uint8_t *)area;
-        }
-
-        _KOS_spin_lock(&allocator->lock);
-
-        while (KOS_atomic_read_ptr(*hookup))
-            hookup = &((struct _KOS_FREE_AREA *)KOS_atomic_read_ptr(*hookup))->next;
-
-        KOS_atomic_write_ptr(*hookup, (void *)prev);
-
-        _KOS_spin_unlock(&allocator->lock);
-
-        return KOS_SUCCESS;
+        if (KOS_atomic_cas_ptr(*list, next, new_ptr))
+            break;
     }
-    else
-        return KOS_ERROR_OUT_OF_MEMORY;
 }
 
-static int _alloc_area(struct _KOS_ALLOCATOR   *allocator,
-                       enum _KOS_AREA_TYPE      type,
-                       enum _KOS_AREA_ELEM_SIZE elem_size_pot)
+static void *_list_pop(KOS_ATOMIC(void *) *list)
 {
-    void *area;
+    void *item;
 
-    assert(type != KOS_AREA_FREE);
+    for (;;) {
+        void *next;
 
-    do {
+        item = KOS_atomic_read_ptr(*list);
 
-        _KOS_spin_lock(&allocator->lock);
+        if ( ! item)
+            break;
 
-        area = KOS_atomic_read_ptr(allocator->areas_free);
-        if (area)
-            KOS_atomic_write_ptr(allocator->areas_free,
-                                 (void *)((struct _KOS_FREE_AREA *)area)->next);
+        next = KOS_atomic_read_ptr(*(KOS_ATOMIC(void *) *)item);
 
-        _KOS_spin_unlock(&allocator->lock);
-
-        if ( ! area) {
-            const int error = _alloc_areas(allocator);
-            if (error)
-                return error;
-        }
-    } while ( ! area);
-
-    assert(((struct _KOS_FREE_AREA *)area)->type == KOS_AREA_FREE);
-
-    if (type == KOS_AREA_FIXED) {
-
-        struct _KOS_FIXED_AREA *new_area = (struct _KOS_FIXED_AREA *)area;
-
-        memset(new_area, 0, _KOS_AREA_SIZE);
-
-        new_area->type = (uint8_t)KOS_AREA_FIXED;
-
-        KOS_atomic_write_u32(new_area->first_free_offs,
-                              ((uint32_t)sizeof(struct _KOS_FIXED_AREA) + 15U) & ~15U);
-
-        _KOS_spin_lock(&allocator->lock);
-
-        KOS_atomic_write_ptr(new_area->next, KOS_atomic_read_ptr(allocator->areas_fixed));
-        KOS_atomic_write_ptr(allocator->areas_fixed, (void *)new_area);
-
-        _KOS_spin_unlock(&allocator->lock);
-    }
-    /* TODO add KOS_AREA_STACK */
-    else {
-
-        struct _KOS_AREA   *new_area = (struct _KOS_AREA *)area;
-        KOS_ATOMIC(void *) *areas    = &allocator->areas[(int)elem_size_pot - 3];
-
-        assert(type == KOS_AREA_RECLAIMABLE);
-
-        memset(new_area, 0, _KOS_AREA_SIZE);
-
-        new_area->type          = (uint8_t)KOS_AREA_RECLAIMABLE;
-        new_area->elem_size_pot = (uint8_t)elem_size_pot;
-
-        _KOS_spin_lock(&allocator->lock);
-
-        KOS_atomic_write_ptr(new_area->next, KOS_atomic_read_ptr(*areas));
-        KOS_atomic_write_ptr(*areas, (void *)new_area);
-
-        _KOS_spin_unlock(&allocator->lock);
+        if (KOS_atomic_cas_ptr(*list, item, next))
+            break;
     }
 
-    return KOS_SUCCESS;
+    return item;
 }
 
 int _KOS_alloc_init(KOS_CONTEXT *ctx)
@@ -185,185 +88,169 @@ int _KOS_alloc_init(KOS_CONTEXT *ctx)
 
     memset(allocator, 0, sizeof(*allocator));
 
-    allocator->str_oom_id = KOS_VOID;
+    allocator->str_oom_id = TO_SMALL_INT(0);
 
-    return _alloc_areas(allocator);
+    assert(_KOS_BITMAP_OFFS + _KOS_BITMAP_SIZE <= _KOS_SLOTS_OFFS);
+    assert( ! (_KOS_SLOTS_OFFS & 7U));
+    assert(_KOS_SLOTS_OFFS + (_KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS) == _KOS_PAGE_SIZE);
+
+    return KOS_SUCCESS;
 }
 
 void _KOS_alloc_destroy(KOS_CONTEXT *ctx)
 {
-    void *objects = KOS_atomic_read_ptr(ctx->allocator.buffers);
+    for (;;) {
+        void *pool = _list_pop(&ctx->allocator.pools);
 
-    while (objects) {
-        void *del = objects;
-        objects   = *(void **)objects;
-        _KOS_free(del);
+        if ( ! pool)
+            break;
+
+        _KOS_free(pool);
     }
 }
 
-void *_KOS_alloc_object_internal(KOS_FRAME                frame,
-                                 enum _KOS_AREA_ELEM_SIZE elem_size_pot,
-                                 int                      elem_size)
+static int _alloc_pool(struct _KOS_ALLOCATOR *allocator)
 {
-    const enum _KOS_AREA_TYPE    alloc_mode = _KOS_alloc_get_mode(frame);
-    struct _KOS_ALLOCATOR *const allocator  = frame->allocator;
-    KOS_ATOMIC(void *)          *area_ptr;
-    void                        *ret        = 0;
+    uint8_t *const pool = (uint8_t *)_KOS_malloc(_KOS_POOL_SIZE);
+    uint8_t       *begin;
+    uint8_t       *page;
 
-    if (_KOS_seq_fail()) {
-        KOS_raise_exception(frame, allocator->str_oom_id);
+    if ( ! pool)
+        return KOS_ERROR_OUT_OF_MEMORY;
+
+    _list_push(&allocator->pools, pool);
+
+    begin = (uint8_t *)(((uintptr_t)pool + _KOS_PAGE_SIZE) & ~(uintptr_t)(_KOS_PAGE_SIZE - 1));
+
+    page = begin + _KOS_POOL_SIZE - _KOS_PAGE_SIZE;
+
+    /* TODO reuse unused portions of the pool */
+
+    while (page > begin) {
+        page -= _KOS_PAGE_SIZE;
+        assert( ! ((uintptr_t)page & (uintptr_t)(_KOS_PAGE_SIZE - 1)));
+        _list_push((KOS_ATOMIC(void *) *)&allocator->free_pages, (void *)page);
+    }
+
+    return KOS_SUCCESS;
+}
+
+static _KOS_PAGE *_alloc_page(struct _KOS_ALLOCATOR *allocator)
+{
+    _KOS_PAGE *page;
+
+    for (;;) {
+        page = (_KOS_PAGE *)_list_pop((KOS_ATOMIC(void *) *)&allocator->free_pages);
+
+        if (page)
+            break;
+
+        if (_alloc_pool(allocator))
+            return 0;
+    }
+
+    KOS_atomic_write_ptr(page->first_free_slot,
+                         (_KOS_SLOT *)((uint8_t *)page + _KOS_SLOTS_OFFS));
+
+    assert( ! ((uintptr_t)KOS_atomic_read_ptr(page->first_free_slot) & ((1 << _KOS_OBJ_ALIGN_BITS) - 1)));
+
+    return page;
+}
+
+static void *_alloc_bytes_from_page(_KOS_PAGE *page, uint32_t size)
+{
+    _KOS_SLOT *const slots_begin = (_KOS_SLOT *)((uint8_t *)page + _KOS_SLOTS_OFFS);
+    _KOS_SLOT *const slots_end   = slots_begin + _KOS_SLOTS_PER_PAGE;
+    const uint32_t   alloc_size  = (size + sizeof(_KOS_SLOT) - 1) >> _KOS_OBJ_ALIGN_BITS;
+
+    for (;;) {
+        _KOS_SLOT *const slot = (_KOS_SLOT *)KOS_atomic_read_ptr(page->first_free_slot);
+        _KOS_SLOT *const next = slot + alloc_size;
+
+        if (next <= slots_end) {
+            if (KOS_atomic_cas_ptr(page->first_free_slot, slot, next))
+                return slot;
+        }
+        else
+            break;
+    }
+
+    return 0;
+}
+
+static void *_alloc_huge_object(KOS_FRAME            frame,
+                                enum KOS_ALLOC_HINT  alloc_hint,
+                                enum KOS_OBJECT_TYPE object_type,
+                                uint32_t             size)
+{
+    KOS_OBJ_HEADER *hdr;
+    void          **ptr = (void **)_KOS_malloc(size + sizeof(void *));
+
+    if ( ! ptr) {
+        KOS_raise_exception(frame, frame->allocator->str_oom_id);
         return 0;
     }
 
-    assert((int)elem_size_pot >= 3 && (int)elem_size_pot <= 7);
-    assert(elem_size <= (1 << (int)elem_size_pot));
-    assert(alloc_mode != KOS_AREA_FREE);
-    assert((int)elem_size_pot < 7 || alloc_mode == KOS_AREA_FIXED);
+    hdr = (KOS_OBJ_HEADER *)(ptr + 1);
+    assert( ! ((uintptr_t)hdr & 7U));
 
-    /* TODO count FIXED, STACK separately */
-    KOS_PERF_CNT_ARRAY(alloc_object, elem_size_pot);
+    hdr->type       = (uint8_t)object_type;
+    hdr->alloc_size = size;
 
-    if (alloc_mode == KOS_AREA_FIXED)
-        area_ptr = &allocator->areas_fixed;
-    else
-        area_ptr = &allocator->areas[elem_size_pot - 3];
+    _list_push(&frame->allocator->pools, (void *)ptr);
+
+    return (void *)hdr;
+}
+
+static void *_alloc_object(KOS_FRAME            frame,
+                           enum KOS_ALLOC_HINT  alloc_hint,
+                           enum KOS_OBJECT_TYPE object_type,
+                           uint32_t             size)
+{
+    struct _KOS_ALLOCATOR *allocator = frame->allocator;
 
     for (;;) {
+        _KOS_PAGE *page = (_KOS_PAGE *)KOS_atomic_read_ptr(allocator->active_pages);
 
-        int error;
+        while (page) {
+            KOS_OBJ_HEADER *const hdr = (KOS_OBJ_HEADER *)
+                    _alloc_bytes_from_page(page, size);
 
-        if (alloc_mode == KOS_AREA_FIXED) {
+            if (hdr) {
 
-            struct _KOS_FIXED_AREA *const area = (struct _KOS_FIXED_AREA *)
-                    KOS_atomic_read_ptr(*area_ptr);
+                /* TODO sort active pages by remaining size in descending order */
 
-            if (area) {
-
-                const int32_t aligned_size = (elem_size + 15) & ~15;
-
-                const int32_t offs = KOS_atomic_add_i32(area->first_free_offs, aligned_size);
-
-                if (offs + elem_size <= _KOS_AREA_SIZE) {
-                    ret = (void *)((uint8_t *)area + offs);
-                    break;
-                }
-
-                KOS_atomic_add_i32(area->first_free_offs, -aligned_size);
+                hdr->type       = (uint8_t)object_type;
+                hdr->alloc_size = size;
+                return hdr;
             }
-        }
-        else {
 
-            struct _KOS_AREA *const area = (struct _KOS_AREA *)
-                    KOS_atomic_read_ptr(*area_ptr);
-
-            if (area) {
-
-                const uint32_t num_chunks   = NUM_CHUNKS(elem_size_pot);
-                const uint32_t bitmap_elems = BITMAP_ELEMS(num_chunks);
-
-                for (;;) {
-
-                    const uint32_t        lookup_offs = KOS_atomic_read_u32(area->free_lookup_offs);
-                    KOS_ATOMIC(uint32_t) *bits_ptr;
-                    uint32_t              bits;
-
-                    if (lookup_offs >= bitmap_elems)
-                        break; /* No more free blocks, allocate new area */
-
-                    bits_ptr = &area->bitmap[lookup_offs];
-
-                    bits = KOS_atomic_read_u32(*bits_ptr);
-
-                    if (bits != ~0U) {
-                        const uint32_t new_bits = bits | (bits + 1U);
-                        uint32_t       offs;
-                        uintptr_t      ptr;
-
-                        if ( ! KOS_atomic_cas_u32(*bits_ptr, bits, new_bits))
-                            /* Failed to grab this object, try another one */
-                            continue;
-
-                        offs = de_bruijn_bit_pos[((~bits & new_bits) * 0x077CB531U) >> 27];
-
-                        offs = (lookup_offs << 5) + offs;
-
-                        if (offs >= num_chunks)
-                            break; /* No more free blocks, allocate new area */
-
-                        ptr = ((uintptr_t)&area->bitmap[bitmap_elems] + 15) & ~(uintptr_t)15;
-
-                        ret = (void *)(ptr + (offs << (int)elem_size_pot));
-                        assert((uint8_t *)ret - (uint8_t *)area < _KOS_AREA_SIZE - 16);
-                        break;
-                    }
-
-                    /* Try next 32-block group */
-                    KOS_atomic_cas_u32(area->free_lookup_offs, lookup_offs, lookup_offs + 4U);
-                }
-
-                if (ret)
-                    break;
-            }
+            page = (_KOS_PAGE *)KOS_atomic_read_ptr(page->next);
         }
 
-        error = _alloc_area(allocator, alloc_mode, elem_size_pot);
+        page = _alloc_page(allocator);
 
-        if (error) {
-            KOS_raise_exception(frame, allocator->str_oom_id);
-            return 0;
-        }
+        if (page)
+            _list_push((KOS_ATOMIC(void *) *)&allocator->active_pages, (void *)page);
+        else
+            break;
     }
 
-    return ret;
+    KOS_raise_exception(frame, frame->allocator->str_oom_id);
+    return 0;
 }
 
-static void *_alloc_buffer(struct _KOS_ALLOCATOR *allocator, size_t size)
+void *_KOS_alloc_object(KOS_FRAME            frame,
+                        enum KOS_ALLOC_HINT  alloc_hint,
+                        enum KOS_OBJECT_TYPE object_type,
+                        uint32_t             size)
 {
-    uint8_t *obj = (uint8_t *)_KOS_malloc(size + sizeof(uint64_t) + 0x10);
-
-    if (obj) {
-        void **ptr = (void **)obj;
-
-        for (;;) {
-            void *next = KOS_atomic_read_ptr(allocator->buffers);
-            *ptr       = next;
-            if (KOS_atomic_cas_ptr(allocator->buffers, next, (void *)obj))
-                break;
-        }
-
-        obj += sizeof(void *);
-        obj += 0x10 - ((int)(uintptr_t)obj & 0xF);
-    }
-
-    return (void *)obj;
-}
-
-void *_KOS_alloc_buffer(KOS_FRAME frame, size_t size)
-{
-    void *buf = _alloc_buffer(frame->allocator, size);
-
-    if (buf) {
-        KOS_PERF_CNT(alloc_buffer);
-        KOS_PERF_ADD(alloc_buffer_total, (uint32_t)size);
+    if (size > _KOS_PAGE_SIZE / 2)
+    {
+        return _alloc_huge_object(frame, alloc_hint, object_type, size);
     }
     else
-        KOS_raise_exception(frame, frame->allocator->str_oom_id);
-
-    return buf;
-}
-
-void _KOS_free_buffer(KOS_FRAME frame, void *ptr, size_t size)
-{
-    /* TODO put on freed list */
-}
-
-void _KOS_alloc_set_mode(KOS_FRAME frame, enum _KOS_AREA_TYPE alloc_mode)
-{
-    assert(alloc_mode != KOS_AREA_FREE);
-    frame->alloc_mode = (uint8_t)alloc_mode;
-}
-
-enum _KOS_AREA_TYPE _KOS_alloc_get_mode(KOS_FRAME frame)
-{
-    return (enum _KOS_AREA_TYPE)frame->alloc_mode;
+    {
+        return _alloc_object(frame, alloc_hint, object_type, size);
+    }
 }

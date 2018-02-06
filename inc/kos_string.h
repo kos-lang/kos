@@ -34,12 +34,12 @@ struct _KOS_VECTOR;
 static inline unsigned KOS_get_string_length(KOS_OBJ_ID obj_id)
 {
     assert(GET_OBJ_TYPE(obj_id) == OBJ_STRING);
-    return OBJPTR(STRING, obj_id)->length;
+    return OBJPTR(STRING, obj_id)->header.length;
 }
 
 #else
 
-#define KOS_get_string_length(obj_id) (OBJPTR(STRING, (obj_id))->length)
+#define KOS_get_string_length(obj_id) (OBJPTR(STRING, (obj_id))->header.length)
 
 #endif
 
@@ -65,10 +65,10 @@ KOS_OBJ_ID KOS_new_const_ascii_string(KOS_FRAME   frame,
                                       const char *ascii_str,
                                       unsigned    length);
 
-KOS_OBJ_ID KOS_new_const_string(KOS_FRAME                  frame,
-                                const void                *str,
-                                unsigned                   length,
-                                enum _KOS_STRING_ELEM_SIZE elem_size);
+KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
+                                const void            *str,
+                                unsigned               length,
+                                enum _KOS_STRING_FLAGS elem_size);
 
 KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
                                      KOS_OBJ_ID codes);

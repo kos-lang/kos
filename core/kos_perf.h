@@ -44,10 +44,6 @@ struct _KOS_PERF {
 
     KOS_ATOMIC(uint32_t) array_salvage_success;
     KOS_ATOMIC(uint32_t) array_salvage_fail;
-
-    KOS_ATOMIC(uint32_t) alloc_object[5];
-    KOS_ATOMIC(uint32_t) alloc_buffer;
-    KOS_ATOMIC(uint32_t) alloc_buffer_total;
 };
 
 extern struct _KOS_PERF _kos_perf;

@@ -32,7 +32,7 @@
 
 int main(void)
 {
-    const intptr_t max_small_int = GET_SMALL_INT((KOS_OBJ_ID)(~((uintptr_t)0) >> 1));
+    const intptr_t max_small_int = GET_SMALL_INT((KOS_OBJ_ID)(~((uintptr_t)2) >> 1));
     const intptr_t min_small_int = -max_small_int - 1;
 
     KOS_CONTEXT ctx;
@@ -96,11 +96,11 @@ int main(void)
         TEST(IS_NUMERIC_OBJ(integer_a));
         TEST(IS_NUMERIC_OBJ(integer_b));
 
-        TEST(GET_NUMERIC_TYPE(integer_a) == OBJ_NUM_INTEGER);
-        TEST(GET_NUMERIC_TYPE(integer_b) == OBJ_NUM_INTEGER);
+        TEST(IS_SMALL_INT(integer_a) || GET_OBJ_TYPE(integer_a) == OBJ_INTEGER);
+        TEST(IS_SMALL_INT(integer_b) || GET_OBJ_TYPE(integer_b) == OBJ_INTEGER);
 
-        TEST(*OBJPTR(INTEGER, integer_a) == min_small_int-1);
-        TEST(*OBJPTR(INTEGER, integer_b) == max_small_int+1);
+        TEST(OBJPTR(INTEGER, integer_a)->value == min_small_int-1);
+        TEST(OBJPTR(INTEGER, integer_b)->value == max_small_int+1);
     }
 
     /************************************************************************/
@@ -129,11 +129,11 @@ int main(void)
         TEST(IS_NUMERIC_OBJ(integer_a));
         TEST(IS_NUMERIC_OBJ(integer_b));
 
-        TEST(GET_NUMERIC_TYPE(integer_a) == OBJ_NUM_INTEGER);
-        TEST(GET_NUMERIC_TYPE(integer_b) == OBJ_NUM_INTEGER);
+        TEST(IS_SMALL_INT(integer_a) || GET_OBJ_TYPE(integer_a) == OBJ_INTEGER);
+        TEST(IS_SMALL_INT(integer_b) || GET_OBJ_TYPE(integer_b) == OBJ_INTEGER);
 
-        TEST(*OBJPTR(INTEGER, integer_a) == min_int);
-        TEST(*OBJPTR(INTEGER, integer_b) == max_int);
+        TEST(OBJPTR(INTEGER, integer_a)->value == min_int);
+        TEST(OBJPTR(INTEGER, integer_b)->value == max_int);
     }
 
     /************************************************************************/
@@ -152,14 +152,14 @@ int main(void)
 
         TEST(IS_NUMERIC_OBJ(number));
 
-        TEST(GET_NUMERIC_TYPE(number) == OBJ_NUM_FLOAT);
+        TEST(GET_OBJ_TYPE(number) == OBJ_FLOAT);
 
-        TEST(*OBJPTR(FLOAT, number) == 1.5);
+        TEST(OBJPTR(FLOAT, number)->value == 1.5);
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID boolean = KOS_TRUE;
+        const KOS_OBJ_ID boolean = KOS_new_boolean(frame, 1);
 
         TEST(!IS_BAD_PTR(boolean));
 
@@ -167,18 +167,14 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(boolean));
 
-        TEST(GET_OBJ_TYPE(boolean) == OBJ_IMMEDIATE);
-
-        TEST(GET_OBJ_TYPE(boolean) != OBJ_STRING);
-
-        TEST(GET_OBJ_TYPE(boolean) != OBJ_OBJECT);
+        TEST(GET_OBJ_TYPE(boolean) == OBJ_BOOLEAN);
 
         TEST(KOS_get_bool(boolean));
     }
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID a_void = KOS_VOID;
+        const KOS_OBJ_ID a_void = KOS_new_void(frame);
 
         TEST(!IS_BAD_PTR(a_void));
 
@@ -186,11 +182,7 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(a_void));
 
-        TEST(GET_OBJ_TYPE(a_void) == OBJ_IMMEDIATE);
-
-        TEST(GET_OBJ_TYPE(a_void) != OBJ_STRING);
-
-        TEST(GET_OBJ_TYPE(a_void) != OBJ_OBJECT);
+        TEST(GET_OBJ_TYPE(a_void) == OBJ_VOID);
     }
 
     /************************************************************************/

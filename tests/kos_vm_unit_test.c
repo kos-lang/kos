@@ -35,6 +35,10 @@
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 
+#define KOS_TRUE  KOS_new_boolean(frame, 1)
+#define KOS_FALSE KOS_new_boolean(frame, 0)
+#define KOS_VOID  KOS_new_void(frame)
+
 enum _VALUE_TYPE {
     V_NONE,     /* in     - no more instruction arguments      */
     V_EXCEPT,   /* out    - instruction generates an exception */
@@ -329,7 +333,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
 
     memset(&module, 0, sizeof(module));
 
-    module.type          = OBJ_MODULE;
+    module.header.type   = OBJ_MODULE;
     module.context       = ctx;
     module.strings       = strings;
     module.bytecode      = &code[0];
@@ -389,7 +393,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
             break;
 
         case V_INTEGER:
-            if (IS_BAD_PTR(ret) || (!IS_SMALL_INT(ret) && GET_NUMERIC_TYPE(ret) != OBJ_NUM_INTEGER)) {
+            if (IS_BAD_PTR(ret) || (!IS_SMALL_INT(ret) && GET_OBJ_TYPE(ret) != OBJ_INTEGER)) {
                 printf("Failed: line %d: expected integer\n", line);
                 error = KOS_ERROR_EXCEPTION;
             }
@@ -398,7 +402,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 if (IS_SMALL_INT(ret))
                     value = GET_SMALL_INT(ret);
                 else
-                    value = *OBJPTR(INTEGER, ret);
+                    value = OBJPTR(INTEGER, ret)->value;
                 if ((uint32_t)(value >> 32) != ret_val->high ||
                     (uint32_t)value         != ret_val->low) {
 
@@ -413,13 +417,13 @@ static int _test_instr(KOS_CONTEXT         *ctx,
         case V_FLOAT:
             if (IS_BAD_PTR(ret)   ||
                 IS_SMALL_INT(ret) ||
-                GET_NUMERIC_TYPE(ret) != OBJ_NUM_FLOAT) {
+                GET_OBJ_TYPE(ret) != OBJ_FLOAT) {
 
                 printf("Failed: line %d: expected float\n", line);
                 error = KOS_ERROR_EXCEPTION;
             }
             else {
-                uint64_t value = _KOS_double_to_uint64_t(*OBJPTR(FLOAT, ret));
+                uint64_t value = _KOS_double_to_uint64_t(OBJPTR(FLOAT, ret)->value);
                 if ((uint32_t)(value >> 32) != ret_val->high ||
                     (uint32_t)value         != ret_val->low) {
 
@@ -1354,24 +1358,24 @@ int main(void)
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_STR0,  0, 0,        "xyz"       }, { V_STR1,  0, 0,        "xyz"       } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_STR0,  0, 0,        "xyz"       }, { V_STR1,  0, 0,        "xyy"       } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_STR0,  0, 0,        "xyy"       }, { V_STR1,  0, 0,        "xyz"       } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_VOID                            }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_VOID                            }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_VOID                            } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_FLOAT, 0,           0           } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_VOID                            }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_VOID                            }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FALSE                           }, { V_VOID                            } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FALSE                           }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FALSE                           }, { V_FLOAT, 0,           0           } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_STR0,  0, 0,        ""          } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FALSE                           }, { V_ARRAY, 0                        } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_FLOAT, ~0U,         ~0U         } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_INT32, 1                        } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_INT32, 2                        } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_FLOAT, 0,           0x3FF00000U } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_TRUE                            }, { V_FLOAT, ~0U,         ~0U         } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_TRUE                            }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_TRUE                            }, { V_INT32, 2                        } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_TRUE                            }, { V_FLOAT, 0,           0x3FF00000U } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_STR0,  0, 0,        "0"         } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_ARRAY, 1                        } } END
     TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_TRUE                            }, { V_OBJECT                          } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_INT32, 0                        }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_INT32, 0                        }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FLOAT, 0,           0           }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_FLOAT, 0,           0           }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_INT32, 0                        }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_INT32, 0                        }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FLOAT, 0,           0           }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LE,     { V_TRUE                              }, { { V_FLOAT, 0,           0           }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LE,     { V_FALSE                             }, { { V_STR1,  0, 0,        "0"         }, { V_FALSE                           } } END
@@ -1402,24 +1406,24 @@ int main(void)
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR0,  0, 0,        "xyz"       }, { V_STR1,  0, 0,        "xyz"       } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR0,  0, 0,        "xyz"       }, { V_STR1,  0, 0,        "xyy"       } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_STR0,  0, 0,        "xyy"       }, { V_STR1,  0, 0,        "xyz"       } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_VOID                            }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_VOID                            }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_VOID                            } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_FLOAT, 0,           0           } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_VOID                            }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_VOID                            }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FALSE                           }, { V_VOID                            } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FALSE                           }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FALSE                           }, { V_FLOAT, 0,           0           } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_STR0,  0, 0,        ""          } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FALSE                           }, { V_ARRAY, 0                        } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_FLOAT, ~0U,         ~0U         } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_INT32, 1                        } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_INT32, 2                        } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_FLOAT, 0,           0x3FF00000U } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_TRUE                            }, { V_FLOAT, ~0U,         ~0U         } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_TRUE                            }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_TRUE                            }, { V_INT32, 2                        } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_TRUE                            }, { V_FLOAT, 0,           0x3FF00000U } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_STR0,  0, 0,        "0"         } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_ARRAY, 1                        } } END
     TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_TRUE                            }, { V_OBJECT                          } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_INT32, 0                        }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_INT32, 0                        }, { V_TRUE                            } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FLOAT, 0,           0           }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_FLOAT, 0,           0           }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_INT32, 0                        }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_INT32, 0                        }, { V_TRUE                            } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FLOAT, 0,           0           }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_CMP_LT,     { V_TRUE                              }, { { V_FLOAT, 0,           0           }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_STR1,  0, 0,        "0"         }, { V_FALSE                           } } END
@@ -1428,7 +1432,6 @@ int main(void)
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_ARRAY, 1                        }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_ARRAY, 0                        }, { V_TRUE                            } } END
     TEST_INSTR INSTR_CMP_LT,     { V_FALSE                             }, { { V_OBJECT                          }, { V_TRUE                            } } END
-
 
     /*========================================================================*/
     /* JUMP.COND */

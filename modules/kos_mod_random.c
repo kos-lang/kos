@@ -40,6 +40,7 @@ static const char str_err_not_random[]    = "invalid this";
 static const char str_err_out_of_memory[] = "out of memory";
 
 struct _KOS_RNG_CONTAINER {
+    KOS_OBJ_HEADER       header; /* TODO remove this when we switch to malloc */
     KOS_ATOMIC(uint32_t) lock;
     struct KOS_RNG       rng;
 };
@@ -47,8 +48,10 @@ struct _KOS_RNG_CONTAINER {
 static void _finalize(KOS_FRAME frame,
                       void     *priv)
 {
+    /* TODO free
     if (priv)
         _KOS_free_buffer(frame, priv, sizeof(struct _KOS_RNG_CONTAINER));
+    */
 }
 
 /* @item random random()
@@ -107,11 +110,14 @@ static KOS_OBJ_ID _random(KOS_FRAME  frame,
             RAISE_EXCEPTION(str_err_invalid_seed);
     }
 
-    /* TODO malloc when we have GC */
+    /* TODO malloc when GC supports finalize */
     /*
     rng = (struct _KOS_RNG_CONTAINER *)_KOS_malloc(sizeof(struct _KOS_RNG_CONTAINER));
     */
-    rng = (struct _KOS_RNG_CONTAINER *)_KOS_alloc_buffer(frame, sizeof(struct _KOS_RNG_CONTAINER));
+    rng = (struct _KOS_RNG_CONTAINER *)_KOS_alloc_object(frame,
+                                                         KOS_ALLOC_PERSISTENT, /* avoid GC */
+                                                         OBJ_OPAQUE,
+                                                         sizeof(struct _KOS_RNG_CONTAINER));
 
     if ( ! rng)
         RAISE_EXCEPTION(str_err_out_of_memory);
@@ -133,8 +139,10 @@ static KOS_OBJ_ID _random(KOS_FRAME  frame,
     rng = 0;
 
 _error:
+    /* TODO free
     if (rng)
         _KOS_free_buffer(frame, rng, sizeof(struct _KOS_RNG_CONTAINER));
+    */
 
     return error ? KOS_BADPTR : ret;
 }

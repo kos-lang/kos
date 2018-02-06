@@ -31,31 +31,30 @@ T numeric_from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
 
     assert( ! IS_BAD_PTR(obj_id));
 
-    if (IS_NUMERIC_OBJ(obj_id)) {
-
-        switch (GET_NUMERIC_TYPE(obj_id)) {
-
-            default:
-                /* TODO check range */
-                return static_cast<T>(GET_SMALL_INT(obj_id));
-
-            case OBJ_NUM_INTEGER: {
-                const int64_t number = *OBJPTR(INTEGER, obj_id);
-                /* TODO check range */
-                ret = static_cast<T>(number);
-                break;
-            }
-
-            case OBJ_NUM_FLOAT: {
-                const double number = *OBJPTR(FLOAT, obj_id);
-                /* TODO check range */
-                ret = static_cast<T>(number);
-                break;
-            }
-        }
+    if (IS_SMALL_INT(obj_id)) {
+        /* TODO check range */
+        return static_cast<T>(GET_SMALL_INT(obj_id));
     }
-    else
-        frame.raise_and_signal_error("source type is not a number");
+    else switch (READ_OBJ_TYPE(obj_id)) {
+
+        case OBJ_INTEGER: {
+            const int64_t number = OBJPTR(INTEGER, obj_id)->value;
+            /* TODO check range */
+            ret = static_cast<T>(number);
+            break;
+        }
+
+        case OBJ_FLOAT: {
+            const double number = OBJPTR(FLOAT, obj_id)->value;
+            /* TODO check range */
+            ret = static_cast<T>(number);
+            break;
+        }
+
+        default:
+            frame.raise_and_signal_error("source type is not a number");
+            break;
+    }
 
     return ret;
 }
@@ -76,7 +75,7 @@ template<>
 integer value_from_object_ptr<integer>(stack_frame frame, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
-    if ( ! IS_SMALL_INT(obj_id) && GET_NUMERIC_TYPE(obj_id) != OBJ_NUM_INTEGER)
+    if ( ! IS_SMALL_INT(obj_id) && GET_OBJ_TYPE(obj_id) != OBJ_INTEGER)
         frame.raise_and_signal_error("source type is not an integer");
 
     return integer(obj_id);
@@ -92,7 +91,7 @@ template<>
 floating value_from_object_ptr<floating>(stack_frame frame, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
-    if (GET_NUMERIC_TYPE(obj_id) != OBJ_NUM_FLOAT)
+    if (GET_OBJ_TYPE(obj_id) != OBJ_FLOAT)
         frame.raise_and_signal_error("source type is not a float");
 
     return floating(obj_id);
@@ -102,7 +101,7 @@ template<>
 bool value_from_object_ptr<bool>(stack_frame frame, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
-    if (obj_id != KOS_FALSE && obj_id != KOS_TRUE)
+    if (GET_OBJ_TYPE(obj_id) != OBJ_BOOLEAN)
         frame.raise_and_signal_error("source type is not a boolean");
 
     return !! KOS_get_bool(obj_id);
@@ -112,7 +111,7 @@ template<>
 boolean value_from_object_ptr<boolean>(stack_frame frame, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
-    if (obj_id != KOS_FALSE && obj_id != KOS_TRUE)
+    if (GET_OBJ_TYPE(obj_id) != OBJ_BOOLEAN)
         frame.raise_and_signal_error("source type is not a boolean");
 
     return boolean(obj_id);
@@ -143,13 +142,13 @@ string value_from_object_ptr<string>(stack_frame frame, KOS_OBJ_ID obj_id)
 }
 
 template<>
-void_ value_from_object_ptr<void_>(stack_frame frame, KOS_OBJ_ID obj_id)
+void_type value_from_object_ptr<void_type>(stack_frame frame, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
-    if (obj_id != KOS_VOID)
+    if (GET_OBJ_TYPE(obj_id) != OBJ_VOID)
         frame.raise_and_signal_error("source type is not a void");
 
-    return void_(obj_id);
+    return void_type(obj_id);
 }
 
 template<>

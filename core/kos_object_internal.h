@@ -44,17 +44,15 @@ typedef struct _KOS_PROPERTY_ITEM {
     KOS_ATOMIC(KOS_OBJ_ID) value;
 } KOS_PITEM;
 
-struct _KOS_PROPERTY_BUF;
-typedef struct _KOS_PROPERTY_BUF *KOS_PBUF_PTR;
-
-struct _KOS_PROPERTY_BUF {
-    uint32_t                 capacity;
-    KOS_ATOMIC(uint32_t)     num_slots_used;
-    KOS_ATOMIC(uint32_t)     num_slots_open;
-    KOS_ATOMIC(uint32_t)     active_copies;
-    KOS_ATOMIC(KOS_PBUF_PTR) new_prop_table;
-    KOS_PITEM                items[1];
-};
+typedef struct _KOS_OBJECT_STORAGE {
+    KOS_OBJ_HEADER         header;
+    uint32_t               capacity;
+    KOS_ATOMIC(uint32_t)   num_slots_used;
+    KOS_ATOMIC(uint32_t)   num_slots_open;
+    KOS_ATOMIC(uint32_t)   active_copies;
+    KOS_ATOMIC(KOS_OBJ_ID) new_prop_table;
+    KOS_PITEM              items[1];
+} KOS_OBJECT_STORAGE;
 
 #define KOS_MIN_PROPS_CAPACITY 4U
 #define KOS_MAX_PROP_REPROBES  8U
@@ -78,24 +76,26 @@ int _KOS_init_array(KOS_FRAME  frame,
 #define KOS_MIN_ARRAY_CAPACITY  4U
 #define KOS_ARRAY_CAPACITY_STEP 1024U
 
-struct _KOS_ARRAY_BUFFER {
+typedef struct _KOS_ARRAY_STORAGE {
+    KOS_OBJ_HEADER         header;
     uint32_t               capacity;
     KOS_ATOMIC(uint32_t)   num_slots_open;
-    KOS_ATOMIC(void *)     next;
+    KOS_ATOMIC(KOS_OBJ_ID) next;
     KOS_ATOMIC(KOS_OBJ_ID) buf[1];
-};
+} KOS_ARRAY_STORAGE;
 
 #ifdef __cplusplus
 
 static inline KOS_ATOMIC(KOS_OBJ_ID) *_KOS_get_array_buffer(KOS_ARRAY *array)
 {
-    struct _KOS_ARRAY_BUFFER *const buf = (struct _KOS_ARRAY_BUFFER *)KOS_atomic_read_ptr(array->data);
-    return &buf->buf[0];
+    const KOS_OBJ_ID buf_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(array->data);
+    assert( ! IS_BAD_PTR(buf_obj));
+    return &OBJPTR(ARRAY_STORAGE, buf_obj)->buf[0];
 }
 
 #else
 
-#define _KOS_get_array_buffer(array) (&((struct _KOS_ARRAY_BUFFER *)KOS_atomic_read_ptr((array)->data))->buf[0])
+#define _KOS_get_array_buffer(array) (&OBJPTR(ARRAY_STORAGE, (KOS_OBJ_ID)KOS_atomic_read_ptr((array)->data))->buf[0])
 
 #endif
 
@@ -116,12 +116,21 @@ int _KOS_array_copy_storage(KOS_FRAME  frame,
 
 static inline const void* _KOS_get_string_buffer(KOS_STRING *str)
 {
-    return (str->flags == KOS_STRING_LOCAL) ? &str->data.buf : str->data.ptr;
+    return (str->header.flags & KOS_STRING_LOCAL) ? &str->local.data[0] : str->ptr.data_ptr;
+}
+
+static inline enum _KOS_STRING_FLAGS _KOS_get_string_elem_size(KOS_STRING *str)
+{
+    return (enum _KOS_STRING_FLAGS)(str->header.flags & KOS_STRING_ELEM_MASK);
 }
 
 #else
 
-#define _KOS_get_string_buffer(str) ((const void *)((str)->flags == KOS_STRING_LOCAL ? &(str)->data.buf : (str)->data.ptr))
+#define _KOS_get_string_buffer(str) (((str)->header.flags & KOS_STRING_LOCAL) ? \
+                (const void *)(&(str)->local.data[0]) : \
+                (const void *)((str)->ptr.data_ptr))
+
+#define _KOS_get_string_elem_size(str) ((enum _KOS_STRING_FLAGS)((str)->header.flags & KOS_STRING_ELEM_MASK))
 
 #endif
 
@@ -129,11 +138,10 @@ static inline const void* _KOS_get_string_buffer(KOS_STRING *str)
 /* KOS_FRAME                                                                */
 /*==========================================================================*/
 
-int _KOS_init_stack_frame(KOS_FRAME           frame,
-                          KOS_MODULE         *module,
-                          enum _KOS_AREA_TYPE alloc_mode,
-                          uint32_t            instr_offs,
-                          uint32_t            num_regs);
+int _KOS_init_stack_frame(KOS_FRAME   frame,
+                          KOS_MODULE *module,
+                          uint32_t    instr_offs,
+                          uint32_t    num_regs);
 
 KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
                                 KOS_MODULE *module,

@@ -41,34 +41,63 @@ KOS_OBJ_ID KOS_new_int(KOS_FRAME frame, int64_t value)
     if (GET_SMALL_INT(obj_id) == value)
         return obj_id;
 
-    integer = (KOS_INTEGER *)_KOS_alloc_object(frame, INTEGER);
+    integer = (KOS_INTEGER *)_KOS_alloc_object(frame,
+                                               KOS_ALLOC_DEFAULT,
+                                               OBJ_INTEGER,
+                                               sizeof(KOS_INTEGER));
 
-    if (integer)
-        *integer = value;
+    if (integer) {
+        assert(integer->header.type == OBJ_INTEGER);
+        integer->value = value;
+    }
 
     return OBJID(INTEGER, integer);
 }
 
 KOS_OBJ_ID KOS_new_float(KOS_FRAME frame, double value)
 {
-    KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(frame, FLOAT);
+    KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(frame,
+                                                       KOS_ALLOC_DEFAULT,
+                                                       OBJ_FLOAT,
+                                                       sizeof(KOS_FLOAT));
 
-    if (number)
-        *number = value;
+    if (number) {
+        assert(number->header.type == OBJ_FLOAT);
+        number->value = value;
+    }
 
     return OBJID(FLOAT, number);
 }
 
+KOS_OBJ_ID KOS_new_void(KOS_FRAME frame)
+{
+    KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
+
+    return ctx->void_obj;
+}
+
+KOS_OBJ_ID KOS_new_boolean(KOS_FRAME frame, int value)
+{
+    KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
+
+    return value ? ctx->true_obj : ctx->false_obj;
+}
+
 KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
 {
-    KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(frame, FUNCTION);
+    KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(frame,
+                                                           KOS_ALLOC_DEFAULT,
+                                                           OBJ_FUNCTION,
+                                                           sizeof(KOS_FUNCTION));
 
     if (func) {
+        assert(func->header.type == OBJ_FUNCTION);
+
         func->min_args              = 0;
         func->num_regs              = 0;
         func->args_reg              = 0;
         func->prototype             = proto_obj;
-        func->closures              = KOS_VOID;
+        func->closures              = KOS_new_void(frame);
         func->module                = frame->module;
         func->handler               = 0;
         func->generator_stack_frame = 0;
@@ -105,10 +134,12 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
                                 KOS_OBJ_ID getter,
                                 KOS_OBJ_ID setter)
 {
-    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(frame, DYNAMIC_PROP);
+    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(frame,
+                                                                       KOS_ALLOC_DEFAULT,
+                                                                       OBJ_DYNAMIC_PROP,
+                                                                       sizeof(KOS_DYNAMIC_PROP));
 
     if (dyn_prop) {
-        dyn_prop->type   = OBJ_DYNAMIC_PROP;
         dyn_prop->getter = getter;
         dyn_prop->setter = setter;
     }
@@ -116,11 +147,10 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
     return OBJID(DYNAMIC_PROP, dyn_prop);
 }
 
-int _KOS_init_stack_frame(KOS_FRAME           frame,
-                          KOS_MODULE         *module,
-                          enum _KOS_AREA_TYPE alloc_mode,
-                          uint32_t            instr_offs,
-                          uint32_t            num_regs)
+int _KOS_init_stack_frame(KOS_FRAME   frame,
+                          KOS_MODULE *module,
+                          uint32_t    instr_offs,
+                          uint32_t    num_regs)
 {
     int error = KOS_SUCCESS;
 
@@ -128,17 +158,17 @@ int _KOS_init_stack_frame(KOS_FRAME           frame,
     assert(module);
     assert(module->context);
 
-    frame->alloc_mode = (uint8_t)alloc_mode;
-    frame->catch_reg  = 0;
-    frame->registers  = KOS_BADPTR;
-    frame->module     = module;
-    frame->allocator  = &module->context->allocator;
-    frame->exception  = KOS_BADPTR;
-    frame->retval     = KOS_VOID;
-    frame->parent     = 0;
-    frame->instr_offs = instr_offs;
-    frame->yield_reg  = KOS_CANNOT_YIELD;
-    frame->catch_offs = KOS_NO_CATCH;
+    frame->header.type      = OBJ_STACK_FRAME;
+    frame->header.catch_reg = 0;
+    frame->header.yield_reg = KOS_CANNOT_YIELD;
+    frame->registers        = KOS_BADPTR;
+    frame->module           = OBJID(MODULE, module);
+    frame->allocator        = &module->context->allocator;
+    frame->exception        = KOS_BADPTR;
+    frame->retval           = KOS_new_void(frame);
+    frame->parent           = KOS_BADPTR;
+    frame->instr_offs       = instr_offs;
+    frame->catch_offs       = KOS_NO_CATCH;
 
     if (num_regs < 256) {
         frame->registers = KOS_new_array(frame, num_regs);
@@ -149,16 +179,15 @@ int _KOS_init_stack_frame(KOS_FRAME           frame,
     return error;
 }
 
-typedef struct _KOS_STACK_FRAME KOS_STACK_FRAME;
-
-#define OBJ_STACK_FRAME 0xF
-
 KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
                                 KOS_MODULE *module,
                                 uint32_t    instr_offs,
                                 uint32_t    num_regs)
 {
-    KOS_FRAME new_frame = (KOS_FRAME)_KOS_alloc_object(frame, STACK_FRAME);
+    KOS_FRAME new_frame = (KOS_FRAME)_KOS_alloc_object(frame,
+                                                       KOS_ALLOC_LOCAL,
+                                                       OBJ_STACK_FRAME,
+                                                       sizeof(struct _KOS_STACK_FRAME));
 
     if (new_frame) {
 
@@ -166,13 +195,13 @@ KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
         assert(module);
         assert(KOS_context_from_frame(frame) == module->context);
 
-        if (_KOS_init_stack_frame(new_frame, module, KOS_AREA_RECLAIMABLE, instr_offs, num_regs)) {
+        if (_KOS_init_stack_frame(new_frame, module, instr_offs, num_regs)) {
             assert( ! IS_BAD_PTR(new_frame->exception));
             frame->exception = new_frame->exception;
             new_frame        = 0; /* object is garbage-collected */
         }
         else
-            new_frame->parent = frame;
+            new_frame->parent = OBJID(STACK_FRAME, frame);
     }
 
     return new_frame;
@@ -183,7 +212,7 @@ KOS_FRAME _KOS_stack_frame_push_func(KOS_FRAME     frame,
 {
     const int no_regs = func->state == KOS_GEN_INIT && func->handler;
     return _KOS_stack_frame_push(frame,
-                                 func->module,
+                                 OBJPTR(MODULE, func->module),
                                  func->instr_offs,
                                  no_regs ? ~0U : func->num_regs);
 }
@@ -192,35 +221,29 @@ int _KOS_is_truthy(KOS_OBJ_ID obj_id)
 {
     int ret;
 
-    /* Quick path for boolean objects */
-    if ((KOS_OBJ_ID)((uintptr_t)obj_id & ~(uintptr_t)0x10U) == KOS_FALSE)
-        return !! ((int)(intptr_t)obj_id & 0x10);
-
-    /* Quick path for small integers */
     if (IS_SMALL_INT(obj_id))
-        return obj_id != TO_SMALL_INT(0);
+        ret = obj_id != TO_SMALL_INT(0);
 
-    switch (GET_OBJ_TYPE(obj_id)) {
+    else switch (READ_OBJ_TYPE(obj_id)) {
 
         case OBJ_INTEGER:
-            /* fall through */
-        case OBJ_INTEGER2:
-            ret = !! *OBJPTR(INTEGER, obj_id);
+            ret = !! OBJPTR(INTEGER, obj_id)->value;
             break;
 
         case OBJ_FLOAT:
-            /* fall through */
-        case OBJ_FLOAT2:
-            ret = *OBJPTR(FLOAT, obj_id) != 0.0;
+            ret = OBJPTR(FLOAT, obj_id)->value != 0.0;
             break;
 
-        case OBJ_IMMEDIATE:
-            ret = obj_id != KOS_VOID;
+        case OBJ_VOID:
+            ret = 0;
+            break;
+
+        case OBJ_BOOLEAN:
+            ret = KOS_get_bool(obj_id);
             break;
 
         default:
             ret = 1;
-            break;
     }
 
     return ret;

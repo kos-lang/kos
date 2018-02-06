@@ -46,35 +46,33 @@ static const char str_err_null_pointer[]      = "null pointer";
 static const char str_err_out_of_memory[]     = "out of memory";
 static const char str_err_too_many_repeats[]  = "repeated string too long";
 
-static KOS_STRING *_new_empty_string(KOS_FRAME                  frame,
-                                     unsigned                   length,
-                                     enum _KOS_STRING_ELEM_SIZE elem_size)
+#ifdef CONFIG_STRING16
+#define _override_elem_size(size) ((size) < KOS_STRING_ELEM_16 ? KOS_STRING_ELEM_16 : (size))
+#elif defined(CONFIG_STRING32)
+#define _override_elem_size(size) KOS_STRING_ELEM_32
+#else
+#define _override_elem_size(size) (size)
+#endif
+
+static KOS_STRING *_new_empty_string(KOS_FRAME              frame,
+                                     unsigned               length,
+                                     enum _KOS_STRING_FLAGS elem_size)
 {
     KOS_STRING *str;
 
     assert(length <= 0xFFFFU);
     assert(length > 0U);
 
-    str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
+    str = (KOS_STRING *)_KOS_alloc_object(frame,
+                                          KOS_ALLOC_DEFAULT,
+                                          OBJ_STRING,
+                                          sizeof(struct _KOS_STRING_LOCAL) - 1U + (length << elem_size));
 
     if (str) {
-
-        str->elem_size = (uint8_t)elem_size;
-        str->hash      = 0;
-        str->length    = (uint16_t)length;
-
-        if ((length << elem_size) > sizeof(str->data)) {
-            void *ptr     = _KOS_alloc_buffer(frame, (length << elem_size));
-            str->data.ptr = ptr;
-            str->flags    = KOS_STRING_BUFFER;
-
-            if (!ptr) {
-                str->length = 0;
-                str         = 0; /* object is garbage-collected */
-            }
-        }
-        else
-            str->flags = KOS_STRING_LOCAL;
+        assert(str->header.type == OBJ_STRING);
+        str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_LOCAL;
+        str->header.length = (uint16_t)length;
+        str->header.hash   = 0;
     }
 
     return str;
@@ -85,26 +83,16 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
                               unsigned              length,
                               enum _KOS_UTF8_ESCAPE escape)
 {
-    KOS_STRING *str;
+    KOS_STRING            *str;
+    enum _KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
 
     if (length) {
         uint32_t max_code;
         unsigned count = _KOS_utf8_get_len(s, length, escape, &max_code);
 
         if (count != ~0U) {
+
             assert(count <= 0xFFFFU);
-            str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
-        }
-        else {
-            KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
-            str = 0;
-        }
-
-        if (str) {
-
-            void *ptr = 0;
-
-            enum _KOS_STRING_ELEM_SIZE elem_size;
 
             if (max_code > 0xFFFFU)
                 elem_size = KOS_STRING_ELEM_32;
@@ -113,25 +101,31 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
             else
                 elem_size = KOS_STRING_ELEM_8;
 
-            str->elem_size = (uint8_t)elem_size;
-            str->hash      = 0;
-            str->length    = (uint16_t)count;
+            elem_size = _override_elem_size(elem_size);
 
-            if ((length << elem_size) > sizeof(str->data)) {
-                ptr           = _KOS_alloc_buffer(frame, length << elem_size);
-                str->data.ptr = ptr;
-                str->flags    = KOS_STRING_BUFFER;
-            }
-            else {
-                ptr        = &str->data.buf;
-                str->flags = KOS_STRING_LOCAL;
-            }
+            str = (KOS_STRING *)_KOS_alloc_object(frame,
+                                                  KOS_ALLOC_DEFAULT,
+                                                  OBJ_STRING,
+                                                  sizeof(struct _KOS_STRING_LOCAL) - 1U + (length << elem_size));
+        }
+        else {
+            KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
+            str = 0;
+        }
 
-            if (!ptr) {
-                str->length = 0;
-                str         = 0; /* object is garbage-collected */
-            }
-            else if (elem_size == KOS_STRING_ELEM_8) {
+        if (str) {
+
+            void *ptr;
+
+            assert(str->header.type == OBJ_STRING);
+
+            str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_LOCAL;
+            str->header.length = (uint16_t)count;
+            str->header.hash   = 0;
+
+            ptr = (void *)_KOS_get_string_buffer(str);
+
+            if (elem_size == KOS_STRING_ELEM_8) {
                 if (KOS_SUCCESS != _KOS_utf8_decode_8(s, length, escape, (uint8_t *)ptr)) {
                     KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
                     str = 0; /* object is garbage-collected */
@@ -185,24 +179,29 @@ KOS_OBJ_ID KOS_new_const_ascii_string(KOS_FRAME   frame,
     return KOS_new_const_string(frame, s, length, KOS_STRING_ELEM_8);
 }
 
-KOS_OBJ_ID KOS_new_const_string(KOS_FRAME                  frame,
-                                const void                *data,
-                                unsigned                   length,
-                                enum _KOS_STRING_ELEM_SIZE elem_size)
+KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
+                                const void            *data,
+                                unsigned               length,
+                                enum _KOS_STRING_FLAGS elem_size)
 {
     KOS_STRING *str;
 
     assert(length <= 0xFFFFU);
+    assert(elem_size <= KOS_STRING_ELEM_32);
 
     if (length) {
-        str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
+        str = (KOS_STRING *)_KOS_alloc_object(frame,
+                                              KOS_ALLOC_DEFAULT,
+                                              OBJ_STRING,
+                                              sizeof(struct _KOS_STRING_PTR));
 
         if (str) {
-            str->elem_size = (uint8_t)elem_size;
-            str->flags     = KOS_STRING_PTR;
-            str->length    = (uint16_t)length;
-            str->hash      = 0;
-            str->data.ptr  = data;
+            assert(str->header.type == OBJ_STRING);
+
+            str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_PTR;
+            str->header.length = (uint16_t)length;
+            str->header.hash   = 0;
+            str->ptr.data_ptr  = data;
         }
     }
     else
@@ -214,13 +213,13 @@ KOS_OBJ_ID KOS_new_const_string(KOS_FRAME                  frame,
 KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
                                      KOS_OBJ_ID codes)
 {
-    int                        error     = KOS_SUCCESS;
-    uint32_t                   length;
-    uint32_t                   i;
-    KOS_ATOMIC(KOS_OBJ_ID)    *codes_buf = 0;
-    enum _KOS_STRING_ELEM_SIZE elem_size = KOS_STRING_ELEM_8;
-    KOS_STRING                *ret       = 0;
-    void                      *str_buf;
+    int                     error     = KOS_SUCCESS;
+    uint32_t                length;
+    uint32_t                i;
+    KOS_ATOMIC(KOS_OBJ_ID) *codes_buf = 0;
+    enum _KOS_STRING_FLAGS  elem_size = KOS_STRING_ELEM_8;
+    KOS_STRING             *ret       = 0;
+    void                   *str_buf;
 
     assert(GET_OBJ_TYPE(codes) == OBJ_ARRAY);
 
@@ -252,6 +251,8 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
                     elem_size = KOS_STRING_ELEM_16;
             }
         }
+
+        elem_size = _override_elem_size(elem_size);
 
         ret = _new_empty_string(frame, length, elem_size);
         if ( ! ret)
@@ -293,7 +294,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
         }
 
         default: { /* KOS_STRING_ELEM_32 */
-            assert(ret->elem_size == KOS_STRING_ELEM_32);
+            assert(_KOS_get_string_elem_size(ret) == KOS_STRING_ELEM_32);
 
             for (i = 0; i < length; i++) {
 
@@ -327,20 +328,20 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
 
     src_buf = _KOS_get_string_buffer(str);
 
-    switch (str->elem_size) {
+    switch (_KOS_get_string_elem_size(str)) {
 
         case KOS_STRING_ELEM_8: {
 
             /* Calculate how many bytes we need. */
-            num_out = _KOS_utf8_calc_buf_size_8((const uint8_t *)src_buf, str->length);
+            num_out = _KOS_utf8_calc_buf_size_8((const uint8_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
             if (buf) {
                 assert(num_out <= buf_size);
-                if (num_out == str->length)
+                if (num_out == str->header.length)
                     memcpy(buf, src_buf, num_out);
                 else
-                    _KOS_utf8_encode_8((const uint8_t *)src_buf, str->length, pdest);
+                    _KOS_utf8_encode_8((const uint8_t *)src_buf, str->header.length, pdest);
             }
             break;
         }
@@ -348,26 +349,26 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
         case KOS_STRING_ELEM_16: {
 
             /* Calculate how many bytes we need. */
-            num_out = _KOS_utf8_calc_buf_size_16((const uint16_t *)src_buf, str->length);
+            num_out = _KOS_utf8_calc_buf_size_16((const uint16_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
             if (buf) {
                 assert(num_out <= buf_size);
-                _KOS_utf8_encode_16((const uint16_t *)src_buf, str->length, pdest);
+                _KOS_utf8_encode_16((const uint16_t *)src_buf, str->header.length, pdest);
             }
             break;
         }
 
         default: {
-            assert(str->elem_size == KOS_STRING_ELEM_32);
+            assert(_KOS_get_string_elem_size(str) == KOS_STRING_ELEM_32);
 
             /* Calculate how many bytes we need. */
-            num_out = _KOS_utf8_calc_buf_size_32((const uint32_t *)src_buf, str->length);
+            num_out = _KOS_utf8_calc_buf_size_32((const uint32_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
             if (buf && num_out != ~0U) {
                 assert(num_out <= buf_size);
-                _KOS_utf8_encode_32((const uint32_t *)src_buf, str->length, pdest);
+                _KOS_utf8_encode_32((const uint32_t *)src_buf, str->header.length, pdest);
             }
             break;
         }
@@ -425,7 +426,7 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
     assert( ! IS_BAD_PTR(obj_id));
     assert(GET_OBJ_TYPE(obj_id) == OBJ_STRING);
 
-    hash = KOS_atomic_read_u32(str->hash);
+    hash = KOS_atomic_read_u32(str->header.hash);
 
     if (!hash) {
 
@@ -435,11 +436,11 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
 
         hash = 5381;
 
-        switch (str->elem_size) {
+        switch (_KOS_get_string_elem_size(str)) {
 
             case KOS_STRING_ELEM_8: {
                 const uint8_t *s   = (uint8_t *)buf;
-                const uint8_t *end = s + str->length;
+                const uint8_t *end = s + str->header.length;
 
                 while (s < end)
                     hash = (hash * 33U) ^ (uint32_t)*(s++);
@@ -448,7 +449,7 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
 
             case KOS_STRING_ELEM_16: {
                 const uint16_t *s   = (uint16_t *)buf;
-                const uint16_t *end = s + str->length;
+                const uint16_t *end = s + str->header.length;
 
                 while (s < end)
                     hash = (hash * 33U) ^ (uint32_t)*(s++);
@@ -456,10 +457,10 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
             }
 
             default: /* KOS_STRING_ELEM_32 */
-                assert(str->elem_size == KOS_STRING_ELEM_32);
+                assert(_KOS_get_string_elem_size(str) == KOS_STRING_ELEM_32);
                 {
                     const uint32_t *s   = (uint32_t *)buf;
-                    const uint32_t *end = s + str->length;
+                    const uint32_t *end = s + str->header.length;
 
                     while (s < end)
                         hash = (hash * 33U) ^ (uint32_t)*(s++);
@@ -469,7 +470,7 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
 
         assert(hash);
 
-        KOS_atomic_write_u32(str->hash, hash);
+        KOS_atomic_write_u32(str->header.hash, hash);
     }
 
     return hash;
@@ -484,32 +485,33 @@ static void _init_empty_string(KOS_STRING *dest,
         void       *dest_buf = (void *)_KOS_get_string_buffer(dest);
         const void *src_buf  = _KOS_get_string_buffer(src);
 
-        assert(len <= src->length);
+        assert(len <= src->header.length);
 
-        if (dest->elem_size == src->elem_size) {
+        if (_KOS_get_string_elem_size(dest) == _KOS_get_string_elem_size(src)) {
 
-            const int dest_shift = (int)dest->elem_size;
+            const int dest_shift = _KOS_get_string_elem_size(dest);
 
             memcpy((char *)dest_buf + (offs << dest_shift),
                    src_buf,
                    len << dest_shift);
         }
-        else switch (dest->elem_size) {
+        else switch (_KOS_get_string_elem_size(dest)) {
 
             case KOS_STRING_ELEM_16: {
                 uint16_t *pdest = (uint16_t *)dest_buf + offs;
                 uint8_t  *psrc  = (uint8_t  *)src_buf;
                 uint8_t  *pend  = psrc + len;
-                assert(src->elem_size == KOS_STRING_ELEM_8);
+                assert(_KOS_get_string_elem_size(src) == KOS_STRING_ELEM_8);
                 for ( ; psrc != pend; ++pdest, ++psrc)
                     *pdest = *psrc;
                 break;
             }
 
             default:
-                assert(dest->elem_size == KOS_STRING_ELEM_32);
-                assert(src->elem_size == KOS_STRING_ELEM_8 || src->elem_size == KOS_STRING_ELEM_16);
-                if (src->elem_size == KOS_STRING_ELEM_8) {
+                assert(_KOS_get_string_elem_size(dest) == KOS_STRING_ELEM_32);
+                assert(_KOS_get_string_elem_size(src) == KOS_STRING_ELEM_8 ||
+                       _KOS_get_string_elem_size(src) == KOS_STRING_ELEM_16);
+                if (_KOS_get_string_elem_size(src) == KOS_STRING_ELEM_8) {
                     uint32_t *pdest = (uint32_t *)dest_buf + offs;
                     uint8_t  *psrc  = (uint8_t  *)src_buf;
                     uint8_t  *pend  = psrc + len;
@@ -548,21 +550,21 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
         new_str = OBJPTR(STRING, *obj_id_array);
 
     else {
-        enum _KOS_STRING_ELEM_SIZE  elem_size = KOS_STRING_ELEM_8;
-        unsigned                    new_len   = 0;
-        unsigned                    num_non_0 = 0;
-        KOS_ATOMIC(KOS_OBJ_ID)     *end       = obj_id_array + num_strings;
-        KOS_ATOMIC(KOS_OBJ_ID)     *cur_ptr;
-        KOS_OBJ_ID                  non_0_str = KOS_VOID;
+        enum _KOS_STRING_FLAGS  elem_size = KOS_STRING_ELEM_8;
+        unsigned                new_len   = 0;
+        unsigned                num_non_0 = 0;
+        KOS_ATOMIC(KOS_OBJ_ID) *end       = obj_id_array + num_strings;
+        KOS_ATOMIC(KOS_OBJ_ID) *cur_ptr;
+        KOS_OBJ_ID              non_0_str = KOS_new_void(frame);
 
         new_str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
 
         for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
-            KOS_OBJ_ID                 cur_str = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
-            enum _KOS_STRING_ELEM_SIZE cur_elem_size;
-            unsigned                   cur_len;
+            KOS_OBJ_ID             cur_str = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
+            enum _KOS_STRING_FLAGS cur_elem_size;
+            unsigned               cur_len;
 
-            if (GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
+            if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
                 new_str = 0;
                 new_len = 0;
                 KOS_raise_exception(frame, IS_BAD_PTR(cur_str) ?
@@ -570,7 +572,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
                 break;
             }
 
-            cur_elem_size = (enum _KOS_STRING_ELEM_SIZE)OBJPTR(STRING, cur_str)->elem_size;
+            cur_elem_size = _KOS_get_string_elem_size(OBJPTR(STRING, cur_str));
             cur_len       = KOS_get_string_length(cur_str);
 
             if (cur_elem_size > elem_size)
@@ -588,6 +590,8 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
             new_str = OBJPTR(STRING, non_0_str);
 
         else if (new_len) {
+            elem_size = _override_elem_size(elem_size);
+
             new_str = _new_empty_string(frame, new_len, elem_size);
 
             if (new_str) {
@@ -595,7 +599,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
                 for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
                     KOS_OBJ_ID     str_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
                     KOS_STRING    *cur_str = OBJPTR(STRING, str_obj);
-                    const unsigned cur_len = cur_str->length;
+                    const unsigned cur_len = cur_str->header.length;
                     _init_empty_string(new_str, pos, cur_str, cur_len);
                     pos += cur_len;
                 }
@@ -613,15 +617,15 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
 {
     KOS_STRING *new_str = 0;
 
-    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
+    if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception(frame, IS_BAD_PTR(obj_id) ?
                 KOS_context_get_cstring(frame, str_err_null_pointer): KOS_context_get_cstring(frame, str_err_not_string));
     else {
-        KOS_STRING                      *str       = OBJPTR(STRING, obj_id);
-        const enum _KOS_STRING_ELEM_SIZE elem_size = (enum _KOS_STRING_ELEM_SIZE)str->elem_size;
-        const int64_t                    len       = str->length;
-        unsigned                         new_len;
-        const uint8_t                   *buf;
+        KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
+        const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
+        const int64_t                len       = str->header.length;
+        unsigned                     new_len;
+        const uint8_t               *buf;
 
         if (len) {
             if (begin < 0)
@@ -650,24 +654,30 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
             else if (new_len) {
                 buf = (const uint8_t *)_KOS_get_string_buffer(str) + (begin << elem_size);
 
-                if (str->flags == KOS_STRING_LOCAL || (new_len << elem_size) <= sizeof(str->data)) {
+                if ((new_len << elem_size) <= 2 * sizeof(void *)) {
                     new_str = _new_empty_string(frame, new_len, elem_size);
                     if (new_str)
                         memcpy((void *)_KOS_get_string_buffer(new_str), buf, new_len << elem_size);
                 }
-                else if (str->flags == KOS_STRING_PTR)
+                else if (str->header.flags & KOS_STRING_PTR)
                     new_str = OBJPTR(STRING, KOS_new_const_string(frame, buf, new_len, elem_size));
                 else {
 
-                    new_str = (KOS_STRING *)_KOS_alloc_object(frame, STRING);
+                    new_str = (KOS_STRING *)_KOS_alloc_object(frame,
+                                                              KOS_ALLOC_DEFAULT,
+                                                              OBJ_STRING,
+                                                              sizeof(struct _KOS_STRING_REF));
 
                     if (new_str) {
-                        new_str->elem_size    = (uint8_t)elem_size;
-                        new_str->flags        = KOS_STRING_REF;
-                        new_str->length       = (uint16_t)new_len;
-                        new_str->hash         = 0;
-                        new_str->data.ref.ptr = buf;
-                        new_str->data.ref.str = OBJID(STRING, str);
+                        struct _KOS_STRING_REF *const ref = (struct _KOS_STRING_REF *)new_str;
+
+                        assert(new_str->header.type == OBJ_STRING);
+
+                        new_str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_REF;
+                        new_str->header.length = (uint16_t)new_len;
+                        new_str->header.hash   = 0;
+                        ref->data_ptr          = buf;
+                        ref->obj_id            = OBJID(STRING, str);
                     }
                 }
             }
@@ -687,16 +697,16 @@ KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
 {
     KOS_STRING *new_str = 0;
 
-    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
+    if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception(frame, IS_BAD_PTR(obj_id)
                 ? KOS_context_get_cstring(frame, str_err_null_pointer)
                 : KOS_context_get_cstring(frame, str_err_not_string));
     else {
-        KOS_STRING                      *str       = OBJPTR(STRING, obj_id);
-        const enum _KOS_STRING_ELEM_SIZE elem_size = (enum _KOS_STRING_ELEM_SIZE)str->elem_size;
-        const int                        len       = (int)str->length;
-        const uint8_t                   *buf;
-        uint8_t                         *new_buf;
+        KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
+        const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
+        const int                    len       = (int)str->header.length;
+        const uint8_t               *buf;
+        uint8_t                     *new_buf;
 
         if (idx < 0)
             idx += len;
@@ -740,14 +750,14 @@ unsigned KOS_string_get_char_code(KOS_FRAME  frame,
 {
     uint32_t code = ~0U;
 
-    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
+    if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception(frame, IS_BAD_PTR(obj_id)
                 ? KOS_context_get_cstring(frame, str_err_null_pointer)
                 : KOS_context_get_cstring(frame, str_err_not_string));
     else {
-        KOS_STRING                      *str       = OBJPTR(STRING, obj_id);
-        const enum _KOS_STRING_ELEM_SIZE elem_size = (enum _KOS_STRING_ELEM_SIZE)str->elem_size;
-        const int                        len       = (int)str->length;
+        KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
+        const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
+        const int                    len       = (int)str->header.length;
 
         if (idx < 0)
             idx += len;
@@ -887,12 +897,12 @@ static int _compare_slice(KOS_STRING *str_a,
     int      result      = 0;
     unsigned a_len       = a_end - a_begin;
     unsigned b_len       = b_end - b_begin;
-    unsigned a_elem_size = str_a->elem_size;
-    unsigned b_elem_size = str_b->elem_size;
+    unsigned a_elem_size = _KOS_get_string_elem_size(str_a);
+    unsigned b_elem_size = _KOS_get_string_elem_size(str_b);
 
-    assert(a_end   <= str_a->length);
+    assert(a_end   <= str_a->header.length);
     assert(a_begin <= a_end);
-    assert(b_end   <= str_b->length);
+    assert(b_end   <= str_b->header.length);
     assert(b_begin <= b_end);
 
     if (a_elem_size == b_elem_size) {
@@ -908,16 +918,18 @@ static int _compare_slice(KOS_STRING *str_a,
         uint32_t ca = 0;
         uint32_t cb = 0;
 
-        if (((uintptr_t)pa & 7U) == ((uintptr_t)pb & 7U)) {
+        if (((uintptr_t)pa & 7U) == ((uintptr_t)pb & 7U) && pa + 8 < pend8) {
 
             while (((uintptr_t)pa & 7U) && *pa == *pb) {
                 ++pa;
                 ++pb;
             }
 
-            while (pa < pend8 && *(const uint64_t *)pa == *(const uint64_t *)pb) {
-                pa += 8;
-                pb += 8;
+            if ( ! ((uintptr_t)pa & 7U)) {
+                while (pa < pend8 && *(const uint64_t *)pa == *(const uint64_t *)pb) {
+                    pa += 8;
+                    pb += 8;
+                }
             }
         }
 
@@ -1169,8 +1181,8 @@ int KOS_string_scan(KOS_FRAME              frame,
 
     /* TODO Optimize */
 
-    text_elem_size    = OBJPTR(STRING, obj_id_text)->elem_size;
-    pattern_elem_size = OBJPTR(STRING, obj_id_pattern)->elem_size;
+    text_elem_size    = _KOS_get_string_elem_size(OBJPTR(STRING, obj_id_text));
+    pattern_elem_size = _KOS_get_string_elem_size(OBJPTR(STRING, obj_id_pattern));
 
     if ( ! reverse && include && pattern_len == 1
         && text_elem_size    == KOS_STRING_ELEM_8
@@ -1189,7 +1201,7 @@ int KOS_string_scan(KOS_FRAME              frame,
         const uint8_t *text     = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_text));
         const uint8_t *pattern  = (const uint8_t *)_KOS_get_string_buffer(OBJPTR(STRING, obj_id_pattern));
         const uint8_t *location = text + (cur_pos << text_elem_size);
-        const uint8_t *text_end = reverse ? text + ((uintptr_t)(intptr_t)-1 << text_elem_size) : text + (text_len << text_elem_size);
+        const uint8_t *text_end = reverse ? text - (1 << text_elem_size) : text + (text_len << text_elem_size);
         const int      delta    = reverse ? (int)((unsigned)-1 << text_elem_size) : (1 << text_elem_size);
         const uint32_t c_mask   = (pattern_elem_size == KOS_STRING_ELEM_8)  ? ~0xFFU :
                                   (pattern_elem_size == KOS_STRING_ELEM_16) ? ~0xFFFFU : 0U;
@@ -1295,11 +1307,11 @@ KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
 
     str = OBJPTR(STRING, obj_id);
 
-    ret = _new_empty_string(frame, len, (enum _KOS_STRING_ELEM_SIZE)str->elem_size);
+    ret = _new_empty_string(frame, len, _KOS_get_string_elem_size(str));
     if ( ! ret)
         return KOS_BADPTR;
 
-    switch (str->elem_size) {
+    switch (_KOS_get_string_elem_size(str)) {
 
         case KOS_STRING_ELEM_8: {
             const uint8_t *src  = (const uint8_t *)_KOS_get_string_buffer(str);
@@ -1323,7 +1335,7 @@ KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
             const uint32_t *src  = (const uint32_t *)_KOS_get_string_buffer(str);
             const uint32_t *end  = src + len;
             uint32_t       *dest = (uint32_t *)_KOS_get_string_buffer(ret) + len - 1;
-            assert(str->elem_size == KOS_STRING_ELEM_32);
+            assert(_KOS_get_string_elem_size(str) == KOS_STRING_ELEM_32);
             for ( ; src != end; ++src, --dest)
                 *dest = *src;
             break;
@@ -1337,13 +1349,13 @@ KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
                              KOS_OBJ_ID obj_id,
                              unsigned   num_repeat)
 {
-    unsigned                   len;
-    enum _KOS_STRING_ELEM_SIZE elem_size;
-    KOS_STRING                *in_str;
-    KOS_STRING                *new_str;
-    uint8_t                   *in_buf;
-    uint8_t                   *new_buf;
-    uint8_t                   *end_buf;
+    unsigned               len;
+    enum _KOS_STRING_FLAGS elem_size;
+    KOS_STRING            *in_str;
+    KOS_STRING            *new_str;
+    uint8_t               *in_buf;
+    uint8_t               *new_buf;
+    uint8_t               *end_buf;
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
         KOS_raise_exception_cstring(frame, str_err_not_string);
@@ -1364,7 +1376,7 @@ KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
     }
 
     in_str    = OBJPTR(STRING, obj_id);
-    elem_size = (enum _KOS_STRING_ELEM_SIZE)in_str->elem_size;
+    elem_size = _KOS_get_string_elem_size(in_str);
     new_str   = _new_empty_string(frame, len * num_repeat, elem_size);
     if ( ! new_str)
         return KOS_BADPTR;

@@ -78,7 +78,7 @@ do {                                                                         \
                             ctx->name##_prototype));                         \
 } while (0)
 
-#define PROTO(type) (frame->module->context->type##_prototype)
+#define PROTO(type) (KOS_context_from_frame(frame)->type##_prototype)
 
 /* @item lang print()
  *
@@ -114,7 +114,7 @@ static KOS_OBJ_ID _print(KOS_FRAME  frame,
 _error:
     _KOS_vector_destroy(&cstr);
 
-    return error ? KOS_BADPTR : KOS_VOID;
+    return error ? KOS_BADPTR : KOS_new_void(frame);
 }
 
 /* @item lang print_()
@@ -146,7 +146,7 @@ static KOS_OBJ_ID _print_(KOS_FRAME  frame,
 _error:
     _KOS_vector_destroy(&cstr);
 
-    return error ? KOS_BADPTR : KOS_VOID;
+    return error ? KOS_BADPTR : KOS_new_void(frame);
 }
 
 static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
@@ -168,7 +168,7 @@ static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
     assert( ! IS_BAD_PTR(walk));
     TRY_OBJID(walk);
 
-    if (GET_OBJ_SUBTYPE(walk) != OBJ_OBJECT_WALK) {
+    if (GET_OBJ_TYPE(walk) != OBJ_OBJECT_WALK) {
         walk = KOS_new_object_walk(frame, walk, deep);
         TRY_OBJID(walk);
 
@@ -271,7 +271,7 @@ static int _create_constructor(KOS_FRAME            frame,
 
     TRY_OBJID(func_obj);
 
-    assert(frame->module);
+    assert( ! IS_BAD_PTR(frame->module));
 
     OBJPTR(FUNCTION, func_obj)->handler = constructor;
     OBJPTR(FUNCTION, func_obj)->module  = frame->module;
@@ -332,7 +332,7 @@ static KOS_OBJ_ID _number_constructor(KOS_FRAME  frame,
 
         if (IS_NUMERIC_OBJ(arg))
             ret = arg;
-        else if (GET_OBJ_TYPE(arg) == OBJ_STRING) {
+        else if (READ_OBJ_TYPE(arg) == OBJ_STRING) {
             struct _KOS_VECTOR cstr;
             _KOS_vector_init(&cstr);
 
@@ -416,7 +416,7 @@ static KOS_OBJ_ID _integer_constructor(KOS_FRAME  frame,
             if (KOS_get_integer(frame, arg, &value) == KOS_SUCCESS)
                 ret = KOS_new_int(frame, value);
         }
-        else if (GET_OBJ_TYPE(arg) == OBJ_STRING) {
+        else if (READ_OBJ_TYPE(arg) == OBJ_STRING) {
 
             struct _KOS_VECTOR cstr;
             _KOS_vector_init(&cstr);
@@ -481,30 +481,30 @@ static KOS_OBJ_ID _float_constructor(KOS_FRAME  frame,
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
+    KOS_OBJ_ID     arg;
 
     if (num_args == 0)
-        ret = KOS_new_float(frame, 0);
-    else {
-        KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
+        return KOS_new_float(frame, 0);
 
-        if (IS_NUMERIC_OBJ(arg)) {
+    arg = KOS_array_read(frame, args_obj, 0);
 
-            switch (GET_NUMERIC_TYPE(arg)) {
+    if (IS_BAD_PTR(arg))
+        return arg;
 
-                default:
-                    ret = KOS_new_float(frame, (double)GET_SMALL_INT(arg));
-                    break;
+    if (IS_SMALL_INT(arg))
+        return KOS_new_float(frame, (double)GET_SMALL_INT(arg));
 
-                case OBJ_NUM_INTEGER:
-                    ret = KOS_new_float(frame, (double)*OBJPTR(INTEGER, arg));
-                    break;
+    switch (READ_OBJ_TYPE(arg)) {
 
-                case OBJ_NUM_FLOAT:
-                    ret = arg;
-                    break;
-            }
-        }
-        else if (GET_OBJ_TYPE(arg) == OBJ_STRING) {
+        case OBJ_INTEGER:
+            ret = KOS_new_float(frame, (double)(OBJPTR(INTEGER, arg)->value));
+            break;
+
+        case OBJ_FLOAT:
+            ret = arg;
+            break;
+
+        case OBJ_STRING: {
 
             struct _KOS_VECTOR cstr;
             _KOS_vector_init(&cstr);
@@ -527,9 +527,12 @@ static KOS_OBJ_ID _float_constructor(KOS_FRAME  frame,
             }
 
             _KOS_vector_destroy(&cstr);
+            break;
         }
-        else if ( ! IS_BAD_PTR(arg))
+
+        default:
             KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
+            break;
     }
 
     return ret;
@@ -575,10 +578,10 @@ static KOS_OBJ_ID _boolean_constructor(KOS_FRAME  frame,
         KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
 
         if ( ! IS_BAD_PTR(arg))
-            ret = KOS_BOOL(_KOS_is_truthy(arg));
+            ret = KOS_new_boolean(frame, _KOS_is_truthy(arg));
     }
     else
-        ret = KOS_FALSE;
+        ret = KOS_new_boolean(frame, 0);
 
     return ret;
 }
@@ -606,7 +609,7 @@ static KOS_OBJ_ID _void_constructor(KOS_FRAME  frame,
                                     KOS_OBJ_ID this_obj,
                                     KOS_OBJ_ID args_obj)
 {
-    return KOS_VOID;
+    return KOS_new_void(frame);
 }
 
 /* @item lang string()
@@ -670,7 +673,7 @@ static KOS_OBJ_ID _string_constructor(KOS_FRAME  frame,
             if (IS_NUMERIC_OBJ(obj))
                 obj = KOS_object_to_string(frame, obj);
 
-            else switch (GET_OBJ_TYPE(obj)) {
+            else switch (READ_OBJ_TYPE(obj)) {
 
                 case OBJ_STRING:
                     break;
@@ -837,6 +840,7 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
                                      KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
+    KOS_OBJ_ID     void_obj = KOS_new_void(frame);
     KOS_OBJ_ID     array    = KOS_new_array(frame, 0);
     const uint32_t num_args = KOS_get_array_size(args_obj);
     uint32_t       i_arg;
@@ -917,7 +921,7 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
                     TRY_OBJID(gen_args);
 
                     for (;;) {
-                        KOS_OBJ_ID ret = KOS_call_function(frame, arg, KOS_VOID, gen_args);
+                        KOS_OBJ_ID ret = KOS_call_function(frame, arg, void_obj, gen_args);
                         if (IS_BAD_PTR(ret)) /* end of iterator */
                             break;
                         TRY(KOS_array_push(frame, array, ret, 0));
@@ -989,6 +993,7 @@ static KOS_OBJ_ID _buffer_constructor(KOS_FRAME  frame,
                                       KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
+    KOS_OBJ_ID     void_obj = KOS_new_void(frame);
     KOS_OBJ_ID     buffer   = KOS_new_buffer(frame, 0);
     const uint32_t num_args = KOS_get_array_size(args_obj);
     uint32_t       i_arg;
@@ -1093,7 +1098,7 @@ static KOS_OBJ_ID _buffer_constructor(KOS_FRAME  frame,
                     for (;;) {
                         int64_t value;
 
-                        KOS_OBJ_ID ret = KOS_call_function(frame, arg, KOS_VOID, gen_args);
+                        KOS_OBJ_ID ret = KOS_call_function(frame, arg, void_obj, gen_args);
                         if (IS_BAD_PTR(ret)) /* end of iterator */
                             break;
 
@@ -1229,7 +1234,7 @@ static KOS_OBJ_ID _exception_constructor(KOS_FRAME  frame,
                                          KOS_OBJ_ID this_obj,
                                          KOS_OBJ_ID args_obj)
 {
-    KOS_OBJ_ID     exception = KOS_VOID;
+    KOS_OBJ_ID     exception = KOS_new_void(frame);
     const uint32_t num_args  = KOS_get_array_size(args_obj);
 
     if (num_args > 0)
@@ -1539,7 +1544,7 @@ static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
 
         if ( ! IS_BAD_PTR(arg)) {
             KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
-            KOS_atomic_write_ptr(func->prototype, (void *)arg);
+            KOS_atomic_write_ptr(func->prototype, arg);
             ret = this_obj;
         }
     }
@@ -1656,7 +1661,7 @@ static KOS_OBJ_ID _slice(KOS_FRAME  frame,
 
     if (IS_NUMERIC_OBJ(a_obj))
         TRY(KOS_get_integer(frame, a_obj, &idx_a));
-    else if (a_obj == KOS_VOID)
+    else if (READ_OBJ_TYPE(a_obj) == OBJ_VOID)
         idx_a = 0;
     else {
         KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
@@ -1665,7 +1670,7 @@ static KOS_OBJ_ID _slice(KOS_FRAME  frame,
 
     if (IS_NUMERIC_OBJ(b_obj))
         TRY(KOS_get_integer(frame, b_obj, &idx_b));
-    else if (b_obj == KOS_VOID)
+    else if (READ_OBJ_TYPE(b_obj) == OBJ_VOID)
         idx_b = MAX_INT64;
     else {
         KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
@@ -1891,7 +1896,7 @@ static KOS_OBJ_ID _fill(KOS_FRAME  frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &begin));
-        else if (arg == KOS_VOID)
+        else if (READ_OBJ_TYPE(arg) == OBJ_VOID)
             begin = 0;
         else {
             KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
@@ -1903,7 +1908,7 @@ static KOS_OBJ_ID _fill(KOS_FRAME  frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &end));
-        else if (arg == KOS_VOID)
+        else if (READ_OBJ_TYPE(arg) == OBJ_VOID)
             end = MAX_INT64;
         else {
             KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
@@ -1917,7 +1922,7 @@ static KOS_OBJ_ID _fill(KOS_FRAME  frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &begin));
-        else if (arg == KOS_VOID)
+        else if (READ_OBJ_TYPE(arg) == OBJ_VOID)
             begin = 0;
         else {
             KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
@@ -2225,25 +2230,23 @@ static int _pack_format(KOS_FRAME                frame,
 
                 TRY_OBJID(value_obj);
 
-                if (IS_NUMERIC_OBJ(value_obj)) {
+                if (IS_SMALL_INT(value_obj))
+                    value = (double)GET_SMALL_INT(value_obj);
 
-                    switch (GET_NUMERIC_TYPE(value_obj)) {
+                else switch (READ_OBJ_TYPE(value_obj)) {
 
-                        default:
-                            value = (double)GET_SMALL_INT(value_obj);
-                            break;
+                    case OBJ_INTEGER:
+                        value = (double)(OBJPTR(INTEGER, value_obj)->value);
+                        break;
 
-                        case OBJ_NUM_INTEGER:
-                            value = (double)*OBJPTR(INTEGER, value_obj);
-                            break;
+                    case OBJ_FLOAT:
+                        value = OBJPTR(FLOAT, value_obj)->value;
+                        break;
 
-                        case OBJ_NUM_FLOAT:
-                            value = *OBJPTR(FLOAT, value_obj);
-                            break;
-                    }
+                    default:
+                        RAISE_EXCEPTION(str_err_bad_pack_value);
+                        break;
                 }
-                else
-                    RAISE_EXCEPTION(str_err_bad_pack_value);
 
                 if (size == 4)
                     out_val = _KOS_float_to_uint32_t((float)value);
@@ -2621,7 +2624,7 @@ static KOS_OBJ_ID _copy_buffer(KOS_FRAME  frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &dest_begin));
-        else if (arg != KOS_VOID)
+        else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
             RAISE_EXCEPTION(str_err_unsup_operand_types);
 
         src = KOS_array_read(frame, args_obj, 1);
@@ -2632,7 +2635,7 @@ static KOS_OBJ_ID _copy_buffer(KOS_FRAME  frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &src_begin));
-        else if (arg != KOS_VOID)
+        else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
             RAISE_EXCEPTION(str_err_unsup_operand_types);
 
         arg = KOS_array_read(frame, args_obj, 3);
@@ -2640,14 +2643,14 @@ static KOS_OBJ_ID _copy_buffer(KOS_FRAME  frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &src_end));
-        else if (arg != KOS_VOID)
+        else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
             RAISE_EXCEPTION(str_err_unsup_operand_types);
     }
     else if (num_args > 2) {
 
         int arg_idx = 1;
 
-        if (IS_NUMERIC_OBJ(arg) || arg == KOS_VOID) {
+        if (IS_NUMERIC_OBJ(arg) || READ_OBJ_TYPE(arg) == OBJ_VOID) {
 
             arg_idx = 2;
 
@@ -2665,7 +2668,7 @@ static KOS_OBJ_ID _copy_buffer(KOS_FRAME  frame,
 
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(frame, arg, &src_begin));
-        else if (arg != KOS_VOID)
+        else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
             RAISE_EXCEPTION(str_err_unsup_operand_types);
 
         if (arg_idx == 1) {
@@ -2675,13 +2678,13 @@ static KOS_OBJ_ID _copy_buffer(KOS_FRAME  frame,
 
             if (IS_NUMERIC_OBJ(arg))
                 TRY(KOS_get_integer(frame, arg, &src_end));
-            else if (arg != KOS_VOID)
+            else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
                 RAISE_EXCEPTION(str_err_unsup_operand_types);
         }
     }
     else if (num_args > 1) {
 
-        if (IS_NUMERIC_OBJ(arg) || arg == KOS_VOID) {
+        if (IS_NUMERIC_OBJ(arg) || READ_OBJ_TYPE(arg) == OBJ_VOID) {
 
             if (IS_NUMERIC_OBJ(arg))
                 TRY(KOS_get_integer(frame, arg, &dest_begin));
@@ -2698,7 +2701,7 @@ static KOS_OBJ_ID _copy_buffer(KOS_FRAME  frame,
 
             if (IS_NUMERIC_OBJ(arg))
                 TRY(KOS_get_integer(frame, arg, &src_begin));
-            else if (arg != KOS_VOID)
+            else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
                 RAISE_EXCEPTION(str_err_unsup_operand_types);
         }
     }
@@ -2817,14 +2820,14 @@ static KOS_OBJ_ID _insert_array(KOS_FRAME  frame,
 
     if (IS_NUMERIC_OBJ(begin_obj))
         TRY(KOS_get_integer(frame, begin_obj, &begin));
-    else if (begin_obj == KOS_VOID)
+    else if (READ_OBJ_TYPE(begin_obj) == OBJ_VOID)
         begin = num_args == 2 ? MAX_INT64 : 0;
     else
         RAISE_EXCEPTION(str_err_unsup_operand_types);
 
     if (IS_NUMERIC_OBJ(end_obj))
         TRY(KOS_get_integer(frame, end_obj, &end));
-    else if (end_obj == KOS_VOID)
+    else if (READ_OBJ_TYPE(end_obj) == OBJ_VOID)
         end = MAX_INT64;
     else
         RAISE_EXCEPTION(str_err_unsup_operand_types);
@@ -2881,7 +2884,7 @@ static KOS_OBJ_ID _pop(KOS_FRAME  frame,
             RAISE_EXCEPTION(str_err_invalid_array_size);
 
         if (num == 0)
-            ret = KOS_VOID;
+            ret = KOS_new_void(frame);
         else
             ret = KOS_new_array(frame, (unsigned)num);
         TRY_OBJID(ret);
@@ -2987,15 +2990,15 @@ static KOS_OBJ_ID _ends_with(KOS_FRAME  frame,
     arg_len  = KOS_get_string_length(arg);
 
     if (arg_len > this_len)
-        ret = KOS_FALSE;
+        ret = KOS_new_boolean(frame, 0);
     else
-        ret = KOS_string_compare_slice(this_obj,
-                                       this_len - arg_len,
-                                       this_len,
-                                       arg,
-                                       0,
-                                       arg_len)
-            ? KOS_FALSE : KOS_TRUE;
+        ret = KOS_new_boolean(frame,
+                              ! KOS_string_compare_slice(this_obj,
+                                                         this_len - arg_len,
+                                                         this_len,
+                                                         arg,
+                                                         0,
+                                                         arg_len));
 
 _error:
     return error ? KOS_BADPTR : ret;
@@ -3225,10 +3228,11 @@ static KOS_OBJ_ID _scan(KOS_FRAME  frame,
         KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 1);
         TRY_OBJID(arg);
 
-        if (arg == KOS_FALSE)
-            include = KOS_SCAN_EXCLUDE;
-
-        else if (arg != KOS_TRUE) {
+        if (GET_OBJ_TYPE(arg) == OBJ_BOOLEAN) {
+            if ( ! KOS_get_bool(arg))
+                include = KOS_SCAN_EXCLUDE;
+        }
+        else {
 
             TRY(KOS_get_integer(frame, arg, &pos64));
 
@@ -3239,9 +3243,11 @@ static KOS_OBJ_ID _scan(KOS_FRAME  frame,
                 arg = KOS_array_read(frame, args_obj, 2);
                 TRY_OBJID(arg);
 
-                if (arg == KOS_FALSE)
-                    include = KOS_SCAN_EXCLUDE;
-                else if (arg != KOS_TRUE)
+                if (GET_OBJ_TYPE(arg) == OBJ_BOOLEAN) {
+                    if ( ! KOS_get_bool(arg))
+                        include = KOS_SCAN_EXCLUDE;
+                }
+                else
                     RAISE_EXCEPTION(str_err_not_boolean);
             }
         }
@@ -3309,10 +3315,11 @@ static KOS_OBJ_ID _rscan(KOS_FRAME  frame,
         KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 1);
         TRY_OBJID(arg);
 
-        if (arg == KOS_FALSE)
-            include = KOS_SCAN_EXCLUDE;
-
-        else if (arg != KOS_TRUE) {
+        if (GET_OBJ_TYPE(arg) == OBJ_BOOLEAN) {
+            if ( ! KOS_get_bool(arg))
+                include = KOS_SCAN_EXCLUDE;
+        }
+        else {
 
             TRY(KOS_get_integer(frame, arg, &pos64));
 
@@ -3330,9 +3337,11 @@ static KOS_OBJ_ID _rscan(KOS_FRAME  frame,
                 arg = KOS_array_read(frame, args_obj, 2);
                 TRY_OBJID(arg);
 
-                if (arg == KOS_FALSE)
-                    include = KOS_SCAN_EXCLUDE;
-                else if (arg != KOS_TRUE)
+                if (GET_OBJ_TYPE(arg) == OBJ_BOOLEAN) {
+                    if ( ! KOS_get_bool(arg))
+                        include = KOS_SCAN_EXCLUDE;
+                }
+                else
                     RAISE_EXCEPTION(str_err_not_boolean);
             }
         }
@@ -3432,15 +3441,15 @@ static KOS_OBJ_ID _starts_with(KOS_FRAME  frame,
     arg_len  = KOS_get_string_length(arg);
 
     if (arg_len > this_len)
-        ret = KOS_FALSE;
+        ret = KOS_new_boolean(frame, 0);
     else
-        ret = KOS_string_compare_slice(this_obj,
-                                       0,
-                                       arg_len,
-                                       arg,
-                                       0,
-                                       arg_len)
-            ? KOS_FALSE : KOS_TRUE;
+        ret = KOS_new_boolean(frame,
+                              ! KOS_string_compare_slice(this_obj,
+                                                         0,
+                                                         arg_len,
+                                                         arg,
+                                                         0,
+                                                         arg_len));
 
 _error:
     return error ? KOS_BADPTR : ret;
@@ -3513,10 +3522,10 @@ static KOS_OBJ_ID _get_function_name(KOS_FRAME  frame,
         KOS_FUNCTION *const func = OBJPTR(FUNCTION, this_obj);
 
         /* TODO add builtin function name */
-        if ( ! func->module || func->instr_offs == ~0U)
+        if (IS_BAD_PTR(func->module) || func->instr_offs == ~0U)
             ret = KOS_context_get_cstring(frame, str_builtin);
         else
-            ret = KOS_module_addr_to_func_name(func->module,
+            ret = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
                                                func->instr_offs);
     }
     else {
@@ -3551,8 +3560,8 @@ static KOS_OBJ_ID _get_instructions(KOS_FRAME  frame,
         KOS_FUNCTION *const func      = OBJPTR(FUNCTION, this_obj);
         uint32_t            num_instr = 0;
 
-        if (func->module)
-            num_instr = KOS_module_func_get_num_instr(func->module,
+        if ( ! IS_BAD_PTR(func->module))
+            num_instr = KOS_module_func_get_num_instr(OBJPTR(MODULE, func->module),
                                                       func->instr_offs);
 
         ret = KOS_new_int(frame, (int64_t)num_instr);
@@ -3589,8 +3598,8 @@ static KOS_OBJ_ID _get_code_size(KOS_FRAME  frame,
         KOS_FUNCTION *const func      = OBJPTR(FUNCTION, this_obj);
         uint32_t            code_size = 0;
 
-        if (func->module)
-            code_size = KOS_module_func_get_code_size(func->module,
+        if ( ! IS_BAD_PTR(func->module))
+            code_size = KOS_module_func_get_code_size(OBJPTR(MODULE, func->module),
                                                       func->instr_offs);
 
         ret = KOS_new_int(frame, (int64_t)code_size);

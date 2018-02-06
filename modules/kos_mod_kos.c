@@ -51,6 +51,7 @@ static const char str_token[]              = "token";
 static const char str_type[]               = "type";
 
 struct _LEXER {
+    KOS_OBJ_HEADER    header; /* TODO remove this when we switch to malloc */
     struct _KOS_LEXER lexer;
     struct _KOS_TOKEN token;
     uint8_t          *last_buf;
@@ -60,8 +61,10 @@ struct _LEXER {
 static void _finalize(KOS_FRAME frame,
                       void     *priv)
 {
+    /* TODO free
     if (priv)
         _KOS_free_buffer(frame, priv, sizeof(struct _LEXER));
+    */
 }
 
 static KOS_OBJ_ID _raw_lexer(KOS_FRAME  frame,
@@ -99,7 +102,11 @@ static KOS_OBJ_ID _raw_lexer(KOS_FRAME  frame,
         lexer_obj_id = KOS_new_object(frame);
         TRY_OBJID(lexer_obj_id);
 
-        lexer = (struct _LEXER *)_KOS_alloc_buffer(frame, sizeof(struct _LEXER));
+        /* TODO use malloc once GC supports finalize */
+        lexer = (struct _LEXER *)_KOS_alloc_object(frame,
+                                                   KOS_ALLOC_PERSISTENT, /* avoid GC */
+                                                   OBJ_OPAQUE,
+                                                   sizeof(struct _LEXER));
         if (!lexer)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
 

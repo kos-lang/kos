@@ -29,15 +29,18 @@
 
 struct _KOS_MODULE_LOAD_CHAIN;
 struct _KOS_RED_BLACK_NODE;
+struct _KOS_PAGE_HEADER;
+
+typedef struct _KOS_PAGE_HEADER _KOS_PAGE;
 
 struct _KOS_ALLOCATOR {
-    KOS_ATOMIC(uint32_t) lock;
-    KOS_ATOMIC(void *)   areas_free;
-    KOS_ATOMIC(void *)   areas_fixed;
-    /* TODO add areas_stack */
-    KOS_ATOMIC(void *)   areas[4]; /* By element size: 8, 16, 32, 64 */
-    KOS_ATOMIC(void *)   buffers;  /* TODO buddy allocator for buffers + freed list */
-    KOS_OBJ_ID           str_oom_id;
+    KOS_ATOMIC(uint32_t)    lock;
+    KOS_ATOMIC(_KOS_PAGE *) active_pages;      /* pages in which new objects are allocated */
+    KOS_ATOMIC(_KOS_PAGE *) free_pages;        /* pages which are currently unused         */
+    KOS_ATOMIC(_KOS_PAGE *) used_pages;        /* pages which have live objects            */
+    KOS_ATOMIC(void *)      huge_objects;      /* objects which don't fit in page size     */
+    KOS_ATOMIC(void *)      pools;             /* allocated memory - page pools            */
+    KOS_OBJ_ID              str_oom_id;
 };
 
 enum _KOS_YIELD_STATE {
@@ -49,19 +52,24 @@ enum _KOS_CATCH_STATE {
     KOS_NO_CATCH = 0x7FFFFFFFU
 };
 
-struct _KOS_STACK_FRAME {
-    struct _KOS_ALLOCATOR   *allocator;
-    uint8_t                  alloc_mode;
-    uint8_t                  catch_reg;
-    uint16_t                 yield_reg;    /* index of the yield register */
-    uint32_t                 catch_offs;
-    struct _KOS_STACK_FRAME *parent;
-    struct _KOS_MODULE      *module;
-    KOS_OBJ_ID               registers;
-    KOS_OBJ_ID               exception;
-    KOS_OBJ_ID               retval;
-    uint32_t                 instr_offs;
+struct _KOS_SF_HDR {
+    uint8_t  type;
+    uint8_t  catch_reg;
+    uint16_t yield_reg; /* index of the yield register */
+    uint32_t alloc_size;
 };
+
+typedef struct _KOS_STACK_FRAME {
+    struct _KOS_SF_HDR     header;
+    struct _KOS_ALLOCATOR *allocator;
+    uint32_t               catch_offs;
+    KOS_OBJ_ID             parent;
+    KOS_OBJ_ID             module;
+    KOS_OBJ_ID             registers;
+    KOS_OBJ_ID             exception;
+    KOS_OBJ_ID             retval;
+    uint32_t               instr_offs;
+} KOS_STACK_FRAME;
 
 struct _KOS_THREAD_ROOT {
     struct _KOS_STACK_FRAME frame;
@@ -81,6 +89,13 @@ struct _KOS_CONTEXT {
     struct _KOS_ALLOCATOR          allocator;
 
     KOS_OBJ_ID                     empty_string;
+    KOS_OBJ_ID                     void_obj;
+    KOS_OBJ_ID                     false_obj;
+    KOS_OBJ_ID                     true_obj;
+    KOS_OBJ_ID                     tombstone_obj;
+    KOS_OBJ_ID                     closed_obj;
+    KOS_OBJ_ID                     reserved_obj;
+    KOS_OBJ_ID                     new_this_obj;
 
     KOS_OBJ_ID                     object_prototype;
     KOS_OBJ_ID                     number_prototype;
@@ -120,12 +135,12 @@ struct _KOS_CONTEXT {
 static inline KOS_CONTEXT *KOS_context_from_frame(KOS_FRAME frame)
 {
     assert(frame);
-    assert(frame->module);
-    assert(frame->module->context);
-    return frame->module->context;
+    KOS_MODULE *const module = OBJPTR(MODULE, frame->module);
+    assert(module->context);
+    return module->context;
 }
 #else
-#define KOS_context_from_frame(frame) ((frame)->module->context)
+#define KOS_context_from_frame(frame) (OBJPTR(MODULE, (frame)->module)->context)
 #endif
 
 #ifdef __cplusplus

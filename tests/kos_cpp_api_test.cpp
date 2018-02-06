@@ -124,8 +124,8 @@ try {
     {
         bool exception = false;
         try {
-            const kos::void_ a = from_object_ptr(frame, TO_SMALL_INT(0));
-            TEST(a.type() == OBJ_IMMEDIATE);
+            const kos::void_type a = from_object_ptr(frame, TO_SMALL_INT(0));
+            TEST(a.type() == OBJ_VOID);
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "source type is not a void")
@@ -240,8 +240,8 @@ try {
     {
         kos::array a = frame.new_array(100);
         TEST(a.size() == 100);
-        TEST(static_cast<KOS_OBJ_ID>(a[0] ) == KOS_VOID);
-        TEST(static_cast<KOS_OBJ_ID>(a[99]) == KOS_VOID);
+        TEST(static_cast<KOS_OBJ_ID>(a[0] ) == KOS_new_void(frame));
+        TEST(static_cast<KOS_OBJ_ID>(a[99]) == KOS_new_void(frame));
     }
 
     {
@@ -495,9 +495,9 @@ try {
     {
         kos::function f = frame.new_function<void (*)(const std::string&), throw_string>();
 
-        kos::void_ v = f("");
-        TEST(v.type() == OBJ_IMMEDIATE);
-        TEST(v == KOS_VOID);
+        kos::void_type v = f("");
+        TEST(v.type() == OBJ_VOID);
+        TEST(v == KOS_new_void(frame));
 
         bool exception = false;
         try {
