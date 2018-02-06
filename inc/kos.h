@@ -41,6 +41,14 @@
 #include <string>
 #include <vector>
 
+#ifdef KOS_CPP11
+#   define NOEXCEPT noexcept
+#elif defined(_MSC_VER)
+#   define NOEXCEPT __declspec(nothrow)
+#else
+#   define NOEXCEPT throw()
+#endif
+
 namespace kos {
 
 class array;
@@ -1544,7 +1552,7 @@ int num_args(Ret (T::*)(T1, T2, T3, T4) const)
 #endif
 
 template<typename T, T fun>
-KOS_OBJ_ID wrapper(KOS_FRAME frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj)
+KOS_OBJ_ID wrapper(KOS_FRAME frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj) NOEXCEPT
 {
     stack_frame frame = frame_ptr;
     try {
