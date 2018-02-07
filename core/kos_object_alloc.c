@@ -184,14 +184,14 @@ static void *_alloc_huge_object(KOS_FRAME            frame,
                                 uint32_t             size)
 {
     KOS_OBJ_HEADER *hdr;
-    void          **ptr = (void **)_KOS_malloc(size + sizeof(void *));
+    void          **ptr = (void **)_KOS_malloc(size + 2 * sizeof(void *));
 
     if ( ! ptr) {
         KOS_raise_exception(frame, frame->allocator->str_oom_id);
         return 0;
     }
 
-    hdr = (KOS_OBJ_HEADER *)(ptr + 1);
+    hdr = (KOS_OBJ_HEADER *)(ptr + 2);
     assert( ! ((uintptr_t)hdr & 7U));
 
     hdr->type       = (uint8_t)object_type;

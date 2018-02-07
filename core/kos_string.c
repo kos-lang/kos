@@ -1181,8 +1181,8 @@ int KOS_string_scan(KOS_FRAME              frame,
 
     /* TODO Optimize */
 
-    text_elem_size    = _KOS_get_string_elem_size(OBJPTR(STRING, obj_id_text));
-    pattern_elem_size = _KOS_get_string_elem_size(OBJPTR(STRING, obj_id_pattern));
+    text_elem_size    = (uint8_t)_KOS_get_string_elem_size(OBJPTR(STRING, obj_id_text));
+    pattern_elem_size = (uint8_t)_KOS_get_string_elem_size(OBJPTR(STRING, obj_id_pattern));
 
     if ( ! reverse && include && pattern_len == 1
         && text_elem_size    == KOS_STRING_ELEM_8
