@@ -22,7 +22,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #pragma warning( push )
-#pragma warning( disable : 4255 4668 5039 )
+#pragma warning( disable : 4255 4668 )
 #include <windows.h>
 #pragma warning( pop )
 

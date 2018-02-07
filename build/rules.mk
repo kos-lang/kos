@@ -100,6 +100,7 @@ ifeq ($(UNAME), Windows)
     CFLAGS += -wd4987 # nonstandard extension used (in MS headers)
     CFLAGS += -wd5026 # move constructor was implicitly defined as deleted
     CFLAGS += -wd5027 # move assignment operator was implicitly defined as deleted
+    CFLAGS += -wd5039 # pointer or reference to potentially throwing function passed to extern C function under -EHc
 
     CONFIG_GCOV := 0
 else
