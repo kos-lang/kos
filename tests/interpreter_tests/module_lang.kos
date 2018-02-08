@@ -231,6 +231,9 @@ do {
     assert 18 .hex()  == "0x12"
     assert (-1).hex() == "0xffffffffffffffff"
     assert 0x7fffffffffffffff .hex() == "0x7fffffffffffffff"
+    assert 0x781000000 .hex() == "0x781000000"
+    assert 0xfedcba .hex() == "0xfedcba"
+    assert 0x9876543210 .hex() == "0x9876543210"
 
     expect_fail(()=>(1.2.hex()))
 }
