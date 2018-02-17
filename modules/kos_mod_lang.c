@@ -986,6 +986,7 @@ static KOS_OBJ_ID _buffer_constructor(KOS_FRAME  frame,
                         if (size >= capacity) {
                             capacity *= 2;
                             TRY(KOS_buffer_resize(frame, buffer, capacity));
+                            data = KOS_buffer_data(buffer) + size;
                         }
 
                         *(data++) = (uint8_t)(uint64_t)value;
