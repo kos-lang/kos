@@ -118,18 +118,17 @@ fun iproduct(args...)
         return
     }
 
-    const step = [] # TODO: array(0, dim)
+    const step = [0].repeat(dim)
 
     for var i = 0; i < dim; i += 1 {
         if args[i] <= 0 {
             return
         }
-        step.push(0) # TODO remove
     }
 
     loop {
         // Make a copy to prevent fiddling outside of the function
-        yield array(step)
+        yield [step...]
 
         for var i = 0; i < dim; i += 1 {
             const next = step[i] + 1

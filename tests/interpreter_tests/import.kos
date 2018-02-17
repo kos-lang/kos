@@ -23,7 +23,7 @@ import lang.array
 import lang.range
 
 do {
-    const a = array(range(10))
+    const a = array(range(10)...)
 
     assert typeof a == "array"
     assert a.size == 10

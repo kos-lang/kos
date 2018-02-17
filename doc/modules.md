@@ -541,32 +541,11 @@ Examples:
 array()
 -------
 
-    array(size = 0)
-    array(args...)
+    array([element, ...])
 
 Array type constructor.
 
-The first variant constructs an array of the specified size.  `size` defaults
-to 0, in which case the result is equivalent to empty array literal `[]`.
-If size is greater than 0, the array is filled with `void` values.
-
-The second variant constructs an array from one or more non-numeric objects.
-Each of these input arguments is converted to an array and the resulting
-arrays are concatenated, producing the final array, which is returned
-by the constructor.  The following input types are supported:
-
- * array    - An array is simply concatenated with other input arguments without
-              any transformation.
-              This can be used e.g. to make a shallow copy of an existing
-              array or to concatenate two arrays.
- * string   - An array is produced containing individual characters of the
-              input string.  The array's elements are strings of size 1.
- * buffer   - A buffer is converted into an array containing individual
-              elements of the buffer.
- * function - If the function is an iterator (a primed generator), subsequent
-              elements are obtained from it and added to the array.
-              For non-iterator functions an exception is thrown.
- * object   - TODO
+Creates an array from arguments.
 
 The prototype of `array.prototype` is `object.prototype`.
 
@@ -574,13 +553,13 @@ Examples:
 
     > array()
     []
-    > array(5)
-    [void, void, void, void, void]
+    > array(1, 2, 3)
+    [1, 2, 3]
     > array("hello")
-    ["h", "e", "l", "l", "o"]
-    > array(range(5))
+    ["hello"]
+    > array(range(5)...)
     [0, 1, 2, 3, 4]
-    > array(shallow({one: 1, two: 2, three: 3}))
+    > array(shallow({one: 1, two: 2, three: 3})...)
     [["one", 1], ["two", 2], ["three", 3]]
 
 array.prototype.fill()
@@ -1308,7 +1287,7 @@ The order of the elements yielded is unspecified.
 
 Example:
 
-    > deep({x:0, y:1}) -> array
+    > [ deep({x:0, y:1}) ... ]
     [["any", <function>], ["all", <function>], ["filter", <function>],
      ["count", <function>], ["reduce", <function>], ["iterator", <function>],
      ["map", <function>], ["y", 1], ["x", 0]]
@@ -2081,7 +2060,7 @@ The order of the elements yielded is unspecified.
 
 Example:
 
-    > shallow({x:0, y:1}) -> array
+    > [ shallow({x:0, y:1}) ... ]
     [["y", 1], ["x", 0]]
 
 sort()

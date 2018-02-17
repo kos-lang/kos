@@ -271,7 +271,7 @@ do {
     }
 
     with const f = file.open(name, file.ro) {
-        const a = f.read_lines(true) -> lang.array
+        const a = [f.read_lines(true)...]
         assert a.size == 2
         assert a[0]   == "xy\r\n"
         assert a[1]   == "z\xFF\n"
@@ -288,7 +288,7 @@ do {
         const lines = [ "ab\r", "cd\r\n", "ef\n", "g" ]
         for const gran in [1, 2, 3, 4, 5] {
             for const keep_ends in [false, true] {
-                const a = file.read_lines(name, keep_ends, gran) -> lang.array
+                const a = [file.read_lines(name, keep_ends, gran)...]
                 assert a.size == lines.size
                 for const i in lang.range(a.size) {
                     const expected = keep_ends ? lines[i] : lines[i].strip()

@@ -319,7 +319,7 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
             }
         }
 
-        return this["insert_array"](begin, end, array(iterator))
+        return this["insert_array"](begin, end, [iterator...])
     }
 }
 
@@ -1501,7 +1501,8 @@ do {
     fun reverse
     {
         var   dst = this.size
-        const obj = typeof this == "buffer" ? buffer(dst) : array(dst)
+        const obj = typeof this == "buffer" ? buffer() : array()
+        obj.resize(dst)
         for var src = 0; dst; src += 1 {
             dst -= 1
             obj[dst] = this[src]
@@ -1556,7 +1557,8 @@ array.prototype.repeat = fun(num)
     assert num >= 0
     const old_size  = this.size
     const new_size  = old_size * num
-    const new_array = array(new_size)
+    const new_array = []
+    new_array.resize(new_size)
     for var i = 0; i < new_size; i += old_size {
         new_array.insert_array(i, i + old_size, this)
     }
@@ -1687,7 +1689,7 @@ fun sort(compare = (x, y) => (x < y), args...)
 
     fun sort(iterable)
     {
-        const a = array(iterable.iterator())
+        const a = array(iterable.iterator()...)
         if ! a.size {
             return a
         }

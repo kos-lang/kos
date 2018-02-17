@@ -98,7 +98,7 @@ create_docs.prototype.scan_file = fun(filename, f)
     }
 
     for var comment in comments {
-        comment = array(comment.split_lines())
+        comment = [comment.split_lines()...]
 
         remove_indentation(comment)
 
@@ -110,7 +110,7 @@ create_docs.prototype.scan_file = fun(filename, f)
             continue
         }
 
-        const loc = array(comment[0].split())
+        const loc = [comment[0].split()...]
 
         if loc.size < 2 {
             continue
