@@ -109,7 +109,7 @@ This program prints the first 1000 prime numbers:
             const idx = value >> 1
 
             # Yield this number as prime if it hasn't been sieved-out
-            if ( ! sieve[idx]) {
+            if ! sieve[idx] {
 
                 yield value
 
