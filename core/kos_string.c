@@ -659,7 +659,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
                     if (new_str)
                         memcpy((void *)_KOS_get_string_buffer(new_str), buf, new_len << elem_size);
                 }
-                else if ( ! (str->header.flags & KOS_STRING_PTR))
+                else if ( ! (str->header.flags & ~KOS_STRING_ELEM_MASK))
                     new_str = OBJPTR(STRING, KOS_new_const_string(frame, buf, new_len, elem_size));
                 else {
 
