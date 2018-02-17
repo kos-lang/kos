@@ -969,6 +969,8 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             /* fall through */
         case NT_PROPERTY:
             /* fall through */
+        case NT_EXPAND:
+            /* fall through */
         case NT_EXPRESSION_LIST:
             /* fall through */
         case NT_SWITCH:

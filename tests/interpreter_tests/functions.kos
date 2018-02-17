@@ -1300,6 +1300,128 @@ do {
     assert add(-4, 4) == 1
 }
 
+# expanded arguments
+do {
+    fun gen1
+    {
+        yield "a"
+        yield 10.5
+    }
+    fun gen2(x)
+    {
+        for var i = 0; i < x; i += 1 {
+            yield i
+        }
+    }
+    fun yield_args(args...)
+    {
+        for const v in args {
+            yield v
+        }
+    }
+    do {
+        const a = [1, 2, 3]
+        const it = yield_args(8, a..., gen1(), gen1()..., typeof void ..., gen2(3)...)
+        assert it() == 8
+        assert it() == 1
+        assert it() == 2
+        assert it() == 3
+            const f = it()
+            assert typeof f == "function"
+            assert f() == "a"
+            assert f() == 10.5
+            expect_fail(f)
+        assert it() == "a"
+        assert it() == 10.5
+        assert it() == "v"
+        assert it() == "o"
+        assert it() == "i"
+        assert it() == "d"
+        assert it() == 0
+        assert it() == 1
+        assert it() == 2
+        expect_fail(it)
+    }
+}
+
+# expand args and return array
+do {
+    fun return_args(a, b, c, d...)
+    {
+        return [a, d..., b, c]
+    }
+    do {
+        const a = return_args(1, "str"..., 2)
+        assert typeof a == "array"
+        assert a.size == 5
+        assert a[0] == 1
+        assert a[1] == "r"
+        assert a[2] == 2
+        assert a[3] == "s"
+        assert a[4] == "t"
+    }
+}
+
+# expand args multiple times
+do {
+    fun invoke_aba(f, a, b)
+    {
+        return f(a..., b..., a...)
+    }
+
+    fun plus_1(a...)
+    {
+        return a.map(x => (x+1))
+    }
+
+    const it = invoke_aba(plus_1, [1, 5], [10, 20])
+    assert it() == 2
+    assert it() == 6
+    assert it() == 11
+    assert it() == 21
+    assert it() == 2
+    assert it() == 6
+    expect_fail(it)
+}
+
+# expand generator into array
+do {
+    fun gen(a, b)
+    {
+        for var i = a; i < b; i += 1 {
+            yield i
+        }
+    }
+
+    const a = [ gen(5, 8) ... ]
+    assert typeof a == "array"
+    assert a.size == 3
+    assert a[0] == 5
+    assert a[1] == 6
+    assert a[2] == 7
+
+    const b = [ gen(5, 5) ... ]
+    assert typeof b == "array"
+    assert b.size == 0
+
+    const c = [ gen, gen(1, 2) ]
+    assert typeof c == "array"
+    assert c.size == 2
+    assert c[0] == gen
+    assert typeof c[1] == "function"
+    assert c[1]() == 1
+    expect_fail(c[1])
+
+    const gen_d = gen(2, 5)
+    const d = [ gen_d..., gen_d..., gen_d..., 0, gen_d... ]
+    assert typeof d == "array"
+    assert d.size == 4
+    assert d[0] == 2
+    assert d[1] == 3
+    assert d[2] == 4
+    assert d[3] == 0
+}
+
 # set prototype on constructor
 do {
     constructor c1

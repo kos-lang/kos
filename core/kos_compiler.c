@@ -2648,30 +2648,58 @@ static int _is_var_used(struct _KOS_COMP_UNIT      *program,
     return 0;
 }
 
+static int _count_non_expanded_siblings(const struct _KOS_AST_NODE *node)
+{
+    int count = 0;
+
+    while (node && node->type != NT_EXPAND) {
+        ++count;
+        node = node->next;
+    }
+
+    return count;
+}
+
 static int _gen_array(struct _KOS_COMP_UNIT      *program,
                       const struct _KOS_AST_NODE *node,
                       struct _KOS_REG           **reg)
 {
     int       error;
     int       i;
-    const int num_elems = _count_siblings(node);
+    const int num_fixed = _count_non_expanded_siblings(node);
 
     if (_is_var_used(program, node, *reg))
         *reg = 0;
 
     TRY(_gen_reg(program, reg));
-    if (num_elems < 256)
-        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, (*reg)->reg, num_elems));
+    if (num_fixed < 256)
+        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, (*reg)->reg, num_fixed));
     else
-        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY, (*reg)->reg, num_elems));
+        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY, (*reg)->reg, num_fixed));
 
     for (i = 0; node; node = node->next, ++i) {
 
-        struct _KOS_REG *arg = 0;
-        TRY(_visit_node(program, node, &arg));
+        struct _KOS_REG *arg    = 0;
+        const int        expand = node->type == NT_EXPAND ? 1 : 0;
+
+        if (expand) {
+            assert(node->children);
+            assert( ! node->children->next);
+            assert(node->children->type != NT_EXPAND);
+            assert(i >= num_fixed);
+            TRY(_visit_node(program, node->children, &arg));
+        }
+        else
+            TRY(_visit_node(program, node, &arg));
+
         assert(arg);
 
-        TRY(_gen_instr3(program, INSTR_SET_ELEM, (*reg)->reg, i, arg->reg));
+        if (i < num_fixed)
+            TRY(_gen_instr3(program, INSTR_SET_ELEM, (*reg)->reg, i, arg->reg));
+        else if (expand)
+            TRY(_gen_instr2(program, INSTR_PUSH_EX, (*reg)->reg, arg->reg));
+        else
+            TRY(_gen_instr2(program, INSTR_PUSH, (*reg)->reg, arg->reg));
 
         _free_reg(program, arg);
     }
