@@ -1189,6 +1189,10 @@ do {
     assert lang.generator instanceof lang.constructor
     assert ! (lang.generator instanceof lang.generator)
 
+    expect_fail(lang.constructor)
+    expect_fail(lang.generator)
+    expect_fail(lang.generator_end)
+
     fun regular_func
     {
     }
@@ -2232,6 +2236,8 @@ do {
 # lang.thread
 
 do {
+    expect_fail(lang.thread)
+
     const o = { t1: 0, t2: 0, done: false }
 
     fun thread1
