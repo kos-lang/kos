@@ -78,6 +78,10 @@ int KOS_print_to_cstr_vec(KOS_FRAME           frame,
                           const char         *sep,
                           unsigned            sep_len);
 
+int KOS_array_push_expand(KOS_FRAME  frame,
+                          KOS_OBJ_ID array,
+                          KOS_OBJ_ID value);
+
 #ifdef __cplusplus
 }
 #endif

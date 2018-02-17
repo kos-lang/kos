@@ -44,6 +44,7 @@ static const char str_buffer_close[]       = ">";
 static const char str_buffer_open[]        = "<";
 static const char str_empty_array[]        = "[]";
 static const char str_empty_buffer[]       = "<>";
+static const char str_err_cannot_expand[]  = "cannot expand object";
 static const char str_err_invalid_string[] = "invalid string";
 static const char str_err_not_array[]      = "object is not an array";
 static const char str_err_not_number[]     = "object is not a number";
@@ -759,5 +760,91 @@ _error:
         error = KOS_ERROR_EXCEPTION;
     }
 
+    return error;
+}
+
+int KOS_array_push_expand(KOS_FRAME  frame,
+                          KOS_OBJ_ID array,
+                          KOS_OBJ_ID value)
+{
+    int      error = KOS_SUCCESS;
+    uint32_t cur_size;
+
+    if (GET_OBJ_TYPE(array) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
+
+    cur_size = KOS_get_array_size(array);
+
+    switch (GET_OBJ_TYPE(value)) {
+
+        case OBJ_ARRAY:
+            TRY(KOS_array_insert(frame, array, cur_size, cur_size,
+                                 value, 0, (int32_t)KOS_get_array_size(value)));
+            break;
+
+        case OBJ_STRING: {
+            const uint32_t len = KOS_get_string_length(value);
+            uint32_t       i;
+
+            TRY(KOS_array_resize(frame, array, cur_size + len));
+
+            for (i = 0; i < len; i++) {
+                KOS_OBJ_ID ch = KOS_string_get_char(frame, value, (int)i);
+                TRY_OBJID(ch);
+                TRY(KOS_array_write(frame, array, (int)(cur_size + i), ch));
+            }
+            break;
+        }
+
+        case OBJ_BUFFER: {
+            const uint32_t size = KOS_get_buffer_size(value);
+            uint32_t       i;
+            uint8_t       *buf  = 0;
+
+            if (size) {
+                buf = KOS_buffer_data(value);
+                assert(buf);
+            }
+
+            TRY(KOS_array_resize(frame, array, cur_size + size));
+
+            for (i = 0; i < size; i++) {
+                const KOS_OBJ_ID byte = TO_SMALL_INT((int)buf[i]);
+                TRY(KOS_array_write(frame, array, (int)(cur_size + i), byte));
+            }
+            break;
+        }
+
+        case OBJ_FUNCTION: {
+            enum _KOS_FUNCTION_STATE state =
+                    (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, value)->state;
+
+            if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE)
+                RAISE_EXCEPTION(str_err_cannot_expand);
+
+            if (state != KOS_GEN_DONE) {
+                KOS_OBJ_ID void_obj = KOS_new_void(frame);
+                KOS_OBJ_ID gen_args = KOS_new_array(frame, 0);
+                TRY_OBJID(gen_args);
+
+                for (;;) {
+                    KOS_OBJ_ID ret = KOS_call_function(frame, value, void_obj, gen_args);
+                    if (IS_BAD_PTR(ret)) /* end of iterator */
+                        break;
+                    TRY(KOS_array_push(frame, array, ret, 0));
+                }
+            }
+            break;
+        }
+
+        case OBJ_OBJECT:
+            /* TODO keys */
+            break;
+
+        default:
+            RAISE_EXCEPTION(str_err_cannot_expand);
+    }
+
+_error:
     return error;
 }

@@ -41,7 +41,6 @@ static const char str_builtin[]                       = "<builtin>";
 static const char str_err_already_joined[]            = "thread already joined";
 static const char str_err_bad_number[]                = "number parse failed";
 static const char str_err_bad_pack_value[]            = "invalid value type for pack format";
-static const char str_err_cannot_convert_to_array[]   = "unsupported type passed to array constructor";
 static const char str_err_cannot_convert_to_buffer[]  = "unsupported type passed to buffer constructor";
 static const char str_err_cannot_convert_to_string[]  = "unsupported type passed to string constructor";
 static const char str_err_cannot_override_prototype[] = "cannot override prototype";
@@ -840,7 +839,6 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
                                      KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
-    KOS_OBJ_ID     void_obj = KOS_new_void(frame);
     KOS_OBJ_ID     array    = KOS_new_array(frame, 0);
     const uint32_t num_args = KOS_get_array_size(args_obj);
     uint32_t       i_arg;
@@ -848,8 +846,6 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
     TRY_OBJID(array);
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
-
-        const uint32_t cur_size = KOS_get_array_size(array);
 
         KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, (int)i_arg);
         TRY_OBJID(arg);
@@ -867,77 +863,7 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
             continue;
         }
 
-        switch (GET_OBJ_TYPE(arg)) {
-
-            case OBJ_ARRAY:
-                TRY(KOS_array_insert(frame, array, cur_size, cur_size,
-                                     arg, 0, (int32_t)KOS_get_array_size(arg)));
-                break;
-
-            case OBJ_STRING: {
-                const uint32_t len = KOS_get_string_length(arg);
-                uint32_t       i;
-
-                TRY(KOS_array_resize(frame, array, cur_size + len));
-
-                for (i = 0; i < len; i++) {
-                    KOS_OBJ_ID ch = KOS_string_get_char(frame, arg, (int)i);
-                    TRY_OBJID(ch);
-                    TRY(KOS_array_write(frame, array, (int)(cur_size + i), ch));
-                }
-                break;
-            }
-
-            case OBJ_BUFFER: {
-                const uint32_t size = KOS_get_buffer_size(arg);
-                uint32_t       i;
-                uint8_t       *buf  = 0;
-
-                if (size) {
-                    buf = KOS_buffer_data(arg);
-                    assert(buf);
-                }
-
-                TRY(KOS_array_resize(frame, array, cur_size + size));
-
-                for (i = 0; i < size; i++) {
-                    const KOS_OBJ_ID byte = TO_SMALL_INT((int)buf[i]);
-                    TRY(KOS_array_write(frame, array, (int)(cur_size + i), byte));
-                }
-                break;
-            }
-
-            case OBJ_FUNCTION: {
-                enum _KOS_FUNCTION_STATE state =
-                        (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, arg)->state;
-
-                if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE) {
-                    KOS_raise_exception_cstring(frame, str_err_cannot_convert_to_array);
-                    return KOS_BADPTR;
-                }
-
-                if (state != KOS_GEN_DONE) {
-                    KOS_OBJ_ID gen_args = KOS_new_array(frame, 0);
-                    TRY_OBJID(gen_args);
-
-                    for (;;) {
-                        KOS_OBJ_ID ret = KOS_call_function(frame, arg, void_obj, gen_args);
-                        if (IS_BAD_PTR(ret)) /* end of iterator */
-                            break;
-                        TRY(KOS_array_push(frame, array, ret, 0));
-                    }
-                }
-                break;
-            }
-
-            case OBJ_OBJECT:
-                /* TODO keys */
-                break;
-
-            default:
-                KOS_raise_exception_cstring(frame, str_err_cannot_convert_to_array);
-                return KOS_BADPTR;
-        }
+        TRY(KOS_array_push_expand(frame, array, arg));
     }
 
 _error:
