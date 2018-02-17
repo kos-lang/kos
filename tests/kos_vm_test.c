@@ -327,6 +327,83 @@ int main(void)
     }
 
     /************************************************************************/
+    /* PUSH */
+    {
+        static const char prop5[]  = "prop5";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop5);
+        KOS_OBJ_ID        ret;
+        KOS_OBJ_ID        val;
+        const uint8_t code[] = {
+            INSTR_LOAD_ARRAY8,  0, 0,
+            INSTR_LOAD_ARRAY8,  1, 1,
+            INSTR_LOAD_INT8,    2, 10,
+            INSTR_SET_ELEM,     1, IMM32(0), 2,
+            INSTR_PUSH,         1, 0,
+            INSTR_PUSH,         1, 1,
+            INSTR_LOAD_STR,     2, IMM32(0)/*"prop5"*/,
+            INSTR_PUSH,         1, 2,
+            INSTR_RETURN,       0, 1
+        };
+
+        ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop);
+        TEST( ! IS_BAD_PTR(ret));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(ret) == 4);
+        TEST(KOS_array_read(frame, ret, 0) == TO_SMALL_INT(10));
+
+        val = KOS_array_read(frame, ret, 1);
+        TEST( ! IS_BAD_PTR(val));
+        TEST(GET_OBJ_TYPE(val) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(val) == 0);
+
+        TEST(KOS_array_read(frame, ret, 2) == ret);
+        TEST(KOS_array_read(frame, ret, 3) == str_prop);
+    }
+
+    /************************************************************************/
+    /* PUSH.EX */
+    {
+        static const char prop5[]  = "01";
+        KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop5);
+        KOS_OBJ_ID        ret;
+        KOS_OBJ_ID        val;
+        const uint8_t code[] = {
+            INSTR_LOAD_ARRAY8,  0, 0,
+            INSTR_LOAD_ARRAY8,  1, 1,
+            INSTR_LOAD_INT8,    2, 10,
+            INSTR_SET_ELEM,     1, IMM32(0), 2,
+            INSTR_PUSH_EX,      1, 0,
+            INSTR_PUSH_EX,      1, 1,
+            INSTR_LOAD_STR,     2, IMM32(0)/*"01"*/,
+            INSTR_PUSH_EX,      1, 2,
+            INSTR_RETURN,       0, 1
+        };
+
+        ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop);
+        TEST( ! IS_BAD_PTR(ret));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(ret) == 4);
+        TEST(KOS_array_read(frame, ret, 0) == TO_SMALL_INT(10));
+        TEST(KOS_array_read(frame, ret, 1) == TO_SMALL_INT(10));
+
+        val = KOS_array_read(frame, ret, 2);
+        TEST( ! IS_BAD_PTR(val));
+        TEST(GET_OBJ_TYPE(val) == OBJ_STRING);
+        TEST(KOS_get_string_length(val) == 1);
+        TEST(KOS_string_get_char_code(frame, val, 0) == 0x30);
+
+        val = KOS_array_read(frame, ret, 3);
+        TEST( ! IS_BAD_PTR(val));
+        TEST(GET_OBJ_TYPE(val) == OBJ_STRING);
+        TEST(KOS_get_string_length(val) == 1);
+        TEST(KOS_string_get_char_code(frame, val, 0) == 0x31);
+    }
+
+    /************************************************************************/
     /* DEL.PROP */
     {
         static const char prop6[]  = "prop6";

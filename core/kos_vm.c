@@ -27,6 +27,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
 #include "kos_object_internal.h"
@@ -1428,6 +1429,34 @@ static int _exec_function(KOS_FRAME frame)
                 error = KOS_array_set_defaults(frame, regs[rdest], idx, regs[rsrc]);
 
                 delta = 4;
+                break;
+            }
+
+            case INSTR_PUSH: { /* <r.dest>, <r.src> */
+                const unsigned rsrc = bytecode[2];
+
+                rdest = bytecode[1];
+
+                assert(rdest < regs_array->size);
+                assert(rsrc  < regs_array->size);
+
+                error = KOS_array_push(frame, regs[rdest], regs[rsrc], 0);
+
+                delta = 3;
+                break;
+            }
+
+            case INSTR_PUSH_EX: { /* <r.dest>, <r.src> */
+                const unsigned rsrc = bytecode[2];
+
+                rdest = bytecode[1];
+
+                assert(rdest < regs_array->size);
+                assert(rsrc  < regs_array->size);
+
+                error = KOS_array_push_expand(frame, regs[rdest], regs[rsrc]);
+
+                delta = 3;
                 break;
             }
 

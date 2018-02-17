@@ -61,7 +61,9 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_JUMP_NOT_COND:       /* fall through */
         case INSTR_BIND_SELF:           /* fall through */
         case INSTR_RETURN:              /* fall through */
-        case INSTR_CATCH:
+        case INSTR_CATCH:               /* fall through */
+        case INSTR_PUSH:                /* fall through */
+        case INSTR_PUSH_EX:
             return 2;
 
         case INSTR_LOAD_INT64:          /* fall through */
@@ -340,6 +342,8 @@ void _KOS_disassemble(const char                          *filename,
         "SET.PROP",
         "SET.GLOBAL",
         "SET.DEFAULTS",
+        "PUSH",
+        "PUSH.EX",
         "DEL",
         "DEL.PROP",
         "ADD",

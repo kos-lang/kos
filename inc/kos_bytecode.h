@@ -96,6 +96,13 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* SET.DEFAULTS <r.dest>, <uint8>, <r.src> */
     INSTR_SET_DEFAULTS,
 
+    /* PUSH <r.dest>, <r.src> */
+    /* Append r.src to array in r.dest */
+    INSTR_PUSH,
+    /* PUSH.EX <r.dest>, <r.src> */
+    /* Expand elements from r.src and append them to array in r.dest */
+    INSTR_PUSH_EX,
+
     /* DEL <r.dest>, <r.prop> */
     INSTR_DEL,
     /* DEL.PROP <r.dest>, <str.idx.int32> */

@@ -308,6 +308,8 @@ static int _test_instr(KOS_CONTEXT         *ctx,
         if (instr != INSTR_SET      &&
             instr != INSTR_SET_ELEM &&
             instr != INSTR_SET_PROP &&
+            instr != INSTR_PUSH     &&
+            instr != INSTR_PUSH_EX  &&
             instr != INSTR_DEL      &&
             instr != INSTR_DEL_PROP)
 
@@ -716,6 +718,26 @@ int main(void)
     TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_STR1                            }, { V_IMM,   0                        } } END
     TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
     TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
+
+    /*========================================================================*/
+    /* PUSH */
+    TEST_INSTR INSTR_PUSH,       { V_EXCEPT                            }, { { V_VOID                            }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH,       { V_EXCEPT                            }, { { V_TRUE                            }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH,       { V_EXCEPT                            }, { { V_INT32, 0,                       }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH,       { V_EXCEPT                            }, { { V_STR1                            }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH,       { V_EXCEPT                            }, { { V_OBJECT                          }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH,       { V_OK                                }, { { V_ARRAY, 0                        }, { V_INT32, 1                        } } END
+
+    /*========================================================================*/
+    /* PUSH.EX */
+    TEST_INSTR INSTR_PUSH_EX,    { V_EXCEPT                            }, { { V_VOID                            }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH_EX,    { V_EXCEPT                            }, { { V_TRUE                            }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH_EX,    { V_EXCEPT                            }, { { V_INT32, 0,                       }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH_EX,    { V_EXCEPT                            }, { { V_STR1                            }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH_EX,    { V_EXCEPT                            }, { { V_OBJECT                          }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH_EX,    { V_EXCEPT                            }, { { V_ARRAY, 0                        }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_PUSH_EX,    { V_OK                                }, { { V_ARRAY, 0                        }, { V_ARRAY, 0                        } } END
+    TEST_INSTR INSTR_PUSH_EX,    { V_OK                                }, { { V_ARRAY, 0                        }, { V_STR0                            } } END
 
     /*========================================================================*/
     /* TYPE */
