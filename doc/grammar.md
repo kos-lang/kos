@@ -1139,7 +1139,7 @@ part of the outermost `MemberExpression`.
 
     ArgumentList ::= Argument ( "," Argument )*
 
-    Argument ::= RHSExpression
+    Argument ::= RHSExpression [ "..." ]
 
     Refinement ::= ( "[" RHSExpression "]" )
                  | ( "[" [ RHSExpression ] ":" [ RHSExpression ] "]" )
@@ -1168,7 +1168,9 @@ part of the outermost `MemberExpression`.
 
     Identifier ::= IDENTIFIER_NAME
 
-    ArrayLiteral ::= "[" [ RHSExpression ( "," RHSExpression )* [ "," ] ] "]"
+    ArrayLiteral ::= "[" [ ArrayElement ( "," ArrayElement )* [ "," ] ] "]"
+
+    ArrayElement ::= RHSExpression [ "..." ]
 
     ObjectLiteral ::= "{" [ PropertyList ] "}"
 

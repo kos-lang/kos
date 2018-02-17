@@ -558,10 +558,22 @@ static int _array_literal(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret
 
         TRY(_right_hand_side_expr(parser, &node));
 
+        TRY(_next_token(parser));
+
+        if (parser->token.op == OT_MORE) {
+
+            struct _KOS_AST_NODE *expanded = node;
+
+            node = 0;
+            TRY(_new_node(parser, &node, NT_EXPAND));
+
+            _ast_push(node, expanded);
+
+            TRY(_next_token(parser));
+        }
+
         _ast_push(*ret, node);
         node = 0;
-
-        TRY(_next_token(parser));
 
         if (parser->token.sep == ST_COMMA)
             TRY(_next_token(parser));
@@ -1303,10 +1315,22 @@ static int _invocation(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
             TRY(_right_hand_side_expr(parser, &node));
 
+            TRY(_next_token(parser));
+
+            if (parser->token.op == OT_MORE) {
+
+                struct _KOS_AST_NODE *expanded = node;
+
+                node = 0;
+                TRY(_new_node(parser, &node, NT_EXPAND));
+
+                _ast_push(node, expanded);
+
+                TRY(_next_token(parser));
+            }
+
             _ast_push(*ret, node);
             node = 0;
-
-            TRY(_next_token(parser));
 
             if (parser->token.sep == ST_PAREN_CLOSE)
                 break;

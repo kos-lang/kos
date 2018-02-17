@@ -57,6 +57,7 @@ enum _KOS_NODE_TYPE {
     NT_LEFT_HAND_SIDE,      /* first argument to assignment */
     NT_PARAMETERS,          /* function arguments list */
     NT_ELLIPSIS,            /* last, unbounded function argument */
+    NT_EXPAND,              /* expanded argument or array element */
     NT_PROPERTY,            /* property definition in object literal */
     NT_IN,                  /* the 'in' part of the for-in loop */
     NT_EXPRESSION_LIST,     /* pre-loop or post-loop expressions in for loop */

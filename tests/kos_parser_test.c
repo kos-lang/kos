@@ -60,6 +60,7 @@ static const char *const node_types[] = {
     "left_hand_side",
     "parameters",
     "ellipsis",
+    "expand",
     "property",
     "in",
     "expression_list",
