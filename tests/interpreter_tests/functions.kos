@@ -1384,6 +1384,17 @@ do {
     expect_fail(it)
 }
 
+# cannot expand these
+do {
+    fun f { }
+    expect_fail(() => (f(1...)))
+    expect_fail(() => (f(1.5...)))
+    expect_fail(() => (f(false...)))
+    expect_fail(() => (f(void...)))
+    expect_fail(() => (f({}...)))
+    expect_fail(() => (f(fun{}...)))
+}
+
 # throw exception during function argument expansion
 do {
     var value     = void

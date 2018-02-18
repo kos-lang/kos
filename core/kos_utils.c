@@ -840,10 +840,6 @@ int KOS_array_push_expand(KOS_FRAME  frame,
             break;
         }
 
-        case OBJ_OBJECT:
-            /* TODO keys */
-            break;
-
         default:
             RAISE_EXCEPTION(str_err_cannot_expand);
     }
