@@ -828,9 +828,12 @@ int KOS_array_push_expand(KOS_FRAME  frame,
                 TRY_OBJID(gen_args);
 
                 for (;;) {
-                    KOS_OBJ_ID ret = KOS_call_function(frame, value, void_obj, gen_args);
-                    if (IS_BAD_PTR(ret)) /* end of iterator */
+                    KOS_OBJ_ID ret = KOS_call_generator(frame, value, void_obj, gen_args);
+                    if (IS_BAD_PTR(ret)) { /* end of iterator */
+                        if (KOS_is_exception_pending(frame))
+                            error = KOS_ERROR_EXCEPTION;
                         break;
+                    }
                     TRY(KOS_array_push(frame, array, ret, 0));
                 }
             }

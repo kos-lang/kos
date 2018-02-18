@@ -974,9 +974,12 @@ static KOS_OBJ_ID _buffer_constructor(KOS_FRAME  frame,
                     for (;;) {
                         int64_t value;
 
-                        KOS_OBJ_ID ret = KOS_call_function(frame, arg, void_obj, gen_args);
-                        if (IS_BAD_PTR(ret)) /* end of iterator */
+                        KOS_OBJ_ID ret = KOS_call_generator(frame, arg, void_obj, gen_args);
+                        if (IS_BAD_PTR(ret)) { /* end of iterator */
+                            if (KOS_is_exception_pending(frame))
+                                RAISE_ERROR(KOS_ERROR_EXCEPTION);
                             break;
+                        }
 
                         TRY(KOS_get_integer(frame, ret, &value));
 

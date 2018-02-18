@@ -207,6 +207,7 @@ KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
 
 enum _KOS_CALL_FLAVOR {
     KOS_CALL_FUNCTION,
+    KOS_CALL_GENERATOR,
     KOS_APPLY_FUNCTION
 };
 
@@ -218,6 +219,9 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
 
 #define KOS_call_function(frame, func_obj, this_obj, args_obj) \
     _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
+
+#define KOS_call_generator(frame, func_obj, this_obj, args_obj) \
+    _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_CALL_GENERATOR)
 
 #define KOS_apply_function(frame, func_obj, this_obj, args_obj) \
     _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)

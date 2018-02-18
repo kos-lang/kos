@@ -758,7 +758,8 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             RAISE_EXCEPTION(str_err_generator_running);
 
         default:
-            assert(state == KOS_GEN_DONE); KOS_raise_generator_end(frame);
+            assert(state == KOS_GEN_DONE);
+            KOS_raise_generator_end(frame);
     }
 
 _error:
@@ -785,7 +786,7 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
 
         if (*state >= KOS_GEN_INIT) {
             if (new_stack_frame->header.yield_reg == KOS_CAN_YIELD) {
-                *state  = KOS_GEN_DONE;
+                *state = KOS_GEN_DONE;
                 func->state = KOS_GEN_DONE;
                 if (instr != INSTR_CALL_GEN)
                     KOS_raise_generator_end(frame);
@@ -800,7 +801,7 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
     }
     else {
         if (*state >= KOS_GEN_INIT) {
-            *state  = KOS_GEN_DONE;
+            *state = KOS_GEN_DONE;
             func->state = KOS_GEN_DONE;
         }
         frame->exception = new_stack_frame->exception;
@@ -1167,8 +1168,10 @@ static int _exec_function(KOS_FRAME frame)
                             error = KOS_ERROR_EXCEPTION;
                         else {
                             value = KOS_call_function(frame, value, src, args);
-                            if (IS_BAD_PTR(value))
+                            if (IS_BAD_PTR(value)) {
+                                assert(KOS_is_exception_pending(frame));
                                 error = KOS_ERROR_EXCEPTION;
+                            }
                         }
                     }
 
@@ -1271,8 +1274,10 @@ static int _exec_function(KOS_FRAME frame)
                             error = KOS_ERROR_EXCEPTION;
                         else {
                             value = KOS_call_function(frame, value, obj, args);
-                            if (IS_BAD_PTR(value))
+                            if (IS_BAD_PTR(value)) {
+                                assert(KOS_is_exception_pending(frame));
                                 error = KOS_ERROR_EXCEPTION;
+                            }
                         }
                     }
 
@@ -1339,8 +1344,10 @@ static int _exec_function(KOS_FRAME frame)
                             error = KOS_array_write(frame, args, 0, value);
                             assert( ! error);
                             value = KOS_call_function(frame, setter, obj, args);
-                            if (IS_BAD_PTR(value))
+                            if (IS_BAD_PTR(value)) {
+                                assert(KOS_is_exception_pending(frame));
                                 error = KOS_ERROR_EXCEPTION;
+                            }
                         }
                     }
                 }
@@ -1407,8 +1414,10 @@ static int _exec_function(KOS_FRAME frame)
                             error = KOS_array_write(frame, args, 0, value);
                             assert( ! error);
                             value = KOS_call_function(frame, setter, obj, args);
-                            if (IS_BAD_PTR(value))
+                            if (IS_BAD_PTR(value)) {
+                                assert(KOS_is_exception_pending(frame));
                                 error = KOS_ERROR_EXCEPTION;
+                            }
                         }
                     }
                 }
@@ -2142,26 +2151,14 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_FRAME new_stack_frame = 0;
 
                 rdest = bytecode[1];
+                rthis = bytecode[3];
+                assert(rthis < regs_array->size);
 
-                switch (instr) {
+                if (instr != INSTR_CALL_GEN)
+                    rargs = bytecode[4];
 
-                    case INSTR_CALL_GEN:
-                        rthis = bytecode[3];
-                        assert(rthis < regs_array->size);
-
-                        this_obj = regs[rthis];
-                        assert( ! IS_BAD_PTR(this_obj));
-                        break;
-
-                    default:
-                        rthis = bytecode[3];
-                        rargs = bytecode[4];
-                        assert(rthis < regs_array->size);
-
-                        this_obj = regs[rthis];
-                        assert( ! IS_BAD_PTR(this_obj));
-                        break;
-                }
+                this_obj = regs[rthis];
+                assert( ! IS_BAD_PTR(this_obj));
 
                 assert(instr != INSTR_TAIL_CALL || rdest <= regs_array->size);
                 assert(rfunc < regs_array->size);
@@ -2411,7 +2408,7 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
 
     func = OBJPTR(FUNCTION, func_obj);
 
-    if (func->state == KOS_CTOR && call_flavor == KOS_CALL_FUNCTION)
+    if (func->state == KOS_CTOR && call_flavor != KOS_APPLY_FUNCTION)
         this_obj = NEW_THIS;
 
     new_stack_frame = _prepare_call(frame, INSTR_CALL, func_obj, &this_obj, args_obj);
@@ -2451,7 +2448,9 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
             assert( ! error || KOS_is_exception_pending(new_stack_frame));
         }
 
-        ret = _finish_call(frame, INSTR_CALL_GEN, func, this_obj, new_stack_frame, &state);
+        ret = _finish_call(frame,
+                           call_flavor == KOS_CALL_GENERATOR ? INSTR_CALL_GEN : INSTR_CALL,
+                           func, this_obj, new_stack_frame, &state);
 
         if (state == KOS_GEN_DONE)
             ret = KOS_BADPTR;
