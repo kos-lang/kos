@@ -1384,6 +1384,33 @@ do {
     expect_fail(it)
 }
 
+# throw exception during function argument expansion
+do {
+    var value     = void
+    var exception = void
+
+    fun set_value
+    {
+        value = 7
+    }
+
+    fun will_throw
+    {
+        yield 23
+        throw 29
+    }
+
+    try {
+        set_value(will_throw()...)
+    }
+    catch const e {
+        exception = e.value
+    }
+
+    assert exception    == 29
+    assert typeof value == "void"
+}
+
 # expand generator into array
 do {
     fun gen(a, b)

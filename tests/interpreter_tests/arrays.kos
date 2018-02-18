@@ -389,6 +389,29 @@ do {
     assert a[5] == 50
 }
 
+# Throw exception during array element expansion
+do {
+    fun will_throw
+    {
+        yield 11
+        throw 13
+        yield 17
+    }
+
+    var a         = void
+    var exception = void
+
+    try {
+        a = [ will_throw()... ]
+    }
+    catch const e {
+        exception = e.value
+    }
+
+    assert exception == 13
+    assert typeof a  == "void"
+}
+
 # Reverse
 do {
     const a = [ 2, true, 1.5, "str" ].reverse()
