@@ -1233,6 +1233,16 @@ do {
     assert typeof constructor_func.set_prototype == "function"
     expect_fail(()=>(regular_func.set_prototype))
     expect_fail(()=>(generator_func.set_prototype))
+
+    assert regular_func.name == "regular_func"
+    var name_from_iter = void
+    for const k, v in lang.deep(regular_func) {
+        if k == "name" {
+            name_from_iter = lang.stringify(v)
+            break
+        }
+    }
+    assert name_from_iter == "regular_func"
 }
 
 do {
