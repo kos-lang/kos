@@ -1463,6 +1463,57 @@ do {
 }
 
 ##############################################################################
+# lang.generator.slice
+
+do {
+    fun primes
+    {
+        for const v in [2, 3, 5, 7, 11, 13, 17, 19] {
+            yield v
+        }
+    }
+
+    const all = [ primes()[:] ... ]
+    assert typeof all == "array"
+    assert all.size   == 8
+    assert all[0]     == 2
+    assert all[1]     == 3
+    assert all[2]     == 5
+    assert all[3]     == 7
+    assert all[4]     == 11
+    assert all[5]     == 13
+    assert all[6]     == 17
+    assert all[7]     == 19
+
+    const some4 = [ primes()[3:7] ... ]
+    assert typeof some4 == "array"
+    assert some4.size   == 4
+    assert some4[0]     == 7
+    assert some4[1]     == 11
+    assert some4[2]     == 13
+    assert some4[3]     == 17
+
+    const somend = [ primes()[5:] ... ]
+    assert typeof somend == "array"
+    assert somend.size   == 3
+    assert somend[0]     == 13
+    assert somend[1]     == 17
+    assert somend[2]     == 19
+
+    const negative1 = primes()[-5:5]
+    assert typeof negative1 == "array"
+    assert negative1.size   == 2
+    assert negative1[0]     == 7
+    assert negative1[1]     == 11
+
+    const negative2 = primes()[:-6]
+    assert typeof negative2 == "array"
+    assert negative2.size   == 2
+    assert negative2[0]     == 2
+    assert negative2[1]     == 3
+}
+
+##############################################################################
 # lang.exception
 
 do {

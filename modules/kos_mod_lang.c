@@ -186,10 +186,13 @@ static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
         assert( ! IS_BAD_PTR(elem.value));
 
         if (GET_OBJ_TYPE(elem.value) == OBJ_DYNAMIC_PROP) {
+            KOS_OBJ_ID args = KOS_new_array(frame, 0);
+            TRY_OBJID(args);
+
             elem.value = KOS_call_function(frame,
                                            OBJPTR(DYNAMIC_PROP, elem.value)->getter,
                                            OBJPTR(OBJECT_WALK, walk)->obj,
-                                           KOS_new_array(frame, 0));
+                                           args);
             TRY_OBJID(elem.value);
         }
 

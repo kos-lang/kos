@@ -48,8 +48,10 @@ static const char str_err_invalid_instruction[] = "invalid instruction";
 static const char str_err_not_callable[]        = "object is not callable";
 static const char str_err_not_function[]        = "object is not a function";
 static const char str_err_not_generator[]       = "function is not a generator";
+static const char str_err_slice_not_function[]  = "slice is not a function";
 static const char str_err_too_few_args[]        = "not enough arguments passed to a function";
 static const char str_err_unsup_operand_types[] = "unsupported operand types";
+static const char str_slice[]                   = "slice";
 static const char str_value[]                   = "value";
 
 #define NEW_THIS (KOS_context_from_frame(frame)->new_this_obj)
@@ -1243,8 +1245,27 @@ static int _exec_function(KOS_FRAME frame)
                         out = KOS_string_slice(frame, src, begin_idx, end_idx);
                     else if (GET_OBJ_TYPE(src) == OBJ_BUFFER)
                         out = KOS_buffer_slice(frame, src, begin_idx, end_idx);
-                    else
+                    else if (GET_OBJ_TYPE(src) == OBJ_ARRAY)
                         out = KOS_array_slice(frame, src, begin_idx, end_idx);
+                    else {
+                        out = KOS_get_property(frame,
+                                               src,
+                                               KOS_context_get_cstring(frame, str_slice));
+                        if (IS_BAD_PTR(out))
+                            error = KOS_ERROR_EXCEPTION;
+                        else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
+                            KOS_raise_exception_cstring(frame, str_err_slice_not_function);
+                        else {
+                            KOS_OBJ_ID args = KOS_new_array(frame, 2);
+                            error = KOS_ERROR_EXCEPTION;
+                            if ( ! IS_BAD_PTR(args))
+                                error = KOS_array_write(frame, args, 0, begin);
+                            if ( ! error)
+                                error = KOS_array_write(frame, args, 1, end);
+                            if ( ! error)
+                                out = KOS_call_function(frame, out, src, args);
+                        }
+                    }
                 }
 
                 delta = 5;
