@@ -2263,8 +2263,8 @@ static int _exec_function(KOS_FRAME frame)
                 if (rargs == ~0U) {
                     args_obj = KOS_new_array(frame, num_args);
                     if ( ! IS_BAD_PTR(args_obj) && num_args)
-                        memcpy(_KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)),
-                               &regs[rarg1],
+                        memcpy((void *)_KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)),
+                               (const void *)&regs[rarg1],
                                num_args * sizeof(KOS_OBJ_ID));
                 }
                 else {

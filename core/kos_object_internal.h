@@ -69,13 +69,6 @@ int _KOS_is_truthy(KOS_OBJ_ID obj_id);
 /* KOS_ARRAY                                                                */
 /*==========================================================================*/
 
-int _KOS_init_array(KOS_FRAME  frame,
-                    KOS_ARRAY *array,
-                    uint32_t   size);
-
-#define KOS_MIN_ARRAY_CAPACITY  4U
-#define KOS_ARRAY_CAPACITY_STEP 1024U
-
 typedef struct _KOS_ARRAY_STORAGE {
     KOS_OBJ_HEADER         header;
     uint32_t               capacity;

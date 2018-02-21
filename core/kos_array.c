@@ -25,6 +25,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_threads.h"
+#include "kos_config.h"
 #include "kos_math.h"
 #include "kos_misc.h"
 #include "kos_object_alloc.h"
@@ -44,7 +45,9 @@ static const char str_err_too_small[]     = "not enough elements to add defaults
 /* CLOSED indicates that an array element has been moved to a new buffer. */
 #define CLOSED    (KOS_context_from_frame(frame)->closed_obj)
 
-#define KOS_buffer_alloc_size(cap) (sizeof(KOS_ARRAY_STORAGE) + ((cap) - 1) * sizeof(KOS_OBJ_ID))
+#define KOS_buffer_alloc_size(cap) (KOS_align_up((uint32_t)sizeof(KOS_ARRAY_STORAGE) \
+                                                   + (uint32_t)(((cap) - 1) * sizeof(KOS_OBJ_ID)), \
+                                                 1U << _KOS_OBJ_ALIGN_BITS))
 
 static void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
                              unsigned                count,
@@ -59,18 +62,17 @@ static void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
 
 static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_FRAME frame, uint32_t capacity)
 {
-    KOS_ARRAY_STORAGE     *buf;
-    const uint32_t max_step = KOS_ARRAY_CAPACITY_STEP / sizeof(KOS_OBJ_ID);
-
-    capacity = KOS_align_up(capacity, max_step);
+    KOS_ARRAY_STORAGE *buf;
+    const uint32_t     buf_alloc_size = KOS_buffer_alloc_size(capacity);
 
     buf = (KOS_ARRAY_STORAGE *)_KOS_alloc_object(frame,
                                                  KOS_ALLOC_DEFAULT,
                                                  OBJ_ARRAY_STORAGE,
-                                                 KOS_buffer_alloc_size(capacity));
+                                                 buf_alloc_size);
 
     if (buf) {
         assert(buf->header.type == OBJ_ARRAY_STORAGE);
+        capacity = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
         buf->capacity = capacity;
         KOS_atomic_write_u32(buf->num_slots_open, capacity);
         KOS_atomic_write_ptr(buf->next,           KOS_BADPTR);
@@ -79,56 +81,61 @@ static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_FRAME frame, uint32_t capacity)
     return buf;
 }
 
-static uint32_t _double_capacity(uint32_t capacity)
-{
-    const uint32_t max_step = KOS_ARRAY_CAPACITY_STEP / sizeof(KOS_OBJ_ID);
-    const uint32_t aligned  = KOS_align_up(capacity + max_step - 1, max_step);
-    return KOS_min(capacity * 2, aligned);
-}
-
-int _KOS_init_array(KOS_FRAME  frame,
-                    KOS_ARRAY *array,
-                    uint32_t   size)
-{
-    int                error = KOS_SUCCESS;
-    KOS_ARRAY_STORAGE *buf;
-    uint32_t           capacity;
-
-    capacity = KOS_max(size, KOS_MIN_ARRAY_CAPACITY);
-
-    KOS_atomic_write_u32(array->size, size);
-
-    if (size) {
-        buf = _alloc_buffer(frame, capacity);
-        KOS_atomic_write_ptr(array->data, OBJID(ARRAY_STORAGE, buf));
-
-        if (buf) {
-            capacity = buf->capacity;
-
-            _atomic_fill_ptr(&buf->buf[0], size, KOS_new_void(frame));
-
-            if (size < capacity)
-                _atomic_fill_ptr(&buf->buf[size], capacity - size, TOMBSTONE);
-        }
-        else
-            error = KOS_ERROR_EXCEPTION;
-    }
-    else
-        KOS_atomic_write_ptr(array->data, KOS_BADPTR);
-
-    return error;
-}
-
 KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
                          uint32_t  size)
 {
-    KOS_ARRAY *array = (KOS_ARRAY *)_KOS_alloc_object(frame,
-                                                      KOS_ALLOC_DEFAULT,
-                                                      OBJ_ARRAY,
-                                                      sizeof(KOS_ARRAY));
+    const uint32_t array_obj_size = KOS_align_up((uint32_t)sizeof(KOS_ARRAY), 1U << _KOS_OBJ_ALIGN_BITS);
+    const uint32_t buf_alloc_size = size ? KOS_buffer_alloc_size(size) : 0;
+    const int      buf_built_in   = array_obj_size + buf_alloc_size <= _KOS_MAX_SMALL_OBJ_SIZE;
+    const uint32_t alloc_size     = buf_built_in ? array_obj_size + buf_alloc_size : array_obj_size;
+    KOS_ARRAY     *array          = (KOS_ARRAY *)_KOS_alloc_object(frame,
+                                                                   KOS_ALLOC_DEFAULT,
+                                                                   OBJ_ARRAY,
+                                                                   alloc_size);
 
-    if (array && KOS_SUCCESS != _KOS_init_array(frame, array, size))
-        array = 0;
+    if (array) {
+        KOS_ARRAY_STORAGE *storage = 0;
+
+        if (buf_built_in) {
+            if (buf_alloc_size) {
+                storage = (KOS_ARRAY_STORAGE *)((uint8_t *)array + array_obj_size);
+                storage->header.type       = OBJ_ARRAY_STORAGE;
+                storage->header.alloc_size = buf_alloc_size;
+                storage->capacity          = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
+
+                KOS_atomic_write_u32(storage->num_slots_open, storage->capacity);
+                KOS_atomic_write_ptr(storage->next,           KOS_BADPTR);
+
+                array->header.alloc_size = array_obj_size;
+
+                KOS_atomic_write_ptr(array->data, OBJID(ARRAY_STORAGE, storage));
+            }
+            else
+                KOS_atomic_write_ptr(array->data, KOS_BADPTR);
+        }
+        else {
+            storage = _alloc_buffer(frame, size);
+
+            if (storage)
+                KOS_atomic_write_ptr(array->data, OBJID(ARRAY_STORAGE, storage));
+            else
+                array = 0;
+        }
+
+        if (array) {
+            KOS_atomic_write_u32(array->size, size);
+
+            if (storage) {
+                const uint32_t capacity = storage->capacity;
+
+                if (size)
+                    _atomic_fill_ptr(&storage->buf[0], size, KOS_new_void(frame));
+
+                if (size < capacity)
+                    _atomic_fill_ptr(&storage->buf[size], capacity - size, TOMBSTONE);
+            }
+        }
+    }
 
     return OBJID(ARRAY, array);
 }
@@ -377,7 +384,7 @@ int KOS_array_resize(KOS_FRAME frame, KOS_OBJ_ID obj_id, uint32_t size)
         uint32_t           old_size;
 
         if (size > capacity) {
-            const uint32_t new_cap = KOS_max(_double_capacity(capacity), size);
+            const uint32_t new_cap = KOS_max(capacity * 2, size);
             TRY(KOS_array_reserve(frame, obj_id, new_cap));
 
             buf = _get_data(array);

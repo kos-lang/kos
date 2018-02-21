@@ -245,7 +245,7 @@ void *_KOS_alloc_object(KOS_FRAME            frame,
                         enum KOS_OBJECT_TYPE object_type,
                         uint32_t             size)
 {
-    if (size > _KOS_PAGE_SIZE / 2)
+    if (size > _KOS_MAX_SMALL_OBJ_SIZE)
     {
         return _alloc_huge_object(frame, alloc_hint, object_type, size);
     }
