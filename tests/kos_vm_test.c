@@ -624,6 +624,94 @@ int main(void)
     }
 
     /************************************************************************/
+    /* CALL.N */
+    {
+        const uint8_t code[] = {
+            INSTR_JUMP,       IMM32(10),
+
+            INSTR_GET_ELEM,   0, 0, IMM32(0),
+            INSTR_RETURN,     0, 0,
+
+            INSTR_LOAD_FUN,   0, IMM32(-19), 1, 2, 0,
+            INSTR_LOAD_INT8,  1, 42,
+            INSTR_LOAD_VOID,  2,
+            INSTR_CALL_N,     0, 0, 2, 1, 1,
+            INSTR_RETURN,     0, 0
+        };
+
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
+        TEST_NO_EXCEPTION();
+
+        TEST(IS_SMALL_INT(ret));
+        TEST(GET_SMALL_INT(ret) == 42);
+    }
+
+    /************************************************************************/
+    /* CALL.N - zero args */
+    {
+        const uint8_t code[] = {
+            INSTR_JUMP,       IMM32(6),
+
+            INSTR_LOAD_INT8,  0, 43,
+            INSTR_RETURN,     0, 0,
+
+            INSTR_LOAD_FUN,   0, IMM32(-15), 0, 2, 0,
+            INSTR_LOAD_VOID,  1,
+            INSTR_CALL_N,     0, 0, 1, 255, 0,
+            INSTR_RETURN,     0, 0
+        };
+
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, 0);
+        TEST_NO_EXCEPTION();
+
+        TEST(IS_SMALL_INT(ret));
+        TEST(GET_SMALL_INT(ret) == 43);
+    }
+
+    /************************************************************************/
+    /* CALL.FUN */
+    {
+        const uint8_t code[] = {
+            INSTR_JUMP,       IMM32(10),
+
+            INSTR_GET_ELEM,   0, 0, IMM32(0),
+            INSTR_RETURN,     0, 0,
+
+            INSTR_LOAD_FUN,   0, IMM32(-19), 1, 2, 0,
+            INSTR_LOAD_INT8,  1, 42,
+            INSTR_CALL_FUN,   0, 0, 1, 1,
+            INSTR_RETURN,     0, 0
+        };
+
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, 0);
+        TEST_NO_EXCEPTION();
+
+        TEST(IS_SMALL_INT(ret));
+        TEST(GET_SMALL_INT(ret) == 42);
+    }
+
+    /************************************************************************/
+    /* CALL.FUN - zero args */
+    {
+        const uint8_t code[] = {
+            INSTR_JUMP,       IMM32(6),
+
+            INSTR_LOAD_INT8,  0, 44,
+            INSTR_RETURN,     0, 0,
+
+            INSTR_LOAD_FUN,   0, IMM32(-15), 0, 2, 0,
+            INSTR_CALL_FUN,   0, 0, 255, 0,
+            INSTR_RETURN,     0, 0
+        };
+
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, 0);
+        TEST_NO_EXCEPTION();
+
+        TEST(IS_SMALL_INT(ret));
+        TEST(GET_SMALL_INT(ret) == 44);
+    }
+
+    /************************************************************************/
     /* LOAD.FUN, CALL - reuse function body twice */
     {
         const uint8_t code[] = {
@@ -1177,6 +1265,56 @@ int main(void)
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_SMALL_INT(42));
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* TAIL.CALL.N */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_FUN,    0, IMM32(19), 2, 3, 0,
+            INSTR_LOAD_INT8,   1, 3,
+            INSTR_LOAD_INT8,   2, 20,
+            INSTR_LOAD_INT8,   3, 100,
+            INSTR_TAIL_CALL_N, 0, 0, 1, 2, 2,
+
+            /* unreachable */
+            INSTR_LOAD_VOID,   0,
+            INSTR_RETURN,      0, 0,
+
+            INSTR_GET_ELEM,    2, 0, IMM32(1), /* arg 1 - 100 */
+            INSTR_GET_ELEM,    0, 0, IMM32(0), /* arg 2 - 20 */
+            INSTR_ADD,         0, 0, 0,
+            INSTR_ADD,         0, 0, 2,
+            INSTR_ADD,         0, 0, 1,        /* this - 3 */
+            INSTR_RETURN,      0, 0
+        };
+
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, 0) == TO_SMALL_INT(143));
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* TAIL.CALL.FUN */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_FUN,      0, IMM32(16), 2, 2, 0,
+            INSTR_LOAD_INT8,     1, 20,
+            INSTR_LOAD_INT8,     2, 100,
+            INSTR_TAIL_CALL_FUN, 0, 0, 1, 2,
+
+            /* unreachable */
+            INSTR_LOAD_VOID,     0,
+            INSTR_RETURN,        0, 0,
+
+            INSTR_GET_ELEM,      1, 0, IMM32(1), /* arg 1 - 100 */
+            INSTR_GET_ELEM,      0, 0, IMM32(0), /* arg 2 - 20 */
+            INSTR_ADD,           0, 0, 0,
+            INSTR_ADD,           0, 0, 1,
+            INSTR_RETURN,        0, 0
+        };
+
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_SMALL_INT(140));
         TEST_NO_EXCEPTION();
     }
 

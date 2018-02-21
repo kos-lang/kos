@@ -2158,12 +2158,24 @@ static int _exec_function(KOS_FRAME frame)
 
             case INSTR_TAIL_CALL: /* <closure.size.uint8>, <r.func>, <r.this>, <r.args> */
                 /* fall through */
+            case INSTR_TAIL_CALL_N: /* <closure.size.uint8>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+                /* fall through */
+            case INSTR_TAIL_CALL_FUN: /* <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
+                /* fall through */
             case INSTR_CALL: /* <r.dest>, <r.func>, <r.this>, <r.args> */
                 /* fall through */
+            case INSTR_CALL_N: /* <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+                /* fall through */
+            case INSTR_CALL_FUN: /* <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
+                /* fall through */
             case INSTR_CALL_GEN: { /* <r.dest>, <r.func>, <r.final> */
-                const unsigned rfunc = bytecode[2];
-                unsigned       rthis = ~0U;
-                unsigned       rargs = ~0U;
+                const unsigned rfunc     = bytecode[2];
+                unsigned       rthis     = ~0U;
+                unsigned       rfinal    = ~0U;
+                unsigned       rargs     = ~0U;
+                unsigned       rarg1     = ~0U;
+                unsigned       num_args  = 0;
+                int            tail_call = 0;
 
                 KOS_OBJ_ID func_obj;
                 KOS_OBJ_ID this_obj;
@@ -2172,22 +2184,89 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_FRAME new_stack_frame = 0;
 
                 rdest = bytecode[1];
-                rthis = bytecode[3];
-                assert(rthis < regs_array->size);
 
-                if (instr != INSTR_CALL_GEN)
-                    rargs = bytecode[4];
+                switch (instr) {
 
-                this_obj = regs[rthis];
-                assert( ! IS_BAD_PTR(this_obj));
+                    case INSTR_TAIL_CALL:
+                        rthis     = bytecode[3];
+                        rargs     = bytecode[4];
+                        tail_call = 1;
+                        delta     = 5;
+                        assert(rdest <= regs_array->size);
+                        break;
 
-                assert(instr != INSTR_TAIL_CALL || rdest <= regs_array->size);
+                    case INSTR_TAIL_CALL_N:
+                        rthis     = bytecode[3];
+                        rarg1     = bytecode[4];
+                        num_args  = bytecode[5];
+                        tail_call = 1;
+                        delta     = 6;
+                        assert(rdest <= regs_array->size);
+                        assert( ! num_args || rarg1 + num_args <= regs_array->size);
+                        break;
+
+                    case INSTR_TAIL_CALL_FUN:
+                        rarg1     = bytecode[3];
+                        num_args  = bytecode[4];
+                        tail_call = 1;
+                        delta     = 5;
+                        assert(rdest <= regs_array->size);
+                        assert( ! num_args || rarg1 + num_args <= regs_array->size);
+                        break;
+
+                    case INSTR_CALL:
+                        rthis = bytecode[3];
+                        rargs = bytecode[4];
+                        delta = 5;
+                        assert(rdest < regs_array->size);
+                        break;
+
+                    case INSTR_CALL_N:
+                        rthis    = bytecode[3];
+                        rarg1    = bytecode[4];
+                        num_args = bytecode[5];
+                        delta    = 6;
+                        assert(rdest < regs_array->size);
+                        assert( ! num_args || rarg1 + num_args <= regs_array->size);
+                        break;
+
+                    case INSTR_CALL_FUN:
+                        rarg1    = bytecode[3];
+                        num_args = bytecode[4];
+                        delta    = 5;
+                        assert(rdest < regs_array->size);
+                        assert( ! num_args || rarg1 + num_args <= regs_array->size);
+                        break;
+
+                    default:
+                        assert(instr == INSTR_CALL_GEN);
+                        rfinal = bytecode[3];
+                        delta = 4;
+                        assert(rdest < regs_array->size);
+                        break;
+                }
+
+                if (rthis != ~0U) {
+                    rthis = bytecode[3];
+                    assert(rthis < regs_array->size);
+
+                    this_obj = regs[rthis];
+                    assert( ! IS_BAD_PTR(this_obj));
+                }
+                else
+                    this_obj = KOS_new_void(frame);
+
                 assert(rfunc < regs_array->size);
 
                 func_obj = regs[rfunc];
 
-                if (instr == INSTR_CALL_GEN)
-                    args_obj = KOS_new_array(frame, 0);
+                if (rargs == ~0U) {
+                    args_obj = KOS_new_array(frame, num_args);
+                    if ( ! IS_BAD_PTR(args_obj) && num_args)
+                        memcpy(_KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)),
+                               &regs[rarg1],
+                               num_args * sizeof(KOS_OBJ_ID));
+                }
                 else {
                     assert(rargs < regs_array->size);
                     args_obj = regs[rargs];
@@ -2256,28 +2335,23 @@ static int _exec_function(KOS_FRAME frame)
                             }
                             if ( ! error) {
                                 const KOS_OBJ_ID result = KOS_new_boolean(frame, state == KOS_GEN_DONE);
-                                if (rthis == rdest)
+                                if (rfinal == rdest)
                                     out = result;
                                 else {
-                                    assert(rthis < regs_array->size);
-                                    regs[rthis] = result;
+                                    assert(rfinal < regs_array->size);
+                                    regs[rfinal] = result;
                                 }
                             }
                         }
                     }
 
-                    if (instr == INSTR_TAIL_CALL && ! error) {
+                    if (tail_call && ! error) {
                         frame->retval    = out;
                         out              = KOS_BADPTR;
                         regs_array->size = rdest; /* closure size */
                         error            = KOS_SUCCESS_RETURN;
                     }
                 }
-
-                if (instr == INSTR_CALL)
-                    delta = 5;
-                else if (instr == INSTR_CALL_GEN)
-                    delta = 4;
                 break;
             }
 

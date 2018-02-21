@@ -100,10 +100,14 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
             return 3;
 
         case INSTR_CALL:                /* fall through */
+        case INSTR_CALL_FUN:            /* fall through */
         case INSTR_TAIL_CALL:           /* fall through */
-        case INSTR_GET_RANGE:           /* fall through */
+        case INSTR_TAIL_CALL_FUN:       /* fall through */
+        case INSTR_GET_RANGE:
             return 4;
 
+        case INSTR_CALL_N:              /* fall through */
+        case INSTR_TAIL_CALL_N:         /* fall through */
         case INSTR_LOAD_FUN:            /* fall through */
         case INSTR_LOAD_GEN:            /* fall through */
         case INSTR_LOAD_CTOR:
@@ -276,6 +280,18 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
         case INSTR_TAIL_CALL:
             return op;
 
+        case INSTR_CALL_N:
+            return op < 4;
+
+        case INSTR_CALL_FUN:
+            return op < 3;
+
+        case INSTR_TAIL_CALL_N:
+            return op && op < 4;
+
+        case INSTR_TAIL_CALL_FUN:
+            return op && op < 3;
+
         case INSTR_JUMP:
             return 0;
 
@@ -372,9 +388,13 @@ void _KOS_disassemble(const char                          *filename,
         "BIND",
         "BIND.SELF",
         "CALL",
+        "CALL.N",
+        "CALL.FUN",
         "CALL.GEN",
         "RETURN",
         "TAIL.CALL",
+        "TAIL.CALL.N",
+        "TAIL.CALL.FUN",
         "YIELD",
         "THROW",
         "CATCH",

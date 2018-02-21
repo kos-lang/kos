@@ -170,8 +170,12 @@ typedef enum _KOS_BYTECODE_INSTR {
 
     /* CALL <r.dest>, <r.func>, <r.this>, <r.args> */
     INSTR_CALL,
-    /* TODO CALL.ARGS <r.dest>, <r.func>, <r.this>, <r.arg1>, <num.args.uint8> */
-    /* TODO CALL.FUN <r.dest>, <r.func>, <r.arg1>, <num.args.uint8> */
+    /* CALL.N <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+    /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
+    INSTR_CALL_N,
+    /* CALL.FUN.N <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
+    /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
+    INSTR_CALL_FUN,
     /* CALL.GEN <r.dest>, <r.func>, <r.final> */
     /* Call generator which is "READY" or "ACTIVE".  r.final is set to false
      * if a subsequent value is yielded or true if the generator returned. */
@@ -180,6 +184,12 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_RETURN,
     /* TAIL.CALL <closure.size.uint8>, <r.func>, <r.this>, <r.args> */
     INSTR_TAIL_CALL,
+    /* TAIL.CALL.N <closure.size.uint8>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+    /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
+    INSTR_TAIL_CALL_N,
+    /* TAIL.CALL.FUN.N <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
+    /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
+    INSTR_TAIL_CALL_FUN,
     /* YIELD <r.src> */
     INSTR_YIELD,
     /* THROW <r.src> */
