@@ -60,6 +60,48 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
                        enum _KOS_BYTECODE_INSTR    instr,
                        unsigned                    tail_closure_size);
 
+static int _gen_new_reg(struct _KOS_COMP_UNIT *program,
+                        struct _KOS_REG      **out_reg)
+{
+    int                error = KOS_SUCCESS;
+    struct _KOS_FRAME *frame = program->cur_frame;
+    struct _KOS_REG   *reg;
+
+    if (program->unused_regs) {
+        reg                  = program->unused_regs;
+        program->unused_regs = reg->next;
+    }
+    else {
+        reg = (struct _KOS_REG *)
+            _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_REG));
+
+        if ( ! reg)
+            error = KOS_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* TODO spill locals to an array, add optimizations to reduce register pressure */
+    assert(frame->num_regs < 256);
+
+    if (reg)
+        reg->reg = frame->num_regs++;
+
+    *out_reg = reg;
+
+    return error;
+}
+
+static void _mark_reg_as_used(struct _KOS_FRAME *frame,
+                              struct _KOS_REG   *reg)
+{
+    reg->prev = 0;
+    reg->next = frame->used_regs;
+
+    if (frame->used_regs)
+        frame->used_regs->prev = reg;
+
+    frame->used_regs = reg;
+}
+
 static int _gen_reg(struct _KOS_COMP_UNIT *program,
                     struct _KOS_REG      **out_reg)
 {
@@ -69,34 +111,14 @@ static int _gen_reg(struct _KOS_COMP_UNIT *program,
         struct _KOS_FRAME *frame = program->cur_frame;
         struct _KOS_REG   *reg   = frame->free_regs;
 
-        if (!reg) {
-            if (program->unused_regs) {
-                reg                  = program->unused_regs;
-                program->unused_regs = reg->next;
-            }
-            else {
-                reg = (struct _KOS_REG *)
-                    _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_REG));
-
-                if ( ! reg)
-                    error = KOS_ERROR_OUT_OF_MEMORY;
-            }
-
-            /* TODO spill locals to an array, add optimizations to reduce register pressure */
-            assert(frame->num_regs < 256);
-
-            if (reg)
-                reg->reg = frame->num_regs++;
-        }
+        if (!reg)
+            error = _gen_new_reg(program, &reg);
 
         if (reg) {
-            if (frame->used_regs)
-                frame->used_regs->prev = reg;
             if (frame->free_regs == reg)
                 frame->free_regs = reg->next;
-            reg->next        = frame->used_regs;
-            reg->prev        = 0;
-            frame->used_regs = reg;
+
+            _mark_reg_as_used(frame, reg);
 
             reg->tmp = 1;
 
@@ -104,6 +126,68 @@ static int _gen_reg(struct _KOS_COMP_UNIT *program,
         }
         else
             error = KOS_ERROR_OUT_OF_MEMORY;
+    }
+
+    return error;
+}
+
+static int _gen_reg_range(struct _KOS_COMP_UNIT *program,
+                          struct _KOS_REG      **out_reg,
+                          int                    num_regs)
+{
+    int                error     = KOS_SUCCESS;
+    struct _KOS_FRAME *frame     = program->cur_frame;
+    struct _KOS_REG  **first_reg = &frame->free_regs;
+    struct _KOS_REG   *reg       = frame->free_regs;
+    int                count     = reg ? 1 : 0;
+
+    assert(num_regs > 1);
+
+    if (reg) for (;;) {
+
+        struct _KOS_REG *next = reg->next;
+
+        if ( ! next)
+            break;
+
+        if (next->reg == reg->reg + 1) {
+            if (++count == num_regs)
+                break;
+        }
+        else {
+            first_reg = &reg->next;
+            count = 1;
+        }
+
+        reg = next;
+    }
+
+    if ((count == num_regs) ||
+        (count && ((*first_reg)->reg + count == frame->num_regs))) {
+
+        reg = *first_reg;
+
+        for ( ; count; --count, --num_regs) {
+            struct _KOS_REG *next = reg->next;
+
+            _mark_reg_as_used(frame, reg);
+
+            *(out_reg++) = reg;
+            *first_reg   = next;
+            reg          = next;
+        }
+    }
+
+    while (num_regs--) {
+        reg = 0;
+
+        error = _gen_new_reg(program, &reg);
+        if (error)
+            break;
+
+        _mark_reg_as_used(frame, reg);
+
+        *(out_reg++) = reg;
     }
 
     return error;
@@ -147,7 +231,9 @@ static void _free_reg(struct _KOS_COMP_UNIT *program,
         reg_ptr = &frame->free_regs;
         while (*reg_ptr && reg->reg > (*reg_ptr)->reg)
             reg_ptr = &(*reg_ptr)->next;
+        assert(*reg_ptr != reg);
         reg->next = *reg_ptr;
+        reg->prev = 0;
         *reg_ptr  = reg;
     }
 }
@@ -1367,7 +1453,6 @@ static int _stream(struct _KOS_COMP_UNIT      *program,
     int                         error    = KOS_SUCCESS;
     struct _KOS_REG            *src_reg  = 0;
     struct _KOS_REG            *func_reg = 0;
-    struct _KOS_REG            *args_reg = 0;
     const struct _KOS_AST_NODE *arrow_node;
     const struct _KOS_AST_NODE *const_node;
 
@@ -1410,26 +1495,12 @@ static int _stream(struct _KOS_COMP_UNIT      *program,
 
     TRY(_visit_node(program, node, &func_reg));
 
-    TRY(_gen_reg(program, &args_reg));
-
-    TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, args_reg->reg, 1));
-
-    TRY(_gen_instr3(program, INSTR_SET_ELEM, args_reg->reg, 0, src_reg->reg));
-
-    if ( ! src_reg->tmp) {
-        src_reg = 0;
-        TRY(_gen_reg(program, &src_reg));
-    }
-
-    TRY(_gen_instr1(program, INSTR_LOAD_VOID, src_reg->reg));
-
     TRY(_gen_dest_reg(program, reg, src_reg));
 
-    TRY(_gen_instr4(program, INSTR_CALL, (*reg)->reg, func_reg->reg, src_reg->reg, args_reg->reg));
+    TRY(_gen_instr4(program, INSTR_CALL_FUN, (*reg)->reg, func_reg->reg, src_reg->reg, 1));
 
     if (*reg != src_reg)
         _free_reg(program, src_reg);
-    _free_reg(program, args_reg);
     _free_reg(program, func_reg);
 
 _error:
@@ -1714,7 +1785,6 @@ static int _invoke_get_iterator(struct _KOS_COMP_UNIT *program,
     int               error          = KOS_SUCCESS;
     int               str_idx;
     struct _KOS_REG  *func_reg       = 0;
-    struct _KOS_REG  *args_reg       = 0;
     struct _KOS_REG  *obj_reg        = *reg;
     struct _KOS_TOKEN token;
     static const char str_iterator[] = "iterator";
@@ -1727,7 +1797,6 @@ static int _invoke_get_iterator(struct _KOS_COMP_UNIT *program,
     }
 
     TRY(_gen_reg(program, &func_reg));
-    TRY(_gen_reg(program, &args_reg));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_iterator;
@@ -1738,11 +1807,8 @@ static int _invoke_get_iterator(struct _KOS_COMP_UNIT *program,
 
     TRY(_gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
 
-    TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, args_reg->reg, 0));
+    TRY(_gen_instr5(program, INSTR_CALL_N, (*reg)->reg, func_reg->reg, obj_reg->reg, 255, 0));
 
-    TRY(_gen_instr4(program, INSTR_CALL, (*reg)->reg, func_reg->reg, obj_reg->reg, args_reg->reg));
-
-    _free_reg(program, args_reg);
     _free_reg(program, func_reg);
 
 _error:
@@ -1809,13 +1875,14 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
     cond_jump_instr_offs = program->cur_offs;
     TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
 
+    _free_reg(program, reg);
+    reg = 0;
+
     if (var_node->next) {
 
         struct _KOS_REG *value_iter_reg = item_reg;
 
         TRY(_invoke_get_iterator(program, &value_iter_reg));
-
-        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, reg->reg, 0));
 
         for ( ; var_node; var_node = var_node->next) {
 
@@ -1823,14 +1890,11 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
             TRY(_lookup_local_var(program, &var_node->token, &item_reg));
             assert(item_reg);
 
-            TRY(_gen_instr4(program, INSTR_CALL, item_reg->reg, value_iter_reg->reg, reg->reg, reg->reg));
+            TRY(_gen_instr4(program, INSTR_CALL_FUN, item_reg->reg, value_iter_reg->reg, 255, 0));
         }
 
         _free_reg(program, value_iter_reg);
     }
-
-    _free_reg(program, reg);
-    reg = 0;
 
     node = node->next;
     assert(node);
@@ -2660,6 +2724,24 @@ static int _count_non_expanded_siblings(const struct _KOS_AST_NODE *node)
     return count;
 }
 
+#define MAX_CONTIG_REGS 4
+
+static int _count_contig_arg_siblings(const struct _KOS_AST_NODE *node)
+{
+    int count = 0;
+
+    while (node) {
+
+        if (node->type == NT_EXPAND)
+            return MAX_CONTIG_REGS + 1;
+
+        ++count;
+        node = node->next;
+    }
+
+    return count;
+}
+
 static int _gen_array(struct _KOS_COMP_UNIT      *program,
                       const struct _KOS_AST_NODE *node,
                       struct _KOS_REG           **reg)
@@ -2719,6 +2801,7 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
     struct _KOS_REG *fun   = 0;
     struct _KOS_REG *args  = _is_var_used(program, node, *reg) ? 0 : *reg;
     int32_t          rdest = (int32_t)tail_closure_size;
+    int              num_contig_args;
 
     assert(tail_closure_size <= 255U);
 
@@ -2736,25 +2819,94 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
 
     node = node->next;
 
-    TRY(_gen_array(program, node, &args));
+    num_contig_args = _count_contig_arg_siblings(node);
 
-    if ( ! *reg && instr == INSTR_CALL)
-        *reg = args;
+    if (num_contig_args <= MAX_CONTIG_REGS) {
 
-    if (!obj) {
-        TRY(_gen_reg(program, &obj));
-        TRY(_gen_instr1(program, INSTR_LOAD_VOID, obj->reg));
+        struct _KOS_REG *argn[MAX_CONTIG_REGS] = { 0, 0, 0, 0 };
+        int              i;
+
+        if (num_contig_args > 1)
+            TRY(_gen_reg_range(program, &argn[0], num_contig_args));
+
+        for (i = 0; node; node = node->next, i++) {
+
+            struct _KOS_REG *arg = argn[i];
+
+            assert(i == 0 || arg->reg == argn[i-1]->reg + 1);
+
+            TRY(_visit_node(program, node, &arg));
+
+            if (arg != argn[i] && argn[i]) {
+                assert( ! arg->tmp);
+                TRY(_gen_instr2(program, INSTR_MOVE, argn[i]->reg, arg->reg));
+            }
+            else if (argn[i] == 0) {
+                assert(num_contig_args == 1);
+                argn[i] = arg;
+            }
+        }
+
+        if (instr == INSTR_CALL) {
+            if ( ! *reg) {
+                for (i = 0; i < num_contig_args; i++) {
+                    if (argn[i]->tmp) {
+                        *reg = argn[i];
+                        break;
+                    }
+                }
+            }
+            if ( ! *reg)
+                TRY(_gen_reg(program, reg));
+
+            rdest = (*reg)->reg;
+        }
+
+        if (obj) {
+            instr = (instr == INSTR_CALL) ? INSTR_CALL_N : INSTR_TAIL_CALL_N;
+
+            TRY(_gen_instr5(program, instr, rdest, fun->reg, obj->reg,
+                            num_contig_args ? argn[0]->reg : 255,
+                            num_contig_args));
+        }
+        else {
+            instr = (instr == INSTR_CALL) ? INSTR_CALL_FUN : INSTR_TAIL_CALL_FUN;
+
+            TRY(_gen_instr4(program, instr, rdest, fun->reg,
+                            num_contig_args ? argn[0]->reg : 255,
+                            num_contig_args));
+        }
+
+        while (num_contig_args) {
+            struct _KOS_REG *arg = argn[--num_contig_args];
+            if (arg != *reg)
+                _free_reg(program, arg);
+        }
+    }
+    else {
+
+        TRY(_gen_array(program, node, &args));
+
+        if ( ! *reg && instr == INSTR_CALL)
+            *reg = args;
+
+        if ( ! obj) {
+            TRY(_gen_reg(program, &obj));
+            TRY(_gen_instr1(program, INSTR_LOAD_VOID, obj->reg));
+        }
+
+        if (instr == INSTR_CALL)
+            rdest = (*reg)->reg;
+
+        TRY(_gen_instr4(program, instr, rdest, fun->reg, obj->reg, args->reg));
+
+        if (args != *reg)
+            _free_reg(program, args);
     }
 
-    if (instr == INSTR_CALL)
-        rdest = (*reg)->reg;
-
-    TRY(_gen_instr4(program, instr, rdest, fun->reg, obj->reg, args->reg));
-
     _free_reg(program, fun);
-    _free_reg(program, obj);
-    if (args != *reg)
-        _free_reg(program, args);
+    if (obj)
+        _free_reg(program, obj);
 
 _error:
     return error;
@@ -3457,16 +3609,19 @@ static int _assign_slice(struct _KOS_COMP_UNIT      *program,
     int                         error;
     int                         str_idx;
     const struct _KOS_AST_NODE *obj_node     = 0;
-    struct _KOS_REG            *args_reg     = 0;
+    struct _KOS_REG            *argn[3]      = { 0, 0, 0 };
     struct _KOS_REG            *obj_reg      = 0;
     struct _KOS_REG            *func_reg     = 0;
+    const int                   src_reg      = src->reg;
     static const char           str_insert[] = "insert";
     struct _KOS_TOKEN           token;
 
-    TRY(_gen_reg(program, &args_reg));
-    TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, args_reg->reg, 3));
-    TRY(_gen_instr3(program, INSTR_SET_ELEM, args_reg->reg, 2, src->reg));
     _free_reg(program, src);
+
+    TRY(_gen_reg_range(program, &argn[0], 3));
+
+    if (src_reg != argn[2]->reg)
+        TRY(_gen_instr2(program, INSTR_MOVE, argn[2]->reg, src_reg));
 
     node = node->children;
     assert(node);
@@ -3475,26 +3630,29 @@ static int _assign_slice(struct _KOS_COMP_UNIT      *program,
     node     = node->next;
     assert(node);
 
+    obj_reg = argn[0];
     TRY(_visit_node(program, node, &obj_reg));
     assert(obj_reg);
 
-    TRY(_gen_instr3(program, INSTR_SET_ELEM, args_reg->reg, 0, obj_reg->reg));
-
-    _free_reg(program, obj_reg);
-    obj_reg = 0;
+    if (obj_reg != argn[0]) {
+        assert( ! obj_reg->tmp);
+        TRY(_gen_instr2(program, INSTR_MOVE, argn[0]->reg, obj_reg->reg));
+    }
 
     node = node->next;
     assert(node);
     assert( ! node->next);
 
+    obj_reg = argn[1];
     TRY(_visit_node(program, node, &obj_reg));
     assert(obj_reg);
 
-    TRY(_gen_instr3(program, INSTR_SET_ELEM, args_reg->reg, 1, obj_reg->reg));
+    if (obj_reg != argn[1]) {
+        assert( ! obj_reg->tmp);
+        TRY(_gen_instr2(program, INSTR_MOVE, argn[1]->reg, obj_reg->reg));
+    }
 
-    _free_reg(program, obj_reg);
     obj_reg = 0;
-
     TRY(_visit_node(program, obj_node, &obj_reg));
     assert(obj_reg);
 
@@ -3509,9 +3667,11 @@ static int _assign_slice(struct _KOS_COMP_UNIT      *program,
 
     TRY(_gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
 
-    TRY(_gen_instr4(program, INSTR_CALL, func_reg->reg, func_reg->reg, obj_reg->reg, args_reg->reg));
+    TRY(_gen_instr5(program, INSTR_CALL_N, func_reg->reg, func_reg->reg, obj_reg->reg, argn[0]->reg, 3));
 
-    _free_reg(program, args_reg);
+    _free_reg(program, argn[2]);
+    _free_reg(program, argn[1]);
+    _free_reg(program, argn[0]);
     _free_reg(program, func_reg);
     _free_reg(program, obj_reg);
 
@@ -3528,7 +3688,6 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
     const struct _KOS_AST_NODE *rhs_node;
     struct _KOS_REG            *reg       = 0;
     struct _KOS_REG            *rhs       = 0;
-    struct _KOS_REG            *args_reg  = 0;
     const enum _KOS_NODE_TYPE   node_type = assg_node->type;
 
     assert(node_type == NT_ASSIGNMENT || node_type == NT_MULTI_ASSIGNMENT);
@@ -3578,13 +3737,6 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
         if ( ! reg && node->type == NT_IDENTIFIER)
             TRY(_lookup_local_var_even_inactive(program, &node->token, is_lhs, &reg));
 
-        if (node_type == NT_MULTI_ASSIGNMENT && ! args_reg) {
-
-            TRY(_gen_reg(program, &args_reg));
-
-            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, args_reg->reg, 0));
-        }
-
         if (reg) {
 
             if (assg_node->token.op == OT_SET) {
@@ -3593,7 +3745,7 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
 
                     assert(reg != rhs);
 
-                    TRY(_gen_instr4(program, INSTR_CALL, reg->reg, rhs->reg, args_reg->reg, args_reg->reg));
+                    TRY(_gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, 255, 0));
                 }
                 else {
 
@@ -3624,7 +3776,7 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
 
                 TRY(_gen_reg(program, &reg));
 
-                TRY(_gen_instr4(program, INSTR_CALL, reg->reg, rhs->reg, args_reg->reg, args_reg->reg));
+                TRY(_gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, 255, 0));
             }
             else
                 reg = rhs;
@@ -3653,9 +3805,6 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
     if (node_type == NT_MULTI_ASSIGNMENT)
         _free_reg(program, rhs);
 
-    if (args_reg)
-        _free_reg(program, args_reg);
-
 _error:
     return error;
 }
@@ -3677,6 +3826,8 @@ static int _interpolated_string(struct _KOS_COMP_UNIT      *program,
         program->error_str   = str_err_no_such_module_variable;
         RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
     }
+
+    /* TODO use INSTR_CALL_FUN if possible, reuse portion of _invocation() */
 
     TRY(_gen_array(program, node->children, &args));
 
@@ -3874,39 +4025,26 @@ static int _gen_arg_list(struct _KOS_COMP_UNIT *program,
                          int                    num_args)
 {
     int               error    = KOS_SUCCESS;
-    int               str_idx;
-    struct _KOS_REG  *tmp_reg  = 0;
+    struct _KOS_REG  *void_reg = 0;
     struct _KOS_REG  *ellipsis_reg;
-    struct _KOS_TOKEN token;
-    static const char str_slice[] = "slice";
 
     TRY(_gen_reg(program, &ellipsis_var->reg));
     ellipsis_reg = ellipsis_var->reg;
     ellipsis_reg->tmp = 0;
 
-    TRY(_gen_reg(program, &tmp_reg));
-
-    memset(&token, 0, sizeof(token));
-    token.begin  = str_slice;
-    token.length = sizeof(str_slice) - 1;
-    token.type   = TT_IDENTIFIER;
-
-    TRY(_gen_str(program, &token, &str_idx));
-
-    TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, tmp_reg->reg, 2));
+    TRY(_gen_reg(program, &void_reg));
 
     if (num_args <= 0x7F)
         TRY(_gen_instr2(program, INSTR_LOAD_INT8, ellipsis_reg->reg, num_args));
     else
         TRY(_gen_instr2(program, INSTR_LOAD_INT32, ellipsis_reg->reg, num_args));
 
-    TRY(_gen_instr3(program, INSTR_SET_ELEM, tmp_reg->reg, 0, ellipsis_reg->reg));
+    TRY(_gen_instr1(program, INSTR_LOAD_VOID, void_reg->reg));
 
-    TRY(_gen_instr3(program, INSTR_GET_PROP, ellipsis_reg->reg, args_reg->reg, str_idx));
+    TRY(_gen_instr4(program, INSTR_GET_RANGE,
+                    ellipsis_reg->reg, args_reg->reg, ellipsis_reg->reg, void_reg->reg));
 
-    TRY(_gen_instr4(program, INSTR_CALL, ellipsis_reg->reg, ellipsis_reg->reg, args_reg->reg, tmp_reg->reg));
-
-    _free_reg(program, tmp_reg);
+    _free_reg(program, void_reg);
 
 _error:
     return error;

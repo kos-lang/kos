@@ -149,7 +149,7 @@ do {
 
     assert find_lowest([9, 10, -5, 245, -1000, 9000, -1]) == -1000
 
-    check(find_lowest, { registers: 5, instructions: 12, size: 63 })
+    check(find_lowest, { registers: 5, instructions: 11, size: 61 })
 }
 
 #============================================================================#
@@ -206,7 +206,7 @@ do {
         assert iter() == 0
     }
 
-    check(map_invoke, { registers: 5, instructions: 6, size: 36 })
+    check(map_invoke, { registers: 4, instructions: 4, size: 27 })
 }
 
 #============================================================================#
@@ -225,7 +225,7 @@ do {
         assert iter() == 0.5
     }
 
-    check(map, { registers: 6, instructions: 15, size: 68 })
+    check(map, { registers: 5, instructions: 11, size: 54 })
 }
 
 #============================================================================#
@@ -645,7 +645,7 @@ do {
     unused_variable(fun { value = 100 })
     assert(value == 100)
 
-    check(unused_variable, { registers: 5, instructions: 6, size: 22 })
+    check(unused_variable, { registers: 3, instructions: 4, size: 17 })
 }
 
 #============================================================================#
