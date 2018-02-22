@@ -1689,40 +1689,76 @@ do {
      */
     array.prototype.sort = fun(compare = less)
     {
-        fun inner_sort(a, begin, end)
-        {
-            const test = compare
-            end -= 1
-            var pivot = a[end]
-            var mid   = begin - 1
-            var i     = begin
-            while i < end {
-                const v = a[i]
-                if test(v, pivot) {
-                    mid += 1
-                    a[i] = a[mid]
-                    a[mid] = v
-                    i += 1
-                    continue
-                }
-                i += 1
-            }
-
-            mid += 1
-            if test(pivot, a[mid]) {
-                a[end] = a[mid]
-                a[mid] = pivot
-            }
-
-            if begin + 1 < mid {
-                inner_sort(a, begin, mid)
-            }
-            if mid + 2 < end + 1 {
-                return inner_sort(a, mid + 1, end + 1)
-            }
-        }
         if this.size > 1 {
-            inner_sort(this, 0, this.size)
+            if (compare == less) {
+                fun inner_sort(a, begin, end)
+                {
+                    end -= 1
+                    var pivot = a[end]
+                    var mid   = begin - 1
+                    var i     = begin
+                    while i < end {
+                        const v = a[i]
+                        if v < pivot {
+                            mid += 1
+                            a[i] = a[mid]
+                            a[mid] = v
+                            i += 1
+                            continue
+                        }
+                        i += 1
+                    }
+
+                    mid += 1
+                    if pivot < a[mid] {
+                        a[end] = a[mid]
+                        a[mid] = pivot
+                    }
+
+                    if begin + 1 < mid {
+                        inner_sort(a, begin, mid)
+                    }
+                    if mid + 2 < end + 1 {
+                        return inner_sort(a, mid + 1, end + 1)
+                    }
+                }
+                inner_sort(this, 0, this.size)
+            }
+            else {
+                fun inner_sort(a, begin, end)
+                {
+                    const test = compare
+                    end -= 1
+                    var pivot = a[end]
+                    var mid   = begin - 1
+                    var i     = begin
+                    while i < end {
+                        const v = a[i]
+                        if test(v, pivot) {
+                            mid += 1
+                            a[i] = a[mid]
+                            a[mid] = v
+                            i += 1
+                            continue
+                        }
+                        i += 1
+                    }
+
+                    mid += 1
+                    if test(pivot, a[mid]) {
+                        a[end] = a[mid]
+                        a[mid] = pivot
+                    }
+
+                    if begin + 1 < mid {
+                        inner_sort(a, begin, mid)
+                    }
+                    if mid + 2 < end + 1 {
+                        return inner_sort(a, mid + 1, end + 1)
+                    }
+                }
+                inner_sort(this, 0, this.size)
+            }
         }
         return this
     }
