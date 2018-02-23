@@ -114,7 +114,7 @@ static int _gen_reg(struct _KOS_COMP_UNIT *program,
         if (!reg)
             error = _gen_new_reg(program, &reg);
 
-        if (reg) {
+        if ( ! error) {
             if (frame->free_regs == reg)
                 frame->free_regs = reg->next;
 
@@ -124,8 +124,6 @@ static int _gen_reg(struct _KOS_COMP_UNIT *program,
 
             *out_reg = reg;
         }
-        else
-            error = KOS_ERROR_OUT_OF_MEMORY;
     }
 
     return error;
@@ -186,6 +184,8 @@ static int _gen_reg_range(struct _KOS_COMP_UNIT *program,
             break;
 
         _mark_reg_as_used(frame, reg);
+
+        reg->tmp = 1;
 
         *(out_reg++) = reg;
     }
@@ -2837,13 +2837,13 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
 
             TRY(_visit_node(program, node, &arg));
 
-            if (arg != argn[i] && argn[i]) {
-                assert( ! arg->tmp);
-                TRY(_gen_instr2(program, INSTR_MOVE, argn[i]->reg, arg->reg));
-            }
-            else if (argn[i] == 0) {
+            if ( ! argn[i]) {
                 assert(num_contig_args == 1);
                 argn[i] = arg;
+            }
+            else if (arg != argn[i]) {
+                assert( ! arg->tmp);
+                TRY(_gen_instr2(program, INSTR_MOVE, argn[i]->reg, arg->reg));
             }
         }
 
