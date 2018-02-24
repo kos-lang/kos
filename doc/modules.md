@@ -2078,6 +2078,23 @@ Examples:
     > count_non_zero([0, 0, 4, 0, 0, 5, 6, 0])
     3
 
+reverse()
+---------
+
+    reverse(iterable)
+
+A generator which produces elements of an iterable object in reverse order.
+
+Returns an iterator function, which yields elements of the iterable object
+in backwards order.
+
+Examples:
+
+    > reverse(range(4)) -> print_elements
+    3, 2, 1, 0
+    > reverse("language") -> print_elements
+    e, g, a, u, g, n, a, l
+
 shallow()
 ---------
 

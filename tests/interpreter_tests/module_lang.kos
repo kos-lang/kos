@@ -2451,6 +2451,31 @@ do {
 }
 
 ##############################################################################
+# lang.reverse
+
+do {
+    const a = [ lang.reverse([1, 2, 3, 4]) ... ]
+    assert a.size == 4
+    assert a[0] == 4
+    assert a[1] == 3
+    assert a[2] == 2
+    assert a[3] == 1
+
+    const s = [ lang.reverse("kos") ... ]
+    assert s.size == 3
+    assert s[0] == "s"
+    assert s[1] == "o"
+    assert s[2] == "k"
+
+    const f = [ lang.reverse(lang.range(2, 6)) ... ]
+    assert f.size == 4
+    assert f[0] == 5
+    assert f[1] == 4
+    assert f[2] == 3
+    assert f[3] == 2
+}
+
+##############################################################################
 # lang.backtrace
 
 do {
