@@ -2476,6 +2476,35 @@ do {
 }
 
 ##############################################################################
+# lang.enumerate
+
+do {
+    const it = lang.enumerate(["abc", 3, 10.5, false])
+    for const pair in [ [0, "abc"], [1, 3], [2, 10.5], [3, false] ] {
+        const result = it()
+        assert result.size == 2
+        assert pair[0] == result[0]
+        assert pair[1] == result[1]
+    }
+    expect_fail(it)
+}
+
+do {
+    const it = lang.enumerate(fun {
+        yield "first"
+        yield "Second"
+        yield "thirD"
+    }())
+    for const pair in [ [0, "first"], [1, "Second"], [2, "thirD"] ] {
+        const result = it()
+        assert result.size == 2
+        assert pair[0] == result[0]
+        assert pair[1] == result[1]
+    }
+    expect_fail(it)
+}
+
+##############################################################################
 # lang.backtrace
 
 do {

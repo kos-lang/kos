@@ -1292,6 +1292,23 @@ Example:
      ["count", <function>], ["reduce", <function>], ["iterator", <function>],
      ["map", <function>], ["y", 1], ["x", 0]]
 
+enumerate()
+-----------
+
+    enumerate(iterable)
+
+A generator which produces indexed elements of an iterable object.
+
+Returns an iterator function, which yields pairs (2-element arrays) containing
+consecutive indices and elements from the iterable object.
+
+Examples:
+
+    > enumerate(["kos", "lang", "uage"]) -> print_elements
+    [0, kos], [1, lang], [2, uage]
+    > enumerate("lang") -> print_elements
+    [0, l], [1, a], [2, n], [3, g]
+
 eol
 ---
 

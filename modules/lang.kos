@@ -1852,6 +1852,31 @@ fun reverse(iterable)
     }
 }
 
+/* @item lang enumerate()
+ *
+ *     enumerate(iterable)
+ *
+ * A generator which produces indexed elements of an iterable object.
+ *
+ * Returns an iterator function, which yields pairs (2-element arrays) containing
+ * consecutive indices and elements from the iterable object.
+ *
+ * Examples:
+ *
+ *     > enumerate(["kos", "lang", "uage"]) -> print_elements
+ *     [0, kos], [1, lang], [2, uage]
+ *     > enumerate("lang") -> print_elements
+ *     [0, l], [1, a], [2, n], [3, g]
+ */
+fun enumerate(iterable)
+{
+    var i = 0
+    for var elem in iterable {
+        yield [i, elem]
+        i += 1
+    }
+}
+
 /* @item lang print_elements()
  *
  *     print_elements(iterable, separator = ", ", end = "\n")
