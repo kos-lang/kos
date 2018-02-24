@@ -161,3 +161,32 @@ do {
     }
     assert ! failed
 }
+
+do {
+    fun expr_chain(a, b)
+    {
+        var x, y = [a, b]
+        x, y = [y, x + 3]
+        x, y = [y * 2, x + y]
+        return [x, y]
+    }
+
+    const c, d = expr_chain(1, 5)
+    assert c == 8
+    assert d == 9
+}
+
+do {
+    fun expr_chain(a...)
+    {
+        var a0, a1, a2, a3 = a
+        a3, a1, a0, a2 = [a0 + a1, a2 - a0, a2 + a3, a1 + a3]
+        return [a0, a1, a2, a3]
+    }
+
+    const a, b, c, d = expr_chain(2, 3, 5, 7)
+    assert a == 12
+    assert b == 3
+    assert c == 10
+    assert d == 5
+}
