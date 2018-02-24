@@ -1877,6 +1877,50 @@ fun enumerate(iterable)
     }
 }
 
+/* @item lang zip()
+ *
+ *     zip(iterable0, iterable1...)
+ *
+ * A generator which produces arrays with elements from each iterable object.
+ *
+ * Returns an iterator function, which yields arrays.  Each array yielded has
+ * one element from each input iterable object.
+ *
+ * Example:
+ *
+ *     > zip(range(4), "abcd") -> print_elements
+ *     [0, a], [1, b], [2, c], [3, d]
+ */
+fun zip(a, b...)
+{
+    if b.size == 0 {
+        return a
+    }
+
+    return fun {
+        const b_size = b.size
+        const size   = 1 + b_size
+
+        const iter = []
+        iter.resize(size)
+        iter[0] = a.iterator()
+        for var i = 0; i < b_size; i += 1 {
+            iter[i + 1] = b[i].iterator()
+        }
+
+        loop {
+            const out = []
+            out.resize(size)
+
+            for var i = 0; i < size; i += 1 {
+                out[i] = iter[i]()
+            }
+
+            yield out
+        }
+    } ()
+}
+
 /* @item lang print_elements()
  *
  *     print_elements(iterable, separator = ", ", end = "\n")

@@ -2805,6 +2805,21 @@ whitespace
 A string containing all characters considered as whitespace by some
 functions.
 
+zip()
+-----
+
+    zip(iterable0, iterable1...)
+
+A generator which produces arrays with elements from each iterable object.
+
+Returns an iterator function, which yields arrays.  Each array yielded has
+one element from each input iterable object.
+
+Example:
+
+    > zip(range(4), "abcd") -> print_elements
+    [0, a], [1, b], [2, c], [3, d]
+
 math
 ====
 

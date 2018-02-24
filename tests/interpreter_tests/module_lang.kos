@@ -2505,6 +2505,41 @@ do {
 }
 
 ##############################################################################
+# lang.zip
+
+do {
+    expect_fail(lang.zip)
+
+    var i = 0
+    for const ret in lang.zip(lang.range(10)) {
+        assert ret == i
+        i += 1
+    }
+
+    const expected = [ ["a", 1], ["b", 2], ["c", 3] ]
+    i = 0
+    for const x, y in lang.zip("abcd", lang.range(1, 4)) {
+        assert x == expected[i][0]
+        assert y == expected[i][1]
+        i += 1
+    }
+
+    i = 0
+    for const x, y in lang.zip("abc", lang.range(1, 10)) {
+        assert x == expected[i][0]
+        assert y == expected[i][1]
+        i += 1
+    }
+
+    const strings = [ "kos", "sok", "cat", "dog" ]
+    i = 0
+    for const a, b, c in lang.zip("kscd", "ooaoo", "sktg") {
+        assert a + b + c == strings[i]
+        i += 1
+    }
+}
+
+##############################################################################
 # lang.backtrace
 
 do {
