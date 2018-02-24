@@ -826,7 +826,7 @@ array.prototype.sort()
 
 Sorts array in-place according to the ordering specified by `compare`.
 
-Returns the array itself.
+Returns void.
 
 `compare` is a function which returns `true` if its first argument
 should come sorted before its second argument and returns `false`

@@ -1676,7 +1676,7 @@ do {
      *
      * Sorts array in-place according to the ordering specified by `compare`.
      *
-     * Returns the array itself.
+     * Returns void.
      *
      * `compare` is a function which returns `true` if its first argument
      * should come sorted before its second argument and returns `false`
@@ -1760,7 +1760,6 @@ do {
                 inner_sort(this, 0, this.size)
             }
         }
-        return this
     }
 
     /* @item lang sort()
@@ -1809,7 +1808,8 @@ do {
             if ! a.size {
                 return a
             }
-            return a.sort(compare)
+            a.sort(compare)
+            return a
         }
 
         return args.size ? sort(args[0]) : sort

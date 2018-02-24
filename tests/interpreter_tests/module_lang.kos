@@ -2099,22 +2099,27 @@ do {
 
 do {
     const a = [].sort()
-    assert typeof a == "array"
+    assert a == void
+}
+
+do {
+    const a = []
+    a.sort()
     assert a.size == 0
 }
 
 do {
-    const a = [8].sort()
-    assert typeof a == "array"
+    const a = [8]
+    a.sort()
     assert a.size == 1
     assert a[0] == 8
 }
 
 do {
     const a = [0, 1]
-    const b = a.sort()
+    const b = lang.sort(a)
     assert typeof b == "array"
-    assert a == b
+    assert a != b
     assert b.size == 2
     assert b[0] == 0
     assert b[1] == 1
@@ -2122,9 +2127,9 @@ do {
 
 do {
     const a = [1, 0]
-    const b = a.sort()
+    const b = lang.sort(a)
     assert typeof b == "array"
-    assert a == b
+    assert a != b
     assert b.size == 2
     assert b[0] == 0
     assert b[1] == 1
@@ -2132,9 +2137,9 @@ do {
 
 do {
     const a = [1, 1]
-    const b = a.sort()
+    const b = lang.sort(a)
     assert typeof b == "array"
-    assert a == b
+    assert a != b
     assert b.size == 2
     assert b[0] == 1
     assert b[1] == 1
@@ -2142,9 +2147,9 @@ do {
 
 do {
     const a = [1, 2, 3]
-    const b = a.sort()
+    const b = lang.sort(a)
     assert typeof b == "array"
-    assert a == b
+    assert a != b
     assert b.size == 3
     assert b[0] == 1
     assert b[1] == 2
@@ -2153,9 +2158,9 @@ do {
 
 do {
     const a = [3, 2, 1]
-    const b = a.sort()
+    const b = lang.sort(a)
     assert typeof b == "array"
-    assert a == b
+    assert a != b
     assert b.size == 3
     assert b[0] == 1
     assert b[1] == 2
@@ -2164,9 +2169,9 @@ do {
 
 do {
     const a = [1, 3, 2]
-    const b = a.sort()
+    const b = lang.sort(a)
     assert typeof b == "array"
-    assert a == b
+    assert a != b
     assert b.size == 3
     assert b[0] == 1
     assert b[1] == 2
@@ -2175,9 +2180,9 @@ do {
 
 do {
     const a = [3, 3, 2]
-    const b = a.sort()
+    const b = lang.sort(a)
     assert typeof b == "array"
-    assert a == b
+    assert a != b
     assert b.size == 3
     assert b[0] == 2
     assert b[1] == 3
@@ -2186,9 +2191,9 @@ do {
 
 do {
     const a = [2, 2, 2]
-    const b = a.sort()
+    const b = lang.sort(a)
     assert typeof b == "array"
-    assert a == b
+    assert a != b
     assert b.size == 3
     assert b[0] == 2
     assert b[1] == 2
