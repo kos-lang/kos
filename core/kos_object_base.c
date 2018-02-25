@@ -93,8 +93,10 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
     if (func) {
         assert(func->header.type == OBJ_FUNCTION);
 
+        func->header.flags          = 0;
+        func->header.num_args       = 0;
+        func->header.num_regs       = 0;
         func->min_args              = 0;
-        func->num_regs              = 0;
         func->args_reg              = 0;
         func->prototype             = proto_obj;
         func->closures              = KOS_new_void(frame);
@@ -149,12 +151,10 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
 
 int _KOS_init_stack_frame(KOS_FRAME   frame,
                           KOS_MODULE *module,
-                          uint32_t    instr_offs,
-                          uint32_t    num_regs)
+                          uint32_t    instr_offs)
 {
     int error = KOS_SUCCESS;
 
-    assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
     assert(module);
     assert(module->context);
 
@@ -170,20 +170,15 @@ int _KOS_init_stack_frame(KOS_FRAME   frame,
     frame->instr_offs       = instr_offs;
     frame->catch_offs       = KOS_NO_CATCH;
 
-    if (num_regs < 256) {
-        frame->registers = KOS_new_array(frame, num_regs);
-        if (IS_BAD_PTR(frame->registers))
-            error = KOS_ERROR_EXCEPTION;
-    }
-
     return error;
 }
 
 KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
                                 KOS_MODULE *module,
                                 uint32_t    instr_offs,
-                                uint32_t    num_regs)
+                                KOS_OBJ_ID  regs)
 {
+    /* TODO reuse old stack frames */
     KOS_FRAME new_frame = (KOS_FRAME)_KOS_alloc_object(frame,
                                                        KOS_ALLOC_LOCAL,
                                                        OBJ_STACK_FRAME,
@@ -191,30 +186,23 @@ KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
 
     if (new_frame) {
 
-        assert(num_regs < 256 || num_regs == ~0U); /* ~0U indicates built-in generator */
+        assert(IS_BAD_PTR(regs) ||
+               (GET_OBJ_TYPE(regs) == OBJ_ARRAY && KOS_get_array_size(regs) < 256));
         assert(module);
         assert(KOS_context_from_frame(frame) == module->context);
 
-        if (_KOS_init_stack_frame(new_frame, module, instr_offs, num_regs)) {
+        if (_KOS_init_stack_frame(new_frame, module, instr_offs)) {
             assert( ! IS_BAD_PTR(new_frame->exception));
             frame->exception = new_frame->exception;
             new_frame        = 0; /* object is garbage-collected */
         }
-        else
-            new_frame->parent = OBJID(STACK_FRAME, frame);
+        else {
+            new_frame->parent    = OBJID(STACK_FRAME, frame);
+            new_frame->registers = regs;
+        }
     }
 
     return new_frame;
-}
-
-KOS_FRAME _KOS_stack_frame_push_func(KOS_FRAME     frame,
-                                     KOS_FUNCTION *func)
-{
-    const int no_regs = func->state == KOS_GEN_INIT && func->handler;
-    return _KOS_stack_frame_push(frame,
-                                 OBJPTR(MODULE, func->module),
-                                 func->instr_offs,
-                                 no_regs ? ~0U : func->num_regs);
 }
 
 int _KOS_is_truthy(KOS_OBJ_ID obj_id)

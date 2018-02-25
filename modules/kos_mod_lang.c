@@ -3554,7 +3554,7 @@ static KOS_OBJ_ID _get_registers(KOS_FRAME  frame,
 
         KOS_FUNCTION *const func = OBJPTR(FUNCTION, this_obj);
 
-        ret = KOS_new_int(frame, (int64_t)func->num_regs);
+        ret = KOS_new_int(frame, (int64_t)func->header.num_regs);
     }
     else {
         KOS_raise_exception_cstring(frame, str_err_not_function);

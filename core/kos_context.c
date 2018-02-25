@@ -108,7 +108,7 @@ static int _register_thread(KOS_CONTEXT        *ctx,
 {
     int error = KOS_SUCCESS;
 
-    TRY(_KOS_init_stack_frame(&thread_root->frame, &ctx->init_module, 0, 0));
+    TRY(_KOS_init_stack_frame(&thread_root->frame, &ctx->init_module, 0));
 
     if (_KOS_tls_get(ctx->thread_key)) {
 

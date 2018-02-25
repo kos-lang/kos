@@ -52,6 +52,15 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* LOAD.CTOR <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg>
      * Create a constructor function object with the specified code. */
     INSTR_LOAD_CTOR,
+    /* LOAD.FUN <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
+     * Create a function object with the specified code. */
+    INSTR_LOAD_FUN2,
+    /* LOAD.GEN <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
+     * Create a generator object with the specified code. */
+    INSTR_LOAD_GEN2,
+    /* LOAD.CTOR <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
+     * Create a constructor function object with the specified code. */
+    INSTR_LOAD_CTOR2,
     /* LOAD.ARRAY8 <r.dest>, <size.int8> */
     INSTR_LOAD_ARRAY8,
     /* LOAD.ARRAY <r.dest>, <size.int32> */
@@ -173,7 +182,7 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* CALL.N <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
     /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
     INSTR_CALL_N,
-    /* CALL.FUN.N <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
+    /* CALL.FUN <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
     /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
     INSTR_CALL_FUN,
     /* CALL.GEN <r.dest>, <r.func>, <r.final> */
@@ -187,7 +196,7 @@ typedef enum _KOS_BYTECODE_INSTR {
     /* TAIL.CALL.N <closure.size.uint8>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
     /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
     INSTR_TAIL_CALL_N,
-    /* TAIL.CALL.FUN.N <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
+    /* TAIL.CALL.FUN <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
     /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
     INSTR_TAIL_CALL_FUN,
     /* YIELD <r.src> */

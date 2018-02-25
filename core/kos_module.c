@@ -1256,7 +1256,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
         KOS_FRAME mod_frame = _KOS_stack_frame_push(frame,
                                                     OBJPTR(MODULE, module_obj),
                                                     0,
-                                                    0);
+                                                    KOS_BADPTR);
         if ( ! mod_frame)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
 

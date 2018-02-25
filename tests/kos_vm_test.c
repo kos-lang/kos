@@ -557,12 +557,11 @@ int main(void)
     /* LOAD.FUN, CALL */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(10),
+            INSTR_JUMP,       IMM32(3),
 
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-19), 1, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(-13), 2, 0, 1, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(1),
             INSTR_LOAD_INT32, 2, IMM32(42),
             INSTR_SET_ELEM,   1, IMM32(0), 2,
@@ -582,7 +581,7 @@ int main(void)
     /* LOAD.FUN, CALL */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,   0, IMM32(39), 1, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(39), 2, 0, 1, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(1),
             INSTR_LOAD_INT32, 2, IMM32(100),
             INSTR_SET_ELEM,   1, IMM32(0), 2,
@@ -592,7 +591,6 @@ int main(void)
             INSTR_ADD,        0, 0, 1,
             INSTR_RETURN,     0, 0,
 
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
             INSTR_MUL,        0, 0, 0,
             INSTR_RETURN,     0, 0
         };
@@ -610,29 +608,31 @@ int main(void)
         const uint8_t code[] = {
             INSTR_JUMP,       IMM32(3),
 
-            INSTR_RETURN,     0, 1,
+            INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-12), 0, 2, 0,
-            INSTR_LOAD_VOID,  1,
+            INSTR_LOAD_FUN2,  0, IMM32(-13), 1, 0, 0, 0,
+            INSTR_LOAD_INT8,  1, 121,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CALL,       0, 0, 1, 2,
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_VOID);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
         TEST_NO_EXCEPTION();
+
+        TEST(IS_SMALL_INT(ret));
+        TEST(GET_SMALL_INT(ret) == 121);
     }
 
     /************************************************************************/
     /* CALL.N */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(10),
+            INSTR_JUMP,       IMM32(3),
 
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-19), 1, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(-13), 2, 0, 1, 0,
             INSTR_LOAD_INT8,  1, 42,
             INSTR_LOAD_VOID,  2,
             INSTR_CALL_N,     0, 0, 2, 1, 1,
@@ -655,7 +655,7 @@ int main(void)
             INSTR_LOAD_INT8,  0, 43,
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-15), 0, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(-16), 1, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_CALL_N,     0, 0, 1, 255, 0,
             INSTR_RETURN,     0, 0
@@ -672,12 +672,11 @@ int main(void)
     /* CALL.FUN */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(10),
+            INSTR_JUMP,       IMM32(3),
 
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-19), 1, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(-13), 2, 0, 1, 0,
             INSTR_LOAD_INT8,  1, 42,
             INSTR_CALL_FUN,   0, 0, 1, 1,
             INSTR_RETURN,     0, 0
@@ -699,7 +698,7 @@ int main(void)
             INSTR_LOAD_INT8,  0, 44,
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-15), 0, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(-16), 1, 0, 0, 0,
             INSTR_CALL_FUN,   0, 0, 255, 0,
             INSTR_RETURN,     0, 0
         };
@@ -712,25 +711,24 @@ int main(void)
     }
 
     /************************************************************************/
-    /* LOAD.FUN, CALL - reuse function body twice */
+    /* LOAD.FUN, CALL.N - reuse function body twice */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,   0, IMM32(34), 0, 3, 0,    /* this function adds 110 */
-            INSTR_LOAD_FUN,   1, IMM32(35), 0, 3, 0,    /* this function adds 100 */
-            INSTR_LOAD_INT32, 2, IMM32(1),
-            INSTR_LOAD_ARRAY, 3, IMM32(0),
-            INSTR_CALL,       2, 0, 2, 3,               /* effectively add 110 */
-            INSTR_CALL,       2, 1, 2, 3,               /* effectively add 100 */
+            INSTR_LOAD_FUN2,  0, IMM32(28), 2, 0, 0, 0, /* this function adds 130 */
+            INSTR_LOAD_FUN2,  1, IMM32(25), 2, 0, 0, 0, /* this function adds 100 */
+            INSTR_LOAD_INT8,  2, 5,
+            INSTR_CALL_N,     2, 0, 2, 255, 0,          /* effectively add 130 */
+            INSTR_CALL_N,     2, 1, 2, 255, 0,          /* effectively add 100 */
             INSTR_RETURN,     0, 2,
 
-            INSTR_LOAD_INT32, 2, IMM32(10),
-            INSTR_ADD,        1, 1, 2,                  /* add 10 to this */
-            INSTR_LOAD_INT32, 2, IMM32(100),
-            INSTR_ADD,        1, 1, 2,                  /* add 100 to this */
-            INSTR_RETURN,     0, 1,
+            INSTR_LOAD_INT8,  1, 30,
+            INSTR_ADD,        0, 0, 1,                  /* add 30 to this */
+            INSTR_LOAD_INT8,  1, 100,
+            INSTR_ADD,        0, 0, 1,                  /* add 100 to this */
+            INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, 0) == TO_SMALL_INT(211));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_SMALL_INT(235));
         TEST_NO_EXCEPTION();
     }
 
@@ -738,13 +736,10 @@ int main(void)
     /* CALL - not a function */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_VOID,  0,
-            INSTR_LOAD_ARRAY, 1, IMM32(1),
-            INSTR_LOAD_INT32, 2, IMM32(100),
-            INSTR_SET_ELEM,   1, IMM32(0), 2,
-            INSTR_LOAD_VOID,  2,
-            INSTR_CALL,       0, 0, 2, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_VOID,   0,
+            INSTR_LOAD_ARRAY8, 1, 0,
+            INSTR_CALL,        0, 0, 0, 1,
+            INSTR_RETURN,      0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_BADPTR);
@@ -757,12 +752,11 @@ int main(void)
         static const char str[]    = "str";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(10),
+            INSTR_JUMP,       IMM32(3),
 
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-19), 1, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(-13), 2, 0, 1, 0,
             INSTR_LOAD_STR,   1, IMM32(0),
             INSTR_LOAD_VOID,  2,
             INSTR_CALL,       0, 0, 2, 1,
@@ -777,19 +771,35 @@ int main(void)
     /* CALL - not enough args */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(10),
+            INSTR_JUMP,        IMM32(3),
 
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-19), 10, 2, 0,
-            INSTR_LOAD_VOID,  1,
-            INSTR_LOAD_ARRAY, 2, IMM32(0),
-            INSTR_CALL,       0, 0, 1, 2,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_FUN2,   0, IMM32(-13), 2, 0, 10, 0,
+            INSTR_LOAD_VOID,   1,
+            INSTR_LOAD_ARRAY8, 2, 0,
+            INSTR_CALL,        0, 0, 1, 2,
+            INSTR_RETURN,      0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_BADPTR);
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* CALL.FUN - not enough args */
+    {
+        const uint8_t code[] = {
+            INSTR_JUMP,        IMM32(3),
+
+            INSTR_RETURN,      0, 0,
+
+            INSTR_LOAD_FUN2,   0, IMM32(-13), 2, 0, 10, 0,
+            INSTR_CALL_FUN,    0, 0, 255, 0,
+            INSTR_RETURN,      0, 0
+        };
+
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 1, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -799,21 +809,18 @@ int main(void)
         static const char str[]    = "own property";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(17),
+            INSTR_JUMP,        IMM32(10),
 
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
-            INSTR_SET_PROP,   1, IMM32(0), 0,
-            INSTR_RETURN,     0, 0,
+            INSTR_SET_PROP,    1, IMM32(0), 0,
+            INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_CTOR,  0, IMM32(-26), 1, 2, 0,
-            INSTR_LOAD_ARRAY, 1, IMM32(1),      /* create arguments array */
-            INSTR_LOAD_INT32, 2, IMM32(0xC0DEU),
-            INSTR_SET_ELEM,   1, IMM32(0), 2,   /* set argument */
-            INSTR_CALL,       0, 0, 1, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_CTOR2,  0, IMM32(-20), 2, 0, 1, 0,
+            INSTR_LOAD_INT32,  1, IMM32(0xC0DEU),
+            INSTR_CALL_FUN,    0, 0, 1, 1,
+            INSTR_RETURN,      0, 0
         };
 
-        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop);
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_SMALL_INT(ret));
@@ -828,19 +835,18 @@ int main(void)
         static const char str[]    = "own property";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(23),
+            INSTR_JUMP,        IMM32(12),
 
-            INSTR_GET_ELEM,   0, 0, IMM32(0),
-            INSTR_SET_PROP,   1, IMM32(0), 0,
-            INSTR_LOAD_INT32, 0, IMM32(0),      /* return value is ignored */
-            INSTR_RETURN,     0, 0,
+            INSTR_SET_PROP,    1, IMM32(0), 0,
+            INSTR_LOAD_VOID,   0,                /* return value is ignored */
+            INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_CTOR,  0, IMM32(-32), 1, 2, 0,
-            INSTR_LOAD_ARRAY, 1, IMM32(1),      /* create arguments array */
-            INSTR_LOAD_INT32, 2, IMM32(0xC0DEU),
-            INSTR_SET_ELEM,   1, IMM32(0), 2,   /* set argument */
-            INSTR_CALL,       0, 0, 1, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_CTOR2,  0, IMM32(-22), 2, 0, 1, 0,
+            INSTR_LOAD_ARRAY8, 1, 1,             /* create arguments array */
+            INSTR_LOAD_INT32,  2, IMM32(0xC0DEU),
+            INSTR_SET_ELEM,    1, IMM32(0), 2,   /* set argument */
+            INSTR_CALL,        0, 0, 1, 1,
+            INSTR_RETURN,      0, 0
         };
 
         KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop);
@@ -860,7 +866,7 @@ int main(void)
 
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_CTOR,  0, IMM32(-12), 0, 2, 0,
+            INSTR_LOAD_CTOR2, 0, IMM32(-13), 1, 0, 0, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(0),
             INSTR_CALL,       1, 0, 1, 1,
 
@@ -881,9 +887,9 @@ int main(void)
 
             INSTR_RETURN,        0, 0,
 
-            INSTR_LOAD_ARRAY,    1, IMM32(0),
-            INSTR_LOAD_CTOR,     2, IMM32(-18), 0, 2, 0,
-            INSTR_LOAD_CTOR,     3, IMM32(-27), 0, 2, 0,
+            INSTR_LOAD_ARRAY8,   1, 0,
+            INSTR_LOAD_CTOR2,    2, IMM32(-16), 1, 0, 0, 0,
+            INSTR_LOAD_CTOR2,    3, IMM32(-26), 1, 0, 0, 0,
             INSTR_CALL,          4, 2, 2, 1,
             INSTR_CALL,          5, 3, 3, 1,
 
@@ -916,9 +922,9 @@ int main(void)
             INSTR_RETURN,        0, 0,
             INSTR_RETURN,        0, 0,
 
-            INSTR_LOAD_ARRAY,    1, IMM32(0),
-            INSTR_LOAD_CTOR,     2, IMM32(-21), 0, 2, 0,
-            INSTR_LOAD_CTOR,     3, IMM32(-27), 0, 2, 0,
+            INSTR_LOAD_ARRAY8,   1, 0,
+            INSTR_LOAD_CTOR2,    2, IMM32(-19), 1, 0, 0, 0,
+            INSTR_LOAD_CTOR2,    3, IMM32(-26), 1, 0, 0, 0,
             INSTR_CALL,          4, 2, 2, 1,
             INSTR_CALL,          5, 3, 3, 1,
 
@@ -945,7 +951,7 @@ int main(void)
     /* LOAD.GEN, CALL - instantiate generator */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(0), 0, 2, 0,
+            INSTR_LOAD_GEN2,  0, IMM32(0), 1, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CALL,       0, 0, 1, 2,
@@ -963,21 +969,20 @@ int main(void)
     }
 
     /************************************************************************/
-    /* LOAD.GEN, CALL */
+    /* LOAD.GEN, CALL.N/FUN */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(25), 0, 2, 0,
-            INSTR_LOAD_INT32, 1, IMM32(0xCAFEU), /* generator yields 'this' */
-            INSTR_LOAD_ARRAY, 2, IMM32(0),
-            INSTR_CALL,       0, 0, 1, 2,        /* instantiate generator   */
-            INSTR_CALL,       0, 0, 1, 2,        /* invoke generator        */
-            INSTR_RETURN,     0, 0,
+            INSTR_LOAD_GEN2,   0, IMM32(20), 1, 0, 0, 0,
+            INSTR_LOAD_INT32,  1, IMM32(0xCAFEU), /* generator yields 'this' */
+            INSTR_CALL_N,      0, 0, 1, 255, 0,   /* instantiate generator   */
+            INSTR_CALL_FUN,    0, 0, 2, 0,        /* invoke generator        */
+            INSTR_RETURN,      0, 0,
 
-            INSTR_YIELD,      1,                 /* generator yields 'this' */
-            INSTR_RETURN,     0, 0
+            INSTR_YIELD,       0,                 /* generator yields 'this' */
+            INSTR_RETURN,      0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_SMALL_INT(0xCAFEU));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_SMALL_INT(0xCAFEU));
         TEST_NO_EXCEPTION();
     }
 
@@ -985,17 +990,16 @@ int main(void)
     /* LOAD.GEN, YIELD */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(19), 0, 2, 0,
-            INSTR_LOAD_ARRAY, 1, IMM32(0),
-            INSTR_CALL,       0, 0, 1, 1,
-            INSTR_CALL,       0, 0, 1, 1,
+            INSTR_LOAD_GEN2,  0, IMM32(13), 1, 0, 0, 0,
+            INSTR_CALL_FUN,   0, 0, 100, 0,
+            INSTR_CALL_FUN,   0, 0, 100, 0,
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_INT32, 0, IMM32(42),
+            INSTR_LOAD_INT8,  0, 42,
             INSTR_YIELD,      0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_SMALL_INT(42));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 1, 0) == TO_SMALL_INT(42));
         TEST_NO_EXCEPTION();
     }
 
@@ -1003,16 +1007,15 @@ int main(void)
     /* LOAD.GEN, CALL - ensure that YIELD resets the register to 'void' */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(30), 0, 2, 0,
-            INSTR_LOAD_INT32, 1, IMM32(0),/* generator will yield 'this' first */
-            INSTR_LOAD_ARRAY, 2, IMM32(0),
-            INSTR_CALL,       0, 0, 1, 2, /* instantiate generator */
+            INSTR_LOAD_GEN2,  0, IMM32(22), 1, 0, 0, 0,
+            INSTR_LOAD_INT8,  1, 0,          /* generator will yield 'this' first */
+            INSTR_CALL_N,     0, 0, 1, 0, 0, /* instantiate generator */
 
-            INSTR_CALL,       3, 0, 1, 2, /* yields 0 ('this') */
-            INSTR_CALL,       3, 0, 1, 2, /* yields 'void', because args are empty */
-            INSTR_RETURN,     0, 3,
+            INSTR_CALL_FUN,   1, 0, 0, 0,    /* yields 0 ('this') */
+            INSTR_CALL_FUN,   1, 0, 0, 0,    /* yields 'void', because args are empty */
+            INSTR_RETURN,     0, 1,
 
-            INSTR_YIELD,      1,
+            INSTR_YIELD,      0,
             INSTR_JUMP,       IMM32(-7)
         };
 
@@ -1024,7 +1027,7 @@ int main(void)
     /* LOAD.GEN, YIELD, CALL.GEN */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,      0, IMM32(80), 2, 3, 0,
+            INSTR_LOAD_GEN2,     0, IMM32(80), 3, 0, 2, 0,
             INSTR_LOAD_ARRAY8,   2, 2,
             INSTR_LOAD_INT8,     1, 3,
             INSTR_SET_ELEM,      2, IMM32(0), 1,    /* begin (3) */
@@ -1046,8 +1049,6 @@ int main(void)
             INSTR_LOAD_INT8,     3, 0,
             INSTR_RETURN,        0, 3,
 
-            INSTR_GET_ELEM,      1, 0, IMM32(1),    /* arg 1 - end   */
-            INSTR_GET_ELEM,      0, 0, IMM32(0),    /* arg 0 - begin */
             INSTR_JUMP,          IMM32(12),
             INSTR_MOVE,          2, 0,
             INSTR_YIELD,         2,
@@ -1067,7 +1068,7 @@ int main(void)
     /* LOAD.GEN, CALL - not enough args */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(20), 2, 2, 0,
+            INSTR_LOAD_GEN2,  0, IMM32(20), 3, 0, 2, 0,
             INSTR_LOAD_INT32, 1, IMM32(0),
             INSTR_LOAD_ARRAY, 2, IMM32(1),
             INSTR_CALL,       0, 0, 1, 2, /* instantiate generator */
@@ -1084,7 +1085,7 @@ int main(void)
     /* LOAD.GEN, CALL - args not an array */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(16), 0, 2, 0,
+            INSTR_LOAD_GEN2,  0, IMM32(16), 2, 0, 0, 0,
             INSTR_LOAD_INT32, 1, IMM32(0),
             INSTR_LOAD_VOID,  2,
             INSTR_CALL,       0, 0, 1, 2, /* instantiate generator */
@@ -1101,17 +1102,16 @@ int main(void)
     /* LOAD.GEN, CALL - one arg passed to generator in "READY" state */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(21), 1, 2, 0,
-            INSTR_LOAD_VOID,  1,
-            INSTR_LOAD_ARRAY, 2, IMM32(1),
-            INSTR_CALL,       0, 0, 1, 2, /* instantiate generator */
-            INSTR_CALL,       0, 0, 1, 2, /* invoke generator */
+            INSTR_LOAD_GEN2,  0, IMM32(17), 2, 0, 1, 0,
+            INSTR_LOAD_INT8,  1, 120,
+            INSTR_CALL_N,     0, 0, 1, 0, 1, /* instantiate generator */
+            INSTR_CALL_FUN,   0, 0, 0, 0,    /* invoke generator */
             INSTR_RETURN,     0, 0,
 
             INSTR_YIELD,      1
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_VOID);
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_SMALL_INT(120));
         TEST_NO_EXCEPTION();
     }
 
@@ -1119,7 +1119,7 @@ int main(void)
     /* YIELD - pass data to generator through yield */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(79), 0, 2, 0,
+            INSTR_LOAD_GEN2,  0, IMM32(79), 2, 0, 0, 0,
             INSTR_LOAD_INT32, 1, IMM32(100),    /* bind initial value, 'this', used by the generator */
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CALL,       0, 0, 1, 2,       /* instantiate generator */
@@ -1137,9 +1137,9 @@ int main(void)
             INSTR_SUB,        4, 4, 3,          /* 250 */
             INSTR_RETURN,     0, 4,
 
-            INSTR_LOAD_INT32, 0, IMM32(1),
-            INSTR_ADD,        1, 1, 0,    /* use 'this' as the initial value */
-            INSTR_YIELD,      1,
+            INSTR_LOAD_INT32, 1, IMM32(1),
+            INSTR_ADD,        0, 0, 1,    /* use 'this' as the initial value */
+            INSTR_YIELD,      0,
             INSTR_JUMP,       IMM32(-11)
         };
 
@@ -1155,51 +1155,13 @@ int main(void)
     /* CALL - call beyond the end of generator */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(26), 0, 2, 0,
-            INSTR_LOAD_VOID,  1,
-            INSTR_LOAD_ARRAY, 2, IMM32(0),
-            INSTR_CALL,       0, 0, 1, 2, /* instantiate generator */
+            INSTR_LOAD_GEN2,  0, IMM32(22), 1, 0, 0, 0,
+            INSTR_LOAD_INT8,  1, -7,
+            INSTR_CALL_N,     0, 0, 1, 10, 0, /* instantiate generator */
 
-            INSTR_CALL,       3, 0, 1, 2,
-            INSTR_CALL,       3, 0, 1, 2,
-            INSTR_RETURN,     0, 3,
-
-            INSTR_YIELD,      1,
-            INSTR_RETURN,     0, 1
-        };
-
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, 0) == KOS_BADPTR);
-        TEST_EXCEPTION();
-    }
-
-    /************************************************************************/
-    /* CALL.GEN - call beyond the end of generator */
-    {
-        const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(19), 0, 2, 0,
-            INSTR_LOAD_ARRAY8,1, 0,
-            INSTR_CALL,       0, 0, 1, 1, /* instantiate generator */
-
-            INSTR_CALL_GEN,   3, 0, 2,    /* returns 'true' in register 2 */
-            INSTR_CALL_GEN,   3, 0, 3,    /* raise exception */
-            INSTR_RETURN,     0, 2,
-
+            INSTR_CALL_FUN,   1, 0, 11, 0,
+            INSTR_CALL_FUN,   1, 0, 12, 0,
             INSTR_RETURN,     0, 1,
-            INSTR_JUMP,       IMM32(-8)
-        };
-
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, 0) == KOS_BADPTR);
-        TEST_EXCEPTION();
-    }
-
-    /************************************************************************/
-    /* YIELD - yield not supported in a regular function */
-    {
-        const uint8_t code[] = {
-            INSTR_LOAD_FUN,   0, IMM32(14), 0, 2, 0,
-            INSTR_LOAD_ARRAY, 1, IMM32(0),
-            INSTR_CALL,       0, 0, 1, 1, /* invoke function */
-            INSTR_RETURN,     0, 0,
 
             INSTR_YIELD,      0,
             INSTR_RETURN,     0, 0
@@ -1210,18 +1172,54 @@ int main(void)
     }
 
     /************************************************************************/
+    /* CALL.GEN - call beyond the end of generator */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_GEN2, 0, IMM32(19), 1, 0, 0, 0,
+            INSTR_CALL_FUN,  0, 0, 0, 0, /* instantiate generator */
+
+            INSTR_CALL_GEN,  2, 0, 1,    /* returns 'true' in register 1 */
+            INSTR_CALL_GEN,  2, 0, 2,    /* raise exception */
+            INSTR_RETURN,    0, 1,
+
+            INSTR_RETURN,    0, 0,
+            INSTR_JUMP,      IMM32(-8)
+        };
+
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == KOS_BADPTR);
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* YIELD - yield not supported in a regular function */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_FUN2, 0, IMM32(12), 1, 0, 0, 0,
+            INSTR_LOAD_INT8, 1, 13,
+            INSTR_CALL_N,    0, 0, 1, 10, 0, /* invoke function */
+            INSTR_RETURN,    0, 0,
+
+            INSTR_YIELD,     0,
+            INSTR_RETURN,    0, 0
+        };
+
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == KOS_BADPTR);
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
     /* CALL.GEN - put both return value and status in the same register */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(15), 0, 2, 0,
-            INSTR_LOAD_ARRAY8,1, 0,
-            INSTR_CALL,       0, 0, 1, 1, /* instantiate generator */
+            INSTR_LOAD_GEN2,   0, IMM32(15), 1, 0, 0, 0,
+            INSTR_LOAD_ARRAY8, 1, 0,
+            INSTR_CALL,        0, 0, 1, 1, /* instantiate generator */
 
-            INSTR_CALL_GEN,   0, 0, 0,    /* invoke generator */
-            INSTR_RETURN,     0, 0,
+            INSTR_CALL_GEN,    0, 0, 0,    /* invoke generator */
+            INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_INT8,  0, 0,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_INT8,   0, 0,
+            INSTR_RETURN,      0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == KOS_TRUE);
@@ -1232,7 +1230,7 @@ int main(void)
     /* CALL.GEN - put both return value and status in the same register */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(18), 0, 2, 0,
+            INSTR_LOAD_GEN2,  0, IMM32(18), 1, 0, 0, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(0),
             INSTR_CALL,       0, 0, 1, 1, /* instantiate generator */
 
@@ -1252,16 +1250,16 @@ int main(void)
     /* TAIL.CALL */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,   0, IMM32(13), 0, 2, 0,
-            INSTR_LOAD_ARRAY8,1, 0,
-            INSTR_TAIL_CALL,  0, 0, 0, 1,
+            INSTR_LOAD_FUN2,   0, IMM32(13), 1, 0, 0, 0,
+            INSTR_LOAD_ARRAY8, 1, 0,
+            INSTR_TAIL_CALL,   0, 0, 0, 1,
 
             /* unreachable */
-            INSTR_LOAD_VOID,  0,
-            INSTR_RETURN,     0, 0,
+            INSTR_LOAD_VOID,   0,
+            INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_INT8,  0, 42,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_INT8,   0, 42,
+            INSTR_RETURN,      0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_SMALL_INT(42));
@@ -1272,7 +1270,7 @@ int main(void)
     /* TAIL.CALL.N */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,    0, IMM32(19), 2, 3, 0,
+            INSTR_LOAD_FUN2,   0, IMM32(19), 3, 0, 2, 0,
             INSTR_LOAD_INT8,   1, 3,
             INSTR_LOAD_INT8,   2, 20,
             INSTR_LOAD_INT8,   3, 100,
@@ -1282,11 +1280,9 @@ int main(void)
             INSTR_LOAD_VOID,   0,
             INSTR_RETURN,      0, 0,
 
-            INSTR_GET_ELEM,    2, 0, IMM32(1), /* arg 1 - 100 */
-            INSTR_GET_ELEM,    0, 0, IMM32(0), /* arg 2 - 20 */
-            INSTR_ADD,         0, 0, 0,
-            INSTR_ADD,         0, 0, 2,
-            INSTR_ADD,         0, 0, 1,        /* this - 3 */
+            INSTR_ADD,         0, 0, 0,        /* arg 0 - 100 */
+            INSTR_ADD,         0, 0, 1,        /* arg 1 - 20  */
+            INSTR_ADD,         0, 0, 2,        /* this  - 3   */
             INSTR_RETURN,      0, 0
         };
 
@@ -1298,7 +1294,7 @@ int main(void)
     /* TAIL.CALL.FUN */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,      0, IMM32(16), 2, 2, 0,
+            INSTR_LOAD_FUN2,     0, IMM32(16), 3, 0, 2, 0,
             INSTR_LOAD_INT8,     1, 20,
             INSTR_LOAD_INT8,     2, 100,
             INSTR_TAIL_CALL_FUN, 0, 0, 1, 2,
@@ -1307,10 +1303,8 @@ int main(void)
             INSTR_LOAD_VOID,     0,
             INSTR_RETURN,        0, 0,
 
-            INSTR_GET_ELEM,      1, 0, IMM32(1), /* arg 1 - 100 */
-            INSTR_GET_ELEM,      0, 0, IMM32(0), /* arg 2 - 20 */
-            INSTR_ADD,           0, 0, 0,
-            INSTR_ADD,           0, 0, 1,
+            INSTR_ADD,           0, 0, 0,        /* arg 0 - 100 */
+            INSTR_ADD,           0, 0, 1,        /* arg 1 - 20  */
             INSTR_RETURN,        0, 0
         };
 
@@ -1385,7 +1379,7 @@ int main(void)
     /* CATCH - catch exception from another function */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,   0, IMM32(22), 0, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(22), 2, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CATCH,      1, IMM32(5),
@@ -1409,7 +1403,7 @@ int main(void)
     /* CATCH - several levels of catch */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,   0, IMM32(42), 0, 3, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(42), 3, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CATCH,      0, IMM32(8),
@@ -1420,7 +1414,7 @@ int main(void)
             INSTR_ADD,        0, 0, 2,
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(44), 0, 3, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(44), 3, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CATCH,      0, IMM32(8),
@@ -1432,7 +1426,7 @@ int main(void)
             INSTR_THROW,      0,
             INSTR_RETURN,     0, 1,
 
-            INSTR_LOAD_FUN,   0, IMM32(44), 0, 2, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(44), 2, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CATCH,      0, IMM32(8),
@@ -1456,32 +1450,31 @@ int main(void)
     /* BIND, BIND.SELF */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,   0, IMM32(24), 0, 3, 0,
+            INSTR_LOAD_FUN2,  0, IMM32(20), 3, 0, 0, 0,
             INSTR_BIND_SELF,  0, 0,
             INSTR_LOAD_VOID,  1,
-            INSTR_LOAD_ARRAY, 2, IMM32(0),
-            INSTR_CALL,       0, 0, 1, 2,           /* returns the last function */
-            INSTR_CALL,       0, 0, 1, 2,           /* sets register 1 to 41     */
+            INSTR_CALL_N,     0, 0, 1, 21, 0,       /* returns the last function */
+            INSTR_CALL_N,     0, 0, 1, 23, 0,       /* sets register 1 to 41     */
             INSTR_RETURN,     0, 1,
 
-            /* reg 2 is register array of the main function */
-            INSTR_LOAD_FUN,   1, IMM32(16), 0, 4, 0,
-            INSTR_BIND_SELF,  1, 0,                 /* bind own registers    */
-            INSTR_BIND,       1, 1, 2,              /* bind main's registers */
+            /* reg 1 is register array of the main function */
+            INSTR_LOAD_FUN2,  2, IMM32(16), 3, 0, 0, 0,
+            INSTR_BIND_SELF,  2, 0,                 /* bind own registers    */
+            INSTR_BIND,       2, 1, 1,              /* bind main's registers */
             INSTR_LOAD_INT32, 0, IMM32(37),
-            INSTR_RETURN,     1, 1,                 /* leave one reg (reg 0) */
+            INSTR_RETURN,     1, 2,                 /* leave one reg (reg 0) */
 
-            /* reg 2 is register array of the above function */
-            /* reg 3 is register array of the main function  */
-            INSTR_GET_ELEM,   0, 2, IMM32(0),
+            /* reg 1 is register array of the above function */
+            /* reg 2 is register array of the main function  */
+            INSTR_GET_ELEM,   0, 1, IMM32(0),
             INSTR_LOAD_INT32, 1, IMM32(4),
             INSTR_ADD,        0, 0, 1,
-            INSTR_SET_ELEM,   3, IMM32(1), 0,
+            INSTR_SET_ELEM,   2, IMM32(1), 0,
             INSTR_LOAD_VOID,  0,
             INSTR_RETURN,     0, 0
         };
 
-        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, 0) == TO_SMALL_INT(41));
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_SMALL_INT(41));
         TEST_NO_EXCEPTION();
     }
 
@@ -1489,7 +1482,7 @@ int main(void)
     /* BIND, BIND.SELF */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN,   0, IMM32(53), 0, 4, 0,
+            INSTR_LOAD_GEN2,  0, IMM32(53), 4, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_LOAD_ARRAY, 3, IMM32(1),
@@ -1504,12 +1497,12 @@ int main(void)
             INSTR_CALL,       0, 0, 1, 2,           /* add 3[0] to 4 */
             INSTR_RETURN,     0, 4,
 
-            /* reg 2 is register array of the main function        */
-            /* reg 3 is array from register 3 in the main function */
-            INSTR_GET_ELEM,   0, 3, IMM32(0),
-            INSTR_GET_ELEM,   1, 2, IMM32(4),
-            INSTR_ADD,        0, 0, 1,
-            INSTR_SET_ELEM,   2, IMM32(4), 0,
+            /* reg 1 is register array of the main function        */
+            /* reg 2 is array from register 3 in the main function */
+            INSTR_GET_ELEM,   0, 2, IMM32(0),
+            INSTR_GET_ELEM,   3, 1, IMM32(4),
+            INSTR_ADD,        0, 0, 3,
+            INSTR_SET_ELEM,   1, IMM32(4), 0,
             INSTR_LOAD_INT32, 0, IMM32(0),
             INSTR_YIELD,      0
         };
@@ -1558,7 +1551,7 @@ int main(void)
             INSTR_SET_ELEM,   1, IMM32(1), 0,
             INSTR_LOAD_INT32, 0, IMM32(4),
             INSTR_LOAD_INT32, 2, IMM32(0x20000),
-            INSTR_LOAD_FUN,   3, IMM32(49), 2, 7, 1, /* Overwritten by this function with level 2 */
+            INSTR_LOAD_FUN2,  3, IMM32(49), 7, 1, 2, 0, /* Overwritten by this function with level 2 */
             INSTR_BIND_SELF,  3, 0,
             INSTR_BIND,       3, 1, 2,
             INSTR_CALL,       0, 3, 0, 1,           /* Returns 0x10 */
@@ -1572,41 +1565,42 @@ int main(void)
 
             /* Level 1: this outer function starts with:
              * 0 - independent var
-             * 1 - args (bound but not preserved)
-             * 2 - this
-             * 3 - global regs
-             * 4 - global integer */
+             * 1 - arg 0 (bound but not preserved)
+             * 2 - arg 1 (bound but not preserved)
+             * 3 - this
+             * 4 - global regs
+             * 5 - global integer */
+            INSTR_GET_ELEM,   6, 4, IMM32(-2),      /* 3 */
             INSTR_LOAD_INT32, 0, IMM32(0x1000),
-            INSTR_GET_ELEM,   5, 1, IMM32(-2),      /* 9 */
-            INSTR_ADD,        2, 2, 5,              /* 4+9 = 13 */
-            INSTR_GET_ELEM,   5, 3, IMM32(-2),      /* 3 */
-            INSTR_ADD,        2, 2, 5,              /* 13+3 = 0x10 */
-            INSTR_LOAD_FUN,   6, IMM32(29), 3, 107, 100,
-            INSTR_BIND,       6, 0, 3,
-            INSTR_BIND,       6, 1, 4,
+            INSTR_ADD,        3, 3, 1,              /* 4+9 = 13 */
+            INSTR_ADD,        3, 3, 6,              /* 13+3 = 0x10 */
+            INSTR_LOAD_FUN2,  6, IMM32(29), 107, 98, 3, 0,
+            INSTR_BIND,       6, 0, 4,
+            INSTR_BIND,       6, 1, 5,
             INSTR_BIND_SELF,  6, 2,
-            INSTR_BIND,       6, 3, 1,
-            INSTR_BIND,       6, 4, 2,
-            INSTR_SET_ELEM,   3, IMM32(-3), 6,
-            INSTR_RETURN,     1, 2,
+            INSTR_BIND,       6, 3, 2,
+            INSTR_BIND,       6, 4, 3,
+            INSTR_SET_ELEM,   4, IMM32(-3), 6,
+            INSTR_RETURN,     1, 3,
 
             /* Level 2: this inner function starts with:
-             * 100 - args array
+             * 98  - arg 0
+             * 99  - arg 1
+             * 100 - arg 2
              * 101 - this
              * 102 - global regs
              * 103 - global integer
              * 104 - level 1 regs
-             * 105 - level 1 args
+             * 105 - level 1 arg 0
              * 106 - level 1 integer */
-            INSTR_GET_ELEM,   0, 100, IMM32(-1),    /* 0x40 */
+            INSTR_MOVE,       0, 100,               /* 0x40 */
             INSTR_GET_ELEM,   2, 102, IMM32(-1),    /* 0x40000 */
             INSTR_GET_ELEM,   4, 104, IMM32(-1),    /* 0x1000 */
-            INSTR_GET_ELEM,   5, 105, IMM32(-1),    /* 0x8000 */
             INSTR_OR,         0, 0, 101,            /* 0x40 | 0x5 */
             INSTR_OR,         0, 0, 2,              /* | 0x40000 */
             INSTR_OR,         0, 0, 103,            /* | 0x20000 */
             INSTR_OR,         0, 0, 4,              /* | 0x1000 */
-            INSTR_OR,         0, 0, 5,              /* | 0x8000 */
+            INSTR_OR,         0, 0, 105,            /* | 0x8000 XXX */
             INSTR_OR,         0, 0, 106,            /* | 0x10 */
             INSTR_RETURN,     0, 0
         };

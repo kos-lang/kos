@@ -112,6 +112,11 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_GEN:            /* fall through */
         case INSTR_LOAD_CTOR:
             return 5;
+
+        case INSTR_LOAD_FUN2:           /* fall through */
+        case INSTR_LOAD_GEN2:           /* fall through */
+        case INSTR_LOAD_CTOR2:
+            return 6;
     }
 }
 
@@ -156,6 +161,12 @@ int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_GEN:
             /* fall through */
         case INSTR_LOAD_CTOR:
+            /* fall through */
+        case INSTR_LOAD_FUN2:
+            /* fall through */
+        case INSTR_LOAD_GEN2:
+            /* fall through */
+        case INSTR_LOAD_CTOR2:
             /* fall through */
         case INSTR_GET_MOD:
             /* fall through */
@@ -205,6 +216,15 @@ static int _get_offset_operand_tail(enum _KOS_BYTECODE_INSTR instr, int op)
                 return 3;
             break;
 
+        case INSTR_LOAD_FUN2:
+            /* fall through */
+        case INSTR_LOAD_GEN2:
+            /* fall through */
+        case INSTR_LOAD_CTOR2:
+            if (op == 1)
+                return 4;
+            break;
+
         case INSTR_CATCH:
             if (op == 1)
                 return 0;
@@ -235,6 +255,12 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_GEN:
             /* fall through */
         case INSTR_LOAD_CTOR:
+            /* fall through */
+        case INSTR_LOAD_FUN2:
+            /* fall through */
+        case INSTR_LOAD_GEN2:
+            /* fall through */
+        case INSTR_LOAD_CTOR2:
             /* fall through */
         case INSTR_LOAD_ARRAY8:
             /* fall through */
@@ -342,6 +368,9 @@ void _KOS_disassemble(const char                          *filename,
         "LOAD.FUN",
         "LOAD.GEN",
         "LOAD.CTOR",
+        "LOAD.FUN2",
+        "LOAD.GEN2",
+        "LOAD.CTOR2",
         "LOAD.ARRAY8",
         "LOAD.ARRAY",
         "LOAD.OBJ",

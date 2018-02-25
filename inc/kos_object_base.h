@@ -246,12 +246,24 @@ enum _KOS_FUNCTION_STATE {
     KOS_GEN_DONE        /* generator function reached the return statement      */
 };
 
+typedef struct _KOS_FUN_HEADER {
+    uint8_t              type;
+    uint8_t              flags;
+    uint8_t              num_args;
+    uint8_t              num_regs;
+    uint32_t             alloc_size;
+} KOS_FUN_HEADER;
+
+enum _KOS_FUNCTION_FLAGS {
+    KOS_FUN_ELLIPSIS = 1,   /* store remaining args in array */
+    KOS_FUN_OLD_STYLE = 2    /* TODO delete with min_args     */
+};
+
 typedef struct _KOS_FUNCTION {
-    KOS_OBJ_HEADER         header;
-    uint8_t                min_args;
-    uint8_t                num_regs;
+    KOS_FUN_HEADER         header;
+    uint8_t                min_args; /* TODO delete */
     uint8_t                args_reg;
-    uint8_t                state;
+    uint8_t                state;    /* TODO convert to KOS_ATOMIC(uint32_t) */
     uint32_t               instr_offs;
     KOS_ATOMIC(KOS_OBJ_ID) prototype;
     KOS_OBJ_ID             closures;

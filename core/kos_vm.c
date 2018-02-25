@@ -568,12 +568,83 @@ static int _is_generator_end_exception(KOS_FRAME frame)
     return 1;
 }
 
-static int _init_registers(KOS_FRAME     stack_frame,
-                           KOS_FUNCTION *func,
-                           KOS_OBJ_ID    regs,
-                           KOS_OBJ_ID    args_obj,
-                           KOS_OBJ_ID    this_obj,
-                           KOS_OBJ_ID    closures)
+static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
+                                  KOS_FUNCTION *func,
+                                  KOS_OBJ_ID    args_obj,
+                                  KOS_OBJ_ID    this_obj,
+                                  KOS_OBJ_ID    closures)
+{
+    int                     error        = KOS_SUCCESS;
+    KOS_OBJ_ID              ellipsis_obj = KOS_BADPTR;
+    KOS_ATOMIC(KOS_OBJ_ID) *regs_buf     = 0;
+    uint32_t                reg          = func->args_reg;
+
+    assert( ! func->handler);
+
+    if (func->header.flags & KOS_FUN_OLD_STYLE)
+        return KOS_new_array(frame, func->header.num_regs);
+
+    assert(func->min_args == func->header.num_args);
+
+    if (func->header.flags & KOS_FUN_ELLIPSIS) {
+        assert(func->header.num_regs >= reg + func->header.num_args + 2); /* args, ellipsis, this */
+    }
+    else {
+        assert(func->header.num_regs >= reg + func->header.num_args + 1); /* args, this */
+    }
+    assert(func->header.num_args <= KOS_get_array_size(args_obj));
+
+    if ((func->header.flags & KOS_FUN_ELLIPSIS) &&
+        (func->header.num_args < KOS_get_array_size(args_obj))) {
+
+        ellipsis_obj = KOS_array_slice(frame, args_obj, func->header.num_args, MAX_INT64);
+        TRY_OBJID(ellipsis_obj);
+    }
+
+    TRY(KOS_array_resize(frame, args_obj, func->header.num_regs));
+
+    regs_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+
+    if (reg > 0 && func->header.num_args)
+        memmove((void *)(regs_buf + reg),
+                (void *)regs_buf,
+                func->header.num_args * sizeof(KOS_OBJ_ID));
+    reg += func->header.num_args;
+
+    if ( ! IS_BAD_PTR(ellipsis_obj))
+        regs_buf[reg++] = ellipsis_obj;
+
+    regs_buf[reg++] = this_obj;
+
+    if (GET_OBJ_TYPE(closures) == OBJ_ARRAY) {
+        KOS_ATOMIC(KOS_OBJ_ID) *src_buf;
+        uint32_t                src_len;
+
+        src_len = KOS_get_array_size(closures);
+
+        assert(src_len > 0);
+        assert(reg + src_len <= 256U);
+        assert(reg + src_len <= KOS_get_array_size(args_obj));
+
+        src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, closures));
+        memcpy((void *)(regs_buf + reg),
+               (void *)src_buf,
+               src_len * sizeof(KOS_OBJ_ID));
+    }
+    else {
+        assert(GET_OBJ_TYPE(closures) == OBJ_VOID);
+    }
+
+_error:
+    return error ? KOS_BADPTR : args_obj;
+}
+
+static int _init_registers_old(KOS_FRAME     stack_frame,
+                               KOS_FUNCTION *func,
+                               KOS_OBJ_ID    regs,
+                               KOS_OBJ_ID    args_obj,
+                               KOS_OBJ_ID    this_obj,
+                               KOS_OBJ_ID    closures)
 {
     int error = KOS_SUCCESS;
 
@@ -581,8 +652,10 @@ static int _init_registers(KOS_FRAME     stack_frame,
 
     uint32_t reg = func->args_reg;
 
-    assert(func->num_regs >= reg + 2); /* args, this */
-    assert(func->num_regs == KOS_get_array_size(regs));
+    assert(func->header.flags & KOS_FUN_OLD_STYLE);
+
+    assert(func->header.num_regs >= reg + 2); /* args, this */
+    assert(func->header.num_regs == KOS_get_array_size(regs));
 
     new_regs[reg++] = args_obj;
     new_regs[reg++] = this_obj;
@@ -633,6 +706,9 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
     if (KOS_get_array_size(args_obj) < func->min_args)
         RAISE_EXCEPTION(str_err_too_few_args);
 
+    if (KOS_get_array_size(args_obj) < func->header.num_args)
+        RAISE_EXCEPTION(str_err_too_few_args);
+
     if (instr == INSTR_CALL_GEN && state < KOS_GEN_READY)
         RAISE_EXCEPTION(str_err_not_generator);
 
@@ -655,17 +731,28 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
         /* Regular function */
         case KOS_FUN: {
-            new_stack_frame = _KOS_stack_frame_push_func(frame, func);
+            KOS_OBJ_ID regs = KOS_BADPTR;
+
+            if ( ! func->handler) {
+                regs = _init_registers(frame,
+                                       func,
+                                       args_obj,
+                                       *this_obj,
+                                       func->closures);
+                TRY_OBJID(regs);
+            }
+
+            new_stack_frame = _KOS_stack_frame_push_func(frame, func, regs);
             if ( ! new_stack_frame)
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-            if ( ! func->handler)
-                TRY(_init_registers(new_stack_frame,
-                                    func,
-                                    new_stack_frame->registers,
-                                    args_obj,
-                                    *this_obj,
-                                    func->closures));
+            if ( ! func->handler && (func->header.flags & KOS_FUN_OLD_STYLE))
+                TRY(_init_registers_old(new_stack_frame, /* TODO delete */
+                                        func,
+                                        new_stack_frame->registers,
+                                        args_obj,
+                                        *this_obj,
+                                        func->closures));
 
             break;
         }
@@ -674,6 +761,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
         case KOS_GEN_INIT: {
             KOS_FUNCTION    *dest;
             KOS_OBJ_ID       ret;
+            KOS_OBJ_ID       regs      = KOS_BADPTR;
             const KOS_OBJ_ID proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(func->prototype);
 
             assert( ! IS_BAD_PTR(proto_obj));
@@ -683,28 +771,42 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
             dest = OBJPTR(FUNCTION, ret);
 
-            dest->min_args   = 0;
-            dest->num_regs   = func->num_regs;
-            dest->args_reg   = func->args_reg;
-            dest->instr_offs = func->instr_offs;
-            dest->closures   = func->closures;
-            dest->module     = func->module;
-            dest->handler    = func->handler;
-            dest->state      = KOS_GEN_READY;
+            dest->header.flags      = func->header.flags;
+            dest->header.num_args   = func->header.num_args;
+            dest->header.num_regs   = func->header.num_regs;
+            dest->min_args          = func->min_args;
+            dest->args_reg          = func->args_reg;
+            dest->instr_offs        = func->instr_offs;
+            dest->closures          = func->closures;
+            dest->module            = func->module;
+            dest->handler           = func->handler;
+            dest->state             = KOS_GEN_READY;
 
-            new_stack_frame = _KOS_stack_frame_push_func(frame, func);
+            if ( ! func->handler) {
+                regs = _init_registers(frame,
+                                       dest,
+                                       args_obj,
+                                       *this_obj,
+                                       func->closures);
+                TRY_OBJID(regs);
+            }
+
+            dest->header.num_args = 0;
+            dest->min_args        = 0;
+
+            new_stack_frame = _KOS_stack_frame_push_func(frame, func, regs);
             if ( ! new_stack_frame)
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
             if (func->handler)
                 new_stack_frame->registers = args_obj;
-            else
-                TRY(_init_registers(frame,
-                                    dest,
-                                    new_stack_frame->registers,
-                                    args_obj,
-                                    *this_obj,
-                                    func->closures));
+            else if (func->header.flags & KOS_FUN_OLD_STYLE)
+                TRY(_init_registers_old(frame,  /* TODO delete */
+                                        dest,
+                                        new_stack_frame->registers,
+                                        args_obj,
+                                        *this_obj,
+                                        func->closures));
 
             dest->generator_stack_frame = new_stack_frame;
             new_stack_frame->parent            = KOS_BADPTR;
@@ -1003,11 +1105,13 @@ static int _exec_function(KOS_FRAME frame)
 
                     KOS_FUNCTION *const fun = OBJPTR(FUNCTION, fun_obj);
 
-                    fun->min_args   = min_args;
-                    fun->num_regs   = num_regs;
-                    fun->args_reg   = args_reg;
-                    fun->instr_offs = offset;
-                    fun->module     = OBJID(MODULE, module);
+                    fun->header.flags    = KOS_FUN_OLD_STYLE;
+                    fun->header.num_args = 0;
+                    fun->header.num_regs = num_regs;
+                    fun->min_args        = min_args;
+                    fun->args_reg        = args_reg;
+                    fun->instr_offs      = offset;
+                    fun->module          = OBJID(MODULE, module);
 
                     if (instr == INSTR_LOAD_GEN)
                         fun->state = KOS_GEN_INIT;
@@ -1018,6 +1122,53 @@ static int _exec_function(KOS_FRAME frame)
                 rdest = bytecode[1];
                 out   = fun_obj;
                 delta = 9;
+                break;
+            }
+
+            case INSTR_LOAD_FUN2: /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
+                /* fall through */
+            case INSTR_LOAD_GEN2: /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
+                /* fall through */
+            case INSTR_LOAD_CTOR2: { /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
+                const int32_t  fun_offs  = (int32_t)_load_32(bytecode+2);
+                const uint8_t  num_regs  = bytecode[6];
+                const uint8_t  args_reg  = bytecode[7];
+                const uint8_t  num_args  = bytecode[8];
+                const uint8_t  flags     = bytecode[9];
+
+                const uint32_t offset    = (uint32_t)((bytecode + 10 + fun_offs) - module->bytecode);
+                KOS_OBJ_ID     fun_obj   = KOS_BADPTR;
+                KOS_OBJ_ID     proto_obj = KOS_new_void(frame);
+
+                assert(offset < module->bytecode_size);
+
+                if (instr == INSTR_LOAD_CTOR2)
+                    proto_obj = KOS_gen_prototype(frame, bytecode + 10 + fun_offs);
+
+                if ( ! IS_BAD_PTR(proto_obj))
+                    fun_obj = KOS_new_function(frame, proto_obj);
+
+                if ( ! IS_BAD_PTR(fun_obj)) {
+
+                    KOS_FUNCTION *const fun = OBJPTR(FUNCTION, fun_obj);
+
+                    fun->header.flags    = flags;
+                    fun->header.num_args = num_args;
+                    fun->header.num_regs = num_regs;
+                    fun->min_args        = num_args; /* TODO delete */
+                    fun->args_reg        = args_reg;
+                    fun->instr_offs      = offset;
+                    fun->module          = OBJID(MODULE, module);
+
+                    if (instr == INSTR_LOAD_GEN2)
+                        fun->state = KOS_GEN_INIT;
+                    else if (instr == INSTR_LOAD_CTOR2)
+                        fun->state = KOS_CTOR;
+                }
+
+                rdest = bytecode[1];
+                out   = fun_obj;
+                delta = 10;
                 break;
             }
 
@@ -1165,6 +1316,7 @@ static int _exec_function(KOS_FRAME frame)
                         KOS_OBJ_ID args;
                         frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
                         value = OBJPTR(DYNAMIC_PROP, value)->getter;
+                        /* TODO try to reuse array from a previous call */
                         args  = KOS_new_array(frame, 0);
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
@@ -1256,6 +1408,7 @@ static int _exec_function(KOS_FRAME frame)
                         else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
                             KOS_raise_exception_cstring(frame, str_err_slice_not_function);
                         else {
+                            /* TODO try to reuse array from a previous call */
                             KOS_OBJ_ID args = KOS_new_array(frame, 2);
                             error = KOS_ERROR_EXCEPTION;
                             if ( ! IS_BAD_PTR(args))
@@ -1290,6 +1443,7 @@ static int _exec_function(KOS_FRAME frame)
                         KOS_OBJ_ID args;
                         frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
                         value = OBJPTR(DYNAMIC_PROP, value)->getter;
+                        /* TODO try to reuse array from a previous call */
                         args  = KOS_new_array(frame, 0);
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
@@ -1358,7 +1512,8 @@ static int _exec_function(KOS_FRAME frame)
                         frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
                         setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
 
-                        args  = KOS_new_array(frame, 1);
+                        /* TODO try to reuse array from a previous call */
+                        args = KOS_new_array(frame, 1);
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
                         else {
@@ -1428,6 +1583,7 @@ static int _exec_function(KOS_FRAME frame)
                         frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
                         setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
 
+                        /* TODO try to reuse array from a previous call */
                         args  = KOS_new_array(frame, 1);
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
@@ -2261,6 +2417,7 @@ static int _exec_function(KOS_FRAME frame)
                 func_obj = regs[rfunc];
 
                 if (rargs == ~0U) {
+                    /* TODO try to reuse array from a previous call */
                     args_obj = KOS_new_array(frame, num_args);
                     if ( ! IS_BAD_PTR(args_obj) && num_args)
                         memcpy((void *)_KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)),
@@ -2559,7 +2716,13 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
     struct _KOS_STACK_FRAME frame;
     int                     error;
 
-    error = _KOS_init_stack_frame(&frame, module, module->instr_offs, module->num_regs);
+    error = _KOS_init_stack_frame(&frame, module, module->instr_offs);
+
+    if ( ! error) {
+        frame.registers = KOS_new_array(&frame, module->num_regs);
+        if (IS_BAD_PTR(frame.registers))
+            error = KOS_ERROR_EXCEPTION;
+    }
 
     if (error)
         *ret = frame.exception;
