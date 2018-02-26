@@ -160,7 +160,8 @@ int _KOS_init_stack_frame(KOS_FRAME   frame,
 
     frame->header.type      = OBJ_STACK_FRAME;
     frame->header.catch_reg = 0;
-    frame->header.yield_reg = KOS_CANNOT_YIELD;
+    frame->header.yield_reg = 255;
+    frame->header.flags     = 0;
     frame->registers        = KOS_BADPTR;
     frame->module           = OBJID(MODULE, module);
     frame->allocator        = &module->context->allocator;

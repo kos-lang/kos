@@ -808,9 +808,9 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
                                         *this_obj,
                                         func->closures));
 
-            dest->generator_stack_frame = new_stack_frame;
-            new_stack_frame->parent            = KOS_BADPTR;
-            new_stack_frame->header.yield_reg  = KOS_CAN_YIELD;
+            dest->generator_stack_frame   =  new_stack_frame;
+            new_stack_frame->parent       =  KOS_BADPTR;
+            new_stack_frame->header.flags |= KOS_CAN_YIELD;
 
             *this_obj = ret;
             break;
@@ -853,8 +853,8 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             /* TODO perform CAS for thread safety */
             func->state = KOS_GEN_RUNNING;
 
-            new_stack_frame->parent           = OBJID(STACK_FRAME, frame);
-            new_stack_frame->header.yield_reg = KOS_CAN_YIELD;
+            new_stack_frame->parent       =  OBJID(STACK_FRAME, frame);
+            new_stack_frame->header.flags |= KOS_CAN_YIELD;
             break;
         }
 
@@ -889,7 +889,7 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
             ret = new_stack_frame->retval;
 
         if (*state >= KOS_GEN_INIT) {
-            if (new_stack_frame->header.yield_reg == KOS_CAN_YIELD) {
+            if (new_stack_frame->header.flags & KOS_CAN_YIELD) {
                 *state = KOS_GEN_DONE;
                 func->state = KOS_GEN_DONE;
                 if (instr != INSTR_CALL_GEN)
@@ -983,6 +983,7 @@ static int _exec_function(KOS_FRAME frame)
     KOS_ATOMIC(KOS_OBJ_ID) *regs       = _KOS_get_array_buffer(regs_array);
     KOS_MODULE             *module     = OBJPTR(MODULE, frame->module);
     int                     error      = KOS_SUCCESS;
+    KOS_BYTECODE_INSTR      instr;
     const uint8_t          *bytecode;
 
     assert(module);
@@ -993,16 +994,13 @@ static int _exec_function(KOS_FRAME frame)
 
     for (;;) { /* Exit condition at the end of the loop */
 
-        const KOS_BYTECODE_INSTR instr = (KOS_BYTECODE_INSTR)*bytecode;
-        int32_t                  delta = 1;
-        KOS_OBJ_ID               out   = KOS_BADPTR;
-        unsigned                 rdest = 0;
+        int32_t    delta = 1;
+        KOS_OBJ_ID out   = KOS_BADPTR;
+        unsigned   rdest = 0;
+
+        instr = (KOS_BYTECODE_INSTR)*bytecode;
 
         switch (instr) {
-
-            case INSTR_BREAKPOINT:
-                /* TODO */
-                break;
 
             case INSTR_LOAD_INT8: { /* <r.dest>, <int8> */
                 const int8_t value = (int8_t)bytecode[2];
@@ -2287,8 +2285,10 @@ static int _exec_function(KOS_FRAME frame)
                         assert(rsrc < regs_array->size);
                         regs_obj = regs[rsrc];
                     }
-                    else
-                        regs_obj = frame->registers;
+                    else {
+                        frame->header.flags |= KOS_REGS_BOUND;
+                        regs_obj            =  frame->registers;
+                    }
 
                     assert( ! IS_SMALL_INT(closures));
                     assert(GET_OBJ_TYPE(closures) == OBJ_VOID ||
@@ -2462,9 +2462,9 @@ static int _exec_function(KOS_FRAME frame)
                                                                      this_obj,
                                                                      args_obj);
 
-                            /* Avoid detecting as end of iterator in the code below */
+                            /* Avoid detecting as end of iterator in _finish_call() */
                             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(ret_val))
-                                new_stack_frame->header.yield_reg = 0;
+                                new_stack_frame->header.flags &= ~KOS_CAN_YIELD;
 
                             new_stack_frame->retval = ret_val;
 
@@ -2528,17 +2528,14 @@ static int _exec_function(KOS_FRAME frame)
             }
 
             case INSTR_YIELD: { /* <r.src> */
-                const unsigned rsrc = bytecode[1];
+                const uint8_t rsrc = bytecode[1];
 
                 assert(rsrc < regs_array->size);
 
-                if (frame->header.yield_reg == KOS_CANNOT_YIELD)
-                    KOS_raise_exception_cstring(frame, str_err_cannot_yield);
-                else {
-                    assert(frame->header.yield_reg == KOS_CAN_YIELD);
-
-                    frame->retval           = regs[rsrc];
-                    frame->header.yield_reg = (uint16_t)rsrc;
+                if (frame->header.flags & KOS_CAN_YIELD) {
+                    frame->retval           =  regs[rsrc];
+                    frame->header.yield_reg =  rsrc;
+                    frame->header.flags     &= ~KOS_CAN_YIELD;
 
                     /* Move bytecode pointer here, because at the end of the loop
                        we test !error, but error is set to KOS_SUCCESS_RETURN */
@@ -2546,6 +2543,8 @@ static int _exec_function(KOS_FRAME frame)
 
                     error =  KOS_SUCCESS_RETURN;
                 }
+                else
+                    KOS_raise_exception_cstring(frame, str_err_cannot_yield);
 
                 delta = 2;
                 break;
@@ -2578,18 +2577,21 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_CANCEL:
-                /* fall through */
-            default: {
-                assert(instr == INSTR_CANCEL);
-                if (instr == INSTR_CANCEL) {
-                    frame->catch_offs = KOS_NO_CATCH;
-                    delta = 1;
+            case INSTR_CANCEL: {
+                frame->catch_offs = KOS_NO_CATCH;
+                delta = 1;
+                break;
+            }
+
+            default:
+                assert(instr == INSTR_BREAKPOINT);
+                if (instr == INSTR_BREAKPOINT) {
+                    /* TODO */
                 }
                 else
                     KOS_raise_exception_cstring(frame, str_err_invalid_instruction);
+                delta = 1;
                 break;
-            }
         }
 
         if ( ! KOS_is_exception_pending(frame)) {
@@ -2627,6 +2629,10 @@ static int _exec_function(KOS_FRAME frame)
 
         assert((uint32_t)(bytecode - module->bytecode) < module->bytecode_size);
     }
+
+    if ( ! (frame->header.flags & KOS_REGS_BOUND)
+            && (error != KOS_SUCCESS_RETURN || instr != INSTR_YIELD))
+        frame->registers = KOS_BADPTR;
 
     if (error == KOS_SUCCESS_RETURN)
         error = KOS_SUCCESS;
@@ -2680,9 +2686,9 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
                                                     this_obj,
                                                     args_obj);
 
-            /* Avoid detecting as end of iterator */
+            /* Avoid detecting as end of iterator in _finish_call() */
             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(retval))
-                new_stack_frame->header.yield_reg = 0;
+                new_stack_frame->header.flags &= ~KOS_CAN_YIELD;
 
             new_stack_frame->retval = retval;
 

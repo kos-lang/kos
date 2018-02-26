@@ -44,8 +44,8 @@ struct _KOS_ALLOCATOR {
 };
 
 enum _KOS_YIELD_STATE {
-    KOS_CANNOT_YIELD = 0x1000U, /* indicates a regular function */
-    KOS_CAN_YIELD    = 0x2000U  /* indicates a generator        */
+    KOS_CAN_YIELD    = 0x1U,  /* indicates a generator        */
+    KOS_REGS_BOUND   = 0x2U   /* registers bound to a closure */
 };
 
 enum _KOS_CATCH_STATE {
@@ -55,7 +55,8 @@ enum _KOS_CATCH_STATE {
 struct _KOS_SF_HDR {
     uint8_t  type;
     uint8_t  catch_reg;
-    uint16_t yield_reg; /* index of the yield register */
+    uint8_t  yield_reg; /* index of the yield register */
+    uint8_t  flags;
     uint32_t alloc_size;
 };
 
@@ -63,12 +64,12 @@ typedef struct _KOS_STACK_FRAME {
     struct _KOS_SF_HDR     header;
     struct _KOS_ALLOCATOR *allocator;
     uint32_t               catch_offs;
+    uint32_t               instr_offs;
     KOS_OBJ_ID             parent;
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             registers;
     KOS_OBJ_ID             exception;
     KOS_OBJ_ID             retval;
-    uint32_t               instr_offs;
 } KOS_STACK_FRAME;
 
 struct _KOS_THREAD_ROOT {
