@@ -1156,7 +1156,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_LOAD_GEN2,  0, IMM32(22), 1, 0, 0, 0,
-            INSTR_LOAD_INT8,  1, -7,
+            INSTR_LOAD_INT8,  1, (uint8_t)(unsigned)-7,
             INSTR_CALL_N,     0, 0, 1, 10, 0, /* instantiate generator */
 
             INSTR_CALL_FUN,   1, 0, 11, 0,
