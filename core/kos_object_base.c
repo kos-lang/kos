@@ -162,16 +162,29 @@ int _KOS_init_stack_frame(KOS_FRAME   frame,
     frame->header.catch_reg = 0;
     frame->header.yield_reg = 255;
     frame->header.flags     = 0;
-    frame->registers        = KOS_BADPTR;
-    frame->module           = OBJID(MODULE, module);
     frame->allocator        = &module->context->allocator;
+    frame->catch_offs       = KOS_NO_CATCH;
+    frame->instr_offs       = instr_offs;
+    frame->num_saved_frames = 0;
+    frame->parent           = KOS_BADPTR;
+    frame->module           = OBJID(MODULE, module);
+    frame->registers        = KOS_BADPTR;
     frame->exception        = KOS_BADPTR;
     frame->retval           = KOS_new_void(frame);
-    frame->parent           = KOS_BADPTR;
-    frame->instr_offs       = instr_offs;
-    frame->catch_offs       = KOS_NO_CATCH;
 
     return error;
+}
+
+static KOS_FRAME _pop_saved_frame(KOS_FRAME frame)
+{
+    KOS_FRAME saved_frame = 0;
+
+    if (frame->num_saved_frames) {
+        KOS_OBJ_ID frame_obj = frame->saved_frames[--frame->num_saved_frames];
+        saved_frame          = OBJPTR(STACK_FRAME, frame_obj);
+    }
+
+    return saved_frame;
 }
 
 KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
@@ -179,11 +192,18 @@ KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
                                 uint32_t    instr_offs,
                                 KOS_OBJ_ID  regs)
 {
-    /* TODO reuse old stack frames */
-    KOS_FRAME new_frame = (KOS_FRAME)_KOS_alloc_object(frame,
-                                                       KOS_ALLOC_LOCAL,
-                                                       OBJ_STACK_FRAME,
-                                                       sizeof(struct _KOS_STACK_FRAME));
+    KOS_FRAME new_frame = _pop_saved_frame(frame);
+
+    if ( ! new_frame) {
+        if ( ! IS_BAD_PTR(frame->parent))
+            new_frame = _pop_saved_frame(OBJPTR(STACK_FRAME, frame->parent));
+
+        if ( ! new_frame)
+            new_frame = (KOS_FRAME)_KOS_alloc_object(frame,
+                                                     KOS_ALLOC_LOCAL,
+                                                     OBJ_STACK_FRAME,
+                                                     sizeof(struct _KOS_STACK_FRAME));
+    }
 
     if (new_frame) {
 

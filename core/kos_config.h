@@ -31,5 +31,6 @@
 #define _KOS_PAGE_SIZE          (1U << _KOS_PAGE_BITS)
 #define _KOS_OBJ_ALIGN_BITS     4
 #define _KOS_MAX_SMALL_OBJ_SIZE (_KOS_PAGE_SIZE >> 1)
+#define _KOS_MIN_REG_CAPACITY   32
 
 #endif
