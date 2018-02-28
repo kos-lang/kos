@@ -56,7 +56,7 @@ do {
         return a + b + c + d + e
     }
 
-    assert sum(1, 2, 3, 4, 5) == 15
+    assert sum(1, 2, +(3), 4, 5) == 15
 
     check(sum, { registers: 3, instructions: 10, size: 54 })
 }
@@ -687,4 +687,23 @@ do {
 
     check(optimize_default_args, { registers: 2, instructions: 2, size: 12 })
     check(f,                     { registers: 2, instructions: 2, size: 10 })
+}
+
+#============================================================================#
+
+do {
+    fun optimize_switch(x)
+    {
+        switch x
+        {
+            case 1 { return x + 1 }
+            case 2 { return x + 2 }
+            else   { return x + 3 }
+        }
+    }
+    assert optimize_switch(1) == 2
+    assert optimize_switch(2) == 4
+    assert optimize_switch(5) == 8
+
+    check(optimize_switch, { registers: 3, instructions: 23, size: 104 })
 }

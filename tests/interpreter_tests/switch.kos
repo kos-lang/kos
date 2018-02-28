@@ -5,7 +5,7 @@ do {
 
             case void  { return 1 }
 
-            case true  { return 2 }
+            case true  { return 2 } fallthrough
 
             case false { return 3 }
 
