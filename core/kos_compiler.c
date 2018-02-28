@@ -2176,7 +2176,8 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
                 TRY(_gen_instr1(program, INSTR_JUMP, 0));
             }
             else {
-                assert(child_node->next->type == NT_FALLTHROUGH);
+                assert(child_node->next->type == NT_FALLTHROUGH ||
+                       child_node->next->type == NT_EMPTY);
                 assert( ! child_node->next->next);
             }
         }

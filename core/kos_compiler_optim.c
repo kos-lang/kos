@@ -115,7 +115,7 @@ static void _promote(struct _KOS_COMP_UNIT      *program,
     node->type       = child->type;
 }
 
-static int _is_nonzero(const struct _KOS_TOKEN *token)
+static int _get_nonzero(const struct _KOS_TOKEN *token, int *non_zero)
 {
     struct _KOS_NUMERIC numeric;
 
@@ -131,28 +131,36 @@ static int _is_nonzero(const struct _KOS_TOKEN *token)
     }
     else {
 
+        int        error;
         const char c = *token->begin;
 
         assert(token->type == TT_NUMERIC);
 
-        if (c >= '1' && c <= '9')
-            return 1;
+        if (c >= '1' && c <= '9') {
+            *non_zero = 1;
+            return KOS_SUCCESS;
+        }
 
-        if (c == '0' && token->length == 1)
-            return 0;
+        if (c == '0' && token->length == 1) {
+            *non_zero = 0;
+            return KOS_SUCCESS;
+        }
 
-        if (KOS_SUCCESS != _KOS_parse_numeric(token->begin,
-                                              token->begin + token->length,
-                                              &numeric))
-            return 1; /* Treat invalid or non-numeric value as non-zero */
+        error = _KOS_parse_numeric(token->begin,
+                                   token->begin + token->length,
+                                   &numeric);
+        if (error)
+            return error;
     }
 
     if (numeric.type == KOS_INTEGER_VALUE)
-        return numeric.u.i ? 1 : 0;
+        *non_zero = numeric.u.i ? 1 : 0;
     else {
         assert(numeric.type == KOS_FLOAT_VALUE);
-        return numeric.u.d == 0.0 ? 0 : 1;
+        *non_zero = numeric.u.d == 0.0 ? 0 : 1;
     }
+
+    return KOS_SUCCESS;
 }
 
 static void _update_scope_ref(struct _KOS_COMP_UNIT *program,
@@ -266,7 +274,6 @@ int _KOS_node_is_truthy(struct _KOS_COMP_UNIT      *program,
 
     if ((node->type == NT_BOOL_LITERAL    && node->token.keyword == KW_TRUE) ||
         (node->type == NT_NUMERIC_LITERAL && node->token.length == 1 && *node->token.begin != '0') ||
-        (node->type == NT_NUMERIC_LITERAL && _is_nonzero(&node->token)) ||
         (node->type == NT_STRING_LITERAL)      ||
         (node->type == NT_FUNCTION_LITERAL)    ||
         (node->type == NT_CONSTRUCTOR_LITERAL) ||
@@ -275,6 +282,13 @@ int _KOS_node_is_truthy(struct _KOS_COMP_UNIT      *program,
         (node->type == NT_INTERPOLATED_STRING)) {
 
         return 1;
+    }
+
+    if (node->type == NT_NUMERIC_LITERAL) {
+        int       value = 0;
+        const int error = _get_nonzero(&node->token, &value);
+        if ( ! error)
+            return value;
     }
 
     return 0;
@@ -290,10 +304,16 @@ int _KOS_node_is_falsy(struct _KOS_COMP_UNIT      *program,
 
     if ((node->type == NT_BOOL_LITERAL    && node->token.keyword == KW_FALSE) ||
         (node->type == NT_NUMERIC_LITERAL && node->token.length == 1 && *node->token.begin == '0') ||
-        (node->type == NT_NUMERIC_LITERAL && ! _is_nonzero(&node->token)) ||
         (node->type == NT_VOID_LITERAL)) {
 
         return 1;
+    }
+
+    if (node->type == NT_NUMERIC_LITERAL) {
+        int       value = 0;
+        const int error = _get_nonzero(&node->token, &value);
+        if ( ! error)
+            return ! value;
     }
 
     return 0;
@@ -579,7 +599,7 @@ static int _for_stmt(struct _KOS_COMP_UNIT *program,
     assert(t == TERM_NONE);
 
     if (program->optimize) {
-        is_truthy = _KOS_node_is_truthy(program, node);
+        is_truthy = node->type == NT_EMPTY || _KOS_node_is_truthy(program, node);
         is_falsy  = is_truthy ? 0 : _KOS_node_is_falsy(program, node);
     }
 
@@ -601,15 +621,15 @@ static int _for_stmt(struct _KOS_COMP_UNIT *program,
         ++program->num_optimizations;
     }
 
-    TRY(_visit_node(program, node->next, &t));
+    TRY(_visit_node(program, node->next, is_terminal));
+
+    if ( ! is_truthy || (*is_terminal & TERM_BREAK))
+        *is_terminal = TERM_NONE;
 
     if (*is_terminal && program->optimize && node->type != NT_EMPTY) {
         _collapse(node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
         ++program->num_optimizations;
     }
-
-    if ( ! is_truthy || (*is_terminal & TERM_BREAK))
-        *is_terminal = TERM_NONE;
 
 _error:
     return error;
@@ -697,6 +717,7 @@ static int _switch_stmt(struct _KOS_COMP_UNIT *program,
     int error          = KOS_SUCCESS;
     int num_cases      = 0;
     int num_terminated = 0;
+    int has_default    = 0;
     int t;
 
     node = node->children;
@@ -710,7 +731,13 @@ static int _switch_stmt(struct _KOS_COMP_UNIT *program,
 
         int next_t;
 
+        if (node->type == NT_DEFAULT)
+            has_default = 1;
+
         TRY(_visit_node(program, node, &next_t));
+
+        if (next_t & TERM_BREAK)
+            next_t = TERM_NONE;
 
         ++num_cases;
         if (next_t) {
@@ -719,7 +746,34 @@ static int _switch_stmt(struct _KOS_COMP_UNIT *program,
         }
     }
 
-    *is_terminal = (num_cases == num_terminated) ? t : TERM_NONE;
+    *is_terminal = (num_cases == num_terminated && has_default) ? t : TERM_NONE;
+
+_error:
+    return error;
+}
+
+static int _case_stmt(struct _KOS_COMP_UNIT *program,
+                      struct _KOS_AST_NODE  *node,
+                      int                   *is_terminal)
+{
+    int error = KOS_SUCCESS;
+    int t;
+
+    node = node->children;
+    assert(node);
+    TRY(_visit_node(program, node, &t));
+    assert(t == TERM_NONE);
+
+    node = node->next;
+    assert(node);
+    assert( ! node->next
+           || node->next->type == NT_FALLTHROUGH
+           || node->next->type == NT_EMPTY);
+
+    TRY(_visit_node(program, node, is_terminal));
+
+    if (*is_terminal && node->next)
+        _collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
 
 _error:
     return error;
@@ -1634,6 +1688,11 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
         case NT_SWITCH:
             error = _switch_stmt(program, node, is_terminal);
             break;
+        case NT_CASE:
+            /* fall through */
+        case NT_DEFAULT:
+            error = _case_stmt(program, node, is_terminal);
+            break;
 
         case NT_FUNCTION_LITERAL:
             /* fall through */
@@ -1700,10 +1759,6 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
         case NT_IN:
             /* fall through */
         case NT_EXPRESSION_LIST:
-            /* fall through */
-        case NT_CASE:
-            /* fall through */
-        case NT_DEFAULT:
             /* fall through */
         case NT_FALLTHROUGH:
             /* fall through */
