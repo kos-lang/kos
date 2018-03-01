@@ -862,16 +862,6 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
                 _find_keyword(begin, end, &token->keyword);
                 token->type = (token->keyword == KW_NONE) ? TT_IDENTIFIER : TT_KEYWORD;
                 break;
-            case LT_UTF8_2:
-                end = lexer->prefetch_end;
-                _find_keyword(begin, end, &token->keyword);
-                if (token->keyword != KW_NONE)
-                    token->type = TT_KEYWORD;
-                else {
-                    lexer->error_str = str_err_char;
-                    error = KOS_ERROR_SCANNING_FAILED;
-                }
-                break;
             case LT_STRING:
                 token->type = TT_STRING;
                 error = _collect_string(lexer);
