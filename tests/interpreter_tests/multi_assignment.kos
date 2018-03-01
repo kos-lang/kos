@@ -190,3 +190,20 @@ do {
     assert c == 10
     assert d == 5
 }
+
+do {
+    fun assign_args(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12)
+    {
+        const b = [8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
+        assert b.size == 10
+        const i, j = [a1, a2]
+        a1, a2, a3, b[i:j], a4, a5, a6, a7, a8, a9, a10, a11, a12 = [a3...]
+        return [a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12, b]
+    }
+    const x, y = assign_args(1, -1, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    assert x == (12 * (12 + 1) / 2) - 3
+    assert y.size == 3
+    assert y[0] == 8
+    assert y[1] == 3
+    assert y[2] == 8
+}

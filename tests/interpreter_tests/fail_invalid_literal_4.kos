@@ -1,5 +1,4 @@
-#!/bin/sh
-
+#
 # Copyright (c) 2014-2018 Chris Dragan
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,39 +18,5 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-
-set -e
-
-if [ $# -ne 4 ]; then
-    echo "Usage: $0 <kos> <output_dir> <start_seq> <seq_len>"
-    exit 1
-fi
-
-KOS="$1"
-OUTPUT="$2/sequential_fail"
-BEGIN=$3
-END=$(($3 + $4 - 1))
-
-for KOSSEQFAIL in $(seq $BEGIN $END); do
-    export KOSSEQFAIL
-    RET=0
-    "$KOS" -v interpreter_tests/sequential_fail.kos -print - -kosarg > "$OUTPUT.stdout" 2> "$OUTPUT.stderr"|| RET=$?
-
-    if [ "$RET" = "0" ]; then
-        echo "Note: Test passed at sequence point $KOSSEQFAIL"
-        break
-    fi
-
-    if [ "$RET" != "1" ]; then
-        echo "Failed at sequence point $KOSSEQFAIL with error code $RET (expected 1)"
-
-        echo "--- stdout -------------------------------------------------"
-        cat "$OUTPUT.stdout"
-
-        echo "--- stderr -------------------------------------------------"
-        cat "$OUTPUT.stderr"
-
-        echo "------------------------------------------------------------"
-        exit $RET
-    fi
-done
+#
+0x12341234123412340000 + 1

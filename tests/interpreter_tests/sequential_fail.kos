@@ -25,7 +25,7 @@ import lang.*
 do {
     var caught = false
     try {
-        throw "hello"
+        throw "HELL\(0)"
     }
     catch const e {
         caught = e.value
@@ -35,7 +35,7 @@ do {
 
 do {
     var i = 1
-    for const elem in [ 1, 2, 3 ] {
+    for const elem in [ 1, 2, 2+1 ] {
         assert elem == i
         i += 1
     }
@@ -48,7 +48,7 @@ do {
         switch key {
             case "a" { assert value == line }
             case "b" { assert value == line + 1 }
-            else     { throw "invalid key" }
+            else     { throw "invalid " + "key" }
         }
     }
 }

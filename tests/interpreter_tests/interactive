@@ -306,3 +306,41 @@ if ! sed -n "1 p" "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
     cat "$OUTPUT"
     exit 1
 fi
+
+##############################################################################
+# Help
+
+"$KOS" -h | tr -d '\r' > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -ne 1 ]; then
+    echo "Expected one line of output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+if ! grep -q "^Usage: kos" "$OUTPUT"; then
+    echo "Expected usage" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+##############################################################################
+# Version
+
+"$KOS" --version | tr -d '\r' > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -ne 1 ]; then
+    echo "Expected one line of output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+if ! grep -q "^Kos [0-9]\." "$OUTPUT"; then
+    echo "Expected version" >&2
+    cat "$OUTPUT"
+    exit 1
+fi

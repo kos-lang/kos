@@ -1,21 +1,17 @@
 ﻿Enhancement proposals
 =====================
 
+* Add syntax coloring for Sublime, Eclipse, IntelliJ IDEA
+
 * Change division to produce float, add integer division operator //
 
 * Add buffer strings b""
 
 * ? Empty array, buffer, string, object (shallow) are all falsy
 
-* if and switch variable declarations
+* if, while, switch variable declarations
 
-* Spread operator for arguments in invocation:
-
-        const a = [ {}, 1.5, false ]
-        some_func(1, a..., 2, "abc"...)
-
-        # Is equivalent to
-        some_func(1, {}, 1.5, false, 2, "a", "b", "c")
+* ? remove C-style for loop
 
 * `private` keyword to make globals module-private
 
