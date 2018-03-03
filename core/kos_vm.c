@@ -614,10 +614,12 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
     assert(func->min_args == func->header.num_args);
 
     if (func->header.flags & KOS_FUN_ELLIPSIS) {
-        assert(func->header.num_regs >= reg + func->header.num_args + 2); /* args, ellipsis, this */
+        /* args, ellipsis, this */
+        assert(func->header.num_regs >= reg + KOS_min(func->header.num_args, (uint8_t)_KOS_MAX_ARGS_IN_REGS) + 2);
     }
     else {
-        assert(func->header.num_regs >= reg + func->header.num_args + 1); /* args, this */
+        /* args, this */
+        assert(func->header.num_regs >= reg + KOS_min(func->header.num_args, (uint8_t)_KOS_MAX_ARGS_IN_REGS) + 1);
     }
     assert(func->header.num_args <= KOS_get_array_size(args_obj));
 
@@ -628,15 +630,34 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
         TRY_OBJID(ellipsis_obj);
     }
 
-    TRY(KOS_array_resize(frame, args_obj, func->header.num_regs));
+    if (func->header.num_args <= _KOS_MAX_ARGS_IN_REGS) {
 
-    regs_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+        TRY(KOS_array_resize(frame, args_obj, func->header.num_regs));
 
-    if (reg > 0 && func->header.num_args)
-        memmove((void *)(regs_buf + reg),
-                (void *)regs_buf,
-                func->header.num_args * sizeof(KOS_OBJ_ID));
-    reg += func->header.num_args;
+        regs_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+
+        if (reg > 0 && func->header.num_args)
+            memmove((void *)(regs_buf + reg),
+                    (void *)regs_buf,
+                    func->header.num_args * sizeof(KOS_OBJ_ID));
+        reg += func->header.num_args;
+    }
+    else {
+        KOS_OBJ_ID rest_obj = KOS_array_slice(frame, args_obj, _KOS_MAX_ARGS_IN_REGS - 1, func->header.num_args);
+        TRY_OBJID(rest_obj);
+
+        TRY(KOS_array_resize(frame, args_obj, func->header.num_regs));
+
+        regs_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+
+        if (reg > 0)
+            memmove((void *)(regs_buf + reg),
+                    (void *)regs_buf,
+                    (_KOS_MAX_ARGS_IN_REGS - 1) * sizeof(KOS_OBJ_ID));
+        reg += _KOS_MAX_ARGS_IN_REGS;
+
+        regs_buf[reg - 1] = rest_obj;
+    }
 
     if ( ! IS_BAD_PTR(ellipsis_obj))
         regs_buf[reg++] = ellipsis_obj;
