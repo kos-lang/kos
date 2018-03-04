@@ -176,6 +176,9 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_BIND,
     /* BIND.SELF <r.dest>, <slot.idx.uint8> */
     INSTR_BIND_SELF,
+    /* BIND.DEFAULTS <r.dest>, <r.src>
+     * Bind an array to a function (closure) as a list of arg default values. */
+    INSTR_BIND_DEFAULTS,
 
     /* CALL <r.dest>, <r.func>, <r.this>, <r.args> */
     INSTR_CALL,

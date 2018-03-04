@@ -42,6 +42,7 @@
 
 static const char str_err_args_not_array[]      = "function arguments are not an array";
 static const char str_err_cannot_yield[]        = "function is not a generator";
+static const char str_err_corrupted_defaults[]  = "argument defaults are corrupted";
 static const char str_err_div_by_zero[]         = "division by zero";
 static const char str_err_generator_running[]   = "generator is running";
 static const char str_err_invalid_byte_value[]  = "buffer element value out of range";
@@ -598,13 +599,18 @@ static void _move_saved_frames(KOS_FRAME parent,
 static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
                                   KOS_FUNCTION *func,
                                   KOS_OBJ_ID    args_obj,
-                                  KOS_OBJ_ID    this_obj,
-                                  KOS_OBJ_ID    closures)
+                                  KOS_OBJ_ID    this_obj)
 {
-    int                     error        = KOS_SUCCESS;
-    KOS_OBJ_ID              ellipsis_obj = KOS_BADPTR;
-    KOS_ATOMIC(KOS_OBJ_ID) *regs_buf     = 0;
-    uint32_t                reg          = func->args_reg;
+    int                     error            = KOS_SUCCESS;
+    KOS_OBJ_ID              ellipsis_obj     = KOS_BADPTR;
+    KOS_ATOMIC(KOS_OBJ_ID) *regs_buf         = 0;
+    uint32_t                reg              = func->args_reg;
+    const uint32_t          num_non_def_args = func->header.num_args;
+    const uint32_t          num_def_args     = GET_OBJ_TYPE(func->defaults) == OBJ_ARRAY
+                                                ? KOS_get_array_size(func->defaults) : 0;
+    const uint32_t          num_args         = num_non_def_args + num_def_args;
+    const uint32_t          num_arg_regs     = KOS_min(num_args, _KOS_MAX_ARGS_IN_REGS);
+    const uint32_t          num_input_args   = KOS_get_array_size(args_obj);
 
     assert( ! func->handler);
 
@@ -615,48 +621,96 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
 
     if (func->header.flags & KOS_FUN_ELLIPSIS) {
         /* args, ellipsis, this */
-        assert(func->header.num_regs >= reg + KOS_min(func->header.num_args, (uint8_t)_KOS_MAX_ARGS_IN_REGS) + 2);
+        assert(func->header.num_regs >= reg + num_arg_regs + 2);
     }
     else {
         /* args, this */
-        assert(func->header.num_regs >= reg + KOS_min(func->header.num_args, (uint8_t)_KOS_MAX_ARGS_IN_REGS) + 1);
+        assert(func->header.num_regs >= reg + num_arg_regs + 1);
     }
-    assert(func->header.num_args <= KOS_get_array_size(args_obj));
+    assert(num_input_args >= num_non_def_args);
 
-    if ((func->header.flags & KOS_FUN_ELLIPSIS) &&
-        (func->header.num_args < KOS_get_array_size(args_obj))) {
-
-        ellipsis_obj = KOS_array_slice(frame, args_obj, func->header.num_args, MAX_INT64);
-        TRY_OBJID(ellipsis_obj);
+    if (func->header.flags & KOS_FUN_ELLIPSIS)  {
+        if (num_input_args > num_arg_regs) {
+            ellipsis_obj = KOS_array_slice(frame, args_obj, num_args, MAX_INT64);
+            TRY_OBJID(ellipsis_obj);
+        }
+        else
+            ellipsis_obj = KOS_new_array(frame, 0);
     }
 
-    if (func->header.num_args <= _KOS_MAX_ARGS_IN_REGS) {
+    if (num_args <= _KOS_MAX_ARGS_IN_REGS) {
+
+        const uint32_t num_to_move = KOS_min(num_input_args, num_args);
 
         TRY(KOS_array_resize(frame, args_obj, func->header.num_regs));
 
         regs_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
 
-        if (reg > 0 && func->header.num_args)
+        if (reg > 0 && num_to_move)
             memmove((void *)(regs_buf + reg),
                     (void *)regs_buf,
-                    func->header.num_args * sizeof(KOS_OBJ_ID));
-        reg += func->header.num_args;
+                    num_to_move * sizeof(KOS_OBJ_ID));
+
+        reg += num_to_move;
+
+        if (num_to_move < num_args) {
+
+            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, func->defaults));
+            KOS_ATOMIC(KOS_OBJ_ID) *src_end = src_buf + num_def_args;
+
+            assert(num_def_args);
+
+            src_buf += num_to_move - num_non_def_args;
+
+            do
+                regs_buf[reg++] = KOS_atomic_read_ptr(*(src_buf++));
+            while (src_buf < src_end);
+        }
     }
     else {
-        KOS_OBJ_ID rest_obj = KOS_array_slice(frame, args_obj, _KOS_MAX_ARGS_IN_REGS - 1, func->header.num_args);
+        const uint32_t num_to_move = KOS_min(num_input_args, _KOS_MAX_ARGS_IN_REGS - 1U);
+
+        KOS_OBJ_ID rest_obj = KOS_array_slice(frame, args_obj, _KOS_MAX_ARGS_IN_REGS - 1, num_args);
         TRY_OBJID(rest_obj);
 
         TRY(KOS_array_resize(frame, args_obj, func->header.num_regs));
 
         regs_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
 
-        if (reg > 0)
+        if (reg > 0 && num_to_move)
             memmove((void *)(regs_buf + reg),
                     (void *)regs_buf,
-                    (_KOS_MAX_ARGS_IN_REGS - 1) * sizeof(KOS_OBJ_ID));
-        reg += _KOS_MAX_ARGS_IN_REGS;
+                    num_to_move * sizeof(KOS_OBJ_ID));
 
-        regs_buf[reg - 1] = rest_obj;
+        reg += num_to_move;
+
+        if (num_input_args < num_args) {
+
+            KOS_ATOMIC(KOS_OBJ_ID) *const src_buf0 = _KOS_get_array_buffer(OBJPTR(ARRAY, func->defaults));
+            KOS_ATOMIC(KOS_OBJ_ID)       *src_buf  = src_buf0;
+
+            if (num_to_move > num_non_def_args)
+                src_buf += num_to_move - num_non_def_args;
+
+            if (num_to_move < _KOS_MAX_ARGS_IN_REGS - 1U) {
+
+                KOS_ATOMIC(KOS_OBJ_ID)* reg_end = src_buf
+                                                + _KOS_MAX_ARGS_IN_REGS - 1U - num_to_move;
+
+                while (src_buf < reg_end)
+                    regs_buf[reg++] = KOS_atomic_read_ptr(*(src_buf++));
+            }
+
+            TRY(KOS_array_insert(frame,
+                                 rest_obj,
+                                 MAX_INT64,
+                                 MAX_INT64,
+                                 func->defaults,
+                                 src_buf - _KOS_get_array_buffer(OBJPTR(ARRAY, func->defaults)),
+                                 MAX_INT64));
+        }
+
+        regs_buf[reg++] = rest_obj;
     }
 
     if ( ! IS_BAD_PTR(ellipsis_obj))
@@ -664,23 +718,23 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
 
     regs_buf[reg++] = this_obj;
 
-    if (GET_OBJ_TYPE(closures) == OBJ_ARRAY) {
+    if (GET_OBJ_TYPE(func->closures) == OBJ_ARRAY) {
         KOS_ATOMIC(KOS_OBJ_ID) *src_buf;
         uint32_t                src_len;
 
-        src_len = KOS_get_array_size(closures);
+        src_len = KOS_get_array_size(func->closures);
 
         assert(src_len > 0);
         assert(reg + src_len <= 256U);
         assert(reg + src_len <= KOS_get_array_size(args_obj));
 
-        src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, closures));
+        src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, func->closures));
         memcpy((void *)(regs_buf + reg),
                (void *)src_buf,
                src_len * sizeof(KOS_OBJ_ID));
     }
     else {
-        assert(GET_OBJ_TYPE(closures) == OBJ_VOID);
+        assert(GET_OBJ_TYPE(func->closures) == OBJ_VOID);
     }
 
 _error:
@@ -785,8 +839,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
                 regs = _init_registers(frame,
                                        func,
                                        args_obj,
-                                       *this_obj,
-                                       func->closures);
+                                       *this_obj);
                 TRY_OBJID(regs);
             }
 
@@ -825,8 +878,9 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             dest->min_args          = func->min_args;
             dest->args_reg          = func->args_reg;
             dest->instr_offs        = func->instr_offs;
-            dest->closures          = func->closures;
             dest->module            = func->module;
+            dest->closures          = func->closures;
+            dest->defaults          = func->defaults;
             dest->handler           = func->handler;
             dest->state             = KOS_GEN_READY;
 
@@ -834,8 +888,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
                 regs = _init_registers(frame,
                                        dest,
                                        args_obj,
-                                       *this_obj,
-                                       func->closures);
+                                       *this_obj);
                 TRY_OBJID(regs);
             }
 
@@ -2403,6 +2456,29 @@ static int _exec_function(KOS_FRAME frame)
                 }
 
                 delta = (instr == INSTR_BIND_SELF) ? 3 : 4;
+                break;
+            }
+
+            case INSTR_BIND_DEFAULTS: { /* <r.dest>, <r.src> */
+                KOS_OBJ_ID     src;
+                KOS_OBJ_ID     dest;
+                const unsigned rsrc = bytecode[2];
+                rdest               = bytecode[1];
+
+                assert(rsrc  < regs_array->size);
+                assert(rdest < regs_array->size);
+
+                src  = regs[rsrc];
+                dest = regs[rdest];
+
+                if (GET_OBJ_TYPE(src) != OBJ_ARRAY)
+                    KOS_raise_exception_cstring(frame, str_err_corrupted_defaults);
+                else if (GET_OBJ_TYPE(dest) != OBJ_FUNCTION)
+                    KOS_raise_exception_cstring(frame, str_err_not_callable);
+                else
+                    OBJPTR(FUNCTION, dest)->defaults = src;
+
+                delta = 3;
                 break;
             }
 

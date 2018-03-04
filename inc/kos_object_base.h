@@ -255,8 +255,8 @@ typedef struct _KOS_FUN_HEADER {
 } KOS_FUN_HEADER;
 
 enum _KOS_FUNCTION_FLAGS {
-    KOS_FUN_ELLIPSIS = 1,   /* store remaining args in array */
-    KOS_FUN_OLD_STYLE = 2    /* TODO delete with min_args     */
+    KOS_FUN_ELLIPSIS  = 1,  /* store remaining args in array */
+    KOS_FUN_OLD_STYLE = 2   /* TODO delete with min_args     */
 };
 
 typedef struct _KOS_FUNCTION {
@@ -266,8 +266,9 @@ typedef struct _KOS_FUNCTION {
     uint8_t                state;    /* TODO convert to KOS_ATOMIC(uint32_t) */
     uint32_t               instr_offs;
     KOS_ATOMIC(KOS_OBJ_ID) prototype;
-    KOS_OBJ_ID             closures;
     KOS_OBJ_ID             module;
+    KOS_OBJ_ID             closures;
+    KOS_OBJ_ID             defaults;
     KOS_FUNCTION_HANDLER   handler;
     KOS_FRAME              generator_stack_frame;
 } KOS_FUNCTION;

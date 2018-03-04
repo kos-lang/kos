@@ -99,8 +99,9 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         func->min_args              = 0;
         func->args_reg              = 0;
         func->prototype             = proto_obj;
-        func->closures              = KOS_new_void(frame);
         func->module                = frame->module;
+        func->closures              = KOS_new_void(frame);
+        func->defaults              = KOS_new_void(frame);
         func->handler               = 0;
         func->generator_stack_frame = 0;
         func->instr_offs            = ~0U;

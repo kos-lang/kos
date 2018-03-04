@@ -27,6 +27,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
+#include "../core/kos_config.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_vm.h"
 #include <stdio.h>
@@ -1600,13 +1601,227 @@ int main(void)
             INSTR_OR,         0, 0, 2,              /* | 0x40000 */
             INSTR_OR,         0, 0, 103,            /* | 0x20000 */
             INSTR_OR,         0, 0, 4,              /* | 0x1000 */
-            INSTR_OR,         0, 0, 105,            /* | 0x8000 XXX */
+            INSTR_OR,         0, 0, 105,            /* | 0x8000 */
             INSTR_OR,         0, 0, 106,            /* | 0x10 */
             INSTR_RETURN,     0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 6, 0) == TO_SMALL_INT(0x69055));
         TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* BIND.DEFAULTS - all default values */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_ARRAY8,   0, 3,
+            INSTR_LOAD_INT8,     1, 10,
+            INSTR_SET_ELEM,      0, IMM32(0), 1,
+            INSTR_LOAD_INT8,     1, 11,
+            INSTR_SET_ELEM,      0, IMM32(1), 1,
+            INSTR_LOAD_INT8,     1, 12,
+            INSTR_SET_ELEM,      0, IMM32(2), 1,
+
+            INSTR_LOAD_FUN2,     1, IMM32(8), 4, 0, 0, 0,
+            INSTR_BIND_DEFAULTS, 1, 0,
+            INSTR_TAIL_CALL_FUN, 0, 1, 255, 0,
+
+            INSTR_LOAD_FUN2,     3, IMM32(8), 2, 0, 0, 0,
+            INSTR_BIND_SELF,     3, 0,
+            INSTR_TAIL_CALL_FUN, 3, 3, 255, 0,
+
+            INSTR_RETURN,        0, 1
+        };
+
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, 0);
+        TEST( ! IS_BAD_PTR(ret));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(ret) == 3);
+        TEST(KOS_array_read(frame, ret, 0) == TO_SMALL_INT(10));
+        TEST(KOS_array_read(frame, ret, 1) == TO_SMALL_INT(11));
+        TEST(KOS_array_read(frame, ret, 2) == TO_SMALL_INT(12));
+    }
+
+    /************************************************************************/
+    /* BIND.DEFAULTS - some default values */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_ARRAY8,   0, 3,
+            INSTR_LOAD_INT8,     1, 20,
+            INSTR_SET_ELEM,      0, IMM32(0), 1,
+            INSTR_LOAD_INT8,     1, 21,
+            INSTR_SET_ELEM,      0, IMM32(1), 1,
+            INSTR_LOAD_INT8,     1, 22,
+            INSTR_SET_ELEM,      0, IMM32(2), 1,
+
+            INSTR_LOAD_FUN2,     2, IMM32(14), 6, 1, 1, 0,
+            INSTR_BIND_DEFAULTS, 2, 0,
+            INSTR_LOAD_INT8,     0, 5,
+            INSTR_LOAD_INT8,     1, 6,
+            INSTR_TAIL_CALL_FUN, 0, 2, 0, 2,
+
+            INSTR_LOAD_FUN2,     5, IMM32(8), 2, 0, 0, 0,
+            INSTR_BIND_SELF,     5, 0,
+            INSTR_TAIL_CALL_FUN, 5, 5, 255, 0,
+
+            INSTR_RETURN,        0, 1
+        };
+
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
+        TEST( ! IS_BAD_PTR(ret));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(ret) == 5);
+        TEST(KOS_array_read(frame, ret, 0) == TO_SMALL_INT(5));
+        TEST(KOS_array_read(frame, ret, 1) == TO_SMALL_INT(5));
+        TEST(KOS_array_read(frame, ret, 2) == TO_SMALL_INT(6));
+        TEST(KOS_array_read(frame, ret, 3) == TO_SMALL_INT(21));
+        TEST(KOS_array_read(frame, ret, 4) == TO_SMALL_INT(22));
+    }
+
+    /************************************************************************/
+    /* BIND.DEFAULTS - lots of default values and ellipsis, few input args */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_FUN2,     0, IMM32(5), 5, 0, 2, 0,
+            INSTR_JUMP,          IMM32(31),
+
+            /* 0 - begin
+             * 1 - end */
+            INSTR_LOAD_ARRAY8,   2, 0,
+            INSTR_LOAD_INT8,     3, 1,
+            INSTR_JUMP,          IMM32(7),
+            INSTR_PUSH,          2, 0,
+            INSTR_ADD,           0, 0, 3,
+            INSTR_CMP_LT,        4, 0, 1,
+            INSTR_JUMP_COND,     IMM32(-17), 4,
+            INSTR_RETURN,        0, 2,
+
+            INSTR_LOAD_INT8,     3, 64,
+            INSTR_LOAD_INT8,     4, 96,
+            INSTR_CALL_FUN,      1, 0, 3, 2,
+            INSTR_LOAD_FUN2,     2, IMM32(19), _KOS_MAX_ARGS_IN_REGS + 5 + 3, 5, 16, 1,
+            INSTR_BIND_DEFAULTS, 2, 1,
+            INSTR_LOAD_INT8,     3, 7,
+            INSTR_LOAD_INT8,     4, 25,
+            INSTR_CALL_FUN,      0, 0, 3, 2,
+            INSTR_TAIL_CALL,     0, 2, 1, 0,
+
+            INSTR_LOAD_FUN2,     _KOS_MAX_ARGS_IN_REGS + 5 + 2, IMM32(8), 2, 0, 0, 0,
+            INSTR_BIND_SELF,     _KOS_MAX_ARGS_IN_REGS + 5 + 2, 0,
+            INSTR_TAIL_CALL_FUN, _KOS_MAX_ARGS_IN_REGS + 5 + 2, _KOS_MAX_ARGS_IN_REGS + 5 + 2, 255, 0,
+
+            INSTR_RETURN,        0, 1
+        };
+
+        int i;
+
+        KOS_OBJ_ID obj;
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 5, 0);
+        TEST( ! IS_BAD_PTR(ret));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(ret) == _KOS_MAX_ARGS_IN_REGS + 5 + 2);
+        for (i = 0; i < 5; i++)
+            TEST(KOS_array_read(frame, ret, i) == TO_SMALL_INT(i + 7));
+        for (i = 5; i < 23; i++)
+            TEST(KOS_array_read(frame, ret, i) == TO_SMALL_INT(i + 2));
+        for (i = 23; i < (int)_KOS_MAX_ARGS_IN_REGS + 5 - 1; i++)
+            TEST(KOS_array_read(frame, ret, i) == TO_SMALL_INT(i - 23 + 66));
+        /* Rest of args */
+        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS + 5 - 1);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(obj) == 48 - _KOS_MAX_ARGS_IN_REGS + 1);
+        for (i = 0; i < 48 - (int)_KOS_MAX_ARGS_IN_REGS + 1; i++)
+            TEST(KOS_array_read(frame, obj, i) == TO_SMALL_INT(i + (int)_KOS_MAX_ARGS_IN_REGS - 1 - 16 + 64));
+        /* Ellipsis */
+        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS + 5);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(obj) == 0);
+        /* this */
+        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS + 5 + 1);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(obj) == 32);
+        for (i = 0; i < 32; i++)
+            TEST(KOS_array_read(frame, obj, i) == TO_SMALL_INT(i + 64));
+    }
+
+    /************************************************************************/
+    /* BIND.DEFAULTS - lots of args, a few default values and ellipsis */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_FUN2,     0, IMM32(5), 5, 0, 2, 0,
+            INSTR_JUMP,          IMM32(31),
+
+            /* 0 - begin
+             * 1 - end */
+            INSTR_LOAD_ARRAY8,   2, 0,
+            INSTR_LOAD_INT8,     3, 1,
+            INSTR_JUMP,          IMM32(7),
+            INSTR_PUSH,          2, 0,
+            INSTR_ADD,           0, 0, 3,
+            INSTR_CMP_LT,        4, 0, 1,
+            INSTR_JUMP_COND,     IMM32(-17), 4,
+            INSTR_RETURN,        0, 2,
+
+            INSTR_LOAD_INT8,     3, 100,
+            INSTR_LOAD_INT8,     4, 105,
+            INSTR_CALL_FUN,      1, 0, 3, 2,
+            INSTR_LOAD_FUN2,     2, IMM32(19), _KOS_MAX_ARGS_IN_REGS + 3, 0, _KOS_MAX_ARGS_IN_REGS, 1,
+            INSTR_BIND_DEFAULTS, 2, 1,
+            INSTR_LOAD_INT8,     3, 1,
+            INSTR_LOAD_INT8,     4, _KOS_MAX_ARGS_IN_REGS + 10,
+            INSTR_CALL_FUN,      0, 0, 3, 2,
+            INSTR_TAIL_CALL,     0, 2, 1, 0,
+
+            INSTR_LOAD_FUN2,     _KOS_MAX_ARGS_IN_REGS + 2, IMM32(8), 2, 0, 0, 0,
+            INSTR_BIND_SELF,     _KOS_MAX_ARGS_IN_REGS + 2, 0,
+            INSTR_TAIL_CALL_FUN, _KOS_MAX_ARGS_IN_REGS + 2, _KOS_MAX_ARGS_IN_REGS + 2, 255, 0,
+
+            INSTR_RETURN,        0, 1
+        };
+
+        int i;
+
+        KOS_OBJ_ID obj;
+        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 5, 0);
+        TEST( ! IS_BAD_PTR(ret));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(ret) == _KOS_MAX_ARGS_IN_REGS + 2);
+        for (i = 0; i < (int)_KOS_MAX_ARGS_IN_REGS - 1; i++)
+            TEST(KOS_array_read(frame, ret, i) == TO_SMALL_INT(i + 1));
+        /* Rest of args */
+        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS - 1);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(obj) == 6);
+        for (i = 0; i < 6; i++)
+            TEST(KOS_array_read(frame, obj, i) == TO_SMALL_INT(i + (int)_KOS_MAX_ARGS_IN_REGS));
+        /* Ellipsis */
+        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(obj) == 4);
+        for (i = 0; i < 4; i++)
+            TEST(KOS_array_read(frame, obj, i) == TO_SMALL_INT(i + (int)_KOS_MAX_ARGS_IN_REGS + 6));
+        /* this */
+        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS + 1);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(obj) == 5);
+        for (i = 0; i < 5; i++)
+            TEST(KOS_array_read(frame, obj, i) == TO_SMALL_INT(i + 100));
     }
 
     KOS_context_destroy(&ctx);
