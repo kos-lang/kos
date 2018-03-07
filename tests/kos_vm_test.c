@@ -278,39 +278,6 @@ int main(void)
     }
 
     /************************************************************************/
-    /* SET.DEFAULTS */
-    {
-        const uint8_t code[] = {
-            INSTR_LOAD_ARRAY8,  0, 2,
-            INSTR_LOAD_INT8,    1, 100,
-            INSTR_SET_ELEM,     0, IMM32(0), 1,
-            INSTR_LOAD_INT8,    1, 101,
-            INSTR_SET_ELEM,     0, IMM32(1), 1,
-            INSTR_LOAD_ARRAY8,  1, 3,
-            INSTR_LOAD_INT8,    2, 5,
-            INSTR_SET_ELEM,     1, IMM32(0), 2,
-            INSTR_LOAD_INT8,    2, 7,
-            INSTR_SET_ELEM,     1, IMM32(1), 2,
-            INSTR_LOAD_INT8,    2, 9,
-            INSTR_SET_ELEM,     1, IMM32(2), 2,
-            INSTR_SET_DEFAULTS, 0, 1, 1,
-            INSTR_RETURN,       0, 0
-        };
-
-        KOS_OBJ_ID array = _run_code(&ctx, frame, &code[0], sizeof(code), 3, 0);
-
-        TEST( ! IS_BAD_PTR(array));
-        TEST_NO_EXCEPTION();
-
-        TEST(GET_OBJ_TYPE(array) == OBJ_ARRAY);
-        TEST(KOS_get_array_size(array) == 4);
-        TEST(KOS_array_read(frame, array, 0) == TO_SMALL_INT(100));
-        TEST(KOS_array_read(frame, array, 1) == TO_SMALL_INT(101));
-        TEST(KOS_array_read(frame, array, 2) == TO_SMALL_INT(7));
-        TEST(KOS_array_read(frame, array, 3) == TO_SMALL_INT(9));
-    }
-
-    /************************************************************************/
     /* SET.PROP, HAS.PROP */
     {
         static const char prop5[]  = "prop5";
@@ -562,7 +529,7 @@ int main(void)
 
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN2,  0, IMM32(-13), 2, 0, 1, 0,
+            INSTR_LOAD_FUN,   0, IMM32(-13), 2, 0, 1, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(1),
             INSTR_LOAD_INT32, 2, IMM32(42),
             INSTR_SET_ELEM,   1, IMM32(0), 2,
@@ -582,7 +549,7 @@ int main(void)
     /* LOAD.FUN, CALL */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,  0, IMM32(39), 2, 0, 1, 0,
+            INSTR_LOAD_FUN,   0, IMM32(39), 2, 0, 1, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(1),
             INSTR_LOAD_INT32, 2, IMM32(100),
             INSTR_SET_ELEM,   1, IMM32(0), 2,
@@ -611,7 +578,7 @@ int main(void)
 
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN2,  0, IMM32(-13), 1, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(-13), 1, 0, 0, 0,
             INSTR_LOAD_INT8,  1, 121,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CALL,       0, 0, 1, 2,
@@ -633,7 +600,7 @@ int main(void)
 
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN2,  0, IMM32(-13), 2, 0, 1, 0,
+            INSTR_LOAD_FUN,   0, IMM32(-13), 2, 0, 1, 0,
             INSTR_LOAD_INT8,  1, 42,
             INSTR_LOAD_VOID,  2,
             INSTR_CALL_N,     0, 0, 2, 1, 1,
@@ -656,7 +623,7 @@ int main(void)
             INSTR_LOAD_INT8,  0, 43,
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN2,  0, IMM32(-16), 1, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(-16), 1, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_CALL_N,     0, 0, 1, 255, 0,
             INSTR_RETURN,     0, 0
@@ -677,7 +644,7 @@ int main(void)
 
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN2,  0, IMM32(-13), 2, 0, 1, 0,
+            INSTR_LOAD_FUN,   0, IMM32(-13), 2, 0, 1, 0,
             INSTR_LOAD_INT8,  1, 42,
             INSTR_CALL_FUN,   0, 0, 1, 1,
             INSTR_RETURN,     0, 0
@@ -699,7 +666,7 @@ int main(void)
             INSTR_LOAD_INT8,  0, 44,
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN2,  0, IMM32(-16), 1, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(-16), 1, 0, 0, 0,
             INSTR_CALL_FUN,   0, 0, 255, 0,
             INSTR_RETURN,     0, 0
         };
@@ -715,7 +682,7 @@ int main(void)
     /* CALL.FUN - too many args */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,  0, IMM32(11), 1, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(11), 1, 0, 0, 0,
             INSTR_LOAD_INT8,  1, 42,
             INSTR_CALL_FUN,   0, 0, 1, 1,
             INSTR_RETURN,     0, 0,
@@ -732,8 +699,8 @@ int main(void)
     /* LOAD.FUN, CALL.N - reuse function body twice */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,  0, IMM32(28), 2, 0, 0, 0, /* this function adds 130 */
-            INSTR_LOAD_FUN2,  1, IMM32(25), 2, 0, 0, 0, /* this function adds 100 */
+            INSTR_LOAD_FUN,   0, IMM32(28), 2, 0, 0, 0, /* this function adds 130 */
+            INSTR_LOAD_FUN,   1, IMM32(25), 2, 0, 0, 0, /* this function adds 100 */
             INSTR_LOAD_INT8,  2, 5,
             INSTR_CALL_N,     2, 0, 2, 255, 0,          /* effectively add 130 */
             INSTR_CALL_N,     2, 1, 2, 255, 0,          /* effectively add 100 */
@@ -774,7 +741,7 @@ int main(void)
 
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN2,  0, IMM32(-13), 2, 0, 1, 0,
+            INSTR_LOAD_FUN,   0, IMM32(-13), 2, 0, 1, 0,
             INSTR_LOAD_STR,   1, IMM32(0),
             INSTR_LOAD_VOID,  2,
             INSTR_CALL,       0, 0, 2, 1,
@@ -793,7 +760,7 @@ int main(void)
 
             INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_FUN2,   0, IMM32(-13), 2, 0, 10, 0,
+            INSTR_LOAD_FUN,    0, IMM32(-13), 2, 0, 10, 0,
             INSTR_LOAD_VOID,   1,
             INSTR_LOAD_ARRAY8, 2, 0,
             INSTR_CALL,        0, 0, 1, 2,
@@ -812,7 +779,7 @@ int main(void)
 
             INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_FUN2,   0, IMM32(-13), 2, 0, 10, 0,
+            INSTR_LOAD_FUN,    0, IMM32(-13), 2, 0, 10, 0,
             INSTR_CALL_FUN,    0, 0, 255, 0,
             INSTR_RETURN,      0, 0
         };
@@ -832,7 +799,7 @@ int main(void)
             INSTR_SET_PROP,    1, IMM32(0), 0,
             INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_CTOR2,  0, IMM32(-20), 2, 0, 1, 0,
+            INSTR_LOAD_CTOR,   0, IMM32(-20), 2, 0, 1, 0,
             INSTR_LOAD_INT32,  1, IMM32(0xC0DEU),
             INSTR_CALL_FUN,    0, 0, 1, 1,
             INSTR_RETURN,      0, 0
@@ -859,7 +826,7 @@ int main(void)
             INSTR_LOAD_VOID,   0,                /* return value is ignored */
             INSTR_RETURN,      0, 0,
 
-            INSTR_LOAD_CTOR2,  0, IMM32(-22), 2, 0, 1, 0,
+            INSTR_LOAD_CTOR,   0, IMM32(-22), 2, 0, 1, 0,
             INSTR_LOAD_ARRAY8, 1, 1,             /* create arguments array */
             INSTR_LOAD_INT32,  2, IMM32(0xC0DEU),
             INSTR_SET_ELEM,    1, IMM32(0), 2,   /* set argument */
@@ -884,7 +851,7 @@ int main(void)
 
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_CTOR2, 0, IMM32(-13), 1, 0, 0, 0,
+            INSTR_LOAD_CTOR,  0, IMM32(-13), 1, 0, 0, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(0),
             INSTR_CALL,       1, 0, 1, 1,
 
@@ -906,8 +873,8 @@ int main(void)
             INSTR_RETURN,        0, 0,
 
             INSTR_LOAD_ARRAY8,   1, 0,
-            INSTR_LOAD_CTOR2,    2, IMM32(-16), 1, 0, 0, 0,
-            INSTR_LOAD_CTOR2,    3, IMM32(-26), 1, 0, 0, 0,
+            INSTR_LOAD_CTOR,     2, IMM32(-16), 1, 0, 0, 0,
+            INSTR_LOAD_CTOR,     3, IMM32(-26), 1, 0, 0, 0,
             INSTR_CALL,          4, 2, 2, 1,
             INSTR_CALL,          5, 3, 3, 1,
 
@@ -941,8 +908,8 @@ int main(void)
             INSTR_RETURN,        0, 0,
 
             INSTR_LOAD_ARRAY8,   1, 0,
-            INSTR_LOAD_CTOR2,    2, IMM32(-19), 1, 0, 0, 0,
-            INSTR_LOAD_CTOR2,    3, IMM32(-26), 1, 0, 0, 0,
+            INSTR_LOAD_CTOR,     2, IMM32(-19), 1, 0, 0, 0,
+            INSTR_LOAD_CTOR,     3, IMM32(-26), 1, 0, 0, 0,
             INSTR_CALL,          4, 2, 2, 1,
             INSTR_CALL,          5, 3, 3, 1,
 
@@ -969,7 +936,7 @@ int main(void)
     /* LOAD.GEN, CALL - instantiate generator */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(0), 1, 0, 0, 0,
+            INSTR_LOAD_GEN,   0, IMM32(0), 1, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CALL,       0, 0, 1, 2,
@@ -990,7 +957,7 @@ int main(void)
     /* LOAD.GEN, CALL.N/FUN */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,   0, IMM32(20), 1, 0, 0, 0,
+            INSTR_LOAD_GEN,    0, IMM32(20), 1, 0, 0, 0,
             INSTR_LOAD_INT32,  1, IMM32(0xCAFEU), /* generator yields 'this' */
             INSTR_CALL_N,      0, 0, 1, 255, 0,   /* instantiate generator   */
             INSTR_CALL_FUN,    0, 0, 2, 0,        /* invoke generator        */
@@ -1008,7 +975,7 @@ int main(void)
     /* LOAD.GEN, YIELD */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(13), 1, 0, 0, 0,
+            INSTR_LOAD_GEN,   0, IMM32(13), 1, 0, 0, 0,
             INSTR_CALL_FUN,   0, 0, 100, 0,
             INSTR_CALL_FUN,   0, 0, 100, 0,
             INSTR_RETURN,     0, 0,
@@ -1025,7 +992,7 @@ int main(void)
     /* LOAD.GEN, CALL - ensure that YIELD resets the register to 'void' */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(22), 1, 0, 0, 0,
+            INSTR_LOAD_GEN,   0, IMM32(22), 1, 0, 0, 0,
             INSTR_LOAD_INT8,  1, 0,          /* generator will yield 'this' first */
             INSTR_CALL_N,     0, 0, 1, 0, 0, /* instantiate generator */
 
@@ -1045,7 +1012,7 @@ int main(void)
     /* LOAD.GEN, YIELD, CALL.GEN */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,     0, IMM32(80), 3, 0, 2, 0,
+            INSTR_LOAD_GEN,      0, IMM32(80), 3, 0, 2, 0,
             INSTR_LOAD_ARRAY8,   2, 2,
             INSTR_LOAD_INT8,     1, 3,
             INSTR_SET_ELEM,      2, IMM32(0), 1,    /* begin (3) */
@@ -1086,7 +1053,7 @@ int main(void)
     /* LOAD.GEN, CALL - not enough args */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(20), 3, 0, 2, 0,
+            INSTR_LOAD_GEN,   0, IMM32(20), 3, 0, 2, 0,
             INSTR_LOAD_INT32, 1, IMM32(0),
             INSTR_LOAD_ARRAY, 2, IMM32(1),
             INSTR_CALL,       0, 0, 1, 2, /* instantiate generator */
@@ -1103,7 +1070,7 @@ int main(void)
     /* LOAD.GEN, CALL - args not an array */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(16), 2, 0, 0, 0,
+            INSTR_LOAD_GEN,   0, IMM32(16), 2, 0, 0, 0,
             INSTR_LOAD_INT32, 1, IMM32(0),
             INSTR_LOAD_VOID,  2,
             INSTR_CALL,       0, 0, 1, 2, /* instantiate generator */
@@ -1120,7 +1087,7 @@ int main(void)
     /* LOAD.GEN, CALL - one arg passed to generator in "READY" state */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(17), 2, 0, 1, 0,
+            INSTR_LOAD_GEN,   0, IMM32(17), 2, 0, 1, 0,
             INSTR_LOAD_INT8,  1, 120,
             INSTR_CALL_N,     0, 0, 1, 0, 1, /* instantiate generator */
             INSTR_CALL_FUN,   0, 0, 0, 0,    /* invoke generator */
@@ -1137,7 +1104,7 @@ int main(void)
     /* YIELD - pass data to generator through yield */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(79), 2, 0, 0, 0,
+            INSTR_LOAD_GEN,   0, IMM32(79), 2, 0, 0, 0,
             INSTR_LOAD_INT32, 1, IMM32(100),    /* bind initial value, 'this', used by the generator */
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CALL,       0, 0, 1, 2,       /* instantiate generator */
@@ -1173,7 +1140,7 @@ int main(void)
     /* CALL - call beyond the end of generator */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(22), 1, 0, 0, 0,
+            INSTR_LOAD_GEN,   0, IMM32(22), 1, 0, 0, 0,
             INSTR_LOAD_INT8,  1, (uint8_t)(unsigned)-7,
             INSTR_CALL_N,     0, 0, 1, 10, 0, /* instantiate generator */
 
@@ -1193,7 +1160,7 @@ int main(void)
     /* CALL.GEN - call beyond the end of generator */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2, 0, IMM32(19), 1, 0, 0, 0,
+            INSTR_LOAD_GEN,  0, IMM32(19), 1, 0, 0, 0,
             INSTR_CALL_FUN,  0, 0, 0, 0, /* instantiate generator */
 
             INSTR_CALL_GEN,  2, 0, 1,    /* returns 'true' in register 1 */
@@ -1212,7 +1179,7 @@ int main(void)
     /* YIELD - yield not supported in a regular function */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2, 0, IMM32(12), 1, 0, 0, 0,
+            INSTR_LOAD_FUN,  0, IMM32(12), 1, 0, 0, 0,
             INSTR_LOAD_INT8, 1, 13,
             INSTR_CALL_N,    0, 0, 1, 10, 0, /* invoke function */
             INSTR_RETURN,    0, 0,
@@ -1229,7 +1196,7 @@ int main(void)
     /* CALL.GEN - put both return value and status in the same register */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,   0, IMM32(15), 1, 0, 0, 0,
+            INSTR_LOAD_GEN,    0, IMM32(15), 1, 0, 0, 0,
             INSTR_LOAD_ARRAY8, 1, 0,
             INSTR_CALL,        0, 0, 1, 1, /* instantiate generator */
 
@@ -1248,7 +1215,7 @@ int main(void)
     /* CALL.GEN - put both return value and status in the same register */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(18), 1, 0, 0, 0,
+            INSTR_LOAD_GEN,   0, IMM32(18), 1, 0, 0, 0,
             INSTR_LOAD_ARRAY, 1, IMM32(0),
             INSTR_CALL,       0, 0, 1, 1, /* instantiate generator */
 
@@ -1268,7 +1235,7 @@ int main(void)
     /* TAIL.CALL */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,   0, IMM32(13), 1, 0, 0, 0,
+            INSTR_LOAD_FUN,    0, IMM32(13), 1, 0, 0, 0,
             INSTR_LOAD_ARRAY8, 1, 0,
             INSTR_TAIL_CALL,   0, 0, 0, 1,
 
@@ -1288,7 +1255,7 @@ int main(void)
     /* TAIL.CALL.N */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,   0, IMM32(19), 3, 0, 2, 0,
+            INSTR_LOAD_FUN,    0, IMM32(19), 3, 0, 2, 0,
             INSTR_LOAD_INT8,   1, 3,
             INSTR_LOAD_INT8,   2, 20,
             INSTR_LOAD_INT8,   3, 100,
@@ -1312,7 +1279,7 @@ int main(void)
     /* TAIL.CALL.FUN */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,     0, IMM32(16), 3, 0, 2, 0,
+            INSTR_LOAD_FUN,      0, IMM32(16), 3, 0, 2, 0,
             INSTR_LOAD_INT8,     1, 20,
             INSTR_LOAD_INT8,     2, 100,
             INSTR_TAIL_CALL_FUN, 0, 0, 1, 2,
@@ -1397,7 +1364,7 @@ int main(void)
     /* CATCH - catch exception from another function */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,  0, IMM32(22), 2, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(22), 2, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CATCH,      1, IMM32(5),
@@ -1421,7 +1388,7 @@ int main(void)
     /* CATCH - several levels of catch */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,  0, IMM32(42), 3, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(42), 3, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CATCH,      0, IMM32(8),
@@ -1432,7 +1399,7 @@ int main(void)
             INSTR_ADD,        0, 0, 2,
             INSTR_RETURN,     0, 0,
 
-            INSTR_LOAD_FUN2,  0, IMM32(44), 3, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(44), 3, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CATCH,      0, IMM32(8),
@@ -1444,7 +1411,7 @@ int main(void)
             INSTR_THROW,      0,
             INSTR_RETURN,     0, 1,
 
-            INSTR_LOAD_FUN2,  0, IMM32(44), 2, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(44), 2, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CATCH,      0, IMM32(8),
@@ -1468,7 +1435,7 @@ int main(void)
     /* BIND, BIND.SELF */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,  0, IMM32(20), 3, 0, 0, 0,
+            INSTR_LOAD_FUN,   0, IMM32(20), 3, 0, 0, 0,
             INSTR_BIND_SELF,  0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_CALL_N,     0, 0, 1, 21, 0,       /* returns the last function */
@@ -1476,7 +1443,7 @@ int main(void)
             INSTR_RETURN,     0, 1,
 
             /* reg 1 is register array of the main function */
-            INSTR_LOAD_FUN2,  2, IMM32(16), 3, 0, 0, 0,
+            INSTR_LOAD_FUN,   2, IMM32(16), 3, 0, 0, 0,
             INSTR_BIND_SELF,  2, 0,                 /* bind own registers    */
             INSTR_BIND,       2, 1, 1,              /* bind main's registers */
             INSTR_LOAD_INT32, 0, IMM32(37),
@@ -1500,7 +1467,7 @@ int main(void)
     /* BIND, BIND.SELF */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_GEN2,  0, IMM32(53), 4, 0, 0, 0,
+            INSTR_LOAD_GEN,   0, IMM32(53), 4, 0, 0, 0,
             INSTR_LOAD_VOID,  1,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_LOAD_ARRAY, 3, IMM32(1),
@@ -1569,7 +1536,7 @@ int main(void)
             INSTR_SET_ELEM,   1, IMM32(1), 0,
             INSTR_LOAD_INT32, 0, IMM32(4),
             INSTR_LOAD_INT32, 2, IMM32(0x20000),
-            INSTR_LOAD_FUN2,  3, IMM32(49), 7, 1, 2, 0, /* Overwritten by this function with level 2 */
+            INSTR_LOAD_FUN,   3, IMM32(49), 7, 1, 2, 0, /* Overwritten by this function with level 2 */
             INSTR_BIND_SELF,  3, 0,
             INSTR_BIND,       3, 1, 2,
             INSTR_CALL,       0, 3, 0, 1,           /* Returns 0x10 */
@@ -1592,7 +1559,7 @@ int main(void)
             INSTR_LOAD_INT32, 0, IMM32(0x1000),
             INSTR_ADD,        3, 3, 1,              /* 4+9 = 13 */
             INSTR_ADD,        3, 3, 6,              /* 13+3 = 0x10 */
-            INSTR_LOAD_FUN2,  6, IMM32(29), 107, 98, 3, 0,
+            INSTR_LOAD_FUN,   6, IMM32(29), 107, 98, 3, 0,
             INSTR_BIND,       6, 0, 4,
             INSTR_BIND,       6, 1, 5,
             INSTR_BIND_SELF,  6, 2,
@@ -1639,11 +1606,11 @@ int main(void)
             INSTR_LOAD_INT8,     1, 12,
             INSTR_SET_ELEM,      0, IMM32(2), 1,
 
-            INSTR_LOAD_FUN2,     1, IMM32(8), 4, 0, 0, 0,
+            INSTR_LOAD_FUN,      1, IMM32(8), 4, 0, 0, 0,
             INSTR_BIND_DEFAULTS, 1, 0,
             INSTR_TAIL_CALL_FUN, 0, 1, 255, 0,
 
-            INSTR_LOAD_FUN2,     3, IMM32(8), 2, 0, 0, 0,
+            INSTR_LOAD_FUN,      3, IMM32(8), 2, 0, 0, 0,
             INSTR_BIND_SELF,     3, 0,
             INSTR_TAIL_CALL_FUN, 3, 3, 255, 0,
 
@@ -1672,13 +1639,13 @@ int main(void)
             INSTR_LOAD_INT8,     1, 22,
             INSTR_SET_ELEM,      0, IMM32(2), 1,
 
-            INSTR_LOAD_FUN2,     2, IMM32(14), 6, 1, 1, 0,
+            INSTR_LOAD_FUN,      2, IMM32(14), 6, 1, 1, 0,
             INSTR_BIND_DEFAULTS, 2, 0,
             INSTR_LOAD_INT8,     0, 5,
             INSTR_LOAD_INT8,     1, 6,
             INSTR_TAIL_CALL_FUN, 0, 2, 0, 2,
 
-            INSTR_LOAD_FUN2,     5, IMM32(8), 2, 0, 0, 0,
+            INSTR_LOAD_FUN,      5, IMM32(8), 2, 0, 0, 0,
             INSTR_BIND_SELF,     5, 0,
             INSTR_TAIL_CALL_FUN, 5, 5, 255, 0,
 
@@ -1701,7 +1668,7 @@ int main(void)
     /* BIND.DEFAULTS - lots of default values and ellipsis, few input args */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,     0, IMM32(5), 5, 0, 2, 0,
+            INSTR_LOAD_FUN,      0, IMM32(5), 5, 0, 2, 0,
             INSTR_JUMP,          IMM32(31),
 
             /* 0 - begin
@@ -1718,14 +1685,14 @@ int main(void)
             INSTR_LOAD_INT8,     3, 64,
             INSTR_LOAD_INT8,     4, 96,
             INSTR_CALL_FUN,      1, 0, 3, 2,
-            INSTR_LOAD_FUN2,     2, IMM32(19), _KOS_MAX_ARGS_IN_REGS + 5 + 3, 5, 16, 1,
+            INSTR_LOAD_FUN,      2, IMM32(19), _KOS_MAX_ARGS_IN_REGS + 5 + 3, 5, 16, 1,
             INSTR_BIND_DEFAULTS, 2, 1,
             INSTR_LOAD_INT8,     3, 7,
             INSTR_LOAD_INT8,     4, 25,
             INSTR_CALL_FUN,      0, 0, 3, 2,
             INSTR_TAIL_CALL,     0, 2, 1, 0,
 
-            INSTR_LOAD_FUN2,     _KOS_MAX_ARGS_IN_REGS + 5 + 2, IMM32(8), 2, 0, 0, 0,
+            INSTR_LOAD_FUN,      _KOS_MAX_ARGS_IN_REGS + 5 + 2, IMM32(8), 2, 0, 0, 0,
             INSTR_BIND_SELF,     _KOS_MAX_ARGS_IN_REGS + 5 + 2, 0,
             INSTR_TAIL_CALL_FUN, _KOS_MAX_ARGS_IN_REGS + 5 + 2, _KOS_MAX_ARGS_IN_REGS + 5 + 2, 255, 0,
 
@@ -1774,7 +1741,7 @@ int main(void)
     /* BIND.DEFAULTS - lots of args, a few default values and ellipsis */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN2,     0, IMM32(5), 5, 0, 2, 0,
+            INSTR_LOAD_FUN,      0, IMM32(5), 5, 0, 2, 0,
             INSTR_JUMP,          IMM32(31),
 
             /* 0 - begin
@@ -1791,14 +1758,14 @@ int main(void)
             INSTR_LOAD_INT8,     3, 100,
             INSTR_LOAD_INT8,     4, 105,
             INSTR_CALL_FUN,      1, 0, 3, 2,
-            INSTR_LOAD_FUN2,     2, IMM32(19), _KOS_MAX_ARGS_IN_REGS + 3, 0, _KOS_MAX_ARGS_IN_REGS, 1,
+            INSTR_LOAD_FUN,      2, IMM32(19), _KOS_MAX_ARGS_IN_REGS + 3, 0, _KOS_MAX_ARGS_IN_REGS, 1,
             INSTR_BIND_DEFAULTS, 2, 1,
             INSTR_LOAD_INT8,     3, 1,
             INSTR_LOAD_INT8,     4, _KOS_MAX_ARGS_IN_REGS + 10,
             INSTR_CALL_FUN,      0, 0, 3, 2,
             INSTR_TAIL_CALL,     0, 2, 1, 0,
 
-            INSTR_LOAD_FUN2,     _KOS_MAX_ARGS_IN_REGS + 2, IMM32(8), 2, 0, 0, 0,
+            INSTR_LOAD_FUN,      _KOS_MAX_ARGS_IN_REGS + 2, IMM32(8), 2, 0, 0, 0,
             INSTR_BIND_SELF,     _KOS_MAX_ARGS_IN_REGS + 2, 0,
             INSTR_TAIL_CALL_FUN, _KOS_MAX_ARGS_IN_REGS + 2, _KOS_MAX_ARGS_IN_REGS + 2, 255, 0,
 

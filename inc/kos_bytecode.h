@@ -43,24 +43,15 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_LOAD_FALSE,
     /* LOAD.VOID <r.dest> */
     INSTR_LOAD_VOID,
-    /* LOAD.FUN <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg>
-     * Create a function object with the specified code. */
-    INSTR_LOAD_FUN,
-    /* LOAD.GEN <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg>
-     * Create a generator object with the specified code. */
-    INSTR_LOAD_GEN,
-    /* LOAD.CTOR <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg>
-     * Create a constructor function object with the specified code. */
-    INSTR_LOAD_CTOR,
     /* LOAD.FUN <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
      * Create a function object with the specified code. */
-    INSTR_LOAD_FUN2,
+    INSTR_LOAD_FUN,
     /* LOAD.GEN <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
      * Create a generator object with the specified code. */
-    INSTR_LOAD_GEN2,
+    INSTR_LOAD_GEN,
     /* LOAD.CTOR <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
      * Create a constructor function object with the specified code. */
-    INSTR_LOAD_CTOR2,
+    INSTR_LOAD_CTOR,
     /* LOAD.ARRAY8 <r.dest>, <size.int8> */
     INSTR_LOAD_ARRAY8,
     /* LOAD.ARRAY <r.dest>, <size.int32> */
@@ -102,8 +93,6 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_SET_PROP,
     /* SET.GLOBAL <int32>, <r.src> */
     INSTR_SET_GLOBAL,
-    /* SET.DEFAULTS <r.dest>, <uint8>, <r.src> */
-    INSTR_SET_DEFAULTS,
 
     /* PUSH <r.dest>, <r.src> */
     /* Append r.src to array in r.dest */

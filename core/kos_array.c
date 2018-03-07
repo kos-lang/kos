@@ -38,7 +38,6 @@ static const char str_err_empty[]         = "array is empty";
 static const char str_err_invalid_index[] = "array index is out of range";
 static const char str_err_not_array[]     = "object is not an array";
 static const char str_err_null_ptr[]      = "null pointer";
-static const char str_err_too_small[]     = "not enough elements to add defaults";
 
 /* TOMBSTONE indicates that an array element has been deleted due to a resize. */
 #define TOMBSTONE (KOS_context_from_frame(frame)->tombstone_obj)
@@ -735,52 +734,4 @@ int KOS_array_fill(KOS_FRAME  frame,
     }
 
     return KOS_SUCCESS;
-}
-
-int KOS_array_set_defaults(KOS_FRAME  frame,
-                           KOS_OBJ_ID obj_id,
-                           uint32_t   idx,
-                           KOS_OBJ_ID src_id)
-{
-    int      error = KOS_SUCCESS;
-    uint32_t len;
-    uint32_t num_elems;
-
-    if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
-
-    if (GET_OBJ_TYPE(src_id) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
-
-    len       = KOS_get_array_size(obj_id);
-    num_elems = KOS_get_array_size(src_id);
-
-    if (len < idx)
-        RAISE_EXCEPTION(str_err_too_small);
-
-    if (idx + num_elems > len) {
-
-        const uint32_t          already_have = len - idx;
-        KOS_ATOMIC(KOS_OBJ_ID) *src          = _KOS_get_array_buffer(OBJPTR(ARRAY, src_id));
-        KOS_ATOMIC(KOS_OBJ_ID) *buf;
-        KOS_ATOMIC(KOS_OBJ_ID) *end;
-
-        src       += already_have;
-        num_elems -= already_have;
-
-        TRY(KOS_array_reserve(frame, obj_id, len + num_elems));
-
-        buf = _KOS_get_array_buffer(OBJPTR(ARRAY, obj_id)) + len;
-        end = buf + num_elems;
-
-        len += num_elems;
-
-        while (buf < end)
-            KOS_atomic_write_ptr(*(buf++), KOS_atomic_read_ptr(*(src++)));
-
-        KOS_atomic_write_u32(OBJPTR(ARRAY, obj_id)->size, len);
-    }
-
-_error:
-    return error;
 }

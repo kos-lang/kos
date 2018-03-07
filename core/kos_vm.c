@@ -614,11 +614,6 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
 
     assert( ! func->handler);
 
-    if (func->header.flags & KOS_FUN_OLD_STYLE)
-        return KOS_new_array(frame, func->header.num_regs);
-
-    assert(func->min_args == func->header.num_args);
-
     if (func->header.flags & KOS_FUN_ELLIPSIS) {
         /* args, ellipsis, this */
         assert(func->header.num_regs >= reg + num_arg_regs + 2);
@@ -741,47 +736,6 @@ _error:
     return error ? KOS_BADPTR : args_obj;
 }
 
-static int _init_registers_old(KOS_FRAME     stack_frame,
-                               KOS_FUNCTION *func,
-                               KOS_OBJ_ID    regs,
-                               KOS_OBJ_ID    args_obj,
-                               KOS_OBJ_ID    this_obj,
-                               KOS_OBJ_ID    closures)
-{
-    int error = KOS_SUCCESS;
-
-    KOS_ATOMIC(KOS_OBJ_ID) *const new_regs = _KOS_get_array_buffer(OBJPTR(ARRAY, regs));
-
-    uint32_t reg = func->args_reg;
-
-    assert(func->header.flags & KOS_FUN_OLD_STYLE);
-
-    assert(func->header.num_regs >= reg + 2); /* args, this */
-    assert(func->header.num_regs == KOS_get_array_size(regs));
-
-    new_regs[reg++] = args_obj;
-    new_regs[reg++] = this_obj;
-
-    if (GET_OBJ_TYPE(closures) == OBJ_ARRAY) {
-        uint32_t src_len;
-        uint32_t i;
-
-        src_len = KOS_get_array_size(closures);
-
-        assert(reg + src_len <= 256U);
-        assert(reg + src_len <= KOS_get_array_size(regs));
-
-        for (i=0; i < src_len; i++) {
-            KOS_OBJ_ID obj = KOS_array_read(stack_frame, closures, (int)i);
-            TRY_OBJID(obj);
-            new_regs[reg++] = obj;
-        }
-    }
-
-_error:
-    return error;
-}
-
 static KOS_FRAME _prepare_call(KOS_FRAME          frame,
                                KOS_BYTECODE_INSTR instr,
                                KOS_OBJ_ID         func_obj,
@@ -804,9 +758,6 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
     func  = OBJPTR(FUNCTION, func_obj);
     state = (enum _KOS_FUNCTION_STATE)func->state;
-
-    if (KOS_get_array_size(args_obj) < func->min_args)
-        RAISE_EXCEPTION(str_err_too_few_args);
 
     if (KOS_get_array_size(args_obj) < func->header.num_args)
         RAISE_EXCEPTION(str_err_too_few_args);
@@ -847,14 +798,6 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             if ( ! new_stack_frame)
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-            if ( ! func->handler && (func->header.flags & KOS_FUN_OLD_STYLE))
-                TRY(_init_registers_old(new_stack_frame, /* TODO delete */
-                                        func,
-                                        new_stack_frame->registers,
-                                        args_obj,
-                                        *this_obj,
-                                        func->closures));
-
             break;
         }
 
@@ -875,7 +818,6 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             dest->header.flags      = func->header.flags;
             dest->header.num_args   = func->header.num_args;
             dest->header.num_regs   = func->header.num_regs;
-            dest->min_args          = func->min_args;
             dest->args_reg          = func->args_reg;
             dest->instr_offs        = func->instr_offs;
             dest->module            = func->module;
@@ -893,7 +835,6 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             }
 
             dest->header.num_args = 0;
-            dest->min_args        = 0;
 
             new_stack_frame = _KOS_stack_frame_push_func(frame, func, regs);
             if ( ! new_stack_frame)
@@ -901,13 +842,6 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
             if (func->handler)
                 new_stack_frame->registers = args_obj;
-            else if (func->header.flags & KOS_FUN_OLD_STYLE)
-                TRY(_init_registers_old(frame,  /* TODO delete */
-                                        dest,
-                                        new_stack_frame->registers,
-                                        args_obj,
-                                        *this_obj,
-                                        func->closures));
 
             dest->generator_stack_frame   =  new_stack_frame;
             new_stack_frame->parent       =  KOS_BADPTR;
@@ -1229,57 +1163,11 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_FUN: /* <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg> */
+            case INSTR_LOAD_FUN: /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
                 /* fall through */
-            case INSTR_LOAD_GEN: /* <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg> */
+            case INSTR_LOAD_GEN: /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
                 /* fall through */
-            case INSTR_LOAD_CTOR: { /* <r.dest>, <delta.int32>, <min.args>, <num.regs>, <args.reg> */
-                const int32_t  fun_offs  = (int32_t)_load_32(bytecode+2);
-                const uint8_t  min_args  = bytecode[6];
-                const uint8_t  num_regs  = bytecode[7];
-                const uint8_t  args_reg  = bytecode[8];
-
-                const uint32_t offset    = (uint32_t)((bytecode + 9 + fun_offs) - module->bytecode);
-                KOS_OBJ_ID     fun_obj   = KOS_BADPTR;
-                KOS_OBJ_ID     proto_obj = KOS_new_void(frame);
-
-                assert(offset < module->bytecode_size);
-
-                if (instr == INSTR_LOAD_CTOR)
-                    proto_obj = KOS_gen_prototype(frame, bytecode + 9 + fun_offs);
-
-                if ( ! IS_BAD_PTR(proto_obj))
-                    fun_obj = KOS_new_function(frame, proto_obj);
-
-                if ( ! IS_BAD_PTR(fun_obj)) {
-
-                    KOS_FUNCTION *const fun = OBJPTR(FUNCTION, fun_obj);
-
-                    fun->header.flags    = KOS_FUN_OLD_STYLE;
-                    fun->header.num_args = 0;
-                    fun->header.num_regs = num_regs;
-                    fun->min_args        = min_args;
-                    fun->args_reg        = args_reg;
-                    fun->instr_offs      = offset;
-                    fun->module          = OBJID(MODULE, module);
-
-                    if (instr == INSTR_LOAD_GEN)
-                        fun->state = KOS_GEN_INIT;
-                    else if (instr == INSTR_LOAD_CTOR)
-                        fun->state = KOS_CTOR;
-                }
-
-                rdest = bytecode[1];
-                out   = fun_obj;
-                delta = 9;
-                break;
-            }
-
-            case INSTR_LOAD_FUN2: /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
-                /* fall through */
-            case INSTR_LOAD_GEN2: /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
-                /* fall through */
-            case INSTR_LOAD_CTOR2: { /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
+            case INSTR_LOAD_CTOR: { /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
                 const int32_t  fun_offs  = (int32_t)_load_32(bytecode+2);
                 const uint8_t  num_regs  = bytecode[6];
                 const uint8_t  args_reg  = bytecode[7];
@@ -1292,7 +1180,7 @@ static int _exec_function(KOS_FRAME frame)
 
                 assert(offset < module->bytecode_size);
 
-                if (instr == INSTR_LOAD_CTOR2)
+                if (instr == INSTR_LOAD_CTOR)
                     proto_obj = KOS_gen_prototype(frame, bytecode + 10 + fun_offs);
 
                 if ( ! IS_BAD_PTR(proto_obj))
@@ -1305,14 +1193,13 @@ static int _exec_function(KOS_FRAME frame)
                     fun->header.flags    = flags;
                     fun->header.num_args = num_args;
                     fun->header.num_regs = num_regs;
-                    fun->min_args        = num_args; /* TODO delete */
                     fun->args_reg        = args_reg;
                     fun->instr_offs      = offset;
                     fun->module          = OBJID(MODULE, module);
 
-                    if (instr == INSTR_LOAD_GEN2)
+                    if (instr == INSTR_LOAD_GEN)
                         fun->state = KOS_GEN_INIT;
-                    else if (instr == INSTR_LOAD_CTOR2)
+                    else if (instr == INSTR_LOAD_CTOR)
                         fun->state = KOS_CTOR;
                 }
 
@@ -1745,21 +1632,6 @@ static int _exec_function(KOS_FRAME frame)
                 }
 
                 delta = 7;
-                break;
-            }
-
-            case INSTR_SET_DEFAULTS: { /* <r.dest>, <uint8>, <r.src> */
-                const unsigned idx  = bytecode[2];
-                const unsigned rsrc = bytecode[3];
-
-                rdest = bytecode[1];
-
-                assert(rdest < regs_array->size);
-                assert(rsrc  < regs_array->size);
-
-                error = KOS_array_set_defaults(frame, regs[rdest], idx, regs[rsrc]);
-
-                delta = 4;
                 break;
             }
 
@@ -2755,7 +2627,7 @@ static int _exec_function(KOS_FRAME frame)
             default:
                 assert(instr == INSTR_BREAKPOINT);
                 if (instr == INSTR_BREAKPOINT) {
-                    /* TODO */
+                    /* TODO simply call a debugger function from context */
                 }
                 else
                     KOS_raise_exception_cstring(frame, str_err_invalid_instruction);

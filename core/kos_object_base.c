@@ -96,7 +96,6 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         func->header.flags          = 0;
         func->header.num_args       = 0;
         func->header.num_regs       = 0;
-        func->min_args              = 0;
         func->args_reg              = 0;
         func->prototype             = proto_obj;
         func->module                = frame->module;
@@ -125,8 +124,8 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_FRAME            frame,
         if ( ! IS_BAD_PTR(func_obj)) {
             assert(min_args >= 0 && min_args < 256);
 
-            OBJPTR(FUNCTION, func_obj)->min_args = (uint8_t)min_args;
-            OBJPTR(FUNCTION, func_obj)->handler  = handler;
+            OBJPTR(FUNCTION, func_obj)->header.num_args = (uint8_t)min_args;
+            OBJPTR(FUNCTION, func_obj)->handler         = handler;
         }
     }
 

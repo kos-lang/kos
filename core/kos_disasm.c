@@ -77,7 +77,6 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_SET:                 /* fall through */
         case INSTR_SET_ELEM:            /* fall through */
         case INSTR_SET_PROP:            /* fall through */
-        case INSTR_SET_DEFAULTS:        /* fall through */
         case INSTR_ADD:                 /* fall through */
         case INSTR_SUB:                 /* fall through */
         case INSTR_MUL:                 /* fall through */
@@ -108,15 +107,12 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
             return 4;
 
         case INSTR_CALL_N:              /* fall through */
-        case INSTR_TAIL_CALL_N:         /* fall through */
+        case INSTR_TAIL_CALL_N:
+            return 5;
+
         case INSTR_LOAD_FUN:            /* fall through */
         case INSTR_LOAD_GEN:            /* fall through */
         case INSTR_LOAD_CTOR:
-            return 5;
-
-        case INSTR_LOAD_FUN2:           /* fall through */
-        case INSTR_LOAD_GEN2:           /* fall through */
-        case INSTR_LOAD_CTOR2:
             return 6;
     }
 }
@@ -163,12 +159,6 @@ int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_CTOR:
             /* fall through */
-        case INSTR_LOAD_FUN2:
-            /* fall through */
-        case INSTR_LOAD_GEN2:
-            /* fall through */
-        case INSTR_LOAD_CTOR2:
-            /* fall through */
         case INSTR_GET_MOD:
             /* fall through */
         case INSTR_SET_ELEM:
@@ -214,15 +204,6 @@ static int _get_offset_operand_tail(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_CTOR:
             if (op == 1)
-                return 3;
-            break;
-
-        case INSTR_LOAD_FUN2:
-            /* fall through */
-        case INSTR_LOAD_GEN2:
-            /* fall through */
-        case INSTR_LOAD_CTOR2:
-            if (op == 1)
                 return 4;
             break;
 
@@ -257,12 +238,6 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_CTOR:
             /* fall through */
-        case INSTR_LOAD_FUN2:
-            /* fall through */
-        case INSTR_LOAD_GEN2:
-            /* fall through */
-        case INSTR_LOAD_CTOR2:
-            /* fall through */
         case INSTR_LOAD_ARRAY8:
             /* fall through */
         case INSTR_LOAD_ARRAY:
@@ -290,8 +265,6 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
         case INSTR_SET_ELEM:
             /* fall through */
         case INSTR_SET_PROP:
-            /* fall through */
-        case INSTR_SET_DEFAULTS:
             /* fall through */
         case INSTR_BIND:
             return op == 1 ? 0 : 1;
@@ -369,9 +342,6 @@ void _KOS_disassemble(const char                          *filename,
         "LOAD.FUN",
         "LOAD.GEN",
         "LOAD.CTOR",
-        "LOAD.FUN2",
-        "LOAD.GEN2",
-        "LOAD.CTOR2",
         "LOAD.ARRAY8",
         "LOAD.ARRAY",
         "LOAD.OBJ",
@@ -387,7 +357,6 @@ void _KOS_disassemble(const char                          *filename,
         "SET.ELEM",
         "SET.PROP",
         "SET.GLOBAL",
-        "SET.DEFAULTS",
         "PUSH",
         "PUSH.EX",
         "DEL",

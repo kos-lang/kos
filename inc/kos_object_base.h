@@ -255,13 +255,11 @@ typedef struct _KOS_FUN_HEADER {
 } KOS_FUN_HEADER;
 
 enum _KOS_FUNCTION_FLAGS {
-    KOS_FUN_ELLIPSIS  = 1,  /* store remaining args in array */
-    KOS_FUN_OLD_STYLE = 2   /* TODO delete with min_args     */
+    KOS_FUN_ELLIPSIS = 1 /* store remaining args in array */
 };
 
 typedef struct _KOS_FUNCTION {
     KOS_FUN_HEADER         header;
-    uint8_t                min_args; /* TODO delete */
     uint8_t                args_reg;
     uint8_t                state;    /* TODO convert to KOS_ATOMIC(uint32_t) */
     uint32_t               instr_offs;

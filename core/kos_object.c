@@ -700,11 +700,11 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_FRAME            frame,
     set_obj = KOS_new_function(frame, KOS_new_void(frame));
     TRY_OBJID(set_obj);
 
-    OBJPTR(FUNCTION, get_obj)->min_args = 0;
-    OBJPTR(FUNCTION, get_obj)->handler  = getter;
+    OBJPTR(FUNCTION, get_obj)->header.num_args = 0;
+    OBJPTR(FUNCTION, get_obj)->handler         = getter;
 
-    OBJPTR(FUNCTION, set_obj)->min_args = 1;
-    OBJPTR(FUNCTION, set_obj)->handler  = setter;
+    OBJPTR(FUNCTION, set_obj)->header.num_args = 1;
+    OBJPTR(FUNCTION, set_obj)->handler         = setter;
 
     dyn_prop = KOS_new_dynamic_prop(frame, get_obj, set_obj);
     TRY_OBJID(dyn_prop);

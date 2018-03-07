@@ -128,7 +128,7 @@ struct _KOS_SCOPE {
     struct _KOS_CATCH_REF       catch_ref; /* For catch references between scopes */
     unsigned                    is_function    : 1;
     unsigned                    uses_this      : 1;
-    unsigned                    have_rest      : 1;
+    unsigned                    have_rest      : 1; /* Has more args than fit in registers */
 };
 
 struct _KOS_SCOPE_REF {

@@ -812,12 +812,9 @@ static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
 
     opcode = *buf;
 
-    assert(opcode == INSTR_LOAD_FUN  ||
-           opcode == INSTR_LOAD_GEN  ||
-           opcode == INSTR_LOAD_CTOR ||
-           opcode == INSTR_LOAD_FUN2 ||
-           opcode == INSTR_LOAD_GEN2 ||
-           opcode == INSTR_LOAD_CTOR2||
+    assert(opcode == INSTR_LOAD_FUN ||
+           opcode == INSTR_LOAD_GEN ||
+           opcode == INSTR_LOAD_CTOR||
            opcode == INSTR_CATCH     ||
            opcode == INSTR_JUMP      ||
            opcode == INSTR_JUMP_COND ||
@@ -825,20 +822,12 @@ static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
 
     switch (opcode) {
 
-        case INSTR_LOAD_FUN2:
-            /* fall through */
-        case INSTR_LOAD_GEN2:
-            /* fall through */
-        case INSTR_LOAD_CTOR2:
-            jump_instr_size = 10;
-            break;
-
         case INSTR_LOAD_FUN:
             /* fall through */
         case INSTR_LOAD_GEN:
             /* fall through */
         case INSTR_LOAD_CTOR:
-            jump_instr_size = 9;
+            jump_instr_size = 10;
             break;
 
         case INSTR_JUMP:
@@ -855,9 +844,6 @@ static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
     buf += (opcode == INSTR_LOAD_FUN
          || opcode == INSTR_LOAD_GEN
          || opcode == INSTR_LOAD_CTOR
-         || opcode == INSTR_LOAD_FUN2
-         || opcode == INSTR_LOAD_GEN2
-         || opcode == INSTR_LOAD_CTOR2
          || opcode == INSTR_CATCH) ? 2 : 1;
 
     for (end = buf+4; buf < end; ++buf) {
@@ -4340,8 +4326,8 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     TRY(_gen_reg(program, reg));
     TRY(_gen_instr6(program,
                     fun_node->type == NT_CONSTRUCTOR_LITERAL
-                        ? INSTR_LOAD_CTOR2
-                        : frame->yield_token ? INSTR_LOAD_GEN2 : INSTR_LOAD_FUN2,
+                        ? INSTR_LOAD_CTOR
+                        : frame->yield_token ? INSTR_LOAD_GEN : INSTR_LOAD_FUN,
                     (*reg)->reg,
                     0,
                     frame->num_regs,
