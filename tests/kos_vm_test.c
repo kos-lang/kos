@@ -1255,7 +1255,7 @@ int main(void)
     /* TAIL.CALL.N */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_FUN,    0, IMM32(19), 3, 0, 2, 0,
+            INSTR_LOAD_FUN,    0, IMM32(20), 3, 0, 2, 0,
             INSTR_LOAD_INT8,   1, 3,
             INSTR_LOAD_INT8,   2, 20,
             INSTR_LOAD_INT8,   3, 100,

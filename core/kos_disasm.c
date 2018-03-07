@@ -421,7 +421,7 @@ void _KOS_disassemble(const char                          *filename,
         const int     mnem_align = 44;
         const char*   str_opcode;
         const uint8_t opcode = *bytecode;
-        assert(opcode <= sizeof(str_instr)/sizeof(str_instr[0]));
+        assert(opcode - INSTR_BREAKPOINT <= sizeof(str_instr)/sizeof(str_instr[0]));
 
         assert(line_addrs == line_addrs_end ||
                offs <= line_addrs->offs);
@@ -447,7 +447,7 @@ void _KOS_disassemble(const char                          *filename,
             ++line_addrs;
         }
 
-        str_opcode   = str_instr[opcode];
+        str_opcode   = str_instr[opcode - INSTR_BREAKPOINT];
         num_operands = _get_num_operands((enum _KOS_BYTECODE_INSTR)opcode);
 
         dis[sizeof(dis)-1] = 0;
