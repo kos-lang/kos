@@ -1342,6 +1342,19 @@ do {
         assert it() == 2
         expect_fail(it)
     }
+    do {
+        fun expand(a)
+        {
+            a = [a...]
+            return a
+        }
+        const a = expand([10, 20, 30])
+        assert typeof a == "array"
+        assert a.size == 3
+        assert a[0] == 10
+        assert a[1] == 20
+        assert a[2] == 30
+    }
 }
 
 # expand args and return array

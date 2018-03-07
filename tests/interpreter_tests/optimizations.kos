@@ -45,7 +45,7 @@ do {
     }
     assert empty() == void
 
-    check(empty, { registers: 2, instructions: 2, size: 5 })
+    check(empty, { registers: 1, instructions: 2, size: 5 })
 }
 
 #============================================================================#
@@ -58,7 +58,7 @@ do {
 
     assert sum(1, 2, +(3), 4, 5) == 15
 
-    check(sum, { registers: 3, instructions: 10, size: 54 })
+    check(sum, { registers: 6, instructions: 5, size: 19 })
 }
 
 #============================================================================#
@@ -71,7 +71,7 @@ do {
 
     assert return_this.apply(123, []) == 123
 
-    check(return_this, { registers: 2, instructions: 1, size: 3 })
+    check(return_this, { registers: 1, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -104,7 +104,7 @@ do {
 
     assert return_string() == "string"
 
-    check(return_string, { registers: 2, instructions: 2, size: 9 })
+    check(return_string, { registers: 1, instructions: 2, size: 9 })
 }
 
 #============================================================================#
@@ -117,7 +117,7 @@ do {
 
     assert times_plus(2, 3, 4) == 10
 
-    check(times_plus, { registers: 3, instructions: 6, size: 32 })
+    check(times_plus, { registers: 4, instructions: 3, size: 11 })
 }
 
 #============================================================================#
@@ -130,7 +130,7 @@ do {
 
     assert plus_times(2, 3, 4) == 14
 
-    check(plus_times, { registers: 4, instructions: 6, size: 32 })
+    check(plus_times, { registers: 4, instructions: 3, size: 11 })
 }
 
 #============================================================================#
@@ -149,7 +149,7 @@ do {
 
     assert find_lowest([9, 10, -5, 245, -1000, 9000, -1]) == -1000
 
-    check(find_lowest, { registers: 5, instructions: 11, size: 61 })
+    check(find_lowest, { registers: 5, instructions: 10, size: 54 })
 }
 
 #============================================================================#
@@ -170,7 +170,7 @@ do {
 
     assert find_greatest([-100, 90, -5, 400, 10, 15]) == 400
 
-    check(find_greatest, { registers: 8, instructions: 15, size: 76 })
+    check(find_greatest, { registers: 6, instructions: 13, size: 62 })
 }
 
 #============================================================================#
@@ -188,7 +188,7 @@ do {
 
     assert throw_exception(5) == 5
 
-    check(throw_exception, { registers: 3, instructions: 8, size: 32 })
+    check(throw_exception, { registers: 3, instructions: 7, size: 25 })
 }
 
 #============================================================================#
@@ -206,7 +206,7 @@ do {
         assert iter() == 0
     }
 
-    check(map_invoke, { registers: 4, instructions: 4, size: 27 })
+    check(map_invoke, { registers: 3, instructions: 2, size: 13 })
 }
 
 #============================================================================#
@@ -225,7 +225,7 @@ do {
         assert iter() == 0.5
     }
 
-    check(map, { registers: 5, instructions: 11, size: 54 })
+    check(map, { registers: 5, instructions: 9, size: 40 })
 }
 
 #============================================================================#
@@ -242,7 +242,7 @@ do {
         assert multi_const(4) == 44
     }
 
-    check(multi_const, { registers: 4, instructions: 7, size: 28 })
+    check(multi_const, { registers: 4, instructions: 6, size: 21 })
 }
 
 #============================================================================#
@@ -271,7 +271,7 @@ do {
         }
         assert caught == 1
     }
-    check(unreachable_if, { registers: 2, instructions: 7, size: 29 })
+    check(unreachable_if, { registers: 2, instructions: 6, size: 22 })
 }
 
 #============================================================================#
@@ -290,7 +290,7 @@ do {
     }
     assert unreachable_repeat(1) == 10
 
-    check(unreachable_repeat, { registers: 2, instructions: 2, size: 6 })
+    check(unreachable_repeat, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#
@@ -306,7 +306,7 @@ do {
 
     assert early_return_from_repeat() == 8
 
-    check(early_return_from_repeat, { registers: 2, instructions: 2, size: 6 })
+    check(early_return_from_repeat, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#
@@ -323,7 +323,7 @@ do {
 
     assert early_break_from_repeat() == 8
 
-    check(early_break_from_repeat, { registers: 2, instructions: 3, size: 11 })
+    check(early_break_from_repeat, { registers: 1, instructions: 3, size: 11 })
 }
 
 #============================================================================#
@@ -341,7 +341,7 @@ do {
     }
     assert unreachable_while(1) == 10
 
-    check(unreachable_while, { registers: 2, instructions: 3, size: 11 })
+    check(unreachable_while, { registers: 1, instructions: 3, size: 11 })
 }
 
 #============================================================================#
@@ -360,7 +360,7 @@ do {
     }
     assert break_inside_while(1) == 102
 
-    check(break_inside_while, { registers: 3, instructions: 8, size: 34 })
+    check(break_inside_while, { registers: 3, instructions: 8, size: 30 })
 }
 
 #============================================================================#
@@ -376,7 +376,7 @@ do {
     }
     assert falsy_while(8) == 8
 
-    check(falsy_while, { registers: 2, instructions: 2, size: 10 })
+    check(falsy_while, { registers: 2, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -391,7 +391,7 @@ do {
     }
     assert falsy_for(2) == 12
 
-    check(falsy_for, { registers: 3, instructions: 7, size: 30 })
+    check(falsy_for, { registers: 2, instructions: 6, size: 23 })
 }
 
 #============================================================================#
@@ -454,7 +454,7 @@ do {
     }
     assert var_to_const_while_true(2) == 13
 
-    check(var_to_const_while_true, { registers: 4, instructions: 8, size: 34 })
+    check(var_to_const_while_true, { registers: 4, instructions: 8, size: 30 })
 }
 
 #============================================================================#
@@ -469,7 +469,7 @@ do {
     }
     assert truthy_while() == 88
 
-    check(truthy_while, { registers: 2, instructions: 3, size: 11 })
+    check(truthy_while, { registers: 1, instructions: 3, size: 11 })
 }
 
 #============================================================================#
@@ -482,7 +482,7 @@ do {
         # TODO optimize-out the trailing return
     }
 
-    check(stuck_forever, { registers: 2, instructions: 3, size: 10 })
+    check(stuck_forever, { registers: 1, instructions: 3, size: 10 })
 }
 
 #============================================================================#
@@ -503,7 +503,7 @@ do {
     }
     assert var_to_const_while_false(2) == 2
 
-    check(var_to_const_while_false, { registers: 3, instructions: 4, size: 24 })
+    check(var_to_const_while_false, { registers: 3, instructions: 3, size: 17 })
 }
 
 #============================================================================#
@@ -515,7 +515,7 @@ do {
     }
     assert collapse_logical_or_true(100) == "xyz"
 
-    check(collapse_logical_or_true, { registers: 2, instructions: 2, size: 9 })
+    check(collapse_logical_or_true, { registers: 1, instructions: 2, size: 9 })
 }
 
 #============================================================================#
@@ -527,7 +527,7 @@ do {
     }
     assert collapse_logical_or_false(100) == 100
 
-    check(collapse_logical_or_false, { registers: 2, instructions: 2, size: 10 })
+    check(collapse_logical_or_false, { registers: 2, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -539,7 +539,7 @@ do {
     }
     assert collapse_logical_and_true(100) == 100
 
-    check(collapse_logical_and_true, { registers: 2, instructions: 2, size: 10 })
+    check(collapse_logical_and_true, { registers: 2, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -553,7 +553,7 @@ do {
     assert typeof ret == "float"
     assert ret == 0
 
-    check(collapse_logical_and_false, { registers: 2, instructions: 2, size: 13 })
+    check(collapse_logical_and_false, { registers: 1, instructions: 2, size: 13 })
 }
 
 #============================================================================#
@@ -565,7 +565,7 @@ do {
     }
     assert collapse_logical_tri_true(10) == 10
 
-    check(collapse_logical_tri_true, { registers: 2, instructions: 2, size: 10 })
+    check(collapse_logical_tri_true, { registers: 2, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -577,7 +577,7 @@ do {
     }
     assert collapse_logical_tri_false(20) == 20
 
-    check(collapse_logical_tri_false, { registers: 2, instructions: 2, size: 10 })
+    check(collapse_logical_tri_false, { registers: 2, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -589,7 +589,7 @@ do {
     }
     assert collapse_add() == 5
 
-    check(collapse_add, { registers: 2, instructions: 2, size: 6 })
+    check(collapse_add, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#
@@ -601,7 +601,7 @@ do {
     }
     assert collapse_interpolated_strings_1() == "this is test"
 
-    check(collapse_interpolated_strings_1, { registers: 2, instructions: 2, size: 9 })
+    check(collapse_interpolated_strings_1, { registers: 1, instructions: 2, size: 9 })
 }
 
 #============================================================================#
@@ -613,7 +613,7 @@ do {
     }
     assert collapse_interpolated_strings_2() == "integer void false 0.0 32"
 
-    check(collapse_interpolated_strings_2, { registers: 2, instructions: 2, size: 9 })
+    check(collapse_interpolated_strings_2, { registers: 1, instructions: 2, size: 9 })
 }
 
 #============================================================================#
@@ -630,7 +630,7 @@ do {
     }
     assert collapse_if_numeric(10, 20) == 10
 
-    check(collapse_if_numeric, { registers: 2, instructions: 2, size: 10 })
+    check(collapse_if_numeric, { registers: 3, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -645,7 +645,7 @@ do {
     unused_variable(fun { value = 100 })
     assert(value == 100)
 
-    check(unused_variable, { registers: 3, instructions: 4, size: 17 })
+    check(unused_variable, { registers: 3, instructions: 3, size: 10 })
 }
 
 #============================================================================#
@@ -666,7 +666,7 @@ do {
 
     assert demote_indep_vars(1)() == 42
 
-    check(demote_indep_vars, { registers: 4, instructions: 5, size: 26 })
+    check(demote_indep_vars, { registers: 3, instructions: 4, size: 20 })
 }
 
 #============================================================================#
@@ -685,8 +685,8 @@ do {
     assert f(52)  == 52
     assert f(-10) == -10
 
-    check(optimize_default_args, { registers: 2, instructions: 2, size: 12 })
-    check(f,                     { registers: 2, instructions: 2, size: 10 })
+    check(optimize_default_args, { registers: 1, instructions: 2, size: 13 })
+    check(f,                     { registers: 4, instructions: 1, size:  3 })
 }
 
 #============================================================================#
@@ -705,5 +705,5 @@ do {
     assert optimize_switch(2) == 4
     assert optimize_switch(5) == 8
 
-    check(optimize_switch, { registers: 3, instructions: 23, size: 104 })
+    check(optimize_switch, { registers: 2, instructions: 19, size: 76 })
 }

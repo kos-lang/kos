@@ -163,31 +163,6 @@ static int _get_nonzero(const struct _KOS_TOKEN *token, int *non_zero)
     return KOS_SUCCESS;
 }
 
-static void _update_scope_ref(struct _KOS_COMP_UNIT *program,
-                              int                    var_type,
-                              struct _KOS_SCOPE     *closure)
-{
-    struct _KOS_SCOPE *scope;
-
-    /* Find function owning the variable's scope */
-    while (closure->next && ! closure->is_function)
-        closure = closure->next;
-
-    /* Reference the function in all inner scopes which use it */
-    for (scope = program->scope_stack; scope != closure; scope = scope->next)
-        if (scope->is_function) {
-
-            struct _KOS_SCOPE_REF *ref = _KOS_find_scope_ref(scope->frame, closure);
-
-            assert(ref);
-
-            if (var_type == VAR_INDEPENDENT_ARGUMENT)
-                ++ref->exported_args;
-            else
-                ++ref->exported_locals;
-        }
-}
-
 static void _lookup_var(struct _KOS_COMP_UNIT   *program,
                         const struct _KOS_TOKEN *token,
                         int                      only_active,
@@ -241,11 +216,6 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
     }
 
     assert(var);
-
-    if ( ! *is_local && var) {
-        assert(var->type == VAR_INDEPENDENT_LOCAL || var->type == VAR_INDEPENDENT_ARGUMENT);
-        _update_scope_ref(program, var->type, scope);
-    }
 
     *out_var = var;
 }
@@ -335,17 +305,6 @@ static int _reset_var_state(struct _KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
-static int _clear_scope_ref(struct _KOS_RED_BLACK_NODE *node,
-                            void                       *cookie)
-{
-    struct _KOS_SCOPE_REF *const ref = (struct _KOS_SCOPE_REF *)node;
-
-    ref->exported_locals = 0;
-    ref->exported_args   = 0;
-
-    return 0;
-}
-
 static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT      *program,
                                       const struct _KOS_AST_NODE *node)
 {
@@ -362,11 +321,6 @@ static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT      *program,
 
     scope->num_vars       = 0;
     scope->num_indep_vars = 0;
-    scope->num_args       = 0;
-    scope->num_indep_args = 0;
-
-    if (scope->frame)
-        _KOS_red_black_walk(scope->frame->closures, _clear_scope_ref, 0);
 
     return scope;
 }
@@ -392,23 +346,19 @@ static int _count_and_update_vars(struct _KOS_RED_BLACK_NODE *node,
         var->type = (var->type == VAR_INDEPENDENT_ARGUMENT) ? VAR_ARGUMENT : VAR_LOCAL;
     }
 
-    /* Count arguments */
-    if (var->type & VAR_ARGUMENT) {
-        assert(scope->is_function || ! scope->next);
-
-        ++scope->num_args;
-
-        if (var->type == VAR_INDEPENDENT_ARGUMENT)
-            ++scope->num_indep_args;
-    }
     /* Count only used local variables */
-    else if ((var->type & VAR_LOCAL) && var->num_reads) {
-        assert( ! (var->type & VAR_ARGUMENT) || var == scope->ellipsis);
+    if ((var->type & VAR_LOCAL) && var->num_reads
+        /* Count ellipsis only if it's independent, in which case it is relocated
+         * to a local variable in the independent range */
+        && (var != scope->ellipsis || var->type == VAR_INDEPENDENT_LOCAL)) {
 
         ++scope->num_vars;
 
         if (var->type == VAR_INDEPENDENT_LOCAL)
             ++scope->num_indep_vars;
+    }
+    else if (var->type & VAR_ARGUMENT) {
+        assert(scope->is_function || ! scope->next);
     }
 
     return KOS_SUCCESS;
@@ -1647,6 +1597,9 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
     switch (node->type) {
 
         case NT_RETURN:
+            /* fall through */
+        default:
+            assert(node->type == NT_RETURN);
             error        = _visit_child_nodes(program, node);
             *is_terminal = TERM_RETURN;
             break;
@@ -1719,21 +1672,33 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             error = _interpolated_string(program, node);
             break;
 
+        case NT_LINE_LITERAL:
+            error = _line(program, node);
+            break;
+
+        case NT_EMPTY:
+            /* fall through */
+        case NT_FALLTHROUGH:
+            /* fall through */
+        case NT_LANDMARK:
+            /* fall through */
+        case NT_NUMERIC_LITERAL:
+            /* fall through */
+        case NT_STRING_LITERAL:
+            /* fall through */
+        case NT_THIS_LITERAL:
+            /* fall through */
+        case NT_BOOL_LITERAL:
+            /* fall through */
+        case NT_VOID_LITERAL:
+            assert( ! node->children);
+            /* fall through */
         case NT_PARAMETERS:
             /* fall through */
         case NT_IMPORT:
             error = KOS_SUCCESS;
             break;
 
-        case NT_LINE_LITERAL:
-            /* fall through */
-        default:
-            assert(node->type == NT_LINE_LITERAL);
-            error = _line(program, node);
-            break;
-
-        case NT_EMPTY:
-            /* fall through */
         case NT_ASSERT:
             /* fall through */
         case NT_REFINEMENT:
@@ -1759,20 +1724,6 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
         case NT_IN:
             /* fall through */
         case NT_EXPRESSION_LIST:
-            /* fall through */
-        case NT_FALLTHROUGH:
-            /* fall through */
-        case NT_LANDMARK:
-            /* fall through */
-        case NT_NUMERIC_LITERAL:
-            /* fall through */
-        case NT_STRING_LITERAL:
-            /* fall through */
-        case NT_THIS_LITERAL:
-            /* fall through */
-        case NT_BOOL_LITERAL:
-            /* fall through */
-        case NT_VOID_LITERAL:
             /* fall through */
         case NT_ARRAY_LITERAL:
             /* fall through */

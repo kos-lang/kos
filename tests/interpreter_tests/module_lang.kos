@@ -1336,7 +1336,7 @@ do {
     fun f { }
 
     assert f.name         == "f"
-    assert f.registers    == 2
+    assert f.registers    == 1
     assert f.instructions == 2 # LOAD.VOID, RETURN
     assert f.size         == 5
 

@@ -289,8 +289,8 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
         if (ref) {
 
             ref->closure         = outer_closure;
-            ref->args_reg        = 0;
             ref->vars_reg        = 0;
+            ref->args_reg        = 0;
             ref->exported_locals = 0;
             ref->exported_args   = 0;
 
@@ -300,15 +300,6 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
         }
         else
             error = KOS_ERROR_OUT_OF_MEMORY;
-    }
-
-    if (ref) {
-        if (var_type == VAR_INDEPENDENT_LOCAL)
-            ++ref->exported_locals;
-        else {
-            assert(var_type == VAR_INDEPENDENT_ARGUMENT);
-            ++ref->exported_args;
-        }
     }
 
     return error;
@@ -940,6 +931,7 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
         case NT_LINE_LITERAL:
             /* fall through */
         case NT_FALLTHROUGH:
+            assert( ! node->children);
             error = KOS_SUCCESS;
             break;
 

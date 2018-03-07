@@ -712,6 +712,23 @@ int main(void)
     }
 
     /************************************************************************/
+    /* CALL.FUN - too many args */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_FUN2,  0, IMM32(11), 1, 0, 0, 0,
+            INSTR_LOAD_INT8,  1, 42,
+            INSTR_CALL_FUN,   0, 0, 1, 1,
+            INSTR_RETURN,     0, 0,
+
+            INSTR_LOAD_INT8,  0, 43,
+            INSTR_RETURN,     0, 0
+        };
+
+        TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, 0) == TO_SMALL_INT(43));
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
     /* LOAD.FUN, CALL.N - reuse function body twice */
     {
         const uint8_t code[] = {

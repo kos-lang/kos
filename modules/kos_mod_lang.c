@@ -1243,6 +1243,10 @@ static void _async_func(KOS_FRAME frame,
     if (IS_BAD_PTR(args_obj))
         return;
 
+    args_obj = KOS_array_slice(frame, args_obj, 0, MAX_INT64);
+    if (IS_BAD_PTR(args_obj))
+        return;
+
     ret_obj = KOS_apply_function(frame, func_obj, OBJID(OBJECT, thread_obj), args_obj);
     if (IS_BAD_PTR(ret_obj))
         return;

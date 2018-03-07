@@ -38,14 +38,16 @@ struct _KOS_REG {
 };
 
 enum _KOS_VAR_TYPE {
-    VAR_LOCAL                = 1,
-    VAR_ARGUMENT             = 2,
-    VAR_INDEPENDENT          = 4,
-    VAR_INDEPENDENT_LOCAL    = 5,
-    VAR_INDEPENDENT_ARGUMENT = 6,
-    VAR_LOCALS_AND_ARGS      = 3,
-    VAR_GLOBAL               = 8,
-    VAR_MODULE               = 16
+    VAR_LOCAL                  = 1,
+    VAR_ARGUMENT               = 2,
+    VAR_INDEPENDENT            = 4,
+    VAR_INDEPENDENT_LOCAL      = 5,
+    VAR_INDEPENDENT_ARGUMENT   = 6,
+    VAR_LOCALS_AND_ARGS        = 3,
+    VAR_ARGUMENT_IN_REG        = 8, /* Argument stored directly in a register */
+    VAR_INDEPENDENT_ARG_IN_REG = 12,
+    VAR_GLOBAL                 = 16,
+    VAR_MODULE                 = 32
 };
 
 enum _KOS_VAR_ACTIVE {
@@ -66,7 +68,7 @@ struct _KOS_VAR {
     int                         local_reads;       /* Number of local reads from a variable                */
     int                         local_assignments; /* Number of local writes to a variable                 */
     int                         array_idx;
-    int                         type         : 6;
+    int                         type         : 7;
     int                         is_active    : 3;  /* Becomes active/searchable after the node */
                                                    /* which declares it. */
     unsigned                    is_const     : 1;
@@ -124,16 +126,17 @@ struct _KOS_SCOPE {
     int                         num_args;
     int                         num_indep_args;
     struct _KOS_CATCH_REF       catch_ref; /* For catch references between scopes */
-    unsigned                    is_function : 1;
-    unsigned                    uses_this   : 1;
+    unsigned                    is_function    : 1;
+    unsigned                    uses_this      : 1;
+    unsigned                    have_rest      : 1;
 };
 
 struct _KOS_SCOPE_REF {
     struct _KOS_RED_BLACK_NODE rb_tree_node;
 
     struct _KOS_SCOPE         *closure;
-    struct _KOS_REG           *args_reg;
     struct _KOS_REG           *vars_reg;
+    struct _KOS_REG           *args_reg;
     unsigned                   exported_locals;
     unsigned                   exported_args;
 };
@@ -273,6 +276,9 @@ int _KOS_compiler_process_vars(struct _KOS_COMP_UNIT      *program,
 
 int _KOS_optimize(struct _KOS_COMP_UNIT *program,
                   struct _KOS_AST_NODE  *ast);
+
+int _KOS_allocate_args(struct _KOS_COMP_UNIT *program,
+                       struct _KOS_AST_NODE  *ast);
 
 struct _KOS_VAR *_KOS_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
                                const struct _KOS_TOKEN    *token);
