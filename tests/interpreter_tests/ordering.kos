@@ -153,3 +153,40 @@ do {
     assert a[4] == 1
     assert a[5] == 2
 }
+
+do {
+    var capture = 10
+    fun c_plus_n(n)
+    {
+        const ret = capture
+        capture += n
+        return ret
+    }
+    assert c_plus_n(1) * 2 + capture == 31
+    assert capture == 11
+    assert capture + c_plus_n(1) * 2 == 34
+    assert capture == 12
+}
+
+do {
+    var a = 10
+    a = a == void ? 0 : a
+    assert a == 10
+}
+
+do {
+    var invoked = false
+    fun test(a, b)
+    {
+        invoked = true
+        return a < b
+    }
+    fun choose(x)
+    {
+        x = test(x, 10) ? x : x
+        return x
+    }
+    const a = choose(5)
+    assert a == 5
+    assert invoked
+}

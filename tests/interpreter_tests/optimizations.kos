@@ -707,3 +707,47 @@ do {
 
     check(optimize_switch, { registers: 2, instructions: 19, size: 76 })
 }
+
+#============================================================================#
+
+do {
+    fun tri_abs_left_identity(a)
+    {
+        a = a >= 0 ? a : -a
+        return a
+    }
+    assert tri_abs_left_identity(10)  == 10
+    assert tri_abs_left_identity(-10) == 10
+    assert tri_abs_left_identity(0)   == 0
+
+    check(tri_abs_left_identity, { registers: 3, instructions: 7, size: 26 })
+}
+
+#============================================================================#
+
+do {
+    fun tri_abs_right_identity(a)
+    {
+        a = a < 0 ? -a : a
+        return a
+    }
+    assert tri_abs_right_identity(10)  == 10
+    assert tri_abs_right_identity(-10) == 10
+    assert tri_abs_right_identity(0)   == 0
+
+    check(tri_abs_right_identity, { registers: 3, instructions: 7, size: 26 })
+}
+
+#============================================================================#
+
+do {
+    fun tri_no_change(a)
+    {
+        a = a == void ? a : a
+        return a
+    }
+    assert tri_no_change(void) == void
+    assert tri_no_change(0)    == 0
+
+    check(tri_no_change, { registers: 2, instructions: 3, size: 9 })
+}

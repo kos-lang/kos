@@ -862,6 +862,13 @@ static void _update_jump_offs(struct _KOS_COMP_UNIT *program,
     _write_jump_offs(program, &program->code_gen_buf, jump_instr_offs, target_offs);
 }
 
+static void _remove_last_instr(struct _KOS_COMP_UNIT *program,
+                               int                    offs)
+{
+    --program->cur_frame->num_instr;
+    program->cur_offs = offs;
+}
+
 int _KOS_scope_compare_item(void                       *what,
                             struct _KOS_RED_BLACK_NODE *node)
 {
@@ -3028,6 +3035,7 @@ static int _pos_neg(struct _KOS_COMP_UNIT      *program,
             _free_reg(program, src);
     }
     else
+        /* TODO: enforce numeric ? */
         *reg = src;
 
 _error:
@@ -3128,48 +3136,75 @@ static int _log_tri(struct _KOS_COMP_UNIT      *program,
     int              error;
     int              offs1;
     int              offs2;
-    struct _KOS_REG *src = *reg;
+    int              offs3;
+    int              offs4;
+    struct _KOS_REG *cond_reg = 0;
+    struct _KOS_REG *src      = *reg;
 
     node = node->children;
     assert(node);
 
-    TRY(_visit_node(program, node, &src));
-    assert(src);
+    TRY(_visit_node(program, node, &cond_reg));
+    assert(cond_reg);
 
     offs1 = program->cur_offs;
-    TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, src->reg));
+    TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, cond_reg->reg));
 
-    _free_reg(program, src);
-    src = 0;
+    _free_reg(program, cond_reg);
 
     node = node->next;
     assert(node);
 
+    offs2 = program->cur_offs;
     TRY(_visit_node(program, node, &src));
     assert(src);
 
-    TRY(_gen_dest_reg(program, reg, src));
+    if (program->cur_offs != offs2 || src != *reg) {
 
-    if (src != *reg)
-        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
+        if (src != *reg) {
+            if ( ! *reg)
+                TRY(_gen_dest_reg(program, reg, src));
 
-    offs2 = program->cur_offs;
-    TRY(_gen_instr1(program, INSTR_JUMP, 0));
+            TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
 
-    _update_jump_offs(program, offs1, program->cur_offs);
+            if (src != *reg) {
+                _free_reg(program, src);
+                src = *reg;
+            }
+        }
+
+        offs3 = program->cur_offs;
+        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+
+        _update_jump_offs(program, offs1, program->cur_offs);
+    }
+    else {
+        _remove_last_instr(program, offs1);
+        offs3 = offs1;
+        TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, cond_reg->reg));
+    }
 
     node = node->next;
     assert(node);
     assert(!node->next);
 
+    offs4 = program->cur_offs;
     TRY(_visit_node(program, node, &src));
 
-    if (src != *reg) {
-        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
-        _free_reg(program, src);
-    }
+    if (program->cur_offs != offs4 || src != *reg) {
 
-    _update_jump_offs(program, offs2, program->cur_offs);
+        if (src != *reg) {
+            TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
+            _free_reg(program, src);
+        }
+
+        _update_jump_offs(program, offs3, program->cur_offs);
+    }
+    else {
+        _remove_last_instr(program, offs3);
+        if (offs3 > offs1)
+            _update_jump_offs(program, offs1, program->cur_offs);
+    }
 
 _error:
     return error;
