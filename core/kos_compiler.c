@@ -1825,9 +1825,7 @@ static int _invoke_get_iterator(struct _KOS_COMP_UNIT *program,
     static const char str_iterator[] = "iterator";
 
     if ( ! (*reg)->tmp) {
-        _free_reg(program, *reg);
         *reg = 0;
-
         TRY(_gen_reg(program, reg));
     }
 
