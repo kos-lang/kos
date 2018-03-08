@@ -59,32 +59,38 @@
  *     0
  *     1
  */
-fun range(first_arg, args...)
+fun range(start, args...)
 {
-    var start = 0
-    var stop  = 0
-    var step  = 1
+    var   stop  = 0
+    var   step  = 1
+    const nargs = args.size
 
-    if args.size {
-        start = first_arg
+    if nargs {
         stop  = args[0]
     }
     else {
-        stop = first_arg
+        stop  = start
+        start = 0
     }
 
-    if args.size > 1 {
+    if nargs > step { // args.size > 1
         step = args[1]
     }
 
     if step > 0 {
-        for var i = start; i < stop; i += step {
-            yield i
+        if start < stop {
+            repeat {
+                yield start
+                start += step
+            } while start < stop
         }
     }
     else if step < 0 {
-        for var i = start; i > stop; i += step {
-            yield i
+        if start > stop {
+            repeat {
+                yield start
+                start += step
+            } while start > stop
         }
     }
 }
@@ -135,8 +141,13 @@ object.prototype.iterator = fun
 do {
     fun iterator
     {
-        for var i = 0; i < this.size; i += 1 {
-            yield this[i]
+        var   i  = 0
+        const _1 = 1
+        if i < this.size {
+            repeat {
+                yield this[i]
+                i += _1
+            } while i < this.size
         }
     }
 
