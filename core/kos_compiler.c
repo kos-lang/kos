@@ -3084,21 +3084,23 @@ static int _log_and_or(struct _KOS_COMP_UNIT      *program,
 {
     int                           error;
     int                           offs;
-    const enum _KOS_OPERATOR_TYPE op  = node->token.op;
-    struct _KOS_REG              *src = *reg;
+    const enum _KOS_OPERATOR_TYPE op    = node->token.op;
+    struct _KOS_REG              *left  = *reg;
+    struct _KOS_REG              *right = 0;
 
     assert(op == OT_LOGAND || op == OT_LOGOR);
 
     node = node->children;
     assert(node);
+    assert(node->next);
 
-    TRY(_visit_node(program, node, &src));
-    assert(src);
+    if ( ! left || ! left->tmp) {
+        left = 0;
+        TRY(_gen_reg(program, &left));
+    }
 
-    TRY(_gen_dest_reg(program, reg, src));
-
-    if (src != *reg)
-        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
+    TRY(_visit_node(program, node, &left));
+    assert(left);
 
     node = node->next;
     assert(node);
@@ -3107,23 +3109,28 @@ static int _log_and_or(struct _KOS_COMP_UNIT      *program,
     offs = program->cur_offs;
 
     if (op == OT_LOGAND)
-        TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, src->reg));
+        TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, left->reg));
     else
-        TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, src->reg));
+        TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, left->reg));
 
-    if (src != *reg)
-        _free_reg(program, src);
-    src = (*reg)->tmp ? *reg : 0;
+    right = left;
 
-    TRY(_visit_node(program, node, &src));
-    assert(src);
+    TRY(_visit_node(program, node, &right));
+    assert(right);
 
-    if (src != *reg) {
-        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
-        _free_reg(program, src);
+    if (left != right) {
+        TRY(_gen_instr2(program, INSTR_MOVE, left->reg, right->reg));
+        _free_reg(program, right);
     }
 
     _update_jump_offs(program, offs, program->cur_offs);
+
+    if ( ! *reg)
+        *reg = left;
+    else if (*reg != left) {
+        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, left->reg));
+        _free_reg(program, left);
+    }
 
 _error:
     return error;

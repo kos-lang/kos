@@ -190,3 +190,15 @@ do {
     assert a == 5
     assert invoked
 }
+
+do {
+    var a = 10
+    a = a != void && a
+    assert a == 10
+}
+
+do {
+    var a = 10
+    a = a == void || a
+    assert a == 10
+}
