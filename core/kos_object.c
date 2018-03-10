@@ -26,6 +26,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
+#include "kos_math.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
@@ -554,6 +555,9 @@ int KOS_set_property(KOS_FRAME  frame,
             KOS_OBJECT_STORAGE *prop_table   = _read_props(&props->props);
             KOS_PITEM          *items;
             unsigned            mask;
+            #ifdef CONFIG_PERF
+            int                 collis_depth = -1;
+            #endif
 
             items = prop_table->items;
             mask  = prop_table->capacity - 1;
@@ -562,6 +566,10 @@ int KOS_set_property(KOS_FRAME  frame,
                 KOS_PITEM *cur_item = items + (idx &= mask);
                 KOS_OBJ_ID cur_key  = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->key);
                 KOS_OBJ_ID oldval;
+
+                #ifdef CONFIG_PERF
+                ++collis_depth;
+                #endif
 
                 /* Found a new empty slot */
                 if (IS_BAD_PTR(cur_key)) {
@@ -576,6 +584,8 @@ int KOS_set_property(KOS_FRAME  frame,
                     if ( ! KOS_atomic_cas_ptr(cur_item->key, KOS_BADPTR, prop))
                         /* Reprobe the slot if another thread has written a key */
                         continue;
+
+                    KOS_PERF_CNT_ARRAY(object_collision, KOS_min(collis_depth, 3));
 
                     KOS_atomic_write_u32(cur_item->hash.hash, hash);
                     KOS_atomic_add_i32(prop_table->num_slots_used, 1);

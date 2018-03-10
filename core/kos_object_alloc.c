@@ -130,6 +130,7 @@ static int _alloc_pool(struct _KOS_ALLOCATOR *allocator)
         page -= _KOS_PAGE_SIZE;
         assert( ! ((uintptr_t)page & (uintptr_t)(_KOS_PAGE_SIZE - 1)));
         _list_push((KOS_ATOMIC(void *) *)&allocator->free_pages, (void *)page);
+        KOS_PERF_CNT(alloc_new_page);
     }
 
     return KOS_SUCCESS;
@@ -153,6 +154,8 @@ static _KOS_PAGE *_alloc_page(struct _KOS_ALLOCATOR *allocator)
                          (_KOS_SLOT *)((uint8_t *)page + _KOS_SLOTS_OFFS));
 
     assert( ! ((uintptr_t)KOS_atomic_read_ptr(page->first_free_slot) & ((1 << _KOS_OBJ_ALIGN_BITS) - 1)));
+
+    KOS_PERF_CNT(alloc_free_page);
 
     return page;
 }
@@ -199,6 +202,8 @@ static void *_alloc_huge_object(KOS_FRAME            frame,
 
     _list_push(&frame->allocator->pools, (void *)ptr);
 
+    KOS_PERF_CNT(alloc_huge_object);
+
     return (void *)hdr;
 }
 
@@ -222,6 +227,9 @@ static void *_alloc_object(KOS_FRAME            frame,
 
                 hdr->type       = (uint8_t)object_type;
                 hdr->alloc_size = size;
+
+                KOS_PERF_CNT(alloc_object);
+
                 return hdr;
             }
 

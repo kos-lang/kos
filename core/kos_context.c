@@ -65,8 +65,9 @@ static const char str_value[]                   = "value";
 
 #ifdef CONFIG_PERF
 struct _KOS_PERF _kos_perf = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, { 0, 0, 0, 0, 0 }, 0
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
+    0, 0,
+    0, 0, 0, 0
 };
 #endif
 
@@ -356,25 +357,33 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
     memset(ctx, 0, sizeof(*ctx));
 
 #ifdef CONFIG_PERF
-#   define PERF_RATIO(a, b) {                                     \
-        const uint32_t va = KOS_atomic_read_u32(_kos_perf.a);     \
-        const uint32_t vb = KOS_atomic_read_u32(_kos_perf.b);     \
-        uint32_t       total = va + vb;                           \
-        if (total == 0) total = 1;                                \
-        printf("    " #a "\t%u (%u%%)\n", va, va * 100 / total); \
-        printf("    " #b "\t%u (%u%%)\n", vb, vb * 100 / total); \
-    }
-#   define PERF_VALUE(a) {                                        \
-        const uint32_t va = KOS_atomic_read_u32(_kos_perf.a);     \
-        printf("    " #a "\t%u\n", va);                          \
-    }
+#   define PERF_RATIO(a) do {                                             \
+        const uint32_t va = KOS_atomic_read_u32(_kos_perf.a##_success);   \
+        const uint32_t vb = KOS_atomic_read_u32(_kos_perf.a##_fail);      \
+        uint32_t       total = va + vb;                                   \
+        if (total == 0) total = 1;                                        \
+        fprintf(stderr, "    " #a "\t%u / %u (%u%%)\n",                   \
+                va, total, va * 100 / total);                             \
+    } while (0)
+#   define PERF_VALUE(a) do {                                             \
+        const uint32_t va = KOS_atomic_read_u32(_kos_perf.a);             \
+        fprintf(stderr, "    " #a "\t%u\n", va);                          \
+    } while (0)
     printf("Performance stats:\n");
-    PERF_RATIO(object_get_success,     object_get_fail);
-    PERF_RATIO(object_set_success,     object_set_fail);
-    PERF_RATIO(object_delete_success,  object_delete_fail);
-    PERF_RATIO(object_resize_success,  object_resize_fail);
-    PERF_RATIO(object_salvage_success, object_salvage_fail);
-    PERF_RATIO(array_salvage_success,  array_salvage_fail);
+    PERF_RATIO(object_get);
+    PERF_RATIO(object_set);
+    PERF_RATIO(object_delete);
+    PERF_RATIO(object_resize);
+    PERF_RATIO(object_salvage);
+    PERF_VALUE(object_collision[0]);
+    PERF_VALUE(object_collision[1]);
+    PERF_VALUE(object_collision[2]);
+    PERF_VALUE(object_collision[3]);
+    PERF_RATIO(array_salvage);
+    PERF_VALUE(alloc_object);
+    PERF_VALUE(alloc_huge_object);
+    PERF_VALUE(alloc_new_page);
+    PERF_VALUE(alloc_free_page);
 #endif
 }
 

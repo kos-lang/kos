@@ -27,7 +27,7 @@
 
 #ifdef CONFIG_PERF
 #   define KOS_PERF_CNT(stat)            KOS_atomic_add_i32(_kos_perf.stat, 1)
-#   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_i32(_kos_perf.stat[(idx)-3], 1)
+#   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_i32(_kos_perf.stat[idx], 1)
 #   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_i32(_kos_perf.stat, (num))
 
 struct _KOS_PERF {
@@ -41,9 +41,15 @@ struct _KOS_PERF {
     KOS_ATOMIC(uint32_t) object_resize_fail;
     KOS_ATOMIC(uint32_t) object_salvage_success;
     KOS_ATOMIC(uint32_t) object_salvage_fail;
+    KOS_ATOMIC(uint32_t) object_collision[4];
 
     KOS_ATOMIC(uint32_t) array_salvage_success;
     KOS_ATOMIC(uint32_t) array_salvage_fail;
+
+    KOS_ATOMIC(uint32_t) alloc_object;
+    KOS_ATOMIC(uint32_t) alloc_huge_object;
+    KOS_ATOMIC(uint32_t) alloc_new_page;
+    KOS_ATOMIC(uint32_t) alloc_free_page;
 };
 
 extern struct _KOS_PERF _kos_perf;
