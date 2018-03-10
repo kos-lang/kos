@@ -61,8 +61,9 @@ struct _KOS_OBJECT_PLACEHOLDER;
  * number.
  *
  * KOS_OBJ_ID's layout is:
- * - "Small" integer     ...iiii iiii iiii iii0 (31- or 63-bit signed integer)
- * - Object pointer      ...pppp pppp pppp p001 (8 byte-aligned pointer)
+ * - "Small" integer       ...iiii iiii iiii iii0 (31- or 63-bit signed integer)
+ * - Heap object pointer   ...pppp pppp pppp p001 (8 byte-aligned pointer)
+ * - Static object pointer ...pppp pppp pppp p101 (8 byte-aligned pointer)
  *
  * If bit 0 is a '1', the rest of KOS_OBJ_ID is treated as the pointer without
  * that bit set.  The actual pointer to the object is KOS_OBJ_ID minus 1.
@@ -169,6 +170,25 @@ typedef union _KOS_BOOLEAN {
 typedef struct _KOS_OPAQUE {
     KOS_OBJ_HEADER header;
 } KOS_OPAQUE;
+
+struct _KOS_CONST_OBJECT {
+    uint64_t       _align8;
+    uint32_t       _align4;
+    KOS_OBJ_HEADER header;
+};
+
+#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).header + 1) )
+
+extern const struct _KOS_CONST_OBJECT _kos_void;
+extern const struct _KOS_CONST_OBJECT _kos_false;
+extern const struct _KOS_CONST_OBJECT _kos_true;
+
+#define KOS_VOID    KOS_CONST_ID(_kos_void)
+#define KOS_FALSE   KOS_CONST_ID(_kos_false)
+#define KOS_TRUE    KOS_CONST_ID(_kos_true)
+#define KOS_BOOL(v) ( (v) ? KOS_TRUE : KOS_FALSE )
+
+#define KOS_CONST_OBJECT_INIT(type, value) { 0, 0, { (type), { (value), 0, 0 }, 0 } }
 
 enum _KOS_STRING_FLAGS {
     /* Two lowest bits specify string element (character) size in bytes */
@@ -351,10 +371,6 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
                                 KOS_OBJ_ID getter,
                                 KOS_OBJ_ID setter);
 
-KOS_OBJ_ID KOS_new_void(KOS_FRAME frame);
-
-KOS_OBJ_ID KOS_new_boolean(KOS_FRAME frame, int value);
-
 #ifdef __cplusplus
 }
 #endif
@@ -363,15 +379,13 @@ KOS_OBJ_ID KOS_new_boolean(KOS_FRAME frame, int value);
 
 static inline bool KOS_get_bool(KOS_OBJ_ID obj_id)
 {
-    assert( ! IS_SMALL_INT(obj_id));
-    assert( ! IS_BAD_PTR(obj_id));
-    assert(GET_OBJ_TYPE(obj_id) == OBJ_BOOLEAN);
-    return OBJPTR(BOOLEAN, obj_id)->boolean.value != 0;
+    assert(obj_id == KOS_TRUE || obj_id == KOS_FALSE);
+    return obj_id == KOS_TRUE;
 }
 
 #else
 
-#define KOS_get_bool(obj_id) (OBJPTR(BOOLEAN, obj_id)->boolean.value != 0)
+#define KOS_get_bool(obj_id) ((obj_id) == KOS_TRUE)
 
 #endif
 

@@ -66,15 +66,19 @@ static const char str_err_not_string[]        = "property name is not a string";
 static const char str_err_no_property[]       = "no such property";
 static const char str_err_no_own_properties[] = "object has no own properties";
 
+static struct _KOS_CONST_OBJECT tombstone = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB0);
+static struct _KOS_CONST_OBJECT closed    = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB1);
+static struct _KOS_CONST_OBJECT reserved  = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB2);
+
 /* When a key is deleted, it remains in the table, but its value is marked
  * as TOMBSTONE. */
-#define TOMBSTONE (KOS_context_from_frame(frame)->tombstone_obj)
+#define TOMBSTONE KOS_CONST_ID(tombstone)
 /* When the hash table is too small and is being resized, values moved to the
  * new table are marked as CLOSED in the old table. */
-#define CLOSED    (KOS_context_from_frame(frame)->closed_obj)
+#define CLOSED    KOS_CONST_ID(closed)
 /* During resize operation, slots in the new table are marked as reserved,
  * which is part of strategy to avoid race conditions. */
-#define RESERVED  (KOS_context_from_frame(frame)->reserved_obj)
+#define RESERVED  KOS_CONST_ID(reserved)
 
 KOS_OBJ_ID KOS_new_object(KOS_FRAME frame)
 {
@@ -702,12 +706,12 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_FRAME            frame,
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID dyn_prop = KOS_BADPTR;
-    KOS_OBJ_ID get_obj  = KOS_new_function(frame, KOS_new_void(frame));
+    KOS_OBJ_ID get_obj  = KOS_new_function(frame, KOS_VOID);
     KOS_OBJ_ID set_obj;
 
     TRY_OBJID(get_obj);
 
-    set_obj = KOS_new_function(frame, KOS_new_void(frame));
+    set_obj = KOS_new_function(frame, KOS_VOID);
     TRY_OBJID(set_obj);
 
     OBJPTR(FUNCTION, get_obj)->header.num_args = 0;
@@ -883,7 +887,7 @@ int KOS_object_walk_init(KOS_FRAME                  frame,
             if (IS_BAD_PTR(key) || value == TOMBSTONE)
                 continue;
 
-            TRY(KOS_set_property(frame, key_table_obj, key, KOS_new_void(frame)));
+            TRY(KOS_set_property(frame, key_table_obj, key, KOS_VOID));
         }
     }
     while ( ! IS_BAD_PTR(obj_id) && deep);

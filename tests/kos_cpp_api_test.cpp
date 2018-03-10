@@ -240,8 +240,8 @@ try {
     {
         kos::array a = frame.new_array(100);
         TEST(a.size() == 100);
-        TEST(static_cast<KOS_OBJ_ID>(a[0] ) == KOS_new_void(frame));
-        TEST(static_cast<KOS_OBJ_ID>(a[99]) == KOS_new_void(frame));
+        TEST(static_cast<KOS_OBJ_ID>(a[0] ) == KOS_VOID);
+        TEST(static_cast<KOS_OBJ_ID>(a[99]) == KOS_VOID);
     }
 
     {
@@ -497,7 +497,7 @@ try {
 
         kos::void_type v = f("");
         TEST(v.type() == OBJ_VOID);
-        TEST(v == KOS_new_void(frame));
+        TEST(v == KOS_VOID);
 
         bool exception = false;
         try {

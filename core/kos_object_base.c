@@ -69,20 +69,6 @@ KOS_OBJ_ID KOS_new_float(KOS_FRAME frame, double value)
     return OBJID(FLOAT, number);
 }
 
-KOS_OBJ_ID KOS_new_void(KOS_FRAME frame)
-{
-    KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
-
-    return ctx->void_obj;
-}
-
-KOS_OBJ_ID KOS_new_boolean(KOS_FRAME frame, int value)
-{
-    KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
-
-    return value ? ctx->true_obj : ctx->false_obj;
-}
-
 KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
 {
     KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(frame,
@@ -99,8 +85,8 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         func->args_reg              = 0;
         func->prototype             = proto_obj;
         func->module                = frame->module;
-        func->closures              = KOS_new_void(frame);
-        func->defaults              = KOS_new_void(frame);
+        func->closures              = KOS_VOID;
+        func->defaults              = KOS_VOID;
         func->handler               = 0;
         func->generator_stack_frame = 0;
         func->instr_offs            = ~0U;
@@ -170,7 +156,7 @@ int _KOS_init_stack_frame(KOS_FRAME   frame,
     frame->module           = OBJID(MODULE, module);
     frame->registers        = KOS_BADPTR;
     frame->exception        = KOS_BADPTR;
-    frame->retval           = KOS_new_void(frame);
+    frame->retval           = KOS_VOID;
 
     return error;
 }

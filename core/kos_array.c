@@ -39,10 +39,13 @@ static const char str_err_invalid_index[] = "array index is out of range";
 static const char str_err_not_array[]     = "object is not an array";
 static const char str_err_null_ptr[]      = "null pointer";
 
+static struct _KOS_CONST_OBJECT tombstone = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xA0);
+static struct _KOS_CONST_OBJECT closed    = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xA1);
+
 /* TOMBSTONE indicates that an array element has been deleted due to a resize. */
-#define TOMBSTONE (KOS_context_from_frame(frame)->tombstone_obj)
+#define TOMBSTONE KOS_CONST_ID(tombstone)
 /* CLOSED indicates that an array element has been moved to a new buffer. */
-#define CLOSED    (KOS_context_from_frame(frame)->closed_obj)
+#define CLOSED    KOS_CONST_ID(closed)
 
 #define KOS_buffer_alloc_size(cap) (KOS_align_up((uint32_t)sizeof(KOS_ARRAY_STORAGE) \
                                                    + (uint32_t)(((cap) - 1) * sizeof(KOS_OBJ_ID)), \
@@ -128,7 +131,7 @@ KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
                 const uint32_t capacity = storage->capacity;
 
                 if (size)
-                    _atomic_fill_ptr(&storage->buf[0], size, KOS_new_void(frame));
+                    _atomic_fill_ptr(&storage->buf[0], size, KOS_VOID);
 
                 if (size < capacity)
                     _atomic_fill_ptr(&storage->buf[size], capacity - size, TOMBSTONE);
@@ -393,7 +396,7 @@ int KOS_array_resize(KOS_FRAME frame, KOS_OBJ_ID obj_id, uint32_t size)
 
         if (size != old_size) {
             if (size > old_size) {
-                const KOS_OBJ_ID void_obj = KOS_new_void(frame);
+                const KOS_OBJ_ID void_obj = KOS_VOID;
                 /* TODO try to improve this */
                 KOS_ATOMIC(KOS_OBJ_ID) *ptr = &buf->buf[old_size];
                 KOS_ATOMIC(KOS_OBJ_ID) *end = &buf->buf[size];

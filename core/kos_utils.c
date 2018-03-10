@@ -823,7 +823,7 @@ int KOS_array_push_expand(KOS_FRAME  frame,
                 RAISE_EXCEPTION(str_err_cannot_expand);
 
             if (state != KOS_GEN_DONE) {
-                KOS_OBJ_ID void_obj = KOS_new_void(frame);
+                KOS_OBJ_ID void_obj = KOS_VOID;
                 KOS_OBJ_ID gen_args = KOS_new_array(frame, 0);
                 TRY_OBJID(gen_args);
 

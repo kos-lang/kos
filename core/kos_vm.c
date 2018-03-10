@@ -57,7 +57,9 @@ static const char str_err_unsup_operand_types[] = "unsupported operand types";
 static const char str_slice[]                   = "slice";
 static const char str_value[]                   = "value";
 
-#define NEW_THIS (KOS_context_from_frame(frame)->new_this_obj)
+static struct _KOS_CONST_OBJECT new_this = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC0);
+
+#define NEW_THIS KOS_CONST_ID(new_this)
 
 static int _exec_function(KOS_FRAME stack_frame);
 
@@ -881,7 +883,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
                     if (num_args)
                         gen_regs[r] = KOS_array_read(frame, args_obj, 0);
                     else
-                        gen_regs[r] = KOS_new_void(frame);
+                        gen_regs[r] = KOS_VOID;
                 }
             }
 
@@ -974,7 +976,7 @@ static KOS_OBJ_ID _read_buffer(KOS_FRAME frame, KOS_OBJ_ID objptr, int idx)
 
     if ((uint32_t)idx >= size)  {
         KOS_raise_exception_cstring(frame, str_err_invalid_index);
-        ret = KOS_new_void(frame);
+        ret = KOS_VOID;
     }
     else {
         uint8_t *const buf = KOS_buffer_data(objptr);
@@ -1144,21 +1146,21 @@ static int _exec_function(KOS_FRAME frame)
 
             case INSTR_LOAD_TRUE: { /* <r.dest> */
                 rdest = bytecode[1];
-                out   = KOS_new_boolean(frame, 1);
+                out   = KOS_TRUE;
                 delta = 2;
                 break;
             }
 
             case INSTR_LOAD_FALSE: { /* <r.dest> */
                 rdest = bytecode[1];
-                out   = KOS_new_boolean(frame, 0);
+                out   = KOS_FALSE;
                 delta = 2;
                 break;
             }
 
             case INSTR_LOAD_VOID: { /* <r.dest> */
                 rdest = bytecode[1];
-                out   = KOS_new_void(frame);
+                out   = KOS_VOID;
                 delta = 2;
                 break;
             }
@@ -1176,7 +1178,7 @@ static int _exec_function(KOS_FRAME frame)
 
                 const uint32_t offset    = (uint32_t)((bytecode + 10 + fun_offs) - module->bytecode);
                 KOS_OBJ_ID     fun_obj   = KOS_BADPTR;
-                KOS_OBJ_ID     proto_obj = KOS_new_void(frame);
+                KOS_OBJ_ID     proto_obj = KOS_VOID;
 
                 assert(offset < module->bytecode_size);
 
@@ -2166,7 +2168,7 @@ static int _exec_function(KOS_FRAME frame)
                 else
                     ret = _compare_integer(instr, src1_type, src2_type);
 
-                out   = KOS_new_boolean(frame, ret);
+                out   = KOS_BOOL(ret);
                 delta = 4;
                 break;
             }
@@ -2185,7 +2187,7 @@ static int _exec_function(KOS_FRAME frame)
                 obj = KOS_get_property(frame, regs[rsrc], regs[rprop]);
                 KOS_clear_exception(frame);
 
-                out   = KOS_new_boolean(frame, !IS_BAD_PTR(obj));
+                out   = KOS_BOOL( ! IS_BAD_PTR(obj));
                 delta = 4;
                 break;
             }
@@ -2206,7 +2208,7 @@ static int _exec_function(KOS_FRAME frame)
                     KOS_OBJ_ID obj = KOS_get_property(frame, regs[rsrc], prop);
                     KOS_clear_exception(frame);
 
-                    out = KOS_new_boolean(frame, !IS_BAD_PTR(obj));
+                    out = KOS_BOOL( ! IS_BAD_PTR(obj));
                 }
 
                 delta = 7;
@@ -2219,7 +2221,7 @@ static int _exec_function(KOS_FRAME frame)
 
                 KOS_OBJ_ID constr_obj;
                 KOS_OBJ_ID proto_obj      = KOS_BADPTR;
-                KOS_OBJ_ID ret            = KOS_new_boolean(frame, 0);
+                KOS_OBJ_ID ret            = KOS_FALSE;
                 int        constr_is_func = 1;
 
                 assert(rsrc  < regs_array->size);
@@ -2241,7 +2243,7 @@ static int _exec_function(KOS_FRAME frame)
                     assert(IS_SMALL_INT(proto_obj) || GET_OBJ_TYPE(proto_obj) <= OBJ_LAST_TYPE);
 
                     if (KOS_has_prototype(frame, regs[rsrc], proto_obj))
-                        ret = KOS_new_boolean(frame, 1);
+                        ret = KOS_TRUE;
                 }
                 else
                     if (constr_is_func)
@@ -2452,7 +2454,7 @@ static int _exec_function(KOS_FRAME frame)
                     assert( ! IS_BAD_PTR(this_obj));
                 }
                 else
-                    this_obj = KOS_new_void(frame);
+                    this_obj = KOS_VOID;
 
                 assert(rfunc < regs_array->size);
 
@@ -2532,7 +2534,7 @@ static int _exec_function(KOS_FRAME frame)
                                 error = KOS_SUCCESS;
                             }
                             if ( ! error) {
-                                const KOS_OBJ_ID result = KOS_new_boolean(frame, state == KOS_GEN_DONE);
+                                const KOS_OBJ_ID result = KOS_BOOL(state == KOS_GEN_DONE);
                                 if (rfinal == rdest)
                                     out = result;
                                 else {

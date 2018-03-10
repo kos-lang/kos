@@ -145,7 +145,7 @@ class stack_frame {
         // ============================
 
         KOS_OBJ_ID call(KOS_OBJ_ID func_obj, KOS_OBJ_ID args_obj) {
-            return check_error(KOS_call_function(_frame, func_obj, KOS_new_void(_frame), args_obj));
+            return check_error(KOS_call_function(_frame, func_obj, KOS_VOID, args_obj));
         }
 
         KOS_OBJ_ID call(KOS_OBJ_ID func_obj, KOS_OBJ_ID args_obj, KOS_OBJ_ID this_obj) {
@@ -1126,7 +1126,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(Args...), KOS_OBJ_ID t
 {
     unused(args);
     fun(extract_arg<indices, Args>(frame, args)...);
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename Ret, typename... Args, int... indices>
@@ -1143,7 +1143,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(Args...), KOS_OBJ_I
     unused(args);
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<indices, Args>(frame, args)...);
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename Ret, typename... Args, int... indices>
@@ -1160,7 +1160,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(Args...) const, KOS
     unused(args);
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<indices, Args>(frame, args)...);
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename Ret, typename... Args>
@@ -1223,14 +1223,14 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (*fun)(T1, T2, T3, T4), KOS_OB
 inline KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(), KOS_OBJ_ID this_obj, array args)
 {
     fun();
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T1>
 KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(T1), KOS_OBJ_ID this_obj, array args)
 {
     fun(extract_arg<0, T1>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T1, typename T2>
@@ -1238,7 +1238,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(T1, T2), KOS_OBJ_ID th
 {
     fun(extract_arg<0, T1>(frame, args),
         extract_arg<1, T2>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T1, typename T2, typename T3>
@@ -1247,7 +1247,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(T1, T2, T3), KOS_OBJ_I
     fun(extract_arg<0, T1>(frame, args),
         extract_arg<1, T2>(frame, args),
         extract_arg<2, T3>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T1, typename T2, typename T3, typename T4>
@@ -1257,7 +1257,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(T1, T2, T3, T4), KOS_O
         extract_arg<1, T2>(frame, args),
         extract_arg<2, T3>(frame, args),
         extract_arg<3, T4>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename Ret>
@@ -1306,7 +1306,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(), KOS_OBJ_ID this_
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)();
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename T1>
@@ -1314,7 +1314,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1), KOS_OBJ_ID thi
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2>
@@ -1323,7 +1323,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2), KOS_OBJ_ID
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(frame, args),
                 extract_arg<1, T2>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2, typename T3>
@@ -1333,7 +1333,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2, T3), KOS_OB
     (obj->*fun)(extract_arg<0, T1>(frame, args),
                 extract_arg<1, T2>(frame, args),
                 extract_arg<2, T3>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2, typename T3, typename T4>
@@ -1344,7 +1344,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2, T3, T4), KO
                 extract_arg<1, T2>(frame, args),
                 extract_arg<2, T3>(frame, args),
                 extract_arg<3, T4>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename Ret>
@@ -1393,7 +1393,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)() const, KOS_OBJ_ID
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)();
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename T1>
@@ -1401,7 +1401,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1) const, KOS_OBJ_
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2>
@@ -1410,7 +1410,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2) const, KOS_
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)(extract_arg<0, T1>(frame, args),
                 extract_arg<1, T2>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2, typename T3>
@@ -1420,7 +1420,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2, T3) const, 
     (obj->*fun)(extract_arg<0, T1>(frame, args),
                 extract_arg<1, T2>(frame, args),
                 extract_arg<2, T3>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2, typename T3, typename T4>
@@ -1431,7 +1431,7 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2, T3, T4) con
                 extract_arg<1, T2>(frame, args),
                 extract_arg<2, T3>(frame, args),
                 extract_arg<3, T4>(frame, args));
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 template<typename T>
@@ -1627,12 +1627,12 @@ inline string to_object_ptr(stack_frame frame, KOS_STRING& v)
 
 inline boolean to_object_ptr(stack_frame frame, bool v)
 {
-    return boolean(KOS_new_boolean(frame, v));
+    return boolean(KOS_BOOL(v));
 }
 
 inline void_type to_object_ptr(stack_frame frame, void_)
 {
-    return void_type(KOS_new_void(frame));
+    return void_type(KOS_VOID);
 }
 
 template<typename T>

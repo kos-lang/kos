@@ -35,10 +35,6 @@
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 
-#define KOS_TRUE  KOS_new_boolean(frame, 1)
-#define KOS_FALSE KOS_new_boolean(frame, 0)
-#define KOS_VOID  KOS_new_void(frame)
-
 enum _VALUE_TYPE {
     V_NONE,     /* in     - no more instruction arguments      */
     V_EXCEPT,   /* out    - instruction generates an exception */

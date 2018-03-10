@@ -63,6 +63,10 @@ static const char str_module[]                  = "module";
 static const char str_offset[]                  = "offset";
 static const char str_value[]                   = "value";
 
+const struct _KOS_CONST_OBJECT _kos_void  = KOS_CONST_OBJECT_INIT(OBJ_VOID,    0);
+const struct _KOS_CONST_OBJECT _kos_false = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
+const struct _KOS_CONST_OBJECT _kos_true  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
+
 #ifdef CONFIG_PERF
 struct _KOS_PERF _kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
@@ -190,40 +194,6 @@ static KOS_OBJ_ID _alloc_empty_string(KOS_FRAME frame)
     return OBJID(STRING, str);
 }
 
-static KOS_OBJ_ID _alloc_void(KOS_FRAME frame)
-{
-    KOS_VOID *obj = (KOS_VOID *)_KOS_alloc_object(frame,
-                                                  KOS_ALLOC_PERSISTENT,
-                                                  OBJ_VOID,
-                                                  sizeof(KOS_VOID));
-
-    return OBJID(VOID, obj);
-}
-
-static KOS_OBJ_ID _alloc_boolean(KOS_FRAME frame, uint8_t value)
-{
-    KOS_BOOLEAN *obj = (KOS_BOOLEAN *)_KOS_alloc_object(frame,
-                                                        KOS_ALLOC_PERSISTENT,
-                                                        OBJ_BOOLEAN,
-                                                        sizeof(KOS_BOOLEAN));
-
-    if (obj)
-        obj->boolean.value = (uint8_t)value;
-
-    return OBJID(BOOLEAN, obj);
-}
-
-static KOS_OBJ_ID _alloc_dummy(KOS_FRAME frame)
-{
-    KOS_OPAQUE *const obj = (KOS_OPAQUE *)
-            _KOS_alloc_object(frame,
-                              KOS_ALLOC_PERSISTENT,
-                              OBJ_OPAQUE,
-                              sizeof(KOS_OPAQUE));
-
-    return OBJID(OPAQUE, obj);
-}
-
 int KOS_context_init(KOS_CONTEXT *ctx,
                      KOS_FRAME   *out_frame)
 {
@@ -255,27 +225,6 @@ int KOS_context_init(KOS_CONTEXT *ctx,
 
     ctx->empty_string = _alloc_empty_string(frame);
     TRY_OBJID(ctx->empty_string);
-
-    ctx->void_obj = _alloc_void(frame);
-    TRY_OBJID(ctx->void_obj);
-
-    ctx->false_obj = _alloc_boolean(frame, 0);
-    TRY_OBJID(ctx->false_obj);
-
-    ctx->true_obj = _alloc_boolean(frame, 1);
-    TRY_OBJID(ctx->true_obj);
-
-    ctx->tombstone_obj = _alloc_dummy(frame);
-    TRY_OBJID(ctx->tombstone_obj);
-
-    ctx->closed_obj = _alloc_dummy(frame);
-    TRY_OBJID(ctx->closed_obj);
-
-    ctx->reserved_obj = _alloc_dummy(frame);
-    TRY_OBJID(ctx->reserved_obj);
-
-    ctx->new_this_obj = _alloc_dummy(frame);
-    TRY_OBJID(ctx->new_this_obj);
 
     {
         KOS_OBJ_ID str = KOS_new_cstring(frame, str_err_out_of_memory);
@@ -476,7 +425,7 @@ KOS_OBJ_ID KOS_context_get_cstring(KOS_FRAME   frame,
 
     if (IS_BAD_PTR(str)) {
         KOS_clear_exception(frame);
-        str = KOS_new_void(frame);
+        str = KOS_VOID;
     }
 
     return str;

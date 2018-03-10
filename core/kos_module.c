@@ -1231,7 +1231,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
     /* Make room for the new module and allocate index */
     {
         uint32_t u_idx = 0;
-        TRY(KOS_array_push(frame, ctx->modules, KOS_new_void(frame), &u_idx));
+        TRY(KOS_array_push(frame, ctx->modules, KOS_VOID, &u_idx));
         module_idx = (int)u_idx;
         assert(module_idx >= 0);
     }

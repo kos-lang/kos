@@ -113,7 +113,7 @@ static KOS_OBJ_ID _print(KOS_FRAME  frame,
 _error:
     _KOS_vector_destroy(&cstr);
 
-    return error ? KOS_BADPTR : KOS_new_void(frame);
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
 /* @item lang print_()
@@ -145,7 +145,7 @@ static KOS_OBJ_ID _print_(KOS_FRAME  frame,
 _error:
     _KOS_vector_destroy(&cstr);
 
-    return error ? KOS_BADPTR : KOS_new_void(frame);
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
 static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
@@ -588,10 +588,10 @@ static KOS_OBJ_ID _boolean_constructor(KOS_FRAME  frame,
         KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
 
         if ( ! IS_BAD_PTR(arg))
-            ret = KOS_new_boolean(frame, _KOS_is_truthy(arg));
+            ret = KOS_BOOL(_KOS_is_truthy(arg));
     }
     else
-        ret = KOS_new_boolean(frame, 0);
+        ret = KOS_FALSE;
 
     return ret;
 }
@@ -619,7 +619,7 @@ static KOS_OBJ_ID _void_constructor(KOS_FRAME  frame,
                                     KOS_OBJ_ID this_obj,
                                     KOS_OBJ_ID args_obj)
 {
-    return KOS_new_void(frame);
+    return KOS_VOID;
 }
 
 /* @item lang string()
@@ -880,7 +880,7 @@ static KOS_OBJ_ID _buffer_constructor(KOS_FRAME  frame,
                                       KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
-    KOS_OBJ_ID     void_obj = KOS_new_void(frame);
+    KOS_OBJ_ID     void_obj = KOS_VOID;
     KOS_OBJ_ID     buffer   = KOS_new_buffer(frame, 0);
     const uint32_t num_args = KOS_get_array_size(args_obj);
     uint32_t       i_arg;
@@ -1125,7 +1125,7 @@ static KOS_OBJ_ID _exception_constructor(KOS_FRAME  frame,
                                          KOS_OBJ_ID this_obj,
                                          KOS_OBJ_ID args_obj)
 {
-    KOS_OBJ_ID     exception = KOS_new_void(frame);
+    KOS_OBJ_ID     exception = KOS_VOID;
     const uint32_t num_args  = KOS_get_array_size(args_obj);
 
     if (num_args > 0)
@@ -2779,7 +2779,7 @@ static KOS_OBJ_ID _pop(KOS_FRAME  frame,
             RAISE_EXCEPTION(str_err_invalid_array_size);
 
         if (num == 0)
-            ret = KOS_new_void(frame);
+            ret = KOS_VOID;
         else
             ret = KOS_new_array(frame, (unsigned)num);
         TRY_OBJID(ret);
@@ -2885,15 +2885,14 @@ static KOS_OBJ_ID _ends_with(KOS_FRAME  frame,
     arg_len  = KOS_get_string_length(arg);
 
     if (arg_len > this_len)
-        ret = KOS_new_boolean(frame, 0);
+        ret = KOS_FALSE;
     else
-        ret = KOS_new_boolean(frame,
-                              ! KOS_string_compare_slice(this_obj,
-                                                         this_len - arg_len,
-                                                         this_len,
-                                                         arg,
-                                                         0,
-                                                         arg_len));
+        ret = KOS_BOOL( ! KOS_string_compare_slice(this_obj,
+                                                   this_len - arg_len,
+                                                   this_len,
+                                                   arg,
+                                                   0,
+                                                   arg_len));
 
 _error:
     return error ? KOS_BADPTR : ret;
@@ -3336,15 +3335,14 @@ static KOS_OBJ_ID _starts_with(KOS_FRAME  frame,
     arg_len  = KOS_get_string_length(arg);
 
     if (arg_len > this_len)
-        ret = KOS_new_boolean(frame, 0);
+        ret = KOS_FALSE;
     else
-        ret = KOS_new_boolean(frame,
-                              ! KOS_string_compare_slice(this_obj,
-                                                         0,
-                                                         arg_len,
-                                                         arg,
-                                                         0,
-                                                         arg_len));
+        ret = KOS_BOOL( ! KOS_string_compare_slice(this_obj,
+                                                   0,
+                                                   arg_len,
+                                                   arg,
+                                                   0,
+                                                   arg_len));
 
 _error:
     return error ? KOS_BADPTR : ret;

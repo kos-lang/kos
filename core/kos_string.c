@@ -555,7 +555,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
         unsigned                num_non_0 = 0;
         KOS_ATOMIC(KOS_OBJ_ID) *end       = obj_id_array + num_strings;
         KOS_ATOMIC(KOS_OBJ_ID) *cur_ptr;
-        KOS_OBJ_ID              non_0_str = KOS_new_void(frame);
+        KOS_OBJ_ID              non_0_str = KOS_VOID;
 
         new_str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
 

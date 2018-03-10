@@ -275,10 +275,10 @@ static KOS_OBJ_ID _is_infinity(KOS_FRAME  frame,
         union _KOS_NUMERIC_VALUE value;
 
         value.d = OBJPTR(FLOAT, arg)->value;
-        ret     = KOS_new_boolean(frame, ((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
+        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
     }
     else
-        ret = KOS_new_boolean(frame, 0);
+        ret = KOS_FALSE;
 
     return ret;
 }
@@ -313,10 +313,10 @@ static KOS_OBJ_ID _is_nan(KOS_FRAME  frame,
         union _KOS_NUMERIC_VALUE value;
 
         value.d = OBJPTR(FLOAT, arg)->value;
-        ret     = KOS_new_boolean(frame, ((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
+        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
     }
     else
-        ret = KOS_new_boolean(frame, 0);
+        ret = KOS_FALSE;
 
     return ret;
 }

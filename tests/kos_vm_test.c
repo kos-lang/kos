@@ -41,10 +41,6 @@
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(frame)); KOS_clear_exception(frame); } while (0)
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(frame))
 
-#define KOS_TRUE  KOS_new_boolean(frame, 1)
-#define KOS_FALSE KOS_new_boolean(frame, 0)
-#define KOS_VOID  KOS_new_void(frame)
-
 #define IMMPART(val,shift) ((uint8_t)((uint32_t)(val) >> shift))
 #define IMM32(val) IMMPART(val, 0), IMMPART(val, 8), IMMPART(val, 16), IMMPART(val, 24)
 

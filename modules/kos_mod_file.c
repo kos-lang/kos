@@ -208,7 +208,7 @@ static KOS_OBJ_ID _close(KOS_FRAME  frame,
         KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)0);
     }
 
-    return error ? KOS_BADPTR : KOS_new_void(frame);
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
 /* @item file file.prototype.print()
@@ -511,7 +511,7 @@ static KOS_OBJ_ID _get_file_eof(KOS_FRAME  frame,
     if ( ! error)
         status = feof(file);
 
-    return error ? KOS_BADPTR : KOS_new_boolean(frame, status);
+    return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
 /* @item file file.prototype.error
@@ -532,7 +532,7 @@ static KOS_OBJ_ID _get_file_error(KOS_FRAME  frame,
     if ( ! error)
         status = ferror(file);
 
-    return error ? KOS_BADPTR : KOS_new_boolean(frame, status);
+    return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
 /* @item file file.prototype.size
@@ -662,7 +662,7 @@ static KOS_OBJ_ID _is_file(KOS_FRAME  frame,
 
     _fix_path_separators(&filename_cstr);
 
-    ret = KOS_new_boolean(frame, _KOS_does_file_exist(filename_cstr.buffer));
+    ret = KOS_BOOL(_KOS_does_file_exist(filename_cstr.buffer));
 
 _error:
     _KOS_vector_destroy(&filename_cstr);
@@ -698,9 +698,9 @@ static KOS_OBJ_ID _remove(KOS_FRAME  frame,
     _fix_path_separators(&filename_cstr);
 
 #ifdef _WIN32
-    ret = KOS_new_boolean(frame, DeleteFile(filename_cstr.buffer));
+    ret = KOS_BOOL(DeleteFile(filename_cstr.buffer));
 #else
-    ret = KOS_new_boolean(frame, unlink(filename_cstr.buffer) == 0);
+    ret = KOS_BOOL(unlink(filename_cstr.buffer) == 0);
 #endif
 
 _error:

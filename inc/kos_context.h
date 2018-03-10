@@ -94,13 +94,6 @@ struct _KOS_CONTEXT {
     struct _KOS_ALLOCATOR          allocator;
 
     KOS_OBJ_ID                     empty_string;
-    KOS_OBJ_ID                     void_obj;
-    KOS_OBJ_ID                     false_obj;
-    KOS_OBJ_ID                     true_obj;
-    KOS_OBJ_ID                     tombstone_obj;
-    KOS_OBJ_ID                     closed_obj;
-    KOS_OBJ_ID                     reserved_obj;
-    KOS_OBJ_ID                     new_this_obj;
 
     KOS_OBJ_ID                     object_prototype;
     KOS_OBJ_ID                     number_prototype;

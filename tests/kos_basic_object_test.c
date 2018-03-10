@@ -159,7 +159,7 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID boolean = KOS_new_boolean(frame, 1);
+        const KOS_OBJ_ID boolean = KOS_TRUE;
 
         TEST(!IS_BAD_PTR(boolean));
 
@@ -174,7 +174,7 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID a_void = KOS_new_void(frame);
+        const KOS_OBJ_ID a_void = KOS_VOID;
 
         TEST(!IS_BAD_PTR(a_void));
 
