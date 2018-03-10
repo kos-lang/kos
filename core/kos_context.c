@@ -65,7 +65,7 @@ static const char str_value[]                   = "value";
 
 const struct _KOS_CONST_OBJECT _kos_void  = KOS_CONST_OBJECT_INIT(OBJ_VOID,    0);
 const struct _KOS_CONST_OBJECT _kos_false = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
-const struct _KOS_CONST_OBJECT _kos_true  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
+const struct _KOS_CONST_OBJECT _kos_true  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
 
 #ifdef CONFIG_PERF
 struct _KOS_PERF _kos_perf = {

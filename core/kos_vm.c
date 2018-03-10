@@ -2158,11 +2158,18 @@ static int _exec_function(KOS_FRAME frame)
                             ret = _compare_string(instr, src1, src2);
                             break;
 
+                        case OBJ_BOOLEAN:
+                            ret = _compare_integer(instr,
+                                                   OBJPTR(BOOLEAN, src1)->boolean.value,
+                                                   OBJPTR(BOOLEAN, src2)->boolean.value);
+                            break;
+
+                        case OBJ_VOID:
+                            ret = _compare_integer(instr, 0, 0);
+                            break;
+
                         default:
-                            if (src1_type == src2_type)
-                                ret = _compare_integer(instr, (int64_t)(intptr_t)src1, (int64_t)(intptr_t)src2);
-                            else
-                                ret = _compare_integer(instr, src1_type, src2_type);
+                            ret = _compare_integer(instr, (int64_t)(intptr_t)src1, (int64_t)(intptr_t)src2);
                             break;
                     }
                 else
