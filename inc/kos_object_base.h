@@ -179,9 +179,17 @@ struct _KOS_CONST_OBJECT {
 
 #define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).header + 1) )
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const struct _KOS_CONST_OBJECT _kos_void;
 extern const struct _KOS_CONST_OBJECT _kos_false;
 extern const struct _KOS_CONST_OBJECT _kos_true;
+
+#ifdef __cplusplus
+}
+#endif
 
 #define KOS_VOID    KOS_CONST_ID(_kos_void)
 #define KOS_FALSE   KOS_CONST_ID(_kos_false)
