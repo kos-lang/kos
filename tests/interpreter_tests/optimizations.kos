@@ -149,7 +149,7 @@ do {
 
     assert find_lowest([9, 10, -5, 245, -1000, 9000, -1]) == -1000
 
-    check(find_lowest, { registers: 5, instructions: 10, size: 54 })
+    check(find_lowest, { registers: 5, instructions: 11, size: 59 })
 }
 
 #============================================================================#
@@ -170,7 +170,7 @@ do {
 
     assert find_greatest([-100, 90, -5, 400, 10, 15]) == 400
 
-    check(find_greatest, { registers: 6, instructions: 13, size: 62 })
+    check(find_greatest, { registers: 6, instructions: 14, size: 67 })
 }
 
 #============================================================================#
@@ -225,7 +225,7 @@ do {
         assert iter() == 0.5
     }
 
-    check(map, { registers: 5, instructions: 9, size: 40 })
+    check(map, { registers: 5, instructions: 10, size: 45 })
 }
 
 #============================================================================#
@@ -391,7 +391,7 @@ do {
     }
     assert falsy_for(2) == 12
 
-    check(falsy_for, { registers: 2, instructions: 6, size: 23 })
+    check(falsy_for, { registers: 2, instructions: 3, size: 10 })
 }
 
 #============================================================================#

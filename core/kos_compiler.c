@@ -1698,26 +1698,27 @@ _error:
 static int _while(struct _KOS_COMP_UNIT      *program,
                   const struct _KOS_AST_NODE *node)
 {
-    int                     error           = KOS_SUCCESS;
-    const int               loop_start_offs = program->cur_offs;
-    int                     jump_instr_offs = 0;
-    int                     offs;
-    struct _KOS_REG        *reg             = 0;
-    struct _KOS_BREAK_OFFS *old_break_offs  = program->cur_frame->break_offs;
-    struct _KOS_SCOPE      *prev_try_scope  = _push_try_scope(program);
+    int                         error          = KOS_SUCCESS;
+    struct _KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
+    struct _KOS_SCOPE          *prev_try_scope = _push_try_scope(program);
+    const struct _KOS_AST_NODE *cond_node      = node->children;
 
     program->cur_frame->break_offs = 0;
 
-    node = node->children;
-    assert(node);
+    assert(cond_node);
 
-    if ( ! _KOS_node_is_falsy(program, node)) {
+    if ( ! _KOS_node_is_falsy(program, cond_node)) {
 
-        const int is_truthy = _KOS_node_is_truthy(program, node);
+        const int        is_truthy       = _KOS_node_is_truthy(program, cond_node);
+        struct _KOS_REG *reg             = 0;
+        int              jump_instr_offs = 0;
+        int              loop_start_offs;
+        int              continue_offs;
+        int              offs;
 
         if ( ! is_truthy) {
 
-            TRY(_visit_node(program, node, &reg));
+            TRY(_visit_node(program, cond_node, &reg));
             assert(reg);
 
             jump_instr_offs = program->cur_offs;
@@ -1727,7 +1728,10 @@ static int _while(struct _KOS_COMP_UNIT      *program,
             reg = 0;
         }
 
-        node = node->next;
+        loop_start_offs = program->cur_offs;
+        continue_offs   = loop_start_offs;
+
+        node = cond_node->next;
         assert(node);
         TRY(_visit_node(program, node, &reg));
         assert(!reg);
@@ -1736,14 +1740,35 @@ static int _while(struct _KOS_COMP_UNIT      *program,
 
         /* TODO skip jump if last node was terminating - return, throw, break, continue */
 
-        offs = program->cur_offs;
-        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+        if (is_truthy) {
+
+            offs = program->cur_offs;
+
+            TRY(_gen_instr1(program, INSTR_JUMP, 0));
+        }
+        else {
+
+            TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
+
+            continue_offs = program->cur_offs;
+
+            TRY(_visit_node(program, cond_node, &reg));
+            assert(reg);
+
+            offs = program->cur_offs;
+
+            TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+
+            _free_reg(program, reg);
+            reg = 0;
+        }
+
         _update_jump_offs(program, offs, loop_start_offs);
 
         if ( ! is_truthy)
             _update_jump_offs(program, jump_instr_offs, program->cur_offs);
 
-        _finish_break_continue(program, loop_start_offs, old_break_offs);
+        _finish_break_continue(program, continue_offs, old_break_offs);
     }
     else
         program->cur_frame->break_offs = old_break_offs;
@@ -1757,63 +1782,82 @@ _error:
 static int _for(struct _KOS_COMP_UNIT      *program,
                 const struct _KOS_AST_NODE *node)
 {
-    int                         error;
-    int                         loop_start_offs;
-    int                         cond_jump_instr_offs = -1;
-    int                         final_jump_instr_offs;
-    int                         step_instr_offs;
-    const struct _KOS_AST_NODE *step_node;
-    struct _KOS_REG            *reg                  = 0;
-    struct _KOS_BREAK_OFFS     *old_break_offs       = program->cur_frame->break_offs;
-    struct _KOS_SCOPE          *prev_try_scope       = _push_try_scope(program);
+    int                         error          = KOS_SUCCESS;
+    const struct _KOS_AST_NODE *cond_node      = node->children;
+    struct _KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
+    struct _KOS_SCOPE          *prev_try_scope = _push_try_scope(program);
 
     program->cur_frame->break_offs = 0;
 
-    loop_start_offs = program->cur_offs;
+    assert(cond_node);
 
-    node = node->children;
-    assert(node);
+    if ( ! _KOS_node_is_falsy(program, cond_node)) {
 
-    TRY(_add_addr2line(program, &node->token, _KOS_FALSE));
+        int                         loop_start_offs;
+        int                         cond_jump_instr_offs = -1;
+        int                         final_jump_instr_offs;
+        int                         step_instr_offs;
+        const struct _KOS_AST_NODE *step_node;
+        struct _KOS_REG            *reg                  = 0;
 
-    /* TODO check truthy/falsy */
+        TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
 
-    TRY(_visit_node(program, node, &reg));
+        /* TODO check truthy/falsy */
 
-    if (reg) {
+        TRY(_visit_node(program, cond_node, &reg));
 
-        cond_jump_instr_offs = program->cur_offs;
-        TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, reg->reg));
+        if (reg) {
 
-        _free_reg(program, reg);
-        reg = 0;
+            cond_jump_instr_offs = program->cur_offs;
+            TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, reg->reg));
+
+            _free_reg(program, reg);
+            reg = 0;
+        }
+
+        loop_start_offs = program->cur_offs;
+
+        step_node = cond_node->next;
+        assert(step_node);
+
+        node = step_node->next;
+        assert(node);
+        assert(!node->next);
+
+        TRY(_visit_node(program, node, &reg));
+        assert(!reg);
+
+        TRY(_add_addr2line(program, &step_node->token, _KOS_FALSE));
+
+        step_instr_offs = program->cur_offs;
+
+        TRY(_visit_node(program, step_node, &reg));
+        assert( ! reg);
+
+        TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
+
+        TRY(_visit_node(program, cond_node, &reg));
+
+        final_jump_instr_offs = program->cur_offs;
+
+        if (reg) {
+
+            TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+
+            _free_reg(program, reg);
+            reg = 0;
+        }
+        else
+            TRY(_gen_instr1(program, INSTR_JUMP, 0));
+
+        _update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
+        if (cond_jump_instr_offs > -1)
+            _update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
+
+        _finish_break_continue(program, step_instr_offs, old_break_offs);
     }
-
-    step_node = node->next;
-    assert(step_node);
-
-    node = step_node->next;
-    assert(node);
-    assert(!node->next);
-
-    TRY(_visit_node(program, node, &reg));
-    assert(!reg);
-
-    TRY(_add_addr2line(program, &step_node->token, _KOS_FALSE));
-
-    step_instr_offs = program->cur_offs;
-
-    TRY(_visit_node(program, step_node, &reg));
-    assert( ! reg);
-
-    final_jump_instr_offs = program->cur_offs;
-    TRY(_gen_instr1(program, INSTR_JUMP, 0));
-
-    _update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
-    if (cond_jump_instr_offs > -1)
-        _update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
-
-    _finish_break_continue(program, step_instr_offs, old_break_offs);
+    else
+        program->cur_frame->break_offs = old_break_offs;
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
@@ -1862,9 +1906,12 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
     int                         loop_start_offs;
     int                         cond_jump_instr_offs = -1;
     int                         final_jump_instr_offs;
+    int                         continue_offs;
     const struct _KOS_AST_NODE *var_node;
     const struct _KOS_AST_NODE *expr_node;
+    const struct _KOS_AST_NODE *assg_node;
     struct _KOS_REG            *reg            = 0;
+    struct _KOS_REG            *final_reg      = 0;
     struct _KOS_REG            *iter_reg       = 0;
     struct _KOS_REG            *item_reg       = 0;
     struct _KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
@@ -1874,11 +1921,11 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
 
     _push_scope(program, node);
 
-    node = node->children;
-    assert(node);
-    assert(node->type == NT_IN);
+    assg_node = node->children;
+    assert(assg_node);
+    assert(assg_node->type == NT_IN);
 
-    var_node = node->children;
+    var_node = assg_node->children;
     assert(var_node);
     assert(var_node->type == NT_VAR || var_node->type == NT_CONST);
 
@@ -1892,13 +1939,11 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
     TRY(_visit_node(program, expr_node, &iter_reg));
     assert(iter_reg);
 
-    _KOS_activate_new_vars(program, node->children);
+    _KOS_activate_new_vars(program, assg_node->children);
 
     TRY(_invoke_get_iterator(program, &iter_reg));
 
-    loop_start_offs = program->cur_offs;
-
-    TRY(_add_addr2line(program, &node->token, _KOS_FALSE));
+    TRY(_add_addr2line(program, &assg_node->token, _KOS_FALSE));
 
     if ( ! var_node->next) {
 
@@ -1908,15 +1953,16 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
     else
         TRY(_gen_reg(program, &item_reg));
 
-    TRY(_gen_reg(program, &reg));
+    TRY(_gen_reg(program, &final_reg));
 
-    TRY(_gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, reg->reg));
+    TRY(_gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, final_reg->reg));
 
     cond_jump_instr_offs = program->cur_offs;
-    TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+    TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, final_reg->reg));
 
-    _free_reg(program, reg);
-    reg = 0;
+    _free_reg(program, final_reg);
+
+    loop_start_offs = program->cur_offs;
 
     if (var_node->next) {
 
@@ -1926,30 +1972,41 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
 
         for ( ; var_node; var_node = var_node->next) {
 
-            item_reg = 0;
-            TRY(_lookup_local_var(program, &var_node->token, &item_reg));
-            assert(item_reg);
+            struct _KOS_REG *var_reg = 0;
 
-            TRY(_gen_instr4(program, INSTR_CALL_FUN, item_reg->reg, value_iter_reg->reg, 255, 0));
+            TRY(_lookup_local_var(program, &var_node->token, &var_reg));
+            assert(var_reg);
+
+            TRY(_gen_instr4(program, INSTR_CALL_FUN, var_reg->reg, value_iter_reg->reg, 255, 0));
         }
 
-        _free_reg(program, value_iter_reg);
+        if (value_iter_reg != item_reg)
+            _free_reg(program, value_iter_reg);
     }
 
-    node = node->next;
+    node = assg_node->next;
     assert(node);
     assert(!node->next);
 
     TRY(_visit_node(program, node, &reg));
     assert(!reg);
 
+    TRY(_add_addr2line(program, &assg_node->token, _KOS_FALSE));
+
+    continue_offs = program->cur_offs;
+
+    TRY(_gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, final_reg->reg));
+
     final_jump_instr_offs = program->cur_offs;
-    TRY(_gen_instr1(program, INSTR_JUMP, 0));
+    TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, final_reg->reg));
 
     _update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
     _update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
-    _finish_break_continue(program, loop_start_offs, old_break_offs);
+    _finish_break_continue(program, continue_offs, old_break_offs);
 
+    final_reg = 0;
+    _free_reg(program, item_reg);
+    item_reg = 0;
     _free_reg(program, iter_reg);
     iter_reg = 0;
 
@@ -2878,6 +2935,8 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
                 TRY(_gen_instr2(program, INSTR_MOVE, argn[i]->reg, arg->reg));
             }
         }
+
+        /* TODO ignore moves if all args are existing, contiguous registers */
 
         if (instr == INSTR_CALL) {
             if ( ! *reg) {
