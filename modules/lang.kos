@@ -78,19 +78,13 @@ fun range(start, args...)
     }
 
     if step > 0 {
-        if start < stop {
-            repeat {
-                yield start
-                start += step
-            } while start < stop
+        for ; start < stop; start += step {
+            yield start
         }
     }
     else if step < 0 {
-        if start > stop {
-            repeat {
-                yield start
-                start += step
-            } while start > stop
+        for ; start > stop; start += step {
+            yield start
         }
     }
 }
@@ -143,11 +137,8 @@ do {
     {
         var   i  = 0
         const _1 = 1
-        if i < this.size {
-            repeat {
-                yield this[i]
-                i += _1
-            } while i < this.size
+        for ; i < this.size; i += _1 {
+            yield this[i]
         }
     }
 
@@ -272,41 +263,40 @@ function.prototype.iterator = () => (this)
  */
 generator.prototype.slice = fun(begin, end)
 {
-    const ibegin = begin == void ? 0   : integer(begin)
-    const iend   = end   == void ? end : integer(end)
+    begin = begin == void ? 0   : integer(begin)
+    end   = end   == void ? end : integer(end)
 
-    if ibegin < 0 || (iend != void && iend < 0) {
-        return [this...][ibegin:iend];
+    if begin < 0 || (end != void && end < 0) {
+        return [this...][begin:end];
     }
     else {
-        const that = this
-        return fun {
+        return fun(that, begin, end) {
             var i = 0
 
-            if i < ibegin {
+            if i < begin {
                 for const skip in that {
                     i += 1
-                    if i >= ibegin {
+                    if i >= begin {
                         break
                     }
                 }
             }
 
-            if iend == void {
+            if end == void {
                 for const elem in that {
                     yield elem
                 }
             }
-            else if i < iend {
+            else if i < end {
                 for const elem in that {
                     yield elem
                     i += 1
-                    if i >= iend {
+                    if i >= end {
                         break
                     }
                 }
             }
-        } ()
+        } (this, begin, end)
     }
 }
 
@@ -346,18 +336,15 @@ generator.prototype.slice = fun(begin, end)
  *     > [1, 2, 3, 4].insert(0, 3, [])
  *     [4]
  */
-array.prototype.insert = fun(first_arg, second_arg, args...)
+array.prototype.insert = fun(begin, iterable, args...)
 {
-    var begin    = first_arg
-    var end      = begin
-    var iterable = void
+    var end = begin
 
     if args.size {
-        end      = second_arg
+        end      = iterable
         iterable = args[0]
     }
     else {
-        iterable = second_arg
         if end == void {
             begin = this.size
         }
@@ -432,19 +419,16 @@ array.prototype.insert = fun(first_arg, second_arg, args...)
  * to obtain elements to be inserted into the buffer.  The elements to be
  * inserted, which are yielded by the iterator, must be numbers from 0 to 255.
  */
-buffer.prototype.insert = fun(first_arg, second_arg, args...)
+buffer.prototype.insert = fun(begin, iterable, args...)
 {
-    var   begin    = first_arg
-    var   end      = begin
-    var   iterable = void
-    const size     = this.size
+    var   end  = begin
+    const size = this.size
 
     if args.size {
-        end      = second_arg
+        end      = iterable
         iterable = args[0]
     }
     else {
-        iterable = second_arg
         if end == void {
             begin = size
         }
@@ -1116,9 +1100,8 @@ fun reduce(op, init, args...)
  *     > sum(["Hello", ", ", "World!"], "")
  *     "Hello, World!"
  */
-fun sum(iterable, init = 0)
+fun sum(iterable, total = 0)
 {
-    var total = init
     for const elem in iterable {
         total += elem
     }
@@ -1529,9 +1512,46 @@ fun method(obj, func)
     return (args...) => (func.apply(obj, args))
 }
 
+var hex = void
+
 do {
     const hex_digits = [ 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
                          0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66 ]
+
+    /* @item lang hex()
+     *
+     *     hex(number)
+     *
+     * Converts an integer to a string containing hexadecimal representation of it.
+     *
+     * Example:
+     *
+     *     > hex(123)
+     *     "0x7b"
+     */
+    hex = fun(value)
+    {
+        assert typeof value == "integer"
+
+        const codes  = buffer(18)
+        const digits = hex_digits
+        var   i      = 17
+        const _15    = 15
+        const _4     = 4
+        const _1     = 1
+
+        repeat {
+            codes[i] = digits[value & _15]
+            value >>>= _4
+            i       -= _1
+        } while value
+
+        codes[i] = 0x78
+        i       -= _1
+        codes[i] = 0x30
+
+        return string(codes[i:])
+    }
 
     /* @item lang integer.prototype.hex()
      *
@@ -1546,38 +1566,8 @@ do {
      */
     integer.prototype.hex = fun
     {
-        const codes = buffer(18)
-        var i       = 17
-        var value   = this
-
-        repeat {
-            codes[i] = hex_digits[value & 15]
-            value >>>= 4
-            i       -= 1
-        } while value
-
-        codes[i] = 0x78
-        i       -= 1
-        codes[i] = 0x30
-
-        return string(codes[i:])
+        return hex(this)
     }
-}
-
-/* @item lang hex()
- *
- *     hex(number)
- *
- * Converts an integer to a string containing hexadecimal representation of it.
- *
- * Example:
- *
- *     > hex(123)
- *     "0x7b"
- */
-fun hex(value)
-{
-    return value.hex()
 }
 
 do {
@@ -1586,8 +1576,9 @@ do {
         var   dst = this.size
         const obj = typeof this == "buffer" ? buffer() : array()
         obj.resize(dst)
-        for var src = 0; dst; src += 1 {
-            dst -= 1
+        const _1 = 1
+        for var src = 0; dst; src += _1 {
+            dst -= _1
             obj[dst] = this[src]
         }
         return obj
@@ -1704,71 +1695,72 @@ do {
             if (compare == less) {
                 fun inner_sort(a, begin, end)
                 {
-                    end -= 1
+                    const _1 = 1
+                    end -= _1
                     var pivot = a[end]
-                    var mid   = begin - 1
+                    var mid   = begin - _1
                     var i     = begin
                     while i < end {
                         const v = a[i]
                         if v < pivot {
-                            mid += 1
+                            mid += _1
                             a[i] = a[mid]
                             a[mid] = v
-                            i += 1
+                            i += _1
                             continue
                         }
-                        i += 1
+                        i += _1
                     }
 
-                    mid += 1
+                    mid += _1
                     if pivot < a[mid] {
                         a[end] = a[mid]
                         a[mid] = pivot
                     }
 
-                    if begin + 1 < mid {
+                    if begin + _1 < mid {
                         inner_sort(a, begin, mid)
                     }
-                    if mid + 2 < end + 1 {
-                        return inner_sort(a, mid + 1, end + 1)
+                    if mid + 2 < end + _1 {
+                        return inner_sort(a, mid + _1, end + _1)
                     }
                 }
                 inner_sort(this, 0, this.size)
             }
             else {
-                fun inner_sort(a, begin, end)
+                fun inner_sort(a, begin, end, compare)
                 {
-                    const test = compare
-                    end -= 1
+                    const _1  = 1
+                    end      -= _1
                     var pivot = a[end]
-                    var mid   = begin - 1
+                    var mid   = begin - _1
                     var i     = begin
                     while i < end {
                         const v = a[i]
-                        if test(v, pivot) {
-                            mid += 1
+                        if compare(v, pivot) {
+                            mid += _1
                             a[i] = a[mid]
                             a[mid] = v
-                            i += 1
+                            i += _1
                             continue
                         }
-                        i += 1
+                        i += _1
                     }
 
-                    mid += 1
-                    if test(pivot, a[mid]) {
+                    mid += _1
+                    if compare(pivot, a[mid]) {
                         a[end] = a[mid]
                         a[mid] = pivot
                     }
 
-                    if begin + 1 < mid {
-                        inner_sort(a, begin, mid)
+                    if begin + _1 < mid {
+                        inner_sort(a, begin, mid, compare)
                     }
-                    if mid + 2 < end + 1 {
-                        return inner_sort(a, mid + 1, end + 1)
+                    if mid + 2 < end + _1 {
+                        return inner_sort(a, mid + _1, end + _1, compare)
                     }
                 }
-                inner_sort(this, 0, this.size)
+                inner_sort(this, 0, this.size, compare)
             }
         }
     }
@@ -1881,10 +1873,11 @@ fun reverse(iterable)
  */
 fun enumerate(iterable)
 {
-    var i = 0
+    var   i  = 0
+    const _1 = 1
     for var elem in iterable {
         yield [i, elem]
-        i += 1
+        i += _1
     }
 }
 
@@ -1908,28 +1901,29 @@ fun zip(a, b...)
         return a
     }
 
-    return fun {
+    return fun(a, b) {
+        const _1     = 1
         const b_size = b.size
-        const size   = 1 + b_size
+        const size   = _1 + b_size
 
         const iter = []
         iter.resize(size)
         iter[0] = a.iterator()
-        for var i = 0; i < b_size; i += 1 {
-            iter[i + 1] = b[i].iterator()
+        for var i = 0; i < b_size; i += _1 {
+            iter[i + _1] = b[i].iterator()
         }
 
         loop {
             const out = []
             out.resize(size)
 
-            for var i = 0; i < size; i += 1 {
+            for var i = 0; i < size; i += _1 {
                 out[i] = iter[i]()
             }
 
             yield out
         }
-    } ()
+    } (a, b)
 }
 
 /* @item lang print_elements()
@@ -2023,8 +2017,9 @@ fun print_lines(iterable)
 fun count_elements(iterable)
 {
     var num_elems = 0
+    const _1 = 1
     for const elem in iterable {
-        num_elems += 1
+        num_elems += _1
     }
     return num_elems
 }
