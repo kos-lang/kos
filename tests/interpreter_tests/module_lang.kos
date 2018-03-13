@@ -907,6 +907,30 @@ do {
 }
 
 ##############################################################################
+# generic slice function
+
+do {
+    const obj = {
+        slice: fun {
+            return 42
+        }
+    }
+
+    const x = obj[10:100]
+
+    assert typeof x == "integer"
+    assert x == 42
+}
+do {
+    const obj = {
+        slice: 10
+    }
+
+    # slice is not a function
+    expect_fail(()=>(obj[10:100]))
+}
+
+##############################################################################
 # lang.array.prototype.insert (with array)
 
 do {
