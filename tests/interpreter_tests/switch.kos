@@ -54,7 +54,7 @@ do {
     var a = 1
 
     switch 8 {
-        else { a = 2 }
+        default { a = 2 }
     }
 
     assert a == 2
@@ -80,7 +80,7 @@ do {
                 ret += "c"
             }
 
-            else {
+            default {
                 ret += "d"
             }
 
@@ -113,7 +113,7 @@ do {
             case 4 fallthrough
             case 5 { continue }
 
-            else   { sum = sum * 10 + i }
+            default   { sum = sum * 10 + i }
 
             case 8 { break }
         }

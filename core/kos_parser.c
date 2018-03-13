@@ -2092,7 +2092,7 @@ static int _switch_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             goto _error;
         }
 
-        if (parser->token.keyword == KW_ELSE) {
+        if (parser->token.keyword == KW_DEFAULT) {
             if (has_default) {
                 parser->error_str = str_err_duplicate_default;
                 error = KOS_ERROR_PARSE_FAILED;

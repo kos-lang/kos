@@ -166,8 +166,9 @@ The following reserved keywords are defined:
 * `const`
 * `constructor`
 * `continue`
-* `delete`
+* `default`
 * `defer`
+* `delete`
 * `do`
 * `else`
 * `fallthrough`
@@ -735,20 +736,20 @@ depending on the value of that expression.  The parentheses around the
 expression are optional (they are treated as part of the expression).
 
 Each new case section begins with a "case" keyword followed by right-hand-side
-expression or with "else" keyword, and is followed by a compound statement, a
+expression or with "default" keyword, and is followed by a compound statement, a
 fallthrough statement or both (in that order).
 
-The "else" case is optional.
+The "default" case is optional.
 
-There can be only one "else" case defined for a given switch statement.
+There can be only one "default" case defined for a given switch statement.
 
-The "else" case does not have to be specified last.
+The "default" case does not have to be specified last.
 
 If the value of the switch expression is equal to one of the right-hand-side
 expressions, the corresponding compound statement is executed.
 
 If the value of the switch expressions does not match any right-hand-side
-expression, then the compound statement following `else` is
+expression, then the compound statement following `default` is
 executed, if it exists, otherwise the switch statement terminates.
 
 If there is no fallthrough statement following a compound statement, then
@@ -757,14 +758,16 @@ the switch statement terminates after that compound statement is executed.
 If a fallthrough statement is executed following a compound statement or
 following a matching right-hand-side expression, the switch statement does not
 terminate, but the execution continues in the next defined case section, as if
-the right-hand-side expression (or "else") for that section matched.
+the right-hand-side expression (or "default") for that section matched.
 
     SwitchStatement ::= "switch" RHSExpression
                         "{" ( SwitchCase )* [ DefaultCase ] ( SwitchCase )* "}"
 
-    SwitchCase      ::= "case" RHSExpression CaseStatement
+    SwitchCase      ::= "case" CaseSpec CaseStatement
 
-    DefaultCase     ::= "else" CaseStatement
+    DefaultCase     ::= "default" CaseStatement
+
+    CaseSpec        ::= RHSExpression
 
     CaseStatement   ::= ( CompoundStatement [ Fallthrough ] )
                         | Fallthrough

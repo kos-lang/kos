@@ -35,7 +35,7 @@ syn match   kosTab              "\t"
 
 syn match   kosNumber           "\<\([1-9][0-9_]*\|0\)\(\.[0-9_]*\)\=\([eEpP][+-]\=[0-9_]\+\)\=\>\|0[bB][01_]\+\|0[xX][0-9a-fA-F_]\+\>"
 
-syn keyword kosConditional      if else switch case
+syn keyword kosConditional      if else switch case default
 syn keyword kosRepeat           while for repeat loop
 syn keyword kosBranch           break continue fallthrough
 syn keyword kosOperator         delete instanceof typeof yield in

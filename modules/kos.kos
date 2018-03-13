@@ -79,7 +79,7 @@ fun lexer(filename, input)
                 }
             }
 
-            else {
+            default {
                 if token.type == token_string_open {
                     save(token, sep_paren_close)
                 }

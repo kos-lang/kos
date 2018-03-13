@@ -296,6 +296,7 @@ static const char *const keywords[] = {
     "const",
     "constructor",
     "continue",
+    "default",
     "defer",
     "delete",
     "do",

@@ -314,6 +314,7 @@ int _KOS_module_kos_init(KOS_FRAME frame)
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_const",        KW_CONST);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_constructor",  KW_CONSTRUCTOR);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_continue",     KW_CONTINUE);
+    TRY_ADD_INTEGER_CONSTANT(frame, "keyword_default",      KW_DEFAULT);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_defer",        KW_DEFER);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_delete",       KW_DELETE);
     TRY_ADD_INTEGER_CONSTANT(frame, "keyword_do",           KW_DO);

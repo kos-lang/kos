@@ -13,7 +13,7 @@ switch a ? b[c+2] : d
     case 1.1 {
         print(4);
     }
-    else {
+    default {
         print(5);
     }
     case a||b||c {
@@ -65,9 +65,9 @@ switch a ? b[c+2] : d
                     (identifier 14 9 print)
                     (number 14 15 4)
         )))
-        (default 16 5 else
-            (empty 16 5 else)
-            (scope 16 10 {
+        (default 16 5 default
+            (empty 16 5 default)
+            (scope 16 13 {
                 (invocation 17 14 paren_open
                     (identifier 17 9 print)
                     (number 17 15 5)
@@ -94,7 +94,7 @@ switch (a)
     }
     case e {
     }
-    else {
+    default {
     }
 }
 
@@ -118,9 +118,9 @@ switch (a)
             (identifier 6 10 e)
             (scope 6 12 {)
         )
-        (default 8 5 else
-            (empty 8 5 else)
-            (scope 8 10 {)
+        (default 8 5 default
+            (empty 8 5 default)
+            (scope 8 13 {)
         )
 ))
 
@@ -177,25 +177,25 @@ switch x { }
 ))
 
 @------------------------------------------------------------------------------
-switch x { else fallthrough; }
+switch x { default fallthrough; }
 
 @0
 
 (scope 1 1
     (switch 1 1 switch
         (identifier 1 8 x)
-        (default 1 12 else
-            (empty 1 12 else)
-            (fallthrough 1 17 fallthrough)
+        (default 1 12 default
+            (empty 1 12 default)
+            (fallthrough 1 20 fallthrough)
         )
 ))
 
 @------------------------------------------------------------------------------
 switch a
 {
-    else   { a(); }
-    case 1 { b(); }
-    else   { c(); } # Duplicate default
+    default { a(); }
+    case 1  { b(); }
+    default { c(); } # Duplicate default
 }
 
 @ 10 5 5

@@ -65,6 +65,7 @@ enum _KOS_KEYWORD_TYPE {
     KW_CONST,
     KW_CONSTRUCTOR,
     KW_CONTINUE,
+    KW_DEFAULT,
     KW_DEFER,
     KW_DELETE,
     KW_DO,
