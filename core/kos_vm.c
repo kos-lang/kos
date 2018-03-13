@@ -551,35 +551,32 @@ static int _is_generator_end_exception(KOS_FRAME frame)
     KOS_CONTEXT *const ctx       = KOS_context_from_frame(frame);
     const KOS_OBJ_ID   exception = KOS_get_exception(frame);
     KOS_OBJ_ID         value;
+    int                ret       = 0;
 
-    if (KOS_get_prototype(frame, exception) != ctx->exception_prototype)
-        return 0;
+    if (KOS_get_prototype(frame, exception) == ctx->exception_prototype) {
 
-    KOS_clear_exception(frame);
-
-    value = KOS_get_property(frame, exception, KOS_context_get_cstring(frame, str_value));
-
-    if (IS_BAD_PTR(value)) {
         KOS_clear_exception(frame);
-        KOS_raise_exception(frame, exception);
-        return 0;
+
+        value = KOS_get_property(frame, exception, KOS_context_get_cstring(frame, str_value));
+
+        if (IS_BAD_PTR(value)) {
+            KOS_clear_exception(frame);
+            KOS_raise_exception(frame, exception);
+        }
+        else if (KOS_get_prototype(frame, value) != ctx->generator_end_prototype)
+            KOS_raise_exception(frame, exception);
+        else
+            ret = 1;
     }
 
-    if (KOS_get_prototype(frame, value) != ctx->generator_end_prototype) {
-        KOS_raise_exception(frame, exception);
-        return 0;
-    }
-
-    return 1;
+    return ret;
 }
 
 static void _save_frame(KOS_FRAME parent,
                         KOS_FRAME exited)
 {
-    if (parent->num_saved_frames == KOS_MAX_SAVED_FRAMES)
-        return;
-
-    parent->saved_frames[parent->num_saved_frames++] = OBJID(STACK_FRAME, exited);
+    if (parent->num_saved_frames < KOS_MAX_SAVED_FRAMES)
+        parent->saved_frames[parent->num_saved_frames++] = OBJID(STACK_FRAME, exited);
 }
 
 static void _move_saved_frames(KOS_FRAME parent,
@@ -2226,10 +2223,8 @@ static int _exec_function(KOS_FRAME frame)
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rfunc = bytecode[3];
 
-                KOS_OBJ_ID constr_obj;
-                KOS_OBJ_ID proto_obj      = KOS_BADPTR;
-                KOS_OBJ_ID ret            = KOS_FALSE;
-                int        constr_is_func = 1;
+                KOS_OBJ_ID     ret   = KOS_FALSE;
+                KOS_OBJ_ID     constr_obj;
 
                 assert(rsrc  < regs_array->size);
                 assert(rfunc < regs_array->size);
@@ -2238,23 +2233,16 @@ static int _exec_function(KOS_FRAME frame)
                 constr_obj = regs[rfunc];
 
                 if (GET_OBJ_TYPE(constr_obj) == OBJ_FUNCTION) {
-                    KOS_FUNCTION *const constr = OBJPTR(FUNCTION, constr_obj);
-                    proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(constr->prototype);
-                    assert( ! IS_BAD_PTR(proto_obj));
-                }
-                else
-                    constr_is_func = 0;
+                    KOS_FUNCTION *const constr    = OBJPTR(FUNCTION, constr_obj);
+                    KOS_OBJ_ID          proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(constr->prototype);
 
-                if ( ! IS_BAD_PTR(proto_obj)) {
+                    assert( ! IS_BAD_PTR(proto_obj));
 
                     assert(IS_SMALL_INT(proto_obj) || GET_OBJ_TYPE(proto_obj) <= OBJ_LAST_TYPE);
 
                     if (KOS_has_prototype(frame, regs[rsrc], proto_obj))
                         ret = KOS_TRUE;
                 }
-                else
-                    if (constr_is_func)
-                        KOS_clear_exception(frame);
 
                 out   = ret;
                 delta = 4;
