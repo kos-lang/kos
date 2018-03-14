@@ -288,6 +288,7 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
         TRY(_KOS_vector_resize(buf, buf->size * 2U));
     }
 
+_error:
     return error;
 }
 #else
