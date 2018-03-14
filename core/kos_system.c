@@ -215,7 +215,7 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
     int  error = KOS_ERROR_NOT_FOUND;
     char path_buf[MAX_PATH];
 
-    const DWORD size = GetModuleFileName(NULL, &path_buf, sizeof(path_buf));
+    const DWORD size = GetModuleFileName(NULL, path_buf, sizeof(path_buf));
 
     if (size < MAX_PATH) {
 
@@ -258,7 +258,7 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
 {
     int error = KOS_ERROR_NOT_FOUND;
 
-    TRY(_KOS_vector_resize(&buf, 256U));
+    TRY(_KOS_vector_resize(buf, 256U));
 
     for (;;) {
 
@@ -273,7 +273,7 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
 
         if (num_read > 0) {
 
-            TRY(_KOS_vector_resize(&buf, num_read + 1));
+            TRY(_KOS_vector_resize(buf, num_read + 1));
 
             buf->buffer[num_read] = 0;
 
@@ -285,7 +285,7 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
         if (buf->size > 16384U)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-        TRY(_KOS_vector_resize(&buf, buf->size * 2U));
+        TRY(_KOS_vector_resize(buf, buf->size * 2U));
     }
 
     return error;
