@@ -586,8 +586,8 @@ static void _move_saved_frames(KOS_FRAME parent,
     unsigned end  = exited->num_saved_frames;
     unsigned room = KOS_MAX_SAVED_FRAMES - parent->num_saved_frames;
 
-    if (end < room)
-        i += room - end;
+    if (end > room)
+        i += end - room;
 
     for ( ; i < end; i++)
         _save_frame(parent, OBJPTR(STACK_FRAME, exited->saved_frames[i]));
