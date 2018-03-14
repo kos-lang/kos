@@ -2,8 +2,8 @@
 
 set -e
 
-out_dir="$1"
-DESTDIR="$2"
+OUT_DIR="$1"
+DEST_DIR="$2"
 
 UNAME=$(uname -s)
 
@@ -11,22 +11,22 @@ case "$UNAME" in
     CYGWIN*|MINGW*|MSYS*) UNAME=Windows ;;
 esac
 
-if [ "$DESTDIR" = "${DESTDIR#/}" ]; then
-    if [ "$UNAME" != "Windows" -o "$DESTDIR" = "${DESTDIR#?:}" ]; then
-        DESTDIR="$(pwd)/../$DESTDIR"
+if [ "$DEST_DIR" = "${DEST_DIR#/}" ]; then
+    if [ "$UNAME" != "Windows" -o "$DEST_DIR" = "${DEST_DIR#?:}" ]; then
+        DEST_DIR="$(pwd)/../$DEST_DIR"
     fi
 fi
 
-echo "Install $DESTDIR"
+echo "Install $DEST_DIR"
 
 if [ "$UNAME" = "Windows" ]; then
-    KOS_EXE="$out_dir/interpreter/kos.exe"
-    BIN_DIR="$DESTDIR/Kos"
-    MODULES_DIR="$DESTDIR/Kos/modules"
+    KOS_EXE="$OUT_DIR/interpreter/kos.exe"
+    BIN_DIR="$DEST_DIR/Kos"
+    MODULES_DIR="$DEST_DIR/Kos/modules"
 else
-    KOS_EXE="$out_dir/interpreter/kos"
-    BIN_DIR="$DESTDIR/bin"
-    MODULES_DIR="$DESTDIR/share/kos/modules"
+    KOS_EXE="$OUT_DIR/interpreter/kos"
+    BIN_DIR="$DEST_DIR/bin"
+    MODULES_DIR="$DEST_DIR/share/kos/modules"
 fi
 
 install -d "$BIN_DIR"

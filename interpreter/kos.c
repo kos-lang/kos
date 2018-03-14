@@ -52,8 +52,6 @@ static int _is_option(const char *arg,
 
 static void _print_usage(void);
 
-static int _add_module_search_paths(KOS_FRAME frame, const char *kos_exe);
-
 static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf);
 
 int main(int argc, char *argv[])
@@ -155,7 +153,7 @@ int main(int argc, char *argv[])
 
     ctx.flags = flags;
 
-    error = _add_module_search_paths(frame, argv[0]);
+    error = KOS_context_add_default_path(frame, argv[0]);
 
     if (error) {
         fprintf(stderr, "Failed to setup module search paths\n");
@@ -277,38 +275,6 @@ static int _is_option(const char *arg,
 static void _print_usage(void)
 {
     printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
-}
-
-#ifndef CONFIG_MODULE_PATH
-#define CONFIG_MODULE_PATH "modules"
-#endif
-
-static int _add_module_search_paths(KOS_FRAME frame, const char *kos_exe)
-{
-    struct _KOS_VECTOR cstr;
-    int                error;
-    static const char  rel_module_path[] = CONFIG_MODULE_PATH;
-    const char        *kos_exe_end       = kos_exe + strlen(kos_exe) - 1;
-    size_t             kos_exe_len;
-
-    _KOS_vector_init(&cstr);
-
-    while (kos_exe_end >= kos_exe && *kos_exe_end != KOS_PATH_SEPARATOR)
-        --kos_exe_end;
-    ++kos_exe_end;
-
-    kos_exe_len = (size_t)(kos_exe_end - kos_exe);
-
-    TRY(_KOS_vector_resize(&cstr, kos_exe_len + sizeof(rel_module_path)));
-    memcpy(cstr.buffer, kos_exe, kos_exe_len);
-    memcpy(cstr.buffer + kos_exe_len, rel_module_path, sizeof(rel_module_path));
-
-    TRY(KOS_context_add_path(frame, cstr.buffer));
-
-_error:
-    _KOS_vector_destroy(&cstr);
-
-    return error;
 }
 
 static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)

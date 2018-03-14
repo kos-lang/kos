@@ -173,11 +173,11 @@ Curly braces are also required in all the other control flow statements below.
     fun select_color(num)
     {
         switch num {
-            case 0 { return "black" }
-            case 1 { return "green" }
-            case 2 fallthrough        # the same as 3
-            case 3 { return "blue"  }
-            else   { return "white" } # anything else, "default"
+            case 0  { return "black" }
+            case 1  { return "green" }
+            case 2  fallthrough        # the same as 3
+            case 3  { return "blue"  }
+            default { return "white" }
         }
     }
 

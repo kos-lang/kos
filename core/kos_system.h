@@ -49,4 +49,6 @@ int _KOS_get_absolute_path(struct _KOS_VECTOR *path);
 int _KOS_get_env(const char         *name,
                  struct _KOS_VECTOR *buf);
 
+int _KOS_executable_path(struct _KOS_VECTOR *buf);
+
 #endif

@@ -25,6 +25,7 @@
 #include "kos_debug.h"
 #include "kos_memory.h"
 #include "kos_try.h"
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <memory.h>
@@ -43,6 +44,9 @@
 #   include <sys/types.h>
 #   include <sys/stat.h>
 #   include <unistd.h>
+#endif
+#ifdef __APPLE__
+#   include <mach-o/dyld.h>
 #endif
 
 static int _errno_to_error(void)
@@ -204,3 +208,91 @@ int _KOS_get_env(const char         *name,
 
     return error;
 }
+
+#ifdef _WIN32
+int _KOS_executable_path(struct _KOS_VECTOR *buf)
+{
+    int  error = KOS_ERROR_NOT_FOUND;
+    char path_buf[MAX_PATH];
+
+    const DWORD size = GetModuleFileName(NULL, &path_buf, sizeof(path_buf));
+
+    if (size < MAX_PATH) {
+
+        const size_t len = size + 1;
+
+        assert(path_buf[size] == 0);
+
+        error = _KOS_vector_resize(buf, len);
+
+        if ( ! error)
+            memcpy(buf->buffer, path_buf, len);
+    }
+
+    return error;
+}
+#elif defined(__APPLE__)
+int _KOS_executable_path(struct _KOS_VECTOR *buf)
+{
+    int      error = KOS_ERROR_NOT_FOUND;
+    uint32_t size  = 0;
+
+    if (_NSGetExecutablePath(0, &size) == -1) {
+
+        error = _KOS_vector_resize(buf, (size_t)size);
+
+        if ( ! error) {
+
+            if (_NSGetExecutablePath(buf->buffer, &size) == 0) {
+                assert(buf->buffer[size - 1] == 0);
+            }
+            else
+                error = KOS_ERROR_NOT_FOUND;
+        }
+    }
+
+    return error;
+}
+#elif defined(__linux__) || defined(__FreeBSD__)
+int _KOS_executable_path(struct _KOS_VECTOR *buf)
+{
+    int error = KOS_ERROR_NOT_FOUND;
+
+    TRY(_KOS_vector_resize(&buf, 256U));
+
+    for (;;) {
+
+#ifdef __linux__
+        static const char proc_link[] = "/proc/self/exe";
+#endif
+#ifdef __FreeBSD__
+        static const char proc_link[] = "/proc/curproc/file";
+#endif
+
+        const ssize_t num_read = readlink(proc_link, buf->buffer, buf->size - 1);
+
+        if (num_read > 0) {
+
+            TRY(_KOS_vector_resize(&buf, num_read + 1));
+
+            buf->buffer[num_read] = 0;
+
+            break;
+        }
+        else if (num_read == 0)
+            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+
+        if (buf->size > 16384U)
+            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+
+        TRY(_KOS_vector_resize(&buf, buf->size * 2U));
+    }
+
+    return error;
+}
+#else
+int _KOS_executable_path(struct _KOS_VECTOR *buf)
+{
+    return KOS_ERROR_NOT_FOUND;
+}
+#endif

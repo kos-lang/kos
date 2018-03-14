@@ -338,10 +338,10 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
 
 int KOS_context_add_path(KOS_FRAME frame, const char *module_search_path)
 {
-    int                       error;
-    uint32_t                  len;
-    KOS_OBJ_ID                path_str;
-    KOS_CONTEXT              *ctx        = KOS_context_from_frame(frame);
+    int          error;
+    uint32_t     len;
+    KOS_OBJ_ID   path_str;
+    KOS_CONTEXT *ctx = KOS_context_from_frame(frame);
 
     path_str = KOS_new_cstring(frame, module_search_path);
     TRY_OBJID(path_str);
@@ -351,6 +351,68 @@ int KOS_context_add_path(KOS_FRAME frame, const char *module_search_path)
     TRY(KOS_array_write(frame, ctx->module_search_paths, (int)len, path_str));
 
 _error:
+    return error;
+}
+
+#ifndef CONFIG_MODULE_PATH
+#   ifdef _WIN32
+#       define CONFIG_MODULE_PATH "modules"
+#   else
+#       define CONFIG_MODULE_PATH "../share/kos/modules"
+#   endif
+#endif
+
+int KOS_context_add_default_path(KOS_FRAME frame, const char *fallback)
+{
+    int                error      = KOS_SUCCESS;
+    struct _KOS_VECTOR cstr;
+    size_t             pos;
+    static const char  rel_path[] = CONFIG_MODULE_PATH;
+
+    _KOS_vector_init(&cstr);
+
+    error = _KOS_executable_path(&cstr);
+
+    if (error != KOS_SUCCESS) {
+
+        size_t len;
+
+        if ( ! fallback)
+            goto _error;
+
+        len = strlen(fallback);
+
+        if ( ! len)
+            goto _error;
+
+        if ( ! strchr(fallback, KOS_PATH_SEPARATOR)) {
+            /* TODO if the fallback does not have path separator,
+             * look for the kos executable in PATH */
+            goto _error;
+        }
+
+        len += 1;
+        TRY(_KOS_vector_resize(&cstr, len));
+
+        memcpy(cstr.buffer, fallback, len);
+    }
+
+    TRY(_KOS_get_absolute_path(&cstr));
+
+    for (pos = cstr.size; pos > 0 && cstr.buffer[pos] != KOS_PATH_SEPARATOR; --pos);
+
+    if ( ! pos)
+        RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+
+    TRY(_KOS_vector_resize(&cstr, pos + 1 + sizeof(rel_path)));
+
+    memcpy(&cstr.buffer[pos + 1], rel_path, sizeof(rel_path));
+
+    TRY(KOS_context_add_path(frame, cstr.buffer));
+
+_error:
+    _KOS_vector_destroy(&cstr);
+
     return error;
 }
 
