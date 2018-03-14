@@ -28,7 +28,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
-#include "kos_file.h"
+#include "kos_system.h"
 #include "kos_malloc.h"
 #include "kos_memory.h"
 #include "kos_misc.h"

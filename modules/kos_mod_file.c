@@ -28,7 +28,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
-#include "../core/kos_file.h"
+#include "../core/kos_system.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_try.h"
 #include <limits.h>

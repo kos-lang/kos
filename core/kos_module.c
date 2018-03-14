@@ -30,7 +30,7 @@
 #include "kos_compiler.h"
 #include "kos_config.h"
 #include "kos_disasm.h"
-#include "kos_file.h"
+#include "kos_system.h"
 #include "kos_malloc.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"

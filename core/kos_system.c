@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "kos_file.h"
+#include "kos_system.h"
 #include "../inc/kos_error.h"
 #include "kos_debug.h"
 #include "kos_memory.h"

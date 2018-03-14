@@ -25,7 +25,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
-#include "../core/kos_file.h"
+#include "../core/kos_system.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_object_internal.h"
 #include "kos_parallel.h"

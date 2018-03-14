@@ -23,7 +23,7 @@
 #include "kos_getline.h"
 #include "../inc/kos_error.h"
 #include "kos_config.h"
-#include "kos_file.h"
+#include "kos_system.h"
 #include "kos_memory.h"
 #include "kos_try.h"
 #include <stdio.h>

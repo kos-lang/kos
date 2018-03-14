@@ -25,7 +25,7 @@
 #include <string.h>
 #include <assert.h>
 #include "../core/kos_ast.h"
-#include "../core/kos_file.h"
+#include "../core/kos_system.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_parser.h"
 #include "../inc/kos_error.h"

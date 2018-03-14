@@ -27,7 +27,7 @@
 #include "../inc/kos_modules_init.h"
 #include "../inc/kos_utils.h"
 #include "../inc/kos_version.h"
-#include "../core/kos_file.h"
+#include "../core/kos_system.h"
 #include "../core/kos_getline.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_object_alloc.h"
