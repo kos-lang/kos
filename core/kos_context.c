@@ -399,7 +399,9 @@ int KOS_context_add_default_path(KOS_FRAME frame, const char *fallback)
 
     TRY(_KOS_get_absolute_path(&cstr));
 
-    for (pos = cstr.size; pos > 0 && cstr.buffer[pos] != KOS_PATH_SEPARATOR; --pos);
+    assert(cstr.size > 0);
+
+    for (pos = cstr.size - 1; pos > 0 && cstr.buffer[pos] != KOS_PATH_SEPARATOR; --pos);
 
     if ( ! pos)
         RAISE_ERROR(KOS_ERROR_NOT_FOUND);
