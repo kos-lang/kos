@@ -1,0 +1,181 @@
+#!/bin/sh
+
+# Copyright (c) 2014-2018 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+set -e
+
+# Ensure that the interpreter doesn't pull anything from KOSPATH
+unset KOSPATH
+
+# Check the number of args passed to the script
+if [ $# -ne 2 ]; then
+    echo "Invalid number of arguments passed to the test" >&2
+    exit 1
+fi
+
+# Get absolute path to this script in tests directory
+cd -P .
+HERE="$(pwd)"
+
+# Set expected relative path
+UNAME="$(uname -s)"
+case "$UNAME" in
+    CYGWIN*|MINGW*|MSYS*) REL_MOD_PATH=modules ; UNAME=Windows ;;
+    *)                    REL_MOD_PATH=../share/kos/modules ;;
+esac
+
+# Function to convert path to OS-specific
+if [ "$UNAME" = "Windows" ]; then
+    fixpath()
+    {
+        cygpath -w "$1"
+    }
+else
+    fixpath()
+    {
+        echo "$1"
+    }
+fi
+
+# The test executable
+TEST="$1"
+TEST_DIR="$(dirname "$2")/pathtest/testdir"
+KOS="../../$(basename "$2")"
+
+# Go to output directory
+cd_out()
+{
+    mkdir -p "$TEST_DIR"
+    cd "$TEST_DIR"
+}
+
+# Test which is expected to pass
+pass()
+{
+    local EXITCODE
+    local INPUT
+    local OUTPUT
+    EXITCODE=0
+    INPUT=$(fixpath "$1")
+    OUTPUT=$(fixpath "$2")
+    "$TEST" "$INPUT" > _mod_path_stdout || EXITCODE=$?
+    pass_check "$INPUT" "$OUTPUT" "$EXITCODE" "$TEST $INPUT"
+}
+
+# Interpreter-based test which is expected to pass
+pass_kos()
+{
+    local EXITCODE
+    local INPUT
+    local OUTPUT
+    EXITCODE=0
+    INPUT="$1"
+    OUTPUT="$2"
+    cd_out
+    "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" || EXITCODE=$?
+    cd - >/dev/null
+    pass_check "$INPUT" "$OUTPUT" "$EXITCODE" "$KOS -c $INPUT"
+}
+
+# Check output from a test expected to pass
+pass_check()
+{
+    local INPUT
+    local OUTPUT
+    local EXITCODE
+    local COMMAND
+    INPUT="$1"
+    OUTPUT="$2"
+    EXITCODE="$3"
+    COMMAND="$4"
+    if [ $EXITCODE -ne 0 ]; then
+        echo "Error: Test failed" >&2
+        echo "$COMMAND" >&2
+        rm _mod_path_stdout
+        [ "$REL_MOD_PATH" = "modules" ] || exit 1
+    fi
+    echo "$OUTPUT" > _mod_path_expected
+    if ! diff -q -i _mod_path_stdout _mod_path_expected; then
+        echo "Error: Test failed" >&2
+        echo "       Expected: $OUTPUT" >&2
+        echo "       Actual:   $(cat _mod_path_stdout)" >&2
+        rm _mod_path_stdout _mod_path_expected
+        [ "$REL_MOD_PATH" = "modules" ] || exit 1
+    fi
+    rm -f _mod_path_stdout _mod_path_expected
+}
+
+# Test which is expected to fail
+fail()
+{
+    local EXITCODE
+    local INPUT
+    EXITCODE=0
+    INPUT=$(fixpath "$1")
+    "$TEST" "$INPUT" > _mod_path_stdout 2>&1 || EXITCODE=$?
+    fail_check "$INPUT" "$EXITCODE" "$TEST $INPUT"
+}
+
+# Interpreter-based test which is expected to fail
+fail_kos()
+{
+    local EXITCODE
+    local INPUT
+    EXITCODE=0
+    INPUT="$1"
+    cd_out
+    "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" 2>&1 || EXITCODE=$?
+    cd - >/dev/null
+    fail_check "$INPUT" "$EXITCODE" "$KOS -c $INPUT"
+}
+
+# Check output from a test expected to fail
+fail_check()
+{
+    local INPUT
+    local EXITCODE
+    local COMMAND
+    INPUT="$1"
+    EXITCODE="$2"
+    COMMAND="$3"
+    if [ $EXITCODE -eq 0 ]; then
+        echo "Error: Test expected to fail but passed" >&2
+        echo "$COMMAND" >&2
+        echo "Output: $(cat _mod_path_stdout)" >&2
+        rm _mod_path_stdout
+        [ "$REL_MOD_PATH" = "modules" ] || exit 1
+    fi
+    rm -f _mod_path_stdout
+}
+
+                           pass     "$HERE/module_paths" "$HERE/$REL_MOD_PATH"
+                           pass     "./module_paths"     "$HERE/$REL_MOD_PATH"
+PATH="$PATH:$HERE"         pass     module_paths         "$HERE/$REL_MOD_PATH"
+PATH="$PATH:."             pass     module_paths         "$HERE/$REL_MOD_PATH"
+
+export KOSPATH="$HERE/../modules"
+pass_kos 'print("Hello")'     "Hello"
+unset KOSPATH
+
+fail     ""
+fail     ./_non_existent_file_
+fail     "$HERE/_non_existent_file_"
+fail_kos 'print("Hello")'

@@ -45,11 +45,13 @@ standalone_tests += kos_vm_unit_test
 
 all_tests  = $(standalone_tests)
 all_tests += kos_parser_test
+all_tests += kos_module_path_test
 
 c_files  = kos_array_test.c
 c_files += kos_atomic_test.c
 c_files += kos_basic_object_test.c
 c_files += kos_buffer_test.c
+c_files += kos_module_path_test.c
 c_files += kos_object_alloc_test.c
 c_files += kos_object_test.c
 c_files += kos_random_test.c
@@ -123,13 +125,13 @@ endef
 
 $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TEST,$(test))))
 
-define RUN_TEST
+define RUN_STANDALONE_TEST
 $1:
 	@echo Test $1
 	@$(CONFIG_TOOL) $(out_dir)/tests/$1$(exe_suffix)
 endef
 
-$(foreach test, $(standalone_tests), $(eval $(call RUN_TEST,$(test))))
+$(foreach test, $(standalone_tests), $(eval $(call RUN_STANDALONE_TEST,$(test))))
 
 module_loading:
 	@echo Test module_loading
@@ -147,7 +149,11 @@ module_lang_print:
 	@echo Test module_lang_print
 	@env KOSPATH=../modules interpreter_tests/module_lang_print $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
-all_tests = $(standalone_tests) $(parser_test_list) module_loading interactive disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list)
+module_paths:
+	@echo Test module_paths
+	@./module_paths $(out_dir)/tests/kos_module_path_test$(exe_suffix) $(out_dir)/interpreter/kos$(exe_suffix)
+
+all_tests = $(standalone_tests) $(parser_test_list) module_loading interactive disasm module_lang_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)
 
 simple_tests = $(filter-out kos_parallel%, $(all_tests))
 
@@ -231,4 +237,4 @@ $(all_tests): gcov.pre.clean
 $(addprefix gcov., $(gcov_modules)): $(all_tests)
 endif
 
-.PHONY: all test simple_test gcov $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_lang_print $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_lang_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)
