@@ -153,7 +153,12 @@ int main(int argc, char *argv[])
 
     ctx.flags = flags;
 
-    error = KOS_context_add_default_path(frame, argv[0]);
+    /* Use executable path from OS to find modules */
+    error = KOS_context_add_default_path(frame, 0);
+
+    /* Fallback: use argv[0] to find modules */
+    if (error)
+        error = KOS_context_add_default_path(frame, argv[0]);
 
     if (error) {
         fprintf(stderr, "Failed to setup module search paths\n");

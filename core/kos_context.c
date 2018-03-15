@@ -28,13 +28,14 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
-#include "kos_system.h"
+#include "kos_debug.h"
 #include "kos_malloc.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
 #include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
+#include "kos_system.h"
 #include "kos_try.h"
 #include <assert.h>
 #include <math.h>
@@ -362,39 +363,74 @@ _error:
 #   endif
 #endif
 
-int KOS_context_add_default_path(KOS_FRAME frame, const char *fallback)
+int KOS_context_add_default_path(KOS_FRAME frame, const char *argv0)
 {
-    int                error      = KOS_SUCCESS;
+    int                error      = KOS_ERROR_NOT_FOUND;
     struct _KOS_VECTOR cstr;
+    struct _KOS_VECTOR cpath;
     size_t             pos;
     static const char  rel_path[] = CONFIG_MODULE_PATH;
 
     _KOS_vector_init(&cstr);
+    _KOS_vector_init(&cpath);
 
-    error = _KOS_executable_path(&cstr);
+    if (argv0) {
 
-    if (error != KOS_SUCCESS) {
-
-        size_t len;
-
-        if ( ! fallback)
-            goto _error;
-
-        len = strlen(fallback);
+        size_t len = argv0 ? strlen(argv0) : 0;
 
         if ( ! len)
             goto _error;
 
-        if ( ! strchr(fallback, KOS_PATH_SEPARATOR)) {
-            /* TODO if the fallback does not have path separator,
-             * look for the kos executable in PATH */
-            goto _error;
+        /* Absolute or relative path */
+        if (strchr(argv0, KOS_PATH_SEPARATOR)) {
+
+            len += 1;
+            TRY(_KOS_vector_resize(&cstr, len));
+
+            memcpy(cstr.buffer, argv0, len);
         }
+        /* Just executable name, scan PATH */
+        else {
 
-        len += 1;
-        TRY(_KOS_vector_resize(&cstr, len));
+            char *buf;
 
-        memcpy(cstr.buffer, fallback, len);
+            TRY(_KOS_get_env("PATH", &cpath));
+
+            buf = cpath.buffer;
+
+            TRY(_KOS_vector_reserve(&cstr, cpath.size + len + 1));
+
+            while ((size_t)(buf - cpath.buffer + 1) < cpath.size) {
+
+                char  *end = strchr(buf, KOS_PATH_LIST_SEPARATOR);
+                size_t base_len;
+
+                if ( ! end)
+                    end = cpath.buffer + cpath.size - 1;
+
+                base_len = end - buf;
+
+                TRY(_KOS_vector_resize(&cstr, base_len + 1 + len + 1));
+
+                memcpy(cstr.buffer, buf, base_len);
+                cstr.buffer[base_len] = KOS_PATH_SEPARATOR;
+                memcpy(&cstr.buffer[base_len + 1], argv0, len);
+                cstr.buffer[base_len + 1 + len] = 0;
+
+                if (_KOS_does_file_exist(cstr.buffer))
+                    break;
+
+                cstr.size = 0;
+
+                buf = end + 1;
+            }
+        }
+    }
+    else {
+        if (_KOS_seq_fail())
+            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+
+        TRY(_KOS_executable_path(&cstr));
     }
 
     TRY(_KOS_get_absolute_path(&cstr));
@@ -413,6 +449,7 @@ int KOS_context_add_default_path(KOS_FRAME frame, const char *fallback)
     TRY(KOS_context_add_path(frame, cstr.buffer));
 
 _error:
+    _KOS_vector_destroy(&cpath);
     _KOS_vector_destroy(&cstr);
 
     return error;
