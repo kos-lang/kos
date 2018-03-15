@@ -113,7 +113,7 @@ pass_check()
         [ "$REL_MOD_PATH" = "modules" ] || exit 1
     fi
     echo "$OUTPUT" > _mod_path_expected
-    if ! diff -q -i _mod_path_stdout _mod_path_expected; then
+    if ! diff -q -i -w _mod_path_stdout _mod_path_expected; then
         echo "Error: Test failed" >&2
         echo "       Expected: $OUTPUT" >&2
         echo "       Actual:   $(cat _mod_path_stdout)" >&2
@@ -166,12 +166,12 @@ fail_check()
     rm -f _mod_path_stdout
 }
 
-                           pass     "$HERE/module_paths" "$HERE/$REL_MOD_PATH"
-                           pass     "./module_paths"     "$HERE/$REL_MOD_PATH"
-PATH="$PATH:$HERE"         pass     module_paths         "$HERE/$REL_MOD_PATH"
-PATH="$PATH:."             pass     module_paths         "$HERE/$REL_MOD_PATH"
+                   pass "$HERE/module_paths" "$HERE/$REL_MOD_PATH"
+                   pass "./module_paths"     "$HERE/$REL_MOD_PATH"
+PATH="$HERE:$PATH" pass module_paths         "$HERE/$REL_MOD_PATH"
+PATH=".:$PATH"     pass module_paths         "$HERE/$REL_MOD_PATH"
 
-export KOSPATH="$HERE/../modules"
+export KOSPATH="$(fixpath "$HERE/../modules")"
 pass_kos 'print("Hello")'     "Hello"
 unset KOSPATH
 
