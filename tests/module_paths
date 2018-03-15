@@ -170,13 +170,21 @@ fail_check()
     rm -f _mod_path_stdout
 }
 
-                   pass "$HERE/module_paths" "$HERE/$REL_MOD_PATH"
-                   pass "./module_paths"     "$HERE/$REL_MOD_PATH"
-PATH="$HERE:$PATH" pass module_paths         "$HERE/$REL_MOD_PATH"
-PATH=".:$PATH"     pass module_paths         "$HERE/$REL_MOD_PATH"
+ORIG_PATH="$PATH"
+
+pass "$HERE/module_paths" "$HERE/$REL_MOD_PATH"
+
+pass "./module_paths" "$HERE/$REL_MOD_PATH"
+
+export PATH="$HERE:$ORIG_PATH"
+pass module_paths "$HERE/$REL_MOD_PATH"
+
+export PATH=".:$ORIG_PATH"
+pass module_paths "$HERE/$REL_MOD_PATH"
+export PATH="$ORIG_PATH"
 
 export KOSPATH="$(fixpath "$HERE/../modules")"
-pass_kos 'print("Hello")'     "Hello"
+pass_kos 'print("Hello")' "Hello"
 unset KOSPATH
 
 fail     ""
