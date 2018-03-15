@@ -46,7 +46,7 @@ esac
 if [ "$UNAME" = "Windows" ]; then
     fixpath()
     {
-        cygpath -w "$1"
+        [ -z "$1" ] || cygpath -w "$1"
     }
 else
     fixpath()
@@ -108,13 +108,16 @@ pass_check()
     COMMAND="$4"
     if [ $EXITCODE -ne 0 ]; then
         echo "Error: Test failed" >&2
-        echo "$COMMAND" >&2
+        echo "       $COMMAND" >&2
+        echo "       PATH=$PATH" >&2
         rm _mod_path_stdout
         [ "$REL_MOD_PATH" = "modules" ] || exit 1
     fi
     echo "$OUTPUT" > _mod_path_expected
     if ! diff -q -i -w _mod_path_stdout _mod_path_expected; then
         echo "Error: Test failed" >&2
+        echo "       $COMMAND" >&2
+        echo "       PATH=$PATH" >&2
         echo "       Expected: $OUTPUT" >&2
         echo "       Actual:   $(cat _mod_path_stdout)" >&2
         rm _mod_path_stdout _mod_path_expected
@@ -158,8 +161,9 @@ fail_check()
     COMMAND="$3"
     if [ $EXITCODE -eq 0 ]; then
         echo "Error: Test expected to fail but passed" >&2
-        echo "$COMMAND" >&2
-        echo "Output: $(cat _mod_path_stdout)" >&2
+        echo "       $COMMAND" >&2
+        echo "       PATH=$PATH" >&2
+        echo "       Output: $(cat _mod_path_stdout)" >&2
         rm _mod_path_stdout
         [ "$REL_MOD_PATH" = "modules" ] || exit 1
     fi
