@@ -93,6 +93,9 @@ static inline KOS_OBJ_ID TO_SMALL_INT(intptr_t value) {
 static inline bool IS_BAD_PTR(KOS_OBJ_ID obj_id) {
     return reinterpret_cast<intptr_t>(obj_id) == 1;
 }
+static inline bool IS_HEAP_OBJECT(KOS_OBJ_ID obj_id) {
+    return (reinterpret_cast<intptr_t>(obj_id) & 7) == 1;
+}
 static inline KOS_TYPE READ_OBJ_TYPE(KOS_OBJ_ID obj_id) {
     assert( ! IS_SMALL_INT(obj_id));
     assert( ! IS_BAD_PTR(obj_id));
@@ -130,6 +133,7 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 #define IS_NUMERIC_OBJ(obj_id) ( GET_OBJ_TYPE(obj_id) <= OBJ_FLOAT                 )
 #define OBJPTR(tag, obj_id)    ( (KOS_##tag *) ((intptr_t)(obj_id) - 1)            )
 #define IS_BAD_PTR(obj_id)     ( (intptr_t)(obj_id) == 1                           )
+#define IS_HEAP_OBJECT(obj_id) ( ((intptr_t)(obj_id) & 7) == 1                     )
 #define OBJID(tag, ptr)        ( (KOS_OBJ_ID) ((intptr_t)(ptr) + 1)                )
 #define READ_OBJ_TYPE(obj_id)  ( (KOS_TYPE) ((uint8_t *)(obj_id))[-1]              )
 #define GET_OBJ_TYPE(obj_id)   ( IS_SMALL_INT(obj_id) ? OBJ_SMALL_INTEGER : READ_OBJ_TYPE(obj_id) )
