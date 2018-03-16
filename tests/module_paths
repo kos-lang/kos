@@ -81,11 +81,17 @@ pass()
     local INPUT
     local OUTPUT
     local TESTPATH
+    local ORIGPATH
     EXITCODE=0
     INPUT=$(fixpath "$1")
     OUTPUT=$(fixpath "$2")
     TESTPATH="$3"
-    PATH="$TESTPATH" "$TEST" "$INPUT" > _mod_path_stdout || EXITCODE=$?
+    ORIGPATH="$PATH"
+
+    export PATH="$TESTPATH"
+    "$TEST" "$INPUT" > _mod_path_stdout || EXITCODE=$?
+    export PATH="$ORIGPATH"
+
     pass_check "$INPUT" "$OUTPUT" "$EXITCODE" "$TEST $INPUT" "$TESTPATH"
 }
 
@@ -95,12 +101,18 @@ pass_kos()
     local EXITCODE
     local INPUT
     local OUTPUT
+    local ORIGPATH
     EXITCODE=0
     INPUT="$1"
     OUTPUT="$2"
+    ORIGPATH="$PATH"
+
     cd_out
-    PATH="" "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" || EXITCODE=$?
+    export PATH=""
+    "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" || EXITCODE=$?
+    export PATH="$ORIGPATH"
     cd - >/dev/null
+
     pass_check "$INPUT" "$OUTPUT" "$EXITCODE" "$KOS -c $INPUT"
 }
 
@@ -122,6 +134,7 @@ pass_check()
         echo "       $COMMAND" >&2
         echo "       PATH=$TESTPATH" >&2
         rm _mod_path_stdout
+        exit 1
     fi
     echo "$OUTPUT" > _mod_path_expected
     if ! diff -q -i -w _mod_path_stdout _mod_path_expected; then
@@ -131,6 +144,7 @@ pass_check()
         echo "       Expected: $OUTPUT" >&2
         echo "       Actual:   $(cat _mod_path_stdout)" >&2
         rm _mod_path_stdout _mod_path_expected
+        exit 1
     fi
     rm -f _mod_path_stdout _mod_path_expected
 }
@@ -141,10 +155,16 @@ fail()
     local EXITCODE
     local INPUT
     local TESTPATH
+    local ORIGPATH
     EXITCODE=0
     INPUT=$(fixpath "$1")
     TESTPATH="$2"
-    PATH="$TESTPATH" "$TEST" "$INPUT" > _mod_path_stdout 2>&1 || EXITCODE=$?
+    ORIGPATH="$PATH"
+
+    export PATH="$TESTPATH"
+    "$TEST" "$INPUT" > _mod_path_stdout 2>&1 || EXITCODE=$?
+    export PATH="$ORIGPATH"
+
     fail_check "$INPUT" "$EXITCODE" "$TEST $INPUT" "$TESTPATH"
 }
 
@@ -153,11 +173,17 @@ fail_kos()
 {
     local EXITCODE
     local INPUT
+    local ORIGPATH
     EXITCODE=0
     INPUT="$1"
+    ORIGPATH="$PATH"
+
     cd_out
-    PATH="" "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" 2>&1 || EXITCODE=$?
+    export PATH=""
+    "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" 2>&1 || EXITCODE=$?
+    export PATH="$ORIGPATH"
     cd - >/dev/null
+
     fail_check "$INPUT" "$EXITCODE" "$KOS -c $INPUT"
 }
 
@@ -178,6 +204,7 @@ fail_check()
         echo "       PATH=$TESTPATH" >&2
         echo "       Output: $(cat _mod_path_stdout)" >&2
         rm _mod_path_stdout
+        exit 1
     fi
     rm -f _mod_path_stdout
 }
