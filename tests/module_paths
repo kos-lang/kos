@@ -44,17 +44,10 @@ esac
 
 # Function to convert path to OS-specific
 if [ "$UNAME" = "Windows" ]; then
-    if type -t cygpath >/dev/null 2>&1; then
-        fixpath()
-        {
-            [ -z "$1" ] || cygpath -w "$1"
-        }
-    else
-        fixpath()
-        {
-            echo "$1" | sed 's=^/\([a-zA-Z]\)/=\1:/=' | tr '/' '\\'
-        }
-    fi
+    fixpath()
+    {
+        echo "$1" | sed 's=^/cygpath== ; s=^/\([a-zA-Z]\)/=\1:/=' | tr '/' '\\'
+    }
 else
     fixpath()
     {
