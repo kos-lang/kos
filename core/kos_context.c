@@ -384,6 +384,9 @@ int KOS_context_add_default_path(KOS_FRAME frame, const char *argv0)
         /* Absolute or relative path */
         if (strchr(argv0, KOS_PATH_SEPARATOR)) {
 
+            if ( ! _KOS_does_file_exist(argv0))
+                RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+
             len += 1;
             TRY(_KOS_vector_resize(&cstr, len));
 
@@ -399,6 +402,8 @@ int KOS_context_add_default_path(KOS_FRAME frame, const char *argv0)
             buf = cpath.buffer;
 
             TRY(_KOS_vector_reserve(&cstr, cpath.size + len + 1));
+
+            cstr.size = 0;
 
             while ((size_t)(buf - cpath.buffer + 1) < cpath.size) {
 
@@ -424,6 +429,9 @@ int KOS_context_add_default_path(KOS_FRAME frame, const char *argv0)
 
                 buf = end + 1;
             }
+
+            if (cstr.size == 0)
+                RAISE_ERROR(KOS_ERROR_NOT_FOUND);
         }
     }
     else {

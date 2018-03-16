@@ -44,10 +44,17 @@ esac
 
 # Function to convert path to OS-specific
 if [ "$UNAME" = "Windows" ]; then
-    fixpath()
-    {
-        [ -z "$1" ] || cygpath -w "$1"
-    }
+    if type -t cygpath >/dev/null 2>&1; then
+        fixpath()
+        {
+            [ -z "$1" ] || cygpath -w "$1"
+        }
+    else
+        fixpath()
+        {
+            echo "$1" | sed 's=^/\([a-zA-Z]\)/=\1:/=' | tr '/' '\\'
+        }
+    fi
 else
     fixpath()
     {
@@ -73,11 +80,13 @@ pass()
     local EXITCODE
     local INPUT
     local OUTPUT
+    local TESTPATH
     EXITCODE=0
     INPUT=$(fixpath "$1")
     OUTPUT=$(fixpath "$2")
-    "$TEST" "$INPUT" > _mod_path_stdout || EXITCODE=$?
-    pass_check "$INPUT" "$OUTPUT" "$EXITCODE" "$TEST $INPUT"
+    TESTPATH="$3"
+    PATH="$TESTPATH" "$TEST" "$INPUT" > _mod_path_stdout || EXITCODE=$?
+    pass_check "$INPUT" "$OUTPUT" "$EXITCODE" "$TEST $INPUT" "$TESTPATH"
 }
 
 # Interpreter-based test which is expected to pass
@@ -90,7 +99,7 @@ pass_kos()
     INPUT="$1"
     OUTPUT="$2"
     cd_out
-    "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" || EXITCODE=$?
+    PATH="" "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" || EXITCODE=$?
     cd - >/dev/null
     pass_check "$INPUT" "$OUTPUT" "$EXITCODE" "$KOS -c $INPUT"
 }
@@ -102,26 +111,26 @@ pass_check()
     local OUTPUT
     local EXITCODE
     local COMMAND
+    local TESTPATH
     INPUT="$1"
     OUTPUT="$2"
     EXITCODE="$3"
     COMMAND="$4"
+    TESTPATH="$5"
     if [ $EXITCODE -ne 0 ]; then
         echo "Error: Test failed" >&2
         echo "       $COMMAND" >&2
-        echo "       PATH=$PATH" >&2
+        echo "       PATH=$TESTPATH" >&2
         rm _mod_path_stdout
-        [ "$REL_MOD_PATH" = "modules" ] || exit 1
     fi
     echo "$OUTPUT" > _mod_path_expected
     if ! diff -q -i -w _mod_path_stdout _mod_path_expected; then
         echo "Error: Test failed" >&2
         echo "       $COMMAND" >&2
-        echo "       PATH=$PATH" >&2
+        echo "       PATH=$TESTPATH" >&2
         echo "       Expected: $OUTPUT" >&2
         echo "       Actual:   $(cat _mod_path_stdout)" >&2
         rm _mod_path_stdout _mod_path_expected
-        [ "$REL_MOD_PATH" = "modules" ] || exit 1
     fi
     rm -f _mod_path_stdout _mod_path_expected
 }
@@ -131,10 +140,12 @@ fail()
 {
     local EXITCODE
     local INPUT
+    local TESTPATH
     EXITCODE=0
     INPUT=$(fixpath "$1")
-    "$TEST" "$INPUT" > _mod_path_stdout 2>&1 || EXITCODE=$?
-    fail_check "$INPUT" "$EXITCODE" "$TEST $INPUT"
+    TESTPATH="$2"
+    PATH="$TESTPATH" "$TEST" "$INPUT" > _mod_path_stdout 2>&1 || EXITCODE=$?
+    fail_check "$INPUT" "$EXITCODE" "$TEST $INPUT" "$TESTPATH"
 }
 
 # Interpreter-based test which is expected to fail
@@ -145,7 +156,7 @@ fail_kos()
     EXITCODE=0
     INPUT="$1"
     cd_out
-    "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" 2>&1 || EXITCODE=$?
+    PATH="" "$KOS" -c "$INPUT" > "$HERE/_mod_path_stdout" 2>&1 || EXITCODE=$?
     cd - >/dev/null
     fail_check "$INPUT" "$EXITCODE" "$KOS -c $INPUT"
 }
@@ -156,32 +167,26 @@ fail_check()
     local INPUT
     local EXITCODE
     local COMMAND
+    local TESTPATH
     INPUT="$1"
     EXITCODE="$2"
     COMMAND="$3"
+    TESTPATH="$4"
     if [ $EXITCODE -eq 0 ]; then
         echo "Error: Test expected to fail but passed" >&2
         echo "       $COMMAND" >&2
-        echo "       PATH=$PATH" >&2
+        echo "       PATH=$TESTPATH" >&2
         echo "       Output: $(cat _mod_path_stdout)" >&2
         rm _mod_path_stdout
-        [ "$REL_MOD_PATH" = "modules" ] || exit 1
     fi
     rm -f _mod_path_stdout
 }
 
-ORIG_PATH="$PATH"
-
 pass "$HERE/module_paths" "$HERE/$REL_MOD_PATH"
-
 pass "./module_paths" "$HERE/$REL_MOD_PATH"
-
-export PATH="$HERE:$ORIG_PATH"
-pass module_paths "$HERE/$REL_MOD_PATH"
-
-export PATH=".:$ORIG_PATH"
-pass module_paths "$HERE/$REL_MOD_PATH"
-export PATH="$ORIG_PATH"
+pass module_paths "$HERE/$REL_MOD_PATH" "$HERE"
+pass module_paths "$HERE/$REL_MOD_PATH" "./_dummy1:/dummy2/path:$HERE:other/dummy3"
+pass module_paths "$HERE/$REL_MOD_PATH" "."
 
 export KOSPATH="$(fixpath "$HERE/../modules")"
 pass_kos 'print("Hello")' "Hello"
@@ -190,4 +195,6 @@ unset KOSPATH
 fail     ""
 fail     ./_non_existent_file_
 fail     "$HERE/_non_existent_file_"
+fail     module_paths
+fail     module_paths "..:dummy_path"
 fail_kos 'print("Hello")'
