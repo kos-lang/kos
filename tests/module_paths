@@ -46,7 +46,7 @@ esac
 if [ "$UNAME" = "Windows" ]; then
     fixpath()
     {
-        echo "$1" | sed 's=^/cygpath== ; s=^/\([a-zA-Z]\)/=\1:/=' | tr '/' '\\'
+        echo "$1" | sed 's=^/cygdrive== ; s=^/\([a-zA-Z]\)/=\1:/=' | tr '/' '\\'
     }
 else
     fixpath()
