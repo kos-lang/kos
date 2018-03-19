@@ -376,7 +376,7 @@ int KOS_context_add_default_path(KOS_FRAME frame, const char *argv0)
 
     if (argv0) {
 
-        size_t len = argv0 ? strlen(argv0) : 0;
+        size_t len = strlen(argv0);
 
         if ( ! len)
             goto _error;
