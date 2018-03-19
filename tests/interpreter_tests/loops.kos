@@ -742,3 +742,34 @@ do {
     }
     assert total == 12
 }
+
+# multiple defers
+do {
+    fun f(x)
+    {
+        var a = 0
+
+        for var i = 0; i < 10; i += 2 {
+            do {
+                defer { a = a * 10 + i + 1 }
+                if i == x {
+                    break
+                }
+            }
+
+            do {
+                defer { a = a * 10 + i + 2 }
+                if i + 1 == x {
+                    break
+                }
+            }
+        }
+
+        return a
+    }
+
+    assert f(0) == 1
+    assert f(1) == 12
+    assert f(2) == 123
+    assert f(3) == 1234
+}

@@ -30,15 +30,18 @@ struct _KOS_AST_NODE;
 struct _KOS_MEMPOOL;
 
 struct _KOS_PARSER {
-    struct _KOS_MEMPOOL *ast_buf;
-    const char          *error_str;
-    struct _KOS_LEXER    lexer;
-    struct _KOS_TOKEN    token;
-    int                  unget;
-    int                  had_eol;
-    int                  allow_break;
-    int                  in_constructor;
-    int                  unary_depth; /* For detecting ambiguous syntax */
+    struct _KOS_MEMPOOL  *ast_buf;
+    const char           *error_str;
+    struct _KOS_LEXER     lexer;
+    struct _KOS_TOKEN     token;
+    int                   unget;
+    int                   had_eol;
+    int                   allow_continue;
+    int                   allow_break;
+    int                   allow_fallthrough;
+    struct _KOS_AST_NODE *last_fallthrough;
+    int                   in_constructor;
+    int                   unary_depth; /* For detecting ambiguous syntax */
 };
 
 void _KOS_parser_init(struct _KOS_PARSER  *parser,

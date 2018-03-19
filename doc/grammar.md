@@ -457,6 +457,7 @@ Statement
                 | ForStatement
                 | ContinueStatement
                 | BreakStatement
+                | FallthroughStatement
                 | ReturnStatement
                 | ThrowStatement
                 | AssertStatement
@@ -735,9 +736,12 @@ The switch statement consists of an expression and case sections executed
 depending on the value of that expression.  The parentheses around the
 expression are optional (they are treated as part of the expression).
 
-Each new case section begins with a "case" keyword followed by right-hand-side
-expression or with "default" keyword, and is followed by a compound statement, a
-fallthrough statement or both (in that order).
+Each new case section begins with a "case" keyword followed by one or more
+right-hand-side expressions separated with comas followed by a colon, or with
+"default" keyword followed by a colon, and is followed by at least one statement.
+
+Each case section constitutes a new scope.  Variables declared inside a case
+section are not visible in other case sections.
 
 The "default" case is optional.
 
@@ -752,27 +756,21 @@ If the value of the switch expressions does not match any right-hand-side
 expression, then the compound statement following `default` is
 executed, if it exists, otherwise the switch statement terminates.
 
-If there is no fallthrough statement following a compound statement, then
-the switch statement terminates after that compound statement is executed.
+If a fallthrough statement is found inside any case section, the switch
+statement does not terminate, but the execution continues in the next case
+section, regardless of whether the switch expression matches the condition
+in that case statement or not.
 
-If a fallthrough statement is executed following a compound statement or
-following a matching right-hand-side expression, the switch statement does not
-terminate, but the execution continues in the next defined case section, as if
-the right-hand-side expression (or "default") for that section matched.
+A fallthrough statement is not allowed in the last case section.
 
     SwitchStatement ::= "switch" RHSExpression
                         "{" ( SwitchCase )* [ DefaultCase ] ( SwitchCase )* "}"
 
-    SwitchCase      ::= "case" CaseSpec CaseStatement
+    SwitchCase      ::= "case" CaseSpec ":" Statement ( Statement )*
 
-    DefaultCase     ::= "default" CaseStatement
+    DefaultCase     ::= "default" ":" Statement ( Statement )*
 
-    CaseSpec        ::= RHSExpression
-
-    CaseStatement   ::= ( CompoundStatement [ Fallthrough ] )
-                        | Fallthrough
-
-    Fallthrough     ::= "fallthrough" OptSemicolon
+    CaseSpec        ::= RHSExpression ( "," RHSExpression )*
 
 
 Loop statement
@@ -895,14 +893,27 @@ the innermost loop when executed.
 Break statement
 ---------------
 
-The break statement is legal only inside for, loop, while or repeat-while
-loops.  If used in the global scope or in a function outside of the loop
-statements, it will produce a compilation error.
+The break statement is legal only inside for, loop, while, repeat-while and
+switch statement.  If used in the global scope or in a function outside of
+one of the above statements, it will produce a compilation error.
 
-If used in a loop, the statement interrupts the loop as if it ended
-immediately, no matter what the loop condition is.
+The statement interrupts the loop or switch statement and causes the execution
+flow to contine after the loop or switch statement.
 
     BreakStatement ::= "break" OptSemicolon
+
+
+Fallthrough statement
+---------------------
+
+The fallthrough statement is legal only inside a switch statement.  It can
+occur at any place inside a switch statement, except the last case/default
+block.
+
+The fallthrough statement causes execution to continue in the next case
+block even if the switch's tested expression doesn't match the case.
+
+    FallthroughStatement ::= "fallthrough" OptSemicolon
 
 
 Return statement

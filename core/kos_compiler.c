@@ -1612,23 +1612,54 @@ static void _finish_break_continue(struct _KOS_COMP_UNIT  *program,
                                    int                     continue_tgt_offs,
                                    struct _KOS_BREAK_OFFS *old_break_offs)
 {
-    struct _KOS_BREAK_OFFS *break_offs     = program->cur_frame->break_offs;
-    const int               break_tgt_offs = program->cur_offs;
+    struct _KOS_BREAK_OFFS *break_offs      = program->cur_frame->break_offs;
+    const int               break_tgt_offs  = program->cur_offs;
+    const int               unsup_node_type = continue_tgt_offs >= 0 ? NT_FALLTHROUGH : NT_CONTINUE;
 
     while (break_offs) {
         struct _KOS_BREAK_OFFS *next = break_offs->next;
 
-        assert(break_offs->type == NT_CONTINUE ||
-               break_offs->type == NT_BREAK);
+        assert(break_offs->type == NT_BREAK    ||
+               break_offs->type == NT_CONTINUE ||
+               break_offs->type == NT_FALLTHROUGH);
+        assert(break_offs->type != NT_FALLTHROUGH || continue_tgt_offs >= 0);
 
-        _update_jump_offs(program, break_offs->offs,
-                break_offs->type == NT_CONTINUE
-                ? continue_tgt_offs : break_tgt_offs);
+        if (break_offs->type == unsup_node_type) {
+            break_offs->next = old_break_offs;
+            old_break_offs   = break_offs;
+        }
+        else
+            _update_jump_offs(program, break_offs->offs,
+                    break_offs->type != NT_BREAK
+                    ? continue_tgt_offs : break_tgt_offs);
 
         break_offs = next;
     }
 
     program->cur_frame->break_offs = old_break_offs;
+}
+
+static void _finish_fallthrough(struct _KOS_COMP_UNIT *program)
+{
+    struct _KOS_BREAK_OFFS **remaining_offs       = &program->cur_frame->break_offs;
+    struct _KOS_BREAK_OFFS  *break_offs           = *remaining_offs;
+    const int                fallthrough_tgt_offs = program->cur_offs;
+
+    *remaining_offs = 0;
+
+    while (break_offs) {
+
+        struct _KOS_BREAK_OFFS *next = break_offs->next;
+
+        if (break_offs->type == NT_FALLTHROUGH)
+            _update_jump_offs(program, break_offs->offs, fallthrough_tgt_offs);
+        else {
+            break_offs->next = *remaining_offs;
+            *remaining_offs  = break_offs;
+        }
+
+        break_offs = next;
+    }
 }
 
 /* Saves last try scope before the loop, used for restoring catch offset */
@@ -1668,12 +1699,9 @@ static int _repeat(struct _KOS_COMP_UNIT      *program,
 
     TRY(_add_addr2line(program, &node->token, _KOS_FALSE));
 
-    if (_KOS_node_is_falsy(program, node))
-        _finish_break_continue(program, program->cur_offs, old_break_offs);
+    test_instr_offs = program->cur_offs;
 
-    else {
-
-        test_instr_offs = program->cur_offs;
+    if ( ! _KOS_node_is_falsy(program, node)) {
 
         TRY(_visit_node(program, node, &reg));
         assert(reg);
@@ -1683,11 +1711,12 @@ static int _repeat(struct _KOS_COMP_UNIT      *program,
         jump_instr_offs = program->cur_offs;
         TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
         _update_jump_offs(program, jump_instr_offs, loop_start_offs);
-
-        _finish_break_continue(program, test_instr_offs, old_break_offs);
-
-        _free_reg(program, reg);
     }
+
+    _finish_break_continue(program, test_instr_offs, old_break_offs);
+
+    if (reg)
+        _free_reg(program, reg);
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
@@ -1703,8 +1732,6 @@ static int _while(struct _KOS_COMP_UNIT      *program,
     struct _KOS_SCOPE          *prev_try_scope = _push_try_scope(program);
     const struct _KOS_AST_NODE *cond_node      = node->children;
 
-    program->cur_frame->break_offs = 0;
-
     assert(cond_node);
 
     if ( ! _KOS_node_is_falsy(program, cond_node)) {
@@ -1715,6 +1742,8 @@ static int _while(struct _KOS_COMP_UNIT      *program,
         int              loop_start_offs;
         int              continue_offs;
         int              offs;
+
+        program->cur_frame->break_offs = 0;
 
         if ( ! is_truthy) {
 
@@ -1770,8 +1799,6 @@ static int _while(struct _KOS_COMP_UNIT      *program,
 
         _finish_break_continue(program, continue_offs, old_break_offs);
     }
-    else
-        program->cur_frame->break_offs = old_break_offs;
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
@@ -1787,8 +1814,6 @@ static int _for(struct _KOS_COMP_UNIT      *program,
     struct _KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
     struct _KOS_SCOPE          *prev_try_scope = _push_try_scope(program);
 
-    program->cur_frame->break_offs = 0;
-
     assert(cond_node);
 
     if ( ! _KOS_node_is_falsy(program, cond_node)) {
@@ -1799,6 +1824,8 @@ static int _for(struct _KOS_COMP_UNIT      *program,
         int                         step_instr_offs;
         const struct _KOS_AST_NODE *step_node;
         struct _KOS_REG            *reg                  = 0;
+
+        program->cur_frame->break_offs = 0;
 
         TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
 
@@ -1856,8 +1883,6 @@ static int _for(struct _KOS_COMP_UNIT      *program,
 
         _finish_break_continue(program, step_instr_offs, old_break_offs);
     }
-    else
-        program->cur_frame->break_offs = old_break_offs;
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
@@ -2076,8 +2101,8 @@ static int _push_break_offs(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _break_continue(struct _KOS_COMP_UNIT      *program,
-                           const struct _KOS_AST_NODE *node)
+static int _break_continue_fallthrough(struct _KOS_COMP_UNIT      *program,
+                                       const struct _KOS_AST_NODE *node)
 {
     int error;
 
@@ -2127,6 +2152,9 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
     int                         i_default_case  = -1;
     int                         final_jump_offs = -1;
     struct _KOS_SWITCH_CASE    *cases           = 0;
+    struct _KOS_BREAK_OFFS     *old_break_offs  = program->cur_frame->break_offs;
+
+    program->cur_frame->break_offs = 0;
 
     node = node->children;
     assert(node);
@@ -2260,6 +2288,9 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
 
         _update_jump_offs(program, cases[i_case].to_jump_offs, program->cur_offs);
 
+        if (i_case)
+            _finish_fallthrough(program);
+
         cases[i_case].final_jump_offs = -1;
 
         if (child_node->type != NT_FALLTHROUGH) {
@@ -2294,6 +2325,8 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
             _update_jump_offs(program, offs, program->cur_offs);
     }
 
+    _finish_break_continue(program, -1, old_break_offs);
+
 _error:
     return error;
 }
@@ -2307,7 +2340,7 @@ static void _update_child_scope_catch(struct _KOS_COMP_UNIT *program)
 
     for ( ; scope; scope = scope->catch_ref.next) {
         size_t i;
-        for (i = 0; i < sizeof(scope->catch_ref.catch_offs)/sizeof(int); i++) {
+        for (i = 0; i < sizeof(scope->catch_ref.catch_offs) / sizeof(int); i++) {
             const int instr_offs = scope->catch_ref.catch_offs[i];
             if (instr_offs)
                 _update_jump_offs(program, instr_offs, dest_offs);
@@ -2323,28 +2356,33 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     int                         error;
     int                         jump_end_offs;
     int                         catch_offs;
-    struct _KOS_REG            *except_reg   = 0;
-    struct _KOS_VAR            *except_var   = 0;
-    struct _KOS_RETURN_OFFS    *return_offs  = program->cur_frame->return_offs;
-    const struct _KOS_AST_NODE *try_node     = node->children;
+    struct _KOS_REG            *except_reg     = 0;
+    struct _KOS_VAR            *except_var     = 0;
+    struct _KOS_RETURN_OFFS    *return_offs    = program->cur_frame->return_offs;
+    struct _KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
+    const struct _KOS_AST_NODE *try_node       = node->children;
     const struct _KOS_AST_NODE *catch_node;
-    const struct _KOS_AST_NODE *finally_node;
+    const struct _KOS_AST_NODE *defer_node;
     struct _KOS_SCOPE          *scope;
 
     scope = _push_scope(program, node);
 
+    program->cur_frame->break_offs = 0;
+
     assert(try_node);
     catch_node = try_node->next;
     assert(catch_node);
-    finally_node = catch_node->next;
-    assert(finally_node);
-    assert(!finally_node->next);
+    defer_node = catch_node->next;
+    assert(defer_node);
+    assert(!defer_node->next);
+
+    assert(catch_node->type == NT_EMPTY || defer_node->type == NT_EMPTY);
 
     if (catch_node->type == NT_CATCH) {
 
         struct _KOS_AST_NODE *variable;
 
-        assert(finally_node->type == NT_EMPTY);
+        assert(defer_node->type == NT_EMPTY);
 
         node = catch_node->children;
         assert(node);
@@ -2372,7 +2410,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     else {
 
         assert(catch_node->type == NT_EMPTY);
-        assert(finally_node->type == NT_SCOPE);
+        assert(defer_node->type == NT_SCOPE);
 
         TRY(_gen_reg(program, &except_reg));
 
@@ -2420,13 +2458,17 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
         except_var->is_active = VAR_INACTIVE;
     }
 
-    /* Finally section */
+    /* Defer section (defer is implemented as try-finally) */
 
     _update_jump_offs(program, jump_end_offs, program->cur_offs);
 
-    if (finally_node->type == NT_SCOPE) {
+    if (defer_node->type == NT_SCOPE) {
 
-        int skip_throw_offs;
+        int                     skip_throw_offs;
+        struct _KOS_BREAK_OFFS *try_break_offs = program->cur_frame->break_offs;
+
+        program->cur_frame->break_offs = old_break_offs;
+        old_break_offs                 = 0;
 
         {
             struct _KOS_RETURN_OFFS *tmp    = program->cur_frame->return_offs;
@@ -2435,7 +2477,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
             scope->catch_ref.finally_active = 0;
         }
 
-        TRY(_scope(program, finally_node));
+        TRY(_scope(program, defer_node));
 
         skip_throw_offs = program->cur_offs;
 
@@ -2443,87 +2485,81 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
         TRY(_gen_instr1(program, INSTR_THROW, except_reg->reg));
 
-        /* Finally section for break and continue */
+        /* Defer section for break, continue and fallthrough */
 
-        if (program->cur_frame->break_offs) {
+        if (try_break_offs) {
 
-            struct _KOS_BREAK_OFFS *break_offs         = program->cur_frame->break_offs;
-            int                     break_jump_offs    = 0;
-            int                     continue_jump_offs = 0;
+            struct _KOS_BREAK_OFFS *break_offs   = try_break_offs;
+            int                     jump_offs[3] = { 0, 0, 0 };
+            enum _KOS_NODE_TYPE     node_type[3] = { NT_BREAK, NT_CONTINUE, NT_FALLTHROUGH };
+            int                     i;
 
             while (break_offs) {
+
                 assert(break_offs->type == NT_CONTINUE ||
-                       break_offs->type == NT_BREAK);
-                if (break_offs->type == NT_CONTINUE) {
-                    continue_jump_offs = 1;
-                    _update_jump_offs(program, break_offs->offs, program->cur_offs);
-                }
-                else
-                    break_jump_offs = 1;
+                       break_offs->type == NT_BREAK    ||
+                       break_offs->type == NT_FALLTHROUGH);
+
+                for (i = 0; i < (int)(sizeof(jump_offs) / sizeof(jump_offs[0])); i++)
+                    if (break_offs->type == node_type[i]) {
+                        jump_offs[i] = 1;
+                        break;
+                    }
+
                 break_offs = break_offs->next;
             }
 
-            if (continue_jump_offs) {
+            for (i = 0; i < (int)(sizeof(jump_offs) / sizeof(jump_offs[0])); i++) {
 
-                TRY(_restore_parent_scope_catch(program, 3));
+                const enum _KOS_NODE_TYPE type = node_type[i];
 
-                TRY(_scope(program, finally_node));
+                if ( ! jump_offs[i])
+                    continue;
 
-                continue_jump_offs = program->cur_offs;
+                for (break_offs = try_break_offs; break_offs; break_offs = break_offs->next)
+                    if (break_offs->type == type)
+                        _update_jump_offs(program, break_offs->offs, program->cur_offs);
 
-                TRY(_gen_instr1(program, INSTR_JUMP, 0));
-            }
+                TRY(_restore_parent_scope_catch(program, i + 2));
 
-            break_offs = program->cur_frame->break_offs;
+                TRY(_scope(program, defer_node));
 
-            while (break_offs) {
-                struct _KOS_BREAK_OFFS *cur = break_offs;
-                break_offs                  = break_offs->next;
-
-                if (cur->type == NT_BREAK)
-                    _update_jump_offs(program, cur->offs, program->cur_offs);
-            }
-
-            program->cur_frame->break_offs = 0;
-
-            if (break_jump_offs) {
-
-                TRY(_restore_parent_scope_catch(program, 4));
-
-                TRY(_scope(program, finally_node));
-
-                break_jump_offs = program->cur_offs;
+                TRY(_push_break_offs(program, type));
+                program->cur_frame->break_offs->offs = program->cur_offs;
 
                 TRY(_gen_instr1(program, INSTR_JUMP, 0));
-
-                TRY(_push_break_offs(program, NT_BREAK));
-
-                program->cur_frame->break_offs->offs = break_jump_offs;
-            }
-
-            if (continue_jump_offs) {
-
-                TRY(_push_break_offs(program, NT_CONTINUE));
-
-                program->cur_frame->break_offs->offs = continue_jump_offs;
             }
         }
 
-        /* Finally section for return statement */
+        /* Defer section for return statement */
 
         if (return_offs) {
 
             for ( ; return_offs; return_offs = return_offs->next)
                 _update_jump_offs(program, return_offs->offs, program->cur_offs);
 
-            TRY(_restore_parent_scope_catch(program, 4));
+            TRY(_restore_parent_scope_catch(program, 5));
 
-            TRY(_scope(program, finally_node));
+            TRY(_scope(program, defer_node));
 
             TRY(_gen_return(program, except_reg->reg));
         }
 
         _update_jump_offs(program, skip_throw_offs, program->cur_offs);
+    }
+
+    if (old_break_offs) {
+        if (program->cur_frame->break_offs) {
+
+            struct _KOS_BREAK_OFFS **break_offs = &program->cur_frame->break_offs;
+
+            while (*break_offs)
+                break_offs = &(*break_offs)->next;
+
+            *break_offs = old_break_offs;
+        }
+        else
+            program->cur_frame->break_offs = old_break_offs;
     }
 
     _free_reg(program, except_reg);
@@ -4693,7 +4729,9 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
         case NT_CONTINUE:
             /* fall through */
         case NT_BREAK:
-            error = _break_continue(program, node);
+            /* fall through */
+        case NT_FALLTHROUGH:
+            error = _break_continue_fallthrough(program, node);
             break;
         case NT_SWITCH:
             error = _switch(program, node);

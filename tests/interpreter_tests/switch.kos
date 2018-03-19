@@ -3,15 +3,15 @@ do {
     {
         switch a {
 
-            case void  { return 1 }
+            case void:  return 1 
 
-            case true  { return 2 } fallthrough
+            case true:  return 2; fallthrough
 
-            case false { return 3 }
+            case false: return 3 
 
-            case "x"   { return 4 }
+            case "x":   return 4 
 
-            case 89    { return 5 }
+            case 89:    return 5 
         }
         return void
     }
@@ -40,7 +40,7 @@ do {
     fun test(x)
     {
         switch x {
-            case 5 { return true }
+            case 5: return true
         }
         return false
     }
@@ -54,7 +54,7 @@ do {
     var a = 1
 
     switch 8 {
-        default { a = 2 }
+        default: a = 2
     }
 
     assert a == 2
@@ -67,29 +67,21 @@ do {
 
         switch a + 1 {
 
-            case 1 {
+            case 1:
                 ret += "a"
-            }
 
-            case 2 {
+            case 2:
                 ret += "b"
-            }
-            fallthrough
+                fallthrough
 
-            case 3 {
+            case 3:
                 ret += "c"
-            }
 
-            default {
+            default:
                 ret += "d"
-            }
 
-            case 4 fallthrough
-            case 5 fallthrough
-
-            case 6 {
+            case 4, 5, 6:
                 ret += "e"
-            }
         }
 
         return ret
@@ -109,13 +101,12 @@ do {
     var sum = 0
     for var i = 1; i < 10; i += 1 {
         switch i {
-            case 2 fallthrough
-            case 4 fallthrough
-            case 5 { continue }
+            case 2, 4, 5:
+                continue
 
-            default   { sum = sum * 10 + i }
+            default: sum = sum * 10 + i
 
-            case 8 { break }
+            case 8: i = 10
         }
     }
 
@@ -128,8 +119,8 @@ do {
         const x = 1
         const y = 2
         switch (a) {
-            case x { return 7 }
-            case y { return 14 }
+            case x: return 7
+            case y: return 14
         }
         return 0
     }
@@ -144,10 +135,8 @@ do {
     fun select(a)
     {
         switch a + 1 {
-            case 0 fallthrough
-            case 1 fallthrough
-            case 2 { return a }
-            case x * 2 { return 10 }
+            case 0, 1, 2: return a
+            case x * 2:   return 10
         }
     }
 
@@ -158,4 +147,190 @@ do {
     assert select(2)  == void
     assert select(3)  == 10
     assert select(4)  == void
+}
+
+do {
+    fun select(a)
+    {
+        switch a {
+
+            case 1: break
+
+            case 2: break
+
+            case 3: return 10
+
+            case 4: break
+        }
+
+        return -a - 1
+    }
+
+    assert select(1) == -2
+    assert select(2) == -3
+    assert select(3) == 10
+    assert select(4) == -5
+}
+
+do {
+    fun vars(a)
+    {
+        switch a {
+
+            case 1:
+                var b = 1
+                b += a
+                return b
+
+            case 2:
+                var b = 10
+                b -= a
+                return b
+        }
+    }
+
+    assert vars(1) == 2
+    assert vars(2) == 8
+}
+
+do {
+    constructor pusher(init = 0)
+    {
+        this.value = init
+    }
+
+    pusher.prototype.push = fun(x)
+    {
+        this.value = this.value * 10 + x
+    }
+
+    fun defer_in_switch(a)
+    {
+        const seq = pusher()
+
+        switch a {
+            case "x", "y", "xy":
+                defer {
+                    seq.push(1)
+                }
+                seq.push(a[0] == "x" ? 2 : 3)
+                if a == "y" {
+                    break
+                }
+                seq.push(4)
+
+            case "a", "b", "c":
+                if a == "a" {
+                    seq.push(5)
+                    fallthrough
+                }
+                try {
+                    defer {
+                        seq.push(6)
+                        if a == "c" {
+                            break
+                        }
+                    }
+                    if a == "b" {
+                        throw 7
+                    }
+                    seq.push(8)
+                }
+                catch const e {
+                    seq.push(0)
+                    seq.push(e.value)
+                    seq.push(0)
+                }
+                seq.push(9)
+
+            case "d":
+                seq.push(1)
+        }
+
+        return seq.value
+    }
+
+    assert defer_in_switch("x")  == 241
+    assert defer_in_switch("y")  == 31
+    assert defer_in_switch("xy") == 241
+
+    assert defer_in_switch("a")  == 51
+    assert defer_in_switch("b")  == 60709
+    assert defer_in_switch("c")  == 86
+    assert defer_in_switch("d")  == 1
+}
+
+do {
+    constructor pusher(init = "")
+    {
+        this.value = init
+    }
+
+    pusher.prototype.push = fun(x)
+    {
+        this.value += x
+    }
+
+    fun defer_in_switch(a, b)
+    {
+        const seq = pusher()
+
+        for var i = 0; i < 2; i += 1, seq.push("\(i)") {
+
+            switch a {
+
+                case "A":
+                    seq.push("a")
+                    if b == 1 {
+                        seq.push("b")
+                        break
+                    }
+                    if b == 2 {
+                        seq.push("c")
+                        fallthrough
+                    }
+                    if b == 3 {
+                        seq.push("d")
+                        continue
+                    }
+                    defer {
+                        defer {
+                            seq.push("e")
+                        }
+                        seq.push("f")
+                        if b == 4 {
+                            seq.push("g")
+                            break
+                        }
+                        if b == 5 {
+                            seq.push("h")
+                            fallthrough
+                        }
+                        if b == 6 {
+                            seq.push("i")
+                            continue
+                        }
+                    }
+                    seq.push("j")
+
+                case "B":
+                    seq.push("k")
+            }
+
+            seq.push("l")
+
+            break
+        }
+
+        return seq.value
+    }
+
+    assert defer_in_switch("B", 0) == "kl"
+    assert defer_in_switch("A", 1) == "abl"
+    assert defer_in_switch("A", 2) == "ackl"
+    assert defer_in_switch("A", 3) == "ad1ad2"
+    assert defer_in_switch("A", 4) == "ajfgel"
+    assert defer_in_switch("A", 5) == "ajfhekl"
+    assert defer_in_switch("A", 6) == "ajfie1ajfie2"
+    assert defer_in_switch("A", 7) == "ajfel"
 }

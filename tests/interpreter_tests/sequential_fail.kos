@@ -46,9 +46,9 @@ do {
     const obj  = { a : line, b : line + 1 }
     for const key, value in shallow(obj) {
         switch key {
-            case "a" { assert value == line }
-            case "b" { assert value == line + 1 }
-            default  { throw "invalid " + "key" }
+            case "a": assert value == line
+            case "b": assert value == line + 1
+            default:  throw "invalid " + "key"
         }
     }
 }
