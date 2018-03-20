@@ -1612,9 +1612,9 @@ static void _finish_break_continue(struct _KOS_COMP_UNIT  *program,
                                    int                     continue_tgt_offs,
                                    struct _KOS_BREAK_OFFS *old_break_offs)
 {
-    struct _KOS_BREAK_OFFS *break_offs      = program->cur_frame->break_offs;
-    const int               break_tgt_offs  = program->cur_offs;
-    const int               unsup_node_type = continue_tgt_offs >= 0 ? NT_FALLTHROUGH : NT_CONTINUE;
+    struct _KOS_BREAK_OFFS   *break_offs      = program->cur_frame->break_offs;
+    const int                 break_tgt_offs  = program->cur_offs;
+    const enum _KOS_NODE_TYPE unsup_node_type = continue_tgt_offs >= 0 ? NT_FALLTHROUGH : NT_CONTINUE;
 
     while (break_offs) {
         struct _KOS_BREAK_OFFS *next = break_offs->next;
