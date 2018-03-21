@@ -194,14 +194,14 @@ do {
 }
 
 do {
-    constructor pusher(init = 0)
-    {
-        this.value = init
-    }
+    class pusher {
+        constructor(init = 0) {
+            this.value = init
+        }
 
-    pusher.prototype.push = fun(x)
-    {
-        this.value = this.value * 10 + x
+        push(x) {
+            this.value = this.value * 10 + x
+        }
     }
 
     fun defer_in_switch(a)
@@ -261,14 +261,14 @@ do {
 }
 
 do {
-    constructor pusher(init = "")
-    {
-        this.value = init
-    }
+    class pusher {
+        constructor(init = "") {
+            this.value = init
+        }
 
-    pusher.prototype.push = fun(x)
-    {
-        this.value += x
+        push(x) {
+            this.value += x
+        }
     }
 
     fun defer_in_switch(a, b)

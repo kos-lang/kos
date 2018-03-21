@@ -34,101 +34,100 @@ fun remove_indentation(lines)
     }
 }
 
-constructor create_docs
-{
-}
+class create_docs {
 
-create_docs.prototype.scan_file = fun(filename, f)
-{
-    fun is_cpp
+    scan_file(filename, f)
     {
-        return filename.ends_with(".h")
-            || filename.ends_with(".c")
-            || filename.ends_with(".cpp")
-    }
-    const lexer =
-        is_cpp()                   ? kos.raw_lexer(f.read(), true) :
-        filename.ends_with(".kos") ? kos.lexer(filename, f.read()) :
-        fun { throw "Unrecognized file type: '\(filename)'" }()
+        fun is_cpp
+        {
+            return filename.ends_with(".h")
+                || filename.ends_with(".c")
+                || filename.ends_with(".cpp")
+        }
+        const lexer =
+            is_cpp()                   ? kos.raw_lexer(f.read(), true) :
+            filename.ends_with(".kos") ? kos.lexer(filename, f.read()) :
+            fun { throw "Unrecognized file type: '\(filename)'" }()
 
-    var   prev_line = -1
-    const comments  = []
-    for const token in lexer {
-        if token.type == kos.token_comment {
-            var comment = token.token
-            if comment.starts_with("#") {
+        var   prev_line = -1
+        const comments  = []
+        for const token in lexer {
+            if token.type == kos.token_comment {
+                var comment = token.token
+                if comment.starts_with("#") {
+                    comment = comment[1:]
+                }
+                else if comment.starts_with("/*") {
+                    var star_offs = -1
+                    var pos       = comment.scan("\n")
+                    if pos > -1 {
+                        pos = comment.scan("\n", pos, false)
+                    }
+                    if pos > -1 && comment[pos] != " " {
+                        pos = -1
+                    }
+                    const next_line_pos = pos
+                    if pos > -1 {
+                        pos = comment.scan(" ", pos, false)
+                    }
+                    if pos > -1 && comment[pos] == "*" {
+                        star_offs = pos - next_line_pos
+                    }
+
+                    comment = comment[2:-2]
+
+                    if star_offs == token.column {
+                        comment = "*".rjust(star_offs + 1) + comment
+                    }
+                }
+                else { # //
+                    comment = comment[2:]
+                }
+
+                if token.line == prev_line + 1 {
+                    comments[-1] = comments[-1] + "\n" + comment
+                }
+                else {
+                    comments.push(comment)
+                }
+
+                prev_line = token.line
+            }
+        }
+
+        for var comment in comments {
+            comment = [comment.split_lines()...]
+
+            remove_indentation(comment)
+
+            while comment.size && comment[0].scan(" \r\n\t", false) == -1 {
                 comment = comment[1:]
             }
-            else if comment.starts_with("/*") {
-                var star_offs = -1
-                var pos       = comment.scan("\n")
-                if pos > -1 {
-                    pos = comment.scan("\n", pos, false)
-                }
-                if pos > -1 && comment[pos] != " " {
-                    pos = -1
-                }
-                const next_line_pos = pos
-                if pos > -1 {
-                    pos = comment.scan(" ", pos, false)
-                }
-                if pos > -1 && comment[pos] == "*" {
-                    star_offs = pos - next_line_pos
-                }
 
-                comment = comment[2:-2]
-
-                if star_offs == token.column {
-                    comment = "*".rjust(star_offs + 1) + comment
-                }
-            }
-            else { # //
-                comment = comment[2:]
+            if ! comment.size || ! comment[0].lstrip().starts_with("@") {
+                continue
             }
 
-            if token.line == prev_line + 1 {
-                comments[-1] = comments[-1] + "\n" + comment
+            const loc = [comment[0].split()...]
+
+            if loc.size < 2 {
+                continue
             }
-            else {
-                comments.push(comment)
-            }
 
-            prev_line = token.line
-        }
-    }
+            const type, topic, item = loc
 
-    for var comment in comments {
-        comment = [comment.split_lines()...]
-
-        remove_indentation(comment)
-
-        while comment.size && comment[0].scan(" \r\n\t", false) == -1 {
             comment = comment[1:]
-        }
 
-        if ! comment.size || ! comment[0].lstrip().starts_with("@") {
-            continue
-        }
-
-        const loc = [comment[0].split()...]
-
-        if loc.size < 2 {
-            continue
-        }
-
-        const type, topic, item = loc
-
-        comment = comment[1:]
-
-        while comment.size && comment[0].scan(" \r\n\t", false) == -1 {
-            comment = comment[1:]
-        }
-
-        if type == "@item" {
-            if ! (topic in this) {
-                this[topic] = { }
+            while comment.size && comment[0].scan(" \r\n\t", false) == -1 {
+                comment = comment[1:]
             }
-            this[topic][item] = comment
+
+            if type == "@item" {
+                if ! (topic in this) {
+                    this[topic] = { }
+                }
+                this[topic][item] = comment
+            }
         }
     }
 }

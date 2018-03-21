@@ -2,32 +2,31 @@
 
 import lang.print
 
-constructor new_fib
-{
-    this.prev = 1
-    this.cur  = 1
-}
+class new_fib {
 
-new_fib.set_prototype({
-
-    get_prev: () => (this.prev),
-    get_cur:  () => (this.cur),
-
-    reset: fun {
+    constructor {
         this.prev = 1
         this.cur  = 1
-    },
+    }
 
-    set_next: fun(next) {
+    get_prev { return this.prev }
+    get_cur  { return this.cur  }
+
+    reset {
+        this.prev = 1
+        this.cur  = 1
+    }
+
+    set_next(next) {
         this.prev = this.cur
         this.cur  = next
-    },
+    }
 
-    advance: fun {
+    advance {
         this.set_next( this.get_prev() + this.get_cur() )
-    },
+    }
 
-    execute: fun(n) {
+    execute(n) {
         for var i = 0; i < n; i += 1 {
             this.advance()
         }
@@ -35,7 +34,7 @@ new_fib.set_prototype({
         this.reset()
         return ret
     }
-})
+}
 
 const fib = new_fib()
 
