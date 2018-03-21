@@ -4676,6 +4676,58 @@ _error:
     return error;
 }
 
+static int _class_literal(struct _KOS_COMP_UNIT      *program,
+                          const struct _KOS_AST_NODE *node,
+                          struct _KOS_REG           **reg)
+{
+    int              error     = KOS_SUCCESS;
+    struct _KOS_REG *proto_reg = 0;
+
+    assert(node->children);
+    node = node->children;
+    assert(node->type == NT_OBJECT_LITERAL);
+    assert(node->next);
+
+    if (node->children) {
+        TRY(_object_literal(program, node, &proto_reg));
+        assert(proto_reg);
+    }
+
+    node = node->next;
+    assert(node->type == NT_CONSTRUCTOR_LITERAL);
+    assert( ! node->next);
+
+    TRY(_function_literal(program, node, reg));
+    assert(*reg);
+
+    if (proto_reg) {
+
+        struct _KOS_REG  *func_reg            = 0;
+        const char        str_set_prototype[] = "set_prototype";
+        int               str_idx             = 0;
+        struct _KOS_TOKEN token;
+
+        TRY(_gen_reg(program, &func_reg));
+
+        memset(&token, 0, sizeof(token));
+        token.begin  = str_set_prototype;
+        token.length = sizeof(str_set_prototype) - 1;
+        token.type   = TT_IDENTIFIER;
+
+        TRY(_gen_str(program, &token, &str_idx));
+
+        TRY(_gen_instr3(program, INSTR_GET_PROP, func_reg->reg, (*reg)->reg, str_idx));
+
+        TRY(_gen_instr5(program, INSTR_CALL_N, func_reg->reg, func_reg->reg, (*reg)->reg, proto_reg->reg, 1));
+
+        _free_reg(program, func_reg);
+        _free_reg(program, proto_reg);
+    }
+
+_error:
+    return error;
+}
+
 /* For this function and all other similar functions which it invokes, reg is:
     - on input, the desired register in which we prefer the return value
     - on output, the actual register containing the value computed
@@ -4777,9 +4829,6 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
         case NT_BOOL_LITERAL:
             error = _bool_literal(program, node, reg);
             break;
-        case NT_VOID_LITERAL:
-            error = _void_literal(program, node, reg);
-            break;
         case NT_FUNCTION_LITERAL:
             /* fall through */
         case NT_CONSTRUCTOR_LITERAL:
@@ -4789,10 +4838,16 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             error = _array_literal(program, node, reg);
             break;
         case NT_OBJECT_LITERAL:
+            error = _object_literal(program, node, reg);
+            break;
+        case NT_CLASS_LITERAL:
+            error = _class_literal(program, node, reg);
+            break;
+        case NT_VOID_LITERAL:
             /* fall through */
         default:
-            assert(node->type == NT_OBJECT_LITERAL);
-            error = _object_literal(program, node, reg);
+            assert(node->type == NT_VOID_LITERAL);
+            error = _void_literal(program, node, reg);
             break;
     }
 

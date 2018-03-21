@@ -1728,6 +1728,8 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
         case NT_ARRAY_LITERAL:
             /* fall through */
         case NT_OBJECT_LITERAL:
+            /* fall through */
+        case NT_CLASS_LITERAL:
             error = _visit_child_nodes(program, node);
             break;
     }

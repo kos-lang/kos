@@ -162,7 +162,7 @@ The following reserved keywords are defined:
 * `break`
 * `case`
 * `catch`
-* `class` (reserved)
+* `class`
 * `const`
 * `constructor`
 * `continue`
@@ -208,7 +208,7 @@ types.
 
     VOID_LITERAL    ::= "v" "o" "i" "d"
 
-Four keywords are currently reserved - `class`, `get`, `static` and `set`.
+The following keywords are currently reserved - `get`, `static` and `set`.
 
 The main difference between keywords and non-keyword literals is that keywords
 cannot be used as variable names.  However, keywords can still be used as
@@ -445,6 +445,7 @@ Statement
                 | ExpressionStatement
                 | FunctionDeclaration
                 | ConstructorDeclaration
+                | ClassDeclaration
                 | DoStatement
                 | IfStatement
                 | TryStatement
@@ -599,6 +600,18 @@ Argument variables are assignable inside the function body.
     ListParameter       ::= Parameter "..."
 
     Parameter           ::= Identifier
+
+
+Class statement
+---------------
+
+    ClassDeclaration ::= "class" Identifier ClassBody
+
+    ClassBody        ::= "{" ( ClassMember )* "}"
+
+    ClassMember      ::= ConstructorLiteral | MemberFunction
+
+    MemberFunction   ::= Identifier [ ParameterList ] CompoundStatement
 
 
 Do statement
@@ -1133,6 +1146,7 @@ Member specification
     MemberExpression ::= PrimaryExpression
                        | FunctionLiteral
                        | ConstructorLiteral
+                       | ClassLiteral
                        | ( MemberExpression Invocation )
                        | ( MemberExpression Refinement )
 
@@ -1144,6 +1158,8 @@ Member specification
     CompoundFunctionLiteral ::= "fun" [ ParameterList ] CompoundStatement
 
     ConstructorLiteral ::= "constructor" [ ParameterList ] CompoundStatement
+
+    ClassLiteral ::= "class" ClassBody
 
     Invocation ::= "(" [ ArgumentList ] ")"
 

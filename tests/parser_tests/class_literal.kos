@@ -1,0 +1,299 @@
+class {
+}
+
+class {
+    cat {
+        return 0
+    }
+
+    dog() {
+        return 1
+    }
+
+    pet(name) {
+        return name + "x"
+    }
+
+    parrot(num_wings, color) {
+        return num_wings + color
+    }
+}
+
+class {
+    aaa { }
+
+    constructor { this.x = 0 }
+
+    bbb { }
+}
+
+@ 0
+
+(scope 1 1
+    (class 1 1 class
+        (object 1 1 class)
+        (constructor 1 1 class
+            (parameters 1 7 {)
+            (landmark 1 7 {)
+            (scope 1 7 {
+                (return 1 7 {
+                    (this 1 7 {)
+            ))
+            (landmark 1 7 {)
+    ))
+
+    (class 4 1 class
+        (object 4 1 class
+            (property 5 5 cat
+                (string 5 5 cat)
+                (function 5 5 cat
+                    (parameters 5 9 {)
+                    (landmark 5 9 {)
+                    (scope 5 9 {
+                        (return 6 9 return
+                            (number 6 16 0)
+                        )
+                        (return 7 5 }
+                            (void 7 5 })
+                    ))
+                    (landmark 7 5 })
+            ))
+            (property 9 5 dog
+                (string 9 5 dog)
+                (function 9 5 dog
+                    (parameters 9 8 paren_open)
+                    (landmark 9 11 {)
+                    (scope 9 11 {
+                        (return 10 9 return
+                            (number 10 16 1)
+                        )
+                        (return 11 5 }
+                            (void 11 5 })
+                    ))
+                    (landmark 11 5 })
+            ))
+            (property 13 5 pet
+                (string 13 5 pet)
+                (function 13 5 pet
+                    (parameters 13 8 paren_open
+                        (identifier 13 9 name)
+                    )
+                    (landmark 13 15 {)
+                    (scope 13 15 {
+                        (return 14 9 return
+                            (operator 14 21 +
+                                (identifier 14 16 name)
+                                (string 14 23 "x")
+                        ))
+                        (return 15 5 }
+                            (void 15 5 })
+                    ))
+                    (landmark 15 5 })
+            ))
+            (property 17 5 parrot
+                (string 17 5 parrot)
+                (function 17 5 parrot
+                    (parameters 17 11 paren_open
+                        (identifier 17 12 num_wings)
+                        (identifier 17 23 color)
+                    )
+                    (landmark 17 30 {)
+                    (scope 17 30 {
+                        (return 18 9 return
+                            (operator 18 26 +
+                                (identifier 18 16 num_wings)
+                                (identifier 18 28 color)
+                        ))
+                        (return 19 5 }
+                            (void 19 5 })
+                    ))
+                    (landmark 19 5 })
+        )))
+        (constructor 4 1 class
+            (parameters 4 7 {)
+            (landmark 4 7 {)
+            (scope 4 7 {
+                (return 4 7 {
+                    (this 4 7 {)
+            ))
+            (landmark 4 7 {)
+    ))
+
+    (class 22 1 class
+        (object 22 1 class
+            (property 23 5 aaa
+                (string 23 5 aaa)
+                (function 23 5 aaa
+                    (parameters 23 9 {)
+                    (landmark 23 9 {)
+                    (scope 23 9 {
+                        (return 23 11 }
+                            (void 23 11 })
+                    ))
+                    (landmark 23 11 })
+            ))
+            (property 27 5 bbb
+                (string 27 5 bbb)
+                (function 27 5 bbb
+                    (parameters 27 9 {)
+                    (landmark 27 9 {)
+                    (scope 27 9 {
+                        (return 27 11 }
+                            (void 27 11 })
+                    ))
+                    (landmark 27 11 })
+            ))
+        )
+        (constructor 25 5 constructor
+            (parameters 25 17 {)
+            (landmark 25 17 {)
+            (scope 25 17 {
+                (assignment 25 26 =
+                    (left_hand_side 25 26 =
+                        (refinement 25 23 .
+                            (this 25 19 this)
+                            (string 25 24 x)
+                    ))
+                    (number 25 28 0)
+                )
+                (return 25 30 }
+                    (this 25 30 })
+            ))
+            (landmark 25 30 })
+    ))
+)
+
+@------------------------------------------------------------------------------
+class named {
+    constructor(a, b) { this[a] = b }
+
+    fun1(a) { return a }
+
+    fun2 { return this.a }
+}
+
+class onlyctor {
+    constructor(x) { this.mmm = x }
+}
+
+@ 0
+
+(scope 1 1
+    (assignment 1 1 class
+        (const 1 1 class
+            (identifier 1 7 named)
+        )
+        (class 1 7 named
+            (object 1 7 named
+                (property 4 5 fun1
+                    (string 4 5 fun1)
+                    (function 4 5 fun1
+                        (parameters 4 9 paren_open
+                            (identifier 4 10 a)
+                        )
+                        (landmark 4 13 {)
+                        (scope 4 13 {
+                            (return 4 15 return
+                                (identifier 4 22 a)
+                            )
+                            (return 4 24 }
+                                (void 4 24 })
+                        ))
+                        (landmark 4 24 })
+                ))
+                (property 6 5 fun2
+                    (string 6 5 fun2)
+                    (function 6 5 fun2
+                        (parameters 6 10 {)
+                        (landmark 6 10 {)
+                        (scope 6 10 {
+                            (return 6 12 return
+                                (refinement 6 23 .
+                                    (this 6 19 this)
+                                    (string 6 24 a)
+                            ))
+                            (return 6 26 }
+                                (void 6 26 })
+                        ))
+                        (landmark 6 26 })
+                ))
+            )
+            (constructor 2 5 constructor
+                (parameters 2 16 paren_open
+                    (identifier 2 17 a)
+                    (identifier 2 20 b)
+                )
+                (landmark 2 23 {)
+                (scope 2 23 {
+                    (assignment 2 33 =
+                        (left_hand_side 2 33 =
+                            (refinement 2 29 [
+                                (this 2 25 this)
+                                (identifier 2 30 a)
+                        ))
+                        (identifier 2 35 b)
+                    )
+                    (return 2 37 }
+                        (this 2 37 })
+                ))
+                (landmark 2 37 })
+    )))
+
+    (assignment 9 1 class
+        (const 9 1 class
+            (identifier 9 7 onlyctor)
+        )
+        (class 9 7 onlyctor
+            (object 9 7 onlyctor)
+            (constructor 10 5 constructor
+                (parameters 10 16 paren_open
+                    (identifier 10 17 x)
+                )
+                (landmark 10 20 {)
+                (scope 10 20 {
+                    (assignment 10 31 =
+                        (left_hand_side 10 31 =
+                            (refinement 10 26 .
+                                (this 10 22 this)
+                                (string 10 27 mmm)
+                        ))
+                        (identifier 10 33 x)
+                    )
+                    (return 10 35 }
+                        (this 10 35 })
+                ))
+                (landmark 10 35 })
+    )))
+)
+
+@------------------------------------------------------------------------------
+class failed
+{
+    constructor { }
+    constructor { } # Duplicate constructor
+}
+
+@ 10 4 5
+
+@------------------------------------------------------------------------------
+class {
+    aaa { }
+
+    constructor { this.x = 0 }
+
+    bbb { }
+
+    constructor(a) { }
+}
+
+@ 10 8 5
+
+@------------------------------------------------------------------------------
+const x = class;
+
+@ 10 1 16
+
+@------------------------------------------------------------------------------
+const x = class A { }
+
+@ 10 1 17

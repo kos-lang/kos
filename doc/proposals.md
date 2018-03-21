@@ -5,11 +5,11 @@
 
 * Change division to produce float, add integer division operator //
 
-* Add buffer strings b""
+* ? Add buffer strings b""
 
 * ? Empty array, buffer, string, object (shallow) are all falsy
 
-* if, while, switch variable declarations
+* ? if, while, switch variable declarations
 
 * ? remove C-style for loop
 
@@ -31,32 +31,11 @@
     - Write test to use constructors with map function.
     - Determine interaction with generators and iterators.
 
-* Class-like prototypes in conjunction with real constructor functions
+* Class improvements
 
-    - A class object is essentially a function object, with the 'constructor'
-      function being the body of the function.  All the remaining functions
-      declared become members of the prototype.
-
-            class Base {
-                constructor(x, y) {
-                    this.x = x
-                    this.y = y
-                }
-                get_x = () => (this.x)
-                get_y = () => (this.y)
-            }
-
-            assert typeof Base == "function"
-            var b = Base(1, 2)
-            print("\(b.get_x()) \(b.get_y())")
-
-            class Derived : Base {
-                // how to call base class constructor?
-                set_xy(x, y) { this.x = x; this.y = y }
-            }
-
-    - Add static?
-    - Add super?
+    - Add class inheritance.
+    - ? Add 'static' functions in classes.
+    - ? Add 'super'.
 
 * Invocation with explicit argument names, e.g.:
 
@@ -66,3 +45,6 @@
 
     - Find line where a variable is no longer used, release register.
     - Don't reload constants if they are already in registers.
+    - Hoist constants outside of loops.  Reuse constants.
+    - Function inlining for simple functions, esp. inside loops.
+    - Stack reuse in tail calls.

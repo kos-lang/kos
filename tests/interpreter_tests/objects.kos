@@ -261,3 +261,75 @@ do {
     assert o1 instanceof get_constr()
     assert o2 instanceof get_constr()
 }
+
+do {
+    class complex {
+        constructor(re, im)
+        {
+            this.re = re
+            this.im = im
+        }
+
+        add(other)
+        {
+            return complex(this.re + other.re,
+                           this.im + other.im)
+        }
+
+        dot(other)
+        {
+            return this.re * other.re +
+                   this.im * other.im
+        }
+    }
+
+    assert typeof complex == "function"
+
+    const c1 = complex(-1, 2)
+    const c2 = complex(3, -5)
+    const c3 = c1.add(c2)
+    const d  = c1.dot(c2)
+
+    assert c1 instanceof complex
+    assert c2 instanceof complex
+    assert c3 instanceof complex
+    assert typeof d == "integer"
+
+    assert c3.re == 2
+    assert c3.im == -3
+    assert d     == -13
+
+    expect_fail(complex)
+    expect_fail(()=>(complex(1)))
+}
+
+do {
+    class value {
+        setv(x) {
+            this.x = x
+        }
+        getv() {
+            return this.x
+        }
+    }
+
+    assert typeof value == "function"
+
+    const v = value();
+    expect_fail(()=>(v.getv()))
+    assert v.setv(42) == void
+    assert v.getv() == 42
+}
+
+do {
+    class empty_ctor {
+        constructor {
+            this.x = 42
+        }
+    }
+
+    assert typeof empty_ctor == "function"
+
+    const v = empty_ctor()
+    assert v.x == 42
+}

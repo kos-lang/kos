@@ -425,24 +425,24 @@ Objects in Kos can have methods:
     print(counter.get())     # Prints: 6
 
 
-Constructors and prototypal inheritance
----------------------------------------
+Constructors and prototype-based inheritance
+--------------------------------------------
 
     import lang.print
 
-    constructor counter(init)
-    {
-        this.count = init
-    }
+    class counter {
 
-    counter.prototype.print = fun
-    {
-        print(this.count)
-    }
+        constructor(init) {
+            this.count = init
+        }
 
-    counter.prototype.add = fun(n)
-    {
-        this.count += n
+        print {
+            print(this.count)
+        }
+
+        add(n) {
+            this.count += n
+        }
     }
 
     const ctr = counter(5)

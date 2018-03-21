@@ -1270,6 +1270,19 @@ do {
 }
 
 do {
+    class empty { }
+    class ctor { constructor { } }
+    class noctor { a { } b { } }
+
+    assert empty  instanceof lang.function
+    assert empty  instanceof lang.constructor
+    assert ctor   instanceof lang.function
+    assert ctor   instanceof lang.constructor
+    assert noctor instanceof lang.function
+    assert noctor instanceof lang.constructor
+}
+
+do {
     const f = ()=>(void)
     assert f instanceof lang.function
     assert f instanceof lang.object
