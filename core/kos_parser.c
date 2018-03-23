@@ -232,6 +232,50 @@ static int _fetch_optional_paren(struct _KOS_PARSER *parser, int *was_paren)
     return error;
 }
 
+static int _set_function_name(struct _KOS_PARSER   *parser,
+                              struct _KOS_AST_NODE *node,
+                              struct _KOS_TOKEN    *token,
+                              int                   can_self_refer)
+{
+    int error = KOS_SUCCESS;
+
+    if (node->type == NT_CLASS_LITERAL) {
+
+        node = node->children;
+        assert(node);
+        node = node->next;
+        assert(node);
+        assert( ! node->next);
+        assert(node->type == NT_CONSTRUCTOR_LITERAL);
+    }
+
+    assert(node->type == NT_FUNCTION_LITERAL ||
+           node->type == NT_CONSTRUCTOR_LITERAL);
+
+    node = node->children;
+    assert(node);
+    assert(node->type == NT_NAME);
+
+    assert(token->type == TT_IDENTIFIER ||
+           token->type == TT_KEYWORD    ||
+           token->type == TT_STRING);
+
+    if (can_self_refer) {
+        assert(token->type == TT_IDENTIFIER);
+        node->type = NT_NAME_CONST;
+    }
+
+    TRY(_push_node(parser,
+                   node,
+                   token->type == TT_STRING ? NT_STRING_LITERAL : NT_IDENTIFIER,
+                   &node));
+
+    node->token = *token;
+
+_error:
+    return error;
+}
+
 static int _parameters(struct _KOS_PARSER    *parser,
                        struct _KOS_AST_NODE **ret)
 {
@@ -380,6 +424,8 @@ static int _function_literal(struct _KOS_PARSER    *parser,
     TRY(_new_node(parser, ret,
                   constructor ? NT_CONSTRUCTOR_LITERAL : NT_FUNCTION_LITERAL));
 
+    TRY(_push_node(parser, *ret, NT_NAME, 0));
+
     TRY(_next_token(parser));
 
     if (parser->token.sep == ST_PAREN_OPEN) {
@@ -481,6 +527,8 @@ static int _lambda_literal_body(struct _KOS_PARSER    *parser,
 
     TRY(_new_node(parser, ret, NT_FUNCTION_LITERAL));
 
+    TRY(_push_node(parser, *ret, NT_NAME, 0));
+
     _ast_push(*ret, args);
 
     parser->unary_depth = 1;
@@ -540,6 +588,8 @@ static int _gen_empty_constructor(struct _KOS_PARSER    *parser,
 
     TRY(_new_node(parser, ret, NT_CONSTRUCTOR_LITERAL));
 
+    TRY(_push_node(parser, *ret, NT_NAME, 0));
+
     TRY(_next_token(parser));
 
     TRY(_push_node(parser, *ret, NT_PARAMETERS, 0));
@@ -598,14 +648,17 @@ static int _class_literal(struct _KOS_PARSER    *parser,
         }
         else if (parser->token.type == TT_IDENTIFIER || parser->token.type == TT_KEYWORD) {
 
-            struct _KOS_AST_NODE *prop_node = 0;
-            struct _KOS_AST_NODE *fun_node  = 0;
+            struct _KOS_AST_NODE *prop_node      = 0;
+            struct _KOS_AST_NODE *fun_node       = 0;
+            struct _KOS_TOKEN     fun_name_token = parser->token;
 
             TRY(_push_node(parser, members_node, NT_PROPERTY, &prop_node));
 
             TRY(_push_node(parser, prop_node, NT_STRING_LITERAL, 0));
 
             TRY(_function_literal(parser, KW_FUN, &fun_node));
+
+            TRY(_set_function_name(parser, fun_node, &fun_name_token, 0));
 
             _ast_push(prop_node, fun_node);
         }
@@ -722,6 +775,8 @@ static int _object_literal(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
 
     for (;;) {
 
+        enum _KOS_TOKEN_TYPE prop_name_type;
+
         TRY(_next_token(parser));
 
         if (parser->token.sep == ST_COMMA) {
@@ -748,14 +803,16 @@ static int _object_literal(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
 
         TRY(_next_token(parser));
 
-        if (parser->token.type == TT_STRING)
+        prop_name_type = parser->token.type;
+
+        if (prop_name_type == TT_STRING)
             TRY(_push_node(parser, prop, NT_STRING_LITERAL, 0));
-        else if (parser->token.type == TT_STRING_OPEN) {
+        else if (prop_name_type == TT_STRING_OPEN) {
             parser->error_str = str_err_expected_string;
             error = KOS_ERROR_PARSE_FAILED;
             goto _error;
         }
-        else if (parser->token.type == TT_IDENTIFIER || parser->token.type == TT_KEYWORD)
+        else if (prop_name_type == TT_IDENTIFIER || prop_name_type == TT_KEYWORD)
             TRY(_push_node(parser, prop, NT_STRING_LITERAL, 0));
         else {
             parser->error_str = str_err_expected_ident_or_str;
@@ -766,6 +823,13 @@ static int _object_literal(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
         TRY(_assume_separator(parser, ST_COLON));
 
         TRY(_right_hand_side_expr(parser, &node));
+
+        if ((node->type == NT_FUNCTION_LITERAL    ||
+             node->type == NT_CONSTRUCTOR_LITERAL ||
+             node->type == NT_CLASS_LITERAL) && prop_name_type != TT_STRING_OPEN) {
+
+            TRY(_set_function_name(parser, node, &prop->children->token, 0));
+        }
 
         _ast_push(prop, node);
         node = 0;
@@ -1524,13 +1588,14 @@ static int _expr_var_const(struct _KOS_PARSER    *parser,
                            int                    allow_multi_assignment,
                            struct _KOS_AST_NODE **ret)
 {
-    struct _KOS_AST_NODE *node = 0;
+    int                   error         = KOS_SUCCESS;
+    struct _KOS_AST_NODE *node          = 0;
+    struct _KOS_AST_NODE *ident_node    = 0;
+    enum _KOS_NODE_TYPE   node_type     = NT_ASSIGNMENT;
+    enum _KOS_NODE_TYPE   var_node_type = parser->token.keyword == KW_CONST
+                                          ? NT_CONST : NT_VAR;
 
-    int error = KOS_SUCCESS;
-
-    enum _KOS_NODE_TYPE node_type = NT_ASSIGNMENT;
-
-    TRY(_new_node(parser, &node, parser->token.keyword == KW_CONST ? NT_CONST : NT_VAR));
+    TRY(_new_node(parser, &node, var_node_type));
 
     TRY(_next_token(parser));
 
@@ -1540,7 +1605,7 @@ static int _expr_var_const(struct _KOS_PARSER    *parser,
         goto _error;
     }
 
-    TRY(_push_node(parser, node, NT_IDENTIFIER, 0));
+    TRY(_push_node(parser, node, NT_IDENTIFIER, &ident_node));
 
     TRY(_next_token(parser));
 
@@ -1585,6 +1650,15 @@ static int _expr_var_const(struct _KOS_PARSER    *parser,
     node = 0;
 
     TRY(_right_hand_side_expr(parser, &node));
+
+    /* TODO error out when doing multi-assignment from unsupported types, like function */
+
+    if ((node->type == NT_FUNCTION_LITERAL    ||
+         node->type == NT_CONSTRUCTOR_LITERAL ||
+         node->type == NT_CLASS_LITERAL) && node_type != NT_IN) {
+
+        TRY(_set_function_name(parser, node, &ident_node->token, var_node_type == NT_CONST));
+    }
 
     _ast_push(*ret, node);
     node = 0;
@@ -1753,6 +1827,8 @@ static int _function_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret
 
     if (parser->token.type == TT_IDENTIFIER) {
 
+        struct _KOS_TOKEN fun_name_token = parser->token;
+
         /* To simplify operator selection in the compiler */
         fun_kw_token.op = OT_SET;
 
@@ -1768,6 +1844,8 @@ static int _function_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret
             TRY(_class_literal(parser, &fun_node));
         else
             TRY(_function_literal(parser, fun_keyword, &fun_node));
+
+        TRY(_set_function_name(parser, fun_node, &fun_name_token, 1));
 
         _ast_push(*ret, fun_node);
         fun_node = 0;

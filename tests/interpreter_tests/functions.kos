@@ -1597,3 +1597,66 @@ do {
 
     assert result == 7 + ((256 * 257) >> 1)
 }
+
+# call itself
+do {
+    fun self(x)
+    {
+        if x == 0 {
+            return 42
+        }
+        return self(x - 1)
+    }
+
+    assert self(10) == 42
+}
+
+# call itself via bind
+do {
+    fun self(x)
+    {
+        fun inner
+        {
+            return self(8)
+        }
+        if x == 0 {
+            return inner()
+        }
+        else {
+            return x + 3
+        }
+    }
+
+    assert self(1) == 4
+    assert self(0) == 11
+}
+
+# call itself via arg
+do {
+    fun self
+    {
+        return "widget"
+    }
+
+    do {
+        fun self(x = self())
+        {
+            return x
+        }
+
+        assert self(1) == 1
+        assert self()  == "widget"
+    }
+
+    do {
+        fun self(x = () => (self()))
+        {
+            return x
+        }
+
+        assert self(10) == 10
+        const f = self()
+        assert typeof f == "function"
+        assert f() == "widget"
+    }
+}

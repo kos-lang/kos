@@ -24,6 +24,8 @@ constructor { }
             (identifier 2 13 a)
         )
         (constructor 2 13 a
+            (name_const 2 13 a
+                (identifier 2 13 a))
             (parameters 2 14 {)
             (landmark 2 14 {)
             (scope 2 14 {
@@ -37,6 +39,8 @@ constructor { }
             (identifier 5 13 b)
         )
         (constructor 5 13 b
+            (name_const 5 13 b
+                (identifier 5 13 b))
             (parameters 5 14 paren_open)
             (landmark 6 1 {)
             (scope 6 1 {
@@ -53,6 +57,8 @@ constructor { }
             (identifier 11 13 c)
         )
         (constructor 11 13 c
+            (name_const 11 13 c
+                (identifier 11 13 c))
             (parameters 12 1 {)
             (landmark 12 1 {)
             (scope 12 1 {
@@ -65,6 +71,7 @@ constructor { }
             (landmark 14 1 })
     ))
     (constructor 17 1 constructor
+        (name 17 1 constructor)
         (parameters 17 13 {)
         (landmark 17 13 {)
         (scope 17 13 {

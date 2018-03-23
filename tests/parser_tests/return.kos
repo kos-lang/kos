@@ -16,6 +16,8 @@ return e ? f : g;
     (assignment 1 1 fun
         (const 1 1 fun (identifier 1 5 a))
         (function 1 5 a
+            (name_const 1 5 a
+                (identifier 1 5 a))
             (parameters 2 1 {)
             (landmark 2 1 {)
             (scope 2 1 {
@@ -61,6 +63,7 @@ fun { return; };
 
 (scope 1 1
     (function 1 1 fun
+        (name 1 1 fun)
         (parameters 1 5 {)
         (landmark 1 5 {)
         (scope 1 5 {

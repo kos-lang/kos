@@ -271,9 +271,29 @@ static void _update_arguments(struct _KOS_COMP_UNIT *program,
 }
 
 static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
-                               struct _KOS_AST_NODE  *node)
+                               struct _KOS_AST_NODE  *node,
+                               struct _KOS_AST_NODE  *name_node)
 {
-    int error = KOS_SUCCESS;
+    int              error   = KOS_SUCCESS;
+    struct _KOS_VAR *fun_var = 0;
+
+    assert(name_node);
+    if (name_node->type == NT_NAME_CONST) {
+        assert(name_node->children);
+        assert(name_node->children->type == NT_IDENTIFIER);
+        assert(name_node->children->token.type == TT_IDENTIFIER);
+
+        fun_var = _KOS_find_var(program->scope_stack->vars, &name_node->children->token);
+        assert(fun_var);
+        assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
+
+        if (fun_var->type & VAR_LOCAL) {
+            assert(fun_var->is_active == VAR_ALWAYS_ACTIVE);
+            fun_var->is_active = VAR_INACTIVE;
+        }
+        else
+            fun_var = 0;
+    }
 
     assert(node);
     assert(node->type == NT_PARAMETERS);
@@ -297,6 +317,9 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
         TRY(_visit_node(program, def_node));
     }
 
+    if (fun_var)
+        fun_var->is_active = VAR_ALWAYS_ACTIVE;
+
 _error:
     return error;
 }
@@ -304,18 +327,22 @@ _error:
 static int _function_literal(struct _KOS_COMP_UNIT *program,
                              struct _KOS_AST_NODE  *node)
 {
-    int error;
+    int                   error;
+    struct _KOS_AST_NODE *name_node;
 
     _push_scope(program, node);
 
-    _update_arguments(program, node->children);
+    name_node = node->children;
+    assert(name_node);
+
+    _update_arguments(program, name_node->next);
 
     error = _visit_child_nodes(program, node);
 
     _pop_scope(program);
 
     if ( ! error)
-        error = _parameter_defaults(program, node->children);
+        error = _parameter_defaults(program, name_node->next, name_node);
 
     return error;
 }
@@ -525,6 +552,10 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
         case NT_ELLIPSIS:
             /* fall through */
         case NT_IMPORT:
+            /* fall through */
+        case NT_NAME:
+            /* fall through */
+        case NT_NAME_CONST:
             error = KOS_SUCCESS;
             break;
 

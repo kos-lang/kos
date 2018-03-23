@@ -55,6 +55,8 @@ enum _KOS_NODE_TYPE {
     NT_INTERPOLATED_STRING, /* string interpolation */
 
     NT_LEFT_HAND_SIDE,      /* first argument to assignment */
+    NT_NAME,                /* function name, not referred to inside the function */
+    NT_NAME_CONST,          /* function name, usable inside the function */
     NT_PARAMETERS,          /* function arguments list */
     NT_ELLIPSIS,            /* last, unbounded function argument */
     NT_EXPAND,              /* expanded argument or array element */

@@ -16,6 +16,8 @@ fun i(j,k){}
     (assignment 2 1 fun
         (const 2 1 fun (identifier 2 5 a))
         (function 2 5 a
+            (name_const 2 5 a
+                (identifier 2 5 a))
             (parameters 2 6 {)
             (landmark 2 6 {)
             (scope 2 6 {
@@ -25,6 +27,8 @@ fun i(j,k){}
     (assignment 5 1 fun
         (const 5 1 fun (identifier 5 5 c))
         (function 5 5 c
+            (name_const 5 5 c
+                (identifier 5 5 c))
             (parameters 5 6 paren_open)
             (landmark 5 8 {)
             (scope 5 8 {
@@ -34,6 +38,8 @@ fun i(j,k){}
     (assignment 8 1 fun
         (const 8 1 fun (identifier 8 5 e))
         (function 8 5 e
+            (name_const 8 5 e
+                (identifier 8 5 e))
             (parameters 8 6 paren_open
                 (identifier 8 7 f)
             )
@@ -45,6 +51,8 @@ fun i(j,k){}
     (assignment 11 1 fun
         (const 11 1 fun (identifier 11 5 i))
         (function 11 5 i
+            (name_const 11 5 i
+                (identifier 11 5 i))
             (parameters 11 6 paren_open
                 (identifier 11 7 j)
                 (identifier 11 9 k)
@@ -73,6 +81,7 @@ fun(c,d){};
 
 (scope 1 1
     (function 2 1 fun
+        (name 2 1 fun)
         (parameters 2 4 {)
         (landmark 2 4 {)
         (scope 2 4 {
@@ -80,6 +89,7 @@ fun(c,d){};
         (landmark 2 5 })
     )
     (function 5 1 fun
+        (name 5 1 fun)
         (parameters 5 4 paren_open)
         (landmark 5 6 {)
         (scope 5 6 {
@@ -87,6 +97,7 @@ fun(c,d){};
         (landmark 5 7 })
     )
     (function 8 1 fun
+        (name 8 1 fun)
         (parameters 8 4 paren_open
             (identifier 8 5 a)
         )
@@ -96,6 +107,7 @@ fun(c,d){};
         (landmark 8 8 })
     )
     (function 11 1 fun
+        (name 11 1 fun)
         (parameters 11 4 paren_open
             (identifier 11 5 c)
             (identifier 11 7 d)
@@ -126,6 +138,7 @@ b=>(b?5:6);
 
 (scope 1 1
     (function 2 3 =>
+        (name 2 3 =>)
         (parameters 2 1 paren_open)
         (landmark 2 3 =>)
         (scope 2 3 =>
@@ -134,6 +147,7 @@ b=>(b?5:6);
         (landmark 2 7 paren_close)
     )
     (function 5 3 =>
+        (name 5 3 =>)
         (parameters 5 1 paren_open)
         (landmark 5 3 =>)
         (scope 5 3 =>
@@ -142,6 +156,7 @@ b=>(b?5:6);
         (landmark 5 7 paren_close)
     )
     (function 8 4 =>
+        (name 8 4 =>)
         (parameters 8 1 paren_open
             (identifier 8 2 a)
         )
@@ -154,6 +169,7 @@ b=>(b?5:6);
         (landmark 8 10 paren_close)
     )
     (function 9 2 =>
+        (name 9 2 =>)
         (parameters 9 2 =>
             (identifier 9 1 b)
         )
@@ -167,6 +183,7 @@ b=>(b?5:6);
         (landmark 9 10 paren_close)
     )
     (function 12 6 =>
+        (name 12 6 =>)
         (parameters 12 1 paren_open
             (identifier 12 2 c)
             (identifier 12 4 d)
@@ -182,6 +199,7 @@ b=>(b?5:6);
         (landmark 12 14 paren_close)
     )
     (function 13 6 =>
+        (name 13 6 =>)
         (parameters 13 1 paren_open
             (identifier 13 2 e)
             (identifier 13 4 f)
@@ -212,6 +230,7 @@ b=>(b?5:6);
 
 (scope 1 1
     (function 3 1 =>
+        (name 3 1 =>)
         (parameters 1 1 paren_open)
         (landmark 3 1 =>)
         (scope 3 1 =>
@@ -221,6 +240,7 @@ b=>(b?5:6);
         (landmark 4 3 paren_close)
     )
     (function 6 7 =>
+        (name 6 7 =>)
         (parameters 6 1 paren_open
             (ellipsis 6 3 ...
                 (identifier 6 2 a)
@@ -233,6 +253,7 @@ b=>(b?5:6);
         (landmark 6 11 paren_close)
     )
     (function 8 6 =>
+        (name 8 6 =>)
         (parameters 8 1 paren_open
             (assignment 8 3 =
                 (identifier 8 2 a)
@@ -261,6 +282,8 @@ var c = Sum(1, 2);
     (assignment 1 1 fun
         (const 1 1 fun (identifier 1 5 Sum))
         (function 1 5 Sum
+            (name_const 1 5 Sum
+                (identifier 1 5 Sum))
             (parameters 1 8 paren_open
                 (identifier 1 9 a)
                 (identifier 1 12 b)
@@ -300,6 +323,7 @@ c = b => (b+3) (4);
         (left_hand_side 1 3 = (identifier 1 1 a))
         (invocation 4 2 paren_open
             (function 1 5 fun
+                (name 1 5 fun)
                 (parameters 1 8 paren_open
                     (identifier 1 9 b)
                 )
@@ -322,6 +346,7 @@ c = b => (b+3) (4);
         )
         (invocation 6 16 paren_open
             (function 6 7 =>
+                (name 6 7 =>)
                 (parameters 6 7 =>
                     (identifier 6 5 b)
                 )
@@ -350,6 +375,7 @@ f = fun(a=1, b=2+3*4, c=d?e:typeof "") { };
             (identifier 2 1 f)
         )
         (function 2 5 fun
+            (name 2 5 fun)
             (parameters 2 8 paren_open
                 (assignment 2 10 =
                     (identifier 2 9 a)
@@ -388,6 +414,7 @@ fun( a , b , c = true , d = void ) { }
 
 (scope 1 1
     (function 2 1 fun
+        (name 2 1 fun)
         (parameters 2 4 paren_open
             (identifier 2 6 a)
             (identifier 2 10 b)
@@ -416,6 +443,7 @@ fun ( a, b = [] , c ... ) { }
 
 (scope 1 1
     (function 2 1 fun
+        (name 2 1 fun)
         (parameters 2 5 paren_open
             (identifier 2 7 a)
             (assignment 2 12 =
@@ -458,6 +486,7 @@ fff = fun(a, b, c, d...) {
     (assignment 2 5 =
         (left_hand_side 2 5 = (identifier 2 1 fff))
         (function 2 7 fun
+            (name 2 7 fun)
             (parameters 2 10 paren_open
                 (identifier 2 11 a)
                 (identifier 2 14 b)
@@ -573,6 +602,8 @@ fun f(a000, a001, a002, a003, a004, a005, a006, a007, a008, a009,
             (identifier 2 5 f)
         )
         (function 2 5 f
+            (name_const 2 5 f
+                (identifier 2 5 f))
             (parameters 2 6 paren_open
                 (identifier 2 7 a000) (identifier 2 13 a001) (identifier 2 19 a002) (identifier 2 25 a003) (identifier 2 31 a004) (identifier 2 37 a005) (identifier 2 43 a006) (identifier 2 49 a007) (identifier 2 55 a008) (identifier 2 61 a009)
                 (identifier 3 7 a010) (identifier 3 13 a011) (identifier 3 19 a012) (identifier 3 25 a013) (identifier 3 31 a014) (identifier 3 37 a015) (identifier 3 43 a016) (identifier 3 49 a017) (identifier 3 55 a018) (identifier 3 61 a019)

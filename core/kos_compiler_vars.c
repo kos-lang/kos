@@ -305,7 +305,6 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-/* TODO merge with _lookup_local_var */
 static int _lookup_and_mark_var(struct _KOS_COMP_UNIT      *program,
                                 const struct _KOS_AST_NODE *node,
                                 struct _KOS_VAR           **out_var)
@@ -660,9 +659,29 @@ static int _this_literal(struct _KOS_COMP_UNIT      *program,
 }
 
 static int _parameter_defaults(struct _KOS_COMP_UNIT      *program,
-                               const struct _KOS_AST_NODE *node)
+                               const struct _KOS_AST_NODE *node,
+                               const struct _KOS_AST_NODE *name_node)
 {
-    int error = KOS_SUCCESS;
+    int              error   = KOS_SUCCESS;
+    struct _KOS_VAR *fun_var = 0;
+
+    assert(name_node);
+    if (name_node->type == NT_NAME_CONST) {
+        assert(name_node->children);
+        assert(name_node->children->type == NT_IDENTIFIER);
+        assert(name_node->children->token.type == TT_IDENTIFIER);
+
+        fun_var = _KOS_find_var(program->scope_stack->vars, &name_node->children->token);
+        assert(fun_var);
+        assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
+
+        if (fun_var->type & VAR_LOCAL) {
+            assert(fun_var->is_active == VAR_ALWAYS_ACTIVE);
+            fun_var->is_active = VAR_INACTIVE;
+        }
+        else
+            fun_var = 0;
+    }
 
     assert(node);
     assert(node->type == NT_PARAMETERS);
@@ -684,6 +703,9 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT      *program,
         }
     }
 
+    if (fun_var)
+        fun_var->is_active = VAR_ALWAYS_ACTIVE;
+
 _error:
     return error;
 }
@@ -695,10 +717,15 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     int                         i;
     int                         ellipsis = 0;
     const struct _KOS_AST_NODE *arg_node;
+    const struct _KOS_AST_NODE *name_node;
 
     TRY(_push_function(program, node));
 
-    node = node->children;
+    name_node = node->children;
+    assert(name_node);
+    assert(name_node->type == NT_NAME || name_node->type == NT_NAME_CONST);
+
+    node = name_node->next;
     assert(node);
     assert(node->type == NT_PARAMETERS);
 
@@ -754,7 +781,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     _pop_scope(program);
 
-    TRY(_parameter_defaults(program, arg_node));
+    TRY(_parameter_defaults(program, arg_node, name_node));
 
 _error:
     return error;
@@ -817,6 +844,7 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
     assert(node);
     assert(node->next);
 
+    /* References to self are only allowed for const, not for var */
     if (node->type == NT_CONST &&
             (node->next->type == NT_FUNCTION_LITERAL
           || node->next->type == NT_CONSTRUCTOR_LITERAL
@@ -826,7 +854,7 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
 
         TRY(_visit_node(program, node));
 
-        assert(node->type == NT_CONST || node->type == NT_VAR);
+        assert(node->type == NT_CONST);
 
         assert(node->children);
         assert(node->children->type == NT_IDENTIFIER);
@@ -835,10 +863,10 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
         var = _KOS_find_var(program->scope_stack->vars, &node->children->token);
         assert(var);
 
+        /* This will still be temporarily disabled when processing parameter defaults */
         var->is_active = VAR_ALWAYS_ACTIVE;
 
         node = node->next;
-
         assert( ! node->next);
 
         TRY(_visit_node(program, node));

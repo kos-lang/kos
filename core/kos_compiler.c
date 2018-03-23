@@ -1026,9 +1026,10 @@ _error:
     return error;
 }
 
-static int _append_frame(struct _KOS_COMP_UNIT *program,
-                         int                    fun_start_offs,
-                         size_t                 addr2line_start_offs)
+static int _append_frame(struct _KOS_COMP_UNIT      *program,
+                         const struct _KOS_AST_NODE *name_node,
+                         int                         fun_start_offs,
+                         size_t                      addr2line_start_offs)
 {
     int          error;
     const size_t fun_end_offs = (size_t)program->cur_offs;
@@ -1037,6 +1038,8 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
     const size_t a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
     size_t       a2l_new_offs = program->addr2line_buf.size;
     int          str_idx      = 0;
+
+    const struct _KOS_TOKEN *name_token;
 
     TRY(_KOS_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
@@ -1056,7 +1059,12 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
     TRY(_KOS_vector_resize(&program->addr2func_buf,
                            program->addr2func_buf.size + sizeof(struct _KOS_COMP_ADDR_TO_FUNC)));
 
-    TRY(_gen_str(program, program->cur_frame->fun_token, &str_idx));
+    assert(name_node);
+    if (name_node->children)
+        name_token = &name_node->children->token;
+    else
+        name_token = program->cur_frame->fun_token;
+    TRY(_gen_str(program, name_token, &str_idx));
 
     memcpy(program->code_buf.buffer + fun_new_offs,
            program->code_gen_buf.buffer + fun_start_offs,
@@ -4312,6 +4320,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     const struct _KOS_AST_NODE *fun_node = node;
     const struct _KOS_AST_NODE *open_node;
+    const struct _KOS_AST_NODE *name_node;
 
     assert(frame);
 
@@ -4338,6 +4347,8 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         int                   i;
 
         assert(arg_node);
+        assert(arg_node->type == NT_NAME || arg_node->type == NT_NAME_CONST);
+        arg_node = arg_node->next;
         assert(arg_node->type == NT_PARAMETERS);
         arg_node = arg_node->children;
 
@@ -4406,7 +4417,10 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     /* Generate registers for closures */
     TRY(_KOS_red_black_walk(frame->closures, _gen_closure_regs, program));
 
-    node = fun_node->children;
+    name_node = fun_node->children;
+    assert(name_node);
+    assert(name_node->type == NT_NAME || name_node->type == NT_NAME_CONST);
+    node = name_node->next;
     assert(node);
     assert(node->type == NT_PARAMETERS);
     node = node->next;
@@ -4449,7 +4463,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     assert(!scope_reg);
 
     /* Move the function code to final code_buf */
-    TRY(_append_frame(program, fun_start_offs, addr2line_start_offs));
+    TRY(_append_frame(program, name_node, fun_start_offs, addr2line_start_offs));
 
     program->cur_frame = last_frame;
 
@@ -4488,6 +4502,8 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     if (num_def) {
         node = fun_node->children;
         assert(node);
+        node = node->next;
+        assert(node);
         node = node->children;
         assert(node);
         for ( ; node; node = node->next) {
@@ -4495,6 +4511,26 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
                 break;
         }
         assert(node);
+    }
+
+    /* Disable variable to which the function is assigned to prevent it from
+     * being used by the argument defaults. */
+    var = 0;
+    if (name_node->type == NT_NAME_CONST) {
+        assert(name_node->children);
+        assert(name_node->children->type == NT_IDENTIFIER);
+        assert(name_node->children->token.type == TT_IDENTIFIER);
+
+        var = _KOS_find_var(program->scope_stack->vars, &name_node->children->token);
+        assert(var);
+        assert((var->type & VAR_LOCAL) || var->type == VAR_GLOBAL);
+
+        if (var->type & VAR_LOCAL) {
+            assert(var->is_active == VAR_ALWAYS_ACTIVE);
+            var->is_active = VAR_INACTIVE;
+        }
+        else
+            var = 0;
     }
 
     /* Generate array with default args */
@@ -4571,6 +4607,9 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
             }
         }
     }
+
+    if (var)
+        var->is_active = VAR_ALWAYS_ACTIVE;
 
 _error:
     return error;

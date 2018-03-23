@@ -58,6 +58,8 @@ static const char *const node_types[] = {
     "multi_assignment",
     "interpolated_string",
     "left_hand_side",
+    "name",
+    "name_const",
     "parameters",
     "ellipsis",
     "expand",

@@ -163,3 +163,46 @@ a = {this:this, new:{}, void:void, true:false, "string":"", array:[]};
 { c = 1 }
 
 @ 10 1 5 # Expected colon
+
+@------------------------------------------------------------------------------
+# Function properties
+var obj = {
+    f1 : fun { },
+    c1 : constructor(x) { }
+}
+
+@ 0
+
+(scope 1 1
+    (assignment 2 9 =
+        (var 2 1 var
+            (identifier 2 5 obj))
+        (object 2 11 {
+            (property 3 5 f1
+                (string 3 5 f1)
+                (function 3 10 fun
+                    (name 3 10 fun
+                        (identifier 3 5 f1))
+                    (parameters 3 14 {)
+                    (landmark 3 14 {)
+                    (scope 3 14 {
+                        (return 3 16 }
+                            (void 3 16 })
+                    ))
+                    (landmark 3 16 })
+            ))
+            (property 4 5 c1
+                (string 4 5 c1)
+                (constructor 4 10 constructor
+                    (name 4 10 constructor
+                        (identifier 4 5 c1))
+                    (parameters 4 21 paren_open
+                        (identifier 4 22 x))
+                    (landmark 4 25 {)
+                    (scope 4 25 {
+                        (return 4 27 }
+                            (this 4 27 })
+                    ))
+                    (landmark 4 27 })
+    ))))
+)
