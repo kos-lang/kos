@@ -4742,7 +4742,7 @@ static int _class_literal(struct _KOS_COMP_UNIT      *program,
     if (proto_reg) {
 
         struct _KOS_REG  *func_reg            = 0;
-        const char        str_set_prototype[] = "set_prototype";
+        static const char str_set_prototype[] = "set_prototype";
         int               str_idx             = 0;
         struct _KOS_TOKEN token;
 
