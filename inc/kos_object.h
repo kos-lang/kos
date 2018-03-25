@@ -98,21 +98,16 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,
                                KOS_OBJ_ID                 obj_id,
                                enum KOS_OBJECT_WALK_DEPTH deep);
 
-int KOS_object_walk_init(KOS_FRAME                  frame,
-                         KOS_OBJECT_WALK           *walk,
-                         KOS_OBJ_ID                 obj_id,
-                         enum KOS_OBJECT_WALK_DEPTH deep);
-
-#define KOS_object_walk_init_shallow(ctx, walk, obj_id) KOS_object_walk_init(ctx, walk, obj_id, KOS_SHALLOW)
-#define KOS_object_walk_init_deep(ctx, walk, obj_id)    KOS_object_walk_init(ctx, walk, obj_id, KOS_DEEP)
+KOS_OBJ_ID KOS_new_object_walk_copy(KOS_FRAME  frame,
+                                    KOS_OBJ_ID walk_id);
 
 typedef struct _KOS_OBJECT_WALK_ELEM {
     KOS_OBJ_ID key;
     KOS_OBJ_ID value;
 } KOS_OBJECT_WALK_ELEM;
 
-KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_FRAME        frame,
-                                     KOS_OBJECT_WALK *walk);
+KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_FRAME  frame,
+                                     KOS_OBJ_ID walk_id);
 
 #ifdef __cplusplus
 }

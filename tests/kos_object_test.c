@@ -39,16 +39,17 @@ static int _walk_object(KOS_FRAME                  frame,
                         unsigned                   num_expected,
                         enum KOS_OBJECT_WALK_DEPTH deep)
 {
-    KOS_OBJECT_WALK      walk;
+    KOS_OBJ_ID           walk;
     KOS_OBJECT_WALK_ELEM elem;
     unsigned             count = 0;
 
-    TEST(KOS_object_walk_init(frame, &walk, obj, deep) == KOS_SUCCESS);
+    walk = KOS_new_object_walk(frame, obj, deep);
+    TEST( ! IS_BAD_PTR(walk));
 
     for (;;) {
         unsigned i;
 
-        elem = KOS_object_walk(frame, &walk);
+        elem = KOS_object_walk(frame, walk);
         if (IS_BAD_PTR(elem.key)) {
             TEST(IS_BAD_PTR(elem.value));
             break;
@@ -105,7 +106,7 @@ int main(void)
         static const char bbb[] = "bbb";
         static const char ccc[] = "ccc";
 
-        KOS_OBJECT_WALK      walk;
+        KOS_OBJ_ID           walk;
         KOS_OBJECT_WALK_ELEM elem;
 
         const KOS_OBJ_ID str_aaa = KOS_context_get_cstring(frame, aaa);
@@ -129,21 +130,22 @@ int main(void)
 
         /* Retrieve both properties by walking */
         {
-            TEST(KOS_object_walk_init_shallow(frame, &walk, o) == KOS_SUCCESS);
+            walk = KOS_new_object_walk(frame, o, KOS_SHALLOW);
+            TEST( ! IS_BAD_PTR(walk));
 
-            elem = KOS_object_walk(frame, &walk);
+            elem = KOS_object_walk(frame, walk);
             TEST(elem.key   == str_aaa);
             TEST(elem.value == TO_SMALL_INT(100));
 
-            elem = KOS_object_walk(frame, &walk);
+            elem = KOS_object_walk(frame, walk);
             TEST(elem.key   == str_bbb);
             TEST(elem.value == TO_SMALL_INT(200));
 
-            elem = KOS_object_walk(frame, &walk);
+            elem = KOS_object_walk(frame, walk);
             TEST(IS_BAD_PTR(elem.key));
             TEST(IS_BAD_PTR(elem.value));
 
-            elem = KOS_object_walk(frame, &walk);
+            elem = KOS_object_walk(frame, walk);
             TEST(IS_BAD_PTR(elem.key));
             TEST(IS_BAD_PTR(elem.value));
         }
@@ -166,17 +168,18 @@ int main(void)
 
         /* Retrieve the remaining property by walking */
         {
-            TEST(KOS_object_walk_init_shallow(frame, &walk, o) == KOS_SUCCESS);
+            walk = KOS_new_object_walk(frame, o, KOS_SHALLOW);
+            TEST( ! IS_BAD_PTR(walk));
 
-            elem = KOS_object_walk(frame, &walk);
+            elem = KOS_object_walk(frame, walk);
             TEST(elem.key   == str_bbb);
             TEST(elem.value == TO_SMALL_INT(200));
 
-            elem = KOS_object_walk(frame, &walk);
+            elem = KOS_object_walk(frame, walk);
             TEST(IS_BAD_PTR(elem.key));
             TEST(IS_BAD_PTR(elem.value));
 
-            elem = KOS_object_walk(frame, &walk);
+            elem = KOS_object_walk(frame, walk);
             TEST(IS_BAD_PTR(elem.key));
             TEST(IS_BAD_PTR(elem.value));
         }
@@ -538,12 +541,13 @@ int main(void)
         }
 
         {
-            KOS_OBJECT_WALK      walk;
+            KOS_OBJ_ID           walk;
             KOS_OBJECT_WALK_ELEM elem;
 
-            TEST(KOS_object_walk_init_shallow(frame, &walk, obj_b) == KOS_SUCCESS);
+            walk = KOS_new_object_walk(frame, obj_b, KOS_SHALLOW);
+            TEST( ! IS_BAD_PTR(walk));
 
-            elem = KOS_object_walk(frame, &walk);
+            elem = KOS_object_walk(frame, walk);
             TEST(IS_BAD_PTR(elem.key));
             TEST(IS_BAD_PTR(elem.value));
         }

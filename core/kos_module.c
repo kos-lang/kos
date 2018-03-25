@@ -293,14 +293,15 @@ static int _predefine_globals(KOS_FRAME              frame,
 {
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cpath;
-    KOS_OBJECT_WALK    walk;
+    KOS_OBJ_ID         walk;
 
     _KOS_vector_init(&cpath);
 
-    TRY(KOS_object_walk_init_shallow(frame, &walk, global_names));
+    walk = KOS_new_object_walk(frame, global_names, KOS_SHALLOW);
+    TRY_OBJID(walk);
 
     for (;;) {
-        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(frame, &walk);
+        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(frame, walk);
         if (IS_BAD_PTR(elem.key))
             break;
 
@@ -314,10 +315,11 @@ static int _predefine_globals(KOS_FRAME              frame,
                                            is_repl ? 0 : 1));
     }
 
-    TRY(KOS_object_walk_init_shallow(frame, &walk, module_names));
+    walk = KOS_new_object_walk(frame, module_names, KOS_SHALLOW);
+    TRY_OBJID(walk);
 
     for (;;) {
-        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(frame, &walk);
+        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(frame, walk);
         if (IS_BAD_PTR(elem.key))
             break;
 
@@ -667,7 +669,7 @@ static int _walk_globals(void                          *vframe,
     KOS_FRAME          frame = (KOS_FRAME)vframe;
     KOS_CONTEXT       *ctx   = KOS_context_from_frame(frame);
     struct _KOS_VECTOR name;
-    KOS_OBJECT_WALK    walk;
+    KOS_OBJ_ID         walk;
     KOS_OBJ_ID         module_obj;
 
     _KOS_vector_init(&name);
@@ -677,10 +679,11 @@ static int _walk_globals(void                          *vframe,
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-    TRY(KOS_object_walk_init_shallow(frame, &walk, OBJPTR(MODULE, module_obj)->global_names));
+    walk = KOS_new_object_walk(frame, OBJPTR(MODULE, module_obj)->global_names, KOS_SHALLOW);
+    TRY_OBJID(walk);
 
     for (;;) {
-        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(frame, &walk);
+        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(frame, walk);
         if (IS_BAD_PTR(elem.key))
             break;
 

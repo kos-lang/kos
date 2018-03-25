@@ -825,37 +825,23 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,
                                KOS_OBJ_ID                 obj_id,
                                enum KOS_OBJECT_WALK_DEPTH deep)
 {
-    KOS_OBJECT_WALK *walk = (KOS_OBJECT_WALK *)_KOS_alloc_object(frame,
-                                                                 KOS_ALLOC_DEFAULT,
-                                                                 OBJ_OBJECT_WALK,
-                                                                 sizeof(KOS_OBJECT_WALK));
+    int              error = KOS_SUCCESS;
+    KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(frame,
+                                                                  KOS_ALLOC_DEFAULT,
+                                                                  OBJ_OBJECT_WALK,
+                                                                  sizeof(KOS_OBJECT_WALK));
+    KOS_OBJ_ID       key_table_obj;
 
-    if (walk) {
-        const int error = KOS_object_walk_init(frame, walk, obj_id, deep);
+    if ( ! walk)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-        if (error) {
-            assert(KOS_is_exception_pending(frame));
-            walk = 0;
-        }
-    }
-
-    return OBJID(OBJECT_WALK, walk);
-}
-
-int KOS_object_walk_init(KOS_FRAME                  frame,
-                         KOS_OBJECT_WALK           *walk,
-                         KOS_OBJ_ID                 obj_id,
-                         enum KOS_OBJECT_WALK_DEPTH deep)
-{
-    int        error         = KOS_SUCCESS;
-    KOS_OBJ_ID key_table_obj = KOS_new_object(frame);
-
+    key_table_obj = KOS_new_object(frame);
     TRY_OBJID(key_table_obj);
 
-    walk->header.type   = OBJ_OBJECT_WALK;
-    walk->obj           = obj_id;
-    walk->key_table     = KOS_BADPTR;
-    walk->index         = 0;
+    walk->header.type = OBJ_OBJECT_WALK;
+    walk->obj         = obj_id;
+    walk->key_table   = KOS_BADPTR;
+    walk->index       = 0;
 
     do {
         KOS_OBJECT_STORAGE *prop_table;
@@ -902,15 +888,45 @@ int KOS_object_walk_init(KOS_FRAME                  frame,
     walk->key_table = OBJID(OBJECT_STORAGE, _read_props(&_get_properties(key_table_obj)->props));
 
 _error:
-    return error;
+    return error ? KOS_BADPTR : OBJID(OBJECT_WALK, walk);
 }
 
-KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_FRAME        frame,
-                                     KOS_OBJECT_WALK *walk)
+KOS_OBJ_ID KOS_new_object_walk_copy(KOS_FRAME  frame,
+                                    KOS_OBJ_ID walk_id)
+{
+    int              error = KOS_SUCCESS;
+    KOS_OBJECT_WALK *src;
+    KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(frame,
+                                                                  KOS_ALLOC_DEFAULT,
+                                                                  OBJ_OBJECT_WALK,
+                                                                  sizeof(KOS_OBJECT_WALK));
+
+    if ( ! walk)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+    assert(GET_OBJ_TYPE(walk_id) == OBJ_OBJECT_WALK);
+
+    src = OBJPTR(OBJECT_WALK, walk_id);
+
+    KOS_atomic_write_u32(walk->index, KOS_atomic_read_u32(src->index));
+    walk->obj       = src->obj;
+    walk->key_table = src->key_table;
+
+_error:
+    return error ? KOS_BADPTR : OBJID(OBJECT_WALK, walk);
+}
+
+KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_FRAME  frame,
+                                     KOS_OBJ_ID walk_id)
 {
     KOS_OBJECT_WALK_ELEM elem     = { KOS_BADPTR, KOS_BADPTR };
     uint32_t             capacity = 0;
     KOS_PITEM           *table    = 0;
+    KOS_OBJECT_WALK     *walk     = 0;
+
+    assert(GET_OBJ_TYPE(walk_id) == OBJ_OBJECT_WALK);
+
+    walk = OBJPTR(OBJECT_WALK, walk_id);
 
     if ( ! IS_BAD_PTR(walk->key_table)) {
         KOS_OBJECT_STORAGE *key_table = OBJPTR(OBJECT_STORAGE, walk->key_table);

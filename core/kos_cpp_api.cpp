@@ -217,4 +217,24 @@ std::string exception::get_exception_string(stack_frame frame)
     return from_object_ptr(frame, obj_id);
 }
 
+object::const_iterator::const_iterator(stack_frame           frame,
+                                       KOS_OBJ_ID            obj_id,
+                                       KOS_OBJECT_WALK_DEPTH depth)
+    : _frame(frame)
+{
+    _elem.key   = KOS_BADPTR;
+    _elem.value = KOS_BADPTR;
+    _walk       = frame.check_error(KOS_new_object_walk(frame, obj_id, depth));
+    _elem       = KOS_object_walk(_frame, _walk);
+}
+
+object::const_iterator& object::const_iterator::operator=(const const_iterator& it)
+{
+    _frame      = it._frame;
+    _walk       = KOS_new_object_walk_copy(_frame, it._walk);
+    _elem.key   = it._elem.key;
+    _elem.value = it._elem.value;
+    return *this;
+}
+
 } // namespace kos

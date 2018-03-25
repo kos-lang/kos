@@ -430,21 +430,24 @@ class object: public object_base {
                 typedef const value_type&         reference;
 
                 const_iterator()
-                    : _frame(0)
+                    : _frame(0), _walk(KOS_BADPTR)
                 {
-                    _walk[0]    = OBJ_OBJECT_WALK;
                     _elem.key   = KOS_BADPTR;
                     _elem.value = KOS_BADPTR;
                 }
 
-                const_iterator(stack_frame frame, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH depth)
-                    : _frame(frame)
+                const_iterator(stack_frame frame, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH depth);
+
+                const_iterator(const const_iterator& it)
+                    : _frame(0), _walk(KOS_BADPTR)
                 {
                     _elem.key   = KOS_BADPTR;
                     _elem.value = KOS_BADPTR;
-                    frame.check_error(KOS_object_walk_init(frame, walk(), obj_id, depth));
-                    _elem = KOS_object_walk(_frame, walk());
+
+                    *this = it;
                 }
+
+                const_iterator& operator=(const const_iterator& it);
 
                 bool operator==(const const_iterator& it) const {
                     return _elem.key == it._elem.key;
@@ -455,7 +458,7 @@ class object: public object_base {
                 }
 
                 const_iterator& operator++() {
-                    _elem = KOS_object_walk(_frame, walk());
+                    _elem = KOS_object_walk(_frame, _walk);
                     return *this;
                 }
 
@@ -474,10 +477,8 @@ class object: public object_base {
                 }
 
             private:
-                KOS_OBJECT_WALK* walk() { return reinterpret_cast<KOS_OBJECT_WALK*>(_walk); }
-
                 mutable stack_frame  _frame;
-                char                 _walk[sizeof(KOS_OBJECT_WALK)];
+                KOS_OBJ_ID           _walk;
                 KOS_OBJECT_WALK_ELEM _elem;
         };
 

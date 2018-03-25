@@ -153,9 +153,9 @@ static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
                                    KOS_OBJ_ID                 args_obj,
                                    enum KOS_OBJECT_WALK_DEPTH deep)
 {
-    int                  error = KOS_SUCCESS;
-    KOS_OBJ_ID           walk;
-    KOS_OBJ_ID           ret  = KOS_BADPTR;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID walk;
+    KOS_OBJ_ID ret  = KOS_BADPTR;
 
     assert( ! IS_BAD_PTR(regs_obj));
     TRY_OBJID(regs_obj);
@@ -180,7 +180,7 @@ static KOS_OBJ_ID _object_iterator(KOS_FRAME                  frame,
         KOS_OBJ_ID array = KOS_new_array(frame, 2);
         TRY_OBJID(array);
 
-        elem = KOS_object_walk(frame, OBJPTR(OBJECT_WALK, walk));
+        elem = KOS_object_walk(frame, walk);
 
         TRY_OBJID(elem.key);
         assert( ! IS_BAD_PTR(elem.value));
