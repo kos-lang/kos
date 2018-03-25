@@ -352,8 +352,7 @@ typedef struct _KOS_OBJECT_WALK {
     KOS_OBJ_HEADER       header;
     KOS_ATOMIC(uint32_t) index;
     KOS_OBJ_ID           obj;
-    KOS_OBJ_ID           key_table_obj;
-    void                *key_table;
+    KOS_OBJ_ID           key_table;
 } KOS_OBJECT_WALK;
 
 enum KOS_ALLOC_HINT {

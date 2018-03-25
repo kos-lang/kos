@@ -470,8 +470,7 @@ KOS_OBJ_ID KOS_get_property(KOS_FRAME  frame,
                             break;
 
                         props = _get_properties(obj_id);
-                    }
-                    while ( ! props || ! _read_props(&props->props));
+                    } while ( ! props || ! _read_props(&props->props));
 
                     if (IS_BAD_PTR(obj_id)) {
                         KOS_raise_exception_cstring(frame, str_err_no_property);
@@ -851,13 +850,11 @@ int KOS_object_walk_init(KOS_FRAME                  frame,
     int        error         = KOS_SUCCESS;
     KOS_OBJ_ID key_table_obj = KOS_new_object(frame);
 
-    if (IS_BAD_PTR(key_table_obj))
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    TRY_OBJID(key_table_obj);
 
     walk->header.type   = OBJ_OBJECT_WALK;
     walk->obj           = obj_id;
-    walk->key_table_obj = key_table_obj;
-    walk->key_table     = (void *)0;
+    walk->key_table     = KOS_BADPTR;
     walk->index         = 0;
 
     do {
@@ -880,19 +877,29 @@ int KOS_object_walk_init(KOS_FRAME                  frame,
         cur_item  = prop_table->items;
         items_end = cur_item + prop_table->capacity;
 
-        for ( ; cur_item < items_end; cur_item++) {
+        for ( ; cur_item < items_end; ++cur_item) {
             const KOS_OBJ_ID key   = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->key);
             const KOS_OBJ_ID value = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->value);
 
             if (IS_BAD_PTR(key) || value == TOMBSTONE)
                 continue;
 
+            if (value == CLOSED) {
+                KOS_OBJECT_STORAGE *new_prop_table = _read_props(&prop_table->new_prop_table);
+
+                _copy_table(frame, props, prop_table, new_prop_table);
+
+                prop_table = new_prop_table;
+                cur_item   = prop_table->items - 1;
+                items_end  = prop_table->items + prop_table->capacity;
+                continue;
+            }
+
             TRY(KOS_set_property(frame, key_table_obj, key, KOS_VOID));
         }
-    }
-    while ( ! IS_BAD_PTR(obj_id) && deep);
+    } while ( ! IS_BAD_PTR(obj_id) && deep);
 
-    walk->key_table = _read_props(&_get_properties(key_table_obj)->props);
+    walk->key_table = OBJID(OBJECT_STORAGE, _read_props(&_get_properties(key_table_obj)->props));
 
 _error:
     return error;
@@ -905,8 +912,8 @@ KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_FRAME        frame,
     uint32_t             capacity = 0;
     KOS_PITEM           *table    = 0;
 
-    if (walk->key_table) {
-        KOS_OBJECT_STORAGE *key_table = (KOS_OBJECT_STORAGE *)(walk->key_table);
+    if ( ! IS_BAD_PTR(walk->key_table)) {
+        KOS_OBJECT_STORAGE *key_table = OBJPTR(OBJECT_STORAGE, walk->key_table);
 
         capacity = key_table->capacity;
         table    = key_table->items;
