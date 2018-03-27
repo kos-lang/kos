@@ -121,6 +121,17 @@ int main(void)
     };
 
     /************************************************************************/
+    {
+        static struct _KOS_CONST_OBJECT const_obj = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 2);
+
+        KOS_BOOLEAN *bool_obj = (KOS_BOOLEAN *)&const_obj._alloc_size;
+
+        TEST(bool_obj->header.alloc_size == 0);
+        TEST(bool_obj->header.type       == OBJ_BOOLEAN);
+        TEST(bool_obj->boolean.value     == 2);
+    }
+
+    /************************************************************************/
     for (i = 0; i < sizeof(alloc) / sizeof(alloc[0]); i++) {
 
         int    j;
@@ -139,7 +150,7 @@ int main(void)
             objects[j] = (*alloc[i].alloc_func)(frame);
             TEST(objects[j]);
 
-            TEST(*(uint8_t *)objects[j] == alloc[i].type);
+            TEST(((uint8_t *)objects[j])[sizeof(KOS_OBJ_ID)] == alloc[i].type);
 
             TEST(((intptr_t)objects[j] & 7) == 0);
 

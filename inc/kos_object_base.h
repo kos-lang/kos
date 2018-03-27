@@ -73,9 +73,15 @@ typedef struct _KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
 #define KOS_BADPTR ((KOS_OBJ_ID)(intptr_t)1)
 
 typedef struct _KOS_OBJ_HEADER {
-    uint8_t  type;        /* KOS_OBJECT_TYPE */
-    uint8_t  reserved[3]; /* alignment       */
-    uint32_t alloc_size;
+    /* During normal operation, alloc_size contains a small integer, which
+     * encodes size of the allocation.
+     *
+     * When objects are moved to a new page during garbage collections,
+     * alloc_size contains an object identifier of the new, target object that
+     * has been allocated in the new page.
+     */
+    KOS_OBJ_ID alloc_size;
+    uint8_t    type;        /* KOS_TYPE */
 } KOS_OBJ_HEADER;
 
 #ifdef __cplusplus
@@ -99,13 +105,17 @@ static inline bool IS_HEAP_OBJECT(KOS_OBJ_ID obj_id) {
 static inline KOS_TYPE READ_OBJ_TYPE(KOS_OBJ_ID obj_id) {
     assert( ! IS_SMALL_INT(obj_id));
     assert( ! IS_BAD_PTR(obj_id));
-    return static_cast<KOS_TYPE>(reinterpret_cast<const uint8_t *>(obj_id)[-1]);
+    return static_cast<KOS_TYPE>(
+               reinterpret_cast<const KOS_OBJ_HEADER *>(
+                   reinterpret_cast<intptr_t>(obj_id) - 1)->type);
 }
 static inline KOS_TYPE GET_OBJ_TYPE(KOS_OBJ_ID obj_id) {
     if (IS_SMALL_INT(obj_id))
         return OBJ_SMALL_INTEGER;
     assert( ! IS_BAD_PTR(obj_id));
-    return static_cast<KOS_TYPE>(reinterpret_cast<const uint8_t *>(obj_id)[-1]);
+    return static_cast<KOS_TYPE>(
+               reinterpret_cast<const KOS_OBJ_HEADER *>(
+                   reinterpret_cast<intptr_t>(obj_id) - 1)->type);
 }
 static inline bool IS_NUMERIC_OBJ(KOS_OBJ_ID obj_id) {
     return GET_OBJ_TYPE(obj_id) <= OBJ_FLOAT;
@@ -135,7 +145,7 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 #define IS_BAD_PTR(obj_id)     ( (intptr_t)(obj_id) == 1                           )
 #define IS_HEAP_OBJECT(obj_id) ( ((intptr_t)(obj_id) & 7) == 1                     )
 #define OBJID(tag, ptr)        ( (KOS_OBJ_ID) ((intptr_t)(ptr) + 1)                )
-#define READ_OBJ_TYPE(obj_id)  ( (KOS_TYPE) ((uint8_t *)(obj_id))[-1]              )
+#define READ_OBJ_TYPE(obj_id)  ( (KOS_TYPE) ((KOS_OBJ_HEADER *)((uint8_t *)(obj_id) - 1))->type   )
 #define GET_OBJ_TYPE(obj_id)   ( IS_SMALL_INT(obj_id) ? OBJ_SMALL_INTEGER : READ_OBJ_TYPE(obj_id) )
 
 #endif
@@ -166,6 +176,7 @@ typedef struct _KOS_VOID {
 typedef union _KOS_BOOLEAN {
     KOS_OBJ_HEADER header;
     struct {
+        KOS_OBJ_ID alloc_size;
         uint8_t    type;
         uint8_t    value;
     }              boolean;
@@ -178,10 +189,12 @@ typedef struct _KOS_OPAQUE {
 struct _KOS_CONST_OBJECT {
     uint64_t       _align8;
     uint32_t       _align4;
-    KOS_OBJ_HEADER header;
+    char           _alloc_size[sizeof(KOS_OBJ_ID)];
+    uint8_t        type;
+    uint8_t        value;
 };
 
-#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).header + 1) )
+#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj)._alloc_size + 1) )
 
 #ifdef __cplusplus
 extern "C" {
@@ -200,7 +213,7 @@ extern const struct _KOS_CONST_OBJECT _kos_true;
 #define KOS_TRUE    KOS_CONST_ID(_kos_true)
 #define KOS_BOOL(v) ( (v) ? KOS_TRUE : KOS_FALSE )
 
-#define KOS_CONST_OBJECT_INIT(type, value) { 0, 0, { (type), { (value), 0, 0 }, 0 } }
+#define KOS_CONST_OBJECT_INIT(type, value) { 0, 0, "", (type), (value) }
 
 enum _KOS_STRING_FLAGS {
     /* Two lowest bits specify string element (character) size in bytes */
@@ -215,10 +228,10 @@ enum _KOS_STRING_FLAGS {
 };
 
 typedef struct _KOS_STR_HEADER {
+    KOS_OBJ_ID           alloc_size;
     uint8_t              type;
     uint8_t              flags;
     uint16_t             length;
-    uint32_t             alloc_size;
     KOS_ATOMIC(uint32_t) hash;
 } KOS_STR_HEADER;
 
@@ -279,11 +292,11 @@ enum _KOS_FUNCTION_STATE {
 };
 
 typedef struct _KOS_FUN_HEADER {
+    KOS_OBJ_ID           alloc_size;
     uint8_t              type;
     uint8_t              flags;
     uint8_t              num_args;
     uint8_t              num_regs;
-    uint32_t             alloc_size;
 } KOS_FUN_HEADER;
 
 enum _KOS_FUNCTION_FLAGS {

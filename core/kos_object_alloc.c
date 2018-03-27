@@ -197,8 +197,8 @@ static void *_alloc_huge_object(KOS_FRAME            frame,
     hdr = (KOS_OBJ_HEADER *)(ptr + 2);
     assert( ! ((uintptr_t)hdr & 7U));
 
+    hdr->alloc_size = TO_SMALL_INT(size);
     hdr->type       = (uint8_t)object_type;
-    hdr->alloc_size = size;
 
     _list_push(&frame->allocator->pools, (void *)ptr);
 
@@ -225,8 +225,8 @@ static void *_alloc_object(KOS_FRAME            frame,
 
                 /* TODO sort active pages by remaining size in descending order */
 
+                hdr->alloc_size = TO_SMALL_INT(size);
                 hdr->type       = (uint8_t)object_type;
-                hdr->alloc_size = size;
 
                 KOS_PERF_CNT(alloc_object);
 

@@ -55,11 +55,11 @@ enum _KOS_CATCH_STATE {
 #define KOS_MAX_SAVED_FRAMES 16
 
 struct _KOS_SF_HDR {
-    uint8_t  type;
-    uint8_t  catch_reg;
-    uint8_t  yield_reg; /* index of the yield register */
-    uint8_t  flags;
-    uint32_t alloc_size;
+    KOS_OBJ_ID alloc_size;
+    uint8_t    type;
+    uint8_t    catch_reg;
+    uint8_t    yield_reg; /* index of the yield register */
+    uint8_t    flags;
 };
 
 typedef struct _KOS_STACK_FRAME {

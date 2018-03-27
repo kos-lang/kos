@@ -101,14 +101,14 @@ KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
         if (buf_built_in) {
             if (buf_alloc_size) {
                 storage = (KOS_ARRAY_STORAGE *)((uint8_t *)array + array_obj_size);
+                storage->header.alloc_size = TO_SMALL_INT(buf_alloc_size);
                 storage->header.type       = OBJ_ARRAY_STORAGE;
-                storage->header.alloc_size = buf_alloc_size;
                 storage->capacity          = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
 
                 KOS_atomic_write_u32(storage->num_slots_open, storage->capacity);
                 KOS_atomic_write_ptr(storage->next,           KOS_BADPTR);
 
-                array->header.alloc_size = array_obj_size;
+                array->header.alloc_size = TO_SMALL_INT(array_obj_size);
 
                 KOS_atomic_write_ptr(array->data, OBJID(ARRAY_STORAGE, storage));
             }
