@@ -78,24 +78,24 @@ static inline void KOS_atomic_full_barrier()
 
 static inline uint32_t KOS_atomic_read_u32(KOS_ATOMIC(uint32_t)& src)
 {
-    return src.load(std::memory_order_acquire);
+    return src.load(std::memory_order_relaxed);
 }
 
 template<typename T>
 T* KOS_atomic_read_ptr(KOS_ATOMIC(T*)& src)
 {
-    return src.load(std::memory_order_acquire);
+    return src.load(std::memory_order_relaxed);
 }
 
 static inline void KOS_atomic_write_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t value)
 {
-    dest.store(value, std::memory_order_release);
+    dest.store(value, std::memory_order_relaxed);
 }
 
 template<typename T>
 void KOS_atomic_write_ptr(KOS_ATOMIC(T*)& dest, T* value)
 {
-    dest.store(value, std::memory_order_release);
+    dest.store(value, std::memory_order_relaxed);
 }
 
 static inline bool KOS_atomic_cas_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t oldv, uint32_t newv)
@@ -138,13 +138,13 @@ T* KOS_atomic_swap_ptr(KOS_ATOMIC(T*)& dest, T* value)
 
 #define KOS_atomic_full_barrier() atomic_thread_fence(memory_order_seq_cst)
 
-#define KOS_atomic_read_u32(src) atomic_load_explicit(&(src), memory_order_acquire)
+#define KOS_atomic_read_u32(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
-#define KOS_atomic_read_ptr(src) atomic_load_explicit(&(src), memory_order_acquire)
+#define KOS_atomic_read_ptr(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
-#define KOS_atomic_write_u32(dest, value) atomic_store_explicit(&(dest), (value), memory_order_release)
+#define KOS_atomic_write_u32(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
 
-#define KOS_atomic_write_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_release)
+#define KOS_atomic_write_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
 
 #define KOS_atomic_cas_u32(dest, oldv, newv) _KOS_atomic_cas_u32(&(dest), (oldv), (newv))
 
