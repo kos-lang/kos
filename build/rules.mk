@@ -106,7 +106,7 @@ ifeq ($(UNAME), Windows)
 else
     ifeq ($(CONFIG_DEBUG), 0)
         CFLAGS += -O3 -DNDEBUG -ffunction-sections -fdata-sections
-        STRIP  += strip
+        STRIP  ?= strip
         ifeq ($(UNAME), Linux)
             LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
         endif
@@ -155,11 +155,11 @@ else
     ifeq ($(UNAME), Darwin)
         CFLAGS  += -DCONFIG_EDITLINE
         LDFLAGS += -ledit -ltermcap
-    endif
-
-    ifeq ($(UNAME), Linux)
-        CFLAGS  += -DCONFIG_READLINE
-        LDFLAGS += -lreadline
+    else
+        ifeq (true,$(shell $(call inv_path, $(depth))/build/have_readline $(CC)))
+            CFLAGS  += -DCONFIG_READLINE
+            LDFLAGS += -lreadline
+        endif
     endif
 
     # Configure gcov
