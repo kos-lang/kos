@@ -95,8 +95,9 @@ If you're cross-compiling Kos, set up the following environment variables to
 point to your cross-toolchain:
 
 * **CC** - path to the C/C++ compiler
-* **LD** - path to the linker
+* **CXX** - path to the C++ compiler used for linking
 * **AR** - path to ar
+* **STRIP** - path to strip for release builds
 
 
 Optional configuration
