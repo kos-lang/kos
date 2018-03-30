@@ -170,6 +170,11 @@ else
     endif
 endif
 
+ifeq ($(UNAME), Darwin)
+    CFLAGS  += -mmacosx-version-min=10.9
+    LDFLAGS += -mmacosx-version-min=10.9
+endif
+
 CONFIG_PERF ?= 0
 
 ifneq ($(CONFIG_PERF), 0)
