@@ -1471,25 +1471,6 @@ Example:
     > count.instructions
     26
 
-function.prototype.iterator()
------------------------------
-
-    function.prototype.iterator()
-
-Returns the function itself (`this`).
-
-The `iterator()` function is also implicitly invoked by the `for-in` loop
-statement.
-
-This allows passing an iterator from an instantiated generator to be
-passed to a `for-in` loop.
-
-Examples:
-
-    > for const x in range(2) { print(x) }
-    0
-    1
-
 function.prototype.name
 -----------------------
 
@@ -1543,6 +1524,25 @@ operator to detect generator functions.
 Calling this constructor function throws an exception.
 
 The prototype of `generator.prototype` is `function.prototype`.
+
+generator.prototype.iterator()
+------------------------------
+
+    generator.prototype.iterator()
+
+Returns the generator itself (`this`).
+
+The `iterator()` generator is also implicitly invoked by the `for-in` loop
+statement.
+
+This allows passing an iterator from an instantiated generator to be
+passed to a `for-in` loop.
+
+Examples:
+
+    > for const x in range(2) { print(x) }
+    0
+    1
 
 generator.prototype.slice()
 ---------------------------
@@ -1890,8 +1890,9 @@ The order of the elements yielded is unspecified.
 This is equivalent to `shallow()` function.
 
 If the object is not of type `object`, e.g. if it is an integer,
-a float, a boolean or a void, the iterator yields the object itself.
-Prototypes of array, string, buffer and function override this generator.
+a float, a boolean, a void or a non-generator function, the iterator yields
+the object itself.  Prototypes of array, string, buffer and function override
+this generator.
 
 The `iterator()` function is also implicitly invoked by the `for-in` loop
 statement.

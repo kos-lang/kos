@@ -1335,6 +1335,85 @@ do {
 }
 
 ##############################################################################
+# Iterate over functions
+do {
+    fun func
+    {
+        return 42
+    }
+
+    constructor ctor
+    {
+        this.xyz = 42
+    }
+
+    fun gen
+    {
+        yield 1
+        yield 2
+    }
+
+    assert typeof func == "function"
+    assert typeof ctor == "function"
+    assert typeof gen  == "function"
+
+    assert func instanceof lang.function
+    assert ctor instanceof lang.constructor
+    assert gen  instanceof lang.generator
+
+    const a = []
+    for const x in func {
+        a.push(x)
+    }
+    assert a.size == 1
+    assert a[0] == func
+
+    a.resize(0)
+    for const x in func() {
+        a.push(x)
+    }
+    assert a.size == 1
+    assert a[0] == 42
+
+    a.resize(0)
+    for const x in ctor {
+        a.push(x)
+    }
+    assert a.size == 1
+    assert a[0] == ctor
+
+    a.resize(0)
+    for const x in ctor() {
+        a.push(x)
+    }
+    assert a.size == 1
+    assert typeof a[0] == "array"
+    assert a[0][0] == "xyz"
+    assert a[0][1] == 42
+
+    a.resize(0)
+    var except = void
+    try {
+        for const x in gen {
+            a.push(x)
+        }
+    }
+    catch const e {
+        except = e
+    }
+    assert a.size == 0
+    assert except != void
+
+    a.resize(0)
+    for const x in gen() {
+        a.push(x)
+    }
+    assert a.size == 2
+    assert a[0] == 1
+    assert a[1] == 2
+}
+
+##############################################################################
 # lang.function.prototype.set_prototype
 
 do {
