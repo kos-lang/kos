@@ -195,6 +195,43 @@ int _KOS_is_current_thread(_KOS_THREAD thread)
     return GetCurrentThreadId() == thread->thread_id ? 1 : 0;
 }
 
+struct _KOS_MUTEX_OBJECT {
+    CRITICAL_SECTION cs;
+};
+
+_KOS_MUTEX _KOS_create_mutex()
+{
+    _KOS_MUTEX mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
+
+    if (mutex)
+        InitializeCriticalSection(&mutex->cs);
+
+    return mutex;
+}
+
+void _KOS_destroy_mutex(_KOS_MUTEX mutex)
+{
+    assert(mutex);
+
+    DeleteCriticalSection(&mutex->cs);
+
+    _KOS_free(mutex);
+}
+
+void _KOS_lock_mutex(_KOS_MUTEX mutex)
+{
+    assert(mutex);
+
+    EnterCriticalSection(&mutex->cs);
+}
+
+void _KOS_unlock_mutex(_KOS_MUTEX mutex)
+{
+    assert(mutex);
+
+    LeaveCriticalSection(&mutex->cs);
+}
+
 int _KOS_tls_create(_KOS_TLS_KEY *key)
 {
     int   error   = KOS_SUCCESS;
@@ -308,6 +345,65 @@ int _KOS_is_current_thread(_KOS_THREAD thread)
     assert(thread);
 
     return pthread_equal(pthread_self(), thread->thread_handle);
+}
+
+struct _KOS_MUTEX_OBJECT {
+    pthread_mutex_t mutex;
+};
+
+_KOS_MUTEX _KOS_create_mutex()
+{
+    _KOS_MUTEX mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
+
+    if (mutex) {
+        if (_KOS_seq_fail() || pthread_mutex_init(&mutex->mutex, 0)) {
+            _KOS_free(mutex);
+            mutex = 0;
+        }
+    }
+
+    return mutex;
+}
+
+void _KOS_destroy_mutex(_KOS_MUTEX mutex)
+{
+    assert(mutex);
+
+    pthread_mutex_destroy(&mutex->mutex);
+
+    _KOS_free(mutex);
+}
+
+void _KOS_lock_mutex(_KOS_MUTEX mutex)
+{
+#ifndef NDEBUG
+    int ret;
+#endif
+
+    assert(mutex);
+
+#ifndef NDEBUG
+    ret =
+#endif
+    pthread_mutex_lock(&mutex->mutex);
+
+    assert(ret == 0);
+}
+
+void _KOS_unlock_mutex(_KOS_MUTEX mutex)
+{
+#ifndef NDEBUG
+    int ret;
+#endif
+
+    assert(mutex);
+
+#ifndef NDEBUG
+    ret =
+#endif
+    pthread_mutex_unlock(&mutex->mutex);
+
+    assert(ret == 0);
 }
 
 struct _KOS_TLS_OBJECT {
