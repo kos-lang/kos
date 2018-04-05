@@ -199,7 +199,7 @@ struct _KOS_MUTEX_OBJECT {
     CRITICAL_SECTION cs;
 };
 
-_KOS_MUTEX _KOS_create_mutex()
+_KOS_MUTEX _KOS_create_mutex(void)
 {
     _KOS_MUTEX mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
 
@@ -351,7 +351,7 @@ struct _KOS_MUTEX_OBJECT {
     pthread_mutex_t mutex;
 };
 
-_KOS_MUTEX _KOS_create_mutex()
+_KOS_MUTEX _KOS_create_mutex(void)
 {
     _KOS_MUTEX mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
 
