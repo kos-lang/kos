@@ -39,7 +39,6 @@
 #endif
 
 static const char str_err_join_self[] = "thread cannot join itself";
-static const char str_err_mutex[]     = "failed to create mutex";
 static const char str_err_thread[]    = "failed to create thread";
 
 void _KOS_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
@@ -200,8 +199,7 @@ struct _KOS_MUTEX_OBJECT {
     CRITICAL_SECTION cs;
 };
 
-int _KOS_create_mutex(struct _KOS_STACK_FRAME *frame,
-                      _KOS_MUTEX              *mutex)
+int _KOS_create_mutex(_KOS_MUTEX *mutex)
 {
     int error = KOS_SUCCESS;
 
@@ -210,10 +208,8 @@ int _KOS_create_mutex(struct _KOS_STACK_FRAME *frame,
 
     if (*mutex)
         InitializeCriticalSection(&(*mutex)->cs);
-    else {
-        KOS_raise_exception_cstring(frame, str_err_mutex);
+    else
         error = KOS_ERROR_EXCEPTION;
-    }
 
     return error;
 }
@@ -360,8 +356,7 @@ struct _KOS_MUTEX_OBJECT {
     pthread_mutex_t mutex;
 };
 
-int _KOS_create_mutex(struct _KOS_STACK_FRAME *frame,
-                      _KOS_MUTEX              *mutex)
+int _KOS_create_mutex(_KOS_MUTEX *mutex)
 {
     int error = KOS_SUCCESS;
 
@@ -372,14 +367,11 @@ int _KOS_create_mutex(struct _KOS_STACK_FRAME *frame,
         if (_KOS_seq_fail() || pthread_mutex_init(&(*mutex)->mutex, 0)) {
             _KOS_free(*mutex);
             *mutex = 0;
-            KOS_raise_exception_cstring(frame, str_err_mutex);
-            error = KOS_ERROR_EXCEPTION;
+            error = KOS_ERROR_OUT_OF_MEMORY;
         }
     }
-    else {
-        KOS_raise_exception_cstring(frame, str_err_mutex);
-        error = KOS_ERROR_EXCEPTION;
-    }
+    else
+        error = KOS_ERROR_OUT_OF_MEMORY;
 
     return error;
 }

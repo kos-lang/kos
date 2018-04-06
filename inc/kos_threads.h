@@ -580,8 +580,7 @@ int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
 
 int _KOS_is_current_thread(_KOS_THREAD thread);
 
-int _KOS_create_mutex(struct _KOS_STACK_FRAME *frame,
-                      _KOS_MUTEX              *mutex);
+int _KOS_create_mutex(_KOS_MUTEX *mutex);
 void _KOS_destroy_mutex(_KOS_MUTEX *mutex);
 void _KOS_lock_mutex(_KOS_MUTEX *mutex);
 void _KOS_unlock_mutex(_KOS_MUTEX *mutex);
