@@ -39,6 +39,7 @@
 #endif
 
 static const char str_err_join_self[] = "thread cannot join itself";
+static const char str_err_mutex[]     = "failed to create mutex";
 static const char str_err_thread[]    = "failed to create thread";
 
 void _KOS_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
@@ -199,37 +200,45 @@ struct _KOS_MUTEX_OBJECT {
     CRITICAL_SECTION cs;
 };
 
-_KOS_MUTEX _KOS_create_mutex(void)
+int _KOS_create_mutex(struct _KOS_STACK_FRAME *frame,
+                      _KOS_MUTEX              *mutex)
 {
-    _KOS_MUTEX mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
+    int error = KOS_SUCCESS;
 
-    if (mutex)
-        InitializeCriticalSection(&mutex->cs);
+    assert(mutex);
+    *mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
 
-    return mutex;
+    if (*mutex)
+        InitializeCriticalSection(&(*mutex)->cs);
+    else {
+        KOS_raise_exception_cstring(frame, str_err_mutex);
+        error = KOS_ERROR_EXCEPTION;
+    }
+
+    return error;
 }
 
-void _KOS_destroy_mutex(_KOS_MUTEX mutex)
+void _KOS_destroy_mutex(_KOS_MUTEX *mutex)
 {
-    assert(mutex);
+    assert(mutex && *mutex);
 
-    DeleteCriticalSection(&mutex->cs);
+    DeleteCriticalSection(&(*mutex)->cs);
 
-    _KOS_free(mutex);
+    _KOS_free(*mutex);
 }
 
-void _KOS_lock_mutex(_KOS_MUTEX mutex)
+void _KOS_lock_mutex(_KOS_MUTEX *mutex)
 {
-    assert(mutex);
+    assert(mutex && *mutex);
 
-    EnterCriticalSection(&mutex->cs);
+    EnterCriticalSection(&(*mutex)->cs);
 }
 
-void _KOS_unlock_mutex(_KOS_MUTEX mutex)
+void _KOS_unlock_mutex(_KOS_MUTEX *mutex)
 {
-    assert(mutex);
+    assert(mutex && *mutex);
 
-    LeaveCriticalSection(&mutex->cs);
+    LeaveCriticalSection(&(*mutex)->cs);
 }
 
 int _KOS_tls_create(_KOS_TLS_KEY *key)
@@ -351,57 +360,67 @@ struct _KOS_MUTEX_OBJECT {
     pthread_mutex_t mutex;
 };
 
-_KOS_MUTEX _KOS_create_mutex(void)
+int _KOS_create_mutex(struct _KOS_STACK_FRAME *frame,
+                      _KOS_MUTEX              *mutex)
 {
-    _KOS_MUTEX mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
+    int error = KOS_SUCCESS;
 
-    if (mutex) {
-        if (_KOS_seq_fail() || pthread_mutex_init(&mutex->mutex, 0)) {
-            _KOS_free(mutex);
-            mutex = 0;
+    assert(mutex);
+    *mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
+
+    if (*mutex) {
+        if (_KOS_seq_fail() || pthread_mutex_init(&(*mutex)->mutex, 0)) {
+            _KOS_free(*mutex);
+            *mutex = 0;
+            KOS_raise_exception_cstring(frame, str_err_mutex);
+            error = KOS_ERROR_EXCEPTION;
         }
     }
+    else {
+        KOS_raise_exception_cstring(frame, str_err_mutex);
+        error = KOS_ERROR_EXCEPTION;
+    }
 
-    return mutex;
+    return error;
 }
 
-void _KOS_destroy_mutex(_KOS_MUTEX mutex)
+void _KOS_destroy_mutex(_KOS_MUTEX *mutex)
 {
-    assert(mutex);
+    assert(mutex && *mutex);
 
-    pthread_mutex_destroy(&mutex->mutex);
+    pthread_mutex_destroy(&(*mutex)->mutex);
 
-    _KOS_free(mutex);
+    _KOS_free(*mutex);
 }
 
-void _KOS_lock_mutex(_KOS_MUTEX mutex)
+void _KOS_lock_mutex(_KOS_MUTEX *mutex)
 {
 #ifndef NDEBUG
     int ret;
 #endif
 
-    assert(mutex);
+    assert(mutex && *mutex);
 
 #ifndef NDEBUG
     ret =
 #endif
-    pthread_mutex_lock(&mutex->mutex);
+    pthread_mutex_lock(&(*mutex)->mutex);
 
     assert(ret == 0);
 }
 
-void _KOS_unlock_mutex(_KOS_MUTEX mutex)
+void _KOS_unlock_mutex(_KOS_MUTEX *mutex)
 {
 #ifndef NDEBUG
     int ret;
 #endif
 
-    assert(mutex);
+    assert(mutex && *mutex);
 
 #ifndef NDEBUG
     ret =
 #endif
-    pthread_mutex_unlock(&mutex->mutex);
+    pthread_mutex_unlock(&(*mutex)->mutex);
 
     assert(ret == 0);
 }
