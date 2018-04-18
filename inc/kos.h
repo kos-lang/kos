@@ -249,18 +249,18 @@ class context {
         KOS_CONTEXT _ctx;
 };
 
-class thread_root {
+class thread_ctx {
     public:
-        thread_root(context& ctx) {
-            KOS_context_register_thread(ctx, &_thread_root);
+        thread_ctx(context& ctx) {
+            KOS_context_register_thread(ctx, &_thread_ctx);
         }
 
         operator KOS_FRAME() {
-            return &_thread_root.frame;
+            return &_thread_ctx.frame;
         }
 
     private:
-        KOS_THREAD_ROOT _thread_root;
+        KOS_THREAD_CONTEXT _thread_ctx;
 };
 
 class object_base {

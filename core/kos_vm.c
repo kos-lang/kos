@@ -553,7 +553,7 @@ static int _is_generator_end_exception(KOS_FRAME frame)
     KOS_OBJ_ID         value;
     int                ret       = 0;
 
-    if (KOS_get_prototype(frame, exception) == ctx->exception_prototype) {
+    if (KOS_get_prototype(frame, exception) == ctx->prototypes.exception_proto) {
 
         KOS_clear_exception(frame);
 
@@ -563,7 +563,7 @@ static int _is_generator_end_exception(KOS_FRAME frame)
             KOS_clear_exception(frame);
             KOS_raise_exception(frame, exception);
         }
-        else if (KOS_get_prototype(frame, value) != ctx->generator_end_prototype)
+        else if (KOS_get_prototype(frame, value) != ctx->prototypes.generator_end_proto)
             KOS_raise_exception(frame, exception);
         else
             ret = 1;
@@ -887,6 +887,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             /* TODO perform CAS for thread safety */
             func->state = KOS_GEN_RUNNING;
 
+            new_stack_frame->thread_ctx   =  frame->thread_ctx;
             new_stack_frame->parent       =  OBJID(STACK_FRAME, frame);
             new_stack_frame->header.flags |= KOS_CAN_YIELD;
             break;
@@ -2755,8 +2756,14 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
 {
     struct _KOS_STACK_FRAME frame;
     int                     error;
+    KOS_THREAD_CONTEXT     *thread_ctx;
 
-    error = _KOS_init_stack_frame(&frame, module, module->instr_offs);
+    assert(module);
+    assert(module->context);
+
+    thread_ctx = (KOS_THREAD_CONTEXT *)_KOS_tls_get(module->context->thread_key);
+
+    error = _KOS_init_stack_frame(&frame, thread_ctx, module, module->instr_offs);
 
     if ( ! error) {
         frame.registers = KOS_new_array(&frame, module->num_regs);

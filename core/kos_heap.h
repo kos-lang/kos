@@ -26,9 +26,9 @@
 #include "../inc/kos_object_base.h"
 #include <stddef.h>
 
-int   _KOS_alloc_init(KOS_CONTEXT *ctx);
+int   _KOS_heap_init(KOS_CONTEXT *ctx);
 
-void  _KOS_alloc_destroy(KOS_CONTEXT *ctx);
+void  _KOS_heap_destroy(KOS_CONTEXT *ctx);
 
 void *_KOS_alloc_object(KOS_FRAME            frame,
                         enum KOS_ALLOC_HINT  alloc_hint,

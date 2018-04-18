@@ -29,10 +29,10 @@
 #include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
 #include "kos_debug.h"
+#include "kos_heap.h"
 #include "kos_malloc.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
-#include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_system.h"
@@ -110,32 +110,33 @@ int _KOS_seq_fail(void)
 #endif
 
 static int _register_thread(KOS_CONTEXT        *ctx,
-                            KOS_THREAD_ROOT    *thread_root)
+                            KOS_THREAD_CONTEXT *thread_ctx)
 {
     int error = KOS_SUCCESS;
 
-    TRY(_KOS_init_stack_frame(&thread_root->frame, &ctx->init_module, 0));
+    assert( ! _KOS_tls_get(ctx->thread_key));
+
+    thread_ctx->ctx = ctx;
+
+    TRY(_KOS_init_stack_frame(&thread_ctx->frame, thread_ctx, &ctx->init_module, 0));
 
     if (_KOS_tls_get(ctx->thread_key)) {
 
-        KOS_OBJ_ID err;
-
-        assert( ! _KOS_tls_get(ctx->thread_key));
-
-        err = KOS_context_get_cstring(&thread_root->frame, str_err_thread_registered);
-        KOS_raise_exception(&thread_root->frame, err);
+        KOS_OBJ_ID err = KOS_context_get_cstring(&thread_ctx->frame, str_err_thread_registered);
+        KOS_raise_exception(&thread_ctx->frame, err);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    _KOS_tls_set(ctx->thread_key, thread_root);
+    _KOS_tls_set(ctx->thread_key, thread_ctx);
 
 _error:
     return error;
 }
 
-int KOS_context_register_thread(KOS_CONTEXT *ctx, KOS_THREAD_ROOT *thread_root)
+int KOS_context_register_thread(KOS_CONTEXT        *ctx,
+                                KOS_THREAD_CONTEXT *thread_ctx)
 {
-    return _register_thread(ctx, thread_root);
+    return _register_thread(ctx, thread_ctx);
 }
 
 static int _add_multiple_paths(KOS_FRAME frame, struct _KOS_VECTOR *cpaths)
@@ -199,17 +200,17 @@ int KOS_context_init(KOS_CONTEXT *ctx,
                      KOS_FRAME   *out_frame)
 {
     int       error;
-    int       alloc_ok = 0;
-    int       tls_ok   = 0;
-    KOS_FRAME frame    = &ctx->main_thread.frame;
+    int       heap_ok = 0;
+    int       tls_ok  = 0;
+    KOS_FRAME frame   = &ctx->main_thread.frame;
 
     memset(ctx, 0, sizeof(*ctx));
 
     TRY(_KOS_tls_create(&ctx->thread_key));
     tls_ok = 1;
 
-    TRY(_KOS_alloc_init(ctx));
-    alloc_ok = 1;
+    TRY(_KOS_heap_init(ctx));
+    heap_ok = 1;
 
     ctx->init_module.header.type  = OBJ_MODULE;
     ctx->init_module.name         = KOS_BADPTR;
@@ -230,24 +231,24 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     {
         KOS_OBJ_ID str = KOS_new_cstring(frame, str_err_out_of_memory);
         TRY_OBJID(str);
-        ctx->allocator.str_oom_id = str;
+        ctx->heap.str_oom_id = str;
     }
 
-    TRY_OBJID(ctx->object_prototype        = KOS_new_object_with_prototype(frame, KOS_BADPTR));
-    TRY_OBJID(ctx->number_prototype        = KOS_new_object(frame));
-    TRY_OBJID(ctx->integer_prototype       = KOS_new_object_with_prototype(frame, ctx->number_prototype));
-    TRY_OBJID(ctx->float_prototype         = KOS_new_object_with_prototype(frame, ctx->number_prototype));
-    TRY_OBJID(ctx->string_prototype        = KOS_new_object(frame));
-    TRY_OBJID(ctx->boolean_prototype       = KOS_new_object(frame));
-    TRY_OBJID(ctx->void_prototype          = KOS_new_object(frame));
-    TRY_OBJID(ctx->array_prototype         = KOS_new_object(frame));
-    TRY_OBJID(ctx->buffer_prototype        = KOS_new_object(frame));
-    TRY_OBJID(ctx->function_prototype      = KOS_new_object(frame));
-    TRY_OBJID(ctx->constructor_prototype   = KOS_new_object_with_prototype(frame, ctx->function_prototype));
-    TRY_OBJID(ctx->generator_prototype     = KOS_new_object_with_prototype(frame, ctx->function_prototype));
-    TRY_OBJID(ctx->exception_prototype     = KOS_new_object(frame));
-    TRY_OBJID(ctx->generator_end_prototype = KOS_new_object(frame));
-    TRY_OBJID(ctx->thread_prototype        = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.object_proto        = KOS_new_object_with_prototype(frame, KOS_BADPTR));
+    TRY_OBJID(ctx->prototypes.number_proto        = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.integer_proto       = KOS_new_object_with_prototype(frame, ctx->prototypes.number_proto));
+    TRY_OBJID(ctx->prototypes.float_proto         = KOS_new_object_with_prototype(frame, ctx->prototypes.number_proto));
+    TRY_OBJID(ctx->prototypes.string_proto        = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.boolean_proto       = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.void_proto          = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.array_proto         = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.buffer_proto        = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.function_proto      = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.constructor_proto   = KOS_new_object_with_prototype(frame, ctx->prototypes.function_proto));
+    TRY_OBJID(ctx->prototypes.generator_proto     = KOS_new_object_with_prototype(frame, ctx->prototypes.function_proto));
+    TRY_OBJID(ctx->prototypes.exception_proto     = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.generator_end_proto = KOS_new_object(frame));
+    TRY_OBJID(ctx->prototypes.thread_proto        = KOS_new_object(frame));
 
     TRY_OBJID(ctx->init_module.name         = KOS_context_get_cstring(frame, str_init));
     TRY_OBJID(ctx->init_module.globals      = KOS_new_array(frame, 0));
@@ -263,8 +264,8 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     *out_frame = frame;
 
 _error:
-    if (error && alloc_ok)
-        _KOS_alloc_destroy(ctx);
+    if (error && heap_ok)
+        _KOS_heap_destroy(ctx);
 
     if (error && tls_ok)
         _KOS_tls_destroy(ctx->thread_key);
@@ -297,10 +298,10 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
         }
     }
 
-    if (ctx->prototypes)
-        _KOS_free(ctx->prototypes);
+    if (ctx->proto_objs)
+        _KOS_free(ctx->proto_objs);
 
-    _KOS_alloc_destroy(ctx);
+    _KOS_heap_destroy(ctx);
 
     _KOS_tls_destroy(ctx->thread_key);
 
@@ -543,14 +544,14 @@ KOS_OBJ_ID KOS_context_get_cstring(KOS_FRAME   frame,
 #ifndef NDEBUG
 void KOS_context_validate(KOS_FRAME frame)
 {
-    KOS_CONTEXT     *ctx = KOS_context_from_frame(frame);
-    KOS_THREAD_ROOT *thread_root;
+    KOS_CONTEXT        *ctx = KOS_context_from_frame(frame);
+    KOS_THREAD_CONTEXT *thread_ctx;
 
     assert(ctx);
 
-    thread_root = (KOS_THREAD_ROOT *)_KOS_tls_get(ctx->thread_key);
+    thread_ctx = (KOS_THREAD_CONTEXT *)_KOS_tls_get(ctx->thread_key);
 
-    assert(thread_root);
+    assert(thread_ctx);
 }
 #endif
 
@@ -603,14 +604,14 @@ void _KOS_wrap_exception(KOS_FRAME frame)
 
         const KOS_OBJ_ID proto = KOS_get_prototype(frame, thrown_object);
 
-        if (proto == ctx->exception_prototype)
+        if (proto == ctx->prototypes.exception_proto)
             /* Exception already wrapped */
             return;
     }
 
     KOS_clear_exception(frame);
 
-    exception = KOS_new_object_with_prototype(frame, ctx->exception_prototype);
+    exception = KOS_new_object_with_prototype(frame, ctx->prototypes.exception_proto);
     TRY_OBJID(exception);
 
     TRY(KOS_set_property(frame, exception, KOS_context_get_cstring(frame, str_value), thrown_object));
@@ -797,7 +798,7 @@ void KOS_raise_generator_end(KOS_FRAME frame)
     KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
 
     const KOS_OBJ_ID exception =
-            KOS_new_object_with_prototype(frame, ctx->generator_end_prototype);
+            KOS_new_object_with_prototype(frame, ctx->prototypes.generator_end_proto);
 
     if ( ! IS_BAD_PTR(exception))
         KOS_raise_exception(frame, exception);
@@ -850,12 +851,12 @@ struct _KOS_PROTOTYPE_ITEM {
 
 typedef struct _KOS_PROTOTYPE_ITEM KOS_PROTO_ITEM;
 
-struct _KOS_PROTOTYPES {
+struct _KOS_PROTO_OBJS {
     uint32_t       capacity;
     KOS_PROTO_ITEM items[1];
 };
 
-typedef struct _KOS_PROTOTYPES *KOS_PROTOTYPES;
+typedef struct _KOS_PROTO_OBJS *KOS_PROTO_OBJS;
 
 static uint32_t _calc_proto_id_hash(uintptr_t id)
 {
@@ -877,10 +878,10 @@ KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
     const uintptr_t id         = (uintptr_t)ptr;
     KOS_OBJ_ID      ret        = KOS_BADPTR;
     const uint32_t  hash       = _calc_proto_id_hash(id);
-    KOS_PROTOTYPES  prototypes;
+    KOS_PROTO_OBJS  prototypes;
     KOS_CONTEXT    *ctx        = KOS_context_from_frame(frame);
 
-    prototypes = (KOS_PROTOTYPES)KOS_atomic_read_ptr(ctx->prototypes);
+    prototypes = (KOS_PROTO_OBJS)KOS_atomic_read_ptr(ctx->proto_objs);
 
     for (;;) {
 
@@ -920,9 +921,9 @@ KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
 
             assert( ! cur_id);
 
-            _KOS_spin_lock(&ctx->prototypes_lock);
+            _KOS_spin_lock(&ctx->proto_objs_lock);
 
-            if (prototypes == (KOS_PROTOTYPES)KOS_atomic_read_ptr(ctx->prototypes)) {
+            if (prototypes == (KOS_PROTO_OBJS)KOS_atomic_read_ptr(ctx->proto_objs)) {
 
                 ret = KOS_new_object(frame);
 
@@ -932,19 +933,19 @@ KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
                     KOS_atomic_write_ptr(cur_item->id,        (void *)id);
                 }
 
-                _KOS_spin_unlock(&ctx->prototypes_lock);
+                _KOS_spin_unlock(&ctx->proto_objs_lock);
                 break;
             }
 
-            _KOS_spin_unlock(&ctx->prototypes_lock);
+            _KOS_spin_unlock(&ctx->proto_objs_lock);
         }
         else {
 
             const uint32_t  new_capacity   = capacity * 2U;
             const uint32_t  new_mask       = new_capacity - 1;
             KOS_PROTO_ITEM *end            = items + capacity;
-            KOS_PROTOTYPES  new_prototypes = (KOS_PROTOTYPES)_KOS_malloc(
-                    sizeof(struct _KOS_PROTOTYPES) +
+            KOS_PROTO_OBJS  new_prototypes = (KOS_PROTO_OBJS)_KOS_malloc(
+                    sizeof(struct _KOS_PROTO_OBJS) +
                     sizeof(struct _KOS_PROTOTYPE_ITEM) * (new_capacity - 1));
             KOS_PROTO_ITEM *new_items      = new_prototypes->items;
 
@@ -957,7 +958,7 @@ KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
 
             memset(new_items, 0, sizeof(struct _KOS_PROTOTYPE_ITEM) * new_capacity);
 
-            _KOS_spin_lock(&ctx->prototypes_lock);
+            _KOS_spin_lock(&ctx->proto_objs_lock);
 
             if (prototypes)
                 for ( ; items < end; ++items) {
@@ -977,16 +978,16 @@ KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
                     KOS_atomic_write_ptr(cur_item->id,        cid);
                 }
 
-            assert(KOS_atomic_read_ptr(ctx->prototypes) == prototypes);
+            assert(KOS_atomic_read_ptr(ctx->proto_objs) == prototypes);
 
-            KOS_atomic_write_ptr(ctx->prototypes, (void *)new_prototypes);
+            KOS_atomic_write_ptr(ctx->proto_objs, (void *)new_prototypes);
 
             /* TODO delay this, it causes a race */
             _KOS_free(prototypes);
 
             prototypes = new_prototypes;
 
-            _KOS_spin_unlock(&ctx->prototypes_lock);
+            _KOS_spin_unlock(&ctx->proto_objs_lock);
         }
     }
 

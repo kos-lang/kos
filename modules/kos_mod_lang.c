@@ -74,10 +74,10 @@ do {                                                                         \
     TRY(_create_constructor(frame,                                           \
                             str,                                             \
                             _##name##_constructor,                           \
-                            ctx->name##_prototype));                         \
+                            ctx->prototypes.name##_proto));                  \
 } while (0)
 
-#define PROTO(type) (KOS_context_from_frame(frame)->type##_prototype)
+#define PROTO(type) (KOS_context_from_frame(frame)->prototypes.type##_proto)
 
 /* @item lang print()
  *
@@ -1300,7 +1300,7 @@ static KOS_OBJ_ID _async(KOS_FRAME  frame,
     }
 
     thread_obj = KOS_new_object_with_prototype(frame,
-            KOS_context_from_frame(frame)->thread_prototype);
+            KOS_context_from_frame(frame)->prototypes.thread_proto);
     TRY_OBJID(thread_obj);
 
     TRY(KOS_set_property(frame, thread_obj,
@@ -1350,7 +1350,7 @@ static KOS_OBJ_ID _wait(KOS_FRAME  frame,
         return KOS_BADPTR;
     }
 
-    if ( ! KOS_has_prototype(frame, this_obj, ctx->thread_prototype)) {
+    if ( ! KOS_has_prototype(frame, this_obj, ctx->prototypes.thread_proto)) {
         KOS_raise_exception_cstring(frame, str_err_not_thread);
         return KOS_BADPTR;
     }

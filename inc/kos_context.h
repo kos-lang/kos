@@ -30,17 +30,24 @@
 struct _KOS_MODULE_LOAD_CHAIN;
 struct _KOS_RED_BLACK_NODE;
 struct _KOS_PAGE_HEADER;
+struct _KOS_POOL_HEADER;
+struct _KOS_WASTE_HEADER;
 
-typedef struct _KOS_PAGE_HEADER _KOS_PAGE;
+typedef struct _KOS_PAGE_HEADER  _KOS_PAGE;
+typedef struct _KOS_POOL_HEADER  _KOS_POOL;
+typedef struct _KOS_WASTE_HEADER _KOS_WASTE;
 
-struct _KOS_ALLOCATOR {
-    KOS_ATOMIC(uint32_t)    lock;
-    KOS_ATOMIC(_KOS_PAGE *) active_pages;      /* pages in which new objects are allocated */
-    KOS_ATOMIC(_KOS_PAGE *) free_pages;        /* pages which are currently unused         */
-    KOS_ATOMIC(_KOS_PAGE *) used_pages;        /* pages which have live objects            */
-    KOS_ATOMIC(void *)      huge_objects;      /* objects which don't fit in page size     */
-    KOS_ATOMIC(void *)      pools;             /* allocated memory - page pools            */
-    KOS_OBJ_ID              str_oom_id;
+struct _KOS_HEAP {
+    _KOS_MUTEX               mutex;
+    KOS_ATOMIC(uint32_t)     gc_state;
+    KOS_ATOMIC(_KOS_PAGE *)  active_pages;      /* pages in which new objects are allocated */
+    KOS_ATOMIC(_KOS_PAGE *)  free_pages;        /* pages which are currently unused         */
+    KOS_ATOMIC(_KOS_PAGE *)  full_pages;        /* pages which have no room for new objects */
+    KOS_ATOMIC(void *)       huge_objects;      /* objects which don't fit in page size     */
+    KOS_ATOMIC(_KOS_POOL *)  pools;             /* allocated memory - page pools            */
+    KOS_ATOMIC(_KOS_POOL *)  pool_headers;      /* list of pool headers for new pools       */
+    KOS_ATOMIC(_KOS_WASTE *) waste;             /* unused memory from pool allocations      */
+    KOS_OBJ_ID               str_oom_id;
 };
 
 enum _KOS_YIELD_STATE {
@@ -63,24 +70,46 @@ struct _KOS_SF_HDR {
 };
 
 typedef struct _KOS_STACK_FRAME {
-    struct _KOS_SF_HDR     header;
-    struct _KOS_ALLOCATOR *allocator;
-    uint32_t               catch_offs;
-    uint32_t               instr_offs;
-    uint8_t                num_saved_frames;
-    KOS_OBJ_ID             parent;
-    KOS_OBJ_ID             module;
-    KOS_OBJ_ID             registers;
-    KOS_OBJ_ID             exception;
-    KOS_OBJ_ID             retval;
-    KOS_OBJ_ID             saved_frames[KOS_MAX_SAVED_FRAMES];
+    struct _KOS_SF_HDR          header;
+    struct _KOS_THREAD_CONTEXT *thread_ctx;
+    uint32_t                    catch_offs;
+    uint32_t                    instr_offs;
+    uint8_t                     num_saved_frames;
+    KOS_OBJ_ID                  parent;
+    KOS_OBJ_ID                  module;
+    KOS_OBJ_ID                  registers;
+    KOS_OBJ_ID                  exception;
+    KOS_OBJ_ID                  retval;
+    KOS_OBJ_ID                  saved_frames[KOS_MAX_SAVED_FRAMES];
 } KOS_STACK_FRAME;
 
-struct _KOS_THREAD_ROOT {
-    struct _KOS_STACK_FRAME frame;
+struct _KOS_THREAD_CONTEXT {
+    struct _KOS_THREAD_CONTEXT *next; /* Add list of thread roots in context */
+    struct _KOS_THREAD_CONTEXT *prev;
+    struct _KOS_STACK_FRAME     frame; /* TODO allocate root frame on heap */
+    struct _KOS_CONTEXT        *ctx;
+    _KOS_PAGE                  *cur_page;
 };
 
-typedef struct _KOS_THREAD_ROOT KOS_THREAD_ROOT;
+typedef struct _KOS_THREAD_CONTEXT KOS_THREAD_CONTEXT;
+
+struct _KOS_PROTOTYPES {
+    KOS_OBJ_ID object_proto;
+    KOS_OBJ_ID number_proto;
+    KOS_OBJ_ID integer_proto;
+    KOS_OBJ_ID float_proto;
+    KOS_OBJ_ID string_proto;
+    KOS_OBJ_ID boolean_proto;
+    KOS_OBJ_ID void_proto;
+    KOS_OBJ_ID array_proto;
+    KOS_OBJ_ID buffer_proto;
+    KOS_OBJ_ID function_proto;
+    KOS_OBJ_ID constructor_proto;
+    KOS_OBJ_ID generator_proto;
+    KOS_OBJ_ID exception_proto;
+    KOS_OBJ_ID generator_end_proto;
+    KOS_OBJ_ID thread_proto;
+};
 
 enum _KOS_CONTEXT_FLAGS {
     KOS_CTX_NO_FLAGS = 0,
@@ -91,31 +120,25 @@ enum _KOS_CONTEXT_FLAGS {
 struct _KOS_CONTEXT {
     uint32_t                       flags;
 
-    struct _KOS_ALLOCATOR          allocator;
+    struct _KOS_HEAP               heap;
 
     KOS_OBJ_ID                     empty_string;
 
-    KOS_OBJ_ID                     object_prototype;
-    KOS_OBJ_ID                     number_prototype;
-    KOS_OBJ_ID                     integer_prototype;
-    KOS_OBJ_ID                     float_prototype;
-    KOS_OBJ_ID                     string_prototype;
-    KOS_OBJ_ID                     boolean_prototype;
-    KOS_OBJ_ID                     void_prototype;
-    KOS_OBJ_ID                     array_prototype;
-    KOS_OBJ_ID                     buffer_prototype;
-    KOS_OBJ_ID                     function_prototype;
-    KOS_OBJ_ID                     constructor_prototype;
-    KOS_OBJ_ID                     generator_prototype;
-    KOS_OBJ_ID                     exception_prototype;
-    KOS_OBJ_ID                     generator_end_prototype;
-    KOS_OBJ_ID                     thread_prototype;
+    struct _KOS_PROTOTYPES         prototypes;
 
-    KOS_ATOMIC(void *)             prototypes;
-    KOS_ATOMIC(uint32_t)           prototypes_lock;
+    /* TODO
+     * - remove constructor functions
+     * - upgrade classes to own type
+     * - add properties to class objects ("static" functions)
+     * - move function and class objects to module instead of creating by instruction
+     * - keep prototypes with the function/class object
+     * - remove the prototype map below. */
+    KOS_ATOMIC(void *)             proto_objs;
+    KOS_ATOMIC(uint32_t)           proto_objs_lock;
 
     _KOS_TLS_KEY                   thread_key;
 
+    /* TODO gather all module-related members in a structure */
     KOS_OBJ_ID                     module_search_paths;
     KOS_OBJ_ID                     module_names;
     KOS_OBJ_ID                     modules;
@@ -123,7 +146,7 @@ struct _KOS_CONTEXT {
     KOS_OBJ_ID                     args;
 
     KOS_MODULE                     init_module;
-    KOS_THREAD_ROOT                main_thread;
+    KOS_THREAD_CONTEXT             main_thread;
 
     struct _KOS_RED_BLACK_NODE    *module_inits;
     struct _KOS_MODULE_LOAD_CHAIN *module_load_chain;
@@ -133,12 +156,11 @@ struct _KOS_CONTEXT {
 static inline KOS_CONTEXT *KOS_context_from_frame(KOS_FRAME frame)
 {
     assert(frame);
-    KOS_MODULE *const module = OBJPTR(MODULE, frame->module);
-    assert(module->context);
-    return module->context;
+    assert(frame->thread_ctx);
+    return frame->thread_ctx->ctx;
 }
 #else
-#define KOS_context_from_frame(frame) (OBJPTR(MODULE, (frame)->module)->context)
+#define KOS_context_from_frame(frame) ((frame)->thread_ctx->ctx)
 #endif
 
 #ifdef __cplusplus
@@ -166,7 +188,8 @@ int KOS_context_register_builtin(KOS_FRAME        frame,
                                  const char      *module,
                                  KOS_BUILTIN_INIT init);
 
-int KOS_context_register_thread(KOS_CONTEXT *ctx, KOS_THREAD_ROOT *thread_root);
+int KOS_context_register_thread(KOS_CONTEXT        *ctx,
+                                KOS_THREAD_CONTEXT *thread_ctx);
 
 KOS_OBJ_ID KOS_context_get_cstring(KOS_FRAME   frame,
                                    const char *cstr);

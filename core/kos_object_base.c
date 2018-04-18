@@ -26,9 +26,9 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
-#include "kos_object_alloc.h"
-#include "kos_object_internal.h"
+#include "kos_heap.h"
 #include "kos_memory.h"
+#include "kos_object_internal.h"
 #include <limits.h>
 #include <string.h>
 #include <assert.h>
@@ -135,9 +135,10 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
     return OBJID(DYNAMIC_PROP, dyn_prop);
 }
 
-int _KOS_init_stack_frame(KOS_FRAME   frame,
-                          KOS_MODULE *module,
-                          uint32_t    instr_offs)
+int _KOS_init_stack_frame(KOS_FRAME           frame,
+                          KOS_THREAD_CONTEXT *thread_ctx,
+                          KOS_MODULE         *module,
+                          uint32_t            instr_offs)
 {
     int error = KOS_SUCCESS;
 
@@ -148,7 +149,7 @@ int _KOS_init_stack_frame(KOS_FRAME   frame,
     frame->header.catch_reg = 0;
     frame->header.yield_reg = 255;
     frame->header.flags     = 0;
-    frame->allocator        = &module->context->allocator;
+    frame->thread_ctx       = thread_ctx;
     frame->catch_offs       = KOS_NO_CATCH;
     frame->instr_offs       = instr_offs;
     frame->num_saved_frames = 0;
@@ -198,7 +199,7 @@ KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
         assert(module);
         assert(KOS_context_from_frame(frame) == module->context);
 
-        if (_KOS_init_stack_frame(new_frame, module, instr_offs)) {
+        if (_KOS_init_stack_frame(new_frame, frame->thread_ctx, module, instr_offs)) {
             assert( ! IS_BAD_PTR(new_frame->exception));
             frame->exception = new_frame->exception;
             new_frame        = 0; /* object is garbage-collected */

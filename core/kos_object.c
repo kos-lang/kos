@@ -26,8 +26,8 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
+#include "kos_heap.h"
 #include "kos_math.h"
-#include "kos_object_alloc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_try.h"
@@ -84,7 +84,7 @@ KOS_OBJ_ID KOS_new_object(KOS_FRAME frame)
 {
     KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
 
-    return KOS_new_object_with_prototype(frame, ctx->object_prototype);
+    return KOS_new_object_with_prototype(frame, ctx->prototypes.object_proto);
 }
 
 KOS_OBJ_ID KOS_new_object_with_prototype(KOS_FRAME  frame,
@@ -752,16 +752,16 @@ KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
     assert( ! IS_BAD_PTR(obj_id));
 
     if (IS_SMALL_INT(obj_id))
-        ret = ctx->integer_prototype;
+        ret = ctx->prototypes.integer_proto;
 
     else switch (READ_OBJ_TYPE(obj_id)) {
 
         case OBJ_INTEGER:
-            ret = ctx->integer_prototype;
+            ret = ctx->prototypes.integer_proto;
             break;
 
         case OBJ_FLOAT:
-            ret = ctx->float_prototype;
+            ret = ctx->prototypes.float_proto;
             break;
 
         case OBJ_OBJECT:
@@ -769,39 +769,39 @@ KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
             break;
 
         case OBJ_STRING:
-            ret = ctx->string_prototype;
+            ret = ctx->prototypes.string_proto;
             break;
 
         case OBJ_ARRAY:
-            ret = ctx->array_prototype;
+            ret = ctx->prototypes.array_proto;
             break;
 
         case OBJ_BUFFER:
-            ret = ctx->buffer_prototype;
+            ret = ctx->prototypes.buffer_proto;
             break;
 
         case OBJ_FUNCTION: {
             const enum _KOS_FUNCTION_STATE state =
                 (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, obj_id)->state;
             if (state == KOS_FUN)
-                ret = ctx->function_prototype;
+                ret = ctx->prototypes.function_proto;
             else if (state == KOS_CTOR)
-                ret = ctx->constructor_prototype;
+                ret = ctx->prototypes.constructor_proto;
             else
-                ret = ctx->generator_prototype;
+                ret = ctx->prototypes.generator_proto;
             break;
         }
 
         case OBJ_BOOLEAN:
-            ret = ctx->boolean_prototype;
+            ret = ctx->prototypes.boolean_proto;
             break;
 
         case OBJ_VOID:
-            ret = ctx->void_prototype;
+            ret = ctx->prototypes.void_proto;
             break;
 
         default:
-            ret = ctx->object_prototype;
+            ret = ctx->prototypes.object_proto;
             break;
     }
 

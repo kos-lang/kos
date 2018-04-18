@@ -27,9 +27,9 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
+#include "../core/kos_heap.h" /* TODO until we have GC */
 #include "../core/kos_malloc.h"
 #include "../core/kos_misc.h"
-#include "../core/kos_object_alloc.h" /* TODO until we have GC */
 #include "../core/kos_try.h"
 #include <math.h>
 

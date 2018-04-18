@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "../core/kos_object_alloc.h"
+#include "../core/kos_heap.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../core/kos_misc.h"

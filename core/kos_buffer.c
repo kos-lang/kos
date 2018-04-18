@@ -22,10 +22,10 @@
 
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_error.h"
-#include "kos_object_alloc.h"
-#include "kos_object_internal.h"
+#include "kos_heap.h"
 #include "kos_math.h"
 #include "kos_misc.h"
+#include "kos_object_internal.h"
 #include <string.h>
 
 static const char str_err_make_room_size[] = "buffer size limit exceeded";

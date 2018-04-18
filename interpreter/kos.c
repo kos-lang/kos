@@ -27,10 +27,10 @@
 #include "../inc/kos_modules_init.h"
 #include "../inc/kos_utils.h"
 #include "../inc/kos_version.h"
-#include "../core/kos_system.h"
 #include "../core/kos_getline.h"
+#include "../core/kos_heap.h"
 #include "../core/kos_memory.h"
-#include "../core/kos_object_alloc.h"
+#include "../core/kos_system.h"
 #include "../core/kos_try.h"
 #include <assert.h>
 #include <locale.h>

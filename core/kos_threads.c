@@ -111,13 +111,13 @@ struct _KOS_THREAD_OBJECT {
 
 static DWORD WINAPI _thread_proc(LPVOID thread_obj)
 {
-    KOS_THREAD_ROOT thread_root;
+    KOS_THREAD_CONTEXT thread_ctx;
 
-    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_root) == KOS_SUCCESS)
-        ((_KOS_THREAD)thread_obj)->proc(&thread_root.frame, ((_KOS_THREAD)thread_obj)->cookie);
+    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS)
+        ((_KOS_THREAD)thread_obj)->proc(&thread_ctx.frame, ((_KOS_THREAD)thread_obj)->cookie);
 
-    if (KOS_is_exception_pending(&thread_root.frame)) {
-        ((_KOS_THREAD)thread_obj)->exception = KOS_get_exception(&thread_root.frame);
+    if (KOS_is_exception_pending(&thread_ctx.frame)) {
+        ((_KOS_THREAD)thread_obj)->exception = KOS_get_exception(&thread_ctx.frame);
         return 1;
     }
 
@@ -281,13 +281,13 @@ struct _KOS_THREAD_OBJECT {
 
 static void *_thread_proc(void *thread_obj)
 {
-    KOS_THREAD_ROOT thread_root;
+    KOS_THREAD_CONTEXT thread_ctx;
 
-    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_root) == KOS_SUCCESS)
-        ((_KOS_THREAD)thread_obj)->proc(&thread_root.frame, ((_KOS_THREAD)thread_obj)->cookie);
+    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS)
+        ((_KOS_THREAD)thread_obj)->proc(&thread_ctx.frame, ((_KOS_THREAD)thread_obj)->cookie);
 
-    if (KOS_is_exception_pending(&thread_root.frame))
-        return (void *)KOS_get_exception(&thread_root.frame);
+    if (KOS_is_exception_pending(&thread_ctx.frame))
+        return (void *)KOS_get_exception(&thread_ctx.frame);
 
     return 0;
 }

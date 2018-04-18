@@ -26,7 +26,7 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
-#include "kos_object_alloc.h"
+#include "kos_heap.h"
 #include "kos_red_black.h"
 
 /*==========================================================================*/
@@ -131,9 +131,10 @@ static inline enum _KOS_STRING_FLAGS _KOS_get_string_elem_size(KOS_STRING *str)
 /* KOS_FRAME                                                                */
 /*==========================================================================*/
 
-int _KOS_init_stack_frame(KOS_FRAME   frame,
-                          KOS_MODULE *module,
-                          uint32_t    instr_offs);
+int _KOS_init_stack_frame(KOS_FRAME           frame,
+                          KOS_THREAD_CONTEXT *thread_ctx,
+                          KOS_MODULE         *module,
+                          uint32_t            instr_offs);
 
 KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
                                 KOS_MODULE *module,

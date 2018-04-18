@@ -153,10 +153,7 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 struct _KOS_CONTEXT;
 typedef struct _KOS_CONTEXT KOS_CONTEXT;
 
-struct _KOS_ALLOCATOR;
-
 struct _KOS_STACK_FRAME;
-
 typedef struct _KOS_STACK_FRAME *KOS_FRAME;
 
 typedef struct _KOS_INTEGER {

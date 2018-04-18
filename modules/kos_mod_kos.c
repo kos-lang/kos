@@ -30,8 +30,8 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "../inc/kos_version.h"
+#include "../core/kos_heap.h"
 #include "../core/kos_lexer.h"
-#include "../core/kos_object_alloc.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_try.h"
 
