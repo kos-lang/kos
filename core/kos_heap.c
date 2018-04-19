@@ -795,7 +795,7 @@ static int _evacuate_object(KOS_FRAME       frame,
     else
         error = KOS_ERROR_EXCEPTION;
 
-    return KOS_SUCCESS;
+    return error;
 }
 
 static void _update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
