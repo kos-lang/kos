@@ -127,7 +127,6 @@ struct _KOS_CONTEXT {
     struct _KOS_PROTOTYPES         prototypes;
 
     /* TODO
-     * - remove constructor functions
      * - upgrade classes to own type
      * - add properties to class objects ("static" functions)
      * - move function and class objects to module instead of creating by instruction

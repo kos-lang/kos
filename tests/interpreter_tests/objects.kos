@@ -99,9 +99,10 @@ do {
 }
 
 do {
-    constructor constr
-    {
-        this.b = "b"
+    class constr {
+        constructor {
+            this.b = "b"
+        }
     }
 
     constr.set_prototype({ a: "a" })
@@ -126,9 +127,10 @@ do {
 }
 
 do {
-    constructor constr(a)
-    {
-        this.a = a + 1
+    class constr {
+        constructor(a) {
+            this.a = a + 1
+        }
     }
 
     expect_fail(()=>(constr()))
@@ -139,16 +141,17 @@ do {
 }
 
 do {
-    var obj = constructor { this.a = 123 }
+    var obj = class { constructor { this.a = 123 } }
     obj = obj()
     assert typeof obj == "object"
     assert obj.a      == 123
 }
 
 do {
-    constructor constr(a)
-    {
-        this.a = a + 2
+    class constr {
+        constructor(a) {
+            this.a = a + 2
+        }
     }
 
     var obj = 10
@@ -160,9 +163,10 @@ do {
 do {
     const base = [void, void, void]
 
-    constructor constr(a)
-    {
-        this.a = a * 2
+    class constr {
+        constructor(a) {
+            this.a = a * 2
+        }
     }
 
     constr.set_prototype(base)
@@ -194,14 +198,16 @@ do {
 }
 
 do {
-    constructor constr1(a)
-    {
-        this.a = a
+    class constr1 {
+        constructor (a) {
+            this.a = a
+        }
     }
 
-    constructor constr2
-    {
-        this.a = void
+    class constr2 {
+        constructor {
+            this.a = void
+        }
     }
 
     const obj   = constr1(42)
@@ -222,11 +228,12 @@ do {
 }
 
 do {
-    constructor constr
-    {
-        this.c = 0
-        this.d = 1
-        this.e = 2
+    class constr {
+        constructor {
+            this.c = 0
+            this.d = 1
+            this.e = 2
+        }
     }
 
     constr.prototype.a = 10
@@ -252,7 +259,7 @@ do {
 do {
     fun get_constr
     {
-        return constructor { }
+        return class { }
     }
 
     const o1 = get_constr()()

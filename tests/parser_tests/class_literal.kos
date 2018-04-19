@@ -320,3 +320,23 @@ const x = class;
 const x = class A { }
 
 @ 10 1 17
+
+@------------------------------------------------------------------------------
+# Return non-this from constructor
+class {
+    constructor {
+        return void
+    }
+}
+
+@ 10 4 16
+
+@------------------------------------------------------------------------------
+# Yield in constructor
+class {
+    constructor {
+        yield void
+    }
+}
+
+@ 10 4 9

@@ -881,8 +881,6 @@ static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             case TT_KEYWORD:
                 switch (token->keyword) {
                     case KW_FUN:
-                        /* fall through */
-                    case KW_CONSTRUCTOR:
                         error = _function_literal(parser, token->keyword, ret);
                         break;
                     case KW_CLASS:
@@ -2889,8 +2887,6 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
 
         switch (token->keyword) {
             case KW_FUN:
-                /* fall through */
-            case KW_CONSTRUCTOR:
                 /* fall through */
             case KW_CLASS:
                 error = _function_stmt(parser, ret);

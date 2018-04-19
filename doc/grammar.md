@@ -444,7 +444,6 @@ Statement
     Statement ::= EmptyStatement
                 | ExpressionStatement
                 | FunctionDeclaration
-                | ConstructorDeclaration
                 | ClassDeclaration
                 | DoStatement
                 | IfStatement
@@ -544,29 +543,6 @@ The following statements are equivalent:
     const Sum = (x, y) => (x + y)
 
 
-Constructor statement
----------------------
-
-Constructor function is a special type of function which serves the purpose of
-creating new objects.
-
-When a constructor function is invoked, a new object is created and bound to
-`this`, even if the construction function is invoked on an object, with the
-exception of the `apply` function.  If the `apply` function is invoked on
-a constructor function, the new object is not created, but `this` is bound
-to the first argument of `apply`.
-
-The constructor statement is mostly identical to function statement, except it
-uses the `constructor` keyword instead of the `fun` keyword.
-
-    ConstructorDeclaration ::= "constructor" Identifier [ ParameterList ] CompoundStatement
-
-The `return` statement inside a constructor function can only return `this`
-or nothing.  No other value can be returned.
-
-The `yield` operator is not allowed inside a constructor function.
-
-
 Function arguments
 ------------------
 
@@ -605,13 +581,36 @@ Argument variables are assignable inside the function body.
 Class statement
 ---------------
 
-    ClassDeclaration ::= "class" Identifier ClassBody
+    ClassDeclaration   ::= "class" Identifier ClassBody
 
-    ClassBody        ::= "{" ( ClassMember )* "}"
+    ClassBody          ::= "{" ( ClassMember )* "}"
 
-    ClassMember      ::= ConstructorLiteral | MemberFunction
+    ClassMember        ::= ConstructorLiteral | MemberFunction
 
-    MemberFunction   ::= Identifier [ ParameterList ] CompoundStatement
+    MemberFunction     ::= Identifier [ ParameterList ] CompoundStatement
+
+
+Constructor literal
+-------------------
+
+Constructor function is a special type of function which serves the purpose of
+creating new objects.
+
+The constructor function is invoked when creating an object of the class to
+which that constructor belongs.
+
+When a constructor function is invoked, a new object is created and bound to
+`this`, even if the construction function is invoked on an object, with the
+exception of the `apply` function.  If the `apply` function is invoked on
+a constructor function, the new object is not created, but `this` is bound
+to the first argument of `apply`.
+
+The `return` statement inside a constructor function can only return `this`
+or nothing.  No other value can be returned.
+
+The `yield` operator is not allowed inside a constructor function.
+
+    ConstructorLiteral ::= "constructor" [ ParameterList ] CompoundStatement
 
 
 Do statement
@@ -946,14 +945,8 @@ If the expression is omitted, the return value of the function is
 The optional right-hand-side expression can only be `this` if it is
 inside a constructor function.
 
-If the optional right-hand-side expression occurs in a generator function,
-its value is ignored.
-
-If the optional right-hand-side expression occurs in a constructor
-function invoked with the new operator and it is an object, it is returned
-instead of the new object/this by the new expression. If the
-right-hand-side expression is of a non-object type, the new object/this
-will be returned by the new expression.
+If the optional right-hand-side expression is specified in a generator
+function, it can only be `void` or resolve to `void` at compile time.
 
     ReturnStatement ::= "return" [ RHSExpression ] OptSemicolon
 
@@ -1145,7 +1138,6 @@ Member specification
 
     MemberExpression ::= PrimaryExpression
                        | FunctionLiteral
-                       | ConstructorLiteral
                        | ClassLiteral
                        | ( MemberExpression Invocation )
                        | ( MemberExpression Refinement )
@@ -1156,8 +1148,6 @@ Member specification
     SimpleFunctionLiteral   ::= ( Identifier | [ ParameterList] ) "=>" "(" RHSExpression ")"
 
     CompoundFunctionLiteral ::= "fun" [ ParameterList ] CompoundStatement
-
-    ConstructorLiteral ::= "constructor" [ ParameterList ] CompoundStatement
 
     ClassLiteral ::= "class" ClassBody
 

@@ -512,9 +512,7 @@ do {
 }
 
 do {
-    constructor ctor
-    {
-    }
+    class ctor { }
 
     ctor.set_prototype(lang.string.prototype)
 
@@ -572,11 +570,12 @@ do {
 }
 
 do {
-    constructor constr
-    {
-        this.c = 2
-        this.d = 3
-        this.e = 4
+    class constr {
+        constructor {
+            this.c = 2
+            this.d = 3
+            this.e = 4
+        }
     }
 
     constr.prototype.a = 0
@@ -752,9 +751,7 @@ do {
 }
 
 do {
-    constructor fake_array
-    {
-    }
+    class fake_array { }
 
     fake_array.set_prototype(lang.array.prototype)
 
@@ -1234,9 +1231,7 @@ do {
     assert ! (generator_func instanceof lang.constructor)
     assert generator_func instanceof lang.generator
 
-    constructor constructor_func
-    {
-    }
+    class constructor_func { }
 
     assert constructor_func instanceof lang.function
     assert constructor_func instanceof lang.constructor
@@ -1320,7 +1315,7 @@ do {
 }
 
 do {
-    const f1 = constructor { }
+    const f1 = class { }
     const f2 = lang.function(f1)
     assert f1 == f2
 }
@@ -1342,9 +1337,10 @@ do {
         return 42
     }
 
-    constructor ctor
-    {
-        this.xyz = 42
+    class ctor {
+        constructor {
+            this.xyz = 42
+        }
     }
 
     fun gen
@@ -1424,9 +1420,7 @@ do {
 # lang.function.prototype.prototype
 
 do {
-    constructor ctor
-    {
-    }
+    class ctor { }
 
     ctor.set_prototype(lang.function.prototype)
 
@@ -1505,9 +1499,10 @@ do {
 }
 
 do {
-    constructor ctor
-    {
-        this.a = 42
+    class ctor {
+        constructor {
+            this.a = 42
+        }
     }
     ctor.prototype.x = -1
 
@@ -1556,7 +1551,7 @@ do {
     {
     }
 
-    constructor c
+    class c
     {
     }
 
@@ -2317,9 +2312,10 @@ do {
 }
 
 do {
-    constructor sortable(key)
-    {
-        this.key = key
+    class sortable {
+        constructor(key) {
+            this.key = key
+        }
     }
 
     const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]

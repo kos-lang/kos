@@ -890,9 +890,7 @@ do {
 
 # call constructor function like a generator
 do {
-    constructor not_gen
-    {
-    }
+    class not_gen { }
 
     expect_fail(fun {
         var a = 0
@@ -1475,11 +1473,9 @@ do {
 
 # set prototype on constructor
 do {
-    constructor c1
-    {
-    }
+    class c1 { }
 
-    const c2 = constructor { }
+    const c2 = class { }
 
     c1.set_prototype(c2)
     c2.set_prototype(c1)
@@ -1511,9 +1507,7 @@ do {
 
     fun obj_with_proto(proto)
     {
-        constructor ctor
-        {
-        }
+        class ctor { }
         ctor.set_prototype(proto)
         return ctor()
     }

@@ -5,7 +5,7 @@ var b = {c:d};
 # String as property name
 var e = {"xxx":f};
 # Keyword as property name
-var g = {constructor:this};
+var g = {fun:this};
 # Multiple properties
 var h = {
     i : 0 ,
@@ -43,9 +43,9 @@ do{{"x":3}}
     (assignment 8 7 =
         (var 8 1 var (identifier 8 5 g))
         (object 8 9 {
-            (property 8 10 constructor
-                (string 8 10 constructor)
-                (this 8 22 this)
+            (property 8 10 fun
+                (string 8 10 fun)
+                (this 8 14 this)
     )))
     (assignment 10 7 =
         (var 10 1 var (identifier 10 5 h))
@@ -168,7 +168,7 @@ a = {this:this, new:{}, void:void, true:false, "string":"", array:[]};
 # Function properties
 var obj = {
     f1 : fun { },
-    c1 : constructor(x) { }
+    c1 : fun(x) { }
 }
 
 @ 0
@@ -193,16 +193,16 @@ var obj = {
             ))
             (property 4 5 c1
                 (string 4 5 c1)
-                (constructor 4 10 constructor
-                    (name 4 10 constructor
+                (function 4 10 fun
+                    (name 4 10 fun
                         (identifier 4 5 c1))
-                    (parameters 4 21 paren_open
-                        (identifier 4 22 x))
-                    (landmark 4 25 {)
-                    (scope 4 25 {
-                        (return 4 27 }
-                            (this 4 27 })
+                    (parameters 4 13 paren_open
+                        (identifier 4 14 x))
+                    (landmark 4 17 {)
+                    (scope 4 17 {
+                        (return 4 19 }
+                            (void 4 19 })
                     ))
-                    (landmark 4 27 })
+                    (landmark 4 19 })
     ))))
 )

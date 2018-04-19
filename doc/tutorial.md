@@ -458,15 +458,18 @@ Constructors
 
     import math
 
-    constructor Vector(x, y)
+    class Vector
     {
-        this.x = x
-        this.y = y
-    }
+        constructor(x, y)
+        {
+            this.x = x
+            this.y = y
+        }
 
-    Vector.prototype.length = fun()
-    {
-        return math.sqrt(this.x * this.x + this.y * this.y)
+        length
+        {
+            return math.sqrt(this.x * this.x + this.y * this.y)
+        }
     }
 
     var v1     = Vector(3, 4)

@@ -244,9 +244,7 @@ do {
 # lang.buffer.prototype.size
 
 do {
-    constructor new_obj
-    {
-    }
+    class new_obj { }
     new_obj.set_prototype(buffer())
 
     const obj = new_obj()
