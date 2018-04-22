@@ -165,6 +165,7 @@ KOS_OBJ_ID KOS_new_class(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         func->header.num_args       = 0;
         func->header.num_regs       = 0;
         func->args_reg              = 0;
+        func->_dummy                = KOS_CTOR;
         func->module                = frame->module;
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;

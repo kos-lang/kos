@@ -756,12 +756,12 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
             func  = OBJPTR(FUNCTION, func_obj);
             state = (enum _KOS_FUNCTION_STATE)func->state;
-            assert(state != KOS_CTOR2);
+            assert(state != KOS_CTOR);
             break;
 
         case OBJ_CLASS:
             func  = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
-            state = KOS_CTOR2;
+            state = KOS_CTOR;
             break;
     }
 
@@ -777,7 +777,7 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
     switch (state) {
 
         /* Constructor function */
-        case KOS_CTOR2:
+        case KOS_CTOR:
             if (*this_obj == NEW_THIS) {
                 KOS_CLASS *const class_ptr = OBJPTR(CLASS, func_obj);
                 const KOS_OBJ_ID proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(class_ptr->prototype);

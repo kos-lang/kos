@@ -281,7 +281,7 @@ typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_FRAME  frame,
 
 enum _KOS_FUNCTION_STATE {
     KOS_FUN,            /* regular function                                     */
-    KOS_CTOR2,          /* class constructor                                    */
+    KOS_CTOR,           /* class constructor                                    */
     KOS_GEN_INIT,       /* generator initializer object                         */
     KOS_GEN_READY,      /* initialized generator function, but not executed yet */
     KOS_GEN_ACTIVE,     /* generator function halted in the middle of execution */
