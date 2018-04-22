@@ -244,7 +244,7 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY_OBJID(ctx->prototypes.array_proto         = KOS_new_object(frame));
     TRY_OBJID(ctx->prototypes.buffer_proto        = KOS_new_object(frame));
     TRY_OBJID(ctx->prototypes.function_proto      = KOS_new_object(frame));
-    TRY_OBJID(ctx->prototypes.constructor_proto   = KOS_new_object_with_prototype(frame, ctx->prototypes.function_proto));
+    TRY_OBJID(ctx->prototypes.class_proto         = KOS_new_object_with_prototype(frame, ctx->prototypes.function_proto));
     TRY_OBJID(ctx->prototypes.generator_proto     = KOS_new_object_with_prototype(frame, ctx->prototypes.function_proto));
     TRY_OBJID(ctx->prototypes.exception_proto     = KOS_new_object(frame));
     TRY_OBJID(ctx->prototypes.generator_end_proto = KOS_new_object(frame));

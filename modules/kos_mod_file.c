@@ -89,7 +89,7 @@ static void _finalize(KOS_FRAME frame,
  *
  *     file(pathname, flags = rw)
  *
- * File object constructor.
+ * File object class.
  *
  * Returns opened file object.
  *
@@ -101,7 +101,7 @@ static void _finalize(KOS_FRAME frame,
  * file functions `file.open()`, `file.create()` and `file.append()`
  * instead of specifying the flags explicitly.
  *
- * It is recommended to use the `file.file` constructor in conjunction with
+ * It is recommended to use the `file.file` class in conjunction with
  * the `with` statement.
  *
  * Example:

@@ -49,7 +49,6 @@ static const char str_err_invalid_byte_value[]  = "buffer element value out of r
 static const char str_err_invalid_index[]       = "index out of range";
 static const char str_err_invalid_instruction[] = "invalid instruction";
 static const char str_err_not_callable[]        = "object is not callable";
-static const char str_err_not_function[]        = "object is not a function";
 static const char str_err_not_generator[]       = "function is not a generator";
 static const char str_err_slice_not_function[]  = "slice is not a function";
 static const char str_err_too_few_args[]        = "not enough arguments passed to a function";
@@ -752,6 +751,9 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
     switch (GET_OBJ_TYPE(func_obj)) {
 
         case OBJ_FUNCTION:
+            /* fall through */
+        default:
+            assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
             func  = OBJPTR(FUNCTION, func_obj);
             state = (enum _KOS_FUNCTION_STATE)func->state;
             assert(state != KOS_CTOR2);
@@ -761,9 +763,6 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             func  = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
             state = KOS_CTOR2;
             break;
-
-        default:
-            RAISE_EXCEPTION(str_err_not_callable);
     }
 
     if (GET_OBJ_TYPE(args_obj) != OBJ_ARRAY)
@@ -2428,7 +2427,8 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID this_obj;
                 KOS_OBJ_ID args_obj;
 
-                KOS_FRAME new_stack_frame = 0;
+                KOS_FUNCTION *func            = 0;
+                KOS_FRAME     new_stack_frame = 0;
 
                 rdest = bytecode[1];
 
@@ -2524,16 +2524,29 @@ static int _exec_function(KOS_FRAME frame)
                 if (IS_BAD_PTR(args_obj))
                     error = KOS_ERROR_EXCEPTION;
                 else {
-                    if (GET_OBJ_TYPE(func_obj) == OBJ_CLASS)
-                        this_obj = NEW_THIS;
-                    new_stack_frame = _prepare_call(frame, instr, func_obj, &this_obj, args_obj);
+                    switch (GET_OBJ_TYPE(func_obj)) {
+
+                        case OBJ_FUNCTION:
+                            func = OBJPTR(FUNCTION, func_obj);
+                            break;
+
+                        case OBJ_CLASS:
+                            this_obj = NEW_THIS;
+                            func     = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
+                            break;
+
+                        default:
+                            KOS_raise_exception_cstring(frame, str_err_not_callable);
+                            break;
+                    }
+
+                    if (func)
+                        new_stack_frame = _prepare_call(frame, instr, func_obj, &this_obj, args_obj);
                     if ( ! new_stack_frame)
                         error = KOS_ERROR_EXCEPTION;
                 }
 
                 if ( ! error) {
-
-                    KOS_FUNCTION *func = OBJPTR(FUNCTION, func_obj);
 
                     if (func->state == KOS_GEN_INIT)
                         out = this_obj;
@@ -2753,7 +2766,7 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
             break;
 
         default:
-            KOS_raise_exception_cstring(frame, str_err_not_function);
+            KOS_raise_exception_cstring(frame, str_err_not_callable);
             return KOS_BADPTR;
     }
 

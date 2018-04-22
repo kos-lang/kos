@@ -41,9 +41,9 @@ static const char str_builtin[]                      = "<builtin>";
 static const char str_err_already_joined[]           = "thread already joined";
 static const char str_err_bad_number[]               = "number parse failed";
 static const char str_err_bad_pack_value[]           = "invalid value type for pack format";
-static const char str_err_cannot_convert_to_buffer[] = "unsupported type passed to buffer constructor";
-static const char str_err_cannot_convert_to_string[] = "unsupported type passed to string constructor";
-static const char str_err_gen_not_callable[]         = "generator constructor is not not callable";
+static const char str_err_cannot_convert_to_buffer[] = "unsupported type passed to buffer class";
+static const char str_err_cannot_convert_to_string[] = "unsupported type passed to string class";
+static const char str_err_gen_not_callable[]         = "generator class is not not callable";
 static const char str_err_invalid_array_size[]       = "array size out of range";
 static const char str_err_invalid_byte_value[]       = "buffer element value out of range";
 static const char str_err_invalid_buffer_size[]      = "buffer size out of range";
@@ -282,8 +282,8 @@ static int _create_class(KOS_FRAME            frame,
 
     assert( ! IS_BAD_PTR(frame->module));
 
-    OBJPTR(FUNCTION, func_obj)->handler = constructor;
-    OBJPTR(FUNCTION, func_obj)->module  = frame->module;
+    OBJPTR(CLASS, func_obj)->handler = constructor;
+    OBJPTR(CLASS, func_obj)->module  = frame->module;
 
     TRY(KOS_module_add_global(frame,
                               str_name,
@@ -298,7 +298,7 @@ _error:
  *
  *     number(value = 0)
  *
- * Numeric type constructor.
+ * Numeric type class.
  *
  * The optional `value` argument can be an integer, a float or a string.
  *
@@ -378,7 +378,7 @@ static KOS_OBJ_ID _number_constructor(KOS_FRAME  frame,
  *
  *     integer(value = 0)
  *
- * Integer type constructor.
+ * Integer type class.
  *
  * The optional `value` argument can be an integer, a float or a string.
  *
@@ -458,7 +458,7 @@ static KOS_OBJ_ID _integer_constructor(KOS_FRAME  frame,
  *
  *     float(value = 0.0)
  *
- * Float type constructor.
+ * Float type class.
  *
  * The optional `value` argument can be an integer, a float or a string.
  *
@@ -550,7 +550,7 @@ static KOS_OBJ_ID _float_constructor(KOS_FRAME  frame,
  *
  *     boolean(value = false)
  *
- * Boolean type constructor.
+ * Boolean type class.
  *
  * Returns the value converted to a boolean using standard truth detection
  * rules.
@@ -598,11 +598,11 @@ static KOS_OBJ_ID _boolean_constructor(KOS_FRAME  frame,
  *
  *     void()
  *
- * Void type constructor.
+ * Void type class.
  *
  * Returns `void`.
  *
- * Because `void` is a keyword, this constructor can only be referenced
+ * Because `void` is a keyword, this class can only be referenced
  * indirectly via the `lang` module, it cannot be referenced if it is
  * imported directly into the current module.
  *
@@ -624,7 +624,7 @@ static KOS_OBJ_ID _void_constructor(KOS_FRAME  frame,
  *
  *     string(args...)
  *
- * String type constructor.
+ * String type class.
  *
  * Returns a new string created from converting all arguments to strings
  * and concatenating them.
@@ -781,7 +781,7 @@ _error:
  *
  *     object()
  *
- * Object type constructor.
+ * Object type class.
  *
  * Returns a new empty object.  Equivalent to empty object literal `{}`.
  *
@@ -803,7 +803,7 @@ static KOS_OBJ_ID _object_constructor(KOS_FRAME  frame,
  *
  *     array([element, ...])
  *
- * Array type constructor.
+ * Array type class.
  *
  * Creates an array from arguments.
  *
@@ -834,7 +834,7 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
  *     buffer(size = 0)
  *     buffer(args...)
  *
- * Buffer type constructor.
+ * Buffer type class.
  *
  * The first variant constructs a buffer of the specified size.  `size` defaults
  * to 0.  If size is greater than 0, the buffer is filled with zeroes.
@@ -842,7 +842,7 @@ static KOS_OBJ_ID _array_constructor(KOS_FRAME  frame,
  * The second variant constructs a buffer from one or more non-numeric objects.
  * Each of these input arguments is converted to a buffer and the resulting
  * buffers are concatenated, producing the final buffer, which is returned
- * by the constructor.  The following input types are supported:
+ * by the class.  The following input types are supported:
  *
  *  * array    - The array must contain numbers from 0 to 255 (floor operation
  *               is applied to floats).  Any other array elements trigger an
@@ -1024,10 +1024,10 @@ _error:
  *
  *     function(func)
  *
- * Function type constructor.
+ * Function type class.
  *
  * The argument is a function object which is returned by
- * this constructor, no new object is created by it.
+ * this class, no new object is created by it.
  * Throws an exception if the argument is not a function.
  *
  * The prototype of `function.prototype` is `object.prototype`.
@@ -1055,24 +1055,23 @@ static KOS_OBJ_ID _function_constructor(KOS_FRAME  frame,
     return ret;
 }
 
-/* @item lang constructor()
+/* @item lang class()
  *
- *     constructor()
+ *     class()
  *
- * Constructor for constructor functions.
+ * Class type class.
  *
- * The purpose of this constructor is to be used with the `instanceof`
- * operator to detect constructor functions.
- *
- * Because `constructor` is a keyword, this constructor can only be referenced
+ * Because `class` is a keyword, this class can only be referenced
  * indirectly via the lang module, it cannot be referenced if it is imported
  * directly into the current module.
  *
- * Calling this constructor function throws an exception.
+ * The argument is a class object which is returned by
+ * this class, no new object is created by it.
+ * Throws an exception if the argument is not a class.
  *
- * The prototype of `constructor.prototype` is `function.prototype`.
+ * The prototype of `class.prototype` is `function.prototype`.
  */
-static KOS_OBJ_ID _constructor_constructor(KOS_FRAME  frame,
+static KOS_OBJ_ID _class_constructor(KOS_FRAME  frame,
                                            KOS_OBJ_ID this_obj,
                                            KOS_OBJ_ID args_obj)
 {
@@ -1099,12 +1098,12 @@ static KOS_OBJ_ID _constructor_constructor(KOS_FRAME  frame,
  *
  *     generator()
  *
- * Constructor for generator functions.
+ * Generator function class.
  *
- * The purpose of this constructor is to be used with the `instanceof`
+ * The purpose of this class is to be used with the `instanceof`
  * operator to detect generator functions.
  *
- * Calling this constructor function throws an exception.
+ * Calling this class throws an exception.
  *
  * The prototype of `generator.prototype` is `function.prototype`.
  */
@@ -1120,15 +1119,15 @@ static KOS_OBJ_ID _generator_constructor(KOS_FRAME  frame,
  *
  *     exception([value])
  *
- * Exception object constructor.
+ * Exception object class.
  *
  * All caught exception objects have `exception.prototype` as their prototype.
- * This constructor gives access to that prototype.
+ * This class gives access to that prototype.
  *
- * Calling this constructor function throws an exception, it does not return
+ * Calling this class throws an exception, it does not return
  * an exception object.  The thrown exception's `value` property can be set
- * to the optional `value` argument.  In other words, calling this constructor
- * function is equivalent to throwing `value`.
+ * to the optional `value` argument.  In other words, calling this class
+ * is equivalent to throwing `value`.
  *
  * If `value` is not specified, `void` is thrown.
  *
@@ -1152,14 +1151,14 @@ static KOS_OBJ_ID _exception_constructor(KOS_FRAME  frame,
  *
  *     generator_end()
  *
- * Generator end object constructor.
+ * Generator end object class.
  *
  * A generator end object is typically thrown when an iterator function is
  * called but has no more values to yield.  In other words, a thrown generator
  * end object indicates end of a generator.  The generator end object can
  * be caught and it becomes the `value` of the exception object caught.
  *
- * Calling this constructor function throws an exception.
+ * Calling this class throws an exception.
  *
  * The prototype of `generator_end.prototype` is `object.prototype`.
  */
@@ -1175,14 +1174,14 @@ static KOS_OBJ_ID _generator_end_constructor(KOS_FRAME  frame,
  *
  *     thread()
  *
- * Thread object constructor.
+ * Thread object class.
  *
  * Thread objects are created by calling `function.prototype.async()`.
  *
- * The purpose of this constructor is to be used with the `instanceof`
+ * The purpose of this class is to be used with the `instanceof`
  * operator to detect thread objects.
  *
- * Calling this constructor function throws an exception.
+ * Calling this class throws an exception.
  *
  * The prototype of `thread.prototype` is `object.prototype`.
  */
@@ -3487,11 +3486,14 @@ static KOS_OBJ_ID _get_code_size(KOS_FRAME  frame,
     return ret;
 }
 
-/* @item lang constructor.prototype.prototype
+/* @item lang class.prototype.prototype
  *
- *     constructor.prototype.prototype
+ *     class.prototype.prototype
  *
- * Read-only prototype used by the constructor function.
+ * Allows reading and setting prototype on class objects.
+ *
+ * The prototype set or retrieved is the prototype used when creating
+ * new objects of this class.
  */
 
 /* @item lang function.prototype.registers
@@ -3597,7 +3599,7 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_CREATE_CONSTRUCTOR(array);
     TRY_CREATE_CONSTRUCTOR(boolean);
     TRY_CREATE_CONSTRUCTOR(buffer);
-    TRY_CREATE_CONSTRUCTOR(constructor);
+    TRY_CREATE_CONSTRUCTOR(class);
     TRY_CREATE_CONSTRUCTOR(exception);
     TRY_CREATE_CONSTRUCTOR(float);
     TRY_CREATE_CONSTRUCTOR(function);

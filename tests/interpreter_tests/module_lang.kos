@@ -42,7 +42,7 @@ do {
     assert typeof lang.number           == "class"
     assert typeof lang.number.prototype == "object"
     assert lang.number instanceof lang.function
-    assert lang.number instanceof lang.constructor
+    assert lang.number instanceof lang.class
 }
 
 do {
@@ -131,7 +131,7 @@ do {
     assert typeof lang.integer           == "class"
     assert typeof lang.integer.prototype == "object"
     assert lang.integer instanceof lang.function
-    assert lang.integer instanceof lang.constructor
+    assert lang.integer instanceof lang.class
 }
 
 do {
@@ -245,7 +245,7 @@ do {
     assert typeof lang.float           == "class"
     assert typeof lang.float.prototype == "object"
     assert lang.float instanceof lang.function
-    assert lang.float instanceof lang.constructor
+    assert lang.float instanceof lang.class
 }
 
 do {
@@ -355,7 +355,7 @@ do {
     assert typeof lang.void           == "class"
     assert typeof lang.void.prototype == "object"
     assert lang.void instanceof lang.function
-    assert lang.void instanceof lang.constructor
+    assert lang.void instanceof lang.class
 }
 
 do {
@@ -399,7 +399,7 @@ do {
     assert typeof lang.boolean           == "class"
     assert typeof lang.boolean.prototype == "object"
     assert lang.boolean instanceof lang.function
-    assert lang.boolean instanceof lang.constructor
+    assert lang.boolean instanceof lang.class
 }
 
 do {
@@ -444,7 +444,7 @@ do {
     assert typeof lang.string           == "class"
     assert typeof lang.string.prototype == "object"
     assert lang.string instanceof lang.function
-    assert lang.string instanceof lang.constructor
+    assert lang.string instanceof lang.class
 }
 
 do {
@@ -528,7 +528,7 @@ do {
     assert typeof lang.object           == "class"
     assert typeof lang.object.prototype == "object"
     assert lang.object instanceof lang.function
-    assert lang.object instanceof lang.constructor
+    assert lang.object instanceof lang.class
 }
 
 do {
@@ -627,7 +627,7 @@ do {
     assert typeof lang.array           == "class"
     assert typeof lang.array.prototype == "object"
     assert lang.array instanceof lang.function
-    assert lang.array instanceof lang.constructor
+    assert lang.array instanceof lang.class
 }
 
 do {
@@ -1199,18 +1199,18 @@ do {
 
 do {
     assert lang.function instanceof lang.function
-    assert lang.function instanceof lang.constructor
+    assert lang.function instanceof lang.class
     assert ! (lang.function instanceof lang.generator)
 
-    assert lang.constructor instanceof lang.function
-    assert lang.constructor instanceof lang.constructor
-    assert ! (lang.constructor instanceof lang.generator)
+    assert lang.class instanceof lang.function
+    assert lang.class instanceof lang.class
+    assert ! (lang.class instanceof lang.generator)
 
     assert lang.generator instanceof lang.function
-    assert lang.generator instanceof lang.constructor
+    assert lang.generator instanceof lang.class
     assert ! (lang.generator instanceof lang.generator)
 
-    expect_fail(lang.constructor)
+    expect_fail(lang.class)
     expect_fail(lang.generator)
     expect_fail(lang.generator_end)
 
@@ -1219,7 +1219,7 @@ do {
     }
 
     assert regular_func instanceof lang.function
-    assert ! (regular_func instanceof lang.constructor)
+    assert ! (regular_func instanceof lang.class)
     assert ! (regular_func instanceof lang.generator)
 
     fun generator_func
@@ -1228,13 +1228,13 @@ do {
     }
 
     assert generator_func instanceof lang.function
-    assert ! (generator_func instanceof lang.constructor)
+    assert ! (generator_func instanceof lang.class)
     assert generator_func instanceof lang.generator
 
     class constructor_func { }
 
     assert constructor_func instanceof lang.function
-    assert constructor_func instanceof lang.constructor
+    assert constructor_func instanceof lang.class
     assert ! (constructor_func instanceof lang.generator)
 
     assert ! ("prototype" in regular_func)
@@ -1262,11 +1262,11 @@ do {
     class noctor { a { } b { } }
 
     assert empty  instanceof lang.function
-    assert empty  instanceof lang.constructor
+    assert empty  instanceof lang.class
     assert ctor   instanceof lang.function
-    assert ctor   instanceof lang.constructor
+    assert ctor   instanceof lang.class
     assert noctor instanceof lang.function
-    assert noctor instanceof lang.constructor
+    assert noctor instanceof lang.class
 }
 
 do {
@@ -1308,7 +1308,7 @@ do {
 
 do {
     const f1 = class { }
-    const f2 = lang.constructor(f1)
+    const f2 = lang.class(f1)
     assert f1 == f2
     expect_fail(()=>(lang.function(f1)))
 }
@@ -1347,7 +1347,7 @@ do {
     assert typeof gen  == "function"
 
     assert func instanceof lang.function
-    assert ctor instanceof lang.constructor
+    assert ctor instanceof lang.class
     assert gen  instanceof lang.generator
 
     const a = []
@@ -1547,15 +1547,15 @@ do {
     }
 
     assert f instanceof lang.function
-    assert ! (f instanceof lang.constructor)
+    assert ! (f instanceof lang.class)
     assert ! (f instanceof lang.generator)
 
     assert c instanceof lang.function
-    assert c instanceof lang.constructor
+    assert c instanceof lang.class
     assert ! (c instanceof lang.generator)
 
     assert g instanceof lang.function
-    assert ! (g instanceof lang.constructor)
+    assert ! (g instanceof lang.class)
     assert g instanceof lang.generator
 }
 
@@ -1616,7 +1616,7 @@ do {
 do {
     assert typeof lang.exception == "class"
     assert lang.exception instanceof lang.function
-    assert lang.exception instanceof lang.constructor
+    assert lang.exception instanceof lang.class
 }
 
 do {
@@ -1676,7 +1676,7 @@ do {
     assert ! (value instanceof lang.array)
 
     assert lang.buffer instanceof lang.function
-    assert lang.buffer instanceof lang.constructor
+    assert lang.buffer instanceof lang.class
 }
 
 ##############################################################################
@@ -1688,7 +1688,7 @@ do {
 }
 
 ##############################################################################
-# constructor selection
+# class selection
 
 do {
     fun new_type(type, args...)

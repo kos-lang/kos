@@ -104,7 +104,7 @@ struct _KOS_PROTOTYPES {
     KOS_OBJ_ID array_proto;
     KOS_OBJ_ID buffer_proto;
     KOS_OBJ_ID function_proto;
-    KOS_OBJ_ID constructor_proto;
+    KOS_OBJ_ID class_proto;
     KOS_OBJ_ID generator_proto;
     KOS_OBJ_ID exception_proto;
     KOS_OBJ_ID generator_end_proto;
@@ -127,8 +127,7 @@ struct _KOS_CONTEXT {
     struct _KOS_PROTOTYPES         prototypes;
 
     /* TODO
-     * - upgrade classes to own type
-     * - add properties to class objects ("static" functions)
+     * - add "static" functions
      * - move function and class objects to module instead of creating by instruction
      * - keep prototypes with the function/class object
      * - remove the prototype map below. */

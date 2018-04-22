@@ -61,7 +61,7 @@ file()
 
     file(pathname, flags = rw)
 
-File object constructor.
+File object class.
 
 Returns opened file object.
 
@@ -73,7 +73,7 @@ shorthand flag constants: `file.ro`, `file.rw` or the auxiliary
 file functions `file.open()`, `file.create()` and `file.append()`
 instead of specifying the flags explicitly.
 
-It is recommended to use the `file.file` constructor in conjunction with
+It is recommended to use the `file.file` class in conjunction with
 the `with` statement.
 
 Example:
@@ -543,7 +543,7 @@ array()
 
     array([element, ...])
 
-Array type constructor.
+Array type class.
 
 Creates an array from arguments.
 
@@ -842,7 +842,7 @@ boolean()
 
     boolean(value = false)
 
-Boolean type constructor.
+Boolean type class.
 
 Returns the value converted to a boolean using standard truth detection
 rules.
@@ -873,7 +873,7 @@ buffer()
     buffer(size = 0)
     buffer(args...)
 
-Buffer type constructor.
+Buffer type class.
 
 The first variant constructs a buffer of the specified size.  `size` defaults
 to 0.  If size is greater than 0, the buffer is filled with zeroes.
@@ -881,7 +881,7 @@ to 0.  If size is greater than 0, the buffer is filled with zeroes.
 The second variant constructs a buffer from one or more non-numeric objects.
 Each of these input arguments is converted to a buffer and the resulting
 buffers are concatenated, producing the final buffer, which is returned
-by the constructor.  The following input types are supported:
+by the class.  The following input types are supported:
 
  * array    - The array must contain numbers from 0 to 255 (floor operation
               is applied to floats).  Any other array elements trigger an
@@ -1183,30 +1183,32 @@ Returns an array containing unpacked values.
 
 TODO - refine format
 
-constructor()
--------------
+class()
+-------
 
-    constructor()
+    class()
 
-Constructor for constructor functions.
+Class type class.
 
-The purpose of this constructor is to be used with the `instanceof`
-operator to detect constructor functions.
-
-Because `constructor` is a keyword, this constructor can only be referenced
+Because `class` is a keyword, this class can only be referenced
 indirectly via the lang module, it cannot be referenced if it is imported
 directly into the current module.
 
-Calling this constructor function throws an exception.
+The argument is a class object which is returned by
+this class, no new object is created by it.
+Throws an exception if the argument is not a class.
 
-The prototype of `constructor.prototype` is `function.prototype`.
+The prototype of `class.prototype` is `function.prototype`.
 
-constructor.prototype.prototype
--------------------------------
+class.prototype.prototype
+-------------------------
 
-    constructor.prototype.prototype
+    class.prototype.prototype
 
-Read-only prototype used by the constructor function.
+Allows reading and setting prototype on class objects.
+
+The prototype set or retrieved is the prototype used when creating
+new objects of this class.
 
 count()
 -------
@@ -1306,15 +1308,15 @@ exception()
 
     exception([value])
 
-Exception object constructor.
+Exception object class.
 
 All caught exception objects have `exception.prototype` as their prototype.
-This constructor gives access to that prototype.
+This class gives access to that prototype.
 
-Calling this constructor function throws an exception, it does not return
+Calling this class throws an exception, it does not return
 an exception object.  The thrown exception's `value` property can be set
-to the optional `value` argument.  In other words, calling this constructor
-function is equivalent to throwing `value`.
+to the optional `value` argument.  In other words, calling this class
+is equivalent to throwing `value`.
 
 If `value` is not specified, `void` is thrown.
 
@@ -1361,7 +1363,7 @@ float()
 
     float(value = 0.0)
 
-Float type constructor.
+Float type class.
 
 The optional `value` argument can be an integer, a float or a string.
 
@@ -1391,10 +1393,10 @@ function()
 
     function(func)
 
-Function type constructor.
+Function type class.
 
 The argument is a function object which is returned by
-this constructor, no new object is created by it.
+this class, no new object is created by it.
 Throws an exception if the argument is not a function.
 
 The prototype of `function.prototype` is `object.prototype`.
@@ -1500,12 +1502,12 @@ generator()
 
     generator()
 
-Constructor for generator functions.
+Generator function class.
 
-The purpose of this constructor is to be used with the `instanceof`
+The purpose of this class is to be used with the `instanceof`
 operator to detect generator functions.
 
-Calling this constructor function throws an exception.
+Calling this class throws an exception.
 
 The prototype of `generator.prototype` is `function.prototype`.
 
@@ -1566,14 +1568,14 @@ generator_end()
 
     generator_end()
 
-Generator end object constructor.
+Generator end object class.
 
 A generator end object is typically thrown when an iterator function is
 called but has no more values to yield.  In other words, a thrown generator
 end object indicates end of a generator.  The generator end object can
 be caught and it becomes the `value` of the exception object caught.
 
-Calling this constructor function throws an exception.
+Calling this class throws an exception.
 
 The prototype of `generator_end.prototype` is `object.prototype`.
 
@@ -1594,7 +1596,7 @@ integer()
 
     integer(value = 0)
 
-Integer type constructor.
+Integer type class.
 
 The optional `value` argument can be an integer, a float or a string.
 
@@ -1717,7 +1719,7 @@ number()
 
     number(value = 0)
 
-Numeric type constructor.
+Numeric type class.
 
 The optional `value` argument can be an integer, a float or a string.
 
@@ -1750,7 +1752,7 @@ object()
 
     object()
 
-Object type constructor.
+Object type class.
 
 Returns a new empty object.  Equivalent to empty object literal `{}`.
 
@@ -2153,7 +2155,7 @@ string()
 
     string(args...)
 
-String type constructor.
+String type class.
 
 Returns a new string created from converting all arguments to strings
 and concatenating them.
@@ -2722,14 +2724,14 @@ thread()
 
     thread()
 
-Thread object constructor.
+Thread object class.
 
 Thread objects are created by calling `function.prototype.async()`.
 
-The purpose of this constructor is to be used with the `instanceof`
+The purpose of this class is to be used with the `instanceof`
 operator to detect thread objects.
 
-Calling this constructor function throws an exception.
+Calling this class throws an exception.
 
 The prototype of `thread.prototype` is `object.prototype`.
 
@@ -2757,11 +2759,11 @@ void()
 
     void()
 
-Void type constructor.
+Void type class.
 
 Returns `void`.
 
-Because `void` is a keyword, this constructor can only be referenced
+Because `void` is a keyword, this class can only be referenced
 indirectly via the `lang` module, it cannot be referenced if it is
 imported directly into the current module.
 
@@ -3037,7 +3039,7 @@ random()
 
     random([seed])
 
-Constructor for pseudo-random number generators.
+Pseudo-random number generator class.
 
 Returns a new pseudo-random generator object.
 
@@ -3050,7 +3052,7 @@ If `seed` is specified, it is used as seed for the pseudo-random number
 generator.  `seed` is either an integer or a float.  If `seed` is a float,
 it is converted to an integer using floor method.
 
-The underlying pseudo-random generator initialized by this constructor
+The underlying pseudo-random generator initialized by this class
 uses PCG XSH RR 32 algorithm.
 
 The quality of pseudo-random numbers produced by this generator is sufficient

@@ -810,7 +810,7 @@ KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
         }
 
         case OBJ_CLASS:
-            ret = ctx->prototypes.constructor_proto;
+            ret = ctx->prototypes.class_proto;
             break;
 
         case OBJ_BOOLEAN:

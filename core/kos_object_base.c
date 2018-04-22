@@ -214,8 +214,8 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_FRAME            frame,
         if ( ! IS_BAD_PTR(func_obj)) {
             assert(min_args >= 0 && min_args < 256);
 
-            OBJPTR(FUNCTION, func_obj)->header.num_args = (uint8_t)min_args;
-            OBJPTR(FUNCTION, func_obj)->handler         = handler;
+            OBJPTR(CLASS, func_obj)->header.num_args = (uint8_t)min_args;
+            OBJPTR(CLASS, func_obj)->handler         = handler;
         }
     }
 

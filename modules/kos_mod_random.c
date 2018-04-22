@@ -58,7 +58,7 @@ static void _finalize(KOS_FRAME frame,
  *
  *     random([seed])
  *
- * Constructor for pseudo-random number generators.
+ * Pseudo-random number generator class.
  *
  * Returns a new pseudo-random generator object.
  *
@@ -71,7 +71,7 @@ static void _finalize(KOS_FRAME frame,
  * generator.  `seed` is either an integer or a float.  If `seed` is a float,
  * it is converted to an integer using floor method.
  *
- * The underlying pseudo-random generator initialized by this constructor
+ * The underlying pseudo-random generator initialized by this class
  * uses PCG XSH RR 32 algorithm.
  *
  * The quality of pseudo-random numbers produced by this generator is sufficient
