@@ -36,35 +36,34 @@
 #include <memory.h>
 #include <stdio.h>
 
-static const char str_args[]                          = "args";
-static const char str_builtin[]                       = "<builtin>";
-static const char str_err_already_joined[]            = "thread already joined";
-static const char str_err_bad_number[]                = "number parse failed";
-static const char str_err_bad_pack_value[]            = "invalid value type for pack format";
-static const char str_err_cannot_convert_to_buffer[]  = "unsupported type passed to buffer constructor";
-static const char str_err_cannot_convert_to_string[]  = "unsupported type passed to string constructor";
-static const char str_err_cannot_override_prototype[] = "cannot override prototype";
-static const char str_err_gen_not_callable[]          = "generator constructor is not not callable";
-static const char str_err_invalid_array_size[]        = "array size out of range";
-static const char str_err_invalid_byte_value[]        = "buffer element value out of range";
-static const char str_err_invalid_buffer_size[]       = "buffer size out of range";
-static const char str_err_invalid_pack_format[]       = "invalid pack format";
-static const char str_err_invalid_string_idx[]        = "string index is out of range";
-static const char str_err_join_self[]                 = "thread cannot join itself";
-static const char str_err_not_array[]                 = "object is not an array";
-static const char str_err_not_boolean[]               = "object is not a boolean";
-static const char str_err_not_buffer[]                = "object is not a buffer";
-static const char str_err_not_class[]                 = "object is not a class";
-static const char str_err_not_enough_pack_values[]    = "insufficient number of packed values";
-static const char str_err_not_function[]              = "object is not a function";
-static const char str_err_not_string[]                = "object is not a string";
-static const char str_err_not_thread[]                = "object is not a thread";
-static const char str_err_too_many_repeats[]          = "invalid string repeat count";
-static const char str_err_unpack_buf_too_short[]      = "unpacked buffer too short";
-static const char str_err_unsup_operand_types[]       = "unsupported operand types";
-static const char str_err_use_async[]                 = "use async to launch threads";
-static const char str_function[]                      = "function";
-static const char str_result[]                        = "result";
+static const char str_args[]                         = "args";
+static const char str_builtin[]                      = "<builtin>";
+static const char str_err_already_joined[]           = "thread already joined";
+static const char str_err_bad_number[]               = "number parse failed";
+static const char str_err_bad_pack_value[]           = "invalid value type for pack format";
+static const char str_err_cannot_convert_to_buffer[] = "unsupported type passed to buffer constructor";
+static const char str_err_cannot_convert_to_string[] = "unsupported type passed to string constructor";
+static const char str_err_gen_not_callable[]         = "generator constructor is not not callable";
+static const char str_err_invalid_array_size[]       = "array size out of range";
+static const char str_err_invalid_byte_value[]       = "buffer element value out of range";
+static const char str_err_invalid_buffer_size[]      = "buffer size out of range";
+static const char str_err_invalid_pack_format[]      = "invalid pack format";
+static const char str_err_invalid_string_idx[]       = "string index is out of range";
+static const char str_err_join_self[]                = "thread cannot join itself";
+static const char str_err_not_array[]                = "object is not an array";
+static const char str_err_not_boolean[]              = "object is not a boolean";
+static const char str_err_not_buffer[]               = "object is not a buffer";
+static const char str_err_not_class[]                = "object is not a class";
+static const char str_err_not_enough_pack_values[]   = "insufficient number of packed values";
+static const char str_err_not_function[]             = "object is not a function";
+static const char str_err_not_string[]               = "object is not a string";
+static const char str_err_not_thread[]               = "object is not a thread";
+static const char str_err_too_many_repeats[]         = "invalid string repeat count";
+static const char str_err_unpack_buf_too_short[]     = "unpacked buffer too short";
+static const char str_err_unsup_operand_types[]      = "unsupported operand types";
+static const char str_err_use_async[]                = "use async to launch threads";
+static const char str_function[]                     = "function";
+static const char str_result[]                       = "result";
 
 #define TRY_CREATE_CONSTRUCTOR(name)                                         \
 do {                                                                         \
@@ -1400,67 +1399,6 @@ static KOS_OBJ_ID _wait(KOS_FRAME  frame,
     }
 
     return error ? KOS_BADPTR : ret;
-}
-
-/* @item lang constructor.prototype.set_prototype()
- *
- *     constructor.prototype.set_prototype(object)
- *
- * Sets prototype for the constructor function.
- *
- * Returns the construction function itself.
- *
- * `object` is the object which becomes the prototype used by the
- * constructor function.  That object becomes the prototype of all objects
- * created by the constructor function.
- *
- * The prototype can be retrieved using `constructor.prototype.prototype`
- * property.
- */
-static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
-                                 KOS_OBJ_ID this_obj,
-                                 KOS_OBJ_ID args_obj)
-{
-    KOS_OBJ_ID ret = KOS_BADPTR;
-
-    assert( ! IS_BAD_PTR(this_obj));
-
-    if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
-
-        KOS_OBJ_ID                 arg     = KOS_array_read(frame, args_obj, 0);
-        const KOS_FUNCTION_HANDLER handler = OBJPTR(CLASS, this_obj)->handler;
-
-        /* TODO Forbid for all built-in functions? */
-        if (handler == _array_constructor         ||
-            handler == _boolean_constructor       ||
-            handler == _buffer_constructor        ||
-            handler == _constructor_constructor   ||
-            handler == _exception_constructor     ||
-            handler == _float_constructor         ||
-            handler == _function_constructor      ||
-            handler == _generator_constructor     ||
-            handler == _generator_end_constructor ||
-            handler == _integer_constructor       ||
-            handler == _number_constructor        ||
-            handler == _object_constructor        ||
-            handler == _string_constructor        ||
-            handler == _thread_constructor        ||
-            handler == _void_constructor) {
-
-            KOS_raise_exception_cstring(frame, str_err_cannot_override_prototype);
-            arg = KOS_BADPTR;
-        }
-
-        if ( ! IS_BAD_PTR(arg)) {
-            KOS_CLASS *func = OBJPTR(CLASS, this_obj);
-            KOS_atomic_write_ptr(func->prototype, arg);
-            ret = this_obj;
-        }
-    }
-    else
-        KOS_raise_exception_cstring(frame, str_err_not_function);
-
-    return ret;
 }
 
 /* @item lang string.prototype.slice()
@@ -3555,27 +3493,6 @@ static KOS_OBJ_ID _get_code_size(KOS_FRAME  frame,
  *
  * Read-only prototype used by the constructor function.
  */
-static KOS_OBJ_ID _get_prototype(KOS_FRAME  frame,
-                                 KOS_OBJ_ID this_obj,
-                                 KOS_OBJ_ID args_obj)
-{
-    KOS_OBJ_ID ret;
-
-    if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
-
-        KOS_CLASS *const func = OBJPTR(CLASS, this_obj);
-
-        ret = (KOS_OBJ_ID)KOS_atomic_read_ptr(func->prototype);
-
-        assert( ! IS_BAD_PTR(ret));
-    }
-    else {
-        KOS_raise_exception_cstring(frame, str_err_not_function);
-        ret = KOS_BADPTR;
-    }
-
-    return ret;
-}
 
 /* @item lang function.prototype.registers
  *
@@ -3710,9 +3627,6 @@ int _KOS_module_lang_init(KOS_FRAME frame)
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "slice",         _slice,             2);
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(buffer),     "unpack",        _unpack,            1);
     TRY_ADD_MEMBER_PROPERTY( frame, PROTO(buffer),     "size",          _get_buffer_size,   0);
-
-    TRY_ADD_MEMBER_PROPERTY( frame, PROTO(constructor),"prototype",     _get_prototype,     0);
-    TRY_ADD_MEMBER_FUNCTION( frame, PROTO(constructor),"set_prototype", _set_prototype,     1);
 
     TRY_ADD_MEMBER_FUNCTION( frame, PROTO(exception),  "print",         _print_exception,   0);
 

@@ -1477,8 +1477,8 @@ do {
 
     const c2 = class { }
 
-    c1.set_prototype(c2)
-    c2.set_prototype(c1)
+    c1.prototype = c2
+    c2.prototype = c1
 }
 
 # set prototype on regular function
@@ -1487,7 +1487,7 @@ do {
     {
     }
 
-    expect_fail(()=>(f.set_prototype({})))
+    expect_fail(fun { f.prototype = {} })
 }
 
 # set prototype on generator
@@ -1497,7 +1497,7 @@ do {
         yield void
     }
 
-    expect_fail(()=>(g.set_prototype({})))
+    expect_fail(fun { g.prototype = {} })
 }
 
 # dynamic prototype
@@ -1508,7 +1508,7 @@ do {
     fun obj_with_proto(proto)
     {
         class ctor { }
-        ctor.set_prototype(proto)
+        ctor.prototype = proto
         return ctor()
     }
 

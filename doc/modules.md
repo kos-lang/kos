@@ -1208,22 +1208,6 @@ constructor.prototype.prototype
 
 Read-only prototype used by the constructor function.
 
-constructor.prototype.set_prototype()
--------------------------------------
-
-    constructor.prototype.set_prototype(object)
-
-Sets prototype for the constructor function.
-
-Returns the construction function itself.
-
-`object` is the object which becomes the prototype used by the
-constructor function.  That object becomes the prototype of all objects
-created by the constructor function.
-
-The prototype can be retrieved using `constructor.prototype.prototype`
-property.
-
 count()
 -------
 

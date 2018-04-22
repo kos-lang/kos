@@ -56,6 +56,8 @@ do {
     const b = buffer()
     assert b instanceof buffer
 
+    assert "insert" in buffer.prototype
+
     expect_fail(fun { buffer.prototype = {} })
     assert typeof buffer.prototype == "object"
 
@@ -245,7 +247,7 @@ do {
 
 do {
     class new_obj { }
-    new_obj.set_prototype(buffer())
+    new_obj.prototype = buffer()
 
     const obj = new_obj()
 

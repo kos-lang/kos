@@ -4741,25 +4741,19 @@ static int _class_literal(struct _KOS_COMP_UNIT      *program,
 
     if (proto_reg) {
 
-        struct _KOS_REG  *func_reg            = 0;
-        static const char str_set_prototype[] = "set_prototype";
-        int               str_idx             = 0;
+        static const char str_prototype[] = "prototype";
+        int               str_idx         = 0;
         struct _KOS_TOKEN token;
 
-        TRY(_gen_reg(program, &func_reg));
-
         memset(&token, 0, sizeof(token));
-        token.begin  = str_set_prototype;
-        token.length = sizeof(str_set_prototype) - 1;
+        token.begin  = str_prototype;
+        token.length = sizeof(str_prototype) - 1;
         token.type   = TT_IDENTIFIER;
 
         TRY(_gen_str(program, &token, &str_idx));
 
-        TRY(_gen_instr3(program, INSTR_GET_PROP, func_reg->reg, (*reg)->reg, str_idx));
+        TRY(_gen_instr3(program, INSTR_SET_PROP, (*reg)->reg, str_idx, proto_reg->reg));
 
-        TRY(_gen_instr5(program, INSTR_CALL_N, func_reg->reg, func_reg->reg, (*reg)->reg, proto_reg->reg, 1));
-
-        _free_reg(program, func_reg);
         _free_reg(program, proto_reg);
     }
 

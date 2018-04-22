@@ -105,7 +105,7 @@ do {
         }
     }
 
-    constr.set_prototype({ a: "a" })
+    constr.prototype = { a: "a" }
 
     const obj = constr()
     assert obj instanceof constr
@@ -169,7 +169,7 @@ do {
         }
     }
 
-    constr.set_prototype(base)
+    constr.prototype = base
 
     const obj = constr(5)
     assert obj instanceof constr
@@ -222,7 +222,7 @@ do {
     assert obj.a   == 42
     assert other.a == 42
 
-    constr1.set_prototype({})
+    constr1.prototype = {}
 
     assert ! (obj instanceof constr1)
 }
@@ -339,4 +339,19 @@ do {
 
     const v = empty_ctor()
     assert v.x == 42
+}
+
+do {
+    class empty { }
+
+    empty.a = 1
+    empty.b = 2
+
+    const e = empty()
+
+    expect_fail(()=>(e.a))
+    expect_fail(()=>(e.b))
+
+    assert empty.a == 1
+    assert empty.b == 2
 }

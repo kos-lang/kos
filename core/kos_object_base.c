@@ -33,6 +33,10 @@
 #include <string.h>
 #include <assert.h>
 
+static const char str_err_cannot_override_prototype[] = "cannot override prototype";
+static const char str_err_not_class[]                 = "object is not a class";
+static const char str_prototype[]                     = "prototype";
+
 KOS_OBJ_ID KOS_new_int(KOS_FRAME frame, int64_t value)
 {
     KOS_OBJ_ID   obj_id = TO_SMALL_INT((intptr_t)value);
@@ -95,6 +99,58 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame)
     return OBJID(FUNCTION, func);
 }
 
+static KOS_OBJ_ID _get_prototype(KOS_FRAME  frame,
+                                 KOS_OBJ_ID this_obj,
+                                 KOS_OBJ_ID args_obj)
+{
+    KOS_OBJ_ID ret;
+
+    if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
+
+        KOS_CLASS *const func = OBJPTR(CLASS, this_obj);
+
+        ret = (KOS_OBJ_ID)KOS_atomic_read_ptr(func->prototype);
+
+        assert( ! IS_BAD_PTR(ret));
+    }
+    else {
+        KOS_raise_exception_cstring(frame, str_err_not_class);
+        ret = KOS_BADPTR;
+    }
+
+    return ret;
+}
+
+static KOS_OBJ_ID _set_prototype(KOS_FRAME  frame,
+                                 KOS_OBJ_ID this_obj,
+                                 KOS_OBJ_ID args_obj)
+{
+    KOS_OBJ_ID ret = KOS_BADPTR;
+
+    assert( ! IS_BAD_PTR(this_obj));
+
+    if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
+
+        KOS_OBJ_ID                 arg     = KOS_array_read(frame, args_obj, 0);
+        const KOS_FUNCTION_HANDLER handler = OBJPTR(CLASS, this_obj)->handler;
+
+        if (handler) {
+            KOS_raise_exception_cstring(frame, str_err_cannot_override_prototype);
+            arg = KOS_BADPTR;
+        }
+
+        if ( ! IS_BAD_PTR(arg)) {
+            KOS_CLASS *func = OBJPTR(CLASS, this_obj);
+            KOS_atomic_write_ptr(func->prototype, arg);
+            ret = this_obj;
+        }
+    }
+    else
+        KOS_raise_exception_cstring(frame, str_err_not_class);
+
+    return ret;
+}
+
 KOS_OBJ_ID KOS_new_class(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
 {
     KOS_CLASS *func = (KOS_CLASS *)_KOS_alloc_object(frame,
@@ -116,6 +172,13 @@ KOS_OBJ_ID KOS_new_class(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         func->instr_offs            = ~0U;
         KOS_atomic_write_ptr(func->prototype, proto_obj);
         KOS_atomic_write_ptr(func->props,     KOS_BADPTR);
+
+        if (KOS_set_builtin_dynamic_property(frame,
+                                             OBJID(CLASS, func),
+                                             KOS_context_get_cstring(frame, str_prototype),
+                                             _get_prototype,
+                                             _set_prototype))
+            func = 0; /* object is garbage collected */
     }
 
     return OBJID(CLASS, func);

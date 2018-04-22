@@ -514,7 +514,7 @@ do {
 do {
     class ctor { }
 
-    ctor.set_prototype(lang.string.prototype)
+    ctor.prototype = lang.string.prototype
 
     const o = ctor()
 
@@ -697,7 +697,7 @@ do {
 
 do {
     expect_fail(fun {
-        lang.array.set_prototype({})
+        lang.array.prototype = {}
     })
 }
 
@@ -753,7 +753,7 @@ do {
 do {
     class fake_array { }
 
-    fake_array.set_prototype(lang.array.prototype)
+    fake_array.prototype = lang.array.prototype
 
     const o = fake_array()
 
@@ -1245,14 +1245,6 @@ do {
     expect_fail(()=>(regular_func.prototype))
     expect_fail(()=>(generator_func.prototype))
 
-    assert ! ("set_prototype" in regular_func)
-    assert ! ("set_prototype" in generator_func)
-    assert "set_prototype" in constructor_func
-
-    assert typeof constructor_func.set_prototype == "function"
-    expect_fail(()=>(regular_func.set_prototype))
-    expect_fail(()=>(generator_func.set_prototype))
-
     assert regular_func.name == "regular_func"
     var name_from_iter = void
     for const k, v in lang.deep(regular_func) {
@@ -1411,19 +1403,12 @@ do {
 }
 
 ##############################################################################
-# lang.function.prototype.set_prototype
-
-do {
-    expect_fail(()=>(lang.function.set_prototype.apply(void, [void])))
-}
-
-##############################################################################
 # lang.function.prototype.prototype
 
 do {
     class ctor { }
 
-    ctor.set_prototype(lang.function.prototype)
+    ctor.prototype = lang.function.prototype
 
     const o = ctor()
 
