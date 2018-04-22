@@ -39,7 +39,7 @@ fun expect_fail(function)
 # file.open, file.is_file, file.remove
 
 do {
-    assert typeof file.file           == "function"
+    assert typeof file.file           == "class"
     assert typeof file.file.prototype == "object"
 }
 

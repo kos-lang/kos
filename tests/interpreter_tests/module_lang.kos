@@ -39,7 +39,7 @@ fun expect_fail(function)
 # lang.number
 
 do {
-    assert typeof lang.number           == "function"
+    assert typeof lang.number           == "class"
     assert typeof lang.number.prototype == "object"
     assert lang.number instanceof lang.function
     assert lang.number instanceof lang.constructor
@@ -128,7 +128,7 @@ do {
 # lang.integer
 
 do {
-    assert typeof lang.integer           == "function"
+    assert typeof lang.integer           == "class"
     assert typeof lang.integer.prototype == "object"
     assert lang.integer instanceof lang.function
     assert lang.integer instanceof lang.constructor
@@ -242,7 +242,7 @@ do {
 # lang.float
 
 do {
-    assert typeof lang.float           == "function"
+    assert typeof lang.float           == "class"
     assert typeof lang.float.prototype == "object"
     assert lang.float instanceof lang.function
     assert lang.float instanceof lang.constructor
@@ -352,7 +352,7 @@ do {
 # lang.void
 
 do {
-    assert typeof lang.void           == "function"
+    assert typeof lang.void           == "class"
     assert typeof lang.void.prototype == "object"
     assert lang.void instanceof lang.function
     assert lang.void instanceof lang.constructor
@@ -396,7 +396,7 @@ do {
 # lang.boolean
 
 do {
-    assert typeof lang.boolean           == "function"
+    assert typeof lang.boolean           == "class"
     assert typeof lang.boolean.prototype == "object"
     assert lang.boolean instanceof lang.function
     assert lang.boolean instanceof lang.constructor
@@ -441,7 +441,7 @@ do {
 # lang.string
 
 do {
-    assert typeof lang.string           == "function"
+    assert typeof lang.string           == "class"
     assert typeof lang.string.prototype == "object"
     assert lang.string instanceof lang.function
     assert lang.string instanceof lang.constructor
@@ -525,7 +525,7 @@ do {
 # lang.object
 
 do {
-    assert typeof lang.object           == "function"
+    assert typeof lang.object           == "class"
     assert typeof lang.object.prototype == "object"
     assert lang.object instanceof lang.function
     assert lang.object instanceof lang.constructor
@@ -624,7 +624,7 @@ do {
 # lang.array
 
 do {
-    assert typeof lang.array           == "function"
+    assert typeof lang.array           == "class"
     assert typeof lang.array.prototype == "object"
     assert lang.array instanceof lang.function
     assert lang.array instanceof lang.constructor
@@ -1316,8 +1316,9 @@ do {
 
 do {
     const f1 = class { }
-    const f2 = lang.function(f1)
+    const f2 = lang.constructor(f1)
     assert f1 == f2
+    expect_fail(()=>(lang.function(f1)))
 }
 
 do {
@@ -1350,7 +1351,7 @@ do {
     }
 
     assert typeof func == "function"
-    assert typeof ctor == "function"
+    assert typeof ctor == "class"
     assert typeof gen  == "function"
 
     assert func instanceof lang.function
@@ -1506,7 +1507,7 @@ do {
     }
     ctor.prototype.x = -1
 
-    assert typeof ctor == "function"
+    assert typeof ctor == "class"
 
     const co = ctor()
     assert typeof co == "object"
@@ -1628,7 +1629,7 @@ do {
 # lang.exception
 
 do {
-    assert typeof lang.exception == "function"
+    assert typeof lang.exception == "class"
     assert lang.exception instanceof lang.function
     assert lang.exception instanceof lang.constructor
 }

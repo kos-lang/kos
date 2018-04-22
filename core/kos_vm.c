@@ -749,14 +749,25 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
     assert( ! IS_BAD_PTR(func_obj));
     assert( ! IS_BAD_PTR(args_obj));
 
-    if (GET_OBJ_TYPE(func_obj) != OBJ_FUNCTION)
-        RAISE_EXCEPTION(str_err_not_callable);
+    switch (GET_OBJ_TYPE(func_obj)) {
+
+        case OBJ_FUNCTION:
+            func  = OBJPTR(FUNCTION, func_obj);
+            state = (enum _KOS_FUNCTION_STATE)func->state;
+            assert(state != KOS_CTOR2);
+            break;
+
+        case OBJ_CLASS:
+            func  = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
+            state = KOS_CTOR2;
+            break;
+
+        default:
+            RAISE_EXCEPTION(str_err_not_callable);
+    }
 
     if (GET_OBJ_TYPE(args_obj) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_args_not_array);
-
-    func  = OBJPTR(FUNCTION, func_obj);
-    state = (enum _KOS_FUNCTION_STATE)func->state;
 
     if (KOS_get_array_size(args_obj) < func->header.num_args)
         RAISE_EXCEPTION(str_err_too_few_args);
@@ -767,9 +778,10 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
     switch (state) {
 
         /* Constructor function */
-        case KOS_CTOR:
+        case KOS_CTOR2:
             if (*this_obj == NEW_THIS) {
-                const KOS_OBJ_ID proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(func->prototype);
+                KOS_CLASS *const class_ptr = OBJPTR(CLASS, func_obj);
+                const KOS_OBJ_ID proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(class_ptr->prototype);
                 assert( ! IS_BAD_PTR(proto_obj));
 
                 if (func->handler)
@@ -802,14 +814,11 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
         /* Instantiate a generator function */
         case KOS_GEN_INIT: {
-            KOS_FUNCTION    *dest;
-            KOS_OBJ_ID       ret;
-            KOS_OBJ_ID       regs      = KOS_BADPTR;
-            const KOS_OBJ_ID proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(func->prototype);
+            KOS_FUNCTION *dest;
+            KOS_OBJ_ID    ret;
+            KOS_OBJ_ID    regs = KOS_BADPTR;
 
-            assert( ! IS_BAD_PTR(proto_obj));
-
-            ret = KOS_new_function(frame, proto_obj);
+            ret = KOS_new_function(frame);
             TRY_OBJID(ret);
 
             dest = OBJPTR(FUNCTION, ret);
@@ -919,7 +928,7 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
 
     if ( ! KOS_is_exception_pending(new_stack_frame)) {
 
-        if (*state == KOS_CTOR && ! func->handler)
+        if (func->header.type == OBJ_CLASS && ! func->handler)
             ret = this_obj;
         else
             ret = new_stack_frame->retval;
@@ -1180,15 +1189,21 @@ static int _exec_function(KOS_FRAME frame)
 
                 assert(offset < module->bytecode_size);
 
-                if (instr == INSTR_LOAD_CTOR)
+                if (instr == INSTR_LOAD_CTOR) {
                     proto_obj = KOS_gen_prototype(frame, bytecode + 10 + fun_offs);
 
-                if ( ! IS_BAD_PTR(proto_obj))
-                    fun_obj = KOS_new_function(frame, proto_obj);
+                    if ( ! IS_BAD_PTR(proto_obj))
+                        fun_obj = KOS_new_class(frame, proto_obj);
+                }
+                else
+                    fun_obj = KOS_new_function(frame);
+
 
                 if ( ! IS_BAD_PTR(fun_obj)) {
 
-                    KOS_FUNCTION *const fun = OBJPTR(FUNCTION, fun_obj);
+                    KOS_FUNCTION *const fun = (instr == INSTR_LOAD_CTOR)
+                                              ? (KOS_FUNCTION *)OBJPTR(CLASS, fun_obj)
+                                              : OBJPTR(FUNCTION, fun_obj);
 
                     fun->header.flags    = flags;
                     fun->header.num_args = num_args;
@@ -1199,8 +1214,6 @@ static int _exec_function(KOS_FRAME frame)
 
                     if (instr == INSTR_LOAD_GEN)
                         fun->state = KOS_GEN_INIT;
-                    else if (instr == INSTR_LOAD_CTOR)
-                        fun->state = KOS_CTOR;
                 }
 
                 rdest = bytecode[1];
@@ -2063,6 +2076,7 @@ static int _exec_function(KOS_FRAME frame)
                 static const char t_array[]    = "array";
                 static const char t_buffer[]   = "buffer";
                 static const char t_function[] = "function";
+                static const char t_class[]    = "class";
 
                 const unsigned rsrc  = bytecode[2];
                 KOS_OBJ_ID     src;
@@ -2108,6 +2122,10 @@ static int _exec_function(KOS_FRAME frame)
 
                     case OBJ_FUNCTION:
                         out = KOS_context_get_cstring(frame, t_function);
+                        break;
+
+                    case OBJ_CLASS:
+                        out = KOS_context_get_cstring(frame, t_class);
                         break;
 
                     default:
@@ -2233,9 +2251,9 @@ static int _exec_function(KOS_FRAME frame)
                 rdest      = bytecode[1];
                 constr_obj = regs[rfunc];
 
-                if (GET_OBJ_TYPE(constr_obj) == OBJ_FUNCTION) {
-                    KOS_FUNCTION *const constr    = OBJPTR(FUNCTION, constr_obj);
-                    KOS_OBJ_ID          proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(constr->prototype);
+                if (GET_OBJ_TYPE(constr_obj) == OBJ_CLASS) {
+                    KOS_CLASS *const constr    = OBJPTR(CLASS, constr_obj);
+                    KOS_OBJ_ID       proto_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(constr->prototype);
 
                     assert( ! IS_BAD_PTR(proto_obj));
 
@@ -2286,15 +2304,30 @@ static int _exec_function(KOS_FRAME frame)
             case INSTR_BIND: { /* <r.dest>, <slot.idx.uint8>, <r.src> */
                 const unsigned idx = bytecode[2];
 
-                KOS_OBJ_ID dest;
+                KOS_OBJ_ID    dest;
+                KOS_FUNCTION *func = 0;
+
                 rdest = bytecode[1];
                 assert(rdest < regs_array->size);
                 dest = regs[rdest];
 
-                if (GET_OBJ_TYPE(dest) != OBJ_FUNCTION)
-                    KOS_raise_exception_cstring(frame, str_err_not_callable);
-                else {
-                    KOS_OBJ_ID closures = OBJPTR(FUNCTION, dest)->closures;
+                switch (GET_OBJ_TYPE(dest)) {
+
+                    case OBJ_FUNCTION:
+                        func = OBJPTR(FUNCTION, dest);
+                        break;
+
+                    case OBJ_CLASS:
+                        func = (KOS_FUNCTION *)OBJPTR(CLASS, dest);
+                        break;
+
+                    default:
+                        KOS_raise_exception_cstring(frame, str_err_not_callable);
+                        break;
+                }
+
+                if (func) {
+                    KOS_OBJ_ID closures = func->closures;
                     KOS_OBJ_ID regs_obj;
 
                     if (instr == INSTR_BIND) {
@@ -2316,7 +2349,7 @@ static int _exec_function(KOS_FRAME frame)
                         if (IS_BAD_PTR(closures))
                             error = KOS_ERROR_EXCEPTION;
                         else
-                            OBJPTR(FUNCTION, dest)->closures = closures;
+                            func->closures = closures;
                     }
                     else if (idx >= KOS_get_array_size(closures))
                         error = KOS_array_resize(frame, closures, idx+1);
@@ -2343,10 +2376,28 @@ static int _exec_function(KOS_FRAME frame)
 
                 if (GET_OBJ_TYPE(src) != OBJ_ARRAY)
                     KOS_raise_exception_cstring(frame, str_err_corrupted_defaults);
-                else if (GET_OBJ_TYPE(dest) != OBJ_FUNCTION)
-                    KOS_raise_exception_cstring(frame, str_err_not_callable);
-                else
-                    OBJPTR(FUNCTION, dest)->defaults = src;
+                else {
+
+                    KOS_FUNCTION *func = 0;
+
+                    switch (GET_OBJ_TYPE(dest)) {
+
+                        case OBJ_FUNCTION:
+                            func = OBJPTR(FUNCTION, dest);
+                            break;
+
+                        case OBJ_CLASS:
+                            func = (KOS_FUNCTION *)OBJPTR(CLASS, dest);
+                            break;
+
+                        default:
+                            KOS_raise_exception_cstring(frame, str_err_not_callable);
+                            break;
+                    }
+
+                    if (func)
+                        func->defaults = src;
+                }
 
                 delta = 3;
                 break;
@@ -2473,8 +2524,7 @@ static int _exec_function(KOS_FRAME frame)
                 if (IS_BAD_PTR(args_obj))
                     error = KOS_ERROR_EXCEPTION;
                 else {
-                    if (GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION
-                            && OBJPTR(FUNCTION, func_obj)->state == KOS_CTOR)
+                    if (GET_OBJ_TYPE(func_obj) == OBJ_CLASS)
                         this_obj = NEW_THIS;
                     new_stack_frame = _prepare_call(frame, instr, func_obj, &this_obj, args_obj);
                     if ( ! new_stack_frame)
@@ -2692,16 +2742,22 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
 
     KOS_context_validate(frame);
 
-    assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
+    switch (GET_OBJ_TYPE(func_obj)) {
 
-    if (GET_OBJ_TYPE(func_obj) != OBJ_FUNCTION) {
-        KOS_raise_exception_cstring(frame, str_err_not_function);
-        return KOS_BADPTR;
+        case OBJ_FUNCTION:
+            func = OBJPTR(FUNCTION, func_obj);
+            break;
+
+        case OBJ_CLASS:
+            func = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
+            break;
+
+        default:
+            KOS_raise_exception_cstring(frame, str_err_not_function);
+            return KOS_BADPTR;
     }
 
-    func = OBJPTR(FUNCTION, func_obj);
-
-    if (func->state == KOS_CTOR && call_flavor != KOS_APPLY_FUNCTION)
+    if (func->header.type == OBJ_CLASS && call_flavor != KOS_APPLY_FUNCTION)
         this_obj = NEW_THIS;
 
     new_stack_frame = _prepare_call(frame, INSTR_CALL, func_obj, &this_obj, args_obj);

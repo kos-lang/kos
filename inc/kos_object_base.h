@@ -40,8 +40,9 @@ typedef enum KOS_OBJECT_TYPE {
     OBJ_ARRAY,
     OBJ_BUFFER,
     OBJ_FUNCTION,
+    OBJ_CLASS,
 
-    OBJ_LAST_TYPE = OBJ_FUNCTION,
+    OBJ_LAST_TYPE = OBJ_CLASS,
 
     OBJ_OPAQUE,         /* Contains binary user data, contents not recognized by GC */
 
@@ -280,7 +281,7 @@ typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_FRAME  frame,
 
 enum _KOS_FUNCTION_STATE {
     KOS_FUN,            /* regular function                                     */
-    KOS_CTOR,           /* constructor function                                 */
+    KOS_CTOR2,          /* class constructor                                    */
     KOS_GEN_INIT,       /* generator initializer object                         */
     KOS_GEN_READY,      /* initialized generator function, but not executed yet */
     KOS_GEN_ACTIVE,     /* generator function halted in the middle of execution */
@@ -305,13 +306,25 @@ typedef struct _KOS_FUNCTION {
     uint8_t                args_reg;
     uint8_t                state;    /* TODO convert to KOS_ATOMIC(uint32_t) */
     uint32_t               instr_offs;
-    KOS_ATOMIC(KOS_OBJ_ID) prototype;
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             closures;
     KOS_OBJ_ID             defaults;
     KOS_FUNCTION_HANDLER   handler;
     KOS_FRAME              generator_stack_frame;
 } KOS_FUNCTION;
+
+typedef struct _KOS_CLASS {
+    KOS_FUN_HEADER         header;
+    uint8_t                args_reg;
+    uint8_t                _dummy;
+    uint32_t               instr_offs;
+    KOS_OBJ_ID             module;
+    KOS_OBJ_ID             closures;
+    KOS_OBJ_ID             defaults;
+    KOS_FUNCTION_HANDLER   handler;
+    KOS_ATOMIC(KOS_OBJ_ID) prototype;
+    KOS_ATOMIC(KOS_OBJ_ID) props;
+} KOS_CLASS;
 
 enum _KOS_MODULE_FLAGS {
     KOS_MODULE_OWN_BYTECODE   = 1,
@@ -381,12 +394,18 @@ KOS_OBJ_ID KOS_new_int(KOS_FRAME frame,
 KOS_OBJ_ID KOS_new_float(KOS_FRAME frame,
                          double    value);
 
-KOS_OBJ_ID KOS_new_function(KOS_FRAME  frame,
-                            KOS_OBJ_ID proto_obj);
+KOS_OBJ_ID KOS_new_function(KOS_FRAME  frame);
+
+KOS_OBJ_ID KOS_new_class(KOS_FRAME  frame,
+                         KOS_OBJ_ID proto_obj);
 
 KOS_OBJ_ID KOS_new_builtin_function(KOS_FRAME            frame,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args);
+
+KOS_OBJ_ID KOS_new_builtin_class(KOS_FRAME            frame,
+                                 KOS_FUNCTION_HANDLER handler,
+                                 int                  min_args);
 
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
                                 KOS_OBJ_ID getter,

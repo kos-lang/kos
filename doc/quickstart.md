@@ -47,6 +47,7 @@ These constants are of immutable types (cannot be modified):
 
 These are mutable types (can be modified, but not reassigned):
 
+    const _class_  = class { }
     const object   = { prop1: 1, prop2: 2, "prop 3": 3 }
     const array    = [ 1, 2, "string" ]
     const buffer   = lang.buffer() # Refer to the tutorial for details

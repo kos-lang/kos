@@ -1545,22 +1545,21 @@ int KOS_module_add_constructor(KOS_FRAME            frame,
                                KOS_OBJ_ID          *ret_proto)
 {
     int         error    = KOS_SUCCESS;
-    KOS_OBJ_ID  func_obj = KOS_new_builtin_function(frame, handler, min_args);
+    KOS_OBJ_ID  func_obj = KOS_new_builtin_class(frame, handler, min_args);
     KOS_MODULE *module   = OBJPTR(MODULE, frame->module);
 
     assert(module);
 
     TRY_OBJID(func_obj);
 
-    OBJPTR(FUNCTION, func_obj)->module = OBJID(MODULE, module);
-    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)KOS_CTOR;
+    OBJPTR(CLASS, func_obj)->module = OBJID(MODULE, module);
 
     TRY(KOS_module_add_global(frame,
                               str_name,
                               func_obj,
                               0));
 
-    *ret_proto = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(FUNCTION, func_obj)->prototype);
+    *ret_proto = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(CLASS, func_obj)->prototype);
     assert( ! IS_BAD_PTR(*ret_proto));
 
 _error:

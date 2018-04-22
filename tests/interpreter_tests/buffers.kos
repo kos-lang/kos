@@ -34,7 +34,7 @@ fun expect_fail(function)
 }
 
 do {
-    assert typeof buffer           == "function"
+    assert typeof buffer           == "class"
     assert typeof buffer.prototype == "object"
 }
 

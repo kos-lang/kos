@@ -69,7 +69,7 @@ KOS_OBJ_ID KOS_new_float(KOS_FRAME frame, double value)
     return OBJID(FLOAT, number);
 }
 
-KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
+KOS_OBJ_ID KOS_new_function(KOS_FRAME frame)
 {
     KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(frame,
                                                            KOS_ALLOC_DEFAULT,
@@ -83,7 +83,6 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         func->header.num_args       = 0;
         func->header.num_regs       = 0;
         func->args_reg              = 0;
-        func->prototype             = proto_obj;
         func->module                = frame->module;
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;
@@ -96,16 +95,58 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
     return OBJID(FUNCTION, func);
 }
 
+KOS_OBJ_ID KOS_new_class(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
+{
+    KOS_CLASS *func = (KOS_CLASS *)_KOS_alloc_object(frame,
+                                                     KOS_ALLOC_DEFAULT,
+                                                     OBJ_CLASS,
+                                                     sizeof(KOS_CLASS));
+
+    if (func) {
+        assert(func->header.type == OBJ_CLASS);
+
+        func->header.flags          = 0;
+        func->header.num_args       = 0;
+        func->header.num_regs       = 0;
+        func->args_reg              = 0;
+        func->module                = frame->module;
+        func->closures              = KOS_VOID;
+        func->defaults              = KOS_VOID;
+        func->handler               = 0;
+        func->instr_offs            = ~0U;
+        KOS_atomic_write_ptr(func->prototype, proto_obj);
+        KOS_atomic_write_ptr(func->props,     KOS_BADPTR);
+    }
+
+    return OBJID(CLASS, func);
+}
+
 KOS_OBJ_ID KOS_new_builtin_function(KOS_FRAME            frame,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args)
+{
+    KOS_OBJ_ID func_obj = KOS_new_function(frame);
+
+    if ( ! IS_BAD_PTR(func_obj)) {
+        assert(min_args >= 0 && min_args < 256);
+
+        OBJPTR(FUNCTION, func_obj)->header.num_args = (uint8_t)min_args;
+        OBJPTR(FUNCTION, func_obj)->handler         = handler;
+    }
+
+    return func_obj;
+}
+
+KOS_OBJ_ID KOS_new_builtin_class(KOS_FRAME            frame,
+                                 KOS_FUNCTION_HANDLER handler,
+                                 int                  min_args)
 {
     KOS_OBJ_ID func_obj  = KOS_BADPTR;
     KOS_OBJ_ID proto_obj = KOS_gen_prototype(frame, (void *)(intptr_t)handler);
 
     if ( ! IS_BAD_PTR(proto_obj)) {
 
-        func_obj = KOS_new_function(frame, proto_obj);
+        func_obj = KOS_new_class(frame, proto_obj);
 
         if ( ! IS_BAD_PTR(func_obj)) {
             assert(min_args >= 0 && min_args < 256);

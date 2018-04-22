@@ -705,12 +705,12 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_FRAME            frame,
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID dyn_prop = KOS_BADPTR;
-    KOS_OBJ_ID get_obj  = KOS_new_function(frame, KOS_VOID);
+    KOS_OBJ_ID get_obj  = KOS_new_function(frame);
     KOS_OBJ_ID set_obj;
 
     TRY_OBJID(get_obj);
 
-    set_obj = KOS_new_function(frame, KOS_VOID);
+    set_obj = KOS_new_function(frame);
     TRY_OBJID(set_obj);
 
     OBJPTR(FUNCTION, get_obj)->header.num_args = 0;
@@ -785,12 +785,14 @@ KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
                 (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, obj_id)->state;
             if (state == KOS_FUN)
                 ret = ctx->prototypes.function_proto;
-            else if (state == KOS_CTOR)
-                ret = ctx->prototypes.constructor_proto;
             else
                 ret = ctx->prototypes.generator_proto;
             break;
         }
+
+        case OBJ_CLASS:
+            ret = ctx->prototypes.constructor_proto;
+            break;
 
         case OBJ_BOOLEAN:
             ret = ctx->prototypes.boolean_proto;

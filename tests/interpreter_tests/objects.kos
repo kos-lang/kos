@@ -290,7 +290,7 @@ do {
         }
     }
 
-    assert typeof complex == "function"
+    assert typeof complex == "class"
 
     const c1 = complex(-1, 2)
     const c2 = complex(3, -5)
@@ -320,7 +320,7 @@ do {
         }
     }
 
-    assert typeof value == "function"
+    assert typeof value == "class"
 
     const v = value();
     expect_fail(()=>(v.getv()))
@@ -335,7 +335,7 @@ do {
         }
     }
 
-    assert typeof empty_ctor == "function"
+    assert typeof empty_ctor == "class"
 
     const v = empty_ctor()
     assert v.x == 42

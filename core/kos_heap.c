@@ -587,7 +587,6 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
             break;
 
         case OBJ_FUNCTION:
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(FUNCTION, obj_id)->prototype), GRAY);
             /* TODO make these atomic */
             _set_mark_state(OBJPTR(FUNCTION, obj_id)->closures, GRAY);
             _set_mark_state(OBJPTR(FUNCTION, obj_id)->defaults, GRAY);
@@ -596,6 +595,14 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
                 if (frame)
                     _set_mark_state(OBJID(STACK_FRAME, frame), GRAY);
             }
+            break;
+
+        case OBJ_CLASS:
+            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(CLASS, obj_id)->prototype), GRAY);
+            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(CLASS, obj_id)->props), GRAY);
+            /* TODO make these atomic */
+            _set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
+            _set_mark_state(OBJPTR(CLASS, obj_id)->defaults, GRAY);
             break;
 
         case OBJ_OBJECT_STORAGE:
@@ -868,7 +875,6 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         case OBJ_FUNCTION:
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_FUNCTION *)hdr)->prototype);
             _update_child_ptr(&((KOS_FUNCTION *)hdr)->closures);
             _update_child_ptr(&((KOS_FUNCTION *)hdr)->defaults);
             {
@@ -879,6 +885,13 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
                     ((KOS_FUNCTION *)hdr)->generator_stack_frame = OBJPTR(STACK_FRAME, obj_id);
                 }
             }
+            break;
+
+        case OBJ_CLASS:
+            _update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->prototype);
+            _update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->props);
+            _update_child_ptr(&((KOS_CLASS *)hdr)->closures);
+            _update_child_ptr(&((KOS_CLASS *)hdr)->defaults);
             break;
 
         case OBJ_DYNAMIC_PROP:

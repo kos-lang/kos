@@ -119,6 +119,7 @@ Mutable types:
 * Array
 * Buffer
 * Object
+* Class
 
 The `typeof` unary operator can be used to determine the type of data at run
 time.  The returned value is a string.  The `typeof` operator returns the
@@ -133,6 +134,7 @@ following strings for respective data types:
 * "buffer" - for buffers.
 * "object" - for objects.
 * "function" - for functions.
+* "class" - for classes.
 
 Example use of the `typeof` operator:
 
@@ -301,7 +303,7 @@ If the compared objects are of the same, non-numeric type, then:
 * For voids, the `==` operator returns `true`.
 * For booleans, the `==` operator returns `true` if the boolean values are the
   same, and `false` otherwise.
-* For all other types - arrays, buffers, objects and functions - the `==`
+* For all other types - arrays, buffers, objects, classes and functions - the `==`
   operator returns `true` if the same object is being compared against itself,
   and `false` otherwise, even if the contents of the objects being compared
   are the same.
@@ -490,6 +492,7 @@ Built-in type constructors
     var buffer  = lang.buffer(10)      // buffer of 10 bytes
     var object  = lang.object          // { }
     var func    = lang.function((x,y)=>(x+y))
+    var _class  = lang.class(class { })
 
 
 Buffers
