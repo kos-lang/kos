@@ -495,7 +495,7 @@ static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
     int error = KOS_SUCCESS;
 
     struct _KOS_COMP_STRING *str =
-            (struct _KOS_COMP_STRING *)_KOS_red_black_find(program->strings,
+            (struct _KOS_COMP_STRING *)_KOS_red_black_find(program->constants,
                                                            (struct _KOS_TOKEN *)token,
                                                            _strings_compare_item);
 
@@ -515,20 +515,20 @@ static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
             if (tok_escape == KOS_UTF8_NO_ESCAPE)
                 escape = KOS_UTF8_NO_ESCAPE;
 
-            str->index  = program->num_strings++;
-            str->next   = 0;
-            str->str    = begin;
-            str->length = length;
-            str->escape = escape;
+            str->header.index = program->num_constants++;
+            str->header.next  = 0;
+            str->str          = begin;
+            str->length       = length;
+            str->escape       = escape;
 
-            if (program->last_string)
-                program->last_string->next = str;
+            if (program->last_constant)
+                program->last_constant->next = (struct _KOS_COMP_CONST *)str;
             else
-                program->string_list = str;
+                program->first_constant = (struct _KOS_COMP_CONST *)str;
 
-            program->last_string = str;
+            program->last_constant = (struct _KOS_COMP_CONST *)str;
 
-            _KOS_red_black_insert(&program->strings,
+            _KOS_red_black_insert(&program->constants,
                                   (struct _KOS_RED_BLACK_NODE *)str,
                                   _strings_compare_node);
         }
@@ -537,7 +537,7 @@ static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
     }
 
     if (!error)
-        *str_idx = str->index;
+        *str_idx = str->header.index;
 
     return error;
 }

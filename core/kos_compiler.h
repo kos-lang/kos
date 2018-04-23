@@ -141,14 +141,50 @@ struct _KOS_SCOPE_REF {
     unsigned                   exported_args;
 };
 
-struct _KOS_COMP_STRING {
-    struct _KOS_RED_BLACK_NODE rb_tree_node;
+enum _KOS_COMP_CONST_TYPE {
+    KOS_COMP_CONST_INTEGER,
+    KOS_COMP_CONST_FLOAT,
+    KOS_COMP_CONST_STRING,
+    KOS_COMP_CONST_FUNCTION
+};
 
-    int                        index;
-    struct _KOS_COMP_STRING   *next;
-    const char                *str;
-    unsigned                   length;
-    enum _KOS_UTF8_ESCAPE      escape;
+enum _KOS_COMP_FUNC_FLAGS {
+    KOS_COMP_FUN_ELLIPSIS  = 1,
+    KOS_COMP_FUN_GENERATOR = 2,
+    KOS_COMP_FUN_CLASS     = 4
+};
+
+struct _KOS_COMP_CONST {
+    struct _KOS_RED_BLACK_NODE rb_tree_node;
+    enum _KOS_COMP_CONST_TYPE  type;
+    uint32_t                   index;
+    struct _KOS_COMP_CONST    *next;
+};
+
+struct _KOS_COMP_INTEGER {
+    struct _KOS_COMP_CONST header;
+    int64_t                value;
+};
+
+struct _KOS_COMP_FLOAT {
+    struct _KOS_COMP_CONST header;
+    double                 value;
+};
+
+struct _KOS_COMP_STRING {
+    struct _KOS_COMP_CONST header;
+    const char            *str;
+    unsigned               length;
+    enum _KOS_UTF8_ESCAPE  escape;
+};
+
+struct _KOS_COMP_FUNCTION {
+    struct _KOS_COMP_CONST header;
+    uint32_t               offset;
+    uint8_t                num_regs;
+    uint8_t                args_reg;
+    uint8_t                num_args;
+    uint8_t                flags;
 };
 
 struct _KOS_PRE_GLOBAL {
@@ -228,10 +264,10 @@ struct _KOS_COMP_UNIT {
     struct _KOS_VAR            *modules;
     int                         num_modules;
 
-    struct _KOS_RED_BLACK_NODE *strings;
-    struct _KOS_COMP_STRING    *string_list;
-    struct _KOS_COMP_STRING    *last_string;
-    int                         num_strings;
+    struct _KOS_RED_BLACK_NODE *constants;
+    struct _KOS_COMP_CONST     *first_constant;
+    struct _KOS_COMP_CONST     *last_constant;
+    int                         num_constants;
 
     struct _KOS_MEMPOOL         allocator;
 

@@ -395,7 +395,7 @@ static uint32_t _count_strings(struct _KOS_COMP_UNIT *program)
 {
     uint32_t i;
 
-    struct _KOS_COMP_STRING *str = program->string_list;
+    struct _KOS_COMP_CONST *str = program->first_constant;
 
     for (i = 0; str; str = str->next, ++i);
 
@@ -406,11 +406,11 @@ static int _alloc_strings(KOS_FRAME              frame,
                           struct _KOS_COMP_UNIT *program,
                           KOS_MODULE            *module)
 {
-    int                       error       = KOS_SUCCESS;
-    const uint32_t            num_strings = _count_strings(program);
-    uint32_t                  base_idx    = 0;
-    struct _KOS_COMP_STRING  *str         = program->string_list;
-    int                       i;
+    int                     error       = KOS_SUCCESS;
+    const uint32_t          num_strings = _count_strings(program);
+    uint32_t                base_idx    = 0;
+    struct _KOS_COMP_CONST *constant    = program->first_constant;
+    int                     i;
 
     if (IS_BAD_PTR(module->strings)) {
         module->strings = KOS_new_array(frame, num_strings);
@@ -422,9 +422,10 @@ static int _alloc_strings(KOS_FRAME              frame,
         TRY(KOS_array_resize(frame, module->strings, base_idx + num_strings));
     }
 
-    for (i = 0; str; str = str->next, ++i) {
+    for (i = 0; constant; constant = constant->next, ++i) {
 
-        KOS_OBJ_ID str_obj;
+        KOS_OBJ_ID               str_obj;
+        struct _KOS_COMP_STRING *str = (struct _KOS_COMP_STRING *)constant;
 
         str_obj = str->escape == KOS_UTF8_WITH_ESCAPE
                 ? KOS_new_string_esc(frame, str->str, str->length)
@@ -838,7 +839,7 @@ static int _compile_module(KOS_FRAME   frame,
     /* Initialize parser and compiler */
     _KOS_compiler_init(&program, module_idx);
     if ( ! IS_BAD_PTR(module->strings))
-        program.num_strings = (int)KOS_get_array_size(module->strings);
+        program.num_constants = (int)KOS_get_array_size(module->strings);
     _KOS_parser_init(&parser,
                      &program.allocator,
                      (unsigned)module_idx,
