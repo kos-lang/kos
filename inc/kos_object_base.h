@@ -363,6 +363,8 @@ typedef struct _KOS_MODULE {
     uint32_t             num_line_addrs;
     uint32_t             num_func_addrs;
     uint32_t             bytecode_size;
+    uint32_t             num_constants;
+    KOS_OBJ_ID           constants[1];
 } KOS_MODULE;
 
 typedef struct _KOS_DYNAMIC_PROP {

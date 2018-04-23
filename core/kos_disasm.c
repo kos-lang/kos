@@ -45,6 +45,8 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_THROW:
             return 1;
 
+        case INSTR_LOAD_CONST8:         /* fall through */
+        case INSTR_LOAD_CONST:          /* fall through */
         case INSTR_LOAD_INT8:           /* fall through */
         case INSTR_LOAD_INT32:          /* fall through */
         case INSTR_LOAD_STR:            /* fall through */
@@ -121,6 +123,8 @@ int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
 {
     switch (instr) {
 
+        case INSTR_LOAD_CONST:
+            /* fall through */
         case INSTR_LOAD_INT32:
             /* fall through */
         case INSTR_LOAD_INT64:
@@ -222,6 +226,10 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
 {
     switch (instr) {
 
+        case INSTR_LOAD_CONST8:
+            /* fall through */
+        case INSTR_LOAD_CONST:
+            /* fall through */
         case INSTR_LOAD_INT8:
             /* fall through */
         case INSTR_LOAD_INT32:
@@ -331,6 +339,8 @@ void _KOS_disassemble(const char                          *filename,
 
     static const char *const str_instr[] = {
         "BREAKPOINT",
+        "LOAD.CONST8",
+        "LOAD.CONST",
         "LOAD.INT8",
         "LOAD.INT32",
         "LOAD.INT64",
@@ -502,6 +512,8 @@ void _KOS_disassemble(const char                          *filename,
         bin[i] = 0;
 
         printf("%s%s\n", bin, dis);
+
+        /* TODO print constant representation for LOAD.CONST[8] */
 
         bytecode += instr_size;
         offs     += instr_size;

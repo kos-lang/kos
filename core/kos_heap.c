@@ -647,6 +647,12 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
             _set_mark_state(OBJPTR(MODULE, obj_id)->global_names, GRAY);
             _set_mark_state(OBJPTR(MODULE, obj_id)->globals,      GRAY);
             _set_mark_state(OBJPTR(MODULE, obj_id)->module_names, GRAY);
+            {
+                KOS_OBJ_ID *item = &((KOS_MODULE *)obj_id)->constants[0];
+                KOS_OBJ_ID *end  = item + ((KOS_MODULE *)obj_id)->num_constants;
+                for ( ; item < end; ++item)
+                    _set_mark_state(*item, GRAY);
+            }
             break;
 
         case OBJ_STACK_FRAME:
@@ -911,6 +917,12 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             _update_child_ptr(&((KOS_MODULE *)hdr)->global_names);
             _update_child_ptr(&((KOS_MODULE *)hdr)->globals);
             _update_child_ptr(&((KOS_MODULE *)hdr)->module_names);
+            {
+                KOS_OBJ_ID *item = &((KOS_MODULE *)hdr)->constants[0];
+                KOS_OBJ_ID *end  = item + ((KOS_MODULE *)hdr)->num_constants;
+                for ( ; item < end; ++item)
+                    _update_child_ptr(item);
+            }
             break;
 
         case OBJ_STACK_FRAME:

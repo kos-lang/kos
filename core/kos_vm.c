@@ -40,21 +40,21 @@
 #include <math.h>
 #include <string.h>
 
-static const char str_err_args_not_array[]      = "function arguments are not an array";
-static const char str_err_cannot_yield[]        = "function is not a generator";
-static const char str_err_corrupted_defaults[]  = "argument defaults are corrupted";
-static const char str_err_div_by_zero[]         = "division by zero";
-static const char str_err_generator_running[]   = "generator is running";
-static const char str_err_invalid_byte_value[]  = "buffer element value out of range";
-static const char str_err_invalid_index[]       = "index out of range";
-static const char str_err_invalid_instruction[] = "invalid instruction";
-static const char str_err_not_callable[]        = "object is not callable";
-static const char str_err_not_generator[]       = "function is not a generator";
-static const char str_err_slice_not_function[]  = "slice is not a function";
-static const char str_err_too_few_args[]        = "not enough arguments passed to a function";
-static const char str_err_unsup_operand_types[] = "unsupported operand types";
-static const char str_slice[]                   = "slice";
-static const char str_value[]                   = "value";
+static const char str_err_args_not_array[]       = "function arguments are not an array";
+static const char str_err_cannot_yield[]         = "function is not a generator";
+static const char str_err_corrupted_defaults[]   = "argument defaults are corrupted";
+static const char str_err_div_by_zero[]          = "division by zero";
+static const char str_err_generator_running[]    = "generator is running";
+static const char str_err_invalid_byte_value[]   = "buffer element value out of range";
+static const char str_err_invalid_index[]        = "index out of range";
+static const char str_err_invalid_instruction[]  = "invalid instruction";
+static const char str_err_not_callable[]         = "object is not callable";
+static const char str_err_not_generator[]        = "function is not a generator";
+static const char str_err_slice_not_function[]   = "slice is not a function";
+static const char str_err_too_few_args[]         = "not enough arguments passed to a function";
+static const char str_err_unsup_operand_types[]  = "unsupported operand types";
+static const char str_slice[]                    = "slice";
+static const char str_value[]                    = "value";
 
 static struct _KOS_CONST_OBJECT new_this = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC0);
 
@@ -1095,6 +1095,32 @@ static int _exec_function(KOS_FRAME frame)
         instr = (KOS_BYTECODE_INSTR)*bytecode;
 
         switch (instr) {
+
+            case INSTR_LOAD_CONST8: { /* <r.dest>, <uint8> */
+                const uint8_t value = bytecode[2];
+
+                rdest = bytecode[1];
+
+                assert(value < module->num_constants);
+
+                out = module->constants[value];
+
+                delta = 3;
+                break;
+            }
+
+            case INSTR_LOAD_CONST: { /* <r.dest>, <uint32> */
+                const uint32_t value = _load_32(bytecode+2);
+
+                rdest = bytecode[1];
+
+                assert(value < module->num_constants);
+
+                out = module->constants[value];
+
+                delta = 6;
+                break;
+            }
 
             case INSTR_LOAD_INT8: { /* <r.dest>, <int8> */
                 const int8_t value = (int8_t)bytecode[2];

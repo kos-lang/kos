@@ -30,6 +30,10 @@ typedef enum _KOS_BYTECODE_INSTR {
      * bytes lower than 128.  Use values 128 and up to increase the chances
      * of jumping into an area which doesn't contain instructions. */
 
+    /* LOAD.CONST8 <r.dest>, <uint8> */
+    INSTR_LOAD_CONST8,
+    /* LOAD.CONST <r.dest>, <uint32> */
+    INSTR_LOAD_CONST,
     /* LOAD.INT8 <r.dest>, <int8> */
     INSTR_LOAD_INT8,
     /* LOAD.INT32 <r.dest>, <int32> */
