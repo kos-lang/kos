@@ -80,44 +80,55 @@ struct _INSTR_DEF {
         return 1; \
 }
 
+typedef struct _TEST_MODULE {
+    struct _KOS_MODULE module;
+    KOS_OBJ_ID         _constants_placeholder[2 + MAX_ARGS];
+} TEST_MODULE;
+
 static int _test_instr(KOS_CONTEXT         *ctx,
                        KOS_BYTECODE_INSTR   instr,
                        int                  line,
                        struct _INSTR_VALUE *ret_val,
                        struct _INSTR_VALUE *args)
 {
-    uint8_t            code[64]        = { 0 };
-    uint32_t           parms[MAX_ARGS] = { 0 };
-    struct _KOS_MODULE module;
-    KOS_FRAME          frame           = &ctx->main_thread.frame;
-    const char        *cstrings[]      = { "aaa", "bbb", "ccc" };
-    KOS_OBJ_ID         strings;
-    uint8_t            regs            = 0;
-    unsigned           words           = 0;
-    int                error           = KOS_SUCCESS;
-    int                i;
-    KOS_OBJ_ID         ret;
+    uint8_t     code[64]        = { 0 };
+    uint32_t    parms[MAX_ARGS] = { 0 };
+    TEST_MODULE module;
+    KOS_FRAME   frame           = &ctx->main_thread.frame;
+    const char *cstrings[]      = { "aaa", "bbb", "ccc" };
+    KOS_OBJ_ID  strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
+    KOS_OBJ_ID  strings_array;  /* TODO delete this */
+    uint8_t     regs            = 0;
+    unsigned    words           = 0;
+    int         error           = KOS_SUCCESS;
+    int         i;
+    KOS_OBJ_ID  ret;
 
-    strings = KOS_new_array(frame, 3);
-    if (IS_BAD_PTR(strings)) {
-        printf("Failed: Unable to allocate strings!\n");
+    memset(&module, 0, sizeof(module));
+    module.module.num_constants = 0;
+
+    strings_array = KOS_new_array(frame, 3);
+    if (IS_BAD_PTR(strings_array)) {
+        printf("Failed: Unable to allocate constants!\n");
         return KOS_ERROR_EXCEPTION;
     }
 
     for (i = 0; i < 3; i++) {
         KOS_OBJ_ID str = KOS_new_cstring(frame, cstrings[i]);
         if (IS_BAD_PTR(str)) {
-            printf("Failed: Unable to allocate strings!\n");
+            printf("Failed: Unable to allocate constants!\n");
             return KOS_ERROR_EXCEPTION;
         }
-        error = KOS_array_write(frame, strings, i, str);
+        strings[i] = str;
+        module.module.constants[module.module.num_constants++] = str;
+        error = KOS_array_write(frame, strings_array, i, str);
         if (error) {
-            printf("Failed: Unable to allocate strings!\n");
+            printf("Failed: Unable to allocate constants!\n");
             return error;
         }
     }
 
-    for (i=0; i < MAX_ARGS; i++) {
+    for (i = 0; i < MAX_ARGS; i++) {
 
         if (args[i].value == V_NONE)
             break;
@@ -151,106 +162,83 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 break;
 
             case V_INT32:
-                code[words++] = INSTR_LOAD_INT32;
-                code[words++] = regs;
-                code[words++] = (uint8_t)args[i].low;
-                code[words++] = (uint8_t)(args[i].low >> 8);
-                code[words++] = (uint8_t)(args[i].low >> 16);
-                code[words++] = (uint8_t)(args[i].low >> 24);
-                parms[i]      = regs++;
+                if ((int32_t)args[i].low < 128 && (int32_t)args[i].low >= -128) {
+                    code[words++] = INSTR_LOAD_INT8;
+                    code[words++] = regs;
+                    code[words++] = (uint8_t)(int8_t)(int32_t)args[i].low;
+                    parms[i]      = regs++;
+                }
+                else {
+                    KOS_OBJ_ID value;
+
+                    code[words++] = INSTR_LOAD_CONST8;
+                    code[words++] = regs;
+                    code[words++] = (uint8_t)module.module.num_constants;
+                    parms[i]      = regs++;
+
+                    value = KOS_new_int(frame, (int32_t)args[i].low);
+                    if (IS_BAD_PTR(value)) {
+                        printf("Failed: Unable to allocate constants!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
+                    module.module.constants[module.module.num_constants++] = value;
+                }
                 break;
 
             case V_INT64:
-                code[words++] = INSTR_LOAD_INT64;
+                code[words++] = INSTR_LOAD_CONST8;
                 code[words++] = regs;
-                code[words++] = (uint8_t)args[i].low;
-                code[words++] = (uint8_t)(args[i].low >> 8);
-                code[words++] = (uint8_t)(args[i].low >> 16);
-                code[words++] = (uint8_t)(args[i].low >> 24);
-                code[words++] = (uint8_t)args[i].high;
-                code[words++] = (uint8_t)(args[i].high >> 8);
-                code[words++] = (uint8_t)(args[i].high >> 16);
-                code[words++] = (uint8_t)(args[i].high >> 24);
+                code[words++] = (uint8_t)module.module.num_constants;
                 parms[i]      = regs++;
+                {
+                    uint64_t   uvalue = (uint64_t)args[i].low + (((uint64_t)args[i].high) << 32);
+                    KOS_OBJ_ID value  = KOS_new_int(frame, (int64_t)uvalue);
+                    if (IS_BAD_PTR(value)) {
+                        printf("Failed: Unable to allocate constants!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
+                    module.module.constants[module.module.num_constants++] = value;
+                }
                 break;
 
             case V_FLOAT:
-                code[words++] = INSTR_LOAD_FLOAT;
+                code[words++] = INSTR_LOAD_CONST8;
                 code[words++] = regs;
-                code[words++] = (uint8_t)args[i].low;
-                code[words++] = (uint8_t)(args[i].low >> 8);
-                code[words++] = (uint8_t)(args[i].low >> 16);
-                code[words++] = (uint8_t)(args[i].low >> 24);
-                code[words++] = (uint8_t)args[i].high;
-                code[words++] = (uint8_t)(args[i].high >> 8);
-                code[words++] = (uint8_t)(args[i].high >> 16);
-                code[words++] = (uint8_t)(args[i].high >> 24);
+                code[words++] = (uint8_t)module.module.num_constants;
                 parms[i]      = regs++;
+                {
+                    KOS_OBJ_ID               value;
+                    union _KOS_NUMERIC_VALUE num;
+
+                    num.i = (int64_t)((uint64_t)args[i].low + (((uint64_t)args[i].high) << 32));
+                    value = KOS_new_float(frame, num.d);
+                    if (IS_BAD_PTR(value)) {
+                        printf("Failed: Unable to allocate constants!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
+                    module.module.constants[module.module.num_constants++] = value;
+                }
                 break;
 
             case V_STR0:
-                code[words++] = INSTR_LOAD_STR;
-                code[words++] = regs;
-                code[words++] = 0;
-                code[words++] = 0;
-                code[words++] = 0;
-                code[words++] = 0;
-                parms[i]      = regs++;
-                if (args[i].str) {
-                    KOS_OBJ_ID str = KOS_new_cstring(frame, args[i].str);
-                    if (IS_BAD_PTR(str)) {
-                        printf("Failed: Unable to allocate strings!\n");
-                        return KOS_ERROR_EXCEPTION;
-                    }
-                    error = KOS_array_write(frame, strings, 0, str);
-                    if (error) {
-                        printf("Failed: Unable to allocate strings!\n");
-                        return error;
-                    }
-                }
-                break;
-
+                /* fall through */
             case V_STR1:
-                code[words++] = INSTR_LOAD_STR;
-                code[words++] = regs;
-                code[words++] = 1;
-                code[words++] = 0;
-                code[words++] = 0;
-                code[words++] = 0;
-                parms[i]      = regs++;
-                if (args[i].str) {
-                    KOS_OBJ_ID str = KOS_new_cstring(frame, args[i].str);
-                    if (IS_BAD_PTR(str)) {
-                        printf("Failed: Unable to allocate strings!\n");
-                        return KOS_ERROR_EXCEPTION;
-                    }
-                    error = KOS_array_write(frame, strings, 1, str);
-                    if (error) {
-                        printf("Failed: Unable to allocate strings!\n");
-                        return error;
-                    }
-                }
-                break;
-
+                /* fall through */
             case V_STR2:
-                code[words++] = INSTR_LOAD_STR;
+                code[words++] = INSTR_LOAD_CONST8;
                 code[words++] = regs;
-                code[words++] = 2;
-                code[words++] = 0;
-                code[words++] = 0;
-                code[words++] = 0;
+                code[words++] = (uint8_t)module.module.num_constants;
                 parms[i]      = regs++;
-                if (args[i].str) {
-                    KOS_OBJ_ID str = KOS_new_cstring(frame, args[i].str);
+                {
+                    const int   idx  = (int)args[i].value - V_STR0;
+                    const char* cstr = args[i].str ? args[i].str : cstrings[idx];
+                    KOS_OBJ_ID  str  = KOS_new_cstring(frame, cstr);
                     if (IS_BAD_PTR(str)) {
-                        printf("Failed: Unable to allocate strings!\n");
+                        printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    error = KOS_array_write(frame, strings, 2, str);
-                    if (error) {
-                        printf("Failed: Unable to allocate strings!\n");
-                        return error;
-                    }
+                    module.module.constants[module.module.num_constants++] = str;
+                    strings[idx] = str;
                 }
                 break;
 
@@ -329,17 +317,15 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     code[words++] = 0;
     code[words++] = regs - 1U;
 
-    memset(&module, 0, sizeof(module));
+    module.module.header.type   = OBJ_MODULE;
+    module.module.context       = ctx;
+    module.module.strings       = strings_array;
+    module.module.bytecode      = &code[0];
+    module.module.bytecode_size = words;
+    module.module.instr_offs    = 0;
+    module.module.num_regs      = regs;
 
-    module.header.type   = OBJ_MODULE;
-    module.context       = ctx;
-    module.strings       = strings;
-    module.bytecode      = &code[0];
-    module.bytecode_size = words;
-    module.instr_offs    = 0;
-    module.num_regs      = regs;
-
-    error = _KOS_vm_run_module(&module, &ret);
+    error = _KOS_vm_run_module(&module.module, &ret);
 
     if (ret_val->value == V_EXCEPT) {
         if (error != KOS_ERROR_EXCEPTION) {
@@ -444,17 +430,11 @@ static int _test_instr(KOS_CONTEXT         *ctx,
             }
             else {
                 KOS_OBJ_ID expected;
-                int        idx;
-                if (ret_val->value == V_STR0)
-                    idx = 0;
-                else if (ret_val->value == V_STR1)
-                    idx = 1;
-                else
-                    idx = 2;
+                const int  idx = (int)ret_val->value - V_STR0;
                 if (ret_val->str)
                     expected = KOS_new_cstring(frame, ret_val->str);
                 else
-                    expected = KOS_array_read(frame, strings, idx);
+                    expected = strings[idx];
                 if (IS_BAD_PTR(expected)) {
                     printf("Failed: Unable to allocate strings\n");
                     error = KOS_ERROR_EXCEPTION;
@@ -531,10 +511,6 @@ int main(void)
     /*========================================================================*/
     /* LOAD.TRUE */
     TEST_INSTR INSTR_LOAD_TRUE,  { V_TRUE  } END
-
-    /*========================================================================*/
-    /* LOAD.STR */
-    TEST_INSTR INSTR_LOAD_STR,   { V_STR0                              }, { { V_IMM,   0                        } }                                        END
 
     /*========================================================================*/
     /* LOAD.INT8 */
