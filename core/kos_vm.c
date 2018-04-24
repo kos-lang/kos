@@ -66,7 +66,7 @@ static KOS_OBJ_ID _make_string(KOS_FRAME           frame,
                                struct _KOS_MODULE *module,
                                int                 idx)
 {
-    return KOS_array_read(frame, module->strings, idx);
+    return KOS_array_read(frame, module->constants_storage, idx);
 }
 
 static KOS_OBJ_ID _add_integer(KOS_FRAME  frame,
@@ -1101,7 +1101,7 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(value < module->num_constants);
+                assert(value < KOS_get_array_size(module->constants_storage));
 
                 out = module->constants[value];
 
@@ -1114,7 +1114,7 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(value < module->num_constants);
+                assert(value < KOS_get_array_size(module->constants_storage));
 
                 out = module->constants[value];
 

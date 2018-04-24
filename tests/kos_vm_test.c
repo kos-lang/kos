@@ -60,21 +60,24 @@ static KOS_OBJ_ID _run_code(KOS_CONTEXT   *ctx,
 
     memset(&module, 0, sizeof(module));
 
-    module.header.type   = OBJ_MODULE;
-    module.context       = ctx;
-    module.strings       = IS_BAD_PTR(string) ? KOS_BADPTR : KOS_new_array(frame, 1);
-    module.bytecode      = bytecode;
-    module.bytecode_size = bytecode_size;
-    module.instr_offs    = 0;
-    module.num_regs      = (uint16_t)num_regs;
+    module.header.type       = OBJ_MODULE;
+    module.context           = ctx;
+    module.constants_storage = IS_BAD_PTR(string) ? KOS_BADPTR : KOS_new_array(frame, 1);
+    module.bytecode          = bytecode;
+    module.bytecode_size     = bytecode_size;
+    module.instr_offs        = 0;
+    module.num_regs          = (uint16_t)num_regs;
 
     if ( ! IS_BAD_PTR(string)) {
 
-        if (IS_BAD_PTR(module.strings))
+        if (IS_BAD_PTR(module.constants_storage))
             error = KOS_ERROR_EXCEPTION;
 
         if ( ! error)
-            error = KOS_array_write(frame, module.strings, 0, string);
+            error = KOS_array_write(frame, module.constants_storage, 0, string);
+
+        if ( ! error)
+            module.constants = _KOS_get_array_buffer(OBJPTR(ARRAY, module.constants_storage));
     }
 
     if ( ! error) {

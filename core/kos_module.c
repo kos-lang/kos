@@ -216,9 +216,9 @@ static KOS_OBJ_ID _alloc_module(KOS_FRAME  frame,
 
         assert(module->header.type == OBJ_MODULE);
 
-        module->name    = module_name;
-        module->context = KOS_context_from_frame(frame);
-        module->strings = KOS_BADPTR;
+        module->name              = module_name;
+        module->context           = KOS_context_from_frame(frame);
+        module->constants_storage = KOS_BADPTR;
 
         module->global_names = KOS_new_object(frame);
         if (IS_BAD_PTR(module->global_names))
@@ -391,7 +391,7 @@ _error:
     return error;
 }
 
-static uint32_t _count_strings(struct _KOS_COMP_UNIT *program)
+static uint32_t _count_constants(struct _KOS_COMP_UNIT *program)
 {
     uint32_t i;
 
@@ -402,25 +402,31 @@ static uint32_t _count_strings(struct _KOS_COMP_UNIT *program)
     return i;
 }
 
-static int _alloc_strings(KOS_FRAME              frame,
-                          struct _KOS_COMP_UNIT *program,
-                          KOS_MODULE            *module)
+static int _alloc_constants(KOS_FRAME              frame,
+                            struct _KOS_COMP_UNIT *program,
+                            KOS_MODULE            *module)
 {
-    int                     error       = KOS_SUCCESS;
-    const uint32_t          num_strings = _count_strings(program);
-    uint32_t                base_idx    = 0;
-    struct _KOS_COMP_CONST *constant    = program->first_constant;
+    int                     error         = KOS_SUCCESS;
+    const uint32_t          num_constants = _count_constants(program);
+    uint32_t                base_idx      = 0;
+    KOS_ATOMIC(KOS_OBJ_ID) *constants;
+    struct _KOS_COMP_CONST *constant      = program->first_constant;
     int                     i;
 
-    if (IS_BAD_PTR(module->strings)) {
-        module->strings = KOS_new_array(frame, num_strings);
+    if (IS_BAD_PTR(module->constants_storage)) {
+        module->constants_storage = KOS_new_array(frame, num_constants);
 
-        TRY_OBJID(module->strings);
+        TRY_OBJID(module->constants_storage);
     }
     else {
-        base_idx = KOS_get_array_size(module->strings);
-        TRY(KOS_array_resize(frame, module->strings, base_idx + num_strings));
+        base_idx = KOS_get_array_size(module->constants_storage);
+        TRY(KOS_array_resize(frame, module->constants_storage, base_idx + num_constants));
     }
+
+    constants         = base_idx || num_constants
+                        ? _KOS_get_array_buffer(OBJPTR(ARRAY, module->constants_storage))
+                        : 0;
+    module->constants = constants;
 
     for (i = 0; constant; constant = constant->next, ++i) {
 
@@ -433,7 +439,7 @@ static int _alloc_strings(KOS_FRAME              frame,
 
         TRY_OBJID(str_obj);
 
-        TRY(KOS_array_write(frame, module->strings, base_idx + i, str_obj));
+        KOS_atomic_write_ptr(constants[base_idx + i], str_obj);
     }
 
 _error:
@@ -838,8 +844,8 @@ static int _compile_module(KOS_FRAME   frame,
 
     /* Initialize parser and compiler */
     _KOS_compiler_init(&program, module_idx);
-    if ( ! IS_BAD_PTR(module->strings))
-        program.num_constants = (int)KOS_get_array_size(module->strings);
+    if ( ! IS_BAD_PTR(module->constants_storage))
+        program.num_constants = (int)KOS_get_array_size(module->constants_storage);
     _KOS_parser_init(&parser,
                      &program.allocator,
                      (unsigned)module_idx,
@@ -899,7 +905,7 @@ static int _compile_module(KOS_FRAME   frame,
     TRY(error);
 
     TRY(_alloc_globals(frame, &program, module));
-    TRY(_alloc_strings(frame, &program, module));
+    TRY(_alloc_constants(frame, &program, module));
     TRY(_save_direct_modules(frame, &program, module));
 
     /* Move compiled program to module */
@@ -1036,7 +1042,7 @@ static int _compile_module(KOS_FRAME   frame,
 
             for (i = 0; i < num_func_addrs; i++) {
                 const uint32_t   idx = func_addrs[i].str_idx;
-                const KOS_OBJ_ID str = KOS_array_read(frame, module->strings, (int)idx);
+                const KOS_OBJ_ID str = KOS_array_read(frame, module->constants_storage, (int)idx);
                 if (IS_BAD_PTR(str)) {
                     error = KOS_ERROR_EXCEPTION;
                     break;
@@ -1058,7 +1064,7 @@ static int _compile_module(KOS_FRAME   frame,
                 const char **func_names_new = (const char **)ptrs.buffer;
                 for (i = 0; i < num_func_addrs; i++) {
                     const uint32_t   idx = func_addrs[i].str_idx;
-                    const KOS_OBJ_ID str = KOS_array_read(frame, module->strings, (int)idx);
+                    const KOS_OBJ_ID str = KOS_array_read(frame, module->constants_storage, (int)idx);
                     if (IS_BAD_PTR(str)) {
                         error = KOS_ERROR_EXCEPTION;
                         break;
@@ -1684,7 +1690,7 @@ KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_MODULE *module,
         if (addr2func->str_idx == ~0U)
             ret = KOS_context_get_cstring(frame, str_global);
         else
-            ret = KOS_array_read(frame, module->strings, (int)addr2func->str_idx);
+            ret = KOS_array_read(frame, module->constants_storage, (int)addr2func->str_idx);
     }
 
     return ret;

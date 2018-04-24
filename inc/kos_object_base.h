@@ -346,25 +346,24 @@ typedef struct _KOS_FUNC_ADDR {
 } KOS_FUNC_ADDR;
 
 typedef struct _KOS_MODULE {
-    KOS_OBJ_HEADER       header;
-    uint8_t              flags;
-    uint16_t             num_regs;
-    uint32_t             instr_offs;
-    KOS_OBJ_ID           name;
-    KOS_OBJ_ID           path;
-    KOS_CONTEXT         *context;
-    KOS_OBJ_ID           strings;
-    KOS_OBJ_ID           global_names;
-    KOS_OBJ_ID           globals;
-    KOS_OBJ_ID           module_names; /* Map of directly referenced modules to their indices, for REPL */
-    const uint8_t       *bytecode;
-    const KOS_LINE_ADDR *line_addrs;
-    const KOS_FUNC_ADDR *func_addrs;
-    uint32_t             num_line_addrs;
-    uint32_t             num_func_addrs;
-    uint32_t             bytecode_size;
-    uint32_t             num_constants;
-    KOS_OBJ_ID           constants[1];
+    KOS_OBJ_HEADER          header;
+    uint8_t                 flags;
+    uint16_t                num_regs;
+    uint32_t                instr_offs;
+    KOS_OBJ_ID              name;
+    KOS_OBJ_ID              path;
+    KOS_CONTEXT            *context;
+    KOS_OBJ_ID              constants_storage;
+    KOS_ATOMIC(KOS_OBJ_ID) *constants;
+    KOS_OBJ_ID              global_names;
+    KOS_OBJ_ID              globals;
+    KOS_OBJ_ID              module_names; /* Map of directly referenced modules to their indices, for REPL */
+    const uint8_t          *bytecode;
+    const KOS_LINE_ADDR    *line_addrs;
+    const KOS_FUNC_ADDR    *func_addrs;
+    uint32_t                num_line_addrs;
+    uint32_t                num_func_addrs;
+    uint32_t                bytecode_size;
 } KOS_MODULE;
 
 typedef struct _KOS_DYNAMIC_PROP {
