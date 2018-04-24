@@ -22,6 +22,7 @@
 
 #include "kos_disasm.h"
 #include "kos_compiler.h"
+#include "kos_memory.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -319,6 +320,29 @@ int _KOS_is_signed_op(enum _KOS_BYTECODE_INSTR instr, int op)
     return 0;
 }
 
+static int _is_constant(enum _KOS_BYTECODE_INSTR instr, int op)
+{
+    switch (instr) {
+
+        case INSTR_LOAD_CONST8:
+            /* fall through */
+        case INSTR_LOAD_CONST:
+            /* fall through */
+        case INSTR_GET_PROP:
+            /* fall through */
+        case INSTR_SET_PROP:
+            /* fall through */
+        case INSTR_DEL_PROP:
+            /* fall through */
+        case INSTR_HAS_PROP:
+            return ! _KOS_is_register(instr, op);
+
+        default:
+            break;
+    }
+    return 0;
+}
+
 void _KOS_disassemble(const char                          *filename,
                       uint32_t                             offs,
                       const uint8_t                       *bytecode,
@@ -327,10 +351,14 @@ void _KOS_disassemble(const char                          *filename,
                       uint32_t                             num_line_addrs,
                       const char                   *const *func_names,
                       const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs,
-                      uint32_t                             num_func_addrs)
+                      uint32_t                             num_func_addrs,
+                      _KOS_PRINT_CONST                     print_const,
+                      void                                *print_const_cookie)
 {
-    const struct _KOS_COMP_ADDR_TO_LINE *line_addrs_end = line_addrs + num_line_addrs;
-    const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs_end = func_addrs + num_func_addrs;
+    const struct _KOS_COMP_ADDR_TO_LINE *line_addrs_end  = line_addrs + num_line_addrs;
+    const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs_end  = func_addrs + num_func_addrs;
+    struct _KOS_VECTOR                   const_buf;
+    const size_t                         max_const_chars = 32;
 
     static const char *const str_instr[] = {
         "BREAKPOINT",
@@ -405,6 +433,14 @@ void _KOS_disassemble(const char                          *filename,
         "CANCEL"
     };
 
+    _KOS_vector_init(&const_buf);
+
+    if (_KOS_vector_reserve(&const_buf, 128)) {
+        printf("Error: Failed to allocate buffer\n");
+        _KOS_vector_destroy(&const_buf);
+        return;
+    }
+
     bytecode += offs;
     size     -= offs;
 
@@ -418,12 +454,15 @@ void _KOS_disassemble(const char                          *filename,
         int           i;
         int           iop;
         int           num_operands;
-        int           instr_size = 1;
+        int           instr_size   = 1;
+        uint32_t      constant     = ~0U;
+        int           has_constant = 0;
         char          bin[64];
         char          dis[128];
         size_t        dis_size;
-        const int     mnem_align = 44;
-        const char*   str_opcode;
+        const char   *const_str    = "";
+        const int     mnem_align   = 44;
+        const char   *str_opcode;
         const uint8_t opcode = *bytecode;
         assert((unsigned)(opcode - INSTR_BREAKPOINT) <= sizeof(str_instr)/sizeof(str_instr[0]));
 
@@ -463,13 +502,18 @@ void _KOS_disassemble(const char                          *filename,
 
         for (iop = 0; iop < num_operands; iop++) {
             const int opsize = _KOS_get_operand_size((enum _KOS_BYTECODE_INSTR)opcode, iop);
-            int       value  = 0;
+            int32_t   value  = 0;
             int       tail   = 0;
 
             assert(opsize == 1 || opsize == 4);
 
             for (i = 0; i < opsize; i++)
                 value |= (int32_t)((uint32_t)bytecode[instr_size+i] << (8*i));
+
+            if (_is_constant((enum _KOS_BYTECODE_INSTR)opcode, iop)) {
+                constant     = (uint32_t)value;
+                has_constant = 1;
+            }
 
             tail = _get_offset_operand_tail((enum _KOS_BYTECODE_INSTR)opcode, iop);
             if (tail >= 0)
@@ -494,6 +538,21 @@ void _KOS_disassemble(const char                          *filename,
             instr_size += opsize;
         }
 
+        if (has_constant && print_const) {
+            static const char header[] = " # ";
+            memcpy(const_buf.buffer, header, sizeof(header));
+            const_buf.size = sizeof(header);
+            if ( ! print_const(print_const_cookie, &const_buf, constant)) {
+                const_str = const_buf.buffer;
+                if (const_buf.size > max_const_chars + 1) {
+                    static const char dotdotdot[] = "...";
+                    memcpy(const_buf.buffer + max_const_chars + 1 - sizeof(dotdotdot),
+                           dotdotdot,
+                           sizeof(dotdotdot));
+                }
+            }
+        }
+
         snprintf(bin, sizeof(bin), "%08X: ", (unsigned)offs);
         bin[sizeof(bin)-1] = 0;
         for (i = 0; i < instr_size; i++) {
@@ -505,9 +564,7 @@ void _KOS_disassemble(const char                          *filename,
             bin[i++] = ' ';
         bin[i] = 0;
 
-        printf("%s%s\n", bin, dis);
-
-        /* TODO print constant representation for LOAD.CONST[8] */
+        printf("%s%s%s\n", bin, dis, const_str);
 
         bytecode += instr_size;
         offs     += instr_size;
@@ -515,4 +572,6 @@ void _KOS_disassemble(const char                          *filename,
         if (size >= (size_t)instr_size)
             size -= instr_size;
     }
+
+    _KOS_vector_destroy(&const_buf);
 }

@@ -827,6 +827,31 @@ static int _append_buf(const uint8_t **dest,
     return KOS_SUCCESS;
 }
 
+struct _PRINT_CONST_COOKIE {
+    KOS_FRAME  frame;
+    KOS_ARRAY *constants_storage;
+};
+
+static int _print_const(void               *cookie,
+                        struct _KOS_VECTOR *cstr_buf,
+                        uint32_t            const_index)
+{
+    struct _PRINT_CONST_COOKIE *data = (struct _PRINT_CONST_COOKIE *)cookie;
+    KOS_ATOMIC(KOS_OBJ_ID)     *constants;
+    KOS_OBJ_ID                  constant;
+
+    assert(const_index < KOS_atomic_read_u32(data->constants_storage->size));
+
+    constants = _KOS_get_array_buffer(data->constants_storage);
+    constant  = (KOS_OBJ_ID)KOS_atomic_read_ptr(constants[const_index]);
+
+    return KOS_object_to_string_or_cstr_vec(data->frame,
+                                            constant,
+                                            KOS_QUOTE_STRINGS,
+                                            0,
+                                            cstr_buf);
+}
+
 static int _compile_module(KOS_FRAME   frame,
                            KOS_OBJ_ID  module_obj,
                            int         module_idx,
@@ -834,10 +859,10 @@ static int _compile_module(KOS_FRAME   frame,
                            unsigned    data_size,
                            int         is_repl)
 {
-    int                   error              = KOS_SUCCESS;
-    KOS_MODULE     *const module             = OBJPTR(MODULE, module_obj);
-    KOS_CONTEXT    *const ctx                = KOS_context_from_frame(frame);
-    const uint32_t        old_bytecode_size  = module->bytecode_size;
+    int                   error             = KOS_SUCCESS;
+    KOS_MODULE     *const module            = OBJPTR(MODULE, module_obj);
+    KOS_CONTEXT    *const ctx               = KOS_context_from_frame(frame);
+    const uint32_t        old_bytecode_size = module->bytecode_size;
     struct _KOS_PARSER    parser;
     struct _KOS_COMP_UNIT program;
     struct _KOS_AST_NODE *ast;
@@ -1004,6 +1029,7 @@ static int _compile_module(KOS_FRAME   frame,
 
         const KOS_FUNC_ADDR *const func_addrs     = module->func_addrs;
         const uint32_t             num_func_addrs = module->num_func_addrs;
+        struct _PRINT_CONST_COOKIE print_const_cookie;
 
         _KOS_vector_init(&cname);
         _KOS_vector_init(&ptrs);
@@ -1086,6 +1112,9 @@ static int _compile_module(KOS_FRAME   frame,
             func_names = (const char *const *)ptrs.buffer;
         }
 
+        print_const_cookie.frame             = frame;
+        print_const_cookie.constants_storage = OBJPTR(ARRAY, module->constants_storage);
+
         _KOS_disassemble(filename,
                          old_bytecode_size,
                          module->bytecode,
@@ -1094,7 +1123,9 @@ static int _compile_module(KOS_FRAME   frame,
                          module->num_line_addrs,
                          func_names,
                          (struct _KOS_COMP_ADDR_TO_FUNC *)func_addrs,
-                         num_func_addrs);
+                         num_func_addrs,
+                         _print_const,
+                         &print_const_cookie);
 
         _KOS_vector_destroy(&ptrs);
         _KOS_vector_destroy(&cname);

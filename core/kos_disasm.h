@@ -28,12 +28,17 @@
 
 struct _KOS_COMP_ADDR_TO_LINE;
 struct _KOS_COMP_ADDR_TO_FUNC;
+struct _KOS_VECTOR;
 
 int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op);
 
 int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op);
 
 int _KOS_is_signed_op(enum _KOS_BYTECODE_INSTR instr, int op);
+
+typedef int (*_KOS_PRINT_CONST)(void               *cookie,
+                                struct _KOS_VECTOR *cstr_buf,
+                                uint32_t            const_index);
 
 void _KOS_disassemble(const char                          *filename,
                       uint32_t                             offs,
@@ -43,6 +48,8 @@ void _KOS_disassemble(const char                          *filename,
                       uint32_t                             num_line_addrs,
                       const char                   *const *func_names,
                       const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs,
-                      uint32_t                             num_func_addrs);
+                      uint32_t                             num_func_addrs,
+                      _KOS_PRINT_CONST                     print_const,
+                      void                                *print_const_cookie);
 
 #endif
