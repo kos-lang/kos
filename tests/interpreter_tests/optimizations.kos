@@ -104,7 +104,7 @@ do {
 
     assert return_string() == "string"
 
-    check(return_string, { registers: 1, instructions: 2, size: 9 })
+    check(return_string, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#
@@ -413,7 +413,7 @@ do {
     }
     assert unreachable_try() == 3
 
-    check(unreachable_try, { registers: 3, instructions: 21, size: 85 })
+    check(unreachable_try, { registers: 3, instructions: 21, size: 79 })
 }
 
 #============================================================================#
@@ -431,7 +431,7 @@ do {
     }
     assert unreachable_if_from_const() == 10
 
-    check(unreachable_if_from_const, { registers: 2, instructions: 3, size: 12 })
+    check(unreachable_if_from_const, { registers: 2, instructions: 3, size: 9 })
 }
 
 #============================================================================#
@@ -515,7 +515,7 @@ do {
     }
     assert collapse_logical_or_true(100) == "xyz"
 
-    check(collapse_logical_or_true, { registers: 1, instructions: 2, size: 9 })
+    check(collapse_logical_or_true, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#
@@ -601,7 +601,7 @@ do {
     }
     assert collapse_interpolated_strings_1() == "this is test"
 
-    check(collapse_interpolated_strings_1, { registers: 1, instructions: 2, size: 9 })
+    check(collapse_interpolated_strings_1, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#
@@ -613,7 +613,7 @@ do {
     }
     assert collapse_interpolated_strings_2() == "integer void false 0.0 32"
 
-    check(collapse_interpolated_strings_2, { registers: 1, instructions: 2, size: 9 })
+    check(collapse_interpolated_strings_2, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#

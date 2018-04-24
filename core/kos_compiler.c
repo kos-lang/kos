@@ -1604,7 +1604,10 @@ static int _assert(struct _KOS_COMP_UNIT      *program,
 
     TRY(_gen_reg(program, &reg));
 
-    TRY(_gen_instr2(program, INSTR_LOAD_STR, reg->reg, str_idx));
+    TRY(_gen_instr2(program,
+                    str_idx < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
+                    reg->reg,
+                    str_idx));
 
     TRY(_gen_instr1(program, INSTR_THROW, reg->reg));
 
@@ -4150,7 +4153,10 @@ static int _string_literal(struct _KOS_COMP_UNIT      *program,
         error = _gen_reg(program, reg);
 
         if (!error)
-            error = _gen_instr2(program, INSTR_LOAD_STR, (*reg)->reg, str_idx);
+            error = _gen_instr2(program,
+                                str_idx < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
+                                (*reg)->reg,
+                                str_idx);
     }
 
     return error;

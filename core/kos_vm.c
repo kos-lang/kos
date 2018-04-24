@@ -1167,15 +1167,6 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_STR: { /* <r.dest>, <str.idx.int32> */
-                const int32_t idx = (int32_t)_load_32(bytecode+2);
-
-                rdest = bytecode[1];
-                out   = _make_string(frame, module, idx);
-                delta = 6;
-                break;
-            }
-
             case INSTR_LOAD_TRUE: { /* <r.dest> */
                 rdest = bytecode[1];
                 out   = KOS_TRUE;

@@ -105,13 +105,13 @@ int main(void)
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,   0,
-            INSTR_LOAD_STR,   1, IMM32(0),/*"prop1"*/
-            INSTR_LOAD_INT32, 2, IMM32(-6),
-            INSTR_SET,        0, 1, 2,
-            INSTR_LOAD_INT32, 2, IMM32(0),
-            INSTR_GET_PROP,   3, 0, IMM32(0),
-            INSTR_RETURN,     0, 3
+            INSTR_LOAD_OBJ,     0,
+            INSTR_LOAD_CONST,   1, IMM32(0),/*"prop1"*/
+            INSTR_LOAD_INT32,   2, IMM32(-6),
+            INSTR_SET,          0, 1, 2,
+            INSTR_LOAD_INT32,   2, IMM32(0),
+            INSTR_GET_PROP,     3, 0, IMM32(0),
+            INSTR_RETURN,       0, 3
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 4, str_prop) == TO_SMALL_INT(-6));
@@ -124,12 +124,12 @@ int main(void)
         static const char prop2[] = "prop2";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop2);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,   0,
-            INSTR_LOAD_INT32, 1, IMM32(-7),
-            INSTR_SET_PROP,   0, IMM32(0)/*"prop2"*/, 1,
-            INSTR_LOAD_STR,   1, IMM32(0),/*"prop2"*/
-            INSTR_GET,        1, 0, 1,
-            INSTR_RETURN,     0, 1
+            INSTR_LOAD_OBJ,     0,
+            INSTR_LOAD_INT32,   1, IMM32(-7),
+            INSTR_SET_PROP,     0, IMM32(0)/*"prop2"*/, 1,
+            INSTR_LOAD_CONST,   1, IMM32(0),/*"prop2"*/
+            INSTR_GET,          1, 0, 1,
+            INSTR_RETURN,       0, 1
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == TO_SMALL_INT(-7));
@@ -174,10 +174,10 @@ int main(void)
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
-            INSTR_LOAD_STR,   0, IMM32(0),/*"prop1"*/
-            INSTR_LOAD_INT32, 1, IMM32(-6),
-            INSTR_SET,        0, 0, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
+            INSTR_LOAD_INT32,   1, IMM32(-6),
+            INSTR_SET,          0, 0, 1,
+            INSTR_RETURN,       0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_BADPTR);
@@ -219,10 +219,10 @@ int main(void)
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
-            INSTR_LOAD_STR,   0, IMM32(0),/*"prop1"*/
-            INSTR_LOAD_INT32, 1, IMM32(-6),
-            INSTR_SET_PROP,   0, IMM32(0)/*"prop1"*/, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
+            INSTR_LOAD_INT32,   1, IMM32(-6),
+            INSTR_SET_PROP,     0, IMM32(0)/*"prop1"*/, 1,
+            INSTR_RETURN,       0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_BADPTR);
@@ -235,10 +235,10 @@ int main(void)
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
-            INSTR_LOAD_STR,   0, IMM32(0),/*"prop1"*/
-            INSTR_LOAD_INT32, 1, IMM32(-6),
-            INSTR_SET_ELEM,   0, IMM32(0), 1,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
+            INSTR_LOAD_INT32,   1, IMM32(-6),
+            INSTR_SET_ELEM,     0, IMM32(0), 1,
+            INSTR_RETURN,       0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_BADPTR);
@@ -251,10 +251,10 @@ int main(void)
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY, 0, IMM32(1),
-            INSTR_LOAD_STR,   1, IMM32(0),/*"prop1"*/
-            INSTR_SET_ELEM,   0, IMM32(1), 1,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_ARRAY,   0, IMM32(1),
+            INSTR_LOAD_CONST,   1, IMM32(0),/*"prop1"*/
+            INSTR_SET_ELEM,     0, IMM32(1), 1,
+            INSTR_RETURN,       0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_BADPTR);
@@ -267,9 +267,9 @@ int main(void)
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop1);
         const uint8_t code[] = {
-            INSTR_LOAD_STR,   0, IMM32(0),/*"prop1"*/
-            INSTR_SET_ELEM,   0, IMM32(0), 0,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
+            INSTR_SET_ELEM,     0, IMM32(0), 0,
+            INSTR_RETURN,       0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 1, str_prop) == KOS_BADPTR);
@@ -307,7 +307,7 @@ int main(void)
             INSTR_SET_ELEM,     1, IMM32(0), 2,
             INSTR_PUSH,         1, 0,
             INSTR_PUSH,         1, 1,
-            INSTR_LOAD_STR,     2, IMM32(0)/*"prop5"*/,
+            INSTR_LOAD_CONST,   2, IMM32(0)/*"prop5"*/,
             INSTR_PUSH,         1, 2,
             INSTR_RETURN,       0, 1
         };
@@ -343,7 +343,7 @@ int main(void)
             INSTR_SET_ELEM,     1, IMM32(0), 2,
             INSTR_PUSH_EX,      1, 0,
             INSTR_PUSH_EX,      1, 1,
-            INSTR_LOAD_STR,     2, IMM32(0)/*"01"*/,
+            INSTR_LOAD_CONST,   2, IMM32(0)/*"01"*/,
             INSTR_PUSH_EX,      1, 2,
             INSTR_RETURN,       0, 1
         };
@@ -410,13 +410,13 @@ int main(void)
         static const char prop7[]  = "prop7";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop7);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,   0,
-            INSTR_LOAD_INT32, 1, IMM32(-10),
-            INSTR_SET_PROP,   0, IMM32(0)/*"prop7"*/, 1,
-            INSTR_LOAD_STR,   1, IMM32(0),/*"prop7*/
-            INSTR_DEL,        0, 1,
-            INSTR_HAS_PROP,   1, 0, IMM32(0),/*"prop7"*/
-            INSTR_RETURN,     0, 1
+            INSTR_LOAD_OBJ,     0,
+            INSTR_LOAD_INT32,   1, IMM32(-10),
+            INSTR_SET_PROP,     0, IMM32(0)/*"prop7"*/, 1,
+            INSTR_LOAD_CONST,   1, IMM32(0),/*"prop7*/
+            INSTR_DEL,          0, 1,
+            INSTR_HAS_PROP,     1, 0, IMM32(0),/*"prop7"*/
+            INSTR_RETURN,       0, 1
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_FALSE);
@@ -429,11 +429,11 @@ int main(void)
         static const char prop7[]  = "prop7";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, prop7);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ, 0,
-            INSTR_LOAD_STR, 1, IMM32(0),/*"prop7*/
-            INSTR_DEL,      0, 1,
-            INSTR_HAS_PROP, 1, 0, IMM32(0),/*"prop7"*/
-            INSTR_RETURN,   0, 1
+            INSTR_LOAD_OBJ,     0,
+            INSTR_LOAD_CONST,   1, IMM32(0),/*"prop7*/
+            INSTR_DEL,          0, 1,
+            INSTR_HAS_PROP,     1, 0, IMM32(0),/*"prop7"*/
+            INSTR_RETURN,       0, 1
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, str_prop) == KOS_FALSE);
@@ -736,15 +736,15 @@ int main(void)
         static const char str[]    = "str";
         KOS_OBJ_ID        str_prop = KOS_context_get_cstring(frame, str);
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(3),
+            INSTR_JUMP,         IMM32(3),
 
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,       0, 0,
 
-            INSTR_LOAD_FUN,   0, IMM32(-13), 2, 0, 1, 0,
-            INSTR_LOAD_STR,   1, IMM32(0),
-            INSTR_LOAD_VOID,  2,
-            INSTR_CALL,       0, 0, 2, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_LOAD_FUN,     0, IMM32(-13), 2, 0, 1, 0,
+            INSTR_LOAD_CONST,   1, IMM32(0),
+            INSTR_LOAD_VOID,    2,
+            INSTR_CALL,         0, 0, 2, 1,
+            INSTR_RETURN,       0, 0
         };
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 3, str_prop) == KOS_BADPTR);

@@ -1,5 +1,5 @@
 Exception: raised
-  #0  0x1B2 in 'thrower' in module_lang_print.kos:31
+  #0  0x19D in 'thrower' in module_lang_print.kos:31
   #1  0x50 in '<global>' in module_lang_print.kos:35
 void true false abc -10 
 

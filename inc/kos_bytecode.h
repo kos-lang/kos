@@ -42,8 +42,6 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_LOAD_INT64,
     /* LOAD.FLOAT <r.dest>, <low.uint32>, <high.uint32> */
     INSTR_LOAD_FLOAT,
-    /* LOAD.STR <r.dest>, <str.idx.int32> */
-    INSTR_LOAD_STR,
     /* LOAD.TRUE <r.dest> */
     INSTR_LOAD_TRUE,
     /* LOAD.FALSE <r.dest> */
