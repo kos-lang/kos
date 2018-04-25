@@ -1150,23 +1150,6 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_FLOAT: { /* <r.dest>, <low.uint32>, <high.uint32> */
-                const uint32_t low  = _load_32(bytecode+2);
-                const uint32_t high = _load_32(bytecode+6);
-
-                union {
-                    uint64_t ui64;
-                    double   d;
-                } int2double;
-
-                int2double.ui64 = ((uint64_t)high << 32) | low;
-
-                rdest = bytecode[1];
-                out   = KOS_new_float(frame, int2double.d);
-                delta = 10;
-                break;
-            }
-
             case INSTR_LOAD_TRUE: { /* <r.dest> */
                 rdest = bytecode[1];
                 out   = KOS_TRUE;

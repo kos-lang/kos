@@ -531,10 +531,6 @@ int main(void)
     TEST_INSTR INSTR_MOVE,       { V_INTEGER, ~0U,         ~0U         }, { { V_INT64, ~0U,         ~0U         } }                                        END
 
     /*========================================================================*/
-    /* LOAD.FLOAT */
-    TEST_INSTR INSTR_MOVE,       { V_FLOAT,   0,           0x3FF00000U }, { { V_FLOAT, 0,           0x3FF00000U } }                                        END
-
-    /*========================================================================*/
     /* LOAD.ARRAY8 */
     TEST_INSTR INSTR_LOAD_ARRAY8,{ V_ARRAY,   0                        }, { { V_IMM8,  0                        } }                                        END
     TEST_INSTR INSTR_LOAD_ARRAY8,{ V_ARRAY,   255                      }, { { V_IMM8,  255                      } }                                        END
