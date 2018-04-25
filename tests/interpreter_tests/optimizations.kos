@@ -149,7 +149,7 @@ do {
 
     assert find_lowest([9, 10, -5, 245, -1000, 9000, -1]) == -1000
 
-    check(find_lowest, { registers: 5, instructions: 11, size: 59 })
+    check(find_lowest, { registers: 5, instructions: 11, size: 52 })
 }
 
 #============================================================================#
@@ -170,7 +170,7 @@ do {
 
     assert find_greatest([-100, 90, -5, 400, 10, 15]) == 400
 
-    check(find_greatest, { registers: 6, instructions: 14, size: 67 })
+    check(find_greatest, { registers: 6, instructions: 14, size: 60 })
 }
 
 #============================================================================#
@@ -503,7 +503,7 @@ do {
     }
     assert var_to_const_while_false(2) == 2
 
-    check(var_to_const_while_false, { registers: 3, instructions: 3, size: 17 })
+    check(var_to_const_while_false, { registers: 3, instructions: 3, size: 10 })
 }
 
 #============================================================================#
@@ -553,7 +553,7 @@ do {
     assert typeof ret == "float"
     assert ret == 0
 
-    check(collapse_logical_and_false, { registers: 1, instructions: 2, size: 13 })
+    check(collapse_logical_and_false, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#

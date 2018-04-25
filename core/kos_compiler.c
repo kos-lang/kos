@@ -25,6 +25,7 @@
 #include "kos_config.h"
 #include "kos_disasm.h"
 #include "kos_try.h"
+#include "kos_math.h"
 #include "kos_misc.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_bytecode.h"
@@ -462,6 +463,26 @@ static void _get_token_str(const struct _KOS_TOKEN *token,
     *out_length = length;
 }
 
+static int _numbers_compare_item(void                       *what,
+                                 struct _KOS_RED_BLACK_NODE *node)
+{
+    const struct _KOS_NUMERIC    *numeric  = (const struct _KOS_NUMERIC *)what;
+    const struct _KOS_COMP_CONST *constant = (const struct _KOS_COMP_CONST *)node;
+
+    const enum _KOS_COMP_CONST_TYPE type =
+        numeric->type == KOS_INTEGER_VALUE ? KOS_COMP_CONST_INTEGER : KOS_COMP_CONST_FLOAT;
+
+    if (type != constant->type)
+        return (int)type < (int)constant->type ? -1 : 1;
+
+    if (numeric->type == KOS_INTEGER_VALUE)
+        return numeric->u.i < ((const struct _KOS_COMP_INTEGER *)constant)->value ? -1 :
+               numeric->u.i > ((const struct _KOS_COMP_INTEGER *)constant)->value ? 1 : 0;
+    else
+        return numeric->u.d == ((const struct _KOS_COMP_FLOAT *)constant)->value ? 0 :
+               numeric->u.d <  ((const struct _KOS_COMP_FLOAT *)constant)->value ? -1 : 1;
+}
+
 static int _strings_compare_item(void                       *what,
                                  struct _KOS_RED_BLACK_NODE *node)
 {
@@ -471,20 +492,67 @@ static int _strings_compare_item(void                       *what,
     unsigned                       length;
     enum _KOS_UTF8_ESCAPE          escape;
 
+    if (str->header.type != KOS_COMP_CONST_STRING)
+        return (int)KOS_COMP_CONST_STRING < (int)str->header.type ? -1 : 1;
+
     _get_token_str(token, &begin, &length, &escape);
 
     return _compare_strings(begin,    length,      escape,
                             str->str, str->length, str->escape);
 }
 
-static int _strings_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                                 struct _KOS_RED_BLACK_NODE *b)
+static int _constants_compare_node(struct _KOS_RED_BLACK_NODE *a,
+                                   struct _KOS_RED_BLACK_NODE *b)
 {
-    const struct _KOS_COMP_STRING *str_a = (const struct _KOS_COMP_STRING *)a;
-    const struct _KOS_COMP_STRING *str_b = (const struct _KOS_COMP_STRING *)b;
+    const struct _KOS_COMP_CONST *const_a = (const struct _KOS_COMP_CONST *)a;
+    const struct _KOS_COMP_CONST *const_b = (const struct _KOS_COMP_CONST *)b;
 
-    return _compare_strings(str_a->str, str_a->length, str_a->escape,
-                            str_b->str, str_b->length, str_b->escape);
+    if (const_a->type != const_b->type)
+        return (int)const_a->type < (int)const_b->type ? -1 : 0;
+
+    else switch (const_a->type) {
+
+        default:
+            assert(const_a->type == KOS_COMP_CONST_INTEGER);
+            return ((const struct _KOS_COMP_INTEGER *)const_a)->value
+                 < ((const struct _KOS_COMP_INTEGER *)const_b)->value
+                 ? -1 : 0;
+
+        case KOS_COMP_CONST_FLOAT:
+            return ((const struct _KOS_COMP_FLOAT *)const_a)->value
+                 < ((const struct _KOS_COMP_FLOAT *)const_b)->value
+                 ? -1 : 0;
+
+        case KOS_COMP_CONST_STRING: {
+            const struct _KOS_COMP_STRING *str_a = (const struct _KOS_COMP_STRING *)const_a;
+            const struct _KOS_COMP_STRING *str_b = (const struct _KOS_COMP_STRING *)const_b;
+            return _compare_strings(str_a->str, str_a->length, str_a->escape,
+                                    str_b->str, str_b->length, str_b->escape);
+        }
+
+        case KOS_COMP_CONST_FUNCTION:
+            return ((const struct _KOS_COMP_FUNCTION *)const_a)->offset
+                 < ((const struct _KOS_COMP_FUNCTION *)const_b)->offset
+                 ? -1 : 0;
+    }
+}
+
+static void _add_constant(struct _KOS_COMP_UNIT  *program,
+                          struct _KOS_COMP_CONST *constant)
+{
+    constant->index = program->num_constants++;
+    constant->next  = 0;
+
+    if (program->last_constant)
+        program->last_constant->next = constant;
+    else
+        program->first_constant = constant;
+
+    program->last_constant = constant;
+
+    _KOS_red_black_insert(&program->constants,
+                          &constant->rb_tree_node,
+                          _constants_compare_node);
 }
 
 static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
@@ -515,22 +583,12 @@ static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
             if (tok_escape == KOS_UTF8_NO_ESCAPE)
                 escape = KOS_UTF8_NO_ESCAPE;
 
-            str->header.index = program->num_constants++;
-            str->header.next  = 0;
-            str->str          = begin;
-            str->length       = length;
-            str->escape       = escape;
+            str->header.type = KOS_COMP_CONST_STRING;
+            str->str         = begin;
+            str->length      = length;
+            str->escape      = escape;
 
-            if (program->last_constant)
-                program->last_constant->next = (struct _KOS_COMP_CONST *)str;
-            else
-                program->first_constant = (struct _KOS_COMP_CONST *)str;
-
-            program->last_constant = (struct _KOS_COMP_CONST *)str;
-
-            _KOS_red_black_insert(&program->constants,
-                                  (struct _KOS_RED_BLACK_NODE *)str,
-                                  _strings_compare_node);
+            _add_constant(program, (struct _KOS_COMP_CONST *)str);
         }
         else
             error = KOS_ERROR_OUT_OF_MEMORY;
@@ -3141,7 +3199,7 @@ static int _pos_neg(struct _KOS_COMP_UNIT      *program,
             _free_reg(program, src);
     }
     else
-        /* TODO: enforce numeric ? */
+        /* TODO: enforce numeric */
         *reg = src;
 
 _error:
@@ -4121,20 +4179,39 @@ static int _numeric_literal(struct _KOS_COMP_UNIT      *program,
         program->error_str   = str_err_invalid_numeric_literal;
         error = KOS_ERROR_COMPILE_FAILED;
     }
-    else if (numeric.type == KOS_INTEGER_VALUE) {
+    else if (numeric.type == KOS_INTEGER_VALUE &&
+             (uint64_t)((numeric.u.i >> 7) + 1) <= 1U)
+        TRY(_gen_instr2(program, INSTR_LOAD_INT8, (*reg)->reg, (int32_t)numeric.u.i));
+    else {
 
-        if ((uint64_t)((numeric.u.i >> 7) + 1) <= 1U)
-            TRY(_gen_instr2(program, INSTR_LOAD_INT8, (*reg)->reg, (int32_t)numeric.u.i));
-        else if ((uint64_t)((numeric.u.i >> 31) + 1) <= 1U)
-            TRY(_gen_instr2(program, INSTR_LOAD_INT32, (*reg)->reg, (int32_t)numeric.u.i));
-        else
-            TRY(_gen_instr3(program, INSTR_LOAD_INT64, (*reg)->reg,
-                            (int32_t)numeric.u.i, (int32_t)(numeric.u.i >> 32)));
+        struct _KOS_COMP_CONST *constant =
+            (struct _KOS_COMP_CONST *)_KOS_red_black_find(program->constants,
+                                                          &numeric,
+                                                          _numbers_compare_item);
+
+        if ( ! constant) {
+            constant = (struct _KOS_COMP_CONST *)
+                _KOS_mempool_alloc(&program->allocator,
+                                   KOS_max(sizeof(struct _KOS_COMP_INTEGER),
+                                           sizeof(struct _KOS_COMP_FLOAT)));
+
+            if (numeric.type == KOS_INTEGER_VALUE) {
+                constant->type = KOS_COMP_CONST_INTEGER;
+                ((struct _KOS_COMP_INTEGER *)constant)->value = numeric.u.i;
+            }
+            else {
+                constant->type = KOS_COMP_CONST_FLOAT;
+                ((struct _KOS_COMP_FLOAT *)constant)->value = numeric.u.d;
+            }
+
+            _add_constant(program, constant);
+        }
+
+        TRY(_gen_instr2(program,
+                        constant->index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
+                        (*reg)->reg,
+                        (int32_t)constant->index));
     }
-    else
-        TRY(_gen_instr3(program, INSTR_LOAD_FLOAT, (*reg)->reg,
-                        (int32_t)((uint64_t)numeric.u.i & 0xFFFFFFFFU),
-                        (int32_t)(((uint64_t)numeric.u.i >> 32) & 0xFFFFFFFFU)));
 
 _error:
     return error;

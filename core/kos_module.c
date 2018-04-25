@@ -430,16 +430,37 @@ static int _alloc_constants(KOS_FRAME              frame,
 
     for (i = 0; constant; constant = constant->next, ++i) {
 
-        KOS_OBJ_ID               str_obj;
-        struct _KOS_COMP_STRING *str = (struct _KOS_COMP_STRING *)constant;
+        KOS_OBJ_ID obj_id = KOS_BADPTR;
 
-        str_obj = str->escape == KOS_UTF8_WITH_ESCAPE
-                ? KOS_new_string_esc(frame, str->str, str->length)
-                : KOS_new_string(frame, str->str, str->length);
+        switch (constant->type) {
 
-        TRY_OBJID(str_obj);
+            default:
+                assert(constant->type == KOS_COMP_CONST_INTEGER);
+                obj_id = KOS_new_int(frame, ((struct _KOS_COMP_INTEGER *)constant)->value);
+                break;
 
-        KOS_atomic_write_ptr(constants[base_idx + i], str_obj);
+            case KOS_COMP_CONST_FLOAT:
+                obj_id = KOS_new_float(frame, ((struct _KOS_COMP_FLOAT *)constant)->value);
+                break;
+
+            case KOS_COMP_CONST_STRING: {
+                struct _KOS_COMP_STRING *str = (struct _KOS_COMP_STRING *)constant;
+
+                obj_id = str->escape == KOS_UTF8_WITH_ESCAPE
+                       ? KOS_new_string_esc(frame, str->str, str->length)
+                       : KOS_new_string(frame, str->str, str->length);
+                break;
+            }
+
+            case KOS_COMP_CONST_FUNCTION: {
+                assert(0);
+                break;
+            }
+        }
+
+        TRY_OBJID(obj_id);
+
+        KOS_atomic_write_ptr(constants[base_idx + i], obj_id);
     }
 
 _error:
