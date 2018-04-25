@@ -521,16 +521,6 @@ int main(void)
     TEST_INSTR INSTR_LOAD_INT32, { V_INTEGER, ~0U,         ~0U         }, { { V_IMM,   ~0U                      } }                                        END
 
     /*========================================================================*/
-    /* LOAD.INT64 */
-    TEST_INSTR INSTR_MOVE,       { V_INTEGER, 0                        }, { { V_INT64, 0                        } }                                        END
-    TEST_INSTR INSTR_MOVE,       { V_INTEGER, 0x7FFFFFFFU              }, { { V_INT64, 0x7FFFFFFFU              } }                                        END
-    TEST_INSTR INSTR_MOVE,       { V_INTEGER, 0x80000000U,             }, { { V_INT64, 0x80000000U              } }                                        END
-    TEST_INSTR INSTR_MOVE,       { V_INTEGER, ~0U,         0x7FFFFFFFU }, { { V_INT64, ~0U,         0x7FFFFFFFU } }                                        END
-    TEST_INSTR INSTR_MOVE,       { V_INTEGER, 0,           0x80000000U }, { { V_INT64, 0,           0x80000000U } }                                        END
-    TEST_INSTR INSTR_MOVE,       { V_INTEGER, 0,           0x40000000U }, { { V_INT64, 0,           0x40000000U } }                                        END
-    TEST_INSTR INSTR_MOVE,       { V_INTEGER, ~0U,         ~0U         }, { { V_INT64, ~0U,         ~0U         } }                                        END
-
-    /*========================================================================*/
     /* LOAD.ARRAY8 */
     TEST_INSTR INSTR_LOAD_ARRAY8,{ V_ARRAY,   0                        }, { { V_IMM8,  0                        } }                                        END
     TEST_INSTR INSTR_LOAD_ARRAY8,{ V_ARRAY,   255                      }, { { V_IMM8,  255                      } }                                        END

@@ -1140,16 +1140,6 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_INT64: { /* <r.dest>, <low.uint32>, <high.int32> */
-                const uint32_t low  = _load_32(bytecode+2);
-                const uint32_t high = _load_32(bytecode+6);
-
-                rdest = bytecode[1];
-                out   = KOS_new_int(frame, (int64_t)(((uint64_t)high << 32) | low));
-                delta = 10;
-                break;
-            }
-
             case INSTR_LOAD_TRUE: { /* <r.dest> */
                 rdest = bytecode[1];
                 out   = KOS_TRUE;
