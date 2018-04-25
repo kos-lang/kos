@@ -28,7 +28,8 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_BREAKPOINT = 0x80,
     /* We have relatively few instructions.  Most of binary code consists of
      * bytes lower than 128.  Use values 128 and up to increase the chances
-     * of jumping into an area which doesn't contain instructions. */
+     * of jumping into an area which doesn't contain instructions when there
+     * is an error. */
 
     /* LOAD.CONST8 <r.dest>, <uint8> */
     INSTR_LOAD_CONST8,
@@ -36,8 +37,6 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_LOAD_CONST,
     /* LOAD.INT8 <r.dest>, <int8> */
     INSTR_LOAD_INT8,
-    /* LOAD.INT32 <r.dest>, <int32> */
-    INSTR_LOAD_INT32,
     /* LOAD.TRUE <r.dest> */
     INSTR_LOAD_TRUE,
     /* LOAD.FALSE <r.dest> */

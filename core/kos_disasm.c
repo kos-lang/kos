@@ -49,7 +49,6 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_CONST8:         /* fall through */
         case INSTR_LOAD_CONST:          /* fall through */
         case INSTR_LOAD_INT8:           /* fall through */
-        case INSTR_LOAD_INT32:          /* fall through */
         case INSTR_LOAD_ARRAY8:         /* fall through */
         case INSTR_LOAD_ARRAY:          /* fall through */
         case INSTR_MOVE:                /* fall through */
@@ -122,8 +121,6 @@ int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
     switch (instr) {
 
         case INSTR_LOAD_CONST:
-            /* fall through */
-        case INSTR_LOAD_INT32:
             /* fall through */
         case INSTR_LOAD_ARRAY:
             /* fall through */
@@ -223,8 +220,6 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_CONST:
             /* fall through */
         case INSTR_LOAD_INT8:
-            /* fall through */
-        case INSTR_LOAD_INT32:
             /* fall through */
         case INSTR_LOAD_FUN:
             /* fall through */
@@ -355,7 +350,6 @@ void _KOS_disassemble(const char                          *filename,
         "LOAD.CONST8",
         "LOAD.CONST",
         "LOAD.INT8",
-        "LOAD.INT32",
         "LOAD.TRUE",
         "LOAD.FALSE",
         "LOAD.VOID",
