@@ -453,7 +453,31 @@ static int _alloc_constants(KOS_FRAME              frame,
             }
 
             case KOS_COMP_CONST_FUNCTION: {
-                assert(0);
+                struct _KOS_COMP_FUNCTION *func_const = (struct _KOS_COMP_FUNCTION *)constant;
+                KOS_FUNCTION              *func;
+
+                if (func_const->flags & KOS_COMP_FUN_CLASS) {
+                    obj_id = KOS_new_class(frame, KOS_VOID);
+                    if (IS_BAD_PTR(obj_id))
+                        break;
+                    func = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
+                }
+                else {
+                    obj_id = KOS_new_function(frame);
+                    if (IS_BAD_PTR(obj_id))
+                        break;
+                    func = OBJPTR(FUNCTION, obj_id);
+                }
+
+                func->header.flags    = (uint8_t)(func_const->flags & KOS_COMP_FUN_ELLIPSIS);
+                func->header.num_args = func_const->num_args;
+                func->header.num_regs = func_const->num_regs;
+                func->args_reg        = func_const->args_reg;
+                func->instr_offs      = func_const->offset;
+                func->module          = OBJID(MODULE, module);
+
+                if (func_const->flags & KOS_COMP_FUN_GENERATOR)
+                    func->state = KOS_GEN_INIT;
                 break;
             }
         }
