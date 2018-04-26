@@ -25,6 +25,7 @@
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
@@ -42,6 +43,8 @@ static const char str_array_comma[]        = ", ";
 static const char str_array_open[]         = "[";
 static const char str_buffer_close[]       = ">";
 static const char str_buffer_open[]        = "<";
+static const char str_builtin[]            = "built-in";
+static const char str_class_open[]         = "<class ";
 static const char str_empty_array[]        = "[]";
 static const char str_empty_buffer[]       = "<>";
 static const char str_err_cannot_expand[]  = "cannot expand object";
@@ -50,7 +53,7 @@ static const char str_err_not_array[]      = "object is not an array";
 static const char str_err_not_number[]     = "object is not a number";
 static const char str_err_out_of_memory[]  = "out of memory";
 static const char str_false[]              = "false";
-static const char str_function[]           = "<function>";
+static const char str_function_open[]      = "<function ";
 static const char str_object[]             = "<object>";
 static const char str_true[]               = "true";
 static const char str_void[]               = "void";
@@ -614,6 +617,90 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+static int _vector_append_function(KOS_FRAME           frame,
+                                   struct _KOS_VECTOR *cstr_vec,
+                                   KOS_OBJ_ID          obj_id)
+{
+    int           error = KOS_SUCCESS;
+    KOS_FUNCTION *func;
+    char          cstr_ptr[22];
+
+    switch (GET_OBJ_TYPE(obj_id)) {
+
+        case OBJ_FUNCTION:
+            func = OBJPTR(FUNCTION, obj_id);
+            TRY(_vector_append_cstr(frame, cstr_vec, str_function_open, sizeof(str_function_open) - 1));
+            break;
+
+        default:
+            assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
+            func = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
+            TRY(_vector_append_cstr(frame, cstr_vec, str_class_open, sizeof(str_class_open) - 1));
+            break;
+    }
+
+    if (func->handler) {
+        /* TODO get built-in function name */
+        TRY(_vector_append_cstr(frame, cstr_vec, str_builtin, sizeof(str_builtin) - 1));
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">", (uint64_t)(uintptr_t)func->handler);
+    }
+    else {
+        KOS_OBJ_ID name_str = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
+                                                           func->instr_offs);
+        TRY_OBJID(name_str);
+        TRY(_vector_append_str(frame, cstr_vec, name_str, KOS_DONT_QUOTE));
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>", (unsigned)func->instr_offs);
+    }
+    TRY(_vector_append_cstr(frame, cstr_vec, cstr_ptr, strlen(cstr_ptr)));
+
+_error:
+    return error;
+}
+
+static KOS_OBJ_ID _function_to_str(KOS_FRAME  frame,
+                                   KOS_OBJ_ID obj_id)
+{
+    int                    error = KOS_SUCCESS;
+    KOS_OBJ_ID             ret   = KOS_BADPTR;
+    KOS_FUNCTION          *func;
+    const char            *str_func;
+    KOS_ATOMIC(KOS_OBJ_ID) strings[3];
+    char                   cstr_ptr[22];
+
+    switch (GET_OBJ_TYPE(obj_id)) {
+
+        case OBJ_FUNCTION:
+            func     = OBJPTR(FUNCTION, obj_id);
+            str_func = str_function_open;
+            break;
+
+        default:
+            assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
+            func     = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
+            str_func = str_class_open;
+            break;
+    }
+
+    strings[0] = KOS_context_get_cstring(frame, str_func);
+    if (func->handler) {
+        /* TODO get built-in function name */
+        strings[1] = KOS_context_get_cstring(frame, str_builtin);
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">", (uint64_t)(uintptr_t)func->handler);
+    }
+    else {
+        strings[1] = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
+                                                  func->instr_offs);
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>", (unsigned)func->instr_offs);
+    }
+    strings[2] = KOS_new_cstring(frame, cstr_ptr);
+    TRY_OBJID(strings[2]);
+
+    ret = KOS_string_add_many(frame, strings, sizeof(strings) / sizeof(strings[0]));
+
+_error:
+    return error ? KOS_BADPTR : ret;
+}
+
 int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
                                      KOS_OBJ_ID          obj_id,
                                      enum _KOS_QUOTE_STR quote_str,
@@ -696,11 +783,12 @@ int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
             break;
 
         case OBJ_FUNCTION:
-            /* TODO print function signature */
+            /* fall through */
+        case OBJ_CLASS:
             if (cstr_vec)
-                error = _vector_append_cstr(frame, cstr_vec, "<function>", 10);
+                error = _vector_append_function(frame, cstr_vec, obj_id);
             else
-                *str = KOS_context_get_cstring(frame, str_function);
+                *str = _function_to_str(frame, obj_id);
             break;
     }
 
