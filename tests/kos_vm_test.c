@@ -796,6 +796,7 @@ int main(void)
     {
         static const char str[]  = "own property";
         KOS_OBJ_ID        constants[2];
+        KOS_OBJ_ID        ret;
         const uint8_t     code[] = {
             INSTR_JUMP,        IMM32(10),
 
@@ -811,7 +812,7 @@ int main(void)
         constants[0] = KOS_context_get_cstring(frame, str);
         constants[1] = TO_SMALL_INT(0xC0DEU);
 
-        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, constants, 2);
+        ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, constants, 2);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_SMALL_INT(ret));
@@ -825,6 +826,7 @@ int main(void)
     {
         static const char str[]    = "own property";
         KOS_OBJ_ID        constants[2];
+        KOS_OBJ_ID        ret;
         const uint8_t     code[]   = {
             INSTR_JUMP,        IMM32(12),
 
@@ -843,7 +845,7 @@ int main(void)
         constants[0] = KOS_context_get_cstring(frame, str);
         constants[1] = TO_SMALL_INT(0xC0DEU);
 
-        KOS_OBJ_ID ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, constants, 2);
+        ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, constants, 2);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_SMALL_INT(ret));

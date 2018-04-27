@@ -545,6 +545,43 @@ static int _compare_string(KOS_BYTECODE_INSTR instr,
     return ret;
 }
 
+static KOS_OBJ_ID _copy_function(KOS_FRAME  frame,
+                                 KOS_OBJ_ID obj_id)
+{
+    KOS_FUNCTION *src;
+    KOS_FUNCTION *dest;
+    KOS_OBJ_ID    ret;
+
+    if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION) {
+        src = OBJPTR(FUNCTION, obj_id);
+        ret = KOS_new_function(frame);
+        if (IS_BAD_PTR(ret))
+            return ret;
+        dest = OBJPTR(FUNCTION, ret);
+    }
+    else {
+        assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
+        src = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
+        ret = KOS_new_class(frame, KOS_VOID);
+        if (IS_BAD_PTR(ret))
+            return ret;
+        dest = (KOS_FUNCTION *)OBJPTR(CLASS, ret);
+    }
+
+    dest->header.flags    = src->header.flags;
+    dest->header.num_args = src->header.num_args;
+    dest->header.num_regs = src->header.num_regs;
+    dest->args_reg        = src->args_reg;
+    dest->state           = src->state;
+    dest->instr_offs      = src->instr_offs;
+    dest->module          = src->module;
+    dest->closures        = src->closures;
+    dest->defaults        = src->defaults;
+    dest->handler         = src->handler;
+
+    return ret;
+}
+
 static int _is_generator_end_exception(KOS_FRAME frame)
 {
     KOS_CONTEXT *const ctx       = KOS_context_from_frame(frame);
@@ -817,21 +854,12 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
             KOS_OBJ_ID    ret;
             KOS_OBJ_ID    regs = KOS_BADPTR;
 
-            ret = KOS_new_function(frame);
+            ret = _copy_function(frame, func_obj);
             TRY_OBJID(ret);
 
             dest = OBJPTR(FUNCTION, ret);
 
-            dest->header.flags      = func->header.flags;
-            dest->header.num_args   = func->header.num_args;
-            dest->header.num_regs   = func->header.num_regs;
-            dest->args_reg          = func->args_reg;
-            dest->instr_offs        = func->instr_offs;
-            dest->module            = func->module;
-            dest->closures          = func->closures;
-            dest->defaults          = func->defaults;
-            dest->handler           = func->handler;
-            dest->state             = KOS_GEN_READY;
+            dest->state = KOS_GEN_READY;
 
             if ( ! func->handler) {
                 regs = _init_registers(frame,
@@ -1117,6 +1145,32 @@ static int _exec_function(KOS_FRAME frame)
                 assert(value < KOS_get_array_size(module->constants_storage));
 
                 out = module->constants[value];
+
+                delta = 6;
+                break;
+            }
+
+            case INSTR_LOAD_CLASS8: { /* <r.dest>, <uint8> */
+                const uint8_t value = bytecode[2];
+
+                rdest = bytecode[1];
+
+                assert(value < KOS_get_array_size(module->constants_storage));
+
+                out = _copy_function(frame, module->constants[value]);
+
+                delta = 3;
+                break;
+            }
+
+            case INSTR_LOAD_CLASS: { /* <r.dest>, <uint32> */
+                const uint32_t value = _load_32(bytecode+2);
+
+                rdest = bytecode[1];
+
+                assert(value < KOS_get_array_size(module->constants_storage));
+
+                out = _copy_function(frame, module->constants[value]);
 
                 delta = 6;
                 break;
