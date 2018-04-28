@@ -4526,8 +4526,8 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     constant->header.type = KOS_COMP_CONST_FUNCTION;
     constant->offset      = 0;
     constant->num_regs    = (uint8_t)frame->num_regs;
-    constant->args_reg    = scope->num_indep_vars;
-    constant->num_args    = num_non_def;
+    constant->args_reg    = (uint8_t)scope->num_indep_vars;
+    constant->num_args    = (uint8_t)num_non_def;
     constant->flags       = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
