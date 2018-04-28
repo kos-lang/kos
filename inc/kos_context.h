@@ -126,14 +126,6 @@ struct _KOS_CONTEXT {
 
     struct _KOS_PROTOTYPES         prototypes;
 
-    /* TODO
-     * - add "static" functions
-     * - move function and class objects to module instead of creating by instruction
-     * - keep prototypes with the function/class object
-     * - remove the prototype map below. */
-    KOS_ATOMIC(void *)             proto_objs;
-    KOS_ATOMIC(uint32_t)           proto_objs_lock;
-
     _KOS_TLS_KEY                   thread_key;
 
     /* TODO gather all module-related members in a structure */
@@ -223,9 +215,6 @@ KOS_OBJ_ID KOS_get_file_name(KOS_FRAME  frame,
 int KOS_get_integer(KOS_FRAME  frame,
                     KOS_OBJ_ID obj_id,
                     int64_t   *ret);
-
-KOS_OBJ_ID KOS_gen_prototype(KOS_FRAME   frame,
-                             const void *ptr);
 
 enum _KOS_CALL_FLAVOR {
     KOS_CALL_FUNCTION,

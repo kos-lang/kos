@@ -206,7 +206,7 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_FRAME            frame,
                                  int                  min_args)
 {
     KOS_OBJ_ID func_obj  = KOS_BADPTR;
-    KOS_OBJ_ID proto_obj = KOS_gen_prototype(frame, (void *)(intptr_t)handler);
+    KOS_OBJ_ID proto_obj = KOS_new_object(frame);
 
     if ( ! IS_BAD_PTR(proto_obj)) {
 
