@@ -55,14 +55,14 @@ int main(int argc, char *argv[])
 
     TRY(KOS_context_add_default_path(frame, argv[1]));
 
-    num_paths = KOS_get_array_size(ctx.module_search_paths);
+    num_paths = KOS_get_array_size(ctx.modules.search_paths);
 
     if (num_paths != 1) {
         fprintf(stderr, "Error: %u paths added\n", (unsigned)num_paths);
         RAISE_ERROR(KOS_ERROR_NOT_FOUND);
     }
 
-    path_str = KOS_array_read(frame, ctx.module_search_paths, 0);
+    path_str = KOS_array_read(frame, ctx.modules.search_paths, 0);
     TRY_OBJID(path_str);
 
     TRY(KOS_string_to_cstr_vec(frame, path_str, &cstr));

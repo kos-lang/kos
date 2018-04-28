@@ -118,7 +118,7 @@ static int _register_thread(KOS_CONTEXT        *ctx,
 
     thread_ctx->ctx = ctx;
 
-    TRY(_KOS_init_stack_frame(&thread_ctx->frame, thread_ctx, &ctx->init_module, 0));
+    TRY(_KOS_init_stack_frame(&thread_ctx->frame, thread_ctx, &ctx->modules.init_module, 0));
 
     if (_KOS_tls_get(ctx->thread_key)) {
 
@@ -212,16 +212,17 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY(_KOS_heap_init(ctx));
     heap_ok = 1;
 
-    ctx->init_module.header.type  = OBJ_MODULE;
-    ctx->init_module.name         = KOS_BADPTR;
-    ctx->init_module.context      = ctx;
-    ctx->init_module.global_names = KOS_BADPTR;
-    ctx->init_module.globals      = KOS_BADPTR;
-    ctx->init_module.module_names = KOS_BADPTR;
-    ctx->module_names             = KOS_BADPTR;
-    ctx->modules                  = KOS_BADPTR;
-    ctx->module_search_paths      = KOS_BADPTR;
-    ctx->args                     = KOS_BADPTR;
+    ctx->modules.init_module.header.type  = OBJ_MODULE;
+    ctx->modules.init_module.name         = KOS_BADPTR;
+    ctx->modules.init_module.context      = ctx;
+    ctx->modules.init_module.global_names = KOS_BADPTR;
+    ctx->modules.init_module.globals      = KOS_BADPTR;
+    ctx->modules.init_module.module_names = KOS_BADPTR;
+    ctx->modules.module_names             = KOS_BADPTR;
+    ctx->modules.modules                  = KOS_BADPTR;
+    ctx->modules.search_paths             = KOS_BADPTR;
+
+    ctx->args = KOS_BADPTR;
 
     TRY(_register_thread(ctx, &ctx->main_thread));
 
@@ -250,14 +251,15 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY_OBJID(ctx->prototypes.generator_end_proto = KOS_new_object(frame));
     TRY_OBJID(ctx->prototypes.thread_proto        = KOS_new_object(frame));
 
-    TRY_OBJID(ctx->init_module.name         = KOS_context_get_cstring(frame, str_init));
-    TRY_OBJID(ctx->init_module.globals      = KOS_new_array(frame, 0));
-    TRY_OBJID(ctx->init_module.global_names = KOS_new_object(frame));
-    TRY_OBJID(ctx->init_module.module_names = KOS_new_object(frame));
-    TRY_OBJID(ctx->module_names             = KOS_new_object(frame));
-    TRY_OBJID(ctx->modules                  = KOS_new_array(frame, 0));
-    TRY_OBJID(ctx->module_search_paths      = KOS_new_array(frame, 0));
-    TRY_OBJID(ctx->args                     = KOS_new_array(frame, 0));
+    TRY_OBJID(ctx->modules.init_module.name         = KOS_context_get_cstring(frame, str_init));
+    TRY_OBJID(ctx->modules.init_module.globals      = KOS_new_array(frame, 0));
+    TRY_OBJID(ctx->modules.init_module.global_names = KOS_new_object(frame));
+    TRY_OBJID(ctx->modules.init_module.module_names = KOS_new_object(frame));
+    TRY_OBJID(ctx->modules.module_names             = KOS_new_object(frame));
+    TRY_OBJID(ctx->modules.modules                  = KOS_new_array(frame, 0));
+    TRY_OBJID(ctx->modules.search_paths             = KOS_new_array(frame, 0));
+
+    TRY_OBJID(ctx->args = KOS_new_array(frame, 0));
 
     TRY(_init_search_paths(frame));
 
@@ -276,11 +278,11 @@ _error:
 void KOS_context_destroy(KOS_CONTEXT *ctx)
 {
     uint32_t  i;
-    uint32_t  num_modules = KOS_get_array_size(ctx->modules);
+    uint32_t  num_modules = KOS_get_array_size(ctx->modules.modules);
     KOS_FRAME frame       = &ctx->main_thread.frame;
 
     for (i = 0; i < num_modules; i++) {
-        KOS_OBJ_ID module_obj = KOS_array_read(frame, ctx->modules, (int)i);
+        KOS_OBJ_ID module_obj = KOS_array_read(frame, ctx->modules.modules, (int)i);
         assert(!IS_BAD_PTR(module_obj));
         if (IS_BAD_PTR(module_obj))
             KOS_clear_exception(frame);
@@ -345,9 +347,9 @@ int KOS_context_add_path(KOS_FRAME frame, const char *module_search_path)
     path_str = KOS_new_cstring(frame, module_search_path);
     TRY_OBJID(path_str);
 
-    len = KOS_get_array_size(ctx->module_search_paths);
-    TRY(KOS_array_resize(frame, ctx->module_search_paths, len+1));
-    TRY(KOS_array_write(frame, ctx->module_search_paths, (int)len, path_str));
+    len = KOS_get_array_size(ctx->modules.search_paths);
+    TRY(KOS_array_resize(frame, ctx->modules.search_paths, len+1));
+    TRY(KOS_array_write(frame, ctx->modules.search_paths, (int)len, path_str));
 
 _error:
     return error;
@@ -518,7 +520,7 @@ int KOS_context_register_builtin(KOS_FRAME        frame,
     mod_init->name = module_name;
     mod_init->init = init;
 
-    _KOS_red_black_insert(&ctx->module_inits, &mod_init->rb_tree_node, _module_init_compare);
+    _KOS_red_black_insert(&ctx->modules.module_inits, &mod_init->rb_tree_node, _module_init_compare);
 
 _error:
     return error;

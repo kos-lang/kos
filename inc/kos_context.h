@@ -111,6 +111,17 @@ struct _KOS_PROTOTYPES {
     KOS_OBJ_ID thread_proto;
 };
 
+struct _KOS_MODULE_MGMT {
+    KOS_OBJ_ID                     search_paths;
+    KOS_OBJ_ID                     module_names;
+    KOS_OBJ_ID                     modules;
+
+    KOS_MODULE                     init_module; /* TODO allocate on heap */
+
+    struct _KOS_RED_BLACK_NODE    *module_inits;
+    struct _KOS_MODULE_LOAD_CHAIN *load_chain;
+};
+
 enum _KOS_CONTEXT_FLAGS {
     KOS_CTX_NO_FLAGS = 0,
     KOS_CTX_VERBOSE  = 1,
@@ -118,28 +129,14 @@ enum _KOS_CONTEXT_FLAGS {
 };
 
 struct _KOS_CONTEXT {
-    uint32_t                       flags;
-
-    struct _KOS_HEAP               heap;
-
-    KOS_OBJ_ID                     empty_string;
-
-    struct _KOS_PROTOTYPES         prototypes;
-
-    _KOS_TLS_KEY                   thread_key;
-
-    /* TODO gather all module-related members in a structure */
-    KOS_OBJ_ID                     module_search_paths;
-    KOS_OBJ_ID                     module_names;
-    KOS_OBJ_ID                     modules;
-
-    KOS_OBJ_ID                     args;
-
-    KOS_MODULE                     init_module;
-    KOS_THREAD_CONTEXT             main_thread;
-
-    struct _KOS_RED_BLACK_NODE    *module_inits;
-    struct _KOS_MODULE_LOAD_CHAIN *module_load_chain;
+    uint32_t                flags;
+    struct _KOS_HEAP        heap;
+    KOS_OBJ_ID              empty_string;
+    struct _KOS_PROTOTYPES  prototypes;
+    KOS_OBJ_ID              args;
+    struct _KOS_MODULE_MGMT modules;
+    _KOS_TLS_KEY            thread_key;
+    KOS_THREAD_CONTEXT      main_thread;
 };
 
 #ifdef __cplusplus

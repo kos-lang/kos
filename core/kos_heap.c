@@ -767,9 +767,9 @@ static void _mark_roots(KOS_FRAME frame)
     _mark_object_black(ctx->prototypes.generator_end_proto);
     _mark_object_black(ctx->prototypes.thread_proto);
 
-    _mark_object_black(ctx->module_search_paths);
-    _mark_object_black(ctx->module_names);
-    _mark_object_black(ctx->modules);
+    _mark_object_black(ctx->modules.search_paths);
+    _mark_object_black(ctx->modules.module_names);
+    _mark_object_black(ctx->modules.modules);
 
     _mark_object_black(ctx->args);
 

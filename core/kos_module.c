@@ -139,7 +139,7 @@ static int _find_module(KOS_FRAME   frame,
     else {
 
         KOS_CONTEXT *ctx       = KOS_context_from_frame(frame);
-        uint32_t     num_paths = KOS_get_array_size(ctx->module_search_paths);
+        uint32_t     num_paths = KOS_get_array_size(ctx->modules.search_paths);
 
         if (!num_paths)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
@@ -147,7 +147,7 @@ static int _find_module(KOS_FRAME   frame,
         for (i = 0; i < num_paths; i++) {
             KOS_ATOMIC(KOS_OBJ_ID) components[4];
 
-            components[0] = KOS_array_read(frame, ctx->module_search_paths, (int)i);
+            components[0] = KOS_array_read(frame, ctx->modules.search_paths, (int)i);
             TRY_OBJID(components[0]);
             components[1] = KOS_context_get_cstring(frame, str_path_sep);
             components[2] = module_name;
@@ -379,7 +379,7 @@ static int _save_direct_modules(KOS_FRAME              frame,
         name = KOS_new_string(frame, var->token->begin, var->token->length);
         TRY_OBJID(name);
 
-        module_idx_obj = KOS_get_property(frame, ctx->module_names, name);
+        module_idx_obj = KOS_get_property(frame, ctx->modules.module_names, name);
         TRY_OBJID(module_idx_obj);
 
         assert(IS_SMALL_INT(module_idx_obj));
@@ -696,7 +696,7 @@ static int _get_global_idx(void       *vframe,
     str = KOS_new_string(frame, name, length);
     TRY_OBJID(str);
 
-    module_obj = KOS_array_read(frame, ctx->modules, module_idx);
+    module_obj = KOS_array_read(frame, ctx->modules.modules, module_idx);
     TRY_OBJID(module_obj);
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
@@ -730,7 +730,7 @@ static int _walk_globals(void                          *vframe,
 
     _KOS_vector_init(&name);
 
-    module_obj = KOS_array_read(frame, ctx->modules, module_idx);
+    module_obj = KOS_array_read(frame, ctx->modules.modules, module_idx);
     TRY_OBJID(module_obj);
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
@@ -950,7 +950,7 @@ static int _compile_module(KOS_FRAME   frame,
 
     /* Save lang module index */
     if (module_idx == 0)
-        TRY(KOS_array_write(frame, ctx->modules, module_idx, module_obj));
+        TRY(KOS_array_write(frame, ctx->modules.modules, module_idx, module_obj));
 
     /* Prepare compiler */
     program.frame          = frame;
@@ -1256,7 +1256,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
     /* TODO use global mutex for thread safety */
 
     /* Load lang module first, so that it ends up at index 0 */
-    if (KOS_get_array_size(ctx->modules) == 0 && module_name != lang) {
+    if (KOS_get_array_size(ctx->modules.modules) == 0 && module_name != lang) {
         int        lang_idx;
         KOS_OBJ_ID path_array;
         KOS_OBJ_ID lang_obj;
@@ -1272,10 +1272,10 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
         else
             dir = module_dir;
         TRY(KOS_array_write(frame, path_array, 0, dir));
-        TRY(KOS_array_insert(frame, ctx->module_search_paths, 0, 0, path_array, 0, 1));
+        TRY(KOS_array_insert(frame, ctx->modules.search_paths, 0, 0, path_array, 0, 1));
 
         if (ctx->flags & KOS_CTX_VERBOSE)
-            _print_search_paths(frame, ctx->module_search_paths);
+            _print_search_paths(frame, ctx->modules.search_paths);
 
         lang_obj = _KOS_module_import(frame, lang, sizeof(lang)-1, 0, 0, &lang_idx);
         TRY_OBJID(lang_obj);
@@ -1284,7 +1284,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
 
     /* Add module to the load chain to prevent and detect circular dependencies */
     {
-        struct _KOS_MODULE_LOAD_CHAIN *chain = ctx->module_load_chain;
+        struct _KOS_MODULE_LOAD_CHAIN *chain = ctx->modules.load_chain;
         loading.next = chain;
         for ( ; chain; chain = chain->next) {
             if (loading.length == chain->length &&
@@ -1297,15 +1297,15 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
             }
         }
     }
-    ctx->module_load_chain = &loading;
-    chain_init             = 1;
+    ctx->modules.load_chain = &loading;
+    chain_init              = 1;
 
     /* Return the module object if it was already loaded */
     {
-        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->module_names, actual_module_name);
+        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->modules.module_names, actual_module_name);
         if (!IS_BAD_PTR(module_idx_obj)) {
             assert(IS_SMALL_INT(module_idx_obj));
-            module_obj = KOS_array_read(frame, ctx->modules, (int)GET_SMALL_INT(module_idx_obj));
+            module_obj = KOS_array_read(frame, ctx->modules.modules, (int)GET_SMALL_INT(module_idx_obj));
             if (IS_BAD_PTR(module_obj))
                 error = KOS_ERROR_EXCEPTION;
             else
@@ -1321,7 +1321,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
     /* Make room for the new module and allocate index */
     {
         uint32_t u_idx = 0;
-        TRY(KOS_array_push(frame, ctx->modules, KOS_VOID, &u_idx));
+        TRY(KOS_array_push(frame, ctx->modules.modules, KOS_VOID, &u_idx));
         module_idx = (int)u_idx;
         assert(module_idx >= 0);
     }
@@ -1339,7 +1339,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
     }
 
     /* Run built-in module initialization */
-    mod_init = (struct _KOS_MODULE_INIT *)_KOS_red_black_find(ctx->module_inits,
+    mod_init = (struct _KOS_MODULE_INIT *)_KOS_red_black_find(ctx->modules.module_inits,
                                                               actual_module_name,
                                                               _module_init_compare);
     if (mod_init) {
@@ -1365,8 +1365,8 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
     _KOS_vector_destroy(&file_buf);
 
     /* Put module on the list */
-    TRY(KOS_array_write(frame, ctx->modules, module_idx, module_obj));
-    TRY(KOS_set_property(frame, ctx->module_names, actual_module_name, TO_SMALL_INT(module_idx)));
+    TRY(KOS_array_write(frame, ctx->modules.modules, module_idx, module_obj));
+    TRY(KOS_set_property(frame, ctx->modules.module_names, actual_module_name, TO_SMALL_INT(module_idx)));
 
     /* Run module */
     error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
@@ -1378,7 +1378,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
 
 _error:
     if (chain_init)
-        ctx->module_load_chain = loading.next;
+        ctx->modules.load_chain = loading.next;
     _KOS_vector_destroy(&file_buf);
 
     if (error) {
@@ -1410,7 +1410,7 @@ KOS_OBJ_ID KOS_repl(KOS_FRAME   frame,
 
     /* Find module object */
     {
-        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->module_names, module_name_str);
+        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             _raise_3(frame,
                      KOS_context_get_cstring(frame, str_err_module),
@@ -1419,7 +1419,7 @@ KOS_OBJ_ID KOS_repl(KOS_FRAME   frame,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
-        module_obj = KOS_array_read(frame, ctx->modules, (int)GET_SMALL_INT(module_idx_obj));
+        module_obj = KOS_array_read(frame, ctx->modules.modules, (int)GET_SMALL_INT(module_idx_obj));
         TRY_OBJID(module_obj);
         module_idx = (int)GET_SMALL_INT(module_idx_obj);
     }
@@ -1498,7 +1498,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_FRAME   frame,
 
     /* Find module object */
     {
-        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->module_names, module_name_str);
+        KOS_OBJ_ID module_idx_obj = KOS_get_property(frame, ctx->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             _raise_3(frame,
                      KOS_context_get_cstring(frame, str_err_module),
@@ -1507,7 +1507,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_FRAME   frame,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
-        module_obj = KOS_array_read(frame, ctx->modules, (int)GET_SMALL_INT(module_idx_obj));
+        module_obj = KOS_array_read(frame, ctx->modules.modules, (int)GET_SMALL_INT(module_idx_obj));
         TRY_OBJID(module_obj);
         module_idx = (int)GET_SMALL_INT(module_idx_obj);
     }

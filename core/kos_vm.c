@@ -1277,7 +1277,7 @@ static int _exec_function(KOS_FRAME frame)
             case INSTR_GET_MOD: { /* <r.dest>, <int32>, <r.glob> */
                 const int      mod_idx    = (int32_t)_load_32(bytecode+2);
                 const unsigned rglob      = bytecode[6];
-                KOS_OBJ_ID     module_obj = KOS_array_read(frame, module->context->modules, mod_idx);
+                KOS_OBJ_ID     module_obj = KOS_array_read(frame, module->context->modules.modules, mod_idx);
 
                 assert(rglob < regs_array->size);
 
@@ -1308,7 +1308,7 @@ static int _exec_function(KOS_FRAME frame)
             case INSTR_GET_MOD_ELEM: { /* <r.dest>, <int32>, <int32> */
                 const int  mod_idx    = (int32_t)_load_32(bytecode+2);
                 const int  glob_idx   = (int32_t)_load_32(bytecode+6);
-                KOS_OBJ_ID module_obj = KOS_array_read(frame, module->context->modules, mod_idx);
+                KOS_OBJ_ID module_obj = KOS_array_read(frame, module->context->modules.modules, mod_idx);
 
                 rdest = bytecode[1];
 
