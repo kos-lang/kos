@@ -473,13 +473,17 @@ static int _alloc_constants(KOS_FRAME              frame,
                 func->header.num_args = func_const->num_args;
                 func->header.num_regs = func_const->num_regs;
                 func->args_reg        = func_const->args_reg;
-                func->instr_offs      = func_const->offset;
+                func->instr_offs      = module->bytecode_size + func_const->offset;
                 func->module          = OBJID(MODULE, module);
 
                 if (func_const->flags & KOS_COMP_FUN_GENERATOR)
                     func->state = KOS_GEN_INIT;
                 break;
             }
+
+            case KOS_COMP_CONST_PROTOTYPE:
+                obj_id = KOS_new_object(frame);
+                break;
         }
 
         TRY_OBJID(obj_id);

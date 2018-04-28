@@ -21,6 +21,7 @@
 #
 
 import lang.array
+import lang.print
 
 /* @item iter generator()
  *
@@ -197,14 +198,14 @@ fun product(args...)
         const offs      = args.size
 
         for var elem in outer_gen() {
-            for var other in product_from_generators.apply(this, args) {
+            for var other in product_from_generators(args...) {
                 other[offs] = elem
                 yield other
             }
         }
     }
 
-    return product_from_generators.apply(this, generators)
+    return product_from_generators(generators...)
 }
 
 /* @item iter cycle()

@@ -666,7 +666,7 @@ do {
 
     assert demote_indep_vars(1)() == 42
 
-    check(demote_indep_vars, { registers: 3, instructions: 4, size: 20 })
+    check(demote_indep_vars, { registers: 3, instructions: 4, size: 13 })
 }
 
 #============================================================================#
@@ -685,8 +685,8 @@ do {
     assert f(52)  == 52
     assert f(-10) == -10
 
-    check(optimize_default_args, { registers: 1, instructions: 2, size: 13 })
-    check(f,                     { registers: 4, instructions: 1, size:  3 })
+    check(optimize_default_args, { registers: 1, instructions: 2, size: 6 })
+    check(f,                     { registers: 4, instructions: 1, size: 3 })
 }
 
 #============================================================================#

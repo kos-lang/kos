@@ -43,10 +43,10 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_LOAD_FALSE,
     /* LOAD.VOID <r.dest> */
     INSTR_LOAD_VOID,
-    /* LOAD.CLASS8 <r.dest>, <uint8> */
-    INSTR_LOAD_CLASS8,
-    /* LOAD.CLASS <r.dest>, <uint32> */
-    INSTR_LOAD_CLASS,
+    /* LOAD.FUNCT8 <r.dest>, <uint8> */
+    INSTR_LOAD_FUNCT8,
+    /* LOAD.FUNCT <r.dest>, <uint32> */
+    INSTR_LOAD_FUNCT,
     /* LOAD.FUN <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
      * Create a function object with the specified code. */
     INSTR_LOAD_FUN,

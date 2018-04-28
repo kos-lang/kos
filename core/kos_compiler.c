@@ -534,6 +534,9 @@ static int _constants_compare_node(struct _KOS_RED_BLACK_NODE *a,
             return ((const struct _KOS_COMP_FUNCTION *)const_a)->offset
                  < ((const struct _KOS_COMP_FUNCTION *)const_b)->offset
                  ? -1 : 0;
+
+        case KOS_COMP_CONST_PROTOTYPE:
+            return const_a->index < const_b->index ? -1 : 0;
     }
 }
 
@@ -840,18 +843,6 @@ static int _gen_instr5(struct _KOS_COMP_UNIT *program,
     return _gen_instr(program, 5, opcode, operand1, operand2, operand3, operand4, operand5);
 }
 
-static int _gen_instr6(struct _KOS_COMP_UNIT *program,
-                       int                    opcode,
-                       int32_t                operand1,
-                       int32_t                operand2,
-                       int32_t                operand3,
-                       int32_t                operand4,
-                       int32_t                operand5,
-                       int32_t                operand6)
-{
-    return _gen_instr(program, 6, opcode, operand1, operand2, operand3, operand4, operand5, operand6);
-}
-
 static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
                              struct _KOS_VECTOR    *vec,
                              int                    jump_instr_offs,
@@ -1132,7 +1123,7 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
 
     program->cur_offs = fun_start_offs;
 
-    program->cur_frame->program_offs = (int)fun_new_offs;
+    program->cur_frame->constant->offset = (uint32_t)fun_new_offs;
 
     memcpy(program->addr2line_buf.buffer + a2l_new_offs,
            program->addr2line_gen_buf.buffer + addr2line_start_offs,
@@ -1180,7 +1171,7 @@ static int _fix_frame_offsets(struct _KOS_RED_BLACK_NODE *node,
     struct _KOS_FRAME *frame   = scope->frame;
 
     if (frame && frame->parent_frame)
-        frame->program_offs += *(int *)cookie;
+        frame->constant->offset += (uint32_t)*(size_t *)cookie;
 
     return KOS_SUCCESS;
 }
@@ -1253,22 +1244,6 @@ _error:
     return error;
 }
 
-static int _patch_fun_loads(struct _KOS_RED_BLACK_NODE *node,
-                            void                       *cookie)
-{
-    struct _KOS_SCOPE     *scope   = (struct _KOS_SCOPE *)node;
-    struct _KOS_FRAME     *frame   = scope->frame;
-    struct _KOS_COMP_UNIT *program = (struct _KOS_COMP_UNIT *)cookie;
-
-    if (frame && frame->parent_frame)
-        _write_jump_offs(program,
-                         &program->code_buf,
-                         frame->parent_frame->program_offs + frame->load_offs,
-                         frame->program_offs);
-
-    return KOS_SUCCESS;
-}
-
 static int _finish_global_scope(struct _KOS_COMP_UNIT *program,
                                 struct _KOS_REG       *reg)
 {
@@ -1287,8 +1262,6 @@ static int _finish_global_scope(struct _KOS_COMP_UNIT *program,
     TRY(_insert_global_frame(program));
 
     assert(program->code_gen_buf.size == 0);
-
-    TRY(_KOS_red_black_walk(program->scopes, _patch_fun_loads, program));
 
 _error:
     return error;
@@ -1313,8 +1286,7 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
 
             struct _KOS_VAR *var = 0;
 
-            program->cur_frame            = program->scope_stack->frame;
-            program->cur_frame->load_offs = -1;
+            program->cur_frame = program->scope_stack->frame;
 
             /* Generate registers for local (non-global) independent variables */
             for (var = program->scope_stack->fun_vars_list; var; var = var->next)
@@ -4195,6 +4167,9 @@ static int _numeric_literal(struct _KOS_COMP_UNIT      *program,
                                    KOS_max(sizeof(struct _KOS_COMP_INTEGER),
                                            sizeof(struct _KOS_COMP_FLOAT)));
 
+            if ( ! constant)
+                RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
             if (numeric.type == KOS_INTEGER_VALUE) {
                 constant->type = KOS_COMP_CONST_INTEGER;
                 ((struct _KOS_COMP_INTEGER *)constant)->value = numeric.u.i;
@@ -4274,22 +4249,29 @@ static int _void_literal(struct _KOS_COMP_UNIT      *program,
     return error;
 }
 
+struct _GEN_CLOSURE_ARGS {
+    struct _KOS_COMP_UNIT *program;
+    int                   *num_binds;
+};
+
 static int _gen_closure_regs(struct _KOS_RED_BLACK_NODE *node,
                              void                       *cookie)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_SCOPE_REF *ref     = (struct _KOS_SCOPE_REF *)node;
-    struct _KOS_COMP_UNIT *program = (struct _KOS_COMP_UNIT *)cookie;
+    struct _KOS_SCOPE_REF    *ref     = (struct _KOS_SCOPE_REF *)node;
+    struct _GEN_CLOSURE_ARGS *args    = (struct _GEN_CLOSURE_ARGS *)cookie;
 
     if (ref->exported_locals) {
-        error = _gen_reg(program, &ref->vars_reg);
+        ++*(args->num_binds);
+        error = _gen_reg(args->program, &ref->vars_reg);
         if ( ! error)
             ref->vars_reg->tmp = 0;
     }
 
     if ( ! error && ref->exported_args) {
-        error = _gen_reg(program, &ref->args_reg);
+        ++*(args->num_binds);
+        error = _gen_reg(args->program, &ref->args_reg);
         if ( ! error)
             ref->args_reg->tmp = 0;
     }
@@ -4397,6 +4379,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     struct _BIND_ARGS  bind_args;
     int                num_def         = 0;
     int                num_non_def     = 0;
+    int                num_binds       = 0;
 #ifndef NDEBUG
     int                last_reg        = -1;
 #endif
@@ -4404,13 +4387,12 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     const struct _KOS_AST_NODE *fun_node = node;
     const struct _KOS_AST_NODE *open_node;
     const struct _KOS_AST_NODE *name_node;
+    struct _KOS_COMP_FUNCTION  *constant;
 
     assert(frame);
 
     frame->fun_token    = &fun_node->token;
     frame->parent_frame = last_frame;
-    frame->program_offs = program->cur_offs; /* Temp, for load_offs, overwritten in _append_frame() */
-    frame->load_offs    = program->cur_offs - last_frame->program_offs;
     program->cur_frame  = frame;
 
     /* Generate registers for local independent variables */
@@ -4498,7 +4480,12 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         frame->this_reg->tmp = 0;
 
     /* Generate registers for closures */
-    TRY(_KOS_red_black_walk(frame->closures, _gen_closure_regs, program));
+    {
+        struct _GEN_CLOSURE_ARGS args;
+        args.program   = program;
+        args.num_binds = &num_binds;
+        TRY(_KOS_red_black_walk(frame->closures, _gen_closure_regs, &args));
+    }
 
     name_node = fun_node->children;
     assert(name_node);
@@ -4545,6 +4532,41 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     TRY(_visit_node(program, node, &scope_reg));
     assert(!scope_reg);
 
+    /* Create constant template for LOAD.CONST */
+    constant = (struct _KOS_COMP_FUNCTION *)_KOS_mempool_alloc(&program->allocator,
+                                                               sizeof(struct _KOS_COMP_FUNCTION));
+    if ( ! constant)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+    constant->header.type = KOS_COMP_CONST_FUNCTION;
+    constant->offset      = 0;
+    constant->num_regs    = frame->num_regs;
+    constant->args_reg    = scope->num_indep_vars;
+    constant->num_args    = num_non_def;
+    constant->flags       = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
+
+    if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
+        constant->flags |= KOS_COMP_FUN_CLASS;
+    else if (frame->yield_token)
+        constant->flags |= KOS_COMP_FUN_GENERATOR;
+
+    _add_constant(program, &constant->header);
+
+    frame->constant = constant;
+
+    /* Create constant placeholder for class prototype */
+    if (fun_node->type == NT_CONSTRUCTOR_LITERAL) {
+
+        struct _KOS_COMP_CONST *proto_const = (struct _KOS_COMP_CONST *)
+                _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_COMP_CONST));
+
+        if ( ! proto_const)
+            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
+        proto_const->type = KOS_COMP_CONST_PROTOTYPE;
+
+        _add_constant(program, proto_const);
+    }
+
     /* Move the function code to final code_buf */
     TRY(_append_frame(program, name_node, fun_start_offs, addr2line_start_offs));
 
@@ -4552,26 +4574,27 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     TRY(_add_addr2line(program, &fun_node->token, _KOS_FALSE));
 
-    /* Generate LOAD.FUN/LOAD.GEN/LOAD.CTOR instruction in the parent frame */
+    /* Generate LOAD.CONST/LOAD.FUNCT instruction in the parent frame */
     assert(frame->num_regs > 0);
     assert(frame->num_regs >= bind_args.delta);
     TRY(_gen_reg(program, reg));
-    TRY(_gen_instr6(program,
-                    fun_node->type == NT_CONSTRUCTOR_LITERAL
-                        ? INSTR_LOAD_CTOR
-                        : frame->yield_token ? INSTR_LOAD_GEN : INSTR_LOAD_FUN,
+
+    TRY(_gen_instr2(program,
+                    (fun_node->type == NT_CONSTRUCTOR_LITERAL ||
+                     scope->num_args > num_non_def ||
+                     num_binds)
+                        ? (constant->header.index < 256 ? INSTR_LOAD_FUNCT8 : INSTR_LOAD_FUNCT)
+                        : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST),
                     (*reg)->reg,
-                    0,
-                    frame->num_regs,
-                    scope->num_indep_vars,
-                    num_non_def,
-                    scope->ellipsis ? KOS_FUN_ELLIPSIS : 0));
+                    (int32_t)constant->header.index));
 
     /* Generate BIND instructions in the parent frame */
-    bind_args.program      = program;
-    bind_args.func_reg     = *reg;
-    bind_args.parent_frame = last_frame;
-    TRY(_KOS_red_black_walk(frame->closures, _gen_binds, &bind_args));
+    if (num_binds) {
+        bind_args.program      = program;
+        bind_args.func_reg     = *reg;
+        bind_args.parent_frame = last_frame;
+        TRY(_KOS_red_black_walk(frame->closures, _gen_binds, &bind_args));
+    }
 
     program->cur_frame = frame;
     _pop_scope(program);

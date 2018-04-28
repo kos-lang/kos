@@ -98,9 +98,8 @@ struct _KOS_FRAME {
     struct _KOS_RETURN_OFFS    *return_offs; /* For return statements inside finally clause (defer) */
     struct _KOS_SCOPE          *last_try_scope;
     const struct _KOS_TOKEN    *yield_token;
+    struct _KOS_COMP_FUNCTION  *constant;   /* The template for the constant object, used with LOAD.CONST */
     int                         num_regs;
-    int                         program_offs;
-    int                         load_offs;
     uint32_t                    num_instr;
 };
 
@@ -145,7 +144,8 @@ enum _KOS_COMP_CONST_TYPE {
     KOS_COMP_CONST_INTEGER,
     KOS_COMP_CONST_FLOAT,
     KOS_COMP_CONST_STRING,
-    KOS_COMP_CONST_FUNCTION
+    KOS_COMP_CONST_FUNCTION,
+    KOS_COMP_CONST_PROTOTYPE
 };
 
 enum _KOS_COMP_FUNC_FLAGS {

@@ -1150,7 +1150,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_CLASS8: { /* <r.dest>, <uint8> */
+            case INSTR_LOAD_FUNCT8: { /* <r.dest>, <uint8> */
                 const uint8_t value = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1159,11 +1159,17 @@ static int _exec_function(KOS_FRAME frame)
 
                 out = _copy_function(frame, module->constants[value]);
 
+                if ( ! IS_BAD_PTR(out) && GET_OBJ_TYPE(out) == OBJ_CLASS) {
+                    assert(value + 1 < KOS_get_array_size(module->constants_storage));
+                    KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype,
+                                         KOS_atomic_read_ptr(module->constants[value + 1]));
+                }
+
                 delta = 3;
                 break;
             }
 
-            case INSTR_LOAD_CLASS: { /* <r.dest>, <uint32> */
+            case INSTR_LOAD_FUNCT: { /* <r.dest>, <uint32> */
                 const uint32_t value = _load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1171,6 +1177,12 @@ static int _exec_function(KOS_FRAME frame)
                 assert(value < KOS_get_array_size(module->constants_storage));
 
                 out = _copy_function(frame, module->constants[value]);
+
+                if ( ! IS_BAD_PTR(out) && GET_OBJ_TYPE(out) == OBJ_CLASS) {
+                    assert(value + 1 < KOS_get_array_size(module->constants_storage));
+                    KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype,
+                                         KOS_atomic_read_ptr(module->constants[value + 1]));
+                }
 
                 delta = 6;
                 break;

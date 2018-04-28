@@ -49,8 +49,8 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_CONST8:         /* fall through */
         case INSTR_LOAD_CONST:          /* fall through */
         case INSTR_LOAD_INT8:           /* fall through */
-        case INSTR_LOAD_CLASS8:         /* fall through */
-        case INSTR_LOAD_CLASS:          /* fall through */
+        case INSTR_LOAD_FUNCT8:         /* fall through */
+        case INSTR_LOAD_FUNCT:          /* fall through */
         case INSTR_LOAD_ARRAY8:         /* fall through */
         case INSTR_LOAD_ARRAY:          /* fall through */
         case INSTR_MOVE:                /* fall through */
@@ -124,7 +124,7 @@ int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
 
         case INSTR_LOAD_CONST:
             /* fall through */
-        case INSTR_LOAD_CLASS:
+        case INSTR_LOAD_FUNCT:
             /* fall through */
         case INSTR_LOAD_ARRAY:
             /* fall through */
@@ -225,9 +225,9 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_INT8:
             /* fall through */
-        case INSTR_LOAD_CLASS8:
+        case INSTR_LOAD_FUNCT8:
             /* fall through */
-        case INSTR_LOAD_CLASS:
+        case INSTR_LOAD_FUNCT:
             /* fall through */
         case INSTR_LOAD_FUN:
             /* fall through */
@@ -321,9 +321,9 @@ static int _is_constant(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_CONST:
             /* fall through */
-        case INSTR_LOAD_CLASS8:
+        case INSTR_LOAD_FUNCT8:
             /* fall through */
-        case INSTR_LOAD_CLASS:
+        case INSTR_LOAD_FUNCT:
             /* fall through */
         case INSTR_GET_PROP:
             /* fall through */
@@ -365,8 +365,8 @@ void _KOS_disassemble(const char                          *filename,
         "LOAD.TRUE",
         "LOAD.FALSE",
         "LOAD.VOID",
-        "LOAD.CLASS8",
-        "LOAD.CLASS",
+        "LOAD.FUNCT8",
+        "LOAD.FUNCT",
         "LOAD.FUN",
         "LOAD.GEN",
         "LOAD.CTOR",
