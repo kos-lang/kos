@@ -355,3 +355,85 @@ do {
     assert empty.a == 1
     assert empty.b == 2
 }
+
+# prototype preservation
+do {
+    fun get_class(a)
+    {
+        return class {
+            constructor {
+                this.a = a
+            }
+        }
+    }
+
+    const c1 = get_class(42)
+    const c2 = get_class("xyz")
+
+    const o1 = c1()
+    const o2 = c2()
+
+    assert o1.a == 42
+    assert o2.a == "xyz"
+
+    assert o1 instanceof c1
+    assert o1 instanceof c2
+    assert o2 instanceof c1
+    assert o2 instanceof c2
+
+    assert ! ("b" in o1)
+    assert ! ("b" in o2)
+    expect_fail(()=>(o1.b))
+    expect_fail(()=>(o2.b))
+    assert ! ("b" in c1.prototype)
+    assert ! ("b" in c2.prototype)
+    expect_fail(()=>(c1.prototype.b))
+    expect_fail(()=>(c2.prototype.b))
+
+    c1.prototype.b = 8
+
+    assert "b" in o1
+    assert "b" in o2
+    assert "b" in c1.prototype
+    assert "b" in c2.prototype
+    assert o1.b == 8
+    assert o2.b == 8
+    assert o1.a == 42
+    assert o2.a == "xyz"
+}
+
+# different prototypes
+do {
+    fun get_class(a)
+    {
+        return class {
+            constructor {
+                this.a = a
+            }
+            get_a {
+                return this.a
+            }
+        }
+    }
+
+    const c1 = get_class("x")
+    const c2 = get_class("y")
+
+    const o1 = c1()
+    const o2 = c2()
+
+    assert o1.a == "x"
+    assert o2.a == "y"
+
+    assert o1 instanceof c1
+    assert o2 instanceof c2
+    assert ! (o1 instanceof c2)
+    assert ! (o2 instanceof o1)
+
+    c1.prototype.b = "a"
+    assert ! ("b" in c2.prototype)
+    c2.prototype.b = "b"
+
+    assert o1.b == "a"
+    assert o2.b == "b"
+}

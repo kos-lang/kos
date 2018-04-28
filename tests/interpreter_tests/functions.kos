@@ -1654,3 +1654,76 @@ do {
         assert f() == "widget"
     }
 }
+
+# ensure independent variable is preserved across separate binds
+do {
+    fun get_closure(a)
+    {
+        var b = a + 1
+        return fun { b += 1; return b }
+    }
+
+    const f1 = get_closure(10)
+    const f2 = get_closure(200)
+
+    assert f1() == 12
+    assert f2() == 202
+    assert f1() == 13
+    assert f2() == 203
+}
+
+# ensure independent argument is preserved across separate binds
+do {
+    fun get_closure(a, b)
+    {
+        b += a
+        return fun { b += 1; return b }
+    }
+
+    const f1 = get_closure(10, 1)
+    const f2 = get_closure(200, 1)
+
+    assert f1() == 12
+    assert f2() == 202
+    assert f1() == 13
+    assert f2() == 203
+}
+
+# ensure independent ellipsis is preserved across separate binds
+do {
+    fun get_closure(a, b...)
+    {
+        b[0] += a
+        return fun { b[0] += 1; return b[0] }
+    }
+
+    const f1 = get_closure(10, 1)
+    const f2 = get_closure(200, 1)
+
+    assert f1() == 12
+    assert f2() == 202
+    assert f1() == 13
+    assert f2() == 203
+}
+
+# ensure independent ellipsis is preserved across separate binds
+do {
+    fun get_closure(b...)
+    {
+        b[0] += 1
+        return fun { b[0] += 1; return b[0] }
+    }
+
+    const a1 = [10]
+    const a2 = [200]
+
+    const f1 = get_closure.apply(void, a1)
+    const f2 = get_closure.apply(void, a2)
+
+    assert f1() == 12
+    assert f2() == 202
+    assert f1() == 13
+    assert f2() == 203
+    assert a1[0] == 10
+    assert a2[0] == 200
+}
