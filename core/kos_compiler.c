@@ -4525,7 +4525,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     constant->header.type = KOS_COMP_CONST_FUNCTION;
     constant->offset      = 0;
-    constant->num_regs    = frame->num_regs;
+    constant->num_regs    = (uint8_t)frame->num_regs;
     constant->args_reg    = scope->num_indep_vars;
     constant->num_args    = num_non_def;
     constant->flags       = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;

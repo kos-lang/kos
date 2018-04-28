@@ -1160,7 +1160,7 @@ static int _exec_function(KOS_FRAME frame)
                 out = _copy_function(frame, module->constants[value]);
 
                 if ( ! IS_BAD_PTR(out) && GET_OBJ_TYPE(out) == OBJ_CLASS) {
-                    assert(value + 1 < KOS_get_array_size(module->constants_storage));
+                    assert(value + 1U < KOS_get_array_size(module->constants_storage));
                     KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype,
                                          KOS_atomic_read_ptr(module->constants[value + 1]));
                 }
@@ -1179,7 +1179,7 @@ static int _exec_function(KOS_FRAME frame)
                 out = _copy_function(frame, module->constants[value]);
 
                 if ( ! IS_BAD_PTR(out) && GET_OBJ_TYPE(out) == OBJ_CLASS) {
-                    assert(value + 1 < KOS_get_array_size(module->constants_storage));
+                    assert(value + 1U < KOS_get_array_size(module->constants_storage));
                     KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype,
                                          KOS_atomic_read_ptr(module->constants[value + 1]));
                 }
