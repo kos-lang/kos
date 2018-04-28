@@ -31,31 +31,22 @@ typedef enum _KOS_BYTECODE_INSTR {
      * of jumping into an area which doesn't contain instructions when there
      * is an error. */
 
+    /* LOAD.INT8 <r.dest>, <int8> */
+    INSTR_LOAD_INT8,
     /* LOAD.CONST8 <r.dest>, <uint8> */
     INSTR_LOAD_CONST8,
     /* LOAD.CONST <r.dest>, <uint32> */
     INSTR_LOAD_CONST,
-    /* LOAD.INT8 <r.dest>, <int8> */
-    INSTR_LOAD_INT8,
+    /* LOAD.FUN8 <r.dest>, <uint8> */
+    INSTR_LOAD_FUN8,
+    /* LOAD.FUN <r.dest>, <uint32> */
+    INSTR_LOAD_FUN,
     /* LOAD.TRUE <r.dest> */
     INSTR_LOAD_TRUE,
     /* LOAD.FALSE <r.dest> */
     INSTR_LOAD_FALSE,
     /* LOAD.VOID <r.dest> */
     INSTR_LOAD_VOID,
-    /* LOAD.FUNCT8 <r.dest>, <uint8> */
-    INSTR_LOAD_FUNCT8,
-    /* LOAD.FUNCT <r.dest>, <uint32> */
-    INSTR_LOAD_FUNCT,
-    /* LOAD.FUN <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
-     * Create a function object with the specified code. */
-    INSTR_LOAD_FUN,
-    /* LOAD.GEN <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
-     * Create a generator object with the specified code. */
-    INSTR_LOAD_GEN,
-    /* LOAD.CTOR <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags>
-     * Create a constructor function object with the specified code. */
-    INSTR_LOAD_CTOR,
     /* LOAD.ARRAY8 <r.dest>, <size.int8> */
     INSTR_LOAD_ARRAY8,
     /* LOAD.ARRAY <r.dest>, <size.int32> */

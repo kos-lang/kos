@@ -861,23 +861,12 @@ static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
 
     opcode = *buf;
 
-    assert(opcode == INSTR_LOAD_FUN ||
-           opcode == INSTR_LOAD_GEN ||
-           opcode == INSTR_LOAD_CTOR||
-           opcode == INSTR_CATCH     ||
+    assert(opcode == INSTR_CATCH     ||
            opcode == INSTR_JUMP      ||
            opcode == INSTR_JUMP_COND ||
            opcode == INSTR_JUMP_NOT_COND);
 
     switch (opcode) {
-
-        case INSTR_LOAD_FUN:
-            /* fall through */
-        case INSTR_LOAD_GEN:
-            /* fall through */
-        case INSTR_LOAD_CTOR:
-            jump_instr_size = 10;
-            break;
 
         case INSTR_JUMP:
             jump_instr_size = 5;
@@ -890,10 +879,7 @@ static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
 
     jump_offs = target_offs - (jump_instr_offs + jump_instr_size);
 
-    buf += (opcode == INSTR_LOAD_FUN
-         || opcode == INSTR_LOAD_GEN
-         || opcode == INSTR_LOAD_CTOR
-         || opcode == INSTR_CATCH) ? 2 : 1;
+    buf += (opcode == INSTR_CATCH) ? 2 : 1;
 
     for (end = buf+4; buf < end; ++buf) {
         *buf      =   (uint8_t)jump_offs;
@@ -4574,7 +4560,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     TRY(_add_addr2line(program, &fun_node->token, _KOS_FALSE));
 
-    /* Generate LOAD.CONST/LOAD.FUNCT instruction in the parent frame */
+    /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
     assert(frame->num_regs > 0);
     assert(frame->num_regs >= bind_args.delta);
     TRY(_gen_reg(program, reg));
@@ -4583,7 +4569,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
                     (fun_node->type == NT_CONSTRUCTOR_LITERAL ||
                      scope->num_args > num_non_def ||
                      num_binds)
-                        ? (constant->header.index < 256 ? INSTR_LOAD_FUNCT8 : INSTR_LOAD_FUNCT)
+                        ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
                         : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST),
                     (*reg)->reg,
                     (int32_t)constant->header.index));

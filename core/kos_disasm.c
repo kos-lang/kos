@@ -49,8 +49,8 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_CONST8:         /* fall through */
         case INSTR_LOAD_CONST:          /* fall through */
         case INSTR_LOAD_INT8:           /* fall through */
-        case INSTR_LOAD_FUNCT8:         /* fall through */
-        case INSTR_LOAD_FUNCT:          /* fall through */
+        case INSTR_LOAD_FUN8:           /* fall through */
+        case INSTR_LOAD_FUN:            /* fall through */
         case INSTR_LOAD_ARRAY8:         /* fall through */
         case INSTR_LOAD_ARRAY:          /* fall through */
         case INSTR_MOVE:                /* fall through */
@@ -110,11 +110,6 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
         case INSTR_CALL_N:              /* fall through */
         case INSTR_TAIL_CALL_N:
             return 5;
-
-        case INSTR_LOAD_FUN:            /* fall through */
-        case INSTR_LOAD_GEN:            /* fall through */
-        case INSTR_LOAD_CTOR:
-            return 6;
     }
 }
 
@@ -124,7 +119,7 @@ int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
 
         case INSTR_LOAD_CONST:
             /* fall through */
-        case INSTR_LOAD_FUNCT:
+        case INSTR_LOAD_FUN:
             /* fall through */
         case INSTR_LOAD_ARRAY:
             /* fall through */
@@ -150,12 +145,6 @@ int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
                 return 4;
             break;
 
-        case INSTR_LOAD_FUN:
-            /* fall through */
-        case INSTR_LOAD_GEN:
-            /* fall through */
-        case INSTR_LOAD_CTOR:
-            /* fall through */
         case INSTR_GET_MOD:
             /* fall through */
         case INSTR_SET_ELEM:
@@ -195,15 +184,6 @@ static int _get_offset_operand_tail(enum _KOS_BYTECODE_INSTR instr, int op)
                 return 1;
             break;
 
-        case INSTR_LOAD_FUN:
-            /* fall through */
-        case INSTR_LOAD_GEN:
-            /* fall through */
-        case INSTR_LOAD_CTOR:
-            if (op == 1)
-                return 4;
-            break;
-
         case INSTR_CATCH:
             if (op == 1)
                 return 0;
@@ -225,15 +205,9 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_INT8:
             /* fall through */
-        case INSTR_LOAD_FUNCT8:
-            /* fall through */
-        case INSTR_LOAD_FUNCT:
+        case INSTR_LOAD_FUN8:
             /* fall through */
         case INSTR_LOAD_FUN:
-            /* fall through */
-        case INSTR_LOAD_GEN:
-            /* fall through */
-        case INSTR_LOAD_CTOR:
             /* fall through */
         case INSTR_LOAD_ARRAY8:
             /* fall through */
@@ -321,9 +295,9 @@ static int _is_constant(enum _KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_CONST:
             /* fall through */
-        case INSTR_LOAD_FUNCT8:
+        case INSTR_LOAD_FUN8:
             /* fall through */
-        case INSTR_LOAD_FUNCT:
+        case INSTR_LOAD_FUN:
             /* fall through */
         case INSTR_GET_PROP:
             /* fall through */
@@ -359,17 +333,14 @@ void _KOS_disassemble(const char                          *filename,
 
     static const char *const str_instr[] = {
         "BREAKPOINT",
+        "LOAD.INT8",
         "LOAD.CONST8",
         "LOAD.CONST",
-        "LOAD.INT8",
+        "LOAD.FUN8",
+        "LOAD.FUN",
         "LOAD.TRUE",
         "LOAD.FALSE",
         "LOAD.VOID",
-        "LOAD.FUNCT8",
-        "LOAD.FUNCT",
-        "LOAD.FUN",
-        "LOAD.GEN",
-        "LOAD.CTOR",
         "LOAD.ARRAY8",
         "LOAD.ARRAY",
         "LOAD.OBJ",

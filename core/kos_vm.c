@@ -1150,7 +1150,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_FUNCT8: { /* <r.dest>, <uint8> */
+            case INSTR_LOAD_FUN8: { /* <r.dest>, <uint8> */
                 const uint8_t value = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1169,7 +1169,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_FUNCT: { /* <r.dest>, <uint32> */
+            case INSTR_LOAD_FUN: { /* <r.dest>, <uint32> */
                 const uint32_t value = _load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1215,56 +1215,6 @@ static int _exec_function(KOS_FRAME frame)
                 rdest = bytecode[1];
                 out   = KOS_VOID;
                 delta = 2;
-                break;
-            }
-
-            case INSTR_LOAD_FUN: /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
-                /* fall through */
-            case INSTR_LOAD_GEN: /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
-                /* fall through */
-            case INSTR_LOAD_CTOR: { /* <r.dest>, <delta.int32>, <num.regs>, <args.reg>, <num.args>, <flags> */
-                const int32_t  fun_offs  = (int32_t)_load_32(bytecode+2);
-                const uint8_t  num_regs  = bytecode[6];
-                const uint8_t  args_reg  = bytecode[7];
-                const uint8_t  num_args  = bytecode[8];
-                const uint8_t  flags     = bytecode[9];
-
-                const uint32_t offset    = (uint32_t)((bytecode + 10 + fun_offs) - module->bytecode);
-                KOS_OBJ_ID     fun_obj   = KOS_BADPTR;
-                KOS_OBJ_ID     proto_obj = KOS_VOID;
-
-                assert(offset < module->bytecode_size);
-
-                if (instr == INSTR_LOAD_CTOR) {
-                    proto_obj = KOS_gen_prototype(frame, bytecode + 10 + fun_offs);
-
-                    if ( ! IS_BAD_PTR(proto_obj))
-                        fun_obj = KOS_new_class(frame, proto_obj);
-                }
-                else
-                    fun_obj = KOS_new_function(frame);
-
-
-                if ( ! IS_BAD_PTR(fun_obj)) {
-
-                    KOS_FUNCTION *const fun = (instr == INSTR_LOAD_CTOR)
-                                              ? (KOS_FUNCTION *)OBJPTR(CLASS, fun_obj)
-                                              : OBJPTR(FUNCTION, fun_obj);
-
-                    fun->header.flags    = flags;
-                    fun->header.num_args = num_args;
-                    fun->header.num_regs = num_regs;
-                    fun->args_reg        = args_reg;
-                    fun->instr_offs      = offset;
-                    fun->module          = OBJID(MODULE, module);
-
-                    if (instr == INSTR_LOAD_GEN)
-                        fun->state = KOS_GEN_INIT;
-                }
-
-                rdest = bytecode[1];
-                out   = fun_obj;
-                delta = 10;
                 break;
             }
 
