@@ -55,6 +55,10 @@ int KOS_get_numeric_arg(KOS_FRAME    frame,
                         int          idx,
                         KOS_NUMERIC *numeric);
 
+int KOS_get_integer(KOS_FRAME  frame,
+                    KOS_OBJ_ID obj_id,
+                    int64_t   *ret);
+
 void KOS_print_exception(KOS_FRAME frame);
 
 enum _KOS_QUOTE_STR {
@@ -81,6 +85,9 @@ int KOS_print_to_cstr_vec(KOS_FRAME           frame,
 int KOS_array_push_expand(KOS_FRAME  frame,
                           KOS_OBJ_ID array,
                           KOS_OBJ_ID value);
+
+KOS_OBJ_ID KOS_get_file_name(KOS_FRAME  frame,
+                             KOS_OBJ_ID full_path);
 
 #ifdef __cplusplus
 }

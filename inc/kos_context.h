@@ -204,15 +204,6 @@ KOS_OBJ_ID KOS_format_exception(KOS_FRAME  frame,
 
 void KOS_raise_generator_end(KOS_FRAME frame);
 
-/* TODO move to utils */
-KOS_OBJ_ID KOS_get_file_name(KOS_FRAME  frame,
-                             KOS_OBJ_ID full_path);
-
-/* TODO move to utils */
-int KOS_get_integer(KOS_FRAME  frame,
-                    KOS_OBJ_ID obj_id,
-                    int64_t   *ret);
-
 enum _KOS_CALL_FLAVOR {
     KOS_CALL_FUNCTION,
     KOS_CALL_GENERATOR,
@@ -233,6 +224,8 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
 
 #define KOS_apply_function(frame, func_obj, this_obj, args_obj) \
     _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
+
+int KOS_collect_garbage(KOS_FRAME frame);
 
 #ifdef __cplusplus
 }

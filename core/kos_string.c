@@ -25,6 +25,7 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_threads.h"
+#include "../inc/kos_utils.h"
 #include "kos_heap.h"
 #include "kos_math.h"
 #include "kos_memory.h"

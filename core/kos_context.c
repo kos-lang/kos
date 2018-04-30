@@ -38,7 +38,6 @@
 #include "kos_system.h"
 #include "kos_try.h"
 #include <assert.h>
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -46,9 +45,7 @@ static const char str_init[]                    = "init";
 static const char str_backtrace[]               = "backtrace";
 static const char str_builtin[]                 = "<builtin>";
 static const char str_err_not_array[]           = "object is not an array";
-static const char str_err_number_out_of_range[] = "number out of range";
 static const char str_err_out_of_memory[]       = "out of memory";
-static const char str_err_unsup_operand_types[] = "unsupported operand types";
 static const char str_err_thread_registered[]   = "thread already registered";
 static const char str_file[]                    = "file";
 static const char str_format_exception[]        = "Exception: ";
@@ -673,33 +670,6 @@ _error:
         frame->exception = partial_wrap ? exception : thrown_object;
 }
 
-KOS_OBJ_ID KOS_get_file_name(KOS_FRAME  frame,
-                             KOS_OBJ_ID full_path)
-{
-    int      error = KOS_SUCCESS;
-    unsigned i;
-    unsigned len;
-
-    assert(GET_OBJ_TYPE(full_path) == OBJ_STRING);
-
-    len = KOS_get_string_length(full_path);
-    for (i = len; i > 0; i--) {
-        const unsigned c = KOS_string_get_char_code(frame, full_path, (int)i - 1);
-        if (c == ~0U)
-            TRY(KOS_ERROR_EXCEPTION);
-        if (c == '/' || c == '\\')
-            break;
-    }
-
-    if (i == len)
-        i = 0;
-
-_error:
-    if (error)
-        return KOS_BADPTR;
-    return KOS_string_slice(frame, full_path, i, len);
-}
-
 KOS_OBJ_ID KOS_format_exception(KOS_FRAME  frame,
                                 KOS_OBJ_ID exception)
 {
@@ -801,42 +771,4 @@ void KOS_raise_generator_end(KOS_FRAME frame)
 
     if ( ! IS_BAD_PTR(exception))
         KOS_raise_exception(frame, exception);
-}
-
-int KOS_get_integer(KOS_FRAME  frame,
-                    KOS_OBJ_ID obj_id,
-                    int64_t   *ret)
-{
-    int error = KOS_SUCCESS;
-
-    assert( ! IS_BAD_PTR(obj_id));
-
-    if (IS_SMALL_INT(obj_id))
-        *ret = GET_SMALL_INT(obj_id);
-
-    else switch (READ_OBJ_TYPE(obj_id)) {
-
-        case OBJ_INTEGER:
-            *ret = OBJPTR(INTEGER, obj_id)->value;
-            break;
-
-        case OBJ_FLOAT: {
-            const double number = OBJPTR(FLOAT, obj_id)->value;
-            if (number <= -9223372036854775808.0 || number >= 9223372036854775808.0) {
-                KOS_raise_exception_cstring(frame, str_err_number_out_of_range);
-                error = KOS_ERROR_EXCEPTION;
-            }
-            else
-                *ret = (int64_t)floor(number);
-            break;
-
-        }
-
-        default:
-            KOS_raise_exception_cstring(frame, str_err_unsup_operand_types);
-            error = KOS_ERROR_EXCEPTION;
-            break;
-    }
-
-    return error;
 }
