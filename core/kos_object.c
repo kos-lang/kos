@@ -176,6 +176,8 @@ static int _is_key_equal(KOS_OBJ_ID key,
 static KOS_OBJECT_STORAGE *_read_props(KOS_ATOMIC(KOS_OBJ_ID) *ptr)
 {
     const KOS_OBJ_ID obj_id = (KOS_OBJ_ID)KOS_atomic_read_ptr(*ptr);
+    /* TODO use read with acquire semantics */
+    KOS_atomic_acquire_barrier();
     return IS_BAD_PTR(obj_id) ? 0 : OBJPTR(OBJECT_STORAGE, obj_id);
 }
 
@@ -259,8 +261,8 @@ static void _copy_table(KOS_FRAME               frame,
                         KOS_OBJECT_STORAGE     *old_table,
                         KOS_OBJECT_STORAGE     *new_table)
 {
-    const uint32_t old_capacity = old_table->capacity;
-    const uint32_t new_capacity = new_table->capacity;
+    const uint32_t old_capacity = KOS_atomic_read_u32(old_table->capacity);
+    const uint32_t new_capacity = KOS_atomic_read_u32(new_table->capacity);
     const uint32_t mask         = old_capacity - 1;
     const uint32_t fuzz         = 64U * (old_capacity - KOS_atomic_read_u32(old_table->num_slots_open));
     uint32_t       i            = fuzz & mask;
@@ -317,7 +319,7 @@ static int _need_resize(KOS_OBJECT_STORAGE *table, unsigned num_reprobes)
     uint32_t usage;
 
     assert(table);
-    capacity = table->capacity;
+    capacity = KOS_atomic_read_u32(table->capacity);
 
     if (capacity >= KOS_MAX_PROP_REPROBES * 2 && num_reprobes < KOS_MAX_PROP_REPROBES)
         return 0;
@@ -338,7 +340,7 @@ static int _resize_prop_table(KOS_FRAME           frame,
     int                     error = KOS_SUCCESS;
     KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
-    const uint32_t      old_capacity = old_table ? old_table->capacity : 0U;
+    const uint32_t      old_capacity = old_table ? KOS_atomic_read_u32(old_table->capacity) : 0U;
     const uint32_t      new_capacity = old_capacity ? old_capacity * grow_factor : KOS_MIN_PROPS_CAPACITY;
     KOS_OBJECT_STORAGE *new_table    = 0;
 
@@ -360,8 +362,8 @@ static int _resize_prop_table(KOS_FRAME           frame,
         if (new_table) {
             unsigned i;
 
+            KOS_atomic_write_u32(new_table->capacity, new_capacity);
             new_table->num_slots_used = 0;
-            new_table->capacity       = new_capacity;
             new_table->num_slots_open = new_capacity;
             new_table->active_copies  = 0;
             new_table->new_prop_table = KOS_BADPTR;
@@ -437,7 +439,7 @@ KOS_OBJ_ID KOS_get_property(KOS_FRAME  frame,
             unsigned            idx          = hash;
             KOS_OBJECT_STORAGE *prop_table   = _read_props(props);
             KOS_PITEM          *items        = prop_table->items;
-            unsigned            num_reprobes = prop_table->capacity;
+            unsigned            num_reprobes = KOS_atomic_read_u32(prop_table->capacity);
             unsigned            mask         = num_reprobes - 1;
 
             for (;;) {
@@ -456,7 +458,7 @@ KOS_OBJ_ID KOS_get_property(KOS_FRAME  frame,
                     idx          = hash;
                     prop_table   = new_prop_table;
                     items        = prop_table->items;
-                    num_reprobes = prop_table->capacity;
+                    num_reprobes = KOS_atomic_read_u32(prop_table->capacity);
                     mask         = num_reprobes - 1;
                     continue;
                 }
@@ -500,7 +502,7 @@ KOS_OBJ_ID KOS_get_property(KOS_FRAME  frame,
                     idx          = hash;
                     prop_table   = _read_props(props);
                     items        = prop_table->items;
-                    num_reprobes = prop_table->capacity;
+                    num_reprobes = KOS_atomic_read_u32(prop_table->capacity);
                     mask         = num_reprobes - 1;
                 }
                 else {
@@ -582,7 +584,7 @@ int KOS_set_property(KOS_FRAME  frame,
             #endif
 
             items = prop_table->items;
-            mask  = prop_table->capacity - 1;
+            mask  = KOS_atomic_read_u32(prop_table->capacity) - 1;
 
             for (;;) {
                 KOS_PITEM *cur_item = items + (idx &= mask);
@@ -624,7 +626,7 @@ int KOS_set_property(KOS_FRAME  frame,
                         prop_table   = _read_props(props);
                         idx          = hash;
                         items        = prop_table->items;
-                        mask         = prop_table->capacity - 1;
+                        mask         = KOS_atomic_read_u32(prop_table->capacity) - 1;
                         num_reprobes = 0;
                     }
                     /* Probe next slot */
@@ -667,7 +669,7 @@ int KOS_set_property(KOS_FRAME  frame,
                     prop_table   = new_prop_table;
                     idx          = hash;
                     items        = prop_table->items;
-                    mask         = prop_table->capacity - 1;
+                    mask         = KOS_atomic_read_u32(prop_table->capacity) - 1;
                     num_reprobes = 0;
                     continue;
                 }
@@ -882,7 +884,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,
             continue;
 
         cur_item  = prop_table->items;
-        items_end = cur_item + prop_table->capacity;
+        items_end = cur_item + KOS_atomic_read_u32(prop_table->capacity);
 
         for ( ; cur_item < items_end; ++cur_item) {
             const KOS_OBJ_ID key   = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->key);
@@ -898,7 +900,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_FRAME                  frame,
 
                 prop_table = new_prop_table;
                 cur_item   = prop_table->items - 1;
-                items_end  = prop_table->items + prop_table->capacity;
+                items_end  = prop_table->items + KOS_atomic_read_u32(prop_table->capacity);
                 continue;
             }
 
@@ -952,7 +954,7 @@ KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_FRAME  frame,
     if ( ! IS_BAD_PTR(walk->key_table)) {
         KOS_OBJECT_STORAGE *key_table = OBJPTR(OBJECT_STORAGE, walk->key_table);
 
-        capacity = key_table->capacity;
+        capacity = KOS_atomic_read_u32(key_table->capacity);
         table    = key_table->items;
     }
 

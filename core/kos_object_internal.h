@@ -46,7 +46,7 @@ typedef struct _KOS_PROPERTY_ITEM {
 
 typedef struct _KOS_OBJECT_STORAGE {
     KOS_OBJ_HEADER         header;
-    uint32_t               capacity;
+    KOS_ATOMIC(uint32_t)   capacity;
     KOS_ATOMIC(uint32_t)   num_slots_used;
     KOS_ATOMIC(uint32_t)   num_slots_open;
     KOS_ATOMIC(uint32_t)   active_copies;
