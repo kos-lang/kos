@@ -28,9 +28,9 @@
 #include <assert.h>
 
 typedef struct _KOS_BUFFER_STORAGE {
-    KOS_OBJ_HEADER header;
-    uint32_t       capacity;
-    uint8_t        buf[1];
+    KOS_OBJ_HEADER       header;
+    KOS_ATOMIC(uint32_t) capacity;
+    uint8_t              buf[1];
 } KOS_BUFFER_STORAGE;
 
 #ifdef __cplusplus

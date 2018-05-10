@@ -75,7 +75,7 @@ static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_FRAME frame, uint32_t capacity)
     if (buf) {
         assert(buf->header.type == OBJ_ARRAY_STORAGE);
         capacity = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
-        buf->capacity = capacity;
+        KOS_atomic_write_u32(buf->capacity,       capacity);
         KOS_atomic_write_u32(buf->num_slots_open, capacity);
         KOS_atomic_write_ptr(buf->next,           KOS_BADPTR);
     }
@@ -88,7 +88,7 @@ KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
 {
     const uint32_t array_obj_size = KOS_align_up((uint32_t)sizeof(KOS_ARRAY), 1U << _KOS_OBJ_ALIGN_BITS);
     const uint32_t buf_alloc_size = size ? KOS_buffer_alloc_size(size) : 0;
-    const int      buf_built_in   = array_obj_size + buf_alloc_size <= _KOS_MAX_SMALL_OBJ_SIZE;
+    const int      buf_built_in   = array_obj_size + buf_alloc_size <= 256U;
     const uint32_t alloc_size     = buf_built_in ? array_obj_size + buf_alloc_size : array_obj_size;
     KOS_ARRAY     *array          = (KOS_ARRAY *)_KOS_alloc_object(frame,
                                                                    KOS_ALLOC_DEFAULT,
@@ -100,12 +100,15 @@ KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
 
         if (buf_built_in) {
             if (buf_alloc_size) {
+
+                const uint32_t capacity = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
+
                 storage = (KOS_ARRAY_STORAGE *)((uint8_t *)array + array_obj_size);
                 storage->header.alloc_size = TO_SMALL_INT(buf_alloc_size);
                 storage->header.type       = OBJ_ARRAY_STORAGE;
-                storage->capacity          = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
 
-                KOS_atomic_write_u32(storage->num_slots_open, storage->capacity);
+                KOS_atomic_write_u32(storage->capacity,       capacity);
+                KOS_atomic_write_u32(storage->num_slots_open, capacity);
                 KOS_atomic_write_ptr(storage->next,           KOS_BADPTR);
 
                 array->header.alloc_size = TO_SMALL_INT(array_obj_size);
@@ -128,7 +131,7 @@ KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
             KOS_atomic_write_u32(array->size, size);
 
             if (storage) {
-                const uint32_t capacity = storage->capacity;
+                const uint32_t capacity = KOS_atomic_read_u32(storage->capacity);
 
                 if (size)
                     _atomic_fill_ptr(&storage->buf[0], size, KOS_VOID);
@@ -145,6 +148,8 @@ KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
 static KOS_ARRAY_STORAGE *_get_data(KOS_ARRAY *array)
 {
     const KOS_OBJ_ID buf_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(array->data);
+    /* TODO use read with acquire semantics */
+    KOS_atomic_acquire_barrier();
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
 }
 
@@ -161,7 +166,7 @@ static void _copy_buf(KOS_FRAME          frame,
 {
     KOS_ATOMIC(KOS_OBJ_ID) *src      = &old_buf->buf[0];
     KOS_ATOMIC(KOS_OBJ_ID) *dst      = &new_buf->buf[0];
-    const uint32_t          capacity = old_buf->capacity;
+    const uint32_t          capacity = KOS_atomic_read_u32(old_buf->capacity);
     const uint32_t          fuzz     = KOS_atomic_read_u32(old_buf->num_slots_open);
     uint32_t                i        = (capacity - fuzz) % capacity;
 
@@ -310,7 +315,7 @@ static int _resize_storage(KOS_FRAME  frame,
     if ( ! new_buf)
         return KOS_ERROR_EXCEPTION;
 
-    _atomic_fill_ptr(&new_buf->buf[0], new_buf->capacity, TOMBSTONE);
+    _atomic_fill_ptr(&new_buf->buf[0], KOS_atomic_read_u32(new_buf->capacity), TOMBSTONE);
 
     if (!old_buf)
         (void)KOS_atomic_cas_ptr(array->data, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf));
@@ -337,7 +342,7 @@ int _KOS_array_copy_storage(KOS_FRAME  frame,
 
     array    = OBJPTR(ARRAY, obj_id);
     buf      = _get_data(array);
-    capacity = buf ? buf->capacity : 0U;
+    capacity = buf ? KOS_atomic_read_u32(buf->capacity) : 0U;
 
     return _resize_storage(frame, obj_id, capacity);
 }
@@ -353,7 +358,7 @@ int KOS_array_reserve(KOS_FRAME frame, KOS_OBJ_ID obj_id, uint32_t new_capacity)
     else {
         KOS_ARRAY   *const array    = OBJPTR(ARRAY, obj_id);
         KOS_ARRAY_STORAGE *old_buf  = _get_data(array);
-        uint32_t           capacity = old_buf ? old_buf->capacity : 0U;
+        uint32_t           capacity = old_buf ? KOS_atomic_read_u32(old_buf->capacity) : 0U;
 
         error = KOS_SUCCESS;
 
@@ -364,7 +369,7 @@ int KOS_array_reserve(KOS_FRAME frame, KOS_OBJ_ID obj_id, uint32_t new_capacity)
 
             old_buf = _get_data(array);
             assert(old_buf);
-            capacity = old_buf->capacity;
+            capacity = KOS_atomic_read_u32(old_buf->capacity);
         }
     }
 
@@ -382,7 +387,7 @@ int KOS_array_resize(KOS_FRAME frame, KOS_OBJ_ID obj_id, uint32_t size)
     else {
         KOS_ARRAY   *const array    = OBJPTR(ARRAY, obj_id);
         KOS_ARRAY_STORAGE *buf      = _get_data(array);
-        const uint32_t     capacity = buf ? buf->capacity : 0U;
+        const uint32_t     capacity = buf ? KOS_atomic_read_u32(buf->capacity) : 0U;
         uint32_t           old_size;
 
         if (size > capacity) {
@@ -485,9 +490,9 @@ KOS_OBJ_ID KOS_array_slice(KOS_FRAME  frame,
 
                     KOS_atomic_write_u32(new_array->size, new_len);
 
-                    if (new_len < dest_buf->capacity)
+                    if (new_len < KOS_atomic_read_u32(dest_buf->capacity))
                         _atomic_fill_ptr(&dest_buf->buf[new_len],
-                                         dest_buf->capacity - new_len,
+                                         KOS_atomic_read_u32(dest_buf->capacity) - new_len,
                                          TOMBSTONE);
                 }
                 else
@@ -628,7 +633,7 @@ int KOS_array_push(KOS_FRAME  frame,
     /* Increment index */
     for (;;) {
 
-        const uint32_t capacity = buf ? buf->capacity : 0;
+        const uint32_t capacity = buf ? KOS_atomic_read_u32(buf->capacity) : 0;
 
         len = KOS_get_array_size(obj_id);
 

@@ -68,8 +68,11 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_FRAME frame, unsigned capacity)
     }
 #endif
 
-    if (data)
-        data->capacity = capacity;
+    if (data) {
+        /* TODO use write with release semantics */
+        KOS_atomic_release_barrier();
+        KOS_atomic_write_u32(data->capacity, capacity);
+    }
 
     return data;
 }
@@ -90,8 +93,11 @@ KOS_OBJ_ID KOS_new_buffer(KOS_FRAME frame,
         if (capacity) {
             KOS_BUFFER_STORAGE *data = _alloc_buffer(frame, capacity);
 
-            if (data)
-                buffer->data = OBJID(BUFFER_STORAGE, data);
+            if (data) {
+                /* TODO use write with release semantics */
+                KOS_atomic_release_barrier();
+                KOS_atomic_write_ptr(buffer->data, OBJID(BUFFER_STORAGE, data));
+            }
             else
                 buffer = 0;
         }
@@ -105,6 +111,8 @@ KOS_OBJ_ID KOS_new_buffer(KOS_FRAME frame,
 static KOS_BUFFER_STORAGE *_get_data(KOS_BUFFER *buffer)
 {
     const KOS_OBJ_ID buf_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(buffer->data);
+    /* TODO use read with acquire semantics */
+    KOS_atomic_acquire_barrier();
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(BUFFER_STORAGE, buf_obj);
 }
 
@@ -125,7 +133,7 @@ int KOS_buffer_reserve(KOS_FRAME  frame,
 
         for (;;) {
             KOS_BUFFER_STORAGE *const old_buf = _get_data(buffer);
-            const uint32_t capacity = old_buf ? old_buf->capacity : 0;
+            const uint32_t capacity = old_buf ? KOS_atomic_read_u32(old_buf->capacity) : 0;
 
             if (new_capacity > capacity) {
 
@@ -174,7 +182,7 @@ int KOS_buffer_resize(KOS_FRAME  frame,
         if (size > old_size) {
 
             KOS_BUFFER_STORAGE *const data = _get_data(buffer);
-            const uint32_t capacity = data ? data->capacity : 0;
+            const uint32_t capacity = data ? KOS_atomic_read_u32(data->capacity) : 0;
 
             if (size > capacity) {
                 const uint32_t new_capacity = size > capacity * 2 ? size : capacity * 2;
@@ -209,7 +217,7 @@ uint8_t *KOS_buffer_make_room(KOS_FRAME  frame,
             const uint32_t old_size = KOS_atomic_read_u32(buffer->size);
             const uint32_t new_size = old_size + size_delta;
             KOS_BUFFER_STORAGE *const data = _get_data(buffer);
-            const uint32_t capacity = data ? data->capacity : 0;
+            const uint32_t capacity = data ? KOS_atomic_read_u32(data->capacity) : 0;
 
             if (size_delta > 0xFFFFFFFFU - old_size) {
                 KOS_raise_exception_cstring(frame, str_err_make_room_size);

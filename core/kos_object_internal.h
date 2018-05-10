@@ -71,7 +71,7 @@ int _KOS_is_truthy(KOS_OBJ_ID obj_id);
 
 typedef struct _KOS_ARRAY_STORAGE {
     KOS_OBJ_HEADER         header;
-    uint32_t               capacity;
+    KOS_ATOMIC(uint32_t)   capacity;
     KOS_ATOMIC(uint32_t)   num_slots_open;
     KOS_ATOMIC(KOS_OBJ_ID) next;
     KOS_ATOMIC(KOS_OBJ_ID) buf[1];
