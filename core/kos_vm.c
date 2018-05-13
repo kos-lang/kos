@@ -1218,7 +1218,7 @@ static int _exec_function(KOS_FRAME frame)
                 break;
             }
 
-            case INSTR_LOAD_ARRAY8: { /* <r.dest>, <size.int8> */
+            case INSTR_LOAD_ARRAY8: { /* <r.dest>, <size.uint8> */
                 const uint8_t size = bytecode[2];
 
                 rdest = bytecode[1];

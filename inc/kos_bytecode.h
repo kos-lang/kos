@@ -47,7 +47,7 @@ typedef enum _KOS_BYTECODE_INSTR {
     INSTR_LOAD_FALSE,
     /* LOAD.VOID <r.dest> */
     INSTR_LOAD_VOID,
-    /* LOAD.ARRAY8 <r.dest>, <size.int8> */
+    /* LOAD.ARRAY8 <r.dest>, <size.uint8> */
     INSTR_LOAD_ARRAY8,
     /* LOAD.ARRAY <r.dest>, <size.int32> */
     INSTR_LOAD_ARRAY,
