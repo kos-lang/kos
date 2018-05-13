@@ -1040,11 +1040,16 @@ static int _import(struct _KOS_COMP_UNIT      *program,
 
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-                TRY(program->get_global_idx(program->frame,
-                                            module_idx,
-                                            node->token.begin,
-                                            node->token.length,
-                                            &global_idx));
+                error = program->get_global_idx(program->frame,
+                                                module_idx,
+                                                node->token.begin,
+                                                node->token.length,
+                                                &global_idx);
+                if (error) {
+                    program->error_token = &node->token;
+                    program->error_str   = str_err_no_such_module_variable;
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+                }
 
                 info.pos = node->token.pos;
 
