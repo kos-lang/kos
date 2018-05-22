@@ -51,7 +51,7 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_FRAME frame, unsigned capacity)
     if (data) {
         static struct KOS_RNG rng;
         static int            init = 0;
-        uint64_t             *buf = (uint64_t *)data;
+        uint64_t             *buf = (uint64_t *)&data->buf[0];
         uint64_t             *end = buf + capacity / sizeof(uint64_t);
 
         assert(data->header.type == OBJ_BUFFER_STORAGE);
