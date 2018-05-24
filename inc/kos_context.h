@@ -38,16 +38,15 @@ typedef struct _KOS_POOL_HEADER  _KOS_POOL;
 typedef struct _KOS_WASTE_HEADER _KOS_WASTE;
 
 struct _KOS_HEAP {
-    _KOS_MUTEX               mutex;
-    KOS_ATOMIC(uint32_t)     gc_state;
-    KOS_ATOMIC(_KOS_PAGE *)  active_pages;      /* pages in which new objects are allocated */
-    KOS_ATOMIC(_KOS_PAGE *)  free_pages;        /* pages which are currently unused         */
-    KOS_ATOMIC(_KOS_PAGE *)  full_pages;        /* pages which have no room for new objects */
-    KOS_ATOMIC(void *)       huge_objects;      /* objects which don't fit in page size     */
-    KOS_ATOMIC(_KOS_POOL *)  pools;             /* allocated memory - page pools            */
-    KOS_ATOMIC(_KOS_POOL *)  pool_headers;      /* list of pool headers for new pools       */
-    KOS_ATOMIC(_KOS_WASTE *) waste;             /* unused memory from pool allocations      */
-    KOS_OBJ_ID               str_oom_id;
+    _KOS_MUTEX           mutex;
+    KOS_ATOMIC(uint32_t) gc_state;
+    _KOS_PAGE           *free_pages;        /* pages which are currently unused         */
+    _KOS_PAGE           *non_full_pages;    /* pages in which new objects are allocated */
+    _KOS_PAGE           *full_pages;        /* pages which have no room for new objects */
+    _KOS_POOL           *pools;             /* allocated memory - page pools            */
+    _KOS_POOL           *pool_headers;      /* list of pool headers for new pools       */
+    _KOS_WASTE          *waste;             /* unused memory from pool allocations      */
+    KOS_OBJ_ID           str_oom_id;
 };
 
 enum _KOS_YIELD_STATE {
@@ -81,12 +80,13 @@ typedef struct _KOS_STACK_FRAME {
     KOS_OBJ_ID                  exception;
     KOS_OBJ_ID                  retval;
     KOS_OBJ_ID                  saved_frames[KOS_MAX_SAVED_FRAMES];
+    KOS_OBJ_REF                *obj_refs;
 } KOS_STACK_FRAME;
 
 struct _KOS_THREAD_CONTEXT {
-    struct _KOS_THREAD_CONTEXT *next; /* Add list of thread roots in context */
+    struct _KOS_THREAD_CONTEXT *next;  /* List of thread roots in context */
     struct _KOS_THREAD_CONTEXT *prev;
-    struct _KOS_STACK_FRAME     frame; /* TODO allocate root frame on heap */
+    KOS_FRAME                   frame;
     struct _KOS_CONTEXT        *ctx;
     _KOS_PAGE                  *cur_page;
 };
@@ -112,14 +112,19 @@ struct _KOS_PROTOTYPES {
 };
 
 struct _KOS_MODULE_MGMT {
-    KOS_OBJ_ID                     search_paths;
-    KOS_OBJ_ID                     module_names;
-    KOS_OBJ_ID                     modules;
-
-    KOS_MODULE                     init_module; /* TODO allocate on heap */
+    KOS_OBJ_ID search_paths;
+    KOS_OBJ_ID module_names;
+    KOS_OBJ_ID modules;
+    KOS_OBJ_ID init_module;
 
     struct _KOS_RED_BLACK_NODE    *module_inits;
     struct _KOS_MODULE_LOAD_CHAIN *load_chain;
+};
+
+struct _KOS_THREAD_MGMT {
+    _KOS_TLS_KEY       thread_key;
+    KOS_THREAD_CONTEXT main_thread;
+    _KOS_MUTEX         mutex;
 };
 
 enum _KOS_CONTEXT_FLAGS {
@@ -132,11 +137,10 @@ struct _KOS_CONTEXT {
     uint32_t                flags;
     struct _KOS_HEAP        heap;
     KOS_OBJ_ID              empty_string;
-    struct _KOS_PROTOTYPES  prototypes;
     KOS_OBJ_ID              args;
+    struct _KOS_PROTOTYPES  prototypes;
     struct _KOS_MODULE_MGMT modules;
-    _KOS_TLS_KEY            thread_key;
-    KOS_THREAD_CONTEXT      main_thread;
+    struct _KOS_THREAD_MGMT threads;
 };
 
 #ifdef __cplusplus
@@ -177,6 +181,9 @@ int KOS_context_register_builtin(KOS_FRAME        frame,
 
 int KOS_context_register_thread(KOS_CONTEXT        *ctx,
                                 KOS_THREAD_CONTEXT *thread_ctx);
+
+void KOS_context_unregister_thread(KOS_CONTEXT        *ctx,
+                                   KOS_THREAD_CONTEXT *thread_ctx);
 
 KOS_OBJ_ID KOS_context_get_cstring(KOS_FRAME   frame,
                                    const char *cstr);
@@ -225,7 +232,22 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
 #define KOS_apply_function(frame, func_obj, this_obj, args_obj) \
     _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
 
-int KOS_collect_garbage(KOS_FRAME frame);
+void KOS_track_ref(KOS_FRAME    frame,
+                   KOS_OBJ_REF *ref);
+
+struct _KOS_GC_STATS {
+    unsigned num_objs_evacuated;
+    unsigned num_objs_freed;
+    unsigned num_objs_finalized;
+    unsigned num_pages_kept;
+    unsigned num_pages_freed;
+    unsigned size_evacuated;
+    unsigned size_freed;
+    unsigned size_kept;
+};
+
+int KOS_collect_garbage(KOS_FRAME             frame,
+                        struct _KOS_GC_STATS *stats);
 
 #ifdef __cplusplus
 }

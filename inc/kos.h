@@ -238,7 +238,7 @@ class context {
         }
 
         operator KOS_FRAME() {
-            return &_ctx.main_thread.frame;
+            return _ctx.threads.main_thread.frame;
         }
 
     private:
@@ -256,7 +256,7 @@ class thread_ctx {
         }
 
         operator KOS_FRAME() {
-            return &_thread_ctx.frame;
+            return _thread_ctx.frame;
         }
 
     private:

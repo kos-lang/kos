@@ -112,16 +112,24 @@ struct _KOS_THREAD_OBJECT {
 static DWORD WINAPI _thread_proc(LPVOID thread_obj)
 {
     KOS_THREAD_CONTEXT thread_ctx;
+    DWORD              ret        = 0;
+    int                unregister = 0;
 
-    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS)
-        ((_KOS_THREAD)thread_obj)->proc(&thread_ctx.frame, ((_KOS_THREAD)thread_obj)->cookie);
-
-    if (KOS_is_exception_pending(&thread_ctx.frame)) {
-        ((_KOS_THREAD)thread_obj)->exception = KOS_get_exception(&thread_ctx.frame);
-        return 1;
+    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS) {
+        ((_KOS_THREAD)thread_obj)->proc(thread_ctx.frame, ((_KOS_THREAD)thread_obj)->cookie);
+        unregister = 1;
     }
 
-    return 0;
+    if (thread_ctx.frame && KOS_is_exception_pending(thread_ctx.frame)) {
+        ((_KOS_THREAD)thread_obj)->exception = KOS_get_exception(thread_ctx.frame);
+        /* TODO nobody owns exception */
+        ret = 1;
+    }
+
+    if (unregister)
+        KOS_context_unregister_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx);
+
+    return ret;
 }
 
 int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
@@ -282,14 +290,22 @@ struct _KOS_THREAD_OBJECT {
 static void *_thread_proc(void *thread_obj)
 {
     KOS_THREAD_CONTEXT thread_ctx;
+    void              *ret        = 0;
+    int                unregister = 0;
 
-    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS)
-        ((_KOS_THREAD)thread_obj)->proc(&thread_ctx.frame, ((_KOS_THREAD)thread_obj)->cookie);
+    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS) {
+        ((_KOS_THREAD)thread_obj)->proc(thread_ctx.frame, ((_KOS_THREAD)thread_obj)->cookie);
+        unregister = 1;
+    }
 
-    if (KOS_is_exception_pending(&thread_ctx.frame))
-        return (void *)KOS_get_exception(&thread_ctx.frame);
+    if (thread_ctx.frame && KOS_is_exception_pending(thread_ctx.frame))
+        ret = (void *)KOS_get_exception(thread_ctx.frame);
+        /* TODO nobody owns exception */
 
-    return 0;
+    if (unregister)
+        KOS_context_unregister_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx);
+
+    return ret;
 }
 
 int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,

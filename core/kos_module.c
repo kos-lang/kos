@@ -1766,7 +1766,7 @@ KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_MODULE *module,
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (addr2func) {
-        KOS_FRAME frame = &module->context->main_thread.frame;
+        KOS_FRAME frame = module->context->threads.main_thread.frame;
         if (addr2func->str_idx == ~0U)
             ret = KOS_context_get_cstring(frame, str_global);
         else

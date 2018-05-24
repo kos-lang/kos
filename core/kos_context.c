@@ -111,29 +111,80 @@ static int _register_thread(KOS_CONTEXT        *ctx,
 {
     int error = KOS_SUCCESS;
 
-    assert( ! _KOS_tls_get(ctx->thread_key));
+    assert( ! _KOS_tls_get(ctx->threads.thread_key));
 
-    thread_ctx->ctx = ctx;
+    thread_ctx->ctx   = ctx;
+    thread_ctx->frame = (KOS_FRAME)_KOS_heap_early_alloc(ctx,
+                                                         thread_ctx,
+                                                         OBJ_STACK_FRAME,
+                                                         (uint32_t)sizeof(KOS_STACK_FRAME));
 
-    TRY(_KOS_init_stack_frame(&thread_ctx->frame, thread_ctx, &ctx->modules.init_module, 0));
+    if ( ! thread_ctx->frame)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
-    if (_KOS_tls_get(ctx->thread_key)) {
+    TRY(_KOS_init_stack_frame(thread_ctx->frame, thread_ctx, OBJPTR(MODULE, ctx->modules.init_module), 0));
 
-        KOS_OBJ_ID err = KOS_context_get_cstring(&thread_ctx->frame, str_err_thread_registered);
-        KOS_raise_exception(&thread_ctx->frame, err);
+    if (_KOS_tls_get(ctx->threads.thread_key)) {
+
+        KOS_OBJ_ID err = KOS_context_get_cstring(thread_ctx->frame, str_err_thread_registered);
+        KOS_raise_exception(thread_ctx->frame, err);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    _KOS_tls_set(ctx->thread_key, thread_ctx);
+    _KOS_tls_set(ctx->threads.thread_key, thread_ctx);
 
 _error:
+    if (error)
+        _KOS_heap_release_thread_page(thread_ctx);
+
     return error;
+}
+
+void KOS_context_unregister_thread(KOS_CONTEXT        *ctx,
+                                   KOS_THREAD_CONTEXT *thread_ctx)
+{
+    _KOS_heap_release_thread_page(thread_ctx);
+
+    assert((KOS_THREAD_CONTEXT *)_KOS_tls_get(ctx->threads.thread_key) == thread_ctx);
+
+    _KOS_tls_set(ctx->threads.thread_key, 0);
+
+    _KOS_lock_mutex(&ctx->threads.mutex);
+
+    assert(thread_ctx != &ctx->threads.main_thread);
+
+    if (thread_ctx->prev)
+        thread_ctx->prev->next = thread_ctx->next;
+
+    if (thread_ctx->next)
+        thread_ctx->next->prev = thread_ctx->prev;
+
+    _KOS_unlock_mutex(&ctx->threads.mutex);
 }
 
 int KOS_context_register_thread(KOS_CONTEXT        *ctx,
                                 KOS_THREAD_CONTEXT *thread_ctx)
 {
-    return _register_thread(ctx, thread_ctx);
+    int error;
+
+    _KOS_lock_mutex(&ctx->threads.mutex);
+
+    thread_ctx->prev              = &ctx->threads.main_thread;
+    thread_ctx->next              = ctx->threads.main_thread.next;
+    ctx->threads.main_thread.next = thread_ctx;
+    if (thread_ctx->next)
+        thread_ctx->next->prev    = thread_ctx;
+
+    _KOS_unlock_mutex(&ctx->threads.mutex);
+
+    thread_ctx->cur_page = 0;
+
+    error = _register_thread(ctx, thread_ctx);
+
+    if (error)
+        KOS_context_unregister_thread(ctx, thread_ctx);
+
+    return error;
 }
 
 static int _add_multiple_paths(KOS_FRAME frame, struct _KOS_VECTOR *cpaths)
@@ -196,32 +247,62 @@ static KOS_OBJ_ID _alloc_empty_string(KOS_FRAME frame)
 int KOS_context_init(KOS_CONTEXT *ctx,
                      KOS_FRAME   *out_frame)
 {
-    int       error;
-    int       heap_ok = 0;
-    int       tls_ok  = 0;
-    KOS_FRAME frame   = &ctx->main_thread.frame;
+    int         error;
+    int         heap_ok   = 0;
+    int         thread_ok = 0;
+    KOS_FRAME   frame;
+    KOS_MODULE *init_module;
 
     memset(ctx, 0, sizeof(*ctx));
 
-    TRY(_KOS_tls_create(&ctx->thread_key));
-    tls_ok = 1;
+    TRY(_KOS_tls_create(&ctx->threads.thread_key));
+    error = _KOS_create_mutex(&ctx->threads.mutex);
+    if (error) {
+        _KOS_tls_destroy(ctx->threads.thread_key);
+        goto _error;
+    }
+    thread_ok = 1;
 
     TRY(_KOS_heap_init(ctx));
     heap_ok = 1;
 
-    ctx->modules.init_module.header.type  = OBJ_MODULE;
-    ctx->modules.init_module.name         = KOS_BADPTR;
-    ctx->modules.init_module.context      = ctx;
-    ctx->modules.init_module.global_names = KOS_BADPTR;
-    ctx->modules.init_module.globals      = KOS_BADPTR;
-    ctx->modules.init_module.module_names = KOS_BADPTR;
-    ctx->modules.module_names             = KOS_BADPTR;
-    ctx->modules.modules                  = KOS_BADPTR;
-    ctx->modules.search_paths             = KOS_BADPTR;
+    ctx->threads.main_thread.cur_page = 0;
+
+    init_module = (KOS_MODULE *)_KOS_heap_early_alloc(ctx,
+                                                      &ctx->threads.main_thread,
+                                                      OBJ_MODULE,
+                                                      (uint32_t)sizeof(KOS_MODULE));
+    if ( ! init_module)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
+    init_module->flags             = 0;
+    init_module->num_regs          = 0;
+    init_module->instr_offs        = 0;
+    init_module->name              = KOS_BADPTR;
+    init_module->path              = KOS_BADPTR;
+    init_module->context           = ctx;
+    init_module->constants_storage = KOS_BADPTR;
+    init_module->constants         = 0;
+    init_module->global_names      = KOS_BADPTR;
+    init_module->globals           = KOS_BADPTR;
+    init_module->module_names      = KOS_BADPTR;
+    init_module->bytecode          = 0;
+    init_module->line_addrs        = 0;
+    init_module->func_addrs        = 0;
+    init_module->num_line_addrs    = 0;
+    init_module->num_func_addrs    = 0;
+    init_module->bytecode_size     = 0;
+
+    ctx->modules.init_module  = OBJID(MODULE, init_module);
+    ctx->modules.module_names = KOS_BADPTR;
+    ctx->modules.modules      = KOS_BADPTR;
+    ctx->modules.search_paths = KOS_BADPTR;
 
     ctx->args = KOS_BADPTR;
 
-    TRY(_register_thread(ctx, &ctx->main_thread));
+    TRY(_register_thread(ctx, &ctx->threads.main_thread));
+
+    frame = ctx->threads.main_thread.frame;
 
     ctx->empty_string = _alloc_empty_string(frame);
     TRY_OBJID(ctx->empty_string);
@@ -248,13 +329,13 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     TRY_OBJID(ctx->prototypes.generator_end_proto = KOS_new_object(frame));
     TRY_OBJID(ctx->prototypes.thread_proto        = KOS_new_object(frame));
 
-    TRY_OBJID(ctx->modules.init_module.name         = KOS_context_get_cstring(frame, str_init));
-    TRY_OBJID(ctx->modules.init_module.globals      = KOS_new_array(frame, 0));
-    TRY_OBJID(ctx->modules.init_module.global_names = KOS_new_object(frame));
-    TRY_OBJID(ctx->modules.init_module.module_names = KOS_new_object(frame));
-    TRY_OBJID(ctx->modules.module_names             = KOS_new_object(frame));
-    TRY_OBJID(ctx->modules.modules                  = KOS_new_array(frame, 0));
-    TRY_OBJID(ctx->modules.search_paths             = KOS_new_array(frame, 0));
+    TRY_OBJID(init_module->name         = KOS_context_get_cstring(frame, str_init));
+    TRY_OBJID(init_module->globals      = KOS_new_array(frame, 0));
+    TRY_OBJID(init_module->global_names = KOS_new_object(frame));
+    TRY_OBJID(init_module->module_names = KOS_new_object(frame));
+    TRY_OBJID(ctx->modules.module_names = KOS_new_object(frame));
+    TRY_OBJID(ctx->modules.modules      = KOS_new_array(frame, 0));
+    TRY_OBJID(ctx->modules.search_paths = KOS_new_array(frame, 0));
 
     TRY_OBJID(ctx->args = KOS_new_array(frame, 0));
 
@@ -266,8 +347,10 @@ _error:
     if (error && heap_ok)
         _KOS_heap_destroy(ctx);
 
-    if (error && tls_ok)
-        _KOS_tls_destroy(ctx->thread_key);
+    if (error && thread_ok) {
+        _KOS_tls_destroy(ctx->threads.thread_key);
+        _KOS_destroy_mutex(&ctx->threads.mutex);
+    }
 
     return error;
 }
@@ -276,7 +359,7 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
 {
     uint32_t  i;
     uint32_t  num_modules = KOS_get_array_size(ctx->modules.modules);
-    KOS_FRAME frame       = &ctx->main_thread.frame;
+    KOS_FRAME frame       = ctx->threads.main_thread.frame;
 
     for (i = 0; i < num_modules; i++) {
         KOS_OBJ_ID module_obj = KOS_array_read(frame, ctx->modules.modules, (int)i);
@@ -299,7 +382,9 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
 
     _KOS_heap_destroy(ctx);
 
-    _KOS_tls_destroy(ctx->thread_key);
+    _KOS_tls_destroy(ctx->threads.thread_key);
+
+    _KOS_destroy_mutex(&ctx->threads.mutex);
 
     memset(ctx, 0, sizeof(*ctx));
 
@@ -545,9 +630,10 @@ void KOS_context_validate(KOS_FRAME frame)
 
     assert(ctx);
 
-    thread_ctx = (KOS_THREAD_CONTEXT *)_KOS_tls_get(ctx->thread_key);
+    thread_ctx = (KOS_THREAD_CONTEXT *)_KOS_tls_get(ctx->threads.thread_key);
 
     assert(thread_ctx);
+    assert(thread_ctx == frame->thread_ctx);
 }
 #endif
 
@@ -771,4 +857,11 @@ void KOS_raise_generator_end(KOS_FRAME frame)
 
     if ( ! IS_BAD_PTR(exception))
         KOS_raise_exception(frame, exception);
+}
+
+void KOS_track_ref(KOS_FRAME    frame,
+                   KOS_OBJ_REF *ref)
+{
+    ref->next       = frame->obj_refs;
+    frame->obj_refs = ref;
 }

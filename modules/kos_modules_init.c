@@ -33,7 +33,7 @@
 int KOS_modules_init(struct _KOS_CONTEXT *ctx)
 {
     int error = KOS_SUCCESS;
-#define MODULE_DEF(module) TRY(KOS_context_register_builtin(&ctx->main_thread.frame, #module, _KOS_module_##module##_init));
+#define MODULE_DEF(module) TRY(KOS_context_register_builtin(ctx->threads.main_thread.frame, #module, _KOS_module_##module##_init));
 #include "kos_module_list.h"
 #undef MODULE_DEF
 _error:

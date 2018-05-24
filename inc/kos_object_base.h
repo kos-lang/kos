@@ -71,6 +71,13 @@ struct _KOS_OBJECT_PLACEHOLDER;
  */
 typedef struct _KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
 
+/* Reference to a KOS_OBJ_ID, typically held on stack.  This allows GC to
+ * update KOS_OBJ_IDs on the stack. */
+typedef struct _KOS_OBJ_REF {
+    KOS_ATOMIC(KOS_OBJ_ID) obj_id;
+    struct _KOS_OBJ_REF   *next;
+} KOS_OBJ_REF;
+
 #define KOS_BADPTR ((KOS_OBJ_ID)(intptr_t)1)
 
 typedef struct _KOS_OBJ_HEADER {

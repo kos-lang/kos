@@ -263,6 +263,7 @@ int _KOS_init_stack_frame(KOS_FRAME           frame,
     frame->registers        = KOS_BADPTR;
     frame->exception        = KOS_BADPTR;
     frame->retval           = KOS_VOID;
+    frame->obj_refs         = 0;
 
     return error;
 }

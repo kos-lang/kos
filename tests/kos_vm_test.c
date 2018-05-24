@@ -54,10 +54,9 @@ static KOS_OBJ_ID _run_code(KOS_CONTEXT   *ctx,
                             KOS_OBJ_ID    *constants,
                             unsigned       num_constants)
 {
-    KOS_OBJ_ID ret   = KOS_BADPTR;
-    int        error = KOS_SUCCESS;
-
-    struct _KOS_MODULE *module = &ctx->modules.init_module;
+    KOS_OBJ_ID  ret    = KOS_BADPTR;
+    int         error  = KOS_SUCCESS;
+    KOS_MODULE *module = OBJPTR(MODULE, ctx->modules.init_module);
 
     memset(module, 0, sizeof(*module));
 

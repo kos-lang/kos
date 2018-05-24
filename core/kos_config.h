@@ -30,7 +30,7 @@
 #define _KOS_POOL_SIZE          (1U << _KOS_POOL_BITS)
 #define _KOS_PAGE_SIZE          (1U << _KOS_PAGE_BITS)
 #define _KOS_OBJ_ALIGN_BITS     4
-#define _KOS_MAX_SMALL_OBJ_SIZE (_KOS_PAGE_SIZE >> 1)
+#define _KOS_MAX_PAGE_SEEK      8   /* Max number of non-full pages to check for free space */
 #define _KOS_MIGRATION_THRESH   90U /* Percentage of page utilization after GC */
 #define _KOS_MIN_REG_CAPACITY   32U
 #define _KOS_MAX_ARGS_IN_REGS   32U

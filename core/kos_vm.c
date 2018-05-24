@@ -668,6 +668,15 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
             ellipsis_obj = KOS_new_array(frame, 0);
     }
 
+    /* TODO Use a new array for registers and copy arguments to preserve original
+     *      args array for debugging purposes (e.g. callstacks).  Depending on
+     *      perf impact, this could be done always or as needed (an option).
+     *
+     *      Consider using an alternative approach to storing registers and
+     *      arguments, e.g. a long "tape" (array) with registers for inner
+     *      stack frames being stored towards the end.
+     */
+
     if (num_args <= _KOS_MAX_ARGS_IN_REGS) {
 
         const uint32_t num_to_move = KOS_min(num_input_args, num_args);
@@ -2827,7 +2836,7 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
     assert(module);
     assert(module->context);
 
-    thread_ctx = (KOS_THREAD_CONTEXT *)_KOS_tls_get(module->context->thread_key);
+    thread_ctx = (KOS_THREAD_CONTEXT *)_KOS_tls_get(module->context->threads.thread_key);
 
     error = _KOS_init_stack_frame(&frame, thread_ctx, module, module->instr_offs);
 

@@ -89,7 +89,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     uint8_t            code[64]        = { 0 };
     uint32_t           parms[MAX_ARGS] = { 0 };
     struct _KOS_MODULE module;
-    KOS_FRAME          frame           = &ctx->main_thread.frame;
+    KOS_FRAME          frame           = ctx->threads.main_thread.frame;
     const char *       cstrings[]      = { "aaa", "bbb", "ccc" };
     KOS_OBJ_ID         strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
     uint8_t            regs            = 0;
