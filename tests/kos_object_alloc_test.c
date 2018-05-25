@@ -414,7 +414,6 @@ int main(void)
         KOS_OBJ_ID group_three[2U * (_KOS_PAGE_SIZE / sizeof(KOS_BYTES))];
         KOS_OBJ_ID group_four[2];
         KOS_OBJ_ID group_five[2];
-        unsigned   i;
 
         TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
 
