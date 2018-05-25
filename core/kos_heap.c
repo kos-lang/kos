@@ -343,14 +343,15 @@ static int _alloc_page_pool(struct _KOS_HEAP *heap)
 #ifndef NDEBUG
     {
         _KOS_PAGE *page      = heap->free_pages;
-        _KOS_PAGE *next_page = page;
         uint32_t   num_pages = 0;
+
+        next_page = page;
 
         while (page) {
 
-            const uint32_t page_size = page->num_slots == _KOS_SLOTS_PER_PAGE
-                                     ? _KOS_PAGE_SIZE
-                                     : _KOS_SLOTS_OFFS + (page->num_slots << _KOS_OBJ_ALIGN_BITS);
+            page_size = page->num_slots == _KOS_SLOTS_PER_PAGE
+                      ? _KOS_PAGE_SIZE
+                      : _KOS_SLOTS_OFFS + (page->num_slots << _KOS_OBJ_ALIGN_BITS);
 
             assert(page->num_slots <= _KOS_SLOTS_PER_PAGE);
             assert(page->num_slots >= (_KOS_PAGE_SIZE >> (3 + _KOS_OBJ_ALIGN_BITS)));
@@ -1193,7 +1194,7 @@ static void _get_flat_page_list(_KOS_PAGE **list, _KOS_PAGE **pages)
 
         num_pages = ((size - 1U) >> _KOS_PAGE_BITS) + 1U;
 
-        if (num_pages > end - dest)
+        if ((intptr_t)num_pages > end - dest)
             break;
 
         while (size) {
@@ -1540,11 +1541,11 @@ static void _update_after_evacuation(KOS_FRAME frame)
 
         while (thread_ctx) {
 
-            KOS_OBJ_ID frame = OBJID(STACK_FRAME, thread_ctx->frame);
+            KOS_OBJ_ID frame_id = OBJID(STACK_FRAME, thread_ctx->frame);
 
-            _update_child_ptr(&frame);
+            _update_child_ptr(&frame_id);
 
-            thread_ctx->frame = OBJPTR(STACK_FRAME, frame);
+            thread_ctx->frame = OBJPTR(STACK_FRAME, frame_id);
 
             thread_ctx = thread_ctx->next;
         }
