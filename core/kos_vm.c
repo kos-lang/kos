@@ -60,7 +60,7 @@ static struct _KOS_CONST_OBJECT new_this = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC
 
 #define NEW_THIS KOS_CONST_ID(new_this)
 
-static int _exec_function(KOS_FRAME stack_frame);
+static int _exec_function(KOS_FRAME frame);
 
 static KOS_OBJ_ID _make_string(KOS_FRAME           frame,
                                struct _KOS_MODULE *module,
@@ -586,10 +586,11 @@ static int _is_generator_end_exception(KOS_FRAME frame)
 {
     KOS_CONTEXT *const ctx       = KOS_context_from_frame(frame);
     const KOS_OBJ_ID   exception = KOS_get_exception(frame);
-    KOS_OBJ_ID         value;
     int                ret       = 0;
 
     if (KOS_get_prototype(frame, exception) == ctx->prototypes.exception_proto) {
+
+        KOS_OBJ_ID value;
 
         KOS_clear_exception(frame);
 

@@ -509,7 +509,6 @@ static void *_alloc_huge_object(KOS_FRAME            frame,
     _KOS_PAGE       **page_ptr = &heap->free_pages;
     KOS_OBJ_HEADER   *hdr      = 0;
     _KOS_PAGE        *page;
-    _KOS_POOL        *pool;
 
     _KOS_lock_mutex(&heap->mutex);
 
@@ -590,7 +589,7 @@ static void *_alloc_huge_object(KOS_FRAME            frame,
 
     if ( ! hdr) {
 
-        pool = _alloc_pool(heap, size + _KOS_SLOTS_OFFS + _KOS_PAGE_SIZE);
+        _KOS_POOL *pool = _alloc_pool(heap, size + _KOS_SLOTS_OFFS + _KOS_PAGE_SIZE);
 
         if (pool) {
             page = (_KOS_PAGE *)pool->usable_ptr;

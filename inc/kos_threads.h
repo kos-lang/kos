@@ -38,11 +38,17 @@
 #endif
 
 /* Detect C++11 support */
-#if defined(__cplusplus) && ! defined(KOS_CPP11)
-#   if __cplusplus >= 201103L
-#       define KOS_CPP11 1
-#   elif defined(_MSC_VER) && _MSC_VER >= 1900
-#       define KOS_CPP11 1
+#if defined(__cplusplus)
+#   if ! defined(KOS_CPP11)
+#       if __cplusplus >= 201103L
+#           define KOS_CPP11 1
+#       elif defined(_MSC_VER) && _MSC_VER >= 1900
+#           define KOS_CPP11 1
+#       endif
+#   endif
+#else
+#   if defined(KOS_CPP11)
+#       undef KOS_CPP11
 #   endif
 #endif
 

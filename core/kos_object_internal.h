@@ -160,10 +160,10 @@ struct _KOS_MODULE_INIT {
 };
 
 KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
-                              const char *name,      /* Module name or path, ASCII or UTF-8    */
-                              unsigned    name_size, /* Length of module name or path in bytes */
-                              const char *data,      /* Module data or 0 if load from file     */
-                              unsigned    data_size, /* Data length if data is not 0           */
-                              int        *module_idx);
+                              const char *module_name, /* Module name or path, ASCII or UTF-8    */
+                              unsigned    name_size,   /* Length of module name or path in bytes */
+                              const char *data,        /* Module data or 0 if load from file     */
+                              unsigned    data_size,   /* Data length if data is not 0           */
+                              int        *out_module_idx);
 
 #endif

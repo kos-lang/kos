@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 int KOS_load_module(KOS_FRAME   frame,
-                    const char *module);
+                    const char *path);
 
 int KOS_load_module_from_memory(KOS_FRAME   frame,
                                 const char *module_name,

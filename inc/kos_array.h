@@ -60,7 +60,7 @@ int KOS_array_write(KOS_FRAME  frame,
 
 int KOS_array_reserve(KOS_FRAME  frame,
                       KOS_OBJ_ID obj_id,
-                      uint32_t   capacity);
+                      uint32_t   new_capacity);
 
 int KOS_array_resize(KOS_FRAME  frame,
                      KOS_OBJ_ID obj_id,

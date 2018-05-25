@@ -67,7 +67,7 @@ enum _KOS_QUOTE_STR {
 };
 
 int KOS_object_to_string_or_cstr_vec(KOS_FRAME           frame,
-                                     KOS_OBJ_ID          obj,
+                                     KOS_OBJ_ID          obj_id,
                                      enum _KOS_QUOTE_STR quote_str,
                                      KOS_OBJ_ID         *str,
                                      struct _KOS_VECTOR *cstr_vec);

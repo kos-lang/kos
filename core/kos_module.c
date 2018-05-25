@@ -510,12 +510,9 @@ static KOS_OBJ_ID _get_line(KOS_FRAME   frame,
 
     /* Find the desired line */
     for ( ; line > 1 && buf < end; line--) {
-
-        char c = 0;
-
         for ( ; buf < end; buf++) {
 
-            c = *buf;
+            char c = *buf;
 
             if (c == '\r') {
                 buf++;
@@ -1603,7 +1600,7 @@ int KOS_module_add_function(KOS_FRAME                frame,
                             KOS_OBJ_ID               str_name,
                             KOS_FUNCTION_HANDLER     handler,
                             int                      min_args,
-                            enum _KOS_FUNCTION_STATE state)
+                            enum _KOS_FUNCTION_STATE gen_state)
 {
     int         error    = KOS_SUCCESS;
     KOS_OBJ_ID  func_obj = KOS_new_builtin_function(frame, handler, min_args);
@@ -1614,7 +1611,7 @@ int KOS_module_add_function(KOS_FRAME                frame,
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module = OBJID(MODULE, module);
-    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)state;
+    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)gen_state;
 
     TRY(KOS_module_add_global(frame,
                               str_name,
@@ -1658,7 +1655,7 @@ int KOS_module_add_member_function(KOS_FRAME                frame,
                                    KOS_OBJ_ID               str_name,
                                    KOS_FUNCTION_HANDLER     handler,
                                    int                      min_args,
-                                   enum _KOS_FUNCTION_STATE state)
+                                   enum _KOS_FUNCTION_STATE gen_state)
 {
     int          error    = KOS_SUCCESS;
     KOS_OBJ_ID   func_obj = KOS_new_builtin_function(frame, handler, min_args);
@@ -1669,7 +1666,7 @@ int KOS_module_add_member_function(KOS_FRAME                frame,
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module = OBJID(MODULE, module);
-    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)state;
+    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)gen_state;
 
     TRY(KOS_set_property(frame, proto_obj, str_name, func_obj));
 

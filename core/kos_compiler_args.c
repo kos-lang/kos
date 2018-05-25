@@ -165,7 +165,7 @@ static int _visit_child_nodes(struct _KOS_COMP_UNIT *program,
 static int _scope(struct _KOS_COMP_UNIT *program,
                   struct _KOS_AST_NODE  *node)
 {
-    int error = KOS_SUCCESS;
+    int error;
 
     _push_scope(program, node);
 
@@ -248,7 +248,7 @@ static void _update_arguments(struct _KOS_COMP_UNIT *program,
 
         assert(var->type == VAR_ARGUMENT || var->type == VAR_INDEPENDENT_ARGUMENT);
 
-        if ( ! have_rest || (have_rest && i < (int)_KOS_MAX_ARGS_IN_REGS - 1)) {
+        if ( ! have_rest || (i < (int)_KOS_MAX_ARGS_IN_REGS - 1)) {
 
             if (var->type == VAR_INDEPENDENT_ARGUMENT) {
                 assert(var->num_reads || var->num_assignments);

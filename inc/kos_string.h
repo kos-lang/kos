@@ -66,7 +66,7 @@ KOS_OBJ_ID KOS_new_const_ascii_string(KOS_FRAME   frame,
                                       unsigned    length);
 
 KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
-                                const void            *str,
+                                const void            *str_data,
                                 unsigned               length,
                                 enum _KOS_STRING_FLAGS elem_size);
 

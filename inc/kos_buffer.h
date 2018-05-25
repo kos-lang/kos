@@ -69,7 +69,7 @@ KOS_OBJ_ID KOS_new_buffer(KOS_FRAME frame,
 
 int KOS_buffer_reserve(KOS_FRAME  frame,
                        KOS_OBJ_ID obj_id,
-                       unsigned   capacity);
+                       unsigned   new_capacity);
 
 int KOS_buffer_resize(KOS_FRAME  frame,
                       KOS_OBJ_ID obj_id,

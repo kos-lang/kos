@@ -48,11 +48,11 @@ static const char str_err_out_of_memory[]     = "out of memory";
 static const char str_err_too_many_repeats[]  = "repeated string too long";
 
 #ifdef CONFIG_STRING16
-#define _override_elem_size(size) ((size) < KOS_STRING_ELEM_16 ? KOS_STRING_ELEM_16 : (size))
+#define _override_elem_size(size) do { (size) = (size) < KOS_STRING_ELEM_16 ? KOS_STRING_ELEM_16 : (size); } while (0)
 #elif defined(CONFIG_STRING32)
-#define _override_elem_size(size) KOS_STRING_ELEM_32
+#define _override_elem_size(size) do { (size) = KOS_STRING_ELEM_32; } while (0)
 #else
-#define _override_elem_size(size) (size)
+#define _override_elem_size(size) do { } while (0)
 #endif
 
 static KOS_STRING *_new_empty_string(KOS_FRAME              frame,
@@ -102,7 +102,7 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
             else
                 elem_size = KOS_STRING_ELEM_8;
 
-            elem_size = _override_elem_size(elem_size);
+            _override_elem_size(elem_size);
 
             str = (KOS_STRING *)_KOS_alloc_object(frame,
                                                   KOS_ALLOC_DEFAULT,
@@ -152,36 +152,36 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
     return OBJID(STRING, str);
 }
 
-KOS_OBJ_ID KOS_new_cstring(KOS_FRAME frame, const char *s)
+KOS_OBJ_ID KOS_new_cstring(KOS_FRAME frame, const char *utf8_str)
 {
-    return _new_string(frame, s, s ? (unsigned)strlen(s) : 0U, KOS_UTF8_NO_ESCAPE);
+    return _new_string(frame, utf8_str, utf8_str ? (unsigned)strlen(utf8_str) : 0U, KOS_UTF8_NO_ESCAPE);
 }
 
-KOS_OBJ_ID KOS_new_string(KOS_FRAME frame, const char *s, unsigned length)
+KOS_OBJ_ID KOS_new_string(KOS_FRAME frame, const char *utf8_str, unsigned length)
 {
-    return _new_string(frame, s, length, KOS_UTF8_NO_ESCAPE);
+    return _new_string(frame, utf8_str, length, KOS_UTF8_NO_ESCAPE);
 }
 
-KOS_OBJ_ID KOS_new_string_esc(KOS_FRAME frame, const char *s, unsigned length)
+KOS_OBJ_ID KOS_new_string_esc(KOS_FRAME frame, const char *utf8_str, unsigned length)
 {
-    return _new_string(frame, s, length, KOS_UTF8_WITH_ESCAPE);
+    return _new_string(frame, utf8_str, length, KOS_UTF8_WITH_ESCAPE);
 }
 
 KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_FRAME   frame,
-                                       const char *s)
+                                       const char *ascii_str)
 {
-    return KOS_new_const_string(frame, s, s ? (unsigned)strlen(s) : 0U, KOS_STRING_ELEM_8);
+    return KOS_new_const_string(frame, ascii_str, ascii_str ? (unsigned)strlen(ascii_str) : 0U, KOS_STRING_ELEM_8);
 }
 
 KOS_OBJ_ID KOS_new_const_ascii_string(KOS_FRAME   frame,
-                                      const char *s,
+                                      const char *ascii_str,
                                       unsigned    length)
 {
-    return KOS_new_const_string(frame, s, length, KOS_STRING_ELEM_8);
+    return KOS_new_const_string(frame, ascii_str, length, KOS_STRING_ELEM_8);
 }
 
 KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
-                                const void            *data,
+                                const void            *str_data,
                                 unsigned               length,
                                 enum _KOS_STRING_FLAGS elem_size)
 {
@@ -202,7 +202,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
             str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_PTR;
             str->header.length = (uint16_t)length;
             str->header.hash   = 0;
-            str->ptr.data_ptr  = data;
+            str->ptr.data_ptr  = str_data;
         }
     }
     else
@@ -253,7 +253,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
             }
         }
 
-        elem_size = _override_elem_size(elem_size);
+        _override_elem_size(elem_size);
 
         ret = _new_empty_string(frame, length, elem_size);
         if ( ! ret)
@@ -591,7 +591,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
             new_str = OBJPTR(STRING, non_0_str);
 
         else if (new_len) {
-            elem_size = _override_elem_size(elem_size);
+            _override_elem_size(elem_size);
 
             new_str = _new_empty_string(frame, new_len, elem_size);
 
@@ -625,10 +625,11 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
         const int64_t                len       = str->header.length;
-        unsigned                     new_len;
         const uint8_t               *buf;
 
         if (len) {
+            unsigned new_len;
+
             if (begin < 0)
                 begin += len;
 
@@ -706,20 +707,19 @@ KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
         const int                    len       = (int)str->header.length;
-        const uint8_t               *buf;
-        uint8_t                     *new_buf;
 
         if (idx < 0)
             idx += len;
 
         if (idx >= 0 && idx < len) {
-            buf = (const uint8_t *)_KOS_get_string_buffer(str) + (idx << elem_size);
+
+            const uint8_t *buf = (const uint8_t *)_KOS_get_string_buffer(str) + (idx << elem_size);
 
             new_str = _new_empty_string(frame, 1, elem_size);
 
             if (new_str) {
 
-                new_buf = (uint8_t *)_KOS_get_string_buffer(new_str);
+                uint8_t *new_buf = (uint8_t *)_KOS_get_string_buffer(new_str);
 
                 switch (elem_size) {
 

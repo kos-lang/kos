@@ -715,10 +715,11 @@ static void _collect_operator(struct _KOS_LEXER *lexer, enum _KOS_OPERATOR_TYPE 
 
     const char *begin, *end;
     int         idx = 1;
-    unsigned    c;
     char        cur;
 
     do {
+        unsigned c;
+
         cur = op_group->str[idx];
         *op = op_group->type;
 
@@ -800,7 +801,6 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
 {
     int error = KOS_SUCCESS;
     const char *begin, *end;
-    unsigned c;
 
     token->keyword = KW_NONE;
     token->op      = OT_NONE;
@@ -832,7 +832,7 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
     }
     else {
 
-        c = _prefetch_next(lexer, &begin, &end);
+        unsigned c = _prefetch_next(lexer, &begin, &end);
 
         switch (c) {
             case LT_WHITESPACE:

@@ -48,11 +48,11 @@ int _KOS_red_black_walk(struct _KOS_RED_BLACK_NODE *node,
 typedef int (*_KOS_RED_BLACK_COMPARE_NODE)(struct _KOS_RED_BLACK_NODE *a,
                                            struct _KOS_RED_BLACK_NODE *b);
 
-void _KOS_red_black_insert(struct _KOS_RED_BLACK_NODE **root,
+void _KOS_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
                            struct _KOS_RED_BLACK_NODE  *new_node,
                            _KOS_RED_BLACK_COMPARE_NODE  compare);
 
-void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **root,
+void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
                            struct _KOS_RED_BLACK_NODE  *node);
 
 #endif

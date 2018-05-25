@@ -251,7 +251,7 @@ class context {
 
 class thread_ctx {
     public:
-        thread_ctx(context& ctx) {
+        explicit thread_ctx(context& ctx) {
             KOS_context_register_thread(ctx, &_thread_ctx);
         }
 
@@ -482,10 +482,10 @@ class object: public object_base {
                 KOS_OBJECT_WALK_ELEM _elem;
         };
 
-        const_iterator begin()  const { return const_iterator(_frame, _obj_id, KOS_SHALLOW); }
-        const_iterator end()    const { return const_iterator(); }
-        const_iterator cbegin() const { return const_iterator(_frame, _obj_id, KOS_SHALLOW); }
-        const_iterator cend()   const { return const_iterator(); }
+        const_iterator        begin()  const { return const_iterator(_frame, _obj_id, KOS_SHALLOW); }
+        static const_iterator end()          { return const_iterator(); }
+        const_iterator        cbegin() const { return const_iterator(_frame, _obj_id, KOS_SHALLOW); }
+        static const_iterator cend()         { return const_iterator(); }
 
     protected:
         mutable stack_frame _frame;

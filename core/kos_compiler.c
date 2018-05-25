@@ -4008,7 +4008,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT      *program,
                                 const struct _KOS_AST_NODE *node,
                                 struct _KOS_REG           **reg)
 {
-    int               error        = KOS_SUCCESS;
+    int               error;
     int               string_idx   = 0;
     struct _KOS_REG  *func_reg     = 0;
     struct _KOS_REG  *args         = *reg;

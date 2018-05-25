@@ -159,7 +159,7 @@ extern "C" {
 #endif
 
 int KOS_context_init(KOS_CONTEXT *ctx,
-                     KOS_FRAME   *frame);
+                     KOS_FRAME   *out_frame);
 
 void KOS_context_destroy(KOS_CONTEXT *ctx);
 
