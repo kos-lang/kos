@@ -497,43 +497,6 @@ _error:
     return error;
 }
 
-static int _while_stmt(struct _KOS_COMP_UNIT *program,
-                       struct _KOS_AST_NODE  *node,
-                       int                   *is_terminal)
-{
-    int error     = KOS_SUCCESS;
-    int is_truthy = 0;
-    int is_falsy  = 0;
-    int t;
-
-    node = node->children;
-    assert(node);
-    TRY(_visit_node(program, node, &t));
-    assert(t == TERM_NONE);
-
-    if (program->optimize) {
-        is_truthy = _KOS_node_is_truthy(program, node);
-        is_falsy  = is_truthy ? 0 : _KOS_node_is_falsy(program, node);
-    }
-
-    node = node->next;
-    assert(node);
-    assert( ! node->next);
-
-    if (is_falsy && node->type != NT_EMPTY) {
-        _collapse(node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
-        ++program->num_optimizations;
-    }
-
-    TRY(_visit_node(program, node, is_terminal));
-
-    if ( ! is_truthy || (*is_terminal & TERM_BREAK))
-        *is_terminal = TERM_NONE;
-
-_error:
-    return error;
-}
-
 static int _for_stmt(struct _KOS_COMP_UNIT *program,
                      struct _KOS_AST_NODE  *node,
                      int                   *is_terminal)
@@ -1652,9 +1615,6 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             break;
         case NT_REPEAT:
             error = _repeat_stmt(program, node, is_terminal);
-            break;
-        case NT_WHILE:
-            error = _while_stmt(program, node, is_terminal);
             break;
         case NT_FOR:
             error = _for_stmt(program, node, is_terminal);

@@ -33,7 +33,6 @@ enum _KOS_NODE_TYPE {
     NT_TRY,
     NT_SWITCH,
     NT_REPEAT,
-    NT_WHILE,
     NT_FOR,
     NT_FOR_IN,
     NT_CONTINUE,

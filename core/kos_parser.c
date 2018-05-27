@@ -2426,14 +2426,11 @@ static int _loop_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     struct _KOS_AST_NODE *node = 0;
 
-    TRY(_new_node(parser, ret, NT_WHILE));
+    TRY(_new_node(parser, ret, NT_FOR));
 
-    TRY(_push_node(parser, *ret, NT_BOOL_LITERAL, &node));
+    TRY(_push_node(parser, *ret, NT_EMPTY, 0));
 
-    node->token.type    = TT_KEYWORD;
-    node->token.keyword = KW_TRUE;
-
-    node = 0;
+    TRY(_push_node(parser, *ret, NT_EMPTY, 0));
 
     ++parser->allow_continue;
     ++parser->allow_break;
@@ -2496,12 +2493,14 @@ static int _while_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     struct _KOS_AST_NODE *node = 0;
 
-    TRY(_new_node(parser, ret, NT_WHILE));
+    TRY(_new_node(parser, ret, NT_FOR));
 
     TRY(_right_hand_side_expr(parser, &node));
 
     _ast_push(*ret, node);
     node = 0;
+
+    TRY(_push_node(parser, *ret, NT_EMPTY, 0));
 
     ++parser->allow_continue;
     ++parser->allow_break;

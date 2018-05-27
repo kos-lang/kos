@@ -26,8 +26,9 @@ for (;;) {
         ))
         (bool 5 7 true)
     )
-    (while 7 1 while
+    (for 7 1 while
         (bool 7 7 true)
+        (empty 7 12 {)
         (scope 7 12 {
             (if 8 5 if
                 (invocation 8 9 paren_open (identifier 8 8 b))

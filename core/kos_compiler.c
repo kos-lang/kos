@@ -1756,88 +1756,6 @@ _error:
     return error;
 }
 
-static int _while(struct _KOS_COMP_UNIT      *program,
-                  const struct _KOS_AST_NODE *node)
-{
-    int                         error          = KOS_SUCCESS;
-    struct _KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
-    struct _KOS_SCOPE          *prev_try_scope = _push_try_scope(program);
-    const struct _KOS_AST_NODE *cond_node      = node->children;
-
-    assert(cond_node);
-
-    if ( ! _KOS_node_is_falsy(program, cond_node)) {
-
-        const int        is_truthy       = _KOS_node_is_truthy(program, cond_node);
-        struct _KOS_REG *reg             = 0;
-        int              jump_instr_offs = 0;
-        int              loop_start_offs;
-        int              continue_offs;
-        int              offs;
-
-        program->cur_frame->break_offs = 0;
-
-        if ( ! is_truthy) {
-
-            TRY(_visit_node(program, cond_node, &reg));
-            assert(reg);
-
-            jump_instr_offs = program->cur_offs;
-            TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, reg->reg));
-
-            _free_reg(program, reg);
-            reg = 0;
-        }
-
-        loop_start_offs = program->cur_offs;
-        continue_offs   = loop_start_offs;
-
-        node = cond_node->next;
-        assert(node);
-        TRY(_visit_node(program, node, &reg));
-        assert(!reg);
-
-        assert(!node->next);
-
-        /* TODO skip jump if last node was terminating - return, throw, break, continue */
-
-        if (is_truthy) {
-
-            offs = program->cur_offs;
-
-            TRY(_gen_instr1(program, INSTR_JUMP, 0));
-        }
-        else {
-
-            TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
-
-            continue_offs = program->cur_offs;
-
-            TRY(_visit_node(program, cond_node, &reg));
-            assert(reg);
-
-            offs = program->cur_offs;
-
-            TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
-
-            _free_reg(program, reg);
-            reg = 0;
-        }
-
-        _update_jump_offs(program, offs, loop_start_offs);
-
-        if ( ! is_truthy)
-            _update_jump_offs(program, jump_instr_offs, program->cur_offs);
-
-        _finish_break_continue(program, continue_offs, old_break_offs);
-    }
-
-    program->cur_frame->last_try_scope = prev_try_scope;
-
-_error:
-    return error;
-}
-
 static int _for(struct _KOS_COMP_UNIT      *program,
                 const struct _KOS_AST_NODE *node)
 {
@@ -1853,19 +1771,26 @@ static int _for(struct _KOS_COMP_UNIT      *program,
         int                         loop_start_offs;
         int                         cond_jump_instr_offs = -1;
         int                         final_jump_instr_offs;
-        int                         step_instr_offs;
+        int                         continue_tgt_offs;
+        int                         is_truthy;
         const struct _KOS_AST_NODE *step_node;
         struct _KOS_REG            *reg                  = 0;
 
         program->cur_frame->break_offs = 0;
 
-        TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
+        is_truthy = _KOS_node_is_truthy(program, cond_node);
 
-        /* TODO check truthy/falsy */
+        if (cond_node->type == NT_EMPTY) {
+            assert( ! is_truthy);
+            is_truthy = 1;
+        }
 
-        TRY(_visit_node(program, cond_node, &reg));
+        if ( ! is_truthy) {
 
-        if (reg) {
+            TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
+
+            TRY(_visit_node(program, cond_node, &reg));
+            assert(reg);
 
             cond_jump_instr_offs = program->cur_offs;
             TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, reg->reg));
@@ -1881,21 +1806,30 @@ static int _for(struct _KOS_COMP_UNIT      *program,
 
         node = step_node->next;
         assert(node);
-        assert(!node->next);
+        assert( ! node->next);
 
         TRY(_visit_node(program, node, &reg));
-        assert(!reg);
+        assert( ! reg);
 
         TRY(_add_addr2line(program, &step_node->token, _KOS_FALSE));
 
-        step_instr_offs = program->cur_offs;
+        continue_tgt_offs = program->cur_offs;
 
         TRY(_visit_node(program, step_node, &reg));
         assert( ! reg);
 
-        TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
+        if (program->cur_offs == continue_tgt_offs && is_truthy)
+            continue_tgt_offs = loop_start_offs;
 
-        TRY(_visit_node(program, cond_node, &reg));
+        if (is_truthy)
+            reg = 0;
+
+        else {
+
+            TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
+
+            TRY(_visit_node(program, cond_node, &reg));
+        }
 
         final_jump_instr_offs = program->cur_offs;
 
@@ -1913,7 +1847,7 @@ static int _for(struct _KOS_COMP_UNIT      *program,
         if (cond_jump_instr_offs > -1)
             _update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
 
-        _finish_break_continue(program, step_instr_offs, old_break_offs);
+        _finish_break_continue(program, continue_tgt_offs, old_break_offs);
     }
 
     program->cur_frame->last_try_scope = prev_try_scope;
@@ -4898,9 +4832,6 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             break;
         case NT_REPEAT:
             error = _repeat(program, node);
-            break;
-        case NT_WHILE:
-            error = _while(program, node);
             break;
         case NT_FOR:
             error = _for(program, node);

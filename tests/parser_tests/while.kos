@@ -11,7 +11,7 @@ while (yield f())
 @ 0
 
 (scope 1 1
-    (while 1 1 while
+    (for 1 1 while
         (operator 1 14 ||
             (operator 1 9 ==
                 (identifier 1 7 a)
@@ -19,13 +19,15 @@ while (yield f())
             )
             (identifier 1 17 c)
         )
+        (empty 2 1 {)
         (scope 2 1 {
             (invocation 3 6 paren_open (identifier 3 5 d))
     ))
-    (while 6 1 while
+    (for 6 1 while
         (yield 6 8 yield
             (invocation 6 15 paren_open (identifier 6 14 f))
         )
+        (empty 7 1 {)
         (scope 7 1 {
             (invocation 8 6 paren_open (identifier 8 5 g))
     ))
@@ -38,12 +40,14 @@ while (false) {}
 @ 0
 
 (scope 1 1
-    (while 1 1 while
+    (for 1 1 while
         (bool 1 7 true)
+        (empty 1 12 {)
         (scope 1 12 {)
     )
-    (while 2 1 while
+    (for 2 1 while
         (bool 2 8 false)
+        (empty 2 15 {)
         (scope 2 15 {)
     )
 )
@@ -54,8 +58,9 @@ loop { }
 @ 0
 
 (scope 1 1
-    (while 1 1 loop
-        (bool 1 1 loop)
+    (for 1 1 loop
+        (empty 1 1 loop)
+        (empty 1 1 loop)
         (scope 1 6 {)
     )
 )

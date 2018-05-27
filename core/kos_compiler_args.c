@@ -597,8 +597,6 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             /* fall through */
         case NT_REPEAT:
             /* fall through */
-        case NT_WHILE:
-            /* fall through */
         case NT_FOR:
             /* fall through */
         case NT_SWITCH:
