@@ -48,6 +48,11 @@ static void _print_stats(struct _KOS_GC_STATS *stats)
     printf("size_kept          %u\n", stats->size_kept);
 }
 
+static void _finalize_1(KOS_FRAME frame, void *priv)
+{
+    *(int *)priv = 1;
+}
+
 int main(void)
 {
     KOS_CONTEXT ctx;
@@ -166,6 +171,42 @@ int main(void)
         TEST(stats[1].num_objs_evacuated == stats[0].num_objs_evacuated);
         TEST(stats[1].num_objs_freed     == 18);
         TEST(stats[1].num_objs_finalized == 0);
+        TEST(stats[1].num_pages_kept     == 0);
+        TEST(stats[1].num_pages_freed    == 1);
+        TEST(stats[1].size_evacuated     == stats[0].size_evacuated);
+        TEST(stats[1].size_freed         >  0);
+        TEST(stats[1].size_kept          == 0);
+
+        {
+            KOS_OBJ_ID proto_id = KOS_new_object(frame);
+            KOS_OBJ_ID obj_id   = KOS_new_object_with_prototype(frame, proto_id);
+            KOS_OBJ_ID prop_id;
+            int        fin      = 0;
+
+            KOS_object_set_private(*OBJPTR(OBJECT, proto_id), &fin);
+            OBJPTR(OBJECT, proto_id)->finalize = _finalize_1;
+
+            /* Object references itself */
+            prop_id = KOS_new_cstring(frame, "self");
+            TEST( ! IS_BAD_PTR(prop_id));
+            TEST(KOS_set_property(frame, obj_id, prop_id, obj_id) == KOS_SUCCESS);
+
+            TEST(KOS_collect_garbage(frame, &stats[1]) == KOS_SUCCESS);
+            frame = OBJPTR(STACK_FRAME, frame_ref.obj_id);
+
+            /* Ensure finalize was run */
+            TEST(fin == 1);
+        }
+
+        /* The following objects must have been destroyed:
+         * - The prototype object.
+         * - The main object.
+         * - The main object's property table storage.
+         * - The string "self".
+         */
+        TEST(stats[1].num_objs_evacuated == stats[0].num_objs_evacuated);
+        TEST(stats[1].num_objs_freed     == 4);
+        TEST(stats[1].num_objs_finalized == 1);
         TEST(stats[1].num_pages_kept     == 0);
         TEST(stats[1].num_pages_freed    == 1);
         TEST(stats[1].size_evacuated     == stats[0].size_evacuated);
