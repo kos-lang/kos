@@ -67,7 +67,7 @@ static KOS_STRING *_new_empty_string(KOS_FRAME              frame,
     str = (KOS_STRING *)_KOS_alloc_object(frame,
                                           KOS_ALLOC_DEFAULT,
                                           OBJ_STRING,
-                                          sizeof(struct _KOS_STRING_LOCAL) - 1U + (length << elem_size));
+                                          sizeof(KOS_STR_HEADER) + (length << elem_size));
 
     if (str) {
         assert(str->header.type == OBJ_STRING);
@@ -107,7 +107,7 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
             str = (KOS_STRING *)_KOS_alloc_object(frame,
                                                   KOS_ALLOC_DEFAULT,
                                                   OBJ_STRING,
-                                                  sizeof(struct _KOS_STRING_LOCAL) - 1U + (length << elem_size));
+                                                  sizeof(KOS_STR_HEADER) + (length << elem_size));
         }
         else {
             KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
