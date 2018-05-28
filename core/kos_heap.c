@@ -251,7 +251,7 @@ static _KOS_POOL *_alloc_pool(struct _KOS_HEAP *heap,
 
     waste_at_front = (uint32_t)(begin - pool);
 
-    if (begin == pool || waste_at_front < sizeof(_KOS_POOL)) {
+    if (waste_at_front < sizeof(_KOS_POOL)) {
         pool_hdr = _get_pool_header(heap);
 
         if ( ! pool_hdr) {
