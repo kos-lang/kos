@@ -26,7 +26,7 @@
 #define _KOS_BUF_ALLOC_SIZE     4096U
 #define _KOS_VEC_MAX_INC_SIZE   262144U
 #define _KOS_POOL_BITS          19
-#define _KOS_PAGE_BITS          14
+#define _KOS_PAGE_BITS          12
 #define _KOS_POOL_SIZE          (1U << _KOS_POOL_BITS)
 #define _KOS_PAGE_SIZE          (1U << _KOS_PAGE_BITS)
 #define _KOS_OBJ_ALIGN_BITS     4
