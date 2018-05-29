@@ -865,3 +865,22 @@ void KOS_track_ref(KOS_FRAME    frame,
     ref->next       = frame->obj_refs;
     frame->obj_refs = ref;
 }
+
+void KOS_untrack_ref(KOS_FRAME    frame,
+                     KOS_OBJ_REF *ref)
+{
+    KOS_OBJ_REF **slot = &frame->obj_refs;
+    KOS_OBJ_REF  *cur;
+
+    cur = *slot;
+
+    while (cur && cur != ref) {
+
+        slot = &cur->next;
+        cur  = *slot;
+    }
+
+    assert(cur);
+
+    *slot = ref->next;
+}

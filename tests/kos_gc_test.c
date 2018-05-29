@@ -53,6 +53,21 @@ static void _finalize_1(KOS_FRAME frame, void *priv)
     *(int *)priv = 1;
 }
 
+static KOS_OBJ_ID _handler(KOS_FRAME  frame,
+                           KOS_OBJ_ID this_obj,
+                           KOS_OBJ_ID args_obj)
+{
+    return args_obj;
+}
+
+static void _fill_buffer(KOS_OBJ_ID buf, int value)
+{
+    uint8_t *const data = KOS_buffer_data(buf);
+    const uint32_t size = KOS_get_buffer_size(buf);
+
+    memset(data, value, size);
+}
+
 int main(void)
 {
     KOS_CONTEXT ctx;
@@ -209,6 +224,136 @@ int main(void)
         TEST(stats[1].num_objs_finalized == 1);
         TEST(stats[1].num_pages_kept     == 0);
         TEST(stats[1].num_pages_freed    == 1);
+        TEST(stats[1].size_evacuated     == stats[0].size_evacuated);
+        TEST(stats[1].size_freed         >  0);
+        TEST(stats[1].size_kept          == 0);
+
+        {
+            KOS_OBJ_ID  array_id;
+            KOS_OBJ_ID  obj_id;
+            KOS_OBJ_REF ref;
+
+            array_id = KOS_new_array(frame, 4);
+            TEST( ! IS_BAD_PTR(array_id));
+
+            ref.obj_id = array_id;
+            KOS_track_ref(frame, &ref);
+
+            obj_id = KOS_new_builtin_function(frame, _handler, 0);
+            TEST( ! IS_BAD_PTR(obj_id));
+
+            TEST(KOS_array_write(frame, array_id, 0, obj_id) == KOS_SUCCESS);
+
+            obj_id = KOS_new_builtin_class(frame, _handler, 0);
+            TEST( ! IS_BAD_PTR(obj_id));
+
+            TEST(KOS_array_write(frame, array_id, 1, obj_id) == KOS_SUCCESS);
+
+            obj_id = KOS_new_buffer(frame, 128);
+            TEST( ! IS_BAD_PTR(obj_id));
+
+            TEST(KOS_array_write(frame, array_id, 2, obj_id) == KOS_SUCCESS);
+
+            obj_id = KOS_new_object_walk(frame, obj_id, KOS_SHALLOW);
+            TEST( ! IS_BAD_PTR(obj_id));
+
+            TEST(KOS_array_write(frame, array_id, 3, obj_id) == KOS_SUCCESS);
+
+            TEST(KOS_collect_garbage(frame, &stats[1]) == KOS_SUCCESS);
+            frame = OBJPTR(STACK_FRAME, frame_ref.obj_id);
+
+            /* The following objects have been evacuated:
+             * - 2 for array
+             * - 1 for function
+             * - 7 for class:
+             *      -- 1 class
+             *      -- 1 prototype object
+             *      -- 1 class property buffer
+             *      -- 1 dynamic prototype property
+             *      -- 1 set function
+             *      -- 1 get function
+             *      -- 1 ???
+             * - 2 for buffer
+             * - 1 for empty walk
+             */
+            TEST(stats[1].num_objs_evacuated == stats[0].num_objs_evacuated + 13);
+            TEST(stats[1].num_objs_freed     == 1);
+            TEST(stats[1].num_objs_finalized == 0);
+            TEST(stats[1].num_pages_kept     == 0);
+            TEST(stats[1].num_pages_freed    == 1);
+            TEST(stats[1].size_evacuated     >= stats[0].size_evacuated);
+            TEST(stats[1].size_freed         >  0);
+            TEST(stats[1].size_kept          == 0);
+
+            KOS_untrack_ref(frame, &ref);
+
+            TEST(KOS_collect_garbage(frame, &stats[1]) == KOS_SUCCESS);
+            frame = OBJPTR(STACK_FRAME, frame_ref.obj_id);
+
+            TEST(stats[1].num_objs_evacuated == stats[0].num_objs_evacuated);
+            TEST(stats[1].num_objs_freed     == 13);
+            TEST(stats[1].num_objs_finalized == 0);
+            TEST(stats[1].num_pages_kept     == 0);
+            TEST(stats[1].num_pages_freed    == 1);
+            TEST(stats[1].size_evacuated     >= stats[0].size_evacuated);
+            TEST(stats[1].size_freed         >  0);
+            TEST(stats[1].size_kept          == 0);
+        }
+
+        KOS_context_destroy(&ctx);
+    }
+
+    /************************************************************************/
+    {
+        struct _KOS_GC_STATS stats[2];
+        KOS_OBJ_REF          frame_ref;
+        KOS_OBJ_REF          obj_ref[2];
+
+        TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
+
+        frame_ref.obj_id = OBJID(STACK_FRAME, frame);
+        KOS_track_ref(frame, &frame_ref);
+
+        TEST(KOS_collect_garbage(frame, &stats[0]) == KOS_SUCCESS);
+        frame = OBJPTR(STACK_FRAME, frame_ref.obj_id);
+
+        obj_ref[0].obj_id = KOS_new_buffer(frame, _KOS_POOL_SIZE / 2U);
+        obj_ref[1].obj_id = KOS_new_buffer(frame, _KOS_POOL_SIZE / 2U);
+
+        TEST( ! IS_BAD_PTR(obj_ref[0].obj_id));
+        TEST( ! IS_BAD_PTR(obj_ref[1].obj_id));
+
+        _fill_buffer(obj_ref[0].obj_id, 0x0A);
+        _fill_buffer(obj_ref[1].obj_id, 0x0B);
+
+        KOS_track_ref(frame, &obj_ref[0]);
+        KOS_track_ref(frame, &obj_ref[1]);
+
+        _KOS_heap_release_thread_page(frame->thread_ctx);
+
+        TEST(KOS_collect_garbage(frame, &stats[1]) == KOS_SUCCESS);
+        frame = OBJPTR(STACK_FRAME, frame_ref.obj_id);
+
+        TEST(stats[1].num_objs_evacuated == stats[0].num_objs_evacuated + 2);
+        TEST(stats[1].num_objs_freed     == 0);
+        TEST(stats[1].num_objs_finalized == 0);
+        TEST(stats[1].num_pages_kept     == 2);
+        TEST(stats[1].num_pages_freed    == 1);
+        TEST(stats[1].size_evacuated     >= stats[0].size_evacuated);
+        TEST(stats[1].size_freed         == 0);
+        TEST(stats[1].size_kept          >  0);
+
+        KOS_untrack_ref(frame, &obj_ref[0]);
+        KOS_untrack_ref(frame, &obj_ref[1]);
+
+        TEST(KOS_collect_garbage(frame, &stats[1]) == KOS_SUCCESS);
+        frame = OBJPTR(STACK_FRAME, frame_ref.obj_id);
+
+        TEST(stats[1].num_objs_evacuated == stats[0].num_objs_evacuated);
+        TEST(stats[1].num_objs_freed     == 4);
+        TEST(stats[1].num_objs_finalized == 0);
+        TEST(stats[1].num_pages_kept     == 0);
+        TEST(stats[1].num_pages_freed    >= (_KOS_POOL_SIZE / _KOS_PAGE_SIZE) + 3U);
         TEST(stats[1].size_evacuated     == stats[0].size_evacuated);
         TEST(stats[1].size_freed         >  0);
         TEST(stats[1].size_kept          == 0);

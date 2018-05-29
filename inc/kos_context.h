@@ -235,6 +235,9 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
 void KOS_track_ref(KOS_FRAME    frame,
                    KOS_OBJ_REF *ref);
 
+void KOS_untrack_ref(KOS_FRAME    frame,
+                     KOS_OBJ_REF *ref);
+
 struct _KOS_GC_STATS {
     unsigned num_objs_evacuated;
     unsigned num_objs_freed;

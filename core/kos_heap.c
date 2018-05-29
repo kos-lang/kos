@@ -495,6 +495,8 @@ static KOS_OBJ_HEADER *_setup_huge_object_in_page(struct _KOS_HEAP    *heap,
 
     PUSH_LIST(heap->full_pages, page);
 
+    assert(page->num_slots > _KOS_SLOTS_PER_PAGE);
+
     KOS_atomic_write_u32(page->num_allocated, page->num_slots);
 
     return hdr;
@@ -1060,6 +1062,14 @@ static int _mark_object_black(KOS_OBJ_ID obj_id)
     return marked;
 }
 
+static uint32_t _get_num_active_slots(_KOS_PAGE *page)
+{
+    /* For a huge object, only match the beginning of the page */
+    return (page->num_slots > _KOS_SLOTS_PER_PAGE)
+           ? 1U
+           : KOS_atomic_read_u32(page->num_allocated);
+}
+
 static int _gray_to_black_in_pages(_KOS_PAGE *page)
 {
     int marked = 0;
@@ -1071,7 +1081,7 @@ static int _gray_to_black_in_pages(_KOS_PAGE *page)
         struct _KOS_MARK_LOC mark_loc = { 0, 0 };
 
         _KOS_SLOT *ptr = (_KOS_SLOT *)((uint8_t *)page + _KOS_SLOTS_OFFS);
-        _KOS_SLOT *end = ptr + KOS_atomic_read_u32(page->num_allocated);
+        _KOS_SLOT *end = ptr + _get_num_active_slots(page);
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + _KOS_BITMAP_OFFS);
 
@@ -1189,7 +1199,7 @@ static void _get_flat_page_list(_KOS_PAGE **list, _KOS_PAGE **pages)
             continue;
         }
 
-        size = (unsigned)(_KOS_BITMAP_OFFS + (page->num_slots << _KOS_OBJ_ALIGN_BITS));
+        size = (unsigned)(_KOS_SLOTS_OFFS + (page->num_slots << _KOS_OBJ_ALIGN_BITS));
 
         num_pages = ((size - 1U) >> _KOS_PAGE_BITS) + 1U;
 
@@ -1200,7 +1210,7 @@ static void _get_flat_page_list(_KOS_PAGE **list, _KOS_PAGE **pages)
 
             const unsigned this_size = KOS_min(size, _KOS_PAGE_SIZE);
 
-            page->num_slots = (this_size - _KOS_BITMAP_OFFS) >> _KOS_OBJ_ALIGN_BITS;
+            page->num_slots = (this_size - _KOS_SLOTS_OFFS) >> _KOS_OBJ_ALIGN_BITS;
 
             *(dest++) = page;
 
@@ -1260,9 +1270,10 @@ static unsigned _push_sorted_list(struct _KOS_HEAP *heap, _KOS_PAGE *list)
         KOS_atomic_write_u32(page->num_allocated, 0);
 
 #ifndef NDEBUG
-        memset(((uint8_t *)page) + _KOS_BITMAP_OFFS,
-               0xDDU,
-               (_KOS_SLOTS_OFFS - _KOS_BITMAP_OFFS) + (page->num_slots << _KOS_OBJ_ALIGN_BITS));
+        if (page != list)
+            memset(((uint8_t *)page) + _KOS_BITMAP_OFFS,
+                   0xDDU,
+                   (_KOS_SLOTS_OFFS - _KOS_BITMAP_OFFS) + (page->num_slots << _KOS_OBJ_ALIGN_BITS));
 #endif
         while (insert_before && page > insert_before) {
 
@@ -1276,6 +1287,12 @@ static unsigned _push_sorted_list(struct _KOS_HEAP *heap, _KOS_PAGE *list)
 
         ++num_pages;
     }
+
+#ifndef NDEBUG
+    memset(((uint8_t *)list) + _KOS_BITMAP_OFFS,
+           0xDDU,
+           (_KOS_SLOTS_OFFS - _KOS_BITMAP_OFFS) + (list->num_slots << _KOS_OBJ_ALIGN_BITS));
+#endif
 
     return num_pages;
 }
@@ -1483,7 +1500,7 @@ static void _update_after_evacuation(KOS_FRAME frame)
     while (page) {
 
         uint8_t       *ptr = (uint8_t *)page + _KOS_SLOTS_OFFS;
-        uint8_t *const end = ptr + (KOS_atomic_read_u32(page->num_allocated) << _KOS_OBJ_ALIGN_BITS);
+        uint8_t *const end = ptr + (_get_num_active_slots(page) << _KOS_OBJ_ALIGN_BITS);
 
         while (ptr < end) {
 
@@ -1578,7 +1595,7 @@ static int _evacuate(KOS_FRAME             frame,
         struct _KOS_MARK_LOC mark_loc = { 0, 0 };
 
         _KOS_SLOT     *ptr            = (_KOS_SLOT *)((uint8_t *)page + _KOS_SLOTS_OFFS);
-        _KOS_SLOT     *end            = ptr + KOS_atomic_read_u32(page->num_allocated);
+        _KOS_SLOT     *end            = ptr + _get_num_active_slots(page);
         const uint32_t num_slots_used = KOS_atomic_read_u32(page->num_used);
 
         next = page->next;
@@ -1606,6 +1623,7 @@ static int _evacuate(KOS_FRAME             frame,
             const uint32_t  color = _get_marking(&mark_loc);
             int             evac  = 0;
 
+            assert(size > 0U);
             assert(color != GRAY);
 
             if (color) {
