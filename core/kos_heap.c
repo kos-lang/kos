@@ -1171,7 +1171,9 @@ static void _get_flat_list(_KOS_PAGE *page, _KOS_PAGE ***begin, _KOS_PAGE ***end
         *end = (_KOS_PAGE **)(ptr + _KOS_BITMAP_SIZE + (num_slots << _KOS_OBJ_ALIGN_BITS));
 }
 
-static void _get_flat_page_list(_KOS_PAGE **list, _KOS_PAGE **pages)
+static void _get_flat_page_list(struct _KOS_HEAP *heap,
+                                _KOS_PAGE       **list,
+                                _KOS_PAGE       **pages)
 {
     _KOS_PAGE  *page  = *pages;
     _KOS_PAGE  *first = *pages;
@@ -1210,11 +1212,17 @@ static void _get_flat_page_list(_KOS_PAGE **list, _KOS_PAGE **pages)
 
             const unsigned this_size = KOS_min(size, _KOS_PAGE_SIZE);
 
-            page->num_slots = (this_size - _KOS_SLOTS_OFFS) >> _KOS_OBJ_ALIGN_BITS;
+            if (this_size >= (_KOS_SLOTS_OFFS + (_KOS_PAGE_SIZE >> 3))) {
 
-            *(dest++) = page;
+                page->num_slots = (this_size - _KOS_SLOTS_OFFS) >> _KOS_OBJ_ALIGN_BITS;
+                assert(page->num_slots <= _KOS_SLOTS_PER_PAGE);
 
-            page = (_KOS_PAGE *)((uintptr_t)page + this_size);
+                *(dest++) = page;
+
+                page = (_KOS_PAGE *)((uintptr_t)page + this_size);
+            }
+            else
+                _register_wasted_region(heap, (void *)page, this_size);
 
             size -= this_size;
         }
@@ -1307,7 +1315,7 @@ static void _reclaim_free_pages(struct _KOS_HEAP     *heap,
         return;
 
     do
-        _get_flat_page_list(&lists, &free_pages);
+        _get_flat_page_list(heap, &lists, &free_pages);
     while (free_pages);
 
     free_pages = lists;
