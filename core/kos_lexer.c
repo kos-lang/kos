@@ -341,7 +341,9 @@ static unsigned _prefetch_next(struct _KOS_LEXER *lexer, const char **begin, con
     if (b < lexer->buf_end) {
         lt = lexem_types[(unsigned char)*b];
 
-        if ((lt & LT_UTF8_MULTI) != 0) {
+        if (lt == LT_UTF8_TAIL)
+            lt = LT_INVALID_UTF8;
+        else if ((lt & LT_UTF8_MULTI) != 0) {
             const unsigned len = lt & LT_UTF8_MASK;
 
             assert(len > 0);
