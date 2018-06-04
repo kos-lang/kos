@@ -101,7 +101,7 @@ $(foreach test, $(all_tests), $(eval $(call LINK_TEST,$(test))))
 parser_test_list = $(wildcard parser_tests/*.kos)
 
 define PARSER_TEST
-$1: $(out_dir)/tests/kos_parser_test$(exe_suffix)
+$1:
 	@echo Test kos_parser_test $(notdir $1)
 	@$(CONFIG_TOOL) $(out_dir)/tests/kos_parser_test$(exe_suffix) $1
 endef
@@ -129,7 +129,7 @@ endef
 $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TEST,$(test))))
 
 define RUN_STANDALONE_TEST
-$1: $(out_dir)/tests/$1$(exe_suffix)
+$1:
 	@echo Test $1
 	@$(CONFIG_TOOL) $(out_dir)/tests/$1$(exe_suffix)
 endef
