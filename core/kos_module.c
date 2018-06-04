@@ -1253,7 +1253,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
     /* TODO use global mutex for thread safety */
 
     /* Load lang module first, so that it ends up at index 0 */
-    if (KOS_get_array_size(ctx->modules.modules) == 0 && module_name != lang) {
+    if (KOS_get_array_size(ctx->modules.modules) == 0 && strcmp(module_name, lang)) {
         int        lang_idx;
         KOS_OBJ_ID path_array;
         KOS_OBJ_ID lang_obj;
