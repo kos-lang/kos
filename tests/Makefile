@@ -122,7 +122,7 @@ interpreter_fail_test_list = $(filter interpreter_tests/fail_%, $(wildcard inter
 define INTERPRETER_FAIL_TEST
 $1:
 	@echo Test kos $(notdir $1)
-	@if env KOSPATH=../modules $(CONFIG_TOOL) $(out_dir)/interpreter/kos$(exe_suffix) $1 2> /dev/null; then echo "Unexpected pass"; false; else true; fi
+	@env KOSPATH=../modules interpreter_tests/fail $(out_dir)/tests/$1 $(CONFIG_TOOL) $(out_dir)/interpreter/kos$(exe_suffix) $1
 endef
 
 $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TEST,$(test))))

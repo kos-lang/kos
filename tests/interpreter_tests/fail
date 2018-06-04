@@ -1,0 +1,55 @@
+#!/bin/sh
+
+# Copyright (c) 2014-2018 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+set -e
+
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <dir> <command> ..."
+    exit 1
+fi
+
+OUTPUT="$1"
+shift
+
+mkdir -p "$OUTPUT"
+
+EC=0
+"$@" >"$OUTPUT/stdout" 2>"$OUTPUT/stderr" || EC=$?
+
+if [ "$EC" != "1" ]; then
+    echo "Failed command: $@"
+    echo "Unexpected exit code: $EC"
+    echo "stdout:"
+    sed 's/^/    /' "$OUTPUT/stdout"
+    echo "stderr:"
+    sed 's/^/    /' "$OUTPUT/stderr"
+    exit 1
+fi
+
+SIZE=$(wc -c < "$OUTPUT/stdout")
+if [ "$SIZE" != "0" ]; then
+    echo "Failed command: $@"
+    echo "Unexpected output on stdout (expected no output)"
+    echo "stdout:"
+    sed 's/^/    /' "$OUTPUT/stdout"
+    exit 1
+fi
