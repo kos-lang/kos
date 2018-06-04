@@ -45,8 +45,7 @@ if [ "$EC" != "1" ]; then
     exit 1
 fi
 
-SIZE=$(wc -c < "$OUTPUT/stdout")
-if [ "$SIZE" != "0" ]; then
+if [ $(wc -c < "$OUTPUT/stdout") != 0 ]; then
     echo "Failed command: $@"
     echo "Unexpected output on stdout (expected no output)"
     echo "stdout:"
