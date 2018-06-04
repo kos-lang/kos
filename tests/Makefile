@@ -52,6 +52,7 @@ c_files  = kos_array_test.c
 c_files += kos_atomic_test.c
 c_files += kos_basic_object_test.c
 c_files += kos_buffer_test.c
+c_files += kos_fuzz_interpreter.c
 c_files += kos_gc_test.c
 c_files += kos_module_path_test.c
 c_files += kos_object_alloc_test.c
@@ -100,7 +101,7 @@ $(foreach test, $(all_tests), $(eval $(call LINK_TEST,$(test))))
 parser_test_list = $(wildcard parser_tests/*.kos)
 
 define PARSER_TEST
-$1:
+$1: $(out_dir)/tests/kos_parser_test$(exe_suffix)
 	@echo Test kos_parser_test $(notdir $1)
 	@$(CONFIG_TOOL) $(out_dir)/tests/kos_parser_test$(exe_suffix) $1
 endef
@@ -128,12 +129,16 @@ endef
 $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TEST,$(test))))
 
 define RUN_STANDALONE_TEST
-$1:
+$1: $(out_dir)/tests/$1$(exe_suffix)
 	@echo Test $1
 	@$(CONFIG_TOOL) $(out_dir)/tests/$1$(exe_suffix)
 endef
 
 $(foreach test, $(standalone_tests), $(eval $(call RUN_STANDALONE_TEST,$(test))))
+
+fuzz: $(out_dir)/tests/kos_fuzz_interpreter$(exe_suffix)
+
+$(eval $(call LINK_TEST,kos_fuzz_interpreter))
 
 module_loading:
 	@echo Test module_loading
@@ -239,4 +244,4 @@ $(all_tests): gcov.pre.clean
 $(addprefix gcov., $(gcov_modules)): $(all_tests)
 endif
 
-.PHONY: all test simple_test gcov $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_lang_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov kos_fuzz_interpreter $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_lang_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)

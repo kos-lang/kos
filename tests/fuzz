@@ -1,4 +1,5 @@
-#
+#!/bin/sh
+
 # Copyright (c) 2014-2018 Chris Dragan
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,51 +19,38 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-#
 
-modules  = interpreter
-modules += core
-modules += modules
-modules += tests
+set -e
 
-# By default, only build the interpreter
-build.interpreter:
+export CONFIG_DEBUG=1
+export CONFIG_NATIVE=1
+export CLANG_VER=c99
+export CFLAGS=-fsanitize=fuzzer-no-link,address
+export LDFLAGS=-fsanitize=fuzzer,address
+export CC=clang
+export CXX=clang++
 
-include build/dirs.mk
+UNAME=$(uname -s)
 
-CONFIG_DEBUG ?= 0
+if [ -z "$JOBS" ]; then
+    case "$UNAME" in
+        Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
+        Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
+        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ; UNAME="Windows" ;;
+        Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
+        *)                                       JOBS=2 ;;
+    esac
+fi
 
-ifeq ($(CONFIG_DEBUG), 0)
-    out_dir ?= Out/release
-else
-    out_dir ?= Out/debug
-endif
+echo "Using $JOBS jobs"
 
-clean:
-	rm -rf $(out_dir)
-	rm -f */*.gcov */*.gcda */*.gcno
+PWD="$(pwd)"
+OUT="$PWD/Out/debug/tests"
+FUZZ="kos_fuzz_interpreter"
+CORPUS="$PWD/tests/kos_fuzz_interpreter_corpus"
 
-build.interpreter build.tests: build.core build.modules
+[ -f "$OUT/$FUZZ" ] || rm -rf Out
 
-fuzz: build.core build.modules
-	@$(MAKE) -C tests fuzz
-
-test: build.interpreter build.tests
-	@$(MAKE) -C tests $@
-
-cldep:
-	@$(MAKE) -C build/cldep CONFIG_DEBUG=0
-
-ifneq (,$(filter CYGWIN% MINGW% MSYS%, $(shell uname -s)))
-$(addprefix build., $(modules)): cldep
-endif
-
-install: build.interpreter
-	@$(MAKE) -C interpreter $@
-
-doc: build.interpreter
-	@echo Extract docs
-	@mkdir -p "$(out_dir)/doc"
-	@env KOSPATH=modules $(out_dir)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
-
-.PHONY: cldep doc install test fuzz
+make -k -j "$JOBS" fuzz CONFIG_STRICT=1 --warn-undefined-variables
+cd "$OUT"
+"./$FUZZ" "$CORPUS" "-jobs=$JOBS"
