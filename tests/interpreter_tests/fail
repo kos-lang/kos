@@ -52,3 +52,11 @@ if [ $(wc -c < "$OUTPUT/stdout") != 0 ]; then
     sed 's/^/    /' "$OUTPUT/stdout"
     exit 1
 fi
+
+if [ $(wc -l < "$OUTPUT/stderr") -gt 3 ]; then
+    echo "Failed command: $@"
+    echo "Unexpected output on stderr (expected at most 3 lines)"
+    echo "stderr:"
+    sed 's/^/    /' "$OUTPUT/stderr"
+    exit 1
+fi

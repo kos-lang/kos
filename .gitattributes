@@ -1,3 +1,2 @@
 whitespace.kos binary
-fail_lexer_9.kos binary
-fail_lexer_1?.kos binary
+fail_lexer_*.kos binary

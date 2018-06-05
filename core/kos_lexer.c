@@ -379,7 +379,7 @@ static unsigned _prefetch_next(struct _KOS_LEXER *lexer, const char **begin, con
     else
         lt = LT_EOF;
 
-    if (lt == LT_EOL && *b == '\r' && b < lexer->buf_end && b[1] == '\n')
+    if (lt == LT_EOL && *b == '\r' && (b + 1 < lexer->buf_end) && b[1] == '\n')
         ++e;
 
     *begin = b;
