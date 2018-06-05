@@ -602,6 +602,11 @@ static void _collect_block_comment(struct _KOS_LEXER *lexer)
 
         c = _prefetch_next(lexer, &begin, &end);
 
+        if (c == LT_INVALID_UTF8) {
+            _retract(lexer, begin);
+            break;
+        }
+
         if (prev == '*' && c != LT_EOF && *begin == '/')
             break;
     }
