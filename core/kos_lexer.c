@@ -412,7 +412,7 @@ static void _collect_whitespace(struct _KOS_LEXER *lexer)
 
     unsigned c = _prefetch_next(lexer, &begin, &end);
 
-    while (c == LT_WHITESPACE)
+    while (c == LT_WHITESPACE && c != LT_INVALID_UTF8)
         c = _prefetch_next(lexer, &begin, &end);
 
     _retract(lexer, begin);
@@ -424,7 +424,7 @@ static void _collect_all_until_eol(struct _KOS_LEXER *lexer)
 
     unsigned c = _prefetch_next(lexer, &begin, &end);
 
-    while ((c & LT_EOL) == 0)
+    while ((c & LT_EOL) == 0 && c != LT_INVALID_UTF8)
         c = _prefetch_next(lexer, &begin, &end);
 
     _retract(lexer, begin);
