@@ -48,9 +48,10 @@ PWD="$(pwd)"
 OUT="$PWD/Out/debug/tests"
 FUZZ="kos_fuzz_interpreter"
 CORPUS="$PWD/tests/kos_fuzz_interpreter_corpus"
+DICT="$PWD/tests/kos_fuzz_interpreter_dict"
 
 [ -f "$OUT/$FUZZ" ] || rm -rf Out
 
 make -k -j "$JOBS" fuzz CONFIG_STRICT=1 --warn-undefined-variables
 cd "$OUT"
-"./$FUZZ" "$CORPUS" "-jobs=$JOBS"
+"./$FUZZ" "$CORPUS" "-jobs=$JOBS" "-workers=$JOBS" "-dict=$DICT"
