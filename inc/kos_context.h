@@ -58,7 +58,7 @@ enum _KOS_CATCH_STATE {
     KOS_NO_CATCH = 0x7FFFFFFFU
 };
 
-#define KOS_MAX_SAVED_FRAMES 16
+#define KOS_MAX_SAVED_FRAMES 8
 
 struct _KOS_SF_HDR {
     KOS_OBJ_ID alloc_size;
@@ -73,13 +73,11 @@ typedef struct _KOS_STACK_FRAME {
     struct _KOS_THREAD_CONTEXT *thread_ctx;
     uint32_t                    catch_offs;
     uint32_t                    instr_offs;
-    uint8_t                     num_saved_frames;
     KOS_OBJ_ID                  parent;
     KOS_OBJ_ID                  module;
     KOS_OBJ_ID                  registers;
     KOS_OBJ_ID                  exception;
     KOS_OBJ_ID                  retval;
-    KOS_OBJ_ID                  saved_frames[KOS_MAX_SAVED_FRAMES];
     KOS_OBJ_REF                *obj_refs;
 } KOS_STACK_FRAME;
 
@@ -89,6 +87,8 @@ struct _KOS_THREAD_CONTEXT {
     KOS_FRAME                   frame;
     struct _KOS_CONTEXT        *ctx;
     _KOS_PAGE                  *cur_page;
+    KOS_OBJ_ID                  saved_regs[KOS_MAX_SAVED_FRAMES];
+    unsigned                    num_saved_regs;
 };
 
 typedef struct _KOS_THREAD_CONTEXT KOS_THREAD_CONTEXT;

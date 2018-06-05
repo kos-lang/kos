@@ -979,11 +979,10 @@ int main(void)
 
             INSTR_RETURN,        0, 0,
 
-            INSTR_LOAD_ARRAY8,   1, 0,
             INSTR_LOAD_FUN8,     2, 0,
             INSTR_LOAD_FUN8,     3, 0,
-            INSTR_CALL,          4, 2, 2, 1,
-            INSTR_CALL,          5, 3, 3, 1,
+            INSTR_CALL_N,        4, 2, 2, 0, 0,
+            INSTR_CALL_N,        5, 3, 3, 0, 0,
 
             INSTR_LOAD_FALSE,    0,
             INSTR_INSTANCEOF,    1, 4, 2,
@@ -1018,11 +1017,10 @@ int main(void)
             INSTR_RETURN,        0, 0,
             INSTR_RETURN,        0, 0,
 
-            INSTR_LOAD_ARRAY8,   1, 0,
             INSTR_LOAD_FUN8,     2, 0,
             INSTR_LOAD_FUN8,     3, 2,
-            INSTR_CALL,          4, 2, 2, 1,
-            INSTR_CALL,          5, 3, 3, 1,
+            INSTR_CALL_N,        4, 2, 2, 0, 0,
+            INSTR_CALL_N,        5, 3, 3, 0, 0,
 
             INSTR_LOAD_FALSE,    0,
             INSTR_INSTANCEOF,    1, 4, 2,

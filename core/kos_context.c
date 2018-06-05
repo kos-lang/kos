@@ -113,6 +113,8 @@ static int _register_thread(KOS_CONTEXT        *ctx,
 
     assert( ! _KOS_tls_get(ctx->threads.thread_key));
 
+    thread_ctx->num_saved_regs = 0;
+
     thread_ctx->ctx   = ctx;
     thread_ctx->frame = (KOS_FRAME)_KOS_heap_early_alloc(ctx,
                                                          thread_ctx,

@@ -1030,12 +1030,6 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
             _set_mark_state(OBJPTR(STACK_FRAME, obj_id)->exception, GRAY);
             _set_mark_state(OBJPTR(STACK_FRAME, obj_id)->retval, GRAY);
             {
-                KOS_OBJ_ID *item = &OBJPTR(STACK_FRAME, obj_id)->saved_frames[0];
-                KOS_OBJ_ID *end  = item + OBJPTR(STACK_FRAME, obj_id)->num_saved_frames;
-                for ( ; item < end; ++item)
-                    _set_mark_state(*item, GRAY);
-            }
-            {
                 KOS_OBJ_REF *ref = OBJPTR(STACK_FRAME, obj_id)->obj_refs;
                 while (ref) {
                     _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(ref->obj_id), GRAY);
@@ -1125,6 +1119,14 @@ static int _gray_to_black(struct _KOS_HEAP *heap)
     return marked;
 }
 
+static void _mark_from_thread_context(struct _KOS_THREAD_CONTEXT *thread_ctx)
+{
+    unsigned i;
+
+    for (i = 0; i < thread_ctx->num_saved_regs; ++i)
+        _mark_object_black(thread_ctx->saved_regs[i]);
+}
+
 static void _mark_roots(KOS_FRAME frame)
 {
     KOS_CONTEXT *ctx = KOS_context_from_frame(frame);
@@ -1156,6 +1158,7 @@ static void _mark_roots(KOS_FRAME frame)
     _mark_object_black(ctx->args);
 
     /* TODO go over all threads */
+    _mark_from_thread_context(frame->thread_ctx);
 
     _mark_object_black(OBJID(STACK_FRAME, frame));
 }
@@ -1475,12 +1478,6 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             _update_child_ptr(&((KOS_STACK_FRAME *)hdr)->registers);
             _update_child_ptr(&((KOS_STACK_FRAME *)hdr)->exception);
             _update_child_ptr(&((KOS_STACK_FRAME *)hdr)->retval);
-            {
-                KOS_OBJ_ID *item = &((KOS_STACK_FRAME *)hdr)->saved_frames[0];
-                KOS_OBJ_ID *end  = item + ((KOS_STACK_FRAME *)hdr)->num_saved_frames;
-                for ( ; item < end; ++item)
-                    _update_child_ptr(item);
-            }
             {
                 KOS_OBJ_REF *ref = ((KOS_STACK_FRAME *)hdr)->obj_refs;
                 while (ref) {

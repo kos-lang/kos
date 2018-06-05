@@ -1529,6 +1529,35 @@ do {
     })
 }
 
+do {
+    const arg_list = [ 1, 2, 3 ]
+    fun(args...) {
+        args[0] = 4
+        args[1] = 5
+        args[2] = 6
+    } . apply(void, arg_list)
+
+    fun resize(args...) { args.resize(1) }
+
+    for var i in lang.range(3) {
+        resize(arg_list...)
+    }
+    for var i in lang.range(3) {
+        resize.apply(void, arg_list)
+    }
+    for var i in lang.range(3) {
+        resize(arg_list...)
+        resize.apply(void, arg_list)
+        resize(arg_list...)
+        resize.apply(void, arg_list)
+    }
+
+    assert arg_list.size == 3
+    assert arg_list[0] == 1
+    assert arg_list[1] == 2
+    assert arg_list[2] == 3
+}
+
 ##############################################################################
 # function constuctors
 

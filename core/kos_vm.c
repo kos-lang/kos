@@ -609,27 +609,18 @@ static int _is_generator_end_exception(KOS_FRAME frame)
     return ret;
 }
 
-static void _save_frame(KOS_FRAME parent,
-                        KOS_FRAME exited)
+static void _save_regs(KOS_FRAME parent,
+                       KOS_FRAME exited)
 {
-    if (parent->num_saved_frames < KOS_MAX_SAVED_FRAMES)
-        parent->saved_frames[parent->num_saved_frames++] = OBJID(STACK_FRAME, exited);
-}
+    struct _KOS_THREAD_CONTEXT *thread_ctx = parent->thread_ctx;
 
-static void _move_saved_frames(KOS_FRAME parent,
-                               KOS_FRAME exited)
-{
-    unsigned i    = 0;
-    unsigned end  = exited->num_saved_frames;
-    unsigned room = KOS_MAX_SAVED_FRAMES - parent->num_saved_frames;
+    assert(thread_ctx->num_saved_regs == 0 ||
+           thread_ctx->saved_regs[thread_ctx->num_saved_regs-1] != exited->registers);
 
-    if (end > room)
-        i += end - room;
+    if ( ! IS_BAD_PTR(exited->registers) && thread_ctx->num_saved_regs < KOS_MAX_SAVED_FRAMES)
+        thread_ctx->saved_regs[thread_ctx->num_saved_regs++] = exited->registers;
 
-    for ( ; i < end; i++)
-        _save_frame(parent, OBJPTR(STACK_FRAME, exited->saved_frames[i]));
-
-    exited->num_saved_frames = 0;
+    exited->registers = KOS_BADPTR;
 }
 
 static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
@@ -998,10 +989,8 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
     new_stack_frame->exception = KOS_BADPTR;
     new_stack_frame->retval    = KOS_BADPTR;
 
-    _move_saved_frames(frame, new_stack_frame);
-
     if ( ! yielded && ! (new_stack_frame->header.flags & KOS_REGS_BOUND))
-        _save_frame(frame, new_stack_frame);
+        _save_regs(frame, new_stack_frame);
 
     return ret;
 }
@@ -1059,33 +1048,35 @@ _error:
     return error;
 }
 
+static KOS_OBJ_ID _pop_saved_regs(KOS_FRAME frame)
+{
+    struct _KOS_THREAD_CONTEXT *thread_ctx = frame->thread_ctx;
+
+    KOS_OBJ_ID regs = KOS_BADPTR;
+
+    if (thread_ctx->num_saved_regs)
+        regs = thread_ctx->saved_regs[--thread_ctx->num_saved_regs];
+
+    return regs;
+}
+
 static KOS_OBJ_ID _alloc_args(KOS_FRAME frame, uint32_t num_args)
 {
-    KOS_OBJ_ID args_obj = KOS_BADPTR;
+    KOS_OBJ_ID args_obj = _pop_saved_regs(frame);
 
-    if (frame->num_saved_frames)
-    {
-        const unsigned  idx          = frame->num_saved_frames - 1;
-        const KOS_FRAME reused_frame = OBJPTR(STACK_FRAME, frame->saved_frames[idx]);
+    if ( ! IS_BAD_PTR(args_obj)) {
+        KOS_OBJ_ID storage;
 
-        args_obj = reused_frame->registers;
+        assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
 
-        if ( ! IS_BAD_PTR(args_obj)) {
-            KOS_OBJ_ID storage;
+        storage = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(ARRAY, args_obj)->data);
 
-            assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
+        assert( ! IS_BAD_PTR(storage));
 
-            storage = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(ARRAY, args_obj)->data);
-
-            assert( ! IS_BAD_PTR(storage));
-
-            if (OBJPTR(ARRAY_STORAGE, storage)->capacity < num_args)
-                args_obj = KOS_BADPTR;
-            else {
-                OBJPTR(ARRAY, args_obj)->size = num_args;
-                reused_frame->registers       = KOS_BADPTR;
-            }
-        }
+        if (OBJPTR(ARRAY_STORAGE, storage)->capacity < num_args)
+            args_obj = KOS_BADPTR;
+        else
+            OBJPTR(ARRAY, args_obj)->size = num_args;
     }
 
     if (IS_BAD_PTR(args_obj)) {
