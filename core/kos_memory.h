@@ -49,5 +49,6 @@ void _KOS_vector_init(struct _KOS_VECTOR *vector);
 void _KOS_vector_destroy(struct _KOS_VECTOR *vector);
 int  _KOS_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity);
 int  _KOS_vector_resize(struct _KOS_VECTOR *vector, size_t size);
+int  _KOS_vector_concat(struct _KOS_VECTOR *dest, struct _KOS_VECTOR *src);
 
 #endif

@@ -26,8 +26,8 @@
 #include "kos_config.h"
 #include "kos_debug.h"
 #include "kos_malloc.h"
-#include <string.h>
 #include <assert.h>
+#include <string.h>
 
 struct _KOS_MEMPOOL_BUFFER {
     struct _KOS_MEMPOOL_BUFFER *next;
@@ -148,6 +148,22 @@ int _KOS_vector_resize(struct _KOS_VECTOR *vector, size_t size)
 
     if (!error)
         vector->size = size;
+
+    return error;
+}
+
+int _KOS_vector_concat(struct _KOS_VECTOR *dest, struct _KOS_VECTOR *src)
+{
+    int error = KOS_SUCCESS;
+
+    if (src->size) {
+
+        const size_t pos = dest->size;
+
+        error = _KOS_vector_resize(dest, dest->size + src->size);
+        if ( ! error)
+            memcpy(dest->buffer + pos, src->buffer, src->size);
+    }
 
     return error;
 }
