@@ -273,7 +273,7 @@ fi
 ##############################################################################
 # Test multiple input lines
 
-"$KOS" -c 'print_("fun(x) {\n return x + 1\n } (41)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print_("fun(x) {\n return x + 1\n } (41)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^[>_]" | tr -d '\r' > "$OUTPUT"
 
 COUNT=$(wc -l < "$OUTPUT")
 
