@@ -29,6 +29,7 @@ fi
 
 KOS="$1"
 OUTPUT="$2/interactive"
+SIGNATURE="^Kos .* interactive interpreter"
 
 ##############################################################################
 # Test -c with a script which prints one line in two statements
@@ -139,7 +140,7 @@ fi
 
 "$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
-if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
@@ -158,7 +159,7 @@ fi
 
 "$KOS" -c 'print_("import file\nfile.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
-if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
@@ -177,7 +178,7 @@ fi
 
 "$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
-if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
@@ -204,7 +205,7 @@ fi
 
 "$KOS" -c 'print_("\"a\\xffb\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
-if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
@@ -223,7 +224,7 @@ fi
 
 "$KOS" -c 'print_("true\nvoid\n1\n\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
-if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
@@ -270,11 +271,38 @@ if [ "$CONTENTS" != "\"x\"" ]; then
 fi
 
 ##############################################################################
+# Test multiple input lines
+
+"$KOS" -c 'print_("fun(x) {\n return x + 1\n } (41)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -ne 2 ]; then
+    echo "Expected one line of output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
+    echo "Expected first line to have interactive interpreter signature" >&2
+    head -n "$OUTPUT"
+    exit 1
+fi
+
+CONTENTS=`sed -n "2 p" "$OUTPUT"`
+
+if [ "$CONTENTS" != "42" ]; then
+    echo "Expected second line of output to contain: \"42\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+##############################################################################
 # Test function declared through the interpreter
 
 "$KOS" -c 'print("fun f(a) { print(\"arg: \\(a)\") }") ; print("f(10)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
-if ! head -n 1 "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
@@ -301,7 +329,7 @@ if [ $COUNT -ne 1 ]; then
     exit 1
 fi
 
-if ! sed -n "1 p" "$OUTPUT" | grep -q "^Kos .* interactive interpreter"; then
+if ! sed -n "1 p" "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
     cat "$OUTPUT"
     exit 1

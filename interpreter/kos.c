@@ -30,6 +30,7 @@
 #include "../core/kos_getline.h"
 #include "../core/kos_heap.h"
 #include "../core/kos_memory.h"
+#include "../core/kos_parser.h"
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
 #include <assert.h>
@@ -282,12 +283,37 @@ static void _print_usage(void)
     printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
 }
 
+static int _is_input_complete(struct _KOS_VECTOR *buf,
+                              struct _KOS_VECTOR *tmp,
+                              int                *out_error)
+{
+    struct _KOS_PARSER    parser;
+    struct _KOS_MEMPOOL   mempool;
+    int                   error;
+    struct _KOS_AST_NODE *out;
+
+    _KOS_mempool_init(&mempool);
+
+    _KOS_parser_init(&parser, &mempool, 0, buf->buffer, buf->buffer + buf->size);
+
+    error = _KOS_parser_parse(&parser, &out);
+
+    _KOS_parser_destroy(&parser);
+
+    _KOS_mempool_destroy(&mempool);
+
+    return error == KOS_SUCCESS || parser.token.type != TT_EOF;
+}
+
 static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
 {
     int                 error;
     struct _KOS_GETLINE state;
     KOS_OBJ_ID          print_args;
     int                 genline_init = 0;
+    struct _KOS_VECTOR  tmp_buf;
+
+    _KOS_vector_init(&tmp_buf);
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
@@ -313,10 +339,25 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
             break;
         }
 
+        while ( ! _is_input_complete(buf, &tmp_buf, &error)) {
+
+            tmp_buf.size = 0;
+
+            error = _KOS_getline(&state, PROMPT_SUBSEQUENT_LINE, &tmp_buf);
+            if (error) {
+                assert(error == KOS_SUCCESS_RETURN || error == KOS_ERROR_OUT_OF_MEMORY);
+                break;
+            }
+
+            error = _KOS_vector_concat(buf, &tmp_buf);
+            if (error)
+                break;
+        }
+        if (error)
+            break;
+
         if ( ! buf->size)
             continue;
-
-        /* TODO parse check if more lines need to be read */
 
         ret = KOS_repl(frame, str_stdin, buf->buffer, (unsigned)buf->size);
         buf->size = 0;
@@ -355,6 +396,8 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
 _error:
     if (genline_init)
         _KOS_getline_destroy(&state);
+
+    _KOS_vector_destroy(&tmp_buf);
 
     return error;
 }
