@@ -22,6 +22,7 @@
 
 #include "kos_parser.h"
 #include "kos_ast.h"
+#include "kos_config.h"
 #include "kos_memory.h"
 #include "kos_try.h"
 #include "../inc/kos_error.h"
@@ -33,6 +34,7 @@ static const char str_err_duplicate_default[]         = "multiple 'default' labe
 static const char str_err_eol_before_par[]            = "ambiguous syntax: end of line before '(' - consider adding a ';'";
 static const char str_err_eol_before_sq[]             = "ambiguous syntax: end of line before '[' - consider adding a ';'";
 static const char str_err_eol_before_op[]             = "ambiguous syntax: end of line before operator - consider adding a ';'";
+static const char str_err_exceeded_ast_depth[]        = "expression depth exceeded";
 static const char str_err_expected_case[]             = "expected 'case'";
 static const char str_err_expected_case_or_default[]  = "expected 'case' or 'default'";
 static const char str_err_expected_case_statements[]  = "expected statements after 'case'";
@@ -160,6 +162,20 @@ static int _assume_separator(struct _KOS_PARSER *parser, enum _KOS_SEPARATOR_TYP
                     break;
             }
         }
+    }
+
+    return error;
+}
+
+static int _increase_ast_depth(struct _KOS_PARSER *parser)
+{
+    int error = KOS_SUCCESS;
+
+    ++parser->ast_depth;
+
+    if (parser->ast_depth > _KOS_MAX_AST_DEPTH) {
+        parser->error_str = str_err_exceeded_ast_depth;
+        error = KOS_ERROR_PARSE_FAILED;
     }
 
     return error;
@@ -959,6 +975,8 @@ static int _unary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
         parser->token.keyword == KW_TYPEOF ||
         parser->token.keyword == KW_DELETE) {
 
+        TRY(_increase_ast_depth(parser));
+
         ++parser->unary_depth;
 
         TRY(_new_node(parser, ret, NT_OPERATOR));
@@ -967,6 +985,8 @@ static int _unary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
         _ast_push(*ret, node);
         node = 0;
+
+        --parser->ast_depth;
 
         assert(parser->unary_depth == saved_unary_depth + 1);
     }
@@ -1208,9 +1228,9 @@ static int _logical_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     if (parser->token.op == OT_LOGAND || parser->token.op == OT_LOGOR) {
 
-        struct _KOS_AST_NODE *op_node = 0;
-
-        const enum _KOS_OPERATOR_TYPE op = parser->token.op;
+        struct _KOS_AST_NODE         *op_node = 0;
+        const enum _KOS_OPERATOR_TYPE op      = parser->token.op;
+        int                           depth   = 0;
 
         TRY(_new_node(parser, ret, NT_OPERATOR));
 
@@ -1220,6 +1240,11 @@ static int _logical_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
         op_node = *ret;
 
         for (;;) {
+
+            TRY(_next_token(parser));
+            TRY(_increase_ast_depth(parser));
+            ++depth;
+            parser->unget = 1;
 
             TRY(_comparison_expr(parser, &node));
 
@@ -1235,6 +1260,8 @@ static int _logical_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             else
                 break;
         }
+
+        parser->ast_depth -= depth;
 
         _ast_push(op_node, node);
         node = 0;
@@ -1268,6 +1295,8 @@ static int _conditional_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **
 
     if (parser->token.op == OT_LOGTRI) {
 
+        TRY(_increase_ast_depth(parser));
+
         TRY(_new_node(parser, ret, NT_OPERATOR));
 
         _ast_push(*ret, node);
@@ -1287,6 +1316,8 @@ static int _conditional_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **
         TRY(_conditional_expr(parser, &node));
 
         _ast_push(*ret, node);
+
+        --parser->ast_depth;
     }
     else {
         parser->unget = 1;
@@ -1304,6 +1335,11 @@ _error:
 static int _stream_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
+    int depth = 1;
+
+    TRY(_next_token(parser));
+    TRY(_increase_ast_depth(parser));
+    parser->unget = 1;
 
     TRY(_conditional_expr(parser, ret));
 
@@ -1312,6 +1348,9 @@ static int _stream_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     while (parser->token.op == OT_ARROW) {
 
         struct _KOS_AST_NODE *node = *ret;
+
+        TRY(_increase_ast_depth(parser));
+        ++depth;
 
         TRY(_new_node(parser, ret, NT_STREAM));
 
@@ -1326,6 +1365,8 @@ static int _stream_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     }
 
     parser->unget = 1;
+
+    parser->ast_depth -= depth;
 
 _error:
     return error;
@@ -2879,7 +2920,10 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
 {
     int error = _next_token(parser);
 
-    if (!error) {
+    if ( ! error)
+        error = _increase_ast_depth(parser);
+
+    if ( ! error) {
         const struct _KOS_TOKEN *token = &parser->token;
 
         assert(parser->unary_depth == 0);
@@ -2959,6 +3003,9 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
         }
     }
 
+    if ( ! error)
+        --parser->ast_depth;
+
     return error;
 }
 
@@ -3011,6 +3058,7 @@ void _KOS_parser_init(struct _KOS_PARSER  *parser,
     parser->allow_fallthrough = 0;
     parser->last_fallthrough  = 0;
     parser->in_constructor    = 0;
+    parser->ast_depth         = 0;
     parser->unary_depth       = 0;
 
     parser->token.length      = 0;

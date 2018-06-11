@@ -23,6 +23,7 @@
 #ifndef __KOS_CONFIG_H
 #define __KOS_CONFIG_H
 
+#define _KOS_MAX_AST_DEPTH      100
 #define _KOS_BUF_ALLOC_SIZE     4096U
 #define _KOS_VEC_MAX_INC_SIZE   262144U
 #define _KOS_POOL_BITS          19

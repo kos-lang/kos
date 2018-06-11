@@ -41,6 +41,7 @@ struct _KOS_PARSER {
     int                   allow_fallthrough;
     struct _KOS_AST_NODE *last_fallthrough;
     int                   in_constructor;
+    int                   ast_depth;   /* For limiting statement/expression depth */
     int                   unary_depth; /* For detecting ambiguous syntax */
 };
 
