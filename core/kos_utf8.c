@@ -189,6 +189,8 @@ unsigned _KOS_utf8_get_len(const char           *str,
             code = c & ((0x80U >> code_len) - 1);
             for (--code_len; code_len; --code_len) {
                 const uint32_t next_c = (uint8_t)*(str++);
+                if ((next_c & 0xC0U) != 0x80U)
+                    return KOS_INVALID_ESC;
                 code = (code << 6) | (next_c & 0x3FU);
             }
 
@@ -233,11 +235,8 @@ int _KOS_utf8_decode_8(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE e
 
             do {
                 const uint8_t next = (uint8_t)*(str++);
-                if ((next & 0xC0U) != 0x80U) {
-                    error = KOS_ERROR_INVALID_UTF8_CHARACTER;
-                    str   = end;
-                    break;
-                }
+                if ((next & 0xC0U) != 0x80U)
+                    return KOS_ERROR_INVALID_UTF8_CHARACTER;
                 c = (c << 6) | (next & 0x3FU);
             }
             while (--code_len);
@@ -273,11 +272,8 @@ int _KOS_utf8_decode_16(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE 
 
             do {
                 const uint16_t next = (uint8_t)*(str++);
-                if ((next & 0xC0U) != 0x80U) {
-                    error = KOS_ERROR_INVALID_UTF8_CHARACTER;
-                    str   = end;
-                    break;
-                }
+                if ((next & 0xC0U) != 0x80U)
+                    return KOS_ERROR_INVALID_UTF8_CHARACTER;
                 c = (c << 6) | (next & 0x3FU);
             }
             while (--code_len);
@@ -313,11 +309,8 @@ int _KOS_utf8_decode_32(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE 
 
             do {
                 const uint32_t next = (uint8_t)*(str++);
-                if ((next & 0xC0U) != 0x80U) {
-                    error = KOS_ERROR_INVALID_UTF8_CHARACTER;
-                    str   = end;
-                    break;
-                }
+                if ((next & 0xC0U) != 0x80U)
+                    return KOS_ERROR_INVALID_UTF8_CHARACTER;
                 c = (c << 6) | (next & 0x3F);
             }
             while (--code_len);
