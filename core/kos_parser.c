@@ -145,6 +145,10 @@ static int _assume_separator(struct _KOS_PARSER *parser, enum _KOS_SEPARATOR_TYP
                     parser->error_str = str_err_expected_curly_open;
                     error = KOS_ERROR_PARSE_FAILED;
                     break;
+                case ST_CURLY_CLOSE:
+                    parser->error_str = str_err_expected_curly_close;
+                    error = KOS_ERROR_PARSE_FAILED;
+                    break;
                 case ST_PAREN_OPEN:
                     parser->error_str = str_err_expected_paren_open;
                     error = KOS_ERROR_PARSE_FAILED;
