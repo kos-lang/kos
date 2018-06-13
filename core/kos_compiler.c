@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+static const char str_err_complex_try[]               = "composition of 'defer', 'try' or 'with' statements too complex";
 static const char str_err_duplicate_property[]        = "duplicate object property";
 static const char str_err_expected_refinement[]       = "expected .identifier or '[' in argument to 'delete'";
 static const char str_err_expected_refinement_ident[] = "expected identifier";
@@ -2021,15 +2022,24 @@ static int _restore_catch(struct _KOS_COMP_UNIT *program,
 
     if (outer_scope && outer_scope->catch_ref.catch_reg) {
 
-        cur_scope->catch_ref.catch_offs[offs_idx] = program->cur_offs;
+        if (cur_scope->catch_ref.catch_offs[offs_idx] == 0) {
 
-        if (offs_idx == 0) {
-            assert(!cur_scope->catch_ref.next);
-            cur_scope->catch_ref.next           = outer_scope->catch_ref.child_scopes;
-            outer_scope->catch_ref.child_scopes = cur_scope;
+            cur_scope->catch_ref.catch_offs[offs_idx] = program->cur_offs;
+
+            if (offs_idx == 0) {
+                assert(!cur_scope->catch_ref.next);
+                assert(outer_scope->catch_ref.child_scopes != cur_scope);
+                cur_scope->catch_ref.next           = outer_scope->catch_ref.child_scopes;
+                outer_scope->catch_ref.child_scopes = cur_scope;
+            }
+
+            error = _gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
         }
-
-        error = _gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
+        else {
+            program->error_token = &cur_scope->scope_node->token;
+            program->error_str   = str_err_complex_try;
+            error = KOS_ERROR_COMPILE_FAILED;
+        }
     }
     else
         error = _gen_instr(program, 0, INSTR_CANCEL);
