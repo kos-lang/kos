@@ -489,3 +489,11 @@ do {
     expect_fail(()=>([1].repeat(void)))
     expect_fail(()=>([1].repeat()))
 }
+
+# Slice test case from fuzzer
+# Invalid operand for slice operator must not crash the compiler.
+do {
+    expect_fail(fun {
+        0[0[:]:0[:]] = 0
+    })
+}

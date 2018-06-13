@@ -3764,8 +3764,8 @@ static int _assign_slice(struct _KOS_COMP_UNIT      *program,
     assert(obj_reg);
 
     if (obj_reg != argn[0]) {
-        assert( ! obj_reg->tmp);
         TRY(_gen_instr2(program, INSTR_MOVE, argn[0]->reg, obj_reg->reg));
+        _free_reg(program, obj_reg);
     }
 
     node = node->next;
@@ -3777,8 +3777,8 @@ static int _assign_slice(struct _KOS_COMP_UNIT      *program,
     assert(obj_reg);
 
     if (obj_reg != argn[1]) {
-        assert( ! obj_reg->tmp);
         TRY(_gen_instr2(program, INSTR_MOVE, argn[1]->reg, obj_reg->reg));
+        _free_reg(program, obj_reg);
     }
 
     obj_reg = 0;
