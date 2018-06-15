@@ -325,6 +325,9 @@ void _KOS_activate_var(struct _KOS_COMP_UNIT      *program,
 void _KOS_activate_new_vars(struct _KOS_COMP_UNIT      *program,
                             const struct _KOS_AST_NODE *node);
 
+void _KOS_activate_self_ref_func(struct _KOS_COMP_UNIT      *program,
+                                 const struct _KOS_AST_NODE *node);
+
 void _KOS_deactivate_vars(struct _KOS_SCOPE *scope);
 
 int _KOS_scope_compare_node(struct _KOS_RED_BLACK_NODE *a,

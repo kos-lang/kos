@@ -675,10 +675,8 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT      *program,
         assert(fun_var);
         assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
 
-        if (fun_var->type & VAR_LOCAL) {
-            assert(fun_var->is_active == VAR_ALWAYS_ACTIVE);
+        if ((fun_var->type & VAR_LOCAL) && fun_var->is_active)
             fun_var->is_active = VAR_INACTIVE;
-        }
         else
             fun_var = 0;
     }
@@ -704,7 +702,7 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT      *program,
     }
 
     if (fun_var)
-        fun_var->is_active = VAR_ALWAYS_ACTIVE;
+        fun_var->is_active = VAR_ACTIVE;
 
 _error:
     return error;
@@ -831,6 +829,25 @@ static int _assert(struct _KOS_COMP_UNIT      *program,
     return _visit_node(program, node);
 }
 
+static int _is_self_ref_func(const struct _KOS_AST_NODE *node)
+{
+    if (node->type != NT_CONST)
+        return 0;
+
+    assert(node->children);
+    assert(node->next);
+
+    if (node->next->type != NT_FUNCTION_LITERAL    &&
+        node->next->type != NT_CONSTRUCTOR_LITERAL &&
+        node->next->type != NT_CLASS_LITERAL)
+        return 0;
+
+    assert(node->children->type == NT_IDENTIFIER);
+    assert( ! node->children->next);
+
+    return 1;
+}
+
 static int _assignment(struct _KOS_COMP_UNIT      *program,
                        const struct _KOS_AST_NODE *input_node)
 {
@@ -844,27 +861,11 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
     assert(node);
     assert(node->next);
 
-    /* References to self are only allowed for const, not for var */
-    if (node->type == NT_CONST &&
-            (node->next->type == NT_FUNCTION_LITERAL
-          || node->next->type == NT_CONSTRUCTOR_LITERAL
-          || node->next->type == NT_CLASS_LITERAL)) {
-
-        struct _KOS_VAR *var;
+    if (_is_self_ref_func(node)) {
 
         TRY(_visit_node(program, node));
 
-        assert(node->type == NT_CONST);
-
-        assert(node->children);
-        assert(node->children->type == NT_IDENTIFIER);
-        assert( ! node->children->next);
-
-        var = _KOS_find_var(program->scope_stack->vars, &node->children->token);
-        assert(var);
-
-        /* This will still be temporarily disabled when processing parameter defaults */
-        var->is_active = VAR_ALWAYS_ACTIVE;
+        _KOS_activate_self_ref_func(program, node);
 
         node = node->next;
         assert( ! node->next);
@@ -1041,6 +1042,20 @@ void _KOS_activate_new_vars(struct _KOS_COMP_UNIT      *program,
     }
     else {
         assert(node->type == NT_LEFT_HAND_SIDE);
+    }
+}
+
+void _KOS_activate_self_ref_func(struct _KOS_COMP_UNIT      *program,
+                                 const struct _KOS_AST_NODE *node)
+{
+    if (_is_self_ref_func(node)) {
+
+        struct _KOS_VAR *var;
+
+        var = _KOS_find_var(program->scope_stack->vars, &node->children->token);
+        assert(var);
+
+        var->is_active = VAR_ACTIVE;
     }
 }
 

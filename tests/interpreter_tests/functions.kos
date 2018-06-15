@@ -1727,3 +1727,28 @@ do {
     assert a1[0] == 10
     assert a2[0] == 200
 }
+
+# shadowing (test case from fuzzer)
+do {
+    const foo = 0
+    do {
+        fun { return foo }
+        const foo = fun { }
+    }
+}
+
+# shadowing
+do {
+    var foo = 0
+    var bar = 0
+    do {
+        fun { foo |= 1 }
+        fun { foo |= 2 } ()
+        assert typeof foo == "integer"
+        const foo = fun { bar |= 4 }
+        assert typeof foo == "function"
+        foo()
+    }
+    assert foo == 2
+    assert bar == 4
+}

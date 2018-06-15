@@ -740,10 +740,8 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
         assert(fun_var);
         assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
 
-        if (fun_var->type & VAR_LOCAL) {
-            assert(fun_var->is_active == VAR_ALWAYS_ACTIVE);
+        if ((fun_var->type & VAR_LOCAL) && fun_var->is_active)
             fun_var->is_active = VAR_INACTIVE;
-        }
         else
             fun_var = 0;
     }
@@ -770,7 +768,7 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
     }
 
     if (fun_var)
-        fun_var->is_active = VAR_ALWAYS_ACTIVE;
+        fun_var->is_active = VAR_ACTIVE;
 
 _error:
     return error;
@@ -840,6 +838,8 @@ static int _assignment(struct _KOS_COMP_UNIT *program,
     rhs_node = lhs_node->next;
     assert(rhs_node);
     assert( ! rhs_node->next);
+
+    _KOS_activate_self_ref_func(program, lhs_node);
 
     TRY(_visit_node(program, rhs_node, &t));
     assert(t == TERM_NONE);

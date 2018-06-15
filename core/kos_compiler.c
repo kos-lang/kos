@@ -3842,6 +3842,8 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
            node->type == NT_VAR ||
            node->type == NT_CONST);
 
+    _KOS_activate_self_ref_func(program, node);
+
     is_lhs = (node->type == NT_LEFT_HAND_SIDE) ? 1 : 0;
 
     assert(is_lhs || (node->children && node->children->type == NT_IDENTIFIER));
@@ -4566,10 +4568,8 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         assert(var);
         assert((var->type & VAR_LOCAL) || var->type == VAR_GLOBAL);
 
-        if (var->type & VAR_LOCAL) {
-            assert(var->is_active == VAR_ALWAYS_ACTIVE);
+        if ((var->type & VAR_LOCAL) && var->is_active)
             var->is_active = VAR_INACTIVE;
-        }
         else
             var = 0;
     }
@@ -4650,7 +4650,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     }
 
     if (var)
-        var->is_active = VAR_ALWAYS_ACTIVE;
+        var->is_active = VAR_ACTIVE;
 
 _error:
     return error;
