@@ -612,3 +612,12 @@ do {
     assert "hello" in final
     assert final.hello == "world"
 }
+
+# function inside defer statement should not crash the interpreter
+# test case from fuzzer
+loop {
+    defer {
+        o => (o => (o))
+    }
+    break
+}

@@ -4541,6 +4541,18 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     _free_all_regs(program, frame->used_regs);
     _free_all_regs(program, frame->free_regs);
 
+    /* Restore original state so the function node is re-entrant for defer
+     * statements re-generated for return and break statements.  All
+     * registers in re-generated defer statement should be the same as
+     * originally. */
+    frame->used_regs = 0;
+    frame->free_regs = 0;
+    frame->this_reg  = 0;
+    frame->args_reg  = 0;
+    frame->num_regs  = 0;
+    if (scope->ellipsis)
+        scope->ellipsis->reg = 0;
+
     /* Find the first default arg */
     if (num_def) {
         node = fun_node->children;
