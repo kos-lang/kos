@@ -676,7 +676,7 @@ string.prototype.zfill = fun(size, fill = "0")
  * A string containing all characters considered as whitespace by some
  * functions.
  */
-const whitespace = " \r\n\t\f\v\0\xA0\x{2028}\x{2029}\x{FEFF}"
+const whitespace = " \r\n\t\f\v\xA0\x{2028}\x{2029}\x{FEFF}"
 
 /* @item lang eol
  *

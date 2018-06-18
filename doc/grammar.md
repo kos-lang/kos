@@ -74,7 +74,6 @@ Whitespaces
 A contiguous series of whitespace non-EOL characters is treated as a single
 whitespace token.  Whitespace characters include:
 
-* U+0000 null
 * U+000B vertical tab
 * U+000C form feed
 * U+0020 space
@@ -92,7 +91,7 @@ character sequence is either `LF`, `CR-LF`, or `CR`, if it's not followed by
 
     Eol                ::= ( "\r" "\n" ) | "\r" | "\n"
 
-    WhitespaceChar     ::= " " | "\0" | "\f" | "\v"
+    WhitespaceChar     ::= " " | "\f" | "\v"
                          | "\x{A0}" | "\x{2028}" | "\x{2029}" | "\x{FEFF}"
 
     WHITESPACE_LITERAL ::= ( WhitespaceChar ( WhitespaceChar )* ) | Eol

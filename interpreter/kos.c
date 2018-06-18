@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 
         /* Load script from command line */
         if (is_script) {
-            error = KOS_load_module_from_memory(frame, str_cmdline, str_import_lang, sizeof(str_import_lang));
+            error = KOS_load_module_from_memory(frame, str_cmdline, str_import_lang, sizeof(str_import_lang) - 1);
 
             if ( ! error) {
                 KOS_OBJ_ID ret = KOS_repl(frame, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
     }
     else {
 
-        error = KOS_load_module_from_memory(frame, str_stdin, str_import_lang, sizeof(str_import_lang));
+        error = KOS_load_module_from_memory(frame, str_stdin, str_import_lang, sizeof(str_import_lang) - 1);
 
         if ( ! error) {
 

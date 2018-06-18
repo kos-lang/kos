@@ -70,10 +70,8 @@ enum _KOS_LEXEM_TYPE {
 };
 
 static const unsigned char lexem_types[] = {
-    /* 0 */
-    LT_WHITESPACE,
-    /* 1..7 */
-    LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID,
+    /* 0..7 */
+    LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID,
     /* 8 */
     LT_INVALID,
     /* 9(TAB) */
