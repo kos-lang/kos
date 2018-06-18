@@ -1736,13 +1736,22 @@ static int _repeat(struct _KOS_COMP_UNIT      *program,
 
     if ( ! _KOS_node_is_falsy(program, node)) {
 
-        TRY(_visit_node(program, node, &reg));
-        assert(reg);
+        const int is_truthy = _KOS_node_is_truthy(program, node);
+
+        if ( ! is_truthy) {
+            TRY(_visit_node(program, node, &reg));
+            assert(reg);
+        }
 
         assert(!node->next);
 
         jump_instr_offs = program->cur_offs;
-        TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+
+        if (reg)
+            TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+        else
+            TRY(_gen_instr1(program, INSTR_JUMP, 0));
+
         _update_jump_offs(program, jump_instr_offs, loop_start_offs);
     }
 
