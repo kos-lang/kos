@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang.print
+import lang: print, stringify
 
 fun expect_fail(function)
 {
@@ -579,4 +579,12 @@ do {
     assert "x".repeat(10)  == "xxxxxxxxxx"
     assert "mno".repeat(2) == "mnomno"
     expect_fail(()=>("x".repeat(0x10000)))
+}
+
+# test case from fuzzer
+do {
+    assert "\(2555555555555555555555551555555555555555555555555555555555555.57)"
+        == stringify(2555555555555555555555551555555555555555555555555555555555555.57)
+    assert "\(2555555555555555555555551555555555555555555555555555555555555.57)"
+        == "\( x => (x) (2555555555555555555555551555555555555555555555555555555555555.57) )"
 }

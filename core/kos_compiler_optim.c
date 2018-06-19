@@ -1465,7 +1465,7 @@ static int _stringify(struct _KOS_COMP_UNIT       *program,
             struct _KOS_NUMERIC      numeric;
             const struct _KOS_TOKEN *token    = &(*node_ptr)->token;
             char                    *store;
-            const unsigned           max_size = 64;
+            const unsigned           max_size = 34;
 
             if (token->type == TT_NUMERIC_BINARY) {
                 const struct _KOS_NUMERIC *value;
@@ -1499,7 +1499,7 @@ static int _stringify(struct _KOS_COMP_UNIT       *program,
 
                 store[0] = '"';
 
-                size = _KOS_print_float(store + 1, max_size - 1, numeric.u.d);
+                size = _KOS_print_float(store + 1, max_size - 2, numeric.u.d);
                 assert(size < max_size - 1);
 
                 store[size + 1] = '"';
