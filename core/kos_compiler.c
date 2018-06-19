@@ -657,11 +657,12 @@ static int _gen_assert_str(struct _KOS_COMP_UNIT      *program,
                            const struct _KOS_AST_NODE *node,
                            int                        *str_idx)
 {
-    int         error = KOS_SUCCESS;
-    const char *begin;
-    const char *end;
-    char       *buf;
-    unsigned    length;
+    int            error = KOS_SUCCESS;
+    const char    *begin;
+    const char    *end;
+    char          *buf;
+    unsigned       length;
+    const unsigned max_length = 64;
 
     static const char assertion_failed[] = "Assertion failed: ";
 
@@ -683,6 +684,9 @@ static int _gen_assert_str(struct _KOS_COMP_UNIT      *program,
     assert((uint8_t)*begin > 0x20);
 
     length = _calc_assert_str_len(begin, end) + sizeof(assertion_failed) - 1;
+
+    if (length > max_length)
+        length = max_length;
 
     buf = (char *)_KOS_mempool_alloc(&program->allocator, length);
 
