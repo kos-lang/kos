@@ -516,6 +516,7 @@ unsigned _KOS_print_float(char *buf, unsigned size, double value)
         if (*end == '.')
             ++end;
         ++end;
+        *end = 0;
     }
 
     return (unsigned)(end - buf);
