@@ -305,6 +305,22 @@ static int _is_input_complete(struct _KOS_VECTOR *buf,
     return error == KOS_SUCCESS || parser.token.type != TT_EOF;
 }
 
+static int _enforce_eol(struct _KOS_VECTOR *buf)
+{
+    const char c = buf->size == 0 ? 0 : buf->buffer[buf->size - 1];
+
+    if (c != '\r' && c != '\n') {
+
+        const int error = _KOS_vector_resize(buf, buf->size + 1);
+        if (error)
+            return error;
+
+        buf->buffer[buf->size - 1] = '\n';
+    }
+
+    return KOS_SUCCESS;
+}
+
 static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
 {
     int                 error;
@@ -339,6 +355,8 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
             break;
         }
 
+        assert(buf->size == 0 || buf->buffer[buf->size - 1] != 0);
+
         while ( ! _is_input_complete(buf, &tmp_buf, &error)) {
 
             tmp_buf.size = 0;
@@ -348,6 +366,12 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
                 assert(error == KOS_SUCCESS_RETURN || error == KOS_ERROR_OUT_OF_MEMORY);
                 break;
             }
+
+            assert(tmp_buf.size == 0 || tmp_buf.buffer[tmp_buf.size - 1] != 0);
+
+            error = _enforce_eol(buf);
+            if (error)
+                break;
 
             error = _KOS_vector_concat(buf, &tmp_buf);
             if (error)
