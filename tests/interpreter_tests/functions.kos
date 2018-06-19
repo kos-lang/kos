@@ -1752,3 +1752,10 @@ do {
     assert foo == 2
     assert bar == 4
 }
+
+# invoke with argument which generates its own register
+# (test case from fuzzer)
+do {
+    const value = (x,y)=>(x+y)("abc"[1:], "d")
+    assert value == "bcd"
+}

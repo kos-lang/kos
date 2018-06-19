@@ -2758,16 +2758,20 @@ static int _slice(struct _KOS_COMP_UNIT      *program,
     TRY(_visit_node(program, node, &end_reg));
     assert(end_reg);
 
-    if (obj_reg->tmp)
-        *reg = obj_reg;
-    else
-        TRY(_gen_reg(program, reg));
+    if ( ! *reg) {
+        if (obj_reg->tmp)
+            *reg = obj_reg;
+        else
+            TRY(_gen_reg(program, reg));
+    }
 
     TRY(_gen_instr4(program, INSTR_GET_RANGE, (*reg)->reg, obj_reg->reg,
                                               begin_reg->reg, end_reg->reg));
 
     _free_reg(program, end_reg);
     _free_reg(program, begin_reg);
+    if (obj_reg != *reg)
+        _free_reg(program, obj_reg);
 
 _error:
     return error;
