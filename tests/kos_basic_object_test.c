@@ -100,9 +100,6 @@ int main(void)
         TEST(IS_SMALL_INT(integer_a) || IS_HEAP_OBJECT(integer_a));
         TEST(IS_SMALL_INT(integer_b) || IS_HEAP_OBJECT(integer_b));
 
-        TEST(!IS_SMALL_INT(integer_a) || !IS_HEAP_OBJECT(integer_a));
-        TEST(!IS_SMALL_INT(integer_b) || !IS_HEAP_OBJECT(integer_b));
-
         TEST(IS_NUMERIC_OBJ(integer_a));
         TEST(IS_NUMERIC_OBJ(integer_b));
 
