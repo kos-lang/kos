@@ -145,6 +145,41 @@ fun sort_by_first(a, b)
     return a[0] < b[0]
 }
 
+fun make_toc_name(name)
+{
+    return string(name.map(fun(c) {
+        switch c {
+            case "_":      return "\_"
+            default:       return c
+        }
+    })...)
+}
+
+fun make_link(name)
+{
+    return string(name.map(fun(c) {
+        switch c {
+            case ".", "(", ")": return ""
+            default:            return c
+        }
+    })...)
+}
+
+# Print TOC
+print("Table of Contents")
+print("=================")
+print("<!--ts-->")
+print("  * [Table of Contents](#table-of-contents)")
+for const topic, items in sort(sort_by_first, docs) {
+    print("  * [\(make_toc_name(topic))](#\(make_link(topic)))")
+    for const item, contents in sort(sort_by_first, items) {
+        const lead = item.scan(".") == -1 ? "" : "  "
+        print("\(lead)    * [\(make_toc_name(item))](#\(make_link(item)))")
+    }
+}
+print("<!--te-->")
+
+# Print module documentation
 for const topic, items in sort(sort_by_first, docs) {
     print(topic)
     print("=".repeat(topic.size))
