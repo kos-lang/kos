@@ -63,6 +63,10 @@ int main(void)
         TEST(GET_SMALL_INT(small_int_min) == min_small_int);
         TEST(GET_SMALL_INT(small_int_max) == max_small_int);
 
+        TEST(!IS_HEAP_OBJECT(small_int0));
+        TEST(!IS_HEAP_OBJECT(small_int_min));
+        TEST(!IS_HEAP_OBJECT(small_int_max));
+
         TEST(IS_NUMERIC_OBJ(small_int0));
         TEST(IS_NUMERIC_OBJ(small_int_max));
 
@@ -92,6 +96,12 @@ int main(void)
 
         TEST(GET_OBJ_TYPE(integer_a) != OBJ_OBJECT);
         TEST(GET_OBJ_TYPE(integer_b) != OBJ_OBJECT);
+
+        TEST(IS_SMALL_INT(integer_a) || IS_HEAP_OBJECT(integer_a));
+        TEST(IS_SMALL_INT(integer_b) || IS_HEAP_OBJECT(integer_b));
+
+        TEST(!IS_SMALL_INT(integer_a) || !IS_HEAP_OBJECT(integer_a));
+        TEST(!IS_SMALL_INT(integer_b) || !IS_HEAP_OBJECT(integer_b));
 
         TEST(IS_NUMERIC_OBJ(integer_a));
         TEST(IS_NUMERIC_OBJ(integer_b));
@@ -126,6 +136,9 @@ int main(void)
         TEST(GET_OBJ_TYPE(integer_a) != OBJ_OBJECT);
         TEST(GET_OBJ_TYPE(integer_b) != OBJ_OBJECT);
 
+        TEST(IS_HEAP_OBJECT(integer_a));
+        TEST(IS_HEAP_OBJECT(integer_b));
+
         TEST(IS_NUMERIC_OBJ(integer_a));
         TEST(IS_NUMERIC_OBJ(integer_b));
 
@@ -152,6 +165,8 @@ int main(void)
 
         TEST(IS_NUMERIC_OBJ(number));
 
+        TEST(IS_HEAP_OBJECT(number));
+
         TEST(GET_OBJ_TYPE(number) == OBJ_FLOAT);
 
         TEST(OBJPTR(FLOAT, number)->value == 1.5);
@@ -166,6 +181,8 @@ int main(void)
         TEST(!IS_SMALL_INT(boolean));
 
         TEST(!IS_NUMERIC_OBJ(boolean));
+
+        TEST(!IS_HEAP_OBJECT(boolean));
 
         TEST(GET_OBJ_TYPE(boolean) == OBJ_BOOLEAN);
 
@@ -182,6 +199,8 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(a_void));
 
+        TEST(!IS_HEAP_OBJECT(a_void));
+
         TEST(GET_OBJ_TYPE(a_void) == OBJ_VOID);
     }
 
@@ -195,6 +214,8 @@ int main(void)
         TEST(!IS_SMALL_INT(obj));
 
         TEST(!IS_NUMERIC_OBJ(obj));
+
+        TEST(IS_HEAP_OBJECT(obj));
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_STRING);
 
@@ -214,6 +235,8 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(obj));
 
+        TEST(IS_HEAP_OBJECT(obj));
+
         TEST(GET_OBJ_TYPE(obj) == OBJ_STRING);
 
         TEST(GET_OBJ_TYPE(obj) != OBJ_OBJECT);
@@ -232,6 +255,8 @@ int main(void)
 
         TEST(!IS_NUMERIC_OBJ(obj));
 
+        TEST(IS_HEAP_OBJECT(obj));
+
         TEST(GET_OBJ_TYPE(obj) == OBJ_STRING);
 
         TEST(GET_OBJ_TYPE(obj) != OBJ_OBJECT);
@@ -248,6 +273,8 @@ int main(void)
         TEST(!IS_SMALL_INT(obj));
 
         TEST(!IS_NUMERIC_OBJ(obj));
+
+        TEST(IS_HEAP_OBJECT(obj));
 
         TEST(GET_OBJ_TYPE(obj) != OBJ_STRING);
 
@@ -267,6 +294,8 @@ int main(void)
         TEST(!IS_SMALL_INT(obj));
 
         TEST(!IS_NUMERIC_OBJ(obj));
+
+        TEST(IS_HEAP_OBJECT(obj));
 
         TEST(GET_OBJ_TYPE(obj) != OBJ_STRING);
 

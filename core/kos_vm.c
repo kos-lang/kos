@@ -56,9 +56,9 @@ static const char str_err_unsup_operand_types[]  = "unsupported operand types";
 static const char str_slice[]                    = "slice";
 static const char str_value[]                    = "value";
 
-static struct _KOS_CONST_OBJECT new_this = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC0);
+DECLARE_STATIC_CONST_OBJECT(_new_this) = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC0);
 
-#define NEW_THIS KOS_CONST_ID(new_this)
+#define NEW_THIS KOS_CONST_ID(_new_this)
 
 static int _exec_function(KOS_FRAME frame);
 

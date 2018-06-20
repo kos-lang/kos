@@ -39,8 +39,8 @@ static const char str_err_invalid_index[] = "array index is out of range";
 static const char str_err_not_array[]     = "object is not an array";
 static const char str_err_null_ptr[]      = "null pointer";
 
-static struct _KOS_CONST_OBJECT tombstone = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xA0);
-static struct _KOS_CONST_OBJECT closed    = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xA1);
+DECLARE_STATIC_CONST_OBJECT(tombstone) = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xA0);
+DECLARE_STATIC_CONST_OBJECT(closed)    = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xA1);
 
 /* TOMBSTONE indicates that an array element has been deleted due to a resize. */
 #define TOMBSTONE KOS_CONST_ID(tombstone)

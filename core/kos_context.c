@@ -61,9 +61,9 @@ static const char str_module[]                  = "module";
 static const char str_offset[]                  = "offset";
 static const char str_value[]                   = "value";
 
-const struct _KOS_CONST_OBJECT _kos_void  = KOS_CONST_OBJECT_INIT(OBJ_VOID,    0);
-const struct _KOS_CONST_OBJECT _kos_false = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
-const struct _KOS_CONST_OBJECT _kos_true  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
+DECLARE_CONST_OBJECT(_kos_void)  = KOS_CONST_OBJECT_INIT(OBJ_VOID,    0);
+DECLARE_CONST_OBJECT(_kos_false) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
+DECLARE_CONST_OBJECT(_kos_true)  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
 
 #ifdef CONFIG_PERF
 struct _KOS_PERF _kos_perf = {
@@ -254,6 +254,10 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     int         thread_ok = 0;
     KOS_FRAME   frame;
     KOS_MODULE *init_module;
+
+    assert(!IS_HEAP_OBJECT(KOS_VOID));
+    assert(!IS_HEAP_OBJECT(KOS_FALSE));
+    assert(!IS_HEAP_OBJECT(KOS_TRUE));
 
     memset(ctx, 0, sizeof(*ctx));
 

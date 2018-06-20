@@ -208,7 +208,7 @@ int main(void)
 
     /************************************************************************/
     {
-        static struct _KOS_CONST_OBJECT const_obj = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 2);
+        DECLARE_STATIC_CONST_OBJECT(const_obj) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 2);
 
         KOS_BOOLEAN *bool_obj = (KOS_BOOLEAN *)&const_obj._alloc_size;
 

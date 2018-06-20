@@ -192,14 +192,30 @@ typedef struct _KOS_OPAQUE {
 } KOS_OPAQUE;
 
 struct _KOS_CONST_OBJECT {
-    uint64_t       _align8;
-    uint32_t       _align4;
-    char           _alloc_size[sizeof(KOS_OBJ_ID)];
-    uint8_t        type;
-    uint8_t        value;
+    uint32_t _align4;
+    uint8_t  _alloc_size[sizeof(KOS_OBJ_ID)];
+    uint8_t  type;
+    uint8_t  value;
 };
 
 #define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj)._alloc_size + 1) )
+
+#ifdef KOS_CPP11
+#   define DECLARE_CONST_OBJECT(name) alignas(8) const struct _KOS_CONST_OBJECT name
+#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(8) static const struct _KOS_CONST_OBJECT name
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#   include <stdalign.h>
+#   define DECLARE_CONST_OBJECT(name) alignas(8) const struct _KOS_CONST_OBJECT name
+#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(8) static const struct _KOS_CONST_OBJECT name
+#elif defined(__GNUC__)
+#   define DECLARE_CONST_OBJECT(name) const struct _KOS_CONST_OBJECT name __attribute__ ((aligned (8)))
+#   define DECLARE_STATIC_CONST_OBJECT(name) static const struct _KOS_CONST_OBJECT name __attribute__ ((aligned (8)))
+#elif defined(_MSC_VER)
+#   define DECLARE_CONST_OBJECT(name) __declspec(align(8)) const struct _KOS_CONST_OBJECT name
+#   define DECLARE_STATIC_CONST_OBJECT(name) __declspec(align(8)) static const struct _KOS_CONST_OBJECT name
+#endif
+
+#define KOS_CONST_OBJECT_INIT(type, value) { 0, "", (type), (value) }
 
 #ifdef __cplusplus
 extern "C" {
@@ -217,8 +233,6 @@ extern const struct _KOS_CONST_OBJECT _kos_true;
 #define KOS_FALSE   KOS_CONST_ID(_kos_false)
 #define KOS_TRUE    KOS_CONST_ID(_kos_true)
 #define KOS_BOOL(v) ( (v) ? KOS_TRUE : KOS_FALSE )
-
-#define KOS_CONST_OBJECT_INIT(type, value) { 0, 0, "", (type), (value) }
 
 enum _KOS_STRING_FLAGS {
     /* Two lowest bits specify string element (character) size in bytes */
