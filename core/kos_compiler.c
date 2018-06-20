@@ -634,11 +634,12 @@ static unsigned _calc_assert_str_len(const char *begin,
 
 static void _get_assert_str(const char *begin,
                             const char *end,
-                            char       *buf)
+                            char       *buf,
+                            char *const buf_end)
 {
     int last_printable = 0;
 
-    for ( ; begin < end; ++begin) {
+    for ( ; begin < end && buf < buf_end; ++begin) {
 
         const char c = *begin;
 
@@ -694,8 +695,8 @@ static int _gen_assert_str(struct _KOS_COMP_UNIT      *program,
 
         struct _KOS_TOKEN token;
 
-        memcpy(buf, assertion_failed, sizeof(assertion_failed)-1);
-        _get_assert_str(begin, end, buf+sizeof(assertion_failed)-1);
+        memcpy(buf, assertion_failed, sizeof(assertion_failed) - 1);
+        _get_assert_str(begin, end, buf + sizeof(assertion_failed) - 1, buf + length);
 
         memset(&token, 0, sizeof(token));
         token.begin  = buf;
