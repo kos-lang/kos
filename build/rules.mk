@@ -79,8 +79,6 @@ ifeq ($(UNAME), Windows)
     endif
 
     STRICTFLAGS = -WX
-
-    # TODO remove this when all functions are implemented
     STRICTFLAGS += -wd4100 # unreferenced formal parameter
 
     # Disable warnings which don't make any sense for this project
@@ -144,8 +142,6 @@ else
     endif
 
     STRICTFLAGS = -Wextra -Werror
-
-    # TODO remove this when all functions are implemented
     STRICTFLAGS += -Wno-unused-parameter
 
     ifeq ($(UNAME), Linux)
