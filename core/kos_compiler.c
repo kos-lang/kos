@@ -47,6 +47,7 @@ static const char str_err_operand_not_numeric[]       = "operand is not a numeri
 static const char str_err_operand_not_string[]        = "operand is not a string";
 static const char str_err_return_in_generator[]       = "complex return statement in a generator function, return value always ignored";
 static const char str_err_stream_dest_not_func[]      = "sink argument of the stream operator is not a function";
+static const char str_err_too_many_registers[]        = "register capacity exceeded";
 
 enum _KOS_BOOL {
     _KOS_FALSE,
@@ -70,6 +71,29 @@ static int _gen_new_reg(struct _KOS_COMP_UNIT *program,
     struct _KOS_FRAME *frame = program->cur_frame;
     struct _KOS_REG   *reg;
 
+    assert(frame->num_regs <= 256);
+
+    if (frame->num_regs == 256) {
+
+        struct _KOS_TOKEN *token = (struct _KOS_TOKEN *)
+            _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_TOKEN));
+
+        if (token) {
+            memset(token, 0, sizeof(*token));
+            token->begin       = "";
+            token->pos.file_id = program->file_id;
+            token->pos.line    = 1;
+            token->pos.column  = 1;
+            token->type        = TT_EOF;
+
+            /* TODO improve either detection or handling of this error */
+            program->error_token = token;
+            program->error_str   = str_err_too_many_registers;
+        }
+
+        return token ? KOS_ERROR_COMPILE_FAILED : KOS_ERROR_OUT_OF_MEMORY;
+    }
+
     if (program->unused_regs) {
         reg                  = program->unused_regs;
         program->unused_regs = reg->next;
@@ -81,9 +105,6 @@ static int _gen_new_reg(struct _KOS_COMP_UNIT *program,
         if ( ! reg)
             error = KOS_ERROR_OUT_OF_MEMORY;
     }
-
-    /* TODO spill locals to an array, add optimizations to reduce register pressure */
-    assert(frame->num_regs < 256);
 
     if (reg)
         reg->reg = frame->num_regs++;
