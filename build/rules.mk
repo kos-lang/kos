@@ -165,6 +165,12 @@ else
         CFLAGS  += -fprofile-arcs -ftest-coverage -fno-inline
         LDFLAGS += -fprofile-arcs -ftest-coverage
     endif
+
+    # Special handling of fuzzer
+    CONFIG_FUZZ ?= 0
+    ifneq ($(CONFIG_FUZZ), 0)
+        CFLAGS += -DCONFIG_FUZZ
+    endif
 endif
 
 ifeq ($(UNAME), Darwin)

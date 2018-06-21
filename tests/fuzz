@@ -22,9 +22,6 @@
 
 set -e
 
-export CONFIG_DEBUG=1
-export CONFIG_NATIVE=1
-export CLANG_VER=c99
 export CFLAGS=-fsanitize=fuzzer-no-link,address
 export LDFLAGS=-fsanitize=fuzzer,address
 export CC=clang
@@ -42,16 +39,35 @@ if [ -z "$JOBS" ]; then
     esac
 fi
 
-echo "Using $JOBS jobs"
-
 PWD="$(pwd)"
 OUT="$PWD/Out/debug/tests"
 FUZZ="kos_fuzz_interpreter"
 CORPUS="$PWD/tests/kos_fuzz_interpreter_corpus"
 DICT="$PWD/tests/kos_fuzz_interpreter_dict"
+MERGE=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --merge) MERGE=1 ;;
+        -j) shift ; JOBS="$1" ;;
+        *) echo "Unrecognized parameter: $1" >&2 ; exit 1 ;;
+    esac
+    shift
+done
+
+echo "Using $JOBS jobs"
 
 [ -f "$OUT/$FUZZ" ] || rm -rf Out
 
-make -k -j "$JOBS" fuzz CONFIG_STRICT=1 --warn-undefined-variables
+make -k -j "$JOBS" fuzz CONFIG_DEBUG=1 CONFIG_FUZZ=1 CONFIG_STRICT=1 CLANG_VER=c99 --warn-undefined-variables
 cd "$OUT"
+if [ "$MERGE" = "1" -a -d "$CORPUS" ]; then
+    mv "$CORPUS" "$CORPUS.old"
+    mkdir -p "$CORPUS"
+    "./$FUZZ" -merge=1 "-jobs=$JOBS" "-workers=$JOBS" "$CORPUS" "$CORPUS.old"
+    rm -rf "$CORPUS.old"
+    exit 0
+fi
+
+mkdir -p "$CORPUS"
 "./$FUZZ" "$CORPUS" "-jobs=$JOBS" "-workers=$JOBS" "-dict=$DICT"

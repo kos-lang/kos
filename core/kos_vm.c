@@ -2267,6 +2267,10 @@ static int _exec_function(KOS_FRAME frame)
 
             case INSTR_JUMP: { /* <delta.int32> */
                 delta = 5 + (int32_t)_load_32(bytecode+1);
+#ifdef CONFIG_FUZZ
+                if (delta < 5)
+                    delta = 5;
+#endif
                 break;
             }
 
@@ -2280,6 +2284,10 @@ static int _exec_function(KOS_FRAME frame)
 
                 if (_KOS_is_truthy(regs[rsrc]))
                     delta += offs;
+#ifdef CONFIG_FUZZ
+                if (delta < 6)
+                    delta = 6;
+#endif
                 break;
             }
 
@@ -2293,6 +2301,10 @@ static int _exec_function(KOS_FRAME frame)
 
                 if ( ! _KOS_is_truthy(regs[rsrc]))
                     delta += offs;
+#ifdef CONFIG_FUZZ
+                if (delta < 6)
+                    delta = 6;
+#endif
                 break;
             }
 
