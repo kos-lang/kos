@@ -26,6 +26,7 @@
 #include "kos_config.h"
 #include "kos_debug.h"
 #include "kos_malloc.h"
+#include "kos_math.h"
 #include <assert.h>
 #include <string.h>
 
@@ -62,12 +63,15 @@ void *_KOS_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size)
 
     if (size > mempool->free_size) {
 
-        buf = (struct _KOS_MEMPOOL_BUFFER *)_KOS_malloc(_KOS_BUF_ALLOC_SIZE);
+        const size_t alloc_size = KOS_max(size + sizeof(struct _KOS_MEMPOOL_BUFFER),
+                                          (size_t)_KOS_BUF_ALLOC_SIZE);
+
+        buf = (struct _KOS_MEMPOOL_BUFFER *)_KOS_malloc(alloc_size);
 
         if (buf) {
             buf->next          = (struct _KOS_MEMPOOL_BUFFER *)(mempool->buffers);
             mempool->buffers   = buf;
-            mempool->free_size = _KOS_BUF_ALLOC_SIZE - sizeof(struct _KOS_MEMPOOL_BUFFER);
+            mempool->free_size = alloc_size - sizeof(struct _KOS_MEMPOOL_BUFFER);
         }
     }
     else if ( ! _KOS_seq_fail())
