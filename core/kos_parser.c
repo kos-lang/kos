@@ -35,6 +35,7 @@ static const char str_err_eol_before_par[]            = "ambiguous syntax: end o
 static const char str_err_eol_before_sq[]             = "ambiguous syntax: end of line before '[' - consider adding a ';'";
 static const char str_err_eol_before_op[]             = "ambiguous syntax: end of line before operator - consider adding a ';'";
 static const char str_err_exceeded_ast_depth[]        = "expression depth exceeded";
+static const char str_err_expected_assignable[]       = "expected identifier, refinement or slice for multi-assignment";
 static const char str_err_expected_case[]             = "expected 'case'";
 static const char str_err_expected_case_or_default[]  = "expected 'case' or 'default'";
 static const char str_err_expected_case_statements[]  = "expected statements after 'case'";
@@ -1710,6 +1711,23 @@ _error:
     return error;
 }
 
+static int _check_multi_assgn_lhs(struct _KOS_PARSER         *parser,
+                                  const struct _KOS_AST_NODE *node)
+{
+    const enum _KOS_NODE_TYPE type = node->type;
+
+    /* TODO add NT_VOID_LITERAL */
+    if (type == NT_REFINEMENT ||
+        type == NT_IDENTIFIER ||
+        type == NT_SLICE)
+
+        return KOS_SUCCESS;
+
+    parser->error_str = str_err_expected_assignable;
+    parser->token     = node->token;
+    return KOS_ERROR_PARSE_FAILED;
+}
+
 static int _expr_no_var(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
     struct _KOS_AST_NODE *node = 0;
@@ -1741,6 +1759,9 @@ static int _expr_no_var(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
         TRY(_new_node(parser, &lhs, NT_LEFT_HAND_SIDE));
 
+        if (parser->token.sep == ST_COMMA)
+            TRY(_check_multi_assgn_lhs(parser, node));
+
         _ast_push(lhs, node);
         node = 0;
 
@@ -1749,6 +1770,8 @@ static int _expr_no_var(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
             ++num_assignees;
 
             TRY(_member_expr(parser, &node));
+
+            TRY(_check_multi_assgn_lhs(parser, node));
 
             _ast_push(lhs, node);
             node = 0;
