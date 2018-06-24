@@ -99,25 +99,6 @@ static int _scope_ref_compare_node(struct _KOS_RED_BLACK_NODE *a,
     return (int)((intptr_t)ref_a->closure - (intptr_t)ref_b->closure);
 }
 
-static int _alloc_frame(struct _KOS_COMP_UNIT *program)
-{
-    int error = KOS_SUCCESS;
-
-    struct _KOS_FRAME *const frame = (struct _KOS_FRAME *)
-        _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_FRAME));
-
-    if (frame) {
-
-        memset(frame, 0, sizeof(*frame));
-
-        program->scope_stack->frame = frame;
-    }
-    else
-        error = KOS_ERROR_OUT_OF_MEMORY;
-
-    return error;
-}
-
 static struct _KOS_VAR *_alloc_var(struct _KOS_COMP_UNIT      *program,
                                    unsigned                    is_const,
                                    const struct _KOS_AST_NODE *node)
@@ -144,28 +125,25 @@ static struct _KOS_VAR *_alloc_var(struct _KOS_COMP_UNIT      *program,
 
 static int _init_global_scope(struct _KOS_COMP_UNIT *program)
 {
-    int error = _alloc_frame(program);
+    int error = KOS_SUCCESS;
 
-    if (!error) {
+    /* Register built-in module globals */
+    struct _KOS_PRE_GLOBAL *global = program->pre_globals;
 
-        /* Register built-in module globals */
-        struct _KOS_PRE_GLOBAL *global = program->pre_globals;
+    for ( ; global; global = global->next) {
 
-        for ( ; global; global = global->next) {
+        struct _KOS_VAR *var = _alloc_var(program, global->is_const, &global->node);
 
-            struct _KOS_VAR *var = _alloc_var(program, global->is_const, &global->node);
-
-            if (var) {
-                var->type        = global->type;
-                var->array_idx   = global->idx;
-                var->next        = program->globals;
-                program->globals = var;
-                ++program->num_globals;
-            }
-            else {
-                error  = KOS_ERROR_OUT_OF_MEMORY;
-                break;
-            }
+        if (var) {
+            var->type        = global->type;
+            var->array_idx   = global->idx;
+            var->next        = program->globals;
+            program->globals = var;
+            ++program->num_globals;
+        }
+        else {
+            error  = KOS_ERROR_OUT_OF_MEMORY;
+            break;
         }
     }
 
@@ -173,19 +151,25 @@ static int _init_global_scope(struct _KOS_COMP_UNIT *program)
 }
 
 static int _push_scope(struct _KOS_COMP_UNIT      *program,
+                       int                         alloc_frame,
                        const struct _KOS_AST_NODE *node)
 {
-    int error = KOS_SUCCESS;
+    int          error = KOS_SUCCESS;
+    const size_t size  = alloc_frame ? sizeof(struct _KOS_FRAME) : sizeof(struct _KOS_SCOPE);
 
     struct _KOS_SCOPE *const scope = (struct _KOS_SCOPE *)
-        _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_SCOPE));
+        _KOS_mempool_alloc(&program->allocator, size);
+    struct _KOS_FRAME *const frame = alloc_frame ? (struct _KOS_FRAME *)scope : 0;
 
-    if (!scope)
+    if ( ! scope)
         error = KOS_ERROR_OUT_OF_MEMORY;
 
     else {
 
-        memset(scope, 0, sizeof(*scope));
+        memset(scope, 0, size);
+
+        if (frame)
+            scope->has_frame = 1;
 
         scope->scope_node = node;
 
@@ -211,14 +195,10 @@ static void _pop_scope(struct _KOS_COMP_UNIT *program)
 static int _push_function(struct _KOS_COMP_UNIT      *program,
                           const struct _KOS_AST_NODE *node)
 {
-    int error = _push_scope(program, node);
+    int error = _push_scope(program, 1, node);
 
-    if (!error) {
-
+    if ( ! error)
         program->scope_stack->is_function = 1;
-
-        error = _alloc_frame(program);
-    }
 
     return error;
 }
@@ -277,9 +257,9 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
 
     struct _KOS_SCOPE_REF *ref;
 
-    assert(inner_scope->frame);
+    assert(inner_scope->has_frame);
 
-    ref = _KOS_find_scope_ref(inner_scope->frame, outer_closure);
+    ref = _KOS_find_scope_ref((struct _KOS_FRAME *)inner_scope, outer_closure);
 
     if ( ! ref) {
 
@@ -294,7 +274,7 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
             ref->exported_locals = 0;
             ref->exported_args   = 0;
 
-            _KOS_red_black_insert(&inner_scope->frame->closures,
+            _KOS_red_black_insert(&((struct _KOS_FRAME *)inner_scope)->closures,
                                   (struct _KOS_RED_BLACK_NODE *)ref,
                                   _scope_ref_compare_node);
         }
@@ -543,7 +523,7 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
 {
     int error;
 
-    TRY(_push_scope(program, node));
+    TRY(_push_scope(program, program->scope_stack ? 0 : 1, node));
 
     TRY(_visit_child_nodes(program, node));
 
@@ -562,8 +542,8 @@ static int _yield(struct _KOS_COMP_UNIT      *program,
     for (scope = program->scope_stack; scope && ! scope->is_function; scope = scope->next);
 
     if (scope) {
-        if ( ! scope->frame->yield_token)
-            scope->frame->yield_token = &node->token;
+        if ( ! ((struct _KOS_FRAME *)scope)->yield_token)
+            ((struct _KOS_FRAME *)scope)->yield_token = &node->token;
         error = KOS_SUCCESS;
     }
     else {

@@ -773,3 +773,18 @@ do {
     assert f(2) == 123
     assert f(3) == 1234
 }
+
+# Declare function inside loop condition
+do {
+    while ()=>(false) ()
+    {
+    }
+
+    var ran = false
+
+    while fun { ran = true; return false } ()
+    {
+    }
+
+    assert ran == true
+}

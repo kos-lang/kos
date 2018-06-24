@@ -86,23 +86,6 @@ struct _KOS_RETURN_OFFS {
     int                      offs;
 };
 
-struct _KOS_FRAME {
-    struct _KOS_REG            *free_regs; /* Allocated registers which are currently unused */
-    struct _KOS_REG            *used_regs;
-    struct _KOS_REG            *this_reg;
-    struct _KOS_REG            *args_reg;
-    struct _KOS_RED_BLACK_NODE *closures;
-    struct _KOS_FRAME          *parent_frame;
-    const struct _KOS_TOKEN    *fun_token;
-    struct _KOS_BREAK_OFFS     *break_offs;
-    struct _KOS_RETURN_OFFS    *return_offs; /* For return statements inside finally clause (defer) */
-    struct _KOS_SCOPE          *last_try_scope;
-    const struct _KOS_TOKEN    *yield_token;
-    struct _KOS_COMP_FUNCTION  *constant;   /* The template for the constant object, used with LOAD.CONST */
-    int                         num_regs;
-    uint32_t                    num_instr;
-};
-
 struct _KOS_CATCH_REF {
     struct _KOS_SCOPE *next;           /* Used by child_scopes */
     struct _KOS_SCOPE *child_scopes;   /* List of child scopes which need to update catch offset to this scope */
@@ -117,7 +100,6 @@ struct _KOS_SCOPE {
     const struct _KOS_AST_NODE *scope_node;
     struct _KOS_SCOPE          *next;
     struct _KOS_RED_BLACK_NODE *vars;
-    struct _KOS_FRAME          *frame;
     struct _KOS_VAR            *fun_vars_list;
     struct _KOS_VAR            *ellipsis;
     int                         num_vars;
@@ -125,9 +107,33 @@ struct _KOS_SCOPE {
     int                         num_args;
     int                         num_indep_args;
     struct _KOS_CATCH_REF       catch_ref; /* For catch references between scopes */
+    unsigned                    has_frame      : 1;
     unsigned                    is_function    : 1;
     unsigned                    uses_this      : 1;
     unsigned                    have_rest      : 1; /* Has more args than fit in registers */
+};
+
+struct _KOS_FRAME {
+    struct _KOS_SCOPE           scope;
+    struct _KOS_REG            *free_regs;        /* Allocated registers which are currently unused */
+    struct _KOS_REG            *used_regs;
+    struct _KOS_REG            *this_reg;
+    struct _KOS_REG            *args_reg;
+    struct _KOS_RED_BLACK_NODE *closures;
+    struct _KOS_FRAME          *parent_frame;
+    const struct _KOS_TOKEN    *fun_token;
+    struct _KOS_BREAK_OFFS     *break_offs;
+    struct _KOS_RETURN_OFFS    *return_offs;      /* For return statements inside finally clause (defer) */
+    struct _KOS_SCOPE          *last_try_scope;
+    const struct _KOS_TOKEN    *yield_token;
+    struct _KOS_COMP_FUNCTION  *constant;         /* The template for the constant object, used with LOAD.CONST */
+    int                         num_regs;
+    uint32_t                    num_instr;
+    int                         load_instr;       /* Instruction used for loading the function */
+    int                         bind_delta;       /* First bound register */
+    int                         num_binds;        /* Number of binds */
+    int                         num_non_def_args; /* Number of args without default values */
+    int                         num_def_args;     /* Number of args with default values */
 };
 
 struct _KOS_SCOPE_REF {

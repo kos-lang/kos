@@ -43,7 +43,11 @@ static void _update_scope_ref(struct _KOS_COMP_UNIT *program,
     for (scope = program->scope_stack; scope != closure; scope = scope->next)
         if (scope->is_function) {
 
-            struct _KOS_SCOPE_REF *ref = _KOS_find_scope_ref(scope->frame, closure);
+            struct _KOS_SCOPE_REF *ref;
+
+            assert(scope->has_frame);
+
+            ref = _KOS_find_scope_ref((struct _KOS_FRAME *)scope, closure);
 
             assert(ref);
 

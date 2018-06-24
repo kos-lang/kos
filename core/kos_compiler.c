@@ -1185,8 +1185,8 @@ _error:
 static int _fix_frame_offsets(struct _KOS_RED_BLACK_NODE *node,
                               void                       *cookie)
 {
-    struct _KOS_SCOPE *scope   = (struct _KOS_SCOPE *)node;
-    struct _KOS_FRAME *frame   = scope->frame;
+    struct _KOS_SCOPE *scope = (struct _KOS_SCOPE *)node;
+    struct _KOS_FRAME *frame = scope->has_frame ? (struct _KOS_FRAME *)scope : 0;
 
     if (frame && frame->parent_frame)
         frame->constant->offset += (uint32_t)*(size_t *)cookie;
@@ -1304,7 +1304,9 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
 
             struct _KOS_VAR *var = 0;
 
-            program->cur_frame = program->scope_stack->frame;
+            assert(program->scope_stack->has_frame);
+
+            program->cur_frame = (struct _KOS_FRAME *)program->scope_stack;
 
             /* Generate registers for local (non-global) independent variables */
             for (var = program->scope_stack->fun_vars_list; var; var = var->next)
@@ -1464,7 +1466,9 @@ static int _is_generator(struct _KOS_COMP_UNIT *program)
 
     for ( ; scope && ! scope->is_function; scope = scope->next);
 
-    return scope && scope->is_function && scope->frame->yield_token;
+    assert( ! scope->is_function || scope->has_frame);
+
+    return scope && scope->is_function && ((struct _KOS_FRAME *)scope)->yield_token;
 }
 
 static int _return(struct _KOS_COMP_UNIT      *program,
@@ -4276,8 +4280,9 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
 
         assert(ref->vars_reg);
         assert(ref->vars_reg->reg >= delta);
+        assert(ref->closure->has_frame);
 
-        if (args->parent_frame == ref->closure->frame)
+        if (args->parent_frame == (struct _KOS_FRAME *)(ref->closure))
             TRY(_gen_instr2(program,
                             INSTR_BIND_SELF,
                             args->func_reg->reg,
@@ -4301,8 +4306,9 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
 
         assert(ref->args_reg);
         assert(ref->args_reg->reg >= delta);
+        assert(ref->closure->has_frame);
 
-        if (args->parent_frame == ref->closure->frame) {
+        if (args->parent_frame == (struct _KOS_FRAME *)(ref->closure)) {
             assert(args->parent_frame->args_reg);
             reg = args->parent_frame->args_reg;
         }
@@ -4339,33 +4345,26 @@ static int _free_arg_regs(struct _KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
-static int _function_literal(struct _KOS_COMP_UNIT      *program,
-                             const struct _KOS_AST_NODE *node,
-                             struct _KOS_REG           **reg)
+static int _gen_function(struct _KOS_COMP_UNIT      *program,
+                         const struct _KOS_AST_NODE *node)
 {
     int                error           = KOS_SUCCESS;
     struct _KOS_SCOPE *scope           = _push_scope(program, node);
-    struct _KOS_FRAME *frame           = scope->frame;
+    struct _KOS_FRAME *frame           = (struct _KOS_FRAME *)scope;
     struct _KOS_FRAME *last_frame      = program->cur_frame;
     struct _KOS_VAR   *var;
     struct _KOS_REG   *scope_reg       = 0;
     struct _KOS_REG   *ellipsis_reg    = 0;
     int                fun_start_offs;
     size_t             addr2line_start_offs;
-    struct _BIND_ARGS  bind_args;
-    int                num_def         = 0;
-    int                num_non_def     = 0;
-    int                num_binds       = 0;
 #ifndef NDEBUG
     int                last_reg        = -1;
 #endif
 
-    const struct _KOS_AST_NODE *fun_node = node;
+    const struct _KOS_AST_NODE *fun_node  = node;
     const struct _KOS_AST_NODE *open_node;
-    const struct _KOS_AST_NODE *name_node;
+    const struct _KOS_AST_NODE *name_node = fun_node->children;
     struct _KOS_COMP_FUNCTION  *constant;
-
-    assert(frame);
 
     frame->fun_token    = &fun_node->token;
     frame->parent_frame = last_frame;
@@ -4402,9 +4401,9 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
             assert(var);
 
             if (arg_node->type == NT_IDENTIFIER)
-                ++num_non_def;
+                ++frame->num_non_def_args;
             else
-                ++num_def;
+                ++frame->num_def_args;
 
             if (var->type & VAR_ARGUMENT_IN_REG) {
 
@@ -4451,7 +4450,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     /* Generate register for 'this' */
     TRY(_gen_reg(program, &frame->this_reg));
     assert(frame->this_reg->reg == ++last_reg);
-    bind_args.delta = frame->this_reg->reg + 1;
+    frame->bind_delta = frame->this_reg->reg + 1;
     if (scope->uses_this)
         frame->this_reg->tmp = 0;
 
@@ -4459,7 +4458,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     {
         struct _GEN_CLOSURE_ARGS args;
         args.program   = program;
-        args.num_binds = &num_binds;
+        args.num_binds = &frame->num_binds;
         TRY(_KOS_red_black_walk(frame->closures, _gen_closure_regs, &args));
     }
 
@@ -4517,7 +4516,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     constant->offset      = 0;
     constant->num_regs    = (uint8_t)frame->num_regs;
     constant->args_reg    = (uint8_t)scope->num_indep_vars;
-    constant->num_args    = (uint8_t)num_non_def;
+    constant->num_args    = (uint8_t)frame->num_non_def_args;
     constant->flags       = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
@@ -4543,34 +4542,20 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         _add_constant(program, proto_const);
     }
 
+    /* Choose instruction for loading the function */
+    frame->load_instr =
+        (fun_node->type == NT_CONSTRUCTOR_LITERAL  ||
+         scope->num_args > frame->num_non_def_args ||
+         frame->num_binds)
+            ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
+            : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST);
+
     /* Move the function code to final code_buf */
     TRY(_append_frame(program, name_node, fun_start_offs, addr2line_start_offs));
 
     program->cur_frame = last_frame;
 
     TRY(_add_addr2line(program, &fun_node->token, _KOS_FALSE));
-
-    /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
-    assert(frame->num_regs > 0);
-    assert(frame->num_regs >= bind_args.delta);
-    TRY(_gen_reg(program, reg));
-
-    TRY(_gen_instr2(program,
-                    (fun_node->type == NT_CONSTRUCTOR_LITERAL ||
-                     scope->num_args > num_non_def ||
-                     num_binds)
-                        ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
-                        : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST),
-                    (*reg)->reg,
-                    (int32_t)constant->header.index));
-
-    /* Generate BIND instructions in the parent frame */
-    if (num_binds) {
-        bind_args.program      = program;
-        bind_args.func_reg     = *reg;
-        bind_args.parent_frame = last_frame;
-        TRY(_KOS_red_black_walk(frame->closures, _gen_binds, &bind_args));
-    }
 
     program->cur_frame = frame;
     _pop_scope(program);
@@ -4579,21 +4564,55 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     /* Free register objects */
     _free_all_regs(program, frame->used_regs);
     _free_all_regs(program, frame->free_regs);
-
-    /* Restore original state so the function node is re-entrant for defer
-     * statements re-generated for return and break statements.  All
-     * registers in re-generated defer statement should be the same as
-     * originally. */
     frame->used_regs = 0;
     frame->free_regs = 0;
-    frame->this_reg  = 0;
-    frame->args_reg  = 0;
-    frame->num_regs  = 0;
-    if (scope->ellipsis)
-        scope->ellipsis->reg = 0;
+
+_error:
+    return error;
+}
+
+static int _function_literal(struct _KOS_COMP_UNIT      *program,
+                             const struct _KOS_AST_NODE *node,
+                             struct _KOS_REG           **reg)
+{
+    int                      error = KOS_SUCCESS;
+    struct _KOS_SCOPE *const scope = (struct _KOS_SCOPE *)
+                                     _KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item);
+    struct _KOS_FRAME *const frame = (struct _KOS_FRAME *)scope;
+    struct _KOS_VAR         *fun_var;
+
+    const struct _KOS_AST_NODE *fun_node  = node;
+    const struct _KOS_AST_NODE *name_node = fun_node->children;
+
+    assert(scope->has_frame);
+
+    /* Generate code for the function */
+    if ( ! frame->constant)
+        TRY(_gen_function(program, node));
+
+    /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
+    assert(frame->num_regs > 0);
+    assert(frame->num_regs >= frame->bind_delta);
+    TRY(_gen_reg(program, reg));
+
+    TRY(_gen_instr2(program,
+                    frame->load_instr,
+                    (*reg)->reg,
+                    (int32_t)frame->constant->header.index));
+
+    /* Generate BIND instructions in the parent frame */
+    if (frame->num_binds) {
+        struct _BIND_ARGS bind_args;
+
+        bind_args.program      = program;
+        bind_args.func_reg     = *reg;
+        bind_args.parent_frame = program->cur_frame;
+        bind_args.delta        = frame->bind_delta;
+        TRY(_KOS_red_black_walk(frame->closures, _gen_binds, &bind_args));
+    }
 
     /* Find the first default arg */
-    if (num_def) {
+    if (frame->num_def_args) {
         node = fun_node->children;
         assert(node);
         node = node->next;
@@ -4609,34 +4628,34 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     /* Disable variable to which the function is assigned to prevent it from
      * being used by the argument defaults. */
-    var = 0;
+    fun_var = 0;
     if (name_node->type == NT_NAME_CONST) {
         assert(name_node->children);
         assert(name_node->children->type == NT_IDENTIFIER);
         assert(name_node->children->token.type == TT_IDENTIFIER);
 
-        var = _KOS_find_var(program->scope_stack->vars, &name_node->children->token);
-        assert(var);
-        assert((var->type & VAR_LOCAL) || var->type == VAR_GLOBAL);
+        fun_var = _KOS_find_var(program->scope_stack->vars, &name_node->children->token);
+        assert(fun_var);
+        assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
 
-        if ((var->type & VAR_LOCAL) && var->is_active)
-            var->is_active = VAR_INACTIVE;
+        if ((fun_var->type & VAR_LOCAL) && fun_var->is_active)
+            fun_var->is_active = VAR_INACTIVE;
         else
-            var = 0;
+            fun_var = 0;
     }
 
     /* Generate array with default args */
-    if (scope->num_args > num_non_def) {
+    if (scope->num_args > frame->num_non_def_args) {
 
         int              i;
         struct _KOS_REG *defaults_reg = 0;
 
         TRY(_gen_reg(program, &defaults_reg));
 
-        if (num_def < 256)
-            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, defaults_reg->reg, num_def));
+        if (frame->num_def_args < 256)
+            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, defaults_reg->reg, frame->num_def_args));
         else
-            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY, defaults_reg->reg, num_def));
+            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY, defaults_reg->reg, frame->num_def_args));
 
         for (i = 0; node && node->type == NT_ASSIGNMENT; node = node->next, ++i) {
 
@@ -4662,7 +4681,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         _free_reg(program, defaults_reg);
     }
     /* Generate code for unused non-constant defaults */
-    else if (num_def) {
+    else if (frame->num_def_args) {
 
         for ( ; node && node->type == NT_ASSIGNMENT; node = node->next) {
 
@@ -4700,8 +4719,8 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         }
     }
 
-    if (var)
-        var->is_active = VAR_ACTIVE;
+    if (fun_var)
+        fun_var->is_active = VAR_ACTIVE;
 
 _error:
     return error;
