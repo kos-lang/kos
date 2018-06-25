@@ -1759,3 +1759,10 @@ do {
     const value = (x,y)=>(x+y)("abc"[1:], "d")
     assert value == "bcd"
 }
+
+# Raw return
+do {
+    if () => (false) () {
+        return false
+    }
+}

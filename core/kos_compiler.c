@@ -1466,7 +1466,7 @@ static int _is_generator(struct _KOS_COMP_UNIT *program)
 
     for ( ; scope && ! scope->is_function; scope = scope->next);
 
-    assert( ! scope->is_function || scope->has_frame);
+    assert( ! scope || ! scope->is_function || scope->has_frame);
 
     return scope && scope->is_function && ((struct _KOS_FRAME *)scope)->yield_token;
 }
