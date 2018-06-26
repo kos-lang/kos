@@ -85,6 +85,7 @@ struct _KOS_THREAD_CONTEXT {
     struct _KOS_THREAD_CONTEXT *next;  /* List of thread roots in context */
     struct _KOS_THREAD_CONTEXT *prev;
     KOS_FRAME                   frame;
+    int                         stack_depth;
     struct _KOS_CONTEXT        *ctx;
     _KOS_PAGE                  *cur_page;
     KOS_OBJ_ID                  saved_regs[KOS_MAX_SAVED_FRAMES];

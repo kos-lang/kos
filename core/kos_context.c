@@ -28,6 +28,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
+#include "kos_config.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_malloc.h"
@@ -114,6 +115,7 @@ static int _register_thread(KOS_CONTEXT        *ctx,
     assert( ! _KOS_tls_get(ctx->threads.thread_key));
 
     thread_ctx->num_saved_regs = 0;
+    thread_ctx->stack_depth    = _KOS_MAX_STACK_DEPTH;
 
     thread_ctx->ctx   = ctx;
     thread_ctx->frame = (KOS_FRAME)_KOS_heap_early_alloc(ctx,

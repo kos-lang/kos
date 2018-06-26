@@ -1766,3 +1766,13 @@ do {
         return false
     }
 }
+
+# Infinite recursion
+do {
+    fun infinite
+    {
+        return infinite() + 1
+    }
+
+    expect_fail(infinite)
+}

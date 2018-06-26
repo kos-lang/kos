@@ -51,6 +51,7 @@ static const char str_err_invalid_instruction[]  = "invalid instruction";
 static const char str_err_not_callable[]         = "object is not callable";
 static const char str_err_not_generator[]        = "function is not a generator";
 static const char str_err_slice_not_function[]   = "slice is not a function";
+static const char str_err_stack_overflow[]            = "stack overflow";
 static const char str_err_too_few_args[]         = "not enough arguments passed to a function";
 static const char str_err_unsup_operand_types[]  = "unsupported operand types";
 static const char str_slice[]                    = "slice";
@@ -1106,6 +1107,7 @@ static int _exec_function(KOS_FRAME frame)
     KOS_ATOMIC(KOS_OBJ_ID) *regs       = _KOS_get_array_buffer(regs_array);
     KOS_MODULE             *module     = OBJPTR(MODULE, frame->module);
     int                     error      = KOS_SUCCESS;
+    const int               old_depth  = frame->thread_ctx->stack_depth;
     KOS_BYTECODE_INSTR      instr;
     const uint8_t          *bytecode;
 
@@ -1113,7 +1115,12 @@ static int _exec_function(KOS_FRAME frame)
     assert(module->context);
     bytecode = module->bytecode + frame->instr_offs;
 
-    /* TODO add protection for infinite callstack depth */
+    if (old_depth > 0)
+        frame->thread_ctx->stack_depth = old_depth - 1;
+    else {
+        KOS_raise_exception_cstring(frame, str_err_stack_overflow);
+        return KOS_ERROR_EXCEPTION;
+    }
 
     for (;;) { /* Exit condition at the end of the loop */
 
@@ -2748,6 +2755,9 @@ static int _exec_function(KOS_FRAME frame)
     assert(!error || KOS_is_exception_pending(frame));
 
     frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
+
+    assert(frame->thread_ctx->stack_depth + 1 == old_depth);
+    frame->thread_ctx->stack_depth = old_depth;
 
     return error;
 }
