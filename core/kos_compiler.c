@@ -4245,15 +4245,19 @@ static int _gen_closure_regs(struct _KOS_RED_BLACK_NODE *node,
     if (ref->exported_locals) {
         ++*(args->num_binds);
         error = _gen_reg(args->program, &ref->vars_reg);
-        if ( ! error)
+        if ( ! error) {
             ref->vars_reg->tmp = 0;
+            ref->vars_reg_idx  = ref->vars_reg->reg;
+        }
     }
 
     if ( ! error && ref->exported_args) {
         ++*(args->num_binds);
         error = _gen_reg(args->program, &ref->args_reg);
-        if ( ! error)
+        if ( ! error) {
             ref->args_reg->tmp = 0;
+            ref->args_reg_idx  = ref->args_reg->reg;
+        }
     }
 
     return error;
@@ -4279,14 +4283,14 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
     if (ref->exported_locals) {
 
         assert(ref->vars_reg);
-        assert(ref->vars_reg->reg >= delta);
+        assert(ref->vars_reg_idx >= delta);
         assert(ref->closure->has_frame);
 
         if (args->parent_frame == (struct _KOS_FRAME *)(ref->closure))
             TRY(_gen_instr2(program,
                             INSTR_BIND_SELF,
                             args->func_reg->reg,
-                            ref->vars_reg->reg - delta));
+                            ref->vars_reg_idx - delta));
         else {
 
             struct _KOS_SCOPE_REF *other_ref =
@@ -4295,36 +4299,36 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
             TRY(_gen_instr3(program,
                             INSTR_BIND,
                             args->func_reg->reg,
-                            ref->vars_reg->reg - delta,
-                            other_ref->vars_reg->reg));
+                            ref->vars_reg_idx - delta,
+                            other_ref->vars_reg_idx));
         }
     }
 
     if (ref->exported_args) {
 
-        struct _KOS_REG *reg;
+        int src_reg = -1;
 
         assert(ref->args_reg);
-        assert(ref->args_reg->reg >= delta);
+        assert(ref->args_reg_idx >= delta);
         assert(ref->closure->has_frame);
 
         if (args->parent_frame == (struct _KOS_FRAME *)(ref->closure)) {
             assert(args->parent_frame->args_reg);
-            reg = args->parent_frame->args_reg;
+            src_reg = args->parent_frame->args_reg->reg;
         }
         else {
 
             struct _KOS_SCOPE_REF *other_ref =
                     _KOS_find_scope_ref(args->parent_frame, ref->closure);
 
-            reg = other_ref->args_reg;
+            src_reg = other_ref->args_reg_idx;
         }
 
         TRY(_gen_instr3(program,
                         INSTR_BIND,
                         args->func_reg->reg,
-                        ref->args_reg->reg - delta,
-                        reg->reg));
+                        ref->args_reg_idx - delta,
+                        src_reg));
     }
 
 _error:

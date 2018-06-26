@@ -788,3 +788,16 @@ do {
 
     assert ran == true
 }
+
+# Test case from fuzzer, must not crash
+repeat {
+    defer {
+        class s {
+            x { return ! s }
+        }
+    }
+
+    defer {
+        break
+    }
+} while false

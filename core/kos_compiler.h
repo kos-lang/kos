@@ -142,6 +142,8 @@ struct _KOS_SCOPE_REF {
     struct _KOS_SCOPE         *closure;
     struct _KOS_REG           *vars_reg;
     struct _KOS_REG           *args_reg;
+    int                        vars_reg_idx;
+    int                        args_reg_idx;
     unsigned                   exported_locals;
     unsigned                   exported_args;
 };
