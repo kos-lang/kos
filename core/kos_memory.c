@@ -54,6 +54,36 @@ void _KOS_mempool_destroy(struct _KOS_MEMPOOL *mempool)
     }
 }
 
+static void *_alloc_large(struct _KOS_MEMPOOL *mempool, size_t size)
+{
+    const size_t alloc_size = size + sizeof(struct _KOS_MEMPOOL_BUFFER);
+
+    struct _KOS_MEMPOOL_BUFFER *buf = (struct _KOS_MEMPOOL_BUFFER *)_KOS_malloc(alloc_size);
+
+    uint8_t *obj = 0;
+
+    if (buf) {
+
+        if (mempool->buffers) {
+
+            struct _KOS_MEMPOOL_BUFFER *top  = (struct _KOS_MEMPOOL_BUFFER *)mempool->buffers;
+            struct _KOS_MEMPOOL_BUFFER *next = top->next;
+
+            buf->next = next;
+            top->next = buf;
+        }
+        else {
+            buf->next          = 0;
+            mempool->buffers   = buf;
+            mempool->free_size = 0;
+        }
+
+        obj = (uint8_t *)buf + sizeof(struct _KOS_MEMPOOL_BUFFER);
+    }
+
+    return obj;
+}
+
 void *_KOS_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size)
 {
     uint8_t                    *obj = 0;
@@ -63,15 +93,16 @@ void *_KOS_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size)
 
     if (size > mempool->free_size) {
 
-        const size_t alloc_size = KOS_max(size + sizeof(struct _KOS_MEMPOOL_BUFFER),
-                                          (size_t)_KOS_BUF_ALLOC_SIZE);
+        /* Special handling for unusually large allocation requests */
+        if (size > (_KOS_BUF_ALLOC_SIZE / 16U))
+            return _alloc_large(mempool, size);
 
-        buf = (struct _KOS_MEMPOOL_BUFFER *)_KOS_malloc(alloc_size);
+        buf = (struct _KOS_MEMPOOL_BUFFER *)_KOS_malloc(_KOS_BUF_ALLOC_SIZE);
 
         if (buf) {
             buf->next          = (struct _KOS_MEMPOOL_BUFFER *)(mempool->buffers);
             mempool->buffers   = buf;
-            mempool->free_size = alloc_size - sizeof(struct _KOS_MEMPOOL_BUFFER);
+            mempool->free_size = _KOS_BUF_ALLOC_SIZE - sizeof(struct _KOS_MEMPOOL_BUFFER);
         }
     }
     else if ( ! _KOS_seq_fail())
