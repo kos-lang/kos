@@ -26,6 +26,7 @@
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
+#include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
@@ -59,6 +60,7 @@ static const char str_false[]                   = "false";
 static const char str_function_open[]           = "<function ";
 static const char str_object[]                  = "<object>";
 static const char str_true[]                    = "true";
+static const char str_value[]                   = "value";
 static const char str_void[]                    = "void";
 
 static const int8_t _extra_len[256] = {
@@ -166,6 +168,28 @@ int KOS_get_integer(KOS_FRAME  frame,
     return error;
 }
 
+static KOS_OBJ_ID _get_exception_string(KOS_FRAME  frame,
+                                        KOS_OBJ_ID exception)
+{
+    if (GET_OBJ_TYPE(exception) == OBJ_OBJECT) {
+
+        const KOS_OBJ_ID proto = KOS_get_prototype(frame, exception);
+
+        if (proto == KOS_context_from_frame(frame)->prototypes.exception_proto) {
+
+            const KOS_OBJ_ID obj_id = KOS_get_property(frame, exception,
+                                    KOS_context_get_cstring(frame, str_value));
+
+            if (IS_BAD_PTR(obj_id))
+                KOS_clear_exception(frame);
+            else if (GET_OBJ_TYPE(obj_id) == OBJ_STRING)
+                return obj_id;
+        }
+    }
+
+    return KOS_BADPTR;
+}
+
 void KOS_print_exception(KOS_FRAME frame)
 {
     struct _KOS_VECTOR cstr;
@@ -191,9 +215,17 @@ void KOS_print_exception(KOS_FRAME frame)
 
             KOS_clear_exception(frame);
 
-            str = KOS_object_to_string(frame, exception);
+            /* TODO when KOS_object_to_string implements object printing,
+             *      then first try KOS_object_to_string and if that doesn't help,
+             *      then fall back to _get_exception_string. */
+            str = _get_exception_string(frame, exception);
 
-            KOS_clear_exception(frame);
+            if (IS_BAD_PTR(str)) {
+
+                str = KOS_object_to_string(frame, exception);
+
+                KOS_clear_exception(frame);
+            }
 
             if (IS_BAD_PTR(str) || KOS_string_to_cstr_vec(frame, str, &cstr))
                 fprintf(stderr, "Exception: <unable to format>\n");

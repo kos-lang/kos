@@ -210,6 +210,8 @@ static _KOS_POOL *_get_pool_header(struct _KOS_HEAP *heap)
             if ( ! pool)
                 return 0;
 
+            heap->heap_size += 8U * (uint32_t)sizeof(_KOS_POOL);
+
             pool->memory      = pool;
             pool->alloc_size  = 8U * sizeof(_KOS_POOL);
             pool->usable_ptr  = 0;
@@ -239,13 +241,20 @@ static _KOS_POOL *_get_pool_header(struct _KOS_HEAP *heap)
 static _KOS_POOL *_alloc_pool(struct _KOS_HEAP *heap,
                               uint32_t          alloc_size)
 {
-    _KOS_POOL     *pool_hdr = 0;
-    uint8_t *const pool     = (uint8_t *)_KOS_malloc(alloc_size);
-    uint8_t       *begin;
-    uint32_t       waste_at_front;
+    _KOS_POOL *pool_hdr = 0;
+    uint8_t   *pool;
+    uint8_t   *begin;
+    uint32_t   waste_at_front;
+
+    if (heap->heap_size + alloc_size > _KOS_MAX_HEAP_SIZE)
+        return 0;
+
+    pool = (uint8_t *)_KOS_malloc(alloc_size);
 
     if ( ! pool)
         return 0;
+
+    heap->heap_size += alloc_size;
 
     begin = (uint8_t *)(((uintptr_t)pool + _KOS_PAGE_SIZE - 1U) & ~(uintptr_t)(_KOS_PAGE_SIZE - 1U));
 

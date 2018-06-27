@@ -40,6 +40,7 @@ typedef struct _KOS_WASTE_HEADER _KOS_WASTE;
 struct _KOS_HEAP {
     _KOS_MUTEX           mutex;
     KOS_ATOMIC(uint32_t) gc_state;
+    uint32_t             heap_size;         /* total amount of memory owned by the heap */
     _KOS_PAGE           *free_pages;        /* pages which are currently unused         */
     _KOS_PAGE           *non_full_pages;    /* pages in which new objects are allocated */
     _KOS_PAGE           *full_pages;        /* pages which have no room for new objects */
