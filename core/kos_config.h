@@ -36,6 +36,10 @@
 #define _KOS_MIN_REG_CAPACITY   32U
 #define _KOS_MAX_ARGS_IN_REGS   32U
 #define _KOS_MAX_STACK_DEPTH    512
-#define _KOS_MAX_HEAP_SIZE      (128U * 1024U * 1024U)
+#ifdef CONFIG_FUZZ
+#   define _KOS_MAX_HEAP_SIZE   (32U * 1024U * 1024U)
+#else
+#   define _KOS_MAX_HEAP_SIZE   (1024U * 1024U * 1024U)
+#endif
 
 #endif
