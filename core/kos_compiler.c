@@ -4350,11 +4350,12 @@ static int _free_arg_regs(struct _KOS_RED_BLACK_NODE *node,
 }
 
 static int _gen_function(struct _KOS_COMP_UNIT      *program,
-                         const struct _KOS_AST_NODE *node)
+                         const struct _KOS_AST_NODE *node,
+                         struct _KOS_SCOPE         **out_scope)
 {
     int                error           = KOS_SUCCESS;
-    struct _KOS_SCOPE *scope           = _push_scope(program, node);
-    struct _KOS_FRAME *frame           = (struct _KOS_FRAME *)scope;
+    struct _KOS_SCOPE *scope;
+    struct _KOS_FRAME *frame;
     struct _KOS_FRAME *last_frame      = program->cur_frame;
     struct _KOS_VAR   *var;
     struct _KOS_REG   *scope_reg       = 0;
@@ -4369,6 +4370,16 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
     const struct _KOS_AST_NODE *open_node;
     const struct _KOS_AST_NODE *name_node = fun_node->children;
     struct _KOS_COMP_FUNCTION  *constant;
+
+    scope = (struct _KOS_SCOPE *)_KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item);
+    frame = (struct _KOS_FRAME *)scope;
+
+    *out_scope = scope;
+
+    if (frame->constant)
+        return KOS_SUCCESS;
+
+    _push_scope(program, node);
 
     frame->fun_token    = &fun_node->token;
     frame->parent_frame = last_frame;
@@ -4579,20 +4590,19 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
                              const struct _KOS_AST_NODE *node,
                              struct _KOS_REG           **reg)
 {
-    int                      error = KOS_SUCCESS;
-    struct _KOS_SCOPE *const scope = (struct _KOS_SCOPE *)
-                                     _KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item);
-    struct _KOS_FRAME *const frame = (struct _KOS_FRAME *)scope;
-    struct _KOS_VAR         *fun_var;
+    int                error = KOS_SUCCESS;
+    struct _KOS_SCOPE *scope;
+    struct _KOS_FRAME *frame;
+    struct _KOS_VAR   *fun_var;
 
     const struct _KOS_AST_NODE *fun_node  = node;
     const struct _KOS_AST_NODE *name_node = fun_node->children;
 
-    assert(scope->has_frame);
-
     /* Generate code for the function */
-    if ( ! frame->constant)
-        TRY(_gen_function(program, node));
+    TRY(_gen_function(program, node, &scope));
+
+    assert(scope->has_frame);
+    frame = (struct _KOS_FRAME *)scope;
     assert(frame->constant);
 
     /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
