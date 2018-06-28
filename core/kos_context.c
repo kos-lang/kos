@@ -144,12 +144,10 @@ _error:
     return error;
 }
 
-void KOS_context_unregister_thread(KOS_CONTEXT        *ctx,
-                                   KOS_THREAD_CONTEXT *thread_ctx)
+static void _unregister_thread(KOS_CONTEXT        *ctx,
+                               KOS_THREAD_CONTEXT *thread_ctx)
 {
     _KOS_heap_release_thread_page(thread_ctx);
-
-    assert((KOS_THREAD_CONTEXT *)_KOS_tls_get(ctx->threads.thread_key) == thread_ctx);
 
     _KOS_tls_set(ctx->threads.thread_key, 0);
 
@@ -186,9 +184,17 @@ int KOS_context_register_thread(KOS_CONTEXT        *ctx,
     error = _register_thread(ctx, thread_ctx);
 
     if (error)
-        KOS_context_unregister_thread(ctx, thread_ctx);
+        _unregister_thread(ctx, thread_ctx);
 
     return error;
+}
+
+void KOS_context_unregister_thread(KOS_CONTEXT        *ctx,
+                                   KOS_THREAD_CONTEXT *thread_ctx)
+{
+    assert((KOS_THREAD_CONTEXT *)_KOS_tls_get(ctx->threads.thread_key) == thread_ctx);
+
+    _unregister_thread(ctx, thread_ctx);
 }
 
 static int _add_multiple_paths(KOS_FRAME frame, struct _KOS_VECTOR *cpaths)
