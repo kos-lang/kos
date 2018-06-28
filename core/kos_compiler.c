@@ -4593,6 +4593,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     /* Generate code for the function */
     if ( ! frame->constant)
         TRY(_gen_function(program, node));
+    assert(frame->constant);
 
     /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
     assert(frame->num_regs > 0);
