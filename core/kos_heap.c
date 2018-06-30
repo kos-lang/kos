@@ -136,6 +136,7 @@ int _KOS_heap_init(KOS_CONTEXT *ctx)
     struct _KOS_HEAP *heap = &ctx->heap;
 
     KOS_atomic_write_u32(heap->gc_state, 0);
+    heap->heap_size      = 0;
     heap->free_pages     = 0;
     heap->non_full_pages = 0;
     heap->full_pages     = 0;
