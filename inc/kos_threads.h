@@ -264,126 +264,51 @@ static inline int _KOS_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *n
 /* GCC and clang                                                            */
 /*==========================================================================*/
 
-#elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
+#elif defined(__GNUC__) && \
+      defined(__GCC_ATOMIC_INT_LOCK_FREE) && (__GCC_ATOMIC_INT_LOCK_FREE > 1) && \
+      defined(__GCC_ATOMIC_POINTER_LOCK_FREE) && (__GCC_ATOMIC_POINTER_LOCK_FREE > 1) && \
+      defined(__GCC_ATOMIC_TEST_AND_SET_TRUEVAL) && (__GCC_ATOMIC_TEST_AND_SET_TRUEVAL > 0)
 
 #define KOS_ATOMIC(type) type volatile
 
-#define KOS_atomic_full_barrier() __sync_synchronize()
+#define KOS_atomic_full_barrier() __atomic_thread_fence(__ATOMIC_SEQ_CST)
 
-#define KOS_atomic_acquire_barrier() __sync_synchronize()
+#define KOS_atomic_acquire_barrier() __atomic_thread_fence(__ATOMIC_ACQUIRE)
 
-#define KOS_atomic_release_barrier() __sync_synchronize()
+#define KOS_atomic_release_barrier() __atomic_thread_fence(__ATOMIC_RELEASE)
 
-#ifdef __cplusplus
+#define KOS_atomic_read_u32(src) __atomic_load_n(&(src), __ATOMIC_RELAXED)
 
-#define KOS_atomic_read_u32(src) \
-        KOS_atomic_read(reinterpret_cast<uint32_t volatile const &>(src))
+#define KOS_atomic_read_ptr(src) __atomic_load_n(&(src), __ATOMIC_RELAXED)
 
-#define KOS_atomic_write_u32(dest, value) \
-        KOS_atomic_write(reinterpret_cast<uint32_t volatile &>(dest), \
-                         static_cast<uint32_t>(value))
+#define KOS_atomic_write_u32(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELAXED)
 
-#define KOS_atomic_cas_u32(dest, oldv, newv) \
-        KOS_atomic_cas(reinterpret_cast<uint32_t volatile &>(dest), \
-                       static_cast<uint32_t>(oldv), \
-                       static_cast<uint32_t>(newv))
+#define KOS_atomic_write_ptr(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELAXED)
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv) \
-        KOS_atomic_cas(reinterpret_cast<void *volatile &>(dest), \
-                       static_cast<void *>(oldv), \
-                       static_cast<void *>(newv))
+#define KOS_atomic_cas_u32(dest, oldv, newv) _KOS_atomic_cas_u32(&(dest), (oldv), (newv))
 
-#define KOS_atomic_add_i32(dest, value) \
-        KOS_atomic_add(reinterpret_cast<int32_t volatile&>(dest), \
-                       static_cast<int32_t>(value))
+#define KOS_atomic_cas_ptr(dest, oldv, newv) _KOS_atomic_cas_ptr((void *volatile *)&(dest), (void *)(oldv), (void *)(newv))
 
-#define KOS_atomic_swap_u32(dest, value) \
-        KOS_atomic_swap(reinterpret_cast<uint32_t volatile&>(dest), \
-                        static_cast<uint32_t>(value))
-
-#define KOS_atomic_swap_ptr(dest, value) \
-        KOS_atomic_swap(reinterpret_cast<void *volatile&>(dest), \
-                        static_cast<void *>(value))
-
-template<typename T>
-T KOS_atomic_read(T volatile const& dest)
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)) || !defined(__STRICT_ANSI__)
+static inline int _KOS_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
-    return dest;
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
-template<typename T>
-T* KOS_atomic_read_ptr(T* volatile const& dest)
+static inline int _KOS_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv)
 {
-    return dest;
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
-
-template<typename T>
-void KOS_atomic_write(T volatile& dest, T value)
-{
-    dest = value;
-}
-
-template<typename T>
-void KOS_atomic_write_ptr(T* volatile& dest, T* value)
-{
-    dest = value;
-}
-
-template<typename T>
-bool KOS_atomic_cas(T volatile& dest, T oldv, T newv)
-{
-    return __sync_bool_compare_and_swap(&dest, oldv, newv);
-}
-
-template<typename T>
-T KOS_atomic_add(T volatile& dest, T value)
-{
-    return __sync_fetch_and_add(&dest, value);
-}
-
-template<typename T>
-T KOS_atomic_swap(T volatile& dest, T value)
-{
-    return __sync_lock_test_and_set(&dest, value);
-}
-
 #else
-
-#define KOS_atomic_read_u32(src) \
-        (*(uint32_t volatile const *)(&(src)))
-
-#define KOS_atomic_read_ptr(src) \
-        (*(void *volatile const *)(&(src)))
-
-#define KOS_atomic_write_u32(dest, value) \
-        (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
-
-#define KOS_atomic_write_ptr(dest, value) \
-        (*(void *volatile *)(&(dest)) = (void *)(value))
-
-#define KOS_atomic_cas_u32(dest, oldv, newv) \
-        __sync_bool_compare_and_swap((uint32_t volatile *)(&(dest)), \
-                                     (uint32_t)(oldv), \
-                                     (uint32_t)(newv))
-
-#define KOS_atomic_cas_ptr(dest, oldv, newv) \
-        __sync_bool_compare_and_swap((void *volatile *)(&(dest)), \
-                                     (void *)(oldv), \
-                                     (void *)(newv))
-
-#define KOS_atomic_add_i32(dest, value) \
-        __sync_fetch_and_add((int32_t volatile *)&(dest), \
-                             (int32_t)(value))
-
-#define KOS_atomic_swap_u32(dest, value) \
-        ((uint32_t)__sync_lock_test_and_set((uint32_t volatile *)&(dest), \
-                                            (uint32_t)(value)))
-
-#define KOS_atomic_swap_ptr(dest, value) \
-        ((void *)__sync_lock_test_and_set((void *volatile *)&(dest), \
-                                          (void *)(value)))
-
+int _KOS_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv);
+int _KOS_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 #endif
+
+#define KOS_atomic_add_i32(dest, value) ((int32_t)__atomic_fetch_add(&(dest), (value), __ATOMIC_SEQ_CST))
+
+#define KOS_atomic_swap_u32(dest, value) __atomic_exchange_n(&(dest), (value), __ATOMIC_SEQ_CST)
+
+#define KOS_atomic_swap_ptr(dest, value) __atomic_exchange_n(&(dest), (value), __ATOMIC_SEQ_CST)
 
 /*==========================================================================*/
 /* x86 (32-bit) fallback for old GCC                                        */
