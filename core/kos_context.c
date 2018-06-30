@@ -254,6 +254,41 @@ static KOS_OBJ_ID _alloc_empty_string(KOS_FRAME frame)
     return OBJID(STRING, str);
 }
 
+static void _clear_context(KOS_CONTEXT *ctx)
+{
+    ctx->flags                           = 0;
+    ctx->empty_string                    = KOS_BADPTR;
+    ctx->args                            = KOS_BADPTR;
+    ctx->prototypes.object_proto         = KOS_BADPTR;
+    ctx->prototypes.number_proto         = KOS_BADPTR;
+    ctx->prototypes.integer_proto        = KOS_BADPTR;
+    ctx->prototypes.float_proto          = KOS_BADPTR;
+    ctx->prototypes.string_proto         = KOS_BADPTR;
+    ctx->prototypes.boolean_proto        = KOS_BADPTR;
+    ctx->prototypes.void_proto           = KOS_BADPTR;
+    ctx->prototypes.array_proto          = KOS_BADPTR;
+    ctx->prototypes.buffer_proto         = KOS_BADPTR;
+    ctx->prototypes.function_proto       = KOS_BADPTR;
+    ctx->prototypes.class_proto          = KOS_BADPTR;
+    ctx->prototypes.generator_proto      = KOS_BADPTR;
+    ctx->prototypes.exception_proto      = KOS_BADPTR;
+    ctx->prototypes.generator_end_proto  = KOS_BADPTR;
+    ctx->prototypes.thread_proto         = KOS_BADPTR;
+    ctx->modules.search_paths            = KOS_BADPTR;
+    ctx->modules.module_names            = KOS_BADPTR;
+    ctx->modules.modules                 = KOS_BADPTR;
+    ctx->modules.init_module             = KOS_BADPTR;
+    ctx->modules.module_inits            = 0;
+    ctx->modules.load_chain              = 0;
+    ctx->threads.main_thread.next        = 0;
+    ctx->threads.main_thread.prev        = 0;
+    ctx->threads.main_thread.frame       = 0;
+    ctx->threads.main_thread.stack_depth = 0;
+    ctx->threads.main_thread.ctx         = ctx;
+    ctx->threads.main_thread.cur_page    = 0;
+    ctx->threads.main_thread.num_saved_regs = 0;
+}
+
 int KOS_context_init(KOS_CONTEXT *ctx,
                      KOS_FRAME   *out_frame)
 {
@@ -267,7 +302,7 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     assert(!IS_HEAP_OBJECT(KOS_FALSE));
     assert(!IS_HEAP_OBJECT(KOS_TRUE));
 
-    memset(ctx, 0, sizeof(*ctx));
+    _clear_context(ctx);
 
     TRY(_KOS_tls_create(&ctx->threads.thread_key));
     error = _KOS_create_mutex(&ctx->threads.mutex);
@@ -279,8 +314,6 @@ int KOS_context_init(KOS_CONTEXT *ctx,
 
     TRY(_KOS_heap_init(ctx));
     heap_ok = 1;
-
-    ctx->threads.main_thread.cur_page = 0;
 
     init_module = (KOS_MODULE *)_KOS_heap_early_alloc(ctx,
                                                       &ctx->threads.main_thread,
@@ -308,11 +341,6 @@ int KOS_context_init(KOS_CONTEXT *ctx,
     init_module->bytecode_size     = 0;
 
     ctx->modules.init_module  = OBJID(MODULE, init_module);
-    ctx->modules.module_names = KOS_BADPTR;
-    ctx->modules.modules      = KOS_BADPTR;
-    ctx->modules.search_paths = KOS_BADPTR;
-
-    ctx->args = KOS_BADPTR;
 
     TRY(_register_thread(ctx, &ctx->threads.main_thread));
 
@@ -400,7 +428,7 @@ void KOS_context_destroy(KOS_CONTEXT *ctx)
 
     _KOS_destroy_mutex(&ctx->threads.mutex);
 
-    memset(ctx, 0, sizeof(*ctx));
+    _clear_context(ctx);
 
 #ifdef CONFIG_PERF
 #   define PERF_RATIO(a) do {                                             \

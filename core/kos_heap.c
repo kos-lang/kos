@@ -135,9 +135,14 @@ int _KOS_heap_init(KOS_CONTEXT *ctx)
 {
     struct _KOS_HEAP *heap = &ctx->heap;
 
-    memset(heap, 0, sizeof(*heap));
-
-    heap->str_oom_id = TO_SMALL_INT(0);
+    KOS_atomic_write_u32(heap->gc_state, 0);
+    heap->free_pages     = 0;
+    heap->non_full_pages = 0;
+    heap->full_pages     = 0;
+    heap->pools          = 0;
+    heap->pool_headers   = 0;
+    heap->waste          = 0;
+    heap->str_oom_id     = KOS_VOID; /* Don't set to BADPTR in case string alloc fails */
 
     assert(_KOS_BITMAP_OFFS + _KOS_BITMAP_SIZE <= _KOS_SLOTS_OFFS);
     assert( ! (_KOS_SLOTS_OFFS & 7U));
