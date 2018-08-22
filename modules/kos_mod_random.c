@@ -286,14 +286,14 @@ _error:
     return error ? KOS_BADPTR : KOS_new_float(frame, value.d - 1.0);
 }
 
-int _KOS_module_random_init(KOS_FRAME frame)
+int _KOS_module_random_init(KOS_FRAME frame, KOS_OBJ_ID module)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID proto;
 
-    TRY_ADD_CONSTRUCTOR(    frame,        "random",  _random,       0, &proto);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "integer", _rand_integer, 0);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "float",   _rand_float,   0);
+    TRY_ADD_CONSTRUCTOR(    frame, module,        "random",  _random,       0, &proto);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "integer", _rand_integer, 0);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "float",   _rand_float,   0);
 
 _error:
     return error;

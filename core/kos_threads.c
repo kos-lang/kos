@@ -128,12 +128,12 @@ static DWORD WINAPI _thread_proc(LPVOID thread_obj)
     int                unregister = 0;
 
     if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS) {
-        ((_KOS_THREAD)thread_obj)->proc(thread_ctx.frame, ((_KOS_THREAD)thread_obj)->cookie);
+        ((_KOS_THREAD)thread_obj)->proc(&thread_ctx, ((_KOS_THREAD)thread_obj)->cookie);
         unregister = 1;
     }
 
-    if (thread_ctx.frame && KOS_is_exception_pending(thread_ctx.frame)) {
-        ((_KOS_THREAD)thread_obj)->exception = KOS_get_exception(thread_ctx.frame);
+    if (KOS_is_exception_pending(&thread_ctx)) {
+        ((_KOS_THREAD)thread_obj)->exception = KOS_get_exception(&thread_ctx);
         /* TODO nobody owns exception */
         ret = 1;
     }
@@ -144,17 +144,17 @@ static DWORD WINAPI _thread_proc(LPVOID thread_obj)
     return ret;
 }
 
-int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
-                       _KOS_THREAD_PROC         proc,
-                       void                    *cookie,
-                       _KOS_THREAD             *thread)
+int _KOS_thread_create(struct _KOS_THREAD_CONTEXT *frame,
+                       _KOS_THREAD_PROC            proc,
+                       void                       *cookie,
+                       _KOS_THREAD                *thread)
 {
     int         error      = KOS_SUCCESS;
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
         new_thread->thread_id = 0;
-        new_thread->ctx       = KOS_context_from_frame(frame);
+        new_thread->ctx       = frame->ctx;
         new_thread->proc      = proc;
         new_thread->cookie    = cookie;
         new_thread->exception = KOS_BADPTR;
@@ -183,8 +183,8 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     return error;
 }
 
-int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
-                     _KOS_THREAD              thread)
+int _KOS_thread_join(struct _KOS_THREAD_CONTEXT *frame,
+                     _KOS_THREAD                 thread)
 {
     int error = KOS_SUCCESS;
 
@@ -306,12 +306,12 @@ static void *_thread_proc(void *thread_obj)
     int                unregister = 0;
 
     if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS) {
-        ((_KOS_THREAD)thread_obj)->proc(thread_ctx.frame, ((_KOS_THREAD)thread_obj)->cookie);
+        ((_KOS_THREAD)thread_obj)->proc(&thread_ctx, ((_KOS_THREAD)thread_obj)->cookie);
         unregister = 1;
     }
 
-    if (thread_ctx.frame && KOS_is_exception_pending(thread_ctx.frame))
-        ret = (void *)KOS_get_exception(thread_ctx.frame);
+    if (KOS_is_exception_pending(&thread_ctx))
+        ret = (void *)KOS_get_exception(&thread_ctx);
         /* TODO nobody owns exception */
 
     if (unregister)
@@ -320,16 +320,16 @@ static void *_thread_proc(void *thread_obj)
     return ret;
 }
 
-int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
-                       _KOS_THREAD_PROC         proc,
-                       void                    *cookie,
-                       _KOS_THREAD             *thread)
+int _KOS_thread_create(struct _KOS_THREAD_CONTEXT *frame,
+                       _KOS_THREAD_PROC            proc,
+                       void                       *cookie,
+                       _KOS_THREAD                *thread)
 {
     int         error      = KOS_SUCCESS;
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
-        new_thread->ctx    = KOS_context_from_frame(frame);
+        new_thread->ctx    = frame->ctx;
         new_thread->proc   = proc;
         new_thread->cookie = cookie;
 
@@ -347,8 +347,8 @@ int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
     return error;
 }
 
-int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
-                     _KOS_THREAD              thread)
+int _KOS_thread_join(struct _KOS_THREAD_CONTEXT *frame,
+                     _KOS_THREAD                 thread)
 {
     int error = KOS_SUCCESS;
 

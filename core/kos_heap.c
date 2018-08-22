@@ -128,7 +128,7 @@ static void *_list_pop(void **list_ptr)
 
 static struct _KOS_HEAP *_get_heap(KOS_FRAME frame)
 {
-    return &frame->thread_ctx->ctx->heap;
+    return &frame->ctx->heap;
 }
 
 int _KOS_heap_init(KOS_CONTEXT *ctx)
@@ -643,7 +643,7 @@ static void *_alloc_object(KOS_FRAME            frame,
                            enum KOS_OBJECT_TYPE object_type,
                            uint32_t             size)
 {
-    struct _KOS_THREAD_CONTEXT *thread_ctx = frame->thread_ctx;
+    struct _KOS_THREAD_CONTEXT *thread_ctx = frame;
     _KOS_PAGE                  *page       = thread_ctx->cur_page;
     const uint32_t              num_slots  = (size + sizeof(_KOS_SLOT) - 1) >> _KOS_OBJ_ALIGN_BITS;
     unsigned                    seek_depth = _KOS_MAX_PAGE_SEEK;
@@ -801,9 +801,16 @@ void *_KOS_alloc_object(KOS_FRAME            frame,
     }
 }
 
+void *_KOS_alloc_object_page(KOS_FRAME            frame,
+                             enum KOS_ALLOC_HINT  alloc_hint,
+                             enum KOS_OBJECT_TYPE object_type)
+{
+    return _alloc_object(frame, alloc_hint, object_type, _KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS);
+}
+
 static void _release_current_page(KOS_FRAME frame)
 {
-    struct _KOS_THREAD_CONTEXT *thread_ctx = frame->thread_ctx;
+    struct _KOS_THREAD_CONTEXT *thread_ctx = frame;
     _KOS_PAGE                  *page       = thread_ctx->cur_page;
 
     if (page) {
@@ -822,7 +829,7 @@ static void _release_current_page(KOS_FRAME frame)
 
 static void _release_current_page_locked(KOS_FRAME frame)
 {
-    struct _KOS_THREAD_CONTEXT *thread_ctx = frame->thread_ctx;
+    struct _KOS_THREAD_CONTEXT *thread_ctx = frame;
     _KOS_PAGE                  *page       = thread_ctx->cur_page;
 
     if (page) {
@@ -978,11 +985,7 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
             /* TODO make these atomic */
             _set_mark_state(OBJPTR(FUNCTION, obj_id)->closures, GRAY);
             _set_mark_state(OBJPTR(FUNCTION, obj_id)->defaults, GRAY);
-            {
-                KOS_FRAME frame = OBJPTR(FUNCTION, obj_id)->generator_stack_frame;
-                if (frame)
-                    _set_mark_state(OBJID(STACK_FRAME, frame), GRAY);
-            }
+            _set_mark_state(OBJPTR(FUNCTION, obj_id)->generator_stack_frame, GRAY);
             break;
 
         case OBJ_CLASS:
@@ -1037,19 +1040,12 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
             _set_mark_state(OBJPTR(MODULE, obj_id)->module_names,      GRAY);
             break;
 
-        case OBJ_STACK_FRAME:
-            /* TODO make these atomic */
-            _set_mark_state(OBJPTR(STACK_FRAME, obj_id)->parent, GRAY);
-            _set_mark_state(OBJPTR(STACK_FRAME, obj_id)->module, GRAY);
-            _set_mark_state(OBJPTR(STACK_FRAME, obj_id)->registers, GRAY);
-            _set_mark_state(OBJPTR(STACK_FRAME, obj_id)->exception, GRAY);
-            _set_mark_state(OBJPTR(STACK_FRAME, obj_id)->retval, GRAY);
+        case OBJ_STACK:
             {
-                KOS_OBJ_REF *ref = OBJPTR(STACK_FRAME, obj_id)->obj_refs;
-                while (ref) {
-                    _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(ref->obj_id), GRAY);
-                    ref = ref->next;
-                }
+                KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(STACK, obj_id)->buf[0];
+                KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(STACK, obj_id)->size;
+                for ( ; item < end; ++item)
+                    _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(*item), GRAY);
             }
             break;
     }
@@ -1134,17 +1130,27 @@ static int _gray_to_black(struct _KOS_HEAP *heap)
     return marked;
 }
 
-static void _mark_from_thread_context(struct _KOS_THREAD_CONTEXT *thread_ctx)
+static void _mark_from_thread_context(KOS_THREAD_CONTEXT *thread_ctx)
 {
-    unsigned i;
+    KOS_OBJ_REF *ref;
 
-    for (i = 0; i < thread_ctx->num_saved_regs; ++i)
-        _mark_object_black(thread_ctx->saved_regs[i]);
+    if ( ! IS_BAD_PTR(thread_ctx->exception))
+        _mark_object_black(thread_ctx->exception);
+    if ( ! IS_BAD_PTR(thread_ctx->retval))
+        _mark_object_black(thread_ctx->retval);
+    if ( ! IS_BAD_PTR(thread_ctx->stack))
+        _mark_object_black(thread_ctx->stack);
+
+    ref = thread_ctx->obj_refs;
+    while (ref) {
+        _mark_object_black((KOS_OBJ_ID)KOS_atomic_read_ptr(ref->obj_id));
+        ref = ref->next;
+    }
 }
 
 static void _mark_roots(KOS_FRAME frame)
 {
-    KOS_CONTEXT *ctx = KOS_context_from_frame(frame);
+    KOS_CONTEXT *ctx = frame->ctx;
 
     _mark_object_black(ctx->empty_string);
     _mark_object_black(_get_heap(frame)->str_oom_id);
@@ -1173,9 +1179,7 @@ static void _mark_roots(KOS_FRAME frame)
     _mark_object_black(ctx->args);
 
     /* TODO go over all threads */
-    _mark_from_thread_context(frame->thread_ctx);
-
-    _mark_object_black(OBJID(STACK_FRAME, frame));
+    _mark_from_thread_context(frame);
 }
 
 static void _get_flat_list(_KOS_PAGE *page, _KOS_PAGE ***begin, _KOS_PAGE ***end)
@@ -1451,14 +1455,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
         case OBJ_FUNCTION:
             _update_child_ptr(&((KOS_FUNCTION *)hdr)->closures);
             _update_child_ptr(&((KOS_FUNCTION *)hdr)->defaults);
-            {
-                KOS_FRAME frame = ((KOS_FUNCTION *)hdr)->generator_stack_frame;
-                if (frame) {
-                    KOS_OBJ_ID obj_id = OBJID(STACK_FRAME, frame);
-                    _update_child_ptr(&obj_id);
-                    ((KOS_FUNCTION *)hdr)->generator_stack_frame = OBJPTR(STACK_FRAME, obj_id);
-                }
-            }
+            _update_child_ptr(&((KOS_FUNCTION *)hdr)->generator_stack_frame);
             break;
 
         case OBJ_CLASS:
@@ -1487,18 +1484,12 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             _update_child_ptr(&((KOS_MODULE *)hdr)->module_names);
             break;
 
-        case OBJ_STACK_FRAME:
-            _update_child_ptr(&((KOS_STACK_FRAME *)hdr)->parent);
-            _update_child_ptr(&((KOS_STACK_FRAME *)hdr)->module);
-            _update_child_ptr(&((KOS_STACK_FRAME *)hdr)->registers);
-            _update_child_ptr(&((KOS_STACK_FRAME *)hdr)->exception);
-            _update_child_ptr(&((KOS_STACK_FRAME *)hdr)->retval);
+        case OBJ_STACK:
             {
-                KOS_OBJ_REF *ref = ((KOS_STACK_FRAME *)hdr)->obj_refs;
-                while (ref) {
-                    _update_child_ptr((KOS_OBJ_ID *)&ref->obj_id);
-                    ref = ref->next;
-                }
+                KOS_ATOMIC(KOS_OBJ_ID) *item = &((KOS_STACK *)hdr)->buf[0];
+                KOS_ATOMIC(KOS_OBJ_ID) *end  = item + ((KOS_STACK *)hdr)->size;
+                for ( ; item < end; ++item)
+                    _update_child_ptr((KOS_OBJ_ID *)item);
             }
             break;
     }
@@ -1506,7 +1497,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
 static void _update_after_evacuation(KOS_FRAME frame)
 {
-    KOS_CONTEXT      *ctx              = KOS_context_from_frame(frame);
+    KOS_CONTEXT      *ctx              = frame->ctx;
     struct _KOS_HEAP *heap             = &ctx->heap;
     _KOS_PAGE        *page             = heap->full_pages;
     int               non_full_checked = 0;
@@ -1577,11 +1568,16 @@ static void _update_after_evacuation(KOS_FRAME frame)
 
         while (thread_ctx) {
 
-            KOS_OBJ_ID frame_id = OBJID(STACK_FRAME, thread_ctx->frame);
+            KOS_OBJ_REF *ref = thread_ctx->obj_refs;
 
-            _update_child_ptr(&frame_id);
+            while (ref) {
+                _update_child_ptr((KOS_OBJ_ID *)&ref->obj_id);
+                ref = ref->next;
+            }
 
-            thread_ctx->frame = OBJPTR(STACK_FRAME, frame_id);
+            _update_child_ptr(&thread_ctx->exception);
+            _update_child_ptr(&thread_ctx->retval);
+            _update_child_ptr(&thread_ctx->stack);
 
             thread_ctx = thread_ctx->next;
         }

@@ -25,6 +25,7 @@
 #include "../inc/kos_bytecode.h"
 #include "../inc/kos_context.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
@@ -50,8 +51,8 @@ static const char str_err_invalid_index[]        = "index out of range";
 static const char str_err_invalid_instruction[]  = "invalid instruction";
 static const char str_err_not_callable[]         = "object is not callable";
 static const char str_err_not_generator[]        = "function is not a generator";
+static const char str_err_not_indexable[]        = "object is not indexable";
 static const char str_err_slice_not_function[]   = "slice is not a function";
-static const char str_err_stack_overflow[]            = "stack overflow";
 static const char str_err_too_few_args[]         = "not enough arguments passed to a function";
 static const char str_err_unsup_operand_types[]  = "unsupported operand types";
 static const char str_slice[]                    = "slice";
@@ -585,7 +586,7 @@ static KOS_OBJ_ID _copy_function(KOS_FRAME  frame,
 
 static int _is_generator_end_exception(KOS_FRAME frame)
 {
-    KOS_CONTEXT *const ctx       = KOS_context_from_frame(frame);
+    KOS_CONTEXT *const ctx       = frame->ctx;
     const KOS_OBJ_ID   exception = KOS_get_exception(frame);
     int                ret       = 0;
 
@@ -610,34 +611,40 @@ static int _is_generator_end_exception(KOS_FRAME frame)
     return ret;
 }
 
-static void _save_regs(KOS_FRAME parent,
-                       KOS_FRAME exited)
+static KOS_ATOMIC(KOS_OBJ_ID) *_get_regs(KOS_FRAME frame,
+                                         uint32_t *num_regs)
 {
-    struct _KOS_THREAD_CONTEXT *thread_ctx = parent->thread_ctx;
+    const KOS_OBJ_ID stack    = frame->stack;
+    const uint32_t   regs_idx = frame->regs_idx;
+    uint32_t         size;
 
-    assert(thread_ctx->num_saved_regs == 0 ||
-           thread_ctx->saved_regs[thread_ctx->num_saved_regs-1] != exited->registers);
+    assert( ! IS_BAD_PTR(stack));
+    assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
 
-    if ( ! IS_BAD_PTR(exited->registers) && thread_ctx->num_saved_regs < KOS_MAX_SAVED_FRAMES)
-        thread_ctx->saved_regs[thread_ctx->num_saved_regs++] = exited->registers;
+    size = KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+    assert(size > KOS_STACK_EXTRA);
+    assert(regs_idx + 1U < size);
 
-    exited->registers = KOS_BADPTR;
+    *num_regs = size - 1U - regs_idx;
+
+    return &OBJPTR(STACK, stack)->buf[regs_idx];
 }
 
-static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
-                                  KOS_FUNCTION *func,
-                                  KOS_OBJ_ID    args_obj,
-                                  KOS_OBJ_ID    this_obj)
+static int _init_registers(KOS_FRAME     frame,
+                           KOS_FUNCTION *func,
+                           KOS_OBJ_ID    args_obj,
+                           KOS_OBJ_ID    this_obj)
 {
     int                     error            = KOS_SUCCESS;
     KOS_OBJ_ID              ellipsis_obj     = KOS_BADPTR;
     KOS_ATOMIC(KOS_OBJ_ID) *regs_buf         = 0;
+    uint32_t                num_regs         = 0;
     uint32_t                reg              = func->args_reg;
     const uint32_t          num_non_def_args = func->header.num_args;
     const uint32_t          num_def_args     = GET_OBJ_TYPE(func->defaults) == OBJ_ARRAY
                                                 ? KOS_get_array_size(func->defaults) : 0;
-    const uint32_t          num_args         = num_non_def_args + num_def_args;
-    const uint32_t          num_arg_regs     = KOS_min(num_args, _KOS_MAX_ARGS_IN_REGS);
+    const uint32_t          num_named_args   = num_non_def_args + num_def_args;
+    const uint32_t          num_arg_regs     = KOS_min(num_named_args, _KOS_MAX_ARGS_IN_REGS);
     const uint32_t          num_input_args   = KOS_get_array_size(args_obj);
 
     assert( ! func->handler);
@@ -654,38 +661,32 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
 
     if (func->header.flags & KOS_FUN_ELLIPSIS)  {
         if (num_input_args > num_arg_regs) {
-            ellipsis_obj = KOS_array_slice(frame, args_obj, num_args, MAX_INT64);
+            ellipsis_obj = KOS_array_slice(frame, args_obj, num_named_args, MAX_INT64);
             TRY_OBJID(ellipsis_obj);
         }
         else
             ellipsis_obj = KOS_new_array(frame, 0);
     }
 
-    /* TODO Use a new array for registers and copy arguments to preserve original
-     *      args array for debugging purposes (e.g. callstacks).  Depending on
-     *      perf impact, this could be done always or as needed (an option).
-     *
-     *      Consider using an alternative approach to storing registers and
-     *      arguments, e.g. a long "tape" (array) with registers for inner
-     *      stack frames being stored towards the end.
-     */
+    /* TODO add option to pass registers from previous function on the stack */
+    regs_buf = _get_regs(frame, &num_regs);
 
-    if (num_args <= _KOS_MAX_ARGS_IN_REGS) {
+    if (num_named_args <= _KOS_MAX_ARGS_IN_REGS) {
 
-        const uint32_t num_to_move = KOS_min(num_input_args, num_args);
+        const uint32_t num_to_move = KOS_min(num_input_args, num_named_args);
 
-        TRY(KOS_array_resize(frame, args_obj, func->header.num_regs));
+        assert(reg + num_to_move <= num_regs);
 
-        regs_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+        if (num_to_move) {
+            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+            KOS_ATOMIC(KOS_OBJ_ID) *end     = src_buf + num_to_move;
 
-        if (reg > 0 && num_to_move)
-            memmove((void *)(regs_buf + reg),
-                    (void *)regs_buf,
-                    num_to_move * sizeof(KOS_OBJ_ID));
+            while (src_buf < end)
+                KOS_atomic_write_ptr(regs_buf[reg++],
+                                     (KOS_OBJ_ID)KOS_atomic_read_ptr(*(src_buf++)));
+        }
 
-        reg += num_to_move;
-
-        if (num_to_move < num_args) {
+        if (num_to_move < num_named_args) {
 
             KOS_ATOMIC(KOS_OBJ_ID) *src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, func->defaults));
             KOS_ATOMIC(KOS_OBJ_ID) *src_end = src_buf + num_def_args;
@@ -695,28 +696,27 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
             src_buf += num_to_move - num_non_def_args;
 
             do
-                regs_buf[reg++] = KOS_atomic_read_ptr(*(src_buf++));
+                KOS_atomic_write_ptr(regs_buf[reg++],
+                                     KOS_atomic_read_ptr(*(src_buf++)));
             while (src_buf < src_end);
         }
     }
     else {
         const uint32_t num_to_move = KOS_min(num_input_args, _KOS_MAX_ARGS_IN_REGS - 1U);
 
-        KOS_OBJ_ID rest_obj = KOS_array_slice(frame, args_obj, _KOS_MAX_ARGS_IN_REGS - 1, num_args);
+        KOS_OBJ_ID rest_obj = KOS_array_slice(frame, args_obj, _KOS_MAX_ARGS_IN_REGS - 1, num_named_args);
         TRY_OBJID(rest_obj);
 
-        TRY(KOS_array_resize(frame, args_obj, func->header.num_regs));
+        if (num_to_move) {
+            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+            KOS_ATOMIC(KOS_OBJ_ID) *end     = src_buf + num_to_move;
 
-        regs_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+            while (src_buf < end)
+                KOS_atomic_write_ptr(regs_buf[reg++],
+                                     (KOS_OBJ_ID)KOS_atomic_read_ptr(*(src_buf++)));
+        }
 
-        if (reg > 0 && num_to_move)
-            memmove((void *)(regs_buf + reg),
-                    (void *)regs_buf,
-                    num_to_move * sizeof(KOS_OBJ_ID));
-
-        reg += num_to_move;
-
-        if (num_input_args < num_args) {
+        if (num_input_args < num_named_args) {
 
             KOS_ATOMIC(KOS_OBJ_ID) *const src_buf0 = _KOS_get_array_buffer(OBJPTR(ARRAY, func->defaults));
             KOS_ATOMIC(KOS_OBJ_ID)       *src_buf  = src_buf0;
@@ -730,7 +730,8 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
                                                 + _KOS_MAX_ARGS_IN_REGS - 1U - num_to_move;
 
                 while (src_buf < reg_end)
-                    regs_buf[reg++] = KOS_atomic_read_ptr(*(src_buf++));
+                    KOS_atomic_write_ptr(regs_buf[reg++],
+                                         (KOS_OBJ_ID)KOS_atomic_read_ptr(*(src_buf++)));
             }
 
             TRY(KOS_array_insert(frame,
@@ -742,66 +743,110 @@ static KOS_OBJ_ID _init_registers(KOS_FRAME     frame,
                                  MAX_INT64));
         }
 
-        regs_buf[reg++] = rest_obj;
+        KOS_atomic_write_ptr(regs_buf[reg++], rest_obj);
     }
 
     if ( ! IS_BAD_PTR(ellipsis_obj))
-        regs_buf[reg++] = ellipsis_obj;
+        KOS_atomic_write_ptr(regs_buf[reg++], ellipsis_obj);
 
-    regs_buf[reg++] = this_obj;
+    KOS_atomic_write_ptr(regs_buf[reg++], this_obj);
+
+    assert( ! IS_BAD_PTR(func->closures));
 
     if (GET_OBJ_TYPE(func->closures) == OBJ_ARRAY) {
         KOS_ATOMIC(KOS_OBJ_ID) *src_buf;
+        KOS_ATOMIC(KOS_OBJ_ID) *end;
         uint32_t                src_len;
 
         src_len = KOS_get_array_size(func->closures);
 
         assert(src_len > 0);
         assert(reg + src_len <= 256U);
-        assert(reg + src_len <= KOS_get_array_size(args_obj));
+        assert(reg + src_len <= num_regs);
 
         src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, func->closures));
-        memcpy((void *)(regs_buf + reg),
-               (void *)src_buf,
-               src_len * sizeof(KOS_OBJ_ID));
+        end     = src_buf + src_len;
+
+        while (src_buf < end)
+            KOS_atomic_write_ptr(regs_buf[reg++],
+                                 (KOS_OBJ_ID)KOS_atomic_read_ptr(*(src_buf++)));
     }
     else {
         assert(GET_OBJ_TYPE(func->closures) == OBJ_VOID);
     }
 
 _error:
-    return error ? KOS_BADPTR : args_obj;
+    return error;
 }
 
-static KOS_FRAME _prepare_call(KOS_FRAME          frame,
-                               KOS_BYTECODE_INSTR instr,
-                               KOS_OBJ_ID         func_obj,
-                               KOS_OBJ_ID        *this_obj,
-                               KOS_OBJ_ID         args_obj)
+static void _set_handler_reg(KOS_FRAME  frame,
+                             KOS_OBJ_ID obj_id)
 {
-    int                      error           = KOS_SUCCESS;
+    uint32_t         size;
+    const KOS_OBJ_ID stack = frame->stack;
+
+    assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
+    assert(OBJPTR(STACK, stack)->header.flags & KOS_REENTRANT_STACK);
+
+    size = KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+    assert(size > KOS_STACK_EXTRA);
+
+    assert((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack)->buf[size - 1]) == TO_SMALL_INT(1));
+    KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[size - 2], obj_id);
+}
+
+static KOS_OBJ_ID _get_handler_reg(KOS_FRAME frame)
+{
+    uint32_t         size;
+    const KOS_OBJ_ID stack = frame->stack;
+
+    assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
+    assert(OBJPTR(STACK, stack)->header.flags & KOS_REENTRANT_STACK);
+
+    size = KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+    assert(size > KOS_STACK_EXTRA);
+
+    assert((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack)->buf[size - 1]) == TO_SMALL_INT(1));
+
+    return (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack)->buf[size - 2]);
+}
+
+static void _write_to_yield_reg(KOS_FRAME  frame,
+                                KOS_OBJ_ID obj_id)
+{
+    const KOS_OBJ_ID        stack = frame->stack;
+    uint32_t                num_regs;
+    KOS_ATOMIC(KOS_OBJ_ID) *regs;
+
+    regs = _get_regs(frame, &num_regs);
+
+    assert((uint32_t)OBJPTR(STACK, stack)->header.yield_reg < num_regs);
+
+    KOS_atomic_write_ptr(regs[OBJPTR(STACK, stack)->header.yield_reg], obj_id);
+}
+
+static int _prepare_call(KOS_FRAME          frame,
+                         KOS_BYTECODE_INSTR instr,
+                         KOS_OBJ_ID         func_obj,
+                         KOS_OBJ_ID        *this_obj,
+                         KOS_OBJ_ID         args_obj)
+{
+    int                      error = KOS_SUCCESS;
     KOS_FUNCTION            *func;
     enum _KOS_FUNCTION_STATE state;
-    KOS_FRAME                new_stack_frame = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
     assert( ! IS_BAD_PTR(args_obj));
 
-    switch (GET_OBJ_TYPE(func_obj)) {
-
-        case OBJ_FUNCTION:
-            /* fall through */
-        default:
-            assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
-            func  = OBJPTR(FUNCTION, func_obj);
-            state = (enum _KOS_FUNCTION_STATE)func->state;
-            assert(state != KOS_CTOR);
-            break;
-
-        case OBJ_CLASS:
-            func  = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
-            state = KOS_CTOR;
-            break;
+    if (GET_OBJ_TYPE(func_obj) != OBJ_CLASS) {
+        assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
+        func  = OBJPTR(FUNCTION, func_obj);
+        state = (enum _KOS_FUNCTION_STATE)func->state;
+        assert(state != KOS_CTOR);
+    }
+    else {
+        func  = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
+        state = KOS_CTOR;
     }
 
     if (GET_OBJ_TYPE(args_obj) != OBJ_ARRAY)
@@ -833,19 +878,13 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
 
         /* Regular function */
         case KOS_FUN: {
-            KOS_OBJ_ID regs = KOS_BADPTR;
+            TRY(_KOS_stack_push_function(frame, func_obj));
 
-            if ( ! func->handler) {
-                regs = _init_registers(frame,
-                                       func,
-                                       args_obj,
-                                       *this_obj);
-                TRY_OBJID(regs);
-            }
-
-            new_stack_frame = _KOS_stack_frame_push_func(frame, func, regs);
-            if ( ! new_stack_frame)
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            if ( ! func->handler)
+                TRY(_init_registers(frame,
+                                    func,
+                                    args_obj,
+                                    *this_obj));
 
             break;
         }
@@ -854,35 +893,29 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
         case KOS_GEN_INIT: {
             KOS_FUNCTION *dest;
             KOS_OBJ_ID    ret;
-            KOS_OBJ_ID    regs = KOS_BADPTR;
 
             ret = _copy_function(frame, func_obj);
             TRY_OBJID(ret);
 
             dest = OBJPTR(FUNCTION, ret);
 
+            TRY(_KOS_stack_push_function(frame, ret));
+
             dest->state = KOS_GEN_READY;
 
-            if ( ! func->handler) {
-                regs = _init_registers(frame,
-                                       dest,
-                                       args_obj,
-                                       *this_obj);
-                TRY_OBJID(regs);
-            }
+            if ( ! func->handler)
+                TRY(_init_registers(frame,
+                                    dest,
+                                    args_obj,
+                                    *this_obj));
+            else
+                _set_handler_reg(frame, args_obj);
 
             dest->header.num_args = 0;
 
-            new_stack_frame = _KOS_stack_frame_push_func(frame, func, regs);
-            if ( ! new_stack_frame)
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            OBJPTR(STACK, frame->stack)->header.flags |= KOS_CAN_YIELD;
 
-            if (func->handler)
-                new_stack_frame->registers = args_obj;
-
-            dest->generator_stack_frame   =  new_stack_frame;
-            new_stack_frame->parent       =  KOS_BADPTR;
-            new_stack_frame->header.flags |= KOS_CAN_YIELD;
+            _KOS_stack_pop(frame);
 
             *this_obj = ret;
             break;
@@ -892,42 +925,25 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
         case KOS_GEN_READY:
             /* fall through */
         case KOS_GEN_ACTIVE: {
-            KOS_ATOMIC(KOS_OBJ_ID) *gen_regs = 0;
-            const uint32_t          num_args = KOS_get_array_size(args_obj);
+            assert( ! IS_BAD_PTR(func->generator_stack_frame));
 
-            assert(func->generator_stack_frame);
+            TRY(_KOS_stack_push_function(frame, func_obj));
 
-            new_stack_frame = func->generator_stack_frame;
+            if ( ! func->handler) {
+                if (state == KOS_GEN_ACTIVE) {
 
-            if (func->handler)
-                *this_obj = new_stack_frame->registers;
-            else
-                gen_regs = _KOS_get_array_buffer(OBJPTR(ARRAY, new_stack_frame->registers));
+                    const uint32_t num_args = KOS_get_array_size(args_obj);
 
-            if (state == KOS_GEN_ACTIVE) {
-
-                const uint32_t r = new_stack_frame->header.yield_reg;
-
-                assert( ! func->handler);
-
-                assert(r < KOS_get_array_size(new_stack_frame->registers));
-
-                assert(gen_regs);
-
-                if (gen_regs) {
-                    if (num_args)
-                        gen_regs[r] = KOS_array_read(frame, args_obj, 0);
-                    else
-                        gen_regs[r] = KOS_VOID;
+                    _write_to_yield_reg(frame, num_args ? KOS_array_read(frame, args_obj, 0) : KOS_VOID);
                 }
             }
+            else
+                *this_obj = _get_handler_reg(frame);
 
             /* TODO perform CAS for thread safety */
             func->state = KOS_GEN_RUNNING;
 
-            new_stack_frame->thread_ctx   =  frame->thread_ctx;
-            new_stack_frame->parent       =  OBJID(STACK_FRAME, frame);
-            new_stack_frame->header.flags |= KOS_CAN_YIELD;
+            OBJPTR(STACK, frame->stack)->header.flags |= KOS_CAN_YIELD;
             break;
         }
 
@@ -937,33 +953,30 @@ static KOS_FRAME _prepare_call(KOS_FRAME          frame,
         default:
             assert(state == KOS_GEN_DONE);
             KOS_raise_generator_end(frame);
+            error = KOS_ERROR_EXCEPTION;
     }
 
 _error:
-    return error ? 0 : new_stack_frame;
+    return error;
 }
 
 static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
                                KOS_BYTECODE_INSTR        instr,
                                KOS_FUNCTION             *func,
                                KOS_OBJ_ID                this_obj,
-                               KOS_FRAME                 new_stack_frame,
                                enum _KOS_FUNCTION_STATE *state)
 {
-    KOS_OBJ_ID ret     = KOS_BADPTR;
-    int        yielded = 0;
+    KOS_OBJ_ID ret = KOS_BADPTR;
 
-    assert(OBJPTR(STACK_FRAME, new_stack_frame->parent) == frame);
-
-    if ( ! KOS_is_exception_pending(new_stack_frame)) {
+    if ( ! KOS_is_exception_pending(frame)) {
 
         if (func->header.type == OBJ_CLASS && ! func->handler)
             ret = this_obj;
         else
-            ret = new_stack_frame->retval;
+            ret = frame->retval;
 
         if (*state >= KOS_GEN_INIT) {
-            if (new_stack_frame->header.flags & KOS_CAN_YIELD) {
+            if (OBJPTR(STACK, frame->stack)->header.flags & KOS_CAN_YIELD) {
                 *state = KOS_GEN_DONE;
                 func->state = KOS_GEN_DONE;
                 if (instr != INSTR_CALL_GEN)
@@ -974,7 +987,6 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
 
                 *state      = end_state;
                 func->state = (uint8_t)end_state;
-                yielded     = 1;
             }
         }
     }
@@ -983,15 +995,11 @@ static KOS_OBJ_ID _finish_call(KOS_FRAME                 frame,
             *state = KOS_GEN_DONE;
             func->state = KOS_GEN_DONE;
         }
-        frame->exception = new_stack_frame->exception;
     }
 
-    new_stack_frame->parent    = KOS_BADPTR;
-    new_stack_frame->exception = KOS_BADPTR;
-    new_stack_frame->retval    = KOS_BADPTR;
+    frame->retval = KOS_BADPTR;
 
-    if ( ! yielded && ! (new_stack_frame->header.flags & KOS_REGS_BOUND))
-        _save_regs(frame, new_stack_frame);
+    _KOS_stack_pop(frame);
 
     return ret;
 }
@@ -1049,48 +1057,152 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _pop_saved_regs(KOS_FRAME frame)
+static KOS_OBJ_ID _read_stack(KOS_FRAME frame, KOS_OBJ_ID objptr, int idx)
 {
-    struct _KOS_THREAD_CONTEXT *thread_ctx = frame->thread_ctx;
+    uint32_t   size;
+    KOS_OBJ_ID ret;
 
-    KOS_OBJ_ID regs = KOS_BADPTR;
+    assert(GET_OBJ_TYPE(objptr) == OBJ_STACK);
+    assert(OBJPTR(STACK, objptr)->header.flags & KOS_REENTRANT_STACK);
 
-    if (thread_ctx->num_saved_regs)
-        regs = thread_ctx->saved_regs[--thread_ctx->num_saved_regs];
+    size = KOS_atomic_read_u32(OBJPTR(STACK, objptr)->size);
+    assert(size >= 1 + KOS_STACK_EXTRA);
 
-    return regs;
+    if (idx < 0)
+        idx += (int)size - 1;
+    else
+        idx += KOS_STACK_EXTRA;
+
+    if ((uint32_t)idx >= size)  {
+        KOS_raise_exception_cstring(frame, str_err_invalid_index);
+        ret = KOS_VOID;
+    }
+    else
+        ret = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, objptr)->buf[idx]);
+
+    return ret;
 }
 
-static KOS_OBJ_ID _alloc_args(KOS_FRAME frame, uint32_t num_args)
+static int _write_stack(KOS_FRAME frame, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID value)
 {
-    KOS_OBJ_ID args_obj = _pop_saved_regs(frame);
+    int      error = KOS_SUCCESS;
+    uint32_t size;
 
-    if ( ! IS_BAD_PTR(args_obj)) {
-        KOS_OBJ_ID storage;
+    assert(GET_OBJ_TYPE(objptr) == OBJ_STACK);
+    assert(OBJPTR(STACK, objptr)->header.flags & KOS_REENTRANT_STACK);
 
-        assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
+    size = KOS_atomic_read_u32(OBJPTR(STACK, objptr)->size);
+    assert(size >= 1 + KOS_STACK_EXTRA);
 
-        storage = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(ARRAY, args_obj)->data);
+    if (idx < 0)
+        idx += (int)size - 1;
+    else
+        idx += KOS_STACK_EXTRA;
 
-        assert( ! IS_BAD_PTR(storage));
 
-        if (OBJPTR(ARRAY_STORAGE, storage)->capacity < num_args)
-            args_obj = KOS_BADPTR;
-        else
-            OBJPTR(ARRAY, args_obj)->size = num_args;
+    if ((uint32_t)idx >= size) {
+        KOS_raise_exception_cstring(frame, str_err_invalid_index);
+        error = KOS_ERROR_EXCEPTION;
+    }
+    else
+        KOS_atomic_write_ptr(OBJPTR(STACK, objptr)->buf[idx], value);
+
+    return error;
+}
+
+static void _set_closure_stack_size(KOS_FRAME frame, unsigned closure_size)
+{
+    const KOS_OBJ_ID stack = frame->stack;
+
+    assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
+
+    if (OBJPTR(STACK, stack)->header.flags & KOS_REENTRANT_STACK) {
+
+        const uint32_t size     = closure_size + 1U + KOS_STACK_EXTRA;
+        const uint32_t old_size = KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+
+        assert(size <= old_size);
+
+        KOS_atomic_write_u32(OBJPTR(STACK, stack)->size, size);
+        KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[size - 1], TO_SMALL_INT((int)closure_size));
+
+        frame->stack_depth -= old_size - size;
+    }
+}
+
+static KOS_MODULE *_get_module(KOS_ATOMIC(KOS_OBJ_ID) *regs)
+{
+    const KOS_OBJ_ID func_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(regs[-3]);
+    KOS_FUNCTION    *func;
+
+    if (GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION)
+        func = OBJPTR(FUNCTION, func_obj);
+    else {
+        assert(GET_OBJ_TYPE(func_obj) == OBJ_CLASS);
+        func = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
     }
 
-    if (IS_BAD_PTR(args_obj)) {
+    assert( ! IS_BAD_PTR(func->module));
+    assert(GET_OBJ_TYPE(func->module) == OBJ_MODULE);
 
-        const uint32_t capacity = KOS_max(num_args, (uint32_t)_KOS_MIN_REG_CAPACITY);
+    return OBJPTR(MODULE, func->module);
+}
 
-        args_obj = KOS_new_array(frame, capacity);
+KOS_OBJ_ID KOS_get_module(KOS_FRAME frame)
+{
+    uint32_t                num_regs;
+    KOS_ATOMIC(KOS_OBJ_ID) *regs = _get_regs(frame, &num_regs);
 
-        if ( ! IS_BAD_PTR(args_obj))
-            OBJPTR(ARRAY, args_obj)->size = num_args;
-    }
+    assert(regs);
 
-    return args_obj;
+    return OBJID(MODULE, _get_module(regs));
+}
+
+/* TODO copy args directly from registers on the caller's stack frame */
+static KOS_OBJ_ID _alloc_args(KOS_FRAME frame, unsigned num_args)
+{
+    return KOS_new_array(frame, num_args);
+}
+
+static int64_t _load_instr_offs(KOS_ATOMIC(KOS_OBJ_ID) *regs)
+{
+    assert(IS_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(regs[-1])));
+    return GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(regs[-1]));
+}
+
+static void _store_instr_offs(KOS_ATOMIC(KOS_OBJ_ID) *regs,
+                              uint32_t                instr_offs)
+{
+    KOS_atomic_write_ptr(regs[-1], TO_SMALL_INT((int64_t)instr_offs));
+}
+
+static uint32_t _get_catch(KOS_ATOMIC(KOS_OBJ_ID) *regs, uint8_t *catch_reg)
+{
+    const KOS_OBJ_ID catch_data_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(regs[-2]);
+    uint64_t         catch_data;
+    uint32_t         catch_offs;
+
+    assert(IS_SMALL_INT(catch_data_obj));
+
+    catch_data = (uint64_t)GET_SMALL_INT(catch_data_obj);
+
+    catch_offs = (uint32_t)(catch_data >> 8);
+    *catch_reg = (uint8_t)(catch_data & 0xFFU);
+
+    return catch_offs;
+}
+
+static void _set_catch(KOS_ATOMIC(KOS_OBJ_ID) *regs, uint32_t catch_offs, uint8_t catch_reg)
+{
+    const uint64_t catch_data = (((uint64_t)catch_offs << 8) | catch_reg);
+    assert(catch_offs < KOS_NO_CATCH);
+    KOS_atomic_write_ptr(regs[-2], TO_SMALL_INT((int64_t)catch_data));
+}
+
+static void _clear_catch(KOS_ATOMIC(KOS_OBJ_ID) *regs)
+{
+    const uint64_t catch_data = KOS_NO_CATCH << 8;
+    KOS_atomic_write_ptr(regs[-2], TO_SMALL_INT((int64_t)catch_data));
 }
 
 static uint32_t _load_32(const uint8_t *bytecode)
@@ -1103,24 +1215,20 @@ static uint32_t _load_32(const uint8_t *bytecode)
 
 static int _exec_function(KOS_FRAME frame)
 {
-    KOS_ARRAY              *regs_array = OBJPTR(ARRAY, frame->registers);
-    KOS_ATOMIC(KOS_OBJ_ID) *regs       = _KOS_get_array_buffer(regs_array);
-    KOS_MODULE             *module     = OBJPTR(MODULE, frame->module);
-    int                     error      = KOS_SUCCESS;
-    const int               old_depth  = frame->thread_ctx->stack_depth;
+    int                     error = KOS_SUCCESS;
+    KOS_ATOMIC(KOS_OBJ_ID) *regs;
+    uint32_t                num_regs;
+    KOS_MODULE             *module;
     KOS_BYTECODE_INSTR      instr;
     const uint8_t          *bytecode;
 
+    regs = _get_regs(frame, &num_regs);
+
+    module = _get_module(regs);
+
     assert(module);
     assert(module->context);
-    bytecode = module->bytecode + frame->instr_offs;
-
-    if (old_depth > 0)
-        frame->thread_ctx->stack_depth = old_depth - 1;
-    else {
-        KOS_raise_exception_cstring(frame, str_err_stack_overflow);
-        return KOS_ERROR_EXCEPTION;
-    }
+    bytecode = module->bytecode + _load_instr_offs(regs);
 
     for (;;) { /* Exit condition at the end of the loop */
 
@@ -1254,7 +1362,7 @@ static int _exec_function(KOS_FRAME frame)
             case INSTR_MOVE: { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
 
-                assert(rsrc  < regs_array->size);
+                assert(rsrc  < num_regs);
 
                 rdest = bytecode[1];
                 out   = regs[rsrc];
@@ -1275,7 +1383,7 @@ static int _exec_function(KOS_FRAME frame)
                 const int32_t  idx  = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
-                assert(rsrc < regs_array->size);
+                assert(rsrc < num_regs);
 
                 error = KOS_array_write(frame, module->globals, idx, regs[rsrc]);
                 delta = 6;
@@ -1287,7 +1395,7 @@ static int _exec_function(KOS_FRAME frame)
                 const unsigned rglob      = bytecode[6];
                 KOS_OBJ_ID     module_obj = KOS_array_read(frame, module->context->modules.modules, mod_idx);
 
-                assert(rglob < regs_array->size);
+                assert(rglob < num_regs);
 
                 rdest = bytecode[1];
 
@@ -1337,8 +1445,8 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID     src;
                 KOS_OBJ_ID     prop;
 
-                assert(rsrc  < regs_array->size);
-                assert(rprop < regs_array->size);
+                assert(rsrc  < num_regs);
+                assert(rprop < num_regs);
 
                 rdest = bytecode[1];
                 src   = regs[rsrc];
@@ -1368,7 +1476,7 @@ static int _exec_function(KOS_FRAME frame)
 
                     if ( ! IS_BAD_PTR(value) && GET_OBJ_TYPE(value) == OBJ_DYNAMIC_PROP) {
                         KOS_OBJ_ID args;
-                        frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
+                        _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
                         value = OBJPTR(DYNAMIC_PROP, value)->getter;
                         args  = _alloc_args(frame, 0);
                         if (IS_BAD_PTR(args))
@@ -1396,19 +1504,23 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID           src;
                 enum KOS_OBJECT_TYPE type;
 
-                assert(rsrc  < regs_array->size);
+                assert(rsrc  < num_regs);
 
                 rdest = bytecode[1];
                 src   = regs[rsrc];
 
                 type = GET_OBJ_TYPE(src);
 
-                if (type == OBJ_STRING)
+                if (type == OBJ_ARRAY)
+                    out = KOS_array_read(frame, src, idx);
+                else if (type == OBJ_STRING)
                     out = KOS_string_get_char(frame, src, idx);
                 else if (type == OBJ_BUFFER)
                     out = _read_buffer(frame, src, idx);
+                else if (type == OBJ_STACK)
+                    out = _read_stack(frame, src, idx);
                 else
-                    out = KOS_array_read(frame, src, idx);
+                    KOS_raise_exception_cstring(frame, str_err_not_indexable);
 
                 delta = 7;
                 break;
@@ -1424,9 +1536,9 @@ static int _exec_function(KOS_FRAME frame)
                 int64_t        begin_idx;
                 int64_t        end_idx = 0;
 
-                assert(rsrc   < regs_array->size);
-                assert(rbegin < regs_array->size);
-                assert(rend   < regs_array->size);
+                assert(rsrc   < num_regs);
+                assert(rbegin < num_regs);
+                assert(rend   < num_regs);
 
                 rdest = bytecode[1];
                 src   = regs[rsrc];
@@ -1482,7 +1594,7 @@ static int _exec_function(KOS_FRAME frame)
                 const int32_t  idx  = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_ID     prop;
 
-                assert(rsrc  < regs_array->size);
+                assert(rsrc  < num_regs);
 
                 rdest = bytecode[1];
                 prop  = _make_string(frame, module, idx);
@@ -1493,7 +1605,7 @@ static int _exec_function(KOS_FRAME frame)
 
                     if ( ! IS_BAD_PTR(value) && GET_OBJ_TYPE(value) == OBJ_DYNAMIC_PROP) {
                         KOS_OBJ_ID args;
-                        frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
+                        _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
                         value = OBJPTR(DYNAMIC_PROP, value)->getter;
                         args  = _alloc_args(frame, 0);
                         if (IS_BAD_PTR(args))
@@ -1522,9 +1634,9 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->size);
-                assert(rprop < regs_array->size);
-                assert(rsrc  < regs_array->size);
+                assert(rdest < num_regs);
+                assert(rprop < num_regs);
+                assert(rsrc  < num_regs);
 
                 prop = regs[rprop];
 
@@ -1560,7 +1672,7 @@ static int _exec_function(KOS_FRAME frame)
                         KOS_clear_exception(frame);
 
                         assert( ! IS_BAD_PTR(setter) && GET_OBJ_TYPE(setter) == OBJ_DYNAMIC_PROP);
-                        frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
+                        _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
                         setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
 
                         args = _alloc_args(frame, 1);
@@ -1583,21 +1695,28 @@ static int _exec_function(KOS_FRAME frame)
             }
 
             case INSTR_SET_ELEM: { /* <r.dest>, <int32>, <r.src> */
-                const int32_t  idx  = (int32_t)_load_32(bytecode+2);
-                const unsigned rsrc = bytecode[6];
-                KOS_OBJ_ID     dest;
+                const int32_t        idx  = (int32_t)_load_32(bytecode+2);
+                const unsigned       rsrc = bytecode[6];
+                KOS_OBJ_ID           dest;
+                enum KOS_OBJECT_TYPE type;
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->size);
-                assert(rsrc  < regs_array->size);
+                assert(rdest < num_regs);
+                assert(rsrc  < num_regs);
 
                 dest = regs[rdest];
 
-                if (GET_OBJ_TYPE(dest) == OBJ_BUFFER)
-                    error = _write_buffer(frame, dest, idx, regs[rsrc]);
-                else
+                type = GET_OBJ_TYPE(dest);
+
+                if (type == OBJ_ARRAY)
                     error = KOS_array_write(frame, dest, idx, regs[rsrc]);
+                else if (type == OBJ_BUFFER)
+                    error = _write_buffer(frame, dest, idx, regs[rsrc]);
+                else if (type == OBJ_STACK)
+                    error = _write_stack(frame, dest, idx, regs[rsrc]);
+                else
+                    KOS_raise_exception_cstring(frame, str_err_not_indexable);
 
                 delta = 7;
                 break;
@@ -1610,8 +1729,8 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->size);
-                assert(rsrc  < regs_array->size);
+                assert(rdest < num_regs);
+                assert(rsrc  < num_regs);
 
                 prop = _make_string(frame, module, idx);
 
@@ -1630,7 +1749,7 @@ static int _exec_function(KOS_FRAME frame)
                         KOS_clear_exception(frame);
 
                         assert( ! IS_BAD_PTR(setter) && GET_OBJ_TYPE(setter) == OBJ_DYNAMIC_PROP);
-                        frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
+                        _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
                         setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
                         args  = _alloc_args(frame, 1);
 
@@ -1657,8 +1776,8 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->size);
-                assert(rsrc  < regs_array->size);
+                assert(rdest < num_regs);
+                assert(rsrc  < num_regs);
 
                 error = KOS_array_push(frame, regs[rdest], regs[rsrc], 0);
 
@@ -1671,8 +1790,8 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->size);
-                assert(rsrc  < regs_array->size);
+                assert(rdest < num_regs);
+                assert(rsrc  < num_regs);
 
                 error = KOS_array_push_expand(frame, regs[rdest], regs[rsrc]);
 
@@ -1685,8 +1804,8 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->size);
-                assert(rprop < regs_array->size);
+                assert(rdest < num_regs);
+                assert(rprop < num_regs);
 
                 KOS_delete_property(frame, regs[rdest], regs[rprop]);
 
@@ -1700,7 +1819,7 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest < regs_array->size);
+                assert(rdest < num_regs);
 
                 prop = _make_string(frame, module, idx);
 
@@ -1718,8 +1837,8 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID src1;
                 KOS_OBJ_ID src2;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1766,8 +1885,8 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID src1;
                 KOS_OBJ_ID src2;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1802,8 +1921,8 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID src1;
                 KOS_OBJ_ID src2;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1838,8 +1957,8 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID src1;
                 KOS_OBJ_ID src2;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1874,8 +1993,8 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID src1;
                 KOS_OBJ_ID src2;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -1909,8 +2028,8 @@ static int _exec_function(KOS_FRAME frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
 
@@ -1937,8 +2056,8 @@ static int _exec_function(KOS_FRAME frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
 
@@ -1965,8 +2084,8 @@ static int _exec_function(KOS_FRAME frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
 
@@ -1991,7 +2110,7 @@ static int _exec_function(KOS_FRAME frame)
                 const unsigned rsrc = bytecode[2];
                 int64_t        a;
 
-                assert(rsrc  < regs_array->size);
+                assert(rsrc  < num_regs);
 
                 rdest = bytecode[1];
 
@@ -2010,8 +2129,8 @@ static int _exec_function(KOS_FRAME frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
 
@@ -2032,8 +2151,8 @@ static int _exec_function(KOS_FRAME frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
 
@@ -2054,8 +2173,8 @@ static int _exec_function(KOS_FRAME frame)
                 int64_t        a;
                 int64_t        b;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
 
@@ -2085,7 +2204,7 @@ static int _exec_function(KOS_FRAME frame)
                 const unsigned rsrc  = bytecode[2];
                 KOS_OBJ_ID     src;
 
-                assert(rsrc  < regs_array->size);
+                assert(rsrc  < num_regs);
 
                 rdest = bytecode[1];
                 src   = regs[rsrc];
@@ -2157,8 +2276,8 @@ static int _exec_function(KOS_FRAME frame)
                 enum KOS_OBJECT_TYPE src1_type;
                 enum KOS_OBJECT_TYPE src2_type;
 
-                assert(rsrc1 < regs_array->size);
-                assert(rsrc2 < regs_array->size);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
                 rdest = bytecode[1];
                 src1  = regs[rsrc1];
@@ -2206,8 +2325,8 @@ static int _exec_function(KOS_FRAME frame)
 
                 KOS_OBJ_ID obj;
 
-                assert(rsrc  < regs_array->size);
-                assert(rprop < regs_array->size);
+                assert(rsrc  < num_regs);
+                assert(rprop < num_regs);
 
                 rdest = bytecode[1];
 
@@ -2224,7 +2343,7 @@ static int _exec_function(KOS_FRAME frame)
                 const int32_t  idx   = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_ID     prop;
 
-                assert(rsrc  < regs_array->size);
+                assert(rsrc  < num_regs);
 
                 rdest = bytecode[1];
 
@@ -2249,8 +2368,8 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID     ret   = KOS_FALSE;
                 KOS_OBJ_ID     constr_obj;
 
-                assert(rsrc  < regs_array->size);
-                assert(rfunc < regs_array->size);
+                assert(rsrc  < num_regs);
+                assert(rfunc < num_regs);
 
                 rdest      = bytecode[1];
                 constr_obj = regs[rfunc];
@@ -2285,7 +2404,7 @@ static int _exec_function(KOS_FRAME frame)
                 const int32_t  offs = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
-                assert(rsrc < regs_array->size);
+                assert(rsrc < num_regs);
 
                 delta = 6;
 
@@ -2302,7 +2421,7 @@ static int _exec_function(KOS_FRAME frame)
                 const int32_t  offs = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
-                assert(rsrc < regs_array->size);
+                assert(rsrc < num_regs);
 
                 delta = 6;
 
@@ -2324,7 +2443,7 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_FUNCTION *func = 0;
 
                 rdest = bytecode[1];
-                assert(rdest < regs_array->size);
+                assert(rdest < num_regs);
                 dest = regs[rdest];
 
                 switch (GET_OBJ_TYPE(dest)) {
@@ -2348,12 +2467,12 @@ static int _exec_function(KOS_FRAME frame)
 
                     if (instr == INSTR_BIND) {
                         const unsigned rsrc = bytecode[3];
-                        assert(rsrc < regs_array->size);
+                        assert(rsrc < num_regs);
                         regs_obj = regs[rsrc];
                     }
                     else {
-                        frame->header.flags |= KOS_REGS_BOUND;
-                        regs_obj            =  frame->registers;
+                        regs_obj = frame->stack;
+                        assert(OBJPTR(STACK, regs_obj)->header.flags & KOS_REENTRANT_STACK);
                     }
 
                     assert( ! IS_SMALL_INT(closures));
@@ -2384,8 +2503,8 @@ static int _exec_function(KOS_FRAME frame)
                 const unsigned rsrc = bytecode[2];
                 rdest               = bytecode[1];
 
-                assert(rsrc  < regs_array->size);
-                assert(rdest < regs_array->size);
+                assert(rsrc  < num_regs);
+                assert(rdest < num_regs);
 
                 src  = regs[rsrc];
                 dest = regs[rdest];
@@ -2444,8 +2563,7 @@ static int _exec_function(KOS_FRAME frame)
                 KOS_OBJ_ID this_obj;
                 KOS_OBJ_ID args_obj;
 
-                KOS_FUNCTION *func            = 0;
-                KOS_FRAME     new_stack_frame = 0;
+                KOS_FUNCTION *func = 0;
 
                 rdest = bytecode[1];
 
@@ -2456,7 +2574,7 @@ static int _exec_function(KOS_FRAME frame)
                         rargs     = bytecode[4];
                         tail_call = 1;
                         delta     = 5;
-                        assert(rdest <= regs_array->size);
+                        assert(rdest <= num_regs);
                         break;
 
                     case INSTR_TAIL_CALL_N:
@@ -2465,8 +2583,8 @@ static int _exec_function(KOS_FRAME frame)
                         num_args  = bytecode[5];
                         tail_call = 1;
                         delta     = 6;
-                        assert(rdest <= regs_array->size);
-                        assert( ! num_args || rarg1 + num_args <= regs_array->size);
+                        assert(rdest <= num_regs);
+                        assert( ! num_args || rarg1 + num_args <= num_regs);
                         break;
 
                     case INSTR_TAIL_CALL_FUN:
@@ -2474,15 +2592,15 @@ static int _exec_function(KOS_FRAME frame)
                         num_args  = bytecode[4];
                         tail_call = 1;
                         delta     = 5;
-                        assert(rdest <= regs_array->size);
-                        assert( ! num_args || rarg1 + num_args <= regs_array->size);
+                        assert(rdest <= num_regs);
+                        assert( ! num_args || rarg1 + num_args <= num_regs);
                         break;
 
                     case INSTR_CALL:
                         rthis = bytecode[3];
                         rargs = bytecode[4];
                         delta = 5;
-                        assert(rdest < regs_array->size);
+                        assert(rdest < num_regs);
                         break;
 
                     case INSTR_CALL_N:
@@ -2490,29 +2608,29 @@ static int _exec_function(KOS_FRAME frame)
                         rarg1    = bytecode[4];
                         num_args = bytecode[5];
                         delta    = 6;
-                        assert(rdest < regs_array->size);
-                        assert( ! num_args || rarg1 + num_args <= regs_array->size);
+                        assert(rdest < num_regs);
+                        assert( ! num_args || rarg1 + num_args <= num_regs);
                         break;
 
                     case INSTR_CALL_FUN:
                         rarg1    = bytecode[3];
                         num_args = bytecode[4];
                         delta    = 5;
-                        assert(rdest < regs_array->size);
-                        assert( ! num_args || rarg1 + num_args <= regs_array->size);
+                        assert(rdest < num_regs);
+                        assert( ! num_args || rarg1 + num_args <= num_regs);
                         break;
 
                     default:
                         assert(instr == INSTR_CALL_GEN);
                         rfinal = bytecode[3];
                         delta = 4;
-                        assert(rdest < regs_array->size);
+                        assert(rdest < num_regs);
                         break;
                 }
 
                 if (rthis != ~0U) {
                     rthis = bytecode[3];
-                    assert(rthis < regs_array->size);
+                    assert(rthis < num_regs);
 
                     this_obj = regs[rthis];
                     assert( ! IS_BAD_PTR(this_obj));
@@ -2520,7 +2638,7 @@ static int _exec_function(KOS_FRAME frame)
                 else
                     this_obj = KOS_VOID;
 
-                assert(rfunc < regs_array->size);
+                assert(rfunc < num_regs);
 
                 func_obj = regs[rfunc];
 
@@ -2532,11 +2650,11 @@ static int _exec_function(KOS_FRAME frame)
                                num_args * sizeof(KOS_OBJ_ID));
                 }
                 else {
-                    assert(rargs < regs_array->size);
+                    assert(rargs < num_regs);
                     args_obj = regs[rargs];
                 }
 
-                frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
+                _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
 
                 if (IS_BAD_PTR(args_obj))
                     error = KOS_ERROR_EXCEPTION;
@@ -2554,13 +2672,12 @@ static int _exec_function(KOS_FRAME frame)
 
                         default:
                             KOS_raise_exception_cstring(frame, str_err_not_callable);
+                            error = KOS_ERROR_EXCEPTION;
                             break;
                     }
 
                     if (func)
-                        new_stack_frame = _prepare_call(frame, instr, func_obj, &this_obj, args_obj);
-                    if ( ! new_stack_frame)
-                        error = KOS_ERROR_EXCEPTION;
+                        error = _prepare_call(frame, instr, func_obj, &this_obj, args_obj);
                 }
 
                 if ( ! error) {
@@ -2572,36 +2689,34 @@ static int _exec_function(KOS_FRAME frame)
                         enum _KOS_FUNCTION_STATE state =
                                 (enum _KOS_FUNCTION_STATE)func->state;
 
-                        assert(new_stack_frame);
-
                         /* TODO optimize INSTR_TAIL_CALL */
 
                         if (func->handler)  {
-                            const KOS_OBJ_ID ret_val = func->handler(new_stack_frame,
+                            const KOS_OBJ_ID ret_val = func->handler(frame,
                                                                      this_obj,
                                                                      args_obj);
 
                             /* Avoid detecting as end of iterator in _finish_call() */
                             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(ret_val))
-                                new_stack_frame->header.flags &= ~KOS_CAN_YIELD;
+                                OBJPTR(STACK, frame->stack)->header.flags &= ~KOS_CAN_YIELD;
 
-                            new_stack_frame->retval = ret_val;
+                            frame->retval = ret_val;
 
-                            if (KOS_is_exception_pending(new_stack_frame)) {
+                            if (KOS_is_exception_pending(frame)) {
                                 assert(IS_BAD_PTR(ret_val));
                                 error = KOS_ERROR_EXCEPTION;
-                                _KOS_wrap_exception(new_stack_frame);
+                                _KOS_wrap_exception(frame);
                             }
                             else {
                                 assert(state > KOS_GEN_INIT || ! IS_BAD_PTR(ret_val));
                             }
                         }
                         else {
-                            error = _exec_function(new_stack_frame);
-                            assert( ! error || KOS_is_exception_pending(new_stack_frame));
+                            error = _exec_function(frame);
+                            assert( ! error || KOS_is_exception_pending(frame));
                         }
 
-                        out = _finish_call(frame, instr, func, this_obj, new_stack_frame, &state);
+                        out = _finish_call(frame, instr, func, this_obj, &state);
 
                         if (instr == INSTR_CALL_GEN) {
                             if (error == KOS_ERROR_EXCEPTION && state == KOS_GEN_DONE
@@ -2614,7 +2729,7 @@ static int _exec_function(KOS_FRAME frame)
                                 if (rfinal == rdest)
                                     out = result;
                                 else {
-                                    assert(rfinal < regs_array->size);
+                                    assert(rfinal < num_regs);
                                     regs[rfinal] = result;
                                 }
                             }
@@ -2622,10 +2737,11 @@ static int _exec_function(KOS_FRAME frame)
                     }
 
                     if (tail_call && ! error) {
-                        frame->retval    = out;
-                        out              = KOS_BADPTR;
-                        regs_array->size = rdest; /* closure size */
-                        error            = KOS_SUCCESS_RETURN;
+                        frame->retval = out;
+                        out           = KOS_BADPTR;
+                        num_regs      = rdest; /* closure size */
+                        error         = KOS_SUCCESS_RETURN;
+                        _set_closure_stack_size(frame, num_regs);
                     }
                 }
                 break;
@@ -2635,12 +2751,13 @@ static int _exec_function(KOS_FRAME frame)
                 const unsigned closure_size = bytecode[1];
                 const unsigned rsrc         = bytecode[2];
 
-                assert(closure_size <= regs_array->size);
-                assert(rsrc         <  regs_array->size);
+                assert(closure_size <= num_regs);
+                assert(rsrc         <  num_regs);
 
                 frame->retval = regs[rsrc];
 
-                regs_array->size = closure_size;
+                num_regs = closure_size;
+                _set_closure_stack_size(frame, closure_size);
 
                 error = KOS_SUCCESS_RETURN;
                 break;
@@ -2649,12 +2766,14 @@ static int _exec_function(KOS_FRAME frame)
             case INSTR_YIELD: { /* <r.src> */
                 const uint8_t rsrc = bytecode[1];
 
-                assert(rsrc < regs_array->size);
+                assert(rsrc < num_regs);
 
-                if (frame->header.flags & KOS_CAN_YIELD) {
-                    frame->retval           =  regs[rsrc];
-                    frame->header.yield_reg =  rsrc;
-                    frame->header.flags     &= ~KOS_CAN_YIELD;
+                if (OBJPTR(STACK, frame->stack)->header.flags & KOS_CAN_YIELD) {
+                    frame->retval = regs[rsrc];
+
+                    assert(OBJPTR(STACK, frame->stack)->header.flags & KOS_REENTRANT_STACK);
+                    OBJPTR(STACK, frame->stack)->header.yield_reg =  rsrc;
+                    OBJPTR(STACK, frame->stack)->header.flags     &= ~KOS_CAN_YIELD;
 
                     /* Move bytecode pointer here, because at the end of the loop
                        we test !error, but error is set to KOS_SUCCESS_RETURN */
@@ -2672,7 +2791,7 @@ static int _exec_function(KOS_FRAME frame)
             case INSTR_THROW: { /* <r.src> */
                 const unsigned rsrc = bytecode[1];
 
-                assert(rsrc < regs_array->size);
+                assert(rsrc < num_regs);
 
                 KOS_raise_exception(frame, regs[rsrc]);
 
@@ -2686,18 +2805,17 @@ static int _exec_function(KOS_FRAME frame)
 
                 rdest = bytecode[1];
 
-                assert(rdest  < regs_array->size);
+                assert(rdest  < num_regs);
                 assert(offset < module->bytecode_size);
 
-                frame->header.catch_reg = (uint8_t)rdest;
-                frame->catch_offs       = offset;
+                _set_catch(regs, offset, (uint8_t)rdest);
 
                 delta = 6;
                 break;
             }
 
             case INSTR_CANCEL: {
-                frame->catch_offs = KOS_NO_CATCH;
+                _clear_catch(regs);
                 delta = 1;
                 break;
             }
@@ -2715,28 +2833,31 @@ static int _exec_function(KOS_FRAME frame)
 
         if ( ! KOS_is_exception_pending(frame)) {
             if ( ! IS_BAD_PTR(out)) {
-                assert(rdest < regs_array->size);
+                assert(rdest < num_regs);
                 regs[rdest] = out;
             }
         }
         else {
+            uint32_t catch_offs;
+            uint8_t  catch_reg;
+
             error = KOS_ERROR_EXCEPTION;
 
-            frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
+            _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
 
             _KOS_wrap_exception(frame);
 
-            if (frame->catch_offs != KOS_NO_CATCH) {
-                const unsigned rexc = frame->header.catch_reg;
+            catch_offs = _get_catch(regs, &catch_reg);
 
-                assert(rexc < regs_array->size);
+            if (catch_offs != KOS_NO_CATCH) {
+                assert(catch_reg < num_regs);
 
-                regs[rexc] = KOS_get_exception(frame);
-                delta      = 0;
-                bytecode   = module->bytecode + frame->catch_offs;
-                error      = KOS_SUCCESS;
+                regs[catch_reg] = KOS_get_exception(frame);
+                delta           = 0;
+                bytecode        = module->bytecode + catch_offs;
+                error           = KOS_SUCCESS;
 
-                frame->catch_offs = KOS_NO_CATCH;
+                _clear_catch(regs);
                 KOS_clear_exception(frame);
             }
         }
@@ -2754,10 +2875,7 @@ static int _exec_function(KOS_FRAME frame)
 
     assert(!error || KOS_is_exception_pending(frame));
 
-    frame->instr_offs = (uint32_t)(bytecode - module->bytecode);
-
-    assert(frame->thread_ctx->stack_depth + 1 == old_depth);
-    frame->thread_ctx->stack_depth = old_depth;
+    _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
 
     return error;
 }
@@ -2771,7 +2889,6 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
     int           error = KOS_SUCCESS;
     KOS_OBJ_ID    ret   = KOS_BADPTR;
     KOS_FUNCTION *func;
-    KOS_FRAME     new_stack_frame;
 
     KOS_context_validate(frame);
 
@@ -2793,9 +2910,9 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
     if (func->header.type == OBJ_CLASS && call_flavor != KOS_APPLY_FUNCTION)
         this_obj = NEW_THIS;
 
-    new_stack_frame = _prepare_call(frame, INSTR_CALL, func_obj, &this_obj, args_obj);
+    error = _prepare_call(frame, INSTR_CALL, func_obj, &this_obj, args_obj);
 
-    if ( ! new_stack_frame)
+    if (error)
         return KOS_BADPTR;
 
     if (func->state == KOS_GEN_INIT)
@@ -2806,33 +2923,32 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
                 (enum _KOS_FUNCTION_STATE)func->state;
 
         if (func->handler)  {
-            const KOS_OBJ_ID retval = func->handler(new_stack_frame,
+            const KOS_OBJ_ID retval = func->handler(frame,
                                                     this_obj,
                                                     args_obj);
 
             /* Avoid detecting as end of iterator in _finish_call() */
             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(retval))
-                new_stack_frame->header.flags &= ~KOS_CAN_YIELD;
+                OBJPTR(STACK, frame->stack)->header.flags &= ~KOS_CAN_YIELD;
 
-            new_stack_frame->retval = retval;
-
-            if (KOS_is_exception_pending(new_stack_frame)) {
+            if (KOS_is_exception_pending(frame)) {
                 assert(IS_BAD_PTR(retval));
                 error = KOS_ERROR_EXCEPTION;
-                _KOS_wrap_exception(new_stack_frame);
+                _KOS_wrap_exception(frame);
             }
             else {
                 assert(state > KOS_GEN_INIT || ! IS_BAD_PTR(retval));
+                frame->retval = retval;
             }
         }
         else {
-            error = _exec_function(new_stack_frame);
-            assert( ! error || KOS_is_exception_pending(new_stack_frame));
+            error = _exec_function(frame);
+            assert( ! error || KOS_is_exception_pending(frame));
         }
 
         ret = _finish_call(frame,
                            call_flavor == KOS_CALL_GENERATOR ? INSTR_CALL_GEN : INSTR_CALL,
-                           func, this_obj, new_stack_frame, &state);
+                           func, this_obj, &state);
 
         if (state == KOS_GEN_DONE)
             ret = KOS_BADPTR;
@@ -2843,41 +2959,39 @@ KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
 
 int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
 {
-    struct _KOS_STACK_FRAME frame;
-    int                     error;
-    KOS_THREAD_CONTEXT     *thread_ctx;
+    int                 error;
+    KOS_THREAD_CONTEXT *frame;
 
     assert(module);
     assert(module->context);
 
-    thread_ctx = (KOS_THREAD_CONTEXT *)_KOS_tls_get(module->context->threads.thread_key);
+    frame = (KOS_THREAD_CONTEXT *)_KOS_tls_get(module->context->threads.thread_key);
 
-    error = _KOS_init_stack_frame(&frame, thread_ctx, module, module->instr_offs);
-
-    if ( ! error) {
-        frame.registers = KOS_new_array(&frame, module->num_regs);
-        if (IS_BAD_PTR(frame.registers))
-            error = KOS_ERROR_EXCEPTION;
-    }
+    error = _KOS_stack_push_module(frame, OBJID(MODULE, module));
 
     if (error)
-        *ret = frame.exception;
+        *ret = frame->exception;
 
     else {
 
-        KOS_context_validate(&frame);
+        KOS_context_validate(frame);
 
-        error = _exec_function(&frame);
+        error = _exec_function(frame);
 
-        assert( ! KOS_is_exception_pending(&frame) || error == KOS_ERROR_EXCEPTION);
+        assert( ! KOS_is_exception_pending(frame) || error == KOS_ERROR_EXCEPTION);
 
         if (error)
-            *ret = frame.exception;
+            *ret = frame->exception;
         else
-            *ret = frame.retval;
+            *ret = frame->retval;
 
         assert( ! IS_BAD_PTR(*ret));
     }
+
+    frame->exception = KOS_BADPTR;
+    frame->retval    = KOS_BADPTR;
+
+    _KOS_stack_pop(frame);
 
     return error;
 }

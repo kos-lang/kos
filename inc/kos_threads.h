@@ -58,10 +58,10 @@ typedef struct _KOS_THREAD_OBJECT *_KOS_THREAD;
 struct _KOS_MUTEX_OBJECT;
 typedef struct _KOS_MUTEX_OBJECT *_KOS_MUTEX;
 
-struct _KOS_STACK_FRAME;
+struct _KOS_THREAD_CONTEXT;
 
-typedef void (*_KOS_THREAD_PROC)(struct _KOS_STACK_FRAME *frame,
-                                 void                    *cookie);
+typedef void (*_KOS_THREAD_PROC)(struct _KOS_THREAD_CONTEXT *frame,
+                                 void                       *cookie);
 
 #ifdef _WIN32
 typedef uint32_t _KOS_TLS_KEY;
@@ -501,13 +501,13 @@ void _KOS_yield(void);
 
 struct _KOS_CONTEXT;
 
-int _KOS_thread_create(struct _KOS_STACK_FRAME *frame,
-                       _KOS_THREAD_PROC         proc,
-                       void                    *cookie,
-                       _KOS_THREAD             *thread);
+int _KOS_thread_create(struct _KOS_THREAD_CONTEXT *frame,
+                       _KOS_THREAD_PROC            proc,
+                       void                       *cookie,
+                       _KOS_THREAD                *thread);
 
-int _KOS_thread_join(struct _KOS_STACK_FRAME *frame,
-                     _KOS_THREAD              thread);
+int _KOS_thread_join(struct _KOS_THREAD_CONTEXT *frame,
+                     _KOS_THREAD                 thread);
 
 int _KOS_is_current_thread(_KOS_THREAD thread);
 

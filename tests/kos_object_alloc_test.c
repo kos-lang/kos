@@ -84,9 +84,9 @@ static void *_alloc_module(KOS_FRAME frame)
     return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_MODULE, sizeof(KOS_MODULE));
 }
 
-static void *_alloc_stack_frame(KOS_FRAME frame)
+static void *_alloc_stack(KOS_FRAME frame)
 {
-    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_STACK_FRAME, sizeof(struct _KOS_STACK_FRAME));
+    return _KOS_alloc_object(frame, KOS_ALLOC_DEFAULT, OBJ_STACK, sizeof(KOS_STACK));
 }
 
 typedef void *(* ALLOC_FUNC)(KOS_FRAME frame);
@@ -196,7 +196,7 @@ int main(void)
         { _alloc_dynamic_prop, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP) },
         { _alloc_object_walk,  OBJ_OBJECT_WALK,  sizeof(KOS_OBJECT_WALK)  },
         { _alloc_module,       OBJ_MODULE,       sizeof(KOS_MODULE)       },
-        { _alloc_stack_frame,  OBJ_STACK_FRAME,  sizeof(struct _KOS_STACK_FRAME) }
+        { _alloc_stack,        OBJ_STACK,        sizeof(KOS_STACK)        }
     };
 
     /************************************************************************/

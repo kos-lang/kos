@@ -82,7 +82,7 @@ DECLARE_STATIC_CONST_OBJECT(reserved)  = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB2)
 
 KOS_OBJ_ID KOS_new_object(KOS_FRAME frame)
 {
-    KOS_CONTEXT *const ctx = KOS_context_from_frame(frame);
+    KOS_CONTEXT *const ctx = frame->ctx;
 
     return KOS_new_object_with_prototype(frame, ctx->prototypes.object_proto);
 }
@@ -721,6 +721,7 @@ int KOS_delete_property(KOS_FRAME  frame,
 }
 
 KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_FRAME            frame,
+                                            KOS_OBJ_ID           module_obj,
                                             KOS_FUNCTION_HANDLER getter,
                                             KOS_FUNCTION_HANDLER setter)
 {
@@ -734,9 +735,11 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_FRAME            frame,
     set_obj = KOS_new_function(frame);
     TRY_OBJID(set_obj);
 
+    OBJPTR(FUNCTION, get_obj)->module          = module_obj;
     OBJPTR(FUNCTION, get_obj)->header.num_args = 0;
     OBJPTR(FUNCTION, get_obj)->handler         = getter;
 
+    OBJPTR(FUNCTION, set_obj)->module          = module_obj;
     OBJPTR(FUNCTION, set_obj)->header.num_args = 1;
     OBJPTR(FUNCTION, set_obj)->handler         = setter;
 
@@ -750,11 +753,12 @@ _error:
 int KOS_set_builtin_dynamic_property(KOS_FRAME            frame,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop,
+                                     KOS_OBJ_ID           module_obj,
                                      KOS_FUNCTION_HANDLER getter,
                                      KOS_FUNCTION_HANDLER setter)
 {
     int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID dyn_prop = KOS_new_builtin_dynamic_property(frame, getter, setter);
+    KOS_OBJ_ID dyn_prop = KOS_new_builtin_dynamic_property(frame, module_obj, getter, setter);
 
     TRY_OBJID(dyn_prop);
 
@@ -768,7 +772,7 @@ KOS_OBJ_ID KOS_get_prototype(KOS_FRAME  frame,
                              KOS_OBJ_ID obj_id)
 {
     KOS_OBJ_ID   ret = KOS_BADPTR;
-    KOS_CONTEXT *ctx = KOS_context_from_frame(frame);
+    KOS_CONTEXT *ctx = frame->ctx;
 
     assert( ! IS_BAD_PTR(obj_id));
 

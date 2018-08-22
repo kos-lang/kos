@@ -423,7 +423,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-int _KOS_module_math_init(KOS_FRAME frame)
+int _KOS_module_math_init(KOS_FRAME frame, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 
@@ -437,7 +437,7 @@ int _KOS_module_math_init(KOS_FRAME frame)
         static const char str_infinity[] = "infinity";
         union _KOS_NUMERIC_VALUE value;
         value.i = (uint64_t)0x7FF00000U << 32;
-        TRY(KOS_module_add_global(frame, KOS_context_get_cstring(frame, str_infinity), KOS_new_float(frame, value.d), 0));
+        TRY(KOS_module_add_global(frame, module, KOS_context_get_cstring(frame, str_infinity), KOS_new_float(frame, value.d), 0));
     }
 
     /* @item math nan
@@ -450,18 +450,18 @@ int _KOS_module_math_init(KOS_FRAME frame)
         static const char str_nan[] = "nan";
         union _KOS_NUMERIC_VALUE value;
         value.i = ((uint64_t)0x7FF00000U << 32) | 1U;
-        TRY(KOS_module_add_global(frame, KOS_context_get_cstring(frame, str_nan), KOS_new_float(frame, value.d), 0));
+        TRY(KOS_module_add_global(frame, module, KOS_context_get_cstring(frame, str_nan), KOS_new_float(frame, value.d), 0));
     }
 
-    TRY_ADD_FUNCTION(frame, "abs",         _abs,         1);
-    TRY_ADD_FUNCTION(frame, "ceil",        _ceil,        1);
-    TRY_ADD_FUNCTION(frame, "exp",         _exp,         1);
-    TRY_ADD_FUNCTION(frame, "expm1",       _expm1,       1);
-    TRY_ADD_FUNCTION(frame, "floor",       _floor,       1);
-    TRY_ADD_FUNCTION(frame, "is_infinity", _is_infinity, 1);
-    TRY_ADD_FUNCTION(frame, "is_nan",      _is_nan,      1);
-    TRY_ADD_FUNCTION(frame, "pow",         _pow,         2);
-    TRY_ADD_FUNCTION(frame, "sqrt",        _sqrt,        1);
+    TRY_ADD_FUNCTION(frame, module, "abs",         _abs,         1);
+    TRY_ADD_FUNCTION(frame, module, "ceil",        _ceil,        1);
+    TRY_ADD_FUNCTION(frame, module, "exp",         _exp,         1);
+    TRY_ADD_FUNCTION(frame, module, "expm1",       _expm1,       1);
+    TRY_ADD_FUNCTION(frame, module, "floor",       _floor,       1);
+    TRY_ADD_FUNCTION(frame, module, "is_infinity", _is_infinity, 1);
+    TRY_ADD_FUNCTION(frame, module, "is_nan",      _is_nan,      1);
+    TRY_ADD_FUNCTION(frame, module, "pow",         _pow,         2);
+    TRY_ADD_FUNCTION(frame, module, "sqrt",        _sqrt,        1);
 
 _error:
     return error;

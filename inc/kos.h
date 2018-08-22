@@ -131,13 +131,13 @@ class stack_frame {
         // Globals
         // =======
 
-        void add_global(KOS_OBJ_ID name, KOS_OBJ_ID value, unsigned* idx = 0) {
-            check_error(KOS_module_add_global(_frame, name, value, idx));
+        void add_global(KOS_OBJ_ID module, KOS_OBJ_ID name, KOS_OBJ_ID value, unsigned* idx = 0) {
+            check_error(KOS_module_add_global(_frame, module, name, value, idx));
         }
 
-        KOS_OBJ_ID get_global(KOS_OBJ_ID name, unsigned* idx = 0) {
+        KOS_OBJ_ID get_global(KOS_OBJ_ID module, KOS_OBJ_ID name, unsigned* idx = 0) {
             KOS_OBJ_ID ret = KOS_BADPTR;
-            check_error(KOS_module_get_global(_frame, name, &ret, idx));
+            check_error(KOS_module_get_global(_frame, module, name, &ret, idx));
             return ret;
         }
 
@@ -238,7 +238,7 @@ class context {
         }
 
         operator KOS_FRAME() {
-            return _ctx.threads.main_thread.frame;
+            return &_ctx.threads.main_thread;
         }
 
     private:
@@ -256,7 +256,7 @@ class thread_ctx {
         }
 
         operator KOS_FRAME() {
-            return _thread_ctx.frame;
+            return &_thread_ctx;
         }
 
     private:

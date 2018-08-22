@@ -130,6 +130,7 @@ static KOS_OBJ_ID _create_func_obj(KOS_FRAME         frame,
     func->header.num_regs = num_regs;
     func->args_reg        = args_reg;
     func->instr_offs      = offset;
+    func->module          = frame->ctx->modules.init_module;
 
     if (create == CREATE_GEN)
         func->state = KOS_GEN_INIT;
@@ -165,6 +166,30 @@ static KOS_OBJ_ID _create_class(KOS_FRAME frame,
                                 uint8_t   flags)
 {
     return _create_func_obj(frame, CREATE_CLASS, offset, num_regs, args_reg, num_args, flags);
+}
+
+static KOS_OBJ_ID _read_stack_reg(KOS_OBJ_ID stack_obj_id,
+                                  int        idx)
+{
+    uint32_t   size;
+    KOS_OBJ_ID ret;
+
+    assert(GET_OBJ_TYPE(stack_obj_id) == OBJ_STACK);
+
+    size = KOS_atomic_read_u32(OBJPTR(STACK, stack_obj_id)->size);
+
+    assert(OBJPTR(STACK, stack_obj_id)->header.flags & KOS_REENTRANT_STACK);
+
+    assert(idx >= 0);
+    if (idx < 0)
+        return KOS_BADPTR;
+
+    assert((uint32_t)idx + KOS_STACK_EXTRA < size);
+    if ((uint32_t)idx + KOS_STACK_EXTRA >= size)
+        return KOS_BADPTR;
+
+    ret = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack_obj_id)->buf[idx + KOS_STACK_EXTRA]);
+    return ret;
 }
 
 int main(void)
@@ -1604,7 +1629,7 @@ int main(void)
         };
 
         KOS_OBJ_ID constants[2];
-        constants[0] = _create_func(frame, 23, 3, 0, 0, 0);
+        constants[0] = _create_func(frame, 23, 3, 0, 0, KOS_FUN_CLOSURE);
         constants[1] = _create_func(frame, 39, 3, 0, 0, 0);
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 2, constants, 2) == TO_SMALL_INT(41));
@@ -1750,7 +1775,7 @@ int main(void)
             TO_SMALL_INT(0),
             TO_SMALL_INT(0)
         };
-        constants[4] = _create_func(frame,  93,   7,  1, 2, 0);
+        constants[4] = _create_func(frame,  93,   7,  1, 2, KOS_FUN_CLOSURE);
         constants[5] = _create_func(frame, 146, 107, 98, 3, 0);
 
         TEST(_run_code(&ctx, frame, &code[0], sizeof(code), 6, constants, 6) == TO_SMALL_INT(0x69055));
@@ -1782,17 +1807,17 @@ int main(void)
         KOS_OBJ_ID ret;
 
         KOS_OBJ_ID constants[2];
-        constants[0] = _create_func(frame, 44, 4, 0, 0, 0);
-        constants[1] = _create_func(frame, 55, 2, 0, 0, 0);
+        constants[0] = _create_func(frame, 44, 4, 0, 0, KOS_FUN_CLOSURE);
+        constants[1] = _create_func(frame, 55, 2, 0, 0, KOS_FUN_CLOSURE);
 
         ret = _run_code(&ctx, frame, &code[0], sizeof(code), 2, constants, 2);
         TEST( ! IS_BAD_PTR(ret));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
-        TEST(KOS_get_array_size(ret) == 3);
-        TEST(KOS_array_read(frame, ret, 0) == TO_SMALL_INT(10));
-        TEST(KOS_array_read(frame, ret, 1) == TO_SMALL_INT(11));
-        TEST(KOS_array_read(frame, ret, 2) == TO_SMALL_INT(12));
+        TEST(GET_OBJ_TYPE(ret) == OBJ_STACK);
+        TEST(KOS_atomic_read_u32(OBJPTR(STACK, ret)->size) == 1U + KOS_STACK_EXTRA + 3U);
+        TEST(KOS_atomic_read_ptr(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 0]) == TO_SMALL_INT(10));
+        TEST(KOS_atomic_read_ptr(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 1]) == TO_SMALL_INT(11));
+        TEST(KOS_atomic_read_ptr(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 2]) == TO_SMALL_INT(12));
     }
 
     /************************************************************************/
@@ -1813,6 +1838,7 @@ int main(void)
             INSTR_LOAD_INT8,     1, 6,
             INSTR_TAIL_CALL_FUN, 0, 2, 0, 2,
 
+            INSTR_LOAD_TRUE,     0,
             INSTR_LOAD_FUN8,     5, 1,
             INSTR_BIND_SELF,     5, 0,
             INSTR_TAIL_CALL_FUN, 5, 5, 255, 0,
@@ -1822,19 +1848,19 @@ int main(void)
         KOS_OBJ_ID ret;
 
         KOS_OBJ_ID constants[2];
-        constants[0] = _create_func(frame, 50, 6, 1, 1, 0);
-        constants[1] = _create_func(frame, 61, 2, 0, 0, 0);
+        constants[0] = _create_func(frame, 50, 6, 1, 1, KOS_FUN_CLOSURE);
+        constants[1] = _create_func(frame, 63, 2, 0, 0, 0);
 
         ret = _run_code(&ctx, frame, &code[0], sizeof(code), 3, constants, 2);
         TEST( ! IS_BAD_PTR(ret));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
-        TEST(KOS_get_array_size(ret) == 5);
-        TEST(KOS_array_read(frame, ret, 0) == TO_SMALL_INT(5));
-        TEST(KOS_array_read(frame, ret, 1) == TO_SMALL_INT(5));
-        TEST(KOS_array_read(frame, ret, 2) == TO_SMALL_INT(6));
-        TEST(KOS_array_read(frame, ret, 3) == TO_SMALL_INT(21));
-        TEST(KOS_array_read(frame, ret, 4) == TO_SMALL_INT(22));
+        TEST(GET_OBJ_TYPE(ret) == OBJ_STACK);
+        TEST(KOS_atomic_read_u32(OBJPTR(STACK, ret)->size) == 1U + KOS_STACK_EXTRA + 5U);
+        TEST(_read_stack_reg(ret, 0) == KOS_TRUE);
+        TEST(_read_stack_reg(ret, 1) == TO_SMALL_INT(5));
+        TEST(_read_stack_reg(ret, 2) == TO_SMALL_INT(6));
+        TEST(_read_stack_reg(ret, 3) == TO_SMALL_INT(21));
+        TEST(_read_stack_reg(ret, 4) == TO_SMALL_INT(22));
     }
 
     /************************************************************************/
@@ -1865,6 +1891,11 @@ int main(void)
             INSTR_CALL_FUN,      0, 0, 3, 2,
             INSTR_TAIL_CALL,     0, 2, 1, 0,
 
+            INSTR_LOAD_VOID,     0,
+            INSTR_LOAD_VOID,     1,
+            INSTR_LOAD_VOID,     2,
+            INSTR_LOAD_VOID,     3,
+            INSTR_LOAD_VOID,     4,
             INSTR_LOAD_FUN8,     _KOS_MAX_ARGS_IN_REGS + 5 + 2, 2,
             INSTR_BIND_SELF,     _KOS_MAX_ARGS_IN_REGS + 5 + 2, 0,
             INSTR_TAIL_CALL_FUN, _KOS_MAX_ARGS_IN_REGS + 5 + 2, _KOS_MAX_ARGS_IN_REGS + 5 + 2, 255, 0,
@@ -1879,22 +1910,23 @@ int main(void)
 
         KOS_OBJ_ID constants[3];
         constants[0] = _create_func(frame,  8, 5, 0, 2, 0);
-        constants[1] = _create_func(frame, 72, _KOS_MAX_ARGS_IN_REGS + 5 + 3, 5, 16, 1);
-        constants[2] = _create_func(frame, 83, 2, 0, 0, 0);
+        constants[1] = _create_func(frame, 72, _KOS_MAX_ARGS_IN_REGS + 5 + 3, 5, 16, KOS_FUN_ELLIPSIS | KOS_FUN_CLOSURE);
+        constants[2] = _create_func(frame, 93, 2, 0, 0, 0);
 
         ret = _run_code(&ctx, frame, &code[0], sizeof(code), 5, constants, 3);
         TEST( ! IS_BAD_PTR(ret));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
-        TEST(KOS_get_array_size(ret) == _KOS_MAX_ARGS_IN_REGS + 5 + 2);
+        TEST(GET_OBJ_TYPE(ret) == OBJ_STACK);
+        TEST(KOS_atomic_read_u32(OBJPTR(STACK, ret)->size) == 1U + KOS_STACK_EXTRA +
+                                                              _KOS_MAX_ARGS_IN_REGS + 5 + 2);
         for (i = 0; i < 5; i++)
-            TEST(KOS_array_read(frame, ret, i) == TO_SMALL_INT(i + 7));
+            TEST(_read_stack_reg(ret, i) == KOS_VOID);
         for (i = 5; i < 23; i++)
-            TEST(KOS_array_read(frame, ret, i) == TO_SMALL_INT(i + 2));
+            TEST(_read_stack_reg(ret, i) == TO_SMALL_INT(i + 2));
         for (i = 23; i < (int)_KOS_MAX_ARGS_IN_REGS + 5 - 1; i++)
-            TEST(KOS_array_read(frame, ret, i) == TO_SMALL_INT(i - 23 + 66));
+            TEST(_read_stack_reg(ret, i) == TO_SMALL_INT(i - 23 + 66));
         /* Rest of args */
-        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS + 5 - 1);
+        obj = _read_stack_reg(ret, _KOS_MAX_ARGS_IN_REGS + 5 - 1);
         TEST( ! IS_BAD_PTR(obj));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
@@ -1902,13 +1934,13 @@ int main(void)
         for (i = 0; i < 48 - (int)_KOS_MAX_ARGS_IN_REGS + 1; i++)
             TEST(KOS_array_read(frame, obj, i) == TO_SMALL_INT(i + (int)_KOS_MAX_ARGS_IN_REGS - 1 - 16 + 64));
         /* Ellipsis */
-        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS + 5);
+        obj = _read_stack_reg(ret, _KOS_MAX_ARGS_IN_REGS + 5);
         TEST( ! IS_BAD_PTR(obj));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
         TEST(KOS_get_array_size(obj) == 0);
         /* this */
-        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS + 5 + 1);
+        obj = _read_stack_reg(ret, _KOS_MAX_ARGS_IN_REGS + 5 + 1);
         TEST( ! IS_BAD_PTR(obj));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
@@ -1959,18 +1991,19 @@ int main(void)
 
         KOS_OBJ_ID constants[3];
         constants[0] = _create_func(frame,  8, 5, 0, 2, 0);
-        constants[1] = _create_func(frame, 72, _KOS_MAX_ARGS_IN_REGS + 3, 0, _KOS_MAX_ARGS_IN_REGS, 1);
+        constants[1] = _create_func(frame, 72, _KOS_MAX_ARGS_IN_REGS + 3, 0, _KOS_MAX_ARGS_IN_REGS, KOS_FUN_ELLIPSIS | KOS_FUN_CLOSURE);
         constants[2] = _create_func(frame, 83, 2, 0, 0, 0);
 
         ret = _run_code(&ctx, frame, &code[0], sizeof(code), 5, constants, 3);
         TEST( ! IS_BAD_PTR(ret));
         TEST_NO_EXCEPTION();
-        TEST(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
-        TEST(KOS_get_array_size(ret) == _KOS_MAX_ARGS_IN_REGS + 2);
+        TEST(GET_OBJ_TYPE(ret) == OBJ_STACK);
+        TEST(KOS_atomic_read_u32(OBJPTR(STACK, ret)->size) == 1U + KOS_STACK_EXTRA +
+                                                              _KOS_MAX_ARGS_IN_REGS + 2);
         for (i = 0; i < (int)_KOS_MAX_ARGS_IN_REGS - 1; i++)
-            TEST(KOS_array_read(frame, ret, i) == TO_SMALL_INT(i + 1));
+            TEST(_read_stack_reg(ret, i) == TO_SMALL_INT(i + 1));
         /* Rest of args */
-        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS - 1);
+        obj = _read_stack_reg(ret, _KOS_MAX_ARGS_IN_REGS - 1);
         TEST( ! IS_BAD_PTR(obj));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
@@ -1978,7 +2011,7 @@ int main(void)
         for (i = 0; i < 6; i++)
             TEST(KOS_array_read(frame, obj, i) == TO_SMALL_INT(i + (int)_KOS_MAX_ARGS_IN_REGS));
         /* Ellipsis */
-        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS);
+        obj = _read_stack_reg(ret, _KOS_MAX_ARGS_IN_REGS);
         TEST( ! IS_BAD_PTR(obj));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
@@ -1986,7 +2019,7 @@ int main(void)
         for (i = 0; i < 4; i++)
             TEST(KOS_array_read(frame, obj, i) == TO_SMALL_INT(i + (int)_KOS_MAX_ARGS_IN_REGS + 6));
         /* this */
-        obj = KOS_array_read(frame, ret, _KOS_MAX_ARGS_IN_REGS + 1);
+        obj = _read_stack_reg(ret, _KOS_MAX_ARGS_IN_REGS + 1);
         TEST( ! IS_BAD_PTR(obj));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);

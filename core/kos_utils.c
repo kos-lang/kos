@@ -175,7 +175,7 @@ static KOS_OBJ_ID _get_exception_string(KOS_FRAME  frame,
 
         const KOS_OBJ_ID proto = KOS_get_prototype(frame, exception);
 
-        if (proto == KOS_context_from_frame(frame)->prototypes.exception_proto) {
+        if (proto == frame->ctx->prototypes.exception_proto) {
 
             const KOS_OBJ_ID obj_id = KOS_get_property(frame, exception,
                                     KOS_context_get_cstring(frame, str_value));

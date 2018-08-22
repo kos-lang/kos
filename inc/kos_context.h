@@ -50,50 +50,60 @@ struct _KOS_HEAP {
     KOS_OBJ_ID           str_oom_id;
 };
 
-enum _KOS_YIELD_STATE {
-    KOS_CAN_YIELD    = 0x1U,  /* indicates a generator        */
-    KOS_REGS_BOUND   = 0x2U   /* registers bound to a closure */
-};
-
+/* Stored on the stack as catch offset */
 enum _KOS_CATCH_STATE {
-    KOS_NO_CATCH = 0x7FFFFFFFU
+    KOS_NO_CATCH = 0x1FFFFF
 };
 
-#define KOS_MAX_SAVED_FRAMES 8
-
-struct _KOS_SF_HDR {
-    KOS_OBJ_ID alloc_size;
-    uint8_t    type;
-    uint8_t    catch_reg;
-    uint8_t    yield_reg; /* index of the yield register */
-    uint8_t    flags;
+/* Stack header flags */
+enum _KOS_STACK_HEADER_FLAGS {
+    KOS_NORMAL_STACK    = 0U,
+    KOS_REENTRANT_STACK = 1U,   /* Stack of a generator or closure      */
+    KOS_CAN_YIELD       = 2U    /* Indicates that a generator can yield */
 };
 
-typedef struct _KOS_STACK_FRAME {
-    struct _KOS_SF_HDR          header;
-    struct _KOS_THREAD_CONTEXT *thread_ctx;
-    uint32_t                    catch_offs;
-    uint32_t                    instr_offs;
-    KOS_OBJ_ID                  parent;
-    KOS_OBJ_ID                  module;
-    KOS_OBJ_ID                  registers;
-    KOS_OBJ_ID                  exception;
-    KOS_OBJ_ID                  retval;
-    KOS_OBJ_REF                *obj_refs;
-} KOS_STACK_FRAME;
+typedef struct _KOS_STACK_HEADER {
+    KOS_OBJ_ID  alloc_size;
+    uint8_t     type;
+    uint8_t     flags;
+    uint8_t     yield_reg; /* In a generator stack, this is the index of the yield register */
+} KOS_STACK_HEADER;
+
+/* Stack management:
+ * - If this is not the root stack object, the first element on the stack
+ *   is the object id of the previous stack object.
+ * - Each stack frame on the stack is either an object id of the reentrant
+ *   or closure stack object or a local stack frame.
+ *
+ * Local stack frame:
+ * - function object id
+ * - catch_offs / catch reg
+ * - instr_offs
+ * - registers
+ *   ...
+ * - number of registers (small int)
+ */
+
+typedef struct _KOS_STACK {
+    KOS_STACK_HEADER       header;
+    uint32_t               capacity;
+    KOS_ATOMIC(uint32_t)   size;
+    KOS_ATOMIC(KOS_OBJ_ID) buf[1]; /* Actual stack */
+} KOS_STACK;
 
 struct _KOS_THREAD_CONTEXT {
-    struct _KOS_THREAD_CONTEXT *next;  /* List of thread roots in context */
-    struct _KOS_THREAD_CONTEXT *prev;
-    KOS_FRAME                   frame;
-    int                         stack_depth;
-    struct _KOS_CONTEXT        *ctx;
-    _KOS_PAGE                  *cur_page;
-    KOS_OBJ_ID                  saved_regs[KOS_MAX_SAVED_FRAMES];
-    unsigned                    num_saved_regs;
-};
+    KOS_THREAD_CONTEXT  *next;     /* List of thread roots in context */
+    KOS_THREAD_CONTEXT  *prev;
 
-typedef struct _KOS_THREAD_CONTEXT KOS_THREAD_CONTEXT;
+    struct _KOS_CONTEXT *ctx;
+    _KOS_PAGE           *cur_page;
+    KOS_OBJ_ID           exception;
+    KOS_OBJ_ID           retval;
+    KOS_OBJ_REF         *obj_refs;
+    KOS_OBJ_ID           stack;    /* Topmost container for registers & stack frames */
+    uint32_t             regs_idx; /* Index of first register in current frame       */
+    uint32_t             stack_depth;
+};
 
 struct _KOS_PROTOTYPES {
     KOS_OBJ_ID object_proto;
@@ -146,14 +156,24 @@ struct _KOS_CONTEXT {
 };
 
 #ifdef __cplusplus
-static inline KOS_CONTEXT *KOS_context_from_frame(KOS_FRAME frame)
+static inline bool KOS_is_exception_pending(KOS_FRAME frame)
 {
-    assert(frame);
-    assert(frame->thread_ctx);
-    return frame->thread_ctx->ctx;
+    return ! IS_BAD_PTR(frame->exception);
+}
+
+static inline KOS_OBJ_ID KOS_get_exception(KOS_FRAME frame)
+{
+    return frame->exception;
+}
+
+static inline void KOS_clear_exception(KOS_FRAME frame)
+{
+    frame->exception = KOS_BADPTR;
 }
 #else
-#define KOS_context_from_frame(frame) ((frame)->thread_ctx->ctx)
+#define KOS_is_exception_pending(frame) (!IS_BAD_PTR((frame)->exception))
+#define KOS_get_exception(frame) ((frame)->exception)
+#define KOS_clear_exception(frame) (void)((frame)->exception = KOS_BADPTR)
 #endif
 
 #ifdef __cplusplus
@@ -175,7 +195,7 @@ int KOS_context_set_args(KOS_FRAME    frame,
                          int          argc,
                          const char **argv);
 
-typedef int (*KOS_BUILTIN_INIT)(KOS_FRAME frame);
+typedef int (*KOS_BUILTIN_INIT)(KOS_FRAME frame, KOS_OBJ_ID module);
 
 int KOS_context_register_builtin(KOS_FRAME        frame,
                                  const char      *module,
@@ -201,12 +221,6 @@ void KOS_raise_exception(KOS_FRAME  frame,
 
 void KOS_raise_exception_cstring(KOS_FRAME   frame,
                                  const char *cstr);
-
-void KOS_clear_exception(KOS_FRAME frame);
-
-int KOS_is_exception_pending(KOS_FRAME frame);
-
-KOS_OBJ_ID KOS_get_exception(KOS_FRAME frame);
 
 KOS_OBJ_ID KOS_format_exception(KOS_FRAME  frame,
                                 KOS_OBJ_ID exception);

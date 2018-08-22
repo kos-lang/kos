@@ -128,24 +128,18 @@ static inline enum _KOS_STRING_FLAGS _KOS_get_string_elem_size(KOS_STRING *str)
 #endif
 
 /*==========================================================================*/
-/* KOS_FRAME                                                                */
+/* KOS_STACK                                                                */
 /*==========================================================================*/
 
-int _KOS_init_stack_frame(KOS_FRAME           frame,
-                          KOS_THREAD_CONTEXT *thread_ctx,
-                          KOS_MODULE         *module,
-                          uint32_t            instr_offs);
+#define KOS_STACK_EXTRA 4U
 
-KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
-                                KOS_MODULE *module,
-                                uint32_t    instr_offs,
-                                KOS_OBJ_ID  regs);
+int _KOS_stack_push_function(KOS_FRAME  frame,
+                             KOS_OBJ_ID func_obj);
 
-#define _KOS_stack_frame_push_func(frame, func, regs)         \
-        _KOS_stack_frame_push((frame),                        \
-                              OBJPTR(MODULE, (func)->module), \
-                              (func)->instr_offs,             \
-                              (regs))
+int _KOS_stack_push_module(KOS_FRAME  frame,
+                           KOS_OBJ_ID module);
+
+void _KOS_stack_pop(KOS_FRAME frame);
 
 void _KOS_wrap_exception(KOS_FRAME frame);
 

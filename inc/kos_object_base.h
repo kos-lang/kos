@@ -52,7 +52,7 @@ typedef enum KOS_OBJECT_TYPE {
     OBJ_DYNAMIC_PROP,
     OBJ_OBJECT_WALK,
     OBJ_MODULE,
-    OBJ_STACK_FRAME
+    OBJ_STACK
 } KOS_TYPE;
 
 struct _KOS_OBJECT_PLACEHOLDER;
@@ -161,8 +161,9 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 struct _KOS_CONTEXT;
 typedef struct _KOS_CONTEXT KOS_CONTEXT;
 
-struct _KOS_STACK_FRAME;
-typedef struct _KOS_STACK_FRAME *KOS_FRAME;
+struct _KOS_THREAD_CONTEXT;
+typedef struct _KOS_THREAD_CONTEXT KOS_THREAD_CONTEXT;
+typedef KOS_THREAD_CONTEXT *KOS_FRAME;
 
 typedef struct _KOS_INTEGER {
     KOS_OBJ_HEADER header;
@@ -319,7 +320,8 @@ typedef struct _KOS_FUN_HEADER {
 } KOS_FUN_HEADER;
 
 enum _KOS_FUNCTION_FLAGS {
-    KOS_FUN_ELLIPSIS = 1 /* store remaining args in array */
+    KOS_FUN_CLOSURE  = 1, /* Function's stack frame is a closure */
+    KOS_FUN_ELLIPSIS = 2  /* Store remaining args in array       */
 };
 
 typedef struct _KOS_FUNCTION {
@@ -331,7 +333,7 @@ typedef struct _KOS_FUNCTION {
     KOS_OBJ_ID             closures;
     KOS_OBJ_ID             defaults;
     KOS_FUNCTION_HANDLER   handler;
-    KOS_FRAME              generator_stack_frame;
+    KOS_OBJ_ID             generator_stack_frame;
 } KOS_FUNCTION;
 
 typedef struct _KOS_CLASS {

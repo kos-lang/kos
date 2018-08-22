@@ -147,7 +147,7 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
         }
     }
     else
-        str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
+        str = OBJPTR(STRING, frame->ctx->empty_string);
 
     return OBJID(STRING, str);
 }
@@ -206,7 +206,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
         }
     }
     else
-        str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
+        str = OBJPTR(STRING, frame->ctx->empty_string);
 
     return OBJID(STRING, str);
 }
@@ -260,7 +260,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
             goto _error;
     }
     else
-        ret = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
+        ret = OBJPTR(STRING, frame->ctx->empty_string);
 
     str_buf = (void *)_KOS_get_string_buffer(ret);
 
@@ -558,7 +558,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
         KOS_ATOMIC(KOS_OBJ_ID) *cur_ptr;
         KOS_OBJ_ID              non_0_str = KOS_VOID;
 
-        new_str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
+        new_str = OBJPTR(STRING, frame->ctx->empty_string);
 
         for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
             KOS_OBJ_ID             cur_str = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
@@ -684,10 +684,10 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
                 }
             }
             else
-                new_str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
+                new_str = OBJPTR(STRING, frame->ctx->empty_string);
         }
         else
-            new_str = OBJPTR(STRING, KOS_context_from_frame(frame)->empty_string);
+            new_str = OBJPTR(STRING, frame->ctx->empty_string);
     }
 
     return OBJID(STRING, new_str);
@@ -1366,7 +1366,7 @@ KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
     len = KOS_get_string_length(obj_id);
 
     if (len == 0 || num_repeat == 0)
-        return KOS_context_from_frame(frame)->empty_string;
+        return frame->ctx->empty_string;
 
     if (num_repeat == 1)
         return obj_id;

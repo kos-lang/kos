@@ -87,11 +87,11 @@ KOS_OBJ_ID KOS_new_function(KOS_FRAME frame)
         func->header.num_args       = 0;
         func->header.num_regs       = 0;
         func->args_reg              = 0;
-        func->module                = frame->module;
+        func->module                = KOS_BADPTR;
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;
         func->handler               = 0;
-        func->generator_stack_frame = 0;
+        func->generator_stack_frame = KOS_BADPTR;
         func->instr_offs            = ~0U;
         func->state                 = KOS_FUN;
     }
@@ -166,7 +166,7 @@ KOS_OBJ_ID KOS_new_class(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         func->header.num_regs       = 0;
         func->args_reg              = 0;
         func->_dummy                = KOS_CTOR;
-        func->module                = frame->module;
+        func->module                = KOS_BADPTR;
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;
         func->handler               = 0;
@@ -177,6 +177,7 @@ KOS_OBJ_ID KOS_new_class(KOS_FRAME frame, KOS_OBJ_ID proto_obj)
         if (KOS_set_builtin_dynamic_property(frame,
                                              OBJID(CLASS, func),
                                              KOS_context_get_cstring(frame, str_prototype),
+                                             frame->ctx->modules.init_module,
                                              _get_prototype,
                                              _set_prototype))
             func = 0; /* object is garbage collected */
@@ -238,66 +239,6 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_FRAME  frame,
     }
 
     return OBJID(DYNAMIC_PROP, dyn_prop);
-}
-
-int _KOS_init_stack_frame(KOS_FRAME           frame,
-                          KOS_THREAD_CONTEXT *thread_ctx,
-                          KOS_MODULE         *module,
-                          uint32_t            instr_offs)
-{
-    int error = KOS_SUCCESS;
-
-    assert(module);
-    assert(module->context);
-
-    frame->header.type      = OBJ_STACK_FRAME;
-    frame->header.catch_reg = 0;
-    frame->header.yield_reg = 255;
-    frame->header.flags     = 0;
-    frame->thread_ctx       = thread_ctx;
-    frame->catch_offs       = KOS_NO_CATCH;
-    frame->instr_offs       = instr_offs;
-    frame->parent           = KOS_BADPTR;
-    frame->module           = OBJID(MODULE, module);
-    frame->registers        = KOS_BADPTR;
-    frame->exception        = KOS_BADPTR;
-    frame->retval           = KOS_VOID;
-    frame->obj_refs         = 0;
-
-    return error;
-}
-
-KOS_FRAME _KOS_stack_frame_push(KOS_FRAME   frame,
-                                KOS_MODULE *module,
-                                uint32_t    instr_offs,
-                                KOS_OBJ_ID  regs)
-{
-    KOS_FRAME new_frame;
-
-    new_frame = (KOS_FRAME)_KOS_alloc_object(frame,
-                                             KOS_ALLOC_LOCAL,
-                                             OBJ_STACK_FRAME,
-                                             sizeof(struct _KOS_STACK_FRAME));
-
-    if (new_frame) {
-
-        assert(IS_BAD_PTR(regs) ||
-               (GET_OBJ_TYPE(regs) == OBJ_ARRAY && KOS_get_array_size(regs) < 256));
-        assert(module);
-        assert(KOS_context_from_frame(frame) == module->context);
-
-        if (_KOS_init_stack_frame(new_frame, frame->thread_ctx, module, instr_offs)) {
-            assert( ! IS_BAD_PTR(new_frame->exception));
-            frame->exception = new_frame->exception;
-            new_frame        = 0; /* object is garbage-collected */
-        }
-        else {
-            new_frame->parent    = OBJID(STACK_FRAME, frame);
-            new_frame->registers = regs;
-        }
-    }
-
-    return new_frame;
 }
 
 int _KOS_is_truthy(KOS_OBJ_ID obj_id)

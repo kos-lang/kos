@@ -40,6 +40,7 @@ c_files += kos_misc.c
 c_files += kos_module.c
 c_files += kos_object_base.c
 c_files += kos_object.c
+c_files += kos_stack.c
 c_files += kos_string.c
 c_files += kos_system.c
 c_files += kos_parser.c

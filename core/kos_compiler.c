@@ -4539,6 +4539,9 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
     else if (frame->yield_token)
         constant->flags |= KOS_COMP_FUN_GENERATOR;
 
+    if (scope->num_indep_vars || scope->num_indep_args)
+        constant->flags |= KOS_COMP_FUN_CLOSURE;
+
     _add_constant(program, &constant->header);
 
     frame->constant = constant;

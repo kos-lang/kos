@@ -35,7 +35,9 @@ void *_KOS_alloc_object(KOS_FRAME            frame,
                         enum KOS_OBJECT_TYPE object_type,
                         uint32_t             size);
 
-struct _KOS_THREAD_CONTEXT;
+void *_KOS_alloc_object_page(KOS_FRAME            frame,
+                             enum KOS_ALLOC_HINT  alloc_hint,
+                             enum KOS_OBJECT_TYPE object_type);
 
 void *_KOS_heap_early_alloc(KOS_CONTEXT                *ctx,
                             struct _KOS_THREAD_CONTEXT *thread_ctx,

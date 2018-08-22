@@ -152,6 +152,7 @@ static KOS_OBJ_ID _open(KOS_FRAME  frame,
     TRY(KOS_set_builtin_dynamic_property(frame,
                                          ret,
                                          KOS_context_get_cstring(frame, str_position),
+                                         KOS_get_module(frame),
                                          _get_file_pos,
                                          _set_file_pos));
 
@@ -166,7 +167,7 @@ _error:
     if (file)
         fclose(file);
 
-    return ret;
+    return error ? KOS_BADPTR : ret;
 }
 
 static int _get_file_object(KOS_FRAME  frame,
@@ -710,6 +711,7 @@ _error:
 }
 
 static int _add_std_file(KOS_FRAME  frame,
+                         KOS_OBJ_ID module,
                          KOS_OBJ_ID proto,
                          KOS_OBJ_ID str_name,
                          FILE      *file)
@@ -722,40 +724,40 @@ static int _add_std_file(KOS_FRAME  frame,
 
     KOS_object_set_private(*OBJPTR(OBJECT, obj), file);
 
-    error = KOS_module_add_global(frame, str_name, obj, 0);
+    error = KOS_module_add_global(frame, module, str_name, obj, 0);
 
 _error:
     return error;
 }
 
-#define TRY_ADD_STD_FILE(frame, proto, name, file)                             \
+#define TRY_ADD_STD_FILE(frame, module, proto, name, file)                     \
 do {                                                                           \
     static const char str_name[] = name;                                       \
     KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name); \
-    TRY(_add_std_file((frame), (proto), str, (file)));                         \
+    TRY(_add_std_file((frame), (module), (proto), str, (file)));               \
 } while (0)
 
-int _KOS_module_file_init(KOS_FRAME frame)
+int _KOS_module_file_init(KOS_FRAME frame, KOS_OBJ_ID module)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID proto;
 
-    TRY_ADD_CONSTRUCTOR(    frame,        "file",      _open,           1, &proto);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "close",     _close,          0);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "print",     _print,          0);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "print_",    _print_,         0);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "read_line", _read_line,      0);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "read_some", _read_some,      0);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "release",   _close,          0);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "seek",      _set_file_pos,   1);
-    TRY_ADD_MEMBER_FUNCTION(frame, proto, "write",     _write,          1);
-    TRY_ADD_MEMBER_PROPERTY(frame, proto, "eof",       _get_file_eof,   0);
-    TRY_ADD_MEMBER_PROPERTY(frame, proto, "error",     _get_file_error, 0);
-    TRY_ADD_MEMBER_PROPERTY(frame, proto, "position",  _get_file_pos,   0);
-    TRY_ADD_MEMBER_PROPERTY(frame, proto, "size",      _get_file_size,  0);
+    TRY_ADD_CONSTRUCTOR(    frame, module,        "file",      _open,           1, &proto);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "close",     _close,          0);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "print",     _print,          0);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "print_",    _print_,         0);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "read_line", _read_line,      0);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "read_some", _read_some,      0);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "release",   _close,          0);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "seek",      _set_file_pos,   1);
+    TRY_ADD_MEMBER_FUNCTION(frame, module, proto, "write",     _write,          1);
+    TRY_ADD_MEMBER_PROPERTY(frame, module, proto, "eof",       _get_file_eof,   0);
+    TRY_ADD_MEMBER_PROPERTY(frame, module, proto, "error",     _get_file_error, 0);
+    TRY_ADD_MEMBER_PROPERTY(frame, module, proto, "position",  _get_file_pos,   0);
+    TRY_ADD_MEMBER_PROPERTY(frame, module, proto, "size",      _get_file_size,  0);
 
-    TRY_ADD_FUNCTION(       frame,        "is_file",   _is_file,        1);
-    TRY_ADD_FUNCTION(       frame,        "remove",    _remove,         1);
+    TRY_ADD_FUNCTION(       frame, module,        "is_file",   _is_file,        1);
+    TRY_ADD_FUNCTION(       frame, module,        "remove",    _remove,         1);
 
     /* @item file stderr
      *
@@ -763,7 +765,7 @@ int _KOS_module_file_init(KOS_FRAME frame)
      *
      * Write-only file object corresponding to standard error.
      */
-    TRY_ADD_STD_FILE(       frame, proto, "stderr",    stderr);
+    TRY_ADD_STD_FILE(       frame, module, proto, "stderr",    stderr);
 
     /* @item file stdin
      *
@@ -771,7 +773,7 @@ int _KOS_module_file_init(KOS_FRAME frame)
      *
      * Read-only file object corresponding to standard input.
      */
-    TRY_ADD_STD_FILE(       frame, proto, "stdin",     stdin);
+    TRY_ADD_STD_FILE(       frame, module, proto, "stdin",     stdin);
 
     /* @item file stdout
      *
@@ -781,7 +783,7 @@ int _KOS_module_file_init(KOS_FRAME frame)
      *
      * Calling `file.stdout.print()` is equivalent to `lang.print()`.
      */
-    TRY_ADD_STD_FILE(       frame, proto, "stdout",    stdout);
+    TRY_ADD_STD_FILE(       frame, module, proto, "stdout",    stdout);
 
 _error:
     return error;

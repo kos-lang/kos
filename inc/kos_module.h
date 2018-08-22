@@ -45,29 +45,36 @@ KOS_OBJ_ID KOS_repl(KOS_FRAME   frame,
 KOS_OBJ_ID KOS_repl_stdin(KOS_FRAME   frame,
                           const char *module_name);
 
+KOS_OBJ_ID KOS_get_module(KOS_FRAME frame);
+
 int KOS_module_add_global(KOS_FRAME  frame,
+                          KOS_OBJ_ID module_obj,
                           KOS_OBJ_ID name,
                           KOS_OBJ_ID value,
                           unsigned  *idx);
 
 int KOS_module_get_global(KOS_FRAME   frame,
+                          KOS_OBJ_ID  module_obj,
                           KOS_OBJ_ID  name,
                           KOS_OBJ_ID *value,
                           unsigned   *idx);
 
 int KOS_module_add_function(KOS_FRAME                frame,
+                            KOS_OBJ_ID               module_obj,
                             KOS_OBJ_ID               str_name,
                             KOS_FUNCTION_HANDLER     handler,
                             int                      min_args,
                             enum _KOS_FUNCTION_STATE gen_state);
 
 int KOS_module_add_constructor(KOS_FRAME            frame,
+                               KOS_OBJ_ID           module_obj,
                                KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLER handler,
                                int                  min_args,
                                KOS_OBJ_ID          *ret_proto);
 
 int KOS_module_add_member_function(KOS_FRAME                frame,
+                                   KOS_OBJ_ID               module_obj,
                                    KOS_OBJ_ID               proto_obj,
                                    KOS_OBJ_ID               str_name,
                                    KOS_FUNCTION_HANDLER     handler,
@@ -93,53 +100,53 @@ uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
 }
 #endif
 
-#define TRY_ADD_FUNCTION(frame, name, handler, min_args)                        \
-do {                                                                            \
-    static const char str_name[] = name;                                        \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);  \
-    TRY(KOS_module_add_function((frame), str, (handler), (min_args), KOS_FUN)); \
+#define TRY_ADD_FUNCTION(frame, module, name, handler, min_args)                          \
+do {                                                                                      \
+    static const char str_name[] = name;                                                  \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);            \
+    TRY(KOS_module_add_function((frame), (module), str, (handler), (min_args), KOS_FUN)); \
 } while (0)
 
-#define TRY_ADD_GENERATOR(frame, name, handler, min_args)                            \
-do {                                                                                 \
-    static const char str_name[] = name;                                             \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);       \
-    TRY(KOS_module_add_function((frame), str, (handler), (min_args), KOS_GEN_INIT)); \
+#define TRY_ADD_GENERATOR(frame, module, name, handler, min_args)                              \
+do {                                                                                           \
+    static const char str_name[] = name;                                                       \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);                 \
+    TRY(KOS_module_add_function((frame), (module), str, (handler), (min_args), KOS_GEN_INIT)); \
 } while (0)
 
-#define TRY_ADD_CONSTRUCTOR(frame, name, handler, min_args, ret_proto)                 \
-do {                                                                                   \
-    static const char str_name[] = name;                                               \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);         \
-    TRY(KOS_module_add_constructor((frame), str, (handler), (min_args), (ret_proto))); \
+#define TRY_ADD_CONSTRUCTOR(frame, module, name, handler, min_args, ret_proto)                   \
+do {                                                                                             \
+    static const char str_name[] = name;                                                         \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);                   \
+    TRY(KOS_module_add_constructor((frame), (module), str, (handler), (min_args), (ret_proto))); \
 } while (0)
 
-#define TRY_ADD_MEMBER_FUNCTION(frame, proto, name, handler, min_args)                          \
+#define TRY_ADD_MEMBER_FUNCTION(frame, module, proto, name, handler, min_args)                            \
+do {                                                                                                      \
+    static const char str_name[] = name;                                                                  \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);                            \
+    TRY(KOS_module_add_member_function((frame), (module), (proto), str, (handler), (min_args), KOS_FUN)); \
+} while (0)
+
+#define TRY_ADD_MEMBER_GENERATOR(frame, module, proto, name, handler, min_args)                                \
+do {                                                                                                           \
+    static const char str_name[] = name;                                                                       \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);                                 \
+    TRY(KOS_module_add_member_function((frame), (module), (proto), str, (handler), (min_args), KOS_GEN_INIT)); \
+} while (0)
+
+#define TRY_ADD_MEMBER_PROPERTY(frame, module, proto, name, getter, setter)                     \
 do {                                                                                            \
     static const char str_name[] = name;                                                        \
     KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);                  \
-    TRY(KOS_module_add_member_function((frame), (proto), str, (handler), (min_args), KOS_FUN)); \
+    TRY(KOS_set_builtin_dynamic_property((frame), (proto), str, (module), (getter), (setter))); \
 } while (0)
 
-#define TRY_ADD_MEMBER_GENERATOR(frame, proto, name, handler, min_args)                              \
-do {                                                                                                 \
-    static const char str_name[] = name;                                                             \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);                       \
-    TRY(KOS_module_add_member_function((frame), (proto), str, (handler), (min_args), KOS_GEN_INIT)); \
-} while (0)
-
-#define TRY_ADD_MEMBER_PROPERTY(frame, proto, name, getter, setter)                   \
-do {                                                                                  \
-    static const char str_name[] = name;                                              \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);        \
-    TRY(KOS_set_builtin_dynamic_property((frame), (proto), str, (getter), (setter))); \
-} while (0)
-
-#define TRY_ADD_INTEGER_CONSTANT(frame, name, value)                           \
-do {                                                                           \
-    static const char str_name[] = name;                                       \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name); \
-    TRY(KOS_module_add_global((frame), str, TO_SMALL_INT((int)(value)), 0));   \
+#define TRY_ADD_INTEGER_CONSTANT(frame, module, name, value)                           \
+do {                                                                                   \
+    static const char str_name[] = name;                                               \
+    KOS_OBJ_ID        str        = KOS_context_get_cstring((frame), str_name);         \
+    TRY(KOS_module_add_global((frame), (module), str, TO_SMALL_INT((int)(value)), 0)); \
 } while (0)
 
 #endif

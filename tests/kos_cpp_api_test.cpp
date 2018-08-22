@@ -513,10 +513,13 @@ try {
     {
         kos::string name = to_object_ptr(frame, "my_global");
 
-        frame.add_global(name, TO_SMALL_INT(42));
+        /* TODO replace this with a new module object */
+        KOS_OBJ_ID module = static_cast<KOS_CONTEXT*>(ctx)->modules.init_module;
+
+        frame.add_global(module, name, TO_SMALL_INT(42));
 
         unsigned idx = ~0U;
-        kos::integer value = frame.get_global(name, &idx);
+        kos::integer value = frame.get_global(module, name, &idx);
 
         TEST(idx == 0);
         TEST(value == 42);
