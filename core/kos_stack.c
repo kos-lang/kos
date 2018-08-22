@@ -277,7 +277,6 @@ void _KOS_stack_pop(KOS_FRAME frame)
 {
     KOS_STACK *stack;
     uint32_t   size;
-    int64_t    num_regs;
 
     assert( ! IS_BAD_PTR(frame->stack));
     stack = OBJPTR(STACK, frame->stack);
@@ -294,9 +293,7 @@ void _KOS_stack_pop(KOS_FRAME frame)
 
         assert(frame->regs_idx < size);
 
-        num_regs = num_regs_u;
-
-        assert(num_regs_u == GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
+        assert((int)num_regs_u == GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
 
         size               -= delta;
         frame->stack_depth -= delta;
