@@ -630,10 +630,60 @@ static KOS_ATOMIC(KOS_OBJ_ID) *_get_regs(KOS_YARN  yarn,
     return &OBJPTR(STACK, stack)->buf[regs_idx];
 }
 
-static int _init_registers(KOS_YARN      yarn,
-                           KOS_FUNCTION *func,
-                           KOS_OBJ_ID    args_obj,
-                           KOS_OBJ_ID    this_obj)
+static KOS_OBJ_ID _make_args(KOS_YARN                yarn,
+                             KOS_ATOMIC(KOS_OBJ_ID) *src,
+                             unsigned                num_args)
+{
+    const KOS_OBJ_ID array_obj = KOS_new_array(yarn, num_args);
+
+    if ( ! IS_BAD_PTR(array_obj) && num_args) {
+        KOS_ATOMIC(KOS_OBJ_ID) *dest = _KOS_get_array_buffer(OBJPTR(ARRAY, array_obj));
+        KOS_ATOMIC(KOS_OBJ_ID) *end  = src + num_args;
+
+        while (src < end) {
+
+            const KOS_OBJ_ID value = (KOS_OBJ_ID)KOS_atomic_read_ptr(*src);
+            KOS_atomic_write_ptr(*dest, value);
+
+            ++src;
+            ++dest;
+        }
+    }
+
+    return array_obj;
+}
+
+static KOS_OBJ_ID _slice_args(KOS_YARN                yarn,
+                              KOS_OBJ_ID              args_obj,
+                              KOS_ATOMIC(KOS_OBJ_ID) *stack_args,
+                              unsigned                num_args,
+                              unsigned                slice_begin,
+                              unsigned                slice_end)
+{
+    unsigned size = 0;
+
+    if ( ! IS_BAD_PTR(args_obj)) {
+        num_args = KOS_get_array_size(args_obj);
+        stack_args = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+    }
+
+    if (slice_begin < num_args && slice_begin < slice_end) {
+
+        if (slice_end > num_args)
+            slice_end = num_args;
+
+        size = slice_end - slice_begin;
+    }
+
+    return _make_args(yarn, stack_args + slice_begin, size);
+}
+
+static int _init_registers(KOS_YARN                yarn,
+                           KOS_FUNCTION           *func,
+                           KOS_OBJ_ID              args_obj,
+                           KOS_ATOMIC(KOS_OBJ_ID)* stack_args,
+                           unsigned                num_args,
+                           KOS_OBJ_ID              this_obj)
 {
     int                     error            = KOS_SUCCESS;
     KOS_OBJ_ID              ellipsis_obj     = KOS_BADPTR;
@@ -645,7 +695,7 @@ static int _init_registers(KOS_YARN      yarn,
                                                 ? KOS_get_array_size(func->defaults) : 0;
     const uint32_t          num_named_args   = num_non_def_args + num_def_args;
     const uint32_t          num_arg_regs     = KOS_min(num_named_args, _KOS_MAX_ARGS_IN_REGS);
-    const uint32_t          num_input_args   = KOS_get_array_size(args_obj);
+    const uint32_t          num_input_args   = IS_BAD_PTR(args_obj) ? num_args : KOS_get_array_size(args_obj);
 
     assert( ! func->handler);
 
@@ -660,15 +710,13 @@ static int _init_registers(KOS_YARN      yarn,
     assert(num_input_args >= num_non_def_args);
 
     if (func->header.flags & KOS_FUN_ELLIPSIS)  {
-        if (num_input_args > num_arg_regs) {
-            ellipsis_obj = KOS_array_slice(yarn, args_obj, num_named_args, MAX_INT64);
-            TRY_OBJID(ellipsis_obj);
-        }
+        if (num_input_args > num_arg_regs)
+            ellipsis_obj = _slice_args(yarn, args_obj, stack_args, num_args, num_named_args, ~0U);
         else
             ellipsis_obj = KOS_new_array(yarn, 0);
+        TRY_OBJID(ellipsis_obj);
     }
 
-    /* TODO add option to pass registers from previous function on the stack */
     regs_buf = _get_regs(yarn, &num_regs);
 
     if (num_named_args <= _KOS_MAX_ARGS_IN_REGS) {
@@ -678,7 +726,8 @@ static int _init_registers(KOS_YARN      yarn,
         assert(reg + num_to_move <= num_regs);
 
         if (num_to_move) {
-            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = IS_BAD_PTR(args_obj) ? stack_args :
+                                              _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
             KOS_ATOMIC(KOS_OBJ_ID) *end     = src_buf + num_to_move;
 
             while (src_buf < end)
@@ -704,11 +753,12 @@ static int _init_registers(KOS_YARN      yarn,
     else {
         const uint32_t num_to_move = KOS_min(num_input_args, _KOS_MAX_ARGS_IN_REGS - 1U);
 
-        KOS_OBJ_ID rest_obj = KOS_array_slice(yarn, args_obj, _KOS_MAX_ARGS_IN_REGS - 1, num_named_args);
+        KOS_OBJ_ID rest_obj = _slice_args(yarn, args_obj, stack_args, num_args, _KOS_MAX_ARGS_IN_REGS - 1, num_named_args);
         TRY_OBJID(rest_obj);
 
         if (num_to_move) {
-            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = IS_BAD_PTR(args_obj) ? stack_args :
+                                              _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
             KOS_ATOMIC(KOS_OBJ_ID) *end     = src_buf + num_to_move;
 
             while (src_buf < end)
@@ -825,18 +875,30 @@ static void _write_to_yield_reg(KOS_YARN   yarn,
     KOS_atomic_write_ptr(regs[OBJPTR(STACK, stack)->header.yield_reg], obj_id);
 }
 
-static int _prepare_call(KOS_YARN           yarn,
-                         KOS_BYTECODE_INSTR instr,
-                         KOS_OBJ_ID         func_obj,
-                         KOS_OBJ_ID        *this_obj,
-                         KOS_OBJ_ID         args_obj)
+static int _prepare_call(KOS_YARN                yarn,
+                         KOS_BYTECODE_INSTR      instr,
+                         KOS_OBJ_ID              func_obj,
+                         KOS_OBJ_ID             *this_obj,
+                         KOS_OBJ_ID              args_obj,
+                         KOS_ATOMIC(KOS_OBJ_ID) *stack_args,
+                         unsigned                num_args)
 {
     int                      error = KOS_SUCCESS;
     KOS_FUNCTION            *func;
     enum _KOS_FUNCTION_STATE state;
 
     assert( ! IS_BAD_PTR(func_obj));
-    assert( ! IS_BAD_PTR(args_obj));
+    if (IS_BAD_PTR(args_obj)) {
+        if (num_args) {
+            assert(stack_args);
+        }
+        else {
+            assert( ! stack_args);
+        }
+    }
+    else {
+        assert( ! num_args && ! stack_args);
+    }
 
     if (GET_OBJ_TYPE(func_obj) != OBJ_CLASS) {
         assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
@@ -849,11 +911,17 @@ static int _prepare_call(KOS_YARN           yarn,
         state = KOS_CTOR;
     }
 
-    if (GET_OBJ_TYPE(args_obj) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_args_not_array);
+    if (IS_BAD_PTR(args_obj)) {
+        if (num_args < func->header.num_args)
+            RAISE_EXCEPTION(str_err_too_few_args);
+    }
+    else {
+        if (GET_OBJ_TYPE(args_obj) != OBJ_ARRAY)
+            RAISE_EXCEPTION(str_err_args_not_array);
 
-    if (KOS_get_array_size(args_obj) < func->header.num_args)
-        RAISE_EXCEPTION(str_err_too_few_args);
+        if (KOS_get_array_size(args_obj) < func->header.num_args)
+            RAISE_EXCEPTION(str_err_too_few_args);
+    }
 
     if (instr == INSTR_CALL_GEN && state < KOS_GEN_READY)
         RAISE_EXCEPTION(str_err_not_generator);
@@ -884,6 +952,8 @@ static int _prepare_call(KOS_YARN           yarn,
                 TRY(_init_registers(yarn,
                                     func,
                                     args_obj,
+                                    stack_args,
+                                    num_args,
                                     *this_obj));
 
             break;
@@ -907,9 +977,16 @@ static int _prepare_call(KOS_YARN           yarn,
                 TRY(_init_registers(yarn,
                                     dest,
                                     args_obj,
+                                    stack_args,
+                                    num_args,
                                     *this_obj));
-            else
+            else {
+                if (IS_BAD_PTR(args_obj)) {
+                    args_obj = _make_args(yarn, stack_args, num_args);
+                    TRY_OBJID(args_obj);
+                }
                 _set_handler_reg(yarn, args_obj);
+            }
 
             dest->header.num_args = 0;
 
@@ -932,9 +1009,19 @@ static int _prepare_call(KOS_YARN           yarn,
             if ( ! func->handler) {
                 if (state == KOS_GEN_ACTIVE) {
 
-                    const uint32_t num_args = KOS_get_array_size(args_obj);
+                    KOS_OBJ_ID value;
 
-                    _write_to_yield_reg(yarn, num_args ? KOS_array_read(yarn, args_obj, 0) : KOS_VOID);
+                    if (IS_BAD_PTR(args_obj))
+                        value = num_args ? (KOS_OBJ_ID)KOS_atomic_read_ptr(stack_args[0]) : KOS_VOID;
+
+                    else {
+
+                        num_args = KOS_get_array_size(args_obj);
+
+                        value = num_args ? KOS_array_read(yarn, args_obj, 0) : KOS_VOID;
+                    }
+
+                    _write_to_yield_reg(yarn, value);
                 }
             }
             else
@@ -1156,12 +1243,6 @@ KOS_OBJ_ID KOS_get_module(KOS_YARN yarn)
     assert(regs);
 
     return OBJID(MODULE, _get_module(regs));
-}
-
-/* TODO copy args directly from registers on the caller's stack frame */
-static KOS_OBJ_ID _alloc_args(KOS_YARN yarn, unsigned num_args)
-{
-    return KOS_new_array(yarn, num_args);
 }
 
 static int64_t _load_instr_offs(KOS_ATOMIC(KOS_OBJ_ID) *regs)
@@ -1478,7 +1559,7 @@ static int _exec_function(KOS_YARN yarn)
                         KOS_OBJ_ID args;
                         _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
                         value = OBJPTR(DYNAMIC_PROP, value)->getter;
-                        args  = _alloc_args(yarn, 0);
+                        args  = KOS_new_array(yarn, 0);
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
                         else {
@@ -1573,13 +1654,12 @@ static int _exec_function(KOS_YARN yarn)
                         else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
                             KOS_raise_exception_cstring(yarn, str_err_slice_not_function);
                         else {
-                            KOS_OBJ_ID args = _alloc_args(yarn, 2);
-                            error = KOS_ERROR_EXCEPTION;
-                            if ( ! IS_BAD_PTR(args))
-                                error = KOS_array_write(yarn, args, 0, begin);
-                            if ( ! error)
-                                error = KOS_array_write(yarn, args, 1, end);
-                            if ( ! error)
+                            KOS_ATOMIC(KOS_OBJ_ID) in_args[2] = { begin, end };
+                            KOS_OBJ_ID             args       = _make_args(yarn, &in_args[0], 2);
+
+                            if (IS_BAD_PTR(args))
+                                error = KOS_ERROR_EXCEPTION;
+                            else
                                 out = KOS_call_function(yarn, out, src, args);
                         }
                     }
@@ -1607,7 +1687,7 @@ static int _exec_function(KOS_YARN yarn)
                         KOS_OBJ_ID args;
                         _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
                         value = OBJPTR(DYNAMIC_PROP, value)->getter;
-                        args  = _alloc_args(yarn, 0);
+                        args  = KOS_new_array(yarn, 0);
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
                         else {
@@ -1675,12 +1755,11 @@ static int _exec_function(KOS_YARN yarn)
                         _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
                         setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
 
-                        args = _alloc_args(yarn, 1);
+                        args = _make_args(yarn, (KOS_ATOMIC(KOS_OBJ_ID) *)&value, 1);
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
                         else {
-                            error = KOS_array_write(yarn, args, 0, value);
-                            assert( ! error);
+                            error = KOS_SUCCESS;
                             value = KOS_call_function(yarn, setter, obj, args);
                             if (IS_BAD_PTR(value)) {
                                 assert(KOS_is_exception_pending(yarn));
@@ -1751,13 +1830,12 @@ static int _exec_function(KOS_YARN yarn)
                         assert( ! IS_BAD_PTR(setter) && GET_OBJ_TYPE(setter) == OBJ_DYNAMIC_PROP);
                         _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
                         setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
-                        args  = _alloc_args(yarn, 1);
+                        args   = _make_args(yarn, (KOS_ATOMIC(KOS_OBJ_ID) *)&value, 1);
 
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
                         else {
-                            error = KOS_array_write(yarn, args, 0, value);
-                            assert( ! error);
+                            error = KOS_SUCCESS;
                             value = KOS_call_function(yarn, setter, obj, args);
                             if (IS_BAD_PTR(value)) {
                                 assert(KOS_is_exception_pending(yarn));
@@ -2559,11 +2637,11 @@ static int _exec_function(KOS_YARN yarn)
                 unsigned       num_args  = 0;
                 int            tail_call = 0;
 
-                KOS_OBJ_ID func_obj;
-                KOS_OBJ_ID this_obj;
-                KOS_OBJ_ID args_obj;
+                KOS_OBJ_ID     func_obj;
+                KOS_OBJ_ID     this_obj;
+                KOS_OBJ_ID     args_obj  = KOS_BADPTR;
 
-                KOS_FUNCTION *func = 0;
+                KOS_FUNCTION  *func = 0;
 
                 rdest = bytecode[1];
 
@@ -2642,43 +2720,33 @@ static int _exec_function(KOS_YARN yarn)
 
                 func_obj = regs[rfunc];
 
-                if (rargs == ~0U) {
-                    args_obj = _alloc_args(yarn, num_args);
-                    if ( ! IS_BAD_PTR(args_obj) && num_args)
-                        memcpy((void *)_KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)),
-                               (const void *)&regs[rarg1],
-                               num_args * sizeof(KOS_OBJ_ID));
-                }
-                else {
+                if (rargs != ~0U) {
                     assert(rargs < num_regs);
                     args_obj = regs[rargs];
                 }
 
                 _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
 
-                if (IS_BAD_PTR(args_obj))
-                    error = KOS_ERROR_EXCEPTION;
-                else {
-                    switch (GET_OBJ_TYPE(func_obj)) {
+                switch (GET_OBJ_TYPE(func_obj)) {
 
-                        case OBJ_FUNCTION:
-                            func = OBJPTR(FUNCTION, func_obj);
-                            break;
+                    case OBJ_FUNCTION:
+                        func = OBJPTR(FUNCTION, func_obj);
+                        break;
 
-                        case OBJ_CLASS:
-                            this_obj = NEW_THIS;
-                            func     = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
-                            break;
+                    case OBJ_CLASS:
+                        this_obj = NEW_THIS;
+                        func     = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
+                        break;
 
-                        default:
-                            KOS_raise_exception_cstring(yarn, str_err_not_callable);
-                            error = KOS_ERROR_EXCEPTION;
-                            break;
-                    }
-
-                    if (func)
-                        error = _prepare_call(yarn, instr, func_obj, &this_obj, args_obj);
+                    default:
+                        KOS_raise_exception_cstring(yarn, str_err_not_callable);
+                        error = KOS_ERROR_EXCEPTION;
+                        break;
                 }
+
+                if (func)
+                    error = _prepare_call(yarn, instr, func_obj, &this_obj,
+                                          args_obj, num_args ? &regs[rarg1] : 0, num_args);
 
                 if ( ! error) {
 
@@ -2692,9 +2760,15 @@ static int _exec_function(KOS_YARN yarn)
                         /* TODO optimize INSTR_TAIL_CALL */
 
                         if (func->handler)  {
-                            const KOS_OBJ_ID ret_val = func->handler(yarn,
-                                                                     this_obj,
-                                                                     args_obj);
+                            KOS_OBJ_ID ret_val = KOS_BADPTR;
+
+                            if (IS_BAD_PTR(args_obj))
+                                args_obj = _make_args(yarn, &regs[rarg1], num_args);
+
+                            if ( ! IS_BAD_PTR(args_obj))
+                                ret_val = func->handler(yarn,
+                                                        this_obj,
+                                                        args_obj);
 
                             /* Avoid detecting as end of iterator in _finish_call() */
                             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(ret_val))
@@ -2910,7 +2984,7 @@ KOS_OBJ_ID _KOS_call_function(KOS_YARN              yarn,
     if (func->header.type == OBJ_CLASS && call_flavor != KOS_APPLY_FUNCTION)
         this_obj = NEW_THIS;
 
-    error = _prepare_call(yarn, INSTR_CALL, func_obj, &this_obj, args_obj);
+    error = _prepare_call(yarn, INSTR_CALL, func_obj, &this_obj, args_obj, 0, 0);
 
     if (error)
         return KOS_BADPTR;
