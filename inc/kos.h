@@ -81,11 +81,11 @@ struct void_ {
 
 class stack_frame {
     public:
-        stack_frame(KOS_FRAME frame)
-            : _frame(frame) { }
+        stack_frame(KOS_YARN yarn)
+            : _yarn(yarn) { }
 
-        operator KOS_FRAME() const {
-            return _frame;
+        operator KOS_YARN() const {
+            return _yarn;
         }
 
         // Error handling
@@ -132,12 +132,12 @@ class stack_frame {
         // =======
 
         void add_global(KOS_OBJ_ID module, KOS_OBJ_ID name, KOS_OBJ_ID value, unsigned* idx = 0) {
-            check_error(KOS_module_add_global(_frame, module, name, value, idx));
+            check_error(KOS_module_add_global(_yarn, module, name, value, idx));
         }
 
         KOS_OBJ_ID get_global(KOS_OBJ_ID module, KOS_OBJ_ID name, unsigned* idx = 0) {
             KOS_OBJ_ID ret = KOS_BADPTR;
-            check_error(KOS_module_get_global(_frame, module, name, &ret, idx));
+            check_error(KOS_module_get_global(_yarn, module, name, &ret, idx));
             return ret;
         }
 
@@ -145,11 +145,11 @@ class stack_frame {
         // ============================
 
         KOS_OBJ_ID call(KOS_OBJ_ID func_obj, KOS_OBJ_ID args_obj) {
-            return check_error(KOS_call_function(_frame, func_obj, KOS_VOID, args_obj));
+            return check_error(KOS_call_function(_yarn, func_obj, KOS_VOID, args_obj));
         }
 
         KOS_OBJ_ID call(KOS_OBJ_ID func_obj, KOS_OBJ_ID args_obj, KOS_OBJ_ID this_obj) {
-            return check_error(KOS_call_function(_frame, func_obj, this_obj, args_obj));
+            return check_error(KOS_call_function(_yarn, func_obj, this_obj, args_obj));
         }
 
         // Register C++ function in Kos
@@ -176,11 +176,11 @@ class stack_frame {
 #endif
 
     private:
-        KOS_FRAME _frame;
+        KOS_YARN _yarn;
 };
 
 template<typename T>
-T value_from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
+T value_from_object_ptr(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     // The default implementation will cause a compile-time error
     // when this function is not specialized for a particular type.
@@ -188,37 +188,37 @@ T value_from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
 }
 
 template<>
-inline KOS_OBJ_ID value_from_object_ptr<KOS_OBJ_ID>(stack_frame frame, KOS_OBJ_ID obj_id)
+inline KOS_OBJ_ID value_from_object_ptr<KOS_OBJ_ID>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     return obj_id;
 }
 
 class obj_id_converter {
     public:
-        obj_id_converter(stack_frame frame, KOS_OBJ_ID obj_id)
-            : _frame(frame), _obj_id(obj_id) { }
+        obj_id_converter(stack_frame yarn, KOS_OBJ_ID obj_id)
+            : _yarn(yarn), _obj_id(obj_id) { }
 
         template<typename T>
         operator T() const {
-            return value_from_object_ptr<T>(_frame, _obj_id);
+            return value_from_object_ptr<T>(_yarn, _obj_id);
         }
 
     private:
-        stack_frame _frame;
+        stack_frame _yarn;
         KOS_OBJ_ID  _obj_id;
 };
 
-inline obj_id_converter from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
+inline obj_id_converter from_object_ptr(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
-    return obj_id_converter(frame, obj_id);
+    return obj_id_converter(yarn, obj_id);
 }
 
 class context {
     public:
         context() {
-            KOS_FRAME frame;
+            KOS_YARN yarn;
 
-            int error = KOS_context_init(&_ctx, &frame);
+            int error = KOS_context_init(&_ctx, &yarn);
             if (error)
                 throw std::runtime_error("failed to initialize Kos context");
 
@@ -237,7 +237,7 @@ class context {
             return &_ctx;
         }
 
-        operator KOS_FRAME() {
+        operator KOS_YARN() {
             return &_ctx.threads.main_thread;
         }
 
@@ -255,12 +255,16 @@ class thread_ctx {
             KOS_context_register_thread(ctx, &_thread_ctx);
         }
 
-        operator KOS_FRAME() {
+        ~thread_ctx() {
+            KOS_context_unregister_thread(_thread_ctx.ctx, &_thread_ctx);
+        }
+
+        operator KOS_YARN() {
             return &_thread_ctx;
         }
 
     private:
-        KOS_THREAD_CONTEXT _thread_ctx;
+        struct _KOS_THREAD_CONTEXT _thread_ctx;
 };
 
 class object_base {
@@ -367,16 +371,16 @@ class void_type: public object_base {
 
 class object: public object_base {
     public:
-        object(stack_frame frame, KOS_OBJ_ID obj_id)
+        object(stack_frame yarn, KOS_OBJ_ID obj_id)
             : object_base(obj_id),
-              _frame(frame)
+              _yarn(yarn)
         {
         }
 
         class const_property {
             public:
-                const_property(stack_frame frame, KOS_OBJ_ID obj_id, const string& key)
-                    : _frame(frame),
+                const_property(stack_frame yarn, KOS_OBJ_ID obj_id, const string& key)
+                    : _yarn(yarn),
                       _obj_id(obj_id),
                       _key(key)
                 {
@@ -384,41 +388,41 @@ class object: public object_base {
 
                 template<typename T>
                 operator T() const {
-                    return value_from_object_ptr<T>(_frame, _frame.check_error(KOS_get_property(_frame, _obj_id, _key)));
+                    return value_from_object_ptr<T>(_yarn, _yarn.check_error(KOS_get_property(_yarn, _obj_id, _key)));
                 }
 
                 void erase() {
-                    _frame.check_error(KOS_delete_property(_frame, _obj_id, _key));
+                    _yarn.check_error(KOS_delete_property(_yarn, _obj_id, _key));
                 }
 
             protected:
-                mutable stack_frame _frame;
+                mutable stack_frame _yarn;
                 KOS_OBJ_ID          _obj_id;
                 const string        _key;
         };
 
         class property: public const_property {
             public:
-                property(stack_frame frame, KOS_OBJ_ID obj_id, const string& key)
-                    : const_property(frame, obj_id, key)
+                property(stack_frame yarn, KOS_OBJ_ID obj_id, const string& key)
+                    : const_property(yarn, obj_id, key)
                 {
                 }
 
                 template<typename T>
                 property& operator=(const T& obj) {
-                    _frame.check_error(KOS_set_property(_frame, _obj_id, _key, to_object_ptr(_frame, obj)));
+                    _yarn.check_error(KOS_set_property(_yarn, _obj_id, _key, to_object_ptr(_yarn, obj)));
                     return *this;
                 }
         };
 
         template<typename T>
         const_property operator[](const T& key) const {
-            return const_property(_frame, _obj_id, to_object_ptr(_frame, key));
+            return const_property(_yarn, _obj_id, to_object_ptr(_yarn, key));
         }
 
         template<typename T>
         property operator[](const T& key) {
-            return property(_frame, _obj_id, to_object_ptr(_frame, key));
+            return property(_yarn, _obj_id, to_object_ptr(_yarn, key));
         }
 
         class const_iterator {
@@ -430,16 +434,16 @@ class object: public object_base {
                 typedef const value_type&         reference;
 
                 const_iterator()
-                    : _frame(0), _walk(KOS_BADPTR)
+                    : _yarn(0), _walk(KOS_BADPTR)
                 {
                     _elem.key   = KOS_BADPTR;
                     _elem.value = KOS_BADPTR;
                 }
 
-                const_iterator(stack_frame frame, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH depth);
+                const_iterator(stack_frame yarn, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH depth);
 
                 const_iterator(const const_iterator& it)
-                    : _frame(0), _walk(KOS_BADPTR)
+                    : _yarn(0), _walk(KOS_BADPTR)
                 {
                     _elem.key   = KOS_BADPTR;
                     _elem.value = KOS_BADPTR;
@@ -458,7 +462,7 @@ class object: public object_base {
                 }
 
                 const_iterator& operator++() {
-                    _elem = KOS_object_walk(_frame, _walk);
+                    _elem = KOS_object_walk(_yarn, _walk);
                     return *this;
                 }
 
@@ -477,18 +481,18 @@ class object: public object_base {
                 }
 
             private:
-                mutable stack_frame  _frame;
+                mutable stack_frame  _yarn;
                 KOS_OBJ_ID           _walk;
                 KOS_OBJECT_WALK_ELEM _elem;
         };
 
-        const_iterator        begin()  const { return const_iterator(_frame, _obj_id, KOS_SHALLOW); }
+        const_iterator        begin()  const { return const_iterator(_yarn, _obj_id, KOS_SHALLOW); }
         static const_iterator end()          { return const_iterator(); }
-        const_iterator        cbegin() const { return const_iterator(_frame, _obj_id, KOS_SHALLOW); }
+        const_iterator        cbegin() const { return const_iterator(_yarn, _obj_id, KOS_SHALLOW); }
         static const_iterator cend()         { return const_iterator(); }
 
     protected:
-        mutable stack_frame _frame;
+        mutable stack_frame _yarn;
 };
 
 template<typename element_type>
@@ -505,8 +509,8 @@ class random_access_iterator {
         {
         }
 
-        random_access_iterator(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
-            : _elem(frame, obj_id, idx)
+        random_access_iterator(stack_frame yarn, KOS_OBJ_ID obj_id, int idx)
+            : _elem(yarn, obj_id, idx)
         {
         }
 
@@ -517,7 +521,7 @@ class random_access_iterator {
         }
 
         operator random_access_iterator<const value_type>() const {
-            return random_access_iterator<const value_type>(_elem.frame(), _elem.object(), _elem.index());
+            return random_access_iterator<const value_type>(_elem.yarn(), _elem.object(), _elem.index());
         }
 
         random_access_iterator& operator++() {
@@ -531,23 +535,23 @@ class random_access_iterator {
         }
 
         random_access_iterator operator++(int) {
-            random_access_iterator tmp(_elem.frame(), _elem.object(), _elem.index());
+            random_access_iterator tmp(_elem.yarn(), _elem.object(), _elem.index());
             operator++();
             return tmp;
         }
 
         random_access_iterator operator--(int) {
-            random_access_iterator tmp(_elem.frame(), _elem.object(), _elem.index());
+            random_access_iterator tmp(_elem.yarn(), _elem.object(), _elem.index());
             operator--();
             return tmp;
         }
 
         random_access_iterator operator+(int delta) const {
-            return random_access_iterator(_elem.frame(), _elem.object(), _elem.index() + delta);
+            return random_access_iterator(_elem.yarn(), _elem.object(), _elem.index() + delta);
         }
 
         random_access_iterator operator-(int delta) const {
-            return random_access_iterator(_elem.frame(), _elem.object(), _elem.index() - delta);
+            return random_access_iterator(_elem.yarn(), _elem.object(), _elem.index() - delta);
         }
 
         random_access_iterator& operator+=(int delta) {
@@ -596,7 +600,7 @@ class random_access_iterator {
 
         // TODO reference to actual element
         reference operator*() const {
-            assert(static_cast<KOS_FRAME>(_elem.frame()));
+            assert(static_cast<KOS_YARN>(_elem.yarn()));
             return _elem;
         }
 
@@ -606,18 +610,18 @@ class random_access_iterator {
 
 class array: public object {
     public:
-        array(stack_frame frame, KOS_OBJ_ID obj_id)
-            : object(frame, obj_id)
+        array(stack_frame yarn, KOS_OBJ_ID obj_id)
+            : object(yarn, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
         }
 
         void reserve(uint32_t capacity) {
-            _frame.check_error(KOS_array_reserve(_frame, _obj_id, capacity));
+            _yarn.check_error(KOS_array_reserve(_yarn, _obj_id, capacity));
         }
 
         void resize(uint32_t length) {
-            _frame.check_error(KOS_array_resize(_frame, _obj_id, length));
+            _yarn.check_error(KOS_array_resize(_yarn, _obj_id, length));
         }
 
         uint32_t size() const {
@@ -626,8 +630,8 @@ class array: public object {
 
         class const_element {
             public:
-                const_element(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
-                    : _frame(frame),
+                const_element(stack_frame yarn, KOS_OBJ_ID obj_id, int idx)
+                    : _yarn(yarn),
                       _obj_id(obj_id),
                       _idx(idx)
                 {
@@ -635,11 +639,11 @@ class array: public object {
 
                 template<typename T>
                 operator T() const {
-                    return value_from_object_ptr<T>(_frame, _frame.check_error(KOS_array_read(_frame, _obj_id, _idx)));
+                    return value_from_object_ptr<T>(_yarn, _yarn.check_error(KOS_array_read(_yarn, _obj_id, _idx)));
                 }
 
-                stack_frame frame() const {
-                    return _frame;
+                stack_frame yarn() const {
+                    return _yarn;
                 }
 
                 KOS_OBJ_ID object() const {
@@ -671,7 +675,7 @@ class array: public object {
                 }
 
             protected:
-                mutable stack_frame _frame;
+                mutable stack_frame _yarn;
                 KOS_OBJ_ID          _obj_id;
                 int                 _idx;
 
@@ -686,14 +690,14 @@ class array: public object {
 
         class element: public const_element {
             public:
-                element(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
-                    : const_element(frame, obj_id, idx)
+                element(stack_frame yarn, KOS_OBJ_ID obj_id, int idx)
+                    : const_element(yarn, obj_id, idx)
                 {
                 }
 
                 template<typename T>
                 element& operator=(const T& v) {
-                    _frame.check_error(KOS_array_write(_frame, _obj_id, _idx, to_object_ptr(_frame, v)));
+                    _yarn.check_error(KOS_array_write(_yarn, _obj_id, _idx, to_object_ptr(_yarn, v)));
                     return *this;
                 }
 
@@ -719,26 +723,26 @@ class array: public object {
         };
 
         const_element operator[](int idx) const {
-            return const_element(_frame, _obj_id, idx);
+            return const_element(_yarn, _obj_id, idx);
         }
 
         element operator[](int idx) {
-            return element(_frame, _obj_id, idx);
+            return element(_yarn, _obj_id, idx);
         }
 
         array slice(int64_t begin, int64_t end) const {
-            return array(_frame, _frame.check_error(KOS_array_slice(_frame, _obj_id, begin, end)));
+            return array(_yarn, _yarn.check_error(KOS_array_slice(_yarn, _obj_id, begin, end)));
         }
 
         typedef random_access_iterator<element>       iterator;
         typedef random_access_iterator<const_element> const_iterator;
 
-        iterator       begin()        { return iterator(_frame, _obj_id, 0); }
-        iterator       end()          { return iterator(_frame, _obj_id, static_cast<int>(size())); }
+        iterator       begin()        { return iterator(_yarn, _obj_id, 0); }
+        iterator       end()          { return iterator(_yarn, _obj_id, static_cast<int>(size())); }
         const_iterator begin()  const { return cbegin(); }
         const_iterator end()    const { return cend(); }
-        const_iterator cbegin() const { return const_iterator(_frame, _obj_id, 0); }
-        const_iterator cend()   const { return const_iterator(_frame, _obj_id, static_cast<int>(size())); }
+        const_iterator cbegin() const { return const_iterator(_yarn, _obj_id, 0); }
+        const_iterator cend()   const { return const_iterator(_yarn, _obj_id, static_cast<int>(size())); }
 
         typedef std::reverse_iterator<iterator>       reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
@@ -753,18 +757,18 @@ class array: public object {
 
 class buffer: public object {
     public:
-        buffer(stack_frame frame, KOS_OBJ_ID obj_id)
-            : object(frame, obj_id)
+        buffer(stack_frame yarn, KOS_OBJ_ID obj_id)
+            : object(yarn, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
         }
 
         void reserve(uint32_t capacity) {
-            _frame.check_error(KOS_buffer_reserve(_frame, _obj_id, capacity));
+            _yarn.check_error(KOS_buffer_reserve(_yarn, _obj_id, capacity));
         }
 
         void resize(uint32_t length) {
-            _frame.check_error(KOS_buffer_resize(_frame, _obj_id, length));
+            _yarn.check_error(KOS_buffer_resize(_yarn, _obj_id, length));
         }
 
         uint32_t size() const {
@@ -773,8 +777,8 @@ class buffer: public object {
 
         class const_element {
             public:
-                const_element(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
-                    : _frame(frame),
+                const_element(stack_frame yarn, KOS_OBJ_ID obj_id, int idx)
+                    : _yarn(yarn),
                       _obj_id(obj_id),
                       _idx(idx)
                 {
@@ -790,8 +794,8 @@ class buffer: public object {
                     return static_cast<char>(buf[idx]);
                 }
 
-                stack_frame frame() const {
-                    return _frame;
+                stack_frame yarn() const {
+                    return _yarn;
                 }
 
                 KOS_OBJ_ID object() const {
@@ -823,7 +827,7 @@ class buffer: public object {
                 }
 
             protected:
-                stack_frame _frame;
+                stack_frame _yarn;
                 KOS_OBJ_ID  _obj_id;
                 int         _idx;
 
@@ -838,8 +842,8 @@ class buffer: public object {
 
         class element: public const_element {
             public:
-                element(stack_frame frame, KOS_OBJ_ID obj_id, int idx)
-                    : const_element(frame, obj_id, idx)
+                element(stack_frame yarn, KOS_OBJ_ID obj_id, int idx)
+                    : const_element(yarn, obj_id, idx)
                 {
                 }
 
@@ -876,22 +880,22 @@ class buffer: public object {
         };
 
         const_element operator[](int idx) const {
-            return const_element(_frame, _obj_id, idx);
+            return const_element(_yarn, _obj_id, idx);
         }
 
         element operator[](int idx) {
-            return element(_frame, _obj_id, idx);
+            return element(_yarn, _obj_id, idx);
         }
 
         typedef random_access_iterator<element>       iterator;
         typedef random_access_iterator<const_element> const_iterator;
 
-        iterator       begin()        { return iterator(_frame, _obj_id, 0); }
-        iterator       end()          { return iterator(_frame, _obj_id, static_cast<int>(size())); }
+        iterator       begin()        { return iterator(_yarn, _obj_id, 0); }
+        iterator       end()          { return iterator(_yarn, _obj_id, static_cast<int>(size())); }
         const_iterator begin()  const { return cbegin(); }
         const_iterator end()    const { return cend(); }
-        const_iterator cbegin() const { return const_iterator(_frame, _obj_id, 0); }
-        const_iterator cend()   const { return const_iterator(_frame, _obj_id, static_cast<int>(size())); }
+        const_iterator cbegin() const { return const_iterator(_yarn, _obj_id, 0); }
+        const_iterator cend()   const { return const_iterator(_yarn, _obj_id, static_cast<int>(size())); }
 
         typedef std::reverse_iterator<iterator>       reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
@@ -927,45 +931,45 @@ array stack_frame::make_array(Args... args)
 
 class function: public object {
     public:
-        function(stack_frame frame, KOS_OBJ_ID obj_id)
-            : object(frame, obj_id)
+        function(stack_frame yarn, KOS_OBJ_ID obj_id)
+            : object(yarn, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION);
         }
 
         obj_id_converter call(array args) const {
-            return obj_id_converter(_frame, _frame.call(_obj_id, args));
+            return obj_id_converter(_yarn, _yarn.call(_obj_id, args));
         }
 
         obj_id_converter call(object_base this_obj, array args) const {
-            return obj_id_converter(_frame, _frame.call(_obj_id, args, this_obj));
+            return obj_id_converter(_yarn, _yarn.call(_obj_id, args, this_obj));
         }
 
 #ifdef KOS_CPP11
         template<typename... Args>
         obj_id_converter operator()(Args... args) const {
-            return call(_frame.make_array(args...));
+            return call(_yarn.make_array(args...));
         }
 
         template<typename... Args>
         obj_id_converter apply(object_base this_obj, Args... args) const {
-            return call(this_obj, _frame.make_array(args...));
+            return call(this_obj, _yarn.make_array(args...));
         }
 #else
         obj_id_converter operator()() const {
-            return call(_frame.new_array(0));
+            return call(_yarn.new_array(0));
         }
 
         template<typename T1>
         obj_id_converter operator()(T1 arg1) const {
-            array args(_frame.new_array(1));
+            array args(_yarn.new_array(1));
             args[0] = arg1;
             return call(args);
         }
 
         template<typename T1, typename T2>
         obj_id_converter operator()(T1 arg1, T2 arg2) const {
-            array args(_frame.new_array(2));
+            array args(_yarn.new_array(2));
             args[0] = arg1;
             args[1] = arg2;
             return call(args);
@@ -973,7 +977,7 @@ class function: public object {
 
         template<typename T1, typename T2, typename T3>
         obj_id_converter operator()(T1 arg1, T2 arg2, T3 arg3) const {
-            array args(_frame.new_array(3));
+            array args(_yarn.new_array(3));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -982,7 +986,7 @@ class function: public object {
 
         template<typename T1, typename T2, typename T3, typename T4>
         obj_id_converter operator()(T1 arg1, T2 arg2, T3 arg3, T4 arg4) const {
-            array args(_frame.new_array(4));
+            array args(_yarn.new_array(4));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -991,19 +995,19 @@ class function: public object {
         }
 
         obj_id_converter apply(object_base this_obj) const {
-            return call(this_obj, _frame.new_array(0));
+            return call(this_obj, _yarn.new_array(0));
         }
 
         template<typename T1>
         obj_id_converter apply(object_base this_obj, T1 arg1) const {
-            array args(_frame.new_array(1));
+            array args(_yarn.new_array(1));
             args[0] = arg1;
             return call(this_obj, args);
         }
 
         template<typename T1, typename T2>
         obj_id_converter apply(object_base this_obj, T1 arg1, T2 arg2) const {
-            array args(_frame.new_array(2));
+            array args(_yarn.new_array(2));
             args[0] = arg1;
             args[1] = arg2;
             return call(this_obj, args);
@@ -1011,7 +1015,7 @@ class function: public object {
 
         template<typename T1, typename T2, typename T3>
         obj_id_converter apply(object_base this_obj, T1 arg1, T2 arg2, T3 arg3) const {
-            array args(_frame.new_array(3));
+            array args(_yarn.new_array(3));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -1020,7 +1024,7 @@ class function: public object {
 
         template<typename T1, typename T2, typename T3, typename T4>
         obj_id_converter apply(object_base this_obj, T1 arg1, T2 arg2, T3 arg3, T4 arg4) const {
-            array args(_frame.new_array(4));
+            array args(_yarn.new_array(4));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -1032,18 +1036,18 @@ class function: public object {
 
 class exception: public std::runtime_error {
     public:
-        explicit exception(stack_frame frame)
-            : std::runtime_error(get_exception_string(frame)),
-              _obj(KOS_get_exception(frame))
+        explicit exception(stack_frame yarn)
+            : std::runtime_error(get_exception_string(yarn)),
+              _obj(KOS_get_exception(yarn))
         {
-            KOS_clear_exception(frame);
+            KOS_clear_exception(yarn);
         }
 
         operator object_base() const {
             return _obj;
         }
 
-        static std::string get_exception_string(stack_frame frame);
+        static std::string get_exception_string(stack_frame yarn);
 
     private:
         KOS_OBJ_ID _obj;
@@ -1056,7 +1060,7 @@ inline void stack_frame::signal_error()
 
 inline object stack_frame::new_object()
 {
-    return object(*this, check_error(KOS_new_object(_frame)));
+    return object(*this, check_error(KOS_new_object(_yarn)));
 }
 
 template<typename T>
@@ -1069,23 +1073,23 @@ object stack_frame::new_object(T* priv)
 
 inline array stack_frame::new_array(unsigned size)
 {
-    return array(*this, check_error(KOS_new_array(_frame, size)));
+    return array(*this, check_error(KOS_new_array(_yarn, size)));
 }
 
 inline buffer stack_frame::new_buffer(unsigned size)
 {
-    return buffer(*this, check_error(KOS_new_buffer(_frame, size)));
+    return buffer(*this, check_error(KOS_new_buffer(_yarn, size)));
 }
 
 inline function stack_frame::new_function(KOS_FUNCTION_HANDLER handler, int min_args)
 {
-    return function(*this, check_error(KOS_new_builtin_function(_frame, handler, min_args)));
+    return function(*this, check_error(KOS_new_builtin_function(_yarn, handler, min_args)));
 }
 
 template<int i, typename T>
-typename remove_reference<T>::type extract_arg(stack_frame frame, array& args_obj)
+typename remove_reference<T>::type extract_arg(stack_frame yarn, array& args_obj)
 {
-    return from_object_ptr(frame, args_obj[i]);
+    return from_object_ptr(yarn, args_obj[i]);
 }
 
 template<typename T>
@@ -1116,51 +1120,51 @@ void unused(T&)
 }
 
 template<typename Ret, typename... Args, int... indices>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
-    return to_object_ptr(frame, fun(extract_arg<indices, Args>(frame, args)...));
+    return to_object_ptr(yarn, fun(extract_arg<indices, Args>(yarn, args)...));
 }
 
 template<typename... Args, int... indices>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
-    fun(extract_arg<indices, Args>(frame, args)...);
+    fun(extract_arg<indices, Args>(yarn, args)...);
     return KOS_VOID;
 }
 
 template<typename T, typename Ret, typename... Args, int... indices>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<indices, Args>(frame, args)...));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<indices, Args>(yarn, args)...));
 }
 
 template<typename T, typename... Args, int... indices>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<indices, Args>(frame, args)...);
+    (obj->*fun)(extract_arg<indices, Args>(yarn, args)...);
     return KOS_VOID;
 }
 
 template<typename T, typename Ret, typename... Args, int... indices>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, array args, seq<indices...>)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<indices, Args>(frame, args)...));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<indices, Args>(yarn, args)...));
 }
 
 template<typename T, typename... Args, int... indices>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, array args, seq<indices...>)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<indices, Args>(frame, args)...);
+    (obj->*fun)(extract_arg<indices, Args>(yarn, args)...);
     return KOS_VOID;
 }
 
@@ -1186,124 +1190,124 @@ KOS_OBJ_ID stack_frame::invoke_native(Ret (T::*fun)(Args...) const, KOS_OBJ_ID t
 }
 #else
 template<typename Ret>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (*fun)(), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (*fun)(), KOS_OBJ_ID this_obj, array args)
 {
-    return to_object_ptr(frame, fun());
+    return to_object_ptr(yarn, fun());
 }
 
 template<typename Ret, typename T1>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (*fun)(T1), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (*fun)(T1), KOS_OBJ_ID this_obj, array args)
 {
-    return to_object_ptr(frame, fun(extract_arg<0, T1>(frame, args)));
+    return to_object_ptr(yarn, fun(extract_arg<0, T1>(yarn, args)));
 }
 
 template<typename Ret, typename T1, typename T2>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
 {
-    return to_object_ptr(frame, fun(extract_arg<0, T1>(frame, args),
-                                    extract_arg<1, T2>(frame, args)));
+    return to_object_ptr(yarn, fun(extract_arg<0, T1>(yarn, args),
+                                   extract_arg<1, T2>(yarn, args)));
 }
 
 template<typename Ret, typename T1, typename T2, typename T3>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
 {
-    return to_object_ptr(frame, fun(extract_arg<0, T1>(frame, args),
-                                    extract_arg<1, T2>(frame, args),
-                                    extract_arg<2, T3>(frame, args)));
+    return to_object_ptr(yarn, fun(extract_arg<0, T1>(yarn, args),
+                                   extract_arg<1, T2>(yarn, args),
+                                   extract_arg<2, T3>(yarn, args)));
 }
 
 template<typename Ret, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
 {
-    return to_object_ptr(frame, fun(extract_arg<0, T1>(frame, args),
-                                    extract_arg<1, T2>(frame, args),
-                                    extract_arg<2, T3>(frame, args),
-                                    extract_arg<3, T4>(frame, args)));
+    return to_object_ptr(yarn, fun(extract_arg<0, T1>(yarn, args),
+                                   extract_arg<1, T2>(yarn, args),
+                                   extract_arg<2, T3>(yarn, args),
+                                   extract_arg<3, T4>(yarn, args)));
 }
 
-inline KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(), KOS_OBJ_ID this_obj, array args)
+inline KOS_OBJ_ID invoke_internal(stack_frame yarn, void (*fun)(), KOS_OBJ_ID this_obj, array args)
 {
     fun();
     return KOS_VOID;
 }
 
 template<typename T1>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(T1), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (*fun)(T1), KOS_OBJ_ID this_obj, array args)
 {
-    fun(extract_arg<0, T1>(frame, args));
+    fun(extract_arg<0, T1>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T1, typename T2>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
 {
-    fun(extract_arg<0, T1>(frame, args),
-        extract_arg<1, T2>(frame, args));
+    fun(extract_arg<0, T1>(yarn, args),
+        extract_arg<1, T2>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T1, typename T2, typename T3>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
 {
-    fun(extract_arg<0, T1>(frame, args),
-        extract_arg<1, T2>(frame, args),
-        extract_arg<2, T3>(frame, args));
+    fun(extract_arg<0, T1>(yarn, args),
+        extract_arg<1, T2>(yarn, args),
+        extract_arg<2, T3>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
 {
-    fun(extract_arg<0, T1>(frame, args),
-        extract_arg<1, T2>(frame, args),
-        extract_arg<2, T3>(frame, args),
-        extract_arg<3, T4>(frame, args));
+    fun(extract_arg<0, T1>(yarn, args),
+        extract_arg<1, T2>(yarn, args),
+        extract_arg<2, T3>(yarn, args),
+        extract_arg<3, T4>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T, typename Ret>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)());
+    return to_object_ptr(yarn, (obj->*fun)());
 }
 
 template<typename T, typename Ret, typename T1>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(T1), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(T1), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<0, T1>(frame, args)));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<0, T1>(yarn, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<0, T1>(frame, args),
-                                            extract_arg<1, T2>(frame, args)));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                                           extract_arg<1, T2>(yarn, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<0, T1>(frame, args),
-                                            extract_arg<1, T2>(frame, args),
-                                            extract_arg<2, T3>(frame, args)));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                                           extract_arg<1, T2>(yarn, args),
+                                           extract_arg<2, T3>(yarn, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<0, T1>(frame, args),
-                                            extract_arg<1, T2>(frame, args),
-                                            extract_arg<2, T3>(frame, args),
-                                            extract_arg<3, T4>(frame, args)));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                                           extract_arg<1, T2>(yarn, args),
+                                           extract_arg<2, T3>(yarn, args),
+                                           extract_arg<3, T4>(yarn, args)));
 }
 
 template<typename T>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)();
@@ -1311,86 +1315,86 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(), KOS_OBJ_ID this_
 }
 
 template<typename T, typename T1>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(T1), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<0, T1>(frame, args));
+    (obj->*fun)(extract_arg<0, T1>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<0, T1>(frame, args),
-                extract_arg<1, T2>(frame, args));
+    (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                extract_arg<1, T2>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2, typename T3>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<0, T1>(frame, args),
-                extract_arg<1, T2>(frame, args),
-                extract_arg<2, T3>(frame, args));
+    (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                extract_arg<1, T2>(yarn, args),
+                extract_arg<2, T3>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<0, T1>(frame, args),
-                extract_arg<1, T2>(frame, args),
-                extract_arg<2, T3>(frame, args),
-                extract_arg<3, T4>(frame, args));
+    (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                extract_arg<1, T2>(yarn, args),
+                extract_arg<2, T3>(yarn, args),
+                extract_arg<3, T4>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T, typename Ret>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)() const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)() const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)());
+    return to_object_ptr(yarn, (obj->*fun)());
 }
 
 template<typename T, typename Ret, typename T1>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(T1) const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(T1) const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<0, T1>(frame, args)));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<0, T1>(yarn, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(T1, T2) const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(T1, T2) const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<0, T1>(frame, args),
-                                            extract_arg<1, T2>(frame, args)));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                                           extract_arg<1, T2>(yarn, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(T1, T2, T3) const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(T1, T2, T3) const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<0, T1>(frame, args),
-                                            extract_arg<1, T2>(frame, args),
-                                            extract_arg<2, T3>(frame, args)));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                                           extract_arg<1, T2>(yarn, args),
+                                           extract_arg<2, T3>(yarn, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_ID invoke_internal(stack_frame frame, Ret (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, Ret (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    return to_object_ptr(frame, (obj->*fun)(extract_arg<0, T1>(frame, args),
-                                            extract_arg<1, T2>(frame, args),
-                                            extract_arg<2, T3>(frame, args),
-                                            extract_arg<3, T4>(frame, args)));
+    return to_object_ptr(yarn, (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                                           extract_arg<1, T2>(yarn, args),
+                                           extract_arg<2, T3>(yarn, args),
+                                           extract_arg<3, T4>(yarn, args)));
 }
 
 template<typename T>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)() const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)() const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
     (obj->*fun)();
@@ -1398,40 +1402,40 @@ KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)() const, KOS_OBJ_ID
 }
 
 template<typename T, typename T1>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1) const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(T1) const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<0, T1>(frame, args));
+    (obj->*fun)(extract_arg<0, T1>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2) const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(T1, T2) const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<0, T1>(frame, args),
-                extract_arg<1, T2>(frame, args));
+    (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                extract_arg<1, T2>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2, typename T3>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2, T3) const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(T1, T2, T3) const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<0, T1>(frame, args),
-                extract_arg<1, T2>(frame, args),
-                extract_arg<2, T3>(frame, args));
+    (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                extract_arg<1, T2>(yarn, args),
+                extract_arg<2, T3>(yarn, args));
     return KOS_VOID;
 }
 
 template<typename T, typename T1, typename T2, typename T3, typename T4>
-KOS_OBJ_ID invoke_internal(stack_frame frame, void (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_ID this_obj, array args)
+KOS_OBJ_ID invoke_internal(stack_frame yarn, void (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_ID this_obj, array args)
 {
     T* const obj = get_priv<T>(this_obj);
-    (obj->*fun)(extract_arg<0, T1>(frame, args),
-                extract_arg<1, T2>(frame, args),
-                extract_arg<2, T3>(frame, args),
-                extract_arg<3, T4>(frame, args));
+    (obj->*fun)(extract_arg<0, T1>(yarn, args),
+                extract_arg<1, T2>(yarn, args),
+                extract_arg<2, T3>(yarn, args),
+                extract_arg<3, T4>(yarn, args));
     return KOS_VOID;
 }
 
@@ -1553,21 +1557,21 @@ int num_args(Ret (T::*)(T1, T2, T3, T4) const)
 #endif
 
 template<typename T, T fun>
-KOS_OBJ_ID wrapper(KOS_FRAME frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj) NOEXCEPT
+KOS_OBJ_ID wrapper(KOS_YARN frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj) NOEXCEPT
 {
-    stack_frame frame = frame_ptr;
+    stack_frame yarn = frame_ptr;
     try {
-        array args(frame, args_obj);
-        return frame.invoke_native(fun, this_obj, args);
+        array args(yarn, args_obj);
+        return yarn.invoke_native(fun, this_obj, args);
     }
     catch (exception&) {
         assert(KOS_is_exception_pending(frame_ptr));
     }
     catch (std::exception& e) {
-        frame.raise(e.what());
+        yarn.raise(e.what());
     }
     catch (...) {
-        frame.raise("native exception");
+        yarn.raise("native exception");
     }
     return KOS_BADPTR;
 }
@@ -1581,68 +1585,68 @@ function stack_frame::new_function()
 // value -> object ptr
 // ===================
 
-inline object_base to_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
+inline object_base to_object_ptr(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     return obj_id;
 }
 
-inline object_base to_object_ptr(stack_frame frame, obj_id_converter obj_id)
+inline object_base to_object_ptr(stack_frame yarn, obj_id_converter obj_id)
 {
     return static_cast<KOS_OBJ_ID>(obj_id);
 }
 
-inline integer to_object_ptr(stack_frame frame, int v)
+inline integer to_object_ptr(stack_frame yarn, int v)
 {
-    return frame.check_error(KOS_new_int(frame, v));
+    return yarn.check_error(KOS_new_int(yarn, v));
 }
 
-inline integer to_object_ptr(stack_frame frame, unsigned v)
+inline integer to_object_ptr(stack_frame yarn, unsigned v)
 {
-    return frame.check_error(KOS_new_int(frame, static_cast<int64_t>(v)));
+    return yarn.check_error(KOS_new_int(yarn, static_cast<int64_t>(v)));
 }
 
-inline integer to_object_ptr(stack_frame frame, int64_t v)
+inline integer to_object_ptr(stack_frame yarn, int64_t v)
 {
-    return frame.check_error(KOS_new_int(frame, v));
+    return yarn.check_error(KOS_new_int(yarn, v));
 }
 
-inline floating to_object_ptr(stack_frame frame, double v)
+inline floating to_object_ptr(stack_frame yarn, double v)
 {
-    return frame.check_error(KOS_new_float(frame, v));
+    return yarn.check_error(KOS_new_float(yarn, v));
 }
 
-inline string to_object_ptr(stack_frame frame, const char* v)
+inline string to_object_ptr(stack_frame yarn, const char* v)
 {
-    return frame.check_error(KOS_new_cstring(frame, v));
+    return yarn.check_error(KOS_new_cstring(yarn, v));
 }
 
-inline string to_object_ptr(stack_frame frame, const std::string& v)
+inline string to_object_ptr(stack_frame yarn, const std::string& v)
 {
-    return frame.check_error(KOS_new_string(frame, v.c_str(), static_cast<unsigned>(v.length())));
+    return yarn.check_error(KOS_new_string(yarn, v.c_str(), static_cast<unsigned>(v.length())));
 }
 
-inline string to_object_ptr(stack_frame frame, KOS_STRING& v)
+inline string to_object_ptr(stack_frame yarn, KOS_STRING& v)
 {
     return string(v);
 }
 
-inline boolean to_object_ptr(stack_frame frame, bool v)
+inline boolean to_object_ptr(stack_frame yarn, bool v)
 {
     return boolean(KOS_BOOL(v));
 }
 
-inline void_type to_object_ptr(stack_frame frame, void_)
+inline void_type to_object_ptr(stack_frame yarn, void_)
 {
     return void_type(KOS_VOID);
 }
 
 template<typename T>
-array to_object_ptr(stack_frame frame, const std::vector<T>& v)
+array to_object_ptr(stack_frame yarn, const std::vector<T>& v)
 {
-    array array(frame, frame.check_error(KOS_new_array(frame, static_cast<unsigned>(v.size()))));
-    frame.check_error(KOS_array_resize(frame, array, static_cast<uint32_t>(v.size())));
+    array array(yarn, yarn.check_error(KOS_new_array(yarn, static_cast<unsigned>(v.size()))));
+    yarn.check_error(KOS_array_resize(yarn, array, static_cast<uint32_t>(v.size())));
     for (size_t i = 0; i < v.size(); i++)
-        frame.check_error(KOS_array_write(frame, array, static_cast<int>(i), to_object_ptr(frame, v[i])));
+        yarn.check_error(KOS_array_write(yarn, array, static_cast<int>(i), to_object_ptr(yarn, v[i])));
     return array;
 }
 
@@ -1650,46 +1654,46 @@ array to_object_ptr(stack_frame frame, const std::vector<T>& v)
 // ===================
 
 template<>
-int value_from_object_ptr<int>(stack_frame frame, KOS_OBJ_ID obj_id);
+int value_from_object_ptr<int>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-int64_t value_from_object_ptr<int64_t>(stack_frame frame, KOS_OBJ_ID obj_id);
+int64_t value_from_object_ptr<int64_t>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-integer value_from_object_ptr<integer>(stack_frame frame, KOS_OBJ_ID obj_id);
+integer value_from_object_ptr<integer>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-double value_from_object_ptr<double>(stack_frame frame, KOS_OBJ_ID obj_id);
+double value_from_object_ptr<double>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-floating value_from_object_ptr<floating>(stack_frame frame, KOS_OBJ_ID obj_id);
+floating value_from_object_ptr<floating>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-bool value_from_object_ptr<bool>(stack_frame frame, KOS_OBJ_ID obj_id);
+bool value_from_object_ptr<bool>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-boolean value_from_object_ptr<boolean>(stack_frame frame, KOS_OBJ_ID obj_id);
+boolean value_from_object_ptr<boolean>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-std::string value_from_object_ptr<std::string>(stack_frame frame, KOS_OBJ_ID obj_id);
+std::string value_from_object_ptr<std::string>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-string value_from_object_ptr<string>(stack_frame frame, KOS_OBJ_ID obj_id);
+string value_from_object_ptr<string>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-void_type value_from_object_ptr<void_type>(stack_frame frame, KOS_OBJ_ID obj_id);
+void_type value_from_object_ptr<void_type>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-object value_from_object_ptr<object>(stack_frame frame, KOS_OBJ_ID obj_id);
+object value_from_object_ptr<object>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-array value_from_object_ptr<array>(stack_frame frame, KOS_OBJ_ID obj_id);
+array value_from_object_ptr<array>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-buffer value_from_object_ptr<buffer>(stack_frame frame, KOS_OBJ_ID obj_id);
+buffer value_from_object_ptr<buffer>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 template<>
-function value_from_object_ptr<function>(stack_frame frame, KOS_OBJ_ID obj_id);
+function value_from_object_ptr<function>(stack_frame yarn, KOS_OBJ_ID obj_id);
 
 } // namespace kos
 

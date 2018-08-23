@@ -54,27 +54,27 @@ static const char str_err_pow_0_0[]       = "0 to the power of 0";
  *     > math.abs(-math.infinity)
  *     infinity
  */
-static KOS_OBJ_ID _abs(KOS_FRAME  frame,
+static KOS_OBJ_ID _abs(KOS_YARN   yarn,
                        KOS_OBJ_ID this_obj,
                        KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
 
-    if (KOS_get_numeric_arg(frame, args_obj, 0, &numeric) == KOS_SUCCESS) {
+    if (KOS_get_numeric_arg(yarn, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
         if (numeric.type == KOS_INTEGER_VALUE) {
             if (numeric.u.i == (int64_t)((uint64_t)1U << 63))
-                KOS_raise_exception_cstring(frame, str_err_abs_minus_max);
+                KOS_raise_exception_cstring(yarn, str_err_abs_minus_max);
             else
-                ret = KOS_new_int(frame, numeric.u.i < 0 ? -numeric.u.i : numeric.u.i);
+                ret = KOS_new_int(yarn, numeric.u.i < 0 ? -numeric.u.i : numeric.u.i);
         }
         else {
             assert(numeric.type == KOS_FLOAT_VALUE);
 
             numeric.u.i &= (int64_t)~((uint64_t)1U << 63);
 
-            ret = KOS_new_float(frame, numeric.u.d);
+            ret = KOS_new_float(yarn, numeric.u.d);
         }
     }
 
@@ -97,12 +97,12 @@ static KOS_OBJ_ID _abs(KOS_FRAME  frame,
  *     > math.ceil(-0.1)
  *     -0.0
  */
-static KOS_OBJ_ID _ceil(KOS_FRAME  frame,
+static KOS_OBJ_ID _ceil(KOS_YARN   yarn,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID arg = KOS_array_read(yarn, args_obj, 0);
 
     assert( ! IS_BAD_PTR(arg));
 
@@ -116,11 +116,11 @@ static KOS_OBJ_ID _ceil(KOS_FRAME  frame,
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(frame, ceil(OBJPTR(FLOAT, arg)->value));
+            ret = KOS_new_float(yarn, ceil(OBJPTR(FLOAT, arg)->value));
             break;
 
         default:
-            KOS_raise_exception_cstring(frame, str_err_not_number);
+            KOS_raise_exception_cstring(yarn, str_err_not_number);
             break;
     }
 
@@ -142,14 +142,14 @@ static KOS_OBJ_ID _ceil(KOS_FRAME  frame,
  *     > math.exp(-1)
  *     0.367879441171442
  */
-static KOS_OBJ_ID _exp(KOS_FRAME  frame,
+static KOS_OBJ_ID _exp(KOS_YARN   yarn,
                        KOS_OBJ_ID this_obj,
                        KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID  ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
 
-    if (KOS_get_numeric_arg(frame, args_obj, 0, &numeric) == KOS_SUCCESS) {
+    if (KOS_get_numeric_arg(yarn, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
         if (numeric.type == KOS_INTEGER_VALUE)
             numeric.u.d = (double)numeric.u.i;
@@ -157,7 +157,7 @@ static KOS_OBJ_ID _exp(KOS_FRAME  frame,
             assert(numeric.type == KOS_FLOAT_VALUE);
         }
 
-        ret = KOS_new_float(frame, exp(numeric.u.d));
+        ret = KOS_new_float(yarn, exp(numeric.u.d));
     }
 
     return ret;
@@ -178,14 +178,14 @@ static KOS_OBJ_ID _exp(KOS_FRAME  frame,
  *     > math.expm1(2)
  *     6.38905609893065
  */
-static KOS_OBJ_ID _expm1(KOS_FRAME  frame,
+static KOS_OBJ_ID _expm1(KOS_YARN   yarn,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID  ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
 
-    if (KOS_get_numeric_arg(frame, args_obj, 0, &numeric) == KOS_SUCCESS) {
+    if (KOS_get_numeric_arg(yarn, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
         if (numeric.type == KOS_INTEGER_VALUE)
             numeric.u.d = (double)numeric.u.i;
@@ -193,7 +193,7 @@ static KOS_OBJ_ID _expm1(KOS_FRAME  frame,
             assert(numeric.type == KOS_FLOAT_VALUE);
         }
 
-        ret = KOS_new_float(frame, expm1(numeric.u.d));
+        ret = KOS_new_float(yarn, expm1(numeric.u.d));
     }
 
     return ret;
@@ -215,12 +215,12 @@ static KOS_OBJ_ID _expm1(KOS_FRAME  frame,
  *     > math.floor(-0.1)
  *     -1.0
  */
-static KOS_OBJ_ID _floor(KOS_FRAME  frame,
+static KOS_OBJ_ID _floor(KOS_YARN   yarn,
                          KOS_OBJ_ID this_obj,
                          KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID arg = KOS_array_read(yarn, args_obj, 0);
 
     assert( ! IS_BAD_PTR(arg));
 
@@ -234,11 +234,11 @@ static KOS_OBJ_ID _floor(KOS_FRAME  frame,
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(frame, floor(OBJPTR(FLOAT, arg)->value));
+            ret = KOS_new_float(yarn, floor(OBJPTR(FLOAT, arg)->value));
             break;
 
         default:
-            KOS_raise_exception_cstring(frame, str_err_not_number);
+            KOS_raise_exception_cstring(yarn, str_err_not_number);
             break;
     }
 
@@ -261,12 +261,12 @@ static KOS_OBJ_ID _floor(KOS_FRAME  frame,
  *     > math.is_infinity(1e60)
  *     false
  */
-static KOS_OBJ_ID _is_infinity(KOS_FRAME  frame,
+static KOS_OBJ_ID _is_infinity(KOS_YARN   yarn,
                                KOS_OBJ_ID this_obj,
                                KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID arg = KOS_array_read(yarn, args_obj, 0);
 
     assert( ! IS_BAD_PTR(arg));
 
@@ -299,12 +299,12 @@ static KOS_OBJ_ID _is_infinity(KOS_FRAME  frame,
  *     > math.is_nan([])
  *     false
  */
-static KOS_OBJ_ID _is_nan(KOS_FRAME  frame,
+static KOS_OBJ_ID _is_nan(KOS_YARN   yarn,
                           KOS_OBJ_ID this_obj,
                           KOS_OBJ_ID args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_OBJ_ID arg = KOS_array_read(frame, args_obj, 0);
+    KOS_OBJ_ID arg = KOS_array_read(yarn, args_obj, 0);
 
     assert( ! IS_BAD_PTR(arg));
 
@@ -340,7 +340,7 @@ static KOS_OBJ_ID _is_nan(KOS_FRAME  frame,
  *     > math.pow(10, -2)
  *     0.01
  */
-static KOS_OBJ_ID _pow(KOS_FRAME  frame,
+static KOS_OBJ_ID _pow(KOS_YARN   yarn,
                        KOS_OBJ_ID this_obj,
                        KOS_OBJ_ID args_obj)
 {
@@ -349,8 +349,8 @@ static KOS_OBJ_ID _pow(KOS_FRAME  frame,
     KOS_NUMERIC arg1;
     KOS_NUMERIC arg2;
 
-    TRY(KOS_get_numeric_arg(frame, args_obj, 0, &arg1));
-    TRY(KOS_get_numeric_arg(frame, args_obj, 1, &arg2));
+    TRY(KOS_get_numeric_arg(yarn, args_obj, 0, &arg1));
+    TRY(KOS_get_numeric_arg(yarn, args_obj, 1, &arg2));
 
     if (arg1.type == KOS_INTEGER_VALUE)
         arg1.u.d = (double)arg1.u.i;
@@ -375,7 +375,7 @@ static KOS_OBJ_ID _pow(KOS_FRAME  frame,
     else if (arg1.u.d < 0 && ceil(arg2.u.d) != arg2.u.d)
         RAISE_EXCEPTION(str_err_negative_root);
     else
-        ret = KOS_new_float(frame, pow(arg1.u.d, arg2.u.d));
+        ret = KOS_new_float(yarn, pow(arg1.u.d, arg2.u.d));
 
 _error:
     return error ? KOS_BADPTR : ret;
@@ -396,7 +396,7 @@ _error:
  *     > math.sqrt(4)
  *     2.0
  */
-static KOS_OBJ_ID _sqrt(KOS_FRAME  frame,
+static KOS_OBJ_ID _sqrt(KOS_YARN   yarn,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
 {
@@ -404,7 +404,7 @@ static KOS_OBJ_ID _sqrt(KOS_FRAME  frame,
     KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
 
-    TRY(KOS_get_numeric_arg(frame, args_obj, 0, &numeric));
+    TRY(KOS_get_numeric_arg(yarn, args_obj, 0, &numeric));
 
     if (numeric.type == KOS_INTEGER_VALUE) {
         if (numeric.u.i < 0)
@@ -417,13 +417,13 @@ static KOS_OBJ_ID _sqrt(KOS_FRAME  frame,
             RAISE_EXCEPTION(str_err_negative_root);
     }
 
-    ret = KOS_new_float(frame, sqrt(numeric.u.d));
+    ret = KOS_new_float(yarn, sqrt(numeric.u.d));
 
 _error:
     return error ? KOS_BADPTR : ret;
 }
 
-int _KOS_module_math_init(KOS_FRAME frame, KOS_OBJ_ID module)
+int _KOS_module_math_init(KOS_YARN yarn, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 
@@ -437,7 +437,7 @@ int _KOS_module_math_init(KOS_FRAME frame, KOS_OBJ_ID module)
         static const char str_infinity[] = "infinity";
         union _KOS_NUMERIC_VALUE value;
         value.i = (uint64_t)0x7FF00000U << 32;
-        TRY(KOS_module_add_global(frame, module, KOS_context_get_cstring(frame, str_infinity), KOS_new_float(frame, value.d), 0));
+        TRY(KOS_module_add_global(yarn, module, KOS_context_get_cstring(yarn, str_infinity), KOS_new_float(yarn, value.d), 0));
     }
 
     /* @item math nan
@@ -450,18 +450,18 @@ int _KOS_module_math_init(KOS_FRAME frame, KOS_OBJ_ID module)
         static const char str_nan[] = "nan";
         union _KOS_NUMERIC_VALUE value;
         value.i = ((uint64_t)0x7FF00000U << 32) | 1U;
-        TRY(KOS_module_add_global(frame, module, KOS_context_get_cstring(frame, str_nan), KOS_new_float(frame, value.d), 0));
+        TRY(KOS_module_add_global(yarn, module, KOS_context_get_cstring(yarn, str_nan), KOS_new_float(yarn, value.d), 0));
     }
 
-    TRY_ADD_FUNCTION(frame, module, "abs",         _abs,         1);
-    TRY_ADD_FUNCTION(frame, module, "ceil",        _ceil,        1);
-    TRY_ADD_FUNCTION(frame, module, "exp",         _exp,         1);
-    TRY_ADD_FUNCTION(frame, module, "expm1",       _expm1,       1);
-    TRY_ADD_FUNCTION(frame, module, "floor",       _floor,       1);
-    TRY_ADD_FUNCTION(frame, module, "is_infinity", _is_infinity, 1);
-    TRY_ADD_FUNCTION(frame, module, "is_nan",      _is_nan,      1);
-    TRY_ADD_FUNCTION(frame, module, "pow",         _pow,         2);
-    TRY_ADD_FUNCTION(frame, module, "sqrt",        _sqrt,        1);
+    TRY_ADD_FUNCTION(yarn, module, "abs",         _abs,         1);
+    TRY_ADD_FUNCTION(yarn, module, "ceil",        _ceil,        1);
+    TRY_ADD_FUNCTION(yarn, module, "exp",         _exp,         1);
+    TRY_ADD_FUNCTION(yarn, module, "expm1",       _expm1,       1);
+    TRY_ADD_FUNCTION(yarn, module, "floor",       _floor,       1);
+    TRY_ADD_FUNCTION(yarn, module, "is_infinity", _is_infinity, 1);
+    TRY_ADD_FUNCTION(yarn, module, "is_nan",      _is_nan,      1);
+    TRY_ADD_FUNCTION(yarn, module, "pow",         _pow,         2);
+    TRY_ADD_FUNCTION(yarn, module, "sqrt",        _sqrt,        1);
 
 _error:
     return error;

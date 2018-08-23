@@ -92,8 +92,8 @@ typedef struct _KOS_STACK {
 } KOS_STACK;
 
 struct _KOS_THREAD_CONTEXT {
-    KOS_THREAD_CONTEXT  *next;     /* List of thread roots in context */
-    KOS_THREAD_CONTEXT  *prev;
+    KOS_YARN             next;     /* List of thread roots in context */
+    KOS_YARN             prev;
 
     struct _KOS_CONTEXT *ctx;
     _KOS_PAGE           *cur_page;
@@ -134,9 +134,9 @@ struct _KOS_MODULE_MGMT {
 };
 
 struct _KOS_THREAD_MGMT {
-    _KOS_TLS_KEY       thread_key;
-    KOS_THREAD_CONTEXT main_thread;
-    _KOS_MUTEX         mutex;
+    _KOS_TLS_KEY               thread_key;
+    struct _KOS_THREAD_CONTEXT main_thread;
+    _KOS_MUTEX                 mutex;
 };
 
 enum _KOS_CONTEXT_FLAGS {
@@ -156,24 +156,24 @@ struct _KOS_CONTEXT {
 };
 
 #ifdef __cplusplus
-static inline bool KOS_is_exception_pending(KOS_FRAME frame)
+static inline bool KOS_is_exception_pending(KOS_YARN yarn)
 {
-    return ! IS_BAD_PTR(frame->exception);
+    return ! IS_BAD_PTR(yarn->exception);
 }
 
-static inline KOS_OBJ_ID KOS_get_exception(KOS_FRAME frame)
+static inline KOS_OBJ_ID KOS_get_exception(KOS_YARN yarn)
 {
-    return frame->exception;
+    return yarn->exception;
 }
 
-static inline void KOS_clear_exception(KOS_FRAME frame)
+static inline void KOS_clear_exception(KOS_YARN yarn)
 {
-    frame->exception = KOS_BADPTR;
+    yarn->exception = KOS_BADPTR;
 }
 #else
-#define KOS_is_exception_pending(frame) (!IS_BAD_PTR((frame)->exception))
-#define KOS_get_exception(frame) ((frame)->exception)
-#define KOS_clear_exception(frame) (void)((frame)->exception = KOS_BADPTR)
+#define KOS_is_exception_pending(yarn) (!IS_BAD_PTR((yarn)->exception))
+#define KOS_get_exception(yarn) ((yarn)->exception)
+#define KOS_clear_exception(yarn) (void)((yarn)->exception = KOS_BADPTR)
 #endif
 
 #ifdef __cplusplus
@@ -181,51 +181,51 @@ extern "C" {
 #endif
 
 int KOS_context_init(KOS_CONTEXT *ctx,
-                     KOS_FRAME   *out_frame);
+                     KOS_YARN   *out_frame);
 
 void KOS_context_destroy(KOS_CONTEXT *ctx);
 
-int KOS_context_add_path(KOS_FRAME   frame,
+int KOS_context_add_path(KOS_YARN    yarn,
                          const char *module_search_path);
 
-int KOS_context_add_default_path(KOS_FRAME   frame,
+int KOS_context_add_default_path(KOS_YARN    yarn,
                                  const char *argv0);
 
-int KOS_context_set_args(KOS_FRAME    frame,
+int KOS_context_set_args(KOS_YARN     yarn,
                          int          argc,
                          const char **argv);
 
-typedef int (*KOS_BUILTIN_INIT)(KOS_FRAME frame, KOS_OBJ_ID module);
+typedef int (*KOS_BUILTIN_INIT)(KOS_YARN yarn, KOS_OBJ_ID module);
 
-int KOS_context_register_builtin(KOS_FRAME        frame,
+int KOS_context_register_builtin(KOS_YARN         yarn,
                                  const char      *module,
                                  KOS_BUILTIN_INIT init);
 
-int KOS_context_register_thread(KOS_CONTEXT        *ctx,
-                                KOS_THREAD_CONTEXT *thread_ctx);
+int KOS_context_register_thread(KOS_CONTEXT *ctx,
+                                KOS_YARN     yarn);
 
-void KOS_context_unregister_thread(KOS_CONTEXT        *ctx,
-                                   KOS_THREAD_CONTEXT *thread_ctx);
+void KOS_context_unregister_thread(KOS_CONTEXT *ctx,
+                                   KOS_YARN     yarn);
 
-KOS_OBJ_ID KOS_context_get_cstring(KOS_FRAME   frame,
+KOS_OBJ_ID KOS_context_get_cstring(KOS_YARN    yarn,
                                    const char *cstr);
 
 #ifdef NDEBUG
-#define KOS_context_validate(frame) ((void)0)
+#define KOS_context_validate(yarn) ((void)0)
 #else
-void KOS_context_validate(KOS_FRAME frame);
+void KOS_context_validate(KOS_YARN yarn);
 #endif
 
-void KOS_raise_exception(KOS_FRAME  frame,
+void KOS_raise_exception(KOS_YARN   yarn,
                          KOS_OBJ_ID exception_obj);
 
-void KOS_raise_exception_cstring(KOS_FRAME   frame,
+void KOS_raise_exception_cstring(KOS_YARN    yarn,
                                  const char *cstr);
 
-KOS_OBJ_ID KOS_format_exception(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_format_exception(KOS_YARN   yarn,
                                 KOS_OBJ_ID exception);
 
-void KOS_raise_generator_end(KOS_FRAME frame);
+void KOS_raise_generator_end(KOS_YARN yarn);
 
 enum _KOS_CALL_FLAVOR {
     KOS_CALL_FUNCTION,
@@ -233,25 +233,25 @@ enum _KOS_CALL_FLAVOR {
     KOS_APPLY_FUNCTION
 };
 
-KOS_OBJ_ID _KOS_call_function(KOS_FRAME             frame,
+KOS_OBJ_ID _KOS_call_function(KOS_YARN              yarn,
                               KOS_OBJ_ID            func_obj,
                               KOS_OBJ_ID            this_obj,
                               KOS_OBJ_ID            args_obj,
                               enum _KOS_CALL_FLAVOR call_flavor);
 
-#define KOS_call_function(frame, func_obj, this_obj, args_obj) \
-    _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
+#define KOS_call_function(yarn, func_obj, this_obj, args_obj) \
+    _KOS_call_function((yarn), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
 
-#define KOS_call_generator(frame, func_obj, this_obj, args_obj) \
-    _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_CALL_GENERATOR)
+#define KOS_call_generator(yarn, func_obj, this_obj, args_obj) \
+    _KOS_call_function((yarn), (func_obj), (this_obj), (args_obj), KOS_CALL_GENERATOR)
 
-#define KOS_apply_function(frame, func_obj, this_obj, args_obj) \
-    _KOS_call_function((frame), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
+#define KOS_apply_function(yarn, func_obj, this_obj, args_obj) \
+    _KOS_call_function((yarn), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
 
-void KOS_track_ref(KOS_FRAME    frame,
+void KOS_track_ref(KOS_YARN     yarn,
                    KOS_OBJ_REF *ref);
 
-void KOS_untrack_ref(KOS_FRAME    frame,
+void KOS_untrack_ref(KOS_YARN     yarn,
                      KOS_OBJ_REF *ref);
 
 struct _KOS_GC_STATS {
@@ -265,7 +265,7 @@ struct _KOS_GC_STATS {
     unsigned size_kept;
 };
 
-int KOS_collect_garbage(KOS_FRAME             frame,
+int KOS_collect_garbage(KOS_YARN              yarn,
                         struct _KOS_GC_STATS *stats);
 
 #ifdef __cplusplus

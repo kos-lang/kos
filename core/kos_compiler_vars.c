@@ -459,7 +459,7 @@ static int _import(struct _KOS_COMP_UNIT      *program,
     assert(node);
 
     assert(program->import_module);
-    TRY(program->import_module(program->frame,
+    TRY(program->import_module(program->yarn,
                                node->token.begin,
                                node->token.length,
                                &module_idx));
@@ -497,7 +497,7 @@ static int _import(struct _KOS_COMP_UNIT      *program,
             info.node    = node;
 
             assert(program->walk_globals);
-            error = program->walk_globals(program->frame,
+            error = program->walk_globals(program->yarn,
                                           module_idx,
                                           _import_global,
                                           &info);

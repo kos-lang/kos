@@ -25,7 +25,7 @@
 namespace kos {
 
 template<typename T>
-T numeric_from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
+T numeric_from_object_ptr(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     T ret = 0;
 
@@ -52,7 +52,7 @@ T numeric_from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
         }
 
         default:
-            frame.raise_and_signal_error("source type is not a number");
+            yarn.raise_and_signal_error("source type is not a number");
             break;
     }
 
@@ -60,69 +60,69 @@ T numeric_from_object_ptr(stack_frame frame, KOS_OBJ_ID obj_id)
 }
 
 template<>
-int value_from_object_ptr<int>(stack_frame frame, KOS_OBJ_ID obj_id)
+int value_from_object_ptr<int>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
-    return numeric_from_object_ptr<int>(frame, obj_id);
+    return numeric_from_object_ptr<int>(yarn, obj_id);
 }
 
 template<>
-int64_t value_from_object_ptr<int64_t>(stack_frame frame, KOS_OBJ_ID obj_id)
+int64_t value_from_object_ptr<int64_t>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
-    return numeric_from_object_ptr<int64_t>(frame, obj_id);
+    return numeric_from_object_ptr<int64_t>(yarn, obj_id);
 }
 
 template<>
-integer value_from_object_ptr<integer>(stack_frame frame, KOS_OBJ_ID obj_id)
+integer value_from_object_ptr<integer>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if ( ! IS_SMALL_INT(obj_id) && GET_OBJ_TYPE(obj_id) != OBJ_INTEGER)
-        frame.raise_and_signal_error("source type is not an integer");
+        yarn.raise_and_signal_error("source type is not an integer");
 
     return integer(obj_id);
 }
 
 template<>
-double value_from_object_ptr<double>(stack_frame frame, KOS_OBJ_ID obj_id)
+double value_from_object_ptr<double>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
-    return numeric_from_object_ptr<double>(frame, obj_id);
+    return numeric_from_object_ptr<double>(yarn, obj_id);
 }
 
 template<>
-floating value_from_object_ptr<floating>(stack_frame frame, KOS_OBJ_ID obj_id)
+floating value_from_object_ptr<floating>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_FLOAT)
-        frame.raise_and_signal_error("source type is not a float");
+        yarn.raise_and_signal_error("source type is not a float");
 
     return floating(obj_id);
 }
 
 template<>
-bool value_from_object_ptr<bool>(stack_frame frame, KOS_OBJ_ID obj_id)
+bool value_from_object_ptr<bool>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_BOOLEAN)
-        frame.raise_and_signal_error("source type is not a boolean");
+        yarn.raise_and_signal_error("source type is not a boolean");
 
     return !! KOS_get_bool(obj_id);
 }
 
 template<>
-boolean value_from_object_ptr<boolean>(stack_frame frame, KOS_OBJ_ID obj_id)
+boolean value_from_object_ptr<boolean>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_BOOLEAN)
-        frame.raise_and_signal_error("source type is not a boolean");
+        yarn.raise_and_signal_error("source type is not a boolean");
 
     return boolean(obj_id);
 }
 
 template<>
-std::string value_from_object_ptr<std::string>(stack_frame frame, KOS_OBJ_ID obj_id)
+std::string value_from_object_ptr<std::string>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        frame.raise_and_signal_error("source type is not a string");
+        yarn.raise_and_signal_error("source type is not a string");
 
     const unsigned len = KOS_string_to_utf8(obj_id, 0, 0);
     std::string    str(static_cast<size_t>(len), '\0');
@@ -132,106 +132,106 @@ std::string value_from_object_ptr<std::string>(stack_frame frame, KOS_OBJ_ID obj
 }
 
 template<>
-string value_from_object_ptr<string>(stack_frame frame, KOS_OBJ_ID obj_id)
+string value_from_object_ptr<string>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        frame.raise_and_signal_error("source type is not a string");
+        yarn.raise_and_signal_error("source type is not a string");
 
     return string(obj_id);
 }
 
 template<>
-void_type value_from_object_ptr<void_type>(stack_frame frame, KOS_OBJ_ID obj_id)
+void_type value_from_object_ptr<void_type>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_VOID)
-        frame.raise_and_signal_error("source type is not a void");
+        yarn.raise_and_signal_error("source type is not a void");
 
     return void_type(obj_id);
 }
 
 template<>
-object value_from_object_ptr<object>(stack_frame frame, KOS_OBJ_ID obj_id)
+object value_from_object_ptr<object>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_OBJECT)
-        frame.raise_and_signal_error("source type is not an object");
+        yarn.raise_and_signal_error("source type is not an object");
 
-    return object(frame, obj_id);
+    return object(yarn, obj_id);
 }
 
 template<>
-array value_from_object_ptr<array>(stack_frame frame, KOS_OBJ_ID obj_id)
+array value_from_object_ptr<array>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
-        frame.raise_and_signal_error("source type is not an array");
+        yarn.raise_and_signal_error("source type is not an array");
 
-    return array(frame, obj_id);
+    return array(yarn, obj_id);
 }
 
 template<>
-buffer value_from_object_ptr<buffer>(stack_frame frame, KOS_OBJ_ID obj_id)
+buffer value_from_object_ptr<buffer>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
-        frame.raise_and_signal_error("source type is not a buffer");
+        yarn.raise_and_signal_error("source type is not a buffer");
 
-    return buffer(frame, obj_id);
+    return buffer(yarn, obj_id);
 }
 
 template<>
-function value_from_object_ptr<function>(stack_frame frame, KOS_OBJ_ID obj_id)
+function value_from_object_ptr<function>(stack_frame yarn, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_FUNCTION)
-        frame.raise_and_signal_error("source type is not a function");
+        yarn.raise_and_signal_error("source type is not a function");
 
-    return function(frame, obj_id);
+    return function(yarn, obj_id);
 }
 
 void stack_frame::raise(const char* desc)
 {
-    KOS_raise_exception(_frame, KOS_new_cstring(_frame, desc));
+    KOS_raise_exception(_yarn, KOS_new_cstring(_yarn, desc));
 }
 
-std::string exception::get_exception_string(stack_frame frame)
+std::string exception::get_exception_string(stack_frame yarn)
 {
-    KOS_OBJ_ID obj_id = KOS_get_exception(frame);
+    KOS_OBJ_ID obj_id = KOS_get_exception(yarn);
     assert( ! IS_BAD_PTR(obj_id));
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
 
         static const char str_value[] = "value";
 
-        obj_id = KOS_get_property(frame, obj_id, KOS_context_get_cstring(frame, str_value));
+        obj_id = KOS_get_property(yarn, obj_id, KOS_context_get_cstring(yarn, str_value));
 
         assert( ! IS_BAD_PTR(obj_id));
 
-        obj_id = KOS_object_to_string(frame, obj_id);
+        obj_id = KOS_object_to_string(yarn, obj_id);
 
         assert( ! IS_BAD_PTR(obj_id));
     }
 
-    return from_object_ptr(frame, obj_id);
+    return from_object_ptr(yarn, obj_id);
 }
 
-object::const_iterator::const_iterator(stack_frame           frame,
+object::const_iterator::const_iterator(stack_frame           yarn,
                                        KOS_OBJ_ID            obj_id,
                                        KOS_OBJECT_WALK_DEPTH depth)
-    : _frame(frame)
+    : _yarn(yarn)
 {
     _elem.key   = KOS_BADPTR;
     _elem.value = KOS_BADPTR;
-    _walk       = frame.check_error(KOS_new_object_walk(frame, obj_id, depth));
-    _elem       = KOS_object_walk(_frame, _walk);
+    _walk       = yarn.check_error(KOS_new_object_walk(yarn, obj_id, depth));
+    _elem       = KOS_object_walk(_yarn, _walk);
 }
 
 object::const_iterator& object::const_iterator::operator=(const const_iterator& it)
 {
-    _frame      = it._frame;
-    _walk       = KOS_new_object_walk_copy(_frame, it._walk);
+    _yarn       = it._yarn;
+    _walk       = KOS_new_object_walk_copy(_yarn, it._walk);
     _elem.key   = it._elem.key;
     _elem.value = it._elem.value;
     return *this;

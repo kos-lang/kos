@@ -58,47 +58,47 @@ void throw_string(const std::string& str)
 int main()
 try {
     kos::context     ctx;
-    kos::stack_frame frame(ctx);
+    kos::stack_frame yarn(ctx);
 
     {
-        const int a = from_object_ptr(frame, TO_SMALL_INT(123));
+        const int a = from_object_ptr(yarn, TO_SMALL_INT(123));
         TEST(a == 123);
     }
 
     {
-        const int64_t a = from_object_ptr(frame, to_object_ptr(frame, (int64_t)1 << 62));
+        const int64_t a = from_object_ptr(yarn, to_object_ptr(yarn, (int64_t)1 << 62));
         TEST(a == (int64_t)1 << 62);
     }
 
     {
-        const kos::integer a = from_object_ptr(frame, to_object_ptr(frame, (int64_t)1 << 62));
+        const kos::integer a = from_object_ptr(yarn, to_object_ptr(yarn, (int64_t)1 << 62));
         TEST(static_cast<int64_t>(a) == (int64_t)1 << 62);
     }
 
     {
-        const double a = from_object_ptr(frame, to_object_ptr(frame, 1.0));
+        const double a = from_object_ptr(yarn, to_object_ptr(yarn, 1.0));
         TEST(a == 1);
     }
 
     {
-        const kos::floating a = from_object_ptr(frame, to_object_ptr(frame, 1.5));
+        const kos::floating a = from_object_ptr(yarn, to_object_ptr(yarn, 1.5));
         TEST(static_cast<double>(a) == 1.5);
     }
 
     {
-        const kos::boolean a = from_object_ptr(frame, to_object_ptr(frame, true));
+        const kos::boolean a = from_object_ptr(yarn, to_object_ptr(yarn, true));
         TEST(static_cast<bool>(a));
     }
 
     {
-        const kos::buffer a = from_object_ptr(frame, KOS_new_buffer(frame, 0));
+        const kos::buffer a = from_object_ptr(yarn, KOS_new_buffer(yarn, 0));
         TEST(a.type() == OBJ_BUFFER);
     }
 
     {
         bool exception = false;
         try {
-            const double a = from_object_ptr(frame, to_object_ptr(frame, "1.0"));
+            const double a = from_object_ptr(yarn, to_object_ptr(yarn, "1.0"));
             TEST(a == 2);
         }
         catch (const kos::exception& e) {
@@ -111,7 +111,7 @@ try {
     {
         bool exception = false;
         try {
-            const bool a = from_object_ptr(frame, TO_SMALL_INT(0));
+            const bool a = from_object_ptr(yarn, TO_SMALL_INT(0));
             TEST(a == true);
         }
         catch (const kos::exception& e) {
@@ -124,7 +124,7 @@ try {
     {
         bool exception = false;
         try {
-            const kos::void_type a = from_object_ptr(frame, TO_SMALL_INT(0));
+            const kos::void_type a = from_object_ptr(yarn, TO_SMALL_INT(0));
             TEST(a.type() == OBJ_VOID);
         }
         catch (const kos::exception& e) {
@@ -137,7 +137,7 @@ try {
     {
         bool exception = false;
         try {
-            const std::string a = from_object_ptr(frame, TO_SMALL_INT(0));
+            const std::string a = from_object_ptr(yarn, TO_SMALL_INT(0));
             TEST(a == "2");
         }
         catch (const kos::exception& e) {
@@ -148,14 +148,14 @@ try {
     }
 
     {
-        const kos::string str = from_object_ptr(frame, to_object_ptr(frame, "uv"));
+        const kos::string str = from_object_ptr(yarn, to_object_ptr(yarn, "uv"));
         TEST(std::string(str) == "uv");
     }
 
     {
         bool exception = false;
         try {
-            const kos::string a = from_object_ptr(frame, TO_SMALL_INT(0));
+            const kos::string a = from_object_ptr(yarn, TO_SMALL_INT(0));
             TEST(std::string(a) == "2");
         }
         catch (const kos::exception& e) {
@@ -166,17 +166,17 @@ try {
     }
 
     {
-        kos::array a = frame.new_array(2);
+        kos::array a = yarn.new_array(2);
         a[0] = 100;
         a[1] = kos::void_();
-        kos::array a2 = from_object_ptr(frame, a);
+        kos::array a2 = from_object_ptr(yarn, a);
         TEST(static_cast<int>(a2[0]) == 100);
     }
 
     {
         bool exception = false;
         try {
-            const kos::array a = from_object_ptr(frame, TO_SMALL_INT(0));
+            const kos::array a = from_object_ptr(yarn, TO_SMALL_INT(0));
             TEST(static_cast<int64_t>(a[0]) == 0);
         }
         catch (const kos::exception& e) {
@@ -189,7 +189,7 @@ try {
     {
         bool exception = false;
         try {
-            const kos::buffer a = from_object_ptr(frame, TO_SMALL_INT(0));
+            const kos::buffer a = from_object_ptr(yarn, TO_SMALL_INT(0));
             TEST(static_cast<char>(a[0]));
         }
         catch (const kos::exception& e) {
@@ -200,16 +200,16 @@ try {
     }
 
     {
-        kos::object o = frame.new_object();
+        kos::object o = yarn.new_object();
         o[std::string("a")] = 24;
-        kos::object o2 = from_object_ptr(frame, o);
+        kos::object o2 = from_object_ptr(yarn, o);
         TEST(static_cast<int>(o2["a"]) == 24);
     }
 
     {
         bool exception = false;
         try {
-            const kos::object a = from_object_ptr(frame, TO_SMALL_INT(0));
+            const kos::object a = from_object_ptr(yarn, TO_SMALL_INT(0));
             TEST(static_cast<bool>(a[""]));
         }
         catch (const kos::exception& e) {
@@ -222,7 +222,7 @@ try {
     {
         bool exception = false;
         try {
-            const kos::function a = from_object_ptr(frame, TO_SMALL_INT(0));
+            const kos::function a = from_object_ptr(yarn, TO_SMALL_INT(0));
             TEST(static_cast<bool>(a()));
         }
         catch (const kos::exception& e) {
@@ -233,19 +233,19 @@ try {
     }
 
     {
-        const std::string a = from_object_ptr(frame, to_object_ptr(frame, "abc"));
+        const std::string a = from_object_ptr(yarn, to_object_ptr(yarn, "abc"));
         TEST(a == "abc");
     }
 
     {
-        kos::array a = frame.new_array(100);
+        kos::array a = yarn.new_array(100);
         TEST(a.size() == 100);
         TEST(static_cast<KOS_OBJ_ID>(a[0] ) == KOS_VOID);
         TEST(static_cast<KOS_OBJ_ID>(a[99]) == KOS_VOID);
     }
 
     {
-        kos::array a = frame.new_array(5);
+        kos::array a = yarn.new_array(5);
         for (int i = 0; i < 5; i++) {
             a[i] = i + 10;
         }
@@ -328,7 +328,7 @@ try {
     }
 
     {
-        kos::buffer b = frame.new_buffer(10);
+        kos::buffer b = yarn.new_buffer(10);
 
         for (int i = 0; i < static_cast<int>(b.size()); i++) {
             b[i] = static_cast<char>(0xF0 + i);
@@ -353,9 +353,9 @@ try {
 
     {
 #ifdef KOS_CPP11
-        kos::function add = frame.NEW_FUNCTION(&add_func);
+        kos::function add = yarn.NEW_FUNCTION(&add_func);
 #else
-        kos::function add = frame.new_function<int64_t (*)(bool, int, int64_t), add_func>();
+        kos::function add = yarn.new_function<int64_t (*)(bool, int, int64_t), add_func>();
 #endif
         const int a6 = add(false, 5, 10);
         TEST(a6 == 6);
@@ -366,9 +366,9 @@ try {
 
     {
 #ifdef KOS_CPP11
-        kos::function set = frame.NEW_FUNCTION(&set_global);
+        kos::function set = yarn.NEW_FUNCTION(&set_global);
 #else
-        kos::function set = frame.new_function<void (*)(const std::string&), set_global>();
+        kos::function set = yarn.new_function<void (*)(const std::string&), set_global>();
 #endif
         set("some string");
         TEST(global_str == "some string");
@@ -376,17 +376,17 @@ try {
 
     {
         test_class        myobj(42, "42");
-        kos::object       o  = frame.new_object(&myobj);
+        kos::object       o  = yarn.new_object(&myobj);
 #ifdef KOS_CPP11
-        kos::function fa = frame.NEW_FUNCTION(&test_class::get_a);
-        kos::function fb = frame.NEW_FUNCTION(&test_class::get_b);
-        kos::function fx = frame.NEW_FUNCTION(&test_class::add_a);
+        kos::function fa = yarn.NEW_FUNCTION(&test_class::get_a);
+        kos::function fb = yarn.NEW_FUNCTION(&test_class::get_b);
+        kos::function fx = yarn.NEW_FUNCTION(&test_class::add_a);
 #else
-        kos::function fa = frame.new_function<int                (test_class::*)() const,    &test_class::get_a>();
-        kos::function fb = frame.new_function<const std::string& (test_class::*)() const,    &test_class::get_b>();
-        kos::function fx = frame.new_function<int64_t            (test_class::*)(bool, int), &test_class::add_a>();
+        kos::function fa = yarn.new_function<int                (test_class::*)() const,    &test_class::get_a>();
+        kos::function fb = yarn.new_function<const std::string& (test_class::*)() const,    &test_class::get_b>();
+        kos::function fx = yarn.new_function<int64_t            (test_class::*)(bool, int), &test_class::add_a>();
 #endif
-        kos::function fy = from_object_ptr(frame, fx);
+        kos::function fy = from_object_ptr(yarn, fx);
 
         const int a = fa.apply(o);
         TEST(a == 42);
@@ -403,12 +403,12 @@ try {
     }
 
     {
-        kos::object o = frame.new_object();
+        kos::object o = yarn.new_object();
         o["i"] = 1.5;
         o["f"] = int64_t(1) << 32;
         o["s"] = "abc";
 #ifdef KOS_CPP11
-        o["a"] = frame.make_array(true, 2, 3, 4);
+        o["a"] = yarn.make_array(true, 2, 3, 4);
 #endif
 
         const double i = o["i"];
@@ -431,7 +431,7 @@ try {
     }
 
     {
-        kos::object o = frame.new_object();
+        kos::object o = yarn.new_object();
         o["1"] = 1;
         o["2"] = 2;
         o["3"] = 3;
@@ -480,10 +480,10 @@ try {
     {
         bool exception = false;
         try {
-            kos::object o = frame.new_object();
+            kos::object o = yarn.new_object();
             o["value"] = "hello, world!";
-            KOS_raise_exception(frame, o);
-            throw kos::exception(frame);
+            KOS_raise_exception(yarn, o);
+            throw kos::exception(yarn);
         }
         catch (const kos::exception& e) {
             if (std::string(e.what()) == "hello, world!")
@@ -493,7 +493,7 @@ try {
     }
 
     {
-        kos::function f = frame.new_function<void (*)(const std::string&), throw_string>();
+        kos::function f = yarn.new_function<void (*)(const std::string&), throw_string>();
 
         kos::void_type v = f("");
         TEST(v.type() == OBJ_VOID);
@@ -511,15 +511,15 @@ try {
     }
 
     {
-        kos::string name = to_object_ptr(frame, "my_global");
+        kos::string name = to_object_ptr(yarn, "my_global");
 
         /* TODO replace this with a new module object */
         KOS_OBJ_ID module = static_cast<KOS_CONTEXT*>(ctx)->modules.init_module;
 
-        frame.add_global(module, name, TO_SMALL_INT(42));
+        yarn.add_global(module, name, TO_SMALL_INT(42));
 
         unsigned idx = ~0U;
-        kos::integer value = frame.get_global(module, name, &idx);
+        kos::integer value = yarn.get_global(module, name, &idx);
 
         TEST(idx == 0);
         TEST(value == 42);

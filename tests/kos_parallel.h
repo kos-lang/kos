@@ -25,8 +25,8 @@
 #include <stdlib.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(frame)); KOS_clear_exception(frame); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(frame))
+#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(yarn)); KOS_clear_exception(yarn); } while (0)
+#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(yarn))
 
 static int _get_num_cpus(void)
 {

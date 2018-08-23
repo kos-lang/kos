@@ -223,12 +223,12 @@ enum _KOS_IMPORT_TYPE {
     KOS_IMPORT_DIRECT
 };
 
-typedef int (*KOS_COMP_IMPORT_MODULE)(void       *vframe,
+typedef int (*KOS_COMP_IMPORT_MODULE)(void       *yarn,
                                       const char *name,
                                       unsigned    length,
                                       int        *module_idx);
 
-typedef int (*KOS_COMP_GET_GLOBAL_IDX)(void       *vframe,
+typedef int (*KOS_COMP_GET_GLOBAL_IDX)(void       *yarn,
                                        int         module_idx,
                                        const char *name,
                                        unsigned    length,
@@ -240,7 +240,7 @@ typedef int (*KOS_COMP_WALL_GLOBALS_CALLBACK)(const char *global_name,
                                               int         global_idx,
                                               void       *cookie);
 
-typedef int (*KOS_COMP_WALK_GLOBALS)(void                          *vframe,
+typedef int (*KOS_COMP_WALK_GLOBALS)(void                          *yarn,
                                      int                            module_idx,
                                      KOS_COMP_WALL_GLOBALS_CALLBACK callback,
                                      void                          *cookie);
@@ -265,7 +265,7 @@ struct _KOS_COMP_UNIT {
     struct _KOS_VAR            *globals;
     int                         num_globals;
 
-    void                       *frame;
+    void                       *yarn;
     KOS_COMP_IMPORT_MODULE      import_module;
     KOS_COMP_GET_GLOBAL_IDX     get_global_idx;
     KOS_COMP_WALK_GLOBALS       walk_globals;

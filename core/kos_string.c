@@ -55,7 +55,7 @@ static const char str_err_too_many_repeats[]  = "repeated string too long";
 #define _override_elem_size(size) do { } while (0)
 #endif
 
-static KOS_STRING *_new_empty_string(KOS_FRAME              frame,
+static KOS_STRING *_new_empty_string(KOS_YARN               yarn,
                                      unsigned               length,
                                      enum _KOS_STRING_FLAGS elem_size)
 {
@@ -64,7 +64,7 @@ static KOS_STRING *_new_empty_string(KOS_FRAME              frame,
     assert(length <= 0xFFFFU);
     assert(length > 0U);
 
-    str = (KOS_STRING *)_KOS_alloc_object(frame,
+    str = (KOS_STRING *)_KOS_alloc_object(yarn,
                                           KOS_ALLOC_DEFAULT,
                                           OBJ_STRING,
                                           sizeof(KOS_STR_HEADER) + (length << elem_size));
@@ -79,7 +79,7 @@ static KOS_STRING *_new_empty_string(KOS_FRAME              frame,
     return str;
 }
 
-static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
+static KOS_OBJ_ID _new_string(KOS_YARN              yarn,
                               const char           *s,
                               unsigned              length,
                               enum _KOS_UTF8_ESCAPE escape)
@@ -104,13 +104,13 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
 
             _override_elem_size(elem_size);
 
-            str = (KOS_STRING *)_KOS_alloc_object(frame,
+            str = (KOS_STRING *)_KOS_alloc_object(yarn,
                                                   KOS_ALLOC_DEFAULT,
                                                   OBJ_STRING,
                                                   sizeof(KOS_STR_HEADER) + (length << elem_size));
         }
         else {
-            KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
+            KOS_raise_exception_cstring(yarn, str_err_invalid_utf8);
             str = 0;
         }
 
@@ -128,59 +128,59 @@ static KOS_OBJ_ID _new_string(KOS_FRAME             frame,
 
             if (elem_size == KOS_STRING_ELEM_8) {
                 if (KOS_SUCCESS != _KOS_utf8_decode_8(s, length, escape, (uint8_t *)ptr)) {
-                    KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
+                    KOS_raise_exception_cstring(yarn, str_err_invalid_utf8);
                     str = 0; /* object is garbage-collected */
                 }
             }
             else if (elem_size == KOS_STRING_ELEM_16) {
                 if (KOS_SUCCESS != _KOS_utf8_decode_16(s, length, escape, (uint16_t *)ptr)) {
-                    KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
+                    KOS_raise_exception_cstring(yarn, str_err_invalid_utf8);
                     str = 0; /* object is garbage-collected */
                 }
             }
             else {
                 if (KOS_SUCCESS != _KOS_utf8_decode_32(s, length, escape, (uint32_t *)ptr)) {
-                    KOS_raise_exception_cstring(frame, str_err_invalid_utf8);
+                    KOS_raise_exception_cstring(yarn, str_err_invalid_utf8);
                     str = 0; /* object is garbage-collected */
                 }
             }
         }
     }
     else
-        str = OBJPTR(STRING, frame->ctx->empty_string);
+        str = OBJPTR(STRING, yarn->ctx->empty_string);
 
     return OBJID(STRING, str);
 }
 
-KOS_OBJ_ID KOS_new_cstring(KOS_FRAME frame, const char *utf8_str)
+KOS_OBJ_ID KOS_new_cstring(KOS_YARN yarn, const char *utf8_str)
 {
-    return _new_string(frame, utf8_str, utf8_str ? (unsigned)strlen(utf8_str) : 0U, KOS_UTF8_NO_ESCAPE);
+    return _new_string(yarn, utf8_str, utf8_str ? (unsigned)strlen(utf8_str) : 0U, KOS_UTF8_NO_ESCAPE);
 }
 
-KOS_OBJ_ID KOS_new_string(KOS_FRAME frame, const char *utf8_str, unsigned length)
+KOS_OBJ_ID KOS_new_string(KOS_YARN yarn, const char *utf8_str, unsigned length)
 {
-    return _new_string(frame, utf8_str, length, KOS_UTF8_NO_ESCAPE);
+    return _new_string(yarn, utf8_str, length, KOS_UTF8_NO_ESCAPE);
 }
 
-KOS_OBJ_ID KOS_new_string_esc(KOS_FRAME frame, const char *utf8_str, unsigned length)
+KOS_OBJ_ID KOS_new_string_esc(KOS_YARN yarn, const char *utf8_str, unsigned length)
 {
-    return _new_string(frame, utf8_str, length, KOS_UTF8_WITH_ESCAPE);
+    return _new_string(yarn, utf8_str, length, KOS_UTF8_WITH_ESCAPE);
 }
 
-KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_FRAME   frame,
+KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_YARN    yarn,
                                        const char *ascii_str)
 {
-    return KOS_new_const_string(frame, ascii_str, ascii_str ? (unsigned)strlen(ascii_str) : 0U, KOS_STRING_ELEM_8);
+    return KOS_new_const_string(yarn, ascii_str, ascii_str ? (unsigned)strlen(ascii_str) : 0U, KOS_STRING_ELEM_8);
 }
 
-KOS_OBJ_ID KOS_new_const_ascii_string(KOS_FRAME   frame,
+KOS_OBJ_ID KOS_new_const_ascii_string(KOS_YARN    yarn,
                                       const char *ascii_str,
                                       unsigned    length)
 {
-    return KOS_new_const_string(frame, ascii_str, length, KOS_STRING_ELEM_8);
+    return KOS_new_const_string(yarn, ascii_str, length, KOS_STRING_ELEM_8);
 }
 
-KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
+KOS_OBJ_ID KOS_new_const_string(KOS_YARN               yarn,
                                 const void            *str_data,
                                 unsigned               length,
                                 enum _KOS_STRING_FLAGS elem_size)
@@ -191,7 +191,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
     assert(elem_size <= KOS_STRING_ELEM_32);
 
     if (length) {
-        str = (KOS_STRING *)_KOS_alloc_object(frame,
+        str = (KOS_STRING *)_KOS_alloc_object(yarn,
                                               KOS_ALLOC_DEFAULT,
                                               OBJ_STRING,
                                               sizeof(struct _KOS_STRING_PTR));
@@ -206,12 +206,12 @@ KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
         }
     }
     else
-        str = OBJPTR(STRING, frame->ctx->empty_string);
+        str = OBJPTR(STRING, yarn->ctx->empty_string);
 
     return OBJID(STRING, str);
 }
 
-KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_new_string_from_codes(KOS_YARN   yarn,
                                      KOS_OBJ_ID codes)
 {
     int                     error     = KOS_SUCCESS;
@@ -240,7 +240,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
             if ( ! IS_NUMERIC_OBJ(elem))
                 RAISE_EXCEPTION(str_err_invalid_char_code);
 
-            TRY(KOS_get_integer(frame, elem, &code));
+            TRY(KOS_get_integer(yarn, elem, &code));
 
             if (code < 0 || code > 0x1FFFFF)
                 RAISE_EXCEPTION(str_err_invalid_char_code);
@@ -255,12 +255,12 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
 
         _override_elem_size(elem_size);
 
-        ret = _new_empty_string(frame, length, elem_size);
+        ret = _new_empty_string(yarn, length, elem_size);
         if ( ! ret)
             goto _error;
     }
     else
-        ret = OBJPTR(STRING, frame->ctx->empty_string);
+        ret = OBJPTR(STRING, yarn->ctx->empty_string);
 
     str_buf = (void *)_KOS_get_string_buffer(ret);
 
@@ -272,7 +272,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
                 const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
                 int64_t          code;
 
-                TRY(KOS_get_integer(frame, elem, &code));
+                TRY(KOS_get_integer(yarn, elem, &code));
 
                 ((uint8_t *)str_buf)[i] = (uint8_t)(uint64_t)code;
             }
@@ -286,7 +286,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
                 const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
                 int64_t          code;
 
-                TRY(KOS_get_integer(frame, elem, &code));
+                TRY(KOS_get_integer(yarn, elem, &code));
 
                 ((uint16_t *)str_buf)[i] = (uint16_t)(uint64_t)code;
             }
@@ -302,7 +302,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
                 const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
                 int64_t          code;
 
-                TRY(KOS_get_integer(frame, elem, &code));
+                TRY(KOS_get_integer(yarn, elem, &code));
 
                 ((uint32_t *)str_buf)[i] = (uint32_t)(uint64_t)code;
             }
@@ -378,7 +378,7 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
     return num_out;
 }
 
-int KOS_string_to_cstr_vec(KOS_FRAME           frame,
+int KOS_string_to_cstr_vec(KOS_YARN            yarn,
                            KOS_OBJ_ID          obj_id,
                            struct _KOS_VECTOR *str_vec)
 {
@@ -388,7 +388,7 @@ int KOS_string_to_cstr_vec(KOS_FRAME           frame,
     assert( ! IS_BAD_PTR(obj_id));
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
-        KOS_raise_exception_cstring(frame, str_err_not_string);
+        KOS_raise_exception_cstring(yarn, str_err_not_string);
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -398,7 +398,7 @@ int KOS_string_to_cstr_vec(KOS_FRAME           frame,
         assert(str_len > 0);
 
         if (str_len == ~0U) {
-            KOS_raise_exception_cstring(frame, str_err_invalid_string);
+            KOS_raise_exception_cstring(yarn, str_err_invalid_string);
             return KOS_ERROR_EXCEPTION;
         }
     }
@@ -406,7 +406,7 @@ int KOS_string_to_cstr_vec(KOS_FRAME           frame,
     error = _KOS_vector_resize(str_vec, str_len+1);
 
     if (error) {
-        KOS_raise_exception_cstring(frame, str_err_out_of_memory);
+        KOS_raise_exception_cstring(yarn, str_err_out_of_memory);
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -531,17 +531,17 @@ static void _init_empty_string(KOS_STRING *dest,
     }
 }
 
-KOS_OBJ_ID KOS_string_add(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_add(KOS_YARN   yarn,
                           KOS_OBJ_ID obj_id_a,
                           KOS_OBJ_ID obj_id_b)
 {
     KOS_ATOMIC(KOS_OBJ_ID) array[2];
     array[0] = obj_id_a;
     array[1] = obj_id_b;
-    return KOS_string_add_many(frame, array, 2);
+    return KOS_string_add_many(yarn, array, 2);
 }
 
-KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
+KOS_OBJ_ID KOS_string_add_many(KOS_YARN                yarn,
                                KOS_ATOMIC(KOS_OBJ_ID) *obj_id_array,
                                unsigned                num_strings)
 {
@@ -558,7 +558,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
         KOS_ATOMIC(KOS_OBJ_ID) *cur_ptr;
         KOS_OBJ_ID              non_0_str = KOS_VOID;
 
-        new_str = OBJPTR(STRING, frame->ctx->empty_string);
+        new_str = OBJPTR(STRING, yarn->ctx->empty_string);
 
         for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
             KOS_OBJ_ID             cur_str = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
@@ -568,8 +568,8 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
             if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
                 new_str = 0;
                 new_len = 0;
-                KOS_raise_exception(frame, IS_BAD_PTR(cur_str) ?
-                        KOS_context_get_cstring(frame, str_err_null_pointer) : KOS_context_get_cstring(frame, str_err_not_string));
+                KOS_raise_exception(yarn, IS_BAD_PTR(cur_str) ?
+                        KOS_context_get_cstring(yarn, str_err_null_pointer) : KOS_context_get_cstring(yarn, str_err_not_string));
                 break;
             }
 
@@ -593,7 +593,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
         else if (new_len) {
             _override_elem_size(elem_size);
 
-            new_str = _new_empty_string(frame, new_len, elem_size);
+            new_str = _new_empty_string(yarn, new_len, elem_size);
 
             if (new_str) {
                 unsigned pos = 0;
@@ -611,7 +611,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
     return OBJID(STRING, new_str);
 }
 
-KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_slice(KOS_YARN   yarn,
                             KOS_OBJ_ID obj_id,
                             int64_t    begin,
                             int64_t    end)
@@ -619,8 +619,8 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
     KOS_STRING *new_str = 0;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(frame, IS_BAD_PTR(obj_id) ?
-                KOS_context_get_cstring(frame, str_err_null_pointer): KOS_context_get_cstring(frame, str_err_not_string));
+        KOS_raise_exception(yarn, IS_BAD_PTR(obj_id) ?
+                KOS_context_get_cstring(yarn, str_err_null_pointer): KOS_context_get_cstring(yarn, str_err_not_string));
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -657,15 +657,15 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
                 buf = (const uint8_t *)_KOS_get_string_buffer(str) + (begin << elem_size);
 
                 if ((new_len << elem_size) <= 2 * sizeof(void *)) {
-                    new_str = _new_empty_string(frame, new_len, elem_size);
+                    new_str = _new_empty_string(yarn, new_len, elem_size);
                     if (new_str)
                         memcpy((void *)_KOS_get_string_buffer(new_str), buf, new_len << elem_size);
                 }
                 else if ( ! (str->header.flags & ~KOS_STRING_ELEM_MASK))
-                    new_str = OBJPTR(STRING, KOS_new_const_string(frame, buf, new_len, elem_size));
+                    new_str = OBJPTR(STRING, KOS_new_const_string(yarn, buf, new_len, elem_size));
                 else {
 
-                    new_str = (KOS_STRING *)_KOS_alloc_object(frame,
+                    new_str = (KOS_STRING *)_KOS_alloc_object(yarn,
                                                               KOS_ALLOC_DEFAULT,
                                                               OBJ_STRING,
                                                               sizeof(struct _KOS_STRING_REF));
@@ -684,25 +684,25 @@ KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
                 }
             }
             else
-                new_str = OBJPTR(STRING, frame->ctx->empty_string);
+                new_str = OBJPTR(STRING, yarn->ctx->empty_string);
         }
         else
-            new_str = OBJPTR(STRING, frame->ctx->empty_string);
+            new_str = OBJPTR(STRING, yarn->ctx->empty_string);
     }
 
     return OBJID(STRING, new_str);
 }
 
-KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_get_char(KOS_YARN   yarn,
                                KOS_OBJ_ID obj_id,
                                int        idx)
 {
     KOS_STRING *new_str = 0;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(frame, IS_BAD_PTR(obj_id)
-                ? KOS_context_get_cstring(frame, str_err_null_pointer)
-                : KOS_context_get_cstring(frame, str_err_not_string));
+        KOS_raise_exception(yarn, IS_BAD_PTR(obj_id)
+                ? KOS_context_get_cstring(yarn, str_err_null_pointer)
+                : KOS_context_get_cstring(yarn, str_err_not_string));
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -715,7 +715,7 @@ KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
 
             const uint8_t *buf = (const uint8_t *)_KOS_get_string_buffer(str) + (idx << elem_size);
 
-            new_str = _new_empty_string(frame, 1, elem_size);
+            new_str = _new_empty_string(yarn, 1, elem_size);
 
             if (new_str) {
 
@@ -739,22 +739,22 @@ KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
             }
         }
         else
-            KOS_raise_exception_cstring(frame, str_err_invalid_index);
+            KOS_raise_exception_cstring(yarn, str_err_invalid_index);
     }
 
     return OBJID(STRING, new_str);
 }
 
-unsigned KOS_string_get_char_code(KOS_FRAME  frame,
+unsigned KOS_string_get_char_code(KOS_YARN   yarn,
                                   KOS_OBJ_ID obj_id,
                                   int        idx)
 {
     uint32_t code = ~0U;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(frame, IS_BAD_PTR(obj_id)
-                ? KOS_context_get_cstring(frame, str_err_null_pointer)
-                : KOS_context_get_cstring(frame, str_err_not_string));
+        KOS_raise_exception(yarn, IS_BAD_PTR(obj_id)
+                ? KOS_context_get_cstring(yarn, str_err_null_pointer)
+                : KOS_context_get_cstring(yarn, str_err_not_string));
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -783,7 +783,7 @@ unsigned KOS_string_get_char_code(KOS_FRAME  frame,
             }
         }
         else
-            KOS_raise_exception_cstring(frame, str_err_invalid_index);
+            KOS_raise_exception_cstring(yarn, str_err_invalid_index);
     }
 
     return code;
@@ -1108,7 +1108,7 @@ static void _string_find_brute_force(KOS_OBJ_ID         obj_id_text,
     *pos = -1;
 }
 
-int KOS_string_find(KOS_FRAME          frame,
+int KOS_string_find(KOS_YARN           yarn,
                     KOS_OBJ_ID         obj_id_text,
                     KOS_OBJ_ID         obj_id_pattern,
                     enum _KOS_FIND_DIR reverse,
@@ -1121,7 +1121,7 @@ int KOS_string_find(KOS_FRAME          frame,
     if (GET_OBJ_TYPE(obj_id_text) != OBJ_STRING ||
         GET_OBJ_TYPE(obj_id_pattern) != OBJ_STRING) {
 
-        KOS_raise_exception_cstring(frame, str_err_not_string);
+        KOS_raise_exception_cstring(yarn, str_err_not_string);
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -1139,7 +1139,7 @@ int KOS_string_find(KOS_FRAME          frame,
     }
 
     if (pattern_len == 1)
-        return KOS_string_scan(frame, obj_id_text, obj_id_pattern, reverse, KOS_SCAN_INCLUDE, pos);
+        return KOS_string_scan(yarn, obj_id_text, obj_id_pattern, reverse, KOS_SCAN_INCLUDE, pos);
 
     /* TODO Optimize */
 
@@ -1147,7 +1147,7 @@ int KOS_string_find(KOS_FRAME          frame,
     return KOS_SUCCESS;
 }
 
-int KOS_string_scan(KOS_FRAME              frame,
+int KOS_string_scan(KOS_YARN               yarn,
                     KOS_OBJ_ID             obj_id_text,
                     KOS_OBJ_ID             obj_id_pattern,
                     enum _KOS_FIND_DIR     reverse,
@@ -1163,7 +1163,7 @@ int KOS_string_scan(KOS_FRAME              frame,
     if (GET_OBJ_TYPE(obj_id_text) != OBJ_STRING ||
         GET_OBJ_TYPE(obj_id_pattern) != OBJ_STRING) {
 
-        KOS_raise_exception_cstring(frame, str_err_not_string);
+        KOS_raise_exception_cstring(yarn, str_err_not_string);
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -1289,7 +1289,7 @@ int KOS_string_scan(KOS_FRAME              frame,
     }
 }
 
-KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_reverse(KOS_YARN   yarn,
                               KOS_OBJ_ID obj_id)
 {
     KOS_STRING *ret;
@@ -1297,7 +1297,7 @@ KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
     unsigned    len;
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
-        KOS_raise_exception_cstring(frame, str_err_not_string);
+        KOS_raise_exception_cstring(yarn, str_err_not_string);
         return KOS_BADPTR;
     }
 
@@ -1308,7 +1308,7 @@ KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
 
     str = OBJPTR(STRING, obj_id);
 
-    ret = _new_empty_string(frame, len, _KOS_get_string_elem_size(str));
+    ret = _new_empty_string(yarn, len, _KOS_get_string_elem_size(str));
     if ( ! ret)
         return KOS_BADPTR;
 
@@ -1346,7 +1346,7 @@ KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
     return OBJID(STRING, ret);
 }
 
-KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_repeat(KOS_YARN   yarn,
                              KOS_OBJ_ID obj_id,
                              unsigned   num_repeat)
 {
@@ -1359,26 +1359,26 @@ KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
     uint8_t               *end_buf;
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
-        KOS_raise_exception_cstring(frame, str_err_not_string);
+        KOS_raise_exception_cstring(yarn, str_err_not_string);
         return KOS_BADPTR;
     }
 
     len = KOS_get_string_length(obj_id);
 
     if (len == 0 || num_repeat == 0)
-        return frame->ctx->empty_string;
+        return yarn->ctx->empty_string;
 
     if (num_repeat == 1)
         return obj_id;
 
     if (num_repeat > 0xFFFFU || (len * num_repeat) > 0xFFFFU) {
-        KOS_raise_exception_cstring(frame, str_err_too_many_repeats);
+        KOS_raise_exception_cstring(yarn, str_err_too_many_repeats);
         return KOS_BADPTR;
     }
 
     in_str    = OBJPTR(STRING, obj_id);
     elem_size = _KOS_get_string_elem_size(in_str);
-    new_str   = _new_empty_string(frame, len * num_repeat, elem_size);
+    new_str   = _new_empty_string(yarn, len * num_repeat, elem_size);
     if ( ! new_str)
         return KOS_BADPTR;
 

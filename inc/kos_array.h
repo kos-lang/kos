@@ -46,32 +46,32 @@ static inline uint32_t KOS_get_array_size(KOS_OBJ_ID obj_id)
 extern "C" {
 #endif
 
-KOS_OBJ_ID KOS_new_array(KOS_FRAME frame,
+KOS_OBJ_ID KOS_new_array(KOS_YARN  yarn,
                          uint32_t  size);
 
-KOS_OBJ_ID KOS_array_read(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_array_read(KOS_YARN   yarn,
                           KOS_OBJ_ID obj_id,
                           int        idx);
 
-int KOS_array_write(KOS_FRAME  frame,
+int KOS_array_write(KOS_YARN   yarn,
                     KOS_OBJ_ID obj_id,
                     int        idx,
                     KOS_OBJ_ID value);
 
-int KOS_array_reserve(KOS_FRAME  frame,
+int KOS_array_reserve(KOS_YARN   yarn,
                       KOS_OBJ_ID obj_id,
                       uint32_t   new_capacity);
 
-int KOS_array_resize(KOS_FRAME  frame,
+int KOS_array_resize(KOS_YARN   yarn,
                      KOS_OBJ_ID obj_id,
                      uint32_t   size);
 
-KOS_OBJ_ID KOS_array_slice(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_array_slice(KOS_YARN   yarn,
                            KOS_OBJ_ID obj_id,
                            int64_t    begin,
                            int64_t    end);
 
-int KOS_array_insert(KOS_FRAME  frame,
+int KOS_array_insert(KOS_YARN   yarn,
                      KOS_OBJ_ID dest_obj_id,
                      int64_t    dest_begin,
                      int64_t    dest_end,
@@ -79,15 +79,15 @@ int KOS_array_insert(KOS_FRAME  frame,
                      int64_t    src_begin,
                      int64_t    src_end);
 
-int KOS_array_push(KOS_FRAME  frame,
+int KOS_array_push(KOS_YARN   yarn,
                    KOS_OBJ_ID obj_id,
                    KOS_OBJ_ID value,
                    uint32_t  *idx);
 
-KOS_OBJ_ID KOS_array_pop(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_array_pop(KOS_YARN   yarn,
                          KOS_OBJ_ID obj_id);
 
-int KOS_array_fill(KOS_FRAME  frame,
+int KOS_array_fill(KOS_YARN   yarn,
                    KOS_OBJ_ID obj_id,
                    int64_t    begin,
                    int64_t    end,

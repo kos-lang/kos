@@ -47,60 +47,60 @@ static inline unsigned KOS_get_string_length(KOS_OBJ_ID obj_id)
 extern "C" {
 #endif
 
-KOS_OBJ_ID KOS_new_cstring(KOS_FRAME   frame,
+KOS_OBJ_ID KOS_new_cstring(KOS_YARN    yarn,
                            const char *utf8_str);
 
-KOS_OBJ_ID KOS_new_string(KOS_FRAME   frame,
+KOS_OBJ_ID KOS_new_string(KOS_YARN    yarn,
                           const char *utf8_str,
                           unsigned    length);
 
-KOS_OBJ_ID KOS_new_string_esc(KOS_FRAME   frame,
+KOS_OBJ_ID KOS_new_string_esc(KOS_YARN    yarn,
                               const char *utf8_str,
                               unsigned    length);
 
-KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_FRAME   frame,
+KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_YARN    yarn,
                                        const char *ascii_str);
 
-KOS_OBJ_ID KOS_new_const_ascii_string(KOS_FRAME   frame,
+KOS_OBJ_ID KOS_new_const_ascii_string(KOS_YARN    yarn,
                                       const char *ascii_str,
                                       unsigned    length);
 
-KOS_OBJ_ID KOS_new_const_string(KOS_FRAME              frame,
+KOS_OBJ_ID KOS_new_const_string(KOS_YARN               yarn,
                                 const void            *str_data,
                                 unsigned               length,
                                 enum _KOS_STRING_FLAGS elem_size);
 
-KOS_OBJ_ID KOS_new_string_from_codes(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_new_string_from_codes(KOS_YARN   yarn,
                                      KOS_OBJ_ID codes);
 
 unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
                             void      *buf,
                             unsigned   buf_size);
 
-int KOS_string_to_cstr_vec(KOS_FRAME           frame,
+int KOS_string_to_cstr_vec(KOS_YARN            yarn,
                            KOS_OBJ_ID          obj_id,
                            struct _KOS_VECTOR *str_vec);
 
 uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id);
 
-KOS_OBJ_ID KOS_string_add(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_add(KOS_YARN   yarn,
                           KOS_OBJ_ID obj_id_a,
                           KOS_OBJ_ID obj_id_b);
 
-KOS_OBJ_ID KOS_string_add_many(KOS_FRAME               frame,
+KOS_OBJ_ID KOS_string_add_many(KOS_YARN                yarn,
                                KOS_ATOMIC(KOS_OBJ_ID) *obj_id_array,
                                unsigned                num_strings);
 
-KOS_OBJ_ID KOS_string_slice(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_slice(KOS_YARN   yarn,
                             KOS_OBJ_ID obj_id,
                             int64_t    begin,
                             int64_t    end);
 
-KOS_OBJ_ID KOS_string_get_char(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_get_char(KOS_YARN   yarn,
                                KOS_OBJ_ID obj_id,
                                int        idx);
 
-unsigned KOS_string_get_char_code(KOS_FRAME  frame,
+unsigned KOS_string_get_char_code(KOS_YARN   yarn,
                                   KOS_OBJ_ID obj_id,
                                   int        idx);
 
@@ -121,7 +121,7 @@ enum _KOS_FIND_DIR {
 
 /* *pos contains starting search position on input and found position on output.
  * If pattern is not found, returns KOS_SUCCESS and sets *pos to -1. */
-int KOS_string_find(KOS_FRAME          frame,
+int KOS_string_find(KOS_YARN           yarn,
                     KOS_OBJ_ID         obj_id_text,
                     KOS_OBJ_ID         obj_id_pattern,
                     enum _KOS_FIND_DIR reverse,
@@ -134,17 +134,17 @@ enum _KOS_SCAN_INCLUDE {
 
 /* *pos contains starting search position on input and found position on output.
  * If pattern is not found, returns KOS_SUCCESS and sets *pos to -1. */
-int KOS_string_scan(KOS_FRAME              frame,
+int KOS_string_scan(KOS_YARN               yarn,
                     KOS_OBJ_ID             obj_id_text,
                     KOS_OBJ_ID             obj_id_pattern,
                     enum _KOS_FIND_DIR     reverse,
                     enum _KOS_SCAN_INCLUDE include,
                     int                   *pos);
 
-KOS_OBJ_ID KOS_string_reverse(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_reverse(KOS_YARN   yarn,
                               KOS_OBJ_ID obj_id);
 
-KOS_OBJ_ID KOS_string_repeat(KOS_FRAME  frame,
+KOS_OBJ_ID KOS_string_repeat(KOS_YARN   yarn,
                              KOS_OBJ_ID obj_id,
                              unsigned   num_repeat);
 

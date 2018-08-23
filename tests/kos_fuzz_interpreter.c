@@ -33,19 +33,19 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     int         error;
     KOS_CONTEXT ctx;
-    KOS_FRAME   frame;
+    KOS_YARN    yarn;
 
-    error = KOS_context_init(&ctx, &frame);
+    error = KOS_context_init(&ctx, &yarn);
 
     if ( ! error) {
 
-        error = KOS_context_add_default_path(frame, 0);
+        error = KOS_context_add_default_path(yarn, 0);
 
         if ( ! error)
-            error = KOS_load_module_from_memory(frame, "lang", (const char *)data, (unsigned)size);
+            error = KOS_load_module_from_memory(yarn, "lang", (const char *)data, (unsigned)size);
 
         if (error == KOS_ERROR_EXCEPTION)
-            KOS_print_exception(frame);
+            KOS_print_exception(yarn);
         else if (error) {
             assert(error == KOS_ERROR_OUT_OF_MEMORY);
             fprintf(stderr, "Out of memory\n");

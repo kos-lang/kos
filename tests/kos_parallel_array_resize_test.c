@@ -46,7 +46,7 @@ struct THREAD_DATA {
     KOS_ATOMIC(uint32_t) num_loops;
 };
 
-static int _run_test(KOS_FRAME frame, struct THREAD_DATA *data)
+static int _run_test(KOS_YARN yarn, struct THREAD_DATA *data)
 {
     struct TEST_DATA *test  = data->test;
     uint32_t          stage = 0;
@@ -76,25 +76,25 @@ static int _run_test(KOS_FRAME frame, struct THREAD_DATA *data)
         for (idx = first_idx; idx < end_idx; idx++) {
             const KOS_OBJ_ID value = TO_SMALL_INT(idx);
 
-            TEST(KOS_array_write(frame, object, idx, value) == KOS_SUCCESS);
+            TEST(KOS_array_write(yarn, object, idx, value) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (idx = end_idx; idx > first_idx; idx--) {
             const KOS_OBJ_ID expected = TO_SMALL_INT(idx-1);
-            const KOS_OBJ_ID actual   = KOS_array_read(frame, object, idx-1);
+            const KOS_OBJ_ID actual   = KOS_array_read(yarn, object, idx-1);
             const KOS_OBJ_ID new_val  = TO_SMALL_INT(-(idx-1));
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
 
-            TEST(KOS_array_write(frame, object, idx-1, new_val) == KOS_SUCCESS);
+            TEST(KOS_array_write(yarn, object, idx-1, new_val) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (idx = first_idx; idx < end_idx; idx++) {
             const KOS_OBJ_ID expected = TO_SMALL_INT(-idx);
-            const KOS_OBJ_ID actual   = KOS_array_read(frame, object, idx);
+            const KOS_OBJ_ID actual   = KOS_array_read(yarn, object, idx);
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
@@ -107,12 +107,12 @@ static int _run_test(KOS_FRAME frame, struct THREAD_DATA *data)
     return 0;
 }
 
-static void _test_thread_func(KOS_FRAME frame,
-                              void     *cookie)
+static void _test_thread_func(KOS_YARN yarn,
+                              void    *cookie)
 {
     struct THREAD_DATA *test  = (struct THREAD_DATA *)cookie;
 
-    if (_run_test(frame, test)) {
+    if (_run_test(yarn, test)) {
         KOS_atomic_add_i32(test->test->done, 1);
         KOS_atomic_add_i32(test->test->error, 1);
     }
@@ -121,10 +121,10 @@ static void _test_thread_func(KOS_FRAME frame,
 int main(void)
 {
     KOS_CONTEXT ctx;
-    KOS_FRAME   frame;
+    KOS_YARN    yarn;
     const int   num_cpus = _get_num_cpus();
 
-    TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
+    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
 
     /************************************************************************/
     /* This test overwrites array indices from multiple threads while the array
@@ -149,7 +149,7 @@ int main(void)
 
         num_idcs = num_threads * max_idcs_per_th;
 
-        obj = KOS_new_array(frame, (uint32_t)num_idcs);
+        obj = KOS_new_array(yarn, (uint32_t)num_idcs);
         TEST( ! IS_BAD_PTR(obj));
 
         _KOS_vector_init(&mem_buf);
@@ -173,13 +173,13 @@ int main(void)
         data.error    = KOS_SUCCESS;
 
         for (i = 0; i < num_threads; i++)
-            TEST(_KOS_thread_create(frame, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+            TEST(_KOS_thread_create(yarn, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             KOS_atomic_add_i32(data.stage, 1);
 
             do {
-                TEST(_KOS_array_copy_storage(frame, obj) == KOS_SUCCESS);
+                TEST(_KOS_array_copy_storage(yarn, obj) == KOS_SUCCESS);
                 _KOS_yield();
             } while (KOS_atomic_read_u32(data.done) != (uint32_t)num_threads);
 
@@ -188,7 +188,7 @@ int main(void)
             TEST( ! data.error);
 
             for (i = 0; i < num_idcs; i++) {
-                KOS_OBJ_ID value = KOS_array_read(frame, obj, i);
+                KOS_OBJ_ID value = KOS_array_read(yarn, obj, i);
                 TEST_NO_EXCEPTION();
                 TEST(value == TO_SMALL_INT(-i));
             }
@@ -199,7 +199,7 @@ int main(void)
         KOS_atomic_full_barrier();
 
         for (i = 0; i < num_threads; i++) {
-            _KOS_thread_join(frame, threads[i]);
+            _KOS_thread_join(yarn, threads[i]);
             TEST_NO_EXCEPTION();
             TEST(KOS_atomic_read_u32(thread_cookies[i].num_loops) == (uint32_t)num_loops);
         }

@@ -60,7 +60,7 @@ typedef struct _KOS_OBJECT_STORAGE {
 
 void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype);
 
-int _KOS_object_copy_prop_table(KOS_FRAME  frame,
+int _KOS_object_copy_prop_table(KOS_YARN   yarn,
                                 KOS_OBJ_ID obj_id);
 
 int _KOS_is_truthy(KOS_OBJ_ID obj_id);
@@ -92,7 +92,7 @@ static inline KOS_ATOMIC(KOS_OBJ_ID) *_KOS_get_array_buffer(KOS_ARRAY *array)
 
 #endif
 
-int _KOS_array_copy_storage(KOS_FRAME  frame,
+int _KOS_array_copy_storage(KOS_YARN   yarn,
                             KOS_OBJ_ID obj_id);
 
 /*==========================================================================*/
@@ -133,15 +133,15 @@ static inline enum _KOS_STRING_FLAGS _KOS_get_string_elem_size(KOS_STRING *str)
 
 #define KOS_STACK_EXTRA 4U
 
-int _KOS_stack_push_function(KOS_FRAME  frame,
+int _KOS_stack_push_function(KOS_YARN   yarn,
                              KOS_OBJ_ID func_obj);
 
-int _KOS_stack_push_module(KOS_FRAME  frame,
+int _KOS_stack_push_module(KOS_YARN   yarn,
                            KOS_OBJ_ID module);
 
-void _KOS_stack_pop(KOS_FRAME frame);
+void _KOS_stack_pop(KOS_YARN yarn);
 
-void _KOS_wrap_exception(KOS_FRAME frame);
+void _KOS_wrap_exception(KOS_YARN yarn);
 
 /*==========================================================================*/
 /* KOS_MODULE                                                               */
@@ -153,7 +153,7 @@ struct _KOS_MODULE_INIT {
     KOS_BUILTIN_INIT           init;
 };
 
-KOS_OBJ_ID _KOS_module_import(KOS_FRAME   frame,
+KOS_OBJ_ID _KOS_module_import(KOS_YARN    yarn,
                               const char *module_name, /* Module name or path, ASCII or UTF-8    */
                               unsigned    name_size,   /* Length of module name or path in bytes */
                               const char *data,        /* Module data or 0 if load from file     */

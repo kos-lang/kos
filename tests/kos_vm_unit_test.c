@@ -89,7 +89,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     uint8_t            code[64]        = { 0 };
     uint32_t           parms[MAX_ARGS] = { 0 };
     struct _KOS_MODULE module;
-    KOS_FRAME          frame           = &ctx->threads.main_thread;
+    KOS_YARN           yarn            = &ctx->threads.main_thread;
     const char *       cstrings[]      = { "aaa", "bbb", "ccc" };
     KOS_OBJ_ID         strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
     uint8_t            regs            = 0;
@@ -101,7 +101,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
 
     memset(&module, 0, sizeof(module));
 
-    module.constants_storage = KOS_new_array(frame, MAX_ARGS + 3);
+    module.constants_storage = KOS_new_array(yarn, MAX_ARGS + 3);
     if (IS_BAD_PTR(module.constants_storage)) {
         printf("Failed: Unable to allocate constants!\n");
         return KOS_ERROR_EXCEPTION;
@@ -109,7 +109,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     module.constants = _KOS_get_array_buffer(OBJPTR(ARRAY, module.constants_storage));
 
     for (i = 0; i < 3; i++) {
-        KOS_OBJ_ID str = KOS_new_cstring(frame, cstrings[i]);
+        KOS_OBJ_ID str = KOS_new_cstring(yarn, cstrings[i]);
         if (IS_BAD_PTR(str)) {
             printf("Failed: Unable to allocate constants!\n");
             return KOS_ERROR_EXCEPTION;
@@ -165,7 +165,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                     code[words++] = (uint8_t)num_constants;
                     parms[i]      = regs++;
 
-                    value = KOS_new_int(frame, (int32_t)args[i].low);
+                    value = KOS_new_int(yarn, (int32_t)args[i].low);
                     if (IS_BAD_PTR(value)) {
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
@@ -181,7 +181,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 parms[i]      = regs++;
                 {
                     uint64_t   uvalue = (uint64_t)args[i].low + (((uint64_t)args[i].high) << 32);
-                    KOS_OBJ_ID value  = KOS_new_int(frame, (int64_t)uvalue);
+                    KOS_OBJ_ID value  = KOS_new_int(yarn, (int64_t)uvalue);
                     if (IS_BAD_PTR(value)) {
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
@@ -200,7 +200,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                     union _KOS_NUMERIC_VALUE num;
 
                     num.i = (int64_t)((uint64_t)args[i].low + (((uint64_t)args[i].high) << 32));
-                    value = KOS_new_float(frame, num.d);
+                    value = KOS_new_float(yarn, num.d);
                     if (IS_BAD_PTR(value)) {
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
@@ -221,7 +221,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 {
                     const int   idx  = (int)args[i].value - V_STR0;
                     const char* cstr = args[i].str ? args[i].str : cstrings[idx];
-                    KOS_OBJ_ID  str  = KOS_new_cstring(frame, cstr);
+                    KOS_OBJ_ID  str  = KOS_new_cstring(yarn, cstr);
                     if (IS_BAD_PTR(str)) {
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
@@ -254,7 +254,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
         }
     }
 
-    if (KOS_array_resize(frame, module.constants_storage, num_constants)) {
+    if (KOS_array_resize(yarn, module.constants_storage, num_constants)) {
         printf("Failed: Unable to allocate constants!\n");
         return KOS_ERROR_EXCEPTION;
     }
@@ -425,7 +425,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                 KOS_OBJ_ID expected;
                 const int  idx = (int)ret_val->value - V_STR0;
                 if (ret_val->str)
-                    expected = KOS_new_cstring(frame, ret_val->str);
+                    expected = KOS_new_cstring(yarn, ret_val->str);
                 else
                     expected = strings[idx];
                 if (IS_BAD_PTR(expected)) {
@@ -436,9 +436,9 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                     struct _KOS_VECTOR cstr;
 
                     _KOS_vector_init(&cstr);
-                    KOS_clear_exception(frame);
+                    KOS_clear_exception(yarn);
 
-                    error = KOS_string_to_cstr_vec(frame, expected, &cstr);
+                    error = KOS_string_to_cstr_vec(yarn, expected, &cstr);
                     if (error)
                         printf("Failed: line %d: expected string ?\n", line);
                     else
@@ -489,9 +489,9 @@ static int _test_instr(KOS_CONTEXT         *ctx,
 int main(void)
 {
     KOS_CONTEXT ctx;
-    KOS_FRAME   frame;
+    KOS_YARN    yarn;
 
-    TEST(KOS_context_init(&ctx, &frame) == KOS_SUCCESS);
+    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
 
     /*========================================================================*/
     /* LOAD.VOID */

@@ -53,7 +53,7 @@ static int _is_option(const char *arg,
 
 static void _print_usage(void);
 
-static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf);
+static int _run_interactive(KOS_YARN yarn, struct _KOS_VECTOR *buf);
 
 int main(int argc, char *argv[])
 {
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     int                interactive = -1;
     uint32_t           flags       = 0;
     KOS_CONTEXT        ctx;
-    KOS_FRAME          frame;
+    KOS_YARN           yarn;
     struct _KOS_VECTOR buf;
 
     _KOS_vector_init(&buf);
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    error = KOS_context_init(&ctx, &frame);
+    error = KOS_context_init(&ctx, &yarn);
 
     if (error) {
         fprintf(stderr, "Failed to initialize interpreter\n");
@@ -155,11 +155,11 @@ int main(int argc, char *argv[])
     ctx.flags = flags;
 
     /* Use executable path from OS to find modules */
-    error = KOS_context_add_default_path(frame, 0);
+    error = KOS_context_add_default_path(yarn, 0);
 
     /* Fallback: use argv[0] to find modules */
     if (error)
-        error = KOS_context_add_default_path(frame, argv[0]);
+        error = KOS_context_add_default_path(yarn, argv[0]);
 
     if (error) {
         fprintf(stderr, "Failed to setup module search paths\n");
@@ -173,17 +173,17 @@ int main(int argc, char *argv[])
 
         argv[i_first_arg - 1] = i_module ? argv[i_module] : &empty[0];
 
-        error = KOS_context_set_args(frame,
+        error = KOS_context_set_args(yarn,
                                      1 + argc - i_first_arg,
                                      (const char **)&argv[i_first_arg - 1]);
 
         argv[i_first_arg - 1] = saved;
     }
     else if (i_module)
-        error = KOS_context_set_args(frame, 1, (const char**)&argv[i_module]);
+        error = KOS_context_set_args(yarn, 1, (const char**)&argv[i_module]);
     else {
         const char *empty_ptr[] = { "" };
-        error = KOS_context_set_args(frame, 1, empty_ptr);
+        error = KOS_context_set_args(yarn, 1, empty_ptr);
     }
 
     if (error) {
@@ -202,21 +202,21 @@ int main(int argc, char *argv[])
 
         /* Load script from command line */
         if (is_script) {
-            error = KOS_load_module_from_memory(frame, str_cmdline, str_import_lang, sizeof(str_import_lang) - 1);
+            error = KOS_load_module_from_memory(yarn, str_cmdline, str_import_lang, sizeof(str_import_lang) - 1);
 
             if ( ! error) {
-                KOS_OBJ_ID ret = KOS_repl(frame, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
+                KOS_OBJ_ID ret = KOS_repl(yarn, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
                 if (IS_BAD_PTR(ret))
                     error = KOS_ERROR_EXCEPTION;
             }
         }
         /* Load script from a file */
         else
-            error = KOS_load_module(frame, argv[i_module]);
+            error = KOS_load_module(yarn, argv[i_module]);
     }
     else {
 
-        error = KOS_load_module_from_memory(frame, str_stdin, str_import_lang, sizeof(str_import_lang) - 1);
+        error = KOS_load_module_from_memory(yarn, str_stdin, str_import_lang, sizeof(str_import_lang) - 1);
 
         if ( ! error) {
 
@@ -225,11 +225,11 @@ int main(int argc, char *argv[])
 
             /* Load subsequent pieces of script from interactive prompt */
             if (interactive)
-                error = _run_interactive(frame, &buf);
+                error = _run_interactive(yarn, &buf);
 
             /* Load script from stdin */
             else {
-                KOS_OBJ_ID ret = KOS_repl_stdin(frame, str_stdin);
+                KOS_OBJ_ID ret = KOS_repl_stdin(yarn, str_stdin);
                 if (IS_BAD_PTR(ret))
                     error = KOS_ERROR_EXCEPTION;
             }
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
     }
 
     if (error == KOS_ERROR_EXCEPTION)
-        KOS_print_exception(frame);
+        KOS_print_exception(yarn);
     else if (error) {
         assert(error == KOS_ERROR_OUT_OF_MEMORY);
         fprintf(stderr, "Out of memory\n");
@@ -321,7 +321,7 @@ static int _enforce_eol(struct _KOS_VECTOR *buf)
     return KOS_SUCCESS;
 }
 
-static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
+static int _run_interactive(KOS_YARN yarn, struct _KOS_VECTOR *buf)
 {
     int                 error;
     struct _KOS_GETLINE state;
@@ -333,7 +333,7 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
-    print_args = KOS_new_array(frame, 1);
+    print_args = KOS_new_array(yarn, 1);
     TRY_OBJID(print_args);
 
     error = _KOS_getline_init(&state);
@@ -383,21 +383,21 @@ static int _run_interactive(KOS_FRAME frame, struct _KOS_VECTOR *buf)
         if ( ! buf->size)
             continue;
 
-        ret = KOS_repl(frame, str_stdin, buf->buffer, (unsigned)buf->size);
+        ret = KOS_repl(yarn, str_stdin, buf->buffer, (unsigned)buf->size);
         buf->size = 0;
 
         if (IS_BAD_PTR(ret)) {
-            KOS_print_exception(frame);
-            KOS_clear_exception(frame);
+            KOS_print_exception(yarn);
+            KOS_clear_exception(yarn);
             continue;
         }
 
         if ( ! IS_SMALL_INT(ret) && GET_OBJ_TYPE(ret) == OBJ_VOID)
             continue;
 
-        TRY(KOS_array_write(frame, print_args, 0, ret));
+        TRY(KOS_array_write(yarn, print_args, 0, ret));
 
-        TRY(KOS_print_to_cstr_vec(frame,
+        TRY(KOS_print_to_cstr_vec(yarn,
                                   print_args,
                                   KOS_QUOTE_STRINGS,
                                   buf,

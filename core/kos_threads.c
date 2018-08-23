@@ -123,9 +123,9 @@ struct _KOS_THREAD_OBJECT {
 
 static DWORD WINAPI _thread_proc(LPVOID thread_obj)
 {
-    KOS_THREAD_CONTEXT thread_ctx;
-    DWORD              ret        = 0;
-    int                unregister = 0;
+    struct _KOS_THREAD_CONTEXT thread_ctx;
+    DWORD                      ret        = 0;
+    int                        unregister = 0;
 
     if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS) {
         ((_KOS_THREAD)thread_obj)->proc(&thread_ctx, ((_KOS_THREAD)thread_obj)->cookie);
@@ -144,17 +144,17 @@ static DWORD WINAPI _thread_proc(LPVOID thread_obj)
     return ret;
 }
 
-int _KOS_thread_create(struct _KOS_THREAD_CONTEXT *frame,
-                       _KOS_THREAD_PROC            proc,
-                       void                       *cookie,
-                       _KOS_THREAD                *thread)
+int _KOS_thread_create(KOS_YARN         yarn,
+                       _KOS_THREAD_PROC proc,
+                       void            *cookie,
+                       _KOS_THREAD     *thread)
 {
     int         error      = KOS_SUCCESS;
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
         new_thread->thread_id = 0;
-        new_thread->ctx       = frame->ctx;
+        new_thread->ctx       = yarn->ctx;
         new_thread->proc      = proc;
         new_thread->cookie    = cookie;
         new_thread->exception = KOS_BADPTR;
@@ -171,7 +171,7 @@ int _KOS_thread_create(struct _KOS_THREAD_CONTEXT *frame,
 
         if (!new_thread->thread_handle) {
             _KOS_free(new_thread);
-            KOS_raise_exception_cstring(frame, str_err_thread);
+            KOS_raise_exception_cstring(yarn, str_err_thread);
             error = KOS_ERROR_EXCEPTION;
         }
         else
@@ -183,14 +183,14 @@ int _KOS_thread_create(struct _KOS_THREAD_CONTEXT *frame,
     return error;
 }
 
-int _KOS_thread_join(struct _KOS_THREAD_CONTEXT *frame,
-                     _KOS_THREAD                 thread)
+int _KOS_thread_join(KOS_YARN    yarn,
+                     _KOS_THREAD thread)
 {
     int error = KOS_SUCCESS;
 
     if (thread) {
         if (_KOS_is_current_thread(thread)) {
-            KOS_raise_exception_cstring(frame, str_err_join_self);
+            KOS_raise_exception_cstring(yarn, str_err_join_self);
             return KOS_ERROR_EXCEPTION;
         }
 
@@ -198,7 +198,7 @@ int _KOS_thread_join(struct _KOS_THREAD_CONTEXT *frame,
         CloseHandle(thread->thread_handle);
 
         if ( ! IS_BAD_PTR(thread->exception)) {
-            KOS_raise_exception(frame, thread->exception);
+            KOS_raise_exception(yarn, thread->exception);
             error = KOS_ERROR_EXCEPTION;
         }
 
@@ -301,9 +301,9 @@ struct _KOS_THREAD_OBJECT {
 
 static void *_thread_proc(void *thread_obj)
 {
-    KOS_THREAD_CONTEXT thread_ctx;
-    void              *ret        = 0;
-    int                unregister = 0;
+    struct _KOS_THREAD_CONTEXT thread_ctx;
+    void                      *ret        = 0;
+    int                        unregister = 0;
 
     if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS) {
         ((_KOS_THREAD)thread_obj)->proc(&thread_ctx, ((_KOS_THREAD)thread_obj)->cookie);
@@ -320,22 +320,22 @@ static void *_thread_proc(void *thread_obj)
     return ret;
 }
 
-int _KOS_thread_create(struct _KOS_THREAD_CONTEXT *frame,
-                       _KOS_THREAD_PROC            proc,
-                       void                       *cookie,
-                       _KOS_THREAD                *thread)
+int _KOS_thread_create(KOS_YARN         yarn,
+                       _KOS_THREAD_PROC proc,
+                       void            *cookie,
+                       _KOS_THREAD     *thread)
 {
     int         error      = KOS_SUCCESS;
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
-        new_thread->ctx    = frame->ctx;
+        new_thread->ctx    = yarn->ctx;
         new_thread->proc   = proc;
         new_thread->cookie = cookie;
 
         if (_KOS_seq_fail() || pthread_create(&new_thread->thread_handle, 0, _thread_proc, new_thread)) {
             _KOS_free(new_thread);
-            KOS_raise_exception_cstring(frame, str_err_thread);
+            KOS_raise_exception_cstring(yarn, str_err_thread);
             error = KOS_ERROR_EXCEPTION;
         }
         else
@@ -347,8 +347,8 @@ int _KOS_thread_create(struct _KOS_THREAD_CONTEXT *frame,
     return error;
 }
 
-int _KOS_thread_join(struct _KOS_THREAD_CONTEXT *frame,
-                     _KOS_THREAD                 thread)
+int _KOS_thread_join(KOS_YARN    yarn,
+                     _KOS_THREAD thread)
 {
     int error = KOS_SUCCESS;
 
@@ -356,14 +356,14 @@ int _KOS_thread_join(struct _KOS_THREAD_CONTEXT *frame,
         void *ret  = 0;
 
         if (_KOS_is_current_thread(thread)) {
-            KOS_raise_exception_cstring(frame, str_err_join_self);
+            KOS_raise_exception_cstring(yarn, str_err_join_self);
             return KOS_ERROR_EXCEPTION;
         }
 
         pthread_join(thread->thread_handle, &ret);
 
         if (ret) {
-            KOS_raise_exception(frame, (KOS_OBJ_ID)ret);
+            KOS_raise_exception(yarn, (KOS_OBJ_ID)ret);
             error = KOS_ERROR_EXCEPTION;
         }
 
