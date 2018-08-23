@@ -149,7 +149,7 @@ int _KOS_stack_push_function(KOS_YARN   yarn,
     const uint32_t   stack_size   = stack ? KOS_atomic_read_u32(stack->size) : 0;
     KOS_STACK       *new_stack    = stack;
     uint32_t         base_idx     = stack_size;
-    const int64_t    catch_init   = KOS_NO_CATCH << 8;
+    const int64_t    catch_init   = (int64_t)KOS_NO_CATCH << 8;
     KOS_FUNCTION    *func;
     unsigned         num_regs;
     unsigned         room;
