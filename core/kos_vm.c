@@ -1654,8 +1654,12 @@ static int _exec_function(KOS_YARN yarn)
                         else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
                             KOS_raise_exception_cstring(yarn, str_err_slice_not_function);
                         else {
-                            KOS_ATOMIC(KOS_OBJ_ID) in_args[2] = { begin, end };
-                            KOS_OBJ_ID             args       = _make_args(yarn, &in_args[0], 2);
+                            KOS_ATOMIC(KOS_OBJ_ID) in_args[2];
+                            KOS_OBJ_ID             args;
+
+                            in_args[0] = begin;
+                            in_args[1] = end;
+                            args       = _make_args(yarn, &in_args[0], 2);
 
                             if (IS_BAD_PTR(args))
                                 error = KOS_ERROR_EXCEPTION;
