@@ -1277,13 +1277,13 @@ static void _set_catch(KOS_ATOMIC(KOS_OBJ_ID) *regs, uint32_t catch_offs, uint8_
 {
     const uint64_t catch_data = (((uint64_t)catch_offs << 8) | catch_reg);
     assert(catch_offs < KOS_NO_CATCH);
-    KOS_atomic_write_ptr(regs[-2], TO_SMALL_INT((int64_t)catch_data));
+    KOS_atomic_write_ptr(regs[-2], TO_SMALL_INT((intptr_t)(int64_t)catch_data));
 }
 
 static void _clear_catch(KOS_ATOMIC(KOS_OBJ_ID) *regs)
 {
-    const uint64_t catch_data = KOS_NO_CATCH << 8;
-    KOS_atomic_write_ptr(regs[-2], TO_SMALL_INT((int64_t)catch_data));
+    const intptr_t catch_data = KOS_NO_CATCH << 8;
+    KOS_atomic_write_ptr(regs[-2], TO_SMALL_INT(catch_data));
 }
 
 static uint32_t _load_32(const uint8_t *bytecode)
