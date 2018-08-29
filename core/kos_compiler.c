@@ -1262,10 +1262,31 @@ _error:
     return error;
 }
 
+static struct _KOS_COMP_FUNCTION *_alloc_func_constant(struct _KOS_COMP_UNIT *program,
+                                                       struct _KOS_FRAME     *frame)
+{
+    struct _KOS_COMP_FUNCTION *constant;
+
+    constant = (struct _KOS_COMP_FUNCTION *)_KOS_mempool_alloc(&program->allocator,
+                                                               sizeof(struct _KOS_COMP_FUNCTION));
+    if (constant) {
+
+        constant->header.type = KOS_COMP_CONST_FUNCTION;
+        constant->offset      = 0;
+        constant->num_regs    = (uint8_t)frame->num_regs;
+        constant->args_reg    = 0;
+        constant->num_args    = 0;
+        constant->flags       = 0;
+    }
+
+    return constant;
+}
+
 static int _finish_global_scope(struct _KOS_COMP_UNIT *program,
                                 struct _KOS_REG       *reg)
 {
-    int error;
+    int                        error;
+    struct _KOS_COMP_FUNCTION *constant;
 
     if ( ! reg) {
         TRY(_gen_reg(program, &reg));
@@ -1280,6 +1301,17 @@ static int _finish_global_scope(struct _KOS_COMP_UNIT *program,
     TRY(_insert_global_frame(program));
 
     assert(program->code_gen_buf.size == 0);
+
+    constant = _alloc_func_constant(program, program->cur_frame);
+    if ( ! constant)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
+    if (program->scope_stack->num_indep_vars)
+        constant->flags |= KOS_COMP_FUN_CLOSURE;
+
+    _add_constant(program, &constant->header);
+
+    program->cur_frame->constant = constant;
 
 _error:
     return error;
@@ -4523,16 +4555,12 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
     assert(!scope_reg);
 
     /* Create constant template for LOAD.CONST */
-    constant = (struct _KOS_COMP_FUNCTION *)_KOS_mempool_alloc(&program->allocator,
-                                                               sizeof(struct _KOS_COMP_FUNCTION));
+    constant = _alloc_func_constant(program, frame);
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
-    constant->header.type = KOS_COMP_CONST_FUNCTION;
-    constant->offset      = 0;
-    constant->num_regs    = (uint8_t)frame->num_regs;
-    constant->args_reg    = (uint8_t)scope->num_indep_vars;
-    constant->num_args    = (uint8_t)frame->num_non_def_args;
-    constant->flags       = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
+    constant->args_reg = (uint8_t)scope->num_indep_vars;
+    constant->num_args = (uint8_t)frame->num_non_def_args;
+    constant->flags    = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
         constant->flags |= KOS_COMP_FUN_CLASS;

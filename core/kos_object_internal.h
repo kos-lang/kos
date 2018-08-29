@@ -133,11 +133,8 @@ static inline enum _KOS_STRING_FLAGS _KOS_get_string_elem_size(KOS_STRING *str)
 
 #define KOS_STACK_EXTRA 4U
 
-int _KOS_stack_push_function(KOS_YARN   yarn,
-                             KOS_OBJ_ID func_obj);
-
-int _KOS_stack_push_module(KOS_YARN   yarn,
-                           KOS_OBJ_ID module);
+int _KOS_stack_push(KOS_YARN   yarn,
+                    KOS_OBJ_ID func_obj);
 
 void _KOS_stack_pop(KOS_YARN yarn);
 

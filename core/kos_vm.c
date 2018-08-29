@@ -946,7 +946,7 @@ static int _prepare_call(KOS_YARN                yarn,
 
         /* Regular function */
         case KOS_FUN: {
-            TRY(_KOS_stack_push_function(yarn, func_obj));
+            TRY(_KOS_stack_push(yarn, func_obj));
 
             if ( ! func->handler)
                 TRY(_init_registers(yarn,
@@ -969,7 +969,7 @@ static int _prepare_call(KOS_YARN                yarn,
 
             dest = OBJPTR(FUNCTION, ret);
 
-            TRY(_KOS_stack_push_function(yarn, ret));
+            TRY(_KOS_stack_push(yarn, ret));
 
             dest->state = KOS_GEN_READY;
 
@@ -1004,7 +1004,7 @@ static int _prepare_call(KOS_YARN                yarn,
         case KOS_GEN_ACTIVE: {
             assert( ! IS_BAD_PTR(func->generator_stack_frame));
 
-            TRY(_KOS_stack_push_function(yarn, func_obj));
+            TRY(_KOS_stack_push(yarn, func_obj));
 
             if ( ! func->handler) {
                 if (state == KOS_GEN_ACTIVE) {
@@ -3045,7 +3045,7 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
 
     yarn = (KOS_YARN)_KOS_tls_get(module->context->threads.thread_key);
 
-    error = _KOS_stack_push_module(yarn, OBJID(MODULE, module));
+    error = _KOS_stack_push(yarn, module->constants[module->main_idx]);
 
     if (error)
         *ret = yarn->exception;

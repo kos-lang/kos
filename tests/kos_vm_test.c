@@ -46,55 +46,6 @@
 
 static const char str_value[] = "value";
 
-static KOS_OBJ_ID _run_code(KOS_CONTEXT   *ctx,
-                            KOS_YARN       yarn,
-                            const uint8_t *bytecode,
-                            unsigned       bytecode_size,
-                            unsigned       num_regs,
-                            KOS_OBJ_ID    *constants,
-                            unsigned       num_constants)
-{
-    KOS_OBJ_ID  ret    = KOS_BADPTR;
-    int         error  = KOS_SUCCESS;
-    KOS_MODULE *module = OBJPTR(MODULE, ctx->modules.init_module);
-
-    memset(module, 0, sizeof(*module));
-
-    module->header.type       = OBJ_MODULE;
-    module->context           = ctx;
-    module->constants_storage = num_constants ? KOS_new_array(yarn, num_constants) : KOS_BADPTR;
-    module->constants         = 0;
-    module->bytecode          = bytecode;
-    module->bytecode_size     = bytecode_size;
-    module->instr_offs        = 0;
-    module->num_regs          = (uint16_t)num_regs;
-
-    if (num_constants) {
-
-        unsigned i;
-
-        if (IS_BAD_PTR(module->constants_storage))
-            error = KOS_ERROR_EXCEPTION;
-
-        for (i = 0; ! error && i < num_constants; ++i)
-            error = KOS_array_write(yarn, module->constants_storage, i, constants[i]);
-
-        if ( ! error)
-            module->constants = _KOS_get_array_buffer(OBJPTR(ARRAY, module->constants_storage));
-    }
-
-    if ( ! error) {
-        error = _KOS_vm_run_module(module, &ret);
-
-        if (error) {
-            KOS_raise_exception(yarn, ret);
-            ret = KOS_BADPTR;
-        }
-    }
-
-    return ret;
-}
-
 enum _CREATE_FUNC {
     CREATE_FUNC,
     CREATE_GEN,
@@ -166,6 +117,62 @@ static KOS_OBJ_ID _create_class(KOS_YARN  yarn,
                                 uint8_t   flags)
 {
     return _create_func_obj(yarn, CREATE_CLASS, offset, num_regs, args_reg, num_args, flags);
+}
+
+static KOS_OBJ_ID _run_code(KOS_CONTEXT   *ctx,
+                            KOS_YARN       yarn,
+                            const uint8_t *bytecode,
+                            unsigned       bytecode_size,
+                            unsigned       num_regs,
+                            KOS_OBJ_ID    *constants,
+                            unsigned       num_constants)
+{
+    KOS_OBJ_ID  ret    = KOS_BADPTR;
+    int         error  = KOS_SUCCESS;
+    KOS_MODULE *module = OBJPTR(MODULE, ctx->modules.init_module);
+
+    memset(module, 0, sizeof(*module));
+
+    module->header.type       = OBJ_MODULE;
+    module->context           = ctx;
+    module->constants_storage = KOS_new_array(yarn, num_constants + 1);
+    module->constants         = 0;
+    module->bytecode          = bytecode;
+    module->bytecode_size     = bytecode_size;
+    module->main_idx          = num_constants;
+
+    if (IS_BAD_PTR(module->constants_storage))
+        error = KOS_ERROR_EXCEPTION;
+    else
+        module->constants = _KOS_get_array_buffer(OBJPTR(ARRAY, module->constants_storage));
+
+    if (num_constants && ! error) {
+
+        unsigned i;
+
+        for (i = 0; ! error && i < num_constants; ++i)
+            error = KOS_array_write(yarn, module->constants_storage, i, constants[i]);
+    }
+
+    if ( ! error) {
+        KOS_OBJ_ID func_obj = _create_func_obj(yarn, CREATE_FUNC, 0, num_regs, 0, 0, KOS_FUN_CLOSURE);
+
+        if (IS_BAD_PTR(func_obj))
+            error = KOS_ERROR_EXCEPTION;
+        else
+            error = KOS_array_write(yarn, module->constants_storage, num_constants, func_obj);
+    }
+
+    if ( ! error) {
+        error = _KOS_vm_run_module(module, &ret);
+
+        if (error) {
+            KOS_raise_exception(yarn, ret);
+            ret = KOS_BADPTR;
+        }
+    }
+
+    return ret;
 }
 
 static KOS_OBJ_ID _read_stack_reg(KOS_OBJ_ID stack_obj_id,

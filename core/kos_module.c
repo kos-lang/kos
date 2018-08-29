@@ -999,8 +999,6 @@ static int _compile_module(KOS_YARN    yarn,
 
             assert(module->line_addrs);
 
-            module->instr_offs = old_bytecode_size;
-
             assert(module->bytecode_size);
             assert(code_buf->size);
             TRY(_append_buf(&module->bytecode, module->bytecode_size,
@@ -1061,7 +1059,7 @@ static int _compile_module(KOS_YARN    yarn,
             }
         }
 
-        module->num_regs = (uint16_t)program.cur_frame->num_regs;
+        module->main_idx = program.cur_frame->constant->header.index;
     }
 
     /* Disassemble */
@@ -1341,7 +1339,12 @@ KOS_OBJ_ID _KOS_module_import(KOS_YARN    yarn,
                                                               actual_module_name,
                                                               _module_init_compare);
     if (mod_init) {
-        TRY(_KOS_stack_push_module(yarn, module_obj));
+        KOS_OBJ_ID func_obj = KOS_new_function(yarn);
+        TRY_OBJID(func_obj);
+
+        OBJPTR(FUNCTION, func_obj)->module = module_obj;
+
+        TRY(_KOS_stack_push(yarn, func_obj));
 
         error = mod_init->init(yarn, module_obj);
 

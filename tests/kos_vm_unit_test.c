@@ -86,27 +86,39 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                        struct _INSTR_VALUE *ret_val,
                        struct _INSTR_VALUE *args)
 {
-    uint8_t            code[64]        = { 0 };
-    uint32_t           parms[MAX_ARGS] = { 0 };
-    struct _KOS_MODULE module;
-    KOS_YARN           yarn            = &ctx->threads.main_thread;
-    const char *       cstrings[]      = { "aaa", "bbb", "ccc" };
-    KOS_OBJ_ID         strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
-    uint8_t            regs            = 0;
-    unsigned           words           = 0;
-    unsigned           num_constants   = 0;
-    int                error           = KOS_SUCCESS;
-    int                i;
-    KOS_OBJ_ID         ret;
+    uint8_t                 code[64]        = { 0 };
+    uint32_t                parms[MAX_ARGS] = { 0 };
+    KOS_MODULE             *module          = 0;
+    KOS_OBJ_ID              constants_array = KOS_BADPTR;
+    KOS_ATOMIC(KOS_OBJ_ID) *constants       = 0;
+    KOS_YARN                yarn            = &ctx->threads.main_thread;
+    const char *            cstrings[]      = { "aaa", "bbb", "ccc" };
+    KOS_OBJ_ID              strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
+    uint8_t                 regs            = 0;
+    unsigned                words           = 0;
+    unsigned                num_constants   = 0;
+    int                     error           = KOS_SUCCESS;
+    int                     i;
+    KOS_OBJ_ID              ret             = KOS_BADPTR;
 
-    memset(&module, 0, sizeof(module));
+    module = (KOS_MODULE *)_KOS_alloc_object(yarn,
+                                             KOS_ALLOC_PERSISTENT,
+                                             OBJ_MODULE,
+                                             sizeof(KOS_MODULE));
+    if ( ! module) {
+        printf("Failed: Unable to allocate module!\n");
+        return KOS_ERROR_EXCEPTION;
+    }
 
-    module.constants_storage = KOS_new_array(yarn, MAX_ARGS + 3);
-    if (IS_BAD_PTR(module.constants_storage)) {
+    constants_array = KOS_new_array(yarn, MAX_ARGS + 4);
+    if (IS_BAD_PTR(constants_array)) {
         printf("Failed: Unable to allocate constants!\n");
         return KOS_ERROR_EXCEPTION;
     }
-    module.constants = _KOS_get_array_buffer(OBJPTR(ARRAY, module.constants_storage));
+    constants = _KOS_get_array_buffer(OBJPTR(ARRAY, constants_array));
+
+    module->constants_storage = constants_array;
+    module->constants         = constants;
 
     for (i = 0; i < 3; i++) {
         KOS_OBJ_ID str = KOS_new_cstring(yarn, cstrings[i]);
@@ -114,7 +126,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
             printf("Failed: Unable to allocate constants!\n");
             return KOS_ERROR_EXCEPTION;
         }
-        module.constants[num_constants++] = str;
+        constants[num_constants++] = str;
     }
 
     for (i = 0; i < MAX_ARGS; i++) {
@@ -170,7 +182,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    module.constants[num_constants++] = value;
+                    constants[num_constants++] = value;
                 }
                 break;
 
@@ -186,7 +198,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    module.constants[num_constants++] = value;
+                    constants[num_constants++] = value;
                 }
                 break;
 
@@ -205,7 +217,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    module.constants[num_constants++] = value;
+                    constants[num_constants++] = value;
                 }
                 break;
 
@@ -226,7 +238,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    module.constants[num_constants++] = str;
+                    constants[num_constants++] = str;
                     strings[idx] = str;
                 }
                 break;
@@ -254,7 +266,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
         }
     }
 
-    if (KOS_array_resize(yarn, module.constants_storage, num_constants)) {
+    if (KOS_array_resize(yarn, constants_array, num_constants)) {
         printf("Failed: Unable to allocate constants!\n");
         return KOS_ERROR_EXCEPTION;
     }
@@ -311,14 +323,35 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     code[words++] = 0;
     code[words++] = regs - 1U;
 
-    module.header.type   = OBJ_MODULE;
-    module.context       = ctx;
-    module.bytecode      = &code[0];
-    module.bytecode_size = words;
-    module.instr_offs    = 0;
-    module.num_regs      = regs;
+    module->name          = KOS_BADPTR;
+    module->path          = KOS_BADPTR;
+    module->header.type   = OBJ_MODULE;
+    module->context       = ctx;
+    module->bytecode      = &code[0];
+    module->bytecode_size = words;
+    module->main_idx      = num_constants;
+    module->line_addrs    = 0;
+    module->func_addrs    = 0;
+    module->global_names  = KOS_BADPTR;
+    module->globals       = KOS_BADPTR;
+    module->module_names  = KOS_BADPTR;
 
-    error = _KOS_vm_run_module(&module, &ret);
+    {
+        KOS_OBJ_ID func_obj = KOS_new_function(yarn);
+
+        if (IS_BAD_PTR(func_obj))
+            error = KOS_ERROR_EXCEPTION;
+        else {
+            constants[num_constants++] = func_obj;
+
+            OBJPTR(FUNCTION, func_obj)->header.num_regs = regs;
+            OBJPTR(FUNCTION, func_obj)->instr_offs      = 0;
+            OBJPTR(FUNCTION, func_obj)->module          = OBJID(MODULE, module);
+        }
+    }
+
+    if ( ! error)
+        error = _KOS_vm_run_module(module, &ret);
 
     if (ret_val->value == V_EXCEPT) {
         if (error != KOS_ERROR_EXCEPTION) {

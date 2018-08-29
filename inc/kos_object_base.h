@@ -367,8 +367,6 @@ typedef struct _KOS_FUNC_ADDR {
 typedef struct _KOS_MODULE {
     KOS_OBJ_HEADER          header;
     uint8_t                 flags;
-    uint16_t                num_regs;
-    uint32_t                instr_offs;
     KOS_OBJ_ID              name;
     KOS_OBJ_ID              path;
     KOS_CONTEXT            *context;
@@ -383,6 +381,7 @@ typedef struct _KOS_MODULE {
     uint32_t                num_line_addrs;
     uint32_t                num_func_addrs;
     uint32_t                bytecode_size;
+    uint32_t                main_idx;     /* Index of constant with main function */
 } KOS_MODULE;
 
 typedef struct _KOS_DYNAMIC_PROP {

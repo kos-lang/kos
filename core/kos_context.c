@@ -317,8 +317,6 @@ int KOS_context_init(KOS_CONTEXT *ctx,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     init_module->flags             = 0;
-    init_module->num_regs          = 0;
-    init_module->instr_offs        = 0;
     init_module->name              = KOS_BADPTR;
     init_module->path              = KOS_BADPTR;
     init_module->context           = ctx;

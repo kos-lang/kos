@@ -141,8 +141,8 @@ static int _push_new_reentrant_stack(KOS_YARN yarn,
     return _init_stack(yarn, new_stack);
 }
 
-int _KOS_stack_push_function(KOS_YARN   yarn,
-                             KOS_OBJ_ID func_obj)
+int _KOS_stack_push(KOS_YARN   yarn,
+                    KOS_OBJ_ID func_obj)
 {
     int              error        = KOS_SUCCESS;
     KOS_STACK *const stack        = IS_BAD_PTR(yarn->stack) ? 0 : OBJPTR(STACK, yarn->stack);
@@ -206,6 +206,9 @@ int _KOS_stack_push_function(KOS_YARN   yarn,
 
         assert(type == OBJ_FUNCTION || IS_BAD_PTR(func->generator_stack_frame));
 
+        if (IS_BAD_PTR(yarn->stack))
+            TRY(_push_new_stack(yarn));
+
         TRY(_push_new_reentrant_stack(yarn, room));
 
         func->generator_stack_frame = yarn->stack;
@@ -245,34 +248,6 @@ _error:
     return error;
 }
 
-int _KOS_stack_push_module(KOS_YARN   yarn,
-                           KOS_OBJ_ID module)
-{
-    const KOS_OBJ_ID func_obj = KOS_new_function(yarn);
-    int              error    = IS_BAD_PTR(func_obj) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
-
-    if ( ! error && IS_BAD_PTR(yarn->stack))
-        error = _push_new_stack(yarn);
-
-    if ( ! error) {
-
-        uint16_t num_regs = OBJPTR(MODULE, module)->num_regs;
-
-        assert(num_regs < 256U);
-
-        OBJPTR(FUNCTION, func_obj)->header.num_regs = (uint8_t)(num_regs > 0 ? num_regs : 1U);
-        /* TODO change module to not have "global scope", but rather generate a function
-         *      for each module's global scope and then mark that function as entry point */
-        OBJPTR(FUNCTION, func_obj)->header.flags    = KOS_FUN_CLOSURE;
-        OBJPTR(FUNCTION, func_obj)->module          = module;
-        OBJPTR(FUNCTION, func_obj)->instr_offs      = OBJPTR(MODULE, module)->instr_offs;
-
-        error = _KOS_stack_push_function(yarn, func_obj);
-    }
-
-    return error;
-}
-
 void _KOS_stack_pop(KOS_YARN yarn)
 {
     KOS_STACK *stack;
@@ -284,35 +259,38 @@ void _KOS_stack_pop(KOS_YARN yarn)
     size = KOS_atomic_read_u32(stack->size);
     assert(size);
 
-    assert(IS_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
+    assert((size == 1 && IS_BAD_PTR(stack->buf[0])) ||
+           IS_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
 
-    if ( ! (stack->header.flags & KOS_REENTRANT_STACK)) {
+    if (size > 1) {
+        if ( ! (stack->header.flags & KOS_REENTRANT_STACK)) {
 
-        const uint32_t num_regs_u = size - yarn->regs_idx - 1U;
-        const uint32_t delta      = num_regs_u + KOS_STACK_EXTRA;
+            const uint32_t num_regs_u = size - yarn->regs_idx - 1U;
+            const uint32_t delta      = num_regs_u + KOS_STACK_EXTRA;
 
-        assert(yarn->regs_idx < size);
+            assert(yarn->regs_idx < size);
 
-        assert((int)num_regs_u == GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
+            assert((int)num_regs_u == GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
 
-        size               -= delta;
-        yarn->stack_depth -= delta;
+            size              -= delta;
+            yarn->stack_depth -= delta;
 
-        KOS_atomic_write_u32(stack->size, size);
-    }
-    else {
+            KOS_atomic_write_u32(stack->size, size);
+        }
+        else {
 
-        const KOS_OBJ_ID new_stack_obj = stack->buf[0];
+            const KOS_OBJ_ID new_stack_obj = stack->buf[0];
 
-        assert(size == 1U + KOS_STACK_EXTRA +
-                       (uint64_t)GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
-        assert(GET_OBJ_TYPE(new_stack_obj) == OBJ_STACK);
+            assert(size == 1U + KOS_STACK_EXTRA +
+                           (uint64_t)GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
+            assert(GET_OBJ_TYPE(new_stack_obj) == OBJ_STACK);
 
-        yarn->stack_depth -= size;
+            yarn->stack_depth -= size;
 
-        stack        = OBJPTR(STACK, new_stack_obj);
-        size         = KOS_atomic_read_u32(stack->size);
-        yarn->stack = new_stack_obj;
+            stack        = OBJPTR(STACK, new_stack_obj);
+            size         = KOS_atomic_read_u32(stack->size);
+            yarn->stack = new_stack_obj;
+        }
     }
 
     /* If we ran out of stack, go to the previous stack object in the chain */
