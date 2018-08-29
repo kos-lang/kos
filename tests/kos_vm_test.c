@@ -155,7 +155,7 @@ static KOS_OBJ_ID _run_code(KOS_CONTEXT   *ctx,
     }
 
     if ( ! error) {
-        KOS_OBJ_ID func_obj = _create_func_obj(yarn, CREATE_FUNC, 0, num_regs, 0, 0, KOS_FUN_CLOSURE);
+        KOS_OBJ_ID func_obj = _create_func_obj(yarn, CREATE_FUNC, 0, (uint8_t)num_regs, 0, 0, KOS_FUN_CLOSURE);
 
         if (IS_BAD_PTR(func_obj))
             error = KOS_ERROR_EXCEPTION;
