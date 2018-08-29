@@ -1559,7 +1559,7 @@ static void _update_after_evacuation(KOS_YARN yarn)
     /* Update object pointers in thread contexts */
 
     {
-        KOS_YARN yarn = &ctx->threads.main_thread;
+        yarn = &ctx->threads.main_thread;
 
         _KOS_lock_mutex(&ctx->threads.mutex);
 
