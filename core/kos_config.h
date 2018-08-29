@@ -35,7 +35,7 @@
 #define _KOS_MIGRATION_THRESH   90U /* Percentage of page utilization after GC */
 #define _KOS_MIN_REG_CAPACITY   32U
 #define _KOS_MAX_ARGS_IN_REGS   32U
-#define _KOS_MAX_STACK_DEPTH    16384U
+#define _KOS_MAX_STACK_DEPTH    4096U
 #ifdef CONFIG_FUZZ
 #   define _KOS_MAX_HEAP_SIZE   (32U * 1024U * 1024U)
 #else
