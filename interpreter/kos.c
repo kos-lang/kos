@@ -302,7 +302,7 @@ static int _is_input_complete(struct _KOS_VECTOR *buf,
 
     _KOS_mempool_destroy(&mempool);
 
-    return error == KOS_SUCCESS || parser.token.type != TT_EOF;
+    return error != KOS_ERROR_PARSE_FAILED || parser.token.type != TT_EOF;
 }
 
 static int _enforce_eol(struct _KOS_VECTOR *buf)
@@ -363,7 +363,9 @@ static int _run_interactive(KOS_YARN yarn, struct _KOS_VECTOR *buf)
 
             error = _KOS_getline(&state, PROMPT_SUBSEQUENT_LINE, &tmp_buf);
             if (error) {
-                assert(error == KOS_SUCCESS_RETURN || error == KOS_ERROR_OUT_OF_MEMORY);
+                assert(error == KOS_ERROR_OUT_OF_MEMORY    ||
+                       error == KOS_ERROR_CANNOT_READ_FILE ||
+                       error == KOS_SUCCESS_RETURN);
                 break;
             }
 
