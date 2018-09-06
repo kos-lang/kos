@@ -255,22 +255,6 @@ static KOS_OBJ_ID _deep(KOS_YARN   yarn,
     return _object_iterator(yarn, regs_obj, args_obj, KOS_DEEP);
 }
 
-/* @item lang void.prototype.iterator()
- *
- *     void.prototype.iterator()
- *
- * A generator which does not produce any elements.
- *
- * Returns an iterator function which always terminates iteration on the
- * first call.
- */
-static KOS_OBJ_ID _iterator(KOS_YARN   yarn,
-                            KOS_OBJ_ID regs_obj,
-                            KOS_OBJ_ID args_obj)
-{
-    return KOS_BADPTR;
-}
-
 static int _create_class(KOS_YARN             yarn,
                          KOS_OBJ_ID           module_obj,
                          KOS_OBJ_ID           str_name,
@@ -595,32 +579,6 @@ static KOS_OBJ_ID _boolean_constructor(KOS_YARN   yarn,
     return ret;
 }
 
-/* @item lang void()
- *
- *     void()
- *
- * Void type class.
- *
- * Returns `void`.
- *
- * Because `void` is a keyword, this class can only be referenced
- * indirectly via the `lang` module, it cannot be referenced if it is
- * imported directly into the current module.
- *
- * The prototype of `void.prototype` is `object.prototype`.
- *
- * Example:
- *
- *     > lang.void()
- *     void
- */
-static KOS_OBJ_ID _void_constructor(KOS_YARN   yarn,
-                                    KOS_OBJ_ID this_obj,
-                                    KOS_OBJ_ID args_obj)
-{
-    return KOS_VOID;
-}
-
 /* @item lang string()
  *
  *     string(args...)
@@ -879,7 +837,6 @@ static KOS_OBJ_ID _buffer_constructor(KOS_YARN   yarn,
                                       KOS_OBJ_ID args_obj)
 {
     int            error    = KOS_SUCCESS;
-    KOS_OBJ_ID     void_obj = KOS_VOID;
     KOS_OBJ_ID     buffer   = KOS_new_buffer(yarn, 0);
     const uint32_t num_args = KOS_get_array_size(args_obj);
     uint32_t       i_arg;
@@ -984,7 +941,7 @@ static KOS_OBJ_ID _buffer_constructor(KOS_YARN   yarn,
                     for (;;) {
                         int64_t value;
 
-                        KOS_OBJ_ID ret = KOS_call_generator(yarn, arg, void_obj, gen_args);
+                        KOS_OBJ_ID ret = KOS_call_generator(yarn, arg, KOS_VOID, gen_args);
                         if (IS_BAD_PTR(ret)) { /* end of iterator */
                             if (KOS_is_exception_pending(yarn))
                                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -3608,7 +3565,6 @@ int _KOS_module_lang_init(KOS_YARN yarn, KOS_OBJ_ID module)
     TRY_CREATE_CONSTRUCTOR(object,        module);
     TRY_CREATE_CONSTRUCTOR(string,        module);
     TRY_CREATE_CONSTRUCTOR(thread,        module);
-    TRY_CREATE_CONSTRUCTOR(void,          module);
 
     TRY_ADD_MEMBER_FUNCTION( yarn, module, PROTO(array),      "insert_array",  _insert_array,      2);
     TRY_ADD_MEMBER_FUNCTION( yarn, module, PROTO(array),      "fill",          _fill,              1);
@@ -3650,8 +3606,6 @@ int _KOS_module_lang_init(KOS_YARN yarn, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_PROPERTY( yarn, module, PROTO(string),     "size",          _get_string_size,   0);
 
     TRY_ADD_MEMBER_FUNCTION( yarn, module, PROTO(thread),     "wait",          _wait,              0);
-
-    TRY_ADD_MEMBER_GENERATOR(yarn, module, PROTO(void),       "iterator",      _iterator,          0);
 
 _error:
     return error;

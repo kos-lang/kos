@@ -112,7 +112,6 @@ struct _KOS_PROTOTYPES {
     KOS_OBJ_ID float_proto;
     KOS_OBJ_ID string_proto;
     KOS_OBJ_ID boolean_proto;
-    KOS_OBJ_ID void_proto;
     KOS_OBJ_ID array_proto;
     KOS_OBJ_ID buffer_proto;
     KOS_OBJ_ID function_proto;

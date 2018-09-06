@@ -39,6 +39,8 @@ fun expect_fail(function)
 # iter.empty
 
 do {
+    assert iter.empty instanceof lang.generator
+
     var count = 0
     for var x in iter.empty() {
         count += 1
@@ -151,9 +153,9 @@ do {
 }
 
 do {
-    const expected = [ [10, void, "a"], [11, void, "a"], [10, void, "b"], [11, void, "b"] ]
+    const expected = [ [10, true, "a"], [11, true, "a"], [10, true, "b"], [11, true, "b"] ]
     var   i        = 0
-    for var a, b, c in iter.product([10, 11], void, "ab") {
+    for var a, b, c in iter.product([10, 11], true, "ab") {
         assert a == expected[i][0]
         assert b == expected[i][1]
         assert c == expected[i][2]

@@ -1158,7 +1158,6 @@ static void _mark_roots(KOS_YARN yarn)
     _mark_object_black(ctx->prototypes.float_proto);
     _mark_object_black(ctx->prototypes.string_proto);
     _mark_object_black(ctx->prototypes.boolean_proto);
-    _mark_object_black(ctx->prototypes.void_proto);
     _mark_object_black(ctx->prototypes.array_proto);
     _mark_object_black(ctx->prototypes.buffer_proto);
     _mark_object_black(ctx->prototypes.function_proto);
@@ -1539,7 +1538,6 @@ static void _update_after_evacuation(KOS_YARN yarn)
     _update_child_ptr(&ctx->prototypes.float_proto);
     _update_child_ptr(&ctx->prototypes.string_proto);
     _update_child_ptr(&ctx->prototypes.boolean_proto);
-    _update_child_ptr(&ctx->prototypes.void_proto);
     _update_child_ptr(&ctx->prototypes.array_proto);
     _update_child_ptr(&ctx->prototypes.buffer_proto);
     _update_child_ptr(&ctx->prototypes.function_proto);

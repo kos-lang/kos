@@ -699,7 +699,7 @@ do {
 }
 
 do {
-    for var v in void {
+    for var v in [] {
         throw "unexpected iteration"
     }
 }

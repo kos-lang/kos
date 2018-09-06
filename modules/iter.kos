@@ -78,7 +78,12 @@ fun generator(iterable)
  * This generator, when instantiated, never yields any objects and
  * terminates immediately.
  */
-const empty = void.iterator
+fun empty
+{
+    if false {
+        yield void
+    }
+}
 
 /* @item iter iproduct()
  *

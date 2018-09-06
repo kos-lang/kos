@@ -104,9 +104,12 @@ fun range(start, args...)
  * This is equivalent to `shallow()` function.
  *
  * If the object is not of type `object`, e.g. if it is an integer,
- * a float, a boolean, a void or a non-generator function, the iterator yields
+ * a float, a boolean or a non-generator function, the iterator yields
  * the object itself.  Prototypes of array, string, buffer and function override
  * this generator.
+ *
+ * Note that `void` object does not have any properties, not even `iterator()`
+ * function, so it is not possible to iterate over it.
  *
  * The `iterator()` function is also implicitly invoked by the `for-in` loop
  * statement.

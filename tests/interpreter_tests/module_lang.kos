@@ -21,7 +21,6 @@
 #
 
 import lang
-import lang.void # For lang.void test, see way below
 
 fun expect_fail(function)
 {
@@ -192,7 +191,6 @@ do {
     assert ! (value instanceof lang.float)
     assert ! (value instanceof lang.string)
     assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.void)
 }
 
 do {
@@ -307,7 +305,6 @@ do {
     assert ! (value instanceof lang.integer)
     assert ! (value instanceof lang.string)
     assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.void)
 }
 
 do {
@@ -349,47 +346,35 @@ do {
 }
 
 ##############################################################################
-# lang.void
+# void
 
 do {
-    assert typeof lang.void           == "class"
-    assert typeof lang.void.prototype == "object"
-    assert lang.void instanceof lang.function
-    assert lang.void instanceof lang.class
-}
+    assert typeof void == "void"
+    expect_fail(fun {
+        for const x in void { }
+    })
 
-do {
-    const v = lang.void()
-    assert v == void
-}
+    var count = 0
+    for const x in lang.deep(void) {
+        count += 1
+    }
+    assert count == 0
 
-do {
-    expect_fail(()=>(void.bool()))
-    lang.void.prototype.bool = ()=>(false)
-    assert void.bool() == false
-}
-
-do {
-    assert void instanceof lang.void
-    assert ! (true  instanceof lang.void)
-    assert ! (false instanceof lang.void)
+    count = 0
+    for const x in lang.shallow(void) {
+        count += 1
+    }
+    assert count == 0
 }
 
 do {
     const value = ()=>(void)()
-    assert value instanceof lang.void
-    assert value instanceof lang.object
+    assert ! (value instanceof lang.object)
     assert ! (value instanceof lang.integer)
     assert ! (value instanceof lang.float)
     assert ! (value instanceof lang.number)
     assert ! (value instanceof lang.string)
     assert ! (value instanceof lang.boolean)
-}
-
-# Even though lang.void was imported directly (at the top), it's not accessible
-do {
-    expect_fail(()=>(void()))
-    assert typeof void == "void"
 }
 
 ##############################################################################
@@ -434,7 +419,6 @@ do {
     assert ! (value instanceof lang.float)
     assert ! (value instanceof lang.number)
     assert ! (value instanceof lang.string)
-    assert ! (value instanceof lang.void)
 }
 
 ##############################################################################
@@ -508,7 +492,6 @@ do {
     assert ! (value instanceof lang.float)
     assert ! (value instanceof lang.number)
     assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.void)
 }
 
 do {
@@ -564,7 +547,6 @@ do {
     assert ! (value instanceof lang.float)
     assert ! (value instanceof lang.number)
     assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.void)
     assert ! (value instanceof lang.string)
     assert ! (value instanceof lang.array)
 }
@@ -735,7 +717,6 @@ do {
     assert ! (value instanceof lang.float)
     assert ! (value instanceof lang.number)
     assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.void)
     assert ! (value instanceof lang.string)
 }
 
@@ -1286,7 +1267,6 @@ do {
     assert ! (value instanceof lang.float)
     assert ! (value instanceof lang.number)
     assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.void)
     assert ! (value instanceof lang.string)
     assert ! (value instanceof lang.array)
 }
@@ -1700,7 +1680,6 @@ do {
     assert ! (value instanceof lang.float)
     assert ! (value instanceof lang.number)
     assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.void)
     assert ! (value instanceof lang.string)
     assert ! (value instanceof lang.array)
 
@@ -1747,7 +1726,7 @@ do {
     assert typeof s == "string"
     assert s        == "1x2"
 
-    for const type in ["integer", "float", "string", "boolean", "void", "object", "array"] {
+    for const type in ["integer", "float", "string", "boolean", "object", "array"] {
         assert typeof new_type(type) == type
     }
 }
@@ -2023,12 +2002,12 @@ do {
 do {
     assert lang.sum([]) == 0
     assert lang.sum([], "") == ""
-    assert lang.sum(void) == 0
     assert lang.sum([10, 200, 3, 4000]) == 4213
     assert lang.sum([4.0, 2.0, 8.0]) == 14.0
     assert lang.sum(["ab", "c", "def", "gh"], "") == "abcdefgh"
 
     expect_fail(lang.sum)
+    expect_fail(() => (lang.sum(void)))
     expect_fail(()=>(lang.sum([1], "")))
 }
 
@@ -2574,7 +2553,7 @@ do {
 
 do {
     assert (["a", "b", "c"] -> lang.count_elements) == 3
-    assert (void -> lang.count_elements) == 0
+    expect_fail(() => (void -> lang.count_elements))
 }
 
 ##############################################################################

@@ -257,7 +257,6 @@ static void _clear_context(KOS_CONTEXT *ctx)
     ctx->prototypes.float_proto          = KOS_BADPTR;
     ctx->prototypes.string_proto         = KOS_BADPTR;
     ctx->prototypes.boolean_proto        = KOS_BADPTR;
-    ctx->prototypes.void_proto           = KOS_BADPTR;
     ctx->prototypes.array_proto          = KOS_BADPTR;
     ctx->prototypes.buffer_proto         = KOS_BADPTR;
     ctx->prototypes.function_proto       = KOS_BADPTR;
@@ -347,13 +346,12 @@ int KOS_context_init(KOS_CONTEXT *ctx,
         ctx->heap.str_oom_id = str;
     }
 
-    TRY_OBJID(ctx->prototypes.object_proto        = KOS_new_object_with_prototype(yarn, KOS_BADPTR));
+    TRY_OBJID(ctx->prototypes.object_proto        = KOS_new_object_with_prototype(yarn, KOS_VOID));
     TRY_OBJID(ctx->prototypes.number_proto        = KOS_new_object(yarn));
     TRY_OBJID(ctx->prototypes.integer_proto       = KOS_new_object_with_prototype(yarn, ctx->prototypes.number_proto));
     TRY_OBJID(ctx->prototypes.float_proto         = KOS_new_object_with_prototype(yarn, ctx->prototypes.number_proto));
     TRY_OBJID(ctx->prototypes.string_proto        = KOS_new_object(yarn));
     TRY_OBJID(ctx->prototypes.boolean_proto       = KOS_new_object(yarn));
-    TRY_OBJID(ctx->prototypes.void_proto          = KOS_new_object(yarn));
     TRY_OBJID(ctx->prototypes.array_proto         = KOS_new_object(yarn));
     TRY_OBJID(ctx->prototypes.buffer_proto        = KOS_new_object(yarn));
     TRY_OBJID(ctx->prototypes.function_proto      = KOS_new_object(yarn));

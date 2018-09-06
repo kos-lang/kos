@@ -824,7 +824,7 @@ KOS_OBJ_ID KOS_get_prototype(KOS_YARN   yarn,
             break;
 
         case OBJ_VOID:
-            ret = ctx->prototypes.void_proto;
+            ret = KOS_BADPTR;
             break;
 
         default:

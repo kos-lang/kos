@@ -162,7 +162,6 @@ Here is how to obtain access to prototypes of individual types:
     const integer_prototype  = lang.integer.prototype;
     const float_prototype    = lang.float.prototype;
     const boolean_prototype  = lang.boolean.prototype;
-    const void_prototype     = lang.void.prototype;
     const string_prototype   = lang.string.prototype;
     const array_prototype    = lang.array.prototype;
     const buffer_prototype   = lang.buffer.prototype;
@@ -170,7 +169,11 @@ Here is how to obtain access to prototypes of individual types:
     const object_prototype   = lang.object.prototype;
 
 `lang.object.prototype` is an indirect prototype for all types of objects.
-In addition to that, integer and float objects also have a common prototype:
+The prototype of `lang.object.prototype` is `void`.
+
+`void` object does not have any prototype.
+
+Integer and float objects also have a common prototype:
 
     const number_prototype   = lang.number.prototype;
 
@@ -187,7 +190,8 @@ Objects of various types provide their own `iterator()` function:
 * Integer, float, boolean: their `iterator()` function generates the
   object's own value.
 
-* Void: its `iterator()` function returns an "empty" generator.
+* Void: does not have any properties, attempting to iterate over `void`
+  object throws an exception.
 
 * String, array, buffer: their `iterator()` function generates all of their
   elements.

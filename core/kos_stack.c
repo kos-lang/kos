@@ -360,7 +360,7 @@ static int _walk_stack(KOS_YARN yarn, KOS_WALK_STACK walk, void *cookie)
     int        error     = KOS_SUCCESS;
     KOS_OBJ_ID stack     = yarn->stack;
     uint32_t   size;
-    uint32_t   prev_size = ~0U;;
+    uint32_t   prev_size = ~0U;
 
     assert( ! IS_BAD_PTR(stack));
     assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
@@ -386,9 +386,11 @@ static int _walk_stack(KOS_YARN yarn, KOS_WALK_STACK walk, void *cookie)
 
                 if (reentrant && prev != yarn->stack) {
                     assert(size > 0);
-                    assert((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack)->buf[size - 1]) == prev);
                     assert(prev_size != ~0U);
-                    size = prev_size - 1;
+                    assert((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack)->buf[prev_size - 1]) == prev);
+
+                    size      = prev_size - 1;
+                    prev_size = ~0U;
                 }
             }
         }

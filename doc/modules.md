@@ -142,8 +142,6 @@ Table of Contents
     * [sum()](#sum)
     * [thread()](#thread)
       * [thread.prototype.wait()](#threadprototypewait)
-    * [void()](#void)
-      * [void.prototype.iterator()](#voidprototypeiterator)
     * [whitespace](#whitespace)
     * [zip()](#zip)
   * [math](#math)
@@ -2045,9 +2043,12 @@ The order of the elements yielded is unspecified.
 This is equivalent to `shallow()` function.
 
 If the object is not of type `object`, e.g. if it is an integer,
-a float, a boolean, a void or a non-generator function, the iterator yields
+a float, a boolean or a non-generator function, the iterator yields
 the object itself.  Prototypes of array, string, buffer and function override
 this generator.
+
+Note that `void` object does not have any properties, not even `iterator()`
+function, so it is not possible to iterate over it.
 
 The `iterator()` function is also implicitly invoked by the `for-in` loop
 statement.
@@ -2922,36 +2923,6 @@ Example:
     > const t = f.async()
     > t.wait()
     42
-
-void()
-------
-
-    void()
-
-Void type class.
-
-Returns `void`.
-
-Because `void` is a keyword, this class can only be referenced
-indirectly via the `lang` module, it cannot be referenced if it is
-imported directly into the current module.
-
-The prototype of `void.prototype` is `object.prototype`.
-
-Example:
-
-    > lang.void()
-    void
-
-void.prototype.iterator()
--------------------------
-
-    void.prototype.iterator()
-
-A generator which does not produce any elements.
-
-Returns an iterator function which always terminates iteration on the
-first call.
 
 whitespace
 ----------
