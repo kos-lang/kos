@@ -1,9 +1,11 @@
 ==============================================================================
-@disasm.kos:1:
-00000000: 82 00 01                          LOAD.CONST8     r0, 1 # <function fun @ 0x6>
-00000003: BA 00 00                          RETURN          0, r0
 
 -- fun() --
 @disasm.kos:3:
-00000006: 82 00 00                          LOAD.CONST8     r0, 0 # "My String"
+00000000: 82 00 00                          LOAD.CONST8     r0, 0 # "My String"
+00000003: BA 00 00                          RETURN          0, r0
+
+-- <global>() --
+@disasm.kos:1:
+00000006: 82 00 01                          LOAD.CONST8     r0, 1 # <function fun @ 0x0>
 00000009: BA 00 00                          RETURN          0, r0

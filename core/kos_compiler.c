@@ -1098,20 +1098,22 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
                          int                         fun_start_offs,
                          size_t                      addr2line_start_offs)
 {
-    int          error;
-    const size_t fun_end_offs = (size_t)program->cur_offs;
-    const size_t fun_size     = fun_end_offs - fun_start_offs;
-    const size_t fun_new_offs = program->code_buf.size;
-    const size_t a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
-    size_t       a2l_new_offs = program->addr2line_buf.size;
-    int          str_idx      = 0;
+    int               error;
+    const size_t      fun_end_offs = (size_t)program->cur_offs;
+    const size_t      fun_size     = fun_end_offs - fun_start_offs;
+    const size_t      fun_new_offs = program->code_buf.size;
+    const size_t      a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
+    size_t            a2l_new_offs = program->addr2line_buf.size;
+    int               str_idx      = 0;
+    struct _KOS_TOKEN global;
+    static const char str_global[] = "<global>";
 
     const struct _KOS_TOKEN *name_token;
 
     TRY(_KOS_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
-    if (a2l_new_offs)
-    {
+    if (a2l_new_offs) {
+
         struct _KOS_COMP_ADDR_TO_LINE *last_ptr =
             (struct _KOS_COMP_ADDR_TO_LINE *)
                 (program->addr2line_buf.buffer + a2l_new_offs);
@@ -1126,11 +1128,20 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
     TRY(_KOS_vector_resize(&program->addr2func_buf,
                            program->addr2func_buf.size + sizeof(struct _KOS_COMP_ADDR_TO_FUNC)));
 
-    assert(name_node);
-    if (name_node->children)
-        name_token = &name_node->children->token;
-    else
-        name_token = program->cur_frame->fun_token;
+    if (name_node) {
+        if (name_node->children)
+            name_token = &name_node->children->token;
+        else
+            name_token = program->cur_frame->fun_token;
+    }
+    else {
+        memset(&global, 0, sizeof(global));
+        global.begin  = str_global;
+        global.length = sizeof(str_global) - 1;
+        global.type   = TT_IDENTIFIER;
+
+        name_token = &global;
+    }
     TRY(_gen_str(program, name_token, &str_idx));
 
     memcpy(program->code_buf.buffer + fun_new_offs,
@@ -1172,91 +1183,14 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
                 (buf->buffer + buf->size - sizeof(struct _KOS_COMP_ADDR_TO_FUNC));
 
         ptr->offs      = (uint32_t)fun_new_offs;
-        ptr->line      = program->cur_frame->fun_token->pos.line;
+        if (program->cur_frame->fun_token)
+            ptr->line  = program->cur_frame->fun_token->pos.line;
+        else
+            ptr->line  = 1;
         ptr->str_idx   = (uint32_t)str_idx;
         ptr->num_instr = program->cur_frame->num_instr;
         ptr->code_size = (uint32_t)fun_size;
     }
-
-_error:
-    return error;
-}
-
-static int _fix_frame_offsets(struct _KOS_RED_BLACK_NODE *node,
-                              void                       *cookie)
-{
-    struct _KOS_SCOPE *scope = (struct _KOS_SCOPE *)node;
-    struct _KOS_FRAME *frame = scope->has_frame ? (struct _KOS_FRAME *)scope : 0;
-
-    if (frame && frame->parent_frame)
-        frame->constant->offset += (uint32_t)*(size_t *)cookie;
-
-    return KOS_SUCCESS;
-}
-
-static int _insert_global_frame(struct _KOS_COMP_UNIT *program)
-{
-    /* At this point code_buf contains bytecodes of all functions
-     * and code_gen_buf contains global scope bytecode. */
-    int          error;
-    const size_t global_scope_size = (size_t)program->cur_offs;
-    const size_t functions_size    = program->code_buf.size;
-    const size_t funcs_a2l_size    = program->addr2line_buf.size;
-
-    TRY(_KOS_vector_resize(&program->code_buf,
-                           functions_size + global_scope_size));
-
-    TRY(_KOS_vector_resize(&program->addr2line_buf,
-                           program->addr2line_buf.size + program->addr2line_gen_buf.size));
-
-    memmove(program->code_buf.buffer + global_scope_size,
-            program->code_buf.buffer,
-            functions_size);
-
-    memcpy(program->code_buf.buffer,
-           program->code_gen_buf.buffer,
-           global_scope_size);
-
-    TRY(_KOS_vector_resize(&program->code_gen_buf, 0));
-
-    program->cur_offs = 0;
-
-    TRY(_KOS_red_black_walk(program->scopes, _fix_frame_offsets, (void *)&global_scope_size));
-
-    /* Update addr2line offsets for functions */
-    {
-        struct _KOS_COMP_ADDR_TO_LINE *ptr =
-            (struct _KOS_COMP_ADDR_TO_LINE *)
-                program->addr2line_buf.buffer;
-        struct _KOS_COMP_ADDR_TO_LINE *end =
-            (struct _KOS_COMP_ADDR_TO_LINE *)
-                (program->addr2line_buf.buffer + program->addr2line_buf.size);
-
-        for ( ; ptr < end; ptr++)
-            ptr->offs += (uint32_t)global_scope_size;
-    }
-
-    {
-        struct _KOS_COMP_ADDR_TO_FUNC *ptr =
-            (struct _KOS_COMP_ADDR_TO_FUNC *)
-                program->addr2func_buf.buffer;
-        struct _KOS_COMP_ADDR_TO_FUNC *end =
-            (struct _KOS_COMP_ADDR_TO_FUNC *)
-                (program->addr2func_buf.buffer + program->addr2func_buf.size);
-
-        for ( ; ptr < end; ptr++)
-            ptr->offs += (uint32_t)global_scope_size;
-    }
-
-    memmove(program->addr2line_buf.buffer + program->addr2line_gen_buf.size,
-            program->addr2line_buf.buffer,
-            funcs_a2l_size);
-
-    memcpy(program->addr2line_buf.buffer,
-           program->addr2line_gen_buf.buffer,
-           program->addr2line_gen_buf.size);
-
-    TRY(_KOS_vector_resize(&program->addr2line_gen_buf, 0));
 
 _error:
     return error;
@@ -1298,10 +1232,6 @@ static int _finish_global_scope(struct _KOS_COMP_UNIT *program,
     _free_reg(program, reg);
     reg = 0;
 
-    TRY(_insert_global_frame(program));
-
-    assert(program->code_gen_buf.size == 0);
-
     constant = _alloc_func_constant(program, program->cur_frame);
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
@@ -1312,6 +1242,10 @@ static int _finish_global_scope(struct _KOS_COMP_UNIT *program,
     _add_constant(program, &constant->header);
 
     program->cur_frame->constant = constant;
+
+    TRY(_append_frame(program, 0, 0, 0));
+
+    assert(program->code_gen_buf.size == 0);
 
 _error:
     return error;
