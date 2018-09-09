@@ -372,9 +372,12 @@ int main(int argc, char *argv[])
     test_double("26153245263757307e49",    0x4D83DE00U, 0x5BD620DFU, KOS_SUCCESS);
     test_double("9e0306",                  0x7FA9A202U, 0x8368022EU, KOS_SUCCESS);
     test_double("1e-324",                  0x00000000U, 0x00000000U, KOS_SUCCESS);
+    test_double("8e-110",                  0x29480C90U, 0x3F7379F2U, KOS_SUCCESS);
+    test_double("8e-112",                  0x28DEC866U, 0xB79E0CBAU, KOS_SUCCESS);
     /*
     test_double("8e-111",                  0x29133D40U, 0x32C2C7F5U, KOS_SUCCESS);
-    test_double("207499759360.469947e-2",  0x41DEEB7CU, 0xD666B365U, KOS_SUCCESS);
+    test_double("2074997593.60469947",     0x41DEEB7CU, 0xD666B365U, KOS_SUCCESS);
+    test_double("58040.05424489488",       0x40EC5701U, 0xBC5FCA30U, KOS_SUCCESS);
     */
 
     /* Formatting errors */
