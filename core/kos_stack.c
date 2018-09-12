@@ -121,7 +121,8 @@ static int _push_new_stack(KOS_YARN yarn)
     KOS_STACK *const new_stack = (KOS_STACK *)_KOS_alloc_object_page(yarn,
                                                                      KOS_ALLOC_DEFAULT,
                                                                      OBJ_STACK);
-    new_stack->header.flags = KOS_NORMAL_STACK;
+    if (new_stack)
+        new_stack->header.flags = KOS_NORMAL_STACK;
 
     return _init_stack(yarn, new_stack);
 }
@@ -134,7 +135,8 @@ static int _push_new_reentrant_stack(KOS_YARN yarn,
                                                                  KOS_ALLOC_DEFAULT,
                                                                  OBJ_STACK,
                                                                  (uint32_t)alloc_size);
-    new_stack->header.flags = KOS_REENTRANT_STACK;
+    if (new_stack)
+        new_stack->header.flags = KOS_REENTRANT_STACK;
 
     assert( ! IS_BAD_PTR(yarn->stack));
 
