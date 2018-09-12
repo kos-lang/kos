@@ -115,6 +115,7 @@ Table of Contents
     * [reduce()](#reduce)
     * [reverse()](#reverse)
     * [shallow()](#shallow)
+    * [sink()](#sink)
     * [sort()](#sort)
     * [string()](#string)
       * [string.prototype.code()](#stringprototypecode)
@@ -2286,6 +2287,45 @@ Example:
 
     > [ shallow({x:0, y:1}) ... ]
     [["y", 1], ["x", 0]]
+
+sink()
+------
+
+    sink(op, iterable)
+    sink(op)
+    sink()
+
+Applies a function to every element of an iterable object.
+
+The first variant invokes function `op` on every element from the `iterable`
+object.
+
+The second and third variant return a function which can be applied to any
+iterable object.  With the third variant, the returned function will simply
+extract all elements from an iterable object.
+
+The function returned by the second variant invokes function `op` on every
+element from the `iterable` object.
+
+The function returned by the third variant simply iterates over the
+`iterable` object, but doesn't do anything with the elements.
+
+Elements are extracted from `iterable` object through its `iterator()`
+function.
+
+A typical use of the `sink()` function is at the end of a chain of stream
+operators `->`.
+
+Examples:
+
+    > range(3) -> sink(print)
+    0
+    1
+    2
+    > "abc" -> map(x => (print(x + "_"))) -> sink()
+    a_
+    b_
+    c_
 
 sort()
 ------

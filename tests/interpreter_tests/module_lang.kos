@@ -2646,6 +2646,34 @@ do {
 }
 
 ##############################################################################
+# lang.sink
+
+do {
+    var sum = 0
+
+    fun update_sum(x)
+    {
+        sum += x
+    }
+
+    lang.sink(update_sum, [1, 300, 20])
+
+    assert sum == 321
+
+    sum = 0;
+
+    [40, 500, 6000] -> lang.sink(update_sum)
+
+    assert sum == 6540
+
+    sum = 0;
+
+    [100, 20, 3] -> lang.map(x => (update_sum(x))) -> lang.sink()
+
+    assert sum == 123
+}
+
+##############################################################################
 # lang.backtrace
 
 do {

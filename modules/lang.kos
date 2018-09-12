@@ -2024,6 +2024,67 @@ fun count_elements(iterable)
     return num_elems
 }
 
+/* @item lang sink()
+ *
+ *     sink(op, iterable)
+ *     sink(op)
+ *     sink()
+ *
+ * Applies a function to every element of an iterable object.
+ *
+ * The first variant invokes function `op` on every element from the `iterable`
+ * object.
+ *
+ * The second and third variant return a function which can be applied to any
+ * iterable object.  With the third variant, the returned function will simply
+ * extract all elements from an iterable object.
+ *
+ * The function returned by the second variant invokes function `op` on every
+ * element from the `iterable` object.
+ *
+ * The function returned by the third variant simply iterates over the
+ * `iterable` object, but doesn't do anything with the elements.
+ *
+ * Elements are extracted from `iterable` object through its `iterator()`
+ * function.
+ *
+ * A typical use of the `sink()` function is at the end of a chain of stream
+ * operators `->`.
+ *
+ * Examples:
+ *
+ *     > range(3) -> sink(print)
+ *     0
+ *     1
+ *     2
+ *     > "abc" -> map(x => (print(x + "_"))) -> sink()
+ *     a_
+ *     b_
+ *     c_
+ */
+
+fun sink(args...)
+{
+    const num_args = args.size
+    if num_args > 1 {
+        sink(args[0])(args[1])
+    }
+    else if args.size {
+        const op = args[0]
+        return fun(iterable) {
+            for const elem in iterable {
+                op(elem)
+            }
+        }
+    }
+    else {
+        return fun(iterable) {
+            for const elem in iterable {
+            }
+        }
+    }
+}
+
 # TODO move to debug module
 /* @item lang backtrace()
  *
