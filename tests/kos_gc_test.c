@@ -30,6 +30,7 @@
 #include "../inc/kos_string.h"
 #include "../core/kos_config.h"
 #include "../core/kos_misc.h"
+#include "../core/kos_object_internal.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -482,15 +483,22 @@ int main(void)
             obj_id = KOS_new_object_walk(yarn, cont_id, KOS_DEEP);
             TEST( ! IS_BAD_PTR(obj_id));
             TEST(KOS_array_write(yarn, array_id, 6, obj_id) == KOS_SUCCESS);
+
+            obj_id = KOS_new_function(yarn);
+            TEST( ! IS_BAD_PTR(obj_id));
+
+            TEST(_KOS_stack_push(yarn, obj_id) == KOS_SUCCESS);
+            _KOS_stack_pop(yarn);
+            yarn->stack = KOS_BADPTR;
         }
 
         TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
-        TEST(stats.num_objs_freed     == 18);
+        TEST(stats.num_objs_freed     == 20);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 0);
-        TEST(stats.num_pages_freed    == 1);
+        TEST(stats.num_pages_freed    == 2);
         TEST(stats.size_evacuated     == base_stats.size_evacuated);
         TEST(stats.size_freed         >  0);
         TEST(stats.size_kept          == 0);
@@ -543,7 +551,7 @@ int main(void)
             KOS_OBJ_ID  obj_id;
             KOS_OBJ_REF ref;
 
-            array_id = KOS_new_array(yarn, 4);
+            array_id = KOS_new_array(yarn, 3);
             TEST( ! IS_BAD_PTR(array_id));
 
             ref.obj_id = array_id;
@@ -552,24 +560,34 @@ int main(void)
             obj_id = KOS_new_builtin_function(yarn, _handler, 0);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(KOS_array_write(yarn, array_id, 0, obj_id) == KOS_SUCCESS);
+            TEST(_KOS_stack_push(yarn, obj_id) == KOS_SUCCESS);
 
             obj_id = KOS_new_builtin_class(yarn, _handler, 0);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(KOS_array_write(yarn, array_id, 1, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(yarn, array_id, 0, obj_id) == KOS_SUCCESS);
 
             obj_id = KOS_new_buffer(yarn, 128);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(KOS_array_write(yarn, array_id, 2, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(yarn, array_id, 1, obj_id) == KOS_SUCCESS);
 
             obj_id = KOS_new_object_walk(yarn, obj_id, KOS_SHALLOW);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(KOS_array_write(yarn, array_id, 3, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(yarn, array_id, 2, obj_id) == KOS_SUCCESS);
 
-            TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+            obj_id = KOS_new_cstring(yarn, "0123456789012345678901234567890123456789");
+            TEST( ! IS_BAD_PTR(obj_id));
+
+            yarn->retval = obj_id;
+
+            obj_id = KOS_string_slice(yarn, obj_id, 1, -1);
+            TEST( ! IS_BAD_PTR(obj_id));
+
+            yarn->exception = obj_id;
+
+            TEST(KOS_collect_garbage(yarn, &stats) == KOS_ERROR_EXCEPTION);
 
             /* The following objects have been evacuated:
              * - 2 for array
@@ -584,31 +602,65 @@ int main(void)
              *      -- 1 get function
              * - 2 for buffer
              * - 1 for empty walk
+             * - 1 for stack
+             * - 1 for string in retval
+             * - 1 for string as exception
              */
-            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 13);
+            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 15);
             TEST(stats.num_objs_freed     == 1);
             TEST(stats.num_objs_finalized == 0);
-            TEST(stats.num_pages_kept     == 0);
+            TEST(stats.num_pages_kept     == 1);
             TEST(stats.num_pages_freed    == 1);
             TEST(stats.size_evacuated     >= base_stats.size_evacuated);
             TEST(stats.size_freed         >  0);
-            TEST(stats.size_kept          == 0);
+            TEST(stats.size_kept          >  0);
 
             KOS_untrack_ref(yarn, &ref);
+
+            _KOS_stack_pop(yarn);
+            yarn->stack = KOS_BADPTR;
+
+            yarn->retval    = KOS_BADPTR;
+            yarn->exception = KOS_BADPTR;
 
             TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
 
             TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
-            TEST(stats.num_objs_freed     == 13);
+            TEST(stats.num_objs_freed     == 16);
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == 0);
-            TEST(stats.num_pages_freed    == 1);
+            TEST(stats.num_pages_freed    == 2);
             TEST(stats.size_evacuated     >= base_stats.size_evacuated);
             TEST(stats.size_freed         >  0);
             TEST(stats.size_kept          == 0);
         }
 
         KOS_context_destroy(&ctx);
+    }
+
+    /************************************************************************/
+    /* Test release of current thread page */
+    {
+        struct _KOS_GC_STATS stats;
+
+        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+
+        TEST(KOS_new_array(yarn, 0) != KOS_BADPTR);
+
+        _KOS_heap_release_thread_page(yarn);
+
+        TEST(KOS_new_array(yarn, 0) != KOS_BADPTR);
+
+        TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+
+        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
+        TEST(stats.num_objs_freed     == 2);
+        TEST(stats.num_objs_finalized == 0);
+        TEST(stats.num_pages_kept     == 0);
+        TEST(stats.num_pages_freed    == 1);
+        TEST(stats.size_evacuated     == base_stats.size_evacuated);
+        TEST(stats.size_freed         >  0);
+        TEST(stats.size_kept          == 0);
     }
 
     /************************************************************************/

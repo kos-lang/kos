@@ -480,8 +480,8 @@ void *_KOS_heap_early_alloc(KOS_CONTEXT         *ctx,
 
 void _KOS_heap_release_thread_page(KOS_YARN yarn)
 {
-    if (yarn->cur_page)
-    {
+    if (yarn->cur_page) {
+
         struct _KOS_HEAP *const heap = &yarn->ctx->heap;
 
         _KOS_lock_mutex(&heap->mutex);
@@ -1590,8 +1590,11 @@ static int _evacuate(KOS_YARN              yarn,
     _KOS_PAGE        *page           = heap->full_pages;
     _KOS_PAGE        *non_full_pages = heap->non_full_pages;
     _KOS_PAGE        *next;
+    KOS_OBJ_ID        exception      = KOS_get_exception(yarn);
 
     struct _KOS_GC_STATS stats = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+    KOS_clear_exception(yarn);
 
     heap->full_pages     = 0;
     heap->non_full_pages = 0;
@@ -1705,6 +1708,9 @@ _error:
 
     _release_current_page_locked(yarn);
 
+    if ( ! IS_BAD_PTR(exception))
+        yarn->exception = exception;
+
     return error;
 }
 
@@ -1750,6 +1756,9 @@ int KOS_collect_garbage(KOS_YARN              yarn,
     KOS_atomic_release_barrier();
 
     KOS_atomic_write_u32(heap->gc_state, GC_INACTIVE);
+
+    if ( ! error && KOS_is_exception_pending(yarn))
+        error = KOS_ERROR_EXCEPTION;
 
     return error;
 }

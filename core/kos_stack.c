@@ -228,16 +228,14 @@ int _KOS_stack_push(KOS_YARN   yarn,
                                                        TO_SMALL_INT((int64_t)num_regs));
     yarn->regs_idx = base_idx + 3;
 
-#ifndef NDEBUG
-    /* Clear registers in debug builds */
+    /* Clear registers builds */
     {
         unsigned       idx = base_idx + 3;
-        const unsigned end = base_idx + num_regs;
+        const unsigned end = idx + num_regs;
 
         for ( ; idx < end; idx++)
             KOS_atomic_write_ptr(new_stack->buf[idx], KOS_BADPTR);
     }
-#endif
 
     yarn->stack_depth += room;
 
