@@ -44,8 +44,7 @@ static const char str_value[]              = "value";
 
 static int _push_new_stack(KOS_YARN yarn);
 
-static int _chain_stack_frame(KOS_YARN   yarn,
-                              KOS_OBJ_ID stack)
+static int _unchain_reentrant_frame(KOS_YARN yarn)
 {
     KOS_OBJ_ID old_stack = yarn->stack;
 
@@ -56,10 +55,11 @@ static int _chain_stack_frame(KOS_YARN   yarn,
 
         assert(KOS_atomic_read_u32(OBJPTR(STACK, old_stack)->size) > 0);
 
-        assert( ! IS_BAD_PTR((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, old_stack)->buf[0])));
-
         old_stack = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, old_stack)->buf[0]);
-        idx       = KOS_atomic_read_u32(OBJPTR(STACK, old_stack)->size);
+
+        assert( ! IS_BAD_PTR(old_stack));
+
+        idx = KOS_atomic_read_u32(OBJPTR(STACK, old_stack)->size);
 
         if (idx == OBJPTR(STACK, old_stack)->capacity) {
 
@@ -80,15 +80,30 @@ static int _chain_stack_frame(KOS_YARN   yarn,
 
         KOS_atomic_write_ptr(OBJPTR(STACK, old_stack)->buf[idx], gen_stack);
         KOS_atomic_write_u32(OBJPTR(STACK, old_stack)->size,     idx + 1);
+
+        yarn->stack = old_stack;
     }
 
-    KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[0], old_stack);
-
-    yarn->stack = stack;
-
-    yarn->stack_depth += KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
-
     return KOS_SUCCESS;
+}
+
+static int _chain_stack_frame(KOS_YARN   yarn,
+                              KOS_OBJ_ID stack)
+{
+    const int error = _unchain_reentrant_frame(yarn);
+
+    if ( ! error) {
+
+        const KOS_OBJ_ID old_stack = yarn->stack;
+
+        KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[0], old_stack);
+
+        yarn->stack = stack;
+
+        yarn->stack_depth += KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+    }
+
+    return error;
 }
 
 static int _init_stack(KOS_YARN   yarn,
@@ -181,7 +196,20 @@ int _KOS_stack_push(KOS_YARN   yarn,
 
         if ( ! stack || stack_size + room > stack->capacity) {
 
-            TRY(_push_new_stack(yarn));
+            KOS_STACK *cur_stack = stack;
+
+            if (stack) {
+
+                TRY(_unchain_reentrant_frame(yarn));
+
+                assert( ! IS_BAD_PTR(yarn->stack));
+                assert(GET_OBJ_TYPE(yarn->stack) == OBJ_STACK);
+
+                cur_stack = OBJPTR(STACK, yarn->stack);
+            }
+
+            if ( ! stack || KOS_atomic_read_u32(cur_stack->size) + room > cur_stack->capacity)
+                TRY(_push_new_stack(yarn));
 
             new_stack = OBJPTR(STACK, yarn->stack);
             base_idx  = KOS_atomic_read_u32(new_stack->size);
@@ -287,8 +315,8 @@ void _KOS_stack_pop(KOS_YARN yarn)
 
             yarn->stack_depth -= size;
 
-            stack        = OBJPTR(STACK, new_stack_obj);
-            size         = KOS_atomic_read_u32(stack->size);
+            stack       = OBJPTR(STACK, new_stack_obj);
+            size        = KOS_atomic_read_u32(stack->size);
             yarn->stack = new_stack_obj;
         }
     }
@@ -306,8 +334,8 @@ void _KOS_stack_pop(KOS_YARN yarn)
 
         assert(GET_OBJ_TYPE(new_stack_obj) == OBJ_STACK);
 
-        stack        = OBJPTR(STACK, new_stack_obj);
-        size         = KOS_atomic_read_u32(stack->size);
+        stack       = OBJPTR(STACK, new_stack_obj);
+        size        = KOS_atomic_read_u32(stack->size);
         yarn->stack = new_stack_obj;
 
         --yarn->stack_depth;
