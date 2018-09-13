@@ -3,7 +3,7 @@
 import lang: print, range
 
 do {
-    const loops = 20000
+    const loops = 3000
     const size  = 10000
     const a     = [range(size)...]
     var   total = 0

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-loops = 20000
+loops = 3000
 size  = 10000
 a     = list(range(size))
 total = 0
