@@ -661,6 +661,8 @@ int main(void)
         TEST(stats.size_evacuated     == base_stats.size_evacuated);
         TEST(stats.size_freed         >  0);
         TEST(stats.size_kept          == 0);
+
+        KOS_context_destroy(&ctx);
     }
 
     /************************************************************************/
