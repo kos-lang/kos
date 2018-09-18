@@ -414,8 +414,10 @@ void _KOS_disassemble(const char                          *filename,
     while (line_addrs < line_addrs_end && line_addrs->offs < offs)
         ++line_addrs;
 
-    while (func_addrs < func_addrs_end && func_addrs->offs < offs)
+    while (func_addrs < func_addrs_end && func_addrs->offs < offs) {
         ++func_addrs;
+        ++func_names;
+    }
 
     while (size) {
         int           i;
