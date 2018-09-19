@@ -42,7 +42,7 @@ assert typeof void    == "void"
 assert typeof false   == "boolean"
 assert typeof {}      == "object"
 assert typeof []      == "array"
-assert typeof ()=>(0) == "function"
+assert typeof (()=>0) == "function"
 
 ##############################################################################
 # +
@@ -98,24 +98,24 @@ do {
     assert b == "def"
 }
 do {
-    const a = ()=>(1)()
+    const a = (()=>1)()
     const b = +(2 + a)
     assert b == 3
     assert a == 1
 }
 expect_fail(fun {
     const a = 1
-    const b = ()=>("abc")()
+    const b = (()=>"abc")()
     const c = a + b
 })
 expect_fail(fun {
     const a = 1
-    const b = ()=>(void)()
+    const b = (()=>void)()
     const c = a + b
 })
 expect_fail(fun {
-    const a = ()=>(true)()
-    const b = ()=>(false)()
+    const a = (()=>true)()
+    const b = (()=>false)()
     const c = a + b
 })
 
@@ -152,7 +152,7 @@ do {
     assert b == 2
 }
 do {
-    const a = ()=>(1)()
+    const a = (()=>1)()
     const b = -(a + 2)
     assert b == -3
     assert a == 1
@@ -163,7 +163,7 @@ do {
     const positive = 0.0
     assert typeof positive == "float"
 
-    const negative = x=>(-x)(positive)
+    const negative = (x=>-x)(positive)
     assert typeof negative == "float"
 
     assert positive == negative
@@ -173,12 +173,12 @@ do {
 }
 
 expect_fail(fun {
-    const a = ()=>("abc")()
-    const b = ()=>("xyz")()
+    const a = (()=>"abc")()
+    const b = (()=>"xyz")()
     const c = a - b
 })
 expect_fail(fun {
-    const a = ()=>("abc")()
+    const a = (()=>"abc")()
     const b = 0
     const c = a - b
 })
@@ -209,7 +209,7 @@ do {
     assert b == 2
 }
 expect_fail(fun {
-    const a = ()=>("a")()
+    const a = (()=>"a")()
     const b = 5
     const c = a * b
 })
@@ -248,7 +248,7 @@ do {
 }
 do {
     const a  = 10
-    const b  = ()=>(0)()
+    const b  = (()=>0)()
     var   ok = false
     try {
         const c = a / b
@@ -260,7 +260,7 @@ do {
 }
 do {
     const a  = 10.0
-    const b  = ()=>(0)()
+    const b  = (()=>0)()
     var   ok = false
     try {
         const c = a / b
@@ -272,7 +272,7 @@ do {
 }
 do {
     const a  = 10
-    const b  = ()=>(0.0)()
+    const b  = (()=>0.0)()
     var   ok = false
     try {
         const c = a / b
@@ -284,7 +284,7 @@ do {
 }
 do {
     const a  = 1.0
-    const b  = ()=>(-0.0)()
+    const b  = (()=>-0.0)()
     var   ok = false
     try {
         const c = a / b
@@ -295,10 +295,10 @@ do {
     assert ok
 }
 do {
-    const bi = () => (0) ()
-    const bf = () => (0.0) ()
-    expect_fail(() => (10 / bi))
-    expect_fail(() => (10 / bf))
+    const bi = (() => 0) ()
+    const bf = (() => 0.0) ()
+    expect_fail(() => 10 / bi)
+    expect_fail(() => 10 / bf)
 }
 
 ##############################################################################
@@ -328,7 +328,7 @@ do {
 }
 do {
     const a  = 10
-    const b  = ()=>(0)()
+    const b  = (()=>0)()
     var   ok = false
     try {
         const c = a % b
@@ -340,7 +340,7 @@ do {
 }
 do {
     const a  = 10.0
-    const b  = ()=>(0)()
+    const b  = (()=>0)()
     var   ok = false
     try {
         const c = a % b
@@ -352,7 +352,7 @@ do {
 }
 do {
     const a  = 10
-    const b  = ()=>(0.0)()
+    const b  = (()=>0.0)()
     var   ok = false
     try {
         const c = a % b
@@ -364,7 +364,7 @@ do {
 }
 do {
     const a  = 1.0
-    const b  = ()=>(-0.0)()
+    const b  = (()=>-0.0)()
     var   ok = false
     try {
         const c = a % b
@@ -381,7 +381,7 @@ do {
     assert c == a
 }
 do {
-    const a = ()=>(-1e-100)()
+    const a = (()=>-1e-100)()
     const b = 1e100
     const c = a % b
     assert c == a
@@ -394,12 +394,12 @@ do {
     assert b == -1
 }
 do {
-    const a = ()=>(5.0)()
+    const a = (()=>5.0)()
     const b = a % -4.0
     assert b == 1
 }
 do {
-    const a = ()=>(-5.0)()
+    const a = (()=>-5.0)()
     const b = a % 4.0
     assert b == -1
 }
@@ -411,20 +411,20 @@ do {
     assert b == -1
 }
 do {
-    const a = ()=>(5)()
+    const a = (()=>5)()
     const b = a % -4
     assert b == 1
 }
 do {
-    const a = ()=>(-5)()
+    const a = (()=>-5)()
     const b = a % 4
     assert b == -1
 }
 do {
-    const bi = () => (0) ()
-    const bf = () => (0.0) ()
-    expect_fail(() => (10 % bi))
-    expect_fail(() => (10 % bf))
+    const bi = (() => 0) ()
+    const bf = (() => 0.0) ()
+    expect_fail(() => 10 % bi)
+    expect_fail(() => 10 % bf)
 }
 
 ##############################################################################
@@ -462,36 +462,36 @@ do {
 ##############################################################################
 # mixed types
 do {
-    const a = 2.0 * ()=>(0x4000000000000000)()
-    const b = ()=>(0x4000000000000000)()
+    const a = 2.0 * (()=>0x4000000000000000)()
+    const b = (()=>0x4000000000000000)()
     const c = 0x4000000000000000
     const d = (a + b) / c
     assert typeof d == "float"
     assert d        == 3
 }
 do {
-    const a = 2.0 * ()=>(0x4000000000000000)()
+    const a = 2.0 * (()=>0x4000000000000000)()
     const b = 0x4000000000000000
     const c = a - b
     assert typeof c == "float"
     assert 0x4000000000000000 == c
 }
 do {
-    const a = ()=>(42)()
+    const a = (()=>42)()
     const b = 0x4000000000000000
     const c = a % b
     assert typeof c == "integer"
     assert c        == 42
 }
 do {
-    const a = ()=>(123.25)()
+    const a = (()=>123.25)()
     const b = 0x4000000000000000
     const c = a % b
     assert typeof c == "float"
     assert c        == 123.25
 }
 do {
-    const a = ()=>(0x4000000000000005)()
+    const a = (()=>0x4000000000000005)()
     const b = 16
     const c = a % b
     assert typeof c == "integer"
@@ -547,7 +547,7 @@ do {
 
 do {
     var   a = 0
-    const b = ()=>(42)()
+    const b = (()=>42)()
     a = a || b
     assert a == 42
 }
@@ -665,7 +665,7 @@ do {
     assert typeof c == "integer"
 }
 do {
-    const a = ()=>(8)()
+    const a = (()=>8)()
     const b = 10
     const c = a | b
     assert c == 10
@@ -713,7 +713,7 @@ do {
     assert c        == 0x7FFFFFFE
 }
 do {
-    var a = ()=>(0xFFFFFFFFFFFFFFFE)()
+    var a = (()=>0xFFFFFFFFFFFFFFFE)()
     a = ~a
     assert a == 1
 }
@@ -802,7 +802,7 @@ do {
     assert typeof c == "integer"
 }
 do {
-    const a = ()=>(0x8000000000000000)()
+    const a = (()=>0x8000000000000000)()
     const b = -15
     const c = a << b
     assert c == 0xFFFF000000000000
@@ -816,7 +816,7 @@ do {
     assert typeof c == "integer"
 }
 do {
-    const a = ()=>(0x8000000000000000)()
+    const a = (()=>0x8000000000000000)()
     const b = -64
     const c = a << b
     assert c == -1
@@ -898,7 +898,7 @@ do {
     assert typeof c == "integer"
 }
 do {
-    const a = ()=>(0x8000000000000000)()
+    const a = (()=>0x8000000000000000)()
     const b = 64
     const c = a >> b
     assert c == -1
@@ -912,7 +912,7 @@ do {
     assert typeof c == "integer"
 }
 do {
-    const a = ()=>(1)()
+    const a = (()=>1)()
     const b = -62
     const c = a >> b
     assert c == 0x4000000000000000
@@ -959,14 +959,14 @@ do {
     assert typeof c == "integer"
 }
 do {
-    const a = ()=>(0x8000000000000000)()
+    const a = (()=>0x8000000000000000)()
     const b = 64
     const c = a >>> b
     assert c == 0
     assert typeof c == "integer"
 }
 do {
-    const a = ()=>(0x8000000000000001)()
+    const a = (()=>0x8000000000000001)()
     const b = -1
     const c = a >>> b
     assert typeof c == "integer"
@@ -1016,17 +1016,17 @@ do {
 ##############################################################################
 # ==
 do {
-    assert 2     == ()=>(2)()
-    assert 3.0   == ()=>(3)()
-    assert 4.0   == ()=>(4.0)()
-    assert 5.0   == ()=>(5)()
-    assert 6     == ()=>(6.0)()
-    assert "abc" == ()=>("abc")()
-    assert void  == ()=>(void)()
-    assert false == ()=>(false)()
-    assert true  == ()=>(true)()
+    assert 2     == (()=>2)()
+    assert 3.0   == (()=>3)()
+    assert 4.0   == (()=>4.0)()
+    assert 5.0   == (()=>5)()
+    assert 6     == (()=>6.0)()
+    assert "abc" == (()=>"abc")()
+    assert void  == (()=>void)()
+    assert false == (()=>false)()
+    assert true  == (()=>true)()
 
-    const array = fun { const a = [ 1, 2, 3 ] ; return ()=>(a) } ()
+    const array = fun { const a = [ 1, 2, 3 ] ; return ()=>a } ()
     assert typeof array() == "array"
     assert array().size   == 3
     assert array()[1]     == 2
@@ -1036,62 +1036,62 @@ do {
 ##############################################################################
 # !=
 do {
-    assert 2     != ()=>(3)()
-    assert 3.0   != ()=>(4)()
-    assert 4.0   != ()=>(5.0)()
-    assert "abc" != ()=>("Abc")()
-    assert void  != ()=>(true)()
-    assert false != ()=>(true)()
-    assert []    != ()=>([])()
-    assert {}    != ()=>({})()
+    assert 2     != (()=>3)()
+    assert 3.0   != (()=>4)()
+    assert 4.0   != (()=>5.0)()
+    assert "abc" != (()=>"Abc")()
+    assert void  != (()=>true)()
+    assert false != (()=>true)()
+    assert []    != (()=>[])()
+    assert {}    != (()=>{})()
 }
 
 ##############################################################################
 # <
 do {
-    assert 1     < ()=>(2)()
-    assert 3.0   < ()=>(4)()
-    assert 5     < ()=>(6.0)()
-    assert "aa"  < ()=>("aaa")()
+    assert 1     < (()=>2)()
+    assert 3.0   < (()=>4)()
+    assert 5     < (()=>6.0)()
+    assert "aa"  < (()=>"aaa")()
     assert false < true
 }
 
 ##############################################################################
 # <=
 do {
-    assert 1     <= ()=>(2)()
-    assert 3.0   <= ()=>(4)()
-    assert 5     <= ()=>(6.0)()
-    assert "aa"  <= ()=>("aaa")()
-    assert "bb"  <= ()=>("bb")()
-    assert false <= ()=>(true)()
-    assert true  <= ()=>(true)()
-    assert false <= ()=>(false)()
-    assert void  <= ()=>(void)()
+    assert 1     <= (()=>2)()
+    assert 3.0   <= (()=>4)()
+    assert 5     <= (()=>6.0)()
+    assert "aa"  <= (()=>"aaa")()
+    assert "bb"  <= (()=>"bb")()
+    assert false <= (()=>true)()
+    assert true  <= (()=>true)()
+    assert false <= (()=>false)()
+    assert void  <= (()=>void)()
 }
 
 ##############################################################################
 # >
 do {
-    assert 2     > ()=>(1)()
-    assert 4.0   > ()=>(3)()
-    assert 6     > ()=>(5.0)()
-    assert "aaa" > ()=>("aa")()
+    assert 2     > (()=>1)()
+    assert 4.0   > (()=>3)()
+    assert 6     > (()=>5.0)()
+    assert "aaa" > (()=>"aa")()
     assert true  > false
 }
 
 ##############################################################################
 # >=
 do {
-    assert 2     >= ()=>(1)()
-    assert 4.0   >= ()=>(3)()
-    assert 6     >= ()=>(5.0)()
-    assert "aaa" >= ()=>("aa")()
-    assert "bb"  >= ()=>("bb")()
-    assert true  >= ()=>(false)()
-    assert true  >= ()=>(true)()
-    assert false >= ()=>(false)()
-    assert void  >= ()=>(void)()
+    assert 2     >= (()=>1)()
+    assert 4.0   >= (()=>3)()
+    assert 6     >= (()=>5.0)()
+    assert "aaa" >= (()=>"aa")()
+    assert "bb"  >= (()=>"bb")()
+    assert true  >= (()=>false)()
+    assert true  >= (()=>true)()
+    assert false >= (()=>false)()
+    assert void  >= (()=>void)()
 }
 
 ##############################################################################
@@ -1204,7 +1204,7 @@ do {
 }
 expect_fail(fun {
     var   a = "abc"
-    const b = ()=>("xyz")()
+    const b = (()=>"xyz")()
     a -= b
 })
 do {

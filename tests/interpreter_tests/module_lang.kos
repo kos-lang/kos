@@ -63,10 +63,10 @@ do {
 }
 
 do {
-    expect_fail(()=>((1).times_three()))
-    expect_fail(()=>((1.5).times_three()))
+    expect_fail(()=>(1).times_three())
+    expect_fail(()=>(1.5).times_three())
 
-    lang.number.prototype.times_three = () => (this*3)
+    lang.number.prototype.times_three = () => this*3
 
     const i = (5).times_three()
     assert typeof i == "integer"
@@ -78,18 +78,18 @@ do {
 }
 
 do {
-    expect_fail(()=>(lang.number("")))
-    expect_fail(()=>(lang.number("a")))
-    expect_fail(()=>(lang.number("e")))
-    expect_fail(()=>(lang.number("123x")))
-    expect_fail(()=>(lang.number("-")))
-    expect_fail(()=>(lang.number("--")))
-    expect_fail(()=>(lang.number("-E")))
-    expect_fail(()=>(lang.number({})))
-    expect_fail(()=>(lang.number([])))
-    expect_fail(()=>(lang.number(()=>(void))))
-    expect_fail(()=>(lang.number(false)))
-    expect_fail(()=>(lang.number(void)))
+    expect_fail(()=>lang.number(""))
+    expect_fail(()=>lang.number("a"))
+    expect_fail(()=>lang.number("e"))
+    expect_fail(()=>lang.number("123x"))
+    expect_fail(()=>lang.number("-"))
+    expect_fail(()=>lang.number("--"))
+    expect_fail(()=>lang.number("-E"))
+    expect_fail(()=>lang.number({}))
+    expect_fail(()=>lang.number([]))
+    expect_fail(()=>lang.number(()=>void))
+    expect_fail(()=>lang.number(false))
+    expect_fail(()=>lang.number(void))
 
     const _1 = lang.number("1")
     assert typeof _1 == "integer"
@@ -160,13 +160,13 @@ do {
 }
 
 do {
-    expect_fail(()=>((3).square()))
+    expect_fail(()=>(3).square())
 
-    lang.integer.prototype.square = () => (this * this)
+    lang.integer.prototype.square = () => this * this
 
     assert (3).square() == 9
 
-    expect_fail(()=>((3.0).square()))
+    expect_fail(()=>(3.0).square())
 }
 
 do {
@@ -184,7 +184,7 @@ do {
 }
 
 do {
-    const value = ()=>(42)()
+    const value = (()=>42)()
     assert value instanceof lang.integer
     assert value instanceof lang.number
     assert value instanceof lang.object
@@ -194,22 +194,22 @@ do {
 }
 
 do {
-    expect_fail(()=>(lang.integer("")))
-    expect_fail(()=>(lang.integer("a")))
-    expect_fail(()=>(lang.integer("e")))
-    expect_fail(()=>(lang.integer("123x")))
-    expect_fail(()=>(lang.integer("-")))
-    expect_fail(()=>(lang.integer("--")))
-    expect_fail(()=>(lang.integer("-E")))
-    expect_fail(()=>(lang.integer("3.")))
-    expect_fail(()=>(lang.integer(".")))
-    expect_fail(()=>(lang.integer("-.")))
-    expect_fail(()=>(lang.integer(".5")))
-    expect_fail(()=>(lang.integer({})))
-    expect_fail(()=>(lang.integer([])))
-    expect_fail(()=>(lang.integer(()=>(void))))
-    expect_fail(()=>(lang.integer(false)))
-    expect_fail(()=>(lang.integer(void)))
+    expect_fail(()=>lang.integer(""))
+    expect_fail(()=>lang.integer("a"))
+    expect_fail(()=>lang.integer("e"))
+    expect_fail(()=>lang.integer("123x"))
+    expect_fail(()=>lang.integer("-"))
+    expect_fail(()=>lang.integer("--"))
+    expect_fail(()=>lang.integer("-E"))
+    expect_fail(()=>lang.integer("3."))
+    expect_fail(()=>lang.integer("."))
+    expect_fail(()=>lang.integer("-."))
+    expect_fail(()=>lang.integer(".5"))
+    expect_fail(()=>lang.integer({}))
+    expect_fail(()=>lang.integer([]))
+    expect_fail(()=>lang.integer(()=>void))
+    expect_fail(()=>lang.integer(false))
+    expect_fail(()=>lang.integer(void))
 
     const _1 = lang.integer("1")
     assert typeof _1 == "integer"
@@ -233,7 +233,7 @@ do {
     assert 0xfedcba .hex() == "0xfedcba"
     assert 0x9876543210 .hex() == "0x9876543210"
 
-    expect_fail(()=>(1.2.hex()))
+    expect_fail(()=>1.2.hex())
 }
 
 ##############################################################################
@@ -276,13 +276,13 @@ do {
 }
 
 do {
-    expect_fail(()=>((3.0).square3()))
+    expect_fail(()=>(3.0).square3())
 
-    lang.float.prototype.square3 = () => (this * this * this)
+    lang.float.prototype.square3 = () => this * this * this
 
     assert (3.0).square3() == 27
 
-    expect_fail(()=>((3).square3()))
+    expect_fail(()=>(3).square3())
 }
 
 do {
@@ -298,7 +298,7 @@ do {
 }
 
 do {
-    const value = ()=>(42.0)()
+    const value = (()=>42.0)()
     assert value instanceof lang.float
     assert value instanceof lang.number
     assert value instanceof lang.object
@@ -308,21 +308,21 @@ do {
 }
 
 do {
-    expect_fail(()=>(lang.float("")))
-    expect_fail(()=>(lang.float("a")))
-    expect_fail(()=>(lang.float("e")))
-    expect_fail(()=>(lang.float("123x")))
-    expect_fail(()=>(lang.float("-")))
-    expect_fail(()=>(lang.float("--")))
-    expect_fail(()=>(lang.float("-E")))
-    expect_fail(()=>(lang.float("0x002")))
-    expect_fail(()=>(lang.float({})))
-    expect_fail(()=>(lang.float([])))
-    expect_fail(()=>(lang.float(()=>(void))))
-    expect_fail(()=>(lang.float(false)))
-    expect_fail(()=>(lang.float(void)))
+    expect_fail(()=>lang.float(""))
+    expect_fail(()=>lang.float("a"))
+    expect_fail(()=>lang.float("e"))
+    expect_fail(()=>lang.float("123x"))
+    expect_fail(()=>lang.float("-"))
+    expect_fail(()=>lang.float("--"))
+    expect_fail(()=>lang.float("-E"))
+    expect_fail(()=>lang.float("0x002"))
+    expect_fail(()=>lang.float({}))
+    expect_fail(()=>lang.float([]))
+    expect_fail(()=>lang.float(()=>void))
+    expect_fail(()=>lang.float(false))
+    expect_fail(()=>lang.float(void))
 
-    expect_fail(()=>(lang.float("1.1.1")))
+    expect_fail(()=>lang.float("1.1.1"))
 
     const _1 = lang.float("1")
     assert typeof _1 == "float"
@@ -368,7 +368,7 @@ do {
 }
 
 do {
-    const value = ()=>(void)()
+    const value = (()=>void)()
     assert ! (value instanceof lang.object)
     assert ! (value instanceof lang.integer)
     assert ! (value instanceof lang.float)
@@ -395,8 +395,8 @@ do {
 }
 
 do {
-    expect_fail(()=>(false.negative()))
-    lang.boolean.prototype.negative = ()=>(!this)
+    expect_fail(()=>false.negative())
+    lang.boolean.prototype.negative = ()=>!this
     assert false.negative()
     assert ! true.negative()
 }
@@ -412,7 +412,7 @@ do {
 }
 
 do {
-    const value = ()=>(false)()
+    const value = (()=>false)()
     assert value instanceof lang.boolean
     assert value instanceof lang.object
     assert ! (value instanceof lang.integer)
@@ -441,13 +441,13 @@ do {
     assert lang.string([0x30, 0x41]) == "0A"
     assert lang.string([0x100, 2])   == "\x{100}\x02"
 
-    expect_fail(()=>(lang.string([void])))
-    expect_fail(()=>(lang.string({})))
-    expect_fail(()=>(lang.string(void)))
-    expect_fail(()=>(lang.string(false)))
-    expect_fail(()=>(lang.string(()=>(void))))
-    expect_fail(()=>(lang.string([0x200000])))
-    expect_fail(()=>(lang.string([-1])))
+    expect_fail(()=>lang.string([void]))
+    expect_fail(()=>lang.string({}))
+    expect_fail(()=>lang.string(void))
+    expect_fail(()=>lang.string(false))
+    expect_fail(()=>lang.string(()=>void))
+    expect_fail(()=>lang.string([0x200000]))
+    expect_fail(()=>lang.string([-1]))
 }
 
 do {
@@ -471,8 +471,8 @@ do {
 }
 
 do {
-    expect_fail(()=>("x".add_2("y")))
-    lang.string.prototype.add_2 = x => (this + x)
+    expect_fail(()=>"x".add_2("y"))
+    lang.string.prototype.add_2 = x => this + x
     assert "x".add_2("y") == "xy"
 }
 
@@ -485,7 +485,7 @@ do {
 }
 
 do {
-    const value = ()=>("abc")()
+    const value = (()=>"abc")()
     assert value instanceof lang.string
     assert value instanceof lang.object
     assert ! (value instanceof lang.integer)
@@ -501,7 +501,7 @@ do {
 
     const o = ctor()
 
-    expect_fail(()=>(o.size))
+    expect_fail(()=>o.size)
 }
 
 ##############################################################################
@@ -541,7 +541,7 @@ do {
 }
 
 do {
-    const value = ()=>({})()
+    const value = (()=>{})()
     assert value instanceof lang.object
     assert ! (value instanceof lang.integer)
     assert ! (value instanceof lang.float)
@@ -637,7 +637,7 @@ do {
     assert typeof a[0] == "array"
     assert a[0].size   == 1
     assert a[0][0]     == 8
-    expect_fail(()=>(a[1]))
+    expect_fail(()=>a[1])
 }
 
 do {
@@ -646,7 +646,7 @@ do {
     assert a.size   == 2
     assert a[0]     == "xy"
     assert a[1]     == true
-    expect_fail(()=>(a[2]))
+    expect_fail(()=>a[2])
 }
 
 do {
@@ -686,7 +686,7 @@ do {
 do {
     const a = [ "a", "b", "c", "d", "e" ]
 
-    expect_fail(()=>(a.ret_elem_3()))
+    expect_fail(()=>a.ret_elem_3())
 
     lang.array.prototype.ret_elem_3 = fun {
         return this[3]
@@ -701,7 +701,7 @@ do {
     assert a[0]     == 10
     assert a[1]     == 20
     assert a[2]     == 30
-    expect_fail(()=>(a[3]))
+    expect_fail(()=>a[3])
 }
 
 do {
@@ -710,7 +710,7 @@ do {
 }
 
 do {
-    const value = ()=>([])()
+    const value = (()=>[])()
     assert value instanceof lang.array
     assert value instanceof lang.object
     assert ! (value instanceof lang.integer)
@@ -740,10 +740,10 @@ do {
 
     assert typeof o == "object"
     assert o instanceof lang.array
-    expect_fail(()=>(o.size))
+    expect_fail(()=>o.size)
     assert typeof o.resize == "function"
-    expect_fail(()=>(o.resize(10)))
-    expect_fail(()=>(o[0]))
+    expect_fail(()=>o.resize(10))
+    expect_fail(()=>o[0])
 }
 
 do {
@@ -823,14 +823,14 @@ do {
     assert typeof c == "void"
     assert a.size   == 2
 
-    expect_fail(()=>(a.pop(3)))
+    expect_fail(()=>a.pop(3))
     assert a.size == 0
 
     assert [1, 2].pop() == 2
 
-    expect_fail(()=>([].pop()))
-    expect_fail(()=>([1].pop(2)))
-    expect_fail(()=>([1].pop(-1)))
+    expect_fail(()=>[].pop())
+    expect_fail(()=>[1].pop(2))
+    expect_fail(()=>[1].pop(-1))
 }
 
 ##############################################################################
@@ -879,8 +879,8 @@ do {
     }
 
     do {
-        expect_fail(()=>([].slice(0, false)))
-        expect_fail(()=>([].slice(false, 0)))
+        expect_fail(()=>[].slice(0, false))
+        expect_fail(()=>[].slice(false, 0))
     }
 }
 
@@ -905,7 +905,7 @@ do {
     }
 
     # slice is not a function
-    expect_fail(()=>(obj[10:100]))
+    expect_fail(()=>obj[10:100])
 }
 
 ##############################################################################
@@ -1008,8 +1008,8 @@ do {
 }
 
 do {
-    expect_fail(()=>([].insert("", 0, [])))
-    expect_fail(()=>([].insert(0, "", [])))
+    expect_fail(()=>[].insert("", 0, []))
+    expect_fail(()=>[].insert(0, "", []))
 }
 
 ##############################################################################
@@ -1061,7 +1061,7 @@ do {
     assert it() == 0
     assert it() == 1
     assert it() == 2
-    expect_fail(()=>(it()))
+    expect_fail(()=>it())
 }
 
 ##############################################################################
@@ -1111,8 +1111,8 @@ do {
         }
     }
 
-    expect_fail(()=>(lang.array.prototype.fill.apply(void, [1])))
-    expect_fail(()=>(a.fill()))
+    expect_fail(()=>lang.array.prototype.fill.apply(void, [1]))
+    expect_fail(()=>a.fill())
 }
 
 ##############################################################################
@@ -1120,7 +1120,7 @@ do {
 
 do {
     const it = "".indices()
-    expect_fail(()=>(it()))
+    expect_fail(()=>it())
 }
 do {
     const it = "abcd".indices()
@@ -1128,7 +1128,7 @@ do {
     assert it() == 1
     assert it() == 2
     assert it() == 3
-    expect_fail(()=>(it()))
+    expect_fail(()=>it())
 }
 
 ##############################################################################
@@ -1140,9 +1140,9 @@ do {
     assert "abcd".ljust(5)      == "abcd "
     assert "abcd".ljust(6, "x") == "abcdxx"
 
-    expect_fail(()=>("abcd".ljust()))
-    expect_fail(()=>("abcd".ljust(1, "")))
-    expect_fail(()=>("abcd".ljust(1, "oo")))
+    expect_fail(()=>"abcd".ljust())
+    expect_fail(()=>"abcd".ljust(1, ""))
+    expect_fail(()=>"abcd".ljust(1, "oo"))
 }
 
 ##############################################################################
@@ -1154,9 +1154,9 @@ do {
     assert "abcd".rjust(5)      == " abcd"
     assert "abcd".rjust(6, "x") == "xxabcd"
 
-    expect_fail(()=>("abcd".rjust()))
-    expect_fail(()=>("abcd".rjust(1, "")))
-    expect_fail(()=>("abcd".rjust(1, "oo")))
+    expect_fail(()=>"abcd".rjust())
+    expect_fail(()=>"abcd".rjust(1, ""))
+    expect_fail(()=>"abcd".rjust(1, "oo"))
 }
 
 ##############################################################################
@@ -1170,9 +1170,9 @@ do {
     assert "--a".zfill(4, "*")  == "-*-a"
     assert "++b".zfill(5, "#")  == "+##+b"
 
-    expect_fail(()=>("abcd".zfill()))
-    expect_fail(()=>("abcd".zfill(1, "")))
-    expect_fail(()=>("abcd".zfill(1, "oo")))
+    expect_fail(()=>"abcd".zfill())
+    expect_fail(()=>"abcd".zfill(1, ""))
+    expect_fail(()=>"abcd".zfill(1, "oo"))
 }
 
 ##############################################################################
@@ -1223,8 +1223,8 @@ do {
     assert "prototype" in constructor_func
 
     assert typeof constructor_func.prototype == "object"
-    expect_fail(()=>(regular_func.prototype))
-    expect_fail(()=>(generator_func.prototype))
+    expect_fail(()=>regular_func.prototype)
+    expect_fail(()=>generator_func.prototype)
 
     assert regular_func.name == "regular_func"
     var name_from_iter = void
@@ -1251,7 +1251,7 @@ do {
 }
 
 do {
-    const f = ()=>(void)
+    const f = ()=>void
     assert f instanceof lang.function
     assert f instanceof lang.object
     assert ! (f instanceof lang.integer)
@@ -1260,7 +1260,7 @@ do {
 }
 
 do {
-    const value = ()=>(void)
+    const value = ()=>void
     assert value instanceof lang.function
     assert value instanceof lang.object
     assert ! (value instanceof lang.integer)
@@ -1272,8 +1272,8 @@ do {
 }
 
 do {
-    const f1 = x => (x + 1)
-    const f2 = x => (x + 1)
+    const f1 = x => x + 1
+    const f2 = x => x + 1
     const f3 = lang.function(f1)
     assert f1 == f3
     assert f1 != f2
@@ -1290,16 +1290,16 @@ do {
     const f1 = class { }
     const f2 = lang.class(f1)
     assert f1 == f2
-    expect_fail(()=>(lang.function(f1)))
+    expect_fail(()=>lang.function(f1))
 }
 
 do {
-    expect_fail(()=>(lang.function()))
-    expect_fail(()=>(lang.function(void)))
-    expect_fail(()=>(lang.function(0)))
-    expect_fail(()=>(lang.function("")))
-    expect_fail(()=>(lang.function([])))
-    expect_fail(()=>(lang.function({})))
+    expect_fail(()=>lang.function())
+    expect_fail(()=>lang.function(void))
+    expect_fail(()=>lang.function(0))
+    expect_fail(()=>lang.function(""))
+    expect_fail(()=>lang.function([]))
+    expect_fail(()=>lang.function({}))
 }
 
 ##############################################################################
@@ -1392,7 +1392,7 @@ do {
 
     const o = ctor()
 
-    expect_fail(()=>(o.prototype))
+    expect_fail(()=>o.prototype)
 }
 
 ##############################################################################
@@ -1404,10 +1404,10 @@ do {
     assert "instructions" in lang.function.prototype
     assert "size"         in lang.function.prototype
 
-    expect_fail(()=>(lang.function.prototype.name))
-    expect_fail(()=>(lang.function.prototype.registers))
-    expect_fail(()=>(lang.function.prototype.instructions))
-    expect_fail(()=>(lang.function.prototype.size))
+    expect_fail(()=>lang.function.prototype.name)
+    expect_fail(()=>lang.function.prototype.registers)
+    expect_fail(()=>lang.function.prototype.instructions)
+    expect_fail(()=>lang.function.prototype.size)
 
     fun f { }
 
@@ -1433,10 +1433,10 @@ do {
 
     assert method.apply(500, [70]) == 570
 
-    expect_fail(()=>(method.apply(void, [])))
-    expect_fail(()=>(method.apply(void, void)))
-    expect_fail(()=>(method.apply(void)))
-    expect_fail(()=>(method.apply()))
+    expect_fail(()=>method.apply(void, []))
+    expect_fail(()=>method.apply(void, void))
+    expect_fail(()=>method.apply(void))
+    expect_fail(()=>method.apply())
 }
 
 do {
@@ -1445,7 +1445,7 @@ do {
         throw ""
     }
 
-    expect_fail(()=>(method.apply(void, [])))
+    expect_fail(()=>method.apply(void, []))
 }
 
 do {
@@ -1499,13 +1499,13 @@ do {
     assert ret.b == 39
     assert ! (o instanceof ctor)
     assert ! (ret instanceof ctor)
-    expect_fail(()=>(o.x))
-    expect_fail(()=>(ret.x))
+    expect_fail(()=>o.x)
+    expect_fail(()=>ret.x)
 }
 
 do {
     expect_fail(fun {
-        ()=>(void) . apply . apply(void, [])
+        (()=>void) . apply . apply(void, [])
     })
 }
 
@@ -1691,8 +1691,8 @@ do {
 # resize
 
 do {
-    expect_fail(()=>([].resize(-1)))
-    expect_fail(()=>(lang.buffer().resize(-1)))
+    expect_fail(()=>[].resize(-1))
+    expect_fail(()=>lang.buffer().resize(-1))
 }
 
 ##############################################################################
@@ -1750,19 +1750,19 @@ do {
     assert key == "a" || key == "b" || key == "c"
     assert value == 42 || value == 43 || value == 44
 
-    expect_fail(()=>(iter()))
+    expect_fail(()=>iter())
 }
 
 do {
-    expect_fail(()=>(lang.shallow({})()))
-    expect_fail(()=>(lang.shallow([1])()))
-    expect_fail(()=>(lang.shallow(1)()))
-    expect_fail(()=>(lang.shallow("1")()))
-    expect_fail(()=>(lang.shallow(true)()))
-    expect_fail(()=>(lang.shallow(void)()))
+    expect_fail(()=>lang.shallow({})())
+    expect_fail(()=>lang.shallow([1])())
+    expect_fail(()=>lang.shallow(1)())
+    expect_fail(()=>lang.shallow("1")())
+    expect_fail(()=>lang.shallow(true)())
+    expect_fail(()=>lang.shallow(void)())
 
     var count = 0
-    for const n in lang.shallow(()=>(void)) {
+    for const n in lang.shallow(()=>void) {
         count += 1
     }
     assert count == 0
@@ -1837,13 +1837,13 @@ do {
 # lang.map
 
 do {
-    const iter = lang.map(()=>(void), [])
+    const iter = lang.map(()=>void, [])
     assert typeof iter == "function"
     expect_fail(iter)
 }
 
 do {
-    const f = lang.map(x => (x))
+    const f = lang.map(x => x)
     assert typeof f == "function"
     const iter = f(["a", "b"])
     assert typeof f == "function"
@@ -1853,7 +1853,7 @@ do {
 }
 
 do {
-    const iter = lang.map(x => (x * 10), [2, 3, 4])
+    const iter = lang.map(x => x * 10, [2, 3, 4])
     assert typeof iter == "function"
     assert iter()      == 20
     assert iter()      == 30
@@ -1862,7 +1862,7 @@ do {
 }
 
 do {
-    const iter = lang.map(x=>(x+5))(lang.range(1, 3))
+    const iter = lang.map(x=>x+5)(lang.range(1, 3))
     assert typeof iter == "function"
     assert iter()      == 6
     assert iter()      == 7
@@ -1870,7 +1870,7 @@ do {
 }
 
 do {
-    const iter = [1, 2, 3].map(x=>(-x))
+    const iter = [1, 2, 3].map(x=>-x)
     assert typeof iter == "function"
     assert iter()      == -1
     assert iter()      == -2
@@ -1879,7 +1879,7 @@ do {
 }
 
 do {
-    const iter = "mno".map(x => (x + "_"))
+    const iter = "mno".map(x => x + "_")
     assert typeof iter == "function"
     assert iter()      == "m_"
     assert iter()      == "n_"
@@ -1888,7 +1888,7 @@ do {
 }
 
 do {
-    const iter = false.map(x => (!x))
+    const iter = false.map(x => !x)
     assert typeof iter == "function"
     assert iter()      == true
     expect_fail(iter)
@@ -1898,17 +1898,17 @@ do {
 # lang.filter
 
 do {
-    const iter = lang.filter(()=>(true), [])
+    const iter = lang.filter(()=>true, [])
     expect_fail(iter)
 }
 
 do {
-    const iter = lang.filter(()=>(false), [1, 2, 3])
+    const iter = lang.filter(()=>false, [1, 2, 3])
     expect_fail(iter)
 }
 
 do {
-    const iter = lang.filter(x => (x & 1), lang.range(10))
+    const iter = lang.filter(x => x & 1, lang.range(10))
     assert typeof iter == "function"
     assert iter()      == 1
     assert iter()      == 3
@@ -1919,7 +1919,7 @@ do {
 }
 
 do {
-    const iter = [5, 6, 7].filter(x => (x != 6))
+    const iter = [5, 6, 7].filter(x => x != 6)
     assert typeof iter == "function"
     assert iter()      == 5
     assert iter()      == 7
@@ -1929,8 +1929,8 @@ do {
 do {
     const result = []
     for var elem in lang.range(5) ->
-                    lang.map(x => ((x - 2) * 10)) ->
-                    lang.filter(x => (x > 0)) {
+                    lang.map(x => (x - 2) * 10) ->
+                    lang.filter(x => x > 0) {
         result.insert(result.size, elem)
     }
     assert result.size == 2
@@ -1942,17 +1942,17 @@ do {
 # lang.reduce
 
 do {
-    const result = lang.reduce((x, y)=>(x + y), 42, [])
+    const result = lang.reduce((x, y)=>x + y, 42, [])
     assert result == 42
 }
 
 do {
-    const result = lang.reduce((x, y)=>(x + y), 0, [10])
+    const result = lang.reduce((x, y)=>x + y, 0, [10])
     assert result == 10
 }
 
 do {
-    const result = lang.reduce((x, y)=>(x + y), 1, [2000, 300, 70, 5])
+    const result = lang.reduce((x, y)=>x + y, 1, [2000, 300, 70, 5])
     assert result == 2376
 }
 
@@ -1987,12 +1987,12 @@ do {
 }
 
 do {
-    const result = [1, 2, 3, 4].reduce((x, y)=>(x+y), 0)
+    const result = [1, 2, 3, 4].reduce((x, y)=>x+y, 0)
     assert result == 10
 }
 
 do {
-    const count = [1, 2, 3, 1, 4, 5, 1, 6, 1, 7].reduce((x, y) => (x + (y == 1 ? 1 : 0)), 0)
+    const count = [1, 2, 3, 1, 4, 5, 1, 6, 1, 7].reduce((x, y) => x + (y == 1 ? 1 : 0), 0)
     assert count == 4
 }
 
@@ -2007,8 +2007,8 @@ do {
     assert lang.sum(["ab", "c", "def", "gh"], "") == "abcdefgh"
 
     expect_fail(lang.sum)
-    expect_fail(() => (lang.sum(void)))
-    expect_fail(()=>(lang.sum([1], "")))
+    expect_fail(() => lang.sum(void))
+    expect_fail(()=>lang.sum([1], ""))
 }
 
 ##############################################################################
@@ -2024,12 +2024,12 @@ do {
 
     assert lang.keys({x: 8, _test_value: 8, y: 8}).count("_test_value") == 1
 
-    assert lang.range(100).map(x => (x/4)).count(11) == 4
+    assert lang.range(100).map(x => x/4).count(11) == 4
 
-    assert lang.count(x => (x > 5), [ 1, 7, 2, 6, 5 ]) == 2
+    assert lang.count(x => x > 5, [ 1, 7, 2, 6, 5 ]) == 2
 
     # Count lowercase letters
-    assert "ThIs Is A MiXeD StRiNg".filter(x => (x.code() >= 97)).count() == 8
+    assert "ThIs Is A MiXeD StRiNg".filter(x => x.code() >= 97).count() == 8
 }
 
 ##############################################################################
@@ -2038,8 +2038,8 @@ do {
 do {
     assert lang.all(1, [1, 1.0, 1]) == true
     assert lang.all(1, [0, 1, 2])   == false
-    assert lang.all(x => (x > 2), [ 4, 3, 5 ]) == true
-    assert lang.all(x => (x > 2), [ 4, 2, 5 ]) == false
+    assert lang.all(x => x > 2, [ 4, 3, 5 ]) == true
+    assert lang.all(x => x > 2, [ 4, 2, 5 ]) == false
 }
 
 ##############################################################################
@@ -2049,8 +2049,8 @@ do {
     assert lang.any(1, [ 0, 2, 3, 4 ]) == false
     assert lang.any(2, [ 0, 2, 3, 4 ]) == true
     assert lang.any(2, [ 0, 2, 3, 2 ]) == true
-    assert lang.any(x => (x == void), [ 1, 2, 3, 4 ]) == false
-    assert lang.any(x => (x == 3),    [ 1, 2, 3, 4 ]) == true
+    assert lang.any(x => x == void, [ 1, 2, 3, 4 ]) == false
+    assert lang.any(x => x == 3,    [ 1, 2, 3, 4 ]) == true
 }
 
 ##############################################################################
@@ -2076,7 +2076,7 @@ do {
 
     delete o.add
 
-    expect_fail(()=>(o.add(1)))
+    expect_fail(()=>o.add(1))
 
     assert m(3) == 4
     assert o._i == 7
@@ -2090,9 +2090,9 @@ do {
     assert ms(3) == 6
     assert o._i  == 3
 
-    expect_fail(()=>(lang.method(o, "_i")))
-    expect_fail(()=>(lang.method(o, "non existent")))
-    expect_fail(()=>(lang.method(o, o._i)))
+    expect_fail(()=>lang.method(o, "_i"))
+    expect_fail(()=>lang.method(o, "non existent"))
+    expect_fail(()=>lang.method(o, o._i))
 }
 
 ##############################################################################
@@ -2196,7 +2196,7 @@ do {
 do {
     assert lang.hex(42) == "0x2a"
 
-    expect_fail(()=>(lang.hex(3.5)))
+    expect_fail(()=>lang.hex(3.5))
 }
 
 ##############################################################################
@@ -2313,7 +2313,7 @@ do {
     }
 
     const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]
-    a.sort((x, y) => (x.key < y.key))
+    a.sort((x, y) => x.key < y.key)
     assert a[0].key == 10
     assert a[1].key == 20
     assert a[2].key == 25
@@ -2355,7 +2355,7 @@ do {
 }
 
 do {
-    const s = lang.sort((x, y) => (x > y), "fooba")
+    const s = lang.sort((x, y) => x > y, "fooba")
     assert typeof s == "array"
     assert s.size == 5
     assert s[0] == "o"
@@ -2376,7 +2376,7 @@ do {
 }
 
 do {
-    const s = [10, 11, 9, 8] -> lang.sort((x, y) => (x > y))
+    const s = [10, 11, 9, 8] -> lang.sort((x, y) => x > y)
     assert typeof s == "array"
     assert s.size == 4
     assert s[0] == 11
@@ -2386,7 +2386,7 @@ do {
 }
 
 do {
-    const it = [30, 1, 20, -2] -> lang.sort -> lang.map(x => (x + 1))
+    const it = [30, 1, 20, -2] -> lang.sort -> lang.map(x => x + 1)
     assert typeof it == "function"
     assert it() == -1
     assert it() == 2
@@ -2461,7 +2461,7 @@ do {
     assert t.args[0]     == 10
     assert t.args[1]     == 24
 
-    expect_fail(()=>(t.wait()))
+    expect_fail(()=>t.wait())
 }
 
 do {
@@ -2553,7 +2553,7 @@ do {
 
 do {
     assert (["a", "b", "c"] -> lang.count_elements) == 3
-    expect_fail(() => (void -> lang.count_elements))
+    expect_fail(() => void -> lang.count_elements)
 }
 
 ##############################################################################
@@ -2668,7 +2668,7 @@ do {
 
     sum = 0;
 
-    [100, 20, 3] -> lang.map(x => (update_sum(x))) -> lang.each()
+    [100, 20, 3] -> lang.map(x => update_sum(x)) -> lang.each()
 
     assert sum == 123
 }

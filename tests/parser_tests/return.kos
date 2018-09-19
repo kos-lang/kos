@@ -74,6 +74,6 @@ fun { return; };
 ))
 
 @------------------------------------------------------------------------------
-x => ( return a ); # Expression expected
+x =>   return a  ; # Expression expected
 
 @ 10 1 8

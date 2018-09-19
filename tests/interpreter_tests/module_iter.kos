@@ -65,12 +65,12 @@ do {
         const it1 = g()
         assert it1() == 1
         assert it1() == 2
-        expect_fail(()=>(it1()))
+        expect_fail(()=>it1())
 
         const it2 = g()
         assert it2() == 1
         assert it2() == 2
-        expect_fail(()=>(it2()))
+        expect_fail(()=>it2())
     }
 
     do {
@@ -81,13 +81,13 @@ do {
 
         assert it1() == 1
         assert it2() == 2
-        expect_fail(()=>(it1()))
-        expect_fail(()=>(it2()))
+        expect_fail(()=>it1())
+        expect_fail(()=>it2())
 
         const it3 = g()
         assert it3() == 1
         assert it3() == 2
-        expect_fail(()=>(it3()))
+        expect_fail(()=>it3())
     }
 }
 
@@ -96,20 +96,20 @@ do {
 
 do {
     var it = iter.iproduct()
-    expect_fail(()=>(it()))
+    expect_fail(()=>it())
 }
 
 do {
     const it = iter.iproduct(1)
     assert it() == 0
-    expect_fail(()=>(it()))
+    expect_fail(()=>it())
 }
 
 do {
     const it = iter.iproduct(2)
     assert it() == 0
     assert it() == 1
-    expect_fail(()=>(it()))
+    expect_fail(()=>it())
 }
 
 do {
@@ -149,7 +149,7 @@ do {
 
 do {
     const it = iter.product()
-    expect_fail(()=>((it())))
+    expect_fail(()=>it())
 }
 
 do {

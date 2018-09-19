@@ -560,13 +560,9 @@ static int _lambda_literal_body(struct _KOS_PARSER    *parser,
 
     TRY(_push_node(parser, node, NT_RETURN, &return_node));
 
-    TRY(_assume_separator(parser, ST_PAREN_OPEN));
-
     TRY(_right_hand_side_expr(parser, &node));
 
     _ast_push(return_node, node);
-
-    TRY(_assume_separator(parser, ST_PAREN_CLOSE));
 
     TRY(_push_node(parser, *ret, NT_LANDMARK, 0));
 

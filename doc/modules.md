@@ -658,11 +658,11 @@ against each element using the `==` operator.
 
 Examples:
 
-    > all(x => (x > 0), [1, 2, 3, 4])
+    > all(x => x > 0, [1, 2, 3, 4])
     true
-    > all(x => (x > 0), [0, 1, 2, 3])
+    > all(x => x > 0, [0, 1, 2, 3])
     false
-    > const all_numbers = all(x => (typeof x == "number"))
+    > const all_numbers = all(x => typeof x == "number")
     > all_numbers([1, 2, 3, 4])
     true
     > all_numbers([1, 2, "foo", 3])
@@ -696,11 +696,11 @@ against each element using the `==` operator.
 
 Examples:
 
-    > any(x => (x > 0), [0, 20, -1, -20])
+    > any(x => x > 0, [0, 20, -1, -20])
     true
-    > any(x => (x < 0), [0, 1, 2, 3])
+    > any(x => x < 0, [0, 1, 2, 3])
     false
-    > const any_numbers = any(x => (typeof x == "number"))
+    > const any_numbers = any(x => typeof x == "number")
     > any_numbers(["a", "b", 1])
     true
     > any_numbers(["a", "b", "c"])
@@ -990,7 +990,7 @@ Examples:
 array.prototype.sort()
 ----------------------
 
-    array.prototype.sort(compare = (x, y) => (x < y))
+    array.prototype.sort(compare = (x, y) => x < y)
 
 Sorts array in-place according to the ordering specified by `compare`.
 
@@ -1400,9 +1400,9 @@ comparing each element to `op` using `==` operator.
 
 Examples:
 
-    > count(x => (x > 0), [-1, 1, 2, -3, 4])
+    > count(x => x > 0, [-1, 1, 2, -3, 4])
     3
-    > const count_numbers = count(x => (x instanceof number))
+    > const count_numbers = count(x => x instanceof number)
     > count_numbers([10, 2, "foo", 30, "bar", 4])
     4
     > count("o", "monologue")
@@ -1480,7 +1480,7 @@ Examples:
     0
     1
     2
-    > "abc" -> map(x => (print(x + "_"))) -> each()
+    > "abc" -> map(x => print(x + "_")) -> each()
     a_
     b_
     c_
@@ -1559,9 +1559,9 @@ elements of it, which are then filtered.
 
 Examples:
 
-    > filter(x => (x < 0), [1, -2, 3, 4, -5, -6]) -> print_elements
+    > filter(x => x < 0, [1, -2, 3, 4, -5, -6]) -> print_elements
     -2, -5, -6
-    > const odd = filter(x => (x & 1))
+    > const odd = filter(x => x & 1)
     > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> print_elements
     9, 7, 5, 3, 1
 
@@ -1891,9 +1891,9 @@ elements of it, which are then mapped.
 
 Examples:
 
-    > map(x => (x*10), [1, 2, 3, 4]) -> print_elements
+    > map(x => x*10, [1, 2, 3, 4]) -> print_elements
     10, 20, 30, 40
-    > const plus2 = map(x => (x + 2))
+    > const plus2 = map(x => x + 2)
     > plus2([10, 11, 12, 13]) -> print_elements
     12, 13, 14, 15
 
@@ -1994,7 +1994,7 @@ against each element using the `==` operator.
 
 Example:
 
-    > [0, 1, 2, 3].all(x => (x > 0))
+    > [0, 1, 2, 3].all(x => x > 0)
     false
 
 object.prototype.any()
@@ -2021,7 +2021,7 @@ against each element using the `==` operator.
 
 Example:
 
-    > [1, 2, -1, 3, 4].any(x => (x < 0))
+    > [1, 2, -1, 3, 4].any(x => x < 0)
     true
 
 object.prototype.count()
@@ -2064,7 +2064,7 @@ obtained through the `iterator()` function.
 
 Example:
 
-    > [1, 2, 3, 4, 5, 6].filter(x => (x & 1)) -> print_elements
+    > [1, 2, 3, 4, 5, 6].filter(x => x & 1) -> print_elements
     1, 3, 5
 
 object.prototype.iterator()
@@ -2118,7 +2118,7 @@ are obtained through the `iterator()` function.
 
 Example:
 
-    > [1, 3, 5, 7].map(x => (x * 2)) -> print_elements
+    > [1, 3, 5, 7].map(x => x * 2) -> print_elements
     2, 6, 10, 14
 
 object.prototype.reduce()
@@ -2140,7 +2140,7 @@ The left fold operation is applied as follows (pseudo-code):
 
 Example:
 
-    > [1, 3, 7, 4, 6].reduce((x, y) => (x + y), 0)
+    > [1, 3, 7, 4, 6].reduce((x, y) => x + y, 0)
     21
 
 print()
@@ -2286,9 +2286,9 @@ elements of it, on which the reduction is performed.
 
 Examples:
 
-    > reduce((x, y) => (x + y), 0, [1, 1, 1, 2, 5])
+    > reduce((x, y) => x + y, 0, [1, 1, 1, 2, 5])
     10
-    > const count_non_zero = reduce((x, y) => (x + (y ? 1 : 0)), 0)
+    > const count_non_zero = reduce((x, y) => x + (y ? 1 : 0), 0)
     > count_non_zero([0, 0, 4, 0, 0, 5, 6, 0])
     3
 
@@ -2330,7 +2330,7 @@ Example:
 sort()
 ------
 
-    sort(compare = (x, y) => (x < y))
+    sort(compare = (x, y) => x < y)
     sort(compare, iterable)
     sort(iterable)
 
@@ -2357,7 +2357,7 @@ Examples:
 
     > sort("kos language") -> print_elements
      , a, a, e, g, g, k, l, n, o, s, u
-    > sort((x, y) => (x[0] < y[0]), { foo: 1, bar: 2, baz: 3 }) -> print_elements
+    > sort((x, y) => x[0] < y[0], { foo: 1, bar: 2, baz: 3 }) -> print_elements
     [bar, 2], [baz, 3], [foo, 1]
 
 string()

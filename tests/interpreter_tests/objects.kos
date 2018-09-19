@@ -31,7 +31,7 @@ fun expect_fail(function)
     assert failed
 }
 
-expect_fail(()=>({}[""]))
+expect_fail(()=>{}[""])
 
 do {
     const a = {}
@@ -63,11 +63,11 @@ do {
 
     assert delete a.bb == void
     assert a.aa == 11
-    expect_fail(()=>(a.bb))
+    expect_fail(()=>a.bb)
 
     const aa = "aa"
     assert delete a[aa] == void
-    expect_fail(()=>(a.aa))
+    expect_fail(()=>a.aa)
 }
 
 do {
@@ -123,7 +123,7 @@ do {
 
     assert obj.b == "b"
     delete obj.b
-    expect_fail(()=>(obj.b))
+    expect_fail(()=>obj.b)
 }
 
 do {
@@ -133,7 +133,7 @@ do {
         }
     }
 
-    expect_fail(()=>(constr()))
+    expect_fail(()=>constr())
 
     const obj = constr(8)
 
@@ -175,8 +175,8 @@ do {
     assert obj instanceof constr
 
     assert obj.a == 10
-    expect_fail(()=>(obj[0]))
-    expect_fail(()=>(obj.length))
+    expect_fail(()=>obj[0])
+    expect_fail(()=>obj.length)
 }
 
 do {
@@ -307,7 +307,7 @@ do {
     assert d     == -13
 
     expect_fail(complex)
-    expect_fail(()=>(complex(1)))
+    expect_fail(()=>complex(1))
 }
 
 do {
@@ -323,7 +323,7 @@ do {
     assert typeof value == "class"
 
     const v = value();
-    expect_fail(()=>(v.getv()))
+    expect_fail(()=>v.getv())
     assert v.setv(42) == void
     assert v.getv() == 42
 }
@@ -349,8 +349,8 @@ do {
 
     const e = empty()
 
-    expect_fail(()=>(e.a))
-    expect_fail(()=>(e.b))
+    expect_fail(()=>e.a)
+    expect_fail(()=>e.b)
 
     assert empty.a == 1
     assert empty.b == 2
@@ -383,12 +383,12 @@ do {
 
     assert ! ("b" in o1)
     assert ! ("b" in o2)
-    expect_fail(()=>(o1.b))
-    expect_fail(()=>(o2.b))
+    expect_fail(()=>o1.b)
+    expect_fail(()=>o2.b)
     assert ! ("b" in c1.prototype)
     assert ! ("b" in c2.prototype)
-    expect_fail(()=>(c1.prototype.b))
-    expect_fail(()=>(c2.prototype.b))
+    expect_fail(()=>c1.prototype.b)
+    expect_fail(()=>c2.prototype.b)
 
     c1.prototype.b = 8
 

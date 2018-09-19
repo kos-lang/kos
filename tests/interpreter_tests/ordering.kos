@@ -121,7 +121,7 @@ do {
     fun order(i)
     {
         if i == 1 {
-            return (x, y) => (x + 2 * y)
+            return (x, y) => x + 2 * y
         }
         else if i == 2 {
             return 5

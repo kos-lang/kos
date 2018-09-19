@@ -452,7 +452,7 @@ Functions
         return x + y
     }
 
-    var sum = (x, y) => (x + y)
+    var sum = (x, y) => x + y
 
 
 Constructors
@@ -491,7 +491,7 @@ Built-in type constructors
     var array   = lang.array(void, 2)  // [ void, 2 ]
     var buffer  = lang.buffer(10)      // buffer of 10 bytes
     var object  = lang.object          // { }
-    var func    = lang.function((x,y)=>(x+y))
+    var func    = lang.function((x,y)=>x+y)
     var _class  = lang.class(class { })
 
 

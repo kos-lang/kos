@@ -76,7 +76,7 @@ objects, like everything else.  Function identifiers are really constants.
 And this is the third way to declare functions.  The parentheses contain the
 expression which is treated like a return statement.
 
-    const subtract_two_numbers = (a, b) => (a - b)
+    const subtract_two_numbers = (a, b) => a - b
 
     lang.print(subtract_two_numbers(7, 5)) # Prints: 2
 
@@ -414,7 +414,7 @@ Objects in Kos can have methods:
 
     const counter = {
         count:     0,
-        get:       () =>  (this.count),
+        get:       () =>  this.count,
         increment: fun    { this.count += 1 },
         add:       fun(n) { this.count += n }
     }

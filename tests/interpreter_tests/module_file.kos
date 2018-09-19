@@ -66,9 +66,9 @@ do {
 
         f.close()
 
-        expect_fail(()=>(f.size))
-        expect_fail(()=>(f.read()))
-        expect_fail(()=>(f.write(init_buf)))
+        expect_fail(()=>f.size)
+        expect_fail(()=>f.read())
+        expect_fail(()=>f.write(init_buf))
     }
 
     assert file.is_file(name)
@@ -83,7 +83,7 @@ do {
             assert (i % 9) == buf[i]
         }
 
-        expect_fail(()=>(f.write(buf)))
+        expect_fail(()=>f.write(buf))
     }
 
     assert file.remove(name)
@@ -104,7 +104,7 @@ do {
 ##############################################################################
 # file.file - open non-existent file
 do {
-    expect_fail(()=>(file.file("_#non_existent#_*?", file.ro)))
+    expect_fail(()=>file.file("_#non_existent#_*?", file.ro))
 }
 
 ##############################################################################
@@ -173,8 +173,8 @@ do {
         assert buf3[0]    == 170
         assert buf3[1]    == 171
 
-        f[()=>("position")()] = 31
-        assert f[()=>("position")()] == 31
+        f[(()=>"position")()] = 31
+        assert f[(()=>"position")()] == 31
 
         const buf4 = f.read(1)
         assert f.position == 32
@@ -209,8 +209,8 @@ do {
     }
 
     with const f = file.open(name, file.ro) {
-        expect_fail(()=>(f.read_line(-1)))
-        expect_fail(()=>(f.read_line(0)))
+        expect_fail(()=>f.read_line(-1))
+        expect_fail(()=>f.read_line(0))
         var line = f.read_line(1)
         assert line == "abcdefg\n"
         line = f.read_line()
@@ -248,7 +248,7 @@ do {
         assert lines() == "def\n"
         assert lines() == "\r"
         assert lines() == "xyz"
-        expect_fail(()=>(lines()))
+        expect_fail(()=>lines())
         assert f.eof
         assert ! f.error
     }
@@ -260,7 +260,7 @@ do {
         assert lines() == "def\n"
         assert lines() == "\r"
         assert lines() == "xyz"
-        expect_fail(()=>(lines()))
+        expect_fail(()=>lines())
         assert f.eof
         assert ! f.error
     }

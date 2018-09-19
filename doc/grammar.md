@@ -539,7 +539,7 @@ The following statements are equivalent:
         return x + y
     }
 
-    const Sum = (x, y) => (x + y)
+    const Sum = (x, y) => x + y
 
 
 Function arguments
@@ -1144,7 +1144,7 @@ Member specification
     FunctionLiteral ::= SimpleFunctionLiteral
                       | CompoundFunctionLiteral
 
-    SimpleFunctionLiteral   ::= ( Identifier | [ ParameterList] ) "=>" "(" RHSExpression ")"
+    SimpleFunctionLiteral   ::= ( Identifier | [ ParameterList] ) "=>" RHSExpression
 
     CompoundFunctionLiteral ::= "fun" [ ParameterList ] CompoundStatement
 

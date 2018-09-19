@@ -19,5 +19,5 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-const a = x => (x)
+const a = x => x
 0->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a->a

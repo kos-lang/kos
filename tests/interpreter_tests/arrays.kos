@@ -37,7 +37,7 @@ do {
     assert ["a", "b", "c"][-1] == "c"
 }
 
-expect_fail(()=>([][0]))
+expect_fail(()=>[][0])
 
 do {
     const a = []
@@ -61,8 +61,8 @@ do {
     assert a.size == 1
     assert a[0]   == 1
     assert a[-1]  == 1
-    expect_fail(()=>(a[1]))
-    expect_fail(()=>(a[-2]))
+    expect_fail(()=>a[1])
+    expect_fail(()=>a[-2])
 
     a.resize(3)
     assert a.size == 3
@@ -72,8 +72,8 @@ do {
     assert a[-1]  == void
     assert a[-2]  == void
     assert a[-3]  == 1
-    expect_fail(()=>(a[3]))
-    expect_fail(()=>(a[-4]))
+    expect_fail(()=>a[3])
+    expect_fail(()=>a[-4])
 }
 
 do {
@@ -325,8 +325,8 @@ do {
         a[e] = 0
     }
 
-    expect_fail(()=>(elem(0x8000000000000000)))
-    expect_fail(()=>(set_elem(0x8000000000000000)))
+    expect_fail(()=>elem(0x8000000000000000))
+    expect_fail(()=>set_elem(0x8000000000000000))
 }
 
 # Large array
@@ -391,12 +391,12 @@ do {
 
 # Cannot expand these
 do {
-    expect_fail(() => ([1...]))
-    expect_fail(() => ([1.5...]))
-    expect_fail(() => ([true...]))
-    expect_fail(() => ([void...]))
-    expect_fail(() => ([{}...]))
-    expect_fail(() => ([fun{}...]))
+    expect_fail(() => [1...])
+    expect_fail(() => [1.5...])
+    expect_fail(() => [true...])
+    expect_fail(() => [void...])
+    expect_fail(() => [{}...])
+    expect_fail(() => [fun{}...])
 }
 
 # Throw exception during array element expansion
@@ -483,11 +483,11 @@ do {
     assert [].repeat(1).size == 0
     assert [].repeat(10000).size == 0
 
-    expect_fail(()=>([].repeat(-1)))
-    expect_fail(()=>([1].repeat(-1)))
-    expect_fail(()=>([1].repeat("")))
-    expect_fail(()=>([1].repeat(void)))
-    expect_fail(()=>([1].repeat()))
+    expect_fail(()=>[].repeat(-1))
+    expect_fail(()=>[1].repeat(-1))
+    expect_fail(()=>[1].repeat(""))
+    expect_fail(()=>[1].repeat(void))
+    expect_fail(()=>[1].repeat())
 }
 
 # Slice test case from fuzzer

@@ -6,8 +6,8 @@ const fib = {
     prev: 1,
     cur:  1,
 
-    get_prev: () => (this.prev),
-    get_cur:  () => (this.cur),
+    get_prev: () => this.prev,
+    get_cur:  () => this.cur,
 
     reset: fun {
         this.prev = 1

@@ -66,7 +66,7 @@ do {
 
     assert a == -7
 
-    expect_fail(()=>(one_arg()))
+    expect_fail(()=>one_arg())
 }
 
 do {
@@ -79,7 +79,7 @@ do {
 
     assert a == 25
 
-    expect_fail(()=>(two_args(1)))
+    expect_fail(()=>two_args(1))
 }
 
 do {
@@ -422,7 +422,7 @@ do {
     }
 
     expect_fail(add_all)
-    expect_fail(()=>(add_all(100)))
+    expect_fail(()=>add_all(100))
     assert add_all(10, 2)                   == 12
     assert add_all(70, 8000, 40000, 3, 900) == 48973
 }
@@ -711,7 +711,7 @@ do {
 do {
     var obj = {
         a: 12,
-        f: () => (this.a + 1)
+        f: () => this.a + 1
     }
     obj = obj.f()
     assert obj == 13
@@ -856,7 +856,7 @@ do {
 
 do {
     const a = 10;
-    const result = a -> x => (x/2)
+    const result = a -> x => x/2
     assert result == 5
 }
 
@@ -869,8 +869,8 @@ do {
 
     const iter = gen()
     assert iter() == 42
-    expect_fail(()=>(iter()))
-    expect_fail(()=>(iter()))
+    expect_fail(()=>iter())
+    expect_fail(()=>iter())
 }
 
 # call non-generator function like a generator
@@ -959,7 +959,7 @@ do {
     {
         var later = []
         for var i = 0; i < n; i += 1 {
-            later.push(()=>(i))
+            later.push(()=>i)
         }
         return later
     }
@@ -1017,7 +1017,7 @@ do {
         const b = a + 1
         fun inner
         {
-            return () => (a * b)
+            return () => a * b
         }
         return inner()
     }
@@ -1028,7 +1028,7 @@ do {
 
 # call a non-callable
 do {
-    expect_fail(()=>( ()=>(3) () () ))
+    expect_fail((()=>()=>3) () ())
 }
 
 # independent variable from inner scope must not be reused
@@ -1080,7 +1080,7 @@ do {
         return sum
     }
 
-    expect_fail(()=>(defaults()))
+    expect_fail(()=>defaults())
 
     assert defaults(0)                == 5
     assert defaults(1)                == 6
@@ -1102,7 +1102,7 @@ do {
         return d
     }
 
-    expect_fail(()=>(defaults()))
+    expect_fail(()=>defaults())
 
     assert defaults(1)          == 3
     assert defaults(20, 300)    == 320
@@ -1251,13 +1251,13 @@ do {
 
 # pass function as a default arg
 do {
-    fun do_something(x, something = x => (x + 1))
+    fun do_something(x, something = x => x + 1)
     {
         return something(x)
     }
 
     assert do_something(5) == 6
-    assert do_something(5, x => (x - 1)) == 4
+    assert do_something(5, x => x - 1) == 4
 }
 
 # arg referenced in inner function's default arg
@@ -1266,7 +1266,7 @@ do {
 
     fun my(arg)
     {
-        fun with_default(def = () => (arg + x))
+        fun with_default(def = () => arg + x)
         {
             return def()
         }
@@ -1287,7 +1287,7 @@ do {
 do {
     fun add(a, b)
     {
-        fun plus_1(def = () => (a + 1))
+        fun plus_1(def = () => a + 1)
         {
             return def()
         }
@@ -1382,7 +1382,7 @@ do {
 
     fun plus_1(a...)
     {
-        return a.map(x => (x+1))
+        return a.map(x => x+1)
     }
 
     const it = invoke_aba(plus_1, [1, 5], [10, 20])
@@ -1398,12 +1398,12 @@ do {
 # cannot expand these
 do {
     fun f { }
-    expect_fail(() => (f(1...)))
-    expect_fail(() => (f(1.5...)))
-    expect_fail(() => (f(false...)))
-    expect_fail(() => (f(void...)))
-    expect_fail(() => (f({}...)))
-    expect_fail(() => (f(fun{}...)))
+    expect_fail(() => f(1...))
+    expect_fail(() => f(1.5...))
+    expect_fail(() => f(false...))
+    expect_fail(() => f(void...))
+    expect_fail(() => f({}...))
+    expect_fail(() => f(fun{}...))
 }
 
 # throw exception during function argument expansion
@@ -1531,7 +1531,7 @@ do {
                  h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15,
                  rest...)
     {
-        return rest.reduce((x, y) => (x + y), 0)
+        return rest.reduce((x, y) => x + y, 0)
     }
 
     fun gen_range(x)
@@ -1643,7 +1643,7 @@ do {
     }
 
     do {
-        fun self(x = () => (self()))
+        fun self(x = () => self())
         {
             return x
         }
@@ -1756,13 +1756,13 @@ do {
 # invoke with argument which generates its own register
 # (test case from fuzzer)
 do {
-    const value = (x,y)=>(x+y)("abc"[1:], "d")
+    const value = ((x,y)=>x+y)("abc"[1:], "d")
     assert value == "bcd"
 }
 
 # Raw return
 do {
-    if () => (false) () {
+    if (() => false) () {
         return false
     }
 }
@@ -1775,4 +1775,11 @@ do {
     }
 
     expect_fail(infinite)
+}
+
+# Chained lambdas
+do {
+    const lambda = x => (y , z) => w => x * 1000 + y * 100 + z * 10 + w
+
+    assert lambda(8)(2,5)(3) == 8253
 }

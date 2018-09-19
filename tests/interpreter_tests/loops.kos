@@ -776,7 +776,7 @@ do {
 
 # Declare function inside loop condition
 do {
-    while ()=>(false) ()
+    while (()=>false) ()
     {
     }
 

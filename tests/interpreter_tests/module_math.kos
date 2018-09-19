@@ -50,7 +50,7 @@ do {
     assert math.ceil(4)                  == 4
     assert math.ceil(0x4000000000000000) == 0x4000000000000000
     assert math.ceil(math.pi)            == 4
-    expect_fail(()=>(math.ceil(void)))
+    expect_fail(()=>math.ceil(void))
 }
 
 # math.floor
@@ -58,7 +58,7 @@ do {
     assert math.floor(4)                  == 4
     assert math.floor(0x4000000000000000) == 0x4000000000000000
     assert math.floor(math.pi)            == 3
-    expect_fail(()=>(math.floor(void)))
+    expect_fail(()=>math.floor(void))
 }
 
 # math.abs
@@ -85,14 +85,14 @@ do {
     assert math.sqrt(16)                 == 4
     assert math.sqrt(49.0)               == 7
     assert math.sqrt(0x4000000000000000) == 0x80000000
-    expect_fail(()=>(math.sqrt(void)))
-    expect_fail(()=>(math.sqrt(-1)))
-    expect_fail(()=>(math.sqrt(-0.5)))
+    expect_fail(()=>math.sqrt(void))
+    expect_fail(()=>math.sqrt(-1))
+    expect_fail(()=>math.sqrt(-0.5))
 }
 
 # math.infinity
 do {
-    const inf = ()=>(math.infinity)()
+    const inf = (()=>math.infinity)()
     assert inf > 0
     assert inf > 0x4000000000000000
     assert inf > 1.7976931348623157e308
@@ -104,7 +104,7 @@ do {
 
 # math.nan
 do {
-    const nan = ()=>(math.nan)()
+    const nan = (()=>math.nan)()
     assert nan != 0
     assert nan != 2
     assert nan != 1.7976931348623157e308
@@ -149,9 +149,9 @@ do {
 
 # math.exp
 do {
-    expect_fail(()=>(math.exp(void)))
-    expect_fail(()=>(math.exp(false)))
-    expect_fail(()=>(math.exp({})))
+    expect_fail(()=>math.exp(void))
+    expect_fail(()=>math.exp(false))
+    expect_fail(()=>math.exp({}))
 
     const e   = math.e
     const err = 1e-10
@@ -165,9 +165,9 @@ do {
 
 # math.expm1
 do {
-    expect_fail(()=>(math.expm1(void)))
-    expect_fail(()=>(math.expm1(false)))
-    expect_fail(()=>(math.expm1({})))
+    expect_fail(()=>math.expm1(void))
+    expect_fail(()=>math.expm1(false))
+    expect_fail(()=>math.expm1({}))
 
     const e   = math.e
     const err = 1e-10
@@ -179,14 +179,14 @@ do {
 
 # math.pow
 do {
-    expect_fail(()=>(math.pow(1, void)))
-    expect_fail(()=>(math.pow(1, false)))
-    expect_fail(()=>(math.pow(1, {})))
-    expect_fail(()=>(math.pow(void,  1)))
-    expect_fail(()=>(math.pow(false, 1)))
-    expect_fail(()=>(math.pow({},    1)))
-    expect_fail(()=>(math.pow(-0.5, -0.5)))
-    expect_fail(()=>(math.pow(0,     0)))
+    expect_fail(()=>math.pow(1, void))
+    expect_fail(()=>math.pow(1, false))
+    expect_fail(()=>math.pow(1, {}))
+    expect_fail(()=>math.pow(void,  1))
+    expect_fail(()=>math.pow(false, 1))
+    expect_fail(()=>math.pow({},    1))
+    expect_fail(()=>math.pow(-0.5, -0.5))
+    expect_fail(()=>math.pow(0,     0))
 
     assert math.pow(2,   5)   == 32
     assert math.pow(2.5, 2.0) == 6.25

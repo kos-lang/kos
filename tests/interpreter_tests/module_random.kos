@@ -57,9 +57,9 @@ do {
         assert v == 0 || v == 1
     }
 
-    expect_fail(()=>(random.rand_integer(1)))
-    expect_fail(()=>(random.rand_integer(1, 1)))
-    expect_fail(()=>(random.rand_integer(1, 0)))
+    expect_fail(()=>random.rand_integer(1))
+    expect_fail(()=>random.rand_integer(1, 1))
+    expect_fail(()=>random.rand_integer(1, 0))
 }
 
 # random.rand_float
@@ -73,14 +73,14 @@ do {
 
 # random.random.prototype.integer
 do {
-    expect_fail(()=>(random.random.prototype.integer.apply(void, [])))
-    expect_fail(()=>(random.random.prototype.integer.apply({}, [])))
+    expect_fail(()=>random.random.prototype.integer.apply(void, []))
+    expect_fail(()=>random.random.prototype.integer.apply({}, []))
 }
 
 # random.seed
 do {
-    expect_fail(()=>(random.random(void)))
-    expect_fail(()=>(random.random(10e19)))
+    expect_fail(()=>random.random(void))
+    expect_fail(()=>random.random(10e19))
 
     const seed = random.rand_integer()
 
