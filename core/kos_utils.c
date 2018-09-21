@@ -742,14 +742,14 @@ static int _vector_append_function(KOS_YARN            yarn,
     if (func->handler) {
         /* TODO get built-in function name */
         TRY(_vector_append_cstr(yarn, cstr_vec, str_builtin, sizeof(str_builtin) - 1));
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">", (uint64_t)(uintptr_t)func->handler);
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">", (uint64_t)(uintptr_t)func->handler);
     }
     else {
         KOS_OBJ_ID name_str = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
                                                            func->instr_offs);
         TRY_OBJID(name_str);
         TRY(_vector_append_str(yarn, cstr_vec, name_str, KOS_DONT_QUOTE));
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>", (unsigned)func->instr_offs);
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%X>", (unsigned)func->instr_offs);
     }
     TRY(_vector_append_cstr(yarn, cstr_vec, cstr_ptr, strlen(cstr_ptr)));
 
