@@ -990,15 +990,20 @@ Examples:
 array.prototype.sort()
 ----------------------
 
-    array.prototype.sort(compare = (x, y) => x < y)
+    array.prototype.sort(key=void, reverse=false)
 
-Sorts array in-place according to the ordering specified by `compare`.
+Sorts array in-place.
 
 Returns void.
 
-`compare` is a function which returns `true` if its first argument
-should come sorted before its second argument and returns `false`
-otherwise.  `compare` defaults to "less-than" operator.
+`key` is a function which produces a sorting key for each element of
+the array.  The array elements are then sorted by the keys using the
+'<' operator.  By default `key` is `void` and the elements themselves
+are used as sorting keys.
+
+`reverse` defaults to `false`.  If `reverse` is specified as `true`,
+the array elements are sorted in reverse order, i.e. in a descending key
+order.
 
 Example:
 
@@ -2330,8 +2335,10 @@ Example:
 sort()
 ------
 
-    sort(compare = (x, y) => x < y)
-    sort(compare, iterable)
+    sort(key = void, reverse = false)
+    sort(key, reverse, iterable)
+    sort(key, iterable)
+    sort(reverse, iterable)
     sort(iterable)
 
 Sorts elements from an iterable object.
@@ -2339,25 +2346,28 @@ Sorts elements from an iterable object.
 Returns an array with elements extracted from the iterable object and sorted.
 
 The first variant returns a sort function, which can then be used
-to sort any iterable object and has a built-in compare predicate.
-The usage of the returned function is the same as the second and
-third variant.
+to sort any iterable object.  The usage of the returned function is
+the same as the usage of the remaining variants.
 
-The second and third variant return an array containing elements extracted
-from an iterable object and sorted according to the `compare` function.  The
-elements are retrieved from the iterable object through its `iterator()`
-function.
+The remaining variants return an array containing elements extracted
+from an iterable object and sorted according to the `key` function and
+`reverse` flag.  Elements are retrieved from the iterable object through
+its `iterator()` function.
 
-`compare` is a function which returns `true` if its first argument
-should come sorted before its second argument and returns `false`
-otherwise.  `compare` defaults to `<` operator in the first and the
-third variant.
+`key` is a function which produces a sorting key for each element to be
+sorted.  The elements are then sorted by the keys using the '<' operator.
+By default `key` is `void` and the elements themselves are used as
+sorting keys.
+
+`reverse` defaults to `false`.  If `reverse` is specified as `true`,
+the elements are sorted in reverse order, i.e. in a descending key
+order.
 
 Examples:
 
     > sort("kos language") -> print_elements
      , a, a, e, g, g, k, l, n, o, s, u
-    > sort((x, y) => x[0] < y[0], { foo: 1, bar: 2, baz: 3 }) -> print_elements
+    > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> print_elements
     [bar, 2], [baz, 3], [foo, 1]
 
 string()

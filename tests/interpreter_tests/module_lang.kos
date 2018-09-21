@@ -2313,12 +2313,28 @@ do {
     }
 
     const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]
-    a.sort((x, y) => x.key < y.key)
+    a.sort(x => x.key)
     assert a[0].key == 10
     assert a[1].key == 20
     assert a[2].key == 25
     assert a[3].key == 30
     assert a[4].key == 40
+}
+
+do {
+    class sortable {
+        constructor(key) {
+            this.key = key
+        }
+    }
+
+    const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]
+    a.sort(x => x.key, true)
+    assert a[0].key == 40
+    assert a[1].key == 30
+    assert a[2].key == 25
+    assert a[3].key == 20
+    assert a[4].key == 10
 }
 
 ##############################################################################
@@ -2355,7 +2371,7 @@ do {
 }
 
 do {
-    const s = lang.sort((x, y) => x > y, "fooba")
+    const s = lang.sort(true, "fooba")
     assert typeof s == "array"
     assert s.size == 5
     assert s[0] == "o"
@@ -2376,7 +2392,7 @@ do {
 }
 
 do {
-    const s = [10, 11, 9, 8] -> lang.sort((x, y) => x > y)
+    const s = [10, 11, 9, 8] -> lang.sort(true)
     assert typeof s == "array"
     assert s.size == 4
     assert s[0] == 11

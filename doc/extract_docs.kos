@@ -140,11 +140,6 @@ for const arg in args[1:] {
     }
 }
 
-fun sort_by_first(a, b)
-{
-    return a[0] < b[0]
-}
-
 fun make_toc_name(name)
 {
     return string(name.map(fun(c) {
@@ -170,9 +165,9 @@ print("Table of Contents")
 print("=================")
 print("<!--ts-->")
 print("  * [Table of Contents](#table-of-contents)")
-for const topic, items in sort(sort_by_first, docs) {
+for const topic, items in sort(x => x[0], docs) {
     print("  * [\(make_toc_name(topic))](#\(make_link(topic)))")
-    for const item, contents in sort(sort_by_first, items) {
+    for const item, contents in sort(x => x[0], items) {
         const lead = item.scan(".") == -1 ? "" : "  "
         print("\(lead)    * [\(make_toc_name(item))](#\(make_link(item)))")
     }
@@ -180,11 +175,11 @@ for const topic, items in sort(sort_by_first, docs) {
 print("<!--te-->")
 
 # Print module documentation
-for const topic, items in sort(sort_by_first, docs) {
+for const topic, items in sort(x => x[0], docs) {
     print(topic)
     print("=".repeat(topic.size))
     print()
-    for const item, contents in sort(sort_by_first, items) {
+    for const item, contents in sort(x => x[0], items) {
         print(item)
         print("-".repeat(item.size))
         print()

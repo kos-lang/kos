@@ -1674,30 +1674,33 @@ var sort = void
 
 do {
 
-    const less = (x, y) => x < y
-
     /* @item lang array.prototype.sort()
      *
-     *     array.prototype.sort(compare = (x, y) => x < y)
+     *     array.prototype.sort(key=void, reverse=false)
      *
-     * Sorts array in-place according to the ordering specified by `compare`.
+     * Sorts array in-place.
      *
      * Returns void.
      *
-     * `compare` is a function which returns `true` if its first argument
-     * should come sorted before its second argument and returns `false`
-     * otherwise.  `compare` defaults to "less-than" operator.
+     * `key` is a function which produces a sorting key for each element of
+     * the array.  The array elements are then sorted by the keys using the
+     * '<' operator.  By default `key` is `void` and the elements themselves
+     * are used as sorting keys.
+     *
+     * `reverse` defaults to `false`.  If `reverse` is specified as `true`,
+     * the array elements are sorted in reverse order, i.e. in a descending key
+     * order.
      *
      * Example:
      *
      *     > [8, 5, 6, 0, 10, 2].sort()
      *     [0, 2, 5, 6, 8, 10]
      */
-    array.prototype.sort = fun(compare = less)
+    array.prototype.sort = fun(key = void, reverse = false)
     {
         if this.size > 1 {
-            if (compare == less) {
-                fun inner_sort(a, begin, end)
+            if (key == void) {
+                fun inner_sort_ascending(a, begin, end)
                 {
                     const _1 = 1
                     end -= _1
@@ -1723,25 +1726,22 @@ do {
                     }
 
                     if begin + _1 < mid {
-                        inner_sort(a, begin, mid)
+                        inner_sort_ascending(a, begin, mid)
                     }
                     if mid + 2 < end + _1 {
-                        return inner_sort(a, mid + _1, end + _1)
+                        return inner_sort_ascending(a, mid + _1, end + _1)
                     }
                 }
-                inner_sort(this, 0, this.size)
-            }
-            else {
-                fun inner_sort(a, begin, end, compare)
+                fun inner_sort_descending(a, begin, end)
                 {
-                    const _1  = 1
-                    end      -= _1
+                    const _1 = 1
+                    end -= _1
                     var pivot = a[end]
                     var mid   = begin - _1
                     var i     = begin
                     while i < end {
                         const v = a[i]
-                        if compare(v, pivot) {
+                        if v > pivot {
                             mid += _1
                             a[i] = a[mid]
                             a[mid] = v
@@ -1752,27 +1752,108 @@ do {
                     }
 
                     mid += _1
-                    if compare(pivot, a[mid]) {
+                    if pivot > a[mid] {
                         a[end] = a[mid]
                         a[mid] = pivot
                     }
 
                     if begin + _1 < mid {
-                        inner_sort(a, begin, mid, compare)
+                        inner_sort_descending(a, begin, mid)
                     }
                     if mid + 2 < end + _1 {
-                        return inner_sort(a, mid + _1, end + _1, compare)
+                        return inner_sort_descending(a, mid + _1, end + _1)
                     }
                 }
-                inner_sort(this, 0, this.size, compare)
+                if reverse {
+                    return inner_sort_descending(this, 0, this.size)
+                }
+                else {
+                    return inner_sort_ascending(this, 0, this.size)
+                }
+            }
+            else {
+                fun inner_sort_ascending(a, begin, end, key)
+                {
+                    const _1  = 1
+                    end      -= _1
+                    var pelem = a[end]
+                    var pivot = key(pelem)
+                    var mid   = begin - _1
+                    var i     = begin
+                    while i < end {
+                        const v = a[i]
+                        if key(v) < pivot {
+                            mid += _1
+                            a[i] = a[mid]
+                            a[mid] = v
+                            i += _1
+                            continue
+                        }
+                        i += _1
+                    }
+
+                    mid += _1
+                    if pivot < key(a[mid]) {
+                        a[end] = a[mid]
+                        a[mid] = pelem
+                    }
+
+                    if begin + _1 < mid {
+                        inner_sort_ascending(a, begin, mid, key)
+                    }
+                    if mid + 2 < end + _1 {
+                        return inner_sort_ascending(a, mid + _1, end + _1, key)
+                    }
+                }
+                fun inner_sort_descending(a, begin, end, key)
+                {
+                    const _1  = 1
+                    end      -= _1
+                    var pelem = a[end]
+                    var pivot = key(pelem)
+                    var mid   = begin - _1
+                    var i     = begin
+                    while i < end {
+                        const v = a[i]
+                        if key(v) > pivot {
+                            mid += _1
+                            a[i] = a[mid]
+                            a[mid] = v
+                            i += _1
+                            continue
+                        }
+                        i += _1
+                    }
+
+                    mid += _1
+                    if pivot > key(a[mid]) {
+                        a[end] = a[mid]
+                        a[mid] = pelem
+                    }
+
+                    if begin + _1 < mid {
+                        inner_sort_descending(a, begin, mid, key)
+                    }
+                    if mid + 2 < end + _1 {
+                        return inner_sort_descending(a, mid + _1, end + _1, key)
+                    }
+                }
+                if reverse {
+                    return inner_sort_descending(this, 0, this.size, key)
+                }
+                else {
+                    return inner_sort_ascending(this, 0, this.size, key)
+                }
             }
         }
     }
 
     /* @item lang sort()
      *
-     *     sort(compare = (x, y) => x < y)
-     *     sort(compare, iterable)
+     *     sort(key = void, reverse = false)
+     *     sort(key, reverse, iterable)
+     *     sort(key, iterable)
+     *     sort(reverse, iterable)
      *     sort(iterable)
      *
      * Sorts elements from an iterable object.
@@ -1780,46 +1861,79 @@ do {
      * Returns an array with elements extracted from the iterable object and sorted.
      *
      * The first variant returns a sort function, which can then be used
-     * to sort any iterable object and has a built-in compare predicate.
-     * The usage of the returned function is the same as the second and
-     * third variant.
+     * to sort any iterable object.  The usage of the returned function is
+     * the same as the usage of the remaining variants.
      *
-     * The second and third variant return an array containing elements extracted
-     * from an iterable object and sorted according to the `compare` function.  The
-     * elements are retrieved from the iterable object through its `iterator()`
-     * function.
+     * The remaining variants return an array containing elements extracted
+     * from an iterable object and sorted according to the `key` function and
+     * `reverse` flag.  Elements are retrieved from the iterable object through
+     * its `iterator()` function.
      *
-     * `compare` is a function which returns `true` if its first argument
-     * should come sorted before its second argument and returns `false`
-     * otherwise.  `compare` defaults to `<` operator in the first and the
-     * third variant.
+     * `key` is a function which produces a sorting key for each element to be
+     * sorted.  The elements are then sorted by the keys using the '<' operator.
+     * By default `key` is `void` and the elements themselves are used as
+     * sorting keys.
+     *
+     * `reverse` defaults to `false`.  If `reverse` is specified as `true`,
+     * the elements are sorted in reverse order, i.e. in a descending key
+     * order.
      *
      * Examples:
      *
      *     > sort("kos language") -> print_elements
      *      , a, a, e, g, g, k, l, n, o, s, u
-     *     > sort((x, y) => x[0] < y[0], { foo: 1, bar: 2, baz: 3 }) -> print_elements
+     *     > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> print_elements
      *     [bar, 2], [baz, 3], [foo, 1]
      */
-    sort = fun(compare = less, args...)
+    sort = fun(key = void, args...)
     {
-        if typeof compare != "function" {
-            args.resize(1)
-            args[0] = compare
-            compare = less
-        }
+        var reverse  = false
+        var iterable = void
 
         fun sort(iterable)
         {
             const a = array(iterable.iterator()...)
-            if ! a.size {
-                return a
+            if a.size {
+                a.sort(key, reverse)
             }
-            a.sort(compare)
             return a
         }
 
-        return args.size ? sort(args[0]) : sort
+        switch typeof key {
+
+            case "void", "function":
+                if args.size {
+                    if args.size > 1 {
+                        reverse  = args[0]
+                        iterable = args[1]
+                    }
+                    else {
+                        iterable = args[0]
+                        if typeof iterable == "boolean" {
+                            reverse = iterable
+                            return sort
+                        }
+                    }
+                }
+                else {
+                    return sort
+                }
+
+            case "boolean":
+                reverse = key
+                key     = void
+                if ! args.size {
+                    return sort
+                }
+                iterable = args[0]
+
+            default:
+                iterable = key
+                key      = void
+
+        }
+
+        return sort(iterable)
     }
 }
 
