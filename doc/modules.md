@@ -1637,21 +1637,22 @@ Example:
 function.prototype.async()
 --------------------------
 
-    function.prototype.async(args...)
+    function.prototype.async(this_object, args_array)
 
 Invokes a function asynchronously on a new thread.
 
 Returns the created thread object.
 
-The returned thread object is also bound as `this` to the function
-being invoked on that thread.
+The `this_object` argument is the object which is bound to the function as
+`this` for this invocation.  It can be any object or `void`.
 
-All the arguments are passed to the function.
+The `args_array` argument is an array (can be empty) containing arguments for
+the function.
 
 Example:
 
     > fun f(a, b) { return a + b }
-    > const t = f.async(1, 2)
+    > const t = f.async(void, [1, 2])
     > t.wait()
     3
 
@@ -2951,7 +2952,7 @@ Thread objects are created by calling `function.prototype.async()`.
 The purpose of this class is to be used with the `instanceof`
 operator to detect thread objects.
 
-Calling this class throws an exception.
+Calling this class directly throws an exception.
 
 The prototype of `thread.prototype` is `object.prototype`.
 

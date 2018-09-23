@@ -2441,8 +2441,8 @@ do {
         while ! o.t1 { }
     }
 
-    const t1 = thread1.async()
-    const t2 = thread2.async()
+    const t1 = thread1.async(void, [])
+    const t2 = thread2.async(void, [])
 
     assert t1 instanceof lang.thread
     assert t1 instanceof lang.object
@@ -2463,7 +2463,7 @@ do {
         return a + b
     }
 
-    const t = sum.async(10, 24);
+    const t = sum.async(void, [10, 24]);
 
     assert t instanceof lang.thread
 
@@ -2489,12 +2489,12 @@ do {
     assert thread(-42) == -420
 
     do {
-        const t = thread.async(2)
+        const t = thread.async(void, [2])
         assert t.wait() == 20
     }
 
     do {
-        const t = thread.async(123)
+        const t = thread.async(void, [123])
         assert t.wait() == 1230
     }
 }
@@ -2505,7 +2505,7 @@ do {
         throw "something"
     }
 
-    const t = thread.async()
+    const t = thread.async(void, [])
     var   e = void
     try {
         t.wait()
@@ -2533,7 +2533,7 @@ do {
     }
 
     # Normal invocation
-    t = thread.async(false)
+    t = thread.async(void, [false])
     assert t instanceof lang.thread
     while ! done { }
     t.wait()
@@ -2543,7 +2543,7 @@ do {
     done    = false
 
     # Exception inside thread
-    t = thread.async(true)
+    t = thread.async(void, [true])
     assert t instanceof lang.thread
     while ! done { }
     var e = void
@@ -2556,12 +2556,45 @@ do {
 
     # Incorrect number of args (not even called)
     e = void
-    t = thread.async()
+    t = thread.async(void, [])
     assert t instanceof lang.thread
     try { t.wait() } catch const exc { e = exc }
     assert ! done
     assert ! success
     assert e != void
+}
+
+do {
+    var x = void
+    const t = lang.function.async.apply(fun { x = 42; return 4.2 }, [void, []])
+    assert t.wait() == 4.2
+    assert x == 42
+
+    expect_fail(() => lang.function.async.apply(void, [void, []]))
+    expect_fail(() => lang.function.async.apply(1, [void, []]))
+    expect_fail(() => lang.function.async.apply("", [void, []]))
+    expect_fail(() => fun {} . async(void))
+    expect_fail(() => fun {} . async())
+    expect_fail(() => fun {} . async(void, {}))
+    expect_fail(() => fun {} . async(void, void))
+    expect_fail(() => fun {} . async(void, -42))
+    expect_fail(() => fun {} . async(void, "42"))
+}
+
+do {
+    const obj = { }
+    assert ! ("xyz" in obj)
+
+    fun fff
+    {
+        this.xyz = "42"
+    }
+
+    const t = fff.async(obj, [])
+    t.wait()
+
+    assert "xyz" in obj
+    assert obj.xyz == "42"
 }
 
 ##############################################################################

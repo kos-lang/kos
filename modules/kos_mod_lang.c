@@ -39,6 +39,7 @@
 static const char str_args[]                         = "args";
 static const char str_builtin[]                      = "<builtin>";
 static const char str_err_already_joined[]           = "thread already joined";
+static const char str_err_args_not_array[]           = "function arguments are not an array";
 static const char str_err_bad_number[]               = "number parse failed";
 static const char str_err_bad_pack_value[]           = "invalid value type for pack format";
 static const char str_err_cannot_convert_to_buffer[] = "unsupported type passed to buffer class";
@@ -64,6 +65,7 @@ static const char str_err_unsup_operand_types[]      = "unsupported operand type
 static const char str_err_use_async[]                = "use async to launch threads";
 static const char str_function[]                     = "function";
 static const char str_result[]                       = "result";
+static const char str_this[]                         = "this";
 
 #define TRY_CREATE_CONSTRUCTOR(name, module)                                \
 do {                                                                        \
@@ -1139,7 +1141,7 @@ static KOS_OBJ_ID _generator_end_constructor(KOS_CONTEXT ctx,
  * The purpose of this class is to be used with the `instanceof`
  * operator to detect thread objects.
  *
- * Calling this class throws an exception.
+ * Calling this class directly throws an exception.
  *
  * The prototype of `thread.prototype` is `object.prototype`.
  */
@@ -1196,16 +1198,22 @@ _error:
 }
 
 static void _async_func(KOS_CONTEXT ctx,
-                        void    *cookie)
+                        void       *cookie)
 {
     KOS_OBJECT *thread_obj = (KOS_OBJECT *)cookie;
     KOS_OBJ_ID  func_obj;
+    KOS_OBJ_ID  this_obj;
     KOS_OBJ_ID  args_obj;
     KOS_OBJ_ID  ret_obj;
 
     func_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
                     KOS_instance_get_cstring(ctx, str_function));
     if (IS_BAD_PTR(func_obj))
+        return;
+
+    this_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
+                    KOS_instance_get_cstring(ctx, str_this));
+    if (IS_BAD_PTR(this_obj))
         return;
 
     args_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
@@ -1217,7 +1225,7 @@ static void _async_func(KOS_CONTEXT ctx,
     if (IS_BAD_PTR(args_obj))
         return;
 
-    ret_obj = KOS_apply_function(ctx, func_obj, OBJID(OBJECT, thread_obj), args_obj);
+    ret_obj = KOS_apply_function(ctx, func_obj, this_obj, args_obj);
     if (IS_BAD_PTR(ret_obj))
         return;
 
@@ -1238,21 +1246,22 @@ static void _thread_finalize(KOS_CONTEXT ctx,
 
 /* @item lang function.prototype.async()
  *
- *     function.prototype.async(args...)
+ *     function.prototype.async(this_object, args_array)
  *
  * Invokes a function asynchronously on a new thread.
  *
  * Returns the created thread object.
  *
- * The returned thread object is also bound as `this` to the function
- * being invoked on that thread.
+ * The `this_object` argument is the object which is bound to the function as
+ * `this` for this invocation.  It can be any object or `void`.
  *
- * All the arguments are passed to the function.
+ * The `args_array` argument is an array (can be empty) containing arguments for
+ * the function.
  *
  * Example:
  *
  *     > fun f(a, b) { return a + b }
- *     > const t = f.async(1, 2)
+ *     > const t = f.async(void, [1, 2])
  *     > t.wait()
  *     3
  */
@@ -1262,6 +1271,8 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
 {
     int         error      = KOS_SUCCESS;
     KOS_OBJ_ID  thread_obj = KOS_BADPTR;
+    KOS_OBJ_ID  arg_this;
+    KOS_OBJ_ID  arg_args;
     _KOS_THREAD thread;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_FUNCTION) {
@@ -1275,8 +1286,18 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
 
     TRY(KOS_set_property(ctx, thread_obj,
                 KOS_instance_get_cstring(ctx, str_function), this_obj));
+
+    arg_this = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(arg_this);
     TRY(KOS_set_property(ctx, thread_obj,
-                KOS_instance_get_cstring(ctx, str_args), args_obj));
+                KOS_instance_get_cstring(ctx, str_this), arg_this));
+
+    arg_args = KOS_array_read(ctx, args_obj, 1);
+    TRY_OBJID(arg_args);
+    if (GET_OBJ_TYPE(arg_args) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_args_not_array);
+    TRY(KOS_set_property(ctx, thread_obj,
+                KOS_instance_get_cstring(ctx, str_args), arg_args));
 
     OBJPTR(OBJECT, thread_obj)->finalize = _thread_finalize;
 
@@ -3587,7 +3608,7 @@ int _KOS_module_lang_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(exception),  "print",         _print_exception,   0);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "apply",         _apply,             2);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "async",         _async,             0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "async",         _async,             2);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "instructions",  _get_instructions,  0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "name",          _get_function_name, 0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "registers",     _get_registers,     0);
