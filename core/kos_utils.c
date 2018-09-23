@@ -91,7 +91,7 @@ static const int8_t _extra_len[256] = {
 
 static const char _hex_digits[] = "0123456789abcdef";
 
-int KOS_get_numeric_arg(KOS_YARN     yarn,
+int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
                         KOS_OBJ_ID   args_obj,
                         int          idx,
                         KOS_NUMERIC *numeric)
@@ -102,7 +102,7 @@ int KOS_get_numeric_arg(KOS_YARN     yarn,
     assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
     assert(idx < (int)KOS_get_array_size(args_obj));
 
-    arg = KOS_array_read(yarn, args_obj, idx);
+    arg = KOS_array_read(ctx, args_obj, idx);
     TRY_OBJID(arg);
 
     if (IS_SMALL_INT(arg)) {
@@ -130,9 +130,9 @@ _error:
     return error;
 }
 
-int KOS_get_integer(KOS_YARN   yarn,
-                    KOS_OBJ_ID obj_id,
-                    int64_t   *ret)
+int KOS_get_integer(KOS_CONTEXT ctx,
+                    KOS_OBJ_ID  obj_id,
+                    int64_t    *ret)
 {
     int error = KOS_SUCCESS;
 
@@ -150,7 +150,7 @@ int KOS_get_integer(KOS_YARN   yarn,
         case OBJ_FLOAT: {
             const double number = OBJPTR(FLOAT, obj_id)->value;
             if (number <= -9223372036854775808.0 || number >= 9223372036854775808.0) {
-                KOS_raise_exception_cstring(yarn, str_err_number_out_of_range);
+                KOS_raise_exception_cstring(ctx, str_err_number_out_of_range);
                 error = KOS_ERROR_EXCEPTION;
             }
             else
@@ -160,7 +160,7 @@ int KOS_get_integer(KOS_YARN   yarn,
         }
 
         default:
-            KOS_raise_exception_cstring(yarn, str_err_unsup_operand_types);
+            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
             error = KOS_ERROR_EXCEPTION;
             break;
     }
@@ -168,20 +168,20 @@ int KOS_get_integer(KOS_YARN   yarn,
     return error;
 }
 
-static KOS_OBJ_ID _get_exception_string(KOS_YARN   yarn,
-                                        KOS_OBJ_ID exception)
+static KOS_OBJ_ID _get_exception_string(KOS_CONTEXT ctx,
+                                        KOS_OBJ_ID  exception)
 {
     if (GET_OBJ_TYPE(exception) == OBJ_OBJECT) {
 
-        const KOS_OBJ_ID proto = KOS_get_prototype(yarn, exception);
+        const KOS_OBJ_ID proto = KOS_get_prototype(ctx, exception);
 
-        if (proto == yarn->inst->prototypes.exception_proto) {
+        if (proto == ctx->inst->prototypes.exception_proto) {
 
-            const KOS_OBJ_ID obj_id = KOS_get_property(yarn, exception,
-                                    KOS_instance_get_cstring(yarn, str_value));
+            const KOS_OBJ_ID obj_id = KOS_get_property(ctx, exception,
+                                    KOS_instance_get_cstring(ctx, str_value));
 
             if (IS_BAD_PTR(obj_id))
-                KOS_clear_exception(yarn);
+                KOS_clear_exception(ctx);
             else if (GET_OBJ_TYPE(obj_id) == OBJ_STRING)
                 return obj_id;
         }
@@ -190,44 +190,44 @@ static KOS_OBJ_ID _get_exception_string(KOS_YARN   yarn,
     return KOS_BADPTR;
 }
 
-void KOS_print_exception(KOS_YARN yarn)
+void KOS_print_exception(KOS_CONTEXT ctx)
 {
     struct _KOS_VECTOR cstr;
     KOS_OBJ_ID         exception;
 
     _KOS_vector_init(&cstr);
 
-    exception = KOS_get_exception(yarn);
+    exception = KOS_get_exception(ctx);
     assert(!IS_BAD_PTR(exception));
 
     if (GET_OBJ_TYPE(exception) == OBJ_STRING) {
-        KOS_clear_exception(yarn);
-        if (KOS_SUCCESS == KOS_string_to_cstr_vec(yarn, exception, &cstr))
+        KOS_clear_exception(ctx);
+        if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, exception, &cstr))
             fprintf(stderr, "%s\n", cstr.buffer);
     }
     else {
         KOS_OBJ_ID formatted;
 
-        KOS_clear_exception(yarn);
-        formatted = KOS_format_exception(yarn, exception);
+        KOS_clear_exception(ctx);
+        formatted = KOS_format_exception(ctx, exception);
         if (IS_BAD_PTR(formatted)) {
             KOS_OBJ_ID str;
 
-            KOS_clear_exception(yarn);
+            KOS_clear_exception(ctx);
 
             /* TODO when KOS_object_to_string implements object printing,
              *      then first try KOS_object_to_string and if that doesn't help,
              *      then fall back to _get_exception_string. */
-            str = _get_exception_string(yarn, exception);
+            str = _get_exception_string(ctx, exception);
 
             if (IS_BAD_PTR(str)) {
 
-                str = KOS_object_to_string(yarn, exception);
+                str = KOS_object_to_string(ctx, exception);
 
-                KOS_clear_exception(yarn);
+                KOS_clear_exception(ctx);
             }
 
-            if (IS_BAD_PTR(str) || KOS_string_to_cstr_vec(yarn, str, &cstr))
+            if (IS_BAD_PTR(str) || KOS_string_to_cstr_vec(ctx, str, &cstr))
                 fprintf(stderr, "Exception: <unable to format>\n");
             else
                 fprintf(stderr, "%s\n", cstr.buffer);
@@ -241,9 +241,9 @@ void KOS_print_exception(KOS_YARN yarn)
             lines = KOS_get_array_size(formatted);
 
             for (i = 0; i < lines; i++) {
-                KOS_OBJ_ID line = KOS_array_read(yarn, formatted, (int)i);
-                assert(!KOS_is_exception_pending(yarn));
-                if (KOS_SUCCESS == KOS_string_to_cstr_vec(yarn, line, &cstr))
+                KOS_OBJ_ID line = KOS_array_read(ctx, formatted, (int)i);
+                assert(!KOS_is_exception_pending(ctx));
+                if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, line, &cstr))
                     fprintf(stderr, "%s\n", cstr.buffer);
             }
         }
@@ -252,8 +252,8 @@ void KOS_print_exception(KOS_YARN yarn)
     _KOS_vector_destroy(&cstr);
 }
 
-KOS_OBJ_ID KOS_get_file_name(KOS_YARN   yarn,
-                             KOS_OBJ_ID full_path)
+KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  full_path)
 {
     int      error = KOS_SUCCESS;
     unsigned i;
@@ -263,7 +263,7 @@ KOS_OBJ_ID KOS_get_file_name(KOS_YARN   yarn,
 
     len = KOS_get_string_length(full_path);
     for (i = len; i > 0; i--) {
-        const unsigned c = KOS_string_get_char_code(yarn, full_path, (int)i - 1);
+        const unsigned c = KOS_string_get_char_code(ctx, full_path, (int)i - 1);
         if (c == ~0U)
             TRY(KOS_ERROR_EXCEPTION);
         if (c == '/' || c == '\\')
@@ -276,10 +276,10 @@ KOS_OBJ_ID KOS_get_file_name(KOS_YARN   yarn,
 _error:
     if (error)
         return KOS_BADPTR;
-    return KOS_string_slice(yarn, full_path, i, len);
+    return KOS_string_slice(ctx, full_path, i, len);
 }
 
-static int _int_to_str(KOS_YARN            yarn,
+static int _int_to_str(KOS_CONTEXT         ctx,
                        int64_t             value,
                        KOS_OBJ_ID         *str,
                        struct _KOS_VECTOR *cstr_vec)
@@ -300,21 +300,21 @@ static int _int_to_str(KOS_YARN            yarn,
                     (cstr_vec->size ? 0 : 1)));
     }
     else {
-        KOS_OBJ_ID ret = KOS_new_cstring(yarn, ptr);
+        KOS_OBJ_ID ret = KOS_new_cstring(ctx, ptr);
         TRY_OBJID(ret);
         *str = ret;
     }
 
 _error:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception_cstring(yarn, str_err_out_of_memory);
+        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
         error = KOS_ERROR_EXCEPTION;
     }
 
     return error;
 }
 
-static int _float_to_str(KOS_YARN            yarn,
+static int _float_to_str(KOS_CONTEXT         ctx,
                          double              value,
                          KOS_OBJ_ID         *str,
                          struct _KOS_VECTOR *cstr_vec)
@@ -336,21 +336,21 @@ static int _float_to_str(KOS_YARN            yarn,
                     (cstr_vec->size ? 0 : 1)));
     }
     else {
-        KOS_OBJ_ID ret = KOS_new_string(yarn, ptr, size);
+        KOS_OBJ_ID ret = KOS_new_string(ctx, ptr, size);
         TRY_OBJID(ret);
         *str = ret;
     }
 
 _error:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception_cstring(yarn, str_err_out_of_memory);
+        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
         error = KOS_ERROR_EXCEPTION;
     }
 
     return error;
 }
 
-static int _vector_append_cstr(KOS_YARN            yarn,
+static int _vector_append_cstr(KOS_CONTEXT         ctx,
                                struct _KOS_VECTOR *cstr_vec,
                                const char         *str,
                                size_t              len)
@@ -359,7 +359,7 @@ static int _vector_append_cstr(KOS_YARN            yarn,
     int          error = _KOS_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
 
     if (error) {
-        KOS_raise_exception_cstring(yarn, str_err_out_of_memory);
+        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
         error = KOS_ERROR_EXCEPTION;
     }
     else
@@ -368,7 +368,7 @@ static int _vector_append_cstr(KOS_YARN            yarn,
     return error;
 }
 
-static int _vector_append_str(KOS_YARN            yarn,
+static int _vector_append_str(KOS_CONTEXT         ctx,
                               struct _KOS_VECTOR *cstr_vec,
                               KOS_OBJ_ID          obj,
                               enum _KOS_QUOTE_STR quote_str)
@@ -386,7 +386,7 @@ static int _vector_append_str(KOS_YARN            yarn,
         assert(str_len > 0);
 
         if (str_len == ~0U) {
-            KOS_raise_exception_cstring(yarn, str_err_invalid_string);
+            KOS_raise_exception_cstring(ctx, str_err_invalid_string);
             return KOS_ERROR_EXCEPTION;
         }
     }
@@ -397,7 +397,7 @@ static int _vector_append_str(KOS_YARN            yarn,
     error = _KOS_vector_resize(cstr_vec, pos + str_len + 1 + (quote_str ? 2 : 0));
 
     if (error) {
-        KOS_raise_exception_cstring(yarn, str_err_out_of_memory);
+        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -430,7 +430,7 @@ static int _vector_append_str(KOS_YARN            yarn,
             error = _KOS_vector_resize(cstr_vec, cstr_vec->size + extra_len);
 
             if (error) {
-                KOS_raise_exception_cstring(yarn, str_err_out_of_memory);
+                KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
                 return KOS_ERROR_EXCEPTION;
             }
 
@@ -529,7 +529,7 @@ static int _vector_append_str(KOS_YARN            yarn,
     return KOS_SUCCESS;
 }
 
-static int _make_quoted_str(KOS_YARN            yarn,
+static int _make_quoted_str(KOS_CONTEXT         ctx,
                             KOS_OBJ_ID          obj_id,
                             KOS_OBJ_ID         *str,
                             struct _KOS_VECTOR *cstr_vec)
@@ -541,12 +541,12 @@ static int _make_quoted_str(KOS_YARN            yarn,
 
     old_size = cstr_vec->size;
 
-    error = _vector_append_str(yarn, cstr_vec, obj_id, KOS_QUOTE_STRINGS);
+    error = _vector_append_str(ctx, cstr_vec, obj_id, KOS_QUOTE_STRINGS);
 
     if ( ! error) {
         const char  *buf  = &cstr_vec->buffer[old_size ? old_size - 1 : 0];
         const size_t size = cstr_vec->size - old_size - (old_size ? 0 : 1);
-        KOS_OBJ_ID new_str = KOS_new_string(yarn, buf, (unsigned)size);
+        KOS_OBJ_ID new_str = KOS_new_string(ctx, buf, (unsigned)size);
         if (IS_BAD_PTR(new_str))
             error = KOS_ERROR_EXCEPTION;
         else
@@ -561,7 +561,7 @@ static int _make_quoted_str(KOS_YARN            yarn,
     return error;
 }
 
-static int _vector_append_array(KOS_YARN            yarn,
+static int _vector_append_array(KOS_CONTEXT         ctx,
                                 struct _KOS_VECTOR *cstr_vec,
                                 KOS_OBJ_ID          obj_id,
                                 enum _KOS_QUOTE_STR quote_str)
@@ -574,28 +574,28 @@ static int _vector_append_array(KOS_YARN            yarn,
 
     length = KOS_get_array_size(obj_id);
 
-    TRY(_vector_append_cstr(yarn, cstr_vec, str_array_open, sizeof(str_array_open)-1));
+    TRY(_vector_append_cstr(ctx, cstr_vec, str_array_open, sizeof(str_array_open)-1));
 
     for (i = 0; i < length; ) {
 
-        KOS_OBJ_ID val_id = KOS_array_read(yarn, obj_id, i);
+        KOS_OBJ_ID val_id = KOS_array_read(ctx, obj_id, i);
         TRY_OBJID(val_id);
 
-        TRY(KOS_object_to_string_or_cstr_vec(yarn, val_id, quote_str, 0, cstr_vec));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, val_id, quote_str, 0, cstr_vec));
 
         ++i;
 
         if (i < length)
-            TRY(_vector_append_cstr(yarn, cstr_vec, str_array_comma, sizeof(str_array_comma)-1));
+            TRY(_vector_append_cstr(ctx, cstr_vec, str_array_comma, sizeof(str_array_comma)-1));
     }
 
-    TRY(_vector_append_cstr(yarn, cstr_vec, str_array_close, sizeof(str_array_close)-1));
+    TRY(_vector_append_cstr(ctx, cstr_vec, str_array_close, sizeof(str_array_close)-1));
 
 _error:
     return error;
 }
 
-static KOS_OBJ_ID _array_to_str(KOS_YARN            yarn,
+static KOS_OBJ_ID _array_to_str(KOS_CONTEXT         ctx,
                                 KOS_OBJ_ID          obj_id,
                                 enum _KOS_QUOTE_STR quote_str)
 {
@@ -610,40 +610,40 @@ static KOS_OBJ_ID _array_to_str(KOS_YARN            yarn,
     length = KOS_get_array_size(obj_id);
 
     if (length == 0)
-        return KOS_instance_get_cstring(yarn, str_empty_array);
+        return KOS_instance_get_cstring(ctx, str_empty_array);
 
-    aux_array_id = KOS_new_array(yarn, length * 2 + 1);
+    aux_array_id = KOS_new_array(ctx, length * 2 + 1);
     TRY_OBJID(aux_array_id);
 
-    TRY(KOS_array_write(yarn, aux_array_id, 0,
-                KOS_instance_get_cstring(yarn, str_array_open)));
+    TRY(KOS_array_write(ctx, aux_array_id, 0,
+                KOS_instance_get_cstring(ctx, str_array_open)));
 
     for (i = 0; i < length; ) {
 
-        KOS_OBJ_ID val_id = KOS_array_read(yarn, obj_id, i);
+        KOS_OBJ_ID val_id = KOS_array_read(ctx, obj_id, i);
         TRY_OBJID(val_id);
 
-        TRY(KOS_object_to_string_or_cstr_vec(yarn, val_id, quote_str, &val_id, 0));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, val_id, quote_str, &val_id, 0));
 
-        TRY(KOS_array_write(yarn, aux_array_id, 1 + i * 2, val_id));
+        TRY(KOS_array_write(ctx, aux_array_id, 1 + i * 2, val_id));
 
         ++i;
 
         if (i < length)
-            TRY(KOS_array_write(yarn, aux_array_id, i * 2,
-                        KOS_instance_get_cstring(yarn, str_array_comma)));
+            TRY(KOS_array_write(ctx, aux_array_id, i * 2,
+                        KOS_instance_get_cstring(ctx, str_array_comma)));
     }
 
-    TRY(KOS_array_write(yarn, aux_array_id, length * 2,
-                KOS_instance_get_cstring(yarn, str_array_close)));
+    TRY(KOS_array_write(ctx, aux_array_id, length * 2,
+                KOS_instance_get_cstring(ctx, str_array_close)));
 
-    ret = KOS_string_add_many(yarn, _KOS_get_array_buffer(OBJPTR(ARRAY, aux_array_id)), length * 2 + 1);
+    ret = KOS_string_add_many(ctx, _KOS_get_array_buffer(OBJPTR(ARRAY, aux_array_id)), length * 2 + 1);
 
 _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _vector_append_buffer(KOS_YARN            yarn,
+static int _vector_append_buffer(KOS_CONTEXT         ctx,
                                  struct _KOS_VECTOR *cstr_vec,
                                  KOS_OBJ_ID          obj_id)
 {
@@ -663,7 +663,7 @@ static int _vector_append_buffer(KOS_YARN            yarn,
     assert(sizeof(str_buffer_open)  == 2);
     assert(sizeof(str_buffer_close) == 2);
 
-    TRY(_vector_append_cstr(yarn, cstr_vec, str_buffer_open, sizeof(str_buffer_open)-1));
+    TRY(_vector_append_cstr(ctx, cstr_vec, str_buffer_open, sizeof(str_buffer_open)-1));
 
     dest = cstr_vec->buffer + cstr_vec->size - 1;
     src  = KOS_buffer_data(obj_id);
@@ -685,14 +685,14 @@ static int _vector_append_buffer(KOS_YARN            yarn,
         cstr_vec->size += size * 3 - 1;
     }
 
-    TRY(_vector_append_cstr(yarn, cstr_vec, str_buffer_close, sizeof(str_buffer_close)-1));
+    TRY(_vector_append_cstr(ctx, cstr_vec, str_buffer_close, sizeof(str_buffer_close)-1));
 
 _error:
     return error;
 }
 
-static KOS_OBJ_ID _buffer_to_str(KOS_YARN   yarn,
-                                 KOS_OBJ_ID obj_id)
+static KOS_OBJ_ID _buffer_to_str(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  obj_id)
 {
     int                error = KOS_SUCCESS;
     KOS_OBJ_ID         ret   = KOS_BADPTR;
@@ -701,15 +701,15 @@ static KOS_OBJ_ID _buffer_to_str(KOS_YARN   yarn,
     assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
 
     if (KOS_get_buffer_size(obj_id) == 0)
-        return KOS_instance_get_cstring(yarn, str_empty_buffer);
+        return KOS_instance_get_cstring(ctx, str_empty_buffer);
 
     _KOS_vector_init(&cstr_vec);
 
-    TRY(_vector_append_buffer(yarn, &cstr_vec, obj_id));
+    TRY(_vector_append_buffer(ctx, &cstr_vec, obj_id));
 
     assert(cstr_vec.size > 1);
 
-    ret = KOS_new_string(yarn, cstr_vec.buffer, (unsigned)cstr_vec.size - 1U);
+    ret = KOS_new_string(ctx, cstr_vec.buffer, (unsigned)cstr_vec.size - 1U);
 
 _error:
     _KOS_vector_destroy(&cstr_vec);
@@ -717,7 +717,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _vector_append_function(KOS_YARN            yarn,
+static int _vector_append_function(KOS_CONTEXT         ctx,
                                    struct _KOS_VECTOR *cstr_vec,
                                    KOS_OBJ_ID          obj_id)
 {
@@ -729,36 +729,36 @@ static int _vector_append_function(KOS_YARN            yarn,
 
         case OBJ_FUNCTION:
             func = OBJPTR(FUNCTION, obj_id);
-            TRY(_vector_append_cstr(yarn, cstr_vec, str_function_open, sizeof(str_function_open) - 1));
+            TRY(_vector_append_cstr(ctx, cstr_vec, str_function_open, sizeof(str_function_open) - 1));
             break;
 
         default:
             assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
             func = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
-            TRY(_vector_append_cstr(yarn, cstr_vec, str_class_open, sizeof(str_class_open) - 1));
+            TRY(_vector_append_cstr(ctx, cstr_vec, str_class_open, sizeof(str_class_open) - 1));
             break;
     }
 
     if (func->handler) {
         /* TODO get built-in function name */
-        TRY(_vector_append_cstr(yarn, cstr_vec, str_builtin, sizeof(str_builtin) - 1));
+        TRY(_vector_append_cstr(ctx, cstr_vec, str_builtin, sizeof(str_builtin) - 1));
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">", (uint64_t)(uintptr_t)func->handler);
     }
     else {
         KOS_OBJ_ID name_str = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
                                                            func->instr_offs);
         TRY_OBJID(name_str);
-        TRY(_vector_append_str(yarn, cstr_vec, name_str, KOS_DONT_QUOTE));
+        TRY(_vector_append_str(ctx, cstr_vec, name_str, KOS_DONT_QUOTE));
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%X>", (unsigned)func->instr_offs);
     }
-    TRY(_vector_append_cstr(yarn, cstr_vec, cstr_ptr, strlen(cstr_ptr)));
+    TRY(_vector_append_cstr(ctx, cstr_vec, cstr_ptr, strlen(cstr_ptr)));
 
 _error:
     return error;
 }
 
-static KOS_OBJ_ID _function_to_str(KOS_YARN   yarn,
-                                   KOS_OBJ_ID obj_id)
+static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
+                                   KOS_OBJ_ID  obj_id)
 {
     int                    error = KOS_SUCCESS;
     KOS_OBJ_ID             ret   = KOS_BADPTR;
@@ -781,10 +781,10 @@ static KOS_OBJ_ID _function_to_str(KOS_YARN   yarn,
             break;
     }
 
-    strings[0] = KOS_instance_get_cstring(yarn, str_func);
+    strings[0] = KOS_instance_get_cstring(ctx, str_func);
     if (func->handler) {
         /* TODO get built-in function name */
-        strings[1] = KOS_instance_get_cstring(yarn, str_builtin);
+        strings[1] = KOS_instance_get_cstring(ctx, str_builtin);
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">", (uint64_t)(uintptr_t)func->handler);
     }
     else {
@@ -792,16 +792,16 @@ static KOS_OBJ_ID _function_to_str(KOS_YARN   yarn,
                                                   func->instr_offs);
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>", (unsigned)func->instr_offs);
     }
-    strings[2] = KOS_new_cstring(yarn, cstr_ptr);
+    strings[2] = KOS_new_cstring(ctx, cstr_ptr);
     TRY_OBJID(strings[2]);
 
-    ret = KOS_string_add_many(yarn, strings, sizeof(strings) / sizeof(strings[0]));
+    ret = KOS_string_add_many(ctx, strings, sizeof(strings) / sizeof(strings[0]));
 
 _error:
     return error ? KOS_BADPTR : ret;
 }
 
-int KOS_object_to_string_or_cstr_vec(KOS_YARN            yarn,
+int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT         ctx,
                                      KOS_OBJ_ID          obj_id,
                                      enum _KOS_QUOTE_STR quote_str,
                                      KOS_OBJ_ID         *str,
@@ -814,23 +814,23 @@ int KOS_object_to_string_or_cstr_vec(KOS_YARN            yarn,
     assert( ! str || ! cstr_vec || quote_str);
 
     if (IS_SMALL_INT(obj_id))
-        error = _int_to_str(yarn, GET_SMALL_INT(obj_id), str, cstr_vec);
+        error = _int_to_str(ctx, GET_SMALL_INT(obj_id), str, cstr_vec);
 
     else switch (READ_OBJ_TYPE(obj_id)) {
 
         case OBJ_INTEGER:
-            error = _int_to_str(yarn, OBJPTR(INTEGER, obj_id)->value, str, cstr_vec);
+            error = _int_to_str(ctx, OBJPTR(INTEGER, obj_id)->value, str, cstr_vec);
             break;
 
         case OBJ_FLOAT:
-            error = _float_to_str(yarn, OBJPTR(FLOAT, obj_id)->value, str, cstr_vec);
+            error = _float_to_str(ctx, OBJPTR(FLOAT, obj_id)->value, str, cstr_vec);
             break;
 
         case OBJ_STRING:
             if ( ! str)
-                error = _vector_append_str(yarn, cstr_vec, obj_id, quote_str);
+                error = _vector_append_str(ctx, cstr_vec, obj_id, quote_str);
             else if (quote_str)
-                error = _make_quoted_str(yarn, obj_id, str, cstr_vec);
+                error = _make_quoted_str(ctx, obj_id, str, cstr_vec);
             else
                 *str = obj_id;
             break;
@@ -840,71 +840,71 @@ int KOS_object_to_string_or_cstr_vec(KOS_YARN            yarn,
         default:
             assert(READ_OBJ_TYPE(obj_id) == OBJ_VOID);
             if (cstr_vec)
-                error = _vector_append_cstr(yarn, cstr_vec, "void", 4);
+                error = _vector_append_cstr(ctx, cstr_vec, "void", 4);
             else
-                *str = KOS_instance_get_cstring(yarn, str_void);
+                *str = KOS_instance_get_cstring(ctx, str_void);
             break;
 
         case OBJ_BOOLEAN:
             if (KOS_get_bool(obj_id)) {
                 if (cstr_vec)
-                    error = _vector_append_cstr(yarn, cstr_vec, "true", 4);
+                    error = _vector_append_cstr(ctx, cstr_vec, "true", 4);
                 else
-                    *str = KOS_instance_get_cstring(yarn, str_true);
+                    *str = KOS_instance_get_cstring(ctx, str_true);
             }
             else {
                 if (cstr_vec)
-                    error = _vector_append_cstr(yarn, cstr_vec, "false", 5);
+                    error = _vector_append_cstr(ctx, cstr_vec, "false", 5);
                 else
-                    *str = KOS_instance_get_cstring(yarn, str_false);
+                    *str = KOS_instance_get_cstring(ctx, str_false);
             }
             break;
 
         case OBJ_ARRAY:
             if (cstr_vec)
-                error = _vector_append_array(yarn, cstr_vec, obj_id, quote_str);
+                error = _vector_append_array(ctx, cstr_vec, obj_id, quote_str);
             else
-                *str = _array_to_str(yarn, obj_id, quote_str);
+                *str = _array_to_str(ctx, obj_id, quote_str);
             break;
 
         case OBJ_BUFFER:
             if (cstr_vec)
-                error = _vector_append_buffer(yarn, cstr_vec, obj_id);
+                error = _vector_append_buffer(ctx, cstr_vec, obj_id);
             else
-                *str = _buffer_to_str(yarn, obj_id);
+                *str = _buffer_to_str(ctx, obj_id);
             break;
 
         case OBJ_OBJECT:
             /* TODO */
             if (cstr_vec)
-                error = _vector_append_cstr(yarn, cstr_vec, "<object>", 8);
+                error = _vector_append_cstr(ctx, cstr_vec, "<object>", 8);
             else
-                *str = KOS_instance_get_cstring(yarn, str_object);
+                *str = KOS_instance_get_cstring(ctx, str_object);
             break;
 
         case OBJ_FUNCTION:
             /* fall through */
         case OBJ_CLASS:
             if (cstr_vec)
-                error = _vector_append_function(yarn, cstr_vec, obj_id);
+                error = _vector_append_function(ctx, cstr_vec, obj_id);
             else
-                *str = _function_to_str(yarn, obj_id);
+                *str = _function_to_str(ctx, obj_id);
             break;
     }
 
     return error;
 }
 
-KOS_OBJ_ID KOS_object_to_string(KOS_YARN   yarn,
-                                KOS_OBJ_ID obj)
+KOS_OBJ_ID KOS_object_to_string(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  obj)
 {
     KOS_OBJ_ID ret   = KOS_BADPTR;
-    const int  error = KOS_object_to_string_or_cstr_vec(yarn, obj, KOS_DONT_QUOTE, &ret, 0);
+    const int  error = KOS_object_to_string_or_cstr_vec(ctx, obj, KOS_DONT_QUOTE, &ret, 0);
 
     return error ? KOS_BADPTR : ret;
 }
 
-int KOS_print_to_cstr_vec(KOS_YARN            yarn,
+int KOS_print_to_cstr_vec(KOS_CONTEXT         ctx,
                           KOS_OBJ_ID          array,
                           enum _KOS_QUOTE_STR quote_str,
                           struct _KOS_VECTOR *cstr_vec,
@@ -930,7 +930,7 @@ int KOS_print_to_cstr_vec(KOS_YARN            yarn,
         TRY(_KOS_vector_reserve(cstr_vec, cstr_vec->size + 128U));
 
     for (i = 0; i < len; i++) {
-        KOS_OBJ_ID obj = KOS_array_read(yarn, array, (int)i);
+        KOS_OBJ_ID obj = KOS_array_read(ctx, array, (int)i);
         TRY_OBJID(obj);
 
         if (i >= first_sep_i && sep_len) {
@@ -939,21 +939,21 @@ int KOS_print_to_cstr_vec(KOS_YARN            yarn,
             memcpy(&cstr_vec->buffer[pos-1], sep, sep_len+1);
         }
 
-        TRY(KOS_object_to_string_or_cstr_vec(yarn, obj, quote_str, 0, cstr_vec));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, obj, quote_str, 0, cstr_vec));
     }
 
 _error:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception_cstring(yarn, str_err_out_of_memory);
+        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
         error = KOS_ERROR_EXCEPTION;
     }
 
     return error;
 }
 
-int KOS_array_push_expand(KOS_YARN   yarn,
-                          KOS_OBJ_ID array,
-                          KOS_OBJ_ID value)
+int KOS_array_push_expand(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  array,
+                          KOS_OBJ_ID  value)
 {
     int      error = KOS_SUCCESS;
     uint32_t cur_size;
@@ -966,7 +966,7 @@ int KOS_array_push_expand(KOS_YARN   yarn,
     switch (GET_OBJ_TYPE(value)) {
 
         case OBJ_ARRAY:
-            TRY(KOS_array_insert(yarn, array, cur_size, cur_size,
+            TRY(KOS_array_insert(ctx, array, cur_size, cur_size,
                                  value, 0, (int32_t)KOS_get_array_size(value)));
             break;
 
@@ -974,12 +974,12 @@ int KOS_array_push_expand(KOS_YARN   yarn,
             const uint32_t len = KOS_get_string_length(value);
             uint32_t       i;
 
-            TRY(KOS_array_resize(yarn, array, cur_size + len));
+            TRY(KOS_array_resize(ctx, array, cur_size + len));
 
             for (i = 0; i < len; i++) {
-                KOS_OBJ_ID ch = KOS_string_get_char(yarn, value, (int)i);
+                KOS_OBJ_ID ch = KOS_string_get_char(ctx, value, (int)i);
                 TRY_OBJID(ch);
-                TRY(KOS_array_write(yarn, array, (int)(cur_size + i), ch));
+                TRY(KOS_array_write(ctx, array, (int)(cur_size + i), ch));
             }
             break;
         }
@@ -994,11 +994,11 @@ int KOS_array_push_expand(KOS_YARN   yarn,
                 assert(buf);
             }
 
-            TRY(KOS_array_resize(yarn, array, cur_size + size));
+            TRY(KOS_array_resize(ctx, array, cur_size + size));
 
             for (i = 0; i < size; i++) {
                 const KOS_OBJ_ID byte = TO_SMALL_INT((int)buf[i]);
-                TRY(KOS_array_write(yarn, array, (int)(cur_size + i), byte));
+                TRY(KOS_array_write(ctx, array, (int)(cur_size + i), byte));
             }
             break;
         }
@@ -1012,17 +1012,17 @@ int KOS_array_push_expand(KOS_YARN   yarn,
 
             if (state != KOS_GEN_DONE) {
                 KOS_OBJ_ID void_obj = KOS_VOID;
-                KOS_OBJ_ID gen_args = KOS_new_array(yarn, 0);
+                KOS_OBJ_ID gen_args = KOS_new_array(ctx, 0);
                 TRY_OBJID(gen_args);
 
                 for (;;) {
-                    KOS_OBJ_ID ret = KOS_call_generator(yarn, value, void_obj, gen_args);
+                    KOS_OBJ_ID ret = KOS_call_generator(ctx, value, void_obj, gen_args);
                     if (IS_BAD_PTR(ret)) { /* end of iterator */
-                        if (KOS_is_exception_pending(yarn))
+                        if (KOS_is_exception_pending(ctx))
                             error = KOS_ERROR_EXCEPTION;
                         break;
                     }
-                    TRY(KOS_array_push(yarn, array, ret, 0));
+                    TRY(KOS_array_push(ctx, array, ret, 0));
                 }
             }
             break;

@@ -106,90 +106,90 @@ int _KOS_seq_fail(void)
 #endif
 
 static int _register_thread(KOS_INSTANCE *inst,
-                            KOS_YARN      yarn)
+                            KOS_CONTEXT   ctx)
 {
     int error = KOS_SUCCESS;
 
     assert( ! _KOS_tls_get(inst->threads.thread_key));
 
-    yarn->inst        = inst;
-    yarn->exception   = KOS_BADPTR;
-    yarn->retval      = KOS_BADPTR;
-    yarn->obj_refs    = 0;
-    yarn->stack       = KOS_BADPTR;
-    yarn->regs_idx    = 0;
-    yarn->stack_depth = 0;
+    ctx->inst        = inst;
+    ctx->exception   = KOS_BADPTR;
+    ctx->retval      = KOS_BADPTR;
+    ctx->obj_refs    = 0;
+    ctx->stack       = KOS_BADPTR;
+    ctx->regs_idx    = 0;
+    ctx->stack_depth = 0;
 
     if (_KOS_tls_get(inst->threads.thread_key)) {
 
-        KOS_OBJ_ID err = KOS_instance_get_cstring(yarn, str_err_thread_registered);
-        KOS_raise_exception(yarn, err);
+        KOS_OBJ_ID err = KOS_instance_get_cstring(ctx, str_err_thread_registered);
+        KOS_raise_exception(ctx, err);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    _KOS_tls_set(inst->threads.thread_key, yarn);
+    _KOS_tls_set(inst->threads.thread_key, ctx);
 
 _error:
     if (error)
-        _KOS_heap_release_thread_page(yarn);
+        _KOS_heap_release_thread_page(ctx);
 
     return error;
 }
 
 static void _unregister_thread(KOS_INSTANCE *inst,
-                               KOS_YARN      yarn)
+                               KOS_CONTEXT   ctx)
 {
-    _KOS_heap_release_thread_page(yarn);
+    _KOS_heap_release_thread_page(ctx);
 
     _KOS_tls_set(inst->threads.thread_key, 0);
 
     _KOS_lock_mutex(&inst->threads.mutex);
 
-    assert(yarn != &inst->threads.main_thread);
+    assert(ctx != &inst->threads.main_thread);
 
-    if (yarn->prev)
-        yarn->prev->next = yarn->next;
+    if (ctx->prev)
+        ctx->prev->next = ctx->next;
 
-    if (yarn->next)
-        yarn->next->prev = yarn->prev;
+    if (ctx->next)
+        ctx->next->prev = ctx->prev;
 
     _KOS_unlock_mutex(&inst->threads.mutex);
 }
 
 int KOS_instance_register_thread(KOS_INSTANCE *inst,
-                                 KOS_YARN      yarn)
+                                 KOS_CONTEXT   ctx)
 {
     int error;
 
     _KOS_lock_mutex(&inst->threads.mutex);
 
-    yarn->prev                     = &inst->threads.main_thread;
-    yarn->next                     = inst->threads.main_thread.next;
-    inst->threads.main_thread.next = yarn;
-    if (yarn->next)
-        yarn->next->prev           = yarn;
+    ctx->prev                      = &inst->threads.main_thread;
+    ctx->next                      = inst->threads.main_thread.next;
+    inst->threads.main_thread.next = ctx;
+    if (ctx->next)
+        ctx->next->prev            = ctx;
 
     _KOS_unlock_mutex(&inst->threads.mutex);
 
-    yarn->cur_page = 0;
+    ctx->cur_page = 0;
 
-    error = _register_thread(inst, yarn);
+    error = _register_thread(inst, ctx);
 
     if (error)
-        _unregister_thread(inst, yarn);
+        _unregister_thread(inst, ctx);
 
     return error;
 }
 
 void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
-                                    KOS_YARN      yarn)
+                                    KOS_CONTEXT   ctx)
 {
-    assert((KOS_YARN)_KOS_tls_get(inst->threads.thread_key) == yarn);
+    assert((KOS_CONTEXT)_KOS_tls_get(inst->threads.thread_key) == ctx);
 
-    _unregister_thread(inst, yarn);
+    _unregister_thread(inst, ctx);
 }
 
-static int _add_multiple_paths(KOS_YARN yarn, struct _KOS_VECTOR *cpaths)
+static int _add_multiple_paths(KOS_CONTEXT ctx, struct _KOS_VECTOR *cpaths)
 {
     int   error = KOS_SUCCESS;
     char *buf   = cpaths->buffer;
@@ -200,7 +200,7 @@ static int _add_multiple_paths(KOS_YARN yarn, struct _KOS_VECTOR *cpaths)
         if (end)
             *end = '\0';
 
-        error = KOS_instance_add_path(yarn, buf);
+        error = KOS_instance_add_path(ctx, buf);
 
         if (end)
             buf = end + 1;
@@ -211,7 +211,7 @@ static int _add_multiple_paths(KOS_YARN yarn, struct _KOS_VECTOR *cpaths)
     return error;
 }
 
-static int _init_search_paths(KOS_YARN yarn)
+static int _init_search_paths(KOS_CONTEXT ctx)
 {
 #ifdef CONFIG_DISABLE_KOSPATH
     return KOS_SUCCESS;
@@ -222,7 +222,7 @@ static int _init_search_paths(KOS_YARN yarn)
     _KOS_vector_init(&cpaths);
 
     if (_KOS_get_env("KOSPATH", &cpaths) == KOS_SUCCESS)
-        error = _add_multiple_paths(yarn, &cpaths);
+        error = _add_multiple_paths(ctx, &cpaths);
 
     _KOS_vector_destroy(&cpaths);
 
@@ -230,9 +230,9 @@ static int _init_search_paths(KOS_YARN yarn)
 #endif
 }
 
-static KOS_OBJ_ID _alloc_empty_string(KOS_YARN yarn)
+static KOS_OBJ_ID _alloc_empty_string(KOS_CONTEXT ctx)
 {
-    KOS_STRING *str = (KOS_STRING *)_KOS_alloc_object(yarn,
+    KOS_STRING *str = (KOS_STRING *)_KOS_alloc_object(ctx,
                                                       KOS_ALLOC_PERSISTENT,
                                                       OBJ_STRING,
                                                       sizeof(KOS_STRING));
@@ -283,13 +283,13 @@ static void _clear_instance(KOS_INSTANCE *inst)
 }
 
 int KOS_instance_init(KOS_INSTANCE *inst,
-                      KOS_YARN     *out_frame)
+                      KOS_CONTEXT     *out_frame)
 {
     int         error;
     int         heap_ok   = 0;
     int         thread_ok = 0;
     KOS_MODULE *init_module;
-    KOS_YARN    yarn;
+    KOS_CONTEXT ctx;
 
     assert(!IS_HEAP_OBJECT(KOS_VOID));
     assert(!IS_HEAP_OBJECT(KOS_FALSE));
@@ -335,45 +335,45 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     TRY(_register_thread(inst, &inst->threads.main_thread));
 
-    yarn = &inst->threads.main_thread;
+    ctx = &inst->threads.main_thread;
 
-    inst->empty_string = _alloc_empty_string(yarn);
+    inst->empty_string = _alloc_empty_string(ctx);
     TRY_OBJID(inst->empty_string);
 
     {
-        KOS_OBJ_ID str = KOS_new_cstring(yarn, str_err_out_of_memory);
+        KOS_OBJ_ID str = KOS_new_cstring(ctx, str_err_out_of_memory);
         TRY_OBJID(str);
         inst->heap.str_oom_id = str;
     }
 
-    TRY_OBJID(inst->prototypes.object_proto        = KOS_new_object_with_prototype(yarn, KOS_VOID));
-    TRY_OBJID(inst->prototypes.number_proto        = KOS_new_object(yarn));
-    TRY_OBJID(inst->prototypes.integer_proto       = KOS_new_object_with_prototype(yarn, inst->prototypes.number_proto));
-    TRY_OBJID(inst->prototypes.float_proto         = KOS_new_object_with_prototype(yarn, inst->prototypes.number_proto));
-    TRY_OBJID(inst->prototypes.string_proto        = KOS_new_object(yarn));
-    TRY_OBJID(inst->prototypes.boolean_proto       = KOS_new_object(yarn));
-    TRY_OBJID(inst->prototypes.array_proto         = KOS_new_object(yarn));
-    TRY_OBJID(inst->prototypes.buffer_proto        = KOS_new_object(yarn));
-    TRY_OBJID(inst->prototypes.function_proto      = KOS_new_object(yarn));
-    TRY_OBJID(inst->prototypes.class_proto         = KOS_new_object_with_prototype(yarn, inst->prototypes.function_proto));
-    TRY_OBJID(inst->prototypes.generator_proto     = KOS_new_object_with_prototype(yarn, inst->prototypes.function_proto));
-    TRY_OBJID(inst->prototypes.exception_proto     = KOS_new_object(yarn));
-    TRY_OBJID(inst->prototypes.generator_end_proto = KOS_new_object(yarn));
-    TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(yarn));
+    TRY_OBJID(inst->prototypes.object_proto        = KOS_new_object_with_prototype(ctx, KOS_VOID));
+    TRY_OBJID(inst->prototypes.number_proto        = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.integer_proto       = KOS_new_object_with_prototype(ctx, inst->prototypes.number_proto));
+    TRY_OBJID(inst->prototypes.float_proto         = KOS_new_object_with_prototype(ctx, inst->prototypes.number_proto));
+    TRY_OBJID(inst->prototypes.string_proto        = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.boolean_proto       = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.array_proto         = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.buffer_proto        = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.function_proto      = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.class_proto         = KOS_new_object_with_prototype(ctx, inst->prototypes.function_proto));
+    TRY_OBJID(inst->prototypes.generator_proto     = KOS_new_object_with_prototype(ctx, inst->prototypes.function_proto));
+    TRY_OBJID(inst->prototypes.exception_proto     = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.generator_end_proto = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(ctx));
 
-    TRY_OBJID(init_module->name          = KOS_instance_get_cstring(yarn, str_init));
-    TRY_OBJID(init_module->globals       = KOS_new_array(yarn, 0));
-    TRY_OBJID(init_module->global_names  = KOS_new_object(yarn));
-    TRY_OBJID(init_module->module_names  = KOS_new_object(yarn));
-    TRY_OBJID(inst->modules.module_names = KOS_new_object(yarn));
-    TRY_OBJID(inst->modules.modules      = KOS_new_array(yarn, 0));
-    TRY_OBJID(inst->modules.search_paths = KOS_new_array(yarn, 0));
+    TRY_OBJID(init_module->name          = KOS_instance_get_cstring(ctx, str_init));
+    TRY_OBJID(init_module->globals       = KOS_new_array(ctx, 0));
+    TRY_OBJID(init_module->global_names  = KOS_new_object(ctx));
+    TRY_OBJID(init_module->module_names  = KOS_new_object(ctx));
+    TRY_OBJID(inst->modules.module_names = KOS_new_object(ctx));
+    TRY_OBJID(inst->modules.modules      = KOS_new_array(ctx, 0));
+    TRY_OBJID(inst->modules.search_paths = KOS_new_array(ctx, 0));
 
-    TRY_OBJID(inst->args = KOS_new_array(yarn, 0));
+    TRY_OBJID(inst->args = KOS_new_array(ctx, 0));
 
-    TRY(_init_search_paths(yarn));
+    TRY(_init_search_paths(ctx));
 
-    *out_frame = yarn;
+    *out_frame = ctx;
 
 _error:
     if (error && heap_ok)
@@ -391,13 +391,13 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
 {
     uint32_t i;
     uint32_t num_modules = KOS_get_array_size(inst->modules.modules);
-    KOS_YARN yarn        = &inst->threads.main_thread;
+    KOS_CONTEXT ctx        = &inst->threads.main_thread;
 
     for (i = 0; i < num_modules; i++) {
-        KOS_OBJ_ID module_obj = KOS_array_read(yarn, inst->modules.modules, (int)i);
+        KOS_OBJ_ID module_obj = KOS_array_read(ctx, inst->modules.modules, (int)i);
         assert(!IS_BAD_PTR(module_obj));
         if (IS_BAD_PTR(module_obj))
-            KOS_clear_exception(yarn);
+            KOS_clear_exception(ctx);
         else if (GET_OBJ_TYPE(module_obj) == OBJ_MODULE) {
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_BYTECODE))
                 _KOS_free((void *)OBJPTR(MODULE, module_obj)->bytecode);
@@ -451,19 +451,19 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
 #endif
 }
 
-int KOS_instance_add_path(KOS_YARN yarn, const char *module_search_path)
+int KOS_instance_add_path(KOS_CONTEXT ctx, const char *module_search_path)
 {
     int           error;
     uint32_t      len;
     KOS_OBJ_ID    path_str;
-    KOS_INSTANCE *inst = yarn->inst;
+    KOS_INSTANCE *inst = ctx->inst;
 
-    path_str = KOS_new_cstring(yarn, module_search_path);
+    path_str = KOS_new_cstring(ctx, module_search_path);
     TRY_OBJID(path_str);
 
     len = KOS_get_array_size(inst->modules.search_paths);
-    TRY(KOS_array_resize(yarn, inst->modules.search_paths, len+1));
-    TRY(KOS_array_write(yarn, inst->modules.search_paths, (int)len, path_str));
+    TRY(KOS_array_resize(ctx, inst->modules.search_paths, len+1));
+    TRY(KOS_array_write(ctx, inst->modules.search_paths, (int)len, path_str));
 
 _error:
     return error;
@@ -477,7 +477,7 @@ _error:
 #   endif
 #endif
 
-int KOS_instance_add_default_path(KOS_YARN yarn, const char *argv0)
+int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
 {
     int                error      = KOS_ERROR_NOT_FOUND;
     struct _KOS_VECTOR cstr;
@@ -568,7 +568,7 @@ int KOS_instance_add_default_path(KOS_YARN yarn, const char *argv0)
 
     memcpy(&cstr.buffer[pos + 1], rel_path, sizeof(rel_path));
 
-    TRY(KOS_instance_add_path(yarn, cstr.buffer));
+    TRY(KOS_instance_add_path(ctx, cstr.buffer));
 
 _error:
     _KOS_vector_destroy(&cpath);
@@ -577,26 +577,26 @@ _error:
     return error;
 }
 
-int KOS_instance_set_args(KOS_YARN     yarn,
+int KOS_instance_set_args(KOS_CONTEXT  ctx,
                           int          argc,
                           const char **argv)
 {
     int           error;
     int           i;
-    KOS_INSTANCE *inst = yarn->inst;
+    KOS_INSTANCE *inst = ctx->inst;
 
     assert(argc >= 0);
 
     if (argc <= 0)
         return KOS_SUCCESS;
 
-    TRY(KOS_array_resize(yarn, inst->args, (uint32_t)argc));
+    TRY(KOS_array_resize(ctx, inst->args, (uint32_t)argc));
 
     for (i = 0; i < argc; i++) {
-        KOS_OBJ_ID arg_str = KOS_new_cstring(yarn, argv[i]);
+        KOS_OBJ_ID arg_str = KOS_new_cstring(ctx, argv[i]);
         TRY_OBJID(arg_str);
 
-        TRY(KOS_array_write(yarn, inst->args, i, arg_str));
+        TRY(KOS_array_write(ctx, inst->args, i, arg_str));
     }
 
 _error:
@@ -612,19 +612,19 @@ static int _module_init_compare(struct _KOS_RED_BLACK_NODE *a,
     return KOS_string_compare(init_a->name, init_b->name);
 }
 
-int KOS_instance_register_builtin(KOS_YARN         yarn,
+int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
                                   KOS_BUILTIN_INIT init)
 {
     int                      error = KOS_SUCCESS;
     struct _KOS_MODULE_INIT *mod_init;
-    KOS_INSTANCE      *const inst  = yarn->inst;
+    KOS_INSTANCE      *const inst  = ctx->inst;
     KOS_OBJ_ID               module_name;
 
-    module_name = KOS_new_cstring(yarn, module);
+    module_name = KOS_new_cstring(ctx, module);
     TRY_OBJID(module_name);
 
-    mod_init = (struct _KOS_MODULE_INIT *)_KOS_alloc_object(yarn,
+    mod_init = (struct _KOS_MODULE_INIT *)_KOS_alloc_object(ctx,
                                                             KOS_ALLOC_PERSISTENT,
                                                             OBJ_OPAQUE, /* TODO double check type */
                                                             sizeof(struct _KOS_MODULE_INIT));
@@ -640,14 +640,14 @@ _error:
     return error;
 }
 
-KOS_OBJ_ID KOS_instance_get_cstring(KOS_YARN    yarn,
+KOS_OBJ_ID KOS_instance_get_cstring(KOS_CONTEXT ctx,
                                     const char *cstr)
 {
     /* TODO lookup in array */
-    KOS_OBJ_ID str = KOS_new_const_ascii_cstring(yarn, cstr);
+    KOS_OBJ_ID str = KOS_new_const_ascii_cstring(ctx, cstr);
 
     if (IS_BAD_PTR(str)) {
-        KOS_clear_exception(yarn);
+        KOS_clear_exception(ctx);
         str = KOS_VOID;
     }
 
@@ -655,39 +655,39 @@ KOS_OBJ_ID KOS_instance_get_cstring(KOS_YARN    yarn,
 }
 
 #ifndef NDEBUG
-void KOS_instance_validate(KOS_YARN yarn)
+void KOS_instance_validate(KOS_CONTEXT ctx)
 {
-    KOS_INSTANCE *inst = yarn->inst;
-    KOS_YARN      thread_ctx;
+    KOS_INSTANCE *inst = ctx->inst;
+    KOS_CONTEXT   thread_ctx;
 
     assert(inst);
 
-    thread_ctx = (KOS_YARN)_KOS_tls_get(inst->threads.thread_key);
+    thread_ctx = (KOS_CONTEXT)_KOS_tls_get(inst->threads.thread_key);
 
     assert(thread_ctx);
-    assert(thread_ctx == yarn);
+    assert(thread_ctx == ctx);
 }
 #endif
 
-void KOS_raise_exception(KOS_YARN   yarn,
-                         KOS_OBJ_ID exception_obj)
+void KOS_raise_exception(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  exception_obj)
 {
     /* Nested exceptions are not allowed. */
     /* This can only happen if there is a bug and an exception has been ignored. */
-    assert(IS_BAD_PTR(yarn->exception));
+    assert(IS_BAD_PTR(ctx->exception));
 
-    if (IS_BAD_PTR(yarn->exception))
-        yarn->exception = exception_obj;
+    if (IS_BAD_PTR(ctx->exception))
+        ctx->exception = exception_obj;
 }
 
-void KOS_raise_exception_cstring(KOS_YARN    yarn,
+void KOS_raise_exception_cstring(KOS_CONTEXT ctx,
                                  const char *cstr)
 {
-    KOS_raise_exception(yarn, KOS_instance_get_cstring(yarn, cstr));
+    KOS_raise_exception(ctx, KOS_instance_get_cstring(ctx, cstr));
 }
 
-KOS_OBJ_ID KOS_format_exception(KOS_YARN   yarn,
-                                KOS_OBJ_ID exception)
+KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  exception)
 {
     int        error;
     unsigned   i;
@@ -697,78 +697,78 @@ KOS_OBJ_ID KOS_format_exception(KOS_YARN   yarn,
     KOS_OBJ_ID array = KOS_BADPTR;
     KOS_OBJ_ID str;
 
-    value = KOS_get_property(yarn, exception, KOS_instance_get_cstring(yarn, str_value));
+    value = KOS_get_property(ctx, exception, KOS_instance_get_cstring(ctx, str_value));
     TRY_OBJID(value);
 
-    backtrace = KOS_get_property(yarn, exception, KOS_instance_get_cstring(yarn, str_backtrace));
+    backtrace = KOS_get_property(ctx, exception, KOS_instance_get_cstring(ctx, str_backtrace));
     TRY_OBJID(backtrace);
 
     if (GET_OBJ_TYPE(backtrace) != OBJ_ARRAY) {
-        KOS_raise_exception_cstring(yarn, str_err_not_array);
+        KOS_raise_exception_cstring(ctx, str_err_not_array);
         TRY(KOS_ERROR_EXCEPTION);
     }
 
     depth = KOS_get_array_size(backtrace);
-    array = KOS_new_array(yarn, 1+depth);
+    array = KOS_new_array(ctx, 1+depth);
     TRY_OBJID(array);
 
-    str = KOS_object_to_string(yarn, value);
+    str = KOS_object_to_string(ctx, value);
     TRY_OBJID(str);
 
-    str = KOS_string_add(yarn, KOS_instance_get_cstring(yarn, str_format_exception), str);
+    str = KOS_string_add(ctx, KOS_instance_get_cstring(ctx, str_format_exception), str);
     TRY_OBJID(str);
 
-    TRY(KOS_array_write(yarn, array, 0, str));
+    TRY(KOS_array_write(ctx, array, 0, str));
 
     for (i = 0; i < depth; i++) {
-        KOS_OBJ_ID             frame_desc = KOS_array_read(yarn, backtrace, (int)i);
+        KOS_OBJ_ID             frame_desc = KOS_array_read(ctx, backtrace, (int)i);
         KOS_ATOMIC(KOS_OBJ_ID) parts[10];
 
         TRY_OBJID(frame_desc);
 
-        parts[0] = KOS_instance_get_cstring(yarn, str_format_hash);
+        parts[0] = KOS_instance_get_cstring(ctx, str_format_hash);
 
-        parts[1] = KOS_object_to_string(yarn, TO_SMALL_INT((int)i));
+        parts[1] = KOS_object_to_string(ctx, TO_SMALL_INT((int)i));
         TRY_OBJID(parts[1]);
 
-        parts[2] = KOS_instance_get_cstring(yarn, str_format_offset);
+        parts[2] = KOS_instance_get_cstring(ctx, str_format_offset);
 
-        str = KOS_get_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_offset));
+        str = KOS_get_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_offset));
         TRY_OBJID(str);
         if (IS_SMALL_INT(str)) {
             char cbuf[16];
             snprintf(cbuf, sizeof(cbuf), "0x%X", (unsigned)GET_SMALL_INT(str));
-            parts[3] = KOS_new_cstring(yarn, cbuf);
+            parts[3] = KOS_new_cstring(ctx, cbuf);
             TRY_OBJID(parts[3]);
         }
         else
-            parts[3] = KOS_instance_get_cstring(yarn, str_format_question_marks);
+            parts[3] = KOS_instance_get_cstring(ctx, str_format_question_marks);
 
-        parts[4] = KOS_instance_get_cstring(yarn, str_format_function);
+        parts[4] = KOS_instance_get_cstring(ctx, str_format_function);
 
-        str = KOS_get_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_function));
+        str = KOS_get_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_function));
         TRY_OBJID(str);
         parts[5] = str;
 
-        parts[6] = KOS_instance_get_cstring(yarn, str_format_module);
+        parts[6] = KOS_instance_get_cstring(ctx, str_format_module);
 
-        str = KOS_get_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_file));
+        str = KOS_get_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_file));
         TRY_OBJID(str);
-        str = KOS_get_file_name(yarn, str);
+        str = KOS_get_file_name(ctx, str);
         TRY_OBJID(str);
         parts[7] = str;
 
-        parts[8] = KOS_instance_get_cstring(yarn, str_format_line);
+        parts[8] = KOS_instance_get_cstring(ctx, str_format_line);
 
-        str = KOS_get_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_line));
+        str = KOS_get_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_line));
         TRY_OBJID(str);
-        parts[9] = KOS_object_to_string(yarn, str);
+        parts[9] = KOS_object_to_string(ctx, str);
         TRY_OBJID(parts[9]);
 
-        str = KOS_string_add_many(yarn, parts, sizeof(parts)/sizeof(parts[0]));
+        str = KOS_string_add_many(ctx, parts, sizeof(parts)/sizeof(parts[0]));
         TRY_OBJID(str);
 
-        TRY(KOS_array_write(yarn, array, 1+(int)i, str));
+        TRY(KOS_array_write(ctx, array, 1+(int)i, str));
     }
 
 _error:
@@ -778,28 +778,28 @@ _error:
     return array;
 }
 
-void KOS_raise_generator_end(KOS_YARN yarn)
+void KOS_raise_generator_end(KOS_CONTEXT ctx)
 {
-    KOS_INSTANCE *const inst = yarn->inst;
+    KOS_INSTANCE *const inst = ctx->inst;
 
     const KOS_OBJ_ID exception =
-            KOS_new_object_with_prototype(yarn, inst->prototypes.generator_end_proto);
+            KOS_new_object_with_prototype(ctx, inst->prototypes.generator_end_proto);
 
     if ( ! IS_BAD_PTR(exception))
-        KOS_raise_exception(yarn, exception);
+        KOS_raise_exception(ctx, exception);
 }
 
-void KOS_track_ref(KOS_YARN     yarn,
+void KOS_track_ref(KOS_CONTEXT  ctx,
                    KOS_OBJ_REF *ref)
 {
-    ref->next      = yarn->obj_refs;
-    yarn->obj_refs = ref;
+    ref->next     = ctx->obj_refs;
+    ctx->obj_refs = ref;
 }
 
-void KOS_untrack_ref(KOS_YARN     yarn,
+void KOS_untrack_ref(KOS_CONTEXT  ctx,
                      KOS_OBJ_REF *ref)
 {
-    KOS_OBJ_REF **slot = &yarn->obj_refs;
+    KOS_OBJ_REF **slot = &ctx->obj_refs;
     KOS_OBJ_REF  *cur;
 
     cur = *slot;

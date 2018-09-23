@@ -29,67 +29,67 @@
 #include <string.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(yarn)); KOS_clear_exception(yarn); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(yarn))
+#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
+#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
 #define NUM_OBJECTS (16 * 1024)
 
-static void *_alloc_integer(KOS_YARN yarn)
+static void *_alloc_integer(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_INTEGER, sizeof(KOS_INTEGER));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_INTEGER, sizeof(KOS_INTEGER));
 }
 
-static void *_alloc_float(KOS_YARN yarn)
+static void *_alloc_float(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_FLOAT, sizeof(KOS_FLOAT));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_FLOAT, sizeof(KOS_FLOAT));
 }
 
-static void *_alloc_string(KOS_YARN yarn)
+static void *_alloc_string(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_STRING, sizeof(KOS_STRING));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_STRING, sizeof(KOS_STRING));
 }
 
-static void *_alloc_object(KOS_YARN yarn)
+static void *_alloc_object(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_OBJECT, sizeof(KOS_OBJECT));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_OBJECT, sizeof(KOS_OBJECT));
 }
 
-static void *_alloc_array(KOS_YARN yarn)
+static void *_alloc_array(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_ARRAY, sizeof(KOS_ARRAY));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_ARRAY, sizeof(KOS_ARRAY));
 }
 
-static void *_alloc_buffer(KOS_YARN yarn)
+static void *_alloc_buffer(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_BUFFER, sizeof(KOS_BUFFER));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_BUFFER, sizeof(KOS_BUFFER));
 }
 
-static void *_alloc_function(KOS_YARN yarn)
+static void *_alloc_function(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_FUNCTION, sizeof(KOS_FUNCTION));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_FUNCTION, sizeof(KOS_FUNCTION));
 }
 
-static void *_alloc_dynamic_prop(KOS_YARN yarn)
+static void *_alloc_dynamic_prop(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP));
 }
 
-static void *_alloc_object_walk(KOS_YARN yarn)
+static void *_alloc_object_walk(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_OBJECT_WALK, sizeof(KOS_OBJECT_WALK));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_OBJECT_WALK, sizeof(KOS_OBJECT_WALK));
 }
 
-static void *_alloc_module(KOS_YARN yarn)
+static void *_alloc_module(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_MODULE, sizeof(KOS_MODULE));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_MODULE, sizeof(KOS_MODULE));
 }
 
-static void *_alloc_stack(KOS_YARN yarn)
+static void *_alloc_stack(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_STACK, sizeof(KOS_STACK));
+    return _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_STACK, sizeof(KOS_STACK));
 }
 
-typedef void *(* ALLOC_FUNC)(KOS_YARN yarn);
+typedef void *(* ALLOC_FUNC)(KOS_CONTEXT ctx);
 
 struct _RANDOM_OBJECT
 {
@@ -106,12 +106,12 @@ typedef union _KOS_BYTES {
     }              bytes;
 } KOS_BYTES;
 
-static KOS_OBJ_ID _alloc_opaque(KOS_YARN yarn,
-                                uint8_t  fill,
-                                size_t   size)
+static KOS_OBJ_ID _alloc_opaque(KOS_CONTEXT ctx,
+                                uint8_t     fill,
+                                size_t      size)
 {
     unsigned actual_size;
-    uint8_t *object = (uint8_t *)_KOS_alloc_object(yarn,
+    uint8_t *object = (uint8_t *)_KOS_alloc_object(ctx,
                                                    KOS_ALLOC_DEFAULT,
                                                    OBJ_OPAQUE,
                                                    (uint32_t)size);
@@ -126,10 +126,10 @@ static KOS_OBJ_ID _alloc_opaque(KOS_YARN yarn,
     return OBJID(OPAQUE, (KOS_OPAQUE *)object);
 }
 
-static KOS_OBJ_ID _alloc_bytes(KOS_YARN yarn,
-                               uint8_t  fill)
+static KOS_OBJ_ID _alloc_bytes(KOS_CONTEXT ctx,
+                               uint8_t     fill)
 {
-    KOS_BYTES *object = (KOS_BYTES *)_KOS_alloc_object(yarn,
+    KOS_BYTES *object = (KOS_BYTES *)_KOS_alloc_object(ctx,
                                                        KOS_ALLOC_DEFAULT,
                                                        OBJ_OPAQUE,
                                                        sizeof(KOS_BYTES));
@@ -178,7 +178,7 @@ static int _check_bytes(KOS_OBJ_ID obj_id,
 int main(void)
 {
     KOS_INSTANCE inst;
-    KOS_YARN     yarn;
+    KOS_CONTEXT  ctx;
     size_t       i;
 
     const struct _ALLOC_FUNC {
@@ -201,7 +201,7 @@ int main(void)
 
     /************************************************************************/
     {
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
         KOS_instance_destroy(&inst);
     }
@@ -223,9 +223,9 @@ int main(void)
         int    j;
         void **objects;
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        objects = (void **)_KOS_alloc_object(yarn,
+        objects = (void **)_KOS_alloc_object(ctx,
                                              KOS_ALLOC_DEFAULT,
                                              OBJ_OPAQUE,
                                              NUM_OBJECTS * sizeof(void *));
@@ -233,7 +233,7 @@ int main(void)
 
         for (j = 0; j < NUM_OBJECTS; j++) {
 
-            objects[j] = (*alloc[i].alloc_func)(yarn);
+            objects[j] = (*alloc[i].alloc_func)(ctx);
             TEST(objects[j]);
 
             TEST(((uint8_t *)objects[j])[sizeof(KOS_OBJ_ID)] == alloc[i].type);
@@ -270,9 +270,9 @@ int main(void)
         int       j;
         void    **objects;
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        objects = (void **)_KOS_alloc_object(yarn,
+        objects = (void **)_KOS_alloc_object(ctx,
                                              KOS_ALLOC_DEFAULT,
                                              OBJ_OPAQUE,
                                              NUM_OBJECTS * sizeof(void *));
@@ -280,7 +280,7 @@ int main(void)
 
         for (j = 0; j < NUM_OBJECTS; j++) {
 
-            objects[j] = _KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
+            objects[j] = _KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
             TEST(objects[j]);
 
             TEST(((intptr_t)objects[j] & 7) == 0);
@@ -316,9 +316,9 @@ int main(void)
 
         _KOS_rng_init(&rng);
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(yarn,
+        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(ctx,
                                                              KOS_ALLOC_DEFAULT,
                                                              OBJ_OPAQUE,
                                                              NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
@@ -330,7 +330,7 @@ int main(void)
             const int size     = 1 << size_pot;
 
             objects[j].size_pot = size_pot;
-            objects[j].obj      = (uint8_t *)_KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
+            objects[j].obj      = (uint8_t *)_KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
             TEST(objects[j].obj);
 
             memset(objects[j].obj, (uint8_t)j, (size_t)size);
@@ -365,9 +365,9 @@ int main(void)
 
         _KOS_rng_init(&rng);
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(yarn,
+        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(ctx,
                                                              KOS_ALLOC_DEFAULT,
                                                              OBJ_OPAQUE,
                                                              NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
@@ -378,7 +378,7 @@ int main(void)
             const int size = 9 + (int)_KOS_rng_random_range(&rng, 128 - 9);
 
             objects[j].size_pot = size;
-            objects[j].obj      = (uint8_t *)_KOS_alloc_object(yarn, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
+            objects[j].obj      = (uint8_t *)_KOS_alloc_object(ctx, KOS_ALLOC_DEFAULT, OBJ_OBJECT, size);
             TEST(objects[j].obj);
 
             TEST(((intptr_t)objects[j].obj & 7) == 0);
@@ -415,17 +415,17 @@ int main(void)
         KOS_OBJ_ID group_four[2];
         KOS_OBJ_ID group_five[2];
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
         /* Test 1:
          * Allocate objects in one page until the page is full, put the page
          * on the list of full pages. */
 
-        group_one[0] = _alloc_opaque(yarn, 0xFEU, 90U * _KOS_PAGE_SIZE / 100U);
+        group_one[0] = _alloc_opaque(ctx, 0xFEU, 90U * _KOS_PAGE_SIZE / 100U);
         TEST( ! IS_BAD_PTR(group_one[0]));
 
         for (i = 1; i < sizeof(group_one) / sizeof(group_one[0]); ++i) {
-            group_one[i] = _alloc_bytes(yarn, (uint8_t)i);
+            group_one[i] = _alloc_bytes(ctx, (uint8_t)i);
             TEST( ! IS_BAD_PTR(group_one[i]));
         }
 
@@ -440,7 +440,7 @@ int main(void)
                     ? (_KOS_PAGE_SIZE / 2U)
                     : (90U * _KOS_PAGE_SIZE / 100U);
 
-            group_two[i] = _alloc_opaque(yarn, (uint8_t)i, size);
+            group_two[i] = _alloc_opaque(ctx, (uint8_t)i, size);
             TEST( ! IS_BAD_PTR(group_two[i]));
         }
 
@@ -448,7 +448,7 @@ int main(void)
          * Allocate lots of small objects to migrate a non-full page to full set. */
 
         for (i = 0; i < sizeof(group_three) / sizeof(group_three[0]); ++i) {
-            group_three[i] = _alloc_bytes(yarn, (uint8_t)i);
+            group_three[i] = _alloc_bytes(ctx, (uint8_t)i);
             TEST( ! IS_BAD_PTR(group_three[i]));
         }
 
@@ -456,7 +456,7 @@ int main(void)
          * Allocate huge objects spanning multiple free pages. */
 
         for (i = 0; i < sizeof(group_four) / sizeof(group_four[0]); ++i) {
-            group_four[i] = _alloc_opaque(yarn, (uint8_t)(0x80U + i), 3U * _KOS_PAGE_SIZE / 2U);
+            group_four[i] = _alloc_opaque(ctx, (uint8_t)(0x80U + i), 3U * _KOS_PAGE_SIZE / 2U);
             TEST( ! IS_BAD_PTR(group_four[i]));
         }
 
@@ -464,7 +464,7 @@ int main(void)
          * Allocate huge objects which cannot be accommodated in existing full pages. */
 
         for (i = 0; i < sizeof(group_five) / sizeof(group_five[0]); ++i) {
-            group_five[i] = _alloc_opaque(yarn, (uint8_t)(0x90U + i), _KOS_POOL_SIZE / 2U);
+            group_five[i] = _alloc_opaque(ctx, (uint8_t)(0x90U + i), _KOS_POOL_SIZE / 2U);
             TEST( ! IS_BAD_PTR(group_five[i]));
         }
 

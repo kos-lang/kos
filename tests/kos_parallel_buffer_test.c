@@ -46,7 +46,7 @@ struct THREAD_DATA {
     uint8_t           id;
 };
 
-static int _run_test(KOS_YARN yarn, struct THREAD_DATA *data)
+static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
 {
     struct TEST_DATA *test = data->test;
     int               i;
@@ -60,20 +60,20 @@ static int _run_test(KOS_YARN yarn, struct THREAD_DATA *data)
         switch (action) {
 
             case 0: {
-                TEST(KOS_buffer_fill(yarn, test->buf, -8, -4, data->id) == KOS_SUCCESS);
+                TEST(KOS_buffer_fill(ctx, test->buf, -8, -4, data->id) == KOS_SUCCESS);
                 TEST_NO_EXCEPTION();
                 break;
             }
 
             case 1: {
-                TEST(KOS_buffer_copy(yarn, test->buf, -8, test->buf, 0, 8) == KOS_SUCCESS);
+                TEST(KOS_buffer_copy(ctx, test->buf, -8, test->buf, 0, 8) == KOS_SUCCESS);
                 TEST_NO_EXCEPTION();
                 break;
             }
 
             default: {
                 const unsigned delta = 64;
-                uint8_t *b = KOS_buffer_make_room(yarn, test->buf, delta);
+                uint8_t *b = KOS_buffer_make_room(ctx, test->buf, delta);
                 TEST(b != 0);
                 TEST_NO_EXCEPTION();
                 memset(b, data->id, delta);
@@ -85,22 +85,22 @@ static int _run_test(KOS_YARN yarn, struct THREAD_DATA *data)
     return 0;
 }
 
-static void _test_thread_func(KOS_YARN yarn,
-                              void    *cookie)
+static void _test_thread_func(KOS_CONTEXT ctx,
+                              void       *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
 
-    if (_run_test(yarn, test))
+    if (_run_test(ctx, test))
         KOS_atomic_add_i32(test->test->error, 1);
 }
 
 int main(void)
 {
     KOS_INSTANCE inst;
-    KOS_YARN     yarn;
+    KOS_CONTEXT  ctx;
     const int    num_cpus = _get_num_cpus();
 
-    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
     /* This test performs buffer make_room, fill and copy from multiple threads */
@@ -139,7 +139,7 @@ int main(void)
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             const unsigned size = 64;
-            KOS_OBJ_ID     buf  = KOS_new_buffer(yarn, size);
+            KOS_OBJ_ID     buf  = KOS_new_buffer(ctx, size);
             data.buf            = buf;
             data.go             = 0;
 
@@ -157,14 +157,14 @@ int main(void)
 
             /* Start with 1, because 0 is for the main thread, which participates */
             for (i = 1; i < num_threads; i++)
-                TEST(_KOS_thread_create(yarn, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(_KOS_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
             KOS_atomic_write_u32(data.go, 1);
-            TEST(_run_test(yarn, thread_cookies) == KOS_SUCCESS);
+            TEST(_run_test(ctx, thread_cookies) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             for (i = 1; i < num_threads; i++) {
-                _KOS_thread_join(yarn, threads[i]);
+                _KOS_thread_join(ctx, threads[i]);
                 TEST_NO_EXCEPTION();
             }
 

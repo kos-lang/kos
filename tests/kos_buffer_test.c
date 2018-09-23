@@ -27,86 +27,86 @@
 #include <stdio.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(yarn)); KOS_clear_exception(yarn); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(yarn))
+#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
+#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
 int main(void)
 {
     KOS_INSTANCE      inst;
-    KOS_YARN          yarn;
+    KOS_CONTEXT       ctx;
     static const char cstr[] = "str";
     KOS_OBJ_ID        str;
 
-    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-    str = KOS_instance_get_cstring(yarn, cstr);
+    str = KOS_instance_get_cstring(ctx, cstr);
 
     /************************************************************************/
     /* Cannot invoke buffer functions on non-buffer objects */
     {
-        KOS_OBJ_ID buf = KOS_new_buffer(yarn, 1);
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 1);
 
-        TEST(KOS_buffer_reserve(yarn, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_reserve(ctx, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(yarn, str, 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_reserve(ctx, str, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(yarn, KOS_BADPTR, 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_reserve(ctx, KOS_BADPTR, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_resize(yarn, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_resize(ctx, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_resize(yarn, str, 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_resize(ctx, str, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_resize(yarn, KOS_BADPTR, 10) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_resize(ctx, KOS_BADPTR, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_make_room(yarn, TO_SMALL_INT(1), 1U) == 0);
+        TEST(KOS_buffer_make_room(ctx, TO_SMALL_INT(1), 1U) == 0);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_make_room(yarn, str, 1U) == 0);
+        TEST(KOS_buffer_make_room(ctx, str, 1U) == 0);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_make_room(yarn, KOS_BADPTR, 1U) == 0);
+        TEST(KOS_buffer_make_room(ctx, KOS_BADPTR, 1U) == 0);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_fill(yarn, TO_SMALL_INT(1), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_fill(ctx, TO_SMALL_INT(1), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_fill(yarn, str, 1, 2, 3U) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_fill(ctx, str, 1, 2, 3U) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_fill(yarn, KOS_BADPTR, 1, 2, 3U) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_fill(ctx, KOS_BADPTR, 1, 2, 3U) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(yarn, TO_SMALL_INT(1), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(ctx, TO_SMALL_INT(1), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(yarn, str, 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(ctx, str, 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(yarn, KOS_BADPTR, 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(ctx, KOS_BADPTR, 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(yarn, buf, 0, TO_SMALL_INT(1), 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(ctx, buf, 0, TO_SMALL_INT(1), 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(yarn, buf, 0, str, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(ctx, buf, 0, str, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(yarn, buf, 0, KOS_BADPTR, 0, 1) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_buffer_copy(ctx, buf, 0, KOS_BADPTR, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_slice(yarn, TO_SMALL_INT(1), 1, 2) == KOS_BADPTR);
+        TEST(KOS_buffer_slice(ctx, TO_SMALL_INT(1), 1, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_slice(yarn, str, 1, 2) == KOS_BADPTR);
+        TEST(KOS_buffer_slice(ctx, str, 1, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_slice(yarn, KOS_BADPTR, 1, 2) == KOS_BADPTR);
+        TEST(KOS_buffer_slice(ctx, KOS_BADPTR, 1, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -116,7 +116,7 @@ int main(void)
         uint8_t *data;
         int      i;
 
-        KOS_OBJ_ID buf = KOS_new_buffer(yarn, 128);
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 128);
         TEST(!IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
@@ -134,14 +134,14 @@ int main(void)
     {
         uint8_t *data;
 
-        KOS_OBJ_ID buf = KOS_new_buffer(yarn, 0);
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 0);
         TEST(!IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_buffer_size(buf) == 0);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(yarn, buf, 10) == KOS_SUCCESS);
+        TEST(KOS_buffer_reserve(ctx, buf, 10) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_buffer_size(buf) == 0);
@@ -151,7 +151,7 @@ int main(void)
         TEST(data != 0);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_buffer_resize(yarn, buf, 100) == KOS_SUCCESS);
+        TEST(KOS_buffer_resize(ctx, buf, 100) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         TEST(KOS_get_buffer_size(buf) == 100);
@@ -165,31 +165,31 @@ int main(void)
     /************************************************************************/
     /* Reserve/resize */
     {
-        KOS_OBJ_ID buf = KOS_new_buffer(yarn, 0);
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 0);
         TEST( ! IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(yarn, buf, 0) == KOS_SUCCESS);
+        TEST(KOS_buffer_reserve(ctx, buf, 0) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 0);
 
-        TEST(KOS_buffer_reserve(yarn, buf, 1) == KOS_SUCCESS);
+        TEST(KOS_buffer_reserve(ctx, buf, 1) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 0);
 
-        TEST(KOS_buffer_reserve(yarn, buf, 128) == KOS_SUCCESS);
+        TEST(KOS_buffer_reserve(ctx, buf, 128) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 0);
 
-        TEST(KOS_buffer_reserve(yarn, buf, 64) == KOS_SUCCESS);
+        TEST(KOS_buffer_reserve(ctx, buf, 64) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 0);
 
-        TEST(KOS_buffer_resize(yarn, buf, 16) == KOS_SUCCESS);
+        TEST(KOS_buffer_resize(ctx, buf, 16) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 16);
 
-        TEST(KOS_buffer_resize(yarn, buf, 5) == KOS_SUCCESS);
+        TEST(KOS_buffer_resize(ctx, buf, 5) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 5);
     }
@@ -200,18 +200,18 @@ int main(void)
         uint8_t *data;
         int      i;
 
-        KOS_OBJ_ID buf = KOS_new_buffer(yarn, 0);
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 0);
         TEST( ! IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_buffer_fill(yarn, buf, -100, 100, 64) == KOS_SUCCESS);
+        TEST(KOS_buffer_fill(ctx, buf, -100, 100, 64) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_buffer_resize(yarn, buf, 128) == KOS_SUCCESS);
+        TEST(KOS_buffer_resize(ctx, buf, 128) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 128);
 
-        TEST(KOS_buffer_fill(yarn, buf, 0, -1, 0x55) == KOS_SUCCESS);
+        TEST(KOS_buffer_fill(ctx, buf, 0, -1, 0x55) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         data = KOS_buffer_data(buf);
@@ -220,11 +220,11 @@ int main(void)
         for (i = 0; i < 127; i++)
             TEST(data[i] == 0x55);
 
-        TEST(KOS_buffer_resize(yarn, buf, 90) == KOS_SUCCESS);
+        TEST(KOS_buffer_resize(ctx, buf, 90) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 90);
 
-        TEST(KOS_buffer_resize(yarn, buf, 512) == KOS_SUCCESS);
+        TEST(KOS_buffer_resize(ctx, buf, 512) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 512);
 
@@ -234,7 +234,7 @@ int main(void)
         for (i = 0; i < 90; i++)
             TEST(data[i] == 0x55);
 
-        TEST(KOS_buffer_fill(yarn, buf, -500, 50, 0xAA) == KOS_SUCCESS);
+        TEST(KOS_buffer_fill(ctx, buf, -500, 50, 0xAA) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         data = KOS_buffer_data(buf);
@@ -255,11 +255,11 @@ int main(void)
     {
         uint8_t *data;
 
-        KOS_OBJ_ID buf = KOS_new_buffer(yarn, 0);
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 0);
         TEST( ! IS_BAD_PTR(buf));
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_make_room(yarn, buf, 2);
+        data = KOS_buffer_make_room(ctx, buf, 2);
         TEST(data);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 2);
@@ -267,14 +267,14 @@ int main(void)
         data[0] = 0x51;
         data[1] = 0x52;
 
-        data = KOS_buffer_make_room(yarn, buf, 1);
+        data = KOS_buffer_make_room(ctx, buf, 1);
         TEST(data);
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 3);
 
         data[0] = 0x40;
 
-        data = KOS_buffer_make_room(yarn, buf, 0xFFFFFFFDU);
+        data = KOS_buffer_make_room(ctx, buf, 0xFFFFFFFDU);
         TEST(data == 0);
         TEST_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 3);
@@ -291,21 +291,21 @@ int main(void)
         uint8_t *data;
         int      i;
 
-        KOS_OBJ_ID buf1 = KOS_new_buffer(yarn, 10);
+        KOS_OBJ_ID buf1 = KOS_new_buffer(ctx, 10);
         KOS_OBJ_ID buf2;
         TEST( ! IS_BAD_PTR(buf1));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf1) == 10);
 
-        buf2 = KOS_new_buffer(yarn, 5);
+        buf2 = KOS_new_buffer(ctx, 5);
         TEST( ! IS_BAD_PTR(buf2));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf2) == 5);
 
-        TEST(KOS_buffer_fill(yarn, buf1, 0, 10, 1) == KOS_SUCCESS);
-        TEST(KOS_buffer_fill(yarn, buf2, 0, 5, 2) == KOS_SUCCESS);
+        TEST(KOS_buffer_fill(ctx, buf1, 0, 10, 1) == KOS_SUCCESS);
+        TEST(KOS_buffer_fill(ctx, buf2, 0, 5, 2) == KOS_SUCCESS);
 
-        TEST(KOS_buffer_copy(yarn, buf1, 2, buf2, -4, 4) == KOS_SUCCESS);
+        TEST(KOS_buffer_copy(ctx, buf1, 2, buf2, -4, 4) == KOS_SUCCESS);
 
         data = KOS_buffer_data(buf1);
         for (i = 0; i < 2; i++)
@@ -315,7 +315,7 @@ int main(void)
         for (i = 5; i < 10; i++)
             TEST(data[i] == 1);
 
-        TEST(KOS_buffer_copy(yarn, buf1, -2, buf2, -100, 100) == KOS_SUCCESS);
+        TEST(KOS_buffer_copy(ctx, buf1, -2, buf2, -100, 100) == KOS_SUCCESS);
 
         data = KOS_buffer_data(buf1);
         for (i = 0; i < 2; i++)
@@ -334,7 +334,7 @@ int main(void)
         for (i = 0; i < 5; i++)
             data[i] = (uint8_t)i;
 
-        TEST(KOS_buffer_copy(yarn, buf2, 0, buf2, -3, 100) == KOS_SUCCESS);
+        TEST(KOS_buffer_copy(ctx, buf2, 0, buf2, -3, 100) == KOS_SUCCESS);
 
         TEST(data[0] == 2);
         TEST(data[1] == 3);
@@ -345,7 +345,7 @@ int main(void)
         for (i = 0; i < 5; i++)
             data[i] = (uint8_t)i;
 
-        TEST(KOS_buffer_copy(yarn, buf2, -2, buf2, 0, 100) == KOS_SUCCESS);
+        TEST(KOS_buffer_copy(ctx, buf2, -2, buf2, 0, 100) == KOS_SUCCESS);
 
         TEST(data[0] == 0);
         TEST(data[1] == 1);
@@ -360,7 +360,7 @@ int main(void)
         uint8_t *data;
         int      i;
 
-        KOS_OBJ_ID buf1 = KOS_new_buffer(yarn, 10);
+        KOS_OBJ_ID buf1 = KOS_new_buffer(ctx, 10);
         KOS_OBJ_ID buf2;
         TEST( ! IS_BAD_PTR(buf1));
         TEST_NO_EXCEPTION();
@@ -370,12 +370,12 @@ int main(void)
         for (i = 0; i < 10; i++)
             data[i] = (uint8_t)i;
 
-        buf2 = KOS_buffer_slice(yarn, buf1, 5, -5);
+        buf2 = KOS_buffer_slice(ctx, buf1, 5, -5);
         TEST( ! IS_BAD_PTR(buf2));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf2) == 0);
 
-        buf2 = KOS_buffer_slice(yarn, buf1, -4, 1000);
+        buf2 = KOS_buffer_slice(ctx, buf1, -4, 1000);
         TEST( ! IS_BAD_PTR(buf2));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf2) == 4);
@@ -387,12 +387,12 @@ int main(void)
         TEST(data[2] == 8);
         TEST(data[3] == 9);
 
-        buf2 = KOS_buffer_slice(yarn, buf1, 5, -6);
+        buf2 = KOS_buffer_slice(ctx, buf1, 5, -6);
         TEST( ! IS_BAD_PTR(buf2));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf2) == 0);
 
-        buf1 = KOS_buffer_slice(yarn, buf2, 5, -6);
+        buf1 = KOS_buffer_slice(ctx, buf2, 5, -6);
         TEST( ! IS_BAD_PTR(buf1));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf1) == 0);

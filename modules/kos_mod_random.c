@@ -45,12 +45,12 @@ struct _KOS_RNG_CONTAINER {
     struct KOS_RNG       rng;
 };
 
-static void _finalize(KOS_YARN yarn,
-                      void    *priv)
+static void _finalize(KOS_CONTEXT ctx,
+                      void       *priv)
 {
     /* TODO free
     if (priv)
-        _KOS_free_buffer(yarn, priv, sizeof(struct _KOS_RNG_CONTAINER));
+        _KOS_free_buffer(ctx, priv, sizeof(struct _KOS_RNG_CONTAINER));
     */
 }
 
@@ -85,23 +85,23 @@ static void _finalize(KOS_YARN yarn,
  *     > r.integer()
  *     -474045495260715754
  */
-static KOS_OBJ_ID _random(KOS_YARN   yarn,
-                          KOS_OBJ_ID this_obj,
-                          KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     int                        error    = KOS_SUCCESS;
     struct _KOS_RNG_CONTAINER *rng      = 0;
     KOS_OBJ_ID                 ret;
     KOS_OBJ_ID                 seed_obj = KOS_BADPTR;
 
-    ret = KOS_new_object_with_prototype(yarn, this_obj);
+    ret = KOS_new_object_with_prototype(ctx, this_obj);
     TRY_OBJID(ret);
 
     OBJPTR(OBJECT, ret)->finalize = _finalize;
 
     if (KOS_get_array_size(args_obj) > 0) {
 
-        seed_obj = KOS_array_read(yarn, args_obj, 0);
+        seed_obj = KOS_array_read(ctx, args_obj, 0);
         TRY_OBJID(seed_obj);
 
         assert( ! IS_BAD_PTR(seed_obj));
@@ -114,7 +114,7 @@ static KOS_OBJ_ID _random(KOS_YARN   yarn,
     /*
     rng = (struct _KOS_RNG_CONTAINER *)_KOS_malloc(sizeof(struct _KOS_RNG_CONTAINER));
     */
-    rng = (struct _KOS_RNG_CONTAINER *)_KOS_alloc_object(yarn,
+    rng = (struct _KOS_RNG_CONTAINER *)_KOS_alloc_object(ctx,
                                                          KOS_ALLOC_PERSISTENT, /* avoid GC */
                                                          OBJ_OPAQUE,
                                                          sizeof(struct _KOS_RNG_CONTAINER));
@@ -130,7 +130,7 @@ static KOS_OBJ_ID _random(KOS_YARN   yarn,
 
         int64_t seed;
 
-        TRY(KOS_get_integer(yarn, seed_obj, &seed));
+        TRY(KOS_get_integer(ctx, seed_obj, &seed));
 
         _KOS_rng_init_seed(&rng->rng, (uint64_t)seed);
     }
@@ -141,13 +141,13 @@ static KOS_OBJ_ID _random(KOS_YARN   yarn,
 _error:
     /* TODO free
     if (rng)
-        _KOS_free_buffer(yarn, rng, sizeof(struct _KOS_RNG_CONTAINER));
+        _KOS_free_buffer(ctx, rng, sizeof(struct _KOS_RNG_CONTAINER));
     */
 
     return error ? KOS_BADPTR : ret;
 }
 
-static int _get_rng(KOS_YARN                    yarn,
+static int _get_rng(KOS_CONTEXT                 ctx,
                     KOS_OBJ_ID                  this_obj,
                     struct _KOS_RNG_CONTAINER **rng)
 {
@@ -191,9 +191,9 @@ _error:
  *     > r.integer(-10, 10)
  *     -2
  */
-static KOS_OBJ_ID _rand_integer(KOS_YARN   yarn,
-                                KOS_OBJ_ID this_obj,
-                                KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _rand_integer(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
 {
     struct _KOS_RNG_CONTAINER *rng       = 0;
     int                        error     = KOS_SUCCESS;
@@ -202,7 +202,7 @@ static KOS_OBJ_ID _rand_integer(KOS_YARN   yarn,
     int64_t                    min_value = 0;
     int64_t                    max_value = 0;
 
-    TRY(_get_rng(yarn, this_obj, &rng));
+    TRY(_get_rng(ctx, this_obj, &rng));
 
     if (KOS_get_array_size(args_obj) == 1)
         RAISE_EXCEPTION(str_err_no_max_value);
@@ -211,15 +211,15 @@ static KOS_OBJ_ID _rand_integer(KOS_YARN   yarn,
 
         KOS_OBJ_ID arg;
 
-        arg = KOS_array_read(yarn, args_obj, 0);
+        arg = KOS_array_read(ctx, args_obj, 0);
         TRY_OBJID(arg);
 
-        TRY(KOS_get_integer(yarn, arg, &min_value));
+        TRY(KOS_get_integer(ctx, arg, &min_value));
 
-        arg = KOS_array_read(yarn, args_obj, 1);
+        arg = KOS_array_read(ctx, args_obj, 1);
         TRY_OBJID(arg);
 
-        TRY(KOS_get_integer(yarn, arg, &max_value));
+        TRY(KOS_get_integer(ctx, arg, &max_value));
 
         if (min_value >= max_value)
             RAISE_EXCEPTION(str_err_invalid_range);
@@ -239,7 +239,7 @@ static KOS_OBJ_ID _rand_integer(KOS_YARN   yarn,
     _KOS_spin_unlock(&rng->lock);
 
 _error:
-    return error ? KOS_BADPTR : KOS_new_int(yarn, value);
+    return error ? KOS_BADPTR : KOS_new_int(ctx, value);
 }
 
 /* @item random random.prototype.float()
@@ -258,9 +258,9 @@ _error:
  *     > r.float()
  *     0.782519239019594
  */
-static KOS_OBJ_ID _rand_float(KOS_YARN   yarn,
-                              KOS_OBJ_ID this_obj,
-                              KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _rand_float(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
 {
     struct _KOS_RNG_CONTAINER *rng   = 0;
     int                        error = KOS_SUCCESS;
@@ -268,7 +268,7 @@ static KOS_OBJ_ID _rand_float(KOS_YARN   yarn,
 
     value.i = 0;
 
-    TRY(_get_rng(yarn, this_obj, &rng));
+    TRY(_get_rng(ctx, this_obj, &rng));
 
     _KOS_spin_lock(&rng->lock);
 
@@ -283,17 +283,17 @@ static KOS_OBJ_ID _rand_float(KOS_YARN   yarn,
             | ((int64_t)0x3FF00000U << 32);
 
 _error:
-    return error ? KOS_BADPTR : KOS_new_float(yarn, value.d - 1.0);
+    return error ? KOS_BADPTR : KOS_new_float(ctx, value.d - 1.0);
 }
 
-int _KOS_module_random_init(KOS_YARN yarn, KOS_OBJ_ID module)
+int _KOS_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID proto;
 
-    TRY_ADD_CONSTRUCTOR(    yarn, module,        "random",  _random,       0, &proto);
-    TRY_ADD_MEMBER_FUNCTION(yarn, module, proto, "integer", _rand_integer, 0);
-    TRY_ADD_MEMBER_FUNCTION(yarn, module, proto, "float",   _rand_float,   0);
+    TRY_ADD_CONSTRUCTOR(    ctx, module,        "random",  _random,       0, &proto);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "integer", _rand_integer, 0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "float",   _rand_float,   0);
 
 _error:
     return error;

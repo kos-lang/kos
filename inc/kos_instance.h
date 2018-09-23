@@ -92,8 +92,8 @@ typedef struct _KOS_STACK {
 } KOS_STACK;
 
 struct _KOS_THREAD_CONTEXT {
-    KOS_YARN              next;     /* List of thread roots in instance */
-    KOS_YARN              prev;
+    KOS_CONTEXT              next;     /* List of thread roots in instance */
+    KOS_CONTEXT              prev;
 
     KOS_INSTANCE         *inst;
     _KOS_PAGE            *cur_page;
@@ -155,24 +155,24 @@ struct _KOS_INSTANCE {
 };
 
 #ifdef __cplusplus
-static inline bool KOS_is_exception_pending(KOS_YARN yarn)
+static inline bool KOS_is_exception_pending(KOS_CONTEXT ctx)
 {
-    return ! IS_BAD_PTR(yarn->exception);
+    return ! IS_BAD_PTR(ctx->exception);
 }
 
-static inline KOS_OBJ_ID KOS_get_exception(KOS_YARN yarn)
+static inline KOS_OBJ_ID KOS_get_exception(KOS_CONTEXT ctx)
 {
-    return yarn->exception;
+    return ctx->exception;
 }
 
-static inline void KOS_clear_exception(KOS_YARN yarn)
+static inline void KOS_clear_exception(KOS_CONTEXT ctx)
 {
-    yarn->exception = KOS_BADPTR;
+    ctx->exception = KOS_BADPTR;
 }
 #else
-#define KOS_is_exception_pending(yarn) (!IS_BAD_PTR((yarn)->exception))
-#define KOS_get_exception(yarn) ((yarn)->exception)
-#define KOS_clear_exception(yarn) (void)((yarn)->exception = KOS_BADPTR)
+#define KOS_is_exception_pending(ctx) (!IS_BAD_PTR((ctx)->exception))
+#define KOS_get_exception(ctx) ((ctx)->exception)
+#define KOS_clear_exception(ctx) (void)((ctx)->exception = KOS_BADPTR)
 #endif
 
 #ifdef __cplusplus
@@ -180,51 +180,51 @@ extern "C" {
 #endif
 
 int KOS_instance_init(KOS_INSTANCE *inst,
-                     KOS_YARN     *out_frame);
+                      KOS_CONTEXT  *out_frame);
 
 void KOS_instance_destroy(KOS_INSTANCE *inst);
 
-int KOS_instance_add_path(KOS_YARN    yarn,
+int KOS_instance_add_path(KOS_CONTEXT ctx,
                           const char *module_search_path);
 
-int KOS_instance_add_default_path(KOS_YARN    yarn,
+int KOS_instance_add_default_path(KOS_CONTEXT ctx,
                                   const char *argv0);
 
-int KOS_instance_set_args(KOS_YARN     yarn,
+int KOS_instance_set_args(KOS_CONTEXT  ctx,
                           int          argc,
                           const char **argv);
 
-typedef int (*KOS_BUILTIN_INIT)(KOS_YARN yarn, KOS_OBJ_ID module);
+typedef int (*KOS_BUILTIN_INIT)(KOS_CONTEXT ctx, KOS_OBJ_ID module);
 
-int KOS_instance_register_builtin(KOS_YARN         yarn,
+int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
                                   KOS_BUILTIN_INIT init);
 
 int KOS_instance_register_thread(KOS_INSTANCE *inst,
-                                 KOS_YARN      yarn);
+                                 KOS_CONTEXT   ctx);
 
 void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
-                                    KOS_YARN      yarn);
+                                    KOS_CONTEXT   ctx);
 
-KOS_OBJ_ID KOS_instance_get_cstring(KOS_YARN    yarn,
+KOS_OBJ_ID KOS_instance_get_cstring(KOS_CONTEXT ctx,
                                     const char *cstr);
 
 #ifdef NDEBUG
-#define KOS_instance_validate(yarn) ((void)0)
+#define KOS_instance_validate(ctx) ((void)0)
 #else
-void KOS_instance_validate(KOS_YARN yarn);
+void KOS_instance_validate(KOS_CONTEXT ctx);
 #endif
 
-void KOS_raise_exception(KOS_YARN   yarn,
-                         KOS_OBJ_ID exception_obj);
+void KOS_raise_exception(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  exception_obj);
 
-void KOS_raise_exception_cstring(KOS_YARN    yarn,
+void KOS_raise_exception_cstring(KOS_CONTEXT ctx,
                                  const char *cstr);
 
-KOS_OBJ_ID KOS_format_exception(KOS_YARN   yarn,
-                                KOS_OBJ_ID exception);
+KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  exception);
 
-void KOS_raise_generator_end(KOS_YARN yarn);
+void KOS_raise_generator_end(KOS_CONTEXT ctx);
 
 enum _KOS_CALL_FLAVOR {
     KOS_CALL_FUNCTION,
@@ -232,25 +232,25 @@ enum _KOS_CALL_FLAVOR {
     KOS_APPLY_FUNCTION
 };
 
-KOS_OBJ_ID _KOS_call_function(KOS_YARN              yarn,
+KOS_OBJ_ID _KOS_call_function(KOS_CONTEXT           ctx,
                               KOS_OBJ_ID            func_obj,
                               KOS_OBJ_ID            this_obj,
                               KOS_OBJ_ID            args_obj,
                               enum _KOS_CALL_FLAVOR call_flavor);
 
-#define KOS_call_function(yarn, func_obj, this_obj, args_obj) \
-    _KOS_call_function((yarn), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
+#define KOS_call_function(ctx, func_obj, this_obj, args_obj) \
+    _KOS_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
 
-#define KOS_call_generator(yarn, func_obj, this_obj, args_obj) \
-    _KOS_call_function((yarn), (func_obj), (this_obj), (args_obj), KOS_CALL_GENERATOR)
+#define KOS_call_generator(ctx, func_obj, this_obj, args_obj) \
+    _KOS_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_GENERATOR)
 
-#define KOS_apply_function(yarn, func_obj, this_obj, args_obj) \
-    _KOS_call_function((yarn), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
+#define KOS_apply_function(ctx, func_obj, this_obj, args_obj) \
+    _KOS_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
 
-void KOS_track_ref(KOS_YARN     yarn,
+void KOS_track_ref(KOS_CONTEXT  ctx,
                    KOS_OBJ_REF *ref);
 
-void KOS_untrack_ref(KOS_YARN     yarn,
+void KOS_untrack_ref(KOS_CONTEXT  ctx,
                      KOS_OBJ_REF *ref);
 
 struct _KOS_GC_STATS {
@@ -264,7 +264,7 @@ struct _KOS_GC_STATS {
     unsigned size_kept;
 };
 
-int KOS_collect_garbage(KOS_YARN              yarn,
+int KOS_collect_garbage(KOS_CONTEXT           ctx,
                         struct _KOS_GC_STATS *stats);
 
 #ifdef __cplusplus

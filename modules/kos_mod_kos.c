@@ -58,30 +58,30 @@ struct _LEXER {
     int               ignore_errors;
 };
 
-static void _finalize(KOS_YARN yarn,
-                      void    *priv)
+static void _finalize(KOS_CONTEXT ctx,
+                      void       *priv)
 {
     /* TODO free
     if (priv)
-        _KOS_free_buffer(yarn, priv, sizeof(struct _LEXER));
+        _KOS_free_buffer(ctx, priv, sizeof(struct _LEXER));
     */
 }
 
-static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
-                             KOS_OBJ_ID regs_obj,
-                             KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  regs_obj,
+                             KOS_OBJ_ID  args_obj)
 {
     int                       error      = KOS_SUCCESS;
     KOS_OBJ_ID                retval     = KOS_BADPTR;
     KOS_OBJ_ID                lexer_obj_id;
-    KOS_OBJ_ID                source     = KOS_instance_get_cstring(yarn, str_source);
+    KOS_OBJ_ID                source     = KOS_instance_get_cstring(ctx, str_source);
     struct _LEXER            *lexer;
     uint8_t                  *buf_data;
     enum _KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
 
-    lexer_obj_id = KOS_array_read(yarn, regs_obj, 0);
+    lexer_obj_id = KOS_array_read(ctx, regs_obj, 0);
     assert( ! IS_BAD_PTR(lexer_obj_id));
     TRY_OBJID(lexer_obj_id);
 
@@ -99,11 +99,11 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
         if (GET_OBJ_TYPE(init_arg) != OBJ_BUFFER)
             RAISE_EXCEPTION(str_err_not_buffer);
 
-        lexer_obj_id = KOS_new_object(yarn);
+        lexer_obj_id = KOS_new_object(ctx);
         TRY_OBJID(lexer_obj_id);
 
         /* TODO use malloc once GC supports finalize */
-        lexer = (struct _LEXER *)_KOS_alloc_object(yarn,
+        lexer = (struct _LEXER *)_KOS_alloc_object(ctx,
                                                    KOS_ALLOC_PERSISTENT, /* avoid GC */
                                                    OBJ_OPAQUE,
                                                    sizeof(struct _LEXER));
@@ -119,17 +119,17 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
 
         _KOS_lexer_init(&lexer->lexer, 0, (char *)buf_data, (char *)buf_data + buf_size);
 
-        TRY(KOS_set_property(yarn, lexer_obj_id, source, init_arg));
+        TRY(KOS_set_property(ctx, lexer_obj_id, source, init_arg));
 
         lexer->last_buf = buf_data;
 
-        TRY(KOS_array_write(yarn, regs_obj, 0, lexer_obj_id));
+        TRY(KOS_array_write(ctx, regs_obj, 0, lexer_obj_id));
 
         lexer->ignore_errors = 0;
 
         if (KOS_get_array_size(regs_obj) > 1) {
 
-            const KOS_OBJ_ID arg = KOS_array_read(yarn, regs_obj, 1);
+            const KOS_OBJ_ID arg = KOS_array_read(ctx, regs_obj, 1);
             TRY_OBJID(arg);
 
             lexer->ignore_errors = _KOS_is_truthy(arg);
@@ -140,7 +140,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
 
         assert(GET_OBJ_TYPE(lexer_obj_id) == OBJ_OBJECT);
 
-        buf_obj_id = KOS_get_property(yarn, lexer_obj_id, source);
+        buf_obj_id = KOS_get_property(ctx, lexer_obj_id, source);
         TRY_OBJID(buf_obj_id);
 
         lexer = (struct _LEXER *)KOS_object_get_private(*OBJPTR(OBJECT, lexer_obj_id));
@@ -148,11 +148,11 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
         if (KOS_get_array_size(args_obj) > 0) {
 
             int64_t    value;
-            KOS_OBJ_ID arg = KOS_array_read(yarn, args_obj, 0);
+            KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
             TRY_OBJID(arg);
 
-            TRY(KOS_get_integer(yarn, arg, &value));
+            TRY(KOS_get_integer(ctx, arg, &value));
 
             if (value != 0 && value != 1)
                 RAISE_EXCEPTION(str_err_invalid_arg);
@@ -205,20 +205,20 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
 
             assert(error == KOS_ERROR_SCANNING_FAILED);
 
-            parts[0] = KOS_instance_get_cstring(yarn, str_format_parse_error);
-            parts[1] = KOS_object_to_string(yarn, TO_SMALL_INT((int)lexer->lexer.pos.line));
+            parts[0] = KOS_instance_get_cstring(ctx, str_format_parse_error);
+            parts[1] = KOS_object_to_string(ctx, TO_SMALL_INT((int)lexer->lexer.pos.line));
             TRY_OBJID(parts[1]);
-            parts[2] = KOS_instance_get_cstring(yarn, str_format_colon);
-            parts[3] = KOS_object_to_string(yarn, TO_SMALL_INT((int)lexer->lexer.pos.column));
+            parts[2] = KOS_instance_get_cstring(ctx, str_format_colon);
+            parts[3] = KOS_object_to_string(ctx, TO_SMALL_INT((int)lexer->lexer.pos.column));
             TRY_OBJID(parts[3]);
-            parts[4] = KOS_instance_get_cstring(yarn, str_format_colon_space);
-            parts[5] = KOS_new_cstring(yarn, lexer->lexer.error_str);
+            parts[4] = KOS_instance_get_cstring(ctx, str_format_colon_space);
+            parts[5] = KOS_new_cstring(ctx, lexer->lexer.error_str);
             TRY_OBJID(parts[5]);
 
-            exception = KOS_string_add_many(yarn, parts, sizeof(parts)/sizeof(parts[0]));
+            exception = KOS_string_add_many(ctx, parts, sizeof(parts)/sizeof(parts[0]));
             TRY_OBJID(exception);
 
-            KOS_raise_exception(yarn, exception);
+            KOS_raise_exception(ctx, exception);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
     }
@@ -228,45 +228,45 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
         struct _KOS_TOKEN *token = &lexer->token;
         KOS_OBJ_ID         value;
 
-        KOS_OBJ_ID token_obj = KOS_new_object(yarn);
+        KOS_OBJ_ID token_obj = KOS_new_object(ctx);
         TRY_OBJID(token_obj);
 
-        value = KOS_new_string(yarn, token->begin, token->length);
+        value = KOS_new_string(ctx, token->begin, token->length);
         TRY_OBJID(value);
 
-        TRY(KOS_set_property(yarn,
+        TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(yarn, str_token),
+                             KOS_instance_get_cstring(ctx, str_token),
                              value));
 
-        TRY(KOS_set_property(yarn,
+        TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(yarn, str_line),
+                             KOS_instance_get_cstring(ctx, str_line),
                              TO_SMALL_INT((int)token->pos.line)));
 
-        TRY(KOS_set_property(yarn,
+        TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(yarn, str_column),
+                             KOS_instance_get_cstring(ctx, str_column),
                              TO_SMALL_INT((int)token->pos.column)));
 
-        TRY(KOS_set_property(yarn,
+        TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(yarn, str_type),
+                             KOS_instance_get_cstring(ctx, str_type),
                              TO_SMALL_INT((int)token->type)));
 
-        TRY(KOS_set_property(yarn,
+        TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(yarn, str_keyword),
+                             KOS_instance_get_cstring(ctx, str_keyword),
                              TO_SMALL_INT((int)token->keyword)));
 
-        TRY(KOS_set_property(yarn,
+        TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(yarn, str_op),
+                             KOS_instance_get_cstring(ctx, str_op),
                              TO_SMALL_INT((int)token->op)));
 
-        TRY(KOS_set_property(yarn,
+        TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(yarn, str_sep),
+                             KOS_instance_get_cstring(ctx, str_sep),
                              TO_SMALL_INT((int)token->sep)));
 
         if (lexer->token.type == TT_STRING || lexer->token.type == TT_STRING_OPEN) {
@@ -283,128 +283,128 @@ _error:
     return retval;
 }
 
-int _KOS_module_kos_init(KOS_YARN yarn, KOS_OBJ_ID module)
+int _KOS_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 
-    TRY_ADD_GENERATOR(       yarn, module, "raw_lexer",    _raw_lexer, 1);
+    TRY_ADD_GENERATOR(       ctx, module, "raw_lexer",    _raw_lexer, 1);
 
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "version_major",        KOS_VERSION_MAJOR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "version_minor",        KOS_VERSION_MINOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "version_major",        KOS_VERSION_MAJOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "version_minor",        KOS_VERSION_MINOR);
 
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_whitespace",     TT_WHITESPACE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_eol",            TT_EOL);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_comment",        TT_COMMENT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_eof",            TT_EOF);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_identifier",     TT_IDENTIFIER);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_keyword",        TT_KEYWORD);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_numeric",        TT_NUMERIC);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_string",         TT_STRING);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_string_open",    TT_STRING_OPEN);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_operator",       TT_OPERATOR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "token_separator",      TT_SEPARATOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_whitespace",     TT_WHITESPACE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_eol",            TT_EOL);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_comment",        TT_COMMENT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_eof",            TT_EOF);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_identifier",     TT_IDENTIFIER);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_keyword",        TT_KEYWORD);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_numeric",        TT_NUMERIC);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_string",         TT_STRING);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_string_open",    TT_STRING_OPEN);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_operator",       TT_OPERATOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "token_separator",      TT_SEPARATOR);
 
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_none",         KW_NONE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_line",         KW_LINE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_assert",       KW_ASSERT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_break",        KW_BREAK);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_case",         KW_CASE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_catch",        KW_CATCH);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_class",        KW_CLASS);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_const",        KW_CONST);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_constructor",  KW_CONSTRUCTOR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_continue",     KW_CONTINUE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_default",      KW_DEFAULT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_defer",        KW_DEFER);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_delete",       KW_DELETE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_do",           KW_DO);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_else",         KW_ELSE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_fallthrough",  KW_FALLTHROUGH);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_false",        KW_FALSE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_for",          KW_FOR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_fun",          KW_FUN);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_get",          KW_GET);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_if",           KW_IF);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_import",       KW_IMPORT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_in",           KW_IN);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_instanceof",   KW_INSTANCEOF);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_loop",         KW_LOOP);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_repeat",       KW_REPEAT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_return",       KW_RETURN);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_set",          KW_SET);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_static",       KW_STATIC);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_switch",       KW_SWITCH);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_this",         KW_THIS);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_throw",        KW_THROW);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_true",         KW_TRUE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_try",          KW_TRY);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_typeof",       KW_TYPEOF);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_var",          KW_VAR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_void",         KW_VOID);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_while",        KW_WHILE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_with",         KW_WITH);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "keyword_yield",        KW_YIELD);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_none",         KW_NONE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_line",         KW_LINE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_assert",       KW_ASSERT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_break",        KW_BREAK);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_case",         KW_CASE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_catch",        KW_CATCH);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_class",        KW_CLASS);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_const",        KW_CONST);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_constructor",  KW_CONSTRUCTOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_continue",     KW_CONTINUE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_default",      KW_DEFAULT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_defer",        KW_DEFER);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_delete",       KW_DELETE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_do",           KW_DO);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_else",         KW_ELSE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_fallthrough",  KW_FALLTHROUGH);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_false",        KW_FALSE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_for",          KW_FOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_fun",          KW_FUN);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_get",          KW_GET);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_if",           KW_IF);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_import",       KW_IMPORT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_in",           KW_IN);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_instanceof",   KW_INSTANCEOF);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_loop",         KW_LOOP);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_repeat",       KW_REPEAT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_return",       KW_RETURN);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_set",          KW_SET);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_static",       KW_STATIC);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_switch",       KW_SWITCH);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_this",         KW_THIS);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_throw",        KW_THROW);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_true",         KW_TRUE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_try",          KW_TRY);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_typeof",       KW_TYPEOF);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_var",          KW_VAR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_void",         KW_VOID);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_while",        KW_WHILE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_with",         KW_WITH);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_yield",        KW_YIELD);
 
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_none",              OT_NONE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_mask",              OT_MASK);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_arithmetic",        OT_ARITHMETIC);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_unary",             OT_UNARY);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_multiplicative",    OT_MULTIPLICATIVE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_bitwise",           OT_BITWISE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_comparison",        OT_COMPARISON);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_assignment",        OT_ASSIGNMENT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_add",               OT_ADD);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_sub",               OT_SUB);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_mul",               OT_MUL);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_div",               OT_DIV);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_mod",               OT_MOD);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_not",               OT_NOT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_lognot",            OT_LOGNOT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_and",               OT_AND);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_or",                OT_OR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_xor",               OT_XOR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_shl",               OT_SHL);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_shr",               OT_SHR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_shru",              OT_SHRU);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_logand",            OT_LOGAND);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_logor",             OT_LOGOR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_logtri",            OT_LOGTRI);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_dot",               OT_DOT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_more",              OT_MORE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_arrow",             OT_ARROW);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_lambda",            OT_LAMBDA);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_eq",                OT_EQ);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_ne",                OT_NE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_ge",                OT_GE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_gt",                OT_GT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_le",                OT_LE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_lt",                OT_LT);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_set",               OT_SET);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setadd",            OT_SETADD);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setsub",            OT_SETSUB);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setmul",            OT_SETMUL);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setdiv",            OT_SETDIV);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setmod",            OT_SETMOD);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setand",            OT_SETAND);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setor",             OT_SETOR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setxor",            OT_SETXOR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setshl",            OT_SETSHL);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setshr",            OT_SETSHR);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "op_setshru",           OT_SETSHRU);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_none",              OT_NONE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_mask",              OT_MASK);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_arithmetic",        OT_ARITHMETIC);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_unary",             OT_UNARY);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_multiplicative",    OT_MULTIPLICATIVE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_bitwise",           OT_BITWISE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_comparison",        OT_COMPARISON);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_assignment",        OT_ASSIGNMENT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_add",               OT_ADD);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_sub",               OT_SUB);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_mul",               OT_MUL);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_div",               OT_DIV);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_mod",               OT_MOD);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_not",               OT_NOT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_lognot",            OT_LOGNOT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_and",               OT_AND);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_or",                OT_OR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_xor",               OT_XOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_shl",               OT_SHL);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_shr",               OT_SHR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_shru",              OT_SHRU);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_logand",            OT_LOGAND);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_logor",             OT_LOGOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_logtri",            OT_LOGTRI);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_dot",               OT_DOT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_more",              OT_MORE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_arrow",             OT_ARROW);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_lambda",            OT_LAMBDA);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_eq",                OT_EQ);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_ne",                OT_NE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_ge",                OT_GE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_gt",                OT_GT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_le",                OT_LE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_lt",                OT_LT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_set",               OT_SET);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setadd",            OT_SETADD);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setsub",            OT_SETSUB);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setmul",            OT_SETMUL);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setdiv",            OT_SETDIV);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setmod",            OT_SETMOD);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setand",            OT_SETAND);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setor",             OT_SETOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setxor",            OT_SETXOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setshl",            OT_SETSHL);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setshr",            OT_SETSHR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "op_setshru",           OT_SETSHRU);
 
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_none",             ST_NONE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_paren_open",       ST_PAREN_OPEN);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_paren_close",      ST_PAREN_CLOSE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_comma",            ST_COMMA);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_colon",            ST_COLON);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_semicolon",        ST_SEMICOLON);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_square_open",      ST_SQUARE_OPEN);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_square_close",     ST_SQUARE_CLOSE);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_curly_open",       ST_CURLY_OPEN);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "sep_curly_close",      ST_CURLY_CLOSE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_none",             ST_NONE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_paren_open",       ST_PAREN_OPEN);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_paren_close",      ST_PAREN_CLOSE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_comma",            ST_COMMA);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_colon",            ST_COLON);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_semicolon",        ST_SEMICOLON);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_square_open",      ST_SQUARE_OPEN);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_square_close",     ST_SQUARE_CLOSE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_curly_open",       ST_CURLY_OPEN);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "sep_curly_close",      ST_CURLY_CLOSE);
 
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "any_token",            NT_ANY);
-    TRY_ADD_INTEGER_CONSTANT(yarn, module, "continue_string",      NT_CONTINUE_STRING);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "any_token",            NT_ANY);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "continue_string",      NT_CONTINUE_STRING);
 
 _error:
     return error;

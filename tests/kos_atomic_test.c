@@ -42,12 +42,12 @@ struct _THREAD_DATA {
     KOS_OBJ_ID           value;
 };
 
-static void _thread(KOS_YARN yarn,
-                    void    *cookie)
+static void _thread(KOS_CONTEXT ctx,
+                    void       *cookie)
 {
     struct _THREAD_DATA *thread_data = (struct _THREAD_DATA *)cookie;
 
-    KOS_raise_exception(yarn, TO_SMALL_INT(GET_SMALL_INT(thread_data->value) + 1));
+    KOS_raise_exception(ctx, TO_SMALL_INT(GET_SMALL_INT(thread_data->value) + 1));
 
     _KOS_spin_unlock(&thread_data->lock);
 }
@@ -151,28 +151,28 @@ int main(void)
     /* Basic thread test */
     {
         KOS_INSTANCE        inst;
-        KOS_YARN            yarn;
+        KOS_CONTEXT         ctx;
         struct _THREAD_DATA thread_data;
         _KOS_THREAD         thread;
 
         thread_data.lock  = 0;
         thread_data.value = TO_SMALL_INT(44);
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
         _KOS_spin_lock(&thread_data.lock);
 
-        TEST(_KOS_thread_create(yarn, _thread, &thread_data, &thread) == KOS_SUCCESS);
+        TEST(_KOS_thread_create(ctx, _thread, &thread_data, &thread) == KOS_SUCCESS);
 
         _KOS_spin_lock(&thread_data.lock);
 
-        _KOS_thread_join(yarn, thread);
+        _KOS_thread_join(ctx, thread);
 
         _KOS_spin_unlock(&thread_data.lock);
 
-        TEST(KOS_is_exception_pending(yarn));
+        TEST(KOS_is_exception_pending(ctx));
 
-        TEST(KOS_get_exception(yarn) == TO_SMALL_INT(45));
+        TEST(KOS_get_exception(ctx) == TO_SMALL_INT(45));
 
         KOS_instance_destroy(&inst);
     }

@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 {
     int                error     = KOS_SUCCESS;
     KOS_INSTANCE       inst;
-    KOS_YARN           yarn;
+    KOS_CONTEXT        ctx;
     int                inst_ok   = 0;
     uint32_t           num_paths = 0;
     KOS_OBJ_ID         path_str;
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
     _KOS_vector_init(&cstr);
 
-    TRY(KOS_instance_init(&inst, &yarn));
+    TRY(KOS_instance_init(&inst, &ctx));
 
     inst_ok = 1;
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
         RAISE_ERROR(KOS_ERROR_NOT_FOUND);
     }
 
-    TRY(KOS_instance_add_default_path(yarn, argv[1]));
+    TRY(KOS_instance_add_default_path(ctx, argv[1]));
 
     num_paths = KOS_get_array_size(inst.modules.search_paths);
 
@@ -62,10 +62,10 @@ int main(int argc, char *argv[])
         RAISE_ERROR(KOS_ERROR_NOT_FOUND);
     }
 
-    path_str = KOS_array_read(yarn, inst.modules.search_paths, 0);
+    path_str = KOS_array_read(ctx, inst.modules.search_paths, 0);
     TRY_OBJID(path_str);
 
-    TRY(KOS_string_to_cstr_vec(yarn, path_str, &cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, path_str, &cstr));
 
     printf("%s\n", cstr.buffer);
 

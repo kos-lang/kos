@@ -47,7 +47,7 @@ struct THREAD_DATA {
     KOS_ATOMIC(uint32_t) num_loops;
 };
 
-static int _run_test(KOS_YARN yarn, struct THREAD_DATA *data)
+static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
 {
     struct TEST_DATA *test  = data->test;
     uint32_t          stage = 0;
@@ -78,38 +78,38 @@ static int _run_test(KOS_YARN yarn, struct THREAD_DATA *data)
             const KOS_OBJ_ID key   = test->prop_names[i_prop];
             const KOS_OBJ_ID value = TO_SMALL_INT(i_prop);
 
-            TEST(KOS_set_property(yarn, object, key, value) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, object, key, value) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
             const KOS_OBJ_ID key      = test->prop_names[i_prop-1];
             const KOS_OBJ_ID expected = TO_SMALL_INT(i_prop-1);
-            const KOS_OBJ_ID actual   = KOS_get_property(yarn, object, key);
+            const KOS_OBJ_ID actual   = KOS_get_property(ctx, object, key);
             const KOS_OBJ_ID new_val  = TO_SMALL_INT(-(i_prop-1));
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
 
-            TEST(KOS_set_property(yarn, object, key, new_val) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, object, key, new_val) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
             const KOS_OBJ_ID key      = test->prop_names[i_prop];
             const KOS_OBJ_ID expected = TO_SMALL_INT(-i_prop);
-            const KOS_OBJ_ID actual   = KOS_get_property(yarn, object, key);
+            const KOS_OBJ_ID actual   = KOS_get_property(ctx, object, key);
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
 
-            TEST(KOS_delete_property(yarn, object, key) == KOS_SUCCESS);
+            TEST(KOS_delete_property(ctx, object, key) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
             const KOS_OBJ_ID key   = test->prop_names[i_prop-1];
-            const KOS_OBJ_ID value = KOS_get_property(yarn, object, key);
+            const KOS_OBJ_ID value = KOS_get_property(ctx, object, key);
 
             TEST(IS_BAD_PTR(value));
             TEST_EXCEPTION();
@@ -122,12 +122,12 @@ static int _run_test(KOS_YARN yarn, struct THREAD_DATA *data)
     return 0;
 }
 
-static void _test_thread_func(KOS_YARN yarn,
-                              void    *cookie)
+static void _test_thread_func(KOS_CONTEXT ctx,
+                              void       *cookie)
 {
     struct THREAD_DATA *test  = (struct THREAD_DATA *)cookie;
 
-    if (_run_test(yarn, test)) {
+    if (_run_test(ctx, test)) {
         KOS_atomic_add_i32(test->test->done, 1);
         KOS_atomic_add_i32(test->test->error, 1);
     }
@@ -136,10 +136,10 @@ static void _test_thread_func(KOS_YARN yarn,
 int main(void)
 {
     KOS_INSTANCE inst;
-    KOS_YARN     yarn;
+    KOS_CONTEXT  ctx;
     const int    num_cpus = _get_num_cpus();
 
-    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
     /* This test writes and deletes unique properties from multiple threads, checking for consistency */
@@ -154,7 +154,7 @@ int main(void)
         int                 num_props;
         KOS_OBJ_ID         *props;
         struct KOS_RNG      rng;
-        KOS_OBJ_ID          obj              = KOS_new_object(yarn);
+        KOS_OBJ_ID          obj              = KOS_new_object(ctx);
         int                 i_loop;
         int                 i;
 
@@ -195,7 +195,7 @@ int main(void)
                     buf[k] = (char)((i >> ((sizeof(buf) - 1 - k) * 7) & 0x7F));
             }
 
-            props[i] = KOS_new_string(yarn, buf, sizeof(buf));
+            props[i] = KOS_new_string(ctx, buf, sizeof(buf));
             TEST( ! IS_BAD_PTR(props[i]));
         }
 
@@ -208,7 +208,7 @@ int main(void)
         data.error      = KOS_SUCCESS;
 
         for (i = 0; i < num_threads; i++)
-            TEST(_KOS_thread_create(yarn, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+            TEST(_KOS_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             /* Limit number of copies made to avoid running out of memory */
@@ -218,7 +218,7 @@ int main(void)
 
             do {
                 if (copies_left-- > 0)
-                    TEST(_KOS_object_copy_prop_table(yarn, obj) == KOS_SUCCESS);
+                    TEST(_KOS_object_copy_prop_table(ctx, obj) == KOS_SUCCESS);
                 _KOS_yield();
             } while (KOS_atomic_read_u32(data.done) != (uint32_t)num_threads);
 
@@ -227,7 +227,7 @@ int main(void)
             TEST( ! data.error);
 
             for (i = 0; i < num_props; i++) {
-                KOS_OBJ_ID value = KOS_get_property(yarn, obj, props[i]);
+                KOS_OBJ_ID value = KOS_get_property(ctx, obj, props[i]);
                 TEST(IS_BAD_PTR(value));
                 TEST_EXCEPTION();
             }
@@ -238,7 +238,7 @@ int main(void)
         KOS_atomic_full_barrier();
 
         for (i = 0; i < num_threads; i++) {
-            _KOS_thread_join(yarn, threads[i]);
+            _KOS_thread_join(ctx, threads[i]);
             TEST_NO_EXCEPTION();
             TEST(KOS_atomic_read_u32(thread_cookies[i].num_loops) == (uint32_t)num_loops);
         }

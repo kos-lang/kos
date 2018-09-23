@@ -27,7 +27,7 @@
 
 #define TRY_OBJID(obj_id) do { if (IS_BAD_PTR(obj_id)) RAISE_ERROR(KOS_ERROR_EXCEPTION); } while (0)
 
-#define RAISE_EXCEPTION(err_obj) do { KOS_raise_exception(yarn, KOS_instance_get_cstring(yarn, (err_obj))); RAISE_ERROR(KOS_ERROR_EXCEPTION); } while (0)
+#define RAISE_EXCEPTION(err_obj) do { KOS_raise_exception(ctx, KOS_instance_get_cstring(ctx, (err_obj))); RAISE_ERROR(KOS_ERROR_EXCEPTION); } while (0)
 
 #define RAISE_ERROR(code) do { error = (code); goto _error; } while (0)
 

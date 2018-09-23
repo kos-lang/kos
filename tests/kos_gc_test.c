@@ -35,17 +35,17 @@
 #include <string.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(yarn)); KOS_clear_exception(yarn); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(yarn))
+#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
+#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
-static void _finalize_1(KOS_YARN yarn, void *priv)
+static void _finalize_1(KOS_CONTEXT ctx, void *priv)
 {
     *(int *)priv = 1;
 }
 
-static KOS_OBJ_ID _handler(KOS_YARN   yarn,
-                           KOS_OBJ_ID this_obj,
-                           KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _handler(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
 {
     return args_obj;
 }
@@ -89,7 +89,7 @@ static int64_t _get_obj_size(KOS_OBJ_ID obj_id)
     return GET_SMALL_INT(hdr->alloc_size);
 }
 
-static int _test_object(KOS_YARN              yarn,
+static int _test_object(KOS_CONTEXT           ctx,
                         KOS_OBJ_ID            obj_id,
                         unsigned              num_objs,
                         int64_t               total_size,
@@ -107,11 +107,11 @@ static int _test_object(KOS_YARN              yarn,
 
     obj_ref.obj_id = obj_id;
 
-    KOS_track_ref(yarn, &obj_ref);
+    KOS_track_ref(ctx, &obj_ref);
 
-    TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+    TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-    KOS_untrack_ref(yarn, &obj_ref);
+    KOS_untrack_ref(ctx, &obj_ref);
 
     TEST(_get_obj_size(obj_ref.obj_id) == size);
 
@@ -124,7 +124,7 @@ static int _test_object(KOS_YARN              yarn,
     TEST(stats.size_freed         == (unsigned)dead_size);
     TEST(stats.size_kept          == 0);
 
-    TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+    TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
     TEST(stats.num_objs_evacuated == orig_stats->num_objs_evacuated);
     TEST(stats.num_objs_freed     == num_objs);
@@ -141,15 +141,15 @@ static int _test_object(KOS_YARN              yarn,
 int main(void)
 {
     KOS_INSTANCE         inst;
-    KOS_YARN             yarn;
+    KOS_CONTEXT          ctx;
     struct _KOS_GC_STATS base_stats;
 
     /************************************************************************/
     /* Test garbage collection on a freshly initialized instance */
     {
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        TEST(KOS_collect_garbage(yarn, 0) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
         KOS_instance_destroy(&inst);
     }
@@ -164,9 +164,9 @@ int main(void)
     {
         KOS_OBJ_ID obj_id[3];
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        TEST(KOS_collect_garbage(yarn, &base_stats) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, &base_stats) == KOS_SUCCESS);
 
         TEST(base_stats.num_objs_evacuated >  0);
         TEST(base_stats.num_objs_freed     == 0);
@@ -179,9 +179,9 @@ int main(void)
 
         /* KOS_new_int */
 
-        obj_id[0] = KOS_new_int(yarn, (int64_t)1 << 63);
+        obj_id[0] = KOS_new_int(ctx, (int64_t)1 << 63);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           1,
                           _get_obj_size(obj_id[0]),
@@ -191,9 +191,9 @@ int main(void)
 
         /* KOS_new_float */
 
-        obj_id[0] = KOS_new_float(yarn, 2.0);
+        obj_id[0] = KOS_new_float(ctx, 2.0);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           1,
                           _get_obj_size(obj_id[0]),
@@ -203,9 +203,9 @@ int main(void)
 
         /* KOS_new_cstring */
 
-        obj_id[0] = KOS_new_cstring(yarn, "test string");
+        obj_id[0] = KOS_new_cstring(ctx, "test string");
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           1,
                           _get_obj_size(obj_id[0]),
@@ -215,11 +215,11 @@ int main(void)
 
         /* KOS_string_slice */
 
-        obj_id[1] = KOS_new_cstring(yarn, "abcdefghijklmnopqrstuvwxyz");
+        obj_id[1] = KOS_new_cstring(ctx, "abcdefghijklmnopqrstuvwxyz");
         TEST( ! IS_BAD_PTR(obj_id[1]));
-        obj_id[0] = KOS_string_slice(yarn, obj_id[1], 1, -1);
+        obj_id[0] = KOS_string_slice(ctx, obj_id[1], 1, -1);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           2,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]),
@@ -229,9 +229,9 @@ int main(void)
 
         /* KOS_new_array (empty) */
 
-        obj_id[0] = KOS_new_array(yarn, 0);
+        obj_id[0] = KOS_new_array(ctx, 0);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           1,
                           _get_obj_size(obj_id[0]),
@@ -241,9 +241,9 @@ int main(void)
 
         /* KOS_new_buffer (empty) */
 
-        obj_id[0] = KOS_new_buffer(yarn, 0);
+        obj_id[0] = KOS_new_buffer(ctx, 0);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           1,
                           _get_obj_size(obj_id[0]),
@@ -253,9 +253,9 @@ int main(void)
 
         /* KOS_new_object (empty) */
 
-        obj_id[0] = KOS_new_object(yarn);
+        obj_id[0] = KOS_new_object(ctx);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           1,
                           _get_obj_size(obj_id[0]),
@@ -265,12 +265,12 @@ int main(void)
 
         /* KOS_new_array */
 
-        obj_id[0] = KOS_new_array(yarn, 1);
+        obj_id[0] = KOS_new_array(ctx, 1);
         TEST( ! IS_BAD_PTR(obj_id[0]));
         obj_id[1] = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(ARRAY, obj_id[0])->data);
         TEST( ! IS_BAD_PTR(obj_id[1]));
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           2,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]),
@@ -280,12 +280,12 @@ int main(void)
 
         /* KOS_new_buffer */
 
-        obj_id[0] = KOS_new_buffer(yarn, 1);
+        obj_id[0] = KOS_new_buffer(ctx, 1);
         TEST( ! IS_BAD_PTR(obj_id[0]));
         obj_id[1] = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(BUFFER, obj_id[0])->data);
         TEST( ! IS_BAD_PTR(obj_id[1]));
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           2,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]),
@@ -295,13 +295,13 @@ int main(void)
 
         /* KOS_new_object */
 
-        obj_id[0] = KOS_new_object(yarn);
+        obj_id[0] = KOS_new_object(ctx);
         TEST( ! IS_BAD_PTR(obj_id[0]));
-        TEST(KOS_set_property(yarn, obj_id[0], KOS_new_cstring(yarn, ""), KOS_TRUE) == KOS_SUCCESS);
+        TEST(KOS_set_property(ctx, obj_id[0], KOS_new_cstring(ctx, ""), KOS_TRUE) == KOS_SUCCESS);
         obj_id[1] = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT, obj_id[0])->props);
         TEST( ! IS_BAD_PTR(obj_id[1]));
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           2,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]),
@@ -311,11 +311,11 @@ int main(void)
 
         /* KOS_new_object with prototype */
 
-        obj_id[1] = KOS_new_object(yarn);
+        obj_id[1] = KOS_new_object(ctx);
         TEST( ! IS_BAD_PTR(obj_id[1]));
-        obj_id[0] = KOS_new_object_with_prototype(yarn, obj_id[1]);
+        obj_id[0] = KOS_new_object_with_prototype(ctx, obj_id[1]);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           2,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]),
@@ -325,11 +325,11 @@ int main(void)
 
         /* KOS_new_object_walk (no properties) */
 
-        obj_id[1] = KOS_new_object(yarn);
+        obj_id[1] = KOS_new_object(ctx);
         TEST( ! IS_BAD_PTR(obj_id[1]));
-        obj_id[0] = KOS_new_object_walk(yarn, obj_id[1], KOS_SHALLOW);
+        obj_id[0] = KOS_new_object_walk(ctx, obj_id[1], KOS_SHALLOW);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           2,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]),
@@ -339,14 +339,14 @@ int main(void)
 
         /* KOS_new_object_walk (no properties) */
 
-        obj_id[1] = KOS_new_object(yarn);
+        obj_id[1] = KOS_new_object(ctx);
         TEST( ! IS_BAD_PTR(obj_id[1]));
-        TEST(KOS_set_property(yarn, obj_id[1], KOS_new_cstring(yarn, ""), KOS_TRUE) == KOS_SUCCESS);
+        TEST(KOS_set_property(ctx, obj_id[1], KOS_new_cstring(ctx, ""), KOS_TRUE) == KOS_SUCCESS);
         obj_id[2] = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT, obj_id[1])->props);
         TEST( ! IS_BAD_PTR(obj_id[2]));
-        obj_id[0] = KOS_new_object_walk(yarn, obj_id[1], KOS_SHALLOW);
+        obj_id[0] = KOS_new_object_walk(ctx, obj_id[1], KOS_SHALLOW);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           4,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]) +
@@ -360,9 +360,9 @@ int main(void)
 
         /* KOS_new_builtin_function */
 
-        obj_id[0] = KOS_new_builtin_function(yarn, _handler, 0);
+        obj_id[0] = KOS_new_builtin_function(ctx, _handler, 0);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           1,
                           _get_obj_size(obj_id[0]),
@@ -372,9 +372,9 @@ int main(void)
 
         /* KOS_new_dynamic_prop */
 
-        obj_id[0] = KOS_new_dynamic_prop(yarn, KOS_BADPTR, KOS_BADPTR);
+        obj_id[0] = KOS_new_dynamic_prop(ctx, KOS_BADPTR, KOS_BADPTR);
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           1,
                           _get_obj_size(obj_id[0]),
@@ -384,14 +384,14 @@ int main(void)
 
         /* KOS_new_builtin_dynamic_property */
 
-        obj_id[0] = KOS_new_builtin_dynamic_property(yarn, KOS_BADPTR, _handler, _handler);
+        obj_id[0] = KOS_new_builtin_dynamic_property(ctx, KOS_BADPTR, _handler, _handler);
         TEST( ! IS_BAD_PTR(obj_id[0]));
         obj_id[1] = OBJPTR(DYNAMIC_PROP, obj_id[0])->getter;
         TEST( ! IS_BAD_PTR(obj_id[1]));
         obj_id[2] = OBJPTR(DYNAMIC_PROP, obj_id[0])->setter;
         TEST( ! IS_BAD_PTR(obj_id[2]));
 
-        TEST(_test_object(yarn,
+        TEST(_test_object(ctx,
                           obj_id[0],
                           3,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]) +
@@ -410,11 +410,11 @@ int main(void)
     {
         struct _KOS_GC_STATS stats;
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        TEST(KOS_collect_garbage(yarn, 0) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
-        TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(base_stats.num_objs_evacuated == stats.num_objs_evacuated);
         TEST(base_stats.num_objs_freed == stats.num_objs_freed);
@@ -438,61 +438,61 @@ int main(void)
             KOS_OBJ_ID prop_id;
             KOS_OBJ_ID obj_id;
 
-            cont_id = KOS_new_object(yarn);
+            cont_id = KOS_new_object(ctx);
             TEST( ! IS_BAD_PTR(cont_id));
 
-            prop_id = KOS_new_cstring(yarn, "int");
+            prop_id = KOS_new_cstring(ctx, "int");
             TEST( ! IS_BAD_PTR(prop_id));
 
-            obj_id = KOS_new_int(yarn, (int64_t)1 << 63);
+            obj_id = KOS_new_int(ctx, (int64_t)1 << 63);
             TEST( ! IS_SMALL_INT(obj_id));
             TEST( ! IS_BAD_PTR(obj_id));
-            TEST(KOS_set_property(yarn, cont_id, prop_id, obj_id) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, cont_id, prop_id, obj_id) == KOS_SUCCESS);
 
-            prop_id = KOS_new_cstring(yarn, "float");
+            prop_id = KOS_new_cstring(ctx, "float");
             TEST( ! IS_BAD_PTR(prop_id));
 
-            obj_id = KOS_new_float(yarn, 1.5);
+            obj_id = KOS_new_float(ctx, 1.5);
             TEST( ! IS_BAD_PTR(obj_id));
-            TEST(KOS_set_property(yarn, cont_id, prop_id, obj_id) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, cont_id, prop_id, obj_id) == KOS_SUCCESS);
 
-            prop_id = KOS_new_cstring(yarn, "array");
+            prop_id = KOS_new_cstring(ctx, "array");
             TEST( ! IS_BAD_PTR(prop_id));
 
-            array_id = KOS_new_array(yarn, 10);
+            array_id = KOS_new_array(ctx, 10);
             TEST( ! IS_BAD_PTR(obj_id));
-            TEST(KOS_set_property(yarn, cont_id, prop_id, array_id) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, cont_id, prop_id, array_id) == KOS_SUCCESS);
 
-            TEST(KOS_array_write(yarn, array_id, 0, KOS_TRUE) == KOS_SUCCESS);
-            TEST(KOS_array_write(yarn, array_id, 1, KOS_FALSE) == KOS_SUCCESS);
-            TEST(KOS_array_write(yarn, array_id, 2, KOS_VOID) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 0, KOS_TRUE) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 1, KOS_FALSE) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 2, KOS_VOID) == KOS_SUCCESS);
 
-            obj_id = KOS_new_string(yarn, long_utf8_string, sizeof(long_utf8_string) - 1);
+            obj_id = KOS_new_string(ctx, long_utf8_string, sizeof(long_utf8_string) - 1);
             TEST( ! IS_BAD_PTR(obj_id));
-            TEST(KOS_array_write(yarn, array_id, 3, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 3, obj_id) == KOS_SUCCESS);
 
-            obj_id = KOS_string_slice(yarn, obj_id, 1, -1);
+            obj_id = KOS_string_slice(ctx, obj_id, 1, -1);
             TEST( ! IS_BAD_PTR(obj_id));
-            TEST(KOS_array_write(yarn, array_id, 4, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 4, obj_id) == KOS_SUCCESS);
 
-            obj_id = KOS_new_buffer(yarn, 256);
+            obj_id = KOS_new_buffer(ctx, 256);
             TEST( ! IS_BAD_PTR(obj_id));
             memset(KOS_buffer_data(obj_id), 0x7F, 256);
-            TEST(KOS_array_write(yarn, array_id, 5, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 5, obj_id) == KOS_SUCCESS);
 
-            obj_id = KOS_new_object_walk(yarn, cont_id, KOS_DEEP);
+            obj_id = KOS_new_object_walk(ctx, cont_id, KOS_DEEP);
             TEST( ! IS_BAD_PTR(obj_id));
-            TEST(KOS_array_write(yarn, array_id, 6, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 6, obj_id) == KOS_SUCCESS);
 
-            obj_id = KOS_new_function(yarn);
+            obj_id = KOS_new_function(ctx);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(_KOS_stack_push(yarn, obj_id) == KOS_SUCCESS);
-            _KOS_stack_pop(yarn);
-            yarn->stack = KOS_BADPTR;
+            TEST(_KOS_stack_push(ctx, obj_id) == KOS_SUCCESS);
+            _KOS_stack_pop(ctx);
+            ctx->stack = KOS_BADPTR;
         }
 
-        TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
         TEST(stats.num_objs_freed     == 20);
@@ -507,8 +507,8 @@ int main(void)
          * Ensure garbage collector runs the finalize function.
          */
         {
-            KOS_OBJ_ID proto_id = KOS_new_object(yarn);
-            KOS_OBJ_ID obj_id   = KOS_new_object_with_prototype(yarn, proto_id);
+            KOS_OBJ_ID proto_id = KOS_new_object(ctx);
+            KOS_OBJ_ID obj_id   = KOS_new_object_with_prototype(ctx, proto_id);
             KOS_OBJ_ID prop_id;
             int        fin      = 0;
 
@@ -516,11 +516,11 @@ int main(void)
             OBJPTR(OBJECT, proto_id)->finalize = _finalize_1;
 
             /* Object references itself */
-            prop_id = KOS_new_cstring(yarn, "self");
+            prop_id = KOS_new_cstring(ctx, "self");
             TEST( ! IS_BAD_PTR(prop_id));
-            TEST(KOS_set_property(yarn, obj_id, prop_id, obj_id) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, obj_id, prop_id, obj_id) == KOS_SUCCESS);
 
-            TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+            TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
             /* Ensure finalize was run */
             TEST(fin == 1);
@@ -551,43 +551,43 @@ int main(void)
             KOS_OBJ_ID  obj_id;
             KOS_OBJ_REF ref;
 
-            array_id = KOS_new_array(yarn, 3);
+            array_id = KOS_new_array(ctx, 3);
             TEST( ! IS_BAD_PTR(array_id));
 
             ref.obj_id = array_id;
-            KOS_track_ref(yarn, &ref);
+            KOS_track_ref(ctx, &ref);
 
-            obj_id = KOS_new_builtin_function(yarn, _handler, 0);
+            obj_id = KOS_new_builtin_function(ctx, _handler, 0);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(_KOS_stack_push(yarn, obj_id) == KOS_SUCCESS);
+            TEST(_KOS_stack_push(ctx, obj_id) == KOS_SUCCESS);
 
-            obj_id = KOS_new_builtin_class(yarn, _handler, 0);
+            obj_id = KOS_new_builtin_class(ctx, _handler, 0);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(KOS_array_write(yarn, array_id, 0, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 0, obj_id) == KOS_SUCCESS);
 
-            obj_id = KOS_new_buffer(yarn, 128);
+            obj_id = KOS_new_buffer(ctx, 128);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(KOS_array_write(yarn, array_id, 1, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 1, obj_id) == KOS_SUCCESS);
 
-            obj_id = KOS_new_object_walk(yarn, obj_id, KOS_SHALLOW);
+            obj_id = KOS_new_object_walk(ctx, obj_id, KOS_SHALLOW);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(KOS_array_write(yarn, array_id, 2, obj_id) == KOS_SUCCESS);
+            TEST(KOS_array_write(ctx, array_id, 2, obj_id) == KOS_SUCCESS);
 
-            obj_id = KOS_new_cstring(yarn, "0123456789012345678901234567890123456789");
+            obj_id = KOS_new_cstring(ctx, "0123456789012345678901234567890123456789");
             TEST( ! IS_BAD_PTR(obj_id));
 
-            yarn->retval = obj_id;
+            ctx->retval = obj_id;
 
-            obj_id = KOS_string_slice(yarn, obj_id, 1, -1);
+            obj_id = KOS_string_slice(ctx, obj_id, 1, -1);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            yarn->exception = obj_id;
+            ctx->exception = obj_id;
 
-            TEST(KOS_collect_garbage(yarn, &stats) == KOS_ERROR_EXCEPTION);
+            TEST(KOS_collect_garbage(ctx, &stats) == KOS_ERROR_EXCEPTION);
 
             /* The following objects have been evacuated:
              * - 2 for array
@@ -615,15 +615,15 @@ int main(void)
             TEST(stats.size_freed         >  0);
             TEST(stats.size_kept          >  0);
 
-            KOS_untrack_ref(yarn, &ref);
+            KOS_untrack_ref(ctx, &ref);
 
-            _KOS_stack_pop(yarn);
-            yarn->stack = KOS_BADPTR;
+            _KOS_stack_pop(ctx);
+            ctx->stack = KOS_BADPTR;
 
-            yarn->retval    = KOS_BADPTR;
-            yarn->exception = KOS_BADPTR;
+            ctx->retval    = KOS_BADPTR;
+            ctx->exception = KOS_BADPTR;
 
-            TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+            TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
             TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
             TEST(stats.num_objs_freed     == 16);
@@ -643,15 +643,15 @@ int main(void)
     {
         struct _KOS_GC_STATS stats;
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        TEST(KOS_new_array(yarn, 0) != KOS_BADPTR);
+        TEST(KOS_new_array(ctx, 0) != KOS_BADPTR);
 
-        _KOS_heap_release_thread_page(yarn);
+        _KOS_heap_release_thread_page(ctx);
 
-        TEST(KOS_new_array(yarn, 0) != KOS_BADPTR);
+        TEST(KOS_new_array(ctx, 0) != KOS_BADPTR);
 
-        TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
         TEST(stats.num_objs_freed     == 2);
@@ -671,12 +671,12 @@ int main(void)
         struct _KOS_GC_STATS stats;
         KOS_OBJ_REF          obj_ref[2];
 
-        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        TEST(KOS_collect_garbage(yarn, 0) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
-        obj_ref[0].obj_id = KOS_new_buffer(yarn, _KOS_POOL_SIZE / 2U);
-        obj_ref[1].obj_id = KOS_new_buffer(yarn, _KOS_POOL_SIZE / 2U);
+        obj_ref[0].obj_id = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
+        obj_ref[1].obj_id = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
 
         TEST( ! IS_BAD_PTR(obj_ref[0].obj_id));
         TEST( ! IS_BAD_PTR(obj_ref[1].obj_id));
@@ -684,12 +684,12 @@ int main(void)
         _fill_buffer(obj_ref[0].obj_id, 0x0A);
         _fill_buffer(obj_ref[1].obj_id, 0x0B);
 
-        KOS_track_ref(yarn, &obj_ref[0]);
-        KOS_track_ref(yarn, &obj_ref[1]);
+        KOS_track_ref(ctx, &obj_ref[0]);
+        KOS_track_ref(ctx, &obj_ref[1]);
 
-        _KOS_heap_release_thread_page(yarn);
+        _KOS_heap_release_thread_page(ctx);
 
-        TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 2);
         TEST(stats.num_objs_freed     == 0);
@@ -703,10 +703,10 @@ int main(void)
         TEST(_test_buffer(obj_ref[0].obj_id, 0x0A, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
         TEST(_test_buffer(obj_ref[1].obj_id, 0x0B, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
 
-        KOS_untrack_ref(yarn, &obj_ref[0]);
-        KOS_untrack_ref(yarn, &obj_ref[1]);
+        KOS_untrack_ref(ctx, &obj_ref[0]);
+        KOS_untrack_ref(ctx, &obj_ref[1]);
 
-        TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
         TEST(stats.num_objs_freed     == 4);
@@ -742,19 +742,19 @@ int main(void)
                 unsigned             i;
                 const unsigned       num_objs = (unsigned)(sizeof(obj_ref) / sizeof(obj_ref[0]));
 
-                TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+                TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-                TEST(KOS_collect_garbage(yarn, 0) == KOS_SUCCESS);
+                TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
                 for (i = 0; i < num_objs; ++i) {
-                    obj_ref[i].obj_id = KOS_new_buffer(yarn, size);
+                    obj_ref[i].obj_id = KOS_new_buffer(ctx, size);
                     TEST( ! IS_BAD_PTR(obj_ref[i].obj_id));
-                    KOS_track_ref(yarn, &obj_ref[i]);
+                    KOS_track_ref(ctx, &obj_ref[i]);
 
                     _fill_buffer(obj_ref[i].obj_id, i);
                 }
 
-                TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+                TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
                 TEST(stats.num_objs_evacuated >= base_stats.num_objs_evacuated);
                 TEST(stats.num_objs_freed     == 0);
@@ -767,10 +767,10 @@ int main(void)
 
                 for (i = 0; i < num_objs; ++i) {
                     TEST(_test_buffer(obj_ref[i].obj_id, i, size) == KOS_SUCCESS);
-                    KOS_untrack_ref(yarn, &obj_ref[i]);
+                    KOS_untrack_ref(ctx, &obj_ref[i]);
                 }
 
-                TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
+                TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
                 KOS_instance_destroy(&inst);
             }

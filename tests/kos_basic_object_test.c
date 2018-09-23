@@ -36,9 +36,9 @@ int main(void)
     const intptr_t min_small_int = -max_small_int - 1;
 
     KOS_INSTANCE inst;
-    KOS_YARN     yarn;
+    KOS_CONTEXT  ctx;
 
-    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
     TEST(min_small_int < 0);
     TEST(max_small_int > 0);
@@ -79,8 +79,8 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID integer_a = KOS_new_int(yarn, min_small_int-1);
-        const KOS_OBJ_ID integer_b = KOS_new_int(yarn, max_small_int+1);
+        const KOS_OBJ_ID integer_a = KOS_new_int(ctx, min_small_int-1);
+        const KOS_OBJ_ID integer_b = KOS_new_int(ctx, max_small_int+1);
 
         TEST(!IS_BAD_PTR(integer_a));
         TEST(!IS_BAD_PTR(integer_b));
@@ -115,8 +115,8 @@ int main(void)
         const intptr_t max_int = (intptr_t)(~(uintptr_t)0 >> 1);
         const intptr_t min_int = -max_int - 1;
 
-        const KOS_OBJ_ID integer_a = KOS_new_int(yarn, min_int);
-        const KOS_OBJ_ID integer_b = KOS_new_int(yarn, max_int);
+        const KOS_OBJ_ID integer_a = KOS_new_int(ctx, min_int);
+        const KOS_OBJ_ID integer_b = KOS_new_int(ctx, max_int);
 
         TEST(!IS_BAD_PTR(integer_a));
         TEST(!IS_BAD_PTR(integer_b));
@@ -148,7 +148,7 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID number = KOS_new_float(yarn, 1.5);
+        const KOS_OBJ_ID number = KOS_new_float(ctx, 1.5);
 
         TEST(!IS_BAD_PTR(number));
 
@@ -204,7 +204,7 @@ int main(void)
     /************************************************************************/
     {
         const uint8_t    str[] = { 1, 0, 3 };
-        const KOS_OBJ_ID obj   = KOS_new_const_string(yarn, str, sizeof(str), KOS_STRING_ELEM_8);
+        const KOS_OBJ_ID obj   = KOS_new_const_string(ctx, str, sizeof(str), KOS_STRING_ELEM_8);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -224,7 +224,7 @@ int main(void)
     /************************************************************************/
     {
         const uint16_t   str[] = { 1 };
-        const KOS_OBJ_ID obj   = KOS_new_const_string(yarn, str, sizeof(str)/2, KOS_STRING_ELEM_16);
+        const KOS_OBJ_ID obj   = KOS_new_const_string(ctx, str, sizeof(str)/2, KOS_STRING_ELEM_16);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -244,7 +244,7 @@ int main(void)
     /************************************************************************/
     {
         const uint32_t   str[] = { 2, 3 };
-        const KOS_OBJ_ID obj   = KOS_new_const_string(yarn, str, sizeof(str)/4, KOS_STRING_ELEM_32);
+        const KOS_OBJ_ID obj   = KOS_new_const_string(ctx, str, sizeof(str)/4, KOS_STRING_ELEM_32);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -263,7 +263,7 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID obj = KOS_new_array(yarn, 16);
+        const KOS_OBJ_ID obj = KOS_new_array(ctx, 16);
 
         TEST(!IS_BAD_PTR(obj));
 
@@ -284,7 +284,7 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID obj = KOS_new_object(yarn);
+        const KOS_OBJ_ID obj = KOS_new_object(ctx);
 
         TEST(!IS_BAD_PTR(obj));
 

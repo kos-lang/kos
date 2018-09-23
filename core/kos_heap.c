@@ -126,9 +126,9 @@ static void *_list_pop(void **list_ptr)
 
 #endif
 
-static struct _KOS_HEAP *_get_heap(KOS_YARN yarn)
+static struct _KOS_HEAP *_get_heap(KOS_CONTEXT ctx)
 {
-    return &yarn->inst->heap;
+    return &ctx->inst->heap;
 }
 
 int _KOS_heap_init(KOS_INSTANCE *inst)
@@ -457,40 +457,40 @@ static KOS_OBJ_HEADER *_alloc_object_from_page(_KOS_PAGE           *page,
 }
 
 void *_KOS_heap_early_alloc(KOS_INSTANCE        *inst,
-                            KOS_YARN             yarn,
+                            KOS_CONTEXT          ctx,
                             enum KOS_OBJECT_TYPE object_type,
                             uint32_t             size)
 {
     const uint32_t num_slots = (size + sizeof(_KOS_SLOT) - 1) >> _KOS_OBJ_ALIGN_BITS;
 
-    if ( ! yarn->cur_page) {
+    if ( ! ctx->cur_page) {
 
         _KOS_lock_mutex(&inst->heap.mutex);
 
-        yarn->cur_page = _alloc_page(&inst->heap);
+        ctx->cur_page = _alloc_page(&inst->heap);
 
         _KOS_unlock_mutex(&inst->heap.mutex);
 
-        if ( ! yarn->cur_page)
+        if ( ! ctx->cur_page)
             return 0;
     }
 
-    return _alloc_object_from_page(yarn->cur_page, object_type, num_slots);
+    return _alloc_object_from_page(ctx->cur_page, object_type, num_slots);
 }
 
-void _KOS_heap_release_thread_page(KOS_YARN yarn)
+void _KOS_heap_release_thread_page(KOS_CONTEXT ctx)
 {
-    if (yarn->cur_page) {
+    if (ctx->cur_page) {
 
-        struct _KOS_HEAP *const heap = &yarn->inst->heap;
+        struct _KOS_HEAP *const heap = &ctx->inst->heap;
 
         _KOS_lock_mutex(&heap->mutex);
 
-        PUSH_LIST(heap->non_full_pages, yarn->cur_page);
+        PUSH_LIST(heap->non_full_pages, ctx->cur_page);
 
         _KOS_unlock_mutex(&heap->mutex);
 
-        yarn->cur_page = 0;
+        ctx->cur_page = 0;
     }
 }
 
@@ -517,12 +517,12 @@ static KOS_OBJ_HEADER *_setup_huge_object_in_page(struct _KOS_HEAP    *heap,
     return hdr;
 }
 
-static void *_alloc_huge_object(KOS_YARN             yarn,
+static void *_alloc_huge_object(KOS_CONTEXT          ctx,
                                 enum KOS_ALLOC_HINT  alloc_hint,
                                 enum KOS_OBJECT_TYPE object_type,
                                 uint32_t             size)
 {
-    struct _KOS_HEAP *heap     = _get_heap(yarn);
+    struct _KOS_HEAP *heap     = _get_heap(ctx);
     _KOS_PAGE       **page_ptr = &heap->free_pages;
     KOS_OBJ_HEADER   *hdr      = 0;
     _KOS_PAGE        *page;
@@ -625,7 +625,7 @@ static void *_alloc_huge_object(KOS_YARN             yarn,
             assert((uint8_t *)hdr + size <= (uint8_t *)pool->usable_ptr + pool->usable_size);
         }
         else
-            KOS_raise_exception(yarn, _get_heap(yarn)->str_oom_id);
+            KOS_raise_exception(ctx, _get_heap(ctx)->str_oom_id);
     }
 
     _KOS_unlock_mutex(&heap->mutex);
@@ -638,19 +638,19 @@ static int _is_page_full(_KOS_PAGE *page)
     return KOS_atomic_read_u32(page->num_allocated) == page->num_slots;
 }
 
-static void *_alloc_object(KOS_YARN             yarn,
+static void *_alloc_object(KOS_CONTEXT          ctx,
                            enum KOS_ALLOC_HINT  alloc_hint,
                            enum KOS_OBJECT_TYPE object_type,
                            uint32_t             size)
 {
-    _KOS_PAGE        *page       = yarn->cur_page;
+    _KOS_PAGE        *page       = ctx->cur_page;
     const uint32_t    num_slots  = (size + sizeof(_KOS_SLOT) - 1) >> _KOS_OBJ_ALIGN_BITS;
     unsigned          seek_depth = _KOS_MAX_PAGE_SEEK;
     struct _KOS_HEAP *heap;
     _KOS_PAGE       **page_ptr;
     KOS_OBJ_HEADER   *hdr        = 0;
 
-    KOS_instance_validate(yarn);
+    KOS_instance_validate(ctx);
 
     /* Fast path: allocate from a page held by this thread */
     if (page) {
@@ -664,7 +664,7 @@ static void *_alloc_object(KOS_YARN             yarn,
     /* Slow path: find a non-full page in the heap which has enough room or
      * allocate a new page. */
 
-    heap = _get_heap(yarn);
+    heap = _get_heap(ctx);
 
     _KOS_lock_mutex(&heap->mutex);
 
@@ -674,7 +674,7 @@ static void *_alloc_object(KOS_YARN             yarn,
 
         _KOS_unlock_mutex(&heap->mutex);
 
-        _help_gc(yarn);
+        _help_gc(ctx);
 
         _KOS_lock_mutex(&heap->mutex);
     }
@@ -715,7 +715,7 @@ static void *_alloc_object(KOS_YARN             yarn,
             else
                 PUSH_LIST(heap->non_full_pages, page);
 
-            yarn->cur_page = 0;
+            ctx->cur_page = 0;
         }
 
         /* Allocate a new page */
@@ -769,7 +769,7 @@ static void *_alloc_object(KOS_YARN             yarn,
 
             assert(page->num_slots >= num_slots);
 
-            yarn->cur_page = page;
+            ctx->cur_page = page;
 
             hdr = _alloc_object_from_page(page, object_type, num_slots);
 
@@ -778,42 +778,42 @@ static void *_alloc_object(KOS_YARN             yarn,
     }
 
     if ( ! hdr)
-        KOS_raise_exception(yarn, _get_heap(yarn)->str_oom_id);
+        KOS_raise_exception(ctx, _get_heap(ctx)->str_oom_id);
 
     _KOS_unlock_mutex(&heap->mutex);
 
     return hdr;
 }
 
-void *_KOS_alloc_object(KOS_YARN             yarn,
+void *_KOS_alloc_object(KOS_CONTEXT          ctx,
                         enum KOS_ALLOC_HINT  alloc_hint,
                         enum KOS_OBJECT_TYPE object_type,
                         uint32_t             size)
 {
     if (size > (_KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS))
     {
-        return _alloc_huge_object(yarn, alloc_hint, object_type, size);
+        return _alloc_huge_object(ctx, alloc_hint, object_type, size);
     }
     else
     {
-        return _alloc_object(yarn, alloc_hint, object_type, size);
+        return _alloc_object(ctx, alloc_hint, object_type, size);
     }
 }
 
-void *_KOS_alloc_object_page(KOS_YARN             yarn,
+void *_KOS_alloc_object_page(KOS_CONTEXT          ctx,
                              enum KOS_ALLOC_HINT  alloc_hint,
                              enum KOS_OBJECT_TYPE object_type)
 {
-    return _alloc_object(yarn, alloc_hint, object_type, _KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS);
+    return _alloc_object(ctx, alloc_hint, object_type, _KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS);
 }
 
-static void _release_current_page(KOS_YARN yarn)
+static void _release_current_page(KOS_CONTEXT ctx)
 {
-    _KOS_PAGE *page = yarn->cur_page;
+    _KOS_PAGE *page = ctx->cur_page;
 
     if (page) {
 
-        struct _KOS_HEAP *heap = _get_heap(yarn);
+        struct _KOS_HEAP *heap = _get_heap(ctx);
 
         _KOS_lock_mutex(&heap->mutex);
 
@@ -821,25 +821,25 @@ static void _release_current_page(KOS_YARN yarn)
 
         _KOS_unlock_mutex(&heap->mutex);
 
-        yarn->cur_page = 0;
+        ctx->cur_page = 0;
     }
 }
 
-static void _release_current_page_locked(KOS_YARN yarn)
+static void _release_current_page_locked(KOS_CONTEXT ctx)
 {
-    _KOS_PAGE *page = yarn->cur_page;
+    _KOS_PAGE *page = ctx->cur_page;
 
     if (page) {
 
-        struct _KOS_HEAP *heap = _get_heap(yarn);
+        struct _KOS_HEAP *heap = _get_heap(ctx);
 
         PUSH_LIST(heap->non_full_pages, page);
 
-        yarn->cur_page = 0;
+        ctx->cur_page = 0;
     }
 }
 
-static void _stop_the_world(KOS_YARN yarn)
+static void _stop_the_world(KOS_CONTEXT ctx)
 {
     /* TODO make all threads enter _help_gc() */
 }
@@ -1127,30 +1127,30 @@ static int _gray_to_black(struct _KOS_HEAP *heap)
     return marked;
 }
 
-static void _mark_from_thread_context(KOS_YARN yarn)
+static void _mark_from_thread_context(KOS_CONTEXT ctx)
 {
     KOS_OBJ_REF *ref;
 
-    if ( ! IS_BAD_PTR(yarn->exception))
-        _mark_object_black(yarn->exception);
-    if ( ! IS_BAD_PTR(yarn->retval))
-        _mark_object_black(yarn->retval);
-    if ( ! IS_BAD_PTR(yarn->stack))
-        _mark_object_black(yarn->stack);
+    if ( ! IS_BAD_PTR(ctx->exception))
+        _mark_object_black(ctx->exception);
+    if ( ! IS_BAD_PTR(ctx->retval))
+        _mark_object_black(ctx->retval);
+    if ( ! IS_BAD_PTR(ctx->stack))
+        _mark_object_black(ctx->stack);
 
-    ref = yarn->obj_refs;
+    ref = ctx->obj_refs;
     while (ref) {
         _mark_object_black((KOS_OBJ_ID)KOS_atomic_read_ptr(ref->obj_id));
         ref = ref->next;
     }
 }
 
-static void _mark_roots(KOS_YARN yarn)
+static void _mark_roots(KOS_CONTEXT ctx)
 {
-    KOS_INSTANCE *const inst = yarn->inst;
+    KOS_INSTANCE *const inst = ctx->inst;
 
     _mark_object_black(inst->empty_string);
-    _mark_object_black(_get_heap(yarn)->str_oom_id);
+    _mark_object_black(_get_heap(ctx)->str_oom_id);
 
     _mark_object_black(inst->prototypes.object_proto);
     _mark_object_black(inst->prototypes.number_proto);
@@ -1175,7 +1175,7 @@ static void _mark_roots(KOS_YARN yarn)
     _mark_object_black(inst->args);
 
     /* TODO go over all threads */
-    _mark_from_thread_context(yarn);
+    _mark_from_thread_context(ctx);
 }
 
 static void _get_flat_list(_KOS_PAGE *page, _KOS_PAGE ***begin, _KOS_PAGE ***end)
@@ -1355,12 +1355,12 @@ static void _reclaim_free_pages(struct _KOS_HEAP     *heap,
     } while (lists);
 }
 
-static int _evacuate_object(KOS_YARN        yarn,
+static int _evacuate_object(KOS_CONTEXT     ctx,
                             KOS_OBJ_HEADER *hdr,
                             uint32_t        size)
 {
     int             error   = KOS_SUCCESS;
-    KOS_OBJ_HEADER *new_obj = (KOS_OBJ_HEADER *)_KOS_alloc_object(yarn,
+    KOS_OBJ_HEADER *new_obj = (KOS_OBJ_HEADER *)_KOS_alloc_object(ctx,
                                                                   KOS_ALLOC_DEFAULT,
                                                                   (enum KOS_OBJECT_TYPE)hdr->type,
                                                                   size);
@@ -1491,9 +1491,9 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
     }
 }
 
-static void _update_after_evacuation(KOS_YARN yarn)
+static void _update_after_evacuation(KOS_CONTEXT ctx)
 {
-    KOS_INSTANCE *const inst             = yarn->inst;
+    KOS_INSTANCE *const inst             = ctx->inst;
     struct _KOS_HEAP   *heap             = &inst->heap;
     _KOS_PAGE          *page             = heap->full_pages;
     int                 non_full_checked = 0;
@@ -1557,44 +1557,44 @@ static void _update_after_evacuation(KOS_YARN yarn)
     /* Update object pointers in thread contexts */
 
     {
-        yarn = &inst->threads.main_thread;
+        ctx = &inst->threads.main_thread;
 
         _KOS_lock_mutex(&inst->threads.mutex);
 
-        while (yarn) {
+        while (ctx) {
 
-            KOS_OBJ_REF *ref = yarn->obj_refs;
+            KOS_OBJ_REF *ref = ctx->obj_refs;
 
             while (ref) {
                 _update_child_ptr((KOS_OBJ_ID *)&ref->obj_id);
                 ref = ref->next;
             }
 
-            _update_child_ptr(&yarn->exception);
-            _update_child_ptr(&yarn->retval);
-            _update_child_ptr(&yarn->stack);
+            _update_child_ptr(&ctx->exception);
+            _update_child_ptr(&ctx->retval);
+            _update_child_ptr(&ctx->stack);
 
-            yarn = yarn->next;
+            ctx = ctx->next;
         }
 
         _KOS_unlock_mutex(&inst->threads.mutex);
     }
 }
 
-static int _evacuate(KOS_YARN              yarn,
+static int _evacuate(KOS_CONTEXT           ctx,
                      _KOS_PAGE           **free_pages,
                      struct _KOS_GC_STATS *out_stats)
 {
-    struct _KOS_HEAP *heap           = _get_heap(yarn);
+    struct _KOS_HEAP *heap           = _get_heap(ctx);
     int               error          = KOS_SUCCESS;
     _KOS_PAGE        *page           = heap->full_pages;
     _KOS_PAGE        *non_full_pages = heap->non_full_pages;
     _KOS_PAGE        *next;
-    KOS_OBJ_ID        exception      = KOS_get_exception(yarn);
+    KOS_OBJ_ID        exception      = KOS_get_exception(ctx);
 
     struct _KOS_GC_STATS stats = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
-    KOS_clear_exception(yarn);
+    KOS_clear_exception(ctx);
 
     heap->full_pages     = 0;
     heap->non_full_pages = 0;
@@ -1641,18 +1641,18 @@ static int _evacuate(KOS_YARN              yarn,
             assert(color != GRAY);
 
             if (color) {
-                if (_evacuate_object(yarn, hdr, size)) {
+                if (_evacuate_object(ctx, hdr, size)) {
 
-                    KOS_clear_exception(yarn);
+                    KOS_clear_exception(ctx);
 
-                    _release_current_page_locked(yarn);
+                    _release_current_page_locked(ctx);
 
-                    _update_after_evacuation(yarn);
+                    _update_after_evacuation(ctx);
 
                     _reclaim_free_pages(heap, *free_pages, &stats);
                     *free_pages = 0;
 
-                    error = _evacuate_object(yarn, hdr, size);
+                    error = _evacuate_object(ctx, hdr, size);
 
                     if (error) {
                         uint8_t       *begin     = (uint8_t *)page + _KOS_SLOTS_OFFS;
@@ -1683,7 +1683,7 @@ static int _evacuate(KOS_YARN              yarn,
 
                 if (obj->finalize) {
 
-                    obj->finalize(yarn, KOS_atomic_read_ptr(obj->priv));
+                    obj->finalize(ctx, KOS_atomic_read_ptr(obj->priv));
 
                     ++stats.num_objs_finalized;
                 }
@@ -1706,17 +1706,17 @@ _error:
     if (out_stats)
         *out_stats = stats;
 
-    _release_current_page_locked(yarn);
+    _release_current_page_locked(ctx);
 
     if ( ! IS_BAD_PTR(exception))
-        yarn->exception = exception;
+        ctx->exception = exception;
 
     return error;
 }
 
-static int _help_gc(KOS_YARN yarn)
+static int _help_gc(KOS_CONTEXT ctx)
 {
-    struct _KOS_HEAP *heap = _get_heap(yarn);
+    struct _KOS_HEAP *heap = _get_heap(ctx);
 
     while (KOS_atomic_read_u32(heap->gc_state) != GC_INACTIVE)
         /* TODO actually help garbage collector */
@@ -1725,31 +1725,31 @@ static int _help_gc(KOS_YARN yarn)
     return KOS_SUCCESS;
 }
 
-int KOS_collect_garbage(KOS_YARN              yarn,
+int KOS_collect_garbage(KOS_CONTEXT           ctx,
                         struct _KOS_GC_STATS *stats)
 {
     int               error      = KOS_SUCCESS;
-    struct _KOS_HEAP *heap       = _get_heap(yarn);
+    struct _KOS_HEAP *heap       = _get_heap(ctx);
     _KOS_PAGE        *free_pages = 0;
 
     if ( ! KOS_atomic_cas_u32(heap->gc_state, GC_INACTIVE, GC_INIT))
-        return _help_gc(yarn);
+        return _help_gc(ctx);
 
-    _release_current_page(yarn);
+    _release_current_page(ctx);
 
     _clear_marking(heap);
 
-    _mark_roots(yarn);
+    _mark_roots(ctx);
 
-    _stop_the_world(yarn); /* Remaining threads enter _help_gc() */
+    _stop_the_world(ctx); /* Remaining threads enter _help_gc() */
 
     /* TODO mark frames in remaining threads */
 
     while (_gray_to_black(heap));
 
-    error = _evacuate(yarn, &free_pages, stats);
+    error = _evacuate(ctx, &free_pages, stats);
 
-    _update_after_evacuation(yarn);
+    _update_after_evacuation(ctx);
 
     _reclaim_free_pages(heap, free_pages, stats);
 
@@ -1757,7 +1757,7 @@ int KOS_collect_garbage(KOS_YARN              yarn,
 
     KOS_atomic_write_u32(heap->gc_state, GC_INACTIVE);
 
-    if ( ! error && KOS_is_exception_pending(yarn))
+    if ( ! error && KOS_is_exception_pending(ctx))
         error = KOS_ERROR_EXCEPTION;
 
     return error;

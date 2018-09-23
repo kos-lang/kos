@@ -59,10 +59,10 @@ struct _KOS_MUTEX_OBJECT;
 typedef struct _KOS_MUTEX_OBJECT *_KOS_MUTEX;
 
 struct _KOS_THREAD_CONTEXT;
-typedef struct _KOS_THREAD_CONTEXT *KOS_YARN;
+typedef struct _KOS_THREAD_CONTEXT *KOS_CONTEXT;
 
-typedef void (*_KOS_THREAD_PROC)(KOS_YARN yarn,
-                                 void    *cookie);
+typedef void (*_KOS_THREAD_PROC)(KOS_CONTEXT ctx,
+                                 void       *cookie);
 
 #ifdef _WIN32
 typedef uint32_t _KOS_TLS_KEY;
@@ -500,12 +500,12 @@ void _KOS_spin_unlock(KOS_ATOMIC(uint32_t) *lock);
 
 void _KOS_yield(void);
 
-int _KOS_thread_create(KOS_YARN         yarn,
+int _KOS_thread_create(KOS_CONTEXT      ctx,
                        _KOS_THREAD_PROC proc,
                        void            *cookie,
                        _KOS_THREAD     *thread);
 
-int _KOS_thread_join(KOS_YARN    yarn,
+int _KOS_thread_join(KOS_CONTEXT ctx,
                      _KOS_THREAD thread);
 
 int _KOS_is_current_thread(_KOS_THREAD thread);

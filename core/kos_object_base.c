@@ -37,7 +37,7 @@ static const char str_err_cannot_override_prototype[] = "cannot override prototy
 static const char str_err_not_class[]                 = "object is not a class";
 static const char str_prototype[]                     = "prototype";
 
-KOS_OBJ_ID KOS_new_int(KOS_YARN yarn, int64_t value)
+KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
 {
     KOS_OBJ_ID   obj_id = TO_SMALL_INT((intptr_t)value);
     KOS_INTEGER *integer;
@@ -45,7 +45,7 @@ KOS_OBJ_ID KOS_new_int(KOS_YARN yarn, int64_t value)
     if (GET_SMALL_INT(obj_id) == value)
         return obj_id;
 
-    integer = (KOS_INTEGER *)_KOS_alloc_object(yarn,
+    integer = (KOS_INTEGER *)_KOS_alloc_object(ctx,
                                                KOS_ALLOC_DEFAULT,
                                                OBJ_INTEGER,
                                                sizeof(KOS_INTEGER));
@@ -58,9 +58,9 @@ KOS_OBJ_ID KOS_new_int(KOS_YARN yarn, int64_t value)
     return OBJID(INTEGER, integer);
 }
 
-KOS_OBJ_ID KOS_new_float(KOS_YARN yarn, double value)
+KOS_OBJ_ID KOS_new_float(KOS_CONTEXT ctx, double value)
 {
-    KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(yarn,
+    KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(ctx,
                                                        KOS_ALLOC_DEFAULT,
                                                        OBJ_FLOAT,
                                                        sizeof(KOS_FLOAT));
@@ -73,9 +73,9 @@ KOS_OBJ_ID KOS_new_float(KOS_YARN yarn, double value)
     return OBJID(FLOAT, number);
 }
 
-KOS_OBJ_ID KOS_new_function(KOS_YARN yarn)
+KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
 {
-    KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(yarn,
+    KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(ctx,
                                                            KOS_ALLOC_DEFAULT,
                                                            OBJ_FUNCTION,
                                                            sizeof(KOS_FUNCTION));
@@ -99,9 +99,9 @@ KOS_OBJ_ID KOS_new_function(KOS_YARN yarn)
     return OBJID(FUNCTION, func);
 }
 
-static KOS_OBJ_ID _get_prototype(KOS_YARN   yarn,
-                                 KOS_OBJ_ID this_obj,
-                                 KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _get_prototype(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  this_obj,
+                                 KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -114,16 +114,16 @@ static KOS_OBJ_ID _get_prototype(KOS_YARN   yarn,
         assert( ! IS_BAD_PTR(ret));
     }
     else {
-        KOS_raise_exception_cstring(yarn, str_err_not_class);
+        KOS_raise_exception_cstring(ctx, str_err_not_class);
         ret = KOS_BADPTR;
     }
 
     return ret;
 }
 
-static KOS_OBJ_ID _set_prototype(KOS_YARN   yarn,
-                                 KOS_OBJ_ID this_obj,
-                                 KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID _set_prototype(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  this_obj,
+                                 KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -131,11 +131,11 @@ static KOS_OBJ_ID _set_prototype(KOS_YARN   yarn,
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
 
-        KOS_OBJ_ID                 arg     = KOS_array_read(yarn, args_obj, 0);
+        KOS_OBJ_ID                 arg     = KOS_array_read(ctx, args_obj, 0);
         const KOS_FUNCTION_HANDLER handler = OBJPTR(CLASS, this_obj)->handler;
 
         if (handler) {
-            KOS_raise_exception_cstring(yarn, str_err_cannot_override_prototype);
+            KOS_raise_exception_cstring(ctx, str_err_cannot_override_prototype);
             arg = KOS_BADPTR;
         }
 
@@ -146,14 +146,14 @@ static KOS_OBJ_ID _set_prototype(KOS_YARN   yarn,
         }
     }
     else
-        KOS_raise_exception_cstring(yarn, str_err_not_class);
+        KOS_raise_exception_cstring(ctx, str_err_not_class);
 
     return ret;
 }
 
-KOS_OBJ_ID KOS_new_class(KOS_YARN yarn, KOS_OBJ_ID proto_obj)
+KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 {
-    KOS_CLASS *func = (KOS_CLASS *)_KOS_alloc_object(yarn,
+    KOS_CLASS *func = (KOS_CLASS *)_KOS_alloc_object(ctx,
                                                      KOS_ALLOC_DEFAULT,
                                                      OBJ_CLASS,
                                                      sizeof(KOS_CLASS));
@@ -174,10 +174,10 @@ KOS_OBJ_ID KOS_new_class(KOS_YARN yarn, KOS_OBJ_ID proto_obj)
         KOS_atomic_write_ptr(func->prototype, proto_obj);
         KOS_atomic_write_ptr(func->props,     KOS_BADPTR);
 
-        if (KOS_set_builtin_dynamic_property(yarn,
+        if (KOS_set_builtin_dynamic_property(ctx,
                                              OBJID(CLASS, func),
-                                             KOS_instance_get_cstring(yarn, str_prototype),
-                                             yarn->inst->modules.init_module,
+                                             KOS_instance_get_cstring(ctx, str_prototype),
+                                             ctx->inst->modules.init_module,
                                              _get_prototype,
                                              _set_prototype))
             func = 0; /* object is garbage collected */
@@ -186,11 +186,11 @@ KOS_OBJ_ID KOS_new_class(KOS_YARN yarn, KOS_OBJ_ID proto_obj)
     return OBJID(CLASS, func);
 }
 
-KOS_OBJ_ID KOS_new_builtin_function(KOS_YARN             yarn,
+KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args)
 {
-    KOS_OBJ_ID func_obj = KOS_new_function(yarn);
+    KOS_OBJ_ID func_obj = KOS_new_function(ctx);
 
     if ( ! IS_BAD_PTR(func_obj)) {
         assert(min_args >= 0 && min_args < 256);
@@ -202,16 +202,16 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_YARN             yarn,
     return func_obj;
 }
 
-KOS_OBJ_ID KOS_new_builtin_class(KOS_YARN             yarn,
+KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_FUNCTION_HANDLER handler,
                                  int                  min_args)
 {
     KOS_OBJ_ID func_obj  = KOS_BADPTR;
-    KOS_OBJ_ID proto_obj = KOS_new_object(yarn);
+    KOS_OBJ_ID proto_obj = KOS_new_object(ctx);
 
     if ( ! IS_BAD_PTR(proto_obj)) {
 
-        func_obj = KOS_new_class(yarn, proto_obj);
+        func_obj = KOS_new_class(ctx, proto_obj);
 
         if ( ! IS_BAD_PTR(func_obj)) {
             assert(min_args >= 0 && min_args < 256);
@@ -224,11 +224,11 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_YARN             yarn,
     return func_obj;
 }
 
-KOS_OBJ_ID KOS_new_dynamic_prop(KOS_YARN   yarn,
-                                KOS_OBJ_ID getter,
-                                KOS_OBJ_ID setter)
+KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  getter,
+                                KOS_OBJ_ID  setter)
 {
-    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(yarn,
+    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(ctx,
                                                                        KOS_ALLOC_DEFAULT,
                                                                        OBJ_DYNAMIC_PROP,
                                                                        sizeof(KOS_DYNAMIC_PROP));

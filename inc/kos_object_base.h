@@ -274,8 +274,8 @@ typedef union _KOS_STRING {
     struct _KOS_STRING_REF   ref;
 } KOS_STRING;
 
-typedef void (*KOS_FINALIZE)(KOS_YARN yarn,
-                             void    *priv);
+typedef void (*KOS_FINALIZE)(KOS_CONTEXT ctx,
+                             void       *priv);
 
 typedef struct _KOS_OBJECT {
     KOS_OBJ_HEADER         header;
@@ -293,9 +293,9 @@ typedef struct _KOS_BUFFER {
 
 typedef struct _KOS_BUFFER KOS_ARRAY;
 
-typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_YARN   yarn,
-                                           KOS_OBJ_ID this_obj,
-                                           KOS_OBJ_ID args_obj);
+typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_CONTEXT ctx,
+                                           KOS_OBJ_ID  this_obj,
+                                           KOS_OBJ_ID  args_obj);
 
 enum _KOS_FUNCTION_STATE {
     KOS_FUN,            /* regular function                                     */
@@ -407,28 +407,28 @@ enum KOS_ALLOC_HINT {
 extern "C" {
 #endif
 
-KOS_OBJ_ID KOS_new_int(KOS_YARN  yarn,
-                       int64_t   value);
+KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx,
+                       int64_t     value);
 
-KOS_OBJ_ID KOS_new_float(KOS_YARN  yarn,
-                         double    value);
+KOS_OBJ_ID KOS_new_float(KOS_CONTEXT ctx,
+                         double      value);
 
-KOS_OBJ_ID KOS_new_function(KOS_YARN yarn);
+KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx);
 
-KOS_OBJ_ID KOS_new_class(KOS_YARN   yarn,
-                         KOS_OBJ_ID proto_obj);
+KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  proto_obj);
 
-KOS_OBJ_ID KOS_new_builtin_function(KOS_YARN             yarn,
+KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args);
 
-KOS_OBJ_ID KOS_new_builtin_class(KOS_YARN             yarn,
+KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_FUNCTION_HANDLER handler,
                                  int                  min_args);
 
-KOS_OBJ_ID KOS_new_dynamic_prop(KOS_YARN   yarn,
-                                KOS_OBJ_ID getter,
-                                KOS_OBJ_ID setter);
+KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  getter,
+                                KOS_OBJ_ID  setter);
 
 #ifdef __cplusplus
 }

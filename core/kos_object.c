@@ -80,17 +80,17 @@ DECLARE_STATIC_CONST_OBJECT(reserved)  = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB2)
  * which is part of strategy to avoid race conditions. */
 #define RESERVED  KOS_CONST_ID(reserved)
 
-KOS_OBJ_ID KOS_new_object(KOS_YARN yarn)
+KOS_OBJ_ID KOS_new_object(KOS_CONTEXT ctx)
 {
-    KOS_INSTANCE *const inst = yarn->inst;
+    KOS_INSTANCE *const inst = ctx->inst;
 
-    return KOS_new_object_with_prototype(yarn, inst->prototypes.object_proto);
+    return KOS_new_object_with_prototype(ctx, inst->prototypes.object_proto);
 }
 
-KOS_OBJ_ID KOS_new_object_with_prototype(KOS_YARN   yarn,
-                                         KOS_OBJ_ID prototype)
+KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
+                                         KOS_OBJ_ID  prototype)
 {
-    KOS_OBJECT *obj = (KOS_OBJECT *)_KOS_alloc_object(yarn,
+    KOS_OBJECT *obj = (KOS_OBJECT *)_KOS_alloc_object(ctx,
                                                       KOS_ALLOC_DEFAULT,
                                                       OBJ_OBJECT,
                                                       sizeof(KOS_OBJECT));
@@ -132,10 +132,10 @@ static int _has_properties(KOS_OBJ_ID obj_id)
     return type == OBJ_OBJECT || type == OBJ_CLASS;
 }
 
-static KOS_OBJECT_STORAGE *_alloc_buffer(KOS_YARN yarn, unsigned capacity)
+static KOS_OBJECT_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 {
     KOS_OBJECT_STORAGE *const storage = (KOS_OBJECT_STORAGE *)
-            _KOS_alloc_object(yarn,
+            _KOS_alloc_object(ctx,
                               KOS_ALLOC_DEFAULT,
                               OBJ_OBJECT_STORAGE,
                               sizeof(KOS_OBJECT_STORAGE) + (capacity - 1) * sizeof(KOS_PITEM));
@@ -181,7 +181,7 @@ static KOS_OBJECT_STORAGE *_read_props(KOS_ATOMIC(KOS_OBJ_ID) *ptr)
     return IS_BAD_PTR(obj_id) ? 0 : OBJPTR(OBJECT_STORAGE, obj_id);
 }
 
-static int _salvage_item(KOS_YARN            yarn,
+static int _salvage_item(KOS_CONTEXT         ctx,
                          KOS_PITEM          *old_item,
                          KOS_OBJECT_STORAGE *new_table,
                          uint32_t            new_capacity)
@@ -256,7 +256,7 @@ static int _salvage_item(KOS_YARN            yarn,
     return ret;
 }
 
-static void _copy_table(KOS_YARN                yarn,
+static void _copy_table(KOS_CONTEXT             ctx,
                         KOS_ATOMIC(KOS_OBJ_ID) *props,
                         KOS_OBJECT_STORAGE     *old_table,
                         KOS_OBJECT_STORAGE     *new_table)
@@ -270,7 +270,7 @@ static void _copy_table(KOS_YARN                yarn,
     KOS_atomic_add_i32(old_table->active_copies, 1);
 
     for (;;) {
-        if (_salvage_item(yarn, old_table->items + i, new_table, new_capacity)) {
+        if (_salvage_item(ctx, old_table->items + i, new_table, new_capacity)) {
             KOS_PERF_CNT(object_salvage_success);
             if (KOS_atomic_add_i32(old_table->num_slots_open, -1) == 1)
                 break;
@@ -332,7 +332,7 @@ static int _need_resize(KOS_OBJECT_STORAGE *table, unsigned num_reprobes)
     return 1;
 }
 
-static int _resize_prop_table(KOS_YARN            yarn,
+static int _resize_prop_table(KOS_CONTEXT         ctx,
                               KOS_OBJ_ID          obj_id,
                               KOS_OBJECT_STORAGE *old_table,
                               uint32_t            grow_factor)
@@ -351,13 +351,13 @@ static int _resize_prop_table(KOS_YARN            yarn,
 
     if (new_table) {
         /* Another thread is already resizing the property table, help it */
-        _copy_table(yarn, props, old_table, new_table);
+        _copy_table(ctx, props, old_table, new_table);
 
         KOS_PERF_CNT(object_resize_success);
     }
     else {
 
-        new_table = _alloc_buffer(yarn, new_capacity);
+        new_table = _alloc_buffer(ctx, new_capacity);
 
         if (new_table) {
             unsigned i;
@@ -379,7 +379,7 @@ static int _resize_prop_table(KOS_YARN            yarn,
                                        KOS_BADPTR,
                                        OBJID(OBJECT_STORAGE, new_table))) {
 
-                    _copy_table(yarn, props, old_table, new_table);
+                    _copy_table(ctx, props, old_table, new_table);
 
                     KOS_PERF_CNT(object_resize_success);
                 }
@@ -388,7 +388,7 @@ static int _resize_prop_table(KOS_YARN            yarn,
                     /* Help copy the new table if it is still being resized */
                     if (KOS_atomic_read_u32(old_table->active_copies)) {
                         new_table = _read_props(&old_table->new_prop_table);
-                        _copy_table(yarn, props, old_table, new_table);
+                        _copy_table(ctx, props, old_table, new_table);
                     }
 
                     KOS_PERF_CNT(object_resize_fail);
@@ -409,22 +409,22 @@ static int _resize_prop_table(KOS_YARN            yarn,
     return error;
 }
 
-KOS_OBJ_ID KOS_get_property(KOS_YARN   yarn,
-                            KOS_OBJ_ID obj_id,
-                            KOS_OBJ_ID prop)
+KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  obj_id,
+                            KOS_OBJ_ID  prop)
 {
     KOS_OBJ_ID retval = KOS_BADPTR;
 
     if (IS_BAD_PTR(obj_id) || IS_BAD_PTR(prop))
-        KOS_raise_exception_cstring(yarn, str_err_null_ptr);
+        KOS_raise_exception_cstring(ctx, str_err_null_ptr);
     else if (GET_OBJ_TYPE(prop) != OBJ_STRING)
-        KOS_raise_exception_cstring(yarn, str_err_not_string);
+        KOS_raise_exception_cstring(ctx, str_err_not_string);
     else {
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
         /* Find non-empty property table in this object or in a prototype */
         while ( ! props || ! _read_props(props)) {
-            obj_id = KOS_get_prototype(yarn, obj_id);
+            obj_id = KOS_get_prototype(ctx, obj_id);
 
             if (IS_BAD_PTR(obj_id)) {
                 props = 0;
@@ -453,7 +453,7 @@ KOS_OBJ_ID KOS_get_property(KOS_YARN   yarn,
                     KOS_OBJECT_STORAGE *new_prop_table = _read_props(&prop_table->new_prop_table);
                     assert(new_prop_table);
 
-                    _copy_table(yarn, props, prop_table, new_prop_table);
+                    _copy_table(ctx, props, prop_table, new_prop_table);
 
                     idx          = hash;
                     prop_table   = new_prop_table;
@@ -485,7 +485,7 @@ KOS_OBJ_ID KOS_get_property(KOS_YARN   yarn,
 
                     /* Find non-empty property table in a prototype */
                     do {
-                        obj_id = KOS_get_prototype(yarn, obj_id);
+                        obj_id = KOS_get_prototype(ctx, obj_id);
 
                         if (IS_BAD_PTR(obj_id)) /* end of prototype chain */
                             break;
@@ -494,7 +494,7 @@ KOS_OBJ_ID KOS_get_property(KOS_YARN   yarn,
                     } while ( ! props || ! _read_props(props));
 
                     if (IS_BAD_PTR(obj_id)) {
-                        KOS_raise_exception_cstring(yarn, str_err_no_property);
+                        KOS_raise_exception_cstring(ctx, str_err_no_property);
                         break;
                     }
                     assert(props);
@@ -513,7 +513,7 @@ KOS_OBJ_ID KOS_get_property(KOS_YARN   yarn,
             }
         }
         else
-            KOS_raise_exception_cstring(yarn, str_err_no_property);
+            KOS_raise_exception_cstring(ctx, str_err_no_property);
     }
 
     if (IS_BAD_PTR(retval))
@@ -524,8 +524,8 @@ KOS_OBJ_ID KOS_get_property(KOS_YARN   yarn,
     return retval;
 }
 
-int _KOS_object_copy_prop_table(KOS_YARN   yarn,
-                                KOS_OBJ_ID obj_id)
+int _KOS_object_copy_prop_table(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  obj_id)
 {
     KOS_ATOMIC(KOS_OBJ_ID) *props;
 
@@ -534,22 +534,22 @@ int _KOS_object_copy_prop_table(KOS_YARN   yarn,
 
     props = _get_properties(obj_id);
 
-    return _resize_prop_table(yarn, obj_id, props ? _read_props(props) : 0, 1U);
+    return _resize_prop_table(ctx, obj_id, props ? _read_props(props) : 0, 1U);
 }
 
-int KOS_set_property(KOS_YARN   yarn,
-                     KOS_OBJ_ID obj_id,
-                     KOS_OBJ_ID prop,
-                     KOS_OBJ_ID value)
+int KOS_set_property(KOS_CONTEXT ctx,
+                     KOS_OBJ_ID  obj_id,
+                     KOS_OBJ_ID  prop,
+                     KOS_OBJ_ID  value)
 {
     int error = KOS_ERROR_EXCEPTION;
 
     if (IS_BAD_PTR(obj_id) || IS_BAD_PTR(prop) || IS_BAD_PTR(value))
-        KOS_raise_exception_cstring(yarn, str_err_null_ptr);
+        KOS_raise_exception_cstring(ctx, str_err_null_ptr);
     else if (GET_OBJ_TYPE(prop) != OBJ_STRING)
-        KOS_raise_exception_cstring(yarn, str_err_not_string);
+        KOS_raise_exception_cstring(ctx, str_err_not_string);
     else if ( ! _has_properties(obj_id))
-        KOS_raise_exception_cstring(yarn, str_err_no_own_properties);
+        KOS_raise_exception_cstring(ctx, str_err_no_own_properties);
     else {
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
@@ -563,9 +563,9 @@ int KOS_set_property(KOS_YARN   yarn,
             }
             /* Allocate property table */
             else {
-                const int rerror = _resize_prop_table(yarn, obj_id, 0, 0U);
+                const int rerror = _resize_prop_table(ctx, obj_id, 0, 0U);
                 if (rerror) {
-                    assert(KOS_is_exception_pending(yarn));
+                    assert(KOS_is_exception_pending(ctx));
                     error = rerror;
                     props = 0;
                 }
@@ -619,7 +619,7 @@ int KOS_set_property(KOS_YARN   yarn,
 
                     /* Resize if property table is full */
                     if (num_reprobes > KOS_MAX_PROP_REPROBES) {
-                        error = _resize_prop_table(yarn, obj_id, prop_table, 2U);
+                        error = _resize_prop_table(ctx, obj_id, prop_table, 2U);
                         if (error)
                             break;
 
@@ -648,7 +648,7 @@ int KOS_set_property(KOS_YARN   yarn,
                         GET_OBJ_TYPE(oldval) == OBJ_DYNAMIC_PROP &&
                         value != TOMBSTONE) {
 
-                        KOS_raise_exception(yarn, oldval);
+                        KOS_raise_exception(ctx, oldval);
                         error = KOS_ERROR_SETTER;
                         break;
                     }
@@ -664,7 +664,7 @@ int KOS_set_property(KOS_YARN   yarn,
                     KOS_OBJECT_STORAGE *const new_prop_table = _read_props(&prop_table->new_prop_table);
                     assert(new_prop_table);
 
-                    _copy_table(yarn, props, prop_table, new_prop_table);
+                    _copy_table(ctx, props, prop_table, new_prop_table);
 
                     prop_table   = new_prop_table;
                     idx          = hash;
@@ -680,7 +680,7 @@ int KOS_set_property(KOS_YARN   yarn,
 
             /* Check if we need to resize the table */
             if ( ! error && _need_resize(prop_table, num_reprobes))
-                error = _resize_prop_table(yarn, obj_id, prop_table, 2U);
+                error = _resize_prop_table(ctx, obj_id, prop_table, 2U);
         }
     }
 
@@ -702,37 +702,37 @@ int KOS_set_property(KOS_YARN   yarn,
     return error;
 }
 
-int KOS_delete_property(KOS_YARN   yarn,
-                        KOS_OBJ_ID obj_id,
-                        KOS_OBJ_ID prop)
+int KOS_delete_property(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  obj_id,
+                        KOS_OBJ_ID  prop)
 {
     if (IS_BAD_PTR(prop)) {
-        KOS_raise_exception_cstring(yarn, str_err_null_ptr);
+        KOS_raise_exception_cstring(ctx, str_err_null_ptr);
         return KOS_ERROR_EXCEPTION;
     }
     else if (GET_OBJ_TYPE(prop) != OBJ_STRING) {
-        KOS_raise_exception_cstring(yarn, str_err_not_string);
+        KOS_raise_exception_cstring(ctx, str_err_not_string);
         return KOS_ERROR_EXCEPTION;
     }
     else if ( ! IS_BAD_PTR(obj_id) && ! _has_properties(obj_id))
         return KOS_SUCCESS;
     else
-        return KOS_set_property(yarn, obj_id, prop, TOMBSTONE);
+        return KOS_set_property(ctx, obj_id, prop, TOMBSTONE);
 }
 
-KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_YARN             yarn,
+KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                             KOS_OBJ_ID           module_obj,
                                             KOS_FUNCTION_HANDLER getter,
                                             KOS_FUNCTION_HANDLER setter)
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID dyn_prop = KOS_BADPTR;
-    KOS_OBJ_ID get_obj  = KOS_new_function(yarn);
+    KOS_OBJ_ID get_obj  = KOS_new_function(ctx);
     KOS_OBJ_ID set_obj;
 
     TRY_OBJID(get_obj);
 
-    set_obj = KOS_new_function(yarn);
+    set_obj = KOS_new_function(ctx);
     TRY_OBJID(set_obj);
 
     OBJPTR(FUNCTION, get_obj)->module          = module_obj;
@@ -743,14 +743,14 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_YARN             yarn,
     OBJPTR(FUNCTION, set_obj)->header.num_args = 1;
     OBJPTR(FUNCTION, set_obj)->handler         = setter;
 
-    dyn_prop = KOS_new_dynamic_prop(yarn, get_obj, set_obj);
+    dyn_prop = KOS_new_dynamic_prop(ctx, get_obj, set_obj);
     TRY_OBJID(dyn_prop);
 
 _error:
     return error ? KOS_BADPTR : dyn_prop;
 }
 
-int KOS_set_builtin_dynamic_property(KOS_YARN             yarn,
+int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop,
                                      KOS_OBJ_ID           module_obj,
@@ -758,21 +758,21 @@ int KOS_set_builtin_dynamic_property(KOS_YARN             yarn,
                                      KOS_FUNCTION_HANDLER setter)
 {
     int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID dyn_prop = KOS_new_builtin_dynamic_property(yarn, module_obj, getter, setter);
+    KOS_OBJ_ID dyn_prop = KOS_new_builtin_dynamic_property(ctx, module_obj, getter, setter);
 
     TRY_OBJID(dyn_prop);
 
-    TRY(KOS_set_property(yarn, obj_id, prop, dyn_prop));
+    TRY(KOS_set_property(ctx, obj_id, prop, dyn_prop));
 
 _error:
     return error;
 }
 
-KOS_OBJ_ID KOS_get_prototype(KOS_YARN   yarn,
-                             KOS_OBJ_ID obj_id)
+KOS_OBJ_ID KOS_get_prototype(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  obj_id)
 {
     KOS_OBJ_ID    ret  = KOS_BADPTR;
-    KOS_INSTANCE *inst = yarn->inst;
+    KOS_INSTANCE *inst = ctx->inst;
 
     assert( ! IS_BAD_PTR(obj_id));
 
@@ -835,12 +835,12 @@ KOS_OBJ_ID KOS_get_prototype(KOS_YARN   yarn,
     return ret;
 }
 
-int KOS_has_prototype(KOS_YARN   yarn,
-                      KOS_OBJ_ID obj_id,
-                      KOS_OBJ_ID proto_id)
+int KOS_has_prototype(KOS_CONTEXT ctx,
+                      KOS_OBJ_ID  obj_id,
+                      KOS_OBJ_ID  proto_id)
 {
     do {
-        obj_id = KOS_get_prototype(yarn, obj_id);
+        obj_id = KOS_get_prototype(ctx, obj_id);
         if (obj_id == proto_id)
             return 1;
     } while ( ! IS_BAD_PTR(obj_id));
@@ -848,12 +848,12 @@ int KOS_has_prototype(KOS_YARN   yarn,
     return 0;
 }
 
-KOS_OBJ_ID KOS_new_object_walk(KOS_YARN                   yarn,
+KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
                                KOS_OBJ_ID                 obj_id,
                                enum KOS_OBJECT_WALK_DEPTH deep)
 {
     int              error = KOS_SUCCESS;
-    KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(yarn,
+    KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
                                                                   KOS_ALLOC_DEFAULT,
                                                                   OBJ_OBJECT_WALK,
                                                                   sizeof(KOS_OBJECT_WALK));
@@ -862,7 +862,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_YARN                   yarn,
     if ( ! walk)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-    key_table_obj = KOS_new_object(yarn);
+    key_table_obj = KOS_new_object(ctx);
     TRY_OBJID(key_table_obj);
 
     walk->header.type = OBJ_OBJECT_WALK;
@@ -877,7 +877,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_YARN                   yarn,
 
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
-        obj_id = KOS_get_prototype(yarn, obj_id);
+        obj_id = KOS_get_prototype(ctx, obj_id);
 
         if ( ! props)
             continue;
@@ -900,7 +900,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_YARN                   yarn,
             if (value == CLOSED) {
                 KOS_OBJECT_STORAGE *new_prop_table = _read_props(&prop_table->new_prop_table);
 
-                _copy_table(yarn, props, prop_table, new_prop_table);
+                _copy_table(ctx, props, prop_table, new_prop_table);
 
                 prop_table = new_prop_table;
                 cur_item   = prop_table->items - 1;
@@ -908,7 +908,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_YARN                   yarn,
                 continue;
             }
 
-            TRY(KOS_set_property(yarn, key_table_obj, key, KOS_VOID));
+            TRY(KOS_set_property(ctx, key_table_obj, key, KOS_VOID));
         }
     } while ( ! IS_BAD_PTR(obj_id) && deep);
 
@@ -918,12 +918,12 @@ _error:
     return error ? KOS_BADPTR : OBJID(OBJECT_WALK, walk);
 }
 
-KOS_OBJ_ID KOS_new_object_walk_copy(KOS_YARN   yarn,
-                                    KOS_OBJ_ID walk_id)
+KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  walk_id)
 {
     int              error = KOS_SUCCESS;
     KOS_OBJECT_WALK *src;
-    KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(yarn,
+    KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
                                                                   KOS_ALLOC_DEFAULT,
                                                                   OBJ_OBJECT_WALK,
                                                                   sizeof(KOS_OBJECT_WALK));
@@ -943,8 +943,8 @@ _error:
     return error ? KOS_BADPTR : OBJID(OBJECT_WALK, walk);
 }
 
-KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_YARN   yarn,
-                                     KOS_OBJ_ID walk_id)
+KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  walk_id)
 {
     KOS_OBJECT_WALK_ELEM elem     = { KOS_BADPTR, KOS_BADPTR };
     uint32_t             capacity = 0;
@@ -974,10 +974,10 @@ KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_YARN   yarn,
 
         if ( ! IS_BAD_PTR(key)) {
 
-            const KOS_OBJ_ID value = KOS_get_property(yarn, walk->obj, key);
+            const KOS_OBJ_ID value = KOS_get_property(ctx, walk->obj, key);
 
             if (IS_BAD_PTR(value))
-                KOS_clear_exception(yarn);
+                KOS_clear_exception(ctx);
             else {
                 elem.key   = key;
                 elem.value = value;
