@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_modules_init.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object_base.h"
 #include "../core/kos_try.h"
@@ -30,10 +30,10 @@
 #include "kos_module_list.h"
 #undef MODULE_DEF
 
-int KOS_modules_init(struct _KOS_CONTEXT *ctx)
+int KOS_modules_init(struct _KOS_INSTANCE *inst)
 {
     int error = KOS_SUCCESS;
-#define MODULE_DEF(module) TRY(KOS_context_register_builtin(&ctx->threads.main_thread, #module, _KOS_module_##module##_init));
+#define MODULE_DEF(module) TRY(KOS_instance_register_builtin(&inst->threads.main_thread, #module, _KOS_module_##module##_init));
 #include "kos_module_list.h"
 #undef MODULE_DEF
 _error:

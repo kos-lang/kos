@@ -22,7 +22,7 @@
 
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_module.h"
@@ -151,7 +151,7 @@ static KOS_OBJ_ID _open(KOS_YARN   yarn,
 
     TRY(KOS_set_builtin_dynamic_property(yarn,
                                          ret,
-                                         KOS_context_get_cstring(yarn, str_position),
+                                         KOS_instance_get_cstring(yarn, str_position),
                                          KOS_get_module(yarn),
                                          _get_file_pos,
                                          _set_file_pos));
@@ -730,11 +730,11 @@ _error:
     return error;
 }
 
-#define TRY_ADD_STD_FILE(yarn, module, proto, name, file)                     \
-do {                                                                          \
-    static const char str_name[] = name;                                      \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((yarn), str_name); \
-    TRY(_add_std_file((yarn), (module), (proto), str, (file)));               \
+#define TRY_ADD_STD_FILE(yarn, module, proto, name, file)                      \
+do {                                                                           \
+    static const char str_name[] = name;                                       \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring((yarn), str_name); \
+    TRY(_add_std_file((yarn), (module), (proto), str, (file)));                \
 } while (0)
 
 int _KOS_module_file_init(KOS_YARN yarn, KOS_OBJ_ID module)

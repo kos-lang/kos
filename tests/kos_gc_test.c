@@ -23,7 +23,7 @@
 #include "../core/kos_heap.h"
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
@@ -140,18 +140,18 @@ static int _test_object(KOS_YARN              yarn,
 
 int main(void)
 {
-    KOS_CONTEXT          ctx;
+    KOS_INSTANCE         inst;
     KOS_YARN             yarn;
     struct _KOS_GC_STATS base_stats;
 
     /************************************************************************/
-    /* Test garbage collection on a freshly initialized context */
+    /* Test garbage collection on a freshly initialized instance */
     {
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(yarn, 0) == KOS_SUCCESS);
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -164,7 +164,7 @@ int main(void)
     {
         KOS_OBJ_ID obj_id[3];
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(yarn, &base_stats) == KOS_SUCCESS);
 
@@ -400,7 +400,7 @@ int main(void)
                           0,
                           &base_stats) == KOS_SUCCESS);
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -410,7 +410,7 @@ int main(void)
     {
         struct _KOS_GC_STATS stats;
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(yarn, 0) == KOS_SUCCESS);
 
@@ -635,7 +635,7 @@ int main(void)
             TEST(stats.size_kept          == 0);
         }
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -643,7 +643,7 @@ int main(void)
     {
         struct _KOS_GC_STATS stats;
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         TEST(KOS_new_array(yarn, 0) != KOS_BADPTR);
 
@@ -662,7 +662,7 @@ int main(void)
         TEST(stats.size_freed         >  0);
         TEST(stats.size_kept          == 0);
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -671,7 +671,7 @@ int main(void)
         struct _KOS_GC_STATS stats;
         KOS_OBJ_REF          obj_ref[2];
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(yarn, 0) == KOS_SUCCESS);
 
@@ -717,7 +717,7 @@ int main(void)
         TEST(stats.size_freed         >  0);
         TEST(stats.size_kept          == 0);
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -742,7 +742,7 @@ int main(void)
                 unsigned             i;
                 const unsigned       num_objs = (unsigned)(sizeof(obj_ref) / sizeof(obj_ref[0]));
 
-                TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+                TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
                 TEST(KOS_collect_garbage(yarn, 0) == KOS_SUCCESS);
 
@@ -772,7 +772,7 @@ int main(void)
 
                 TEST(KOS_collect_garbage(yarn, &stats) == KOS_SUCCESS);
 
-                KOS_context_destroy(&ctx);
+                KOS_instance_destroy(&inst);
             }
         }
     }

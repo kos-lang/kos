@@ -68,16 +68,16 @@ static const char str_result[]                       = "result";
 #define TRY_CREATE_CONSTRUCTOR(name, module)                                 \
 do {                                                                         \
     static const char str_name[] = #name;                                    \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring(yarn, str_name); \
-    KOS_CONTEXT      *ctx        = yarn->ctx;                               \
-    TRY(_create_class(yarn,                                                 \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring(yarn, str_name); \
+    KOS_INSTANCE     *inst       = yarn->inst;                               \
+    TRY(_create_class(yarn,                                                  \
                       module,                                                \
                       str,                                                   \
                       _##name##_constructor,                                 \
-                      ctx->prototypes.name##_proto));                        \
+                      inst->prototypes.name##_proto));                       \
 } while (0)
 
-#define PROTO(type) (yarn->ctx->prototypes.type##_proto)
+#define PROTO(type) (yarn->inst->prototypes.type##_proto)
 
 /* @item lang print()
  *
@@ -1204,12 +1204,12 @@ static void _async_func(KOS_YARN yarn,
     KOS_OBJ_ID  ret_obj;
 
     func_obj = KOS_get_property(yarn, OBJID(OBJECT, thread_obj),
-                    KOS_context_get_cstring(yarn, str_function));
+                    KOS_instance_get_cstring(yarn, str_function));
     if (IS_BAD_PTR(func_obj))
         return;
 
     args_obj = KOS_get_property(yarn, OBJID(OBJECT, thread_obj),
-                    KOS_context_get_cstring(yarn, str_args));
+                    KOS_instance_get_cstring(yarn, str_args));
     if (IS_BAD_PTR(args_obj))
         return;
 
@@ -1222,7 +1222,7 @@ static void _async_func(KOS_YARN yarn,
         return;
 
     if (KOS_set_property(yarn, OBJID(OBJECT, thread_obj),
-            KOS_context_get_cstring(yarn, str_result), ret_obj) == KOS_ERROR_EXCEPTION) {
+            KOS_instance_get_cstring(yarn, str_result), ret_obj) == KOS_ERROR_EXCEPTION) {
         assert(KOS_is_exception_pending(yarn));
     }
 }
@@ -1270,13 +1270,13 @@ static KOS_OBJ_ID _async(KOS_YARN   yarn,
     }
 
     thread_obj = KOS_new_object_with_prototype(yarn,
-            yarn->ctx->prototypes.thread_proto);
+            yarn->inst->prototypes.thread_proto);
     TRY_OBJID(thread_obj);
 
     TRY(KOS_set_property(yarn, thread_obj,
-                KOS_context_get_cstring(yarn, str_function), this_obj));
+                KOS_instance_get_cstring(yarn, str_function), this_obj));
     TRY(KOS_set_property(yarn, thread_obj,
-                KOS_context_get_cstring(yarn, str_args), args_obj));
+                KOS_instance_get_cstring(yarn, str_args), args_obj));
 
     OBJPTR(OBJECT, thread_obj)->finalize = _thread_finalize;
 
@@ -1310,17 +1310,17 @@ static KOS_OBJ_ID _wait(KOS_YARN   yarn,
                         KOS_OBJ_ID this_obj,
                         KOS_OBJ_ID args_obj)
 {
-    int                error = KOS_SUCCESS;
-    KOS_OBJ_ID         ret   = KOS_BADPTR;
-    KOS_CONTEXT *const ctx   = yarn->ctx;
-    _KOS_THREAD        thread;
+    int                 error = KOS_SUCCESS;
+    KOS_OBJ_ID          ret   = KOS_BADPTR;
+    KOS_INSTANCE *const inst  = yarn->inst;
+    _KOS_THREAD         thread;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
         KOS_raise_exception_cstring(yarn, str_err_not_thread);
         return KOS_BADPTR;
     }
 
-    if ( ! KOS_has_prototype(yarn, this_obj, ctx->prototypes.thread_proto)) {
+    if ( ! KOS_has_prototype(yarn, this_obj, inst->prototypes.thread_proto)) {
         KOS_raise_exception_cstring(yarn, str_err_not_thread);
         return KOS_BADPTR;
     }
@@ -1350,7 +1350,7 @@ static KOS_OBJ_ID _wait(KOS_YARN   yarn,
 
     if (!error) {
         ret = KOS_get_property(yarn, this_obj,
-                KOS_context_get_cstring(yarn, str_result));
+                KOS_instance_get_cstring(yarn, str_result));
         if (IS_BAD_PTR(ret))
             error = KOS_ERROR_EXCEPTION;
     }
@@ -3339,7 +3339,7 @@ static KOS_OBJ_ID _get_function_name(KOS_YARN   yarn,
 
         /* TODO add builtin function name */
         if (IS_BAD_PTR(func->module) || func->instr_offs == ~0U)
-            ret = KOS_context_get_cstring(yarn, str_builtin);
+            ret = KOS_instance_get_cstring(yarn, str_builtin);
         else
             ret = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
                                                func->instr_offs);
@@ -3549,7 +3549,7 @@ int _KOS_module_lang_init(KOS_YARN yarn, KOS_OBJ_ID module)
     TRY_ADD_GENERATOR(yarn, module, "deep",      _deep,      1);
     TRY_ADD_GENERATOR(yarn, module, "shallow",   _shallow,   1);
 
-    TRY(KOS_module_add_global(yarn, module, KOS_context_get_cstring(yarn, str_args), yarn->ctx->args, 0));
+    TRY(KOS_module_add_global(yarn, module, KOS_instance_get_cstring(yarn, str_args), yarn->inst->args, 0));
 
     TRY_CREATE_CONSTRUCTOR(array,         module);
     TRY_CREATE_CONSTRUCTOR(boolean,       module);

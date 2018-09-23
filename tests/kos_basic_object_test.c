@@ -22,7 +22,7 @@
 
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_array.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
@@ -35,10 +35,10 @@ int main(void)
     const intptr_t max_small_int = GET_SMALL_INT((KOS_OBJ_ID)(~((uintptr_t)2) >> 1));
     const intptr_t min_small_int = -max_small_int - 1;
 
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
 
-    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
     TEST(min_small_int < 0);
     TEST(max_small_int > 0);
@@ -301,7 +301,7 @@ int main(void)
         TEST(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
     }
 
-    KOS_context_destroy(&ctx);
+    KOS_instance_destroy(&inst);
 
     return 0;
 }

@@ -22,7 +22,7 @@
 
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
@@ -74,7 +74,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
     int                       error      = KOS_SUCCESS;
     KOS_OBJ_ID                retval     = KOS_BADPTR;
     KOS_OBJ_ID                lexer_obj_id;
-    KOS_OBJ_ID                source     = KOS_context_get_cstring(yarn, str_source);
+    KOS_OBJ_ID                source     = KOS_instance_get_cstring(yarn, str_source);
     struct _LEXER            *lexer;
     uint8_t                  *buf_data;
     enum _KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
@@ -205,13 +205,13 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
 
             assert(error == KOS_ERROR_SCANNING_FAILED);
 
-            parts[0] = KOS_context_get_cstring(yarn, str_format_parse_error);
+            parts[0] = KOS_instance_get_cstring(yarn, str_format_parse_error);
             parts[1] = KOS_object_to_string(yarn, TO_SMALL_INT((int)lexer->lexer.pos.line));
             TRY_OBJID(parts[1]);
-            parts[2] = KOS_context_get_cstring(yarn, str_format_colon);
+            parts[2] = KOS_instance_get_cstring(yarn, str_format_colon);
             parts[3] = KOS_object_to_string(yarn, TO_SMALL_INT((int)lexer->lexer.pos.column));
             TRY_OBJID(parts[3]);
-            parts[4] = KOS_context_get_cstring(yarn, str_format_colon_space);
+            parts[4] = KOS_instance_get_cstring(yarn, str_format_colon_space);
             parts[5] = KOS_new_cstring(yarn, lexer->lexer.error_str);
             TRY_OBJID(parts[5]);
 
@@ -236,37 +236,37 @@ static KOS_OBJ_ID _raw_lexer(KOS_YARN   yarn,
 
         TRY(KOS_set_property(yarn,
                              token_obj,
-                             KOS_context_get_cstring(yarn, str_token),
+                             KOS_instance_get_cstring(yarn, str_token),
                              value));
 
         TRY(KOS_set_property(yarn,
                              token_obj,
-                             KOS_context_get_cstring(yarn, str_line),
+                             KOS_instance_get_cstring(yarn, str_line),
                              TO_SMALL_INT((int)token->pos.line)));
 
         TRY(KOS_set_property(yarn,
                              token_obj,
-                             KOS_context_get_cstring(yarn, str_column),
+                             KOS_instance_get_cstring(yarn, str_column),
                              TO_SMALL_INT((int)token->pos.column)));
 
         TRY(KOS_set_property(yarn,
                              token_obj,
-                             KOS_context_get_cstring(yarn, str_type),
+                             KOS_instance_get_cstring(yarn, str_type),
                              TO_SMALL_INT((int)token->type)));
 
         TRY(KOS_set_property(yarn,
                              token_obj,
-                             KOS_context_get_cstring(yarn, str_keyword),
+                             KOS_instance_get_cstring(yarn, str_keyword),
                              TO_SMALL_INT((int)token->keyword)));
 
         TRY(KOS_set_property(yarn,
                              token_obj,
-                             KOS_context_get_cstring(yarn, str_op),
+                             KOS_instance_get_cstring(yarn, str_op),
                              TO_SMALL_INT((int)token->op)));
 
         TRY(KOS_set_property(yarn,
                              token_obj,
-                             KOS_context_get_cstring(yarn, str_sep),
+                             KOS_instance_get_cstring(yarn, str_sep),
                              TO_SMALL_INT((int)token->sep)));
 
         if (lexer->token.type == TT_STRING || lexer->token.type == TT_STRING_OPEN) {

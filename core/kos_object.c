@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_object.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
@@ -82,9 +82,9 @@ DECLARE_STATIC_CONST_OBJECT(reserved)  = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB2)
 
 KOS_OBJ_ID KOS_new_object(KOS_YARN yarn)
 {
-    KOS_CONTEXT *const ctx = yarn->ctx;
+    KOS_INSTANCE *const inst = yarn->inst;
 
-    return KOS_new_object_with_prototype(yarn, ctx->prototypes.object_proto);
+    return KOS_new_object_with_prototype(yarn, inst->prototypes.object_proto);
 }
 
 KOS_OBJ_ID KOS_new_object_with_prototype(KOS_YARN   yarn,
@@ -771,22 +771,22 @@ _error:
 KOS_OBJ_ID KOS_get_prototype(KOS_YARN   yarn,
                              KOS_OBJ_ID obj_id)
 {
-    KOS_OBJ_ID   ret = KOS_BADPTR;
-    KOS_CONTEXT *ctx = yarn->ctx;
+    KOS_OBJ_ID    ret  = KOS_BADPTR;
+    KOS_INSTANCE *inst = yarn->inst;
 
     assert( ! IS_BAD_PTR(obj_id));
 
     if (IS_SMALL_INT(obj_id))
-        ret = ctx->prototypes.integer_proto;
+        ret = inst->prototypes.integer_proto;
 
     else switch (READ_OBJ_TYPE(obj_id)) {
 
         case OBJ_INTEGER:
-            ret = ctx->prototypes.integer_proto;
+            ret = inst->prototypes.integer_proto;
             break;
 
         case OBJ_FLOAT:
-            ret = ctx->prototypes.float_proto;
+            ret = inst->prototypes.float_proto;
             break;
 
         case OBJ_OBJECT:
@@ -794,33 +794,33 @@ KOS_OBJ_ID KOS_get_prototype(KOS_YARN   yarn,
             break;
 
         case OBJ_STRING:
-            ret = ctx->prototypes.string_proto;
+            ret = inst->prototypes.string_proto;
             break;
 
         case OBJ_ARRAY:
-            ret = ctx->prototypes.array_proto;
+            ret = inst->prototypes.array_proto;
             break;
 
         case OBJ_BUFFER:
-            ret = ctx->prototypes.buffer_proto;
+            ret = inst->prototypes.buffer_proto;
             break;
 
         case OBJ_FUNCTION: {
             const enum _KOS_FUNCTION_STATE state =
                 (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, obj_id)->state;
             if (state == KOS_FUN)
-                ret = ctx->prototypes.function_proto;
+                ret = inst->prototypes.function_proto;
             else
-                ret = ctx->prototypes.generator_proto;
+                ret = inst->prototypes.generator_proto;
             break;
         }
 
         case OBJ_CLASS:
-            ret = ctx->prototypes.class_proto;
+            ret = inst->prototypes.class_proto;
             break;
 
         case OBJ_BOOLEAN:
-            ret = ctx->prototypes.boolean_proto;
+            ret = inst->prototypes.boolean_proto;
             break;
 
         case OBJ_VOID:
@@ -828,7 +828,7 @@ KOS_OBJ_ID KOS_get_prototype(KOS_YARN   yarn,
             break;
 
         default:
-            ret = ctx->prototypes.object_proto;
+            ret = inst->prototypes.object_proto;
             break;
     }
 

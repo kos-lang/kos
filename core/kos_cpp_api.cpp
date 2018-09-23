@@ -205,7 +205,7 @@ std::string exception::get_exception_string(stack_frame yarn)
 
         static const char str_value[] = "value";
 
-        obj_id = KOS_get_property(yarn, obj_id, KOS_context_get_cstring(yarn, str_value));
+        obj_id = KOS_get_property(yarn, obj_id, KOS_instance_get_cstring(yarn, str_value));
 
         assert( ! IS_BAD_PTR(obj_id));
 

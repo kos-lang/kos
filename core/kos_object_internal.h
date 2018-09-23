@@ -23,7 +23,7 @@
 #ifndef __KOS_OBJECT_INTERNAL_H
 #define __KOS_OBJECT_INTERNAL_H
 
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
 #include "kos_heap.h"

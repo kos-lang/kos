@@ -500,8 +500,6 @@ void _KOS_spin_unlock(KOS_ATOMIC(uint32_t) *lock);
 
 void _KOS_yield(void);
 
-struct _KOS_CONTEXT;
-
 int _KOS_thread_create(KOS_YARN         yarn,
                        _KOS_THREAD_PROC proc,
                        void            *cookie,

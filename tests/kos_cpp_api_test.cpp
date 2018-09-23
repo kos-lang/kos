@@ -57,8 +57,8 @@ void throw_string(const std::string& str)
 
 int main()
 try {
-    kos::context     ctx;
-    kos::stack_frame yarn(ctx);
+    kos::instance    inst;
+    kos::stack_frame yarn(inst);
 
     {
         const int a = from_object_ptr(yarn, TO_SMALL_INT(123));
@@ -514,7 +514,7 @@ try {
         kos::string name = to_object_ptr(yarn, "my_global");
 
         /* TODO replace this with a new module object */
-        KOS_OBJ_ID module = static_cast<KOS_CONTEXT*>(ctx)->modules.init_module;
+        KOS_OBJ_ID module = static_cast<KOS_INSTANCE*>(inst)->modules.init_module;
 
         yarn.add_global(module, name, TO_SMALL_INT(42));
 

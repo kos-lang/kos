@@ -22,7 +22,7 @@
 
 #include "../inc/kos_string.h"
 #include "../inc/kos_array.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_utils.h"
@@ -49,10 +49,10 @@
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
 
-    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
     /************************************************************************/
     {
@@ -1228,7 +1228,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID empty = yarn->ctx->empty_string;
+        KOS_OBJ_ID empty = yarn->inst->empty_string;
 
         TEST(!IS_BAD_PTR(empty));
         TEST(GET_OBJ_TYPE(empty) == OBJ_STRING);
@@ -1239,7 +1239,7 @@ int main(void)
     {
         static const char str[] = "str";
 
-        KOS_OBJ_ID str_str = KOS_context_get_cstring(yarn, str);
+        KOS_OBJ_ID str_str = KOS_instance_get_cstring(yarn, str);
         TEST(!IS_BAD_PTR(str_str));
         TEST(GET_OBJ_TYPE(str_str) == OBJ_STRING);
 
@@ -1279,7 +1279,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID str = KOS_string_slice(yarn, yarn->ctx->empty_string, 0, 1);
+        KOS_OBJ_ID str = KOS_string_slice(yarn, yarn->inst->empty_string, 0, 1);
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);
@@ -1470,7 +1470,7 @@ int main(void)
     {
         static const char src[] = "abc";
 
-        KOS_OBJ_ID str_src = KOS_context_get_cstring(yarn, src);
+        KOS_OBJ_ID str_src = KOS_instance_get_cstring(yarn, src);
 
         KOS_OBJ_ID str = KOS_object_to_string(yarn, str_src);
 
@@ -1681,7 +1681,7 @@ int main(void)
         TEST_EXCEPTION();
     }
 
-    KOS_context_destroy(&ctx);
+    KOS_instance_destroy(&inst);
 
     return 0;
 }

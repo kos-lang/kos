@@ -22,7 +22,7 @@
 
 #include "../inc/kos_array.h"
 #include "../inc/kos_bytecode.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
@@ -76,11 +76,11 @@ struct _INSTR_DEF {
 
 #define END \
     }; \
-    if (_test_instr(&ctx, instr.instr, __LINE__, &instr.out, &instr.in[0]) != KOS_SUCCESS) \
+    if (_test_instr(&inst, instr.instr, __LINE__, &instr.out, &instr.in[0]) != KOS_SUCCESS) \
         return 1; \
 }
 
-static int _test_instr(KOS_CONTEXT         *ctx,
+static int _test_instr(KOS_INSTANCE        *inst,
                        KOS_BYTECODE_INSTR   instr,
                        int                  line,
                        struct _INSTR_VALUE *ret_val,
@@ -91,7 +91,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     KOS_MODULE             *module          = 0;
     KOS_OBJ_ID              constants_array = KOS_BADPTR;
     KOS_ATOMIC(KOS_OBJ_ID) *constants       = 0;
-    KOS_YARN                yarn            = &ctx->threads.main_thread;
+    KOS_YARN                yarn            = &inst->threads.main_thread;
     const char *            cstrings[]      = { "aaa", "bbb", "ccc" };
     KOS_OBJ_ID              strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
     uint8_t                 regs            = 0;
@@ -326,7 +326,7 @@ static int _test_instr(KOS_CONTEXT         *ctx,
     module->name          = KOS_BADPTR;
     module->path          = KOS_BADPTR;
     module->header.type   = OBJ_MODULE;
-    module->context       = ctx;
+    module->inst          = inst;
     module->bytecode      = &code[0];
     module->bytecode_size = words;
     module->main_idx      = num_constants;
@@ -521,10 +521,10 @@ static int _test_instr(KOS_CONTEXT         *ctx,
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
 
-    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
     /*========================================================================*/
     /* LOAD.VOID */
@@ -1468,7 +1468,7 @@ int main(void)
     TEST_INSTR INSTR_JUMP_NOT_COND, { V_FALSE                          }, { { V_ARRAY, 1                        }                                        } END
     TEST_INSTR INSTR_JUMP_NOT_COND, { V_FALSE                          }, { { V_OBJECT                          }                                        } END
 
-    KOS_context_destroy(&ctx);
+    KOS_instance_destroy(&inst);
 
     return 0;
 }

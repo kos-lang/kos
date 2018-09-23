@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_threads.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "kos_debug.h"
 #include "kos_malloc.h"
@@ -115,7 +115,7 @@ void _KOS_yield(void)
 struct _KOS_THREAD_OBJECT {
     HANDLE           thread_handle;
     DWORD            thread_id;
-    KOS_CONTEXT     *ctx;
+    KOS_INSTANCE    *inst;
     _KOS_THREAD_PROC proc;
     void            *cookie;
     KOS_OBJ_ID       exception;
@@ -127,7 +127,7 @@ static DWORD WINAPI _thread_proc(LPVOID thread_obj)
     DWORD                      ret        = 0;
     int                        unregister = 0;
 
-    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS) {
+    if (KOS_instance_register_thread(((_KOS_THREAD)thread_obj)->inst, &thread_ctx) == KOS_SUCCESS) {
         ((_KOS_THREAD)thread_obj)->proc(&thread_ctx, ((_KOS_THREAD)thread_obj)->cookie);
         unregister = 1;
     }
@@ -139,7 +139,7 @@ static DWORD WINAPI _thread_proc(LPVOID thread_obj)
     }
 
     if (unregister)
-        KOS_context_unregister_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx);
+        KOS_instance_unregister_thread(((_KOS_THREAD)thread_obj)->inst, &thread_ctx);
 
     return ret;
 }
@@ -154,7 +154,7 @@ int _KOS_thread_create(KOS_YARN         yarn,
 
     if (new_thread) {
         new_thread->thread_id = 0;
-        new_thread->ctx       = yarn->ctx;
+        new_thread->inst      = yarn->inst;
         new_thread->proc      = proc;
         new_thread->cookie    = cookie;
         new_thread->exception = KOS_BADPTR;
@@ -294,7 +294,7 @@ void _KOS_tls_set(_KOS_TLS_KEY key, void *value)
 
 struct _KOS_THREAD_OBJECT {
     pthread_t        thread_handle;
-    KOS_CONTEXT     *ctx;
+    KOS_INSTANCE    *inst;
     _KOS_THREAD_PROC proc;
     void            *cookie;
 };
@@ -305,7 +305,7 @@ static void *_thread_proc(void *thread_obj)
     void                      *ret        = 0;
     int                        unregister = 0;
 
-    if (KOS_context_register_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx) == KOS_SUCCESS) {
+    if (KOS_instance_register_thread(((_KOS_THREAD)thread_obj)->inst, &thread_ctx) == KOS_SUCCESS) {
         ((_KOS_THREAD)thread_obj)->proc(&thread_ctx, ((_KOS_THREAD)thread_obj)->cookie);
         unregister = 1;
     }
@@ -315,7 +315,7 @@ static void *_thread_proc(void *thread_obj)
         /* TODO nobody owns exception */
 
     if (unregister)
-        KOS_context_unregister_thread(((_KOS_THREAD)thread_obj)->ctx, &thread_ctx);
+        KOS_instance_unregister_thread(((_KOS_THREAD)thread_obj)->inst, &thread_ctx);
 
     return ret;
 }
@@ -329,7 +329,7 @@ int _KOS_thread_create(KOS_YARN         yarn,
     _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
-        new_thread->ctx    = yarn->ctx;
+        new_thread->inst   = yarn->inst;
         new_thread->proc   = proc;
         new_thread->cookie = cookie;
 

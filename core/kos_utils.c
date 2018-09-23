@@ -23,7 +23,7 @@
 #include "../inc/kos_utils.h"
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
@@ -175,10 +175,10 @@ static KOS_OBJ_ID _get_exception_string(KOS_YARN   yarn,
 
         const KOS_OBJ_ID proto = KOS_get_prototype(yarn, exception);
 
-        if (proto == yarn->ctx->prototypes.exception_proto) {
+        if (proto == yarn->inst->prototypes.exception_proto) {
 
             const KOS_OBJ_ID obj_id = KOS_get_property(yarn, exception,
-                                    KOS_context_get_cstring(yarn, str_value));
+                                    KOS_instance_get_cstring(yarn, str_value));
 
             if (IS_BAD_PTR(obj_id))
                 KOS_clear_exception(yarn);
@@ -610,13 +610,13 @@ static KOS_OBJ_ID _array_to_str(KOS_YARN            yarn,
     length = KOS_get_array_size(obj_id);
 
     if (length == 0)
-        return KOS_context_get_cstring(yarn, str_empty_array);
+        return KOS_instance_get_cstring(yarn, str_empty_array);
 
     aux_array_id = KOS_new_array(yarn, length * 2 + 1);
     TRY_OBJID(aux_array_id);
 
     TRY(KOS_array_write(yarn, aux_array_id, 0,
-                KOS_context_get_cstring(yarn, str_array_open)));
+                KOS_instance_get_cstring(yarn, str_array_open)));
 
     for (i = 0; i < length; ) {
 
@@ -631,11 +631,11 @@ static KOS_OBJ_ID _array_to_str(KOS_YARN            yarn,
 
         if (i < length)
             TRY(KOS_array_write(yarn, aux_array_id, i * 2,
-                        KOS_context_get_cstring(yarn, str_array_comma)));
+                        KOS_instance_get_cstring(yarn, str_array_comma)));
     }
 
     TRY(KOS_array_write(yarn, aux_array_id, length * 2,
-                KOS_context_get_cstring(yarn, str_array_close)));
+                KOS_instance_get_cstring(yarn, str_array_close)));
 
     ret = KOS_string_add_many(yarn, _KOS_get_array_buffer(OBJPTR(ARRAY, aux_array_id)), length * 2 + 1);
 
@@ -701,7 +701,7 @@ static KOS_OBJ_ID _buffer_to_str(KOS_YARN   yarn,
     assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
 
     if (KOS_get_buffer_size(obj_id) == 0)
-        return KOS_context_get_cstring(yarn, str_empty_buffer);
+        return KOS_instance_get_cstring(yarn, str_empty_buffer);
 
     _KOS_vector_init(&cstr_vec);
 
@@ -781,10 +781,10 @@ static KOS_OBJ_ID _function_to_str(KOS_YARN   yarn,
             break;
     }
 
-    strings[0] = KOS_context_get_cstring(yarn, str_func);
+    strings[0] = KOS_instance_get_cstring(yarn, str_func);
     if (func->handler) {
         /* TODO get built-in function name */
-        strings[1] = KOS_context_get_cstring(yarn, str_builtin);
+        strings[1] = KOS_instance_get_cstring(yarn, str_builtin);
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">", (uint64_t)(uintptr_t)func->handler);
     }
     else {
@@ -842,7 +842,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_YARN            yarn,
             if (cstr_vec)
                 error = _vector_append_cstr(yarn, cstr_vec, "void", 4);
             else
-                *str = KOS_context_get_cstring(yarn, str_void);
+                *str = KOS_instance_get_cstring(yarn, str_void);
             break;
 
         case OBJ_BOOLEAN:
@@ -850,13 +850,13 @@ int KOS_object_to_string_or_cstr_vec(KOS_YARN            yarn,
                 if (cstr_vec)
                     error = _vector_append_cstr(yarn, cstr_vec, "true", 4);
                 else
-                    *str = KOS_context_get_cstring(yarn, str_true);
+                    *str = KOS_instance_get_cstring(yarn, str_true);
             }
             else {
                 if (cstr_vec)
                     error = _vector_append_cstr(yarn, cstr_vec, "false", 5);
                 else
-                    *str = KOS_context_get_cstring(yarn, str_false);
+                    *str = KOS_instance_get_cstring(yarn, str_false);
             }
             break;
 
@@ -879,7 +879,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_YARN            yarn,
             if (cstr_vec)
                 error = _vector_append_cstr(yarn, cstr_vec, "<object>", 8);
             else
-                *str = KOS_context_get_cstring(yarn, str_object);
+                *str = KOS_instance_get_cstring(yarn, str_object);
             break;
 
         case OBJ_FUNCTION:

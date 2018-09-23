@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_array.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
@@ -32,7 +32,7 @@
 #include "kos_parallel.h"
 
 struct TEST_DATA {
-    KOS_CONTEXT         *ctx;
+    KOS_INSTANCE        *inst;
     KOS_OBJ_ID           object;
     int                  num_idcs;
     KOS_ATOMIC(uint32_t) stage;
@@ -120,11 +120,11 @@ static void _test_thread_func(KOS_YARN yarn,
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
-    const int   num_cpus = _get_num_cpus();
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
+    const int    num_cpus = _get_num_cpus();
 
-    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
     /************************************************************************/
     /* This test overwrites array indices from multiple threads while the array
@@ -165,7 +165,7 @@ int main(void)
             thread_cookies[i].num_loops = 0;
         }
 
-        data.ctx      = &ctx;
+        data.inst     = &inst;
         data.object   = obj;
         data.num_idcs = max_idcs_per_th;
         data.stage    = 0U;
@@ -207,7 +207,7 @@ int main(void)
         _KOS_vector_destroy(&mem_buf);
     }
 
-    KOS_context_destroy(&ctx);
+    KOS_instance_destroy(&inst);
 
     return 0;
 }

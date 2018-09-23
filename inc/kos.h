@@ -25,7 +25,7 @@
 
 #include "kos_array.h"
 #include "kos_buffer.h"
-#include "kos_context.h"
+#include "kos_instance.h"
 #include "kos_module.h"
 #include "kos_modules_init.h"
 #include "kos_object_base.h"
@@ -213,50 +213,50 @@ inline obj_id_converter from_object_ptr(stack_frame yarn, KOS_OBJ_ID obj_id)
     return obj_id_converter(yarn, obj_id);
 }
 
-class context {
+class instance {
     public:
-        context() {
+        instance() {
             KOS_YARN yarn;
 
-            int error = KOS_context_init(&_ctx, &yarn);
+            int error = KOS_instance_init(&_inst, &yarn);
             if (error)
-                throw std::runtime_error("failed to initialize Kos context");
+                throw std::runtime_error("failed to initialize Kos instance");
 
-            error = KOS_modules_init(&_ctx);
+            error = KOS_modules_init(&_inst);
             if (error) {
-                KOS_context_destroy(&_ctx);
+                KOS_instance_destroy(&_inst);
                 throw std::runtime_error("failed to initialize Kos modules");
             }
         }
 
-        ~context() {
-            KOS_context_destroy(&_ctx);
+        ~instance() {
+            KOS_instance_destroy(&_inst);
         }
 
-        operator KOS_CONTEXT*() {
-            return &_ctx;
+        operator KOS_INSTANCE*() {
+            return &_inst;
         }
 
         operator KOS_YARN() {
-            return &_ctx.threads.main_thread;
+            return &_inst.threads.main_thread;
         }
 
     private:
         // Non-copyable
-        context(const context&);
-        context& operator=(const context&);
+        instance(const instance&);
+        instance& operator=(const instance&);
 
-        KOS_CONTEXT _ctx;
+        KOS_INSTANCE _inst;
 };
 
 class thread_ctx {
     public:
-        explicit thread_ctx(context& ctx) {
-            KOS_context_register_thread(ctx, &_thread_ctx);
+        explicit thread_ctx(instance& inst) {
+            KOS_instance_register_thread(inst, &_thread_ctx);
         }
 
         ~thread_ctx() {
-            KOS_context_unregister_thread(_thread_ctx.ctx, &_thread_ctx);
+            KOS_instance_unregister_thread(_thread_ctx.inst, &_thread_ctx);
         }
 
         operator KOS_YARN() {

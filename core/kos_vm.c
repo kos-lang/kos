@@ -23,7 +23,7 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_bytecode.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
@@ -586,23 +586,23 @@ static KOS_OBJ_ID _copy_function(KOS_YARN   yarn,
 
 static int _is_generator_end_exception(KOS_YARN yarn)
 {
-    KOS_CONTEXT *const ctx       = yarn->ctx;
-    const KOS_OBJ_ID   exception = KOS_get_exception(yarn);
-    int                ret       = 0;
+    KOS_INSTANCE *const inst      = yarn->inst;
+    const KOS_OBJ_ID    exception = KOS_get_exception(yarn);
+    int                 ret       = 0;
 
-    if (KOS_get_prototype(yarn, exception) == ctx->prototypes.exception_proto) {
+    if (KOS_get_prototype(yarn, exception) == inst->prototypes.exception_proto) {
 
         KOS_OBJ_ID value;
 
         KOS_clear_exception(yarn);
 
-        value = KOS_get_property(yarn, exception, KOS_context_get_cstring(yarn, str_value));
+        value = KOS_get_property(yarn, exception, KOS_instance_get_cstring(yarn, str_value));
 
         if (IS_BAD_PTR(value)) {
             KOS_clear_exception(yarn);
             KOS_raise_exception(yarn, exception);
         }
-        else if (KOS_get_prototype(yarn, value) != ctx->prototypes.generator_end_proto)
+        else if (KOS_get_prototype(yarn, value) != inst->prototypes.generator_end_proto)
             KOS_raise_exception(yarn, exception);
         else
             ret = 1;
@@ -1308,7 +1308,7 @@ static int _exec_function(KOS_YARN yarn)
     module = _get_module(regs);
 
     assert(module);
-    assert(module->context);
+    assert(module->inst);
     bytecode = module->bytecode + _load_instr_offs(regs);
 
     for (;;) { /* Exit condition at the end of the loop */
@@ -1474,7 +1474,7 @@ static int _exec_function(KOS_YARN yarn)
             case INSTR_GET_MOD: { /* <r.dest>, <int32>, <r.glob> */
                 const int      mod_idx    = (int32_t)_load_32(bytecode+2);
                 const unsigned rglob      = bytecode[6];
-                KOS_OBJ_ID     module_obj = KOS_array_read(yarn, module->context->modules.modules, mod_idx);
+                KOS_OBJ_ID     module_obj = KOS_array_read(yarn, module->inst->modules.modules, mod_idx);
 
                 assert(rglob < num_regs);
 
@@ -1505,7 +1505,7 @@ static int _exec_function(KOS_YARN yarn)
             case INSTR_GET_MOD_ELEM: { /* <r.dest>, <int32>, <int32> */
                 const int  mod_idx    = (int32_t)_load_32(bytecode+2);
                 const int  glob_idx   = (int32_t)_load_32(bytecode+6);
-                KOS_OBJ_ID module_obj = KOS_array_read(yarn, module->context->modules.modules, mod_idx);
+                KOS_OBJ_ID module_obj = KOS_array_read(yarn, module->inst->modules.modules, mod_idx);
 
                 rdest = bytecode[1];
 
@@ -1648,7 +1648,7 @@ static int _exec_function(KOS_YARN yarn)
                     else {
                         out = KOS_get_property(yarn,
                                                src,
-                                               KOS_context_get_cstring(yarn, str_slice));
+                                               KOS_instance_get_cstring(yarn, str_slice));
                         if (IS_BAD_PTR(out))
                             error = KOS_ERROR_EXCEPTION;
                         else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
@@ -2294,47 +2294,47 @@ static int _exec_function(KOS_YARN yarn)
                 assert(!IS_BAD_PTR(src));
 
                 if (IS_SMALL_INT(src))
-                    out = KOS_context_get_cstring(yarn, t_integer);
+                    out = KOS_instance_get_cstring(yarn, t_integer);
 
                 else switch (GET_OBJ_TYPE(src)) {
                     case OBJ_INTEGER:
-                        out = KOS_context_get_cstring(yarn, t_integer);
+                        out = KOS_instance_get_cstring(yarn, t_integer);
                         break;
 
                     case OBJ_FLOAT:
-                        out = KOS_context_get_cstring(yarn, t_float);
+                        out = KOS_instance_get_cstring(yarn, t_float);
                         break;
 
                     case OBJ_STRING:
-                        out = KOS_context_get_cstring(yarn, t_string);
+                        out = KOS_instance_get_cstring(yarn, t_string);
                         break;
 
                     case OBJ_VOID:
-                        out = KOS_context_get_cstring(yarn, t_void);
+                        out = KOS_instance_get_cstring(yarn, t_void);
                         break;
 
                     case OBJ_BOOLEAN:
-                        out = KOS_context_get_cstring(yarn, t_boolean);
+                        out = KOS_instance_get_cstring(yarn, t_boolean);
                         break;
 
                     case OBJ_ARRAY:
-                        out = KOS_context_get_cstring(yarn, t_array);
+                        out = KOS_instance_get_cstring(yarn, t_array);
                         break;
 
                     case OBJ_BUFFER:
-                        out = KOS_context_get_cstring(yarn, t_buffer);
+                        out = KOS_instance_get_cstring(yarn, t_buffer);
                         break;
 
                     case OBJ_FUNCTION:
-                        out = KOS_context_get_cstring(yarn, t_function);
+                        out = KOS_instance_get_cstring(yarn, t_function);
                         break;
 
                     case OBJ_CLASS:
-                        out = KOS_context_get_cstring(yarn, t_class);
+                        out = KOS_instance_get_cstring(yarn, t_class);
                         break;
 
                     default:
-                        out = KOS_context_get_cstring(yarn, t_object);
+                        out = KOS_instance_get_cstring(yarn, t_object);
                         break;
                 }
 
@@ -2901,7 +2901,7 @@ static int _exec_function(KOS_YARN yarn)
             default:
                 assert(instr == INSTR_BREAKPOINT);
                 if (instr == INSTR_BREAKPOINT) {
-                    /* TODO simply call a debugger function from context */
+                    /* TODO simply call a debugger function from instance */
                 }
                 else
                     KOS_raise_exception_cstring(yarn, str_err_invalid_instruction);
@@ -2968,7 +2968,7 @@ KOS_OBJ_ID _KOS_call_function(KOS_YARN              yarn,
     KOS_OBJ_ID    ret   = KOS_BADPTR;
     KOS_FUNCTION *func;
 
-    KOS_context_validate(yarn);
+    KOS_instance_validate(yarn);
 
     switch (GET_OBJ_TYPE(func_obj)) {
 
@@ -3041,9 +3041,9 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
     KOS_YARN yarn;
 
     assert(module);
-    assert(module->context);
+    assert(module->inst);
 
-    yarn = (KOS_YARN)_KOS_tls_get(module->context->threads.thread_key);
+    yarn = (KOS_YARN)_KOS_tls_get(module->inst->threads.thread_key);
 
     error = _KOS_stack_push(yarn, module->constants[module->main_idx]);
 
@@ -3052,7 +3052,7 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
 
     else {
 
-        KOS_context_validate(yarn);
+        KOS_instance_validate(yarn);
 
         error = _exec_function(yarn);
 

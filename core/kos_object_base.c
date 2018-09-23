@@ -176,8 +176,8 @@ KOS_OBJ_ID KOS_new_class(KOS_YARN yarn, KOS_OBJ_ID proto_obj)
 
         if (KOS_set_builtin_dynamic_property(yarn,
                                              OBJID(CLASS, func),
-                                             KOS_context_get_cstring(yarn, str_prototype),
-                                             yarn->ctx->modules.init_module,
+                                             KOS_instance_get_cstring(yarn, str_prototype),
+                                             yarn->inst->modules.init_module,
                                              _get_prototype,
                                              _set_prototype))
             func = 0; /* object is garbage collected */

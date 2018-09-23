@@ -103,49 +103,49 @@ uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
 #define TRY_ADD_FUNCTION(yarn, module, name, handler, min_args)                          \
 do {                                                                                     \
     static const char str_name[] = name;                                                 \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((yarn), str_name);            \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring((yarn), str_name);           \
     TRY(KOS_module_add_function((yarn), (module), str, (handler), (min_args), KOS_FUN)); \
 } while (0)
 
 #define TRY_ADD_GENERATOR(yarn, module, name, handler, min_args)                              \
 do {                                                                                          \
     static const char str_name[] = name;                                                      \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((yarn), str_name);                 \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring((yarn), str_name);                \
     TRY(KOS_module_add_function((yarn), (module), str, (handler), (min_args), KOS_GEN_INIT)); \
 } while (0)
 
 #define TRY_ADD_CONSTRUCTOR(yarn, module, name, handler, min_args, ret_proto)                   \
 do {                                                                                            \
     static const char str_name[] = name;                                                        \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((yarn), str_name);                   \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring((yarn), str_name);                  \
     TRY(KOS_module_add_constructor((yarn), (module), str, (handler), (min_args), (ret_proto))); \
 } while (0)
 
 #define TRY_ADD_MEMBER_FUNCTION(yarn, module, proto, name, handler, min_args)                            \
 do {                                                                                                     \
     static const char str_name[] = name;                                                                 \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((yarn), str_name);                            \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring((yarn), str_name);                           \
     TRY(KOS_module_add_member_function((yarn), (module), (proto), str, (handler), (min_args), KOS_FUN)); \
 } while (0)
 
 #define TRY_ADD_MEMBER_GENERATOR(yarn, module, proto, name, handler, min_args)                                \
 do {                                                                                                          \
     static const char str_name[] = name;                                                                      \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((yarn), str_name);                                 \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring((yarn), str_name);                                \
     TRY(KOS_module_add_member_function((yarn), (module), (proto), str, (handler), (min_args), KOS_GEN_INIT)); \
 } while (0)
 
 #define TRY_ADD_MEMBER_PROPERTY(yarn, module, proto, name, getter, setter)                     \
 do {                                                                                           \
     static const char str_name[] = name;                                                       \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((yarn), str_name);                  \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring((yarn), str_name);                 \
     TRY(KOS_set_builtin_dynamic_property((yarn), (proto), str, (module), (getter), (setter))); \
 } while (0)
 
 #define TRY_ADD_INTEGER_CONSTANT(yarn, module, name, value)                           \
 do {                                                                                  \
     static const char str_name[] = name;                                              \
-    KOS_OBJ_ID        str        = KOS_context_get_cstring((yarn), str_name);         \
+    KOS_OBJ_ID        str        = KOS_instance_get_cstring((yarn), str_name);        \
     TRY(KOS_module_add_global((yarn), (module), str, TO_SMALL_INT((int)(value)), 0)); \
 } while (0)
 

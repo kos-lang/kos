@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_array.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_modules_init.h"
@@ -57,16 +57,16 @@ static int _run_interactive(KOS_YARN yarn, struct _KOS_VECTOR *buf);
 
 int main(int argc, char *argv[])
 {
-    int                error       = KOS_SUCCESS;
-    int                ctx_ok      = 0;
-    int                is_script   = 0;
-    int                i_module    = 0;
-    int                i_first_arg = 0;
-    int                interactive = -1;
-    uint32_t           flags       = 0;
-    KOS_CONTEXT        ctx;
-    KOS_YARN           yarn;
-    struct _KOS_VECTOR buf;
+    int                  error       = KOS_SUCCESS;
+    int                  inst_ok     = 0;
+    int                  is_script   = 0;
+    int                  i_module    = 0;
+    int                  i_first_arg = 0;
+    int                  interactive = -1;
+    uint32_t             flags       = 0;
+    KOS_INSTANCE         inst;
+    KOS_YARN             yarn;
+    struct _KOS_VECTOR   buf;
 
     _KOS_vector_init(&buf);
 
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
             }
 
             if (_is_option(arg, "v", "verbose")) {
-                flags |= KOS_CTX_VERBOSE;
+                flags |= KOS_INST_VERBOSE;
                 ++i_first_arg;
             }
             else {
@@ -125,20 +125,20 @@ int main(int argc, char *argv[])
         }
     }
 
-    error = KOS_context_init(&ctx, &yarn);
+    error = KOS_instance_init(&inst, &yarn);
 
     if (error) {
         fprintf(stderr, "Failed to initialize interpreter\n");
         goto _error;
     }
 
-    ctx_ok = 1;
+    inst_ok = 1;
 
     {
         /* KOSDISASM=1 turns on disassembly */
         if (!_KOS_get_env("KOSDISASM", &buf) &&
                 buf.size == 2 && buf.buffer[0] == '1' && buf.buffer[1] == 0)
-            flags |= KOS_CTX_DISASM;
+            flags |= KOS_INST_DISASM;
 
         /* KOSINTERACTIVE=1 forces interactive prompt       */
         /* KOSINTERACTIVE=0 forces treating stdin as a file */
@@ -152,14 +152,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    ctx.flags = flags;
+    inst.flags = flags;
 
     /* Use executable path from OS to find modules */
-    error = KOS_context_add_default_path(yarn, 0);
+    error = KOS_instance_add_default_path(yarn, 0);
 
     /* Fallback: use argv[0] to find modules */
     if (error)
-        error = KOS_context_add_default_path(yarn, argv[0]);
+        error = KOS_instance_add_default_path(yarn, argv[0]);
 
     if (error) {
         fprintf(stderr, "Failed to setup module search paths\n");
@@ -173,17 +173,17 @@ int main(int argc, char *argv[])
 
         argv[i_first_arg - 1] = i_module ? argv[i_module] : &empty[0];
 
-        error = KOS_context_set_args(yarn,
+        error = KOS_instance_set_args(yarn,
                                      1 + argc - i_first_arg,
                                      (const char **)&argv[i_first_arg - 1]);
 
         argv[i_first_arg - 1] = saved;
     }
     else if (i_module)
-        error = KOS_context_set_args(yarn, 1, (const char**)&argv[i_module]);
+        error = KOS_instance_set_args(yarn, 1, (const char**)&argv[i_module]);
     else {
         const char *empty_ptr[] = { "" };
-        error = KOS_context_set_args(yarn, 1, empty_ptr);
+        error = KOS_instance_set_args(yarn, 1, empty_ptr);
     }
 
     if (error) {
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
         goto _error;
     }
 
-    error = KOS_modules_init(&ctx);
+    error = KOS_modules_init(&inst);
 
     if (error) {
         fprintf(stderr, "Failed to initialize modules\n");
@@ -244,8 +244,8 @@ int main(int argc, char *argv[])
     }
 
 _error:
-    if (ctx_ok)
-        KOS_context_destroy(&ctx);
+    if (inst_ok)
+        KOS_instance_destroy(&inst);
 
     _KOS_vector_destroy(&buf);
 

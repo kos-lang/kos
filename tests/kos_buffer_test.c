@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_buffer.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include <stdio.h>
@@ -32,14 +32,14 @@
 
 int main(void)
 {
-    KOS_CONTEXT       ctx;
+    KOS_INSTANCE      inst;
     KOS_YARN          yarn;
     static const char cstr[] = "str";
     KOS_OBJ_ID        str;
 
-    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
-    str = KOS_context_get_cstring(yarn, cstr);
+    str = KOS_instance_get_cstring(yarn, cstr);
 
     /************************************************************************/
     /* Cannot invoke buffer functions on non-buffer objects */
@@ -404,7 +404,7 @@ int main(void)
         /* TODO */
     }
 
-    KOS_context_destroy(&ctx);
+    KOS_instance_destroy(&inst);
 
     return 0;
 }

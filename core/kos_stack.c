@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_array.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
@@ -525,15 +525,15 @@ static int _dump_stack(KOS_OBJ_ID stack,
     const uint32_t          instr_offs  = _get_instr_offs(stack_frame);
     const unsigned          line        = KOS_module_addr_to_line(module, instr_offs);
     KOS_OBJ_ID              func_name   = KOS_module_addr_to_func_name(module, instr_offs);
-    KOS_OBJ_ID              module_name = KOS_context_get_cstring(yarn, str_builtin);
-    KOS_OBJ_ID              module_path = KOS_context_get_cstring(yarn, str_builtin);
+    KOS_OBJ_ID              module_name = KOS_instance_get_cstring(yarn, str_builtin);
+    KOS_OBJ_ID              module_path = KOS_instance_get_cstring(yarn, str_builtin);
     int                     error       = KOS_SUCCESS;
 
     KOS_OBJ_ID frame_desc = KOS_new_object(yarn);
     TRY_OBJID(frame_desc);
 
     if (IS_BAD_PTR(func_name))
-        func_name = KOS_context_get_cstring(yarn, str_builtin); /* TODO add builtin function name */
+        func_name = KOS_instance_get_cstring(yarn, str_builtin); /* TODO add builtin function name */
 
     assert(dump_ctx->idx < KOS_get_array_size(dump_ctx->backtrace));
     TRY(KOS_array_write(yarn, dump_ctx->backtrace, (int)dump_ctx->idx, frame_desc));
@@ -545,11 +545,11 @@ static int _dump_stack(KOS_OBJ_ID stack,
         module_path = module->path;
     }
 
-    TRY(KOS_set_property(yarn, frame_desc, KOS_context_get_cstring(yarn, str_module),   module_name));
-    TRY(KOS_set_property(yarn, frame_desc, KOS_context_get_cstring(yarn, str_file),     module_path));
-    TRY(KOS_set_property(yarn, frame_desc, KOS_context_get_cstring(yarn, str_line),     TO_SMALL_INT((int)line)));
-    TRY(KOS_set_property(yarn, frame_desc, KOS_context_get_cstring(yarn, str_offset),   TO_SMALL_INT((int)instr_offs)));
-    TRY(KOS_set_property(yarn, frame_desc, KOS_context_get_cstring(yarn, str_function), func_name));
+    TRY(KOS_set_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_module),   module_name));
+    TRY(KOS_set_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_file),     module_path));
+    TRY(KOS_set_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_line),     TO_SMALL_INT((int)line)));
+    TRY(KOS_set_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_offset),   TO_SMALL_INT((int)instr_offs)));
+    TRY(KOS_set_property(yarn, frame_desc, KOS_instance_get_cstring(yarn, str_function), func_name));
 
     ++dump_ctx->idx;
 
@@ -559,14 +559,14 @@ _error:
 
 void _KOS_wrap_exception(KOS_YARN yarn)
 {
-    int                error         = KOS_SUCCESS;
-    unsigned           depth;
-    KOS_OBJ_ID         exception;
-    KOS_OBJ_ID         backtrace;
-    KOS_OBJ_ID         thrown_object = yarn->exception;
-    KOS_CONTEXT *const ctx           = yarn->ctx;
-    int                partial_wrap  = 0;
-    _KOS_DUMP_CONTEXT  dump_ctx;
+    int                 error         = KOS_SUCCESS;
+    unsigned            depth;
+    KOS_OBJ_ID          exception;
+    KOS_OBJ_ID          backtrace;
+    KOS_OBJ_ID          thrown_object = yarn->exception;
+    KOS_INSTANCE *const inst          = yarn->inst;
+    int                 partial_wrap  = 0;
+    _KOS_DUMP_CONTEXT   dump_ctx;
 
     assert(!IS_BAD_PTR(thrown_object));
 
@@ -574,17 +574,17 @@ void _KOS_wrap_exception(KOS_YARN yarn)
 
         const KOS_OBJ_ID proto = KOS_get_prototype(yarn, thrown_object);
 
-        if (proto == ctx->prototypes.exception_proto)
+        if (proto == inst->prototypes.exception_proto)
             /* Exception already wrapped */
             return;
     }
 
     KOS_clear_exception(yarn);
 
-    exception = KOS_new_object_with_prototype(yarn, ctx->prototypes.exception_proto);
+    exception = KOS_new_object_with_prototype(yarn, inst->prototypes.exception_proto);
     TRY_OBJID(exception);
 
-    TRY(KOS_set_property(yarn, exception, KOS_context_get_cstring(yarn, str_value), thrown_object));
+    TRY(KOS_set_property(yarn, exception, KOS_instance_get_cstring(yarn, str_value), thrown_object));
 
     partial_wrap = 1;
 
@@ -596,7 +596,7 @@ void _KOS_wrap_exception(KOS_YARN yarn)
 
     TRY(KOS_array_resize(yarn, backtrace, depth));
 
-    TRY(KOS_set_property(yarn, exception, KOS_context_get_cstring(yarn, str_backtrace), backtrace));
+    TRY(KOS_set_property(yarn, exception, KOS_instance_get_cstring(yarn, str_backtrace), backtrace));
 
     dump_ctx.yarn      = yarn;
     dump_ctx.idx       = 0;

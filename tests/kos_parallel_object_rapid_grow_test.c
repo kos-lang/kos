@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_object.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
@@ -33,7 +33,7 @@
 #include <time.h>
 
 struct TEST_DATA {
-    KOS_CONTEXT         *ctx;
+    KOS_INSTANCE        *inst;
     KOS_OBJ_ID           object;
     KOS_OBJ_ID          *prop_names;
     size_t               num_props;
@@ -117,11 +117,11 @@ static void _read_props(KOS_YARN yarn,
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
-    const int   num_cpus = _get_num_cpus();
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
+    const int    num_cpus = _get_num_cpus();
 
-    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
     /************************************************************************/
     /* This test grows objects from multiple threads, causing lots of collisions */
@@ -165,7 +165,7 @@ int main(void)
             TEST( ! IS_BAD_PTR(props[i]));
         }
 
-        data.ctx        = &ctx;
+        data.inst       = &inst;
         data.prop_names = props;
         data.num_props  = num_props;
         data.num_loops  = num_props * 2U / (unsigned)num_threads;
@@ -211,7 +211,7 @@ int main(void)
         _KOS_vector_destroy(&mem_buf);
     }
 
-    KOS_context_destroy(&ctx);
+    KOS_instance_destroy(&inst);
 
     return 0;
 }

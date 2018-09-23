@@ -26,9 +26,9 @@
 #include "../inc/kos_object_base.h"
 #include <stddef.h>
 
-int   _KOS_heap_init(KOS_CONTEXT *ctx);
+int   _KOS_heap_init(KOS_INSTANCE *inst);
 
-void  _KOS_heap_destroy(KOS_CONTEXT *ctx);
+void  _KOS_heap_destroy(KOS_INSTANCE *inst);
 
 void *_KOS_alloc_object(KOS_YARN             yarn,
                         enum KOS_ALLOC_HINT  alloc_hint,
@@ -39,10 +39,10 @@ void *_KOS_alloc_object_page(KOS_YARN             yarn,
                              enum KOS_ALLOC_HINT  alloc_hint,
                              enum KOS_OBJECT_TYPE object_type);
 
-void *_KOS_heap_early_alloc(KOS_CONTEXT         *ctx,
-                            KOS_YARN             yarn,
-                            enum KOS_OBJECT_TYPE object_type,
-                            uint32_t             size);
+void *_KOS_heap_early_alloc(KOS_INSTANCE         *inst,
+                            KOS_YARN              yarn,
+                            enum KOS_OBJECT_TYPE  object_type,
+                            uint32_t              size);
 
 void _KOS_heap_release_thread_page(KOS_YARN yarn);
 

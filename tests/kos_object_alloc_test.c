@@ -21,7 +21,7 @@
  */
 
 #include "../core/kos_heap.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../core/kos_config.h"
 #include "../core/kos_misc.h"
@@ -177,9 +177,9 @@ static int _check_bytes(KOS_OBJ_ID obj_id,
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
-    size_t      i;
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
+    size_t       i;
 
     const struct _ALLOC_FUNC {
         ALLOC_FUNC           alloc_func;
@@ -201,9 +201,9 @@ int main(void)
 
     /************************************************************************/
     {
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -223,7 +223,7 @@ int main(void)
         int    j;
         void **objects;
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         objects = (void **)_KOS_alloc_object(yarn,
                                              KOS_ALLOC_DEFAULT,
@@ -260,7 +260,7 @@ int main(void)
                 }
         }
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -270,7 +270,7 @@ int main(void)
         int       j;
         void    **objects;
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         objects = (void **)_KOS_alloc_object(yarn,
                                              KOS_ALLOC_DEFAULT,
@@ -305,7 +305,7 @@ int main(void)
                 }
         }
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -316,7 +316,7 @@ int main(void)
 
         _KOS_rng_init(&rng);
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(yarn,
                                                              KOS_ALLOC_DEFAULT,
@@ -354,7 +354,7 @@ int main(void)
                 }
         }
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -365,7 +365,7 @@ int main(void)
 
         _KOS_rng_init(&rng);
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(yarn,
                                                              KOS_ALLOC_DEFAULT,
@@ -404,7 +404,7 @@ int main(void)
                 }
         }
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     /************************************************************************/
@@ -415,7 +415,7 @@ int main(void)
         KOS_OBJ_ID group_four[2];
         KOS_OBJ_ID group_five[2];
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         /* Test 1:
          * Allocate objects in one page until the page is full, put the page
@@ -487,7 +487,7 @@ int main(void)
         for (i = 0; i < sizeof(group_five) / sizeof(group_five[0]); ++i)
             TEST(_check_opaque(group_five[i], (uint8_t)(0x90U + i)));
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     return 0;

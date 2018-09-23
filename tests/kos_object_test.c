@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_object.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_object_internal.h"
@@ -73,10 +73,10 @@ static int _walk_object(KOS_YARN                   yarn,
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
 
-    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
     /************************************************************************/
     {
@@ -88,11 +88,11 @@ int main(void)
         TEST(GET_OBJ_TYPE(o) == OBJ_OBJECT);
 
         /* Can delete non-existent property */
-        TEST(KOS_delete_property(yarn, o, KOS_context_get_cstring(yarn, non_existent)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(yarn, o, KOS_instance_get_cstring(yarn, non_existent)) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         /* Cannot retrieve non-existent property */
-        TEST(IS_BAD_PTR(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, non_existent))));
+        TEST(IS_BAD_PTR(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, non_existent))));
         TEST_EXCEPTION();
 
         /* Invalid property pointer */
@@ -109,9 +109,9 @@ int main(void)
         KOS_OBJ_ID           walk;
         KOS_OBJECT_WALK_ELEM elem;
 
-        const KOS_OBJ_ID str_aaa = KOS_context_get_cstring(yarn, aaa);
-        const KOS_OBJ_ID str_bbb = KOS_context_get_cstring(yarn, bbb);
-        const KOS_OBJ_ID str_ccc = KOS_context_get_cstring(yarn, ccc);
+        const KOS_OBJ_ID str_aaa = KOS_instance_get_cstring(yarn, aaa);
+        const KOS_OBJ_ID str_bbb = KOS_instance_get_cstring(yarn, bbb);
+        const KOS_OBJ_ID str_ccc = KOS_instance_get_cstring(yarn, ccc);
 
         const KOS_OBJ_ID o = KOS_new_object(yarn);
         TEST(!IS_BAD_PTR(o));
@@ -159,7 +159,7 @@ int main(void)
         TEST_NO_EXCEPTION();
 
         /* Cannot retrieve a property after it has been deleted */
-        TEST(IS_BAD_PTR(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, aaa))));
+        TEST(IS_BAD_PTR(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, aaa))));
         TEST_EXCEPTION();
 
         /* Retrieve the remaining property */
@@ -193,27 +193,27 @@ int main(void)
         TEST(!IS_BAD_PTR(o));
 
         /* Cannot set property when value is null pointer */
-        TEST(KOS_set_property(yarn, o, KOS_context_get_cstring(yarn, str), KOS_BADPTR) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(yarn, o, KOS_instance_get_cstring(yarn, str), KOS_BADPTR) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of null pointer */
-        TEST(KOS_set_property(yarn, KOS_BADPTR, KOS_context_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(yarn, KOS_BADPTR, KOS_instance_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of a number */
-        TEST(KOS_set_property(yarn, TO_SMALL_INT(123), KOS_context_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(yarn, TO_SMALL_INT(123), KOS_instance_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of a string */
-        TEST(KOS_set_property(yarn, KOS_context_get_cstring(yarn, str), KOS_context_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(yarn, KOS_instance_get_cstring(yarn, str), KOS_instance_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of a boolean */
-        TEST(KOS_set_property(yarn, KOS_TRUE, KOS_context_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(yarn, KOS_TRUE, KOS_instance_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of a void */
-        TEST(KOS_set_property(yarn, KOS_VOID, KOS_context_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(yarn, KOS_VOID, KOS_instance_get_cstring(yarn, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
     }
 
@@ -251,11 +251,11 @@ int main(void)
         TEST(!IS_BAD_PTR(o));
 
         /* Can set property if name and value are correct */
-        TEST(KOS_set_property(yarn, o, KOS_context_get_cstring(yarn, str), TO_SMALL_INT(3)) == KOS_SUCCESS);
+        TEST(KOS_set_property(yarn, o, KOS_instance_get_cstring(yarn, str), TO_SMALL_INT(3)) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         /* Cannot retrieve property of a null pointer */
-        TEST(IS_BAD_PTR(KOS_get_property(yarn, KOS_BADPTR, KOS_context_get_cstring(yarn, str))));
+        TEST(IS_BAD_PTR(KOS_get_property(yarn, KOS_BADPTR, KOS_instance_get_cstring(yarn, str))));
         TEST_EXCEPTION();
 
         /* Cannot retrieve property when name is a null pointer */
@@ -275,7 +275,7 @@ int main(void)
         TEST_EXCEPTION();
 
         /* Can retrieve correct property */
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, str)) == TO_SMALL_INT(3));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, str)) == TO_SMALL_INT(3));
         TEST_NO_EXCEPTION();
     }
 
@@ -348,70 +348,70 @@ int main(void)
         TEST(!IS_BAD_PTR(o));
 
         /* Cannot retrieve non-existent property */
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, aaa)) == KOS_BADPTR);
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, aaa)) == KOS_BADPTR);
         TEST_EXCEPTION();
 
         /* Add properties to the prototype */
-        TEST(KOS_set_property(yarn, base, KOS_context_get_cstring(yarn, aaa), TO_SMALL_INT(1)) == KOS_SUCCESS);
-        TEST(KOS_set_property(yarn, base, KOS_context_get_cstring(yarn, bbb), TO_SMALL_INT(2)) == KOS_SUCCESS);
+        TEST(KOS_set_property(yarn, base, KOS_instance_get_cstring(yarn, aaa), TO_SMALL_INT(1)) == KOS_SUCCESS);
+        TEST(KOS_set_property(yarn, base, KOS_instance_get_cstring(yarn, bbb), TO_SMALL_INT(2)) == KOS_SUCCESS);
 
         /* Can retrieve properties from prototype */
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, bbb)) == TO_SMALL_INT(2));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, bbb)) == TO_SMALL_INT(2));
         TEST_NO_EXCEPTION();
 
         /* Cannot retrieve non-existent property */
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, ccc)) == KOS_BADPTR);
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, ccc)) == KOS_BADPTR);
         TEST_EXCEPTION();
 
         /* Set properties */
-        TEST(KOS_set_property(yarn, o, KOS_context_get_cstring(yarn, aaa), TO_SMALL_INT(3)) == KOS_SUCCESS);
-        TEST(KOS_set_property(yarn, o, KOS_context_get_cstring(yarn, ccc), TO_SMALL_INT(4)) == KOS_SUCCESS);
+        TEST(KOS_set_property(yarn, o, KOS_instance_get_cstring(yarn, aaa), TO_SMALL_INT(3)) == KOS_SUCCESS);
+        TEST(KOS_set_property(yarn, o, KOS_instance_get_cstring(yarn, ccc), TO_SMALL_INT(4)) == KOS_SUCCESS);
 
         /* Check all properties */
-        TEST(KOS_get_property(yarn, base, KOS_context_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(yarn, base, KOS_instance_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(yarn, base, KOS_context_get_cstring(yarn, bbb)) == TO_SMALL_INT(2));
+        TEST(KOS_get_property(yarn, base, KOS_instance_get_cstring(yarn, bbb)) == TO_SMALL_INT(2));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(yarn, base, KOS_context_get_cstring(yarn, ccc)) == KOS_BADPTR);
+        TEST(KOS_get_property(yarn, base, KOS_instance_get_cstring(yarn, ccc)) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, aaa)) == TO_SMALL_INT(3));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, aaa)) == TO_SMALL_INT(3));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, bbb)) == TO_SMALL_INT(2));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, bbb)) == TO_SMALL_INT(2));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, ccc)) == TO_SMALL_INT(4));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, ccc)) == TO_SMALL_INT(4));
         TEST_NO_EXCEPTION();
 
         /* Delete some properties */
-        TEST(KOS_delete_property(yarn, base, KOS_context_get_cstring(yarn, bbb)) == KOS_SUCCESS);
-        TEST(KOS_delete_property(yarn, o,    KOS_context_get_cstring(yarn, aaa)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(yarn, base, KOS_instance_get_cstring(yarn, bbb)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(yarn, o,    KOS_instance_get_cstring(yarn, aaa)) == KOS_SUCCESS);
 
         /* Check all properties again */
-        TEST(KOS_get_property(yarn, base, KOS_context_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(yarn, base, KOS_instance_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(yarn, base, KOS_context_get_cstring(yarn, bbb)) == KOS_BADPTR);
+        TEST(KOS_get_property(yarn, base, KOS_instance_get_cstring(yarn, bbb)) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(yarn, base, KOS_context_get_cstring(yarn, ccc)) == KOS_BADPTR);
+        TEST(KOS_get_property(yarn, base, KOS_instance_get_cstring(yarn, ccc)) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, bbb)) == KOS_BADPTR);
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, bbb)) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, ccc)) == TO_SMALL_INT(4));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, ccc)) == TO_SMALL_INT(4));
         TEST_NO_EXCEPTION();
 
         /* Delete more properties */
-        TEST(KOS_delete_property(yarn, o, KOS_context_get_cstring(yarn, aaa)) == KOS_SUCCESS);
-        TEST(KOS_delete_property(yarn, o, KOS_context_get_cstring(yarn, bbb)) == KOS_SUCCESS);
-        TEST(KOS_delete_property(yarn, o, KOS_context_get_cstring(yarn, ccc)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(yarn, o, KOS_instance_get_cstring(yarn, aaa)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(yarn, o, KOS_instance_get_cstring(yarn, bbb)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(yarn, o, KOS_instance_get_cstring(yarn, ccc)) == KOS_SUCCESS);
 
         /* Check properties again */
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, aaa)) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, bbb)) == KOS_BADPTR);
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, bbb)) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(yarn, o, KOS_context_get_cstring(yarn, ccc)) == KOS_BADPTR);
+        TEST(KOS_get_property(yarn, o, KOS_instance_get_cstring(yarn, ccc)) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -500,12 +500,12 @@ int main(void)
         static const char s5[] = "5";
         static const char s6[] = "6";
 
-        const KOS_OBJ_ID str_1 = KOS_context_get_cstring(yarn, s1);
-        const KOS_OBJ_ID str_2 = KOS_context_get_cstring(yarn, s2);
-        const KOS_OBJ_ID str_3 = KOS_context_get_cstring(yarn, s3);
-        const KOS_OBJ_ID str_4 = KOS_context_get_cstring(yarn, s4);
-        const KOS_OBJ_ID str_5 = KOS_context_get_cstring(yarn, s5);
-        const KOS_OBJ_ID str_6 = KOS_context_get_cstring(yarn, s6);
+        const KOS_OBJ_ID str_1 = KOS_instance_get_cstring(yarn, s1);
+        const KOS_OBJ_ID str_2 = KOS_instance_get_cstring(yarn, s2);
+        const KOS_OBJ_ID str_3 = KOS_instance_get_cstring(yarn, s3);
+        const KOS_OBJ_ID str_4 = KOS_instance_get_cstring(yarn, s4);
+        const KOS_OBJ_ID str_5 = KOS_instance_get_cstring(yarn, s5);
+        const KOS_OBJ_ID str_6 = KOS_instance_get_cstring(yarn, s6);
 
         TEST(!IS_BAD_PTR(obj_a));
         TEST(!IS_BAD_PTR(obj_b));
@@ -618,10 +618,10 @@ int main(void)
         static const char efg[] = "efg";
         static const char ghi[] = "ghi";
 
-        const KOS_OBJ_ID str_abc = KOS_context_get_cstring(yarn, abc);
-        const KOS_OBJ_ID str_cde = KOS_context_get_cstring(yarn, cde);
-        const KOS_OBJ_ID str_efg = KOS_context_get_cstring(yarn, efg);
-        const KOS_OBJ_ID str_ghi = KOS_context_get_cstring(yarn, ghi);
+        const KOS_OBJ_ID str_abc = KOS_instance_get_cstring(yarn, abc);
+        const KOS_OBJ_ID str_cde = KOS_instance_get_cstring(yarn, cde);
+        const KOS_OBJ_ID str_efg = KOS_instance_get_cstring(yarn, efg);
+        const KOS_OBJ_ID str_ghi = KOS_instance_get_cstring(yarn, ghi);
 
         KOS_OBJ_ID obj = KOS_new_object(yarn);
         TEST( ! IS_BAD_PTR(obj));
@@ -639,7 +639,7 @@ int main(void)
         TEST(KOS_get_property(yarn, obj, str_ghi) == TO_SMALL_INT(4));
     }
 
-    KOS_context_destroy(&ctx);
+    KOS_instance_destroy(&inst);
 
     return 0;
 }

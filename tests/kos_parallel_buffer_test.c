@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_buffer.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
@@ -33,7 +33,7 @@
 #include <memory.h>
 
 struct TEST_DATA {
-    KOS_CONTEXT         *ctx;
+    KOS_INSTANCE        *inst;
     KOS_OBJ_ID           buf;
     int                  num_loops;
     KOS_ATOMIC(uint32_t) go;
@@ -96,11 +96,11 @@ static void _test_thread_func(KOS_YARN yarn,
 
 int main(void)
 {
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
-    const int   num_cpus = _get_num_cpus();
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
+    const int    num_cpus = _get_num_cpus();
 
-    TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
     /************************************************************************/
     /* This test performs buffer make_room, fill and copy from multiple threads */
@@ -133,7 +133,7 @@ int main(void)
             TEST((thread_cookies[i].id >= 0x80U) && (thread_cookies[i].id <= 0x9FU));
         }
 
-        data.ctx        = &ctx;
+        data.inst       = &inst;
         data.num_loops  = num_thread_loops;
         data.error      = KOS_SUCCESS;
 
@@ -198,7 +198,7 @@ int main(void)
         _KOS_vector_destroy(&mem_buf);
     }
 
-    KOS_context_destroy(&ctx);
+    KOS_instance_destroy(&inst);
 
     return 0;
 }

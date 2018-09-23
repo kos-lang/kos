@@ -21,7 +21,7 @@
  */
 
 #include "../inc/kos_array.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object_base.h"
@@ -437,7 +437,7 @@ int _KOS_module_math_init(KOS_YARN yarn, KOS_OBJ_ID module)
         static const char str_infinity[] = "infinity";
         union _KOS_NUMERIC_VALUE value;
         value.i = (uint64_t)0x7FF00000U << 32;
-        TRY(KOS_module_add_global(yarn, module, KOS_context_get_cstring(yarn, str_infinity), KOS_new_float(yarn, value.d), 0));
+        TRY(KOS_module_add_global(yarn, module, KOS_instance_get_cstring(yarn, str_infinity), KOS_new_float(yarn, value.d), 0));
     }
 
     /* @item math nan
@@ -450,7 +450,7 @@ int _KOS_module_math_init(KOS_YARN yarn, KOS_OBJ_ID module)
         static const char str_nan[] = "nan";
         union _KOS_NUMERIC_VALUE value;
         value.i = ((uint64_t)0x7FF00000U << 32) | 1U;
-        TRY(KOS_module_add_global(yarn, module, KOS_context_get_cstring(yarn, str_nan), KOS_new_float(yarn, value.d), 0));
+        TRY(KOS_module_add_global(yarn, module, KOS_instance_get_cstring(yarn, str_nan), KOS_new_float(yarn, value.d), 0));
     }
 
     TRY_ADD_FUNCTION(yarn, module, "abs",         _abs,         1);

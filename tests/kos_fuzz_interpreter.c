@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_utils.h"
@@ -31,15 +31,15 @@ extern "C"
 #endif
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
-    int         error;
-    KOS_CONTEXT ctx;
-    KOS_YARN    yarn;
+    int          error;
+    KOS_INSTANCE inst;
+    KOS_YARN     yarn;
 
-    error = KOS_context_init(&ctx, &yarn);
+    error = KOS_instance_init(&inst, &yarn);
 
     if ( ! error) {
 
-        error = KOS_context_add_default_path(yarn, 0);
+        error = KOS_instance_add_default_path(yarn, 0);
 
         if ( ! error)
             error = KOS_load_module_from_memory(yarn, "lang", (const char *)data, (unsigned)size);
@@ -51,7 +51,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
             fprintf(stderr, "Out of memory\n");
         }
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
     return 0;
 }

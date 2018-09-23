@@ -21,7 +21,7 @@
  */
 
 #include "kos_heap.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
@@ -128,12 +128,12 @@ static void *_list_pop(void **list_ptr)
 
 static struct _KOS_HEAP *_get_heap(KOS_YARN yarn)
 {
-    return &yarn->ctx->heap;
+    return &yarn->inst->heap;
 }
 
-int _KOS_heap_init(KOS_CONTEXT *ctx)
+int _KOS_heap_init(KOS_INSTANCE *inst)
 {
-    struct _KOS_HEAP *heap = &ctx->heap;
+    struct _KOS_HEAP *heap = &inst->heap;
 
     KOS_atomic_write_u32(heap->gc_state, 0);
     heap->heap_size      = 0;
@@ -152,10 +152,10 @@ int _KOS_heap_init(KOS_CONTEXT *ctx)
     return _KOS_create_mutex(&heap->mutex);
 }
 
-void _KOS_heap_destroy(KOS_CONTEXT *ctx)
+void _KOS_heap_destroy(KOS_INSTANCE *inst)
 {
     for (;;) {
-        _KOS_POOL *pool = (_KOS_POOL *)POP_LIST(ctx->heap.pools);
+        _KOS_POOL *pool = (_KOS_POOL *)POP_LIST(inst->heap.pools);
 
         if ( ! pool)
             break;
@@ -163,7 +163,7 @@ void _KOS_heap_destroy(KOS_CONTEXT *ctx)
         _KOS_free(pool->memory);
     }
 
-    _KOS_destroy_mutex(&ctx->heap.mutex);
+    _KOS_destroy_mutex(&inst->heap.mutex);
 }
 
 static void _register_wasted_region(struct _KOS_HEAP *heap,
@@ -456,7 +456,7 @@ static KOS_OBJ_HEADER *_alloc_object_from_page(_KOS_PAGE           *page,
     return hdr;
 }
 
-void *_KOS_heap_early_alloc(KOS_CONTEXT         *ctx,
+void *_KOS_heap_early_alloc(KOS_INSTANCE        *inst,
                             KOS_YARN             yarn,
                             enum KOS_OBJECT_TYPE object_type,
                             uint32_t             size)
@@ -465,11 +465,11 @@ void *_KOS_heap_early_alloc(KOS_CONTEXT         *ctx,
 
     if ( ! yarn->cur_page) {
 
-        _KOS_lock_mutex(&ctx->heap.mutex);
+        _KOS_lock_mutex(&inst->heap.mutex);
 
-        yarn->cur_page = _alloc_page(&ctx->heap);
+        yarn->cur_page = _alloc_page(&inst->heap);
 
-        _KOS_unlock_mutex(&ctx->heap.mutex);
+        _KOS_unlock_mutex(&inst->heap.mutex);
 
         if ( ! yarn->cur_page)
             return 0;
@@ -482,7 +482,7 @@ void _KOS_heap_release_thread_page(KOS_YARN yarn)
 {
     if (yarn->cur_page) {
 
-        struct _KOS_HEAP *const heap = &yarn->ctx->heap;
+        struct _KOS_HEAP *const heap = &yarn->inst->heap;
 
         _KOS_lock_mutex(&heap->mutex);
 
@@ -650,7 +650,7 @@ static void *_alloc_object(KOS_YARN             yarn,
     _KOS_PAGE       **page_ptr;
     KOS_OBJ_HEADER   *hdr        = 0;
 
-    KOS_context_validate(yarn);
+    KOS_instance_validate(yarn);
 
     /* Fast path: allocate from a page held by this thread */
     if (page) {
@@ -1147,32 +1147,32 @@ static void _mark_from_thread_context(KOS_YARN yarn)
 
 static void _mark_roots(KOS_YARN yarn)
 {
-    KOS_CONTEXT *ctx = yarn->ctx;
+    KOS_INSTANCE *const inst = yarn->inst;
 
-    _mark_object_black(ctx->empty_string);
+    _mark_object_black(inst->empty_string);
     _mark_object_black(_get_heap(yarn)->str_oom_id);
 
-    _mark_object_black(ctx->prototypes.object_proto);
-    _mark_object_black(ctx->prototypes.number_proto);
-    _mark_object_black(ctx->prototypes.integer_proto);
-    _mark_object_black(ctx->prototypes.float_proto);
-    _mark_object_black(ctx->prototypes.string_proto);
-    _mark_object_black(ctx->prototypes.boolean_proto);
-    _mark_object_black(ctx->prototypes.array_proto);
-    _mark_object_black(ctx->prototypes.buffer_proto);
-    _mark_object_black(ctx->prototypes.function_proto);
-    _mark_object_black(ctx->prototypes.class_proto);
-    _mark_object_black(ctx->prototypes.generator_proto);
-    _mark_object_black(ctx->prototypes.exception_proto);
-    _mark_object_black(ctx->prototypes.generator_end_proto);
-    _mark_object_black(ctx->prototypes.thread_proto);
+    _mark_object_black(inst->prototypes.object_proto);
+    _mark_object_black(inst->prototypes.number_proto);
+    _mark_object_black(inst->prototypes.integer_proto);
+    _mark_object_black(inst->prototypes.float_proto);
+    _mark_object_black(inst->prototypes.string_proto);
+    _mark_object_black(inst->prototypes.boolean_proto);
+    _mark_object_black(inst->prototypes.array_proto);
+    _mark_object_black(inst->prototypes.buffer_proto);
+    _mark_object_black(inst->prototypes.function_proto);
+    _mark_object_black(inst->prototypes.class_proto);
+    _mark_object_black(inst->prototypes.generator_proto);
+    _mark_object_black(inst->prototypes.exception_proto);
+    _mark_object_black(inst->prototypes.generator_end_proto);
+    _mark_object_black(inst->prototypes.thread_proto);
 
-    _mark_object_black(ctx->modules.init_module);
-    _mark_object_black(ctx->modules.search_paths);
-    _mark_object_black(ctx->modules.module_names);
-    _mark_object_black(ctx->modules.modules);
+    _mark_object_black(inst->modules.init_module);
+    _mark_object_black(inst->modules.search_paths);
+    _mark_object_black(inst->modules.module_names);
+    _mark_object_black(inst->modules.modules);
 
-    _mark_object_black(ctx->args);
+    _mark_object_black(inst->args);
 
     /* TODO go over all threads */
     _mark_from_thread_context(yarn);
@@ -1493,10 +1493,10 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
 static void _update_after_evacuation(KOS_YARN yarn)
 {
-    KOS_CONTEXT      *ctx              = yarn->ctx;
-    struct _KOS_HEAP *heap             = &ctx->heap;
-    _KOS_PAGE        *page             = heap->full_pages;
-    int               non_full_checked = 0;
+    KOS_INSTANCE *const inst             = yarn->inst;
+    struct _KOS_HEAP   *heap             = &inst->heap;
+    _KOS_PAGE          *page             = heap->full_pages;
+    int                 non_full_checked = 0;
 
     if ( ! page) {
         page = heap->non_full_pages;
@@ -1527,39 +1527,39 @@ static void _update_after_evacuation(KOS_YARN yarn)
         }
     }
 
-    /* Update object pointers in context */
+    /* Update object pointers in instance */
 
-    _update_child_ptr(&ctx->empty_string);
+    _update_child_ptr(&inst->empty_string);
     _update_child_ptr(&heap->str_oom_id);
 
-    _update_child_ptr(&ctx->prototypes.object_proto);
-    _update_child_ptr(&ctx->prototypes.number_proto);
-    _update_child_ptr(&ctx->prototypes.integer_proto);
-    _update_child_ptr(&ctx->prototypes.float_proto);
-    _update_child_ptr(&ctx->prototypes.string_proto);
-    _update_child_ptr(&ctx->prototypes.boolean_proto);
-    _update_child_ptr(&ctx->prototypes.array_proto);
-    _update_child_ptr(&ctx->prototypes.buffer_proto);
-    _update_child_ptr(&ctx->prototypes.function_proto);
-    _update_child_ptr(&ctx->prototypes.class_proto);
-    _update_child_ptr(&ctx->prototypes.generator_proto);
-    _update_child_ptr(&ctx->prototypes.exception_proto);
-    _update_child_ptr(&ctx->prototypes.generator_end_proto);
-    _update_child_ptr(&ctx->prototypes.thread_proto);
+    _update_child_ptr(&inst->prototypes.object_proto);
+    _update_child_ptr(&inst->prototypes.number_proto);
+    _update_child_ptr(&inst->prototypes.integer_proto);
+    _update_child_ptr(&inst->prototypes.float_proto);
+    _update_child_ptr(&inst->prototypes.string_proto);
+    _update_child_ptr(&inst->prototypes.boolean_proto);
+    _update_child_ptr(&inst->prototypes.array_proto);
+    _update_child_ptr(&inst->prototypes.buffer_proto);
+    _update_child_ptr(&inst->prototypes.function_proto);
+    _update_child_ptr(&inst->prototypes.class_proto);
+    _update_child_ptr(&inst->prototypes.generator_proto);
+    _update_child_ptr(&inst->prototypes.exception_proto);
+    _update_child_ptr(&inst->prototypes.generator_end_proto);
+    _update_child_ptr(&inst->prototypes.thread_proto);
 
-    _update_child_ptr(&ctx->modules.init_module);
-    _update_child_ptr(&ctx->modules.search_paths);
-    _update_child_ptr(&ctx->modules.module_names);
-    _update_child_ptr(&ctx->modules.modules);
+    _update_child_ptr(&inst->modules.init_module);
+    _update_child_ptr(&inst->modules.search_paths);
+    _update_child_ptr(&inst->modules.module_names);
+    _update_child_ptr(&inst->modules.modules);
 
-    _update_child_ptr(&ctx->args);
+    _update_child_ptr(&inst->args);
 
     /* Update object pointers in thread contexts */
 
     {
-        yarn = &ctx->threads.main_thread;
+        yarn = &inst->threads.main_thread;
 
-        _KOS_lock_mutex(&ctx->threads.mutex);
+        _KOS_lock_mutex(&inst->threads.mutex);
 
         while (yarn) {
 
@@ -1577,7 +1577,7 @@ static void _update_after_evacuation(KOS_YARN yarn)
             yarn = yarn->next;
         }
 
-        _KOS_unlock_mutex(&ctx->threads.mutex);
+        _KOS_unlock_mutex(&inst->threads.mutex);
     }
 }
 

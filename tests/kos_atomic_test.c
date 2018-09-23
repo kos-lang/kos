@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_threads.h"
@@ -150,7 +150,7 @@ int main(void)
 
     /* Basic thread test */
     {
-        KOS_CONTEXT         ctx;
+        KOS_INSTANCE        inst;
         KOS_YARN            yarn;
         struct _THREAD_DATA thread_data;
         _KOS_THREAD         thread;
@@ -158,7 +158,7 @@ int main(void)
         thread_data.lock  = 0;
         thread_data.value = TO_SMALL_INT(44);
 
-        TEST(KOS_context_init(&ctx, &yarn) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, &yarn) == KOS_SUCCESS);
 
         _KOS_spin_lock(&thread_data.lock);
 
@@ -174,7 +174,7 @@ int main(void)
 
         TEST(KOS_get_exception(yarn) == TO_SMALL_INT(45));
 
-        KOS_context_destroy(&ctx);
+        KOS_instance_destroy(&inst);
     }
 
     return 0;

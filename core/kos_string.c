@@ -22,7 +22,7 @@
 
 #include "../inc/kos_string.h"
 #include "../inc/kos_array.h"
-#include "../inc/kos_context.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
@@ -147,7 +147,7 @@ static KOS_OBJ_ID _new_string(KOS_YARN              yarn,
         }
     }
     else
-        str = OBJPTR(STRING, yarn->ctx->empty_string);
+        str = OBJPTR(STRING, yarn->inst->empty_string);
 
     return OBJID(STRING, str);
 }
@@ -206,7 +206,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_YARN               yarn,
         }
     }
     else
-        str = OBJPTR(STRING, yarn->ctx->empty_string);
+        str = OBJPTR(STRING, yarn->inst->empty_string);
 
     return OBJID(STRING, str);
 }
@@ -260,7 +260,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_YARN   yarn,
             goto _error;
     }
     else
-        ret = OBJPTR(STRING, yarn->ctx->empty_string);
+        ret = OBJPTR(STRING, yarn->inst->empty_string);
 
     str_buf = (void *)_KOS_get_string_buffer(ret);
 
@@ -558,7 +558,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_YARN                yarn,
         KOS_ATOMIC(KOS_OBJ_ID) *cur_ptr;
         KOS_OBJ_ID              non_0_str = KOS_VOID;
 
-        new_str = OBJPTR(STRING, yarn->ctx->empty_string);
+        new_str = OBJPTR(STRING, yarn->inst->empty_string);
 
         for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
             KOS_OBJ_ID             cur_str = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
@@ -569,7 +569,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_YARN                yarn,
                 new_str = 0;
                 new_len = 0;
                 KOS_raise_exception(yarn, IS_BAD_PTR(cur_str) ?
-                        KOS_context_get_cstring(yarn, str_err_null_pointer) : KOS_context_get_cstring(yarn, str_err_not_string));
+                        KOS_instance_get_cstring(yarn, str_err_null_pointer) : KOS_instance_get_cstring(yarn, str_err_not_string));
                 break;
             }
 
@@ -620,7 +620,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_YARN   yarn,
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception(yarn, IS_BAD_PTR(obj_id) ?
-                KOS_context_get_cstring(yarn, str_err_null_pointer): KOS_context_get_cstring(yarn, str_err_not_string));
+                KOS_instance_get_cstring(yarn, str_err_null_pointer): KOS_instance_get_cstring(yarn, str_err_not_string));
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -684,10 +684,10 @@ KOS_OBJ_ID KOS_string_slice(KOS_YARN   yarn,
                 }
             }
             else
-                new_str = OBJPTR(STRING, yarn->ctx->empty_string);
+                new_str = OBJPTR(STRING, yarn->inst->empty_string);
         }
         else
-            new_str = OBJPTR(STRING, yarn->ctx->empty_string);
+            new_str = OBJPTR(STRING, yarn->inst->empty_string);
     }
 
     return OBJID(STRING, new_str);
@@ -701,8 +701,8 @@ KOS_OBJ_ID KOS_string_get_char(KOS_YARN   yarn,
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception(yarn, IS_BAD_PTR(obj_id)
-                ? KOS_context_get_cstring(yarn, str_err_null_pointer)
-                : KOS_context_get_cstring(yarn, str_err_not_string));
+                ? KOS_instance_get_cstring(yarn, str_err_null_pointer)
+                : KOS_instance_get_cstring(yarn, str_err_not_string));
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -753,8 +753,8 @@ unsigned KOS_string_get_char_code(KOS_YARN   yarn,
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception(yarn, IS_BAD_PTR(obj_id)
-                ? KOS_context_get_cstring(yarn, str_err_null_pointer)
-                : KOS_context_get_cstring(yarn, str_err_not_string));
+                ? KOS_instance_get_cstring(yarn, str_err_null_pointer)
+                : KOS_instance_get_cstring(yarn, str_err_not_string));
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -1366,7 +1366,7 @@ KOS_OBJ_ID KOS_string_repeat(KOS_YARN   yarn,
     len = KOS_get_string_length(obj_id);
 
     if (len == 0 || num_repeat == 0)
-        return yarn->ctx->empty_string;
+        return yarn->inst->empty_string;
 
     if (num_repeat == 1)
         return obj_id;

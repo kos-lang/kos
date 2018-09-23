@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_CONTEXT_H
-#define __KOS_CONTEXT_H
+#ifndef __KOS_INSTANCE_H
+#define __KOS_INSTANCE_H
 
 #include "kos_object_base.h"
 #include "kos_threads.h"
@@ -92,17 +92,17 @@ typedef struct _KOS_STACK {
 } KOS_STACK;
 
 struct _KOS_THREAD_CONTEXT {
-    KOS_YARN             next;     /* List of thread roots in context */
-    KOS_YARN             prev;
+    KOS_YARN              next;     /* List of thread roots in instance */
+    KOS_YARN              prev;
 
-    struct _KOS_CONTEXT *ctx;
-    _KOS_PAGE           *cur_page;
-    KOS_OBJ_ID           exception;
-    KOS_OBJ_ID           retval;
-    KOS_OBJ_REF         *obj_refs;
-    KOS_OBJ_ID           stack;    /* Topmost container for registers & stack frames */
-    uint32_t             regs_idx; /* Index of first register in current frame       */
-    uint32_t             stack_depth;
+    KOS_INSTANCE         *inst;
+    _KOS_PAGE            *cur_page;
+    KOS_OBJ_ID            exception;
+    KOS_OBJ_ID            retval;
+    KOS_OBJ_REF          *obj_refs;
+    KOS_OBJ_ID            stack;    /* Topmost container for registers & stack frames */
+    uint32_t              regs_idx; /* Index of first register in current frame       */
+    uint32_t              stack_depth;
 };
 
 struct _KOS_PROTOTYPES {
@@ -138,13 +138,13 @@ struct _KOS_THREAD_MGMT {
     _KOS_MUTEX                 mutex;
 };
 
-enum _KOS_CONTEXT_FLAGS {
-    KOS_CTX_NO_FLAGS = 0,
-    KOS_CTX_VERBOSE  = 1,
-    KOS_CTX_DISASM   = 2
+enum _KOS_INSTANCE_FLAGS {
+    KOS_INST_NO_FLAGS = 0,
+    KOS_INST_VERBOSE  = 1,
+    KOS_INST_DISASM   = 2
 };
 
-struct _KOS_CONTEXT {
+struct _KOS_INSTANCE {
     uint32_t                flags;
     struct _KOS_HEAP        heap;
     KOS_OBJ_ID              empty_string;
@@ -179,40 +179,40 @@ static inline void KOS_clear_exception(KOS_YARN yarn)
 extern "C" {
 #endif
 
-int KOS_context_init(KOS_CONTEXT *ctx,
-                     KOS_YARN   *out_frame);
+int KOS_instance_init(KOS_INSTANCE *inst,
+                     KOS_YARN     *out_frame);
 
-void KOS_context_destroy(KOS_CONTEXT *ctx);
+void KOS_instance_destroy(KOS_INSTANCE *inst);
 
-int KOS_context_add_path(KOS_YARN    yarn,
-                         const char *module_search_path);
+int KOS_instance_add_path(KOS_YARN    yarn,
+                          const char *module_search_path);
 
-int KOS_context_add_default_path(KOS_YARN    yarn,
-                                 const char *argv0);
+int KOS_instance_add_default_path(KOS_YARN    yarn,
+                                  const char *argv0);
 
-int KOS_context_set_args(KOS_YARN     yarn,
-                         int          argc,
-                         const char **argv);
+int KOS_instance_set_args(KOS_YARN     yarn,
+                          int          argc,
+                          const char **argv);
 
 typedef int (*KOS_BUILTIN_INIT)(KOS_YARN yarn, KOS_OBJ_ID module);
 
-int KOS_context_register_builtin(KOS_YARN         yarn,
-                                 const char      *module,
-                                 KOS_BUILTIN_INIT init);
+int KOS_instance_register_builtin(KOS_YARN         yarn,
+                                  const char      *module,
+                                  KOS_BUILTIN_INIT init);
 
-int KOS_context_register_thread(KOS_CONTEXT *ctx,
-                                KOS_YARN     yarn);
+int KOS_instance_register_thread(KOS_INSTANCE *inst,
+                                 KOS_YARN      yarn);
 
-void KOS_context_unregister_thread(KOS_CONTEXT *ctx,
-                                   KOS_YARN     yarn);
+void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
+                                    KOS_YARN      yarn);
 
-KOS_OBJ_ID KOS_context_get_cstring(KOS_YARN    yarn,
-                                   const char *cstr);
+KOS_OBJ_ID KOS_instance_get_cstring(KOS_YARN    yarn,
+                                    const char *cstr);
 
 #ifdef NDEBUG
-#define KOS_context_validate(yarn) ((void)0)
+#define KOS_instance_validate(yarn) ((void)0)
 #else
-void KOS_context_validate(KOS_YARN yarn);
+void KOS_instance_validate(KOS_YARN yarn);
 #endif
 
 void KOS_raise_exception(KOS_YARN   yarn,

@@ -158,8 +158,8 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 
 #endif
 
-struct _KOS_CONTEXT;
-typedef struct _KOS_CONTEXT KOS_CONTEXT;
+struct _KOS_INSTANCE;
+typedef struct _KOS_INSTANCE KOS_INSTANCE;
 
 typedef struct _KOS_INTEGER {
     KOS_OBJ_HEADER header;
@@ -369,7 +369,7 @@ typedef struct _KOS_MODULE {
     uint8_t                 flags;
     KOS_OBJ_ID              name;
     KOS_OBJ_ID              path;
-    KOS_CONTEXT            *context;
+    KOS_INSTANCE           *inst;
     KOS_OBJ_ID              constants_storage;
     KOS_ATOMIC(KOS_OBJ_ID) *constants;
     KOS_OBJ_ID              global_names;
