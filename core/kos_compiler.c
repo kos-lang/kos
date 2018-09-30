@@ -276,6 +276,20 @@ static void _free_all_regs(struct _KOS_COMP_UNIT *program,
     }
 }
 
+#ifndef NDEBUG
+static int _count_used_regs(struct _KOS_COMP_UNIT *program)
+{
+    int                count = 0;
+    struct _KOS_FRAME *frame = program->cur_frame;
+    struct _KOS_REG   *reg   = frame->used_regs;
+
+    for ( ; reg; reg = reg->next)
+        ++count;
+
+    return count;
+}
+#endif
+
 static int _lookup_local_var_even_inactive(struct _KOS_COMP_UNIT   *program,
                                            const struct _KOS_TOKEN *token,
                                            int                      only_active,
@@ -1261,7 +1275,10 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
 
     if (child || global) {
 
-        struct _KOS_REG *reg = 0;
+        struct _KOS_REG *reg      = 0;
+#ifndef NDEBUG
+        int              skip_tmp = 0;
+#endif
 
         _push_scope(program, node);
 
@@ -1286,6 +1303,10 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
         /* Process inner nodes */
         for ( ; child; child = child->next) {
 
+#ifndef NDEBUG
+            const int initial_used_regs = _count_used_regs(program) - skip_tmp;
+#endif
+
             TRY(_add_addr2line(program, &child->token, _KOS_FALSE));
 
             if (reg) {
@@ -1294,6 +1315,21 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
             }
 
             TRY(_visit_node(program, child, &reg));
+
+#ifndef NDEBUG
+            skip_tmp = (reg && reg->tmp) ? 1 : 0;
+
+            /* TODO: NT_EXPRESSION_LIST is a bit more difficult to check,
+             * because it can contain multiple variable declarations and
+             * assignments.  For now we skip checking it. */
+            if (child->type != NT_EXPRESSION_LIST &&
+                    ((child->type != NT_ASSIGNMENT && child->type != NT_MULTI_ASSIGNMENT)
+                        || (child->children->type == NT_LEFT_HAND_SIDE))) {
+
+                const int used_regs = _count_used_regs(program);
+                assert(used_regs == initial_used_regs + skip_tmp);
+            }
+#endif
         }
 
         if (global)
@@ -2703,6 +2739,9 @@ static int _refinement_object(struct _KOS_COMP_UNIT      *program,
         _free_reg(program, prop);
     }
 
+    if (obj != *reg && ! out_obj)
+        _free_reg(program, obj);
+
 _error:
     return error;
 }
@@ -3289,7 +3328,7 @@ static int _log_and_or(struct _KOS_COMP_UNIT      *program,
     int                           error;
     int                           offs;
     const enum _KOS_OPERATOR_TYPE op    = node->token.op;
-    struct _KOS_REG              *left  = *reg;
+    struct _KOS_REG              *left  = 0;
     struct _KOS_REG              *right = 0;
 
     assert(op == OT_LOGAND || op == OT_LOGOR);
@@ -3297,11 +3336,6 @@ static int _log_and_or(struct _KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
     assert(node->next);
-
-    if ( ! left || ! left->tmp) {
-        left = 0;
-        TRY(_gen_reg(program, &left));
-    }
 
     TRY(_visit_node(program, node, &left));
     assert(left);
