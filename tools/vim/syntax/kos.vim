@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:     Kos
 " Maintainer:   Chris Dragan <chris@chris.dragan.name>
-" Last Change:  2018 Sep 12
+" Last Change:  2018 Sep 25
 
 " For version 5.x: Clear all syntax items
 " For version 6.x: Quit when a syntax file was already loaded
@@ -36,13 +36,13 @@ syn match   kosNumber           "\<\([1-9][0-9_]*\|0\)\(\.[0-9_]*\)\=\([eEpP][+-
 syn keyword kosConditional      if else switch case default
 syn keyword kosRepeat           while for repeat loop
 syn keyword kosBranch           break continue fallthrough
-syn keyword kosOperator         delete instanceof typeof yield in
+syn keyword kosOperator         delete instanceof typeof yield async in
 syn keyword kosStatement        return with import try catch defer do
 syn keyword kosBoolean          true false
 syn keyword kosVoid             void
 syn keyword kosIdentifier       __line__ this var const
 syn keyword kosException        throw assert
-syn keyword kosReserved         set get static
+syn keyword kosReserved         set get static extends
 syn keyword kosClass            class
 
 if exists("kos_fold")

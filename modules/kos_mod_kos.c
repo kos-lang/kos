@@ -307,6 +307,7 @@ int _KOS_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_none",         KW_NONE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_line",         KW_LINE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_assert",       KW_ASSERT);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_async",        KW_ASYNC);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_break",        KW_BREAK);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_case",         KW_CASE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_catch",        KW_CATCH);
@@ -319,6 +320,7 @@ int _KOS_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_delete",       KW_DELETE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_do",           KW_DO);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_else",         KW_ELSE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_extends",      KW_EXTENDS);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_fallthrough",  KW_FALLTHROUGH);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_false",        KW_FALSE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_for",          KW_FOR);

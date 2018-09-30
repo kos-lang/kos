@@ -48,6 +48,7 @@ enum _KOS_NODE_TYPE {
     NT_CONST,
     NT_OPERATOR,
     NT_YIELD,
+    NT_ASYNC,
     NT_STREAM,
     NT_ASSIGNMENT,          /* single variable assignment */
     NT_MULTI_ASSIGNMENT,    /* multiple variable assignment */

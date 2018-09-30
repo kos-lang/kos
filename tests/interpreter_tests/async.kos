@@ -1,0 +1,110 @@
+#
+# Copyright (c) 2014-2018 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+import lang.thread
+
+fun expect_fail(function)
+{
+    var failed = false
+    try {
+        function()
+    }
+    catch const e {
+        failed = true
+    }
+    assert failed
+}
+
+const unoptimized = x => x
+
+# Test basic async do
+do {
+    var a = void
+    ;(async do { a = 10 }).wait()
+    assert a == 10
+}
+
+# Test async function call with object
+do {
+    var a = 1
+    var b = 2
+    var c = { setb: fun(x) { b = x } }
+    var d = 3
+
+    const t = async c.setb(10)
+    t.wait()
+
+    unoptimized(a)
+    unoptimized(d)
+
+    assert t instanceof thread
+    assert a == 1
+    assert b == 10
+    assert typeof c == "object"
+    assert "setb" in c
+    assert d == 3
+}
+
+# Test async stream
+do {
+    var a = void
+    var b = void
+    var c = void
+
+    fun aa(x)
+    {
+        a = x
+        return x + 1
+    }
+
+    fun bb(x)
+    {
+        b = x
+        return x + 1
+    }
+
+    fun cc(x)
+    {
+        c = x
+        return x + 1
+    }
+
+    const t = async 101 -> aa -> bb -> cc
+    const result = t.wait()
+
+    assert t instanceof thread
+    assert a == 101
+    assert b == 102
+    assert c == 103
+    assert result == 104
+}
+
+# Test async stream with object
+do {
+    const o = { value: 10,
+                doit:  fun(x) { this.value = x; return x + 1 } }
+
+    const val = (async 42 -> o.doit).wait()
+
+    assert o.value == 42
+    assert val == 43
+}

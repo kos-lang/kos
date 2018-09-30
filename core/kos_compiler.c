@@ -1514,28 +1514,13 @@ _error:
     return error;
 }
 
-static int _stream(struct _KOS_COMP_UNIT      *program,
-                   const struct _KOS_AST_NODE *node,
-                   struct _KOS_REG           **reg)
+static int _validate_stream_rhs(struct _KOS_COMP_UNIT      *program,
+                                const struct _KOS_AST_NODE *arrow_node,
+                                const struct _KOS_AST_NODE *node)
 {
-    int                         error    = KOS_SUCCESS;
-    struct _KOS_REG            *src_reg  = 0;
-    struct _KOS_REG            *func_reg = 0;
-    const struct _KOS_AST_NODE *arrow_node;
-    const struct _KOS_AST_NODE *const_node;
+    int error = KOS_SUCCESS;
 
-    arrow_node = node;
-
-    node = node->children;
-    assert(node);
-
-    TRY(_visit_node(program, node, &src_reg));
-
-    node = node->next;
-    assert(node);
-    assert( ! node->next);
-
-    const_node = _KOS_get_const(program, node);
+    const struct _KOS_AST_NODE *const_node = _KOS_get_const(program, node);
 
     if (const_node)
         switch (const_node->type) {
@@ -1560,6 +1545,34 @@ static int _stream(struct _KOS_COMP_UNIT      *program,
             default:
                 break;
         }
+
+_error:
+    return error;
+}
+
+static int _stream(struct _KOS_COMP_UNIT      *program,
+                   const struct _KOS_AST_NODE *node,
+                   struct _KOS_REG           **reg)
+{
+    int                         error    = KOS_SUCCESS;
+    struct _KOS_REG            *src_reg  = 0;
+    struct _KOS_REG            *func_reg = 0;
+    const struct _KOS_AST_NODE *arrow_node;
+
+    arrow_node = node;
+
+    node = node->children;
+    assert(node);
+
+    TRY(_visit_node(program, node, &src_reg));
+
+    node = node->next;
+    assert(node);
+    assert( ! node->next);
+
+    TRY(_validate_stream_rhs(program, arrow_node, node));
+
+    /* TODO relay 'this' if refinement */
 
     TRY(_visit_node(program, node, &func_reg));
 
@@ -2726,6 +2739,27 @@ static int _refinement(struct _KOS_COMP_UNIT      *program,
     return error;
 }
 
+static int _maybe_refinement(struct _KOS_COMP_UNIT      *program,
+                             const struct _KOS_AST_NODE *node,
+                             struct _KOS_REG           **reg,
+                             struct _KOS_REG           **out_obj)
+{
+    int error;
+
+    assert(out_obj);
+
+    if (node->type == NT_REFINEMENT)
+        error = _refinement(program, node, reg, out_obj);
+    else {
+        error = _visit_node(program, node, reg);
+        *out_obj = 0;
+    }
+
+    assert(*reg);
+
+    return error;
+}
+
 static int _slice(struct _KOS_COMP_UNIT      *program,
                   const struct _KOS_AST_NODE *node,
                   struct _KOS_REG           **reg)
@@ -2918,14 +2952,7 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    if (node->type == NT_REFINEMENT)
-        TRY(_refinement(program, node, &fun, &obj));
-
-    else {
-
-        TRY(_visit_node(program, node, &fun));
-        assert(fun);
-    }
+    TRY(_maybe_refinement(program, node, &fun, &obj));
 
     node = node->next;
 
@@ -3019,6 +3046,103 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
     _free_reg(program, fun);
     if (obj)
         _free_reg(program, obj);
+
+_error:
+    return error;
+}
+
+static int _async(struct _KOS_COMP_UNIT      *program,
+                  const struct _KOS_AST_NODE *node,
+                  struct _KOS_REG           **reg)
+{
+    int               error       = KOS_SUCCESS;
+    struct _KOS_REG  *argn[2]     = { 0, 0 };
+    struct _KOS_REG  *fun         = 0;
+    struct _KOS_REG  *async       = 0;
+    struct _KOS_REG  *obj;
+    int               str_idx;
+    struct _KOS_TOKEN token;
+    static const char str_async[] = "async";
+
+    node = node->children;
+    assert(node);
+    assert( ! node->next);
+    assert(node->type == NT_INVOCATION || node->type == NT_STREAM);
+
+    TRY(_gen_reg_range(program, &argn[0], 2));
+
+    obj = argn[0];
+
+    if (*reg)
+        fun = *reg;
+
+    if (node->type == NT_INVOCATION) {
+
+        node = node->children;
+        assert(node);
+
+        TRY(_maybe_refinement(program, node, &fun, &obj));
+
+        node = node->next;
+
+        TRY(_gen_array(program, node, &argn[1]));
+    }
+    else {
+        const struct _KOS_AST_NODE *arrow_node = node;
+
+        assert(node->type == NT_STREAM);
+
+        node = node->children;
+        assert(node);
+
+        TRY(_visit_node(program, node, &argn[0]));
+
+        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, argn[1]->reg, 1));
+
+        TRY(_gen_instr3(program, INSTR_SET_ELEM, argn[1]->reg, 0, argn[0]->reg));
+
+        node = node->next;
+        assert(node);
+        assert( ! node->next);
+
+        TRY(_validate_stream_rhs(program, arrow_node, node));
+
+        TRY(_maybe_refinement(program, node, &fun, &obj));
+    }
+
+    memset(&token, 0, sizeof(token));
+    token.begin  = str_async;
+    token.length = sizeof(str_async) - 1;
+    token.type   = TT_IDENTIFIER;
+
+    TRY(_gen_str(program, &token, &str_idx));
+
+    if (*reg && fun != *reg)
+        async = *reg;
+
+    if (obj && obj != argn[0]) {
+        TRY(_gen_instr2(program, INSTR_MOVE, argn[0]->reg, obj->reg));
+        _free_reg(program, obj);
+    }
+
+    TRY(_gen_reg(program, &async));
+
+    if ( ! *reg)
+        *reg = async;
+
+    TRY(_gen_instr3(program, INSTR_GET_PROP, async->reg, fun->reg, str_idx));
+
+    if ( ! obj)
+        TRY(_gen_instr1(program, INSTR_LOAD_VOID, argn[0]->reg));
+
+    TRY(_gen_instr5(program, INSTR_CALL_N, (*reg)->reg, async->reg, fun->reg, argn[0]->reg, 2));
+
+    if (fun != *reg)
+        _free_reg(program, fun);
+    if (async != *reg)
+        _free_reg(program, async);
+    _free_reg(program, argn[0]);
+    _free_reg(program, argn[1]);
 
 _error:
     return error;
@@ -4880,6 +5004,9 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             break;
         case NT_YIELD:
             error = _yield(program, node, reg);
+            break;
+        case NT_ASYNC:
+            error = _async(program, node, reg);
             break;
         case NT_STREAM:
             error = _stream(program, node, reg);

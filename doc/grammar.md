@@ -158,6 +158,7 @@ The following reserved keywords are defined:
 
 * `__line__`
 * `assert`
+* `async`
 * `break`
 * `case`
 * `catch`
@@ -170,6 +171,7 @@ The following reserved keywords are defined:
 * `delete`
 * `do`
 * `else`
+* `extends` (reserved)
 * `fallthrough`
 * `false`
 * `for`
@@ -1019,6 +1021,18 @@ Expressions
 
     YieldExpression ::= StreamExpression
                       | ( "yield" StreamExpression )
+                      | ( "yield" AsyncExpression )
+                      | AsyncExpression
+
+    AsyncExpression ::= AsyncInvocation
+                      | AsyncStreamExpression
+                      | AsyncDoStatement
+
+    AsyncInvocation ::= "async" MemberExpression Invocation
+
+    AsyncStreamExpression ::= "async" StreamExpression "->" ConditionalExpression
+
+    AsyncDoStatement  ::= "async" DoStatement
 
     StreamExpression ::= [ StreamExpression "->" ] ConditionalExpression
 

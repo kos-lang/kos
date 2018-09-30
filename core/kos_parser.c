@@ -48,6 +48,7 @@ static const char str_err_expected_curly_open[]       = "expected '{'";
 static const char str_err_expected_expression[]       = "expected expression";
 static const char str_err_expected_ident_or_str[]     = "expected identifier or string literal";
 static const char str_err_expected_identifier[]       = "expected identifier";
+static const char str_err_expected_invocation[]       = "expected invocation";
 static const char str_err_expected_lambda_op[]        = "expected '=>'";
 static const char str_err_expected_member_expr[]      = "expected literal, identifier or '('";
 static const char str_err_expected_multi_assignment[] = "expected '=' after comma-separated variables or members";
@@ -76,6 +77,7 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
 static int _member_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
 static int _right_hand_side_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
 static int _compound_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
+static int _do_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
 
 static int _next_token(struct _KOS_PARSER *parser)
 {
@@ -1373,6 +1375,90 @@ _error:
     return error;
 }
 
+static int _async_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+{
+    int                   error      = KOS_SUCCESS;
+    struct _KOS_AST_NODE *node       = 0;
+    struct _KOS_TOKEN     name_token = parser->token;
+
+    TRY(_new_node(parser, ret, NT_ASYNC));
+
+    TRY(_next_token(parser));
+
+    if (parser->token.keyword == KW_DO) {
+
+        struct _KOS_AST_NODE   *fun_node = 0;
+        struct _KOS_AST_NODE   *tmp_node = 0;
+        struct _KOS_AST_NODE   *sub_node = 0;
+        struct _KOS_SAVED_STATE state;
+
+        _save_function_state(parser, &state);
+
+        TRY(_new_node(parser, &node, NT_INVOCATION));
+
+        TRY(_new_node(parser, &fun_node, NT_FUNCTION_LITERAL));
+        _ast_push(node, fun_node);
+
+        TRY(_new_node(parser, &tmp_node, NT_NAME));
+        tmp_node->token = name_token;
+        _ast_push(fun_node, tmp_node);
+
+        TRY(_new_node(parser, &sub_node, NT_IDENTIFIER));
+        sub_node->token = name_token;
+        _ast_push(tmp_node, sub_node);
+        sub_node = 0;
+        tmp_node = 0;
+
+        TRY(_new_node(parser, &tmp_node, NT_PARAMETERS));
+        _ast_push(fun_node, tmp_node);
+        tmp_node = 0;
+
+        TRY(_new_node(parser, &tmp_node, NT_LANDMARK));
+        _ast_push(fun_node, tmp_node);
+        tmp_node = 0;
+
+        TRY(_new_node(parser, &sub_node, NT_RETURN));
+
+        parser->unary_depth = 0;
+
+        error = _do_stmt(parser, &tmp_node);
+        assert(error || parser->unary_depth == 0);
+        _restore_function_state(parser, &state);
+        if (error)
+            goto _error;
+
+        assert(tmp_node->type == NT_SCOPE);
+        _ast_push(tmp_node, sub_node);
+        _ast_push(fun_node, tmp_node);
+        tmp_node = 0;
+        sub_node = 0;
+
+        TRY(_new_node(parser, &tmp_node, NT_LANDMARK));
+        _ast_push(fun_node, tmp_node);
+        tmp_node = 0;
+    }
+    else {
+        struct _KOS_TOKEN saved_token = parser->token;
+
+        parser->unget = 1;
+
+        TRY(_stream_expr(parser, &node));
+
+        if (node->type != NT_INVOCATION && node->type != NT_STREAM) {
+            parser->token     = saved_token;
+            parser->error_str = str_err_expected_invocation;
+            error = KOS_ERROR_PARSE_FAILED;
+            goto _error;
+        }
+    }
+
+    _ast_push(*ret, node);
+    node = 0;
+
+_error:
+    return error;
+}
+
 static int _right_hand_side_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
@@ -1391,10 +1477,21 @@ static int _right_hand_side_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NOD
 
         TRY(_new_node(parser, ret, NT_YIELD));
 
-        TRY(_stream_expr(parser, &node));
+        TRY(_next_token(parser));
+
+        if (parser->token.keyword == KW_ASYNC)
+            TRY(_async_expr(parser, &node));
+        else {
+            parser->unget = 1;
+            TRY(_stream_expr(parser, &node));
+        }
 
         _ast_push(*ret, node);
         node = 0;
+    }
+    else if (parser->token.keyword == KW_ASYNC) {
+
+        TRY(_async_expr(parser, ret));
     }
     else {
 

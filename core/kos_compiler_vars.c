@@ -984,6 +984,8 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
         case NT_OBJECT_LITERAL:
             /* fall through */
         case NT_CLASS_LITERAL:
+            /* fall through */
+        case NT_ASYNC:
             error = _visit_child_nodes(program, node);
             break;
     }
