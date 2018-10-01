@@ -24,7 +24,8 @@
 #error "MODULE_DEF is not defined"
 #endif
 
-MODULE_DEF(file)
+MODULE_DEF(fs)
+MODULE_DEF(io)
 MODULE_DEF(kos)
 MODULE_DEF(lang)
 MODULE_DEF(math)

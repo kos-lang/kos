@@ -20,7 +20,8 @@
 # IN THE SOFTWARE.
 #
 
-import file
+import io
+import fs
 import lang
 
 fun expect_fail(function)
@@ -36,20 +37,20 @@ fun expect_fail(function)
 }
 
 ##############################################################################
-# file.open, file.is_file, file.remove
+# io.open, fs.is_file, fs.remove
 
 do {
-    assert typeof file.file           == "class"
-    assert typeof file.file.prototype == "object"
+    assert typeof io.file           == "class"
+    assert typeof io.file.prototype == "object"
 }
 
 do {
     const name = "__test_file"
-    file.remove(name)
-    assert ! file.is_file(name)
+    fs.remove(name)
+    assert ! fs.is_file(name)
 
     do {
-        const f = file.create(name)
+        const f = io.create(name)
         assert typeof f == "object"
 
         assert f.size == 0
@@ -71,9 +72,9 @@ do {
         expect_fail(()=>f.write(init_buf))
     }
 
-    assert file.is_file(name)
+    assert fs.is_file(name)
 
-    with const f = file.open(name, file.ro) {
+    with const f = io.open(name, io.ro) {
         const buf = f.read()
 
         assert typeof buf == "buffer"
@@ -86,14 +87,14 @@ do {
         expect_fail(()=>f.write(buf))
     }
 
-    assert file.remove(name)
-    assert ! file.remove(name)
+    assert fs.remove(name)
+    assert ! fs.remove(name)
 }
 
 do {
     var failed = true
     try {
-        file.open("", void)
+        io.open("", void)
     }
     catch const e {
         failed = false
@@ -102,9 +103,9 @@ do {
 }
 
 ##############################################################################
-# file.file - open non-existent file
+# io.file - open non-existent file
 do {
-    expect_fail(()=>file.file("_#non_existent#_*?", file.ro))
+    expect_fail(()=>io.file("_#non_existent#_*?", io.ro))
 }
 
 ##############################################################################
@@ -113,7 +114,7 @@ do {
 do {
     const name = "__test_file"
     var failed = true
-    var f = file.create(name)
+    var f = io.create(name)
     try {
         defer {
             f.close()
@@ -131,10 +132,10 @@ do {
 
 do {
     const name = "./__test_file"
-    file.remove(name)
-    assert ! file.is_file(name)
+    fs.remove(name)
+    assert ! fs.is_file(name)
 
-    with const f = file.file(name, file.create_flag) {
+    with const f = io.file(name, io.create_flag) {
         const buf = lang.buffer(100)
         for var i in lang.range(buf.size) {
             buf[i] = i + 100
@@ -142,7 +143,7 @@ do {
         f.write(buf)
     }
 
-    with const f = file.file(name, file.ro) {
+    with const f = io.file(name, io.ro) {
         assert f.size     == 100
         assert f.position == 0
         assert typeof f.position == "integer"
@@ -182,17 +183,17 @@ do {
         assert buf4[0]    == 131
     }
 
-    assert file.remove(name)
-    assert ! file.is_file(name)
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
 }
 
 ##############################################################################
-# file.stdin, file.stdout, file.stderr
+# io.stdin, io.stdout, io.stderr
 
 do {
-    assert file.stdin  instanceof file.file
-    assert file.stdout instanceof file.file
-    assert file.stderr instanceof file.file
+    assert io.stdin  instanceof io.file
+    assert io.stdout instanceof io.file
+    assert io.stderr instanceof io.file
 }
 
 ##############################################################################
@@ -200,15 +201,15 @@ do {
 
 do {
     const name = "./__text_line"
-    file.remove(name)
-    assert ! file.is_file(name)
+    fs.remove(name)
+    assert ! fs.is_file(name)
 
-    with const f = file.create(name) {
+    with const f = io.create(name) {
         const lines = "abcdefg\nhijklm\nnop";
         f.write(lang.buffer().pack("s\(lines.size)", lines))
     }
 
-    with const f = file.open(name, file.ro) {
+    with const f = io.open(name, io.ro) {
         expect_fail(()=>f.read_line(-1))
         expect_fail(()=>f.read_line(0))
         var line = f.read_line(1)
@@ -224,8 +225,8 @@ do {
         assert ! f.error
     }
 
-    assert file.remove(name)
-    assert ! file.remove(name)
+    assert fs.remove(name)
+    assert ! fs.remove(name)
 }
 
 ##############################################################################
@@ -233,15 +234,15 @@ do {
 
 do {
     const name = "./__text_file"
-    file.remove(name)
-    assert ! file.is_file(name)
+    fs.remove(name)
+    assert ! fs.is_file(name)
 
-    with const f = file.create(name) {
+    with const f = io.create(name) {
         const lines = "abc\n\ndef\n\rxyz"
         f.write(lang.buffer().pack("s\(lines.size)", lines))
     }
 
-    with const f = file.open(name, file.ro) {
+    with const f = io.open(name, io.ro) {
         const lines = f.read_lines(true)
         assert lines() == "abc\n"
         assert lines() == "\n"
@@ -253,7 +254,7 @@ do {
         assert ! f.error
     }
 
-    with const f = file.open(name, file.ro) {
+    with const f = io.open(name, io.ro) {
         const lines = f.read_lines(true, 1)
         assert lines() == "abc\n"
         assert lines() == "\n"
@@ -265,12 +266,12 @@ do {
         assert ! f.error
     }
 
-    with const f = file.create(name) {
+    with const f = io.create(name) {
         const lines = "xy\r\nz\x{FF}\n"
         f.write(lang.buffer().pack("s", lines))
     }
 
-    with const f = file.open(name, file.ro) {
+    with const f = io.open(name, io.ro) {
         const a = [f.read_lines(true)...]
         assert a.size == 2
         assert a[0]   == "xy\r\n"
@@ -279,7 +280,7 @@ do {
         assert ! f.error
     }
 
-    with const f = file.create(name) {
+    with const f = io.create(name) {
         const lines = "ab\rcd\r\nef\ng"
         f.write(lang.buffer(lines))
     }
@@ -288,7 +289,7 @@ do {
         const lines = [ "ab\r", "cd\r\n", "ef\n", "g" ]
         for const gran in [1, 2, 3, 4, 5] {
             for const keep_ends in [false, true] {
-                const a = [file.read_lines(name, keep_ends, gran)...]
+                const a = [io.read_lines(name, keep_ends, gran)...]
                 assert a.size == lines.size
                 for const i in lang.range(a.size) {
                     const expected = keep_ends ? lines[i] : lines[i].strip()
@@ -302,8 +303,8 @@ do {
         }
     }
 
-    assert file.remove(name)
-    assert ! file.is_file(name)
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
 }
 
 ##############################################################################
@@ -311,10 +312,10 @@ do {
 
 do {
     const name = "./__text_file"
-    file.remove(name)
-    assert ! file.is_file(name)
+    fs.remove(name)
+    assert ! fs.is_file(name)
 
-    with const f = file.create(name) {
+    with const f = io.create(name) {
         var exception = false
         var buf       = lang.buffer(1024)
         var ret       = void
@@ -331,8 +332,8 @@ do {
         assert buf.size   == 1024
     }
 
-    assert file.remove(name)
-    assert ! file.is_file(name)
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
 }
 
 ##############################################################################
@@ -340,10 +341,10 @@ do {
 
 do {
     const name = "./__text_file"
-    file.remove(name)
-    assert ! file.is_file(name)
+    fs.remove(name)
+    assert ! fs.is_file(name)
 
-    with const f = file.create(name) {
+    with const f = io.create(name) {
         f.print_(false, void)
         f.print_()
         f.print_(":")
@@ -354,7 +355,7 @@ do {
         f.print("END")
     }
 
-    with const f = file.open(name, file.ro) {
+    with const f = io.open(name, io.ro) {
         const expected = [ "false void:",
                            "Hello, World!",
                            "1", "2", "3", "a", "b", "c",
@@ -374,8 +375,8 @@ do {
         assert i == expected.size
     }
 
-    assert file.remove(name)
-    assert ! file.is_file(name)
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
 }
 
 ##############################################################################
@@ -383,14 +384,14 @@ do {
 
 do {
     const name = "./__text_file"
-    file.remove(name)
-    assert ! file.is_file(name)
+    fs.remove(name)
+    assert ! fs.is_file(name)
 
-    with const f = file.create(name) {
+    with const f = io.create(name) {
         const data = lang.string(f.print_("abcdefghijklmnopqrstuvwxyz").seek(-8).read(4))
         assert data == "stuv"
     }
 
-    assert file.remove(name)
-    assert ! file.is_file(name)
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
 }

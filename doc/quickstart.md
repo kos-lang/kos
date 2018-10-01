@@ -336,9 +336,9 @@ Resource management
 The `with` statement ensures that the file is closed, even if a `return`
 or an exception occurs inside it.
 
-    import file
+    import io
 
-    with const f = file.open("myfile") {
+    with const f = io.open("myfile") {
         const buf = f.read()
         # Do something with buffer buf
     }
@@ -346,7 +346,7 @@ or an exception occurs inside it.
 Another way to clean up explicitly is to use the `defer` statement:
 
     do { # Start a new, inner scope
-        const f = file.open("myfile")
+        const f = io.open("myfile")
         defer {
             f.close() # This will be executed at the end of current scope
         }
@@ -363,7 +363,7 @@ Buffers
 
 This writes 256 bytes with values of 0 through 255 to a newly created file:
 
-    import file
+    import io
     import lang.buffer
     import lang.range
 
@@ -373,7 +373,7 @@ This writes 256 bytes with values of 0 through 255 to a newly created file:
         buf[i] = i
     }
 
-    with const f = file.create("newfile") {
+    with const f = io.create("newfile") {
         f.write(buf)
     }
 

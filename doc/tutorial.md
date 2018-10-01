@@ -515,8 +515,8 @@ To create a new buffer of size 100, filled with zeroes:
 
 To load a file:
 
-    import file
-    var buf = file.open("myfile").read()
+    import io
+    var buf = io.open("myfile").read()
 
 
 Exceptions

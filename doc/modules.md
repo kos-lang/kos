@@ -2,7 +2,10 @@ Table of Contents
 =================
 <!--ts-->
   * [Table of Contents](#table-of-contents)
-  * [file](#file)
+  * [fs](#fs)
+    * [is\_file()](#is_file)
+    * [remove()](#remove)
+  * [io](#io)
     * [append()](#append)
     * [append\_flag](#append_flag)
     * [create()](#create)
@@ -22,10 +25,8 @@ Table of Contents
       * [file.prototype.seek()](#fileprototypeseek)
       * [file.prototype.size](#fileprototypesize)
       * [file.prototype.write()](#fileprototypewrite)
-    * [is\_file()](#is_file)
     * [open()](#open)
     * [read\_lines()](#read_lines)
-    * [remove()](#remove)
     * [ro](#ro)
     * [rw](#rw)
     * [stderr](#stderr)
@@ -166,8 +167,31 @@ Table of Contents
       * [random.prototype.float()](#randomprototypefloat)
       * [random.prototype.integer()](#randomprototypeinteger)
 <!--te-->
-file
-====
+fs
+==
+
+is_file()
+---------
+
+    is_file(pathname)
+
+Determines whether a file exists.
+
+Returns `true` if `pathname` exists and is a file, or `false` otherwise.
+
+remove()
+--------
+
+    remove(pathname)
+
+Deletes a file `pathname`.
+
+Returns `true` if the file was successfuly deleted or `false` if
+the file could not be deleted or if it did not exist in the first
+place.
+
+io
+==
 
 append()
 --------
@@ -237,16 +261,16 @@ Returns opened file object.
 
 `flags` is a string, which specifies file open mode compatible with
 the C `fopen()` function.  It is normally recommended to use the
-shorthand flag constants: `file.ro`, `file.rw` or the auxiliary
-file functions `file.open()`, `file.create()` and `file.append()`
+shorthand flag constants: `io.ro`, `io.rw` or the auxiliary
+file functions `io.open()`, `io.create()` and `io.append()`
 instead of specifying the flags explicitly.
 
-It is recommended to use the `file.file` class in conjunction with
+It is recommended to use the `io.file` class in conjunction with
 the `with` statement.
 
 Example:
 
-    > with const f = file.file("my.txt", file.create_flag) { f.print("hello") }
+    > with const f = io.file("my.txt", io.create_flag) { f.print("hello") }
 
 file.prototype.close()
 ----------------------
@@ -428,15 +452,6 @@ Returns the file object to which bytes has been written.
 `buffer` is a buffer object.  Its size can be zero, in which case nothing
 is written.
 
-is_file()
----------
-
-    is_file(pathname)
-
-Determines whether a file exists.
-
-Returns `true` if `pathname` exists and is a file, or `false` otherwise.
-
 open()
 ------
 
@@ -479,17 +494,6 @@ defaults to 4KB.
 Example:
 
     > for const line in file.read_lines("README.txt") { print(line) }
-
-remove()
---------
-
-    remove(pathname)
-
-Deletes a file `pathname`.
-
-Returns `true` if the file was successfuly deleted or `false` if
-the file could not be deleted or if it did not exist in the first
-place.
 
 ro
 --

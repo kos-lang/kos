@@ -34,16 +34,6 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#ifdef _WIN32
-#   define WIN32_LEAN_AND_MEAN
-#   pragma warning( push )
-#   pragma warning( disable : 4255 4668 )
-#   include <windows.h>
-#   pragma warning( pop )
-#   pragma warning( disable : 4996 ) /* 'fopen': This function may be unsafe */
-#else
-#   include <unistd.h>
-#endif
 
 static const char str_err_bad_flags[]           = "incorrect file open flags";
 static const char str_err_cannot_get_position[] = "unable to obtain file position";
@@ -85,7 +75,7 @@ static void _finalize(KOS_CONTEXT ctx,
         fclose((FILE *)priv);
 }
 
-/* @item file file()
+/* @item io file()
  *
  *     file(pathname, flags = rw)
  *
@@ -97,16 +87,16 @@ static void _finalize(KOS_CONTEXT ctx,
  *
  * `flags` is a string, which specifies file open mode compatible with
  * the C `fopen()` function.  It is normally recommended to use the
- * shorthand flag constants: `file.ro`, `file.rw` or the auxiliary
- * file functions `file.open()`, `file.create()` and `file.append()`
+ * shorthand flag constants: `io.ro`, `io.rw` or the auxiliary
+ * file functions `io.open()`, `io.create()` and `io.append()`
  * instead of specifying the flags explicitly.
  *
- * It is recommended to use the `file.file` class in conjunction with
+ * It is recommended to use the `io.file` class in conjunction with
  * the `with` statement.
  *
  * Example:
  *
- *     > with const f = file.file("my.txt", file.create_flag) { f.print("hello") }
+ *     > with const f = io.file("my.txt", io.create_flag) { f.print("hello") }
  */
 static KOS_OBJ_ID _open(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
@@ -191,7 +181,7 @@ _error:
     return error;
 }
 
-/* @item file file.prototype.close()
+/* @item io file.prototype.close()
  *
  *     file.prototype.close()
  *
@@ -212,7 +202,7 @@ static KOS_OBJ_ID _close(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-/* @item file file.prototype.print()
+/* @item io file.prototype.print()
  *
  *     file.prototype.print(values...)
  *
@@ -255,7 +245,7 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item file file.prototype.print_()
+/* @item io file.prototype.print_()
  *
  *     file.prototype.print_(values...)
  *
@@ -298,7 +288,7 @@ static int _is_eol(char c)
     return c == '\n' || c == '\r';
 }
 
-/* @item file file.prototype.read_line()
+/* @item io file.prototype.read_line()
  *
  *     file.prototype.read_line(reserved_size = 4096)
  *
@@ -374,7 +364,7 @@ _error:
     return error ? KOS_BADPTR : line;
 }
 
-/* @item file file.prototype.read_some()
+/* @item io file.prototype.read_some()
  *
  *     file.prototype.read_some(size = 4096 [, buffer])
  *
@@ -450,7 +440,7 @@ _error:
     return error ? KOS_BADPTR : buf;
 }
 
-/* @item file file.prototype.write()
+/* @item io file.prototype.write()
  *
  *     file.prototype.write(buffer)
  *
@@ -494,7 +484,7 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item file file.prototype.eof
+/* @item io file.prototype.eof
  *
  *     file.prototype.eof
  *
@@ -515,7 +505,7 @@ static KOS_OBJ_ID _get_file_eof(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
-/* @item file file.prototype.error
+/* @item io file.prototype.error
  *
  *     file.prototype.error
  *
@@ -536,7 +526,7 @@ static KOS_OBJ_ID _get_file_error(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
-/* @item file file.prototype.size
+/* @item io file.prototype.size
  *
  *     file.prototype.size
  *
@@ -571,7 +561,7 @@ _error:
     return error ? KOS_BADPTR : KOS_new_int(ctx, (int64_t)size);
 }
 
-/* @item file file.prototype.position
+/* @item io file.prototype.position
  *
  *     file.prototype.position
  *
@@ -596,7 +586,7 @@ _error:
     return error ? KOS_BADPTR : KOS_new_int(ctx, (int64_t)pos);
 }
 
-/* @item file file.prototype.seek()
+/* @item io file.prototype.seek()
  *
  *     file.prototype.seek(pos)
  *
@@ -638,78 +628,6 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item file is_file()
- *
- *     is_file(pathname)
- *
- * Determines whether a file exists.
- *
- * Returns `true` if `pathname` exists and is a file, or `false` otherwise.
- */
-static KOS_OBJ_ID _is_file(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
-{
-    int                error        = KOS_SUCCESS;
-    KOS_OBJ_ID         ret          = KOS_BADPTR;
-    KOS_OBJ_ID         filename_obj = KOS_array_read(ctx, args_obj, 0);
-    struct _KOS_VECTOR filename_cstr;
-
-    _KOS_vector_init(&filename_cstr);
-
-    TRY_OBJID(filename_obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
-
-    _fix_path_separators(&filename_cstr);
-
-    ret = KOS_BOOL(_KOS_does_file_exist(filename_cstr.buffer));
-
-_error:
-    _KOS_vector_destroy(&filename_cstr);
-
-    return ret;
-}
-
-/* @item file remove()
- *
- *     remove(pathname)
- *
- * Deletes a file `pathname`.
- *
- * Returns `true` if the file was successfuly deleted or `false` if
- * the file could not be deleted or if it did not exist in the first
- * place.
- */
-static KOS_OBJ_ID _remove(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
-{
-    int                error        = KOS_SUCCESS;
-    KOS_OBJ_ID         ret          = KOS_BADPTR;
-    KOS_OBJ_ID         filename_obj = KOS_array_read(ctx, args_obj, 0);
-    struct _KOS_VECTOR filename_cstr;
-
-    _KOS_vector_init(&filename_cstr);
-
-    TRY_OBJID(filename_obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
-
-    _fix_path_separators(&filename_cstr);
-
-#ifdef _WIN32
-    ret = KOS_BOOL(DeleteFile(filename_cstr.buffer));
-#else
-    ret = KOS_BOOL(unlink(filename_cstr.buffer) == 0);
-#endif
-
-_error:
-    _KOS_vector_destroy(&filename_cstr);
-
-    return ret;
-}
-
 static int _add_std_file(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  module,
                          KOS_OBJ_ID  proto,
@@ -737,7 +655,7 @@ do {                                                                           \
     TRY(_add_std_file((ctx), (module), (proto), str, (file)));                \
 } while (0)
 
-int _KOS_module_file_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int _KOS_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID proto;
@@ -756,10 +674,7 @@ int _KOS_module_file_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "position",  _get_file_pos,   0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "size",      _get_file_size,  0);
 
-    TRY_ADD_FUNCTION(       ctx, module,        "is_file",   _is_file,        1);
-    TRY_ADD_FUNCTION(       ctx, module,        "remove",    _remove,         1);
-
-    /* @item file stderr
+    /* @item io stderr
      *
      *     stderr
      *
@@ -767,7 +682,7 @@ int _KOS_module_file_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      */
     TRY_ADD_STD_FILE(       ctx, module, proto, "stderr",    stderr);
 
-    /* @item file stdin
+    /* @item io stdin
      *
      *     stdin
      *
@@ -775,7 +690,7 @@ int _KOS_module_file_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      */
     TRY_ADD_STD_FILE(       ctx, module, proto, "stdin",     stdin);
 
-    /* @item file stdout
+    /* @item io stdout
      *
      *     stdout
      *

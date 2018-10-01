@@ -1,6 +1,6 @@
 #!/usr/bin/env kos
 
-import file
+import io
 import kos
 import lang.*
 
@@ -135,7 +135,7 @@ class create_docs {
 const docs = create_docs()
 
 for const arg in args[1:] {
-    with const f = file.open(arg, file.ro) {
+    with const f = io.open(arg, io.ro) {
         docs.scan_file(arg, f)
     }
 }

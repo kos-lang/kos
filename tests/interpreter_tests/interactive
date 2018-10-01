@@ -157,7 +157,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with import statements
 
-"$KOS" -c 'print_("import file\nfile.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print_("import io\nio.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2

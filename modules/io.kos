@@ -22,7 +22,7 @@
 
 import lang: buffer, string, eol
 
-/* @item file ro
+/* @item io ro
  *
  *     ro
  *
@@ -33,7 +33,7 @@ import lang: buffer, string, eol
  */
 const ro = "rb"
 
-/* @item file rw
+/* @item io rw
  *
  *     rw
  *
@@ -44,7 +44,7 @@ const ro = "rb"
  */
 const rw = "r+b"
 
-/* @item file create_flag
+/* @item io create_flag
  *
  *     create_flag
  *
@@ -54,7 +54,7 @@ const rw = "r+b"
  */
 const create_flag = "w+b"
 
-/* @item file append_flag
+/* @item io append_flag
  *
  *     append_flag
  *
@@ -64,7 +64,7 @@ const create_flag = "w+b"
  */
 const append_flag = "a+b"
 
-/* @item file open()
+/* @item io open()
  *
  *     open(filename, flags = rw)
  *
@@ -88,7 +88,7 @@ fun open(filename, flags = rw)
     return file(filename, flags)
 }
 
-/* @item file create()
+/* @item io create()
  *
  *     create(filename)
  *
@@ -110,7 +110,7 @@ fun create(filename)
     return file(filename, create_flag)
 }
 
-/* @item file append()
+/* @item io append()
  *
  *     append(filename)
  *
@@ -133,7 +133,7 @@ fun append(filename)
     return file(filename, append_flag)
 }
 
-/* @item file file.prototype.read()
+/* @item io file.prototype.read()
  *
  *     file.prototype.read()
  *     file.prototype.read(size [, buffer])
@@ -174,7 +174,7 @@ file.prototype.read = fun(in_size = 0x7FFFFFFFFFFFFFFF, in_buf = void)
     return buf
 }
 
-/* @item file file.prototype.read_lines()
+/* @item io file.prototype.read_lines()
  *
  *     file.prototype.read_lines(keep_ends = false, gran = 0x1000)
  *
@@ -262,7 +262,7 @@ file.prototype.read_lines = fun(keep_ends = false, gran = 0x1000)
     }
 }
 
-/* @item file read_lines()
+/* @item io read_lines()
  *
  *     read_lines(filename, keep_ends = false, gran = 0x1000)
  *
@@ -293,7 +293,7 @@ fun read_lines(filename, keep_ends = false, gran = 0x1000)
     }
 }
 
-/* @item file file.prototype.print_lines()
+/* @item io file.prototype.print_lines()
  *
  *     file.prototype.print_lines(iterable)
  *
