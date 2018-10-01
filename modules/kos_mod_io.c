@@ -34,6 +34,9 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef _WIN32
+#   pragma warning( disable : 4996 ) /* 'fopen': This function may be unsafe */
+#endif
 
 static const char str_err_bad_flags[]           = "incorrect file open flags";
 static const char str_err_cannot_get_position[] = "unable to obtain file position";
