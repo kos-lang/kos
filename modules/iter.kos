@@ -238,3 +238,41 @@ fun cycle(iterable)
         }
     }
 }
+
+/* @item iter reverse()
+ *
+ *     reverse(iterable)
+ *
+ * A generator which produces elements of an iterable object in reverse order.
+ *
+ * For strings, arrays and buffers, returns the object of the same type
+ * containing elements in reverse order.
+ *
+ * For objects of other type, returns an iterator function, which yields
+ * elements of the iterable object in backwards order.
+ *
+ * Examples:
+ *
+ *     > iter.reverse(range(4)) -> print_elements
+ *     3, 2, 1, 0
+ *     > iter.reverse("language")
+ *     "egaugnal"
+ */
+fun reverse(iterable)
+{
+    switch typeof iterable {
+
+        default:
+            iterable = [ iterable ... ]
+            return fun(iterable_inner) {
+                for var i = iterable_inner.size; i; {
+                    i -= 1
+                    yield iterable_inner[i]
+                }
+            } (iterable)
+
+        case "string", "array", "buffer":
+            return iterable.reverse()
+    }
+}
+

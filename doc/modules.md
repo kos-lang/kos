@@ -38,6 +38,7 @@ Table of Contents
     * [generator()](#generator)
     * [iproduct()](#iproduct)
     * [product()](#product)
+    * [reverse()](#reverse)
   * [lang](#lang)
     * [all()](#all)
     * [any()](#any)
@@ -115,7 +116,6 @@ Table of Contents
     * [print\_lines()](#print_lines)
     * [range()](#range)
     * [reduce()](#reduce)
-    * [reverse()](#reverse)
     * [shallow()](#shallow)
     * [sort()](#sort)
     * [string()](#string)
@@ -630,6 +630,26 @@ Example:
 
     > iter.product(range(5, 7), "xyz") -> print_elements
     [5, x], [6, x], [5, y], [6, y], [5, z], [6, z]
+
+reverse()
+---------
+
+    reverse(iterable)
+
+A generator which produces elements of an iterable object in reverse order.
+
+For strings, arrays and buffers, returns the object of the same type
+containing elements in reverse order.
+
+For objects of other type, returns an iterator function, which yields
+elements of the iterable object in backwards order.
+
+Examples:
+
+    > iter.reverse(range(4)) -> print_elements
+    3, 2, 1, 0
+    > iter.reverse("language")
+    "egaugnal"
 
 lang
 ====
@@ -2301,23 +2321,6 @@ Examples:
     > const count_non_zero = reduce((x, y) => x + (y ? 1 : 0), 0)
     > count_non_zero([0, 0, 4, 0, 0, 5, 6, 0])
     3
-
-reverse()
----------
-
-    reverse(iterable)
-
-A generator which produces elements of an iterable object in reverse order.
-
-Returns an iterator function, which yields elements of the iterable object
-in backwards order.
-
-Examples:
-
-    > reverse(range(4)) -> print_elements
-    3, 2, 1, 0
-    > reverse("language") -> print_elements
-    e, g, a, u, g, n, a, l
 
 shallow()
 ---------
