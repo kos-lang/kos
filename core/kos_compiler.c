@@ -2794,7 +2794,7 @@ static int _maybe_refinement(struct _KOS_COMP_UNIT      *program,
         *out_obj = 0;
     }
 
-    assert(*reg);
+    assert(error || *reg);
 
     return error;
 }
