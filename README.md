@@ -63,14 +63,14 @@ Examples
 This program prints "Hello, World!":
 
     #!/usr/bin/env kos
-    import lang.print
+    import base.print
 
     print("Hello, World!")
 
 This program prints 30 terms of the Fibonacci series:
 
     #!/usr/bin/env kos
-    import lang.print_
+    import base.print_
 
     const terms = 30
     var   a     = 0
@@ -90,7 +90,7 @@ This program prints 30 terms of the Fibonacci series:
 This program prints the first 1000 prime numbers:
 
     #!/usr/bin/env kos
-    import lang.print_
+    import base.print_
 
     # Prime number generator with a fixed-size sieve
     fun primes(max_number)

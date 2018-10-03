@@ -50,7 +50,7 @@ These are mutable types (can be modified, but not reassigned):
     const _class_  = class { }
     const object   = { prop1: 1, prop2: 2, "prop 3": 3 }
     const array    = [ 1, 2, "string" ]
-    const buffer   = lang.buffer() # Refer to the tutorial for details
+    const buffer   = base.buffer() # Refer to the tutorial for details
 
 
 Functions
@@ -64,21 +64,21 @@ This is the most common way to declare functions.  Please note that
         return a + b
     }
 
-    lang.print(add_two_numbers(1, 5)) # Prints: 6
+    base.print(add_two_numbers(1, 5)) # Prints: 6
 
 And here is a function declared in an alternative way.  Functions are just
 objects, like everything else.  Function identifiers are really constants.
 
     const multiply_two_numbers = fun(a, b) { return a * b }
 
-    lang.print(multiply_two_numbers(3, 4)) # Prints: 12
+    base.print(multiply_two_numbers(3, 4)) # Prints: 12
 
 And this is the third way to declare functions.  The parentheses contain the
 expression which is treated like a return statement.
 
     const subtract_two_numbers = (a, b) => a - b
 
-    lang.print(subtract_two_numbers(7, 5)) # Prints: 2
+    base.print(subtract_two_numbers(7, 5)) # Prints: 2
 
 
 Semicolons are optional
@@ -121,7 +121,7 @@ Object properties can be accessed in two ways:
     const obj  = { }
     obj.one    = 1
     obj["two"] = 2
-    lang.print("one:", obj["one"], ", two:", obj.two)
+    base.print("one:", obj["one"], ", two:", obj.two)
     # Prints: one: 1, two: 2
 
 Everything is an object, so integers, functions, booleans and arrays also have
@@ -132,7 +132,7 @@ In addition to that, arrays, strings and buffers have elements, indexable with
 a number.  The first element always has index zero.
 
     const array = [ "a", "b", "c" ]
-    lang.print("element 0:", array[0])
+    base.print("element 0:", array[0])
     # Prints: element 0: a
 
 A number can be used to index only arrays, strings and buffers.  Attempting
@@ -185,7 +185,7 @@ Curly braces are also required in all the other control flow statements below.
 
     var a = 42
     while a > 0 {
-        lang.print(a)
+        base.print(a)
         a -= 10
     }
     # Prints: 42 32 22 12 2 (in consecutive lines)
@@ -194,7 +194,7 @@ Curly braces are also required in all the other control flow statements below.
 
     var a = 42
     repeat {
-        lang.print(a)
+        base.print(a)
         a -= 10
     } while a > 0
     # Prints: 42 32 22 12 2 (in consecutive lines)
@@ -202,7 +202,7 @@ Curly braces are also required in all the other control flow statements below.
 `for` loop:
 
     for var i = 0; i < 10; i += 1 {
-        lang.print(i)
+        base.print(i)
     }
     # Prints consecutive integers from 0 to 9, inclusive
 
@@ -210,7 +210,7 @@ Curly braces are also required in all the other control flow statements below.
 
     const a = [ 1, 2, 4 ]
     for var number in a {
-        lang.print(number)
+        base.print(number)
     }
     # Prints: 1 2 4 (in consecutive lines)
 
@@ -221,7 +221,7 @@ Curly braces are also required in all the other control flow statements below.
         if i >= 5 {
             break
         }
-        lang.print(i)
+        base.print(i)
     }
     # Prints: 0 1 2 3 4
 
@@ -232,22 +232,22 @@ Modules
 By default in a new script no module is imported and the global namespace is
 clean.  In order to do something useful, modules must be imported explicitly.
 
-This applies even to the `lang` module, which is conceptually like a standard
+This applies even to the `base` module, which is conceptually like a standard
 library.  In other languages, several built-in symbols are readily available
-in every script.  In Kos, the `lang` module has to be imported explicitly.
+in every script.  In Kos, the `base` module has to be imported explicitly.
 
 Each module is executed only once.  For example, if another module imports
-`lang`, it is setup once and another module will only reference its symbols,
-but will not cause the `lang` module to be reloaded.
+`base`, it is setup once and another module will only reference its symbols,
+but will not cause the `base` module to be reloaded.
 
-    import lang
+    import base
 
-    lang.print("Hello, World!)
+    base.print("Hello, World!)
 
 You can explicitly import individual symbols, rather than the entire module:
 
-    import lang.print
-    import lang.range
+    import base.print
+    import base.range
 
     for var i in range(5) {
         print(i)
@@ -260,7 +260,7 @@ Conversion
 
 Interpolated strings make it easy to convert anything to a string:
 
-    import lang.print
+    import base.print
 
     const a = 1
     const b = true
@@ -269,9 +269,9 @@ Interpolated strings make it easy to convert anything to a string:
 
 Converting between integers, floats and strings:
 
-    import lang.integer
-    import lang.float
-    import lang.string
+    import base.integer
+    import base.float
+    import base.string
 
     const integer_10 = integer("10")
     const integer_20 = integer(20.0)
@@ -296,7 +296,7 @@ A function containing a `yield` statement is a generator.
 This function will actually return another function, which can be called
 multiple times to obtain subsequent values, for example:
 
-    import lang.print
+    import base.print
 
     const iterator = odd_numbers(7)
     print(iterator())  # Prints: 1
@@ -318,11 +318,11 @@ Another way to use a generator is to use the `for`..`in` loop:
 There is no exception thrown in this case, the loop automatically detects
 the end of the generator.
 
-In fact, the lang.range() function is a generator, too.
+In fact, the base.range() function is a generator, too.
 
 The output from the generator can be turned into an array, like so:
 
-    import lang.array
+    import base.array
 
     const odd_1_3_5_7 = array(odd_numbers(7))
 
@@ -364,8 +364,8 @@ Buffers
 This writes 256 bytes with values of 0 through 255 to a newly created file:
 
     import io
-    import lang.buffer
-    import lang.range
+    import base.buffer
+    import base.range
 
     const buf = buffer(256) # Buffer of size 256, filled with 0s
 
@@ -395,7 +395,7 @@ Exceptions
 
 An exception can be thrown and caught, like so:
 
-    import lang.print
+    import base.print
 
     try {
         throw "Hello, exception!"
@@ -410,7 +410,7 @@ Methods
 
 Objects in Kos can have methods:
 
-    import lang.print
+    import base.print
 
     const counter = {
         count:     0,
@@ -429,7 +429,7 @@ Objects in Kos can have methods:
 Constructors and prototype-based inheritance
 --------------------------------------------
 
-    import lang.print
+    import base.print
 
     class counter {
 

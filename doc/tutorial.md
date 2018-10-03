@@ -481,18 +481,18 @@ Constructors
 Built-in type constructors
 --------------------------
 
-    import lang
+    import base
 
-    var integer = lang.integer("1")    // 1
-    var float   = lang.float("2")      // 2.0
-    var string  = lang.string(3)       // "3"
-    var boolean = lang.boolean(0)      // false
-    var _void   = lang.void
-    var array   = lang.array(void, 2)  // [ void, 2 ]
-    var buffer  = lang.buffer(10)      // buffer of 10 bytes
-    var object  = lang.object          // { }
-    var func    = lang.function((x,y)=>x+y)
-    var _class  = lang.class(class { })
+    var integer = base.integer("1")    // 1
+    var float   = base.float("2")      // 2.0
+    var string  = base.string(3)       // "3"
+    var boolean = base.boolean(0)      // false
+    var _void   = base.void
+    var array   = base.array(void, 2)  // [ void, 2 ]
+    var buffer  = base.buffer(10)      // buffer of 10 bytes
+    var object  = base.object          // { }
+    var func    = base.function((x,y)=>x+y)
+    var _class  = base.class(class { })
 
 
 Buffers
@@ -510,8 +510,8 @@ Attempt to write a value less than 0 or greater than 255 triggers an exception.
 
 To create a new buffer of size 100, filled with zeroes:
 
-    import lang
-    var buf = lang.buffer(100)
+    import base
+    var buf = base.buffer(100)
 
 To load a file:
 

@@ -132,7 +132,7 @@ Modules
 -------
 
 All modules must be imported explicitly for their global variables and
-functions to be accessible, including the `lang` module, which conceptually
+functions to be accessible, including the `base` module, which conceptually
 contains "built-in" functionality.  This way the global scope is not polluted
 with unnecessary and potentially unwanted variables.
 
@@ -157,25 +157,25 @@ A prototype is an object itself, and can further have its own prototype.
 
 Here is how to obtain access to prototypes of individual types:
 
-    import lang;
+    import base;
 
-    const integer_prototype  = lang.integer.prototype;
-    const float_prototype    = lang.float.prototype;
-    const boolean_prototype  = lang.boolean.prototype;
-    const string_prototype   = lang.string.prototype;
-    const array_prototype    = lang.array.prototype;
-    const buffer_prototype   = lang.buffer.prototype;
-    const function_prototype = lang.function.prototype;
-    const object_prototype   = lang.object.prototype;
+    const integer_prototype  = base.integer.prototype;
+    const float_prototype    = base.float.prototype;
+    const boolean_prototype  = base.boolean.prototype;
+    const string_prototype   = base.string.prototype;
+    const array_prototype    = base.array.prototype;
+    const buffer_prototype   = base.buffer.prototype;
+    const function_prototype = base.function.prototype;
+    const object_prototype   = base.object.prototype;
 
-`lang.object.prototype` is an indirect prototype for all types of objects.
-The prototype of `lang.object.prototype` is `void`.
+`base.object.prototype` is an indirect prototype for all types of objects.
+The prototype of `base.object.prototype` is `void`.
 
 `void` object does not have any prototype.
 
 Integer and float objects also have a common prototype:
 
-    const number_prototype   = lang.number.prototype;
+    const number_prototype   = base.number.prototype;
 
 
 Iterators
