@@ -135,8 +135,10 @@ static int _gen_reg(struct _KOS_COMP_UNIT *program,
         struct _KOS_FRAME *frame = program->cur_frame;
         struct _KOS_REG   *reg   = frame->free_regs;
 
-        if (!reg)
+        if ( ! reg) {
             error = _gen_new_reg(program, &reg);
+            assert(error || reg);
+        }
 
         if ( ! error) {
             if (frame->free_regs == reg)
@@ -3009,9 +3011,11 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
 
             struct _KOS_REG *arg = argn[i];
 
+            assert(i == 0 || arg);
             assert(i == 0 || arg->reg == argn[i-1]->reg + 1);
 
             TRY(_visit_node(program, node, &arg));
+            assert(arg);
 
             if ( ! argn[i]) {
                 assert(num_contig_args == 1);
@@ -4196,8 +4200,8 @@ static int _identifier(struct _KOS_COMP_UNIT      *program,
 
     else {
 
-        struct _KOS_VAR *var = 0;
-        struct _KOS_REG *container_reg;
+        struct _KOS_VAR *var           = 0;
+        struct _KOS_REG *container_reg = 0;
 
         TRY(_gen_reg(program, reg));
 
@@ -4219,6 +4223,7 @@ static int _identifier(struct _KOS_COMP_UNIT      *program,
                 break;
 
             default:
+                assert(container_reg);
                 TRY(_gen_instr3(program, INSTR_GET_ELEM, (*reg)->reg, container_reg->reg, var->array_idx));
                 break;
         }
@@ -4601,7 +4606,6 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
         TRY(_KOS_red_black_walk(frame->closures, _gen_closure_regs, &args));
     }
 
-    name_node = fun_node->children;
     assert(name_node);
     assert(name_node->type == NT_NAME || name_node->type == NT_NAME_CONST);
     node = name_node->next;

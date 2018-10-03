@@ -2752,6 +2752,8 @@ static int _exec_function(KOS_CONTEXT ctx)
                     error = _prepare_call(ctx, instr, func_obj, &this_obj,
                                           args_obj, num_args ? &regs[rarg1] : 0, num_args);
 
+                assert(error || func);
+
                 if ( ! error) {
 
                     if (func->state == KOS_GEN_INIT)

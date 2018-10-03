@@ -1343,7 +1343,7 @@ static void _reclaim_free_pages(struct _KOS_HEAP     *heap,
         free_pages = free_pages->next;
     }
 
-    do {
+    while (lists) {
 
         _KOS_PAGE *next      = lists->next;
         unsigned   num_pages = _push_sorted_list(heap, lists);
@@ -1352,7 +1352,7 @@ static void _reclaim_free_pages(struct _KOS_HEAP     *heap,
             stats->num_pages_freed += num_pages;
 
         lists = next;
-    } while (lists);
+    }
 }
 
 static int _evacuate_object(KOS_CONTEXT     ctx,
