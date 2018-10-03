@@ -2,6 +2,8 @@ Table of Contents
 =================
 <!--ts-->
   * [Table of Contents](#table-of-contents)
+  * [debug](#debug)
+    * [backtrace()](#backtrace)
   * [fs](#fs)
     * [is\_file()](#is_file)
     * [remove()](#remove)
@@ -167,6 +169,19 @@ Table of Contents
       * [random.prototype.float()](#randomprototypefloat)
       * [random.prototype.integer()](#randomprototypeinteger)
 <!--te-->
+debug
+=====
+
+backtrace()
+-----------
+
+    backtrace()
+
+Returns backtrace from the place of the invocation.
+
+The backtrace returned is identical to the backtrace obtained
+from an exception object.
+
 fs
 ==
 

@@ -2166,23 +2166,3 @@ fun each(args...)
         }
     }
 }
-
-# TODO move to debug module
-/* @item lang backtrace()
- *
- *     backtrace()
- *
- * Returns backtrace from the place of the invocation.
- *
- * The backtrace returned is identical to the backtrace obtained
- * from an exception object.
- */
-fun backtrace
-{
-    try {
-        throw void
-    }
-    catch const e {
-        return e.backtrace[1:]
-    }
-}

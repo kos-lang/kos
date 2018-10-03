@@ -2696,27 +2696,3 @@ do {
 
     assert sum == 123
 }
-
-##############################################################################
-# lang.backtrace
-
-do {
-    var line = __line__; var b = lang.backtrace()
-
-    assert b.size        == 1
-    assert b[0].line     == line
-    assert b[0].function == "<global>"
-
-    fun fff
-    {
-        line = __line__; b = lang.backtrace()
-    }
-
-    var line2 = __line__; fff()
-
-    assert b.size        == 2
-    assert b[0].line     == line
-    assert b[0].function == "fff"
-    assert b[1].line     == line2
-    assert b[1].function == "<global>"
-}
