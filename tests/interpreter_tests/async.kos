@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-import lang.thread
+import base.thread
 
 fun expect_fail(function)
 {

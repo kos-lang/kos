@@ -44,7 +44,7 @@
 #define KOS_VERSION_STRING "Kos " TO_STR(KOS_VERSION_MAJOR) "." TO_STR(KOS_VERSION_MINOR)
 
 static const char str_cmdline[]     = "<commandline>";
-static const char str_import_lang[] = "import lang.*";
+static const char str_import_base[] = "import base.*";
 static const char str_stdin[]       = "<stdin>";
 
 static int _is_option(const char *arg,
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 
         /* Load script from command line */
         if (is_script) {
-            error = KOS_load_module_from_memory(ctx, str_cmdline, str_import_lang, sizeof(str_import_lang) - 1);
+            error = KOS_load_module_from_memory(ctx, str_cmdline, str_import_base, sizeof(str_import_base) - 1);
 
             if ( ! error) {
                 KOS_OBJ_ID ret = KOS_repl(ctx, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
     }
     else {
 
-        error = KOS_load_module_from_memory(ctx, str_stdin, str_import_lang, sizeof(str_import_lang) - 1);
+        error = KOS_load_module_from_memory(ctx, str_stdin, str_import_base, sizeof(str_import_base) - 1);
 
         if ( ! error) {
 

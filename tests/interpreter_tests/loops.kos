@@ -19,8 +19,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang.print
-import lang.generator_end
+import base.print
+import base.generator_end
 
 do {
     var a = 1

@@ -699,7 +699,7 @@ int _KOS_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      *
      * Write-only file object corresponding to standard output.
      *
-     * Calling `file.stdout.print()` is equivalent to `lang.print()`.
+     * Calling `file.stdout.print()` is equivalent to `base.print()`.
      */
     TRY_ADD_STD_FILE(       ctx, module, proto, "stdout",    stdout);
 

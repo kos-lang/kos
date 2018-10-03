@@ -22,5 +22,5 @@
 
 # Dummy module just for fail_import_2.kos test
 
-# Defines string so that import lang.* will fail
+# Defines string so that import base.* will fail
 const string = "string"

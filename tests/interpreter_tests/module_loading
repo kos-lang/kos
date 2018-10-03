@@ -89,13 +89,13 @@ fi
 note "test 3"
 touch "$DIR/zero"
 if kos "$DIR/zero"; then
-    die "Failed: Interpreter exited successfuly even if module lang is missing"
+    die "Failed: Interpreter exited successfuly even if module base is missing"
 fi
 
 note "test 4"
-touch "$DIR/lang.kos"
-if ! kos "$DIR/lang.kos"; then
-    die "Failed: Interpreter failed to load module lang"
+touch "$DIR/base.kos"
+if ! kos "$DIR/base.kos"; then
+    die "Failed: Interpreter failed to load module base"
 fi
 
 note "test 5"
@@ -138,30 +138,30 @@ if kos "$DIR/first.kos"; then
 fi
 
 note "test 11"
-echo "import first;" > "$DIR/lang.kos"
+echo "import first;" > "$DIR/base.kos"
 if kos "$DIR/zero"; then
     die "Failed: Interpreter failed to detect a circular dependency"
 fi
 
 note "test 12"
-echo "import empty;" > "$DIR/lang.kos"
+echo "import empty;" > "$DIR/base.kos"
 if ! kos "$DIR/zero"; then
-    die "Failed: Interpreter failed to load empty module from lang"
+    die "Failed: Interpreter failed to load empty module from base"
 fi
 
 if [ "$UNAME" != "Windows" -a "$UNAME" != "Haiku" ]; then
     note "test 13"
-    chmod 000 "$DIR/lang.kos"
+    chmod 000 "$DIR/base.kos"
     if kos "$DIR/zero"; then
-        die "Failed: Interpreter loaded unreadable file lang.kos"
+        die "Failed: Interpreter loaded unreadable file base.kos"
     fi
 fi
 
 note "test 14"
-rm -f "$DIR/lang.kos"
-mkdir "$DIR/lang.kos"
+rm -f "$DIR/base.kos"
+mkdir "$DIR/base.kos"
 if kos "$DIR/zero"; then
-    die "Failed: Interpreter failed to detect lang.kos being a directory"
+    die "Failed: Interpreter failed to detect base.kos being a directory"
 fi
 
 note "test 15"

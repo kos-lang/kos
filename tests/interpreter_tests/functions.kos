@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-import lang.generator_end
+import base.generator_end
 
 fun expect_fail(function)
 {

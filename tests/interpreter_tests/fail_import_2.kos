@@ -20,4 +20,4 @@
 # IN THE SOFTWARE.
 #
 import string_overlap.* # Defines 'string'
-import lang.*           # Redefines 'string'
+import base.*           # Redefines 'string'

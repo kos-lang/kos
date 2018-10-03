@@ -20,9 +20,9 @@
 # IN THE SOFTWARE.
 #
 
-import io
+import base
 import fs
-import lang
+import io
 
 fun expect_fail(function)
 {
@@ -55,8 +55,8 @@ do {
 
         assert f.size == 0
 
-        const init_buf = lang.buffer(9)
-        for var i in lang.range(init_buf.size) {
+        const init_buf = base.buffer(9)
+        for var i in base.range(init_buf.size) {
             init_buf[i] = i
         }
 
@@ -80,7 +80,7 @@ do {
         assert typeof buf == "buffer"
         assert buf.size   == 27
 
-        for var i in lang.range(buf.size) {
+        for var i in base.range(buf.size) {
             assert (i % 9) == buf[i]
         }
 
@@ -136,8 +136,8 @@ do {
     assert ! fs.is_file(name)
 
     with const f = io.file(name, io.create_flag) {
-        const buf = lang.buffer(100)
-        for var i in lang.range(buf.size) {
+        const buf = base.buffer(100)
+        for var i in base.range(buf.size) {
             buf[i] = i + 100
         }
         f.write(buf)
@@ -206,7 +206,7 @@ do {
 
     with const f = io.create(name) {
         const lines = "abcdefg\nhijklm\nnop";
-        f.write(lang.buffer().pack("s\(lines.size)", lines))
+        f.write(base.buffer().pack("s\(lines.size)", lines))
     }
 
     with const f = io.open(name, io.ro) {
@@ -239,7 +239,7 @@ do {
 
     with const f = io.create(name) {
         const lines = "abc\n\ndef\n\rxyz"
-        f.write(lang.buffer().pack("s\(lines.size)", lines))
+        f.write(base.buffer().pack("s\(lines.size)", lines))
     }
 
     with const f = io.open(name, io.ro) {
@@ -268,7 +268,7 @@ do {
 
     with const f = io.create(name) {
         const lines = "xy\r\nz\x{FF}\n"
-        f.write(lang.buffer().pack("s", lines))
+        f.write(base.buffer().pack("s", lines))
     }
 
     with const f = io.open(name, io.ro) {
@@ -282,7 +282,7 @@ do {
 
     with const f = io.create(name) {
         const lines = "ab\rcd\r\nef\ng"
-        f.write(lang.buffer(lines))
+        f.write(base.buffer(lines))
     }
 
     do {
@@ -291,11 +291,11 @@ do {
             for const keep_ends in [false, true] {
                 const a = [io.read_lines(name, keep_ends, gran)...]
                 assert a.size == lines.size
-                for const i in lang.range(a.size) {
+                for const i in base.range(a.size) {
                     const expected = keep_ends ? lines[i] : lines[i].strip()
                     if a[i] != expected {
-                        lang.print("Failed keep_ends=\(keep_ends) gran=\(gran) line=\(i) expected='\(
-                                    lang.stringify(expected))' actual='\(lang.stringify(a[i]))'")
+                        base.print("Failed keep_ends=\(keep_ends) gran=\(gran) line=\(i) expected='\(
+                                    base.stringify(expected))' actual='\(base.stringify(a[i]))'")
                         assert a[i] == expected
                     }
                 }
@@ -317,7 +317,7 @@ do {
 
     with const f = io.create(name) {
         var exception = false
-        var buf       = lang.buffer(1024)
+        var buf       = base.buffer(1024)
         var ret       = void
         assert buf.size == 1024
         try {
@@ -351,7 +351,7 @@ do {
         f.print()
         f.print("Hello,", "World!")
         f.print_lines([1, 2, 3]);
-        ["a", "b", "c"] -> lang.method(f, f.print_lines)
+        ["a", "b", "c"] -> base.method(f, f.print_lines)
         f.print("END")
     }
 
@@ -388,7 +388,7 @@ do {
     assert ! fs.is_file(name)
 
     with const f = io.create(name) {
-        const data = lang.string(f.print_("abcdefghijklmnopqrstuvwxyz").seek(-8).read(4))
+        const data = base.string(f.print_("abcdefghijklmnopqrstuvwxyz").seek(-8).read(4))
         assert data == "stuv"
     }
 

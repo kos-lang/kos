@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-import lang
+import base
 import kos
 
 fun expect_fail(function)
@@ -31,7 +31,7 @@ fun expect_fail(function)
     }
     catch const e {
         failed = true
-        if lang.args.size > 1 && lang.args[1] == "-print" {
+        if base.args.size > 1 && base.args[1] == "-print" {
             e.print()
         }
     }
@@ -39,7 +39,7 @@ fun expect_fail(function)
 }
 
 do {
-    const buf = lang.buffer();
+    const buf = base.buffer();
     buf.pack("s", "try/*comment*/+0=0x44")
     const expected = [ [  1, "token_keyword",  "try"         ],
                        [  4, "token_comment",  "/*comment*/" ],
@@ -67,7 +67,7 @@ do {
 
 do {
     expect_fail(fun {
-        const buf = lang.buffer()
+        const buf = base.buffer()
         buf.pack("s", "'")
         const it = kos.raw_lexer(buf)
         it()
@@ -75,7 +75,7 @@ do {
 }
 
 do {
-    const lexer = lang.buffer().pack("s", ")hello\"") -> kos.raw_lexer
+    const lexer = base.buffer().pack("s", ")hello\"") -> kos.raw_lexer
 
     const t1 = lexer()
     assert t1.line   == 1
@@ -94,7 +94,7 @@ do {
 }
 
 do {
-    const lexer = lang.buffer().pack("s", ")str\"") -> kos.raw_lexer
+    const lexer = base.buffer().pack("s", ")str\"") -> kos.raw_lexer
     const t     = lexer(kos.continue_string)
 
     assert t.type  == kos.token_separator
@@ -103,7 +103,7 @@ do {
 }
 
 do {
-    const lexer = lang.buffer().pack("s", "\"a\\()b\"") -> kos.raw_lexer
+    const lexer = base.buffer().pack("s", "\"a\\()b\"") -> kos.raw_lexer
 
     const t1 = lexer()
     assert t1.line   == 1
@@ -126,14 +126,14 @@ do {
 }
 
 do {
-    const lexer = lang.buffer().pack("s", "(str\"") -> kos.raw_lexer
+    const lexer = base.buffer().pack("s", "(str\"") -> kos.raw_lexer
 
     const t1 = lexer()
     expect_fail(()=>lexer(kos.continue_string))
 }
 
 do {
-    const lexer = kos.lexer("filename", lang.buffer().pack("s", "{([\"\\()\"])}"))
+    const lexer = kos.lexer("filename", base.buffer().pack("s", "{([\"\\()\"])}"))
 
     const expected = [ [  1, "token_separator",   "sep_curly_open",   "{"     ],
                        [  2, "token_separator",   "sep_paren_open",   "("     ],
@@ -160,7 +160,7 @@ do {
 
 do {
     const input = "+\\hello"
-    const buf   = lang.buffer().pack("s", input)
+    const buf   = base.buffer().pack("s", input)
 
     do {
         const lexer = kos.raw_lexer(buf)

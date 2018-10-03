@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-import lang
+import base
 
 fun expect_fail(function)
 {
@@ -35,29 +35,29 @@ fun expect_fail(function)
 }
 
 ##############################################################################
-# lang.number
+# base.number
 
 do {
-    assert typeof lang.number           == "class"
-    assert typeof lang.number.prototype == "object"
-    assert lang.number instanceof lang.function
-    assert lang.number instanceof lang.class
+    assert typeof base.number           == "class"
+    assert typeof base.number.prototype == "object"
+    assert base.number instanceof base.function
+    assert base.number instanceof base.class
 }
 
 do {
-    const number = lang.number()
+    const number = base.number()
     assert typeof number == "integer"
     assert number        == 0
 }
 
 do {
-    const number = lang.number(101)
+    const number = base.number(101)
     assert typeof number == "integer"
     assert number        == 101
 }
 
 do {
-    const number = lang.number(10.1)
+    const number = base.number(10.1)
     assert typeof number == "float"
     assert number        == 10.1
 }
@@ -66,7 +66,7 @@ do {
     expect_fail(()=>(1).times_three())
     expect_fail(()=>(1.5).times_three())
 
-    lang.number.prototype.times_three = () => this*3
+    base.number.prototype.times_three = () => this*3
 
     const i = (5).times_three()
     assert typeof i == "integer"
@@ -78,91 +78,91 @@ do {
 }
 
 do {
-    expect_fail(()=>lang.number(""))
-    expect_fail(()=>lang.number("a"))
-    expect_fail(()=>lang.number("e"))
-    expect_fail(()=>lang.number("123x"))
-    expect_fail(()=>lang.number("-"))
-    expect_fail(()=>lang.number("--"))
-    expect_fail(()=>lang.number("-E"))
-    expect_fail(()=>lang.number({}))
-    expect_fail(()=>lang.number([]))
-    expect_fail(()=>lang.number(()=>void))
-    expect_fail(()=>lang.number(false))
-    expect_fail(()=>lang.number(void))
+    expect_fail(()=>base.number(""))
+    expect_fail(()=>base.number("a"))
+    expect_fail(()=>base.number("e"))
+    expect_fail(()=>base.number("123x"))
+    expect_fail(()=>base.number("-"))
+    expect_fail(()=>base.number("--"))
+    expect_fail(()=>base.number("-E"))
+    expect_fail(()=>base.number({}))
+    expect_fail(()=>base.number([]))
+    expect_fail(()=>base.number(()=>void))
+    expect_fail(()=>base.number(false))
+    expect_fail(()=>base.number(void))
 
-    const _1 = lang.number("1")
+    const _1 = base.number("1")
     assert typeof _1 == "integer"
     assert _1        == 1
 
-    const _2 = lang.number("0x002")
+    const _2 = base.number("0x002")
     assert typeof _2 == "integer"
     assert _2        == 2
 
-    const _3 = lang.number("3.")
+    const _3 = base.number("3.")
     assert typeof _3 == "float"
     assert _3        == 3
 
-    const _0 = lang.number(".")
+    const _0 = base.number(".")
     assert typeof _0 == "float"
     assert _0        == 0
 
-    const _m0 = lang.number("-.")
+    const _m0 = base.number("-.")
     assert typeof _m0 == "float"
     assert _m0        == 0
 
-    const _0_5 = lang.number(".5")
+    const _0_5 = base.number(".5")
     assert typeof _0_5 == "float"
     assert _0_5        == 0.5
 }
 
 do {
     const number = "number"
-    const value  = lang[number](5)
+    const value  = base[number](5)
     assert value        == 5
     assert typeof value == "integer"
 }
 
 ##############################################################################
-# lang.integer
+# base.integer
 
 do {
-    assert typeof lang.integer           == "class"
-    assert typeof lang.integer.prototype == "object"
-    assert lang.integer instanceof lang.function
-    assert lang.integer instanceof lang.class
+    assert typeof base.integer           == "class"
+    assert typeof base.integer.prototype == "object"
+    assert base.integer instanceof base.function
+    assert base.integer instanceof base.class
 }
 
 do {
-    const number = lang.integer()
+    const number = base.integer()
     assert typeof number == "integer"
     assert number        == 0
 }
 
 do {
-    const number = lang.integer(10)
+    const number = base.integer(10)
     assert typeof number == "integer"
     assert number        == 10
 }
 
 do {
-    const number = lang.integer(2.9)
+    const number = base.integer(2.9)
     assert typeof number == "integer"
     assert number        == 2
 }
 
 do {
-    assert lang.integer(2.1)  == 2
-    assert lang.integer(1.9)  == 1
-    assert lang.integer(-0.9) == -1
-    assert lang.integer(-1.1) == -2
-    assert lang.integer(-1.9) == -2
+    assert base.integer(2.1)  == 2
+    assert base.integer(1.9)  == 1
+    assert base.integer(-0.9) == -1
+    assert base.integer(-1.1) == -2
+    assert base.integer(-1.9) == -2
 }
 
 do {
     expect_fail(()=>(3).square())
 
-    lang.integer.prototype.square = () => this * this
+    base.integer.prototype.square = () => this * this
 
     assert (3).square() == 9
 
@@ -170,58 +170,58 @@ do {
 }
 
 do {
-    assert lang.integer()     == 0
-    assert lang.integer(-5)   == -5
-    assert lang.integer(8.25) == 8
+    assert base.integer()     == 0
+    assert base.integer(-5)   == -5
+    assert base.integer(8.25) == 8
 }
 
 do {
-    assert 0 instanceof lang.integer
-    assert 1 instanceof lang.integer
-    assert 0x7FFFFFFFFFFFFFFF instanceof lang.integer
-    assert ! (0.0 instanceof lang.integer)
+    assert 0 instanceof base.integer
+    assert 1 instanceof base.integer
+    assert 0x7FFFFFFFFFFFFFFF instanceof base.integer
+    assert ! (0.0 instanceof base.integer)
     assert ! (0 instanceof 0)
 }
 
 do {
     const value = (()=>42)()
-    assert value instanceof lang.integer
-    assert value instanceof lang.number
-    assert value instanceof lang.object
-    assert ! (value instanceof lang.float)
-    assert ! (value instanceof lang.string)
-    assert ! (value instanceof lang.boolean)
+    assert value instanceof base.integer
+    assert value instanceof base.number
+    assert value instanceof base.object
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.string)
+    assert ! (value instanceof base.boolean)
 }
 
 do {
-    expect_fail(()=>lang.integer(""))
-    expect_fail(()=>lang.integer("a"))
-    expect_fail(()=>lang.integer("e"))
-    expect_fail(()=>lang.integer("123x"))
-    expect_fail(()=>lang.integer("-"))
-    expect_fail(()=>lang.integer("--"))
-    expect_fail(()=>lang.integer("-E"))
-    expect_fail(()=>lang.integer("3."))
-    expect_fail(()=>lang.integer("."))
-    expect_fail(()=>lang.integer("-."))
-    expect_fail(()=>lang.integer(".5"))
-    expect_fail(()=>lang.integer({}))
-    expect_fail(()=>lang.integer([]))
-    expect_fail(()=>lang.integer(()=>void))
-    expect_fail(()=>lang.integer(false))
-    expect_fail(()=>lang.integer(void))
+    expect_fail(()=>base.integer(""))
+    expect_fail(()=>base.integer("a"))
+    expect_fail(()=>base.integer("e"))
+    expect_fail(()=>base.integer("123x"))
+    expect_fail(()=>base.integer("-"))
+    expect_fail(()=>base.integer("--"))
+    expect_fail(()=>base.integer("-E"))
+    expect_fail(()=>base.integer("3."))
+    expect_fail(()=>base.integer("."))
+    expect_fail(()=>base.integer("-."))
+    expect_fail(()=>base.integer(".5"))
+    expect_fail(()=>base.integer({}))
+    expect_fail(()=>base.integer([]))
+    expect_fail(()=>base.integer(()=>void))
+    expect_fail(()=>base.integer(false))
+    expect_fail(()=>base.integer(void))
 
-    const _1 = lang.integer("1")
+    const _1 = base.integer("1")
     assert typeof _1 == "integer"
     assert _1        == 1
 
-    const _2 = lang.integer("0x002")
+    const _2 = base.integer("0x002")
     assert typeof _2 == "integer"
     assert _2        == 2
 }
 
 ##############################################################################
-# lang.integer.prototype.hex
+# base.integer.prototype.hex
 
 do {
     assert 0 .hex()   == "0x0"
@@ -237,48 +237,48 @@ do {
 }
 
 ##############################################################################
-# lang.float
+# base.float
 
 do {
-    assert typeof lang.float           == "class"
-    assert typeof lang.float.prototype == "object"
-    assert lang.float instanceof lang.function
-    assert lang.float instanceof lang.class
+    assert typeof base.float           == "class"
+    assert typeof base.float.prototype == "object"
+    assert base.float instanceof base.function
+    assert base.float instanceof base.class
 }
 
 do {
-    const number = lang.float()
+    const number = base.float()
     assert typeof number == "float"
     assert number        == 0
 }
 
 do {
-    const number = lang.float(10)
+    const number = base.float(10)
     assert typeof number == "float"
     assert number        == 10
 }
 
 do {
-    const number = lang.float(2.9)
+    const number = base.float(2.9)
     assert typeof number == "float"
     assert number        == 2.9
 }
 
 do {
-    const number = lang.float(4611686018427387904)
+    const number = base.float(4611686018427387904)
     assert typeof number == "float"
     assert number        == 4611686018427387904
 }
 
 do {
-    assert lang.float("+1") == 1
-    assert lang.float("1e0x10") == 10000000000000000
+    assert base.float("+1") == 1
+    assert base.float("1e0x10") == 10000000000000000
 }
 
 do {
     expect_fail(()=>(3.0).square3())
 
-    lang.float.prototype.square3 = () => this * this * this
+    base.float.prototype.square3 = () => this * this * this
 
     assert (3.0).square3() == 27
 
@@ -286,61 +286,61 @@ do {
 }
 
 do {
-    assert lang.float()     == 0
-    assert lang.float(3)    == 3
-    assert lang.float(-4.5) == -4.5
+    assert base.float()     == 0
+    assert base.float(3)    == 3
+    assert base.float(-4.5) == -4.5
 }
 
 do {
-    assert 0.0 instanceof lang.float
-    assert 0.5 instanceof lang.float
-    assert ! (0 instanceof lang.float)
+    assert 0.0 instanceof base.float
+    assert 0.5 instanceof base.float
+    assert ! (0 instanceof base.float)
 }
 
 do {
     const value = (()=>42.0)()
-    assert value instanceof lang.float
-    assert value instanceof lang.number
-    assert value instanceof lang.object
-    assert ! (value instanceof lang.integer)
-    assert ! (value instanceof lang.string)
-    assert ! (value instanceof lang.boolean)
+    assert value instanceof base.float
+    assert value instanceof base.number
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.string)
+    assert ! (value instanceof base.boolean)
 }
 
 do {
-    expect_fail(()=>lang.float(""))
-    expect_fail(()=>lang.float("a"))
-    expect_fail(()=>lang.float("e"))
-    expect_fail(()=>lang.float("123x"))
-    expect_fail(()=>lang.float("-"))
-    expect_fail(()=>lang.float("--"))
-    expect_fail(()=>lang.float("-E"))
-    expect_fail(()=>lang.float("0x002"))
-    expect_fail(()=>lang.float({}))
-    expect_fail(()=>lang.float([]))
-    expect_fail(()=>lang.float(()=>void))
-    expect_fail(()=>lang.float(false))
-    expect_fail(()=>lang.float(void))
+    expect_fail(()=>base.float(""))
+    expect_fail(()=>base.float("a"))
+    expect_fail(()=>base.float("e"))
+    expect_fail(()=>base.float("123x"))
+    expect_fail(()=>base.float("-"))
+    expect_fail(()=>base.float("--"))
+    expect_fail(()=>base.float("-E"))
+    expect_fail(()=>base.float("0x002"))
+    expect_fail(()=>base.float({}))
+    expect_fail(()=>base.float([]))
+    expect_fail(()=>base.float(()=>void))
+    expect_fail(()=>base.float(false))
+    expect_fail(()=>base.float(void))
 
-    expect_fail(()=>lang.float("1.1.1"))
+    expect_fail(()=>base.float("1.1.1"))
 
-    const _1 = lang.float("1")
+    const _1 = base.float("1")
     assert typeof _1 == "float"
     assert _1        == 1
 
-    const _3 = lang.float("3.")
+    const _3 = base.float("3.")
     assert typeof _3 == "float"
     assert _3        == 3
 
-    const _0 = lang.float(".")
+    const _0 = base.float(".")
     assert typeof _0 == "float"
     assert _0        == 0
 
-    const _m0 = lang.float("-.")
+    const _m0 = base.float("-.")
     assert typeof _m0 == "float"
     assert _m0        == 0
 
-    const _0_5 = lang.float(".5")
+    const _0_5 = base.float(".5")
     assert typeof _0_5 == "float"
     assert _0_5        == 0.5
 }
@@ -355,13 +355,13 @@ do {
     })
 
     var count = 0
-    for const x in lang.deep(void) {
+    for const x in base.deep(void) {
         count += 1
     }
     assert count == 0
 
     count = 0
-    for const x in lang.shallow(void) {
+    for const x in base.shallow(void) {
         count += 1
     }
     assert count == 0
@@ -369,135 +369,135 @@ do {
 
 do {
     const value = (()=>void)()
-    assert ! (value instanceof lang.object)
-    assert ! (value instanceof lang.integer)
-    assert ! (value instanceof lang.float)
-    assert ! (value instanceof lang.number)
-    assert ! (value instanceof lang.string)
-    assert ! (value instanceof lang.boolean)
+    assert ! (value instanceof base.object)
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.string)
+    assert ! (value instanceof base.boolean)
 }
 
 ##############################################################################
-# lang.boolean
+# base.boolean
 
 do {
-    assert typeof lang.boolean           == "class"
-    assert typeof lang.boolean.prototype == "object"
-    assert lang.boolean instanceof lang.function
-    assert lang.boolean instanceof lang.class
+    assert typeof base.boolean           == "class"
+    assert typeof base.boolean.prototype == "object"
+    assert base.boolean instanceof base.function
+    assert base.boolean instanceof base.class
 }
 
 do {
-    assert lang.boolean(true)
-    assert ! lang.boolean(false)
-    assert lang.boolean(3 + 4)
-    assert ! lang.boolean(5 - 5)
+    assert base.boolean(true)
+    assert ! base.boolean(false)
+    assert base.boolean(3 + 4)
+    assert ! base.boolean(5 - 5)
 }
 
 do {
     expect_fail(()=>false.negative())
-    lang.boolean.prototype.negative = ()=>!this
+    base.boolean.prototype.negative = ()=>!this
     assert false.negative()
     assert ! true.negative()
 }
 
 do {
-    assert true  instanceof lang.boolean
-    assert false instanceof lang.boolean
-    assert ! (void instanceof lang.boolean)
+    assert true  instanceof base.boolean
+    assert false instanceof base.boolean
+    assert ! (void instanceof base.boolean)
 
     const a = 10
     const b = 2 * 5
-    assert (a == b) instanceof lang.boolean
+    assert (a == b) instanceof base.boolean
 }
 
 do {
     const value = (()=>false)()
-    assert value instanceof lang.boolean
-    assert value instanceof lang.object
-    assert ! (value instanceof lang.integer)
-    assert ! (value instanceof lang.float)
-    assert ! (value instanceof lang.number)
-    assert ! (value instanceof lang.string)
+    assert value instanceof base.boolean
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.string)
 }
 
 ##############################################################################
-# lang.string
+# base.string
 
 do {
-    assert typeof lang.string           == "class"
-    assert typeof lang.string.prototype == "object"
-    assert lang.string instanceof lang.function
-    assert lang.string instanceof lang.class
+    assert typeof base.string           == "class"
+    assert typeof base.string.prototype == "object"
+    assert base.string instanceof base.function
+    assert base.string instanceof base.class
 }
 
 do {
-    assert lang.string()             == ""
-    assert lang.string(123)          == "123"
-    assert lang.string("x", 5, "z")  == "x5z"
-    assert lang.string()             == ""
-    assert lang.string(8)            == "8"
-    assert lang.string([], [])       == ""
-    assert lang.string([0x30, 0x41]) == "0A"
-    assert lang.string([0x100, 2])   == "\x{100}\x02"
+    assert base.string()             == ""
+    assert base.string(123)          == "123"
+    assert base.string("x", 5, "z")  == "x5z"
+    assert base.string()             == ""
+    assert base.string(8)            == "8"
+    assert base.string([], [])       == ""
+    assert base.string([0x30, 0x41]) == "0A"
+    assert base.string([0x100, 2])   == "\x{100}\x02"
 
-    expect_fail(()=>lang.string([void]))
-    expect_fail(()=>lang.string({}))
-    expect_fail(()=>lang.string(void))
-    expect_fail(()=>lang.string(false))
-    expect_fail(()=>lang.string(()=>void))
-    expect_fail(()=>lang.string([0x200000]))
-    expect_fail(()=>lang.string([-1]))
+    expect_fail(()=>base.string([void]))
+    expect_fail(()=>base.string({}))
+    expect_fail(()=>base.string(void))
+    expect_fail(()=>base.string(false))
+    expect_fail(()=>base.string(()=>void))
+    expect_fail(()=>base.string([0x200000]))
+    expect_fail(()=>base.string([-1]))
 }
 
 do {
     const elements = [0x1FFFFF, 1, 2, 3, 4, 5]
-    const s        = lang.string(elements)
+    const s        = base.string(elements)
     assert typeof s == "string"
     assert s.size   == elements.size
-    for var i in lang.range(s.size) {
+    for var i in base.range(s.size) {
         assert s.code(i) == elements[i]
     }
 }
 
 do {
     const elements = [0x1FFFFF, 1, 2, 3, 4, 5, 6]
-    const s        = lang.string(elements)
+    const s        = base.string(elements)
     assert typeof s == "string"
     assert s.size   == elements.size
-    for var i in lang.range(s.size) {
+    for var i in base.range(s.size) {
         assert s.code(i) == elements[i]
     }
 }
 
 do {
     expect_fail(()=>"x".add_2("y"))
-    lang.string.prototype.add_2 = x => this + x
+    base.string.prototype.add_2 = x => this + x
     assert "x".add_2("y") == "xy"
 }
 
 do {
     const str = "123"
-    assert str instanceof lang.string
+    assert str instanceof base.string
     assert str == "123"
 
-    assert "x\(1)y" instanceof lang.string
+    assert "x\(1)y" instanceof base.string
 }
 
 do {
     const value = (()=>"abc")()
-    assert value instanceof lang.string
-    assert value instanceof lang.object
-    assert ! (value instanceof lang.integer)
-    assert ! (value instanceof lang.float)
-    assert ! (value instanceof lang.number)
-    assert ! (value instanceof lang.boolean)
+    assert value instanceof base.string
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.boolean)
 }
 
 do {
     class ctor { }
 
-    ctor.prototype = lang.string.prototype
+    ctor.prototype = base.string.prototype
 
     const o = ctor()
 
@@ -505,17 +505,17 @@ do {
 }
 
 ##############################################################################
-# lang.object
+# base.object
 
 do {
-    assert typeof lang.object           == "class"
-    assert typeof lang.object.prototype == "object"
-    assert lang.object instanceof lang.function
-    assert lang.object instanceof lang.class
+    assert typeof base.object           == "class"
+    assert typeof base.object.prototype == "object"
+    assert base.object instanceof base.function
+    assert base.object instanceof base.class
 }
 
 do {
-    const o = lang.object()
+    const o = base.object()
     assert typeof o == "object"
 
     o.prop1 = "xyz"
@@ -523,7 +523,7 @@ do {
 }
 
 do {
-    const o = lang.object()
+    const o = base.object()
     assert typeof o == "object"
 
     o.prop2 = "xyz"
@@ -531,24 +531,24 @@ do {
 }
 
 do {
-    assert {} instanceof lang.object
-    assert ! ({} instanceof lang.array)
-    assert ! ({} instanceof lang.function)
-    assert ! ({} instanceof lang.string)
+    assert {} instanceof base.object
+    assert ! ({} instanceof base.array)
+    assert ! ({} instanceof base.function)
+    assert ! ({} instanceof base.string)
 
-    const o = lang.object()
-    assert o instanceof lang.object
+    const o = base.object()
+    assert o instanceof base.object
 }
 
 do {
     const value = (()=>{})()
-    assert value instanceof lang.object
-    assert ! (value instanceof lang.integer)
-    assert ! (value instanceof lang.float)
-    assert ! (value instanceof lang.number)
-    assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.string)
-    assert ! (value instanceof lang.array)
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.boolean)
+    assert ! (value instanceof base.string)
+    assert ! (value instanceof base.array)
 }
 
 do {
@@ -567,7 +567,7 @@ do {
 
     var values = ["a", "b", "c", "d", "e"]
 
-    for const key, value in lang.deep(obj) {
+    for const key, value in base.deep(obj) {
         assert value == obj[key]
         if typeof value == "integer" && value >= 0 && value < values.size {
             assert values[value] == key
@@ -581,7 +581,7 @@ do {
 
     values = ["a", "b", "c", "d", "e"]
 
-    for const key, value in lang.shallow(obj) {
+    for const key, value in base.shallow(obj) {
         assert typeof value == "integer"
         assert value == obj[key]
         assert value >= 0 && value < values.size
@@ -591,47 +591,47 @@ do {
 }
 
 do {
-    const it = lang.shallow.apply({aaa:0}, [void])
+    const it = base.shallow.apply({aaa:0}, [void])
     assert typeof it == "function"
     for const x, v in it {
         assert x == "aaa"
     }
 
-    for const x, v in lang.shallow.apply(void, [void]) {
+    for const x, v in base.shallow.apply(void, [void]) {
         throw "unexpected property"
     }
 }
 
 ##############################################################################
-# lang.array
+# base.array
 
 do {
-    assert typeof lang.array           == "class"
-    assert typeof lang.array.prototype == "object"
-    assert lang.array instanceof lang.function
-    assert lang.array instanceof lang.class
+    assert typeof base.array           == "class"
+    assert typeof base.array.prototype == "object"
+    assert base.array instanceof base.function
+    assert base.array instanceof base.class
 }
 
 do {
-    const a = lang.array()
+    const a = base.array()
     assert typeof a == "array"
     assert a.size   == 0
 }
 
 do {
-    const a = lang.array(1)
+    const a = base.array(1)
     assert a.size == 1
     assert a[0]   == 1
 }
 
 do {
-    const a = lang.array(-1)
+    const a = base.array(-1)
     assert a.size == 1
     assert a[0] == -1
 }
 
 do {
-    const a = lang.array([8])
+    const a = base.array([8])
     assert typeof a    == "array"
     assert a.size      == 1
     assert typeof a[0] == "array"
@@ -641,7 +641,7 @@ do {
 }
 
 do {
-    const a = lang.array("xy", true)
+    const a = base.array("xy", true)
     assert typeof a == "array"
     assert a.size   == 2
     assert a[0]     == "xy"
@@ -650,13 +650,13 @@ do {
 }
 
 do {
-    const a = lang.array(2.1)
+    const a = base.array(2.1)
     assert a.size == 1
     assert a[0]   == 2.1
 }
 
 do {
-    const a = lang.array(lang.range(4)...)
+    const a = base.array(base.range(4)...)
     assert typeof a == "array"
     assert a.size   == 4
     for var i = 0; i < 4; i += 1 {
@@ -665,7 +665,7 @@ do {
 }
 
 do {
-    const a = lang.array(lang.shallow({a: void, b: void, c: void})...)
+    const a = base.array(base.shallow({a: void, b: void, c: void})...)
     assert typeof a == "array"
     assert a.size   == 3
     const had = { "a": false, "b": false, "c": false }
@@ -679,7 +679,7 @@ do {
 
 do {
     expect_fail(fun {
-        lang.array.prototype = {}
+        base.array.prototype = {}
     })
 }
 
@@ -688,7 +688,7 @@ do {
 
     expect_fail(()=>a.ret_elem_3())
 
-    lang.array.prototype.ret_elem_3 = fun {
+    base.array.prototype.ret_elem_3 = fun {
         return this[3]
     }
 
@@ -696,7 +696,7 @@ do {
 }
 
 do {
-    const a = lang.array([10, 20]..., [30]...)
+    const a = base.array([10, 20]..., [30]...)
     assert a.size == 3
     assert a[0]     == 10
     assert a[1]     == 20
@@ -705,24 +705,24 @@ do {
 }
 
 do {
-    assert [] instanceof lang.array
-    assert [] instanceof lang.object
+    assert [] instanceof base.array
+    assert [] instanceof base.object
 }
 
 do {
     const value = (()=>[])()
-    assert value instanceof lang.array
-    assert value instanceof lang.object
-    assert ! (value instanceof lang.integer)
-    assert ! (value instanceof lang.float)
-    assert ! (value instanceof lang.number)
-    assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.string)
+    assert value instanceof base.array
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.boolean)
+    assert ! (value instanceof base.string)
 }
 
 do {
     const a = [1, 2, 100]
-    const b = lang.array.apply(void, a)
+    const b = base.array.apply(void, a)
     assert typeof b == "array"
     assert b        != a
     assert b.size   == a.size
@@ -734,12 +734,12 @@ do {
 do {
     class fake_array { }
 
-    fake_array.prototype = lang.array.prototype
+    fake_array.prototype = base.array.prototype
 
     const o = fake_array()
 
     assert typeof o == "object"
-    assert o instanceof lang.array
+    assert o instanceof base.array
     expect_fail(()=>o.size)
     assert typeof o.resize == "function"
     expect_fail(()=>o.resize(10))
@@ -747,12 +747,12 @@ do {
 }
 
 do {
-    const buf = lang.buffer(10)
-    for var i in lang.range(buf.size) {
+    const buf = base.buffer(10)
+    for var i in base.range(buf.size) {
         buf[i] = i + 20
     }
 
-    const a = lang.array(buf...)
+    const a = base.array(buf...)
 
     assert a.size == 10
 
@@ -765,7 +765,7 @@ do {
 }
 
 do {
-    const a = lang.array(lang.buffer())
+    const a = base.array(base.buffer())
 
     assert typeof a    == "array"
     assert a.size      == 1
@@ -775,7 +775,7 @@ do {
 
 do {
     expect_fail(fun { [].reserve(-1) })
-    expect_fail(fun { lang.array.prototype.reserve(void, [0]) })
+    expect_fail(fun { base.array.prototype.reserve(void, [0]) })
 
     const a = []
     a.reserve(100)
@@ -783,8 +783,8 @@ do {
 }
 
 do {
-    expect_fail(fun { lang.array.prototype.push(0) })
-    expect_fail(fun { lang.array.prototype.pop() })
+    expect_fail(fun { base.array.prototype.push(0) })
+    expect_fail(fun { base.array.prototype.pop() })
     expect_fail(fun { [].push.apply("", ["a"]) })
     expect_fail(fun { [].pop.apply("a", []) })
 
@@ -834,7 +834,7 @@ do {
 }
 
 ##############################################################################
-# lang.array.prototype.slice
+# base.array.prototype.slice
 
 do {
     const a = []
@@ -909,7 +909,7 @@ do {
 }
 
 ##############################################################################
-# lang.array.prototype.insert (with array)
+# base.array.prototype.insert (with array)
 
 do {
     const a = [1, 2, 3, 4]
@@ -957,7 +957,7 @@ do {
         const out = [].insert.apply(test.array, test.args)
         assert out      == test.array
         assert out.size == test.result.size
-        for var i in lang.range(out.size) {
+        for var i in base.range(out.size) {
             assert out[i] == test.result[i]
         }
     }
@@ -1013,7 +1013,7 @@ do {
 }
 
 ##############################################################################
-# lang.array.prototype.insert
+# base.array.prototype.insert
 
 do {
     const a = []
@@ -1023,13 +1023,13 @@ do {
     assert a[0]   == "a"
     assert a[2]   == "c"
 
-    a.insert(void, lang.buffer())
+    a.insert(void, base.buffer())
     assert a.size == 3
     assert a[0]   == "a"
     assert a[2]   == "c"
 
-    const buf = lang.buffer(4)
-    for var i in lang.range(buf.size) {
+    const buf = base.buffer(4)
+    for var i in base.range(buf.size) {
         buf[i] = buf.size - i
     }
 
@@ -1039,7 +1039,7 @@ do {
     assert a[3]   == 4
     assert a[6]   == 1
 
-    for var i in lang.range(buf.size) {
+    for var i in base.range(buf.size) {
         buf[i] = 10 + i
     }
 
@@ -1054,7 +1054,7 @@ do {
 }
 
 ##############################################################################
-# lang.array.prototype.indices
+# base.array.prototype.indices
 
 do {
     const it = [ true, void, -2 ].indices()
@@ -1065,10 +1065,10 @@ do {
 }
 
 ##############################################################################
-# lang.array.prototype.fill
+# base.array.prototype.fill
 
 do {
-    const a = lang.array()
+    const a = base.array()
     a.resize(10)
 
     assert a.size == 10
@@ -1111,12 +1111,12 @@ do {
         }
     }
 
-    expect_fail(()=>lang.array.prototype.fill.apply(void, [1]))
+    expect_fail(()=>base.array.prototype.fill.apply(void, [1]))
     expect_fail(()=>a.fill())
 }
 
 ##############################################################################
-# lang.string.prototype.indices
+# base.string.prototype.indices
 
 do {
     const it = "".indices()
@@ -1132,7 +1132,7 @@ do {
 }
 
 ##############################################################################
-# lang.string.prototype.ljust
+# base.string.prototype.ljust
 
 do {
     assert "abcd".ljust(3)      == "abcd"
@@ -1146,7 +1146,7 @@ do {
 }
 
 ##############################################################################
-# lang.string.prototype.rjust
+# base.string.prototype.rjust
 
 do {
     assert "abcd".rjust(3)      == "abcd"
@@ -1160,7 +1160,7 @@ do {
 }
 
 ##############################################################################
-# lang.string.prototype.zfill
+# base.string.prototype.zfill
 
 do {
     assert "abcd".zfill(3)      == "abcd"
@@ -1176,47 +1176,47 @@ do {
 }
 
 ##############################################################################
-# lang.function
+# base.function
 
 do {
-    assert lang.function instanceof lang.function
-    assert lang.function instanceof lang.class
-    assert ! (lang.function instanceof lang.generator)
+    assert base.function instanceof base.function
+    assert base.function instanceof base.class
+    assert ! (base.function instanceof base.generator)
 
-    assert lang.class instanceof lang.function
-    assert lang.class instanceof lang.class
-    assert ! (lang.class instanceof lang.generator)
+    assert base.class instanceof base.function
+    assert base.class instanceof base.class
+    assert ! (base.class instanceof base.generator)
 
-    assert lang.generator instanceof lang.function
-    assert lang.generator instanceof lang.class
-    assert ! (lang.generator instanceof lang.generator)
+    assert base.generator instanceof base.function
+    assert base.generator instanceof base.class
+    assert ! (base.generator instanceof base.generator)
 
-    expect_fail(lang.class)
-    expect_fail(lang.generator)
-    expect_fail(lang.generator_end)
+    expect_fail(base.class)
+    expect_fail(base.generator)
+    expect_fail(base.generator_end)
 
     fun regular_func
     {
     }
 
-    assert regular_func instanceof lang.function
-    assert ! (regular_func instanceof lang.class)
-    assert ! (regular_func instanceof lang.generator)
+    assert regular_func instanceof base.function
+    assert ! (regular_func instanceof base.class)
+    assert ! (regular_func instanceof base.generator)
 
     fun generator_func
     {
         yield void
     }
 
-    assert generator_func instanceof lang.function
-    assert ! (generator_func instanceof lang.class)
-    assert generator_func instanceof lang.generator
+    assert generator_func instanceof base.function
+    assert ! (generator_func instanceof base.class)
+    assert generator_func instanceof base.generator
 
     class constructor_func { }
 
-    assert constructor_func instanceof lang.function
-    assert constructor_func instanceof lang.class
-    assert ! (constructor_func instanceof lang.generator)
+    assert constructor_func instanceof base.function
+    assert constructor_func instanceof base.class
+    assert ! (constructor_func instanceof base.generator)
 
     assert ! ("prototype" in regular_func)
     assert ! ("prototype" in generator_func)
@@ -1228,9 +1228,9 @@ do {
 
     assert regular_func.name == "regular_func"
     var name_from_iter = void
-    for const k, v in lang.deep(regular_func) {
+    for const k, v in base.deep(regular_func) {
         if k == "name" {
-            name_from_iter = lang.stringify(v)
+            name_from_iter = base.stringify(v)
             break
         }
     }
@@ -1242,39 +1242,39 @@ do {
     class ctor { constructor { } }
     class noctor { a { } b { } }
 
-    assert empty  instanceof lang.function
-    assert empty  instanceof lang.class
-    assert ctor   instanceof lang.function
-    assert ctor   instanceof lang.class
-    assert noctor instanceof lang.function
-    assert noctor instanceof lang.class
+    assert empty  instanceof base.function
+    assert empty  instanceof base.class
+    assert ctor   instanceof base.function
+    assert ctor   instanceof base.class
+    assert noctor instanceof base.function
+    assert noctor instanceof base.class
 }
 
 do {
     const f = ()=>void
-    assert f instanceof lang.function
-    assert f instanceof lang.object
-    assert ! (f instanceof lang.integer)
-    assert ! (f instanceof lang.string)
-    assert ! (f instanceof lang.array)
+    assert f instanceof base.function
+    assert f instanceof base.object
+    assert ! (f instanceof base.integer)
+    assert ! (f instanceof base.string)
+    assert ! (f instanceof base.array)
 }
 
 do {
     const value = ()=>void
-    assert value instanceof lang.function
-    assert value instanceof lang.object
-    assert ! (value instanceof lang.integer)
-    assert ! (value instanceof lang.float)
-    assert ! (value instanceof lang.number)
-    assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.string)
-    assert ! (value instanceof lang.array)
+    assert value instanceof base.function
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.boolean)
+    assert ! (value instanceof base.string)
+    assert ! (value instanceof base.array)
 }
 
 do {
     const f1 = x => x + 1
     const f2 = x => x + 1
-    const f3 = lang.function(f1)
+    const f3 = base.function(f1)
     assert f1 == f3
     assert f1 != f2
     assert f2 != f3
@@ -1282,24 +1282,24 @@ do {
 
 do {
     const f1 = fun { yield 0 }
-    const f2 = lang.function(f1)
+    const f2 = base.function(f1)
     assert f1 == f2
 }
 
 do {
     const f1 = class { }
-    const f2 = lang.class(f1)
+    const f2 = base.class(f1)
     assert f1 == f2
-    expect_fail(()=>lang.function(f1))
+    expect_fail(()=>base.function(f1))
 }
 
 do {
-    expect_fail(()=>lang.function())
-    expect_fail(()=>lang.function(void))
-    expect_fail(()=>lang.function(0))
-    expect_fail(()=>lang.function(""))
-    expect_fail(()=>lang.function([]))
-    expect_fail(()=>lang.function({}))
+    expect_fail(()=>base.function())
+    expect_fail(()=>base.function(void))
+    expect_fail(()=>base.function(0))
+    expect_fail(()=>base.function(""))
+    expect_fail(()=>base.function([]))
+    expect_fail(()=>base.function({}))
 }
 
 ##############################################################################
@@ -1326,9 +1326,9 @@ do {
     assert typeof ctor == "class"
     assert typeof gen  == "function"
 
-    assert func instanceof lang.function
-    assert ctor instanceof lang.class
-    assert gen  instanceof lang.generator
+    assert func instanceof base.function
+    assert ctor instanceof base.class
+    assert gen  instanceof base.generator
 
     const a = []
     for const x in func {
@@ -1383,12 +1383,12 @@ do {
 }
 
 ##############################################################################
-# lang.function.prototype.prototype
+# base.function.prototype.prototype
 
 do {
     class ctor { }
 
-    ctor.prototype = lang.function.prototype
+    ctor.prototype = base.function.prototype
 
     const o = ctor()
 
@@ -1396,18 +1396,18 @@ do {
 }
 
 ##############################################################################
-# lang.function.prototype.*statistics*
+# base.function.prototype.*statistics*
 
 do {
-    assert "name"         in lang.function.prototype
-    assert "registers"    in lang.function.prototype
-    assert "instructions" in lang.function.prototype
-    assert "size"         in lang.function.prototype
+    assert "name"         in base.function.prototype
+    assert "registers"    in base.function.prototype
+    assert "instructions" in base.function.prototype
+    assert "size"         in base.function.prototype
 
-    expect_fail(()=>lang.function.prototype.name)
-    expect_fail(()=>lang.function.prototype.registers)
-    expect_fail(()=>lang.function.prototype.instructions)
-    expect_fail(()=>lang.function.prototype.size)
+    expect_fail(()=>base.function.prototype.name)
+    expect_fail(()=>base.function.prototype.registers)
+    expect_fail(()=>base.function.prototype.instructions)
+    expect_fail(()=>base.function.prototype.size)
 
     fun f { }
 
@@ -1416,14 +1416,14 @@ do {
     assert f.instructions == 2 # LOAD.VOID, RETURN
     assert f.size         == 5
 
-    assert lang.function.name         == "<builtin>"
-    assert lang.function.registers    == 0
-    assert lang.function.instructions == 0
-    assert lang.function.size         == 0
+    assert base.function.name         == "<builtin>"
+    assert base.function.registers    == 0
+    assert base.function.instructions == 0
+    assert base.function.size         == 0
 }
 
 ##############################################################################
-# lang.function.prototype.apply
+# base.function.prototype.apply
 
 do {
     fun method(arg)
@@ -1519,13 +1519,13 @@ do {
 
     fun resize(args...) { args.resize(1) }
 
-    for var i in lang.range(3) {
+    for var i in base.range(3) {
         resize(arg_list...)
     }
-    for var i in lang.range(3) {
+    for var i in base.range(3) {
         resize.apply(void, arg_list)
     }
-    for var i in lang.range(3) {
+    for var i in base.range(3) {
         resize(arg_list...)
         resize.apply(void, arg_list)
         resize(arg_list...)
@@ -1555,21 +1555,21 @@ do {
         yield void
     }
 
-    assert f instanceof lang.function
-    assert ! (f instanceof lang.class)
-    assert ! (f instanceof lang.generator)
+    assert f instanceof base.function
+    assert ! (f instanceof base.class)
+    assert ! (f instanceof base.generator)
 
-    assert c instanceof lang.function
-    assert c instanceof lang.class
-    assert ! (c instanceof lang.generator)
+    assert c instanceof base.function
+    assert c instanceof base.class
+    assert ! (c instanceof base.generator)
 
-    assert g instanceof lang.function
-    assert ! (g instanceof lang.class)
-    assert g instanceof lang.generator
+    assert g instanceof base.function
+    assert ! (g instanceof base.class)
+    assert g instanceof base.generator
 }
 
 ##############################################################################
-# lang.generator.slice
+# base.generator.slice
 
 do {
     fun primes
@@ -1620,12 +1620,12 @@ do {
 }
 
 ##############################################################################
-# lang.exception
+# base.exception
 
 do {
-    assert typeof lang.exception == "class"
-    assert lang.exception instanceof lang.function
-    assert lang.exception instanceof lang.class
+    assert typeof base.exception == "class"
+    assert base.exception instanceof base.function
+    assert base.exception instanceof base.class
 }
 
 do {
@@ -1633,34 +1633,34 @@ do {
     var exception = void
     assert ! exception
     try {
-        line = __line__ ; lang.exception()
+        line = __line__ ; base.exception()
         assert false
     }
     catch const e {
         exception = e
     }
     assert exception
-    assert exception instanceof lang.exception
+    assert exception instanceof base.exception
     assert exception.backtrace.size    == 2
     assert exception.backtrace[1].line == line
 }
 
 do {
     var exception = void
-    assert ! (exception instanceof lang.exception)
+    assert ! (exception instanceof base.exception)
     try {
         throw void
     }
     catch const e {
         exception = e
     }
-    assert exception instanceof lang.exception
+    assert exception instanceof base.exception
 }
 
 do {
     var ex = void
     try {
-        lang.exception(42.0)
+        base.exception(42.0)
     }
     catch const e {
         ex = e.value
@@ -1673,18 +1673,18 @@ do {
 # instanceof buffer
 
 do {
-    const value = lang.buffer()
-    assert value instanceof lang.buffer
-    assert value instanceof lang.object
-    assert ! (value instanceof lang.integer)
-    assert ! (value instanceof lang.float)
-    assert ! (value instanceof lang.number)
-    assert ! (value instanceof lang.boolean)
-    assert ! (value instanceof lang.string)
-    assert ! (value instanceof lang.array)
+    const value = base.buffer()
+    assert value instanceof base.buffer
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.boolean)
+    assert ! (value instanceof base.string)
+    assert ! (value instanceof base.array)
 
-    assert lang.buffer instanceof lang.function
-    assert lang.buffer instanceof lang.class
+    assert base.buffer instanceof base.function
+    assert base.buffer instanceof base.class
 }
 
 ##############################################################################
@@ -1692,7 +1692,7 @@ do {
 
 do {
     expect_fail(()=>[].resize(-1))
-    expect_fail(()=>lang.buffer().resize(-1))
+    expect_fail(()=>base.buffer().resize(-1))
 }
 
 ##############################################################################
@@ -1701,7 +1701,7 @@ do {
 do {
     fun new_type(type, args...)
     {
-        return lang[type].apply(void, args)
+        return base[type].apply(void, args)
     }
 
     const a = new_type("array", "xy"..., 2)
@@ -1732,11 +1732,11 @@ do {
 }
 
 ##############################################################################
-# lang.shallow
+# base.shallow
 
 do {
     const obj  = { a: 42, b: 43, c: 44 }
-    const iter = lang.shallow(obj)
+    const iter = base.shallow(obj)
 
     var key, value = iter()
     assert key == "a" || key == "b" || key == "c"
@@ -1754,21 +1754,21 @@ do {
 }
 
 do {
-    expect_fail(()=>lang.shallow({})())
-    expect_fail(()=>lang.shallow([1])())
-    expect_fail(()=>lang.shallow(1)())
-    expect_fail(()=>lang.shallow("1")())
-    expect_fail(()=>lang.shallow(true)())
-    expect_fail(()=>lang.shallow(void)())
+    expect_fail(()=>base.shallow({})())
+    expect_fail(()=>base.shallow([1])())
+    expect_fail(()=>base.shallow(1)())
+    expect_fail(()=>base.shallow("1")())
+    expect_fail(()=>base.shallow(true)())
+    expect_fail(()=>base.shallow(void)())
 
     var count = 0
-    for const n in lang.shallow(()=>void) {
+    for const n in base.shallow(()=>void) {
         count += 1
     }
     assert count == 0
 
     count = 0
-    for const n, v in lang.shallow({xyz:void}) {
+    for const n, v in base.shallow({xyz:void}) {
         assert n == "xyz"
         count += 1
     }
@@ -1776,14 +1776,14 @@ do {
 }
 
 ##############################################################################
-# lang.range
+# base.range
 
 do {
-    expect_fail(lang.range)
+    expect_fail(base.range)
 }
 
 do {
-    const iter = lang.range(5)
+    const iter = base.range(5)
     assert iter() == 0
     assert iter() == 1
     assert iter() == 2
@@ -1793,7 +1793,7 @@ do {
 }
 
 do {
-    const iter = lang.range(6, 9)
+    const iter = base.range(6, 9)
     assert iter() == 6
     assert iter() == 7
     assert iter() == 8
@@ -1801,7 +1801,7 @@ do {
 }
 
 do {
-    const iter = lang.range(-10, -5)
+    const iter = base.range(-10, -5)
     assert iter() == -10
     assert iter() == -9
     assert iter() == -8
@@ -1811,12 +1811,12 @@ do {
 }
 
 do {
-    const iter = lang.range(10, 5)
+    const iter = base.range(10, 5)
     expect_fail(iter)
 }
 
 do {
-    const iter = lang.range(-2, 5, 2)
+    const iter = base.range(-2, 5, 2)
     assert iter() == -2
     assert iter() == 0
     assert iter() == 2
@@ -1825,7 +1825,7 @@ do {
 }
 
 do {
-    const iter = lang.range(10, 0, -3)
+    const iter = base.range(10, 0, -3)
     assert iter() == 10
     assert iter() == 7
     assert iter() == 4
@@ -1834,16 +1834,16 @@ do {
 }
 
 ##############################################################################
-# lang.map
+# base.map
 
 do {
-    const iter = lang.map(()=>void, [])
+    const iter = base.map(()=>void, [])
     assert typeof iter == "function"
     expect_fail(iter)
 }
 
 do {
-    const f = lang.map(x => x)
+    const f = base.map(x => x)
     assert typeof f == "function"
     const iter = f(["a", "b"])
     assert typeof f == "function"
@@ -1853,7 +1853,7 @@ do {
 }
 
 do {
-    const iter = lang.map(x => x * 10, [2, 3, 4])
+    const iter = base.map(x => x * 10, [2, 3, 4])
     assert typeof iter == "function"
     assert iter()      == 20
     assert iter()      == 30
@@ -1862,7 +1862,7 @@ do {
 }
 
 do {
-    const iter = lang.map(x=>x+5)(lang.range(1, 3))
+    const iter = base.map(x=>x+5)(base.range(1, 3))
     assert typeof iter == "function"
     assert iter()      == 6
     assert iter()      == 7
@@ -1895,20 +1895,20 @@ do {
 }
 
 ##############################################################################
-# lang.filter
+# base.filter
 
 do {
-    const iter = lang.filter(()=>true, [])
+    const iter = base.filter(()=>true, [])
     expect_fail(iter)
 }
 
 do {
-    const iter = lang.filter(()=>false, [1, 2, 3])
+    const iter = base.filter(()=>false, [1, 2, 3])
     expect_fail(iter)
 }
 
 do {
-    const iter = lang.filter(x => x & 1, lang.range(10))
+    const iter = base.filter(x => x & 1, base.range(10))
     assert typeof iter == "function"
     assert iter()      == 1
     assert iter()      == 3
@@ -1928,9 +1928,9 @@ do {
 
 do {
     const result = []
-    for var elem in lang.range(5) ->
-                    lang.map(x => (x - 2) * 10) ->
-                    lang.filter(x => x > 0) {
+    for var elem in base.range(5) ->
+                    base.map(x => (x - 2) * 10) ->
+                    base.filter(x => x > 0) {
         result.insert(result.size, elem)
     }
     assert result.size == 2
@@ -1939,20 +1939,20 @@ do {
 }
 
 ##############################################################################
-# lang.reduce
+# base.reduce
 
 do {
-    const result = lang.reduce((x, y)=>x + y, 42, [])
+    const result = base.reduce((x, y)=>x + y, 42, [])
     assert result == 42
 }
 
 do {
-    const result = lang.reduce((x, y)=>x + y, 0, [10])
+    const result = base.reduce((x, y)=>x + y, 0, [10])
     assert result == 10
 }
 
 do {
-    const result = lang.reduce((x, y)=>x + y, 1, [2000, 300, 70, 5])
+    const result = base.reduce((x, y)=>x + y, 1, [2000, 300, 70, 5])
     assert result == 2376
 }
 
@@ -1960,7 +1960,7 @@ do {
     fun fib_elem(elem)
     {
         var prev = 0
-        return lang.range(1, elem).reduce(fun(accum) {
+        return base.range(1, elem).reduce(fun(accum) {
             const y = prev
             prev    = accum
             return accum + y
@@ -1975,7 +1975,7 @@ do {
     fun fib_on_range
     {
         var prev = 0
-        return lang.reduce(fun(accum) {
+        return base.reduce(fun(accum) {
             const y = prev
             prev    = accum
             return accum + y
@@ -1983,7 +1983,7 @@ do {
     }
 
     # 12th elem of Fibonacci series
-    assert fib_on_range()(lang.range(1, 12)) == 144
+    assert fib_on_range()(base.range(1, 12)) == 144
 }
 
 do {
@@ -1997,64 +1997,64 @@ do {
 }
 
 ##############################################################################
-# lang.sum
+# base.sum
 
 do {
-    assert lang.sum([]) == 0
-    assert lang.sum([], "") == ""
-    assert lang.sum([10, 200, 3, 4000]) == 4213
-    assert lang.sum([4.0, 2.0, 8.0]) == 14.0
-    assert lang.sum(["ab", "c", "def", "gh"], "") == "abcdefgh"
+    assert base.sum([]) == 0
+    assert base.sum([], "") == ""
+    assert base.sum([10, 200, 3, 4000]) == 4213
+    assert base.sum([4.0, 2.0, 8.0]) == 14.0
+    assert base.sum(["ab", "c", "def", "gh"], "") == "abcdefgh"
 
-    expect_fail(lang.sum)
-    expect_fail(() => lang.sum(void))
-    expect_fail(()=>lang.sum([1], ""))
+    expect_fail(base.sum)
+    expect_fail(() => base.sum(void))
+    expect_fail(()=>base.sum([1], ""))
 }
 
 ##############################################################################
-# lang.count
+# base.count
 
 do {
-    assert lang.count(void, []            ) == 0
-    assert lang.count("",   [1, 2]        ) == 0
-    assert lang.count(4,    lang.range(10)) == 1
-    assert lang.count("a",  "abcadefagh"  ) == 3
+    assert base.count(void, []            ) == 0
+    assert base.count("",   [1, 2]        ) == 0
+    assert base.count(4,    base.range(10)) == 1
+    assert base.count("a",  "abcadefagh"  ) == 3
 
     assert "Hello, World!".count("l") == 3
 
-    assert lang.keys({x: 8, _test_value: 8, y: 8}).count("_test_value") == 1
+    assert base.keys({x: 8, _test_value: 8, y: 8}).count("_test_value") == 1
 
-    assert lang.range(100).map(x => x/4).count(11) == 4
+    assert base.range(100).map(x => x/4).count(11) == 4
 
-    assert lang.count(x => x > 5, [ 1, 7, 2, 6, 5 ]) == 2
+    assert base.count(x => x > 5, [ 1, 7, 2, 6, 5 ]) == 2
 
     # Count lowercase letters
     assert "ThIs Is A MiXeD StRiNg".filter(x => x.code() >= 97).count() == 8
 }
 
 ##############################################################################
-# lang.all
+# base.all
 
 do {
-    assert lang.all(1, [1, 1.0, 1]) == true
-    assert lang.all(1, [0, 1, 2])   == false
-    assert lang.all(x => x > 2, [ 4, 3, 5 ]) == true
-    assert lang.all(x => x > 2, [ 4, 2, 5 ]) == false
+    assert base.all(1, [1, 1.0, 1]) == true
+    assert base.all(1, [0, 1, 2])   == false
+    assert base.all(x => x > 2, [ 4, 3, 5 ]) == true
+    assert base.all(x => x > 2, [ 4, 2, 5 ]) == false
 }
 
 ##############################################################################
-# lang.any
+# base.any
 
 do {
-    assert lang.any(1, [ 0, 2, 3, 4 ]) == false
-    assert lang.any(2, [ 0, 2, 3, 4 ]) == true
-    assert lang.any(2, [ 0, 2, 3, 2 ]) == true
-    assert lang.any(x => x == void, [ 1, 2, 3, 4 ]) == false
-    assert lang.any(x => x == 3,    [ 1, 2, 3, 4 ]) == true
+    assert base.any(1, [ 0, 2, 3, 4 ]) == false
+    assert base.any(2, [ 0, 2, 3, 4 ]) == true
+    assert base.any(2, [ 0, 2, 3, 2 ]) == true
+    assert base.any(x => x == void, [ 1, 2, 3, 4 ]) == false
+    assert base.any(x => x == 3,    [ 1, 2, 3, 4 ]) == true
 }
 
 ##############################################################################
-# lang.method
+# base.method
 
 do {
     const o = {
@@ -2066,7 +2066,7 @@ do {
     assert o.add(1) == 0
     assert o._i     == 1
 
-    const m = lang.method(o, o.add)
+    const m = base.method(o, o.add)
     assert typeof m == "function"
 
     assert m(2) == 1
@@ -2081,7 +2081,7 @@ do {
     assert m(3) == 4
     assert o._i == 7
 
-    const ms = lang.method(o, "sub")
+    const ms = base.method(o, "sub")
     assert typeof ms == "function"
 
     assert ms(1) == 7
@@ -2090,13 +2090,13 @@ do {
     assert ms(3) == 6
     assert o._i  == 3
 
-    expect_fail(()=>lang.method(o, "_i"))
-    expect_fail(()=>lang.method(o, "non existent"))
-    expect_fail(()=>lang.method(o, o._i))
+    expect_fail(()=>base.method(o, "_i"))
+    expect_fail(()=>base.method(o, "non existent"))
+    expect_fail(()=>base.method(o, o._i))
 }
 
 ##############################################################################
-# lang.keys
+# base.keys
 
 do {
     fun gen
@@ -2112,7 +2112,7 @@ do {
     assert it0()[0] == 700
     expect_fail(it0)
 
-    const it = lang.keys(gen())
+    const it = base.keys(gen())
     assert it() == 40
     assert it() == -40
     assert it() == 700
@@ -2122,9 +2122,9 @@ do {
 do {
     const obj = { "0" : 10, "1" : 200, "2" : 3000, "3" : 4000 }
     const a = [ false, false, false, false ]
-    for const key in lang.keys(obj) {
+    for const key in base.keys(obj) {
         assert typeof key == "string"
-        const value = lang.integer(key)
+        const value = base.integer(key)
         assert value >= 0 && value <= 3
         assert ! a[value]
         a[value] = true
@@ -2138,11 +2138,11 @@ do {
 do {
     fun gen
     {
-        const it = lang.range(4)
+        const it = base.range(4)
         loop { yield it }
     }
 
-    const it = lang.keys(gen())
+    const it = base.keys(gen())
     assert it() == 0
     assert it() == 1
     assert it() == 2
@@ -2151,10 +2151,10 @@ do {
 }
 
 do {
-    const a  = [ lang.range(10, 20),
-                 lang.range(5, 6),
-                 lang.range(-100, -200, -1) ]
-    const it = lang.keys(a)
+    const a  = [ base.range(10, 20),
+                 base.range(5, 6),
+                 base.range(-100, -200, -1) ]
+    const it = base.keys(a)
     assert it() == 10
     assert it() == 5
     assert it() == -100
@@ -2163,7 +2163,7 @@ do {
 
 do {
     const a = [ [1, 2], [3], [4, 5], [], [6] ]
-    const it = lang.keys(a)
+    const it = base.keys(a)
     assert it() == 1
     assert it() == 3
     assert it() == 4
@@ -2172,35 +2172,35 @@ do {
 }
 
 ##############################################################################
-# lang.stringify
+# base.stringify
 
 do {
-    assert lang.stringify()              == ""
-    assert lang.stringify("a")           == "a"
-    assert lang.stringify(false)         == "false"
-    assert lang.stringify(true)          == "true"
-    assert lang.stringify(void)          == "void"
-    assert lang.stringify(1)             == "1"
-    assert lang.stringify(1.5)           == "1.5"
-    assert lang.stringify([])            == "[]"
-    assert lang.stringify([1])           == "[1]"
-    assert lang.stringify([2, 33, 444])  == "[2, 33, 444]"
-    assert lang.stringify(["true",true]) == "[true, true]"
+    assert base.stringify()              == ""
+    assert base.stringify("a")           == "a"
+    assert base.stringify(false)         == "false"
+    assert base.stringify(true)          == "true"
+    assert base.stringify(void)          == "void"
+    assert base.stringify(1)             == "1"
+    assert base.stringify(1.5)           == "1.5"
+    assert base.stringify([])            == "[]"
+    assert base.stringify([1])           == "[1]"
+    assert base.stringify([2, 33, 444])  == "[2, 33, 444]"
+    assert base.stringify(["true",true]) == "[true, true]"
 
-    assert lang.stringify(false, 2, "o") == "false2o"
+    assert base.stringify(false, 2, "o") == "false2o"
 }
 
 ##############################################################################
-# lang.hex
+# base.hex
 
 do {
-    assert lang.hex(42) == "0x2a"
+    assert base.hex(42) == "0x2a"
 
-    expect_fail(()=>lang.hex(3.5))
+    expect_fail(()=>base.hex(3.5))
 }
 
 ##############################################################################
-# lang.array.prototype.sort
+# base.array.prototype.sort
 
 do {
     const a = [].sort()
@@ -2222,7 +2222,7 @@ do {
 
 do {
     const a = [0, 1]
-    const b = lang.sort(a)
+    const b = base.sort(a)
     assert typeof b == "array"
     assert a != b
     assert b.size == 2
@@ -2232,7 +2232,7 @@ do {
 
 do {
     const a = [1, 0]
-    const b = lang.sort(a)
+    const b = base.sort(a)
     assert typeof b == "array"
     assert a != b
     assert b.size == 2
@@ -2242,7 +2242,7 @@ do {
 
 do {
     const a = [1, 1]
-    const b = lang.sort(a)
+    const b = base.sort(a)
     assert typeof b == "array"
     assert a != b
     assert b.size == 2
@@ -2252,7 +2252,7 @@ do {
 
 do {
     const a = [1, 2, 3]
-    const b = lang.sort(a)
+    const b = base.sort(a)
     assert typeof b == "array"
     assert a != b
     assert b.size == 3
@@ -2263,7 +2263,7 @@ do {
 
 do {
     const a = [3, 2, 1]
-    const b = lang.sort(a)
+    const b = base.sort(a)
     assert typeof b == "array"
     assert a != b
     assert b.size == 3
@@ -2274,7 +2274,7 @@ do {
 
 do {
     const a = [1, 3, 2]
-    const b = lang.sort(a)
+    const b = base.sort(a)
     assert typeof b == "array"
     assert a != b
     assert b.size == 3
@@ -2285,7 +2285,7 @@ do {
 
 do {
     const a = [3, 3, 2]
-    const b = lang.sort(a)
+    const b = base.sort(a)
     assert typeof b == "array"
     assert a != b
     assert b.size == 3
@@ -2296,7 +2296,7 @@ do {
 
 do {
     const a = [2, 2, 2]
-    const b = lang.sort(a)
+    const b = base.sort(a)
     assert typeof b == "array"
     assert a != b
     assert b.size == 3
@@ -2338,11 +2338,11 @@ do {
 }
 
 ##############################################################################
-# lang.sort
+# base.sort
 
 do {
     const a = [ 5, 4, 2, 3, 1 ]
-    const s = lang.sort(a)
+    const s = base.sort(a)
     assert typeof s == "array"
     assert s.size == 5
     assert s[0] == 1
@@ -2359,7 +2359,7 @@ do {
 }
 
 do {
-    const s = lang.sort("foobar")
+    const s = base.sort("foobar")
     assert typeof s == "array"
     assert s.size == 6
     assert s[0] == "a"
@@ -2371,7 +2371,7 @@ do {
 }
 
 do {
-    const s = lang.sort(true, "fooba")
+    const s = base.sort(true, "fooba")
     assert typeof s == "array"
     assert s.size == 5
     assert s[0] == "o"
@@ -2382,7 +2382,7 @@ do {
 }
 
 do {
-    const s = [10, 11, 9, 8] -> lang.sort
+    const s = [10, 11, 9, 8] -> base.sort
     assert typeof s == "array"
     assert s.size == 4
     assert s[0] == 8
@@ -2392,7 +2392,7 @@ do {
 }
 
 do {
-    const s = [10, 11, 9, 8] -> lang.sort(true)
+    const s = [10, 11, 9, 8] -> base.sort(true)
     assert typeof s == "array"
     assert s.size == 4
     assert s[0] == 11
@@ -2402,7 +2402,7 @@ do {
 }
 
 do {
-    const it = [30, 1, 20, -2] -> lang.sort -> lang.map(x => x + 1)
+    const it = [30, 1, 20, -2] -> base.sort -> base.map(x => x + 1)
     assert typeof it == "function"
     assert it() == -1
     assert it() == 2
@@ -2412,19 +2412,19 @@ do {
 }
 
 ##############################################################################
-# lang.args
+# base.args
 
 do {
-    assert typeof lang.args == "array"
-    assert lang.args.size   == 1
-    assert lang.args[0].ends_with("module_lang.kos")
+    assert typeof base.args == "array"
+    assert base.args.size   == 1
+    assert base.args[0].ends_with("module_base.kos")
 }
 
 ##############################################################################
-# lang.thread
+# base.thread
 
 do {
-    expect_fail(lang.thread)
+    expect_fail(base.thread)
 
     const o = { t1: 0, t2: 0, done: false }
 
@@ -2444,10 +2444,10 @@ do {
     const t1 = thread1.async(void, [])
     const t2 = thread2.async(void, [])
 
-    assert t1 instanceof lang.thread
-    assert t1 instanceof lang.object
-    assert t2 instanceof lang.thread
-    assert t2 instanceof lang.object
+    assert t1 instanceof base.thread
+    assert t1 instanceof base.object
+    assert t2 instanceof base.thread
+    assert t2 instanceof base.object
 
     o.done = true
     t1.wait()
@@ -2465,7 +2465,7 @@ do {
 
     const t = sum.async(void, [10, 24]);
 
-    assert t instanceof lang.thread
+    assert t instanceof base.thread
 
     const result = t.wait()
 
@@ -2534,7 +2534,7 @@ do {
 
     # Normal invocation
     t = thread.async(void, [false])
-    assert t instanceof lang.thread
+    assert t instanceof base.thread
     while ! done { }
     t.wait()
     assert success
@@ -2544,7 +2544,7 @@ do {
 
     # Exception inside thread
     t = thread.async(void, [true])
-    assert t instanceof lang.thread
+    assert t instanceof base.thread
     while ! done { }
     var e = void
     try { t.wait() } catch const exc { e = exc }
@@ -2557,7 +2557,7 @@ do {
     # Incorrect number of args (not even called)
     e = void
     t = thread.async(void, [])
-    assert t instanceof lang.thread
+    assert t instanceof base.thread
     try { t.wait() } catch const exc { e = exc }
     assert ! done
     assert ! success
@@ -2566,13 +2566,13 @@ do {
 
 do {
     var x = void
-    const t = lang.function.async.apply(fun { x = 42; return 4.2 }, [void, []])
+    const t = base.function.async.apply(fun { x = 42; return 4.2 }, [void, []])
     assert t.wait() == 4.2
     assert x == 42
 
-    expect_fail(() => lang.function.async.apply(void, [void, []]))
-    expect_fail(() => lang.function.async.apply(1, [void, []]))
-    expect_fail(() => lang.function.async.apply("", [void, []]))
+    expect_fail(() => base.function.async.apply(void, [void, []]))
+    expect_fail(() => base.function.async.apply(1, [void, []]))
+    expect_fail(() => base.function.async.apply("", [void, []]))
     expect_fail(() => fun {} . async(void))
     expect_fail(() => fun {} . async())
     expect_fail(() => fun {} . async(void, {}))
@@ -2598,18 +2598,18 @@ do {
 }
 
 ##############################################################################
-# lang.count_elements
+# base.count_elements
 
 do {
-    assert (["a", "b", "c"] -> lang.count_elements) == 3
-    expect_fail(() => void -> lang.count_elements)
+    assert (["a", "b", "c"] -> base.count_elements) == 3
+    expect_fail(() => void -> base.count_elements)
 }
 
 ##############################################################################
-# lang.enumerate
+# base.enumerate
 
 do {
-    const it = lang.enumerate(["abc", 3, 10.5, false])
+    const it = base.enumerate(["abc", 3, 10.5, false])
     for const pair in [ [0, "abc"], [1, 3], [2, 10.5], [3, false] ] {
         const result = it()
         assert result.size == 2
@@ -2620,7 +2620,7 @@ do {
 }
 
 do {
-    const it = lang.enumerate(fun {
+    const it = base.enumerate(fun {
         yield "first"
         yield "Second"
         yield "thirD"
@@ -2635,27 +2635,27 @@ do {
 }
 
 ##############################################################################
-# lang.zip
+# base.zip
 
 do {
-    expect_fail(lang.zip)
+    expect_fail(base.zip)
 
     var i = 0
-    for const ret in lang.zip(lang.range(10)) {
+    for const ret in base.zip(base.range(10)) {
         assert ret == i
         i += 1
     }
 
     const expected = [ ["a", 1], ["b", 2], ["c", 3] ]
     i = 0
-    for const x, y in lang.zip("abcd", lang.range(1, 4)) {
+    for const x, y in base.zip("abcd", base.range(1, 4)) {
         assert x == expected[i][0]
         assert y == expected[i][1]
         i += 1
     }
 
     i = 0
-    for const x, y in lang.zip("abc", lang.range(1, 10)) {
+    for const x, y in base.zip("abc", base.range(1, 10)) {
         assert x == expected[i][0]
         assert y == expected[i][1]
         i += 1
@@ -2663,14 +2663,14 @@ do {
 
     const strings = [ "kos", "sok", "cat", "dog" ]
     i = 0
-    for const a, b, c in lang.zip("kscd", "ooaoo", "sktg") {
+    for const a, b, c in base.zip("kscd", "ooaoo", "sktg") {
         assert a + b + c == strings[i]
         i += 1
     }
 }
 
 ##############################################################################
-# lang.each
+# base.each
 
 do {
     var sum = 0
@@ -2680,19 +2680,19 @@ do {
         sum += x
     }
 
-    lang.each(update_sum, [1, 300, 20])
+    base.each(update_sum, [1, 300, 20])
 
     assert sum == 321
 
     sum = 0;
 
-    [40, 500, 6000] -> lang.each(update_sum)
+    [40, 500, 6000] -> base.each(update_sum)
 
     assert sum == 6540
 
     sum = 0;
 
-    [100, 20, 3] -> lang.map(x => update_sum(x)) -> lang.each()
+    [100, 20, 3] -> base.map(x => update_sum(x)) -> base.each()
 
     assert sum == 123
 }

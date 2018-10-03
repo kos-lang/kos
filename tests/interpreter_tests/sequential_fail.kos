@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-import lang.*
+import base.*
 
 do {
     var caught = false

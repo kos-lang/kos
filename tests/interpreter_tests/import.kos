@@ -19,8 +19,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang.array
-import lang.range
+import base.array
+import base.range
 
 do {
     const a = array(range(10)...)

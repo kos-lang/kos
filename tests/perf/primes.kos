@@ -1,7 +1,7 @@
 #!/usr/bin/env kos
 
-import lang.buffer
-import lang.print
+import base.buffer
+import base.print
 
 # Prime number generator with a fixed-size sieve
 fun primes(max_number)

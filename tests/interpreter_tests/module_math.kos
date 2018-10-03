@@ -21,7 +21,7 @@
 #
 
 import math
-import lang.string
+import base.string
 
 fun expect_fail(function)
 {

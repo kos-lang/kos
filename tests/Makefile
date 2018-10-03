@@ -108,7 +108,7 @@ endef
 
 $(foreach test, $(parser_test_list), $(eval $(call PARSER_TEST,$(test))))
 
-interpreter_test_list = $(filter-out interpreter_tests/fail_% interpreter_tests/module_lang_print.kos, $(wildcard interpreter_tests/*.kos))
+interpreter_test_list = $(filter-out interpreter_tests/fail_% interpreter_tests/module_base_print.kos, $(wildcard interpreter_tests/*.kos))
 
 define INTERPRETER_TEST
 $1:
@@ -152,15 +152,15 @@ disasm:
 	@echo Test disasm
 	@env KOSPATH=../modules interpreter_tests/disasm $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
-module_lang_print:
-	@echo Test module_lang_print
-	@env KOSPATH=../modules interpreter_tests/module_lang_print $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
+module_base_print:
+	@echo Test module_base_print
+	@env KOSPATH=../modules interpreter_tests/module_base_print $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
 module_paths:
 	@echo Test module_paths
 	@./module_paths $(out_dir)/tests/kos_module_path_test$(exe_suffix) $(out_dir)/interpreter/kos$(exe_suffix)
 
-all_tests = $(standalone_tests) $(parser_test_list) module_loading interactive disasm module_lang_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)
+all_tests = $(standalone_tests) $(parser_test_list) module_loading interactive disasm module_base_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)
 
 simple_tests = $(filter-out kos_parallel%, $(all_tests))
 
@@ -244,4 +244,4 @@ $(all_tests): gcov.pre.clean
 $(addprefix gcov., $(gcov_modules)): $(all_tests)
 endif
 
-.PHONY: all test simple_test gcov kos_fuzz_interpreter $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_lang_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov kos_fuzz_interpreter $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) module_loading interactive disasm module_base_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)

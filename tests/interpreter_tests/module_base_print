@@ -30,8 +30,8 @@ fi
 KOS="$1"
 DIR="$2"
 
-"$KOS" "$(dirname "$0")"/module_lang_print.kos | tr -d '\r' > "$DIR"/module_lang_print.txt
+"$KOS" "$(dirname "$0")"/module_base_print.kos | tr -d '\r' > "$DIR"/module_base_print.txt
 
-tr -d '\r' < "$(dirname "$0")"/module_lang_print.txt > "$DIR"/module_lang_print_expected.txt
+tr -d '\r' < "$(dirname "$0")"/module_base_print.txt > "$DIR"/module_base_print_expected.txt
 
-diff "$DIR"/module_lang_print_expected.txt "$DIR"/module_lang_print.txt
+diff "$DIR"/module_base_print_expected.txt "$DIR"/module_base_print.txt

@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-/* @item lang range()
+/* @item base range()
  *
  *     range(stop)
  *     range(start, stop, step = 1)
@@ -89,7 +89,7 @@ fun range(start, args...)
     }
 }
 
-/* @item lang object.prototype.iterator()
+/* @item base object.prototype.iterator()
  *
  *     object.prototype.iterator()
  *
@@ -146,7 +146,7 @@ do {
         }
     }
 
-    /* @item lang array.prototype.iterator()
+    /* @item base array.prototype.iterator()
      *
      *     array.prototype.iterator()
      *
@@ -166,7 +166,7 @@ do {
      */
     array.prototype.iterator = iterator
 
-    /* @item lang string.prototype.iterator()
+    /* @item base string.prototype.iterator()
      *
      *     string.prototype.iterator()
      *
@@ -189,7 +189,7 @@ do {
      */
     string.prototype.iterator = iterator
 
-    /* @item lang buffer.prototype.iterator()
+    /* @item base buffer.prototype.iterator()
      *
      *     buffer.prototype.iterator()
      *
@@ -213,7 +213,7 @@ do {
     buffer.prototype.iterator = iterator
 }
 
-/* @item lang generator.prototype.iterator()
+/* @item base generator.prototype.iterator()
  *
  *     generator.prototype.iterator()
  *
@@ -233,7 +233,7 @@ do {
  */
 generator.prototype.iterator = () => this
 
-/* @item lang generator.prototype.slice()
+/* @item base generator.prototype.slice()
  *
  *     generator.prototype.slice(begin, end)
  *
@@ -304,7 +304,7 @@ generator.prototype.slice = fun(begin, end)
     }
 }
 
-/* @item lang array.prototype.insert()
+/* @item base array.prototype.insert()
  *
  *     array.prototype.insert(pos, iterable)
  *     array.prototype.insert(begin, end, iterable)
@@ -397,7 +397,7 @@ array.prototype.insert = fun(begin, iterable, args...)
     }
 }
 
-/* @item lang buffer.prototype.insert()
+/* @item base buffer.prototype.insert()
  *
  *     buffer.prototype.insert(pos, obj)
  *     buffer.prototype.insert(begin, end, obj)
@@ -489,7 +489,7 @@ do {
         return range(this.size)
     }
 
-    /* @item lang array.prototype.indices()
+    /* @item base array.prototype.indices()
      *
      *     array.prototype.indices()
      *
@@ -508,7 +508,7 @@ do {
      */
     array.prototype.indices = indices
 
-    /* @item lang string.prototype.indices()
+    /* @item base string.prototype.indices()
      *
      *     string.prototype.indices()
      *
@@ -527,7 +527,7 @@ do {
      */
     string.prototype.indices = indices
 
-    /* @item lang buffer.prototype.indices()
+    /* @item base buffer.prototype.indices()
      *
      *     buffer.prototype.indices()
      *
@@ -547,7 +547,7 @@ do {
     buffer.prototype.indices = indices
 }
 
-/* @item lang string.prototype.ljust()
+/* @item base string.prototype.ljust()
  *
  *     string.prototype.ljust(size, fill = " ")
  *
@@ -585,7 +585,7 @@ string.prototype.ljust = fun(size, fill = " ")
     return this + fill.repeat(size - this.size)
 }
 
-/* @item lang string.prototype.rjust()
+/* @item base string.prototype.rjust()
  *
  *     string.prototype.rjust(size, fill = " ")
  *
@@ -623,7 +623,7 @@ string.prototype.rjust = fun(size, fill = " ")
     return fill.repeat(size - this.size) + this
 }
 
-/* @item lang string.prototype.zfill()
+/* @item base string.prototype.zfill()
  *
  *     string.prototype.zfill(size, fill = "0")
  *
@@ -672,7 +672,7 @@ string.prototype.zfill = fun(size, fill = "0")
     }
 }
 
-/* @item lang whitespace
+/* @item base whitespace
  *
  *     whitespace
  *
@@ -681,7 +681,7 @@ string.prototype.zfill = fun(size, fill = "0")
  */
 const whitespace = " \r\n\t\f\v\xA0\x{2028}\x{2029}\x{FEFF}"
 
-/* @item lang eol
+/* @item base eol
  *
  *     eol
  *
@@ -690,7 +690,7 @@ const whitespace = " \r\n\t\f\v\xA0\x{2028}\x{2029}\x{FEFF}"
  */
 const eol = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
 
-/* @item lang string.prototype.lstrip()
+/* @item base string.prototype.lstrip()
  *
  *     string.prototype.lstrip(chars = whitespace)
  *
@@ -700,7 +700,7 @@ const eol = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
  * its beginning.
  *
  * `chars` is a string, which specifies the list of characters treated
- * as whitespace.  It defaults to `lang.whitespace`.
+ * as whitespace.  It defaults to `base.whitespace`.
  *
  * Example:
  *
@@ -716,7 +716,7 @@ string.prototype.lstrip = fun(chars = whitespace)
     return ""
 }
 
-/* @item lang string.prototype.rstrip()
+/* @item base string.prototype.rstrip()
  *
  *     string.prototype.rstrip(chars = whitespace)
  *
@@ -726,7 +726,7 @@ string.prototype.lstrip = fun(chars = whitespace)
  * its end.
  *
  * `chars` is a string, which specifies the list of characters treated
- * as whitespace.  It defaults to `lang.whitespace`.
+ * as whitespace.  It defaults to `base.whitespace`.
  *
  * Example:
  *
@@ -739,7 +739,7 @@ string.prototype.rstrip = fun(chars = whitespace)
     return this[: pos + 1]
 }
 
-/* @item lang string.prototype.strip()
+/* @item base string.prototype.strip()
  *
  *     string.prototype.strip(chars = whitespace)
  *
@@ -749,7 +749,7 @@ string.prototype.rstrip = fun(chars = whitespace)
  * its beginning and end.
  *
  * `chars` is a string, which specifies the list of characters treated
- * as whitespace.  It defaults to `lang.whitespace`.
+ * as whitespace.  It defaults to `base.whitespace`.
  *
  * Example:
  *
@@ -766,7 +766,7 @@ string.prototype.strip = fun(chars = whitespace)
     return ""
 }
 
-/* @item lang string.prototype.split()
+/* @item base string.prototype.split()
  *
  *     string.prototype.split(sep = void, max_split = -1)
  *
@@ -848,7 +848,7 @@ string.prototype.split = fun(sep = void, max_split = -1)
     }
 }
 
-/* @item lang string.prototype.split_lines()
+/* @item base string.prototype.split_lines()
  *
  *     string.prototype.split_lines(keep_ends = false)
  *
@@ -856,7 +856,7 @@ string.prototype.split = fun(sep = void, max_split = -1)
  *
  * Returns an iterator function, which yields strings, which are subsequent
  * lines, resulting from splitting the string using EOL characters from
- * `lang.eol`.
+ * `base.eol`.
  *
  * Two subsequent EOL characters will yield an empty line, except if a CR
  * characters is followed by an LF character, in which case they are kept
@@ -901,13 +901,13 @@ string.prototype.split_lines = fun(keep_ends = false)
     }
 }
 
-/* @item lang keys()
+/* @item base keys()
  *
  *     keys(iterable)
  *
  * A generator which produces first elements of each element from an iterable
- * object.  When iterating objects (including `lang.deep()` and
- * `lang.shallow()`), object keys are yielded.
+ * object.  When iterating objects (including `base.deep()` and
+ * `base.shallow()`), object keys are yielded.
  *
  * Returns an iterator function, which iterates over the elements of an iterable
  * object, then for each of the elements extracts its first sub-element and
@@ -932,7 +932,7 @@ fun keys(iterable)
     }
 }
 
-/* @item lang map()
+/* @item base map()
  *
  *     map(op)
  *     map(op, iterable)
@@ -979,7 +979,7 @@ fun map(op, args...)
     }
 }
 
-/* @item lang filter()
+/* @item base filter()
  *
  *     filter(op)
  *     filter(op, iterable)
@@ -1029,7 +1029,7 @@ fun filter(op, args...)
     }
 }
 
-/* @item lang reduce()
+/* @item base reduce()
  *
  *     reduce(op, init)
  *     reduce(op, init, iterable)
@@ -1082,7 +1082,7 @@ fun reduce(op, init, args...)
     }
 }
 
-/* @item lang sum()
+/* @item base sum()
  *
  *     sum(iterable, init = 0)
  *
@@ -1112,7 +1112,7 @@ fun sum(iterable, total = 0)
     return total
 }
 
-/* @item lang count()
+/* @item base count()
  *
  *     count(op)
  *     count(op, iterable)
@@ -1176,7 +1176,7 @@ fun count(op, args...)
     }
 }
 
-/* @item lang all()
+/* @item base all()
  *
  *     all(op)
  *     all(op, iterable)
@@ -1246,7 +1246,7 @@ fun all(op, args...)
     }
 }
 
-/* @item lang any()
+/* @item base any()
  *
  *     any(op)
  *     any(op, iterable)
@@ -1316,7 +1316,7 @@ fun any(op, args...)
     }
 }
 
-/* @item lang object.prototype.map()
+/* @item base object.prototype.map()
  *
  *     object.prototype.map(op)
  *
@@ -1336,7 +1336,7 @@ object.prototype.map = fun(transform)
     return map(transform, this)
 }
 
-/* @item lang object.prototype.filter()
+/* @item base object.prototype.filter()
  *
  *     object.prototype.filter(op)
  *
@@ -1356,7 +1356,7 @@ object.prototype.filter = fun(op)
     return filter(op, this)
 }
 
-/* @item lang object.prototype.reduce()
+/* @item base object.prototype.reduce()
  *
  *     object.prototype.reduce(op, init)
  *
@@ -1382,7 +1382,7 @@ object.prototype.reduce = fun(op, init)
     return reduce(op, init, this)
 }
 
-/* @item lang object.prototype.count()
+/* @item base object.prototype.count()
  *
  *     object.prototype.count()
  *     object.prototype.count(op)
@@ -1422,7 +1422,7 @@ object.prototype.count = fun(args...)
     }
 }
 
-/* @item lang object.prototype.all()
+/* @item base object.prototype.all()
  *
  *     object.prototype.all(op)
  *
@@ -1453,7 +1453,7 @@ object.prototype.all = fun(op)
     return all(op, this)
 }
 
-/* @item lang object.prototype.any()
+/* @item base object.prototype.any()
  *
  *     object.prototype.any(op)
  *
@@ -1484,7 +1484,7 @@ object.prototype.any = fun(op)
     return any(op, this)
 }
 
-/* @item lang method()
+/* @item base method()
  *
  *     method(obj, func)
  *
@@ -1522,7 +1522,7 @@ do {
     const hex_digits = [ 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
                          0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66 ]
 
-    /* @item lang hex()
+    /* @item base hex()
      *
      *     hex(number)
      *
@@ -1557,7 +1557,7 @@ do {
         return string(codes[i:])
     }
 
-    /* @item lang integer.prototype.hex()
+    /* @item base integer.prototype.hex()
      *
      *     integer.prototype.hex()
      *
@@ -1588,7 +1588,7 @@ do {
         return obj
     }
 
-    /* @item lang array.prototype.reverse()
+    /* @item base array.prototype.reverse()
      *
      *     array.prototype.reverse()
      *
@@ -1601,7 +1601,7 @@ do {
      */
     array.prototype.reverse = reverse
 
-    /* @item lang buffer.prototype.reverse()
+    /* @item base buffer.prototype.reverse()
      *
      *     buffer.prototype.reverse()
      *
@@ -1615,7 +1615,7 @@ do {
     buffer.prototype.reverse = reverse
 }
 
-/* @item lang array.prototype.repeat()
+/* @item base array.prototype.repeat()
  *
  *     array.prototype.repeat(num)
  *
@@ -1643,7 +1643,7 @@ array.prototype.repeat = fun(num)
     return new_array
 }
 
-/* @item lang buffer.prototype.repeat()
+/* @item base buffer.prototype.repeat()
  *
  *     buffer.prototype.repeat(num)
  *
@@ -1674,7 +1674,7 @@ var sort = void
 
 do {
 
-    /* @item lang array.prototype.sort()
+    /* @item base array.prototype.sort()
      *
      *     array.prototype.sort(key=void, reverse=false)
      *
@@ -1848,7 +1848,7 @@ do {
         }
     }
 
-    /* @item lang sort()
+    /* @item base sort()
      *
      *     sort(key = void, reverse = false)
      *     sort(key, reverse, iterable)
@@ -1937,7 +1937,7 @@ do {
     }
 }
 
-/* @item lang enumerate()
+/* @item base enumerate()
  *
  *     enumerate(iterable)
  *
@@ -1963,7 +1963,7 @@ fun enumerate(iterable)
     }
 }
 
-/* @item lang zip()
+/* @item base zip()
  *
  *     zip(iterable0, iterable1...)
  *
@@ -2008,14 +2008,14 @@ fun zip(a, b...)
     } (a, b)
 }
 
-/* @item lang print_elements()
+/* @item base print_elements()
  *
  *     print_elements(iterable, separator = ", ", end = "\n")
  *
  * Prints all elements from an iterable object on stdout.
  *
  * Elements are extracted from `iterable` object through its `iterator()`
- * function, then printed using `lang.print_()` function.
+ * function, then printed using `base.print_()` function.
  *
  * The optional `separator` is a string to be printed between
  * the items.  It defaults to a comma.
@@ -2049,14 +2049,14 @@ fun print_elements(iterable, separator = ", ", end = "\n")
     print_(end)
 }
 
-/* @item lang print_lines()
+/* @item base print_lines()
  *
  *     print_lines(iterable)
  *
  * Prints all elements from an iterable object on stdout on separate lines.
  *
  * Elements are extracted from `iterable` object through its `iterator()`
- * function, then printed using `lang.print()` function.
+ * function, then printed using `base.print()` function.
  *
  * If there are no elements, nothing is printed.
  *
@@ -2078,7 +2078,7 @@ fun print_lines(iterable)
     }
 }
 
-/* @item lang count_elements()
+/* @item base count_elements()
  *
  *     count_elements(iterable)
  *
@@ -2106,7 +2106,7 @@ fun count_elements(iterable)
     return num_elems
 }
 
-/* @item lang each()
+/* @item base each()
  *
  *     each(op, iterable)
  *     each(op)

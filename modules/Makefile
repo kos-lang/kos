@@ -23,10 +23,10 @@
 module = kos_modules
 depth  = modules
 
-c_files  = kos_mod_fs.c
+c_files  = kos_mod_base.c
+c_files += kos_mod_fs.c
 c_files += kos_mod_io.c
 c_files += kos_mod_kos.c
-c_files += kos_mod_lang.c
 c_files += kos_mod_math.c
 c_files += kos_mod_random.c
 c_files += kos_modules_init.c

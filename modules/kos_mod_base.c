@@ -81,7 +81,7 @@ do {                                                                        \
 
 #define PROTO(type) (ctx->inst->prototypes.type##_proto)
 
-/* @item lang print()
+/* @item base print()
  *
  *     print(values...)
  *
@@ -118,7 +118,7 @@ _error:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-/* @item lang print_()
+/* @item base print_()
  *
  *     print_(values...)
  *
@@ -208,7 +208,7 @@ _error:
     return ret;
 }
 
-/* @item lang shallow()
+/* @item base shallow()
  *
  *     shallow(obj)
  *
@@ -232,7 +232,7 @@ static KOS_OBJ_ID _shallow(KOS_CONTEXT ctx,
     return _object_iterator(ctx, regs_obj, args_obj, KOS_SHALLOW);
 }
 
-/* @item lang deep()
+/* @item base deep()
  *
  *     deep(obj)
  *
@@ -281,7 +281,7 @@ _error:
     return error;
 }
 
-/* @item lang number()
+/* @item base number()
  *
  *     number(value = 0)
  *
@@ -361,7 +361,7 @@ static KOS_OBJ_ID _number_constructor(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang integer()
+/* @item base integer()
  *
  *     integer(value = 0)
  *
@@ -441,7 +441,7 @@ static KOS_OBJ_ID _integer_constructor(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang float()
+/* @item base float()
  *
  *     float(value = 0.0)
  *
@@ -533,7 +533,7 @@ static KOS_OBJ_ID _float_constructor(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang boolean()
+/* @item base boolean()
  *
  *     boolean(value = false)
  *
@@ -581,7 +581,7 @@ static KOS_OBJ_ID _boolean_constructor(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang string()
+/* @item base string()
  *
  *     string(args...)
  *
@@ -676,7 +676,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang stringify()
+/* @item base stringify()
  *
  *     stringify(args...)
  *
@@ -738,7 +738,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang object()
+/* @item base object()
  *
  *     object()
  *
@@ -760,7 +760,7 @@ static KOS_OBJ_ID _object_constructor(KOS_CONTEXT ctx,
     return KOS_new_object(ctx);
 }
 
-/* @item lang array()
+/* @item base array()
  *
  *     array([element, ...])
  *
@@ -790,7 +790,7 @@ static KOS_OBJ_ID _array_constructor(KOS_CONTEXT ctx,
     return args_obj;
 }
 
-/* @item lang buffer()
+/* @item base buffer()
  *
  *     buffer(size = 0)
  *     buffer(args...)
@@ -980,7 +980,7 @@ _error:
     return error ? KOS_BADPTR : buffer;
 }
 
-/* @item lang function()
+/* @item base function()
  *
  *     function(func)
  *
@@ -1015,14 +1015,14 @@ static KOS_OBJ_ID _function_constructor(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang class()
+/* @item base class()
  *
  *     class()
  *
  * Class type class.
  *
  * Because `class` is a keyword, this class can only be referenced
- * indirectly via the lang module, it cannot be referenced if it is imported
+ * indirectly via the base module, it cannot be referenced if it is imported
  * directly into the current module.
  *
  * The argument is a class object which is returned by
@@ -1054,7 +1054,7 @@ static KOS_OBJ_ID _class_constructor(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang generator()
+/* @item base generator()
  *
  *     generator()
  *
@@ -1075,7 +1075,7 @@ static KOS_OBJ_ID _generator_constructor(KOS_CONTEXT ctx,
     return KOS_BADPTR;
 }
 
-/* @item lang exception()
+/* @item base exception()
  *
  *     exception([value])
  *
@@ -1107,7 +1107,7 @@ static KOS_OBJ_ID _exception_constructor(KOS_CONTEXT ctx,
     return KOS_BADPTR;
 }
 
-/* @item lang generator_end()
+/* @item base generator_end()
  *
  *     generator_end()
  *
@@ -1130,7 +1130,7 @@ static KOS_OBJ_ID _generator_end_constructor(KOS_CONTEXT ctx,
     return KOS_BADPTR;
 }
 
-/* @item lang thread()
+/* @item base thread()
  *
  *     thread()
  *
@@ -1153,7 +1153,7 @@ static KOS_OBJ_ID _thread_constructor(KOS_CONTEXT ctx,
     return KOS_BADPTR;
 }
 
-/* @item lang function.prototype.apply()
+/* @item base function.prototype.apply()
  *
  *     function.prototype.apply(this_object, args_array)
  *
@@ -1244,7 +1244,7 @@ static void _thread_finalize(KOS_CONTEXT ctx,
         _KOS_thread_join(ctx, (_KOS_THREAD)priv);
 }
 
-/* @item lang function.prototype.async()
+/* @item base function.prototype.async()
  *
  *     function.prototype.async(this_object, args_array)
  *
@@ -1309,7 +1309,7 @@ _error:
     return error ? KOS_BADPTR : thread_obj;
 }
 
-/* @item lang thread.prototype.wait()
+/* @item base thread.prototype.wait()
  *
  *     thread.prototype.wait()
  *
@@ -1379,7 +1379,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang string.prototype.slice()
+/* @item base string.prototype.slice()
  *
  *     string.prototype.slice(begin, end)
  *
@@ -1408,7 +1408,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
  *     "guag"
  */
 
-/* @item lang array.prototype.slice()
+/* @item base array.prototype.slice()
  *
  *     array.prototype.slice(begin, end)
  *
@@ -1438,7 +1438,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
  *     [4, 5, 6, 7]
  */
 
-/* @item lang buffer.prototype.slice()
+/* @item base buffer.prototype.slice()
  *
  *     buffer.prototype.slice(begin, end)
  *
@@ -1513,7 +1513,7 @@ _error:
     return ret;
 }
 
-/* @item lang array.prototype.size
+/* @item base array.prototype.size
  *
  *     array.prototype.size
  *
@@ -1542,7 +1542,7 @@ static KOS_OBJ_ID _get_array_size(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang buffer.prototype.size
+/* @item base buffer.prototype.size
  *
  *     buffer.prototype.size
  *
@@ -1571,7 +1571,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang array.prototype.resize()
+/* @item base array.prototype.resize()
  *
  *     array.prototype.resize(size)
  *
@@ -1591,7 +1591,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_CONTEXT ctx,
  *     [void, void, void, void, void]
  */
 
-/* @item lang buffer.prototype.resize()
+/* @item base buffer.prototype.resize()
  *
  *     buffer.prototype.resize(size)
  *
@@ -1651,7 +1651,7 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item lang array.prototype.fill()
+/* @item base array.prototype.fill()
  *
  *     array.prototype.fill(value)
  *     array.prototype.fill(begin, value)
@@ -1679,7 +1679,7 @@ _error:
  *     ["foo", "foo", "foo", "foo", "foo"]
  */
 
-/* @item lang buffer.prototype.fill()
+/* @item base buffer.prototype.fill()
  *
  *     buffer.prototype.fill(value)
  *     buffer.prototype.fill(begin, value)
@@ -2294,7 +2294,7 @@ _error:
     return error;
 }
 
-/* @item lang buffer.prototype.pack()
+/* @item base buffer.prototype.pack()
  *
  *     buffer.prototype.pack(format, args...)
  *
@@ -2330,7 +2330,7 @@ static KOS_OBJ_ID _pack(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item lang buffer.prototype.unpack()
+/* @item base buffer.prototype.unpack()
  *
  *     buffer.prototype.unpack(pos, format)
  *     buffer.prototype.unpack(format)
@@ -2391,7 +2391,7 @@ _error:
     return error ? KOS_BADPTR : fmt.data;
 }
 
-/* @item lang buffer.prototype.copy_buffer()
+/* @item base buffer.prototype.copy_buffer()
  *
  *     buffer.prototype.copy_buffer(src_buf)
  *     buffer.prototype.copy_buffer(src_buf, src_begin)
@@ -2544,7 +2544,7 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item lang array.prototype.reserve()
+/* @item base array.prototype.reserve()
  *
  *     array.prototype.reserve(size)
  *
@@ -2557,7 +2557,7 @@ _error:
  * Returns the array object itself (`this`).
  */
 
-/* @item lang buffer.prototype.reserve()
+/* @item base buffer.prototype.reserve()
  *
  *     buffer.prototype.reserve(size)
  *
@@ -2598,7 +2598,7 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item lang array.prototype.insert_array()
+/* @item base array.prototype.insert_array()
  *
  *     array.prototype.insert_array(pos, array)
  *     array.prototype.insert_array(begin, end, array)
@@ -2665,7 +2665,7 @@ _error:
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item lang array.prototype.pop()
+/* @item base array.prototype.pop()
  *
  *     array.prototype.pop(num_elements = 1)
  *
@@ -2726,7 +2726,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang array.prototype.push()
+/* @item base array.prototype.push()
  *
  *     array.prototype.push(values...)
  *
@@ -2777,7 +2777,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang string.prototype.ends_with()
+/* @item base string.prototype.ends_with()
  *
  *     string.prototype.ends_with(str)
  *
@@ -2828,7 +2828,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang string.prototype.repeat()
+/* @item base string.prototype.repeat()
  *
  *     string.prototype.repeat(num)
  *
@@ -2873,7 +2873,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang string.prototype.find()
+/* @item base string.prototype.find()
  *
  *     string.prototype.find(substr, pos = 0)
  *
@@ -2930,7 +2930,7 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
-/* @item lang string.prototype.rfind()
+/* @item base string.prototype.rfind()
  *
  *     string.prototype.rfind(substr, pos = -1)
  *
@@ -2999,7 +2999,7 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
-/* @item lang string.prototype.scan()
+/* @item base string.prototype.scan()
  *
  *     string.prototype.scan(chars, inclusive)
  *     string.prototype.scan(chars, pos = 0, inclusive = true)
@@ -3083,7 +3083,7 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
-/* @item lang string.prototype.rscan()
+/* @item base string.prototype.rscan()
  *
  *     string.prototype.rscan(chars, inclusive)
  *     string.prototype.rscan(chars, pos = 0, inclusive = true)
@@ -3177,7 +3177,7 @@ _error:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
-/* @item lang string.prototype.code()
+/* @item base string.prototype.code()
  *
  *     string.prototype.code(pos = 0)
  *
@@ -3227,7 +3227,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang string.prototype.starts_with()
+/* @item base string.prototype.starts_with()
  *
  *     string.prototype.starts_with(str)
  *
@@ -3278,7 +3278,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item lang string.prototype.size
+/* @item base string.prototype.size
  *
  *     string.prototype.size
  *
@@ -3305,7 +3305,7 @@ static KOS_OBJ_ID _get_string_size(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang string.prototype.reverse()
+/* @item base string.prototype.reverse()
  *
  *     string.prototype.reverse()
  *
@@ -3323,7 +3323,7 @@ static KOS_OBJ_ID _reverse(KOS_CONTEXT ctx,
     return KOS_string_reverse(ctx, this_obj);
 }
 
-/* @item lang function.prototype.name
+/* @item base function.prototype.name
  *
  *     function.prototype.name
  *
@@ -3369,7 +3369,7 @@ static KOS_OBJ_ID _get_function_name(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang function.prototype.instructions
+/* @item base function.prototype.instructions
  *
  *     function.prototype.instructions
  *
@@ -3417,7 +3417,7 @@ static KOS_OBJ_ID _get_instructions(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang function.prototype.size
+/* @item base function.prototype.size
  *
  *     function.prototype.size
  *
@@ -3465,7 +3465,7 @@ static KOS_OBJ_ID _get_code_size(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang class.prototype.prototype
+/* @item base class.prototype.prototype
  *
  *     class.prototype.prototype
  *
@@ -3475,7 +3475,7 @@ static KOS_OBJ_ID _get_code_size(KOS_CONTEXT ctx,
  * new objects of this class.
  */
 
-/* @item lang function.prototype.registers
+/* @item base function.prototype.registers
  *
  *     function.prototype.registers
  *
@@ -3516,7 +3516,7 @@ static KOS_OBJ_ID _get_registers(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item lang exception.prototype.print()
+/* @item base exception.prototype.print()
  *
  *     exception.prototype.print()
  *
@@ -3560,7 +3560,7 @@ _error:
     return ret;
 }
 
-int _KOS_module_lang_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int _KOS_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 

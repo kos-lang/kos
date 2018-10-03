@@ -2,46 +2,7 @@ Table of Contents
 =================
 <!--ts-->
   * [Table of Contents](#table-of-contents)
-  * [debug](#debug)
-    * [backtrace()](#backtrace)
-  * [fs](#fs)
-    * [is\_file()](#is_file)
-    * [remove()](#remove)
-  * [io](#io)
-    * [append()](#append)
-    * [append\_flag](#append_flag)
-    * [create()](#create)
-    * [create\_flag](#create_flag)
-    * [file()](#file)
-      * [file.prototype.close()](#fileprototypeclose)
-      * [file.prototype.eof](#fileprototypeeof)
-      * [file.prototype.error](#fileprototypeerror)
-      * [file.prototype.position](#fileprototypeposition)
-      * [file.prototype.print()](#fileprototypeprint)
-      * [file.prototype.print\_()](#fileprototypeprint_)
-      * [file.prototype.print\_lines()](#fileprototypeprint_lines)
-      * [file.prototype.read()](#fileprototyperead)
-      * [file.prototype.read\_line()](#fileprototyperead_line)
-      * [file.prototype.read\_lines()](#fileprototyperead_lines)
-      * [file.prototype.read\_some()](#fileprototyperead_some)
-      * [file.prototype.seek()](#fileprototypeseek)
-      * [file.prototype.size](#fileprototypesize)
-      * [file.prototype.write()](#fileprototypewrite)
-    * [open()](#open)
-    * [read\_lines()](#read_lines)
-    * [ro](#ro)
-    * [rw](#rw)
-    * [stderr](#stderr)
-    * [stdin](#stdin)
-    * [stdout](#stdout)
-  * [iter](#iter)
-    * [cycle()](#cycle)
-    * [empty()](#empty)
-    * [generator()](#generator)
-    * [iproduct()](#iproduct)
-    * [product()](#product)
-    * [reverse()](#reverse)
-  * [lang](#lang)
+  * [base](#base)
     * [all()](#all)
     * [any()](#any)
     * [array()](#array)
@@ -148,6 +109,45 @@ Table of Contents
       * [thread.prototype.wait()](#threadprototypewait)
     * [whitespace](#whitespace)
     * [zip()](#zip)
+  * [debug](#debug)
+    * [backtrace()](#backtrace)
+  * [fs](#fs)
+    * [is\_file()](#is_file)
+    * [remove()](#remove)
+  * [io](#io)
+    * [append()](#append)
+    * [append\_flag](#append_flag)
+    * [create()](#create)
+    * [create\_flag](#create_flag)
+    * [file()](#file)
+      * [file.prototype.close()](#fileprototypeclose)
+      * [file.prototype.eof](#fileprototypeeof)
+      * [file.prototype.error](#fileprototypeerror)
+      * [file.prototype.position](#fileprototypeposition)
+      * [file.prototype.print()](#fileprototypeprint)
+      * [file.prototype.print\_()](#fileprototypeprint_)
+      * [file.prototype.print\_lines()](#fileprototypeprint_lines)
+      * [file.prototype.read()](#fileprototyperead)
+      * [file.prototype.read\_line()](#fileprototyperead_line)
+      * [file.prototype.read\_lines()](#fileprototyperead_lines)
+      * [file.prototype.read\_some()](#fileprototyperead_some)
+      * [file.prototype.seek()](#fileprototypeseek)
+      * [file.prototype.size](#fileprototypesize)
+      * [file.prototype.write()](#fileprototypewrite)
+    * [open()](#open)
+    * [read\_lines()](#read_lines)
+    * [ro](#ro)
+    * [rw](#rw)
+    * [stderr](#stderr)
+    * [stdin](#stdin)
+    * [stdout](#stdout)
+  * [iter](#iter)
+    * [cycle()](#cycle)
+    * [empty()](#empty)
+    * [generator()](#generator)
+    * [iproduct()](#iproduct)
+    * [product()](#product)
+    * [reverse()](#reverse)
   * [math](#math)
     * [abs()](#abs)
     * [ceil()](#ceil)
@@ -169,504 +169,7 @@ Table of Contents
       * [random.prototype.float()](#randomprototypefloat)
       * [random.prototype.integer()](#randomprototypeinteger)
 <!--te-->
-debug
-=====
-
-backtrace()
------------
-
-    backtrace()
-
-Returns backtrace from the place of the invocation.
-
-The backtrace returned is identical to the backtrace obtained
-from an exception object.
-
-fs
-==
-
-is_file()
----------
-
-    is_file(pathname)
-
-Determines whether a file exists.
-
-Returns `true` if `pathname` exists and is a file, or `false` otherwise.
-
-remove()
---------
-
-    remove(pathname)
-
-Deletes a file `pathname`.
-
-Returns `true` if the file was successfuly deleted or `false` if
-the file could not be deleted or if it did not exist in the first
-place.
-
-io
-==
-
-append()
---------
-
-    append(filename)
-
-Creates a new or opens an existing file in append mode, opens for reading
-and writing.
-
-Returns opened file object.
-
-`filename` is the path to the file to create or truncate.
-
-It is recommended to use the `file.append()` function in conjunction with
-the `with` statement.
-
-Example:
-
-    > with const f = file.append("my.txt") { f.print("hello") }
-
-append_flag
------------
-
-    append_flag
-
-Flag used with `file.file` and `file.open`.  Indicates that the file is to
-be created if it does not exist or opened at at the end for appending.
-The file is always opened for reading and writing with this flag.
-
-create()
---------
-
-    create(filename)
-
-Creates a new or truncates an existing file, opens for reading and writing.
-
-Returns opened file object.
-
-`filename` is the path to the file to create or truncate.
-
-It is recommended to use the `file.create()` function in conjunction with
-the `with` statement.
-
-Example:
-
-    > with const f = file.create("my.txt") { f.print("hello") }
-
-create_flag
------------
-
-    create_flag
-
-Flag used with `file.file` and `file.open`.  Indicates that the file is to
-be created if it does not exist or truncated if it exists and then opened
-for reading and writing.
-
-file()
-------
-
-    file(pathname, flags = rw)
-
-File object class.
-
-Returns opened file object.
-
-`pathname` is the path to the file.
-
-`flags` is a string, which specifies file open mode compatible with
-the C `fopen()` function.  It is normally recommended to use the
-shorthand flag constants: `io.ro`, `io.rw` or the auxiliary
-file functions `io.open()`, `io.create()` and `io.append()`
-instead of specifying the flags explicitly.
-
-It is recommended to use the `io.file` class in conjunction with
-the `with` statement.
-
-Example:
-
-    > with const f = io.file("my.txt", io.create_flag) { f.print("hello") }
-
-file.prototype.close()
-----------------------
-
-    file.prototype.close()
-
-Closes the file object if it is still opened.
-
-file.prototype.eof
-------------------
-
-    file.prototype.eof
-
-A boolean read-only flag indicating whether the read/write pointer has
-reached the end of the file object.
-
-file.prototype.error
---------------------
-
-    file.prototype.error
-
-A boolean read-only flag indicating whether there was an error during the
-last file operation on the file object.
-
-file.prototype.position
------------------------
-
-    file.prototype.position
-
-Read-only position of the read/write pointer in the opened file object.
-
-file.prototype.print()
-----------------------
-
-    file.prototype.print(values...)
-
-Converts all arguments to printable strings and writes them to the file.
-
-Returns the file object to which the strings were written.
-
-Accepts zero or more arguments to write.
-
-Written values are separated with a single space.
-
-After printing all values writes an EOL character.  If no values are
-provided, just writes an EOL character.
-
-file.prototype.print_()
------------------------
-
-    file.prototype.print_(values...)
-
-Converts all arguments to printable strings and writes them to the file.
-
-Returns the file object to which the strings were written.
-
-Accepts zero or more arguments to write.
-
-Written values are separated with a single space.
-
-Unlike `file.prototype.print()`, does not write an EOL character after finishing writing.
-
-file.prototype.print_lines()
-----------------------------
-
-    file.prototype.print_lines(iterable)
-
-Prints all elements from an iterable object into the file on separate lines.
-
-Elements are extracted from `iterable` object through its `iterator()`
-function, then printed using `file.prototype.print()` function.
-
-If there are no elements, nothing is printed.
-
-file.prototype.read()
----------------------
-
-    file.prototype.read()
-    file.prototype.read(size [, buffer])
-
-Reads bytes from an opened file object.
-
-Returns a buffer containing the bytes read.
-
-The first variant reads as many bytes as it can, possibly until the end
-of file.
-
-The second variant reads up to `size` bytes, or less if the file does not
-have that many bytes.  It never reads more than `size` bytes.
-
-If `buffer` is specified, bytes are appended to it and that buffer is
-returned instead of creating a new buffer.
-
-file.prototype.read_line()
---------------------------
-
-    file.prototype.read_line(reserved_size = 4096)
-
-Reads a single line of text from a file.
-
-Returns the string containing the line read, including EOL character sequence.
-
-`reserved_size` is the amount of bytes to reserve for the buffer into which
-the file is read.  If the line is longer than that, the buffer will be
-automatically resized.  This is an implementation detail and it may change
-in the future.
-
-This is a low-level function, `file.prototype.read_lines()` is a better choice
-in most cases.
-
-file.prototype.read_lines()
----------------------------
-
-    file.prototype.read_lines(keep_ends = false, gran = 0x1000)
-
-A generator which produces subsequent lines of text read from a file.
-
-Returns an iterator function, which yields subsequent lines read
-from the file on subsequent invocations.  The lines returned by the
-iterator function are strings.
-
-`keep_ends` tells whether the EOL character sequences should be kept
-as part of the returned lines.  It defaults to `false`.
-
-`gran` is the internal granularity at which the file is read.  It
-defaults to 4KB.
-
-file.prototype.read_some()
---------------------------
-
-    file.prototype.read_some(size = 4096 [, buffer])
-
-Reads a variable number of bytes from an opened file object.
-
-Returns a buffer containing the bytes read.
-
-Reads as many bytes as it can, up to the specified `size`.
-
-`size` is the maximum bytes to read.  `size` defaults to 4096.  Less
-bytes can be read if no more bytes are available.
-
-If `buffer` is specified, bytes are appended to it and that buffer is
-returned instead of creating a new buffer.
-
-This is a low-level function, `file.prototype.read()` is a better choice
-in most cases.
-
-file.prototype.seek()
----------------------
-
-    file.prototype.seek(pos)
-
-Moves the read/write pointer to a different position in the file.
-
-Returns the file object for which the pointer has been moved.
-
-`pos` is the new, absolute position in the file where the pointer
-is moved.  If it is negative, the pointer is moved relative to the end of
-the file.  If it is a float, it is converted to integer using floor mode.
-
-Throws an exception if the pointer cannot be moved for whatever reason.
-
-file.prototype.size
--------------------
-
-    file.prototype.size
-
-Read-only size of the opened file object.
-
-file.prototype.write()
-----------------------
-
-    file.prototype.write(buffer)
-
-Writes a buffer containing bytes into an opened file object.
-
-Returns the file object to which bytes has been written.
-
-`buffer` is a buffer object.  Its size can be zero, in which case nothing
-is written.
-
-open()
-------
-
-    open(filename, flags = rw)
-
-Opens a file.
-
-Returns opened file object.
-
-`filename` is the path to the file to open.
-
-Optional `flags` specify open mode.  `flags` default to `rw`.
-
-It is recommended to use the `file.open()` function in conjunction with
-the `with` statement.
-
-Example:
-
-    > with const f = file.open("my.txt", file.create_flag) { f.print("hello") }
-
-read_lines()
-------------
-
-    read_lines(filename, keep_ends = false, gran = 0x1000)
-
-A generator which produces subsequent lines of text read from a file.
-
-Returns an iterator function, which yields subsequent lines read
-from the file on subsequent invocations.  The lines returned by the
-iterator function are strings.
-
-`filename` is the path to the file to open.
-
-`keep_ends` tells whether the EOL character sequences should be kept
-as part of the returned lines.  It defaults to `false`.
-
-`gran` is the internal granularity at which the file is read.  It
-defaults to 4KB.
-
-Example:
-
-    > for const line in file.read_lines("README.txt") { print(line) }
-
-ro
---
-
-    ro
-
-Flag used with `file.file` and `file.open`.  Indicates that the file is to
-be opened for reading only.
-
-File must exist if this flag is used, or else exception is thrown.
-
-rw
---
-
-    rw
-
-Flag used with `file.file` and `file.open`.  Indicates that the file is to
-be opened for reading and writing.
-
-File must exist if this flag is used, or else exception is thrown.
-
-stderr
-------
-
-    stderr
-
-Write-only file object corresponding to standard error.
-
-stdin
------
-
-    stdin
-
-Read-only file object corresponding to standard input.
-
-stdout
-------
-
-    stdout
-
-Write-only file object corresponding to standard output.
-
-Calling `file.stdout.print()` is equivalent to `lang.print()`.
-
-iter
-====
-
-cycle()
--------
-
-    cycle(iterable)
-
-A generator which cycles forever over elements of an interable object.
-
-Returns an iterator function, which yields subsequent elements of an
-iterable object cyclically, infinitely.  Once yielding the last element,
-it starts from the beginning and yields the first and subsequent elements
-again.
-
-`iterable` is an object on which `iterator()` is invoked to obtain subsequent
-elements of it.  It is wrapped with `iter.generator()`, so that when
-`iterable` is a function, the elements are cached, so they can be yielded
-again.
-
-empty()
--------
-
-    empty()
-
-Empty generator.
-
-This generator, when instantiated, never yields any objects and
-terminates immediately.
-
-generator()
------------
-
-    generator(iterable)
-
-Creates a generator function, which caches another generator.
-
-Returns a generator function, which can be instantiated many times.
-
-If `iterable` is a function, it is assumed to be a generator or an
-iterator, its elements are cached, so that the returned generator
-function can be instantiated multiple times.
-
-If the returned generator is instantiated twice and processed
-in parallel, the behavior is undefined.
-
-If `iterable` is not a function, the behavior of the returned
-generator upon instantiation will be equivalent to calling
-`iterable.iterator()`.
-
-iproduct()
-----------
-
-    iproduct(range_sizes...)
-
-A generator which produces permutations of multiple 0-based ranges.
-
-Returns an iterator function, which yields subsequent permutations
-of the specified ranges.
-
-The arguments of this function are integers, which specify how many
-elements each range contains.  The number of input arguments is equal
-to the number of ranges. The first range is innermost, the last range
-is outermost.
-
-`iter.iproduct(n, m)` is equivalent to `iter.product(range(n), range(m))`.
-
-Example:
-
-    > iter.iproduct(2, 3) -> print_elements
-    [0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2]
-    > iter.iproduct(3, 2) -> print_elements
-    [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
-
-product()
----------
-
-    product(iterables...)
-
-A generator which produces permutations of the output of multiple other
-generators.
-
-Returns an iterator function, which yields arrays containing subsequent
-permutations of values from input iterable objects.
-
-The arguments, `iterables`, are objects on which `iterator()` is invoked
-to obtain generators for each iterable object.
-
-Example:
-
-    > iter.product(range(5, 7), "xyz") -> print_elements
-    [5, x], [6, x], [5, y], [6, y], [5, z], [6, z]
-
-reverse()
----------
-
-    reverse(iterable)
-
-A generator which produces elements of an iterable object in reverse order.
-
-For strings, arrays and buffers, returns the object of the same type
-containing elements in reverse order.
-
-For objects of other type, returns an iterator function, which yields
-elements of the iterable object in backwards order.
-
-Examples:
-
-    > iter.reverse(range(4)) -> print_elements
-    3, 2, 1, 0
-    > iter.reverse("language")
-    "egaugnal"
-
-lang
+base
 ====
 
 all()
@@ -1403,7 +906,7 @@ class()
 Class type class.
 
 Because `class` is a keyword, this class can only be referenced
-indirectly via the lang module, it cannot be referenced if it is imported
+indirectly via the base module, it cannot be referenced if it is imported
 directly into the current module.
 
 The argument is a class object which is returned by
@@ -1895,8 +1398,8 @@ keys()
     keys(iterable)
 
 A generator which produces first elements of each element from an iterable
-object.  When iterating objects (including `lang.deep()` and
-`lang.shallow()`), object keys are yielded.
+object.  When iterating objects (including `base.deep()` and
+`base.shallow()`), object keys are yielded.
 
 Returns an iterator function, which iterates over the elements of an iterable
 object, then for each of the elements extracts its first sub-element and
@@ -2223,7 +1726,7 @@ print_elements()
 Prints all elements from an iterable object on stdout.
 
 Elements are extracted from `iterable` object through its `iterator()`
-function, then printed using `lang.print_()` function.
+function, then printed using `base.print_()` function.
 
 The optional `separator` is a string to be printed between
 the items.  It defaults to a comma.
@@ -2250,7 +1753,7 @@ print_lines()
 Prints all elements from an iterable object on stdout on separate lines.
 
 Elements are extracted from `iterable` object through its `iterator()`
-function, then printed using `lang.print()` function.
+function, then printed using `base.print()` function.
 
 If there are no elements, nothing is printed.
 
@@ -2577,7 +2080,7 @@ Returns a new string with all whitespace characters removed from
 its beginning.
 
 `chars` is a string, which specifies the list of characters treated
-as whitespace.  It defaults to `lang.whitespace`.
+as whitespace.  It defaults to `base.whitespace`.
 
 Example:
 
@@ -2712,7 +2215,7 @@ Returns a new string with all whitespace characters removed from
 its end.
 
 `chars` is a string, which specifies the list of characters treated
-as whitespace.  It defaults to `lang.whitespace`.
+as whitespace.  It defaults to `base.whitespace`.
 
 Example:
 
@@ -2830,7 +2333,7 @@ A generator which produces subsequent lines extracted from a string.
 
 Returns an iterator function, which yields strings, which are subsequent
 lines, resulting from splitting the string using EOL characters from
-`lang.eol`.
+`base.eol`.
 
 Two subsequent EOL characters will yield an empty line, except if a CR
 characters is followed by an LF character, in which case they are kept
@@ -2874,7 +2377,7 @@ Returns a new string with all whitespace characters removed from
 its beginning and end.
 
 `chars` is a string, which specifies the list of characters treated
-as whitespace.  It defaults to `lang.whitespace`.
+as whitespace.  It defaults to `base.whitespace`.
 
 Example:
 
@@ -3019,6 +2522,503 @@ Example:
 
     > zip(range(4), "abcd") -> print_elements
     [0, a], [1, b], [2, c], [3, d]
+
+debug
+=====
+
+backtrace()
+-----------
+
+    backtrace()
+
+Returns backtrace from the place of the invocation.
+
+The backtrace returned is identical to the backtrace obtained
+from an exception object.
+
+fs
+==
+
+is_file()
+---------
+
+    is_file(pathname)
+
+Determines whether a file exists.
+
+Returns `true` if `pathname` exists and is a file, or `false` otherwise.
+
+remove()
+--------
+
+    remove(pathname)
+
+Deletes a file `pathname`.
+
+Returns `true` if the file was successfuly deleted or `false` if
+the file could not be deleted or if it did not exist in the first
+place.
+
+io
+==
+
+append()
+--------
+
+    append(filename)
+
+Creates a new or opens an existing file in append mode, opens for reading
+and writing.
+
+Returns opened file object.
+
+`filename` is the path to the file to create or truncate.
+
+It is recommended to use the `file.append()` function in conjunction with
+the `with` statement.
+
+Example:
+
+    > with const f = file.append("my.txt") { f.print("hello") }
+
+append_flag
+-----------
+
+    append_flag
+
+Flag used with `file.file` and `file.open`.  Indicates that the file is to
+be created if it does not exist or opened at at the end for appending.
+The file is always opened for reading and writing with this flag.
+
+create()
+--------
+
+    create(filename)
+
+Creates a new or truncates an existing file, opens for reading and writing.
+
+Returns opened file object.
+
+`filename` is the path to the file to create or truncate.
+
+It is recommended to use the `file.create()` function in conjunction with
+the `with` statement.
+
+Example:
+
+    > with const f = file.create("my.txt") { f.print("hello") }
+
+create_flag
+-----------
+
+    create_flag
+
+Flag used with `file.file` and `file.open`.  Indicates that the file is to
+be created if it does not exist or truncated if it exists and then opened
+for reading and writing.
+
+file()
+------
+
+    file(pathname, flags = rw)
+
+File object class.
+
+Returns opened file object.
+
+`pathname` is the path to the file.
+
+`flags` is a string, which specifies file open mode compatible with
+the C `fopen()` function.  It is normally recommended to use the
+shorthand flag constants: `io.ro`, `io.rw` or the auxiliary
+file functions `io.open()`, `io.create()` and `io.append()`
+instead of specifying the flags explicitly.
+
+It is recommended to use the `io.file` class in conjunction with
+the `with` statement.
+
+Example:
+
+    > with const f = io.file("my.txt", io.create_flag) { f.print("hello") }
+
+file.prototype.close()
+----------------------
+
+    file.prototype.close()
+
+Closes the file object if it is still opened.
+
+file.prototype.eof
+------------------
+
+    file.prototype.eof
+
+A boolean read-only flag indicating whether the read/write pointer has
+reached the end of the file object.
+
+file.prototype.error
+--------------------
+
+    file.prototype.error
+
+A boolean read-only flag indicating whether there was an error during the
+last file operation on the file object.
+
+file.prototype.position
+-----------------------
+
+    file.prototype.position
+
+Read-only position of the read/write pointer in the opened file object.
+
+file.prototype.print()
+----------------------
+
+    file.prototype.print(values...)
+
+Converts all arguments to printable strings and writes them to the file.
+
+Returns the file object to which the strings were written.
+
+Accepts zero or more arguments to write.
+
+Written values are separated with a single space.
+
+After printing all values writes an EOL character.  If no values are
+provided, just writes an EOL character.
+
+file.prototype.print_()
+-----------------------
+
+    file.prototype.print_(values...)
+
+Converts all arguments to printable strings and writes them to the file.
+
+Returns the file object to which the strings were written.
+
+Accepts zero or more arguments to write.
+
+Written values are separated with a single space.
+
+Unlike `file.prototype.print()`, does not write an EOL character after finishing writing.
+
+file.prototype.print_lines()
+----------------------------
+
+    file.prototype.print_lines(iterable)
+
+Prints all elements from an iterable object into the file on separate lines.
+
+Elements are extracted from `iterable` object through its `iterator()`
+function, then printed using `file.prototype.print()` function.
+
+If there are no elements, nothing is printed.
+
+file.prototype.read()
+---------------------
+
+    file.prototype.read()
+    file.prototype.read(size [, buffer])
+
+Reads bytes from an opened file object.
+
+Returns a buffer containing the bytes read.
+
+The first variant reads as many bytes as it can, possibly until the end
+of file.
+
+The second variant reads up to `size` bytes, or less if the file does not
+have that many bytes.  It never reads more than `size` bytes.
+
+If `buffer` is specified, bytes are appended to it and that buffer is
+returned instead of creating a new buffer.
+
+file.prototype.read_line()
+--------------------------
+
+    file.prototype.read_line(reserved_size = 4096)
+
+Reads a single line of text from a file.
+
+Returns the string containing the line read, including EOL character sequence.
+
+`reserved_size` is the amount of bytes to reserve for the buffer into which
+the file is read.  If the line is longer than that, the buffer will be
+automatically resized.  This is an implementation detail and it may change
+in the future.
+
+This is a low-level function, `file.prototype.read_lines()` is a better choice
+in most cases.
+
+file.prototype.read_lines()
+---------------------------
+
+    file.prototype.read_lines(keep_ends = false, gran = 0x1000)
+
+A generator which produces subsequent lines of text read from a file.
+
+Returns an iterator function, which yields subsequent lines read
+from the file on subsequent invocations.  The lines returned by the
+iterator function are strings.
+
+`keep_ends` tells whether the EOL character sequences should be kept
+as part of the returned lines.  It defaults to `false`.
+
+`gran` is the internal granularity at which the file is read.  It
+defaults to 4KB.
+
+file.prototype.read_some()
+--------------------------
+
+    file.prototype.read_some(size = 4096 [, buffer])
+
+Reads a variable number of bytes from an opened file object.
+
+Returns a buffer containing the bytes read.
+
+Reads as many bytes as it can, up to the specified `size`.
+
+`size` is the maximum bytes to read.  `size` defaults to 4096.  Less
+bytes can be read if no more bytes are available.
+
+If `buffer` is specified, bytes are appended to it and that buffer is
+returned instead of creating a new buffer.
+
+This is a low-level function, `file.prototype.read()` is a better choice
+in most cases.
+
+file.prototype.seek()
+---------------------
+
+    file.prototype.seek(pos)
+
+Moves the read/write pointer to a different position in the file.
+
+Returns the file object for which the pointer has been moved.
+
+`pos` is the new, absolute position in the file where the pointer
+is moved.  If it is negative, the pointer is moved relative to the end of
+the file.  If it is a float, it is converted to integer using floor mode.
+
+Throws an exception if the pointer cannot be moved for whatever reason.
+
+file.prototype.size
+-------------------
+
+    file.prototype.size
+
+Read-only size of the opened file object.
+
+file.prototype.write()
+----------------------
+
+    file.prototype.write(buffer)
+
+Writes a buffer containing bytes into an opened file object.
+
+Returns the file object to which bytes has been written.
+
+`buffer` is a buffer object.  Its size can be zero, in which case nothing
+is written.
+
+open()
+------
+
+    open(filename, flags = rw)
+
+Opens a file.
+
+Returns opened file object.
+
+`filename` is the path to the file to open.
+
+Optional `flags` specify open mode.  `flags` default to `rw`.
+
+It is recommended to use the `file.open()` function in conjunction with
+the `with` statement.
+
+Example:
+
+    > with const f = file.open("my.txt", file.create_flag) { f.print("hello") }
+
+read_lines()
+------------
+
+    read_lines(filename, keep_ends = false, gran = 0x1000)
+
+A generator which produces subsequent lines of text read from a file.
+
+Returns an iterator function, which yields subsequent lines read
+from the file on subsequent invocations.  The lines returned by the
+iterator function are strings.
+
+`filename` is the path to the file to open.
+
+`keep_ends` tells whether the EOL character sequences should be kept
+as part of the returned lines.  It defaults to `false`.
+
+`gran` is the internal granularity at which the file is read.  It
+defaults to 4KB.
+
+Example:
+
+    > for const line in file.read_lines("README.txt") { print(line) }
+
+ro
+--
+
+    ro
+
+Flag used with `file.file` and `file.open`.  Indicates that the file is to
+be opened for reading only.
+
+File must exist if this flag is used, or else exception is thrown.
+
+rw
+--
+
+    rw
+
+Flag used with `file.file` and `file.open`.  Indicates that the file is to
+be opened for reading and writing.
+
+File must exist if this flag is used, or else exception is thrown.
+
+stderr
+------
+
+    stderr
+
+Write-only file object corresponding to standard error.
+
+stdin
+-----
+
+    stdin
+
+Read-only file object corresponding to standard input.
+
+stdout
+------
+
+    stdout
+
+Write-only file object corresponding to standard output.
+
+Calling `file.stdout.print()` is equivalent to `base.print()`.
+
+iter
+====
+
+cycle()
+-------
+
+    cycle(iterable)
+
+A generator which cycles forever over elements of an interable object.
+
+Returns an iterator function, which yields subsequent elements of an
+iterable object cyclically, infinitely.  Once yielding the last element,
+it starts from the beginning and yields the first and subsequent elements
+again.
+
+`iterable` is an object on which `iterator()` is invoked to obtain subsequent
+elements of it.  It is wrapped with `iter.generator()`, so that when
+`iterable` is a function, the elements are cached, so they can be yielded
+again.
+
+empty()
+-------
+
+    empty()
+
+Empty generator.
+
+This generator, when instantiated, never yields any objects and
+terminates immediately.
+
+generator()
+-----------
+
+    generator(iterable)
+
+Creates a generator function, which caches another generator.
+
+Returns a generator function, which can be instantiated many times.
+
+If `iterable` is a function, it is assumed to be a generator or an
+iterator, its elements are cached, so that the returned generator
+function can be instantiated multiple times.
+
+If the returned generator is instantiated twice and processed
+in parallel, the behavior is undefined.
+
+If `iterable` is not a function, the behavior of the returned
+generator upon instantiation will be equivalent to calling
+`iterable.iterator()`.
+
+iproduct()
+----------
+
+    iproduct(range_sizes...)
+
+A generator which produces permutations of multiple 0-based ranges.
+
+Returns an iterator function, which yields subsequent permutations
+of the specified ranges.
+
+The arguments of this function are integers, which specify how many
+elements each range contains.  The number of input arguments is equal
+to the number of ranges. The first range is innermost, the last range
+is outermost.
+
+`iter.iproduct(n, m)` is equivalent to `iter.product(range(n), range(m))`.
+
+Example:
+
+    > iter.iproduct(2, 3) -> print_elements
+    [0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2]
+    > iter.iproduct(3, 2) -> print_elements
+    [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
+
+product()
+---------
+
+    product(iterables...)
+
+A generator which produces permutations of the output of multiple other
+generators.
+
+Returns an iterator function, which yields arrays containing subsequent
+permutations of values from input iterable objects.
+
+The arguments, `iterables`, are objects on which `iterator()` is invoked
+to obtain generators for each iterable object.
+
+Example:
+
+    > iter.product(range(5, 7), "xyz") -> print_elements
+    [5, x], [6, x], [5, y], [6, y], [5, z], [6, z]
+
+reverse()
+---------
+
+    reverse(iterable)
+
+A generator which produces elements of an iterable object in reverse order.
+
+For strings, arrays and buffers, returns the object of the same type
+containing elements in reverse order.
+
+For objects of other type, returns an iterator function, which yields
+elements of the iterable object in backwards order.
+
+Examples:
+
+    > iter.reverse(range(4)) -> print_elements
+    3, 2, 1, 0
+    > iter.reverse("language")
+    "egaugnal"
 
 math
 ====

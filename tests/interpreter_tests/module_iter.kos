@@ -21,7 +21,7 @@
 #
 
 import iter
-import lang
+import base
 
 fun expect_fail(function)
 {
@@ -39,7 +39,7 @@ fun expect_fail(function)
 # iter.empty
 
 do {
-    assert iter.empty instanceof lang.generator
+    assert iter.empty instanceof base.generator
 
     var count = 0
     for var x in iter.empty() {
@@ -168,7 +168,7 @@ do {
 
 do {
     var i = 0
-    for var x in iter.cycle(lang.range(3)) {
+    for var x in iter.cycle(base.range(3)) {
         assert i % 3 == x
         i += 1
         if i == 20 {
@@ -178,7 +178,7 @@ do {
 }
 
 ##############################################################################
-# lang.reverse
+# base.reverse
 
 do {
     const a = iter.reverse([1, 2, 3, 4])
@@ -196,7 +196,7 @@ do {
     assert s[1] == "o"
     assert s[2] == "k"
 
-    const f = iter.reverse(lang.range(2, 6))
+    const f = iter.reverse(base.range(2, 6))
     assert typeof f == "function"
     assert f() == 5
     assert f() == 4

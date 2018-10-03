@@ -2,7 +2,7 @@
 
 import io
 import kos
-import lang.*
+import base.*
 
 fun remove_indentation(lines)
 {

@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-import lang: buffer, string, eol
+import base: buffer, string, eol
 
 /* @item io ro
  *

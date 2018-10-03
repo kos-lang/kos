@@ -946,7 +946,7 @@ static int _compile_module(KOS_CONTEXT ctx,
     }
     TRY(error);
 
-    /* Save lang module index */
+    /* Save base module index */
     if (module_idx == 0)
         TRY(KOS_array_write(ctx, inst->modules.modules, module_idx, module_obj));
 
@@ -1204,7 +1204,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
                               unsigned    data_size,
                               int        *out_module_idx)
 {
-    static const char             lang[]          = "lang";
+    static const char             base[]          = "base";
     int                           error           = KOS_SUCCESS;
     int                           module_idx      = -1;
     KOS_OBJ_ID                    module_obj      = KOS_BADPTR;
@@ -1251,11 +1251,11 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 
     /* TODO use global mutex for thread safety */
 
-    /* Load lang module first, so that it ends up at index 0 */
-    if (KOS_get_array_size(inst->modules.modules) == 0 && strcmp(module_name, lang)) {
-        int        lang_idx;
+    /* Load base module first, so that it ends up at index 0 */
+    if (KOS_get_array_size(inst->modules.modules) == 0 && strcmp(module_name, base)) {
+        int        base_idx;
         KOS_OBJ_ID path_array;
-        KOS_OBJ_ID lang_obj;
+        KOS_OBJ_ID base_obj;
         KOS_OBJ_ID dir;
 
         /* Add search path - path of the topmost module being loaded */
@@ -1273,9 +1273,9 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
         if (inst->flags & KOS_INST_VERBOSE)
             _print_search_paths(ctx, inst->modules.search_paths);
 
-        lang_obj = _KOS_module_import(ctx, lang, sizeof(lang)-1, 0, 0, &lang_idx);
-        TRY_OBJID(lang_obj);
-        assert(lang_idx == 0);
+        base_obj = _KOS_module_import(ctx, base, sizeof(base)-1, 0, 0, &base_idx);
+        TRY_OBJID(base_obj);
+        assert(base_idx == 0);
     }
 
     /* Add module to the load chain to prevent and detect circular dependencies */

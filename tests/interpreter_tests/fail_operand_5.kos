@@ -19,6 +19,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang
+import base
 
-lang.print(5 -> 10)
+base.print(5 -> 10)

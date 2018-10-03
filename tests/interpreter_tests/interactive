@@ -56,8 +56,8 @@ if ! grep -q "Kos module search paths: \., " "$OUTPUT"; then
     cat "$OUTPUT"
     exit 1
 fi
-if ! grep -q "Kos loading module lang from" "$OUTPUT"; then
-    echo "Expected output to contain information about loaded module lang, but it is missing" >&2
+if ! grep -q "Kos loading module base from" "$OUTPUT"; then
+    echo "Expected output to contain information about loaded module base, but it is missing" >&2
     cat "$OUTPUT"
     exit 1
 fi

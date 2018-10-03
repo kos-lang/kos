@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import lang: buffer, integer, print, string, range
+import base: buffer, integer, print, string, range
 
 fun expect_fail(function)
 {
@@ -243,7 +243,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.size
+# base.buffer.prototype.size
 
 do {
     class new_obj { }
@@ -257,7 +257,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.fill
+# base.buffer.prototype.fill
 
 do {
     const b = buffer(32)
@@ -326,7 +326,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.copy_buffer
+# base.buffer.prototype.copy_buffer
 
 do {
     const b1 = buffer(10)
@@ -422,7 +422,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.insert
+# base.buffer.prototype.insert
 
 do {
     const b1 = buffer()
@@ -462,7 +462,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.slice
+# base.buffer.prototype.slice
 
 do {
     const b1 = buffer(20)
@@ -544,7 +544,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.pack
+# base.buffer.prototype.pack
 
 do {
     const b = buffer()
@@ -777,7 +777,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.unpack
+# base.buffer.prototype.unpack
 
 do {
     const b = buffer([ 1, 2, 3, 4, 5, 6, 7 ])
@@ -972,7 +972,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.resize()
+# base.buffer.prototype.resize()
 
 do {
     const b = buffer([1, 2, 3, 4, 5])
@@ -992,7 +992,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.reverse()
+# base.buffer.prototype.reverse()
 do {
     const b = buffer(5)
     for var i in range(5) {
@@ -1025,7 +1025,7 @@ do {
 }
 
 ##############################################################################
-# lang.buffer.prototype.repeat()
+# base.buffer.prototype.repeat()
 do {
     const a = buffer(3)
     a[0] = 10

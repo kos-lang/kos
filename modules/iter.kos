@@ -20,8 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-import lang.array
-import lang.print
+import base: array, print
 
 /* @item iter generator()
  *

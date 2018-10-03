@@ -20,10 +20,10 @@
 # IN THE SOFTWARE.
 #
 
-import lang.print
-import lang.print_
-import lang.print_elements
-import lang.buffer
+import base.print
+import base.print_
+import base.print_elements
+import base.buffer
 
 do {
     fun thrower
