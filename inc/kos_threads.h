@@ -292,8 +292,6 @@ static inline int _KOS_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *n
 #define KOS_atomic_cas_ptr(dest, oldv, newv) _KOS_atomic_cas_ptr((void *volatile *)&(dest), (void *)(oldv), (void *)(newv))
 
 #if defined(__cplusplus) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)) || !defined(__STRICT_ANSI__)
-#define KOS_GCC_ATOMIC_EXTENSION 1
-
 static inline int _KOS_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
     return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
@@ -304,6 +302,7 @@ static inline int _KOS_atomic_cas_ptr(void *volatile *dest, void *oldv, void *ne
     return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 #else
+#define KOS_GCC_ATOMIC_EXTENSION 1
 int _KOS_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv);
 int _KOS_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 #endif
