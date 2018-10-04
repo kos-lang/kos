@@ -41,7 +41,7 @@
 static const char str_err_join_self[] = "thread cannot join itself";
 static const char str_err_thread[]    = "failed to create thread";
 
-#if !defined(__cplusplus) && (!defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)) && defined(__STRICT_ANSI__)
+#ifdef KOS_GCC_ATOMIC_EXTENSION
 int _KOS_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
     return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
