@@ -30,6 +30,22 @@ RUN_VALGRIND=0
 RUN_GCOV=0
 RUN_SEQFAIL=0
 
+UNAME=$(uname -s)
+
+if [ -z "$JOBS" ]; then
+    case "$UNAME" in
+        Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
+        Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
+        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ; UNAME="Windows" ;;
+        Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
+        *)                                       JOBS=2 ;;
+    esac
+fi
+
+if [ "$UNAME" = "Windows" ]; then
+    RUN_ASAN=0
+fi
+
 if [ $# -gt 0 ]; then
     if [ "$1" = "default" ]; then
         shift
@@ -54,18 +70,6 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-
-UNAME=$(uname -s)
-
-if [ -z "$JOBS" ]; then
-    case "$UNAME" in
-        Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
-        Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
-        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ; UNAME="Windows" ;;
-        Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
-        *)                                       JOBS=2 ;;
-    esac
-fi
 
 echo "Using $JOBS jobs"
 

@@ -2,35 +2,27 @@ language: cpp
 
 matrix:
     include:
-      #- os: linux
-      #- compiler: gcc
-      #- # add gcc 5 and valgrind
-      #- addons:
-      #-     apt:
-      #-         sources:
-      #-           - ubuntu-toolchain-r-test
-      #-         packages:
-      #-           - g++-5
-      #- install:
-      #-   - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5" GCOV="gcov-5"; fi
-      #- script:
-      #-   - tests/run seqfail
-
-      - name: "Ubuntu 14.04 - gcc-new"
+      - name: "Ubuntu 14.04"
         os: linux
         dist: trusty
         compiler: gcc
+        addons:
+            apt:
+                sources:
+                  - ubuntu-toolchain-r-test
+                packages:
+                  - g++-8
+        install:
+          - if [ "$CXX" = "g++" ]; then export CXX="g++-8" CC="gcc-8" GCOV="gcov-8"; fi
         script:
-         - gcc --version
-         - tests/run default seqfail
+          - tests/run default seqfail
 
-      - name: "Ubuntu 12.04 - gcc-old"
+      - name: "Ubuntu 12.04"
         os: linux
         dist: precise
         compiler: gcc
         script:
-         - gcc --version
-         - tests/run c89 release
+          - tests/run c89
 
       - name: "Valgrind"
         os: linux
@@ -41,7 +33,7 @@ matrix:
                 packages:
                  - valgrind
         script:
-         - tests/run valgrind
+          - tests/run valgrind
 
       - name: "Coverage"
         os: linux
@@ -59,9 +51,6 @@ matrix:
         os: linux
         dist: trusty
         compiler: gcc
-        branches:
-            only:
-             - coverity_scan
         addons:
             coverity_scan:
                 project:
@@ -76,10 +65,11 @@ matrix:
               - secure: "NQYyTds2bcp3VLb2mY8QAr+u04KUdgq00Ju+tEOk0z7tuztSLyv+kVXL3W59j4oxrrFwWSBqELgTp/ybj+WEwmJ7y9u/cA0gbiTJB/LpreP9PoxSK/zlpzsTLRFr6SzXpxoUpsKfmP7C2b08tnqb89PX5tU/sU4ooEkGCtXc/jZ7Fnu3MIv7sDrmOEAVpcDE5iCQOKxxVailuP1GglgZwcOjRfclmCdISyRjxOVXuWsar1AXiB5klMm1sUISY/UJm4NUnjkwkKLVW0+t46dYzvmOZIdvDaAnvIeXoVoaQw3s6BxYmbk9QqvigFK3RU72reshvxtuQFM0dmozOffx1vlTHFsXU2gGvGhBUO7toFc9hnFyiyumAlNnOmPcCq/ilz0NPJjHkcV0Xsf/XGlFLHpNYXpZ/nlGlO5jAQI3YQ8qVk/jOJYF4fqupH96faQZnsjpJ6u0cIMd1xBZ/nPm0HYrK7aub1mZcKtOlTpgATBqyjrBLxophm0sVa7JRdIKevndMijzNLHXSQaj+je+pNHsxql6HCvEFBaq9x4OOZVyFaWDbVdJoslP3e88SaL2hZRV1Qh6xZcM86sB2SMcDjpq5LmF9ydiJcg/Mhxkz+9/miUR82lPG4P3V/dmIKJz4oJbPy+G0F0zST0Zl/nxzcRJry500wcsSfs1aVOwIkg="
         before_install:
           - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+        script:
+          - true
 
       - name: "MacOSX"
         os: osx
         compiler: clang
         script:
-          - clang --version
           - tests/run
