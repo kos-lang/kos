@@ -22,16 +22,35 @@
 
 set -e
 
-ARG_NOSAN=""
-ARG_GCOV=""
-ARG_SEQFAIL=""
+RUN_C89=1
+RUN_CPP14=1
+RUN_RELEASE=1
+RUN_ASAN=1
+RUN_VALGRIND=0
+RUN_GCOV=0
+RUN_SEQFAIL=0
+
+if [ $# -gt 0 ]; then
+    if [ "$1" = "default" ]; then
+        shift
+    else
+        RUN_C89=0
+        RUN_CPP14=0
+        RUN_RELEASE=0
+        RUN_ASAN=0
+    fi
+fi
 
 while [ $# -gt 0 ]; do
     case $1 in
-        nosan)   ARG_NOSAN=$1   ;;
-        gcov)    ARG_GCOV=$1    ;;
-        seqfail) ARG_SEQFAIL=$1 ;;
-        *)       echo "Error: Unrecognized parameter - $1" >&2 ; exit 1
+        c89)      RUN_C89=1      ;;
+        cpp14)    RUN_CPP14=1    ;;
+        release)  RUN_RELEASE=1  ;;
+        asan)     RUN_ASAN=1     ;;
+        valgrind) RUN_VALGRIND=1 ;;
+        gcov)     RUN_GCOV=1     ;;
+        seqfail)  RUN_SEQFAIL=1  ;;
+        *)        echo "Error: Unrecognized parameter - $1" >&2 ; exit 1
     esac
     shift
 done
@@ -115,9 +134,21 @@ unset CONFIG_GCOV
 unset CONFIG_SEQFAIL
 export CONFIG_DEBUG=1
 
-runtests c89 c++98
+if [ "$RUN_C89" = "1" -o "$RUN_VALGRIND" = "1" ]; then
+    runtests c89 c++98
+fi
 
-if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
+if [ "$RUN_VALGRIND" = "1" ]; then
+    if [ "$UNAME" != "Linux" ]; then
+        echo "Error: Valgrind is only supported on Linux!" >&2
+        exit 1
+    fi
+
+    if [ "$(which valgrind 2>/dev/null)" = "" ]; then
+        echo "Error: Valgrind not found!" >&2
+        exit 1
+    fi
+
     export CONFIG_TOOL="valgrind --error-exitcode=1 --track-origins=yes"
 
     # Limit number of jobs to reduce memory pressure
@@ -130,28 +161,41 @@ if [ "$UNAME" = "Linux" ] && [ "$(which valgrind 2>/dev/null)" != "" ]; then
     JOBS=$ORIG_JOBS
 fi
 
-if [ "$UNAME" = "Darwin" -o "$UNAME" = "Linux" ]; then
-    if [ "$ARG_NOSAN" != "nosan" ]; then
-        export SANITIZER="address"
-        [ $JOBS -gt 2 ] && JOBS=$(($JOBS / 2))
-        [ $JOBS = 0 ] && JOBS=1
+if [ "$RUN_ASAN" = "1" ]; then
+    if [ "$UNAME" != "Darwin" -a "$UNAME" != "Linux" ]; then
+        echo "Error: Address sanitizer is only supported on MacOSX and Linux!" >&2
+        exit 1
     fi
+
+    export SANITIZER="address"
+    [ $JOBS -gt 2 ] && JOBS=$(($JOBS / 2))
+    [ $JOBS = 0 ] && JOBS=1
+    RUN_CPP14="1"
 fi
 
-if [ "$ARG_SEQFAIL" = "seqfail" ]; then
+if [ "$RUN_SEQFAIL" = "1" ]; then
     export CONFIG_SEQFAIL=1
+    RUN_CPP14="1"
 fi
 
-runtests c++14 c++14
+if [ "$RUN_CPP14" = "1" ]; then
+    runtests c++14 c++14
+fi
 
 unset SANITIZER
 unset CONFIG_SEQFAIL
 JOBS=$ORIG_JOBS
 
 unset CONFIG_DEBUG
-runtests c11 c++11
+if [ "$RUN_RELEASE" = "1" ]; then
+    runtests c11 c++11
+fi
 
-if [ "$UNAME" != "Windows" -a "$ARG_GCOV" = "gcov" ]; then
+if [ "$RUN_GCOV" = "1" ]; then
+    if [ "$UNAME" = "Windows" ]; then
+        echo "Error: gcov not supported on Windows!" >&2
+        exit 1
+    fi
     export CONFIG_GCOV=1
     export CONFIG_DEBUG=1
     export CONFIG_SEQFAIL=1
