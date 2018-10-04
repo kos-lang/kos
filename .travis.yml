@@ -39,8 +39,16 @@ matrix:
         os: linux
         dist: trusty
         compiler: gcc
+        addons:
+            apt:
+                sources:
+                  - ubuntu-toolchain-r-test
+                packages:
+                  - g++-5
+        install:
+          - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5" GCOV="gcov-5"; fi
         before_install:
-          #- pip install --user urllib3[secure] # Fix for coveralls upload failure
+          - pip install --user urllib3[secure] # Fix for coveralls upload failure
           - pip install --user cpp-coveralls
         script:
           - tests/run gcov
@@ -66,7 +74,7 @@ matrix:
         before_install:
           - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
         script:
-          - true
+          - tests/run c89
 
       - name: "MacOSX"
         os: osx
