@@ -73,8 +73,8 @@ objects, like everything else.  Function identifiers are really constants.
 
     base.print(multiply_two_numbers(3, 4)) # Prints: 12
 
-And this is the third way to declare functions.  The parentheses contain the
-expression which is treated like a return statement.
+And this is the third way to declare functions.  The expression after the
+arrow `=>` is treated like a return statement.
 
     const subtract_two_numbers = (a, b) => a - b
 
@@ -242,7 +242,7 @@ but will not cause the `base` module to be reloaded.
 
     import base
 
-    base.print("Hello, World!)
+    base.print("Hello, World!")
 
 You can explicitly import individual symbols, rather than the entire module:
 
@@ -253,6 +253,10 @@ You can explicitly import individual symbols, rather than the entire module:
         print(i)
     }
     # Prints: 0 1 2 3 4 (in consecutive lines)
+
+Or alternatively:
+
+    import base: print, range
 
 
 Conversion
@@ -328,6 +332,9 @@ The output from the generator can be turned into an array, like so:
 
     # Equivalent to:
     const equivalent = [ 1, 3, 5, 7 ]
+
+    # Or by expanding the elements from the generator:
+    const expanded = [ odd_numbers(7) ... ]
 
 
 Resource management
