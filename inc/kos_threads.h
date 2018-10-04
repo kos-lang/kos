@@ -268,7 +268,8 @@ static inline int _KOS_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *n
 #elif defined(__GNUC__) && \
       defined(__GCC_ATOMIC_INT_LOCK_FREE) && (__GCC_ATOMIC_INT_LOCK_FREE > 1) && \
       defined(__GCC_ATOMIC_POINTER_LOCK_FREE) && (__GCC_ATOMIC_POINTER_LOCK_FREE > 1) && \
-      defined(__GCC_ATOMIC_TEST_AND_SET_TRUEVAL) && (__GCC_ATOMIC_TEST_AND_SET_TRUEVAL > 0)
+      defined(__GCC_ATOMIC_TEST_AND_SET_TRUEVAL) && (__GCC_ATOMIC_TEST_AND_SET_TRUEVAL > 0) && \
+      defined(__ATOMIC_SEQ_CST)
 
 #define KOS_ATOMIC(type) type volatile
 
