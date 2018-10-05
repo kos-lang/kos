@@ -75,7 +75,7 @@ do {
 
 do {
     const str = "\xff"
-    assert (()=>"\X{0FF}")() == str
+    assert (()=>"\x{0FF}")() == str
 }
 
 do {
