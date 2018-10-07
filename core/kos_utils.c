@@ -58,7 +58,11 @@ static const char str_err_out_of_memory[]       = "out of memory";
 static const char str_err_unsup_operand_types[] = "unsupported operand types";
 static const char str_false[]                   = "false";
 static const char str_function_open[]           = "<function ";
-static const char str_object[]                  = "<object>";
+static const char str_object_close[]            = " }";
+static const char str_object_colon[]            = ": ";
+static const char str_object_open[]             = "{";
+static const char str_object_sep[]              = ", ";
+static const char str_space[]                   = " ";
 static const char str_true[]                    = "true";
 static const char str_value[]                   = "value";
 static const char str_void[]                    = "void";
@@ -215,14 +219,13 @@ void KOS_print_exception(KOS_CONTEXT ctx)
 
             KOS_clear_exception(ctx);
 
-            /* TODO when KOS_object_to_string implements object printing,
-             *      then first try KOS_object_to_string and if that doesn't help,
-             *      then fall back to _get_exception_string. */
-            str = _get_exception_string(ctx, exception);
+            str = KOS_object_to_string(ctx, exception);
 
             if (IS_BAD_PTR(str)) {
 
-                str = KOS_object_to_string(ctx, exception);
+                KOS_clear_exception(ctx);
+
+                str = _get_exception_string(ctx, exception);
 
                 KOS_clear_exception(ctx);
             }
@@ -717,6 +720,77 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
+static int _vector_append_object(KOS_CONTEXT         ctx,
+                                 struct _KOS_VECTOR *cstr_vec,
+                                 KOS_OBJ_ID          obj_id,
+                                 enum _KOS_QUOTE_STR quote_str)
+{
+    int        error     = KOS_SUCCESS;
+    KOS_OBJ_ID walk_id;
+    uint32_t   num_elems = 0;
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
+
+    walk_id = KOS_new_object_walk(ctx, obj_id, KOS_SHALLOW);
+    TRY_OBJID(walk_id);
+
+    TRY(_vector_append_cstr(ctx, cstr_vec, str_object_open, sizeof(str_object_open)-1));
+
+    for (;; ++num_elems) {
+
+        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(ctx, walk_id);
+
+        if (IS_BAD_PTR(elem.key)) {
+            if (KOS_is_exception_pending(ctx))
+                error = KOS_ERROR_EXCEPTION;
+            break;
+        }
+
+        assert( ! IS_BAD_PTR(elem.value));
+        assert(GET_OBJ_TYPE(elem.key) == OBJ_STRING);
+
+        if (num_elems)
+            TRY(_vector_append_cstr(ctx, cstr_vec, str_object_sep, sizeof(str_object_sep)-1));
+        else
+            TRY(_vector_append_cstr(ctx, cstr_vec, str_space, sizeof(str_space)-1));
+
+        TRY(_vector_append_str(ctx, cstr_vec, elem.key, quote_str));
+
+        TRY(_vector_append_cstr(ctx, cstr_vec, str_object_colon, sizeof(str_object_colon)-1));
+
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, elem.value, quote_str, 0, cstr_vec));
+    }
+
+    TRY(_vector_append_cstr(ctx, cstr_vec, str_object_close, sizeof(str_object_close)-1));
+
+_error:
+    return error;
+}
+
+static KOS_OBJ_ID _object_to_str(KOS_CONTEXT         ctx,
+                                 KOS_OBJ_ID          obj_id,
+                                 enum _KOS_QUOTE_STR quote_str)
+{
+    int                error = KOS_SUCCESS;
+    KOS_OBJ_ID         ret   = KOS_BADPTR;
+    struct _KOS_VECTOR cstr_vec;
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
+
+    _KOS_vector_init(&cstr_vec);
+
+    TRY(_vector_append_object(ctx, &cstr_vec, obj_id, quote_str));
+
+    assert(cstr_vec.size > 1);
+
+    ret = KOS_new_string(ctx, cstr_vec.buffer, (unsigned)cstr_vec.size - 1U);
+
+_error:
+    _KOS_vector_destroy(&cstr_vec);
+
+    return error ? KOS_BADPTR : ret;
+}
+
 static int _vector_append_function(KOS_CONTEXT         ctx,
                                    struct _KOS_VECTOR *cstr_vec,
                                    KOS_OBJ_ID          obj_id)
@@ -875,11 +949,10 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT         ctx,
             break;
 
         case OBJ_OBJECT:
-            /* TODO */
             if (cstr_vec)
-                error = _vector_append_cstr(ctx, cstr_vec, "<object>", 8);
+                error = _vector_append_object(ctx, cstr_vec, obj_id, quote_str);
             else
-                *str = KOS_instance_get_cstring(ctx, str_object);
+                *str = _object_to_str(ctx, obj_id, quote_str);
             break;
 
         case OBJ_FUNCTION:
