@@ -121,7 +121,7 @@ void *_KOS_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size)
 
 void _KOS_vector_init(struct _KOS_VECTOR *vector)
 {
-    vector->buffer   = (char *)&vector->_local_buffer;
+    vector->buffer   = (char *)(void *)&vector->_local_buffer;
     vector->size     = 0;
     vector->capacity = sizeof(vector->_local_buffer);
 }
