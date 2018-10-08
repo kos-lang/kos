@@ -53,7 +53,6 @@ static const char *const node_types[] = {
     "operator",
     "yield",
     "async",
-    "stream",
     "assignment",
     "multi_assignment",
     "interpolated_string",

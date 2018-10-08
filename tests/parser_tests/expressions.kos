@@ -629,9 +629,9 @@ a -> b;
 @ 0
 
 (scope 1 1
-    (stream 1 3 ->
-        (identifier 1 1 a)
+    (invocation 1 3 ->
         (identifier 1 6 b)
+        (identifier 1 1 a)
     )
 )
 
@@ -641,25 +641,27 @@ a -> b || c -> d ? e : f -> g(h -> i);
 @ 0
 
 (scope 1 1
-    (stream 1 26 ->
-        (stream 1 13 ->
-            (stream 1 3 ->
-                (identifier 1 1 a)
-                (operator 1 8 ||
-                    (identifier 1 6 b)
-                    (identifier 1 11 c)
-            ))
+    (invocation 1 26 ->
+        (invocation 1 30 paren_open
+            (identifier 1 29 g)
+            (invocation 1 33 ->
+                (identifier 1 36 i)
+                (identifier 1 31 h)
+        ))
+        (invocation 1 13 ->
             (operator 1 18 ?:
                 (identifier 1 16 d)
                 (identifier 1 20 e)
                 (identifier 1 24 f)
+            )
+            (invocation 1 3 ->
+                (operator 1 8 ||
+                    (identifier 1 6 b)
+                    (identifier 1 11 c)
+                )
+                (identifier 1 1 a)
         ))
-        (invocation 1 30 paren_open
-            (identifier 1 29 g)
-            (stream 1 33 ->
-                (identifier 1 31 h)
-                (identifier 1 36 i)
-))))
+))
 
 @------------------------------------------------------------------------------
 a = b -> c ? d -> e : f;
@@ -770,11 +772,11 @@ async x -> y -> z
 
 (scope 1 1
     (async 2 1 async
-        (stream 2 14 ->
-            (stream 2 9 ->
-                (identifier 2 7 x)
-                (identifier 2 12 y))
-            (identifier 2 17 z)))
+        (invocation 2 14 ->
+            (identifier 2 17 z)
+            (invocation 2 9 ->
+                (identifier 2 12 y)
+                (identifier 2 7 x))))
 )
 
 @------------------------------------------------------------------------------

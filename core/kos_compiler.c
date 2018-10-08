@@ -46,7 +46,6 @@ static const char str_err_no_such_module_variable[]   = "no such global in modul
 static const char str_err_operand_not_numeric[]       = "operand is not a numeric constant";
 static const char str_err_operand_not_string[]        = "operand is not a string";
 static const char str_err_return_in_generator[]       = "complex return statement in a generator function, return value always ignored";
-static const char str_err_stream_dest_not_func[]      = "sink argument of the stream operator is not a function";
 static const char str_err_too_many_registers[]        = "register capacity exceeded";
 
 enum _KOS_BOOL {
@@ -1552,80 +1551,6 @@ _error:
     return error;
 }
 
-static int _validate_stream_rhs(struct _KOS_COMP_UNIT      *program,
-                                const struct _KOS_AST_NODE *arrow_node,
-                                const struct _KOS_AST_NODE *node)
-{
-    int error = KOS_SUCCESS;
-
-    const struct _KOS_AST_NODE *const_node = _KOS_get_const(program, node);
-
-    if (const_node)
-        switch (const_node->type) {
-
-            case NT_NUMERIC_LITERAL:
-                /* fall through */
-            case NT_STRING_LITERAL:
-                /* fall through */
-            case NT_LINE_LITERAL:
-                /* fall through */
-            case NT_BOOL_LITERAL:
-                /* fall through */
-            case NT_VOID_LITERAL:
-                /* fall through */
-            case NT_ARRAY_LITERAL:
-                /* fall through */
-            case NT_OBJECT_LITERAL:
-                program->error_token = &arrow_node->token;
-                program->error_str   = str_err_stream_dest_not_func;
-                RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
-
-            default:
-                break;
-        }
-
-_error:
-    return error;
-}
-
-static int _stream(struct _KOS_COMP_UNIT      *program,
-                   const struct _KOS_AST_NODE *node,
-                   struct _KOS_REG           **reg)
-{
-    int                         error    = KOS_SUCCESS;
-    struct _KOS_REG            *src_reg  = 0;
-    struct _KOS_REG            *func_reg = 0;
-    const struct _KOS_AST_NODE *arrow_node;
-
-    arrow_node = node;
-
-    node = node->children;
-    assert(node);
-
-    TRY(_visit_node(program, node, &src_reg));
-
-    node = node->next;
-    assert(node);
-    assert( ! node->next);
-
-    TRY(_validate_stream_rhs(program, arrow_node, node));
-
-    /* TODO relay 'this' if refinement */
-
-    TRY(_visit_node(program, node, &func_reg));
-
-    TRY(_gen_dest_reg(program, reg, src_reg));
-
-    TRY(_gen_instr4(program, INSTR_CALL_FUN, (*reg)->reg, func_reg->reg, src_reg->reg, 1));
-
-    if (*reg != src_reg)
-        _free_reg(program, src_reg);
-    _free_reg(program, func_reg);
-
-_error:
-    return error;
-}
-
 static int _throw(struct _KOS_COMP_UNIT      *program,
                   const struct _KOS_AST_NODE *node)
 {
@@ -3110,7 +3035,7 @@ static int _async(struct _KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
     assert( ! node->next);
-    assert(node->type == NT_INVOCATION || node->type == NT_STREAM);
+    assert(node->type == NT_INVOCATION);
 
     TRY(_gen_reg_range(program, &argn[0], 2));
 
@@ -3119,39 +3044,14 @@ static int _async(struct _KOS_COMP_UNIT      *program,
     if (*reg)
         fun = *reg;
 
-    if (node->type == NT_INVOCATION) {
+    node = node->children;
+    assert(node);
 
-        node = node->children;
-        assert(node);
+    TRY(_maybe_refinement(program, node, &fun, &obj));
 
-        TRY(_maybe_refinement(program, node, &fun, &obj));
+    node = node->next;
 
-        node = node->next;
-
-        TRY(_gen_array(program, node, &argn[1]));
-    }
-    else {
-        const struct _KOS_AST_NODE *arrow_node = node;
-
-        assert(node->type == NT_STREAM);
-
-        node = node->children;
-        assert(node);
-
-        TRY(_visit_node(program, node, &argn[0]));
-
-        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, argn[1]->reg, 1));
-
-        TRY(_gen_instr3(program, INSTR_SET_ELEM, argn[1]->reg, 0, argn[0]->reg));
-
-        node = node->next;
-        assert(node);
-        assert( ! node->next);
-
-        TRY(_validate_stream_rhs(program, arrow_node, node));
-
-        TRY(_maybe_refinement(program, node, &fun, &obj));
-    }
+    TRY(_gen_array(program, node, &argn[1]));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_async;
@@ -5045,9 +4945,6 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             break;
         case NT_ASYNC:
             error = _async(program, node, reg);
-            break;
-        case NT_STREAM:
-            error = _stream(program, node, reg);
             break;
         case NT_THROW:
             error = _throw(program, node);

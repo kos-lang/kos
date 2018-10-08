@@ -1350,19 +1350,18 @@ static int _stream_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     while (parser->token.op == OT_ARROW) {
 
-        struct _KOS_AST_NODE *node = *ret;
+        struct _KOS_AST_NODE *arg_node = *ret;
+        struct _KOS_AST_NODE *fun_node = 0;
 
         TRY(_increase_ast_depth(parser));
         ++depth;
 
-        TRY(_new_node(parser, ret, NT_STREAM));
+        TRY(_new_node(parser, ret, NT_INVOCATION));
 
-        _ast_push(*ret, node);
-        node = 0;
+        TRY(_conditional_expr(parser, &fun_node));
 
-        TRY(_conditional_expr(parser, &node));
-
-        _ast_push(*ret, node);
+        _ast_push(*ret, fun_node);
+        _ast_push(*ret, arg_node);
 
         TRY(_next_token(parser));
     }
@@ -1444,7 +1443,7 @@ static int _async_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
         TRY(_stream_expr(parser, &node));
 
-        if (node->type != NT_INVOCATION && node->type != NT_STREAM) {
+        if (node->type != NT_INVOCATION) {
             parser->token     = saved_token;
             parser->error_str = str_err_expected_invocation;
             error = KOS_ERROR_PARSE_FAILED;

@@ -1706,8 +1706,6 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             /* fall through */
         case NT_ASYNC:
             /* fall through */
-        case NT_STREAM:
-            /* fall through */
         case NT_ELLIPSIS:
             /* fall through */
         case NT_PROPERTY:
