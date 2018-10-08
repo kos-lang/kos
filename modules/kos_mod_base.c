@@ -687,17 +687,25 @@ _error:
  *
  * If no arguments are provided, returns an empty string.
  *
+ * `stringify()` is implicitly invoked during string interpolation, so
+ * the result of `stringify()` is the same as the result of string
+ * interpolation.
+ *
  * String arguments are treated literally without any conversion.
  *
  * Integer, float, boolean and void arguments are converted to their
  * string representation, which is the same as in source code.
  *
- * Arrays and objects are converted to a human-readable representation
- * similar to their apperance in source code, except all the conversion
- * rules apply in the same way to their elements, so for example
- * strings are not double-quoted.
+ * Array and object arguments are converted to a human-readable representation
+ * similar to their apperance in source code.  Strings inside arrays
+ * and objects are double-quoted.
  *
- * TODO describe buffer, function
+ * Buffer arguments are converted to the form of `<xx xx ...>`, where `xx` are
+ * two hexadecimal digits representing every byte in the buffer.
+ *
+ * Function arguments are converted to the form of `<function nnn @ xxx>`,
+ * where `nnn` is the function name and `xxx` is the bytecode offset of the
+ * function's entry point.
  *
  * Example:
  *

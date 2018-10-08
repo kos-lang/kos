@@ -58,11 +58,11 @@ static const char str_err_out_of_memory[]       = "out of memory";
 static const char str_err_unsup_operand_types[] = "unsupported operand types";
 static const char str_false[]                   = "false";
 static const char str_function_open[]           = "<function ";
-static const char str_object_close[]            = " }";
+static const char str_object_close[]            = "}";
 static const char str_object_colon[]            = ": ";
 static const char str_object_open[]             = "{";
 static const char str_object_sep[]              = ", ";
-static const char str_space[]                   = " ";
+static const char str_quote[]                   = "\"";
 static const char str_true[]                    = "true";
 static const char str_value[]                   = "value";
 static const char str_void[]                    = "void";
@@ -566,8 +566,7 @@ static int _make_quoted_str(KOS_CONTEXT         ctx,
 
 static int _vector_append_array(KOS_CONTEXT         ctx,
                                 struct _KOS_VECTOR *cstr_vec,
-                                KOS_OBJ_ID          obj_id,
-                                enum _KOS_QUOTE_STR quote_str)
+                                KOS_OBJ_ID          obj_id)
 {
     int      error;
     uint32_t length;
@@ -584,7 +583,7 @@ static int _vector_append_array(KOS_CONTEXT         ctx,
         KOS_OBJ_ID val_id = KOS_array_read(ctx, obj_id, i);
         TRY_OBJID(val_id);
 
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, val_id, quote_str, 0, cstr_vec));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, val_id, KOS_QUOTE_STRINGS, 0, cstr_vec));
 
         ++i;
 
@@ -598,13 +597,13 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _array_to_str(KOS_CONTEXT         ctx,
-                                KOS_OBJ_ID          obj_id,
-                                enum _KOS_QUOTE_STR quote_str)
+static KOS_OBJ_ID _array_to_str(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  obj_id)
 {
     int        error;
     uint32_t   length;
     uint32_t   i;
+    uint32_t   i_out;
     KOS_OBJ_ID ret       = KOS_BADPTR;
     KOS_OBJ_ID aux_array_id;
 
@@ -615,32 +614,52 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT         ctx,
     if (length == 0)
         return KOS_instance_get_cstring(ctx, str_empty_array);
 
-    aux_array_id = KOS_new_array(ctx, length * 2 + 1);
+    aux_array_id = KOS_new_array(ctx, length * 4 + 1);
     TRY_OBJID(aux_array_id);
 
     TRY(KOS_array_write(ctx, aux_array_id, 0,
                 KOS_instance_get_cstring(ctx, str_array_open)));
 
-    for (i = 0; i < length; ) {
+    i_out = 1;
+
+    for (i = 0; i < length; ++i) {
 
         KOS_OBJ_ID val_id = KOS_array_read(ctx, obj_id, i);
         TRY_OBJID(val_id);
 
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, val_id, quote_str, &val_id, 0));
+        if (GET_OBJ_TYPE(val_id) == OBJ_STRING) {
 
-        TRY(KOS_array_write(ctx, aux_array_id, 1 + i * 2, val_id));
+            TRY(KOS_array_write(ctx, aux_array_id, i_out,
+                        KOS_instance_get_cstring(ctx, str_quote)));
 
-        ++i;
+            TRY(KOS_array_write(ctx, aux_array_id, i_out + 1, val_id));
 
-        if (i < length)
-            TRY(KOS_array_write(ctx, aux_array_id, i * 2,
+            TRY(KOS_array_write(ctx, aux_array_id, i_out + 2,
+                        KOS_instance_get_cstring(ctx, str_quote)));
+
+            i_out += 3;
+        }
+        else {
+
+            TRY(KOS_object_to_string_or_cstr_vec(ctx, val_id, KOS_QUOTE_STRINGS, &val_id, 0));
+
+            TRY(KOS_array_write(ctx, aux_array_id, i_out, val_id));
+
+            ++i_out;
+        }
+
+        if (i + 1 < length) {
+            TRY(KOS_array_write(ctx, aux_array_id, i_out,
                         KOS_instance_get_cstring(ctx, str_array_comma)));
+            ++i_out;
+        }
     }
 
-    TRY(KOS_array_write(ctx, aux_array_id, length * 2,
+    TRY(KOS_array_write(ctx, aux_array_id, i_out,
                 KOS_instance_get_cstring(ctx, str_array_close)));
+    ++i_out;
 
-    ret = KOS_string_add_many(ctx, _KOS_get_array_buffer(OBJPTR(ARRAY, aux_array_id)), length * 2 + 1);
+    ret = KOS_string_add_many(ctx, _KOS_get_array_buffer(OBJPTR(ARRAY, aux_array_id)), i_out);
 
 _error:
     return error ? KOS_BADPTR : ret;
@@ -722,8 +741,7 @@ _error:
 
 static int _vector_append_object(KOS_CONTEXT         ctx,
                                  struct _KOS_VECTOR *cstr_vec,
-                                 KOS_OBJ_ID          obj_id,
-                                 enum _KOS_QUOTE_STR quote_str)
+                                 KOS_OBJ_ID          obj_id)
 {
     int        error     = KOS_SUCCESS;
     KOS_OBJ_ID walk_id;
@@ -751,14 +769,12 @@ static int _vector_append_object(KOS_CONTEXT         ctx,
 
         if (num_elems)
             TRY(_vector_append_cstr(ctx, cstr_vec, str_object_sep, sizeof(str_object_sep)-1));
-        else
-            TRY(_vector_append_cstr(ctx, cstr_vec, str_space, sizeof(str_space)-1));
 
-        TRY(_vector_append_str(ctx, cstr_vec, elem.key, quote_str));
+        TRY(_vector_append_str(ctx, cstr_vec, elem.key, KOS_QUOTE_STRINGS));
 
         TRY(_vector_append_cstr(ctx, cstr_vec, str_object_colon, sizeof(str_object_colon)-1));
 
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, elem.value, quote_str, 0, cstr_vec));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, elem.value, KOS_QUOTE_STRINGS, 0, cstr_vec));
     }
 
     TRY(_vector_append_cstr(ctx, cstr_vec, str_object_close, sizeof(str_object_close)-1));
@@ -767,9 +783,8 @@ _error:
     return error;
 }
 
-static KOS_OBJ_ID _object_to_str(KOS_CONTEXT         ctx,
-                                 KOS_OBJ_ID          obj_id,
-                                 enum _KOS_QUOTE_STR quote_str)
+static KOS_OBJ_ID _object_to_str(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  obj_id)
 {
     int                error = KOS_SUCCESS;
     KOS_OBJ_ID         ret   = KOS_BADPTR;
@@ -779,7 +794,7 @@ static KOS_OBJ_ID _object_to_str(KOS_CONTEXT         ctx,
 
     _KOS_vector_init(&cstr_vec);
 
-    TRY(_vector_append_object(ctx, &cstr_vec, obj_id, quote_str));
+    TRY(_vector_append_object(ctx, &cstr_vec, obj_id));
 
     assert(cstr_vec.size > 1);
 
@@ -936,9 +951,9 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT         ctx,
 
         case OBJ_ARRAY:
             if (cstr_vec)
-                error = _vector_append_array(ctx, cstr_vec, obj_id, quote_str);
+                error = _vector_append_array(ctx, cstr_vec, obj_id);
             else
-                *str = _array_to_str(ctx, obj_id, quote_str);
+                *str = _array_to_str(ctx, obj_id);
             break;
 
         case OBJ_BUFFER:
@@ -950,9 +965,9 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT         ctx,
 
         case OBJ_OBJECT:
             if (cstr_vec)
-                error = _vector_append_object(ctx, cstr_vec, obj_id, quote_str);
+                error = _vector_append_object(ctx, cstr_vec, obj_id);
             else
-                *str = _object_to_str(ctx, obj_id, quote_str);
+                *str = _object_to_str(ctx, obj_id);
             break;
 
         case OBJ_FUNCTION:

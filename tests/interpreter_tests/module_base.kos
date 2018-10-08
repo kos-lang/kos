@@ -2185,7 +2185,7 @@ do {
     assert base.stringify([])            == "[]"
     assert base.stringify([1])           == "[1]"
     assert base.stringify([2, 33, 444])  == "[2, 33, 444]"
-    assert base.stringify(["true",true]) == "[true, true]"
+    assert base.stringify(["true",true]) == "[\"true\", true]"
 
     assert base.stringify(false, 2, "o") == "false2o"
 }
