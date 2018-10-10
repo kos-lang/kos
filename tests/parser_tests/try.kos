@@ -13,7 +13,7 @@ do {
 @ 0
 
 (scope 1 1
-    (try 1 1 try
+    (try-catch 1 1 try
         (scope 1 5 {
             (if 2 5 if
                 (operator 2 8 !
@@ -33,7 +33,6 @@ do {
                         (identifier 7 11 c)
                         (string 7 15 "d")
         ))))
-        (empty 9 1 do)
     )
     (scope 9 4 {
         (invocation 10 6 paren_open
@@ -48,23 +47,21 @@ try {} catch (var b) { throw b; }
 @ 0
 
 (scope 1 1
-    (try 1 1 try
+    (try-catch 1 1 try
         (scope 1 5 {)
         (catch 1 8 catch
             (const 1 15 const (identifier 1 21 a))
             (scope 1 24 {
                 (throw 1 26 throw (identifier 1 32 a))
         ))
-        (empty 2 1 try)
     )
-    (try 2 1 try
+    (try-catch 2 1 try
         (scope 2 5 {)
         (catch 2 8 catch
             (var 2 15 var (identifier 2 19 b))
             (scope 2 22 {
                 (throw 2 24 throw (identifier 2 30 b))
         ))
-        (empty 4 1)
     )
 )
 

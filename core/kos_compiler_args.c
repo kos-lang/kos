@@ -415,7 +415,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *finally_node;
+    const enum _KOS_NODE_TYPE node_type = node->type;
 
     _push_scope(program, node);
 
@@ -425,11 +425,14 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
 
     node = node->next;
     assert(node);
-    if (node->type == NT_CATCH) {
+    assert( ! node->next);
+    if (node_type == NT_TRY_CATCH) {
 
         struct _KOS_AST_NODE *var_node = node->children;
         struct _KOS_AST_NODE *scope_node;
         struct _KOS_VAR      *var;
+
+        assert(node->type == NT_CATCH);
 
         assert(var_node);
         assert(var_node->type == NT_VAR || var_node->type == NT_CONST);
@@ -456,14 +459,8 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
 
         var->is_active = VAR_INACTIVE;
     }
-    else {
-        assert(node->type == NT_EMPTY);
-    }
-
-    finally_node = node->next;
-    assert(finally_node);
-    assert( ! finally_node->next);
-    TRY(_visit_node(program, finally_node));
+    else
+        TRY(_visit_node(program, node));
 
     _pop_scope(program);
 
@@ -520,7 +517,9 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
             error = _assignment(program, node);
             break;
 
-        case NT_TRY:
+        case NT_TRY_CATCH:
+            /* fall through */
+        case NT_TRY_DEFER:
             error = _try_stmt(program, node);
             break;
 

@@ -557,7 +557,8 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
     int t2    = TERM_NONE;
     int t3;
 
-    struct _KOS_AST_NODE *finally_node;
+    const enum _KOS_NODE_TYPE node_type    = node->type;
+    struct _KOS_AST_NODE     *finally_node = 0;
 
     _push_scope(program, node);
 
@@ -567,12 +568,16 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
 
     node = node->next;
     assert(node);
-    if (node->type == NT_CATCH) {
+    assert( ! node->next);
+
+    if (node_type == NT_TRY_CATCH) {
 
         struct _KOS_AST_NODE *var_node = node->children;
         struct _KOS_AST_NODE *scope_node;
         struct _KOS_VAR      *var;
         int                   is_local;
+
+        assert(node->type == NT_CATCH);
 
         assert(var_node);
         assert(var_node->type == NT_VAR || var_node->type == NT_CONST);
@@ -600,17 +605,15 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
         var->is_active = VAR_INACTIVE;
     }
     else {
-        assert(node->type == NT_EMPTY);
-    }
 
-    finally_node = node->next;
-    assert(finally_node);
-    assert( ! finally_node->next);
-    TRY(_visit_node(program, finally_node, &t3));
+        finally_node = node;
+
+        TRY(_visit_node(program, finally_node, &t3));
+    }
 
     *is_terminal = TERM_NONE;
 
-    if (finally_node->type == NT_EMPTY || ! t3) {
+    if ( ! finally_node || finally_node->type == NT_EMPTY || ! t3) {
         if (t1 && t2)
             *is_terminal = (t1 & ~TERM_THROW) | t2;
     }
@@ -1622,7 +1625,9 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
         case NT_FOR_IN:
             error = _for_in_stmt(program, node);
             break;
-        case NT_TRY:
+        case NT_TRY_CATCH:
+            /* fall through */
+        case NT_TRY_DEFER:
             error = _try_stmt(program, node, is_terminal);
             break;
         case NT_SWITCH:

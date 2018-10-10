@@ -2074,7 +2074,7 @@ static int _try_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     struct _KOS_AST_NODE *node = 0;
 
-    TRY(_new_node(parser, ret, NT_TRY));
+    TRY(_new_node(parser, ret, NT_TRY_CATCH));
 
     TRY(_compound_stmt(parser, &node));
 
@@ -2082,12 +2082,6 @@ static int _try_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     node = 0;
 
     TRY(_next_token(parser));
-
-    if (parser->token.keyword != KW_CATCH) {
-        parser->error_str = str_err_expected_catch;
-        error = KOS_ERROR_PARSE_FAILED;
-        goto _error;
-    }
 
     if (parser->token.keyword == KW_CATCH) {
 
@@ -2132,11 +2126,10 @@ static int _try_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
         TRY(_next_token(parser));
     }
     else {
-
-        TRY(_push_node(parser, *ret, NT_EMPTY, 0));
+        parser->error_str = str_err_expected_catch;
+        error = KOS_ERROR_PARSE_FAILED;
+        goto _error;
     }
-
-    TRY(_push_node(parser, *ret, NT_EMPTY, 0));
 
     parser->unget = 1;
 
@@ -2152,12 +2145,9 @@ static int _defer_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     struct _KOS_AST_NODE *finally_node = 0;
 
     /* defer is implemented as try..finally */
-    TRY(_new_node(parser, ret, NT_TRY));
+    TRY(_new_node(parser, ret, NT_TRY_DEFER));
 
     TRY(_push_node(parser, *ret, NT_SCOPE, &try_node));
-
-    /* empty catch node */
-    TRY(_push_node(parser, *ret, NT_EMPTY, 0));
 
     TRY(_compound_stmt(parser, &finally_node));
 
@@ -2365,7 +2355,7 @@ static int _with_stmt_continued(struct _KOS_PARSER   *parser,
 
     TRY(_next_token(parser));
 
-    TRY(_push_node(parser, parent_node, NT_TRY, &try_node));
+    TRY(_push_node(parser, parent_node, NT_TRY_DEFER, &try_node));
 
     if (parser->token.sep == ST_COMMA) {
 
@@ -2400,8 +2390,6 @@ static int _with_stmt_continued(struct _KOS_PARSER   *parser,
 
         _ast_push(try_node, scope_node);
     }
-
-    TRY(_push_node(parser, try_node, NT_EMPTY, 0));
 
     TRY(_gen_release(parser, try_node, node->children));
 

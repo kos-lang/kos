@@ -916,7 +916,9 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
                 _KOS_activate_new_vars(program, node->children);
             break;
 
-        case NT_TRY:
+        case NT_TRY_CATCH:
+            /* fall through */
+        case NT_TRY_DEFER:
             /* fall through */
         case NT_FOR_IN: /* Has its own scope for the iterator variable */
             /* fall through */

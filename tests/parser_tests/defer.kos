@@ -28,23 +28,21 @@ do {
 
 (scope 1 1
     (scope 1 4 {
-        (try 2 5 defer
+        (try-defer 2 5 defer
             (scope 2 5 defer
                 (invocation 3 6 paren_open
                     (identifier 3 5 c)
                 )
-                (try 4 5 defer
+                (try-defer 4 5 defer
                     (scope 4 5 defer
                         (scope 5 11 {
                             (invocation 5 14 paren_open
                                 (identifier 5 13 e)
                     )))
-                    (empty 4 5 defer)
                     (scope 4 11 {
                         (invocation 4 14 paren_open
                             (identifier 4 13 d)
             ))))
-            (empty 2 5 defer)
             (scope 2 11 {
                 (invocation 2 14 paren_open
                     (identifier 2 13 a)
@@ -63,16 +61,14 @@ return
 @ 0
 
 (scope 1 1
-    (try 1 1 defer
+    (try-defer 1 1 defer
         (scope 1 1 defer
             (return 5 1 return))
-        (empty 1 1 defer)
         (scope 1 7 {
-            (try 2 5 defer
+            (try-defer 2 5 defer
                 (scope 2 5 defer
                     (scope 3 8 {)
                 )
-                (empty 2 5 defer)
                 (scope 2 11 {))))
 )
 

@@ -387,12 +387,11 @@ switch x {
         (case 2 5 case
             (number 2 10 1)
             (scope 2 11 :
-                (try 3 9 defer
+                (try-defer 3 9 defer
                     (scope 3 9 defer
                         (invocation 4 10 paren_open
                             (identifier 4 9 b)
                     ))
-                    (empty 3 9 defer)
                     (scope 3 15 {
                         (invocation 3 18 paren_open
                             (identifier 3 17 a)
@@ -400,12 +399,11 @@ switch x {
         (case 6 5 case
             (number 6 10 2)
             (scope 6 11 :
-                (try 7 9 defer
+                (try-defer 7 9 defer
                     (scope 7 9 defer
                         (invocation 8 10 paren_open
                             (identifier 8 9 d)
                     ))
-                    (empty 7 9 defer)
                     (scope 7 15 {
                         (invocation 7 18 paren_open
                             (identifier 7 17 c)
@@ -413,12 +411,11 @@ switch x {
         (default 10 5 default
             (empty 10 12 :)
             (scope 10 12 :
-                (try 11 9 defer
+                (try-defer 11 9 defer
                     (scope 11 9 defer
                         (invocation 12 10 paren_open
                             (identifier 12 9 f)
                     ))
-                    (empty 11 9 defer)
                     (scope 11 15 {
                         (invocation 11 18 paren_open
                             (identifier 11 17 e)

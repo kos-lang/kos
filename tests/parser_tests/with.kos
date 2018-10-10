@@ -21,9 +21,8 @@ with a { }
                         (identifier 1 6 1:6)
                         (string 1 6 acquire)
         ))))
-        (try 1 8 {
+        (try-defer 1 8 {
             (scope 1 8 {)
-            (empty 1 10 })
             (scope 1 10 }
                 (invocation 1 10 }
                     (refinement 1 10 }
@@ -56,12 +55,11 @@ with const a = b { a(); }
                         (string 1 12 acquire)
             )))
         )
-        (try 1 18 {
+        (try-defer 1 18 {
             (scope 1 18 {
                 (invocation 1 21 paren_open
                     (identifier 1 20 a)
             ))
-            (empty 1 25 })
             (scope 1 25 }
                 (invocation 1 25 }
                     (refinement 1 25 }
@@ -104,9 +102,8 @@ do {
                             (identifier 4 10 4:10)
                             (string 4 10 acquire)
             ))))
-            (try 4 15 {
+            (try-defer 4 15 {
                 (scope 4 15 {)
-                (empty 4 17 })
                 (scope 4 17 }
                     (invocation 4 17 }
                         (refinement 4 17 }
@@ -145,7 +142,7 @@ with a + b,
                         (identifier 1 6 1:6)
                         (string 1 6 acquire)
         ))))
-        (try 1 11 ,
+        (try-defer 1 11 ,
             (scope 2 6 const
                 (assignment 2 14 =
                     (const 2 6 const
@@ -164,7 +161,7 @@ with a + b,
                                 (identifier 2 12 c)
                                 (string 2 12 acquire)
                 ))))
-                (try 2 17 ,
+                (try-defer 2 17 ,
                     (scope 3 6 e
                         (assignment 3 6 e
                             (const 3 6 e
@@ -183,7 +180,7 @@ with a + b,
                                         (identifier 3 6 3:6)
                                         (string 3 6 acquire)
                         ))))
-                        (try 3 7 ,
+                        (try-defer 3 7 ,
                             (scope 4 6 const
                                 (assignment 4 14 =
                                     (const 4 6 const
@@ -202,33 +199,29 @@ with a + b,
                                                 (identifier 4 12 f)
                                                 (string 4 12 acquire)
                                 ))))
-                                (try 4 21 {
+                                (try-defer 4 21 {
                                     (scope 4 21 {
                                         (invocation 5 6 paren_open
                                             (identifier 5 5 a)
                                     ))
-                                    (empty 6 1 })
                                     (scope 6 1 }
                                         (invocation 6 1 }
                                             (refinement 6 1 }
                                                 (identifier 4 12 f)
                                                 (string 4 12 release)
                             )))))
-                            (empty 6 1 })
                             (scope 6 1 }
                                 (invocation 6 1 }
                                     (refinement 6 1 }
                                         (identifier 3 6 3:6)
                                         (string 3 6 release)
                     )))))
-                    (empty 6 1 })
                     (scope 6 1 }
                         (invocation 6 1 }
                             (refinement 6 1 }
                                 (identifier 2 12 c)
                                 (string 2 12 release)
             )))))
-            (empty 6 1 })
             (scope 6 1 }
                 (invocation 6 1 }
                     (refinement 6 1 }

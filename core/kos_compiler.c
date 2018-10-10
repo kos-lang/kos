@@ -2317,9 +2317,10 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     struct _KOS_VAR            *except_var     = 0;
     struct _KOS_RETURN_OFFS    *return_offs    = program->cur_frame->return_offs;
     struct _KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
+    const enum _KOS_NODE_TYPE   node_type      = node->type;
     const struct _KOS_AST_NODE *try_node       = node->children;
-    const struct _KOS_AST_NODE *catch_node;
-    const struct _KOS_AST_NODE *defer_node;
+    const struct _KOS_AST_NODE *catch_node     = 0;
+    const struct _KOS_AST_NODE *defer_node     = 0;
     struct _KOS_SCOPE          *scope;
 
     scope = _push_scope(program, node);
@@ -2327,19 +2328,18 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     program->cur_frame->break_offs = 0;
 
     assert(try_node);
-    catch_node = try_node->next;
-    assert(catch_node);
-    defer_node = catch_node->next;
-    assert(defer_node);
-    assert(!defer_node->next);
+    assert(try_node->next);
+    assert(!try_node->next->next);
+    if (node_type == NT_TRY_CATCH)
+        catch_node = try_node->next;
+    else
+        defer_node = try_node->next;
 
-    assert(catch_node->type == NT_EMPTY || defer_node->type == NT_EMPTY);
-
-    if (catch_node->type == NT_CATCH) {
+    if (catch_node) {
 
         struct _KOS_AST_NODE *variable;
 
-        assert(defer_node->type == NT_EMPTY);
+        assert(catch_node->type == NT_CATCH);
 
         node = catch_node->children;
         assert(node);
@@ -2366,7 +2366,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     }
     else {
 
-        assert(catch_node->type == NT_EMPTY);
+        assert(node_type == NT_TRY_DEFER);
         assert(defer_node->type == NT_SCOPE);
 
         TRY(_gen_reg(program, &except_reg));
@@ -2400,7 +2400,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
     TRY(_restore_parent_scope_catch(program, 1));
 
-    if (catch_node->type == NT_CATCH) {
+    if (catch_node) {
 
         node = node->next;
         assert(node);
@@ -2419,7 +2419,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
     _update_jump_offs(program, jump_end_offs, program->cur_offs);
 
-    if (defer_node->type == NT_SCOPE) {
+    if (defer_node) {
 
         int                     skip_throw_offs;
         struct _KOS_BREAK_OFFS *try_break_offs = program->cur_frame->break_offs;
@@ -4971,7 +4971,9 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
         case NT_SWITCH:
             error = _switch(program, node);
             break;
-        case NT_TRY:
+        case NT_TRY_CATCH:
+            /* fall through */
+        case NT_TRY_DEFER:
             error = _try_stmt(program, node);
             break;
         case NT_REFINEMENT:

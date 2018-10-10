@@ -30,7 +30,8 @@ enum _KOS_NODE_TYPE {
     NT_IMPORT,
     NT_SCOPE,               /* compound statement */
     NT_IF,
-    NT_TRY,
+    NT_TRY_CATCH,
+    NT_TRY_DEFER,
     NT_SWITCH,
     NT_REPEAT,
     NT_FOR,
