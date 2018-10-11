@@ -924,9 +924,11 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             /* fall through */
         case NT_SCOPE:
             /* fall through */
-        case NT_CONTINUE: /* Create fake scope just for catch refs */
+        case NT_CONTINUE:    /* Create fake scope just for catch refs */
             /* fall through */
-        case NT_BREAK:    /* Create fake scope just for catch refs */
+        case NT_BREAK:       /* Create fake scope just for catch refs */
+            /* fall through */
+        case NT_FALLTHROUGH: /* Create fake scope just for catch refs */
             error = _scope(program, node);
             break;
 
@@ -941,8 +943,6 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
         case NT_VOID_LITERAL:
             /* fall through */
         case NT_LINE_LITERAL:
-            /* fall through */
-        case NT_FALLTHROUGH:
             assert( ! node->children);
             error = KOS_SUCCESS;
             break;

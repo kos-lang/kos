@@ -413,7 +413,7 @@ do {
     }
     assert unreachable_try() == 3
 
-    check(unreachable_try, { registers: 3, instructions: 21, size: 79 })
+    check(unreachable_try, { registers: 3, instructions: 19, size: 68 })
 }
 
 #============================================================================#

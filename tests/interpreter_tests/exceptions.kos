@@ -21,6 +21,7 @@
 #
 
 import base.exception
+import base.print # TODO delete
 
 # passing assertions
 do {
@@ -620,4 +621,195 @@ loop {
         o => (o => (o))
     }
     break
+}
+
+# composite try-catch and defer
+do {
+    var value = 0
+
+    try {
+        defer {
+            defer {
+                value = value * 10 + 1
+            }
+            value = value * 10 + 2
+        }
+        throw 3
+    }
+    catch const e {
+        value = value * 10 + e.value
+    }
+
+    assert value == 213
+}
+
+# complex set of defer statements
+do {
+
+    var seq = ""
+
+    fun def(x, y)
+    {
+        seq = ""
+
+        try {
+
+            defer {
+
+                while y < 20 {
+
+                    y += 10
+
+                    switch y {
+
+                        case 10:
+
+                            defer {
+
+                                defer {
+                                    seq += "f"
+
+                                    if x == 11 {
+                                        seq += "(11break)"
+                                        break
+                                    }
+                                    else if x == 12 {
+                                        seq += "(12continue)"
+                                        continue
+                                    }
+                                    else if x == 13 {
+                                        seq += "(13fallthrough)"
+                                        fallthrough
+                                    }
+                                    else if x == 14 {
+                                        seq += "(14return)"
+                                        return 140
+                                    }
+                                    else if x == 15 {
+                                        seq += "(15throw)"
+                                        throw 150
+                                    }
+
+                                    seq += "g"
+                                }
+
+                                seq += "d"
+
+                                if x == 6 {
+                                    seq += "(6break)"
+                                    break
+                                }
+                                else if x == 7 {
+                                    seq += "(7continue)"
+                                    continue
+                                }
+                                else if x == 8 {
+                                    seq += "(8fallthrough)"
+                                    fallthrough
+                                }
+                                else if x == 9 {
+                                    seq += "(9return)"
+                                    return 90
+                                }
+                                else if x == 10 {
+                                    seq += "(10throw)"
+                                    throw 100
+                                }
+
+                                seq += "e"
+                            }
+
+                            seq += "b"
+
+                            if x == 1 {
+                                seq += "(1break)"
+                                break
+                            }
+                            else if x == 2 {
+                                seq += "(2continue)"
+                                continue
+                            }
+                            else if x == 3 {
+                                seq += "(3fallthrough)"
+                                fallthrough
+                            }
+                            else if x == 4 {
+                                seq += "(4return)"
+                                return 40
+                            }
+                            else if x == 5 {
+                                seq += "(5throw)"
+                                throw 50
+                            }
+
+                            seq += "c"
+
+                        default:
+                            seq += "x"
+                    }
+
+                    seq += "y"
+                }
+                seq += "z"
+            }
+
+            seq += "a"
+        }
+        catch const e {
+            seq += "X\(e.value)"
+        }
+
+        return 0
+    }
+
+    assert def(0, 1) == 0
+    assert seq == "axyxyz"
+
+    assert def(0, 0) == 0
+    assert seq == "abcdefgyxyz"
+
+    assert def(1, 0) == 0
+    assert seq == "ab(1break)defgyxyz"
+
+    assert def(2, 0) == 0
+    assert seq == "ab(2continue)defgxyz"
+
+    assert def(3, 0) == 0
+    assert seq == "ab(3fallthrough)defgxyxyz"
+
+    assert def(4, 0) == 40
+    assert seq == "ab(4return)defg"
+
+    assert def(5, 0) == 0
+    assert seq == "ab(5throw)defgX50"
+
+    assert def(6, 0) == 0
+    assert seq == "abcd(6break)fgyxyz"
+
+    assert def(7, 0) == 0
+    assert seq == "abcd(7continue)fgxyz"
+
+    assert def(8, 0) == 0
+    assert seq == "abcd(8fallthrough)fgxyxyz"
+
+    assert def(9, 0) == 90
+    assert seq == "abcd(9return)fg"
+
+    assert def(10, 0) == 0
+    assert seq == "abcd(10throw)fgX100"
+
+    assert def(11, 0) == 0
+    assert seq == "abcdef(11break)yxyz"
+
+    assert def(12, 0) == 0
+    assert seq == "abcdef(12continue)xyz"
+
+    assert def(13, 0) == 0
+    assert seq == "abcdef(13fallthrough)xyxyz"
+
+    assert def(14, 0) == 140
+    assert seq == "abcdef(14return)"
+
+    assert def(15, 0) == 0
+    assert seq == "abcdef(15throw)X150"
 }

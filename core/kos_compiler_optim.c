@@ -555,7 +555,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
     int error = KOS_SUCCESS;
     int t1;
     int t2    = TERM_NONE;
-    int t3;
+    int t3    = TERM_NONE;
 
     const enum _KOS_NODE_TYPE node_type    = node->type;
     struct _KOS_AST_NODE     *finally_node = 0;

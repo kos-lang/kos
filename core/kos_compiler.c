@@ -35,7 +35,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-static const char str_err_complex_try[]               = "composition of 'defer', 'try' or 'with' statements too complex";
 static const char str_err_duplicate_property[]        = "duplicate object property";
 static const char str_err_expected_refinement[]       = "expected .identifier or '[' in argument to 'delete'";
 static const char str_err_expected_refinement_ident[] = "expected identifier";
@@ -1992,8 +1991,7 @@ _error:
 }
 
 static int _restore_catch(struct _KOS_COMP_UNIT *program,
-                          struct _KOS_SCOPE     *outer_scope,
-                          int                    offs_idx)
+                          struct _KOS_SCOPE     *outer_scope)
 {
     struct _KOS_SCOPE *cur_scope = program->scope_stack;
     int                error;
@@ -2003,24 +2001,23 @@ static int _restore_catch(struct _KOS_COMP_UNIT *program,
 
     if (outer_scope && outer_scope->catch_ref.catch_reg) {
 
-        if (cur_scope->catch_ref.catch_offs[offs_idx] == 0) {
+        struct _KOS_CATCH_REF *cur_catch_ref = &cur_scope->catch_ref;
+        int                    offs_idx      = cur_catch_ref->num_catch_offs;
 
-            cur_scope->catch_ref.catch_offs[offs_idx] = program->cur_offs;
+        assert((size_t)offs_idx < sizeof(cur_catch_ref->catch_offs) / sizeof(int));
+        assert(cur_catch_ref->catch_offs[offs_idx] == 0);
 
-            if (offs_idx == 0) {
-                assert(!cur_scope->catch_ref.next);
-                assert(outer_scope->catch_ref.child_scopes != cur_scope);
-                cur_scope->catch_ref.next           = outer_scope->catch_ref.child_scopes;
-                outer_scope->catch_ref.child_scopes = cur_scope;
-            }
+        cur_catch_ref->catch_offs[offs_idx] = program->cur_offs;
+        cur_catch_ref->num_catch_offs       = offs_idx + 1;
 
-            error = _gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
+        if (offs_idx == 0) {
+            assert(!cur_catch_ref->next);
+            assert(outer_scope->catch_ref.child_scopes != cur_scope);
+            cur_catch_ref->next                 = outer_scope->catch_ref.child_scopes;
+            outer_scope->catch_ref.child_scopes = cur_scope;
         }
-        else {
-            program->error_token = &cur_scope->scope_node->token;
-            program->error_str   = str_err_complex_try;
-            error = KOS_ERROR_COMPILE_FAILED;
-        }
+
+        error = _gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
     }
     else
         error = _gen_instr(program, 0, INSTR_CANCEL);
@@ -2028,8 +2025,7 @@ static int _restore_catch(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _restore_parent_scope_catch(struct _KOS_COMP_UNIT *program,
-                                       int                    offs_idx)
+static int _restore_parent_scope_catch(struct _KOS_COMP_UNIT *program)
 {
     struct _KOS_SCOPE *scope = program->scope_stack;
 
@@ -2037,7 +2033,7 @@ static int _restore_parent_scope_catch(struct _KOS_COMP_UNIT *program,
 
     scope = _find_try_scope(scope->next);
 
-    return _restore_catch(program, scope, offs_idx);
+    return _restore_catch(program, scope);
 }
 
 static int _push_break_offs(struct _KOS_COMP_UNIT *program,
@@ -2069,7 +2065,7 @@ static int _break_continue_fallthrough(struct _KOS_COMP_UNIT      *program,
 
         _push_scope(program, node);
 
-        TRY(_restore_catch(program, program->cur_frame->last_try_scope, 0));
+        TRY(_restore_catch(program, program->cur_frame->last_try_scope));
 
         _pop_scope(program);
     }
@@ -2296,8 +2292,11 @@ static void _update_child_scope_catch(struct _KOS_COMP_UNIT *program)
     scope = scope->catch_ref.child_scopes;
 
     for ( ; scope; scope = scope->catch_ref.next) {
-        size_t i;
-        for (i = 0; i < sizeof(scope->catch_ref.catch_offs) / sizeof(int); i++) {
+
+        const int num_catch_offs = scope->catch_ref.num_catch_offs;
+        int       i;
+
+        for (i = 0; i < num_catch_offs; i++) {
             const int instr_offs = scope->catch_ref.catch_offs[i];
             if (instr_offs)
                 _update_jump_offs(program, instr_offs, dest_offs);
@@ -2311,7 +2310,6 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
                      const struct _KOS_AST_NODE *node)
 {
     int                         error;
-    int                         jump_end_offs;
     int                         catch_offs;
     struct _KOS_REG            *except_reg     = 0;
     struct _KOS_VAR            *except_var     = 0;
@@ -2387,20 +2385,26 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     assert(try_node->type == NT_SCOPE);
     TRY(_scope(program, try_node));
 
-    TRY(_restore_parent_scope_catch(program, 0));
-
-    jump_end_offs = program->cur_offs;
-    TRY(_gen_instr1(program, INSTR_JUMP, 0));
+    /* We're done with the try scope, prevent _find_try_scope() from finding this
+     * catch target again when inside catch or defer clause. */
+    scope->catch_ref.catch_reg = 0;
 
     /* Catch section */
 
-    _update_child_scope_catch(program);
-
-    _update_jump_offs(program, catch_offs, program->cur_offs);
-
-    TRY(_restore_parent_scope_catch(program, 1));
-
     if (catch_node) {
+
+        int jump_end_offs;
+
+        TRY(_restore_parent_scope_catch(program));
+
+        jump_end_offs = program->cur_offs;
+        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+
+        _update_child_scope_catch(program);
+
+        _update_jump_offs(program, catch_offs, program->cur_offs);
+
+        TRY(_restore_parent_scope_catch(program));
 
         node = node->next;
         assert(node);
@@ -2413,13 +2417,13 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
         TRY(_scope(program, node));
 
         except_var->is_active = VAR_INACTIVE;
+
+        _update_jump_offs(program, jump_end_offs, program->cur_offs);
     }
 
-    /* Defer section (defer is implemented as try-finally) */
+    /* Defer section */
 
-    _update_jump_offs(program, jump_end_offs, program->cur_offs);
-
-    if (defer_node) {
+    else {
 
         int                     skip_throw_offs;
         struct _KOS_BREAK_OFFS *try_break_offs = program->cur_frame->break_offs;
@@ -2433,6 +2437,14 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
             return_offs                     = tmp;
             scope->catch_ref.finally_active = 0;
         }
+
+        assert(defer_node);
+
+        _update_child_scope_catch(program);
+
+        _update_jump_offs(program, catch_offs, program->cur_offs);
+
+        TRY(_restore_parent_scope_catch(program));
 
         TRY(_scope(program, defer_node));
 
@@ -2477,7 +2489,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
                     if (break_offs->type == type)
                         _update_jump_offs(program, break_offs->offs, program->cur_offs);
 
-                TRY(_restore_parent_scope_catch(program, i + 2));
+                TRY(_restore_parent_scope_catch(program));
 
                 TRY(_scope(program, defer_node));
 
@@ -2495,7 +2507,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
             for ( ; return_offs; return_offs = return_offs->next)
                 _update_jump_offs(program, return_offs->offs, program->cur_offs);
 
-            TRY(_restore_parent_scope_catch(program, 5));
+            TRY(_restore_parent_scope_catch(program));
 
             TRY(_scope(program, defer_node));
 
