@@ -2458,9 +2458,9 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
         if (try_break_offs) {
 
-            struct _KOS_BREAK_OFFS *break_offs   = try_break_offs;
-            int                     jump_offs[3] = { 0, 0, 0 };
-            enum _KOS_NODE_TYPE     node_type[3] = { NT_BREAK, NT_CONTINUE, NT_FALLTHROUGH };
+            struct _KOS_BREAK_OFFS *break_offs    = try_break_offs;
+            int                     jump_offs[3]  = { 0, 0, 0 };
+            enum _KOS_NODE_TYPE     node_types[3] = { NT_BREAK, NT_CONTINUE, NT_FALLTHROUGH };
             int                     i;
 
             while (break_offs) {
@@ -2470,7 +2470,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
                        break_offs->type == NT_FALLTHROUGH);
 
                 for (i = 0; i < (int)(sizeof(jump_offs) / sizeof(jump_offs[0])); i++)
-                    if (break_offs->type == node_type[i]) {
+                    if (break_offs->type == node_types[i]) {
                         jump_offs[i] = 1;
                         break;
                     }
@@ -2480,7 +2480,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
             for (i = 0; i < (int)(sizeof(jump_offs) / sizeof(jump_offs[0])); i++) {
 
-                const enum _KOS_NODE_TYPE type = node_type[i];
+                const enum _KOS_NODE_TYPE type = node_types[i];
 
                 if ( ! jump_offs[i])
                     continue;
