@@ -1155,24 +1155,54 @@ static enum _KOS_COMPARE_RESULT _compare_float(KOS_OBJ_ID a, KOS_OBJ_ID b)
                                    KOS_EQUAL;
 }
 
-static enum _KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID a, KOS_OBJ_ID b)
+/* This is used when comparing arrays to prevent infinite recursion */
+struct _KOS_COMPARE_REF {
+    KOS_OBJ_ID               a;
+    KOS_OBJ_ID               b;
+    struct _KOS_COMPARE_REF *next;
+};
+
+static enum _KOS_COMPARE_RESULT _compare(KOS_OBJ_ID               a,
+                                         KOS_OBJ_ID               b,
+                                         struct _KOS_COMPARE_REF *cmp_ref);
+
+static enum _KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID               a,
+                                               KOS_OBJ_ID               b,
+                                               struct _KOS_COMPARE_REF *cmp_ref)
 {
     const uint32_t a_size   = KOS_get_array_size(a);
     const uint32_t b_size   = KOS_get_array_size(b);
     const uint32_t cmp_size = KOS_min(a_size, b_size);
 
-    KOS_ATOMIC(KOS_OBJ_ID) *a_buf = a_size ? _KOS_get_array_buffer(OBJPTR(ARRAY, a)) : 0;
-    KOS_ATOMIC(KOS_OBJ_ID) *b_buf = b_size ? _KOS_get_array_buffer(OBJPTR(ARRAY, b)) : 0;
+    KOS_ATOMIC(KOS_OBJ_ID)       *a_buf    = a_size ? _KOS_get_array_buffer(OBJPTR(ARRAY, a)) : 0;
+    KOS_ATOMIC(KOS_OBJ_ID)       *b_buf    = b_size ? _KOS_get_array_buffer(OBJPTR(ARRAY, b)) : 0;
+    KOS_ATOMIC(KOS_OBJ_ID) *const a_end    = a_buf + cmp_size;
+    enum _KOS_COMPARE_RESULT      cmp      = KOS_EQUAL;
+    struct _KOS_COMPARE_REF       this_ref;
 
-    KOS_ATOMIC(KOS_OBJ_ID) *const a_end = a_buf + cmp_size;
+    this_ref.a    = a;
+    this_ref.b    = b;
+    this_ref.next = cmp_ref;
 
-    enum _KOS_COMPARE_RESULT cmp = KOS_EQUAL;
+    while (cmp_ref) {
+        const int aa = a == cmp_ref->a;
+        const int bb = b == cmp_ref->b;
+        const int ab = a == cmp_ref->b;
+        const int ba = b == cmp_ref->a;
+
+        if (aa && bb)
+            return KOS_EQUAL;
+        else if (aa || bb || ab || ba)
+            return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
+
+        cmp_ref = cmp_ref->next;
+    }
 
     for ( ; a_buf < a_end; ++a_buf, ++b_buf) {
 
-        /* TODO prevent infinite recursion */
-        cmp = KOS_compare((KOS_OBJ_ID)KOS_atomic_read_ptr(*a_buf),
-                          (KOS_OBJ_ID)KOS_atomic_read_ptr(*b_buf));
+        cmp = _compare((KOS_OBJ_ID)KOS_atomic_read_ptr(*a_buf),
+                       (KOS_OBJ_ID)KOS_atomic_read_ptr(*b_buf),
+                       &this_ref);
 
         if (cmp)
             break;
@@ -1200,8 +1230,9 @@ static enum _KOS_COMPARE_RESULT _compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
                                  KOS_EQUAL;
 }
 
-enum _KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
-                                     KOS_OBJ_ID b)
+static enum _KOS_COMPARE_RESULT _compare(KOS_OBJ_ID               a,
+                                         KOS_OBJ_ID               b,
+                                         struct _KOS_COMPARE_REF *cmp_ref)
 {
     const KOS_TYPE a_type = GET_OBJ_TYPE(a);
     const KOS_TYPE b_type = GET_OBJ_TYPE(b);
@@ -1251,11 +1282,10 @@ enum _KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
             }
 
             case OBJ_OBJECT:
-                /* TODO add support for comparison function in object? */
                 return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
 
             case OBJ_ARRAY:
-                return _compare_array(a, b);
+                return _compare_array(a, b, cmp_ref);
 
             case OBJ_BUFFER:
                 return _compare_buf(a, b);
@@ -1268,4 +1298,10 @@ enum _KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
     }
     else
         return (a_type < b_type) ? KOS_LESS_THAN : KOS_GREATER_THAN;
+}
+
+enum _KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
+                                     KOS_OBJ_ID b)
+{
+    return _compare(a, b, 0);
 }
