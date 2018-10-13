@@ -724,11 +724,14 @@ do {
     const a = [1, 2, 100]
     const b = base.array.apply(void, a)
     assert typeof b == "array"
-    assert b        != a
+    assert b        == a
     assert b.size   == a.size
     for var i = 0; i < b.size; i += 1 {
         assert b[i] == a[i]
     }
+    b.push(0)
+    assert b.size == a.size + 1
+    assert b      != a
 }
 
 do {
@@ -2224,10 +2227,12 @@ do {
     const a = [0, 1]
     const b = base.sort(a)
     assert typeof b == "array"
-    assert a != b
+    assert a == b
     assert b.size == 2
     assert b[0] == 0
     assert b[1] == 1
+    b.push(2)
+    assert b.size == a.size + 1
 }
 
 do {
@@ -2244,17 +2249,20 @@ do {
     const a = [1, 1]
     const b = base.sort(a)
     assert typeof b == "array"
-    assert a != b
+    assert a == b
     assert b.size == 2
     assert b[0] == 1
     assert b[1] == 1
+    b.push(0)
+    assert b.size == a.size + 1
 }
 
 do {
     const a = [1, 2, 3]
     const b = base.sort(a)
     assert typeof b == "array"
-    assert a != b
+    assert a == b
+    a[1] = 0
     assert b.size == 3
     assert b[0] == 1
     assert b[1] == 2
@@ -2298,7 +2306,8 @@ do {
     const a = [2, 2, 2]
     const b = base.sort(a)
     assert typeof b == "array"
-    assert a != b
+    assert a == b
+    a[0] = 0
     assert b.size == 3
     assert b[0] == 2
     assert b[1] == 2

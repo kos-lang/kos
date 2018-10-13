@@ -149,11 +149,13 @@ do {
     const a = ["a", "b", void, "d", true, "f"]
 
     const b = a[:]
-    assert b      != a
+    assert b      == a
     assert b.size == 6
     assert b[0]   == "a"
     assert b[2]   == void
     assert b[-1]  == "f"
+    b.push(void)
+    assert b.size == a.size + 1
 
     const c = a[-4:-2]
     assert c      != a

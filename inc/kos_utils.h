@@ -46,6 +46,13 @@ typedef struct _KOS_NUMERIC KOS_NUMERIC;
 
 struct _KOS_VECTOR;
 
+enum _KOS_COMPARE_RESULT {
+    KOS_EQUAL,
+    KOS_LESS_THAN,
+    KOS_GREATER_THAN,
+    KOS_INDETERMINATE
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -85,6 +92,9 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT         ctx,
 int KOS_array_push_expand(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  array,
                           KOS_OBJ_ID  value);
+
+enum _KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
+                                     KOS_OBJ_ID b);
 
 KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  full_path);

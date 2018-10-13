@@ -413,140 +413,6 @@ static KOS_OBJ_ID _mod_float(KOS_CONTEXT ctx,
     return ret;
 }
 
-static int _compare_integer(KOS_BYTECODE_INSTR instr,
-                            int64_t            a,
-                            int64_t            b)
-{
-    int ret;
-
-    switch (instr) {
-
-        case INSTR_CMP_EQ:
-            /* fall through*/
-        default:
-            assert(instr == INSTR_CMP_EQ);
-            ret = a == b;
-            break;
-
-        case INSTR_CMP_NE:
-            ret = a != b;
-            break;
-
-        case INSTR_CMP_LT:
-            ret = a < b;
-            break;
-
-        case INSTR_CMP_LE:
-            ret = a <= b;
-            break;
-    }
-
-    return ret;
-}
-
-static int _compare_float(KOS_BYTECODE_INSTR instr,
-                          KOS_OBJ_ID         aobj,
-                          KOS_OBJ_ID         bobj)
-{
-    int            ret;
-    const KOS_TYPE a_type = IS_SMALL_INT(aobj) ? OBJ_INTEGER : GET_OBJ_TYPE(aobj);
-    const KOS_TYPE b_type = IS_SMALL_INT(bobj) ? OBJ_INTEGER : GET_OBJ_TYPE(bobj);
-
-    if (a_type != OBJ_FLOAT && b_type != OBJ_FLOAT) {
-
-        const int64_t a = IS_SMALL_INT(aobj) ? GET_SMALL_INT(aobj)
-                                             : OBJPTR(INTEGER, aobj)->value;
-        const int64_t b = IS_SMALL_INT(bobj) ? GET_SMALL_INT(bobj)
-                                             : OBJPTR(INTEGER, bobj)->value;
-
-        ret = _compare_integer(instr, a, b);
-    }
-    else {
-
-        const double a = (a_type == OBJ_FLOAT)
-                            ? OBJPTR(FLOAT, aobj)->value
-                            : IS_SMALL_INT(aobj)
-                                ? GET_SMALL_INT(aobj)
-                                : OBJPTR(INTEGER, aobj)->value;
-
-        const double b = (b_type == OBJ_FLOAT)
-                            ? OBJPTR(FLOAT, bobj)->value
-                            : IS_SMALL_INT(bobj)
-                                ? GET_SMALL_INT(bobj)
-                                : OBJPTR(INTEGER, bobj)->value;
-
-        switch (instr) {
-
-            case INSTR_CMP_EQ:
-                /* fall through */
-            default:
-                assert(instr == INSTR_CMP_EQ);
-                ret = a == b;
-                break;
-
-            case INSTR_CMP_NE:
-                ret = a != b;
-                break;
-
-            case INSTR_CMP_LT:
-                ret = a < b;
-                break;
-
-            case INSTR_CMP_LE:
-                ret = a <= b;
-                break;
-        }
-    }
-
-    return ret;
-}
-
-static int _compare_string(KOS_BYTECODE_INSTR instr,
-                           KOS_OBJ_ID         aobj,
-                           KOS_OBJ_ID         bobj)
-{
-    int ret;
-    int str_cmp;
-
-    assert(GET_OBJ_TYPE(aobj) == OBJ_STRING);
-    assert(GET_OBJ_TYPE(bobj) == OBJ_STRING);
-
-    if (instr == INSTR_CMP_EQ) {
-        if (KOS_string_get_hash(aobj) != KOS_string_get_hash(bobj))
-            return 0;
-    }
-    else if (instr == INSTR_CMP_NE) {
-        if (KOS_string_get_hash(aobj) != KOS_string_get_hash(bobj))
-            return 1;
-    }
-
-    str_cmp = KOS_string_compare(aobj, bobj);
-
-    switch (instr) {
-
-        case INSTR_CMP_EQ:
-            /* fall through */
-        default:
-            assert(instr == INSTR_CMP_EQ);
-            ret = ! str_cmp;
-            break;
-
-        case INSTR_CMP_NE:
-            ret = !! str_cmp;
-            break;
-
-        case INSTR_CMP_LE:
-            ret = str_cmp <= 0;
-            break;
-
-        case INSTR_CMP_LT:
-            ret = str_cmp < 0;
-            break;
-    }
-
-    return ret;
-}
-
 static KOS_OBJ_ID _copy_function(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  obj_id)
 {
@@ -2342,21 +2208,11 @@ static int _exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
-            case INSTR_CMP_EQ: /* <r.dest>, <r.src1>, <r.src2> */
-                /* fall through */
-            case INSTR_CMP_NE: /* <r.dest>, <r.src1>, <r.src2> */
-                /* fall through */
-            case INSTR_CMP_LE: /* <r.dest>, <r.src1>, <r.src2> */
-                /* fall through */
-            case INSTR_CMP_LT: { /* <r.dest>, <r.src1>, <r.src2> */
+            case INSTR_CMP_EQ: { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
-                int            ret;
                 KOS_OBJ_ID     src1;
                 KOS_OBJ_ID     src2;
-
-                enum KOS_OBJECT_TYPE src1_type;
-                enum KOS_OBJECT_TYPE src2_type;
 
                 assert(rsrc1 < num_regs);
                 assert(rsrc2 < num_regs);
@@ -2365,38 +2221,64 @@ static int _exec_function(KOS_CONTEXT ctx)
                 src1  = regs[rsrc1];
                 src2  = regs[rsrc2];
 
-                src1_type = IS_NUMERIC_OBJ(src1) ? OBJ_INTEGER : READ_OBJ_TYPE(src1);
-                src2_type = IS_NUMERIC_OBJ(src2) ? OBJ_INTEGER : READ_OBJ_TYPE(src2);
+                out   = KOS_BOOL(KOS_compare(src1, src2) == KOS_EQUAL);
+                delta = 4;
+                break;
+            }
 
-                if (src1_type == src2_type)
-                    switch (src1_type) {
+            case INSTR_CMP_NE: { /* <r.dest>, <r.src1>, <r.src2> */
+                const unsigned rsrc1 = bytecode[2];
+                const unsigned rsrc2 = bytecode[3];
+                KOS_OBJ_ID     src1;
+                KOS_OBJ_ID     src2;
 
-                        case OBJ_INTEGER:
-                            ret = _compare_float(instr, src1, src2);
-                            break;
+                enum _KOS_COMPARE_RESULT cmp;
 
-                        case OBJ_STRING:
-                            ret = _compare_string(instr, src1, src2);
-                            break;
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
 
-                        case OBJ_BOOLEAN:
-                            ret = _compare_integer(instr,
-                                                   OBJPTR(BOOLEAN, src1)->boolean.value,
-                                                   OBJPTR(BOOLEAN, src2)->boolean.value);
-                            break;
+                rdest = bytecode[1];
+                src1  = regs[rsrc1];
+                src2  = regs[rsrc2];
 
-                        case OBJ_VOID:
-                            ret = _compare_integer(instr, 0, 0);
-                            break;
+                cmp   = KOS_compare(src1, src2);
+                out   = KOS_BOOL(cmp);
+                delta = 4;
+                break;
+            }
 
-                        default:
-                            ret = _compare_integer(instr, (int64_t)(intptr_t)src1, (int64_t)(intptr_t)src2);
-                            break;
-                    }
-                else
-                    ret = _compare_integer(instr, src1_type, src2_type);
+            case INSTR_CMP_LE: { /* <r.dest>, <r.src1>, <r.src2> */
+                const unsigned rsrc1 = bytecode[2];
+                const unsigned rsrc2 = bytecode[3];
+                KOS_OBJ_ID     src1;
+                KOS_OBJ_ID     src2;
 
-                out   = KOS_BOOL(ret);
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
+
+                rdest = bytecode[1];
+                src1  = regs[rsrc1];
+                src2  = regs[rsrc2];
+
+                out   = KOS_BOOL(KOS_compare(src1, src2) <= KOS_LESS_THAN);
+                delta = 4;
+                break;
+            }
+
+            case INSTR_CMP_LT: { /* <r.dest>, <r.src1>, <r.src2> */
+                const unsigned rsrc1 = bytecode[2];
+                const unsigned rsrc2 = bytecode[3];
+                KOS_OBJ_ID     src1;
+                KOS_OBJ_ID     src2;
+
+                assert(rsrc1 < num_regs);
+                assert(rsrc2 < num_regs);
+
+                rdest = bytecode[1];
+                src1  = regs[rsrc1];
+                src2  = regs[rsrc2];
+
+                out   = KOS_BOOL(KOS_compare(src1, src2) == KOS_LESS_THAN);
                 delta = 4;
                 break;
             }

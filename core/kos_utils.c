@@ -28,6 +28,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "kos_math.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
 #include "kos_object_internal.h"
@@ -1122,4 +1123,149 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
 
 _error:
     return error;
+}
+
+static enum _KOS_COMPARE_RESULT _compare_int(int64_t a, int64_t b)
+{
+    return a < b ? KOS_LESS_THAN    :
+           a > b ? KOS_GREATER_THAN :
+                   KOS_EQUAL;
+}
+
+static double _get_float(KOS_OBJ_ID obj_id)
+{
+    if (IS_SMALL_INT(obj_id))
+        return (double)GET_SMALL_INT(obj_id);
+    else if (GET_OBJ_TYPE(obj_id) == OBJ_INTEGER)
+        return (double)OBJPTR(INTEGER, obj_id)->value;
+    else
+        return OBJPTR(FLOAT, obj_id)->value;
+}
+
+static enum _KOS_COMPARE_RESULT _compare_float(KOS_OBJ_ID a, KOS_OBJ_ID b)
+{
+    const double a_float = _get_float(a);
+    const double b_float = _get_float(b);
+
+    if (a_float != a_float || b_float != b_float)
+        return KOS_INDETERMINATE;
+    else
+        return a_float < b_float ? KOS_LESS_THAN    :
+               a_float > b_float ? KOS_GREATER_THAN :
+                                   KOS_EQUAL;
+}
+
+static enum _KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID a, KOS_OBJ_ID b)
+{
+    const uint32_t a_size   = KOS_get_array_size(a);
+    const uint32_t b_size   = KOS_get_array_size(b);
+    const uint32_t cmp_size = KOS_min(a_size, b_size);
+
+    KOS_ATOMIC(KOS_OBJ_ID) *a_buf = a_size ? _KOS_get_array_buffer(OBJPTR(ARRAY, a)) : 0;
+    KOS_ATOMIC(KOS_OBJ_ID) *b_buf = b_size ? _KOS_get_array_buffer(OBJPTR(ARRAY, b)) : 0;
+
+    KOS_ATOMIC(KOS_OBJ_ID) *const a_end = a_buf + cmp_size;
+
+    enum _KOS_COMPARE_RESULT cmp = KOS_EQUAL;
+
+    for ( ; a_buf < a_end; ++a_buf, ++b_buf) {
+
+        /* TODO prevent infinite recursion */
+        cmp = KOS_compare((KOS_OBJ_ID)KOS_atomic_read_ptr(*a_buf),
+                          (KOS_OBJ_ID)KOS_atomic_read_ptr(*b_buf));
+
+        if (cmp)
+            break;
+    }
+
+    return cmp             ? cmp              :
+           a_size < b_size ? KOS_LESS_THAN    :
+           a_size > b_size ? KOS_GREATER_THAN :
+                             KOS_EQUAL;
+}
+
+static enum _KOS_COMPARE_RESULT _compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
+{
+    const uint32_t a_size   = KOS_get_buffer_size(a);
+    const uint32_t b_size   = KOS_get_buffer_size(b);
+    const uint32_t cmp_size = KOS_min(a_size, b_size);
+
+    const int cmp = cmp_size ? memcmp(KOS_buffer_data(a), KOS_buffer_data(b), cmp_size) : 0;
+
+    if (cmp)
+        return cmp > 0 ? KOS_GREATER_THAN : KOS_LESS_THAN;
+    else
+        return a_size < b_size ? KOS_LESS_THAN    :
+               a_size > b_size ? KOS_GREATER_THAN :
+                                 KOS_EQUAL;
+}
+
+enum _KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
+                                     KOS_OBJ_ID b)
+{
+    const KOS_TYPE a_type = GET_OBJ_TYPE(a);
+    const KOS_TYPE b_type = GET_OBJ_TYPE(b);
+
+    if (a == b) {
+        if (a_type == OBJ_FLOAT) {
+            const double value = OBJPTR(FLOAT, a)->value;
+            return value == value ? KOS_EQUAL : KOS_INDETERMINATE;
+        }
+        else
+            return KOS_EQUAL;
+    }
+    else if (a_type == b_type || (a_type <= OBJ_FLOAT && b_type <= OBJ_FLOAT)) {
+
+        switch (a_type) {
+
+            default:
+                assert(a_type == OBJ_SMALL_INTEGER ||
+                       a_type == OBJ_INTEGER       ||
+                       a_type == OBJ_FLOAT);
+
+                if (a_type == OBJ_FLOAT || b_type == OBJ_FLOAT)
+                    return _compare_float(a, b);
+                else if (a_type == OBJ_SMALL_INTEGER && b_type == OBJ_SMALL_INTEGER)
+                    return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
+                else {
+                    const int64_t a_int = a_type == OBJ_SMALL_INTEGER
+                                        ? GET_SMALL_INT(a)
+                                        : OBJPTR(INTEGER, a)->value;
+                    const int64_t b_int = b_type == OBJ_SMALL_INTEGER
+                                        ? GET_SMALL_INT(b)
+                                        : OBJPTR(INTEGER, b)->value;
+                    return _compare_int(a_int, b_int);
+                }
+
+            case OBJ_VOID:
+                return KOS_EQUAL;
+
+            case OBJ_BOOLEAN:
+                return _compare_int((int)KOS_get_bool(a), (int)KOS_get_bool(b));
+
+            case OBJ_STRING: {
+                const int cmp = KOS_string_compare(a, b);
+                return cmp < 0 ? KOS_LESS_THAN    :
+                       cmp     ? KOS_GREATER_THAN :
+                                 KOS_EQUAL;
+            }
+
+            case OBJ_OBJECT:
+                /* TODO add support for comparison function in object? */
+                return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
+
+            case OBJ_ARRAY:
+                return _compare_array(a, b);
+
+            case OBJ_BUFFER:
+                return _compare_buf(a, b);
+
+            case OBJ_FUNCTION:
+                /* fall through */
+            case OBJ_CLASS:
+                return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
+        }
+    }
+    else
+        return (a_type < b_type) ? KOS_LESS_THAN : KOS_GREATER_THAN;
 }

@@ -1025,6 +1025,7 @@ do {
     assert void  == (()=>void)()
     assert false == (()=>false)()
     assert true  == (()=>true)()
+    assert []    == (()=>[])()
 
     const array = fun { const a = [ 1, 2, 3 ] ; return ()=>a } ()
     assert typeof array() == "array"
@@ -1042,7 +1043,7 @@ do {
     assert "abc" != (()=>"Abc")()
     assert void  != (()=>true)()
     assert false != (()=>true)()
-    assert []    != (()=>[])()
+    assert []    != (()=>[0])()
     assert {}    != (()=>{})()
 }
 
@@ -1054,6 +1055,9 @@ do {
     assert 5     < (()=>6.0)()
     assert "aa"  < (()=>"aaa")()
     assert false < true
+    assert ! ([] < (()=>[])())
+    assert ! ([0]< (()=>[])())
+    assert []    < (()=>[0])()
 }
 
 ##############################################################################
@@ -1068,6 +1072,9 @@ do {
     assert true  <= (()=>true)()
     assert false <= (()=>false)()
     assert void  <= (()=>void)()
+    assert []    <= (()=>[])()
+    assert ! ([0]<= (()=>[])())
+    assert []    <= (()=>[0])()
 }
 
 ##############################################################################

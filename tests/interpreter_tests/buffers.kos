@@ -476,11 +476,12 @@ do {
     assert typeof b2 == "buffer"
     assert b1.size == 20
     assert b2.size == 20
-    assert b1 != b2
+    assert b1 == b2
+    b2[0] = 200
 
     for var i in range(b1.size) {
         assert b1[i] == i
-        assert b2[i] == i
+        assert b2[i] == (i == 0 ? 200 : i)
     }
 
     b2 = b1[-100:100]
@@ -488,18 +489,19 @@ do {
     assert typeof b2 == "buffer"
     assert b1.size == 20
     assert b2.size == 20
-    assert b1 != b2
+    assert b1 == b2
 
     b2 = b1.slice(void, void)
 
     assert typeof b2 == "buffer"
     assert b1.size == 20
     assert b2.size == 20
-    assert b1 != b2
+    assert b1 == b2
+    b2[2] = 100
 
     for var i in range(b1.size) {
         assert b1[i] == i
-        assert b2[i] == i
+        assert b2[i] == (i == 2 ? 100 : i)
     }
 
     b2 = b1[10:]

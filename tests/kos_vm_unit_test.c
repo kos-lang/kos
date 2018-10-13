@@ -371,32 +371,21 @@ static int _test_instr(KOS_INSTANCE        *inst,
             break;
 
         case V_VOID:
-            if (IS_BAD_PTR(ret)   ||
-                IS_SMALL_INT(ret) ||
-                ret != KOS_VOID) {
-
+            if (ret != KOS_VOID) {
                 printf("Failed: line %d: expected void\n", line);
                 error = KOS_ERROR_EXCEPTION;
             }
             break;
 
         case V_FALSE:
-            if (IS_BAD_PTR(ret)                       ||
-                IS_SMALL_INT(ret)                     ||
-                (ret != KOS_FALSE && ret != KOS_TRUE) ||
-                KOS_get_bool(ret) != 0) {
-
+            if (ret != KOS_FALSE) {
                 printf("Failed: line %d: expected false\n", line);
                 error = KOS_ERROR_EXCEPTION;
             }
             break;
 
         case V_TRUE:
-            if (IS_BAD_PTR(ret)                       ||
-                IS_SMALL_INT(ret)                     ||
-                (ret != KOS_FALSE && ret != KOS_TRUE) ||
-                KOS_get_bool(ret) == 0) {
-
+            if (ret != KOS_TRUE) {
                 printf("Failed: line %d: expected true\n", line);
                 error = KOS_ERROR_EXCEPTION;
             }
@@ -1168,7 +1157,7 @@ int main(void)
     TEST_INSTR INSTR_CMP_EQ,     { V_TRUE                              }, { { V_STR0,  0, 0,        ""          }, { V_STR1,  0, 0,        ""          } } END
     TEST_INSTR INSTR_CMP_EQ,     { V_TRUE                              }, { { V_STR0,  0, 0,        "xyz"       }, { V_STR1,  0, 0,        "xyz"       } } END
     TEST_INSTR INSTR_CMP_EQ,     { V_FALSE                             }, { { V_STR0,  0, 0,        "xyz"       }, { V_STR1,  0, 0,        "xyy"       } } END
-    TEST_INSTR INSTR_CMP_EQ,     { V_FALSE                             }, { { V_ARRAY, 0                        }, { V_ARRAY, 0                        } } END
+    TEST_INSTR INSTR_CMP_EQ,     { V_TRUE                              }, { { V_ARRAY, 0                        }, { V_ARRAY, 0                        } } END
     TEST_INSTR INSTR_CMP_EQ,     { V_FALSE                             }, { { V_OBJECT                          }, { V_OBJECT                          } } END
     TEST_INSTR INSTR_CMP_EQ,     { V_FALSE                             }, { { V_VOID                            }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_EQ,     { V_FALSE                             }, { { V_VOID                            }, { V_TRUE                            } } END
@@ -1260,7 +1249,7 @@ int main(void)
     TEST_INSTR INSTR_CMP_NE,     { V_FALSE                             }, { { V_STR0,  0, 0,        ""          }, { V_STR1,  0, 0,        ""          } } END
     TEST_INSTR INSTR_CMP_NE,     { V_FALSE                             }, { { V_STR0,  0, 0,        "xyz"       }, { V_STR1,  0, 0,        "xyz"       } } END
     TEST_INSTR INSTR_CMP_NE,     { V_TRUE                              }, { { V_STR0,  0, 0,        "xyz"       }, { V_STR1,  0, 0,        "xyy"       } } END
-    TEST_INSTR INSTR_CMP_NE,     { V_TRUE                              }, { { V_ARRAY, 0                        }, { V_ARRAY, 0                        } } END
+    TEST_INSTR INSTR_CMP_NE,     { V_FALSE                             }, { { V_ARRAY, 0                        }, { V_ARRAY, 0                        } } END
     TEST_INSTR INSTR_CMP_NE,     { V_TRUE                              }, { { V_OBJECT                          }, { V_OBJECT                          } } END
     TEST_INSTR INSTR_CMP_NE,     { V_TRUE                              }, { { V_VOID                            }, { V_FALSE                           } } END
     TEST_INSTR INSTR_CMP_NE,     { V_TRUE                              }, { { V_VOID                            }, { V_TRUE                            } } END
