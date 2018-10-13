@@ -860,6 +860,38 @@ do {
     assert result == 5
 }
 
+# stream operator with refinement
+do {
+    class c1 {
+        constructor {
+            this.x = void
+        }
+        set1(x) {
+            this.x = x
+            return x + 1
+        }
+    }
+
+    class c2 {
+        constructor {
+            this.x = void
+        }
+        set2(x) {
+            this.x = x * 10
+            return x + 2
+        }
+    }
+
+    const o1 = c1()
+    const o2 = c2()
+
+    const result = 5 -> o1.set1 -> o2.set2
+
+    assert o1.x   == 5
+    assert o2.x   == 60
+    assert result == 8
+}
+
 # call finished generator
 do {
     fun gen

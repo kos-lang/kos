@@ -109,14 +109,14 @@ do {
     assert nan != 2
     assert nan != 1.7976931348623157e308
     assert nan != math.infinity
-    assert ! (nan == math.nan)
+    assert ! (()=>nan == math.nan)()
     assert nan != math.nan
-    assert ! (-nan < math.nan)
-    assert ! (-nan > math.nan)
-    assert ! (nan < 0)
-    assert ! (nan > 0)
-    assert ! (nan < 1)
-    assert ! (nan > 1)
+    assert ! (()=>-nan < math.nan)()
+    assert ! (()=>-nan > math.nan)()
+    assert ! (()=>nan < 0)()
+    assert ! (()=>nan > 0)()
+    assert ! (()=>nan < 1)()
+    assert ! (()=>nan > 1)()
 }
 
 # math.is_infinity
