@@ -2206,21 +2206,100 @@ do {
 # base.array.prototype.sort
 
 do {
-    const a = [].sort()
-    assert a == void
+    const a = []
+    const b = a.sort()
+    assert typeof b == "array"
+    assert b == a
+    assert a == []
 }
 
 do {
-    const a = []
-    a.sort()
+    const a = ["x"]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert b == a
+    assert a.size == 1
+    assert a[0] == "x"
+}
+
+do {
+    const a = [3, 10, 5, 1]
+    const b = a.sort(true)
+    assert a == b
+    assert a[0] == 10
+    assert a[1] == 5
+    assert a[2] == 3
+    assert a[3] == 1
+    assert b[0] == 10
+    assert b[1] == 5
+    assert b[2] == 3
+    assert b[3] == 1
+}
+
+do {
+    const a = ["base", 101, "array", 42, 60, "sort", -10, "size"]
+    const b = a.sort(x => typeof x, true)
+    assert a == b
+    assert a[0] == "size"
+    assert a[1] == "sort"
+    assert a[2] == "array"
+    assert a[3] == "base"
+    assert a[4] == -10
+    assert a[5] == 60
+    assert a[6] == 42
+    assert a[7] == 101
+}
+
+do {
+    const a = ["base", 101, "array", 42, 60, "sort", -10, "size"]
+    const b = a.sort(x => typeof x)
+    assert a == b
+    assert a[0] == 101
+    assert a[1] == 42
+    assert a[2] == 60
+    assert a[3] == -10
+    assert a[4] == "base"
+    assert a[5] == "array"
+    assert a[6] == "sort"
+    assert a[7] == "size"
+}
+
+##############################################################################
+# base.sort
+
+do {
+    const empty = []
+    const a = base.sort(empty)
+    assert typeof a == "array"
+    assert a.size == 0
+    assert a == empty
+
+    empty.push(0)
+    assert empty.size == 1
+    assert a.size == 0
+}
+
+do {
+    fun empty
+    {
+        if false { yield void }
+    }
+
+    const a = base.sort(false, empty())
+    assert typeof a == "array"
     assert a.size == 0
 }
 
 do {
     const a = [8]
-    a.sort()
+    const b = base.sort(a)
     assert a.size == 1
     assert a[0] == 8
+    assert a == b
+    a.push(0)
+    assert a.size == 2
+    assert b.size == 1
+    assert b[0] == 8
 }
 
 do {
@@ -2233,6 +2312,16 @@ do {
     assert b[1] == 1
     b.push(2)
     assert b.size == a.size + 1
+}
+
+do {
+    const a = [0, 1]
+    const b = base.sort(true, a)
+    a.push(2)
+    assert typeof b == "array"
+    assert b.size == 2
+    assert b[0] == 1
+    assert b[1] == 0
 }
 
 do {
@@ -2322,12 +2411,12 @@ do {
     }
 
     const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]
-    a.sort(x => x.key)
-    assert a[0].key == 10
-    assert a[1].key == 20
-    assert a[2].key == 25
-    assert a[3].key == 30
-    assert a[4].key == 40
+    const b = base.sort(x => x.key, a)
+    assert b[0].key == 10
+    assert b[1].key == 20
+    assert b[2].key == 25
+    assert b[3].key == 30
+    assert b[4].key == 40
 }
 
 do {
@@ -2338,16 +2427,13 @@ do {
     }
 
     const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]
-    a.sort(x => x.key, true)
-    assert a[0].key == 40
-    assert a[1].key == 30
-    assert a[2].key == 25
-    assert a[3].key == 20
-    assert a[4].key == 10
+    const b = base.sort(x => x.key, true, a)
+    assert b[0].key == 40
+    assert b[1].key == 30
+    assert b[2].key == 25
+    assert b[3].key == 20
+    assert b[4].key == 10
 }
-
-##############################################################################
-# base.sort
 
 do {
     const a = [ 5, 4, 2, 3, 1 ]
@@ -2418,6 +2504,25 @@ do {
     assert it() == 21
     assert it() == 31
     expect_fail(it)
+}
+
+# Order of "equal" elements must be preserved
+do {
+    const input = ["020", 1, 20, "21", 5, 3, "0020", "8", "5", "05", "0001"]
+    const a = base.sort(x => base.integer(x), input)
+    assert typeof a == "array"
+    assert a.size == 11
+    assert a[0]   == 1
+    assert a[1]   == "0001"
+    assert a[2]   == 3
+    assert a[3]   == 5
+    assert a[4]   == "5"
+    assert a[5]   == "05"
+    assert a[6]   == "8"
+    assert a[7]   == "020"
+    assert a[8]   == 20
+    assert a[9]   == "0020"
+    assert a[10]  == "21"
 }
 
 ##############################################################################

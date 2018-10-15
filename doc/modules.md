@@ -533,14 +533,18 @@ array.prototype.sort()
 ----------------------
 
     array.prototype.sort(key=void, reverse=false)
+    array.prototype.sort(reverse)
 
 Sorts array in-place.
 
-Returns void.
+Returns the array being sorted (`this`).
 
-`key` is a function which produces a sorting key for each element of
-the array.  The array elements are then sorted by the keys using the
-'<' operator.  By default `key` is `void` and the elements themselves
+Uses a stable sorting algorithm, which preserves order of elements for
+which sorting keys compare as equal.
+
+`key` is a single-argument function which produces a sorting key for each
+element of the array.  The array elements are then sorted by the keys using
+the '<' operator.  By default `key` is `void` and the elements themselves
 are used as sorting keys.
 
 `reverse` defaults to `false`.  If `reverse` is specified as `true`,
@@ -1871,6 +1875,9 @@ Sorts elements from an iterable object.
 
 Returns an array with elements extracted from the iterable object and sorted.
 
+Uses a stable sorting algorithm, which preserves order of elements for
+which sorting keys compare as equal.
+
 The first variant returns a sort function, which can then be used
 to sort any iterable object.  The usage of the returned function is
 the same as the usage of the remaining variants.
@@ -1880,10 +1887,10 @@ from an iterable object and sorted according to the `key` function and
 `reverse` flag.  Elements are retrieved from the iterable object through
 its `iterator()` function.
 
-`key` is a function which produces a sorting key for each element to be
-sorted.  The elements are then sorted by the keys using the '<' operator.
-By default `key` is `void` and the elements themselves are used as
-sorting keys.
+`key` is a single-argument function which produces a sorting key for each
+element of the array.  The array elements are then sorted by the keys using
+the '<' operator.  By default `key` is `void` and the elements themselves
+are used as sorting keys.
 
 `reverse` defaults to `false`.  If `reverse` is specified as `true`,
 the elements are sorted in reverse order, i.e. in a descending key

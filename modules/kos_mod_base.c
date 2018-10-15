@@ -48,7 +48,9 @@ static const char str_err_gen_not_callable[]         = "generator class is not n
 static const char str_err_invalid_array_size[]       = "array size out of range";
 static const char str_err_invalid_byte_value[]       = "buffer element value out of range";
 static const char str_err_invalid_buffer_size[]      = "buffer size out of range";
+static const char str_err_invalid_key_type[]         = "invalid key type, must be function or void";
 static const char str_err_invalid_pack_format[]      = "invalid pack format";
+static const char str_err_invalid_reverse_type[]     = "invalid reverse type, must be boolean";
 static const char str_err_invalid_string_idx[]       = "string index is out of range";
 static const char str_err_join_self[]                = "thread cannot join itself";
 static const char str_err_not_array[]                = "object is not an array";
@@ -1519,6 +1521,269 @@ static KOS_OBJ_ID _slice(KOS_CONTEXT ctx,
 
 _error:
     return ret;
+}
+
+static KOS_OBJ_ID _expand_for_sort(KOS_CONTEXT ctx,
+                                   KOS_OBJ_ID  iterable,
+                                   KOS_OBJ_ID  key_func)
+{
+    int                     error    = KOS_SUCCESS;
+    uint32_t                i        = 0;
+    uint32_t                size;
+    const uint32_t          step     = (key_func == KOS_VOID) ? 2 : 3;
+    KOS_OBJ_ID              ret;
+    KOS_OBJ_ID              key_args = KOS_BADPTR;
+    KOS_ATOMIC(KOS_OBJ_ID) *src;
+    KOS_ATOMIC(KOS_OBJ_ID) *src_end;
+    KOS_ATOMIC(KOS_OBJ_ID) *dest;
+
+    assert(GET_OBJ_TYPE(iterable) == OBJ_ARRAY);
+
+    size = KOS_get_array_size(iterable);
+    ret  = KOS_new_array(ctx, size * step);
+    TRY_OBJID(ret);
+
+    if (key_func != KOS_VOID) {
+        key_args = KOS_new_array(ctx, 1);
+        TRY_OBJID(ret);
+    }
+
+    src     = _KOS_get_array_buffer(OBJPTR(ARRAY, iterable));
+    src_end = src + size;
+    dest    = _KOS_get_array_buffer(OBJPTR(ARRAY, ret));
+
+    while (src < src_end) {
+
+        const KOS_OBJ_ID val = (KOS_OBJ_ID)KOS_atomic_read_ptr(*src);
+
+        if (key_func == KOS_VOID) {
+            KOS_atomic_write_ptr(dest[0], val);
+            KOS_atomic_write_ptr(dest[1], TO_SMALL_INT(i));
+        }
+        else {
+            KOS_OBJ_ID       key;
+
+            TRY(KOS_array_write(ctx, key_args, 0, val));
+            key = KOS_call_function(ctx, key_func, KOS_VOID, key_args);
+            TRY_OBJID(key);
+
+            KOS_atomic_write_ptr(dest[0], key);
+            KOS_atomic_write_ptr(dest[1], TO_SMALL_INT(i));
+            KOS_atomic_write_ptr(dest[2], val);
+        }
+
+        ++i;
+        ++src;
+        dest += step;
+    }
+
+_error:
+    return error ? KOS_BADPTR : ret;
+}
+
+static int _is_less_for_sort(KOS_OBJ_ID               left_key,
+                             KOS_OBJ_ID               left_idx,
+                             enum _KOS_COMPARE_RESULT lt,
+                             enum _KOS_COMPARE_RESULT gt,
+                             KOS_OBJ_ID               right_key,
+                             KOS_OBJ_ID               right_idx)
+{
+    const enum _KOS_COMPARE_RESULT cmp = KOS_compare(left_key, right_key);
+
+    if (cmp == lt)
+        return 1;
+
+    if (cmp == gt)
+        return 0;
+
+    if (lt == KOS_LESS_THAN)
+        return (intptr_t)left_idx < (intptr_t)right_idx;
+    else
+        return (intptr_t)left_idx > (intptr_t)right_idx;
+}
+
+static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
+                        KOS_ATOMIC(KOS_OBJ_ID) *end,
+                        int                     step,
+                        int                     reverse)
+{
+    const KOS_OBJ_ID pivot_key = (KOS_OBJ_ID)KOS_atomic_read_ptr(*(end - step));
+    const KOS_OBJ_ID pivot_idx = (KOS_OBJ_ID)KOS_atomic_read_ptr(*(end - step + 1));
+
+    KOS_ATOMIC(KOS_OBJ_ID)        *mid = begin - step;
+    KOS_ATOMIC(KOS_OBJ_ID)        *p   = begin;
+    const enum _KOS_COMPARE_RESULT lt  = reverse ? KOS_GREATER_THAN : KOS_LESS_THAN;
+    const enum _KOS_COMPARE_RESULT gt  = reverse ? KOS_LESS_THAN : KOS_GREATER_THAN;
+
+    end -= step;
+
+    while (p < end) {
+        const KOS_OBJ_ID key = (KOS_OBJ_ID)KOS_atomic_read_ptr(p[0]);
+        const KOS_OBJ_ID idx = (KOS_OBJ_ID)KOS_atomic_read_ptr(p[1]);
+
+        if (_is_less_for_sort(key, idx, lt, gt, pivot_key, pivot_idx)) {
+
+            mid += step;
+
+            KOS_atomic_write_ptr(p[0], (KOS_OBJ_ID)KOS_atomic_read_ptr(mid[0]));
+            KOS_atomic_write_ptr(p[1], (KOS_OBJ_ID)KOS_atomic_read_ptr(mid[1]));
+
+            KOS_atomic_write_ptr(mid[0], key);
+            KOS_atomic_write_ptr(mid[1], idx);
+
+            if (step == 3) {
+                const KOS_OBJ_ID val = (KOS_OBJ_ID)KOS_atomic_read_ptr(p[2]);
+
+                KOS_atomic_write_ptr(p[2], (KOS_OBJ_ID)KOS_atomic_read_ptr(mid[2]));
+                KOS_atomic_write_ptr(mid[2], val);
+            }
+        }
+
+        p += step;
+    }
+
+    mid += step;
+
+    {
+        const KOS_OBJ_ID key = (KOS_OBJ_ID)KOS_atomic_read_ptr(mid[0]);
+        const KOS_OBJ_ID idx = (KOS_OBJ_ID)KOS_atomic_read_ptr(mid[1]);
+
+        if (_is_less_for_sort(pivot_key, pivot_idx, lt, gt, key, idx)) {
+            KOS_atomic_write_ptr(end[0], key);
+            KOS_atomic_write_ptr(end[1], idx);
+
+            KOS_atomic_write_ptr(mid[0], pivot_key);
+            KOS_atomic_write_ptr(mid[1], pivot_idx);
+
+            if (step == 3) {
+                const KOS_OBJ_ID pivot_val = (KOS_OBJ_ID)KOS_atomic_read_ptr(end[2]);
+
+                KOS_atomic_write_ptr(end[2], (KOS_OBJ_ID)KOS_atomic_read_ptr(mid[2]));
+                KOS_atomic_write_ptr(mid[2], pivot_val);
+            }
+        }
+    }
+
+    if (begin + step < mid)
+        _sort_range(begin, mid, step, reverse);
+    if (mid + step < end)
+        _sort_range(mid + step, end + step, step, reverse);
+}
+
+static void _copy_sort_results(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  ret,
+                               KOS_OBJ_ID  sorted,
+                               uint32_t    step)
+{
+    KOS_ATOMIC(KOS_OBJ_ID) *src;
+    KOS_ATOMIC(KOS_OBJ_ID) *src_end;
+    KOS_ATOMIC(KOS_OBJ_ID) *dest;
+
+    assert(GET_OBJ_TYPE(ret) == OBJ_ARRAY);
+    assert(GET_OBJ_TYPE(sorted) == OBJ_ARRAY);
+    assert(step == 2 || step == 3);
+
+    src     = _KOS_get_array_buffer(OBJPTR(ARRAY, sorted));
+    src_end = src + KOS_get_array_size(sorted);
+    dest    = _KOS_get_array_buffer(OBJPTR(ARRAY, ret));
+
+    assert(KOS_get_array_size(ret) * step == KOS_get_array_size(sorted));
+
+    if (step == 3)
+        src += 2;
+
+    while (src < src_end) {
+
+        const KOS_OBJ_ID val = (KOS_OBJ_ID)KOS_atomic_read_ptr(*src);
+        KOS_atomic_write_ptr(*dest, val);
+
+        src += step;
+        ++dest;
+    }
+}
+
+/* @item base array.prototype.sort()
+ *
+ *     array.prototype.sort(key=void, reverse=false)
+ *     array.prototype.sort(reverse)
+ *
+ * Sorts array in-place.
+ *
+ * Returns the array being sorted (`this`).
+ *
+ * Uses a stable sorting algorithm, which preserves order of elements for
+ * which sorting keys compare as equal.
+ *
+ * `key` is a single-argument function which produces a sorting key for each
+ * element of the array.  The array elements are then sorted by the keys using
+ * the '<' operator.  By default `key` is `void` and the elements themselves
+ * are used as sorting keys.
+ *
+ * `reverse` defaults to `false`.  If `reverse` is specified as `true`,
+ * the array elements are sorted in reverse order, i.e. in a descending key
+ * order.
+ *
+ * Example:
+ *
+ *     > [8, 5, 6, 0, 10, 2].sort()
+ *     [0, 2, 5, 6, 8, 10]
+ */
+static KOS_OBJ_ID _sort(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
+{
+    int                     error    = KOS_SUCCESS;
+    const uint32_t          num_args = KOS_get_array_size(args_obj);
+    KOS_OBJ_ID              key      = KOS_VOID;
+    KOS_OBJ_ID              reverse  = KOS_FALSE;
+    KOS_ATOMIC(KOS_OBJ_ID) *src;
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
+
+    if (num_args > 0) {
+
+        KOS_TYPE type;
+
+        key = KOS_array_read(ctx, args_obj, 0);
+        TRY_OBJID(key);
+
+        type = GET_OBJ_TYPE(key);
+
+        if (type == OBJ_BOOLEAN) {
+            reverse = key;
+            key     = KOS_VOID;
+        }
+        else {
+            if (type != OBJ_VOID && type != OBJ_FUNCTION && type != OBJ_CLASS)
+                RAISE_EXCEPTION(str_err_invalid_key_type);
+
+            if (num_args > 1) {
+                reverse = KOS_array_read(ctx, args_obj, 1);
+                TRY_OBJID(reverse);
+                if (reverse != KOS_TRUE && reverse != KOS_FALSE)
+                    RAISE_EXCEPTION(str_err_invalid_reverse_type);
+            }
+        }
+    }
+
+    if (KOS_get_array_size(this_obj) > 1) {
+
+        const KOS_OBJ_ID aux = _expand_for_sort(ctx, this_obj, key);
+        TRY_OBJID(aux);
+
+        src = _KOS_get_array_buffer(OBJPTR(ARRAY, aux));
+
+        _sort_range(src,
+                    src + KOS_get_array_size(aux),
+                    (key == KOS_VOID) ? 2 : 3,
+                    (int)KOS_get_bool(reverse));
+
+        _copy_sort_results(ctx, this_obj, aux, (key == KOS_VOID) ? 2 : 3);
+    }
+
+_error:
+    return error ? KOS_BADPTR : this_obj;
 }
 
 /* @item base array.prototype.size
@@ -3572,11 +3837,11 @@ int _KOS_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 
-    TRY_ADD_FUNCTION( ctx, module, "print",     _print,     0);
-    TRY_ADD_FUNCTION( ctx, module, "print_",    _print_,    0);
-    TRY_ADD_FUNCTION( ctx, module, "stringify", _stringify, 0);
-    TRY_ADD_GENERATOR(ctx, module, "deep",      _deep,      1);
-    TRY_ADD_GENERATOR(ctx, module, "shallow",   _shallow,   1);
+    TRY_ADD_FUNCTION( ctx, module, "print",      _print,     0);
+    TRY_ADD_FUNCTION( ctx, module, "print_",     _print_,    0);
+    TRY_ADD_FUNCTION( ctx, module, "stringify",  _stringify, 0);
+    TRY_ADD_GENERATOR(ctx, module, "deep",       _deep,      1);
+    TRY_ADD_GENERATOR(ctx, module, "shallow",    _shallow,   1);
 
     TRY(KOS_module_add_global(ctx, module, KOS_instance_get_cstring(ctx, str_args), ctx->inst->args, 0));
 
@@ -3602,6 +3867,7 @@ int _KOS_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "reserve",       _reserve,           1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "resize",        _resize,            1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "slice",         _slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "sort",          _sort,              0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(array),      "size",          _get_array_size,    0);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "copy_buffer",   _copy_buffer,       1);

@@ -144,8 +144,8 @@ fun make_toc_name(name)
 {
     return string(name.map(fun(c) {
         switch c {
-            case "_":      return "\_"
-            default:       return c
+            case "_": return "\_"
+            default:  return c
         }
     })...)
 }
