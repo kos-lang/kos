@@ -147,7 +147,7 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT           ctx,
         }
     }
     else
-        str = OBJPTR(STRING, ctx->inst->empty_string);
+        str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
 
     return OBJID(STRING, str);
 }
@@ -206,7 +206,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT            ctx,
         }
     }
     else
-        str = OBJPTR(STRING, ctx->inst->empty_string);
+        str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
 
     return OBJID(STRING, str);
 }
@@ -260,7 +260,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
             goto _error;
     }
     else
-        ret = OBJPTR(STRING, ctx->inst->empty_string);
+        ret = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
 
     str_buf = (void *)_KOS_get_string_buffer(ret);
 
@@ -558,7 +558,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
         KOS_ATOMIC(KOS_OBJ_ID) *cur_ptr;
         KOS_OBJ_ID              non_0_str = KOS_VOID;
 
-        new_str = OBJPTR(STRING, ctx->inst->empty_string);
+        new_str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
 
         for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
             KOS_OBJ_ID             cur_str = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
@@ -684,10 +684,10 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                 }
             }
             else
-                new_str = OBJPTR(STRING, ctx->inst->empty_string);
+                new_str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
         }
         else
-            new_str = OBJPTR(STRING, ctx->inst->empty_string);
+            new_str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
     }
 
     return OBJID(STRING, new_str);
@@ -1366,7 +1366,7 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
     len = KOS_get_string_length(obj_id);
 
     if (len == 0 || num_repeat == 0)
-        return ctx->inst->empty_string;
+        return KOS_get_string(ctx, KOS_STR_EMPTY);
 
     if (num_repeat == 1)
         return obj_id;

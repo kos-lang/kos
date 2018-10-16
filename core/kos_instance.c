@@ -248,8 +248,12 @@ static KOS_OBJ_ID _alloc_empty_string(KOS_CONTEXT ctx)
 
 static void _clear_instance(KOS_INSTANCE *inst)
 {
+    int i;
+
+    for (i = 0; i < KOS_STR_NUM; ++i)
+        inst->common_strings[i] = KOS_BADPTR;
+
     inst->flags                           = 0;
-    inst->empty_string                    = KOS_BADPTR;
     inst->args                            = KOS_BADPTR;
     inst->prototypes.object_proto         = KOS_BADPTR;
     inst->prototypes.number_proto         = KOS_BADPTR;
@@ -337,8 +341,8 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     ctx = &inst->threads.main_thread;
 
-    inst->empty_string = _alloc_empty_string(ctx);
-    TRY_OBJID(inst->empty_string);
+    inst->common_strings[KOS_STR_EMPTY] = _alloc_empty_string(ctx);
+    TRY_OBJID(inst->common_strings[KOS_STR_EMPTY]);
 
     {
         KOS_OBJ_ID str = KOS_new_cstring(ctx, str_err_out_of_memory);
@@ -652,6 +656,14 @@ KOS_OBJ_ID KOS_instance_get_cstring(KOS_CONTEXT ctx,
     }
 
     return str;
+}
+
+KOS_OBJ_ID KOS_get_string(KOS_CONTEXT  ctx,
+                          enum KOS_STR id)
+{
+    assert((int)id >= 0 && id < KOS_STR_NUM);
+
+    return ctx->inst->common_strings[id];
 }
 
 #ifndef NDEBUG

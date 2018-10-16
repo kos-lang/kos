@@ -1149,7 +1149,12 @@ static void _mark_roots(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *const inst = ctx->inst;
 
-    _mark_object_black(inst->empty_string);
+    {
+        int i;
+
+        for (i = 0; i < KOS_STR_NUM; ++i)
+            _mark_object_black(inst->common_strings[i]);
+    }
     _mark_object_black(_get_heap(ctx)->str_oom_id);
 
     _mark_object_black(inst->prototypes.object_proto);
@@ -1529,7 +1534,12 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
 
     /* Update object pointers in instance */
 
-    _update_child_ptr(&inst->empty_string);
+    {
+        int i;
+
+        for (i = 0; i < KOS_STR_NUM; ++i)
+            _update_child_ptr(&inst->common_strings[i]);
+    }
     _update_child_ptr(&heap->str_oom_id);
 
     _update_child_ptr(&inst->prototypes.object_proto);

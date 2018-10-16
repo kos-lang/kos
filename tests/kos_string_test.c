@@ -1228,7 +1228,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID empty = ctx->inst->empty_string;
+        KOS_OBJ_ID empty = KOS_get_string(ctx, KOS_STR_EMPTY);
 
         TEST(!IS_BAD_PTR(empty));
         TEST(GET_OBJ_TYPE(empty) == OBJ_STRING);
@@ -1279,7 +1279,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID str = KOS_string_slice(ctx, ctx->inst->empty_string, 0, 1);
+        KOS_OBJ_ID str = KOS_string_slice(ctx, KOS_get_string(ctx, KOS_STR_EMPTY), 0, 1);
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);

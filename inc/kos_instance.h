@@ -138,6 +138,11 @@ struct _KOS_THREAD_MGMT {
     _KOS_MUTEX                 mutex;
 };
 
+enum KOS_STR {
+    KOS_STR_EMPTY,
+    KOS_STR_NUM /* number of pre-allocated strings */
+};
+
 enum _KOS_INSTANCE_FLAGS {
     KOS_INST_NO_FLAGS = 0,
     KOS_INST_VERBOSE  = 1,
@@ -147,7 +152,7 @@ enum _KOS_INSTANCE_FLAGS {
 struct _KOS_INSTANCE {
     uint32_t                flags;
     struct _KOS_HEAP        heap;
-    KOS_OBJ_ID              empty_string;
+    KOS_OBJ_ID              common_strings[KOS_STR_NUM]; /* For KOS_get_string() */
     KOS_OBJ_ID              args;
     struct _KOS_PROTOTYPES  prototypes;
     struct _KOS_MODULE_MGMT modules;
@@ -208,6 +213,9 @@ void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
 
 KOS_OBJ_ID KOS_instance_get_cstring(KOS_CONTEXT ctx,
                                     const char *cstr);
+
+KOS_OBJ_ID KOS_get_string(KOS_CONTEXT  ctx,
+                          enum KOS_STR id);
 
 #ifdef NDEBUG
 #define KOS_instance_validate(ctx) ((void)0)

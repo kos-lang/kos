@@ -1228,7 +1228,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 
     /* Find module source file */
     if (data) {
-        module_dir  = inst->empty_string;
+        module_dir  = KOS_get_string(ctx, KOS_STR_EMPTY);
         module_path = actual_module_name;
     }
     else
