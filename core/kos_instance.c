@@ -43,11 +43,8 @@
 #include <string.h>
 
 static const char str_init[]                    = "init";
-static const char str_backtrace[]               = "backtrace";
 static const char str_err_not_array[]           = "object is not an array";
-static const char str_err_out_of_memory[]       = "out of memory";
 static const char str_err_thread_registered[]   = "thread already registered";
-static const char str_file[]                    = "file";
 static const char str_format_exception[]        = "Exception: ";
 static const char str_format_hash[]             = "  #";
 static const char str_format_line[]             = ":";
@@ -55,10 +52,6 @@ static const char str_format_function[]         = " in '";
 static const char str_format_module[]           = "' in ";
 static const char str_format_offset[]           = "  ";
 static const char str_format_question_marks[]   = "???";
-static const char str_function[]                = "function";
-static const char str_line[]                    = "line";
-static const char str_offset[]                  = "offset";
-static const char str_value[]                   = "value";
 
 DECLARE_CONST_OBJECT(_kos_void)  = KOS_CONST_OBJECT_INIT(OBJ_VOID,    0);
 DECLARE_CONST_OBJECT(_kos_false) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
@@ -120,12 +113,8 @@ static int _register_thread(KOS_INSTANCE *inst,
     ctx->regs_idx    = 0;
     ctx->stack_depth = 0;
 
-    if (_KOS_tls_get(inst->threads.thread_key)) {
-
-        KOS_OBJ_ID err = KOS_instance_get_cstring(ctx, str_err_thread_registered);
-        KOS_raise_exception(ctx, err);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+    if (_KOS_tls_get(inst->threads.thread_key))
+        RAISE_EXCEPTION(str_err_thread_registered);
 
     _KOS_tls_set(inst->threads.thread_key, ctx);
 
@@ -246,12 +235,73 @@ static KOS_OBJ_ID _alloc_empty_string(KOS_CONTEXT ctx)
     return OBJID(STRING, str);
 }
 
+struct _KOS_INIT_STRING {
+    enum KOS_STR str_id;
+    const char  *text;
+};
+
+static int _init_common_strings(KOS_CONTEXT   ctx,
+                                KOS_INSTANCE *inst)
+{
+    int    error = KOS_SUCCESS;
+    size_t i;
+
+    static const struct _KOS_INIT_STRING init[] = {
+
+        /* Init this one first before anything else */
+        { KOS_STR_OUT_OF_MEMORY, "out of memory" },
+
+        { KOS_STR_ARGS,       "args"      },
+        { KOS_STR_ARRAY,      "array"     },
+        { KOS_STR_BACKTRACE,  "backtrace" },
+        { KOS_STR_BOOLEAN,    "boolean"   },
+        { KOS_STR_BUFFER,     "buffer"    },
+        { KOS_STR_CLASS,      "class"     },
+        { KOS_STR_FALSE,      "false"     },
+        { KOS_STR_FILE,       "file"      },
+        { KOS_STR_FLOAT,      "float"     },
+        { KOS_STR_FUNCTION,   "function"  },
+        { KOS_STR_GLOBAL,     "global"    },
+        { KOS_STR_INTEGER,    "integer"   },
+        { KOS_STR_LINE,       "line"      },
+        { KOS_STR_MODULE,     "module"    },
+        { KOS_STR_OBJECT,     "object"    },
+        { KOS_STR_OFFSET,     "offset"    },
+        { KOS_STR_PROTOTYPE,  "prototype" },
+        { KOS_STR_QUOTE_MARK, "\""        },
+        { KOS_STR_RESULT,     "result"    },
+        { KOS_STR_SLICE,      "slice"     },
+        { KOS_STR_STRING,     "string"    },
+        { KOS_STR_THIS,       "this"      },
+        { KOS_STR_TRUE,       "true"      },
+        { KOS_STR_VALUE,      "value"     },
+        { KOS_STR_VOID,       "void"      },
+        { KOS_STR_XBUILTINX,  "<builtin>" }
+    };
+
+    inst->common_strings[KOS_STR_EMPTY] = _alloc_empty_string(ctx);
+    TRY_OBJID(inst->common_strings[KOS_STR_EMPTY]);
+
+    for (i = 0; i < sizeof(init) / sizeof(init[0]); ++i) {
+        const KOS_OBJ_ID str_id = KOS_new_const_ascii_cstring(ctx, init[i].text);
+        TRY_OBJID(str_id);
+
+        inst->common_strings[init[i].str_id] = str_id;
+    }
+
+_error:
+    return error;
+}
+
 static void _clear_instance(KOS_INSTANCE *inst)
 {
     int i;
 
     for (i = 0; i < KOS_STR_NUM; ++i)
         inst->common_strings[i] = KOS_BADPTR;
+
+    /* Set to an innocuous value in case initial allocation fails */
+    inst->common_strings[KOS_STR_OUT_OF_MEMORY] = KOS_VOID;
 
     inst->flags                           = 0;
     inst->args                            = KOS_BADPTR;
@@ -341,14 +391,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     ctx = &inst->threads.main_thread;
 
-    inst->common_strings[KOS_STR_EMPTY] = _alloc_empty_string(ctx);
-    TRY_OBJID(inst->common_strings[KOS_STR_EMPTY]);
-
-    {
-        KOS_OBJ_ID str = KOS_new_cstring(ctx, str_err_out_of_memory);
-        TRY_OBJID(str);
-        inst->heap.str_oom_id = str;
-    }
+    TRY(_init_common_strings(ctx, inst));
 
     TRY_OBJID(inst->prototypes.object_proto        = KOS_new_object_with_prototype(ctx, KOS_VOID));
     TRY_OBJID(inst->prototypes.number_proto        = KOS_new_object(ctx));
@@ -365,7 +408,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY_OBJID(inst->prototypes.generator_end_proto = KOS_new_object(ctx));
     TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(ctx));
 
-    TRY_OBJID(init_module->name          = KOS_instance_get_cstring(ctx, str_init));
+    TRY_OBJID(init_module->name          = KOS_new_const_ascii_string(ctx, str_init, sizeof(str_init) - 1));
     TRY_OBJID(init_module->globals       = KOS_new_array(ctx, 0));
     TRY_OBJID(init_module->global_names  = KOS_new_object(ctx));
     TRY_OBJID(init_module->module_names  = KOS_new_object(ctx));
@@ -644,26 +687,12 @@ _error:
     return error;
 }
 
-KOS_OBJ_ID KOS_instance_get_cstring(KOS_CONTEXT ctx,
-                                    const char *cstr)
-{
-    /* TODO lookup in array */
-    KOS_OBJ_ID str = KOS_new_const_ascii_cstring(ctx, cstr);
-
-    if (IS_BAD_PTR(str)) {
-        KOS_clear_exception(ctx);
-        str = KOS_VOID;
-    }
-
-    return str;
-}
-
 KOS_OBJ_ID KOS_get_string(KOS_CONTEXT  ctx,
-                          enum KOS_STR id)
+                          enum KOS_STR str_id)
 {
-    assert((int)id >= 0 && id < KOS_STR_NUM);
+    assert((int)str_id >= 0 && str_id < KOS_STR_NUM);
 
-    return ctx->inst->common_strings[id];
+    return ctx->inst->common_strings[str_id];
 }
 
 #ifndef NDEBUG
@@ -695,99 +724,114 @@ void KOS_raise_exception(KOS_CONTEXT ctx,
 void KOS_raise_exception_cstring(KOS_CONTEXT ctx,
                                  const char *cstr)
 {
-    KOS_raise_exception(ctx, KOS_instance_get_cstring(ctx, cstr));
+    const KOS_OBJ_ID str = KOS_new_const_ascii_cstring(ctx, cstr);
+
+    if ( ! IS_BAD_PTR(str))
+        KOS_raise_exception(ctx, str);
+
+    assert( ! IS_BAD_PTR(ctx->exception));
 }
 
 KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  exception)
 {
-    int        error;
-    unsigned   i;
-    unsigned   depth;
-    KOS_OBJ_ID value;
-    KOS_OBJ_ID backtrace;
-    KOS_OBJ_ID array = KOS_BADPTR;
-    KOS_OBJ_ID str;
+    int                error;
+    unsigned           i;
+    unsigned           depth;
+    KOS_OBJ_ID         value;
+    KOS_OBJ_ID         backtrace;
+    KOS_OBJ_ID         array = KOS_BADPTR;
+    KOS_OBJ_ID         str;
+    struct _KOS_VECTOR cstr;
 
-    value = KOS_get_property(ctx, exception, KOS_instance_get_cstring(ctx, str_value));
+    _KOS_vector_init(&cstr);
+
+    value = KOS_get_property(ctx, exception, KOS_get_string(ctx, KOS_STR_VALUE));
     TRY_OBJID(value);
 
-    backtrace = KOS_get_property(ctx, exception, KOS_instance_get_cstring(ctx, str_backtrace));
+    backtrace = KOS_get_property(ctx, exception, KOS_get_string(ctx, KOS_STR_BACKTRACE));
     TRY_OBJID(backtrace);
 
-    if (GET_OBJ_TYPE(backtrace) != OBJ_ARRAY) {
-        KOS_raise_exception_cstring(ctx, str_err_not_array);
-        TRY(KOS_ERROR_EXCEPTION);
-    }
+    if (GET_OBJ_TYPE(backtrace) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
 
     depth = KOS_get_array_size(backtrace);
-    array = KOS_new_array(ctx, 1+depth);
+    array = KOS_new_array(ctx, 1 + depth);
     TRY_OBJID(array);
 
-    str = KOS_object_to_string(ctx, value);
-    TRY_OBJID(str);
+    if (_KOS_vector_reserve(&cstr, 80) != KOS_SUCCESS) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+    TRY(_KOS_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));
+    TRY(KOS_object_to_string_or_cstr_vec(ctx, value, KOS_DONT_QUOTE, 0, &cstr));
 
-    str = KOS_string_add(ctx, KOS_instance_get_cstring(ctx, str_format_exception), str);
+    str = KOS_new_string(ctx, cstr.buffer, cstr.size - 1);
     TRY_OBJID(str);
 
     TRY(KOS_array_write(ctx, array, 0, str));
 
     for (i = 0; i < depth; i++) {
-        KOS_OBJ_ID             frame_desc = KOS_array_read(ctx, backtrace, (int)i);
-        KOS_ATOMIC(KOS_OBJ_ID) parts[10];
 
+        char cbuf[16];
+
+        const KOS_OBJ_ID frame_desc = KOS_array_read(ctx, backtrace, (int)i);
         TRY_OBJID(frame_desc);
 
-        parts[0] = KOS_instance_get_cstring(ctx, str_format_hash);
+        cstr.size = 0;
 
-        parts[1] = KOS_object_to_string(ctx, TO_SMALL_INT((int)i));
-        TRY_OBJID(parts[1]);
+        TRY(_KOS_append_cstr(ctx, &cstr, str_format_hash,
+                             sizeof(str_format_hash) - 1));
 
-        parts[2] = KOS_instance_get_cstring(ctx, str_format_offset);
+        snprintf(cbuf, sizeof(cbuf), "%u", i);
+        TRY(_KOS_append_cstr(ctx, &cstr, cbuf, strlen(cbuf)));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_offset));
+        TRY(_KOS_append_cstr(ctx, &cstr, str_format_offset,
+                             sizeof(str_format_offset) - 1));
+
+        str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_OFFSET));
         TRY_OBJID(str);
         if (IS_SMALL_INT(str)) {
-            char cbuf[16];
             snprintf(cbuf, sizeof(cbuf), "0x%X", (unsigned)GET_SMALL_INT(str));
-            parts[3] = KOS_new_cstring(ctx, cbuf);
-            TRY_OBJID(parts[3]);
+            TRY(_KOS_append_cstr(ctx, &cstr, cbuf, strlen(cbuf)));
         }
         else
-            parts[3] = KOS_instance_get_cstring(ctx, str_format_question_marks);
+            TRY(_KOS_append_cstr(ctx, &cstr, str_format_question_marks,
+                                 sizeof(str_format_question_marks) - 1));
 
-        parts[4] = KOS_instance_get_cstring(ctx, str_format_function);
+        TRY(_KOS_append_cstr(ctx, &cstr, str_format_function,
+                             sizeof(str_format_function) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_function));
+        str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_FUNCTION));
         TRY_OBJID(str);
-        parts[5] = str;
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
-        parts[6] = KOS_instance_get_cstring(ctx, str_format_module);
+        TRY(_KOS_append_cstr(ctx, &cstr, str_format_module,
+                             sizeof(str_format_module) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_file));
+        str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_FILE));
         TRY_OBJID(str);
         str = KOS_get_file_name(ctx, str);
         TRY_OBJID(str);
-        parts[7] = str;
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
-        parts[8] = KOS_instance_get_cstring(ctx, str_format_line);
+        TRY(_KOS_append_cstr(ctx, &cstr, str_format_line,
+                             sizeof(str_format_line) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_line));
+        str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_LINE));
         TRY_OBJID(str);
-        parts[9] = KOS_object_to_string(ctx, str);
-        TRY_OBJID(parts[9]);
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
-        str = KOS_string_add_many(ctx, parts, sizeof(parts)/sizeof(parts[0]));
+        str = KOS_new_string(ctx, cstr.buffer, cstr.size - 1);
         TRY_OBJID(str);
 
         TRY(KOS_array_write(ctx, array, 1+(int)i, str));
     }
 
 _error:
-    if (error)
-        array = KOS_BADPTR;
+    _KOS_vector_destroy(&cstr);
 
-    return array;
+    return error ? KOS_BADPTR : array;
 }
 
 void KOS_raise_generator_end(KOS_CONTEXT ctx)

@@ -35,7 +35,6 @@
 
 static const char str_err_cannot_override_prototype[] = "cannot override prototype";
 static const char str_err_not_class[]                 = "object is not a class";
-static const char str_prototype[]                     = "prototype";
 
 KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
 {
@@ -176,7 +175,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 
         if (KOS_set_builtin_dynamic_property(ctx,
                                              OBJID(CLASS, func),
-                                             KOS_instance_get_cstring(ctx, str_prototype),
+                                             KOS_get_string(ctx, KOS_STR_PROTOTYPE),
                                              ctx->inst->modules.init_module,
                                              _get_prototype,
                                              _set_prototype))

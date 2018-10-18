@@ -44,8 +44,6 @@
 #define IMMPART(val,shift) ((uint8_t)((uint32_t)(val) >> shift))
 #define IMM32(val) IMMPART(val, 0), IMMPART(val, 8), IMMPART(val, 16), IMMPART(val, 24)
 
-static const char str_value[] = "value";
-
 enum _CREATE_FUNC {
     CREATE_FUNC,
     CREATE_GEN,
@@ -210,7 +208,7 @@ int main(void)
     /* SET, GET.PROP */
     {
         static const char prop1[]  = "prop1";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop1);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,     0,
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop1"*/
@@ -221,6 +219,8 @@ int main(void)
             INSTR_RETURN,       0, 3
         };
 
+        TEST(!IS_BAD_PTR(str_prop));
+
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 4, &str_prop, 1) == TO_SMALL_INT(-6));
         TEST_NO_EXCEPTION();
     }
@@ -229,7 +229,7 @@ int main(void)
     /* SET.PROP, GET */
     {
         static const char prop2[] = "prop2";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop2);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop2);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,     0,
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-7,
@@ -238,6 +238,8 @@ int main(void)
             INSTR_GET,          1, 0, 1,
             INSTR_RETURN,       0, 1
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 2, &str_prop, 1) == TO_SMALL_INT(-7));
         TEST_NO_EXCEPTION();
@@ -279,13 +281,15 @@ int main(void)
     /* SET - invalid object type */
     {
         static const char prop1[]  = "prop1";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop1);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-6,
             INSTR_SET,          0, 0, 1,
             INSTR_RETURN,       0, 0
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 2, &str_prop, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -324,13 +328,15 @@ int main(void)
     /* SET.PROP - invalid object type */
     {
         static const char prop1[]  = "prop1";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop1);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-6,
             INSTR_SET_PROP,     0, IMM32(0)/*"prop1"*/, 1,
             INSTR_RETURN,       0, 0
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 2, &str_prop, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -340,13 +346,15 @@ int main(void)
     /* SET.ELEM - invalid object type */
     {
         static const char prop1[]  = "prop1";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop1);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-6,
             INSTR_SET_ELEM,     0, IMM32(0), 1,
             INSTR_RETURN,       0, 0
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 2, &str_prop, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -356,13 +364,15 @@ int main(void)
     /* SET.ELEM - index out of range */
     {
         static const char prop1[]  = "prop1";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop1);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_ARRAY,   0, IMM32(1),
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop1"*/
             INSTR_SET_ELEM,     0, IMM32(1), 1,
             INSTR_RETURN,       0, 0
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 2, &str_prop, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -372,12 +382,14 @@ int main(void)
     /* SET.ELEM - invalid index type for array */
     {
         static const char prop1[]  = "prop1";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop1);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
             INSTR_SET_ELEM,     0, IMM32(0), 0,
             INSTR_RETURN,       0, 0
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 1, &str_prop, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -387,7 +399,7 @@ int main(void)
     /* SET.PROP, HAS.PROP */
     {
         static const char prop5[]  = "prop5";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop5);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop5);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,   0,
             INSTR_LOAD_INT8,  1, (uint8_t)(int8_t)-9,
@@ -395,6 +407,8 @@ int main(void)
             INSTR_HAS_PROP,   2, 0, IMM32(0),/*"prop5"*/
             INSTR_RETURN,     0, 2
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 3, &str_prop, 1) == KOS_TRUE);
         TEST_NO_EXCEPTION();
@@ -404,7 +418,7 @@ int main(void)
     /* PUSH */
     {
         static const char prop5[]  = "prop5";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop5);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop5);
         KOS_OBJ_ID        ret;
         KOS_OBJ_ID        val;
         const uint8_t code[] = {
@@ -418,6 +432,8 @@ int main(void)
             INSTR_PUSH,         1, 2,
             INSTR_RETURN,       0, 1
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         ret = _run_code(&inst, ctx, &code[0], sizeof(code), 3, &str_prop, 1);
         TEST( ! IS_BAD_PTR(ret));
@@ -440,7 +456,7 @@ int main(void)
     /* PUSH.EX */
     {
         static const char prop5[]  = "01";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop5);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop5);
         KOS_OBJ_ID        ret;
         KOS_OBJ_ID        val;
         const uint8_t code[] = {
@@ -454,6 +470,8 @@ int main(void)
             INSTR_PUSH_EX,      1, 2,
             INSTR_RETURN,       0, 1
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         ret = _run_code(&inst, ctx, &code[0], sizeof(code), 3, &str_prop, 1);
         TEST( ! IS_BAD_PTR(ret));
@@ -481,7 +499,7 @@ int main(void)
     /* DEL.PROP */
     {
         static const char prop6[]  = "prop6";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop6);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop6);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,   0,
             INSTR_LOAD_INT8,  1, (uint8_t)(int8_t)-10,
@@ -491,6 +509,8 @@ int main(void)
             INSTR_RETURN,     0, 1
         };
 
+        TEST(!IS_BAD_PTR(str_prop));
+
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 2, &str_prop, 1) == KOS_FALSE);
         TEST_NO_EXCEPTION();
     }
@@ -499,13 +519,15 @@ int main(void)
     /* DEL.PROP - delete non-existent property */
     {
         static const char prop6[]  = "prop6";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop6);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop6);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ, 0,
             INSTR_DEL_PROP, 0, IMM32(0),/*"prop6"*/
             INSTR_HAS_PROP, 0, 0, IMM32(0),/*"prop6"*/
             INSTR_RETURN,   0, 0
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 1, &str_prop, 1) == KOS_FALSE);
         TEST_NO_EXCEPTION();
@@ -515,7 +537,7 @@ int main(void)
     /* DEL */
     {
         static const char prop7[]  = "prop7";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop7);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop7);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,     0,
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-10,
@@ -526,6 +548,8 @@ int main(void)
             INSTR_RETURN,       0, 1
         };
 
+        TEST(!IS_BAD_PTR(str_prop));
+
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 2, &str_prop, 1) == KOS_FALSE);
         TEST_NO_EXCEPTION();
     }
@@ -534,7 +558,7 @@ int main(void)
     /* DEL - delete non-existent property */
     {
         static const char prop7[]  = "prop7";
-        KOS_OBJ_ID        str_prop = KOS_instance_get_cstring(ctx, prop7);
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop7);
         const uint8_t code[] = {
             INSTR_LOAD_OBJ,     0,
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop7*/
@@ -542,6 +566,8 @@ int main(void)
             INSTR_HAS_PROP,     1, 0, IMM32(0),/*"prop7"*/
             INSTR_RETURN,       0, 1
         };
+
+        TEST(!IS_BAD_PTR(str_prop));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 2, &str_prop, 1) == KOS_FALSE);
         TEST_NO_EXCEPTION();
@@ -866,8 +892,11 @@ int main(void)
             INSTR_RETURN,       0, 0
         };
 
-        constants[0] = KOS_instance_get_cstring(ctx, str);
+        constants[0] = KOS_new_const_ascii_cstring(ctx, str);
         constants[1] = _create_func(ctx, 5, 2, 0, 1, 0);
+
+        TEST(!IS_BAD_PTR(constants[0]));
+        TEST(!IS_BAD_PTR(constants[1]));
 
         TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 3, constants, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -915,6 +944,7 @@ int main(void)
     /* CALL constructor */
     {
         static const char str[]  = "own property";
+        KOS_OBJ_ID        str_prop;
         KOS_OBJ_ID        constants[4];
         KOS_OBJ_ID        ret;
         const uint8_t     code[] = {
@@ -929,17 +959,24 @@ int main(void)
             INSTR_RETURN,      0, 0
         };
 
-        constants[0] = KOS_instance_get_cstring(ctx, str);
+        constants[0] = KOS_new_const_ascii_cstring(ctx, str);
         constants[1] = TO_SMALL_INT(0xC0DEU);
         constants[2] = _create_class(ctx, 5, 2, 0, 1, 0);
         constants[3] = KOS_new_object(ctx); /* prototype */
+        str_prop     = KOS_new_const_ascii_cstring(ctx, str);
+
+        TEST(!IS_BAD_PTR(constants[0]));
+        TEST(!IS_BAD_PTR(constants[1]));
+        TEST(!IS_BAD_PTR(constants[2]));
+        TEST(!IS_BAD_PTR(constants[3]));
+        TEST(!IS_BAD_PTR(str_prop));
 
         ret = _run_code(&inst, ctx, &code[0], sizeof(code), 2, constants, 4);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_SMALL_INT(ret));
         TEST(GET_OBJ_TYPE(ret) == OBJ_OBJECT);
-        TEST(KOS_get_property(ctx, ret, KOS_instance_get_cstring(ctx, str)) == TO_SMALL_INT(0xC0DEU));
+        TEST(KOS_get_property(ctx, ret, str_prop) == TO_SMALL_INT(0xC0DEU));
         TEST_NO_EXCEPTION();
     }
 
@@ -947,6 +984,7 @@ int main(void)
     /* CALL constructor */
     {
         static const char str[]    = "own property";
+        KOS_OBJ_ID        str_prop;
         KOS_OBJ_ID        ret;
         const uint8_t     code[]   = {
             INSTR_JUMP,        IMM32(12),
@@ -964,17 +1002,24 @@ int main(void)
         };
 
         KOS_OBJ_ID constants[4];
-        constants[0] = KOS_instance_get_cstring(ctx, str);
+        constants[0] = KOS_new_const_ascii_cstring(ctx, str);
         constants[1] = TO_SMALL_INT(0xC0DEU);
         constants[2] = _create_class(ctx, 5, 2, 0, 1, 0);
         constants[3] = KOS_new_object(ctx); /* prototype */
+        str_prop     = KOS_new_const_ascii_cstring(ctx, str);
+
+        TEST(!IS_BAD_PTR(constants[0]));
+        TEST(!IS_BAD_PTR(constants[1]));
+        TEST(!IS_BAD_PTR(constants[2]));
+        TEST(!IS_BAD_PTR(constants[3]));
+        TEST(!IS_BAD_PTR(str_prop));
 
         ret = _run_code(&inst, ctx, &code[0], sizeof(code), 3, constants, 4);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_SMALL_INT(ret));
         TEST(GET_OBJ_TYPE(ret) == OBJ_OBJECT);
-        TEST(KOS_get_property(ctx, ret, KOS_instance_get_cstring(ctx, str)) == TO_SMALL_INT(0xC0DEU));
+        TEST(KOS_get_property(ctx, ret, str_prop) == TO_SMALL_INT(0xC0DEU));
         TEST_NO_EXCEPTION();
     }
 
@@ -1493,7 +1538,7 @@ int main(void)
         KOS_OBJ_ID obj = _run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, 0);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_get_property(ctx, obj, KOS_instance_get_cstring(ctx, str_value)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(ctx, obj, KOS_get_string(ctx, KOS_STR_VALUE)) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
     }
 
@@ -1550,7 +1595,7 @@ int main(void)
         KOS_OBJ_ID obj = _run_code(&inst, ctx, &code[0], sizeof(code), 3, &func, 1);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_get_property(ctx, obj, KOS_instance_get_cstring(ctx, str_value)) == TO_SMALL_INT(42));
+        TEST(KOS_get_property(ctx, obj, KOS_get_string(ctx, KOS_STR_VALUE)) == TO_SMALL_INT(42));
         TEST_NO_EXCEPTION();
     }
 
@@ -1598,7 +1643,7 @@ int main(void)
         };
 
         KOS_OBJ_ID constants[4];
-        constants[0] = KOS_instance_get_cstring(ctx, str_value);
+        constants[0] = KOS_get_string(ctx, KOS_STR_VALUE);
         constants[1] = _create_func(ctx,  42, 3, 0, 0, 0);
         constants[2] = _create_func(ctx,  86, 3, 0, 0, 0);
         constants[3] = _create_func(ctx, 130, 2, 0, 0, 0);

@@ -107,6 +107,7 @@ static KOS_OBJ_ID _open(KOS_CONTEXT ctx,
 {
     int                error        = KOS_SUCCESS;
     KOS_OBJ_ID         ret          = KOS_BADPTR;
+    KOS_OBJ_ID         pos_id;
     FILE              *file         = 0;
     KOS_OBJ_ID         filename_obj = KOS_array_read(ctx, args_obj, 0);
     struct _KOS_VECTOR filename_cstr;
@@ -142,9 +143,12 @@ static KOS_OBJ_ID _open(KOS_CONTEXT ctx,
     ret = KOS_new_object_with_prototype(ctx, this_obj);
     TRY_OBJID(ret);
 
+    pos_id = KOS_new_const_ascii_string(ctx, str_position, sizeof(str_position) - 1);
+    TRY_OBJID(pos_id);
+
     TRY(KOS_set_builtin_dynamic_property(ctx,
                                          ret,
-                                         KOS_instance_get_cstring(ctx, str_position),
+                                         pos_id,
                                          KOS_get_module(ctx),
                                          _get_file_pos,
                                          _set_file_pos));
@@ -651,11 +655,13 @@ _error:
     return error;
 }
 
-#define TRY_ADD_STD_FILE(ctx, module, proto, name, file)                      \
-do {                                                                           \
-    static const char str_name[] = name;                                       \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring((ctx), str_name); \
-    TRY(_add_std_file((ctx), (module), (proto), str, (file)));                \
+#define TRY_ADD_STD_FILE(ctx, module, proto, name, file)                             \
+do {                                                                                 \
+    static const char str_name[] = name;                                             \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,       \
+                                                              sizeof(str_name) - 1); \
+    TRY_OBJID(str);                                                                  \
+    TRY(_add_std_file((ctx), (module), (proto), str, (file)));                       \
 } while (0)
 
 int _KOS_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)

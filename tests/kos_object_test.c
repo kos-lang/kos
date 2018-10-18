@@ -76,23 +76,46 @@ int main(void)
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
 
+    KOS_OBJ_ID str_aaa;
+    KOS_OBJ_ID str_bbb;
+    KOS_OBJ_ID str_ccc;
+
     TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
     {
+        static const char aaa[] = "aaa";
+        static const char bbb[] = "bbb";
+        static const char ccc[] = "ccc";
+
+        str_aaa = KOS_new_const_ascii_cstring(ctx, aaa);
+        str_bbb = KOS_new_const_ascii_cstring(ctx, bbb);
+        str_ccc = KOS_new_const_ascii_cstring(ctx, ccc);
+
+        TEST(!IS_BAD_PTR(str_aaa));
+        TEST(!IS_BAD_PTR(str_bbb));
+        TEST(!IS_BAD_PTR(str_ccc));
+    }
+
+    /************************************************************************/
+    {
         static const char non_existent[] = "non existent";
+        KOS_OBJ_ID        na;
 
         const KOS_OBJ_ID o = KOS_new_object(ctx);
         TEST(!IS_BAD_PTR(o));
         TEST(!IS_SMALL_INT(o));
         TEST(GET_OBJ_TYPE(o) == OBJ_OBJECT);
 
+        na = KOS_new_const_ascii_cstring(ctx, non_existent);
+        TEST(!IS_BAD_PTR(na));
+
         /* Can delete non-existent property */
-        TEST(KOS_delete_property(ctx, o, KOS_instance_get_cstring(ctx, non_existent)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(ctx, o, na) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         /* Cannot retrieve non-existent property */
-        TEST(IS_BAD_PTR(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, non_existent))));
+        TEST(IS_BAD_PTR(KOS_get_property(ctx, o, na)));
         TEST_EXCEPTION();
 
         /* Invalid property pointer */
@@ -102,16 +125,8 @@ int main(void)
 
     /************************************************************************/
     {
-        static const char aaa[] = "aaa";
-        static const char bbb[] = "bbb";
-        static const char ccc[] = "ccc";
-
         KOS_OBJ_ID           walk;
         KOS_OBJECT_WALK_ELEM elem;
-
-        const KOS_OBJ_ID str_aaa = KOS_instance_get_cstring(ctx, aaa);
-        const KOS_OBJ_ID str_bbb = KOS_instance_get_cstring(ctx, bbb);
-        const KOS_OBJ_ID str_ccc = KOS_instance_get_cstring(ctx, ccc);
 
         const KOS_OBJ_ID o = KOS_new_object(ctx);
         TEST(!IS_BAD_PTR(o));
@@ -159,7 +174,7 @@ int main(void)
         TEST_NO_EXCEPTION();
 
         /* Cannot retrieve a property after it has been deleted */
-        TEST(IS_BAD_PTR(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, aaa))));
+        TEST(IS_BAD_PTR(KOS_get_property(ctx, o, str_aaa)));
         TEST_EXCEPTION();
 
         /* Retrieve the remaining property */
@@ -187,33 +202,37 @@ int main(void)
 
     /************************************************************************/
     {
-        static const char str[] = "string";
+        static const char cstr[] = "string";
+        KOS_OBJ_ID        str;
 
         const KOS_OBJ_ID o = KOS_new_object(ctx);
         TEST(!IS_BAD_PTR(o));
 
+        str = KOS_new_const_ascii_cstring(ctx, cstr);
+        TEST(!IS_BAD_PTR(str));
+
         /* Cannot set property when value is null pointer */
-        TEST(KOS_set_property(ctx, o, KOS_instance_get_cstring(ctx, str), KOS_BADPTR) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(ctx, o, str, KOS_BADPTR) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of null pointer */
-        TEST(KOS_set_property(ctx, KOS_BADPTR, KOS_instance_get_cstring(ctx, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(ctx, KOS_BADPTR, str, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of a number */
-        TEST(KOS_set_property(ctx, TO_SMALL_INT(123), KOS_instance_get_cstring(ctx, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(ctx, TO_SMALL_INT(123), str, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of a string */
-        TEST(KOS_set_property(ctx, KOS_instance_get_cstring(ctx, str), KOS_instance_get_cstring(ctx, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(ctx, str, str, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of a boolean */
-        TEST(KOS_set_property(ctx, KOS_TRUE, KOS_instance_get_cstring(ctx, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(ctx, KOS_TRUE, str, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         /* Cannot set property of a void */
-        TEST(KOS_set_property(ctx, KOS_VOID, KOS_instance_get_cstring(ctx, str), TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_set_property(ctx, KOS_VOID, str, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
     }
 
@@ -245,17 +264,21 @@ int main(void)
 
     /************************************************************************/
     {
-        static const char str[] = "string";
+        static const char cstr[] = "string";
+        KOS_OBJ_ID        str;
 
         const KOS_OBJ_ID o = KOS_new_object(ctx);
         TEST(!IS_BAD_PTR(o));
 
+        str = KOS_new_const_ascii_cstring(ctx, cstr);
+        TEST(!IS_BAD_PTR(str));
+
         /* Can set property if name and value are correct */
-        TEST(KOS_set_property(ctx, o, KOS_instance_get_cstring(ctx, str), TO_SMALL_INT(3)) == KOS_SUCCESS);
+        TEST(KOS_set_property(ctx, o, str, TO_SMALL_INT(3)) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         /* Cannot retrieve property of a null pointer */
-        TEST(IS_BAD_PTR(KOS_get_property(ctx, KOS_BADPTR, KOS_instance_get_cstring(ctx, str))));
+        TEST(IS_BAD_PTR(KOS_get_property(ctx, KOS_BADPTR, str)));
         TEST_EXCEPTION();
 
         /* Cannot retrieve property when name is a null pointer */
@@ -275,7 +298,7 @@ int main(void)
         TEST_EXCEPTION();
 
         /* Can retrieve correct property */
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, str)) == TO_SMALL_INT(3));
+        TEST(KOS_get_property(ctx, o, str) == TO_SMALL_INT(3));
         TEST_NO_EXCEPTION();
     }
 
@@ -340,78 +363,74 @@ int main(void)
         KOS_OBJ_ID base = KOS_new_object(ctx);
         KOS_OBJ_ID o    = KOS_new_object_with_prototype(ctx, base);
 
-        static const char aaa[] = "aaa";
-        static const char bbb[] = "bbb";
-        static const char ccc[] = "ccc";
-
         TEST(!IS_BAD_PTR(base));
         TEST(!IS_BAD_PTR(o));
 
         /* Cannot retrieve non-existent property */
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, aaa)) == KOS_BADPTR);
+        TEST(KOS_get_property(ctx, o, str_aaa) == KOS_BADPTR);
         TEST_EXCEPTION();
 
         /* Add properties to the prototype */
-        TEST(KOS_set_property(ctx, base, KOS_instance_get_cstring(ctx, aaa), TO_SMALL_INT(1)) == KOS_SUCCESS);
-        TEST(KOS_set_property(ctx, base, KOS_instance_get_cstring(ctx, bbb), TO_SMALL_INT(2)) == KOS_SUCCESS);
+        TEST(KOS_set_property(ctx, base, str_aaa, TO_SMALL_INT(1)) == KOS_SUCCESS);
+        TEST(KOS_set_property(ctx, base, str_bbb, TO_SMALL_INT(2)) == KOS_SUCCESS);
 
         /* Can retrieve properties from prototype */
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(ctx, o, str_aaa) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, bbb)) == TO_SMALL_INT(2));
+        TEST(KOS_get_property(ctx, o, str_bbb) == TO_SMALL_INT(2));
         TEST_NO_EXCEPTION();
 
         /* Cannot retrieve non-existent property */
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, ccc)) == KOS_BADPTR);
+        TEST(KOS_get_property(ctx, o, str_ccc) == KOS_BADPTR);
         TEST_EXCEPTION();
 
         /* Set properties */
-        TEST(KOS_set_property(ctx, o, KOS_instance_get_cstring(ctx, aaa), TO_SMALL_INT(3)) == KOS_SUCCESS);
-        TEST(KOS_set_property(ctx, o, KOS_instance_get_cstring(ctx, ccc), TO_SMALL_INT(4)) == KOS_SUCCESS);
+        TEST(KOS_set_property(ctx, o, str_aaa, TO_SMALL_INT(3)) == KOS_SUCCESS);
+        TEST(KOS_set_property(ctx, o, str_ccc, TO_SMALL_INT(4)) == KOS_SUCCESS);
 
         /* Check all properties */
-        TEST(KOS_get_property(ctx, base, KOS_instance_get_cstring(ctx, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(ctx, base, str_aaa) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(ctx, base, KOS_instance_get_cstring(ctx, bbb)) == TO_SMALL_INT(2));
+        TEST(KOS_get_property(ctx, base, str_bbb) == TO_SMALL_INT(2));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(ctx, base, KOS_instance_get_cstring(ctx, ccc)) == KOS_BADPTR);
+        TEST(KOS_get_property(ctx, base, str_ccc) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, aaa)) == TO_SMALL_INT(3));
+        TEST(KOS_get_property(ctx, o, str_aaa) == TO_SMALL_INT(3));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, bbb)) == TO_SMALL_INT(2));
+        TEST(KOS_get_property(ctx, o, str_bbb) == TO_SMALL_INT(2));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, ccc)) == TO_SMALL_INT(4));
+        TEST(KOS_get_property(ctx, o, str_ccc) == TO_SMALL_INT(4));
         TEST_NO_EXCEPTION();
 
         /* Delete some properties */
-        TEST(KOS_delete_property(ctx, base, KOS_instance_get_cstring(ctx, bbb)) == KOS_SUCCESS);
-        TEST(KOS_delete_property(ctx, o,    KOS_instance_get_cstring(ctx, aaa)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(ctx, base, str_bbb) == KOS_SUCCESS);
+        TEST(KOS_delete_property(ctx, o,    str_aaa) == KOS_SUCCESS);
 
         /* Check all properties again */
-        TEST(KOS_get_property(ctx, base, KOS_instance_get_cstring(ctx, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(ctx, base, str_aaa) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(ctx, base, KOS_instance_get_cstring(ctx, bbb)) == KOS_BADPTR);
+        TEST(KOS_get_property(ctx, base, str_bbb) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(ctx, base, KOS_instance_get_cstring(ctx, ccc)) == KOS_BADPTR);
+        TEST(KOS_get_property(ctx, base, str_ccc) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(ctx, o, str_aaa) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, bbb)) == KOS_BADPTR);
+        TEST(KOS_get_property(ctx, o, str_bbb) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, ccc)) == TO_SMALL_INT(4));
+        TEST(KOS_get_property(ctx, o, str_ccc) == TO_SMALL_INT(4));
         TEST_NO_EXCEPTION();
 
         /* Delete more properties */
-        TEST(KOS_delete_property(ctx, o, KOS_instance_get_cstring(ctx, aaa)) == KOS_SUCCESS);
-        TEST(KOS_delete_property(ctx, o, KOS_instance_get_cstring(ctx, bbb)) == KOS_SUCCESS);
-        TEST(KOS_delete_property(ctx, o, KOS_instance_get_cstring(ctx, ccc)) == KOS_SUCCESS);
+        TEST(KOS_delete_property(ctx, o, str_aaa) == KOS_SUCCESS);
+        TEST(KOS_delete_property(ctx, o, str_bbb) == KOS_SUCCESS);
+        TEST(KOS_delete_property(ctx, o, str_ccc) == KOS_SUCCESS);
 
         /* Check properties again */
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, aaa)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(ctx, o, str_aaa) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, bbb)) == KOS_BADPTR);
+        TEST(KOS_get_property(ctx, o, str_bbb) == KOS_BADPTR);
         TEST_EXCEPTION();
-        TEST(KOS_get_property(ctx, o, KOS_instance_get_cstring(ctx, ccc)) == KOS_BADPTR);
+        TEST(KOS_get_property(ctx, o, str_ccc) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -500,17 +519,24 @@ int main(void)
         static const char s5[] = "5";
         static const char s6[] = "6";
 
-        const KOS_OBJ_ID str_1 = KOS_instance_get_cstring(ctx, s1);
-        const KOS_OBJ_ID str_2 = KOS_instance_get_cstring(ctx, s2);
-        const KOS_OBJ_ID str_3 = KOS_instance_get_cstring(ctx, s3);
-        const KOS_OBJ_ID str_4 = KOS_instance_get_cstring(ctx, s4);
-        const KOS_OBJ_ID str_5 = KOS_instance_get_cstring(ctx, s5);
-        const KOS_OBJ_ID str_6 = KOS_instance_get_cstring(ctx, s6);
+        const KOS_OBJ_ID str_1 = KOS_new_const_ascii_cstring(ctx, s1);
+        const KOS_OBJ_ID str_2 = KOS_new_const_ascii_cstring(ctx, s2);
+        const KOS_OBJ_ID str_3 = KOS_new_const_ascii_cstring(ctx, s3);
+        const KOS_OBJ_ID str_4 = KOS_new_const_ascii_cstring(ctx, s4);
+        const KOS_OBJ_ID str_5 = KOS_new_const_ascii_cstring(ctx, s5);
+        const KOS_OBJ_ID str_6 = KOS_new_const_ascii_cstring(ctx, s6);
 
         TEST(!IS_BAD_PTR(obj_a));
         TEST(!IS_BAD_PTR(obj_b));
         TEST(!IS_BAD_PTR(obj_c));
         TEST(!IS_BAD_PTR(obj_d));
+
+        TEST(!IS_BAD_PTR(str_1));
+        TEST(!IS_BAD_PTR(str_2));
+        TEST(!IS_BAD_PTR(str_3));
+        TEST(!IS_BAD_PTR(str_4));
+        TEST(!IS_BAD_PTR(str_5));
+        TEST(!IS_BAD_PTR(str_6));
 
         TEST(KOS_set_property(ctx, obj_a, str_1, TO_SMALL_INT(1)) == KOS_SUCCESS);
         TEST(KOS_set_property(ctx, obj_a, str_2, TO_SMALL_INT(100)) == KOS_SUCCESS);
@@ -618,13 +644,18 @@ int main(void)
         static const char efg[] = "efg";
         static const char ghi[] = "ghi";
 
-        const KOS_OBJ_ID str_abc = KOS_instance_get_cstring(ctx, abc);
-        const KOS_OBJ_ID str_cde = KOS_instance_get_cstring(ctx, cde);
-        const KOS_OBJ_ID str_efg = KOS_instance_get_cstring(ctx, efg);
-        const KOS_OBJ_ID str_ghi = KOS_instance_get_cstring(ctx, ghi);
+        const KOS_OBJ_ID str_abc = KOS_new_const_ascii_cstring(ctx, abc);
+        const KOS_OBJ_ID str_cde = KOS_new_const_ascii_cstring(ctx, cde);
+        const KOS_OBJ_ID str_efg = KOS_new_const_ascii_cstring(ctx, efg);
+        const KOS_OBJ_ID str_ghi = KOS_new_const_ascii_cstring(ctx, ghi);
 
         KOS_OBJ_ID obj = KOS_new_object(ctx);
         TEST( ! IS_BAD_PTR(obj));
+
+        TEST( ! IS_BAD_PTR(str_abc));
+        TEST( ! IS_BAD_PTR(str_cde));
+        TEST( ! IS_BAD_PTR(str_efg));
+        TEST( ! IS_BAD_PTR(str_ghi));
 
         TEST(KOS_set_property(ctx, obj, str_abc, TO_SMALL_INT(1)) == KOS_SUCCESS);
         TEST(KOS_set_property(ctx, obj, str_cde, TO_SMALL_INT(2)) == KOS_SUCCESS);

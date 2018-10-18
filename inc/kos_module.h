@@ -103,49 +103,63 @@ uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
 #define TRY_ADD_FUNCTION(ctx, module, name, handler, min_args)                          \
 do {                                                                                    \
     static const char str_name[] = name;                                                \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring((ctx), str_name);           \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,          \
+                                                              sizeof(str_name) - 1);    \
+    TRY_OBJID(str);                                                                     \
     TRY(KOS_module_add_function((ctx), (module), str, (handler), (min_args), KOS_FUN)); \
 } while (0)
 
 #define TRY_ADD_GENERATOR(ctx, module, name, handler, min_args)                              \
 do {                                                                                         \
     static const char str_name[] = name;                                                     \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring((ctx), str_name);                \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,               \
+                                                              sizeof(str_name) - 1);         \
+    TRY_OBJID(str);                                                                          \
     TRY(KOS_module_add_function((ctx), (module), str, (handler), (min_args), KOS_GEN_INIT)); \
 } while (0)
 
 #define TRY_ADD_CONSTRUCTOR(ctx, module, name, handler, min_args, ret_proto)                   \
 do {                                                                                           \
     static const char str_name[] = name;                                                       \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring((ctx), str_name);                  \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,                 \
+                                                              sizeof(str_name) - 1);           \
+    TRY_OBJID(str);                                                                            \
     TRY(KOS_module_add_constructor((ctx), (module), str, (handler), (min_args), (ret_proto))); \
 } while (0)
 
 #define TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, name, handler, min_args)                            \
 do {                                                                                                    \
     static const char str_name[] = name;                                                                \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring((ctx), str_name);                           \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,                          \
+                                                              sizeof(str_name) - 1);                    \
+    TRY_OBJID(str);                                                                                     \
     TRY(KOS_module_add_member_function((ctx), (module), (proto), str, (handler), (min_args), KOS_FUN)); \
 } while (0)
 
 #define TRY_ADD_MEMBER_GENERATOR(ctx, module, proto, name, handler, min_args)                                \
 do {                                                                                                         \
     static const char str_name[] = name;                                                                     \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring((ctx), str_name);                                \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,                               \
+                                                              sizeof(str_name) - 1);                         \
+    TRY_OBJID(str);                                                                                          \
     TRY(KOS_module_add_member_function((ctx), (module), (proto), str, (handler), (min_args), KOS_GEN_INIT)); \
 } while (0)
 
 #define TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, name, getter, setter)                     \
 do {                                                                                          \
     static const char str_name[] = name;                                                      \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring((ctx), str_name);                 \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,                \
+                                                              sizeof(str_name) - 1);          \
+    TRY_OBJID(str);                                                                           \
     TRY(KOS_set_builtin_dynamic_property((ctx), (proto), str, (module), (getter), (setter))); \
 } while (0)
 
 #define TRY_ADD_INTEGER_CONSTANT(ctx, module, name, value)                           \
 do {                                                                                 \
     static const char str_name[] = name;                                             \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring((ctx), str_name);        \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,       \
+                                                              sizeof(str_name) - 1); \
+    TRY_OBJID(str);                                                                  \
     TRY(KOS_module_add_global((ctx), (module), str, TO_SMALL_INT((int)(value)), 0)); \
 } while (0)
 

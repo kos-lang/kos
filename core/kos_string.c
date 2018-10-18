@@ -568,8 +568,8 @@ KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
             if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
                 new_str = 0;
                 new_len = 0;
-                KOS_raise_exception(ctx, IS_BAD_PTR(cur_str) ?
-                        KOS_instance_get_cstring(ctx, str_err_null_pointer) : KOS_instance_get_cstring(ctx, str_err_not_string));
+                KOS_raise_exception_cstring(ctx, IS_BAD_PTR(cur_str) ?
+                                            str_err_null_pointer : str_err_not_string);
                 break;
             }
 
@@ -619,8 +619,8 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
     KOS_STRING *new_str = 0;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id) ?
-                KOS_instance_get_cstring(ctx, str_err_null_pointer): KOS_instance_get_cstring(ctx, str_err_not_string));
+        KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
+                                    str_err_null_pointer: str_err_not_string);
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -700,9 +700,8 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
     KOS_STRING *new_str = 0;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id)
-                ? KOS_instance_get_cstring(ctx, str_err_null_pointer)
-                : KOS_instance_get_cstring(ctx, str_err_not_string));
+        KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
+                                    str_err_null_pointer : str_err_not_string);
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -752,9 +751,8 @@ unsigned KOS_string_get_char_code(KOS_CONTEXT ctx,
     uint32_t code = ~0U;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id)
-                ? KOS_instance_get_cstring(ctx, str_err_null_pointer)
-                : KOS_instance_get_cstring(ctx, str_err_not_string));
+        KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
+                                    str_err_null_pointer : str_err_not_string);
     else {
         KOS_STRING                  *str       = OBJPTR(STRING, obj_id);
         const enum _KOS_STRING_FLAGS elem_size = _KOS_get_string_elem_size(str);
@@ -1395,4 +1393,22 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
     }
 
     return OBJID(STRING, new_str);
+}
+
+int _KOS_append_cstr(KOS_CONTEXT         ctx,
+                     struct _KOS_VECTOR *cstr_vec,
+                     const char         *str,
+                     size_t              len)
+{
+    const size_t pos   = cstr_vec->size;
+    int          error = _KOS_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
+
+    if (error) {
+        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+        error = KOS_ERROR_EXCEPTION;
+    }
+    else
+        memcpy(&cstr_vec->buffer[pos ? pos - 1 : pos], str, len + 1);
+
+    return error;
 }

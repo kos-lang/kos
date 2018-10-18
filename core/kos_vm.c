@@ -55,8 +55,6 @@ static const char str_err_not_indexable[]        = "object is not indexable";
 static const char str_err_slice_not_function[]   = "slice is not a function";
 static const char str_err_too_few_args[]         = "not enough arguments passed to a function";
 static const char str_err_unsup_operand_types[]  = "unsupported operand types";
-static const char str_slice[]                    = "slice";
-static const char str_value[]                    = "value";
 
 DECLARE_STATIC_CONST_OBJECT(_new_this) = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC0);
 
@@ -462,7 +460,7 @@ static int _is_generator_end_exception(KOS_CONTEXT ctx)
 
         KOS_clear_exception(ctx);
 
-        value = KOS_get_property(ctx, exception, KOS_instance_get_cstring(ctx, str_value));
+        value = KOS_get_property(ctx, exception, KOS_get_string(ctx, KOS_STR_VALUE));
 
         if (IS_BAD_PTR(value)) {
             KOS_clear_exception(ctx);
@@ -1514,7 +1512,7 @@ static int _exec_function(KOS_CONTEXT ctx)
                     else {
                         out = KOS_get_property(ctx,
                                                src,
-                                               KOS_instance_get_cstring(ctx, str_slice));
+                                               KOS_get_string(ctx, KOS_STR_SLICE));
                         if (IS_BAD_PTR(out))
                             error = KOS_ERROR_EXCEPTION;
                         else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
@@ -2138,17 +2136,6 @@ static int _exec_function(KOS_CONTEXT ctx)
             }
 
             case INSTR_TYPE: { /* <r.dest>, <r.src> */
-                static const char t_integer[]  = "integer";
-                static const char t_float[]    = "float";
-                static const char t_string[]   = "string";
-                static const char t_boolean[]  = "boolean";
-                static const char t_void[]     = "void";
-                static const char t_object[]   = "object";
-                static const char t_array[]    = "array";
-                static const char t_buffer[]   = "buffer";
-                static const char t_function[] = "function";
-                static const char t_class[]    = "class";
-
                 const unsigned rsrc  = bytecode[2];
                 KOS_OBJ_ID     src;
 
@@ -2160,47 +2147,47 @@ static int _exec_function(KOS_CONTEXT ctx)
                 assert(!IS_BAD_PTR(src));
 
                 if (IS_SMALL_INT(src))
-                    out = KOS_instance_get_cstring(ctx, t_integer);
+                    out = KOS_get_string(ctx, KOS_STR_INTEGER);
 
                 else switch (GET_OBJ_TYPE(src)) {
                     case OBJ_INTEGER:
-                        out = KOS_instance_get_cstring(ctx, t_integer);
+                        out = KOS_get_string(ctx, KOS_STR_INTEGER);
                         break;
 
                     case OBJ_FLOAT:
-                        out = KOS_instance_get_cstring(ctx, t_float);
+                        out = KOS_get_string(ctx, KOS_STR_FLOAT);
                         break;
 
                     case OBJ_STRING:
-                        out = KOS_instance_get_cstring(ctx, t_string);
+                        out = KOS_get_string(ctx, KOS_STR_STRING);
                         break;
 
                     case OBJ_VOID:
-                        out = KOS_instance_get_cstring(ctx, t_void);
+                        out = KOS_get_string(ctx, KOS_STR_VOID);
                         break;
 
                     case OBJ_BOOLEAN:
-                        out = KOS_instance_get_cstring(ctx, t_boolean);
+                        out = KOS_get_string(ctx, KOS_STR_BOOLEAN);
                         break;
 
                     case OBJ_ARRAY:
-                        out = KOS_instance_get_cstring(ctx, t_array);
+                        out = KOS_get_string(ctx, KOS_STR_ARRAY);
                         break;
 
                     case OBJ_BUFFER:
-                        out = KOS_instance_get_cstring(ctx, t_buffer);
+                        out = KOS_get_string(ctx, KOS_STR_BUFFER);
                         break;
 
                     case OBJ_FUNCTION:
-                        out = KOS_instance_get_cstring(ctx, t_function);
+                        out = KOS_get_string(ctx, KOS_STR_FUNCTION);
                         break;
 
                     case OBJ_CLASS:
-                        out = KOS_instance_get_cstring(ctx, t_class);
+                        out = KOS_get_string(ctx, KOS_STR_CLASS);
                         break;
 
                     default:
-                        out = KOS_instance_get_cstring(ctx, t_object);
+                        out = KOS_get_string(ctx, KOS_STR_OBJECT);
                         break;
                 }
 

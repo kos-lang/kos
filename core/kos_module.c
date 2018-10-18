@@ -50,13 +50,11 @@ static const char str_err_end[]              = "\"";
 static const char str_err_internal[]         = "internal error";
 static const char str_err_module[]           = "module \"";
 static const char str_err_not_found[]        = "\" not found";
-static const char str_err_out_of_memory[]    = "out of memory";
 static const char str_err_stdin[]            = "failed reading from stdin";
 static const char str_err_unable_to_open[]   = "unable to open file \"";
 static const char str_err_unable_to_read[]   = "unable to read file \"";
 static const char str_format_colon[]         = ":";
 static const char str_format_error[]         = ": error: ";
-static const char str_global[]               = "<global>";
 static const char str_path_sep[]             = KOS_PATH_SEPARATOR_STR;
 static const char str_script_ext[]           = ".kos";
 
@@ -67,21 +65,25 @@ struct _KOS_MODULE_LOAD_CHAIN {
 };
 
 static void _raise_3(KOS_CONTEXT ctx,
-                     KOS_OBJ_ID  s1,
+                     const char *s1,
                      KOS_OBJ_ID  s2,
-                     KOS_OBJ_ID  s3)
+                     const char *s3)
 {
-    KOS_OBJ_ID             str_err_full;
     KOS_ATOMIC(KOS_OBJ_ID) str_err[3];
 
-    str_err[0] = s1;
+    str_err[0] = KOS_new_const_ascii_cstring(ctx, s1);
     str_err[1] = s2;
-    str_err[2] = s3;
+    if ( ! IS_BAD_PTR(str_err[0])) {
+        str_err[2] = KOS_new_const_ascii_cstring(ctx, s3);
 
-    str_err_full = KOS_string_add_many(ctx, str_err, 3);
+        if ( ! IS_BAD_PTR(str_err[2])) {
 
-    if (!IS_BAD_PTR(str_err_full))
-        KOS_raise_exception(ctx, str_err_full);
+            const KOS_OBJ_ID str_err_full = KOS_string_add_many(ctx, str_err, 3);
+
+            if ( ! IS_BAD_PTR(str_err_full))
+                KOS_raise_exception(ctx, str_err_full);
+        }
+    }
 }
 
 static unsigned _rfind_path(const char *path,
@@ -149,9 +151,13 @@ static int _find_module(KOS_CONTEXT ctx,
 
             components[0] = KOS_array_read(ctx, inst->modules.search_paths, (int)i);
             TRY_OBJID(components[0]);
-            components[1] = KOS_instance_get_cstring(ctx, str_path_sep);
+            components[1] = KOS_new_const_ascii_string(ctx, str_path_sep,
+                                                       sizeof(str_path_sep) - 1);
+            TRY_OBJID(components[1]);
             components[2] = module_name;
-            components[3] = KOS_instance_get_cstring(ctx, str_script_ext);
+            components[3] = KOS_new_const_ascii_string(ctx, str_script_ext,
+                                                       sizeof(str_script_ext) - 1);
+            TRY_OBJID(components[3]);
 
             path = KOS_string_add_many(ctx, components, sizeof(components)/sizeof(components[0]));
             TRY_OBJID(path);
@@ -253,17 +259,19 @@ static int _load_file(KOS_CONTEXT         ctx,
     switch (error) {
 
         case KOS_ERROR_CANNOT_OPEN_FILE:
-            _raise_3(ctx, KOS_instance_get_cstring(ctx, str_err_unable_to_open), path, KOS_instance_get_cstring(ctx, str_err_end));
+            _raise_3(ctx, str_err_unable_to_open, path, str_err_end);
             error = KOS_ERROR_EXCEPTION;
             break;
 
         case KOS_ERROR_CANNOT_READ_FILE:
-            _raise_3(ctx, KOS_instance_get_cstring(ctx, str_err_unable_to_read), path, KOS_instance_get_cstring(ctx, str_err_end));
+            _raise_3(ctx, str_err_unable_to_read, path, str_err_end);
             error = KOS_ERROR_EXCEPTION;
             break;
 
         case KOS_ERROR_OUT_OF_MEMORY:
-            RAISE_EXCEPTION(str_err_out_of_memory);
+            KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+            error = KOS_ERROR_EXCEPTION;
+            break;
 
         default:
             break;
@@ -589,31 +597,43 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
     parts[0] = KOS_get_file_name(ctx, OBJPTR(MODULE, module_obj)->path);
     TRY_OBJID(parts[0]);
 
-    parts[1] = KOS_instance_get_cstring(ctx, str_format_colon);
+    parts[1] = KOS_new_const_ascii_string(ctx, str_format_colon,
+                                          sizeof(str_format_colon) - 1);
+    TRY_OBJID(parts[1]);
 
     parts[2] = KOS_object_to_string(ctx, TO_SMALL_INT((int)pos.line));
     TRY_OBJID(parts[2]);
 
-    parts[3] = KOS_instance_get_cstring(ctx, str_format_colon);
+    parts[3] = KOS_new_const_ascii_string(ctx, str_format_colon,
+                                          sizeof(str_format_colon) - 1);
+    TRY_OBJID(parts[3]);
 
     parts[4] = KOS_object_to_string(ctx, TO_SMALL_INT((int)pos.column));
     TRY_OBJID(parts[4]);
 
-    parts[5] = KOS_instance_get_cstring(ctx, str_format_error);
+    parts[5] = KOS_new_const_ascii_string(ctx, str_format_error,
+                                          sizeof(str_format_error) - 1);
+    TRY_OBJID(parts[5]);
 
     parts[6] = KOS_new_const_ascii_cstring(ctx, error_str);
     TRY_OBJID(parts[6]);
 
-    parts[7] = KOS_instance_get_cstring(ctx, str_eol);
+    parts[7] = KOS_new_const_ascii_string(ctx, str_eol,
+                                          sizeof(str_eol) - 1);
+    TRY_OBJID(parts[7]);
 
     parts[8] = _get_line(ctx, data, data_size, pos.line);
     TRY_OBJID(parts[8]);
 
-    parts[9] = KOS_instance_get_cstring(ctx, str_eol);
+    parts[9] = KOS_new_const_ascii_string(ctx, str_eol,
+                                          sizeof(str_eol) - 1);
+    TRY_OBJID(parts[9]);
 
     error = _KOS_vector_resize(&cstr, pos.column);
-    if (error)
-        RAISE_EXCEPTION(str_err_out_of_memory);
+    if (error) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        goto _error;
+    }
 
     memset(cstr.buffer, ' ', pos.column-1);
     cstr.buffer[pos.column-1] = '^';
@@ -1189,7 +1209,7 @@ static void _handle_interpreter_error(KOS_CONTEXT ctx, int error)
         assert(KOS_is_exception_pending(ctx));
     else if (error == KOS_ERROR_OUT_OF_MEMORY) {
         if ( ! KOS_is_exception_pending(ctx))
-            KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+            KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
     }
     else {
         if ( ! KOS_is_exception_pending(ctx))
@@ -1240,10 +1260,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
                              &module_path);
     if (error) {
         if (error == KOS_ERROR_NOT_FOUND) {
-            _raise_3(ctx,
-                     KOS_instance_get_cstring(ctx, str_err_module),
-                     actual_module_name,
-                     KOS_instance_get_cstring(ctx, str_err_not_found));
+            _raise_3(ctx, str_err_module, actual_module_name, str_err_not_found);
             error = KOS_ERROR_EXCEPTION;
         }
         goto _error;
@@ -1262,7 +1279,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
         path_array = KOS_new_array(ctx, 1);
         TRY_OBJID(path_array);
         if (KOS_get_string_length(module_dir) == 0) {
-            dir = KOS_instance_get_cstring(ctx, str_cur_dir);
+            dir = KOS_new_const_ascii_string(ctx, str_cur_dir, sizeof(str_cur_dir) - 1);
             TRY_OBJID(dir);
         }
         else
@@ -1288,7 +1305,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 
                 KOS_OBJ_ID name_str = KOS_new_string(ctx, module_name, name_size);
                 if (!IS_BAD_PTR(name_str))
-                    _raise_3(ctx, KOS_instance_get_cstring(ctx, str_err_circular_deps), name_str, KOS_instance_get_cstring(ctx, str_err_end));
+                    _raise_3(ctx, str_err_circular_deps, name_str, str_err_end);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -1410,10 +1427,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     {
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
-            _raise_3(ctx,
-                     KOS_instance_get_cstring(ctx, str_err_module),
-                     module_name_str,
-                     KOS_instance_get_cstring(ctx, str_err_not_found));
+            _raise_3(ctx, str_err_module, module_name_str, str_err_not_found);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
@@ -1498,10 +1512,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     {
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
-            _raise_3(ctx,
-                     KOS_instance_get_cstring(ctx, str_err_module),
-                     module_name_str,
-                     KOS_instance_get_cstring(ctx, str_err_not_found));
+            _raise_3(ctx, str_err_module, module_name_str, str_err_not_found);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
@@ -1554,7 +1565,7 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     KOS_clear_exception(ctx);
 
     if ( ! IS_BAD_PTR(prop)) {
-        _raise_3(ctx, KOS_instance_get_cstring(ctx, str_err_duplicate_global), name, KOS_instance_get_cstring(ctx, str_err_end));
+        _raise_3(ctx, str_err_duplicate_global, name, str_err_end);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -1770,7 +1781,7 @@ KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_MODULE *module,
     if (addr2func) {
         KOS_CONTEXT ctx = &module->inst->threads.main_thread;
         if (addr2func->str_idx == ~0U)
-            ret = KOS_instance_get_cstring(ctx, str_global);
+            ret = KOS_get_string(ctx, KOS_STR_GLOBAL);
         else
             ret = KOS_array_read(ctx, module->constants_storage, (int)addr2func->str_idx);
     }

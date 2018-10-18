@@ -74,12 +74,15 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
     int                       error      = KOS_SUCCESS;
     KOS_OBJ_ID                retval     = KOS_BADPTR;
     KOS_OBJ_ID                lexer_obj_id;
-    KOS_OBJ_ID                source     = KOS_instance_get_cstring(ctx, str_source);
+    KOS_OBJ_ID                source;
     struct _LEXER            *lexer;
     uint8_t                  *buf_data;
     enum _KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
+
+    source = KOS_new_const_ascii_string(ctx, str_source, sizeof(str_source) - 1);
+    TRY_OBJID(source);
 
     lexer_obj_id = KOS_array_read(ctx, regs_obj, 0);
     assert( ! IS_BAD_PTR(lexer_obj_id));
@@ -205,13 +208,19 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
             assert(error == KOS_ERROR_SCANNING_FAILED);
 
-            parts[0] = KOS_instance_get_cstring(ctx, str_format_parse_error);
+            parts[0] = KOS_new_const_ascii_string(ctx, str_format_parse_error,
+                                                  sizeof(str_format_parse_error) - 1);
+            TRY_OBJID(parts[0]);
             parts[1] = KOS_object_to_string(ctx, TO_SMALL_INT((int)lexer->lexer.pos.line));
             TRY_OBJID(parts[1]);
-            parts[2] = KOS_instance_get_cstring(ctx, str_format_colon);
+            parts[2] = KOS_new_const_ascii_string(ctx, str_format_colon,
+                                                  sizeof(str_format_colon) - 1);
+            TRY_OBJID(parts[2]);
             parts[3] = KOS_object_to_string(ctx, TO_SMALL_INT((int)lexer->lexer.pos.column));
             TRY_OBJID(parts[3]);
-            parts[4] = KOS_instance_get_cstring(ctx, str_format_colon_space);
+            parts[4] = KOS_new_const_ascii_string(ctx, str_format_colon_space,
+                                                  sizeof(str_format_colon_space) - 1);
+            TRY_OBJID(parts[4]);
             parts[5] = KOS_new_cstring(ctx, lexer->lexer.error_str);
             TRY_OBJID(parts[5]);
 
@@ -226,6 +235,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
     if (lexer->token.type != TT_EOF) {
 
         struct _KOS_TOKEN *token = &lexer->token;
+        KOS_OBJ_ID         key;
         KOS_OBJ_ID         value;
 
         KOS_OBJ_ID token_obj = KOS_new_object(ctx);
@@ -234,39 +244,53 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         value = KOS_new_string(ctx, token->begin, token->length);
         TRY_OBJID(value);
 
+        key = KOS_new_const_ascii_string(ctx, str_token, sizeof(str_token) - 1);
+        TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(ctx, str_token),
+                             key,
                              value));
 
+        key = KOS_new_const_ascii_string(ctx, str_line, sizeof(str_line) - 1);
+        TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(ctx, str_line),
+                             key,
                              TO_SMALL_INT((int)token->pos.line)));
 
+        key = KOS_new_const_ascii_string(ctx, str_column, sizeof(str_column) - 1);
+        TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(ctx, str_column),
+                             key,
                              TO_SMALL_INT((int)token->pos.column)));
 
+        key = KOS_new_const_ascii_string(ctx, str_type, sizeof(str_type) - 1);
+        TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(ctx, str_type),
+                             key,
                              TO_SMALL_INT((int)token->type)));
 
+        key = KOS_new_const_ascii_string(ctx, str_keyword, sizeof(str_keyword) - 1);
+        TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(ctx, str_keyword),
+                             key,
                              TO_SMALL_INT((int)token->keyword)));
 
+        key = KOS_new_const_ascii_string(ctx, str_op, sizeof(str_op) - 1);
+        TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(ctx, str_op),
+                             key,
                              TO_SMALL_INT((int)token->op)));
 
+        key = KOS_new_const_ascii_string(ctx, str_sep, sizeof(str_sep) - 1);
+        TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
-                             KOS_instance_get_cstring(ctx, str_sep),
+                             key,
                              TO_SMALL_INT((int)token->sep)));
 
         if (lexer->token.type == TT_STRING || lexer->token.type == TT_STRING_OPEN) {

@@ -605,6 +605,7 @@ int main(void)
         KOS_ATOMIC(KOS_OBJ_ID) src[1];
         KOS_OBJ_ID             s;
         src[0] = KOS_new_const_ascii_cstring(ctx, "");
+        TEST(!IS_BAD_PTR(src[0]));
         s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
@@ -620,6 +621,9 @@ int main(void)
         src[0] = KOS_new_const_ascii_cstring(ctx, "");
         src[1] = KOS_new_const_ascii_cstring(ctx, "");
         src[2] = KOS_new_const_ascii_cstring(ctx, "");
+        TEST(!IS_BAD_PTR(src[0]));
+        TEST(!IS_BAD_PTR(src[1]));
+        TEST(!IS_BAD_PTR(src[2]));
         s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
@@ -653,6 +657,9 @@ int main(void)
         src[0] = KOS_new_const_ascii_cstring(ctx, "one ");
         src[1] = KOS_new_const_ascii_cstring(ctx, "two ");
         src[2] = KOS_new_const_ascii_cstring(ctx, "three");
+        TEST(!IS_BAD_PTR(src[0]));
+        TEST(!IS_BAD_PTR(src[1]));
+        TEST(!IS_BAD_PTR(src[2]));
         s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
@@ -671,6 +678,9 @@ int main(void)
         src[0] = KOS_new_const_ascii_cstring(ctx, "a");
         src[1] = KOS_new_cstring(ctx, "\xDF\xBF");
         src[2] = KOS_new_const_ascii_cstring(ctx, "b");
+        TEST(!IS_BAD_PTR(src[0]));
+        TEST(!IS_BAD_PTR(src[1]));
+        TEST(!IS_BAD_PTR(src[2]));
         s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
@@ -867,6 +877,7 @@ int main(void)
         KOS_OBJ_ID src;
         KOS_OBJ_ID s;
         src = KOS_new_const_ascii_cstring(ctx, "xyz");
+        TEST(!IS_BAD_PTR(src));
 
         s = KOS_string_get_char(ctx, src, 0);
         TEST(!IS_BAD_PTR(s));
@@ -1239,7 +1250,7 @@ int main(void)
     {
         static const char str[] = "str";
 
-        KOS_OBJ_ID str_str = KOS_instance_get_cstring(ctx, str);
+        KOS_OBJ_ID str_str = KOS_new_const_ascii_cstring(ctx, str);
         TEST(!IS_BAD_PTR(str_str));
         TEST(GET_OBJ_TYPE(str_str) == OBJ_STRING);
 
@@ -1470,9 +1481,12 @@ int main(void)
     {
         static const char src[] = "abc";
 
-        KOS_OBJ_ID str_src = KOS_instance_get_cstring(ctx, src);
+        KOS_OBJ_ID str;
+        KOS_OBJ_ID str_src = KOS_new_const_ascii_cstring(ctx, src);
 
-        KOS_OBJ_ID str = KOS_object_to_string(ctx, str_src);
+        TEST(!IS_BAD_PTR(str_src));
+
+        str = KOS_object_to_string(ctx, str_src);
 
         TEST(str == str_src);
     }

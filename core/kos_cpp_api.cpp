@@ -203,9 +203,7 @@ std::string exception::get_exception_string(stack_frame ctx)
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
 
-        static const char str_value[] = "value";
-
-        obj_id = KOS_get_property(ctx, obj_id, KOS_instance_get_cstring(ctx, str_value));
+        obj_id = KOS_get_property(ctx, obj_id, KOS_get_string(ctx, KOS_STR_VALUE));
 
         assert( ! IS_BAD_PTR(obj_id));
 

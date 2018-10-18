@@ -127,6 +127,11 @@ static inline enum _KOS_STRING_FLAGS _KOS_get_string_elem_size(KOS_STRING *str)
 
 #endif
 
+int _KOS_append_cstr(KOS_CONTEXT         ctx,
+                     struct _KOS_VECTOR *cstr_vec,
+                     const char         *str,
+                     size_t              len);
+
 /*==========================================================================*/
 /* KOS_STACK                                                                */
 /*==========================================================================*/

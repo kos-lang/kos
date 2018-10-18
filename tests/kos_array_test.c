@@ -42,7 +42,8 @@ int main(void)
 
     TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-    str = KOS_instance_get_cstring(ctx, cstr);
+    str = KOS_new_const_ascii_cstring(ctx, cstr);
+    TEST(!IS_BAD_PTR(str));
 
     /************************************************************************/
     /* Cannot read from a non-array */

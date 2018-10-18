@@ -36,8 +36,6 @@
 #include <memory.h>
 #include <stdio.h>
 
-static const char str_args[]                         = "args";
-static const char str_builtin[]                      = "<builtin>";
 static const char str_err_already_joined[]           = "thread already joined";
 static const char str_err_args_not_array[]           = "function arguments are not an array";
 static const char str_err_bad_number[]               = "number parse failed";
@@ -65,20 +63,18 @@ static const char str_err_too_many_repeats[]         = "invalid string repeat co
 static const char str_err_unpack_buf_too_short[]     = "unpacked buffer too short";
 static const char str_err_unsup_operand_types[]      = "unsupported operand types";
 static const char str_err_use_async[]                = "use async to launch threads";
-static const char str_function[]                     = "function";
-static const char str_result[]                       = "result";
-static const char str_this[]                         = "this";
 
-#define TRY_CREATE_CONSTRUCTOR(name, module)                                \
-do {                                                                        \
-    static const char str_name[] = #name;                                   \
-    KOS_OBJ_ID        str        = KOS_instance_get_cstring(ctx, str_name); \
-    KOS_INSTANCE     *inst       = ctx->inst;                               \
-    TRY(_create_class(ctx,                                                  \
-                      module,                                               \
-                      str,                                                  \
-                      _##name##_constructor,                                \
-                      inst->prototypes.name##_proto));                      \
+#define TRY_CREATE_CONSTRUCTOR(name, module)                                         \
+do {                                                                                 \
+    static const char str_name[] = #name;                                            \
+    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,       \
+                                                              sizeof(str_name) - 1); \
+    TRY_OBJID(str);                                                                  \
+    TRY(_create_class(ctx,                                                           \
+                      module,                                                        \
+                      str,                                                           \
+                      _##name##_constructor,                                         \
+                      ctx->inst->prototypes.name##_proto));                          \
 } while (0)
 
 #define PROTO(type) (ctx->inst->prototypes.type##_proto)
@@ -1217,17 +1213,17 @@ static void _async_func(KOS_CONTEXT ctx,
     KOS_OBJ_ID  ret_obj;
 
     func_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
-                    KOS_instance_get_cstring(ctx, str_function));
+                                KOS_get_string(ctx, KOS_STR_FUNCTION));
     if (IS_BAD_PTR(func_obj))
         return;
 
     this_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
-                    KOS_instance_get_cstring(ctx, str_this));
+                                KOS_get_string(ctx, KOS_STR_THIS));
     if (IS_BAD_PTR(this_obj))
         return;
 
     args_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
-                    KOS_instance_get_cstring(ctx, str_args));
+                                KOS_get_string(ctx, KOS_STR_ARGS));
     if (IS_BAD_PTR(args_obj))
         return;
 
@@ -1240,7 +1236,7 @@ static void _async_func(KOS_CONTEXT ctx,
         return;
 
     if (KOS_set_property(ctx, OBJID(OBJECT, thread_obj),
-            KOS_instance_get_cstring(ctx, str_result), ret_obj) == KOS_ERROR_EXCEPTION) {
+                         KOS_get_string(ctx, KOS_STR_RESULT), ret_obj) == KOS_ERROR_EXCEPTION) {
         assert(KOS_is_exception_pending(ctx));
     }
 }
@@ -1295,19 +1291,19 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
     TRY_OBJID(thread_obj);
 
     TRY(KOS_set_property(ctx, thread_obj,
-                KOS_instance_get_cstring(ctx, str_function), this_obj));
+                         KOS_get_string(ctx, KOS_STR_FUNCTION), this_obj));
 
     arg_this = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(arg_this);
     TRY(KOS_set_property(ctx, thread_obj,
-                KOS_instance_get_cstring(ctx, str_this), arg_this));
+                         KOS_get_string(ctx, KOS_STR_THIS), arg_this));
 
     arg_args = KOS_array_read(ctx, args_obj, 1);
     TRY_OBJID(arg_args);
     if (GET_OBJ_TYPE(arg_args) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_args_not_array);
     TRY(KOS_set_property(ctx, thread_obj,
-                KOS_instance_get_cstring(ctx, str_args), arg_args));
+                         KOS_get_string(ctx, KOS_STR_ARGS), arg_args));
 
     OBJPTR(OBJECT, thread_obj)->finalize = _thread_finalize;
 
@@ -1381,7 +1377,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
 
     if (!error) {
         ret = KOS_get_property(ctx, this_obj,
-                KOS_instance_get_cstring(ctx, str_result));
+                               KOS_get_string(ctx, KOS_STR_RESULT));
         if (IS_BAD_PTR(ret))
             error = KOS_ERROR_EXCEPTION;
     }
@@ -3633,7 +3629,7 @@ static KOS_OBJ_ID _get_function_name(KOS_CONTEXT ctx,
 
         /* TODO add builtin function name */
         if (IS_BAD_PTR(func->module) || func->instr_offs == ~0U)
-            ret = KOS_instance_get_cstring(ctx, str_builtin);
+            ret = KOS_get_string(ctx, KOS_STR_XBUILTINX);
         else
             ret = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
                                                func->instr_offs);
@@ -3843,7 +3839,7 @@ int _KOS_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_GENERATOR(ctx, module, "deep",       _deep,      1);
     TRY_ADD_GENERATOR(ctx, module, "shallow",    _shallow,   1);
 
-    TRY(KOS_module_add_global(ctx, module, KOS_instance_get_cstring(ctx, str_args), ctx->inst->args, 0));
+    TRY(KOS_module_add_global(ctx, module, KOS_get_string(ctx, KOS_STR_ARGS), ctx->inst->args, 0));
 
     TRY_CREATE_CONSTRUCTOR(array,         module);
     TRY_CREATE_CONSTRUCTOR(boolean,       module);

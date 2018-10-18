@@ -143,7 +143,6 @@ int _KOS_heap_init(KOS_INSTANCE *inst)
     heap->pools          = 0;
     heap->pool_headers   = 0;
     heap->waste          = 0;
-    heap->str_oom_id     = KOS_VOID; /* Don't set to BADPTR in case string alloc fails */
 
     assert(_KOS_BITMAP_OFFS + _KOS_BITMAP_SIZE <= _KOS_SLOTS_OFFS);
     assert( ! (_KOS_SLOTS_OFFS & 7U));
@@ -625,7 +624,7 @@ static void *_alloc_huge_object(KOS_CONTEXT          ctx,
             assert((uint8_t *)hdr + size <= (uint8_t *)pool->usable_ptr + pool->usable_size);
         }
         else
-            KOS_raise_exception(ctx, _get_heap(ctx)->str_oom_id);
+            KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
     }
 
     _KOS_unlock_mutex(&heap->mutex);
@@ -778,7 +777,7 @@ static void *_alloc_object(KOS_CONTEXT          ctx,
     }
 
     if ( ! hdr)
-        KOS_raise_exception(ctx, _get_heap(ctx)->str_oom_id);
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
 
     _KOS_unlock_mutex(&heap->mutex);
 
@@ -1155,7 +1154,6 @@ static void _mark_roots(KOS_CONTEXT ctx)
         for (i = 0; i < KOS_STR_NUM; ++i)
             _mark_object_black(inst->common_strings[i]);
     }
-    _mark_object_black(_get_heap(ctx)->str_oom_id);
 
     _mark_object_black(inst->prototypes.object_proto);
     _mark_object_black(inst->prototypes.number_proto);
@@ -1540,7 +1538,6 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
         for (i = 0; i < KOS_STR_NUM; ++i)
             _update_child_ptr(&inst->common_strings[i]);
     }
-    _update_child_ptr(&heap->str_oom_id);
 
     _update_child_ptr(&inst->prototypes.object_proto);
     _update_child_ptr(&inst->prototypes.number_proto);

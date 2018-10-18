@@ -592,11 +592,10 @@ int main(void)
             /* The following objects have been evacuated:
              * - 2 for array
              * - 1 for function
-             * - 7 for class:
+             * - 6 for class:
              *      -- 1 class
              *      -- 1 class property buffer
              *      -- 1 prototype object
-             *      -- 1 string "prototype"
              *      -- 1 dynamic "prototype" property
              *      -- 1 set function
              *      -- 1 get function
@@ -606,7 +605,7 @@ int main(void)
              * - 1 for string in retval
              * - 1 for string as exception
              */
-            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 15);
+            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 14);
             TEST(stats.num_objs_freed     == 1);
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == 1);
@@ -626,7 +625,7 @@ int main(void)
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
             TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
-            TEST(stats.num_objs_freed     == 16);
+            TEST(stats.num_objs_freed     == 15);
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == 0);
             TEST(stats.num_pages_freed    == 2);

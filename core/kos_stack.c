@@ -31,16 +31,8 @@
 #include "kos_object_internal.h"
 #include "kos_try.h"
 
-static const char str_backtrace[]          = "backtrace";
-static const char str_builtin[]            = "<builtin>";
 static const char str_err_not_callable[]   = "object is not callable";
 static const char str_err_stack_overflow[] = "stack overflow";
-static const char str_file[]               = "file";
-static const char str_function[]           = "function";
-static const char str_line[]               = "line";
-static const char str_module[]             = "module";
-static const char str_offset[]             = "offset";
-static const char str_value[]              = "value";
 
 static int _push_new_stack(KOS_CONTEXT ctx);
 
@@ -525,15 +517,15 @@ static int _dump_stack(KOS_OBJ_ID stack,
     const uint32_t          instr_offs  = _get_instr_offs(stack_frame);
     const unsigned          line        = KOS_module_addr_to_line(module, instr_offs);
     KOS_OBJ_ID              func_name   = KOS_module_addr_to_func_name(module, instr_offs);
-    KOS_OBJ_ID              module_name = KOS_instance_get_cstring(ctx, str_builtin);
-    KOS_OBJ_ID              module_path = KOS_instance_get_cstring(ctx, str_builtin);
+    KOS_OBJ_ID              module_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
+    KOS_OBJ_ID              module_path = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     int                     error       = KOS_SUCCESS;
 
     KOS_OBJ_ID frame_desc = KOS_new_object(ctx);
     TRY_OBJID(frame_desc);
 
     if (IS_BAD_PTR(func_name))
-        func_name = KOS_instance_get_cstring(ctx, str_builtin); /* TODO add builtin function name */
+        func_name = KOS_get_string(ctx, KOS_STR_XBUILTINX); /* TODO add builtin function name */
 
     assert(dump_ctx->idx < KOS_get_array_size(dump_ctx->backtrace));
     TRY(KOS_array_write(ctx, dump_ctx->backtrace, (int)dump_ctx->idx, frame_desc));
@@ -545,11 +537,11 @@ static int _dump_stack(KOS_OBJ_ID stack,
         module_path = module->path;
     }
 
-    TRY(KOS_set_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_module),   module_name));
-    TRY(KOS_set_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_file),     module_path));
-    TRY(KOS_set_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_line),     TO_SMALL_INT((int)line)));
-    TRY(KOS_set_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_offset),   TO_SMALL_INT((int)instr_offs)));
-    TRY(KOS_set_property(ctx, frame_desc, KOS_instance_get_cstring(ctx, str_function), func_name));
+    TRY(KOS_set_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_MODULE),   module_name));
+    TRY(KOS_set_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_FILE),     module_path));
+    TRY(KOS_set_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_LINE),     TO_SMALL_INT((int)line)));
+    TRY(KOS_set_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_OFFSET),   TO_SMALL_INT((int)instr_offs)));
+    TRY(KOS_set_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_FUNCTION), func_name));
 
     ++dump_ctx->idx;
 
@@ -584,7 +576,7 @@ void _KOS_wrap_exception(KOS_CONTEXT ctx)
     exception = KOS_new_object_with_prototype(ctx, inst->prototypes.exception_proto);
     TRY_OBJID(exception);
 
-    TRY(KOS_set_property(ctx, exception, KOS_instance_get_cstring(ctx, str_value), thrown_object));
+    TRY(KOS_set_property(ctx, exception, KOS_get_string(ctx, KOS_STR_VALUE), thrown_object));
 
     partial_wrap = 1;
 
@@ -596,7 +588,7 @@ void _KOS_wrap_exception(KOS_CONTEXT ctx)
 
     TRY(KOS_array_resize(ctx, backtrace, depth));
 
-    TRY(KOS_set_property(ctx, exception, KOS_instance_get_cstring(ctx, str_backtrace), backtrace));
+    TRY(KOS_set_property(ctx, exception, KOS_get_string(ctx, KOS_STR_BACKTRACE), backtrace));
 
     dump_ctx.ctx       = ctx;
     dump_ctx.idx       = 0;

@@ -47,7 +47,6 @@ struct _KOS_HEAP {
     _KOS_POOL           *pools;             /* allocated memory - page pools            */
     _KOS_POOL           *pool_headers;      /* list of pool headers for new pools       */
     _KOS_WASTE          *waste;             /* unused memory from pool allocations      */
-    KOS_OBJ_ID           str_oom_id;
 };
 
 /* Stored on the stack as catch offset */
@@ -140,6 +139,35 @@ struct _KOS_THREAD_MGMT {
 
 enum KOS_STR {
     KOS_STR_EMPTY,
+    KOS_STR_OUT_OF_MEMORY,
+
+    KOS_STR_ARGS,
+    KOS_STR_ARRAY,
+    KOS_STR_BACKTRACE,
+    KOS_STR_BOOLEAN,
+    KOS_STR_BUFFER,
+    KOS_STR_CLASS,
+    KOS_STR_FALSE,
+    KOS_STR_FILE,
+    KOS_STR_FLOAT,
+    KOS_STR_FUNCTION,
+    KOS_STR_GLOBAL,
+    KOS_STR_INTEGER,
+    KOS_STR_LINE,
+    KOS_STR_MODULE,
+    KOS_STR_OBJECT,
+    KOS_STR_OFFSET,
+    KOS_STR_PROTOTYPE,
+    KOS_STR_QUOTE_MARK,
+    KOS_STR_RESULT,
+    KOS_STR_SLICE,
+    KOS_STR_STRING,
+    KOS_STR_THIS,
+    KOS_STR_TRUE,
+    KOS_STR_VALUE,
+    KOS_STR_VOID,
+    KOS_STR_XBUILTINX,
+
     KOS_STR_NUM /* number of pre-allocated strings */
 };
 
@@ -211,11 +239,8 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
                                     KOS_CONTEXT   ctx);
 
-KOS_OBJ_ID KOS_instance_get_cstring(KOS_CONTEXT ctx,
-                                    const char *cstr);
-
 KOS_OBJ_ID KOS_get_string(KOS_CONTEXT  ctx,
-                          enum KOS_STR id);
+                          enum KOS_STR str_id);
 
 #ifdef NDEBUG
 #define KOS_instance_validate(ctx) ((void)0)
