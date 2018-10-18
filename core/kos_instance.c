@@ -766,7 +766,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
     TRY(_KOS_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));
     TRY(KOS_object_to_string_or_cstr_vec(ctx, value, KOS_DONT_QUOTE, 0, &cstr));
 
-    str = KOS_new_string(ctx, cstr.buffer, cstr.size - 1);
+    str = KOS_new_string(ctx, cstr.buffer, (unsigned)(cstr.size - 1));
     TRY_OBJID(str);
 
     TRY(KOS_array_write(ctx, array, 0, str));
@@ -822,7 +822,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
-        str = KOS_new_string(ctx, cstr.buffer, cstr.size - 1);
+        str = KOS_new_string(ctx, cstr.buffer, (unsigned)(cstr.size - 1));
         TRY_OBJID(str);
 
         TRY(KOS_array_write(ctx, array, 1+(int)i, str));
