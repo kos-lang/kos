@@ -843,7 +843,7 @@ static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
     KOS_OBJ_ID             ret   = KOS_BADPTR;
     KOS_FUNCTION          *func;
     const char            *str_func;
-    size_t                 str_func_len;
+    unsigned               str_func_len;
     KOS_ATOMIC(KOS_OBJ_ID) strings[3];
     char                   cstr_ptr[22];
 
