@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>contactEmailRot13</key>
+	<string>chris@chris.dragan.name</string>
+	<key>contactName</key>
+	<string>Chris Dragan</string>
+	<key>description</key>
+	<string>Syntax highlighting for &lt;a href="https://github.com/kos-lang/kos"&gt;Kos programming language&lt;/a&gt;.</string>
+	<key>name</key>
+	<string>Kos</string>
+	<key>uuid</key>
+	<string>5506F5F6-984F-4F26-8B25-AC3F0F933C63</string>
+</dict>
+</plist>
