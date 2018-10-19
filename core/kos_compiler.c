@@ -2328,14 +2328,12 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     assert(try_node);
     assert(try_node->next);
     assert(!try_node->next->next);
-    if (node_type == NT_TRY_CATCH)
-        catch_node = try_node->next;
-    else
-        defer_node = try_node->next;
 
-    if (catch_node) {
+    if (node_type == NT_TRY_CATCH) {
 
         struct _KOS_AST_NODE *variable;
+
+        catch_node = try_node->next;
 
         assert(catch_node->type == NT_CATCH);
 
@@ -2364,6 +2362,8 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
     }
     else {
 
+        defer_node = try_node->next;
+
         assert(node_type == NT_TRY_DEFER);
         assert(defer_node->type == NT_SCOPE);
 
@@ -2391,7 +2391,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
     /* Catch section */
 
-    if (catch_node) {
+    if (node_type == NT_TRY_CATCH) {
 
         int jump_end_offs;
 
@@ -2437,8 +2437,6 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
             return_offs                     = tmp;
             scope->catch_ref.finally_active = 0;
         }
-
-        assert(defer_node);
 
         _update_child_scope_catch(program);
 

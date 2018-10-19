@@ -2592,6 +2592,7 @@ static int _exec_function(KOS_CONTEXT ctx)
                 assert(rfunc < num_regs);
 
                 func_obj = regs[rfunc];
+                assert( ! IS_BAD_PTR(func_obj));
 
                 if (rargs != ~0U) {
                     assert(rargs < num_regs);
@@ -2617,11 +2618,9 @@ static int _exec_function(KOS_CONTEXT ctx)
                         break;
                 }
 
-                if (func)
+                if ( ! error)
                     error = _prepare_call(ctx, instr, func_obj, &this_obj,
                                           args_obj, num_args ? &regs[rarg1] : 0, num_args);
-
-                assert(error || func);
 
                 if ( ! error) {
 
