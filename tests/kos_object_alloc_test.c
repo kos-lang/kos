@@ -498,15 +498,26 @@ int main(void)
         void      *pages[3];
         KOS_OBJ_ID opaque[(_KOS_POOL_SIZE / _KOS_PAGE_SIZE) + 4U];
 
-        for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i) {
-            pages[i] = _KOS_malloc(_KOS_PAGE_SIZE / 4U);
-            TEST(pages[i]);
-        }
-
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i)
-            _KOS_heap_lend_page(ctx, pages[i], _KOS_PAGE_SIZE / 4U);
+        for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i) {
+
+            size_t size = _KOS_PAGE_SIZE / 4U;
+            void  *alloc;
+
+            for (;;) {
+                alloc = _KOS_malloc(size);
+
+                if (_KOS_heap_lend_page(ctx, alloc, size)) {
+                    pages[i] = alloc;
+                    break;
+                }
+
+                _KOS_free(alloc);
+
+                size += _KOS_PAGE_SIZE / 4U;
+            }
+        }
 
         for (i = 0; i < sizeof(opaque) / sizeof(opaque[0]); ++i) {
             opaque[i] = _alloc_opaque(ctx, (uint8_t)0xA1U, 3U * _KOS_PAGE_SIZE / 4U);

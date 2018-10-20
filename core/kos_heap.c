@@ -359,15 +359,16 @@ static _KOS_PAGE *_alloc_page(struct _KOS_HEAP *heap)
 }
 
 #ifndef NDEBUG
-void _KOS_heap_lend_page(KOS_CONTEXT ctx,
-                         void       *buffer,
-                         size_t      size)
+int _KOS_heap_lend_page(KOS_CONTEXT ctx,
+                        void       *buffer,
+                        size_t      size)
 {
     const uintptr_t   buf_ptr      = (uintptr_t)buffer;
     const uintptr_t   good_buf_ptr = KOS_align_up(buf_ptr, (uintptr_t)_KOS_PAGE_SIZE);
     const uintptr_t   reserved     = good_buf_ptr - buf_ptr + _KOS_SLOTS_OFFS
                                      + (1U << _KOS_OBJ_ALIGN_BITS);
     struct _KOS_HEAP *heap         = _get_heap(ctx);
+    int               lent         = 0;
 
     _KOS_lock_mutex(&heap->mutex);
 
@@ -384,9 +385,13 @@ void _KOS_heap_lend_page(KOS_CONTEXT ctx,
 
         page->next = *insert_at;
         *insert_at = page;
+
+        lent = 1;
     }
 
     _KOS_unlock_mutex(&heap->mutex);
+
+    return lent;
 }
 #endif
 

@@ -167,9 +167,9 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 /*==========================================================================*/
 
 #ifndef NDEBUG
-void _KOS_heap_lend_page(KOS_CONTEXT ctx,
-                         void       *buffer,
-                         size_t      size);
+int _KOS_heap_lend_page(KOS_CONTEXT ctx,
+                        void       *buffer,
+                        size_t      size);
 #endif
 
 #endif
