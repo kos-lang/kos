@@ -168,12 +168,11 @@ int _KOS_vector_resize(struct _KOS_VECTOR *vector, size_t size)
 
     if (size > vector->capacity) {
         size_t       new_capacity;
-        const size_t delta =
-            (vector->capacity > _KOS_VEC_MAX_INC_SIZE) ? _KOS_VEC_MAX_INC_SIZE : vector->capacity;
+        const size_t delta = KOS_max(KOS_min(vector->capacity, _KOS_VEC_MAX_INC_SIZE), 64);
 
-        if (!vector->capacity)
-            new_capacity = (size > 8) ? size : 8;
-        else if (vector->capacity + delta > size)
+        assert(vector->capacity);
+
+        if (vector->capacity + delta > size)
             new_capacity = vector->capacity + delta;
         else
             new_capacity = size;
