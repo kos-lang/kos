@@ -202,7 +202,7 @@ static _KOS_POOL *_alloc_pool(struct _KOS_HEAP *heap,
 
     heap->heap_size += alloc_size;
 
-    begin = (uint8_t *)(((uintptr_t)pool + _KOS_PAGE_SIZE - 1U) & ~(uintptr_t)(_KOS_PAGE_SIZE - 1U));
+    begin = (uint8_t *)KOS_align_up((uintptr_t)pool, (uintptr_t)_KOS_PAGE_SIZE);
 
     waste_at_front = (uint32_t)(begin - pool);
 
@@ -357,6 +357,38 @@ static _KOS_PAGE *_alloc_page(struct _KOS_HEAP *heap)
 
     return page;
 }
+
+#ifndef NDEBUG
+void _KOS_heap_lend_page(KOS_CONTEXT ctx,
+                         void       *buffer,
+                         size_t      size)
+{
+    const uintptr_t   buf_ptr      = (uintptr_t)buffer;
+    const uintptr_t   good_buf_ptr = KOS_align_up(buf_ptr, (uintptr_t)_KOS_PAGE_SIZE);
+    const uintptr_t   reserved     = good_buf_ptr - buf_ptr + _KOS_SLOTS_OFFS
+                                     + (1U << _KOS_OBJ_ALIGN_BITS);
+    struct _KOS_HEAP *heap         = _get_heap(ctx);
+
+    _KOS_lock_mutex(&heap->mutex);
+
+    if (reserved <= size) {
+
+        _KOS_PAGE  *page      = (_KOS_PAGE *)good_buf_ptr;
+        _KOS_PAGE **insert_at = &heap->free_pages;
+
+        page->num_slots = (uint32_t)(size - reserved) >> _KOS_OBJ_ALIGN_BITS;
+        KOS_atomic_write_u32(page->num_allocated, 0);
+
+        while (*insert_at && page > *insert_at)
+            insert_at = &(*insert_at)->next;
+
+        page->next = *insert_at;
+        *insert_at = page;
+    }
+
+    _KOS_unlock_mutex(&heap->mutex);
+}
+#endif
 
 static void *_alloc_slots_from_page(_KOS_PAGE *page, uint32_t num_slots)
 {
@@ -1204,8 +1236,7 @@ static int _sort_compare(const void *a, const void *b)
     _KOS_PAGE *const *pa = (_KOS_PAGE *const *)a;
     _KOS_PAGE *const *pb = (_KOS_PAGE *const *)b;
 
-    return (pa < pb) ? -1 :
-           (pa > pb) ?  1 : 0;
+    return (pa < pb) ? -1 : (pa > pb) ?  1 : 0;
 }
 
 static void _sort_flat_page_list(_KOS_PAGE *list)

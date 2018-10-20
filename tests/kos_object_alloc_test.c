@@ -24,7 +24,9 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../core/kos_config.h"
+#include "../core/kos_malloc.h"
 #include "../core/kos_misc.h"
+#include "../core/kos_object_internal.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -489,6 +491,38 @@ int main(void)
 
         KOS_instance_destroy(&inst);
     }
+
+    /************************************************************************/
+#ifndef NDEBUG
+    {
+        void      *pages[3];
+        size_t     i;
+        KOS_OBJ_ID opaque[(_KOS_POOL_SIZE / _KOS_PAGE_SIZE) + 4U];
+
+        for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i) {
+            pages[i] = _KOS_malloc(_KOS_PAGE_SIZE / 4U);
+            TEST(pages[i]);
+        }
+
+        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+
+        for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i)
+            _KOS_heap_lend_page(ctx, pages[i], _KOS_PAGE_SIZE / 4U);
+
+        for (i = 0; i < sizeof(opaque) / sizeof(opaque[0]); ++i) {
+            opaque[i] = _alloc_opaque(ctx, (uint8_t)0xA1U, 3U * _KOS_PAGE_SIZE / 4U);
+            TEST( ! IS_BAD_PTR(opaque[i]));
+        }
+
+        for (i = 0; i < sizeof(opaque) / sizeof(opaque[0]); ++i)
+            TEST(_check_opaque(opaque[i], (uint8_t)0xA1U));
+
+        KOS_instance_destroy(&inst);
+
+        for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i)
+            _KOS_free(pages[i]);
+    }
+#endif
 
     return 0;
 }

@@ -162,4 +162,14 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
                               unsigned    data_size,   /* Data length if data is not 0           */
                               int        *out_module_idx);
 
+/*==========================================================================*/
+/* KOS_HEAP                                                                 */
+/*==========================================================================*/
+
+#ifndef NDEBUG
+void _KOS_heap_lend_page(KOS_CONTEXT ctx,
+                         void       *buffer,
+                         size_t      size);
+#endif
+
 #endif
