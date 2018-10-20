@@ -1940,7 +1940,11 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
 
         struct _KOS_REG *value_iter_reg = item_reg;
 
+        assert(value_iter_reg->tmp);
+
         TRY(_invoke_get_iterator(program, &value_iter_reg));
+
+        assert(value_iter_reg == item_reg);
 
         for ( ; var_node; var_node = var_node->next) {
 
@@ -1951,9 +1955,6 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
 
             TRY(_gen_instr4(program, INSTR_CALL_FUN, var_reg->reg, value_iter_reg->reg, 255, 0));
         }
-
-        if (value_iter_reg != item_reg)
-            _free_reg(program, value_iter_reg);
     }
 
     node = assg_node->next;

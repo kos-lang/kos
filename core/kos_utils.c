@@ -1248,6 +1248,7 @@ static enum _KOS_COMPARE_RESULT _compare(KOS_OBJ_ID               a,
                 assert(a_type == OBJ_SMALL_INTEGER ||
                        a_type == OBJ_INTEGER       ||
                        a_type == OBJ_FLOAT);
+                assert(a_type != OBJ_VOID);
 
                 if (a_type == OBJ_FLOAT || b_type == OBJ_FLOAT)
                     return _compare_float(a, b);
@@ -1262,9 +1263,6 @@ static enum _KOS_COMPARE_RESULT _compare(KOS_OBJ_ID               a,
                                         : OBJPTR(INTEGER, b)->value;
                     return _compare_int(a_int, b_int);
                 }
-
-            case OBJ_VOID:
-                return KOS_EQUAL;
 
             case OBJ_BOOLEAN:
                 return _compare_int((int)KOS_get_bool(a), (int)KOS_get_bool(b));

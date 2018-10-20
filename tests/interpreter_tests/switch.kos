@@ -27,6 +27,21 @@ do {
 }
 
 do {
+    fun test(a, b)
+    {
+        switch a {
+
+            case b + 1: return 1
+            case b + 2: return 2
+        }
+    }
+
+    assert test(8, 7)   == 1
+    assert test(20, 18) == 2
+    assert test(8, 1)   == void
+}
+
+do {
     var value = void
 
     fun mutate { value = 123 }

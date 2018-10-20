@@ -59,7 +59,11 @@ do {
 
     fun gen
     {
-        for var i = 0; i < 3; i += 1 {
+        var j = 10
+        for var i = 0; i < 2;
+            i += 1,
+            j += 2 {
+
             idx = i
             yield i
         }
@@ -71,7 +75,18 @@ do {
 }
 
 do {
-    const values = [ 1, 2.0, ["x","y"], buffer([3, 4]), {x:"y"}, ()=>void ];
+    const x = "x"
+    const values = [ 1, 2.0, [x,"y"], buffer([3, 4]), {x:"y"}, ()=>void ];
     const str = stringify.apply(void, values)
-    assert str.starts_with("12.0[\"x\", \"y\"]<03 04>{\"x\": \"y\"}<function ")
+    assert str.starts_with("12.0[\"\((a=>a)(x))\", \"y\"]<03 04>{\"x\": \"y\"}<function ")
+}
+
+do {
+    class stuff {
+        to_string(x) { print(x) ; return "\(x)" }
+    }
+
+    const o = stuff()
+    assert o.to_string(stuff).starts_with("<class");
+    assert o.to_string(print).starts_with("<function");
 }

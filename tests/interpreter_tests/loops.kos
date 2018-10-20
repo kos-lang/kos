@@ -801,3 +801,16 @@ repeat {
         break
     }
 } while false
+
+# Forever loop using repeat
+do {
+    var count = 0
+    repeat {
+        count += 1
+        if count >= 10 {
+            break
+        }
+    } while true
+
+    assert count == 10
+}

@@ -29,6 +29,7 @@
 #include "../inc/kos_utils.h"
 #include "kos_compiler.h"
 #include "kos_config.h"
+#include "kos_debug.h"
 #include "kos_disasm.h"
 #include "kos_heap.h"
 #include "kos_malloc.h"
@@ -574,6 +575,8 @@ static KOS_OBJ_ID _get_line(KOS_CONTEXT ctx,
 
         ret = KOS_new_string(ctx, line_buf.buffer, len);
     }
+    else
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
 
     _KOS_vector_destroy(&line_buf);
 
@@ -710,6 +713,8 @@ static int _get_global_idx(void       *vframe,
     KOS_OBJ_ID    glob_idx_obj;
 
     assert(module_idx >= 0);
+
+    TRY(_KOS_seq_fail());
 
     str = KOS_new_string(ctx, name, length);
     TRY_OBJID(str);

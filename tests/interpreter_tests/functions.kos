@@ -1815,3 +1815,64 @@ do {
 
     assert lambda(8)(2,5)(3) == 8253
 }
+
+# Independent args which don't fit in registers
+do {
+    fun lots_of_args(a00, a01, a02, a03, a04, a05, a06, a07, a08, a09, a0a, a0b, a0c, a0d, a0e, a0f,
+                     a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a1a, a1b, a1c, a1d, a1e, a1f,
+                     a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a2a, a2b, a2c, a2d, a2e, a2f,
+                     a30, a31, a32, a33, a34, a35, a36, a37, a38, a39, a3a, a3b, a3c, a3d, a3e, a3f,
+                     a40)
+    {
+        const sum1 = a00 * 1000 + a40
+        var   sum2 = void
+
+        fun update(x1, x2)
+        {
+            fun inner
+            {
+                a00 += x1
+                a40 += x2
+                sum2 = x1 * 1000 + x2
+            }
+
+            return inner()
+        }
+
+        update(a01, a3f)
+
+        const sum3 = a00 * 1000 + a40
+
+        return [sum1, sum2, sum3]
+    }
+
+    const a1, a2, a3 = lots_of_args(1, 2, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
+                                    9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
+                                    9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
+                                    9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 3,
+                                    4)
+
+    assert a1 == 1004
+    assert a2 == 2003
+    assert a3 == 3007
+}
+
+# Unused default args
+do {
+    var thing = void
+
+    fun touch(x)
+    {
+        thing = x
+    }
+
+    fun dummy(a, b = touch(42))
+    {
+        return a + 1
+    }
+
+    assert thing == 42
+    thing = void
+    assert dummy(10) == 11
+    assert thing == void
+}
