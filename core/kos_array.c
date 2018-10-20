@@ -64,13 +64,16 @@ static void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
 
 static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
 {
-    KOS_ARRAY_STORAGE *buf;
+    KOS_ARRAY_STORAGE *buf            = 0;
     const uint32_t     buf_alloc_size = KOS_buffer_alloc_size(capacity);
 
-    buf = (KOS_ARRAY_STORAGE *)_KOS_alloc_object(ctx,
-                                                 KOS_ALLOC_DEFAULT,
-                                                 OBJ_ARRAY_STORAGE,
-                                                 buf_alloc_size);
+    if (capacity < 256U * 1024U * 1024U)
+        buf = (KOS_ARRAY_STORAGE *)_KOS_alloc_object(ctx,
+                                                     KOS_ALLOC_DEFAULT,
+                                                     OBJ_ARRAY_STORAGE,
+                                                     buf_alloc_size);
+    else
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
 
     if (buf) {
         assert(buf->header.type == OBJ_ARRAY_STORAGE);
