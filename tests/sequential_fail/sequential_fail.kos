@@ -1,5 +1,4 @@
-#!/bin/sh
-
+#
 # Copyright (c) 2014-2018 Chris Dragan
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,39 +18,60 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+#
 
-set -e
+import base.*
 
-if [ $# -ne 4 ]; then
-    echo "Usage: $0 <kos> <output_dir> <start_seq> <seq_len>"
-    exit 1
-fi
+do {
+    var caught = false
+    try {
+        throw "HELL\(0)"
+    }
+    catch const e {
+        caught = e.value
+        e.print()
+    }
+    assert caught
+}
 
-KOS="$1"
-OUTPUT="$2/sequential_fail"
-BEGIN=$3
-END=$(($3 + $4 - 1))
+do {
+    var i = 1
+    for const elem in [ 1, 2, 2+1 ] {
+        assert elem == i
+        i += 1
+    }
+}
 
-for KOSSEQFAIL in $(seq $BEGIN $END); do
-    export KOSSEQFAIL
-    RET=0
-    "$KOS" -v interpreter_tests/sequential_fail.kos -print - -kosarg > "$OUTPUT.stdout" 2> "$OUTPUT.stderr"|| RET=$?
+do {
+    const line = __line__
+    const obj  = { a : line, b : line + 1 }
+    for const key, value in shallow(obj) {
+        switch key {
+            case "a": assert value == line
+            case "b": assert value == line + 1
+            default:  throw "invalid " + "key"
+        }
+    }
+}
 
-    if [ "$RET" = "0" ]; then
-        echo "Note: Test passed at sequence point $KOSSEQFAIL"
-        break
-    fi
+do {
+    var idx = void
 
-    if [ "$RET" != "1" ]; then
-        echo "Failed at sequence point $KOSSEQFAIL with error code $RET (expected 1)"
+    fun gen
+    {
+        for var i = 0; i < 3; i += 1 {
+            idx = i
+            yield i
+        }
+    }
 
-        echo "--- stdout -------------------------------------------------"
-        cat "$OUTPUT.stdout"
+    for const value in gen() {
+        assert idx == value
+    }
+}
 
-        echo "--- stderr -------------------------------------------------"
-        cat "$OUTPUT.stderr"
-
-        echo "------------------------------------------------------------"
-        exit $RET
-    fi
-done
+do {
+    const values = [ 1, 2.0, ["x","y"], buffer([3, 4]), {x:"y"}, ()=>void ];
+    const str = stringify.apply(void, values)
+    assert str.starts_with("12.0[\"x\", \"y\"]<03 04>{\"x\": \"y\"}<function ")
+}

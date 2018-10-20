@@ -1,4 +1,5 @@
-#
+#!/bin/sh
+
 # Copyright (c) 2014-2018 Chris Dragan
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,59 +19,39 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-#
 
-import base.*
+set -e
 
-do {
-    var caught = false
-    try {
-        throw "HELL\(0)"
-    }
-    catch const e {
-        caught = e.value
-    }
-    assert caught
-}
+if [ $# -ne 4 ]; then
+    echo "Usage: $0 <kos> <output_dir> <start_seq> <seq_len>"
+    exit 1
+fi
 
-do {
-    var i = 1
-    for const elem in [ 1, 2, 2+1 ] {
-        assert elem == i
-        i += 1
-    }
-}
+KOS="$1"
+OUTPUT="$2/sequential_fail"
+BEGIN=$3
+END=$(($3 + $4 - 1))
 
-do {
-    const line = __line__
-    const obj  = { a : line, b : line + 1 }
-    for const key, value in shallow(obj) {
-        switch key {
-            case "a": assert value == line
-            case "b": assert value == line + 1
-            default:  throw "invalid " + "key"
-        }
-    }
-}
+for KOSSEQFAIL in $(seq $BEGIN $END); do
+    export KOSSEQFAIL
+    RET=0
+    "$KOS" -v sequential_fail/sequential_fail.kos -print - -kosarg > "$OUTPUT.stdout" 2> "$OUTPUT.stderr"|| RET=$?
 
-do {
-    var idx = void
+    if [ "$RET" = "0" ]; then
+        echo "Note: Test passed at sequence point $KOSSEQFAIL"
+        break
+    fi
 
-    fun gen
-    {
-        for var i = 0; i < 3; i += 1 {
-            idx = i
-            yield i
-        }
-    }
+    if [ "$RET" != "1" ]; then
+        echo "Failed at sequence point $KOSSEQFAIL with error code $RET (expected 1)"
 
-    for const value in gen() {
-        assert idx == value
-    }
-}
+        echo "--- stdout -------------------------------------------------"
+        cat "$OUTPUT.stdout"
 
-do {
-    const values = [ 1, 2.0, ["x","y"], buffer([3, 4]), {x:"y"}, ()=>void ];
-    const str = stringify.apply(void, values)
-    assert str.starts_with("12.0[\"x\", \"y\"]<03 04>{\"x\": \"y\"}<function ")
-}
+        echo "--- stderr -------------------------------------------------"
+        cat "$OUTPUT.stderr"
+
+        echo "------------------------------------------------------------"
+        exit $RET
+    fi
+done

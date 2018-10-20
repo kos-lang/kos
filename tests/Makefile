@@ -171,7 +171,7 @@ sequential_test_list =
 define SEQFAIL_RULE
 sequential_fail.$1:
 	@echo Test sequential fail $1
-	@env KOSPATH=../modules interpreter_tests/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests $1 200
+	@env KOSPATH=../modules sequential_fail/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests $1 200
 
 sequential_test_list += sequential_fail.$1
 endef
