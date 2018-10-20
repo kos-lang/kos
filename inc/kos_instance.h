@@ -91,17 +91,17 @@ typedef struct _KOS_STACK {
 } KOS_STACK;
 
 struct _KOS_THREAD_CONTEXT {
-    KOS_CONTEXT              next;     /* List of thread roots in instance */
-    KOS_CONTEXT              prev;
+    KOS_CONTEXT   next;     /* List of thread roots in instance */
+    KOS_CONTEXT   prev;
 
-    KOS_INSTANCE         *inst;
-    _KOS_PAGE            *cur_page;
-    KOS_OBJ_ID            exception;
-    KOS_OBJ_ID            retval;
-    KOS_OBJ_REF          *obj_refs;
-    KOS_OBJ_ID            stack;    /* Topmost container for registers & stack frames */
-    uint32_t              regs_idx; /* Index of first register in current frame       */
-    uint32_t              stack_depth;
+    KOS_INSTANCE *inst;
+    _KOS_PAGE    *cur_page;
+    KOS_OBJ_ID    exception;
+    KOS_OBJ_ID    retval;
+    KOS_OBJ_REF  *obj_refs;
+    KOS_OBJ_ID    stack;    /* Topmost container for registers & stack frames */
+    uint32_t      regs_idx; /* Index of first register in current frame       */
+    uint32_t      stack_depth;
 };
 
 struct _KOS_PROTOTYPES {
