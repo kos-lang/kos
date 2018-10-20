@@ -503,17 +503,17 @@ int main(void)
         for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i) {
 
             size_t size = _KOS_PAGE_SIZE / 4U;
-            void  *alloc;
+            void  *mem;
 
             for (;;) {
-                alloc = _KOS_malloc(size);
+                mem = _KOS_malloc(size);
 
-                if (_KOS_heap_lend_page(ctx, alloc, size)) {
-                    pages[i] = alloc;
+                if (_KOS_heap_lend_page(ctx, mem, size)) {
+                    pages[i] = mem;
                     break;
                 }
 
-                _KOS_free(alloc);
+                _KOS_free(mem);
 
                 size += _KOS_PAGE_SIZE / 4U;
             }
