@@ -62,7 +62,7 @@ struct _KOS_PAGE_HEADER {
     _KOS_PAGE           *next;
     uint32_t             num_slots;       /* Total number of slots in this page */
     KOS_ATOMIC(uint32_t) num_allocated;   /* Number of slots allocated          */
-    KOS_ATOMIC(uint32_t) num_used;        /* Number of slots used, during GC    */
+    KOS_ATOMIC(uint32_t) num_used;        /* Number of slots used, only for GC  */
 };
 
 #define _KOS_PAGE_HDR_SIZE  (sizeof(struct _KOS_PAGE_HEADER))
@@ -155,11 +155,16 @@ void _KOS_heap_destroy(KOS_INSTANCE *inst)
 {
     for (;;) {
         _KOS_POOL *pool = (_KOS_POOL *)POP_LIST(inst->heap.pools);
+        void      *memory;
 
         if ( ! pool)
             break;
 
-        _KOS_free(pool->memory);
+        memory = pool->memory;
+        _KOS_free(memory);
+
+        if (pool != memory)
+            _KOS_free(pool);
     }
 
     _KOS_destroy_mutex(&inst->heap.mutex);
@@ -179,74 +184,10 @@ static void _register_wasted_region(struct _KOS_HEAP *heap,
     }
 }
 
-static _KOS_POOL *_get_pool_header(struct _KOS_HEAP *heap)
-{
-    _KOS_POOL *pool = (_KOS_POOL *)POP_LIST(heap->pool_headers);
-
-    if ( ! pool) {
-
-        _KOS_WASTE *discarded = 0;
-        _KOS_WASTE *waste;
-        _KOS_POOL  *begin;
-
-        for (;;) {
-
-            waste = (_KOS_WASTE *)POP_LIST(heap->waste);
-
-            if ( ! waste)
-                break;
-
-            if (waste->size >= sizeof(_KOS_POOL) && waste->size <= 8U * sizeof(_KOS_POOL))
-                break;
-
-            waste->next = discarded;
-            discarded = waste;
-        }
-
-        while (discarded) {
-            _KOS_WASTE *to_push = discarded;
-            discarded           = discarded->next;
-
-            PUSH_LIST(heap->waste, to_push);
-        }
-
-        if ( ! waste) {
-            pool = (_KOS_POOL *)_KOS_malloc(8U * sizeof(_KOS_POOL));
-            if ( ! pool)
-                return 0;
-
-            heap->heap_size += 8U * (uint32_t)sizeof(_KOS_POOL);
-
-            pool->memory      = pool;
-            pool->alloc_size  = 8U * sizeof(_KOS_POOL);
-            pool->usable_ptr  = 0;
-            pool->usable_size = 0U;
-
-            PUSH_LIST(heap->pools, pool);
-
-            waste       = (_KOS_WASTE *)(pool + 1);
-            waste->size = 7U * sizeof(_KOS_POOL);
-        }
-
-        begin = (_KOS_POOL *)waste;
-        pool  = begin + waste->size / sizeof(_KOS_POOL);
-
-        for (;;) {
-            --pool;
-            if (pool == begin)
-                break;
-
-            PUSH_LIST(heap->pool_headers, pool);
-        }
-    }
-
-    return pool;
-}
-
 static _KOS_POOL *_alloc_pool(struct _KOS_HEAP *heap,
                               uint32_t          alloc_size)
 {
-    _KOS_POOL *pool_hdr = 0;
+    _KOS_POOL *pool_hdr;
     uint8_t   *pool;
     uint8_t   *begin;
     uint32_t   waste_at_front;
@@ -266,15 +207,14 @@ static _KOS_POOL *_alloc_pool(struct _KOS_HEAP *heap,
     waste_at_front = (uint32_t)(begin - pool);
 
     if (waste_at_front < sizeof(_KOS_POOL)) {
-        pool_hdr = _get_pool_header(heap);
+        pool_hdr = (_KOS_POOL *)_KOS_malloc(sizeof(struct _KOS_POOL_HEADER));
 
         if ( ! pool_hdr) {
             _KOS_free(pool);
             return 0;
         }
     }
-
-    if ( ! pool_hdr) {
+    else {
 
         uint8_t *waste;
         uint32_t waste_size;
