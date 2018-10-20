@@ -496,7 +496,6 @@ int main(void)
 #ifndef NDEBUG
     {
         void      *pages[3];
-        size_t     i;
         KOS_OBJ_ID opaque[(_KOS_POOL_SIZE / _KOS_PAGE_SIZE) + 4U];
 
         for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i) {
