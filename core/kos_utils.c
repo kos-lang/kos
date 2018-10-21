@@ -1248,7 +1248,6 @@ static enum _KOS_COMPARE_RESULT _compare(KOS_OBJ_ID               a,
                 assert(a_type == OBJ_SMALL_INTEGER ||
                        a_type == OBJ_INTEGER       ||
                        a_type == OBJ_FLOAT);
-                assert(a_type != OBJ_VOID);
 
                 if (a_type == OBJ_FLOAT || b_type == OBJ_FLOAT)
                     return _compare_float(a, b);
