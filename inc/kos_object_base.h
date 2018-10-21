@@ -399,12 +399,6 @@ typedef struct _KOS_OBJECT_WALK {
     KOS_ATOMIC(KOS_OBJ_ID) last_value;
 } KOS_OBJECT_WALK;
 
-enum KOS_ALLOC_HINT {
-    KOS_ALLOC_DEFAULT,      /* Default placement in the global heap         */
-    KOS_ALLOC_LOCAL,        /* Prefer frame-local allocation                */
-    KOS_ALLOC_PERSISTENT    /* Prefer persistent allocation for root object */
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -115,7 +115,6 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
     rng = (struct _KOS_RNG_CONTAINER *)_KOS_malloc(sizeof(struct _KOS_RNG_CONTAINER));
     */
     rng = (struct _KOS_RNG_CONTAINER *)_KOS_alloc_object(ctx,
-                                                         KOS_ALLOC_PERSISTENT, /* avoid GC */
                                                          OBJ_OPAQUE,
                                                          sizeof(struct _KOS_RNG_CONTAINER));
 

@@ -69,7 +69,6 @@ static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
 
     if (capacity < 256U * 1024U * 1024U)
         buf = (KOS_ARRAY_STORAGE *)_KOS_alloc_object(ctx,
-                                                     KOS_ALLOC_DEFAULT,
                                                      OBJ_ARRAY_STORAGE,
                                                      buf_alloc_size);
     else
@@ -94,7 +93,6 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
     const int      buf_built_in   = array_obj_size + buf_alloc_size <= 256U;
     const uint32_t alloc_size     = buf_built_in ? array_obj_size + buf_alloc_size : array_obj_size;
     KOS_ARRAY     *array          = (KOS_ARRAY *)_KOS_alloc_object(ctx,
-                                                                   KOS_ALLOC_DEFAULT,
                                                                    OBJ_ARRAY,
                                                                    alloc_size);
 

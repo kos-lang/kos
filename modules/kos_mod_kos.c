@@ -107,7 +107,6 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
         /* TODO use malloc once GC supports finalize */
         lexer = (struct _LEXER *)_KOS_alloc_object(ctx,
-                                                   KOS_ALLOC_PERSISTENT, /* avoid GC */
                                                    OBJ_OPAQUE,
                                                    sizeof(struct _LEXER));
         if (!lexer)

@@ -91,7 +91,6 @@ KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
                                          KOS_OBJ_ID  prototype)
 {
     KOS_OBJECT *obj = (KOS_OBJECT *)_KOS_alloc_object(ctx,
-                                                      KOS_ALLOC_DEFAULT,
                                                       OBJ_OBJECT,
                                                       sizeof(KOS_OBJECT));
 
@@ -138,7 +137,6 @@ static KOS_OBJECT_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 {
     KOS_OBJECT_STORAGE *const storage = (KOS_OBJECT_STORAGE *)
             _KOS_alloc_object(ctx,
-                              KOS_ALLOC_DEFAULT,
                               OBJ_OBJECT_STORAGE,
                               sizeof(KOS_OBJECT_STORAGE) + (capacity - 1) * sizeof(KOS_PITEM));
 
@@ -873,7 +871,6 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
 {
     int              error = KOS_SUCCESS;
     KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
-                                                                  KOS_ALLOC_DEFAULT,
                                                                   OBJ_OBJECT_WALK,
                                                                   sizeof(KOS_OBJECT_WALK));
     KOS_OBJ_ID       key_table_obj;
@@ -948,7 +945,6 @@ KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
     int              error = KOS_SUCCESS;
     KOS_OBJECT_WALK *src;
     KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
-                                                                  KOS_ALLOC_DEFAULT,
                                                                   OBJ_OBJECT_WALK,
                                                                   sizeof(KOS_OBJECT_WALK));
 

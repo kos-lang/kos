@@ -214,7 +214,6 @@ static KOS_OBJ_ID _alloc_module(KOS_CONTEXT ctx,
     KOS_MODULE *module;
 
     module = (KOS_MODULE *)_KOS_alloc_object(ctx,
-                                             KOS_ALLOC_PERSISTENT,
                                              OBJ_MODULE,
                                              sizeof(KOS_MODULE));
     if (module) {

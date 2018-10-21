@@ -494,7 +494,6 @@ static KOS_OBJ_HEADER *_setup_huge_object_in_page(struct _KOS_HEAP    *heap,
 }
 
 static void *_alloc_huge_object(KOS_CONTEXT          ctx,
-                                enum KOS_ALLOC_HINT  alloc_hint,
                                 enum KOS_OBJECT_TYPE object_type,
                                 uint32_t             size)
 {
@@ -615,7 +614,6 @@ static int _is_page_full(_KOS_PAGE *page)
 }
 
 static void *_alloc_object(KOS_CONTEXT          ctx,
-                           enum KOS_ALLOC_HINT  alloc_hint,
                            enum KOS_OBJECT_TYPE object_type,
                            uint32_t             size)
 {
@@ -762,25 +760,23 @@ static void *_alloc_object(KOS_CONTEXT          ctx,
 }
 
 void *_KOS_alloc_object(KOS_CONTEXT          ctx,
-                        enum KOS_ALLOC_HINT  alloc_hint,
                         enum KOS_OBJECT_TYPE object_type,
                         uint32_t             size)
 {
     if (size > (_KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS))
     {
-        return _alloc_huge_object(ctx, alloc_hint, object_type, size);
+        return _alloc_huge_object(ctx, object_type, size);
     }
     else
     {
-        return _alloc_object(ctx, alloc_hint, object_type, size);
+        return _alloc_object(ctx, object_type, size);
     }
 }
 
 void *_KOS_alloc_object_page(KOS_CONTEXT          ctx,
-                             enum KOS_ALLOC_HINT  alloc_hint,
                              enum KOS_OBJECT_TYPE object_type)
 {
-    return _alloc_object(ctx, alloc_hint, object_type, _KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS);
+    return _alloc_object(ctx, object_type, _KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS);
 }
 
 static void _release_current_page(KOS_CONTEXT ctx)
@@ -1340,7 +1336,6 @@ static int _evacuate_object(KOS_CONTEXT     ctx,
 {
     int             error   = KOS_SUCCESS;
     KOS_OBJ_HEADER *new_obj = (KOS_OBJ_HEADER *)_KOS_alloc_object(ctx,
-                                                                  KOS_ALLOC_DEFAULT,
                                                                   (enum KOS_OBJECT_TYPE)hdr->type,
                                                                   size);
 

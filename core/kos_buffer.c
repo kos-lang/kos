@@ -38,7 +38,6 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 {
     KOS_BUFFER_STORAGE *const data = (KOS_BUFFER_STORAGE *)
             _KOS_alloc_object(ctx,
-                              KOS_ALLOC_DEFAULT,
                               OBJ_BUFFER_STORAGE,
                               KOS_buffer_alloc_size(capacity));
 
@@ -81,7 +80,6 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
                           unsigned    size)
 {
     KOS_BUFFER    *buffer   = (KOS_BUFFER *)_KOS_alloc_object(ctx,
-                                                              KOS_ALLOC_DEFAULT,
                                                               OBJ_BUFFER,
                                                               sizeof(KOS_BUFFER));
     const unsigned capacity = (size + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);

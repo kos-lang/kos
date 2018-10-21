@@ -126,7 +126,6 @@ static int _init_stack(KOS_CONTEXT ctx,
 static int _push_new_stack(KOS_CONTEXT ctx)
 {
     KOS_STACK *const new_stack = (KOS_STACK *)_KOS_alloc_object_page(ctx,
-                                                                     KOS_ALLOC_DEFAULT,
                                                                      OBJ_STACK);
     if (new_stack)
         new_stack->header.flags = KOS_NORMAL_STACK;
@@ -139,7 +138,6 @@ static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
 {
     const size_t     alloc_size = sizeof(KOS_STACK) + sizeof(KOS_OBJ_ID) * room;
     KOS_STACK *const new_stack  = (KOS_STACK *)_KOS_alloc_object(ctx,
-                                                                 KOS_ALLOC_DEFAULT,
                                                                  OBJ_STACK,
                                                                  (uint32_t)alloc_size);
     if (new_stack)

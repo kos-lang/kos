@@ -102,7 +102,6 @@ static int _test_instr(KOS_INSTANCE        *inst,
     KOS_OBJ_ID              ret             = KOS_BADPTR;
 
     module = (KOS_MODULE *)_KOS_alloc_object(ctx,
-                                             KOS_ALLOC_PERSISTENT,
                                              OBJ_MODULE,
                                              sizeof(KOS_MODULE));
     if ( ! module) {

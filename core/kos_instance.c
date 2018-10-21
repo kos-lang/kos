@@ -222,7 +222,6 @@ static int _init_search_paths(KOS_CONTEXT ctx)
 static KOS_OBJ_ID _alloc_empty_string(KOS_CONTEXT ctx)
 {
     KOS_STRING *str = (KOS_STRING *)_KOS_alloc_object(ctx,
-                                                      KOS_ALLOC_PERSISTENT,
                                                       OBJ_STRING,
                                                       sizeof(KOS_STRING));
 
@@ -672,7 +671,6 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
     TRY_OBJID(module_name);
 
     mod_init = (struct _KOS_MODULE_INIT *)_KOS_alloc_object(ctx,
-                                                            KOS_ALLOC_PERSISTENT,
                                                             OBJ_OPAQUE, /* TODO double check type */
                                                             sizeof(struct _KOS_MODULE_INIT));
     if ( ! mod_init)

@@ -31,12 +31,10 @@ int   _KOS_heap_init(KOS_INSTANCE *inst);
 void  _KOS_heap_destroy(KOS_INSTANCE *inst);
 
 void *_KOS_alloc_object(KOS_CONTEXT          ctx,
-                        enum KOS_ALLOC_HINT  alloc_hint,
                         enum KOS_OBJECT_TYPE object_type,
                         uint32_t             size);
 
 void *_KOS_alloc_object_page(KOS_CONTEXT          ctx,
-                             enum KOS_ALLOC_HINT  alloc_hint,
                              enum KOS_OBJECT_TYPE object_type);
 
 void *_KOS_heap_early_alloc(KOS_INSTANCE         *inst,
