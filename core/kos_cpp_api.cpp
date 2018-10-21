@@ -218,20 +218,17 @@ std::string exception::get_exception_string(stack_frame ctx)
 object::const_iterator::const_iterator(stack_frame           ctx,
                                        KOS_OBJ_ID            obj_id,
                                        KOS_OBJECT_WALK_DEPTH depth)
-    : _ctx(ctx)
+    : _ctx(ctx), _elem(KOS_BADPTR, KOS_BADPTR)
 {
-    _elem.key   = KOS_BADPTR;
-    _elem.value = KOS_BADPTR;
-    _walk       = ctx.check_error(KOS_new_object_walk(ctx, obj_id, depth));
-    _elem       = KOS_object_walk(_ctx, _walk);
+    _walk = ctx.check_error(KOS_new_object_walk(ctx, obj_id, depth));
+    operator++();
 }
 
 object::const_iterator& object::const_iterator::operator=(const const_iterator& it)
 {
-    _ctx        = it._ctx;
-    _walk       = KOS_new_object_walk_copy(_ctx, it._walk);
-    _elem.key   = it._elem.key;
-    _elem.value = it._elem.value;
+    _ctx  = it._ctx;
+    _walk = KOS_new_object_walk_copy(_ctx, it._walk);
+    _elem = it._elem;
     return *this;
 }
 

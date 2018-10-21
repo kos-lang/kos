@@ -308,34 +308,29 @@ static int _predefine_globals(KOS_CONTEXT            ctx,
     walk = KOS_new_object_walk(ctx, global_names, KOS_SHALLOW);
     TRY_OBJID(walk);
 
-    for (;;) {
-        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(ctx, walk);
-        if (IS_BAD_PTR(elem.key))
-            break;
+    while ( ! KOS_object_walk(ctx, walk)) {
 
-        assert(IS_SMALL_INT(elem.value));
+        assert(IS_SMALL_INT(KOS_get_walk_value(walk)));
 
-        TRY(KOS_string_to_cstr_vec(ctx, elem.key, &cpath));
+        TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(walk), &cpath));
 
         TRY(_KOS_compiler_predefine_global(program,
                                            cpath.buffer,
-                                           (int)GET_SMALL_INT(elem.value),
+                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk)),
                                            is_repl ? 0 : 1));
     }
 
     walk = KOS_new_object_walk(ctx, module_names, KOS_SHALLOW);
     TRY_OBJID(walk);
 
-    for (;;) {
-        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(ctx, walk);
-        if (IS_BAD_PTR(elem.key))
-            break;
+    while ( ! KOS_object_walk(ctx, walk)) {
 
-        assert(IS_SMALL_INT(elem.value));
+        assert(IS_SMALL_INT(KOS_get_walk_value(walk)));
 
-        TRY(KOS_string_to_cstr_vec(ctx, elem.key, &cpath));
+        TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(walk), &cpath));
 
-        TRY(_KOS_compiler_predefine_module(program, cpath.buffer, (int)GET_SMALL_INT(elem.value)));
+        TRY(_KOS_compiler_predefine_module(program, cpath.buffer,
+                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk))));
     }
 
 _error:
@@ -760,19 +755,16 @@ static int _walk_globals(void                          *vframe,
     walk = KOS_new_object_walk(ctx, OBJPTR(MODULE, module_obj)->global_names, KOS_SHALLOW);
     TRY_OBJID(walk);
 
-    for (;;) {
-        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(ctx, walk);
-        if (IS_BAD_PTR(elem.key))
-            break;
+    while ( ! KOS_object_walk(ctx, walk)) {
 
-        assert(IS_SMALL_INT(elem.value));
+        assert(IS_SMALL_INT(KOS_get_walk_value(walk)));
 
-        TRY(KOS_string_to_cstr_vec(ctx, elem.key, &name));
+        TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(walk), &name));
 
         TRY(callback(name.buffer,
                      (unsigned)name.size - 1U,
                      module_idx,
-                     (int)GET_SMALL_INT(elem.value),
+                     (int)GET_SMALL_INT(KOS_get_walk_value(walk)),
                      cookie));
     }
 

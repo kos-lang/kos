@@ -175,31 +175,32 @@ static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                ctx,
     }
 
     {
-        KOS_OBJECT_WALK_ELEM elem;
-
         KOS_OBJ_ID array = KOS_new_array(ctx, 2);
         TRY_OBJID(array);
 
-        elem = KOS_object_walk(ctx, walk);
+        if ( ! KOS_object_walk(ctx, walk)) {
 
-        TRY_OBJID(elem.key);
-        assert( ! IS_BAD_PTR(elem.value));
+            KOS_OBJ_ID value = KOS_get_walk_value(walk);
 
-        if (GET_OBJ_TYPE(elem.value) == OBJ_DYNAMIC_PROP) {
-            KOS_OBJ_ID args = KOS_new_array(ctx, 0);
-            TRY_OBJID(args);
+            assert( ! IS_BAD_PTR(KOS_get_walk_key(walk)));
+            assert( ! IS_BAD_PTR(value));
 
-            elem.value = KOS_call_function(ctx,
-                                           OBJPTR(DYNAMIC_PROP, elem.value)->getter,
-                                           OBJPTR(OBJECT_WALK, walk)->obj,
-                                           args);
-            TRY_OBJID(elem.value);
+            if (GET_OBJ_TYPE(value) == OBJ_DYNAMIC_PROP) {
+                KOS_OBJ_ID args = KOS_new_array(ctx, 0);
+                TRY_OBJID(args);
+
+                value = KOS_call_function(ctx,
+                                          OBJPTR(DYNAMIC_PROP, value)->getter,
+                                          OBJPTR(OBJECT_WALK, walk)->obj,
+                                          args);
+                TRY_OBJID(value);
+            }
+
+            TRY(KOS_array_write(ctx, array, 0, KOS_get_walk_key(walk)));
+            TRY(KOS_array_write(ctx, array, 1, value));
+
+            ret = array;
         }
-
-        TRY(KOS_array_write(ctx, array, 0, elem.key));
-        TRY(KOS_array_write(ctx, array, 1, elem.value));
-
-        ret = array;
     }
 
 _error:

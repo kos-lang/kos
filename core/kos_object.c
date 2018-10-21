@@ -967,13 +967,13 @@ _error:
     return error ? KOS_BADPTR : OBJID(OBJECT_WALK, walk);
 }
 
-KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_CONTEXT ctx,
-                                     KOS_OBJ_ID  walk_id)
+int KOS_object_walk(KOS_CONTEXT ctx,
+                    KOS_OBJ_ID  walk_id)
 {
-    KOS_OBJECT_WALK_ELEM elem     = { KOS_BADPTR, KOS_BADPTR };
-    uint32_t             capacity = 0;
-    KOS_PITEM           *table    = 0;
-    KOS_OBJECT_WALK     *walk     = 0;
+    int              error    = KOS_ERROR_INTERNAL;
+    uint32_t         capacity = 0;
+    KOS_PITEM       *table    = 0;
+    KOS_OBJECT_WALK *walk     = 0;
 
     assert(GET_OBJ_TYPE(walk_id) == OBJ_OBJECT_WALK);
 
@@ -991,8 +991,12 @@ KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_CONTEXT ctx,
         KOS_OBJ_ID    key;
         const int32_t index = KOS_atomic_add_i32(walk->index, 1);
 
-        if ((uint32_t)index >= capacity)
+        if ((uint32_t)index >= capacity) {
+            KOS_atomic_write_ptr(walk->last_key,   KOS_BADPTR);
+            KOS_atomic_write_ptr(walk->last_value, KOS_BADPTR);
+            error = KOS_ERROR_NOT_FOUND;
             break;
+        }
 
         key = (KOS_OBJ_ID)KOS_atomic_read_ptr(table[index].key);
 
@@ -1003,15 +1007,13 @@ KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_CONTEXT ctx,
             if (IS_BAD_PTR(value))
                 KOS_clear_exception(ctx);
             else {
-                elem.key   = key;
-                elem.value = value;
-
                 KOS_atomic_write_ptr(walk->last_key,   key);
                 KOS_atomic_write_ptr(walk->last_value, value);
+                error = KOS_SUCCESS;
                 break;
             }
         }
     }
 
-    return elem;
+    return error;
 }

@@ -734,37 +734,31 @@ static int _vector_append_object(KOS_CONTEXT         ctx,
                                  KOS_OBJ_ID          obj_id)
 {
     int        error     = KOS_SUCCESS;
-    KOS_OBJ_ID walk_id;
+    KOS_OBJ_ID walk;
     uint32_t   num_elems = 0;
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
-    walk_id = KOS_new_object_walk(ctx, obj_id, KOS_SHALLOW);
-    TRY_OBJID(walk_id);
+    walk = KOS_new_object_walk(ctx, obj_id, KOS_SHALLOW);
+    TRY_OBJID(walk);
 
     TRY(_KOS_append_cstr(ctx, cstr_vec, str_object_open, sizeof(str_object_open)-1));
 
-    for (;; ++num_elems) {
+    while ( ! KOS_object_walk(ctx, walk)) {
 
-        KOS_OBJECT_WALK_ELEM elem = KOS_object_walk(ctx, walk_id);
-
-        if (IS_BAD_PTR(elem.key)) {
-            if (KOS_is_exception_pending(ctx))
-                error = KOS_ERROR_EXCEPTION;
-            break;
-        }
-
-        assert( ! IS_BAD_PTR(elem.value));
-        assert(GET_OBJ_TYPE(elem.key) == OBJ_STRING);
+        assert(GET_OBJ_TYPE(KOS_get_walk_key(walk)) == OBJ_STRING);
+        assert( ! IS_BAD_PTR(KOS_get_walk_value(walk)));
 
         if (num_elems)
             TRY(_KOS_append_cstr(ctx, cstr_vec, str_object_sep, sizeof(str_object_sep)-1));
 
-        TRY(_vector_append_str(ctx, cstr_vec, elem.key, KOS_QUOTE_STRINGS));
+        TRY(_vector_append_str(ctx, cstr_vec, KOS_get_walk_key(walk), KOS_QUOTE_STRINGS));
 
         TRY(_KOS_append_cstr(ctx, cstr_vec, str_object_colon, sizeof(str_object_colon)-1));
 
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, elem.value, KOS_QUOTE_STRINGS, 0, cstr_vec));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, KOS_get_walk_value(walk), KOS_QUOTE_STRINGS, 0, cstr_vec));
+
+        ++num_elems;
     }
 
     TRY(_KOS_append_cstr(ctx, cstr_vec, str_object_close, sizeof(str_object_close)-1));

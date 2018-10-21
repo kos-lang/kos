@@ -995,8 +995,12 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_OBJECT_WALK:
             /* TODO make these atomic */
-            _set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->obj, GRAY);
-            _set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->key_table, GRAY);
+            _set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->obj,         GRAY);
+            _set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->key_table,   GRAY);
+            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(
+                            OBJPTR(OBJECT_WALK, obj_id)->last_key),   GRAY);
+            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(
+                            OBJPTR(OBJECT_WALK, obj_id)->last_value), GRAY);
             break;
 
         case OBJ_MODULE:
@@ -1443,6 +1447,8 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
         case OBJ_OBJECT_WALK:
             _update_child_ptr(&((KOS_OBJECT_WALK *)hdr)->obj);
             _update_child_ptr(&((KOS_OBJECT_WALK *)hdr)->key_table);
+            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_WALK *)hdr)->last_key);
+            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_WALK *)hdr)->last_value);
             break;
 
         case OBJ_MODULE:

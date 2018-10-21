@@ -428,42 +428,40 @@ class object: public object_base {
 
         class const_iterator {
             public:
-                typedef std::forward_iterator_tag iterator_category;
-                typedef KOS_OBJECT_WALK_ELEM      value_type;
-                typedef void                      difference_type;
-                typedef const value_type*         pointer;
-                typedef const value_type&         reference;
+                typedef std::forward_iterator_tag         iterator_category;
+                typedef std::pair<KOS_OBJ_ID, KOS_OBJ_ID> value_type;
+                typedef void                              difference_type;
+                typedef const value_type*                 pointer;
+                typedef const value_type&                 reference;
 
                 const_iterator()
-                    : _ctx(0), _walk(KOS_BADPTR)
+                    : _ctx(0), _walk(KOS_BADPTR), _elem(KOS_BADPTR, KOS_BADPTR)
                 {
-                    _elem.key   = KOS_BADPTR;
-                    _elem.value = KOS_BADPTR;
                 }
 
                 const_iterator(stack_frame ctx, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH depth);
 
                 const_iterator(const const_iterator& it)
-                    : _ctx(0), _walk(KOS_BADPTR)
+                    : _ctx(0), _walk(KOS_BADPTR), _elem(KOS_BADPTR, KOS_BADPTR)
                 {
-                    _elem.key   = KOS_BADPTR;
-                    _elem.value = KOS_BADPTR;
-
                     *this = it;
                 }
 
                 const_iterator& operator=(const const_iterator& it);
 
                 bool operator==(const const_iterator& it) const {
-                    return _elem.key == it._elem.key;
+                    return _elem.first == it._elem.first;
                 }
 
                 bool operator!=(const const_iterator& it) const {
-                    return ! (_elem.key == it._elem.key);
+                    return ! (_elem.first == it._elem.first);
                 }
 
                 const_iterator& operator++() {
-                    _elem = KOS_object_walk(_ctx, _walk);
+                    if (KOS_object_walk(_ctx, _walk))
+                        _elem = value_type(KOS_BADPTR, KOS_BADPTR);
+                    else
+                        _elem = value_type(KOS_get_walk_key(_walk), KOS_get_walk_value(_walk));
                     return *this;
                 }
 
@@ -484,7 +482,7 @@ class object: public object_base {
             private:
                 mutable stack_frame  _ctx;
                 KOS_OBJ_ID           _walk;
-                KOS_OBJECT_WALK_ELEM _elem;
+                value_type           _elem;
         };
 
         const_iterator        begin()  const { return const_iterator(_ctx, _obj_id, KOS_SHALLOW); }

@@ -444,8 +444,8 @@ try {
             ++b_it;
             TEST(a_it == b_it);
 
-            const std::string key   = kos::string(it->key);
-            const int         value = static_cast<int>(kos::integer(it->value));
+            const std::string key   = kos::string(it->first);
+            const int         value = static_cast<int>(kos::integer(it->second));
 
             sum += value;
 
@@ -461,8 +461,8 @@ try {
 #ifdef KOS_CPP11
         sum = 0;
         for (const auto& kv : o) {
-            const std::string key   = kos::string(kv.key);
-            const int         value = static_cast<int>(kos::integer(kv.value));
+            const std::string key   = kos::string(kv.first);
+            const int         value = static_cast<int>(kos::integer(kv.second));
 
             sum += value;
 
