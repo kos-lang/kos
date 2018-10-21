@@ -286,6 +286,12 @@ void KOS_track_ref(KOS_CONTEXT  ctx,
 void KOS_untrack_ref(KOS_CONTEXT  ctx,
                      KOS_OBJ_REF *ref);
 
+void KOS_track_object(KOS_CONTEXT ctx,
+                      KOS_OBJ_ID  obj_id);
+
+void KOS_release_object(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  obj_id);
+
 struct _KOS_GC_STATS {
     unsigned num_objs_evacuated;
     unsigned num_objs_freed;

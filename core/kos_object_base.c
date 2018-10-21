@@ -52,6 +52,8 @@ KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
     if (integer) {
         assert(integer->header.type == OBJ_INTEGER);
         integer->value = value;
+
+        KOS_track_object(ctx, OBJID(INTEGER, integer));
     }
 
     return OBJID(INTEGER, integer);
@@ -67,6 +69,8 @@ KOS_OBJ_ID KOS_new_float(KOS_CONTEXT ctx, double value)
     if (number) {
         assert(number->header.type == OBJ_FLOAT);
         number->value = value;
+
+        KOS_track_object(ctx, OBJID(FLOAT, number));
     }
 
     return OBJID(FLOAT, number);
@@ -93,6 +97,8 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->generator_stack_frame = KOS_BADPTR;
         func->instr_offs            = ~0U;
         func->state                 = KOS_FUN;
+
+        KOS_track_object(ctx, OBJID(FUNCTION, func));
     }
 
     return OBJID(FUNCTION, func);
@@ -158,6 +164,9 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
                                                      sizeof(KOS_CLASS));
 
     if (func) {
+
+        KOS_OBJ_REF ref;
+
         assert(func->header.type == OBJ_CLASS);
 
         func->header.flags          = 0;
@@ -173,6 +182,9 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         KOS_atomic_write_ptr(func->prototype, proto_obj);
         KOS_atomic_write_ptr(func->props,     KOS_BADPTR);
 
+        KOS_atomic_write_ptr(ref.obj_id, OBJID(CLASS, func));
+        KOS_track_ref(ctx, &ref);
+
         if (KOS_set_builtin_dynamic_property(ctx,
                                              OBJID(CLASS, func),
                                              KOS_get_string(ctx, KOS_STR_PROTOTYPE),
@@ -180,6 +192,10 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
                                              _get_prototype,
                                              _set_prototype))
             func = 0; /* object is garbage collected */
+        else
+            KOS_track_object(ctx, OBJID(CLASS, func));
+
+        KOS_untrack_ref(ctx, &ref);
     }
 
     return OBJID(CLASS, func);
@@ -210,6 +226,12 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
 
     if ( ! IS_BAD_PTR(proto_obj)) {
 
+        KOS_OBJ_REF ref;
+
+        KOS_atomic_write_ptr(ref.obj_id, proto_obj);
+        KOS_track_ref(ctx, &ref);
+        KOS_release_object(ctx, proto_obj);
+
         func_obj = KOS_new_class(ctx, proto_obj);
 
         if ( ! IS_BAD_PTR(func_obj)) {
@@ -218,6 +240,8 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
             OBJPTR(CLASS, func_obj)->header.num_args = (uint8_t)min_args;
             OBJPTR(CLASS, func_obj)->handler         = handler;
         }
+
+        KOS_untrack_ref(ctx, &ref);
     }
 
     return func_obj;
@@ -235,6 +259,8 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx,
     if (dyn_prop) {
         dyn_prop->getter = getter;
         dyn_prop->setter = setter;
+
+        KOS_track_object(ctx, OBJID(DYNAMIC_PROP, dyn_prop));
     }
 
     return OBJID(DYNAMIC_PROP, dyn_prop);

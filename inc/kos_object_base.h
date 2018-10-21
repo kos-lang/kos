@@ -391,10 +391,12 @@ typedef struct _KOS_DYNAMIC_PROP {
 } KOS_DYNAMIC_PROP;
 
 typedef struct _KOS_OBJECT_WALK {
-    KOS_OBJ_HEADER       header;
-    KOS_ATOMIC(uint32_t) index;
-    KOS_OBJ_ID           obj;
-    KOS_OBJ_ID           key_table;
+    KOS_OBJ_HEADER         header;
+    KOS_ATOMIC(uint32_t)   index;
+    KOS_OBJ_ID             obj;
+    KOS_OBJ_ID             key_table;
+    KOS_ATOMIC(KOS_OBJ_ID) last_key;
+    KOS_ATOMIC(KOS_OBJ_ID) last_value;
 } KOS_OBJECT_WALK;
 
 enum KOS_ALLOC_HINT {

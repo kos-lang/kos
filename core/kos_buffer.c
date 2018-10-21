@@ -90,6 +90,8 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
 
         buffer->size = size;
 
+        KOS_track_object(ctx, OBJID(BUFFER, buffer));
+
         if (capacity) {
             KOS_BUFFER_STORAGE *data = _alloc_buffer(ctx, capacity);
 

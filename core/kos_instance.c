@@ -870,3 +870,13 @@ void KOS_untrack_ref(KOS_CONTEXT  ctx,
 
     *slot = ref->next;
 }
+
+void KOS_track_object(KOS_CONTEXT ctx,
+                      KOS_OBJ_ID  obj_id)
+{
+}
+
+void KOS_release_object(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  obj_id)
+{
+}

@@ -98,6 +98,8 @@ KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
     if (obj) {
         assert(obj->header.type == OBJ_OBJECT);
         _KOS_init_object(obj, prototype);
+
+        KOS_track_object(ctx, OBJID(OBJECT, obj));
     }
 
     return OBJID(OBJECT, obj);
@@ -516,10 +518,12 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
             KOS_raise_exception_cstring(ctx, str_err_no_property);
     }
 
-    if (IS_BAD_PTR(retval))
-        KOS_PERF_CNT(object_get_fail);
-    else
+    if ( ! IS_BAD_PTR(retval)) {
         KOS_PERF_CNT(object_get_success);
+        KOS_track_object(ctx, retval);
+    }
+    else
+        KOS_PERF_CNT(object_get_fail);
 
     return retval;
 }
@@ -725,15 +729,27 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                             KOS_FUNCTION_HANDLER getter,
                                             KOS_FUNCTION_HANDLER setter)
 {
-    int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID dyn_prop = KOS_BADPTR;
-    KOS_OBJ_ID get_obj  = KOS_new_function(ctx);
-    KOS_OBJ_ID set_obj;
+    int         error    = KOS_SUCCESS;
+    KOS_OBJ_ID  dyn_prop = KOS_BADPTR;
+    KOS_OBJ_ID  get_obj  = KOS_new_function(ctx);
+    KOS_OBJ_ID  set_obj;
+    KOS_OBJ_REF get_ref;
+    KOS_OBJ_REF set_ref;
+
+    KOS_atomic_write_ptr(get_ref.obj_id, get_obj);
+    KOS_atomic_write_ptr(set_ref.obj_id, KOS_BADPTR);
+    KOS_track_ref(ctx, &get_ref);
+    KOS_track_ref(ctx, &set_ref);
 
     TRY_OBJID(get_obj);
 
+    KOS_release_object(ctx, get_obj);
+
     set_obj = KOS_new_function(ctx);
     TRY_OBJID(set_obj);
+
+    KOS_atomic_write_ptr(set_ref.obj_id, set_obj);
+    KOS_release_object(ctx, set_obj);
 
     OBJPTR(FUNCTION, get_obj)->module          = module_obj;
     OBJPTR(FUNCTION, get_obj)->header.num_args = 0;
@@ -747,6 +763,9 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_CONTEXT          ctx,
     TRY_OBJID(dyn_prop);
 
 _error:
+    KOS_untrack_ref(ctx, &set_ref);
+    KOS_untrack_ref(ctx, &get_ref);
+
     return error ? KOS_BADPTR : dyn_prop;
 }
 
@@ -869,6 +888,11 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
     walk->obj         = obj_id;
     walk->key_table   = KOS_BADPTR;
     walk->index       = 0;
+    walk->last_key    = KOS_BADPTR;
+    walk->last_value  = KOS_BADPTR;
+
+    KOS_release_object(ctx, key_table_obj);
+    KOS_track_object(ctx, OBJID(OBJECT_WALK, walk));
 
     do {
         KOS_OBJECT_STORAGE *prop_table;
@@ -936,8 +960,12 @@ KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
     src = OBJPTR(OBJECT_WALK, walk_id);
 
     KOS_atomic_write_u32(walk->index, KOS_atomic_read_u32(src->index));
-    walk->obj       = src->obj;
-    walk->key_table = src->key_table;
+    walk->obj        = src->obj;
+    walk->key_table  = src->key_table;
+    walk->last_key   = (KOS_OBJ_ID)KOS_atomic_read_ptr(src->last_key);
+    walk->last_value = (KOS_OBJ_ID)KOS_atomic_read_ptr(src->last_value);
+
+    KOS_track_object(ctx, OBJID(OBJECT_WALK, walk));
 
 _error:
     return error ? KOS_BADPTR : OBJID(OBJECT_WALK, walk);
@@ -981,6 +1009,9 @@ KOS_OBJECT_WALK_ELEM KOS_object_walk(KOS_CONTEXT ctx,
             else {
                 elem.key   = key;
                 elem.value = value;
+
+                KOS_atomic_write_ptr(walk->last_key,   key);
+                KOS_atomic_write_ptr(walk->last_value, value);
                 break;
             }
         }

@@ -120,8 +120,13 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
             }
             else
                 KOS_atomic_write_ptr(array->data, KOS_BADPTR);
+
+            KOS_track_object(ctx, OBJID(ARRAY, array));
         }
         else {
+            KOS_atomic_write_ptr(array->data, KOS_BADPTR);
+            KOS_track_object(ctx, OBJID(ARRAY, array));
+
             storage = _alloc_buffer(ctx, size);
 
             if (storage)
@@ -250,8 +255,10 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
 
                 if (elem == CLOSED)
                     buf = _get_next(buf);
-                else
+                else {
+                    KOS_track_object(ctx, elem);
                     break;
+                }
             }
         }
         else
