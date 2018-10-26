@@ -697,12 +697,12 @@ static void *_alloc_object(KOS_CONTEXT          ctx,
     while (seek_depth--) {
 
         _KOS_PAGE *old_page = *page_ptr;
-        uint32_t   size;
+        uint32_t   page_size;
 
         if ( ! old_page)
             break;
 
-        size = _non_full_page_size(old_page);
+        page_size = _non_full_page_size(old_page);
 
         hdr = _alloc_object_from_page(old_page, object_type, num_slots);
 
@@ -710,7 +710,7 @@ static void *_alloc_object(KOS_CONTEXT          ctx,
             if (_is_page_full(old_page)) {
                 *page_ptr = old_page->next;
                 PUSH_LIST(heap->full_pages, old_page);
-                heap->used_size += _full_page_size(old_page) - size;
+                heap->used_size += _full_page_size(old_page) - page_size;
             }
 
             break;
