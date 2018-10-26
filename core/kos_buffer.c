@@ -79,33 +79,41 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
                           unsigned    size)
 {
-    KOS_BUFFER    *buffer   = (KOS_BUFFER *)_KOS_alloc_object(ctx,
-                                                              OBJ_BUFFER,
-                                                              sizeof(KOS_BUFFER));
     const unsigned capacity = (size + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);
+    KOS_OBJ_REF    buffer;
 
-    if (buffer) {
+    buffer.obj_id = OBJID(BUFFER, (KOS_BUFFER *)_KOS_alloc_object(ctx,
+                                                                  OBJ_BUFFER,
+                                                                  sizeof(KOS_BUFFER)));
+    if ( ! IS_BAD_PTR(buffer.obj_id)) {
 
-        buffer->size = size;
-
-        KOS_track_object(ctx, OBJID(BUFFER, buffer));
+        OBJPTR(BUFFER, buffer.obj_id)->size = size;
+        OBJPTR(BUFFER, buffer.obj_id)->data = KOS_BADPTR;
 
         if (capacity) {
-            KOS_BUFFER_STORAGE *data = _alloc_buffer(ctx, capacity);
+
+            KOS_BUFFER_STORAGE *data;
+
+            KOS_track_ref(ctx, &buffer);
+
+            data = _alloc_buffer(ctx, capacity);
+
+            KOS_untrack_ref(ctx, &buffer);
 
             if (data) {
                 /* TODO use write with release semantics */
                 KOS_atomic_release_barrier();
-                KOS_atomic_write_ptr(buffer->data, OBJID(BUFFER_STORAGE, data));
+                KOS_atomic_write_ptr(OBJPTR(BUFFER, buffer.obj_id)->data,
+                                     OBJID(BUFFER_STORAGE, data));
             }
             else
-                buffer = 0;
+                buffer.obj_id = KOS_BADPTR;
         }
-        else
-            buffer->data = KOS_BADPTR;
     }
 
-    return OBJID(BUFFER, buffer);
+    ctx->retval = buffer.obj_id;
+
+    return buffer.obj_id;
 }
 
 static KOS_BUFFER_STORAGE *_get_data(KOS_BUFFER *buffer)

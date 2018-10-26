@@ -109,6 +109,8 @@ static int _test_object(KOS_CONTEXT           ctx,
 
     KOS_track_ref(ctx, &obj_ref);
 
+    ctx->retval = KOS_BADPTR;
+
     TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
     KOS_untrack_ref(ctx, &obj_ref);
@@ -372,7 +374,7 @@ int main(void)
 
         /* KOS_new_dynamic_prop */
 
-        obj_id[0] = KOS_new_dynamic_prop(ctx, KOS_BADPTR, KOS_BADPTR);
+        obj_id[0] = KOS_new_dynamic_prop(ctx);
 
         TEST(_test_object(ctx,
                           obj_id[0],
@@ -384,7 +386,7 @@ int main(void)
 
         /* KOS_new_builtin_dynamic_property */
 
-        obj_id[0] = KOS_new_builtin_dynamic_property(ctx, KOS_BADPTR, _handler, _handler);
+        obj_id[0] = KOS_new_builtin_dynamic_prop(ctx, KOS_BADPTR, _handler, _handler);
         TEST( ! IS_BAD_PTR(obj_id[0]));
         obj_id[1] = OBJPTR(DYNAMIC_PROP, obj_id[0])->getter;
         TEST( ! IS_BAD_PTR(obj_id[1]));
@@ -492,6 +494,8 @@ int main(void)
             ctx->stack = KOS_BADPTR;
         }
 
+        ctx->retval = KOS_BADPTR;
+
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
@@ -519,6 +523,8 @@ int main(void)
             prop_id = KOS_new_cstring(ctx, "self");
             TEST( ! IS_BAD_PTR(prop_id));
             TEST(KOS_set_property(ctx, obj_id, prop_id, obj_id) == KOS_SUCCESS);
+
+            ctx->retval = KOS_BADPTR;
 
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -650,6 +656,8 @@ int main(void)
 
         TEST(KOS_new_array(ctx, 0) != KOS_BADPTR);
 
+        ctx->retval = KOS_BADPTR;
+
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
@@ -704,6 +712,8 @@ int main(void)
 
         KOS_untrack_ref(ctx, &obj_ref[0]);
         KOS_untrack_ref(ctx, &obj_ref[1]);
+
+        ctx->retval = KOS_BADPTR;
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 

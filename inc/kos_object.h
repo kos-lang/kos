@@ -84,11 +84,6 @@ int KOS_delete_property(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  obj_id,
                         KOS_OBJ_ID  prop);
 
-KOS_OBJ_ID KOS_new_builtin_dynamic_property(KOS_CONTEXT          ctx,
-                                            KOS_OBJ_ID           module_obj,
-                                            KOS_FUNCTION_HANDLER getter,
-                                            KOS_FUNCTION_HANDLER setter);
-
 int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop,

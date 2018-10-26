@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    inst.flags = flags;
+    inst.flags |= flags;
 
     /* Use executable path from OS to find modules */
     error = KOS_instance_add_default_path(ctx, 0);

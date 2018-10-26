@@ -137,6 +137,8 @@ int _KOS_heap_init(KOS_INSTANCE *inst)
 
     KOS_atomic_write_u32(heap->gc_state, 0);
     heap->heap_size      = 0;
+    heap->used_size      = 0;
+    heap->gc_threshold   = _KOS_GC_STEP;
     heap->free_pages     = 0;
     heap->non_full_pages = 0;
     heap->full_pages     = 0;
@@ -182,6 +184,8 @@ static void _register_wasted_region(struct _KOS_HEAP *heap,
 
         PUSH_LIST(heap->waste, waste);
     }
+
+    heap->used_size += size;
 }
 
 static _KOS_POOL *_alloc_pool(struct _KOS_HEAP *heap,
@@ -395,6 +399,21 @@ int _KOS_heap_lend_page(KOS_CONTEXT ctx,
 }
 #endif
 
+static void _try_collect_garbage(KOS_CONTEXT ctx)
+{
+    struct _KOS_HEAP *const heap = _get_heap(ctx);
+
+    if ( ! (ctx->inst->flags & KOS_INST_MANUAL_GC) &&
+        heap->used_size > heap->gc_threshold) {
+
+        _KOS_unlock_mutex(&heap->mutex);
+
+        KOS_collect_garbage(ctx, 0);
+
+        _KOS_lock_mutex(&heap->mutex);
+    }
+}
+
 static void *_alloc_slots_from_page(_KOS_PAGE *page, uint32_t num_slots)
 {
     const uint32_t total_slots   = page->num_slots;
@@ -454,6 +473,16 @@ void *_KOS_heap_early_alloc(KOS_INSTANCE        *inst,
     return _alloc_object_from_page(ctx->cur_page, object_type, num_slots);
 }
 
+static uint32_t _full_page_size(_KOS_PAGE *page)
+{
+    return _KOS_SLOTS_OFFS + (page->num_slots << _KOS_OBJ_ALIGN_BITS);
+}
+
+static uint32_t _non_full_page_size(_KOS_PAGE *page)
+{
+    return _KOS_SLOTS_OFFS + (KOS_atomic_read_u32(page->num_allocated) << _KOS_OBJ_ALIGN_BITS);
+}
+
 void _KOS_heap_release_thread_page(KOS_CONTEXT ctx)
 {
     if (ctx->cur_page) {
@@ -463,6 +492,8 @@ void _KOS_heap_release_thread_page(KOS_CONTEXT ctx)
         _KOS_lock_mutex(&heap->mutex);
 
         PUSH_LIST(heap->non_full_pages, ctx->cur_page);
+
+        heap->used_size += _non_full_page_size(ctx->cur_page);
 
         _KOS_unlock_mutex(&heap->mutex);
 
@@ -488,6 +519,8 @@ static KOS_OBJ_HEADER *_setup_huge_object_in_page(struct _KOS_HEAP    *heap,
 
     assert(page->num_slots > _KOS_SLOTS_PER_PAGE);
 
+    heap->used_size += _full_page_size(page);
+
     KOS_atomic_write_u32(page->num_allocated, page->num_slots);
 
     return hdr;
@@ -497,14 +530,17 @@ static void *_alloc_huge_object(KOS_CONTEXT          ctx,
                                 enum KOS_OBJECT_TYPE object_type,
                                 uint32_t             size)
 {
-    struct _KOS_HEAP *heap     = _get_heap(ctx);
-    _KOS_PAGE       **page_ptr = &heap->free_pages;
-    KOS_OBJ_HEADER   *hdr      = 0;
+    struct _KOS_HEAP *heap = _get_heap(ctx);
+    KOS_OBJ_HEADER   *hdr  = 0;
+    _KOS_PAGE       **page_ptr;
     _KOS_PAGE        *page;
 
     _KOS_lock_mutex(&heap->mutex);
 
-    page = *page_ptr;
+    _try_collect_garbage(ctx);
+
+    page_ptr = &heap->free_pages;
+    page     = *page_ptr;
 
     while (page) {
 
@@ -661,9 +697,12 @@ static void *_alloc_object(KOS_CONTEXT          ctx,
     while (seek_depth--) {
 
         _KOS_PAGE *old_page = *page_ptr;
+        uint32_t   size;
 
         if ( ! old_page)
             break;
+
+        size = _non_full_page_size(old_page);
 
         hdr = _alloc_object_from_page(old_page, object_type, num_slots);
 
@@ -671,6 +710,7 @@ static void *_alloc_object(KOS_CONTEXT          ctx,
             if (_is_page_full(old_page)) {
                 *page_ptr = old_page->next;
                 PUSH_LIST(heap->full_pages, old_page);
+                heap->used_size += _full_page_size(old_page) - size;
             }
 
             break;
@@ -684,13 +724,19 @@ static void *_alloc_object(KOS_CONTEXT          ctx,
         /* Release thread's current page */
         if (page) {
 
-            if (_is_page_full(page))
+            if (_is_page_full(page)) {
                 PUSH_LIST(heap->full_pages, page);
-            else
+                heap->used_size += _full_page_size(page);
+            }
+            else {
                 PUSH_LIST(heap->non_full_pages, page);
+                heap->used_size += _non_full_page_size(page);
+            }
 
             ctx->cur_page = 0;
         }
+
+        _try_collect_garbage(ctx);
 
         /* Allocate a new page */
         page = _alloc_page(heap);
@@ -791,6 +837,8 @@ static void _release_current_page(KOS_CONTEXT ctx)
 
         PUSH_LIST(heap->non_full_pages, page);
 
+        heap->used_size += _non_full_page_size(page);
+
         _KOS_unlock_mutex(&heap->mutex);
 
         ctx->cur_page = 0;
@@ -806,6 +854,8 @@ static void _release_current_page_locked(KOS_CONTEXT ctx)
         struct _KOS_HEAP *heap = _get_heap(ctx);
 
         PUSH_LIST(heap->non_full_pages, page);
+
+        heap->used_size += _non_full_page_size(page);
 
         ctx->cur_page = 0;
     }
@@ -1116,7 +1166,7 @@ static void _mark_from_thread_context(KOS_CONTEXT ctx)
 
     ref = ctx->obj_refs;
     while (ref) {
-        _mark_object_black((KOS_OBJ_ID)KOS_atomic_read_ptr(ref->obj_id));
+        _mark_object_black(ref->obj_id);
         ref = ref->next;
     }
 }
@@ -1238,8 +1288,8 @@ static void _get_flat_page_list(struct _KOS_HEAP *heap,
 
 static int _sort_compare(const void *a, const void *b)
 {
-    _KOS_PAGE *const *pa = (_KOS_PAGE *const *)a;
-    _KOS_PAGE *const *pb = (_KOS_PAGE *const *)b;
+    _KOS_PAGE *const pa = *(_KOS_PAGE *const *)a;
+    _KOS_PAGE *const pb = *(_KOS_PAGE *const *)b;
 
     return (pa < pb) ? -1 : (pa > pb) ?  1 : 0;
 }
@@ -1257,16 +1307,16 @@ static unsigned _push_sorted_list(struct _KOS_HEAP *heap, _KOS_PAGE *list)
 {
     _KOS_PAGE **begin;
     _KOS_PAGE **end;
-    _KOS_PAGE **insert_ptr;
-    _KOS_PAGE  *insert_before;
+    _KOS_PAGE **insert_at;
+    _KOS_PAGE  *page_at;
     unsigned    num_pages = 0;
 
     _get_flat_list(list, &begin, 0);
 
     end = begin + KOS_atomic_read_u32(list->num_allocated);
 
-    insert_ptr    = &heap->free_pages;
-    insert_before = *insert_ptr;
+    insert_at = &heap->free_pages;
+    page_at   = *insert_at;
 
     while (begin < end) {
 
@@ -1280,15 +1330,17 @@ static unsigned _push_sorted_list(struct _KOS_HEAP *heap, _KOS_PAGE *list)
                    0xDDU,
                    (_KOS_SLOTS_OFFS - _KOS_BITMAP_OFFS) + (page->num_slots << _KOS_OBJ_ALIGN_BITS));
 #endif
-        while (insert_before && page > insert_before) {
+        while (page_at && page > page_at) {
 
-            insert_ptr    = &insert_before->next;
-            insert_before = *insert_ptr;
+            insert_at = &page_at->next;
+            page_at   = *insert_at;
         }
 
-        page->next  = insert_before;
-        *insert_ptr = page;
-        insert_ptr  = &page->next;
+        page->next = page_at;
+        *insert_at = page;
+        insert_at  = &page->next;
+
+        assert(begin + 1 >= end || *(begin + 1) > page);
 
         ++num_pages;
     }
@@ -1575,6 +1627,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
     _KOS_PAGE        *non_full_pages = heap->non_full_pages;
     _KOS_PAGE        *next;
     KOS_OBJ_ID        exception      = KOS_get_exception(ctx);
+    int               non_full_turn  = 0;
 
     struct _KOS_GC_STATS stats = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -1584,6 +1637,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
     heap->non_full_pages = 0;
 
     if ( ! page) {
+        non_full_turn = 1;
         page = non_full_pages;
         non_full_pages = 0;
     }
@@ -1596,17 +1650,21 @@ static int _evacuate(KOS_CONTEXT           ctx,
         _KOS_SLOT     *end            = ptr + _get_num_active_slots(page);
         const uint32_t num_slots_used = KOS_atomic_read_u32(page->num_used);
 
+        heap->used_size -= non_full_turn ? _non_full_page_size(page) : _full_page_size(page);
+
         next = page->next;
 
         if ( ! next && non_full_pages) {
             next = non_full_pages;
             non_full_pages = 0;
+            non_full_turn = 1;
         }
 
         /* If the number of slots used reaches the threshold, then the page is
          * exempt from evacuation. */
         if (num_slots_used >= (_KOS_SLOTS_PER_PAGE * _KOS_MIGRATION_THRESH) / 100U) {
             PUSH_LIST(heap->full_pages, page);
+            heap->used_size += _full_page_size(page);
             ++stats.num_pages_kept;
             stats.size_kept += num_slots_used << _KOS_OBJ_ALIGN_BITS;
             continue;
@@ -1650,6 +1708,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
                         do {
                             next = page->next;
                             PUSH_LIST(heap->full_pages, page);
+                            heap->used_size += _full_page_size(page);
                             page = next;
                         } while (page);
 
@@ -1698,6 +1757,11 @@ _error:
     return error;
 }
 
+static void _update_gc_threshold(struct _KOS_HEAP *heap)
+{
+    heap->gc_threshold = heap->used_size + _KOS_GC_STEP;
+}
+
 static int _help_gc(KOS_CONTEXT ctx)
 {
     struct _KOS_HEAP *heap = _get_heap(ctx);
@@ -1736,6 +1800,8 @@ int KOS_collect_garbage(KOS_CONTEXT           ctx,
     _update_after_evacuation(ctx);
 
     _reclaim_free_pages(heap, free_pages, stats);
+
+    _update_gc_threshold(heap);
 
     KOS_atomic_release_barrier();
 

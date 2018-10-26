@@ -74,8 +74,8 @@ typedef struct _KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
 /* Reference to a KOS_OBJ_ID, typically held on stack.  This allows GC to
  * update KOS_OBJ_IDs on the stack. */
 typedef struct _KOS_OBJ_REF {
-    KOS_ATOMIC(KOS_OBJ_ID) obj_id;
-    struct _KOS_OBJ_REF   *next;
+    volatile KOS_OBJ_ID  obj_id;
+    struct _KOS_OBJ_REF *next;
 } KOS_OBJ_REF;
 
 #define KOS_BADPTR ((KOS_OBJ_ID)(intptr_t)1)
@@ -422,9 +422,12 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_FUNCTION_HANDLER handler,
                                  int                  min_args);
 
-KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  getter,
-                                KOS_OBJ_ID  setter);
+KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx);
+
+KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
+                                        KOS_OBJ_ID           module_obj,
+                                        KOS_FUNCTION_HANDLER getter,
+                                        KOS_FUNCTION_HANDLER setter);
 
 #ifdef __cplusplus
 }

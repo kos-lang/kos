@@ -118,22 +118,32 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
             }
             else
                 KOS_atomic_write_ptr(array->data, KOS_BADPTR);
-
-            KOS_track_object(ctx, OBJID(ARRAY, array));
         }
         else {
+            KOS_OBJ_REF array_ref;
+
             KOS_atomic_write_ptr(array->data, KOS_BADPTR);
-            KOS_track_object(ctx, OBJID(ARRAY, array));
+
+            array_ref.obj_id = OBJID(ARRAY, array);
+            KOS_track_ref(ctx, &array_ref);
 
             storage = _alloc_buffer(ctx, size);
 
-            if (storage)
+            KOS_untrack_ref(ctx, &array_ref);
+
+            if (storage) {
+                array = OBJPTR(ARRAY, array_ref.obj_id);
+
                 KOS_atomic_write_ptr(array->data, OBJID(ARRAY_STORAGE, storage));
+            }
             else
                 array = 0;
         }
 
         if (array) {
+
+            ctx->retval = OBJID(ARRAY, array);
+
             KOS_atomic_write_u32(array->size, size);
 
             if (storage) {
@@ -254,7 +264,7 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
                 if (elem == CLOSED)
                     buf = _get_next(buf);
                 else {
-                    KOS_track_object(ctx, elem);
+                    ctx->retval = elem;
                     break;
                 }
             }

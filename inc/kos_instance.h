@@ -40,13 +40,15 @@ typedef struct _KOS_WASTE_HEADER _KOS_WASTE;
 struct _KOS_HEAP {
     _KOS_MUTEX           mutex;
     KOS_ATOMIC(uint32_t) gc_state;
-    uint32_t             heap_size;         /* total amount of memory owned by the heap */
-    _KOS_PAGE           *free_pages;        /* pages which are currently unused         */
-    _KOS_PAGE           *non_full_pages;    /* pages in which new objects are allocated */
-    _KOS_PAGE           *full_pages;        /* pages which have no room for new objects */
-    _KOS_POOL           *pools;             /* allocated memory - page pools            */
-    _KOS_POOL           *pool_headers;      /* list of pool headers for new pools       */
-    _KOS_WASTE          *waste;             /* unused memory from pool allocations      */
+    uint32_t             heap_size;         /* Total amount of memory owned by the heap */
+    uint32_t             used_size;         /* Size used in full_ and non_full_pages    */
+    uint32_t             gc_threshold;      /* Next used size that triggers GC          */
+    _KOS_PAGE           *free_pages;        /* Pages which are currently unused         */
+    _KOS_PAGE           *non_full_pages;    /* Pages in which new objects are allocated */
+    _KOS_PAGE           *full_pages;        /* Pages which have no room for new objects */
+    _KOS_POOL           *pools;             /* Allocated memory - page pools            */
+    _KOS_POOL           *pool_headers;      /* List of pool headers for new pools       */
+    _KOS_WASTE          *waste;             /* Unused memory from pool allocations      */
 };
 
 /* Stored on the stack as catch offset */
@@ -98,10 +100,10 @@ struct _KOS_THREAD_CONTEXT {
     _KOS_PAGE    *cur_page;
     KOS_OBJ_ID    exception;
     KOS_OBJ_ID    retval;
-    KOS_OBJ_REF  *obj_refs;
     KOS_OBJ_ID    stack;    /* Topmost container for registers & stack frames */
     uint32_t      regs_idx; /* Index of first register in current frame       */
     uint32_t      stack_depth;
+    KOS_OBJ_REF  *obj_refs;
 };
 
 struct _KOS_PROTOTYPES {
@@ -172,9 +174,10 @@ enum KOS_STR {
 };
 
 enum _KOS_INSTANCE_FLAGS {
-    KOS_INST_NO_FLAGS = 0,
-    KOS_INST_VERBOSE  = 1,
-    KOS_INST_DISASM   = 2
+    KOS_INST_NO_FLAGS  = 0,
+    KOS_INST_VERBOSE   = 1,
+    KOS_INST_DISASM    = 2,
+    KOS_INST_MANUAL_GC = 4
 };
 
 struct _KOS_INSTANCE {
@@ -213,7 +216,7 @@ extern "C" {
 #endif
 
 int KOS_instance_init(KOS_INSTANCE *inst,
-                      KOS_CONTEXT  *out_frame);
+                      KOS_CONTEXT  *out_ctx);
 
 void KOS_instance_destroy(KOS_INSTANCE *inst);
 
@@ -285,12 +288,6 @@ void KOS_track_ref(KOS_CONTEXT  ctx,
 
 void KOS_untrack_ref(KOS_CONTEXT  ctx,
                      KOS_OBJ_REF *ref);
-
-void KOS_track_object(KOS_CONTEXT ctx,
-                      KOS_OBJ_ID  obj_id);
-
-void KOS_release_object(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  obj_id);
 
 struct _KOS_GC_STATS {
     unsigned num_objs_evacuated;
