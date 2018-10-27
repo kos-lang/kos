@@ -1201,6 +1201,7 @@ static void _mark_roots(KOS_CONTEXT ctx)
     _mark_object_black(inst->modules.search_paths);
     _mark_object_black(inst->modules.module_names);
     _mark_object_black(inst->modules.modules);
+    _mark_object_black(inst->modules.module_inits);
 
     _mark_object_black(inst->args);
 
@@ -1587,6 +1588,7 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
     _update_child_ptr(&inst->modules.search_paths);
     _update_child_ptr(&inst->modules.module_names);
     _update_child_ptr(&inst->modules.modules);
+    _update_child_ptr(&inst->modules.module_inits);
 
     _update_child_ptr(&inst->args);
 

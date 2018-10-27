@@ -127,9 +127,9 @@ struct _KOS_MODULE_MGMT {
     KOS_OBJ_ID search_paths;
     KOS_OBJ_ID module_names;
     KOS_OBJ_ID modules;
-    KOS_OBJ_ID init_module;
+    KOS_OBJ_ID init_module;  /* Initial module for top-level stack frame */
+    KOS_OBJ_ID module_inits; /* Registered built-in module initializers  */
 
-    struct _KOS_RED_BLACK_NODE    *module_inits;
     struct _KOS_MODULE_LOAD_CHAIN *load_chain;
 };
 

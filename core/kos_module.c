@@ -283,16 +283,6 @@ _error:
     return error;
 }
 
-static int _module_init_compare(void                       *what,
-                                struct _KOS_RED_BLACK_NODE *node)
-{
-    KOS_OBJ_ID module_name = (KOS_OBJ_ID)what;
-
-    struct _KOS_MODULE_INIT *mod_init = (struct _KOS_MODULE_INIT *)node;
-
-    return KOS_string_compare(module_name, mod_init->name);
-}
-
 static int _predefine_globals(KOS_CONTEXT            ctx,
                               struct _KOS_COMP_UNIT *program,
                               KOS_OBJ_ID             global_names,
@@ -1227,10 +1217,10 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
     KOS_OBJ_ID                    actual_module_name;
     KOS_OBJ_ID                    module_dir      = KOS_BADPTR;
     KOS_OBJ_ID                    module_path     = KOS_BADPTR;
+    KOS_OBJ_ID                    mod_init;
     KOS_OBJ_ID                    ret;
     KOS_INSTANCE           *const inst            = ctx->inst;
     struct _KOS_MODULE_LOAD_CHAIN loading         = { 0, 0, 0 };
-    struct _KOS_MODULE_INIT      *mod_init;
     struct _KOS_VECTOR            file_buf;
     int                           chain_init      = 0;
 
@@ -1348,10 +1338,11 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
     }
 
     /* Run built-in module initialization */
-    mod_init = (struct _KOS_MODULE_INIT *)_KOS_red_black_find(inst->modules.module_inits,
-                                                              actual_module_name,
-                                                              _module_init_compare);
-    if (mod_init) {
+    mod_init = KOS_get_property(ctx, inst->modules.module_inits, actual_module_name);
+
+    if (IS_BAD_PTR(mod_init))
+        KOS_clear_exception(ctx);
+    else {
         KOS_OBJ_ID func_obj = KOS_new_function(ctx);
         TRY_OBJID(func_obj);
 
@@ -1359,7 +1350,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 
         TRY(_KOS_stack_push(ctx, func_obj));
 
-        error = mod_init->init(ctx, module_obj);
+        error = ((struct _KOS_MODULE_INIT *)OBJPTR(OPAQUE, mod_init))->init(ctx, module_obj);
 
         _KOS_stack_pop(ctx);
 

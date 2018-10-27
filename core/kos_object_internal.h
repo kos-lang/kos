@@ -150,9 +150,8 @@ void _KOS_wrap_exception(KOS_CONTEXT ctx);
 /*==========================================================================*/
 
 struct _KOS_MODULE_INIT {
-    struct _KOS_RED_BLACK_NODE rb_tree_node;
-    KOS_OBJ_ID                 name;
-    KOS_BUILTIN_INIT           init;
+    KOS_OBJ_HEADER   hdr;
+    KOS_BUILTIN_INIT init;
 };
 
 KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,

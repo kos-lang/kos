@@ -322,7 +322,7 @@ static void _clear_instance(KOS_INSTANCE *inst)
     inst->modules.module_names             = KOS_BADPTR;
     inst->modules.modules                  = KOS_BADPTR;
     inst->modules.init_module              = KOS_BADPTR;
-    inst->modules.module_inits             = 0;
+    inst->modules.module_inits             = KOS_BADPTR;
     inst->modules.load_chain               = 0;
     inst->threads.main_thread.next         = 0;
     inst->threads.main_thread.prev         = 0;
@@ -413,6 +413,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY_OBJID(inst->modules.module_names = KOS_new_object(ctx));
     TRY_OBJID(inst->modules.modules      = KOS_new_array(ctx, 0));
     TRY_OBJID(inst->modules.search_paths = KOS_new_array(ctx, 0));
+    TRY_OBJID(inst->modules.module_inits = KOS_new_object(ctx));
 
     TRY_OBJID(inst->args = KOS_new_array(ctx, 0));
 
@@ -650,15 +651,6 @@ _error:
     return error;
 }
 
-static int _module_init_compare(struct _KOS_RED_BLACK_NODE *a,
-                                struct _KOS_RED_BLACK_NODE *b)
-{
-    struct _KOS_MODULE_INIT *init_a = (struct _KOS_MODULE_INIT *)a;
-    struct _KOS_MODULE_INIT *init_b = (struct _KOS_MODULE_INIT *)b;
-
-    return KOS_string_compare(init_a->name, init_b->name);
-}
-
 int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
                                   KOS_BUILTIN_INIT init)
@@ -672,15 +664,14 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
     TRY_OBJID(module_name);
 
     mod_init = (struct _KOS_MODULE_INIT *)_KOS_alloc_object(ctx,
-                                                            OBJ_OPAQUE, /* TODO double check type */
+                                                            OBJ_OPAQUE,
                                                             sizeof(struct _KOS_MODULE_INIT));
     if ( ! mod_init)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-    mod_init->name = module_name;
     mod_init->init = init;
 
-    _KOS_red_black_insert(&inst->modules.module_inits, &mod_init->rb_tree_node, _module_init_compare);
+    error = KOS_set_property(ctx, inst->modules.module_inits, module_name, OBJID(OPAQUE, mod_init));
 
 _error:
     return error;
