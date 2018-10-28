@@ -302,7 +302,7 @@ static void _clear_instance(KOS_INSTANCE *inst)
     /* Set to an innocuous value in case initial allocation fails */
     inst->common_strings[KOS_STR_OUT_OF_MEMORY] = KOS_VOID;
 
-    inst->flags                            = KOS_INST_MANUAL_GC; /* TODO enable automatic GC */
+    inst->flags                            = KOS_INST_MANUAL_GC; /* TODO enable automatic GC */;
     inst->args                             = KOS_BADPTR;
     inst->prototypes.object_proto          = KOS_BADPTR;
     inst->prototypes.number_proto          = KOS_BADPTR;
@@ -367,21 +367,20 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     if ( ! init_module)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
-    init_module->flags             = 0;
-    init_module->name              = KOS_BADPTR;
-    init_module->path              = KOS_BADPTR;
-    init_module->inst              = inst;
-    init_module->constants_storage = KOS_BADPTR;
-    init_module->constants         = 0;
-    init_module->global_names      = KOS_BADPTR;
-    init_module->globals           = KOS_BADPTR;
-    init_module->module_names      = KOS_BADPTR;
-    init_module->bytecode          = 0;
-    init_module->line_addrs        = 0;
-    init_module->func_addrs        = 0;
-    init_module->num_line_addrs    = 0;
-    init_module->num_func_addrs    = 0;
-    init_module->bytecode_size     = 0;
+    init_module->flags          = 0;
+    init_module->name           = KOS_BADPTR;
+    init_module->path           = KOS_BADPTR;
+    init_module->inst           = inst;
+    init_module->constants      = KOS_BADPTR;
+    init_module->global_names   = KOS_BADPTR;
+    init_module->globals        = KOS_BADPTR;
+    init_module->module_names   = KOS_BADPTR;
+    init_module->bytecode       = 0;
+    init_module->line_addrs     = 0;
+    init_module->func_addrs     = 0;
+    init_module->num_line_addrs = 0;
+    init_module->num_func_addrs = 0;
+    init_module->bytecode_size  = 0;
 
     inst->modules.init_module  = OBJID(MODULE, init_module);
 
@@ -671,7 +670,10 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
 
     mod_init->init = init;
 
-    error = KOS_set_property(ctx, inst->modules.module_inits, module_name, OBJID(OPAQUE, mod_init));
+    error = KOS_set_property(ctx,
+                             inst->modules.module_inits,
+                             module_name,
+                             OBJID(OPAQUE, (KOS_OPAQUE *)mod_init));
 
 _error:
     return error;

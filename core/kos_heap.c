@@ -1055,12 +1055,12 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_MODULE:
             /* TODO lock gc during module setup */
-            _set_mark_state(OBJPTR(MODULE, obj_id)->name,              GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->path,              GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->constants_storage, GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->global_names,      GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->globals,           GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->module_names,      GRAY);
+            _set_mark_state(OBJPTR(MODULE, obj_id)->name,         GRAY);
+            _set_mark_state(OBJPTR(MODULE, obj_id)->path,         GRAY);
+            _set_mark_state(OBJPTR(MODULE, obj_id)->constants,    GRAY);
+            _set_mark_state(OBJPTR(MODULE, obj_id)->global_names, GRAY);
+            _set_mark_state(OBJPTR(MODULE, obj_id)->globals,      GRAY);
+            _set_mark_state(OBJPTR(MODULE, obj_id)->module_names, GRAY);
             break;
 
         case OBJ_STACK:
@@ -1417,7 +1417,7 @@ static void _update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 
         KOS_OBJ_ID new_obj = ((KOS_OBJ_HEADER *)((intptr_t)obj_id - 1))->alloc_size;
 
-        /* TODO how can this not be a heap object ??? */
+        /* Objects in pages retained keep their size in their size field */
         if (IS_HEAP_OBJECT(new_obj)) {
             *obj_id_ptr = new_obj;
             assert(READ_OBJ_TYPE(obj_id) == READ_OBJ_TYPE(new_obj));
@@ -1507,7 +1507,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
         case OBJ_MODULE:
             _update_child_ptr(&((KOS_MODULE *)hdr)->name);
             _update_child_ptr(&((KOS_MODULE *)hdr)->path);
-            _update_child_ptr(&((KOS_MODULE *)hdr)->constants_storage);
+            _update_child_ptr(&((KOS_MODULE *)hdr)->constants);
             _update_child_ptr(&((KOS_MODULE *)hdr)->global_names);
             _update_child_ptr(&((KOS_MODULE *)hdr)->globals);
             _update_child_ptr(&((KOS_MODULE *)hdr)->module_names);
@@ -1650,6 +1650,9 @@ static int _evacuate(KOS_CONTEXT           ctx,
 
         _KOS_SLOT     *ptr            = (_KOS_SLOT *)((uint8_t *)page + _KOS_SLOTS_OFFS);
         _KOS_SLOT     *end            = ptr + _get_num_active_slots(page);
+#ifndef NDEBUG
+        _KOS_SLOT     *page_end       = ptr + KOS_atomic_read_u32(page->num_allocated);
+#endif
         const uint32_t num_slots_used = KOS_atomic_read_u32(page->num_used);
 
         heap->used_size -= non_full_turn ? _non_full_page_size(page) : _full_page_size(page);
@@ -1683,6 +1686,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
 
             assert(size > 0U);
             assert(color != GRAY);
+            assert(size <= (uint8_t *)page_end - (uint8_t *)ptr);
 
             if (color) {
                 if (_evacuate_object(ctx, hdr, size)) {
@@ -1693,6 +1697,9 @@ static int _evacuate(KOS_CONTEXT           ctx,
 
                     _update_after_evacuation(ctx);
 
+                    /* TODO this will not work, pages can't be reused until
+                     *      the end of GC, because evacuated object refs
+                     *      must be updated in other objects. */
                     _reclaim_free_pages(heap, *free_pages, &stats);
                     *free_pages = 0;
 

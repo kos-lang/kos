@@ -78,6 +78,8 @@ typedef struct _KOS_OBJ_REF {
     struct _KOS_OBJ_REF *next;
 } KOS_OBJ_REF;
 
+#define KOS_REF_INIT { KOS_BADPTR, 0 }
+
 #define KOS_BADPTR ((KOS_OBJ_ID)(intptr_t)1)
 
 typedef struct _KOS_OBJ_HEADER {
@@ -370,8 +372,7 @@ typedef struct _KOS_MODULE {
     KOS_OBJ_ID              name;
     KOS_OBJ_ID              path;
     KOS_INSTANCE           *inst;
-    KOS_OBJ_ID              constants_storage;
-    KOS_ATOMIC(KOS_OBJ_ID) *constants;
+    KOS_OBJ_ID              constants;
     KOS_OBJ_ID              global_names;
     KOS_OBJ_ID              globals;
     KOS_OBJ_ID              module_names; /* Map of directly referenced modules to their indices, for REPL */

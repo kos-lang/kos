@@ -62,13 +62,6 @@ DECLARE_STATIC_CONST_OBJECT(_new_this) = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC0)
 
 static int _exec_function(KOS_CONTEXT ctx);
 
-static KOS_OBJ_ID _make_string(KOS_CONTEXT         ctx,
-                               struct _KOS_MODULE *module,
-                               int                 idx)
-{
-    return KOS_array_read(ctx, module->constants_storage, idx);
-}
-
 static KOS_OBJ_ID _add_integer(KOS_CONTEXT ctx,
                                int64_t     a,
                                KOS_OBJ_ID  bobj)
@@ -1190,9 +1183,7 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 rdest = bytecode[1];
 
-                assert(value < KOS_get_array_size(module->constants_storage));
-
-                out = module->constants[value];
+                out = KOS_array_read(ctx, module->constants, value);
 
                 delta = 3;
                 break;
@@ -1203,9 +1194,7 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 rdest = bytecode[1];
 
-                assert(value < KOS_get_array_size(module->constants_storage));
-
-                out = module->constants[value];
+                out = KOS_array_read(ctx, module->constants, value);
 
                 delta = 6;
                 break;
@@ -1216,14 +1205,21 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 rdest = bytecode[1];
 
-                assert(value < KOS_get_array_size(module->constants_storage));
+                out = KOS_array_read(ctx, module->constants, value);
 
-                out = _copy_function(ctx, module->constants[value]);
+                if ( ! IS_BAD_PTR(out))
+                    out = _copy_function(ctx, out);
 
                 if ( ! IS_BAD_PTR(out) && GET_OBJ_TYPE(out) == OBJ_CLASS) {
-                    assert(value + 1U < KOS_get_array_size(module->constants_storage));
-                    KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype,
-                                         KOS_atomic_read_ptr(module->constants[value + 1]));
+
+                    const KOS_OBJ_ID proto_obj = KOS_array_read(ctx,
+                                                                module->constants,
+                                                                (uint32_t)value + 1U);
+
+                    if ( ! IS_BAD_PTR(proto_obj))
+                        KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
+                    else
+                        out = KOS_BADPTR;
                 }
 
                 delta = 3;
@@ -1235,14 +1231,18 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 rdest = bytecode[1];
 
-                assert(value < KOS_get_array_size(module->constants_storage));
+                out = KOS_array_read(ctx, module->constants, value);
 
-                out = _copy_function(ctx, module->constants[value]);
+                if ( ! IS_BAD_PTR(out))
+                    out = _copy_function(ctx, out);
 
                 if ( ! IS_BAD_PTR(out) && GET_OBJ_TYPE(out) == OBJ_CLASS) {
-                    assert(value + 1U < KOS_get_array_size(module->constants_storage));
-                    KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype,
-                                         KOS_atomic_read_ptr(module->constants[value + 1]));
+                    const KOS_OBJ_ID proto_obj = KOS_array_read(ctx, module->constants, value + 1);
+
+                    if ( ! IS_BAD_PTR(proto_obj))
+                        KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
+                    else
+                        out = KOS_BADPTR;
                 }
 
                 delta = 6;
@@ -1545,7 +1545,7 @@ static int _exec_function(KOS_CONTEXT ctx)
                 assert(rsrc  < num_regs);
 
                 rdest = bytecode[1];
-                prop  = _make_string(ctx, module, idx);
+                prop  = KOS_array_read(ctx, module->constants, idx);
 
                 if (!IS_BAD_PTR(prop)) {
                     KOS_OBJ_ID obj   = regs[rsrc];
@@ -1679,7 +1679,7 @@ static int _exec_function(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 assert(rsrc  < num_regs);
 
-                prop = _make_string(ctx, module, idx);
+                prop = KOS_array_read(ctx, module->constants, idx);
 
                 if (!IS_BAD_PTR(prop)) {
                     KOS_OBJ_ID obj   = regs[rdest];
@@ -1767,7 +1767,7 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 assert(rdest < num_regs);
 
-                prop = _make_string(ctx, module, idx);
+                prop = KOS_array_read(ctx, module->constants, idx);
 
                 if (!IS_BAD_PTR(prop))
                     KOS_delete_property(ctx, regs[rdest], prop);
@@ -2298,7 +2298,7 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 rdest = bytecode[1];
 
-                prop = _make_string(ctx, module, idx);
+                prop = KOS_array_read(ctx, module->constants, idx);
 
                 if (!IS_BAD_PTR(prop)) {
 
@@ -2909,13 +2909,24 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
 {
     int         error;
     KOS_CONTEXT ctx;
+    KOS_OBJ_ID  func_obj;
+    int         pushed = 0;
 
     assert(module);
     assert(module->inst);
 
     ctx = (KOS_CONTEXT)_KOS_tls_get(module->inst->threads.thread_key);
 
-    error = _KOS_stack_push(ctx, module->constants[module->main_idx]);
+    func_obj = KOS_array_read(ctx, module->constants, module->main_idx);
+
+    if ( ! IS_BAD_PTR(func_obj)) {
+        error = _KOS_stack_push(ctx, func_obj);
+
+        if ( ! error)
+            pushed = 1;
+    }
+    else
+        error = KOS_ERROR_EXCEPTION;
 
     if (error)
         *ret = ctx->exception;
@@ -2939,7 +2950,8 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
     ctx->exception = KOS_BADPTR;
     ctx->retval    = KOS_BADPTR;
 
-    _KOS_stack_pop(ctx);
+    if (pushed)
+        _KOS_stack_pop(ctx);
 
     return error;
 }

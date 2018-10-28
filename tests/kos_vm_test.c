@@ -131,25 +131,22 @@ static KOS_OBJ_ID _run_code(KOS_INSTANCE  *inst,
 
     memset(module, 0, sizeof(*module));
 
-    module->header.type       = OBJ_MODULE;
-    module->inst              = inst;
-    module->constants_storage = KOS_new_array(ctx, num_constants + 1);
-    module->constants         = 0;
-    module->bytecode          = bytecode;
-    module->bytecode_size     = bytecode_size;
-    module->main_idx          = num_constants;
+    module->header.type   = OBJ_MODULE;
+    module->inst          = inst;
+    module->constants     = KOS_new_array(ctx, num_constants + 1);
+    module->bytecode      = bytecode;
+    module->bytecode_size = bytecode_size;
+    module->main_idx      = num_constants;
 
-    if (IS_BAD_PTR(module->constants_storage))
+    if (IS_BAD_PTR(module->constants))
         error = KOS_ERROR_EXCEPTION;
-    else
-        module->constants = _KOS_get_array_buffer(OBJPTR(ARRAY, module->constants_storage));
 
     if (num_constants && ! error) {
 
         unsigned i;
 
         for (i = 0; ! error && i < num_constants; ++i)
-            error = KOS_array_write(ctx, module->constants_storage, i, constants[i]);
+            error = KOS_array_write(ctx, module->constants, i, constants[i]);
     }
 
     if ( ! error) {
@@ -158,7 +155,7 @@ static KOS_OBJ_ID _run_code(KOS_INSTANCE  *inst,
         if (IS_BAD_PTR(func_obj))
             error = KOS_ERROR_EXCEPTION;
         else
-            error = KOS_array_write(ctx, module->constants_storage, num_constants, func_obj);
+            error = KOS_array_write(ctx, module->constants, num_constants, func_obj);
     }
 
     if ( ! error) {

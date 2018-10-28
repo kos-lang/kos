@@ -89,8 +89,7 @@ static int _test_instr(KOS_INSTANCE        *inst,
     uint8_t                 code[64]        = { 0 };
     uint32_t                parms[MAX_ARGS] = { 0 };
     KOS_MODULE             *module          = 0;
-    KOS_OBJ_ID              constants_array = KOS_BADPTR;
-    KOS_ATOMIC(KOS_OBJ_ID) *constants       = 0;
+    KOS_OBJ_ID              constants       = KOS_BADPTR;
     KOS_CONTEXT             ctx             = &inst->threads.main_thread;
     const char *            cstrings[]      = { "aaa", "bbb", "ccc" };
     KOS_OBJ_ID              strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
@@ -109,15 +108,13 @@ static int _test_instr(KOS_INSTANCE        *inst,
         return KOS_ERROR_EXCEPTION;
     }
 
-    constants_array = KOS_new_array(ctx, MAX_ARGS + 4);
-    if (IS_BAD_PTR(constants_array)) {
+    constants = KOS_new_array(ctx, MAX_ARGS + 4);
+    if (IS_BAD_PTR(constants)) {
         printf("Failed: Unable to allocate constants!\n");
         return KOS_ERROR_EXCEPTION;
     }
-    constants = _KOS_get_array_buffer(OBJPTR(ARRAY, constants_array));
 
-    module->constants_storage = constants_array;
-    module->constants         = constants;
+    module->constants = constants;
 
     for (i = 0; i < 3; i++) {
         KOS_OBJ_ID str = KOS_new_cstring(ctx, cstrings[i]);
@@ -125,7 +122,10 @@ static int _test_instr(KOS_INSTANCE        *inst,
             printf("Failed: Unable to allocate constants!\n");
             return KOS_ERROR_EXCEPTION;
         }
-        constants[num_constants++] = str;
+        if (KOS_array_write(ctx, constants, num_constants++, str)) {
+            printf("Failed: Unable to allocate constants!\n");
+            return KOS_ERROR_EXCEPTION;
+        }
     }
 
     for (i = 0; i < MAX_ARGS; i++) {
@@ -181,7 +181,10 @@ static int _test_instr(KOS_INSTANCE        *inst,
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    constants[num_constants++] = value;
+                    if (KOS_array_write(ctx, constants, num_constants++, value)) {
+                        printf("Failed: Unable to allocate constants!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
                 }
                 break;
 
@@ -197,7 +200,10 @@ static int _test_instr(KOS_INSTANCE        *inst,
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    constants[num_constants++] = value;
+                    if (KOS_array_write(ctx, constants, num_constants++, value)) {
+                        printf("Failed: Unable to allocate constants!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
                 }
                 break;
 
@@ -216,7 +222,10 @@ static int _test_instr(KOS_INSTANCE        *inst,
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    constants[num_constants++] = value;
+                    if (KOS_array_write(ctx, constants, num_constants++, value)) {
+                        printf("Failed: Unable to allocate constants!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
                 }
                 break;
 
@@ -237,7 +246,10 @@ static int _test_instr(KOS_INSTANCE        *inst,
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
                     }
-                    constants[num_constants++] = str;
+                    if (KOS_array_write(ctx, constants, num_constants++, str)) {
+                        printf("Failed: Unable to allocate constants!\n");
+                        return KOS_ERROR_EXCEPTION;
+                    }
                     strings[idx] = str;
                 }
                 break;
@@ -265,7 +277,7 @@ static int _test_instr(KOS_INSTANCE        *inst,
         }
     }
 
-    if (KOS_array_resize(ctx, constants_array, num_constants)) {
+    if (KOS_array_resize(ctx, constants, num_constants + 1)) {
         printf("Failed: Unable to allocate constants!\n");
         return KOS_ERROR_EXCEPTION;
     }
@@ -341,7 +353,10 @@ static int _test_instr(KOS_INSTANCE        *inst,
         if (IS_BAD_PTR(func_obj))
             error = KOS_ERROR_EXCEPTION;
         else {
-            constants[num_constants++] = func_obj;
+            if (KOS_array_write(ctx, constants, num_constants++, func_obj)) {
+                printf("Failed: Unable to allocate constants!\n");
+                return KOS_ERROR_EXCEPTION;
+            }
 
             OBJPTR(FUNCTION, func_obj)->header.num_regs = regs;
             OBJPTR(FUNCTION, func_obj)->instr_offs      = 0;
