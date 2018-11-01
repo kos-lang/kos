@@ -133,18 +133,19 @@ static int _has_properties(KOS_OBJ_ID obj_id)
     return type == OBJ_OBJECT || type == OBJ_CLASS;
 }
 
-static KOS_OBJECT_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
+static KOS_OBJ_ID _alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 {
     KOS_OBJECT_STORAGE *const storage = (KOS_OBJECT_STORAGE *)
             _KOS_alloc_object(ctx,
                               OBJ_OBJECT_STORAGE,
-                              sizeof(KOS_OBJECT_STORAGE) + (capacity - 1) * sizeof(KOS_PITEM));
+                              sizeof(KOS_OBJECT_STORAGE) +
+                                    (capacity - 1) * sizeof(KOS_PITEM));
 
     if (storage) {
         assert(storage->header.type == OBJ_OBJECT_STORAGE);
     }
 
-    return storage;
+    return OBJID(OBJECT_STORAGE, storage);
 }
 
 void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
@@ -173,18 +174,18 @@ static int _is_key_equal(KOS_OBJ_ID key,
     }
 }
 
-static KOS_OBJECT_STORAGE *_read_props(KOS_ATOMIC(KOS_OBJ_ID) *ptr)
+static KOS_OBJ_ID _read_props(KOS_ATOMIC(KOS_OBJ_ID) *ptr)
 {
     const KOS_OBJ_ID obj_id = (KOS_OBJ_ID)KOS_atomic_read_ptr(*ptr);
     /* TODO use read with acquire semantics */
     KOS_atomic_acquire_barrier();
-    return IS_BAD_PTR(obj_id) ? 0 : OBJPTR(OBJECT_STORAGE, obj_id);
+    return obj_id;
 }
 
-static int _salvage_item(KOS_CONTEXT         ctx,
-                         KOS_PITEM          *old_item,
-                         KOS_OBJECT_STORAGE *new_table,
-                         uint32_t            new_capacity)
+static int _salvage_item(KOS_CONTEXT ctx,
+                         KOS_PITEM  *old_item,
+                         KOS_OBJ_ID  new_table,
+                         uint32_t    new_capacity)
 {
     KOS_OBJ_ID     key;
     KOS_OBJ_ID     value;
@@ -212,11 +213,11 @@ static int _salvage_item(KOS_CONTEXT         ctx,
 
         KOS_OBJ_ID dest_key;
 
-        new_item = new_table->items + idx;
+        new_item = OBJPTR(OBJECT_STORAGE, new_table)->items + idx;
 
         if (KOS_atomic_cas_ptr(new_item->key, KOS_BADPTR, key)) {
             KOS_atomic_write_u32(new_item->hash.hash, hash);
-            KOS_atomic_add_i32(new_table->num_slots_used, 1);
+            KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, new_table)->num_slots_used, 1);
             break;
         }
 
@@ -258,27 +259,34 @@ static int _salvage_item(KOS_CONTEXT         ctx,
 
 static void _copy_table(KOS_CONTEXT             ctx,
                         KOS_ATOMIC(KOS_OBJ_ID) *props,
-                        KOS_OBJECT_STORAGE     *old_table,
-                        KOS_OBJECT_STORAGE     *new_table)
+                        KOS_OBJ_ID              old_table,
+                        KOS_OBJ_ID              new_table)
 {
-    const uint32_t old_capacity = KOS_atomic_read_u32(old_table->capacity);
-    const uint32_t new_capacity = KOS_atomic_read_u32(new_table->capacity);
+    const uint32_t old_capacity = KOS_atomic_read_u32(
+                                    OBJPTR(OBJECT_STORAGE, old_table)->capacity);
+    const uint32_t new_capacity = KOS_atomic_read_u32(
+                                    OBJPTR(OBJECT_STORAGE, new_table)->capacity);
     const uint32_t mask         = old_capacity - 1;
-    const uint32_t fuzz         = 64U * (old_capacity - KOS_atomic_read_u32(old_table->num_slots_open));
+    const uint32_t fuzz         = 64U * (old_capacity - KOS_atomic_read_u32(
+                                    OBJPTR(OBJECT_STORAGE, old_table)->num_slots_open));
     uint32_t       i            = fuzz & mask;
 
-    KOS_atomic_add_i32(old_table->active_copies, 1);
+    KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies, 1);
 
     for (;;) {
-        if (_salvage_item(ctx, old_table->items + i, new_table, new_capacity)) {
+        if (_salvage_item(ctx,
+                          OBJPTR(OBJECT_STORAGE, old_table)->items + i,
+                          new_table,
+                          new_capacity)) {
             KOS_PERF_CNT(object_salvage_success);
-            if (KOS_atomic_add_i32(old_table->num_slots_open, -1) == 1)
+            if (KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, old_table)->num_slots_open,
+                                   -1) == 1)
                 break;
         }
         /* Early exit if another thread has finished salvaging */
         else {
             KOS_PERF_CNT(object_salvage_fail);
-            if ( ! KOS_atomic_read_u32(old_table->num_slots_open))
+            if ( ! KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, old_table)->num_slots_open))
                 break;
         }
 
@@ -289,17 +297,15 @@ static void _copy_table(KOS_CONTEXT             ctx,
     /* Avoid race when one thread marks a slot as reserved in the new
      * table while another thread deletes the original item and
      * closes the source slot. */
-    if (KOS_atomic_add_i32(old_table->active_copies, -1) > 1) {
-        while (KOS_atomic_read_u32(old_table->active_copies))
+    if (KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies, -1) > 1) {
+        while (KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies))
             _KOS_yield();
     }
 
-    if (KOS_atomic_cas_ptr(*props,
-                           OBJID(OBJECT_STORAGE, old_table),
-                           OBJID(OBJECT_STORAGE, new_table))) {
+    if (KOS_atomic_cas_ptr(*props, old_table, new_table)) {
 #ifndef NDEBUG
         for (i = 0; i < old_capacity; i++) {
-            KOS_PITEM *item  = old_table->items + i;
+            KOS_PITEM *item  = OBJPTR(OBJECT_STORAGE, old_table)->items + i;
             KOS_OBJ_ID value = (KOS_OBJ_ID)KOS_atomic_read_ptr(item->value);
             assert(value == CLOSED);
         }
@@ -307,49 +313,51 @@ static void _copy_table(KOS_CONTEXT             ctx,
     }
 }
 
-static int _need_resize(KOS_OBJECT_STORAGE *table, unsigned num_reprobes)
+static int _need_resize(KOS_OBJ_ID table, unsigned num_reprobes)
 {
     /* Determine if resize is needed based on the number of reprobes */
 #if KOS_MAX_PROP_REPROBES * 2 <= KOS_MIN_PROPS_CAPACITY
-    assert(table);
+    assert( ! IS_BAD_PTR(table));
     if (num_reprobes < KOS_MAX_PROP_REPROBES)
         return 0;
 #else
     uint32_t capacity;
     uint32_t usage;
 
-    assert(table);
-    capacity = KOS_atomic_read_u32(table->capacity);
+    assert( ! IS_BAD_PTR(table));
+    capacity = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, table)->capacity);
 
     if (capacity >= KOS_MAX_PROP_REPROBES * 2 && num_reprobes < KOS_MAX_PROP_REPROBES)
         return 0;
 
     /* For small property tables use a simpler heuristic */
-    usage = KOS_atomic_read_u32(table->num_slots_used);
+    usage = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, table)->num_slots_used);
     if (usage * 4 < capacity * 3)
         return 0;
 #endif
     return 1;
 }
 
-static int _resize_prop_table(KOS_CONTEXT         ctx,
-                              KOS_OBJ_ID          obj_id,
-                              KOS_OBJECT_STORAGE *old_table,
-                              uint32_t            grow_factor)
+static int _resize_prop_table(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  obj_id,
+                              KOS_OBJ_ID  old_table,
+                              uint32_t    grow_factor)
 {
     int                     error = KOS_SUCCESS;
     KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
-    const uint32_t      old_capacity = old_table ? KOS_atomic_read_u32(old_table->capacity) : 0U;
-    const uint32_t      new_capacity = old_capacity ? old_capacity * grow_factor : KOS_MIN_PROPS_CAPACITY;
-    KOS_OBJECT_STORAGE *new_table    = 0;
+    const uint32_t old_capacity = IS_BAD_PTR(old_table) ? 0U :
+        KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, old_table)->capacity);
+    const uint32_t new_capacity = old_capacity ? old_capacity * grow_factor
+                                               : KOS_MIN_PROPS_CAPACITY;
+    KOS_OBJ_ID     new_table    = KOS_BADPTR;
 
-    if (old_table)
-        new_table = _read_props(&old_table->new_prop_table);
+    if ( ! IS_BAD_PTR(old_table))
+        new_table = _read_props(&OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table);
 
     assert(props);
 
-    if (new_table) {
+    if ( ! IS_BAD_PTR(new_table)) {
         /* Another thread is already resizing the property table, help it */
         _copy_table(ctx, props, old_table, new_table);
 
@@ -359,25 +367,25 @@ static int _resize_prop_table(KOS_CONTEXT         ctx,
 
         new_table = _alloc_buffer(ctx, new_capacity);
 
-        if (new_table) {
+        if ( ! IS_BAD_PTR(new_table)) {
             unsigned i;
 
-            KOS_atomic_write_u32(new_table->capacity, new_capacity);
-            new_table->num_slots_used = 0;
-            new_table->num_slots_open = new_capacity;
-            new_table->active_copies  = 0;
-            new_table->new_prop_table = KOS_BADPTR;
+            KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, new_table)->capacity, new_capacity);
+            OBJPTR(OBJECT_STORAGE, new_table)->num_slots_used = 0;
+            OBJPTR(OBJECT_STORAGE, new_table)->num_slots_open = new_capacity;
+            OBJPTR(OBJECT_STORAGE, new_table)->active_copies  = 0;
+            OBJPTR(OBJECT_STORAGE, new_table)->new_prop_table = KOS_BADPTR;
 
             for (i = 0; i < new_capacity; i++) {
-                new_table->items[i].key       = KOS_BADPTR;
-                new_table->items[i].hash.hash = 0;
-                new_table->items[i].value     = TOMBSTONE;
+                OBJPTR(OBJECT_STORAGE, new_table)->items[i].key       = KOS_BADPTR;
+                OBJPTR(OBJECT_STORAGE, new_table)->items[i].hash.hash = 0;
+                OBJPTR(OBJECT_STORAGE, new_table)->items[i].value     = TOMBSTONE;
             }
 
-            if (old_table) {
-                if (KOS_atomic_cas_ptr(old_table->new_prop_table,
+            if ( ! IS_BAD_PTR(old_table)) {
+                if (KOS_atomic_cas_ptr(OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table,
                                        KOS_BADPTR,
-                                       OBJID(OBJECT_STORAGE, new_table))) {
+                                       new_table)) {
 
                     _copy_table(ctx, props, old_table, new_table);
 
@@ -386,8 +394,8 @@ static int _resize_prop_table(KOS_CONTEXT         ctx,
                 /* Somebody already resized it */
                 else {
                     /* Help copy the new table if it is still being resized */
-                    if (KOS_atomic_read_u32(old_table->active_copies)) {
-                        new_table = _read_props(&old_table->new_prop_table);
+                    if (KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies)) {
+                        new_table = _read_props(&OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table);
                         _copy_table(ctx, props, old_table, new_table);
                     }
 
@@ -397,7 +405,7 @@ static int _resize_prop_table(KOS_CONTEXT         ctx,
             else
                 if ( ! KOS_atomic_cas_ptr(*props,
                                           KOS_BADPTR,
-                                          OBJID(OBJECT_STORAGE, new_table))) {
+                                          new_table)) {
                     /* Somebody already resized it */
                     KOS_PERF_CNT(object_resize_fail);
                 }
@@ -423,7 +431,7 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
         /* Find non-empty property table in this object or in a prototype */
-        while ( ! props || ! _read_props(props)) {
+        while ( ! props || IS_BAD_PTR(_read_props(props))) {
             obj_id = KOS_get_prototype(ctx, obj_id);
 
             if (IS_BAD_PTR(obj_id)) {
@@ -435,12 +443,13 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
         }
 
         if (props) {
-            const uint32_t      hash         = KOS_string_get_hash(prop);
-            unsigned            idx          = hash;
-            KOS_OBJECT_STORAGE *prop_table   = _read_props(props);
-            KOS_PITEM          *items        = prop_table->items;
-            unsigned            num_reprobes = KOS_atomic_read_u32(prop_table->capacity);
-            unsigned            mask         = num_reprobes - 1;
+            const uint32_t hash         = KOS_string_get_hash(prop);
+            unsigned       idx          = hash;
+            KOS_OBJ_ID     prop_table   = _read_props(props);
+            KOS_PITEM     *items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
+            unsigned       num_reprobes = KOS_atomic_read_u32(
+                                            OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
+            unsigned       mask         = num_reprobes - 1;
 
             for (;;) {
                 KOS_PITEM *const cur_item  = items + (idx &= mask);
@@ -450,15 +459,15 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
                 /* Object property table is being resized, so read value from the new table */
                 if (cur_value == CLOSED) {
                     /* Help copy the old table to avoid races when it is partially copied */
-                    KOS_OBJECT_STORAGE *new_prop_table = _read_props(&prop_table->new_prop_table);
-                    assert(new_prop_table);
+                    KOS_OBJ_ID new_prop_table = _read_props(&OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
+                    assert( ! IS_BAD_PTR(new_prop_table));
 
                     _copy_table(ctx, props, prop_table, new_prop_table);
 
                     idx          = hash;
                     prop_table   = new_prop_table;
-                    items        = prop_table->items;
-                    num_reprobes = KOS_atomic_read_u32(prop_table->capacity);
+                    items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
+                    num_reprobes = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
                     mask         = num_reprobes - 1;
                     continue;
                 }
@@ -491,7 +500,7 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
                             break;
 
                         props = _get_properties(obj_id);
-                    } while ( ! props || ! _read_props(props));
+                    } while ( ! props || IS_BAD_PTR(_read_props(props)));
 
                     if (IS_BAD_PTR(obj_id)) {
                         KOS_raise_exception_cstring(ctx, str_err_no_property);
@@ -501,8 +510,8 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
 
                     idx          = hash;
                     prop_table   = _read_props(props);
-                    items        = prop_table->items;
-                    num_reprobes = KOS_atomic_read_u32(prop_table->capacity);
+                    items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
+                    num_reprobes = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
                     mask         = num_reprobes - 1;
                 }
                 else {
@@ -537,7 +546,7 @@ int _KOS_object_copy_prop_table(KOS_CONTEXT ctx,
 
     props = _get_properties(obj_id);
 
-    return _resize_prop_table(ctx, obj_id, props ? _read_props(props) : 0, 1U);
+    return _resize_prop_table(ctx, obj_id, props ? _read_props(props) : KOS_BADPTR, 1U);
 }
 
 int KOS_set_property(KOS_CONTEXT ctx,
@@ -557,7 +566,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
         /* Check if property table is non-empty */
-        if ( ! _read_props(props)) {
+        if (IS_BAD_PTR(_read_props(props))) {
 
             /* It is OK to delete non-existent props even if property table is empty */
             if (value == TOMBSTONE) {
@@ -566,7 +575,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
             }
             /* Allocate property table */
             else {
-                const int rerror = _resize_prop_table(ctx, obj_id, 0, 0U);
+                const int rerror = _resize_prop_table(ctx, obj_id, KOS_BADPTR, 0U);
                 if (rerror) {
                     assert(KOS_is_exception_pending(ctx));
                     error = rerror;
@@ -576,18 +585,18 @@ int KOS_set_property(KOS_CONTEXT ctx,
         }
 
         if (props) {
-            const uint32_t      hash         = KOS_string_get_hash(prop);
-            unsigned            idx          = hash;
-            unsigned            num_reprobes = 0;
-            KOS_OBJECT_STORAGE *prop_table   = _read_props(props);
-            KOS_PITEM          *items;
-            unsigned            mask;
+            const uint32_t hash         = KOS_string_get_hash(prop);
+            unsigned       idx          = hash;
+            unsigned       num_reprobes = 0;
+            KOS_OBJ_ID     prop_table   = _read_props(props);
+            KOS_PITEM     *items;
+            unsigned       mask;
             #ifdef CONFIG_PERF
-            int                 collis_depth = -1;
+            int            collis_depth = -1;
             #endif
 
-            items = prop_table->items;
-            mask  = KOS_atomic_read_u32(prop_table->capacity) - 1;
+            items = OBJPTR(OBJECT_STORAGE, prop_table)->items;
+            mask  = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity) - 1;
 
             for (;;) {
                 KOS_PITEM *cur_item = items + (idx &= mask);
@@ -615,7 +624,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                     KOS_PERF_CNT_ARRAY(object_collision, KOS_min(collis_depth, 3));
 
                     KOS_atomic_write_u32(cur_item->hash.hash, hash);
-                    KOS_atomic_add_i32(prop_table->num_slots_used, 1);
+                    KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, prop_table)->num_slots_used, 1);
                 }
                 /* Otherwise check if this key matches the sought property */
                 else if ( ! _is_key_equal(prop, hash, cur_key, cur_item)) {
@@ -628,8 +637,8 @@ int KOS_set_property(KOS_CONTEXT ctx,
 
                         prop_table   = _read_props(props);
                         idx          = hash;
-                        items        = prop_table->items;
-                        mask         = KOS_atomic_read_u32(prop_table->capacity) - 1;
+                        items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
+                        mask         = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity) - 1;
                         num_reprobes = 0;
                     }
                     /* Probe next slot */
@@ -664,15 +673,17 @@ int KOS_set_property(KOS_CONTEXT ctx,
 
                 /* Another thread is resizing the table - use new property table */
                 if (oldval == CLOSED) {
-                    KOS_OBJECT_STORAGE *const new_prop_table = _read_props(&prop_table->new_prop_table);
-                    assert(new_prop_table);
+                    const KOS_OBJ_ID new_prop_table = _read_props(
+                            &OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
+                    assert( ! IS_BAD_PTR(new_prop_table));
 
                     _copy_table(ctx, props, prop_table, new_prop_table);
 
                     prop_table   = new_prop_table;
                     idx          = hash;
-                    items        = prop_table->items;
-                    mask         = KOS_atomic_read_u32(prop_table->capacity) - 1;
+                    items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
+                    mask         = KOS_atomic_read_u32(
+                                    OBJPTR(OBJECT_STORAGE, prop_table)->capacity) - 1;
                     num_reprobes = 0;
                     continue;
                 }
@@ -850,9 +861,9 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
     TRY_OBJID(key_table_obj);
 
     do {
-        KOS_OBJECT_STORAGE *prop_table;
-        KOS_PITEM          *cur_item;
-        KOS_PITEM          *items_end;
+        KOS_OBJ_ID prop_table;
+        KOS_PITEM *cur_item;
+        KOS_PITEM *items_end;
 
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
@@ -863,11 +874,11 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
 
         prop_table = _read_props(props);
 
-        if ( ! prop_table)
+        if (IS_BAD_PTR(prop_table))
             continue;
 
-        cur_item  = prop_table->items;
-        items_end = cur_item + KOS_atomic_read_u32(prop_table->capacity);
+        cur_item  = OBJPTR(OBJECT_STORAGE, prop_table)->items;
+        items_end = cur_item + KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
 
         for ( ; cur_item < items_end; ++cur_item) {
             const KOS_OBJ_ID key   = (KOS_OBJ_ID)KOS_atomic_read_ptr(cur_item->key);
@@ -877,13 +888,14 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
                 continue;
 
             if (value == CLOSED) {
-                KOS_OBJECT_STORAGE *new_prop_table = _read_props(&prop_table->new_prop_table);
+                const KOS_OBJ_ID new_prop_table = _read_props(&OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
 
                 _copy_table(ctx, props, prop_table, new_prop_table);
 
                 prop_table = new_prop_table;
-                cur_item   = prop_table->items - 1;
-                items_end  = prop_table->items + KOS_atomic_read_u32(prop_table->capacity);
+                cur_item   = OBJPTR(OBJECT_STORAGE, prop_table)->items - 1;
+                items_end  = OBJPTR(OBJECT_STORAGE, prop_table)->items +
+                                KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
                 continue;
             }
 
@@ -892,7 +904,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
     } while ( ! IS_BAD_PTR(obj_id) && deep);
 
     OBJPTR(OBJECT_WALK, walk.obj_id)->key_table =
-        OBJID(OBJECT_STORAGE, _read_props(_get_properties(key_table_obj)));
+            _read_props(_get_properties(key_table_obj));
 
 _error:
     KOS_untrack_ref(ctx, &walk);
