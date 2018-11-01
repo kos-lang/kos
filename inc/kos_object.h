@@ -47,19 +47,19 @@ static inline void* KOS_object_get_private(KOS_OBJECT& obj)
 
 static inline KOS_OBJ_ID KOS_get_walk_key(KOS_OBJ_ID walk)
 {
-    return (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT_WALK, walk)->last_key);
+    return KOS_atomic_read_obj(OBJPTR(OBJECT_WALK, walk)->last_key);
 }
 
 static inline KOS_OBJ_ID KOS_get_walk_value(KOS_OBJ_ID walk)
 {
-    return (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT_WALK, walk)->last_value);
+    return KOS_atomic_read_obj(OBJPTR(OBJECT_WALK, walk)->last_value);
 }
 #else
 #define KOS_object_swap_private(obj, value) KOS_atomic_swap_ptr((obj).priv, value)
 #define KOS_object_set_private(obj, value)  KOS_atomic_write_ptr((obj).priv, value)
 #define KOS_object_get_private(obj)         KOS_atomic_read_ptr((obj).priv)
-#define KOS_get_walk_key(walk)              ((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT_WALK, (walk))->last_key))
-#define KOS_get_walk_value(walk)            ((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT_WALK, (walk))->last_value))
+#define KOS_get_walk_key(walk)              (KOS_atomic_read_obj(OBJPTR(OBJECT_WALK, (walk))->last_key))
+#define KOS_get_walk_value(walk)            (KOS_atomic_read_obj(OBJPTR(OBJECT_WALK, (walk))->last_value))
 #endif
 
 #ifdef __cplusplus

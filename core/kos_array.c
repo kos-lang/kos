@@ -163,7 +163,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
 
 static KOS_ARRAY_STORAGE *_get_data(KOS_ARRAY *array)
 {
-    const KOS_OBJ_ID buf_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(array->data);
+    const KOS_OBJ_ID buf_obj = KOS_atomic_read_obj(array->data);
     /* TODO use read with acquire semantics */
     KOS_atomic_acquire_barrier();
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
@@ -171,7 +171,7 @@ static KOS_ARRAY_STORAGE *_get_data(KOS_ARRAY *array)
 
 static KOS_ARRAY_STORAGE *_get_next(KOS_ARRAY_STORAGE *storage)
 {
-    const KOS_OBJ_ID buf_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(storage->next);
+    const KOS_OBJ_ID buf_obj = KOS_atomic_read_obj(storage->next);
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
 }
 
@@ -192,7 +192,7 @@ static void _copy_buf(KOS_CONTEXT        ctx,
 
         /* Salvage item to the new buffer */
         for (;;) {
-            const KOS_OBJ_ID value = (KOS_OBJ_ID)KOS_atomic_read_ptr(src[i]);
+            const KOS_OBJ_ID value = KOS_atomic_read_obj(src[i]);
 
             /* Another thread copied it */
             if (value == CLOSED)
@@ -253,7 +253,7 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
             KOS_ARRAY_STORAGE *buf = _get_data(array);
 
             for (;;) {
-                elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(buf->buf[bufidx]);
+                elem = KOS_atomic_read_obj(buf->buf[bufidx]);
 
                 if (elem == TOMBSTONE) {
                     KOS_raise_exception_cstring(ctx, str_err_invalid_index);
@@ -295,7 +295,7 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
 
             for (;;) {
 
-                KOS_OBJ_ID cur = (KOS_OBJ_ID)KOS_atomic_read_ptr(buf->buf[bufidx]);
+                KOS_OBJ_ID cur = KOS_atomic_read_obj(buf->buf[bufidx]);
 
                 if (cur == TOMBSTONE) {
                     KOS_raise_exception_cstring(ctx, str_err_invalid_index);
@@ -490,7 +490,7 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
                     while (idx < new_len) {
 
                         const KOS_OBJ_ID value =
-                            (KOS_OBJ_ID)KOS_atomic_read_ptr(src_buf->buf[begin + idx]);
+                            KOS_atomic_read_obj(src_buf->buf[begin + idx]);
 
                         if (value == TOMBSTONE) {
                             new_len = idx;
@@ -743,7 +743,7 @@ int KOS_array_fill(KOS_CONTEXT ctx,
 
     while (begin < end) {
 
-        KOS_OBJ_ID cur = (KOS_OBJ_ID)KOS_atomic_read_ptr(buf->buf[begin]);
+        KOS_OBJ_ID cur = KOS_atomic_read_obj(buf->buf[begin]);
 
         if (cur == TOMBSTONE)
             break;

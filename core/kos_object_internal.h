@@ -81,14 +81,14 @@ typedef struct _KOS_ARRAY_STORAGE {
 
 static inline KOS_ATOMIC(KOS_OBJ_ID) *_KOS_get_array_buffer(KOS_ARRAY *array)
 {
-    const KOS_OBJ_ID buf_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(array->data);
+    const KOS_OBJ_ID buf_obj = KOS_atomic_read_obj(array->data);
     assert( ! IS_BAD_PTR(buf_obj));
     return &OBJPTR(ARRAY_STORAGE, buf_obj)->buf[0];
 }
 
 #else
 
-#define _KOS_get_array_buffer(array) (&OBJPTR(ARRAY_STORAGE, (KOS_OBJ_ID)KOS_atomic_read_ptr((array)->data))->buf[0])
+#define _KOS_get_array_buffer(array) (&OBJPTR(ARRAY_STORAGE, KOS_atomic_read_obj((array)->data))->buf[0])
 
 #endif
 

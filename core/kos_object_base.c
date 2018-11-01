@@ -111,7 +111,7 @@ static KOS_OBJ_ID _get_prototype(KOS_CONTEXT ctx,
 
         KOS_CLASS *const func = OBJPTR(CLASS, this_obj);
 
-        ret = (KOS_OBJ_ID)KOS_atomic_read_ptr(func->prototype);
+        ret = KOS_atomic_read_obj(func->prototype);
 
         assert( ! IS_BAD_PTR(ret));
     }

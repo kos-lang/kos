@@ -118,7 +118,7 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
 
 static KOS_BUFFER_STORAGE *_get_data(KOS_BUFFER *buffer)
 {
-    const KOS_OBJ_ID buf_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(buffer->data);
+    const KOS_OBJ_ID buf_obj = KOS_atomic_read_obj(buffer->data);
     /* TODO use read with acquire semantics */
     KOS_atomic_acquire_barrier();
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(BUFFER_STORAGE, buf_obj);

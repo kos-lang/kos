@@ -237,7 +237,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
 
         for (i = 0; i < length; i++) {
 
-            const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+            const KOS_OBJ_ID elem = KOS_atomic_read_obj(codes_buf[i]);
             int64_t          code;
 
             if ( ! IS_NUMERIC_OBJ(elem))
@@ -272,7 +272,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
         case KOS_STRING_ELEM_8: {
             for (i = 0; i < length; i++) {
 
-                const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+                const KOS_OBJ_ID elem = KOS_atomic_read_obj(codes_buf[i]);
                 int64_t          code;
 
                 TRY(KOS_get_integer(ctx, elem, &code));
@@ -286,7 +286,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
         case KOS_STRING_ELEM_16: {
             for (i = 0; i < length; i++) {
 
-                const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+                const KOS_OBJ_ID elem = KOS_atomic_read_obj(codes_buf[i]);
                 int64_t          code;
 
                 TRY(KOS_get_integer(ctx, elem, &code));
@@ -302,7 +302,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
 
             for (i = 0; i < length; i++) {
 
-                const KOS_OBJ_ID elem = (KOS_OBJ_ID)KOS_atomic_read_ptr(codes_buf[i]);
+                const KOS_OBJ_ID elem = KOS_atomic_read_obj(codes_buf[i]);
                 int64_t          code;
 
                 TRY(KOS_get_integer(ctx, elem, &code));
@@ -564,7 +564,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
         new_str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
 
         for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
-            KOS_OBJ_ID             cur_str = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
+            KOS_OBJ_ID             cur_str = KOS_atomic_read_obj(*cur_ptr);
             enum _KOS_STRING_FLAGS cur_elem_size;
             unsigned               cur_len;
 
@@ -601,7 +601,7 @@ KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
             if (new_str) {
                 unsigned pos = 0;
                 for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
-                    KOS_OBJ_ID     str_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(*cur_ptr);
+                    KOS_OBJ_ID     str_obj = KOS_atomic_read_obj(*cur_ptr);
                     KOS_STRING    *cur_str = OBJPTR(STRING, str_obj);
                     const unsigned cur_len = cur_str->header.length;
                     _init_empty_string(new_str, pos, cur_str, cur_len);

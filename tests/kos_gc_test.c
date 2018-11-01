@@ -269,7 +269,7 @@ int main(void)
 
         obj_id[0] = KOS_new_array(ctx, 1);
         TEST( ! IS_BAD_PTR(obj_id[0]));
-        obj_id[1] = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(ARRAY, obj_id[0])->data);
+        obj_id[1] = KOS_atomic_read_obj(OBJPTR(ARRAY, obj_id[0])->data);
         TEST( ! IS_BAD_PTR(obj_id[1]));
 
         TEST(_test_object(ctx,
@@ -284,7 +284,7 @@ int main(void)
 
         obj_id[0] = KOS_new_buffer(ctx, 1);
         TEST( ! IS_BAD_PTR(obj_id[0]));
-        obj_id[1] = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(BUFFER, obj_id[0])->data);
+        obj_id[1] = KOS_atomic_read_obj(OBJPTR(BUFFER, obj_id[0])->data);
         TEST( ! IS_BAD_PTR(obj_id[1]));
 
         TEST(_test_object(ctx,
@@ -300,7 +300,7 @@ int main(void)
         obj_id[0] = KOS_new_object(ctx);
         TEST( ! IS_BAD_PTR(obj_id[0]));
         TEST(KOS_set_property(ctx, obj_id[0], KOS_new_cstring(ctx, ""), KOS_TRUE) == KOS_SUCCESS);
-        obj_id[1] = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT, obj_id[0])->props);
+        obj_id[1] = KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id[0])->props);
         TEST( ! IS_BAD_PTR(obj_id[1]));
 
         TEST(_test_object(ctx,
@@ -344,7 +344,7 @@ int main(void)
         obj_id[1] = KOS_new_object(ctx);
         TEST( ! IS_BAD_PTR(obj_id[1]));
         TEST(KOS_set_property(ctx, obj_id[1], KOS_new_cstring(ctx, ""), KOS_TRUE) == KOS_SUCCESS);
-        obj_id[2] = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT, obj_id[1])->props);
+        obj_id[2] = KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id[1])->props);
         TEST( ! IS_BAD_PTR(obj_id[2]));
         obj_id[0] = KOS_new_object_walk(ctx, obj_id[1], KOS_SHALLOW);
 

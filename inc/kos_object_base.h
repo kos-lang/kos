@@ -442,9 +442,16 @@ static inline bool KOS_get_bool(KOS_OBJ_ID obj_id)
     return obj_id == KOS_TRUE;
 }
 
+static inline KOS_OBJ_ID KOS_atomic_read_obj(KOS_ATOMIC(KOS_OBJ_ID)& src)
+{
+    return (KOS_OBJ_ID)KOS_atomic_read_ptr(src);
+}
+
 #else
 
 #define KOS_get_bool(obj_id) ((obj_id) == KOS_TRUE)
+
+#define KOS_atomic_read_obj(src) ((KOS_OBJ_ID)KOS_atomic_read_ptr(src))
 
 #endif
 

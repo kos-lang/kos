@@ -190,7 +190,7 @@ static KOS_OBJ_ID _read_stack_reg(KOS_OBJ_ID stack_obj_id,
     if ((uint32_t)idx + KOS_STACK_EXTRA >= size)
         return KOS_BADPTR;
 
-    ret = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack_obj_id)->buf[idx + KOS_STACK_EXTRA]);
+    ret = KOS_atomic_read_obj(OBJPTR(STACK, stack_obj_id)->buf[idx + KOS_STACK_EXTRA]);
     return ret;
 }
 
@@ -1864,9 +1864,9 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(ret) == OBJ_STACK);
         TEST(KOS_atomic_read_u32(OBJPTR(STACK, ret)->size) == 1U + KOS_STACK_EXTRA + 3U);
-        TEST(KOS_atomic_read_ptr(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 0]) == TO_SMALL_INT(10));
-        TEST(KOS_atomic_read_ptr(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 1]) == TO_SMALL_INT(11));
-        TEST(KOS_atomic_read_ptr(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 2]) == TO_SMALL_INT(12));
+        TEST(KOS_atomic_read_obj(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 0]) == TO_SMALL_INT(10));
+        TEST(KOS_atomic_read_obj(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 1]) == TO_SMALL_INT(11));
+        TEST(KOS_atomic_read_obj(OBJPTR(STACK, ret)->buf[KOS_STACK_EXTRA + 2]) == TO_SMALL_INT(12));
     }
 
     /************************************************************************/

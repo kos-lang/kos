@@ -988,16 +988,16 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
 
         default:
             assert(READ_OBJ_TYPE(obj_id) == OBJ_OBJECT);
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT, obj_id)->props), GRAY);
+            _set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->props), GRAY);
             _set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
             break;
 
         case OBJ_ARRAY:
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(ARRAY, obj_id)->data), GRAY);
+            _set_mark_state(KOS_atomic_read_obj(OBJPTR(ARRAY, obj_id)->data), GRAY);
             break;
 
         case OBJ_BUFFER:
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(BUFFER, obj_id)->data), GRAY);
+            _set_mark_state(KOS_atomic_read_obj(OBJPTR(BUFFER, obj_id)->data), GRAY);
             break;
 
         case OBJ_FUNCTION:
@@ -1008,32 +1008,32 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
             break;
 
         case OBJ_CLASS:
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(CLASS, obj_id)->prototype), GRAY);
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(CLASS, obj_id)->props), GRAY);
+            _set_mark_state(KOS_atomic_read_obj(OBJPTR(CLASS, obj_id)->prototype), GRAY);
+            _set_mark_state(KOS_atomic_read_obj(OBJPTR(CLASS, obj_id)->props), GRAY);
             /* TODO make these atomic */
             _set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
             _set_mark_state(OBJPTR(CLASS, obj_id)->defaults, GRAY);
             break;
 
         case OBJ_OBJECT_STORAGE:
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(OBJECT_STORAGE, obj_id)->new_prop_table), GRAY);
+            _set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, obj_id)->new_prop_table), GRAY);
             {
                 KOS_PITEM *item = &OBJPTR(OBJECT_STORAGE, obj_id)->items[0];
                 KOS_PITEM *end  = item + OBJPTR(OBJECT_STORAGE, obj_id)->capacity;
                 for ( ; item < end; ++item) {
-                    _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(item->key), GRAY);
-                    _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(item->value), GRAY);
+                    _set_mark_state(KOS_atomic_read_obj(item->key), GRAY);
+                    _set_mark_state(KOS_atomic_read_obj(item->value), GRAY);
                 }
             }
             break;
 
         case OBJ_ARRAY_STORAGE:
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(ARRAY_STORAGE, obj_id)->next), GRAY);
+            _set_mark_state(KOS_atomic_read_obj(OBJPTR(ARRAY_STORAGE, obj_id)->next), GRAY);
             {
                 KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(ARRAY_STORAGE, obj_id)->buf[0];
                 KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(ARRAY_STORAGE, obj_id)->capacity;
                 for ( ; item < end; ++item)
-                    _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(*item), GRAY);
+                    _set_mark_state(KOS_atomic_read_obj(*item), GRAY);
             }
             break;
 
@@ -1047,9 +1047,9 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
             /* TODO make these atomic */
             _set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->obj,         GRAY);
             _set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->key_table,   GRAY);
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(
+            _set_mark_state(KOS_atomic_read_obj(
                             OBJPTR(OBJECT_WALK, obj_id)->last_key),   GRAY);
-            _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(
+            _set_mark_state(KOS_atomic_read_obj(
                             OBJPTR(OBJECT_WALK, obj_id)->last_value), GRAY);
             break;
 
@@ -1068,7 +1068,7 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
                 KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(STACK, obj_id)->buf[0];
                 KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(STACK, obj_id)->size;
                 for ( ; item < end; ++item)
-                    _set_mark_state((KOS_OBJ_ID)KOS_atomic_read_ptr(*item), GRAY);
+                    _set_mark_state(KOS_atomic_read_obj(*item), GRAY);
             }
             break;
     }
@@ -1458,7 +1458,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         case OBJ_OBJECT_STORAGE:
-            assert(IS_BAD_PTR((KOS_OBJ_ID)KOS_atomic_read_ptr(((KOS_OBJECT_STORAGE *)hdr)->new_prop_table)));
+            assert(IS_BAD_PTR(KOS_atomic_read_obj(((KOS_OBJECT_STORAGE *)hdr)->new_prop_table)));
             {
                 KOS_PITEM *item = &((KOS_OBJECT_STORAGE *)hdr)->items[0];
                 KOS_PITEM *end  = item + ((KOS_OBJECT_STORAGE *)hdr)->capacity;
@@ -1470,7 +1470,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         case OBJ_ARRAY_STORAGE:
-            assert(IS_BAD_PTR((KOS_OBJ_ID)KOS_atomic_read_ptr(((KOS_ARRAY_STORAGE *)hdr)->next)));
+            assert(IS_BAD_PTR(KOS_atomic_read_obj(((KOS_ARRAY_STORAGE *)hdr)->next)));
             {
                 KOS_ATOMIC(KOS_OBJ_ID) *item = &((KOS_ARRAY_STORAGE *)hdr)->buf[0];
                 KOS_ATOMIC(KOS_OBJ_ID) *end  = item + ((KOS_ARRAY_STORAGE *)hdr)->capacity;

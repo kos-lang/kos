@@ -47,7 +47,7 @@ static int _unchain_reentrant_frame(KOS_CONTEXT ctx)
 
         assert(KOS_atomic_read_u32(OBJPTR(STACK, old_stack)->size) > 0);
 
-        old_stack = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, old_stack)->buf[0]);
+        old_stack = KOS_atomic_read_obj(OBJPTR(STACK, old_stack)->buf[0]);
 
         assert( ! IS_BAD_PTR(old_stack));
 
@@ -278,7 +278,7 @@ void _KOS_stack_pop(KOS_CONTEXT ctx)
     assert(size);
 
     assert((size == 1 && IS_BAD_PTR(stack->buf[0])) ||
-           IS_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
+           IS_SMALL_INT(KOS_atomic_read_obj(stack->buf[size - 1])));
 
     if (size > 1) {
         if ( ! (stack->header.flags & KOS_REENTRANT_STACK)) {
@@ -288,7 +288,7 @@ void _KOS_stack_pop(KOS_CONTEXT ctx)
 
             assert(ctx->regs_idx < size);
 
-            assert((int)num_regs_u == GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
+            assert((int)num_regs_u == GET_SMALL_INT(KOS_atomic_read_obj(stack->buf[size - 1])));
 
             size             -= delta;
             ctx->stack_depth -= delta;
@@ -300,7 +300,7 @@ void _KOS_stack_pop(KOS_CONTEXT ctx)
             const KOS_OBJ_ID new_stack_obj = stack->buf[0];
 
             assert(size == 1U + KOS_STACK_EXTRA +
-                           (uint64_t)GET_SMALL_INT((KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1])));
+                           (uint64_t)GET_SMALL_INT(KOS_atomic_read_obj(stack->buf[size - 1])));
             assert(GET_OBJ_TYPE(new_stack_obj) == OBJ_STACK);
 
             ctx->stack_depth -= size;
@@ -314,7 +314,7 @@ void _KOS_stack_pop(KOS_CONTEXT ctx)
     /* If we ran out of stack, go to the previous stack object in the chain */
     while (size == 1) {
 
-        const KOS_OBJ_ID new_stack_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[0]);
+        const KOS_OBJ_ID new_stack_obj = KOS_atomic_read_obj(stack->buf[0]);
 
         if (IS_BAD_PTR(new_stack_obj)) {
             size = 0;
@@ -334,7 +334,7 @@ void _KOS_stack_pop(KOS_CONTEXT ctx)
     /* Push previous reentrant frame (generator or closure) on the stack */
     if (size) {
 
-        const KOS_OBJ_ID new_stack_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(stack->buf[size - 1]);
+        const KOS_OBJ_ID new_stack_obj = KOS_atomic_read_obj(stack->buf[size - 1]);
 
         if (IS_SMALL_INT(new_stack_obj)) {
             assert(size > KOS_STACK_EXTRA);
@@ -392,7 +392,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 
             const KOS_OBJ_ID prev = stack;
 
-            stack = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack)->buf[0]);
+            stack = KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[0]);
             if (IS_BAD_PTR(stack))
                 --size;
             else {
@@ -405,7 +405,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
                 if (reentrant && prev != ctx->stack) {
                     assert(size > 0);
                     assert(prev_size != ~0U);
-                    assert((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack)->buf[prev_size - 1]) == prev);
+                    assert(KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[prev_size - 1]) == prev);
 
                     size      = prev_size - 1;
                     prev_size = ~0U;
@@ -414,7 +414,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
         }
         else {
 
-            KOS_OBJ_ID num_regs_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, stack)->buf[size - 1]);
+            KOS_OBJ_ID num_regs_obj = KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[size - 1]);
 
             if (IS_SMALL_INT(num_regs_obj)) {
                 int64_t    num_regs;
@@ -446,7 +446,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 
                 assert(GET_OBJ_TYPE(num_regs_obj) == OBJ_STACK);
                 assert(KOS_atomic_read_u32(OBJPTR(STACK, num_regs_obj)->size) > 0);
-                assert((KOS_OBJ_ID)KOS_atomic_read_ptr(OBJPTR(STACK, num_regs_obj)->buf[0]) == stack);
+                assert(KOS_atomic_read_obj(OBJPTR(STACK, num_regs_obj)->buf[0]) == stack);
                 assert(OBJPTR(STACK, num_regs_obj)->header.flags & KOS_REENTRANT_STACK);
                 assert( ! reentrant);
 
@@ -478,7 +478,7 @@ typedef struct _DUMP_CONTEXT {
 
 static KOS_FUNCTION *_get_func(KOS_ATOMIC(KOS_OBJ_ID) *stack_frame)
 {
-    KOS_OBJ_ID    func_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(*stack_frame);
+    KOS_OBJ_ID    func_obj = KOS_atomic_read_obj(*stack_frame);
     KOS_FUNCTION *func;
 
     if (GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION)
@@ -493,7 +493,7 @@ static KOS_FUNCTION *_get_func(KOS_ATOMIC(KOS_OBJ_ID) *stack_frame)
 
 static uint32_t _get_instr_offs(KOS_ATOMIC(KOS_OBJ_ID) *stack_frame)
 {
-    KOS_OBJ_ID offs_obj = (KOS_OBJ_ID)KOS_atomic_read_ptr(stack_frame[2]);
+    KOS_OBJ_ID offs_obj = KOS_atomic_read_obj(stack_frame[2]);
     int64_t    offs;
 
     assert(IS_SMALL_INT(offs_obj));
