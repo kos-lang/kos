@@ -1722,7 +1722,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
 
             assert(size > 0U);
             assert(color != GRAY);
-            assert(size <= (uint8_t *)page_end - (uint8_t *)ptr);
+            assert(size <= (size_t)((uint8_t *)page_end - (uint8_t *)ptr));
 
             if (color) {
                 if (_evacuate_object(ctx, hdr, size)) {
