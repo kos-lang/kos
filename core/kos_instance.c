@@ -101,17 +101,22 @@ int _KOS_seq_fail(void)
 static int _register_thread(KOS_INSTANCE *inst,
                             KOS_CONTEXT   ctx)
 {
-    int error = KOS_SUCCESS;
+    int    error = KOS_SUCCESS;
+    size_t i;
 
     assert( ! _KOS_tls_get(inst->threads.thread_key));
 
-    ctx->inst         = inst;
-    ctx->exception    = KOS_BADPTR;
-    ctx->retval       = KOS_BADPTR;
-    ctx->stack        = KOS_BADPTR;
-    ctx->regs_idx     = 0;
-    ctx->stack_depth  = 0;
-    ctx->obj_refs     = 0; /* TODO delete */
+    ctx->inst          = inst;
+    ctx->exception     = KOS_BADPTR;
+    ctx->retval        = KOS_BADPTR;
+    ctx->stack         = KOS_BADPTR;
+    ctx->local_refs    = KOS_BADPTR;
+    ctx->regs_idx      = 0;
+    ctx->stack_depth   = 0;
+    ctx->tmp_ref_count = 0;
+
+    for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); ++i)
+        ctx->tmp_refs[i] = 0;
 
     if (_KOS_tls_get(inst->threads.thread_key))
         RAISE_EXCEPTION(str_err_thread_registered);
@@ -421,12 +426,14 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     *out_ctx = ctx;
 
 _error:
-    if (error && heap_ok)
-        _KOS_heap_destroy(inst);
+    if (error) {
+        if (heap_ok)
+            _KOS_heap_destroy(inst);
 
-    if (error && thread_ok) {
-        _KOS_tls_destroy(inst->threads.thread_key);
-        _KOS_destroy_mutex(&inst->threads.mutex);
+        if (thread_ok) {
+            _KOS_tls_destroy(inst->threads.thread_key);
+            _KOS_destroy_mutex(&inst->threads.mutex);
+        }
     }
 
     inst->threads.main_thread.retval = KOS_BADPTR;
@@ -837,28 +844,74 @@ void KOS_raise_generator_end(KOS_CONTEXT ctx)
         KOS_raise_exception(ctx, exception);
 }
 
-void KOS_track_ref(KOS_CONTEXT  ctx,
-                   KOS_OBJ_REF *ref)
+int KOS_push_local_scope(KOS_CONTEXT ctx, unsigned size)
 {
-    ref->next     = ctx->obj_refs;
-    ctx->obj_refs = ref;
-}
+    int             error = KOS_ERROR_EXCEPTION;
+    KOS_LOCAL_REFS *refs;
+    size_t          alloc_size;
 
-void KOS_untrack_ref(KOS_CONTEXT  ctx,
-                     KOS_OBJ_REF *ref)
-{
-    KOS_OBJ_REF **slot = &ctx->obj_refs;
-    KOS_OBJ_REF  *cur;
+    assert(size <= KOS_MAX_REFS_IN_SCOPE);
 
-    cur = *slot;
+    if (size > KOS_MAX_REFS_IN_SCOPE)
+        return KOS_ERROR_INTERNAL;
 
-    while (cur && cur != ref) {
+    if (size == 0)
+        size = KOS_MAX_REFS_IN_SCOPE;
 
-        slot = &cur->next;
-        cur  = *slot;
+    alloc_size = sizeof(KOS_LOCAL_REFS) + ((size - 1U) * sizeof(void *));
+
+    refs  = (KOS_LOCAL_REFS *)_KOS_alloc_object(ctx,
+                                                OBJ_LOCAL_REFS,
+                                                alloc_size);
+    if (refs) {
+
+        refs->header.num_tracked = 0;
+        refs->header.capacity    = (uint8_t)size;
+        refs->next               = ctx->local_refs;
+        ctx->local_refs          = OBJID(LOCAL_REFS, refs);
+
+        error = KOS_SUCCESS;
     }
 
-    assert(cur);
+    return error;
+}
 
-    *slot = ref->next;
+void KOS_pop_local_scope(KOS_CONTEXT ctx)
+{
+    assert( ! IS_BAD_PTR(ctx->local_refs));
+
+    ctx->local_refs = OBJPTR(LOCAL_REFS, ctx->local_refs)->next;
+}
+
+int KOS_push_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref)
+{
+    KOS_LOCAL_REFS *refs;
+
+    assert( ! IS_BAD_PTR(ctx->local_refs));
+
+    refs = OBJPTR(LOCAL_REFS, ctx->local_refs);
+
+    assert(refs->header.num_tracked < refs->header.capacity);
+
+    if (refs->header.num_tracked >= refs->header.capacity)
+        return KOS_ERROR_INTERNAL;
+
+    refs->refs[refs->header.num_tracked++] = ref;
+
+    return KOS_SUCCESS;
+}
+
+void KOS_pop_local(KOS_CONTEXT ctx, KOS_OBJ_ID *obj_id)
+{
+    KOS_LOCAL_REFS *refs;
+
+    assert( ! IS_BAD_PTR(ctx->local_refs));
+
+    refs = OBJPTR(LOCAL_REFS, ctx->local_refs);
+
+    assert(refs->header.num_tracked > 0);
+
+    --refs->header.num_tracked;
+
+    assert(refs->refs[refs->header.num_tracked] == obj_id);
 }

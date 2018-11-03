@@ -257,10 +257,10 @@ static int _salvage_item(KOS_CONTEXT ctx,
     return ret;
 }
 
-static void _copy_table(KOS_CONTEXT             ctx,
-                        KOS_ATOMIC(KOS_OBJ_ID) *props,
-                        KOS_OBJ_ID              old_table,
-                        KOS_OBJ_ID              new_table)
+static void _copy_table(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  src_obj_id,
+                        KOS_OBJ_ID  old_table,
+                        KOS_OBJ_ID  new_table)
 {
     const uint32_t old_capacity = KOS_atomic_read_u32(
                                     OBJPTR(OBJECT_STORAGE, old_table)->capacity);
@@ -270,6 +270,8 @@ static void _copy_table(KOS_CONTEXT             ctx,
     const uint32_t fuzz         = 64U * (old_capacity - KOS_atomic_read_u32(
                                     OBJPTR(OBJECT_STORAGE, old_table)->num_slots_open));
     uint32_t       i            = fuzz & mask;
+
+    KOS_ATOMIC(KOS_OBJ_ID) *props;
 
     KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies, 1);
 
@@ -302,6 +304,7 @@ static void _copy_table(KOS_CONTEXT             ctx,
             _KOS_yield();
     }
 
+    props = _get_properties(src_obj_id);
     if (KOS_atomic_cas_ptr(*props, old_table, new_table)) {
 #ifndef NDEBUG
         for (i = 0; i < old_capacity; i++) {
@@ -343,9 +346,7 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  old_table,
                               uint32_t    grow_factor)
 {
-    int                     error = KOS_SUCCESS;
-    KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
-
+    int            error        = KOS_SUCCESS;
     const uint32_t old_capacity = IS_BAD_PTR(old_table) ? 0U :
         KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, old_table)->capacity);
     const uint32_t new_capacity = old_capacity ? old_capacity * grow_factor
@@ -353,19 +354,21 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
     KOS_OBJ_ID     new_table    = KOS_BADPTR;
 
     if ( ! IS_BAD_PTR(old_table))
-        new_table = _read_props(&OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table);
-
-    assert(props);
+        new_table = KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table);
 
     if ( ! IS_BAD_PTR(new_table)) {
         /* Another thread is already resizing the property table, help it */
-        _copy_table(ctx, props, old_table, new_table);
+        _copy_table(ctx, obj_id, old_table, new_table);
 
         KOS_PERF_CNT(object_resize_success);
     }
     else {
 
+        _KOS_track_refs(ctx, 2, &obj_id, &old_table);
+
         new_table = _alloc_buffer(ctx, new_capacity);
+
+        _KOS_untrack_refs(ctx, 2);
 
         if ( ! IS_BAD_PTR(new_table)) {
             unsigned i;
@@ -387,7 +390,7 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
                                        KOS_BADPTR,
                                        new_table)) {
 
-                    _copy_table(ctx, props, old_table, new_table);
+                    _copy_table(ctx, obj_id, old_table, new_table);
 
                     KOS_PERF_CNT(object_resize_success);
                 }
@@ -395,20 +398,24 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
                 else {
                     /* Help copy the new table if it is still being resized */
                     if (KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies)) {
-                        new_table = _read_props(&OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table);
-                        _copy_table(ctx, props, old_table, new_table);
+                        new_table = KOS_atomic_read_obj(
+                                OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table);
+                        _copy_table(ctx, obj_id, old_table, new_table);
                     }
 
                     KOS_PERF_CNT(object_resize_fail);
                 }
             }
-            else
+            else {
+                KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
+
                 if ( ! KOS_atomic_cas_ptr(*props,
                                           KOS_BADPTR,
                                           new_table)) {
                     /* Somebody already resized it */
                     KOS_PERF_CNT(object_resize_fail);
                 }
+            }
         }
         else
             error = KOS_ERROR_EXCEPTION;
@@ -459,10 +466,11 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
                 /* Object property table is being resized, so read value from the new table */
                 if (cur_value == CLOSED) {
                     /* Help copy the old table to avoid races when it is partially copied */
-                    KOS_OBJ_ID new_prop_table = _read_props(&OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
+                    KOS_OBJ_ID new_prop_table = KOS_atomic_read_obj(
+                            OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
                     assert( ! IS_BAD_PTR(new_prop_table));
 
-                    _copy_table(ctx, props, prop_table, new_prop_table);
+                    _copy_table(ctx, obj_id, prop_table, new_prop_table);
 
                     idx          = hash;
                     prop_table   = new_prop_table;
@@ -565,6 +573,8 @@ int KOS_set_property(KOS_CONTEXT ctx,
     else {
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
+        _KOS_track_refs(ctx, 3, &obj_id, &prop, &value);
+
         /* Check if property table is non-empty */
         if (IS_BAD_PTR(_read_props(props))) {
 
@@ -575,10 +585,13 @@ int KOS_set_property(KOS_CONTEXT ctx,
             }
             /* Allocate property table */
             else {
-                const int rerror = _resize_prop_table(ctx, obj_id, KOS_BADPTR, 0U);
-                if (rerror) {
+                error = _resize_prop_table(ctx, obj_id, KOS_BADPTR, 0U);
+                if ( ! error) {
+                    error = KOS_ERROR_EXCEPTION;
+                    props = _get_properties(obj_id);
+                }
+                else {
                     assert(KOS_is_exception_pending(ctx));
-                    error = rerror;
                     props = 0;
                 }
             }
@@ -635,6 +648,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                         if (error)
                             break;
 
+                        props        = _get_properties(obj_id);
                         prop_table   = _read_props(props);
                         idx          = hash;
                         items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
@@ -673,11 +687,11 @@ int KOS_set_property(KOS_CONTEXT ctx,
 
                 /* Another thread is resizing the table - use new property table */
                 if (oldval == CLOSED) {
-                    const KOS_OBJ_ID new_prop_table = _read_props(
-                            &OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
+                    const KOS_OBJ_ID new_prop_table = KOS_atomic_read_obj(
+                            OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
                     assert( ! IS_BAD_PTR(new_prop_table));
 
-                    _copy_table(ctx, props, prop_table, new_prop_table);
+                    _copy_table(ctx, obj_id, prop_table, new_prop_table);
 
                     prop_table   = new_prop_table;
                     idx          = hash;
@@ -696,6 +710,8 @@ int KOS_set_property(KOS_CONTEXT ctx,
             if ( ! error && _need_resize(prop_table, num_reprobes))
                 error = _resize_prop_table(ctx, obj_id, prop_table, 2U);
         }
+
+        _KOS_untrack_refs(ctx, 3);
     }
 
 #ifdef CONFIG_PERF
@@ -741,14 +757,20 @@ int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                      KOS_FUNCTION_HANDLER getter,
                                      KOS_FUNCTION_HANDLER setter)
 {
-    int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID dyn_prop = KOS_new_builtin_dynamic_prop(ctx, module_obj, getter, setter);
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID dyn_prop;
 
-    TRY_OBJID(dyn_prop);
+    _KOS_track_refs(ctx, 3, &obj_id, &prop, &module_obj);
 
-    TRY(KOS_set_property(ctx, obj_id, prop, dyn_prop));
+    dyn_prop = KOS_new_builtin_dynamic_prop(ctx, module_obj, getter, setter);
 
-_error:
+    _KOS_untrack_refs(ctx, 3);
+
+    if ( ! IS_BAD_PTR(dyn_prop))
+        error = KOS_set_property(ctx, obj_id, prop, dyn_prop);
+    else
+        error = KOS_ERROR_EXCEPTION;
+
     return error;
 }
 
@@ -836,32 +858,31 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
                                KOS_OBJ_ID                 obj_id,
                                enum KOS_OBJECT_WALK_DEPTH deep)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_REF walk;
-    KOS_OBJ_ID  key_table_obj;
+    int        error         = KOS_SUCCESS;
+    KOS_OBJ_ID walk_id       = KOS_BADPTR;
+    KOS_OBJ_ID key_table_obj = KOS_BADPTR;
+    KOS_OBJ_ID prop_table    = KOS_BADPTR;
 
-    walk.obj_id = OBJID(OBJECT_WALK,
-                        (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
-                                                             OBJ_OBJECT_WALK,
-                                                             sizeof(KOS_OBJECT_WALK)));
+    _KOS_track_refs(ctx, 4, &obj_id, &walk_id, &key_table_obj, &prop_table);
 
-    KOS_track_ref(ctx, &walk);
-
-    if (IS_BAD_PTR(walk.obj_id))
+    walk_id = OBJID(OBJECT_WALK,
+                    (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
+                                                         OBJ_OBJECT_WALK,
+                                                         sizeof(KOS_OBJECT_WALK)));
+    if (IS_BAD_PTR(walk_id))
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-    OBJPTR(OBJECT_WALK, walk.obj_id)->header.type = OBJ_OBJECT_WALK;
-    OBJPTR(OBJECT_WALK, walk.obj_id)->obj         = obj_id;
-    OBJPTR(OBJECT_WALK, walk.obj_id)->key_table   = KOS_BADPTR;
-    OBJPTR(OBJECT_WALK, walk.obj_id)->index       = 0;
-    OBJPTR(OBJECT_WALK, walk.obj_id)->last_key    = KOS_BADPTR;
-    OBJPTR(OBJECT_WALK, walk.obj_id)->last_value  = KOS_BADPTR;
+    OBJPTR(OBJECT_WALK, walk_id)->header.type = OBJ_OBJECT_WALK;
+    OBJPTR(OBJECT_WALK, walk_id)->obj         = obj_id;
+    OBJPTR(OBJECT_WALK, walk_id)->key_table   = KOS_BADPTR;
+    OBJPTR(OBJECT_WALK, walk_id)->index       = 0;
+    OBJPTR(OBJECT_WALK, walk_id)->last_key    = KOS_BADPTR;
+    OBJPTR(OBJECT_WALK, walk_id)->last_value  = KOS_BADPTR;
 
     key_table_obj = KOS_new_object(ctx);
     TRY_OBJID(key_table_obj);
 
     do {
-        KOS_OBJ_ID prop_table;
         KOS_PITEM *cur_item;
         KOS_PITEM *items_end;
 
@@ -888,9 +909,10 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
                 continue;
 
             if (value == CLOSED) {
-                const KOS_OBJ_ID new_prop_table = _read_props(&OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
+                const KOS_OBJ_ID new_prop_table = KOS_atomic_read_obj(
+                        OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
 
-                _copy_table(ctx, props, prop_table, new_prop_table);
+                _copy_table(ctx, obj_id, prop_table, new_prop_table);
 
                 prop_table = new_prop_table;
                 cur_item   = OBJPTR(OBJECT_STORAGE, prop_table)->items - 1;
@@ -903,18 +925,18 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
         }
     } while ( ! IS_BAD_PTR(obj_id) && deep);
 
-    OBJPTR(OBJECT_WALK, walk.obj_id)->key_table =
+    OBJPTR(OBJECT_WALK, walk_id)->key_table =
             _read_props(_get_properties(key_table_obj));
 
 _error:
-    KOS_untrack_ref(ctx, &walk);
+    _KOS_untrack_refs(ctx, 4);
 
     if (error)
-        walk.obj_id = KOS_BADPTR; /* Object is garbage collected */
+        walk_id = KOS_BADPTR; /* Object is garbage collected */
 
-    ctx->retval = walk.obj_id;
+    ctx->retval = walk_id;
 
-    return walk.obj_id;
+    return walk_id;
 }
 
 KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
@@ -922,9 +944,15 @@ KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
 {
     int              error = KOS_SUCCESS;
     KOS_OBJECT_WALK *src;
-    KOS_OBJECT_WALK *walk  = (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
-                                                                  OBJ_OBJECT_WALK,
-                                                                  sizeof(KOS_OBJECT_WALK));
+    KOS_OBJECT_WALK *walk;
+
+    _KOS_track_refs(ctx, 1, &walk_id);
+
+    walk = (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
+                                                OBJ_OBJECT_WALK,
+                                                sizeof(KOS_OBJECT_WALK));
+
+    _KOS_untrack_refs(ctx, 1);
 
     if ( ! walk)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);

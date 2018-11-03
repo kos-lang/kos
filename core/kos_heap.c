@@ -32,6 +32,7 @@
 #include "kos_memory.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -403,8 +404,8 @@ static void _try_collect_garbage(KOS_CONTEXT ctx)
 {
     struct _KOS_HEAP *const heap = _get_heap(ctx);
 
-    if ( ! (ctx->inst->flags & KOS_INST_MANUAL_GC) &&
-        heap->used_size > heap->gc_threshold) {
+    if (heap->used_size > heap->gc_threshold &&
+        ! (ctx->inst->flags & KOS_INST_MANUAL_GC)) {
 
         _KOS_unlock_mutex(&heap->mutex);
 
@@ -1071,6 +1072,18 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
                     _set_mark_state(KOS_atomic_read_obj(*item), GRAY);
             }
             break;
+
+        case OBJ_LOCAL_REFS:
+            {
+                KOS_OBJ_ID **ref = &OBJPTR(LOCAL_REFS, obj_id)->refs[0];
+                KOS_OBJ_ID **end = ref + OBJPTR(LOCAL_REFS, obj_id)->header.num_tracked;
+
+                _set_mark_state(OBJPTR(LOCAL_REFS, obj_id)->next, GRAY);
+
+                for ( ; ref < end; ++ref)
+                    _set_mark_state(**ref, GRAY);
+            }
+            break;
     }
 }
 
@@ -1155,7 +1168,7 @@ static int _gray_to_black(struct _KOS_HEAP *heap)
 
 static void _mark_from_thread_context(KOS_CONTEXT ctx)
 {
-    KOS_OBJ_REF *ref;
+    uint32_t i;
 
     if ( ! IS_BAD_PTR(ctx->exception))
         _mark_object_black(ctx->exception);
@@ -1163,11 +1176,16 @@ static void _mark_from_thread_context(KOS_CONTEXT ctx)
         _mark_object_black(ctx->retval);
     if ( ! IS_BAD_PTR(ctx->stack))
         _mark_object_black(ctx->stack);
+    if ( ! IS_BAD_PTR(ctx->local_refs))
+        _mark_object_black(ctx->local_refs);
 
-    ref = ctx->obj_refs;
-    while (ref) {
-        _mark_object_black(ref->obj_id);
-        ref = ref->next;
+    for (i = 0; i < ctx->tmp_ref_count; ++i) {
+        KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
+        if (obj_id_ptr) {
+            const KOS_OBJ_ID obj_id = *obj_id_ptr;
+            if ( ! IS_BAD_PTR(obj_id))
+                _mark_object_black(obj_id);
+        }
     }
 }
 
@@ -1392,9 +1410,13 @@ static int _evacuate_object(KOS_CONTEXT     ctx,
                             uint32_t        size)
 {
     int             error   = KOS_SUCCESS;
-    KOS_OBJ_HEADER *new_obj = (KOS_OBJ_HEADER *)_KOS_alloc_object(ctx,
-                                                                  (enum KOS_OBJECT_TYPE)hdr->type,
-                                                                  size);
+    KOS_OBJ_HEADER *new_obj;
+
+    assert(size <= (_KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS));
+
+    new_obj = (KOS_OBJ_HEADER *)_alloc_object(ctx,
+                                              (enum KOS_OBJECT_TYPE)hdr->type,
+                                              size);
 
     if (new_obj) {
         memcpy(new_obj, hdr, size);
@@ -1521,6 +1543,18 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
                     _update_child_ptr((KOS_OBJ_ID *)item);
             }
             break;
+
+        case OBJ_LOCAL_REFS:
+            {
+                KOS_OBJ_ID **ref = &((KOS_LOCAL_REFS *)hdr)->refs[0];
+                KOS_OBJ_ID **end = ref + ((KOS_LOCAL_REFS *)hdr)->header.num_tracked;
+
+                _update_child_ptr(&((KOS_LOCAL_REFS *)hdr)->next);
+
+                for ( ; ref < end; ++ref)
+                    _update_child_ptr(*ref);
+            }
+            break;
     }
 }
 
@@ -1601,16 +1635,18 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
 
         while (ctx) {
 
-            KOS_OBJ_REF *ref = ctx->obj_refs;
-
-            while (ref) {
-                _update_child_ptr((KOS_OBJ_ID *)&ref->obj_id);
-                ref = ref->next;
-            }
+            uint32_t i;
 
             _update_child_ptr(&ctx->exception);
             _update_child_ptr(&ctx->retval);
             _update_child_ptr(&ctx->stack);
+            _update_child_ptr(&ctx->local_refs);
+
+            for (i = 0; i < ctx->tmp_ref_count; ++i) {
+                KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
+                if (obj_id_ptr)
+                    _update_child_ptr(obj_id_ptr);
+            }
 
             ctx = ctx->next;
         }
@@ -1820,4 +1856,36 @@ int KOS_collect_garbage(KOS_CONTEXT           ctx,
         error = KOS_ERROR_EXCEPTION;
 
     return error;
+}
+
+void _KOS_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
+{
+    va_list  args;
+    uint32_t i;
+    uint32_t end;
+
+    assert(num_entries > 0);
+    assert((size_t)(ctx->tmp_ref_count + num_entries) <=
+           sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]));
+
+    i   = ctx->tmp_ref_count;
+    end = i + num_entries;
+
+    va_start(args, num_entries);
+
+    do {
+        ctx->tmp_refs[i] = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
+        ++i;
+    } while (i < end);
+
+    ctx->tmp_ref_count = end;
+
+    va_end(args);
+}
+
+void _KOS_untrack_refs(KOS_CONTEXT ctx, int num_entries)
+{
+    assert(num_entries > 0 && (unsigned)num_entries <= ctx->tmp_ref_count);
+
+    ctx->tmp_ref_count -= num_entries;
 }

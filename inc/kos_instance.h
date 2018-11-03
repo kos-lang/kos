@@ -64,10 +64,10 @@ enum _KOS_STACK_HEADER_FLAGS {
 };
 
 typedef struct _KOS_STACK_HEADER {
-    KOS_OBJ_ID  alloc_size;
-    uint8_t     type;
-    uint8_t     flags;
-    uint8_t     yield_reg; /* In a generator stack, this is the index of the yield register */
+    KOS_OBJ_ID alloc_size;
+    uint8_t    type;
+    uint8_t    flags;
+    uint8_t    yield_reg; /* In a generator stack, this is the index of the yield register */
 } KOS_STACK_HEADER;
 
 /* Stack management:
@@ -100,10 +100,12 @@ struct _KOS_THREAD_CONTEXT {
     _KOS_PAGE    *cur_page;
     KOS_OBJ_ID    exception;
     KOS_OBJ_ID    retval;
-    KOS_OBJ_ID    stack;    /* Topmost container for registers & stack frames */
-    uint32_t      regs_idx; /* Index of first register in current frame       */
+    KOS_OBJ_ID    stack;       /* Topmost container for registers & stack frames */
+    KOS_OBJ_ID    local_refs;  /* Object id refs on user's local stack           */
+    KOS_OBJ_ID   *tmp_refs[9]; /* Object id refs during object creation          */
+    uint32_t      tmp_ref_count;
+    uint32_t      regs_idx;    /* Index of first register in current frame       */
     uint32_t      stack_depth;
-    KOS_OBJ_REF  *obj_refs;
 };
 
 struct _KOS_PROTOTYPES {
@@ -283,11 +285,13 @@ KOS_OBJ_ID _KOS_call_function(KOS_CONTEXT           ctx,
 #define KOS_apply_function(ctx, func_obj, this_obj, args_obj) \
     _KOS_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
 
-void KOS_track_ref(KOS_CONTEXT  ctx,
-                   KOS_OBJ_REF *ref);
+int KOS_push_local_scope(KOS_CONTEXT ctx, unsigned size);
 
-void KOS_untrack_ref(KOS_CONTEXT  ctx,
-                     KOS_OBJ_REF *ref);
+void KOS_pop_local_scope(KOS_CONTEXT ctx);
+
+int KOS_push_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref);
+
+void KOS_pop_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref);
 
 struct _KOS_GC_STATS {
     unsigned num_objs_evacuated;

@@ -97,7 +97,6 @@ static int _test_object(KOS_CONTEXT           ctx,
                         int64_t               dead_size,
                         struct _KOS_GC_STATS *orig_stats)
 {
-    KOS_OBJ_REF          obj_ref;
     struct _KOS_GC_STATS stats;
     int64_t              size;
 
@@ -105,17 +104,15 @@ static int _test_object(KOS_CONTEXT           ctx,
 
     size = _get_obj_size(obj_id);
 
-    obj_ref.obj_id = obj_id;
-
-    KOS_track_ref(ctx, &obj_ref);
+    TEST(KOS_push_local(ctx, &obj_id) == KOS_SUCCESS);
 
     ctx->retval = KOS_BADPTR;
 
     TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-    KOS_untrack_ref(ctx, &obj_ref);
+    KOS_pop_local(ctx, &obj_id);
 
-    TEST(_get_obj_size(obj_ref.obj_id) == size);
+    TEST(_get_obj_size(obj_id) == size);
 
     TEST(stats.num_objs_evacuated == orig_stats->num_objs_evacuated + num_objs);
     TEST(stats.num_objs_freed     == num_dead_objs);
@@ -167,6 +164,8 @@ int main(void)
         KOS_OBJ_ID obj_id[3];
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+
+        TEST(KOS_push_local_scope(ctx, 1) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(ctx, &base_stats) == KOS_SUCCESS);
 
@@ -414,7 +413,7 @@ int main(void)
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+        TEST(KOS_collect_garbage(ctx, &base_stats) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -553,15 +552,15 @@ int main(void)
          * the objects get destroyed.
          */
         {
-            KOS_OBJ_ID  array_id;
-            KOS_OBJ_ID  obj_id;
-            KOS_OBJ_REF ref;
+            KOS_OBJ_ID array_id = KOS_BADPTR;
+            KOS_OBJ_ID obj_id;
+
+            TEST(KOS_push_local_scope(ctx, 1) == KOS_SUCCESS);
 
             array_id = KOS_new_array(ctx, 3);
             TEST( ! IS_BAD_PTR(array_id));
 
-            ref.obj_id = array_id;
-            KOS_track_ref(ctx, &ref);
+            TEST(KOS_push_local(ctx, &array_id) == KOS_SUCCESS);
 
             obj_id = KOS_new_builtin_function(ctx, _handler, 0);
             TEST( ! IS_BAD_PTR(obj_id));
@@ -596,6 +595,7 @@ int main(void)
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_ERROR_EXCEPTION);
 
             /* The following objects have been evacuated:
+             * - 1 for local scope object
              * - 2 for array
              * - 1 for function
              * - 6 for class:
@@ -611,7 +611,7 @@ int main(void)
              * - 1 for string in retval
              * - 1 for string as exception
              */
-            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 14);
+            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 15);
             TEST(stats.num_objs_freed     == 1);
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == 1);
@@ -620,7 +620,9 @@ int main(void)
             TEST(stats.size_freed         >  0);
             TEST(stats.size_kept          >  0);
 
-            KOS_untrack_ref(ctx, &ref);
+            KOS_pop_local_scope(ctx);
+
+            TEST(KOS_get_array_size(array_id) == 3);
 
             _KOS_stack_pop(ctx);
             ctx->stack = KOS_BADPTR;
@@ -631,7 +633,7 @@ int main(void)
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
             TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
-            TEST(stats.num_objs_freed     == 15);
+            TEST(stats.num_objs_freed     == 16);
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == 0);
             TEST(stats.num_pages_freed    == 2);
@@ -676,29 +678,31 @@ int main(void)
     /* Test garbage collector with two big buffer objects. */
     {
         struct _KOS_GC_STATS stats;
-        KOS_OBJ_REF          obj_ref[2];
+        KOS_OBJ_ID           obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
-        obj_ref[0].obj_id = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
-        obj_ref[1].obj_id = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
+        TEST(KOS_push_local_scope(ctx, 2) == KOS_SUCCESS);
 
-        TEST( ! IS_BAD_PTR(obj_ref[0].obj_id));
-        TEST( ! IS_BAD_PTR(obj_ref[1].obj_id));
+        TEST(KOS_push_local(ctx, &obj_id[0]) == KOS_SUCCESS);
+        TEST(KOS_push_local(ctx, &obj_id[1]) == KOS_SUCCESS);
 
-        _fill_buffer(obj_ref[0].obj_id, 0x0A);
-        _fill_buffer(obj_ref[1].obj_id, 0x0B);
+        obj_id[0] = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
+        obj_id[1] = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
 
-        KOS_track_ref(ctx, &obj_ref[0]);
-        KOS_track_ref(ctx, &obj_ref[1]);
+        TEST( ! IS_BAD_PTR(obj_id[0]));
+        TEST( ! IS_BAD_PTR(obj_id[1]));
+
+        _fill_buffer(obj_id[0], 0x0A);
+        _fill_buffer(obj_id[1], 0x0B);
 
         _KOS_heap_release_thread_page(ctx);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 2);
+        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 3);
         TEST(stats.num_objs_freed     == 0);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 2);
@@ -707,18 +711,17 @@ int main(void)
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          >  0);
 
-        TEST(_test_buffer(obj_ref[0].obj_id, 0x0A, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
-        TEST(_test_buffer(obj_ref[1].obj_id, 0x0B, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
+        TEST(_test_buffer(obj_id[0], 0x0A, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
+        TEST(_test_buffer(obj_id[1], 0x0B, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
 
-        KOS_untrack_ref(ctx, &obj_ref[0]);
-        KOS_untrack_ref(ctx, &obj_ref[1]);
+        KOS_pop_local_scope(ctx);
 
         ctx->retval = KOS_BADPTR;
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
-        TEST(stats.num_objs_freed     == 4);
+        TEST(stats.num_objs_freed     == 5);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 0);
         TEST(stats.num_pages_freed    >= _KOS_POOL_SIZE / _KOS_PAGE_SIZE);
@@ -747,20 +750,22 @@ int main(void)
             for ( ; size <= max_size; size += 8) {
 
                 struct _KOS_GC_STATS stats;
-                KOS_OBJ_REF          obj_ref[_KOS_POOL_SIZE / _KOS_PAGE_SIZE];
+                KOS_OBJ_ID           obj_ids[_KOS_POOL_SIZE / _KOS_PAGE_SIZE];
                 unsigned             i;
-                const unsigned       num_objs = (unsigned)(sizeof(obj_ref) / sizeof(obj_ref[0]));
+                const unsigned       num_objs = (unsigned)(sizeof(obj_ids) / sizeof(obj_ids[0]));
 
                 TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
                 TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
-                for (i = 0; i < num_objs; ++i) {
-                    obj_ref[i].obj_id = KOS_new_buffer(ctx, size);
-                    TEST( ! IS_BAD_PTR(obj_ref[i].obj_id));
-                    KOS_track_ref(ctx, &obj_ref[i]);
+                TEST(KOS_push_local_scope(ctx, num_objs) == KOS_SUCCESS);
 
-                    _fill_buffer(obj_ref[i].obj_id, i);
+                for (i = 0; i < num_objs; ++i) {
+                    TEST(KOS_push_local(ctx, &obj_ids[i]) == KOS_SUCCESS);
+                    obj_ids[i] = KOS_new_buffer(ctx, size);
+                    TEST( ! IS_BAD_PTR(obj_ids[i]));
+
+                    _fill_buffer(obj_ids[i], i);
                 }
 
                 TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
@@ -775,9 +780,10 @@ int main(void)
                 TEST(stats.size_kept          >  0);
 
                 for (i = 0; i < num_objs; ++i) {
-                    TEST(_test_buffer(obj_ref[i].obj_id, i, size) == KOS_SUCCESS);
-                    KOS_untrack_ref(ctx, &obj_ref[i]);
+                    TEST(_test_buffer(obj_ids[i], i, size) == KOS_SUCCESS);
                 }
+
+                KOS_pop_local_scope(ctx);
 
                 TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 

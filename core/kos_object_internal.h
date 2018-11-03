@@ -171,4 +171,8 @@ int _KOS_heap_lend_page(KOS_CONTEXT ctx,
                         size_t      size);
 #endif
 
+void _KOS_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
+
+void _KOS_untrack_refs(KOS_CONTEXT ctx, int num_entries);
+
 #endif

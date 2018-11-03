@@ -155,49 +155,48 @@ static KOS_OBJ_ID _set_prototype(KOS_CONTEXT ctx,
 
 KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 {
-    KOS_OBJ_REF func_ref;
-    func_ref.obj_id = OBJID(CLASS, (KOS_CLASS *)
-                          _KOS_alloc_object(ctx,
-                                            OBJ_CLASS,
-                                            sizeof(KOS_CLASS)));
+    KOS_OBJ_ID func_obj = KOS_BADPTR;
 
-    if ( ! IS_BAD_PTR(func_ref.obj_id)) {
+    _KOS_track_refs(ctx, 2, &func_obj, &proto_obj);
+
+    func_obj = OBJID(CLASS, (KOS_CLASS *)
+                     _KOS_alloc_object(ctx, OBJ_CLASS, sizeof(KOS_CLASS)));
+
+    if ( ! IS_BAD_PTR(func_obj)) {
 
         int error;
 
-        assert(OBJPTR(CLASS, func_ref.obj_id)->header.type == OBJ_CLASS);
+        assert(OBJPTR(CLASS, func_obj)->header.type == OBJ_CLASS);
 
-        OBJPTR(CLASS, func_ref.obj_id)->header.flags          = 0;
-        OBJPTR(CLASS, func_ref.obj_id)->header.num_args       = 0;
-        OBJPTR(CLASS, func_ref.obj_id)->header.num_regs       = 0;
-        OBJPTR(CLASS, func_ref.obj_id)->args_reg              = 0;
-        OBJPTR(CLASS, func_ref.obj_id)->_dummy                = KOS_CTOR;
-        OBJPTR(CLASS, func_ref.obj_id)->module                = KOS_BADPTR;
-        OBJPTR(CLASS, func_ref.obj_id)->closures              = KOS_VOID;
-        OBJPTR(CLASS, func_ref.obj_id)->defaults              = KOS_VOID;
-        OBJPTR(CLASS, func_ref.obj_id)->handler               = 0;
-        OBJPTR(CLASS, func_ref.obj_id)->instr_offs            = ~0U;
-        KOS_atomic_write_ptr(OBJPTR(CLASS, func_ref.obj_id)->prototype, proto_obj);
-        KOS_atomic_write_ptr(OBJPTR(CLASS, func_ref.obj_id)->props,     KOS_BADPTR);
-
-        KOS_track_ref(ctx, &func_ref);
+        OBJPTR(CLASS, func_obj)->header.flags          = 0;
+        OBJPTR(CLASS, func_obj)->header.num_args       = 0;
+        OBJPTR(CLASS, func_obj)->header.num_regs       = 0;
+        OBJPTR(CLASS, func_obj)->args_reg              = 0;
+        OBJPTR(CLASS, func_obj)->_dummy                = KOS_CTOR;
+        OBJPTR(CLASS, func_obj)->module                = KOS_BADPTR;
+        OBJPTR(CLASS, func_obj)->closures              = KOS_VOID;
+        OBJPTR(CLASS, func_obj)->defaults              = KOS_VOID;
+        OBJPTR(CLASS, func_obj)->handler               = 0;
+        OBJPTR(CLASS, func_obj)->instr_offs            = ~0U;
+        KOS_atomic_write_ptr(OBJPTR(CLASS, func_obj)->prototype, proto_obj);
+        KOS_atomic_write_ptr(OBJPTR(CLASS, func_obj)->props,     KOS_BADPTR);
 
         error = KOS_set_builtin_dynamic_property(ctx,
-                                                 func_ref.obj_id,
+                                                 func_obj,
                                                  KOS_get_string(ctx, KOS_STR_PROTOTYPE),
                                                  ctx->inst->modules.init_module,
                                                  _get_prototype,
                                                  _set_prototype);
 
-        KOS_untrack_ref(ctx, &func_ref);
-
         if (error)
-            func_ref.obj_id = KOS_BADPTR; /* object is garbage collected */
+            func_obj = KOS_BADPTR; /* object is garbage collected */
         else
-            ctx->retval = func_ref.obj_id;
+            ctx->retval = func_obj;
     }
 
-    return func_ref.obj_id;
+    _KOS_untrack_refs(ctx, 2);
+
+    return func_obj;
 }
 
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
@@ -220,18 +219,12 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_FUNCTION_HANDLER handler,
                                  int                  min_args)
 {
-    KOS_OBJ_ID  func_obj  = KOS_BADPTR;
-    KOS_OBJ_REF proto_ref;
+    KOS_OBJ_ID func_obj  = KOS_BADPTR;
+    KOS_OBJ_ID proto_obj = KOS_new_object(ctx);
 
-    proto_ref.obj_id = KOS_new_object(ctx);
+    if ( ! IS_BAD_PTR(proto_obj)) {
 
-    if ( ! IS_BAD_PTR(proto_ref.obj_id)) {
-
-        KOS_track_ref(ctx, &proto_ref);
-
-        func_obj = KOS_new_class(ctx, proto_ref.obj_id);
-
-        KOS_untrack_ref(ctx, &proto_ref);
+        func_obj = KOS_new_class(ctx, proto_obj);
 
         if ( ! IS_BAD_PTR(func_obj)) {
             assert(min_args >= 0 && min_args < 256);
@@ -265,50 +258,47 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
                                         KOS_FUNCTION_HANDLER getter,
                                         KOS_FUNCTION_HANDLER setter)
 {
-    KOS_OBJ_REF dyn_prop_ref;
+    KOS_OBJ_ID dyn_prop_obj;
 
-    dyn_prop_ref.obj_id = KOS_new_dynamic_prop(ctx);
+    _KOS_track_refs(ctx, 1, &module_obj);
 
-    if ( ! IS_BAD_PTR(dyn_prop_ref.obj_id)) {
+    dyn_prop_obj = KOS_new_dynamic_prop(ctx);
 
-        KOS_OBJ_ID get_obj;
+    _KOS_track_refs(ctx, 1, &dyn_prop_obj);
 
-        KOS_track_ref(ctx, &dyn_prop_ref);
+    if ( ! IS_BAD_PTR(dyn_prop_obj)) {
 
-        get_obj = KOS_new_function(ctx);
+        KOS_OBJ_ID func_obj = KOS_new_function(ctx);
 
-        if ( ! IS_BAD_PTR(get_obj)) {
-
-            KOS_OBJ_ID set_obj;
-
-            OBJPTR(FUNCTION, get_obj)->module          = module_obj;
-            OBJPTR(FUNCTION, get_obj)->header.num_args = 0;
-            OBJPTR(FUNCTION, get_obj)->handler         = getter;
-
-            OBJPTR(DYNAMIC_PROP, dyn_prop_ref.obj_id)->getter = get_obj;
-
-            set_obj = KOS_new_function(ctx);
-
-            if ( ! IS_BAD_PTR(set_obj)) {
-
-                OBJPTR(FUNCTION, set_obj)->module          = module_obj;
-                OBJPTR(FUNCTION, set_obj)->header.num_args = 0;
-                OBJPTR(FUNCTION, set_obj)->handler         = setter;
-
-                OBJPTR(DYNAMIC_PROP, dyn_prop_ref.obj_id)->setter = set_obj;
-            }
-            else
-                dyn_prop_ref.obj_id = KOS_BADPTR;
+        if ( ! IS_BAD_PTR(func_obj)) {
+            OBJPTR(FUNCTION, func_obj)->module          = module_obj;
+            OBJPTR(FUNCTION, func_obj)->header.num_args = 0;
+            OBJPTR(FUNCTION, func_obj)->handler         = getter;
+            OBJPTR(DYNAMIC_PROP, dyn_prop_obj)->getter  = func_obj;
         }
         else
-            dyn_prop_ref.obj_id = KOS_BADPTR;
-
-        KOS_untrack_ref(ctx, &dyn_prop_ref);
+            dyn_prop_obj = KOS_BADPTR;
     }
 
-    ctx->retval = dyn_prop_ref.obj_id;
+    if ( ! IS_BAD_PTR(dyn_prop_obj)) {
 
-    return dyn_prop_ref.obj_id;
+        KOS_OBJ_ID func_obj = KOS_new_function(ctx);
+
+        if ( ! IS_BAD_PTR(func_obj)) {
+            OBJPTR(FUNCTION, func_obj)->module          = module_obj;
+            OBJPTR(FUNCTION, func_obj)->header.num_args = 0;
+            OBJPTR(FUNCTION, func_obj)->handler         = setter;
+            OBJPTR(DYNAMIC_PROP, dyn_prop_obj)->setter  = func_obj;
+        }
+        else
+            dyn_prop_obj = KOS_BADPTR;
+    }
+
+    _KOS_untrack_refs(ctx, 2);
+
+    ctx->retval = dyn_prop_obj;
+
+    return dyn_prop_obj;
 }
 
 int _KOS_is_truthy(KOS_OBJ_ID obj_id)

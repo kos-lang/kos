@@ -52,7 +52,8 @@ typedef enum KOS_OBJECT_TYPE {
     OBJ_DYNAMIC_PROP,
     OBJ_OBJECT_WALK,
     OBJ_MODULE,
-    OBJ_STACK
+    OBJ_STACK,
+    OBJ_LOCAL_REFS
 } KOS_TYPE;
 
 struct _KOS_OBJECT_PLACEHOLDER;
@@ -70,15 +71,6 @@ struct _KOS_OBJECT_PLACEHOLDER;
  * that bit set.  The actual pointer to the object is KOS_OBJ_ID minus 1.
  */
 typedef struct _KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
-
-/* Reference to a KOS_OBJ_ID, typically held on stack.  This allows GC to
- * update KOS_OBJ_IDs on the stack. */
-typedef struct _KOS_OBJ_REF {
-    volatile KOS_OBJ_ID  obj_id;
-    struct _KOS_OBJ_REF *next;
-} KOS_OBJ_REF;
-
-#define KOS_REF_INIT { KOS_BADPTR, 0 }
 
 #define KOS_BADPTR ((KOS_OBJ_ID)(intptr_t)1)
 
