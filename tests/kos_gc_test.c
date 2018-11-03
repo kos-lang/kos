@@ -778,12 +778,10 @@ int main(void)
 
                 TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-                TEST(stats.num_objs_evacuated >= base_stats.num_objs_evacuated);
                 TEST(stats.num_objs_freed     == 0);
                 TEST(stats.num_objs_finalized == 0);
                 TEST(stats.num_pages_kept     >= num_objs);
-                TEST(stats.num_pages_freed    == 1);
-                TEST(stats.size_evacuated     >= base_stats.size_evacuated);
+                TEST(stats.num_pages_freed    <  2);
                 TEST(stats.size_freed         == 0);
                 TEST(stats.size_kept          >  0);
 
