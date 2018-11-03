@@ -31,6 +31,7 @@ RUN_GCOV=0
 RUN_SEQFAIL=0
 
 UNAME=$(uname -s)
+MAKE=make
 
 if [ -z "$JOBS" ]; then
     case "$UNAME" in
@@ -41,6 +42,12 @@ if [ -z "$JOBS" ]; then
         *)                                       JOBS=2 ;;
     esac
 fi
+
+case "$UNAME" in
+    Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly)
+        MAKE=gmake
+        ;;
+esac
 
 if [ "$UNAME" = "Windows" ]; then
     RUN_ASAN=0
@@ -166,8 +173,8 @@ if [ "$RUN_VALGRIND" = "1" ]; then
 fi
 
 if [ "$RUN_ASAN" = "1" ]; then
-    if [ "$UNAME" != "Darwin" -a "$UNAME" != "Linux" ]; then
-        echo "Error: Address sanitizer is only supported on MacOSX and Linux!" >&2
+    if [ "$UNAME" = "Windows" ]; then
+        echo "Error: Address sanitizer is not supported on Windows!" >&2
         exit 1
     fi
 

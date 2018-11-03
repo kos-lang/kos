@@ -159,6 +159,10 @@ else
         endif
     endif
 
+    ifneq (,$(filter FreeBSD OpenBSD NetBSD DragonFly,$(UNAME)))
+        LDFLAGS += -lpthread
+    endif
+
     # Configure gcov
     CONFIG_GCOV ?= 0
     ifneq ($(CONFIG_GCOV), 0)

@@ -797,8 +797,8 @@ _error:
     return error;
 }
 
-static int _assert(struct _KOS_COMP_UNIT      *program,
-                   const struct _KOS_AST_NODE *node)
+static int _assert_stmt(struct _KOS_COMP_UNIT      *program,
+                        const struct _KOS_AST_NODE *node)
 {
     node = node->children;
     assert(node);
@@ -899,7 +899,7 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
             error = _catch(program, node);
             break;
         case NT_ASSERT:
-            error = _assert(program, node);
+            error = _assert_stmt(program, node);
             break;
 
         case NT_VAR:
