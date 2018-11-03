@@ -29,6 +29,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_config.h"
+#include "../core/kos_math.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
 #include <stdio.h>
@@ -737,17 +738,24 @@ int main(void)
      * page management and coalescing works.
      */
     {
-        const int min_over_size = -(int)((4U * _KOS_PAGE_SIZE) / 100U);
-        const int max_over_size = (int)((4U * _KOS_PAGE_SIZE) / 100U);
-        const int max_num_pages = 2;
-        int       num_pages     = 1;
+        const uint32_t sizeof_buf    = sizeof(KOS_BUFFER);
+        const uint32_t sizeof_buf_st = sizeof(KOS_BUFFER_STORAGE) - 1U;
+        const uint32_t obj_align     = 1U << _KOS_OBJ_ALIGN_BITS;
+        const uint32_t hdr_size      = KOS_align_up(sizeof_buf, obj_align) +
+                                       KOS_align_up(sizeof_buf_st, obj_align);
+        const uint32_t page_buf_cap  = KOS_align_up((uint32_t)(_KOS_PAGE_SIZE - hdr_size),
+                                                    KOS_BUFFER_CAPACITY_ALIGN);
+        const int      min_over_size = -2 * KOS_BUFFER_CAPACITY_ALIGN;
+        const int      max_over_size = 2 * KOS_BUFFER_CAPACITY_ALIGN;
+        const int      max_num_pages = 2;
+        int            num_pages     = 1;
 
         for ( ; num_pages <= max_num_pages; ++num_pages) {
 
-            int       size     = (int)_KOS_PAGE_SIZE * num_pages + min_over_size;
-            const int max_size = size + (max_over_size - min_over_size);
+            int       size     = (int)page_buf_cap + (num_pages - 1) * _KOS_PAGE_SIZE + min_over_size;
+            const int max_size = (int)page_buf_cap + (num_pages - 1) * _KOS_PAGE_SIZE + max_over_size;
 
-            for ( ; size <= max_size; size += 8) {
+            for ( ; size <= max_size; size += KOS_BUFFER_CAPACITY_ALIGN) {
 
                 struct _KOS_GC_STATS stats;
                 KOS_OBJ_ID           obj_ids[_KOS_POOL_SIZE / _KOS_PAGE_SIZE];

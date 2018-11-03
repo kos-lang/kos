@@ -862,7 +862,7 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, unsigned size)
 
     refs  = (KOS_LOCAL_REFS *)_KOS_alloc_object(ctx,
                                                 OBJ_LOCAL_REFS,
-                                                alloc_size);
+                                                (uint32_t)alloc_size);
     if (refs) {
 
         refs->header.num_tracked = 0;
