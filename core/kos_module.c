@@ -1352,7 +1352,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
     else {
         KOS_OBJ_ID func_obj;
 
-        KOS_push_local(ctx, &mod_init);
+        TRY(KOS_push_local(ctx, &mod_init));
 
         func_obj = KOS_new_function(ctx);
         TRY_OBJID(func_obj);
