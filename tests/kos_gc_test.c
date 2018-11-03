@@ -745,7 +745,7 @@ int main(void)
                                        KOS_align_up(sizeof_buf_st, obj_align);
         const uint32_t page_buf_cap  = KOS_align_up((uint32_t)(_KOS_PAGE_SIZE - hdr_size),
                                                     KOS_BUFFER_CAPACITY_ALIGN);
-        const int      min_over_size = -2 * KOS_BUFFER_CAPACITY_ALIGN;
+        const int      min_over_size = -2 * (int)KOS_BUFFER_CAPACITY_ALIGN;
         const int      max_over_size = 2 * KOS_BUFFER_CAPACITY_ALIGN;
         const int      max_num_pages = 2;
         int            num_pages     = 1;
