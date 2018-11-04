@@ -38,18 +38,15 @@ typedef struct _KOS_BUFFER_STORAGE {
 static inline uint32_t KOS_get_buffer_size(KOS_OBJ_ID obj_id)
 {
     assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
-    KOS_BUFFER *const buffer = OBJPTR(BUFFER, obj_id);
-    return KOS_atomic_read_u32(buffer->size);
+    return KOS_atomic_read_u32(OBJPTR(BUFFER, obj_id)->size);
 }
 
 static inline uint8_t *KOS_buffer_data(KOS_OBJ_ID obj_id)
 {
     assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
-    KOS_BUFFER         *const buffer  = OBJPTR(BUFFER, obj_id);
-    const KOS_OBJ_ID          buf_obj = KOS_atomic_read_obj(buffer->data);
-    KOS_BUFFER_STORAGE       *data;
+    const KOS_OBJ_ID buf_obj = KOS_atomic_read_obj(OBJPTR(BUFFER, obj_id)->data);
     assert( ! IS_BAD_PTR(buf_obj));
-    data = OBJPTR(BUFFER_STORAGE, buf_obj);
+    KOS_BUFFER_STORAGE *data = OBJPTR(BUFFER_STORAGE, buf_obj);
     return &data->buf[0];
 }
 

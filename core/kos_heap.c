@@ -1462,6 +1462,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
         case OBJ_STRING:
             if (((KOS_STRING *)hdr)->header.flags & KOS_STRING_REF)
+                /* TODO update data_ptr */
                 _update_child_ptr(&((KOS_STRING *)hdr)->ref.obj_id);
             break;
 

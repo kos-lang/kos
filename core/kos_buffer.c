@@ -343,8 +343,7 @@ KOS_OBJ_ID KOS_buffer_slice(KOS_CONTEXT ctx,
     else if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
         KOS_raise_exception_cstring(ctx, str_err_not_buffer);
     else {
-        uint32_t src_size = KOS_atomic_read_u32(OBJPTR(BUFFER, obj_id)->size);
-        KOS_BUFFER_STORAGE *const src_data = _get_data(obj_id);
+        const uint32_t src_size = KOS_atomic_read_u32(OBJPTR(BUFFER, obj_id)->size);
 
         if (src_size) {
 
@@ -361,11 +360,15 @@ KOS_OBJ_ID KOS_buffer_slice(KOS_CONTEXT ctx,
             assert(new_size_64 <= 0xFFFFFFFF);
             new_size = (uint32_t)new_size_64;
 
+            _KOS_track_refs(ctx, 1, &obj_id);
+
             ret = KOS_new_buffer(ctx, new_size);
+
+            _KOS_untrack_refs(ctx, 1);
 
             if (new_size && ! IS_BAD_PTR(ret)) {
                 KOS_BUFFER_STORAGE *const dst_data = _get_data(ret);
-                memcpy(dst_data->buf, &src_data->buf[begin], new_size);
+                memcpy(dst_data->buf, &_get_data(obj_id)->buf[begin], new_size);
             }
         }
         else

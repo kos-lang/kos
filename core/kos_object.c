@@ -976,30 +976,30 @@ _error:
 int KOS_object_walk(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  walk_id)
 {
-    int              error    = KOS_ERROR_INTERNAL;
-    uint32_t         capacity = 0;
-    KOS_PITEM       *table    = 0;
-    KOS_OBJECT_WALK *walk     = 0;
+    int        error    = KOS_ERROR_INTERNAL;
+    uint32_t   capacity = 0;
+    KOS_PITEM *table    = 0;
+    KOS_OBJ_ID key      = KOS_BADPTR;
 
     assert(GET_OBJ_TYPE(walk_id) == OBJ_OBJECT_WALK);
 
-    walk = OBJPTR(OBJECT_WALK, walk_id);
-
-    if ( ! IS_BAD_PTR(walk->key_table)) {
-        KOS_OBJECT_STORAGE *key_table = OBJPTR(OBJECT_STORAGE, walk->key_table);
+    if ( ! IS_BAD_PTR(OBJPTR(OBJECT_WALK, walk_id)->key_table)) {
+        KOS_OBJECT_STORAGE *key_table = OBJPTR(OBJECT_STORAGE,
+                OBJPTR(OBJECT_WALK, walk_id)->key_table);
 
         capacity = KOS_atomic_read_u32(key_table->capacity);
         table    = key_table->items;
     }
 
+    _KOS_track_refs(ctx, 2, &walk_id, &key);
+
     for (;;) {
 
-        KOS_OBJ_ID    key;
-        const int32_t index = KOS_atomic_add_i32(walk->index, 1);
+        const int32_t index = KOS_atomic_add_i32(OBJPTR(OBJECT_WALK, walk_id)->index, 1);
 
         if ((uint32_t)index >= capacity) {
-            KOS_atomic_write_ptr(walk->last_key,   KOS_BADPTR);
-            KOS_atomic_write_ptr(walk->last_value, KOS_BADPTR);
+            KOS_atomic_write_ptr(OBJPTR(OBJECT_WALK, walk_id)->last_key,   KOS_BADPTR);
+            KOS_atomic_write_ptr(OBJPTR(OBJECT_WALK, walk_id)->last_value, KOS_BADPTR);
             error = KOS_ERROR_NOT_FOUND;
             break;
         }
@@ -1008,18 +1008,22 @@ int KOS_object_walk(KOS_CONTEXT ctx,
 
         if ( ! IS_BAD_PTR(key)) {
 
-            const KOS_OBJ_ID value = KOS_get_property(ctx, walk->obj, key);
+            const KOS_OBJ_ID value = KOS_get_property(ctx,
+                                                      OBJPTR(OBJECT_WALK, walk_id)->obj,
+                                                      key);
 
             if (IS_BAD_PTR(value))
                 KOS_clear_exception(ctx);
             else {
-                KOS_atomic_write_ptr(walk->last_key,   key);
-                KOS_atomic_write_ptr(walk->last_value, value);
+                KOS_atomic_write_ptr(OBJPTR(OBJECT_WALK, walk_id)->last_key,   key);
+                KOS_atomic_write_ptr(OBJPTR(OBJECT_WALK, walk_id)->last_value, value);
                 error = KOS_SUCCESS;
                 break;
             }
         }
     }
+
+    _KOS_untrack_refs(ctx, 2);
 
     return error;
 }

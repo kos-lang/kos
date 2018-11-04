@@ -86,9 +86,16 @@ static inline KOS_ATOMIC(KOS_OBJ_ID) *_KOS_get_array_buffer(KOS_ARRAY *array)
     return &OBJPTR(ARRAY_STORAGE, buf_obj)->buf[0];
 }
 
+static inline KOS_OBJ_ID _KOS_get_array_storage(KOS_OBJ_ID obj_id)
+{
+    return KOS_atomic_read_obj(OBJPTR(ARRAY, obj_id)->data);
+}
+
 #else
 
 #define _KOS_get_array_buffer(array) (&OBJPTR(ARRAY_STORAGE, KOS_atomic_read_obj((array)->data))->buf[0])
+
+#define _KOS_get_array_storage(obj_id) (KOS_atomic_read_obj(OBJPTR(ARRAY, (obj_id))->data))
 
 #endif
 

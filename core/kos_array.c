@@ -163,7 +163,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
 
 static KOS_ARRAY_STORAGE *_get_data(KOS_OBJ_ID obj_id)
 {
-    const KOS_OBJ_ID buf_obj = KOS_atomic_read_obj(OBJPTR(ARRAY, obj_id)->data);
+    const KOS_OBJ_ID buf_obj = _KOS_get_array_storage(obj_id);
     /* TODO use read with acquire semantics */
     KOS_atomic_acquire_barrier();
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
@@ -245,8 +245,8 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
     else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception_cstring(ctx, str_err_not_array);
     else {
-        const uint32_t   size   = KOS_atomic_read_u32(OBJPTR(ARRAY, obj_id)->size);
-        const uint32_t   bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
+        const uint32_t size   = KOS_atomic_read_u32(OBJPTR(ARRAY, obj_id)->size);
+        const uint32_t bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
 
         if (bufidx < size) {
             KOS_ARRAY_STORAGE *buf = _get_data(obj_id);
@@ -719,6 +719,8 @@ KOS_OBJ_ID KOS_array_pop(KOS_CONTEXT ctx,
     uint32_t   len;
     KOS_OBJ_ID ret = KOS_BADPTR;
 
+    _KOS_track_refs(ctx, 2, &obj_id, &ret);
+
     if (IS_BAD_PTR(obj_id))
         RAISE_EXCEPTION(str_err_null_ptr);
     else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
@@ -735,6 +737,8 @@ KOS_OBJ_ID KOS_array_pop(KOS_CONTEXT ctx,
     error = KOS_array_resize(ctx, obj_id, len-1);
 
 _error:
+    _KOS_untrack_refs(ctx, 2);
+
     return error ? KOS_BADPTR : ret;
 }
 

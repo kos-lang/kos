@@ -133,18 +133,24 @@ static KOS_OBJ_ID _set_prototype(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
 
-        KOS_OBJ_ID                 arg     = KOS_array_read(ctx, args_obj, 0);
-        const KOS_FUNCTION_HANDLER handler = OBJPTR(CLASS, this_obj)->handler;
+        KOS_OBJ_ID arg;
 
-        if (handler) {
-            KOS_raise_exception_cstring(ctx, str_err_cannot_override_prototype);
-            arg = KOS_BADPTR;
-        }
+        _KOS_track_refs(ctx, 1, &this_obj);
+
+        arg = KOS_array_read(ctx, args_obj, 0);
+
+        _KOS_untrack_refs(ctx, 1);
 
         if ( ! IS_BAD_PTR(arg)) {
-            KOS_CLASS *func = OBJPTR(CLASS, this_obj);
-            KOS_atomic_write_ptr(func->prototype, arg);
-            ret = this_obj;
+
+            const KOS_FUNCTION_HANDLER handler = OBJPTR(CLASS, this_obj)->handler;
+
+            if ( ! handler) {
+                KOS_atomic_write_ptr(OBJPTR(CLASS, this_obj)->prototype, arg);
+                ret = this_obj;
+            }
+            else
+                KOS_raise_exception_cstring(ctx, str_err_cannot_override_prototype);
         }
     }
     else
@@ -258,13 +264,11 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
                                         KOS_FUNCTION_HANDLER getter,
                                         KOS_FUNCTION_HANDLER setter)
 {
-    KOS_OBJ_ID dyn_prop_obj;
+    KOS_OBJ_ID dyn_prop_obj = KOS_BADPTR;
 
-    _KOS_track_refs(ctx, 1, &module_obj);
+    _KOS_track_refs(ctx, 2, &module_obj, &dyn_prop_obj);
 
     dyn_prop_obj = KOS_new_dynamic_prop(ctx);
-
-    _KOS_track_refs(ctx, 1, &dyn_prop_obj);
 
     if ( ! IS_BAD_PTR(dyn_prop_obj)) {
 
