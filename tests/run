@@ -134,7 +134,7 @@ runtests()
     echo "***************************************************************************"
 
     [ "$3" = "noclean" ] || rm -rf Out
-    make -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 CONFIG_STRICT=1 --warn-undefined-variables
+    $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 CONFIG_STRICT=1 --warn-undefined-variables
 }
 
 cd "$(dirname $0)"/..
