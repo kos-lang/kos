@@ -44,7 +44,7 @@ if [ -z "$JOBS" ]; then
 fi
 
 case "$UNAME" in
-    Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly)
+    FreeBSD|OpenBSD|NetBSD|DragonFly)
         MAKE=gmake
         ;;
 esac
