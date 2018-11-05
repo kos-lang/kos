@@ -32,7 +32,6 @@
 #include "kos_memory.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1857,36 +1856,4 @@ int KOS_collect_garbage(KOS_CONTEXT           ctx,
         error = KOS_ERROR_EXCEPTION;
 
     return error;
-}
-
-void _KOS_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
-{
-    va_list  args;
-    uint32_t i;
-    uint32_t end;
-
-    assert(num_entries > 0);
-    assert((size_t)(ctx->tmp_ref_count + num_entries) <=
-           sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]));
-
-    i   = ctx->tmp_ref_count;
-    end = i + num_entries;
-
-    va_start(args, num_entries);
-
-    do {
-        ctx->tmp_refs[i] = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
-        ++i;
-    } while (i < end);
-
-    ctx->tmp_ref_count = end;
-
-    va_end(args);
-}
-
-void _KOS_untrack_refs(KOS_CONTEXT ctx, int num_entries)
-{
-    assert(num_entries > 0 && (unsigned)num_entries <= ctx->tmp_ref_count);
-
-    ctx->tmp_ref_count -= num_entries;
 }
