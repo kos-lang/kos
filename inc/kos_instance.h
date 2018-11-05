@@ -293,6 +293,10 @@ int KOS_push_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref);
 
 void KOS_pop_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref);
 
+int KOS_push_locals(KOS_CONTEXT ctx, int num_entries, ...);
+
+void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries, ...);
+
 struct _KOS_GC_STATS {
     unsigned num_objs_evacuated;
     unsigned num_objs_freed;

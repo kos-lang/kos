@@ -39,6 +39,7 @@
 #include "kos_system.h"
 #include "kos_try.h"
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -914,4 +915,66 @@ void KOS_pop_local(KOS_CONTEXT ctx, KOS_OBJ_ID *obj_id)
     --refs->header.num_tracked;
 
     assert(refs->refs[refs->header.num_tracked] == obj_id);
+}
+
+int KOS_push_locals(KOS_CONTEXT ctx, int num_entries, ...)
+{
+    va_list         args;
+    KOS_LOCAL_REFS *refs;
+
+    assert( ! IS_BAD_PTR(ctx->local_refs));
+
+    refs = OBJPTR(LOCAL_REFS, ctx->local_refs);
+
+    assert(refs->header.num_tracked + num_entries <= refs->header.capacity);
+
+    if (refs->header.num_tracked + num_entries > refs->header.capacity)
+        return KOS_ERROR_INTERNAL;
+
+    assert(num_entries > 0);
+
+    if (num_entries <= 0)
+        return KOS_ERROR_INTERNAL;
+
+    va_start(args, num_entries);
+
+    do
+        refs->refs[refs->header.num_tracked++] = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
+    while (--num_entries);
+
+    va_end(args);
+
+    return KOS_SUCCESS;
+}
+
+void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries, ...)
+{
+    KOS_LOCAL_REFS *refs;
+
+    assert( ! IS_BAD_PTR(ctx->local_refs));
+
+    refs = OBJPTR(LOCAL_REFS, ctx->local_refs);
+
+    assert(num_entries > 0);
+    assert(num_entries <= refs->header.num_tracked);
+
+    refs->header.num_tracked -= num_entries;
+
+#ifndef NDEBUG
+    {
+        int     i;
+        va_list args;
+
+        va_start(args, num_entries);
+
+        for (i = 0; i < num_entries; i++) {
+
+            KOS_OBJ_ID *ref = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
+
+            assert(ref == refs->refs[refs->header.num_tracked + i]);
+        }
+
+        va_end(args);
+    }
+#endif
 }
