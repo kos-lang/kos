@@ -958,7 +958,7 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries, ...)
     assert(num_entries > 0);
     assert(num_entries <= refs->header.num_tracked);
 
-    refs->header.num_tracked -= num_entries;
+    refs->header.num_tracked -= (unsigned)num_entries;
 
 #ifndef NDEBUG
     {
