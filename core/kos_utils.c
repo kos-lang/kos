@@ -200,16 +200,19 @@ void KOS_print_exception(KOS_CONTEXT ctx)
     exception = KOS_get_exception(ctx);
     assert(!IS_BAD_PTR(exception));
 
+    KOS_clear_exception(ctx);
+
     if (GET_OBJ_TYPE(exception) == OBJ_STRING) {
-        KOS_clear_exception(ctx);
         if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, exception, &cstr))
             fprintf(stderr, "%s\n", cstr.buffer);
     }
     else {
         KOS_OBJ_ID formatted;
 
-        KOS_clear_exception(ctx);
+        _KOS_track_refs(ctx, 1, &exception);
+
         formatted = KOS_format_exception(ctx, exception);
+
         if (IS_BAD_PTR(formatted)) {
             KOS_OBJ_ID str;
 
@@ -235,17 +238,21 @@ void KOS_print_exception(KOS_CONTEXT ctx)
             uint32_t i;
             uint32_t lines;
 
-            assert(GET_OBJ_TYPE(formatted) == OBJ_ARRAY);
+            exception = formatted;
 
-            lines = KOS_get_array_size(formatted);
+            assert(GET_OBJ_TYPE(exception) == OBJ_ARRAY);
+
+            lines = KOS_get_array_size(exception);
 
             for (i = 0; i < lines; i++) {
-                KOS_OBJ_ID line = KOS_array_read(ctx, formatted, (int)i);
+                KOS_OBJ_ID line = KOS_array_read(ctx, exception, (int)i);
                 assert(!KOS_is_exception_pending(ctx));
                 if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, line, &cstr))
                     fprintf(stderr, "%s\n", cstr.buffer);
             }
         }
+
+        _KOS_untrack_refs(ctx, 1);
     }
 
     _KOS_vector_destroy(&cstr);
@@ -254,7 +261,6 @@ void KOS_print_exception(KOS_CONTEXT ctx)
 KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  full_path)
 {
-    int      error = KOS_SUCCESS;
     unsigned i;
     unsigned len;
 
@@ -264,7 +270,7 @@ KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
     for (i = len; i > 0; i--) {
         const unsigned c = KOS_string_get_char_code(ctx, full_path, (int)i - 1);
         if (c == ~0U)
-            TRY(KOS_ERROR_EXCEPTION);
+            return KOS_BADPTR;
         if (c == '/' || c == '\\')
             break;
     }
@@ -272,9 +278,6 @@ KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
     if (i == len)
         i = 0;
 
-_error:
-    if (error)
-        return KOS_BADPTR;
     return KOS_string_slice(ctx, full_path, i, len);
 }
 
@@ -525,9 +528,9 @@ static int _make_quoted_str(KOS_CONTEXT         ctx,
     error = _vector_append_str(ctx, cstr_vec, obj_id, KOS_QUOTE_STRINGS);
 
     if ( ! error) {
-        const char  *buf  = &cstr_vec->buffer[old_size ? old_size - 1 : 0];
-        const size_t size = cstr_vec->size - old_size - (old_size ? 0 : 1);
-        KOS_OBJ_ID new_str = KOS_new_string(ctx, buf, (unsigned)size);
+        const char  *buf     = &cstr_vec->buffer[old_size ? old_size - 1 : 0];
+        const size_t size    = cstr_vec->size - old_size - (old_size ? 0 : 1);
+        KOS_OBJ_ID   new_str = KOS_new_string(ctx, buf, (unsigned)size);
         if (IS_BAD_PTR(new_str))
             error = KOS_ERROR_EXCEPTION;
         else

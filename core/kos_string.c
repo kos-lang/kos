@@ -557,6 +557,8 @@ KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
 {
     KOS_STRING *new_str;
 
+    /* TODO track refs */
+
     if (num_strings == 1)
         new_str = OBJPTR(STRING, *obj_id_array);
 
