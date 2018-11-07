@@ -42,6 +42,7 @@
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
 #   include <sys/types.h>
+#   include <sys/mman.h>
 #   include <sys/stat.h>
 #   include <unistd.h>
 #endif
@@ -295,5 +296,18 @@ _error:
 int _KOS_executable_path(struct _KOS_VECTOR *buf)
 {
     return KOS_ERROR_NOT_FOUND;
+}
+#endif
+
+#ifdef _WIN32
+int _KOS_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect)
+{
+    DWORD old = 0;
+    return VirtualProtect(ptr, size, protect == _KOS_NO_ACCESS ? PAGE_NOACCESS : PAGE_READWRITE, &old) != 0 ? 0 : 1;
+}
+#else
+int _KOS_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect)
+{
+    return mprotect(ptr, size, protect == _KOS_NO_ACCESS ? PROT_NONE : PROT_READ | PROT_WRITE);
 }
 #endif

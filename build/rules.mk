@@ -203,6 +203,12 @@ ifneq ($(CONFIG_SEQFAIL), 0)
     CFLAGS += -DCONFIG_SEQFAIL
 endif
 
+CONFIG_MAD_GC ?= 0
+
+ifneq ($(CONFIG_MAD_GC), 0)
+    CFLAGS += -DCONFIG_MAD_GC
+endif
+
 ##############################################################################
 # Optionally treat warnings as errors and add more checks
 

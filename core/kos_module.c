@@ -1221,9 +1221,8 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 
     _get_module_name(module_name, name_size, &loading);
 
-    TRY(KOS_push_local_scope(ctx, 13));
-    TRY(KOS_push_local(ctx, &module_obj));
-    TRY(KOS_push_local(ctx, &actual_module_name));
+    TRY(KOS_push_local_scope(ctx, 14));
+    TRY(KOS_push_locals(ctx, 3, &module_obj, &actual_module_name, &module_dir));
 
     /* Determine actual module name */
     actual_module_name = KOS_new_string(ctx, loading.module_name, loading.length);

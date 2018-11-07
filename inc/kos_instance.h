@@ -49,6 +49,11 @@ struct _KOS_HEAP {
     _KOS_POOL           *pools;             /* Allocated memory - page pools            */
     _KOS_POOL           *pool_headers;      /* List of pool headers for new pools       */
     _KOS_WASTE          *waste;             /* Unused memory from pool allocations      */
+
+#ifdef CONFIG_MAD_GC
+    struct _KOS_LOCKED_PAGES *locked_pages_first;
+    struct _KOS_LOCKED_PAGES *locked_pages_last;
+#endif
 };
 
 /* Stored on the stack as catch offset */

@@ -308,7 +308,7 @@ static void _clear_instance(KOS_INSTANCE *inst)
     /* Set to an innocuous value in case initial allocation fails */
     inst->common_strings[KOS_STR_OUT_OF_MEMORY] = KOS_VOID;
 
-    inst->flags                            = KOS_INST_MANUAL_GC; /* TODO enable automatic GC */;
+    inst->flags                            = KOS_INST_MANUAL_GC;
     inst->args                             = KOS_BADPTR;
     inst->prototypes.object_proto          = KOS_BADPTR;
     inst->prototypes.number_proto          = KOS_BADPTR;
@@ -425,6 +425,11 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY(_init_search_paths(ctx));
 
     *out_ctx = ctx;
+
+#ifdef CONFIG_MAD_GC /* TODO always enable automatic GC */
+    /* Enable automatic GC */
+    inst->flags = 0;
+#endif
 
 _error:
     if (error) {
@@ -670,9 +675,14 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
     module_name = KOS_new_cstring(ctx, module);
     TRY_OBJID(module_name);
 
+    _KOS_track_refs(ctx, 1, &module_name);
+
     mod_init = (struct _KOS_MODULE_INIT *)_KOS_alloc_object(ctx,
                                                             OBJ_OPAQUE,
                                                             sizeof(struct _KOS_MODULE_INIT));
+
+    _KOS_untrack_refs(ctx, 1);
+
     if ( ! mod_init)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 

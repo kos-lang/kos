@@ -72,6 +72,21 @@ struct _KOS_PAGE_HEADER {
 #define _KOS_BITMAP_OFFS    ((_KOS_PAGE_HDR_SIZE + 3U) & ~3U)
 #define _KOS_SLOTS_OFFS     (_KOS_PAGE_SIZE - (_KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS))
 
+#ifdef CONFIG_MAD_GC
+#define _KOS_MAX_LOCKED_PAGES 128
+
+struct _KOS_LOCKED_PAGE {
+    _KOS_PAGE *page;
+    uint32_t   num_slots;
+};
+
+struct _KOS_LOCKED_PAGES {
+    struct _KOS_LOCKED_PAGES *next;
+    uint32_t                  num_pages;
+    struct _KOS_LOCKED_PAGE   pages[_KOS_MAX_LOCKED_PAGES];
+};
+#endif
+
 #ifdef __cplusplus
 
 template<typename T>
@@ -155,6 +170,34 @@ int _KOS_heap_init(KOS_INSTANCE *inst)
 
 void _KOS_heap_destroy(KOS_INSTANCE *inst)
 {
+#ifdef CONFIG_MAD_GC
+    {
+        struct _KOS_LOCKED_PAGES *locked_pages = inst->heap.locked_pages_first;
+
+        while (locked_pages) {
+
+            uint32_t                  i;
+            struct _KOS_LOCKED_PAGES *del;
+
+            for (i = 0 ; i < locked_pages->num_pages; i++) {
+
+                _KOS_PAGE *page      = locked_pages->pages[i].page;
+                uint32_t   num_slots = locked_pages->pages[i].num_slots;
+
+                if (num_slots == _KOS_SLOTS_PER_PAGE)
+                    _KOS_mem_protect(page, _KOS_PAGE_SIZE, _KOS_READ_WRITE);
+            }
+
+            del = locked_pages;
+            locked_pages = locked_pages->next;
+            _KOS_free(del);
+        }
+
+        inst->heap.locked_pages_first = 0;
+        inst->heap.locked_pages_last  = 0;
+    }
+#endif
+
     for (;;) {
         _KOS_POOL *pool = (_KOS_POOL *)POP_LIST(inst->heap.pools);
         void      *memory;
@@ -403,8 +446,16 @@ static void _try_collect_garbage(KOS_CONTEXT ctx)
 {
     struct _KOS_HEAP *const heap = _get_heap(ctx);
 
+    /* Don't try to collect garbage when the garbage collector is running */
+    if (KOS_atomic_read_u32(heap->gc_state) != GC_INACTIVE)
+        return;
+
+#ifdef CONFIG_MAD_GC
+    if ( ! (ctx->inst->flags & KOS_INST_MANUAL_GC)) {
+#else
     if (heap->used_size > heap->gc_threshold &&
         ! (ctx->inst->flags & KOS_INST_MANUAL_GC)) {
+#endif
 
         _KOS_unlock_mutex(&heap->mutex);
 
@@ -809,6 +860,15 @@ void *_KOS_alloc_object(KOS_CONTEXT          ctx,
                         enum KOS_OBJECT_TYPE object_type,
                         uint32_t             size)
 {
+#ifdef CONFIG_MAD_GC
+    {
+        struct _KOS_HEAP *heap = _get_heap(ctx);
+
+        _KOS_lock_mutex(&heap->mutex);
+        _try_collect_garbage(ctx);
+        _KOS_unlock_mutex(&heap->mutex);
+    }
+#endif
     if (size > (_KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS))
     {
         return _alloc_huge_object(ctx, object_type, size);
@@ -1321,6 +1381,52 @@ static void _sort_flat_page_list(_KOS_PAGE *list)
     qsort(begin, KOS_atomic_read_u32(list->num_allocated), sizeof(void *), _sort_compare);
 }
 
+#ifdef CONFIG_MAD_GC
+static void _lock_pages(struct _KOS_HEAP *heap, _KOS_PAGE *pages)
+{
+    while (pages) {
+
+        _KOS_PAGE *page      = pages;
+        uint32_t   num_slots = page->num_slots;
+        uint32_t   i;
+
+        pages = page->next;
+
+        /* Only lock heap pages fully aligning with OS pages */
+        if (num_slots == _KOS_SLOTS_PER_PAGE) {
+            if (_KOS_mem_protect(page, _KOS_PAGE_SIZE, _KOS_NO_ACCESS)) {
+                fprintf(stderr, "Failed to lock region at %p size %u\n", (void *)page, _KOS_PAGE_SIZE);
+                exit(1);
+            }
+        }
+
+        if ( ! heap->locked_pages_last || heap->locked_pages_last->num_pages == _KOS_MAX_LOCKED_PAGES) {
+
+            struct _KOS_LOCKED_PAGES *locked_pages =
+                (struct _KOS_LOCKED_PAGES *)_KOS_malloc(sizeof(struct _KOS_LOCKED_PAGES));
+
+            if ( ! locked_pages) {
+                fprintf(stderr, "Failed to allocate memory to store locked pages\n");
+                exit(1);
+            }
+
+            locked_pages->num_pages = 0;
+            locked_pages->next = 0;
+            if (heap->locked_pages_last)
+                heap->locked_pages_last->next = locked_pages;
+            heap->locked_pages_last = locked_pages;
+            if ( ! heap->locked_pages_first)
+                heap->locked_pages_first = locked_pages;
+        }
+
+        i = heap->locked_pages_last->num_pages++;
+
+        heap->locked_pages_last->pages[i].page      = page;
+        heap->locked_pages_last->pages[i].num_slots = num_slots;
+    }
+}
+#endif
+
 static unsigned _push_sorted_list(struct _KOS_HEAP *heap, _KOS_PAGE *list)
 {
     _KOS_PAGE **begin;
@@ -1328,12 +1434,19 @@ static unsigned _push_sorted_list(struct _KOS_HEAP *heap, _KOS_PAGE *list)
     _KOS_PAGE **insert_at;
     _KOS_PAGE  *page_at;
     unsigned    num_pages = 0;
+#ifdef CONFIG_MAD_GC
+    _KOS_PAGE  *to_lock = 0;
+#endif
 
     _get_flat_list(list, &begin, 0);
 
     end = begin + KOS_atomic_read_u32(list->num_allocated);
 
+#ifdef CONFIG_MAD_GC
+    insert_at = &to_lock;
+#else
     insert_at = &heap->free_pages;
+#endif
     page_at   = *insert_at;
 
     while (begin < end) {
@@ -1367,6 +1480,10 @@ static unsigned _push_sorted_list(struct _KOS_HEAP *heap, _KOS_PAGE *list)
     memset(((uint8_t *)list) + _KOS_BITMAP_OFFS,
            0xDDU,
            (_KOS_SLOTS_OFFS - _KOS_BITMAP_OFFS) + (list->num_slots << _KOS_OBJ_ALIGN_BITS));
+#endif
+
+#ifdef CONFIG_MAD_GC
+    _lock_pages(heap, to_lock);
 #endif
 
     return num_pages;
@@ -1703,6 +1820,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
 
         /* If the number of slots used reaches the threshold, then the page is
          * exempt from evacuation. */
+        /* TODO force evacuate if mad GC */
         if (num_slots_used >= (_KOS_SLOTS_PER_PAGE * _KOS_MIGRATION_THRESH) / 100U) {
             PUSH_LIST(heap->full_pages, page);
             heap->used_size += _full_page_size(page);
