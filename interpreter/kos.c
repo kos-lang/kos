@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
         goto _error;
     }
 
-    error = KOS_modules_init(&inst);
+    error = KOS_modules_init(ctx);
 
     if (error) {
         fprintf(stderr, "Failed to initialize modules\n");

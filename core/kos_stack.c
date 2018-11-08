@@ -605,8 +605,6 @@ void _KOS_wrap_exception(KOS_CONTEXT ctx)
     backtrace = KOS_new_array(ctx, depth);
     TRY_OBJID(backtrace);
 
-    TRY(KOS_array_resize(ctx, backtrace, depth));
-
     TRY(KOS_set_property(ctx, exception, KOS_get_string(ctx, KOS_STR_BACKTRACE), backtrace));
 
     dump_ctx.ctx       = ctx;

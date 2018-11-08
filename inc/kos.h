@@ -223,7 +223,7 @@ class instance {
             if (error)
                 throw std::runtime_error("failed to initialize Kos instance");
 
-            error = KOS_modules_init(&_inst);
+            error = KOS_modules_init(ctx);
             if (error) {
                 KOS_instance_destroy(&_inst);
                 throw std::runtime_error("failed to initialize Kos modules");

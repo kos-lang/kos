@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 
     inst_ok = 1;
 
-    TRY(KOS_modules_init(&inst));
+    TRY(KOS_modules_init(ctx));
 
     if (argc != 2) {
         fprintf(stderr, "Invalid number of arguments passed to the test, expected 1\n");
