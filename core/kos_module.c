@@ -1775,7 +1775,8 @@ unsigned KOS_module_addr_to_func_line(KOS_MODULE *module,
     return line;
 }
 
-KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_MODULE *module,
+KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_CONTEXT ctx,
+                                        KOS_MODULE *module,
                                         uint32_t    offs)
 {
     const KOS_FUNC_ADDR *addr2func = _addr_to_func(module, offs);
@@ -1783,7 +1784,6 @@ KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_MODULE *module,
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (addr2func) {
-        KOS_CONTEXT ctx = &module->inst->threads.main_thread;
         if (addr2func->str_idx == ~0U)
             ret = KOS_get_string(ctx, KOS_STR_GLOBAL);
         else

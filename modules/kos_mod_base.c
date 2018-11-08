@@ -3632,7 +3632,8 @@ static KOS_OBJ_ID _get_function_name(KOS_CONTEXT ctx,
         if (IS_BAD_PTR(func->module) || func->instr_offs == ~0U)
             ret = KOS_get_string(ctx, KOS_STR_XBUILTINX);
         else
-            ret = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
+            ret = KOS_module_addr_to_func_name(ctx,
+                                               OBJPTR(MODULE, func->module),
                                                func->instr_offs);
     }
 

@@ -2632,6 +2632,24 @@ do {
 }
 
 do {
+    fun thrower
+    {
+        try {
+            throw "hello"
+        }
+        catch const e {
+        }
+    }
+
+    for const i in base.range(500) {
+        const threads = [ base.range(4).map(() => thrower.async(void,[])) ... ]
+        for const t in threads {
+            t.wait()
+        }
+    }
+}
+
+do {
     var t       = void
     var done    = false
     var success = false

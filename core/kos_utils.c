@@ -821,7 +821,8 @@ static int _vector_append_function(KOS_CONTEXT         ctx,
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">", (uint64_t)(uintptr_t)func->handler);
     }
     else {
-        KOS_OBJ_ID name_str = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
+        KOS_OBJ_ID name_str = KOS_module_addr_to_func_name(ctx,
+                                                           OBJPTR(MODULE, func->module),
                                                            func->instr_offs);
         TRY_OBJID(name_str);
         TRY(_vector_append_str(ctx, cstr_vec, name_str, KOS_DONT_QUOTE));
@@ -870,8 +871,10 @@ static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">", (uint64_t)(uintptr_t)func->handler);
     }
     else {
-        strings[1] = KOS_module_addr_to_func_name(OBJPTR(MODULE, func->module),
+        strings[1] = KOS_module_addr_to_func_name(ctx,
+                                                  OBJPTR(MODULE, func->module),
                                                   func->instr_offs);
+        TRY_OBJID(strings[1]);
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>", (unsigned)func->instr_offs);
     }
     strings[2] = KOS_new_cstring(ctx, cstr_ptr);

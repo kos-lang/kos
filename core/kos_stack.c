@@ -520,21 +520,28 @@ static int _dump_stack(KOS_OBJ_ID stack,
     KOS_MODULE             *module      = IS_BAD_PTR(func->module) ? 0 : OBJPTR(MODULE, func->module);
     const uint32_t          instr_offs  = _get_instr_offs(stack_frame);
     const unsigned          line        = KOS_module_addr_to_line(module, instr_offs);
-    KOS_OBJ_ID              func_name   = KOS_module_addr_to_func_name(module, instr_offs);
+    KOS_OBJ_ID              func_name   = KOS_BADPTR;
     KOS_OBJ_ID              module_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     KOS_OBJ_ID              module_path = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     int                     error       = KOS_SUCCESS;
     KOS_OBJ_ID              frame_desc  = KOS_BADPTR;
     int                     pushed      = 0;
 
+    func_name = KOS_module_addr_to_func_name(ctx, module, instr_offs);
+    if (IS_BAD_PTR(func_name)) {
+        if (KOS_is_exception_pending(ctx))
+            goto _error;
+
+        /* TODO add builtin function name */
+        func_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
+    }
+
+
     TRY(KOS_push_locals(ctx, 4, &func_name, &module_name, &module_path, &frame_desc));
     pushed = 1;
 
     frame_desc = KOS_new_object(ctx);
     TRY_OBJID(frame_desc);
-
-    if (IS_BAD_PTR(func_name))
-        func_name = KOS_get_string(ctx, KOS_STR_XBUILTINX); /* TODO add builtin function name */
 
     assert(dump_ctx->idx < KOS_get_array_size(dump_ctx->backtrace));
     TRY(KOS_array_write(ctx, dump_ctx->backtrace, (int)dump_ctx->idx, frame_desc));
