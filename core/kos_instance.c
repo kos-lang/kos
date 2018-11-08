@@ -989,6 +989,13 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries, ...)
 #endif
 }
 
+void _KOS_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+{
+    KOS_instance_validate(ctx);
+
+    ctx->retval = obj_id;
+}
+
 void _KOS_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
 {
     va_list  args;

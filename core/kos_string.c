@@ -74,7 +74,7 @@ static KOS_STRING *_new_empty_string(KOS_CONTEXT            ctx,
         str->header.length = (uint16_t)length;
         str->header.hash   = 0;
 
-        ctx->retval = OBJID(STRING, str);
+        _KOS_set_return_value(ctx, OBJID(STRING, str));
     }
 
     return str;
@@ -124,7 +124,7 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT           ctx,
             str->header.length = (uint16_t)count;
             str->header.hash   = 0;
 
-            ctx->retval = OBJID(STRING, str);
+            _KOS_set_return_value(ctx, OBJID(STRING, str));
 
             ptr = (void *)_KOS_get_string_buffer(str);
 
@@ -205,7 +205,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT            ctx,
             str->header.hash   = 0;
             str->ptr.data_ptr  = str_data;
 
-            ctx->retval = OBJID(STRING, str);
+            _KOS_set_return_value(ctx, OBJID(STRING, str));
         }
     }
     else
@@ -702,7 +702,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                         ref->data_ptr                          = buf;
                         ref->obj_id                            = obj_id;
 
-                        ctx->retval = new_str;
+                        _KOS_set_return_value(ctx, new_str);
                     }
                 }
 

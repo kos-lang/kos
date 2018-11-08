@@ -142,7 +142,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
 
         if (array) {
 
-            ctx->retval = OBJID(ARRAY, array);
+            _KOS_set_return_value(ctx, OBJID(ARRAY, array));
 
             KOS_atomic_write_u32(array->size, size);
 
@@ -263,7 +263,7 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
                 if (elem == CLOSED)
                     buf = _get_next(buf);
                 else {
-                    ctx->retval = elem;
+                    _KOS_set_return_value(ctx, elem);
                     break;
                 }
             }

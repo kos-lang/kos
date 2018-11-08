@@ -98,7 +98,7 @@ KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
         assert(obj->header.type == OBJ_OBJECT);
         _KOS_init_object(obj, prototype);
 
-        ctx->retval = OBJID(OBJECT, obj);
+        _KOS_set_return_value(ctx, OBJID(OBJECT, obj));
     }
 
     return OBJID(OBJECT, obj);
@@ -536,7 +536,7 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
     if ( ! IS_BAD_PTR(retval)) {
         KOS_PERF_CNT(object_get_success);
 
-        ctx->retval = retval;
+        _KOS_set_return_value(ctx, retval);
     }
     else
         KOS_PERF_CNT(object_get_fail);
@@ -934,7 +934,7 @@ _error:
     if (error)
         walk_id = KOS_BADPTR; /* Object is garbage collected */
 
-    ctx->retval = walk_id;
+    _KOS_set_return_value(ctx, walk_id);
 
     return walk_id;
 }
@@ -959,7 +959,7 @@ KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(walk_id) == OBJ_OBJECT_WALK);
 
-    ctx->retval = OBJID(OBJECT_WALK, walk);
+    _KOS_set_return_value(ctx, OBJID(OBJECT_WALK, walk));
 
     src = OBJPTR(OBJECT_WALK, walk_id);
 
