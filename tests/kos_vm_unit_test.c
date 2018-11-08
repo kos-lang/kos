@@ -76,29 +76,28 @@ struct _INSTR_DEF {
 
 #define END \
     }; \
-    if (_test_instr(&inst, instr.instr, __LINE__, &instr.out, &instr.in[0]) != KOS_SUCCESS) \
+    if (_test_instr(ctx, instr.instr, __LINE__, &instr.out, &instr.in[0]) != KOS_SUCCESS) \
         return 1; \
 }
 
-static int _test_instr(KOS_INSTANCE        *inst,
+static int _test_instr(KOS_CONTEXT          ctx,
                        KOS_BYTECODE_INSTR   instr,
                        int                  line,
                        struct _INSTR_VALUE *ret_val,
                        struct _INSTR_VALUE *args)
 {
-    uint8_t                 code[64]        = { 0 };
-    uint32_t                parms[MAX_ARGS] = { 0 };
-    KOS_MODULE             *module          = 0;
-    KOS_OBJ_ID              constants       = KOS_BADPTR;
-    KOS_CONTEXT             ctx             = &inst->threads.main_thread;
-    const char *            cstrings[]      = { "aaa", "bbb", "ccc" };
-    KOS_OBJ_ID              strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
-    uint8_t                 regs            = 0;
-    unsigned                words           = 0;
-    unsigned                num_constants   = 0;
-    int                     error           = KOS_SUCCESS;
-    int                     i;
-    KOS_OBJ_ID              ret             = KOS_BADPTR;
+    uint8_t     code[64]        = { 0 };
+    uint32_t    parms[MAX_ARGS] = { 0 };
+    KOS_MODULE *module          = 0;
+    KOS_OBJ_ID  constants       = KOS_BADPTR;
+    const char *cstrings[]      = { "aaa", "bbb", "ccc" };
+    KOS_OBJ_ID  strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
+    uint8_t     regs            = 0;
+    unsigned    words           = 0;
+    unsigned    num_constants   = 0;
+    int         error           = KOS_SUCCESS;
+    int         i;
+    KOS_OBJ_ID  ret             = KOS_BADPTR;
 
     module = (KOS_MODULE *)_KOS_alloc_object(ctx,
                                              OBJ_MODULE,
@@ -337,7 +336,7 @@ static int _test_instr(KOS_INSTANCE        *inst,
     module->name          = KOS_BADPTR;
     module->path          = KOS_BADPTR;
     module->header.type   = OBJ_MODULE;
-    module->inst          = inst;
+    module->inst          = ctx->inst;
     module->bytecode      = &code[0];
     module->bytecode_size = words;
     module->main_idx      = num_constants;

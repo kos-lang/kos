@@ -388,7 +388,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     init_module->num_func_addrs = 0;
     init_module->bytecode_size  = 0;
 
-    inst->modules.init_module  = OBJID(MODULE, init_module);
+    inst->modules.init_module = OBJID(MODULE, init_module);
 
     TRY(_register_thread(inst, &inst->threads.main_thread));
 
@@ -449,9 +449,9 @@ _error:
 
 void KOS_instance_destroy(KOS_INSTANCE *inst)
 {
-    uint32_t i;
-    uint32_t num_modules = KOS_get_array_size(inst->modules.modules);
-    KOS_CONTEXT ctx        = &inst->threads.main_thread;
+    uint32_t    i;
+    uint32_t    num_modules = KOS_get_array_size(inst->modules.modules);
+    KOS_CONTEXT ctx         = &inst->threads.main_thread;
 
     for (i = 0; i < num_modules; i++) {
         KOS_OBJ_ID module_obj = KOS_array_read(ctx, inst->modules.modules, (int)i);
