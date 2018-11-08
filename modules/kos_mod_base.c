@@ -1353,22 +1353,17 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
+    thread = (_KOS_THREAD)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
+
+    if (thread && _KOS_is_current_thread(thread)) {
+        KOS_raise_exception_cstring(ctx, str_err_join_self);
+        return KOS_BADPTR;
+    }
+
     thread = (_KOS_THREAD)KOS_object_swap_private(*OBJPTR(OBJECT, this_obj), (void *)0);
 
     if ( ! thread) {
         KOS_raise_exception_cstring(ctx, str_err_already_joined);
-        return KOS_BADPTR;
-    }
-
-    if (thread && _KOS_is_current_thread(thread)) {
-
-        /* NOTE: This causes ABA problem if a thread is trying to join itself.
-         *       Possible solution could be to use a special pointer to indicate
-         *       that the thread is being joined. */
-
-        KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)thread);
-
-        KOS_raise_exception_cstring(ctx, str_err_join_self);
         return KOS_BADPTR;
     }
 
