@@ -70,7 +70,11 @@ static void _raise_3(KOS_CONTEXT ctx,
                      KOS_OBJ_ID  s2,
                      const char *s3)
 {
-    KOS_ATOMIC(KOS_OBJ_ID) str_err[3] = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
+    KOS_ATOMIC(KOS_OBJ_ID) str_err[3];
+
+    str_err[0] = KOS_BADPTR;
+    str_err[1] = KOS_BADPTR;
+    str_err[2] = KOS_BADPTR;
 
     _KOS_track_refs(ctx, 3, &str_err[0], &str_err[1], &str_err[2]);
 
@@ -150,8 +154,12 @@ static int _find_module(KOS_CONTEXT ctx,
         KOS_INSTANCE *inst      = ctx->inst;
         uint32_t      num_paths = KOS_get_array_size(inst->modules.search_paths);
 
-        KOS_ATOMIC(KOS_OBJ_ID) components[4] = {
-                KOS_BADPTR, KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
+        KOS_ATOMIC(KOS_OBJ_ID) components[4];
+
+        components[0] = KOS_BADPTR;
+        components[1] = KOS_BADPTR;
+        components[2] = KOS_BADPTR;
+        components[3] = KOS_BADPTR;
 
         if (!num_paths)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
@@ -608,16 +616,25 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
     KOS_OBJ_ID             ret   = KOS_BADPTR;
     struct _KOS_VECTOR     cstr;
     int                    pushed = 0;
-    KOS_ATOMIC(KOS_OBJ_ID) parts[11] = {
-        KOS_BADPTR, KOS_BADPTR, KOS_BADPTR, KOS_BADPTR, KOS_BADPTR,
-        KOS_BADPTR, KOS_BADPTR, KOS_BADPTR, KOS_BADPTR, KOS_BADPTR,
-        KOS_BADPTR
-    };
+    KOS_ATOMIC(KOS_OBJ_ID) parts[11];
+
+    parts[0]  = KOS_BADPTR;
+    parts[1]  = KOS_BADPTR;
+    parts[2]  = KOS_BADPTR;
+    parts[3]  = KOS_BADPTR;
+    parts[4]  = KOS_BADPTR;
+    parts[5]  = KOS_BADPTR;
+    parts[6]  = KOS_BADPTR;
+    parts[7]  = KOS_BADPTR;
+    parts[8]  = KOS_BADPTR;
+    parts[9]  = KOS_BADPTR;
+    parts[10] = KOS_BADPTR;
 
     _KOS_vector_init(&cstr);
 
-    TRY(KOS_push_locals(ctx, 11, &parts[0], &parts[1], &parts[2], &parts[3],
-                &parts[4], &parts[5], &parts[6], &parts[7], &parts[9],
+    TRY(KOS_push_locals(ctx, 11,
+                &parts[0], &parts[1], &parts[2], &parts[3], &parts[4],
+                &parts[5], &parts[6], &parts[7], &parts[8], &parts[9],
                 &parts[10]));
     pushed = 1;
 
@@ -675,8 +692,9 @@ _error:
         ret = KOS_BADPTR;
 
     if (pushed)
-        KOS_pop_locals(ctx, 11, &parts[0], &parts[1], &parts[2], &parts[3],
-                &parts[4], &parts[5], &parts[6], &parts[7], &parts[9],
+        KOS_pop_locals(ctx, 11,
+                &parts[0], &parts[1], &parts[2], &parts[3], &parts[4],
+                &parts[5], &parts[6], &parts[7], &parts[8], &parts[9],
                 &parts[10]);
 
     _KOS_vector_destroy(&cstr);
