@@ -32,6 +32,7 @@
 #include "kos_memory.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
+#include "kos_system.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

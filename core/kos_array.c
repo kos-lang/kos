@@ -585,8 +585,13 @@ int KOS_array_insert(KOS_CONTEXT ctx,
 
     src_delta = (uint32_t)(src_end - src_begin);
 
-    if (src_delta > dest_delta)
+    if (src_delta > dest_delta) {
+        _KOS_track_refs(ctx, 2, &dest_obj_id, &src_obj_id);
+
         TRY(KOS_array_resize(ctx, dest_obj_id, dest_len - dest_delta + src_delta));
+
+        _KOS_untrack_refs(ctx, 2);
+    }
 
     dest_buf = _get_data(dest_obj_id);
     if (src_begin != src_end)

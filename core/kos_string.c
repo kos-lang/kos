@@ -545,10 +545,19 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  obj_id_a,
                           KOS_OBJ_ID  obj_id_b)
 {
+    KOS_OBJ_ID             retval;
     KOS_ATOMIC(KOS_OBJ_ID) array[2];
+
     array[0] = obj_id_a;
     array[1] = obj_id_b;
-    return KOS_string_add_many(ctx, array, 2);
+
+    _KOS_track_refs(ctx, 2, &array[0], &array[1]);
+
+    retval = KOS_string_add_many(ctx, array, 2);
+
+    _KOS_untrack_refs(ctx, 2);
+
+    return retval;
 }
 
 KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
