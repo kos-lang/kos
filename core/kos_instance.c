@@ -880,8 +880,6 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
 
     if (IS_BAD_PTR(local_refs)) {
 
-        int error;
-
         *prev_scope = TO_SMALL_INT(KOS_LOOK_FURTHER);
 
         error = _push_local_refs_object(ctx);
