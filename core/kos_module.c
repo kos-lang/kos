@@ -1281,6 +1281,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
     KOS_OBJ_ID                    module_path        = KOS_BADPTR;
     KOS_OBJ_ID                    mod_init;
     KOS_OBJ_ID                    ret;
+    KOS_OBJ_ID                    prev_locals;
     KOS_INSTANCE           *const inst               = ctx->inst;
     struct _KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
     struct _KOS_VECTOR            file_buf;
@@ -1290,7 +1291,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 
     _get_module_name(module_name, name_size, &loading);
 
-    TRY(KOS_push_local_scope(ctx, 32));
+    TRY(KOS_push_local_scope(ctx, &prev_locals));
     TRY(KOS_push_locals(ctx, 4, &module_obj, &actual_module_name, &module_dir, &module_path));
 
     /* Determine actual module name */

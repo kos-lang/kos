@@ -26,21 +26,6 @@
 #include "../inc/kos_object_base.h"
 #include <stddef.h>
 
-typedef struct _KOS_LOCAL_REFS_HEADER {
-    KOS_OBJ_ID alloc_size;
-    uint8_t    type;
-    uint8_t    num_tracked;
-    uint8_t    capacity;
-} KOS_LOCAL_REFS_HEADER;
-
-#define KOS_MAX_REFS_IN_SCOPE (256U - 3U)
-
-typedef struct _KOS_LOCAL_REFS {
-    KOS_LOCAL_REFS_HEADER header;
-    KOS_OBJ_ID            next;
-    KOS_OBJ_ID           *refs[1];
-} KOS_LOCAL_REFS;
-
 int   _KOS_heap_init(KOS_INSTANCE *inst);
 
 void  _KOS_heap_destroy(KOS_INSTANCE *inst);

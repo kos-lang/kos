@@ -578,6 +578,7 @@ void _KOS_wrap_exception(KOS_CONTEXT ctx)
     KOS_INSTANCE *const inst          = ctx->inst;
     int                 partial_wrap  = 0;
     _KOS_DUMP_CONTEXT   dump_ctx;
+    KOS_OBJ_ID          prev_locals;
     int                 pushed        = 0;
 
     assert(!IS_BAD_PTR(thrown_object));
@@ -593,7 +594,7 @@ void _KOS_wrap_exception(KOS_CONTEXT ctx)
 
     KOS_clear_exception(ctx);
 
-    TRY(KOS_push_local_scope(ctx, 4 + 1 + 4));
+    TRY(KOS_push_local_scope(ctx, &prev_locals));
     pushed = 1;
 
     dump_ctx.backtrace = KOS_BADPTR;

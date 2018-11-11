@@ -172,6 +172,21 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 /* KOS_HEAP                                                                 */
 /*==========================================================================*/
 
+#define KOS_LOOK_FURTHER 255
+
+typedef struct _KOS_LOCAL_REFS_HEADER {
+    KOS_OBJ_ID alloc_size;
+    uint8_t    type;
+    uint8_t    num_tracked;
+    uint8_t    prev_scope;
+} KOS_LOCAL_REFS_HEADER;
+
+typedef struct _KOS_LOCAL_REFS {
+    KOS_LOCAL_REFS_HEADER header;
+    KOS_OBJ_ID            next;
+    KOS_OBJ_ID           *refs[64 - 3];
+} KOS_LOCAL_REFS;
+
 #ifndef NDEBUG
 int _KOS_heap_lend_page(KOS_CONTEXT ctx,
                         void       *buffer,

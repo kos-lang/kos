@@ -290,7 +290,7 @@ KOS_OBJ_ID _KOS_call_function(KOS_CONTEXT           ctx,
 #define KOS_apply_function(ctx, func_obj, this_obj, args_obj) \
     _KOS_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
 
-int KOS_push_local_scope(KOS_CONTEXT ctx, unsigned size);
+int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 
 void KOS_pop_local_scope(KOS_CONTEXT ctx);
 
