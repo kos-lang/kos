@@ -29,6 +29,7 @@ RUN_ASAN=1
 RUN_VALGRIND=0
 RUN_GCOV=0
 RUN_SEQFAIL=0
+RUN_MADGC=0
 
 UNAME=$(uname -s)
 MAKE=make
@@ -73,6 +74,7 @@ while [ $# -gt 0 ]; do
         valgrind) RUN_VALGRIND=1 ;;
         gcov)     RUN_GCOV=1     ;;
         seqfail)  RUN_SEQFAIL=1  ;;
+        madgc)    RUN_MADGC=1    ;;
         *)        echo "Error: Unrecognized parameter - $1" >&2 ; exit 1
     esac
     shift
@@ -196,6 +198,16 @@ fi
 unset SANITIZER
 unset CONFIG_SEQFAIL
 JOBS=$ORIG_JOBS
+
+if [ "$RUN_MADGC" = "1" ]; then
+    if [ "$RUN_SEQFAIL" = "1" ]; then
+        export CONFIG_SEQFAIL=1
+    fi
+    export CONFIG_MADGC=1
+    runtests c++11 c++11
+    unset CONFIG_MADGC
+    unset CONFIG_SEQFAIL
+fi
 
 unset CONFIG_DEBUG
 if [ "$RUN_RELEASE" = "1" ]; then
