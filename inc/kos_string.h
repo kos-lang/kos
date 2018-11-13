@@ -83,13 +83,12 @@ int KOS_string_to_cstr_vec(KOS_CONTEXT         ctx,
 
 uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id);
 
-KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  obj_id_a,
-                          KOS_OBJ_ID  obj_id_b);
+KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID *str_id_array,
+                            unsigned    num_strings);
 
-KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
-                               KOS_ATOMIC(KOS_OBJ_ID) *obj_id_array,
-                               unsigned                num_strings);
+KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  str_array_id);
 
 KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  obj_id,

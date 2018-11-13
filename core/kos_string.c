@@ -42,6 +42,7 @@ static const char str_err_invalid_char_code[] = "invalid character code";
 static const char str_err_invalid_index[]     = "string index is out of range";
 static const char str_err_invalid_string[]    = "invalid string";
 static const char str_err_invalid_utf8[]      = "invalid UTF-8 sequence";
+static const char str_err_not_array[]         = "object is not an array";
 static const char str_err_not_string[]        = "object is not a string";
 static const char str_err_null_pointer[]      = "null pointer";
 static const char str_err_out_of_memory[]     = "out of memory";
@@ -541,54 +542,35 @@ static void _init_empty_string(KOS_STRING *dest,
     }
 }
 
-KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  obj_id_a,
-                          KOS_OBJ_ID  obj_id_b)
+KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID *str_id_array,
+                            unsigned    num_strings)
 {
-    KOS_OBJ_ID             retval;
-    KOS_ATOMIC(KOS_OBJ_ID) array[2];
+    KOS_OBJ_ID new_str_id = KOS_BADPTR;
 
-    array[0] = obj_id_a;
-    array[1] = obj_id_b;
-
-    _KOS_track_refs(ctx, 2, &array[0], &array[1]);
-
-    retval = KOS_string_add_many(ctx, array, 2);
-
-    _KOS_untrack_refs(ctx, 2);
-
-    return retval;
-}
-
-KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
-                               KOS_ATOMIC(KOS_OBJ_ID) *obj_id_array,
-                               unsigned                num_strings)
-{
-    KOS_STRING *new_str;
-
-    /* TODO track refs */
+    _KOS_track_refs(ctx, 1, &new_str_id);
 
     if (num_strings == 1)
-        new_str = OBJPTR(STRING, *obj_id_array);
+        new_str_id = *str_id_array;
 
     else {
         enum _KOS_STRING_FLAGS  elem_size = KOS_STRING_ELEM_8;
         unsigned                new_len   = 0;
         unsigned                num_non_0 = 0;
-        KOS_ATOMIC(KOS_OBJ_ID) *end       = obj_id_array + num_strings;
-        KOS_ATOMIC(KOS_OBJ_ID) *cur_ptr;
+        KOS_OBJ_ID       *const end       = str_id_array + num_strings;
+        KOS_OBJ_ID             *cur_ptr;
         KOS_OBJ_ID              non_0_str = KOS_VOID;
 
-        new_str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
+        new_str_id = KOS_get_string(ctx, KOS_STR_EMPTY);
 
-        for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
-            KOS_OBJ_ID             cur_str = KOS_atomic_read_obj(*cur_ptr);
+        for (cur_ptr = str_id_array; cur_ptr != end; ++cur_ptr) {
+            KOS_OBJ_ID             cur_str = *cur_ptr;
             enum _KOS_STRING_FLAGS cur_elem_size;
             unsigned               cur_len;
 
             if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
-                new_str = 0;
-                new_len = 0;
+                new_str_id = KOS_BADPTR;
+                new_len    = 0;
                 KOS_raise_exception_cstring(ctx, IS_BAD_PTR(cur_str) ?
                                             str_err_null_pointer : str_err_not_string);
                 break;
@@ -609,27 +591,125 @@ KOS_OBJ_ID KOS_string_add_many(KOS_CONTEXT             ctx,
         }
 
         if (num_non_0 == 1 && new_len)
-            new_str = OBJPTR(STRING, non_0_str);
+            new_str_id = non_0_str;
 
         else if (new_len) {
             _override_elem_size(elem_size);
 
-            new_str = _new_empty_string(ctx, new_len, elem_size);
+            new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
 
-            if (new_str) {
+            if ( ! IS_BAD_PTR(new_str_id)) {
+
                 unsigned pos = 0;
-                for (cur_ptr = obj_id_array; cur_ptr != end; ++cur_ptr) {
-                    KOS_OBJ_ID     str_obj = KOS_atomic_read_obj(*cur_ptr);
-                    KOS_STRING    *cur_str = OBJPTR(STRING, str_obj);
-                    const unsigned cur_len = cur_str->header.length;
-                    _init_empty_string(new_str, pos, cur_str, cur_len);
+
+                for (cur_ptr = str_id_array; cur_ptr != end; ++cur_ptr) {
+                    KOS_OBJ_ID     str_obj = *cur_ptr;
+                    const unsigned cur_len = OBJPTR(STRING, str_obj)->header.length;
+                    _init_empty_string(OBJPTR(STRING, new_str_id), pos, OBJPTR(STRING, str_obj), cur_len);
                     pos += cur_len;
                 }
             }
         }
     }
 
-    return OBJID(STRING, new_str);
+    _KOS_untrack_refs(ctx, 1);
+
+    return new_str_id;
+}
+
+KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  str_array_id)
+{
+    KOS_OBJ_ID new_str_id = KOS_BADPTR;
+    unsigned   num_strings;
+
+    if (IS_BAD_PTR(str_array_id) || GET_OBJ_TYPE(str_array_id) != OBJ_ARRAY) {
+        KOS_raise_exception_cstring(ctx, str_err_not_array);
+        return KOS_BADPTR;
+    }
+
+    num_strings = KOS_get_array_size(str_array_id);
+
+    _KOS_track_refs(ctx, 2, &new_str_id, &str_array_id);
+
+    if (num_strings == 1) {
+        new_str_id = KOS_array_read(ctx, str_array_id, 0);
+
+        if ( ! IS_BAD_PTR(new_str_id) && GET_OBJ_TYPE(new_str_id) != OBJ_STRING) {
+            KOS_raise_exception_cstring(ctx, str_err_not_string);
+            new_str_id = KOS_BADPTR;
+        }
+    }
+    else {
+        enum _KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
+        unsigned               new_len   = 0;
+        unsigned               num_non_0 = 0;
+        unsigned               i;
+        KOS_OBJ_ID             non_0_str = KOS_VOID;
+
+        new_str_id = KOS_get_string(ctx, KOS_STR_EMPTY);
+
+        for (i = 0; i < num_strings; ++i) {
+            KOS_OBJ_ID             cur_str = KOS_array_read(ctx, str_array_id, i);
+            enum _KOS_STRING_FLAGS cur_elem_size;
+            unsigned               cur_len;
+
+            if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
+                new_str_id = KOS_BADPTR;
+                new_len    = 0;
+                if ( ! IS_BAD_PTR(cur_str))
+                    KOS_raise_exception_cstring(ctx, str_err_not_string);
+                break;
+            }
+
+            cur_elem_size = _KOS_get_string_elem_size(OBJPTR(STRING, cur_str));
+            cur_len       = KOS_get_string_length(cur_str);
+
+            if (cur_elem_size > elem_size)
+                elem_size = cur_elem_size;
+
+            new_len += cur_len;
+
+            if (cur_len) {
+                ++num_non_0;
+                non_0_str = cur_str;
+            }
+        }
+
+        if (num_non_0 == 1 && new_len)
+            new_str_id = non_0_str;
+
+        else if (new_len) {
+            _override_elem_size(elem_size);
+
+            new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+
+            if ( ! IS_BAD_PTR(new_str_id)) {
+
+                unsigned pos = 0;
+
+                for (i = 0; i < num_strings; ++i) {
+                    KOS_OBJ_ID str_obj = KOS_array_read(ctx, str_array_id, i);
+                    unsigned   cur_len;
+
+                    if (IS_BAD_PTR(str_obj) || GET_OBJ_TYPE(str_obj) != OBJ_STRING) {
+                        new_str_id = KOS_BADPTR;
+                        if ( ! IS_BAD_PTR(str_obj))
+                            KOS_raise_exception_cstring(ctx, str_err_not_string);
+                        break;
+                    }
+
+                    cur_len = OBJPTR(STRING, str_obj)->header.length;
+                    _init_empty_string(OBJPTR(STRING, new_str_id), pos, OBJPTR(STRING, str_obj), cur_len);
+                    pos += cur_len;
+                }
+            }
+        }
+    }
+
+    _KOS_untrack_refs(ctx, 2);
+
+    return new_str_id;
 }
 
 KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,

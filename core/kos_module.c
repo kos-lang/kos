@@ -70,7 +70,7 @@ static void _raise_3(KOS_CONTEXT ctx,
                      KOS_OBJ_ID  s2,
                      const char *s3)
 {
-    KOS_ATOMIC(KOS_OBJ_ID) str_err[3];
+    KOS_OBJ_ID str_err[3];
 
     str_err[0] = KOS_BADPTR;
     str_err[1] = KOS_BADPTR;
@@ -85,7 +85,7 @@ static void _raise_3(KOS_CONTEXT ctx,
 
         if ( ! IS_BAD_PTR(str_err[2])) {
 
-            const KOS_OBJ_ID str_err_full = KOS_string_add_many(ctx, str_err, 3);
+            const KOS_OBJ_ID str_err_full = KOS_string_add_n(ctx, str_err, 3);
 
             if ( ! IS_BAD_PTR(str_err_full))
                 KOS_raise_exception(ctx, str_err_full);
@@ -154,7 +154,7 @@ static int _find_module(KOS_CONTEXT ctx,
         KOS_INSTANCE *inst      = ctx->inst;
         uint32_t      num_paths = KOS_get_array_size(inst->modules.search_paths);
 
-        KOS_ATOMIC(KOS_OBJ_ID) components[4];
+        KOS_OBJ_ID components[4];
 
         components[0] = KOS_BADPTR;
         components[1] = KOS_BADPTR;
@@ -183,7 +183,7 @@ static int _find_module(KOS_CONTEXT ctx,
                                                        sizeof(str_script_ext) - 1);
             TRY_OBJID(components[3]);
 
-            path = KOS_string_add_many(ctx, components, sizeof(components)/sizeof(components[0]));
+            path = KOS_string_add_n(ctx, components, sizeof(components)/sizeof(components[0]));
             TRY_OBJID(path);
 
             TRY(KOS_string_to_cstr_vec(ctx, path, &cpath));
@@ -612,11 +612,11 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
                                 const char          *error_str,
                                 struct _KOS_FILE_POS pos)
 {
-    int                    error = KOS_SUCCESS;
-    KOS_OBJ_ID             ret   = KOS_BADPTR;
-    struct _KOS_VECTOR     cstr;
-    int                    pushed = 0;
-    KOS_ATOMIC(KOS_OBJ_ID) parts[11];
+    int                error = KOS_SUCCESS;
+    KOS_OBJ_ID         ret   = KOS_BADPTR;
+    struct _KOS_VECTOR cstr;
+    int                pushed = 0;
+    KOS_OBJ_ID         parts[11];
 
     parts[0]  = KOS_BADPTR;
     parts[1]  = KOS_BADPTR;
@@ -685,7 +685,7 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
     parts[10] = KOS_new_string(ctx, cstr.buffer, pos.column);
     TRY_OBJID(parts[10]);
 
-    ret = KOS_string_add_many(ctx, parts, sizeof(parts)/sizeof(parts[0]));
+    ret = KOS_string_add_n(ctx, parts, sizeof(parts)/sizeof(parts[0]));
 
 _error:
     if (error)

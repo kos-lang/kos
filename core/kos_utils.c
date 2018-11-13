@@ -650,8 +650,9 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT ctx,
     TRY_OBJID(str);
     TRY(KOS_array_write(ctx, aux_array_id, i_out, str));
     ++i_out;
+    TRY(KOS_array_resize(ctx, aux_array_id, i_out));
 
-    ret = KOS_string_add_many(ctx, _KOS_get_array_buffer(OBJPTR(ARRAY, aux_array_id)), i_out);
+    ret = KOS_string_add(ctx, aux_array_id);
 
 _error:
     return error ? KOS_BADPTR : ret;
@@ -837,13 +838,13 @@ _error:
 static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
                                    KOS_OBJ_ID  obj_id)
 {
-    int                    error = KOS_SUCCESS;
-    KOS_OBJ_ID             ret   = KOS_BADPTR;
-    KOS_FUNCTION          *func;
-    const char            *str_func;
-    unsigned               str_func_len;
-    KOS_ATOMIC(KOS_OBJ_ID) strings[3];
-    char                   cstr_ptr[22];
+    int           error = KOS_SUCCESS;
+    KOS_OBJ_ID    ret   = KOS_BADPTR;
+    KOS_FUNCTION *func;
+    const char   *str_func;
+    unsigned      str_func_len;
+    KOS_OBJ_ID    strings[3];
+    char          cstr_ptr[22];
 
     switch (GET_OBJ_TYPE(obj_id)) {
 
@@ -880,7 +881,7 @@ static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
     strings[2] = KOS_new_cstring(ctx, cstr_ptr);
     TRY_OBJID(strings[2]);
 
-    ret = KOS_string_add_many(ctx, strings, sizeof(strings) / sizeof(strings[0]));
+    ret = KOS_string_add_n(ctx, strings, sizeof(strings) / sizeof(strings[0]));
 
 _error:
     return error ? KOS_BADPTR : ret;

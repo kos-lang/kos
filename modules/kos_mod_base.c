@@ -668,7 +668,7 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
         }
 
         if (i == num_args)
-            ret = KOS_string_add_many(ctx, _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)), num_args);
+            ret = KOS_string_add(ctx, args_obj);
     }
 
 _error:
@@ -738,7 +738,7 @@ static KOS_OBJ_ID _stringify(KOS_CONTEXT ctx,
         }
 
         if (i == num_args)
-            ret = KOS_string_add_many(ctx, _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj)), num_args);
+            ret = KOS_string_add(ctx, args_obj);
     }
 
 _error:

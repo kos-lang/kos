@@ -202,8 +202,8 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
             lexer->lexer.pos.column += token->length;
         }
         else {
-            KOS_ATOMIC(KOS_OBJ_ID) parts[6];
-            KOS_OBJ_ID             exception;
+            KOS_OBJ_ID parts[6];
+            KOS_OBJ_ID exception;
 
             assert(error == KOS_ERROR_SCANNING_FAILED);
 
@@ -223,7 +223,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
             parts[5] = KOS_new_cstring(ctx, lexer->lexer.error_str);
             TRY_OBJID(parts[5]);
 
-            exception = KOS_string_add_many(ctx, parts, sizeof(parts)/sizeof(parts[0]));
+            exception = KOS_string_add_n(ctx, parts, sizeof(parts)/sizeof(parts[0]));
             TRY_OBJID(exception);
 
             KOS_raise_exception(ctx, exception);

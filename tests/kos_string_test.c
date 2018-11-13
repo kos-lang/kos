@@ -592,7 +592,7 @@ int main(void)
 
     /************************************************************************/
     {
-        const KOS_OBJ_ID s = KOS_string_add_many(ctx, 0, 0);
+        const KOS_OBJ_ID s = KOS_string_add_n(ctx, 0, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(_KOS_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_8);
@@ -602,11 +602,11 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_ID) src[1];
-        KOS_OBJ_ID             s;
+        KOS_OBJ_ID src[1];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(ctx, "");
         TEST(!IS_BAD_PTR(src[0]));
-        s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
+        s      = KOS_string_add_n(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(_KOS_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_8);
@@ -616,15 +616,15 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_ID) src[3];
-        KOS_OBJ_ID             s;
+        KOS_OBJ_ID src[3];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(ctx, "");
         src[1] = KOS_new_const_ascii_cstring(ctx, "");
         src[2] = KOS_new_const_ascii_cstring(ctx, "");
         TEST(!IS_BAD_PTR(src[0]));
         TEST(!IS_BAD_PTR(src[1]));
         TEST(!IS_BAD_PTR(src[2]));
-        s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
+        s      = KOS_string_add_n(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(_KOS_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_8);
@@ -634,33 +634,33 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_ID) src[1];
-        KOS_OBJ_ID             s;
+        KOS_OBJ_ID src[1];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_cstring(ctx, "abc\xDF\xBF");
-        s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
+        s      = KOS_string_add_n(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(s == src[0]);
     }
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_ID) src[1];
-        KOS_OBJ_ID             s;
+        KOS_OBJ_ID src[1];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_cstring(ctx, "this is a very long 32-bit string \xF7\xBF\xBF\xBF");
-        s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
+        s      = KOS_string_add_n(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(s == src[0]);
     }
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_ID) src[3];
-        KOS_OBJ_ID             s;
+        KOS_OBJ_ID src[3];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(ctx, "one ");
         src[1] = KOS_new_const_ascii_cstring(ctx, "two ");
         src[2] = KOS_new_const_ascii_cstring(ctx, "three");
         TEST(!IS_BAD_PTR(src[0]));
         TEST(!IS_BAD_PTR(src[1]));
         TEST(!IS_BAD_PTR(src[2]));
-        s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
+        s      = KOS_string_add_n(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(_KOS_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_MIN_8);
@@ -673,15 +673,15 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_ID) src[3];
-        KOS_OBJ_ID             s;
+        KOS_OBJ_ID src[3];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(ctx, "a");
         src[1] = KOS_new_cstring(ctx, "\xDF\xBF");
         src[2] = KOS_new_const_ascii_cstring(ctx, "b");
         TEST(!IS_BAD_PTR(src[0]));
         TEST(!IS_BAD_PTR(src[1]));
         TEST(!IS_BAD_PTR(src[2]));
-        s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
+        s      = KOS_string_add_n(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(_KOS_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_MIN_16);
@@ -694,14 +694,14 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_ID) src[5];
-        KOS_OBJ_ID             s;
+        KOS_OBJ_ID src[5];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(ctx, "abcdefghijklmnopqrstuvwxyz");
         src[1] = KOS_new_cstring(ctx, "\xC4\x80");
         src[2] = KOS_new_cstring(ctx, "\xF0\x90\x80\x82");
         src[3] = KOS_new_const_ascii_cstring(ctx, "");
         src[4] = KOS_new_cstring(ctx, "\xE0\x80\x83");
-        s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
+        s      = KOS_string_add_n(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(_KOS_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_32);
@@ -717,14 +717,14 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_ATOMIC(KOS_OBJ_ID) src[5];
-        KOS_OBJ_ID             s;
+        KOS_OBJ_ID src[5];
+        KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(ctx, "");
         src[1] = KOS_new_const_ascii_cstring(ctx, "");
         src[2] = KOS_new_const_ascii_cstring(ctx, "x");
         src[3] = KOS_new_const_ascii_cstring(ctx, "");
         src[4] = KOS_new_const_ascii_cstring(ctx, "");
-        s      = KOS_string_add_many(ctx, src, sizeof(src)/sizeof(src[0]));
+        s      = KOS_string_add_n(ctx, src, sizeof(src)/sizeof(src[0]));
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(GET_OBJ_TYPE(s) == OBJ_STRING);
@@ -737,7 +737,7 @@ int main(void)
         KOS_OBJ_ID s;
         src[0] = KOS_new_const_ascii_cstring(ctx, "abc");
         src[1] = KOS_new_const_ascii_cstring(ctx, "def");
-        s      = KOS_string_add(ctx, src[0], src[1]);
+        s      = KOS_string_add_n(ctx, src, 2);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(_KOS_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_MIN_8);
@@ -1249,28 +1249,165 @@ int main(void)
     /************************************************************************/
     {
         static const char str[] = "str";
+        KOS_OBJ_ID        a[2];
 
         KOS_OBJ_ID str_str = KOS_new_const_ascii_cstring(ctx, str);
         TEST(!IS_BAD_PTR(str_str));
         TEST(GET_OBJ_TYPE(str_str) == OBJ_STRING);
 
-        TEST(KOS_string_add(ctx, str_str, KOS_BADPTR) == KOS_BADPTR);
+        a[0] = str_str;
+        a[1] = KOS_BADPTR;
+        TEST(KOS_string_add_n(ctx, a, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(ctx, TO_SMALL_INT(1), str_str) == KOS_BADPTR);
+        a[0] = TO_SMALL_INT(1);
+        a[1] = str_str;
+        TEST(KOS_string_add_n(ctx, a, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(ctx, str_str, KOS_TRUE) == KOS_BADPTR);
+        a[0] = str_str;
+        a[1] = KOS_TRUE;
+        TEST(KOS_string_add_n(ctx, a, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(ctx, KOS_VOID, str_str) == KOS_BADPTR);
+        a[0] = KOS_VOID;
+        a[1] = str_str;
+        TEST(KOS_string_add_n(ctx, a, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(ctx, str_str, KOS_new_array(ctx, 8)) == KOS_BADPTR);
+        a[0] = str_str;
+        a[1] = KOS_new_array(ctx, 8);
+        TEST(KOS_string_add_n(ctx, a, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(ctx, KOS_new_object(ctx), str_str) == KOS_BADPTR);
+        a[0] = KOS_new_object(ctx);
+        a[1] = str_str;
+        TEST(KOS_string_add_n(ctx, a, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID array;
+        KOS_OBJ_ID in_str;
+        KOS_OBJ_ID str;
+
+        TEST(KOS_string_add(ctx, KOS_BADPTR) == KOS_BADPTR);
+        TEST_EXCEPTION();
+
+        TEST(KOS_string_add(ctx, KOS_VOID) == KOS_BADPTR);
+        TEST_EXCEPTION();
+
+        TEST(KOS_string_add(ctx, KOS_get_string(ctx, KOS_STR_EMPTY)) == KOS_BADPTR);
+        TEST_EXCEPTION();
+
+        array = KOS_new_array(ctx, 0);
+        TEST( ! IS_BAD_PTR(array));
+        TEST_NO_EXCEPTION();
+
+        str = KOS_string_add(ctx, array);
+        TEST( ! IS_BAD_PTR(str));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(str) == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == 0);
+
+        TEST(KOS_array_resize(ctx, array, 1) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_string_add(ctx, array) == KOS_BADPTR);
+        TEST_EXCEPTION();
+
+        TEST(KOS_array_write(ctx, array, 0, KOS_get_string(ctx, KOS_STR_EMPTY)) == KOS_SUCCESS);
+
+        str = KOS_string_add(ctx, array);
+        TEST( ! IS_BAD_PTR(str));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(str) == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == 0);
+
+        in_str = KOS_new_const_ascii_cstring(ctx, "test");
+        TEST( ! IS_BAD_PTR(in_str));
+        TEST(GET_OBJ_TYPE(in_str) == OBJ_STRING);
+        TEST(KOS_array_write(ctx, array, 0, in_str) == KOS_SUCCESS);
+
+        str = KOS_string_add(ctx, array);
+        TEST( ! IS_BAD_PTR(str));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(str) == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == 4);
+        TEST(str == in_str);
+
+        TEST(KOS_array_resize(ctx, array, 2) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_string_add(ctx, array) == KOS_BADPTR);
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        static const char *in_cstr[]       = { "this", "is", "A", "test" };
+        static const char  expected_cstr[] = "thisisAtest";
+        KOS_OBJ_ID         array;
+        KOS_OBJ_ID         expected;
+        KOS_OBJ_ID         str;
+        size_t             i;
+
+        array = KOS_new_array(ctx, sizeof(in_cstr) / sizeof(in_cstr[0]));
+        TEST( ! IS_BAD_PTR(array));
+        TEST_NO_EXCEPTION();
+
+        for (i = 0; i < sizeof(in_cstr) / sizeof(in_cstr[0]); ++i) {
+            KOS_OBJ_ID in_str = KOS_new_const_ascii_cstring(ctx, in_cstr[i]);
+            TEST( ! IS_BAD_PTR(in_str));
+            TEST_NO_EXCEPTION();
+
+            TEST(KOS_array_write(ctx, array, i, in_str) == KOS_SUCCESS);
+        }
+
+        expected = KOS_new_const_ascii_string(ctx, expected_cstr, sizeof(expected_cstr) - 1);
+        TEST( ! IS_BAD_PTR(expected));
+        TEST_NO_EXCEPTION();
+
+        str = KOS_string_add(ctx, array);
+        TEST( ! IS_BAD_PTR(str));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(str) == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == KOS_get_string_length(expected));
+        TEST(KOS_string_compare(str, expected) == 0);
+    }
+
+    /************************************************************************/
+    {
+        static const char *in_cstr[]       = { "this", "i\xC3\x80s", "test" };
+        static const char  expected_cstr[] = "thisi\xC3\x80stest";
+        KOS_OBJ_ID         array;
+        KOS_OBJ_ID         expected;
+        KOS_OBJ_ID         str;
+        size_t             i;
+
+        array = KOS_new_array(ctx, sizeof(in_cstr) / sizeof(in_cstr[0]));
+        TEST( ! IS_BAD_PTR(array));
+        TEST_NO_EXCEPTION();
+
+        for (i = 0; i < sizeof(in_cstr) / sizeof(in_cstr[0]); ++i) {
+            KOS_OBJ_ID in_str = KOS_new_cstring(ctx, in_cstr[i]);
+            TEST( ! IS_BAD_PTR(in_str));
+            TEST_NO_EXCEPTION();
+
+            TEST(KOS_array_write(ctx, array, i, in_str) == KOS_SUCCESS);
+        }
+
+        expected = KOS_new_cstring(ctx, expected_cstr);
+        TEST( ! IS_BAD_PTR(expected));
+        TEST_NO_EXCEPTION();
+
+        str = KOS_string_add(ctx, array);
+        TEST( ! IS_BAD_PTR(str));
+        TEST_NO_EXCEPTION();
+        TEST(GET_OBJ_TYPE(str) == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == KOS_get_string_length(expected));
+        TEST(KOS_string_compare(str, expected) == 0);
     }
 
     /************************************************************************/

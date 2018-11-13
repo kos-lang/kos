@@ -1780,35 +1780,34 @@ static int _exec_function(KOS_CONTEXT ctx)
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
-                KOS_OBJ_ID src1;
-                KOS_OBJ_ID src2;
+                KOS_OBJ_ID src[2];
 
                 assert(rsrc1 < num_regs);
                 assert(rsrc2 < num_regs);
 
-                rdest = bytecode[1];
-                src1  = regs[rsrc1];
-                src2  = regs[rsrc2];
+                rdest  = bytecode[1];
+                src[0] = regs[rsrc1];
+                src[1] = regs[rsrc2];
 
-                if (IS_SMALL_INT(src1)) {
-                    const int64_t a = GET_SMALL_INT(src1);
-                    out             = _add_integer(ctx, a, src2);
+                if (IS_SMALL_INT(src[0])) {
+                    const int64_t a = GET_SMALL_INT(src[0]);
+                    out             = _add_integer(ctx, a, src[1]);
                 }
                 else {
 
-                    switch (GET_OBJ_TYPE(src1)) {
+                    switch (GET_OBJ_TYPE(src[0])) {
 
                         case OBJ_INTEGER:
-                            out = _add_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
+                            out = _add_integer(ctx, OBJPTR(INTEGER, src[0])->value, src[1]);
                             break;
 
                         case OBJ_FLOAT:
-                            out = _add_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
+                            out = _add_float(ctx, OBJPTR(FLOAT, src[0])->value, src[1]);
                             break;
 
                         case OBJ_STRING: {
-                            if (GET_OBJ_TYPE(src2) == OBJ_STRING)
-                                out = KOS_string_add(ctx, src1, src2);
+                            if (GET_OBJ_TYPE(src[1]) == OBJ_STRING)
+                                out = KOS_string_add_n(ctx, src, 2);
                             else
                                 KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
                             break;
