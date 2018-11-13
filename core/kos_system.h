@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_FILE_H
-#define __KOS_FILE_H
+#ifndef KOS_FILE_H_INCLUDED
+#define KOS_FILE_H_INCLUDED
 
 #ifdef _WIN32
 #   define KOS_PATH_SEPARATOR          '\\'

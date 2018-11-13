@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_DEBUG_H
-#define __KOS_DEBUG_H
+#ifndef KOS_DEBUG_H_INCLUDED
+#define KOS_DEBUG_H_INCLUDED
 
 #ifdef CONFIG_SEQFAIL
 

@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_DISASM_H
-#define __KOS_DISASM_H
+#ifndef KOS_DISASM_H_INCLUDED
+#define KOS_DISASM_H_INCLUDED
 
 #include "../inc/kos_bytecode.h"
 #include <stdint.h>

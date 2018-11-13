@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_MODULE_H
-#define __KOS_MODULE_H
+#ifndef KOS_MODULE_H_INCLUDED
+#define KOS_MODULE_H_INCLUDED
 
 #include "kos_object_base.h"
 

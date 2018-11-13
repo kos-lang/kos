@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_COMPILER_H
-#define __KOS_COMPILER_H
+#ifndef KOS_COMPILER_H_INCLUDED
+#define KOS_COMPILER_H_INCLUDED
 
 #include "../inc/kos_bytecode.h"
 #include "kos_ast.h"

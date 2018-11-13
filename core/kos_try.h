@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_TRY_H
-#define __KOS_TRY_H
+#ifndef KOS_TRY_H_INCLUDED
+#define KOS_TRY_H_INCLUDED
 
 #define TRY(code) do { if (0 != (error = (code))) goto _error; } while (0)
 

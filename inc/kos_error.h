@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_ERROR_H
-#define __KOS_ERROR_H
+#ifndef KOS_ERROR_H_INCLUDED
+#define KOS_ERROR_H_INCLUDED
 
 enum KOS_ERROR {
     KOS_SUCCESS,

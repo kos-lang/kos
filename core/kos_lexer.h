@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_LEXER_H
-#define __KOS_LEXER_H
+#ifndef KOS_LEXER_H_INCLUDED
+#define KOS_LEXER_H_INCLUDED
 
 struct _KOS_FILE_POS {
     unsigned file_id;

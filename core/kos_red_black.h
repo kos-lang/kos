@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_RED_BLACK_H
-#define __KOS_RED_BLACK_H
+#ifndef KOS_RED_BLACK_H_INCLUDED
+#define KOS_RED_BLACK_H_INCLUDED
 
 struct _KOS_RED_BLACK_NODE {
     struct _KOS_RED_BLACK_NODE *parent;

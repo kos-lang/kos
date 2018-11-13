@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_UTF8_H
-#define __KOS_UTF8_H
+#ifndef KOS_UTF8_H_INCLUDED
+#define KOS_UTF8_H_INCLUDED
 
 #include <stdint.h>
 

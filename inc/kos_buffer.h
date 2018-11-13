@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_BUFFER_H
-#define __KOS_BUFFER_H
+#ifndef KOS_BUFFER_H_INCLUDED
+#define KOS_BUFFER_H_INCLUDED
 
 #include "kos_object_base.h"
 #include "kos_threads.h"

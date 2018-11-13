@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_UNICODE_H
-#define __KOS_UNICODE_H
+#ifndef KOS_UNICODE_H_INCLUDED
+#define KOS_UNICODE_H_INCLUDED
 
 #include <stdint.h>
 

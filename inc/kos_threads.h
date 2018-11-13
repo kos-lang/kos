@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_THREADS_H
-#define __KOS_THREADS_H
+#ifndef KOS_THREADS_H_INCLUDED
+#define KOS_THREADS_H_INCLUDED
 
 #include <stdint.h>
 

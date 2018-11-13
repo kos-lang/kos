@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_BYTECODE_H
-#define __KOS_BYTECODE_H
+#ifndef KOS_BYTECODE_H_INCLUDED
+#define KOS_BYTECODE_H_INCLUDED
 
 typedef enum _KOS_BYTECODE_INSTR {
     /* BREAKPOINT */

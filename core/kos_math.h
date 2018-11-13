@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_MATH_H
-#define __KOS_MATH_H
+#ifndef KOS_MATH_H_INCLUDED
+#define KOS_MATH_H_INCLUDED
 
 #ifdef __cplusplus
 

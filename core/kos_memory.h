@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_MEMORY_H
-#define __KOS_MEMORY_H
+#ifndef KOS_MEMORY_H_INCLUDED
+#define KOS_MEMORY_H_INCLUDED
 
 #include <stddef.h>
 

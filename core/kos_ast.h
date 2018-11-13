@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_AST_H
-#define __KOS_AST_H
+#ifndef KOS_AST_H_INCLUDED
+#define KOS_AST_H_INCLUDED
 
 #include "kos_lexer.h"
 

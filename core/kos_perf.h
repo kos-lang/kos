@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_PERF_H
-#define __KOS_PERF_H
+#ifndef KOS_PERF_H_INCLUDED
+#define KOS_PERF_H_INCLUDED
 
 #include "../inc/kos_threads.h"
 

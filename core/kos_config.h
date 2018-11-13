@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_CONFIG_H
-#define __KOS_CONFIG_H
+#ifndef KOS_CONFIG_H_INCLUDED
+#define KOS_CONFIG_H_INCLUDED
 
 #define _KOS_MAX_AST_DEPTH      100
 #define _KOS_BUF_ALLOC_SIZE     4096U

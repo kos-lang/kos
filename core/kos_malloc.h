@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_MALLOC_H
-#define __KOS_MALLOC_H
+#ifndef KOS_MALLOC_H_INCLUDED
+#define KOS_MALLOC_H_INCLUDED
 
 #include <stddef.h>
 

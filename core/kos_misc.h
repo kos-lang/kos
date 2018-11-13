@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_MISC_H
-#define __KOS_MISC_H
+#ifndef KOS_MISC_H_INCLUDED
+#define KOS_MISC_H_INCLUDED
 
 #include "../inc/kos_utils.h"
 

@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_OBJECT_INTERNAL_H
-#define __KOS_OBJECT_INTERNAL_H
+#ifndef KOS_OBJECT_INTERNAL_H_INCLUDED
+#define KOS_OBJECT_INTERNAL_H_INCLUDED
 
 #include "../inc/kos_instance.h"
 #include "../inc/kos_string.h"

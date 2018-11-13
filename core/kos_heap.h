@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_OBJECT_ALLOC_H
-#define __KOS_OBJECT_ALLOC_H
+#ifndef KOS_OBJECT_ALLOC_H_INCLUDED
+#define KOS_OBJECT_ALLOC_H_INCLUDED
 
 #include "../inc/kos_object_base.h"
 #include <stddef.h>

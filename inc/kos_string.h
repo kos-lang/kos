@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_STRING_H
-#define __KOS_STRING_H
+#ifndef KOS_STRING_H_INCLUDED
+#define KOS_STRING_H_INCLUDED
 
 #include "kos_object_base.h"
 #include <assert.h>

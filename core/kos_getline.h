@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_GETLINE_H
-#define __KOS_GETLINE_H
+#ifndef KOS_GETLINE_H_INCLUDED
+#define KOS_GETLINE_H_INCLUDED
 
 #ifdef CONFIG_READLINE
 

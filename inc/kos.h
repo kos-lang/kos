@@ -20,8 +20,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef __KOS_H
-#define __KOS_H
+#ifndef KOS_H_INCLUDED
+#define KOS_H_INCLUDED
 
 #include "kos_array.h"
 #include "kos_buffer.h"
