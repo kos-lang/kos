@@ -460,7 +460,7 @@ static int _if_stmt(struct _KOS_COMP_UNIT *program,
     else if (is_truthy)
         *is_terminal = t1;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -493,7 +493,7 @@ static int _repeat_stmt(struct _KOS_COMP_UNIT *program,
     if (*is_terminal & TERM_BREAK)
         *is_terminal = TERM_NONE;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -544,7 +544,7 @@ static int _for_stmt(struct _KOS_COMP_UNIT *program,
         ++program->num_optimizations;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -622,7 +622,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
 
     _pop_scope(program);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -664,7 +664,7 @@ static int _switch_stmt(struct _KOS_COMP_UNIT *program,
 
     *is_terminal = (num_cases == num_terminated && has_default) ? t : TERM_NONE;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -691,7 +691,7 @@ static int _case_stmt(struct _KOS_COMP_UNIT *program,
     if (*is_terminal && node->next)
         _collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -704,7 +704,7 @@ static int _visit_child_nodes(struct _KOS_COMP_UNIT *program,
     for (node = node->children; node; node = node->next)
         TRY(_visit_node(program, node, &t));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -773,7 +773,7 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
     if (fun_var)
         fun_var->is_active = VAR_ACTIVE;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -882,7 +882,7 @@ static int _assignment(struct _KOS_COMP_UNIT *program,
         }
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1056,7 +1056,7 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT      *program,
 
     error = _collapse_numeric(program, node, &numeric_a);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1414,7 +1414,7 @@ static int _operator(struct _KOS_COMP_UNIT *program,
             break;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1562,7 +1562,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT *program,
     if ( ! node->children->next)
         _promote(program, node, node->children);
 
-_error:
+cleanup:
     return error;
 }
 

@@ -1034,7 +1034,7 @@ static int _import_global(const char *global_name,
 
     _free_reg(info->program, reg);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1103,7 +1103,7 @@ static int _import(struct _KOS_COMP_UNIT      *program,
         }
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1206,7 +1206,7 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
         ptr->code_size = (uint32_t)fun_size;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1261,7 +1261,7 @@ static int _finish_global_scope(struct _KOS_COMP_UNIT *program,
 
     assert(program->code_gen_buf.size == 0);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1340,7 +1340,7 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
         _pop_scope(program);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1397,7 +1397,7 @@ static int _if(struct _KOS_COMP_UNIT      *program,
     if (offs >= 0)
         _update_jump_offs(program, offs, program->cur_offs);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1458,7 +1458,7 @@ static int _gen_return(struct _KOS_COMP_UNIT *program,
     else
         TRY(_gen_instr2(program, INSTR_RETURN, _get_closure_size(program), reg));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1520,7 +1520,7 @@ static int _return(struct _KOS_COMP_UNIT      *program,
             _free_reg(program, reg);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1546,7 +1546,7 @@ static int _yield(struct _KOS_COMP_UNIT      *program,
     if (src != *reg)
         _free_reg(program, src);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1565,7 +1565,7 @@ static int _throw(struct _KOS_COMP_UNIT      *program,
 
     _free_reg(program, reg);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1608,7 +1608,7 @@ static int _assert_stmt(struct _KOS_COMP_UNIT      *program,
 
     _free_reg(program, reg);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1733,7 +1733,7 @@ static int _repeat(struct _KOS_COMP_UNIT      *program,
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1833,7 +1833,7 @@ static int _for(struct _KOS_COMP_UNIT      *program,
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1867,7 +1867,7 @@ static int _invoke_get_iterator(struct _KOS_COMP_UNIT *program,
 
     _free_reg(program, func_reg);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1987,7 +1987,7 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -2074,7 +2074,7 @@ static int _break_continue_fallthrough(struct _KOS_COMP_UNIT      *program,
     program->cur_frame->break_offs->offs = program->cur_offs;
     TRY(_gen_instr1(program, INSTR_JUMP, 0));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -2281,7 +2281,7 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
 
     _finish_break_continue(program, -1, old_break_offs);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -2534,7 +2534,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
 
     _pop_scope(program);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -2585,7 +2585,7 @@ static int _refinement_module(struct _KOS_COMP_UNIT      *program,
             _free_reg(program, prop);
     }
 
-_error:
+cleanup:
     kos_vector_destroy(&cstr);
 
     return error;
@@ -2680,7 +2680,7 @@ static int _refinement_object(struct _KOS_COMP_UNIT      *program,
     if (obj != *reg && ! out_obj)
         _free_reg(program, obj);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -2780,7 +2780,7 @@ static int _slice(struct _KOS_COMP_UNIT      *program,
     if (obj_reg != *reg)
         _free_reg(program, obj_reg);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -2907,7 +2907,7 @@ static int _gen_array(struct _KOS_COMP_UNIT      *program,
         _free_reg(program, arg);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3026,7 +3026,7 @@ static int _invocation(struct _KOS_COMP_UNIT      *program,
     if (obj)
         _free_reg(program, obj);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3098,7 +3098,7 @@ static int _async(struct _KOS_COMP_UNIT      *program,
     _free_reg(program, argn[0]);
     _free_reg(program, argn[1]);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3196,7 +3196,7 @@ static int _pos_neg(struct _KOS_COMP_UNIT      *program,
         /* TODO: enforce numeric */
         *reg = src;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3232,7 +3232,7 @@ static int _log_not(struct _KOS_COMP_UNIT      *program,
 
     _update_jump_offs(program, offs2, program->cur_offs);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3285,7 +3285,7 @@ static int _log_and_or(struct _KOS_COMP_UNIT      *program,
         _free_reg(program, left);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3366,7 +3366,7 @@ static int _log_tri(struct _KOS_COMP_UNIT      *program,
             _update_jump_offs(program, offs1, program->cur_offs);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3390,7 +3390,7 @@ static int _has_prop(struct _KOS_COMP_UNIT      *program,
     if (src != *reg)
         _free_reg(program, src);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3451,7 +3451,7 @@ static int _delete(struct _KOS_COMP_UNIT      *program,
     TRY(_gen_reg(program, reg));
     TRY(_gen_instr1(program, INSTR_LOAD_VOID, (*reg)->reg));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3661,7 +3661,7 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
     if (reg2 && *reg != reg2)
         _free_reg(program, reg2);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3775,7 +3775,7 @@ static int _assign_member(struct _KOS_COMP_UNIT      *program,
 
     _free_reg(program, obj);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3819,7 +3819,7 @@ static int _assign_non_local(struct _KOS_COMP_UNIT      *program,
     if (tmp_reg)
         _free_reg(program, tmp_reg);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -3896,7 +3896,7 @@ static int _assign_slice(struct _KOS_COMP_UNIT      *program,
     _free_reg(program, func_reg);
     _free_reg(program, obj_reg);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4028,7 +4028,7 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
     if (node_type == NT_MULTI_ASSIGNMENT)
         _free_reg(program, rhs);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4067,7 +4067,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT      *program,
     if (args != *reg)
         _free_reg(program, args);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4140,7 +4140,7 @@ static int _identifier(struct _KOS_COMP_UNIT      *program,
         }
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4208,7 +4208,7 @@ static int _numeric_literal(struct _KOS_COMP_UNIT      *program,
                         (int32_t)constant->index));
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4371,7 +4371,7 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
                         src_reg));
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4620,7 +4620,7 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
     frame->used_regs = 0;
     frame->free_regs = 0;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4775,7 +4775,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
     if (fun_var)
         fun_var->is_active = VAR_ACTIVE;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4875,7 +4875,7 @@ static int _object_literal(struct _KOS_COMP_UNIT      *program,
         _free_reg(program, prop);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -4921,7 +4921,7 @@ static int _class_literal(struct _KOS_COMP_UNIT      *program,
         _free_reg(program, proto_reg);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -5093,7 +5093,7 @@ int kos_compiler_compile(struct _KOS_COMP_UNIT *program,
     TRY(_visit_node(program, ast, &reg));
     assert(!reg);
 
-_error:
+cleanup:
     return error;
 }
 

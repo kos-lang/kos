@@ -345,7 +345,7 @@ static int _lookup_and_mark_var(struct _KOS_COMP_UNIT      *program,
         error                = KOS_ERROR_COMPILE_FAILED;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -391,7 +391,7 @@ static int _define_local_var(struct _KOS_COMP_UNIT      *program,
         scope->fun_vars_list = var;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -514,7 +514,7 @@ static int _import(struct _KOS_COMP_UNIT      *program,
         }
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -529,7 +529,7 @@ static int _scope(struct _KOS_COMP_UNIT      *program,
 
     _pop_scope(program);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -570,7 +570,7 @@ static int _var(struct _KOS_COMP_UNIT      *program,
         var->is_active = VAR_INACTIVE;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -600,7 +600,7 @@ static int _left_hand_side(struct _KOS_COMP_UNIT      *program,
         }
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -613,7 +613,7 @@ static int _identifier(struct _KOS_COMP_UNIT      *program,
     if (_lookup_local_var(program, &node->token, &var) != KOS_SUCCESS)
         TRY(_lookup_and_mark_var(program, node, &var));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -684,7 +684,7 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT      *program,
     if (fun_var)
         fun_var->is_active = VAR_ACTIVE;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -761,7 +761,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
 
     TRY(_parameter_defaults(program, arg_node, name_node));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -793,7 +793,7 @@ static int _catch(struct _KOS_COMP_UNIT      *program,
 
     var->is_active = VAR_INACTIVE;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -859,7 +859,7 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
         kos_activate_new_vars(program, node);
     }
 
-_error:
+cleanup:
     return error;
 }
 

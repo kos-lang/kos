@@ -377,7 +377,7 @@ static KOS_OBJ_ID _pow(KOS_CONTEXT ctx,
     else
         ret = KOS_new_float(ctx, pow(arg1.u.d, arg2.u.d));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -419,7 +419,7 @@ static KOS_OBJ_ID _sqrt(KOS_CONTEXT ctx,
 
     ret = KOS_new_float(ctx, sqrt(numeric.u.d));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -475,6 +475,6 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_FUNCTION(ctx, module, "pow",         _pow,         2);
     TRY_ADD_FUNCTION(ctx, module, "sqrt",        _sqrt,        1);
 
-_error:
+cleanup:
     return error;
 }

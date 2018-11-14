@@ -443,7 +443,7 @@ int kos_parse_double(const char *begin,
         *value = conv.d;
     }
 
-_error:
+cleanup:
     return error;
 }
 

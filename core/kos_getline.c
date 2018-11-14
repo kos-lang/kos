@@ -234,7 +234,7 @@ int kos_getline(struct _KOS_GETLINE *state,
             break;
     }
 
-_error:
+cleanup:
     return error;
 }
 

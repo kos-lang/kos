@@ -322,7 +322,7 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
     if (fun_var)
         fun_var->is_active = VAR_ACTIVE;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -406,7 +406,7 @@ static int _assignment(struct _KOS_COMP_UNIT *program,
         }
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -464,7 +464,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT *program,
 
     _pop_scope(program);
 
-_error:
+cleanup:
     return error;
 }
 

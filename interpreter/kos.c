@@ -74,19 +74,19 @@ int main(int argc, char *argv[])
 
     if (argc == 2 && _is_option(argv[1], "h", "help")) {
         _print_usage();
-        goto _error;
+        goto cleanup;
     }
 
 #ifdef _WIN32
     if (argc == 2 && _is_option(argv[1], "?", 0)) {
         _print_usage();
-        goto _error;
+        goto cleanup;
     }
 #endif
 
     if (argc == 2 && _is_option(argv[1], 0, "version")) {
         printf(KOS_VERSION_STRING "\n");
-        goto _error;
+        goto cleanup;
     }
 
     if (argc > 1) {
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
                 if ((argc - i_first_arg) == 1) {
                     fprintf(stderr, "Argument expected for the -c option\n");
                     error = KOS_ERROR_NOT_FOUND;
-                    goto _error;
+                    goto cleanup;
                 }
                 is_script   = 1;
                 i_module    = i_first_arg + 1;
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
 
     if (error) {
         fprintf(stderr, "Failed to initialize interpreter\n");
-        goto _error;
+        goto cleanup;
     }
 
     inst_ok = 1;
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
 
     if (error) {
         fprintf(stderr, "Failed to setup module search paths\n");
-        goto _error;
+        goto cleanup;
     }
 
     if (i_first_arg) {
@@ -188,14 +188,14 @@ int main(int argc, char *argv[])
 
     if (error) {
         fprintf(stderr, "Failed to setup command line arguments\n");
-        goto _error;
+        goto cleanup;
     }
 
     error = KOS_modules_init(ctx);
 
     if (error) {
         fprintf(stderr, "Failed to initialize modules\n");
-        goto _error;
+        goto cleanup;
     }
 
     if (i_module) {
@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Out of memory\n");
     }
 
-_error:
+cleanup:
     if (inst_ok)
         KOS_instance_destroy(&inst);
 
@@ -340,7 +340,7 @@ static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
     if (error) {
         assert(error == KOS_ERROR_OUT_OF_MEMORY);
         fprintf(stderr, "Failed to initialize command line editor\n");
-        goto _error;
+        goto cleanup;
     }
     genline_init = 1;
 
@@ -419,7 +419,7 @@ static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
     if (error == KOS_SUCCESS_RETURN)
         error = KOS_SUCCESS;
 
-_error:
+cleanup:
     if (genline_init)
         kos_getline_destroy(&state);
 

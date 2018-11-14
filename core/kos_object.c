@@ -928,7 +928,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
     OBJPTR(OBJECT_WALK, walk_id)->key_table =
             _read_props(_get_properties(key_table_obj));
 
-_error:
+cleanup:
     kos_untrack_refs(ctx, 4);
 
     if (error)
@@ -969,7 +969,7 @@ KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
     walk->last_key   = KOS_atomic_read_obj(src->last_key);
     walk->last_value = KOS_atomic_read_obj(src->last_value);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : OBJID(OBJECT_WALK, walk);
 }
 

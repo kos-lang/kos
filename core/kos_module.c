@@ -204,7 +204,7 @@ static int _find_module(KOS_CONTEXT ctx,
 
     KOS_pop_locals(ctx, 2, &path, &dir);
 
-_error:
+cleanup:
     if (!error) {
         *out_abs_dir  = dir;
         *out_abs_path = path;
@@ -278,7 +278,7 @@ static KOS_OBJ_ID _alloc_module(KOS_CONTEXT ctx,
     TRY_OBJID(obj_id);
     OBJPTR(MODULE, module)->module_names = obj_id;
 
-_error:
+cleanup:
     kos_untrack_refs(ctx, 3);
 
     return error ? KOS_BADPTR : module;
@@ -319,7 +319,7 @@ static int _load_file(KOS_CONTEXT         ctx,
             break;
     }
 
-_error:
+cleanup:
     kos_vector_destroy(&cpath);
 
     kos_untrack_refs(ctx, 1);
@@ -367,7 +367,7 @@ static int _predefine_globals(KOS_CONTEXT            ctx,
                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk))));
     }
 
-_error:
+cleanup:
     kos_vector_destroy(&cpath);
 
     return error;
@@ -396,7 +396,7 @@ static int _alloc_globals(KOS_CONTEXT            ctx,
         }
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -424,7 +424,7 @@ static int _save_direct_modules(KOS_CONTEXT            ctx,
         TRY(KOS_set_property(ctx, module->module_names, name, module_idx_obj));
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -523,7 +523,7 @@ static int _alloc_constants(KOS_CONTEXT            ctx,
         TRY(KOS_array_write(ctx, module->constants, base_idx + i, obj_id));
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -676,7 +676,7 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
     error = kos_vector_resize(&cstr, pos.column);
     if (error) {
         KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
-        goto _error;
+        goto cleanup;
     }
 
     memset(cstr.buffer, ' ', pos.column-1);
@@ -687,7 +687,7 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
 
     ret = KOS_string_add_n(ctx, parts, sizeof(parts)/sizeof(parts[0]));
 
-_error:
+cleanup:
     if (error)
         ret = KOS_BADPTR;
 
@@ -778,7 +778,7 @@ static int _get_global_idx(void       *vframe,
 
     *global_idx = (int)GET_SMALL_INT(glob_idx_obj);
 
-_error:
+cleanup:
     if (error) {
         KOS_clear_exception(ctx);
         error = KOS_ERROR_NOT_FOUND;
@@ -821,7 +821,7 @@ static int _walk_globals(void                          *vframe,
                      cookie));
     }
 
-_error:
+cleanup:
     kos_vector_destroy(&name);
 
     return error;
@@ -866,7 +866,7 @@ static void _print_search_paths(KOS_CONTEXT ctx,
         }
     }
 
-_error:
+cleanup:
     if (error) {
         KOS_clear_exception(ctx);
         printf("%sout of memory\n", str_paths);
@@ -905,7 +905,7 @@ static void _print_load_info(KOS_CONTEXT ctx,
 
     TRY(KOS_object_to_string_or_cstr_vec(ctx, module_path, KOS_DONT_QUOTE, 0, &cstr));
 
-_error:
+cleanup:
     if (error) {
         KOS_clear_exception(ctx);
         printf("%sout of memory\n", str_loading);
@@ -1245,7 +1245,7 @@ static int _compile_module(KOS_CONTEXT ctx,
         TRY(error);
     }
 
-_error:
+cleanup:
     kos_parser_destroy(&parser);
     kos_compiler_destroy(&program);
     return error;
@@ -1315,7 +1315,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
             _raise_3(ctx, str_err_module, actual_module_name, str_err_not_found);
             error = KOS_ERROR_EXCEPTION;
         }
-        goto _error;
+        goto cleanup;
     }
 
     /* TODO use global mutex for thread safety */
@@ -1385,7 +1385,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
                 error = KOS_ERROR_EXCEPTION;
             else
                 module_idx = (int)GET_SMALL_INT(module_idx_obj);
-            goto _error;
+            goto cleanup;
         }
     }
     KOS_clear_exception(ctx);
@@ -1438,7 +1438,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
         if (error) {
             assert( ! IS_BAD_PTR(ctx->exception));
-            goto _error;
+            goto cleanup;
         }
     }
 
@@ -1460,7 +1460,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, ret);
     }
 
-_error:
+cleanup:
     if (chain_init)
         inst->modules.load_chain = loading.next;
 
@@ -1521,7 +1521,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, ret);
     }
 
-_error:
+cleanup:
     if (error)
         _handle_interpreter_error(ctx, error);
     else {
@@ -1560,7 +1560,7 @@ static int _load_stdin(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
         }
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1609,7 +1609,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, ret);
     }
 
-_error:
+cleanup:
     if (error)
         _handle_interpreter_error(ctx, error);
     else {
@@ -1649,7 +1649,7 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     if (idx)
         *idx = new_idx;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1680,7 +1680,7 @@ int KOS_module_get_global(KOS_CONTEXT ctx,
     if (idx)
         *idx = (unsigned)GET_SMALL_INT(idx_obj);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1707,7 +1707,7 @@ int KOS_module_add_function(KOS_CONTEXT              ctx,
                               func_obj,
                               0));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1736,7 +1736,7 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
     *ret_proto = KOS_atomic_read_obj(OBJPTR(CLASS, func_obj)->prototype);
     assert( ! IS_BAD_PTR(*ret_proto));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -1760,7 +1760,7 @@ int KOS_module_add_member_function(KOS_CONTEXT              ctx,
 
     TRY(KOS_set_property(ctx, proto_obj, str_name, func_obj));
 
-_error:
+cleanup:
     return error;
 }
 

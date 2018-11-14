@@ -299,7 +299,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         retval = token_obj;
     }
 
-_error:
+cleanup:
     if (error)
         retval = KOS_BADPTR;
 
@@ -431,6 +431,6 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "any_token",            NT_ANY);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "continue_string",      NT_CONTINUE_STRING);
 
-_error:
+cleanup:
     return error;
 }

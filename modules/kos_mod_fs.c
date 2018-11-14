@@ -78,7 +78,7 @@ static KOS_OBJ_ID _is_file(KOS_CONTEXT ctx,
 
     ret = KOS_BOOL(kos_does_file_exist(filename_cstr.buffer));
 
-_error:
+cleanup:
     kos_vector_destroy(&filename_cstr);
 
     return ret;
@@ -117,7 +117,7 @@ static KOS_OBJ_ID _remove(KOS_CONTEXT ctx,
     ret = KOS_BOOL(unlink(filename_cstr.buffer) == 0);
 #endif
 
-_error:
+cleanup:
     kos_vector_destroy(&filename_cstr);
 
     return ret;
@@ -130,6 +130,6 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_FUNCTION(ctx, module, "is_file", _is_file, 1);
     TRY_ADD_FUNCTION(ctx, module, "remove",  _remove,  1);
 
-_error:
+cleanup:
     return error;
 }

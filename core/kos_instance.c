@@ -124,7 +124,7 @@ static int _register_thread(KOS_INSTANCE *inst,
 
     kos_tls_set(inst->threads.thread_key, ctx);
 
-_error:
+cleanup:
     if (error)
         kos_heap_release_thread_page(ctx);
 
@@ -294,7 +294,7 @@ static int _init_common_strings(KOS_CONTEXT   ctx,
         inst->common_strings[init[i].str_id] = str_id;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -359,7 +359,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     error = kos_create_mutex(&inst->threads.mutex);
     if (error) {
         kos_tls_destroy(inst->threads.thread_key);
-        goto _error;
+        goto cleanup;
     }
     thread_ok = 1;
 
@@ -431,7 +431,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     inst->flags = 0;
 #endif
 
-_error:
+cleanup:
     if (error) {
         if (heap_ok)
             kos_heap_destroy(inst);
@@ -525,7 +525,7 @@ int KOS_instance_add_path(KOS_CONTEXT ctx, const char *module_search_path)
     TRY(KOS_array_resize(ctx, inst->modules.search_paths, len+1));
     TRY(KOS_array_write(ctx, inst->modules.search_paths, (int)len, path_str));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -553,7 +553,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
         size_t len = strlen(argv0);
 
         if ( ! len)
-            goto _error;
+            goto cleanup;
 
         /* Absolute or relative path */
         if (strchr(argv0, KOS_PATH_SEPARATOR)) {
@@ -630,7 +630,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
 
     TRY(KOS_instance_add_path(ctx, cstr.buffer));
 
-_error:
+cleanup:
     kos_vector_destroy(&cpath);
     kos_vector_destroy(&cstr);
 
@@ -659,7 +659,7 @@ int KOS_instance_set_args(KOS_CONTEXT  ctx,
         TRY(KOS_array_write(ctx, inst->args, i, arg_str));
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -693,7 +693,7 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                              module_name,
                              OBJID(OPAQUE, (KOS_OPAQUE *)mod_init));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -838,7 +838,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY(KOS_array_write(ctx, array, 1+(int)i, str));
     }
 
-_error:
+cleanup:
     kos_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : array;

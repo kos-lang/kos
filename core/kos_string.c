@@ -265,7 +265,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
         kos_untrack_refs(ctx, 1);
 
         if ( ! ret)
-            goto _error;
+            goto cleanup;
     }
     else
         ret = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
@@ -322,7 +322,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
         }
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : OBJID(STRING, ret);
 }
 

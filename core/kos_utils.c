@@ -126,7 +126,7 @@ int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
             break;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -307,7 +307,7 @@ static int _int_to_str(KOS_CONTEXT         ctx,
         *str = ret;
     }
 
-_error:
+cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
         KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
         error = KOS_ERROR_EXCEPTION;
@@ -343,7 +343,7 @@ static int _float_to_str(KOS_CONTEXT         ctx,
         *str = ret;
     }
 
-_error:
+cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
         KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
         error = KOS_ERROR_EXCEPTION;
@@ -574,7 +574,7 @@ static int _vector_append_array(KOS_CONTEXT         ctx,
 
     TRY(kos_append_cstr(ctx, cstr_vec, str_array_close, sizeof(str_array_close)-1));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -654,7 +654,7 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT ctx,
 
     ret = KOS_string_add(ctx, aux_array_id);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -702,7 +702,7 @@ static int _vector_append_buffer(KOS_CONTEXT         ctx,
 
     TRY(kos_append_cstr(ctx, cstr_vec, str_buffer_close, sizeof(str_buffer_close)-1));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -727,7 +727,7 @@ static KOS_OBJ_ID _buffer_to_str(KOS_CONTEXT ctx,
 
     ret = KOS_new_string(ctx, cstr_vec.buffer, (unsigned)cstr_vec.size - 1U);
 
-_error:
+cleanup:
     kos_vector_destroy(&cstr_vec);
 
     return error ? KOS_BADPTR : ret;
@@ -767,7 +767,7 @@ static int _vector_append_object(KOS_CONTEXT         ctx,
 
     TRY(kos_append_cstr(ctx, cstr_vec, str_object_close, sizeof(str_object_close)-1));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -788,7 +788,7 @@ static KOS_OBJ_ID _object_to_str(KOS_CONTEXT ctx,
 
     ret = KOS_new_string(ctx, cstr_vec.buffer, (unsigned)cstr_vec.size - 1U);
 
-_error:
+cleanup:
     kos_vector_destroy(&cstr_vec);
 
     return error ? KOS_BADPTR : ret;
@@ -831,7 +831,7 @@ static int _vector_append_function(KOS_CONTEXT         ctx,
     }
     TRY(kos_append_cstr(ctx, cstr_vec, cstr_ptr, strlen(cstr_ptr)));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -883,7 +883,7 @@ static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
 
     ret = KOS_string_add_n(ctx, strings, sizeof(strings) / sizeof(strings[0]));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -1027,7 +1027,7 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT         ctx,
         TRY(KOS_object_to_string_or_cstr_vec(ctx, obj, quote_str, 0, cstr_vec));
     }
 
-_error:
+cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
         KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
         error = KOS_ERROR_EXCEPTION;
@@ -1117,7 +1117,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
             RAISE_EXCEPTION(str_err_cannot_expand);
     }
 
-_error:
+cleanup:
     return error;
 }
 

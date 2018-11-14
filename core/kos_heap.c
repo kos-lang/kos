@@ -1876,7 +1876,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
                             page = next;
                         } while (page);
 
-                        goto _error;
+                        goto cleanup;
                     }
 
                 }
@@ -1909,7 +1909,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
         PUSH_LIST(*free_pages, page);
     }
 
-_error:
+cleanup:
     if (out_stats)
         *out_stats = stats;
 

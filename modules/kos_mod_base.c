@@ -110,7 +110,7 @@ static KOS_OBJ_ID _print(KOS_CONTEXT ctx,
     else
         printf("\n");
 
-_error:
+cleanup:
     kos_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : KOS_VOID;
@@ -142,7 +142,7 @@ static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
     if (cstr.size > 1)
         fwrite(cstr.buffer, 1, cstr.size - 1, stdout);
 
-_error:
+cleanup:
     kos_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : KOS_VOID;
@@ -203,7 +203,7 @@ static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                ctx,
         }
     }
 
-_error:
+cleanup:
     return ret;
 }
 
@@ -276,7 +276,7 @@ static int _create_class(KOS_CONTEXT          ctx,
                               func_obj,
                               0));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -671,7 +671,7 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
             ret = KOS_string_add(ctx, args_obj);
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -741,7 +741,7 @@ static KOS_OBJ_ID _stringify(KOS_CONTEXT ctx,
             ret = KOS_string_add(ctx, args_obj);
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -983,7 +983,7 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
         }
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : buffer;
 }
 
@@ -1200,7 +1200,7 @@ static KOS_OBJ_ID _apply(KOS_CONTEXT ctx,
 
     ret = KOS_apply_function(ctx, this_obj, arg_this, arg_args);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -1312,7 +1312,7 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
 
     KOS_object_set_private(*OBJPTR(OBJECT, thread_obj), (void *)thread);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : thread_obj;
 }
 
@@ -1511,7 +1511,7 @@ static KOS_OBJ_ID _slice(KOS_CONTEXT ctx,
     else
         ret = KOS_array_slice(ctx, this_obj, idx_a, idx_b);
 
-_error:
+cleanup:
     return ret;
 }
 
@@ -1569,7 +1569,7 @@ static KOS_OBJ_ID _expand_for_sort(KOS_CONTEXT ctx,
         dest += step;
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -1774,7 +1774,7 @@ static KOS_OBJ_ID _sort(KOS_CONTEXT ctx,
         _copy_sort_results(ctx, this_obj, aux, (key == KOS_VOID) ? 2 : 3);
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
@@ -1912,7 +1912,7 @@ static KOS_OBJ_ID _resize(KOS_CONTEXT ctx,
         TRY(KOS_array_resize(ctx, this_obj, (uint32_t)size));
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
@@ -2045,7 +2045,7 @@ static KOS_OBJ_ID _fill(KOS_CONTEXT ctx,
         error = KOS_buffer_fill(ctx, this_obj, begin, end, (uint8_t)value);
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
@@ -2216,7 +2216,7 @@ static int _process_pack_format(KOS_CONTEXT              ctx,
             TRY(handler(ctx, fmt, buffer_obj, (char)c, size, count));
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -2427,7 +2427,7 @@ static int _pack_format(KOS_CONTEXT              ctx,
         }
     }
 
-_error:
+cleanup:
     kos_vector_destroy(&str_buf);
     return error;
 }
@@ -2555,7 +2555,7 @@ static int _unpack_format(KOS_CONTEXT              ctx,
 
     fmt->idx = (int)(data - KOS_buffer_data(buffer_obj));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -2652,7 +2652,7 @@ static KOS_OBJ_ID _unpack(KOS_CONTEXT ctx,
 
     TRY(_process_pack_format(ctx, this_obj, _unpack_format, &fmt));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : fmt.data;
 }
 
@@ -2805,7 +2805,7 @@ static KOS_OBJ_ID _copy_buffer(KOS_CONTEXT ctx,
 
     error = KOS_buffer_copy(ctx, this_obj, dest_begin, src, src_begin, src_end);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
@@ -2859,7 +2859,7 @@ static KOS_OBJ_ID _reserve(KOS_CONTEXT ctx,
         TRY(KOS_array_reserve(ctx, this_obj, (uint32_t)size));
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
@@ -2926,7 +2926,7 @@ static KOS_OBJ_ID _insert_array(KOS_CONTEXT ctx,
 
     TRY(KOS_array_insert(ctx, this_obj, begin, end, src_obj, 0, src_len));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
@@ -2987,7 +2987,7 @@ static KOS_OBJ_ID _pop(KOS_CONTEXT ctx,
         }
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -3038,7 +3038,7 @@ static KOS_OBJ_ID _push(KOS_CONTEXT ctx,
         }
     }
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -3089,7 +3089,7 @@ static KOS_OBJ_ID _ends_with(KOS_CONTEXT ctx,
                                                    0,
                                                    arg_len));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -3134,7 +3134,7 @@ static KOS_OBJ_ID _repeat(KOS_CONTEXT ctx,
 
     ret = KOS_string_repeat(ctx, this_obj, (unsigned)num);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -3191,7 +3191,7 @@ static KOS_OBJ_ID _find(KOS_CONTEXT ctx,
 
     TRY(KOS_string_find(ctx, this_obj, pattern, KOS_FIND_FORWARD, &pos));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
@@ -3260,7 +3260,7 @@ static KOS_OBJ_ID _rfind(KOS_CONTEXT ctx,
 
     TRY(KOS_string_find(ctx, this_obj, pattern, KOS_FIND_REVERSE, &pos));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
@@ -3344,7 +3344,7 @@ static KOS_OBJ_ID _scan(KOS_CONTEXT ctx,
 
     TRY(KOS_string_scan(ctx, this_obj, pattern, KOS_FIND_FORWARD, include, &pos));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
@@ -3438,7 +3438,7 @@ static KOS_OBJ_ID _rscan(KOS_CONTEXT ctx,
 
     TRY(KOS_string_scan(ctx, this_obj, pattern, KOS_FIND_REVERSE, include, &pos));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : TO_SMALL_INT(pos);
 }
 
@@ -3488,7 +3488,7 @@ static KOS_OBJ_ID _code(KOS_CONTEXT ctx,
 
     ret = KOS_new_int(ctx, (int64_t)code);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -3539,7 +3539,7 @@ static KOS_OBJ_ID _starts_with(KOS_CONTEXT ctx,
                                                    0,
                                                    arg_len));
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
@@ -3821,7 +3821,7 @@ static KOS_OBJ_ID _print_exception(KOS_CONTEXT ctx,
 
     ret = this_obj;
 
-_error:
+cleanup:
     kos_vector_destroy(&cstr);
     return ret;
 }
@@ -3895,6 +3895,6 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(thread),     "wait",          _wait,              0);
 
-_error:
+cleanup:
     return error;
 }

@@ -137,7 +137,7 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
     KOS_object_set_private(*OBJPTR(OBJECT, ret), rng);
     rng = 0;
 
-_error:
+cleanup:
     /* TODO free
     if (rng)
         kos_free_buffer(ctx, rng, sizeof(struct _KOS_RNG_CONTAINER));
@@ -162,7 +162,7 @@ static int _get_rng(KOS_CONTEXT                 ctx,
     if ( ! *rng)
         RAISE_EXCEPTION(str_err_not_random);
 
-_error:
+cleanup:
     return error;
 }
 
@@ -237,7 +237,7 @@ static KOS_OBJ_ID _rand_integer(KOS_CONTEXT ctx,
 
     kos_spin_unlock(&rng->lock);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : KOS_new_int(ctx, value);
 }
 
@@ -281,7 +281,7 @@ static KOS_OBJ_ID _rand_float(KOS_CONTEXT ctx,
     value.i = (value.i & (int64_t)~((uint64_t)0xFFF00000U << 32))
             | ((int64_t)0x3FF00000U << 32);
 
-_error:
+cleanup:
     return error ? KOS_BADPTR : KOS_new_float(ctx, value.d - 1.0);
 }
 
@@ -294,6 +294,6 @@ int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "integer", _rand_integer, 0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "float",   _rand_float,   0);
 
-_error:
+cleanup:
     return error;
 }

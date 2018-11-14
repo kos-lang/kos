@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 
     printf("%s\n", cstr.buffer);
 
-_error:
+cleanup:
     if (inst_ok)
         KOS_instance_destroy(&inst);
 

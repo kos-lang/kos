@@ -448,7 +448,7 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
         error = KOS_SUCCESS;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -646,7 +646,7 @@ int KOS_array_insert(KOS_CONTEXT ctx,
     if (src_delta < dest_delta)
         TRY(KOS_array_resize(ctx, dest_obj_id, dest_len - dest_delta + src_delta));
 
-_error:
+cleanup:
     return error;
 }
 
@@ -711,7 +711,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
     if (idx)
         *idx = len;
 
-_error:
+cleanup:
     return error;
 }
 
@@ -741,7 +741,7 @@ KOS_OBJ_ID KOS_array_pop(KOS_CONTEXT ctx,
 
     error = KOS_array_resize(ctx, obj_id, len-1);
 
-_error:
+cleanup:
     kos_untrack_refs(ctx, 2);
 
     return error ? KOS_BADPTR : ret;

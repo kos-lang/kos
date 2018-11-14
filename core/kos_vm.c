@@ -682,7 +682,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
         assert(GET_OBJ_TYPE(func->closures) == OBJ_VOID);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -900,7 +900,7 @@ static int _prepare_call(KOS_CONTEXT             ctx,
             error = KOS_ERROR_EXCEPTION;
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -997,7 +997,7 @@ static int _write_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID
         buf[idx] = (uint8_t)byte_value;
     }
 
-_error:
+cleanup:
     return error;
 }
 

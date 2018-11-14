@@ -137,7 +137,7 @@ int kos_load_file(const char         *filename,
     if (size != fread(buf->buffer, 1, size, file))
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
 
-_error:
+cleanup:
     if (file)
         fclose(file);
 
@@ -289,7 +289,7 @@ int kos_executable_path(struct _KOS_VECTOR *buf)
         TRY(kos_vector_resize(buf, buf->size * 2U));
     }
 
-_error:
+cleanup:
     return error;
 }
 #else

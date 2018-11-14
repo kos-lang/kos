@@ -262,7 +262,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
         RAISE_EXCEPTION(str_err_stack_overflow);
     }
 
-_error:
+cleanup:
     return error;
 }
 
@@ -530,7 +530,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
     func_name = KOS_module_addr_to_func_name(ctx, module, instr_offs);
     if (IS_BAD_PTR(func_name)) {
         if (KOS_is_exception_pending(ctx))
-            goto _error;
+            goto cleanup;
 
         /* TODO add builtin function name */
         func_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
@@ -561,7 +561,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
 
     ++dump_ctx->idx;
 
-_error:
+cleanup:
     if (pushed)
         KOS_pop_locals(ctx, 4, &func_name, &module_name, &module_path, &frame_desc);
 
@@ -623,7 +623,7 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
 
     ctx->exception = exception;
 
-_error:
+cleanup:
     if (pushed)
         KOS_pop_local_scope(ctx);
 
