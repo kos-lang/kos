@@ -1351,13 +1351,13 @@ int main(void)
         KOS_OBJ_ID         array;
         KOS_OBJ_ID         expected;
         KOS_OBJ_ID         str;
-        size_t             i;
+        int                i;
 
         array = KOS_new_array(ctx, sizeof(in_cstr) / sizeof(in_cstr[0]));
         TEST( ! IS_BAD_PTR(array));
         TEST_NO_EXCEPTION();
 
-        for (i = 0; i < sizeof(in_cstr) / sizeof(in_cstr[0]); ++i) {
+        for (i = 0; i < (int)(sizeof(in_cstr) / sizeof(in_cstr[0])); ++i) {
             KOS_OBJ_ID in_str = KOS_new_const_ascii_cstring(ctx, in_cstr[i]);
             TEST( ! IS_BAD_PTR(in_str));
             TEST_NO_EXCEPTION();
@@ -1384,13 +1384,13 @@ int main(void)
         KOS_OBJ_ID         array;
         KOS_OBJ_ID         expected;
         KOS_OBJ_ID         str;
-        size_t             i;
+        int                i;
 
         array = KOS_new_array(ctx, sizeof(in_cstr) / sizeof(in_cstr[0]));
         TEST( ! IS_BAD_PTR(array));
         TEST_NO_EXCEPTION();
 
-        for (i = 0; i < sizeof(in_cstr) / sizeof(in_cstr[0]); ++i) {
+        for (i = 0; i < (int)(sizeof(in_cstr) / sizeof(in_cstr[0])); ++i) {
             KOS_OBJ_ID in_str = KOS_new_cstring(ctx, in_cstr[i]);
             TEST( ! IS_BAD_PTR(in_str));
             TEST_NO_EXCEPTION();
