@@ -113,8 +113,8 @@ static KOS_OBJ_ID _open(KOS_CONTEXT ctx,
     struct _KOS_VECTOR filename_cstr;
     struct _KOS_VECTOR flags_cstr;
 
-    _KOS_vector_init(&filename_cstr);
-    _KOS_vector_init(&flags_cstr);
+    kos_vector_init(&filename_cstr);
+    kos_vector_init(&flags_cstr);
 
     TRY_OBJID(filename_obj);
 
@@ -159,8 +159,8 @@ static KOS_OBJ_ID _open(KOS_CONTEXT ctx,
     file = 0;
 
 _error:
-    _KOS_vector_destroy(&flags_cstr);
-    _KOS_vector_destroy(&filename_cstr);
+    kos_vector_destroy(&flags_cstr);
+    kos_vector_destroy(&filename_cstr);
     if (file)
         fclose(file);
 
@@ -232,7 +232,7 @@ static KOS_OBJ_ID _print(KOS_CONTEXT ctx,
     int                error = _get_file_object(ctx, this_obj, &file, 0);
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     if ( ! error && file) {
 
@@ -247,7 +247,7 @@ static KOS_OBJ_ID _print(KOS_CONTEXT ctx,
     }
 
 _error:
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : this_obj;
 }
@@ -274,7 +274,7 @@ static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
     int                error = _get_file_object(ctx, this_obj, &file, 0);
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     if ( ! error && file) {
 
@@ -285,7 +285,7 @@ static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
     }
 
 _error:
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : this_obj;
 }
@@ -323,7 +323,7 @@ static KOS_OBJ_ID _read_line(KOS_CONTEXT ctx,
     struct _KOS_VECTOR buf;
     KOS_OBJ_ID         line       = KOS_BADPTR;
 
-    _KOS_vector_init(&buf);
+    kos_vector_init(&buf);
 
     TRY(_get_file_object(ctx, this_obj, &file, 1));
 
@@ -346,7 +346,7 @@ static KOS_OBJ_ID _read_line(KOS_CONTEXT ctx,
     do {
         char *ret;
 
-        TRY(_KOS_vector_resize(&buf, (size_t)(last_size + size_delta)));
+        TRY(kos_vector_resize(&buf, (size_t)(last_size + size_delta)));
 
         ret = fgets(buf.buffer + last_size, size_delta, file);
 
@@ -367,7 +367,7 @@ static KOS_OBJ_ID _read_line(KOS_CONTEXT ctx,
     line = KOS_new_string(ctx, buf.buffer, (unsigned)last_size);
 
 _error:
-    _KOS_vector_destroy(&buf);
+    kos_vector_destroy(&buf);
     return error ? KOS_BADPTR : line;
 }
 
@@ -664,7 +664,7 @@ do {                                                                            
     TRY(_add_std_file((ctx), (module), (proto), str, (file)));                       \
 } while (0)
 
-int _KOS_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID proto;

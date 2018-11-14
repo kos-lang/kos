@@ -71,21 +71,21 @@ static int                  _kos_seq_init      = 0;
 static KOS_ATOMIC(uint32_t) _kos_seq;
 static uint32_t             _kos_seq_threshold = ~0U;
 
-int _KOS_seq_fail(void)
+int kos_seq_fail(void)
 {
     if ( ! _kos_seq_init) {
 
         struct _KOS_VECTOR cstr;
         int64_t            value = -1;
 
-        _KOS_vector_init(&cstr);
+        kos_vector_init(&cstr);
 
-        if (_KOS_get_env("KOSSEQFAIL", &cstr) == KOS_SUCCESS
+        if (kos_get_env("KOSSEQFAIL", &cstr) == KOS_SUCCESS
                 && cstr.size > 0
-                && _KOS_parse_int(cstr.buffer, cstr.buffer + cstr.size - 1, &value) == KOS_SUCCESS)
+                && kos_parse_int(cstr.buffer, cstr.buffer + cstr.size - 1, &value) == KOS_SUCCESS)
             _kos_seq_threshold = (uint32_t)value;
 
-        _KOS_vector_destroy(&cstr);
+        kos_vector_destroy(&cstr);
 
         KOS_atomic_write_u32(_kos_seq, 0);
 
@@ -105,7 +105,7 @@ static int _register_thread(KOS_INSTANCE *inst,
     int    error = KOS_SUCCESS;
     size_t i;
 
-    assert( ! _KOS_tls_get(inst->threads.thread_key));
+    assert( ! kos_tls_get(inst->threads.thread_key));
 
     ctx->inst          = inst;
     ctx->exception     = KOS_BADPTR;
@@ -119,14 +119,14 @@ static int _register_thread(KOS_INSTANCE *inst,
     for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); ++i)
         ctx->tmp_refs[i] = 0;
 
-    if (_KOS_tls_get(inst->threads.thread_key))
+    if (kos_tls_get(inst->threads.thread_key))
         RAISE_EXCEPTION(str_err_thread_registered);
 
-    _KOS_tls_set(inst->threads.thread_key, ctx);
+    kos_tls_set(inst->threads.thread_key, ctx);
 
 _error:
     if (error)
-        _KOS_heap_release_thread_page(ctx);
+        kos_heap_release_thread_page(ctx);
 
     return error;
 }
@@ -134,11 +134,11 @@ _error:
 static void _unregister_thread(KOS_INSTANCE *inst,
                                KOS_CONTEXT   ctx)
 {
-    _KOS_heap_release_thread_page(ctx);
+    kos_heap_release_thread_page(ctx);
 
-    _KOS_tls_set(inst->threads.thread_key, 0);
+    kos_tls_set(inst->threads.thread_key, 0);
 
-    _KOS_lock_mutex(&inst->threads.mutex);
+    kos_lock_mutex(&inst->threads.mutex);
 
     assert(ctx != &inst->threads.main_thread);
 
@@ -148,7 +148,7 @@ static void _unregister_thread(KOS_INSTANCE *inst,
     if (ctx->next)
         ctx->next->prev = ctx->prev;
 
-    _KOS_unlock_mutex(&inst->threads.mutex);
+    kos_unlock_mutex(&inst->threads.mutex);
 }
 
 int KOS_instance_register_thread(KOS_INSTANCE *inst,
@@ -156,7 +156,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 {
     int error;
 
-    _KOS_lock_mutex(&inst->threads.mutex);
+    kos_lock_mutex(&inst->threads.mutex);
 
     ctx->prev                      = &inst->threads.main_thread;
     ctx->next                      = inst->threads.main_thread.next;
@@ -164,7 +164,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     if (ctx->next)
         ctx->next->prev            = ctx;
 
-    _KOS_unlock_mutex(&inst->threads.mutex);
+    kos_unlock_mutex(&inst->threads.mutex);
 
     ctx->cur_page = 0;
 
@@ -179,7 +179,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
                                     KOS_CONTEXT   ctx)
 {
-    assert((KOS_CONTEXT)_KOS_tls_get(inst->threads.thread_key) == ctx);
+    assert((KOS_CONTEXT)kos_tls_get(inst->threads.thread_key) == ctx);
 
     _unregister_thread(inst, ctx);
 }
@@ -214,12 +214,12 @@ static int _init_search_paths(KOS_CONTEXT ctx)
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cpaths;
 
-    _KOS_vector_init(&cpaths);
+    kos_vector_init(&cpaths);
 
-    if (_KOS_get_env("KOSPATH", &cpaths) == KOS_SUCCESS)
+    if (kos_get_env("KOSPATH", &cpaths) == KOS_SUCCESS)
         error = _add_multiple_paths(ctx, &cpaths);
 
-    _KOS_vector_destroy(&cpaths);
+    kos_vector_destroy(&cpaths);
 
     return error;
 #endif
@@ -227,9 +227,9 @@ static int _init_search_paths(KOS_CONTEXT ctx)
 
 static KOS_OBJ_ID _alloc_empty_string(KOS_CONTEXT ctx)
 {
-    KOS_STRING *str = (KOS_STRING *)_KOS_alloc_object(ctx,
-                                                      OBJ_STRING,
-                                                      sizeof(KOS_STRING));
+    KOS_STRING *str = (KOS_STRING *)kos_alloc_object(ctx,
+                                                     OBJ_STRING,
+                                                     sizeof(KOS_STRING));
 
     if (str) {
         str->header.flags  = (uint8_t)KOS_STRING_ELEM_8 | (uint8_t)KOS_STRING_LOCAL;
@@ -355,21 +355,21 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     _clear_instance(inst);
 
-    TRY(_KOS_tls_create(&inst->threads.thread_key));
-    error = _KOS_create_mutex(&inst->threads.mutex);
+    TRY(kos_tls_create(&inst->threads.thread_key));
+    error = kos_create_mutex(&inst->threads.mutex);
     if (error) {
-        _KOS_tls_destroy(inst->threads.thread_key);
+        kos_tls_destroy(inst->threads.thread_key);
         goto _error;
     }
     thread_ok = 1;
 
-    TRY(_KOS_heap_init(inst));
+    TRY(kos_heap_init(inst));
     heap_ok = 1;
 
-    init_module = (KOS_MODULE *)_KOS_heap_early_alloc(inst,
-                                                      &inst->threads.main_thread,
-                                                      OBJ_MODULE,
-                                                      (uint32_t)sizeof(KOS_MODULE));
+    init_module = (KOS_MODULE *)kos_heap_early_alloc(inst,
+                                                     &inst->threads.main_thread,
+                                                     OBJ_MODULE,
+                                                     (uint32_t)sizeof(KOS_MODULE));
     if ( ! init_module)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
@@ -434,11 +434,11 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 _error:
     if (error) {
         if (heap_ok)
-            _KOS_heap_destroy(inst);
+            kos_heap_destroy(inst);
 
         if (thread_ok) {
-            _KOS_tls_destroy(inst->threads.thread_key);
-            _KOS_destroy_mutex(&inst->threads.mutex);
+            kos_tls_destroy(inst->threads.thread_key);
+            kos_destroy_mutex(&inst->threads.mutex);
         }
     }
 
@@ -460,11 +460,11 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
             KOS_clear_exception(ctx);
         else if (GET_OBJ_TYPE(module_obj) == OBJ_MODULE) {
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_BYTECODE))
-                _KOS_free((void *)OBJPTR(MODULE, module_obj)->bytecode);
+                kos_free((void *)OBJPTR(MODULE, module_obj)->bytecode);
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_LINE_ADDRS))
-                _KOS_free((void *)OBJPTR(MODULE, module_obj)->line_addrs);
+                kos_free((void *)OBJPTR(MODULE, module_obj)->line_addrs);
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_FUNC_ADDRS))
-                _KOS_free((void *)OBJPTR(MODULE, module_obj)->func_addrs);
+                kos_free((void *)OBJPTR(MODULE, module_obj)->func_addrs);
         }
         else {
             /* failed e.g. during compilation */
@@ -472,11 +472,11 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
         }
     }
 
-    _KOS_heap_destroy(inst);
+    kos_heap_destroy(inst);
 
-    _KOS_tls_destroy(inst->threads.thread_key);
+    kos_tls_destroy(inst->threads.thread_key);
 
-    _KOS_destroy_mutex(&inst->threads.mutex);
+    kos_destroy_mutex(&inst->threads.mutex);
 
     _clear_instance(inst);
 
@@ -545,8 +545,8 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
     size_t             pos;
     static const char  rel_path[] = CONFIG_MODULE_PATH;
 
-    _KOS_vector_init(&cstr);
-    _KOS_vector_init(&cpath);
+    kos_vector_init(&cstr);
+    kos_vector_init(&cpath);
 
     if (argv0) {
 
@@ -558,11 +558,11 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
         /* Absolute or relative path */
         if (strchr(argv0, KOS_PATH_SEPARATOR)) {
 
-            if ( ! _KOS_does_file_exist(argv0))
+            if ( ! kos_does_file_exist(argv0))
                 RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
             len += 1;
-            TRY(_KOS_vector_resize(&cstr, len));
+            TRY(kos_vector_resize(&cstr, len));
 
             memcpy(cstr.buffer, argv0, len);
         }
@@ -571,11 +571,11 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
 
             char *buf;
 
-            TRY(_KOS_get_env("PATH", &cpath));
+            TRY(kos_get_env("PATH", &cpath));
 
             buf = cpath.buffer;
 
-            TRY(_KOS_vector_reserve(&cstr, cpath.size + len + 1));
+            TRY(kos_vector_reserve(&cstr, cpath.size + len + 1));
 
             cstr.size = 0;
 
@@ -589,14 +589,14 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
 
                 base_len = end - buf;
 
-                TRY(_KOS_vector_resize(&cstr, base_len + 1 + len + 1));
+                TRY(kos_vector_resize(&cstr, base_len + 1 + len + 1));
 
                 memcpy(cstr.buffer, buf, base_len);
                 cstr.buffer[base_len] = KOS_PATH_SEPARATOR;
                 memcpy(&cstr.buffer[base_len + 1], argv0, len);
                 cstr.buffer[base_len + 1 + len] = 0;
 
-                if (_KOS_does_file_exist(cstr.buffer))
+                if (kos_does_file_exist(cstr.buffer))
                     break;
 
                 cstr.size = 0;
@@ -609,13 +609,13 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
         }
     }
     else {
-        if (_KOS_seq_fail())
+        if (kos_seq_fail())
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-        TRY(_KOS_executable_path(&cstr));
+        TRY(kos_executable_path(&cstr));
     }
 
-    TRY(_KOS_get_absolute_path(&cstr));
+    TRY(kos_get_absolute_path(&cstr));
 
     assert(cstr.size > 0);
 
@@ -624,15 +624,15 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
     if ( ! pos)
         RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-    TRY(_KOS_vector_resize(&cstr, pos + 1 + sizeof(rel_path)));
+    TRY(kos_vector_resize(&cstr, pos + 1 + sizeof(rel_path)));
 
     memcpy(&cstr.buffer[pos + 1], rel_path, sizeof(rel_path));
 
     TRY(KOS_instance_add_path(ctx, cstr.buffer));
 
 _error:
-    _KOS_vector_destroy(&cpath);
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cpath);
+    kos_vector_destroy(&cstr);
 
     return error;
 }
@@ -675,13 +675,13 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
     module_name = KOS_new_cstring(ctx, module);
     TRY_OBJID(module_name);
 
-    _KOS_track_refs(ctx, 1, &module_name);
+    kos_track_refs(ctx, 1, &module_name);
 
-    mod_init = (struct _KOS_MODULE_INIT *)_KOS_alloc_object(ctx,
-                                                            OBJ_OPAQUE,
-                                                            sizeof(struct _KOS_MODULE_INIT));
+    mod_init = (struct _KOS_MODULE_INIT *)kos_alloc_object(ctx,
+                                                           OBJ_OPAQUE,
+                                                           sizeof(struct _KOS_MODULE_INIT));
 
-    _KOS_untrack_refs(ctx, 1);
+    kos_untrack_refs(ctx, 1);
 
     if ( ! mod_init)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -713,7 +713,7 @@ void KOS_instance_validate(KOS_CONTEXT ctx)
 
     assert(inst);
 
-    thread_ctx = (KOS_CONTEXT)_KOS_tls_get(inst->threads.thread_key);
+    thread_ctx = (KOS_CONTEXT)kos_tls_get(inst->threads.thread_key);
 
     assert(thread_ctx);
     assert(thread_ctx == ctx);
@@ -754,7 +754,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
     KOS_OBJ_ID         str;
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     value = KOS_get_property(ctx, exception, KOS_get_string(ctx, KOS_STR_VALUE));
     TRY_OBJID(value);
@@ -769,11 +769,11 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
     array = KOS_new_array(ctx, 1 + depth);
     TRY_OBJID(array);
 
-    if (_KOS_vector_reserve(&cstr, 80) != KOS_SUCCESS) {
+    if (kos_vector_reserve(&cstr, 80) != KOS_SUCCESS) {
         KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
-    TRY(_KOS_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));
+    TRY(kos_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));
     TRY(KOS_object_to_string_or_cstr_vec(ctx, value, KOS_DONT_QUOTE, 0, &cstr));
 
     str = KOS_new_string(ctx, cstr.buffer, (unsigned)(cstr.size - 1));
@@ -790,34 +790,34 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
         cstr.size = 0;
 
-        TRY(_KOS_append_cstr(ctx, &cstr, str_format_hash,
-                             sizeof(str_format_hash) - 1));
+        TRY(kos_append_cstr(ctx, &cstr, str_format_hash,
+                            sizeof(str_format_hash) - 1));
 
         snprintf(cbuf, sizeof(cbuf), "%u", i);
-        TRY(_KOS_append_cstr(ctx, &cstr, cbuf, strlen(cbuf)));
+        TRY(kos_append_cstr(ctx, &cstr, cbuf, strlen(cbuf)));
 
-        TRY(_KOS_append_cstr(ctx, &cstr, str_format_offset,
-                             sizeof(str_format_offset) - 1));
+        TRY(kos_append_cstr(ctx, &cstr, str_format_offset,
+                            sizeof(str_format_offset) - 1));
 
         str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_OFFSET));
         TRY_OBJID(str);
         if (IS_SMALL_INT(str)) {
             snprintf(cbuf, sizeof(cbuf), "0x%X", (unsigned)GET_SMALL_INT(str));
-            TRY(_KOS_append_cstr(ctx, &cstr, cbuf, strlen(cbuf)));
+            TRY(kos_append_cstr(ctx, &cstr, cbuf, strlen(cbuf)));
         }
         else
-            TRY(_KOS_append_cstr(ctx, &cstr, str_format_question_marks,
-                                 sizeof(str_format_question_marks) - 1));
+            TRY(kos_append_cstr(ctx, &cstr, str_format_question_marks,
+                                sizeof(str_format_question_marks) - 1));
 
-        TRY(_KOS_append_cstr(ctx, &cstr, str_format_function,
-                             sizeof(str_format_function) - 1));
+        TRY(kos_append_cstr(ctx, &cstr, str_format_function,
+                            sizeof(str_format_function) - 1));
 
         str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_FUNCTION));
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
-        TRY(_KOS_append_cstr(ctx, &cstr, str_format_module,
-                             sizeof(str_format_module) - 1));
+        TRY(kos_append_cstr(ctx, &cstr, str_format_module,
+                            sizeof(str_format_module) - 1));
 
         str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_FILE));
         TRY_OBJID(str);
@@ -825,8 +825,8 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
-        TRY(_KOS_append_cstr(ctx, &cstr, str_format_line,
-                             sizeof(str_format_line) - 1));
+        TRY(kos_append_cstr(ctx, &cstr, str_format_line,
+                            sizeof(str_format_line) - 1));
 
         str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_LINE));
         TRY_OBJID(str);
@@ -839,7 +839,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
     }
 
 _error:
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : array;
 }
@@ -859,7 +859,7 @@ static int _push_local_refs_object(KOS_CONTEXT ctx)
 {
     int             error      = KOS_ERROR_EXCEPTION;
     KOS_LOCAL_REFS *local_refs = (KOS_LOCAL_REFS *)
-        _KOS_alloc_object(ctx, OBJ_LOCAL_REFS, (uint32_t)sizeof(KOS_LOCAL_REFS));
+        kos_alloc_object(ctx, OBJ_LOCAL_REFS, (uint32_t)sizeof(KOS_LOCAL_REFS));
 
     if (local_refs) {
         local_refs->header.num_tracked = 0;
@@ -1041,14 +1041,14 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries, ...)
     while (--num_entries);
 }
 
-void _KOS_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+void kos_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
 {
     KOS_instance_validate(ctx);
 
     ctx->retval = obj_id;
 }
 
-void _KOS_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
+void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
 {
     va_list  args;
     uint32_t i;
@@ -1073,7 +1073,7 @@ void _KOS_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
     va_end(args);
 }
 
-void _KOS_untrack_refs(KOS_CONTEXT ctx, int num_entries)
+void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries)
 {
     assert(num_entries > 0 && (unsigned)num_entries <= ctx->tmp_ref_count);
 

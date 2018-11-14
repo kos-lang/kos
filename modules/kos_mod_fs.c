@@ -68,7 +68,7 @@ static KOS_OBJ_ID _is_file(KOS_CONTEXT ctx,
     KOS_OBJ_ID         filename_obj = KOS_array_read(ctx, args_obj, 0);
     struct _KOS_VECTOR filename_cstr;
 
-    _KOS_vector_init(&filename_cstr);
+    kos_vector_init(&filename_cstr);
 
     TRY_OBJID(filename_obj);
 
@@ -76,10 +76,10 @@ static KOS_OBJ_ID _is_file(KOS_CONTEXT ctx,
 
     _fix_path_separators(&filename_cstr);
 
-    ret = KOS_BOOL(_KOS_does_file_exist(filename_cstr.buffer));
+    ret = KOS_BOOL(kos_does_file_exist(filename_cstr.buffer));
 
 _error:
-    _KOS_vector_destroy(&filename_cstr);
+    kos_vector_destroy(&filename_cstr);
 
     return ret;
 }
@@ -103,7 +103,7 @@ static KOS_OBJ_ID _remove(KOS_CONTEXT ctx,
     KOS_OBJ_ID         filename_obj = KOS_array_read(ctx, args_obj, 0);
     struct _KOS_VECTOR filename_cstr;
 
-    _KOS_vector_init(&filename_cstr);
+    kos_vector_init(&filename_cstr);
 
     TRY_OBJID(filename_obj);
 
@@ -118,12 +118,12 @@ static KOS_OBJ_ID _remove(KOS_CONTEXT ctx,
 #endif
 
 _error:
-    _KOS_vector_destroy(&filename_cstr);
+    kos_vector_destroy(&filename_cstr);
 
     return ret;
 }
 
-int _KOS_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 

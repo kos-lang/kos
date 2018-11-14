@@ -90,15 +90,15 @@ KOS_OBJ_ID KOS_new_object(KOS_CONTEXT ctx)
 KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
                                          KOS_OBJ_ID  prototype)
 {
-    KOS_OBJECT *obj = (KOS_OBJECT *)_KOS_alloc_object(ctx,
-                                                      OBJ_OBJECT,
-                                                      sizeof(KOS_OBJECT));
+    KOS_OBJECT *obj = (KOS_OBJECT *)kos_alloc_object(ctx,
+                                                     OBJ_OBJECT,
+                                                     sizeof(KOS_OBJECT));
 
     if (obj) {
         assert(obj->header.type == OBJ_OBJECT);
-        _KOS_init_object(obj, prototype);
+        kos_init_object(obj, prototype);
 
-        _KOS_set_return_value(ctx, OBJID(OBJECT, obj));
+        kos_set_return_value(ctx, OBJID(OBJECT, obj));
     }
 
     return OBJID(OBJECT, obj);
@@ -136,10 +136,10 @@ static int _has_properties(KOS_OBJ_ID obj_id)
 static KOS_OBJ_ID _alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 {
     KOS_OBJECT_STORAGE *const storage = (KOS_OBJECT_STORAGE *)
-            _KOS_alloc_object(ctx,
-                              OBJ_OBJECT_STORAGE,
-                              sizeof(KOS_OBJECT_STORAGE) +
-                                    (capacity - 1) * sizeof(KOS_PITEM));
+            kos_alloc_object(ctx,
+                             OBJ_OBJECT_STORAGE,
+                             sizeof(KOS_OBJECT_STORAGE) +
+                                   (capacity - 1) * sizeof(KOS_PITEM));
 
     if (storage) {
         assert(storage->header.type == OBJ_OBJECT_STORAGE);
@@ -148,7 +148,7 @@ static KOS_OBJ_ID _alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
     return OBJID(OBJECT_STORAGE, storage);
 }
 
-void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
+void kos_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
 {
     obj->prototype = prototype;
     obj->finalize  = 0;
@@ -301,7 +301,7 @@ static void _copy_table(KOS_CONTEXT ctx,
      * closes the source slot. */
     if (KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies, -1) > 1) {
         while (KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies))
-            _KOS_yield();
+            kos_yield();
     }
 
     props = _get_properties(src_obj_id);
@@ -364,11 +364,11 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
     }
     else {
 
-        _KOS_track_refs(ctx, 2, &obj_id, &old_table);
+        kos_track_refs(ctx, 2, &obj_id, &old_table);
 
         new_table = _alloc_buffer(ctx, new_capacity);
 
-        _KOS_untrack_refs(ctx, 2);
+        kos_untrack_refs(ctx, 2);
 
         if ( ! IS_BAD_PTR(new_table)) {
             unsigned i;
@@ -536,7 +536,7 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
     if ( ! IS_BAD_PTR(retval)) {
         KOS_PERF_CNT(object_get_success);
 
-        _KOS_set_return_value(ctx, retval);
+        kos_set_return_value(ctx, retval);
     }
     else
         KOS_PERF_CNT(object_get_fail);
@@ -544,8 +544,8 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
     return retval;
 }
 
-int _KOS_object_copy_prop_table(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  obj_id)
+int kos_object_copy_prop_table(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  obj_id)
 {
     KOS_ATOMIC(KOS_OBJ_ID) *props;
 
@@ -573,7 +573,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
     else {
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
-        _KOS_track_refs(ctx, 3, &obj_id, &prop, &value);
+        kos_track_refs(ctx, 3, &obj_id, &prop, &value);
 
         /* Check if property table is non-empty */
         if (IS_BAD_PTR(_read_props(props))) {
@@ -711,7 +711,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                 error = _resize_prop_table(ctx, obj_id, prop_table, 2U);
         }
 
-        _KOS_untrack_refs(ctx, 3);
+        kos_untrack_refs(ctx, 3);
     }
 
 #ifdef CONFIG_PERF
@@ -760,11 +760,11 @@ int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID dyn_prop;
 
-    _KOS_track_refs(ctx, 3, &obj_id, &prop, &module_obj);
+    kos_track_refs(ctx, 3, &obj_id, &prop, &module_obj);
 
     dyn_prop = KOS_new_builtin_dynamic_prop(ctx, module_obj, getter, setter);
 
-    _KOS_untrack_refs(ctx, 3);
+    kos_untrack_refs(ctx, 3);
 
     if ( ! IS_BAD_PTR(dyn_prop))
         error = KOS_set_property(ctx, obj_id, prop, dyn_prop);
@@ -863,12 +863,12 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
     KOS_OBJ_ID key_table_obj = KOS_BADPTR;
     KOS_OBJ_ID prop_table    = KOS_BADPTR;
 
-    _KOS_track_refs(ctx, 4, &obj_id, &walk_id, &key_table_obj, &prop_table);
+    kos_track_refs(ctx, 4, &obj_id, &walk_id, &key_table_obj, &prop_table);
 
     walk_id = OBJID(OBJECT_WALK,
-                    (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
-                                                         OBJ_OBJECT_WALK,
-                                                         sizeof(KOS_OBJECT_WALK)));
+                    (KOS_OBJECT_WALK *)kos_alloc_object(ctx,
+                                                        OBJ_OBJECT_WALK,
+                                                        sizeof(KOS_OBJECT_WALK)));
     if (IS_BAD_PTR(walk_id))
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
@@ -929,12 +929,12 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
             _read_props(_get_properties(key_table_obj));
 
 _error:
-    _KOS_untrack_refs(ctx, 4);
+    kos_untrack_refs(ctx, 4);
 
     if (error)
         walk_id = KOS_BADPTR; /* Object is garbage collected */
 
-    _KOS_set_return_value(ctx, walk_id);
+    kos_set_return_value(ctx, walk_id);
 
     return walk_id;
 }
@@ -946,20 +946,20 @@ KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
     KOS_OBJECT_WALK *src;
     KOS_OBJECT_WALK *walk;
 
-    _KOS_track_refs(ctx, 1, &walk_id);
+    kos_track_refs(ctx, 1, &walk_id);
 
-    walk = (KOS_OBJECT_WALK *)_KOS_alloc_object(ctx,
-                                                OBJ_OBJECT_WALK,
-                                                sizeof(KOS_OBJECT_WALK));
+    walk = (KOS_OBJECT_WALK *)kos_alloc_object(ctx,
+                                               OBJ_OBJECT_WALK,
+                                               sizeof(KOS_OBJECT_WALK));
 
-    _KOS_untrack_refs(ctx, 1);
+    kos_untrack_refs(ctx, 1);
 
     if ( ! walk)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
     assert(GET_OBJ_TYPE(walk_id) == OBJ_OBJECT_WALK);
 
-    _KOS_set_return_value(ctx, OBJID(OBJECT_WALK, walk));
+    kos_set_return_value(ctx, OBJID(OBJECT_WALK, walk));
 
     src = OBJPTR(OBJECT_WALK, walk_id);
 
@@ -991,7 +991,7 @@ int KOS_object_walk(KOS_CONTEXT ctx,
         table    = key_table->items;
     }
 
-    _KOS_track_refs(ctx, 2, &walk_id, &key);
+    kos_track_refs(ctx, 2, &walk_id, &key);
 
     for (;;) {
 
@@ -1023,7 +1023,7 @@ int KOS_object_walk(KOS_CONTEXT ctx,
         }
     }
 
-    _KOS_untrack_refs(ctx, 2);
+    kos_untrack_refs(ctx, 2);
 
     return error;
 }

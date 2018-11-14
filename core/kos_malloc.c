@@ -24,15 +24,15 @@
 #include "kos_debug.h"
 #include <stdlib.h>
 
-void *_KOS_malloc(size_t size)
+void *kos_malloc(size_t size)
 {
-    if (_KOS_seq_fail())
+    if (kos_seq_fail())
         return 0;
 
     return malloc(size);
 }
 
-void _KOS_free(void *ptr)
+void kos_free(void *ptr)
 {
     free(ptr);
 }

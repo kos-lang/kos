@@ -34,7 +34,7 @@ static int reference = 0;
 static void test_int(const char *str, uint32_t hi, uint32_t lo, int error)
 {
     int64_t   v   = 0;
-    const int ret = _KOS_parse_int(str, str+strlen(str), &v);
+    const int ret = kos_parse_int(str, str+strlen(str), &v);
 
     if (ret != error) {
         printf("Failed: %s - error %d, expected %d\n", str, ret, error);
@@ -55,7 +55,7 @@ static void test_int(const char *str, uint32_t hi, uint32_t lo, int error)
 static void test_double(const char *str, uint32_t high, uint32_t low, int error)
 {
     double value = 0;
-    int    ret   = _KOS_parse_double(str, str+strlen(str), &value);
+    int    ret   = kos_parse_double(str, str+strlen(str), &value);
 
     if (ret != error) {
         printf("Failed: %s - error %d, expected %d\n", str, ret, error);
@@ -63,7 +63,7 @@ static void test_double(const char *str, uint32_t high, uint32_t low, int error)
     }
     else if (ret == 0) {
 
-        const uint64_t uval      = _KOS_double_to_uint64_t(value);
+        const uint64_t uval      = kos_double_to_uint64_t(value);
         const uint32_t uval_low  = (uint32_t)uval;
         const uint32_t uval_high = (uint32_t)(uval >> 32);
 
@@ -82,7 +82,7 @@ static void test_double(const char *str, uint32_t high, uint32_t low, int error)
                 status = 1;
             }
             else {
-                const uint64_t conv_u = _KOS_double_to_uint64_t(conv_d);
+                const uint64_t conv_u = kos_double_to_uint64_t(conv_d);
                 if (conv_u != uval) {
                     printf("Failed: %s - value 0x%08X%08X, strtod 0x%08X%08X\n",
                            str, uval_high, uval_low,
@@ -100,7 +100,7 @@ static void test_random_double(void)
     struct KOS_RNG rng;
     int            i_test;
 
-    _KOS_rng_init(&rng);
+    kos_rng_init(&rng);
 
     for (i_test = 0; i_test < 10240; i_test++) {
 
@@ -115,17 +115,17 @@ static void test_random_double(void)
         uint64_t expected_u;
         char*    endptr;
 
-        if (_KOS_rng_random_range(&rng, 1U))
+        if (kos_rng_random_range(&rng, 1U))
             *(pos++) = '-';
 
-        num_digits = (unsigned)_KOS_rng_random_range(&rng, 23U) + 1U;
+        num_digits = (unsigned)kos_rng_random_range(&rng, 23U) + 1U;
 
-        if (_KOS_rng_random_range(&rng, 4U))
-            dot_pos = (unsigned)_KOS_rng_random_range(&rng, num_digits - 2U);
+        if (kos_rng_random_range(&rng, 4U))
+            dot_pos = (unsigned)kos_rng_random_range(&rng, num_digits - 2U);
 
         for (i_digit = 0; i_digit < num_digits; i_digit++) {
 
-            const char digit = '0' + (char)(unsigned)_KOS_rng_random_range(&rng, 9U);
+            const char digit = '0' + (char)(unsigned)kos_rng_random_range(&rng, 9U);
 
             *(pos++) = digit;
 
@@ -133,13 +133,13 @@ static void test_random_double(void)
                 *(pos++) = '.';
         }
 
-        if (_KOS_rng_random_range(&rng, 4U)) {
+        if (kos_rng_random_range(&rng, 4U)) {
 
-            *(pos++) = _KOS_rng_random_range(&rng, 1U) ? 'e' : 'E';
+            *(pos++) = kos_rng_random_range(&rng, 1U) ? 'e' : 'E';
 
-            if (_KOS_rng_random_range(&rng, 1U))
+            if (kos_rng_random_range(&rng, 1U))
                 *(pos++) = '-';
-            else if (_KOS_rng_random_range(&rng, 1U))
+            else if (kos_rng_random_range(&rng, 1U))
                 *(pos++) = '+';
 
             num_digits = (unsigned)((&str[0] + sizeof(str)) - pos) - 1U;
@@ -148,7 +148,7 @@ static void test_random_double(void)
             assert(num_digits > 0);
 
             if (num_digits > 1U)
-                num_digits = 1U + (unsigned)_KOS_rng_random_range(&rng, num_digits - 1U);
+                num_digits = 1U + (unsigned)kos_rng_random_range(&rng, num_digits - 1U);
             else
                 num_digits = 1U;
             assert(pos + num_digits + 1 <= &str[0] + sizeof(str));
@@ -160,13 +160,13 @@ static void test_random_double(void)
                 if (i_digit == 0 && num_digits == 3)
                     max_digit = 2U;
 
-                *(pos++) = '0' + (char)(unsigned)_KOS_rng_random_range(&rng, max_digit);
+                *(pos++) = '0' + (char)(unsigned)kos_rng_random_range(&rng, max_digit);
             }
         }
 
         *pos = '\0';
 
-        ret = _KOS_parse_double(str, pos, &actual);
+        ret = kos_parse_double(str, pos, &actual);
 
         expected = strtod(str, &endptr);
 
@@ -182,8 +182,8 @@ static void test_random_double(void)
             continue;
         }
 
-        actual_u   = _KOS_double_to_uint64_t(actual);
-        expected_u = _KOS_double_to_uint64_t(expected);
+        actual_u   = kos_double_to_uint64_t(actual);
+        expected_u = kos_double_to_uint64_t(expected);
 
         if (actual_u != expected_u) {
             char           diff_str[32];

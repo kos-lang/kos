@@ -183,16 +183,16 @@ enum _KOS_NEXT_TOKEN_MODE {
     NT_CONTINUE_STRING  /* Next token continues a string */
 };
 
-void _KOS_lexer_init(struct _KOS_LEXER *lexer,
-                     unsigned           file_id,
-                     const char        *begin,
-                     const char        *end);
+void kos_lexer_init(struct _KOS_LEXER *lexer,
+                    unsigned           file_id,
+                    const char        *begin,
+                    const char        *end);
 
-int  _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
-                           enum _KOS_NEXT_TOKEN_MODE mode,
-                           struct _KOS_TOKEN        *token);
+int  kos_lexer_next_token(struct _KOS_LEXER        *lexer,
+                          enum _KOS_NEXT_TOKEN_MODE mode,
+                          struct _KOS_TOKEN        *token);
 
-void _KOS_lexer_unget_token(struct _KOS_LEXER       *lexer,
-                            const struct _KOS_TOKEN *token);
+void kos_lexer_unget_token(struct _KOS_LEXER       *lexer,
+                           const struct _KOS_TOKEN *token);
 
 #endif

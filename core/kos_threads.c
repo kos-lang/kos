@@ -42,20 +42,20 @@ static const char str_err_join_self[] = "thread cannot join itself";
 static const char str_err_thread[]    = "failed to create thread";
 
 #ifdef KOS_GCC_ATOMIC_EXTENSION
-int _KOS_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
+int kos_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
     return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
-int _KOS_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv)
+int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv)
 {
     return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 #endif
 
-void _KOS_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
-                          KOS_ATOMIC(void *) *src,
-                          unsigned            ptr_count)
+void kos_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
+                         KOS_ATOMIC(void *) *src,
+                         unsigned            ptr_count)
 {
     if (src == dest)
         return;
@@ -85,13 +85,13 @@ void _KOS_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
     }
 }
 
-void _KOS_spin_lock(KOS_ATOMIC(uint32_t) *lock)
+void kos_spin_lock(KOS_ATOMIC(uint32_t) *lock)
 {
     while (KOS_atomic_swap_u32(*lock, 1))
-        _KOS_yield();
+        kos_yield();
 }
 
-void _KOS_spin_unlock(KOS_ATOMIC(uint32_t) *lock)
+void kos_spin_unlock(KOS_ATOMIC(uint32_t) *lock)
 {
 #ifdef NDEBUG
     KOS_atomic_swap_u32(*lock, 0);
@@ -101,7 +101,7 @@ void _KOS_spin_unlock(KOS_ATOMIC(uint32_t) *lock)
 #endif
 }
 
-void _KOS_yield(void)
+void kos_yield(void)
 {
 #ifdef _WIN32
     SwitchToThread();
@@ -144,13 +144,13 @@ static DWORD WINAPI _thread_proc(LPVOID thread_obj)
     return ret;
 }
 
-int _KOS_thread_create(KOS_CONTEXT      ctx,
-                       _KOS_THREAD_PROC proc,
-                       void            *cookie,
-                       _KOS_THREAD     *thread)
+int kos_thread_create(KOS_CONTEXT      ctx,
+                      _KOS_THREAD_PROC proc,
+                      void            *cookie,
+                      _KOS_THREAD     *thread)
 {
     int         error      = KOS_SUCCESS;
-    _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
+    _KOS_THREAD new_thread = (_KOS_THREAD)kos_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
         new_thread->thread_id = 0;
@@ -159,7 +159,7 @@ int _KOS_thread_create(KOS_CONTEXT      ctx,
         new_thread->cookie    = cookie;
         new_thread->exception = KOS_BADPTR;
 
-        if (_KOS_seq_fail())
+        if (kos_seq_fail())
             new_thread->thread_handle = 0;
         else
             new_thread->thread_handle = CreateThread(0,
@@ -170,7 +170,7 @@ int _KOS_thread_create(KOS_CONTEXT      ctx,
                                                      &new_thread->thread_id);
 
         if (!new_thread->thread_handle) {
-            _KOS_free(new_thread);
+            kos_free(new_thread);
             KOS_raise_exception_cstring(ctx, str_err_thread);
             error = KOS_ERROR_EXCEPTION;
         }
@@ -183,13 +183,13 @@ int _KOS_thread_create(KOS_CONTEXT      ctx,
     return error;
 }
 
-int _KOS_thread_join(KOS_CONTEXT ctx,
-                     _KOS_THREAD thread)
+int kos_thread_join(KOS_CONTEXT ctx,
+                    _KOS_THREAD thread)
 {
     int error = KOS_SUCCESS;
 
     if (thread) {
-        if (_KOS_is_current_thread(thread)) {
+        if (kos_is_current_thread(thread)) {
             KOS_raise_exception_cstring(ctx, str_err_join_self);
             return KOS_ERROR_EXCEPTION;
         }
@@ -202,13 +202,13 @@ int _KOS_thread_join(KOS_CONTEXT ctx,
             error = KOS_ERROR_EXCEPTION;
         }
 
-        _KOS_free(thread);
+        kos_free(thread);
     }
 
     return error;
 }
 
-int _KOS_is_current_thread(_KOS_THREAD thread)
+int kos_is_current_thread(_KOS_THREAD thread)
 {
     assert(thread);
 
@@ -219,12 +219,12 @@ struct _KOS_MUTEX_OBJECT {
     CRITICAL_SECTION cs;
 };
 
-int _KOS_create_mutex(_KOS_MUTEX *mutex)
+int kos_create_mutex(_KOS_MUTEX *mutex)
 {
     int error = KOS_SUCCESS;
 
     assert(mutex);
-    *mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
+    *mutex = (_KOS_MUTEX)kos_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
 
     if (*mutex)
         InitializeCriticalSection(&(*mutex)->cs);
@@ -234,35 +234,35 @@ int _KOS_create_mutex(_KOS_MUTEX *mutex)
     return error;
 }
 
-void _KOS_destroy_mutex(_KOS_MUTEX *mutex)
+void kos_destroy_mutex(_KOS_MUTEX *mutex)
 {
     assert(mutex && *mutex);
 
     DeleteCriticalSection(&(*mutex)->cs);
 
-    _KOS_free(*mutex);
+    kos_free(*mutex);
 }
 
-void _KOS_lock_mutex(_KOS_MUTEX *mutex)
+void kos_lock_mutex(_KOS_MUTEX *mutex)
 {
     assert(mutex && *mutex);
 
     EnterCriticalSection(&(*mutex)->cs);
 }
 
-void _KOS_unlock_mutex(_KOS_MUTEX *mutex)
+void kos_unlock_mutex(_KOS_MUTEX *mutex)
 {
     assert(mutex && *mutex);
 
     LeaveCriticalSection(&(*mutex)->cs);
 }
 
-int _KOS_tls_create(_KOS_TLS_KEY *key)
+int kos_tls_create(_KOS_TLS_KEY *key)
 {
     int   error   = KOS_SUCCESS;
     DWORD new_key;
 
-    if (_KOS_seq_fail())
+    if (kos_seq_fail())
         new_key = TLS_OUT_OF_INDEXES;
     else
         new_key = TlsAlloc();
@@ -275,17 +275,17 @@ int _KOS_tls_create(_KOS_TLS_KEY *key)
     return error;
 }
 
-void _KOS_tls_destroy(_KOS_TLS_KEY key)
+void kos_tls_destroy(_KOS_TLS_KEY key)
 {
     TlsFree(key);
 }
 
-void *_KOS_tls_get(_KOS_TLS_KEY key)
+void *kos_tls_get(_KOS_TLS_KEY key)
 {
     return TlsGetValue(key);
 }
 
-void _KOS_tls_set(_KOS_TLS_KEY key, void *value)
+void kos_tls_set(_KOS_TLS_KEY key, void *value)
 {
     TlsSetValue(key, value);
 }
@@ -320,21 +320,21 @@ static void *_thread_proc(void *thread_obj)
     return ret;
 }
 
-int _KOS_thread_create(KOS_CONTEXT      ctx,
-                       _KOS_THREAD_PROC proc,
-                       void            *cookie,
-                       _KOS_THREAD     *thread)
+int kos_thread_create(KOS_CONTEXT      ctx,
+                      _KOS_THREAD_PROC proc,
+                      void            *cookie,
+                      _KOS_THREAD     *thread)
 {
     int         error      = KOS_SUCCESS;
-    _KOS_THREAD new_thread = (_KOS_THREAD)_KOS_malloc(sizeof(struct _KOS_THREAD_OBJECT));
+    _KOS_THREAD new_thread = (_KOS_THREAD)kos_malloc(sizeof(struct _KOS_THREAD_OBJECT));
 
     if (new_thread) {
         new_thread->inst   = ctx->inst;
         new_thread->proc   = proc;
         new_thread->cookie = cookie;
 
-        if (_KOS_seq_fail() || pthread_create(&new_thread->thread_handle, 0, _thread_proc, new_thread)) {
-            _KOS_free(new_thread);
+        if (kos_seq_fail() || pthread_create(&new_thread->thread_handle, 0, _thread_proc, new_thread)) {
+            kos_free(new_thread);
             KOS_raise_exception_cstring(ctx, str_err_thread);
             error = KOS_ERROR_EXCEPTION;
         }
@@ -347,15 +347,15 @@ int _KOS_thread_create(KOS_CONTEXT      ctx,
     return error;
 }
 
-int _KOS_thread_join(KOS_CONTEXT ctx,
-                     _KOS_THREAD thread)
+int kos_thread_join(KOS_CONTEXT ctx,
+                    _KOS_THREAD thread)
 {
     int error = KOS_SUCCESS;
 
     if (thread) {
         void *ret  = 0;
 
-        if (_KOS_is_current_thread(thread)) {
+        if (kos_is_current_thread(thread)) {
             KOS_raise_exception_cstring(ctx, str_err_join_self);
             return KOS_ERROR_EXCEPTION;
         }
@@ -367,13 +367,13 @@ int _KOS_thread_join(KOS_CONTEXT ctx,
             error = KOS_ERROR_EXCEPTION;
         }
 
-        _KOS_free(thread);
+        kos_free(thread);
     }
 
     return error;
 }
 
-int _KOS_is_current_thread(_KOS_THREAD thread)
+int kos_is_current_thread(_KOS_THREAD thread)
 {
     assert(thread);
 
@@ -384,16 +384,16 @@ struct _KOS_MUTEX_OBJECT {
     pthread_mutex_t mutex;
 };
 
-int _KOS_create_mutex(_KOS_MUTEX *mutex)
+int kos_create_mutex(_KOS_MUTEX *mutex)
 {
     int error = KOS_SUCCESS;
 
     assert(mutex);
-    *mutex = (_KOS_MUTEX)_KOS_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
+    *mutex = (_KOS_MUTEX)kos_malloc(sizeof(struct _KOS_MUTEX_OBJECT));
 
     if (*mutex) {
-        if (_KOS_seq_fail() || pthread_mutex_init(&(*mutex)->mutex, 0)) {
-            _KOS_free(*mutex);
+        if (kos_seq_fail() || pthread_mutex_init(&(*mutex)->mutex, 0)) {
+            kos_free(*mutex);
             *mutex = 0;
             error = KOS_ERROR_OUT_OF_MEMORY;
         }
@@ -404,16 +404,16 @@ int _KOS_create_mutex(_KOS_MUTEX *mutex)
     return error;
 }
 
-void _KOS_destroy_mutex(_KOS_MUTEX *mutex)
+void kos_destroy_mutex(_KOS_MUTEX *mutex)
 {
     assert(mutex && *mutex);
 
     pthread_mutex_destroy(&(*mutex)->mutex);
 
-    _KOS_free(*mutex);
+    kos_free(*mutex);
 }
 
-void _KOS_lock_mutex(_KOS_MUTEX *mutex)
+void kos_lock_mutex(_KOS_MUTEX *mutex)
 {
 #ifndef NDEBUG
     int ret;
@@ -429,7 +429,7 @@ void _KOS_lock_mutex(_KOS_MUTEX *mutex)
     assert(ret == 0);
 }
 
-void _KOS_unlock_mutex(_KOS_MUTEX *mutex)
+void kos_unlock_mutex(_KOS_MUTEX *mutex)
 {
 #ifndef NDEBUG
     int ret;
@@ -449,14 +449,14 @@ struct _KOS_TLS_OBJECT {
     pthread_key_t key;
 };
 
-int _KOS_tls_create(_KOS_TLS_KEY *key)
+int kos_tls_create(_KOS_TLS_KEY *key)
 {
     int          error   = KOS_SUCCESS;
-    _KOS_TLS_KEY new_key = (_KOS_TLS_KEY)_KOS_malloc(sizeof(struct _KOS_TLS_OBJECT));
+    _KOS_TLS_KEY new_key = (_KOS_TLS_KEY)kos_malloc(sizeof(struct _KOS_TLS_OBJECT));
 
     if (new_key) {
-        if (_KOS_seq_fail() || pthread_key_create(&new_key->key, 0)) {
-            _KOS_free(new_key);
+        if (kos_seq_fail() || pthread_key_create(&new_key->key, 0)) {
+            kos_free(new_key);
             error = KOS_ERROR_OUT_OF_MEMORY;
         }
         else
@@ -468,18 +468,18 @@ int _KOS_tls_create(_KOS_TLS_KEY *key)
     return error;
 }
 
-void _KOS_tls_destroy(_KOS_TLS_KEY key)
+void kos_tls_destroy(_KOS_TLS_KEY key)
 {
     pthread_key_delete(key->key);
-    _KOS_free(key);
+    kos_free(key);
 }
 
-void *_KOS_tls_get(_KOS_TLS_KEY key)
+void *kos_tls_get(_KOS_TLS_KEY key)
 {
     return pthread_getspecific(key->key);
 }
 
-void _KOS_tls_set(_KOS_TLS_KEY key, void *value)
+void kos_tls_set(_KOS_TLS_KEY key, void *value)
 {
     pthread_setspecific(key->key, value);
 }

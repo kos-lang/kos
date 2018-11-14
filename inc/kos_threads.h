@@ -170,16 +170,16 @@ T* KOS_atomic_swap_ptr(KOS_ATOMIC(T*)& dest, T* value)
 
 #define KOS_atomic_write_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
 
-#define KOS_atomic_cas_u32(dest, oldv, newv) _KOS_atomic_cas_u32(&(dest), (oldv), (newv))
+#define KOS_atomic_cas_u32(dest, oldv, newv) kos_atomic_cas_u32(&(dest), (oldv), (newv))
 
-static inline int _KOS_atomic_cas_u32(_Atomic(uint32_t) *dest, uint32_t oldv, uint32_t newv)
+static inline int kos_atomic_cas_u32(_Atomic(uint32_t) *dest, uint32_t oldv, uint32_t newv)
 {
     return atomic_compare_exchange_strong(dest, &oldv, newv);
 }
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv) _KOS_atomic_cas_ptr((_Atomic(void *) *)&(dest), (void *)(oldv), (void *)(newv))
+#define KOS_atomic_cas_ptr(dest, oldv, newv) kos_atomic_cas_ptr((_Atomic(void *) *)&(dest), (void *)(oldv), (void *)(newv))
 
-static inline int _KOS_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *newv)
+static inline int kos_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *newv)
 {
     return atomic_compare_exchange_strong(dest, &oldv, newv);
 }
@@ -287,24 +287,24 @@ static inline int _KOS_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *n
 
 #define KOS_atomic_write_ptr(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELAXED)
 
-#define KOS_atomic_cas_u32(dest, oldv, newv) _KOS_atomic_cas_u32(&(dest), (oldv), (newv))
+#define KOS_atomic_cas_u32(dest, oldv, newv) kos_atomic_cas_u32(&(dest), (oldv), (newv))
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv) _KOS_atomic_cas_ptr((void *volatile *)&(dest), (void *)(oldv), (void *)(newv))
+#define KOS_atomic_cas_ptr(dest, oldv, newv) kos_atomic_cas_ptr((void *volatile *)&(dest), (void *)(oldv), (void *)(newv))
 
 #if defined(__cplusplus) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)) || !defined(__STRICT_ANSI__)
-static inline int _KOS_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
+static inline int kos_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
     return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
-static inline int _KOS_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv)
+static inline int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv)
 {
     return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 #else
 #define KOS_GCC_ATOMIC_EXTENSION 1
-int _KOS_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv);
-int _KOS_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
+int kos_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv);
+int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 #endif
 
 #define KOS_atomic_add_i32(dest, value) ((int32_t)__atomic_fetch_add(&(dest), (value), __ATOMIC_SEQ_CST))
@@ -493,33 +493,33 @@ int _KOS_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 /* Platform-independent declarations                                        */
 /*==========================================================================*/
 
-void _KOS_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
-                          KOS_ATOMIC(void *) *src,
-                          unsigned            ptr_count);
+void kos_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
+                         KOS_ATOMIC(void *) *src,
+                         unsigned            ptr_count);
 
-void _KOS_spin_lock(KOS_ATOMIC(uint32_t) *lock);
-void _KOS_spin_unlock(KOS_ATOMIC(uint32_t) *lock);
+void kos_spin_lock(KOS_ATOMIC(uint32_t) *lock);
+void kos_spin_unlock(KOS_ATOMIC(uint32_t) *lock);
 
-void _KOS_yield(void);
+void kos_yield(void);
 
-int _KOS_thread_create(KOS_CONTEXT      ctx,
-                       _KOS_THREAD_PROC proc,
-                       void            *cookie,
-                       _KOS_THREAD     *thread);
+int kos_thread_create(KOS_CONTEXT      ctx,
+                      _KOS_THREAD_PROC proc,
+                      void            *cookie,
+                      _KOS_THREAD     *thread);
 
-int _KOS_thread_join(KOS_CONTEXT ctx,
-                     _KOS_THREAD thread);
+int kos_thread_join(KOS_CONTEXT ctx,
+                    _KOS_THREAD thread);
 
-int _KOS_is_current_thread(_KOS_THREAD thread);
+int kos_is_current_thread(_KOS_THREAD thread);
 
-int _KOS_create_mutex(_KOS_MUTEX *mutex);
-void _KOS_destroy_mutex(_KOS_MUTEX *mutex);
-void _KOS_lock_mutex(_KOS_MUTEX *mutex);
-void _KOS_unlock_mutex(_KOS_MUTEX *mutex);
+int kos_create_mutex(_KOS_MUTEX *mutex);
+void kos_destroy_mutex(_KOS_MUTEX *mutex);
+void kos_lock_mutex(_KOS_MUTEX *mutex);
+void kos_unlock_mutex(_KOS_MUTEX *mutex);
 
-int   _KOS_tls_create(_KOS_TLS_KEY *key);
-void  _KOS_tls_destroy(_KOS_TLS_KEY key);
-void *_KOS_tls_get(_KOS_TLS_KEY key);
-void  _KOS_tls_set(_KOS_TLS_KEY key, void *value);
+int   kos_tls_create(_KOS_TLS_KEY *key);
+void  kos_tls_destroy(_KOS_TLS_KEY key);
+void *kos_tls_get(_KOS_TLS_KEY key);
+void  kos_tls_set(_KOS_TLS_KEY key, void *value);
 
 #endif

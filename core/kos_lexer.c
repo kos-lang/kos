@@ -458,7 +458,7 @@ static int _collect_escape(struct _KOS_LEXER *lexer, int *format)
         error = KOS_ERROR_SCANNING_FAILED;
     }
     else {
-        const char esc_type = _KOS_escape_sequence_map[(unsigned char)*begin];
+        const char esc_type = kos_escape_sequence_map[(unsigned char)*begin];
         if (esc_type == KOS_ET_HEX) {
             c = _prefetch_next(lexer, &begin, &end);
             if (c == LT_EOF) {
@@ -774,10 +774,10 @@ static void _find_keyword(const char *begin, const char *end, enum _KOS_KEYWORD_
     }
 }
 
-void _KOS_lexer_init(struct _KOS_LEXER *lexer,
-                     unsigned           file_id,
-                     const char        *begin,
-                     const char        *end)
+void kos_lexer_init(struct _KOS_LEXER *lexer,
+                    unsigned           file_id,
+                    const char        *begin,
+                    const char        *end)
 {
     lexer->buf             = begin;
     lexer->buf_end         = end;
@@ -802,9 +802,9 @@ void _KOS_lexer_init(struct _KOS_LEXER *lexer,
     }
 }
 
-int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
-                          enum _KOS_NEXT_TOKEN_MODE mode,
-                          struct _KOS_TOKEN        *token)
+int kos_lexer_next_token(struct _KOS_LEXER        *lexer,
+                         enum _KOS_NEXT_TOKEN_MODE mode,
+                         struct _KOS_TOKEN        *token)
 {
     int error = KOS_SUCCESS;
     const char *begin, *end;
@@ -977,7 +977,7 @@ int _KOS_lexer_next_token(struct _KOS_LEXER        *lexer,
     return error;
 }
 
-void _KOS_lexer_unget_token(struct _KOS_LEXER *lexer, const struct _KOS_TOKEN *token)
+void kos_lexer_unget_token(struct _KOS_LEXER *lexer, const struct _KOS_TOKEN *token)
 {
     lexer->prefetch_begin = token->begin;
     lexer->prefetch_end   = token->begin;

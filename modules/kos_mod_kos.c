@@ -63,7 +63,7 @@ static void _finalize(KOS_CONTEXT ctx,
 {
     /* TODO free
     if (priv)
-        _KOS_free_buffer(ctx, priv, sizeof(struct _LEXER));
+        kos_free_buffer(ctx, priv, sizeof(struct _LEXER));
     */
 }
 
@@ -106,9 +106,9 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         TRY_OBJID(lexer_obj_id);
 
         /* TODO use malloc once GC supports finalize */
-        lexer = (struct _LEXER *)_KOS_alloc_object(ctx,
-                                                   OBJ_OPAQUE,
-                                                   sizeof(struct _LEXER));
+        lexer = (struct _LEXER *)kos_alloc_object(ctx,
+                                                  OBJ_OPAQUE,
+                                                  sizeof(struct _LEXER));
         if (!lexer)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
@@ -119,7 +119,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         buf_size = KOS_get_buffer_size(init_arg);
         buf_data = KOS_buffer_data(init_arg);
 
-        _KOS_lexer_init(&lexer->lexer, 0, (char *)buf_data, (char *)buf_data + buf_size);
+        kos_lexer_init(&lexer->lexer, 0, (char *)buf_data, (char *)buf_data + buf_size);
 
         TRY(KOS_set_property(ctx, lexer_obj_id, source, init_arg));
 
@@ -134,7 +134,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
             const KOS_OBJ_ID arg = KOS_array_read(ctx, regs_obj, 1);
             TRY_OBJID(arg);
 
-            lexer->ignore_errors = _KOS_is_truthy(arg);
+            lexer->ignore_errors = kos_is_truthy(arg);
         }
     }
     else {
@@ -165,7 +165,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
                 if (lexer->token.sep != ST_PAREN_CLOSE)
                     RAISE_EXCEPTION(str_err_not_paren);
 
-                _KOS_lexer_unget_token(&lexer->lexer, &lexer->token);
+                kos_lexer_unget_token(&lexer->lexer, &lexer->token);
             }
         }
 
@@ -185,7 +185,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
     assert( ! lexer->lexer.error_str);
 
-    error = _KOS_lexer_next_token(&lexer->lexer, next_token, &lexer->token);
+    error = kos_lexer_next_token(&lexer->lexer, next_token, &lexer->token);
 
     if (error) {
         if (lexer->ignore_errors) {
@@ -306,7 +306,7 @@ _error:
     return retval;
 }
 
-int _KOS_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 

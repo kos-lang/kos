@@ -25,9 +25,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-struct _KOS_RED_BLACK_NODE *_KOS_red_black_find(struct _KOS_RED_BLACK_NODE *root,
-                                                void                       *what,
-                                                _KOS_RED_BLACK_COMPARE_ITEM compare)
+struct _KOS_RED_BLACK_NODE *kos_red_black_find(struct _KOS_RED_BLACK_NODE *root,
+                                               void                       *what,
+                                               _KOS_RED_BLACK_COMPARE_ITEM compare)
 {
     while (root) {
         const int result = compare(what, root);
@@ -42,9 +42,9 @@ struct _KOS_RED_BLACK_NODE *_KOS_red_black_find(struct _KOS_RED_BLACK_NODE *root
     return root;
 }
 
-int _KOS_red_black_walk(struct _KOS_RED_BLACK_NODE *node,
-                        _KOS_RED_BLACK_WALK         walk,
-                        void                       *cookie)
+int kos_red_black_walk(struct _KOS_RED_BLACK_NODE *node,
+                       _KOS_RED_BLACK_WALK         walk,
+                       void                       *cookie)
 
 {
     int error = KOS_SUCCESS;
@@ -153,9 +153,9 @@ static void _right_rotate(struct _KOS_RED_BLACK_NODE **root,
     node->parent = other;
 }
 
-void _KOS_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
-                           struct _KOS_RED_BLACK_NODE  *new_node,
-                           _KOS_RED_BLACK_COMPARE_NODE  compare)
+void kos_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
+                          struct _KOS_RED_BLACK_NODE  *new_node,
+                          _KOS_RED_BLACK_COMPARE_NODE  compare)
 {
     new_node->red   = 1;
     new_node->left  = 0;
@@ -210,8 +210,8 @@ void _KOS_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
         new_node->red = 0;
 }
 
-void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
-                           struct _KOS_RED_BLACK_NODE  *node)
+void kos_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
+                          struct _KOS_RED_BLACK_NODE  *node)
 {
     struct _KOS_RED_BLACK_NODE *succ;
     struct _KOS_RED_BLACK_NODE *parent;

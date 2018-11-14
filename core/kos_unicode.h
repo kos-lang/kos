@@ -27,10 +27,10 @@
 
 #ifdef CONFIG_HAS_UNICODE
 
-int      _KOS_unicode_compare(uint32_t a, uint32_t b);
-int      _KOS_unicode_icompare(uint32_t a, uint32_t b);
-uint32_t _KOS_unicode_to_upper(uint32_t c);
-uint32_t _KOS_unicode_to_lower(uint32_t c);
+int      kos_unicode_compare(uint32_t a, uint32_t b);
+int      kos_unicode_icompare(uint32_t a, uint32_t b);
+uint32_t kos_unicode_to_upper(uint32_t c);
+uint32_t kos_unicode_to_lower(uint32_t c);
 
 #else
 
@@ -43,7 +43,7 @@ uint32_t _KOS_unicode_to_lower(uint32_t c);
 #define INLINE
 #endif
 
-static INLINE int _KOS_unicode_compare(uint32_t a, uint32_t b)
+static INLINE int kos_unicode_compare(uint32_t a, uint32_t b)
 {
     wchar_t wa[4] = { 0 };
     wchar_t wb[4] = { 0 };
@@ -52,11 +52,11 @@ static INLINE int _KOS_unicode_compare(uint32_t a, uint32_t b)
     return wcscoll(wa, wb);
 }
 
-#define _KOS_unicode_to_upper(c) ((uint32_t)towupper(c))
+#define kos_unicode_to_upper(c) ((uint32_t)towupper(c))
 
-#define _KOS_unicode_to_lower(c) ((uint32_t)towlower(c))
+#define kos_unicode_to_lower(c) ((uint32_t)towlower(c))
 
-#define _KOS_unicode_icompare(a, b) (_KOS_unicode_compare(_KOS_unicode_to_lower(a), _KOS_unicode_to_lower(b)))
+#define kos_unicode_icompare(a, b) (kos_unicode_compare(kos_unicode_to_lower(a), kos_unicode_to_lower(b)))
 
 #endif
 

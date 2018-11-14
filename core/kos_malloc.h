@@ -25,7 +25,7 @@
 
 #include <stddef.h>
 
-void *_KOS_malloc(size_t size);
-void  _KOS_free(void *ptr);
+void *kos_malloc(size_t size);
+void  kos_free(void *ptr);
 
 #endif

@@ -50,7 +50,7 @@ static void _finalize(KOS_CONTEXT ctx,
 {
     /* TODO free
     if (priv)
-        _KOS_free_buffer(ctx, priv, sizeof(struct _KOS_RNG_CONTAINER));
+        kos_free_buffer(ctx, priv, sizeof(struct _KOS_RNG_CONTAINER));
     */
 }
 
@@ -112,11 +112,11 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
 
     /* TODO malloc when GC supports finalize */
     /*
-    rng = (struct _KOS_RNG_CONTAINER *)_KOS_malloc(sizeof(struct _KOS_RNG_CONTAINER));
+    rng = (struct _KOS_RNG_CONTAINER *)kos_malloc(sizeof(struct _KOS_RNG_CONTAINER));
     */
-    rng = (struct _KOS_RNG_CONTAINER *)_KOS_alloc_object(ctx,
-                                                         OBJ_OPAQUE,
-                                                         sizeof(struct _KOS_RNG_CONTAINER));
+    rng = (struct _KOS_RNG_CONTAINER *)kos_alloc_object(ctx,
+                                                        OBJ_OPAQUE,
+                                                        sizeof(struct _KOS_RNG_CONTAINER));
 
     if ( ! rng)
         RAISE_EXCEPTION(str_err_out_of_memory);
@@ -124,14 +124,14 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
     rng->lock = 0;
 
     if (IS_BAD_PTR(seed_obj))
-        _KOS_rng_init(&rng->rng);
+        kos_rng_init(&rng->rng);
     else {
 
         int64_t seed;
 
         TRY(KOS_get_integer(ctx, seed_obj, &seed));
 
-        _KOS_rng_init_seed(&rng->rng, (uint64_t)seed);
+        kos_rng_init_seed(&rng->rng, (uint64_t)seed);
     }
 
     KOS_object_set_private(*OBJPTR(OBJECT, ret), rng);
@@ -140,7 +140,7 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
 _error:
     /* TODO free
     if (rng)
-        _KOS_free_buffer(ctx, rng, sizeof(struct _KOS_RNG_CONTAINER));
+        kos_free_buffer(ctx, rng, sizeof(struct _KOS_RNG_CONTAINER));
     */
 
     return error ? KOS_BADPTR : ret;
@@ -226,16 +226,16 @@ static KOS_OBJ_ID _rand_integer(KOS_CONTEXT ctx,
         min_max = 1;
     }
 
-    _KOS_spin_lock(&rng->lock);
+    kos_spin_lock(&rng->lock);
 
     if (min_max)
         value = min_value +
-            (int64_t)_KOS_rng_random_range(&rng->rng,
-                                           (uint64_t)(max_value - min_value));
+            (int64_t)kos_rng_random_range(&rng->rng,
+                                          (uint64_t)(max_value - min_value));
     else
-        value = (int64_t)_KOS_rng_random(&rng->rng);
+        value = (int64_t)kos_rng_random(&rng->rng);
 
-    _KOS_spin_unlock(&rng->lock);
+    kos_spin_unlock(&rng->lock);
 
 _error:
     return error ? KOS_BADPTR : KOS_new_int(ctx, value);
@@ -269,11 +269,11 @@ static KOS_OBJ_ID _rand_float(KOS_CONTEXT ctx,
 
     TRY(_get_rng(ctx, this_obj, &rng));
 
-    _KOS_spin_lock(&rng->lock);
+    kos_spin_lock(&rng->lock);
 
-    value.i = (int64_t)_KOS_rng_random(&rng->rng);
+    value.i = (int64_t)kos_rng_random(&rng->rng);
 
-    _KOS_spin_unlock(&rng->lock);
+    kos_spin_unlock(&rng->lock);
 
     /* Set sign bit to 0 and exponent field to 0x3FF, which corresponds to
      * exponent value 0, making this value uniformly distributed
@@ -285,7 +285,7 @@ _error:
     return error ? KOS_BADPTR : KOS_new_float(ctx, value.d - 1.0);
 }
 
-int _KOS_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID proto;

@@ -37,25 +37,25 @@
 
 struct _KOS_VECTOR;
 
-int _KOS_is_stdin_interactive(void);
+int kos_is_stdin_interactive(void);
 
-int _KOS_load_file(const char         *filename,
-                   struct _KOS_VECTOR *buf);
+int kos_load_file(const char         *filename,
+                  struct _KOS_VECTOR *buf);
 
-int _KOS_does_file_exist(const char *filename);
+int kos_does_file_exist(const char *filename);
 
-int _KOS_get_absolute_path(struct _KOS_VECTOR *path);
+int kos_get_absolute_path(struct _KOS_VECTOR *path);
 
-int _KOS_get_env(const char         *name,
-                 struct _KOS_VECTOR *buf);
+int kos_get_env(const char         *name,
+                struct _KOS_VECTOR *buf);
 
-int _KOS_executable_path(struct _KOS_VECTOR *buf);
+int kos_executable_path(struct _KOS_VECTOR *buf);
 
 enum _KOS_PROTECT {
     _KOS_NO_ACCESS,
     _KOS_READ_WRITE
 };
 
-int _KOS_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect);
+int kos_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect);
 
 #endif

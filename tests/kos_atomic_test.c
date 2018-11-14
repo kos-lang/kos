@@ -49,7 +49,7 @@ static void _thread(KOS_CONTEXT ctx,
 
     KOS_raise_exception(ctx, TO_SMALL_INT(GET_SMALL_INT(thread_data->value) + 1));
 
-    _KOS_spin_unlock(&thread_data->lock);
+    kos_spin_unlock(&thread_data->lock);
 }
 
 int main(void)
@@ -160,15 +160,15 @@ int main(void)
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        _KOS_spin_lock(&thread_data.lock);
+        kos_spin_lock(&thread_data.lock);
 
-        TEST(_KOS_thread_create(ctx, _thread, &thread_data, &thread) == KOS_SUCCESS);
+        TEST(kos_thread_create(ctx, _thread, &thread_data, &thread) == KOS_SUCCESS);
 
-        _KOS_spin_lock(&thread_data.lock);
+        kos_spin_lock(&thread_data.lock);
 
-        _KOS_thread_join(ctx, thread);
+        kos_thread_join(ctx, thread);
 
-        _KOS_spin_unlock(&thread_data.lock);
+        kos_spin_unlock(&thread_data.lock);
 
         TEST(KOS_is_exception_pending(ctx));
 

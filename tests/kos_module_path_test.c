@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     KOS_OBJ_ID         path_str;
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     TRY(KOS_instance_init(&inst, &ctx));
 
@@ -73,7 +73,7 @@ _error:
     if (inst_ok)
         KOS_instance_destroy(&inst);
 
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     if (error)
         fprintf(stderr, "Error: Failed with error code %d\n", error);

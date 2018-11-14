@@ -67,7 +67,7 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
                 break;
             }
 
-            _KOS_yield();
+            kos_yield();
         }
         if (stage == ~0U)
             break;
@@ -167,10 +167,10 @@ int main(void)
 
         num_props = num_threads * max_props_per_th;
 
-        _KOS_rng_init(&rng);
+        kos_rng_init(&rng);
 
-        _KOS_vector_init(&mem_buf);
-        TEST(_KOS_vector_resize(&mem_buf,
+        kos_vector_init(&mem_buf);
+        TEST(kos_vector_resize(&mem_buf,
                 num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
                 + num_props * sizeof(KOS_OBJ_ID)
             ) == KOS_SUCCESS);
@@ -190,7 +190,7 @@ int main(void)
 
             for (k = 0; k < sizeof(buf); k++) {
                 if (k + 4U < sizeof(buf))
-                    buf[k] = (char)_KOS_rng_random_range(&rng, 127U);
+                    buf[k] = (char)kos_rng_random_range(&rng, 127U);
                 else
                     buf[k] = (char)((i >> ((sizeof(buf) - 1 - k) * 7) & 0x7F));
             }
@@ -208,7 +208,7 @@ int main(void)
         data.error      = KOS_SUCCESS;
 
         for (i = 0; i < num_threads; i++)
-            TEST(_KOS_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+            TEST(kos_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             /* Limit number of copies made to avoid running out of memory */
@@ -218,8 +218,8 @@ int main(void)
 
             do {
                 if (copies_left-- > 0)
-                    TEST(_KOS_object_copy_prop_table(ctx, obj) == KOS_SUCCESS);
-                _KOS_yield();
+                    TEST(kos_object_copy_prop_table(ctx, obj) == KOS_SUCCESS);
+                kos_yield();
             } while (KOS_atomic_read_u32(data.done) != (uint32_t)num_threads);
 
             KOS_atomic_write_u32(data.done, 0U);
@@ -238,12 +238,12 @@ int main(void)
         KOS_atomic_full_barrier();
 
         for (i = 0; i < num_threads; i++) {
-            _KOS_thread_join(ctx, threads[i]);
+            kos_thread_join(ctx, threads[i]);
             TEST_NO_EXCEPTION();
             TEST(KOS_atomic_read_u32(thread_cookies[i].num_loops) == (uint32_t)num_loops);
         }
 
-        _KOS_vector_destroy(&mem_buf);
+        kos_vector_destroy(&mem_buf);
     }
 
     KOS_instance_destroy(&inst);

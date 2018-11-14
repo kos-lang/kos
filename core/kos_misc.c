@@ -51,8 +51,8 @@ union DOUBLE_TO_UINT64 {
     uint64_t u;
 };
 
-int _KOS_is_integer(const char *begin,
-                    const char *end)
+int kos_is_integer(const char *begin,
+                   const char *end)
 {
     int ret = 1;
 
@@ -69,9 +69,9 @@ int _KOS_is_integer(const char *begin,
     return ret;
 }
 
-int _KOS_parse_int(const char *begin,
-                   const char *end,
-                   int64_t    *value)
+int kos_parse_int(const char *begin,
+                  const char *end,
+                  int64_t    *value)
 {
     int         error = KOS_SUCCESS;
     const char *s;
@@ -203,9 +203,9 @@ static void _renormalize(uint64_t *mantissa, int *exponent)
     }
 }
 
-int _KOS_parse_double(const char *begin,
-                      const char *end,
-                      double     *value)
+int kos_parse_double(const char *begin,
+                     const char *end,
+                     double     *value)
 {
     int      error             = KOS_SUCCESS;
     int      sign              = 0;
@@ -300,7 +300,7 @@ int _KOS_parse_double(const char *begin,
             if (begin == end)
                 RAISE_ERROR(KOS_ERROR_INVALID_EXPONENT);
 
-            error = _KOS_parse_int(begin, end, &e);
+            error = kos_parse_int(begin, end, &e);
 
             if (error)
                 RAISE_ERROR(KOS_ERROR_INVALID_EXPONENT);
@@ -447,21 +447,21 @@ _error:
     return error;
 }
 
-int _KOS_parse_numeric(const char          *begin,
-                       const char          *end,
-                       struct _KOS_NUMERIC *value)
+int kos_parse_numeric(const char          *begin,
+                      const char          *end,
+                      struct _KOS_NUMERIC *value)
 {
     int error;
 
     value->type = KOS_NON_NUMERIC;
 
-    if (_KOS_is_integer(begin, end)) {
-        error = _KOS_parse_int(begin, end, &value->u.i);
+    if (kos_is_integer(begin, end)) {
+        error = kos_parse_int(begin, end, &value->u.i);
         if ( ! error)
             value->type = KOS_INTEGER_VALUE;
     }
     else {
-        error = _KOS_parse_double(begin, end, &value->u.d);
+        error = kos_parse_double(begin, end, &value->u.d);
         if ( ! error)
             value->type = KOS_FLOAT_VALUE;
     }
@@ -469,14 +469,14 @@ int _KOS_parse_numeric(const char          *begin,
     return error;
 }
 
-uint64_t _KOS_double_to_uint64_t(double value)
+uint64_t kos_double_to_uint64_t(double value)
 {
     union DOUBLE_TO_UINT64 conv;
     conv.d = value;
     return conv.u;
 }
 
-uint32_t _KOS_float_to_uint32_t(float value)
+uint32_t kos_float_to_uint32_t(float value)
 {
     union FLOAT_TO_UINT32 {
         float    f;
@@ -486,7 +486,7 @@ uint32_t _KOS_float_to_uint32_t(float value)
     return conv.u;
 }
 
-unsigned _KOS_print_float(char *buf, unsigned size, double value)
+unsigned kos_print_float(char *buf, unsigned size, double value)
 {
     char *end;
 
@@ -522,7 +522,7 @@ unsigned _KOS_print_float(char *buf, unsigned size, double value)
     return (unsigned)(end - buf);
 }
 
-void _KOS_get_entropy_fallback(uint8_t *bytes)
+void kos_get_entropy_fallback(uint8_t *bytes)
 {
     const uint32_t multiplier = 0x8088405U;
     uint32_t       state      = (uint32_t)time(0);
@@ -550,12 +550,12 @@ static void _get_entropy(uint8_t *bytes)
     if (CryptAcquireContext(&crypt_prov, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
 
         if ( ! CryptGenRandom(crypt_prov, 32, bytes))
-            _KOS_get_entropy_fallback(bytes);
+            kos_get_entropy_fallback(bytes);
 
         CryptReleaseContext(crypt_prov, 0);
     }
     else
-        _KOS_get_entropy_fallback(bytes);
+        kos_get_entropy_fallback(bytes);
 }
 #else
 static void _get_entropy(uint8_t *bytes)
@@ -563,14 +563,14 @@ static void _get_entropy(uint8_t *bytes)
     const int fd = open("/dev/urandom", O_RDONLY);
 
     if (fd == -1)
-        _KOS_get_entropy_fallback(bytes);
+        kos_get_entropy_fallback(bytes);
 
     else {
 
         const ssize_t num_read = read(fd, bytes, 32);
 
         if (num_read != 32)
-            _KOS_get_entropy_fallback(bytes);
+            kos_get_entropy_fallback(bytes);
 
         close(fd);
     }
@@ -604,7 +604,7 @@ static void _pcg_init(struct KOS_RNG_PCG32 *pcg,
     _pcg_random(pcg);
 }
 
-void _KOS_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
+void kos_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
 {
 #define BITS64_U64(x) ((x)<<60) | ((x)<<56) | ((x)<<52) | ((x)<<48) | \
                       ((x)<<44) | ((x)<<40) | ((x)<<36) | ((x)<<32) | \
@@ -617,7 +617,7 @@ void _KOS_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
 #undef BITS64_U64
 }
 
-void _KOS_rng_init(struct KOS_RNG *rng)
+void kos_rng_init(struct KOS_RNG *rng)
 {
     uint64_t entropy[4];
     _get_entropy((uint8_t *)&entropy);
@@ -626,17 +626,17 @@ void _KOS_rng_init(struct KOS_RNG *rng)
     _pcg_init(&rng->pcg[1], entropy[2], entropy[3]);
 }
 
-uint64_t _KOS_rng_random(struct KOS_RNG *rng)
+uint64_t kos_rng_random(struct KOS_RNG *rng)
 {
     const uint64_t low  = _pcg_random(&rng->pcg[0]);
     const uint64_t high = _pcg_random(&rng->pcg[1]);
     return (high << 32U) | low;
 }
 
-uint64_t _KOS_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
+uint64_t kos_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
 {
     if (max_value == (uint64_t)(int64_t)-1)
-        return _KOS_rng_random(rng);
+        return kos_rng_random(rng);
 
     if (max_value == (uint32_t)(int32_t)-1)
         return _pcg_random(&rng->pcg[0]);
@@ -659,14 +659,14 @@ uint64_t _KOS_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
         const uint64_t threshold = (~mask + 1U) % mask;
 
         for (;;) {
-            const uint64_t r = _KOS_rng_random(rng);
+            const uint64_t r = kos_rng_random(rng);
             if (r >= threshold)
                 return r % mask;
         }
     }
 }
 
-int64_t _KOS_fix_index(int64_t idx, unsigned length)
+int64_t kos_fix_index(int64_t idx, unsigned length)
 {
     if (idx < 0)
         idx += length;

@@ -55,7 +55,7 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
         KOS_atomic_full_barrier();
 
     for (i = 0; i < test->num_loops; i++) {
-        const unsigned action = (unsigned)_KOS_rng_random_range(&data->rng, 4);
+        const unsigned action = (unsigned)kos_rng_random_range(&data->rng, 4);
 
         switch (action) {
 
@@ -119,15 +119,15 @@ int main(void)
         if (num_threads < 2)
             num_threads = 2;
 
-        _KOS_vector_init(&mem_buf);
-        TEST(_KOS_vector_resize(&mem_buf,
+        kos_vector_init(&mem_buf);
+        TEST(kos_vector_resize(&mem_buf,
                 num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
             ) == KOS_SUCCESS);
         thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
         threads        = (_KOS_THREAD *)(thread_cookies + num_threads);
 
         for (i = 0; i < num_threads; i++) {
-            _KOS_rng_init(&thread_cookies[i].rng);
+            kos_rng_init(&thread_cookies[i].rng);
             thread_cookies[i].test = &data;
             thread_cookies[i].id   = (uint8_t)(unsigned)((i & 0x1F) + 0x80);
             TEST((thread_cookies[i].id >= 0x80U) && (thread_cookies[i].id <= 0x9FU));
@@ -157,14 +157,14 @@ int main(void)
 
             /* Start with 1, because 0 is for the main thread, which participates */
             for (i = 1; i < num_threads; i++)
-                TEST(_KOS_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(kos_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
             KOS_atomic_write_u32(data.go, 1);
             TEST(_run_test(ctx, thread_cookies) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             for (i = 1; i < num_threads; i++) {
-                _KOS_thread_join(ctx, threads[i]);
+                kos_thread_join(ctx, threads[i]);
                 TEST_NO_EXCEPTION();
             }
 
@@ -195,7 +195,7 @@ int main(void)
             }
         }
 
-        _KOS_vector_destroy(&mem_buf);
+        kos_vector_destroy(&mem_buf);
     }
 
     KOS_instance_destroy(&inst);

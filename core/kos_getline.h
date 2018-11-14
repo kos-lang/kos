@@ -31,9 +31,9 @@ struct _KOS_GETLINE {
 
 struct _KOS_VECTOR;
 
-int _KOS_getline_init(struct _KOS_GETLINE *state);
+int kos_getline_init(struct _KOS_GETLINE *state);
 
-#define _KOS_getline_destroy(state) ((void)0)
+#define kos_getline_destroy(state) ((void)0)
 
 #elif defined(CONFIG_EDITLINE)
 
@@ -47,9 +47,9 @@ struct _KOS_GETLINE {
 
 struct _KOS_VECTOR;
 
-int _KOS_getline_init(struct _KOS_GETLINE *state);
+int kos_getline_init(struct _KOS_GETLINE *state);
 
-void _KOS_getline_destroy(struct _KOS_GETLINE *state);
+void kos_getline_destroy(struct _KOS_GETLINE *state);
 
 #else
 
@@ -59,9 +59,9 @@ struct _KOS_GETLINE {
 
 struct _KOS_VECTOR;
 
-int _KOS_getline_init(struct _KOS_GETLINE *state);
+int kos_getline_init(struct _KOS_GETLINE *state);
 
-#define _KOS_getline_destroy(state) ((void)0)
+#define kos_getline_destroy(state) ((void)0)
 
 #endif
 
@@ -70,8 +70,8 @@ enum _KOS_PROMPT {
     PROMPT_SUBSEQUENT_LINE
 };
 
-int _KOS_getline(struct _KOS_GETLINE *state,
-                 enum _KOS_PROMPT     prompt,
-                 struct _KOS_VECTOR  *buf);
+int kos_getline(struct _KOS_GETLINE *state,
+                enum _KOS_PROMPT     prompt,
+                struct _KOS_VECTOR  *buf);
 
 #endif

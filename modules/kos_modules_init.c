@@ -26,14 +26,14 @@
 #include "../inc/kos_object_base.h"
 #include "../core/kos_try.h"
 
-#define MODULE_DEF(module) int _KOS_module_##module##_init(KOS_CONTEXT ctx, KOS_OBJ_ID module);
+#define MODULE_DEF(module) int kos_module_##module##_init(KOS_CONTEXT ctx, KOS_OBJ_ID module);
 #include "kos_module_list.h"
 #undef MODULE_DEF
 
 int KOS_modules_init(struct _KOS_THREAD_CONTEXT *ctx)
 {
     int error = KOS_SUCCESS;
-#define MODULE_DEF(module) TRY(KOS_instance_register_builtin(ctx, #module, _KOS_module_##module##_init));
+#define MODULE_DEF(module) TRY(KOS_instance_register_builtin(ctx, #module, kos_module_##module##_init));
 #include "kos_module_list.h"
 #undef MODULE_DEF
 _error:

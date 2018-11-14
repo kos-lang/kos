@@ -47,7 +47,7 @@ static void _update_scope_ref(struct _KOS_COMP_UNIT *program,
 
             assert(scope->has_frame);
 
-            ref = _KOS_find_scope_ref((struct _KOS_FRAME *)scope, closure);
+            ref = kos_find_scope_ref((struct _KOS_FRAME *)scope, closure);
 
             assert(ref);
 
@@ -75,7 +75,7 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
 
     for (scope = program->scope_stack; scope->next && ! scope->is_function; scope = scope->next) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var && (var->is_active || ! only_active)) {
             *out_var = var;
@@ -90,7 +90,7 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
 
     if ( ! scope->next && ! only_active) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var) {
             is_local = 1; /* This is global scope, but mark it as "local" access */
@@ -100,7 +100,7 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
 
     for ( ; scope; scope = scope->next) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var && var->is_active) {
             is_local = scope == fun_scope || ! scope->next ? 1 : 0; /* current func's arguments are "local" */
@@ -130,13 +130,13 @@ static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT      *program,
                                       const struct _KOS_AST_NODE *node)
 {
     struct _KOS_SCOPE *scope = (struct _KOS_SCOPE *)
-            _KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item);
+            kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
 
     assert(scope);
 
     assert(scope->next == program->scope_stack);
 
-    _KOS_deactivate_vars(scope);
+    kos_deactivate_vars(scope);
 
     program->scope_stack = scope;
 
@@ -228,7 +228,7 @@ static void _update_arguments(struct _KOS_COMP_UNIT *program,
                 break;
         }
 
-        var = _KOS_find_var(scope->vars, &ident_node->token);
+        var = kos_find_var(scope->vars, &ident_node->token);
         assert(var);
 
         if (var->num_reads || var->num_assignments) {
@@ -245,7 +245,7 @@ static void _update_arguments(struct _KOS_COMP_UNIT *program,
     for (i = 0, arg_node = node; arg_node && arg_node->type != NT_ELLIPSIS; arg_node = arg_node->next, ++i) {
 
         struct _KOS_AST_NODE *ident_node = arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
-        struct _KOS_VAR      *var        = _KOS_find_var(scope->vars, &ident_node->token);
+        struct _KOS_VAR      *var        = kos_find_var(scope->vars, &ident_node->token);
 
         assert(ident_node->type == NT_IDENTIFIER);
         assert(var);
@@ -287,7 +287,7 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
         assert(name_node->children->type == NT_IDENTIFIER);
         assert(name_node->children->token.type == TT_IDENTIFIER);
 
-        fun_var = _KOS_find_var(program->scope_stack->vars, &name_node->children->token);
+        fun_var = kos_find_var(program->scope_stack->vars, &name_node->children->token);
         assert(fun_var);
         assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
 
@@ -385,7 +385,7 @@ static int _assignment(struct _KOS_COMP_UNIT *program,
     assert(rhs_node);
     assert( ! rhs_node->next);
 
-    _KOS_activate_self_ref_func(program, lhs_node);
+    kos_activate_self_ref_func(program, lhs_node);
 
     TRY(_visit_node(program, rhs_node));
 
@@ -477,7 +477,7 @@ static int _for_in_stmt(struct _KOS_COMP_UNIT *program,
 
     assert(node->children);
     assert(node->children->children);
-    _KOS_activate_new_vars(program, node->children->children);
+    kos_activate_new_vars(program, node->children->children);
 
     error = _visit_child_nodes(program, node);
 
@@ -618,8 +618,8 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-int _KOS_allocate_args(struct _KOS_COMP_UNIT *program,
-                       struct _KOS_AST_NODE  *ast)
+int kos_allocate_args(struct _KOS_COMP_UNIT *program,
+                      struct _KOS_AST_NODE  *ast)
 {
     assert(ast->type == NT_SCOPE);
     return _visit_node(program, ast);

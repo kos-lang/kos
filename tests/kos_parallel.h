@@ -33,18 +33,18 @@ static int _get_num_cpus(void)
     int                num_cpus = 2; /* By default behave as if there were 2 CPUs */
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
-    if (_KOS_get_env("TEST_CPUS", &cstr) == KOS_SUCCESS) {
+    if (kos_get_env("TEST_CPUS", &cstr) == KOS_SUCCESS) {
         num_cpus = (int)strtol(cstr.buffer, 0, 10);
         if (num_cpus < 1) {
-            _KOS_vector_destroy(&cstr);
+            kos_vector_destroy(&cstr);
             printf("Failed: Invalid value in TEST_CPUS env var!\n");
             exit(1);
         }
     }
 
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     return num_cpus;
 }

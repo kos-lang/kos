@@ -76,7 +76,7 @@ static void _raise_3(KOS_CONTEXT ctx,
     str_err[1] = KOS_BADPTR;
     str_err[2] = KOS_BADPTR;
 
-    _KOS_track_refs(ctx, 3, &str_err[0], &str_err[1], &str_err[2]);
+    kos_track_refs(ctx, 3, &str_err[0], &str_err[1], &str_err[2]);
 
     str_err[0] = KOS_new_const_ascii_cstring(ctx, s1);
     str_err[1] = s2;
@@ -92,7 +92,7 @@ static void _raise_3(KOS_CONTEXT ctx,
         }
     }
 
-    _KOS_untrack_refs(ctx, 3);
+    kos_untrack_refs(ctx, 3);
 }
 
 static unsigned _rfind_path(const char *path,
@@ -123,19 +123,19 @@ static int _find_module(KOS_CONTEXT ctx,
     struct _KOS_VECTOR cpath;
     unsigned           i;
 
-    _KOS_vector_init(&cpath);
+    kos_vector_init(&cpath);
 
     TRY(KOS_push_locals(ctx, 2, &path, &dir));
 
     /* Find dot or path separator, it indicates it's a path to a file */
     if (_rfind_path(maybe_path, length, '.') > 0) {
-        TRY(_KOS_vector_resize(&cpath, length+1));
+        TRY(kos_vector_resize(&cpath, length+1));
         memcpy(cpath.buffer, maybe_path, length);
         cpath.buffer[length] = 0;
 
-        TRY(_KOS_get_absolute_path(&cpath));
+        TRY(kos_get_absolute_path(&cpath));
 
-        if (!_KOS_does_file_exist(cpath.buffer))
+        if (!kos_does_file_exist(cpath.buffer))
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
         path = KOS_new_string(ctx, cpath.buffer, (unsigned)(cpath.size-1));
@@ -188,7 +188,7 @@ static int _find_module(KOS_CONTEXT ctx,
 
             TRY(KOS_string_to_cstr_vec(ctx, path, &cpath));
 
-            if (_KOS_does_file_exist(cpath.buffer)) {
+            if (kos_does_file_exist(cpath.buffer)) {
                 dir   = components[0];
                 error = KOS_SUCCESS;
                 break;
@@ -210,7 +210,7 @@ _error:
         *out_abs_path = path;
     }
 
-    _KOS_vector_destroy(&cpath);
+    kos_vector_destroy(&cpath);
 
     assert(error != KOS_ERROR_INTERNAL);
 
@@ -243,10 +243,10 @@ static KOS_OBJ_ID _alloc_module(KOS_CONTEXT ctx,
     KOS_OBJ_ID module = KOS_BADPTR;
     KOS_OBJ_ID obj_id = KOS_BADPTR;
 
-    _KOS_track_refs(ctx, 3, &module_name, &module, &obj_id);
+    kos_track_refs(ctx, 3, &module_name, &module, &obj_id);
 
     module = OBJID(MODULE, (KOS_MODULE *)
-            _KOS_alloc_object(ctx, OBJ_MODULE, sizeof(KOS_MODULE)));
+            kos_alloc_object(ctx, OBJ_MODULE, sizeof(KOS_MODULE)));
     TRY_OBJID(module);
 
     {
@@ -279,7 +279,7 @@ static KOS_OBJ_ID _alloc_module(KOS_CONTEXT ctx,
     OBJPTR(MODULE, module)->module_names = obj_id;
 
 _error:
-    _KOS_untrack_refs(ctx, 3);
+    kos_untrack_refs(ctx, 3);
 
     return error ? KOS_BADPTR : module;
 }
@@ -291,12 +291,12 @@ static int _load_file(KOS_CONTEXT         ctx,
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cpath;
 
-    _KOS_track_refs(ctx, 1, &path);
+    kos_track_refs(ctx, 1, &path);
 
-    _KOS_vector_init(&cpath);
+    kos_vector_init(&cpath);
     TRY(KOS_string_to_cstr_vec(ctx, path, &cpath));
 
-    error = _KOS_load_file(cpath.buffer, file_buf);
+    error = kos_load_file(cpath.buffer, file_buf);
 
     switch (error) {
 
@@ -320,9 +320,9 @@ static int _load_file(KOS_CONTEXT         ctx,
     }
 
 _error:
-    _KOS_vector_destroy(&cpath);
+    kos_vector_destroy(&cpath);
 
-    _KOS_untrack_refs(ctx, 1);
+    kos_untrack_refs(ctx, 1);
 
     return error;
 }
@@ -337,7 +337,7 @@ static int _predefine_globals(KOS_CONTEXT            ctx,
     struct _KOS_VECTOR cpath;
     KOS_OBJ_ID         walk;
 
-    _KOS_vector_init(&cpath);
+    kos_vector_init(&cpath);
 
     walk = KOS_new_object_walk(ctx, global_names, KOS_SHALLOW);
     TRY_OBJID(walk);
@@ -348,10 +348,10 @@ static int _predefine_globals(KOS_CONTEXT            ctx,
 
         TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(walk), &cpath));
 
-        TRY(_KOS_compiler_predefine_global(program,
-                                           cpath.buffer,
-                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk)),
-                                           is_repl ? 0 : 1));
+        TRY(kos_compiler_predefine_global(program,
+                                          cpath.buffer,
+                                          (int)GET_SMALL_INT(KOS_get_walk_value(walk)),
+                                          is_repl ? 0 : 1));
     }
 
     walk = KOS_new_object_walk(ctx, module_names, KOS_SHALLOW);
@@ -363,12 +363,12 @@ static int _predefine_globals(KOS_CONTEXT            ctx,
 
         TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(walk), &cpath));
 
-        TRY(_KOS_compiler_predefine_module(program, cpath.buffer,
-                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk))));
+        TRY(kos_compiler_predefine_module(program, cpath.buffer,
+                                          (int)GET_SMALL_INT(KOS_get_walk_value(walk))));
     }
 
 _error:
-    _KOS_vector_destroy(&cpath);
+    kos_vector_destroy(&cpath);
 
     return error;
 }
@@ -538,7 +538,7 @@ static KOS_OBJ_ID _get_line(KOS_CONTEXT ctx,
     struct _KOS_VECTOR line_buf;
     KOS_OBJ_ID         ret       = KOS_BADPTR;
 
-    _KOS_vector_init(&line_buf);
+    kos_vector_init(&line_buf);
 
     /* Find the desired line */
     for ( ; line > 1 && buf < end; line--) {
@@ -577,7 +577,7 @@ static KOS_OBJ_ID _get_line(KOS_CONTEXT ctx,
     }
 
     /* Copy line, expanding TABs */
-    if ( ! _KOS_vector_resize(&line_buf, len)) {
+    if ( ! kos_vector_resize(&line_buf, len)) {
 
         unsigned dest = 0;
 
@@ -600,7 +600,7 @@ static KOS_OBJ_ID _get_line(KOS_CONTEXT ctx,
     else
         KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
 
-    _KOS_vector_destroy(&line_buf);
+    kos_vector_destroy(&line_buf);
 
     return ret;
 }
@@ -630,7 +630,7 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
     parts[9]  = KOS_BADPTR;
     parts[10] = KOS_BADPTR;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     TRY(KOS_push_locals(ctx, 11,
                 &parts[0], &parts[1], &parts[2], &parts[3], &parts[4],
@@ -673,7 +673,7 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
                                           sizeof(str_eol) - 1);
     TRY_OBJID(parts[9]);
 
-    error = _KOS_vector_resize(&cstr, pos.column);
+    error = kos_vector_resize(&cstr, pos.column);
     if (error) {
         KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
         goto _error;
@@ -697,7 +697,7 @@ _error:
                 &parts[5], &parts[6], &parts[7], &parts[8], &parts[9],
                 &parts[10]);
 
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     return ret;
 }
@@ -705,12 +705,12 @@ _error:
 int KOS_load_module(KOS_CONTEXT ctx, const char *path)
 {
     int        idx;
-    KOS_OBJ_ID module = _KOS_module_import(ctx,
-                                           path,
-                                           (unsigned)strlen(path),
-                                           0,
-                                           0,
-                                           &idx);
+    KOS_OBJ_ID module = kos_module_import(ctx,
+                                          path,
+                                          (unsigned)strlen(path),
+                                          0,
+                                          0,
+                                          &idx);
 
     return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
@@ -721,12 +721,12 @@ int KOS_load_module_from_memory(KOS_CONTEXT ctx,
                                 unsigned    buf_size)
 {
     int        idx;
-    KOS_OBJ_ID module = _KOS_module_import(ctx,
-                                           module_name,
-                                           (unsigned)strlen(module_name),
-                                           buf,
-                                           buf_size,
-                                           &idx);
+    KOS_OBJ_ID module = kos_module_import(ctx,
+                                          module_name,
+                                          (unsigned)strlen(module_name),
+                                          buf,
+                                          buf_size,
+                                          &idx);
 
     return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
@@ -741,7 +741,7 @@ static int _import_module(void       *vframe,
 
     assert(module_idx);
 
-    module_obj = _KOS_module_import(ctx, name, length, 0, 0, module_idx);
+    module_obj = kos_module_import(ctx, name, length, 0, 0, module_idx);
 
     return IS_BAD_PTR(module_obj) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
@@ -761,7 +761,7 @@ static int _get_global_idx(void       *vframe,
 
     assert(module_idx >= 0);
 
-    TRY(_KOS_seq_fail());
+    TRY(kos_seq_fail());
 
     str = KOS_new_string(ctx, name, length);
     TRY_OBJID(str);
@@ -798,7 +798,7 @@ static int _walk_globals(void                          *vframe,
     KOS_OBJ_ID          walk;
     KOS_OBJ_ID          module_obj;
 
-    _KOS_vector_init(&name);
+    kos_vector_init(&name);
 
     module_obj = KOS_array_read(ctx, inst->modules.modules, module_idx);
     TRY_OBJID(module_obj);
@@ -822,7 +822,7 @@ static int _walk_globals(void                          *vframe,
     }
 
 _error:
-    _KOS_vector_destroy(&name);
+    kos_vector_destroy(&name);
 
     return error;
 }
@@ -839,11 +839,11 @@ static void _print_search_paths(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(paths) == OBJ_ARRAY);
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
-    TRY(_KOS_vector_reserve(&cstr, 128));
+    TRY(kos_vector_reserve(&cstr, 128));
 
-    TRY(_KOS_vector_resize(&cstr, sizeof(str_paths)));
+    TRY(kos_vector_resize(&cstr, sizeof(str_paths)));
 
     memcpy(cstr.buffer, str_paths, sizeof(str_paths));
 
@@ -861,7 +861,7 @@ static void _print_search_paths(KOS_CONTEXT ctx,
         TRY(KOS_object_to_string_or_cstr_vec(ctx, path, KOS_DONT_QUOTE, 0, &cstr));
 
         if (i + 1 < num_paths) {
-            TRY(_KOS_vector_resize(&cstr, cstr.size + sizeof(str_comma) - 1));
+            TRY(kos_vector_resize(&cstr, cstr.size + sizeof(str_comma) - 1));
             memcpy(cstr.buffer + cstr.size - sizeof(str_comma), str_comma, sizeof(str_comma));
         }
     }
@@ -874,7 +874,7 @@ _error:
     else
         printf("%s\n", cstr.buffer);
 
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 }
 
 static void _print_load_info(KOS_CONTEXT ctx,
@@ -890,17 +890,17 @@ static void _print_load_info(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(module_name) == OBJ_STRING);
     assert(GET_OBJ_TYPE(module_path) == OBJ_STRING);
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
-    TRY(_KOS_vector_reserve(&cstr, 128));
+    TRY(kos_vector_reserve(&cstr, 128));
 
-    TRY(_KOS_vector_resize(&cstr, sizeof(str_loading)));
+    TRY(kos_vector_resize(&cstr, sizeof(str_loading)));
 
     memcpy(cstr.buffer, str_loading, sizeof(str_loading));
 
     TRY(KOS_object_to_string_or_cstr_vec(ctx, module_name, KOS_DONT_QUOTE, 0, &cstr));
 
-    TRY(_KOS_vector_resize(&cstr, cstr.size + sizeof(str_from) - 1));
+    TRY(kos_vector_resize(&cstr, cstr.size + sizeof(str_from) - 1));
     memcpy(cstr.buffer + cstr.size - sizeof(str_from), str_from, sizeof(str_from));
 
     TRY(KOS_object_to_string_or_cstr_vec(ctx, module_path, KOS_DONT_QUOTE, 0, &cstr));
@@ -913,7 +913,7 @@ _error:
     else
         printf("%s\n", cstr.buffer);
 
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 }
 
 static int _append_buf(const uint8_t **dest,
@@ -929,14 +929,14 @@ static int _append_buf(const uint8_t **dest,
     assert(src);
     assert(src_size);
 
-    new_buf = (uint8_t *)_KOS_malloc(dest_size + src_size);
+    new_buf = (uint8_t *)kos_malloc(dest_size + src_size);
     if ( ! new_buf)
         return KOS_ERROR_OUT_OF_MEMORY;
 
     memcpy(new_buf, *dest, dest_size);
     memcpy(new_buf + dest_size, src, src_size);
 
-    _KOS_free((void *)*dest);
+    kos_free((void *)*dest);
 
     *dest = new_buf;
 
@@ -983,17 +983,17 @@ static int _compile_module(KOS_CONTEXT ctx,
     struct _KOS_AST_NODE *ast;
 
     /* Initialize parser and compiler */
-    _KOS_compiler_init(&program, module_idx);
+    kos_compiler_init(&program, module_idx);
     if ( ! IS_BAD_PTR(module->constants))
         program.num_constants = (int)KOS_get_array_size(module->constants);
-    _KOS_parser_init(&parser,
-                     &program.allocator,
-                     (unsigned)module_idx,
-                     data,
-                     data + data_size);
+    kos_parser_init(&parser,
+                    &program.allocator,
+                    (unsigned)module_idx,
+                    data,
+                    data + data_size);
 
     /* Construct AST from source code */
-    error = _KOS_parser_parse(&parser, &ast);
+    error = kos_parser_parse(&parser, &ast);
 
     if (error == KOS_ERROR_SCANNING_FAILED ||
         error == KOS_ERROR_PARSE_FAILED) {
@@ -1026,7 +1026,7 @@ static int _compile_module(KOS_CONTEXT ctx,
     TRY(_predefine_globals(ctx, &program, module->global_names, module->module_names, is_repl));
 
     /* Compile source code into bytecode */
-    error = _KOS_compiler_compile(&program, ast);
+    error = kos_compiler_compile(&program, ast);
 
     if (error == KOS_ERROR_COMPILE_FAILED) {
 
@@ -1144,8 +1144,8 @@ static int _compile_module(KOS_CONTEXT ctx,
         const uint32_t             num_func_addrs = module->num_func_addrs;
         struct _PRINT_CONST_COOKIE print_const_cookie;
 
-        _KOS_vector_init(&cname);
-        _KOS_vector_init(&ptrs);
+        kos_vector_init(&cname);
+        kos_vector_init(&ptrs);
 
         error = KOS_string_to_cstr_vec(ctx, module->name, &cname);
         printf("\n");
@@ -1170,14 +1170,14 @@ static int _compile_module(KOS_CONTEXT ctx,
         }
 
         if (!error)
-            error = _KOS_vector_resize(&ptrs, num_func_addrs * sizeof(void *));
+            error = kos_vector_resize(&ptrs, num_func_addrs * sizeof(void *));
         if (!error) {
             struct _KOS_VECTOR buf;
             uint32_t           i;
             size_t             total_size = 0;
             char              *names      = 0;
 
-            _KOS_vector_init(&buf);
+            kos_vector_init(&buf);
 
             for (i = 0; i < num_func_addrs; i++) {
                 const uint32_t   idx = func_addrs[i].str_idx;
@@ -1194,7 +1194,7 @@ static int _compile_module(KOS_CONTEXT ctx,
 
             if (!error) {
                 const size_t base = cname.size;
-                error = _KOS_vector_resize(&cname, base + total_size);
+                error = kos_vector_resize(&cname, base + total_size);
                 if (!error)
                     names = cname.buffer + base;
             }
@@ -1217,7 +1217,7 @@ static int _compile_module(KOS_CONTEXT ctx,
                 }
             }
 
-            _KOS_vector_destroy(&buf);
+            kos_vector_destroy(&buf);
         }
 
         if (!error) {
@@ -1228,26 +1228,26 @@ static int _compile_module(KOS_CONTEXT ctx,
         print_const_cookie.ctx       = ctx;
         print_const_cookie.constants = module->constants;
 
-        _KOS_disassemble(filename,
-                         old_bytecode_size,
-                         module->bytecode,
-                         module->bytecode_size,
-                         (struct _KOS_COMP_ADDR_TO_LINE *)module->line_addrs,
-                         module->num_line_addrs,
-                         func_names,
-                         (struct _KOS_COMP_ADDR_TO_FUNC *)func_addrs,
-                         num_func_addrs,
-                         _print_const,
-                         &print_const_cookie);
+        kos_disassemble(filename,
+                        old_bytecode_size,
+                        module->bytecode,
+                        module->bytecode_size,
+                        (struct _KOS_COMP_ADDR_TO_LINE *)module->line_addrs,
+                        module->num_line_addrs,
+                        func_names,
+                        (struct _KOS_COMP_ADDR_TO_FUNC *)func_addrs,
+                        num_func_addrs,
+                        _print_const,
+                        &print_const_cookie);
 
-        _KOS_vector_destroy(&ptrs);
-        _KOS_vector_destroy(&cname);
+        kos_vector_destroy(&ptrs);
+        kos_vector_destroy(&cname);
         TRY(error);
     }
 
 _error:
-    _KOS_parser_destroy(&parser);
-    _KOS_compiler_destroy(&program);
+    kos_parser_destroy(&parser);
+    kos_compiler_destroy(&program);
     return error;
 }
 
@@ -1265,12 +1265,12 @@ static void _handle_interpreter_error(KOS_CONTEXT ctx, int error)
     }
 }
 
-KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
-                              const char *module_name,
-                              unsigned    name_size,
-                              const char *data,
-                              unsigned    data_size,
-                              int        *out_module_idx)
+KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
+                             const char *module_name,
+                             unsigned    name_size,
+                             const char *data,
+                             unsigned    data_size,
+                             int        *out_module_idx)
 {
     static const char             base[]             = "base";
     int                           error              = KOS_SUCCESS;
@@ -1287,7 +1287,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
     struct _KOS_VECTOR            file_buf;
     int                           chain_init         = 0;
 
-    _KOS_vector_init(&file_buf);
+    kos_vector_init(&file_buf);
 
     _get_module_name(module_name, name_size, &loading);
 
@@ -1348,7 +1348,7 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
         if (inst->flags & KOS_INST_VERBOSE)
             _print_search_paths(ctx, inst->modules.search_paths);
 
-        base_obj = _KOS_module_import(ctx, base, sizeof(base)-1, 0, 0, &base_idx);
+        base_obj = kos_module_import(ctx, base, sizeof(base)-1, 0, 0, &base_idx);
         TRY_OBJID(base_obj);
         assert(base_idx == 0);
     }
@@ -1428,11 +1428,11 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
 
         OBJPTR(FUNCTION, func_obj)->module = module_obj;
 
-        TRY(_KOS_stack_push(ctx, func_obj));
+        TRY(kos_stack_push(ctx, func_obj));
 
         error = ((struct _KOS_MODULE_INIT *)OBJPTR(OPAQUE, mod_init))->init(ctx, module_obj);
 
-        _KOS_stack_pop(ctx);
+        kos_stack_pop(ctx);
 
         KOS_pop_local(ctx, &mod_init);
 
@@ -1446,14 +1446,14 @@ KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
     TRY(_compile_module(ctx, module_obj, module_idx, data, data_size, 0));
 
     /* Free file buffer */
-    _KOS_vector_destroy(&file_buf);
+    kos_vector_destroy(&file_buf);
 
     /* Put module on the list */
     TRY(KOS_array_write(ctx, inst->modules.modules, module_idx, module_obj));
     TRY(KOS_set_property(ctx, inst->modules.module_names, actual_module_name, TO_SMALL_INT(module_idx)));
 
     /* Run module */
-    error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
+    error = kos_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
 
     if (error) {
         assert(error == KOS_ERROR_EXCEPTION);
@@ -1466,7 +1466,7 @@ _error:
 
     KOS_pop_local_scope(ctx);
 
-    _KOS_vector_destroy(&file_buf);
+    kos_vector_destroy(&file_buf);
 
     /* TODO remove module from array if it failed to load? */
 
@@ -1514,7 +1514,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     TRY(_compile_module(ctx, module_obj, module_idx, buf, buf_size, 1));
 
     /* Run module */
-    error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
+    error = kos_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
 
     if (error) {
         assert(error == KOS_ERROR_EXCEPTION);
@@ -1535,19 +1535,19 @@ static int _load_stdin(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
 {
     int error = KOS_SUCCESS;
 
-    TRY(_KOS_vector_resize(buf, 0));
+    TRY(kos_vector_resize(buf, 0));
 
     for (;;) {
         const size_t last_size = buf->size;
         size_t       num_read;
 
-        TRY(_KOS_vector_resize(buf, last_size + _KOS_BUF_ALLOC_SIZE));
+        TRY(kos_vector_resize(buf, last_size + _KOS_BUF_ALLOC_SIZE));
 
         num_read = fread(buf->buffer + last_size, 1, _KOS_BUF_ALLOC_SIZE, stdin);
 
         if (num_read < _KOS_BUF_ALLOC_SIZE) {
 
-            TRY(_KOS_vector_resize(buf, last_size + num_read));
+            TRY(kos_vector_resize(buf, last_size + num_read));
 
             if (ferror(stdin)) {
                 KOS_raise_exception_cstring(ctx, str_err_stdin);
@@ -1575,7 +1575,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     KOS_INSTANCE *const inst        = ctx->inst;
     struct _KOS_VECTOR  buf;
 
-    _KOS_vector_init(&buf);
+    kos_vector_init(&buf);
 
     TRY(_load_stdin(ctx, &buf));
 
@@ -1599,10 +1599,10 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     TRY(_compile_module(ctx, module_obj, module_idx, buf.buffer, (unsigned)buf.size, 1));
 
     /* Free the buffer */
-    _KOS_vector_destroy(&buf);
+    kos_vector_destroy(&buf);
 
     /* Run module */
-    error = _KOS_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
+    error = kos_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
 
     if (error) {
         assert(error == KOS_ERROR_EXCEPTION);
@@ -1616,7 +1616,7 @@ _error:
         assert(!KOS_is_exception_pending(ctx));
     }
 
-    _KOS_vector_destroy(&buf);
+    kos_vector_destroy(&buf);
 
     return error ? KOS_BADPTR : ret;
 }

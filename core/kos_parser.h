@@ -45,15 +45,15 @@ struct _KOS_PARSER {
     int                   unary_depth; /* For detecting ambiguous syntax */
 };
 
-void _KOS_parser_init(struct _KOS_PARSER  *parser,
-                      struct _KOS_MEMPOOL *mempool,
-                      unsigned             file_id,
-                      const char          *begin,
-                      const char          *end);
+void kos_parser_init(struct _KOS_PARSER  *parser,
+                     struct _KOS_MEMPOOL *mempool,
+                     unsigned             file_id,
+                     const char          *begin,
+                     const char          *end);
 
-int  _KOS_parser_parse(struct _KOS_PARSER    *parser,
-                       struct _KOS_AST_NODE **ret);
+int  kos_parser_parse(struct _KOS_PARSER    *parser,
+                      struct _KOS_AST_NODE **ret);
 
-void _KOS_parser_destroy(struct _KOS_PARSER *parser);
+void kos_parser_destroy(struct _KOS_PARSER *parser);
 
 #endif

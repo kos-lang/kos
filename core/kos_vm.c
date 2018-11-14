@@ -494,7 +494,7 @@ static KOS_OBJ_ID _make_args(KOS_CONTEXT             ctx,
     const KOS_OBJ_ID array_obj = KOS_new_array(ctx, num_args);
 
     if ( ! IS_BAD_PTR(array_obj) && num_args) {
-        KOS_ATOMIC(KOS_OBJ_ID) *dest = _KOS_get_array_buffer(OBJPTR(ARRAY, array_obj));
+        KOS_ATOMIC(KOS_OBJ_ID) *dest = kos_get_array_buffer(OBJPTR(ARRAY, array_obj));
         KOS_ATOMIC(KOS_OBJ_ID) *end  = src + num_args;
 
         while (src < end) {
@@ -521,7 +521,7 @@ static KOS_OBJ_ID _slice_args(KOS_CONTEXT             ctx,
 
     if ( ! IS_BAD_PTR(args_obj)) {
         num_args = KOS_get_array_size(args_obj);
-        stack_args = _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+        stack_args = kos_get_array_buffer(OBJPTR(ARRAY, args_obj));
     }
 
     if (slice_begin < num_args && slice_begin < slice_end) {
@@ -584,7 +584,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
 
         if (num_to_move) {
             KOS_ATOMIC(KOS_OBJ_ID) *src_buf = IS_BAD_PTR(args_obj) ? stack_args :
-                                              _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+                                              kos_get_array_buffer(OBJPTR(ARRAY, args_obj));
             KOS_ATOMIC(KOS_OBJ_ID) *end     = src_buf + num_to_move;
 
             while (src_buf < end)
@@ -594,7 +594,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
 
         if (num_to_move < num_named_args) {
 
-            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, func->defaults));
+            KOS_ATOMIC(KOS_OBJ_ID) *src_buf = kos_get_array_buffer(OBJPTR(ARRAY, func->defaults));
             KOS_ATOMIC(KOS_OBJ_ID) *src_end = src_buf + num_def_args;
 
             assert(num_def_args);
@@ -615,7 +615,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
 
         if (num_to_move) {
             KOS_ATOMIC(KOS_OBJ_ID) *src_buf = IS_BAD_PTR(args_obj) ? stack_args :
-                                              _KOS_get_array_buffer(OBJPTR(ARRAY, args_obj));
+                                              kos_get_array_buffer(OBJPTR(ARRAY, args_obj));
             KOS_ATOMIC(KOS_OBJ_ID) *end     = src_buf + num_to_move;
 
             while (src_buf < end)
@@ -625,7 +625,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
 
         if (num_input_args < num_named_args) {
 
-            KOS_ATOMIC(KOS_OBJ_ID) *const src_buf0 = _KOS_get_array_buffer(OBJPTR(ARRAY, func->defaults));
+            KOS_ATOMIC(KOS_OBJ_ID) *const src_buf0 = kos_get_array_buffer(OBJPTR(ARRAY, func->defaults));
             KOS_ATOMIC(KOS_OBJ_ID)       *src_buf  = src_buf0;
 
             if (num_to_move > num_non_def_args)
@@ -646,7 +646,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
                                  MAX_INT64,
                                  MAX_INT64,
                                  func->defaults,
-                                 src_buf - _KOS_get_array_buffer(OBJPTR(ARRAY, func->defaults)),
+                                 src_buf - kos_get_array_buffer(OBJPTR(ARRAY, func->defaults)),
                                  MAX_INT64));
         }
 
@@ -671,7 +671,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
         assert(reg + src_len <= 256U);
         assert(reg + src_len <= num_regs);
 
-        src_buf = _KOS_get_array_buffer(OBJPTR(ARRAY, func->closures));
+        src_buf = kos_get_array_buffer(OBJPTR(ARRAY, func->closures));
         end     = src_buf + src_len;
 
         while (src_buf < end)
@@ -803,7 +803,7 @@ static int _prepare_call(KOS_CONTEXT             ctx,
 
         /* Regular function */
         case KOS_FUN: {
-            TRY(_KOS_stack_push(ctx, func_obj));
+            TRY(kos_stack_push(ctx, func_obj));
 
             if ( ! func->handler)
                 TRY(_init_registers(ctx,
@@ -826,7 +826,7 @@ static int _prepare_call(KOS_CONTEXT             ctx,
 
             dest = OBJPTR(FUNCTION, ret);
 
-            TRY(_KOS_stack_push(ctx, ret));
+            TRY(kos_stack_push(ctx, ret));
 
             dest->state = KOS_GEN_READY;
 
@@ -849,7 +849,7 @@ static int _prepare_call(KOS_CONTEXT             ctx,
 
             OBJPTR(STACK, ctx->stack)->header.flags |= KOS_CAN_YIELD;
 
-            _KOS_stack_pop(ctx);
+            kos_stack_pop(ctx);
 
             *this_obj = ret;
             break;
@@ -861,7 +861,7 @@ static int _prepare_call(KOS_CONTEXT             ctx,
         case KOS_GEN_ACTIVE: {
             assert( ! IS_BAD_PTR(func->generator_stack_frame));
 
-            TRY(_KOS_stack_push(ctx, func_obj));
+            TRY(kos_stack_push(ctx, func_obj));
 
             if ( ! func->handler) {
                 if (state == KOS_GEN_ACTIVE) {
@@ -943,7 +943,7 @@ static KOS_OBJ_ID _finish_call(KOS_CONTEXT               ctx,
 
     ctx->retval = KOS_BADPTR;
 
-    _KOS_stack_pop(ctx);
+    kos_stack_pop(ctx);
 
     return ret;
 }
@@ -2358,7 +2358,7 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 delta = 6;
 
-                if (_KOS_is_truthy(regs[rsrc]))
+                if (kos_is_truthy(regs[rsrc]))
                     delta += offs;
 #ifdef CONFIG_FUZZ
                 if (delta < 6)
@@ -2375,7 +2375,7 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 delta = 6;
 
-                if ( ! _KOS_is_truthy(regs[rsrc]))
+                if ( ! kos_is_truthy(regs[rsrc]))
                     delta += offs;
 #ifdef CONFIG_FUZZ
                 if (delta < 6)
@@ -2652,7 +2652,7 @@ static int _exec_function(KOS_CONTEXT ctx)
                             if (KOS_is_exception_pending(ctx)) {
                                 assert(IS_BAD_PTR(ret_val));
                                 error = KOS_ERROR_EXCEPTION;
-                                _KOS_wrap_exception(ctx);
+                                kos_wrap_exception(ctx);
                             }
                             else {
                                 assert(state > KOS_GEN_INIT || ! IS_BAD_PTR(ret_val));
@@ -2792,7 +2792,7 @@ static int _exec_function(KOS_CONTEXT ctx)
 
             _store_instr_offs(regs, (uint32_t)(bytecode - module->bytecode));
 
-            _KOS_wrap_exception(ctx);
+            kos_wrap_exception(ctx);
 
             catch_offs = _get_catch(regs, &catch_reg);
 
@@ -2827,11 +2827,11 @@ static int _exec_function(KOS_CONTEXT ctx)
     return error;
 }
 
-KOS_OBJ_ID _KOS_call_function(KOS_CONTEXT           ctx,
-                              KOS_OBJ_ID            func_obj,
-                              KOS_OBJ_ID            this_obj,
-                              KOS_OBJ_ID            args_obj,
-                              enum _KOS_CALL_FLAVOR call_flavor)
+KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
+                             KOS_OBJ_ID            func_obj,
+                             KOS_OBJ_ID            this_obj,
+                             KOS_OBJ_ID            args_obj,
+                             enum _KOS_CALL_FLAVOR call_flavor)
 {
     int           error = KOS_SUCCESS;
     KOS_OBJ_ID    ret   = KOS_BADPTR;
@@ -2881,7 +2881,7 @@ KOS_OBJ_ID _KOS_call_function(KOS_CONTEXT           ctx,
             if (KOS_is_exception_pending(ctx)) {
                 assert(IS_BAD_PTR(retval));
                 error = KOS_ERROR_EXCEPTION;
-                _KOS_wrap_exception(ctx);
+                kos_wrap_exception(ctx);
             }
             else {
                 assert(state > KOS_GEN_INIT || ! IS_BAD_PTR(retval));
@@ -2904,7 +2904,7 @@ KOS_OBJ_ID _KOS_call_function(KOS_CONTEXT           ctx,
     return error ? KOS_BADPTR : ret;
 }
 
-int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
+int kos_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
 {
     int         error;
     KOS_CONTEXT ctx;
@@ -2914,12 +2914,12 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
     assert(module);
     assert(module->inst);
 
-    ctx = (KOS_CONTEXT)_KOS_tls_get(module->inst->threads.thread_key);
+    ctx = (KOS_CONTEXT)kos_tls_get(module->inst->threads.thread_key);
 
     func_obj = KOS_array_read(ctx, module->constants, module->main_idx);
 
     if ( ! IS_BAD_PTR(func_obj)) {
-        error = _KOS_stack_push(ctx, func_obj);
+        error = kos_stack_push(ctx, func_obj);
 
         if ( ! error)
             pushed = 1;
@@ -2950,7 +2950,7 @@ int _KOS_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
     ctx->retval    = KOS_BADPTR;
 
     if (pushed)
-        _KOS_stack_pop(ctx);
+        kos_stack_pop(ctx);
 
     return error;
 }

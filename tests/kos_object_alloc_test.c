@@ -38,57 +38,57 @@
 
 static void *_alloc_integer(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_INTEGER, sizeof(KOS_INTEGER));
+    return kos_alloc_object(ctx, OBJ_INTEGER, sizeof(KOS_INTEGER));
 }
 
 static void *_alloc_float(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_FLOAT, sizeof(KOS_FLOAT));
+    return kos_alloc_object(ctx, OBJ_FLOAT, sizeof(KOS_FLOAT));
 }
 
 static void *_alloc_string(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_STRING, sizeof(KOS_STRING));
+    return kos_alloc_object(ctx, OBJ_STRING, sizeof(KOS_STRING));
 }
 
 static void *_alloc_object(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_OBJECT, sizeof(KOS_OBJECT));
+    return kos_alloc_object(ctx, OBJ_OBJECT, sizeof(KOS_OBJECT));
 }
 
 static void *_alloc_array(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_ARRAY, sizeof(KOS_ARRAY));
+    return kos_alloc_object(ctx, OBJ_ARRAY, sizeof(KOS_ARRAY));
 }
 
 static void *_alloc_buffer(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_BUFFER, sizeof(KOS_BUFFER));
+    return kos_alloc_object(ctx, OBJ_BUFFER, sizeof(KOS_BUFFER));
 }
 
 static void *_alloc_function(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_FUNCTION, sizeof(KOS_FUNCTION));
+    return kos_alloc_object(ctx, OBJ_FUNCTION, sizeof(KOS_FUNCTION));
 }
 
 static void *_alloc_dynamic_prop(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP));
+    return kos_alloc_object(ctx, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP));
 }
 
 static void *_alloc_object_walk(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_OBJECT_WALK, sizeof(KOS_OBJECT_WALK));
+    return kos_alloc_object(ctx, OBJ_OBJECT_WALK, sizeof(KOS_OBJECT_WALK));
 }
 
 static void *_alloc_module(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_MODULE, sizeof(KOS_MODULE));
+    return kos_alloc_object(ctx, OBJ_MODULE, sizeof(KOS_MODULE));
 }
 
 static void *_alloc_stack(KOS_CONTEXT ctx)
 {
-    return _KOS_alloc_object(ctx, OBJ_STACK, sizeof(KOS_STACK));
+    return kos_alloc_object(ctx, OBJ_STACK, sizeof(KOS_STACK));
 }
 
 typedef void *(* ALLOC_FUNC)(KOS_CONTEXT ctx);
@@ -113,9 +113,9 @@ static KOS_OBJ_ID _alloc_opaque(KOS_CONTEXT ctx,
                                 size_t      size)
 {
     unsigned actual_size;
-    uint8_t *object = (uint8_t *)_KOS_alloc_object(ctx,
-                                                   OBJ_OPAQUE,
-                                                   (uint32_t)size);
+    uint8_t *object = (uint8_t *)kos_alloc_object(ctx,
+                                                  OBJ_OPAQUE,
+                                                  (uint32_t)size);
 
     if ( ! object)
         return KOS_BADPTR;
@@ -130,9 +130,9 @@ static KOS_OBJ_ID _alloc_opaque(KOS_CONTEXT ctx,
 static KOS_OBJ_ID _alloc_bytes(KOS_CONTEXT ctx,
                                uint8_t     fill)
 {
-    KOS_BYTES *object = (KOS_BYTES *)_KOS_alloc_object(ctx,
-                                                       OBJ_OPAQUE,
-                                                       sizeof(KOS_BYTES));
+    KOS_BYTES *object = (KOS_BYTES *)kos_alloc_object(ctx,
+                                                      OBJ_OPAQUE,
+                                                      sizeof(KOS_BYTES));
 
     if ( ! object)
         return KOS_BADPTR;
@@ -225,9 +225,9 @@ int main(void)
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        objects = (void **)_KOS_alloc_object(ctx,
-                                             OBJ_OPAQUE,
-                                             NUM_OBJECTS * sizeof(void *));
+        objects = (void **)kos_alloc_object(ctx,
+                                            OBJ_OPAQUE,
+                                            NUM_OBJECTS * sizeof(void *));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
@@ -271,14 +271,14 @@ int main(void)
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        objects = (void **)_KOS_alloc_object(ctx,
-                                             OBJ_OPAQUE,
-                                             NUM_OBJECTS * sizeof(void *));
+        objects = (void **)kos_alloc_object(ctx,
+                                            OBJ_OPAQUE,
+                                            NUM_OBJECTS * sizeof(void *));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
 
-            objects[j] = _KOS_alloc_object(ctx, OBJ_OBJECT, size);
+            objects[j] = kos_alloc_object(ctx, OBJ_OBJECT, size);
             TEST(objects[j]);
 
             TEST(((intptr_t)objects[j] & 7) == 0);
@@ -312,22 +312,22 @@ int main(void)
         struct _RANDOM_OBJECT *objects;
         int                    j;
 
-        _KOS_rng_init(&rng);
+        kos_rng_init(&rng);
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(ctx,
-                                                             OBJ_OPAQUE,
-                                                             NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
+        objects = (struct _RANDOM_OBJECT *)kos_alloc_object(ctx,
+                                                            OBJ_OPAQUE,
+                                                            NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
 
-            const int size_pot = 3 + (int)_KOS_rng_random_range(&rng, 6 - 3);
+            const int size_pot = 3 + (int)kos_rng_random_range(&rng, 6 - 3);
             const int size     = 1 << size_pot;
 
             objects[j].size_pot = size_pot;
-            objects[j].obj      = (uint8_t *)_KOS_alloc_object(ctx, OBJ_OBJECT, size);
+            objects[j].obj      = (uint8_t *)kos_alloc_object(ctx, OBJ_OBJECT, size);
             TEST(objects[j].obj);
 
             memset(objects[j].obj, (uint8_t)j, (size_t)size);
@@ -360,21 +360,21 @@ int main(void)
         struct _RANDOM_OBJECT *objects;
         int                    j;
 
-        _KOS_rng_init(&rng);
+        kos_rng_init(&rng);
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
-        objects = (struct _RANDOM_OBJECT *)_KOS_alloc_object(ctx,
-                                                             OBJ_OPAQUE,
-                                                             NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
+        objects = (struct _RANDOM_OBJECT *)kos_alloc_object(ctx,
+                                                            OBJ_OPAQUE,
+                                                            NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
 
-            const int size = 9 + (int)_KOS_rng_random_range(&rng, 128 - 9);
+            const int size = 9 + (int)kos_rng_random_range(&rng, 128 - 9);
 
             objects[j].size_pot = size;
-            objects[j].obj      = (uint8_t *)_KOS_alloc_object(ctx, OBJ_OBJECT, size);
+            objects[j].obj      = (uint8_t *)kos_alloc_object(ctx, OBJ_OBJECT, size);
             TEST(objects[j].obj);
 
             TEST(((intptr_t)objects[j].obj & 7) == 0);
@@ -500,14 +500,14 @@ int main(void)
             void  *mem;
 
             for (;;) {
-                mem = _KOS_malloc(size);
+                mem = kos_malloc(size);
 
-                if (_KOS_heap_lend_page(ctx, mem, size)) {
+                if (kos_heap_lend_page(ctx, mem, size)) {
                     pages[i] = mem;
                     break;
                 }
 
-                _KOS_free(mem);
+                kos_free(mem);
 
                 size += _KOS_PAGE_SIZE / 4U;
             }
@@ -524,7 +524,7 @@ int main(void)
         KOS_instance_destroy(&inst);
 
         for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i)
-            _KOS_free(pages[i]);
+            kos_free(pages[i]);
     }
 #endif
 

@@ -113,7 +113,7 @@ static int _get_num_operands(enum _KOS_BYTECODE_INSTR instr)
     }
 }
 
-int _KOS_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
+int kos_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op)
 {
     switch (instr) {
 
@@ -195,7 +195,7 @@ static int _get_offset_operand_tail(enum _KOS_BYTECODE_INSTR instr, int op)
     return -1;
 }
 
-int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
+int kos_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
 {
     switch (instr) {
 
@@ -272,10 +272,10 @@ int _KOS_is_register(enum _KOS_BYTECODE_INSTR instr, int op)
     return 1;
 }
 
-int _KOS_is_signed_op(enum _KOS_BYTECODE_INSTR instr, int op)
+int kos_is_signed_op(enum _KOS_BYTECODE_INSTR instr, int op)
 {
-    assert( ! _KOS_is_register(instr, op));
-    assert(_KOS_get_operand_size(instr, op) == 1);
+    assert( ! kos_is_register(instr, op));
+    assert(kos_get_operand_size(instr, op) == 1);
     switch (instr) {
 
         case INSTR_LOAD_INT8:
@@ -306,7 +306,7 @@ static int _is_constant(enum _KOS_BYTECODE_INSTR instr, int op)
         case INSTR_DEL_PROP:
             /* fall through */
         case INSTR_HAS_PROP:
-            return ! _KOS_is_register(instr, op);
+            return ! kos_is_register(instr, op);
 
         default:
             break;
@@ -314,17 +314,17 @@ static int _is_constant(enum _KOS_BYTECODE_INSTR instr, int op)
     return 0;
 }
 
-void _KOS_disassemble(const char                          *filename,
-                      uint32_t                             offs,
-                      const uint8_t                       *bytecode,
-                      uint32_t                             size,
-                      const struct _KOS_COMP_ADDR_TO_LINE *line_addrs,
-                      uint32_t                             num_line_addrs,
-                      const char                   *const *func_names,
-                      const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs,
-                      uint32_t                             num_func_addrs,
-                      _KOS_PRINT_CONST                     print_const,
-                      void                                *print_const_cookie)
+void kos_disassemble(const char                          *filename,
+                     uint32_t                             offs,
+                     const uint8_t                       *bytecode,
+                     uint32_t                             size,
+                     const struct _KOS_COMP_ADDR_TO_LINE *line_addrs,
+                     uint32_t                             num_line_addrs,
+                     const char                   *const *func_names,
+                     const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs,
+                     uint32_t                             num_func_addrs,
+                     _KOS_PRINT_CONST                     print_const,
+                     void                                *print_const_cookie)
 {
     const struct _KOS_COMP_ADDR_TO_LINE *line_addrs_end  = line_addrs + num_line_addrs;
     const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs_end  = func_addrs + num_func_addrs;
@@ -400,11 +400,11 @@ void _KOS_disassemble(const char                          *filename,
         "CANCEL"
     };
 
-    _KOS_vector_init(&const_buf);
+    kos_vector_init(&const_buf);
 
-    if (_KOS_vector_reserve(&const_buf, 128)) {
+    if (kos_vector_reserve(&const_buf, 128)) {
         printf("Error: Failed to allocate buffer\n");
-        _KOS_vector_destroy(&const_buf);
+        kos_vector_destroy(&const_buf);
         return;
     }
 
@@ -470,7 +470,7 @@ void _KOS_disassemble(const char                          *filename,
         dis[dis_size] = 0;
 
         for (iop = 0; iop < num_operands; iop++) {
-            const int opsize = _KOS_get_operand_size((enum _KOS_BYTECODE_INSTR)opcode, iop);
+            const int opsize = kos_get_operand_size((enum _KOS_BYTECODE_INSTR)opcode, iop);
             int32_t   value  = 0;
             int       tail   = 0;
 
@@ -487,10 +487,10 @@ void _KOS_disassemble(const char                          *filename,
             tail = _get_offset_operand_tail((enum _KOS_BYTECODE_INSTR)opcode, iop);
             if (tail >= 0)
                 snprintf(&dis[dis_size], sizeof(dis)-dis_size, "%08X", value + offs + instr_size + opsize + tail);
-            else if (_KOS_is_register((enum _KOS_BYTECODE_INSTR)opcode, iop))
+            else if (kos_is_register((enum _KOS_BYTECODE_INSTR)opcode, iop))
                 snprintf(&dis[dis_size], sizeof(dis)-dis_size, "r%d", value);
             else {
-                if (opsize == 1 && _KOS_is_signed_op((enum _KOS_BYTECODE_INSTR)opcode, iop))
+                if (opsize == 1 && kos_is_signed_op((enum _KOS_BYTECODE_INSTR)opcode, iop))
                     value = (int32_t)(int8_t)value;
                 snprintf(&dis[dis_size], sizeof(dis)-dis_size, "%d", value);
             }
@@ -542,5 +542,5 @@ void _KOS_disassemble(const char                          *filename,
             size -= instr_size;
     }
 
-    _KOS_vector_destroy(&const_buf);
+    kos_vector_destroy(&const_buf);
 }

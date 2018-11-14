@@ -32,9 +32,9 @@ struct _KOS_MEMPOOL {
     void  *buffers;
 };
 
-void  _KOS_mempool_init(struct _KOS_MEMPOOL *mempool);
-void  _KOS_mempool_destroy(struct _KOS_MEMPOOL *mempool);
-void *_KOS_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size);
+void  kos_mempool_init(struct _KOS_MEMPOOL *mempool);
+void  kos_mempool_destroy(struct _KOS_MEMPOOL *mempool);
+void *kos_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size);
 
 /* Dynamic array of bytes */
 
@@ -45,11 +45,11 @@ struct _KOS_VECTOR {
     double _local_buffer[2];
 };
 
-void _KOS_vector_init(struct _KOS_VECTOR *vector);
-void _KOS_vector_destroy(struct _KOS_VECTOR *vector);
-int  _KOS_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity);
-int  _KOS_vector_resize(struct _KOS_VECTOR *vector, size_t size);
-int  _KOS_vector_concat(struct _KOS_VECTOR *dest, struct _KOS_VECTOR *src);
-int  _KOS_vector_append_cstr(struct _KOS_VECTOR *dest, const char* cstr);
+void kos_vector_init(struct _KOS_VECTOR *vector);
+void kos_vector_destroy(struct _KOS_VECTOR *vector);
+int  kos_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity);
+int  kos_vector_resize(struct _KOS_VECTOR *vector, size_t size);
+int  kos_vector_concat(struct _KOS_VECTOR *dest, struct _KOS_VECTOR *src);
+int  kos_vector_append_cstr(struct _KOS_VECTOR *dest, const char* cstr);
 
 #endif

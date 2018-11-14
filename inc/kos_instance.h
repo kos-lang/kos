@@ -275,20 +275,20 @@ enum _KOS_CALL_FLAVOR {
     KOS_APPLY_FUNCTION
 };
 
-KOS_OBJ_ID _KOS_call_function(KOS_CONTEXT           ctx,
-                              KOS_OBJ_ID            func_obj,
-                              KOS_OBJ_ID            this_obj,
-                              KOS_OBJ_ID            args_obj,
-                              enum _KOS_CALL_FLAVOR call_flavor);
+KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
+                             KOS_OBJ_ID            func_obj,
+                             KOS_OBJ_ID            this_obj,
+                             KOS_OBJ_ID            args_obj,
+                             enum _KOS_CALL_FLAVOR call_flavor);
 
 #define KOS_call_function(ctx, func_obj, this_obj, args_obj) \
-    _KOS_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
+    kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
 
 #define KOS_call_generator(ctx, func_obj, this_obj, args_obj) \
-    _KOS_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_GENERATOR)
+    kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_GENERATOR)
 
 #define KOS_apply_function(ctx, func_obj, this_obj, args_obj) \
-    _KOS_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
+    kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
 
 int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 

@@ -291,62 +291,62 @@ struct _KOS_COMP_UNIT {
 
 struct _KOS_AST_NODE;
 
-void _KOS_compiler_init(struct _KOS_COMP_UNIT *program,
-                        int                    file_id);
+void kos_compiler_init(struct _KOS_COMP_UNIT *program,
+                       int                    file_id);
 
-int _KOS_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
-                                   const char            *name,
-                                   int                    idx,
-                                   int                    is_const);
+int kos_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
+                                  const char            *name,
+                                  int                    idx,
+                                  int                    is_const);
 
-int _KOS_compiler_predefine_module(struct _KOS_COMP_UNIT *program,
-                                   const char            *name,
-                                   int                    idx);
+int kos_compiler_predefine_module(struct _KOS_COMP_UNIT *program,
+                                  const char            *name,
+                                  int                    idx);
 
-int _KOS_compiler_compile(struct _KOS_COMP_UNIT *program,
-                          struct _KOS_AST_NODE  *ast);
+int kos_compiler_compile(struct _KOS_COMP_UNIT *program,
+                         struct _KOS_AST_NODE  *ast);
 
-void _KOS_compiler_destroy(struct _KOS_COMP_UNIT *program);
+void kos_compiler_destroy(struct _KOS_COMP_UNIT *program);
 
-const struct _KOS_AST_NODE *_KOS_get_const(struct _KOS_COMP_UNIT      *program,
-                                           const struct _KOS_AST_NODE *node);
+const struct _KOS_AST_NODE *kos_get_const(struct _KOS_COMP_UNIT      *program,
+                                          const struct _KOS_AST_NODE *node);
 
-int _KOS_node_is_truthy(struct _KOS_COMP_UNIT      *program,
-                        const struct _KOS_AST_NODE *node);
-
-int _KOS_node_is_falsy(struct _KOS_COMP_UNIT      *program,
+int kos_node_is_truthy(struct _KOS_COMP_UNIT      *program,
                        const struct _KOS_AST_NODE *node);
 
-int _KOS_compiler_process_vars(struct _KOS_COMP_UNIT      *program,
-                               const struct _KOS_AST_NODE *ast);
+int kos_node_is_falsy(struct _KOS_COMP_UNIT      *program,
+                      const struct _KOS_AST_NODE *node);
 
-int _KOS_optimize(struct _KOS_COMP_UNIT *program,
-                  struct _KOS_AST_NODE  *ast);
+int kos_compiler_process_vars(struct _KOS_COMP_UNIT      *program,
+                              const struct _KOS_AST_NODE *ast);
 
-int _KOS_allocate_args(struct _KOS_COMP_UNIT *program,
-                       struct _KOS_AST_NODE  *ast);
+int kos_optimize(struct _KOS_COMP_UNIT *program,
+                 struct _KOS_AST_NODE  *ast);
 
-struct _KOS_VAR *_KOS_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
-                               const struct _KOS_TOKEN    *token);
+int kos_allocate_args(struct _KOS_COMP_UNIT *program,
+                      struct _KOS_AST_NODE  *ast);
 
-void _KOS_activate_var(struct _KOS_COMP_UNIT      *program,
-                       const struct _KOS_AST_NODE *node);
+struct _KOS_VAR *kos_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
+                              const struct _KOS_TOKEN    *token);
 
-void _KOS_activate_new_vars(struct _KOS_COMP_UNIT      *program,
-                            const struct _KOS_AST_NODE *node);
+void kos_activate_var(struct _KOS_COMP_UNIT      *program,
+                      const struct _KOS_AST_NODE *node);
 
-void _KOS_activate_self_ref_func(struct _KOS_COMP_UNIT      *program,
-                                 const struct _KOS_AST_NODE *node);
+void kos_activate_new_vars(struct _KOS_COMP_UNIT      *program,
+                           const struct _KOS_AST_NODE *node);
 
-void _KOS_deactivate_vars(struct _KOS_SCOPE *scope);
+void kos_activate_self_ref_func(struct _KOS_COMP_UNIT      *program,
+                                const struct _KOS_AST_NODE *node);
 
-int _KOS_scope_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                            struct _KOS_RED_BLACK_NODE *b);
+void kos_deactivate_vars(struct _KOS_SCOPE *scope);
 
-int _KOS_scope_compare_item(void                       *what,
-                            struct _KOS_RED_BLACK_NODE *node);
+int kos_scope_compare_node(struct _KOS_RED_BLACK_NODE *a,
+                           struct _KOS_RED_BLACK_NODE *b);
 
-struct _KOS_SCOPE_REF *_KOS_find_scope_ref(struct _KOS_FRAME *frame,
-                                           struct _KOS_SCOPE *closure);
+int kos_scope_compare_item(void                       *what,
+                           struct _KOS_RED_BLACK_NODE *node);
+
+struct _KOS_SCOPE_REF *kos_find_scope_ref(struct _KOS_FRAME *frame,
+                                          struct _KOS_SCOPE *closure);
 
 #endif

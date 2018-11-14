@@ -90,7 +90,7 @@ static int _next_token(struct _KOS_PARSER *parser)
 
         for (;;) {
 
-            error = _KOS_lexer_next_token(&parser->lexer, NT_ANY, &parser->token);
+            error = kos_lexer_next_token(&parser->lexer, NT_ANY, &parser->token);
 
             if (error)
                 break;
@@ -197,7 +197,7 @@ static int _new_node(struct _KOS_PARSER    *parser,
 
     assert(parser->ast_buf);
 
-    ast_node = (struct _KOS_AST_NODE *)_KOS_mempool_alloc(parser->ast_buf, sizeof(struct _KOS_AST_NODE));
+    ast_node = (struct _KOS_AST_NODE *)kos_mempool_alloc(parser->ast_buf, sizeof(struct _KOS_AST_NODE));
 
     if (ast_node) {
         ast_node->next       = 0;
@@ -526,7 +526,7 @@ static int _is_lambda_literal(struct _KOS_PARSER *parser,
 
 _error:
     if ( ! error) {
-        _KOS_lexer_unget_token(&parser->lexer, &saved_token);
+        kos_lexer_unget_token(&parser->lexer, &saved_token);
         parser->unget = 0;
         error = _next_token(parser);
     }
@@ -716,10 +716,10 @@ static int _interpolated_string(struct _KOS_PARSER    *parser,
         _ast_push(*ret, node);
         node = 0;
 
-        _KOS_lexer_unget_token(&parser->lexer, &parser->token);
+        kos_lexer_unget_token(&parser->lexer, &parser->token);
         parser->unget = 0;
 
-        TRY(_KOS_lexer_next_token(&parser->lexer, NT_CONTINUE_STRING, &parser->token));
+        TRY(kos_lexer_next_token(&parser->lexer, NT_CONTINUE_STRING, &parser->token));
         parser->unget = 0;
 
         assert(parser->token.type == TT_STRING_OPEN ||
@@ -2010,7 +2010,7 @@ static int _function_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret
     }
     else {
 
-        _KOS_lexer_unget_token(&parser->lexer, &fun_kw_token);
+        kos_lexer_unget_token(&parser->lexer, &fun_kw_token);
         parser->unget = 0;
         TRY(_expr_stmt(parser, ret));
     }
@@ -2200,7 +2200,7 @@ static int _gen_fake_const(struct _KOS_PARSER    *parser,
 
     TRY(_push_node(parser, node, NT_IDENTIFIER, &node));
 
-    name = (char *)_KOS_mempool_alloc(parser->ast_buf, max_len);
+    name = (char *)kos_mempool_alloc(parser->ast_buf, max_len);
 
     if ( ! name) {
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -3148,13 +3148,13 @@ static int _handle_imports(struct _KOS_PARSER *parser, struct _KOS_AST_NODE *roo
     return error;
 }
 
-void _KOS_parser_init(struct _KOS_PARSER  *parser,
-                      struct _KOS_MEMPOOL *mempool,
-                      unsigned             file_id,
-                      const char          *begin,
-                      const char          *end)
+void kos_parser_init(struct _KOS_PARSER  *parser,
+                     struct _KOS_MEMPOOL *mempool,
+                     unsigned             file_id,
+                     const char          *begin,
+                     const char          *end)
 {
-    _KOS_lexer_init(&parser->lexer, file_id, begin, end);
+    kos_lexer_init(&parser->lexer, file_id, begin, end);
 
     parser->ast_buf           = mempool;
     parser->error_str         = 0;
@@ -3176,8 +3176,8 @@ void _KOS_parser_init(struct _KOS_PARSER  *parser,
     parser->token.sep         = ST_NONE;
 }
 
-int _KOS_parser_parse(struct _KOS_PARSER    *parser,
-                      struct _KOS_AST_NODE **ret)
+int kos_parser_parse(struct _KOS_PARSER    *parser,
+                     struct _KOS_AST_NODE **ret)
 {
     struct _KOS_AST_NODE *root = 0;
     struct _KOS_AST_NODE *node = 0;
@@ -3207,7 +3207,7 @@ _error:
     return error;
 }
 
-void _KOS_parser_destroy(struct _KOS_PARSER *parser)
+void kos_parser_destroy(struct _KOS_PARSER *parser)
 {
     parser->ast_buf = 0;
 }

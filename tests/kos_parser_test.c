@@ -352,9 +352,9 @@ int main(int argc, char *argv[])
     int                 print = 0;
     const char         *usage = "Usage: kos_parser_test [-verbose] [-notest] <testfile>\n";
 
-    _KOS_vector_init(&file_buf);
+    kos_vector_init(&file_buf);
 
-    _KOS_mempool_init(&allocator);
+    kos_mempool_init(&allocator);
 
     if (argc < 2 || argc > 4) {
         printf("%s", usage);
@@ -375,11 +375,11 @@ int main(int argc, char *argv[])
             }
         }
 
-        error = _KOS_load_file(argv[iarg], &file_buf);
+        error = kos_load_file(argv[iarg], &file_buf);
 
         /* Alloc one more char and set it to 0 */
         if (!error) {
-            error = _KOS_vector_resize(&file_buf, file_buf.size+1);
+            error = kos_vector_resize(&file_buf, file_buf.size+1);
             if (!error)
                 file_buf.buffer[file_buf.size-1] = 0;
         }
@@ -422,7 +422,7 @@ int main(int argc, char *argv[])
                 break;
         }
 
-        _KOS_parser_init(&parser, &allocator, 0, buf, end);
+        kos_parser_init(&parser, &allocator, 0, buf, end);
 
         ++end;
 
@@ -447,7 +447,7 @@ int main(int argc, char *argv[])
 
             struct _KOS_AST_NODE *ast;
 
-            const int test_error = _KOS_parser_parse(&parser, &ast);
+            const int test_error = kos_parser_parse(&parser, &ast);
 
             if (test_error != expected_error && test) {
                 printf("Invalid error code returned by parser: %d, but expected %d\n",
@@ -472,7 +472,7 @@ int main(int argc, char *argv[])
                 }
             }
 
-            _KOS_parser_destroy(&parser);
+            kos_parser_destroy(&parser);
         }
 
         if (error)
@@ -498,9 +498,9 @@ int main(int argc, char *argv[])
         buf = end;
     }
 
-    _KOS_mempool_destroy(&allocator);
+    kos_mempool_destroy(&allocator);
 
-    _KOS_vector_destroy(&file_buf);
+    kos_vector_destroy(&file_buf);
 
     if (error) {
 

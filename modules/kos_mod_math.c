@@ -423,7 +423,7 @@ _error:
     return error ? KOS_BADPTR : ret;
 }
 
-int _KOS_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 

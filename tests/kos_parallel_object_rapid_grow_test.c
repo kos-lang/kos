@@ -143,8 +143,8 @@ int main(void)
         if (num_threads > 2)
             --num_threads; /* The main thread participates */
 
-        _KOS_vector_init(&mem_buf);
-        TEST(_KOS_vector_resize(&mem_buf,
+        kos_vector_init(&mem_buf);
+        TEST(kos_vector_resize(&mem_buf,
                 num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
                 + num_props * sizeof(KOS_OBJ_ID)
             ) == KOS_SUCCESS);
@@ -152,14 +152,14 @@ int main(void)
         thread_cookies = (struct THREAD_DATA *)(props + num_props);
         threads        = (_KOS_THREAD *)(thread_cookies + num_threads);
 
-        _KOS_rng_init(&rng);
+        kos_rng_init(&rng);
 
         for (i = 0; i < num_props; i++) {
             char     buf[3];
             unsigned k;
 
             for (k = 0; k < sizeof(buf); k++)
-                buf[k] = (char)_KOS_rng_random_range(&rng, 127U);
+                buf[k] = (char)kos_rng_random_range(&rng, 127U);
 
             props[i] = KOS_new_string(ctx, buf, sizeof(buf));
             TEST( ! IS_BAD_PTR(props[i]));
@@ -180,17 +180,17 @@ int main(void)
 
             for (i = 0; i < num_threads; i++) {
                 thread_cookies[i].test      = &data;
-                thread_cookies[i].rand_init = (unsigned)_KOS_rng_random_range(&rng, 0xFFFFFFFFU);
-                TEST(_KOS_thread_create(ctx, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                thread_cookies[i].rand_init = (unsigned)kos_rng_random_range(&rng, 0xFFFFFFFFU);
+                TEST(kos_thread_create(ctx, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
             }
 
-            i = (int)_KOS_rng_random_range(&rng, 0x7FFFFFFF);
+            i = (int)kos_rng_random_range(&rng, 0x7FFFFFFF);
             KOS_atomic_write_u32(data.go, 1);
             TEST(_write_props_inner(ctx, &data, (unsigned)i) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             for (i = 0; i < num_threads; i++) {
-                _KOS_thread_join(ctx, threads[i]);
+                kos_thread_join(ctx, threads[i]);
                 TEST_NO_EXCEPTION();
             }
 
@@ -208,7 +208,7 @@ int main(void)
             }
         }
 
-        _KOS_vector_destroy(&mem_buf);
+        kos_vector_destroy(&mem_buf);
     }
 
     KOS_instance_destroy(&inst);

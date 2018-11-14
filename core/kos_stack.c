@@ -125,8 +125,8 @@ static int _init_stack(KOS_CONTEXT ctx,
 
 static int _push_new_stack(KOS_CONTEXT ctx)
 {
-    KOS_STACK *const new_stack = (KOS_STACK *)_KOS_alloc_object_page(ctx,
-                                                                     OBJ_STACK);
+    KOS_STACK *const new_stack = (KOS_STACK *)kos_alloc_object_page(ctx,
+                                                                    OBJ_STACK);
     if (new_stack)
         new_stack->header.flags = KOS_NORMAL_STACK;
 
@@ -137,9 +137,9 @@ static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
                                      unsigned    room)
 {
     const size_t     alloc_size = sizeof(KOS_STACK) + sizeof(KOS_OBJ_ID) * room;
-    KOS_STACK *const new_stack  = (KOS_STACK *)_KOS_alloc_object(ctx,
-                                                                 OBJ_STACK,
-                                                                 (uint32_t)alloc_size);
+    KOS_STACK *const new_stack  = (KOS_STACK *)kos_alloc_object(ctx,
+                                                                OBJ_STACK,
+                                                                (uint32_t)alloc_size);
     if (new_stack)
         new_stack->header.flags = KOS_REENTRANT_STACK;
 
@@ -148,8 +148,8 @@ static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
     return _init_stack(ctx, new_stack);
 }
 
-int _KOS_stack_push(KOS_CONTEXT ctx,
-                    KOS_OBJ_ID  func_obj)
+int kos_stack_push(KOS_CONTEXT ctx,
+                   KOS_OBJ_ID  func_obj)
 {
     int              error        = KOS_SUCCESS;
     KOS_STACK *const stack        = IS_BAD_PTR(ctx->stack) ? 0 : OBJPTR(STACK, ctx->stack);
@@ -258,7 +258,7 @@ int _KOS_stack_push(KOS_CONTEXT ctx,
     ctx->stack_depth += room;
 
     if (ctx->stack_depth > _KOS_MAX_STACK_DEPTH) {
-        _KOS_stack_pop(ctx);
+        kos_stack_pop(ctx);
         RAISE_EXCEPTION(str_err_stack_overflow);
     }
 
@@ -266,7 +266,7 @@ _error:
     return error;
 }
 
-void _KOS_stack_pop(KOS_CONTEXT ctx)
+void kos_stack_pop(KOS_CONTEXT ctx)
 {
     KOS_STACK *stack;
     uint32_t   size;
@@ -568,7 +568,7 @@ _error:
     return error;
 }
 
-void _KOS_wrap_exception(KOS_CONTEXT ctx)
+void kos_wrap_exception(KOS_CONTEXT ctx)
 {
     int                 error         = KOS_SUCCESS;
     unsigned            depth;

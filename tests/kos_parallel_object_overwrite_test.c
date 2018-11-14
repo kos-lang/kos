@@ -145,8 +145,8 @@ int main(void)
         if (num_threads > 2)
             --num_threads; /* The main thread participates */
 
-        _KOS_vector_init(&mem_buf);
-        TEST(_KOS_vector_resize(&mem_buf,
+        kos_vector_init(&mem_buf);
+        TEST(kos_vector_resize(&mem_buf,
                 num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
             ) == KOS_SUCCESS);
         thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
@@ -165,7 +165,7 @@ int main(void)
         for (i = 0; i < num_threads; i++) {
             thread_cookies[i].test      = &data;
             thread_cookies[i].rand_init = rand();
-            TEST(_KOS_thread_create(ctx, ((i & 1)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+            TEST(kos_thread_create(ctx, ((i & 1)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
         }
 
         i = rand();
@@ -174,11 +174,11 @@ int main(void)
         TEST_NO_EXCEPTION();
 
         for (i = 0; i < num_threads; i++) {
-            _KOS_thread_join(ctx, threads[i]);
+            kos_thread_join(ctx, threads[i]);
             TEST_NO_EXCEPTION();
         }
 
-        _KOS_vector_destroy(&mem_buf);
+        kos_vector_destroy(&mem_buf);
 
         TEST(data.error == KOS_SUCCESS);
 

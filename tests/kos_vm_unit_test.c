@@ -99,9 +99,9 @@ static int _test_instr(KOS_CONTEXT          ctx,
     int         i;
     KOS_OBJ_ID  ret             = KOS_BADPTR;
 
-    module = (KOS_MODULE *)_KOS_alloc_object(ctx,
-                                             OBJ_MODULE,
-                                             sizeof(KOS_MODULE));
+    module = (KOS_MODULE *)kos_alloc_object(ctx,
+                                            OBJ_MODULE,
+                                            sizeof(KOS_MODULE));
     if ( ! module) {
         printf("Failed: Unable to allocate module!\n");
         return KOS_ERROR_EXCEPTION;
@@ -364,7 +364,7 @@ static int _test_instr(KOS_CONTEXT          ctx,
     }
 
     if ( ! error)
-        error = _KOS_vm_run_module(module, &ret);
+        error = kos_vm_run_module(module, &ret);
 
     if (ret_val->value == V_EXCEPT) {
         if (error != KOS_ERROR_EXCEPTION) {
@@ -435,7 +435,7 @@ static int _test_instr(KOS_CONTEXT          ctx,
                 error = KOS_ERROR_EXCEPTION;
             }
             else {
-                uint64_t value = _KOS_double_to_uint64_t(OBJPTR(FLOAT, ret)->value);
+                uint64_t value = kos_double_to_uint64_t(OBJPTR(FLOAT, ret)->value);
                 if ((uint32_t)(value >> 32) != ret_val->high ||
                     (uint32_t)value         != ret_val->low) {
 
@@ -470,7 +470,7 @@ static int _test_instr(KOS_CONTEXT          ctx,
                 if ( ! error && KOS_string_compare(ret, expected)) {
                     struct _KOS_VECTOR cstr;
 
-                    _KOS_vector_init(&cstr);
+                    kos_vector_init(&cstr);
                     KOS_clear_exception(ctx);
 
                     error = KOS_string_to_cstr_vec(ctx, expected, &cstr);
@@ -479,7 +479,7 @@ static int _test_instr(KOS_CONTEXT          ctx,
                     else
                         printf("Failed: line %d: expected string \"%s\"\n", line, cstr.buffer);
 
-                    _KOS_vector_destroy(&cstr);
+                    kos_vector_destroy(&cstr);
                     error = KOS_ERROR_EXCEPTION;
                 }
             }

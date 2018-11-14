@@ -38,15 +38,15 @@ static const char str_prompt_subsequent_line[] = "_ ";
 #include <readline/history.h>
 #include <stdlib.h>
 
-int _KOS_getline_init(struct _KOS_GETLINE *state)
+int kos_getline_init(struct _KOS_GETLINE *state)
 {
     rl_initialize();
     return KOS_SUCCESS;
 }
 
-int _KOS_getline(struct _KOS_GETLINE *state,
-                 enum _KOS_PROMPT     prompt,
-                 struct _KOS_VECTOR  *buf)
+int kos_getline(struct _KOS_GETLINE *state,
+                enum _KOS_PROMPT     prompt,
+                struct _KOS_VECTOR  *buf)
 {
     int         error;
     const char* str_prompt = prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
@@ -62,7 +62,7 @@ int _KOS_getline(struct _KOS_GETLINE *state,
         if (num_read)
             add_history(line);
 
-        error = _KOS_vector_resize(buf, num_read);
+        error = kos_vector_resize(buf, num_read);
 
         if (error)
             fprintf(stderr, "Out of memory\n");
@@ -113,7 +113,7 @@ static int _get_cfn(EditLine *e, char *c)
     return 1;
 }
 
-int _KOS_getline_init(struct _KOS_GETLINE *state)
+int kos_getline_init(struct _KOS_GETLINE *state)
 {
     state->e = el_init("Kos", stdin, stdout, stderr);
 
@@ -140,15 +140,15 @@ int _KOS_getline_init(struct _KOS_GETLINE *state)
     return KOS_SUCCESS;
 }
 
-void _KOS_getline_destroy(struct _KOS_GETLINE *state)
+void kos_getline_destroy(struct _KOS_GETLINE *state)
 {
     history_end(state->h);
     el_end(state->e);
 }
 
-int _KOS_getline(struct _KOS_GETLINE *state,
-                 enum _KOS_PROMPT     prompt,
-                 struct _KOS_VECTOR  *buf)
+int kos_getline(struct _KOS_GETLINE *state,
+                enum _KOS_PROMPT     prompt,
+                struct _KOS_VECTOR  *buf)
 {
     int         count = 0;
     const char *line;
@@ -166,7 +166,7 @@ int _KOS_getline(struct _KOS_GETLINE *state,
     if (count > 0) {
 
         const size_t old_size = buf->size;
-        const int    error    = _KOS_vector_resize(buf, old_size + (size_t)count);
+        const int    error    = kos_vector_resize(buf, old_size + (size_t)count);
 
         if (error) {
             fprintf(stderr, "Out of memory\n");
@@ -187,15 +187,15 @@ int _KOS_getline(struct _KOS_GETLINE *state,
 
 #else
 
-int _KOS_getline_init(struct _KOS_GETLINE *state)
+int kos_getline_init(struct _KOS_GETLINE *state)
 {
-    state->interactive = _KOS_is_stdin_interactive();
+    state->interactive = kos_is_stdin_interactive();
     return KOS_SUCCESS;
 }
 
-int _KOS_getline(struct _KOS_GETLINE *state,
-                 enum _KOS_PROMPT     prompt,
-                 struct _KOS_VECTOR  *buf)
+int kos_getline(struct _KOS_GETLINE *state,
+                enum _KOS_PROMPT     prompt,
+                struct _KOS_VECTOR  *buf)
 {
     int error = KOS_SUCCESS;
 
@@ -210,7 +210,7 @@ int _KOS_getline(struct _KOS_GETLINE *state,
         const size_t increment = _KOS_BUF_ALLOC_SIZE;
         size_t       num_read;
 
-        if (_KOS_vector_resize(buf, old_size + increment)) {
+        if (kos_vector_resize(buf, old_size + increment)) {
             fprintf(stderr, "Out of memory\n");
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
         }

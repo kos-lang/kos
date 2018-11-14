@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     KOS_CONTEXT          ctx;
     struct _KOS_VECTOR   buf;
 
-    _KOS_vector_init(&buf);
+    kos_vector_init(&buf);
 
     setlocale(LC_ALL, "");
 
@@ -136,13 +136,13 @@ int main(int argc, char *argv[])
 
     {
         /* KOSDISASM=1 turns on disassembly */
-        if (!_KOS_get_env("KOSDISASM", &buf) &&
+        if (!kos_get_env("KOSDISASM", &buf) &&
                 buf.size == 2 && buf.buffer[0] == '1' && buf.buffer[1] == 0)
             flags |= KOS_INST_DISASM;
 
         /* KOSINTERACTIVE=1 forces interactive prompt       */
         /* KOSINTERACTIVE=0 forces treating stdin as a file */
-        if (!_KOS_get_env("KOSINTERACTIVE", &buf) &&
+        if (!kos_get_env("KOSINTERACTIVE", &buf) &&
                 buf.size == 2 && buf.buffer[1] == 0) {
 
             if (buf.buffer[0] == '0')
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
         if ( ! error) {
 
             if (interactive < 0)
-                interactive = _KOS_is_stdin_interactive();
+                interactive = kos_is_stdin_interactive();
 
             /* Load subsequent pieces of script from interactive prompt */
             if (interactive)
@@ -247,7 +247,7 @@ _error:
     if (inst_ok)
         KOS_instance_destroy(&inst);
 
-    _KOS_vector_destroy(&buf);
+    kos_vector_destroy(&buf);
 
     return error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
@@ -292,15 +292,15 @@ static int _is_input_complete(struct _KOS_VECTOR *buf,
     int                   error;
     struct _KOS_AST_NODE *out;
 
-    _KOS_mempool_init(&mempool);
+    kos_mempool_init(&mempool);
 
-    _KOS_parser_init(&parser, &mempool, 0, buf->buffer, buf->buffer + buf->size);
+    kos_parser_init(&parser, &mempool, 0, buf->buffer, buf->buffer + buf->size);
 
-    error = _KOS_parser_parse(&parser, &out);
+    error = kos_parser_parse(&parser, &out);
 
-    _KOS_parser_destroy(&parser);
+    kos_parser_destroy(&parser);
 
-    _KOS_mempool_destroy(&mempool);
+    kos_mempool_destroy(&mempool);
 
     return error != KOS_ERROR_PARSE_FAILED || parser.token.type != TT_EOF;
 }
@@ -311,7 +311,7 @@ static int _enforce_eol(struct _KOS_VECTOR *buf)
 
     if (c != '\r' && c != '\n') {
 
-        const int error = _KOS_vector_resize(buf, buf->size + 1);
+        const int error = kos_vector_resize(buf, buf->size + 1);
         if (error)
             return error;
 
@@ -329,14 +329,14 @@ static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
     int                 genline_init = 0;
     struct _KOS_VECTOR  tmp_buf;
 
-    _KOS_vector_init(&tmp_buf);
+    kos_vector_init(&tmp_buf);
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
     print_args = KOS_new_array(ctx, 1);
     TRY_OBJID(print_args);
 
-    error = _KOS_getline_init(&state);
+    error = kos_getline_init(&state);
     if (error) {
         assert(error == KOS_ERROR_OUT_OF_MEMORY);
         fprintf(stderr, "Failed to initialize command line editor\n");
@@ -349,7 +349,7 @@ static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
     for (;;) {
         KOS_OBJ_ID ret;
 
-        error = _KOS_getline(&state, PROMPT_FIRST_LINE, buf);
+        error = kos_getline(&state, PROMPT_FIRST_LINE, buf);
         if (error) {
             assert(error == KOS_SUCCESS_RETURN || error == KOS_ERROR_OUT_OF_MEMORY);
             break;
@@ -361,7 +361,7 @@ static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
 
             tmp_buf.size = 0;
 
-            error = _KOS_getline(&state, PROMPT_SUBSEQUENT_LINE, &tmp_buf);
+            error = kos_getline(&state, PROMPT_SUBSEQUENT_LINE, &tmp_buf);
             if (error) {
                 assert(error == KOS_ERROR_OUT_OF_MEMORY    ||
                        error == KOS_ERROR_CANNOT_READ_FILE ||
@@ -375,7 +375,7 @@ static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
             if (error)
                 break;
 
-            error = _KOS_vector_concat(buf, &tmp_buf);
+            error = kos_vector_concat(buf, &tmp_buf);
             if (error)
                 break;
         }
@@ -421,9 +421,9 @@ static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
 
 _error:
     if (genline_init)
-        _KOS_getline_destroy(&state);
+        kos_getline_destroy(&state);
 
-    _KOS_vector_destroy(&tmp_buf);
+    kos_vector_destroy(&tmp_buf);
 
     return error;
 }

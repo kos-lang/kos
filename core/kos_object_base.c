@@ -44,15 +44,15 @@ KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
     if (GET_SMALL_INT(obj_id) == value)
         return obj_id;
 
-    integer = (KOS_INTEGER *)_KOS_alloc_object(ctx,
-                                               OBJ_INTEGER,
-                                               sizeof(KOS_INTEGER));
+    integer = (KOS_INTEGER *)kos_alloc_object(ctx,
+                                              OBJ_INTEGER,
+                                              sizeof(KOS_INTEGER));
 
     if (integer) {
         assert(integer->header.type == OBJ_INTEGER);
         integer->value = value;
 
-        _KOS_set_return_value(ctx, OBJID(INTEGER, integer));
+        kos_set_return_value(ctx, OBJID(INTEGER, integer));
     }
 
     return OBJID(INTEGER, integer);
@@ -60,15 +60,15 @@ KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
 
 KOS_OBJ_ID KOS_new_float(KOS_CONTEXT ctx, double value)
 {
-    KOS_FLOAT *number = (KOS_FLOAT *)_KOS_alloc_object(ctx,
-                                                       OBJ_FLOAT,
-                                                       sizeof(KOS_FLOAT));
+    KOS_FLOAT *number = (KOS_FLOAT *)kos_alloc_object(ctx,
+                                                      OBJ_FLOAT,
+                                                      sizeof(KOS_FLOAT));
 
     if (number) {
         assert(number->header.type == OBJ_FLOAT);
         number->value = value;
 
-        _KOS_set_return_value(ctx, OBJID(FLOAT, number));
+        kos_set_return_value(ctx, OBJID(FLOAT, number));
     }
 
     return OBJID(FLOAT, number);
@@ -76,9 +76,9 @@ KOS_OBJ_ID KOS_new_float(KOS_CONTEXT ctx, double value)
 
 KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
 {
-    KOS_FUNCTION *func = (KOS_FUNCTION *)_KOS_alloc_object(ctx,
-                                                           OBJ_FUNCTION,
-                                                           sizeof(KOS_FUNCTION));
+    KOS_FUNCTION *func = (KOS_FUNCTION *)kos_alloc_object(ctx,
+                                                          OBJ_FUNCTION,
+                                                          sizeof(KOS_FUNCTION));
 
     if (func) {
         assert(func->header.type == OBJ_FUNCTION);
@@ -95,7 +95,7 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->instr_offs            = ~0U;
         func->state                 = KOS_FUN;
 
-        _KOS_set_return_value(ctx, OBJID(FUNCTION, func));
+        kos_set_return_value(ctx, OBJID(FUNCTION, func));
     }
 
     return OBJID(FUNCTION, func);
@@ -135,11 +135,11 @@ static KOS_OBJ_ID _set_prototype(KOS_CONTEXT ctx,
 
         KOS_OBJ_ID arg;
 
-        _KOS_track_refs(ctx, 1, &this_obj);
+        kos_track_refs(ctx, 1, &this_obj);
 
         arg = KOS_array_read(ctx, args_obj, 0);
 
-        _KOS_untrack_refs(ctx, 1);
+        kos_untrack_refs(ctx, 1);
 
         if ( ! IS_BAD_PTR(arg)) {
 
@@ -163,10 +163,10 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 {
     KOS_OBJ_ID func_obj = KOS_BADPTR;
 
-    _KOS_track_refs(ctx, 2, &func_obj, &proto_obj);
+    kos_track_refs(ctx, 2, &func_obj, &proto_obj);
 
     func_obj = OBJID(CLASS, (KOS_CLASS *)
-                     _KOS_alloc_object(ctx, OBJ_CLASS, sizeof(KOS_CLASS)));
+                     kos_alloc_object(ctx, OBJ_CLASS, sizeof(KOS_CLASS)));
 
     if ( ! IS_BAD_PTR(func_obj)) {
 
@@ -197,10 +197,10 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         if (error)
             func_obj = KOS_BADPTR; /* object is garbage collected */
         else
-            _KOS_set_return_value(ctx, func_obj);
+            kos_set_return_value(ctx, func_obj);
     }
 
-    _KOS_untrack_refs(ctx, 2);
+    kos_untrack_refs(ctx, 2);
 
     return func_obj;
 }
@@ -245,15 +245,15 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
 
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx)
 {
-    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)_KOS_alloc_object(ctx,
-                                                                       OBJ_DYNAMIC_PROP,
-                                                                       sizeof(KOS_DYNAMIC_PROP));
+    KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)kos_alloc_object(ctx,
+                                                                      OBJ_DYNAMIC_PROP,
+                                                                      sizeof(KOS_DYNAMIC_PROP));
 
     if (dyn_prop) {
         dyn_prop->getter = KOS_BADPTR;
         dyn_prop->setter = KOS_BADPTR;
 
-        _KOS_set_return_value(ctx, OBJID(DYNAMIC_PROP, dyn_prop));
+        kos_set_return_value(ctx, OBJID(DYNAMIC_PROP, dyn_prop));
     }
 
     return OBJID(DYNAMIC_PROP, dyn_prop);
@@ -266,7 +266,7 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
 {
     KOS_OBJ_ID dyn_prop_obj = KOS_BADPTR;
 
-    _KOS_track_refs(ctx, 2, &module_obj, &dyn_prop_obj);
+    kos_track_refs(ctx, 2, &module_obj, &dyn_prop_obj);
 
     dyn_prop_obj = KOS_new_dynamic_prop(ctx);
 
@@ -298,14 +298,14 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
             dyn_prop_obj = KOS_BADPTR;
     }
 
-    _KOS_untrack_refs(ctx, 2);
+    kos_untrack_refs(ctx, 2);
 
-    _KOS_set_return_value(ctx, dyn_prop_obj);
+    kos_set_return_value(ctx, dyn_prop_obj);
 
     return dyn_prop_obj;
 }
 
-int _KOS_is_truthy(KOS_OBJ_ID obj_id)
+int kos_is_truthy(KOS_OBJ_ID obj_id)
 {
     int ret;
 

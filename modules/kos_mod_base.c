@@ -99,7 +99,7 @@ static KOS_OBJ_ID _print(KOS_CONTEXT ctx,
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
@@ -111,7 +111,7 @@ static KOS_OBJ_ID _print(KOS_CONTEXT ctx,
         printf("\n");
 
 _error:
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : KOS_VOID;
 }
@@ -135,7 +135,7 @@ static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
     int                error = KOS_SUCCESS;
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
@@ -143,7 +143,7 @@ static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
         fwrite(cstr.buffer, 1, cstr.size - 1, stdout);
 
 _error:
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : KOS_VOID;
 }
@@ -328,7 +328,7 @@ static KOS_OBJ_ID _number_constructor(KOS_CONTEXT ctx,
             ret = arg;
         else if (READ_OBJ_TYPE(arg) == OBJ_STRING) {
             struct _KOS_VECTOR cstr;
-            _KOS_vector_init(&cstr);
+            kos_vector_init(&cstr);
 
             if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, arg, &cstr)) {
 
@@ -338,7 +338,7 @@ static KOS_OBJ_ID _number_constructor(KOS_CONTEXT ctx,
 
                 assert(begin <= end);
 
-                if (KOS_SUCCESS == _KOS_parse_numeric(begin, end, &numeric)) {
+                if (KOS_SUCCESS == kos_parse_numeric(begin, end, &numeric)) {
 
                     if (numeric.type == KOS_INTEGER_VALUE)
                         ret = KOS_new_int(ctx, numeric.u.i);
@@ -351,7 +351,7 @@ static KOS_OBJ_ID _number_constructor(KOS_CONTEXT ctx,
                     KOS_raise_exception_cstring(ctx, str_err_bad_number);
             }
 
-            _KOS_vector_destroy(&cstr);
+            kos_vector_destroy(&cstr);
         }
         else
             KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
@@ -413,7 +413,7 @@ static KOS_OBJ_ID _integer_constructor(KOS_CONTEXT ctx,
         else if (READ_OBJ_TYPE(arg) == OBJ_STRING) {
 
             struct _KOS_VECTOR cstr;
-            _KOS_vector_init(&cstr);
+            kos_vector_init(&cstr);
 
             if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, arg, &cstr)) {
 
@@ -423,7 +423,7 @@ static KOS_OBJ_ID _integer_constructor(KOS_CONTEXT ctx,
 
                 assert(begin <= end);
 
-                error = _KOS_parse_int(begin, end, &value);
+                error = kos_parse_int(begin, end, &value);
 
                 if (error)
                     KOS_raise_exception_cstring(ctx, str_err_bad_number);
@@ -431,7 +431,7 @@ static KOS_OBJ_ID _integer_constructor(KOS_CONTEXT ctx,
                     ret = KOS_new_int(ctx, value);
             }
 
-            _KOS_vector_destroy(&cstr);
+            kos_vector_destroy(&cstr);
         }
         else if ( ! IS_BAD_PTR(arg))
             KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
@@ -501,7 +501,7 @@ static KOS_OBJ_ID _float_constructor(KOS_CONTEXT ctx,
         case OBJ_STRING: {
 
             struct _KOS_VECTOR cstr;
-            _KOS_vector_init(&cstr);
+            kos_vector_init(&cstr);
 
             if (KOS_string_to_cstr_vec(ctx, arg, &cstr) == KOS_SUCCESS) {
 
@@ -512,7 +512,7 @@ static KOS_OBJ_ID _float_constructor(KOS_CONTEXT ctx,
 
                 assert(begin <= end);
 
-                error = _KOS_parse_double(begin, end, &value);
+                error = kos_parse_double(begin, end, &value);
 
                 if (error)
                     KOS_raise_exception_cstring(ctx, str_err_bad_number);
@@ -520,7 +520,7 @@ static KOS_OBJ_ID _float_constructor(KOS_CONTEXT ctx,
                     ret = KOS_new_float(ctx, value);
             }
 
-            _KOS_vector_destroy(&cstr);
+            kos_vector_destroy(&cstr);
             break;
         }
 
@@ -572,7 +572,7 @@ static KOS_OBJ_ID _boolean_constructor(KOS_CONTEXT ctx,
         KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
         if ( ! IS_BAD_PTR(arg))
-            ret = KOS_BOOL(_KOS_is_truthy(arg));
+            ret = KOS_BOOL(kos_is_truthy(arg));
     }
     else
         ret = KOS_FALSE;
@@ -1248,7 +1248,7 @@ static void _thread_finalize(KOS_CONTEXT ctx,
     /* TODO don't block GC: add detection for finished threads, put thread
      *      on a list for GC to retry to join */
     if (priv)
-        _KOS_thread_join(ctx, (_KOS_THREAD)priv);
+        kos_thread_join(ctx, (_KOS_THREAD)priv);
 }
 
 /* @item base function.prototype.async()
@@ -1308,7 +1308,7 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
 
     OBJPTR(OBJECT, thread_obj)->finalize = _thread_finalize;
 
-    TRY(_KOS_thread_create(ctx, _async_func, OBJPTR(OBJECT, thread_obj), &thread));
+    TRY(kos_thread_create(ctx, _async_func, OBJPTR(OBJECT, thread_obj), &thread));
 
     KOS_object_set_private(*OBJPTR(OBJECT, thread_obj), (void *)thread);
 
@@ -1355,7 +1355,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
 
     thread = (_KOS_THREAD)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
 
-    if (thread && _KOS_is_current_thread(thread)) {
+    if (thread && kos_is_current_thread(thread)) {
         KOS_raise_exception_cstring(ctx, str_err_join_self);
         return KOS_BADPTR;
     }
@@ -1369,7 +1369,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
 
     /* TODO don't block GC */
 
-    error = _KOS_thread_join(ctx, thread);
+    error = kos_thread_join(ctx, thread);
 
     if (!error) {
         ret = KOS_get_property(ctx, this_obj,
@@ -1540,9 +1540,9 @@ static KOS_OBJ_ID _expand_for_sort(KOS_CONTEXT ctx,
         TRY_OBJID(ret);
     }
 
-    src     = _KOS_get_array_buffer(OBJPTR(ARRAY, iterable));
+    src     = kos_get_array_buffer(OBJPTR(ARRAY, iterable));
     src_end = src + size;
-    dest    = _KOS_get_array_buffer(OBJPTR(ARRAY, ret));
+    dest    = kos_get_array_buffer(OBJPTR(ARRAY, ret));
 
     while (src < src_end) {
 
@@ -1675,9 +1675,9 @@ static void _copy_sort_results(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(sorted) == OBJ_ARRAY);
     assert(step == 2 || step == 3);
 
-    src     = _KOS_get_array_buffer(OBJPTR(ARRAY, sorted));
+    src     = kos_get_array_buffer(OBJPTR(ARRAY, sorted));
     src_end = src + KOS_get_array_size(sorted);
-    dest    = _KOS_get_array_buffer(OBJPTR(ARRAY, ret));
+    dest    = kos_get_array_buffer(OBJPTR(ARRAY, ret));
 
     assert(KOS_get_array_size(ret) * step == KOS_get_array_size(sorted));
 
@@ -1764,7 +1764,7 @@ static KOS_OBJ_ID _sort(KOS_CONTEXT ctx,
         const KOS_OBJ_ID aux = _expand_for_sort(ctx, this_obj, key);
         TRY_OBJID(aux);
 
-        src = _KOS_get_array_buffer(OBJPTR(ARRAY, aux));
+        src = kos_get_array_buffer(OBJPTR(ARRAY, aux));
 
         _sort_range(src,
                     src + KOS_get_array_size(aux),
@@ -2232,7 +2232,7 @@ static int _pack_format(KOS_CONTEXT              ctx,
     uint8_t           *dst   = 0;
     struct _KOS_VECTOR str_buf;
 
-    _KOS_vector_init(&str_buf);
+    kos_vector_init(&str_buf);
 
     if (fmt->idx < 0) {
         KOS_OBJ_ID obj = fmt->data;
@@ -2339,9 +2339,9 @@ static int _pack_format(KOS_CONTEXT              ctx,
                 }
 
                 if (size == 4)
-                    out_val = _KOS_float_to_uint32_t((float)value);
+                    out_val = kos_float_to_uint32_t((float)value);
                 else
-                    out_val = _KOS_double_to_uint64_t(value);
+                    out_val = kos_double_to_uint64_t(value);
 
                 for (i = 0; i < size; i++) {
                     const unsigned offs = big_end ? (size - 1U - i) : i;
@@ -2428,7 +2428,7 @@ static int _pack_format(KOS_CONTEXT              ctx,
     }
 
 _error:
-    _KOS_vector_destroy(&str_buf);
+    kos_vector_destroy(&str_buf);
     return error;
 }
 
@@ -2639,7 +2639,7 @@ static KOS_OBJ_ID _unpack(KOS_CONTEXT ctx,
 
         TRY(KOS_get_integer(ctx, fmt.fmt_str, &idx));
 
-        idx = _KOS_fix_index(idx, KOS_get_buffer_size(this_obj));
+        idx = kos_fix_index(idx, KOS_get_buffer_size(this_obj));
 
         fmt.idx = (int)idx;
 
@@ -3186,7 +3186,7 @@ static KOS_OBJ_ID _find(KOS_CONTEXT ctx,
 
         TRY(KOS_get_integer(ctx, arg, &pos64));
 
-        pos = (int)_KOS_fix_index(pos64, len);
+        pos = (int)kos_fix_index(pos64, len);
     }
 
     TRY(KOS_string_find(ctx, this_obj, pattern, KOS_FIND_FORWARD, &pos));
@@ -3251,7 +3251,7 @@ static KOS_OBJ_ID _rfind(KOS_CONTEXT ctx,
         if (pos64 < -(int64_t)text_len)
             pos = -1;
         else {
-            const int new_pos = (int)_KOS_fix_index(pos64, text_len);
+            const int new_pos = (int)kos_fix_index(pos64, text_len);
 
             if (new_pos < pos)
                 pos = new_pos;
@@ -3325,7 +3325,7 @@ static KOS_OBJ_ID _scan(KOS_CONTEXT ctx,
 
             TRY(KOS_get_integer(ctx, arg, &pos64));
 
-            pos = (int)_KOS_fix_index(pos64, len);
+            pos = (int)kos_fix_index(pos64, len);
 
             if (KOS_get_array_size(args_obj) > 2) {
 
@@ -3415,7 +3415,7 @@ static KOS_OBJ_ID _rscan(KOS_CONTEXT ctx,
             if (pos64 < -(int64_t)text_len)
                 pos = -1;
             else {
-                const int new_pos = (int)_KOS_fix_index(pos64, text_len);
+                const int new_pos = (int)kos_fix_index(pos64, text_len);
 
                 if (new_pos < pos)
                     pos = new_pos;
@@ -3799,7 +3799,7 @@ static KOS_OBJ_ID _print_exception(KOS_CONTEXT ctx,
     KOS_OBJ_ID         formatted = KOS_format_exception(ctx, this_obj);
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     TRY_OBJID(formatted);
 
@@ -3822,11 +3822,11 @@ static KOS_OBJ_ID _print_exception(KOS_CONTEXT ctx,
     ret = this_obj;
 
 _error:
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
     return ret;
 }
 
-int _KOS_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 

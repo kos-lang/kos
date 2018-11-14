@@ -107,7 +107,7 @@ static int _test_object(KOS_CONTEXT           ctx,
 
     TEST(KOS_push_local(ctx, &obj_id) == KOS_SUCCESS);
 
-    _KOS_set_return_value(ctx, KOS_BADPTR);
+    kos_set_return_value(ctx, KOS_BADPTR);
 
     TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -490,12 +490,12 @@ int main(void)
             obj_id = KOS_new_function(ctx);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(_KOS_stack_push(ctx, obj_id) == KOS_SUCCESS);
-            _KOS_stack_pop(ctx);
+            TEST(kos_stack_push(ctx, obj_id) == KOS_SUCCESS);
+            kos_stack_pop(ctx);
             ctx->stack = KOS_BADPTR;
         }
 
-        _KOS_set_return_value(ctx, KOS_BADPTR);
+        kos_set_return_value(ctx, KOS_BADPTR);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -525,7 +525,7 @@ int main(void)
             TEST( ! IS_BAD_PTR(prop_id));
             TEST(KOS_set_property(ctx, obj_id, prop_id, obj_id) == KOS_SUCCESS);
 
-            _KOS_set_return_value(ctx, KOS_BADPTR);
+            kos_set_return_value(ctx, KOS_BADPTR);
 
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -568,7 +568,7 @@ int main(void)
             obj_id = KOS_new_builtin_function(ctx, _handler, 0);
             TEST( ! IS_BAD_PTR(obj_id));
 
-            TEST(_KOS_stack_push(ctx, obj_id) == KOS_SUCCESS);
+            TEST(kos_stack_push(ctx, obj_id) == KOS_SUCCESS);
 
             obj_id = KOS_new_builtin_class(ctx, _handler, 0);
             TEST( ! IS_BAD_PTR(obj_id));
@@ -588,7 +588,7 @@ int main(void)
             obj_id = KOS_new_cstring(ctx, "0123456789012345678901234567890123456789");
             TEST( ! IS_BAD_PTR(obj_id));
 
-            _KOS_set_return_value(ctx, obj_id);
+            kos_set_return_value(ctx, obj_id);
 
             obj_id = KOS_string_slice(ctx, obj_id, 1, -1);
             TEST( ! IS_BAD_PTR(obj_id));
@@ -627,10 +627,10 @@ int main(void)
 
             TEST(KOS_get_array_size(array_id) == 3);
 
-            _KOS_stack_pop(ctx);
+            kos_stack_pop(ctx);
             ctx->stack = KOS_BADPTR;
 
-            _KOS_set_return_value(ctx, KOS_BADPTR);
+            kos_set_return_value(ctx, KOS_BADPTR);
             ctx->exception = KOS_BADPTR;
 
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
@@ -658,11 +658,11 @@ int main(void)
 
         TEST(KOS_new_array(ctx, 0) != KOS_BADPTR);
 
-        _KOS_heap_release_thread_page(ctx);
+        kos_heap_release_thread_page(ctx);
 
         TEST(KOS_new_array(ctx, 0) != KOS_BADPTR);
 
-        _KOS_set_return_value(ctx, KOS_BADPTR);
+        kos_set_return_value(ctx, KOS_BADPTR);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -703,7 +703,7 @@ int main(void)
         _fill_buffer(obj_id[0], 0x0A);
         _fill_buffer(obj_id[1], 0x0B);
 
-        _KOS_heap_release_thread_page(ctx);
+        kos_heap_release_thread_page(ctx);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -721,7 +721,7 @@ int main(void)
 
         KOS_pop_local_scope(ctx);
 
-        _KOS_set_return_value(ctx, KOS_BADPTR);
+        kos_set_return_value(ctx, KOS_BADPTR);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 

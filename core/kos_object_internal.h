@@ -58,12 +58,12 @@ typedef struct _KOS_OBJECT_STORAGE {
 #define KOS_MAX_PROP_REPROBES  8U
 #define KOS_SPEED_GROW_BELOW   64U
 
-void _KOS_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype);
+void kos_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype);
 
-int _KOS_object_copy_prop_table(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  obj_id);
+int kos_object_copy_prop_table(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  obj_id);
 
-int _KOS_is_truthy(KOS_OBJ_ID obj_id);
+int kos_is_truthy(KOS_OBJ_ID obj_id);
 
 /*==========================================================================*/
 /* KOS_ARRAY                                                                */
@@ -79,28 +79,28 @@ typedef struct _KOS_ARRAY_STORAGE {
 
 #ifdef __cplusplus
 
-static inline KOS_ATOMIC(KOS_OBJ_ID) *_KOS_get_array_buffer(KOS_ARRAY *array)
+static inline KOS_ATOMIC(KOS_OBJ_ID) *kos_get_array_buffer(KOS_ARRAY *array)
 {
     const KOS_OBJ_ID buf_obj = KOS_atomic_read_obj(array->data);
     assert( ! IS_BAD_PTR(buf_obj));
     return &OBJPTR(ARRAY_STORAGE, buf_obj)->buf[0];
 }
 
-static inline KOS_OBJ_ID _KOS_get_array_storage(KOS_OBJ_ID obj_id)
+static inline KOS_OBJ_ID kos_get_array_storage(KOS_OBJ_ID obj_id)
 {
     return KOS_atomic_read_obj(OBJPTR(ARRAY, obj_id)->data);
 }
 
 #else
 
-#define _KOS_get_array_buffer(array) (&OBJPTR(ARRAY_STORAGE, KOS_atomic_read_obj((array)->data))->buf[0])
+#define kos_get_array_buffer(array) (&OBJPTR(ARRAY_STORAGE, KOS_atomic_read_obj((array)->data))->buf[0])
 
-#define _KOS_get_array_storage(obj_id) (KOS_atomic_read_obj(OBJPTR(ARRAY, (obj_id))->data))
+#define kos_get_array_storage(obj_id) (KOS_atomic_read_obj(OBJPTR(ARRAY, (obj_id))->data))
 
 #endif
 
-int _KOS_array_copy_storage(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  obj_id);
+int kos_array_copy_storage(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  obj_id);
 
 /*==========================================================================*/
 /* KOS_BUFFER                                                               */
@@ -114,30 +114,30 @@ int _KOS_array_copy_storage(KOS_CONTEXT ctx,
 
 #ifdef __cplusplus
 
-static inline const void* _KOS_get_string_buffer(KOS_STRING *str)
+static inline const void* kos_get_string_buffer(KOS_STRING *str)
 {
     return (str->header.flags & KOS_STRING_LOCAL) ? &str->local.data[0] : str->ptr.data_ptr;
 }
 
-static inline enum _KOS_STRING_FLAGS _KOS_get_string_elem_size(KOS_STRING *str)
+static inline enum _KOS_STRING_FLAGS kos_get_string_elem_size(KOS_STRING *str)
 {
     return (enum _KOS_STRING_FLAGS)(str->header.flags & KOS_STRING_ELEM_MASK);
 }
 
 #else
 
-#define _KOS_get_string_buffer(str) (((str)->header.flags & KOS_STRING_LOCAL) ? \
+#define kos_get_string_buffer(str) (((str)->header.flags & KOS_STRING_LOCAL) ? \
                 (const void *)(&(str)->local.data[0]) : \
                 (const void *)((str)->ptr.data_ptr))
 
-#define _KOS_get_string_elem_size(str) ((enum _KOS_STRING_FLAGS)((str)->header.flags & KOS_STRING_ELEM_MASK))
+#define kos_get_string_elem_size(str) ((enum _KOS_STRING_FLAGS)((str)->header.flags & KOS_STRING_ELEM_MASK))
 
 #endif
 
-int _KOS_append_cstr(KOS_CONTEXT         ctx,
-                     struct _KOS_VECTOR *cstr_vec,
-                     const char         *str,
-                     size_t              len);
+int kos_append_cstr(KOS_CONTEXT         ctx,
+                    struct _KOS_VECTOR *cstr_vec,
+                    const char         *str,
+                    size_t              len);
 
 /*==========================================================================*/
 /* KOS_STACK                                                                */
@@ -145,12 +145,12 @@ int _KOS_append_cstr(KOS_CONTEXT         ctx,
 
 #define KOS_STACK_EXTRA 4U
 
-int _KOS_stack_push(KOS_CONTEXT ctx,
-                    KOS_OBJ_ID  func_obj);
+int kos_stack_push(KOS_CONTEXT ctx,
+                   KOS_OBJ_ID  func_obj);
 
-void _KOS_stack_pop(KOS_CONTEXT ctx);
+void kos_stack_pop(KOS_CONTEXT ctx);
 
-void _KOS_wrap_exception(KOS_CONTEXT ctx);
+void kos_wrap_exception(KOS_CONTEXT ctx);
 
 /*==========================================================================*/
 /* KOS_MODULE                                                               */
@@ -161,12 +161,12 @@ struct _KOS_MODULE_INIT {
     KOS_BUILTIN_INIT init;
 };
 
-KOS_OBJ_ID _KOS_module_import(KOS_CONTEXT ctx,
-                              const char *module_name, /* Module name or path, ASCII or UTF-8    */
-                              unsigned    name_size,   /* Length of module name or path in bytes */
-                              const char *data,        /* Module data or 0 if load from file     */
-                              unsigned    data_size,   /* Data length if data is not 0           */
-                              int        *out_module_idx);
+KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
+                             const char *module_name, /* Module name or path, ASCII or UTF-8    */
+                             unsigned    name_size,   /* Length of module name or path in bytes */
+                             const char *data,        /* Module data or 0 if load from file     */
+                             unsigned    data_size,   /* Data length if data is not 0           */
+                             int        *out_module_idx);
 
 /*==========================================================================*/
 /* KOS_HEAP                                                                 */
@@ -188,15 +188,15 @@ typedef struct _KOS_LOCAL_REFS {
 } KOS_LOCAL_REFS;
 
 #ifndef NDEBUG
-int _KOS_heap_lend_page(KOS_CONTEXT ctx,
-                        void       *buffer,
-                        size_t      size);
+int kos_heap_lend_page(KOS_CONTEXT ctx,
+                       void       *buffer,
+                       size_t      size);
 #endif
 
-void _KOS_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
+void kos_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
 
-void _KOS_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
+void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
 
-void _KOS_untrack_refs(KOS_CONTEXT ctx, int num_entries);
+void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries);
 
 #endif

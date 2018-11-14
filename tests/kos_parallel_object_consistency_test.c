@@ -57,7 +57,7 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
         KOS_atomic_full_barrier();
 
     for (i = 0; i < test->num_loops; i++) {
-        const int rnd_num   = (int)_KOS_rng_random_range(&data->rng, ((unsigned)test->num_props / 4U) - 1U);
+        const int rnd_num   = (int)kos_rng_random_range(&data->rng, ((unsigned)test->num_props / 4U) - 1U);
         const int num_props = (3 * test->num_props / 4) + rnd_num;
         const int end_prop  = first_prop + num_props;
         int       i_prop;
@@ -146,8 +146,8 @@ int main(void)
 
         num_props = num_threads * max_props_per_th;
 
-        _KOS_vector_init(&mem_buf);
-        TEST(_KOS_vector_resize(&mem_buf,
+        kos_vector_init(&mem_buf);
+        TEST(kos_vector_resize(&mem_buf,
                 num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
                 + num_props * sizeof(KOS_OBJ_ID)
             ) == KOS_SUCCESS);
@@ -156,7 +156,7 @@ int main(void)
         threads        = (_KOS_THREAD *)(thread_cookies + num_threads);
 
         for (i = 0; i < num_threads; i++) {
-            _KOS_rng_init(&thread_cookies[i].rng);
+            kos_rng_init(&thread_cookies[i].rng);
             thread_cookies[i].test       = &data;
             thread_cookies[i].first_prop = i * max_props_per_th;
         }
@@ -167,7 +167,7 @@ int main(void)
 
             for (k = 0; k < sizeof(buf); k++)
                 if (k + 4U < sizeof(buf))
-                    buf[k] = (char)_KOS_rng_random_range(&thread_cookies->rng, 127U);
+                    buf[k] = (char)kos_rng_random_range(&thread_cookies->rng, 127U);
                 else
                     buf[k] = (char)((i >> ((sizeof(buf) - 1 - k) * 7) & 0x7F));
 
@@ -190,14 +190,14 @@ int main(void)
 
             /* Start with 1, because 0 is for the main thread, which participates */
             for (i = 1; i < num_threads; i++)
-                TEST(_KOS_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(kos_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
             KOS_atomic_write_u32(data.go, 1);
             TEST(_run_test(ctx, thread_cookies) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             for (i = 1; i < num_threads; i++) {
-                _KOS_thread_join(ctx, threads[i]);
+                kos_thread_join(ctx, threads[i]);
                 TEST_NO_EXCEPTION();
             }
 
@@ -210,7 +210,7 @@ int main(void)
             }
         }
 
-        _KOS_vector_destroy(&mem_buf);
+        kos_vector_destroy(&mem_buf);
     }
 
     KOS_instance_destroy(&inst);

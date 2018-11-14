@@ -656,7 +656,7 @@ int main(void)
         TEST(KOS_set_property(ctx, obj, str_efg, TO_SMALL_INT(3)) == KOS_SUCCESS);
         TEST(KOS_set_property(ctx, obj, str_ghi, TO_SMALL_INT(4)) == KOS_SUCCESS);
 
-        TEST(_KOS_object_copy_prop_table(ctx, obj) == KOS_SUCCESS);
+        TEST(kos_object_copy_prop_table(ctx, obj) == KOS_SUCCESS);
 
         TEST(KOS_get_property(ctx, obj, str_abc) == TO_SMALL_INT(1));
         TEST(KOS_get_property(ctx, obj, str_cde) == TO_SMALL_INT(2));

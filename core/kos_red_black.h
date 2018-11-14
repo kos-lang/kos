@@ -34,25 +34,25 @@ struct _KOS_RED_BLACK_NODE {
 typedef int (*_KOS_RED_BLACK_COMPARE_ITEM)(void                       *what,
                                            struct _KOS_RED_BLACK_NODE *node);
 
-struct _KOS_RED_BLACK_NODE *_KOS_red_black_find(struct _KOS_RED_BLACK_NODE *root,
-                                                void                       *what,
-                                                _KOS_RED_BLACK_COMPARE_ITEM compare);
+struct _KOS_RED_BLACK_NODE *kos_red_black_find(struct _KOS_RED_BLACK_NODE *root,
+                                               void                       *what,
+                                               _KOS_RED_BLACK_COMPARE_ITEM compare);
 
 typedef int (*_KOS_RED_BLACK_WALK)(struct _KOS_RED_BLACK_NODE *node,
                                    void                       *cookie);
 
-int _KOS_red_black_walk(struct _KOS_RED_BLACK_NODE *node,
-                        _KOS_RED_BLACK_WALK         walk,
-                        void                       *cookie);
+int kos_red_black_walk(struct _KOS_RED_BLACK_NODE *node,
+                       _KOS_RED_BLACK_WALK         walk,
+                       void                       *cookie);
 
 typedef int (*_KOS_RED_BLACK_COMPARE_NODE)(struct _KOS_RED_BLACK_NODE *a,
                                            struct _KOS_RED_BLACK_NODE *b);
 
-void _KOS_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
-                           struct _KOS_RED_BLACK_NODE  *new_node,
-                           _KOS_RED_BLACK_COMPARE_NODE  compare);
+void kos_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
+                          struct _KOS_RED_BLACK_NODE  *new_node,
+                          _KOS_RED_BLACK_COMPARE_NODE  compare);
 
-void _KOS_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
-                           struct _KOS_RED_BLACK_NODE  *node);
+void kos_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
+                          struct _KOS_RED_BLACK_NODE  *node);
 
 #endif

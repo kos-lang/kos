@@ -74,7 +74,7 @@ static int _gen_new_reg(struct _KOS_COMP_UNIT *program,
     if (frame->num_regs == 256) {
 
         struct _KOS_TOKEN *token = (struct _KOS_TOKEN *)
-            _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_TOKEN));
+            kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_TOKEN));
 
         if (token) {
             memset(token, 0, sizeof(*token));
@@ -98,7 +98,7 @@ static int _gen_new_reg(struct _KOS_COMP_UNIT *program,
     }
     else {
         reg = (struct _KOS_REG *)
-            _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_REG));
+            kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_REG));
 
         if ( ! reg)
             error = KOS_ERROR_OUT_OF_MEMORY;
@@ -306,7 +306,7 @@ static int _lookup_local_var_even_inactive(struct _KOS_COMP_UNIT   *program,
      * via the arguments array. */
     for (scope = program->scope_stack; scope && scope->next && ! scope->is_function; scope = scope->next) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var && (var->is_active || ! only_active)) {
             assert( ! (var->type & VAR_ARGUMENT));
@@ -327,7 +327,7 @@ static int _lookup_local_var_even_inactive(struct _KOS_COMP_UNIT   *program,
     /* Lookup arguments in registers */
     if ( ! var && scope && scope->is_function) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var && (var->type & VAR_ARGUMENT_IN_REG)) {
             assert(var->reg);
@@ -340,7 +340,7 @@ static int _lookup_local_var_even_inactive(struct _KOS_COMP_UNIT   *program,
     /* Access arguments list */
     if ( ! var && scope && scope->is_function && scope->ellipsis) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
         if (var != scope->ellipsis)
             var = 0;
 
@@ -380,7 +380,7 @@ static int _lookup_var(struct _KOS_COMP_UNIT   *program,
     /* Find variable in args, closures and globals */
     for ( ; scope; scope = scope->next) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var && var->is_active) {
             /* Global scope */
@@ -422,7 +422,7 @@ static int _lookup_var(struct _KOS_COMP_UNIT   *program,
             while (scope->next && ! scope->is_function)
                 scope = scope->next;
 
-            ref = _KOS_find_scope_ref(program->cur_frame, scope);
+            ref = kos_find_scope_ref(program->cur_frame, scope);
 
             assert(ref);
             if (is_var || is_arg_in_reg) {
@@ -589,7 +589,7 @@ static void _add_constant(struct _KOS_COMP_UNIT  *program,
 
     program->last_constant = constant;
 
-    _KOS_red_black_insert(&program->constants,
+    kos_red_black_insert(&program->constants,
                           &constant->rb_tree_node,
                           _constants_compare_node);
 }
@@ -602,14 +602,14 @@ static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
     int error = KOS_SUCCESS;
 
     struct _KOS_COMP_STRING *str =
-            (struct _KOS_COMP_STRING *)_KOS_red_black_find(program->constants,
-                                                           (struct _KOS_TOKEN *)token,
-                                                           _strings_compare_item);
+            (struct _KOS_COMP_STRING *)kos_red_black_find(program->constants,
+                                                          (struct _KOS_TOKEN *)token,
+                                                          _strings_compare_item);
 
     if (!str) {
 
         str = (struct _KOS_COMP_STRING *)
-            _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_COMP_STRING));
+            kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_COMP_STRING));
 
         if (str) {
 
@@ -724,7 +724,7 @@ static int _gen_assert_str(struct _KOS_COMP_UNIT      *program,
     if (length > max_length)
         length = max_length;
 
-    buf = (char *)_KOS_mempool_alloc(&program->allocator, length);
+    buf = (char *)kos_mempool_alloc(&program->allocator, length);
 
     if (buf) {
 
@@ -770,7 +770,7 @@ static int _add_addr2line(struct _KOS_COMP_UNIT   *program,
         }
     }
 
-    error = _KOS_vector_resize(addr2line, addr2line->size + sizeof(new_loc));
+    error = kos_vector_resize(addr2line, addr2line->size + sizeof(new_loc));
 
     if ( ! error) {
 
@@ -789,8 +789,8 @@ static int _gen_instr(struct _KOS_COMP_UNIT *program,
                       ...)
 {
     int cur_offs = program->cur_offs;
-    int error    = _KOS_vector_resize(&program->code_gen_buf,
-                                      (size_t)cur_offs + 1 + 4 * num_args); /* Over-estimate */
+    int error    = kos_vector_resize(&program->code_gen_buf,
+                                    (size_t)cur_offs + 1 + 4 * num_args); /* Over-estimate */
     if (!error) {
 
         enum _KOS_BYTECODE_INSTR instr = INSTR_BREAKPOINT;
@@ -808,11 +808,11 @@ static int _gen_instr(struct _KOS_COMP_UNIT *program,
             if (i == 0)
                 instr = (enum _KOS_BYTECODE_INSTR)value;
             else
-                size = _KOS_get_operand_size(instr, i-1);
+                size = kos_get_operand_size(instr, i-1);
 
             if (size == 1) {
-                if ( ! _KOS_is_register(instr, i-1)) {
-                    if (_KOS_is_signed_op(instr, i-1)) {
+                if ( ! kos_is_register(instr, i-1)) {
+                    if (kos_is_signed_op(instr, i-1)) {
                         assert((uint32_t)(value + 128) < 256U);
                     }
                     else {
@@ -945,8 +945,8 @@ static void _remove_last_instr(struct _KOS_COMP_UNIT *program,
     program->cur_offs = offs;
 }
 
-int _KOS_scope_compare_item(void                       *what,
-                            struct _KOS_RED_BLACK_NODE *node)
+int kos_scope_compare_item(void                       *what,
+                           struct _KOS_RED_BLACK_NODE *node)
 {
     const struct _KOS_AST_NODE *scope_node = (const struct _KOS_AST_NODE *)what;
 
@@ -959,13 +959,13 @@ static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT      *program,
                                       const struct _KOS_AST_NODE *node)
 {
     struct _KOS_SCOPE *scope = (struct _KOS_SCOPE *)
-            _KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item);
+            kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
 
     assert(scope);
 
     assert(scope->next == program->scope_stack);
 
-    _KOS_deactivate_vars(scope);
+    kos_deactivate_vars(scope);
 
     program->scope_stack = scope;
 
@@ -992,7 +992,7 @@ static void _pop_scope(struct _KOS_COMP_UNIT *program)
     assert(program->scope_stack);
 
     if (program->scope_stack->vars)
-        _KOS_red_black_walk(program->scope_stack->vars, _free_scope_regs, (void *)program);
+        kos_red_black_walk(program->scope_stack->vars, _free_scope_regs, (void *)program);
 
     program->scope_stack = program->scope_stack->next;
 }
@@ -1021,7 +1021,7 @@ static int _import_global(const char *global_name,
     token.pos    = info->pos;
     token.type   = TT_IDENTIFIER;
 
-    var = _KOS_find_var(info->program->scope_stack->vars, &token);
+    var = kos_find_var(info->program->scope_stack->vars, &token);
 
     assert(var);
     assert(var->type == VAR_GLOBAL);
@@ -1124,7 +1124,7 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
 
     const struct _KOS_TOKEN *name_token;
 
-    TRY(_KOS_vector_resize(&program->code_buf, fun_new_offs + fun_size));
+    TRY(kos_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
     if (a2l_new_offs) {
 
@@ -1137,10 +1137,10 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
             a2l_new_offs -= sizeof(struct _KOS_COMP_ADDR_TO_LINE);
     }
 
-    TRY(_KOS_vector_resize(&program->addr2line_buf, a2l_new_offs + a2l_size));
+    TRY(kos_vector_resize(&program->addr2line_buf, a2l_new_offs + a2l_size));
 
-    TRY(_KOS_vector_resize(&program->addr2func_buf,
-                           program->addr2func_buf.size + sizeof(struct _KOS_COMP_ADDR_TO_FUNC)));
+    TRY(kos_vector_resize(&program->addr2func_buf,
+                          program->addr2func_buf.size + sizeof(struct _KOS_COMP_ADDR_TO_FUNC)));
 
     if (name_node) {
         if (name_node->children)
@@ -1162,7 +1162,7 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
            program->code_gen_buf.buffer + fun_start_offs,
            fun_size);
 
-    TRY(_KOS_vector_resize(&program->code_gen_buf, (size_t)fun_start_offs));
+    TRY(kos_vector_resize(&program->code_gen_buf, (size_t)fun_start_offs));
 
     program->cur_offs = fun_start_offs;
 
@@ -1172,7 +1172,7 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
            program->addr2line_gen_buf.buffer + addr2line_start_offs,
            a2l_size);
 
-    TRY(_KOS_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs));
+    TRY(kos_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs));
 
     /* Update addr2line offsets for this function */
     {
@@ -1215,8 +1215,8 @@ static struct _KOS_COMP_FUNCTION *_alloc_func_constant(struct _KOS_COMP_UNIT *pr
 {
     struct _KOS_COMP_FUNCTION *constant;
 
-    constant = (struct _KOS_COMP_FUNCTION *)_KOS_mempool_alloc(&program->allocator,
-                                                               sizeof(struct _KOS_COMP_FUNCTION));
+    constant = (struct _KOS_COMP_FUNCTION *)kos_mempool_alloc(&program->allocator,
+                                                              sizeof(struct _KOS_COMP_FUNCTION));
     if (constant) {
 
         constant->header.type = KOS_COMP_CONST_FUNCTION;
@@ -1358,7 +1358,7 @@ static int _if(struct _KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    always_truthy = _KOS_node_is_truthy(program, node);
+    always_truthy = kos_node_is_truthy(program, node);
 
     if ( ! always_truthy) {
 
@@ -1441,7 +1441,7 @@ static int _gen_return(struct _KOS_COMP_UNIT *program,
         const int return_reg = scope->catch_ref.catch_reg->reg;
 
         struct _KOS_RETURN_OFFS *const return_offs = (struct _KOS_RETURN_OFFS *)
-            _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_RETURN_OFFS));
+            kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_RETURN_OFFS));
 
         if ( ! return_offs)
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
@@ -1705,9 +1705,9 @@ static int _repeat(struct _KOS_COMP_UNIT      *program,
 
     test_instr_offs = program->cur_offs;
 
-    if ( ! _KOS_node_is_falsy(program, node)) {
+    if ( ! kos_node_is_falsy(program, node)) {
 
-        const int is_truthy = _KOS_node_is_truthy(program, node);
+        const int is_truthy = kos_node_is_truthy(program, node);
 
         if ( ! is_truthy) {
             TRY(_visit_node(program, node, &reg));
@@ -1747,7 +1747,7 @@ static int _for(struct _KOS_COMP_UNIT      *program,
 
     assert(cond_node);
 
-    if ( ! _KOS_node_is_falsy(program, cond_node)) {
+    if ( ! kos_node_is_falsy(program, cond_node)) {
 
         int                         loop_start_offs;
         int                         cond_jump_instr_offs = -1;
@@ -1759,7 +1759,7 @@ static int _for(struct _KOS_COMP_UNIT      *program,
 
         program->cur_frame->break_offs = 0;
 
-        is_truthy = _KOS_node_is_truthy(program, cond_node);
+        is_truthy = kos_node_is_truthy(program, cond_node);
 
         if (cond_node->type == NT_EMPTY) {
             assert( ! is_truthy);
@@ -1911,7 +1911,7 @@ static int _for_in(struct _KOS_COMP_UNIT      *program,
     TRY(_visit_node(program, expr_node, &iter_reg));
     assert(iter_reg);
 
-    _KOS_activate_new_vars(program, assg_node->children);
+    kos_activate_new_vars(program, assg_node->children);
 
     TRY(_invoke_get_iterator(program, &iter_reg));
 
@@ -2042,7 +2042,7 @@ static int _push_break_offs(struct _KOS_COMP_UNIT *program,
 {
     int                           error      = KOS_SUCCESS;
     struct _KOS_BREAK_OFFS *const break_offs = (struct _KOS_BREAK_OFFS *)
-        _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_BREAK_OFFS));
+        kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_BREAK_OFFS));
 
     if (break_offs) {
         break_offs->next               = program->cur_frame->break_offs;
@@ -2127,7 +2127,7 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
 
     assert(num_cases);
 
-    cases = (struct _KOS_SWITCH_CASE *)_KOS_mempool_alloc(
+    cases = (struct _KOS_SWITCH_CASE *)kos_mempool_alloc(
             &program->allocator, sizeof(struct _KOS_SWITCH_CASE) * num_cases);
 
     if ( ! cases)
@@ -2164,7 +2164,7 @@ static int _switch(struct _KOS_COMP_UNIT      *program,
             assert(node->children);
             assert(node->children->type != NT_EMPTY);
 
-            case_node = _KOS_get_const(program, node->children);
+            case_node = kos_get_const(program, node->children);
 
             if ( ! case_node)
                 case_node = node->children;
@@ -2348,7 +2348,7 @@ static int _try_stmt(struct _KOS_COMP_UNIT      *program,
         assert(!variable->children);
         assert(!variable->next);
 
-        except_var = _KOS_find_var(program->scope_stack->vars, &variable->token);
+        except_var = kos_find_var(program->scope_stack->vars, &variable->token);
         assert(except_var);
 
         assert(except_var->is_active == VAR_INACTIVE);
@@ -2546,7 +2546,7 @@ static int _refinement_module(struct _KOS_COMP_UNIT      *program,
     int                error;
     struct _KOS_VECTOR cstr;
 
-    _KOS_vector_init(&cstr);
+    kos_vector_init(&cstr);
 
     if (node->type == NT_STRING_LITERAL) {
 
@@ -2586,7 +2586,7 @@ static int _refinement_module(struct _KOS_COMP_UNIT      *program,
     }
 
 _error:
-    _KOS_vector_destroy(&cstr);
+    kos_vector_destroy(&cstr);
 
     return error;
 }
@@ -2609,9 +2609,9 @@ static int _maybe_int(const struct _KOS_AST_NODE *node,
     }
     else {
 
-        if (KOS_SUCCESS != _KOS_parse_numeric(node->token.begin,
-                                              node->token.begin + node->token.length,
-                                              &numeric))
+        if (KOS_SUCCESS != kos_parse_numeric(node->token.begin,
+                                             node->token.begin + node->token.length,
+                                             &numeric))
             return 0;
     }
 
@@ -2816,7 +2816,7 @@ static int _is_var_used(struct _KOS_COMP_UNIT      *program,
 
             for (scope = program->scope_stack; scope && scope->next; scope = scope->next) {
 
-                const int error = _KOS_red_black_walk(scope->vars, _find_var_by_reg, reg);
+                const int error = kos_red_black_walk(scope->vars, _find_var_by_reg, reg);
 
                 if (error == KOS_SUCCESS_RETURN)
                     return 1;
@@ -3113,7 +3113,7 @@ static int _check_const_literal(struct _KOS_COMP_UNIT      *program,
                                 enum _CHECK_TYPE            expected_type)
 {
     enum _KOS_NODE_TYPE         cur_node_type;
-    const struct _KOS_AST_NODE *const_node = _KOS_get_const(program, node);
+    const struct _KOS_AST_NODE *const_node = kos_get_const(program, node);
 
     if ( ! const_node)
         return KOS_SUCCESS;
@@ -3556,10 +3556,10 @@ static int _operator(struct _KOS_COMP_UNIT      *program,
 
         case OT_ADD:
             if (operands == 2) {
-                const struct _KOS_AST_NODE *const_a = _KOS_get_const(program, node);
+                const struct _KOS_AST_NODE *const_a = kos_get_const(program, node);
                 const struct _KOS_AST_NODE *const_b;
                 assert(node->next);
-                const_b = _KOS_get_const(program, node->next);
+                const_b = kos_get_const(program, node->next);
 
                 if (const_a) {
                     if (const_b) {
@@ -3924,7 +3924,7 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
            node->type == NT_VAR ||
            node->type == NT_CONST);
 
-    _KOS_activate_self_ref_func(program, node);
+    kos_activate_self_ref_func(program, node);
 
     is_lhs = (node->type == NT_LEFT_HAND_SIDE) ? 1 : 0;
 
@@ -3988,12 +3988,12 @@ static int _assignment(struct _KOS_COMP_UNIT      *program,
             }
 
             if ( ! is_lhs)
-                _KOS_activate_var(program, node);
+                kos_activate_var(program, node);
         }
         else {
 
             if ( ! is_lhs)
-                _KOS_activate_var(program, node);
+                kos_activate_var(program, node);
 
             if (node_type == NT_MULTI_ASSIGNMENT) {
 
@@ -4162,9 +4162,9 @@ static int _numeric_literal(struct _KOS_COMP_UNIT      *program,
         numeric = *value;
     }
     else
-        error = _KOS_parse_numeric(node->token.begin,
-                                   node->token.begin + node->token.length,
-                                   &numeric);
+        error = kos_parse_numeric(node->token.begin,
+                                  node->token.begin + node->token.length,
+                                  &numeric);
 
     if (error) {
         program->error_token = &node->token;
@@ -4177,15 +4177,15 @@ static int _numeric_literal(struct _KOS_COMP_UNIT      *program,
     else {
 
         struct _KOS_COMP_CONST *constant =
-            (struct _KOS_COMP_CONST *)_KOS_red_black_find(program->constants,
-                                                          &numeric,
-                                                          _numbers_compare_item);
+            (struct _KOS_COMP_CONST *)kos_red_black_find(program->constants,
+                                                         &numeric,
+                                                         _numbers_compare_item);
 
         if ( ! constant) {
             constant = (struct _KOS_COMP_CONST *)
-                _KOS_mempool_alloc(&program->allocator,
-                                   KOS_max(sizeof(struct _KOS_COMP_INTEGER),
-                                           sizeof(struct _KOS_COMP_FLOAT)));
+                kos_mempool_alloc(&program->allocator,
+                                  KOS_max(sizeof(struct _KOS_COMP_INTEGER),
+                                          sizeof(struct _KOS_COMP_FLOAT)));
 
             if ( ! constant)
                 RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
@@ -4334,7 +4334,7 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
         else {
 
             struct _KOS_SCOPE_REF *other_ref =
-                    _KOS_find_scope_ref(args->parent_frame, ref->closure);
+                    kos_find_scope_ref(args->parent_frame, ref->closure);
 
             TRY(_gen_instr3(program,
                             INSTR_BIND,
@@ -4359,7 +4359,7 @@ static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
         else {
 
             struct _KOS_SCOPE_REF *other_ref =
-                    _KOS_find_scope_ref(args->parent_frame, ref->closure);
+                    kos_find_scope_ref(args->parent_frame, ref->closure);
 
             src_reg = other_ref->args_reg_idx;
         }
@@ -4411,7 +4411,7 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
     const struct _KOS_AST_NODE *name_node = fun_node->children;
     struct _KOS_COMP_FUNCTION  *constant;
 
-    scope = (struct _KOS_SCOPE *)_KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item);
+    scope = (struct _KOS_SCOPE *)kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
     frame = (struct _KOS_FRAME *)scope;
 
     *out_scope = scope;
@@ -4452,7 +4452,7 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
             struct _KOS_AST_NODE *ident_node =
                 arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
 
-            var = _KOS_find_var(scope->vars, &ident_node->token);
+            var = kos_find_var(scope->vars, &ident_node->token);
             assert(var);
 
             if (arg_node->type == NT_IDENTIFIER)
@@ -4514,7 +4514,7 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
         struct _GEN_CLOSURE_ARGS args;
         args.program   = program;
         args.num_binds = &frame->num_binds;
-        TRY(_KOS_red_black_walk(frame->closures, _gen_closure_regs, &args));
+        TRY(kos_red_black_walk(frame->closures, _gen_closure_regs, &args));
     }
 
     assert(name_node);
@@ -4555,7 +4555,7 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
         frame->this_reg = 0;
     }
     if (scope->num_args)
-        TRY(_KOS_red_black_walk(scope->vars, _free_arg_regs, program));
+        TRY(kos_red_black_walk(scope->vars, _free_arg_regs, program));
 
     /* Generate code for function body */
     TRY(_visit_node(program, node, &scope_reg));
@@ -4585,7 +4585,7 @@ static int _gen_function(struct _KOS_COMP_UNIT      *program,
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL) {
 
         struct _KOS_COMP_CONST *proto_const = (struct _KOS_COMP_CONST *)
-                _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_COMP_CONST));
+                kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_COMP_CONST));
 
         if ( ! proto_const)
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
@@ -4661,7 +4661,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         bind_args.func_reg     = *reg;
         bind_args.parent_frame = program->cur_frame;
         bind_args.delta        = frame->bind_delta;
-        TRY(_KOS_red_black_walk(frame->closures, _gen_binds, &bind_args));
+        TRY(kos_red_black_walk(frame->closures, _gen_binds, &bind_args));
     }
 
     /* Find the first default arg */
@@ -4687,7 +4687,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
         assert(name_node->children->type == NT_IDENTIFIER);
         assert(name_node->children->token.type == TT_IDENTIFIER);
 
-        fun_var = _KOS_find_var(program->scope_stack->vars, &name_node->children->token);
+        fun_var = kos_find_var(program->scope_stack->vars, &name_node->children->token);
         assert(fun_var);
         assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
 
@@ -4747,7 +4747,7 @@ static int _function_literal(struct _KOS_COMP_UNIT      *program,
             assert(def_node);
             assert( ! def_node->next);
 
-            def_node = _KOS_get_const(program, def_node);
+            def_node = kos_get_const(program, def_node);
 
             if ( ! def_node)
                 continue;
@@ -4844,23 +4844,23 @@ static int _object_literal(struct _KOS_COMP_UNIT      *program,
 
         TRY(_gen_str(program, &prop_node->token, &str_idx));
 
-        if (_KOS_red_black_find(prop_str_idcs, (void *)(intptr_t)str_idx, _prop_compare_item)) {
+        if (kos_red_black_find(prop_str_idcs, (void *)(intptr_t)str_idx, _prop_compare_item)) {
             program->error_token = &prop_node->token;
             program->error_str   = str_err_duplicate_property;
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
         }
         else {
             struct _KOS_OBJECT_PROP_DUPE *new_node = (struct _KOS_OBJECT_PROP_DUPE *)
-                _KOS_mempool_alloc(&program->allocator, sizeof(struct _KOS_OBJECT_PROP_DUPE));
+                kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_OBJECT_PROP_DUPE));
 
             if ( ! new_node)
                 RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
             new_node->str_idx = str_idx;
 
-            _KOS_red_black_insert(&prop_str_idcs,
-                                  (struct _KOS_RED_BLACK_NODE *)new_node,
-                                  _prop_compare_node);
+            kos_red_black_insert(&prop_str_idcs,
+                                 (struct _KOS_RED_BLACK_NODE *)new_node,
+                                 _prop_compare_node);
         }
 
         prop_node = prop_node->next;
@@ -5050,7 +5050,7 @@ static int _visit_node(struct _KOS_COMP_UNIT      *program,
     return error;
 }
 
-void _KOS_compiler_init(struct _KOS_COMP_UNIT *program,
+void kos_compiler_init(struct _KOS_COMP_UNIT *program,
                         int                    file_id)
 {
     memset(program, 0, sizeof(*program));
@@ -5058,37 +5058,37 @@ void _KOS_compiler_init(struct _KOS_COMP_UNIT *program,
     program->optimize = 1;
     program->file_id  = file_id;
 
-    _KOS_mempool_init(&program->allocator);
+    kos_mempool_init(&program->allocator);
 
-    _KOS_vector_init(&program->code_buf);
-    _KOS_vector_init(&program->code_gen_buf);
-    _KOS_vector_init(&program->addr2line_buf);
-    _KOS_vector_init(&program->addr2line_gen_buf);
-    _KOS_vector_init(&program->addr2func_buf);
+    kos_vector_init(&program->code_buf);
+    kos_vector_init(&program->code_gen_buf);
+    kos_vector_init(&program->addr2line_buf);
+    kos_vector_init(&program->addr2line_gen_buf);
+    kos_vector_init(&program->addr2func_buf);
 }
 
-int _KOS_compiler_compile(struct _KOS_COMP_UNIT *program,
-                          struct _KOS_AST_NODE  *ast)
+int kos_compiler_compile(struct _KOS_COMP_UNIT *program,
+                         struct _KOS_AST_NODE  *ast)
 {
     int              error;
     int              num_optimizations;
     struct _KOS_REG *reg = 0;
 
-    TRY(_KOS_vector_reserve(&program->code_buf,          1024));
-    TRY(_KOS_vector_reserve(&program->code_gen_buf,      1024));
-    TRY(_KOS_vector_reserve(&program->addr2line_buf,     1024));
-    TRY(_KOS_vector_reserve(&program->addr2line_gen_buf, 256));
-    TRY(_KOS_vector_reserve(&program->addr2func_buf,     256));
+    TRY(kos_vector_reserve(&program->code_buf,          1024));
+    TRY(kos_vector_reserve(&program->code_gen_buf,      1024));
+    TRY(kos_vector_reserve(&program->addr2line_buf,     1024));
+    TRY(kos_vector_reserve(&program->addr2line_gen_buf, 256));
+    TRY(kos_vector_reserve(&program->addr2func_buf,     256));
 
-    TRY(_KOS_compiler_process_vars(program, ast));
+    TRY(kos_compiler_process_vars(program, ast));
 
     do {
         num_optimizations = program->num_optimizations;
-        TRY(_KOS_optimize(program, ast));
+        TRY(kos_optimize(program, ast));
     }
     while (program->num_optimizations > num_optimizations);
 
-    TRY(_KOS_allocate_args(program, ast));
+    TRY(kos_allocate_args(program, ast));
 
     TRY(_visit_node(program, ast, &reg));
     assert(!reg);
@@ -5097,15 +5097,15 @@ _error:
     return error;
 }
 
-void _KOS_compiler_destroy(struct _KOS_COMP_UNIT *program)
+void kos_compiler_destroy(struct _KOS_COMP_UNIT *program)
 {
     program->pre_globals = 0;
 
-    _KOS_vector_destroy(&program->code_gen_buf);
-    _KOS_vector_destroy(&program->code_buf);
-    _KOS_vector_destroy(&program->addr2line_gen_buf);
-    _KOS_vector_destroy(&program->addr2line_buf);
-    _KOS_vector_destroy(&program->addr2func_buf);
+    kos_vector_destroy(&program->code_gen_buf);
+    kos_vector_destroy(&program->code_buf);
+    kos_vector_destroy(&program->addr2line_gen_buf);
+    kos_vector_destroy(&program->addr2line_buf);
+    kos_vector_destroy(&program->addr2func_buf);
 
-    _KOS_mempool_destroy(&program->allocator);
+    kos_mempool_destroy(&program->allocator);
 }

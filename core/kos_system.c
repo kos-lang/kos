@@ -72,7 +72,7 @@ static int _errno_to_error(void)
     return error;
 }
 
-int _KOS_is_stdin_interactive(void)
+int kos_is_stdin_interactive(void)
 {
 #ifdef _WIN32
     return _isatty(_fileno(stdin));
@@ -88,7 +88,7 @@ static int _is_file(const char *filename)
 
     return (attr != INVALID_FILE_ATTRIBUTES
                 && 0 == (attr & FILE_ATTRIBUTE_DIRECTORY)
-                && ! _KOS_seq_fail())
+                && ! kos_seq_fail())
            ? KOS_SUCCESS : KOS_ERROR_NOT_FOUND;
 }
 #else
@@ -98,7 +98,7 @@ static int _is_file(const char *filename)
     struct stat statbuf;
 
     if (0 == stat(filename, &statbuf)) {
-        if ((statbuf.st_mode & S_IFMT) == S_IFDIR || _KOS_seq_fail())
+        if ((statbuf.st_mode & S_IFMT) == S_IFDIR || kos_seq_fail())
             error = KOS_ERROR_NOT_FOUND;
     }
     else
@@ -108,8 +108,8 @@ static int _is_file(const char *filename)
 }
 #endif
 
-int _KOS_load_file(const char         *filename,
-                   struct _KOS_VECTOR *buf)
+int kos_load_file(const char         *filename,
+                  struct _KOS_VECTOR *buf)
 {
     int    error;
     long   lsize;
@@ -119,10 +119,10 @@ int _KOS_load_file(const char         *filename,
     TRY(_is_file(filename));
 
     file = fopen(filename, "rb");
-    if (!file || _KOS_seq_fail())
+    if (!file || kos_seq_fail())
         RAISE_ERROR(KOS_ERROR_CANNOT_OPEN_FILE);
 
-    if (0 != fseek(file, 0, SEEK_END) || _KOS_seq_fail())
+    if (0 != fseek(file, 0, SEEK_END) || kos_seq_fail())
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
 
     lsize = ftell(file);
@@ -132,7 +132,7 @@ int _KOS_load_file(const char         *filename,
     if (0 != fseek(file, 0, SEEK_SET))
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
 
-    TRY(_KOS_vector_resize(buf, size));
+    TRY(kos_vector_resize(buf, size));
 
     if (size != fread(buf->buffer, 1, size, file))
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
@@ -144,12 +144,12 @@ _error:
     return error;
 }
 
-int _KOS_does_file_exist(const char *filename)
+int kos_does_file_exist(const char *filename)
 {
     return _is_file(filename) == KOS_SUCCESS;
 }
 
-int _KOS_get_absolute_path(struct _KOS_VECTOR *path)
+int kos_get_absolute_path(struct _KOS_VECTOR *path)
 {
     int   error;
     char *resolved_path;
@@ -175,7 +175,7 @@ int _KOS_get_absolute_path(struct _KOS_VECTOR *path)
 
         const size_t len = strlen(resolved_path) + 1;
 
-        error = _KOS_vector_resize(path, len);
+        error = kos_vector_resize(path, len);
 
         if (!error)
             memcpy(path->buffer, resolved_path, len);
@@ -189,8 +189,8 @@ int _KOS_get_absolute_path(struct _KOS_VECTOR *path)
     return error;
 }
 
-int _KOS_get_env(const char         *name,
-                 struct _KOS_VECTOR *buf)
+int kos_get_env(const char         *name,
+                struct _KOS_VECTOR *buf)
 {
     int         error;
     const char *value = getenv(name);
@@ -199,7 +199,7 @@ int _KOS_get_env(const char         *name,
 
         const size_t len = strlen(value);
 
-        error = _KOS_vector_resize(buf, len+1);
+        error = kos_vector_resize(buf, len+1);
 
         if (!error)
             memcpy(buf->buffer, value, len+1);
@@ -211,7 +211,7 @@ int _KOS_get_env(const char         *name,
 }
 
 #ifdef _WIN32
-int _KOS_executable_path(struct _KOS_VECTOR *buf)
+int kos_executable_path(struct _KOS_VECTOR *buf)
 {
     int  error = KOS_ERROR_NOT_FOUND;
     char path_buf[MAX_PATH];
@@ -224,7 +224,7 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
 
         assert(path_buf[size] == 0);
 
-        error = _KOS_vector_resize(buf, len);
+        error = kos_vector_resize(buf, len);
 
         if ( ! error)
             memcpy(buf->buffer, path_buf, len);
@@ -233,14 +233,14 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
     return error;
 }
 #elif defined(__APPLE__)
-int _KOS_executable_path(struct _KOS_VECTOR *buf)
+int kos_executable_path(struct _KOS_VECTOR *buf)
 {
     int      error = KOS_ERROR_NOT_FOUND;
     uint32_t size  = 0;
 
     if (_NSGetExecutablePath(0, &size) == -1) {
 
-        error = _KOS_vector_resize(buf, (size_t)size);
+        error = kos_vector_resize(buf, (size_t)size);
 
         if ( ! error) {
 
@@ -255,11 +255,11 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
     return error;
 }
 #elif defined(__linux__) || defined(__FreeBSD__)
-int _KOS_executable_path(struct _KOS_VECTOR *buf)
+int kos_executable_path(struct _KOS_VECTOR *buf)
 {
     int error = KOS_ERROR_NOT_FOUND;
 
-    TRY(_KOS_vector_resize(buf, 256U));
+    TRY(kos_vector_resize(buf, 256U));
 
     for (;;) {
 
@@ -274,7 +274,7 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
 
         if (num_read > 0) {
 
-            TRY(_KOS_vector_resize(buf, num_read + 1));
+            TRY(kos_vector_resize(buf, num_read + 1));
 
             buf->buffer[num_read] = 0;
 
@@ -286,27 +286,27 @@ int _KOS_executable_path(struct _KOS_VECTOR *buf)
         if (buf->size > 16384U)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-        TRY(_KOS_vector_resize(buf, buf->size * 2U));
+        TRY(kos_vector_resize(buf, buf->size * 2U));
     }
 
 _error:
     return error;
 }
 #else
-int _KOS_executable_path(struct _KOS_VECTOR *buf)
+int kos_executable_path(struct _KOS_VECTOR *buf)
 {
     return KOS_ERROR_NOT_FOUND;
 }
 #endif
 
 #ifdef _WIN32
-int _KOS_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect)
+int kos_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect)
 {
     DWORD old = 0;
     return VirtualProtect(ptr, size, protect == _KOS_NO_ACCESS ? PAGE_NOACCESS : PAGE_READWRITE, &old) != 0 ? 0 : 1;
 }
 #else
-int _KOS_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect)
+int kos_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect)
 {
     return mprotect(ptr, size, protect == _KOS_NO_ACCESS ? PROT_NONE : PROT_READ | PROT_WRITE);
 }

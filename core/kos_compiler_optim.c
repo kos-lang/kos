@@ -70,7 +70,7 @@ static int _collapse_numeric(struct _KOS_COMP_UNIT     *program,
     int                  error;
     const unsigned       length = sizeof(struct _KOS_NUMERIC);
     struct _KOS_NUMERIC *store  = (struct _KOS_NUMERIC *)
-                                  _KOS_mempool_alloc(&program->allocator, length);
+                                  kos_mempool_alloc(&program->allocator, length);
 
     if (store) {
 
@@ -93,20 +93,20 @@ static void _promote(struct _KOS_COMP_UNIT      *program,
                      const struct _KOS_AST_NODE *child)
 {
     struct _KOS_SCOPE *scope = (struct _KOS_SCOPE *)
-            _KOS_red_black_find(program->scopes, (void *)child, _KOS_scope_compare_item);
+            kos_red_black_find(program->scopes, (void *)child, kos_scope_compare_item);
 
-    assert( ! _KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item));
+    assert( ! kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item));
 
     if (scope) {
 
-        _KOS_red_black_delete(&program->scopes, (struct _KOS_RED_BLACK_NODE *)scope);
+        kos_red_black_delete(&program->scopes, (struct _KOS_RED_BLACK_NODE *)scope);
 
         assert(scope->scope_node == child);
         scope->scope_node = node;
 
-        _KOS_red_black_insert(&program->scopes,
-                              (struct _KOS_RED_BLACK_NODE *)scope,
-                              _KOS_scope_compare_node);
+        kos_red_black_insert(&program->scopes,
+                             (struct _KOS_RED_BLACK_NODE *)scope,
+                             kos_scope_compare_node);
     }
 
     node->children   = child->children;
@@ -146,9 +146,9 @@ static int _get_nonzero(const struct _KOS_TOKEN *token, int *non_zero)
             return KOS_SUCCESS;
         }
 
-        error = _KOS_parse_numeric(token->begin,
-                                   token->begin + token->length,
-                                   &numeric);
+        error = kos_parse_numeric(token->begin,
+                                  token->begin + token->length,
+                                  &numeric);
         if (error)
             return error;
     }
@@ -177,7 +177,7 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
 
     for (scope = program->scope_stack; scope->next && ! scope->is_function; scope = scope->next) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var && (var->is_active || ! only_active)) {
             *out_var  = var;
@@ -195,7 +195,7 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
 
     if ( ! scope->next && ! only_active) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var) {
             *is_local = 1; /* This is global scope, but mark it as "local" access */
@@ -205,7 +205,7 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
 
     for ( ; scope; scope = scope->next) {
 
-        var = _KOS_find_var(scope->vars, token);
+        var = kos_find_var(scope->vars, token);
 
         if (var && var->is_active) {
             *is_local = scope == fun_scope || ! scope->next ? 1 : 0; /* current func's arguments are "local" */
@@ -220,8 +220,8 @@ static void _lookup_var(struct _KOS_COMP_UNIT   *program,
     *out_var = var;
 }
 
-const struct _KOS_AST_NODE *_KOS_get_const(struct _KOS_COMP_UNIT      *program,
-                                           const struct _KOS_AST_NODE *node)
+const struct _KOS_AST_NODE *kos_get_const(struct _KOS_COMP_UNIT      *program,
+                                          const struct _KOS_AST_NODE *node)
 {
     struct _KOS_VAR *var = 0;
     int              is_local;
@@ -234,10 +234,10 @@ const struct _KOS_AST_NODE *_KOS_get_const(struct _KOS_COMP_UNIT      *program,
     return var->is_const ? var->value : 0;
 }
 
-int _KOS_node_is_truthy(struct _KOS_COMP_UNIT      *program,
-                        const struct _KOS_AST_NODE *node)
+int kos_node_is_truthy(struct _KOS_COMP_UNIT      *program,
+                       const struct _KOS_AST_NODE *node)
 {
-    node = _KOS_get_const(program, node);
+    node = kos_get_const(program, node);
 
     if ( ! node)
         return 0;
@@ -264,10 +264,10 @@ int _KOS_node_is_truthy(struct _KOS_COMP_UNIT      *program,
     return 0;
 }
 
-int _KOS_node_is_falsy(struct _KOS_COMP_UNIT      *program,
-                       const struct _KOS_AST_NODE *node)
+int kos_node_is_falsy(struct _KOS_COMP_UNIT      *program,
+                      const struct _KOS_AST_NODE *node)
 {
-    node = _KOS_get_const(program, node);
+    node = kos_get_const(program, node);
 
     if ( ! node)
         return 0;
@@ -309,13 +309,13 @@ static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT      *program,
                                       const struct _KOS_AST_NODE *node)
 {
     struct _KOS_SCOPE *scope = (struct _KOS_SCOPE *)
-            _KOS_red_black_find(program->scopes, (void *)node, _KOS_scope_compare_item);
+            kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
 
     assert(scope);
 
     assert(scope->next == program->scope_stack);
 
-    _KOS_red_black_walk(scope->vars, _reset_var_state, 0);
+    kos_red_black_walk(scope->vars, _reset_var_state, 0);
 
     program->scope_stack = scope;
 
@@ -370,7 +370,7 @@ static void _pop_scope(struct _KOS_COMP_UNIT *program)
 
     assert(scope);
 
-    _KOS_red_black_walk(scope->vars, _count_and_update_vars, scope);
+    kos_red_black_walk(scope->vars, _count_and_update_vars, scope);
 
     if ( ! scope->is_function && scope->next) {
         scope->next->num_vars       += scope->num_vars;
@@ -422,8 +422,8 @@ static int _if_stmt(struct _KOS_COMP_UNIT *program,
     TRY(_visit_node(program, node, &t1));
 
     if (program->optimize) {
-        is_truthy = _KOS_node_is_truthy(program, node);
-        is_falsy  = is_truthy ? 0 : _KOS_node_is_falsy(program, node);
+        is_truthy = kos_node_is_truthy(program, node);
+        is_falsy  = is_truthy ? 0 : kos_node_is_falsy(program, node);
     }
 
     assert(node->next);
@@ -512,8 +512,8 @@ static int _for_stmt(struct _KOS_COMP_UNIT *program,
     assert(t == TERM_NONE);
 
     if (program->optimize) {
-        is_truthy = node->type == NT_EMPTY || _KOS_node_is_truthy(program, node);
-        is_falsy  = is_truthy ? 0 : _KOS_node_is_falsy(program, node);
+        is_truthy = node->type == NT_EMPTY || kos_node_is_truthy(program, node);
+        is_falsy  = is_truthy ? 0 : kos_node_is_falsy(program, node);
     }
 
     node = node->next;
@@ -717,7 +717,7 @@ static int _for_in_stmt(struct _KOS_COMP_UNIT *program,
 
     assert(node->children);
     assert(node->children->children);
-    _KOS_activate_new_vars(program, node->children->children);
+    kos_activate_new_vars(program, node->children->children);
 
     error = _visit_child_nodes(program, node);
 
@@ -739,7 +739,7 @@ static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
         assert(name_node->children->type == NT_IDENTIFIER);
         assert(name_node->children->token.type == TT_IDENTIFIER);
 
-        fun_var = _KOS_find_var(program->scope_stack->vars, &name_node->children->token);
+        fun_var = kos_find_var(program->scope_stack->vars, &name_node->children->token);
         assert(fun_var);
         assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
 
@@ -842,7 +842,7 @@ static int _assignment(struct _KOS_COMP_UNIT *program,
     assert(rhs_node);
     assert( ! rhs_node->next);
 
-    _KOS_activate_self_ref_func(program, lhs_node);
+    kos_activate_self_ref_func(program, lhs_node);
 
     TRY(_visit_node(program, rhs_node, &t));
     assert(t == TERM_NONE);
@@ -907,18 +907,18 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT      *program,
         assert(a->token.length == sizeof(struct _KOS_NUMERIC));
         numeric_a = *(const struct _KOS_NUMERIC *)(a->token.begin);
     }
-    else if (KOS_SUCCESS != _KOS_parse_numeric(a->token.begin,
-                                               a->token.begin + a->token.length,
-                                               &numeric_a))
+    else if (KOS_SUCCESS != kos_parse_numeric(a->token.begin,
+                                              a->token.begin + a->token.length,
+                                              &numeric_a))
         return KOS_SUCCESS;
 
     if (b->token.type == TT_NUMERIC_BINARY) {
         assert(b->token.length == sizeof(struct _KOS_NUMERIC));
         numeric_b = *(const struct _KOS_NUMERIC *)(b->token.begin);
     }
-    else if (KOS_SUCCESS != _KOS_parse_numeric(b->token.begin,
-                                               b->token.begin + b->token.length,
-                                               &numeric_b))
+    else if (KOS_SUCCESS != kos_parse_numeric(b->token.begin,
+                                              b->token.begin + b->token.length,
+                                              &numeric_b))
         return KOS_SUCCESS;
 
     /* Convert to the same type, mimicking the VM */
@@ -1071,9 +1071,9 @@ static int _optimize_unary_op(struct _KOS_COMP_UNIT      *program,
         assert(a->token.length == sizeof(struct _KOS_NUMERIC));
         numeric_a = *(const struct _KOS_NUMERIC *)(a->token.begin);
     }
-    else if (KOS_SUCCESS != _KOS_parse_numeric(a->token.begin,
-                                               a->token.begin + a->token.length,
-                                               &numeric_a))
+    else if (KOS_SUCCESS != kos_parse_numeric(a->token.begin,
+                                              a->token.begin + a->token.length,
+                                              &numeric_a))
         return KOS_SUCCESS;
 
     if (op & OT_ARITHMETIC) {
@@ -1164,7 +1164,7 @@ static int _add_strings(struct _KOS_COMP_UNIT      *program,
 
     new_length = a_length + b_length + (is_raw ? 3U : 2U);
 
-    str = (char *)_KOS_mempool_alloc(&program->allocator, new_length);
+    str = (char *)kos_mempool_alloc(&program->allocator, new_length);
 
     if ( ! str)
         return KOS_ERROR_OUT_OF_MEMORY;
@@ -1211,7 +1211,7 @@ static void _collapse_typeof(struct _KOS_COMP_UNIT      *program,
                 }
             }
             else {
-                if (_KOS_is_integer(a->token.begin, a->token.begin + a->token.length))
+                if (kos_is_integer(a->token.begin, a->token.begin + a->token.length))
                     type = "\"integer\"";
                 else
                     type = "\"float\"";
@@ -1276,9 +1276,9 @@ static int _operator(struct _KOS_COMP_UNIT *program,
     if ( ! program->optimize)
         return KOS_SUCCESS;
 
-    ca = _KOS_get_const(program, a);
+    ca = kos_get_const(program, a);
     if (b)
-        cb = _KOS_get_const(program, b);
+        cb = kos_get_const(program, b);
 
     a_type = ca ? ca->type : NT_EMPTY;
     b_type = cb ? cb->type : NT_EMPTY;
@@ -1336,11 +1336,11 @@ static int _operator(struct _KOS_COMP_UNIT *program,
         }
 
         case OT_LOGNOT: {
-            if (_KOS_node_is_truthy(program, ca) && a->token.keyword != KW_FALSE) {
+            if (kos_node_is_truthy(program, ca) && a->token.keyword != KW_FALSE) {
                 _collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_FALSE, 0, 0);
                 ++program->num_optimizations;
             }
-            else if (_KOS_node_is_falsy(program, ca) && a->token.keyword != KW_TRUE) {
+            else if (kos_node_is_falsy(program, ca) && a->token.keyword != KW_TRUE) {
                 _collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_TRUE, 0, 0);
                 ++program->num_optimizations;
             }
@@ -1348,11 +1348,11 @@ static int _operator(struct _KOS_COMP_UNIT *program,
         }
 
         case OT_LOGAND: {
-            if (_KOS_node_is_truthy(program, ca) && b) {
+            if (kos_node_is_truthy(program, ca) && b) {
                 _promote(program, node, b);
                 ++program->num_optimizations;
             }
-            else if (_KOS_node_is_falsy(program, ca)) {
+            else if (kos_node_is_falsy(program, ca)) {
                 _promote(program, node, a);
                 ++program->num_optimizations;
             }
@@ -1360,11 +1360,11 @@ static int _operator(struct _KOS_COMP_UNIT *program,
         }
 
         case OT_LOGOR: {
-            if (_KOS_node_is_truthy(program, ca)) {
+            if (kos_node_is_truthy(program, ca)) {
                 _promote(program, node, a);
                 ++program->num_optimizations;
             }
-            else if (_KOS_node_is_falsy(program, ca) && b) {
+            else if (kos_node_is_falsy(program, ca) && b) {
                 _promote(program, node, b);
                 ++program->num_optimizations;
             }
@@ -1373,11 +1373,11 @@ static int _operator(struct _KOS_COMP_UNIT *program,
 
         case OT_LOGTRI: {
             assert(b);
-            if (_KOS_node_is_truthy(program, ca) && b) {
+            if (kos_node_is_truthy(program, ca) && b) {
                 _promote(program, node, b);
                 ++program->num_optimizations;
             }
-            else if (_KOS_node_is_falsy(program, ca) && b) {
+            else if (kos_node_is_falsy(program, ca) && b) {
                 assert(b->next);
                 if (b->next) {
                     _promote(program, node, b->next);
@@ -1479,14 +1479,14 @@ static int _stringify(struct _KOS_COMP_UNIT       *program,
 
                 numeric = *value;
             }
-            else if (KOS_SUCCESS != _KOS_parse_numeric(token->begin,
-                                                       token->begin + token->length,
-                                                       &numeric))
+            else if (KOS_SUCCESS != kos_parse_numeric(token->begin,
+                                                      token->begin + token->length,
+                                                      &numeric))
                 return 0; /* Parse errors are handled later */
 
             _copy_node_as_string(tmp_node, *node_ptr);
 
-            store = (char *)_KOS_mempool_alloc(&program->allocator, max_size + 1);
+            store = (char *)kos_mempool_alloc(&program->allocator, max_size + 1);
             if ( ! store)
                 return 0; /* Malloc errors are handled later */
 
@@ -1502,7 +1502,7 @@ static int _stringify(struct _KOS_COMP_UNIT       *program,
 
                 store[0] = '"';
 
-                size = _KOS_print_float(store + 1, max_size - 2, numeric.u.d);
+                size = kos_print_float(store + 1, max_size - 2, numeric.u.d);
                 assert(size < max_size - 1);
 
                 store[size + 1] = '"';
@@ -1535,7 +1535,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT *program,
     while (child && child->next) {
 
         struct _KOS_AST_NODE       *next = child->next;
-        const struct _KOS_AST_NODE *ca   = _KOS_get_const(program, child);
+        const struct _KOS_AST_NODE *ca   = kos_get_const(program, child);
         const struct _KOS_AST_NODE *cb;
         struct _KOS_AST_NODE        sa;
         struct _KOS_AST_NODE        sb;
@@ -1543,7 +1543,7 @@ static int _interpolated_string(struct _KOS_COMP_UNIT *program,
         TRY(_visit_node(program, next, &t));
         assert(t == TERM_NONE);
 
-        cb = _KOS_get_const(program, next);
+        cb = kos_get_const(program, next);
 
         if (ca && cb &&
             _stringify(program, &ca, &sa) && _stringify(program, &cb, &sb) &&
@@ -1733,8 +1733,8 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-int _KOS_optimize(struct _KOS_COMP_UNIT *program,
-                  struct _KOS_AST_NODE  *ast)
+int kos_optimize(struct _KOS_COMP_UNIT *program,
+                 struct _KOS_AST_NODE  *ast)
 {
     int t;
     assert(ast->type == NT_SCOPE);

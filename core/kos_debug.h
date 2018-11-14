@@ -25,11 +25,11 @@
 
 #ifdef CONFIG_SEQFAIL
 
-int _KOS_seq_fail(void);
+int kos_seq_fail(void);
 
 #else
 
-#define _KOS_seq_fail() 0
+#define kos_seq_fail() 0
 
 #endif
 
