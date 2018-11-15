@@ -25,11 +25,11 @@
 
 #ifdef CONFIG_READLINE
 
-struct _KOS_GETLINE {
+typedef struct KOS_GETLINE_S {
     char dummy;
-};
+} KOS_GETLINE;
 
-int kos_getline_init(struct _KOS_GETLINE *state);
+int kos_getline_init(KOS_GETLINE *state);
 
 #define kos_getline_destroy(state) ((void)0)
 
@@ -37,23 +37,23 @@ int kos_getline_init(struct _KOS_GETLINE *state);
 
 #include <histedit.h>
 
-struct _KOS_GETLINE {
+typedef struct KOS_GETLINE_S {
     EditLine *e;
     History  *h;
     HistEvent ev;
-};
+} KOS_GETLINE;
 
-int kos_getline_init(struct _KOS_GETLINE *state);
+int kos_getline_init(KOS_GETLINE *state);
 
-void kos_getline_destroy(struct _KOS_GETLINE *state);
+void kos_getline_destroy(KOS_GETLINE *state);
 
 #else
 
-struct _KOS_GETLINE {
+typedef struct KOS_GETLINE_S {
     int interactive;
-};
+} KOS_GETLINE;
 
-int kos_getline_init(struct _KOS_GETLINE *state);
+int kos_getline_init(KOS_GETLINE *state);
 
 #define kos_getline_destroy(state) ((void)0)
 
@@ -66,7 +66,7 @@ enum _KOS_PROMPT {
 
 struct KOS_VECTOR_S;
 
-int kos_getline(struct _KOS_GETLINE *state,
+int kos_getline(KOS_GETLINE         *state,
                 enum _KOS_PROMPT     prompt,
                 struct KOS_VECTOR_S *buf);
 

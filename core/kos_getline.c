@@ -38,13 +38,13 @@ static const char str_prompt_subsequent_line[] = "_ ";
 #include <readline/history.h>
 #include <stdlib.h>
 
-int kos_getline_init(struct _KOS_GETLINE *state)
+int kos_getline_init(KOS_GETLINE *state)
 {
     rl_initialize();
     return KOS_SUCCESS;
 }
 
-int kos_getline(struct _KOS_GETLINE *state,
+int kos_getline(KOS_GETLINE *state,
                 enum _KOS_PROMPT     prompt,
                 KOS_VECTOR          *buf)
 {
@@ -113,7 +113,7 @@ static int _get_cfn(EditLine *e, char *c)
     return 1;
 }
 
-int kos_getline_init(struct _KOS_GETLINE *state)
+int kos_getline_init(KOS_GETLINE *state)
 {
     state->e = el_init("Kos", stdin, stdout, stderr);
 
@@ -140,13 +140,13 @@ int kos_getline_init(struct _KOS_GETLINE *state)
     return KOS_SUCCESS;
 }
 
-void kos_getline_destroy(struct _KOS_GETLINE *state)
+void kos_getline_destroy(KOS_GETLINE *state)
 {
     history_end(state->h);
     el_end(state->e);
 }
 
-int kos_getline(struct _KOS_GETLINE *state,
+int kos_getline(KOS_GETLINE *state,
                 enum _KOS_PROMPT     prompt,
                 KOS_VECTOR          *buf)
 {
@@ -187,13 +187,13 @@ int kos_getline(struct _KOS_GETLINE *state,
 
 #else
 
-int kos_getline_init(struct _KOS_GETLINE *state)
+int kos_getline_init(KOS_GETLINE *state)
 {
     state->interactive = kos_is_stdin_interactive();
     return KOS_SUCCESS;
 }
 
-int kos_getline(struct _KOS_GETLINE *state,
+int kos_getline(KOS_GETLINE *state,
                 enum _KOS_PROMPT     prompt,
                 KOS_VECTOR          *buf)
 {

@@ -323,11 +323,11 @@ static int _enforce_eol(KOS_VECTOR *buf)
 
 static int _run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 {
-    int                 error;
-    struct _KOS_GETLINE state;
-    KOS_OBJ_ID          print_args;
-    int                 genline_init = 0;
-    KOS_VECTOR          tmp_buf;
+    int         error;
+    KOS_GETLINE state;
+    KOS_OBJ_ID  print_args;
+    int         genline_init = 0;
+    KOS_VECTOR  tmp_buf;
 
     kos_vector_init(&tmp_buf);
 
