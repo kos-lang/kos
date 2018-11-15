@@ -389,9 +389,9 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
     return num_out;
 }
 
-int KOS_string_to_cstr_vec(KOS_CONTEXT         ctx,
-                           KOS_OBJ_ID          obj_id,
-                           struct _KOS_VECTOR *str_vec)
+int KOS_string_to_cstr_vec(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  obj_id,
+                           KOS_VECTOR *str_vec)
 {
     int      error   = KOS_SUCCESS;
     unsigned str_len = 0;
@@ -1519,10 +1519,10 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
     return OBJID(STRING, new_str);
 }
 
-int kos_append_cstr(KOS_CONTEXT         ctx,
-                    struct _KOS_VECTOR *cstr_vec,
-                    const char         *str,
-                    size_t              len)
+int kos_append_cstr(KOS_CONTEXT ctx,
+                    KOS_VECTOR *cstr_vec,
+                    const char *str,
+                    size_t      len)
 {
     const size_t pos   = cstr_vec->size;
     int          error = kos_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));

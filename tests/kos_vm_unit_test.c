@@ -468,7 +468,7 @@ static int _test_instr(KOS_CONTEXT          ctx,
                     error = KOS_ERROR_EXCEPTION;
                 }
                 if ( ! error && KOS_string_compare(ret, expected)) {
-                    struct _KOS_VECTOR cstr;
+                    KOS_VECTOR cstr;
 
                     kos_vector_init(&cstr);
                     KOS_clear_exception(ctx);

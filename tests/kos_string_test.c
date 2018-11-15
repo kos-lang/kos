@@ -1512,10 +1512,10 @@ int main(void)
 
     /************************************************************************/
     {
-        uint32_t           src_ok[]      = { 0x1FFFFFU };
-        uint32_t           src_invalid[] = { 0x200000U };
-        KOS_OBJ_ID         str;
-        struct _KOS_VECTOR vec;
+        uint32_t   src_ok[]      = { 0x1FFFFFU };
+        uint32_t   src_invalid[] = { 0x200000U };
+        KOS_OBJ_ID str;
+        KOS_VECTOR vec;
 
         kos_vector_init(&vec);
 
@@ -1678,8 +1678,8 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID         str;
-        struct _KOS_VECTOR vec;
+        KOS_OBJ_ID str;
+        KOS_VECTOR vec;
 
         kos_vector_init(&vec);
 
@@ -1699,8 +1699,8 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID         str;
-        struct _KOS_VECTOR vec;
+        KOS_OBJ_ID str;
+        KOS_VECTOR vec;
 
         kos_vector_init(&vec);
 
@@ -1736,8 +1736,8 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID         str;
-        struct _KOS_VECTOR vec;
+        KOS_OBJ_ID str;
+        KOS_VECTOR vec;
 
         kos_vector_init(&vec);
 

@@ -117,11 +117,11 @@ static int _find_module(KOS_CONTEXT ctx,
                         KOS_OBJ_ID *out_abs_dir,
                         KOS_OBJ_ID *out_abs_path)
 {
-    int                error = KOS_ERROR_INTERNAL;
-    KOS_OBJ_ID         path  = KOS_BADPTR;
-    KOS_OBJ_ID         dir   = KOS_BADPTR;
-    struct _KOS_VECTOR cpath;
-    unsigned           i;
+    int        error = KOS_ERROR_INTERNAL;
+    KOS_OBJ_ID path  = KOS_BADPTR;
+    KOS_OBJ_ID dir   = KOS_BADPTR;
+    KOS_VECTOR cpath;
+    unsigned   i;
 
     kos_vector_init(&cpath);
 
@@ -284,12 +284,12 @@ cleanup:
     return error ? KOS_BADPTR : module;
 }
 
-static int _load_file(KOS_CONTEXT         ctx,
-                      KOS_OBJ_ID          path,
-                      struct _KOS_VECTOR *file_buf)
+static int _load_file(KOS_CONTEXT ctx,
+                      KOS_OBJ_ID  path,
+                      KOS_VECTOR *file_buf)
 {
-    int                error = KOS_SUCCESS;
-    struct _KOS_VECTOR cpath;
+    int        error = KOS_SUCCESS;
+    KOS_VECTOR cpath;
 
     kos_track_refs(ctx, 1, &path);
 
@@ -333,9 +333,9 @@ static int _predefine_globals(KOS_CONTEXT            ctx,
                               KOS_OBJ_ID             module_names,
                               int                    is_repl)
 {
-    int                error = KOS_SUCCESS;
-    struct _KOS_VECTOR cpath;
-    KOS_OBJ_ID         walk;
+    int        error = KOS_SUCCESS;
+    KOS_VECTOR cpath;
+    KOS_OBJ_ID walk;
 
     kos_vector_init(&cpath);
 
@@ -532,11 +532,11 @@ static KOS_OBJ_ID _get_line(KOS_CONTEXT ctx,
                             unsigned    buf_size,
                             unsigned    line)
 {
-    const char        *const end = buf + buf_size;
-    const char        *begin;
-    unsigned           len       = 0;
-    struct _KOS_VECTOR line_buf;
-    KOS_OBJ_ID         ret       = KOS_BADPTR;
+    const char *const end = buf + buf_size;
+    const char       *begin;
+    unsigned          len       = 0;
+    KOS_VECTOR        line_buf;
+    KOS_OBJ_ID        ret       = KOS_BADPTR;
 
     kos_vector_init(&line_buf);
 
@@ -612,11 +612,11 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
                                 const char          *error_str,
                                 struct _KOS_FILE_POS pos)
 {
-    int                error = KOS_SUCCESS;
-    KOS_OBJ_ID         ret   = KOS_BADPTR;
-    struct _KOS_VECTOR cstr;
-    int                pushed = 0;
-    KOS_OBJ_ID         parts[11];
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
+    KOS_VECTOR cstr;
+    int        pushed = 0;
+    KOS_OBJ_ID parts[11];
 
     parts[0]  = KOS_BADPTR;
     parts[1]  = KOS_BADPTR;
@@ -794,7 +794,7 @@ static int _walk_globals(void                          *vframe,
     int                 error = KOS_SUCCESS;
     KOS_CONTEXT         ctx   = (KOS_CONTEXT)vframe;
     KOS_INSTANCE *const inst  = ctx->inst;
-    struct _KOS_VECTOR  name;
+    KOS_VECTOR          name;
     KOS_OBJ_ID          walk;
     KOS_OBJ_ID          module_obj;
 
@@ -830,10 +830,10 @@ cleanup:
 static void _print_search_paths(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  paths)
 {
-    int                error = KOS_SUCCESS;
-    struct _KOS_VECTOR cstr;
-    uint32_t           num_paths;
-    uint32_t           i;
+    int        error = KOS_SUCCESS;
+    KOS_VECTOR cstr;
+    uint32_t   num_paths;
+    uint32_t   i;
 
     static const char str_paths[] = "Kos module search paths: ";
 
@@ -881,8 +881,8 @@ static void _print_load_info(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  module_name,
                              KOS_OBJ_ID  module_path)
 {
-    int                error = KOS_SUCCESS;
-    struct _KOS_VECTOR cstr;
+    int        error = KOS_SUCCESS;
+    KOS_VECTOR cstr;
 
     static const char str_loading[] = "Kos loading module ";
     static const char str_from[]    = " from ";
@@ -948,9 +948,9 @@ struct _PRINT_CONST_COOKIE {
     KOS_OBJ_ID  constants;
 };
 
-static int _print_const(void               *cookie,
-                        struct _KOS_VECTOR *cstr_buf,
-                        uint32_t            const_index)
+static int _print_const(void       *cookie,
+                        KOS_VECTOR *cstr_buf,
+                        uint32_t    const_index)
 {
     struct _PRINT_CONST_COOKIE *data = (struct _PRINT_CONST_COOKIE *)cookie;
     KOS_OBJ_ID                  constant;
@@ -1050,9 +1050,9 @@ static int _compile_module(KOS_CONTEXT ctx,
 
     /* Move compiled program to module */
     {
-        struct _KOS_VECTOR *code_buf     = &program.code_buf;
-        struct _KOS_VECTOR *addr_to_line = &program.addr2line_buf;
-        struct _KOS_VECTOR *addr_to_func = &program.addr2func_buf;
+        KOS_VECTOR *code_buf     = &program.code_buf;
+        KOS_VECTOR *addr_to_line = &program.addr2line_buf;
+        KOS_VECTOR *addr_to_func = &program.addr2func_buf;
 
         const uint32_t old_num_line_addrs = module->num_line_addrs;
         const uint32_t old_num_func_addrs = module->num_func_addrs;
@@ -1132,8 +1132,8 @@ static int _compile_module(KOS_CONTEXT ctx,
 
     /* Disassemble */
     if (inst->flags & KOS_INST_DISASM) {
-        struct _KOS_VECTOR cname;
-        struct _KOS_VECTOR ptrs;
+        KOS_VECTOR         cname;
+        KOS_VECTOR         ptrs;
         const char *const *func_names = 0;
         size_t             i_filename = 0;
         const char        *filename   = "";
@@ -1172,10 +1172,10 @@ static int _compile_module(KOS_CONTEXT ctx,
         if (!error)
             error = kos_vector_resize(&ptrs, num_func_addrs * sizeof(void *));
         if (!error) {
-            struct _KOS_VECTOR buf;
-            uint32_t           i;
-            size_t             total_size = 0;
-            char              *names      = 0;
+            KOS_VECTOR buf;
+            uint32_t   i;
+            size_t     total_size = 0;
+            char      *names      = 0;
 
             kos_vector_init(&buf);
 
@@ -1284,7 +1284,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     KOS_OBJ_ID                    prev_locals;
     KOS_INSTANCE           *const inst               = ctx->inst;
     struct _KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
-    struct _KOS_VECTOR            file_buf;
+    KOS_VECTOR                    file_buf;
     int                           chain_init         = 0;
 
     kos_vector_init(&file_buf);
@@ -1536,7 +1536,7 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _load_stdin(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
+static int _load_stdin(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 {
     int error = KOS_SUCCESS;
 
@@ -1579,7 +1579,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     KOS_OBJ_ID          ret         = KOS_BADPTR;
     KOS_OBJ_ID          prev_locals = KOS_BADPTR;
     KOS_INSTANCE *const inst        = ctx->inst;
-    struct _KOS_VECTOR  buf;
+    KOS_VECTOR          buf;
 
     kos_vector_init(&buf);
 

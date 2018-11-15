@@ -503,7 +503,7 @@ int main(void)
         TEST(stats.num_objs_freed     == 20);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 0);
-        TEST(stats.num_pages_freed    == 3);
+        TEST(stats.num_pages_freed    >= 2 && stats.num_pages_freed <= 3);
         TEST(stats.size_evacuated     == base_stats.size_evacuated);
         TEST(stats.size_freed         >  0);
         TEST(stats.size_kept          == 0);

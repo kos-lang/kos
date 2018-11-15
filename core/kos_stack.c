@@ -375,7 +375,7 @@ typedef int (*KOS_WALK_STACK)(KOS_OBJ_ID stack,
 
 static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 {
-    int        error     = KOS_SUCCESS;
+    int        error;
     KOS_OBJ_ID stack     = ctx->stack;
     uint32_t   size;
     uint32_t   prev_size = ~0U;
@@ -520,7 +520,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
     KOS_MODULE             *module      = IS_BAD_PTR(func->module) ? 0 : OBJPTR(MODULE, func->module);
     const uint32_t          instr_offs  = _get_instr_offs(stack_frame);
     const unsigned          line        = KOS_module_addr_to_line(module, instr_offs);
-    KOS_OBJ_ID              func_name   = KOS_BADPTR;
+    KOS_OBJ_ID              func_name;
     KOS_OBJ_ID              module_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     KOS_OBJ_ID              module_path = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     int                     error       = KOS_SUCCESS;

@@ -96,8 +96,8 @@ static KOS_OBJ_ID _print(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
                          KOS_OBJ_ID  args_obj)
 {
-    int                error = KOS_SUCCESS;
-    struct _KOS_VECTOR cstr;
+    int        error = KOS_SUCCESS;
+    KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 
@@ -132,8 +132,8 @@ static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int                error = KOS_SUCCESS;
-    struct _KOS_VECTOR cstr;
+    int        error = KOS_SUCCESS;
+    KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 
@@ -327,7 +327,9 @@ static KOS_OBJ_ID _number_constructor(KOS_CONTEXT ctx,
         if (IS_NUMERIC_OBJ(arg))
             ret = arg;
         else if (READ_OBJ_TYPE(arg) == OBJ_STRING) {
-            struct _KOS_VECTOR cstr;
+
+            KOS_VECTOR cstr;
+
             kos_vector_init(&cstr);
 
             if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, arg, &cstr)) {
@@ -412,7 +414,8 @@ static KOS_OBJ_ID _integer_constructor(KOS_CONTEXT ctx,
         }
         else if (READ_OBJ_TYPE(arg) == OBJ_STRING) {
 
-            struct _KOS_VECTOR cstr;
+            KOS_VECTOR cstr;
+
             kos_vector_init(&cstr);
 
             if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, arg, &cstr)) {
@@ -500,7 +503,8 @@ static KOS_OBJ_ID _float_constructor(KOS_CONTEXT ctx,
 
         case OBJ_STRING: {
 
-            struct _KOS_VECTOR cstr;
+            KOS_VECTOR cstr;
+
             kos_vector_init(&cstr);
 
             if (KOS_string_to_cstr_vec(ctx, arg, &cstr) == KOS_SUCCESS) {
@@ -2227,10 +2231,10 @@ static int _pack_format(KOS_CONTEXT              ctx,
                         unsigned                 size,
                         unsigned                 count)
 {
-    int                error = KOS_SUCCESS;
-    int                big_end;
-    uint8_t           *dst   = 0;
-    struct _KOS_VECTOR str_buf;
+    int        error = KOS_SUCCESS;
+    int        big_end;
+    uint8_t   *dst   = 0;
+    KOS_VECTOR str_buf;
 
     kos_vector_init(&str_buf);
 
@@ -3792,12 +3796,12 @@ static KOS_OBJ_ID _print_exception(KOS_CONTEXT ctx,
                                    KOS_OBJ_ID  this_obj,
                                    KOS_OBJ_ID  args_obj)
 {
-    int                error;
-    KOS_OBJ_ID         ret       = KOS_BADPTR;
-    uint32_t           i;
-    uint32_t           lines;
-    KOS_OBJ_ID         formatted = KOS_format_exception(ctx, this_obj);
-    struct _KOS_VECTOR cstr;
+    int        error;
+    KOS_OBJ_ID ret       = KOS_BADPTR;
+    uint32_t   i;
+    uint32_t   lines;
+    KOS_OBJ_ID formatted = KOS_format_exception(ctx, this_obj);
+    KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 

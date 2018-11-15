@@ -75,8 +75,8 @@ int kos_seq_fail(void)
 {
     if ( ! _kos_seq_init) {
 
-        struct _KOS_VECTOR cstr;
-        int64_t            value = -1;
+        KOS_VECTOR cstr;
+        int64_t    value = -1;
 
         kos_vector_init(&cstr);
 
@@ -204,7 +204,7 @@ void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
     _unregister_thread(inst, ctx);
 }
 
-static int _add_multiple_paths(KOS_CONTEXT ctx, struct _KOS_VECTOR *cpaths)
+static int _add_multiple_paths(KOS_CONTEXT ctx, KOS_VECTOR *cpaths)
 {
     int   error = KOS_SUCCESS;
     char *buf   = cpaths->buffer;
@@ -231,8 +231,8 @@ static int _init_search_paths(KOS_CONTEXT ctx)
 #ifdef CONFIG_DISABLE_KOSPATH
     return KOS_SUCCESS;
 #else
-    int                error = KOS_SUCCESS;
-    struct _KOS_VECTOR cpaths;
+    int        error = KOS_SUCCESS;
+    KOS_VECTOR cpaths;
 
     kos_vector_init(&cpaths);
 
@@ -559,11 +559,11 @@ cleanup:
 
 int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
 {
-    int                error      = KOS_ERROR_NOT_FOUND;
-    struct _KOS_VECTOR cstr;
-    struct _KOS_VECTOR cpath;
-    size_t             pos;
-    static const char  rel_path[] = CONFIG_MODULE_PATH;
+    int               error      = KOS_ERROR_NOT_FOUND;
+    KOS_VECTOR        cstr;
+    KOS_VECTOR        cpath;
+    size_t            pos;
+    static const char rel_path[] = CONFIG_MODULE_PATH;
 
     kos_vector_init(&cstr);
     kos_vector_init(&cpath);
@@ -765,14 +765,14 @@ void KOS_raise_exception_cstring(KOS_CONTEXT ctx,
 KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  exception)
 {
-    int                error;
-    unsigned           i;
-    unsigned           depth;
-    KOS_OBJ_ID         value;
-    KOS_OBJ_ID         backtrace;
-    KOS_OBJ_ID         array = KOS_BADPTR;
-    KOS_OBJ_ID         str;
-    struct _KOS_VECTOR cstr;
+    int        error;
+    unsigned   i;
+    unsigned   depth;
+    KOS_OBJ_ID value;
+    KOS_OBJ_ID backtrace;
+    KOS_OBJ_ID array = KOS_BADPTR;
+    KOS_OBJ_ID str;
+    KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 
@@ -1016,6 +1016,7 @@ void KOS_pop_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref)
 
 int KOS_push_locals(KOS_CONTEXT ctx, int num_entries, ...)
 {
+    int     error = KOS_SUCCESS;
     va_list args;
 
     assert(num_entries > 0);
@@ -1023,15 +1024,15 @@ int KOS_push_locals(KOS_CONTEXT ctx, int num_entries, ...)
     va_start(args, num_entries);
 
     do {
-        const int error = KOS_push_local(ctx, (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *));
+        error = KOS_push_local(ctx, (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *));
 
         if (error)
-            return error;
+            break;
     } while (--num_entries);
 
     va_end(args);
 
-    return KOS_SUCCESS;
+    return error;
 }
 
 void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries, ...)

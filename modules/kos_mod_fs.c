@@ -39,7 +39,7 @@
 #   include <unistd.h>
 #endif
 
-static void _fix_path_separators(struct _KOS_VECTOR *buf)
+static void _fix_path_separators(KOS_VECTOR *buf)
 {
     char       *ptr = buf->buffer;
     char *const end = ptr + buf->size;
@@ -63,10 +63,10 @@ static KOS_OBJ_ID _is_file(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  this_obj,
                            KOS_OBJ_ID  args_obj)
 {
-    int                error        = KOS_SUCCESS;
-    KOS_OBJ_ID         ret          = KOS_BADPTR;
-    KOS_OBJ_ID         filename_obj = KOS_array_read(ctx, args_obj, 0);
-    struct _KOS_VECTOR filename_cstr;
+    int        error        = KOS_SUCCESS;
+    KOS_OBJ_ID ret          = KOS_BADPTR;
+    KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
+    KOS_VECTOR filename_cstr;
 
     kos_vector_init(&filename_cstr);
 
@@ -98,10 +98,10 @@ static KOS_OBJ_ID _remove(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int                error        = KOS_SUCCESS;
-    KOS_OBJ_ID         ret          = KOS_BADPTR;
-    KOS_OBJ_ID         filename_obj = KOS_array_read(ctx, args_obj, 0);
-    struct _KOS_VECTOR filename_cstr;
+    int        error        = KOS_SUCCESS;
+    KOS_OBJ_ID ret          = KOS_BADPTR;
+    KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
+    KOS_VECTOR filename_cstr;
 
     kos_vector_init(&filename_cstr);
 

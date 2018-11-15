@@ -132,7 +132,7 @@ int main(void)
     {
         const int           num_loops       = 1000 / (num_cpus > 100 ? 100 : num_cpus);
         const int           max_idcs_per_th = 100;
-        struct _KOS_VECTOR  mem_buf;
+        KOS_VECTOR          mem_buf;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
         _KOS_THREAD        *threads         = 0;

@@ -119,14 +119,14 @@ void *kos_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size)
     return obj;
 }
 
-void kos_vector_init(struct _KOS_VECTOR *vector)
+void kos_vector_init(KOS_VECTOR *vector)
 {
     vector->buffer   = (char *)(void *)&vector->_local_buffer;
     vector->size     = 0;
     vector->capacity = sizeof(vector->_local_buffer);
 }
 
-void kos_vector_destroy(struct _KOS_VECTOR *vector)
+void kos_vector_destroy(KOS_VECTOR *vector)
 {
     if (vector->capacity > sizeof(vector->_local_buffer)) {
         kos_free(vector->buffer);
@@ -135,7 +135,7 @@ void kos_vector_destroy(struct _KOS_VECTOR *vector)
     }
 }
 
-int kos_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity)
+int kos_vector_reserve(KOS_VECTOR *vector, size_t capacity)
 {
     int error = KOS_SUCCESS;
 
@@ -162,7 +162,7 @@ int kos_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity)
     return error;
 }
 
-int kos_vector_resize(struct _KOS_VECTOR *vector, size_t size)
+int kos_vector_resize(KOS_VECTOR *vector, size_t size)
 {
     int error = KOS_SUCCESS;
 
@@ -187,7 +187,7 @@ int kos_vector_resize(struct _KOS_VECTOR *vector, size_t size)
     return error;
 }
 
-int kos_vector_concat(struct _KOS_VECTOR *dest, struct _KOS_VECTOR *src)
+int kos_vector_concat(KOS_VECTOR *dest, KOS_VECTOR *src)
 {
     int error = KOS_SUCCESS;
 

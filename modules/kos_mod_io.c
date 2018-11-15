@@ -59,7 +59,7 @@ static KOS_OBJ_ID _set_file_pos(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  this_obj,
                                 KOS_OBJ_ID  args_obj);
 
-static void _fix_path_separators(struct _KOS_VECTOR *buf)
+static void _fix_path_separators(KOS_VECTOR *buf)
 {
     char       *ptr = buf->buffer;
     char *const end = ptr + buf->size;
@@ -105,13 +105,13 @@ static KOS_OBJ_ID _open(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    int                error        = KOS_SUCCESS;
-    KOS_OBJ_ID         ret          = KOS_BADPTR;
-    KOS_OBJ_ID         pos_id;
-    FILE              *file         = 0;
-    KOS_OBJ_ID         filename_obj = KOS_array_read(ctx, args_obj, 0);
-    struct _KOS_VECTOR filename_cstr;
-    struct _KOS_VECTOR flags_cstr;
+    int        error        = KOS_SUCCESS;
+    KOS_OBJ_ID ret          = KOS_BADPTR;
+    KOS_OBJ_ID pos_id;
+    FILE      *file         = 0;
+    KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
+    KOS_VECTOR filename_cstr;
+    KOS_VECTOR flags_cstr;
 
     kos_vector_init(&filename_cstr);
     kos_vector_init(&flags_cstr);
@@ -228,9 +228,9 @@ static KOS_OBJ_ID _print(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
                          KOS_OBJ_ID  args_obj)
 {
-    FILE              *file  = 0;
-    int                error = _get_file_object(ctx, this_obj, &file, 0);
-    struct _KOS_VECTOR cstr;
+    FILE      *file  = 0;
+    int        error = _get_file_object(ctx, this_obj, &file, 0);
+    KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 
@@ -270,9 +270,9 @@ static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    FILE              *file  = 0;
-    int                error = _get_file_object(ctx, this_obj, &file, 0);
-    struct _KOS_VECTOR cstr;
+    FILE      *file  = 0;
+    int        error = _get_file_object(ctx, this_obj, &file, 0);
+    KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 
@@ -315,13 +315,13 @@ static KOS_OBJ_ID _read_line(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    int                error      = KOS_SUCCESS;
-    FILE              *file       = 0;
-    int                size_delta = 4096;
-    int                last_size  = 0;
-    int                num_read;
-    struct _KOS_VECTOR buf;
-    KOS_OBJ_ID         line       = KOS_BADPTR;
+    int        error      = KOS_SUCCESS;
+    FILE      *file       = 0;
+    int        size_delta = 4096;
+    int        last_size  = 0;
+    int        num_read;
+    KOS_VECTOR buf;
+    KOS_OBJ_ID line       = KOS_BADPTR;
 
     kos_vector_init(&buf);
 

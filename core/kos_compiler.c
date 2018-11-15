@@ -751,7 +751,7 @@ static int _add_addr2line(struct _KOS_COMP_UNIT   *program,
                           enum _KOS_BOOL           force)
 {
     int                           error;
-    struct _KOS_VECTOR           *addr2line = &program->addr2line_gen_buf;
+    KOS_VECTOR                   *addr2line = &program->addr2line_gen_buf;
     struct _KOS_COMP_ADDR_TO_LINE new_loc;
 
     new_loc.offs = (uint32_t)program->cur_offs;
@@ -885,7 +885,7 @@ static int _gen_instr5(struct _KOS_COMP_UNIT *program,
 }
 
 static void _write_jump_offs(struct _KOS_COMP_UNIT *program,
-                             struct _KOS_VECTOR    *vec,
+                             KOS_VECTOR            *vec,
                              int                    jump_instr_offs,
                              int                    target_offs)
 {
@@ -1190,7 +1190,7 @@ static int _append_frame(struct _KOS_COMP_UNIT      *program,
     }
 
     {
-        struct _KOS_VECTOR *buf = &program->addr2func_buf;
+        KOS_VECTOR *buf = &program->addr2func_buf;
 
         struct _KOS_COMP_ADDR_TO_FUNC *ptr =
             (struct _KOS_COMP_ADDR_TO_FUNC *)
@@ -2543,8 +2543,8 @@ static int _refinement_module(struct _KOS_COMP_UNIT      *program,
                               const struct _KOS_AST_NODE *node, /* the second child of the refinement node */
                               struct _KOS_REG           **reg)
 {
-    int                error;
-    struct _KOS_VECTOR cstr;
+    int        error;
+    KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 

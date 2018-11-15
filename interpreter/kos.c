@@ -53,20 +53,20 @@ static int _is_option(const char *arg,
 
 static void _print_usage(void);
 
-static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf);
+static int _run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf);
 
 int main(int argc, char *argv[])
 {
-    int                  error       = KOS_SUCCESS;
-    int                  inst_ok     = 0;
-    int                  is_script   = 0;
-    int                  i_module    = 0;
-    int                  i_first_arg = 0;
-    int                  interactive = -1;
-    uint32_t             flags       = 0;
-    KOS_INSTANCE         inst;
-    KOS_CONTEXT          ctx;
-    struct _KOS_VECTOR   buf;
+    int          error       = KOS_SUCCESS;
+    int          inst_ok     = 0;
+    int          is_script   = 0;
+    int          i_module    = 0;
+    int          i_first_arg = 0;
+    int          interactive = -1;
+    uint32_t     flags       = 0;
+    KOS_INSTANCE inst;
+    KOS_CONTEXT  ctx;
+    KOS_VECTOR   buf;
 
     kos_vector_init(&buf);
 
@@ -283,9 +283,9 @@ static void _print_usage(void)
     printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
 }
 
-static int _is_input_complete(struct _KOS_VECTOR *buf,
-                              struct _KOS_VECTOR *tmp,
-                              int                *out_error)
+static int _is_input_complete(KOS_VECTOR *buf,
+                              KOS_VECTOR *tmp,
+                              int        *out_error)
 {
     struct _KOS_PARSER    parser;
     struct _KOS_MEMPOOL   mempool;
@@ -305,7 +305,7 @@ static int _is_input_complete(struct _KOS_VECTOR *buf,
     return error != KOS_ERROR_PARSE_FAILED || parser.token.type != TT_EOF;
 }
 
-static int _enforce_eol(struct _KOS_VECTOR *buf)
+static int _enforce_eol(KOS_VECTOR *buf)
 {
     const char c = buf->size == 0 ? 0 : buf->buffer[buf->size - 1];
 
@@ -321,13 +321,13 @@ static int _enforce_eol(struct _KOS_VECTOR *buf)
     return KOS_SUCCESS;
 }
 
-static int _run_interactive(KOS_CONTEXT ctx, struct _KOS_VECTOR *buf)
+static int _run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 {
     int                 error;
     struct _KOS_GETLINE state;
     KOS_OBJ_ID          print_args;
     int                 genline_init = 0;
-    struct _KOS_VECTOR  tmp_buf;
+    KOS_VECTOR          tmp_buf;
 
     kos_vector_init(&tmp_buf);
 

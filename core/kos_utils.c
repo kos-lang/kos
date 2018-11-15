@@ -192,8 +192,8 @@ static KOS_OBJ_ID _get_exception_string(KOS_CONTEXT ctx,
 
 void KOS_print_exception(KOS_CONTEXT ctx)
 {
-    struct _KOS_VECTOR cstr;
-    KOS_OBJ_ID         exception;
+    KOS_VECTOR cstr;
+    KOS_OBJ_ID exception;
 
     kos_vector_init(&cstr);
 
@@ -281,10 +281,10 @@ KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
     return KOS_string_slice(ctx, full_path, i, len);
 }
 
-static int _int_to_str(KOS_CONTEXT         ctx,
-                       int64_t             value,
-                       KOS_OBJ_ID         *str,
-                       struct _KOS_VECTOR *cstr_vec)
+static int _int_to_str(KOS_CONTEXT ctx,
+                       int64_t     value,
+                       KOS_OBJ_ID *str,
+                       KOS_VECTOR *cstr_vec)
 {
     int     error = KOS_SUCCESS;
     uint8_t buf[64];
@@ -316,10 +316,10 @@ cleanup:
     return error;
 }
 
-static int _float_to_str(KOS_CONTEXT         ctx,
-                         double              value,
-                         KOS_OBJ_ID         *str,
-                         struct _KOS_VECTOR *cstr_vec)
+static int _float_to_str(KOS_CONTEXT ctx,
+                         double      value,
+                         KOS_OBJ_ID *str,
+                         KOS_VECTOR *cstr_vec)
 {
     int      error = KOS_SUCCESS;
     uint8_t  buf[32];
@@ -353,7 +353,7 @@ cleanup:
 }
 
 static int _vector_append_str(KOS_CONTEXT         ctx,
-                              struct _KOS_VECTOR *cstr_vec,
+                              KOS_VECTOR         *cstr_vec,
                               KOS_OBJ_ID          obj,
                               enum _KOS_QUOTE_STR quote_str)
 {
@@ -513,10 +513,10 @@ static int _vector_append_str(KOS_CONTEXT         ctx,
     return KOS_SUCCESS;
 }
 
-static int _make_quoted_str(KOS_CONTEXT         ctx,
-                            KOS_OBJ_ID          obj_id,
-                            KOS_OBJ_ID         *str,
-                            struct _KOS_VECTOR *cstr_vec)
+static int _make_quoted_str(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  obj_id,
+                            KOS_OBJ_ID *str,
+                            KOS_VECTOR *cstr_vec)
 {
     int    error;
     size_t old_size;
@@ -545,9 +545,9 @@ static int _make_quoted_str(KOS_CONTEXT         ctx,
     return error;
 }
 
-static int _vector_append_array(KOS_CONTEXT         ctx,
-                                struct _KOS_VECTOR *cstr_vec,
-                                KOS_OBJ_ID          obj_id)
+static int _vector_append_array(KOS_CONTEXT ctx,
+                                KOS_VECTOR *cstr_vec,
+                                KOS_OBJ_ID  obj_id)
 {
     int      error;
     uint32_t length;
@@ -658,9 +658,9 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _vector_append_buffer(KOS_CONTEXT         ctx,
-                                 struct _KOS_VECTOR *cstr_vec,
-                                 KOS_OBJ_ID          obj_id)
+static int _vector_append_buffer(KOS_CONTEXT ctx,
+                                 KOS_VECTOR *cstr_vec,
+                                 KOS_OBJ_ID  obj_id)
 {
     int            error;
     uint32_t       size;
@@ -709,9 +709,9 @@ cleanup:
 static KOS_OBJ_ID _buffer_to_str(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  obj_id)
 {
-    int                error = KOS_SUCCESS;
-    KOS_OBJ_ID         ret   = KOS_BADPTR;
-    struct _KOS_VECTOR cstr_vec;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
+    KOS_VECTOR cstr_vec;
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
 
@@ -733,9 +733,9 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _vector_append_object(KOS_CONTEXT         ctx,
-                                 struct _KOS_VECTOR *cstr_vec,
-                                 KOS_OBJ_ID          obj_id)
+static int _vector_append_object(KOS_CONTEXT ctx,
+                                 KOS_VECTOR *cstr_vec,
+                                 KOS_OBJ_ID  obj_id)
 {
     int        error     = KOS_SUCCESS;
     KOS_OBJ_ID walk;
@@ -774,9 +774,9 @@ cleanup:
 static KOS_OBJ_ID _object_to_str(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  obj_id)
 {
-    int                error = KOS_SUCCESS;
-    KOS_OBJ_ID         ret   = KOS_BADPTR;
-    struct _KOS_VECTOR cstr_vec;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
+    KOS_VECTOR cstr_vec;
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
@@ -794,9 +794,9 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _vector_append_function(KOS_CONTEXT         ctx,
-                                   struct _KOS_VECTOR *cstr_vec,
-                                   KOS_OBJ_ID          obj_id)
+static int _vector_append_function(KOS_CONTEXT ctx,
+                                   KOS_VECTOR *cstr_vec,
+                                   KOS_OBJ_ID  obj_id)
 {
     int           error = KOS_SUCCESS;
     KOS_FUNCTION *func;
@@ -891,7 +891,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT         ctx,
                                      KOS_OBJ_ID          obj_id,
                                      enum _KOS_QUOTE_STR quote_str,
                                      KOS_OBJ_ID         *str,
-                                     struct _KOS_VECTOR *cstr_vec)
+                                     KOS_VECTOR         *cstr_vec)
 {
     int error = KOS_SUCCESS;
 
@@ -992,7 +992,7 @@ KOS_OBJ_ID KOS_object_to_string(KOS_CONTEXT ctx,
 int KOS_print_to_cstr_vec(KOS_CONTEXT         ctx,
                           KOS_OBJ_ID          array,
                           enum _KOS_QUOTE_STR quote_str,
-                          struct _KOS_VECTOR *cstr_vec,
+                          KOS_VECTOR         *cstr_vec,
                           const char         *sep,
                           unsigned            sep_len)
 {

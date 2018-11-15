@@ -134,10 +134,10 @@ static inline enum _KOS_STRING_FLAGS kos_get_string_elem_size(KOS_STRING *str)
 
 #endif
 
-int kos_append_cstr(KOS_CONTEXT         ctx,
-                    struct _KOS_VECTOR *cstr_vec,
-                    const char         *str,
-                    size_t              len);
+int kos_append_cstr(KOS_CONTEXT          ctx,
+                    struct KOS_VECTOR_S *cstr_vec,
+                    const char          *str,
+                    size_t               len);
 
 /*==========================================================================*/
 /* KOS_STACK                                                                */

@@ -38,18 +38,20 @@ void *kos_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size);
 
 /* Dynamic array of bytes */
 
-struct _KOS_VECTOR {
+struct KOS_VECTOR_S {
     char  *buffer;
     size_t size;
     size_t capacity;
     double _local_buffer[2];
 };
 
-void kos_vector_init(struct _KOS_VECTOR *vector);
-void kos_vector_destroy(struct _KOS_VECTOR *vector);
-int  kos_vector_reserve(struct _KOS_VECTOR *vector, size_t capacity);
-int  kos_vector_resize(struct _KOS_VECTOR *vector, size_t size);
-int  kos_vector_concat(struct _KOS_VECTOR *dest, struct _KOS_VECTOR *src);
-int  kos_vector_append_cstr(struct _KOS_VECTOR *dest, const char* cstr);
+typedef struct KOS_VECTOR_S KOS_VECTOR;
+
+void kos_vector_init(KOS_VECTOR *vector);
+void kos_vector_destroy(KOS_VECTOR *vector);
+int  kos_vector_reserve(KOS_VECTOR *vector, size_t capacity);
+int  kos_vector_resize(KOS_VECTOR *vector, size_t size);
+int  kos_vector_concat(KOS_VECTOR *dest, KOS_VECTOR *src);
+int  kos_vector_append_cstr(KOS_VECTOR *dest, const char* cstr);
 
 #endif

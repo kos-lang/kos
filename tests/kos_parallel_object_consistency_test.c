@@ -130,7 +130,7 @@ int main(void)
         const int           num_loops        = 1024;
         const int           num_thread_loops = 3;
         const int           max_props_per_th = 16;
-        struct _KOS_VECTOR  mem_buf;
+        KOS_VECTOR          mem_buf;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
         _KOS_THREAD        *threads          = 0;

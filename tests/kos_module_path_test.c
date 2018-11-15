@@ -32,13 +32,13 @@
 
 int main(int argc, char *argv[])
 {
-    int                error     = KOS_SUCCESS;
-    KOS_INSTANCE       inst;
-    KOS_CONTEXT        ctx;
-    int                inst_ok   = 0;
-    uint32_t           num_paths = 0;
-    KOS_OBJ_ID         path_str;
-    struct _KOS_VECTOR cstr;
+    int          error     = KOS_SUCCESS;
+    KOS_INSTANCE inst;
+    KOS_CONTEXT  ctx;
+    int          inst_ok   = 0;
+    uint32_t     num_paths = 0;
+    KOS_OBJ_ID   path_str;
+    KOS_VECTOR   cstr;
 
     kos_vector_init(&cstr);
 

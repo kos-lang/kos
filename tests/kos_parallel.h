@@ -30,8 +30,8 @@
 
 static int _get_num_cpus(void)
 {
-    int                num_cpus = 2; /* By default behave as if there were 2 CPUs */
-    struct _KOS_VECTOR cstr;
+    int        num_cpus = 2; /* By default behave as if there were 2 CPUs */
+    KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 

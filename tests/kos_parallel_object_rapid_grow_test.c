@@ -128,7 +128,7 @@ int main(void)
     {
         const int           num_loops   = 100;
         const int           num_props   = 128;
-        struct _KOS_VECTOR  mem_buf;
+        KOS_VECTOR          mem_buf;
         _KOS_THREAD        *threads     = 0;
         int                 num_threads = 0;
         struct THREAD_DATA *thread_cookies;

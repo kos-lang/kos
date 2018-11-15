@@ -108,8 +108,8 @@ static int _is_file(const char *filename)
 }
 #endif
 
-int kos_load_file(const char         *filename,
-                  struct _KOS_VECTOR *buf)
+int kos_load_file(const char *filename,
+                  KOS_VECTOR *buf)
 {
     int    error;
     long   lsize;
@@ -149,7 +149,7 @@ int kos_does_file_exist(const char *filename)
     return _is_file(filename) == KOS_SUCCESS;
 }
 
-int kos_get_absolute_path(struct _KOS_VECTOR *path)
+int kos_get_absolute_path(KOS_VECTOR *path)
 {
     int   error;
     char *resolved_path;
@@ -189,8 +189,8 @@ int kos_get_absolute_path(struct _KOS_VECTOR *path)
     return error;
 }
 
-int kos_get_env(const char         *name,
-                struct _KOS_VECTOR *buf)
+int kos_get_env(const char *name,
+                KOS_VECTOR *buf)
 {
     int         error;
     const char *value = getenv(name);
@@ -211,7 +211,7 @@ int kos_get_env(const char         *name,
 }
 
 #ifdef _WIN32
-int kos_executable_path(struct _KOS_VECTOR *buf)
+int kos_executable_path(KOS_VECTOR *buf)
 {
     int  error = KOS_ERROR_NOT_FOUND;
     char path_buf[MAX_PATH];
@@ -233,7 +233,7 @@ int kos_executable_path(struct _KOS_VECTOR *buf)
     return error;
 }
 #elif defined(__APPLE__)
-int kos_executable_path(struct _KOS_VECTOR *buf)
+int kos_executable_path(KOS_VECTOR *buf)
 {
     int      error = KOS_ERROR_NOT_FOUND;
     uint32_t size  = 0;
@@ -255,7 +255,7 @@ int kos_executable_path(struct _KOS_VECTOR *buf)
     return error;
 }
 #elif defined(__linux__) || defined(__FreeBSD__)
-int kos_executable_path(struct _KOS_VECTOR *buf)
+int kos_executable_path(KOS_VECTOR *buf)
 {
     int error = KOS_ERROR_NOT_FOUND;
 
@@ -293,7 +293,7 @@ cleanup:
     return error;
 }
 #else
-int kos_executable_path(struct _KOS_VECTOR *buf)
+int kos_executable_path(KOS_VECTOR *buf)
 {
     return KOS_ERROR_NOT_FOUND;
 }

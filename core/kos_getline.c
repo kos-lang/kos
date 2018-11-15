@@ -46,7 +46,7 @@ int kos_getline_init(struct _KOS_GETLINE *state)
 
 int kos_getline(struct _KOS_GETLINE *state,
                 enum _KOS_PROMPT     prompt,
-                struct _KOS_VECTOR  *buf)
+                KOS_VECTOR          *buf)
 {
     int         error;
     const char* str_prompt = prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
@@ -148,7 +148,7 @@ void kos_getline_destroy(struct _KOS_GETLINE *state)
 
 int kos_getline(struct _KOS_GETLINE *state,
                 enum _KOS_PROMPT     prompt,
-                struct _KOS_VECTOR  *buf)
+                KOS_VECTOR          *buf)
 {
     int         count = 0;
     const char *line;
@@ -195,7 +195,7 @@ int kos_getline_init(struct _KOS_GETLINE *state)
 
 int kos_getline(struct _KOS_GETLINE *state,
                 enum _KOS_PROMPT     prompt,
-                struct _KOS_VECTOR  *buf)
+                KOS_VECTOR          *buf)
 {
     int error = KOS_SUCCESS;
 

@@ -29,8 +29,6 @@ struct _KOS_GETLINE {
     char dummy;
 };
 
-struct _KOS_VECTOR;
-
 int kos_getline_init(struct _KOS_GETLINE *state);
 
 #define kos_getline_destroy(state) ((void)0)
@@ -45,8 +43,6 @@ struct _KOS_GETLINE {
     HistEvent ev;
 };
 
-struct _KOS_VECTOR;
-
 int kos_getline_init(struct _KOS_GETLINE *state);
 
 void kos_getline_destroy(struct _KOS_GETLINE *state);
@@ -56,8 +52,6 @@ void kos_getline_destroy(struct _KOS_GETLINE *state);
 struct _KOS_GETLINE {
     int interactive;
 };
-
-struct _KOS_VECTOR;
 
 int kos_getline_init(struct _KOS_GETLINE *state);
 
@@ -70,8 +64,10 @@ enum _KOS_PROMPT {
     PROMPT_SUBSEQUENT_LINE
 };
 
+struct KOS_VECTOR_S;
+
 int kos_getline(struct _KOS_GETLINE *state,
                 enum _KOS_PROMPT     prompt,
-                struct _KOS_VECTOR  *buf);
+                struct KOS_VECTOR_S *buf);
 
 #endif

@@ -35,21 +35,21 @@
 #   define KOS_PATH_LIST_SEPARATOR_STR ":"
 #endif
 
-struct _KOS_VECTOR;
+struct KOS_VECTOR_S;
 
 int kos_is_stdin_interactive(void);
 
-int kos_load_file(const char         *filename,
-                  struct _KOS_VECTOR *buf);
+int kos_load_file(const char          *filename,
+                  struct KOS_VECTOR_S *buf);
 
 int kos_does_file_exist(const char *filename);
 
-int kos_get_absolute_path(struct _KOS_VECTOR *path);
+int kos_get_absolute_path(struct KOS_VECTOR_S *path);
 
-int kos_get_env(const char         *name,
-                struct _KOS_VECTOR *buf);
+int kos_get_env(const char          *name,
+                struct KOS_VECTOR_S *buf);
 
-int kos_executable_path(struct _KOS_VECTOR *buf);
+int kos_executable_path(struct KOS_VECTOR_S *buf);
 
 enum _KOS_PROTECT {
     _KOS_NO_ACCESS,

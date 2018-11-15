@@ -123,7 +123,7 @@ int main(void)
     /************************************************************************/
     /* This test performs multiple reads and writes at the same locations in the property table */
     {
-        struct _KOS_VECTOR  mem_buf;
+        KOS_VECTOR          mem_buf;
         _KOS_THREAD        *threads     = 0;
         int                 num_threads = 0;
         KOS_OBJ_ID          o           = KOS_new_object(ctx);

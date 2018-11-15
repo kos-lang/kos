@@ -27,7 +27,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-struct _KOS_VECTOR;
+struct KOS_VECTOR_S;
 
 #ifdef __cplusplus
 
@@ -77,9 +77,9 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
                             void      *buf,
                             unsigned   buf_size);
 
-int KOS_string_to_cstr_vec(KOS_CONTEXT         ctx,
-                           KOS_OBJ_ID          obj_id,
-                           struct _KOS_VECTOR *str_vec);
+int KOS_string_to_cstr_vec(KOS_CONTEXT          ctx,
+                           KOS_OBJ_ID           obj_id,
+                           struct KOS_VECTOR_S *str_vec);
 
 uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id);
 

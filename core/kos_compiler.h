@@ -281,12 +281,12 @@ struct _KOS_COMP_UNIT {
 
     struct _KOS_MEMPOOL         allocator;
 
-    struct _KOS_VECTOR          code_buf;
-    struct _KOS_VECTOR          code_gen_buf;
+    KOS_VECTOR                  code_buf;
+    KOS_VECTOR                  code_gen_buf;
 
-    struct _KOS_VECTOR          addr2line_buf;
-    struct _KOS_VECTOR          addr2line_gen_buf;
-    struct _KOS_VECTOR          addr2func_buf;
+    KOS_VECTOR                  addr2line_buf;
+    KOS_VECTOR                  addr2line_gen_buf;
+    KOS_VECTOR                  addr2func_buf;
 };
 
 struct _KOS_AST_NODE;

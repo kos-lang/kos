@@ -328,7 +328,7 @@ void kos_disassemble(const char                          *filename,
 {
     const struct _KOS_COMP_ADDR_TO_LINE *line_addrs_end  = line_addrs + num_line_addrs;
     const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs_end  = func_addrs + num_func_addrs;
-    struct _KOS_VECTOR                   const_buf;
+    KOS_VECTOR                           const_buf;
     const size_t                         max_const_chars = 32;
 
     static const char *const str_instr[] = {

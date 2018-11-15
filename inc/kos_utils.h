@@ -44,7 +44,7 @@ struct _KOS_NUMERIC {
 
 typedef struct _KOS_NUMERIC KOS_NUMERIC;
 
-struct _KOS_VECTOR;
+struct KOS_VECTOR_S;
 
 enum _KOS_COMPARE_RESULT {
     KOS_EQUAL,
@@ -73,21 +73,21 @@ enum _KOS_QUOTE_STR {
     KOS_QUOTE_STRINGS
 };
 
-int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT         ctx,
-                                     KOS_OBJ_ID          obj_id,
-                                     enum _KOS_QUOTE_STR quote_str,
-                                     KOS_OBJ_ID         *str,
-                                     struct _KOS_VECTOR *cstr_vec);
+int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT          ctx,
+                                     KOS_OBJ_ID           obj_id,
+                                     enum _KOS_QUOTE_STR  quote_str,
+                                     KOS_OBJ_ID          *str,
+                                     struct KOS_VECTOR_S *cstr_vec);
 
 KOS_OBJ_ID KOS_object_to_string(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  obj);
 
-int KOS_print_to_cstr_vec(KOS_CONTEXT         ctx,
-                          KOS_OBJ_ID          array,
-                          enum _KOS_QUOTE_STR quote_str,
-                          struct _KOS_VECTOR *cstr_vec,
-                          const char         *sep,
-                          unsigned            sep_len);
+int KOS_print_to_cstr_vec(KOS_CONTEXT          ctx,
+                          KOS_OBJ_ID           array,
+                          enum _KOS_QUOTE_STR  quote_str,
+                          struct KOS_VECTOR_S *cstr_vec,
+                          const char          *sep,
+                          unsigned             sep_len);
 
 int KOS_array_push_expand(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  array,
