@@ -103,6 +103,40 @@ fi
 rm "$OUTPUT.err"
 
 ##############################################################################
+# Test -c with undeclared identifier
+
+RET=0
+"$KOS" -c foo > "$OUTPUT.out" 2> "$OUTPUT.err" || RET=$?
+
+tr -d '\r' < "$OUTPUT.out" > "$OUTPUT"
+rm "$OUTPUT.out"
+
+if [ $RET != "1" ]; then
+    echo "Expected exit code 1, but it is $RET"
+    cat "$OUTPUT"
+    cat "$OUTPUT.err"
+    exit 1
+fi
+
+if ! grep -q "undeclared identifier" "$OUTPUT.err"; then
+    echo "Expected error text: \"undeclared identifier\""
+    cat "$OUTPUT"
+    cat "$OUTPUT.err"
+    exit 1
+fi
+
+CONTENTS=`cat "$OUTPUT"`
+
+if [ -n "$CONTENTS" ]; then
+    echo "Expected empty output, but it is different" >&2
+    cat "$OUTPUT"
+    cat "$OUTPUT.err"
+    exit 1
+fi
+
+rm "$OUTPUT.err"
+
+##############################################################################
 # Test script read from stdin pipe
 
 echo 'print("From stdin")' | "$KOS" | tr -d '\r' > "$OUTPUT"

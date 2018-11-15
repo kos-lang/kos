@@ -1493,6 +1493,9 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     KOS_OBJ_ID    module_name_str;
     KOS_OBJ_ID    ret         = KOS_BADPTR;
     KOS_INSTANCE *inst        = ctx->inst;
+    KOS_OBJ_ID    prev_locals = KOS_BADPTR;
+
+    TRY(KOS_push_local_scope(ctx, &prev_locals));
 
     module_name_str = KOS_new_cstring(ctx, module_name);
     TRY_OBJID(module_name_str);
@@ -1522,6 +1525,8 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     }
 
 cleanup:
+    KOS_pop_local_scope(ctx);
+
     if (error)
         _handle_interpreter_error(ctx, error);
     else {
@@ -1572,10 +1577,13 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     KOS_OBJ_ID          module_obj  = KOS_BADPTR;
     KOS_OBJ_ID          module_name_str;
     KOS_OBJ_ID          ret         = KOS_BADPTR;
+    KOS_OBJ_ID          prev_locals = KOS_BADPTR;
     KOS_INSTANCE *const inst        = ctx->inst;
     struct _KOS_VECTOR  buf;
 
     kos_vector_init(&buf);
+
+    TRY(KOS_push_local_scope(ctx, &prev_locals));
 
     TRY(_load_stdin(ctx, &buf));
 
@@ -1615,6 +1623,8 @@ cleanup:
     else {
         assert(!KOS_is_exception_pending(ctx));
     }
+
+    KOS_pop_local_scope(ctx);
 
     kos_vector_destroy(&buf);
 

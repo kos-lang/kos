@@ -99,6 +99,24 @@ int kos_seq_fail(void)
 }
 #endif
 
+static int _push_local_refs_object(KOS_CONTEXT ctx)
+{
+    int             error      = KOS_ERROR_EXCEPTION;
+    KOS_LOCAL_REFS *local_refs = (KOS_LOCAL_REFS *)
+        kos_alloc_object(ctx, OBJ_LOCAL_REFS, (uint32_t)sizeof(KOS_LOCAL_REFS));
+
+    if (local_refs) {
+        local_refs->header.num_tracked = 0;
+        local_refs->header.prev_scope  = KOS_LOOK_FURTHER;
+        local_refs->next               = ctx->local_refs;
+        ctx->local_refs                = OBJID(LOCAL_REFS, local_refs);
+
+        error = KOS_SUCCESS;
+    }
+
+    return error;
+}
+
 static int _register_thread(KOS_INSTANCE *inst,
                             KOS_CONTEXT   ctx)
 {
@@ -123,6 +141,8 @@ static int _register_thread(KOS_INSTANCE *inst,
         RAISE_EXCEPTION(str_err_thread_registered);
 
     kos_tls_set(inst->threads.thread_key, ctx);
+
+    TRY(_push_local_refs_object(ctx));
 
 cleanup:
     if (error)
@@ -853,24 +873,6 @@ void KOS_raise_generator_end(KOS_CONTEXT ctx)
 
     if ( ! IS_BAD_PTR(exception))
         KOS_raise_exception(ctx, exception);
-}
-
-static int _push_local_refs_object(KOS_CONTEXT ctx)
-{
-    int             error      = KOS_ERROR_EXCEPTION;
-    KOS_LOCAL_REFS *local_refs = (KOS_LOCAL_REFS *)
-        kos_alloc_object(ctx, OBJ_LOCAL_REFS, (uint32_t)sizeof(KOS_LOCAL_REFS));
-
-    if (local_refs) {
-        local_refs->header.num_tracked = 0;
-        local_refs->header.prev_scope  = KOS_LOOK_FURTHER;
-        local_refs->next               = ctx->local_refs;
-        ctx->local_refs                = OBJID(LOCAL_REFS, local_refs);
-
-        error = KOS_SUCCESS;
-    }
-
-    return error;
 }
 
 int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)

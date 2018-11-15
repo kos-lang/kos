@@ -503,7 +503,7 @@ int main(void)
         TEST(stats.num_objs_freed     == 20);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 0);
-        TEST(stats.num_pages_freed    == 2);
+        TEST(stats.num_pages_freed    == 3);
         TEST(stats.size_evacuated     == base_stats.size_evacuated);
         TEST(stats.size_freed         >  0);
         TEST(stats.size_kept          == 0);
@@ -614,7 +614,7 @@ int main(void)
              * - 1 for string in retval
              * - 1 for string as exception
              */
-            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 15);
+            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 14);
             TEST(stats.num_objs_freed     == 1);
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == 1);
@@ -635,8 +635,7 @@ int main(void)
 
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-            /* Local scope object remains */
-            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 1);
+            TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
             TEST(stats.num_objs_freed     == 15);
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == 0);
@@ -707,7 +706,7 @@ int main(void)
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 3);
+        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 2);
         TEST(stats.num_objs_freed     == 0);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 2);
@@ -725,13 +724,12 @@ int main(void)
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-        /* Local scope object remains */
-        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 1);
+        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
         TEST(stats.num_objs_freed     == 4);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 0);
         TEST(stats.num_pages_freed    >= _KOS_POOL_SIZE / _KOS_PAGE_SIZE);
-        TEST(stats.size_evacuated     == base_stats.size_evacuated + sizeof(KOS_LOCAL_REFS));
+        TEST(stats.size_evacuated     == base_stats.size_evacuated);
         TEST(stats.size_freed         >  0);
         TEST(stats.size_kept          == 0);
 
