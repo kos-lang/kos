@@ -27,14 +27,14 @@
 
 /* Variable-size allocator without ability to free items */
 
-struct _KOS_MEMPOOL {
+struct KOS_MEMPOOL_S {
     size_t free_size;
     void  *buffers;
 };
 
-void  kos_mempool_init(struct _KOS_MEMPOOL *mempool);
-void  kos_mempool_destroy(struct _KOS_MEMPOOL *mempool);
-void *kos_mempool_alloc(struct _KOS_MEMPOOL *mempool, size_t size);
+void  kos_mempool_init(struct KOS_MEMPOOL_S *mempool);
+void  kos_mempool_destroy(struct KOS_MEMPOOL_S *mempool);
+void *kos_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size);
 
 /* Dynamic array of bytes */
 

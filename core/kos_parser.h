@@ -27,10 +27,10 @@
 
 struct _KOS_AST_NODE;
 
-struct _KOS_MEMPOOL;
+struct KOS_MEMPOOL_S;
 
 struct _KOS_PARSER {
-    struct _KOS_MEMPOOL  *ast_buf;
+    struct KOS_MEMPOOL_S *ast_buf;
     const char           *error_str;
     struct _KOS_LEXER     lexer;
     struct _KOS_TOKEN     token;
@@ -45,11 +45,11 @@ struct _KOS_PARSER {
     int                   unary_depth; /* For detecting ambiguous syntax */
 };
 
-void kos_parser_init(struct _KOS_PARSER  *parser,
-                     struct _KOS_MEMPOOL *mempool,
-                     unsigned             file_id,
-                     const char          *begin,
-                     const char          *end);
+void kos_parser_init(struct _KOS_PARSER   *parser,
+                     struct KOS_MEMPOOL_S *mempool,
+                     unsigned              file_id,
+                     const char           *begin,
+                     const char           *end);
 
 int  kos_parser_parse(struct _KOS_PARSER    *parser,
                       struct _KOS_AST_NODE **ret);

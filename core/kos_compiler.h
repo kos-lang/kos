@@ -279,7 +279,7 @@ struct _KOS_COMP_UNIT {
     struct _KOS_COMP_CONST     *last_constant;
     int                         num_constants;
 
-    struct _KOS_MEMPOOL         allocator;
+    struct KOS_MEMPOOL_S        allocator;
 
     KOS_VECTOR                  code_buf;
     KOS_VECTOR                  code_gen_buf;

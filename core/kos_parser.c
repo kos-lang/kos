@@ -3148,11 +3148,11 @@ static int _handle_imports(struct _KOS_PARSER *parser, struct _KOS_AST_NODE *roo
     return error;
 }
 
-void kos_parser_init(struct _KOS_PARSER  *parser,
-                     struct _KOS_MEMPOOL *mempool,
-                     unsigned             file_id,
-                     const char          *begin,
-                     const char          *end)
+void kos_parser_init(struct _KOS_PARSER   *parser,
+                     struct KOS_MEMPOOL_S *mempool,
+                     unsigned              file_id,
+                     const char           *begin,
+                     const char           *end)
 {
     kos_lexer_init(&parser->lexer, file_id, begin, end);
 

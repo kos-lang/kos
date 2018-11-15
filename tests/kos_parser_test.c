@@ -342,15 +342,15 @@ static int scan_int(char **buf, const char *end, int *value)
 
 int main(int argc, char *argv[])
 {
-    struct _KOS_PARSER  parser;
-    KOS_VECTOR          file_buf;
-    struct _KOS_MEMPOOL allocator;
-    char               *file_end;
-    char               *buf;
-    int                 error;
-    int                 test  = 1;
-    int                 print = 0;
-    const char         *usage = "Usage: kos_parser_test [-verbose] [-notest] <testfile>\n";
+    struct _KOS_PARSER   parser;
+    KOS_VECTOR           file_buf;
+    struct KOS_MEMPOOL_S allocator;
+    char                *file_end;
+    char                *buf;
+    int                  error;
+    int                  test  = 1;
+    int                  print = 0;
+    const char          *usage = "Usage: kos_parser_test [-verbose] [-notest] <testfile>\n";
 
     kos_vector_init(&file_buf);
 
