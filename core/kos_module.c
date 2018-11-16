@@ -1694,12 +1694,12 @@ cleanup:
     return error;
 }
 
-int KOS_module_add_function(KOS_CONTEXT              ctx,
-                            KOS_OBJ_ID               module_obj,
-                            KOS_OBJ_ID               str_name,
-                            KOS_FUNCTION_HANDLER     handler,
-                            int                      min_args,
-                            enum _KOS_FUNCTION_STATE gen_state)
+int KOS_module_add_function(KOS_CONTEXT          ctx,
+                            KOS_OBJ_ID           module_obj,
+                            KOS_OBJ_ID           str_name,
+                            KOS_FUNCTION_HANDLER handler,
+                            int                  min_args,
+                            KOS_FUNCTION_STATE   gen_state)
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID func_obj = KOS_new_builtin_function(ctx, handler, min_args);
@@ -1750,13 +1750,13 @@ cleanup:
     return error;
 }
 
-int KOS_module_add_member_function(KOS_CONTEXT              ctx,
-                                   KOS_OBJ_ID               module_obj,
-                                   KOS_OBJ_ID               proto_obj,
-                                   KOS_OBJ_ID               str_name,
-                                   KOS_FUNCTION_HANDLER     handler,
-                                   int                      min_args,
-                                   enum _KOS_FUNCTION_STATE gen_state)
+int KOS_module_add_member_function(KOS_CONTEXT          ctx,
+                                   KOS_OBJ_ID           module_obj,
+                                   KOS_OBJ_ID           proto_obj,
+                                   KOS_OBJ_ID           str_name,
+                                   KOS_FUNCTION_HANDLER handler,
+                                   int                  min_args,
+                                   KOS_FUNCTION_STATE   gen_state)
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID func_obj = KOS_new_builtin_function(ctx, handler, min_args);

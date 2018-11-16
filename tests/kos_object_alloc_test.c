@@ -182,9 +182,9 @@ int main(void)
     size_t       i;
 
     const struct _ALLOC_FUNC {
-        ALLOC_FUNC           alloc_func;
-        enum KOS_OBJECT_TYPE type;
-        size_t               size;
+        ALLOC_FUNC alloc_func;
+        KOS_TYPE   type;
+        size_t     size;
     } alloc[] = {
         { _alloc_integer,      OBJ_INTEGER,      sizeof(KOS_INTEGER)      },
         { _alloc_float,        OBJ_FLOAT,        sizeof(KOS_FLOAT)        },
@@ -210,7 +210,7 @@ int main(void)
     {
         DECLARE_STATIC_CONST_OBJECT(const_obj) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 2);
 
-        KOS_BOOLEAN *bool_obj = (KOS_BOOLEAN *)&const_obj._alloc_size;
+        KOS_BOOLEAN *bool_obj = (KOS_BOOLEAN *)&const_obj.alloc_size;
 
         TEST(bool_obj->header.alloc_size == 0);
         TEST(bool_obj->header.type       == OBJ_BOOLEAN);

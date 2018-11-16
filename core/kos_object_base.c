@@ -174,16 +174,16 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 
         assert(OBJPTR(CLASS, func_obj)->header.type == OBJ_CLASS);
 
-        OBJPTR(CLASS, func_obj)->header.flags          = 0;
-        OBJPTR(CLASS, func_obj)->header.num_args       = 0;
-        OBJPTR(CLASS, func_obj)->header.num_regs       = 0;
-        OBJPTR(CLASS, func_obj)->args_reg              = 0;
-        OBJPTR(CLASS, func_obj)->_dummy                = KOS_CTOR;
-        OBJPTR(CLASS, func_obj)->module                = KOS_BADPTR;
-        OBJPTR(CLASS, func_obj)->closures              = KOS_VOID;
-        OBJPTR(CLASS, func_obj)->defaults              = KOS_VOID;
-        OBJPTR(CLASS, func_obj)->handler               = 0;
-        OBJPTR(CLASS, func_obj)->instr_offs            = ~0U;
+        OBJPTR(CLASS, func_obj)->header.flags    = 0;
+        OBJPTR(CLASS, func_obj)->header.num_args = 0;
+        OBJPTR(CLASS, func_obj)->header.num_regs = 0;
+        OBJPTR(CLASS, func_obj)->args_reg        = 0;
+        OBJPTR(CLASS, func_obj)->dummy           = KOS_CTOR;
+        OBJPTR(CLASS, func_obj)->module          = KOS_BADPTR;
+        OBJPTR(CLASS, func_obj)->closures        = KOS_VOID;
+        OBJPTR(CLASS, func_obj)->defaults        = KOS_VOID;
+        OBJPTR(CLASS, func_obj)->handler         = 0;
+        OBJPTR(CLASS, func_obj)->instr_offs      = ~0U;
         KOS_atomic_write_ptr(OBJPTR(CLASS, func_obj)->prototype, proto_obj);
         KOS_atomic_write_ptr(OBJPTR(CLASS, func_obj)->props,     KOS_BADPTR);
 

@@ -119,9 +119,9 @@ static inline const void* kos_get_string_buffer(KOS_STRING *str)
     return (str->header.flags & KOS_STRING_LOCAL) ? &str->local.data[0] : str->ptr.data_ptr;
 }
 
-static inline enum _KOS_STRING_FLAGS kos_get_string_elem_size(KOS_STRING *str)
+static inline KOS_STRING_FLAGS kos_get_string_elem_size(KOS_STRING *str)
 {
-    return (enum _KOS_STRING_FLAGS)(str->header.flags & KOS_STRING_ELEM_MASK);
+    return (KOS_STRING_FLAGS)(str->header.flags & KOS_STRING_ELEM_MASK);
 }
 
 #else
@@ -130,7 +130,7 @@ static inline enum _KOS_STRING_FLAGS kos_get_string_elem_size(KOS_STRING *str)
                 (const void *)(&(str)->local.data[0]) : \
                 (const void *)((str)->ptr.data_ptr))
 
-#define kos_get_string_elem_size(str) ((enum _KOS_STRING_FLAGS)((str)->header.flags & KOS_STRING_ELEM_MASK))
+#define kos_get_string_elem_size(str) ((KOS_STRING_FLAGS)((str)->header.flags & KOS_STRING_ELEM_MASK))
 
 #endif
 

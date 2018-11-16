@@ -54,9 +54,9 @@ static const char str_format_module[]           = "' in ";
 static const char str_format_offset[]           = "  ";
 static const char str_format_question_marks[]   = "???";
 
-DECLARE_CONST_OBJECT(_kos_void)  = KOS_CONST_OBJECT_INIT(OBJ_VOID,    0);
-DECLARE_CONST_OBJECT(_kos_false) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
-DECLARE_CONST_OBJECT(_kos_true)  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
+DECLARE_CONST_OBJECT(KOS_void)  = KOS_CONST_OBJECT_INIT(OBJ_VOID,    0);
+DECLARE_CONST_OBJECT(KOS_false) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
+DECLARE_CONST_OBJECT(KOS_true)  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
 
 #ifdef CONFIG_PERF
 struct _KOS_PERF _kos_perf = {
@@ -261,8 +261,8 @@ static KOS_OBJ_ID _alloc_empty_string(KOS_CONTEXT ctx)
 }
 
 struct _KOS_INIT_STRING {
-    enum KOS_STR str_id;
-    const char  *text;
+    enum KOS_STR_E str_id;
+    const char    *text;
 };
 
 static int _init_common_strings(KOS_CONTEXT   ctx,
@@ -717,8 +717,8 @@ cleanup:
     return error;
 }
 
-KOS_OBJ_ID KOS_get_string(KOS_CONTEXT  ctx,
-                          enum KOS_STR str_id)
+KOS_OBJ_ID KOS_get_string(KOS_CONTEXT    ctx,
+                          enum KOS_STR_E str_id)
 {
     assert((int)str_id >= 0 && str_id < KOS_STR_NUM);
 

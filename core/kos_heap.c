@@ -487,9 +487,9 @@ static void *_alloc_slots_from_page(_KOS_PAGE *page, uint32_t num_slots)
     return slot;
 }
 
-static KOS_OBJ_HEADER *_alloc_object_from_page(_KOS_PAGE           *page,
-                                               enum KOS_OBJECT_TYPE object_type,
-                                               uint32_t             num_slots)
+static KOS_OBJ_HEADER *_alloc_object_from_page(_KOS_PAGE *page,
+                                               KOS_TYPE   object_type,
+                                               uint32_t   num_slots)
 {
     KOS_OBJ_HEADER *const hdr = (KOS_OBJ_HEADER *)_alloc_slots_from_page(page, num_slots);
 
@@ -503,10 +503,10 @@ static KOS_OBJ_HEADER *_alloc_object_from_page(_KOS_PAGE           *page,
     return hdr;
 }
 
-void *kos_heap_early_alloc(KOS_INSTANCE        *inst,
-                           KOS_CONTEXT          ctx,
-                           enum KOS_OBJECT_TYPE object_type,
-                           uint32_t             size)
+void *kos_heap_early_alloc(KOS_INSTANCE *inst,
+                           KOS_CONTEXT   ctx,
+                           KOS_TYPE      object_type,
+                           uint32_t      size)
 {
     const uint32_t num_slots = (size + sizeof(_KOS_SLOT) - 1) >> _KOS_OBJ_ALIGN_BITS;
 
@@ -553,10 +553,10 @@ void kos_heap_release_thread_page(KOS_CONTEXT ctx)
     }
 }
 
-static KOS_OBJ_HEADER *_setup_huge_object_in_page(struct _KOS_HEAP    *heap,
-                                                  _KOS_PAGE           *page,
-                                                  enum KOS_OBJECT_TYPE object_type,
-                                                  uint32_t             size)
+static KOS_OBJ_HEADER *_setup_huge_object_in_page(struct _KOS_HEAP *heap,
+                                                  _KOS_PAGE        *page,
+                                                  KOS_TYPE          object_type,
+                                                  uint32_t          size)
 {
     KOS_OBJ_HEADER *hdr = (KOS_OBJ_HEADER *)((uint8_t *)page + _KOS_SLOTS_OFFS);
 
@@ -578,9 +578,9 @@ static KOS_OBJ_HEADER *_setup_huge_object_in_page(struct _KOS_HEAP    *heap,
     return hdr;
 }
 
-static void *_alloc_huge_object(KOS_CONTEXT          ctx,
-                                enum KOS_OBJECT_TYPE object_type,
-                                uint32_t             size)
+static void *_alloc_huge_object(KOS_CONTEXT ctx,
+                                KOS_TYPE    object_type,
+                                uint32_t    size)
 {
     struct _KOS_HEAP *heap = _get_heap(ctx);
     KOS_OBJ_HEADER   *hdr  = 0;
@@ -701,9 +701,9 @@ static int _is_page_full(_KOS_PAGE *page)
     return KOS_atomic_read_u32(page->num_allocated) == page->num_slots;
 }
 
-static void *_alloc_object(KOS_CONTEXT          ctx,
-                           enum KOS_OBJECT_TYPE object_type,
-                           uint32_t             size)
+static void *_alloc_object(KOS_CONTEXT ctx,
+                           KOS_TYPE    object_type,
+                           uint32_t    size)
 {
     _KOS_PAGE        *page       = ctx->cur_page;
     const uint32_t    num_slots  = (size + sizeof(_KOS_SLOT) - 1) >> _KOS_OBJ_ALIGN_BITS;
@@ -857,9 +857,9 @@ static void *_alloc_object(KOS_CONTEXT          ctx,
     return hdr;
 }
 
-void *kos_alloc_object(KOS_CONTEXT          ctx,
-                       enum KOS_OBJECT_TYPE object_type,
-                       uint32_t             size)
+void *kos_alloc_object(KOS_CONTEXT ctx,
+                       KOS_TYPE    object_type,
+                       uint32_t    size)
 {
 #ifdef CONFIG_MAD_GC
     {
@@ -880,8 +880,8 @@ void *kos_alloc_object(KOS_CONTEXT          ctx,
     }
 }
 
-void *kos_alloc_object_page(KOS_CONTEXT          ctx,
-                            enum KOS_OBJECT_TYPE object_type)
+void *kos_alloc_object_page(KOS_CONTEXT ctx,
+                            KOS_TYPE    object_type)
 {
     return _alloc_object(ctx, object_type, _KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS);
 }
@@ -1532,7 +1532,7 @@ static int _evacuate_object(KOS_CONTEXT     ctx,
     assert(size <= (_KOS_SLOTS_PER_PAGE << _KOS_OBJ_ALIGN_BITS));
 
     new_obj = (KOS_OBJ_HEADER *)_alloc_object(ctx,
-                                              (enum KOS_OBJECT_TYPE)hdr->type,
+                                              (KOS_TYPE)hdr->type,
                                               size);
 
     if (new_obj) {

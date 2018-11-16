@@ -812,8 +812,8 @@ KOS_OBJ_ID KOS_get_prototype(KOS_CONTEXT ctx,
             break;
 
         case OBJ_FUNCTION: {
-            const enum _KOS_FUNCTION_STATE state =
-                (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, obj_id)->state;
+            const KOS_FUNCTION_STATE state =
+                (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, obj_id)->state;
             if (state == KOS_FUN)
                 ret = inst->prototypes.function_proto;
             else
@@ -854,9 +854,9 @@ int KOS_has_prototype(KOS_CONTEXT ctx,
     return 0;
 }
 
-KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
-                               KOS_OBJ_ID                 obj_id,
-                               enum KOS_OBJECT_WALK_DEPTH deep)
+KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
+                               KOS_OBJ_ID                   obj_id,
+                               enum KOS_OBJECT_WALK_DEPTH_E deep)
 {
     int        error         = KOS_SUCCESS;
     KOS_OBJ_ID walk_id       = KOS_BADPTR;

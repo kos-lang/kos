@@ -215,9 +215,9 @@ std::string exception::get_exception_string(stack_frame ctx)
     return from_object_ptr(ctx, obj_id);
 }
 
-object::const_iterator::const_iterator(stack_frame           ctx,
-                                       KOS_OBJ_ID            obj_id,
-                                       KOS_OBJECT_WALK_DEPTH depth)
+object::const_iterator::const_iterator(stack_frame             ctx,
+                                       KOS_OBJ_ID              obj_id,
+                                       KOS_OBJECT_WALK_DEPTH_E depth)
     : _ctx(ctx), _elem(KOS_BADPTR, KOS_BADPTR)
 {
     _walk = ctx.check_error(KOS_new_object_walk(ctx, obj_id, depth));

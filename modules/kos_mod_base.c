@@ -148,10 +148,10 @@ cleanup:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                ctx,
-                                   KOS_OBJ_ID                 regs_obj,
-                                   KOS_OBJ_ID                 args_obj,
-                                   enum KOS_OBJECT_WALK_DEPTH deep)
+static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                  ctx,
+                                   KOS_OBJ_ID                   regs_obj,
+                                   KOS_OBJ_ID                   args_obj,
+                                   enum KOS_OBJECT_WALK_DEPTH_E deep)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID walk;
@@ -928,8 +928,8 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
             }
 
             case OBJ_FUNCTION: {
-                enum _KOS_FUNCTION_STATE state =
-                        (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, arg)->state;
+                const KOS_FUNCTION_STATE state =
+                        (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, arg)->state;
 
                 if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE) {
                     KOS_raise_exception_cstring(ctx, str_err_cannot_convert_to_buffer);

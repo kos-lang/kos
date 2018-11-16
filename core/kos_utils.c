@@ -1089,8 +1089,8 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
         }
 
         case OBJ_FUNCTION: {
-            enum _KOS_FUNCTION_STATE state =
-                    (enum _KOS_FUNCTION_STATE)OBJPTR(FUNCTION, value)->state;
+            const KOS_FUNCTION_STATE state =
+                    (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, value)->state;
 
             if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE)
                 RAISE_EXCEPTION(str_err_cannot_expand);

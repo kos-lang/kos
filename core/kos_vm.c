@@ -740,9 +740,9 @@ static int _prepare_call(KOS_CONTEXT             ctx,
                          KOS_ATOMIC(KOS_OBJ_ID) *stack_args,
                          unsigned                num_args)
 {
-    int                      error = KOS_SUCCESS;
-    KOS_FUNCTION            *func;
-    enum _KOS_FUNCTION_STATE state;
+    int                error = KOS_SUCCESS;
+    KOS_FUNCTION      *func;
+    KOS_FUNCTION_STATE state;
 
     assert( ! IS_BAD_PTR(func_obj));
     if (IS_BAD_PTR(args_obj)) {
@@ -760,7 +760,7 @@ static int _prepare_call(KOS_CONTEXT             ctx,
     if (GET_OBJ_TYPE(func_obj) != OBJ_CLASS) {
         assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
         func  = OBJPTR(FUNCTION, func_obj);
-        state = (enum _KOS_FUNCTION_STATE)func->state;
+        state = (KOS_FUNCTION_STATE)func->state;
         assert(state != KOS_CTOR);
     }
     else {
@@ -904,11 +904,11 @@ cleanup:
     return error;
 }
 
-static KOS_OBJ_ID _finish_call(KOS_CONTEXT               ctx,
-                               KOS_BYTECODE_INSTR        instr,
-                               KOS_FUNCTION             *func,
-                               KOS_OBJ_ID                this_obj,
-                               enum _KOS_FUNCTION_STATE *state)
+static KOS_OBJ_ID _finish_call(KOS_CONTEXT         ctx,
+                               KOS_BYTECODE_INSTR  instr,
+                               KOS_FUNCTION       *func,
+                               KOS_OBJ_ID          this_obj,
+                               KOS_FUNCTION_STATE *state)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -927,7 +927,7 @@ static KOS_OBJ_ID _finish_call(KOS_CONTEXT               ctx,
                     KOS_raise_generator_end(ctx);
             }
             else {
-                const enum _KOS_FUNCTION_STATE end_state = func->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
+                const KOS_FUNCTION_STATE end_state = func->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
 
                 *state      = end_state;
                 func->state = (uint8_t)end_state;
@@ -1407,7 +1407,7 @@ static int _exec_function(KOS_CONTEXT ctx)
                         }
                     }
                     if (!error) {
-                        const enum KOS_OBJECT_TYPE type = GET_OBJ_TYPE(src);
+                        const KOS_TYPE type = GET_OBJ_TYPE(src);
                         if (type == OBJ_STRING)
                             out = KOS_string_get_char(ctx, src, (int)idx);
                         else if (type == OBJ_BUFFER)
@@ -1444,10 +1444,10 @@ static int _exec_function(KOS_CONTEXT ctx)
             }
 
             case INSTR_GET_ELEM: { /* <r.dest>, <r.src>, <int32> */
-                const unsigned       rsrc = bytecode[2];
-                const int32_t        idx  = (int32_t)_load_32(bytecode+3);
-                KOS_OBJ_ID           src;
-                enum KOS_OBJECT_TYPE type;
+                const unsigned rsrc = bytecode[2];
+                const int32_t  idx  = (int32_t)_load_32(bytecode+3);
+                KOS_OBJ_ID     src;
+                KOS_TYPE       type;
 
                 assert(rsrc  < num_regs);
 
@@ -1642,10 +1642,10 @@ static int _exec_function(KOS_CONTEXT ctx)
             }
 
             case INSTR_SET_ELEM: { /* <r.dest>, <int32>, <r.src> */
-                const int32_t        idx  = (int32_t)_load_32(bytecode+2);
-                const unsigned       rsrc = bytecode[6];
-                KOS_OBJ_ID           dest;
-                enum KOS_OBJECT_TYPE type;
+                const int32_t  idx  = (int32_t)_load_32(bytecode+2);
+                const unsigned rsrc = bytecode[6];
+                KOS_OBJ_ID     dest;
+                KOS_TYPE       type;
 
                 rdest = bytecode[1];
 
@@ -2627,8 +2627,7 @@ static int _exec_function(KOS_CONTEXT ctx)
                         out = this_obj;
 
                     else {
-                        enum _KOS_FUNCTION_STATE state =
-                                (enum _KOS_FUNCTION_STATE)func->state;
+                        KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)func->state;
 
                         /* TODO optimize INSTR_TAIL_CALL */
 
@@ -2866,8 +2865,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
         ret = this_obj;
 
     else {
-        enum _KOS_FUNCTION_STATE state =
-                (enum _KOS_FUNCTION_STATE)func->state;
+        KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)func->state;
 
         if (func->handler)  {
             const KOS_OBJ_ID retval = func->handler(ctx,
@@ -2904,7 +2902,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
     return error ? KOS_BADPTR : ret;
 }
 
-int kos_vm_run_module(struct _KOS_MODULE *module, KOS_OBJ_ID *ret)
+int kos_vm_run_module(KOS_MODULE *module, KOS_OBJ_ID *ret)
 {
     int         error;
     KOS_CONTEXT ctx;

@@ -98,14 +98,14 @@ int KOS_has_prototype(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  obj_id,
                       KOS_OBJ_ID  proto_id);
 
-enum KOS_OBJECT_WALK_DEPTH {
+enum KOS_OBJECT_WALK_DEPTH_E {
     KOS_SHALLOW,
     KOS_DEEP
 };
 
-KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                ctx,
-                               KOS_OBJ_ID                 obj_id,
-                               enum KOS_OBJECT_WALK_DEPTH deep);
+KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
+                               KOS_OBJ_ID                   obj_id,
+                               enum KOS_OBJECT_WALK_DEPTH_E deep);
 
 KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
                                     KOS_OBJ_ID  walk_id);

@@ -151,17 +151,16 @@ static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
 int kos_stack_push(KOS_CONTEXT ctx,
                    KOS_OBJ_ID  func_obj)
 {
-    int              error        = KOS_SUCCESS;
-    KOS_STACK *const stack        = IS_BAD_PTR(ctx->stack) ? 0 : OBJPTR(STACK, ctx->stack);
-    const uint32_t   stack_size   = stack ? KOS_atomic_read_u32(stack->size) : 0;
-    KOS_STACK       *new_stack    = stack;
-    uint32_t         base_idx     = stack_size;
-    const int64_t    catch_init   = (int64_t)KOS_NO_CATCH << 8;
+    int              error      = KOS_SUCCESS;
+    KOS_STACK *const stack      = IS_BAD_PTR(ctx->stack) ? 0 : OBJPTR(STACK, ctx->stack);
+    const uint32_t   stack_size = stack ? KOS_atomic_read_u32(stack->size) : 0;
+    KOS_STACK       *new_stack  = stack;
+    uint32_t         base_idx   = stack_size;
+    const int64_t    catch_init = (int64_t)KOS_NO_CATCH << 8;
     KOS_FUNCTION    *func;
     unsigned         num_regs;
     unsigned         room;
-
-    const enum KOS_OBJECT_TYPE type = GET_OBJ_TYPE(func_obj);
+    const KOS_TYPE   type       = GET_OBJ_TYPE(func_obj);
 
     switch (type) {
 

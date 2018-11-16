@@ -439,7 +439,7 @@ class object: public object_base {
                 {
                 }
 
-                const_iterator(stack_frame ctx, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH depth);
+                const_iterator(stack_frame ctx, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH_E depth);
 
                 const_iterator(const const_iterator& it)
                     : _ctx(0), _walk(KOS_BADPTR), _elem(KOS_BADPTR, KOS_BADPTR)

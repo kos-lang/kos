@@ -23,7 +23,7 @@
 #ifndef KOS_ERROR_H_INCLUDED
 #define KOS_ERROR_H_INCLUDED
 
-enum KOS_ERROR {
+enum KOS_ERROR_E {
     KOS_SUCCESS,
     KOS_SUCCESS_RETURN,                     /* auxiliary, not an error */
     KOS_ERROR_INTERNAL,

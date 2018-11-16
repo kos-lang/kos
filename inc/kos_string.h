@@ -65,10 +65,10 @@ KOS_OBJ_ID KOS_new_const_ascii_string(KOS_CONTEXT ctx,
                                       const char *ascii_str,
                                       unsigned    length);
 
-KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT            ctx,
-                                const void            *str_data,
-                                unsigned               length,
-                                enum _KOS_STRING_FLAGS elem_size);
+KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT      ctx,
+                                const void      *str_data,
+                                unsigned         length,
+                                KOS_STRING_FLAGS elem_size);
 
 KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  codes);

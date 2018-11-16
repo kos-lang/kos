@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include "kos_threads.h"
 
-typedef enum KOS_OBJECT_TYPE {
+typedef enum KOS_OBJECT_TYPE_E {
     OBJ_SMALL_INTEGER,  /* Returned by GET_OBJ_TYPE, never used in any object */
 
     /* Language types */
@@ -56,7 +56,7 @@ typedef enum KOS_OBJECT_TYPE {
     OBJ_LOCAL_REFS
 } KOS_TYPE;
 
-struct _KOS_OBJECT_PLACEHOLDER;
+struct KOS_OBJECT_PLACEHOLDER;
 
 /* KOS_OBJ_ID contains either a pointer to the object or an integer number.
  * The least significant bit (bit 0) indicates whether it is a pointer or a
@@ -70,11 +70,11 @@ struct _KOS_OBJECT_PLACEHOLDER;
  * If bit 0 is a '1', the rest of KOS_OBJ_ID is treated as the pointer without
  * that bit set.  The actual pointer to the object is KOS_OBJ_ID minus 1.
  */
-typedef struct _KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
+typedef struct KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
 
 #define KOS_BADPTR ((KOS_OBJ_ID)(intptr_t)1)
 
-typedef struct _KOS_OBJ_HEADER {
+typedef struct KOS_OBJ_HEADER_S {
     /* During normal operation, alloc_size contains a small integer, which
      * encodes size of the allocation.
      *
@@ -123,7 +123,7 @@ static inline bool IS_NUMERIC_OBJ(KOS_OBJ_ID obj_id) {
     return GET_OBJ_TYPE(obj_id) <= OBJ_FLOAT;
 }
 template<typename T>
-static inline T* KOS_object_ptr(KOS_OBJ_ID obj_id, KOS_OBJECT_TYPE type) {
+static inline T* KOS_object_ptr(KOS_OBJ_ID obj_id, KOS_TYPE type) {
     assert( ! IS_SMALL_INT(obj_id));
     assert(GET_OBJ_TYPE(obj_id) == type);
     return reinterpret_cast<T*>(reinterpret_cast<intptr_t>(obj_id) - 1);
@@ -152,24 +152,24 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 
 #endif
 
-struct _KOS_INSTANCE;
-typedef struct _KOS_INSTANCE KOS_INSTANCE;
+struct KOS_INSTANCE_S;
+typedef struct KOS_INSTANCE_S KOS_INSTANCE;
 
-typedef struct _KOS_INTEGER {
+typedef struct KOS_INTEGER_S {
     KOS_OBJ_HEADER header;
     int64_t        value;
 } KOS_INTEGER;
 
-typedef struct _KOS_FLOAT {
+typedef struct KOS_FLOAT_S {
     KOS_OBJ_HEADER header;
     double         value;
 } KOS_FLOAT;
 
-typedef struct _KOS_VOID {
+typedef struct KOS_VOID_S {
     KOS_OBJ_HEADER header;
 } KOS_VOID;
 
-typedef union _KOS_BOOLEAN {
+typedef union KOS_BOOLEAN_U {
     KOS_OBJ_HEADER header;
     struct {
         KOS_OBJ_ID alloc_size;
@@ -178,32 +178,32 @@ typedef union _KOS_BOOLEAN {
     }              boolean;
 } KOS_BOOLEAN;
 
-typedef struct _KOS_OPAQUE {
+typedef struct KOS_OPAQUE_S {
     KOS_OBJ_HEADER header;
 } KOS_OPAQUE;
 
-struct _KOS_CONST_OBJECT {
-    uint32_t _align4;
-    uint8_t  _alloc_size[sizeof(KOS_OBJ_ID)];
+struct KOS_CONST_OBJECT_S {
+    uint32_t align4;
+    uint8_t  alloc_size[sizeof(KOS_OBJ_ID)];
     uint8_t  type;
     uint8_t  value;
 };
 
-#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj)._alloc_size + 1) )
+#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).alloc_size + 1) )
 
 #ifdef KOS_CPP11
-#   define DECLARE_CONST_OBJECT(name) alignas(8) const struct _KOS_CONST_OBJECT name
-#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(8) static const struct _KOS_CONST_OBJECT name
+#   define DECLARE_CONST_OBJECT(name) alignas(8) const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(8) static const struct KOS_CONST_OBJECT_S name
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #   include <stdalign.h>
-#   define DECLARE_CONST_OBJECT(name) alignas(8) const struct _KOS_CONST_OBJECT name
-#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(8) static const struct _KOS_CONST_OBJECT name
+#   define DECLARE_CONST_OBJECT(name) alignas(8) const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(8) static const struct KOS_CONST_OBJECT_S name
 #elif defined(__GNUC__)
-#   define DECLARE_CONST_OBJECT(name) const struct _KOS_CONST_OBJECT name __attribute__ ((aligned (8)))
-#   define DECLARE_STATIC_CONST_OBJECT(name) static const struct _KOS_CONST_OBJECT name __attribute__ ((aligned (8)))
+#   define DECLARE_CONST_OBJECT(name) const struct KOS_CONST_OBJECT_S name __attribute__ ((aligned (8)))
+#   define DECLARE_STATIC_CONST_OBJECT(name) static const struct KOS_CONST_OBJECT_S name __attribute__ ((aligned (8)))
 #elif defined(_MSC_VER)
-#   define DECLARE_CONST_OBJECT(name) __declspec(align(8)) const struct _KOS_CONST_OBJECT name
-#   define DECLARE_STATIC_CONST_OBJECT(name) __declspec(align(8)) static const struct _KOS_CONST_OBJECT name
+#   define DECLARE_CONST_OBJECT(name) __declspec(align(8)) const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_STATIC_CONST_OBJECT(name) __declspec(align(8)) static const struct KOS_CONST_OBJECT_S name
 #endif
 
 #define KOS_CONST_OBJECT_INIT(type, value) { 0, "", (type), (value) }
@@ -212,20 +212,20 @@ struct _KOS_CONST_OBJECT {
 extern "C" {
 #endif
 
-extern const struct _KOS_CONST_OBJECT _kos_void;
-extern const struct _KOS_CONST_OBJECT _kos_false;
-extern const struct _KOS_CONST_OBJECT _kos_true;
+extern const struct KOS_CONST_OBJECT_S KOS_void;
+extern const struct KOS_CONST_OBJECT_S KOS_false;
+extern const struct KOS_CONST_OBJECT_S KOS_true;
 
 #ifdef __cplusplus
 }
 #endif
 
-#define KOS_VOID    KOS_CONST_ID(_kos_void)
-#define KOS_FALSE   KOS_CONST_ID(_kos_false)
-#define KOS_TRUE    KOS_CONST_ID(_kos_true)
+#define KOS_VOID    KOS_CONST_ID(KOS_void)
+#define KOS_FALSE   KOS_CONST_ID(KOS_false)
+#define KOS_TRUE    KOS_CONST_ID(KOS_true)
 #define KOS_BOOL(v) ( (v) ? KOS_TRUE : KOS_FALSE )
 
-enum _KOS_STRING_FLAGS {
+typedef enum KOS_STRING_FLAGS_E {
     /* Two lowest bits specify string element (character) size in bytes */
     KOS_STRING_ELEM_8    = 0,
     KOS_STRING_ELEM_16   = 1,
@@ -235,9 +235,9 @@ enum _KOS_STRING_FLAGS {
     KOS_STRING_LOCAL     = 4, /* The string is stored entirely in the string object.          */
     KOS_STRING_PTR       = 0, /* The string is stored somewhere else, we only have a pointer. */
     KOS_STRING_REF       = 8  /* The string is stored in another string, we have a reference. */
-};
+} KOS_STRING_FLAGS;
 
-typedef struct _KOS_STR_HEADER {
+typedef struct KOS_STR_HEADER_S {
     KOS_OBJ_ID           alloc_size;
     uint8_t              type;
     uint8_t              flags;
@@ -245,33 +245,33 @@ typedef struct _KOS_STR_HEADER {
     KOS_ATOMIC(uint32_t) hash;
 } KOS_STR_HEADER;
 
-struct _KOS_STRING_LOCAL {
+struct KOS_STRING_LOCAL_S {
     KOS_STR_HEADER header;
     uint8_t        data[1];
 };
 
-struct _KOS_STRING_PTR {
+struct KOS_STRING_PTR_S {
     KOS_STR_HEADER header;
     const void    *data_ptr;
 };
 
-struct _KOS_STRING_REF {
+struct KOS_STRING_REF_S {
     KOS_STR_HEADER header;
     const void    *data_ptr;
     KOS_OBJ_ID     obj_id;
 };
 
-typedef union _KOS_STRING {
-    KOS_STR_HEADER           header;
-    struct _KOS_STRING_LOCAL local;
-    struct _KOS_STRING_PTR   ptr;
-    struct _KOS_STRING_REF   ref;
+typedef union KOS_STRING_U {
+    KOS_STR_HEADER            header;
+    struct KOS_STRING_LOCAL_S local;
+    struct KOS_STRING_PTR_S   ptr;
+    struct KOS_STRING_REF_S   ref;
 } KOS_STRING;
 
 typedef void (*KOS_FINALIZE)(KOS_CONTEXT ctx,
                              void       *priv);
 
-typedef struct _KOS_OBJECT {
+typedef struct KOS_OBJECT_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(KOS_OBJ_ID) props;
     KOS_OBJ_ID             prototype;
@@ -279,19 +279,19 @@ typedef struct _KOS_OBJECT {
     KOS_FINALIZE           finalize;
 } KOS_OBJECT;
 
-typedef struct _KOS_BUFFER {
+typedef struct KOS_BUFFER_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(uint32_t)   size;
     KOS_ATOMIC(KOS_OBJ_ID) data;
 } KOS_BUFFER;
 
-typedef struct _KOS_BUFFER KOS_ARRAY;
+typedef struct KOS_BUFFER_S KOS_ARRAY;
 
 typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_CONTEXT ctx,
                                            KOS_OBJ_ID  this_obj,
                                            KOS_OBJ_ID  args_obj);
 
-enum _KOS_FUNCTION_STATE {
+typedef enum KOS_FUNCTION_STATE_E {
     KOS_FUN,            /* regular function                                     */
     KOS_CTOR,           /* class constructor                                    */
     KOS_GEN_INIT,       /* generator initializer object                         */
@@ -299,37 +299,37 @@ enum _KOS_FUNCTION_STATE {
     KOS_GEN_ACTIVE,     /* generator function halted in the middle of execution */
     KOS_GEN_RUNNING,    /* generator function is being run                      */
     KOS_GEN_DONE        /* generator function reached the return statement      */
-};
+} KOS_FUNCTION_STATE;
 
-typedef struct _KOS_FUN_HEADER {
-    KOS_OBJ_ID           alloc_size;
-    uint8_t              type;
-    uint8_t              flags;
-    uint8_t              num_args;
-    uint8_t              num_regs;
+typedef struct KOS_FUN_HEADER_S {
+    KOS_OBJ_ID alloc_size;
+    uint8_t    type;
+    uint8_t    flags;
+    uint8_t    num_args;
+    uint8_t    num_regs;
 } KOS_FUN_HEADER;
 
-enum _KOS_FUNCTION_FLAGS {
+enum KOS_FUNCTION_FLAGS_E {
     KOS_FUN_CLOSURE  = 1, /* Function's stack frame is a closure */
     KOS_FUN_ELLIPSIS = 2  /* Store remaining args in array       */
 };
 
-typedef struct _KOS_FUNCTION {
-    KOS_FUN_HEADER         header;
-    uint8_t                args_reg;
-    uint8_t                state;    /* TODO convert to KOS_ATOMIC(uint32_t) */
-    uint32_t               instr_offs;
-    KOS_OBJ_ID             module;
-    KOS_OBJ_ID             closures;
-    KOS_OBJ_ID             defaults;
-    KOS_FUNCTION_HANDLER   handler;
-    KOS_OBJ_ID             generator_stack_frame;
+typedef struct KOS_FUNCTION_S {
+    KOS_FUN_HEADER       header;
+    uint8_t              args_reg;
+    uint8_t              state;    /* TODO convert to KOS_ATOMIC(uint32_t) */
+    uint32_t             instr_offs;
+    KOS_OBJ_ID           module;
+    KOS_OBJ_ID           closures;
+    KOS_OBJ_ID           defaults;
+    KOS_FUNCTION_HANDLER handler;
+    KOS_OBJ_ID           generator_stack_frame;
 } KOS_FUNCTION;
 
-typedef struct _KOS_CLASS {
+typedef struct KOS_CLASS_S {
     KOS_FUN_HEADER         header;
     uint8_t                args_reg;
-    uint8_t                _dummy;
+    uint8_t                dummy;
     uint32_t               instr_offs;
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             closures;
@@ -339,18 +339,18 @@ typedef struct _KOS_CLASS {
     KOS_ATOMIC(KOS_OBJ_ID) props;
 } KOS_CLASS;
 
-enum _KOS_MODULE_FLAGS {
+enum KOS_MODULE_FLAGS_E {
     KOS_MODULE_OWN_BYTECODE   = 1,
     KOS_MODULE_OWN_LINE_ADDRS = 2,
     KOS_MODULE_OWN_FUNC_ADDRS = 4
 };
 
-typedef struct _KOS_LINE_ADDR {
+typedef struct KOS_LINE_ADDR_S {
     uint32_t offs;
     uint32_t line;
 } KOS_LINE_ADDR;
 
-typedef struct _KOS_FUNC_ADDR {
+typedef struct KOS_FUNC_ADDR_S {
     uint32_t offs;
     uint32_t line;
     uint32_t str_idx;
@@ -358,7 +358,7 @@ typedef struct _KOS_FUNC_ADDR {
     uint32_t code_size;
 } KOS_FUNC_ADDR;
 
-typedef struct _KOS_MODULE {
+typedef struct KOS_MODULE_S {
     KOS_OBJ_HEADER          header;
     uint8_t                 flags;
     KOS_OBJ_ID              name;
@@ -377,13 +377,13 @@ typedef struct _KOS_MODULE {
     uint32_t                main_idx;     /* Index of constant with main function */
 } KOS_MODULE;
 
-typedef struct _KOS_DYNAMIC_PROP {
+typedef struct KOS_DYNAMIC_PROP_S {
     KOS_OBJ_HEADER       header;
     KOS_OBJ_ID           getter;
     KOS_OBJ_ID           setter;
 } KOS_DYNAMIC_PROP;
 
-typedef struct _KOS_OBJECT_WALK {
+typedef struct KOS_OBJECT_WALK_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(uint32_t)   index;
     KOS_OBJ_ID             obj;

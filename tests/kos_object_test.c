@@ -33,11 +33,11 @@
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
-static int _walk_object(KOS_CONTEXT                ctx,
-                        KOS_OBJ_ID                 obj,
-                        KOS_OBJ_ID                *expected,
-                        unsigned                   num_expected,
-                        enum KOS_OBJECT_WALK_DEPTH deep)
+static int _walk_object(KOS_CONTEXT                  ctx,
+                        KOS_OBJ_ID                   obj,
+                        KOS_OBJ_ID                  *expected,
+                        unsigned                     num_expected,
+                        enum KOS_OBJECT_WALK_DEPTH_E deep)
 {
     KOS_OBJ_ID walk;
     unsigned   count = 0;
