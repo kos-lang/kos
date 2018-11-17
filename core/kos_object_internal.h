@@ -33,18 +33,18 @@
 /* KOS_OBJECT                                                               */
 /*==========================================================================*/
 
-union _KOS_HASH_ALIGN {
+union KOS_HASH_ALIGN_U {
     KOS_ATOMIC(uint32_t) hash;
     KOS_OBJ_ID           align;
 };
 
-typedef struct _KOS_PROPERTY_ITEM {
+typedef struct KOS_PROPERTY_ITEM_S {
     KOS_ATOMIC(KOS_OBJ_ID) key;
-    union _KOS_HASH_ALIGN  hash;
+    union KOS_HASH_ALIGN_U hash;
     KOS_ATOMIC(KOS_OBJ_ID) value;
 } KOS_PITEM;
 
-typedef struct _KOS_OBJECT_STORAGE {
+typedef struct KOS_OBJECT_STORAGE_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(uint32_t)   capacity;
     KOS_ATOMIC(uint32_t)   num_slots_used;
@@ -69,7 +69,7 @@ int kos_is_truthy(KOS_OBJ_ID obj_id);
 /* KOS_ARRAY                                                                */
 /*==========================================================================*/
 
-typedef struct _KOS_ARRAY_STORAGE {
+typedef struct KOS_ARRAY_STORAGE_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(uint32_t)   capacity;
     KOS_ATOMIC(uint32_t)   num_slots_open;
@@ -156,7 +156,7 @@ void kos_wrap_exception(KOS_CONTEXT ctx);
 /* KOS_MODULE                                                               */
 /*==========================================================================*/
 
-struct _KOS_MODULE_INIT {
+struct KOS_MODULE_INIT_S {
     KOS_OBJ_HEADER   hdr;
     KOS_BUILTIN_INIT init;
 };
@@ -174,14 +174,14 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
 #define KOS_LOOK_FURTHER 255
 
-typedef struct _KOS_LOCAL_REFS_HEADER {
+typedef struct KOS_LOCAL_REFS_HEADER_S {
     KOS_OBJ_ID alloc_size;
     uint8_t    type;
     uint8_t    num_tracked;
     uint8_t    prev_scope;
 } KOS_LOCAL_REFS_HEADER;
 
-typedef struct _KOS_LOCAL_REFS {
+typedef struct KOS_LOCAL_REFS_S {
     KOS_LOCAL_REFS_HEADER header;
     KOS_OBJ_ID            next;
     KOS_OBJ_ID           *refs[64 - 3];

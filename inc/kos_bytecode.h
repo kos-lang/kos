@@ -23,7 +23,7 @@
 #ifndef KOS_BYTECODE_H_INCLUDED
 #define KOS_BYTECODE_H_INCLUDED
 
-typedef enum _KOS_BYTECODE_INSTR {
+typedef enum KOS_BYTECODE_INSTR_U {
     /* BREAKPOINT */
     INSTR_BREAKPOINT = 0x80,
     /* We have relatively few instructions.  Most of binary code consists of

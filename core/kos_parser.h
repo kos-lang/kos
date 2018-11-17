@@ -25,24 +25,24 @@
 
 #include "kos_lexer.h"
 
-struct _KOS_AST_NODE;
+struct KOS_AST_NODE_S;
 
 struct KOS_MEMPOOL_S;
 
 struct _KOS_PARSER {
-    struct KOS_MEMPOOL_S *ast_buf;
-    const char           *error_str;
-    struct _KOS_LEXER     lexer;
-    struct _KOS_TOKEN     token;
-    int                   unget;
-    int                   had_eol;
-    int                   allow_continue;
-    int                   allow_break;
-    int                   allow_fallthrough;
-    struct _KOS_AST_NODE *last_fallthrough;
-    int                   in_constructor;
-    int                   ast_depth;   /* For limiting statement/expression depth */
-    int                   unary_depth; /* For detecting ambiguous syntax */
+    struct KOS_MEMPOOL_S  *ast_buf;
+    const char            *error_str;
+    struct _KOS_LEXER      lexer;
+    struct _KOS_TOKEN      token;
+    int                    unget;
+    int                    had_eol;
+    int                    allow_continue;
+    int                    allow_break;
+    int                    allow_fallthrough;
+    struct KOS_AST_NODE_S *last_fallthrough;
+    int                    in_constructor;
+    int                    ast_depth;   /* For limiting statement/expression depth */
+    int                    unary_depth; /* For detecting ambiguous syntax */
 };
 
 void kos_parser_init(struct _KOS_PARSER   *parser,
@@ -51,8 +51,8 @@ void kos_parser_init(struct _KOS_PARSER   *parser,
                      const char           *begin,
                      const char           *end);
 
-int  kos_parser_parse(struct _KOS_PARSER    *parser,
-                      struct _KOS_AST_NODE **ret);
+int  kos_parser_parse(struct _KOS_PARSER     *parser,
+                      struct KOS_AST_NODE_S **ret);
 
 void kos_parser_destroy(struct _KOS_PARSER *parser);
 

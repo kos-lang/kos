@@ -59,26 +59,26 @@ enum _KOS_VAR_ACTIVE {
 struct _KOS_VAR {
     struct _KOS_RED_BLACK_NODE  rb_tree_node;
 
-    struct _KOS_VAR            *next;
-    const struct _KOS_TOKEN    *token;
-    struct _KOS_REG            *reg;
-    const struct _KOS_AST_NODE *value;
-    int                         num_reads;         /* Number of reads from a variable (including closures) */
-    int                         num_assignments;   /* Number of writes to a variable (including closures)  */
-    int                         local_reads;       /* Number of local reads from a variable                */
-    int                         local_assignments; /* Number of local writes to a variable                 */
-    int                         array_idx;
-    int                         type         : 7;
-    int                         is_active    : 3;  /* Becomes active/searchable after the node */
-                                                   /* which declares it. */
-    unsigned                    is_const     : 1;
-    unsigned                    has_defaults : 1;
+    struct _KOS_VAR         *next;
+    const struct _KOS_TOKEN *token;
+    struct _KOS_REG         *reg;
+    const KOS_AST_NODE      *value;
+    int                      num_reads;         /* Number of reads from a variable (including closures) */
+    int                      num_assignments;   /* Number of writes to a variable (including closures)  */
+    int                      local_reads;       /* Number of local reads from a variable                */
+    int                      local_assignments; /* Number of local writes to a variable                 */
+    int                      array_idx;
+    int                      type         : 7;
+    int                      is_active    : 3;  /* Becomes active/searchable after the node */
+                                                /* which declares it. */
+    unsigned                 is_const     : 1;
+    unsigned                 has_defaults : 1;
 };
 
 struct _KOS_BREAK_OFFS {
     struct _KOS_BREAK_OFFS *next;
     int                     offs;
-    enum _KOS_NODE_TYPE     type;
+    KOS_NODE_TYPE           type;
 };
 
 struct _KOS_RETURN_OFFS {
@@ -98,7 +98,7 @@ struct _KOS_CATCH_REF {
 struct _KOS_SCOPE {
     struct _KOS_RED_BLACK_NODE  rb_tree_node;
 
-    const struct _KOS_AST_NODE *scope_node;
+    const KOS_AST_NODE         *scope_node;
     struct _KOS_SCOPE          *next;
     struct _KOS_RED_BLACK_NODE *vars;
     struct _KOS_VAR            *fun_vars_list;
@@ -199,7 +199,7 @@ struct _KOS_COMP_FUNCTION {
 
 struct _KOS_PRE_GLOBAL {
     struct _KOS_PRE_GLOBAL *next;
-    struct _KOS_AST_NODE    node;
+    KOS_AST_NODE            node;
     enum _KOS_VAR_TYPE      type;
     int                     idx;
     int                     is_const;
@@ -289,8 +289,6 @@ struct _KOS_COMP_UNIT {
     KOS_VECTOR                  addr2func_buf;
 };
 
-struct _KOS_AST_NODE;
-
 void kos_compiler_init(struct _KOS_COMP_UNIT *program,
                        int                    file_id);
 
@@ -304,39 +302,39 @@ int kos_compiler_predefine_module(struct _KOS_COMP_UNIT *program,
                                   int                    idx);
 
 int kos_compiler_compile(struct _KOS_COMP_UNIT *program,
-                         struct _KOS_AST_NODE  *ast);
+                         KOS_AST_NODE          *ast);
 
 void kos_compiler_destroy(struct _KOS_COMP_UNIT *program);
 
-const struct _KOS_AST_NODE *kos_get_const(struct _KOS_COMP_UNIT      *program,
-                                          const struct _KOS_AST_NODE *node);
+const KOS_AST_NODE *kos_get_const(struct _KOS_COMP_UNIT *program,
+                                  const KOS_AST_NODE    *node);
 
-int kos_node_is_truthy(struct _KOS_COMP_UNIT      *program,
-                       const struct _KOS_AST_NODE *node);
+int kos_node_is_truthy(struct _KOS_COMP_UNIT *program,
+                       const KOS_AST_NODE    *node);
 
-int kos_node_is_falsy(struct _KOS_COMP_UNIT      *program,
-                      const struct _KOS_AST_NODE *node);
+int kos_node_is_falsy(struct _KOS_COMP_UNIT *program,
+                      const KOS_AST_NODE    *node);
 
-int kos_compiler_process_vars(struct _KOS_COMP_UNIT      *program,
-                              const struct _KOS_AST_NODE *ast);
+int kos_compiler_process_vars(struct _KOS_COMP_UNIT *program,
+                              const KOS_AST_NODE    *ast);
 
 int kos_optimize(struct _KOS_COMP_UNIT *program,
-                 struct _KOS_AST_NODE  *ast);
+                 KOS_AST_NODE          *ast);
 
 int kos_allocate_args(struct _KOS_COMP_UNIT *program,
-                      struct _KOS_AST_NODE  *ast);
+                      KOS_AST_NODE          *ast);
 
 struct _KOS_VAR *kos_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
                               const struct _KOS_TOKEN    *token);
 
-void kos_activate_var(struct _KOS_COMP_UNIT      *program,
-                      const struct _KOS_AST_NODE *node);
+void kos_activate_var(struct _KOS_COMP_UNIT *program,
+                      const KOS_AST_NODE    *node);
 
-void kos_activate_new_vars(struct _KOS_COMP_UNIT      *program,
-                           const struct _KOS_AST_NODE *node);
+void kos_activate_new_vars(struct _KOS_COMP_UNIT *program,
+                           const KOS_AST_NODE    *node);
 
-void kos_activate_self_ref_func(struct _KOS_COMP_UNIT      *program,
-                                const struct _KOS_AST_NODE *node);
+void kos_activate_self_ref_func(struct _KOS_COMP_UNIT *program,
+                                const KOS_AST_NODE    *node);
 
 void kos_deactivate_vars(struct _KOS_SCOPE *scope);
 

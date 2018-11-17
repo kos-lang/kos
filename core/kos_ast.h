@@ -25,7 +25,7 @@
 
 #include "kos_lexer.h"
 
-enum _KOS_NODE_TYPE {
+typedef enum KOS_NODE_TYPE_U {
     NT_EMPTY,
     NT_IMPORT,
     NT_SCOPE,               /* compound statement */
@@ -81,14 +81,14 @@ enum _KOS_NODE_TYPE {
     NT_CLASS_LITERAL,
     NT_ARRAY_LITERAL,
     NT_OBJECT_LITERAL
-};
+} KOS_NODE_TYPE;
 
-struct _KOS_AST_NODE {
-    struct _KOS_AST_NODE *next;
-    struct _KOS_AST_NODE *children;
-    struct _KOS_AST_NODE *last_child;
-    struct _KOS_TOKEN     token;
-    enum _KOS_NODE_TYPE   type;
-};
+typedef struct KOS_AST_NODE_S {
+    struct KOS_AST_NODE_S *next;
+    struct KOS_AST_NODE_S *children;
+    struct KOS_AST_NODE_S *last_child;
+    struct _KOS_TOKEN      token;
+    KOS_NODE_TYPE          type;
+} KOS_AST_NODE;
 
 #endif

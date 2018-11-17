@@ -287,10 +287,10 @@ static int _is_input_complete(KOS_VECTOR *buf,
                               KOS_VECTOR *tmp,
                               int        *out_error)
 {
-    struct _KOS_PARSER    parser;
-    struct KOS_MEMPOOL_S  mempool;
-    int                   error;
-    struct _KOS_AST_NODE *out;
+    struct _KOS_PARSER     parser;
+    struct KOS_MEMPOOL_S   mempool;
+    int                    error;
+    struct KOS_AST_NODE_S *out;
 
     kos_mempool_init(&mempool);
 

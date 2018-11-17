@@ -980,7 +980,7 @@ static int _compile_module(KOS_CONTEXT ctx,
     const uint32_t        old_bytecode_size = module->bytecode_size;
     struct _KOS_PARSER    parser;
     struct _KOS_COMP_UNIT program;
-    struct _KOS_AST_NODE *ast;
+    KOS_AST_NODE         *ast;
 
     /* Initialize parser and compiler */
     kos_compiler_init(&program, module_idx);
@@ -1430,7 +1430,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
         TRY(kos_stack_push(ctx, func_obj));
 
-        error = ((struct _KOS_MODULE_INIT *)OBJPTR(OPAQUE, mod_init))->init(ctx, module_obj);
+        error = ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, mod_init))->init(ctx, module_obj);
 
         kos_stack_pop(ctx);
 

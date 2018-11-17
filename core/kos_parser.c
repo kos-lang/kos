@@ -73,11 +73,11 @@ static const char str_err_unexpected_fallthrough[]    = "unexpected 'fallthrough
 static const char str_err_unsupported_slice_assign[]  = "unsupported assignment to slice, expected '='";
 static const char str_err_yield_in_constructor[]      = "'yield' not allowed in constructors";
 
-static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
-static int _member_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
-static int _right_hand_side_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
-static int _compound_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
-static int _do_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret);
+static int _next_statement(struct _KOS_PARSER *parser, KOS_AST_NODE **ret);
+static int _member_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret);
+static int _right_hand_side_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret);
+static int _compound_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret);
+static int _do_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret);
 
 static int _next_token(struct _KOS_PARSER *parser)
 {
@@ -188,16 +188,16 @@ static int _increase_ast_depth(struct _KOS_PARSER *parser)
     return error;
 }
 
-static int _new_node(struct _KOS_PARSER    *parser,
-                     struct _KOS_AST_NODE **node,
-                     enum _KOS_NODE_TYPE    type)
+static int _new_node(struct _KOS_PARSER *parser,
+                     KOS_AST_NODE      **node,
+                     KOS_NODE_TYPE       type)
 {
-    int                   error = KOS_SUCCESS;
-    struct _KOS_AST_NODE *ast_node;
+    int           error = KOS_SUCCESS;
+    KOS_AST_NODE *ast_node;
 
     assert(parser->ast_buf);
 
-    ast_node = (struct _KOS_AST_NODE *)kos_mempool_alloc(parser->ast_buf, sizeof(struct _KOS_AST_NODE));
+    ast_node = (KOS_AST_NODE *)kos_mempool_alloc(parser->ast_buf, sizeof(KOS_AST_NODE));
 
     if (ast_node) {
         ast_node->next       = 0;
@@ -214,7 +214,7 @@ static int _new_node(struct _KOS_PARSER    *parser,
     return error;
 }
 
-static void _ast_push(struct _KOS_AST_NODE *parent, struct _KOS_AST_NODE *child)
+static void _ast_push(KOS_AST_NODE *parent, KOS_AST_NODE *child)
 {
     if (parent->last_child)
         parent->last_child->next = child;
@@ -223,12 +223,12 @@ static void _ast_push(struct _KOS_AST_NODE *parent, struct _KOS_AST_NODE *child)
     parent->last_child = child;
 }
 
-static int _push_node(struct _KOS_PARSER    *parser,
-                      struct _KOS_AST_NODE  *node,
-                      enum _KOS_NODE_TYPE    type,
-                      struct _KOS_AST_NODE **ret)
+static int _push_node(struct _KOS_PARSER *parser,
+                      KOS_AST_NODE       *node,
+                      KOS_NODE_TYPE       type,
+                      KOS_AST_NODE      **ret)
 {
-    struct _KOS_AST_NODE *new_node = 0;
+    KOS_AST_NODE *new_node = 0;
 
     int error = _new_node(parser, &new_node, type);
 
@@ -255,10 +255,10 @@ static int _fetch_optional_paren(struct _KOS_PARSER *parser, int *was_paren)
     return error;
 }
 
-static int _set_function_name(struct _KOS_PARSER   *parser,
-                              struct _KOS_AST_NODE *node,
-                              struct _KOS_TOKEN    *token,
-                              int                   can_self_refer)
+static int _set_function_name(struct _KOS_PARSER *parser,
+                              KOS_AST_NODE       *node,
+                              struct _KOS_TOKEN  *token,
+                              int                 can_self_refer)
 {
     int error = KOS_SUCCESS;
 
@@ -299,8 +299,8 @@ cleanup:
     return error;
 }
 
-static int _parameters(struct _KOS_PARSER    *parser,
-                       struct _KOS_AST_NODE **ret)
+static int _parameters(struct _KOS_PARSER *parser,
+                       KOS_AST_NODE      **ret)
 {
     int error        = KOS_SUCCESS;
     int num_non_def  = 0;
@@ -312,8 +312,8 @@ static int _parameters(struct _KOS_PARSER    *parser,
 
     while (parser->token.type == TT_IDENTIFIER) {
 
-        enum _KOS_NODE_TYPE   node_type = NT_ASSIGNMENT;
-        struct _KOS_AST_NODE *node      = 0;
+        KOS_NODE_TYPE node_type = NT_ASSIGNMENT;
+        KOS_AST_NODE *node      = 0;
 
         TRY(_new_node(parser, &node, NT_IDENTIFIER));
 
@@ -321,7 +321,7 @@ static int _parameters(struct _KOS_PARSER    *parser,
 
         if (parser->token.op == OT_ASSIGNMENT) {
 
-            struct _KOS_AST_NODE *assign_node;
+            KOS_AST_NODE *assign_node;
 
             has_defaults = 1;
 
@@ -345,7 +345,7 @@ static int _parameters(struct _KOS_PARSER    *parser,
         }
         else if (parser->token.op == OT_MORE) {
 
-            struct _KOS_AST_NODE *new_arg;
+            KOS_AST_NODE *new_arg;
 
             node_type = NT_ELLIPSIS;
 
@@ -392,12 +392,12 @@ cleanup:
 }
 
 struct _KOS_SAVED_STATE {
-    int                   unary_depth;
-    int                   allow_continue;
-    int                   allow_break;
-    int                   allow_fallthrough;
-    struct _KOS_AST_NODE *last_fallthrough;
-    int                   in_constructor;
+    int           unary_depth;
+    int           allow_continue;
+    int           allow_break;
+    int           allow_fallthrough;
+    KOS_AST_NODE *last_fallthrough;
+    int           in_constructor;
 };
 
 static void _save_function_state(struct _KOS_PARSER      *parser,
@@ -431,13 +431,13 @@ static void _restore_function_state(struct _KOS_PARSER      *parser,
 
 static int _function_literal(struct _KOS_PARSER    *parser,
                              enum _KOS_KEYWORD_TYPE keyword,
-                             struct _KOS_AST_NODE **ret)
+                             KOS_AST_NODE         **ret)
 {
     int       error       = KOS_SUCCESS;
     const int constructor = keyword == KW_CONSTRUCTOR;
 
-    struct _KOS_AST_NODE   *node = 0;
-    struct _KOS_AST_NODE   *args;
+    KOS_AST_NODE           *node = 0;
+    KOS_AST_NODE           *args;
     struct _KOS_SAVED_STATE state;
 
     _save_function_state(parser, &state);
@@ -534,13 +534,13 @@ cleanup:
     return error;
 }
 
-static int _lambda_literal_body(struct _KOS_PARSER    *parser,
-                                struct _KOS_AST_NODE  *args,
-                                struct _KOS_AST_NODE **ret)
+static int _lambda_literal_body(struct _KOS_PARSER *parser,
+                                KOS_AST_NODE       *args,
+                                KOS_AST_NODE      **ret)
 {
     int                     error       = KOS_SUCCESS;
-    struct _KOS_AST_NODE   *node        = 0;
-    struct _KOS_AST_NODE   *return_node = 0;
+    KOS_AST_NODE           *node        = 0;
+    KOS_AST_NODE           *return_node = 0;
     struct _KOS_SAVED_STATE state;
 
     _save_function_state(parser, &state);
@@ -576,11 +576,11 @@ cleanup:
     return error;
 }
 
-static int _lambda_literal(struct _KOS_PARSER    *parser,
-                           struct _KOS_AST_NODE **ret)
+static int _lambda_literal(struct _KOS_PARSER *parser,
+                           KOS_AST_NODE      **ret)
 {
-    struct _KOS_AST_NODE *args  = 0;
-    int                   error = KOS_SUCCESS;
+    KOS_AST_NODE *args  = 0;
+    int           error = KOS_SUCCESS;
 
     TRY(_parameters(parser, &args));
 
@@ -598,12 +598,12 @@ cleanup:
     return error;
 }
 
-static int _gen_empty_constructor(struct _KOS_PARSER    *parser,
-                                  struct _KOS_AST_NODE **ret)
+static int _gen_empty_constructor(struct _KOS_PARSER *parser,
+                                  KOS_AST_NODE      **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, NT_CONSTRUCTOR_LITERAL));
 
@@ -629,13 +629,13 @@ cleanup:
     return error;
 }
 
-static int _class_literal(struct _KOS_PARSER    *parser,
-                          struct _KOS_AST_NODE **ret)
+static int _class_literal(struct _KOS_PARSER *parser,
+                          KOS_AST_NODE      **ret)
 {
-    int                   error           = KOS_SUCCESS;
-    int                   had_constructor = 0;
-    struct _KOS_AST_NODE *members_node    = 0;
-    struct _KOS_AST_NODE *empty_ctor      = 0;
+    int           error           = KOS_SUCCESS;
+    int           had_constructor = 0;
+    KOS_AST_NODE *members_node    = 0;
+    KOS_AST_NODE *empty_ctor      = 0;
 
     TRY(_new_node(parser, ret, NT_CLASS_LITERAL));
 
@@ -651,7 +651,7 @@ static int _class_literal(struct _KOS_PARSER    *parser,
 
         if (parser->token.keyword == KW_CONSTRUCTOR) {
 
-            struct _KOS_AST_NODE *ctor_node = 0;
+            KOS_AST_NODE *ctor_node = 0;
 
             if (had_constructor) {
                 parser->error_str = str_err_unexpected_ctor;
@@ -667,9 +667,9 @@ static int _class_literal(struct _KOS_PARSER    *parser,
         }
         else if (parser->token.type == TT_IDENTIFIER || parser->token.type == TT_KEYWORD) {
 
-            struct _KOS_AST_NODE *prop_node      = 0;
-            struct _KOS_AST_NODE *fun_node       = 0;
-            struct _KOS_TOKEN     fun_name_token = parser->token;
+            KOS_AST_NODE     *prop_node      = 0;
+            KOS_AST_NODE     *fun_node       = 0;
+            struct _KOS_TOKEN fun_name_token = parser->token;
 
             TRY(_push_node(parser, members_node, NT_PROPERTY, &prop_node));
 
@@ -696,11 +696,11 @@ cleanup:
     return error;
 }
 
-static int _interpolated_string(struct _KOS_PARSER    *parser,
-                                struct _KOS_AST_NODE **ret)
+static int _interpolated_string(struct _KOS_PARSER *parser,
+                                KOS_AST_NODE      **ret)
 {
-    int                   error = KOS_SUCCESS;
-    struct _KOS_AST_NODE *node  = 0;
+    int           error = KOS_SUCCESS;
+    KOS_AST_NODE *node  = 0;
 
     TRY(_new_node(parser, ret, NT_INTERPOLATED_STRING));
 
@@ -736,11 +736,11 @@ cleanup:
     return error;
 }
 
-static int _array_literal(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _array_literal(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, NT_ARRAY_LITERAL));
 
@@ -756,7 +756,7 @@ static int _array_literal(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret
 
         if (parser->token.op == OT_MORE) {
 
-            struct _KOS_AST_NODE *expanded = node;
+            KOS_AST_NODE *expanded = node;
 
             node = 0;
             TRY(_new_node(parser, &node, NT_EXPAND));
@@ -782,13 +782,13 @@ cleanup:
     return error;
 }
 
-static int _object_literal(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _object_literal(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
     int comma = 1;
 
-    struct _KOS_AST_NODE *node = 0;
-    struct _KOS_AST_NODE *prop = 0;
+    KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *prop = 0;
 
     TRY(_new_node(parser, ret, NT_OBJECT_LITERAL));
 
@@ -860,7 +860,7 @@ cleanup:
     return error;
 }
 
-static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _primary_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int       error             = _next_token(parser);
     const int saved_unary_depth = parser->unary_depth;
@@ -886,7 +886,7 @@ static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
                     error = _next_token(parser);
                 if ( ! error) {
                     if (token->op == OT_LAMBDA) {
-                        struct _KOS_AST_NODE *args = 0;
+                        KOS_AST_NODE *args = 0;
                         error = _new_node(parser, &args, NT_PARAMETERS);
                         if ( ! error) {
                             _ast_push(args, *ret);
@@ -966,11 +966,11 @@ static int _primary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     return error;
 }
 
-static int _unary_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _unary_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int                   error             = KOS_SUCCESS;
-    const int             saved_unary_depth = parser->unary_depth;
-    struct _KOS_AST_NODE *node              = 0;
+    int           error             = KOS_SUCCESS;
+    const int     saved_unary_depth = parser->unary_depth;
+    KOS_AST_NODE *node              = 0;
 
     TRY(_next_token(parser));
 
@@ -1008,12 +1008,12 @@ cleanup:
     return error;
 }
 
-static int _arithm_bitwise_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _arithm_bitwise_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
-    struct _KOS_AST_NODE *aux  = 0;
+    KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *aux  = 0;
 
     TRY(_unary_expr(parser, &node));
 
@@ -1175,12 +1175,12 @@ cleanup:
     return error;
 }
 
-static int _comparison_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _comparison_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
-    struct _KOS_AST_NODE *aux  = 0;
+    KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *aux  = 0;
 
     TRY(_arithm_bitwise_expr(parser, &node));
 
@@ -1219,11 +1219,11 @@ cleanup:
     return error;
 }
 
-static int _logical_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _logical_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_comparison_expr(parser, &node));
 
@@ -1231,7 +1231,7 @@ static int _logical_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     if (parser->token.op == OT_LOGAND || parser->token.op == OT_LOGOR) {
 
-        struct _KOS_AST_NODE         *op_node = 0;
+        KOS_AST_NODE                 *op_node = 0;
         const enum _KOS_OPERATOR_TYPE op      = parser->token.op;
         int                           depth   = 0;
 
@@ -1286,11 +1286,11 @@ cleanup:
     return error;
 }
 
-static int _conditional_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _conditional_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int                   error             = KOS_SUCCESS;
-    struct _KOS_AST_NODE *node              = 0;
-    const int             saved_unary_depth = parser->unary_depth;
+    int           error             = KOS_SUCCESS;
+    KOS_AST_NODE *node              = 0;
+    const int     saved_unary_depth = parser->unary_depth;
 
     TRY(_logical_expr(parser, &node));
 
@@ -1335,7 +1335,7 @@ cleanup:
     return error;
 }
 
-static int _stream_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _stream_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
     int depth = 1;
@@ -1350,8 +1350,8 @@ static int _stream_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     while (parser->token.op == OT_ARROW) {
 
-        struct _KOS_AST_NODE *arg_node = *ret;
-        struct _KOS_AST_NODE *fun_node = 0;
+        KOS_AST_NODE *arg_node = *ret;
+        KOS_AST_NODE *fun_node = 0;
 
         TRY(_increase_ast_depth(parser));
         ++depth;
@@ -1374,11 +1374,11 @@ cleanup:
     return error;
 }
 
-static int _async_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _async_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int                   error      = KOS_SUCCESS;
-    struct _KOS_AST_NODE *node       = 0;
-    struct _KOS_TOKEN     name_token = parser->token;
+    int               error      = KOS_SUCCESS;
+    KOS_AST_NODE     *node       = 0;
+    struct _KOS_TOKEN name_token = parser->token;
 
     TRY(_new_node(parser, ret, NT_ASYNC));
 
@@ -1386,9 +1386,9 @@ static int _async_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     if (parser->token.keyword == KW_DO) {
 
-        struct _KOS_AST_NODE   *fun_node = 0;
-        struct _KOS_AST_NODE   *tmp_node = 0;
-        struct _KOS_AST_NODE   *sub_node = 0;
+        KOS_AST_NODE           *fun_node = 0;
+        KOS_AST_NODE           *tmp_node = 0;
+        KOS_AST_NODE           *sub_node = 0;
         struct _KOS_SAVED_STATE state;
 
         _save_function_state(parser, &state);
@@ -1458,11 +1458,11 @@ cleanup:
     return error;
 }
 
-static int _right_hand_side_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _right_hand_side_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_next_token(parser));
 
@@ -1503,11 +1503,11 @@ cleanup:
     return error;
 }
 
-static int _refinement_identifier(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _refinement_identifier(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int error = KOS_SUCCESS;
+    int           error = KOS_SUCCESS;
+    KOS_AST_NODE *node  = *ret;
 
-    struct _KOS_AST_NODE *node = *ret;
     *ret = 0;
 
     TRY(_new_node(parser, ret, NT_REFINEMENT));
@@ -1535,11 +1535,11 @@ cleanup:
     return error;
 }
 
-static int _refinement_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _refinement_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int error = KOS_SUCCESS;
+    int           error = KOS_SUCCESS;
+    KOS_AST_NODE *node  = *ret;
 
-    struct _KOS_AST_NODE *node = *ret;
     *ret = 0;
 
     TRY(_new_node(parser, ret, NT_REFINEMENT));
@@ -1618,11 +1618,11 @@ cleanup:
     return error;
 }
 
-static int _invocation(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _invocation(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = *ret;
+    KOS_AST_NODE *node = *ret;
     *ret = 0;
 
     TRY(_new_node(parser, ret, NT_INVOCATION));
@@ -1644,7 +1644,7 @@ static int _invocation(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
             if (parser->token.op == OT_MORE) {
 
-                struct _KOS_AST_NODE *expanded = node;
+                KOS_AST_NODE *expanded = node;
 
                 node = 0;
                 TRY(_new_node(parser, &node, NT_EXPAND));
@@ -1672,7 +1672,7 @@ cleanup:
     return error;
 }
 
-static int _member_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _member_expr(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int       error;
     const int saved_unary_depth = parser->unary_depth;
@@ -1719,16 +1719,16 @@ static int _member_expr(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     return error;
 }
 
-static int _expr_var_const(struct _KOS_PARSER    *parser,
-                           int                    allow_in,
-                           int                    allow_multi_assignment,
-                           struct _KOS_AST_NODE **ret)
+static int _expr_var_const(struct _KOS_PARSER *parser,
+                           int                 allow_in,
+                           int                 allow_multi_assignment,
+                           KOS_AST_NODE      **ret)
 {
-    int                   error         = KOS_SUCCESS;
-    struct _KOS_AST_NODE *node          = 0;
-    struct _KOS_AST_NODE *ident_node    = 0;
-    enum _KOS_NODE_TYPE   node_type     = NT_ASSIGNMENT;
-    enum _KOS_NODE_TYPE   var_node_type = parser->token.keyword == KW_CONST
+    int           error         = KOS_SUCCESS;
+    KOS_AST_NODE *node          = 0;
+    KOS_AST_NODE *ident_node    = 0;
+    KOS_NODE_TYPE node_type     = NT_ASSIGNMENT;
+    KOS_NODE_TYPE var_node_type = parser->token.keyword == KW_CONST
                                           ? NT_CONST : NT_VAR;
 
     TRY(_new_node(parser, &node, var_node_type));
@@ -1803,10 +1803,10 @@ cleanup:
     return error;
 }
 
-static int _check_multi_assgn_lhs(struct _KOS_PARSER         *parser,
-                                  const struct _KOS_AST_NODE *node)
+static int _check_multi_assgn_lhs(struct _KOS_PARSER *parser,
+                                  const KOS_AST_NODE *node)
 {
-    const enum _KOS_NODE_TYPE type = node->type;
+    const KOS_NODE_TYPE type = node->type;
 
     /* TODO add NT_VOID_LITERAL */
     if (type == NT_REFINEMENT ||
@@ -1820,14 +1820,14 @@ static int _check_multi_assgn_lhs(struct _KOS_PARSER         *parser,
     return KOS_ERROR_PARSE_FAILED;
 }
 
-static int _expr_no_var(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _expr_no_var(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    struct _KOS_AST_NODE *node = 0;
-    struct _KOS_AST_NODE *lhs  = 0;
+    KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *lhs  = 0;
 
     int error = KOS_SUCCESS;
 
-    enum _KOS_NODE_TYPE node_type;
+    KOS_NODE_TYPE node_type;
 
     TRY(_right_hand_side_expr(parser, &node));
 
@@ -1907,7 +1907,7 @@ cleanup:
     return error;
 }
 
-static int _expr(struct _KOS_PARSER *parser, int allow_in, int allow_var, struct _KOS_AST_NODE **ret)
+static int _expr(struct _KOS_PARSER *parser, int allow_in, int allow_var, KOS_AST_NODE **ret)
 {
     int error;
 
@@ -1929,7 +1929,7 @@ static int _expr(struct _KOS_PARSER *parser, int allow_in, int allow_var, struct
     return error;
 }
 
-static int _expr_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _expr_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = _expr(parser, 0, 1, ret);
 
@@ -1939,11 +1939,11 @@ static int _expr_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     return error;
 }
 
-static int _compound_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _compound_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_assume_separator(parser, ST_CURLY_OPEN));
 
@@ -1973,11 +1973,11 @@ cleanup:
     return error;
 }
 
-static int _function_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _function_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int                    error        = KOS_SUCCESS;
-    struct _KOS_AST_NODE  *const_node;
-    struct _KOS_AST_NODE  *fun_node     = 0;
+    KOS_AST_NODE          *const_node;
+    KOS_AST_NODE          *fun_node     = 0;
     struct _KOS_TOKEN      fun_kw_token = parser->token;
     enum _KOS_KEYWORD_TYPE fun_keyword  = fun_kw_token.keyword;
 
@@ -2019,16 +2019,16 @@ cleanup:
     return error;
 }
 
-static int _do_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _do_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     return _compound_stmt(parser, ret);
 }
 
-static int _if_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _if_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, NT_IF));
 
@@ -2068,11 +2068,11 @@ cleanup:
     return error;
 }
 
-static int _try_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _try_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, NT_TRY_CATCH));
 
@@ -2085,9 +2085,9 @@ static int _try_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     if (parser->token.keyword == KW_CATCH) {
 
-        int                   has_paren;
-        struct _KOS_AST_NODE *catch_node;
-        struct _KOS_AST_NODE *var_node;
+        int           has_paren;
+        KOS_AST_NODE *catch_node;
+        KOS_AST_NODE *var_node;
 
         TRY(_push_node(parser, *ret, NT_CATCH, &catch_node));
 
@@ -2137,12 +2137,12 @@ cleanup:
     return error;
 }
 
-static int _defer_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _defer_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *try_node     = 0;
-    struct _KOS_AST_NODE *finally_node = 0;
+    KOS_AST_NODE *try_node     = 0;
+    KOS_AST_NODE *finally_node = 0;
 
     /* defer is implemented as try..finally */
     TRY(_new_node(parser, ret, NT_TRY_DEFER));
@@ -2166,7 +2166,7 @@ static int _defer_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
         do {
 
-            struct _KOS_AST_NODE *node = 0;
+            KOS_AST_NODE *node = 0;
 
             parser->unget = 1;
 
@@ -2188,13 +2188,13 @@ cleanup:
     return error;
 }
 
-static int _gen_fake_const(struct _KOS_PARSER    *parser,
-                           struct _KOS_AST_NODE  *parent_node)
+static int _gen_fake_const(struct _KOS_PARSER *parser,
+                           KOS_AST_NODE       *parent_node)
 {
-    int                   error;
-    struct _KOS_AST_NODE *node    = 0;
-    char*                 name    = 0;
-    const size_t          max_len = 32;
+    int           error;
+    KOS_AST_NODE *node    = 0;
+    char*         name    = 0;
+    const size_t  max_len = 32;
 
     TRY(_push_node(parser, parent_node, NT_CONST, &node));
 
@@ -2220,17 +2220,17 @@ cleanup:
     return error;
 }
 
-static int _gen_acquire(struct _KOS_PARSER   *parser,
-                        struct _KOS_AST_NODE *parent_node,
-                        struct _KOS_AST_NODE *const_node)
+static int _gen_acquire(struct _KOS_PARSER *parser,
+                        KOS_AST_NODE       *parent_node,
+                        KOS_AST_NODE       *const_node)
 {
     int error;
 
     static const char str_acquire[] = "acquire";
 
-    struct _KOS_AST_NODE *if_node = 0;
-    struct _KOS_AST_NODE *node    = 0;
-    struct _KOS_AST_NODE *id_node = 0;
+    KOS_AST_NODE *if_node = 0;
+    KOS_AST_NODE *node    = 0;
+    KOS_AST_NODE *id_node = 0;
 
     assert(const_node);
     assert(const_node->type == NT_CONST);
@@ -2282,16 +2282,16 @@ cleanup:
     return error;
 }
 
-static int _gen_release(struct _KOS_PARSER   *parser,
-                        struct _KOS_AST_NODE *parent_node,
-                        struct _KOS_AST_NODE *const_node)
+static int _gen_release(struct _KOS_PARSER *parser,
+                        KOS_AST_NODE       *parent_node,
+                        KOS_AST_NODE       *const_node)
 {
     int error;
 
     static const char str_release[] = "release";
 
-    struct _KOS_AST_NODE *node    = 0;
-    struct _KOS_AST_NODE *id_node = 0;
+    KOS_AST_NODE *node    = 0;
+    KOS_AST_NODE *id_node = 0;
 
     assert(const_node);
     assert(const_node->type == NT_CONST);
@@ -2321,21 +2321,21 @@ cleanup:
     return error;
 }
 
-static int _with_stmt_continued(struct _KOS_PARSER   *parser,
-                                int                   has_paren,
-                                struct _KOS_AST_NODE *parent_node)
+static int _with_stmt_continued(struct _KOS_PARSER *parser,
+                                int                 has_paren,
+                                KOS_AST_NODE       *parent_node)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node     = 0;
-    struct _KOS_AST_NODE *try_node = 0;
+    KOS_AST_NODE *node     = 0;
+    KOS_AST_NODE *try_node = 0;
 
     if (parser->token.keyword == KW_CONST)
         TRY(_expr_var_const(parser, 0, 0, &node));
 
     else {
 
-        struct _KOS_AST_NODE *aux_node = 0;
+        KOS_AST_NODE *aux_node = 0;
 
         TRY(_new_node(parser, &node, NT_ASSIGNMENT));
 
@@ -2359,7 +2359,7 @@ static int _with_stmt_continued(struct _KOS_PARSER   *parser,
 
     if (parser->token.sep == ST_COMMA) {
 
-        struct _KOS_AST_NODE *scope_node = 0;
+        KOS_AST_NODE *scope_node = 0;
 
         TRY(_next_token(parser));
 
@@ -2379,7 +2379,7 @@ static int _with_stmt_continued(struct _KOS_PARSER   *parser,
     }
     else {
 
-        struct _KOS_AST_NODE *scope_node = 0;
+        KOS_AST_NODE *scope_node = 0;
 
         parser->unget = 1;
 
@@ -2397,7 +2397,7 @@ cleanup:
     return error;
 }
 
-static int _with_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _with_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
     int has_paren;
@@ -2422,14 +2422,14 @@ cleanup:
     return error;
 }
 
-static int _switch_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _switch_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error       = KOS_SUCCESS;
     int has_default = 0;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
-    struct _KOS_AST_NODE *saved_fallthrough = parser->last_fallthrough;
+    KOS_AST_NODE *saved_fallthrough = parser->last_fallthrough;
 
     parser->last_fallthrough = 0;
 
@@ -2449,9 +2449,9 @@ static int _switch_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
 
     while (parser->token.sep != ST_CURLY_CLOSE) {
 
-        struct _KOS_AST_NODE *case_node  = 0;
-        struct _KOS_AST_NODE *scope_node = 0;
-        int                   num_stmts  = 0;
+        KOS_AST_NODE *case_node  = 0;
+        KOS_AST_NODE *scope_node = 0;
+        int           num_stmts  = 0;
 
         if (parser->token.type == TT_EOF) {
             parser->error_str = str_err_expected_curly_close;
@@ -2522,7 +2522,7 @@ static int _switch_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
                parser->token.sep     != ST_CURLY_CLOSE &&
                parser->token.type    != TT_EOF) {
 
-            enum _KOS_NODE_TYPE node_type;
+            KOS_NODE_TYPE node_type;
 
             parser->unget = 1;
 
@@ -2568,11 +2568,11 @@ cleanup:
     return error;
 }
 
-static int _loop_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _loop_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, NT_FOR));
 
@@ -2595,11 +2595,11 @@ cleanup:
     return error;
 }
 
-static int _repeat_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _repeat_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, NT_REPEAT));
 
@@ -2635,11 +2635,11 @@ cleanup:
     return error;
 }
 
-static int _while_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _while_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, NT_FOR));
 
@@ -2668,11 +2668,11 @@ cleanup:
 static int _for_expr_list(struct _KOS_PARSER      *parser,
                           int                      allow_in,
                           enum _KOS_SEPARATOR_TYPE end_sep,
-                          struct _KOS_AST_NODE   **ret)
+                          KOS_AST_NODE           **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, NT_EXPRESSION_LIST));
 
@@ -2727,15 +2727,15 @@ cleanup:
     return error;
 }
 
-static int _for_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _for_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error  = KOS_SUCCESS;
     int for_in = 0;
     int has_paren;
 
-    struct _KOS_AST_NODE *node       = 0;
-    struct _KOS_AST_NODE *scope_node = 0;
-    struct _KOS_AST_NODE *for_node   = 0;
+    KOS_AST_NODE *node       = 0;
+    KOS_AST_NODE *scope_node = 0;
+    KOS_AST_NODE *for_node   = 0;
 
     TRY(_new_node(parser, &for_node, NT_FOR));
 
@@ -2842,7 +2842,7 @@ cleanup:
     return error;
 }
 
-static int _continue_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _continue_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
@@ -2860,7 +2860,7 @@ static int _continue_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret
     return error;
 }
 
-static int _break_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _break_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
@@ -2878,7 +2878,7 @@ static int _break_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
     return error;
 }
 
-static int _fallthrough_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _fallthrough_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
@@ -2898,7 +2898,7 @@ static int _fallthrough_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **
     return error;
 }
 
-static int _import_stmt(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _import_stmt(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
@@ -2970,13 +2970,13 @@ static int _end_of_return(const struct _KOS_PARSER *parser)
     return 0;
 }
 
-static int _return_throw_assert_stmt(struct _KOS_PARSER    *parser,
-                                     enum _KOS_NODE_TYPE    type,
-                                     struct _KOS_AST_NODE **ret)
+static int _return_throw_assert_stmt(struct _KOS_PARSER *parser,
+                                     KOS_NODE_TYPE       type,
+                                     KOS_AST_NODE      **ret)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *node = 0;
 
     TRY(_new_node(parser, ret, type));
 
@@ -3023,7 +3023,7 @@ cleanup:
     return error;
 }
 
-static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **ret)
+static int _next_statement(struct _KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = _next_token(parser);
 
@@ -3116,7 +3116,7 @@ static int _next_statement(struct _KOS_PARSER *parser, struct _KOS_AST_NODE **re
     return error;
 }
 
-static int _handle_imports(struct _KOS_PARSER *parser, struct _KOS_AST_NODE *root)
+static int _handle_imports(struct _KOS_PARSER *parser, KOS_AST_NODE *root)
 {
     int error = _next_token(parser);
 
@@ -3126,7 +3126,7 @@ static int _handle_imports(struct _KOS_PARSER *parser, struct _KOS_AST_NODE *roo
 
         if (token->keyword == KW_IMPORT) {
 
-            struct _KOS_AST_NODE *node = 0;
+            KOS_AST_NODE *node = 0;
 
             error = _import_stmt(parser, &node);
 
@@ -3176,11 +3176,11 @@ void kos_parser_init(struct _KOS_PARSER   *parser,
     parser->token.sep         = ST_NONE;
 }
 
-int kos_parser_parse(struct _KOS_PARSER    *parser,
-                     struct _KOS_AST_NODE **ret)
+int kos_parser_parse(struct _KOS_PARSER *parser,
+                     KOS_AST_NODE      **ret)
 {
-    struct _KOS_AST_NODE *root = 0;
-    struct _KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *root = 0;
+    KOS_AST_NODE *node = 0;
 
     int error = KOS_SUCCESS;
 

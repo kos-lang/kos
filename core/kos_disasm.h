@@ -30,11 +30,11 @@ struct _KOS_COMP_ADDR_TO_LINE;
 struct _KOS_COMP_ADDR_TO_FUNC;
 struct KOS_VECTOR_S;
 
-int kos_get_operand_size(enum _KOS_BYTECODE_INSTR instr, int op);
+int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op);
 
-int kos_is_register(enum _KOS_BYTECODE_INSTR instr, int op);
+int kos_is_register(KOS_BYTECODE_INSTR instr, int op);
 
-int kos_is_signed_op(enum _KOS_BYTECODE_INSTR instr, int op);
+int kos_is_signed_op(KOS_BYTECODE_INSTR instr, int op);
 
 typedef int (*_KOS_PRINT_CONST)(void                *cookie,
                                 struct KOS_VECTOR_S *cstr_buf,

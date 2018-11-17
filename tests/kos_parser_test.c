@@ -205,11 +205,11 @@ static int compare_output(const char *actual,
     return error;
 }
 
-static int _walk_tree(const struct _KOS_AST_NODE *node,
-                      int                         level,
-                      int                         print,
-                      char                      **compare,
-                      const char                 *compare_end)
+static int _walk_tree(const KOS_AST_NODE *node,
+                      int                 level,
+                      int                 print,
+                      char              **compare,
+                      const char         *compare_end)
 {
     char                     buf[WALK_BUF_SIZE];
     const struct _KOS_TOKEN *token    = &node->token;
@@ -362,7 +362,7 @@ int main(int argc, char *argv[])
     }
 
     {
-        int   iarg;
+        int iarg;
 
         for (iarg=1; iarg < argc-1; iarg++) {
             if (!strcmp(argv[iarg], "-verbose"))
@@ -445,7 +445,7 @@ int main(int argc, char *argv[])
 
         if (!error) {
 
-            struct _KOS_AST_NODE *ast;
+            KOS_AST_NODE *ast;
 
             const int test_error = kos_parser_parse(&parser, &ast);
 

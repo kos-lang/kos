@@ -687,19 +687,19 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
                                   KOS_BUILTIN_INIT init)
 {
-    int                      error = KOS_SUCCESS;
-    struct _KOS_MODULE_INIT *mod_init;
-    KOS_INSTANCE      *const inst  = ctx->inst;
-    KOS_OBJ_ID               module_name;
+    int                       error = KOS_SUCCESS;
+    struct KOS_MODULE_INIT_S *mod_init;
+    KOS_INSTANCE      *const  inst  = ctx->inst;
+    KOS_OBJ_ID                module_name;
 
     module_name = KOS_new_cstring(ctx, module);
     TRY_OBJID(module_name);
 
     kos_track_refs(ctx, 1, &module_name);
 
-    mod_init = (struct _KOS_MODULE_INIT *)kos_alloc_object(ctx,
-                                                           OBJ_OPAQUE,
-                                                           sizeof(struct _KOS_MODULE_INIT));
+    mod_init = (struct KOS_MODULE_INIT_S *)kos_alloc_object(ctx,
+                                                            OBJ_OPAQUE,
+                                                            sizeof(struct KOS_MODULE_INIT_S));
 
     kos_untrack_refs(ctx, 1);
 
