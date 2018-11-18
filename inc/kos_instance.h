@@ -96,7 +96,7 @@ typedef struct _KOS_STACK {
     KOS_ATOMIC(KOS_OBJ_ID) buf[1]; /* Actual stack */
 } KOS_STACK;
 
-struct _KOS_THREAD_CONTEXT {
+struct KOS_THREAD_CONTEXT_S {
     KOS_CONTEXT   next;     /* List of thread roots in instance */
     KOS_CONTEXT   prev;
 
@@ -140,9 +140,9 @@ struct _KOS_MODULE_MGMT {
 };
 
 struct _KOS_THREAD_MGMT {
-    _KOS_TLS_KEY               thread_key;
-    struct _KOS_THREAD_CONTEXT main_thread;
-    _KOS_MUTEX                 mutex;
+    _KOS_TLS_KEY                thread_key;
+    struct KOS_THREAD_CONTEXT_S main_thread;
+    _KOS_MUTEX                  mutex;
 };
 
 enum KOS_STR_E {

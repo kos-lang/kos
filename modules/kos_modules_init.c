@@ -30,7 +30,7 @@
 #include "kos_module_list.h"
 #undef MODULE_DEF
 
-int KOS_modules_init(struct _KOS_THREAD_CONTEXT *ctx)
+int KOS_modules_init(struct KOS_THREAD_CONTEXT_S *ctx)
 {
     int error = KOS_SUCCESS;
 #define MODULE_DEF(module) TRY(KOS_instance_register_builtin(ctx, #module, kos_module_##module##_init));

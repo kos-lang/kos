@@ -30,7 +30,7 @@
 #   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_i32(_kos_perf.stat[idx], 1)
 #   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_i32(_kos_perf.stat, (num))
 
-struct _KOS_PERF {
+struct KOS_PERF_S {
     KOS_ATOMIC(uint32_t) object_get_success;
     KOS_ATOMIC(uint32_t) object_get_fail;
     KOS_ATOMIC(uint32_t) object_set_success;
@@ -52,7 +52,7 @@ struct _KOS_PERF {
     KOS_ATOMIC(uint32_t) alloc_free_page;
 };
 
-extern struct _KOS_PERF _kos_perf;
+extern struct KOS_PERF_S _kos_perf;
 
 #else
 #   define KOS_PERF_CNT(stat)            (void)0

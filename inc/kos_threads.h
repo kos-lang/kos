@@ -58,8 +58,8 @@ typedef struct _KOS_THREAD_OBJECT *_KOS_THREAD;
 struct _KOS_MUTEX_OBJECT;
 typedef struct _KOS_MUTEX_OBJECT *_KOS_MUTEX;
 
-struct _KOS_THREAD_CONTEXT;
-typedef struct _KOS_THREAD_CONTEXT *KOS_CONTEXT;
+struct KOS_THREAD_CONTEXT_S;
+typedef struct KOS_THREAD_CONTEXT_S *KOS_CONTEXT;
 
 typedef void (*_KOS_THREAD_PROC)(KOS_CONTEXT ctx,
                                  void       *cookie);

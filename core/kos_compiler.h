@@ -205,12 +205,12 @@ struct _KOS_PRE_GLOBAL {
     char                    name_buf[1];
 };
 
-struct _KOS_COMP_ADDR_TO_LINE {
+struct KOS_COMP_ADDR_TO_LINE_S {
     uint32_t offs;
     uint32_t line;
 };
 
-struct _KOS_COMP_ADDR_TO_FUNC {
+struct KOS_COMP_ADDR_TO_FUNC_S {
     uint32_t offs;
     uint32_t line;
     uint32_t str_idx;

@@ -265,7 +265,7 @@ class thread_ctx {
         }
 
     private:
-        struct _KOS_THREAD_CONTEXT _thread_ctx;
+        struct KOS_THREAD_CONTEXT_S _thread_ctx;
 };
 
 class object_base {

@@ -314,22 +314,22 @@ static int _is_constant(KOS_BYTECODE_INSTR instr, int op)
     return 0;
 }
 
-void kos_disassemble(const char                          *filename,
-                     uint32_t                             offs,
-                     const uint8_t                       *bytecode,
-                     uint32_t                             size,
-                     const struct _KOS_COMP_ADDR_TO_LINE *line_addrs,
-                     uint32_t                             num_line_addrs,
-                     const char                   *const *func_names,
-                     const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs,
-                     uint32_t                             num_func_addrs,
-                     _KOS_PRINT_CONST                     print_const,
-                     void                                *print_const_cookie)
+void kos_disassemble(const char                           *filename,
+                     uint32_t                              offs,
+                     const uint8_t                        *bytecode,
+                     uint32_t                              size,
+                     const struct KOS_COMP_ADDR_TO_LINE_S *line_addrs,
+                     uint32_t                              num_line_addrs,
+                     const char                    *const *func_names,
+                     const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs,
+                     uint32_t                              num_func_addrs,
+                     KOS_PRINT_CONST                       print_const,
+                     void                                 *print_const_cookie)
 {
-    const struct _KOS_COMP_ADDR_TO_LINE *line_addrs_end  = line_addrs + num_line_addrs;
-    const struct _KOS_COMP_ADDR_TO_FUNC *func_addrs_end  = func_addrs + num_func_addrs;
-    KOS_VECTOR                           const_buf;
-    const size_t                         max_const_chars = 32;
+    const struct KOS_COMP_ADDR_TO_LINE_S *line_addrs_end  = line_addrs + num_line_addrs;
+    const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs_end  = func_addrs + num_func_addrs;
+    KOS_VECTOR                            const_buf;
+    const size_t                          max_const_chars = 32;
 
     static const char *const str_instr[] = {
         "BREAKPOINT",

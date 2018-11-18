@@ -23,13 +23,13 @@
 #ifndef KOS_MODULES_INIT_H_INCLUDED
 #define KOS_MODULES_INIT_H_INCLUDED
 
-struct _KOS_THREAD_CONTEXT;
+struct KOS_THREAD_CONTEXT_S;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int KOS_modules_init(struct _KOS_THREAD_CONTEXT *ctx);
+int KOS_modules_init(struct KOS_THREAD_CONTEXT_S *ctx);
 
 #ifdef __cplusplus
 }

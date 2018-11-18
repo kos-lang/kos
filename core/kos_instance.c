@@ -59,7 +59,7 @@ DECLARE_CONST_OBJECT(KOS_false) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
 DECLARE_CONST_OBJECT(KOS_true)  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
 
 #ifdef CONFIG_PERF
-struct _KOS_PERF _kos_perf = {
+struct KOS_PERF_S _kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
     0, 0,
     0, 0, 0, 0

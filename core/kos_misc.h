@@ -38,9 +38,9 @@ int kos_parse_double(const char *begin,
                      const char *end,
                      double     *value);
 
-int kos_parse_numeric(const char          *begin,
-                      const char          *end,
-                      struct _KOS_NUMERIC *value);
+int kos_parse_numeric(const char  *begin,
+                      const char  *end,
+                      KOS_NUMERIC *value);
 
 uint64_t kos_double_to_uint64_t(double value);
 

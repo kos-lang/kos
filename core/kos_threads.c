@@ -123,9 +123,9 @@ struct _KOS_THREAD_OBJECT {
 
 static DWORD WINAPI _thread_proc(LPVOID thread_obj)
 {
-    struct _KOS_THREAD_CONTEXT thread_ctx;
-    DWORD                      ret        = 0;
-    int                        unregister = 0;
+    struct KOS_THREAD_CONTEXT_S thread_ctx;
+    DWORD                       ret        = 0;
+    int                         unregister = 0;
 
     if (KOS_instance_register_thread(((_KOS_THREAD)thread_obj)->inst, &thread_ctx) == KOS_SUCCESS) {
         ((_KOS_THREAD)thread_obj)->proc(&thread_ctx, ((_KOS_THREAD)thread_obj)->cookie);
@@ -301,9 +301,9 @@ struct _KOS_THREAD_OBJECT {
 
 static void *_thread_proc(void *thread_obj)
 {
-    struct _KOS_THREAD_CONTEXT thread_ctx;
-    void                      *ret        = 0;
-    int                        unregister = 0;
+    struct KOS_THREAD_CONTEXT_S thread_ctx;
+    void                       *ret        = 0;
+    int                         unregister = 0;
 
     if (KOS_instance_register_thread(((_KOS_THREAD)thread_obj)->inst, &thread_ctx) == KOS_SUCCESS) {
         ((_KOS_THREAD)thread_obj)->proc(&thread_ctx, ((_KOS_THREAD)thread_obj)->cookie);

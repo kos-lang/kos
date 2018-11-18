@@ -447,9 +447,9 @@ cleanup:
     return error;
 }
 
-int kos_parse_numeric(const char          *begin,
-                      const char          *end,
-                      struct _KOS_NUMERIC *value)
+int kos_parse_numeric(const char  *begin,
+                      const char  *end,
+                      KOS_NUMERIC *value)
 {
     int error;
 

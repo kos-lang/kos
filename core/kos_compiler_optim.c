@@ -63,14 +63,13 @@ static void _collapse(KOS_AST_NODE    *node,
     }
 }
 
-static int _collapse_numeric(struct _KOS_COMP_UNIT     *program,
-                             KOS_AST_NODE              *node,
-                             const struct _KOS_NUMERIC *value)
+static int _collapse_numeric(struct _KOS_COMP_UNIT *program,
+                             KOS_AST_NODE          *node,
+                             const KOS_NUMERIC     *value)
 {
-    int                  error;
-    const unsigned       length = sizeof(struct _KOS_NUMERIC);
-    struct _KOS_NUMERIC *store  = (struct _KOS_NUMERIC *)
-                                  kos_mempool_alloc(&program->allocator, length);
+    int            error;
+    const unsigned length = sizeof(KOS_NUMERIC);
+    KOS_NUMERIC   *store  = (KOS_NUMERIC *)kos_mempool_alloc(&program->allocator, length);
 
     if (store) {
 
@@ -117,15 +116,15 @@ static void _promote(struct _KOS_COMP_UNIT *program,
 
 static int _get_nonzero(const KOS_TOKEN *token, int *non_zero)
 {
-    struct _KOS_NUMERIC numeric;
+    KOS_NUMERIC numeric;
 
     assert(token->length > 0);
 
     if (token->type == TT_NUMERIC_BINARY) {
 
-        const struct _KOS_NUMERIC *value = (const struct _KOS_NUMERIC *)token->begin;
+        const KOS_NUMERIC *value = (const KOS_NUMERIC *)token->begin;
 
-        assert(token->length == sizeof(struct _KOS_NUMERIC));
+        assert(token->length == sizeof(KOS_NUMERIC));
 
         numeric = *value;
     }
@@ -898,14 +897,14 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT *program,
                                const KOS_AST_NODE    *a,
                                const KOS_AST_NODE    *b)
 {
-    int                 error;
-    KOS_OPERATOR_TYPE   op = node->token.op;
-    struct _KOS_NUMERIC numeric_a;
-    struct _KOS_NUMERIC numeric_b;
+    int               error;
+    KOS_OPERATOR_TYPE op = node->token.op;
+    KOS_NUMERIC       numeric_a;
+    KOS_NUMERIC       numeric_b;
 
     if (a->token.type == TT_NUMERIC_BINARY) {
-        assert(a->token.length == sizeof(struct _KOS_NUMERIC));
-        numeric_a = *(const struct _KOS_NUMERIC *)(a->token.begin);
+        assert(a->token.length == sizeof(KOS_NUMERIC));
+        numeric_a = *(const KOS_NUMERIC *)(a->token.begin);
     }
     else if (KOS_SUCCESS != kos_parse_numeric(a->token.begin,
                                               a->token.begin + a->token.length,
@@ -913,8 +912,8 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT *program,
         return KOS_SUCCESS;
 
     if (b->token.type == TT_NUMERIC_BINARY) {
-        assert(b->token.length == sizeof(struct _KOS_NUMERIC));
-        numeric_b = *(const struct _KOS_NUMERIC *)(b->token.begin);
+        assert(b->token.length == sizeof(KOS_NUMERIC));
+        numeric_b = *(const KOS_NUMERIC *)(b->token.begin);
     }
     else if (KOS_SUCCESS != kos_parse_numeric(b->token.begin,
                                               b->token.begin + b->token.length,
@@ -1064,12 +1063,12 @@ static int _optimize_unary_op(struct _KOS_COMP_UNIT *program,
                               KOS_AST_NODE          *node,
                               const KOS_AST_NODE    *a)
 {
-    KOS_OPERATOR_TYPE   op = node->token.op;
-    struct _KOS_NUMERIC numeric_a;
+    KOS_OPERATOR_TYPE op = node->token.op;
+    KOS_NUMERIC       numeric_a;
 
     if (a->token.type == TT_NUMERIC_BINARY) {
-        assert(a->token.length == sizeof(struct _KOS_NUMERIC));
-        numeric_a = *(const struct _KOS_NUMERIC *)(a->token.begin);
+        assert(a->token.length == sizeof(KOS_NUMERIC));
+        numeric_a = *(const KOS_NUMERIC *)(a->token.begin);
     }
     else if (KOS_SUCCESS != kos_parse_numeric(a->token.begin,
                                               a->token.begin + a->token.length,
@@ -1200,9 +1199,9 @@ static void _collapse_typeof(struct _KOS_COMP_UNIT *program,
 
         case NT_NUMERIC_LITERAL:
             if (a->token.type == TT_NUMERIC_BINARY) {
-                const struct _KOS_NUMERIC *value = (const struct _KOS_NUMERIC *)
+                const KOS_NUMERIC *value = (const KOS_NUMERIC *)
                     a->token.begin;
-                assert(a->token.length == sizeof(struct _KOS_NUMERIC));
+                assert(a->token.length == sizeof(KOS_NUMERIC));
                 if (value->type == KOS_INTEGER_VALUE)
                     type = "\"integer\"";
                 else {
@@ -1465,17 +1464,17 @@ static int _stringify(struct _KOS_COMP_UNIT *program,
 
         case NT_NUMERIC_LITERAL: {
 
-            struct _KOS_NUMERIC numeric;
-            const KOS_TOKEN    *token    = &(*node_ptr)->token;
-            char               *store;
-            const unsigned      max_size = 34;
+            KOS_NUMERIC      numeric;
+            const KOS_TOKEN *token    = &(*node_ptr)->token;
+            char            *store;
+            const unsigned   max_size = 34;
 
             if (token->type == TT_NUMERIC_BINARY) {
-                const struct _KOS_NUMERIC *value;
+                const KOS_NUMERIC *value;
 
-                assert(token->length == sizeof(struct _KOS_NUMERIC));
+                assert(token->length == sizeof(KOS_NUMERIC));
 
-                value = (const struct _KOS_NUMERIC *)token->begin;
+                value = (const KOS_NUMERIC *)token->begin;
 
                 numeric = *value;
             }
@@ -1569,7 +1568,7 @@ cleanup:
 static int _line(struct _KOS_COMP_UNIT *program,
                  KOS_AST_NODE          *node)
 {
-    struct _KOS_NUMERIC numeric;
+    KOS_NUMERIC numeric;
 
     assert( ! node->children);
 

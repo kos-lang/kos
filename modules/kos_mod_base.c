@@ -334,9 +334,9 @@ static KOS_OBJ_ID _number_constructor(KOS_CONTEXT ctx,
 
             if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, arg, &cstr)) {
 
-                const char         *begin = cstr.buffer;
-                const char         *end   = begin + cstr.size - 1;
-                struct _KOS_NUMERIC numeric;
+                const char *begin = cstr.buffer;
+                const char *end   = begin + cstr.size - 1;
+                KOS_NUMERIC numeric;
 
                 assert(begin <= end);
 

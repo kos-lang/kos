@@ -27,7 +27,7 @@
 #include "kos_threads.h"
 #include <assert.h>
 
-typedef struct _KOS_BUFFER_STORAGE {
+typedef struct KOS_BUFFER_STORAGE_S {
     KOS_OBJ_HEADER       header;
     KOS_ATOMIC(uint32_t) capacity;
     uint8_t              buf[1];

@@ -502,7 +502,7 @@ static void _get_token_str(const KOS_TOKEN       *token,
 static int _numbers_compare_item(void               *what,
                                  KOS_RED_BLACK_NODE *node)
 {
-    const struct _KOS_NUMERIC    *numeric  = (const struct _KOS_NUMERIC *)what;
+    const KOS_NUMERIC            *numeric  = (const KOS_NUMERIC *)what;
     const struct _KOS_COMP_CONST *constant = (const struct _KOS_COMP_CONST *)node;
 
     const enum _KOS_COMP_CONST_TYPE type =
@@ -750,18 +750,18 @@ static int _add_addr2line(struct _KOS_COMP_UNIT *program,
                           const KOS_TOKEN       *token,
                           enum _KOS_BOOL         force)
 {
-    int                           error;
-    KOS_VECTOR                   *addr2line = &program->addr2line_gen_buf;
-    struct _KOS_COMP_ADDR_TO_LINE new_loc;
+    int                            error;
+    KOS_VECTOR                    *addr2line = &program->addr2line_gen_buf;
+    struct KOS_COMP_ADDR_TO_LINE_S new_loc;
 
     new_loc.offs = (uint32_t)program->cur_offs;
     new_loc.line = (uint32_t)token->pos.line;
 
     if (addr2line->size && ! force) {
 
-        struct _KOS_COMP_ADDR_TO_LINE *const last =
-            (struct _KOS_COMP_ADDR_TO_LINE *)
-                (addr2line->buffer + (addr2line->size - sizeof(struct _KOS_COMP_ADDR_TO_LINE)));
+        struct KOS_COMP_ADDR_TO_LINE_S *const last =
+            (struct KOS_COMP_ADDR_TO_LINE_S *)
+                (addr2line->buffer + (addr2line->size - sizeof(struct KOS_COMP_ADDR_TO_LINE_S)));
 
         if (last->offs == new_loc.offs) {
             if (new_loc.line > last->line)
@@ -774,8 +774,8 @@ static int _add_addr2line(struct _KOS_COMP_UNIT *program,
 
     if ( ! error) {
 
-        struct _KOS_COMP_ADDR_TO_LINE *const last =
-            (struct _KOS_COMP_ADDR_TO_LINE *)
+        struct KOS_COMP_ADDR_TO_LINE_S *const last =
+            (struct KOS_COMP_ADDR_TO_LINE_S *)
                 (addr2line->buffer + (addr2line->size - sizeof(new_loc)));
 
         *last = new_loc;
@@ -1127,19 +1127,19 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
 
     if (a2l_new_offs) {
 
-        struct _KOS_COMP_ADDR_TO_LINE *last_ptr =
-            (struct _KOS_COMP_ADDR_TO_LINE *)
+        struct KOS_COMP_ADDR_TO_LINE_S *last_ptr =
+            (struct KOS_COMP_ADDR_TO_LINE_S *)
                 (program->addr2line_buf.buffer + a2l_new_offs);
         --last_ptr;
 
         if (last_ptr->offs == fun_new_offs)
-            a2l_new_offs -= sizeof(struct _KOS_COMP_ADDR_TO_LINE);
+            a2l_new_offs -= sizeof(struct KOS_COMP_ADDR_TO_LINE_S);
     }
 
     TRY(kos_vector_resize(&program->addr2line_buf, a2l_new_offs + a2l_size));
 
     TRY(kos_vector_resize(&program->addr2func_buf,
-                          program->addr2func_buf.size + sizeof(struct _KOS_COMP_ADDR_TO_FUNC)));
+                          program->addr2func_buf.size + sizeof(struct KOS_COMP_ADDR_TO_FUNC_S)));
 
     if (name_node) {
         if (name_node->children)
@@ -1175,11 +1175,11 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
 
     /* Update addr2line offsets for this function */
     {
-        struct _KOS_COMP_ADDR_TO_LINE *ptr =
-            (struct _KOS_COMP_ADDR_TO_LINE *)
+        struct KOS_COMP_ADDR_TO_LINE_S *ptr =
+            (struct KOS_COMP_ADDR_TO_LINE_S *)
                 (program->addr2line_buf.buffer + a2l_new_offs);
-        struct _KOS_COMP_ADDR_TO_LINE *const end =
-            (struct _KOS_COMP_ADDR_TO_LINE *)
+        struct KOS_COMP_ADDR_TO_LINE_S *const end =
+            (struct KOS_COMP_ADDR_TO_LINE_S *)
                 (program->addr2line_buf.buffer + program->addr2line_buf.size);
 
         const uint32_t delta = (uint32_t)(fun_new_offs - fun_start_offs);
@@ -1191,9 +1191,9 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
     {
         KOS_VECTOR *buf = &program->addr2func_buf;
 
-        struct _KOS_COMP_ADDR_TO_FUNC *ptr =
-            (struct _KOS_COMP_ADDR_TO_FUNC *)
-                (buf->buffer + buf->size - sizeof(struct _KOS_COMP_ADDR_TO_FUNC));
+        struct KOS_COMP_ADDR_TO_FUNC_S *ptr =
+            (struct KOS_COMP_ADDR_TO_FUNC_S *)
+                (buf->buffer + buf->size - sizeof(struct KOS_COMP_ADDR_TO_FUNC_S));
 
         ptr->offs      = (uint32_t)fun_new_offs;
         if (program->cur_frame->fun_token)
@@ -2593,16 +2593,16 @@ cleanup:
 static int _maybe_int(const KOS_AST_NODE *node,
                       int64_t            *value)
 {
-    struct _KOS_NUMERIC numeric;
+    KOS_NUMERIC numeric;
 
     if (node->type != NT_NUMERIC_LITERAL)
         return 0;
 
     if (node->token.type == TT_NUMERIC_BINARY) {
 
-        const struct _KOS_NUMERIC *ptr = (const struct _KOS_NUMERIC *)node->token.begin;
+        const KOS_NUMERIC *ptr = (const KOS_NUMERIC *)node->token.begin;
 
-        assert(node->token.length == sizeof(struct _KOS_NUMERIC));
+        assert(node->token.length == sizeof(KOS_NUMERIC));
 
         numeric = *ptr;
     }
@@ -4147,16 +4147,16 @@ static int _numeric_literal(struct _KOS_COMP_UNIT *program,
                             const KOS_AST_NODE    *node,
                             struct _KOS_REG      **reg)
 {
-    struct _KOS_NUMERIC numeric;
-    int                 error;
+    KOS_NUMERIC numeric;
+    int         error;
 
     TRY(_gen_reg(program, reg));
 
     if (node->token.type == TT_NUMERIC_BINARY) {
 
-        const struct _KOS_NUMERIC *value = (const struct _KOS_NUMERIC *)node->token.begin;
+        const KOS_NUMERIC *value = (const KOS_NUMERIC *)node->token.begin;
 
-        assert(node->token.length == sizeof(struct _KOS_NUMERIC));
+        assert(node->token.length == sizeof(KOS_NUMERIC));
 
         numeric = *value;
     }

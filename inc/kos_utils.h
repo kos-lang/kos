@@ -37,12 +37,10 @@ union _KOS_NUMERIC_VALUE {
     double  d;
 };
 
-struct _KOS_NUMERIC {
+typedef struct KOS_NUMERIC_S {
     enum _KOS_NUMERIC_TYPE   type;
     union _KOS_NUMERIC_VALUE u;
-};
-
-typedef struct _KOS_NUMERIC KOS_NUMERIC;
+} KOS_NUMERIC;
 
 struct KOS_VECTOR_S;
 
