@@ -23,23 +23,23 @@
 #ifndef KOS_LEXER_H_INCLUDED
 #define KOS_LEXER_H_INCLUDED
 
-struct _KOS_FILE_POS {
+typedef struct KOS_FILE_POS_S {
     unsigned file_id;
     unsigned line;
     unsigned column;
-};
+} KOS_FILE_POS;
 
-struct _KOS_LEXER {
-    const char          *buf;
-    const char          *buf_end;
-    const char          *prefetch_begin;
-    const char          *prefetch_end;
-    const char          *error_str;
-    struct _KOS_FILE_POS pos;
-    struct _KOS_FILE_POS old_pos;
-};
+typedef struct KOS_LEXER_S {
+    const char  *buf;
+    const char  *buf_end;
+    const char  *prefetch_begin;
+    const char  *prefetch_end;
+    const char  *error_str;
+    KOS_FILE_POS pos;
+    KOS_FILE_POS old_pos;
+} KOS_LEXER;
 
-enum _KOS_TOKEN_TYPE {
+typedef enum KOS_TOKEN_TYPE_E {
     TT_WHITESPACE,
     TT_EOL,
     TT_COMMENT,
@@ -52,9 +52,9 @@ enum _KOS_TOKEN_TYPE {
     TT_OPERATOR,
     TT_SEPARATOR,
     TT_NUMERIC_BINARY /* used during optimization, not emitted by lexer */
-};
+} KOS_TOKEN_TYPE;
 
-enum _KOS_KEYWORD_TYPE {
+typedef enum KOS_KEYWORD_TYPE_E {
     KW_NONE,
     KW_LINE,
     KW_ASSERT,
@@ -97,9 +97,9 @@ enum _KOS_KEYWORD_TYPE {
     KW_WHILE,
     KW_WITH,
     KW_YIELD
-};
+} KOS_KEYWORD_TYPE;
 
-enum _KOS_OPERATOR_TYPE {
+typedef enum KOS_OPERATOR_TYPE_E {
     OT_NONE,
 
     OT_MASK           = 0xF8, /* 1111 1000 */
@@ -153,9 +153,9 @@ enum _KOS_OPERATOR_TYPE {
     OT_SETSHL         = 0x19, /* 0001 1001 */
     OT_SETSHR         = 0x1A, /* 0001 1010 */
     OT_SETSHRU        = 0x1B  /* 0001 1011 */
-};
+} KOS_OPERATOR_TYPE;
 
-enum _KOS_SEPARATOR_TYPE {
+typedef enum KOS_SEPARATOR_TYPE_E {
     ST_NONE,
     ST_PAREN_OPEN,
     ST_PAREN_CLOSE,
@@ -166,33 +166,33 @@ enum _KOS_SEPARATOR_TYPE {
     ST_SQUARE_CLOSE,
     ST_CURLY_OPEN,
     ST_CURLY_CLOSE
-};
+} KOS_SEPARATOR_TYPE;
 
-struct _KOS_TOKEN {
-    const char              *begin;
-    unsigned                 length;
-    struct _KOS_FILE_POS     pos;
-    enum _KOS_TOKEN_TYPE     type;
-    enum _KOS_KEYWORD_TYPE   keyword;
-    enum _KOS_OPERATOR_TYPE  op;
-    enum _KOS_SEPARATOR_TYPE sep;
-};
+typedef struct KOS_TOKEN_S {
+    const char        *begin;
+    unsigned           length;
+    KOS_FILE_POS       pos;
+    KOS_TOKEN_TYPE     type;
+    KOS_KEYWORD_TYPE   keyword;
+    KOS_OPERATOR_TYPE  op;
+    KOS_SEPARATOR_TYPE sep;
+} KOS_TOKEN;
 
-enum _KOS_NEXT_TOKEN_MODE {
+typedef enum KOS_NEXT_TOKEN_MODE_E {
     NT_ANY,             /* Next token can be of any type */
     NT_CONTINUE_STRING  /* Next token continues a string */
-};
+} KOS_NEXT_TOKEN_MODE;
 
-void kos_lexer_init(struct _KOS_LEXER *lexer,
-                    unsigned           file_id,
-                    const char        *begin,
-                    const char        *end);
+void kos_lexer_init(KOS_LEXER  *lexer,
+                    unsigned    file_id,
+                    const char *begin,
+                    const char *end);
 
-int  kos_lexer_next_token(struct _KOS_LEXER        *lexer,
-                          enum _KOS_NEXT_TOKEN_MODE mode,
-                          struct _KOS_TOKEN        *token);
+int  kos_lexer_next_token(KOS_LEXER          *lexer,
+                          KOS_NEXT_TOKEN_MODE mode,
+                          KOS_TOKEN          *token);
 
-void kos_lexer_unget_token(struct _KOS_LEXER       *lexer,
-                           const struct _KOS_TOKEN *token);
+void kos_lexer_unget_token(KOS_LEXER       *lexer,
+                           const KOS_TOKEN *token);
 
 #endif

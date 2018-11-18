@@ -47,8 +47,8 @@ int kos_scope_compare_node(struct _KOS_RED_BLACK_NODE *a,
     return (int)((intptr_t)scope_a->scope_node - (intptr_t)scope_b->scope_node);
 }
 
-static int _compare_tokens(const struct _KOS_TOKEN *token_a,
-                           const struct _KOS_TOKEN *token_b)
+static int _compare_tokens(const KOS_TOKEN *token_a,
+                           const KOS_TOKEN *token_b)
 {
     const unsigned len_a = token_a->length;
     const unsigned len_b = token_b->length;
@@ -66,8 +66,8 @@ static int _compare_tokens(const struct _KOS_TOKEN *token_a,
 static int _var_compare_node(struct _KOS_RED_BLACK_NODE *a,
                              struct _KOS_RED_BLACK_NODE *b)
 {
-    const struct _KOS_TOKEN *token_a = ((const struct _KOS_VAR *)a)->token;
-    const struct _KOS_TOKEN *token_b = ((const struct _KOS_VAR *)b)->token;
+    const KOS_TOKEN *token_a = ((const struct _KOS_VAR *)a)->token;
+    const KOS_TOKEN *token_b = ((const struct _KOS_VAR *)b)->token;
 
     return _compare_tokens(token_a, token_b);
 }
@@ -75,8 +75,8 @@ static int _var_compare_node(struct _KOS_RED_BLACK_NODE *a,
 static int _var_compare_item(void                       *what,
                              struct _KOS_RED_BLACK_NODE *node)
 {
-    const struct _KOS_TOKEN *token_a = (const struct _KOS_TOKEN *)what;
-    const struct _KOS_TOKEN *token_b = ((const struct _KOS_VAR *)node)->token;
+    const KOS_TOKEN *token_a = (const KOS_TOKEN *)what;
+    const KOS_TOKEN *token_b = ((const struct _KOS_VAR *)node)->token;
 
     return _compare_tokens(token_a, token_b);
 }
@@ -204,14 +204,14 @@ static int _push_function(struct _KOS_COMP_UNIT *program,
 }
 
 struct _KOS_VAR *kos_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
-                              const struct _KOS_TOKEN    *token)
+                              const KOS_TOKEN            *token)
 {
     return (struct _KOS_VAR *)kos_red_black_find(rb_root, (void *)token, _var_compare_item);
 }
 
-static int _lookup_local_var(struct _KOS_COMP_UNIT   *program,
-                             const struct _KOS_TOKEN *token,
-                             struct _KOS_VAR        **out_var)
+static int _lookup_local_var(struct _KOS_COMP_UNIT *program,
+                             const KOS_TOKEN       *token,
+                             struct _KOS_VAR      **out_var)
 {
     int error = KOS_ERROR_INTERNAL;
 
@@ -424,8 +424,8 @@ static int _import_global(const char *global_name,
 
     if (g_node) {
 
-        struct _KOS_TOKEN *token = &g_node->token;
-        struct _KOS_VAR   *var;
+        KOS_TOKEN       *token = &g_node->token;
+        struct _KOS_VAR *var;
 
         memset(g_node, 0, sizeof(*g_node));
 

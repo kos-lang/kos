@@ -51,11 +51,11 @@ static const char str_token[]              = "token";
 static const char str_type[]               = "type";
 
 struct _LEXER {
-    KOS_OBJ_HEADER    header; /* TODO remove this when we switch to malloc */
-    struct _KOS_LEXER lexer;
-    struct _KOS_TOKEN token;
-    uint8_t          *last_buf;
-    int               ignore_errors;
+    KOS_OBJ_HEADER header; /* TODO remove this when we switch to malloc */
+    KOS_LEXER      lexer;
+    KOS_TOKEN      token;
+    uint8_t       *last_buf;
+    int            ignore_errors;
 };
 
 static void _finalize(KOS_CONTEXT ctx,
@@ -71,13 +71,13 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  regs_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    int                       error      = KOS_SUCCESS;
-    KOS_OBJ_ID                retval     = KOS_BADPTR;
-    KOS_OBJ_ID                lexer_obj_id;
-    KOS_OBJ_ID                source;
-    struct _LEXER            *lexer;
-    uint8_t                  *buf_data;
-    enum _KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
+    int                 error      = KOS_SUCCESS;
+    KOS_OBJ_ID          retval     = KOS_BADPTR;
+    KOS_OBJ_ID          lexer_obj_id;
+    KOS_OBJ_ID          source;
+    struct _LEXER      *lexer;
+    uint8_t            *buf_data;
+    KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
 
@@ -190,7 +190,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
     if (error) {
         if (lexer->ignore_errors) {
 
-            struct _KOS_TOKEN *token = &lexer->token;
+            KOS_TOKEN *token = &lexer->token;
 
             lexer->lexer.error_str = 0;
 
@@ -233,9 +233,9 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
     if (lexer->token.type != TT_EOF) {
 
-        struct _KOS_TOKEN *token = &lexer->token;
-        KOS_OBJ_ID         key;
-        KOS_OBJ_ID         value;
+        KOS_TOKEN *token = &lexer->token;
+        KOS_OBJ_ID key;
+        KOS_OBJ_ID value;
 
         KOS_OBJ_ID token_obj = KOS_new_object(ctx);
         TRY_OBJID(token_obj);

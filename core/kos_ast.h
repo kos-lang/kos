@@ -87,7 +87,7 @@ typedef struct KOS_AST_NODE_S {
     struct KOS_AST_NODE_S *next;
     struct KOS_AST_NODE_S *children;
     struct KOS_AST_NODE_S *last_child;
-    struct _KOS_TOKEN      token;
+    KOS_TOKEN              token;
     KOS_NODE_TYPE          type;
 } KOS_AST_NODE;
 

@@ -73,8 +73,8 @@ static int _gen_new_reg(struct _KOS_COMP_UNIT *program,
 
     if (frame->num_regs == 256) {
 
-        struct _KOS_TOKEN *token = (struct _KOS_TOKEN *)
-            kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_TOKEN));
+        KOS_TOKEN *token = (KOS_TOKEN *)
+            kos_mempool_alloc(&program->allocator, sizeof(KOS_TOKEN));
 
         if (token) {
             memset(token, 0, sizeof(*token));
@@ -290,10 +290,10 @@ static int _count_used_regs(struct _KOS_COMP_UNIT *program)
 }
 #endif
 
-static int _lookup_local_var_even_inactive(struct _KOS_COMP_UNIT   *program,
-                                           const struct _KOS_TOKEN *token,
-                                           int                      only_active,
-                                           struct _KOS_REG        **reg)
+static int _lookup_local_var_even_inactive(struct _KOS_COMP_UNIT *program,
+                                           const KOS_TOKEN       *token,
+                                           int                    only_active,
+                                           struct _KOS_REG      **reg)
 {
     int                error = KOS_SUCCESS;
     struct _KOS_VAR   *var   = 0;
@@ -354,17 +354,17 @@ static int _lookup_local_var_even_inactive(struct _KOS_COMP_UNIT   *program,
     return error;
 }
 
-static int _lookup_local_var(struct _KOS_COMP_UNIT   *program,
-                             const struct _KOS_TOKEN *token,
-                             struct _KOS_REG        **reg)
+static int _lookup_local_var(struct _KOS_COMP_UNIT *program,
+                             const KOS_TOKEN       *token,
+                             struct _KOS_REG      **reg)
 {
     return _lookup_local_var_even_inactive(program, token, 1, reg);
 }
 
-static int _lookup_var(struct _KOS_COMP_UNIT   *program,
-                       const struct _KOS_TOKEN *token,
-                       struct _KOS_VAR        **out_var,
-                       struct _KOS_REG        **reg)
+static int _lookup_var(struct _KOS_COMP_UNIT *program,
+                       const KOS_TOKEN       *token,
+                       struct _KOS_VAR      **out_var,
+                       struct _KOS_REG      **reg)
 {
     struct _KOS_VAR   *var          = 0;
     struct _KOS_SCOPE *scope        = program->scope_stack;
@@ -465,10 +465,10 @@ static int _compare_strings(const char *a, unsigned len_a, enum _KOS_UTF8_ESCAPE
     return result;
 }
 
-static void _get_token_str(const struct _KOS_TOKEN *token,
-                           const char             **out_begin,
-                           unsigned                *out_length,
-                           enum _KOS_UTF8_ESCAPE   *out_escape)
+static void _get_token_str(const KOS_TOKEN       *token,
+                           const char           **out_begin,
+                           unsigned              *out_length,
+                           enum _KOS_UTF8_ESCAPE *out_escape)
 {
     const char *begin  = token->begin;
     unsigned    length = token->length;
@@ -522,7 +522,7 @@ static int _numbers_compare_item(void                       *what,
 static int _strings_compare_item(void                       *what,
                                  struct _KOS_RED_BLACK_NODE *node)
 {
-    const struct _KOS_TOKEN       *token = (const struct _KOS_TOKEN       *)what;
+    const KOS_TOKEN               *token = (const KOS_TOKEN               *)what;
     const struct _KOS_COMP_STRING *str   = (const struct _KOS_COMP_STRING *)node;
     const char                    *begin;
     unsigned                       length;
@@ -594,16 +594,16 @@ static void _add_constant(struct _KOS_COMP_UNIT  *program,
                           _constants_compare_node);
 }
 
-static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
-                        const struct _KOS_TOKEN *token,
-                        enum _KOS_UTF8_ESCAPE    escape,
-                        int                     *str_idx)
+static int _gen_str_esc(struct _KOS_COMP_UNIT *program,
+                        const KOS_TOKEN       *token,
+                        enum _KOS_UTF8_ESCAPE  escape,
+                        int                   *str_idx)
 {
     int error = KOS_SUCCESS;
 
     struct _KOS_COMP_STRING *str =
             (struct _KOS_COMP_STRING *)kos_red_black_find(program->constants,
-                                                          (struct _KOS_TOKEN *)token,
+                                                          (KOS_TOKEN *)token,
                                                           _strings_compare_item);
 
     if (!str) {
@@ -639,9 +639,9 @@ static int _gen_str_esc(struct _KOS_COMP_UNIT   *program,
     return error;
 }
 
-static int _gen_str(struct _KOS_COMP_UNIT   *program,
-                    const struct _KOS_TOKEN *token,
-                    int                     *str_idx)
+static int _gen_str(struct _KOS_COMP_UNIT *program,
+                    const KOS_TOKEN       *token,
+                    int                   *str_idx)
 {
     return _gen_str_esc(program, token, KOS_UTF8_WITH_ESCAPE, str_idx);
 }
@@ -728,7 +728,7 @@ static int _gen_assert_str(struct _KOS_COMP_UNIT *program,
 
     if (buf) {
 
-        struct _KOS_TOKEN token;
+        KOS_TOKEN token;
 
         memcpy(buf, assertion_failed, sizeof(assertion_failed) - 1);
         _get_assert_str(begin, end, buf + sizeof(assertion_failed) - 1, buf + length);
@@ -746,9 +746,9 @@ static int _gen_assert_str(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _add_addr2line(struct _KOS_COMP_UNIT   *program,
-                          const struct _KOS_TOKEN *token,
-                          enum _KOS_BOOL           force)
+static int _add_addr2line(struct _KOS_COMP_UNIT *program,
+                          const KOS_TOKEN       *token,
+                          enum _KOS_BOOL         force)
 {
     int                           error;
     KOS_VECTOR                   *addr2line = &program->addr2line_gen_buf;
@@ -999,7 +999,7 @@ static void _pop_scope(struct _KOS_COMP_UNIT *program)
 
 struct _IMPORT_INFO {
     struct _KOS_COMP_UNIT *program;
-    struct _KOS_FILE_POS   pos;
+    KOS_FILE_POS           pos;
 };
 
 static int _import_global(const char *global_name,
@@ -1012,7 +1012,7 @@ static int _import_global(const char *global_name,
     struct _IMPORT_INFO *info  = (struct _IMPORT_INFO *)cookie;
     struct _KOS_REG     *reg   = 0;
     struct _KOS_VAR     *var;
-    struct _KOS_TOKEN    token;
+    KOS_TOKEN            token;
 
     memset(&token, 0, sizeof(token));
 
@@ -1119,10 +1119,9 @@ static int _append_frame(struct _KOS_COMP_UNIT *program,
     const size_t      a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
     size_t            a2l_new_offs = program->addr2line_buf.size;
     int               str_idx      = 0;
-    struct _KOS_TOKEN global;
+    KOS_TOKEN         global;
     static const char str_global[] = "<global>";
-
-    const struct _KOS_TOKEN *name_token;
+    const KOS_TOKEN  *name_token;
 
     TRY(kos_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
@@ -1844,7 +1843,7 @@ static int _invoke_get_iterator(struct _KOS_COMP_UNIT *program,
     int               str_idx;
     struct _KOS_REG  *func_reg       = 0;
     struct _KOS_REG  *obj_reg        = *reg;
-    struct _KOS_TOKEN token;
+    KOS_TOKEN         token;
     static const char str_iterator[] = "iterator";
 
     if ( ! (*reg)->tmp) {
@@ -3040,7 +3039,7 @@ static int _async(struct _KOS_COMP_UNIT *program,
     struct _KOS_REG  *async       = 0;
     struct _KOS_REG  *obj;
     int               str_idx;
-    struct _KOS_TOKEN token;
+    KOS_TOKEN         token;
     static const char str_async[] = "async";
 
     node = node->children;
@@ -3157,9 +3156,9 @@ static int _pos_neg(struct _KOS_COMP_UNIT *program,
                     const KOS_AST_NODE    *node,
                     struct _KOS_REG      **reg)
 {
-    int                           error;
-    const enum _KOS_OPERATOR_TYPE op  = node->token.op;
-    struct _KOS_REG              *src = *reg;
+    int                     error;
+    const KOS_OPERATOR_TYPE op  = node->token.op;
+    struct _KOS_REG        *src = *reg;
 
     assert(op == OT_ADD || op == OT_SUB);
 
@@ -3240,11 +3239,11 @@ static int _log_and_or(struct _KOS_COMP_UNIT *program,
                        const KOS_AST_NODE    *node,
                        struct _KOS_REG      **reg)
 {
-    int                           error;
-    int                           offs;
-    const enum _KOS_OPERATOR_TYPE op    = node->token.op;
-    struct _KOS_REG              *left  = 0;
-    struct _KOS_REG              *right = 0;
+    int                     error;
+    int                     offs;
+    const KOS_OPERATOR_TYPE op    = node->token.op;
+    struct _KOS_REG        *left  = 0;
+    struct _KOS_REG        *right = 0;
 
     assert(op == OT_LOGAND || op == OT_LOGOR);
 
@@ -3459,14 +3458,14 @@ static int _operator(struct _KOS_COMP_UNIT *program,
                      const KOS_AST_NODE    *node,
                      struct _KOS_REG      **reg)
 {
-    int                           error    = KOS_SUCCESS;
-    const enum _KOS_OPERATOR_TYPE op       = node->token.op;
-    const enum _KOS_KEYWORD_TYPE  kw       = node->token.keyword;
-    struct _KOS_REG              *reg1     = 0;
-    struct _KOS_REG              *reg2     = 0;
-    int                           opcode   = 0;
-    int                           operands = 0;
-    int                           swap     = 0;
+    int                     error    = KOS_SUCCESS;
+    const KOS_OPERATOR_TYPE op       = node->token.op;
+    const KOS_KEYWORD_TYPE  kw       = node->token.keyword;
+    struct _KOS_REG        *reg1     = 0;
+    struct _KOS_REG        *reg2     = 0;
+    int                     opcode   = 0;
+    int                     operands = 0;
+    int                     swap     = 0;
 
     assert(node);
     assert(node->children);
@@ -3665,7 +3664,7 @@ cleanup:
     return error;
 }
 
-static int _assign_instr(enum _KOS_OPERATOR_TYPE op)
+static int _assign_instr(KOS_OPERATOR_TYPE op)
 {
     switch (op) {
         case OT_SETADD: return INSTR_ADD;
@@ -3685,10 +3684,10 @@ static int _assign_instr(enum _KOS_OPERATOR_TYPE op)
     }
 }
 
-static int _assign_member(struct _KOS_COMP_UNIT  *program,
-                          enum _KOS_OPERATOR_TYPE assg_op,
-                          const KOS_AST_NODE     *node,
-                          struct _KOS_REG        *src)
+static int _assign_member(struct _KOS_COMP_UNIT *program,
+                          KOS_OPERATOR_TYPE      assg_op,
+                          const KOS_AST_NODE    *node,
+                          struct _KOS_REG       *src)
 {
     int              error;
     int              str_idx = 0;
@@ -3779,10 +3778,10 @@ cleanup:
     return error;
 }
 
-static int _assign_non_local(struct _KOS_COMP_UNIT  *program,
-                             enum _KOS_OPERATOR_TYPE assg_op,
-                             const KOS_AST_NODE     *node,
-                             struct _KOS_REG        *src)
+static int _assign_non_local(struct _KOS_COMP_UNIT *program,
+                             KOS_OPERATOR_TYPE      assg_op,
+                             const KOS_AST_NODE    *node,
+                             struct _KOS_REG       *src)
 {
     int              error;
     struct _KOS_VAR *var     = 0;
@@ -3835,7 +3834,7 @@ static int _assign_slice(struct _KOS_COMP_UNIT *program,
     struct _KOS_REG    *func_reg     = 0;
     const int           src_reg      = src->reg;
     static const char   str_insert[] = "insert";
-    struct _KOS_TOKEN   token;
+    KOS_TOKEN           token;
 
     _free_reg(program, src);
 
@@ -4907,7 +4906,7 @@ static int _class_literal(struct _KOS_COMP_UNIT *program,
 
         static const char str_prototype[] = "prototype";
         int               str_idx         = 0;
-        struct _KOS_TOKEN token;
+        KOS_TOKEN         token;
 
         memset(&token, 0, sizeof(token));
         token.begin  = str_prototype;

@@ -605,12 +605,12 @@ static KOS_OBJ_ID _get_line(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _format_error(KOS_CONTEXT          ctx,
-                                KOS_OBJ_ID           module_obj,
-                                const char          *data,
-                                unsigned             data_size,
-                                const char          *error_str,
-                                struct _KOS_FILE_POS pos)
+static KOS_OBJ_ID _format_error(KOS_CONTEXT  ctx,
+                                KOS_OBJ_ID   module_obj,
+                                const char  *data,
+                                unsigned     data_size,
+                                const char  *error_str,
+                                KOS_FILE_POS pos)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
@@ -998,8 +998,8 @@ static int _compile_module(KOS_CONTEXT ctx,
     if (error == KOS_ERROR_SCANNING_FAILED ||
         error == KOS_ERROR_PARSE_FAILED) {
 
-        const struct _KOS_FILE_POS pos = (error == KOS_ERROR_SCANNING_FAILED)
-                                         ? parser.lexer.pos : parser.token.pos;
+        const KOS_FILE_POS pos = (error == KOS_ERROR_SCANNING_FAILED)
+                                 ? parser.lexer.pos : parser.token.pos;
         KOS_OBJ_ID error_obj = _format_error(ctx,
                                              module_obj,
                                              data,

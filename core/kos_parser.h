@@ -32,8 +32,8 @@ struct KOS_MEMPOOL_S;
 struct _KOS_PARSER {
     struct KOS_MEMPOOL_S  *ast_buf;
     const char            *error_str;
-    struct _KOS_LEXER      lexer;
-    struct _KOS_TOKEN      token;
+    KOS_LEXER              lexer;
+    KOS_TOKEN              token;
     int                    unget;
     int                    had_eol;
     int                    allow_continue;

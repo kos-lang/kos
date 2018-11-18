@@ -44,12 +44,12 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
                        KOS_AST_NODE          *node,
                        int                   *is_terminal);
 
-static void _collapse(KOS_AST_NODE          *node,
-                      KOS_NODE_TYPE          node_type,
-                      enum _KOS_TOKEN_TYPE   token_type,
-                      enum _KOS_KEYWORD_TYPE keyword,
-                      const char            *begin,
-                      unsigned               length)
+static void _collapse(KOS_AST_NODE    *node,
+                      KOS_NODE_TYPE    node_type,
+                      KOS_TOKEN_TYPE   token_type,
+                      KOS_KEYWORD_TYPE keyword,
+                      const char      *begin,
+                      unsigned         length)
 {
     node->children      = 0;
     node->type          = node_type;
@@ -115,7 +115,7 @@ static void _promote(struct _KOS_COMP_UNIT *program,
     node->type       = child->type;
 }
 
-static int _get_nonzero(const struct _KOS_TOKEN *token, int *non_zero)
+static int _get_nonzero(const KOS_TOKEN *token, int *non_zero)
 {
     struct _KOS_NUMERIC numeric;
 
@@ -163,11 +163,11 @@ static int _get_nonzero(const struct _KOS_TOKEN *token, int *non_zero)
     return KOS_SUCCESS;
 }
 
-static void _lookup_var(struct _KOS_COMP_UNIT   *program,
-                        const struct _KOS_TOKEN *token,
-                        int                      only_active,
-                        struct _KOS_VAR        **out_var,
-                        int                     *is_local)
+static void _lookup_var(struct _KOS_COMP_UNIT *program,
+                        const KOS_TOKEN       *token,
+                        int                    only_active,
+                        struct _KOS_VAR      **out_var,
+                        int                   *is_local)
 {
     struct _KOS_SCOPE *scope     = program->scope_stack;
     struct _KOS_SCOPE *fun_scope = 0;
@@ -898,10 +898,10 @@ static int _optimize_binary_op(struct _KOS_COMP_UNIT *program,
                                const KOS_AST_NODE    *a,
                                const KOS_AST_NODE    *b)
 {
-    int                     error;
-    enum _KOS_OPERATOR_TYPE op = node->token.op;
-    struct _KOS_NUMERIC     numeric_a;
-    struct _KOS_NUMERIC     numeric_b;
+    int                 error;
+    KOS_OPERATOR_TYPE   op = node->token.op;
+    struct _KOS_NUMERIC numeric_a;
+    struct _KOS_NUMERIC numeric_b;
 
     if (a->token.type == TT_NUMERIC_BINARY) {
         assert(a->token.length == sizeof(struct _KOS_NUMERIC));
@@ -1064,8 +1064,8 @@ static int _optimize_unary_op(struct _KOS_COMP_UNIT *program,
                               KOS_AST_NODE          *node,
                               const KOS_AST_NODE    *a)
 {
-    enum _KOS_OPERATOR_TYPE op = node->token.op;
-    struct _KOS_NUMERIC     numeric_a;
+    KOS_OPERATOR_TYPE   op = node->token.op;
+    struct _KOS_NUMERIC numeric_a;
 
     if (a->token.type == TT_NUMERIC_BINARY) {
         assert(a->token.length == sizeof(struct _KOS_NUMERIC));
@@ -1131,16 +1131,16 @@ static int _add_strings(struct _KOS_COMP_UNIT *program,
                         const KOS_AST_NODE    *a,
                         const KOS_AST_NODE    *b)
 {
-    char                      *str;
-    const enum _KOS_TOKEN_TYPE a_type   = a->token.type;
-    const enum _KOS_TOKEN_TYPE b_type   = b->token.type;
-    const char                *a_begin  = a->token.begin + 1;
-    const char                *b_begin  = b->token.begin + 1;
-    unsigned                   a_length = a->token.length;
-    unsigned                   b_length = b->token.length;
-    const int                  is_raw   = _is_raw(a);
-    unsigned                   pos;
-    unsigned                   new_length;
+    char                *str;
+    const KOS_TOKEN_TYPE a_type   = a->token.type;
+    const KOS_TOKEN_TYPE b_type   = b->token.type;
+    const char          *a_begin  = a->token.begin + 1;
+    const char          *b_begin  = b->token.begin + 1;
+    unsigned             a_length = a->token.length;
+    unsigned             b_length = b->token.length;
+    const int            is_raw   = _is_raw(a);
+    unsigned             pos;
+    unsigned             new_length;
 
     assert(a->type == NT_STRING_LITERAL);
     assert(a_type == TT_STRING || a_type == TT_STRING_OPEN);
@@ -1290,7 +1290,7 @@ static int _operator(struct _KOS_COMP_UNIT *program,
         case OT_SUB: {
             if (b) {
 
-                const enum _KOS_OPERATOR_TYPE op = node->token.op;
+                const KOS_OPERATOR_TYPE op = node->token.op;
 
                 if (a_type == NT_NUMERIC_LITERAL && b_type == NT_NUMERIC_LITERAL)
                     error = _optimize_binary_op(program, node, ca, cb);
@@ -1445,7 +1445,7 @@ static int _stringify(struct _KOS_COMP_UNIT *program,
             /* fall through */
         case NT_BOOL_LITERAL: {
 
-            const enum _KOS_KEYWORD_TYPE kw = (*node_ptr)->token.keyword;
+            const KOS_KEYWORD_TYPE kw = (*node_ptr)->token.keyword;
 
             _copy_node_as_string(tmp_node, *node_ptr);
 
@@ -1465,10 +1465,10 @@ static int _stringify(struct _KOS_COMP_UNIT *program,
 
         case NT_NUMERIC_LITERAL: {
 
-            struct _KOS_NUMERIC      numeric;
-            const struct _KOS_TOKEN *token    = &(*node_ptr)->token;
-            char                    *store;
-            const unsigned           max_size = 34;
+            struct _KOS_NUMERIC numeric;
+            const KOS_TOKEN    *token    = &(*node_ptr)->token;
+            char               *store;
+            const unsigned      max_size = 34;
 
             if (token->type == TT_NUMERIC_BINARY) {
                 const struct _KOS_NUMERIC *value;

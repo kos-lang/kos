@@ -61,10 +61,10 @@ static void _update_scope_ref(struct _KOS_COMP_UNIT *program,
         }
 }
 
-static void _lookup_var(struct _KOS_COMP_UNIT   *program,
-                        const struct _KOS_TOKEN *token,
-                        int                      only_active,
-                        struct _KOS_VAR        **out_var)
+static void _lookup_var(struct _KOS_COMP_UNIT *program,
+                        const KOS_TOKEN       *token,
+                        int                    only_active,
+                        struct _KOS_VAR      **out_var)
 {
     struct _KOS_SCOPE *scope     = program->scope_stack;
     struct _KOS_SCOPE *fun_scope = 0;

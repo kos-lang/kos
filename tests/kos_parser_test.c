@@ -100,8 +100,8 @@ static const char *const separators[] = {
 };
 
 struct OPERATOR_MAP {
-    enum _KOS_OPERATOR_TYPE op;
-    const char             *name;
+    KOS_OPERATOR_TYPE op;
+    const char       *name;
 };
 
 const struct OPERATOR_MAP operators[] = {
@@ -211,15 +211,15 @@ static int _walk_tree(const KOS_AST_NODE *node,
                       char              **compare,
                       const char         *compare_end)
 {
-    char                     buf[WALK_BUF_SIZE];
-    const struct _KOS_TOKEN *token    = &node->token;
-    char                    *out      = buf;
-    char                    *end      = buf + WALK_BUF_SIZE - 1;
-    int                      error    = KOS_SUCCESS;
-    int                      one_line = node->children ? 0 : 1;
-    const char              *indent   = "                                                                                                                                                                                                        ";
-    int                      i;
-    int                      indent_shift = 4;
+    char             buf[WALK_BUF_SIZE];
+    const KOS_TOKEN *token    = &node->token;
+    char            *out      = buf;
+    char            *end      = buf + WALK_BUF_SIZE - 1;
+    int              error    = KOS_SUCCESS;
+    int              one_line = node->children ? 0 : 1;
+    const char      *indent   = "                                                                                                                                                                                                        ";
+    int              i;
+    int              indent_shift = 4;
 
     assert(level<50);
 
@@ -462,7 +462,7 @@ int main(int argc, char *argv[])
                 error = _walk_tree(ast, 0, print, test ? &end : 0, file_end);
 
             else if (test) {
-                struct _KOS_FILE_POS pos = parser.token.pos;
+                const KOS_FILE_POS pos = parser.token.pos;
                 if ((unsigned)line   != pos.line ||
                     (unsigned)column != pos.column) {
 

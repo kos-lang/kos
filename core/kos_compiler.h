@@ -60,7 +60,7 @@ struct _KOS_VAR {
     struct _KOS_RED_BLACK_NODE  rb_tree_node;
 
     struct _KOS_VAR         *next;
-    const struct _KOS_TOKEN *token;
+    const KOS_TOKEN         *token;
     struct _KOS_REG         *reg;
     const KOS_AST_NODE      *value;
     int                      num_reads;         /* Number of reads from a variable (including closures) */
@@ -122,11 +122,11 @@ struct _KOS_FRAME {
     struct _KOS_REG            *args_reg;
     struct _KOS_RED_BLACK_NODE *closures;
     struct _KOS_FRAME          *parent_frame;
-    const struct _KOS_TOKEN    *fun_token;
+    const KOS_TOKEN            *fun_token;
     struct _KOS_BREAK_OFFS     *break_offs;
     struct _KOS_RETURN_OFFS    *return_offs;      /* For return statements inside finally clause (defer) */
     struct _KOS_SCOPE          *last_try_scope;
-    const struct _KOS_TOKEN    *yield_token;
+    const KOS_TOKEN            *yield_token;
     struct _KOS_COMP_FUNCTION  *constant;         /* The template for the constant object, used with LOAD.CONST */
     int                         num_regs;
     uint32_t                    num_instr;
@@ -247,7 +247,7 @@ typedef int (*KOS_COMP_WALK_GLOBALS)(void                          *ctx,
                                      void                          *cookie);
 
 struct _KOS_COMP_UNIT {
-    const struct _KOS_TOKEN    *error_token;
+    const KOS_TOKEN            *error_token;
     const char                 *error_str;
 
     int                         optimize;
@@ -325,7 +325,7 @@ int kos_allocate_args(struct _KOS_COMP_UNIT *program,
                       KOS_AST_NODE          *ast);
 
 struct _KOS_VAR *kos_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
-                              const struct _KOS_TOKEN    *token);
+                              const KOS_TOKEN            *token);
 
 void kos_activate_var(struct _KOS_COMP_UNIT *program,
                       const KOS_AST_NODE    *node);

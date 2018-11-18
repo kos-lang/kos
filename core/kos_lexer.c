@@ -260,8 +260,8 @@ static const unsigned char hex_and_operator_map[] = {
 };
 
 struct _KOS_OP_SPECIFIER {
-    const char             *str;
-    enum _KOS_OPERATOR_TYPE type;
+    const char       *str;
+    KOS_OPERATOR_TYPE type;
 };
 
 static const struct _KOS_OP_SPECIFIER operator_map[][7] = {
@@ -328,7 +328,7 @@ static const char *const keywords[] = {
     "yield"
 };
 
-static unsigned _prefetch_next(struct _KOS_LEXER *lexer, const char **begin, const char **end)
+static unsigned _prefetch_next(KOS_LEXER *lexer, const char **begin, const char **end)
 {
     unsigned lt;
 
@@ -400,13 +400,13 @@ static unsigned _prefetch_next(struct _KOS_LEXER *lexer, const char **begin, con
     return lt;
 }
 
-static void _retract(struct _KOS_LEXER *lexer, const char *back)
+static void _retract(KOS_LEXER *lexer, const char *back)
 {
     lexer->prefetch_end = back;
     lexer->pos          = lexer->old_pos;
 }
 
-static void _collect_whitespace(struct _KOS_LEXER *lexer)
+static void _collect_whitespace(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
@@ -418,7 +418,7 @@ static void _collect_whitespace(struct _KOS_LEXER *lexer)
     _retract(lexer, begin);
 }
 
-static void _collect_all_until_eol(struct _KOS_LEXER *lexer)
+static void _collect_all_until_eol(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
@@ -445,7 +445,7 @@ static int _char_is_bin_or_underscore(char c)
     return c == '0' || c == '1' || c == '_';
 }
 
-static int _collect_escape(struct _KOS_LEXER *lexer, int *format)
+static int _collect_escape(KOS_LEXER *lexer, int *format)
 {
     const char *begin, *end;
 
@@ -514,7 +514,7 @@ static int _collect_escape(struct _KOS_LEXER *lexer, int *format)
     return error;
 }
 
-static int _collect_string(struct _KOS_LEXER *lexer)
+static int _collect_string(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
@@ -548,7 +548,7 @@ static int _collect_string(struct _KOS_LEXER *lexer)
     return error;
 }
 
-static int _collect_raw_string(struct _KOS_LEXER *lexer)
+static int _collect_raw_string(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
@@ -579,7 +579,7 @@ static int _collect_raw_string(struct _KOS_LEXER *lexer)
     return error;
 }
 
-static void _collect_identifier(struct _KOS_LEXER *lexer)
+static void _collect_identifier(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
@@ -591,7 +591,7 @@ static void _collect_identifier(struct _KOS_LEXER *lexer)
     _retract(lexer, begin);
 }
 
-static void _collect_block_comment(struct _KOS_LEXER *lexer)
+static void _collect_block_comment(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
@@ -617,7 +617,7 @@ static int _is_digit_or_underscore(unsigned c)
     return c == LT_DIGIT || c == LT_UNDERSCORE;
 }
 
-static int _collect_decimal(struct _KOS_LEXER *lexer)
+static int _collect_decimal(KOS_LEXER *lexer)
 {
     const char *begin, *end;
     unsigned    c;
@@ -665,7 +665,7 @@ static int _collect_decimal(struct _KOS_LEXER *lexer)
     return error;
 }
 
-static int _collect_hex(struct _KOS_LEXER *lexer)
+static int _collect_hex(KOS_LEXER *lexer)
 {
     int error = KOS_SUCCESS;
     const char *begin, *end;
@@ -690,7 +690,7 @@ static int _collect_hex(struct _KOS_LEXER *lexer)
     return error;
 }
 
-static int _collect_bin(struct _KOS_LEXER *lexer)
+static int _collect_bin(KOS_LEXER *lexer)
 {
     int error = KOS_SUCCESS;
     const char *begin, *end;
@@ -715,7 +715,7 @@ static int _collect_bin(struct _KOS_LEXER *lexer)
     return error;
 }
 
-static void _collect_operator(struct _KOS_LEXER *lexer, enum _KOS_OPERATOR_TYPE *op)
+static void _collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
 {
     const struct _KOS_OP_SPECIFIER *op_group =
             operator_map[hex_and_operator_map[(unsigned char)*lexer->prefetch_begin]];
@@ -751,7 +751,7 @@ static void _collect_operator(struct _KOS_LEXER *lexer, enum _KOS_OPERATOR_TYPE 
     _retract(lexer, begin);
 }
 
-static void _find_keyword(const char *begin, const char *end, enum _KOS_KEYWORD_TYPE *kw)
+static void _find_keyword(const char *begin, const char *end, KOS_KEYWORD_TYPE *kw)
 {
     const int     num  = (int)(end - begin);
     unsigned char low  = 1;
@@ -763,7 +763,7 @@ static void _find_keyword(const char *begin, const char *end, enum _KOS_KEYWORD_
             if (keywords[mid][num])
                 high = mid - 1U;
             else {
-                *kw = (enum _KOS_KEYWORD_TYPE)mid;
+                *kw = (KOS_KEYWORD_TYPE)mid;
                 break;
             }
         }
@@ -774,10 +774,10 @@ static void _find_keyword(const char *begin, const char *end, enum _KOS_KEYWORD_
     }
 }
 
-void kos_lexer_init(struct _KOS_LEXER *lexer,
-                    unsigned           file_id,
-                    const char        *begin,
-                    const char        *end)
+void kos_lexer_init(KOS_LEXER  *lexer,
+                    unsigned    file_id,
+                    const char *begin,
+                    const char *end)
 {
     lexer->buf             = begin;
     lexer->buf_end         = end;
@@ -802,9 +802,9 @@ void kos_lexer_init(struct _KOS_LEXER *lexer,
     }
 }
 
-int kos_lexer_next_token(struct _KOS_LEXER        *lexer,
-                         enum _KOS_NEXT_TOKEN_MODE mode,
-                         struct _KOS_TOKEN        *token)
+int kos_lexer_next_token(KOS_LEXER          *lexer,
+                         KOS_NEXT_TOKEN_MODE mode,
+                         KOS_TOKEN          *token)
 {
     int error = KOS_SUCCESS;
     const char *begin, *end;
@@ -908,7 +908,7 @@ int kos_lexer_next_token(struct _KOS_LEXER        *lexer,
                 break;
             case LT_SEPARATOR:
                 token->type = TT_SEPARATOR;
-                token->sep  = (enum _KOS_SEPARATOR_TYPE)hex_and_operator_map[
+                token->sep  = (KOS_SEPARATOR_TYPE)hex_and_operator_map[
                               (unsigned char)*lexer->prefetch_begin];
                 break;
             case LT_SLASH: {
@@ -977,7 +977,7 @@ int kos_lexer_next_token(struct _KOS_LEXER        *lexer,
     return error;
 }
 
-void kos_lexer_unget_token(struct _KOS_LEXER *lexer, const struct _KOS_TOKEN *token)
+void kos_lexer_unget_token(KOS_LEXER *lexer, const KOS_TOKEN *token)
 {
     lexer->prefetch_begin = token->begin;
     lexer->prefetch_end   = token->begin;
