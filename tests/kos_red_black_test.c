@@ -32,8 +32,8 @@
 #include "../core/kos_red_black.h"
 
 struct MYNODE {
-    struct _KOS_RED_BLACK_NODE node;
-    intptr_t                   value;
+    KOS_RED_BLACK_NODE node;
+    intptr_t           value;
 };
 
 enum RB_ERROR {
@@ -42,8 +42,8 @@ enum RB_ERROR {
     ERROR_WRONG_WALK_ORDER  = 12
 };
 
-static int cmp_node(struct _KOS_RED_BLACK_NODE *a,
-                    struct _KOS_RED_BLACK_NODE *b)
+static int cmp_node(KOS_RED_BLACK_NODE *a,
+                    KOS_RED_BLACK_NODE *b)
 {
     struct MYNODE *aa = (struct MYNODE *)a;
     struct MYNODE *bb = (struct MYNODE *)b;
@@ -53,8 +53,8 @@ static int cmp_node(struct _KOS_RED_BLACK_NODE *a,
         return aa->value < bb->value ? -1 : 1;
 }
 
-static int cmp_value(void                       *value,
-                     struct _KOS_RED_BLACK_NODE *node)
+static int cmp_value(void               *value,
+                     KOS_RED_BLACK_NODE *node)
 {
     const intptr_t node_value = ((struct MYNODE *)node)->value;
 
@@ -84,7 +84,7 @@ static int check_tree_order(struct MYNODE *n)
     return e;
 }
 
-static int check_node_order(struct _KOS_RED_BLACK_NODE *node, void *cookie)
+static int check_node_order(KOS_RED_BLACK_NODE *node, void *cookie)
 {
     struct MYNODE      *n     = (struct MYNODE *)node;
     intptr_t           *prev  = (intptr_t *)cookie;
@@ -96,7 +96,7 @@ static int check_walk_order(struct MYNODE *n)
 {
     uintptr_t prev = (uintptr_t)1U << (sizeof(intptr_t)*8-1);
 
-    return kos_red_black_walk((struct _KOS_RED_BLACK_NODE *)n, check_node_order, &prev);
+    return kos_red_black_walk((KOS_RED_BLACK_NODE *)n, check_node_order, &prev);
 }
 
 static int count_black_nodes(struct MYNODE *n)
@@ -174,7 +174,7 @@ static void free_tree(struct MYNODE *n)
     }
 }
 
-static int print_tree_node(struct _KOS_RED_BLACK_NODE *node, void *cookie)
+static int print_tree_node(KOS_RED_BLACK_NODE *node, void *cookie)
 {
     struct MYNODE *n     = (struct MYNODE *)node;
     const intptr_t value = n->value;
@@ -185,7 +185,7 @@ static int print_tree_node(struct _KOS_RED_BLACK_NODE *node, void *cookie)
 static void print_tree(struct MYNODE *root)
 {
     printf("tree:");
-    kos_red_black_walk((struct _KOS_RED_BLACK_NODE *)root, print_tree_node, 0);
+    kos_red_black_walk((KOS_RED_BLACK_NODE *)root, print_tree_node, 0);
     printf("\n");
 }
 
@@ -208,8 +208,8 @@ static int test_sequence(const int *insert_seq,
         int       error;
         const int idx = insert_seq[i];
 
-        kos_red_black_insert((struct _KOS_RED_BLACK_NODE **)&root,
-                             (struct _KOS_RED_BLACK_NODE *)&nodes[idx],
+        kos_red_black_insert((KOS_RED_BLACK_NODE **)&root,
+                             (KOS_RED_BLACK_NODE *)&nodes[idx],
                              cmp_node);
 
         error = check_tree(root);
@@ -223,8 +223,8 @@ static int test_sequence(const int *insert_seq,
         int       error;
         const int idx = delete_seq[i];
 
-        kos_red_black_delete((struct _KOS_RED_BLACK_NODE **)&root,
-                             (struct _KOS_RED_BLACK_NODE *)&nodes[idx]);
+        kos_red_black_delete((KOS_RED_BLACK_NODE **)&root,
+                             (KOS_RED_BLACK_NODE *)&nodes[idx]);
 
         if (++i == count)
             break;
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
         for (i = 0; i < size*2; i++) {
             struct MYNODE *node;
 
-            if (kos_red_black_find((struct _KOS_RED_BLACK_NODE *)root,
+            if (kos_red_black_find((KOS_RED_BLACK_NODE *)root,
                                    (void *)values[i % size],
                                    cmp_value))
                 continue;
@@ -360,8 +360,8 @@ int main(int argc, char *argv[])
 
             node->value = values[i % size];
 
-            kos_red_black_insert((struct _KOS_RED_BLACK_NODE **)&root,
-                                 (struct _KOS_RED_BLACK_NODE *)node,
+            kos_red_black_insert((KOS_RED_BLACK_NODE **)&root,
+                                 (KOS_RED_BLACK_NODE *)node,
                                  cmp_node);
 
             ++total;
@@ -377,13 +377,13 @@ int main(int argc, char *argv[])
         for (i = 0 ; i < total*4; i++) {
             const uint64_t idx  = kos_rng_random(&rng);
             struct MYNODE *node = (struct MYNODE *)kos_red_black_find(
-                    (struct _KOS_RED_BLACK_NODE *)root,
+                    (KOS_RED_BLACK_NODE *)root,
                     (void *)values[(unsigned)idx % size],
                     cmp_value);
 
             if (node) {
-                kos_red_black_delete((struct _KOS_RED_BLACK_NODE **)&root,
-                                     (struct _KOS_RED_BLACK_NODE *)node);
+                kos_red_black_delete((KOS_RED_BLACK_NODE **)&root,
+                                     (KOS_RED_BLACK_NODE *)node);
                 kos_free(node);
                 --total;
             }

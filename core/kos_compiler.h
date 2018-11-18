@@ -57,22 +57,21 @@ enum _KOS_VAR_ACTIVE {
 };
 
 struct _KOS_VAR {
-    struct _KOS_RED_BLACK_NODE  rb_tree_node;
-
-    struct _KOS_VAR         *next;
-    const KOS_TOKEN         *token;
-    struct _KOS_REG         *reg;
-    const KOS_AST_NODE      *value;
-    int                      num_reads;         /* Number of reads from a variable (including closures) */
-    int                      num_assignments;   /* Number of writes to a variable (including closures)  */
-    int                      local_reads;       /* Number of local reads from a variable                */
-    int                      local_assignments; /* Number of local writes to a variable                 */
-    int                      array_idx;
-    int                      type         : 7;
-    int                      is_active    : 3;  /* Becomes active/searchable after the node */
-                                                /* which declares it. */
-    unsigned                 is_const     : 1;
-    unsigned                 has_defaults : 1;
+    KOS_RED_BLACK_NODE  rb_tree_node;
+    struct _KOS_VAR    *next;
+    const KOS_TOKEN    *token;
+    struct _KOS_REG    *reg;
+    const KOS_AST_NODE *value;
+    int                 num_reads;         /* Number of reads from a variable (including closures) */
+    int                 num_assignments;   /* Number of writes to a variable (including closures)  */
+    int                 local_reads;       /* Number of local reads from a variable                */
+    int                 local_assignments; /* Number of local writes to a variable                 */
+    int                 array_idx;
+    int                 type         : 7;
+    int                 is_active    : 3;  /* Becomes active/searchable after the node */
+                                           /* which declares it. */
+    unsigned            is_const     : 1;
+    unsigned            has_defaults : 1;
 };
 
 struct _KOS_BREAK_OFFS {
@@ -96,57 +95,57 @@ struct _KOS_CATCH_REF {
 };
 
 struct _KOS_SCOPE {
-    struct _KOS_RED_BLACK_NODE  rb_tree_node;
+    KOS_RED_BLACK_NODE    rb_tree_node;
 
-    const KOS_AST_NODE         *scope_node;
-    struct _KOS_SCOPE          *next;
-    struct _KOS_RED_BLACK_NODE *vars;
-    struct _KOS_VAR            *fun_vars_list;
-    struct _KOS_VAR            *ellipsis;
-    int                         num_vars;
-    int                         num_indep_vars;
-    int                         num_args;
-    int                         num_indep_args;
-    struct _KOS_CATCH_REF       catch_ref; /* For catch references between scopes */
-    unsigned                    has_frame      : 1;
-    unsigned                    is_function    : 1;
-    unsigned                    uses_this      : 1;
-    unsigned                    have_rest      : 1; /* Has more args than fit in registers */
+    const KOS_AST_NODE   *scope_node;
+    struct _KOS_SCOPE    *next;
+    KOS_RED_BLACK_NODE   *vars;
+    struct _KOS_VAR      *fun_vars_list;
+    struct _KOS_VAR      *ellipsis;
+    int                   num_vars;
+    int                   num_indep_vars;
+    int                   num_args;
+    int                   num_indep_args;
+    struct _KOS_CATCH_REF catch_ref; /* For catch references between scopes */
+    unsigned              has_frame      : 1;
+    unsigned              is_function    : 1;
+    unsigned              uses_this      : 1;
+    unsigned              have_rest      : 1; /* Has more args than fit in registers */
 };
 
 struct _KOS_FRAME {
-    struct _KOS_SCOPE           scope;
-    struct _KOS_REG            *free_regs;        /* Allocated registers which are currently unused */
-    struct _KOS_REG            *used_regs;
-    struct _KOS_REG            *this_reg;
-    struct _KOS_REG            *args_reg;
-    struct _KOS_RED_BLACK_NODE *closures;
-    struct _KOS_FRAME          *parent_frame;
-    const KOS_TOKEN            *fun_token;
-    struct _KOS_BREAK_OFFS     *break_offs;
-    struct _KOS_RETURN_OFFS    *return_offs;      /* For return statements inside finally clause (defer) */
-    struct _KOS_SCOPE          *last_try_scope;
-    const KOS_TOKEN            *yield_token;
-    struct _KOS_COMP_FUNCTION  *constant;         /* The template for the constant object, used with LOAD.CONST */
-    int                         num_regs;
-    uint32_t                    num_instr;
-    int                         load_instr;       /* Instruction used for loading the function */
-    int                         bind_delta;       /* First bound register */
-    int                         num_binds;        /* Number of binds */
-    int                         num_non_def_args; /* Number of args without default values */
-    int                         num_def_args;     /* Number of args with default values */
+    struct _KOS_SCOPE          scope;
+    struct _KOS_REG           *free_regs;        /* Allocated registers which are currently unused */
+    struct _KOS_REG           *used_regs;
+    struct _KOS_REG           *this_reg;
+    struct _KOS_REG           *args_reg;
+    KOS_RED_BLACK_NODE        *closures;
+    struct _KOS_FRAME         *parent_frame;
+    const KOS_TOKEN           *fun_token;
+    struct _KOS_BREAK_OFFS    *break_offs;
+    struct _KOS_RETURN_OFFS   *return_offs;      /* For return statements inside finally clause (defer) */
+    struct _KOS_SCOPE         *last_try_scope;
+    const KOS_TOKEN           *yield_token;
+    struct _KOS_COMP_FUNCTION *constant;         /* The template for the constant object, used with LOAD.CONST */
+    int                        num_regs;
+    uint32_t                   num_instr;
+    int                        load_instr;       /* Instruction used for loading the function */
+    int                        bind_delta;       /* First bound register */
+    int                        num_binds;        /* Number of binds */
+    int                        num_non_def_args; /* Number of args without default values */
+    int                        num_def_args;     /* Number of args with default values */
 };
 
 struct _KOS_SCOPE_REF {
-    struct _KOS_RED_BLACK_NODE rb_tree_node;
+    KOS_RED_BLACK_NODE rb_tree_node;
 
-    struct _KOS_SCOPE         *closure;
-    struct _KOS_REG           *vars_reg;
-    struct _KOS_REG           *args_reg;
-    int                        vars_reg_idx;
-    int                        args_reg_idx;
-    unsigned                   exported_locals;
-    unsigned                   exported_args;
+    struct _KOS_SCOPE *closure;
+    struct _KOS_REG   *vars_reg;
+    struct _KOS_REG   *args_reg;
+    int                vars_reg_idx;
+    int                args_reg_idx;
+    unsigned           exported_locals;
+    unsigned           exported_args;
 };
 
 enum _KOS_COMP_CONST_TYPE {
@@ -165,10 +164,10 @@ enum _KOS_COMP_FUNC_FLAGS {
 };
 
 struct _KOS_COMP_CONST {
-    struct _KOS_RED_BLACK_NODE rb_tree_node;
-    enum _KOS_COMP_CONST_TYPE  type;
-    uint32_t                   index;
-    struct _KOS_COMP_CONST    *next;
+    KOS_RED_BLACK_NODE        rb_tree_node;
+    enum _KOS_COMP_CONST_TYPE type;
+    uint32_t                  index;
+    struct _KOS_COMP_CONST   *next;
 };
 
 struct _KOS_COMP_INTEGER {
@@ -247,46 +246,46 @@ typedef int (*KOS_COMP_WALK_GLOBALS)(void                          *ctx,
                                      void                          *cookie);
 
 struct _KOS_COMP_UNIT {
-    const KOS_TOKEN            *error_token;
-    const char                 *error_str;
+    const KOS_TOKEN         *error_token;
+    const char              *error_str;
 
-    int                         optimize;
-    int                         num_optimizations;
+    int                      optimize;
+    int                      num_optimizations;
 
-    int                         file_id;
-    int                         cur_offs;
-    struct _KOS_FRAME          *cur_frame;
+    int                      file_id;
+    int                      cur_offs;
+    struct _KOS_FRAME       *cur_frame;
 
-    struct _KOS_REG            *unused_regs; /* Register objects reusable without allocating memory */
+    struct _KOS_REG         *unused_regs; /* Register objects reusable without allocating memory */
 
-    struct _KOS_RED_BLACK_NODE *scopes;
-    struct _KOS_SCOPE          *scope_stack;
+    KOS_RED_BLACK_NODE      *scopes;
+    struct _KOS_SCOPE       *scope_stack;
 
-    struct _KOS_PRE_GLOBAL     *pre_globals;
-    struct _KOS_VAR            *globals;
-    int                         num_globals;
+    struct _KOS_PRE_GLOBAL  *pre_globals;
+    struct _KOS_VAR         *globals;
+    int                      num_globals;
 
-    void                       *ctx;
-    KOS_COMP_IMPORT_MODULE      import_module;
-    KOS_COMP_GET_GLOBAL_IDX     get_global_idx;
-    KOS_COMP_WALK_GLOBALS       walk_globals;
+    void                    *ctx;
+    KOS_COMP_IMPORT_MODULE   import_module;
+    KOS_COMP_GET_GLOBAL_IDX  get_global_idx;
+    KOS_COMP_WALK_GLOBALS    walk_globals;
 
-    struct _KOS_VAR            *modules;
-    int                         num_modules;
+    struct _KOS_VAR         *modules;
+    int                      num_modules;
 
-    struct _KOS_RED_BLACK_NODE *constants;
-    struct _KOS_COMP_CONST     *first_constant;
-    struct _KOS_COMP_CONST     *last_constant;
-    int                         num_constants;
+    KOS_RED_BLACK_NODE      *constants;
+    struct _KOS_COMP_CONST  *first_constant;
+    struct _KOS_COMP_CONST  *last_constant;
+    int                      num_constants;
 
-    struct KOS_MEMPOOL_S        allocator;
+    struct KOS_MEMPOOL_S     allocator;
 
-    KOS_VECTOR                  code_buf;
-    KOS_VECTOR                  code_gen_buf;
+    KOS_VECTOR               code_buf;
+    KOS_VECTOR               code_gen_buf;
 
-    KOS_VECTOR                  addr2line_buf;
-    KOS_VECTOR                  addr2line_gen_buf;
-    KOS_VECTOR                  addr2func_buf;
+    KOS_VECTOR               addr2line_buf;
+    KOS_VECTOR               addr2line_gen_buf;
+    KOS_VECTOR               addr2func_buf;
 };
 
 void kos_compiler_init(struct _KOS_COMP_UNIT *program,
@@ -324,8 +323,8 @@ int kos_optimize(struct _KOS_COMP_UNIT *program,
 int kos_allocate_args(struct _KOS_COMP_UNIT *program,
                       KOS_AST_NODE          *ast);
 
-struct _KOS_VAR *kos_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
-                              const KOS_TOKEN            *token);
+struct _KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
+                              const KOS_TOKEN    *token);
 
 void kos_activate_var(struct _KOS_COMP_UNIT *program,
                       const KOS_AST_NODE    *node);
@@ -338,11 +337,11 @@ void kos_activate_self_ref_func(struct _KOS_COMP_UNIT *program,
 
 void kos_deactivate_vars(struct _KOS_SCOPE *scope);
 
-int kos_scope_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                           struct _KOS_RED_BLACK_NODE *b);
+int kos_scope_compare_node(KOS_RED_BLACK_NODE *a,
+                           KOS_RED_BLACK_NODE *b);
 
-int kos_scope_compare_item(void                       *what,
-                           struct _KOS_RED_BLACK_NODE *node);
+int kos_scope_compare_item(void               *what,
+                           KOS_RED_BLACK_NODE *node);
 
 struct _KOS_SCOPE_REF *kos_find_scope_ref(struct _KOS_FRAME *frame,
                                           struct _KOS_SCOPE *closure);

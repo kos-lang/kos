@@ -38,8 +38,8 @@ static const char str_err_unexpected_yield[]       = "'yield' not allowed in glo
 static int _visit_node(struct _KOS_COMP_UNIT *program,
                        const KOS_AST_NODE    *node);
 
-int kos_scope_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                           struct _KOS_RED_BLACK_NODE *b)
+int kos_scope_compare_node(KOS_RED_BLACK_NODE *a,
+                           KOS_RED_BLACK_NODE *b)
 {
     const struct _KOS_SCOPE *scope_a = (const struct _KOS_SCOPE *)a;
     const struct _KOS_SCOPE *scope_b = (const struct _KOS_SCOPE *)b;
@@ -63,8 +63,8 @@ static int _compare_tokens(const KOS_TOKEN *token_a,
     return result;
 }
 
-static int _var_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                             struct _KOS_RED_BLACK_NODE *b)
+static int _var_compare_node(KOS_RED_BLACK_NODE *a,
+                             KOS_RED_BLACK_NODE *b)
 {
     const KOS_TOKEN *token_a = ((const struct _KOS_VAR *)a)->token;
     const KOS_TOKEN *token_b = ((const struct _KOS_VAR *)b)->token;
@@ -72,8 +72,8 @@ static int _var_compare_node(struct _KOS_RED_BLACK_NODE *a,
     return _compare_tokens(token_a, token_b);
 }
 
-static int _var_compare_item(void                       *what,
-                             struct _KOS_RED_BLACK_NODE *node)
+static int _var_compare_item(void               *what,
+                             KOS_RED_BLACK_NODE *node)
 {
     const KOS_TOKEN *token_a = (const KOS_TOKEN *)what;
     const KOS_TOKEN *token_b = ((const struct _KOS_VAR *)node)->token;
@@ -81,8 +81,8 @@ static int _var_compare_item(void                       *what,
     return _compare_tokens(token_a, token_b);
 }
 
-static int _scope_ref_compare_item(void                       *what,
-                                   struct _KOS_RED_BLACK_NODE *node)
+static int _scope_ref_compare_item(void               *what,
+                                   KOS_RED_BLACK_NODE *node)
 {
     const struct _KOS_SCOPE     *closure = (const struct _KOS_SCOPE *)    what;
     const struct _KOS_SCOPE_REF *ref     = (const struct _KOS_SCOPE_REF *)node;
@@ -90,8 +90,8 @@ static int _scope_ref_compare_item(void                       *what,
     return (int)((intptr_t)closure - (intptr_t)ref->closure);
 }
 
-static int _scope_ref_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                                   struct _KOS_RED_BLACK_NODE *b)
+static int _scope_ref_compare_node(KOS_RED_BLACK_NODE *a,
+                                   KOS_RED_BLACK_NODE *b)
 {
     const struct _KOS_SCOPE_REF *ref_a = (const struct _KOS_SCOPE_REF *)a;
     const struct _KOS_SCOPE_REF *ref_b = (const struct _KOS_SCOPE_REF *)b;
@@ -116,7 +116,7 @@ static struct _KOS_VAR *_alloc_var(struct _KOS_COMP_UNIT *program,
         var->has_defaults = 0;
 
         kos_red_black_insert(&program->scope_stack->vars,
-                             (struct _KOS_RED_BLACK_NODE *)var,
+                             (KOS_RED_BLACK_NODE *)var,
                              _var_compare_node);
     }
 
@@ -174,7 +174,7 @@ static int _push_scope(struct _KOS_COMP_UNIT *program,
         scope->scope_node = node;
 
         kos_red_black_insert(&program->scopes,
-                             (struct _KOS_RED_BLACK_NODE *)scope,
+                             (KOS_RED_BLACK_NODE *)scope,
                              kos_scope_compare_node);
 
         scope->next          = program->scope_stack;
@@ -203,8 +203,8 @@ static int _push_function(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-struct _KOS_VAR *kos_find_var(struct _KOS_RED_BLACK_NODE *rb_root,
-                              const KOS_TOKEN            *token)
+struct _KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
+                              const KOS_TOKEN    *token)
 {
     return (struct _KOS_VAR *)kos_red_black_find(rb_root, (void *)token, _var_compare_item);
 }
@@ -275,7 +275,7 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
             ref->exported_args   = 0;
 
             kos_red_black_insert(&((struct _KOS_FRAME *)inner_scope)->closures,
-                                 (struct _KOS_RED_BLACK_NODE *)ref,
+                                 (KOS_RED_BLACK_NODE *)ref,
                                  _scope_ref_compare_node);
         }
         else
@@ -1041,8 +1041,8 @@ void kos_activate_self_ref_func(struct _KOS_COMP_UNIT *program,
     }
 }
 
-static int _deactivate(struct _KOS_RED_BLACK_NODE *node,
-                       void                       *cookie)
+static int _deactivate(KOS_RED_BLACK_NODE *node,
+                       void               *cookie)
 {
     struct _KOS_VAR *var = (struct _KOS_VAR *)node;
 

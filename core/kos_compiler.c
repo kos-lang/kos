@@ -499,8 +499,8 @@ static void _get_token_str(const KOS_TOKEN       *token,
     *out_length = length;
 }
 
-static int _numbers_compare_item(void                       *what,
-                                 struct _KOS_RED_BLACK_NODE *node)
+static int _numbers_compare_item(void               *what,
+                                 KOS_RED_BLACK_NODE *node)
 {
     const struct _KOS_NUMERIC    *numeric  = (const struct _KOS_NUMERIC *)what;
     const struct _KOS_COMP_CONST *constant = (const struct _KOS_COMP_CONST *)node;
@@ -519,8 +519,8 @@ static int _numbers_compare_item(void                       *what,
                numeric->u.d <  ((const struct _KOS_COMP_FLOAT *)constant)->value ? -1 : 1;
 }
 
-static int _strings_compare_item(void                       *what,
-                                 struct _KOS_RED_BLACK_NODE *node)
+static int _strings_compare_item(void               *what,
+                                 KOS_RED_BLACK_NODE *node)
 {
     const KOS_TOKEN               *token = (const KOS_TOKEN               *)what;
     const struct _KOS_COMP_STRING *str   = (const struct _KOS_COMP_STRING *)node;
@@ -537,8 +537,8 @@ static int _strings_compare_item(void                       *what,
                             str->str, str->length, str->escape);
 }
 
-static int _constants_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                                   struct _KOS_RED_BLACK_NODE *b)
+static int _constants_compare_node(KOS_RED_BLACK_NODE *a,
+                                   KOS_RED_BLACK_NODE *b)
 {
     const struct _KOS_COMP_CONST *const_a = (const struct _KOS_COMP_CONST *)a;
     const struct _KOS_COMP_CONST *const_b = (const struct _KOS_COMP_CONST *)b;
@@ -945,8 +945,8 @@ static void _remove_last_instr(struct _KOS_COMP_UNIT *program,
     program->cur_offs = offs;
 }
 
-int kos_scope_compare_item(void                       *what,
-                           struct _KOS_RED_BLACK_NODE *node)
+int kos_scope_compare_item(void               *what,
+                           KOS_RED_BLACK_NODE *node)
 {
     const KOS_AST_NODE *scope_node = (const KOS_AST_NODE *)what;
 
@@ -972,8 +972,8 @@ static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT *program,
     return scope;
 }
 
-static int _free_scope_regs(struct _KOS_RED_BLACK_NODE *node,
-                            void                       *cookie)
+static int _free_scope_regs(KOS_RED_BLACK_NODE *node,
+                            void               *cookie)
 {
     struct _KOS_VAR       *var     = (struct _KOS_VAR *)node;
     struct _KOS_COMP_UNIT *program = (struct _KOS_COMP_UNIT *)cookie;
@@ -2783,8 +2783,8 @@ cleanup:
     return error;
 }
 
-static int _find_var_by_reg(struct _KOS_RED_BLACK_NODE *node,
-                            void                       *cookie)
+static int _find_var_by_reg(KOS_RED_BLACK_NODE *node,
+                            void               *cookie)
 {
     struct _KOS_VAR *var = (struct _KOS_VAR *)node;
     struct _KOS_REG *reg = (struct _KOS_REG *)cookie;
@@ -4273,8 +4273,8 @@ struct _GEN_CLOSURE_ARGS {
     int                   *num_binds;
 };
 
-static int _gen_closure_regs(struct _KOS_RED_BLACK_NODE *node,
-                             void                       *cookie)
+static int _gen_closure_regs(KOS_RED_BLACK_NODE *node,
+                             void               *cookie)
 {
     int error = KOS_SUCCESS;
 
@@ -4309,8 +4309,8 @@ struct _BIND_ARGS {
     int                    delta;
 };
 
-static int _gen_binds(struct _KOS_RED_BLACK_NODE *node,
-                      void                       *cookie)
+static int _gen_binds(KOS_RED_BLACK_NODE *node,
+                      void               *cookie)
 {
     int error = KOS_SUCCESS;
 
@@ -4374,8 +4374,8 @@ cleanup:
     return error;
 }
 
-static int _free_arg_regs(struct _KOS_RED_BLACK_NODE *node,
-                          void                       *cookie)
+static int _free_arg_regs(KOS_RED_BLACK_NODE *node,
+                          void               *cookie)
 {
     struct _KOS_VAR       *var     = (struct _KOS_VAR *)node;
     struct _KOS_COMP_UNIT *program = (struct _KOS_COMP_UNIT *)cookie;
@@ -4799,12 +4799,12 @@ static int _array_literal(struct _KOS_COMP_UNIT *program,
 }
 
 struct _KOS_OBJECT_PROP_DUPE {
-    struct _KOS_RED_BLACK_NODE rb_tree_node;
-    int                        str_idx;
+    KOS_RED_BLACK_NODE rb_tree_node;
+    int                str_idx;
 };
 
-static int _prop_compare_item(void                       *what,
-                              struct _KOS_RED_BLACK_NODE *node)
+static int _prop_compare_item(void               *what,
+                              KOS_RED_BLACK_NODE *node)
 {
     const int                     str_idx   = (int)(intptr_t)what;
     struct _KOS_OBJECT_PROP_DUPE *prop_node = (struct _KOS_OBJECT_PROP_DUPE *)node;
@@ -4812,8 +4812,8 @@ static int _prop_compare_item(void                       *what,
     return str_idx - prop_node->str_idx;
 }
 
-static int _prop_compare_node(struct _KOS_RED_BLACK_NODE *a,
-                              struct _KOS_RED_BLACK_NODE *b)
+static int _prop_compare_node(KOS_RED_BLACK_NODE *a,
+                              KOS_RED_BLACK_NODE *b)
 {
     struct _KOS_OBJECT_PROP_DUPE *a_node = (struct _KOS_OBJECT_PROP_DUPE *)a;
     struct _KOS_OBJECT_PROP_DUPE *b_node = (struct _KOS_OBJECT_PROP_DUPE *)b;
@@ -4825,8 +4825,8 @@ static int _object_literal(struct _KOS_COMP_UNIT *program,
                            const KOS_AST_NODE    *node,
                            struct _KOS_REG      **reg)
 {
-    int                         error;
-    struct _KOS_RED_BLACK_NODE *prop_str_idcs = 0;
+    int                 error;
+    KOS_RED_BLACK_NODE *prop_str_idcs = 0;
 
     TRY(_gen_reg(program, reg));
     TRY(_gen_instr1(program, INSTR_LOAD_OBJ, (*reg)->reg));
@@ -4858,7 +4858,7 @@ static int _object_literal(struct _KOS_COMP_UNIT *program,
             new_node->str_idx = str_idx;
 
             kos_red_black_insert(&prop_str_idcs,
-                                 (struct _KOS_RED_BLACK_NODE *)new_node,
+                                 (KOS_RED_BLACK_NODE *)new_node,
                                  _prop_compare_node);
         }
 

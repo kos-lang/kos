@@ -28,7 +28,6 @@
 #include <stddef.h>
 
 struct _KOS_MODULE_LOAD_CHAIN;
-struct _KOS_RED_BLACK_NODE;
 struct _KOS_PAGE_HEADER;
 struct _KOS_POOL_HEADER;
 struct _KOS_WASTE_HEADER;

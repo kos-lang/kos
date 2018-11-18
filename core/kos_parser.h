@@ -29,7 +29,7 @@ struct KOS_AST_NODE_S;
 
 struct KOS_MEMPOOL_S;
 
-struct _KOS_PARSER {
+typedef struct KOS_PARSER_S {
     struct KOS_MEMPOOL_S  *ast_buf;
     const char            *error_str;
     KOS_LEXER              lexer;
@@ -43,17 +43,17 @@ struct _KOS_PARSER {
     int                    in_constructor;
     int                    ast_depth;   /* For limiting statement/expression depth */
     int                    unary_depth; /* For detecting ambiguous syntax */
-};
+} KOS_PARSER;
 
-void kos_parser_init(struct _KOS_PARSER   *parser,
+void kos_parser_init(KOS_PARSER           *parser,
                      struct KOS_MEMPOOL_S *mempool,
                      unsigned              file_id,
                      const char           *begin,
                      const char           *end);
 
-int  kos_parser_parse(struct _KOS_PARSER     *parser,
+int  kos_parser_parse(KOS_PARSER             *parser,
                       struct KOS_AST_NODE_S **ret);
 
-void kos_parser_destroy(struct _KOS_PARSER *parser);
+void kos_parser_destroy(KOS_PARSER *parser);
 
 #endif

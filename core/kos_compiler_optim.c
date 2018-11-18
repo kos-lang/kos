@@ -99,13 +99,13 @@ static void _promote(struct _KOS_COMP_UNIT *program,
 
     if (scope) {
 
-        kos_red_black_delete(&program->scopes, (struct _KOS_RED_BLACK_NODE *)scope);
+        kos_red_black_delete(&program->scopes, (KOS_RED_BLACK_NODE *)scope);
 
         assert(scope->scope_node == child);
         scope->scope_node = node;
 
         kos_red_black_insert(&program->scopes,
-                             (struct _KOS_RED_BLACK_NODE *)scope,
+                             (KOS_RED_BLACK_NODE *)scope,
                              kos_scope_compare_node);
     }
 
@@ -289,8 +289,8 @@ int kos_node_is_falsy(struct _KOS_COMP_UNIT *program,
     return 0;
 }
 
-static int _reset_var_state(struct _KOS_RED_BLACK_NODE *node,
-                            void                       *cookie)
+static int _reset_var_state(KOS_RED_BLACK_NODE *node,
+                            void               *cookie)
 {
     struct _KOS_VAR *var = (struct _KOS_VAR *)node;
 
@@ -325,8 +325,8 @@ static struct _KOS_SCOPE *_push_scope(struct _KOS_COMP_UNIT *program,
     return scope;
 }
 
-static int _count_and_update_vars(struct _KOS_RED_BLACK_NODE *node,
-                                  void                       *cookie)
+static int _count_and_update_vars(KOS_RED_BLACK_NODE *node,
+                                  void               *cookie)
 {
     struct _KOS_VAR   *var   = (struct _KOS_VAR *)node;
     struct _KOS_SCOPE *scope = (struct _KOS_SCOPE *)cookie;

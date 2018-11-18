@@ -978,7 +978,7 @@ static int _compile_module(KOS_CONTEXT ctx,
     KOS_MODULE     *const module            = OBJPTR(MODULE, module_obj);
     KOS_INSTANCE   *const inst              = ctx->inst;
     const uint32_t        old_bytecode_size = module->bytecode_size;
-    struct _KOS_PARSER    parser;
+    KOS_PARSER            parser;
     struct _KOS_COMP_UNIT program;
     KOS_AST_NODE         *ast;
 

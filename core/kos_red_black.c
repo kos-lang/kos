@@ -25,9 +25,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-struct _KOS_RED_BLACK_NODE *kos_red_black_find(struct _KOS_RED_BLACK_NODE *root,
-                                               void                       *what,
-                                               _KOS_RED_BLACK_COMPARE_ITEM compare)
+KOS_RED_BLACK_NODE *kos_red_black_find(KOS_RED_BLACK_NODE        *root,
+                                       void                      *what,
+                                       KOS_RED_BLACK_COMPARE_ITEM compare)
 {
     while (root) {
         const int result = compare(what, root);
@@ -42,9 +42,9 @@ struct _KOS_RED_BLACK_NODE *kos_red_black_find(struct _KOS_RED_BLACK_NODE *root,
     return root;
 }
 
-int kos_red_black_walk(struct _KOS_RED_BLACK_NODE *node,
-                       _KOS_RED_BLACK_WALK         walk,
-                       void                       *cookie)
+int kos_red_black_walk(KOS_RED_BLACK_NODE *node,
+                       KOS_RED_BLACK_WALK  walk,
+                       void               *cookie)
 
 {
     int error = KOS_SUCCESS;
@@ -69,7 +69,7 @@ int kos_red_black_walk(struct _KOS_RED_BLACK_NODE *node,
             }
             else {
 
-                struct _KOS_RED_BLACK_NODE *prev;
+                KOS_RED_BLACK_NODE *prev;
 
                 do {
                     prev = node;
@@ -83,11 +83,11 @@ int kos_red_black_walk(struct _KOS_RED_BLACK_NODE *node,
     return error;
 }
 
-static void _insert_binary(struct _KOS_RED_BLACK_NODE **node,
-                           struct _KOS_RED_BLACK_NODE  *new_node,
-                           _KOS_RED_BLACK_COMPARE_NODE  compare)
+static void _insert_binary(KOS_RED_BLACK_NODE       **node,
+                           KOS_RED_BLACK_NODE        *new_node,
+                           KOS_RED_BLACK_COMPARE_NODE compare)
 {
-    struct _KOS_RED_BLACK_NODE *parent = 0;
+    KOS_RED_BLACK_NODE *parent = 0;
 
     while (*node) {
         parent = *node;
@@ -101,10 +101,10 @@ static void _insert_binary(struct _KOS_RED_BLACK_NODE **node,
     new_node->parent = parent;
 }
 
-static void _left_rotate(struct _KOS_RED_BLACK_NODE **root,
-                         struct _KOS_RED_BLACK_NODE  *node)
+static void _left_rotate(KOS_RED_BLACK_NODE **root,
+                         KOS_RED_BLACK_NODE  *node)
 {
-    struct _KOS_RED_BLACK_NODE *other = node->right;
+    KOS_RED_BLACK_NODE *other = node->right;
 
     node->right = other->left;
 
@@ -127,10 +127,10 @@ static void _left_rotate(struct _KOS_RED_BLACK_NODE **root,
     node->parent = other;
 }
 
-static void _right_rotate(struct _KOS_RED_BLACK_NODE **root,
-                          struct _KOS_RED_BLACK_NODE  *node)
+static void _right_rotate(KOS_RED_BLACK_NODE **root,
+                          KOS_RED_BLACK_NODE  *node)
 {
-    struct _KOS_RED_BLACK_NODE *other = node->left;
+    KOS_RED_BLACK_NODE *other = node->left;
 
     node->left = other->right;
 
@@ -153,9 +153,9 @@ static void _right_rotate(struct _KOS_RED_BLACK_NODE **root,
     node->parent = other;
 }
 
-void kos_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
-                          struct _KOS_RED_BLACK_NODE  *new_node,
-                          _KOS_RED_BLACK_COMPARE_NODE  compare)
+void kos_red_black_insert(KOS_RED_BLACK_NODE       **out_root,
+                          KOS_RED_BLACK_NODE        *new_node,
+                          KOS_RED_BLACK_COMPARE_NODE compare)
 {
     new_node->red   = 1;
     new_node->left  = 0;
@@ -165,8 +165,8 @@ void kos_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
 
     /* Restore red-black property */
     while (new_node != *out_root && new_node->parent->red) {
-        struct _KOS_RED_BLACK_NODE *pp_left  = new_node->parent->parent->left;
-        struct _KOS_RED_BLACK_NODE *pp_right = new_node->parent->parent->right;
+        KOS_RED_BLACK_NODE *pp_left  = new_node->parent->parent->left;
+        KOS_RED_BLACK_NODE *pp_right = new_node->parent->parent->right;
 
         if (new_node->parent == pp_left) {
             if (pp_right && pp_right->red) {
@@ -210,17 +210,17 @@ void kos_red_black_insert(struct _KOS_RED_BLACK_NODE **out_root,
         new_node->red = 0;
 }
 
-void kos_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
-                          struct _KOS_RED_BLACK_NODE  *node)
+void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
+                          KOS_RED_BLACK_NODE  *node)
 {
-    struct _KOS_RED_BLACK_NODE *succ;
-    struct _KOS_RED_BLACK_NODE *parent;
-    struct _KOS_RED_BLACK_NODE  leaf = { 0, 0, 0, /*red=*/ 3 };
-    struct _KOS_RED_BLACK_NODE *root = *out_root;
+    KOS_RED_BLACK_NODE *succ;
+    KOS_RED_BLACK_NODE *parent;
+    KOS_RED_BLACK_NODE  leaf = { 0, 0, 0, /*red=*/ 3 };
+    KOS_RED_BLACK_NODE *root = *out_root;
 
     /* If deleted node has two children, swap it with the successor and delete the successor */
     if (node->left && node->right) {
-        struct _KOS_RED_BLACK_NODE *a, *b;
+        KOS_RED_BLACK_NODE *a, *b;
         int color;
 
         succ = node->right;
@@ -309,8 +309,8 @@ void kos_red_black_delete(struct _KOS_RED_BLACK_NODE **out_root,
     /* Restore red-black property */
     while (node->red == 2) {
 
-        struct _KOS_RED_BLACK_NODE *sibling;
-        int                         sibling_left;
+        KOS_RED_BLACK_NODE *sibling;
+        int                 sibling_left;
 
         /* If root, just make it black */
         parent = node->parent;

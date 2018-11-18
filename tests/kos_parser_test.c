@@ -342,7 +342,7 @@ static int scan_int(char **buf, const char *end, int *value)
 
 int main(int argc, char *argv[])
 {
-    struct _KOS_PARSER   parser;
+    KOS_PARSER           parser;
     KOS_VECTOR           file_buf;
     struct KOS_MEMPOOL_S allocator;
     char                *file_end;
