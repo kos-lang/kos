@@ -35,14 +35,14 @@ static const char str_err_undefined_var[]          = "undeclared identifier";
 static const char str_err_unexpected_global_this[] = "'this' not allowed in global scope";
 static const char str_err_unexpected_yield[]       = "'yield' not allowed in global scope";
 
-static int _visit_node(struct _KOS_COMP_UNIT *program,
-                       const KOS_AST_NODE    *node);
+static int _visit_node(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *node);
 
 int kos_scope_compare_node(KOS_RED_BLACK_NODE *a,
                            KOS_RED_BLACK_NODE *b)
 {
-    const struct _KOS_SCOPE *scope_a = (const struct _KOS_SCOPE *)a;
-    const struct _KOS_SCOPE *scope_b = (const struct _KOS_SCOPE *)b;
+    const KOS_SCOPE *scope_a = (const KOS_SCOPE *)a;
+    const KOS_SCOPE *scope_b = (const KOS_SCOPE *)b;
 
     return (int)((intptr_t)scope_a->scope_node - (intptr_t)scope_b->scope_node);
 }
@@ -66,8 +66,8 @@ static int _compare_tokens(const KOS_TOKEN *token_a,
 static int _var_compare_node(KOS_RED_BLACK_NODE *a,
                              KOS_RED_BLACK_NODE *b)
 {
-    const KOS_TOKEN *token_a = ((const struct _KOS_VAR *)a)->token;
-    const KOS_TOKEN *token_b = ((const struct _KOS_VAR *)b)->token;
+    const KOS_TOKEN *token_a = ((const KOS_VAR *)a)->token;
+    const KOS_TOKEN *token_b = ((const KOS_VAR *)b)->token;
 
     return _compare_tokens(token_a, token_b);
 }
@@ -76,7 +76,7 @@ static int _var_compare_item(void               *what,
                              KOS_RED_BLACK_NODE *node)
 {
     const KOS_TOKEN *token_a = (const KOS_TOKEN *)what;
-    const KOS_TOKEN *token_b = ((const struct _KOS_VAR *)node)->token;
+    const KOS_TOKEN *token_b = ((const KOS_VAR *)node)->token;
 
     return _compare_tokens(token_a, token_b);
 }
@@ -84,8 +84,8 @@ static int _var_compare_item(void               *what,
 static int _scope_ref_compare_item(void               *what,
                                    KOS_RED_BLACK_NODE *node)
 {
-    const struct _KOS_SCOPE     *closure = (const struct _KOS_SCOPE *)    what;
-    const struct _KOS_SCOPE_REF *ref     = (const struct _KOS_SCOPE_REF *)node;
+    const KOS_SCOPE     *closure = (const KOS_SCOPE *)            what;
+    const KOS_SCOPE_REF *ref     = (const KOS_SCOPE_REF *)node;
 
     return (int)((intptr_t)closure - (intptr_t)ref->closure);
 }
@@ -93,18 +93,18 @@ static int _scope_ref_compare_item(void               *what,
 static int _scope_ref_compare_node(KOS_RED_BLACK_NODE *a,
                                    KOS_RED_BLACK_NODE *b)
 {
-    const struct _KOS_SCOPE_REF *ref_a = (const struct _KOS_SCOPE_REF *)a;
-    const struct _KOS_SCOPE_REF *ref_b = (const struct _KOS_SCOPE_REF *)b;
+    const KOS_SCOPE_REF *ref_a = (const KOS_SCOPE_REF *)a;
+    const KOS_SCOPE_REF *ref_b = (const KOS_SCOPE_REF *)b;
 
     return (int)((intptr_t)ref_a->closure - (intptr_t)ref_b->closure);
 }
 
-static struct _KOS_VAR *_alloc_var(struct _KOS_COMP_UNIT *program,
-                                   unsigned               is_const,
-                                   const KOS_AST_NODE    *node)
+static KOS_VAR *_alloc_var(KOS_COMP_UNIT      *program,
+                           unsigned            is_const,
+                           const KOS_AST_NODE *node)
 {
-    struct _KOS_VAR *var = (struct _KOS_VAR *)
-        kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_VAR));
+    KOS_VAR *var = (KOS_VAR *)
+        kos_mempool_alloc(&program->allocator, sizeof(KOS_VAR));
 
     if (var) {
         memset(var, 0, sizeof(*var));
@@ -123,16 +123,16 @@ static struct _KOS_VAR *_alloc_var(struct _KOS_COMP_UNIT *program,
     return var;
 }
 
-static int _init_global_scope(struct _KOS_COMP_UNIT *program)
+static int _init_global_scope(KOS_COMP_UNIT *program)
 {
     int error = KOS_SUCCESS;
 
     /* Register built-in module globals */
-    struct _KOS_PRE_GLOBAL *global = program->pre_globals;
+    KOS_PRE_GLOBAL *global = program->pre_globals;
 
     for ( ; global; global = global->next) {
 
-        struct _KOS_VAR *var = _alloc_var(program, global->is_const, &global->node);
+        KOS_VAR *var = _alloc_var(program, global->is_const, &global->node);
 
         if (var) {
             var->type        = global->type;
@@ -150,16 +150,16 @@ static int _init_global_scope(struct _KOS_COMP_UNIT *program)
     return error;
 }
 
-static int _push_scope(struct _KOS_COMP_UNIT *program,
-                       int                    alloc_frame,
-                       const KOS_AST_NODE    *node)
+static int _push_scope(KOS_COMP_UNIT      *program,
+                       int                 alloc_frame,
+                       const KOS_AST_NODE *node)
 {
     int          error = KOS_SUCCESS;
-    const size_t size  = alloc_frame ? sizeof(struct _KOS_FRAME) : sizeof(struct _KOS_SCOPE);
+    const size_t size  = alloc_frame ? sizeof(KOS_FRAME) : sizeof(KOS_SCOPE);
 
-    struct _KOS_SCOPE *const scope = (struct _KOS_SCOPE *)
+    KOS_SCOPE *const scope = (KOS_SCOPE *)
         kos_mempool_alloc(&program->allocator, size);
-    struct _KOS_FRAME *const frame = alloc_frame ? (struct _KOS_FRAME *)scope : 0;
+    KOS_FRAME *const frame = alloc_frame ? (KOS_FRAME *)scope : 0;
 
     if ( ! scope)
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -187,13 +187,13 @@ static int _push_scope(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-static void _pop_scope(struct _KOS_COMP_UNIT *program)
+static void _pop_scope(KOS_COMP_UNIT *program)
 {
     program->scope_stack = program->scope_stack->next;
 }
 
-static int _push_function(struct _KOS_COMP_UNIT *program,
-                          const KOS_AST_NODE    *node)
+static int _push_function(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node)
 {
     int error = _push_scope(program, 1, node);
 
@@ -203,19 +203,18 @@ static int _push_function(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-struct _KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
-                              const KOS_TOKEN    *token)
+KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
+                      const KOS_TOKEN    *token)
 {
-    return (struct _KOS_VAR *)kos_red_black_find(rb_root, (void *)token, _var_compare_item);
+    return (KOS_VAR *)kos_red_black_find(rb_root, (void *)token, _var_compare_item);
 }
 
-static int _lookup_local_var(struct _KOS_COMP_UNIT *program,
-                             const KOS_TOKEN       *token,
-                             struct _KOS_VAR      **out_var)
+static int _lookup_local_var(KOS_COMP_UNIT   *program,
+                             const KOS_TOKEN *token,
+                             KOS_VAR        **out_var)
 {
-    int error = KOS_ERROR_INTERNAL;
-
-    struct _KOS_SCOPE *scope = program->scope_stack;
+    int        error = KOS_ERROR_INTERNAL;
+    KOS_SCOPE *scope = program->scope_stack;
 
     assert(scope);
 
@@ -225,7 +224,7 @@ static int _lookup_local_var(struct _KOS_COMP_UNIT *program,
 
     for (scope = program->scope_stack; scope->next && ! scope->is_function; scope = scope->next) {
 
-        struct _KOS_VAR *var = kos_find_var(scope->vars, token);
+        KOS_VAR *var = kos_find_var(scope->vars, token);
 
         if (var && var->is_active) {
             *out_var = var;
@@ -240,31 +239,31 @@ static int _lookup_local_var(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-struct _KOS_SCOPE_REF *kos_find_scope_ref(struct _KOS_FRAME *frame,
-                                          struct _KOS_SCOPE *closure)
+KOS_SCOPE_REF *kos_find_scope_ref(KOS_FRAME *frame,
+                                  KOS_SCOPE *closure)
 {
-    return (struct _KOS_SCOPE_REF *)kos_red_black_find(frame->closures,
-                                                       closure,
-                                                       _scope_ref_compare_item);
+    return (KOS_SCOPE_REF *)kos_red_black_find(frame->closures,
+                                               closure,
+                                               _scope_ref_compare_item);
 }
 
-static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
-                          int                    var_type,
-                          struct _KOS_SCOPE     *inner_scope,
-                          struct _KOS_SCOPE     *outer_closure)
+static int _add_scope_ref(KOS_COMP_UNIT *program,
+                          int            var_type,
+                          KOS_SCOPE     *inner_scope,
+                          KOS_SCOPE     *outer_closure)
 {
     int error = KOS_SUCCESS;
 
-    struct _KOS_SCOPE_REF *ref;
+    KOS_SCOPE_REF *ref;
 
     assert(inner_scope->has_frame);
 
-    ref = kos_find_scope_ref((struct _KOS_FRAME *)inner_scope, outer_closure);
+    ref = kos_find_scope_ref((KOS_FRAME *)inner_scope, outer_closure);
 
     if ( ! ref) {
 
-        ref = (struct _KOS_SCOPE_REF *)
-            kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_SCOPE_REF));
+        ref = (KOS_SCOPE_REF *)
+            kos_mempool_alloc(&program->allocator, sizeof(KOS_SCOPE_REF));
 
         if (ref) {
 
@@ -274,7 +273,7 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
             ref->exported_locals = 0;
             ref->exported_args   = 0;
 
-            kos_red_black_insert(&((struct _KOS_FRAME *)inner_scope)->closures,
+            kos_red_black_insert(&((KOS_FRAME *)inner_scope)->closures,
                                  (KOS_RED_BLACK_NODE *)ref,
                                  _scope_ref_compare_node);
         }
@@ -285,14 +284,14 @@ static int _add_scope_ref(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _lookup_and_mark_var(struct _KOS_COMP_UNIT *program,
-                                const KOS_AST_NODE    *node,
-                                struct _KOS_VAR      **out_var)
+static int _lookup_and_mark_var(KOS_COMP_UNIT      *program,
+                                const KOS_AST_NODE *node,
+                                KOS_VAR           **out_var)
 {
-    int                error;
-    struct _KOS_VAR   *var   = 0;
-    struct _KOS_SCOPE *scope = program->scope_stack;
-    struct _KOS_SCOPE *local_fun_scope;
+    int        error;
+    KOS_VAR   *var   = 0;
+    KOS_SCOPE *scope = program->scope_stack;
+    KOS_SCOPE *local_fun_scope;
 
     assert(scope);
 
@@ -316,7 +315,7 @@ static int _lookup_and_mark_var(struct _KOS_COMP_UNIT *program,
             /* Ignore own args */
             if (scope != local_fun_scope) {
 
-                struct _KOS_SCOPE *closure = scope;
+                KOS_SCOPE *closure = scope;
 
                 if (var->type & VAR_LOCAL)
                     var->type = VAR_INDEPENDENT_LOCAL;
@@ -349,15 +348,15 @@ cleanup:
     return error;
 }
 
-static int _define_local_var(struct _KOS_COMP_UNIT *program,
-                             unsigned               is_const,
-                             const KOS_AST_NODE    *node,
-                             struct _KOS_VAR      **out_var)
+static int _define_local_var(KOS_COMP_UNIT      *program,
+                             unsigned            is_const,
+                             const KOS_AST_NODE *node,
+                             KOS_VAR           **out_var)
 {
-    int                error = KOS_SUCCESS;
-    struct _KOS_VAR   *var;
-    struct _KOS_SCOPE *scope;
-    int                global;
+    int        error = KOS_SUCCESS;
+    KOS_VAR   *var;
+    KOS_SCOPE *scope;
+    int        global;
 
     assert(node->type == NT_IDENTIFIER);
     assert(program->scope_stack);
@@ -395,8 +394,8 @@ cleanup:
     return error;
 }
 
-static int _visit_child_nodes(struct _KOS_COMP_UNIT *program,
-                              const KOS_AST_NODE    *node)
+static int _visit_child_nodes(KOS_COMP_UNIT      *program,
+                              const KOS_AST_NODE *node)
 {
     int error = KOS_SUCCESS;
 
@@ -407,8 +406,8 @@ static int _visit_child_nodes(struct _KOS_COMP_UNIT *program,
 }
 
 struct _IMPORT_INFO {
-    struct _KOS_COMP_UNIT *program;
-    const KOS_AST_NODE    *node;
+    KOS_COMP_UNIT      *program;
+    const KOS_AST_NODE *node;
 };
 
 static int _import_global(const char *global_name,
@@ -424,8 +423,8 @@ static int _import_global(const char *global_name,
 
     if (g_node) {
 
-        KOS_TOKEN       *token = &g_node->token;
-        struct _KOS_VAR *var;
+        KOS_TOKEN *token = &g_node->token;
+        KOS_VAR   *var;
 
         memset(g_node, 0, sizeof(*g_node));
 
@@ -446,8 +445,8 @@ static int _import_global(const char *global_name,
     return error;
 }
 
-static int _import(struct _KOS_COMP_UNIT *program,
-                   const KOS_AST_NODE    *node)
+static int _import(KOS_COMP_UNIT      *program,
+                   const KOS_AST_NODE *node)
 {
     int error;
     int module_idx;
@@ -466,7 +465,7 @@ static int _import(struct _KOS_COMP_UNIT *program,
 
     if (!node->next) {
 
-        struct _KOS_VAR *var = kos_find_var(program->scope_stack->vars, &node->token);
+        KOS_VAR *var = kos_find_var(program->scope_stack->vars, &node->token);
 
         /* Importing the same module multiple times is allowed. */
         if (var) {
@@ -505,7 +504,7 @@ static int _import(struct _KOS_COMP_UNIT *program,
         else {
             for ( ; node; node = node->next) {
 
-                struct _KOS_VAR *var;
+                KOS_VAR *var;
 
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
@@ -518,8 +517,8 @@ cleanup:
     return error;
 }
 
-static int _scope(struct _KOS_COMP_UNIT *program,
-                  const KOS_AST_NODE    *node)
+static int _scope(KOS_COMP_UNIT      *program,
+                  const KOS_AST_NODE *node)
 {
     int error;
 
@@ -533,17 +532,17 @@ cleanup:
     return error;
 }
 
-static int _yield(struct _KOS_COMP_UNIT *program,
-                  const KOS_AST_NODE    *node)
+static int _yield(KOS_COMP_UNIT      *program,
+                  const KOS_AST_NODE *node)
 {
-    int                error;
-    struct _KOS_SCOPE *scope;
+    int        error;
+    KOS_SCOPE *scope;
 
     for (scope = program->scope_stack; scope && ! scope->is_function; scope = scope->next);
 
     if (scope) {
-        if ( ! ((struct _KOS_FRAME *)scope)->yield_token)
-            ((struct _KOS_FRAME *)scope)->yield_token = &node->token;
+        if ( ! ((KOS_FRAME *)scope)->yield_token)
+            ((KOS_FRAME *)scope)->yield_token = &node->token;
         error = KOS_SUCCESS;
     }
     else {
@@ -558,12 +557,12 @@ static int _yield(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _var(struct _KOS_COMP_UNIT *program,
-                const KOS_AST_NODE    *node)
+static int _var(KOS_COMP_UNIT      *program,
+                const KOS_AST_NODE *node)
 {
-    int              error    = KOS_SUCCESS;
-    const unsigned   is_const = node->type == NT_CONST ? 1U : 0U;
-    struct _KOS_VAR *var;
+    int            error    = KOS_SUCCESS;
+    const unsigned is_const = node->type == NT_CONST ? 1U : 0U;
+    KOS_VAR       *var;
 
     for (node = node->children; node; node = node->next) {
         TRY(_define_local_var(program, is_const, node, &var));
@@ -574,8 +573,8 @@ cleanup:
     return error;
 }
 
-static int _left_hand_side(struct _KOS_COMP_UNIT *program,
-                           const KOS_AST_NODE    *node)
+static int _left_hand_side(KOS_COMP_UNIT      *program,
+                           const KOS_AST_NODE *node)
 {
     int error = KOS_SUCCESS;
 
@@ -583,7 +582,7 @@ static int _left_hand_side(struct _KOS_COMP_UNIT *program,
 
         if (node->type == NT_IDENTIFIER) {
 
-            struct _KOS_VAR *var = 0;
+            KOS_VAR *var = 0;
 
             if (_lookup_local_var(program, &node->token, &var) != KOS_SUCCESS)
                 TRY(_lookup_and_mark_var(program, node, &var));
@@ -604,11 +603,11 @@ cleanup:
     return error;
 }
 
-static int _identifier(struct _KOS_COMP_UNIT *program,
-                       const KOS_AST_NODE    *node)
+static int _identifier(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *node)
 {
-    int              error = KOS_SUCCESS;
-    struct _KOS_VAR *var;
+    int      error = KOS_SUCCESS;
+    KOS_VAR *var;
 
     if (_lookup_local_var(program, &node->token, &var) != KOS_SUCCESS)
         TRY(_lookup_and_mark_var(program, node, &var));
@@ -617,11 +616,11 @@ cleanup:
     return error;
 }
 
-static int _this_literal(struct _KOS_COMP_UNIT *program,
-                         const KOS_AST_NODE    *node)
+static int _this_literal(KOS_COMP_UNIT      *program,
+                         const KOS_AST_NODE *node)
 {
-    int                error;
-    struct _KOS_SCOPE *scope;
+    int        error;
+    KOS_SCOPE *scope;
 
     for (scope = program->scope_stack; scope && ! scope->is_function; scope = scope->next);
 
@@ -638,12 +637,12 @@ static int _this_literal(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _parameter_defaults(struct _KOS_COMP_UNIT *program,
-                               const KOS_AST_NODE    *node,
-                               const KOS_AST_NODE    *name_node)
+static int _parameter_defaults(KOS_COMP_UNIT      *program,
+                               const KOS_AST_NODE *node,
+                               const KOS_AST_NODE *name_node)
 {
-    int              error   = KOS_SUCCESS;
-    struct _KOS_VAR *fun_var = 0;
+    int      error   = KOS_SUCCESS;
+    KOS_VAR *fun_var = 0;
 
     assert(name_node);
     if (name_node->type == NT_NAME_CONST) {
@@ -688,8 +687,8 @@ cleanup:
     return error;
 }
 
-static int _function_literal(struct _KOS_COMP_UNIT *program,
-                             const KOS_AST_NODE    *node)
+static int _function_literal(KOS_COMP_UNIT      *program,
+                             const KOS_AST_NODE *node)
 {
     int                 error;
     int                 i;
@@ -709,7 +708,7 @@ static int _function_literal(struct _KOS_COMP_UNIT *program,
 
     for (i = 0, arg_node = node->children; arg_node; i++, arg_node = arg_node->next) {
 
-        struct _KOS_VAR    *var;
+        KOS_VAR            *var;
         const KOS_AST_NODE *ident_node = arg_node;
 
         assert(arg_node->type == NT_IDENTIFIER ||
@@ -765,11 +764,11 @@ cleanup:
     return error;
 }
 
-static int _catch(struct _KOS_COMP_UNIT *program,
-                  const KOS_AST_NODE    *node)
+static int _catch(KOS_COMP_UNIT      *program,
+                  const KOS_AST_NODE *node)
 {
-    int              error;
-    struct _KOS_VAR *var;
+    int      error;
+    KOS_VAR *var;
 
     node = node->children;
 
@@ -797,8 +796,8 @@ cleanup:
     return error;
 }
 
-static int _assert_stmt(struct _KOS_COMP_UNIT *program,
-                        const KOS_AST_NODE    *node)
+static int _assert_stmt(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *node)
 {
     node = node->children;
     assert(node);
@@ -828,8 +827,8 @@ static int _is_self_ref_func(const KOS_AST_NODE *node)
     return 1;
 }
 
-static int _assignment(struct _KOS_COMP_UNIT *program,
-                       const KOS_AST_NODE    *input_node)
+static int _assignment(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *input_node)
 {
     int                 error = KOS_SUCCESS;
     const KOS_AST_NODE *node  = input_node;
@@ -863,8 +862,8 @@ cleanup:
     return error;
 }
 
-static int _visit_node(struct _KOS_COMP_UNIT *program,
-                       const KOS_AST_NODE    *node)
+static int _visit_node(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *node)
 {
     int error = KOS_ERROR_INTERNAL;
 
@@ -993,11 +992,11 @@ static int _visit_node(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-void kos_activate_var(struct _KOS_COMP_UNIT *program,
-                      const KOS_AST_NODE    *node)
+void kos_activate_var(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node)
 {
 
-    struct _KOS_VAR *var;
+    KOS_VAR *var;
 
     assert(node->type == NT_IDENTIFIER);
 
@@ -1008,8 +1007,8 @@ void kos_activate_var(struct _KOS_COMP_UNIT *program,
         var->is_active = VAR_ACTIVE;
 }
 
-void kos_activate_new_vars(struct _KOS_COMP_UNIT *program,
-                           const KOS_AST_NODE    *node)
+void kos_activate_new_vars(KOS_COMP_UNIT      *program,
+                           const KOS_AST_NODE *node)
 {
     assert(node);
 
@@ -1027,12 +1026,12 @@ void kos_activate_new_vars(struct _KOS_COMP_UNIT *program,
     }
 }
 
-void kos_activate_self_ref_func(struct _KOS_COMP_UNIT *program,
-                                const KOS_AST_NODE    *node)
+void kos_activate_self_ref_func(KOS_COMP_UNIT      *program,
+                                const KOS_AST_NODE *node)
 {
     if (_is_self_ref_func(node)) {
 
-        struct _KOS_VAR *var;
+        KOS_VAR *var;
 
         var = kos_find_var(program->scope_stack->vars, &node->children->token);
         assert(var);
@@ -1044,7 +1043,7 @@ void kos_activate_self_ref_func(struct _KOS_COMP_UNIT *program,
 static int _deactivate(KOS_RED_BLACK_NODE *node,
                        void               *cookie)
 {
-    struct _KOS_VAR *var = (struct _KOS_VAR *)node;
+    KOS_VAR *var = (KOS_VAR *)node;
 
     if (var->is_active == VAR_ACTIVE)
         var->is_active = VAR_INACTIVE;
@@ -1052,29 +1051,29 @@ static int _deactivate(KOS_RED_BLACK_NODE *node,
     return 0;
 }
 
-void kos_deactivate_vars(struct _KOS_SCOPE *scope)
+void kos_deactivate_vars(KOS_SCOPE *scope)
 {
     kos_red_black_walk(scope->vars, _deactivate, 0);
 }
 
-int kos_compiler_process_vars(struct _KOS_COMP_UNIT *program,
-                              const KOS_AST_NODE    *ast)
+int kos_compiler_process_vars(KOS_COMP_UNIT      *program,
+                              const KOS_AST_NODE *ast)
 {
     assert(ast->type == NT_SCOPE);
     return _visit_node(program, ast);
 }
 
-static int _predefine_global(struct _KOS_COMP_UNIT *program,
-                             const char            *name,
-                             int                    idx,
-                             int                    is_const,
-                             enum _KOS_VAR_TYPE     type)
+static int _predefine_global(KOS_COMP_UNIT      *program,
+                             const char         *name,
+                             int                 idx,
+                             int                 is_const,
+                             enum KOS_VAR_TYPE_E type)
 {
     int            error = KOS_SUCCESS;
     const unsigned len   = (unsigned)strlen(name);
 
-    struct _KOS_PRE_GLOBAL *global = (struct _KOS_PRE_GLOBAL *)
-        kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_PRE_GLOBAL) + len);
+    KOS_PRE_GLOBAL *global = (KOS_PRE_GLOBAL *)
+        kos_mempool_alloc(&program->allocator, sizeof(KOS_PRE_GLOBAL) + len);
 
     if (global) {
         memset(&global->node, 0, sizeof(global->node));
@@ -1097,17 +1096,17 @@ static int _predefine_global(struct _KOS_COMP_UNIT *program,
     return error;
 }
 
-int kos_compiler_predefine_global(struct _KOS_COMP_UNIT *program,
-                                  const char            *name,
-                                  int                    idx,
-                                  int                    is_const)
+int kos_compiler_predefine_global(KOS_COMP_UNIT *program,
+                                  const char    *name,
+                                  int            idx,
+                                  int            is_const)
 {
     return _predefine_global(program, name, idx, is_const, VAR_GLOBAL);
 }
 
-int kos_compiler_predefine_module(struct _KOS_COMP_UNIT *program,
-                                  const char            *name,
-                                  int                    idx)
+int kos_compiler_predefine_module(KOS_COMP_UNIT *program,
+                                  const char    *name,
+                                  int            idx)
 {
     return _predefine_global(program, name, idx, 1, VAR_MODULE);
 }

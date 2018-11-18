@@ -327,11 +327,11 @@ cleanup:
     return error;
 }
 
-static int _predefine_globals(KOS_CONTEXT            ctx,
-                              struct _KOS_COMP_UNIT *program,
-                              KOS_OBJ_ID             global_names,
-                              KOS_OBJ_ID             module_names,
-                              int                    is_repl)
+static int _predefine_globals(KOS_CONTEXT    ctx,
+                              KOS_COMP_UNIT *program,
+                              KOS_OBJ_ID     global_names,
+                              KOS_OBJ_ID     module_names,
+                              int            is_repl)
 {
     int        error = KOS_SUCCESS;
     KOS_VECTOR cpath;
@@ -373,12 +373,12 @@ cleanup:
     return error;
 }
 
-static int _alloc_globals(KOS_CONTEXT            ctx,
-                          struct _KOS_COMP_UNIT *program,
-                          KOS_MODULE            *module)
+static int _alloc_globals(KOS_CONTEXT    ctx,
+                          KOS_COMP_UNIT *program,
+                          KOS_MODULE    *module)
 {
-    int              error;
-    struct _KOS_VAR *var;
+    int      error;
+    KOS_VAR *var;
 
     TRY(KOS_array_resize(ctx, module->globals, (uint32_t)program->num_globals));
 
@@ -400,12 +400,12 @@ cleanup:
     return error;
 }
 
-static int _save_direct_modules(KOS_CONTEXT            ctx,
-                                struct _KOS_COMP_UNIT *program,
-                                KOS_MODULE            *module)
+static int _save_direct_modules(KOS_CONTEXT    ctx,
+                                KOS_COMP_UNIT *program,
+                                KOS_MODULE    *module)
 {
     int                 error = KOS_SUCCESS;
-    struct _KOS_VAR    *var;
+    KOS_VAR            *var;
     KOS_INSTANCE *const inst  = ctx->inst;
 
     for (var = program->modules; var; var = var->next) {
@@ -428,26 +428,26 @@ cleanup:
     return error;
 }
 
-static uint32_t _count_constants(struct _KOS_COMP_UNIT *program)
+static uint32_t _count_constants(KOS_COMP_UNIT *program)
 {
     uint32_t i;
 
-    struct _KOS_COMP_CONST *str = program->first_constant;
+    KOS_COMP_CONST *str = program->first_constant;
 
     for (i = 0; str; str = str->next, ++i);
 
     return i;
 }
 
-static int _alloc_constants(KOS_CONTEXT            ctx,
-                            struct _KOS_COMP_UNIT *program,
-                            KOS_MODULE            *module)
+static int _alloc_constants(KOS_CONTEXT    ctx,
+                            KOS_COMP_UNIT *program,
+                            KOS_MODULE    *module)
 {
-    int                     error         = KOS_SUCCESS;
-    const uint32_t          num_constants = _count_constants(program);
-    uint32_t                base_idx      = 0;
-    struct _KOS_COMP_CONST *constant      = program->first_constant;
-    int                     i;
+    int             error         = KOS_SUCCESS;
+    const uint32_t  num_constants = _count_constants(program);
+    uint32_t        base_idx      = 0;
+    KOS_COMP_CONST *constant      = program->first_constant;
+    int             i;
 
     if (IS_BAD_PTR(module->constants)) {
         module->constants = KOS_new_array(ctx, num_constants);
@@ -467,15 +467,15 @@ static int _alloc_constants(KOS_CONTEXT            ctx,
 
             default:
                 assert(constant->type == KOS_COMP_CONST_INTEGER);
-                obj_id = KOS_new_int(ctx, ((struct _KOS_COMP_INTEGER *)constant)->value);
+                obj_id = KOS_new_int(ctx, ((KOS_COMP_INTEGER *)constant)->value);
                 break;
 
             case KOS_COMP_CONST_FLOAT:
-                obj_id = KOS_new_float(ctx, ((struct _KOS_COMP_FLOAT *)constant)->value);
+                obj_id = KOS_new_float(ctx, ((KOS_COMP_FLOAT *)constant)->value);
                 break;
 
             case KOS_COMP_CONST_STRING: {
-                struct _KOS_COMP_STRING *str = (struct _KOS_COMP_STRING *)constant;
+                KOS_COMP_STRING *str = (KOS_COMP_STRING *)constant;
 
                 obj_id = str->escape == KOS_UTF8_WITH_ESCAPE
                        ? KOS_new_string_esc(ctx, str->str, str->length)
@@ -484,8 +484,8 @@ static int _alloc_constants(KOS_CONTEXT            ctx,
             }
 
             case KOS_COMP_CONST_FUNCTION: {
-                struct _KOS_COMP_FUNCTION *func_const = (struct _KOS_COMP_FUNCTION *)constant;
-                KOS_FUNCTION              *func;
+                KOS_COMP_FUNCTION *func_const = (KOS_COMP_FUNCTION *)constant;
+                KOS_FUNCTION      *func;
 
                 if (func_const->flags & KOS_COMP_FUN_CLASS) {
                     obj_id = KOS_new_class(ctx, KOS_VOID);
@@ -974,13 +974,13 @@ static int _compile_module(KOS_CONTEXT ctx,
                            unsigned    data_size,
                            int         is_repl)
 {
-    int                   error             = KOS_SUCCESS;
-    KOS_MODULE     *const module            = OBJPTR(MODULE, module_obj);
-    KOS_INSTANCE   *const inst              = ctx->inst;
-    const uint32_t        old_bytecode_size = module->bytecode_size;
-    KOS_PARSER            parser;
-    struct _KOS_COMP_UNIT program;
-    KOS_AST_NODE         *ast;
+    int                 error             = KOS_SUCCESS;
+    KOS_MODULE   *const module            = OBJPTR(MODULE, module_obj);
+    KOS_INSTANCE *const inst              = ctx->inst;
+    const uint32_t      old_bytecode_size = module->bytecode_size;
+    KOS_PARSER          parser;
+    KOS_COMP_UNIT       program;
+    KOS_AST_NODE       *ast;
 
     /* Initialize parser and compiler */
     kos_compiler_init(&program, module_idx);
