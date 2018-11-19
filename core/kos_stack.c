@@ -562,7 +562,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
 
 cleanup:
     if (pushed)
-        KOS_pop_locals(ctx, 4, &func_name, &module_name, &module_path, &frame_desc);
+        KOS_pop_locals(ctx, 4);
 
     return error;
 }
@@ -624,7 +624,7 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
 
 cleanup:
     if (pushed)
-        KOS_pop_local_scope(ctx);
+        KOS_pop_local_scope(ctx, &prev_locals);
 
     if (error)
         ctx->exception = partial_wrap ? exception : thrown_object;

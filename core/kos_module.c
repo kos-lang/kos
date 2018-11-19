@@ -195,14 +195,13 @@ static int _find_module(KOS_CONTEXT ctx,
             }
         }
 
-        KOS_pop_locals(ctx, 5, &module_name,
-                &components[0], &components[1], &components[2], &components[3]);
+        KOS_pop_locals(ctx, 5);
 
         if (IS_BAD_PTR(dir))
             error = KOS_ERROR_NOT_FOUND;
     }
 
-    KOS_pop_locals(ctx, 2, &path, &dir);
+    KOS_pop_locals(ctx, 2);
 
 cleanup:
     if (!error) {
@@ -692,10 +691,7 @@ cleanup:
         ret = KOS_BADPTR;
 
     if (pushed)
-        KOS_pop_locals(ctx, 11,
-                &parts[0], &parts[1], &parts[2], &parts[3], &parts[4],
-                &parts[5], &parts[6], &parts[7], &parts[8], &parts[9],
-                &parts[10]);
+        KOS_pop_locals(ctx, 11);
 
     kos_vector_destroy(&cstr);
 
@@ -1286,12 +1282,14 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     struct _KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
     KOS_VECTOR                    file_buf;
     int                           chain_init         = 0;
+    int                           pushed             = 0;
 
     kos_vector_init(&file_buf);
 
     _get_module_name(module_name, name_size, &loading);
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
+    pushed = 1;
     TRY(KOS_push_locals(ctx, 4, &module_obj, &actual_module_name, &module_dir, &module_path));
 
     /* Determine actual module name */
@@ -1464,7 +1462,8 @@ cleanup:
     if (chain_init)
         inst->modules.load_chain = loading.next;
 
-    KOS_pop_local_scope(ctx);
+    if (pushed)
+        KOS_pop_local_scope(ctx, &prev_locals);
 
     kos_vector_destroy(&file_buf);
 
@@ -1494,8 +1493,10 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     KOS_OBJ_ID    ret         = KOS_BADPTR;
     KOS_INSTANCE *inst        = ctx->inst;
     KOS_OBJ_ID    prev_locals = KOS_BADPTR;
+    int           pushed      = 0;
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
+    pushed = 1;
 
     module_name_str = KOS_new_cstring(ctx, module_name);
     TRY_OBJID(module_name_str);
@@ -1525,7 +1526,8 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    KOS_pop_local_scope(ctx);
+    if (pushed)
+        KOS_pop_local_scope(ctx, &prev_locals);
 
     if (error)
         _handle_interpreter_error(ctx, error);
@@ -1580,10 +1582,12 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     KOS_OBJ_ID          prev_locals = KOS_BADPTR;
     KOS_INSTANCE *const inst        = ctx->inst;
     KOS_VECTOR          buf;
+    int                 pushed      = 0;
 
     kos_vector_init(&buf);
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
+    pushed = 1;
 
     TRY(_load_stdin(ctx, &buf));
 
@@ -1624,7 +1628,8 @@ cleanup:
         assert(!KOS_is_exception_pending(ctx));
     }
 
-    KOS_pop_local_scope(ctx);
+    if (pushed)
+        KOS_pop_local_scope(ctx, &prev_locals);
 
     kos_vector_destroy(&buf);
 

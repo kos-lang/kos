@@ -291,7 +291,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
 
 int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 
-void KOS_pop_local_scope(KOS_CONTEXT ctx);
+void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 
 int KOS_push_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref);
 
@@ -299,7 +299,7 @@ void KOS_pop_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref);
 
 int KOS_push_locals(KOS_CONTEXT ctx, int num_entries, ...);
 
-void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries, ...);
+void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries);
 
 struct _KOS_GC_STATS {
     unsigned num_objs_evacuated;

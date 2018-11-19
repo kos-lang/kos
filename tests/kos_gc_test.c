@@ -623,7 +623,7 @@ int main(void)
             TEST(stats.size_freed         >  0);
             TEST(stats.size_kept          >  0);
 
-            KOS_pop_local_scope(ctx);
+            KOS_pop_local_scope(ctx, &prev_locals);
 
             TEST(KOS_get_array_size(array_id) == 3);
 
@@ -718,7 +718,7 @@ int main(void)
         TEST(_test_buffer(obj_id[0], 0x0A, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
         TEST(_test_buffer(obj_id[1], 0x0B, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
 
-        KOS_pop_local_scope(ctx);
+        KOS_pop_local_scope(ctx, &prev_locals);
 
         kos_set_return_value(ctx, KOS_BADPTR);
 
@@ -793,7 +793,7 @@ int main(void)
                     TEST(_test_buffer(obj_ids[i], i, size) == KOS_SUCCESS);
                 }
 
-                KOS_pop_local_scope(ctx);
+                KOS_pop_local_scope(ctx, &prev_locals);
 
                 TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
