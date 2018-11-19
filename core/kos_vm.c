@@ -2637,10 +2637,18 @@ static int _exec_function(KOS_CONTEXT ctx)
                             if (IS_BAD_PTR(args_obj))
                                 args_obj = _make_args(ctx, &regs[rarg1], num_args);
 
-                            if ( ! IS_BAD_PTR(args_obj))
-                                ret_val = func->handler(ctx,
-                                                        this_obj,
-                                                        args_obj);
+                            if ( ! IS_BAD_PTR(args_obj)) {
+
+                                KOS_OBJ_ID prev_locals;
+
+                                error  = KOS_push_local_scope(ctx, &prev_locals);
+
+                                if ( ! error) {
+                                    ret_val = func->handler(ctx, this_obj, args_obj);
+
+                                    KOS_pop_local_scope(ctx, &prev_locals);
+                                }
+                            }
 
                             /* Avoid detecting as end of iterator in _finish_call() */
                             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(ret_val))
@@ -2868,9 +2876,16 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
         KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)func->state;
 
         if (func->handler)  {
-            const KOS_OBJ_ID retval = func->handler(ctx,
-                                                    this_obj,
-                                                    args_obj);
+            KOS_OBJ_ID prev_locals;
+            KOS_OBJ_ID retval = KOS_BADPTR;
+
+            error = KOS_push_local_scope(ctx, &prev_locals);
+
+            if ( ! error) {
+                retval = func->handler(ctx, this_obj, args_obj);
+
+                KOS_pop_local_scope(ctx, &prev_locals);
+            }
 
             /* Avoid detecting as end of iterator in _finish_call() */
             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(retval))
