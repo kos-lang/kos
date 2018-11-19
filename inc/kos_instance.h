@@ -37,7 +37,7 @@ typedef struct _KOS_POOL_HEADER  _KOS_POOL;
 typedef struct _KOS_WASTE_HEADER _KOS_WASTE;
 
 struct _KOS_HEAP {
-    _KOS_MUTEX           mutex;
+    KOS_MUTEX            mutex;
     KOS_ATOMIC(uint32_t) gc_state;
     uint32_t             heap_size;         /* Total amount of memory owned by the heap */
     uint32_t             used_size;         /* Size used in full_ and non_full_pages    */
@@ -140,9 +140,9 @@ struct _KOS_MODULE_MGMT {
 };
 
 struct _KOS_THREAD_MGMT {
-    _KOS_TLS_KEY                thread_key;
+    KOS_TLS_KEY                 thread_key;
     struct KOS_THREAD_CONTEXT_S main_thread;
-    _KOS_MUTEX                  mutex;
+    KOS_MUTEX                   mutex;
 };
 
 enum KOS_STR_E {

@@ -1252,7 +1252,7 @@ static void _thread_finalize(KOS_CONTEXT ctx,
     /* TODO don't block GC: add detection for finished threads, put thread
      *      on a list for GC to retry to join */
     if (priv)
-        kos_thread_join(ctx, (_KOS_THREAD)priv);
+        kos_thread_join(ctx, (KOS_THREAD)priv);
 }
 
 /* @item base function.prototype.async()
@@ -1280,11 +1280,11 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
                          KOS_OBJ_ID  args_obj)
 {
-    int         error      = KOS_SUCCESS;
-    KOS_OBJ_ID  thread_obj = KOS_BADPTR;
-    KOS_OBJ_ID  arg_this;
-    KOS_OBJ_ID  arg_args;
-    _KOS_THREAD thread;
+    int        error      = KOS_SUCCESS;
+    KOS_OBJ_ID thread_obj = KOS_BADPTR;
+    KOS_OBJ_ID arg_this;
+    KOS_OBJ_ID arg_args;
+    KOS_THREAD thread;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_FUNCTION) {
         KOS_raise_exception_cstring(ctx, str_err_not_function);
@@ -1345,7 +1345,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
     int                 error = KOS_SUCCESS;
     KOS_OBJ_ID          ret   = KOS_BADPTR;
     KOS_INSTANCE *const inst  = ctx->inst;
-    _KOS_THREAD         thread;
+    KOS_THREAD          thread;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
         KOS_raise_exception_cstring(ctx, str_err_not_thread);
@@ -1357,14 +1357,14 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
-    thread = (_KOS_THREAD)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
+    thread = (KOS_THREAD)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
 
     if (thread && kos_is_current_thread(thread)) {
         KOS_raise_exception_cstring(ctx, str_err_join_self);
         return KOS_BADPTR;
     }
 
-    thread = (_KOS_THREAD)KOS_object_swap_private(*OBJPTR(OBJECT, this_obj), (void *)0);
+    thread = (KOS_THREAD)KOS_object_swap_private(*OBJPTR(OBJECT, this_obj), (void *)0);
 
     if ( ! thread) {
         KOS_raise_exception_cstring(ctx, str_err_already_joined);

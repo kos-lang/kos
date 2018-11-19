@@ -153,7 +153,7 @@ int main(void)
         KOS_INSTANCE        inst;
         KOS_CONTEXT         ctx;
         struct _THREAD_DATA thread_data;
-        _KOS_THREAD         thread;
+        KOS_THREAD          thread;
 
         thread_data.lock  = 0;
         thread_data.value = TO_SMALL_INT(44);

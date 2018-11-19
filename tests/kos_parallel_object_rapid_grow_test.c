@@ -129,7 +129,7 @@ int main(void)
         const int           num_loops   = 100;
         const int           num_props   = 128;
         KOS_VECTOR          mem_buf;
-        _KOS_THREAD        *threads     = 0;
+        KOS_THREAD         *threads     = 0;
         int                 num_threads = 0;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
@@ -145,12 +145,12 @@ int main(void)
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
-                num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
+                num_threads * (sizeof(KOS_THREAD) + sizeof(struct THREAD_DATA))
                 + num_props * sizeof(KOS_OBJ_ID)
             ) == KOS_SUCCESS);
         props          = (KOS_OBJ_ID *)mem_buf.buffer;
         thread_cookies = (struct THREAD_DATA *)(props + num_props);
-        threads        = (_KOS_THREAD *)(thread_cookies + num_threads);
+        threads        = (KOS_THREAD *)(thread_cookies + num_threads);
 
         kos_rng_init(&rng);
 

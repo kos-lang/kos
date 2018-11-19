@@ -124,7 +124,7 @@ int main(void)
     /* This test performs multiple reads and writes at the same locations in the property table */
     {
         KOS_VECTOR          mem_buf;
-        _KOS_THREAD        *threads     = 0;
+        KOS_THREAD         *threads     = 0;
         int                 num_threads = 0;
         KOS_OBJ_ID          o           = KOS_new_object(ctx);
         struct THREAD_DATA *thread_cookies;
@@ -147,10 +147,10 @@ int main(void)
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
-                num_threads * (sizeof(_KOS_THREAD) + sizeof(struct THREAD_DATA))
+                num_threads * (sizeof(KOS_THREAD) + sizeof(struct THREAD_DATA))
             ) == KOS_SUCCESS);
         thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
-        threads        = (_KOS_THREAD *)(thread_cookies + num_threads);
+        threads        = (KOS_THREAD *)(thread_cookies + num_threads);
 
         data.inst       = &inst;
         data.object     = o;

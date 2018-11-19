@@ -52,23 +52,23 @@
 #   endif
 #endif
 
-struct _KOS_THREAD_OBJECT;
-typedef struct _KOS_THREAD_OBJECT *_KOS_THREAD;
+struct KOS_THREAD_OBJECT_S;
+typedef struct KOS_THREAD_OBJECT_S *KOS_THREAD;
 
-struct _KOS_MUTEX_OBJECT;
-typedef struct _KOS_MUTEX_OBJECT *_KOS_MUTEX;
+struct KOS_MUTEX_OBJECT_S;
+typedef struct KOS_MUTEX_OBJECT_S *KOS_MUTEX;
 
 struct KOS_THREAD_CONTEXT_S;
 typedef struct KOS_THREAD_CONTEXT_S *KOS_CONTEXT;
 
-typedef void (*_KOS_THREAD_PROC)(KOS_CONTEXT ctx,
-                                 void       *cookie);
+typedef void (*KOS_THREAD_PROC)(KOS_CONTEXT ctx,
+                                void       *cookie);
 
 #ifdef _WIN32
-typedef uint32_t _KOS_TLS_KEY;
+typedef uint32_t KOS_TLS_KEY;
 #else
-struct _KOS_TLS_OBJECT;
-typedef struct _KOS_TLS_OBJECT *_KOS_TLS_KEY;
+struct KOS_TLS_OBJECT_S;
+typedef struct KOS_TLS_OBJECT_S *KOS_TLS_KEY;
 #endif
 
 /*==========================================================================*/
@@ -502,24 +502,24 @@ void kos_spin_unlock(KOS_ATOMIC(uint32_t) *lock);
 
 void kos_yield(void);
 
-int kos_thread_create(KOS_CONTEXT      ctx,
-                      _KOS_THREAD_PROC proc,
-                      void            *cookie,
-                      _KOS_THREAD     *thread);
+int kos_thread_create(KOS_CONTEXT     ctx,
+                      KOS_THREAD_PROC proc,
+                      void           *cookie,
+                      KOS_THREAD     *thread);
 
 int kos_thread_join(KOS_CONTEXT ctx,
-                    _KOS_THREAD thread);
+                    KOS_THREAD  thread);
 
-int kos_is_current_thread(_KOS_THREAD thread);
+int kos_is_current_thread(KOS_THREAD thread);
 
-int kos_create_mutex(_KOS_MUTEX *mutex);
-void kos_destroy_mutex(_KOS_MUTEX *mutex);
-void kos_lock_mutex(_KOS_MUTEX *mutex);
-void kos_unlock_mutex(_KOS_MUTEX *mutex);
+int kos_create_mutex(KOS_MUTEX *mutex);
+void kos_destroy_mutex(KOS_MUTEX *mutex);
+void kos_lock_mutex(KOS_MUTEX *mutex);
+void kos_unlock_mutex(KOS_MUTEX *mutex);
 
-int   kos_tls_create(_KOS_TLS_KEY *key);
-void  kos_tls_destroy(_KOS_TLS_KEY key);
-void *kos_tls_get(_KOS_TLS_KEY key);
-void  kos_tls_set(_KOS_TLS_KEY key, void *value);
+int   kos_tls_create(KOS_TLS_KEY *key);
+void  kos_tls_destroy(KOS_TLS_KEY key);
+void *kos_tls_get(KOS_TLS_KEY key);
+void  kos_tls_set(KOS_TLS_KEY key, void *value);
 
 #endif
