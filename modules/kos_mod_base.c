@@ -3607,25 +3607,12 @@ static KOS_OBJ_ID _get_function_name(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  this_obj,
                                      KOS_OBJ_ID  args_obj)
 {
-    KOS_OBJ_ID    ret  = KOS_BADPTR;
-    KOS_FUNCTION *func = 0;
+    KOS_OBJ_ID     ret  = KOS_BADPTR;
+    const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
 
-    switch (GET_OBJ_TYPE(this_obj)) {
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
 
-        case OBJ_FUNCTION:
-            func = OBJPTR(FUNCTION, this_obj);
-            break;
-
-        case OBJ_CLASS:
-            func = (KOS_FUNCTION *)OBJPTR(CLASS, this_obj);
-            break;
-
-        default:
-            KOS_raise_exception_cstring(ctx, str_err_not_function);
-            break;
-    }
-
-    if (func) {
+        KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
 
         /* TODO add builtin function name */
         if (IS_BAD_PTR(func->module) || func->instr_offs == ~0U)
@@ -3635,6 +3622,8 @@ static KOS_OBJ_ID _get_function_name(KOS_CONTEXT ctx,
                                                OBJPTR(MODULE, func->module),
                                                func->instr_offs);
     }
+    else
+        KOS_raise_exception_cstring(ctx, str_err_not_function);
 
     return ret;
 }
@@ -3656,26 +3645,13 @@ static KOS_OBJ_ID _get_instructions(KOS_CONTEXT ctx,
                                     KOS_OBJ_ID  this_obj,
                                     KOS_OBJ_ID  args_obj)
 {
-    KOS_OBJ_ID    ret  = KOS_BADPTR;
-    KOS_FUNCTION *func = 0;
+    KOS_OBJ_ID     ret  = KOS_BADPTR;
+    const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
 
-    switch (GET_OBJ_TYPE(this_obj)) {
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
 
-        case OBJ_FUNCTION:
-            func = OBJPTR(FUNCTION, this_obj);
-            break;
-
-        case OBJ_CLASS:
-            func = (KOS_FUNCTION *)OBJPTR(CLASS, this_obj);
-            break;
-
-        default:
-            KOS_raise_exception_cstring(ctx, str_err_not_function);
-            break;
-    }
-
-    if (func) {
-        uint32_t num_instr = 0;
+        KOS_FUNCTION *func      = OBJPTR(FUNCTION, this_obj);
+        uint32_t      num_instr = 0;
 
         if ( ! IS_BAD_PTR(func->module))
             num_instr = KOS_module_func_get_num_instr(OBJPTR(MODULE, func->module),
@@ -3683,6 +3659,8 @@ static KOS_OBJ_ID _get_instructions(KOS_CONTEXT ctx,
 
         ret = KOS_new_int(ctx, (int64_t)num_instr);
     }
+    else
+        KOS_raise_exception_cstring(ctx, str_err_not_function);
 
     return ret;
 }
@@ -3704,26 +3682,13 @@ static KOS_OBJ_ID _get_code_size(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  this_obj,
                                  KOS_OBJ_ID  args_obj)
 {
-    KOS_OBJ_ID    ret  = KOS_BADPTR;
-    KOS_FUNCTION *func = 0;
+    KOS_OBJ_ID     ret  = KOS_BADPTR;
+    const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
 
-    switch (GET_OBJ_TYPE(this_obj)) {
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
 
-        case OBJ_FUNCTION:
-            func = OBJPTR(FUNCTION, this_obj);
-            break;
-
-        case OBJ_CLASS:
-            func = (KOS_FUNCTION *)OBJPTR(CLASS, this_obj);
-            break;
-
-        default:
-            KOS_raise_exception_cstring(ctx, str_err_not_function);
-            break;
-    }
-
-    if (func) {
-        uint32_t code_size = 0;
+        KOS_FUNCTION *func      = OBJPTR(FUNCTION, this_obj);
+        uint32_t      code_size = 0;
 
         if ( ! IS_BAD_PTR(func->module))
             code_size = KOS_module_func_get_code_size(OBJPTR(MODULE, func->module),
@@ -3731,6 +3696,8 @@ static KOS_OBJ_ID _get_code_size(KOS_CONTEXT ctx,
 
         ret = KOS_new_int(ctx, (int64_t)code_size);
     }
+    else
+        KOS_raise_exception_cstring(ctx, str_err_not_function);
 
     return ret;
 }
@@ -3762,26 +3729,17 @@ static KOS_OBJ_ID _get_registers(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  this_obj,
                                  KOS_OBJ_ID  args_obj)
 {
-    KOS_OBJ_ID    ret  = KOS_BADPTR;
-    KOS_FUNCTION *func = 0;
+    KOS_OBJ_ID     ret  = KOS_BADPTR;
+    const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
 
-    switch (GET_OBJ_TYPE(this_obj)) {
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
 
-        case OBJ_FUNCTION:
-            func = OBJPTR(FUNCTION, this_obj);
-            break;
+        KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
 
-        case OBJ_CLASS:
-            func = (KOS_FUNCTION *)OBJPTR(CLASS, this_obj);
-            break;
-
-        default:
-            KOS_raise_exception_cstring(ctx, str_err_not_function);
-            break;
-    }
-
-    if (func)
         ret = KOS_new_int(ctx, (int64_t)func->header.num_regs);
+    }
+    else
+        KOS_raise_exception_cstring(ctx, str_err_not_function);
 
     return ret;
 }

@@ -162,19 +162,10 @@ int kos_stack_push(KOS_CONTEXT ctx,
     unsigned         room;
     const KOS_TYPE   type       = GET_OBJ_TYPE(func_obj);
 
-    switch (type) {
-
-        case OBJ_FUNCTION:
-            func = OBJPTR(FUNCTION, func_obj);
-            break;
-
-        case OBJ_CLASS:
-            func = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
-            break;
-
-        default:
-            RAISE_EXCEPTION(str_err_not_callable);
-    }
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS)
+        func = OBJPTR(FUNCTION, func_obj);
+    else
+        RAISE_EXCEPTION(str_err_not_callable);
 
     assert( ! func->handler || func->header.num_regs == 0);
     num_regs = func->handler ? 1 : func->header.num_regs;
@@ -481,21 +472,6 @@ typedef struct _DUMP_CONTEXT {
     KOS_OBJ_ID  backtrace;
 } _KOS_DUMP_CONTEXT;
 
-static KOS_FUNCTION *_get_func(KOS_ATOMIC(KOS_OBJ_ID) *stack_frame)
-{
-    KOS_OBJ_ID    func_obj = KOS_atomic_read_obj(*stack_frame);
-    KOS_FUNCTION *func;
-
-    if (GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION)
-        func = OBJPTR(FUNCTION, func_obj);
-    else {
-        assert(GET_OBJ_TYPE(func_obj) == OBJ_CLASS);
-        func = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
-    }
-
-    return func;
-}
-
 static uint32_t _get_instr_offs(KOS_ATOMIC(KOS_OBJ_ID) *stack_frame)
 {
     KOS_OBJ_ID offs_obj = KOS_atomic_read_obj(stack_frame[2]);
@@ -515,7 +491,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
     _KOS_DUMP_CONTEXT      *dump_ctx    = (_KOS_DUMP_CONTEXT *)cookie;
     KOS_CONTEXT             ctx         = dump_ctx->ctx;
     KOS_ATOMIC(KOS_OBJ_ID) *stack_frame = &OBJPTR(STACK, stack)->buf[frame_idx];
-    KOS_FUNCTION           *func        = _get_func(stack_frame);
+    KOS_FUNCTION           *func        = OBJPTR(FUNCTION, KOS_atomic_read_obj(*stack_frame));
     KOS_MODULE             *module      = IS_BAD_PTR(func->module) ? 0 : OBJPTR(MODULE, func->module);
     const uint32_t          instr_offs  = _get_instr_offs(stack_frame);
     const unsigned          line        = KOS_module_addr_to_line(module, instr_offs);

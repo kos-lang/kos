@@ -125,7 +125,8 @@ static inline bool IS_NUMERIC_OBJ(KOS_OBJ_ID obj_id) {
 template<typename T>
 static inline T* KOS_object_ptr(KOS_OBJ_ID obj_id, KOS_TYPE type) {
     assert( ! IS_SMALL_INT(obj_id));
-    assert(GET_OBJ_TYPE(obj_id) == type);
+    assert(GET_OBJ_TYPE(obj_id) == type ||
+           type == OBJ_FUNCTION && GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
     return reinterpret_cast<T*>(reinterpret_cast<intptr_t>(obj_id) - 1);
 }
 #define OBJPTR(tag, obj_id) KOS_object_ptr<KOS_##tag>(obj_id, OBJ_##tag)

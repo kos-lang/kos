@@ -802,19 +802,15 @@ static int _vector_append_function(KOS_CONTEXT ctx,
     KOS_FUNCTION *func;
     char          cstr_ptr[22];
 
-    switch (GET_OBJ_TYPE(obj_id)) {
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION ||
+           GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
 
-        case OBJ_FUNCTION:
-            func = OBJPTR(FUNCTION, obj_id);
-            TRY(kos_append_cstr(ctx, cstr_vec, str_function_open, sizeof(str_function_open) - 1));
-            break;
+    func = OBJPTR(FUNCTION, obj_id);
 
-        default:
-            assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
-            func = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
-            TRY(kos_append_cstr(ctx, cstr_vec, str_class_open, sizeof(str_class_open) - 1));
-            break;
-    }
+    if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION)
+        TRY(kos_append_cstr(ctx, cstr_vec, str_function_open, sizeof(str_function_open) - 1));
+    else
+        TRY(kos_append_cstr(ctx, cstr_vec, str_class_open, sizeof(str_class_open) - 1));
 
     if (func->handler) {
         /* TODO get built-in function name */
@@ -846,20 +842,18 @@ static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
     KOS_OBJ_ID    strings[3];
     char          cstr_ptr[22];
 
-    switch (GET_OBJ_TYPE(obj_id)) {
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION ||
+           GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
 
-        case OBJ_FUNCTION:
-            func         = OBJPTR(FUNCTION, obj_id);
-            str_func     = str_function_open;
-            str_func_len = sizeof(str_function_open) - 1;
-            break;
+    func = OBJPTR(FUNCTION, obj_id);
 
-        default:
-            assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
-            func         = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
-            str_func     = str_class_open;
-            str_func_len = sizeof(str_class_open) - 1;
-            break;
+    if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION) {
+        str_func     = str_function_open;
+        str_func_len = sizeof(str_function_open) - 1;
+    }
+    else {
+        str_func     = str_class_open;
+        str_func_len = sizeof(str_class_open) - 1;
     }
 
     strings[0] = KOS_new_const_ascii_string(ctx, str_func, str_func_len);

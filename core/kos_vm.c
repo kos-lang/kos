@@ -411,21 +411,18 @@ static KOS_OBJ_ID _copy_function(KOS_CONTEXT ctx,
     KOS_FUNCTION *dest;
     KOS_OBJ_ID    ret;
 
-    if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION) {
-        src = OBJPTR(FUNCTION, obj_id);
+    if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION)
         ret = KOS_new_function(ctx);
-        if (IS_BAD_PTR(ret))
-            return ret;
-        dest = OBJPTR(FUNCTION, ret);
-    }
     else {
         assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
-        src = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
         ret = KOS_new_class(ctx, KOS_VOID);
-        if (IS_BAD_PTR(ret))
-            return ret;
-        dest = (KOS_FUNCTION *)OBJPTR(CLASS, ret);
     }
+
+    if (IS_BAD_PTR(ret))
+        return ret;
+
+    src  = OBJPTR(FUNCTION, obj_id);
+    dest = OBJPTR(FUNCTION, ret);
 
     dest->header.flags    = src->header.flags;
     dest->header.num_args = src->header.num_args;
@@ -757,16 +754,14 @@ static int _prepare_call(KOS_CONTEXT             ctx,
         assert( ! num_args && ! stack_args);
     }
 
-    if (GET_OBJ_TYPE(func_obj) != OBJ_CLASS) {
-        assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
-        func  = OBJPTR(FUNCTION, func_obj);
-        state = (KOS_FUNCTION_STATE)func->state;
-        assert(state != KOS_CTOR);
-    }
-    else {
-        func  = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
-        state = KOS_CTOR;
-    }
+    assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION ||
+           GET_OBJ_TYPE(func_obj) == OBJ_CLASS);
+
+    func = OBJPTR(FUNCTION, func_obj);
+
+    state = (GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION) ? (KOS_FUNCTION_STATE)func->state : KOS_CTOR;
+
+    assert(GET_OBJ_TYPE(func_obj) == OBJ_CLASS || state != KOS_CTOR);
 
     if (IS_BAD_PTR(args_obj)) {
         if (num_args < func->header.num_args)
@@ -1079,12 +1074,10 @@ static KOS_MODULE *_get_module(KOS_ATOMIC(KOS_OBJ_ID) *regs)
     const KOS_OBJ_ID func_obj = KOS_atomic_read_obj(regs[-3]);
     KOS_FUNCTION    *func;
 
-    if (GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION)
-        func = OBJPTR(FUNCTION, func_obj);
-    else {
-        assert(GET_OBJ_TYPE(func_obj) == OBJ_CLASS);
-        func = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
-    }
+    assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION ||
+           GET_OBJ_TYPE(func_obj) == OBJ_CLASS);
+
+    func = OBJPTR(FUNCTION, func_obj);
 
     assert( ! IS_BAD_PTR(func->module));
     assert(GET_OBJ_TYPE(func->module) == OBJ_MODULE);
@@ -2396,19 +2389,13 @@ static int _exec_function(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 dest = regs[rdest];
 
-                switch (GET_OBJ_TYPE(dest)) {
+                {
+                    const KOS_TYPE type = GET_OBJ_TYPE(dest);
 
-                    case OBJ_FUNCTION:
+                    if (type == OBJ_FUNCTION || type == OBJ_CLASS)
                         func = OBJPTR(FUNCTION, dest);
-                        break;
-
-                    case OBJ_CLASS:
-                        func = (KOS_FUNCTION *)OBJPTR(CLASS, dest);
-                        break;
-
-                    default:
+                    else
                         KOS_raise_exception_cstring(ctx, str_err_not_callable);
-                        break;
                 }
 
                 if (func) {
@@ -2463,25 +2450,16 @@ static int _exec_function(KOS_CONTEXT ctx)
                     KOS_raise_exception_cstring(ctx, str_err_corrupted_defaults);
                 else {
 
-                    KOS_FUNCTION *func = 0;
+                    KOS_FUNCTION  *func = 0;
+                    const KOS_TYPE type = GET_OBJ_TYPE(dest);
 
-                    switch (GET_OBJ_TYPE(dest)) {
+                    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
+                        func = OBJPTR(FUNCTION, dest);
 
-                        case OBJ_FUNCTION:
-                            func = OBJPTR(FUNCTION, dest);
-                            break;
-
-                        case OBJ_CLASS:
-                            func = (KOS_FUNCTION *)OBJPTR(CLASS, dest);
-                            break;
-
-                        default:
-                            KOS_raise_exception_cstring(ctx, str_err_not_callable);
-                            break;
-                    }
-
-                    if (func)
                         func->defaults = src;
+                    }
+                    else
+                        KOS_raise_exception_cstring(ctx, str_err_not_callable);
                 }
 
                 delta = 3;
@@ -2602,13 +2580,11 @@ static int _exec_function(KOS_CONTEXT ctx)
 
                 switch (GET_OBJ_TYPE(func_obj)) {
 
-                    case OBJ_FUNCTION:
-                        func = OBJPTR(FUNCTION, func_obj);
-                        break;
-
                     case OBJ_CLASS:
                         this_obj = NEW_THIS;
-                        func     = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
+                        /* fall through */
+                    case OBJ_FUNCTION:
+                        func = OBJPTR(FUNCTION, func_obj);
                         break;
 
                     default:
@@ -2843,25 +2819,20 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
     int           error = KOS_SUCCESS;
     KOS_OBJ_ID    ret   = KOS_BADPTR;
     KOS_FUNCTION *func;
+    KOS_TYPE      type;
 
     KOS_instance_validate(ctx);
 
-    switch (GET_OBJ_TYPE(func_obj)) {
+    type = GET_OBJ_TYPE(func_obj);
 
-        case OBJ_FUNCTION:
-            func = OBJPTR(FUNCTION, func_obj);
-            break;
-
-        case OBJ_CLASS:
-            func = (KOS_FUNCTION *)OBJPTR(CLASS, func_obj);
-            break;
-
-        default:
-            KOS_raise_exception_cstring(ctx, str_err_not_callable);
-            return KOS_BADPTR;
+    if (type != OBJ_FUNCTION && type != OBJ_CLASS) {
+        KOS_raise_exception_cstring(ctx, str_err_not_callable);
+        return KOS_BADPTR;
     }
 
-    if (func->header.type == OBJ_CLASS && call_flavor != KOS_APPLY_FUNCTION)
+    func = OBJPTR(FUNCTION, func_obj);
+
+    if (type == OBJ_CLASS && call_flavor != KOS_APPLY_FUNCTION)
         this_obj = NEW_THIS;
 
     error = _prepare_call(ctx, INSTR_CALL, func_obj, &this_obj, args_obj, 0, 0);
