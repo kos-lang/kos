@@ -125,14 +125,15 @@ cleanup:
 
 int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
-    int error = KOS_SUCCESS;
+    int error  = KOS_SUCCESS;
+    int pushed = 0;
 
-    TRY(KOS_push_local(ctx, &module));
+    TRY(KOS_push_locals(ctx, &pushed, 1, &module));
 
     TRY_ADD_FUNCTION(ctx, module, "is_file", _is_file, 1);
     TRY_ADD_FUNCTION(ctx, module, "remove",  _remove,  1);
 
 cleanup:
-    KOS_pop_local(ctx, &module);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }

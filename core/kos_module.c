@@ -117,15 +117,16 @@ static int _find_module(KOS_CONTEXT ctx,
                         KOS_OBJ_ID *out_abs_dir,
                         KOS_OBJ_ID *out_abs_path)
 {
-    int        error = KOS_ERROR_INTERNAL;
-    KOS_OBJ_ID path  = KOS_BADPTR;
-    KOS_OBJ_ID dir   = KOS_BADPTR;
+    int        error  = KOS_ERROR_INTERNAL;
+    KOS_OBJ_ID path   = KOS_BADPTR;
+    KOS_OBJ_ID dir    = KOS_BADPTR;
     KOS_VECTOR cpath;
     unsigned   i;
+    int        pushed = 0;
 
     kos_vector_init(&cpath);
 
-    TRY(KOS_push_locals(ctx, 2, &path, &dir));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &path, &dir));
 
     /* Find dot or path separator, it indicates it's a path to a file */
     if (_rfind_path(maybe_path, length, '.') > 0) {
@@ -153,6 +154,7 @@ static int _find_module(KOS_CONTEXT ctx,
 
         KOS_INSTANCE *inst      = ctx->inst;
         uint32_t      num_paths = KOS_get_array_size(inst->modules.search_paths);
+        int           pushed2   = 0;
 
         KOS_OBJ_ID components[4];
 
@@ -164,8 +166,10 @@ static int _find_module(KOS_CONTEXT ctx,
         if (!num_paths)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-        TRY(KOS_push_locals(ctx, 5, &module_name,
-                &components[0], &components[1], &components[2], &components[3]));
+        TRY(KOS_push_locals(ctx, &pushed2, 5,
+                            &module_name,
+                            &components[0], &components[1], &components[2], &components[3]));
+        pushed += pushed2;
 
         for (i = 0; i < num_paths; i++) {
             components[0] = KOS_BADPTR;
@@ -195,19 +199,17 @@ static int _find_module(KOS_CONTEXT ctx,
             }
         }
 
-        KOS_pop_locals(ctx, 5);
-
         if (IS_BAD_PTR(dir))
             error = KOS_ERROR_NOT_FOUND;
     }
-
-    KOS_pop_locals(ctx, 2);
 
 cleanup:
     if (!error) {
         *out_abs_dir  = dir;
         *out_abs_path = path;
     }
+
+    KOS_pop_locals(ctx, pushed);
 
     kos_vector_destroy(&cpath);
 
@@ -337,8 +339,7 @@ static int _predefine_globals(KOS_CONTEXT    ctx,
     KOS_OBJ_ID walk   = KOS_BADPTR;
     int        pushed = 0;
 
-    TRY(KOS_push_locals(ctx, 3, &global_names, &module_names, &walk));
-    pushed = 1;
+    TRY(KOS_push_locals(ctx, &pushed, 3, &global_names, &module_names, &walk));
 
     kos_vector_init(&cpath);
 
@@ -373,8 +374,7 @@ static int _predefine_globals(KOS_CONTEXT    ctx,
 cleanup:
     kos_vector_destroy(&cpath);
 
-    if (pushed)
-        KOS_pop_locals(ctx, 3);
+    KOS_pop_locals(ctx, pushed);
 
     return error;
 }
@@ -385,8 +385,9 @@ static int _alloc_globals(KOS_CONTEXT    ctx,
 {
     int      error;
     KOS_VAR *var;
+    int      pushed = 0;
 
-    TRY(KOS_push_local(ctx, &module_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
 
     TRY(KOS_array_resize(ctx,
                          OBJPTR(MODULE, module_obj)->globals,
@@ -410,7 +411,7 @@ static int _alloc_globals(KOS_CONTEXT    ctx,
     }
 
 cleanup:
-    KOS_pop_local(ctx, &module_obj);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -418,11 +419,12 @@ static int _save_direct_modules(KOS_CONTEXT    ctx,
                                 KOS_COMP_UNIT *program,
                                 KOS_OBJ_ID     module_obj)
 {
-    int                 error = KOS_SUCCESS;
+    int                 error  = KOS_SUCCESS;
     KOS_VAR            *var;
-    KOS_INSTANCE *const inst  = ctx->inst;
+    KOS_INSTANCE *const inst   = ctx->inst;
+    int                 pushed = 0;
 
-    TRY(KOS_push_local(ctx, &module_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
 
     for (var = program->modules; var; var = var->next) {
 
@@ -441,7 +443,7 @@ static int _save_direct_modules(KOS_CONTEXT    ctx,
     }
 
 cleanup:
-    KOS_pop_local(ctx, &module_obj);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -464,9 +466,10 @@ static int _alloc_constants(KOS_CONTEXT    ctx,
     const uint32_t  num_constants = _count_constants(program);
     uint32_t        base_idx      = 0;
     KOS_COMP_CONST *constant      = program->first_constant;
+    int             pushed        = 0;
     int             i;
 
-    TRY(KOS_push_local(ctx, &module_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
 
     if (IS_BAD_PTR(OBJPTR(MODULE, module_obj)->constants)) {
         OBJPTR(MODULE, module_obj)->constants = KOS_new_array(ctx, num_constants);
@@ -543,7 +546,7 @@ static int _alloc_constants(KOS_CONTEXT    ctx,
     }
 
 cleanup:
-    KOS_pop_local(ctx, &module_obj);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -652,11 +655,10 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT  ctx,
 
     kos_vector_init(&cstr);
 
-    TRY(KOS_push_locals(ctx, 11,
+    TRY(KOS_push_locals(ctx, &pushed, 11,
                 &parts[0], &parts[1], &parts[2], &parts[3], &parts[4],
                 &parts[5], &parts[6], &parts[7], &parts[8], &parts[9],
                 &parts[10]));
-    pushed = 1;
 
     parts[0] = KOS_get_file_name(ctx, OBJPTR(MODULE, module_obj)->path);
     TRY_OBJID(parts[0]);
@@ -711,8 +713,7 @@ cleanup:
     if (error)
         ret = KOS_BADPTR;
 
-    if (pushed)
-        KOS_pop_locals(ctx, 11);
+    KOS_pop_locals(ctx, pushed);
 
     kos_vector_destroy(&cstr);
 
@@ -999,8 +1000,7 @@ static int _compile_module(KOS_CONTEXT ctx,
     KOS_AST_NODE       *ast;
     int                 pushed            = 0;
 
-    TRY(KOS_push_local(ctx, &module_obj));
-    pushed = 1;
+    TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
 
     /* Initialize parser and compiler */
     kos_compiler_init(&program, module_idx);
@@ -1274,8 +1274,7 @@ static int _compile_module(KOS_CONTEXT ctx,
 cleanup:
     kos_parser_destroy(&parser);
     kos_compiler_destroy(&program);
-    if (pushed)
-        KOS_pop_local(ctx, &module_obj);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -1303,6 +1302,8 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     static const char             base[]             = "base";
     int                           error              = KOS_SUCCESS;
     int                           module_idx         = -1;
+    int                           chain_init         = 0;
+    int                           pushed             = 0;
     KOS_OBJ_ID                    module_obj         = KOS_BADPTR;
     KOS_OBJ_ID                    actual_module_name = KOS_BADPTR;
     KOS_OBJ_ID                    module_dir         = KOS_BADPTR;
@@ -1313,14 +1314,14 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     KOS_INSTANCE           *const inst               = ctx->inst;
     struct _KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
     KOS_VECTOR                    file_buf;
-    int                           chain_init         = 0;
 
     kos_vector_init(&file_buf);
 
     _get_module_name(module_name, name_size, &loading);
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
-    TRY(KOS_push_locals(ctx, 4, &module_obj, &actual_module_name, &module_dir, &module_path));
+    TRY(KOS_push_locals(ctx, &pushed, 4,
+                        &module_obj, &actual_module_name, &module_dir, &module_path));
 
     /* Determine actual module name */
     actual_module_name = KOS_new_string(ctx, loading.module_name, loading.length);
@@ -1354,9 +1355,10 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
         KOS_OBJ_ID path_array = KOS_BADPTR;
         KOS_OBJ_ID dir        = KOS_BADPTR;
         KOS_OBJ_ID base_obj;
+        int        pushed2    = 0;
 
-        TRY(KOS_push_local(ctx, &path_array));
-        TRY(KOS_push_local(ctx, &dir));
+        TRY(KOS_push_locals(ctx, &pushed2, 2, &path_array, &dir));
+        pushed += pushed2;
 
         /* Add search path - path of the topmost module being loaded */
         path_array = KOS_new_array(ctx, 1);
@@ -1370,8 +1372,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
         TRY(KOS_array_write(ctx, path_array, 0, dir));
         TRY(KOS_array_insert(ctx, inst->modules.search_paths, 0, 0, path_array, 0, 1));
 
-        KOS_pop_local(ctx, &dir);
-        KOS_pop_local(ctx, &path_array);
+        KOS_pop_locals(ctx, pushed2);
 
         if (inst->flags & KOS_INST_VERBOSE)
             _print_search_paths(ctx, inst->modules.search_paths);
@@ -1390,8 +1391,9 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
                     0 == memcmp(loading.module_name, chain->module_name, loading.length)) {
 
                 KOS_OBJ_ID name_str = KOS_BADPTR;
+                int        pushed2  = 0;
 
-                TRY(KOS_push_local(ctx, &name_str));
+                TRY(KOS_push_locals(ctx, &pushed2, 1, &name_str));
 
                 name_str = KOS_new_string(ctx, module_name, name_size);
                 if (!IS_BAD_PTR(name_str))
@@ -1449,8 +1451,10 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     else {
         KOS_OBJ_ID func_obj;
         KOS_OBJ_ID prev_init_locals = KOS_BADPTR;
+        int        pushed2          = 0;
 
-        TRY(KOS_push_local(ctx, &mod_init));
+        TRY(KOS_push_locals(ctx, &pushed2, 1, &mod_init));
+        pushed += pushed2;
 
         func_obj = KOS_new_function(ctx);
         TRY_OBJID(func_obj);
@@ -1467,7 +1471,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
         kos_stack_pop(ctx);
 
-        KOS_pop_local(ctx, &mod_init);
+        KOS_pop_locals(ctx, pushed2);
 
         if (error) {
             assert( ! IS_BAD_PTR(ctx->exception));
@@ -1673,10 +1677,11 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     int         error;
     uint32_t    new_idx;
     KOS_OBJ_ID  prop;
+    int         pushed = 0;
 
     assert( ! IS_BAD_PTR(module_obj));
 
-    TRY(KOS_push_locals(ctx, 3, &module_obj, &name, &value));
+    TRY(KOS_push_locals(ctx, &pushed, 3, &module_obj, &name, &value));
 
     prop = KOS_get_property(ctx, OBJPTR(MODULE, module_obj)->global_names, name);
 
@@ -1694,7 +1699,7 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
         *idx = new_idx;
 
 cleanup:
-    KOS_pop_locals(ctx, 3);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -1736,10 +1741,11 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
                             int                  min_args,
                             KOS_FUNCTION_STATE   gen_state)
 {
-    int        error    = KOS_SUCCESS;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
     KOS_OBJ_ID func_obj;
 
-    TRY(KOS_push_locals(ctx, 2, &module_obj, &str_name));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &module_obj, &str_name));
 
     func_obj = KOS_new_builtin_function(ctx, handler, min_args);
 
@@ -1757,7 +1763,7 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
                               0));
 
 cleanup:
-    KOS_pop_locals(ctx, 2);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -1770,10 +1776,11 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID func_obj = KOS_BADPTR;
+    int        pushed   = 0;
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-    TRY(KOS_push_locals(ctx, 3, &func_obj, &module_obj, &str_name));
+    TRY(KOS_push_locals(ctx, &pushed, 3, &func_obj, &module_obj, &str_name));
 
     func_obj = KOS_new_builtin_class(ctx, handler, min_args);
     TRY_OBJID(func_obj);
@@ -1790,7 +1797,7 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
     assert( ! IS_BAD_PTR(*ret_proto));
 
 cleanup:
-    KOS_pop_locals(ctx, 3);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -1802,12 +1809,13 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
                                    int                  min_args,
                                    KOS_FUNCTION_STATE   gen_state)
 {
-    int        error    = KOS_SUCCESS;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
     KOS_OBJ_ID func_obj;
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-    TRY(KOS_push_locals(ctx, 3, &module_obj, &proto_obj, &str_name));
+    TRY(KOS_push_locals(ctx, &pushed, 3, &module_obj, &proto_obj, &str_name));
 
     func_obj = KOS_new_builtin_function(ctx, handler, min_args);
     TRY_OBJID(func_obj);
@@ -1818,7 +1826,7 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
     TRY(KOS_set_property(ctx, proto_obj, str_name, func_obj));
 
 cleanup:
-    KOS_pop_locals(ctx, 3);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 

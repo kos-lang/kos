@@ -287,16 +287,17 @@ cleanup:
 
 int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
-    int        error = KOS_SUCCESS;
-    KOS_OBJ_ID proto = KOS_BADPTR;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
+    KOS_OBJ_ID proto  = KOS_BADPTR;
 
-    TRY(KOS_push_locals(ctx, 2, &module, &proto));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &proto));
 
     TRY_ADD_CONSTRUCTOR(    ctx, module,        "random",  _random,       0, &proto);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "integer", _rand_integer, 0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "float",   _rand_float,   0);
 
 cleanup:
-    KOS_pop_locals(ctx, 2);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }

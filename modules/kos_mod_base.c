@@ -263,8 +263,9 @@ static int _create_class(KOS_CONTEXT          ctx,
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID func_obj = KOS_BADPTR;
+    int        pushed   = 0;
 
-    TRY(KOS_push_locals(ctx, 3, &module_obj, &str_name, &prototype));
+    TRY(KOS_push_locals(ctx, &pushed, 3, &module_obj, &str_name, &prototype));
 
     func_obj = KOS_new_class(ctx, prototype);
     TRY_OBJID(func_obj);
@@ -279,7 +280,7 @@ static int _create_class(KOS_CONTEXT          ctx,
                               0));
 
 cleanup:
-    KOS_pop_locals(ctx, 3);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -3795,8 +3796,9 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int        error  = KOS_SUCCESS;
     KOS_OBJ_ID str_id = KOS_BADPTR;
+    int        pushed = 0;
 
-    TRY(KOS_push_locals(ctx, 2, &module, &str_id));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &str_id));
 
     TRY_ADD_FUNCTION( ctx, module, "print",      _print,     0);
     TRY_ADD_FUNCTION( ctx, module, "print_",     _print_,    0);
@@ -3864,6 +3866,6 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(thread),     "wait",          _wait,              0);
 
 cleanup:
-    KOS_pop_locals(ctx, 2);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }

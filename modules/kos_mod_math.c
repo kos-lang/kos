@@ -426,9 +426,10 @@ cleanup:
 int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int        error  = KOS_SUCCESS;
+    int        pushed = 0;
     KOS_OBJ_ID str_id = KOS_BADPTR;
 
-    TRY(KOS_push_locals(ctx, 2, &module, &str_id));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &str_id));
 
     /* @item math infinity
      *
@@ -478,6 +479,6 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_FUNCTION(ctx, module, "sqrt",        _sqrt,        1);
 
 cleanup:
-    KOS_pop_locals(ctx, 2);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }

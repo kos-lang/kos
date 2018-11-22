@@ -374,8 +374,9 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
     KOS_OBJ_ID stack     = ctx->stack;
     uint32_t   size;
     uint32_t   prev_size = ~0U;
+    int        pushed    = 0;
 
-    error = KOS_push_local(ctx, &stack);
+    error = KOS_push_locals(ctx, &pushed, 1, &stack);
     if (error)
         return error;
 
@@ -456,7 +457,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
         }
     }
 
-    KOS_pop_local(ctx, &stack);
+    KOS_pop_locals(ctx, pushed);
 
     return error;
 }
@@ -516,8 +517,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
         func_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     }
 
-    TRY(KOS_push_locals(ctx, 4, &func_name, &module_name, &module_path, &frame_desc));
-    pushed = 1;
+    TRY(KOS_push_locals(ctx, &pushed, 4, &func_name, &module_name, &module_path, &frame_desc));
 
     frame_desc = KOS_new_object(ctx);
     TRY_OBJID(frame_desc);
@@ -541,8 +541,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
     ++dump_ctx->idx;
 
 cleanup:
-    if (pushed)
-        KOS_pop_locals(ctx, 4);
+    KOS_pop_locals(ctx, pushed);
 
     return error;
 }
@@ -558,6 +557,7 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
     int                 partial_wrap  = 0;
     _KOS_DUMP_CONTEXT   dump_ctx;
     KOS_OBJ_ID          prev_locals   = KOS_BADPTR;
+    int                 pushed        = 0;
 
     assert(!IS_BAD_PTR(thrown_object));
 
@@ -575,7 +575,8 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
     TRY(KOS_push_local_scope(ctx, &prev_locals));
 
     dump_ctx.backtrace = KOS_BADPTR;
-    TRY(KOS_push_locals(ctx, 4, &exception, &backtrace, &thrown_object, &dump_ctx.backtrace));
+    TRY(KOS_push_locals(ctx, &pushed, 4,
+                        &exception, &backtrace, &thrown_object, &dump_ctx.backtrace));
 
     exception = KOS_new_object_with_prototype(ctx, inst->prototypes.exception_proto);
     TRY_OBJID(exception);

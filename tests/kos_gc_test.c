@@ -100,18 +100,19 @@ static int _test_object(KOS_CONTEXT           ctx,
 {
     struct _KOS_GC_STATS stats;
     int64_t              size;
+    int                  pushed = 0;
 
     TEST( ! IS_BAD_PTR(obj_id));
 
     size = _get_obj_size(obj_id);
 
-    TEST(KOS_push_local(ctx, &obj_id) == KOS_SUCCESS);
+    TEST(KOS_push_locals(ctx, &pushed, 1, &obj_id) == KOS_SUCCESS);
 
     kos_set_return_value(ctx, KOS_BADPTR);
 
     TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-    KOS_pop_local(ctx, &obj_id);
+    KOS_pop_locals(ctx, pushed);
 
     TEST(_get_obj_size(obj_id) == size);
 
@@ -557,13 +558,15 @@ int main(void)
             KOS_OBJ_ID array_id = KOS_BADPTR;
             KOS_OBJ_ID obj_id;
             KOS_OBJ_ID prev_locals;
+            int        pushed   = 0;
 
             TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
             array_id = KOS_new_array(ctx, 3);
             TEST( ! IS_BAD_PTR(array_id));
 
-            TEST(KOS_push_local(ctx, &array_id) == KOS_SUCCESS);
+            TEST(KOS_push_locals(ctx, &pushed, 1, &array_id) == KOS_SUCCESS);
+            TEST(pushed == 1);
 
             obj_id = KOS_new_builtin_function(ctx, _handler, 0);
             TEST( ! IS_BAD_PTR(obj_id));
@@ -683,6 +686,7 @@ int main(void)
         struct _KOS_GC_STATS stats;
         KOS_OBJ_ID           obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
         KOS_OBJ_ID           prev_locals;
+        int                  pushed    = 0;
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
@@ -690,8 +694,8 @@ int main(void)
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
-        TEST(KOS_push_local(ctx, &obj_id[0]) == KOS_SUCCESS);
-        TEST(KOS_push_local(ctx, &obj_id[1]) == KOS_SUCCESS);
+        TEST(KOS_push_locals(ctx, &pushed, 2, &obj_id[0], &obj_id[1]) == KOS_SUCCESS);
+        TEST(pushed == 2);
 
         obj_id[0] = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
         obj_id[1] = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
@@ -773,7 +777,10 @@ int main(void)
                 TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
                 for (i = 0; i < num_objs; ++i) {
-                    TEST(KOS_push_local(ctx, &obj_ids[i]) == KOS_SUCCESS);
+                    int pushed = 0;
+
+                    TEST(KOS_push_locals(ctx, &pushed, 1, &obj_ids[i]) == KOS_SUCCESS);
+                    TEST(pushed == 1);
                     obj_ids[i] = KOS_new_buffer(ctx, size);
                     TEST( ! IS_BAD_PTR(obj_ids[i]));
 

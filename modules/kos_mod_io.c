@@ -666,10 +666,11 @@ do {                                                                            
 
 int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
-    int        error = KOS_SUCCESS;
-    KOS_OBJ_ID proto = KOS_BADPTR;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
+    KOS_OBJ_ID proto  = KOS_BADPTR;
 
-    TRY(KOS_push_locals(ctx, 2, &module, &proto));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &proto));
 
     TRY_ADD_CONSTRUCTOR(    ctx, module,        "file",      _open,           1, &proto);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "close",     _close,          0);
@@ -712,6 +713,6 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_STD_FILE(       ctx, module, proto, "stdout",    stdout);
 
 cleanup:
-    KOS_pop_locals(ctx, 2);
+    KOS_pop_locals(ctx, pushed);
     return error;
 }

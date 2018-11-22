@@ -81,12 +81,12 @@ typedef struct _KOS_STACK_HEADER {
  *   or closure stack object or a local stack frame.
  *
  * Local stack frame:
- * - function object id
- * - catch_offs / catch reg
- * - instr_offs
- * - registers
- *   ...
- * - number of registers (small int)
+ * +0 function object id
+ * +1 catch_offs / catch reg
+ * +2 instr_offs
+ * +3 registers
+ *    ...
+ * +N number of registers (small int)
  */
 
 typedef struct _KOS_STACK {
@@ -293,13 +293,9 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 
 void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 
-int KOS_push_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref);
+int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...);
 
-void KOS_pop_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref);
-
-int KOS_push_locals(KOS_CONTEXT ctx, int num_entries, ...);
-
-void KOS_pop_locals(KOS_CONTEXT ctx, int num_entries);
+void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
 
 struct _KOS_GC_STATS {
     unsigned num_objs_evacuated;
