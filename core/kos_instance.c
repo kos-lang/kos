@@ -877,12 +877,15 @@ void KOS_raise_generator_end(KOS_CONTEXT ctx)
 
 int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
 {
-    KOS_OBJ_ID local_refs = ctx->local_refs;
+    KOS_OBJ_ID local_refs  = ctx->local_refs;
+    KOS_OBJ_ID prev_locals;
     int        error;
+
+    *prev_scope = KOS_BADPTR;
 
     if (IS_BAD_PTR(local_refs)) {
 
-        *prev_scope = TO_SMALL_INT(KOS_LOOK_FURTHER);
+        prev_locals = TO_SMALL_INT(KOS_LOOK_FURTHER);
 
         error = _push_local_refs_object(ctx);
 
@@ -892,13 +895,15 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
         local_refs = ctx->local_refs;
     }
     else
-        *prev_scope = TO_SMALL_INT(OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope);
+        prev_locals = TO_SMALL_INT(OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope);
 
     error = KOS_push_local(ctx, prev_scope);
 
     if ( ! error) {
 
         assert(OBJPTR(LOCAL_REFS, ctx->local_refs)->header.num_tracked > 0);
+
+        *prev_scope = prev_locals;
 
         OBJPTR(LOCAL_REFS, ctx->local_refs)->header.prev_scope =
             OBJPTR(LOCAL_REFS, ctx->local_refs)->header.num_tracked - 1;
@@ -912,6 +917,9 @@ void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
     KOS_OBJ_ID prev_scope_idx;
     KOS_OBJ_ID local_refs  = ctx->local_refs;
     uint8_t    num_tracked = 0;
+
+    if (IS_BAD_PTR(*prev_scope))
+        return;
 
     assert( ! IS_BAD_PTR(local_refs));
 
@@ -948,6 +956,7 @@ void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
             assert(OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope ==
                    (uint8_t)GET_SMALL_INT(prev_scope_idx));
         }
+        OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope = KOS_LOOK_FURTHER;
     }
 
     ctx->local_refs = local_refs;

@@ -157,22 +157,24 @@ int kos_stack_push(KOS_CONTEXT ctx,
     KOS_STACK       *new_stack  = stack;
     uint32_t         base_idx   = stack_size;
     const int64_t    catch_init = (int64_t)KOS_NO_CATCH << 8;
-    KOS_FUNCTION    *func;
     unsigned         num_regs;
     unsigned         room;
     const KOS_TYPE   type       = GET_OBJ_TYPE(func_obj);
 
-    if (type == OBJ_FUNCTION || type == OBJ_CLASS)
-        func = OBJPTR(FUNCTION, func_obj);
-    else
+    kos_track_refs(ctx, 1, &func_obj);
+
+    if (type != OBJ_FUNCTION && type != OBJ_CLASS)
         RAISE_EXCEPTION(str_err_not_callable);
 
-    assert( ! func->handler || func->header.num_regs == 0);
-    num_regs = func->handler ? 1 : func->header.num_regs;
+    assert( ! OBJPTR(FUNCTION, func_obj)->handler ||
+           OBJPTR(FUNCTION, func_obj)->header.num_regs == 0);
+    num_regs = OBJPTR(FUNCTION, func_obj)->handler
+               ? 1 : OBJPTR(FUNCTION, func_obj)->header.num_regs;
     room = num_regs + KOS_STACK_EXTRA;
 
     /* Prepare stack for accommodating new stack frame */
-    if (func->state < KOS_GEN_INIT && ! (func->header.flags & KOS_FUN_CLOSURE)) {
+    if (OBJPTR(FUNCTION, func_obj)->state < KOS_GEN_INIT &&
+        ! (OBJPTR(FUNCTION, func_obj)->header.flags & KOS_FUN_CLOSURE)) {
 
         if ( ! stack || stack_size + room > stack->capacity) {
 
@@ -197,9 +199,9 @@ int kos_stack_push(KOS_CONTEXT ctx,
             assert(base_idx + room <= new_stack->capacity);
         }
     }
-    else if (func->state > KOS_GEN_INIT) {
+    else if (OBJPTR(FUNCTION, func_obj)->state > KOS_GEN_INIT) {
 
-        const KOS_OBJ_ID gen_stack = func->generator_stack_frame;
+        const KOS_OBJ_ID gen_stack = OBJPTR(FUNCTION, func_obj)->generator_stack_frame;
 
         assert( ! IS_BAD_PTR(gen_stack));
         assert(GET_OBJ_TYPE(gen_stack) == OBJ_STACK);
@@ -210,18 +212,19 @@ int kos_stack_push(KOS_CONTEXT ctx,
 
         ctx->regs_idx = 4U;
 
-        return KOS_SUCCESS;
+        goto cleanup;
     }
     else {
 
-        assert(type == OBJ_FUNCTION || IS_BAD_PTR(func->generator_stack_frame));
+        assert(type == OBJ_FUNCTION ||
+               IS_BAD_PTR(OBJPTR(FUNCTION, func_obj)->generator_stack_frame));
 
         if (IS_BAD_PTR(ctx->stack))
             TRY(_push_new_stack(ctx));
 
         TRY(_push_new_reentrant_stack(ctx, room));
 
-        func->generator_stack_frame = ctx->stack;
+        OBJPTR(FUNCTION, func_obj)->generator_stack_frame = ctx->stack;
 
         new_stack = OBJPTR(STACK, ctx->stack);
         base_idx  = KOS_atomic_read_u32(new_stack->size);
@@ -231,7 +234,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     KOS_atomic_write_u32(new_stack->size,              base_idx + room);
     KOS_atomic_write_ptr(new_stack->buf[base_idx],     func_obj);
     KOS_atomic_write_ptr(new_stack->buf[base_idx + 1], TO_SMALL_INT((int64_t)catch_init));
-    KOS_atomic_write_ptr(new_stack->buf[base_idx + 2], TO_SMALL_INT((int64_t)func->instr_offs));
+    KOS_atomic_write_ptr(new_stack->buf[base_idx + 2], TO_SMALL_INT((int64_t)OBJPTR(FUNCTION, func_obj)->instr_offs));
     KOS_atomic_write_ptr(new_stack->buf[base_idx + 3 + num_regs],
                                                        TO_SMALL_INT((int64_t)num_regs));
     ctx->regs_idx = base_idx + 3;
@@ -253,6 +256,8 @@ int kos_stack_push(KOS_CONTEXT ctx,
     }
 
 cleanup:
+    kos_untrack_refs(ctx, 1);
+
     return error;
 }
 
@@ -511,7 +516,6 @@ static int _dump_stack(KOS_OBJ_ID stack,
         func_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     }
 
-
     TRY(KOS_push_locals(ctx, 4, &func_name, &module_name, &module_path, &frame_desc));
     pushed = 1;
 
@@ -553,8 +557,7 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
     KOS_INSTANCE *const inst          = ctx->inst;
     int                 partial_wrap  = 0;
     _KOS_DUMP_CONTEXT   dump_ctx;
-    KOS_OBJ_ID          prev_locals;
-    int                 pushed        = 0;
+    KOS_OBJ_ID          prev_locals   = KOS_BADPTR;
 
     assert(!IS_BAD_PTR(thrown_object));
 
@@ -570,7 +573,6 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
     KOS_clear_exception(ctx);
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
-    pushed = 1;
 
     dump_ctx.backtrace = KOS_BADPTR;
     TRY(KOS_push_locals(ctx, 4, &exception, &backtrace, &thrown_object, &dump_ctx.backtrace));
@@ -599,8 +601,7 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
     ctx->exception = exception;
 
 cleanup:
-    if (pushed)
-        KOS_pop_local_scope(ctx, &prev_locals);
+    KOS_pop_local_scope(ctx, &prev_locals);
 
     if (error)
         ctx->exception = partial_wrap ? exception : thrown_object;

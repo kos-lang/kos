@@ -332,9 +332,13 @@ static int _predefine_globals(KOS_CONTEXT    ctx,
                               KOS_OBJ_ID     module_names,
                               int            is_repl)
 {
-    int        error = KOS_SUCCESS;
+    int        error  = KOS_SUCCESS;
     KOS_VECTOR cpath;
-    KOS_OBJ_ID walk;
+    KOS_OBJ_ID walk   = KOS_BADPTR;
+    int        pushed = 0;
+
+    TRY(KOS_push_locals(ctx, 3, &global_names, &module_names, &walk));
+    pushed = 1;
 
     kos_vector_init(&cpath);
 
@@ -369,17 +373,24 @@ static int _predefine_globals(KOS_CONTEXT    ctx,
 cleanup:
     kos_vector_destroy(&cpath);
 
+    if (pushed)
+        KOS_pop_locals(ctx, 3);
+
     return error;
 }
 
 static int _alloc_globals(KOS_CONTEXT    ctx,
                           KOS_COMP_UNIT *program,
-                          KOS_MODULE    *module)
+                          KOS_OBJ_ID     module_obj)
 {
     int      error;
     KOS_VAR *var;
 
-    TRY(KOS_array_resize(ctx, module->globals, (uint32_t)program->num_globals));
+    TRY(KOS_push_local(ctx, &module_obj));
+
+    TRY(KOS_array_resize(ctx,
+                         OBJPTR(MODULE, module_obj)->globals,
+                         (uint32_t)program->num_globals));
 
     for (var = program->globals; var; var = var->next) {
 
@@ -388,24 +399,30 @@ static int _alloc_globals(KOS_CONTEXT    ctx,
             KOS_OBJ_ID name;
 
             name = KOS_new_string(ctx, var->token->begin, var->token->length);
-
             TRY_OBJID(name);
+
             assert(var->array_idx < program->num_globals);
-            TRY(KOS_set_property(ctx, module->global_names, name, TO_SMALL_INT(var->array_idx)));
+            TRY(KOS_set_property(ctx,
+                                 OBJPTR(MODULE, module_obj)->global_names,
+                                 name,
+                                 TO_SMALL_INT(var->array_idx)));
         }
     }
 
 cleanup:
+    KOS_pop_local(ctx, &module_obj);
     return error;
 }
 
 static int _save_direct_modules(KOS_CONTEXT    ctx,
                                 KOS_COMP_UNIT *program,
-                                KOS_MODULE    *module)
+                                KOS_OBJ_ID     module_obj)
 {
     int                 error = KOS_SUCCESS;
     KOS_VAR            *var;
     KOS_INSTANCE *const inst  = ctx->inst;
+
+    TRY(KOS_push_local(ctx, &module_obj));
 
     for (var = program->modules; var; var = var->next) {
 
@@ -420,10 +437,11 @@ static int _save_direct_modules(KOS_CONTEXT    ctx,
 
         assert(IS_SMALL_INT(module_idx_obj));
 
-        TRY(KOS_set_property(ctx, module->module_names, name, module_idx_obj));
+        TRY(KOS_set_property(ctx, OBJPTR(MODULE, module_obj)->module_names, name, module_idx_obj));
     }
 
 cleanup:
+    KOS_pop_local(ctx, &module_obj);
     return error;
 }
 
@@ -440,7 +458,7 @@ static uint32_t _count_constants(KOS_COMP_UNIT *program)
 
 static int _alloc_constants(KOS_CONTEXT    ctx,
                             KOS_COMP_UNIT *program,
-                            KOS_MODULE    *module)
+                            KOS_OBJ_ID     module_obj)
 {
     int             error         = KOS_SUCCESS;
     const uint32_t  num_constants = _count_constants(program);
@@ -448,14 +466,16 @@ static int _alloc_constants(KOS_CONTEXT    ctx,
     KOS_COMP_CONST *constant      = program->first_constant;
     int             i;
 
-    if (IS_BAD_PTR(module->constants)) {
-        module->constants = KOS_new_array(ctx, num_constants);
+    TRY(KOS_push_local(ctx, &module_obj));
 
-        TRY_OBJID(module->constants);
+    if (IS_BAD_PTR(OBJPTR(MODULE, module_obj)->constants)) {
+        OBJPTR(MODULE, module_obj)->constants = KOS_new_array(ctx, num_constants);
+
+        TRY_OBJID(OBJPTR(MODULE, module_obj)->constants);
     }
     else {
-        base_idx = KOS_get_array_size(module->constants);
-        TRY(KOS_array_resize(ctx, module->constants, base_idx + num_constants));
+        base_idx = KOS_get_array_size(OBJPTR(MODULE, module_obj)->constants);
+        TRY(KOS_array_resize(ctx, OBJPTR(MODULE, module_obj)->constants, base_idx + num_constants));
     }
 
     for (i = 0; constant; constant = constant->next, ++i) {
@@ -504,8 +524,8 @@ static int _alloc_constants(KOS_CONTEXT    ctx,
                 func->header.num_args = func_const->num_args;
                 func->header.num_regs = func_const->num_regs;
                 func->args_reg        = func_const->args_reg;
-                func->instr_offs      = module->bytecode_size + func_const->offset;
-                func->module          = OBJID(MODULE, module);
+                func->instr_offs      = OBJPTR(MODULE, module_obj)->bytecode_size + func_const->offset;
+                func->module          = module_obj;
 
                 if (func_const->flags & KOS_COMP_FUN_GENERATOR)
                     func->state = KOS_GEN_INIT;
@@ -519,10 +539,11 @@ static int _alloc_constants(KOS_CONTEXT    ctx,
 
         TRY_OBJID(obj_id);
 
-        TRY(KOS_array_write(ctx, module->constants, base_idx + i, obj_id));
+        TRY(KOS_array_write(ctx, OBJPTR(MODULE, module_obj)->constants, base_idx + i, obj_id));
     }
 
 cleanup:
+    KOS_pop_local(ctx, &module_obj);
     return error;
 }
 
@@ -971,17 +992,20 @@ static int _compile_module(KOS_CONTEXT ctx,
                            int         is_repl)
 {
     int                 error             = KOS_SUCCESS;
-    KOS_MODULE   *const module            = OBJPTR(MODULE, module_obj);
     KOS_INSTANCE *const inst              = ctx->inst;
-    const uint32_t      old_bytecode_size = module->bytecode_size;
+    const uint32_t      old_bytecode_size = OBJPTR(MODULE, module_obj)->bytecode_size;
     KOS_PARSER          parser;
     KOS_COMP_UNIT       program;
     KOS_AST_NODE       *ast;
+    int                 pushed            = 0;
+
+    TRY(KOS_push_local(ctx, &module_obj));
+    pushed = 1;
 
     /* Initialize parser and compiler */
     kos_compiler_init(&program, module_idx);
-    if ( ! IS_BAD_PTR(module->constants))
-        program.num_constants = (int)KOS_get_array_size(module->constants);
+    if ( ! IS_BAD_PTR(OBJPTR(MODULE, module_obj)->constants))
+        program.num_constants = (int)KOS_get_array_size(OBJPTR(MODULE, module_obj)->constants);
     kos_parser_init(&parser,
                     &program.allocator,
                     (unsigned)module_idx,
@@ -1019,7 +1043,11 @@ static int _compile_module(KOS_CONTEXT ctx,
     program.import_module  = _import_module;
     program.get_global_idx = _get_global_idx;
     program.walk_globals   = _walk_globals;
-    TRY(_predefine_globals(ctx, &program, module->global_names, module->module_names, is_repl));
+    TRY(_predefine_globals(ctx,
+                           &program,
+                           OBJPTR(MODULE, module_obj)->global_names,
+                           OBJPTR(MODULE, module_obj)->module_names,
+                           is_repl));
 
     /* Compile source code into bytecode */
     error = kos_compiler_compile(&program, ast);
@@ -1040,15 +1068,16 @@ static int _compile_module(KOS_CONTEXT ctx,
     }
     TRY(error);
 
-    TRY(_alloc_globals(ctx, &program, module));
-    TRY(_alloc_constants(ctx, &program, module));
-    TRY(_save_direct_modules(ctx, &program, module));
+    TRY(_alloc_globals(ctx, &program, module_obj));
+    TRY(_alloc_constants(ctx, &program, module_obj));
+    TRY(_save_direct_modules(ctx, &program, module_obj));
 
     /* Move compiled program to module */
     {
         KOS_VECTOR *code_buf     = &program.code_buf;
         KOS_VECTOR *addr_to_line = &program.addr2line_buf;
         KOS_VECTOR *addr_to_func = &program.addr2func_buf;
+        KOS_MODULE *module       = OBJPTR(MODULE, module_obj);
 
         const uint32_t old_num_line_addrs = module->num_line_addrs;
         const uint32_t old_num_func_addrs = module->num_func_addrs;
@@ -1135,6 +1164,7 @@ static int _compile_module(KOS_CONTEXT ctx,
         const char        *filename   = "";
         static const char  divider[]  =
                 "==============================================================================";
+        KOS_MODULE        *module     = OBJPTR(MODULE, module_obj);
 
         const KOS_FUNC_ADDR *const func_addrs     = module->func_addrs;
         const uint32_t             num_func_addrs = module->num_func_addrs;
@@ -1244,6 +1274,8 @@ static int _compile_module(KOS_CONTEXT ctx,
 cleanup:
     kos_parser_destroy(&parser);
     kos_compiler_destroy(&program);
+    if (pushed)
+        KOS_pop_local(ctx, &module_obj);
     return error;
 }
 
@@ -1277,19 +1309,17 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     KOS_OBJ_ID                    module_path        = KOS_BADPTR;
     KOS_OBJ_ID                    mod_init;
     KOS_OBJ_ID                    ret;
-    KOS_OBJ_ID                    prev_locals;
+    KOS_OBJ_ID                    prev_locals        = KOS_BADPTR;
     KOS_INSTANCE           *const inst               = ctx->inst;
     struct _KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
     KOS_VECTOR                    file_buf;
     int                           chain_init         = 0;
-    int                           pushed             = 0;
 
     kos_vector_init(&file_buf);
 
     _get_module_name(module_name, name_size, &loading);
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
-    pushed = 1;
     TRY(KOS_push_locals(ctx, 4, &module_obj, &actual_module_name, &module_dir, &module_path));
 
     /* Determine actual module name */
@@ -1418,6 +1448,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
         KOS_clear_exception(ctx);
     else {
         KOS_OBJ_ID func_obj;
+        KOS_OBJ_ID prev_init_locals = KOS_BADPTR;
 
         TRY(KOS_push_local(ctx, &mod_init));
 
@@ -1428,7 +1459,11 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
         TRY(kos_stack_push(ctx, func_obj));
 
+        TRY(KOS_push_local_scope(ctx, &prev_init_locals));
+
         error = ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, mod_init))->init(ctx, module_obj);
+
+        KOS_pop_local_scope(ctx, &prev_init_locals);
 
         kos_stack_pop(ctx);
 
@@ -1462,8 +1497,7 @@ cleanup:
     if (chain_init)
         inst->modules.load_chain = loading.next;
 
-    if (pushed)
-        KOS_pop_local_scope(ctx, &prev_locals);
+    KOS_pop_local_scope(ctx, &prev_locals);
 
     kos_vector_destroy(&file_buf);
 
@@ -1493,10 +1527,8 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     KOS_OBJ_ID    ret         = KOS_BADPTR;
     KOS_INSTANCE *inst        = ctx->inst;
     KOS_OBJ_ID    prev_locals = KOS_BADPTR;
-    int           pushed      = 0;
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
-    pushed = 1;
 
     module_name_str = KOS_new_cstring(ctx, module_name);
     TRY_OBJID(module_name_str);
@@ -1526,8 +1558,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    if (pushed)
-        KOS_pop_local_scope(ctx, &prev_locals);
+    KOS_pop_local_scope(ctx, &prev_locals);
 
     if (error)
         _handle_interpreter_error(ctx, error);
@@ -1582,12 +1613,10 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     KOS_OBJ_ID          prev_locals = KOS_BADPTR;
     KOS_INSTANCE *const inst        = ctx->inst;
     KOS_VECTOR          buf;
-    int                 pushed      = 0;
 
     kos_vector_init(&buf);
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
-    pushed = 1;
 
     TRY(_load_stdin(ctx, &buf));
 
@@ -1628,8 +1657,7 @@ cleanup:
         assert(!KOS_is_exception_pending(ctx));
     }
 
-    if (pushed)
-        KOS_pop_local_scope(ctx, &prev_locals);
+    KOS_pop_local_scope(ctx, &prev_locals);
 
     kos_vector_destroy(&buf);
 
@@ -1645,11 +1673,12 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     int         error;
     uint32_t    new_idx;
     KOS_OBJ_ID  prop;
-    KOS_MODULE* module = OBJPTR(MODULE, module_obj);
 
-    assert(module);
+    assert( ! IS_BAD_PTR(module_obj));
 
-    prop = KOS_get_property(ctx, module->global_names, name);
+    TRY(KOS_push_locals(ctx, 3, &module_obj, &name, &value));
+
+    prop = KOS_get_property(ctx, OBJPTR(MODULE, module_obj)->global_names, name);
 
     KOS_clear_exception(ctx);
 
@@ -1658,13 +1687,14 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    TRY(KOS_array_push(ctx, module->globals, value, &new_idx));
-    TRY(KOS_set_property(ctx, module->global_names, name, TO_SMALL_INT((int)new_idx)));
+    TRY(KOS_array_push(ctx, OBJPTR(MODULE, module_obj)->globals, value, &new_idx));
+    TRY(KOS_set_property(ctx, OBJPTR(MODULE, module_obj)->global_names, name, TO_SMALL_INT((int)new_idx)));
 
     if (idx)
         *idx = new_idx;
 
 cleanup:
+    KOS_pop_locals(ctx, 3);
     return error;
 }
 
@@ -1707,7 +1737,11 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
                             KOS_FUNCTION_STATE   gen_state)
 {
     int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID func_obj = KOS_new_builtin_function(ctx, handler, min_args);
+    KOS_OBJ_ID func_obj;
+
+    TRY(KOS_push_locals(ctx, 2, &module_obj, &str_name));
+
+    func_obj = KOS_new_builtin_function(ctx, handler, min_args);
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
@@ -1723,6 +1757,7 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
                               0));
 
 cleanup:
+    KOS_pop_locals(ctx, 2);
     return error;
 }
 
@@ -1734,10 +1769,13 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
                                KOS_OBJ_ID          *ret_proto)
 {
     int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID func_obj = KOS_new_builtin_class(ctx, handler, min_args);
+    KOS_OBJ_ID func_obj = KOS_BADPTR;
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
+    TRY(KOS_push_locals(ctx, 3, &func_obj, &module_obj, &str_name));
+
+    func_obj = KOS_new_builtin_class(ctx, handler, min_args);
     TRY_OBJID(func_obj);
 
     OBJPTR(CLASS, func_obj)->module = module_obj;
@@ -1752,6 +1790,7 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
     assert( ! IS_BAD_PTR(*ret_proto));
 
 cleanup:
+    KOS_pop_locals(ctx, 3);
     return error;
 }
 
@@ -1764,10 +1803,13 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
                                    KOS_FUNCTION_STATE   gen_state)
 {
     int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID func_obj = KOS_new_builtin_function(ctx, handler, min_args);
+    KOS_OBJ_ID func_obj;
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
+    TRY(KOS_push_locals(ctx, 3, &module_obj, &proto_obj, &str_name));
+
+    func_obj = KOS_new_builtin_function(ctx, handler, min_args);
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module = module_obj;
@@ -1776,6 +1818,7 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
     TRY(KOS_set_property(ctx, proto_obj, str_name, func_obj));
 
 cleanup:
+    KOS_pop_locals(ctx, 3);
     return error;
 }
 

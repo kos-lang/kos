@@ -310,6 +310,8 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int error = KOS_SUCCESS;
 
+    TRY(KOS_push_local(ctx, &module));
+
     TRY_ADD_GENERATOR(       ctx, module, "raw_lexer",    _raw_lexer, 1);
 
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "version_major",        KOS_VERSION_MAJOR);
@@ -432,5 +434,6 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "continue_string",      NT_CONTINUE_STRING);
 
 cleanup:
+    KOS_pop_local(ctx, &module);
     return error;
 }

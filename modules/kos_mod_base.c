@@ -67,12 +67,11 @@ static const char str_err_use_async[]                = "use async to launch thre
 #define TRY_CREATE_CONSTRUCTOR(name, module)                                         \
 do {                                                                                 \
     static const char str_name[] = #name;                                            \
-    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,       \
-                                                              sizeof(str_name) - 1); \
-    TRY_OBJID(str);                                                                  \
+    str_id = KOS_new_const_ascii_string((ctx), str_name, sizeof(str_name) - 1);      \
+    TRY_OBJID(str_id);                                                               \
     TRY(_create_class(ctx,                                                           \
                       module,                                                        \
-                      str,                                                           \
+                      str_id,                                                        \
                       _##name##_constructor,                                         \
                       ctx->inst->prototypes.name##_proto));                          \
 } while (0)
@@ -263,8 +262,11 @@ static int _create_class(KOS_CONTEXT          ctx,
                          KOS_OBJ_ID           prototype)
 {
     int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID func_obj = KOS_new_class(ctx, prototype);
+    KOS_OBJ_ID func_obj = KOS_BADPTR;
 
+    TRY(KOS_push_locals(ctx, 3, &module_obj, &str_name, &prototype));
+
+    func_obj = KOS_new_class(ctx, prototype);
     TRY_OBJID(func_obj);
 
     OBJPTR(CLASS, func_obj)->handler = constructor;
@@ -277,6 +279,7 @@ static int _create_class(KOS_CONTEXT          ctx,
                               0));
 
 cleanup:
+    KOS_pop_locals(ctx, 3);
     return error;
 }
 
@@ -3790,7 +3793,10 @@ cleanup:
 
 int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
-    int error = KOS_SUCCESS;
+    int        error  = KOS_SUCCESS;
+    KOS_OBJ_ID str_id = KOS_BADPTR;
+
+    TRY(KOS_push_locals(ctx, 2, &module, &str_id));
 
     TRY_ADD_FUNCTION( ctx, module, "print",      _print,     0);
     TRY_ADD_FUNCTION( ctx, module, "print_",     _print_,    0);
@@ -3858,5 +3864,6 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(thread),     "wait",          _wait,              0);
 
 cleanup:
+    KOS_pop_locals(ctx, 2);
     return error;
 }

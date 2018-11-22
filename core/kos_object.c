@@ -90,9 +90,13 @@ KOS_OBJ_ID KOS_new_object(KOS_CONTEXT ctx)
 KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
                                          KOS_OBJ_ID  prototype)
 {
-    KOS_OBJECT *obj = (KOS_OBJECT *)kos_alloc_object(ctx,
-                                                     OBJ_OBJECT,
-                                                     sizeof(KOS_OBJECT));
+    KOS_OBJECT *obj;
+
+    kos_track_refs(ctx, 1, &prototype);
+
+    obj = (KOS_OBJECT *)kos_alloc_object(ctx, OBJ_OBJECT, sizeof(KOS_OBJECT));
+
+    kos_untrack_refs(ctx, 1);
 
     if (obj) {
         assert(obj->header.type == OBJ_OBJECT);
@@ -883,8 +887,8 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
     TRY_OBJID(key_table_obj);
 
     do {
-        KOS_PITEM *cur_item;
-        KOS_PITEM *items_end;
+        uint32_t i;
+        uint32_t capacity;
 
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
@@ -898,12 +902,12 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
         if (IS_BAD_PTR(prop_table))
             continue;
 
-        cur_item  = OBJPTR(OBJECT_STORAGE, prop_table)->items;
-        items_end = cur_item + KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
+        capacity = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
 
-        for ( ; cur_item < items_end; ++cur_item) {
-            const KOS_OBJ_ID key   = KOS_atomic_read_obj(cur_item->key);
-            const KOS_OBJ_ID value = KOS_atomic_read_obj(cur_item->value);
+        for (i = 0; i < capacity; i++) {
+            KOS_PITEM       *cur_item = OBJPTR(OBJECT_STORAGE, prop_table)->items + i;
+            const KOS_OBJ_ID key      = KOS_atomic_read_obj(cur_item->key);
+            const KOS_OBJ_ID value    = KOS_atomic_read_obj(cur_item->value);
 
             if (IS_BAD_PTR(key) || value == TOMBSTONE)
                 continue;
@@ -915,9 +919,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
                 _copy_table(ctx, obj_id, prop_table, new_prop_table);
 
                 prop_table = new_prop_table;
-                cur_item   = OBJPTR(OBJECT_STORAGE, prop_table)->items - 1;
-                items_end  = OBJPTR(OBJECT_STORAGE, prop_table)->items +
-                                KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
+                capacity   = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
                 continue;
             }
 

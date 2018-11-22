@@ -125,7 +125,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
             KOS_atomic_write_ptr(array->data, KOS_BADPTR);
 
             array_id = OBJID(ARRAY, array);
-            kos_track_refs(ctx, 1, &array);
+            kos_track_refs(ctx, 1, &array_id);
 
             storage = _alloc_buffer(ctx, size);
 

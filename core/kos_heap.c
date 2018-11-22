@@ -1598,7 +1598,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         case OBJ_OBJECT_STORAGE:
-            assert(IS_BAD_PTR(KOS_atomic_read_obj(((KOS_OBJECT_STORAGE *)hdr)->new_prop_table)));
+            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_STORAGE *)hdr)->new_prop_table);
             {
                 KOS_PITEM *item = &((KOS_OBJECT_STORAGE *)hdr)->items[0];
                 KOS_PITEM *end  = item + ((KOS_OBJECT_STORAGE *)hdr)->capacity;
@@ -1610,7 +1610,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         case OBJ_ARRAY_STORAGE:
-            assert(IS_BAD_PTR(KOS_atomic_read_obj(((KOS_ARRAY_STORAGE *)hdr)->next)));
+            _update_child_ptr((KOS_OBJ_ID *)&((KOS_ARRAY_STORAGE *)hdr)->next);
             {
                 KOS_ATOMIC(KOS_OBJ_ID) *item = &((KOS_ARRAY_STORAGE *)hdr)->buf[0];
                 KOS_ATOMIC(KOS_OBJ_ID) *end  = item + ((KOS_ARRAY_STORAGE *)hdr)->capacity;
@@ -1807,7 +1807,9 @@ static int _evacuate(KOS_CONTEXT           ctx,
 #ifndef NDEBUG
         _KOS_SLOT     *page_end       = ptr + KOS_atomic_read_u32(page->num_allocated);
 #endif
+#ifndef CONFIG_MAD_GC
         const uint32_t num_slots_used = KOS_atomic_read_u32(page->num_used);
+#endif
 
         heap->used_size -= non_full_turn ? _non_full_page_size(page) : _full_page_size(page);
 
@@ -1819,9 +1821,9 @@ static int _evacuate(KOS_CONTEXT           ctx,
             non_full_turn = 1;
         }
 
+#ifndef CONFIG_MAD_GC
         /* If the number of slots used reaches the threshold, then the page is
          * exempt from evacuation. */
-        /* TODO force evacuate if mad GC */
         if (num_slots_used >= (_KOS_SLOTS_PER_PAGE * _KOS_MIGRATION_THRESH) / 100U) {
             PUSH_LIST(heap->full_pages, page);
             heap->used_size += _full_page_size(page);
@@ -1829,6 +1831,7 @@ static int _evacuate(KOS_CONTEXT           ctx,
             stats.size_kept += num_slots_used << _KOS_OBJ_ALIGN_BITS;
             continue;
         }
+#endif
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + _KOS_BITMAP_OFFS);
 
