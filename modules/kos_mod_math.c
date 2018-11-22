@@ -457,7 +457,6 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      */
     {
         static const char str_nan[] = "nan";
-        KOS_OBJ_ID        str_id;
         union _KOS_NUMERIC_VALUE value;
 
         value.i = ((uint64_t)0x7FF00000U << 32) | 1U;
