@@ -2888,21 +2888,24 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
     return error ? KOS_BADPTR : ret;
 }
 
-int kos_vm_run_module(KOS_MODULE *module, KOS_OBJ_ID *ret)
+KOS_OBJ_ID kos_vm_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int         error;
-    KOS_CONTEXT ctx;
-    KOS_OBJ_ID  func_obj;
-    int         pushed = 0;
+    int        error;
+    KOS_OBJ_ID func_obj;
+    int        pushed = 0;
 
-    assert(module);
-    assert(module->inst);
+    assert( ! IS_BAD_PTR(module_obj));
+    assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
+    assert(OBJPTR(MODULE, module_obj)->inst);
 
-    ctx = (KOS_CONTEXT)kos_tls_get(module->inst->threads.thread_key);
-
-    func_obj = KOS_array_read(ctx, module->constants, module->main_idx);
+    func_obj = KOS_array_read(ctx,
+                              OBJPTR(MODULE, module_obj)->constants,
+                              OBJPTR(MODULE, module_obj)->main_idx);
 
     if ( ! IS_BAD_PTR(func_obj)) {
+        assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
+        assert(GET_OBJ_TYPE(OBJPTR(FUNCTION, func_obj)->module) == OBJ_MODULE);
+
         error = kos_stack_push(ctx, func_obj);
 
         if ( ! error)
@@ -2911,30 +2914,22 @@ int kos_vm_run_module(KOS_MODULE *module, KOS_OBJ_ID *ret)
     else
         error = KOS_ERROR_EXCEPTION;
 
-    if (error)
-        *ret = ctx->exception;
-
-    else {
+    if ( ! error) {
 
         KOS_instance_validate(ctx);
 
         error = _exec_function(ctx);
 
+        if ( ! error)
+            func_obj = ctx->retval;
+
         assert( ! KOS_is_exception_pending(ctx) || error == KOS_ERROR_EXCEPTION);
-
-        if (error)
-            *ret = ctx->exception;
-        else
-            *ret = ctx->retval;
-
-        assert( ! IS_BAD_PTR(*ret));
     }
-
-    ctx->exception = KOS_BADPTR;
-    ctx->retval    = KOS_BADPTR;
 
     if (pushed)
         kos_stack_pop(ctx);
 
-    return error;
+    assert(error == KOS_SUCCESS || error == KOS_ERROR_EXCEPTION);
+
+    return error ? KOS_BADPTR : func_obj;
 }

@@ -25,6 +25,6 @@
 
 #include "../inc/kos_object_base.h"
 
-int kos_vm_run_module(KOS_MODULE *module, KOS_OBJ_ID *ret);
+KOS_OBJ_ID kos_vm_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj);
 
 #endif

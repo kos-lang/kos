@@ -363,8 +363,19 @@ static int _test_instr(KOS_CONTEXT          ctx,
         }
     }
 
-    if ( ! error)
-        error = kos_vm_run_module(module, &ret);
+    if ( ! error) {
+        ret = kos_vm_run_module(ctx, OBJID(MODULE, module));
+
+        if (IS_BAD_PTR(ret)) {
+            assert(KOS_is_exception_pending(ctx));
+            ret = KOS_get_exception(ctx);
+            KOS_clear_exception(ctx);
+            error = KOS_ERROR_EXCEPTION;
+        }
+        else {
+            assert( ! KOS_is_exception_pending(ctx));
+        }
+    }
 
     if (ret_val->value == V_EXCEPT) {
         if (error != KOS_ERROR_EXCEPTION) {

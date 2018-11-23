@@ -1490,11 +1490,11 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     TRY(KOS_set_property(ctx, inst->modules.module_names, actual_module_name, TO_SMALL_INT(module_idx)));
 
     /* Run module */
-    error = kos_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
+    ret = kos_vm_run_module(ctx, module_obj);
 
-    if (error) {
-        assert(error == KOS_ERROR_EXCEPTION);
-        KOS_raise_exception(ctx, ret);
+    if (IS_BAD_PTR(ret)) {
+        assert(KOS_is_exception_pending(ctx));
+        error = KOS_ERROR_EXCEPTION;
     }
 
 cleanup:
@@ -1554,11 +1554,11 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     TRY(_compile_module(ctx, module_obj, module_idx, buf, buf_size, 1));
 
     /* Run module */
-    error = kos_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
+    ret = kos_vm_run_module(ctx, module_obj);
 
-    if (error) {
-        assert(error == KOS_ERROR_EXCEPTION);
-        KOS_raise_exception(ctx, ret);
+    if (IS_BAD_PTR(ret)) {
+        assert(KOS_is_exception_pending(ctx));
+        error = KOS_ERROR_EXCEPTION;
     }
 
 cleanup:
@@ -1647,11 +1647,11 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     kos_vector_destroy(&buf);
 
     /* Run module */
-    error = kos_vm_run_module(OBJPTR(MODULE, module_obj), &ret);
+    ret = kos_vm_run_module(ctx, module_obj);
 
-    if (error) {
-        assert(error == KOS_ERROR_EXCEPTION);
-        KOS_raise_exception(ctx, ret);
+    if (IS_BAD_PTR(ret)) {
+        assert(KOS_is_exception_pending(ctx));
+        error = KOS_ERROR_EXCEPTION;
     }
 
 cleanup:

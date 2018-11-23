@@ -159,11 +159,11 @@ static KOS_OBJ_ID _run_code(KOS_INSTANCE  *inst,
     }
 
     if ( ! error) {
-        error = kos_vm_run_module(module, &ret);
+        ret = kos_vm_run_module(ctx, OBJID(MODULE, module));
 
-        if (error) {
-            KOS_raise_exception(ctx, ret);
-            ret = KOS_BADPTR;
+        if (IS_BAD_PTR(ret)) {
+            assert(KOS_is_exception_pending(ctx));
+            error = KOS_ERROR_EXCEPTION;
         }
     }
 
