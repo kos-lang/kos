@@ -300,14 +300,14 @@ int kos_executable_path(KOS_VECTOR *buf)
 #endif
 
 #ifdef _WIN32
-int kos_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect)
+int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect)
 {
     DWORD old = 0;
-    return VirtualProtect(ptr, size, protect == _KOS_NO_ACCESS ? PAGE_NOACCESS : PAGE_READWRITE, &old) != 0 ? 0 : 1;
+    return VirtualProtect(ptr, size, protect == KOS_NO_ACCESS ? PAGE_NOACCESS : PAGE_READWRITE, &old) != 0 ? 0 : 1;
 }
 #else
-int kos_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect)
+int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect)
 {
-    return mprotect(ptr, size, protect == _KOS_NO_ACCESS ? PROT_NONE : PROT_READ | PROT_WRITE);
+    return mprotect(ptr, size, protect == KOS_NO_ACCESS ? PROT_NONE : PROT_READ | PROT_WRITE);
 }
 #endif

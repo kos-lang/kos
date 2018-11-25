@@ -23,24 +23,24 @@
 #ifndef KOS_CONFIG_H_INCLUDED
 #define KOS_CONFIG_H_INCLUDED
 
-#define _KOS_MAX_AST_DEPTH      100
-#define _KOS_BUF_ALLOC_SIZE     4096U
-#define _KOS_VEC_MAX_INC_SIZE   262144U
-#define _KOS_POOL_BITS          19
-#define _KOS_PAGE_BITS          12
-#define _KOS_POOL_SIZE          (1U << _KOS_POOL_BITS)
-#define _KOS_PAGE_SIZE          (1U << _KOS_PAGE_BITS)
-#define _KOS_OBJ_ALIGN_BITS     4
-#define _KOS_MAX_PAGE_SEEK      8   /* Max number of non-full pages to check for free space */
-#define _KOS_MIGRATION_THRESH   90U /* Percentage of page utilization after GC */
-#define _KOS_GC_STEP            (_KOS_PAGE_SIZE * 16U)
-#define _KOS_MIN_REG_CAPACITY   32U
-#define _KOS_MAX_ARGS_IN_REGS   32U
-#define _KOS_MAX_STACK_DEPTH    4096U
+#define KOS_MAX_AST_DEPTH      100
+#define KOS_BUF_ALLOC_SIZE     4096U
+#define KOS_VEC_MAX_INC_SIZE   262144U
+#define KOS_POOL_BITS          19
+#define KOS_PAGE_BITS          12
+#define KOS_POOL_SIZE          (1U << KOS_POOL_BITS)
+#define KOS_PAGE_SIZE          (1U << KOS_PAGE_BITS)
+#define KOS_OBJ_ALIGN_BITS     4
+#define KOS_MAX_PAGE_SEEK      8   /* Max number of non-full pages to check for free space */
+#define KOS_MIGRATION_THRESH   90U /* Percentage of page utilization after GC */
+#define KOS_GC_STEP            (KOS_PAGE_SIZE * 16U)
+#define KOS_MIN_REG_CAPACITY   32U
+#define KOS_MAX_ARGS_IN_REGS   32U
+#define KOS_MAX_STACK_DEPTH    4096U
 #ifdef CONFIG_FUZZ
-#   define _KOS_MAX_HEAP_SIZE   (32U * 1024U * 1024U)
+#   define KOS_MAX_HEAP_SIZE   (32U * 1024U * 1024U)
 #else
-#   define _KOS_MAX_HEAP_SIZE   (1024U * 1024U * 1024U)
+#   define KOS_MAX_HEAP_SIZE   (1024U * 1024U * 1024U)
 #endif
 
 #endif

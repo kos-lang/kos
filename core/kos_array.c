@@ -49,7 +49,7 @@ DECLARE_STATIC_CONST_OBJECT(closed)    = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xA1)
 
 #define KOS_buffer_alloc_size(cap) (KOS_align_up((uint32_t)sizeof(KOS_ARRAY_STORAGE) \
                                                    + (uint32_t)(((cap) - 1) * sizeof(KOS_OBJ_ID)), \
-                                                 1U << _KOS_OBJ_ALIGN_BITS))
+                                                 1U << KOS_OBJ_ALIGN_BITS))
 
 static void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
                              unsigned                count,
@@ -88,7 +88,7 @@ static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
 KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
                          uint32_t    size)
 {
-    const uint32_t array_obj_size = KOS_align_up((uint32_t)sizeof(KOS_ARRAY), 1U << _KOS_OBJ_ALIGN_BITS);
+    const uint32_t array_obj_size = KOS_align_up((uint32_t)sizeof(KOS_ARRAY), 1U << KOS_OBJ_ALIGN_BITS);
     const uint32_t buf_alloc_size = size ? KOS_buffer_alloc_size(size) : 0;
     const int      buf_built_in   = array_obj_size + buf_alloc_size <= 256U;
     const uint32_t alloc_size     = buf_built_in ? array_obj_size + buf_alloc_size : array_obj_size;

@@ -59,10 +59,10 @@ static const char str_format_error[]         = ": error: ";
 static const char str_path_sep[]             = KOS_PATH_SEPARATOR_STR;
 static const char str_script_ext[]           = ".kos";
 
-struct _KOS_MODULE_LOAD_CHAIN {
-    struct _KOS_MODULE_LOAD_CHAIN *next;
-    const char                    *module_name;
-    unsigned                       length;
+struct KOS_MODULE_LOAD_CHAIN_S {
+    KOS_MODULE_LOAD_CHAIN *next;
+    const char            *module_name;
+    unsigned               length;
 };
 
 static void _raise_3(KOS_CONTEXT ctx,
@@ -218,9 +218,9 @@ cleanup:
     return error;
 }
 
-static void _get_module_name(const char                    *module,
-                             unsigned                       length,
-                             struct _KOS_MODULE_LOAD_CHAIN *loading)
+static void _get_module_name(const char            *module,
+                             unsigned               length,
+                             KOS_MODULE_LOAD_CHAIN *loading)
 {
     unsigned i = _rfind_path(module, length, '.');
 
@@ -1299,21 +1299,21 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
                              unsigned    data_size,
                              int        *out_module_idx)
 {
-    static const char             base[]             = "base";
-    int                           error              = KOS_SUCCESS;
-    int                           module_idx         = -1;
-    int                           chain_init         = 0;
-    int                           pushed             = 0;
-    KOS_OBJ_ID                    module_obj         = KOS_BADPTR;
-    KOS_OBJ_ID                    actual_module_name = KOS_BADPTR;
-    KOS_OBJ_ID                    module_dir         = KOS_BADPTR;
-    KOS_OBJ_ID                    module_path        = KOS_BADPTR;
-    KOS_OBJ_ID                    mod_init;
-    KOS_OBJ_ID                    ret;
-    KOS_OBJ_ID                    prev_locals        = KOS_BADPTR;
-    KOS_INSTANCE           *const inst               = ctx->inst;
-    struct _KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
-    KOS_VECTOR                    file_buf;
+    static const char     base[]             = "base";
+    int                   error              = KOS_SUCCESS;
+    int                   module_idx         = -1;
+    int                   chain_init         = 0;
+    int                   pushed             = 0;
+    KOS_OBJ_ID            module_obj         = KOS_BADPTR;
+    KOS_OBJ_ID            actual_module_name = KOS_BADPTR;
+    KOS_OBJ_ID            module_dir         = KOS_BADPTR;
+    KOS_OBJ_ID            module_path        = KOS_BADPTR;
+    KOS_OBJ_ID            mod_init;
+    KOS_OBJ_ID            ret;
+    KOS_OBJ_ID            prev_locals        = KOS_BADPTR;
+    KOS_INSTANCE   *const inst               = ctx->inst;
+    KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
+    KOS_VECTOR            file_buf;
 
     kos_vector_init(&file_buf);
 
@@ -1384,7 +1384,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
     /* Add module to the load chain to prevent and detect circular dependencies */
     {
-        struct _KOS_MODULE_LOAD_CHAIN *chain = inst->modules.load_chain;
+        KOS_MODULE_LOAD_CHAIN *chain = inst->modules.load_chain;
         loading.next = chain;
         for ( ; chain; chain = chain->next) {
             if (loading.length == chain->length &&
@@ -1583,11 +1583,11 @@ static int _load_stdin(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         const size_t last_size = buf->size;
         size_t       num_read;
 
-        TRY(kos_vector_resize(buf, last_size + _KOS_BUF_ALLOC_SIZE));
+        TRY(kos_vector_resize(buf, last_size + KOS_BUF_ALLOC_SIZE));
 
-        num_read = fread(buf->buffer + last_size, 1, _KOS_BUF_ALLOC_SIZE, stdin);
+        num_read = fread(buf->buffer + last_size, 1, KOS_BUF_ALLOC_SIZE, stdin);
 
-        if (num_read < _KOS_BUF_ALLOC_SIZE) {
+        if (num_read < KOS_BUF_ALLOC_SIZE) {
 
             TRY(kos_vector_resize(buf, last_size + num_read));
 

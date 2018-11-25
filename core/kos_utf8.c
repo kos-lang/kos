@@ -162,10 +162,10 @@ static uint32_t _parse_escape_sequence(const char **str_ptr,
     return code;
 }
 
-unsigned kos_utf8_get_len(const char           *str,
-                          unsigned              length,
-                          enum _KOS_UTF8_ESCAPE escape,
-                          uint32_t             *max_code)
+unsigned kos_utf8_get_len(const char     *str,
+                          unsigned        length,
+                          KOS_UTF8_ESCAPE escape,
+                          uint32_t       *max_code)
 {
     const char *const end   = str + length;
     unsigned          count = 0;
@@ -219,7 +219,7 @@ unsigned kos_utf8_get_len(const char           *str,
     return count;
 }
 
-int kos_utf8_decode_8(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE escape, uint8_t *out)
+int kos_utf8_decode_8(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint8_t *out)
 {
     const char *const end   = str + length;
     int               error = KOS_SUCCESS;
@@ -256,7 +256,7 @@ int kos_utf8_decode_8(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE es
     return error;
 }
 
-int kos_utf8_decode_16(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE escape, uint16_t *out)
+int kos_utf8_decode_16(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint16_t *out)
 {
     const char *const end   = str + length;
     int               error = KOS_SUCCESS;
@@ -293,7 +293,7 @@ int kos_utf8_decode_16(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE e
     return error;
 }
 
-int kos_utf8_decode_32(const char *str, unsigned length, enum _KOS_UTF8_ESCAPE escape, uint32_t *out)
+int kos_utf8_decode_32(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint32_t *out)
 {
     const char *const end   = str + length;
     int               error = KOS_SUCCESS;

@@ -90,17 +90,17 @@ static int64_t _get_obj_size(KOS_OBJ_ID obj_id)
     return GET_SMALL_INT(hdr->alloc_size);
 }
 
-static int _test_object(KOS_CONTEXT           ctx,
-                        KOS_OBJ_ID            obj_id,
-                        unsigned              num_objs,
-                        int64_t               total_size,
-                        unsigned              num_dead_objs,
-                        int64_t               dead_size,
-                        struct _KOS_GC_STATS *orig_stats)
+static int _test_object(KOS_CONTEXT            ctx,
+                        KOS_OBJ_ID             obj_id,
+                        unsigned               num_objs,
+                        int64_t                total_size,
+                        unsigned               num_dead_objs,
+                        int64_t                dead_size,
+                        struct KOS_GC_STATS_S *orig_stats)
 {
-    struct _KOS_GC_STATS stats;
-    int64_t              size;
-    int                  pushed = 0;
+    struct KOS_GC_STATS_S stats;
+    int64_t               size;
+    int                   pushed = 0;
 
     TEST( ! IS_BAD_PTR(obj_id));
 
@@ -141,9 +141,9 @@ static int _test_object(KOS_CONTEXT           ctx,
 
 int main(void)
 {
-    KOS_INSTANCE         inst;
-    KOS_CONTEXT          ctx;
-    struct _KOS_GC_STATS base_stats;
+    KOS_INSTANCE          inst;
+    KOS_CONTEXT           ctx;
+    struct KOS_GC_STATS_S base_stats;
 
     /************************************************************************/
     /* Test garbage collection on a freshly initialized instance */
@@ -412,7 +412,7 @@ int main(void)
      * for both runs.
      */
     {
-        struct _KOS_GC_STATS stats;
+        struct KOS_GC_STATS_S stats;
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
@@ -654,7 +654,7 @@ int main(void)
     /************************************************************************/
     /* Test release of current thread page */
     {
-        struct _KOS_GC_STATS stats;
+        struct KOS_GC_STATS_S stats;
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
@@ -683,10 +683,10 @@ int main(void)
     /************************************************************************/
     /* Test garbage collector with two big buffer objects. */
     {
-        struct _KOS_GC_STATS stats;
-        KOS_OBJ_ID           obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
-        KOS_OBJ_ID           prev_locals;
-        int                  pushed    = 0;
+        struct KOS_GC_STATS_S stats;
+        KOS_OBJ_ID            obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
+        KOS_OBJ_ID            prev_locals;
+        int                   pushed    = 0;
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
@@ -697,8 +697,8 @@ int main(void)
         TEST(KOS_push_locals(ctx, &pushed, 2, &obj_id[0], &obj_id[1]) == KOS_SUCCESS);
         TEST(pushed == 2);
 
-        obj_id[0] = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
-        obj_id[1] = KOS_new_buffer(ctx, _KOS_POOL_SIZE / 2U);
+        obj_id[0] = KOS_new_buffer(ctx, KOS_POOL_SIZE / 2U);
+        obj_id[1] = KOS_new_buffer(ctx, KOS_POOL_SIZE / 2U);
 
         TEST( ! IS_BAD_PTR(obj_id[0]));
         TEST( ! IS_BAD_PTR(obj_id[1]));
@@ -719,8 +719,8 @@ int main(void)
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          >  0);
 
-        TEST(_test_buffer(obj_id[0], 0x0A, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
-        TEST(_test_buffer(obj_id[1], 0x0B, _KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
+        TEST(_test_buffer(obj_id[0], 0x0A, KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
+        TEST(_test_buffer(obj_id[1], 0x0B, KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
 
         KOS_pop_local_scope(ctx, &prev_locals);
 
@@ -732,7 +732,7 @@ int main(void)
         TEST(stats.num_objs_freed     == 4);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 0);
-        TEST(stats.num_pages_freed    >= _KOS_POOL_SIZE / _KOS_PAGE_SIZE);
+        TEST(stats.num_pages_freed    >= KOS_POOL_SIZE / KOS_PAGE_SIZE);
         TEST(stats.size_evacuated     == base_stats.size_evacuated);
         TEST(stats.size_freed         >  0);
         TEST(stats.size_kept          == 0);
@@ -747,10 +747,10 @@ int main(void)
     {
         const uint32_t sizeof_buf    = sizeof(KOS_BUFFER);
         const uint32_t sizeof_buf_st = sizeof(KOS_BUFFER_STORAGE) - 1U;
-        const uint32_t obj_align     = 1U << _KOS_OBJ_ALIGN_BITS;
+        const uint32_t obj_align     = 1U << KOS_OBJ_ALIGN_BITS;
         const uint32_t hdr_size      = KOS_align_up(sizeof_buf, obj_align) +
                                        KOS_align_up(sizeof_buf_st, obj_align);
-        const uint32_t page_buf_cap  = KOS_align_up((uint32_t)(_KOS_PAGE_SIZE - hdr_size),
+        const uint32_t page_buf_cap  = KOS_align_up((uint32_t)(KOS_PAGE_SIZE - hdr_size),
                                                     KOS_BUFFER_CAPACITY_ALIGN);
         const int      min_over_size = -2 * (int)KOS_BUFFER_CAPACITY_ALIGN;
         const int      max_over_size = 2 * KOS_BUFFER_CAPACITY_ALIGN;
@@ -759,16 +759,16 @@ int main(void)
 
         for ( ; num_pages <= max_num_pages; ++num_pages) {
 
-            int       size     = (int)page_buf_cap + (num_pages - 1) * _KOS_PAGE_SIZE + min_over_size;
-            const int max_size = (int)page_buf_cap + (num_pages - 1) * _KOS_PAGE_SIZE + max_over_size;
+            int       size     = (int)page_buf_cap + (num_pages - 1) * KOS_PAGE_SIZE + min_over_size;
+            const int max_size = (int)page_buf_cap + (num_pages - 1) * KOS_PAGE_SIZE + max_over_size;
 
             for ( ; size <= max_size; size += KOS_BUFFER_CAPACITY_ALIGN) {
 
-                struct _KOS_GC_STATS stats;
-                KOS_OBJ_ID           obj_ids[_KOS_POOL_SIZE / _KOS_PAGE_SIZE];
-                KOS_OBJ_ID           prev_locals;
-                unsigned             i;
-                const unsigned       num_objs = (unsigned)(sizeof(obj_ids) / sizeof(obj_ids[0]));
+                struct KOS_GC_STATS_S stats;
+                KOS_OBJ_ID            obj_ids[KOS_POOL_SIZE / KOS_PAGE_SIZE];
+                KOS_OBJ_ID            prev_locals;
+                unsigned              i;
+                const unsigned        num_objs = (unsigned)(sizeof(obj_ids) / sizeof(obj_ids[0]));
 
                 TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 

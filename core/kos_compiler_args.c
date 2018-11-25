@@ -239,7 +239,7 @@ static void _update_arguments(KOS_COMP_UNIT *program,
     }
 
     num_args  = have_ellipsis ? num_non_def + num_def : max_used + 1;
-    have_rest = num_args > (int)_KOS_MAX_ARGS_IN_REGS;
+    have_rest = num_args > (int)KOS_MAX_ARGS_IN_REGS;
 
     for (i = 0, arg_node = node; arg_node && arg_node->type != NT_ELLIPSIS; arg_node = arg_node->next, ++i) {
 
@@ -251,7 +251,7 @@ static void _update_arguments(KOS_COMP_UNIT *program,
 
         assert(var->type == VAR_ARGUMENT || var->type == VAR_INDEPENDENT_ARGUMENT);
 
-        if ( ! have_rest || (i < (int)_KOS_MAX_ARGS_IN_REGS - 1)) {
+        if ( ! have_rest || (i < (int)KOS_MAX_ARGS_IN_REGS - 1)) {
 
             if (var->type == VAR_INDEPENDENT_ARGUMENT) {
                 assert(var->num_reads || var->num_assignments);
@@ -262,7 +262,7 @@ static void _update_arguments(KOS_COMP_UNIT *program,
                 var->type = VAR_ARGUMENT_IN_REG;
         }
         else
-            var->array_idx -= (int)_KOS_MAX_ARGS_IN_REGS - 1;
+            var->array_idx -= (int)KOS_MAX_ARGS_IN_REGS - 1;
     }
 
     scope->num_args       = num_args;

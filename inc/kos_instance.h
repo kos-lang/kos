@@ -27,47 +27,48 @@
 #include "kos_threads.h"
 #include <stddef.h>
 
-struct _KOS_MODULE_LOAD_CHAIN;
-struct _KOS_PAGE_HEADER;
-struct _KOS_POOL_HEADER;
-struct _KOS_WASTE_HEADER;
+struct KOS_MODULE_LOAD_CHAIN_S;
+struct KOS_PAGE_HEADER_S;
+struct KOS_POOL_HEADER_S;
+struct KOS_WASTE_HEADER_S;
 
-typedef struct _KOS_PAGE_HEADER  _KOS_PAGE;
-typedef struct _KOS_POOL_HEADER  _KOS_POOL;
-typedef struct _KOS_WASTE_HEADER _KOS_WASTE;
+typedef struct KOS_PAGE_HEADER_S       KOS_PAGE;
+typedef struct KOS_POOL_HEADER_S       KOS_POOL;
+typedef struct KOS_WASTE_HEADER_S      KOS_WASTE;
+typedef struct KOS_MODULE_LOAD_CHAIN_S KOS_MODULE_LOAD_CHAIN;
 
-struct _KOS_HEAP {
+typedef struct KOS_HEAP_S {
     KOS_MUTEX            mutex;
     KOS_ATOMIC(uint32_t) gc_state;
     uint32_t             heap_size;         /* Total amount of memory owned by the heap */
     uint32_t             used_size;         /* Size used in full_ and non_full_pages    */
     uint32_t             gc_threshold;      /* Next used size that triggers GC          */
-    _KOS_PAGE           *free_pages;        /* Pages which are currently unused         */
-    _KOS_PAGE           *non_full_pages;    /* Pages in which new objects are allocated */
-    _KOS_PAGE           *full_pages;        /* Pages which have no room for new objects */
-    _KOS_POOL           *pools;             /* Allocated memory - page pools            */
-    _KOS_POOL           *pool_headers;      /* List of pool headers for new pools       */
-    _KOS_WASTE          *waste;             /* Unused memory from pool allocations      */
+    KOS_PAGE            *free_pages;        /* Pages which are currently unused         */
+    KOS_PAGE            *non_full_pages;    /* Pages in which new objects are allocated */
+    KOS_PAGE            *full_pages;        /* Pages which have no room for new objects */
+    KOS_POOL            *pools;             /* Allocated memory - page pools            */
+    KOS_POOL            *pool_headers;      /* List of pool headers for new pools       */
+    KOS_WASTE           *waste;             /* Unused memory from pool allocations      */
 
 #ifdef CONFIG_MAD_GC
-    struct _KOS_LOCKED_PAGES *locked_pages_first;
-    struct _KOS_LOCKED_PAGES *locked_pages_last;
+    struct KOS_LOCKED_PAGES_S *locked_pages_first;
+    struct KOS_LOCKED_PAGES_S *locked_pages_last;
 #endif
-};
+} KOS_HEAP;
 
 /* Stored on the stack as catch offset */
-enum _KOS_CATCH_STATE {
+enum KOS_CATCH_STATE_E {
     KOS_NO_CATCH = 0x1FFFFF
 };
 
 /* Stack header flags */
-enum _KOS_STACK_HEADER_FLAGS {
+enum KOS_STACK_HEADER_FLAGS_E {
     KOS_NORMAL_STACK    = 0U,
     KOS_REENTRANT_STACK = 1U,   /* Stack of a generator or closure      */
     KOS_CAN_YIELD       = 2U    /* Indicates that a generator can yield */
 };
 
-typedef struct _KOS_STACK_HEADER {
+typedef struct KOS_STACK_HEADER_S {
     KOS_OBJ_ID alloc_size;
     uint8_t    type;
     uint8_t    flags;
@@ -89,7 +90,7 @@ typedef struct _KOS_STACK_HEADER {
  * +N number of registers (small int)
  */
 
-typedef struct _KOS_STACK {
+typedef struct KOS_STACK_S {
     KOS_STACK_HEADER       header;
     uint32_t               capacity;
     KOS_ATOMIC(uint32_t)   size;
@@ -101,7 +102,7 @@ struct KOS_THREAD_CONTEXT_S {
     KOS_CONTEXT   prev;
 
     KOS_INSTANCE *inst;
-    _KOS_PAGE    *cur_page;
+    KOS_PAGE     *cur_page;
     KOS_OBJ_ID    exception;
     KOS_OBJ_ID    retval;
     KOS_OBJ_ID    stack;        /* Topmost container for registers & stack frames */
@@ -112,7 +113,7 @@ struct KOS_THREAD_CONTEXT_S {
     uint32_t      stack_depth;
 };
 
-struct _KOS_PROTOTYPES {
+struct KOS_PROTOTYPES_S {
     KOS_OBJ_ID object_proto;
     KOS_OBJ_ID number_proto;
     KOS_OBJ_ID integer_proto;
@@ -129,17 +130,17 @@ struct _KOS_PROTOTYPES {
     KOS_OBJ_ID thread_proto;
 };
 
-struct _KOS_MODULE_MGMT {
+struct KOS_MODULE_MGMT_S {
     KOS_OBJ_ID search_paths;
     KOS_OBJ_ID module_names;
     KOS_OBJ_ID modules;
     KOS_OBJ_ID init_module;  /* Initial module for top-level stack frame */
     KOS_OBJ_ID module_inits; /* Registered built-in module initializers  */
 
-    struct _KOS_MODULE_LOAD_CHAIN *load_chain;
+    KOS_MODULE_LOAD_CHAIN *load_chain;
 };
 
-struct _KOS_THREAD_MGMT {
+struct KOS_THREAD_MGMT_S {
     KOS_TLS_KEY                 thread_key;
     struct KOS_THREAD_CONTEXT_S main_thread;
     KOS_MUTEX                   mutex;
@@ -187,13 +188,13 @@ enum KOS_INSTANCE_FLAGS_E {
 };
 
 struct KOS_INSTANCE_S {
-    uint32_t                flags;
-    struct _KOS_HEAP        heap;
-    KOS_OBJ_ID              common_strings[KOS_STR_NUM]; /* For KOS_get_string() */
-    KOS_OBJ_ID              args;
-    struct _KOS_PROTOTYPES  prototypes;
-    struct _KOS_MODULE_MGMT modules;
-    struct _KOS_THREAD_MGMT threads;
+    uint32_t                 flags;
+    KOS_HEAP                 heap;
+    KOS_OBJ_ID               common_strings[KOS_STR_NUM]; /* For KOS_get_string() */
+    KOS_OBJ_ID               args;
+    struct KOS_PROTOTYPES_S  prototypes;
+    struct KOS_MODULE_MGMT_S modules;
+    struct KOS_THREAD_MGMT_S threads;
 };
 
 #ifdef __cplusplus
@@ -268,17 +269,17 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
 void KOS_raise_generator_end(KOS_CONTEXT ctx);
 
-enum _KOS_CALL_FLAVOR {
+enum KOS_CALL_FLAVOR_E {
     KOS_CALL_FUNCTION,
     KOS_CALL_GENERATOR,
     KOS_APPLY_FUNCTION
 };
 
-KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
-                             KOS_OBJ_ID            func_obj,
-                             KOS_OBJ_ID            this_obj,
-                             KOS_OBJ_ID            args_obj,
-                             enum _KOS_CALL_FLAVOR call_flavor);
+KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
+                             KOS_OBJ_ID             func_obj,
+                             KOS_OBJ_ID             this_obj,
+                             KOS_OBJ_ID             args_obj,
+                             enum KOS_CALL_FLAVOR_E call_flavor);
 
 #define KOS_call_function(ctx, func_obj, this_obj, args_obj) \
     kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
@@ -297,7 +298,7 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...);
 
 void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
 
-struct _KOS_GC_STATS {
+struct KOS_GC_STATS_S {
     unsigned num_objs_evacuated;
     unsigned num_objs_freed;
     unsigned num_objs_finalized;
@@ -308,8 +309,8 @@ struct _KOS_GC_STATS {
     unsigned size_kept;
 };
 
-int KOS_collect_garbage(KOS_CONTEXT           ctx,
-                        struct _KOS_GC_STATS *stats);
+int KOS_collect_garbage(KOS_CONTEXT            ctx,
+                        struct KOS_GC_STATS_S *stats);
 
 #ifdef __cplusplus
 }

@@ -81,10 +81,10 @@ static KOS_STRING *_new_empty_string(KOS_CONTEXT      ctx,
     return str;
 }
 
-static KOS_OBJ_ID _new_string(KOS_CONTEXT           ctx,
-                              const char           *s,
-                              unsigned              length,
-                              enum _KOS_UTF8_ESCAPE escape)
+static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
+                              const char     *s,
+                              unsigned        length,
+                              KOS_UTF8_ESCAPE escape)
 {
     KOS_STRING      *str;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
@@ -1198,10 +1198,10 @@ int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
                           (unsigned)b_end);
 }
 
-static void _string_find_brute_force(KOS_OBJ_ID         obj_id_text,
-                                     KOS_OBJ_ID         obj_id_pattern,
-                                     enum _KOS_FIND_DIR reverse,
-                                     int               *pos)
+static void _string_find_brute_force(KOS_OBJ_ID          obj_id_text,
+                                     KOS_OBJ_ID          obj_id_pattern,
+                                     enum KOS_FIND_DIR_E reverse,
+                                     int                *pos)
 {
     const int text_len     = (int)KOS_get_string_length(obj_id_text);
     const int pat_len      = (int)KOS_get_string_length(obj_id_pattern);
@@ -1224,11 +1224,11 @@ static void _string_find_brute_force(KOS_OBJ_ID         obj_id_text,
     *pos = -1;
 }
 
-int KOS_string_find(KOS_CONTEXT        ctx,
-                    KOS_OBJ_ID         obj_id_text,
-                    KOS_OBJ_ID         obj_id_pattern,
-                    enum _KOS_FIND_DIR reverse,
-                    int               *pos)
+int KOS_string_find(KOS_CONTEXT         ctx,
+                    KOS_OBJ_ID          obj_id_text,
+                    KOS_OBJ_ID          obj_id_pattern,
+                    enum KOS_FIND_DIR_E reverse,
+                    int                *pos)
 {
     int text_len;
     int pattern_len;
@@ -1263,12 +1263,12 @@ int KOS_string_find(KOS_CONTEXT        ctx,
     return KOS_SUCCESS;
 }
 
-int KOS_string_scan(KOS_CONTEXT            ctx,
-                    KOS_OBJ_ID             obj_id_text,
-                    KOS_OBJ_ID             obj_id_pattern,
-                    enum _KOS_FIND_DIR     reverse,
-                    enum _KOS_SCAN_INCLUDE include,
-                    int                   *pos)
+int KOS_string_scan(KOS_CONTEXT             ctx,
+                    KOS_OBJ_ID              obj_id_text,
+                    KOS_OBJ_ID              obj_id_pattern,
+                    enum KOS_FIND_DIR_E     reverse,
+                    enum KOS_SCAN_INCLUDE_E include,
+                    int                    *pos)
 {
     int     text_len;
     int     pattern_len;
@@ -1350,9 +1350,9 @@ int KOS_string_scan(KOS_CONTEXT            ctx,
             switch (pattern_elem_size) {
 
                 case KOS_STRING_ELEM_8: {
-                    const uint8_t         *pat_ptr = pattern;
-                    const uint8_t         *pat_end = pat_ptr + pattern_len;
-                    enum _KOS_SCAN_INCLUDE match   = KOS_SCAN_EXCLUDE;
+                    const uint8_t          *pat_ptr = pattern;
+                    const uint8_t          *pat_end = pat_ptr + pattern_len;
+                    enum KOS_SCAN_INCLUDE_E match   = KOS_SCAN_EXCLUDE;
                     for ( ; pat_ptr != pat_end; ++pat_ptr)
                         if (*pat_ptr == code) {
                             match = KOS_SCAN_INCLUDE;
@@ -1366,9 +1366,9 @@ int KOS_string_scan(KOS_CONTEXT            ctx,
                 }
 
                 case KOS_STRING_ELEM_16: {
-                    const uint16_t        *pat_ptr = (const uint16_t *)pattern;
-                    const uint16_t        *pat_end = pat_ptr + pattern_len;
-                    enum _KOS_SCAN_INCLUDE match   = KOS_SCAN_EXCLUDE;
+                    const uint16_t         *pat_ptr = (const uint16_t *)pattern;
+                    const uint16_t         *pat_end = pat_ptr + pattern_len;
+                    enum KOS_SCAN_INCLUDE_E match   = KOS_SCAN_EXCLUDE;
                     for ( ; pat_ptr != pat_end; ++pat_ptr)
                         if (*pat_ptr == code) {
                             match = KOS_SCAN_INCLUDE;
@@ -1382,9 +1382,9 @@ int KOS_string_scan(KOS_CONTEXT            ctx,
                 }
 
                 default: {
-                    const uint32_t        *pat_ptr = (const uint32_t *)pattern;
-                    const uint32_t        *pat_end = pat_ptr + pattern_len;
-                    enum _KOS_SCAN_INCLUDE match   = KOS_SCAN_EXCLUDE;
+                    const uint32_t         *pat_ptr = (const uint32_t *)pattern;
+                    const uint32_t         *pat_end = pat_ptr + pattern_len;
+                    enum KOS_SCAN_INCLUDE_E match   = KOS_SCAN_EXCLUDE;
                     assert(pattern_elem_size == KOS_STRING_ELEM_32);
                     for ( ; pat_ptr != pat_end; ++pat_ptr)
                         if (*pat_ptr == code) {

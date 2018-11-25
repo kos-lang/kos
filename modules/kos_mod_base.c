@@ -1581,14 +1581,14 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _is_less_for_sort(KOS_OBJ_ID               left_key,
-                             KOS_OBJ_ID               left_idx,
-                             enum _KOS_COMPARE_RESULT lt,
-                             enum _KOS_COMPARE_RESULT gt,
-                             KOS_OBJ_ID               right_key,
-                             KOS_OBJ_ID               right_idx)
+static int _is_less_for_sort(KOS_OBJ_ID         left_key,
+                             KOS_OBJ_ID         left_idx,
+                             KOS_COMPARE_RESULT lt,
+                             KOS_COMPARE_RESULT gt,
+                             KOS_OBJ_ID         right_key,
+                             KOS_OBJ_ID         right_idx)
 {
-    const enum _KOS_COMPARE_RESULT cmp = KOS_compare(left_key, right_key);
+    const KOS_COMPARE_RESULT cmp = KOS_compare(left_key, right_key);
 
     if (cmp == lt)
         return 1;
@@ -1610,10 +1610,10 @@ static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
     const KOS_OBJ_ID pivot_key = KOS_atomic_read_obj(*(end - step));
     const KOS_OBJ_ID pivot_idx = KOS_atomic_read_obj(*(end - step + 1));
 
-    KOS_ATOMIC(KOS_OBJ_ID)        *mid = begin - step;
-    KOS_ATOMIC(KOS_OBJ_ID)        *p   = begin;
-    const enum _KOS_COMPARE_RESULT lt  = reverse ? KOS_GREATER_THAN : KOS_LESS_THAN;
-    const enum _KOS_COMPARE_RESULT gt  = reverse ? KOS_LESS_THAN : KOS_GREATER_THAN;
+    KOS_ATOMIC(KOS_OBJ_ID)  *mid = begin - step;
+    KOS_ATOMIC(KOS_OBJ_ID)  *p   = begin;
+    const KOS_COMPARE_RESULT lt  = reverse ? KOS_GREATER_THAN : KOS_LESS_THAN;
+    const KOS_COMPARE_RESULT gt  = reverse ? KOS_LESS_THAN : KOS_GREATER_THAN;
 
     end -= step;
 
@@ -3307,10 +3307,10 @@ static KOS_OBJ_ID _scan(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    int                    error   = KOS_SUCCESS;
-    int                    pos     = 0;
-    KOS_OBJ_ID             pattern = KOS_array_read(ctx, args_obj, 0);
-    enum _KOS_SCAN_INCLUDE include = KOS_SCAN_INCLUDE;
+    int                     error   = KOS_SUCCESS;
+    int                     pos     = 0;
+    KOS_OBJ_ID              pattern = KOS_array_read(ctx, args_obj, 0);
+    enum KOS_SCAN_INCLUDE_E include = KOS_SCAN_INCLUDE;
 
     TRY_OBJID(pattern);
 
@@ -3391,11 +3391,11 @@ static KOS_OBJ_ID _rscan(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
                          KOS_OBJ_ID  args_obj)
 {
-    int                    error   = KOS_SUCCESS;
-    int                    pos     = -1;
-    KOS_OBJ_ID             pattern = KOS_array_read(ctx, args_obj, 0);
-    enum _KOS_SCAN_INCLUDE include = KOS_SCAN_INCLUDE;
-    unsigned               text_len;
+    int                     error   = KOS_SUCCESS;
+    int                     pos     = -1;
+    KOS_OBJ_ID              pattern = KOS_array_read(ctx, args_obj, 0);
+    enum KOS_SCAN_INCLUDE_E include = KOS_SCAN_INCLUDE;
+    unsigned                text_len;
 
     TRY_OBJID(pattern);
 

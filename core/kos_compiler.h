@@ -181,10 +181,10 @@ typedef struct KOS_COMP_FLOAT_S {
 } KOS_COMP_FLOAT;
 
 typedef struct KOS_COMP_STRING_S {
-    KOS_COMP_CONST header;
-    const char    *str;
-    unsigned       length;
-    enum _KOS_UTF8_ESCAPE escape;
+    KOS_COMP_CONST  header;
+    const char     *str;
+    unsigned        length;
+    KOS_UTF8_ESCAPE escape;
 } KOS_COMP_STRING;
 
 typedef struct KOS_COMP_FUNCTION_S {

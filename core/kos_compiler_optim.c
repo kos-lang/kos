@@ -33,7 +33,7 @@
 
 static const char str_err_div_by_zero[] = "division by zero";
 
-enum _KOS_TERMINATOR {
+enum KOS_TERMINATOR_E {
     TERM_NONE   = 0,
     TERM_BREAK  = 1,
     TERM_THROW  = 2,

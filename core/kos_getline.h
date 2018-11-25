@@ -59,7 +59,7 @@ int kos_getline_init(KOS_GETLINE *state);
 
 #endif
 
-enum _KOS_PROMPT {
+enum KOS_PROMPT_E {
     PROMPT_FIRST_LINE,
     PROMPT_SUBSEQUENT_LINE
 };
@@ -67,7 +67,7 @@ enum _KOS_PROMPT {
 struct KOS_VECTOR_S;
 
 int kos_getline(KOS_GETLINE         *state,
-                enum _KOS_PROMPT     prompt,
+                enum KOS_PROMPT_E    prompt,
                 struct KOS_VECTOR_S *buf);
 
 #endif

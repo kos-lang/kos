@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 
-enum _KOS_ESCAPE_TYPE {
+enum KOS_ESCAPE_TYPE_E {
     KOS_ET_INVALID     = 0,
     KOS_ET_INTERPOLATE = 40,
     KOS_ET_HEX         = 120
@@ -33,30 +33,30 @@ enum _KOS_ESCAPE_TYPE {
 
 extern const char kos_escape_sequence_map[256];
 
-enum _KOS_UTF8_ESCAPE {
+typedef enum KOS_UTF8_ESCAPE_E {
     KOS_UTF8_NO_ESCAPE,
     KOS_UTF8_WITH_ESCAPE
-};
+} KOS_UTF8_ESCAPE;
 
-unsigned kos_utf8_get_len(const char           *str,
-                          unsigned              length,
-                          enum _KOS_UTF8_ESCAPE escape,
-                          uint32_t             *max_code);
+unsigned kos_utf8_get_len(const char     *str,
+                          unsigned        length,
+                          KOS_UTF8_ESCAPE escape,
+                          uint32_t       *max_code);
 
-int kos_utf8_decode_8(const char           *str,
-                      unsigned              length,
-                      enum _KOS_UTF8_ESCAPE escape,
-                      uint8_t              *out);
+int kos_utf8_decode_8(const char     *str,
+                      unsigned        length,
+                      KOS_UTF8_ESCAPE escape,
+                      uint8_t        *out);
 
-int kos_utf8_decode_16(const char           *str,
-                       unsigned              length,
-                       enum _KOS_UTF8_ESCAPE escape,
-                       uint16_t             *out);
+int kos_utf8_decode_16(const char     *str,
+                       unsigned        length,
+                       KOS_UTF8_ESCAPE escape,
+                       uint16_t       *out);
 
-int kos_utf8_decode_32(const char           *str,
-                       unsigned              length,
-                       enum _KOS_UTF8_ESCAPE escape,
-                       uint32_t             *out);
+int kos_utf8_decode_32(const char     *str,
+                       unsigned        length,
+                       KOS_UTF8_ESCAPE escape,
+                       uint32_t       *out);
 
 unsigned kos_utf8_calc_buf_size_8(const uint8_t *buf, unsigned length);
 

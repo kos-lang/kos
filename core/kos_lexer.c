@@ -42,7 +42,7 @@ static const char str_err_no_hex_digits[]       = "invalid escape sequence, no h
 static const char str_err_too_many_hex_digits[] = "invalid escape sequence, more than 6 hex digits specified";
 static const char str_err_tab[]                 = "unexpected tab character, tabs are not allowed";
 
-enum _KOS_LEXEM_TYPE {
+enum KOS_LEXEM_TYPE_E {
     LT_INVALID,
     LT_WHITESPACE,
     LT_COMMENT,
@@ -187,7 +187,7 @@ static const unsigned char lexem_types[] = {
     LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID
 };
 
-enum _OPERATOR_MAP_INDEX {
+enum OPERATOR_MAP_INDEX_E {
     OMI_NONE,
     OMI_BANG,
     OMI_PERCENT,
@@ -259,12 +259,12 @@ static const unsigned char hex_and_operator_map[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-struct _KOS_OP_SPECIFIER {
+struct KOS_OP_SPECIFIER_S {
     const char       *str;
     KOS_OPERATOR_TYPE type;
 };
 
-static const struct _KOS_OP_SPECIFIER operator_map[][7] = {
+static const struct KOS_OP_SPECIFIER_S operator_map[][7] = {
     { { 0,   OT_NONE   } },
     { { "!", OT_LOGNOT }, { "!=",  OT_NE     }, { 0,     OT_NONE   } },
     { { "%", OT_MOD    }, { "%=",  OT_SETMOD }, { 0,     OT_NONE   } },
@@ -717,7 +717,7 @@ static int _collect_bin(KOS_LEXER *lexer)
 
 static void _collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
 {
-    const struct _KOS_OP_SPECIFIER *op_group =
+    const struct KOS_OP_SPECIFIER_S *op_group =
             operator_map[hex_and_operator_map[(unsigned char)*lexer->prefetch_begin]];
 
     const char *begin, *end;

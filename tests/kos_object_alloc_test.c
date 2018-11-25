@@ -405,9 +405,9 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID group_one[(_KOS_PAGE_SIZE / 10U) / sizeof(KOS_OPAQUE)];
-        KOS_OBJ_ID group_two[(_KOS_POOL_SIZE / _KOS_PAGE_SIZE) + 1U];
-        KOS_OBJ_ID group_three[2U * (_KOS_PAGE_SIZE / sizeof(KOS_BYTES))];
+        KOS_OBJ_ID group_one[(KOS_PAGE_SIZE / 10U) / sizeof(KOS_OPAQUE)];
+        KOS_OBJ_ID group_two[(KOS_POOL_SIZE / KOS_PAGE_SIZE) + 1U];
+        KOS_OBJ_ID group_three[2U * (KOS_PAGE_SIZE / sizeof(KOS_BYTES))];
         KOS_OBJ_ID group_four[2];
         KOS_OBJ_ID group_five[2];
 
@@ -417,7 +417,7 @@ int main(void)
          * Allocate objects in one page until the page is full, put the page
          * on the list of full pages. */
 
-        group_one[0] = _alloc_opaque(ctx, 0xFEU, 90U * _KOS_PAGE_SIZE / 100U);
+        group_one[0] = _alloc_opaque(ctx, 0xFEU, 90U * KOS_PAGE_SIZE / 100U);
         TEST( ! IS_BAD_PTR(group_one[0]));
 
         for (i = 1; i < sizeof(group_one) / sizeof(group_one[0]); ++i) {
@@ -433,8 +433,8 @@ int main(void)
             /* Allocate smaller objects (leave more room) in the first half of
              * the allocated pages. */
             const uint32_t size = i < sizeof(group_two) / (2U * sizeof(group_two[0]))
-                    ? (_KOS_PAGE_SIZE / 2U)
-                    : (90U * _KOS_PAGE_SIZE / 100U);
+                    ? (KOS_PAGE_SIZE / 2U)
+                    : (90U * KOS_PAGE_SIZE / 100U);
 
             group_two[i] = _alloc_opaque(ctx, (uint8_t)i, size);
             TEST( ! IS_BAD_PTR(group_two[i]));
@@ -452,7 +452,7 @@ int main(void)
          * Allocate huge objects spanning multiple free pages. */
 
         for (i = 0; i < sizeof(group_four) / sizeof(group_four[0]); ++i) {
-            group_four[i] = _alloc_opaque(ctx, (uint8_t)(0x80U + i), 3U * _KOS_PAGE_SIZE / 2U);
+            group_four[i] = _alloc_opaque(ctx, (uint8_t)(0x80U + i), 3U * KOS_PAGE_SIZE / 2U);
             TEST( ! IS_BAD_PTR(group_four[i]));
         }
 
@@ -460,7 +460,7 @@ int main(void)
          * Allocate huge objects which cannot be accommodated in existing full pages. */
 
         for (i = 0; i < sizeof(group_five) / sizeof(group_five[0]); ++i) {
-            group_five[i] = _alloc_opaque(ctx, (uint8_t)(0x90U + i), _KOS_POOL_SIZE / 2U);
+            group_five[i] = _alloc_opaque(ctx, (uint8_t)(0x90U + i), KOS_POOL_SIZE / 2U);
             TEST( ! IS_BAD_PTR(group_five[i]));
         }
 
@@ -490,13 +490,13 @@ int main(void)
 #ifndef NDEBUG
     {
         void      *pages[3];
-        KOS_OBJ_ID opaque[(_KOS_POOL_SIZE / _KOS_PAGE_SIZE) + 4U];
+        KOS_OBJ_ID opaque[(KOS_POOL_SIZE / KOS_PAGE_SIZE) + 4U];
 
         TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
 
         for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i) {
 
-            size_t size = _KOS_PAGE_SIZE / 4U;
+            size_t size = KOS_PAGE_SIZE / 4U;
             void  *mem;
 
             for (;;) {
@@ -509,12 +509,12 @@ int main(void)
 
                 kos_free(mem);
 
-                size += _KOS_PAGE_SIZE / 4U;
+                size += KOS_PAGE_SIZE / 4U;
             }
         }
 
         for (i = 0; i < sizeof(opaque) / sizeof(opaque[0]); ++i) {
-            opaque[i] = _alloc_opaque(ctx, (uint8_t)0xA1U, 3U * _KOS_PAGE_SIZE / 4U);
+            opaque[i] = _alloc_opaque(ctx, (uint8_t)0xA1U, 3U * KOS_PAGE_SIZE / 4U);
             TEST( ! IS_BAD_PTR(opaque[i]));
         }
 

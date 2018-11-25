@@ -39,18 +39,18 @@ static const char str_err_no_max_value[]  = "max argument missing";
 static const char str_err_not_random[]    = "invalid this";
 static const char str_err_out_of_memory[] = "out of memory";
 
-struct _KOS_RNG_CONTAINER {
+typedef struct KOS_RNG_CONTAINER_S {
     KOS_OBJ_HEADER       header; /* TODO remove this when we switch to malloc */
     KOS_ATOMIC(uint32_t) lock;
     struct KOS_RNG       rng;
-};
+} KOS_RNG_CONTAINER;
 
 static void _finalize(KOS_CONTEXT ctx,
                       void       *priv)
 {
     /* TODO free
     if (priv)
-        kos_free_buffer(ctx, priv, sizeof(struct _KOS_RNG_CONTAINER));
+        kos_free_buffer(ctx, priv, sizeof(KOS_RNG_CONTAINER));
     */
 }
 
@@ -89,10 +89,10 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int                        error    = KOS_SUCCESS;
-    struct _KOS_RNG_CONTAINER *rng      = 0;
-    KOS_OBJ_ID                 ret;
-    KOS_OBJ_ID                 seed_obj = KOS_BADPTR;
+    int                error    = KOS_SUCCESS;
+    KOS_RNG_CONTAINER *rng      = 0;
+    KOS_OBJ_ID         ret;
+    KOS_OBJ_ID         seed_obj = KOS_BADPTR;
 
     ret = KOS_new_object_with_prototype(ctx, this_obj);
     TRY_OBJID(ret);
@@ -112,11 +112,11 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
 
     /* TODO malloc when GC supports finalize */
     /*
-    rng = (struct _KOS_RNG_CONTAINER *)kos_malloc(sizeof(struct _KOS_RNG_CONTAINER));
+    rng = (KOS_RNG_CONTAINER *)kos_malloc(sizeof(KOS_RNG_CONTAINER));
     */
-    rng = (struct _KOS_RNG_CONTAINER *)kos_alloc_object(ctx,
-                                                        OBJ_OPAQUE,
-                                                        sizeof(struct _KOS_RNG_CONTAINER));
+    rng = (KOS_RNG_CONTAINER *)kos_alloc_object(ctx,
+                                                OBJ_OPAQUE,
+                                                sizeof(KOS_RNG_CONTAINER));
 
     if ( ! rng)
         RAISE_EXCEPTION(str_err_out_of_memory);
@@ -140,15 +140,15 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
 cleanup:
     /* TODO free
     if (rng)
-        kos_free_buffer(ctx, rng, sizeof(struct _KOS_RNG_CONTAINER));
+        kos_free_buffer(ctx, rng, sizeof(KOS_RNG_CONTAINER));
     */
 
     return error ? KOS_BADPTR : ret;
 }
 
-static int _get_rng(KOS_CONTEXT                 ctx,
-                    KOS_OBJ_ID                  this_obj,
-                    struct _KOS_RNG_CONTAINER **rng)
+static int _get_rng(KOS_CONTEXT         ctx,
+                    KOS_OBJ_ID          this_obj,
+                    KOS_RNG_CONTAINER **rng)
 {
     int error = KOS_SUCCESS;
 
@@ -157,7 +157,7 @@ static int _get_rng(KOS_CONTEXT                 ctx,
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT)
         RAISE_EXCEPTION(str_err_not_random);
 
-    *rng = (struct _KOS_RNG_CONTAINER *)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
+    *rng = (KOS_RNG_CONTAINER *)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
 
     if ( ! *rng)
         RAISE_EXCEPTION(str_err_not_random);
@@ -194,12 +194,12 @@ static KOS_OBJ_ID _rand_integer(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  this_obj,
                                 KOS_OBJ_ID  args_obj)
 {
-    struct _KOS_RNG_CONTAINER *rng       = 0;
-    int                        error     = KOS_SUCCESS;
-    int64_t                    value     = 0;
-    int                        min_max   = 0;
-    int64_t                    min_value = 0;
-    int64_t                    max_value = 0;
+    KOS_RNG_CONTAINER *rng       = 0;
+    int                error     = KOS_SUCCESS;
+    int64_t            value     = 0;
+    int                min_max   = 0;
+    int64_t            min_value = 0;
+    int64_t            max_value = 0;
 
     TRY(_get_rng(ctx, this_obj, &rng));
 
@@ -261,9 +261,9 @@ static KOS_OBJ_ID _rand_float(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  this_obj,
                               KOS_OBJ_ID  args_obj)
 {
-    struct _KOS_RNG_CONTAINER *rng   = 0;
-    int                        error = KOS_SUCCESS;
-    union _KOS_NUMERIC_VALUE   value;
+    KOS_RNG_CONTAINER *rng   = 0;
+    int                error = KOS_SUCCESS;
+    KOS_NUMERIC_VALUE  value;
 
     value.i = 0;
 

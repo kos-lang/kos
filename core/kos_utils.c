@@ -352,10 +352,10 @@ cleanup:
     return error;
 }
 
-static int _vector_append_str(KOS_CONTEXT         ctx,
-                              KOS_VECTOR         *cstr_vec,
-                              KOS_OBJ_ID          obj,
-                              enum _KOS_QUOTE_STR quote_str)
+static int _vector_append_str(KOS_CONTEXT   ctx,
+                              KOS_VECTOR   *cstr_vec,
+                              KOS_OBJ_ID    obj,
+                              KOS_QUOTE_STR quote_str)
 {
     unsigned str_len = 0;
     size_t   pos     = cstr_vec->size;
@@ -881,11 +881,11 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT         ctx,
-                                     KOS_OBJ_ID          obj_id,
-                                     enum _KOS_QUOTE_STR quote_str,
-                                     KOS_OBJ_ID         *str,
-                                     KOS_VECTOR         *cstr_vec)
+int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT   ctx,
+                                     KOS_OBJ_ID    obj_id,
+                                     KOS_QUOTE_STR quote_str,
+                                     KOS_OBJ_ID   *str,
+                                     KOS_VECTOR   *cstr_vec)
 {
     int error = KOS_SUCCESS;
 
@@ -983,12 +983,12 @@ KOS_OBJ_ID KOS_object_to_string(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : ret;
 }
 
-int KOS_print_to_cstr_vec(KOS_CONTEXT         ctx,
-                          KOS_OBJ_ID          array,
-                          enum _KOS_QUOTE_STR quote_str,
-                          KOS_VECTOR         *cstr_vec,
-                          const char         *sep,
-                          unsigned            sep_len)
+int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
+                          KOS_OBJ_ID    array,
+                          KOS_QUOTE_STR quote_str,
+                          KOS_VECTOR   *cstr_vec,
+                          const char   *sep,
+                          unsigned      sep_len)
 {
     int      error = KOS_SUCCESS;
     uint32_t len;
@@ -1115,7 +1115,7 @@ cleanup:
     return error;
 }
 
-static enum _KOS_COMPARE_RESULT _compare_int(int64_t a, int64_t b)
+static KOS_COMPARE_RESULT _compare_int(int64_t a, int64_t b)
 {
     return a < b ? KOS_LESS_THAN    :
            a > b ? KOS_GREATER_THAN :
@@ -1132,7 +1132,7 @@ static double _get_float(KOS_OBJ_ID obj_id)
         return OBJPTR(FLOAT, obj_id)->value;
 }
 
-static enum _KOS_COMPARE_RESULT _compare_float(KOS_OBJ_ID a, KOS_OBJ_ID b)
+static KOS_COMPARE_RESULT _compare_float(KOS_OBJ_ID a, KOS_OBJ_ID b)
 {
     const double a_float = _get_float(a);
     const double b_float = _get_float(b);
@@ -1146,19 +1146,19 @@ static enum _KOS_COMPARE_RESULT _compare_float(KOS_OBJ_ID a, KOS_OBJ_ID b)
 }
 
 /* This is used when comparing arrays to prevent infinite recursion */
-struct _KOS_COMPARE_REF {
-    KOS_OBJ_ID               a;
-    KOS_OBJ_ID               b;
-    struct _KOS_COMPARE_REF *next;
+struct KOS_COMPARE_REF_S {
+    KOS_OBJ_ID                a;
+    KOS_OBJ_ID                b;
+    struct KOS_COMPARE_REF_S *next;
 };
 
-static enum _KOS_COMPARE_RESULT _compare(KOS_OBJ_ID               a,
-                                         KOS_OBJ_ID               b,
-                                         struct _KOS_COMPARE_REF *cmp_ref);
+static KOS_COMPARE_RESULT _compare(KOS_OBJ_ID                a,
+                                   KOS_OBJ_ID                b,
+                                   struct KOS_COMPARE_REF_S *cmp_ref);
 
-static enum _KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID               a,
-                                               KOS_OBJ_ID               b,
-                                               struct _KOS_COMPARE_REF *cmp_ref)
+static KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID                a,
+                                         KOS_OBJ_ID                b,
+                                         struct KOS_COMPARE_REF_S *cmp_ref)
 {
     const uint32_t a_size   = KOS_get_array_size(a);
     const uint32_t b_size   = KOS_get_array_size(b);
@@ -1167,8 +1167,8 @@ static enum _KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID               a,
     KOS_ATOMIC(KOS_OBJ_ID)       *a_buf    = a_size ? kos_get_array_buffer(OBJPTR(ARRAY, a)) : 0;
     KOS_ATOMIC(KOS_OBJ_ID)       *b_buf    = b_size ? kos_get_array_buffer(OBJPTR(ARRAY, b)) : 0;
     KOS_ATOMIC(KOS_OBJ_ID) *const a_end    = a_buf + cmp_size;
-    enum _KOS_COMPARE_RESULT      cmp      = KOS_EQUAL;
-    struct _KOS_COMPARE_REF       this_ref;
+    KOS_COMPARE_RESULT            cmp      = KOS_EQUAL;
+    struct KOS_COMPARE_REF_S      this_ref;
 
     this_ref.a    = a;
     this_ref.b    = b;
@@ -1204,7 +1204,7 @@ static enum _KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID               a,
                              KOS_EQUAL;
 }
 
-static enum _KOS_COMPARE_RESULT _compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
+static KOS_COMPARE_RESULT _compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
 {
     const uint32_t a_size   = KOS_get_buffer_size(a);
     const uint32_t b_size   = KOS_get_buffer_size(b);
@@ -1220,9 +1220,9 @@ static enum _KOS_COMPARE_RESULT _compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
                                  KOS_EQUAL;
 }
 
-static enum _KOS_COMPARE_RESULT _compare(KOS_OBJ_ID               a,
-                                         KOS_OBJ_ID               b,
-                                         struct _KOS_COMPARE_REF *cmp_ref)
+static KOS_COMPARE_RESULT _compare(KOS_OBJ_ID                a,
+                                   KOS_OBJ_ID                b,
+                                   struct KOS_COMPARE_REF_S *cmp_ref)
 {
     const KOS_TYPE a_type = GET_OBJ_TYPE(a);
     const KOS_TYPE b_type = GET_OBJ_TYPE(b);
@@ -1287,8 +1287,8 @@ static enum _KOS_COMPARE_RESULT _compare(KOS_OBJ_ID               a,
         return (a_type < b_type) ? KOS_LESS_THAN : KOS_GREATER_THAN;
 }
 
-enum _KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
-                                     KOS_OBJ_ID b)
+KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
+                               KOS_OBJ_ID b)
 {
     return _compare(a, b, 0);
 }

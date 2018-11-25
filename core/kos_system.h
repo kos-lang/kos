@@ -51,11 +51,11 @@ int kos_get_env(const char          *name,
 
 int kos_executable_path(struct KOS_VECTOR_S *buf);
 
-enum _KOS_PROTECT {
-    _KOS_NO_ACCESS,
-    _KOS_READ_WRITE
+enum KOS_PROTECT_E {
+    KOS_NO_ACCESS,
+    KOS_READ_WRITE
 };
 
-int kos_mem_protect(void *ptr, unsigned size, enum _KOS_PROTECT protect);
+int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect);
 
 #endif

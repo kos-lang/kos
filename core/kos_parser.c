@@ -180,7 +180,7 @@ static int _increase_ast_depth(KOS_PARSER *parser)
 
     ++parser->ast_depth;
 
-    if (parser->ast_depth > _KOS_MAX_AST_DEPTH) {
+    if (parser->ast_depth > KOS_MAX_AST_DEPTH) {
         parser->error_str = str_err_exceeded_ast_depth;
         error = KOS_ERROR_PARSE_FAILED;
     }

@@ -212,8 +212,8 @@ static int _test_instr(KOS_CONTEXT          ctx,
                 code[words++] = (uint8_t)num_constants;
                 parms[i]      = regs++;
                 {
-                    KOS_OBJ_ID               value;
-                    union _KOS_NUMERIC_VALUE num;
+                    KOS_OBJ_ID        value;
+                    KOS_NUMERIC_VALUE num;
 
                     num.i = (int64_t)((uint64_t)args[i].low + (((uint64_t)args[i].high) << 32));
                     value = KOS_new_float(ctx, num.d);

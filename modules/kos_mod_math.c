@@ -272,7 +272,7 @@ static KOS_OBJ_ID _is_infinity(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(arg) == OBJ_FLOAT) {
 
-        union _KOS_NUMERIC_VALUE value;
+        KOS_NUMERIC_VALUE value;
 
         value.d = OBJPTR(FLOAT, arg)->value;
         ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
@@ -310,7 +310,7 @@ static KOS_OBJ_ID _is_nan(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(arg) == OBJ_FLOAT) {
 
-        union _KOS_NUMERIC_VALUE value;
+        KOS_NUMERIC_VALUE value;
 
         value.d = OBJPTR(FLOAT, arg)->value;
         ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
@@ -439,7 +439,7 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      */
     {
         static const char str_infinity[] = "infinity";
-        union _KOS_NUMERIC_VALUE value;
+        KOS_NUMERIC_VALUE value;
 
         value.i = (uint64_t)0x7FF00000U << 32;
 
@@ -457,7 +457,7 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      */
     {
         static const char str_nan[] = "nan";
-        union _KOS_NUMERIC_VALUE value;
+        KOS_NUMERIC_VALUE value;
 
         value.i = ((uint64_t)0x7FF00000U << 32) | 1U;
 

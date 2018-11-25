@@ -113,32 +113,32 @@ int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
                              int64_t    b_begin,
                              int64_t    b_end);
 
-enum _KOS_FIND_DIR {
+enum KOS_FIND_DIR_E {
     KOS_FIND_FORWARD,
     KOS_FIND_REVERSE
 };
 
 /* *pos contains starting search position on input and found position on output.
  * If pattern is not found, returns KOS_SUCCESS and sets *pos to -1. */
-int KOS_string_find(KOS_CONTEXT        ctx,
-                    KOS_OBJ_ID         obj_id_text,
-                    KOS_OBJ_ID         obj_id_pattern,
-                    enum _KOS_FIND_DIR reverse,
-                    int               *pos);
+int KOS_string_find(KOS_CONTEXT         ctx,
+                    KOS_OBJ_ID          obj_id_text,
+                    KOS_OBJ_ID          obj_id_pattern,
+                    enum KOS_FIND_DIR_E reverse,
+                    int                *pos);
 
-enum _KOS_SCAN_INCLUDE {
+enum KOS_SCAN_INCLUDE_E {
     KOS_SCAN_EXCLUDE,
     KOS_SCAN_INCLUDE
 };
 
 /* *pos contains starting search position on input and found position on output.
  * If pattern is not found, returns KOS_SUCCESS and sets *pos to -1. */
-int KOS_string_scan(KOS_CONTEXT            ctx,
-                    KOS_OBJ_ID             obj_id_text,
-                    KOS_OBJ_ID             obj_id_pattern,
-                    enum _KOS_FIND_DIR     reverse,
-                    enum _KOS_SCAN_INCLUDE include,
-                    int                   *pos);
+int KOS_string_scan(KOS_CONTEXT             ctx,
+                    KOS_OBJ_ID              obj_id_text,
+                    KOS_OBJ_ID              obj_id_pattern,
+                    enum KOS_FIND_DIR_E     reverse,
+                    enum KOS_SCAN_INCLUDE_E include,
+                    int                    *pos);
 
 KOS_OBJ_ID KOS_string_reverse(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id);

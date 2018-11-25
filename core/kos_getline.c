@@ -44,9 +44,9 @@ int kos_getline_init(KOS_GETLINE *state)
     return KOS_SUCCESS;
 }
 
-int kos_getline(KOS_GETLINE     *state,
-                enum _KOS_PROMPT prompt,
-                KOS_VECTOR      *buf)
+int kos_getline(KOS_GETLINE      *state,
+                enum KOS_PROMPT_E prompt,
+                KOS_VECTOR       *buf)
 {
     int         error;
     const char* str_prompt = prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
@@ -146,9 +146,9 @@ void kos_getline_destroy(KOS_GETLINE *state)
     el_end(state->e);
 }
 
-int kos_getline(KOS_GETLINE     *state,
-                enum _KOS_PROMPT prompt,
-                KOS_VECTOR      *buf)
+int kos_getline(KOS_GETLINE      *state,
+                enum KOS_PROMPT_E prompt,
+                KOS_VECTOR       *buf)
 {
     int         count = 0;
     const char *line;
@@ -193,9 +193,9 @@ int kos_getline_init(KOS_GETLINE *state)
     return KOS_SUCCESS;
 }
 
-int kos_getline(KOS_GETLINE     *state,
-                enum _KOS_PROMPT prompt,
-                KOS_VECTOR      *buf)
+int kos_getline(KOS_GETLINE      *state,
+                enum KOS_PROMPT_E prompt,
+                KOS_VECTOR       *buf)
 {
     int error = KOS_SUCCESS;
 

@@ -250,7 +250,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
 
     ctx->stack_depth += room;
 
-    if (ctx->stack_depth > _KOS_MAX_STACK_DEPTH) {
+    if (ctx->stack_depth > KOS_MAX_STACK_DEPTH) {
         kos_stack_pop(ctx);
         RAISE_EXCEPTION(str_err_stack_overflow);
     }

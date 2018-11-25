@@ -548,7 +548,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
     const uint32_t          num_def_args     = GET_OBJ_TYPE(func->defaults) == OBJ_ARRAY
                                                 ? KOS_get_array_size(func->defaults) : 0;
     const uint32_t          num_named_args   = num_non_def_args + num_def_args;
-    const uint32_t          num_arg_regs     = KOS_min(num_named_args, _KOS_MAX_ARGS_IN_REGS);
+    const uint32_t          num_arg_regs     = KOS_min(num_named_args, KOS_MAX_ARGS_IN_REGS);
     const uint32_t          num_input_args   = IS_BAD_PTR(args_obj) ? num_args : KOS_get_array_size(args_obj);
 
     assert( ! func->handler);
@@ -573,7 +573,7 @@ static int _init_registers(KOS_CONTEXT             ctx,
 
     regs_buf = _get_regs(ctx, &num_regs);
 
-    if (num_named_args <= _KOS_MAX_ARGS_IN_REGS) {
+    if (num_named_args <= KOS_MAX_ARGS_IN_REGS) {
 
         const uint32_t num_to_move = KOS_min(num_input_args, num_named_args);
 
@@ -605,9 +605,9 @@ static int _init_registers(KOS_CONTEXT             ctx,
         }
     }
     else {
-        const uint32_t num_to_move = KOS_min(num_input_args, _KOS_MAX_ARGS_IN_REGS - 1U);
+        const uint32_t num_to_move = KOS_min(num_input_args, KOS_MAX_ARGS_IN_REGS - 1U);
 
-        KOS_OBJ_ID rest_obj = _slice_args(ctx, args_obj, stack_args, num_args, _KOS_MAX_ARGS_IN_REGS - 1, num_named_args);
+        KOS_OBJ_ID rest_obj = _slice_args(ctx, args_obj, stack_args, num_args, KOS_MAX_ARGS_IN_REGS - 1, num_named_args);
         TRY_OBJID(rest_obj);
 
         if (num_to_move) {
@@ -628,10 +628,10 @@ static int _init_registers(KOS_CONTEXT             ctx,
             if (num_to_move > num_non_def_args)
                 src_buf += num_to_move - num_non_def_args;
 
-            if (num_to_move < _KOS_MAX_ARGS_IN_REGS - 1U) {
+            if (num_to_move < KOS_MAX_ARGS_IN_REGS - 1U) {
 
                 KOS_ATOMIC(KOS_OBJ_ID)* reg_end = src_buf
-                                                + _KOS_MAX_ARGS_IN_REGS - 1U - num_to_move;
+                                                + KOS_MAX_ARGS_IN_REGS - 1U - num_to_move;
 
                 while (src_buf < reg_end)
                     KOS_atomic_write_ptr(regs_buf[reg++],
@@ -2211,7 +2211,7 @@ static int _exec_function(KOS_CONTEXT ctx)
                 KOS_OBJ_ID     src1;
                 KOS_OBJ_ID     src2;
 
-                enum _KOS_COMPARE_RESULT cmp;
+                KOS_COMPARE_RESULT cmp;
 
                 assert(rsrc1 < num_regs);
                 assert(rsrc2 < num_regs);
@@ -2810,11 +2810,11 @@ static int _exec_function(KOS_CONTEXT ctx)
     return error;
 }
 
-KOS_OBJ_ID kos_call_function(KOS_CONTEXT           ctx,
-                             KOS_OBJ_ID            func_obj,
-                             KOS_OBJ_ID            this_obj,
-                             KOS_OBJ_ID            args_obj,
-                             enum _KOS_CALL_FLAVOR call_flavor)
+KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
+                             KOS_OBJ_ID             func_obj,
+                             KOS_OBJ_ID             this_obj,
+                             KOS_OBJ_ID             args_obj,
+                             enum KOS_CALL_FLAVOR_E call_flavor)
 {
     int           error = KOS_SUCCESS;
     KOS_OBJ_ID    ret   = KOS_BADPTR;

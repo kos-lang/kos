@@ -47,9 +47,9 @@ static const char str_err_operand_not_string[]        = "operand is not a string
 static const char str_err_return_in_generator[]       = "complex return statement in a generator function, return value always ignored";
 static const char str_err_too_many_registers[]        = "register capacity exceeded";
 
-enum _KOS_BOOL {
-    _KOS_FALSE,
-    _KOS_TRUE
+enum KOS_BOOL_E {
+    KOS_FALSE_VALUE,
+    KOS_TRUE_VALUE
 };
 
 static int _visit_node(KOS_COMP_UNIT      *program,
@@ -445,8 +445,8 @@ static int _lookup_var(KOS_COMP_UNIT   *program,
     return var ? KOS_SUCCESS : KOS_ERROR_INTERNAL;
 }
 
-static int _compare_strings(const char *a, unsigned len_a, enum _KOS_UTF8_ESCAPE escape_a,
-                            const char *b, unsigned len_b, enum _KOS_UTF8_ESCAPE escape_b)
+static int _compare_strings(const char *a, unsigned len_a, KOS_UTF8_ESCAPE escape_a,
+                            const char *b, unsigned len_b, KOS_UTF8_ESCAPE escape_b)
 {
     const unsigned min_len = (len_a <= len_b) ? len_a : len_b;
     int            result;
@@ -464,10 +464,10 @@ static int _compare_strings(const char *a, unsigned len_a, enum _KOS_UTF8_ESCAPE
     return result;
 }
 
-static void _get_token_str(const KOS_TOKEN       *token,
-                           const char           **out_begin,
-                           unsigned              *out_length,
-                           enum _KOS_UTF8_ESCAPE *out_escape)
+static void _get_token_str(const KOS_TOKEN *token,
+                           const char     **out_begin,
+                           unsigned        *out_length,
+                           KOS_UTF8_ESCAPE *out_escape)
 {
     const char *begin  = token->begin;
     unsigned    length = token->length;
@@ -525,7 +525,7 @@ static int _strings_compare_item(void               *what,
     const KOS_COMP_STRING *str   = (const KOS_COMP_STRING *)node;
     const char            *begin;
     unsigned               length;
-    enum _KOS_UTF8_ESCAPE  escape;
+    KOS_UTF8_ESCAPE        escape;
 
     if (str->header.type != KOS_COMP_CONST_STRING)
         return (int)KOS_COMP_CONST_STRING < (int)str->header.type ? -1 : 1;
@@ -593,10 +593,10 @@ static void _add_constant(KOS_COMP_UNIT  *program,
                           _constants_compare_node);
 }
 
-static int _gen_str_esc(KOS_COMP_UNIT         *program,
-                        const KOS_TOKEN       *token,
-                        enum _KOS_UTF8_ESCAPE  escape,
-                        int                   *str_idx)
+static int _gen_str_esc(KOS_COMP_UNIT   *program,
+                        const KOS_TOKEN *token,
+                        KOS_UTF8_ESCAPE  escape,
+                        int             *str_idx)
 {
     int error = KOS_SUCCESS;
 
@@ -612,9 +612,9 @@ static int _gen_str_esc(KOS_COMP_UNIT         *program,
 
         if (str) {
 
-            const char           *begin;
-            unsigned              length;
-            enum _KOS_UTF8_ESCAPE tok_escape;
+            const char     *begin;
+            unsigned        length;
+            KOS_UTF8_ESCAPE tok_escape;
 
             _get_token_str(token, &begin, &length, &tok_escape);
 
@@ -747,7 +747,7 @@ static int _gen_assert_str(KOS_COMP_UNIT      *program,
 
 static int _add_addr2line(KOS_COMP_UNIT   *program,
                           const KOS_TOKEN *token,
-                          enum _KOS_BOOL   force)
+                          enum KOS_BOOL_E  force)
 {
     int                            error;
     KOS_VECTOR                    *addr2line = &program->addr2line_gen_buf;
@@ -1304,7 +1304,7 @@ static int _scope(KOS_COMP_UNIT      *program,
             const int initial_used_regs = _count_used_regs(program) - skip_tmp;
 #endif
 
-            TRY(_add_addr2line(program, &child->token, _KOS_FALSE));
+            TRY(_add_addr2line(program, &child->token, KOS_FALSE_VALUE));
 
             if (reg) {
                 _free_reg(program, reg);
@@ -1350,7 +1350,7 @@ static int _if(KOS_COMP_UNIT      *program,
 
     KOS_REG *reg = 0;
 
-    TRY(_add_addr2line(program, &node->token, _KOS_FALSE));
+    TRY(_add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
     node = node->children;
     assert(node);
@@ -1693,12 +1693,12 @@ static int _repeat(KOS_COMP_UNIT      *program,
     TRY(_visit_node(program, node, &reg));
     assert(!reg);
 
-    TRY(_add_addr2line(program, &node->token, _KOS_FALSE));
+    TRY(_add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
     node = node->next;
     assert(node);
 
-    TRY(_add_addr2line(program, &node->token, _KOS_FALSE));
+    TRY(_add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
     test_instr_offs = program->cur_offs;
 
@@ -1765,7 +1765,7 @@ static int _for(KOS_COMP_UNIT      *program,
 
         if ( ! is_truthy) {
 
-            TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
+            TRY(_add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
 
             TRY(_visit_node(program, cond_node, &reg));
             assert(reg);
@@ -1789,7 +1789,7 @@ static int _for(KOS_COMP_UNIT      *program,
         TRY(_visit_node(program, node, &reg));
         assert( ! reg);
 
-        TRY(_add_addr2line(program, &step_node->token, _KOS_FALSE));
+        TRY(_add_addr2line(program, &step_node->token, KOS_FALSE_VALUE));
 
         continue_tgt_offs = program->cur_offs;
 
@@ -1804,7 +1804,7 @@ static int _for(KOS_COMP_UNIT      *program,
 
         else {
 
-            TRY(_add_addr2line(program, &cond_node->token, _KOS_FALSE));
+            TRY(_add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
 
             TRY(_visit_node(program, cond_node, &reg));
         }
@@ -1912,7 +1912,7 @@ static int _for_in(KOS_COMP_UNIT      *program,
 
     TRY(_invoke_get_iterator(program, &iter_reg));
 
-    TRY(_add_addr2line(program, &assg_node->token, _KOS_FALSE));
+    TRY(_add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
 
     if ( ! var_node->next) {
 
@@ -1961,7 +1961,7 @@ static int _for_in(KOS_COMP_UNIT      *program,
     TRY(_visit_node(program, node, &reg));
     assert(!reg);
 
-    TRY(_add_addr2line(program, &assg_node->token, _KOS_FALSE));
+    TRY(_add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
 
     continue_offs = program->cur_offs;
 
@@ -2547,10 +2547,10 @@ static int _refinement_module(KOS_COMP_UNIT      *program,
 
     if (node->type == NT_STRING_LITERAL) {
 
-        int                   global_idx;
-        const char           *begin;
-        unsigned              length;
-        enum _KOS_UTF8_ESCAPE escape;
+        int             global_idx;
+        const char     *begin;
+        unsigned        length;
+        KOS_UTF8_ESCAPE escape;
 
         /* TODO this does not work for escaped strings, get_global_idx assumes NO_ESCAPE */
         _get_token_str(&node->token, &begin, &length, &escape);
@@ -4080,7 +4080,7 @@ static int _expression_list(KOS_COMP_UNIT      *program,
 
         KOS_REG *tmp_reg = 0;
 
-        error = _add_addr2line(program, &node->token, _KOS_FALSE);
+        error = _add_addr2line(program, &node->token, KOS_FALSE_VALUE);
         if (error)
             break;
 
@@ -4533,7 +4533,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
     fun_start_offs       = program->cur_offs;
     addr2line_start_offs = program->addr2line_gen_buf.size;
 
-    TRY(_add_addr2line(program, &open_node->token, _KOS_TRUE));
+    TRY(_add_addr2line(program, &open_node->token, KOS_TRUE_VALUE));
 
     /* Move ellipsis into place */
     if (ellipsis_reg) {
@@ -4605,7 +4605,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
 
     program->cur_frame = last_frame;
 
-    TRY(_add_addr2line(program, &fun_node->token, _KOS_FALSE));
+    TRY(_add_addr2line(program, &fun_node->token, KOS_FALSE_VALUE));
 
     program->cur_frame = frame;
     _pop_scope(program);

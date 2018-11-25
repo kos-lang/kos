@@ -94,15 +94,15 @@ void *kos_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
     if (size > mempool->free_size) {
 
         /* Special handling for unusually large allocation requests */
-        if (size > (_KOS_BUF_ALLOC_SIZE / 16U))
+        if (size > (KOS_BUF_ALLOC_SIZE / 16U))
             return _alloc_large(mempool, size);
 
-        buf = (struct MEMPOOL_BUF *)kos_malloc(_KOS_BUF_ALLOC_SIZE);
+        buf = (struct MEMPOOL_BUF *)kos_malloc(KOS_BUF_ALLOC_SIZE);
 
         if (buf) {
             buf->next          = (struct MEMPOOL_BUF *)(mempool->buffers);
             mempool->buffers   = buf;
-            mempool->free_size = _KOS_BUF_ALLOC_SIZE - sizeof(struct MEMPOOL_BUF);
+            mempool->free_size = KOS_BUF_ALLOC_SIZE - sizeof(struct MEMPOOL_BUF);
         }
     }
     else if ( ! kos_seq_fail())
@@ -111,7 +111,7 @@ void *kos_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
     if (buf) {
         assert(size <= mempool->free_size);
 
-        obj = ((uint8_t *)buf) + _KOS_BUF_ALLOC_SIZE - mempool->free_size;
+        obj = ((uint8_t *)buf) + KOS_BUF_ALLOC_SIZE - mempool->free_size;
 
         mempool->free_size -= size;
     }
@@ -168,7 +168,7 @@ int kos_vector_resize(KOS_VECTOR *vector, size_t size)
 
     if (size > vector->capacity) {
         size_t       new_capacity;
-        const size_t delta = KOS_max(KOS_min(vector->capacity, (size_t)_KOS_VEC_MAX_INC_SIZE),
+        const size_t delta = KOS_max(KOS_min(vector->capacity, (size_t)KOS_VEC_MAX_INC_SIZE),
                                      (size_t)64);
 
         assert(vector->capacity);
