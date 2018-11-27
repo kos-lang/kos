@@ -216,10 +216,10 @@ inline obj_id_converter from_object_ptr(stack_frame ctx, KOS_OBJ_ID obj_id)
 
 class instance {
     public:
-        instance() {
+        explicit instance(uint32_t flags = 0) {
             KOS_CONTEXT ctx;
 
-            int error = KOS_instance_init(&_inst, &ctx);
+            int error = KOS_instance_init(&_inst, flags, &ctx);
             if (error)
                 throw std::runtime_error("failed to initialize Kos instance");
 

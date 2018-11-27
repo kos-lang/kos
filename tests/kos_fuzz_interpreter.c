@@ -35,7 +35,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
 
-    error = KOS_instance_init(&inst, &ctx);
+    error = KOS_instance_init(&inst, 0, &ctx);
 
     if ( ! error) {
 

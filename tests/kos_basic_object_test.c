@@ -38,7 +38,7 @@ int main(void)
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
 
-    TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
     TEST(min_small_int < 0);
     TEST(max_small_int > 0);

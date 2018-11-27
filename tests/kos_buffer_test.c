@@ -37,7 +37,7 @@ int main(void)
     static const char cstr[] = "str";
     KOS_OBJ_ID        str;
 
-    TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
     str = KOS_new_const_ascii_cstring(ctx, cstr);
     TEST(!IS_BAD_PTR(str));

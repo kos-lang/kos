@@ -158,7 +158,7 @@ int main(void)
         thread_data.lock  = 0;
         thread_data.value = TO_SMALL_INT(44);
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
         kos_spin_lock(&thread_data.lock);
 

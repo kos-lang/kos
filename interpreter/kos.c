@@ -125,7 +125,23 @@ int main(int argc, char *argv[])
         }
     }
 
-    error = KOS_instance_init(&inst, &ctx);
+    /* KOSDISASM=1 turns on disassembly */
+    if (!kos_get_env("KOSDISASM", &buf) &&
+            buf.size == 2 && buf.buffer[0] == '1' && buf.buffer[1] == 0)
+        flags |= KOS_INST_DISASM;
+
+    /* KOSINTERACTIVE=1 forces interactive prompt       */
+    /* KOSINTERACTIVE=0 forces treating stdin as a file */
+    if (!kos_get_env("KOSINTERACTIVE", &buf) &&
+            buf.size == 2 && buf.buffer[1] == 0) {
+
+        if (buf.buffer[0] == '0')
+            interactive = 0;
+        else if (buf.buffer[0] == '1')
+            interactive = 1;
+    }
+
+    error = KOS_instance_init(&inst, flags, &ctx);
 
     if (error) {
         fprintf(stderr, "Failed to initialize interpreter\n");
@@ -133,26 +149,6 @@ int main(int argc, char *argv[])
     }
 
     inst_ok = 1;
-
-    {
-        /* KOSDISASM=1 turns on disassembly */
-        if (!kos_get_env("KOSDISASM", &buf) &&
-                buf.size == 2 && buf.buffer[0] == '1' && buf.buffer[1] == 0)
-            flags |= KOS_INST_DISASM;
-
-        /* KOSINTERACTIVE=1 forces interactive prompt       */
-        /* KOSINTERACTIVE=0 forces treating stdin as a file */
-        if (!kos_get_env("KOSINTERACTIVE", &buf) &&
-                buf.size == 2 && buf.buffer[1] == 0) {
-
-            if (buf.buffer[0] == '0')
-                interactive = 0;
-            else if (buf.buffer[0] == '1')
-                interactive = 1;
-        }
-    }
-
-    inst.flags |= flags;
 
     /* Use executable path from OS to find modules */
     error = KOS_instance_add_default_path(ctx, 0);

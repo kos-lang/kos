@@ -201,7 +201,7 @@ int main(void)
 
     /************************************************************************/
     {
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         KOS_instance_destroy(&inst);
     }
@@ -223,7 +223,7 @@ int main(void)
         int    j;
         void **objects;
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         objects = (void **)kos_alloc_object(ctx,
                                             OBJ_OPAQUE,
@@ -269,7 +269,7 @@ int main(void)
         int       j;
         void    **objects;
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         objects = (void **)kos_alloc_object(ctx,
                                             OBJ_OPAQUE,
@@ -314,7 +314,7 @@ int main(void)
 
         kos_rng_init(&rng);
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         objects = (struct _RANDOM_OBJECT *)kos_alloc_object(ctx,
                                                             OBJ_OPAQUE,
@@ -362,7 +362,7 @@ int main(void)
 
         kos_rng_init(&rng);
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         objects = (struct _RANDOM_OBJECT *)kos_alloc_object(ctx,
                                                             OBJ_OPAQUE,
@@ -411,7 +411,7 @@ int main(void)
         KOS_OBJ_ID group_four[2];
         KOS_OBJ_ID group_five[2];
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         /* Test 1:
          * Allocate objects in one page until the page is full, put the page
@@ -492,7 +492,7 @@ int main(void)
         void      *pages[3];
         KOS_OBJ_ID opaque[(KOS_POOL_SIZE / KOS_PAGE_SIZE) + 4U];
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i) {
 

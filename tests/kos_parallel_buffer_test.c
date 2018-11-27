@@ -100,7 +100,7 @@ int main(void)
     KOS_CONTEXT  ctx;
     const int    num_cpus = _get_num_cpus();
 
-    TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
     /* This test performs buffer make_room, fill and copy from multiple threads */

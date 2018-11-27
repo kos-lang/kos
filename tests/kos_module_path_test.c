@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
     kos_vector_init(&cstr);
 
-    TRY(KOS_instance_init(&inst, &ctx));
+    TRY(KOS_instance_init(&inst, 0, &ctx));
 
     inst_ok = 1;
 

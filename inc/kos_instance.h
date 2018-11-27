@@ -223,6 +223,7 @@ extern "C" {
 #endif
 
 int KOS_instance_init(KOS_INSTANCE *inst,
+                      uint32_t      flags,
                       KOS_CONTEXT  *out_ctx);
 
 void KOS_instance_destroy(KOS_INSTANCE *inst);

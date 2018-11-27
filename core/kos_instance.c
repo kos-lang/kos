@@ -328,39 +328,42 @@ static void _clear_instance(KOS_INSTANCE *inst)
     /* Set to an innocuous value in case initial allocation fails */
     inst->common_strings[KOS_STR_OUT_OF_MEMORY] = KOS_VOID;
 
-    inst->flags                            = KOS_INST_MANUAL_GC;
-    inst->args                             = KOS_BADPTR;
-    inst->prototypes.object_proto          = KOS_BADPTR;
-    inst->prototypes.number_proto          = KOS_BADPTR;
-    inst->prototypes.integer_proto         = KOS_BADPTR;
-    inst->prototypes.float_proto           = KOS_BADPTR;
-    inst->prototypes.string_proto          = KOS_BADPTR;
-    inst->prototypes.boolean_proto         = KOS_BADPTR;
-    inst->prototypes.array_proto           = KOS_BADPTR;
-    inst->prototypes.buffer_proto          = KOS_BADPTR;
-    inst->prototypes.function_proto        = KOS_BADPTR;
-    inst->prototypes.class_proto           = KOS_BADPTR;
-    inst->prototypes.generator_proto       = KOS_BADPTR;
-    inst->prototypes.exception_proto       = KOS_BADPTR;
-    inst->prototypes.generator_end_proto   = KOS_BADPTR;
-    inst->prototypes.thread_proto          = KOS_BADPTR;
-    inst->modules.search_paths             = KOS_BADPTR;
-    inst->modules.module_names             = KOS_BADPTR;
-    inst->modules.modules                  = KOS_BADPTR;
-    inst->modules.init_module              = KOS_BADPTR;
-    inst->modules.module_inits             = KOS_BADPTR;
-    inst->modules.load_chain               = 0;
-    inst->threads.main_thread.next         = 0;
-    inst->threads.main_thread.prev         = 0;
-    inst->threads.main_thread.inst         = inst;
-    inst->threads.main_thread.cur_page     = 0;
-    inst->threads.main_thread.exception    = KOS_BADPTR;
-    inst->threads.main_thread.retval       = KOS_BADPTR;
-    inst->threads.main_thread.stack        = KOS_BADPTR;
-    inst->threads.main_thread.stack_depth  = 0;
+    /* Disable GC during early init */
+    inst->flags = KOS_INST_MANUAL_GC;
+
+    inst->args                            = KOS_BADPTR;
+    inst->prototypes.object_proto         = KOS_BADPTR;
+    inst->prototypes.number_proto         = KOS_BADPTR;
+    inst->prototypes.integer_proto        = KOS_BADPTR;
+    inst->prototypes.float_proto          = KOS_BADPTR;
+    inst->prototypes.string_proto         = KOS_BADPTR;
+    inst->prototypes.boolean_proto        = KOS_BADPTR;
+    inst->prototypes.array_proto          = KOS_BADPTR;
+    inst->prototypes.buffer_proto         = KOS_BADPTR;
+    inst->prototypes.function_proto       = KOS_BADPTR;
+    inst->prototypes.class_proto          = KOS_BADPTR;
+    inst->prototypes.generator_proto      = KOS_BADPTR;
+    inst->prototypes.exception_proto      = KOS_BADPTR;
+    inst->prototypes.generator_end_proto  = KOS_BADPTR;
+    inst->prototypes.thread_proto         = KOS_BADPTR;
+    inst->modules.search_paths            = KOS_BADPTR;
+    inst->modules.module_names            = KOS_BADPTR;
+    inst->modules.modules                 = KOS_BADPTR;
+    inst->modules.init_module             = KOS_BADPTR;
+    inst->modules.module_inits            = KOS_BADPTR;
+    inst->modules.load_chain              = 0;
+    inst->threads.main_thread.next        = 0;
+    inst->threads.main_thread.prev        = 0;
+    inst->threads.main_thread.inst        = inst;
+    inst->threads.main_thread.cur_page    = 0;
+    inst->threads.main_thread.exception   = KOS_BADPTR;
+    inst->threads.main_thread.retval      = KOS_BADPTR;
+    inst->threads.main_thread.stack       = KOS_BADPTR;
+    inst->threads.main_thread.stack_depth = 0;
 }
 
 int KOS_instance_init(KOS_INSTANCE *inst,
+                      uint32_t      flags,
                       KOS_CONTEXT  *out_ctx)
 {
     int         error;
@@ -450,6 +453,9 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     /* Enable automatic GC */
     inst->flags = 0;
 #endif
+
+    /* Set user flags */
+    inst->flags |= flags;
 
 cleanup:
     if (error) {

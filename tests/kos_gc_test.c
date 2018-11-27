@@ -148,7 +148,7 @@ int main(void)
     /************************************************************************/
     /* Test garbage collection on a freshly initialized instance */
     {
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
@@ -166,7 +166,7 @@ int main(void)
         KOS_OBJ_ID obj_id[3];
         KOS_OBJ_ID prev_locals;
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
@@ -414,7 +414,7 @@ int main(void)
     {
         struct KOS_GC_STATS_S stats;
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(ctx, &base_stats) == KOS_SUCCESS);
 
@@ -656,7 +656,7 @@ int main(void)
     {
         struct KOS_GC_STATS_S stats;
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_new_array(ctx, 0) != KOS_BADPTR);
 
@@ -688,7 +688,7 @@ int main(void)
         KOS_OBJ_ID            prev_locals;
         int                   pushed    = 0;
 
-        TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
@@ -770,7 +770,7 @@ int main(void)
                 unsigned              i;
                 const unsigned        num_objs = (unsigned)(sizeof(obj_ids) / sizeof(obj_ids[0]));
 
-                TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+                TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
                 TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 

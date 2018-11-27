@@ -52,7 +52,7 @@ int main(void)
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
 
-    TEST(KOS_instance_init(&inst, &ctx) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
     {
