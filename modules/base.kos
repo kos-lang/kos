@@ -1524,18 +1524,24 @@ do {
 
     /* @item base hex()
      *
-     *     hex(number)
+     *     hex(number, min_digits = 0)
      *
      * Converts an integer to a string containing hexadecimal representation of it.
      *
-     * Example:
+     * `min_digits` specifies the minimum number of hexadecimal digits to print.
+     *
+     * Examples:
      *
      *     > hex(123)
      *     "0x7b"
+     *     > hex(123, 4)
+     *     "0x007b"
      */
-    hex = fun(value)
+    hex = fun(value, min_digits = 0)
     {
         assert typeof value == "integer"
+        assert typeof min_digits == "integer"
+        assert min_digits >= 0 && min_digits <= 16
 
         const codes  = buffer(18)
         const digits = hex_digits
@@ -1550,6 +1556,13 @@ do {
             i       -= _1
         } while value
 
+        const target_i = 17 - min_digits
+
+        while i > target_i {
+            codes[i] = 0x30
+            i -= _1
+        }
+
         codes[i] = 0x78
         i       -= _1
         codes[i] = 0x30
@@ -1559,18 +1572,22 @@ do {
 
     /* @item base integer.prototype.hex()
      *
-     *     integer.prototype.hex()
+     *     integer.prototype.hex(min_digits = 0)
      *
      * Converts the integer to a string containing hexadecimal representation of it.
      *
-     * Example:
+     * `min_digits` specifies the minimum number of hexadecimal digits to print.
+     *
+     * Examples:
      *
      *     > 123 .hex()
      *     "0x7b"
+     *     > 123 .hex(4)
+     *     "0x007b"
      */
-    integer.prototype.hex = fun
+    integer.prototype.hex = fun(min_digits = 0)
     {
-        return hex(this)
+        return hex(this, min_digits)
     }
 }
 

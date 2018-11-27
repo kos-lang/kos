@@ -232,8 +232,14 @@ do {
     assert 0x781000000 .hex() == "0x781000000"
     assert 0xfedcba .hex() == "0xfedcba"
     assert 0x9876543210 .hex() == "0x9876543210"
+    for var i = 0; i <= 16; i += 1 {
+        assert 32 .hex(i) == "0x" + "20".zfill(i)
+    }
 
     expect_fail(()=>1.2.hex())
+    expect_fail(()=>"1".hex())
+    expect_fail(()=>32 .hex(17))
+    expect_fail(()=>32 .hex(-1))
 }
 
 ##############################################################################
