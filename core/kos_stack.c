@@ -239,7 +239,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
                                                        TO_SMALL_INT((int64_t)num_regs));
     ctx->regs_idx = base_idx + 3;
 
-    /* Clear registers builds */
+    /* Clear registers */
     {
         unsigned       idx = base_idx + 3;
         const unsigned end = idx + num_regs;
