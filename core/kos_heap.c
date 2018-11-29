@@ -1528,14 +1528,19 @@ static int _evacuate_object(KOS_CONTEXT     ctx,
                             KOS_OBJ_HEADER *hdr,
                             uint32_t        size)
 {
-    int             error   = KOS_SUCCESS;
+    int             error = KOS_SUCCESS;
+    const KOS_TYPE  type  = (KOS_TYPE)hdr->type;
     KOS_OBJ_HEADER *new_obj;
 
-    assert(size <= (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS));
-
-    new_obj = (KOS_OBJ_HEADER *)_alloc_object(ctx,
-                                              (KOS_TYPE)hdr->type,
-                                              size);
+#ifdef CONFIG_MAD_GC
+    if (size > (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
+        new_obj = (KOS_OBJ_HEADER *)_alloc_huge_object(ctx, type, size);
+    else
+#endif
+    {
+        assert(size <= (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS));
+        new_obj = (KOS_OBJ_HEADER *)_alloc_object(ctx, type, size);
+    }
 
     if (new_obj) {
         memcpy(new_obj, hdr, size);

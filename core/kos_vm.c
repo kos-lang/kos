@@ -409,12 +409,16 @@ static KOS_OBJ_ID _copy_function(KOS_CONTEXT ctx,
     KOS_FUNCTION *dest;
     KOS_OBJ_ID    ret;
 
+    kos_track_refs(ctx, 1, &obj_id);
+
     if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION)
         ret = KOS_new_function(ctx);
     else {
         assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
         ret = KOS_new_class(ctx, KOS_VOID);
     }
+
+    kos_untrack_refs(ctx, 1);
 
     if (IS_BAD_PTR(ret))
         return ret;
@@ -886,7 +890,7 @@ cleanup:
 
 static KOS_OBJ_ID _finish_call(KOS_CONTEXT         ctx,
                                KOS_BYTECODE_INSTR  instr,
-                               KOS_FUNCTION       *func,
+                               KOS_OBJ_ID          func_obj,
                                KOS_OBJ_ID          this_obj,
                                KOS_FUNCTION_STATE *state)
 {
@@ -894,7 +898,8 @@ static KOS_OBJ_ID _finish_call(KOS_CONTEXT         ctx,
 
     if ( ! KOS_is_exception_pending(ctx)) {
 
-        if (func->header.type == OBJ_CLASS && ! func->handler)
+        if (OBJPTR(FUNCTION, func_obj)->header.type == OBJ_CLASS
+                && ! OBJPTR(FUNCTION, func_obj)->handler)
             ret = this_obj;
         else
             ret = ctx->retval;
@@ -902,22 +907,23 @@ static KOS_OBJ_ID _finish_call(KOS_CONTEXT         ctx,
         if (*state >= KOS_GEN_INIT) {
             if (OBJPTR(STACK, ctx->stack)->header.flags & KOS_CAN_YIELD) {
                 *state = KOS_GEN_DONE;
-                func->state = KOS_GEN_DONE;
+                OBJPTR(FUNCTION, func_obj)->state = KOS_GEN_DONE;
                 if (instr != INSTR_CALL_GEN)
                     KOS_raise_generator_end(ctx);
             }
             else {
-                const KOS_FUNCTION_STATE end_state = func->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
+                const KOS_FUNCTION_STATE end_state =
+                    OBJPTR(FUNCTION, func_obj)->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
 
-                *state      = end_state;
-                func->state = (uint8_t)end_state;
+                *state = end_state;
+                OBJPTR(FUNCTION, func_obj)->state = (uint8_t)end_state;
             }
         }
     }
     else {
         if (*state >= KOS_GEN_INIT) {
             *state = KOS_GEN_DONE;
-            func->state = KOS_GEN_DONE;
+            OBJPTR(FUNCTION, func_obj)->state = KOS_GEN_DONE;
         }
     }
 
@@ -1158,6 +1164,14 @@ static int exec_function(KOS_CONTEXT ctx)
     assert( ! IS_BAD_PTR(module));
     assert(OBJPTR(MODULE, module)->inst);
     bytecode = OBJPTR(MODULE, module)->bytecode + load_instr_offs(stack, regs_idx);
+
+    {
+        int pushed = 0;
+        error = KOS_push_locals(ctx, &pushed, 2, &module, &stack);
+        if (error)
+            return error;
+        assert(pushed == 2);
+    }
 
     for (;;) { /* Exit condition at the end of the loop */
 
@@ -1561,7 +1575,11 @@ static int exec_function(KOS_CONTEXT ctx)
                         store_instr_offs(stack, regs_idx,
                                          (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                         value = OBJPTR(DYNAMIC_PROP, value)->getter;
+
+                        kos_track_refs(ctx, 2, &value, &obj);
                         args  = KOS_new_array(ctx, 0);
+                        kos_untrack_refs(ctx, 2);
+
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
                         else {
@@ -2409,8 +2427,7 @@ static int exec_function(KOS_CONTEXT ctx)
             case INSTR_BIND: { /* <r.dest>, <slot.idx.uint8>, <r.src> */
                 const unsigned idx = bytecode[2];
 
-                KOS_OBJ_ID    dest;
-                KOS_FUNCTION *func = 0;
+                KOS_OBJ_ID dest;
 
                 rdest = bytecode[1];
                 assert(rdest < num_regs);
@@ -2419,14 +2436,14 @@ static int exec_function(KOS_CONTEXT ctx)
                 {
                     const KOS_TYPE type = GET_OBJ_TYPE(dest);
 
-                    if (type == OBJ_FUNCTION || type == OBJ_CLASS)
-                        func = OBJPTR(FUNCTION, dest);
-                    else
+                    if (type != OBJ_FUNCTION && type != OBJ_CLASS) {
+                        dest = KOS_BADPTR;
                         KOS_raise_exception_cstring(ctx, str_err_not_callable);
+                    }
                 }
 
-                if (func) {
-                    KOS_OBJ_ID closures = func->closures;
+                if ( ! IS_BAD_PTR(dest)) {
+                    KOS_OBJ_ID closures = OBJPTR(FUNCTION, dest)->closures;
                     KOS_OBJ_ID regs_obj;
 
                     if (instr == INSTR_BIND) {
@@ -2443,15 +2460,19 @@ static int exec_function(KOS_CONTEXT ctx)
                     assert(GET_OBJ_TYPE(closures) == OBJ_VOID ||
                            GET_OBJ_TYPE(closures) == OBJ_ARRAY);
 
+                    kos_track_refs(ctx, 3, &dest, &closures, &regs_obj);
+
                     if (GET_OBJ_TYPE(closures) == OBJ_VOID) {
                         closures = KOS_new_array(ctx, idx+1);
                         if (IS_BAD_PTR(closures))
                             error = KOS_ERROR_EXCEPTION;
                         else
-                            func->closures = closures;
+                            OBJPTR(FUNCTION, dest)->closures = closures;
                     }
                     else if (idx >= KOS_get_array_size(closures))
                         error = KOS_array_resize(ctx, closures, idx+1);
+
+                    kos_untrack_refs(ctx, 3);
 
                     if (!error)
                         error = KOS_array_write(ctx, closures, (int)idx, regs_obj);
@@ -2674,7 +2695,7 @@ static int exec_function(KOS_CONTEXT ctx)
                             assert( ! error || KOS_is_exception_pending(ctx));
                         }
 
-                        out = _finish_call(ctx, instr, func, this_obj, &state);
+                        out = _finish_call(ctx, instr, func_obj, this_obj, &state);
 
                         if (instr == INSTR_CALL_GEN) {
                             if (error == KOS_ERROR_EXCEPTION && state == KOS_GEN_DONE
@@ -2837,6 +2858,8 @@ static int exec_function(KOS_CONTEXT ctx)
     store_instr_offs(stack, regs_idx,
                      (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
 
+    KOS_pop_locals(ctx, 2);
+
     return error;
 }
 
@@ -2846,10 +2869,10 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
                              KOS_OBJ_ID             args_obj,
                              enum KOS_CALL_FLAVOR_E call_flavor)
 {
-    int           error = KOS_SUCCESS;
-    KOS_OBJ_ID    ret   = KOS_BADPTR;
-    KOS_FUNCTION *func;
-    KOS_TYPE      type;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
+    KOS_OBJ_ID ret    = KOS_BADPTR;
+    KOS_TYPE   type;
 
     KOS_instance_validate(ctx);
 
@@ -2860,30 +2883,34 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         return KOS_BADPTR;
     }
 
-    func = OBJPTR(FUNCTION, func_obj);
+    error = KOS_push_locals(ctx, &pushed, 4, &func_obj, &this_obj, &args_obj, &ret);
+    if (error)
+        return KOS_BADPTR;
 
     if (type == OBJ_CLASS && call_flavor != KOS_APPLY_FUNCTION)
         this_obj = NEW_THIS;
 
     error = _prepare_call(ctx, INSTR_CALL, func_obj, &this_obj, args_obj, 0, 0);
 
-    if (error)
+    if (error) {
+        KOS_pop_locals(ctx, pushed);
         return KOS_BADPTR;
+    }
 
-    if (func->state == KOS_GEN_INIT)
+    if (OBJPTR(FUNCTION, func_obj)->state == KOS_GEN_INIT)
         ret = this_obj;
 
     else {
-        KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)func->state;
+        KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, func_obj)->state;
 
-        if (func->handler)  {
+        if (OBJPTR(FUNCTION, func_obj)->handler)  {
             KOS_OBJ_ID prev_locals;
             KOS_OBJ_ID retval = KOS_BADPTR;
 
             error = KOS_push_local_scope(ctx, &prev_locals);
 
             if ( ! error) {
-                retval = func->handler(ctx, this_obj, args_obj);
+                retval = OBJPTR(FUNCTION, func_obj)->handler(ctx, this_obj, args_obj);
 
                 KOS_pop_local_scope(ctx, &prev_locals);
             }
@@ -2909,11 +2936,13 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
 
         ret = _finish_call(ctx,
                            call_flavor == KOS_CALL_GENERATOR ? INSTR_CALL_GEN : INSTR_CALL,
-                           func, this_obj, &state);
+                           func_obj, this_obj, &state);
 
         if (state == KOS_GEN_DONE)
             ret = KOS_BADPTR;
     }
+
+    KOS_pop_locals(ctx, pushed);
 
     return error ? KOS_BADPTR : ret;
 }
