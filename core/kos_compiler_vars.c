@@ -405,10 +405,10 @@ static int _visit_child_nodes(KOS_COMP_UNIT      *program,
     return error;
 }
 
-struct _IMPORT_INFO {
+typedef struct KOS_IMPORT_INFO_S {
     KOS_COMP_UNIT      *program;
     const KOS_AST_NODE *node;
-};
+} KOS_IMPORT_INFO;
 
 static int _import_global(const char *global_name,
                           unsigned    global_length,
@@ -416,9 +416,9 @@ static int _import_global(const char *global_name,
                           int         global_idx,
                           void       *cookie)
 {
-    int                  error  = KOS_SUCCESS;
-    struct _IMPORT_INFO *info   = (struct _IMPORT_INFO *)cookie;
-    KOS_AST_NODE  *const g_node = (KOS_AST_NODE *)
+    int                 error  = KOS_SUCCESS;
+    KOS_IMPORT_INFO    *info   = (KOS_IMPORT_INFO *)cookie;
+    KOS_AST_NODE *const g_node = (KOS_AST_NODE *)
         kos_mempool_alloc(&info->program->allocator, sizeof(KOS_AST_NODE) + global_length);
 
     if (g_node) {
@@ -491,7 +491,8 @@ static int _import(KOS_COMP_UNIT      *program,
 
     if (node) {
         if (node->token.op == OT_MUL) {
-            struct _IMPORT_INFO info;
+            KOS_IMPORT_INFO info;
+
             info.program = program;
             info.node    = node;
 

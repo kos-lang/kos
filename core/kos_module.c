@@ -961,17 +961,17 @@ static int _append_buf(const uint8_t **dest,
     return KOS_SUCCESS;
 }
 
-struct _PRINT_CONST_COOKIE {
+typedef struct KOS_PRINT_CONST_COOKIE_S {
     KOS_CONTEXT ctx;
     KOS_OBJ_ID  constants;
-};
+} KOS_PRINT_CONST_COOKIE;
 
 static int _print_const(void       *cookie,
                         KOS_VECTOR *cstr_buf,
                         uint32_t    const_index)
 {
-    struct _PRINT_CONST_COOKIE *data = (struct _PRINT_CONST_COOKIE *)cookie;
-    KOS_OBJ_ID                  constant;
+    KOS_PRINT_CONST_COOKIE *data = (KOS_PRINT_CONST_COOKIE *)cookie;
+    KOS_OBJ_ID              constant;
 
     constant = KOS_array_read(data->ctx, data->constants, const_index);
 
@@ -1168,7 +1168,7 @@ static int _compile_module(KOS_CONTEXT ctx,
 
         const KOS_FUNC_ADDR *const func_addrs     = module->func_addrs;
         const uint32_t             num_func_addrs = module->num_func_addrs;
-        struct _PRINT_CONST_COOKIE print_const_cookie;
+        KOS_PRINT_CONST_COOKIE     print_const_cookie;
 
         kos_vector_init(&cname);
         kos_vector_init(&ptrs);

@@ -260,7 +260,7 @@ static KOS_OBJ_ID _alloc_empty_string(KOS_CONTEXT ctx)
     return OBJID(STRING, str);
 }
 
-struct _KOS_INIT_STRING {
+struct KOS_INIT_STRING_S {
     enum KOS_STR_E str_id;
     const char    *text;
 };
@@ -271,7 +271,7 @@ static int _init_common_strings(KOS_CONTEXT   ctx,
     int    error = KOS_SUCCESS;
     size_t i;
 
-    static const struct _KOS_INIT_STRING init[] = {
+    static const struct KOS_INIT_STRING_S init[] = {
 
         /* Init this one first before anything else */
         { KOS_STR_OUT_OF_MEMORY, "out of memory" },

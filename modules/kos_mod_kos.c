@@ -50,20 +50,20 @@ static const char str_source[]             = "source";
 static const char str_token[]              = "token";
 static const char str_type[]               = "type";
 
-struct _LEXER {
+typedef struct KOS_LEXER_OBJ_S {
     KOS_OBJ_HEADER header; /* TODO remove this when we switch to malloc */
     KOS_LEXER      lexer;
     KOS_TOKEN      token;
     uint8_t       *last_buf;
     int            ignore_errors;
-};
+} KOS_LEXER_OBJ;
 
 static void _finalize(KOS_CONTEXT ctx,
                       void       *priv)
 {
     /* TODO free
     if (priv)
-        kos_free_buffer(ctx, priv, sizeof(struct _LEXER));
+        kos_free_buffer(ctx, priv, sizeof(KOS_LEXER_OBJ));
     */
 }
 
@@ -75,7 +75,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
     KOS_OBJ_ID          retval     = KOS_BADPTR;
     KOS_OBJ_ID          lexer_obj_id;
     KOS_OBJ_ID          source;
-    struct _LEXER      *lexer;
+    KOS_LEXER_OBJ      *lexer;
     uint8_t            *buf_data;
     KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
 
@@ -106,9 +106,9 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         TRY_OBJID(lexer_obj_id);
 
         /* TODO use malloc once GC supports finalize */
-        lexer = (struct _LEXER *)kos_alloc_object(ctx,
+        lexer = (KOS_LEXER_OBJ *)kos_alloc_object(ctx,
                                                   OBJ_OPAQUE,
-                                                  sizeof(struct _LEXER));
+                                                  sizeof(KOS_LEXER_OBJ));
         if (!lexer)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
@@ -145,7 +145,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         buf_obj_id = KOS_get_property(ctx, lexer_obj_id, source);
         TRY_OBJID(buf_obj_id);
 
-        lexer = (struct _LEXER *)KOS_object_get_private(*OBJPTR(OBJECT, lexer_obj_id));
+        lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(*OBJPTR(OBJECT, lexer_obj_id));
 
         if (KOS_get_array_size(args_obj) > 0) {
 

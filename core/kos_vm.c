@@ -56,9 +56,9 @@ static const char str_err_slice_not_function[]   = "slice is not a function";
 static const char str_err_too_few_args[]         = "not enough arguments passed to a function";
 static const char str_err_unsup_operand_types[]  = "unsupported operand types";
 
-DECLARE_STATIC_CONST_OBJECT(_new_this) = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC0);
+DECLARE_STATIC_CONST_OBJECT(new_this) = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xC0);
 
-#define NEW_THIS KOS_CONST_ID(_new_this)
+#define NEW_THIS KOS_CONST_ID(new_this)
 
 static KOS_OBJ_ID _add_integer(KOS_CONTEXT ctx,
                                int64_t     a,

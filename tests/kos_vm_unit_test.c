@@ -35,7 +35,7 @@
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 
-enum _VALUE_TYPE {
+enum VALUE_TYPE_E {
     V_NONE,     /* in     - no more instruction arguments      */
     V_EXCEPT,   /* out    - instruction generates an exception */
     V_OK,       /* out    - no result, no exception            */
@@ -55,24 +55,24 @@ enum _VALUE_TYPE {
     V_OBJECT    /* in/out - object                             */
 };
 
-struct _INSTR_VALUE {
-    enum _VALUE_TYPE value;
-    uint32_t         low;
-    uint32_t         high;
-    const char      *str;
+struct INSTR_VALUE_S {
+    enum VALUE_TYPE_E value;
+    uint32_t          low;
+    uint32_t          high;
+    const char       *str;
 };
 
 #define MAX_ARGS 3
 
-struct _INSTR_DEF {
-    KOS_BYTECODE_INSTR  instr;
-    struct _INSTR_VALUE out;
-    struct _INSTR_VALUE in[MAX_ARGS];
+struct INSTR_DEF_S {
+    KOS_BYTECODE_INSTR   instr;
+    struct INSTR_VALUE_S out;
+    struct INSTR_VALUE_S in[MAX_ARGS];
 };
 
 #define TEST_INSTR \
 { \
-    struct _INSTR_DEF instr = {
+    struct INSTR_DEF_S instr = {
 
 #define END \
     }; \
@@ -80,11 +80,11 @@ struct _INSTR_DEF {
         return 1; \
 }
 
-static int _test_instr(KOS_CONTEXT          ctx,
-                       KOS_BYTECODE_INSTR   instr,
-                       int                  line,
-                       struct _INSTR_VALUE *ret_val,
-                       struct _INSTR_VALUE *args)
+static int _test_instr(KOS_CONTEXT           ctx,
+                       KOS_BYTECODE_INSTR    instr,
+                       int                   line,
+                       struct INSTR_VALUE_S *ret_val,
+                       struct INSTR_VALUE_S *args)
 {
     uint8_t     code[64]        = { 0 };
     uint32_t    parms[MAX_ARGS] = { 0 };

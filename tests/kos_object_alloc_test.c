@@ -93,13 +93,12 @@ static void *_alloc_stack(KOS_CONTEXT ctx)
 
 typedef void *(* ALLOC_FUNC)(KOS_CONTEXT ctx);
 
-struct _RANDOM_OBJECT
-{
+struct RANDOM_OBJECT_S {
     uint8_t *obj;
     int      size_pot;
 };
 
-typedef union _KOS_BYTES {
+typedef union KOS_BYTES_U {
     KOS_OBJ_HEADER header;
     struct {
         KOS_OBJ_ID alloc_size;
@@ -181,7 +180,7 @@ int main(void)
     KOS_CONTEXT  ctx;
     size_t       i;
 
-    const struct _ALLOC_FUNC {
+    const struct ALLOC_FUNC_S {
         ALLOC_FUNC alloc_func;
         KOS_TYPE   type;
         size_t     size;
@@ -308,17 +307,17 @@ int main(void)
 
     /************************************************************************/
     {
-        struct KOS_RNG         rng;
-        struct _RANDOM_OBJECT *objects;
-        int                    j;
+        struct KOS_RNG          rng;
+        struct RANDOM_OBJECT_S *objects;
+        int                     j;
 
         kos_rng_init(&rng);
 
         TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
-        objects = (struct _RANDOM_OBJECT *)kos_alloc_object(ctx,
-                                                            OBJ_OPAQUE,
-                                                            NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
+        objects = (struct RANDOM_OBJECT_S *)kos_alloc_object(ctx,
+                                                             OBJ_OPAQUE,
+                                                             NUM_OBJECTS * sizeof(struct RANDOM_OBJECT_S));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {
@@ -356,17 +355,17 @@ int main(void)
 
     /************************************************************************/
     {
-        struct KOS_RNG         rng;
-        struct _RANDOM_OBJECT *objects;
-        int                    j;
+        struct KOS_RNG          rng;
+        struct RANDOM_OBJECT_S *objects;
+        int                     j;
 
         kos_rng_init(&rng);
 
         TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
-        objects = (struct _RANDOM_OBJECT *)kos_alloc_object(ctx,
-                                                            OBJ_OPAQUE,
-                                                            NUM_OBJECTS * sizeof(struct _RANDOM_OBJECT));
+        objects = (struct RANDOM_OBJECT_S *)kos_alloc_object(ctx,
+                                                             OBJ_OPAQUE,
+                                                             NUM_OBJECTS * sizeof(struct RANDOM_OBJECT_S));
         TEST(objects);
 
         for (j = 0; j < NUM_OBJECTS; j++) {

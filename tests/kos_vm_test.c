@@ -44,19 +44,19 @@
 #define IMMPART(val,shift) ((uint8_t)((uint32_t)(val) >> shift))
 #define IMM32(val) IMMPART(val, 0), IMMPART(val, 8), IMMPART(val, 16), IMMPART(val, 24)
 
-enum _CREATE_FUNC {
+enum CREATE_FUNC_E {
     CREATE_FUNC,
     CREATE_GEN,
     CREATE_CLASS
 };
 
-static KOS_OBJ_ID _create_func_obj(KOS_CONTEXT       ctx,
-                                   enum _CREATE_FUNC create,
-                                   uint32_t          offset,
-                                   uint8_t           num_regs,
-                                   uint8_t           args_reg,
-                                   uint8_t           num_args,
-                                   uint8_t           flags)
+static KOS_OBJ_ID _create_func_obj(KOS_CONTEXT        ctx,
+                                   enum CREATE_FUNC_E create,
+                                   uint32_t           offset,
+                                   uint8_t            num_regs,
+                                   uint8_t            args_reg,
+                                   uint8_t            num_args,
+                                   uint8_t            flags)
 {
     KOS_OBJ_ID    obj_id;
     KOS_FUNCTION *func;

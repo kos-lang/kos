@@ -995,10 +995,10 @@ static void _pop_scope(KOS_COMP_UNIT *program)
     program->scope_stack = program->scope_stack->next;
 }
 
-struct _IMPORT_INFO {
+typedef struct KOS_IMPORT_INFO_S {
     KOS_COMP_UNIT *program;
     KOS_FILE_POS   pos;
-};
+} KOS_IMPORT_INFO;
 
 static int _import_global(const char *global_name,
                           unsigned    global_length,
@@ -1006,11 +1006,11 @@ static int _import_global(const char *global_name,
                           int         global_idx,
                           void       *cookie)
 {
-    int                  error = KOS_SUCCESS;
-    struct _IMPORT_INFO *info  = (struct _IMPORT_INFO *)cookie;
-    KOS_REG             *reg   = 0;
-    KOS_VAR             *var;
-    KOS_TOKEN            token;
+    int              error = KOS_SUCCESS;
+    KOS_IMPORT_INFO *info  = (KOS_IMPORT_INFO *)cookie;
+    KOS_REG         *reg   = 0;
+    KOS_VAR         *var;
+    KOS_TOKEN        token;
 
     memset(&token, 0, sizeof(token));
 
@@ -1046,8 +1046,8 @@ static int _import(KOS_COMP_UNIT      *program,
 
     if (node->next) {
 
-        int                 module_idx;
-        struct _IMPORT_INFO info;
+        int             module_idx;
+        KOS_IMPORT_INFO info;
 
         info.program = program;
 
@@ -2075,10 +2075,10 @@ cleanup:
     return error;
 }
 
-struct _KOS_SWITCH_CASE {
+typedef struct KOS_SWITCH_CASE_S {
     int to_jump_offs;
     int final_jump_offs;
-};
+} KOS_SWITCH_CASE;
 
 static int _count_siblings(const KOS_AST_NODE *node)
 {
@@ -2095,15 +2095,15 @@ static int _count_siblings(const KOS_AST_NODE *node)
 static int _switch(KOS_COMP_UNIT      *program,
                    const KOS_AST_NODE *node)
 {
-    int                      error;
-    KOS_REG                 *value_reg       = 0;
-    const KOS_AST_NODE      *first_case_node;
-    int                      num_cases;
-    int                      i_case;
-    int                      i_default_case  = -1;
-    int                      final_jump_offs = -1;
-    struct _KOS_SWITCH_CASE *cases           = 0;
-    KOS_BREAK_OFFS          *old_break_offs  = program->cur_frame->break_offs;
+    int                 error;
+    KOS_REG            *value_reg       = 0;
+    const KOS_AST_NODE *first_case_node;
+    int                 num_cases;
+    int                 i_case;
+    int                 i_default_case  = -1;
+    int                 final_jump_offs = -1;
+    KOS_SWITCH_CASE    *cases           = 0;
+    KOS_BREAK_OFFS     *old_break_offs  = program->cur_frame->break_offs;
 
     program->cur_frame->break_offs = 0;
 
@@ -2124,8 +2124,8 @@ static int _switch(KOS_COMP_UNIT      *program,
 
     assert(num_cases);
 
-    cases = (struct _KOS_SWITCH_CASE *)kos_mempool_alloc(
-            &program->allocator, sizeof(struct _KOS_SWITCH_CASE) * num_cases);
+    cases = (KOS_SWITCH_CASE *)kos_mempool_alloc(
+            &program->allocator, sizeof(KOS_SWITCH_CASE) * num_cases);
 
     if ( ! cases)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
@@ -3099,7 +3099,7 @@ cleanup:
     return error;
 }
 
-enum _CHECK_TYPE {
+enum CHECK_TYPE_E {
     CHECK_NUMERIC           = 1,
     CHECK_STRING            = 2,
     CHECK_NUMERIC_OR_STRING = 3
@@ -3107,7 +3107,7 @@ enum _CHECK_TYPE {
 
 static int _check_const_literal(KOS_COMP_UNIT      *program,
                                 const KOS_AST_NODE *node,
-                                enum _CHECK_TYPE    expected_type)
+                                enum CHECK_TYPE_E   expected_type)
 {
     KOS_NODE_TYPE       cur_node_type;
     const KOS_AST_NODE *const_node = kos_get_const(program, node);
@@ -4266,18 +4266,18 @@ static int _void_literal(KOS_COMP_UNIT      *program,
     return error;
 }
 
-struct _GEN_CLOSURE_ARGS {
+typedef struct KOS_GEN_CLOSURE_ARGS_S {
     KOS_COMP_UNIT *program;
     int           *num_binds;
-};
+} KOS_GEN_CLOSURE_ARGS;
 
 static int _gen_closure_regs(KOS_RED_BLACK_NODE *node,
                              void               *cookie)
 {
     int error = KOS_SUCCESS;
 
-    KOS_SCOPE_REF            *ref  = (KOS_SCOPE_REF *)node;
-    struct _GEN_CLOSURE_ARGS *args = (struct _GEN_CLOSURE_ARGS *)cookie;
+    KOS_SCOPE_REF        *ref  = (KOS_SCOPE_REF *)node;
+    KOS_GEN_CLOSURE_ARGS *args = (KOS_GEN_CLOSURE_ARGS *)cookie;
 
     if (ref->exported_locals) {
         ++*(args->num_binds);
@@ -4300,22 +4300,22 @@ static int _gen_closure_regs(KOS_RED_BLACK_NODE *node,
     return error;
 }
 
-struct _BIND_ARGS {
+typedef struct KOS_BIND_ARGS_S {
     KOS_COMP_UNIT *program;
     KOS_REG       *func_reg;
     KOS_FRAME     *parent_frame;
     int            delta;
-};
+} KOS_BIND_ARGS;
 
 static int _gen_binds(KOS_RED_BLACK_NODE *node,
                       void               *cookie)
 {
     int error = KOS_SUCCESS;
 
-    KOS_SCOPE_REF     *ref     = (KOS_SCOPE_REF *)node;
-    struct _BIND_ARGS *args    = (struct _BIND_ARGS *)    cookie;
-    KOS_COMP_UNIT     *program = args->program;
-    const int          delta   = args->delta;
+    KOS_SCOPE_REF *ref     = (KOS_SCOPE_REF *)node;
+    KOS_BIND_ARGS *args    = (KOS_BIND_ARGS *)cookie;
+    KOS_COMP_UNIT *program = args->program;
+    const int      delta   = args->delta;
 
     if (ref->exported_locals) {
 
@@ -4508,7 +4508,8 @@ static int _gen_function(KOS_COMP_UNIT      *program,
 
     /* Generate registers for closures */
     {
-        struct _GEN_CLOSURE_ARGS args;
+        KOS_GEN_CLOSURE_ARGS args;
+
         args.program   = program;
         args.num_binds = &frame->num_binds;
         TRY(kos_red_black_walk(frame->closures, _gen_closure_regs, &args));
@@ -4652,7 +4653,7 @@ static int _function_literal(KOS_COMP_UNIT      *program,
 
     /* Generate BIND instructions in the parent frame */
     if (frame->num_binds) {
-        struct _BIND_ARGS bind_args;
+        KOS_BIND_ARGS bind_args;
 
         bind_args.program      = program;
         bind_args.func_reg     = *reg;
@@ -4796,16 +4797,16 @@ static int _array_literal(KOS_COMP_UNIT      *program,
     return error;
 }
 
-struct _KOS_OBJECT_PROP_DUPE {
+typedef struct KOS_OBJECT_PROP_DUPE_S {
     KOS_RED_BLACK_NODE rb_tree_node;
     int                str_idx;
-};
+} KOS_OBJECT_PROP_DUPE;
 
 static int _prop_compare_item(void               *what,
                               KOS_RED_BLACK_NODE *node)
 {
-    const int                     str_idx   = (int)(intptr_t)what;
-    struct _KOS_OBJECT_PROP_DUPE *prop_node = (struct _KOS_OBJECT_PROP_DUPE *)node;
+    const int             str_idx   = (int)(intptr_t)what;
+    KOS_OBJECT_PROP_DUPE *prop_node = (KOS_OBJECT_PROP_DUPE *)node;
 
     return str_idx - prop_node->str_idx;
 }
@@ -4813,8 +4814,8 @@ static int _prop_compare_item(void               *what,
 static int _prop_compare_node(KOS_RED_BLACK_NODE *a,
                               KOS_RED_BLACK_NODE *b)
 {
-    struct _KOS_OBJECT_PROP_DUPE *a_node = (struct _KOS_OBJECT_PROP_DUPE *)a;
-    struct _KOS_OBJECT_PROP_DUPE *b_node = (struct _KOS_OBJECT_PROP_DUPE *)b;
+    KOS_OBJECT_PROP_DUPE *a_node = (KOS_OBJECT_PROP_DUPE *)a;
+    KOS_OBJECT_PROP_DUPE *b_node = (KOS_OBJECT_PROP_DUPE *)b;
 
     return a_node->str_idx - b_node->str_idx;
 }
@@ -4847,8 +4848,8 @@ static int _object_literal(KOS_COMP_UNIT      *program,
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
         }
         else {
-            struct _KOS_OBJECT_PROP_DUPE *new_node = (struct _KOS_OBJECT_PROP_DUPE *)
-                kos_mempool_alloc(&program->allocator, sizeof(struct _KOS_OBJECT_PROP_DUPE));
+            KOS_OBJECT_PROP_DUPE *new_node = (KOS_OBJECT_PROP_DUPE *)
+                kos_mempool_alloc(&program->allocator, sizeof(KOS_OBJECT_PROP_DUPE));
 
             if ( ! new_node)
                 RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);

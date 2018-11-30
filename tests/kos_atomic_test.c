@@ -37,7 +37,7 @@ static void *_ptr(int value)
     return (void *)v;
 }
 
-struct _THREAD_DATA {
+struct THREAD_DATA_S {
     KOS_ATOMIC(uint32_t) lock;
     KOS_OBJ_ID           value;
 };
@@ -45,7 +45,7 @@ struct _THREAD_DATA {
 static void _thread(KOS_CONTEXT ctx,
                     void       *cookie)
 {
-    struct _THREAD_DATA *thread_data = (struct _THREAD_DATA *)cookie;
+    struct THREAD_DATA_S *thread_data = (struct THREAD_DATA_S *)cookie;
 
     KOS_raise_exception(ctx, TO_SMALL_INT(GET_SMALL_INT(thread_data->value) + 1));
 
@@ -150,10 +150,10 @@ int main(void)
 
     /* Basic thread test */
     {
-        KOS_INSTANCE        inst;
-        KOS_CONTEXT         ctx;
-        struct _THREAD_DATA thread_data;
-        KOS_THREAD          thread;
+        KOS_INSTANCE         inst;
+        KOS_CONTEXT          ctx;
+        struct THREAD_DATA_S thread_data;
+        KOS_THREAD           thread;
 
         thread_data.lock  = 0;
         thread_data.value = TO_SMALL_INT(44);

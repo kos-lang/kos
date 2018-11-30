@@ -472,11 +472,11 @@ static int _get_depth(KOS_OBJ_ID stack,
     return KOS_SUCCESS;
 }
 
-typedef struct _DUMP_CONTEXT {
+typedef struct KOS_DUMP_CONTEXT_S {
     KOS_CONTEXT ctx;
     uint32_t    idx;
     KOS_OBJ_ID  backtrace;
-} _KOS_DUMP_CONTEXT;
+} KOS_DUMP_CONTEXT;
 
 static uint32_t _get_instr_offs(KOS_ATOMIC(KOS_OBJ_ID) *stack_frame)
 {
@@ -494,7 +494,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
                        uint32_t   frame_size,
                        void      *cookie)
 {
-    _KOS_DUMP_CONTEXT      *dump_ctx    = (_KOS_DUMP_CONTEXT *)cookie;
+    KOS_DUMP_CONTEXT       *dump_ctx    = (KOS_DUMP_CONTEXT *)cookie;
     KOS_CONTEXT             ctx         = dump_ctx->ctx;
     KOS_ATOMIC(KOS_OBJ_ID) *stack_frame = &OBJPTR(STACK, stack)->buf[frame_idx];
     KOS_FUNCTION           *func        = OBJPTR(FUNCTION, KOS_atomic_read_obj(*stack_frame));
@@ -555,7 +555,7 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
     KOS_OBJ_ID          thrown_object = ctx->exception;
     KOS_INSTANCE *const inst          = ctx->inst;
     int                 partial_wrap  = 0;
-    _KOS_DUMP_CONTEXT   dump_ctx;
+    KOS_DUMP_CONTEXT    dump_ctx;
     KOS_OBJ_ID          prev_locals   = KOS_BADPTR;
     int                 pushed        = 0;
 

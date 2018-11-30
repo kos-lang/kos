@@ -391,17 +391,17 @@ cleanup:
     return error;
 }
 
-struct _KOS_SAVED_STATE {
+typedef struct KOS_SAVED_STATE_S {
     int           unary_depth;
     int           allow_continue;
     int           allow_break;
     int           allow_fallthrough;
     KOS_AST_NODE *last_fallthrough;
     int           in_constructor;
-};
+} KOS_SAVED_STATE;
 
-static void _save_function_state(KOS_PARSER              *parser,
-                                 struct _KOS_SAVED_STATE *state)
+static void _save_function_state(KOS_PARSER      *parser,
+                                 KOS_SAVED_STATE *state)
 {
     state->unary_depth       = parser->unary_depth;
     state->allow_continue    = parser->allow_continue;
@@ -418,8 +418,8 @@ static void _save_function_state(KOS_PARSER              *parser,
     parser->in_constructor    = 0;
 }
 
-static void _restore_function_state(KOS_PARSER              *parser,
-                                    struct _KOS_SAVED_STATE *state)
+static void _restore_function_state(KOS_PARSER      *parser,
+                                    KOS_SAVED_STATE *state)
 {
     parser->unary_depth       = state->unary_depth;
     parser->allow_continue    = state->allow_continue;
@@ -436,9 +436,9 @@ static int _function_literal(KOS_PARSER      *parser,
     int       error       = KOS_SUCCESS;
     const int constructor = keyword == KW_CONSTRUCTOR;
 
-    KOS_AST_NODE           *node = 0;
-    KOS_AST_NODE           *args;
-    struct _KOS_SAVED_STATE state;
+    KOS_AST_NODE   *node = 0;
+    KOS_AST_NODE   *args;
+    KOS_SAVED_STATE state;
 
     _save_function_state(parser, &state);
 
@@ -538,10 +538,10 @@ static int _lambda_literal_body(KOS_PARSER    *parser,
                                 KOS_AST_NODE  *args,
                                 KOS_AST_NODE **ret)
 {
-    int                     error       = KOS_SUCCESS;
-    KOS_AST_NODE           *node        = 0;
-    KOS_AST_NODE           *return_node = 0;
-    struct _KOS_SAVED_STATE state;
+    int             error       = KOS_SUCCESS;
+    KOS_AST_NODE   *node        = 0;
+    KOS_AST_NODE   *return_node = 0;
+    KOS_SAVED_STATE state;
 
     _save_function_state(parser, &state);
 
@@ -1386,10 +1386,10 @@ static int _async_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     if (parser->token.keyword == KW_DO) {
 
-        KOS_AST_NODE           *fun_node = 0;
-        KOS_AST_NODE           *tmp_node = 0;
-        KOS_AST_NODE           *sub_node = 0;
-        struct _KOS_SAVED_STATE state;
+        KOS_AST_NODE   *fun_node = 0;
+        KOS_AST_NODE   *tmp_node = 0;
+        KOS_AST_NODE   *sub_node = 0;
+        KOS_SAVED_STATE state;
 
         _save_function_state(parser, &state);
 

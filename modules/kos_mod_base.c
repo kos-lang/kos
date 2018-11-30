@@ -2057,19 +2057,19 @@ cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
-struct _KOS_PACK_FORMAT {
+struct KOS_PACK_FORMAT_S {
     KOS_OBJ_ID fmt_str;
     KOS_OBJ_ID data;
     int        idx;
     int        big_end;
 };
 
-typedef int (*_KOS_PACK_FORMAT_FUNC)(KOS_CONTEXT              ctx,
-                                     struct _KOS_PACK_FORMAT *fmt,
-                                     KOS_OBJ_ID               buffer_obj,
-                                     char                     value_fmt,
-                                     unsigned                 size,
-                                     unsigned                 count);
+typedef int (*KOS_PACK_FORMAT_FUNC)(KOS_CONTEXT               ctx,
+                                    struct KOS_PACK_FORMAT_S *fmt,
+                                    KOS_OBJ_ID                buffer_obj,
+                                    char                      value_fmt,
+                                    unsigned                  size,
+                                    unsigned                  count);
 
 static int _is_whitespace(unsigned char_code)
 {
@@ -2142,10 +2142,10 @@ static unsigned _pack_format_get_count(KOS_CONTEXT ctx,
     return count;
 }
 
-static int _process_pack_format(KOS_CONTEXT              ctx,
-                                KOS_OBJ_ID               buffer_obj,
-                                _KOS_PACK_FORMAT_FUNC    handler,
-                                struct _KOS_PACK_FORMAT *fmt)
+static int _process_pack_format(KOS_CONTEXT               ctx,
+                                KOS_OBJ_ID                buffer_obj,
+                                KOS_PACK_FORMAT_FUNC      handler,
+                                struct KOS_PACK_FORMAT_S *fmt)
 {
     int            error    = KOS_SUCCESS;
     KOS_OBJ_ID     fmt_str  = fmt->fmt_str;
@@ -2228,12 +2228,12 @@ cleanup:
     return error;
 }
 
-static int _pack_format(KOS_CONTEXT              ctx,
-                        struct _KOS_PACK_FORMAT *fmt,
-                        KOS_OBJ_ID               buffer_obj,
-                        char                     value_fmt,
-                        unsigned                 size,
-                        unsigned                 count)
+static int _pack_format(KOS_CONTEXT               ctx,
+                        struct KOS_PACK_FORMAT_S *fmt,
+                        KOS_OBJ_ID                buffer_obj,
+                        char                      value_fmt,
+                        unsigned                  size,
+                        unsigned                  count)
 {
     int        error = KOS_SUCCESS;
     int        big_end;
@@ -2440,12 +2440,12 @@ cleanup:
     return error;
 }
 
-static int _unpack_format(KOS_CONTEXT              ctx,
-                          struct _KOS_PACK_FORMAT *fmt,
-                          KOS_OBJ_ID               buffer_obj,
-                          char                     value_fmt,
-                          unsigned                 size,
-                          unsigned                 count)
+static int _unpack_format(KOS_CONTEXT               ctx,
+                          struct KOS_PACK_FORMAT_S *fmt,
+                          KOS_OBJ_ID                buffer_obj,
+                          char                      value_fmt,
+                          unsigned                  size,
+                          unsigned                  count)
 {
     int            error     = KOS_SUCCESS;
     uint8_t       *data      = 0;
@@ -2583,8 +2583,8 @@ static KOS_OBJ_ID _pack(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    int                     error;
-    struct _KOS_PACK_FORMAT fmt;
+    int                      error;
+    struct KOS_PACK_FORMAT_S fmt;
 
     fmt.fmt_str = KOS_array_read(ctx, args_obj, 0);
     fmt.data    = args_obj;
@@ -2623,8 +2623,8 @@ static KOS_OBJ_ID _unpack(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int                     error;
-    struct _KOS_PACK_FORMAT fmt;
+    int                      error;
+    struct KOS_PACK_FORMAT_S fmt;
 
     fmt.fmt_str = KOS_BADPTR;
     fmt.data    = KOS_BADPTR;
