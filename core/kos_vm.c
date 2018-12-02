@@ -2497,15 +2497,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 if (GET_OBJ_TYPE(src) != OBJ_ARRAY)
                     KOS_raise_exception_cstring(ctx, str_err_corrupted_defaults);
                 else {
-
-                    KOS_FUNCTION  *func = 0;
                     const KOS_TYPE type = GET_OBJ_TYPE(dest);
 
-                    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
-                        func = OBJPTR(FUNCTION, dest);
-
-                        func->defaults = src;
-                    }
+                    if (type == OBJ_FUNCTION || type == OBJ_CLASS)
+                        OBJPTR(FUNCTION, dest)->defaults = src;
                     else
                         KOS_raise_exception_cstring(ctx, str_err_not_callable);
                 }

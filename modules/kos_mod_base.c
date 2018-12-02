@@ -2504,7 +2504,7 @@ static int _unpack_format(KOS_CONTEXT               ctx,
                             uint32_t u;
                         } u2f;
                         u2f.u  = (uint32_t)value;
-                        fvalue = u2f.f;
+                        fvalue = (double)u2f.f;
                     }
                     else {
                         union {

@@ -144,6 +144,12 @@ else
 
     STRICTFLAGS = -Wextra -Werror
     STRICTFLAGS += -Wno-unused-parameter
+    STRICTFLAGS += -Wshadow
+    STRICTFLAGS += -Wunused
+    STRICTFLAGS += -Wnull-dereference
+    STRICTFLAGS += -Wdouble-promotion
+    STRICTFLAGS += -Wformat=2
+    #STRICTFLAGS += -Wconversion
 
     ifeq ($(UNAME), Linux)
         CFLAGS  += -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_SOURCE
