@@ -1249,6 +1249,15 @@ static void _mark_from_thread_context(KOS_CONTEXT ctx)
                 _mark_object_black(obj_id);
         }
     }
+
+    for (i = 0; i < ctx->helper_ref_count; ++i) {
+        KOS_OBJ_ID *const obj_id_ptr = ctx->helper_refs[i];
+        if (obj_id_ptr) {
+            const KOS_OBJ_ID obj_id = *obj_id_ptr;
+            if ( ! IS_BAD_PTR(obj_id))
+                _mark_object_black(obj_id);
+        }
+    }
 }
 
 static void _mark_roots(KOS_CONTEXT ctx)
@@ -1771,6 +1780,12 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
 
             for (i = 0; i < ctx->tmp_ref_count; ++i) {
                 KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
+                if (obj_id_ptr)
+                    _update_child_ptr(obj_id_ptr);
+            }
+
+            for (i = 0; i < ctx->helper_ref_count; ++i) {
+                KOS_OBJ_ID *const obj_id_ptr = ctx->helper_refs[i];
                 if (obj_id_ptr)
                     _update_child_ptr(obj_id_ptr);
             }

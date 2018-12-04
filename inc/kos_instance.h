@@ -97,6 +97,8 @@ typedef struct KOS_STACK_S {
     KOS_ATOMIC(KOS_OBJ_ID) buf[1]; /* Actual stack */
 } KOS_STACK;
 
+#define KOS_MAX_LOCALS 16
+
 struct KOS_THREAD_CONTEXT_S {
     KOS_CONTEXT   next;     /* List of thread roots in instance */
     KOS_CONTEXT   prev;
@@ -108,7 +110,9 @@ struct KOS_THREAD_CONTEXT_S {
     KOS_OBJ_ID    stack;        /* Topmost container for registers & stack frames */
     KOS_OBJ_ID    local_refs;   /* Object id refs on user's local stack           */
     KOS_OBJ_ID   *tmp_refs[10]; /* Object id refs during object creation          */
+    KOS_OBJ_ID   *helper_refs[KOS_MAX_LOCALS]; /* Helper when pushing locals stack*/
     uint32_t      tmp_ref_count;
+    uint32_t      helper_ref_count;
     uint32_t      regs_idx;     /* Index of first register in current frame       */
     uint32_t      stack_depth;
 };

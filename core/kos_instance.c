@@ -125,14 +125,15 @@ static int _register_thread(KOS_INSTANCE *inst,
 
     assert( ! kos_tls_get(inst->threads.thread_key));
 
-    ctx->inst          = inst;
-    ctx->exception     = KOS_BADPTR;
-    ctx->retval        = KOS_BADPTR;
-    ctx->stack         = KOS_BADPTR;
-    ctx->local_refs    = KOS_BADPTR;
-    ctx->regs_idx      = 0;
-    ctx->stack_depth   = 0;
-    ctx->tmp_ref_count = 0;
+    ctx->inst             = inst;
+    ctx->exception        = KOS_BADPTR;
+    ctx->retval           = KOS_BADPTR;
+    ctx->stack            = KOS_BADPTR;
+    ctx->local_refs       = KOS_BADPTR;
+    ctx->regs_idx         = 0;
+    ctx->stack_depth      = 0;
+    ctx->tmp_ref_count    = 0;
+    ctx->helper_ref_count = 0;
 
     for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); ++i)
         ctx->tmp_refs[i] = 0;
@@ -881,65 +882,37 @@ void KOS_raise_generator_end(KOS_CONTEXT ctx)
         KOS_raise_exception(ctx, exception);
 }
 
-static int push_local(KOS_CONTEXT ctx, KOS_OBJ_ID *ref)
+static int have_room_for_locals(KOS_CONTEXT ctx, int num_entries)
 {
-    KOS_OBJ_ID local_refs = ctx->local_refs;
-    uint8_t    num_tracked;
+    const KOS_OBJ_ID local_refs = ctx->local_refs;
+    unsigned         num_tracked;
 
     assert( ! IS_BAD_PTR(local_refs));
+    assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
 
     num_tracked = OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked;
 
-    if (num_tracked == sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs) /
-                       sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs[0])) {
-
-        const int error = _push_local_refs_object(ctx);
-
-        if (error)
-            return error;
-
-        local_refs  = ctx->local_refs;
-        num_tracked = 0;
-    }
-
-    OBJPTR(LOCAL_REFS, local_refs)->refs[num_tracked] = ref;
-
-    OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = num_tracked + 1;
-
-    return KOS_SUCCESS;
+    return (num_tracked + (unsigned)num_entries) <=
+           (sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs) /
+            sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs[0]));
 }
 
-static void pop_local(KOS_CONTEXT ctx)
+static int reserve_locals(KOS_CONTEXT ctx, int num_entries)
 {
-    KOS_OBJ_ID local_refs = ctx->local_refs;
-    uint8_t    num_tracked;
+    const KOS_OBJ_ID local_refs = ctx->local_refs;
+    unsigned         num_tracked;
 
     assert( ! IS_BAD_PTR(local_refs));
+    assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
 
     num_tracked = OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked;
 
-    assert(OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope == KOS_LOOK_FURTHER ||
-           OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope + 1 < num_tracked);
+    if ((num_tracked + (unsigned)num_entries) <=
+        (sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs) /
+         sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs[0])))
+        return KOS_SUCCESS;
 
-    if ( ! num_tracked) {
-
-        local_refs = OBJPTR(LOCAL_REFS, local_refs)->next;
-
-        assert( ! IS_BAD_PTR(local_refs));
-
-        ctx->local_refs = local_refs;
-
-        num_tracked = OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked;
-
-        assert(num_tracked > 0);
-
-        assert(OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope == KOS_LOOK_FURTHER ||
-               OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope + 1 < num_tracked);
-    }
-
-    --num_tracked;
-
-    OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = num_tracked;
+    return _push_local_refs_object(ctx);
 }
 
 int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
@@ -964,16 +937,22 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
     else
         prev_locals = TO_SMALL_INT(OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope);
 
-    error = push_local(ctx, prev_scope);
+    error = reserve_locals(ctx, 1);
 
     if ( ! error) {
 
-        assert(OBJPTR(LOCAL_REFS, ctx->local_refs)->header.num_tracked > 0);
+        local_refs = ctx->local_refs;
+
+        assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
+
+        OBJPTR(LOCAL_REFS, local_refs)->refs[
+            OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked++]
+                = prev_scope;
 
         *prev_scope = prev_locals;
 
-        OBJPTR(LOCAL_REFS, ctx->local_refs)->header.prev_scope =
-            OBJPTR(LOCAL_REFS, ctx->local_refs)->header.num_tracked - 1;
+        OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope =
+            OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked - 1;
     }
 
     return error;
@@ -1032,20 +1011,67 @@ void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
 int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
 {
     int     error = KOS_SUCCESS;
-    int     left  = num_entries;
     va_list args;
 
     assert(num_entries > 0);
+    assert(num_entries <= KOS_MAX_LOCALS);
     assert(*push_status == 0);
 
     va_start(args, num_entries);
 
-    do {
-        error = push_local(ctx, (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *));
+    if (have_room_for_locals(ctx, num_entries)) {
+        const KOS_OBJ_ID local_refs = ctx->local_refs;
+        uint8_t          num_tracked;
+        KOS_OBJ_ID     **ptr;
+        KOS_OBJ_ID     **end;
 
-        if (error)
-            break;
-    } while (--left);
+        assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
+
+        num_tracked = OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked;
+        ptr         = &OBJPTR(LOCAL_REFS, local_refs)->refs[num_tracked];
+        end         = ptr + num_entries;
+
+        do
+            *(ptr++) = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
+        while (ptr < end);
+
+        OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = num_tracked + num_entries;
+    }
+    else {
+        KOS_OBJ_ID **helper_refs = &ctx->helper_refs[0];
+        KOS_OBJ_ID **end         = helper_refs + num_entries;
+
+        assert(ctx->helper_ref_count == 0);
+
+        do
+            *(helper_refs++) = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
+        while (helper_refs < end);
+
+        ctx->helper_ref_count = num_entries;
+
+        error = reserve_locals(ctx, num_entries);
+
+        if ( ! error) {
+            const KOS_OBJ_ID local_refs = ctx->local_refs;
+            uint8_t          num_tracked;
+            KOS_OBJ_ID     **ptr;
+
+            assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
+
+            helper_refs = &ctx->helper_refs[0];
+            num_tracked = OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked;
+            ptr         = &OBJPTR(LOCAL_REFS, local_refs)->refs[num_tracked];
+            end         = ptr + num_entries;
+
+            do
+                *(ptr++) = *(helper_refs++);
+            while (ptr < end);
+
+            OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = num_tracked + num_entries;
+        }
+
+        ctx->helper_ref_count = 0;
+    }
 
     va_end(args);
 
@@ -1057,8 +1083,35 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
 
 void KOS_pop_locals(KOS_CONTEXT ctx, int push_status)
 {
-    while (push_status--)
-        pop_local(ctx);
+    if (push_status) {
+        KOS_OBJ_ID local_refs = ctx->local_refs;
+        unsigned   num_tracked;
+
+        assert( ! IS_BAD_PTR(local_refs));
+        assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
+
+        num_tracked = OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked;
+
+        if ( ! num_tracked) {
+
+            local_refs = OBJPTR(LOCAL_REFS, local_refs)->next;
+
+            assert( ! IS_BAD_PTR(local_refs));
+
+            ctx->local_refs = local_refs;
+
+            num_tracked = OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked;
+
+            assert(num_tracked > 0);
+
+            assert(OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope == KOS_LOOK_FURTHER ||
+                   OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope + 1 < num_tracked);
+        }
+
+        assert(num_tracked >= (unsigned)push_status);
+
+        OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = num_tracked - push_status;
+    }
 }
 
 void kos_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
