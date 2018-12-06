@@ -1038,7 +1038,7 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
             *(ptr++) = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
         while (ptr < end);
 
-        OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = num_tracked + (unsigned)num_entries;
+        OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = (uint8_t)(num_tracked + num_entries);
     }
     else {
         KOS_OBJ_ID **helper_refs = &ctx->helper_refs[0];
@@ -1070,7 +1070,7 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
                 *(ptr++) = *(helper_refs++);
             while (ptr < end);
 
-            OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = num_tracked + (unsigned)num_entries;
+            OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = (uint8_t)(num_tracked + num_entries);
         }
 
         ctx->helper_ref_count = 0;
@@ -1113,7 +1113,7 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int push_status)
 
         assert(num_tracked >= (unsigned)push_status);
 
-        OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = num_tracked - (unsigned)push_status;
+        OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = (uint8_t)(num_tracked - push_status);
     }
 }
 

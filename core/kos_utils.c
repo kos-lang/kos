@@ -301,7 +301,7 @@ static int _int_to_str(KOS_CONTEXT ctx,
         TRY(kos_vector_resize(cstr_vec, cstr_vec->size + strlen(ptr) +
                     (cstr_vec->size ? 0 : 1)));
     }
-    else {
+    else if (str) {
         KOS_OBJ_ID ret = KOS_new_cstring(ctx, ptr);
         TRY_OBJID(ret);
         *str = ret;
@@ -337,7 +337,7 @@ static int _float_to_str(KOS_CONTEXT ctx,
         TRY(kos_vector_resize(cstr_vec, cstr_vec->size + size +
                     (cstr_vec->size ? 0 : 1)));
     }
-    else {
+    else if (str) {
         KOS_OBJ_ID ret = KOS_new_string(ctx, ptr, size);
         TRY_OBJID(ret);
         *str = ret;
@@ -921,7 +921,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT   ctx,
             assert(READ_OBJ_TYPE(obj_id) == OBJ_VOID);
             if (cstr_vec)
                 error = kos_append_cstr(ctx, cstr_vec, "void", 4);
-            else
+            else if (str)
                 *str = KOS_get_string(ctx, KOS_STR_VOID);
             break;
 
@@ -929,13 +929,13 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT   ctx,
             if (KOS_get_bool(obj_id)) {
                 if (cstr_vec)
                     error = kos_append_cstr(ctx, cstr_vec, "true", 4);
-                else
+                else if (str)
                     *str = KOS_get_string(ctx, KOS_STR_TRUE);
             }
             else {
                 if (cstr_vec)
                     error = kos_append_cstr(ctx, cstr_vec, "false", 5);
-                else
+                else if (str)
                     *str = KOS_get_string(ctx, KOS_STR_FALSE);
             }
             break;
@@ -943,21 +943,21 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT   ctx,
         case OBJ_ARRAY:
             if (cstr_vec)
                 error = _vector_append_array(ctx, cstr_vec, obj_id);
-            else
+            else if (str)
                 *str = _array_to_str(ctx, obj_id);
             break;
 
         case OBJ_BUFFER:
             if (cstr_vec)
                 error = _vector_append_buffer(ctx, cstr_vec, obj_id);
-            else
+            else if (str)
                 *str = _buffer_to_str(ctx, obj_id);
             break;
 
         case OBJ_OBJECT:
             if (cstr_vec)
                 error = _vector_append_object(ctx, cstr_vec, obj_id);
-            else
+            else if (str)
                 *str = _object_to_str(ctx, obj_id);
             break;
 
@@ -966,7 +966,7 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT   ctx,
         case OBJ_CLASS:
             if (cstr_vec)
                 error = _vector_append_function(ctx, cstr_vec, obj_id);
-            else
+            else if (str)
                 *str = _function_to_str(ctx, obj_id);
             break;
     }
