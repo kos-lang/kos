@@ -754,6 +754,9 @@ void KOS_raise_exception(KOS_CONTEXT ctx,
     /* This can only happen if there is a bug and an exception has been ignored. */
     assert(IS_BAD_PTR(ctx->exception));
 
+    assert(GET_OBJ_TYPE(exception_obj) <= OBJ_LAST_TYPE ||
+           GET_OBJ_TYPE(exception_obj) == OBJ_DYNAMIC_PROP);
+
     if (IS_BAD_PTR(ctx->exception))
         ctx->exception = exception_obj;
 }

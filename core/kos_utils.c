@@ -1034,11 +1034,14 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  array,
                           KOS_OBJ_ID  value)
 {
-    int      error = KOS_SUCCESS;
+    int      error  = KOS_SUCCESS;
     uint32_t cur_size;
+    int      pushed = 0;
 
     if (GET_OBJ_TYPE(array) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_not_array);
+
+    TRY(KOS_push_locals(ctx, &pushed, 2, &array, &value));
 
     cur_size = KOS_get_array_size(array);
 
@@ -1094,6 +1097,12 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
                 KOS_OBJ_ID gen_args = KOS_new_array(ctx, 0);
                 TRY_OBJID(gen_args);
 
+                {
+                    int pushed2 = 0;
+                    TRY(KOS_push_locals(ctx, &pushed2, 1, &gen_args));
+                    pushed += pushed2;
+                }
+
                 for (;;) {
                     KOS_OBJ_ID ret = KOS_call_generator(ctx, value, void_obj, gen_args);
                     if (IS_BAD_PTR(ret)) { /* end of iterator */
@@ -1112,6 +1121,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
     }
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 

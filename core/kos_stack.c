@@ -498,9 +498,9 @@ static int _dump_stack(KOS_OBJ_ID stack,
     KOS_CONTEXT             ctx         = dump_ctx->ctx;
     KOS_ATOMIC(KOS_OBJ_ID) *stack_frame = &OBJPTR(STACK, stack)->buf[frame_idx];
     KOS_FUNCTION           *func        = OBJPTR(FUNCTION, KOS_atomic_read_obj(*stack_frame));
-    KOS_MODULE             *module      = IS_BAD_PTR(func->module) ? 0 : OBJPTR(MODULE, func->module);
+    KOS_OBJ_ID              module      = func->module;
     const uint32_t          instr_offs  = _get_instr_offs(stack_frame);
-    const unsigned          line        = KOS_module_addr_to_line(module, instr_offs);
+    const unsigned          line        = KOS_module_addr_to_line(IS_BAD_PTR(module) ? 0 : OBJPTR(MODULE, module), instr_offs);
     KOS_OBJ_ID              func_name;
     KOS_OBJ_ID              module_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     KOS_OBJ_ID              module_path = KOS_get_string(ctx, KOS_STR_XBUILTINX);
@@ -508,7 +508,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
     KOS_OBJ_ID              frame_desc  = KOS_BADPTR;
     int                     pushed      = 0;
 
-    func_name = KOS_module_addr_to_func_name(ctx, module, instr_offs);
+    func_name = KOS_module_addr_to_func_name(ctx, IS_BAD_PTR(module) ? 0 : OBJPTR(MODULE, module), instr_offs);
     if (IS_BAD_PTR(func_name)) {
         if (KOS_is_exception_pending(ctx))
             goto cleanup;
@@ -517,7 +517,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
         func_name = KOS_get_string(ctx, KOS_STR_XBUILTINX);
     }
 
-    TRY(KOS_push_locals(ctx, &pushed, 4, &func_name, &module_name, &module_path, &frame_desc));
+    TRY(KOS_push_locals(ctx, &pushed, 5, &module, &func_name, &module_name, &module_path, &frame_desc));
 
     frame_desc = KOS_new_object(ctx);
     TRY_OBJID(frame_desc);
@@ -527,9 +527,9 @@ static int _dump_stack(KOS_OBJ_ID stack,
 
     /* TODO use builtin function pointer for offset */
 
-    if (module) {
-        module_name = module->name;
-        module_path = module->path;
+    if ( ! IS_BAD_PTR(module)) {
+        module_name = OBJPTR(MODULE, module)->name;
+        module_path = OBJPTR(MODULE, module)->path;
     }
 
     TRY(KOS_set_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_MODULE),   module_name));

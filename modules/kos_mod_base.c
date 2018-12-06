@@ -727,6 +727,11 @@ static KOS_OBJ_ID _stringify(KOS_CONTEXT ctx,
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
 
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 1, &args_obj));
+    }
+
     if (num_args == 0)
         ret = KOS_new_string(ctx, 0, 0);
 
@@ -1193,6 +1198,7 @@ static KOS_OBJ_ID _apply(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  args_obj)
 {
     int        error    = KOS_SUCCESS;
+    int        pushed   = 0;
     KOS_OBJ_ID ret      = KOS_BADPTR;
     KOS_OBJ_ID arg_args = KOS_BADPTR;
     KOS_OBJ_ID arg_this;
@@ -1203,7 +1209,9 @@ static KOS_OBJ_ID _apply(KOS_CONTEXT ctx,
     arg_args = KOS_array_read(ctx, args_obj, 1);
     TRY_OBJID(arg_args);
 
+    TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &arg_this));
     arg_args = KOS_array_slice(ctx, arg_args, 0, MAX_INT64);
+    KOS_pop_locals(ctx, pushed);
     TRY_OBJID(arg_args);
 
     ret = KOS_apply_function(ctx, this_obj, arg_this, arg_args);
