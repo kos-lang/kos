@@ -146,7 +146,7 @@ else
     STRICTFLAGS += -Wno-unused-parameter
     STRICTFLAGS += -Wshadow
     STRICTFLAGS += -Wunused
-    STRICTFLAGS += -Wnull-dereference
+    #STRICTFLAGS += -Wnull-dereference
     STRICTFLAGS += -Wdouble-promotion
     STRICTFLAGS += -Wformat=2
     #STRICTFLAGS += -Wconversion
