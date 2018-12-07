@@ -354,7 +354,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
                     : "=a" (at_ret), "+m" (*at_ptr)              \
                     : "r" (newv), "0" (oldv)                     \
                     : "memory");                                 \
-       ret == oldv;                                              \
+       at_ret == oldv;                                           \
     })
 
 #define KOS_atomic_cas_ptr(dest, oldv, newv)               \
@@ -365,7 +365,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
                     : "=a" (at_ret), "+m" (*at_ptr)        \
                     : "r" (newv), "0" (oldv)               \
                     : "memory");                           \
-       ret == oldv;                                        \
+       at_ret == oldv;                                     \
     })
 
 #define KOS_atomic_add_i32(dest, value)                           \
@@ -375,7 +375,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
         __asm__ volatile("lock xaddl %0, %1\n"                    \
                     : "+r" (at_ret), "+m" (*at_ptr)               \
                     : : "memory", "cc");                          \
-        ret;                                                      \
+        at_ret;                                                   \
     })
 
 #define KOS_atomic_swap_u32(dest, value)                          \
@@ -385,7 +385,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
         __asm__ volatile("xchgl %0, %1\n"                         \
                     : "+r" (at_ret), "+m" (*at_ptr)               \
                     : : "memory", "cc");                          \
-        ret;                                                      \
+        at_ret;                                                   \
     })
 
 #define KOS_atomic_swap_ptr(dest, value)                    \
@@ -395,7 +395,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
         __asm__ volatile("xchgl %0, %1\n"                   \
                     : "+r" (at_ret), "+m" (*at_ptr)         \
                     : : "memory", "cc");                    \
-        ret;                                                \
+        at_ret;                                             \
     })
 
 /*==========================================================================*/
@@ -439,7 +439,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
                     : "=a" (at_ret), "+m" (*at_ptr)              \
                     : "r" (newv), "0" (oldv)                     \
                     : "memory");                                 \
-       ret == oldv;                                              \
+       at_ret == oldv;                                           \
     })
 
 #define KOS_atomic_cas_ptr(dest, oldv, newv)               \
@@ -450,7 +450,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
                     : "=a" (at_ret), "+m" (*at_ptr)        \
                     : "r" (newv), "0" (oldv)               \
                     : "memory");                           \
-       ret == oldv;                                        \
+       at_ret == oldv;                                     \
     })
 
 #define KOS_atomic_add_i32(dest, value)                           \
@@ -460,7 +460,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
         __asm__ volatile("lock xaddl %0, %1\n"                    \
                     : "+r" (at_ret), "+m" (*at_ptr)               \
                     : : "memory", "cc");                          \
-        ret;                                                      \
+        at_ret;                                                   \
     })
 
 #define KOS_atomic_swap_u32(dest, value)                          \
@@ -470,7 +470,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
         __asm__ volatile("xchgl %0, %1\n"                         \
                     : "+r" (at_ret), "+m" (*at_ptr)               \
                     : : "memory", "cc");                          \
-        ret;                                                      \
+        at_ret;                                                   \
     })
 
 #define KOS_atomic_swap_ptr(dest, value)                    \
@@ -480,7 +480,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
         __asm__ volatile("xchgq %0, %1\n"                   \
                     : "+r" (at_ret), "+m" (*at_ptr)         \
                     : : "memory", "cc");                    \
-        ret;                                                \
+        at_ret;                                             \
     })
 
 #else
