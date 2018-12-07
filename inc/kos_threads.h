@@ -321,13 +321,13 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 
 #define KOS_ATOMIC(type) type volatile
 
-#define KOS_atomic_full_barrier() do {        \
-        uint32_t volatile  barrier = 0;       \
-        uint32_t volatile *ptr = &barrier;    \
-        uint32_t           ret = 0;           \
-        __asm__ volatile("xchg %0, %1\n"      \
-                    : "+r" (ret), "+m" (*ptr) \
-                    : : "memory", "cc");      \
+#define KOS_atomic_full_barrier() do {                        \
+        uint32_t volatile  barrier = 0;                       \
+        uint32_t volatile *barrier_ptr = &barrier;            \
+        uint32_t           barrier_ret = 0;                   \
+        __asm__ volatile("xchg %0, %1\n"                      \
+                    : "+r" (barrier_ret), "+m" (*barrier_ptr) \
+                    : : "memory", "cc");                      \
         } while (0)
 
 #define KOS_atomic_acquire_barrier() KOS_atomic_full_barrier()
@@ -346,56 +346,56 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 #define KOS_atomic_write_ptr(dest, value) \
         (*(void *volatile *)(&(dest)) = (void *)(value))
 
-#define KOS_atomic_cas_u32(dest, oldv, newv)                  \
-    __extension__ ({                                          \
-       uint32_t           ret;                                \
-       uint32_t volatile *ptr = (uint32_t volatile *)&(dest); \
-       __asm__ volatile("lock cmpxchgl %2, %1\n"              \
-                    : "=a" (ret), "+m" (*ptr)                 \
-                    : "r" (newv), "0" (oldv)                  \
-                    : "memory");                              \
-       ret == oldv;                                           \
+#define KOS_atomic_cas_u32(dest, oldv, newv)                     \
+    __extension__ ({                                             \
+       uint32_t           at_ret;                                \
+       uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
+       __asm__ volatile("lock cmpxchgl %2, %1\n"                 \
+                    : "=a" (at_ret), "+m" (*at_ptr)              \
+                    : "r" (newv), "0" (oldv)                     \
+                    : "memory");                                 \
+       ret == oldv;                                              \
     })
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv)            \
-    __extension__ ({                                    \
-       void           *ret;                             \
-       void *volatile *ptr = (void *volatile *)&(dest); \
-       __asm__ volatile("lock cmpxchgl %2, %1\n"        \
-                    : "=a" (ret), "+m" (*ptr)           \
-                    : "r" (newv), "0" (oldv)            \
-                    : "memory");                        \
-       ret == oldv;                                     \
+#define KOS_atomic_cas_ptr(dest, oldv, newv)               \
+    __extension__ ({                                       \
+       void           *at_ret;                             \
+       void *volatile *at_ptr = (void *volatile *)&(dest); \
+       __asm__ volatile("lock cmpxchgl %2, %1\n"           \
+                    : "=a" (at_ret), "+m" (*at_ptr)        \
+                    : "r" (newv), "0" (oldv)               \
+                    : "memory");                           \
+       ret == oldv;                                        \
     })
 
-#define KOS_atomic_add_i32(dest, value)                        \
-    __extension__ ({                                           \
-        int32_t            ret = (int32_t)(value);             \
-        uint32_t volatile *ptr = (uint32_t volatile *)&(dest); \
-        __asm__ volatile("lock xaddl %0, %1\n"                 \
-                    : "+r" (ret), "+m" (*ptr)                  \
-                    : : "memory", "cc");                       \
-        ret;                                                   \
+#define KOS_atomic_add_i32(dest, value)                           \
+    __extension__ ({                                              \
+        int32_t            at_ret = (int32_t)(value);             \
+        uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
+        __asm__ volatile("lock xaddl %0, %1\n"                    \
+                    : "+r" (at_ret), "+m" (*at_ptr)               \
+                    : : "memory", "cc");                          \
+        ret;                                                      \
     })
 
-#define KOS_atomic_swap_u32(dest, value)                       \
-    __extension__ ({                                           \
-        uint32_t           ret = (uint32_t)(value);            \
-        uint32_t volatile *ptr = (uint32_t volatile *)&(dest); \
-        __asm__ volatile("xchgl %0, %1\n"                      \
-                    : "+r" (ret), "+m" (*ptr)                  \
-                    : : "memory", "cc");                       \
-        ret;                                                   \
+#define KOS_atomic_swap_u32(dest, value)                          \
+    __extension__ ({                                              \
+        uint32_t           at_ret = (uint32_t)(value);            \
+        uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
+        __asm__ volatile("xchgl %0, %1\n"                         \
+                    : "+r" (at_ret), "+m" (*at_ptr)               \
+                    : : "memory", "cc");                          \
+        ret;                                                      \
     })
 
-#define KOS_atomic_swap_ptr(dest, value)                 \
-    __extension__ ({                                     \
-        void           *ret = (void *)(value);           \
-        void *volatile *ptr = (void *volatile *)&(dest); \
-        __asm__ volatile("xchgl %0, %1\n"                \
-                    : "+r" (ret), "+m" (*ptr)            \
-                    : : "memory", "cc");                 \
-        ret;                                             \
+#define KOS_atomic_swap_ptr(dest, value)                    \
+    __extension__ ({                                        \
+        void           *at_ret = (void *)(value);           \
+        void *volatile *at_ptr = (void *volatile *)&(dest); \
+        __asm__ volatile("xchgl %0, %1\n"                   \
+                    : "+r" (at_ret), "+m" (*at_ptr)         \
+                    : : "memory", "cc");                    \
+        ret;                                                \
     })
 
 /*==========================================================================*/
@@ -406,13 +406,13 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 
 #define KOS_ATOMIC(type) type volatile
 
-#define KOS_atomic_full_barrier() do {        \
-        uint32_t volatile  barrier = 0;       \
-        uint32_t volatile *ptr = &barrier;    \
-        uint32_t           ret = 0;           \
-        __asm__ volatile("lock or %0, %1\n"   \
-                    : "+r" (ret), "+m" (*ptr) \
-                    : : "memory", "cc");      \
+#define KOS_atomic_full_barrier() do {                        \
+        uint32_t volatile  barrier = 0;                       \
+        uint32_t volatile *barrier_ptr = &barrier;            \
+        uint32_t           barrier_ret = 0;                   \
+        __asm__ volatile("lock or %0, %1\n"                   \
+                    : "+r" (barrier_ret), "+m" (*barrier_ptr) \
+                    : : "memory", "cc");                      \
         } while (0)
 
 #define KOS_atomic_acquire_barrier() KOS_atomic_full_barrier()
@@ -431,56 +431,56 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 #define KOS_atomic_write_ptr(dest, value) \
         (*(void *volatile *)(&(dest)) = (void *)(value))
 
-#define KOS_atomic_cas_u32(dest, oldv, newv)                  \
-    __extension__ ({                                          \
-       uint32_t           ret;                                \
-       uint32_t volatile *ptr = (uint32_t volatile *)&(dest); \
-       __asm__ volatile("lock cmpxchgl %2, %1\n"              \
-                    : "=a" (ret), "+m" (*ptr)                 \
-                    : "r" (newv), "0" (oldv)                  \
-                    : "memory");                              \
-       ret == oldv;                                           \
+#define KOS_atomic_cas_u32(dest, oldv, newv)                     \
+    __extension__ ({                                             \
+       uint32_t           at_ret;                                \
+       uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
+       __asm__ volatile("lock cmpxchgl %2, %1\n"                 \
+                    : "=a" (at_ret), "+m" (*at_ptr)              \
+                    : "r" (newv), "0" (oldv)                     \
+                    : "memory");                                 \
+       ret == oldv;                                              \
     })
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv)            \
-    __extension__ ({                                    \
-       void           *ret;                             \
-       void *volatile *ptr = (void *volatile *)&(dest); \
-       __asm__ volatile("lock cmpxchgq %2, %1\n"        \
-                    : "=a" (ret), "+m" (*ptr)           \
-                    : "r" (newv), "0" (oldv)            \
-                    : "memory");                        \
-       ret == oldv;                                     \
+#define KOS_atomic_cas_ptr(dest, oldv, newv)               \
+    __extension__ ({                                       \
+       void           *at_ret;                             \
+       void *volatile *at_ptr = (void *volatile *)&(dest); \
+       __asm__ volatile("lock cmpxchgq %2, %1\n"           \
+                    : "=a" (at_ret), "+m" (*at_ptr)        \
+                    : "r" (newv), "0" (oldv)               \
+                    : "memory");                           \
+       ret == oldv;                                        \
     })
 
-#define KOS_atomic_add_i32(dest, value)                        \
-    __extension__ ({                                           \
-        int32_t            ret = (int32_t)(value);             \
-        uint32_t volatile *ptr = (uint32_t volatile *)&(dest); \
-        __asm__ volatile("lock xaddl %0, %1\n"                 \
-                    : "+r" (ret), "+m" (*ptr)                  \
-                    : : "memory", "cc");                       \
-        ret;                                                   \
+#define KOS_atomic_add_i32(dest, value)                           \
+    __extension__ ({                                              \
+        int32_t            at_ret = (int32_t)(value);             \
+        uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
+        __asm__ volatile("lock xaddl %0, %1\n"                    \
+                    : "+r" (at_ret), "+m" (*at_ptr)               \
+                    : : "memory", "cc");                          \
+        ret;                                                      \
     })
 
-#define KOS_atomic_swap_u32(dest, value)                       \
-    __extension__ ({                                           \
-        uint32_t           ret = (uint32_t)(value);            \
-        uint32_t volatile *ptr = (uint32_t volatile *)&(dest); \
-        __asm__ volatile("xchgl %0, %1\n"                      \
-                    : "+r" (ret), "+m" (*ptr)                  \
-                    : : "memory", "cc");                       \
-        ret;                                                   \
+#define KOS_atomic_swap_u32(dest, value)                          \
+    __extension__ ({                                              \
+        uint32_t           at_ret = (uint32_t)(value);            \
+        uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
+        __asm__ volatile("xchgl %0, %1\n"                         \
+                    : "+r" (at_ret), "+m" (*at_ptr)               \
+                    : : "memory", "cc");                          \
+        ret;                                                      \
     })
 
-#define KOS_atomic_swap_ptr(dest, value)                 \
-    __extension__ ({                                     \
-        void           *ret = (void *)(value);           \
-        void *volatile *ptr = (void *volatile *)&(dest); \
-        __asm__ volatile("xchgq %0, %1\n"                \
-                    : "+r" (ret), "+m" (*ptr)            \
-                    : : "memory", "cc");                 \
-        ret;                                             \
+#define KOS_atomic_swap_ptr(dest, value)                    \
+    __extension__ ({                                        \
+        void           *at_ret = (void *)(value);           \
+        void *volatile *at_ptr = (void *volatile *)&(dest); \
+        __asm__ volatile("xchgq %0, %1\n"                   \
+                    : "+r" (at_ret), "+m" (*at_ptr)         \
+                    : : "memory", "cc");                    \
+        ret;                                                \
     })
 
 #else

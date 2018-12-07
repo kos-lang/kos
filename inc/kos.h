@@ -520,7 +520,7 @@ class random_access_iterator {
         }
 
         operator random_access_iterator<const value_type>() const {
-            return random_access_iterator<const value_type>(_elem.ctx(), _elem.object(), _elem.index());
+            return random_access_iterator<const value_type>(_elem.get_context(), _elem.object(), _elem.index());
         }
 
         random_access_iterator& operator++() {
@@ -534,23 +534,23 @@ class random_access_iterator {
         }
 
         random_access_iterator operator++(int) {
-            random_access_iterator tmp(_elem.ctx(), _elem.object(), _elem.index());
+            random_access_iterator tmp(_elem.get_context(), _elem.object(), _elem.index());
             operator++();
             return tmp;
         }
 
         random_access_iterator operator--(int) {
-            random_access_iterator tmp(_elem.ctx(), _elem.object(), _elem.index());
+            random_access_iterator tmp(_elem.get_context(), _elem.object(), _elem.index());
             operator--();
             return tmp;
         }
 
         random_access_iterator operator+(int delta) const {
-            return random_access_iterator(_elem.ctx(), _elem.object(), _elem.index() + delta);
+            return random_access_iterator(_elem.get_context(), _elem.object(), _elem.index() + delta);
         }
 
         random_access_iterator operator-(int delta) const {
-            return random_access_iterator(_elem.ctx(), _elem.object(), _elem.index() - delta);
+            return random_access_iterator(_elem.get_context(), _elem.object(), _elem.index() - delta);
         }
 
         random_access_iterator& operator+=(int delta) {
@@ -599,7 +599,7 @@ class random_access_iterator {
 
         // TODO reference to actual element
         reference operator*() const {
-            assert(static_cast<KOS_CONTEXT>(_elem.ctx()));
+            assert(static_cast<KOS_CONTEXT>(_elem.get_context()));
             return _elem;
         }
 
@@ -641,7 +641,7 @@ class array: public object {
                     return value_from_object_ptr<T>(_ctx, _ctx.check_error(KOS_array_read(_ctx, _obj_id, _idx)));
                 }
 
-                stack_frame ctx() const {
+                stack_frame get_context() const {
                     return _ctx;
                 }
 
@@ -729,8 +729,8 @@ class array: public object {
             return element(_ctx, _obj_id, idx);
         }
 
-        array slice(int64_t begin, int64_t end) const {
-            return array(_ctx, _ctx.check_error(KOS_array_slice(_ctx, _obj_id, begin, end)));
+        array slice(int64_t begin_idx, int64_t end_idx) const {
+            return array(_ctx, _ctx.check_error(KOS_array_slice(_ctx, _obj_id, begin_idx, end_idx)));
         }
 
         typedef random_access_iterator<element>       iterator;
@@ -793,7 +793,7 @@ class buffer: public object {
                     return static_cast<char>(buf[idx]);
                 }
 
-                stack_frame ctx() const {
+                stack_frame get_context() const {
                     return _ctx;
                 }
 
