@@ -29,7 +29,7 @@
 
 static int status = 0;
 
-static int reference = 0;
+static int arg_reference = 0;
 
 static void test_int(const char *str, uint32_t hi, uint32_t lo, int error)
 {
@@ -73,7 +73,7 @@ static void test_double(const char *str, uint32_t high, uint32_t low, int error)
             status = 1;
         }
 
-        if (reference) {
+        if (arg_reference) {
             char        *endptr = 0;
             const double conv_d = strtod(str, &endptr);
 
@@ -212,15 +212,15 @@ static void test_random_double(void)
 
 int main(int argc, char *argv[])
 {
-    int random = 0;
+    int arg_random = 0;
 
     if (argc == 2) {
         if (strcmp(argv[1], "-reference") == 0)
-            reference = 1;
+            arg_reference = 1;
 
         else if (strcmp(argv[1], "-random") == 0) {
-            reference = 1;
-            random    = 1;
+            arg_reference = 1;
+            arg_random    = 1;
         }
     }
 
@@ -386,7 +386,7 @@ int main(int argc, char *argv[])
     test_double("1e-325",                            0,           0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
     test_double("9999999999999999999e308",           0,           0, KOS_ERROR_NUMBER_TOO_BIG);
 
-    if (random)
+    if (arg_random)
         test_random_double();
 
     return status;
