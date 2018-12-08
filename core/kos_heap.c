@@ -142,10 +142,14 @@ static void *_list_pop(void **list_ptr)
 
 #endif
 
-static KOS_HEAP *_get_heap(KOS_CONTEXT ctx)
+#ifdef __cplusplus
+static inline KOS_HEAP *_get_heap(KOS_CONTEXT ctx)
 {
     return &ctx->inst->heap;
 }
+#else
+#define _get_heap(ctx) (&(ctx)->inst->heap)
+#endif
 
 int kos_heap_init(KOS_INSTANCE *inst)
 {
@@ -443,12 +447,18 @@ int kos_heap_lend_page(KOS_CONTEXT ctx,
 }
 #endif
 
+static int is_recursive_collection(KOS_HEAP *heap)
+{
+    /* TODO improve this, check on different thread */
+    return KOS_atomic_read_u32(heap->gc_state) != GC_INACTIVE;
+}
+
 static void _try_collect_garbage(KOS_CONTEXT ctx)
 {
     KOS_HEAP *const heap = _get_heap(ctx);
 
     /* Don't try to collect garbage when the garbage collector is running */
-    if (KOS_atomic_read_u32(heap->gc_state) != GC_INACTIVE)
+    if (is_recursive_collection(heap))
         return;
 
 #ifdef CONFIG_MAD_GC
@@ -730,7 +740,8 @@ static void *_alloc_object(KOS_CONTEXT ctx,
 
     kos_lock_mutex(&heap->mutex);
 
-    /* TODO if in GC, unlock mutex and help GC */
+    /* TODO if in GC, unlock mutex and help GC, unless the current thread is
+     * already participating in GC */
 #if 0
     if (_is_gc_active(heap)) {
 
@@ -861,15 +872,8 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
                        KOS_TYPE    object_type,
                        uint32_t    size)
 {
-#ifdef CONFIG_MAD_GC
-    {
-        KOS_HEAP *heap = _get_heap(ctx);
+    kos_trigger_mad_gc(ctx);
 
-        kos_lock_mutex(&heap->mutex);
-        _try_collect_garbage(ctx);
-        kos_unlock_mutex(&heap->mutex);
-    }
-#endif
     if (size > (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
     {
         return _alloc_huge_object(ctx, object_type, size);
@@ -1404,10 +1408,12 @@ static void _lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
 
         pages = page->next;
 
-        /* Only lock heap pages fully aligning with OS pages */
+        /* Only lock heap pages which are fully aligned with OS pages */
         if (num_slots == KOS_SLOTS_PER_PAGE) {
             if (kos_mem_protect(page, KOS_PAGE_SIZE, KOS_NO_ACCESS)) {
-                fprintf(stderr, "Failed to lock region at %p size %u\n", (void *)page, KOS_PAGE_SIZE);
+                assert(0);
+                fprintf(stderr, "Failed to lock region at %p size %u\n",
+                        (void *)page, KOS_PAGE_SIZE);
                 exit(1);
             }
         }
@@ -1436,6 +1442,60 @@ static void _lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
         heap->locked_pages_last->pages[i].page      = page;
         heap->locked_pages_last->pages[i].num_slots = num_slots;
     }
+}
+
+static void unlock_pages(KOS_HEAP *heap)
+{
+    struct KOS_LOCKED_PAGES_S *locked_pages = heap->locked_pages_first;
+    KOS_PAGE                 **insert_at    = &heap->free_pages;
+
+    while (locked_pages) {
+        struct KOS_LOCKED_PAGES_S *cur_locked_page_list = locked_pages;
+
+        uint32_t i;
+
+        locked_pages = locked_pages->next;
+
+        for (i = 0; i < cur_locked_page_list->num_pages; ++i) {
+            const uint32_t  num_slots = cur_locked_page_list->pages[i].num_slots;
+            KOS_PAGE *const page      = cur_locked_page_list->pages[i].page;
+            KOS_PAGE       *cur;
+
+            if (num_slots == KOS_SLOTS_PER_PAGE) {
+                if (kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE)) {
+                    assert(0);
+                    fprintf(stderr, "Failed to unlock region at %p size %u\n",
+                            (void *)page, KOS_PAGE_SIZE);
+                    exit(1);
+                }
+            }
+
+            /* Put page on free list */
+            cur = *insert_at;
+
+            if (page < cur) {
+                insert_at = &heap->free_pages;
+                cur       = heap->free_pages;
+            }
+
+            while (cur && page > cur) {
+                insert_at = &cur->next;
+                cur       = cur->next;
+            }
+
+            assert(page < cur || ! cur);
+
+            page->next = cur;
+            *insert_at = page;
+            if (cur)
+                insert_at = &page->next;
+        }
+
+        kos_free(cur_locked_page_list);
+    }
+
+    heap->locked_pages_first = 0;
+    heap->locked_pages_last  = 0;
 }
 #endif
 
@@ -1826,6 +1886,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
 
         struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
 
+        unsigned  num_evac = 0;
         KOS_SLOT *ptr      = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
         KOS_SLOT *end      = ptr + _get_num_active_slots(page);
 #ifndef NDEBUG
@@ -1864,7 +1925,6 @@ static int _evacuate(KOS_CONTEXT            ctx,
             KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
             const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
             const uint32_t  color = _get_marking(&mark_loc);
-            int             evac  = 0;
 
             assert(size > 0U);
             assert(color != GRAY);
@@ -1875,55 +1935,52 @@ static int _evacuate(KOS_CONTEXT            ctx,
 
                     KOS_clear_exception(ctx);
 
-                    _release_current_page_locked(ctx);
+                    assert( ! ctx->cur_page);
 
-                    _update_after_evacuation(ctx);
-
-                    /* TODO this will not work, pages can't be reused until
-                     *      the end of GC, because evacuated object refs
-                     *      must be updated in other objects. */
-                    _reclaim_free_pages(heap, *free_pages, &stats);
-                    *free_pages = 0;
-
+#ifdef CONFIG_MAD_GC
+                    unlock_pages(heap);
+#else
+                    /* TODO find all free pages and make them available; a free
+                     * page which had no objects to evacuate is marked with
+                     * num_allocated == 0 */
+                    assert(0);
+#endif
                     error = _evacuate_object(ctx, hdr, size);
 
                     if (error) {
-                        uint8_t       *begin     = (uint8_t *)page + KOS_SLOTS_OFFS;
-                        const uint32_t evac_size = (uint32_t)((uint8_t *)ptr - begin);
+                        /* TODO failed mid-evacuation, therefore we have to do the
+                         * following:
+                         * 1) Put back the remaining pages on the full or half-full
+                         *    list.
+                         * 2) Update pointers after evacuation.
+                         * 3) Set size of the first object to the size of
+                         *    the area that was evacuated successfully and set
+                         *    the type to OBJ_OPAQUE - this will make sure this
+                         *    area remains reserved until the next evacuation.
+                         */
 
-                        hdr = (KOS_OBJ_HEADER *)begin;
-                        hdr->alloc_size = TO_SMALL_INT(evac_size);
-
-                        /* TODO page failed mid-evacuation, alloc_sizes are corrupted */
-
-                        do {
-                            next = page->next;
-                            PUSH_LIST(heap->full_pages, page);
-                            heap->used_size += _full_page_size(page);
-                            page = next;
-                        } while (page);
+                        assert(0);
 
                         goto cleanup;
                     }
 
                 }
-                ++stats.num_objs_evacuated;
+                ++num_evac;
                 stats.size_evacuated += size;
-                evac = 1;
             }
-            else if (hdr->type == OBJ_OBJECT) {
+            else {
+                if (hdr->type == OBJ_OBJECT) {
 
-                KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
+                    KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
 
-                if (obj->finalize) {
+                    if (obj->finalize) {
 
-                    obj->finalize(ctx, KOS_atomic_read_ptr(obj->priv));
+                        obj->finalize(ctx, KOS_atomic_read_ptr(obj->priv));
 
-                    ++stats.num_objs_finalized;
+                        ++stats.num_objs_finalized;
+                    }
                 }
-            }
 
-            if ( ! evac) {
                 ++stats.num_objs_freed;
                 stats.size_freed += size;
             }
@@ -1932,6 +1989,13 @@ static int _evacuate(KOS_CONTEXT            ctx,
 
             ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
         }
+
+        stats.num_objs_evacuated += num_evac;
+
+        /* Mark page which has no evacuated objects, such page can be re-used
+         * early before the end of evacuation when the heap is full. */
+        if ( ! num_evac)
+            KOS_atomic_write_u32(page->num_allocated, 0);
 
         PUSH_LIST(*free_pages, page);
     }
@@ -1955,7 +2019,7 @@ static void _update_gc_threshold(KOS_HEAP *heap)
 
 static int _help_gc(KOS_CONTEXT ctx)
 {
-    KOS_HEAP *heap = _get_heap(ctx);
+    KOS_HEAP *const heap = _get_heap(ctx);
 
     while (KOS_atomic_read_u32(heap->gc_state) != GC_INACTIVE)
         /* TODO actually help garbage collector */
@@ -1963,6 +2027,21 @@ static int _help_gc(KOS_CONTEXT ctx)
 
     return KOS_SUCCESS;
 }
+
+#ifdef CONFIG_MAD_GC
+void kos_trigger_mad_gc(KOS_CONTEXT ctx)
+{
+    KOS_HEAP *const heap = _get_heap(ctx);
+
+    /* Don't try to collect garbage when the garbage collector is running */
+    if (is_recursive_collection(heap))
+        return;
+
+    kos_lock_mutex(&heap->mutex);
+    _try_collect_garbage(ctx);
+    kos_unlock_mutex(&heap->mutex);
+}
+#endif
 
 int KOS_collect_garbage(KOS_CONTEXT            ctx,
                         struct KOS_GC_STATS_S *stats)

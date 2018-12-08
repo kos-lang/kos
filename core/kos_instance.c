@@ -549,7 +549,11 @@ int KOS_instance_add_path(KOS_CONTEXT ctx, const char *module_search_path)
     TRY_OBJID(path_str);
 
     len = KOS_get_array_size(inst->modules.search_paths);
+
+    kos_track_refs(ctx, 1, &path_str);
     TRY(KOS_array_resize(ctx, inst->modules.search_paths, len+1));
+    kos_untrack_refs(ctx, 1);
+
     TRY(KOS_array_write(ctx, inst->modules.search_paths, (int)len, path_str));
 
 cleanup:
@@ -756,6 +760,12 @@ void KOS_raise_exception(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(exception_obj) <= OBJ_LAST_TYPE ||
            GET_OBJ_TYPE(exception_obj) == OBJ_DYNAMIC_PROP);
+
+#ifdef CONFIG_MAD_GC
+    kos_track_refs(ctx, 1, &exception_obj);
+    kos_trigger_mad_gc(ctx);
+    kos_untrack_refs(ctx, 1);
+#endif
 
     if (IS_BAD_PTR(ctx->exception))
         ctx->exception = exception_obj;

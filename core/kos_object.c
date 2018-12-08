@@ -600,6 +600,12 @@ int KOS_set_property(KOS_CONTEXT ctx,
                 }
             }
         }
+#ifdef CONFIG_MAD_GC
+        else {
+            kos_trigger_mad_gc(ctx);
+            props = _get_properties(obj_id);
+        }
+#endif
 
         if (props) {
             const uint32_t hash         = KOS_string_get_hash(prop);

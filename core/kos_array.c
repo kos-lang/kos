@@ -404,6 +404,12 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
 {
     int error = KOS_ERROR_EXCEPTION;
 
+#ifdef CONFIG_MAD_GC
+    kos_track_refs(ctx, 1, &obj_id);
+    kos_trigger_mad_gc(ctx);
+    kos_untrack_refs(ctx, 1);
+#endif
+
     if (IS_BAD_PTR(obj_id))
         KOS_raise_exception_cstring(ctx, str_err_null_ptr);
     else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
