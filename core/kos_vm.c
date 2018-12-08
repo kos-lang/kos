@@ -2705,6 +2705,8 @@ static int exec_function(KOS_CONTEXT ctx)
                                 if ( ! error) {
                                     ret_val = OBJPTR(FUNCTION, func_obj)->handler(ctx, this_obj, args_obj);
 
+                                    assert(IS_BAD_PTR(ret_val) || GET_OBJ_TYPE(ret_val) <= OBJ_LAST_TYPE);
+
                                     KOS_pop_local_scope(ctx, &prev_locals);
                                 }
                             }
