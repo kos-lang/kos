@@ -22,6 +22,7 @@
 
 #include "../inc/kos_string.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_buffer.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_threads.h"
@@ -324,6 +325,80 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
 
 cleanup:
     return error ? KOS_BADPTR : OBJID(STRING, ret);
+}
+
+KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
+                                      KOS_OBJ_ID  utf8_buf)
+{
+    KOS_STRING      *str       = 0;
+    KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
+    int              pushed    = 0;
+    uint32_t         size;
+    uint32_t         max_code;
+    unsigned         length;
+    void            *ptr;
+
+    assert(GET_OBJ_TYPE(utf8_buf) == OBJ_BUFFER);
+
+    size = KOS_get_buffer_size(utf8_buf);
+    if ( ! size)
+        return KOS_get_string(ctx, KOS_STR_EMPTY);
+
+    utf8_buf = KOS_atomic_read_obj(OBJPTR(BUFFER, utf8_buf)->data);
+
+    length = kos_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf,
+                              size, KOS_UTF8_NO_ESCAPE, &max_code);
+    if (length == ~0U) {
+        KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+        goto cleanup;
+    }
+
+    if (KOS_push_locals(ctx, &pushed, 1, &utf8_buf))
+        goto cleanup;
+
+    if (max_code > 0xFFFFU)
+        elem_size = KOS_STRING_ELEM_32;
+    else if (max_code > 0xFFU)
+        elem_size = KOS_STRING_ELEM_16;
+    else
+        elem_size = KOS_STRING_ELEM_8;
+
+    _override_elem_size(elem_size);
+
+    str = _new_empty_string(ctx, length, elem_size);
+    if ( ! str)
+        goto cleanup;
+
+    kos_set_return_value(ctx, OBJID(STRING, str));
+
+    ptr = (void *)kos_get_string_buffer(str);
+
+    if (elem_size == KOS_STRING_ELEM_8) {
+        if (KOS_SUCCESS != kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf,
+                                             size, KOS_UTF8_NO_ESCAPE, (uint8_t *)ptr)) {
+            KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+            str = 0; /* object is garbage-collected */
+        }
+    }
+    else if (elem_size == KOS_STRING_ELEM_16) {
+        if (KOS_SUCCESS != kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf,
+                                              size, KOS_UTF8_NO_ESCAPE, (uint16_t *)ptr)) {
+            KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+            str = 0; /* object is garbage-collected */
+        }
+    }
+    else {
+        if (KOS_SUCCESS != kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf,
+                                              size, KOS_UTF8_NO_ESCAPE, (uint32_t *)ptr)) {
+            KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+            str = 0; /* object is garbage-collected */
+        }
+    }
+
+cleanup:
+    KOS_pop_locals(ctx, pushed);
+
+    return OBJID(STRING, str);
 }
 
 unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,

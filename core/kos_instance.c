@@ -159,6 +159,8 @@ static void _unregister_thread(KOS_INSTANCE *inst,
 
     kos_tls_set(inst->threads.thread_key, 0);
 
+    /* TODO mark thread as excluded from GC */
+
     kos_lock_mutex(&inst->threads.mutex);
 
     assert(ctx != &inst->threads.main_thread);
@@ -177,6 +179,8 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 {
     int error;
 
+    kos_lock_gc(inst);
+
     kos_lock_mutex(&inst->threads.mutex);
 
     ctx->prev                      = &inst->threads.main_thread;
@@ -186,6 +190,8 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
         ctx->next->prev            = ctx;
 
     kos_unlock_mutex(&inst->threads.mutex);
+
+    kos_unlock_gc(inst);
 
     ctx->cur_page = 0;
 
@@ -290,6 +296,7 @@ static int _init_common_strings(KOS_CONTEXT   ctx,
         { KOS_STR_GLOBAL,     "global"    },
         { KOS_STR_INTEGER,    "integer"   },
         { KOS_STR_LINE,       "line"      },
+        { KOS_STR_LOCALS,     " locals "  },
         { KOS_STR_MODULE,     "module"    },
         { KOS_STR_OBJECT,     "object"    },
         { KOS_STR_OFFSET,     "offset"    },
@@ -298,7 +305,6 @@ static int _init_common_strings(KOS_CONTEXT   ctx,
         { KOS_STR_RESULT,     "result"    },
         { KOS_STR_SLICE,      "slice"     },
         { KOS_STR_STRING,     "string"    },
-        { KOS_STR_THIS,       "this"      },
         { KOS_STR_TRUE,       "true"      },
         { KOS_STR_VALUE,      "value"     },
         { KOS_STR_VOID,       "void"      },

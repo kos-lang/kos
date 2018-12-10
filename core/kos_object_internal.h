@@ -193,6 +193,10 @@ int kos_heap_lend_page(KOS_CONTEXT ctx,
                        size_t      size);
 #endif
 
+void kos_lock_gc(KOS_INSTANCE *inst);
+
+void kos_unlock_gc(KOS_INSTANCE *inst);
+
 void kos_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
 
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);

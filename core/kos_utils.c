@@ -582,13 +582,15 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  obj_id)
 {
     int        error;
+    int        pushed       = 0;
     uint32_t   length;
     uint32_t   i;
     uint32_t   i_out;
-    KOS_OBJ_ID ret       = KOS_BADPTR;
+    KOS_OBJ_ID ret          = KOS_BADPTR;
     KOS_OBJ_ID str;
-    KOS_OBJ_ID str_comma = KOS_BADPTR;
-    KOS_OBJ_ID aux_array_id;
+    KOS_OBJ_ID str_comma    = KOS_BADPTR;
+    KOS_OBJ_ID aux_array_id = KOS_BADPTR;
+    KOS_OBJ_ID val_id       = KOS_BADPTR;
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
 
@@ -597,6 +599,8 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT ctx,
     if (length == 0)
         return KOS_new_const_ascii_string(ctx, str_empty_array,
                                           sizeof(str_empty_array) - 1);
+
+    TRY(KOS_push_locals(ctx, &pushed, 4, &obj_id, &str_comma, &aux_array_id, &val_id));
 
     aux_array_id = KOS_new_array(ctx, length * 4 + 1);
     TRY_OBJID(aux_array_id);
@@ -610,7 +614,7 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT ctx,
 
     for (i = 0; i < length; ++i) {
 
-        KOS_OBJ_ID val_id = KOS_array_read(ctx, obj_id, i);
+        val_id = KOS_array_read(ctx, obj_id, i);
         TRY_OBJID(val_id);
 
         if (GET_OBJ_TYPE(val_id) == OBJ_STRING) {
@@ -655,6 +659,8 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT ctx,
     ret = KOS_string_add(ctx, aux_array_id);
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
+
     return error ? KOS_BADPTR : ret;
 }
 
@@ -1071,12 +1077,12 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
             uint32_t       i;
             uint8_t       *buf  = 0;
 
+            TRY(KOS_array_resize(ctx, array, cur_size + size));
+
             if (size) {
                 buf = KOS_buffer_data(value);
                 assert(buf);
             }
-
-            TRY(KOS_array_resize(ctx, array, cur_size + size));
 
             for (i = 0; i < size; i++) {
                 const KOS_OBJ_ID byte = TO_SMALL_INT((int)buf[i]);

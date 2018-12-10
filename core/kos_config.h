@@ -39,6 +39,8 @@
 #define KOS_MAX_STACK_DEPTH    4096U
 #ifdef CONFIG_FUZZ
 #   define KOS_MAX_HEAP_SIZE   (32U * 1024U * 1024U)
+#elif defined(CONFIG_MAD_GC)
+#   define KOS_MAX_HEAP_SIZE   (32U * 1024U * 1024U)
 #else
 #   define KOS_MAX_HEAP_SIZE   (1024U * 1024U * 1024U)
 #endif

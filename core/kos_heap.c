@@ -39,6 +39,7 @@
 
 enum GC_STATE_E {
     GC_INACTIVE,
+    GC_LOCKED,
     GC_INIT
 };
 
@@ -462,11 +463,12 @@ static void _try_collect_garbage(KOS_CONTEXT ctx)
         return;
 
 #ifdef CONFIG_MAD_GC
-    if ( ! (ctx->inst->flags & KOS_INST_MANUAL_GC)) {
+    if ( ! (ctx->inst->flags & KOS_INST_MANUAL_GC))
 #else
     if (heap->used_size > heap->gc_threshold &&
-        ! (ctx->inst->flags & KOS_INST_MANUAL_GC)) {
+        ! (ctx->inst->flags & KOS_INST_MANUAL_GC))
 #endif
+    {
 
         kos_unlock_mutex(&heap->mutex);
 
@@ -1935,7 +1937,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
 
                     KOS_clear_exception(ctx);
 
-                    assert( ! ctx->cur_page);
+                    _release_current_page_locked(ctx);
 
 #ifdef CONFIG_MAD_GC
                     unlock_pages(heap);
@@ -2043,12 +2045,37 @@ void kos_trigger_mad_gc(KOS_CONTEXT ctx)
 }
 #endif
 
+void kos_lock_gc(KOS_INSTANCE *inst)
+{
+    while ( ! KOS_atomic_cas_u32(inst->heap.gc_state, GC_INACTIVE, GC_LOCKED))
+        kos_yield();
+}
+
+void kos_unlock_gc(KOS_INSTANCE *inst)
+{
+    assert(KOS_atomic_read_u32(inst->heap.gc_state) == GC_LOCKED);
+
+    KOS_atomic_write_u32(inst->heap.gc_state, GC_INACTIVE);
+
+    KOS_atomic_release_barrier();
+}
+
 int KOS_collect_garbage(KOS_CONTEXT            ctx,
                         struct KOS_GC_STATS_S *stats)
 {
     int       error      = KOS_SUCCESS;
     KOS_HEAP *heap       = _get_heap(ctx);
     KOS_PAGE *free_pages = 0;
+
+    kos_lock_mutex(&ctx->inst->threads.mutex);
+
+    /* TODO multiple threads are not brought up yet */
+    if (ctx->prev || ctx->next) {
+        kos_unlock_mutex(&ctx->inst->threads.mutex);
+        return KOS_SUCCESS;
+    }
+
+    kos_unlock_mutex(&ctx->inst->threads.mutex);
 
     if ( ! KOS_atomic_cas_u32(heap->gc_state, GC_INACTIVE, GC_INIT))
         return _help_gc(ctx);

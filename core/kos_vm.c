@@ -1563,7 +1563,13 @@ static int exec_function(KOS_CONTEXT ctx)
                         else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
                             KOS_raise_exception_cstring(ctx, str_err_slice_not_function);
                         else {
-                            KOS_OBJ_ID args = KOS_new_array(ctx, 2);
+                            KOS_OBJ_ID args;
+
+                            kos_track_refs(ctx, 2, &out, &src);
+
+                            args = KOS_new_array(ctx, 2);
+
+                            kos_untrack_refs(ctx, 2);
 
                             if ( ! IS_BAD_PTR(args)) {
                                 KOS_ATOMIC(KOS_OBJ_ID) *buf =
@@ -1589,7 +1595,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 const int32_t  idx  = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_ID     prop;
 
-                assert(rsrc  < num_regs);
+                assert(rsrc < num_regs);
 
                 rdest = bytecode[1];
                 prop  = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, idx);

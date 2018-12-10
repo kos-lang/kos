@@ -27,6 +27,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
+#include "../core/kos_malloc.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
@@ -152,9 +153,14 @@ static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                  ctx,
                                    KOS_OBJ_ID                   args_obj,
                                    enum KOS_OBJECT_WALK_DEPTH_E deep)
 {
-    int        error = KOS_SUCCESS;
-    KOS_OBJ_ID walk;
-    KOS_OBJ_ID ret  = KOS_BADPTR;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
+    KOS_OBJ_ID ret    = KOS_BADPTR;
+    KOS_OBJ_ID array  = KOS_BADPTR;
+    KOS_OBJ_ID walk   = KOS_BADPTR;
+    KOS_OBJ_ID value  = KOS_BADPTR;
+
+    TRY(KOS_push_locals(ctx, &pushed, 4, &regs_obj, &array, &walk, &value));
 
     assert( ! IS_BAD_PTR(regs_obj));
     TRY_OBJID(regs_obj);
@@ -174,12 +180,12 @@ static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                  ctx,
     }
 
     {
-        KOS_OBJ_ID array = KOS_new_array(ctx, 2);
+        array = KOS_new_array(ctx, 2);
         TRY_OBJID(array);
 
         if ( ! KOS_object_walk(ctx, walk)) {
 
-            KOS_OBJ_ID value = KOS_get_walk_value(walk);
+            value = KOS_get_walk_value(walk);
 
             assert( ! IS_BAD_PTR(KOS_get_walk_key(walk)));
             assert( ! IS_BAD_PTR(value));
@@ -632,8 +638,11 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
                                       KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
+    int            pushed   = 0;
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
+
+    TRY(KOS_push_locals(ctx, &pushed, 1, &args_obj));
 
     if (num_args == 0)
         ret = KOS_new_string(ctx, 0, 0);
@@ -658,13 +667,9 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
                     obj = KOS_new_string_from_codes(ctx, obj);
                     break;
 
-                case OBJ_BUFFER: {
-                    const uint32_t    size = KOS_get_buffer_size(obj);
-                    const char *const buf  = (char *)KOS_buffer_data(obj);
-
-                    obj = KOS_new_string(ctx, buf, size);
+                case OBJ_BUFFER:
+                    obj = KOS_new_string_from_buffer(ctx, obj);
                     break;
-                }
 
                 default:
                     RAISE_EXCEPTION(str_err_cannot_convert_to_string);
@@ -859,10 +864,14 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
                                       KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
-    KOS_OBJ_ID     buffer   = KOS_new_buffer(ctx, 0);
+    int            pushed   = 0;
     const uint32_t num_args = KOS_get_array_size(args_obj);
     uint32_t       i_arg;
+    KOS_OBJ_ID     buffer   = KOS_BADPTR;
 
+    TRY(KOS_push_locals(ctx, &pushed, 2, &buffer, &args_obj));
+
+    buffer = KOS_new_buffer(ctx, 0);
     TRY_OBJID(buffer);
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
@@ -1220,42 +1229,52 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
+struct KOS_THREAD_CARRIER_S {
+    KOS_OBJ_ID thread_obj;
+    KOS_OBJ_ID func_obj;
+    KOS_OBJ_ID this_obj;
+    KOS_OBJ_ID args_obj;
+};
+
 static void _async_func(KOS_CONTEXT ctx,
                         void       *cookie)
 {
-    KOS_OBJECT *thread_obj = (KOS_OBJECT *)cookie;
-    KOS_OBJ_ID  func_obj;
-    KOS_OBJ_ID  this_obj;
-    KOS_OBJ_ID  args_obj;
-    KOS_OBJ_ID  ret_obj;
+    KOS_OBJ_ID                   ret_obj;
+    struct KOS_THREAD_CARRIER_S *carrier = (struct KOS_THREAD_CARRIER_S *)cookie;
 
-    func_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
-                                KOS_get_string(ctx, KOS_STR_FUNCTION));
-    if (IS_BAD_PTR(func_obj))
-        return;
+    {
+        int pushed = 0;
+        if (KOS_push_locals(ctx, &pushed, 4,
+                            &carrier->thread_obj,
+                            &carrier->func_obj,
+                            &carrier->this_obj,
+                            &carrier->args_obj))
+            goto cleanup;
+    }
 
-    this_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
-                                KOS_get_string(ctx, KOS_STR_THIS));
-    if (IS_BAD_PTR(this_obj))
-        return;
+    if (KOS_delete_property(ctx, carrier->thread_obj, KOS_get_string(ctx, KOS_STR_LOCALS)))
+        goto cleanup;
 
-    args_obj = KOS_get_property(ctx, OBJID(OBJECT, thread_obj),
-                                KOS_get_string(ctx, KOS_STR_ARGS));
-    if (IS_BAD_PTR(args_obj))
-        return;
+    assert(GET_OBJ_TYPE(carrier->thread_obj) <= OBJ_LAST_TYPE);
+    assert(GET_OBJ_TYPE(carrier->func_obj)   <= OBJ_LAST_TYPE);
+    assert(GET_OBJ_TYPE(carrier->this_obj)   <= OBJ_LAST_TYPE);
+    assert(GET_OBJ_TYPE(carrier->args_obj)   <= OBJ_LAST_TYPE);
 
-    args_obj = KOS_array_slice(ctx, args_obj, 0, MAX_INT64);
-    if (IS_BAD_PTR(args_obj))
-        return;
+    carrier->args_obj = KOS_array_slice(ctx, carrier->args_obj, 0, MAX_INT64);
+    if (IS_BAD_PTR(carrier->args_obj))
+        goto cleanup;
 
-    ret_obj = KOS_apply_function(ctx, func_obj, this_obj, args_obj);
+    ret_obj = KOS_apply_function(ctx, carrier->func_obj, carrier->this_obj, carrier->args_obj);
     if (IS_BAD_PTR(ret_obj))
-        return;
+        goto cleanup;
 
-    if (KOS_set_property(ctx, OBJID(OBJECT, thread_obj),
+    if (KOS_set_property(ctx, carrier->thread_obj,
                          KOS_get_string(ctx, KOS_STR_RESULT), ret_obj) == KOS_ERROR_EXCEPTION) {
         assert(KOS_is_exception_pending(ctx));
     }
+
+cleanup:
+    kos_free(carrier);
 }
 
 static void _thread_finalize(KOS_CONTEXT ctx,
@@ -1292,43 +1311,76 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
                          KOS_OBJ_ID  args_obj)
 {
-    int        error      = KOS_SUCCESS;
-    KOS_OBJ_ID thread_obj = KOS_BADPTR;
-    KOS_OBJ_ID arg_this;
-    KOS_OBJ_ID arg_args;
-    KOS_THREAD thread;
+    struct KOS_THREAD_CARRIER_S *carrier    = 0;
+    KOS_LOCAL_REFS              *local_refs;
+    KOS_OBJ_ID                   thread_obj = KOS_BADPTR;
+    KOS_OBJ_ID                   arg_this;
+    KOS_OBJ_ID                   arg_args;
+    KOS_THREAD                   thread;
+    int                          error      = KOS_SUCCESS;
+    int                          pushed     = 0;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_FUNCTION) {
         KOS_raise_exception_cstring(ctx, str_err_not_function);
         return KOS_BADPTR;
     }
 
+    TRY(KOS_push_locals(ctx, &pushed, 3, &this_obj, &args_obj, &thread_obj));
+
     thread_obj = KOS_new_object_with_prototype(ctx,
             ctx->inst->prototypes.thread_proto);
     TRY_OBJID(thread_obj);
 
-    TRY(KOS_set_property(ctx, thread_obj,
-                         KOS_get_string(ctx, KOS_STR_FUNCTION), this_obj));
+    carrier = (struct KOS_THREAD_CARRIER_S *)kos_malloc(sizeof(*carrier));
+    if (!carrier) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    local_refs = (KOS_LOCAL_REFS *)kos_alloc_object(ctx, OBJ_LOCAL_REFS, (uint32_t)sizeof(KOS_LOCAL_REFS));
+    if (!local_refs) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+    local_refs->header.num_tracked = 0;
+    local_refs->header.prev_scope  = KOS_LOOK_FURTHER;
+    local_refs->next               = 0;
 
     arg_this = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(arg_this);
-    TRY(KOS_set_property(ctx, thread_obj,
-                         KOS_get_string(ctx, KOS_STR_THIS), arg_this));
 
     arg_args = KOS_array_read(ctx, args_obj, 1);
     TRY_OBJID(arg_args);
     if (GET_OBJ_TYPE(arg_args) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_args_not_array);
+
+    carrier->thread_obj = thread_obj;
+    carrier->func_obj   = this_obj;
+    carrier->this_obj   = arg_this;
+    carrier->args_obj   = arg_args;
+
+    args_obj = OBJID(LOCAL_REFS, local_refs);
+    local_refs->refs[0] = &carrier->thread_obj;
+    local_refs->refs[1] = &carrier->func_obj;
+    local_refs->refs[2] = &carrier->this_obj;
+    local_refs->refs[3] = &carrier->args_obj;
+    local_refs->header.num_tracked = 4;
+
     TRY(KOS_set_property(ctx, thread_obj,
-                         KOS_get_string(ctx, KOS_STR_ARGS), arg_args));
+                         KOS_get_string(ctx, KOS_STR_LOCALS), args_obj));
 
     OBJPTR(OBJECT, thread_obj)->finalize = _thread_finalize;
 
-    TRY(kos_thread_create(ctx, _async_func, OBJPTR(OBJECT, thread_obj), &thread));
+    TRY(kos_thread_create(ctx, _async_func, (void *)carrier, &thread));
+
+    carrier = 0;
 
     KOS_object_set_private(*OBJPTR(OBJECT, thread_obj), (void *)thread);
 
 cleanup:
+    if (carrier)
+        kos_free(carrier);
+
     return error ? KOS_BADPTR : thread_obj;
 }
 
@@ -1535,57 +1587,62 @@ static KOS_OBJ_ID _expand_for_sort(KOS_CONTEXT ctx,
                                    KOS_OBJ_ID  iterable,
                                    KOS_OBJ_ID  key_func)
 {
-    int                     error    = KOS_SUCCESS;
-    uint32_t                i        = 0;
-    uint32_t                size;
-    const uint32_t          step     = (key_func == KOS_VOID) ? 2 : 3;
-    KOS_OBJ_ID              ret;
-    KOS_OBJ_ID              key_args = KOS_BADPTR;
-    KOS_ATOMIC(KOS_OBJ_ID) *src;
-    KOS_ATOMIC(KOS_OBJ_ID) *src_end;
-    KOS_ATOMIC(KOS_OBJ_ID) *dest;
+    int            error    = KOS_SUCCESS;
+    int            pushed   = 0;
+    uint32_t       i        = 0;
+    uint32_t       i_dest   = 0;
+    uint32_t       size;
+    const uint32_t step     = (key_func == KOS_VOID) ? 2 : 3;
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
+    KOS_OBJ_ID     key_args = KOS_BADPTR;
+    KOS_OBJ_ID     src      = KOS_BADPTR;
+    KOS_OBJ_ID     dest     = KOS_BADPTR;
+    KOS_OBJ_ID     val      = KOS_BADPTR;
 
     assert(GET_OBJ_TYPE(iterable) == OBJ_ARRAY);
 
+    TRY(KOS_push_locals(ctx, &pushed, 6, &key_func, &ret, &key_args, &src, &dest, &val));
+
     size = KOS_get_array_size(iterable);
+    src  = kos_get_array_storage(iterable);
+
     ret  = KOS_new_array(ctx, size * step);
     TRY_OBJID(ret);
+
+    dest = kos_get_array_storage(ret);
 
     if (key_func != KOS_VOID) {
         key_args = KOS_new_array(ctx, 1);
         TRY_OBJID(ret);
     }
 
-    src     = kos_get_array_buffer(OBJPTR(ARRAY, iterable));
-    src_end = src + size;
-    dest    = kos_get_array_buffer(OBJPTR(ARRAY, ret));
+    while (i < size) {
 
-    while (src < src_end) {
-
-        const KOS_OBJ_ID val = KOS_atomic_read_obj(*src);
+        val = KOS_atomic_read_obj(OBJPTR(ARRAY_STORAGE, src)->buf[i]);
 
         if (key_func == KOS_VOID) {
-            KOS_atomic_write_ptr(dest[0], val);
-            KOS_atomic_write_ptr(dest[1], TO_SMALL_INT(i));
+            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest],     val);
+            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 1], TO_SMALL_INT(i));
         }
         else {
-            KOS_OBJ_ID       key;
+            KOS_OBJ_ID key;
 
             TRY(KOS_array_write(ctx, key_args, 0, val));
             key = KOS_call_function(ctx, key_func, KOS_VOID, key_args);
             TRY_OBJID(key);
 
-            KOS_atomic_write_ptr(dest[0], key);
-            KOS_atomic_write_ptr(dest[1], TO_SMALL_INT(i));
-            KOS_atomic_write_ptr(dest[2], val);
+            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest],     key);
+            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 1], TO_SMALL_INT(i));
+            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 2], val);
         }
 
         ++i;
-        ++src;
-        dest += step;
+        i_dest += step;
     }
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
+
     return error ? KOS_BADPTR : ret;
 }
 
@@ -1741,6 +1798,7 @@ static KOS_OBJ_ID _sort(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  args_obj)
 {
     int                     error    = KOS_SUCCESS;
+    int                     pushed   = 0;
     const uint32_t          num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID              key      = KOS_VOID;
     KOS_OBJ_ID              reverse  = KOS_FALSE;
@@ -1777,7 +1835,11 @@ static KOS_OBJ_ID _sort(KOS_CONTEXT ctx,
 
     if (KOS_get_array_size(this_obj) > 1) {
 
-        const KOS_OBJ_ID aux = _expand_for_sort(ctx, this_obj, key);
+        KOS_OBJ_ID aux = KOS_BADPTR;
+
+        TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &aux));
+
+        aux = _expand_for_sort(ctx, this_obj, key);
         TRY_OBJID(aux);
 
         src = kos_get_array_buffer(OBJPTR(ARRAY, aux));
@@ -1895,9 +1957,12 @@ static KOS_OBJ_ID _resize(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int        error = KOS_SUCCESS;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
     KOS_OBJ_ID size_obj;
     int64_t    size;
+
+    TRY(KOS_push_locals(ctx, &pushed, 1, &this_obj));
 
     size_obj = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(size_obj);
@@ -2853,9 +2918,12 @@ static KOS_OBJ_ID _reserve(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  this_obj,
                            KOS_OBJ_ID  args_obj)
 {
-    int        error = KOS_SUCCESS;
-    KOS_OBJ_ID size_obj;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
     int64_t    size;
+    KOS_OBJ_ID size_obj;
+
+    TRY(KOS_push_locals(ctx, &pushed, 1, &this_obj));
 
     size_obj = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(size_obj);
@@ -2898,12 +2966,15 @@ static KOS_OBJ_ID _insert_array(KOS_CONTEXT ctx,
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
+    int            pushed   = 0;
     KOS_OBJ_ID     begin_obj;
     KOS_OBJ_ID     end_obj;
     KOS_OBJ_ID     src_obj;
     int64_t        begin    = 0;
     int64_t        end      = 0;
     int64_t        src_len;
+
+    TRY(KOS_push_locals(ctx, &pushed, 1, &this_obj));
 
     begin_obj = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(begin_obj);
@@ -2979,7 +3050,8 @@ static KOS_OBJ_ID _pop(KOS_CONTEXT ctx,
         ret = KOS_array_pop(ctx, this_obj);
 
     else {
-        int64_t    num = 0;
+        int64_t    num    = 0;
+        int        pushed = 0;
         int        idx;
         KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
         TRY_OBJID(arg);
@@ -2988,6 +3060,8 @@ static KOS_OBJ_ID _pop(KOS_CONTEXT ctx,
 
         if (num < 0 || num > INT_MAX)
             RAISE_EXCEPTION(str_err_invalid_array_size);
+
+        TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &ret));
 
         if (num == 0)
             ret = KOS_VOID;
@@ -3027,9 +3101,12 @@ static KOS_OBJ_ID _push(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
+    int            pushed   = 0;
     const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_ID     ret      = KOS_BADPTR;
     uint32_t       i;
+    KOS_OBJ_ID     ret      = KOS_BADPTR;
+
+    TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &args_obj));
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_not_array);
