@@ -22,11 +22,11 @@
 
 #include "../inc/kos_instance.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_atomic.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
-#include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
 #include "kos_config.h"
 #include "kos_debug.h"
@@ -125,13 +125,16 @@ static int _register_thread(KOS_INSTANCE *inst,
 
     assert( ! kos_tls_get(inst->threads.thread_key));
 
+    /* Note: ctx->cur_page is set by the caller */
+
     ctx->inst             = inst;
+    ctx->thread_obj       = KOS_BADPTR;
     ctx->exception        = KOS_BADPTR;
     ctx->retval           = KOS_BADPTR;
     ctx->stack            = KOS_BADPTR;
-    ctx->local_refs       = KOS_BADPTR;
     ctx->regs_idx         = 0;
     ctx->stack_depth      = 0;
+    ctx->local_refs       = KOS_BADPTR;
     ctx->tmp_ref_count    = 0;
     ctx->helper_ref_count = 0;
 
@@ -363,6 +366,7 @@ static void _clear_instance(KOS_INSTANCE *inst)
     inst->threads.main_thread.prev        = 0;
     inst->threads.main_thread.inst        = inst;
     inst->threads.main_thread.cur_page    = 0;
+    inst->threads.main_thread.thread_obj  = KOS_BADPTR;
     inst->threads.main_thread.exception   = KOS_BADPTR;
     inst->threads.main_thread.retval      = KOS_BADPTR;
     inst->threads.main_thread.stack       = KOS_BADPTR;

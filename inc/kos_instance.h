@@ -105,16 +105,17 @@ struct KOS_THREAD_CONTEXT_S {
 
     KOS_INSTANCE *inst;
     KOS_PAGE     *cur_page;
+    KOS_OBJ_ID    thread_obj;
     KOS_OBJ_ID    exception;
     KOS_OBJ_ID    retval;
     KOS_OBJ_ID    stack;        /* Topmost container for registers & stack frames */
+    uint32_t      regs_idx;     /* Index of first register in current frame       */
+    uint32_t      stack_depth;
     KOS_OBJ_ID    local_refs;   /* Object id refs on user's local stack           */
     KOS_OBJ_ID   *tmp_refs[10]; /* Object id refs during object creation          */
     KOS_OBJ_ID   *helper_refs[KOS_MAX_LOCALS]; /* Helper when pushing locals stack*/
     uint32_t      tmp_ref_count;
     uint32_t      helper_ref_count;
-    uint32_t      regs_idx;     /* Index of first register in current frame       */
-    uint32_t      stack_depth;
 };
 
 struct KOS_PROTOTYPES_S {

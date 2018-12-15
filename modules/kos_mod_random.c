@@ -45,8 +45,8 @@ typedef struct KOS_RNG_CONTAINER_S {
     struct KOS_RNG       rng;
 } KOS_RNG_CONTAINER;
 
-static void _finalize(KOS_CONTEXT ctx,
-                      void       *priv)
+static void finalize(KOS_CONTEXT ctx,
+                     KOS_OBJ_ID  priv)
 {
     /* TODO free
     if (priv)
@@ -97,7 +97,9 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
     ret = KOS_new_object_with_prototype(ctx, this_obj);
     TRY_OBJID(ret);
 
-    OBJPTR(OBJECT, ret)->finalize = _finalize;
+    KOS_object_set_private(ret, KOS_BADPTR);
+
+    OBJPTR(OBJECT, ret)->finalize = finalize;
 
     if (KOS_get_array_size(args_obj) > 0) {
 
@@ -134,7 +136,7 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
         kos_rng_init_seed(&rng->rng, (uint64_t)seed);
     }
 
-    KOS_object_set_private(*OBJPTR(OBJECT, ret), rng);
+    KOS_object_set_private(ret, OBJID(OPAQUE, (KOS_OPAQUE *)rng));
     rng = 0;
 
 cleanup:
@@ -150,17 +152,19 @@ static int _get_rng(KOS_CONTEXT         ctx,
                     KOS_OBJ_ID          this_obj,
                     KOS_RNG_CONTAINER **rng)
 {
-    int error = KOS_SUCCESS;
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID rng_obj;
 
     assert( ! IS_BAD_PTR(this_obj));
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT)
         RAISE_EXCEPTION(str_err_not_random);
 
-    *rng = (KOS_RNG_CONTAINER *)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
-
-    if ( ! *rng)
+    rng_obj = KOS_object_get_private(this_obj);
+    if (IS_BAD_PTR(rng_obj) || IS_SMALL_INT(rng_obj))
         RAISE_EXCEPTION(str_err_not_random);
+
+    *rng = (KOS_RNG_CONTAINER *)OBJPTR(OPAQUE, rng_obj);
 
 cleanup:
     return error;

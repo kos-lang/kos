@@ -25,7 +25,7 @@
 
 #include <assert.h>
 #include <stdint.h>
-#include "kos_threads.h"
+#include "kos_atomic.h"
 
 typedef enum KOS_OBJECT_TYPE_E {
     OBJ_SMALL_INTEGER,  /* Returned by GET_OBJ_TYPE, never used in any object */
@@ -53,7 +53,8 @@ typedef enum KOS_OBJECT_TYPE_E {
     OBJ_OBJECT_WALK,
     OBJ_MODULE,
     OBJ_STACK,
-    OBJ_LOCAL_REFS
+    OBJ_LOCAL_REFS,
+    OBJ_THREAD
 } KOS_TYPE;
 
 struct KOS_OBJECT_PLACEHOLDER;
@@ -152,6 +153,9 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 #define GET_OBJ_TYPE(obj_id)   ( IS_SMALL_INT(obj_id) ? OBJ_SMALL_INTEGER : READ_OBJ_TYPE(obj_id) )
 
 #endif
+
+struct KOS_THREAD_CONTEXT_S;
+typedef struct KOS_THREAD_CONTEXT_S *KOS_CONTEXT;
 
 struct KOS_INSTANCE_S;
 typedef struct KOS_INSTANCE_S KOS_INSTANCE;
@@ -270,13 +274,13 @@ typedef union KOS_STRING_U {
 } KOS_STRING;
 
 typedef void (*KOS_FINALIZE)(KOS_CONTEXT ctx,
-                             void       *priv);
+                             KOS_OBJ_ID  priv);
 
 typedef struct KOS_OBJECT_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(KOS_OBJ_ID) props;
     KOS_OBJ_ID             prototype;
-    KOS_ATOMIC(void *)     priv;
+    KOS_ATOMIC(KOS_OBJ_ID) priv;
     KOS_FINALIZE           finalize;
 } KOS_OBJECT;
 

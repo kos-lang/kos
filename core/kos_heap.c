@@ -21,10 +21,10 @@
  */
 
 #include "kos_heap.h"
+#include "../inc/kos_atomic.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
-#include "../inc/kos_threads.h"
 #include "kos_config.h"
 #include "kos_debug.h"
 #include "kos_malloc.h"
@@ -33,6 +33,7 @@
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_system.h"
+#include "kos_threads_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1057,6 +1058,7 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
             assert(READ_OBJ_TYPE(obj_id) == OBJ_OBJECT);
             _set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->props), GRAY);
             _set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
+            _set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->priv), GRAY);
             break;
 
         case OBJ_ARRAY:
@@ -1150,6 +1152,16 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
 
                 for ( ; ref < end; ++ref)
                     _set_mark_state(**ref, GRAY);
+            }
+            break;
+
+        case OBJ_THREAD:
+            {
+                _set_mark_state(OBJPTR(THREAD, obj_id)->thread_func, GRAY);
+                _set_mark_state(OBJPTR(THREAD, obj_id)->this_obj,    GRAY);
+                _set_mark_state(OBJPTR(THREAD, obj_id)->args_obj,    GRAY);
+                _set_mark_state(OBJPTR(THREAD, obj_id)->retval,      GRAY);
+                _set_mark_state(OBJPTR(THREAD, obj_id)->exception,   GRAY);
             }
             break;
     }
@@ -1665,6 +1677,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             assert(hdr->type == OBJ_OBJECT);
             _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->props);
             _update_child_ptr(&((KOS_OBJECT *)hdr)->prototype);
+            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->priv);
             break;
 
         case OBJ_ARRAY:
@@ -1751,6 +1764,16 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
                 for ( ; ref < end; ++ref)
                     _update_child_ptr(*ref);
+            }
+            break;
+
+        case OBJ_THREAD:
+            {
+                _update_child_ptr(&((KOS_THREAD *)hdr)->thread_func);
+                _update_child_ptr(&((KOS_THREAD *)hdr)->this_obj);
+                _update_child_ptr(&((KOS_THREAD *)hdr)->args_obj);
+                _update_child_ptr(&((KOS_THREAD *)hdr)->retval);
+                _update_child_ptr(&((KOS_THREAD *)hdr)->exception);
             }
             break;
     }
@@ -1977,7 +2000,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
 
                     if (obj->finalize) {
 
-                        obj->finalize(ctx, KOS_atomic_read_ptr(obj->priv));
+                        obj->finalize(ctx, KOS_atomic_read_obj(obj->priv));
 
                         ++stats.num_objs_finalized;
                     }

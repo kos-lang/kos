@@ -20,31 +20,36 @@
  * IN THE SOFTWARE.
  */
 
-#include "../core/kos_memory.h"
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef KOS_THREAD_INTERNAL_H_INCLUDED
+#define KOS_THREAD_INTERNAL_H_INCLUDED
 
-#define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
+#include "../inc/kos_threads.h"
 
-static int _get_num_cpus(void)
-{
-    int        num_cpus = 2; /* By default behave as if there were 2 CPUs */
-    KOS_VECTOR cstr;
+#ifdef _WIN32
+#   define WIN32_LEAN_AND_MEAN
+#   pragma warning( push )
+#   pragma warning( disable : 4255 4668 )
+#   include <windows.h>
+#   pragma warning( pop )
+#else
+#   include <pthread.h>
+#   include <sched.h>
+#endif
 
-    kos_vector_init(&cstr);
+typedef struct KOS_THREAD_S {
+    KOS_OBJ_HEADER  header;
+    KOS_INSTANCE   *inst;
+    KOS_OBJ_ID      thread_func;
+    KOS_OBJ_ID      this_obj;
+    KOS_OBJ_ID      args_obj;
+    KOS_OBJ_ID      retval;
+    KOS_OBJ_ID      exception;
+#ifdef _WIN32
+    HANDLE          thread_handle;
+    DWORD           thread_id;
+#else
+    pthread_t       thread_handle;
+#endif
+} KOS_THREAD;
 
-    if (kos_get_env("TEST_CPUS", &cstr) == KOS_SUCCESS) {
-        num_cpus = (int)strtol(cstr.buffer, 0, 10);
-        if (num_cpus < 1) {
-            kos_vector_destroy(&cstr);
-            printf("Failed: Invalid value in TEST_CPUS env var!\n");
-            exit(1);
-        }
-    }
-
-    kos_vector_destroy(&cstr);
-
-    return num_cpus;
-}
+#endif

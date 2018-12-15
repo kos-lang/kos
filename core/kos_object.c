@@ -21,11 +21,11 @@
  */
 
 #include "../inc/kos_object.h"
+#include "../inc/kos_atomic.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
-#include "../inc/kos_threads.h"
 #include "kos_heap.h"
 #include "kos_math.h"
 #include "kos_object_internal.h"
@@ -157,7 +157,7 @@ void kos_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
     obj->prototype = prototype;
     obj->finalize  = 0;
 
-    KOS_atomic_write_ptr(obj->priv,  (void *)0);
+    KOS_atomic_write_ptr(obj->priv,  TO_SMALL_INT(0));
     KOS_atomic_write_ptr(obj->props, KOS_BADPTR);
 }
 

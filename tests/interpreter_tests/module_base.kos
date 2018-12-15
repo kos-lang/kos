@@ -2589,8 +2589,7 @@ do {
 
     const result = t.wait()
 
-    assert result   == 34
-    assert t.result == 34
+    assert result == 34
 
     expect_fail(()=>t.wait())
 }

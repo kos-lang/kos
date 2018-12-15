@@ -29,7 +29,7 @@
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
-#include "kos_parallel.h"
+#include "kos_test_tools.h"
 #include <memory.h>
 
 struct TEST_DATA {
@@ -98,7 +98,7 @@ int main(void)
 {
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
-    const int    num_cpus = _get_num_cpus();
+    const int    num_cpus = get_num_cpus();
 
     TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
@@ -110,7 +110,7 @@ int main(void)
         KOS_VECTOR          mem_buf;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
-        KOS_THREAD         *threads          = 0;
+        THREAD             *threads          = 0;
         int                 num_threads      = 0;
         int                 i_loop;
         int                 i;
@@ -121,10 +121,10 @@ int main(void)
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
-                num_threads * (sizeof(KOS_THREAD) + sizeof(struct THREAD_DATA))
+                num_threads * (sizeof(THREAD) + sizeof(struct THREAD_DATA))
             ) == KOS_SUCCESS);
         thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
-        threads        = (KOS_THREAD *)(thread_cookies + num_threads);
+        threads        = (THREAD *)(thread_cookies + num_threads);
 
         for (i = 0; i < num_threads; i++) {
             kos_rng_init(&thread_cookies[i].rng);
@@ -157,14 +157,14 @@ int main(void)
 
             /* Start with 1, because 0 is for the main thread, which participates */
             for (i = 1; i < num_threads; i++)
-                TEST(kos_thread_create(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(create_thread(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
             KOS_atomic_write_u32(data.go, 1);
             TEST(_run_test(ctx, thread_cookies) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             for (i = 1; i < num_threads; i++) {
-                kos_thread_join(ctx, threads[i]);
+                join_thread(ctx, threads[i]);
                 TEST_NO_EXCEPTION();
             }
 

@@ -29,7 +29,7 @@
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
-#include "kos_parallel.h"
+#include "kos_test_tools.h"
 #include <time.h>
 
 struct TEST_DATA {
@@ -119,7 +119,7 @@ int main(void)
 {
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
-    const int    num_cpus = _get_num_cpus();
+    const int    num_cpus = get_num_cpus();
 
     TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
@@ -129,7 +129,7 @@ int main(void)
         const int           num_loops   = 100;
         const int           num_props   = 128;
         KOS_VECTOR          mem_buf;
-        KOS_THREAD         *threads     = 0;
+        THREAD             *threads     = 0;
         int                 num_threads = 0;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
@@ -145,12 +145,12 @@ int main(void)
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
-                num_threads * (sizeof(KOS_THREAD) + sizeof(struct THREAD_DATA))
+                num_threads * (sizeof(THREAD) + sizeof(struct THREAD_DATA))
                 + num_props * sizeof(KOS_OBJ_ID)
             ) == KOS_SUCCESS);
         props          = (KOS_OBJ_ID *)mem_buf.buffer;
         thread_cookies = (struct THREAD_DATA *)(props + num_props);
-        threads        = (KOS_THREAD *)(thread_cookies + num_threads);
+        threads        = (THREAD *)(thread_cookies + num_threads);
 
         kos_rng_init(&rng);
 
@@ -181,7 +181,7 @@ int main(void)
             for (i = 0; i < num_threads; i++) {
                 thread_cookies[i].test      = &data;
                 thread_cookies[i].rand_init = (unsigned)kos_rng_random_range(&rng, 0xFFFFFFFFU);
-                TEST(kos_thread_create(ctx, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(create_thread(ctx, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
             }
 
             i = (int)kos_rng_random_range(&rng, 0x7FFFFFFF);
@@ -190,7 +190,7 @@ int main(void)
             TEST_NO_EXCEPTION();
 
             for (i = 0; i < num_threads; i++) {
-                kos_thread_join(ctx, threads[i]);
+                join_thread(ctx, threads[i]);
                 TEST_NO_EXCEPTION();
             }
 

@@ -1066,7 +1066,7 @@ template<typename T>
 object stack_frame::new_object(T* priv)
 {
     const object obj = new_object();
-    KOS_object_set_private(*OBJPTR(OBJECT, obj), priv);
+    KOS_object_set_private_ptr(obj, priv);
     return obj;
 }
 
@@ -1095,7 +1095,7 @@ template<typename T>
 T* get_priv(KOS_OBJ_ID obj)
 {
     assert(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
-    return static_cast<T*>(KOS_object_get_private(*OBJPTR(OBJECT, obj)));
+    return static_cast<T*>(KOS_object_get_private_ptr(obj));
 }
 
 #ifdef KOS_CPP11

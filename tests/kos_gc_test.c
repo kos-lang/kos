@@ -39,7 +39,7 @@
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
-static void _finalize_1(KOS_CONTEXT ctx, void *priv)
+static void _finalize_1(KOS_CONTEXT ctx, KOS_OBJ_ID priv)
 {
     *(int *)priv = 1;
 }
@@ -518,7 +518,7 @@ int main(void)
             KOS_OBJ_ID prop_id;
             int        fin      = 0;
 
-            KOS_object_set_private(*OBJPTR(OBJECT, proto_id), &fin);
+            KOS_object_set_private_ptr(proto_id, &fin);
             OBJPTR(OBJECT, proto_id)->finalize = _finalize_1;
 
             /* Object references itself */

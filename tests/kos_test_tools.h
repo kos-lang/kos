@@ -20,41 +20,26 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef KOS_THREADS_H_INCLUDED
-#define KOS_THREADS_H_INCLUDED
+#include "../inc/kos_object_base.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "kos_object_base.h"
+struct THREAD_S;
+typedef struct THREAD_S *THREAD;
 
-struct KOS_MUTEX_OBJECT_S;
-typedef struct KOS_MUTEX_OBJECT_S *KOS_MUTEX;
+typedef void (*THREAD_PROC)(KOS_CONTEXT ctx,
+                            void       *cookie);
 
-#ifdef _WIN32
-typedef uint32_t KOS_TLS_KEY;
-#else
-struct KOS_TLS_OBJECT_S;
-typedef struct KOS_TLS_OBJECT_S *KOS_TLS_KEY;
-#endif
+int create_thread(KOS_CONTEXT ctx,
+                  THREAD_PROC proc,
+                  void       *cookie,
+                  THREAD     *thread);
 
-void kos_yield(void);
+int join_thread(KOS_CONTEXT ctx,
+                THREAD      thread);
 
-KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  thread_func,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj);
+#define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
+#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
+#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
-KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  thread);
-
-int kos_is_current_thread(KOS_OBJ_ID thread);
-
-int kos_create_mutex(KOS_MUTEX *mutex);
-void kos_destroy_mutex(KOS_MUTEX *mutex);
-void kos_lock_mutex(KOS_MUTEX *mutex);
-void kos_unlock_mutex(KOS_MUTEX *mutex);
-
-int   kos_tls_create(KOS_TLS_KEY *key);
-void  kos_tls_destroy(KOS_TLS_KEY key);
-void *kos_tls_get(KOS_TLS_KEY key);
-void  kos_tls_set(KOS_TLS_KEY key, void *value);
-
-#endif
+int get_num_cpus(void);

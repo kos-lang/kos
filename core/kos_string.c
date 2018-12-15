@@ -22,10 +22,10 @@
 
 #include "../inc/kos_string.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_atomic.h"
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
-#include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
 #include "kos_heap.h"
 #include "kos_math.h"

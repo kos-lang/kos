@@ -71,10 +71,10 @@ static void _fix_path_separators(KOS_VECTOR *buf)
     }
 }
 
-static void _finalize(KOS_CONTEXT ctx,
-                      void       *priv)
+static void finalize(KOS_CONTEXT ctx,
+                     KOS_OBJ_ID  priv)
 {
-    if (priv)
+    if (priv && IS_SMALL_INT(priv))
         fclose((FILE *)priv);
 }
 
@@ -153,9 +153,9 @@ static KOS_OBJ_ID _open(KOS_CONTEXT ctx,
                                          _get_file_pos,
                                          _set_file_pos));
 
-    OBJPTR(OBJECT, ret)->finalize = _finalize;
+    OBJPTR(OBJECT, ret)->finalize = finalize;
 
-    KOS_object_set_private(*OBJPTR(OBJECT, ret), file);
+    KOS_object_set_private_ptr(ret, file);
     file = 0;
 
 cleanup:
@@ -179,7 +179,7 @@ static int _get_file_object(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT)
         RAISE_EXCEPTION(str_err_file_not_open);
 
-    *file = (FILE *)KOS_object_get_private(*OBJPTR(OBJECT, this_obj));
+    *file = (FILE *)KOS_object_get_private_ptr(this_obj);
 
     if (must_be_open && ! *file)
         RAISE_EXCEPTION(str_err_file_not_open);
@@ -203,7 +203,7 @@ static KOS_OBJ_ID _close(KOS_CONTEXT ctx,
 
     if ( ! error && file) {
         fclose(file);
-        KOS_object_set_private(*OBJPTR(OBJECT, this_obj), (void *)0);
+        KOS_object_set_private_ptr(this_obj, (void *)0);
     }
 
     return error ? KOS_BADPTR : KOS_VOID;
@@ -647,7 +647,7 @@ static int _add_std_file(KOS_CONTEXT ctx,
 
     TRY_OBJID(obj);
 
-    KOS_object_set_private(*OBJPTR(OBJECT, obj), file);
+    KOS_object_set_private_ptr(obj, file);
 
     error = KOS_module_add_global(ctx, module, str_name, obj, 0);
 

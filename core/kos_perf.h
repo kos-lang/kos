@@ -23,7 +23,7 @@
 #ifndef KOS_PERF_H_INCLUDED
 #define KOS_PERF_H_INCLUDED
 
-#include "../inc/kos_threads.h"
+#include "../inc/kos_atomic.h"
 
 #ifdef CONFIG_PERF
 #   define KOS_PERF_CNT(stat)            KOS_atomic_add_i32(_kos_perf.stat, 1)

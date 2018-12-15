@@ -68,6 +68,7 @@ c_files += kos_parallel_object_resize_test.c
 c_files += kos_parse_num_test.c
 c_files += kos_parser_test.c
 c_files += kos_string_test.c
+c_files += kos_test_tools.c
 c_files += kos_vm_test.c
 c_files += kos_vm_unit_test.c
 
@@ -97,6 +98,12 @@ $(out_dir)/tests/$1$(exe_suffix): $(out_dir)/tests/$1$(o_suffix) $(out_dir)/modu
 endef
 
 $(foreach test, $(all_tests), $(eval $(call LINK_TEST,$(test))))
+
+define PARALLEL_DEP
+$(out_dir)/tests/$1$(exe_suffix): $(out_dir)/tests/kos_test_tools$(o_suffix)
+endef
+
+$(foreach test, $(filter kos_parallel_%, $(all_tests)), $(eval $(call PARALLEL_DEP,$(test))))
 
 parser_test_list = $(wildcard parser_tests/*.kos)
 

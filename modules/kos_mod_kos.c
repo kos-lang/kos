@@ -58,8 +58,8 @@ typedef struct KOS_LEXER_OBJ_S {
     int            ignore_errors;
 } KOS_LEXER_OBJ;
 
-static void _finalize(KOS_CONTEXT ctx,
-                      void       *priv)
+static void finalize(KOS_CONTEXT ctx,
+                     KOS_OBJ_ID  priv)
 {
     /* TODO free
     if (priv)
@@ -92,7 +92,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
     /* Instantiate the lexer on first invocation */
     if (GET_OBJ_TYPE(lexer_obj_id) != OBJ_OBJECT ||
-        ! KOS_object_get_private(*OBJPTR(OBJECT, lexer_obj_id))) {
+        ! KOS_object_get_private_ptr(lexer_obj_id)) {
 
         KOS_OBJ_ID init_arg = lexer_obj_id;
         uint32_t   buf_size;
@@ -112,9 +112,9 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         if (!lexer)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-        OBJPTR(OBJECT, lexer_obj_id)->finalize = _finalize;
+        OBJPTR(OBJECT, lexer_obj_id)->finalize = finalize;
 
-        KOS_object_set_private(*OBJPTR(OBJECT, lexer_obj_id), lexer);
+        KOS_object_set_private_ptr(lexer_obj_id, lexer);
 
         buf_size = KOS_get_buffer_size(init_arg);
         buf_data = KOS_buffer_data(init_arg);
@@ -145,7 +145,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         buf_obj_id = KOS_get_property(ctx, lexer_obj_id, source);
         TRY_OBJID(buf_obj_id);
 
-        lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(*OBJPTR(OBJECT, lexer_obj_id));
+        lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(lexer_obj_id);
 
         if (KOS_get_array_size(args_obj) > 0) {
 
