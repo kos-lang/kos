@@ -175,8 +175,75 @@ int kos_heap_init(KOS_INSTANCE *inst)
     return kos_create_mutex(&heap->mutex);
 }
 
+static uint32_t get_num_active_slots(KOS_PAGE *page)
+{
+    /* For a huge object, only match the beginning of the page */
+    return (page->num_slots > KOS_SLOTS_PER_PAGE)
+           ? 1U
+           : KOS_atomic_read_u32(page->num_allocated);
+}
+
+static void finalize_objects(KOS_CONTEXT ctx,
+                             KOS_HEAP   *heap)
+{
+    KOS_PAGE *page           = heap->full_pages;
+    KOS_PAGE *non_full_pages = heap->non_full_pages;
+    KOS_PAGE *next;
+    int       non_full_turn  = 0;
+
+    heap->full_pages     = 0;
+    heap->non_full_pages = 0;
+
+    if ( ! page) {
+        non_full_turn = 1;
+        page = non_full_pages;
+        non_full_pages = 0;
+    }
+
+    for ( ; page; page = next) {
+
+        KOS_SLOT *ptr      = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
+        KOS_SLOT *end      = ptr + get_num_active_slots(page);
+#ifndef NDEBUG
+        KOS_SLOT *page_end = ptr + KOS_atomic_read_u32(page->num_allocated);
+#endif
+
+        next = page->next;
+
+        if ( ! next && non_full_pages) {
+            next = non_full_pages;
+            non_full_pages = 0;
+            non_full_turn = 1;
+        }
+
+        while (ptr < end) {
+
+            KOS_OBJ_HEADER *hdr  = (KOS_OBJ_HEADER *)ptr;
+            const uint32_t  size = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+
+            assert(size > 0U);
+            assert(size <= (size_t)((uint8_t *)page_end - (uint8_t *)ptr));
+
+            if (hdr->type == OBJ_OBJECT) {
+
+                KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
+
+                if (obj->finalize)
+                    obj->finalize(ctx, KOS_atomic_read_obj(obj->priv));
+            }
+
+            ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
+        }
+    }
+}
+
 void kos_heap_destroy(KOS_INSTANCE *inst)
 {
+    assert(inst->threads.main_thread.prev == 0);
+    assert(inst->threads.main_thread.next == 0);
+
+    kos_heap_release_thread_page(&inst->threads.main_thread);
+
 #ifdef CONFIG_MAD_GC
     {
         struct KOS_LOCKED_PAGES_S *locked_pages = inst->heap.locked_pages_first;
@@ -204,6 +271,8 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
         inst->heap.locked_pages_last  = 0;
     }
 #endif
+
+    finalize_objects(&inst->threads.main_thread, &inst->heap);
 
     for (;;) {
         KOS_POOL *pool = (KOS_POOL *)POP_LIST(inst->heap.pools);
@@ -1183,14 +1252,6 @@ static int _mark_object_black(KOS_OBJ_ID obj_id)
     return marked;
 }
 
-static uint32_t _get_num_active_slots(KOS_PAGE *page)
-{
-    /* For a huge object, only match the beginning of the page */
-    return (page->num_slots > KOS_SLOTS_PER_PAGE)
-           ? 1U
-           : KOS_atomic_read_u32(page->num_allocated);
-}
-
 static int _gray_to_black_in_pages(KOS_PAGE *page)
 {
     int marked = 0;
@@ -1202,7 +1263,7 @@ static int _gray_to_black_in_pages(KOS_PAGE *page)
         struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
 
         KOS_SLOT *ptr = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
-        KOS_SLOT *end = ptr + _get_num_active_slots(page);
+        KOS_SLOT *end = ptr + get_num_active_slots(page);
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
@@ -1795,7 +1856,7 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
     while (page) {
 
         uint8_t       *ptr = (uint8_t *)page + KOS_SLOTS_OFFS;
-        uint8_t *const end = ptr + (_get_num_active_slots(page) << KOS_OBJ_ALIGN_BITS);
+        uint8_t *const end = ptr + (get_num_active_slots(page) << KOS_OBJ_ALIGN_BITS);
 
         while (ptr < end) {
 
@@ -1913,7 +1974,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
 
         unsigned  num_evac = 0;
         KOS_SLOT *ptr      = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
-        KOS_SLOT *end      = ptr + _get_num_active_slots(page);
+        KOS_SLOT *end      = ptr + get_num_active_slots(page);
 #ifndef NDEBUG
         KOS_SLOT *page_end = ptr + KOS_atomic_read_u32(page->num_allocated);
 #endif
