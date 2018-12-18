@@ -118,6 +118,11 @@ static KOS_OBJ_ID _open(KOS_CONTEXT ctx,
 
     TRY_OBJID(filename_obj);
 
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 4, &this_obj, &args_obj, &ret, &filename_obj));
+    }
+
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
     _fix_path_separators(&filename_cstr);
@@ -416,6 +421,11 @@ static KOS_OBJ_ID _read_some(KOS_CONTEXT ctx,
     if (to_read < 1)
         to_read = 1;
 
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 2, &args_obj, &buf));
+    }
+
     if (KOS_get_array_size(args_obj) > 1) {
         buf = KOS_array_read(ctx, args_obj, 1);
 
@@ -641,10 +651,13 @@ static int _add_std_file(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  str_name,
                          FILE       *file)
 {
-    int error = KOS_SUCCESS;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
+    KOS_OBJ_ID obj;
 
-    KOS_OBJ_ID obj = KOS_new_object_with_prototype(ctx, proto);
+    TRY(KOS_push_locals(ctx, &pushed, 3, &module, &proto, &str_name));
 
+    obj = KOS_new_object_with_prototype(ctx, proto);
     TRY_OBJID(obj);
 
     KOS_object_set_private_ptr(obj, file);
@@ -652,6 +665,8 @@ static int _add_std_file(KOS_CONTEXT ctx,
     error = KOS_module_add_global(ctx, module, str_name, obj, 0);
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
+
     return error;
 }
 

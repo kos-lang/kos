@@ -71,15 +71,22 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  regs_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    int                 error      = KOS_SUCCESS;
-    KOS_OBJ_ID          retval     = KOS_BADPTR;
-    KOS_OBJ_ID          lexer_obj_id;
-    KOS_OBJ_ID          source;
+    int                 error        = KOS_SUCCESS;
+    KOS_OBJ_ID          retval       = KOS_BADPTR;
+    KOS_OBJ_ID          lexer_obj_id = KOS_BADPTR;
+    KOS_OBJ_ID          init_arg     = KOS_BADPTR;
+    KOS_OBJ_ID          source       = KOS_BADPTR;
     KOS_LEXER_OBJ      *lexer;
     uint8_t            *buf_data;
-    KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
+    KOS_NEXT_TOKEN_MODE next_token   = NT_ANY;
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
+
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 5,
+                            &regs_obj, &args_obj, &lexer_obj_id, &init_arg, &source));
+    }
 
     source = KOS_new_const_ascii_string(ctx, str_source, sizeof(str_source) - 1);
     TRY_OBJID(source);
@@ -94,8 +101,9 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(lexer_obj_id) != OBJ_OBJECT ||
         ! KOS_object_get_private_ptr(lexer_obj_id)) {
 
-        KOS_OBJ_ID init_arg = lexer_obj_id;
-        uint32_t   buf_size;
+        uint32_t buf_size;
+
+        init_arg = lexer_obj_id;
 
         /* TODO support OBJ_STRING as argument */
 

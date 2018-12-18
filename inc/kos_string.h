@@ -74,7 +74,9 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  codes);
 
 KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
-                                      KOS_OBJ_ID  utf8_buf);
+                                      KOS_OBJ_ID  utf8_buf,
+                                      unsigned    begin,
+                                      unsigned    end);
 
 unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
                             void      *buf,

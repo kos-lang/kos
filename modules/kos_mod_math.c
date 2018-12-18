@@ -440,13 +440,16 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     {
         static const char str_infinity[] = "infinity";
         KOS_NUMERIC_VALUE value;
+        KOS_OBJ_ID        value_obj;
 
         value.i = (uint64_t)0x7FF00000U << 32;
 
         str_id = KOS_new_const_ascii_string(ctx, str_infinity, sizeof(str_infinity) - 1);
         TRY_OBJID(str_id);
 
-        TRY(KOS_module_add_global(ctx, module, str_id, KOS_new_float(ctx, value.d), 0));
+        value_obj = KOS_new_float(ctx, value.d);
+
+        TRY(KOS_module_add_global(ctx, module, str_id, value_obj, 0));
     }
 
     /* @item math nan
@@ -458,13 +461,16 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     {
         static const char str_nan[] = "nan";
         KOS_NUMERIC_VALUE value;
+        KOS_OBJ_ID        value_obj;
 
         value.i = ((uint64_t)0x7FF00000U << 32) | 1U;
 
         str_id = KOS_new_const_ascii_string(ctx, str_nan, sizeof(str_nan) - 1);
         TRY_OBJID(str_id);
 
-        TRY(KOS_module_add_global(ctx, module, str_id, KOS_new_float(ctx, value.d), 0));
+        value_obj = KOS_new_float(ctx, value.d);
+
+        TRY(KOS_module_add_global(ctx, module, str_id, value_obj, 0));
     }
 
     TRY_ADD_FUNCTION(ctx, module, "abs",         _abs,         1);

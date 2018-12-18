@@ -38,16 +38,17 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char str_err_array_too_large[]   = "input array too large";
-static const char str_err_invalid_char_code[] = "invalid character code";
-static const char str_err_invalid_index[]     = "string index is out of range";
-static const char str_err_invalid_string[]    = "invalid string";
-static const char str_err_invalid_utf8[]      = "invalid UTF-8 sequence";
-static const char str_err_not_array[]         = "object is not an array";
-static const char str_err_not_string[]        = "object is not a string";
-static const char str_err_null_pointer[]      = "null pointer";
-static const char str_err_out_of_memory[]     = "out of memory";
-static const char str_err_too_many_repeats[]  = "repeated string too long";
+static const char str_err_array_too_large[]      = "input array too large";
+static const char str_err_invalid_char_code[]    = "invalid character code";
+static const char str_err_invalid_index[]        = "string index is out of range";
+static const char str_err_invalid_buffer_index[] = "buffer index is out of range";
+static const char str_err_invalid_string[]       = "invalid string";
+static const char str_err_invalid_utf8[]         = "invalid UTF-8 sequence";
+static const char str_err_not_array[]            = "object is not an array";
+static const char str_err_not_string[]           = "object is not a string";
+static const char str_err_null_pointer[]         = "null pointer";
+static const char str_err_out_of_memory[]        = "out of memory";
+static const char str_err_too_many_repeats[]     = "repeated string too long";
 
 #ifdef CONFIG_STRING16
 #define _override_elem_size(size) do { (size) = (size) < KOS_STRING_ELEM_16 ? KOS_STRING_ELEM_16 : (size); } while (0)
@@ -322,7 +323,9 @@ cleanup:
 }
 
 KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
-                                      KOS_OBJ_ID  utf8_buf)
+                                      KOS_OBJ_ID  utf8_buf,
+                                      unsigned    begin,
+                                      unsigned    end)
 {
     KOS_STRING      *str       = 0;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
@@ -335,12 +338,18 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(utf8_buf) == OBJ_BUFFER);
 
     size = KOS_get_buffer_size(utf8_buf);
-    if ( ! size)
+    if ( ! size && begin == end)
         return KOS_get_string(ctx, KOS_STR_EMPTY);
+    if (begin > end || end > size) {
+        KOS_raise_exception_cstring(ctx, str_err_invalid_buffer_index);
+        goto cleanup;
+    }
+
+    size = end - begin;
 
     utf8_buf = KOS_atomic_read_obj(OBJPTR(BUFFER, utf8_buf)->data);
 
-    length = kos_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf,
+    length = kos_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                               size, KOS_UTF8_NO_ESCAPE, &max_code);
     if (length == ~0U) {
         KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
@@ -366,21 +375,21 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     ptr = (void *)kos_get_string_buffer(str);
 
     if (elem_size == KOS_STRING_ELEM_8) {
-        if (KOS_SUCCESS != kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf,
+        if (KOS_SUCCESS != kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                                              size, KOS_UTF8_NO_ESCAPE, (uint8_t *)ptr)) {
             KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
             str = 0; /* object is garbage-collected */
         }
     }
     else if (elem_size == KOS_STRING_ELEM_16) {
-        if (KOS_SUCCESS != kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf,
+        if (KOS_SUCCESS != kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                                               size, KOS_UTF8_NO_ESCAPE, (uint16_t *)ptr)) {
             KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
             str = 0; /* object is garbage-collected */
         }
     }
     else {
-        if (KOS_SUCCESS != kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf,
+        if (KOS_SUCCESS != kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                                               size, KOS_UTF8_NO_ESCAPE, (uint32_t *)ptr)) {
             KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
             str = 0; /* object is garbage-collected */

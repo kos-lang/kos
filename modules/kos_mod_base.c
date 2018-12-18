@@ -668,7 +668,7 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
                     break;
 
                 case OBJ_BUFFER:
-                    obj = KOS_new_string_from_buffer(ctx, obj);
+                    obj = KOS_new_string_from_buffer(ctx, obj, 0, KOS_get_buffer_size(obj));
                     break;
 
                 default:
@@ -868,8 +868,10 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
     const uint32_t num_args = KOS_get_array_size(args_obj);
     uint32_t       i_arg;
     KOS_OBJ_ID     buffer   = KOS_BADPTR;
+    KOS_OBJ_ID     arg      = KOS_BADPTR;
+    KOS_OBJ_ID     gen_args = KOS_BADPTR;
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &buffer, &args_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 4, &args_obj, &buffer, &arg, &gen_args));
 
     buffer = KOS_new_buffer(ctx, 0);
     TRY_OBJID(buffer);
@@ -878,7 +880,7 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
 
         const uint32_t cur_size = KOS_get_buffer_size(buffer);
 
-        KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, (int)i_arg);
+        arg = KOS_array_read(ctx, args_obj, (int)i_arg);
         TRY_OBJID(arg);
 
         if (i_arg == 0 && num_args == 1 && IS_NUMERIC_OBJ(arg)) {
@@ -955,11 +957,10 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
                 }
 
                 if (state != KOS_GEN_DONE) {
-                    uint8_t *data;
                     uint32_t size     = cur_size;
                     uint32_t capacity = cur_size;
 
-                    KOS_OBJ_ID gen_args = KOS_new_array(ctx, 0);
+                    gen_args = KOS_new_array(ctx, 0);
                     TRY_OBJID(gen_args);
 
                     if (cur_size < 64) {
@@ -967,10 +968,9 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
                         capacity = 64;
                     }
 
-                    data = KOS_buffer_data(buffer) + cur_size;
-
                     for (;;) {
-                        int64_t value;
+                        int64_t  value;
+                        uint8_t *data;
 
                         KOS_OBJ_ID ret = KOS_call_generator(ctx, arg, KOS_VOID, gen_args);
                         if (IS_BAD_PTR(ret)) { /* end of iterator */
@@ -987,10 +987,11 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
                         if (size >= capacity) {
                             capacity *= 2;
                             TRY(KOS_buffer_resize(ctx, buffer, capacity));
-                            data = KOS_buffer_data(buffer) + size;
                         }
 
-                        *(data++) = (uint8_t)(uint64_t)value;
+                        data = KOS_buffer_data(buffer) + size;
+
+                        *data = (uint8_t)(uint64_t)value;
                         ++size;
                     }
 
@@ -1218,7 +1219,7 @@ static KOS_OBJ_ID _apply(KOS_CONTEXT ctx,
     arg_args = KOS_array_read(ctx, args_obj, 1);
     TRY_OBJID(arg_args);
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &arg_this));
+    TRY(KOS_push_locals(ctx, &pushed, 3, &this_obj, &arg_this, &arg_args));
     arg_args = KOS_array_slice(ctx, arg_args, 0, MAX_INT64);
     KOS_pop_locals(ctx, pushed);
     TRY_OBJID(arg_args);
@@ -1517,7 +1518,8 @@ static KOS_OBJ_ID _expand_for_sort(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(iterable) == OBJ_ARRAY);
 
-    TRY(KOS_push_locals(ctx, &pushed, 6, &key_func, &ret, &key_args, &src, &dest, &val));
+    TRY(KOS_push_locals(ctx, &pushed, 7,
+                        &iterable, &key_func, &ret, &key_args, &src, &dest, &val));
 
     size = KOS_get_array_size(iterable);
     src  = kos_get_array_storage(iterable);
@@ -1753,7 +1755,7 @@ static KOS_OBJ_ID _sort(KOS_CONTEXT ctx,
 
         KOS_OBJ_ID aux = KOS_BADPTR;
 
-        TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &aux));
+        TRY(KOS_push_locals(ctx, &pushed, 3, &this_obj, &key, &aux));
 
         aux = _expand_for_sort(ctx, this_obj, key);
         TRY_OBJID(aux);
@@ -1878,7 +1880,7 @@ static KOS_OBJ_ID _resize(KOS_CONTEXT ctx,
     KOS_OBJ_ID size_obj;
     int64_t    size;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &this_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &args_obj));
 
     size_obj = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(size_obj);
@@ -2137,9 +2139,13 @@ static int _process_pack_format(KOS_CONTEXT               ctx,
                                 struct KOS_PACK_FORMAT_S *fmt)
 {
     int            error    = KOS_SUCCESS;
-    KOS_OBJ_ID     fmt_str  = fmt->fmt_str;
-    const unsigned fmt_size = KOS_get_string_length(fmt_str);
+    const unsigned fmt_size = KOS_get_string_length(fmt->fmt_str);
     unsigned       i_fmt    = 0;
+
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 1, &buffer_obj));
+    }
 
     while (i_fmt < fmt_size) {
 
@@ -2147,25 +2153,25 @@ static int _process_pack_format(KOS_CONTEXT               ctx,
         unsigned size  = 1;
         unsigned c;
 
-        _pack_format_skip_spaces(ctx, fmt_str, &i_fmt);
+        _pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
 
         if (i_fmt >= fmt_size)
             break;
 
-        c = KOS_string_get_char_code(ctx, fmt_str, (int)i_fmt++);
+        c = KOS_string_get_char_code(ctx, fmt->fmt_str, (int)i_fmt++);
         assert(c != ~0U);
 
         if (c >= '0' && c <= '9') {
             --i_fmt;
-            count = _pack_format_get_count(ctx, fmt_str, &i_fmt);
+            count = _pack_format_get_count(ctx, fmt->fmt_str, &i_fmt);
             assert(count != ~0U);
 
-            _pack_format_skip_spaces(ctx, fmt_str, &i_fmt);
+            _pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
 
             if (i_fmt >= fmt_size)
                 RAISE_EXCEPTION(str_err_invalid_pack_format);
 
-            c = KOS_string_get_char_code(ctx, fmt_str, (int)i_fmt++);
+            c = KOS_string_get_char_code(ctx, fmt->fmt_str, (int)i_fmt++);
             assert(c != ~0U);
         }
 
@@ -2192,10 +2198,12 @@ static int _process_pack_format(KOS_CONTEXT               ctx,
                 /* fall through */
             case 's': {
                 unsigned next_c;
-                _pack_format_skip_spaces(ctx, fmt_str, &i_fmt);
-                next_c = (i_fmt < fmt_size) ? KOS_string_get_char_code(ctx, fmt_str, (int)i_fmt) : ~0U;
+                _pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
+                next_c = (i_fmt < fmt_size)
+                         ? KOS_string_get_char_code(ctx, fmt->fmt_str, (int)i_fmt)
+                         : ~0U;
                 if (next_c >= '0' && next_c <= '9') {
-                    size = _pack_format_get_count(ctx, fmt_str, &i_fmt);
+                    size = _pack_format_get_count(ctx, fmt->fmt_str, &i_fmt);
                 }
                 else if (c == 's') {
                     size = ~0U;
@@ -2224,12 +2232,15 @@ static int _pack_format(KOS_CONTEXT               ctx,
                         unsigned                  size,
                         unsigned                  count)
 {
-    int        error = KOS_SUCCESS;
+    int        error  = KOS_SUCCESS;
+    int        pushed = 0;
     int        big_end;
-    uint8_t   *dst   = 0;
+    uint8_t   *dst    = 0;
     KOS_VECTOR str_buf;
 
     kos_vector_init(&str_buf);
+
+    TRY(KOS_push_locals(ctx, &pushed, 1, &buffer_obj));
 
     if (fmt->idx < 0) {
         KOS_OBJ_ID obj = fmt->data;
@@ -2425,6 +2436,7 @@ static int _pack_format(KOS_CONTEXT               ctx,
     }
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
     kos_vector_destroy(&str_buf);
     return error;
 }
@@ -2437,7 +2449,8 @@ static int _unpack_format(KOS_CONTEXT               ctx,
                           unsigned                  count)
 {
     int            error     = KOS_SUCCESS;
-    uint8_t       *data      = 0;
+    int            pushed    = 0;
+    int            offs;
     const uint32_t data_size = KOS_get_buffer_size(buffer_obj);
     int            big_end   = fmt->big_end;
     KOS_OBJ_ID     obj;
@@ -2452,17 +2465,18 @@ static int _unpack_format(KOS_CONTEXT               ctx,
     if (fmt->idx + size * count > data_size)
         RAISE_EXCEPTION(str_err_unpack_buf_too_short);
 
-    assert(data_size);
-    data = KOS_buffer_data(buffer_obj);
-    assert(data);
+    TRY(KOS_push_locals(ctx, &pushed, 1, &buffer_obj));
 
-    data += fmt->idx;
+    assert(data_size);
+    assert(KOS_buffer_data(buffer_obj));
+
+    offs = fmt->idx;
 
     switch (value_fmt) {
 
         case 'x':
             assert(size == 1);
-            data += size * count;
+            offs += size * count;
             break;
 
         case 'f':
@@ -2476,8 +2490,8 @@ static int _unpack_format(KOS_CONTEXT               ctx,
                 unsigned i;
 
                 for (i = 0; i < size; i++) {
-                    const unsigned offs = big_end ? i : (size - 1 - i);
-                    value = (value << 8) | data[offs];
+                    const unsigned rel_offs = big_end ? i : (size - 1 - i);
+                    value = (value << 8) | KOS_buffer_data(buffer_obj)[offs + rel_offs];
                 }
 
                 if (value_fmt == 'i' && size < 8) {
@@ -2512,7 +2526,7 @@ static int _unpack_format(KOS_CONTEXT               ctx,
 
                 TRY(KOS_array_push(ctx, fmt->data, obj, 0));
 
-                data += size;
+                offs += size;
             }
             break;
         }
@@ -2524,11 +2538,11 @@ static int _unpack_format(KOS_CONTEXT               ctx,
                 TRY_OBJID(obj);
 
                 if (size)
-                    memcpy(KOS_buffer_data(obj), data, size);
+                    memcpy(KOS_buffer_data(obj), &KOS_buffer_data(buffer_obj)[offs], size);
 
                 TRY(KOS_array_push(ctx, fmt->data, obj, 0));
 
-                data += size;
+                offs += size;
             }
             break;
         }
@@ -2538,21 +2552,22 @@ static int _unpack_format(KOS_CONTEXT               ctx,
         default: {
             assert(value_fmt == 's');
             for ( ; count; count--) {
-                obj = KOS_new_string(ctx, (char *)data, size);
+                obj = KOS_new_string_from_buffer(ctx, buffer_obj, offs, offs + size);
 
                 TRY_OBJID(obj);
 
                 TRY(KOS_array_push(ctx, fmt->data, obj, 0));
 
-                data += size;
+                offs += size;
             }
             break;
         }
     }
 
-    fmt->idx = (int)(data - KOS_buffer_data(buffer_obj));
+    fmt->idx = offs;
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
@@ -2581,6 +2596,12 @@ static KOS_OBJ_ID _pack(KOS_CONTEXT ctx,
     fmt.big_end = 0;
 
     assert( ! IS_BAD_PTR(fmt.fmt_str));
+
+    {
+        int pushed = 0;
+        if (KOS_push_locals(ctx, &pushed, 3, &this_obj, &fmt.fmt_str, &fmt.data))
+            return KOS_BADPTR;
+    }
 
     if (GET_OBJ_TYPE(fmt.fmt_str) == OBJ_STRING)
         error = _process_pack_format(ctx, this_obj, _pack_format, &fmt);
@@ -2626,9 +2647,14 @@ static KOS_OBJ_ID _unpack(KOS_CONTEXT ctx,
         RAISE_EXCEPTION(str_err_not_buffer);
 
     fmt.fmt_str = KOS_array_read(ctx, args_obj, 0);
-    fmt.data    = KOS_new_array(ctx, 0);
-
     TRY_OBJID(fmt.fmt_str);
+
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 4, &this_obj, &args_obj, &fmt.fmt_str, &fmt.data));
+    }
+
+    fmt.data = KOS_new_array(ctx, 0);
     TRY_OBJID(fmt.data);
 
     if (IS_NUMERIC_OBJ(fmt.fmt_str)) {
@@ -2839,7 +2865,7 @@ static KOS_OBJ_ID _reserve(KOS_CONTEXT ctx,
     int64_t    size;
     KOS_OBJ_ID size_obj;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &this_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &args_obj));
 
     size_obj = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(size_obj);
@@ -2890,7 +2916,7 @@ static KOS_OBJ_ID _insert_array(KOS_CONTEXT ctx,
     int64_t        end      = 0;
     int64_t        src_len;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &this_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &args_obj));
 
     begin_obj = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(begin_obj);
@@ -2977,7 +3003,7 @@ static KOS_OBJ_ID _pop(KOS_CONTEXT ctx,
         if (num < 0 || num > INT_MAX)
             RAISE_EXCEPTION(str_err_invalid_array_size);
 
-        TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &ret));
+        TRY(KOS_push_locals(ctx, &pushed, 3, &this_obj, &ret, &arg));
 
         if (num == 0)
             ret = KOS_VOID;
@@ -3760,14 +3786,20 @@ static KOS_OBJ_ID _print_exception(KOS_CONTEXT ctx,
                                    KOS_OBJ_ID  args_obj)
 {
     int        error;
-    KOS_OBJ_ID ret       = KOS_BADPTR;
+    KOS_OBJ_ID ret = KOS_BADPTR;
     uint32_t   i;
     uint32_t   lines;
-    KOS_OBJ_ID formatted = KOS_format_exception(ctx, this_obj);
+    KOS_OBJ_ID formatted;
     KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 1, &this_obj));
+    }
+
+    formatted = KOS_format_exception(ctx, this_obj);
     TRY_OBJID(formatted);
 
     assert(GET_OBJ_TYPE(formatted) == OBJ_ARRAY);

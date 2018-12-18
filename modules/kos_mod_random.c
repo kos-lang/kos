@@ -91,8 +91,13 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
 {
     int                error    = KOS_SUCCESS;
     KOS_RNG_CONTAINER *rng      = 0;
-    KOS_OBJ_ID         ret;
+    KOS_OBJ_ID         ret      = KOS_BADPTR;
     KOS_OBJ_ID         seed_obj = KOS_BADPTR;
+
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 4, &this_obj, &args_obj, &ret, &seed_obj));
+    }
 
     ret = KOS_new_object_with_prototype(ctx, this_obj);
     TRY_OBJID(ret);
