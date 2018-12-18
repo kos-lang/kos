@@ -116,7 +116,7 @@ int join_thread(KOS_CONTEXT ctx,
     int error = KOS_SUCCESS;
 
     if (thread) {
-        if (GetCurrentThread() == thread->thread_id) {
+        if (GetCurrentThreadId() == thread->thread_id) {
             KOS_raise_exception_cstring(ctx, str_err_join_self);
             return KOS_ERROR_EXCEPTION;
         }
