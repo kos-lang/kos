@@ -76,7 +76,7 @@ int main(void)
     KOS_OBJ_ID str_bbb;
     KOS_OBJ_ID str_ccc;
 
-    TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
     {

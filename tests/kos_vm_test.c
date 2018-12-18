@@ -129,7 +129,7 @@ static KOS_OBJ_ID _run_code(KOS_INSTANCE  *inst,
     int         error  = KOS_SUCCESS;
     KOS_MODULE *module = OBJPTR(MODULE, inst->modules.init_module);
 
-    memset(module, 0, sizeof(*module));
+    memset(((uint8_t *)module) + sizeof(KOS_OBJ_HEADER), 0, sizeof(*module) - sizeof(KOS_OBJ_HEADER));
 
     module->header.type   = OBJ_MODULE;
     module->inst          = inst;
@@ -175,7 +175,7 @@ int main(void)
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
 
-    TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
     /* SET, GET.PROP */
