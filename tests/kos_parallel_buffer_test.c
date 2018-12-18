@@ -111,6 +111,7 @@ int main(void)
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
         THREAD             *threads          = 0;
+        KOS_OBJ_ID          prev_locals      = KOS_BADPTR;
         int                 num_threads      = 0;
         int                 i_loop;
         int                 i;
@@ -133,21 +134,27 @@ int main(void)
             TEST((thread_cookies[i].id >= 0x80U) && (thread_cookies[i].id <= 0x9FU));
         }
 
-        data.inst       = &inst;
-        data.num_loops  = num_thread_loops;
-        data.error      = KOS_SUCCESS;
+        data.inst      = &inst;
+        data.num_loops = num_thread_loops;
+        data.error     = KOS_SUCCESS;
+        data.buf       = KOS_BADPTR;
+
+        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
+        {
+            int pushed = 0;
+            TEST(KOS_push_locals(ctx, &pushed, 1, &data.buf) == KOS_SUCCESS);
+        }
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             const unsigned size = 64;
-            KOS_OBJ_ID     buf  = KOS_new_buffer(ctx, size);
-            data.buf            = buf;
+            data.buf            = KOS_new_buffer(ctx, size);
             data.go             = 0;
 
-            TEST(!IS_BAD_PTR(buf));
+            TEST(!IS_BAD_PTR(data.buf));
 
             /* Fill buffer with expected data */
             {
-                uint8_t       *b   = KOS_buffer_data(buf);
+                uint8_t       *b   = KOS_buffer_data(data.buf);
                 uint8_t *const end = b + size;
 
                 i = 0;
@@ -172,8 +179,8 @@ int main(void)
 
             /* Check buffer contents */
             {
-                const size_t   endsize = KOS_get_buffer_size(buf);
-                uint8_t       *b       = KOS_buffer_data(buf);
+                const size_t   endsize = KOS_get_buffer_size(data.buf);
+                uint8_t       *b       = KOS_buffer_data(data.buf);
                 uint8_t *const end     = b + endsize;
 
                 for (i = 0 ; b < end; i++, b++) {
@@ -193,6 +200,8 @@ int main(void)
 */
                 }
             }
+
+            TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
         }
 
         kos_vector_destroy(&mem_buf);
