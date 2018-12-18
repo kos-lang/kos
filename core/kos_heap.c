@@ -189,13 +189,11 @@ static void finalize_objects(KOS_CONTEXT ctx,
     KOS_PAGE *page           = heap->full_pages;
     KOS_PAGE *non_full_pages = heap->non_full_pages;
     KOS_PAGE *next;
-    int       non_full_turn  = 0;
 
     heap->full_pages     = 0;
     heap->non_full_pages = 0;
 
     if ( ! page) {
-        non_full_turn = 1;
         page = non_full_pages;
         non_full_pages = 0;
     }
@@ -213,7 +211,6 @@ static void finalize_objects(KOS_CONTEXT ctx,
         if ( ! next && non_full_pages) {
             next = non_full_pages;
             non_full_pages = 0;
-            non_full_turn = 1;
         }
 
         while (ptr < end) {
