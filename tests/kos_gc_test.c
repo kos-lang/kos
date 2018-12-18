@@ -590,6 +590,7 @@ int main(void)
             obj_id = KOS_string_slice(ctx, obj_id, 1, -1);
             TEST( ! IS_BAD_PTR(obj_id));
 
+            ctx->retval    = KOS_BADPTR;
             ctx->exception = obj_id;
 
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_ERROR_EXCEPTION);
@@ -611,14 +612,16 @@ int main(void)
              * - 1 for string in retval
              * - 1 for string as exception
              */
+#ifndef CONFIG_MAD_GC
             TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 14);
-            TEST(stats.num_objs_freed     == 1);
-            TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == 1);
             TEST(stats.num_pages_freed    == 1);
+            TEST(stats.size_kept          >  0);
+#endif
+            TEST(stats.num_objs_freed     == 1);
+            TEST(stats.num_objs_finalized == 0);
             TEST(stats.size_evacuated     >= base_stats.size_evacuated);
             TEST(stats.size_freed         >  0);
-            TEST(stats.size_kept          >  0);
 
             KOS_pop_local_scope(ctx, &prev_locals);
 
@@ -702,14 +705,16 @@ int main(void)
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
+#ifndef CONFIG_MAD_GC
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated + 2);
-        TEST(stats.num_objs_freed     == 0);
-        TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == 2);
         TEST(stats.num_pages_freed    == 1);
+        TEST(stats.size_kept          >  0);
+#endif
+        TEST(stats.num_objs_freed     == 0);
+        TEST(stats.num_objs_finalized == 0);
         TEST(stats.size_evacuated     >= base_stats.size_evacuated);
         TEST(stats.size_freed         == 0);
-        TEST(stats.size_kept          >  0);
 
         TEST(_test_buffer(obj_id[0], 0x0A, KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
         TEST(_test_buffer(obj_id[1], 0x0B, KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
@@ -779,12 +784,14 @@ int main(void)
 
                 TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-                TEST(stats.num_objs_freed     == 0);
-                TEST(stats.num_objs_finalized == 0);
+#ifndef CONFIG_MAD_GC
                 TEST(stats.num_pages_kept     >= num_objs);
                 TEST(stats.num_pages_freed    <  4);
-                TEST(stats.size_freed         == 0);
                 TEST(stats.size_kept          >  0);
+#endif
+                TEST(stats.num_objs_freed     == 0);
+                TEST(stats.num_objs_finalized == 0);
+                TEST(stats.size_freed         == 0);
 
                 for (i = 0; i < num_objs; ++i) {
                     TEST(_test_buffer(obj_ids[i], i, size) == KOS_SUCCESS);
