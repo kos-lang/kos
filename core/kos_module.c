@@ -73,13 +73,12 @@ static void _raise_3(KOS_CONTEXT ctx,
     KOS_OBJ_ID str_err[3];
 
     str_err[0] = KOS_BADPTR;
-    str_err[1] = KOS_BADPTR;
+    str_err[1] = s2;
     str_err[2] = KOS_BADPTR;
 
     kos_track_refs(ctx, 3, &str_err[0], &str_err[1], &str_err[2]);
 
     str_err[0] = KOS_new_const_ascii_cstring(ctx, s1);
-    str_err[1] = s2;
     if ( ! IS_BAD_PTR(str_err[0])) {
         str_err[2] = KOS_new_const_ascii_cstring(ctx, s3);
 
@@ -126,7 +125,7 @@ static int _find_module(KOS_CONTEXT ctx,
 
     kos_vector_init(&cpath);
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &path, &dir));
+    TRY(KOS_push_locals(ctx, &pushed, 3, &module_name, &path, &dir));
 
     /* Find dot or path separator, it indicates it's a path to a file */
     if (_rfind_path(maybe_path, length, '.') > 0) {
@@ -166,8 +165,7 @@ static int _find_module(KOS_CONTEXT ctx,
         if (!num_paths)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-        TRY(KOS_push_locals(ctx, &pushed2, 5,
-                            &module_name,
+        TRY(KOS_push_locals(ctx, &pushed2, 4,
                             &components[0], &components[1], &components[2], &components[3]));
         pushed += pushed2;
 
@@ -655,10 +653,10 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT  ctx,
 
     kos_vector_init(&cstr);
 
-    TRY(KOS_push_locals(ctx, &pushed, 11,
+    TRY(KOS_push_locals(ctx, &pushed, 12,
                 &parts[0], &parts[1], &parts[2], &parts[3], &parts[4],
                 &parts[5], &parts[6], &parts[7], &parts[8], &parts[9],
-                &parts[10]));
+                &parts[10], &module_obj));
 
     parts[0] = KOS_get_file_name(ctx, OBJPTR(MODULE, module_obj)->path);
     TRY_OBJID(parts[0]);
@@ -809,9 +807,10 @@ static int _walk_globals(void                          *vframe,
                          KOS_COMP_WALL_GLOBALS_CALLBACK callback,
                          void                          *cookie)
 {
-    int                 error = KOS_SUCCESS;
-    KOS_CONTEXT         ctx   = (KOS_CONTEXT)vframe;
-    KOS_INSTANCE *const inst  = ctx->inst;
+    int                 error  = KOS_SUCCESS;
+    int                 pushed = 0;
+    KOS_CONTEXT         ctx    = (KOS_CONTEXT)vframe;
+    KOS_INSTANCE *const inst   = ctx->inst;
     KOS_VECTOR          name;
     KOS_OBJ_ID          walk;
     KOS_OBJ_ID          module_obj;
@@ -822,6 +821,8 @@ static int _walk_globals(void                          *vframe,
     TRY_OBJID(module_obj);
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
+
+    TRY(KOS_push_locals(ctx, &pushed, 2, &module_obj, &walk));
 
     walk = KOS_new_object_walk(ctx, OBJPTR(MODULE, module_obj)->global_names, KOS_SHALLOW);
     TRY_OBJID(walk);
@@ -840,6 +841,7 @@ static int _walk_globals(void                          *vframe,
     }
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
     kos_vector_destroy(&name);
 
     return error;
@@ -1533,6 +1535,10 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     KOS_OBJ_ID    prev_locals = KOS_BADPTR;
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
+    }
 
     module_name_str = KOS_new_cstring(ctx, module_name);
     TRY_OBJID(module_name_str);
@@ -1621,6 +1627,11 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     kos_vector_init(&buf);
 
     TRY(KOS_push_local_scope(ctx, &prev_locals));
+
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
+    }
 
     TRY(_load_stdin(ctx, &buf));
 

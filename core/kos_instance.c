@@ -796,11 +796,13 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  exception)
 {
     int        error;
+    int        pushed = 0;
     unsigned   i;
     unsigned   depth;
     KOS_OBJ_ID value;
     KOS_OBJ_ID backtrace;
-    KOS_OBJ_ID array = KOS_BADPTR;
+    KOS_OBJ_ID array      = KOS_BADPTR;
+    KOS_OBJ_ID frame_desc = KOS_BADPTR;
     KOS_OBJ_ID str;
     KOS_VECTOR cstr;
 
@@ -814,6 +816,8 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(backtrace) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_not_array);
+
+    TRY(KOS_push_locals(ctx, &pushed, 4, &value, &backtrace, &array, &frame_desc));
 
     depth = KOS_get_array_size(backtrace);
     array = KOS_new_array(ctx, 1 + depth);
@@ -835,7 +839,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
         char cbuf[16];
 
-        const KOS_OBJ_ID frame_desc = KOS_array_read(ctx, backtrace, (int)i);
+        frame_desc = KOS_array_read(ctx, backtrace, (int)i);
         TRY_OBJID(frame_desc);
 
         cstr.size = 0;
@@ -890,6 +894,8 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
 cleanup:
     kos_vector_destroy(&cstr);
+
+    KOS_pop_locals(ctx, pushed);
 
     return error ? KOS_BADPTR : array;
 }
@@ -1098,8 +1104,10 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
 
     va_end(args);
 
-    if ( ! error)
+    if ( ! error) {
         *push_status = num_entries;
+        kos_trigger_mad_gc(ctx);
+    }
 
     return error;
 }
@@ -1160,6 +1168,8 @@ void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
     ctx->tmp_ref_count = end;
 
     va_end(args);
+
+    kos_trigger_mad_gc(ctx);
 }
 
 void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries)

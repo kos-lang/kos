@@ -632,20 +632,24 @@ static int init_registers(KOS_CONTEXT ctx,
 
         if (num_input_args < num_named_args) {
 
-            KOS_ATOMIC(KOS_OBJ_ID) *const src_buf0 = kos_get_array_buffer(OBJPTR(ARRAY, OBJPTR(FUNCTION, func_obj)->defaults));
-            KOS_ATOMIC(KOS_OBJ_ID)       *src_buf  = src_buf0;
+            uint32_t src_offs = 0;
 
             if (num_to_move > num_non_def_args)
-                src_buf += num_to_move - num_non_def_args;
+                src_offs += num_to_move - num_non_def_args;
 
             if (num_to_move < KOS_MAX_ARGS_IN_REGS - 1U) {
 
-                KOS_ATOMIC(KOS_OBJ_ID)* reg_end = src_buf
-                                                + KOS_MAX_ARGS_IN_REGS - 1U - num_to_move;
+                const uint32_t to_copy  = KOS_MAX_ARGS_IN_REGS - 1U - num_to_move;
+                KOS_OBJ_ID     defaults = OBJPTR(FUNCTION, func_obj)->defaults;
 
-                while (src_buf < reg_end)
-                    KOS_atomic_write_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++],
-                                         KOS_atomic_read_obj(*(src_buf++)));
+                defaults = kos_get_array_storage(defaults);
+
+                kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&OBJPTR(STACK, ctx->stack)->buf[reg],
+                                    (KOS_ATOMIC(void *) *)&OBJPTR(ARRAY_STORAGE, defaults)->buf[src_offs],
+                                    to_copy);
+
+                src_offs += to_copy;
+                reg      += to_copy;
             }
 
             {
@@ -659,7 +663,7 @@ static int init_registers(KOS_CONTEXT ctx,
                                  MAX_INT64,
                                  MAX_INT64,
                                  OBJPTR(FUNCTION, func_obj)->defaults,
-                                 src_buf - kos_get_array_buffer(OBJPTR(ARRAY, OBJPTR(FUNCTION, func_obj)->defaults)),
+                                 src_offs,
                                  MAX_INT64));
 
             KOS_pop_locals(ctx, 1);
@@ -1468,7 +1472,11 @@ static int exec_function(KOS_CONTEXT ctx)
                         store_instr_offs(stack, regs_idx,
                                          (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                         value = OBJPTR(DYNAMIC_PROP, value)->getter;
+
+                        kos_track_refs(ctx, 2, &value, &src);
                         args  = KOS_new_array(ctx, 0);
+                        kos_untrack_refs(ctx, 2);
+
                         if (IS_BAD_PTR(args))
                             error = KOS_ERROR_EXCEPTION;
                         else {
@@ -1664,14 +1672,16 @@ static int exec_function(KOS_CONTEXT ctx)
                     }
                 }
                 else {
-                    KOS_OBJ_ID obj   = REGISTER(rdest);
-                    KOS_OBJ_ID value = REGISTER(rsrc);
+                    KOS_OBJ_ID obj    = REGISTER(rdest);
+                    KOS_OBJ_ID value  = REGISTER(rsrc);
 
+                    kos_track_refs(ctx, 3, &obj, &prop, &value);
                     error = KOS_set_property(ctx, obj, prop, value);
+                    kos_untrack_refs(ctx, 3);
 
                     if (error == KOS_ERROR_SETTER) {
-                        KOS_OBJ_ID setter;
                         KOS_OBJ_ID args;
+                        KOS_OBJ_ID setter;
 
                         assert(KOS_is_exception_pending(ctx));
                         setter = KOS_get_exception(ctx);
@@ -1682,7 +1692,9 @@ static int exec_function(KOS_CONTEXT ctx)
                                          (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                         setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
 
+                        kos_track_refs(ctx, 2, &setter, &obj);
                         args = KOS_new_array(ctx, 1);
+                        kos_untrack_refs(ctx, 2);
 
                         if ( ! IS_BAD_PTR(args)) {
                             KOS_ATOMIC(KOS_OBJ_ID) *buf =
@@ -2680,7 +2692,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 }
 
                 if ( ! error)
-                    error = KOS_push_locals(ctx, &pushed, 2, &func_obj, &this_obj);
+                    error = KOS_push_locals(ctx, &pushed, 3, &func_obj, &this_obj, &args_obj);
 
                 if ( ! error)
                     error = _prepare_call(ctx, instr, func_obj, &this_obj,

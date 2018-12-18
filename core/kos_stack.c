@@ -151,20 +151,25 @@ static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
 int kos_stack_push(KOS_CONTEXT ctx,
                    KOS_OBJ_ID  func_obj)
 {
-    int              error      = KOS_SUCCESS;
-    KOS_STACK *const stack      = IS_BAD_PTR(ctx->stack) ? 0 : OBJPTR(STACK, ctx->stack);
-    const uint32_t   stack_size = stack ? KOS_atomic_read_u32(stack->size) : 0;
-    KOS_STACK       *new_stack  = stack;
-    uint32_t         base_idx   = stack_size;
-    const int64_t    catch_init = (int64_t)KOS_NO_CATCH << 8;
-    unsigned         num_regs;
-    unsigned         room;
-    const KOS_TYPE   type       = GET_OBJ_TYPE(func_obj);
+    int            error      = KOS_SUCCESS;
+    uint32_t       stack_size;
+    uint32_t       base_idx;
+    const int64_t  catch_init = (int64_t)KOS_NO_CATCH << 8;
+    unsigned       num_regs;
+    unsigned       room;
+    const KOS_TYPE type       = GET_OBJ_TYPE(func_obj);
+    KOS_STACK     *stack;
+    KOS_STACK     *new_stack;
 
     kos_track_refs(ctx, 1, &func_obj);
 
     if (type != OBJ_FUNCTION && type != OBJ_CLASS)
         RAISE_EXCEPTION(str_err_not_callable);
+
+    stack      = IS_BAD_PTR(ctx->stack) ? 0 : OBJPTR(STACK, ctx->stack);
+    new_stack  = stack;
+    stack_size = stack ? KOS_atomic_read_u32(stack->size) : 0;
+    base_idx   = stack_size;
 
     assert( ! OBJPTR(FUNCTION, func_obj)->handler ||
            OBJPTR(FUNCTION, func_obj)->header.num_regs == 0);

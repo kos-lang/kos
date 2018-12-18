@@ -216,7 +216,7 @@ inline obj_id_converter from_object_ptr(stack_frame ctx, KOS_OBJ_ID obj_id)
 
 class instance {
     public:
-        explicit instance(uint32_t flags = 0) {
+        explicit instance(uint32_t flags = KOS_INST_MANUAL_GC) {
             KOS_CONTEXT ctx;
 
             int error = KOS_instance_init(&_inst, flags, &ctx);

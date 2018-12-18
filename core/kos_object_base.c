@@ -127,13 +127,7 @@ static KOS_OBJ_ID _set_prototype(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
 
-        KOS_OBJ_ID arg;
-
-        kos_track_refs(ctx, 1, &this_obj);
-
-        arg = KOS_array_read(ctx, args_obj, 0);
-
-        kos_untrack_refs(ctx, 1);
+        const KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
         if ( ! IS_BAD_PTR(arg)) {
 

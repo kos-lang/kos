@@ -110,7 +110,13 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
 {
-    KOS_THREAD *thread = (KOS_THREAD *)kos_alloc_object(ctx, OBJ_THREAD, sizeof(KOS_THREAD));
+    KOS_THREAD *thread;
+    int         pushed = 0;
+
+    if (KOS_push_locals(ctx, &pushed, 3, &thread_func, &this_obj, &args_obj))
+        return KOS_BADPTR;
+
+    thread = (KOS_THREAD *)kos_alloc_object(ctx, OBJ_THREAD, sizeof(KOS_THREAD));
 
     if (thread) {
         assert(thread->header.type == OBJ_THREAD);
@@ -125,6 +131,8 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
         thread->thread_id     = 0;
 #endif
     }
+
+    KOS_pop_locals(ctx, pushed);
 
     return OBJID(THREAD, thread);
 }

@@ -168,6 +168,11 @@ int kos_heap_init(KOS_INSTANCE *inst)
     heap->pool_headers   = 0;
     heap->waste          = 0;
 
+#ifdef CONFIG_MAD_GC
+    heap->locked_pages_first = 0;
+    heap->locked_pages_last  = 0;
+#endif
+
     assert(KOS_BITMAP_OFFS + KOS_BITMAP_SIZE <= KOS_SLOTS_OFFS);
     assert( ! (KOS_SLOTS_OFFS & 7U));
     assert(KOS_SLOTS_OFFS + (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) == KOS_PAGE_SIZE);
@@ -929,10 +934,10 @@ static void *_alloc_object(KOS_CONTEXT ctx,
         }
     }
 
+    kos_unlock_mutex(&heap->mutex);
+
     if ( ! hdr)
         KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
-
-    kos_unlock_mutex(&heap->mutex);
 
     return hdr;
 }
@@ -1726,9 +1731,21 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         case OBJ_STRING:
-            if (((KOS_STRING *)hdr)->header.flags & KOS_STRING_REF)
-                /* TODO update data_ptr */
-                _update_child_ptr(&((KOS_STRING *)hdr)->ref.obj_id);
+            if (((KOS_STRING *)hdr)->header.flags & KOS_STRING_REF) {
+                const uint8_t* old_data_ptr = (const uint8_t *)((KOS_STRING *)hdr)->ref.data_ptr;
+                KOS_OBJ_ID     old_ref_obj  = ((KOS_STRING *)hdr)->ref.obj_id;
+                KOS_OBJ_ID     new_ref_obj  = old_ref_obj;
+                intptr_t       delta;
+
+                assert(OBJPTR(STRING, old_ref_obj)->header.flags & KOS_STRING_LOCAL);
+
+                _update_child_ptr(&new_ref_obj);
+
+                delta = (intptr_t)new_ref_obj - (intptr_t)old_ref_obj;
+
+                ((KOS_STRING *)hdr)->ref.obj_id   = new_ref_obj;
+                ((KOS_STRING *)hdr)->ref.data_ptr = old_data_ptr + delta;
+            }
             break;
 
         default:
