@@ -570,9 +570,11 @@ int KOS_set_property(KOS_CONTEXT ctx,
     else if ( ! _has_properties(obj_id))
         KOS_raise_exception_cstring(ctx, str_err_no_own_properties);
     else {
-        KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
+        KOS_ATOMIC(KOS_OBJ_ID) *props;
 
         kos_track_refs(ctx, 3, &obj_id, &prop, &value);
+
+        props = _get_properties(obj_id);
 
         /* Check if property table is non-empty */
         if (IS_BAD_PTR(_read_props(props))) {
@@ -977,20 +979,17 @@ int KOS_object_walk(KOS_CONTEXT ctx,
 {
     int        error    = KOS_ERROR_INTERNAL;
     uint32_t   capacity = 0;
-    KOS_PITEM *table    = 0;
+    KOS_OBJ_ID table    = KOS_BADPTR;
     KOS_OBJ_ID key      = KOS_BADPTR;
 
     assert(GET_OBJ_TYPE(walk_id) == OBJ_OBJECT_WALK);
 
     if ( ! IS_BAD_PTR(OBJPTR(OBJECT_WALK, walk_id)->key_table)) {
-        KOS_OBJECT_STORAGE *key_table = OBJPTR(OBJECT_STORAGE,
-                OBJPTR(OBJECT_WALK, walk_id)->key_table);
-
-        capacity = KOS_atomic_read_u32(key_table->capacity);
-        table    = key_table->items;
+        table    = OBJPTR(OBJECT_WALK, walk_id)->key_table;
+        capacity = KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, table)->capacity);
     }
 
-    kos_track_refs(ctx, 2, &walk_id, &key);
+    kos_track_refs(ctx, 3, &walk_id, &table, &key);
 
     for (;;) {
 
@@ -1003,7 +1002,7 @@ int KOS_object_walk(KOS_CONTEXT ctx,
             break;
         }
 
-        key = KOS_atomic_read_obj(table[index].key);
+        key = KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, table)->items[index].key);
 
         if ( ! IS_BAD_PTR(key)) {
 
@@ -1022,7 +1021,7 @@ int KOS_object_walk(KOS_CONTEXT ctx,
         }
     }
 
-    kos_untrack_refs(ctx, 2);
+    kos_untrack_refs(ctx, 3);
 
     return error;
 }
