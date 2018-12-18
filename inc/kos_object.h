@@ -29,7 +29,7 @@
 static inline KOS_OBJ_ID KOS_object_swap_private(KOS_OBJ_ID obj,
                                                  KOS_OBJ_ID value)
 {
-    return KOS_atomic_swap_ptr(OBJPTR(OBJECT, obj)->priv, value);
+    return (KOS_OBJ_ID)KOS_atomic_swap_ptr(OBJPTR(OBJECT, obj)->priv, value);
 }
 
 static inline void KOS_object_set_private(KOS_OBJ_ID obj,
