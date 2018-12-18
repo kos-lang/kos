@@ -197,8 +197,6 @@ void kos_lock_gc(KOS_INSTANCE *inst);
 
 void kos_unlock_gc(KOS_INSTANCE *inst);
 
-void kos_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
-
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
 
 void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries);

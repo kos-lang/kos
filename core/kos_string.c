@@ -75,8 +75,6 @@ static KOS_STRING *_new_empty_string(KOS_CONTEXT      ctx,
         str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_LOCAL;
         str->header.length = (uint16_t)length;
         str->header.hash   = 0;
-
-        kos_set_return_value(ctx, OBJID(STRING, str));
     }
 
     return str;
@@ -125,8 +123,6 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
             str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_LOCAL;
             str->header.length = (uint16_t)count;
             str->header.hash   = 0;
-
-            kos_set_return_value(ctx, OBJID(STRING, str));
 
             ptr = (void *)kos_get_string_buffer(str);
 
@@ -206,8 +202,6 @@ KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT      ctx,
             str->header.length = (uint16_t)length;
             str->header.hash   = 0;
             str->ptr.data_ptr  = str_data;
-
-            kos_set_return_value(ctx, OBJID(STRING, str));
         }
     }
     else
@@ -368,8 +362,6 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     str = _new_empty_string(ctx, length, elem_size);
     if ( ! str)
         goto cleanup;
-
-    kos_set_return_value(ctx, OBJID(STRING, str));
 
     ptr = (void *)kos_get_string_buffer(str);
 
@@ -865,8 +857,6 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                         OBJPTR(STRING, new_str)->header.hash   = 0;
                         ref->data_ptr                          = buf;
                         ref->obj_id                            = obj_id;
-
-                        kos_set_return_value(ctx, new_str);
                     }
                 }
 

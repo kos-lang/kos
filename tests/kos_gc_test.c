@@ -108,8 +108,6 @@ static int _test_object(KOS_CONTEXT            ctx,
 
     TEST(KOS_push_locals(ctx, &pushed, 1, &obj_id) == KOS_SUCCESS);
 
-    kos_set_return_value(ctx, KOS_BADPTR);
-
     TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
     KOS_pop_locals(ctx, pushed);
@@ -496,8 +494,6 @@ int main(void)
             ctx->stack = KOS_BADPTR;
         }
 
-        kos_set_return_value(ctx, KOS_BADPTR);
-
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
         TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
@@ -525,8 +521,6 @@ int main(void)
             prop_id = KOS_new_cstring(ctx, "self");
             TEST( ! IS_BAD_PTR(prop_id));
             TEST(KOS_set_property(ctx, obj_id, prop_id, obj_id) == KOS_SUCCESS);
-
-            kos_set_return_value(ctx, KOS_BADPTR);
 
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -591,7 +585,7 @@ int main(void)
             obj_id = KOS_new_cstring(ctx, "0123456789012345678901234567890123456789");
             TEST( ! IS_BAD_PTR(obj_id));
 
-            kos_set_return_value(ctx, obj_id);
+            ctx->retval = obj_id;
 
             obj_id = KOS_string_slice(ctx, obj_id, 1, -1);
             TEST( ! IS_BAD_PTR(obj_id));
@@ -633,7 +627,7 @@ int main(void)
             kos_stack_pop(ctx);
             ctx->stack = KOS_BADPTR;
 
-            kos_set_return_value(ctx, KOS_BADPTR);
+            ctx->retval    = KOS_BADPTR;
             ctx->exception = KOS_BADPTR;
 
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
@@ -663,8 +657,6 @@ int main(void)
         kos_heap_release_thread_page(ctx);
 
         TEST(KOS_new_array(ctx, 0) != KOS_BADPTR);
-
-        kos_set_return_value(ctx, KOS_BADPTR);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -723,8 +715,6 @@ int main(void)
         TEST(_test_buffer(obj_id[1], 0x0B, KOS_POOL_SIZE / 2U) == KOS_SUCCESS);
 
         KOS_pop_local_scope(ctx, &prev_locals);
-
-        kos_set_return_value(ctx, KOS_BADPTR);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 

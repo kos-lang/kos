@@ -1137,13 +1137,6 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int push_status)
     }
 }
 
-void kos_set_return_value(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
-{
-    KOS_instance_validate(ctx);
-
-    ctx->retval = obj_id;
-}
-
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
 {
     va_list  args;

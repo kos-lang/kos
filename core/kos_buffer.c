@@ -111,8 +111,6 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
         }
     }
 
-    kos_set_return_value(ctx, obj_id);
-
     return obj_id;
 }
 

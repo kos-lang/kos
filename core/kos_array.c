@@ -142,8 +142,6 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
 
         if (array) {
 
-            kos_set_return_value(ctx, OBJID(ARRAY, array));
-
             KOS_atomic_write_u32(array->size, size);
 
             if (storage) {
@@ -262,10 +260,8 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
 
                 if (elem == CLOSED)
                     buf = _get_next(buf);
-                else {
-                    kos_set_return_value(ctx, elem);
+                else
                     break;
-                }
             }
         }
         else
