@@ -26,7 +26,7 @@ matrix:
 
       - name: "Valgrind"
         os: linux
-        dist: trusty
+        dist: xenial
         compiler: gcc
         addons:
             apt:
