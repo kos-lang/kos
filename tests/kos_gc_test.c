@@ -806,5 +806,86 @@ int main(void)
         }
     }
 
+    /************************************************************************/
+    /* Dead object in non-full page points to an object which was evacuated,
+     * pointers to evacuated page should not be updated in the dead object. */
+    {
+        KOS_OBJ_ID  prev_locals;
+        KOS_STRING *big_string;
+        KOS_STRING *small_string;
+        KOS_STRING *held_string;
+        KOS_OBJ_ID  held_obj = KOS_BADPTR;
+        int         pushed   = 0;
+        uint32_t    size     = 0;
+        uint32_t    len      = 0;
+
+        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
+
+        TEST(KOS_push_locals(ctx, &pushed, 1, &held_obj) == KOS_SUCCESS);
+
+        /* This object will go away entirely (page reclaimed) */
+        big_string = (KOS_STRING *)kos_alloc_object_page(ctx, OBJ_STRING);
+        TEST(big_string);
+
+        size = (uint32_t)(int)GET_SMALL_INT(big_string->header.alloc_size);
+        len  = size - (uint32_t)sizeof(struct KOS_STRING_LOCAL_S) + 1U;
+
+        big_string->header.flags  = KOS_STRING_LOCAL;
+        big_string->header.length = (uint16_t)len;
+        big_string->header.hash   = 0;
+        memset(&big_string->local.data[0], 0xA5, len);
+
+        /* This object will be dead */
+        small_string = (KOS_STRING *)kos_alloc_object_page(ctx, OBJ_STRING);
+        TEST(small_string);
+
+        small_string->header.flags  = KOS_STRING_REF;
+        small_string->header.length = (uint16_t)len;
+        small_string->header.hash   = 0;
+        small_string->ref.data_ptr  = &big_string->local.data[0];
+        small_string->ref.obj_id    = OBJID(STRING, big_string);
+
+        /* This object will survive */
+        {
+            const uint32_t small_size = KOS_align_up((uint32_t)sizeof(struct KOS_STRING_REF_S),
+                                                     1U << KOS_OBJ_ALIGN_BITS);
+            const uint32_t alloc_size = (uint32_t)(int)GET_SMALL_INT(small_string->header.alloc_size);
+
+            small_string->header.alloc_size = TO_SMALL_INT((int64_t)small_size);
+
+            held_string = (KOS_STRING *)((uint8_t *)small_string + small_size);
+
+            size = alloc_size - small_size;
+            len  = size - (uint32_t)sizeof(struct KOS_STRING_LOCAL_S) + 1U;
+        }
+        held_string->header.alloc_size = TO_SMALL_INT((int64_t)size);
+        held_string->header.type       = OBJ_STRING;
+        held_string->header.flags      = KOS_STRING_LOCAL;
+        held_string->header.length     = (uint16_t)len;
+        held_string->header.hash       = 0;
+        memset(&held_string->local.data[0], 0xA6U, held_string->header.length);
+
+        held_obj = OBJID(STRING, held_string);
+
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        {
+            uint32_t i;
+
+            held_string = OBJPTR(STRING, held_obj);
+
+            for (i = 0; i < len; i++)
+                TEST(held_string->local.data[i] == 0xA6U);
+        }
+
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        KOS_instance_destroy(&inst);
+    }
+
     return 0;
 }

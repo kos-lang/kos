@@ -1709,6 +1709,8 @@ static void _update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 
         KOS_OBJ_ID new_obj = ((KOS_OBJ_HEADER *)((intptr_t)obj_id - 1))->alloc_size;
 
+        assert((unsigned)READ_OBJ_TYPE(obj_id) != 0xDDU);
+
         /* Objects in pages retained keep their size in their size field */
         if (IS_HEAP_OBJECT(new_obj)) {
             *obj_id_ptr = new_obj;
@@ -1869,15 +1871,23 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
     /* TODO add way to go over all pages */
     while (page) {
 
+        struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
+
         uint8_t       *ptr = (uint8_t *)page + KOS_SLOTS_OFFS;
         uint8_t *const end = ptr + (get_num_active_slots(page) << KOS_OBJ_ALIGN_BITS);
 
+        mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
+
         while (ptr < end) {
 
-            KOS_OBJ_HEADER *hdr  = (KOS_OBJ_HEADER *)ptr;
-            const uint32_t  size = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+            KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
+            const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+            const uint32_t  color = _get_marking(&mark_loc);
 
-            _update_child_ptrs(hdr);
+            if (color)
+                _update_child_ptrs(hdr);
+
+            _advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
 
             ptr += size;
         }
