@@ -137,6 +137,7 @@ int main(void)
         int                 num_threads      = 0;
         int                 num_props;
         KOS_OBJ_ID         *props;
+        KOS_OBJ_ID          prev_locals;
         int                 i_loop;
         int                 i;
 
@@ -161,9 +162,12 @@ int main(void)
             thread_cookies[i].first_prop = i * max_props_per_th;
         }
 
+        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
+
         for (i = 0; i < num_props; i++) {
             char     buf[8];
             unsigned k;
+            int      pushed = 0;
 
             for (k = 0; k < sizeof(buf); k++)
                 if (k + 4U < sizeof(buf))
@@ -173,6 +177,8 @@ int main(void)
 
             props[i] = KOS_new_string(ctx, buf, sizeof(buf));
             TEST( ! IS_BAD_PTR(props[i]));
+
+            TEST(KOS_push_locals(ctx, &pushed, 1, &props[i]) == KOS_SUCCESS);
         }
 
         data.inst       = &inst;
@@ -182,11 +188,13 @@ int main(void)
         data.error      = KOS_SUCCESS;
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
-            KOS_OBJ_ID o = KOS_new_object(ctx);
-            data.object  = o;
+            int   pushed = 0;
+            data.object  = KOS_new_object(ctx);
             data.go      = 0;
 
-            TEST(!IS_BAD_PTR(o));
+            TEST(!IS_BAD_PTR(data.object));
+
+            TEST(KOS_push_locals(ctx, &pushed, 1, &data.object) == KOS_SUCCESS);
 
             /* Start with 1, because 0 is for the main thread, which participates */
             for (i = 1; i < num_threads; i++)
@@ -204,10 +212,14 @@ int main(void)
             TEST(data.error == KOS_SUCCESS);
 
             for (i = 0; i < num_props; i++) {
-                KOS_OBJ_ID value = KOS_get_property(ctx, o, props[i]);
+                KOS_OBJ_ID value = KOS_get_property(ctx, data.object, props[i]);
                 TEST(IS_BAD_PTR(value));
                 TEST_EXCEPTION();
             }
+
+            KOS_pop_locals(ctx, pushed);
+
+            TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
         }
 
         kos_vector_destroy(&mem_buf);
