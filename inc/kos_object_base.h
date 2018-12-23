@@ -42,7 +42,7 @@ typedef enum KOS_OBJECT_TYPE_E {
     OBJ_FUNCTION,
     OBJ_CLASS,
 
-    OBJ_LAST_TYPE = OBJ_CLASS,
+    OBJ_LAST_TYPE = OBJ_CLASS, /* Last type exposed to the language */
 
     OBJ_OPAQUE,         /* Contains binary user data, contents not recognized by GC */
 

@@ -1709,8 +1709,6 @@ static void _update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 
         KOS_OBJ_ID new_obj = ((KOS_OBJ_HEADER *)((intptr_t)obj_id - 1))->alloc_size;
 
-        assert((unsigned)READ_OBJ_TYPE(obj_id) != 0xDDU);
-
         /* Objects in pages retained keep their size in their size field */
         if (IS_HEAP_OBJECT(new_obj)) {
             *obj_id_ptr = new_obj;
@@ -1871,23 +1869,15 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
     /* TODO add way to go over all pages */
     while (page) {
 
-        struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
-
         uint8_t       *ptr = (uint8_t *)page + KOS_SLOTS_OFFS;
         uint8_t *const end = ptr + (get_num_active_slots(page) << KOS_OBJ_ALIGN_BITS);
-
-        mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
         while (ptr < end) {
 
             KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
             const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
-            const uint32_t  color = _get_marking(&mark_loc);
 
-            if (color)
-                _update_child_ptrs(hdr);
-
-            _advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
+            _update_child_ptrs(hdr);
 
             ptr += size;
         }
@@ -1967,6 +1957,23 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
     }
 }
 
+static void finalize_object(KOS_CONTEXT            ctx,
+                            KOS_OBJ_HEADER        *hdr,
+                            struct KOS_GC_STATS_S *stats)
+{
+    if (hdr->type == OBJ_OBJECT) {
+
+        KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
+
+        if (obj->finalize) {
+
+            obj->finalize(ctx, KOS_atomic_read_obj(obj->priv));
+
+            ++stats->num_objs_finalized;
+        }
+    }
+}
+
 static int _evacuate(KOS_CONTEXT            ctx,
                      KOS_PAGE             **free_pages,
                      struct KOS_GC_STATS_S *out_stats)
@@ -2016,10 +2023,37 @@ static int _evacuate(KOS_CONTEXT            ctx,
             non_full_turn = 1;
         }
 
+        mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
+
 #ifndef CONFIG_MAD_GC
         /* If the number of slots used reaches the threshold, then the page is
          * exempt from evacuation. */
         if (num_slots_used >= (KOS_SLOTS_PER_PAGE * KOS_MIGRATION_THRESH) / 100U) {
+
+            /* Mark unused objects as opaque so they don't participate in
+             * pointer update after evacuation. */
+            if (num_slots_used < KOS_atomic_read_u32(page->num_allocated)) {
+                while (ptr < end) {
+
+                    KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
+                    const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+                    const uint32_t  color = _get_marking(&mark_loc);
+
+                    assert(size > 0U);
+                    assert(color != GRAY);
+                    assert(size <= (size_t)((uint8_t *)page_end - (uint8_t *)ptr));
+
+                    if ( ! color) {
+                        finalize_object(ctx, hdr, &stats);
+                        hdr->type = OBJ_OPAQUE;
+                    }
+
+                    _advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
+
+                    ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
+                }
+            }
+
             PUSH_LIST(heap->full_pages, page);
             heap->used_size += _full_page_size(page);
             ++stats.num_pages_kept;
@@ -2027,8 +2061,6 @@ static int _evacuate(KOS_CONTEXT            ctx,
             continue;
         }
 #endif
-
-        mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
         while (ptr < end) {
 
@@ -2079,17 +2111,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
                 stats.size_evacuated += size;
             }
             else {
-                if (hdr->type == OBJ_OBJECT) {
-
-                    KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
-
-                    if (obj->finalize) {
-
-                        obj->finalize(ctx, KOS_atomic_read_obj(obj->priv));
-
-                        ++stats.num_objs_finalized;
-                    }
-                }
+                finalize_object(ctx, hdr, &stats);
 
                 ++stats.num_objs_freed;
                 stats.size_freed += size;
