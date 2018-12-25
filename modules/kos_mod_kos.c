@@ -32,8 +32,10 @@
 #include "../inc/kos_version.h"
 #include "../core/kos_heap.h"
 #include "../core/kos_lexer.h"
+#include "../core/kos_malloc.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_try.h"
+#include <string.h>
 
 static const char str_column[]             = "column";
 static const char str_err_not_buffer[]     = "object is not a buffer";
@@ -46,25 +48,23 @@ static const char str_keyword[]            = "keyword";
 static const char str_line[]               = "line";
 static const char str_op[]                 = "op";
 static const char str_sep[]                = "sep";
-static const char str_source[]             = "source";
 static const char str_token[]              = "token";
 static const char str_type[]               = "type";
 
 typedef struct KOS_LEXER_OBJ_S {
-    KOS_OBJ_HEADER header; /* TODO remove this when we switch to malloc */
-    KOS_LEXER      lexer;
-    KOS_TOKEN      token;
-    uint8_t       *last_buf;
-    int            ignore_errors;
+    KOS_LEXER lexer;
+    KOS_TOKEN token;
+    int       ignore_errors;
+    char      buf[1];
 } KOS_LEXER_OBJ;
 
 static void finalize(KOS_CONTEXT ctx,
                      KOS_OBJ_ID  priv)
 {
-    /* TODO free
+    assert(IS_SMALL_INT(priv));
+
     if (priv)
-        kos_free_buffer(ctx, priv, sizeof(KOS_LEXER_OBJ));
-    */
+        kos_free((void *)priv);
 }
 
 static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
@@ -75,21 +75,18 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
     KOS_OBJ_ID          retval       = KOS_BADPTR;
     KOS_OBJ_ID          lexer_obj_id = KOS_BADPTR;
     KOS_OBJ_ID          init_arg     = KOS_BADPTR;
-    KOS_OBJ_ID          source       = KOS_BADPTR;
+    KOS_OBJ_ID          token_obj    = KOS_BADPTR;
+    KOS_OBJ_ID          value        = KOS_BADPTR;
     KOS_LEXER_OBJ      *lexer;
-    uint8_t            *buf_data;
     KOS_NEXT_TOKEN_MODE next_token   = NT_ANY;
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
 
     {
         int pushed = 0;
-        TRY(KOS_push_locals(ctx, &pushed, 5,
-                            &regs_obj, &args_obj, &lexer_obj_id, &init_arg, &source));
+        TRY(KOS_push_locals(ctx, &pushed, 6,
+                            &regs_obj, &args_obj, &lexer_obj_id, &init_arg, &token_obj, &value));
     }
-
-    source = KOS_new_const_ascii_string(ctx, str_source, sizeof(str_source) - 1);
-    TRY_OBJID(source);
 
     lexer_obj_id = KOS_array_read(ctx, regs_obj, 0);
     assert( ! IS_BAD_PTR(lexer_obj_id));
@@ -110,28 +107,24 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         if (GET_OBJ_TYPE(init_arg) != OBJ_BUFFER)
             RAISE_EXCEPTION(str_err_not_buffer);
 
+        buf_size = KOS_get_buffer_size(init_arg);
+
         lexer_obj_id = KOS_new_object(ctx);
         TRY_OBJID(lexer_obj_id);
 
-        /* TODO use malloc once GC supports finalize */
-        lexer = (KOS_LEXER_OBJ *)kos_alloc_object(ctx,
-                                                  OBJ_OPAQUE,
-                                                  sizeof(KOS_LEXER_OBJ));
-        if (!lexer)
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        lexer = (KOS_LEXER_OBJ *)kos_malloc(sizeof(KOS_LEXER_OBJ) + buf_size - 1);
+        if ( ! lexer) {
+            KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+            goto cleanup;
+        }
 
         OBJPTR(OBJECT, lexer_obj_id)->finalize = finalize;
 
         KOS_object_set_private_ptr(lexer_obj_id, lexer);
 
-        buf_size = KOS_get_buffer_size(init_arg);
-        buf_data = KOS_buffer_data(init_arg);
+        memcpy(&lexer->buf[0], KOS_buffer_data(init_arg), buf_size);
 
-        kos_lexer_init(&lexer->lexer, 0, (char *)buf_data, (char *)buf_data + buf_size);
-
-        TRY(KOS_set_property(ctx, lexer_obj_id, source, init_arg));
-
-        lexer->last_buf = buf_data;
+        kos_lexer_init(&lexer->lexer, 0, &lexer->buf[0], &lexer->buf[buf_size]);
 
         TRY(KOS_array_write(ctx, regs_obj, 0, lexer_obj_id));
 
@@ -146,28 +139,23 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         }
     }
     else {
-        KOS_OBJ_ID buf_obj_id;
-
         assert(GET_OBJ_TYPE(lexer_obj_id) == OBJ_OBJECT);
-
-        buf_obj_id = KOS_get_property(ctx, lexer_obj_id, source);
-        TRY_OBJID(buf_obj_id);
 
         lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(lexer_obj_id);
 
         if (KOS_get_array_size(args_obj) > 0) {
 
-            int64_t    value;
+            int64_t    i_value;
             KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
             TRY_OBJID(arg);
 
-            TRY(KOS_get_integer(ctx, arg, &value));
+            TRY(KOS_get_integer(ctx, arg, &i_value));
 
-            if (value != 0 && value != 1)
+            if (i_value != 0 && i_value != 1)
                 RAISE_EXCEPTION(str_err_invalid_arg);
 
-            if (value) {
+            if (i_value) {
                 next_token = NT_CONTINUE_STRING;
 
                 if (lexer->token.sep != ST_PAREN_CLOSE)
@@ -175,19 +163,6 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
                 kos_lexer_unget_token(&lexer->lexer, &lexer->token);
             }
-        }
-
-        buf_data = KOS_buffer_data(buf_obj_id);
-
-        /* Update pointers if the buffer's data storage was reallocated */
-        if (buf_data != lexer->last_buf) {
-            const intptr_t delta = (intptr_t)(buf_data - lexer->last_buf);
-
-            lexer->lexer.buf            += delta;
-            lexer->lexer.buf_end        += delta;
-            lexer->lexer.prefetch_begin += delta;
-            lexer->lexer.prefetch_end   += delta;
-            lexer->last_buf             =  buf_data;
         }
     }
 
@@ -210,10 +185,16 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
             lexer->lexer.pos.column += token->length;
         }
         else {
-            KOS_OBJ_ID parts[6];
+            KOS_OBJ_ID parts[6] = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR,
+                                    KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
             KOS_OBJ_ID exception;
+            int        pushed = 0;
 
             assert(error == KOS_ERROR_SCANNING_FAILED);
+
+            TRY(KOS_push_locals(ctx, &pushed, 6,
+                                &parts[0], &parts[1], &parts[2],
+                                &parts[3], &parts[4], &parts[5]));
 
             parts[0] = KOS_new_const_ascii_string(ctx, str_format_parse_error,
                                                   sizeof(str_format_parse_error) - 1);
@@ -243,9 +224,8 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
         KOS_TOKEN *token = &lexer->token;
         KOS_OBJ_ID key;
-        KOS_OBJ_ID value;
 
-        KOS_OBJ_ID token_obj = KOS_new_object(ctx);
+        token_obj = KOS_new_object(ctx);
         TRY_OBJID(token_obj);
 
         value = KOS_new_string(ctx, token->begin, token->length);
