@@ -399,12 +399,6 @@ int main(void)
         TEST(KOS_get_buffer_size(buf1) == 0);
     }
 
-    /************************************************************************/
-    /* KOS_buffer_rotate */
-    {
-        /* TODO */
-    }
-
     KOS_instance_destroy(&inst);
 
     return 0;

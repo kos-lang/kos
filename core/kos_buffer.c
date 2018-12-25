@@ -387,13 +387,3 @@ KOS_OBJ_ID KOS_buffer_slice(KOS_CONTEXT ctx,
 
     return ret;
 }
-
-int KOS_buffer_rotate(KOS_CONTEXT ctx,
-                      KOS_OBJ_ID  obj_id,
-                      int64_t     begin,
-                      int64_t     mid,
-                      int64_t     end)
-{
-    /* TODO */
-    return KOS_ERROR_INTERNAL;
-}
