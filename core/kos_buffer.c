@@ -122,6 +122,14 @@ static KOS_BUFFER_STORAGE *_get_data(KOS_OBJ_ID obj_id)
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(BUFFER_STORAGE, buf_obj);
 }
 
+static KOS_OBJ_ID get_storage(KOS_OBJ_ID obj_id)
+{
+    const KOS_OBJ_ID storage_obj = KOS_atomic_read_obj(OBJPTR(BUFFER, obj_id)->data);
+    /* TODO use read with acquire semantics */
+    KOS_atomic_acquire_barrier();
+    return storage_obj;
+}
+
 int KOS_buffer_reserve(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  obj_id,
                        unsigned    new_capacity)
@@ -135,12 +143,16 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
     else if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
         KOS_raise_exception_cstring(ctx, str_err_not_buffer);
     else {
+        KOS_OBJ_ID old_buf = KOS_BADPTR;
 
-        kos_track_refs(ctx, 1, &obj_id);
+        kos_track_refs(ctx, 2, &obj_id, &old_buf);
 
         for (;;) {
-            KOS_BUFFER_STORAGE *const old_buf = _get_data(obj_id);
-            const uint32_t capacity = old_buf ? KOS_atomic_read_u32(old_buf->capacity) : 0;
+            uint32_t capacity;
+
+            old_buf  = get_storage(obj_id);
+            capacity = IS_BAD_PTR(old_buf) ? 0
+                     : KOS_atomic_read_u32(OBJPTR(BUFFER_STORAGE, old_buf)->capacity);
 
             if (new_capacity > capacity) {
 
@@ -155,10 +167,10 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
                     continue;
 
                 if (size)
-                    memcpy(&buf->buf[0], &old_buf->buf[0], size);
+                    memcpy(&buf->buf[0], &OBJPTR(BUFFER_STORAGE, old_buf)->buf[0], size);
 
                 (void)KOS_atomic_cas_ptr(OBJPTR(BUFFER, obj_id)->data,
-                                         OBJID(BUFFER_STORAGE, old_buf),
+                                         old_buf,
                                          OBJID(BUFFER_STORAGE, buf));
             }
 
@@ -166,7 +178,7 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
             break;
         }
 
-        kos_untrack_refs(ctx, 1);
+        kos_untrack_refs(ctx, 2);
     }
 
     return error;
