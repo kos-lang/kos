@@ -25,6 +25,7 @@
 #endif
 
 MODULE_DEF(base)
+MODULE_DEF(datetime)
 MODULE_DEF(fs)
 MODULE_DEF(io)
 MODULE_DEF(kos)
