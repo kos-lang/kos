@@ -332,6 +332,11 @@ static int _run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     print_args = KOS_new_array(ctx, 1);
     TRY_OBJID(print_args);
 
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 1, &print_args));
+    }
+
     error = kos_getline_init(&state);
     if (error) {
         assert(error == KOS_ERROR_OUT_OF_MEMORY);
