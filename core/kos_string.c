@@ -855,7 +855,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                                                sizeof(struct KOS_STRING_REF_S)));
 
                     if ( ! IS_BAD_PTR(new_str)) {
-                        struct KOS_STRING_REF_S *const ref = (struct KOS_STRING_REF_S *)OBJPTR(STRING, new_str);
+                        struct KOS_STRING_REF_S *const ref = &OBJPTR(STRING, new_str)->ref;
 
                         buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id)) + (begin << elem_size);
 
@@ -865,7 +865,11 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                         OBJPTR(STRING, new_str)->header.length = (uint16_t)new_len;
                         OBJPTR(STRING, new_str)->header.hash   = 0;
                         ref->data_ptr                          = buf;
-                        ref->obj_id                            = obj_id;
+
+                        if (OBJPTR(STRING, obj_id)->header.flags & KOS_STRING_REF)
+                            ref->obj_id = OBJPTR(STRING, obj_id)->ref.obj_id;
+                        else
+                            ref->obj_id = obj_id;
                     }
                 }
 
