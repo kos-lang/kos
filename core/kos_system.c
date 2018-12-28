@@ -330,7 +330,7 @@ int64_t kos_get_time_ms(void)
     /* Convert from 100s of ns to ms */
     time_ms /= 10000;
 
-    /* Convert from Windows time (1602) to Epoch time (1970) */
+    /* Convert from Windows time (1601) to Epoch time (1970) */
     time_ms -= epoch;
 
     return time_ms;
