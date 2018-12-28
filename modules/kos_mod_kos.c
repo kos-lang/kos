@@ -58,6 +58,17 @@ typedef struct KOS_LEXER_OBJ_S {
     char      buf[1];
 } KOS_LEXER_OBJ;
 
+typedef enum IDS_E {
+    CONST_STR_TOKEN,
+    CONST_STR_LINE,
+    CONST_STR_COLUMN,
+    CONST_STR_TYPE,
+    CONST_STR_KEYWORD,
+    CONST_STR_OP,
+    CONST_STR_SEP,
+    CONST_STR_NUM_IDS
+} IDS;
+
 static void finalize(KOS_CONTEXT ctx,
                      KOS_OBJ_ID  priv)
 {
@@ -77,6 +88,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
     KOS_OBJ_ID          init_arg     = KOS_BADPTR;
     KOS_OBJ_ID          token_obj    = KOS_BADPTR;
     KOS_OBJ_ID          value        = KOS_BADPTR;
+    KOS_OBJ_ID          ids          = KOS_BADPTR;
     KOS_LEXER_OBJ      *lexer;
     KOS_NEXT_TOKEN_MODE next_token   = NT_ANY;
 
@@ -84,8 +96,8 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
     {
         int pushed = 0;
-        TRY(KOS_push_locals(ctx, &pushed, 6,
-                            &regs_obj, &args_obj, &lexer_obj_id, &init_arg, &token_obj, &value));
+        TRY(KOS_push_locals(ctx, &pushed, 7,
+                            &regs_obj, &args_obj, &lexer_obj_id, &init_arg, &token_obj, &value, &ids));
     }
 
     lexer_obj_id = KOS_array_read(ctx, regs_obj, 0);
@@ -126,6 +138,8 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
         kos_lexer_init(&lexer->lexer, 0, &lexer->buf[0], &lexer->buf[buf_size]);
 
+        TRY(KOS_array_resize(ctx, regs_obj, 2));
+
         TRY(KOS_array_write(ctx, regs_obj, 0, lexer_obj_id));
 
         lexer->ignore_errors = 0;
@@ -137,6 +151,33 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
             lexer->ignore_errors = kos_is_truthy(arg);
         }
+
+        ids = KOS_new_array(ctx, CONST_STR_NUM_IDS);
+        TRY_OBJID(ids);
+
+        token_obj = KOS_new_const_ascii_string(ctx, str_token,   sizeof(str_token)   - 1);
+        TRY_OBJID(token_obj);
+        TRY(KOS_array_write(ctx, ids, CONST_STR_TOKEN,   token_obj));
+        token_obj = KOS_new_const_ascii_string(ctx, str_line,    sizeof(str_line)    - 1);
+        TRY_OBJID(token_obj);
+        TRY(KOS_array_write(ctx, ids, CONST_STR_LINE,    token_obj));
+        token_obj = KOS_new_const_ascii_string(ctx, str_column,  sizeof(str_column)  - 1);
+        TRY_OBJID(token_obj);
+        TRY(KOS_array_write(ctx, ids, CONST_STR_COLUMN,  token_obj));
+        token_obj = KOS_new_const_ascii_string(ctx, str_type,    sizeof(str_type)    - 1);
+        TRY_OBJID(token_obj);
+        TRY(KOS_array_write(ctx, ids, CONST_STR_TYPE,    token_obj));
+        token_obj = KOS_new_const_ascii_string(ctx, str_keyword, sizeof(str_keyword) - 1);
+        TRY_OBJID(token_obj);
+        TRY(KOS_array_write(ctx, ids, CONST_STR_KEYWORD, token_obj));
+        token_obj = KOS_new_const_ascii_string(ctx, str_op,      sizeof(str_op)      - 1);
+        TRY_OBJID(token_obj);
+        TRY(KOS_array_write(ctx, ids, CONST_STR_OP,      token_obj));
+        token_obj = KOS_new_const_ascii_string(ctx, str_sep,     sizeof(str_sep)     - 1);
+        TRY_OBJID(token_obj);
+        TRY(KOS_array_write(ctx, ids, CONST_STR_SEP,     token_obj));
+
+        TRY(KOS_array_write(ctx, regs_obj, 1, ids));
     }
     else {
         assert(GET_OBJ_TYPE(lexer_obj_id) == OBJ_OBJECT);
@@ -164,6 +205,9 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
                 kos_lexer_unget_token(&lexer->lexer, &lexer->token);
             }
         }
+
+        ids = KOS_array_read(ctx, regs_obj, 1);
+        TRY_OBJID(ids);
     }
 
     assert( ! lexer->lexer.error_str);
@@ -231,49 +275,49 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
         value = KOS_new_string(ctx, token->begin, token->length);
         TRY_OBJID(value);
 
-        key = KOS_new_const_ascii_string(ctx, str_token, sizeof(str_token) - 1);
+        key = KOS_array_read(ctx, ids, CONST_STR_TOKEN);
         TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
                              key,
                              value));
 
-        key = KOS_new_const_ascii_string(ctx, str_line, sizeof(str_line) - 1);
+        key = KOS_array_read(ctx, ids, CONST_STR_LINE);
         TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
                              key,
                              TO_SMALL_INT((int)token->pos.line)));
 
-        key = KOS_new_const_ascii_string(ctx, str_column, sizeof(str_column) - 1);
+        key = KOS_array_read(ctx, ids, CONST_STR_COLUMN);
         TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
                              key,
                              TO_SMALL_INT((int)token->pos.column)));
 
-        key = KOS_new_const_ascii_string(ctx, str_type, sizeof(str_type) - 1);
+        key = KOS_array_read(ctx, ids, CONST_STR_TYPE);
         TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
                              key,
                              TO_SMALL_INT((int)token->type)));
 
-        key = KOS_new_const_ascii_string(ctx, str_keyword, sizeof(str_keyword) - 1);
+        key = KOS_array_read(ctx, ids, CONST_STR_KEYWORD);
         TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
                              key,
                              TO_SMALL_INT((int)token->keyword)));
 
-        key = KOS_new_const_ascii_string(ctx, str_op, sizeof(str_op) - 1);
+        key = KOS_array_read(ctx, ids, CONST_STR_OP);
         TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
                              key,
                              TO_SMALL_INT((int)token->op)));
 
-        key = KOS_new_const_ascii_string(ctx, str_sep, sizeof(str_sep) - 1);
+        key = KOS_array_read(ctx, ids, CONST_STR_SEP);
         TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token_obj,
