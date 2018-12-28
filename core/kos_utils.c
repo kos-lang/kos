@@ -746,11 +746,14 @@ static int _vector_append_object(KOS_CONTEXT ctx,
     int        error     = KOS_SUCCESS;
     KOS_OBJ_ID walk;
     uint32_t   num_elems = 0;
+    int        pushed    = 0;
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
     walk = KOS_new_object_walk(ctx, obj_id, KOS_SHALLOW);
     TRY_OBJID(walk);
+
+    TRY(KOS_push_locals(ctx, &pushed, 1, &walk));
 
     TRY(kos_append_cstr(ctx, cstr_vec, str_object_open, sizeof(str_object_open)-1));
 
@@ -774,6 +777,7 @@ static int _vector_append_object(KOS_CONTEXT ctx,
     TRY(kos_append_cstr(ctx, cstr_vec, str_object_close, sizeof(str_object_close)-1));
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
     return error;
 }
 
