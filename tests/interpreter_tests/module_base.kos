@@ -459,9 +459,10 @@ do {
 do {
     const elements = [0x1FFFFF, 1, 2, 3, 4, 5]
     const s        = base.string(elements)
+    const size     = s.size
     assert typeof s == "string"
-    assert s.size   == elements.size
-    for var i in base.range(s.size) {
+    assert size     == elements.size
+    for var i = 0; i < size; i += 1 {
         assert s.code(i) == elements[i]
     }
 }
@@ -469,9 +470,10 @@ do {
 do {
     const elements = [0x1FFFFF, 1, 2, 3, 4, 5, 6]
     const s        = base.string(elements)
+    const size     = s.size
     assert typeof s == "string"
-    assert s.size   == elements.size
-    for var i in base.range(s.size) {
+    assert size     == elements.size
+    for var i = 0; i < size; i += 1 {
         assert s.code(i) == elements[i]
     }
 }
@@ -757,7 +759,8 @@ do {
 
 do {
     const buf = base.buffer(10)
-    for var i in base.range(buf.size) {
+    const size = buf.size
+    for var i = 0; i < size; i += 1 {
         buf[i] = i + 20
     }
 
@@ -964,9 +967,10 @@ do {
     {
         test.args[-1] = test.args[-1] || test.array
         const out = [].insert.apply(test.array, test.args)
-        assert out      == test.array
-        assert out.size == test.result.size
-        for var i in base.range(out.size) {
+        const size = out.size
+        assert out  == test.array
+        assert size == test.result.size
+        for var i = 0; i < size; i += 1 {
             assert out[i] == test.result[i]
         }
     }
@@ -1037,8 +1041,9 @@ do {
     assert a[0]   == "a"
     assert a[2]   == "c"
 
-    const buf = base.buffer(4)
-    for var i in base.range(buf.size) {
+    const buf   = base.buffer(4)
+    const size1 = buf.size
+    for var i = 0; i < size1; i += 1 {
         buf[i] = buf.size - i
     }
 
@@ -1048,7 +1053,8 @@ do {
     assert a[3]   == 4
     assert a[6]   == 1
 
-    for var i in base.range(buf.size) {
+    const size2 = buf.size
+    for var i = 0; i < size2; i += 1 {
         buf[i] = 10 + i
     }
 
@@ -1528,13 +1534,13 @@ do {
 
     fun resize(args...) { args.resize(1) }
 
-    for var i in base.range(3) {
+    for var i = 0; i < 3; i += 1 {
         resize(arg_list...)
     }
-    for var i in base.range(3) {
+    for var i = 0; i < 3; i += 1 {
         resize.apply(void, arg_list)
     }
-    for var i in base.range(3) {
+    for var i = 0; i < 3; i += 1 {
         resize(arg_list...)
         resize.apply(void, arg_list)
         resize(arg_list...)
@@ -2033,7 +2039,11 @@ do {
 
     assert base.keys({x: 8, _test_value: 8, y: 8}).count("_test_value") == 1
 
-    assert base.range(100).map(x => x/4).count(11) == 4
+    assert fun {
+        for var i = 0; i < 100; i += 1 {
+            yield i / 4
+        }
+    } () . count(11) == 4
 
     assert base.count(x => x > 5, [ 1, 7, 2, 6, 5 ]) == 2
 
@@ -2641,11 +2651,15 @@ do {
         }
     }
 
-    for const i in base.range(500) {
-        const threads = [ base.range(4).map(() => thrower.async(void,[])) ... ]
-        for const t in threads {
-            t.wait()
-        }
+    for var i = 200; i; i -= 1 {
+        const t1 = async thrower()
+        const t2 = async thrower()
+        const t3 = async thrower()
+        const t4 = async thrower()
+        t1.wait()
+        t2.wait()
+        t3.wait()
+        t4.wait()
     }
 }
 
