@@ -41,9 +41,11 @@
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
+#   include <sys/time.h>
 #   include <sys/types.h>
 #   include <sys/mman.h>
 #   include <sys/stat.h>
+#   include <time.h>
 #   include <unistd.h>
 #endif
 #ifdef __APPLE__
@@ -309,5 +311,58 @@ int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect)
 int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect)
 {
     return mprotect(ptr, size, protect == KOS_NO_ACCESS ? PROT_NONE : PROT_READ | PROT_WRITE);
+}
+#endif
+
+#ifdef _WIN32
+int64_t kos_get_time_ms(void)
+{
+    const int64_t epoch = (int64_t)116444736 * (int64_t)100000;
+    int64_t       time_ms;
+    FILETIME      ft;
+
+    GetSystemTimeAsFileTime(&ft);
+
+    time_ms = (int64_t)ft.dwLowDateTime;
+
+    time_ms += (int64_t)ft.dwHighDateTime << 32;
+
+    /* Convert from 100s of ns to ms */
+    time_ms /= 10000;
+
+    /* Convert from Windows time (1602) to Epoch time (1970) */
+    time_ms -= epoch;
+
+    return time_ms;
+}
+#elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
+int64_t kos_get_time_ms(void)
+{
+    int64_t         time_ms = 0;
+    struct timespec ts;
+
+    if (!clock_gettime(CLOCK_REALTIME, &ts)) {
+
+        time_ms = (int64_t)ts.tv_sec * 1000;
+
+        time_ms += (int64_t)ts.tv_nsec / 1000000;
+    }
+
+    return time_ms;
+}
+#else
+int64_t kos_get_time_ms(void)
+{
+    int64_t        time_ms = 0;
+    struct timeval tv;
+
+    if (!gettimeofday(&tv, 0)) {
+
+        time_ms = (int64_t)tv.tv_sec * 1000;
+
+        time_ms += (int64_t)tv.tv_usec / 1000;
+    }
+
+    return time_ms;
 }
 #endif

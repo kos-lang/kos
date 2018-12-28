@@ -23,6 +23,8 @@
 #ifndef KOS_FILE_H_INCLUDED
 #define KOS_FILE_H_INCLUDED
 
+#include <stdint.h>
+
 #ifdef _WIN32
 #   define KOS_PATH_SEPARATOR          '\\'
 #   define KOS_PATH_SEPARATOR_STR      "\\"
@@ -57,5 +59,7 @@ enum KOS_PROTECT_E {
 };
 
 int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect);
+
+int64_t kos_get_time_ms(void);
 
 #endif

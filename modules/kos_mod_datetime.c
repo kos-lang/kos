@@ -24,12 +24,8 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
+#include "../core/kos_system.h"
 #include "../core/kos_try.h"
-#ifdef _WIN32
-    /* TODO */
-#else
-#   include <sys/time.h>
-#endif
 
 static const char str_err_cannot_get_time[] = "failed to get system time";
 
@@ -37,32 +33,20 @@ static const char str_err_cannot_get_time[] = "failed to get system time";
  *
  *     now()
  *
- * Returns current time, in milliseconds since Epoch, in UTC.
+ * Returns current time, in milliseconds since the Epoch.
  *
  */
 static KOS_OBJ_ID now(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  this_obj,
                       KOS_OBJ_ID  args_obj)
 {
-    KOS_OBJ_ID ret = KOS_BADPTR;
+    KOS_OBJ_ID    ret     = KOS_BADPTR;
+    const int64_t time_ms = kos_get_time_ms();
 
-#ifdef _WIN32
-    /* TODO */
-#else
-    struct timeval  tv;
-    struct timezone tz;
-
-    if (!gettimeofday(&tv, &tz)) {
-
-        int64_t time_ms = (int64_t)tv.tv_sec * 1000;
-
-        time_ms += (int64_t)tv.tv_usec / 1000;
-
+    if (time_ms)
         ret = KOS_new_int(ctx, time_ms);
-    }
     else
         KOS_raise_exception_cstring(ctx, str_err_cannot_get_time);
-#endif
 
     return ret;
 }
