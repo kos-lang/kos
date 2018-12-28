@@ -771,8 +771,11 @@ static void *_alloc_huge_object(KOS_CONTEXT ctx,
 
             assert((uint8_t *)hdr + size <= (uint8_t *)pool->usable_ptr + pool->usable_size);
         }
-        else
+        else {
+            kos_unlock_mutex(&heap->mutex);
             KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+            kos_lock_mutex(&heap->mutex);
+        }
     }
 
     kos_unlock_mutex(&heap->mutex);
