@@ -37,11 +37,11 @@ fun expect_fail(function)
 # random.rand_integer
 do {
     var sum = 0
-    for var i = 0; i < 0x1000; i += 1 {
+    for var i = 0; i < 0x100; i += 1 {
         sum += random.rand_integer() >> 13
     }
 
-    sum >>= 55
+    sum >>= 59
 
     assert sum >= -0x10
     assert sum <  0x10
@@ -64,7 +64,7 @@ do {
 
 # random.rand_float
 do {
-    for var i = 0; i < 0x1000; i += 1 {
+    for var i = 0; i < 0x100; i += 1 {
         const r = random.rand_float()
         assert r >= 0
         assert r < 1
