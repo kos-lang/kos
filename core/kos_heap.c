@@ -58,7 +58,7 @@ struct KOS_WASTE_HEADER_S {
 };
 
 typedef struct KOS_SLOT_PLACEHOLDER_S {
-    uint8_t _dummy[1 << KOS_OBJ_ALIGN_BITS];
+    uint8_t dummy[1 << KOS_OBJ_ALIGN_BITS];
 } KOS_SLOT;
 
 struct KOS_PAGE_HEADER_S {
@@ -92,40 +92,42 @@ struct KOS_LOCKED_PAGES_S {
 
 #ifdef __cplusplus
 
-template<typename T>
-void _list_push(T*& list, T* value)
-{
-    value->next = list;
-    list        = value;
-}
-
-template<typename T>
-T* _list_pop(T*& list)
-{
-    T* const ret = list;
-
-    if (ret) {
-        T* const next = ret->next;
-
-        list = next;
+namespace {
+    template<typename T>
+    void list_push(T*& list, T* value)
+    {
+        value->next = list;
+        list        = value;
     }
 
-    return ret;
+    template<typename T>
+    T* list_pop(T*& list)
+    {
+        T* const ret = list;
+
+        if (ret) {
+            T* const next = ret->next;
+
+            list = next;
+        }
+
+        return ret;
+    }
 }
 
-#define PUSH_LIST(list, value) _list_push(list, value)
+#define PUSH_LIST(list, value) list_push(list, value)
 
-#define POP_LIST(list) _list_pop(list)
+#define POP_LIST(list) list_pop(list)
 
 #else
 
-static void _list_push(void **list_ptr, void *value, void **next_ptr)
+static void list_push(void **list_ptr, void *value, void **next_ptr)
 {
     *next_ptr = *list_ptr;
     *list_ptr = value;
 }
 
-static void *_list_pop(void **list_ptr)
+static void *list_pop(void **list_ptr)
 {
     void *ret = *list_ptr;
 
@@ -138,19 +140,19 @@ static void *_list_pop(void **list_ptr)
     return ret;
 }
 
-#define PUSH_LIST(list, value) _list_push((void **)&(list), (void *)(value), (void **)&(value)->next)
+#define PUSH_LIST(list, value) list_push((void **)&(list), (void *)(value), (void **)&(value)->next)
 
-#define POP_LIST(list) _list_pop((void **)&(list))
+#define POP_LIST(list) list_pop((void **)&(list))
 
 #endif
 
 #ifdef __cplusplus
-static inline KOS_HEAP *_get_heap(KOS_CONTEXT ctx)
+static inline KOS_HEAP *get_heap(KOS_CONTEXT ctx)
 {
     return &ctx->inst->heap;
 }
 #else
-#define _get_heap(ctx) (&(ctx)->inst->heap)
+#define get_heap(ctx) (&(ctx)->inst->heap)
 #endif
 
 int kos_heap_init(KOS_INSTANCE *inst)
@@ -293,9 +295,9 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
     kos_destroy_mutex(&inst->heap.mutex);
 }
 
-static void _register_wasted_region(KOS_HEAP *heap,
-                                    void     *ptr,
-                                    uint32_t  size)
+static void register_wasted_region(KOS_HEAP *heap,
+                                   void     *ptr,
+                                   uint32_t  size)
 {
     if (size >= sizeof(KOS_WASTE)) {
 
@@ -309,8 +311,8 @@ static void _register_wasted_region(KOS_HEAP *heap,
     heap->used_size += size;
 }
 
-static KOS_POOL *_alloc_pool(KOS_HEAP *heap,
-                             uint32_t  alloc_size)
+static KOS_POOL *alloc_pool(KOS_HEAP *heap,
+                            uint32_t  alloc_size)
 {
     KOS_POOL *pool_hdr;
     uint8_t  *pool;
@@ -350,7 +352,7 @@ static KOS_POOL *_alloc_pool(KOS_HEAP *heap,
         waste      = pool + sizeof(KOS_POOL);
         waste_size = waste_at_front - (uint32_t)sizeof(KOS_POOL);
 
-        _register_wasted_region(heap, waste, waste_size);
+        register_wasted_region(heap, waste, waste_size);
     }
 
     pool_hdr->memory      = pool;
@@ -363,9 +365,9 @@ static KOS_POOL *_alloc_pool(KOS_HEAP *heap,
     return pool_hdr;
 }
 
-static int _alloc_page_pool(KOS_HEAP *heap)
+static int alloc_page_pool(KOS_HEAP *heap)
 {
-    KOS_POOL *pool_hdr  = _alloc_pool(heap, KOS_POOL_SIZE);
+    KOS_POOL *pool_hdr  = alloc_pool(heap, KOS_POOL_SIZE);
     KOS_PAGE *next_page = 0;
     uint8_t  *begin;
     uint8_t  *usable_end;
@@ -388,7 +390,7 @@ static int _alloc_page_pool(KOS_HEAP *heap)
 
         pool_hdr->usable_size -= waste_size;
 
-        _register_wasted_region(heap, page_bytes, waste_size);
+        register_wasted_region(heap, page_bytes, waste_size);
 
         page_size = KOS_PAGE_SIZE;
     }
@@ -458,13 +460,13 @@ static int _alloc_page_pool(KOS_HEAP *heap)
     return KOS_SUCCESS;
 }
 
-static KOS_PAGE *_alloc_page(KOS_HEAP *heap)
+static KOS_PAGE *alloc_page(KOS_HEAP *heap)
 {
     KOS_PAGE *page = heap->free_pages;
 
     if ( ! page) {
 
-        if (_alloc_page_pool(heap))
+        if (alloc_page_pool(heap))
             return 0;
 
         page = heap->free_pages;
@@ -492,7 +494,7 @@ int kos_heap_lend_page(KOS_CONTEXT ctx,
     const uintptr_t good_buf_ptr = KOS_align_up(buf_ptr, (uintptr_t)KOS_PAGE_SIZE);
     const uintptr_t reserved     = good_buf_ptr - buf_ptr + KOS_SLOTS_OFFS
                                    + (1U << KOS_OBJ_ALIGN_BITS);
-    KOS_HEAP       *heap         = _get_heap(ctx);
+    KOS_HEAP       *heap         = get_heap(ctx);
     int             lent         = 0;
 
     kos_lock_mutex(&heap->mutex);
@@ -526,9 +528,9 @@ static int is_recursive_collection(KOS_HEAP *heap)
     return KOS_atomic_read_u32(heap->gc_state) != GC_INACTIVE;
 }
 
-static void _try_collect_garbage(KOS_CONTEXT ctx)
+static void try_collect_garbage(KOS_CONTEXT ctx)
 {
-    KOS_HEAP *const heap = _get_heap(ctx);
+    KOS_HEAP *const heap = get_heap(ctx);
 
     /* Don't try to collect garbage when the garbage collector is running */
     if (is_recursive_collection(heap))
@@ -550,7 +552,7 @@ static void _try_collect_garbage(KOS_CONTEXT ctx)
     }
 }
 
-static void *_alloc_slots_from_page(KOS_PAGE *page, uint32_t num_slots)
+static void *alloc_slots_from_page(KOS_PAGE *page, uint32_t num_slots)
 {
     const uint32_t total_slots   = page->num_slots;
     const uint32_t num_allocated = KOS_atomic_read_u32(page->num_allocated);
@@ -571,11 +573,11 @@ static void *_alloc_slots_from_page(KOS_PAGE *page, uint32_t num_slots)
     return slot;
 }
 
-static KOS_OBJ_HEADER *_alloc_object_from_page(KOS_PAGE *page,
-                                               KOS_TYPE  object_type,
-                                               uint32_t  num_slots)
+static KOS_OBJ_HEADER *alloc_object_from_page(KOS_PAGE *page,
+                                              KOS_TYPE  object_type,
+                                              uint32_t  num_slots)
 {
-    KOS_OBJ_HEADER *const hdr = (KOS_OBJ_HEADER *)_alloc_slots_from_page(page, num_slots);
+    KOS_OBJ_HEADER *const hdr = (KOS_OBJ_HEADER *)alloc_slots_from_page(page, num_slots);
 
     if (hdr) {
         hdr->alloc_size = TO_SMALL_INT(num_slots << KOS_OBJ_ALIGN_BITS);
@@ -598,7 +600,7 @@ void *kos_heap_early_alloc(KOS_INSTANCE *inst,
 
         kos_lock_mutex(&inst->heap.mutex);
 
-        ctx->cur_page = _alloc_page(&inst->heap);
+        ctx->cur_page = alloc_page(&inst->heap);
 
         kos_unlock_mutex(&inst->heap.mutex);
 
@@ -606,15 +608,15 @@ void *kos_heap_early_alloc(KOS_INSTANCE *inst,
             return 0;
     }
 
-    return _alloc_object_from_page(ctx->cur_page, object_type, num_slots);
+    return alloc_object_from_page(ctx->cur_page, object_type, num_slots);
 }
 
-static uint32_t _full_page_size(KOS_PAGE *page)
+static uint32_t full_page_size(KOS_PAGE *page)
 {
     return KOS_SLOTS_OFFS + (page->num_slots << KOS_OBJ_ALIGN_BITS);
 }
 
-static uint32_t _non_full_page_size(KOS_PAGE *page)
+static uint32_t non_full_page_size(KOS_PAGE *page)
 {
     return KOS_SLOTS_OFFS + (KOS_atomic_read_u32(page->num_allocated) << KOS_OBJ_ALIGN_BITS);
 }
@@ -629,7 +631,7 @@ void kos_heap_release_thread_page(KOS_CONTEXT ctx)
 
         PUSH_LIST(heap->non_full_pages, ctx->cur_page);
 
-        heap->used_size += _non_full_page_size(ctx->cur_page);
+        heap->used_size += non_full_page_size(ctx->cur_page);
 
         kos_unlock_mutex(&heap->mutex);
 
@@ -637,10 +639,10 @@ void kos_heap_release_thread_page(KOS_CONTEXT ctx)
     }
 }
 
-static KOS_OBJ_HEADER *_setup_huge_object_in_page(KOS_HEAP *heap,
-                                                  KOS_PAGE *page,
-                                                  KOS_TYPE  object_type,
-                                                  uint32_t  size)
+static KOS_OBJ_HEADER *setup_huge_object_in_page(KOS_HEAP *heap,
+                                                 KOS_PAGE *page,
+                                                 KOS_TYPE  object_type,
+                                                 uint32_t  size)
 {
     KOS_OBJ_HEADER *hdr = (KOS_OBJ_HEADER *)((uint8_t *)page + KOS_SLOTS_OFFS);
 
@@ -655,25 +657,25 @@ static KOS_OBJ_HEADER *_setup_huge_object_in_page(KOS_HEAP *heap,
 
     assert(page->num_slots > KOS_SLOTS_PER_PAGE);
 
-    heap->used_size += _full_page_size(page);
+    heap->used_size += full_page_size(page);
 
     KOS_atomic_write_u32(page->num_allocated, page->num_slots);
 
     return hdr;
 }
 
-static void *_alloc_huge_object(KOS_CONTEXT ctx,
-                                KOS_TYPE    object_type,
-                                uint32_t    size)
+static void *alloc_huge_object(KOS_CONTEXT ctx,
+                               KOS_TYPE    object_type,
+                               uint32_t    size)
 {
-    KOS_HEAP       *heap = _get_heap(ctx);
+    KOS_HEAP       *heap = get_heap(ctx);
     KOS_OBJ_HEADER *hdr  = 0;
     KOS_PAGE      **page_ptr;
     KOS_PAGE       *page;
 
     kos_lock_mutex(&heap->mutex);
 
-    _try_collect_garbage(ctx);
+    try_collect_garbage(ctx);
 
     page_ptr = &heap->free_pages;
     page     = *page_ptr;
@@ -735,7 +737,7 @@ static void *_alloc_huge_object(KOS_CONTEXT ctx,
 
                 page->num_slots = num_slots;
 
-                hdr = _setup_huge_object_in_page(heap, page, object_type, size);
+                hdr = setup_huge_object_in_page(heap, page, object_type, size);
 
                 assert((uint8_t *)hdr + size <= (uint8_t *)page + accum);
 
@@ -753,7 +755,7 @@ static void *_alloc_huge_object(KOS_CONTEXT ctx,
 
     if ( ! hdr) {
 
-        KOS_POOL *pool = _alloc_pool(heap, size + KOS_SLOTS_OFFS + KOS_PAGE_SIZE);
+        KOS_POOL *pool = alloc_pool(heap, size + KOS_SLOTS_OFFS + KOS_PAGE_SIZE);
 
         if (pool) {
             page = (KOS_PAGE *)pool->usable_ptr;
@@ -764,10 +766,10 @@ static void *_alloc_huge_object(KOS_CONTEXT ctx,
 
             assert((page->num_slots << KOS_OBJ_ALIGN_BITS) >= size);
 
-            hdr = _setup_huge_object_in_page(heap,
-                                             page,
-                                             object_type,
-                                             size);
+            hdr = setup_huge_object_in_page(heap,
+                                            page,
+                                            object_type,
+                                            size);
 
             assert((uint8_t *)hdr + size <= (uint8_t *)pool->usable_ptr + pool->usable_size);
         }
@@ -783,14 +785,14 @@ static void *_alloc_huge_object(KOS_CONTEXT ctx,
     return (void *)hdr;
 }
 
-static int _is_page_full(KOS_PAGE *page)
+static int is_page_full(KOS_PAGE *page)
 {
     return KOS_atomic_read_u32(page->num_allocated) == page->num_slots;
 }
 
-static void *_alloc_object(KOS_CONTEXT ctx,
-                           KOS_TYPE    object_type,
-                           uint32_t    size)
+static void *alloc_object(KOS_CONTEXT ctx,
+                          KOS_TYPE    object_type,
+                          uint32_t    size)
 {
     KOS_PAGE       *page       = ctx->cur_page;
     const uint32_t  num_slots  = (size + sizeof(KOS_SLOT) - 1) >> KOS_OBJ_ALIGN_BITS;
@@ -804,7 +806,7 @@ static void *_alloc_object(KOS_CONTEXT ctx,
     /* Fast path: allocate from a page held by this thread */
     if (page) {
 
-        hdr = _alloc_object_from_page(page, object_type, num_slots);
+        hdr = alloc_object_from_page(page, object_type, num_slots);
 
         if (hdr)
             return hdr;
@@ -813,18 +815,18 @@ static void *_alloc_object(KOS_CONTEXT ctx,
     /* Slow path: find a non-full page in the heap which has enough room or
      * allocate a new page. */
 
-    heap = _get_heap(ctx);
+    heap = get_heap(ctx);
 
     kos_lock_mutex(&heap->mutex);
 
     /* TODO if in GC, unlock mutex and help GC, unless the current thread is
      * already participating in GC */
 #if 0
-    if (_is_gc_active(heap)) {
+    if (is_gc_active(heap)) {
 
         kos_unlock_mutex(&heap->mutex);
 
-        _help_gc(ctx);
+        help_gc(ctx);
 
         kos_lock_mutex(&heap->mutex);
     }
@@ -842,15 +844,15 @@ static void *_alloc_object(KOS_CONTEXT ctx,
         if ( ! old_page)
             break;
 
-        page_size = _non_full_page_size(old_page);
+        page_size = non_full_page_size(old_page);
 
-        hdr = _alloc_object_from_page(old_page, object_type, num_slots);
+        hdr = alloc_object_from_page(old_page, object_type, num_slots);
 
         if (hdr) {
-            if (_is_page_full(old_page)) {
+            if (is_page_full(old_page)) {
                 *page_ptr = old_page->next;
                 PUSH_LIST(heap->full_pages, old_page);
-                heap->used_size += _full_page_size(old_page) - page_size;
+                heap->used_size += full_page_size(old_page) - page_size;
             }
 
             break;
@@ -864,22 +866,22 @@ static void *_alloc_object(KOS_CONTEXT ctx,
         /* Release thread's current page */
         if (page) {
 
-            if (_is_page_full(page)) {
+            if (is_page_full(page)) {
                 PUSH_LIST(heap->full_pages, page);
-                heap->used_size += _full_page_size(page);
+                heap->used_size += full_page_size(page);
             }
             else {
                 PUSH_LIST(heap->non_full_pages, page);
-                heap->used_size += _non_full_page_size(page);
+                heap->used_size += non_full_page_size(page);
             }
 
             ctx->cur_page = 0;
         }
 
-        _try_collect_garbage(ctx);
+        try_collect_garbage(ctx);
 
         /* Allocate a new page */
-        page = _alloc_page(heap);
+        page = alloc_page(heap);
 
         /* If page capacity is too small, find page which is big enough */
         if (page && page->num_slots < num_slots) {
@@ -890,7 +892,7 @@ static void *_alloc_object(KOS_CONTEXT ctx,
 
             for (;;) {
 
-                page = _alloc_page(heap);
+                page = alloc_page(heap);
 
                 if ( ! page || page->num_slots >= num_slots)
                     break;
@@ -931,7 +933,7 @@ static void *_alloc_object(KOS_CONTEXT ctx,
 
             ctx->cur_page = page;
 
-            hdr = _alloc_object_from_page(page, object_type, num_slots);
+            hdr = alloc_object_from_page(page, object_type, num_slots);
 
             assert(hdr);
         }
@@ -953,33 +955,33 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
 
     if (size > (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
     {
-        return _alloc_huge_object(ctx, object_type, size);
+        return alloc_huge_object(ctx, object_type, size);
     }
     else
     {
-        return _alloc_object(ctx, object_type, size);
+        return alloc_object(ctx, object_type, size);
     }
 }
 
 void *kos_alloc_object_page(KOS_CONTEXT ctx,
                             KOS_TYPE    object_type)
 {
-    return _alloc_object(ctx, object_type, KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS);
+    return alloc_object(ctx, object_type, KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS);
 }
 
-static void _release_current_page(KOS_CONTEXT ctx)
+static void release_current_page(KOS_CONTEXT ctx)
 {
     KOS_PAGE *page = ctx->cur_page;
 
     if (page) {
 
-        KOS_HEAP *heap = _get_heap(ctx);
+        KOS_HEAP *heap = get_heap(ctx);
 
         kos_lock_mutex(&heap->mutex);
 
         PUSH_LIST(heap->non_full_pages, page);
 
-        heap->used_size += _non_full_page_size(page);
+        heap->used_size += non_full_page_size(page);
 
         kos_unlock_mutex(&heap->mutex);
 
@@ -987,25 +989,25 @@ static void _release_current_page(KOS_CONTEXT ctx)
     }
 }
 
-static void _release_current_page_locked(KOS_CONTEXT ctx)
+static void release_current_page_locked(KOS_CONTEXT ctx)
 {
     KOS_PAGE *page = ctx->cur_page;
 
     if (page) {
 
-        KOS_HEAP *heap = _get_heap(ctx);
+        KOS_HEAP *heap = get_heap(ctx);
 
         PUSH_LIST(heap->non_full_pages, page);
 
-        heap->used_size += _non_full_page_size(page);
+        heap->used_size += non_full_page_size(page);
 
         ctx->cur_page = 0;
     }
 }
 
-static void _stop_the_world(KOS_CONTEXT ctx)
+static void stop_the_world(KOS_CONTEXT ctx)
 {
-    /* TODO make all threads enter _help_gc() */
+    /* TODO make all threads enter help_gc() */
 }
 
 enum KOS_MARK_STATE_E {
@@ -1015,8 +1017,8 @@ enum KOS_MARK_STATE_E {
     COLORMASK = 3
 };
 
-static void _set_marking_in_pages(KOS_PAGE             *page,
-                                  enum KOS_MARK_STATE_E state)
+static void set_marking_in_pages(KOS_PAGE             *page,
+                                 enum KOS_MARK_STATE_E state)
 {
     const int mask = (int)state * 0x55;
 
@@ -1032,11 +1034,11 @@ static void _set_marking_in_pages(KOS_PAGE             *page,
     }
 }
 
-static void _clear_marking(KOS_HEAP *heap)
+static void clear_marking(KOS_HEAP *heap)
 {
-    _set_marking_in_pages(heap->non_full_pages, WHITE);
-    _set_marking_in_pages(heap->full_pages,     WHITE);
-    _set_marking_in_pages(heap->free_pages,     GRAY);
+    set_marking_in_pages(heap->non_full_pages, WHITE);
+    set_marking_in_pages(heap->full_pages,     WHITE);
+    set_marking_in_pages(heap->free_pages,     GRAY);
 }
 
 struct KOS_MARK_LOC_S {
@@ -1044,7 +1046,7 @@ struct KOS_MARK_LOC_S {
     uint32_t              mask_idx;
 };
 
-static struct KOS_MARK_LOC_S _get_mark_location(KOS_OBJ_ID obj_id)
+static struct KOS_MARK_LOC_S get_mark_location(KOS_OBJ_ID obj_id)
 {
     const uintptr_t offs_in_page  = (uintptr_t)obj_id & (uintptr_t)(KOS_PAGE_SIZE - 1);
     const uint32_t  slot_idx      = (uint32_t)(offs_in_page - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
@@ -1060,8 +1062,8 @@ static struct KOS_MARK_LOC_S _get_mark_location(KOS_OBJ_ID obj_id)
     return mark_loc;
 }
 
-static void _advance_marking(struct KOS_MARK_LOC_S *mark_loc,
-                             uint32_t               num_slots)
+static void advance_marking(struct KOS_MARK_LOC_S *mark_loc,
+                            uint32_t               num_slots)
 {
     const uint32_t mask_idx = mark_loc->mask_idx + num_slots * 2U;
 
@@ -1069,15 +1071,15 @@ static void _advance_marking(struct KOS_MARK_LOC_S *mark_loc,
     mark_loc->mask_idx =  mask_idx & 0x1FU;
 }
 
-static uint32_t _get_marking(const struct KOS_MARK_LOC_S *mark_loc)
+static uint32_t get_marking(const struct KOS_MARK_LOC_S *mark_loc)
 {
     const uint32_t marking = KOS_atomic_read_u32(*(mark_loc->bitmap));
 
     return (marking >> mark_loc->mask_idx) & COLORMASK;
 }
 
-static int _set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
-                               enum KOS_MARK_STATE_E state)
+static int set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
+                              enum KOS_MARK_STATE_E state)
 {
     const uint32_t mask = (uint32_t)state << mark_loc.mask_idx;
 
@@ -1094,23 +1096,23 @@ static int _set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
     return 0;
 }
 
-static int _set_mark_state(KOS_OBJ_ID            obj_id,
-                           enum KOS_MARK_STATE_E state)
+static int set_mark_state(KOS_OBJ_ID            obj_id,
+                          enum KOS_MARK_STATE_E state)
 {
     assert(((uintptr_t)obj_id & 0xFFFFFFFFU) != 0xDDDDDDDDU);
 
     /* TODO can we get rid of IS_BAD_PTR ? */
     if (IS_HEAP_OBJECT(obj_id) && ! IS_BAD_PTR(obj_id)) {
 
-        const struct KOS_MARK_LOC_S mark_loc = _get_mark_location(obj_id);
+        const struct KOS_MARK_LOC_S mark_loc = get_mark_location(obj_id);
 
-        return _set_mark_state_loc(mark_loc, state);
+        return set_mark_state_loc(mark_loc, state);
     }
     else
         return 0;
 }
 
-static void _mark_children_gray(KOS_OBJ_ID obj_id)
+static void mark_children_gray(KOS_OBJ_ID obj_id)
 {
     switch (READ_OBJ_TYPE(obj_id)) {
 
@@ -1125,87 +1127,87 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_STRING:
             if (OBJPTR(STRING, obj_id)->header.flags & KOS_STRING_REF)
-                _set_mark_state(OBJPTR(STRING, obj_id)->ref.obj_id, GRAY);
+                set_mark_state(OBJPTR(STRING, obj_id)->ref.obj_id, GRAY);
             break;
 
         default:
             assert(READ_OBJ_TYPE(obj_id) == OBJ_OBJECT);
-            _set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->props), GRAY);
-            _set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
-            _set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->priv), GRAY);
+            set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->props), GRAY);
+            set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
+            set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->priv), GRAY);
             break;
 
         case OBJ_ARRAY:
-            _set_mark_state(KOS_atomic_read_obj(OBJPTR(ARRAY, obj_id)->data), GRAY);
+            set_mark_state(KOS_atomic_read_obj(OBJPTR(ARRAY, obj_id)->data), GRAY);
             break;
 
         case OBJ_BUFFER:
-            _set_mark_state(KOS_atomic_read_obj(OBJPTR(BUFFER, obj_id)->data), GRAY);
+            set_mark_state(KOS_atomic_read_obj(OBJPTR(BUFFER, obj_id)->data), GRAY);
             break;
 
         case OBJ_FUNCTION:
             /* TODO make these atomic */
-            _set_mark_state(OBJPTR(FUNCTION, obj_id)->module,   GRAY);
-            _set_mark_state(OBJPTR(FUNCTION, obj_id)->closures, GRAY);
-            _set_mark_state(OBJPTR(FUNCTION, obj_id)->defaults, GRAY);
-            _set_mark_state(OBJPTR(FUNCTION, obj_id)->generator_stack_frame, GRAY);
+            set_mark_state(OBJPTR(FUNCTION, obj_id)->module,   GRAY);
+            set_mark_state(OBJPTR(FUNCTION, obj_id)->closures, GRAY);
+            set_mark_state(OBJPTR(FUNCTION, obj_id)->defaults, GRAY);
+            set_mark_state(OBJPTR(FUNCTION, obj_id)->generator_stack_frame, GRAY);
             break;
 
         case OBJ_CLASS:
-            _set_mark_state(KOS_atomic_read_obj(OBJPTR(CLASS, obj_id)->prototype), GRAY);
-            _set_mark_state(KOS_atomic_read_obj(OBJPTR(CLASS, obj_id)->props), GRAY);
+            set_mark_state(KOS_atomic_read_obj(OBJPTR(CLASS, obj_id)->prototype), GRAY);
+            set_mark_state(KOS_atomic_read_obj(OBJPTR(CLASS, obj_id)->props), GRAY);
             /* TODO make these atomic */
-            _set_mark_state(OBJPTR(CLASS, obj_id)->module,   GRAY);
-            _set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
-            _set_mark_state(OBJPTR(CLASS, obj_id)->defaults, GRAY);
+            set_mark_state(OBJPTR(CLASS, obj_id)->module,   GRAY);
+            set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
+            set_mark_state(OBJPTR(CLASS, obj_id)->defaults, GRAY);
             break;
 
         case OBJ_OBJECT_STORAGE:
-            _set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, obj_id)->new_prop_table), GRAY);
+            set_mark_state(KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, obj_id)->new_prop_table), GRAY);
             {
                 KOS_PITEM *item = &OBJPTR(OBJECT_STORAGE, obj_id)->items[0];
                 KOS_PITEM *end  = item + OBJPTR(OBJECT_STORAGE, obj_id)->capacity;
                 for ( ; item < end; ++item) {
-                    _set_mark_state(KOS_atomic_read_obj(item->key), GRAY);
-                    _set_mark_state(KOS_atomic_read_obj(item->value), GRAY);
+                    set_mark_state(KOS_atomic_read_obj(item->key), GRAY);
+                    set_mark_state(KOS_atomic_read_obj(item->value), GRAY);
                 }
             }
             break;
 
         case OBJ_ARRAY_STORAGE:
-            _set_mark_state(KOS_atomic_read_obj(OBJPTR(ARRAY_STORAGE, obj_id)->next), GRAY);
+            set_mark_state(KOS_atomic_read_obj(OBJPTR(ARRAY_STORAGE, obj_id)->next), GRAY);
             {
                 KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(ARRAY_STORAGE, obj_id)->buf[0];
                 KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(ARRAY_STORAGE, obj_id)->capacity;
                 for ( ; item < end; ++item)
-                    _set_mark_state(KOS_atomic_read_obj(*item), GRAY);
+                    set_mark_state(KOS_atomic_read_obj(*item), GRAY);
             }
             break;
 
         case OBJ_DYNAMIC_PROP:
             /* TODO make these atomic */
-            _set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->getter, GRAY);
-            _set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->setter, GRAY);
+            set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->getter, GRAY);
+            set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->setter, GRAY);
             break;
 
         case OBJ_OBJECT_WALK:
             /* TODO make these atomic */
-            _set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->obj,         GRAY);
-            _set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->key_table,   GRAY);
-            _set_mark_state(KOS_atomic_read_obj(
-                            OBJPTR(OBJECT_WALK, obj_id)->last_key),   GRAY);
-            _set_mark_state(KOS_atomic_read_obj(
-                            OBJPTR(OBJECT_WALK, obj_id)->last_value), GRAY);
+            set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->obj,         GRAY);
+            set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->key_table,   GRAY);
+            set_mark_state(KOS_atomic_read_obj(
+                           OBJPTR(OBJECT_WALK, obj_id)->last_key),   GRAY);
+            set_mark_state(KOS_atomic_read_obj(
+                           OBJPTR(OBJECT_WALK, obj_id)->last_value), GRAY);
             break;
 
         case OBJ_MODULE:
             /* TODO lock gc during module setup */
-            _set_mark_state(OBJPTR(MODULE, obj_id)->name,         GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->path,         GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->constants,    GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->global_names, GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->globals,      GRAY);
-            _set_mark_state(OBJPTR(MODULE, obj_id)->module_names, GRAY);
+            set_mark_state(OBJPTR(MODULE, obj_id)->name,         GRAY);
+            set_mark_state(OBJPTR(MODULE, obj_id)->path,         GRAY);
+            set_mark_state(OBJPTR(MODULE, obj_id)->constants,    GRAY);
+            set_mark_state(OBJPTR(MODULE, obj_id)->global_names, GRAY);
+            set_mark_state(OBJPTR(MODULE, obj_id)->globals,      GRAY);
+            set_mark_state(OBJPTR(MODULE, obj_id)->module_names, GRAY);
             break;
 
         case OBJ_STACK:
@@ -1213,7 +1215,7 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
                 KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(STACK, obj_id)->buf[0];
                 KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(STACK, obj_id)->size;
                 for ( ; item < end; ++item)
-                    _set_mark_state(KOS_atomic_read_obj(*item), GRAY);
+                    set_mark_state(KOS_atomic_read_obj(*item), GRAY);
             }
             break;
 
@@ -1222,26 +1224,26 @@ static void _mark_children_gray(KOS_OBJ_ID obj_id)
                 KOS_OBJ_ID **ref = &OBJPTR(LOCAL_REFS, obj_id)->refs[0];
                 KOS_OBJ_ID **end = ref + OBJPTR(LOCAL_REFS, obj_id)->header.num_tracked;
 
-                _set_mark_state(OBJPTR(LOCAL_REFS, obj_id)->next, GRAY);
+                set_mark_state(OBJPTR(LOCAL_REFS, obj_id)->next, GRAY);
 
                 for ( ; ref < end; ++ref)
-                    _set_mark_state(**ref, GRAY);
+                    set_mark_state(**ref, GRAY);
             }
             break;
 
         case OBJ_THREAD:
             {
-                _set_mark_state(OBJPTR(THREAD, obj_id)->thread_func, GRAY);
-                _set_mark_state(OBJPTR(THREAD, obj_id)->this_obj,    GRAY);
-                _set_mark_state(OBJPTR(THREAD, obj_id)->args_obj,    GRAY);
-                _set_mark_state(OBJPTR(THREAD, obj_id)->retval,      GRAY);
-                _set_mark_state(OBJPTR(THREAD, obj_id)->exception,   GRAY);
+                set_mark_state(OBJPTR(THREAD, obj_id)->thread_func, GRAY);
+                set_mark_state(OBJPTR(THREAD, obj_id)->this_obj,    GRAY);
+                set_mark_state(OBJPTR(THREAD, obj_id)->args_obj,    GRAY);
+                set_mark_state(OBJPTR(THREAD, obj_id)->retval,      GRAY);
+                set_mark_state(OBJPTR(THREAD, obj_id)->exception,   GRAY);
             }
             break;
     }
 }
 
-static int _mark_object_black(KOS_OBJ_ID obj_id)
+static int mark_object_black(KOS_OBJ_ID obj_id)
 {
     int marked = 0;
 
@@ -1249,15 +1251,15 @@ static int _mark_object_black(KOS_OBJ_ID obj_id)
 
         assert( ! IS_BAD_PTR(obj_id));
 
-        marked = _set_mark_state(obj_id, BLACK);
+        marked = set_mark_state(obj_id, BLACK);
 
-        _mark_children_gray(obj_id);
+        mark_children_gray(obj_id);
     }
 
     return marked;
 }
 
-static int _gray_to_black_in_pages(KOS_PAGE *page)
+static int gray_to_black_in_pages(KOS_PAGE *page)
 {
     int marked = 0;
 
@@ -1277,19 +1279,19 @@ static int _gray_to_black_in_pages(KOS_PAGE *page)
             KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)ptr;
             const uint32_t        size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
             const uint32_t        slots = size >> KOS_OBJ_ALIGN_BITS;
-            const uint32_t        color = _get_marking(&mark_loc);
+            const uint32_t        color = get_marking(&mark_loc);
 
             if (color == GRAY) {
-                marked         += _set_mark_state_loc(mark_loc, BLACK);
+                marked         += set_mark_state_loc(mark_loc, BLACK);
                 num_slots_used += slots;
 
-                _mark_children_gray((KOS_OBJ_ID)((intptr_t)hdr + 1));
+                mark_children_gray((KOS_OBJ_ID)((intptr_t)hdr + 1));
             }
             else if (color)
                 /* TODO mark children gray if it's already black? */
                 num_slots_used += slots;
 
-            _advance_marking(&mark_loc, slots);
+            advance_marking(&mark_loc, slots);
 
             ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
         }
@@ -1302,35 +1304,35 @@ static int _gray_to_black_in_pages(KOS_PAGE *page)
     return marked;
 }
 
-static int _gray_to_black(KOS_HEAP *heap)
+static int gray_to_black(KOS_HEAP *heap)
 {
     int marked = 0;
 
-    marked += _gray_to_black_in_pages(heap->non_full_pages);
-    marked += _gray_to_black_in_pages(heap->full_pages);
+    marked += gray_to_black_in_pages(heap->non_full_pages);
+    marked += gray_to_black_in_pages(heap->full_pages);
 
     return marked;
 }
 
-static void _mark_from_thread_context(KOS_CONTEXT ctx)
+static void mark_from_thread_context(KOS_CONTEXT ctx)
 {
     uint32_t i;
 
     if ( ! IS_BAD_PTR(ctx->exception))
-        _mark_object_black(ctx->exception);
+        mark_object_black(ctx->exception);
     if ( ! IS_BAD_PTR(ctx->retval))
-        _mark_object_black(ctx->retval);
+        mark_object_black(ctx->retval);
     if ( ! IS_BAD_PTR(ctx->stack))
-        _mark_object_black(ctx->stack);
+        mark_object_black(ctx->stack);
     if ( ! IS_BAD_PTR(ctx->local_refs))
-        _mark_object_black(ctx->local_refs);
+        mark_object_black(ctx->local_refs);
 
     for (i = 0; i < ctx->tmp_ref_count; ++i) {
         KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
         if (obj_id_ptr) {
             const KOS_OBJ_ID obj_id = *obj_id_ptr;
             if ( ! IS_BAD_PTR(obj_id))
-                _mark_object_black(obj_id);
+                mark_object_black(obj_id);
         }
     }
 
@@ -1339,12 +1341,12 @@ static void _mark_from_thread_context(KOS_CONTEXT ctx)
         if (obj_id_ptr) {
             const KOS_OBJ_ID obj_id = *obj_id_ptr;
             if ( ! IS_BAD_PTR(obj_id))
-                _mark_object_black(obj_id);
+                mark_object_black(obj_id);
         }
     }
 }
 
-static void _mark_roots(KOS_CONTEXT ctx)
+static void mark_roots(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *const inst = ctx->inst;
 
@@ -1352,37 +1354,37 @@ static void _mark_roots(KOS_CONTEXT ctx)
         int i;
 
         for (i = 0; i < KOS_STR_NUM; ++i)
-            _mark_object_black(inst->common_strings[i]);
+            mark_object_black(inst->common_strings[i]);
     }
 
-    _mark_object_black(inst->prototypes.object_proto);
-    _mark_object_black(inst->prototypes.number_proto);
-    _mark_object_black(inst->prototypes.integer_proto);
-    _mark_object_black(inst->prototypes.float_proto);
-    _mark_object_black(inst->prototypes.string_proto);
-    _mark_object_black(inst->prototypes.boolean_proto);
-    _mark_object_black(inst->prototypes.array_proto);
-    _mark_object_black(inst->prototypes.buffer_proto);
-    _mark_object_black(inst->prototypes.function_proto);
-    _mark_object_black(inst->prototypes.class_proto);
-    _mark_object_black(inst->prototypes.generator_proto);
-    _mark_object_black(inst->prototypes.exception_proto);
-    _mark_object_black(inst->prototypes.generator_end_proto);
-    _mark_object_black(inst->prototypes.thread_proto);
+    mark_object_black(inst->prototypes.object_proto);
+    mark_object_black(inst->prototypes.number_proto);
+    mark_object_black(inst->prototypes.integer_proto);
+    mark_object_black(inst->prototypes.float_proto);
+    mark_object_black(inst->prototypes.string_proto);
+    mark_object_black(inst->prototypes.boolean_proto);
+    mark_object_black(inst->prototypes.array_proto);
+    mark_object_black(inst->prototypes.buffer_proto);
+    mark_object_black(inst->prototypes.function_proto);
+    mark_object_black(inst->prototypes.class_proto);
+    mark_object_black(inst->prototypes.generator_proto);
+    mark_object_black(inst->prototypes.exception_proto);
+    mark_object_black(inst->prototypes.generator_end_proto);
+    mark_object_black(inst->prototypes.thread_proto);
 
-    _mark_object_black(inst->modules.init_module);
-    _mark_object_black(inst->modules.search_paths);
-    _mark_object_black(inst->modules.module_names);
-    _mark_object_black(inst->modules.modules);
-    _mark_object_black(inst->modules.module_inits);
+    mark_object_black(inst->modules.init_module);
+    mark_object_black(inst->modules.search_paths);
+    mark_object_black(inst->modules.module_names);
+    mark_object_black(inst->modules.modules);
+    mark_object_black(inst->modules.module_inits);
 
-    _mark_object_black(inst->args);
+    mark_object_black(inst->args);
 
     /* TODO go over all threads */
-    _mark_from_thread_context(ctx);
+    mark_from_thread_context(ctx);
 }
 
-static void _get_flat_list(KOS_PAGE *page, KOS_PAGE ***begin, KOS_PAGE ***end)
+static void get_flat_list(KOS_PAGE *page, KOS_PAGE ***begin, KOS_PAGE ***end)
 {
     uint8_t *const ptr       = (uint8_t *)page + KOS_BITMAP_OFFS;
     const uint32_t num_slots = KOS_min(page->num_slots, (uint32_t)KOS_SLOTS_PER_PAGE);
@@ -1393,9 +1395,9 @@ static void _get_flat_list(KOS_PAGE *page, KOS_PAGE ***begin, KOS_PAGE ***end)
         *end = (KOS_PAGE **)(ptr + KOS_BITMAP_SIZE + (num_slots << KOS_OBJ_ALIGN_BITS));
 }
 
-static void _get_flat_page_list(KOS_HEAP  *heap,
-                                KOS_PAGE **list,
-                                KOS_PAGE **pages)
+static void get_flat_page_list(KOS_HEAP  *heap,
+                               KOS_PAGE **list,
+                               KOS_PAGE **pages)
 {
     KOS_PAGE  *page  = *pages;
     KOS_PAGE  *first = *pages;
@@ -1405,7 +1407,7 @@ static void _get_flat_page_list(KOS_HEAP  *heap,
 
     assert(page);
 
-    _get_flat_list(first, &begin, &end);
+    get_flat_list(first, &begin, &end);
 
     dest = begin;
 
@@ -1444,7 +1446,7 @@ static void _get_flat_page_list(KOS_HEAP  *heap,
                 page = (KOS_PAGE *)((uintptr_t)page + this_size);
             }
             else
-                _register_wasted_region(heap, (void *)page, this_size);
+                register_wasted_region(heap, (void *)page, this_size);
 
             size -= this_size;
         }
@@ -1460,7 +1462,7 @@ static void _get_flat_page_list(KOS_HEAP  *heap,
     *pages = page;
 }
 
-static int _sort_compare(const void *a, const void *b)
+static int sort_compare(const void *a, const void *b)
 {
     KOS_PAGE *const pa = *(KOS_PAGE *const *)a;
     KOS_PAGE *const pb = *(KOS_PAGE *const *)b;
@@ -1468,17 +1470,17 @@ static int _sort_compare(const void *a, const void *b)
     return (pa < pb) ? -1 : (pa > pb) ?  1 : 0;
 }
 
-static void _sort_flat_page_list(KOS_PAGE *list)
+static void sort_flat_page_list(KOS_PAGE *list)
 {
     KOS_PAGE **begin;
 
-    _get_flat_list(list, &begin, 0);
+    get_flat_list(list, &begin, 0);
 
-    qsort(begin, KOS_atomic_read_u32(list->num_allocated), sizeof(void *), _sort_compare);
+    qsort(begin, KOS_atomic_read_u32(list->num_allocated), sizeof(void *), sort_compare);
 }
 
 #ifdef CONFIG_MAD_GC
-static void _lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
+static void lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
 {
     while (pages) {
 
@@ -1579,7 +1581,7 @@ static void unlock_pages(KOS_HEAP *heap)
 }
 #endif
 
-static unsigned _push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
+static unsigned push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
 {
     KOS_PAGE **begin;
     KOS_PAGE **end;
@@ -1590,7 +1592,7 @@ static unsigned _push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
     KOS_PAGE  *to_lock = 0;
 #endif
 
-    _get_flat_list(list, &begin, 0);
+    get_flat_list(list, &begin, 0);
 
     end = begin + KOS_atomic_read_u32(list->num_allocated);
 
@@ -1635,15 +1637,15 @@ static unsigned _push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
 #endif
 
 #ifdef CONFIG_MAD_GC
-    _lock_pages(heap, to_lock);
+    lock_pages(heap, to_lock);
 #endif
 
     return num_pages;
 }
 
-static void _reclaim_free_pages(KOS_HEAP              *heap,
-                                KOS_PAGE              *free_pages,
-                                struct KOS_GC_STATS_S *stats)
+static void reclaim_free_pages(KOS_HEAP              *heap,
+                               KOS_PAGE              *free_pages,
+                               struct KOS_GC_STATS_S *stats)
 {
     KOS_PAGE *lists = 0;
 
@@ -1651,20 +1653,20 @@ static void _reclaim_free_pages(KOS_HEAP              *heap,
         return;
 
     do
-        _get_flat_page_list(heap, &lists, &free_pages);
+        get_flat_page_list(heap, &lists, &free_pages);
     while (free_pages);
 
     free_pages = lists;
 
     while (free_pages) {
-        _sort_flat_page_list(free_pages);
+        sort_flat_page_list(free_pages);
         free_pages = free_pages->next;
     }
 
     while (lists) {
 
         KOS_PAGE *next      = lists->next;
-        unsigned  num_pages = _push_sorted_list(heap, lists);
+        unsigned  num_pages = push_sorted_list(heap, lists);
 
         if (stats)
             stats->num_pages_freed += num_pages;
@@ -1673,9 +1675,9 @@ static void _reclaim_free_pages(KOS_HEAP              *heap,
     }
 }
 
-static int _evacuate_object(KOS_CONTEXT     ctx,
-                            KOS_OBJ_HEADER *hdr,
-                            uint32_t        size)
+static int evacuate_object(KOS_CONTEXT     ctx,
+                           KOS_OBJ_HEADER *hdr,
+                           uint32_t        size)
 {
     int             error = KOS_SUCCESS;
     const KOS_TYPE  type  = (KOS_TYPE)hdr->type;
@@ -1683,12 +1685,12 @@ static int _evacuate_object(KOS_CONTEXT     ctx,
 
 #ifdef CONFIG_MAD_GC
     if (size > (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
-        new_obj = (KOS_OBJ_HEADER *)_alloc_huge_object(ctx, type, size);
+        new_obj = (KOS_OBJ_HEADER *)alloc_huge_object(ctx, type, size);
     else
 #endif
     {
         assert(size <= (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS));
-        new_obj = (KOS_OBJ_HEADER *)_alloc_object(ctx, type, size);
+        new_obj = (KOS_OBJ_HEADER *)alloc_object(ctx, type, size);
     }
 
     if (new_obj) {
@@ -1702,7 +1704,7 @@ static int _evacuate_object(KOS_CONTEXT     ctx,
     return error;
 }
 
-static void _update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
+static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 {
     KOS_OBJ_ID obj_id = *obj_id_ptr;
 
@@ -1720,7 +1722,7 @@ static void _update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
     }
 }
 
-static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
+static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
 {
     switch (hdr->type) {
 
@@ -1742,7 +1744,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
                 assert(OBJPTR(STRING, old_ref_obj)->header.flags & KOS_STRING_LOCAL);
 
-                _update_child_ptr(&new_ref_obj);
+                update_child_ptr(&new_ref_obj);
 
                 delta = (intptr_t)new_ref_obj - (intptr_t)old_ref_obj;
 
@@ -1753,75 +1755,75 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
         default:
             assert(hdr->type == OBJ_OBJECT);
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->props);
-            _update_child_ptr(&((KOS_OBJECT *)hdr)->prototype);
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->priv);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->props);
+            update_child_ptr(&((KOS_OBJECT *)hdr)->prototype);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->priv);
             break;
 
         case OBJ_ARRAY:
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_ARRAY *)hdr)->data);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_ARRAY *)hdr)->data);
             break;
 
         case OBJ_BUFFER:
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_BUFFER *)hdr)->data);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_BUFFER *)hdr)->data);
             break;
 
         case OBJ_OBJECT_STORAGE:
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_STORAGE *)hdr)->new_prop_table);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_STORAGE *)hdr)->new_prop_table);
             {
                 KOS_PITEM *item = &((KOS_OBJECT_STORAGE *)hdr)->items[0];
                 KOS_PITEM *end  = item + ((KOS_OBJECT_STORAGE *)hdr)->capacity;
                 for ( ; item < end; ++item) {
-                    _update_child_ptr((KOS_OBJ_ID *)&item->key);
-                    _update_child_ptr((KOS_OBJ_ID *)&item->value);
+                    update_child_ptr((KOS_OBJ_ID *)&item->key);
+                    update_child_ptr((KOS_OBJ_ID *)&item->value);
                 }
             }
             break;
 
         case OBJ_ARRAY_STORAGE:
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_ARRAY_STORAGE *)hdr)->next);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_ARRAY_STORAGE *)hdr)->next);
             {
                 KOS_ATOMIC(KOS_OBJ_ID) *item = &((KOS_ARRAY_STORAGE *)hdr)->buf[0];
                 KOS_ATOMIC(KOS_OBJ_ID) *end  = item + ((KOS_ARRAY_STORAGE *)hdr)->capacity;
                 for ( ; item < end; ++item)
-                    _update_child_ptr((KOS_OBJ_ID *)item);
+                    update_child_ptr((KOS_OBJ_ID *)item);
             }
             break;
 
         case OBJ_FUNCTION:
-            _update_child_ptr(&((KOS_FUNCTION *)hdr)->module);
-            _update_child_ptr(&((KOS_FUNCTION *)hdr)->closures);
-            _update_child_ptr(&((KOS_FUNCTION *)hdr)->defaults);
-            _update_child_ptr(&((KOS_FUNCTION *)hdr)->generator_stack_frame);
+            update_child_ptr(&((KOS_FUNCTION *)hdr)->module);
+            update_child_ptr(&((KOS_FUNCTION *)hdr)->closures);
+            update_child_ptr(&((KOS_FUNCTION *)hdr)->defaults);
+            update_child_ptr(&((KOS_FUNCTION *)hdr)->generator_stack_frame);
             break;
 
         case OBJ_CLASS:
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->prototype);
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->props);
-            _update_child_ptr(&((KOS_CLASS *)hdr)->module);
-            _update_child_ptr(&((KOS_CLASS *)hdr)->closures);
-            _update_child_ptr(&((KOS_CLASS *)hdr)->defaults);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->prototype);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->props);
+            update_child_ptr(&((KOS_CLASS *)hdr)->module);
+            update_child_ptr(&((KOS_CLASS *)hdr)->closures);
+            update_child_ptr(&((KOS_CLASS *)hdr)->defaults);
             break;
 
         case OBJ_DYNAMIC_PROP:
-            _update_child_ptr(&((KOS_DYNAMIC_PROP *)hdr)->getter);
-            _update_child_ptr(&((KOS_DYNAMIC_PROP *)hdr)->setter);
+            update_child_ptr(&((KOS_DYNAMIC_PROP *)hdr)->getter);
+            update_child_ptr(&((KOS_DYNAMIC_PROP *)hdr)->setter);
             break;
 
         case OBJ_OBJECT_WALK:
-            _update_child_ptr(&((KOS_OBJECT_WALK *)hdr)->obj);
-            _update_child_ptr(&((KOS_OBJECT_WALK *)hdr)->key_table);
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_WALK *)hdr)->last_key);
-            _update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_WALK *)hdr)->last_value);
+            update_child_ptr(&((KOS_OBJECT_WALK *)hdr)->obj);
+            update_child_ptr(&((KOS_OBJECT_WALK *)hdr)->key_table);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_WALK *)hdr)->last_key);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_WALK *)hdr)->last_value);
             break;
 
         case OBJ_MODULE:
-            _update_child_ptr(&((KOS_MODULE *)hdr)->name);
-            _update_child_ptr(&((KOS_MODULE *)hdr)->path);
-            _update_child_ptr(&((KOS_MODULE *)hdr)->constants);
-            _update_child_ptr(&((KOS_MODULE *)hdr)->global_names);
-            _update_child_ptr(&((KOS_MODULE *)hdr)->globals);
-            _update_child_ptr(&((KOS_MODULE *)hdr)->module_names);
+            update_child_ptr(&((KOS_MODULE *)hdr)->name);
+            update_child_ptr(&((KOS_MODULE *)hdr)->path);
+            update_child_ptr(&((KOS_MODULE *)hdr)->constants);
+            update_child_ptr(&((KOS_MODULE *)hdr)->global_names);
+            update_child_ptr(&((KOS_MODULE *)hdr)->globals);
+            update_child_ptr(&((KOS_MODULE *)hdr)->module_names);
             break;
 
         case OBJ_STACK:
@@ -1829,7 +1831,7 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
                 KOS_ATOMIC(KOS_OBJ_ID) *item = &((KOS_STACK *)hdr)->buf[0];
                 KOS_ATOMIC(KOS_OBJ_ID) *end  = item + ((KOS_STACK *)hdr)->size;
                 for ( ; item < end; ++item)
-                    _update_child_ptr((KOS_OBJ_ID *)item);
+                    update_child_ptr((KOS_OBJ_ID *)item);
             }
             break;
 
@@ -1838,26 +1840,26 @@ static void _update_child_ptrs(KOS_OBJ_HEADER *hdr)
                 KOS_OBJ_ID **ref = &((KOS_LOCAL_REFS *)hdr)->refs[0];
                 KOS_OBJ_ID **end = ref + ((KOS_LOCAL_REFS *)hdr)->header.num_tracked;
 
-                _update_child_ptr(&((KOS_LOCAL_REFS *)hdr)->next);
+                update_child_ptr(&((KOS_LOCAL_REFS *)hdr)->next);
 
                 for ( ; ref < end; ++ref)
-                    _update_child_ptr(*ref);
+                    update_child_ptr(*ref);
             }
             break;
 
         case OBJ_THREAD:
             {
-                _update_child_ptr(&((KOS_THREAD *)hdr)->thread_func);
-                _update_child_ptr(&((KOS_THREAD *)hdr)->this_obj);
-                _update_child_ptr(&((KOS_THREAD *)hdr)->args_obj);
-                _update_child_ptr(&((KOS_THREAD *)hdr)->retval);
-                _update_child_ptr(&((KOS_THREAD *)hdr)->exception);
+                update_child_ptr(&((KOS_THREAD *)hdr)->thread_func);
+                update_child_ptr(&((KOS_THREAD *)hdr)->this_obj);
+                update_child_ptr(&((KOS_THREAD *)hdr)->args_obj);
+                update_child_ptr(&((KOS_THREAD *)hdr)->retval);
+                update_child_ptr(&((KOS_THREAD *)hdr)->exception);
             }
             break;
     }
 }
 
-static void _update_after_evacuation(KOS_CONTEXT ctx)
+static void update_after_evacuation(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *const inst             = ctx->inst;
     KOS_HEAP           *heap             = &inst->heap;
@@ -1880,7 +1882,7 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
             KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
             const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
 
-            _update_child_ptrs(hdr);
+            update_child_ptrs(hdr);
 
             ptr += size;
         }
@@ -1899,31 +1901,31 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
         int i;
 
         for (i = 0; i < KOS_STR_NUM; ++i)
-            _update_child_ptr(&inst->common_strings[i]);
+            update_child_ptr(&inst->common_strings[i]);
     }
 
-    _update_child_ptr(&inst->prototypes.object_proto);
-    _update_child_ptr(&inst->prototypes.number_proto);
-    _update_child_ptr(&inst->prototypes.integer_proto);
-    _update_child_ptr(&inst->prototypes.float_proto);
-    _update_child_ptr(&inst->prototypes.string_proto);
-    _update_child_ptr(&inst->prototypes.boolean_proto);
-    _update_child_ptr(&inst->prototypes.array_proto);
-    _update_child_ptr(&inst->prototypes.buffer_proto);
-    _update_child_ptr(&inst->prototypes.function_proto);
-    _update_child_ptr(&inst->prototypes.class_proto);
-    _update_child_ptr(&inst->prototypes.generator_proto);
-    _update_child_ptr(&inst->prototypes.exception_proto);
-    _update_child_ptr(&inst->prototypes.generator_end_proto);
-    _update_child_ptr(&inst->prototypes.thread_proto);
+    update_child_ptr(&inst->prototypes.object_proto);
+    update_child_ptr(&inst->prototypes.number_proto);
+    update_child_ptr(&inst->prototypes.integer_proto);
+    update_child_ptr(&inst->prototypes.float_proto);
+    update_child_ptr(&inst->prototypes.string_proto);
+    update_child_ptr(&inst->prototypes.boolean_proto);
+    update_child_ptr(&inst->prototypes.array_proto);
+    update_child_ptr(&inst->prototypes.buffer_proto);
+    update_child_ptr(&inst->prototypes.function_proto);
+    update_child_ptr(&inst->prototypes.class_proto);
+    update_child_ptr(&inst->prototypes.generator_proto);
+    update_child_ptr(&inst->prototypes.exception_proto);
+    update_child_ptr(&inst->prototypes.generator_end_proto);
+    update_child_ptr(&inst->prototypes.thread_proto);
 
-    _update_child_ptr(&inst->modules.init_module);
-    _update_child_ptr(&inst->modules.search_paths);
-    _update_child_ptr(&inst->modules.module_names);
-    _update_child_ptr(&inst->modules.modules);
-    _update_child_ptr(&inst->modules.module_inits);
+    update_child_ptr(&inst->modules.init_module);
+    update_child_ptr(&inst->modules.search_paths);
+    update_child_ptr(&inst->modules.module_names);
+    update_child_ptr(&inst->modules.modules);
+    update_child_ptr(&inst->modules.module_inits);
 
-    _update_child_ptr(&inst->args);
+    update_child_ptr(&inst->args);
 
     /* Update object pointers in thread contexts */
 
@@ -1936,21 +1938,21 @@ static void _update_after_evacuation(KOS_CONTEXT ctx)
 
             uint32_t i;
 
-            _update_child_ptr(&ctx->exception);
-            _update_child_ptr(&ctx->retval);
-            _update_child_ptr(&ctx->stack);
-            _update_child_ptr(&ctx->local_refs);
+            update_child_ptr(&ctx->exception);
+            update_child_ptr(&ctx->retval);
+            update_child_ptr(&ctx->stack);
+            update_child_ptr(&ctx->local_refs);
 
             for (i = 0; i < ctx->tmp_ref_count; ++i) {
                 KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
                 if (obj_id_ptr)
-                    _update_child_ptr(obj_id_ptr);
+                    update_child_ptr(obj_id_ptr);
             }
 
             for (i = 0; i < ctx->helper_ref_count; ++i) {
                 KOS_OBJ_ID *const obj_id_ptr = ctx->helper_refs[i];
                 if (obj_id_ptr)
-                    _update_child_ptr(obj_id_ptr);
+                    update_child_ptr(obj_id_ptr);
             }
 
             ctx = ctx->next;
@@ -1977,11 +1979,11 @@ static void finalize_object(KOS_CONTEXT            ctx,
     }
 }
 
-static int _evacuate(KOS_CONTEXT            ctx,
-                     KOS_PAGE             **free_pages,
-                     struct KOS_GC_STATS_S *out_stats)
+static int evacuate(KOS_CONTEXT            ctx,
+                    KOS_PAGE             **free_pages,
+                    struct KOS_GC_STATS_S *out_stats)
 {
-    KOS_HEAP   *heap           = _get_heap(ctx);
+    KOS_HEAP   *heap           = get_heap(ctx);
     int         error          = KOS_SUCCESS;
     KOS_PAGE   *page           = heap->full_pages;
     KOS_PAGE   *non_full_pages = heap->non_full_pages;
@@ -2016,7 +2018,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
         const uint32_t num_slots_used = KOS_atomic_read_u32(page->num_used);
 #endif
 
-        heap->used_size -= non_full_turn ? _non_full_page_size(page) : _full_page_size(page);
+        heap->used_size -= non_full_turn ? non_full_page_size(page) : full_page_size(page);
 
         next = page->next;
 
@@ -2040,7 +2042,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
 
                     KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
                     const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
-                    const uint32_t  color = _get_marking(&mark_loc);
+                    const uint32_t  color = get_marking(&mark_loc);
 
                     assert(size > 0U);
                     assert(color != GRAY);
@@ -2051,14 +2053,14 @@ static int _evacuate(KOS_CONTEXT            ctx,
                         hdr->type = OBJ_OPAQUE;
                     }
 
-                    _advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
+                    advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
 
                     ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
                 }
             }
 
             PUSH_LIST(heap->full_pages, page);
-            heap->used_size += _full_page_size(page);
+            heap->used_size += full_page_size(page);
             ++stats.num_pages_kept;
             stats.size_kept += num_slots_used << KOS_OBJ_ALIGN_BITS;
             continue;
@@ -2069,18 +2071,18 @@ static int _evacuate(KOS_CONTEXT            ctx,
 
             KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
             const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
-            const uint32_t  color = _get_marking(&mark_loc);
+            const uint32_t  color = get_marking(&mark_loc);
 
             assert(size > 0U);
             assert(color != GRAY);
             assert(size <= (size_t)((uint8_t *)page_end - (uint8_t *)ptr));
 
             if (color) {
-                if (_evacuate_object(ctx, hdr, size)) {
+                if (evacuate_object(ctx, hdr, size)) {
 
                     KOS_clear_exception(ctx);
 
-                    _release_current_page_locked(ctx);
+                    release_current_page_locked(ctx);
 
 #ifdef CONFIG_MAD_GC
                     unlock_pages(heap);
@@ -2090,7 +2092,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
                      * num_allocated == 0 */
                     assert(0);
 #endif
-                    error = _evacuate_object(ctx, hdr, size);
+                    error = evacuate_object(ctx, hdr, size);
 
                     if (error) {
                         /* TODO failed mid-evacuation, therefore we have to do the
@@ -2120,7 +2122,7 @@ static int _evacuate(KOS_CONTEXT            ctx,
                 stats.size_freed += size;
             }
 
-            _advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
+            advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
 
             ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
         }
@@ -2139,7 +2141,7 @@ cleanup:
     if (out_stats)
         *out_stats = stats;
 
-    _release_current_page_locked(ctx);
+    release_current_page_locked(ctx);
 
     if ( ! IS_BAD_PTR(exception))
         ctx->exception = exception;
@@ -2147,14 +2149,14 @@ cleanup:
     return error;
 }
 
-static void _update_gc_threshold(KOS_HEAP *heap)
+static void update_gc_threshold(KOS_HEAP *heap)
 {
     heap->gc_threshold = heap->used_size + KOS_GC_STEP;
 }
 
-static int _help_gc(KOS_CONTEXT ctx)
+static int help_gc(KOS_CONTEXT ctx)
 {
-    KOS_HEAP *const heap = _get_heap(ctx);
+    KOS_HEAP *const heap = get_heap(ctx);
 
     while (KOS_atomic_read_u32(heap->gc_state) != GC_INACTIVE)
         /* TODO actually help garbage collector */
@@ -2166,14 +2168,14 @@ static int _help_gc(KOS_CONTEXT ctx)
 #ifdef CONFIG_MAD_GC
 void kos_trigger_mad_gc(KOS_CONTEXT ctx)
 {
-    KOS_HEAP *const heap = _get_heap(ctx);
+    KOS_HEAP *const heap = get_heap(ctx);
 
     /* Don't try to collect garbage when the garbage collector is running */
     if (is_recursive_collection(heap))
         return;
 
     kos_lock_mutex(&heap->mutex);
-    _try_collect_garbage(ctx);
+    try_collect_garbage(ctx);
     kos_unlock_mutex(&heap->mutex);
 }
 #endif
@@ -2197,7 +2199,7 @@ int KOS_collect_garbage(KOS_CONTEXT            ctx,
                         struct KOS_GC_STATS_S *stats)
 {
     int       error      = KOS_SUCCESS;
-    KOS_HEAP *heap       = _get_heap(ctx);
+    KOS_HEAP *heap       = get_heap(ctx);
     KOS_PAGE *free_pages = 0;
 
     kos_lock_mutex(&ctx->inst->threads.mutex);
@@ -2211,27 +2213,27 @@ int KOS_collect_garbage(KOS_CONTEXT            ctx,
     kos_unlock_mutex(&ctx->inst->threads.mutex);
 
     if ( ! KOS_atomic_cas_u32(heap->gc_state, GC_INACTIVE, GC_INIT))
-        return _help_gc(ctx);
+        return help_gc(ctx);
 
-    _release_current_page(ctx);
+    release_current_page(ctx);
 
-    _clear_marking(heap);
+    clear_marking(heap);
 
-    _mark_roots(ctx);
+    mark_roots(ctx);
 
-    _stop_the_world(ctx); /* Remaining threads enter _help_gc() */
+    stop_the_world(ctx); /* Remaining threads enter help_gc() */
 
     /* TODO mark frames in remaining threads */
 
-    while (_gray_to_black(heap));
+    while (gray_to_black(heap));
 
-    error = _evacuate(ctx, &free_pages, stats);
+    error = evacuate(ctx, &free_pages, stats);
 
-    _update_after_evacuation(ctx);
+    update_after_evacuation(ctx);
 
-    _reclaim_free_pages(heap, free_pages, stats);
+    reclaim_free_pages(heap, free_pages, stats);
 
-    _update_gc_threshold(heap);
+    update_gc_threshold(heap);
 
     KOS_atomic_release_barrier();
 
