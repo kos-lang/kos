@@ -5049,7 +5049,7 @@ static int _visit_node(KOS_COMP_UNIT      *program,
 }
 
 void kos_compiler_init(KOS_COMP_UNIT *program,
-                        int           file_id)
+                       int           file_id)
 {
     memset(program, 0, sizeof(*program));
 
@@ -5067,11 +5067,11 @@ void kos_compiler_init(KOS_COMP_UNIT *program,
 
 int kos_compiler_compile(KOS_COMP_UNIT *program,
                          KOS_AST_NODE  *ast,
-                         int           *num_opt_passes)
+                         unsigned      *num_opt_passes)
 {
     int      error;
     int      num_optimizations;
-    int      num_passes = 0;
+    unsigned num_passes = 0;
     KOS_REG *reg        = 0;
 
     TRY(kos_vector_reserve(&program->code_buf,          1024));

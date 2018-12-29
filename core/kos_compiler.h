@@ -302,7 +302,7 @@ int kos_compiler_predefine_module(KOS_COMP_UNIT *program,
 
 int kos_compiler_compile(KOS_COMP_UNIT *program,
                          KOS_AST_NODE  *ast,
-                         int           *num_opt_passes);
+                         unsigned      *num_opt_passes);
 
 void kos_compiler_destroy(KOS_COMP_UNIT *program);
 
