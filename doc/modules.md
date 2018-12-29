@@ -109,6 +109,8 @@ Table of Contents
       * [thread.prototype.wait()](#threadprototypewait)
     * [whitespace](#whitespace)
     * [zip()](#zip)
+  * [datetime](#datetime)
+    * [now()](#now)
   * [debug](#debug)
     * [backtrace()](#backtrace)
   * [fs](#fs)
@@ -1341,14 +1343,18 @@ The prototype of `generator_end.prototype` is `object.prototype`.
 hex()
 -----
 
-    hex(number)
+    hex(number, min_digits = 0)
 
 Converts an integer to a string containing hexadecimal representation of it.
 
-Example:
+`min_digits` specifies the minimum number of hexadecimal digits to print.
+
+Examples:
 
     > hex(123)
     "0x7b"
+    > hex(123, 4)
+    "0x007b"
 
 integer()
 ---------
@@ -1387,14 +1393,18 @@ Examples:
 integer.prototype.hex()
 -----------------------
 
-    integer.prototype.hex()
+    integer.prototype.hex(min_digits = 0)
 
 Converts the integer to a string containing hexadecimal representation of it.
 
-Example:
+`min_digits` specifies the minimum number of hexadecimal digits to print.
+
+Examples:
 
     > 123 .hex()
     "0x7b"
+    > 123 .hex(4)
+    "0x007b"
 
 keys()
 ------
@@ -2537,6 +2547,17 @@ Example:
 
     > zip(range(4), "abcd") -> print_elements
     [0, a], [1, b], [2, c], [3, d]
+
+datetime
+========
+
+now()
+-----
+
+    now()
+
+Returns current time, in milliseconds since the Epoch.
+
 
 debug
 =====
