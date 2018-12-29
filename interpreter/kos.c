@@ -47,13 +47,13 @@ static const char str_cmdline[]     = "<commandline>";
 static const char str_import_base[] = "import base.*";
 static const char str_stdin[]       = "<stdin>";
 
-static int _is_option(const char *arg,
-                      const char *short_opt,
-                      const char *long_opt);
+static int is_option(const char *arg,
+                     const char *short_opt,
+                     const char *long_opt);
 
-static void _print_usage(void);
+static void print_usage(void);
 
-static int _run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf);
+static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf);
 
 int main(int argc, char *argv[])
 {
@@ -72,19 +72,19 @@ int main(int argc, char *argv[])
 
     setlocale(LC_ALL, "");
 
-    if (argc == 2 && _is_option(argv[1], "h", "help")) {
-        _print_usage();
+    if (argc == 2 && is_option(argv[1], "h", "help")) {
+        print_usage();
         goto cleanup;
     }
 
 #ifdef _WIN32
-    if (argc == 2 && _is_option(argv[1], "?", 0)) {
-        _print_usage();
+    if (argc == 2 && is_option(argv[1], "?", 0)) {
+        print_usage();
         goto cleanup;
     }
 #endif
 
-    if (argc == 2 && _is_option(argv[1], 0, "version")) {
+    if (argc == 2 && is_option(argv[1], 0, "version")) {
         printf(KOS_VERSION_STRING "\n");
         goto cleanup;
     }
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            if (_is_option(arg, "c", "command")) {
+            if (is_option(arg, "c", "command")) {
                 if ((argc - i_first_arg) == 1) {
                     fprintf(stderr, "Argument expected for the -c option\n");
                     error = KOS_ERROR_NOT_FOUND;
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            if (_is_option(arg, "v", "verbose")) {
+            if (is_option(arg, "v", "verbose")) {
                 flags |= KOS_INST_VERBOSE;
                 ++i_first_arg;
             }
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
 
             /* Load subsequent pieces of script from interactive prompt */
             if (interactive)
-                error = _run_interactive(ctx, &buf);
+                error = run_interactive(ctx, &buf);
 
             /* Load script from stdin */
             else {
@@ -248,9 +248,9 @@ cleanup:
     return error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-static int _is_option(const char *arg,
-                      const char *short_opt,
-                      const char *long_opt)
+static int is_option(const char *arg,
+                     const char *short_opt,
+                     const char *long_opt)
 {
 #ifdef _WIN32
     if (arg[0] != '-' && arg[0] != '/')
@@ -274,14 +274,14 @@ static int _is_option(const char *arg,
     return 0;
 }
 
-static void _print_usage(void)
+static void print_usage(void)
 {
     printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
 }
 
-static int _is_input_complete(KOS_VECTOR *buf,
-                              KOS_VECTOR *tmp,
-                              int        *out_error)
+static int is_input_complete(KOS_VECTOR *buf,
+                             KOS_VECTOR *tmp,
+                             int        *out_error)
 {
     KOS_PARSER             parser;
     struct KOS_MEMPOOL_S   mempool;
@@ -301,7 +301,7 @@ static int _is_input_complete(KOS_VECTOR *buf,
     return error != KOS_ERROR_PARSE_FAILED || parser.token.type != TT_EOF;
 }
 
-static int _enforce_eol(KOS_VECTOR *buf)
+static int enforce_eol(KOS_VECTOR *buf)
 {
     const char c = buf->size == 0 ? 0 : buf->buffer[buf->size - 1];
 
@@ -317,7 +317,7 @@ static int _enforce_eol(KOS_VECTOR *buf)
     return KOS_SUCCESS;
 }
 
-static int _run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
+static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 {
     int         error;
     KOS_GETLINE state;
@@ -358,7 +358,7 @@ static int _run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
         assert(buf->size == 0 || buf->buffer[buf->size - 1] != 0);
 
-        while ( ! _is_input_complete(buf, &tmp_buf, &error)) {
+        while ( ! is_input_complete(buf, &tmp_buf, &error)) {
 
             tmp_buf.size = 0;
 
@@ -372,7 +372,7 @@ static int _run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
             assert(tmp_buf.size == 0 || tmp_buf.buffer[tmp_buf.size - 1] != 0);
 
-            error = _enforce_eol(buf);
+            error = enforce_eol(buf);
             if (error)
                 break;
 
