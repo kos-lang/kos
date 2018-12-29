@@ -314,10 +314,18 @@ typedef struct KOS_GC_STATS_S {
     unsigned size_evacuated;
     unsigned size_freed;
     unsigned size_kept;
+    unsigned num_gray_passes;
+    unsigned initial_heap_size;
+    unsigned initial_used_size;
+    unsigned heap_size;
+    unsigned used_size;
+    unsigned mark_time_ms;
+    unsigned gray_time_ms;
+    unsigned evac_time_ms;
 } KOS_GC_STATS;
 
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
-                        KOS_GC_STATS *stats);
+                        KOS_GC_STATS *out_stats);
 
 #ifdef __cplusplus
 }

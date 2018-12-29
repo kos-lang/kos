@@ -1668,8 +1668,7 @@ static void reclaim_free_pages(KOS_HEAP     *heap,
         KOS_PAGE *next      = lists->next;
         unsigned  num_pages = push_sorted_list(heap, lists);
 
-        if (stats)
-            stats->num_pages_freed += num_pages;
+        stats->num_pages_freed += num_pages;
 
         lists = next;
     }
@@ -1991,7 +1990,7 @@ static int evacuate(KOS_CONTEXT   ctx,
     KOS_OBJ_ID  exception      = KOS_get_exception(ctx);
     int         non_full_turn  = 0;
 
-    KOS_GC_STATS stats = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U };
+    KOS_GC_STATS stats = *out_stats;
 
     KOS_clear_exception(ctx);
 
@@ -2138,8 +2137,7 @@ static int evacuate(KOS_CONTEXT   ctx,
     }
 
 cleanup:
-    if (out_stats)
-        *out_stats = stats;
+    *out_stats = stats;
 
     release_current_page_locked(ctx);
 
@@ -2196,13 +2194,25 @@ void kos_unlock_gc(KOS_INSTANCE *inst)
 }
 
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
-                        KOS_GC_STATS *stats)
+                        KOS_GC_STATS *out_stats)
 {
-    int       error      = KOS_SUCCESS;
-    KOS_HEAP *heap       = get_heap(ctx);
-    KOS_PAGE *free_pages = 0;
+    uint64_t     time_0;
+    uint64_t     time_1;
+    uint64_t     time_2;
+    uint64_t     time_3;
+    KOS_HEAP    *heap            = get_heap(ctx);
+    KOS_PAGE    *free_pages      = 0;
+    KOS_GC_STATS stats           = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+                                     0U, 0U, 0U, 0U, 0U, 0U };
+    unsigned     num_gray_passes = 0U;
+    int          error           = KOS_SUCCESS;
+
+    time_0 = kos_get_time_ms();
 
     kos_lock_mutex(&ctx->inst->threads.mutex);
+
+    stats.initial_heap_size = heap->heap_size;
+    stats.initial_used_size = heap->used_size;
 
     /* TODO multiple threads are not brought up yet */
     if (ctx->prev || ctx->next) {
@@ -2225,15 +2235,24 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     /* TODO mark frames in remaining threads */
 
+    time_1 = kos_get_time_ms();
+
+    do ++num_gray_passes;
     while (gray_to_black(heap));
 
-    error = evacuate(ctx, &free_pages, stats);
+    time_2 = kos_get_time_ms();
+
+    error = evacuate(ctx, &free_pages, &stats);
 
     update_after_evacuation(ctx);
 
-    reclaim_free_pages(heap, free_pages, stats);
+    reclaim_free_pages(heap, free_pages, &stats);
 
     update_gc_threshold(heap);
+
+    stats.num_gray_passes = num_gray_passes;
+    stats.heap_size       = heap->heap_size;
+    stats.used_size       = heap->used_size;
 
     KOS_atomic_release_barrier();
 
@@ -2241,6 +2260,23 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     if ( ! error && KOS_is_exception_pending(ctx))
         error = KOS_ERROR_EXCEPTION;
+
+    time_3 = kos_get_time_ms();
+
+    stats.mark_time_ms = (unsigned)(time_1 - time_0);
+    stats.gray_time_ms = (unsigned)(time_2 - time_1);
+    stats.evac_time_ms = (unsigned)(time_3 - time_2);
+
+    if (ctx->inst->flags & KOS_INST_DEBUG) {
+        printf("GC used/total [B] %x/%x -> %x/%x : mark/gray/evac [ms] %u/%u/%u : gray passes %u\n",
+               stats.initial_used_size, stats.initial_heap_size,
+               stats.used_size, stats.heap_size,
+               stats.mark_time_ms, stats.gray_time_ms, stats.evac_time_ms,
+               stats.num_gray_passes);
+    }
+
+    if (out_stats)
+        *out_stats = stats;
 
     return error;
 }
