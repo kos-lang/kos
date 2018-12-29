@@ -994,12 +994,13 @@ static int _compile_module(KOS_CONTEXT ctx,
                            unsigned    data_size,
                            int         is_repl)
 {
-    int                 error             = KOS_SUCCESS;
     KOS_INSTANCE *const inst              = ctx->inst;
-    const uint32_t      old_bytecode_size = OBJPTR(MODULE, module_obj)->bytecode_size;
+    KOS_AST_NODE       *ast;
     KOS_PARSER          parser;
     KOS_COMP_UNIT       program;
-    KOS_AST_NODE       *ast;
+    int                 error             = KOS_SUCCESS;
+    const uint32_t      old_bytecode_size = OBJPTR(MODULE, module_obj)->bytecode_size;
+    int                 num_opt_passes    = 0;
     int                 pushed            = 0;
 
     TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
@@ -1052,7 +1053,7 @@ static int _compile_module(KOS_CONTEXT ctx,
                            is_repl));
 
     /* Compile source code into bytecode */
-    error = kos_compiler_compile(&program, ast);
+    error = kos_compiler_compile(&program, ast, &num_opt_passes);
 
     if (error == KOS_ERROR_COMPILE_FAILED) {
 
@@ -1069,6 +1070,20 @@ static int _compile_module(KOS_CONTEXT ctx,
         error = KOS_ERROR_EXCEPTION;
     }
     TRY(error);
+
+    /* Print number of optimization passes */
+    if (inst->flags & KOS_INST_DEBUG) {
+        KOS_VECTOR cname;
+
+        kos_vector_init(&cname);
+        error = KOS_string_to_cstr_vec(ctx, OBJPTR(MODULE, module_obj)->name, &cname);
+
+        if ( ! error)
+            printf("%s: %d optimization passes\n", cname.buffer, num_opt_passes);
+
+        kos_vector_destroy(&cname);
+        TRY(error);
+    }
 
     TRY(_alloc_globals(ctx, &program, module_obj));
     TRY(_alloc_constants(ctx, &program, module_obj));

@@ -5066,11 +5066,13 @@ void kos_compiler_init(KOS_COMP_UNIT *program,
 }
 
 int kos_compiler_compile(KOS_COMP_UNIT *program,
-                         KOS_AST_NODE  *ast)
+                         KOS_AST_NODE  *ast,
+                         int           *num_opt_passes)
 {
     int      error;
     int      num_optimizations;
-    KOS_REG *reg = 0;
+    int      num_passes = 0;
+    KOS_REG *reg        = 0;
 
     TRY(kos_vector_reserve(&program->code_buf,          1024));
     TRY(kos_vector_reserve(&program->code_gen_buf,      1024));
@@ -5083,6 +5085,7 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
     do {
         num_optimizations = program->num_optimizations;
         TRY(kos_optimize(program, ast));
+        ++num_passes;
     }
     while (program->num_optimizations > num_optimizations);
 
@@ -5090,6 +5093,9 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
 
     TRY(_visit_node(program, ast, &reg));
     assert(!reg);
+
+    if (num_opt_passes)
+        *num_opt_passes = num_passes;
 
 cleanup:
     return error;
