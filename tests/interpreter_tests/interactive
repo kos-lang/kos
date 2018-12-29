@@ -376,8 +376,8 @@ fi
 
 COUNT=$(wc -l < "$OUTPUT")
 
-if [ $COUNT -ne 1 ]; then
-    echo "Expected one line of output" >&2
+if [ $COUNT -ne 6 ]; then
+    echo "Expected 6 lines of output" >&2
     cat "$OUTPUT"
     exit 1
 fi

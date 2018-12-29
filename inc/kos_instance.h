@@ -188,8 +188,9 @@ enum KOS_STR_E {
 enum KOS_INSTANCE_FLAGS_E {
     KOS_INST_NO_FLAGS  = 0,
     KOS_INST_VERBOSE   = 1,
-    KOS_INST_DISASM    = 2,
-    KOS_INST_MANUAL_GC = 4
+    KOS_INST_DEBUG     = 2,
+    KOS_INST_DISASM    = 4,
+    KOS_INST_MANUAL_GC = 8
 };
 
 struct KOS_INSTANCE_S {

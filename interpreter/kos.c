@@ -117,6 +117,10 @@ int main(int argc, char *argv[])
                 flags |= KOS_INST_VERBOSE;
                 ++i_first_arg;
             }
+            else if (is_option(arg, "vv", 0)) {
+                flags |= KOS_INST_VERBOSE | KOS_INST_DEBUG;
+                ++i_first_arg;
+            }
             else {
                 i_module    = i_first_arg;
                 i_first_arg = (argc - i_first_arg) > 1 ? i_first_arg + 1 : 0;
@@ -277,6 +281,11 @@ static int is_option(const char *arg,
 static void print_usage(void)
 {
     printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("  -v, --verbose     Enable verbose output\n");
+    printf("  -vv               Enable more verbose output\n");
+    printf("\n");
 }
 
 static int is_input_complete(KOS_VECTOR *buf,
