@@ -45,8 +45,8 @@
 #   include <sys/types.h>
 #   include <sys/mman.h>
 #   include <sys/stat.h>
-#   include <time.h>
 #   include <unistd.h>
+#   include <time.h> /* On Linux this must come after unistd.h for clock_gettime() */
 #endif
 #ifdef __APPLE__
 #   include <mach-o/dyld.h>
