@@ -305,7 +305,7 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...);
 
 void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
 
-struct KOS_GC_STATS_S {
+typedef struct KOS_GC_STATS_S {
     unsigned num_objs_evacuated;
     unsigned num_objs_freed;
     unsigned num_objs_finalized;
@@ -314,10 +314,10 @@ struct KOS_GC_STATS_S {
     unsigned size_evacuated;
     unsigned size_freed;
     unsigned size_kept;
-};
+} KOS_GC_STATS;
 
-int KOS_collect_garbage(KOS_CONTEXT            ctx,
-                        struct KOS_GC_STATS_S *stats);
+int KOS_collect_garbage(KOS_CONTEXT   ctx,
+                        KOS_GC_STATS *stats);
 
 #ifdef __cplusplus
 }

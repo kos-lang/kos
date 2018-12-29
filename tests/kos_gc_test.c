@@ -90,17 +90,17 @@ static int64_t _get_obj_size(KOS_OBJ_ID obj_id)
     return GET_SMALL_INT(hdr->alloc_size);
 }
 
-static int _test_object(KOS_CONTEXT            ctx,
-                        KOS_OBJ_ID             obj_id,
-                        unsigned               num_objs,
-                        int64_t                total_size,
-                        unsigned               num_dead_objs,
-                        int64_t                dead_size,
-                        struct KOS_GC_STATS_S *orig_stats)
+static int _test_object(KOS_CONTEXT   ctx,
+                        KOS_OBJ_ID    obj_id,
+                        unsigned      num_objs,
+                        int64_t       total_size,
+                        unsigned      num_dead_objs,
+                        int64_t       dead_size,
+                        KOS_GC_STATS *orig_stats)
 {
-    struct KOS_GC_STATS_S stats;
-    int64_t               size;
-    int                   pushed = 0;
+    KOS_GC_STATS stats;
+    int64_t      size;
+    int          pushed = 0;
 
     TEST( ! IS_BAD_PTR(obj_id));
 
@@ -139,9 +139,9 @@ static int _test_object(KOS_CONTEXT            ctx,
 
 int main(void)
 {
-    KOS_INSTANCE          inst;
-    KOS_CONTEXT           ctx;
-    struct KOS_GC_STATS_S base_stats;
+    KOS_INSTANCE inst;
+    KOS_CONTEXT  ctx;
+    KOS_GC_STATS base_stats;
 
     /************************************************************************/
     /* Test garbage collection on a freshly initialized instance */
@@ -410,7 +410,7 @@ int main(void)
      * for both runs.
      */
     {
-        struct KOS_GC_STATS_S stats;
+        KOS_GC_STATS stats;
 
         TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
@@ -651,7 +651,7 @@ int main(void)
     /************************************************************************/
     /* Test release of current thread page */
     {
-        struct KOS_GC_STATS_S stats;
+        KOS_GC_STATS stats;
 
         TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
@@ -678,10 +678,10 @@ int main(void)
     /************************************************************************/
     /* Test garbage collector with two big buffer objects. */
     {
-        struct KOS_GC_STATS_S stats;
-        KOS_OBJ_ID            obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
-        KOS_OBJ_ID            prev_locals;
-        int                   pushed    = 0;
+        KOS_GC_STATS stats;
+        KOS_OBJ_ID   obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
+        KOS_OBJ_ID   prev_locals;
+        int          pushed    = 0;
 
         TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
@@ -759,11 +759,11 @@ int main(void)
 
             for ( ; size <= max_size; size += KOS_BUFFER_CAPACITY_ALIGN) {
 
-                struct KOS_GC_STATS_S stats;
-                KOS_OBJ_ID            obj_ids[KOS_POOL_SIZE / KOS_PAGE_SIZE];
-                KOS_OBJ_ID            prev_locals;
-                unsigned              i;
-                const unsigned        num_objs = (unsigned)(sizeof(obj_ids) / sizeof(obj_ids[0]));
+                KOS_GC_STATS   stats;
+                KOS_OBJ_ID     obj_ids[KOS_POOL_SIZE / KOS_PAGE_SIZE];
+                KOS_OBJ_ID     prev_locals;
+                unsigned       i;
+                const unsigned num_objs = (unsigned)(sizeof(obj_ids) / sizeof(obj_ids[0]));
 
                 TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 

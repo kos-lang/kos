@@ -1643,9 +1643,9 @@ static unsigned push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
     return num_pages;
 }
 
-static void reclaim_free_pages(KOS_HEAP              *heap,
-                               KOS_PAGE              *free_pages,
-                               struct KOS_GC_STATS_S *stats)
+static void reclaim_free_pages(KOS_HEAP     *heap,
+                               KOS_PAGE     *free_pages,
+                               KOS_GC_STATS *stats)
 {
     KOS_PAGE *lists = 0;
 
@@ -1962,9 +1962,9 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     }
 }
 
-static void finalize_object(KOS_CONTEXT            ctx,
-                            KOS_OBJ_HEADER        *hdr,
-                            struct KOS_GC_STATS_S *stats)
+static void finalize_object(KOS_CONTEXT     ctx,
+                            KOS_OBJ_HEADER *hdr,
+                            KOS_GC_STATS   *stats)
 {
     if (hdr->type == OBJ_OBJECT) {
 
@@ -1979,9 +1979,9 @@ static void finalize_object(KOS_CONTEXT            ctx,
     }
 }
 
-static int evacuate(KOS_CONTEXT            ctx,
-                    KOS_PAGE             **free_pages,
-                    struct KOS_GC_STATS_S *out_stats)
+static int evacuate(KOS_CONTEXT   ctx,
+                    KOS_PAGE    **free_pages,
+                    KOS_GC_STATS *out_stats)
 {
     KOS_HEAP   *heap           = get_heap(ctx);
     int         error          = KOS_SUCCESS;
@@ -1991,7 +1991,7 @@ static int evacuate(KOS_CONTEXT            ctx,
     KOS_OBJ_ID  exception      = KOS_get_exception(ctx);
     int         non_full_turn  = 0;
 
-    struct KOS_GC_STATS_S stats = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    KOS_GC_STATS stats = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U };
 
     KOS_clear_exception(ctx);
 
@@ -2195,8 +2195,8 @@ void kos_unlock_gc(KOS_INSTANCE *inst)
     KOS_atomic_release_barrier();
 }
 
-int KOS_collect_garbage(KOS_CONTEXT            ctx,
-                        struct KOS_GC_STATS_S *stats)
+int KOS_collect_garbage(KOS_CONTEXT   ctx,
+                        KOS_GC_STATS *stats)
 {
     int       error      = KOS_SUCCESS;
     KOS_HEAP *heap       = get_heap(ctx);
