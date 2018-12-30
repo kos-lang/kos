@@ -30,26 +30,22 @@
 struct KOS_MODULE_LOAD_CHAIN_S;
 struct KOS_PAGE_HEADER_S;
 struct KOS_POOL_HEADER_S;
-struct KOS_WASTE_HEADER_S;
 
 typedef struct KOS_PAGE_HEADER_S       KOS_PAGE;
 typedef struct KOS_POOL_HEADER_S       KOS_POOL;
-typedef struct KOS_WASTE_HEADER_S      KOS_WASTE;
 typedef struct KOS_MODULE_LOAD_CHAIN_S KOS_MODULE_LOAD_CHAIN;
 
 typedef struct KOS_HEAP_S {
     KOS_MUTEX            mutex;
     KOS_ATOMIC(uint32_t) gc_state;
-    uint32_t             heap_size;         /* Total amount of memory owned by the heap */
-    uint32_t             used_size;         /* Size used in full_ and non_full_pages    */
-    uint32_t             wasted_size;       /* TODO delete this */
-    uint32_t             gc_threshold;      /* Next used size that triggers GC          */
-    KOS_PAGE            *free_pages;        /* Pages which are currently unused         */
-    KOS_PAGE            *non_full_pages;    /* Pages in which new objects are allocated */
-    KOS_PAGE            *full_pages;        /* Pages which have no room for new objects */
-    KOS_POOL            *pools;             /* Allocated memory - page pools            */
-    KOS_POOL            *pool_headers;      /* List of pool headers for new pools       */
-    KOS_WASTE           *waste;             /* Unused memory from pool allocations      */
+    uint32_t             heap_size;      /* Total amount of memory owned by the heap */
+    uint32_t             used_size;      /* Size used in full_ and non_full_pages    */
+    uint32_t             gc_threshold;   /* Next used size that triggers GC          */
+    KOS_PAGE            *free_pages;     /* Pages which are currently unused         */
+    KOS_PAGE            *non_full_pages; /* Pages in which new objects are allocated */
+    KOS_PAGE            *full_pages;     /* Pages which have no room for new objects */
+    KOS_POOL            *pools;          /* Allocated memory - page pools            */
+    KOS_POOL            *pool_headers;   /* List of pool headers for new pools       */
 
 #ifdef CONFIG_MAD_GC
     struct KOS_LOCKED_PAGES_S *locked_pages_first;

@@ -27,5 +27,7 @@
 
 void *kos_malloc(size_t size);
 void  kos_free(void *ptr);
+void *kos_malloc_aligned(size_t size, size_t alignment);
+void  kos_free_aligned(void *ptr);
 
 #endif

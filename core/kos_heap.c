@@ -45,16 +45,9 @@ enum GC_STATE_E {
 };
 
 struct KOS_POOL_HEADER_S {
-    KOS_POOL *next;        /* Pointer to next pool header                    */
-    void     *memory;      /* Pointer to the allocated memory                */
-    void     *usable_ptr;  /* Pointer to usable region of memory in the pool */
-    uint32_t  alloc_size;  /* Number of allocated bytes                      */
-    uint32_t  usable_size; /* Size of the usable region                      */
-};
-
-struct KOS_WASTE_HEADER_S {
-    KOS_WASTE *next;
-    uint32_t   size;
+    KOS_POOL *next;        /* Pointer to next pool header     */
+    void     *memory;      /* Pointer to the allocated memory */
+    uint32_t  alloc_size;  /* Number of allocated bytes       */
 };
 
 typedef struct KOS_SLOT_PLACEHOLDER_S {
@@ -162,14 +155,12 @@ int kos_heap_init(KOS_INSTANCE *inst)
     KOS_atomic_write_u32(heap->gc_state, 0);
     heap->heap_size      = 0;
     heap->used_size      = 0;
-    heap->wasted_size    = 0;
     heap->gc_threshold   = KOS_GC_STEP;
     heap->free_pages     = 0;
     heap->non_full_pages = 0;
     heap->full_pages     = 0;
     heap->pools          = 0;
     heap->pool_headers   = 0;
-    heap->waste          = 0;
 
 #ifdef CONFIG_MAD_GC
     heap->locked_pages_first = 0;
@@ -287,30 +278,12 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
             break;
 
         memory = pool->memory;
-        kos_free(memory);
+        kos_free_aligned(memory);
 
-        if (pool != memory)
-            kos_free(pool);
+        kos_free(pool);
     }
 
     kos_destroy_mutex(&inst->heap.mutex);
-}
-
-static void register_wasted_region(KOS_HEAP *heap,
-                                   void     *ptr,
-                                   uint32_t  size)
-{
-    if (size >= sizeof(KOS_WASTE)) {
-
-        KOS_WASTE *waste = (KOS_WASTE *)ptr;
-
-        waste->size = size;
-
-        PUSH_LIST(heap->waste, waste);
-    }
-
-    heap->wasted_size += size;
-    heap->used_size   += size;
 }
 
 static KOS_POOL *alloc_pool(KOS_HEAP *heap,
@@ -319,48 +292,30 @@ static KOS_POOL *alloc_pool(KOS_HEAP *heap,
     KOS_POOL *pool_hdr;
     uint8_t  *pool;
     uint8_t  *begin;
-    uint32_t  waste_at_front;
 
     if (heap->heap_size + alloc_size > KOS_MAX_HEAP_SIZE)
         return 0;
 
-    pool = (uint8_t *)kos_malloc(alloc_size);
+    pool = (uint8_t *)kos_malloc_aligned(alloc_size, (size_t)KOS_PAGE_SIZE);
 
     if ( ! pool)
         return 0;
 
     heap->heap_size += alloc_size;
 
-    begin = (uint8_t *)KOS_align_up((uintptr_t)pool, (uintptr_t)KOS_PAGE_SIZE);
+    assert(KOS_align_up((uintptr_t)pool, (uintptr_t)KOS_PAGE_SIZE) == (uintptr_t)pool);
 
-    waste_at_front = (uint32_t)(begin - pool);
+    begin = (uint8_t *)pool;
 
-    if (waste_at_front < sizeof(KOS_POOL)) {
-        pool_hdr = (KOS_POOL *)kos_malloc(sizeof(KOS_POOL));
+    pool_hdr = (KOS_POOL *)kos_malloc(sizeof(KOS_POOL));
 
-        if ( ! pool_hdr) {
-            kos_free(pool);
-            return 0;
-        }
-    }
-    else {
-
-        uint8_t *waste;
-        uint32_t waste_size;
-
-        assert(waste_at_front >= sizeof(KOS_POOL));
-
-        pool_hdr   = (KOS_POOL *)pool;
-        waste      = pool + sizeof(KOS_POOL);
-        waste_size = waste_at_front - (uint32_t)sizeof(KOS_POOL);
-
-        register_wasted_region(heap, waste, waste_size);
+    if ( ! pool_hdr) {
+        kos_free_aligned(pool);
+        return 0;
     }
 
-    pool_hdr->memory      = pool;
-    pool_hdr->alloc_size  = alloc_size;
-    pool_hdr->usable_ptr  = begin;
-    pool_hdr->usable_size = (uint32_t)((pool + alloc_size) - begin);
+    pool_hdr->memory     = pool;
+    pool_hdr->alloc_size = alloc_size;
 
     PUSH_LIST(heap->pools, pool_hdr);
 
@@ -371,52 +326,34 @@ static int alloc_page_pool(KOS_HEAP *heap)
 {
     KOS_POOL *pool_hdr  = alloc_pool(heap, KOS_POOL_SIZE);
     KOS_PAGE *next_page = 0;
-    uint8_t  *begin;
-    uint8_t  *usable_end;
     uint8_t  *page_bytes;
-    uint32_t  page_size;
 
     if ( ! pool_hdr)
         return KOS_ERROR_OUT_OF_MEMORY;
 
-    begin      = (uint8_t *)pool_hdr->usable_ptr;
-    usable_end = begin + pool_hdr->usable_size;
-    page_bytes = (uint8_t *)((uintptr_t)usable_end & ~(uintptr_t)(KOS_PAGE_SIZE - 1U));
-    page_size  = (uint32_t)(usable_end - page_bytes);
+    assert((uintptr_t)pool_hdr->memory % (uintptr_t)KOS_PAGE_SIZE == 0U);
+    assert(pool_hdr->alloc_size % KOS_PAGE_SIZE == 0U);
 
-    if (page_size > KOS_SLOTS_OFFS + (KOS_PAGE_SIZE >> 3))
-        page_bytes += page_size;
-    else {
-
-        uint32_t waste_size = (uint32_t)(usable_end - page_bytes);
-
-        pool_hdr->usable_size -= waste_size;
-
-        register_wasted_region(heap, page_bytes, waste_size);
-
-        page_size = KOS_PAGE_SIZE;
-    }
+    page_bytes = (uint8_t *)pool_hdr->memory + pool_hdr->alloc_size;
 
     assert(heap->free_pages == 0);
 
-    while (page_bytes > begin) {
+    while (page_bytes > (uint8_t *)pool_hdr->memory) {
 
         KOS_PAGE *page;
 
-        page_bytes -= page_size;
+        page_bytes -= KOS_PAGE_SIZE;
         assert( ! ((uintptr_t)page_bytes & (uintptr_t)(KOS_PAGE_SIZE - 1)));
 
         page = (KOS_PAGE *)page_bytes;
 
-        page->num_slots = (page_size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
+        page->num_slots = (KOS_PAGE_SIZE - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
 
         KOS_atomic_write_u32(page->num_allocated, 0);
 
         page->next = next_page;
 
         KOS_PERF_CNT(alloc_new_page);
-
-        page_size = KOS_PAGE_SIZE;
 
         next_page = page;
     }
@@ -432,22 +369,18 @@ static int alloc_page_pool(KOS_HEAP *heap)
 
         while (page) {
 
-            page_size = page->num_slots == KOS_SLOTS_PER_PAGE
-                      ? KOS_PAGE_SIZE
-                      : KOS_SLOTS_OFFS + (page->num_slots << KOS_OBJ_ALIGN_BITS);
-
             assert(page->num_slots <= KOS_SLOTS_PER_PAGE);
             assert(page->num_slots >= (KOS_PAGE_SIZE >> (3 + KOS_OBJ_ALIGN_BITS)));
             assert(KOS_atomic_read_u32(page->num_allocated) == 0);
 
             assert(page == next_page);
 
-            assert((uintptr_t)page >= (uintptr_t)pool_hdr->usable_ptr);
+            assert((uintptr_t)page >= (uintptr_t)pool_hdr->memory);
 
-            assert((uintptr_t)page + page_size <=
-                   (uintptr_t)pool_hdr->usable_ptr + pool_hdr->usable_size);
+            assert((uintptr_t)page + KOS_PAGE_SIZE <=
+                   (uintptr_t)pool_hdr->memory + pool_hdr->alloc_size);
 
-            next_page = (KOS_PAGE *)((uint8_t *)page + page_size);
+            next_page = (KOS_PAGE *)((uint8_t *)page + KOS_PAGE_SIZE);
 
             page = page->next;
 
@@ -656,7 +589,7 @@ void kos_heap_release_thread_page(KOS_CONTEXT ctx)
 #ifndef NDEBUG
 static void verify_heap_used_size(KOS_HEAP *heap)
 {
-    uint32_t  used_size = heap->wasted_size;
+    uint32_t  used_size = 0;
     KOS_PAGE *page;
 
     for (page = heap->non_full_pages; page; page = page->next)
@@ -787,14 +720,12 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     if ( ! hdr) {
 
-        KOS_POOL *pool = alloc_pool(heap, size + KOS_SLOTS_OFFS + KOS_PAGE_SIZE);
+        KOS_POOL *pool = alloc_pool(heap, KOS_align_up(size + (uint32_t)KOS_SLOTS_OFFS, (uint32_t)KOS_PAGE_SIZE));
 
         if (pool) {
-            page = (KOS_PAGE *)pool->usable_ptr;
+            page = (KOS_PAGE *)pool->memory;
 
-            /* TODO register tail as wasted */
-
-            page->num_slots = (pool->usable_size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
+            page->num_slots = (pool->alloc_size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
 
             assert((page->num_slots << KOS_OBJ_ALIGN_BITS) >= size);
 
@@ -803,7 +734,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
                                             object_type,
                                             size);
 
-            assert((uint8_t *)hdr + size <= (uint8_t *)pool->usable_ptr + pool->usable_size);
+            assert((uint8_t *)hdr + size <= (uint8_t *)pool->memory + pool->alloc_size);
         }
         else {
             kos_unlock_mutex(&heap->mutex);
@@ -1435,17 +1366,14 @@ static void get_flat_page_list(KOS_HEAP  *heap,
 
             const unsigned this_size = KOS_min(size, KOS_PAGE_SIZE);
 
-            if (this_size >= (KOS_SLOTS_OFFS + (KOS_PAGE_SIZE >> 3))) {
+            assert(this_size >= (KOS_SLOTS_OFFS + (KOS_PAGE_SIZE >> 3)));
 
-                page->num_slots = (this_size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
-                assert(page->num_slots <= KOS_SLOTS_PER_PAGE);
+            page->num_slots = (this_size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
+            assert(page->num_slots <= KOS_SLOTS_PER_PAGE);
 
-                *(dest++) = page;
+            *(dest++) = page;
 
-                page = (KOS_PAGE *)((uintptr_t)page + this_size);
-            }
-            else
-                register_wasted_region(heap, (void *)page, this_size);
+            page = (KOS_PAGE *)((uintptr_t)page + this_size);
 
             size -= this_size;
         }
