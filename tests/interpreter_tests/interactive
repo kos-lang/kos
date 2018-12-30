@@ -27,6 +27,16 @@ if [ $# -ne 2 ]; then
     exit 1
 fi
 
+remove_cr()
+{
+    tr -d '\r'
+}
+
+remove_prompt()
+{
+    grep -v "> \|_ "
+}
+
 KOS="$1"
 OUTPUT="$2/interactive"
 SIGNATURE="^Kos .* interactive interpreter"
@@ -36,7 +46,7 @@ SIGNATURE="^Kos .* interactive interpreter"
 
 "$KOS" -c 'print_("Hello, ")
 print("Kos")
-' | tr -d '\r' > "$OUTPUT"
+' | remove_cr > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -49,7 +59,7 @@ fi
 ##############################################################################
 # Test -v
 
-"$KOS" -v -c 'print("Hello")' | tr -d '\r' > "$OUTPUT"
+"$KOS" -v -c 'print("Hello")' | remove_cr > "$OUTPUT"
 
 if ! grep -q "Kos module search paths: \., " "$OUTPUT"; then
     echo "Expected output to contain module search paths, but they are missing" >&2
@@ -65,7 +75,7 @@ fi
 ##############################################################################
 # Test -c in conjunction with script arguments
 
-"$KOS" --command "print(integer(args[1]) + integer(args[2]))" 20 -5 | tr -d '\r' > "$OUTPUT"
+"$KOS" --command "print(integer(args[1]) + integer(args[2]))" 20 -5 | remove_cr > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -81,7 +91,7 @@ fi
 RET=0
 "$KOS" -c > "$OUTPUT.out" 2> "$OUTPUT.err" || RET=$?
 
-tr -d '\r' < "$OUTPUT.out" > "$OUTPUT"
+remove_cr < "$OUTPUT.out" > "$OUTPUT"
 rm "$OUTPUT.out"
 
 if [ $RET != "1" ]; then
@@ -108,7 +118,7 @@ rm "$OUTPUT.err"
 RET=0
 "$KOS" -c foo > "$OUTPUT.out" 2> "$OUTPUT.err" || RET=$?
 
-tr -d '\r' < "$OUTPUT.out" > "$OUTPUT"
+remove_cr < "$OUTPUT.out" > "$OUTPUT"
 rm "$OUTPUT.out"
 
 if [ $RET != "1" ]; then
@@ -139,7 +149,7 @@ rm "$OUTPUT.err"
 ##############################################################################
 # Test script read from stdin pipe
 
-echo 'print("From stdin")' | "$KOS" | tr -d '\r' > "$OUTPUT"
+echo 'print("From stdin")' | "$KOS" | remove_cr > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -149,7 +159,7 @@ if [ "$CONTENTS" != "From stdin" ]; then
     exit 1
 fi
 
-echo 'print(args.size)' | "$KOS" - | tr -d '\r' > "$OUTPUT"
+echo 'print(args.size)' | "$KOS" - | remove_cr > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -159,7 +169,7 @@ if [ "$CONTENTS" != "1" ]; then
     exit 1
 fi
 
-echo 'print(integer(args[1]) + 1)' | "$KOS" - 17 | tr -d '\r' > "$OUTPUT"
+echo 'print(integer(args[1]) + 1)' | "$KOS" - 17 | remove_cr > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -172,7 +182,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with a single line of input ending with EOL
 
-"$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -191,7 +201,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with import statements
 
-"$KOS" -c 'print_("import io\nio.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print_("import io\nio.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -210,7 +220,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with two lines of input and several EOLs
 
-"$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -237,7 +247,7 @@ fi
 ##############################################################################
 # Test quoted strings from interactive interpreter
 
-"$KOS" -c 'print_("\"a\\xffb\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print_("\"a\\xffb\"")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -256,7 +266,7 @@ fi
 ##############################################################################
 # Test various outputs from interactive interpreter
 
-"$KOS" -c 'print_("true\nvoid\n1\n\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print_("true\nvoid\n1\n\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -307,7 +317,7 @@ fi
 ##############################################################################
 # Test multiple input lines
 
-"$KOS" -c 'print_("fun(x) {\n return x + 1\n } (41)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^[>_]" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print_("fun(x) {\n return x + 1\n } (41)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 COUNT=$(wc -l < "$OUTPUT")
 
@@ -334,7 +344,7 @@ fi
 ##############################################################################
 # Test function declared through the interpreter
 
-"$KOS" -c 'print("fun f(a) { print(\"arg: \\(a)\") }") ; print("f(10)")' | KOSINTERACTIVE=1 "$KOS" | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print("fun f(a) { print(\"arg: \\(a)\") }") ; print("f(10)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -353,7 +363,7 @@ fi
 ##############################################################################
 # Refer to module twice
 
-"$KOS" -c 'print("import random"); print("var r = random.random()") ; print("r = random.random()")' | KOSINTERACTIVE=1 "$KOS" 2>&1 | grep -v "^>" | tr -d '\r' > "$OUTPUT"
+"$KOS" -c 'print("import random"); print("var r = random.random()") ; print("r = random.random()")' | KOSINTERACTIVE=1 "$KOS" 2>&1 | remove_prompt | remove_cr > "$OUTPUT"
 
 COUNT=$(wc -l < "$OUTPUT")
 
@@ -372,7 +382,7 @@ fi
 ##############################################################################
 # Help
 
-"$KOS" -h | tr -d '\r' > "$OUTPUT"
+"$KOS" -h | remove_cr > "$OUTPUT"
 
 COUNT=$(wc -l < "$OUTPUT")
 
@@ -391,7 +401,7 @@ fi
 ##############################################################################
 # Version
 
-"$KOS" --version | tr -d '\r' > "$OUTPUT"
+"$KOS" --version | remove_cr > "$OUTPUT"
 
 COUNT=$(wc -l < "$OUTPUT")
 
