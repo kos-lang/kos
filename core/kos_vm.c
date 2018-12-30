@@ -469,6 +469,7 @@ static int _is_generator_end_exception(KOS_CONTEXT ctx)
     return ret;
 }
 
+#ifndef NDEBUG
 static uint32_t get_num_regs(KOS_OBJ_ID stack, uint32_t regs_idx)
 {
     uint32_t size;
@@ -482,6 +483,7 @@ static uint32_t get_num_regs(KOS_OBJ_ID stack, uint32_t regs_idx)
 
     return size - 1U - regs_idx;
 }
+#endif
 
 static KOS_OBJ_ID make_args(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  stack,
@@ -1189,7 +1191,9 @@ static int exec_function(KOS_CONTEXT ctx)
     KOS_OBJ_ID     stack    = ctx->stack;
     int            error    = KOS_SUCCESS;
     uint32_t       regs_idx = ctx->regs_idx;
-    uint32_t       num_regs = get_num_regs(stack, regs_idx);
+#ifndef NDEBUG
+    const uint32_t num_regs = get_num_regs(stack, regs_idx);
+#endif
 
     module = KOS_get_module(ctx);
 
@@ -2772,9 +2776,8 @@ static int exec_function(KOS_CONTEXT ctx)
                     if (tail_call && ! error) {
                         ctx->retval = out;
                         out         = KOS_BADPTR;
-                        num_regs    = rdest; /* closure size */
                         error       = KOS_SUCCESS_RETURN;
-                        _set_closure_stack_size(ctx, num_regs);
+                        _set_closure_stack_size(ctx, rdest);
                     }
                 }
                 KOS_pop_locals(ctx, pushed);
@@ -2792,7 +2795,6 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 assert(GET_OBJ_TYPE(ctx->retval) <= OBJ_LAST_TYPE);
 
-                num_regs = closure_size;
                 _set_closure_stack_size(ctx, closure_size);
 
                 error = KOS_SUCCESS_RETURN;

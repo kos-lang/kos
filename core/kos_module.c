@@ -337,9 +337,9 @@ static int _predefine_globals(KOS_CONTEXT    ctx,
     KOS_OBJ_ID walk   = KOS_BADPTR;
     int        pushed = 0;
 
-    TRY(KOS_push_locals(ctx, &pushed, 3, &global_names, &module_names, &walk));
-
     kos_vector_init(&cpath);
+
+    TRY(KOS_push_locals(ctx, &pushed, 3, &global_names, &module_names, &walk));
 
     walk = KOS_new_object_walk(ctx, global_names, KOS_SHALLOW);
     TRY_OBJID(walk);

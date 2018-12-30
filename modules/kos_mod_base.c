@@ -1330,8 +1330,6 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    int                 error = KOS_SUCCESS;
-    KOS_OBJ_ID          ret   = KOS_BADPTR;
     KOS_OBJ_ID          thread;
     KOS_INSTANCE *const inst  = ctx->inst;
 
@@ -1361,9 +1359,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
 
     /* TODO don't block GC */
 
-    ret = kos_thread_join(ctx, thread);
-
-    return error ? KOS_BADPTR : ret;
+    return kos_thread_join(ctx, thread);
 }
 
 /* @item base string.prototype.slice()
