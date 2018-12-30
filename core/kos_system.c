@@ -41,7 +41,6 @@
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
-#   define _POSIX_C_SOURCE 199309L /* For clock_gettime() */
 #   include <sys/time.h>
 #   include <sys/types.h>
 #   include <sys/mman.h>
@@ -336,7 +335,7 @@ int64_t kos_get_time_ms(void)
 
     return time_ms;
 }
-#elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
+#elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0) && defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 199309L)
 int64_t kos_get_time_ms(void)
 {
     int64_t         time_ms = 0;
