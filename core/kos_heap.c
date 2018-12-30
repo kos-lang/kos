@@ -162,6 +162,7 @@ int kos_heap_init(KOS_INSTANCE *inst)
     KOS_atomic_write_u32(heap->gc_state, 0);
     heap->heap_size      = 0;
     heap->used_size      = 0;
+    heap->wasted_size    = 0;
     heap->gc_threshold   = KOS_GC_STEP;
     heap->free_pages     = 0;
     heap->non_full_pages = 0;
@@ -308,7 +309,8 @@ static void register_wasted_region(KOS_HEAP *heap,
         PUSH_LIST(heap->waste, waste);
     }
 
-    heap->used_size += size;
+    heap->wasted_size += size;
+    heap->used_size   += size;
 }
 
 static KOS_POOL *alloc_pool(KOS_HEAP *heap,
@@ -621,23 +623,53 @@ static uint32_t non_full_page_size(KOS_PAGE *page)
     return KOS_SLOTS_OFFS + (KOS_atomic_read_u32(page->num_allocated) << KOS_OBJ_ALIGN_BITS);
 }
 
-void kos_heap_release_thread_page(KOS_CONTEXT ctx)
+static void release_current_page_locked(KOS_CONTEXT ctx)
 {
-    if (ctx->cur_page) {
+    KOS_PAGE *page = ctx->cur_page;
 
-        KOS_HEAP *const heap = &ctx->inst->heap;
+    if (page) {
 
-        kos_lock_mutex(&heap->mutex);
+        KOS_HEAP *heap = get_heap(ctx);
 
-        PUSH_LIST(heap->non_full_pages, ctx->cur_page);
+        PUSH_LIST(heap->non_full_pages, page);
 
-        heap->used_size += non_full_page_size(ctx->cur_page);
-
-        kos_unlock_mutex(&heap->mutex);
+        heap->used_size += non_full_page_size(page);
 
         ctx->cur_page = 0;
     }
 }
+
+void kos_heap_release_thread_page(KOS_CONTEXT ctx)
+{
+    if (ctx->cur_page) {
+
+        KOS_HEAP *const heap = get_heap(ctx);
+
+        kos_lock_mutex(&heap->mutex);
+
+        release_current_page_locked(ctx);
+
+        kos_unlock_mutex(&heap->mutex);
+    }
+}
+
+#ifndef NDEBUG
+static void verify_heap_used_size(KOS_HEAP *heap)
+{
+    uint32_t  used_size = heap->wasted_size;
+    KOS_PAGE *page;
+
+    for (page = heap->non_full_pages; page; page = page->next)
+        used_size += non_full_page_size(page);
+
+    for (page = heap->full_pages; page; page = page->next)
+        used_size += full_page_size(page);
+
+    assert(used_size == heap->used_size);
+}
+#else
+#define verify_heap_used_size(heap) ((void)0)
+#endif
 
 static KOS_OBJ_HEADER *setup_huge_object_in_page(KOS_HEAP *heap,
                                                  KOS_PAGE *page,
@@ -844,6 +876,8 @@ static void *alloc_object(KOS_CONTEXT ctx,
         if ( ! old_page)
             break;
 
+        /* TODO reinstate non-full page as cur_page */
+
         page_size = non_full_page_size(old_page);
 
         hdr = alloc_object_from_page(old_page, object_type, num_slots);
@@ -854,7 +888,8 @@ static void *alloc_object(KOS_CONTEXT ctx,
                 PUSH_LIST(heap->full_pages, old_page);
                 heap->used_size += full_page_size(old_page) - page_size;
             }
-
+            else
+                heap->used_size += non_full_page_size(old_page) - page_size;
             break;
         }
 
@@ -967,42 +1002,6 @@ void *kos_alloc_object_page(KOS_CONTEXT ctx,
                             KOS_TYPE    object_type)
 {
     return alloc_object(ctx, object_type, KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS);
-}
-
-static void release_current_page(KOS_CONTEXT ctx)
-{
-    KOS_PAGE *page = ctx->cur_page;
-
-    if (page) {
-
-        KOS_HEAP *heap = get_heap(ctx);
-
-        kos_lock_mutex(&heap->mutex);
-
-        PUSH_LIST(heap->non_full_pages, page);
-
-        heap->used_size += non_full_page_size(page);
-
-        kos_unlock_mutex(&heap->mutex);
-
-        ctx->cur_page = 0;
-    }
-}
-
-static void release_current_page_locked(KOS_CONTEXT ctx)
-{
-    KOS_PAGE *page = ctx->cur_page;
-
-    if (page) {
-
-        KOS_HEAP *heap = get_heap(ctx);
-
-        PUSH_LIST(heap->non_full_pages, page);
-
-        heap->used_size += non_full_page_size(page);
-
-        ctx->cur_page = 0;
-    }
 }
 
 static void stop_the_world(KOS_CONTEXT ctx)
@@ -2032,6 +2031,8 @@ static int evacuate(KOS_CONTEXT   ctx,
 #ifndef CONFIG_MAD_GC
         /* If the number of slots used reaches the threshold, then the page is
          * exempt from evacuation. */
+        /* TODO Skip evacuation if
+         * num_allocated - num_slots_used < (KOS_SLOTS_PER_PAGE * (100-KOS_MIGRATION_THRESH)) / 100 */
         if (num_slots_used >= (KOS_SLOTS_PER_PAGE * KOS_MIGRATION_THRESH) / 100U) {
 
             /* Mark unused objects as opaque so they don't participate in
@@ -2058,6 +2059,7 @@ static int evacuate(KOS_CONTEXT   ctx,
                 }
             }
 
+            /* TODO put on non_full list if the page is not full */
             PUSH_LIST(heap->full_pages, page);
             heap->used_size += full_page_size(page);
             ++stats.num_pages_kept;
@@ -2198,12 +2200,10 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 {
     uint64_t     time_0;
     uint64_t     time_1;
-    uint64_t     time_2;
-    uint64_t     time_3;
     KOS_HEAP    *heap            = get_heap(ctx);
     KOS_PAGE    *free_pages      = 0;
     KOS_GC_STATS stats           = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
-                                     0U, 0U, 0U, 0U, 0U, 0U };
+                                     0U, 0U, 0U, 0U };
     unsigned     num_gray_passes = 0U;
     int          error           = KOS_SUCCESS;
 
@@ -2225,7 +2225,9 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     if ( ! KOS_atomic_cas_u32(heap->gc_state, GC_INACTIVE, GC_INIT))
         return help_gc(ctx);
 
-    release_current_page(ctx);
+    kos_heap_release_thread_page(ctx);
+
+    verify_heap_used_size(heap);
 
     clear_marking(heap);
 
@@ -2235,12 +2237,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     /* TODO mark frames in remaining threads */
 
-    time_1 = kos_get_time_ms();
-
     do ++num_gray_passes;
     while (gray_to_black(heap));
-
-    time_2 = kos_get_time_ms();
 
     error = evacuate(ctx, &free_pages, &stats);
 
@@ -2261,19 +2259,18 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     if ( ! error && KOS_is_exception_pending(ctx))
         error = KOS_ERROR_EXCEPTION;
 
-    time_3 = kos_get_time_ms();
+    time_1 = kos_get_time_ms();
 
-    stats.mark_time_ms = (unsigned)(time_1 - time_0);
-    stats.gray_time_ms = (unsigned)(time_2 - time_1);
-    stats.evac_time_ms = (unsigned)(time_3 - time_2);
+    stats.time_ms = (unsigned)(time_1 - time_0);
 
     if (ctx->inst->flags & KOS_INST_DEBUG) {
-        printf("GC used/total [B] %x/%x -> %x/%x : mark/gray/evac [ms] %u/%u/%u : gray passes %u\n",
+        printf("GC used/total [B] %x/%x -> %x/%x : time %u ms : gray passes %u\n",
                stats.initial_used_size, stats.initial_heap_size,
                stats.used_size, stats.heap_size,
-               stats.mark_time_ms, stats.gray_time_ms, stats.evac_time_ms,
-               stats.num_gray_passes);
+               stats.time_ms, stats.num_gray_passes);
     }
+
+    verify_heap_used_size(heap);
 
     if (out_stats)
         *out_stats = stats;

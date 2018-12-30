@@ -42,6 +42,7 @@ typedef struct KOS_HEAP_S {
     KOS_ATOMIC(uint32_t) gc_state;
     uint32_t             heap_size;         /* Total amount of memory owned by the heap */
     uint32_t             used_size;         /* Size used in full_ and non_full_pages    */
+    uint32_t             wasted_size;       /* TODO delete this */
     uint32_t             gc_threshold;      /* Next used size that triggers GC          */
     KOS_PAGE            *free_pages;        /* Pages which are currently unused         */
     KOS_PAGE            *non_full_pages;    /* Pages in which new objects are allocated */
@@ -319,9 +320,7 @@ typedef struct KOS_GC_STATS_S {
     unsigned initial_used_size;
     unsigned heap_size;
     unsigned used_size;
-    unsigned mark_time_ms;
-    unsigned gray_time_ms;
-    unsigned evac_time_ms;
+    unsigned time_ms;
 } KOS_GC_STATS;
 
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
