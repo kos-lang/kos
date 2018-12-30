@@ -470,9 +470,10 @@ static int _alloc_constants(KOS_CONTEXT    ctx,
     TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
 
     if (IS_BAD_PTR(OBJPTR(MODULE, module_obj)->constants)) {
-        OBJPTR(MODULE, module_obj)->constants = KOS_new_array(ctx, num_constants);
+        const KOS_OBJ_ID constants = KOS_new_array(ctx, num_constants);
 
-        TRY_OBJID(OBJPTR(MODULE, module_obj)->constants);
+        TRY_OBJID(constants);
+        OBJPTR(MODULE, module_obj)->constants = constants;
     }
     else {
         base_idx = KOS_get_array_size(OBJPTR(MODULE, module_obj)->constants);
