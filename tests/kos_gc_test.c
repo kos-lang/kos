@@ -32,6 +32,7 @@
 #include "../core/kos_math.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
+#include "../core/kos_threads_internal.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -82,6 +83,22 @@ static int _test_buffer(KOS_OBJ_ID buf, int value, uint32_t size)
     }
 
     return 0;
+}
+
+static KOS_OBJ_ID new_thread_obj(KOS_CONTEXT ctx)
+{
+    KOS_THREAD *thread = (KOS_THREAD *)kos_alloc_object(ctx, OBJ_THREAD, sizeof(KOS_THREAD));
+
+    if (thread) {
+        thread->inst        = ctx->inst;
+        thread->thread_func = KOS_BADPTR;
+        thread->this_obj    = KOS_BADPTR;
+        thread->args_obj    = KOS_BADPTR;
+        thread->retval      = KOS_BADPTR;
+        thread->exception   = KOS_BADPTR;
+    }
+
+    return OBJID(THREAD, thread);
 }
 
 static int64_t _get_obj_size(KOS_OBJ_ID obj_id)
@@ -161,7 +178,7 @@ int main(void)
      * - run garbage collector while there are no references to the object.
      */
     {
-        KOS_OBJ_ID obj_id[3];
+        KOS_OBJ_ID obj_id[6];
         KOS_OBJ_ID prev_locals;
 
         TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
@@ -398,6 +415,37 @@ int main(void)
                           3,
                           _get_obj_size(obj_id[0]) + _get_obj_size(obj_id[1]) +
                               _get_obj_size(obj_id[2]),
+                          0,
+                          0,
+                          &base_stats) == KOS_SUCCESS);
+
+        /* Thread */
+
+        obj_id[0] = new_thread_obj(ctx);
+        TEST( ! IS_BAD_PTR(obj_id[0]));
+        {
+            int i;
+            for (i = 1; i < 6; i++) {
+                obj_id[i] = KOS_new_float(ctx, i);
+                TEST( ! IS_BAD_PTR(obj_id[i]));
+                TEST(GET_OBJ_TYPE(obj_id[i]) == OBJ_FLOAT);
+            }
+            OBJPTR(THREAD, obj_id[0])->thread_func = obj_id[1];
+            OBJPTR(THREAD, obj_id[0])->this_obj    = obj_id[2];
+            OBJPTR(THREAD, obj_id[0])->args_obj    = obj_id[3];
+            OBJPTR(THREAD, obj_id[0])->retval      = obj_id[4];
+            OBJPTR(THREAD, obj_id[0])->exception   = obj_id[5];
+        }
+
+        TEST(_test_object(ctx,
+                          obj_id[0],
+                          6,
+                          _get_obj_size(obj_id[0]) +
+                              _get_obj_size(obj_id[1]) +
+                              _get_obj_size(obj_id[2]) +
+                              _get_obj_size(obj_id[3]) +
+                              _get_obj_size(obj_id[4]) +
+                              _get_obj_size(obj_id[5]),
                           0,
                           0,
                           &base_stats) == KOS_SUCCESS);
