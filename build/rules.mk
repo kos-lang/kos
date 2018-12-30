@@ -152,8 +152,8 @@ else
     #STRICTFLAGS += -Wconversion
 
     ifeq ($(UNAME), Linux)
-        CFLAGS  += -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_SOURCE=200112L
-        LDFLAGS += -lpthread
+        CFLAGS  += -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L
+        LDFLAGS += -lpthread -lrt
     endif
 
     ifeq ($(UNAME), Darwin)
