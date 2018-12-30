@@ -335,7 +335,7 @@ int64_t kos_get_time_ms(void)
 
     return time_ms;
 }
-#elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0) && defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 199309L)
+#elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
 int64_t kos_get_time_ms(void)
 {
     int64_t         time_ms = 0;

@@ -291,7 +291,6 @@ static KOS_POOL *alloc_pool(KOS_HEAP *heap,
 {
     KOS_POOL *pool_hdr;
     uint8_t  *pool;
-    uint8_t  *begin;
 
     if (heap->heap_size + alloc_size > KOS_MAX_HEAP_SIZE)
         return 0;
@@ -304,8 +303,6 @@ static KOS_POOL *alloc_pool(KOS_HEAP *heap,
     heap->heap_size += alloc_size;
 
     assert(KOS_align_up((uintptr_t)pool, (uintptr_t)KOS_PAGE_SIZE) == (uintptr_t)pool);
-
-    begin = (uint8_t *)pool;
 
     pool_hdr = (KOS_POOL *)kos_malloc(sizeof(KOS_POOL));
 
