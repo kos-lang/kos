@@ -240,8 +240,8 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
                 KOS_PAGE *page      = locked_pages->pages[i].page;
                 uint32_t  num_slots = locked_pages->pages[i].num_slots;
 
-                if (num_slots == KOS_SLOTS_PER_PAGE)
-                    kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
+                assert(num_slots == KOS_SLOTS_PER_PAGE);
+                kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
             }
 
             del = locked_pages;
@@ -352,8 +352,7 @@ static int alloc_page_pool(KOS_HEAP *heap)
 
         while (page) {
 
-            assert(page->num_slots <= KOS_SLOTS_PER_PAGE);
-            assert(page->num_slots >= (KOS_PAGE_SIZE >> (3 + KOS_OBJ_ALIGN_BITS)));
+            assert(page->num_slots == KOS_SLOTS_PER_PAGE);
             assert(KOS_atomic_read_u32(page->num_allocated) == 0);
 
             assert(page == next_page);
@@ -606,10 +605,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
             next_ptr = &page->next;
 
-            if (page->num_slots < KOS_SLOTS_PER_PAGE) {
-                page = *next_ptr;
-                break;
-            }
+            assert(page->num_slots == KOS_SLOTS_PER_PAGE);
 
             accum += KOS_PAGE_SIZE;
 
@@ -818,50 +814,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
         /* Allocate a new page */
         page = alloc_page(heap);
 
-        /* If page capacity is too small, find page which is big enough */
-        /* TODO Delete this */
-        if (page && page->num_slots < num_slots) {
-
-            KOS_PAGE *pages_too_small = page;
-
-            page->next = 0;
-
-            for (;;) {
-
-                page = alloc_page(heap);
-
-                if ( ! page || page->num_slots >= num_slots)
-                    break;
-
-                assert(page != pages_too_small);
-
-                page->next = pages_too_small;
-
-                pages_too_small = page;
-            }
-
-            while (pages_too_small) {
-
-                KOS_PAGE  *next      = pages_too_small->next;
-                KOS_PAGE **insert_at = &heap->free_pages;
-                KOS_PAGE  *next_free = *insert_at;
-
-                while (next_free && pages_too_small > next_free) {
-
-                    insert_at = &next_free->next;
-                    next_free = *insert_at;
-                }
-
-                assert(pages_too_small != next_free);
-                assert(pages_too_small < next_free || ! next_free);
-
-                pages_too_small->next = next_free;
-
-                *insert_at = pages_too_small;
-
-                pages_too_small = next;
-            }
-        }
+        assert( ! page || page->num_slots == KOS_SLOTS_PER_PAGE);
 
         if (page) {
 
@@ -1338,7 +1291,7 @@ static void get_flat_page_list(KOS_HEAP  *heap,
             assert(this_size >= (KOS_SLOTS_OFFS + (KOS_PAGE_SIZE >> 3)));
 
             page->num_slots = (this_size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
-            assert(page->num_slots <= KOS_SLOTS_PER_PAGE);
+            assert(page->num_slots == KOS_SLOTS_PER_PAGE);
 
             *(dest++) = page;
 
@@ -1387,14 +1340,8 @@ static void lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
         pages = page->next;
 
         /* Only lock heap pages which are fully aligned with OS pages */
-        if (num_slots == KOS_SLOTS_PER_PAGE) {
-            if (kos_mem_protect(page, KOS_PAGE_SIZE, KOS_NO_ACCESS)) {
-                assert(0);
-                fprintf(stderr, "Failed to lock region at %p size %u\n",
-                        (void *)page, KOS_PAGE_SIZE);
-                exit(1);
-            }
-        }
+        assert(num_slots == KOS_SLOTS_PER_PAGE);
+        kos_mem_protect(page, KOS_PAGE_SIZE, KOS_NO_ACCESS);
 
         if ( ! heap->locked_pages_last || heap->locked_pages_last->num_pages == KOS_MAX_LOCKED_PAGES) {
 
@@ -1439,14 +1386,8 @@ static void unlock_pages(KOS_HEAP *heap)
             KOS_PAGE *const page      = cur_locked_page_list->pages[i].page;
             KOS_PAGE       *cur;
 
-            if (num_slots == KOS_SLOTS_PER_PAGE) {
-                if (kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE)) {
-                    assert(0);
-                    fprintf(stderr, "Failed to unlock region at %p size %u\n",
-                            (void *)page, KOS_PAGE_SIZE);
-                    exit(1);
-                }
-            }
+            assert(num_slots == KOS_SLOTS_PER_PAGE);
+            kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
 
             /* Put page on free list */
             cur = *insert_at;
