@@ -437,8 +437,8 @@ static KOS_OBJ_ID alloc_buffer(KOS_CONTEXT  ctx,
 {
     KOS_OBJ_ID  obj_id[2];
     OBJECT_DESC desc[2] = {
-        { OBJ_BUFFER,         (uint32_t)sizeof(KOS_BUFFER)         },
-        { OBJ_BUFFER_STORAGE, (uint32_t)sizeof(KOS_BUFFER_STORAGE) }
+        { OBJ_BUFFER,         (uint32_t)sizeof(KOS_BUFFER) },
+        { OBJ_BUFFER_STORAGE, (uint32_t)(sizeof(KOS_BUFFER_STORAGE) + sizeof(buffer_test) - 1) }
     };
 
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
