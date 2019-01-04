@@ -172,6 +172,20 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 /* KOS_HEAP                                                                 */
 /*==========================================================================*/
 
+struct KOS_PAGE_HEADER_S {
+    KOS_PAGE            *next;
+    uint32_t             num_slots;       /* Total number of slots in this page */
+    KOS_ATOMIC(uint32_t) num_allocated;   /* Number of slots allocated          */
+    KOS_ATOMIC(uint32_t) num_used;        /* Number of slots used, only for GC  */
+};
+
+#define KOS_PAGE_HDR_SIZE  (sizeof(KOS_PAGE))
+#define KOS_SLOTS_PER_PAGE (((KOS_PAGE_SIZE - KOS_PAGE_HDR_SIZE) << 2) / \
+                            ((1U << (KOS_OBJ_ALIGN_BITS + 2)) + 1U))
+#define KOS_BITMAP_SIZE    (((KOS_SLOTS_PER_PAGE + 15U) & ~15U) >> 2)
+#define KOS_BITMAP_OFFS    ((KOS_PAGE_HDR_SIZE + 3U) & ~3U)
+#define KOS_SLOTS_OFFS     (KOS_PAGE_SIZE - (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
+
 #define KOS_LOOK_FURTHER 255
 
 typedef struct KOS_LOCAL_REFS_HEADER_S {
@@ -186,12 +200,6 @@ typedef struct KOS_LOCAL_REFS_S {
     KOS_OBJ_ID            next;
     KOS_OBJ_ID           *refs[64 - 3];
 } KOS_LOCAL_REFS;
-
-#ifndef NDEBUG
-int kos_heap_lend_page(KOS_CONTEXT ctx,
-                       void       *buffer,
-                       size_t      size);
-#endif
 
 void kos_lock_gc(KOS_INSTANCE *inst);
 

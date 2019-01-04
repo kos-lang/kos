@@ -523,47 +523,5 @@ int main(void)
         KOS_instance_destroy(&inst);
     }
 
-    /************************************************************************/
-#ifndef NDEBUG
-    {
-        void      *pages[3];
-        KOS_OBJ_ID opaque[(KOS_POOL_SIZE / KOS_PAGE_SIZE) + 4U];
-
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
-
-        for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i) {
-
-            size_t size = KOS_PAGE_SIZE / 4U;
-            void  *mem;
-
-            for (;;) {
-                mem = kos_malloc(size);
-
-                if (kos_heap_lend_page(ctx, mem, size)) {
-                    pages[i] = mem;
-                    break;
-                }
-
-                kos_free(mem);
-
-                size += KOS_PAGE_SIZE / 4U;
-            }
-        }
-
-        for (i = 0; i < sizeof(opaque) / sizeof(opaque[0]); ++i) {
-            opaque[i] = _alloc_opaque(ctx, (uint8_t)0xA1U, 3U * KOS_PAGE_SIZE / 4U);
-            TEST( ! IS_BAD_PTR(opaque[i]));
-        }
-
-        for (i = 0; i < sizeof(opaque) / sizeof(opaque[0]); ++i)
-            TEST(_check_opaque(opaque[i], (uint8_t)0xA1U));
-
-        KOS_instance_destroy(&inst);
-
-        for (i = 0; i < sizeof(pages) / sizeof(pages[0]); ++i)
-            kos_free(pages[i]);
-    }
-#endif
-
     return 0;
 }
