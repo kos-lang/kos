@@ -846,7 +846,7 @@ static KOS_OBJ_ID alloc_opaque(KOS_CONTEXT  ctx,
     ptr = (uint8_t *)OBJPTR(OPAQUE, obj_id) + sizeof(KOS_OPAQUE);
 
     for (i = 0; i < size; i++)
-        ptr[i] = i;
+        ptr[i] = (uint8_t)i;
 
     *num_objs   = 1;
     *total_size = get_obj_size(obj_id);
