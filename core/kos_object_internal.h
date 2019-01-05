@@ -172,6 +172,28 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 /* KOS_HEAP                                                                 */
 /*==========================================================================*/
 
+/*
+ * The heap is comprised of pools containing pages.  Each pool is an individual
+ * memory allocation.
+ * Page size preferably matches CPU page size.
+ * All pages are aligned on page size.
+ *
+ * Layout of a page on the heap:
+ * +=============================================+
+ * | header |  bitmap  |          slots          |
+ * +=============================================+
+ *          ^          ^
+ *          |          +-- KOS_SLOTS_OFFS
+ *          +-- KOS_BITMAP_OFFS
+ *
+ * - Page header structure (also typedef'ed as KOS_PAGE) is described below.
+ * - Bitmap is used during garbage collection to determine which objects are
+ *   still in use.  Bitmap contains 2 bits per slot, the 2 bits are used for
+ *   marking.
+ * - Slots are used for object storage.  An object occupies at least one slot,
+ *   typically multiple contiguous slots.  Marking bits in the bitmap are used
+ *   to store marking color for object's first slot only.
+ */
 struct KOS_PAGE_HEADER_S {
     KOS_PAGE            *next;
     uint32_t             num_slots;       /* Total number of slots in this page */
