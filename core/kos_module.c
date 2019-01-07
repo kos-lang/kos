@@ -813,7 +813,7 @@ static int _walk_globals(void                          *vframe,
     KOS_CONTEXT         ctx    = (KOS_CONTEXT)vframe;
     KOS_INSTANCE *const inst   = ctx->inst;
     KOS_VECTOR          name;
-    KOS_OBJ_ID          walk;
+    KOS_OBJ_ID          walk   = KOS_BADPTR;
     KOS_OBJ_ID          module_obj;
 
     kos_vector_init(&name);
