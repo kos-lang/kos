@@ -1037,6 +1037,8 @@ void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
     ctx->local_refs = local_refs;
 }
 
+#define IS_VALID(obj_id) (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) <= OBJ_THREAD)
+
 int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
 {
     int     error = KOS_SUCCESS;
@@ -1060,9 +1062,11 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
         ptr         = &OBJPTR(LOCAL_REFS, local_refs)->refs[num_tracked];
         end         = ptr + num_entries;
 
-        do
-            *(ptr++) = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
-        while (ptr < end);
+        do {
+            KOS_OBJ_ID *const obj_ptr = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
+            assert(IS_VALID(*obj_ptr));
+            *(ptr++) = obj_ptr;
+        } while (ptr < end);
 
         OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked = (uint8_t)(num_tracked + num_entries);
     }
@@ -1072,9 +1076,11 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
 
         assert(ctx->helper_ref_count == 0);
 
-        do
-            *(helper_refs++) = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
-        while (helper_refs < end);
+        do {
+            KOS_OBJ_ID *const obj_ptr = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
+            assert(IS_VALID(*obj_ptr));
+            *(helper_refs++) = obj_ptr;
+        } while (helper_refs < end);
 
         ctx->helper_ref_count = num_entries;
 
