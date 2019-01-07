@@ -1569,6 +1569,7 @@ int main(void)
                 for (i = 0; i < num_objs; ++i) {
                     int pushed = 0;
 
+                    obj_ids[i] = KOS_BADPTR;
                     TEST(KOS_push_locals(ctx, &pushed, 1, &obj_ids[i]) == KOS_SUCCESS);
                     TEST(pushed == 1);
                     obj_ids[i] = KOS_new_buffer(ctx, size);
