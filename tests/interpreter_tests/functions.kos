@@ -21,18 +21,7 @@
 #
 
 import base.generator_end
-
-fun expect_fail(function)
-{
-    var failed = false
-    try {
-        function()
-    }
-    catch const e {
-        failed = true
-    }
-    assert failed
-}
+import test_tools.expect_fail
 
 do {
     fun no_work
@@ -1797,16 +1786,6 @@ do {
     if (() => false) () {
         return false
     }
-}
-
-# Infinite recursion
-do {
-    fun infinite
-    {
-        return infinite() + 1
-    }
-
-    expect_fail(infinite)
 }
 
 # Chained lambdas
