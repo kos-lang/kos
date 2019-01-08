@@ -199,6 +199,18 @@ struct KOS_PAGE_HEADER_S {
     uint32_t             num_slots;       /* Total number of slots in this page */
     KOS_ATOMIC(uint32_t) num_allocated;   /* Number of slots allocated          */
     KOS_ATOMIC(uint32_t) num_used;        /* Number of slots used, only for GC  */
+
+    /* TODO
+     * - Distinguish between number of slots that the page has and the number of
+     *   slots usable for allocating small objects.  This will enable allocating
+     *   a big object far in the page and using the rest of the page for small
+     *   objects.
+     * - Distinguish between old pages and new page.  New objects should never
+     *   be allocated in old pages, objects can only be moved from new pages
+     *   to old pages.  Old pages can just be put on full_pages list.  is_page_full()
+     *   will need to be adjusted to detect an old page and treat it as full,
+     *   except for when allocating space for evacuated objects during GC.
+     */
 };
 
 #define KOS_PAGE_HDR_SIZE  (sizeof(KOS_PAGE))
@@ -223,9 +235,9 @@ typedef struct KOS_LOCAL_REFS_S {
     KOS_OBJ_ID           *refs[64 - 3];
 } KOS_LOCAL_REFS;
 
-void kos_lock_gc(KOS_INSTANCE *inst);
+void kos_lock_gc(KOS_CONTEXT ctx);
 
-void kos_unlock_gc(KOS_INSTANCE *inst);
+void kos_unlock_gc(KOS_CONTEXT ctx);
 
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
 

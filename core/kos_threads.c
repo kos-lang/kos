@@ -240,10 +240,14 @@ KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
     if ( ! OBJPTR(THREAD, init.thread_obj)->thread_handle)
         RAISE_EXCEPTION(str_err_thread);
 
+    KOS_suspend_context(ctx);
+
     EnterCriticalSection(&init.start_cs);
     while ( ! init.started)
         SleepConditionVariableCS(&init.start_cv, &init.start_cs, INFINITE);
     LeaveCriticalSection(&init.start_cs);
+
+    KOS_resume_context(ctx);
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
@@ -266,8 +270,12 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
     if (kos_is_current_thread(thread))
         RAISE_EXCEPTION(str_err_join_self);
 
+    KOS_suspend_context(ctx);
+
     WaitForSingleObject(OBJPTR(THREAD, thread)->thread_handle, INFINITE);
     CloseHandle(OBJPTR(THREAD, thread)->thread_handle);
+
+    KOS_resume_context(ctx);
 
     if (IS_BAD_PTR(OBJPTR(THREAD, thread)->exception)) {
         retval = OBJPTR(THREAD, thread)->retval;
@@ -464,10 +472,14 @@ KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
                                          &init))
         RAISE_EXCEPTION(str_err_thread);
 
+    KOS_suspend_context(ctx);
+
     pthread_mutex_lock(&init.start_mutex);
     while ( ! init.started)
         pthread_cond_wait(&init.start_cv, &init.start_mutex);
     pthread_mutex_unlock(&init.start_mutex);
+
+    KOS_resume_context(ctx);
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
@@ -491,7 +503,11 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
     if (kos_is_current_thread(thread))
         RAISE_EXCEPTION(str_err_join_self);
 
+    KOS_suspend_context(ctx);
+
     pthread_join(OBJPTR(THREAD, thread)->thread_handle, NULL);
+
+    KOS_resume_context(ctx);
 
     if (IS_BAD_PTR(OBJPTR(THREAD, thread)->exception)) {
         retval = OBJPTR(THREAD, thread)->retval;

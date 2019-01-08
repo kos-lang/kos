@@ -125,7 +125,7 @@ static int _register_thread(KOS_INSTANCE *inst,
 
     assert( ! kos_tls_get(inst->threads.thread_key));
 
-    /* Note: ctx->cur_page is set by the caller */
+    /* Note: ctx->cur_page and ctx->gc_state are set by the caller */
 
     ctx->inst             = inst;
     ctx->thread_obj       = KOS_BADPTR;
@@ -134,9 +134,9 @@ static int _register_thread(KOS_INSTANCE *inst,
     ctx->stack            = KOS_BADPTR;
     ctx->regs_idx         = 0;
     ctx->stack_depth      = 0;
-    ctx->local_refs       = KOS_BADPTR;
     ctx->tmp_ref_count    = 0;
     ctx->helper_ref_count = 0;
+    ctx->local_refs       = KOS_BADPTR;
 
     for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); ++i)
         ctx->tmp_refs[i] = 0;
@@ -145,6 +145,8 @@ static int _register_thread(KOS_INSTANCE *inst,
         RAISE_EXCEPTION(str_err_thread_registered);
 
     kos_tls_set(inst->threads.thread_key, ctx);
+
+    KOS_resume_context(ctx);
 
     TRY(_push_local_refs_object(ctx));
 
@@ -182,7 +184,12 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 {
     int error;
 
-    kos_lock_gc(inst);
+    ctx->inst = inst;
+    ctx->cur_page = 0;
+
+    KOS_suspend_context(ctx);
+
+    kos_lock_gc(ctx);
 
     kos_lock_mutex(&inst->threads.mutex);
 
@@ -194,9 +201,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 
     kos_unlock_mutex(&inst->threads.mutex);
 
-    kos_unlock_gc(inst);
-
-    ctx->cur_page = 0;
+    kos_unlock_gc(ctx);
 
     error = _register_thread(inst, ctx);
 
@@ -424,6 +429,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     inst->modules.init_module = OBJID(MODULE, init_module);
 
+    KOS_suspend_context(&inst->threads.main_thread);
     TRY(_register_thread(inst, &inst->threads.main_thread));
 
     ctx = &inst->threads.main_thread;

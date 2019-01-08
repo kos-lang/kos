@@ -36,16 +36,23 @@ typedef struct KOS_POOL_HEADER_S       KOS_POOL;
 typedef struct KOS_MODULE_LOAD_CHAIN_S KOS_MODULE_LOAD_CHAIN;
 
 typedef struct KOS_HEAP_S {
-    KOS_MUTEX            mutex;
-    KOS_ATOMIC(uint32_t) gc_state;
-    uint32_t             heap_size;      /* Total amount of memory owned by the heap */
-    uint32_t             used_size;      /* Size used in full_ and non_full_pages    */
-    uint32_t             gc_threshold;   /* Next used size that triggers GC          */
-    KOS_PAGE            *free_pages;     /* Pages which are currently unused         */
-    KOS_PAGE            *non_full_pages; /* Pages in which new objects are allocated */
-    KOS_PAGE            *full_pages;     /* Pages which have no room for new objects */
-    KOS_POOL            *pools;          /* Allocated memory - page pools            */
-    KOS_POOL            *pool_headers;   /* List of pool headers for new pools       */
+    KOS_MUTEX              mutex;
+    KOS_ATOMIC(uint32_t)   gc_state;
+    uint32_t               heap_size;      /* Total amount of memory owned by the heap */
+    uint32_t               used_size;      /* Size used in full_ and non_full_pages    */
+    uint32_t               gc_threshold;   /* Next used size that triggers GC          */
+    KOS_PAGE              *free_pages;     /* Pages which are currently unused         */
+    KOS_PAGE              *non_full_pages; /* Pages in which new objects are allocated */
+    KOS_PAGE              *full_pages;     /* Pages which have no room for new objects */
+    KOS_POOL              *pools;          /* Allocated memory - page pools            */
+    KOS_POOL              *pool_headers;   /* List of pool headers for new pools       */
+
+    KOS_ATOMIC(KOS_PAGE *) gray_pages;     /* Page pointer for gray-to-black marking   */
+    KOS_ATOMIC(KOS_PAGE *) update_pages;   /* Page pointer for update-after-evac       */
+    KOS_ATOMIC(uint32_t)   gray_marked;    /* Number of objects marked                 */
+    KOS_ATOMIC(uint32_t)   walk_stage;     /* Stage of walking page lists              */
+    KOS_ATOMIC(uint32_t)   walk_active;    /* Number of thread walking pages           */
+    KOS_ATOMIC(uint32_t)   gc_cycles;      /* Number of GC cycles commenced            */
 
 #ifdef CONFIG_MAD_GC
     struct KOS_LOCKED_PAGES_S *locked_pages_first;
@@ -97,8 +104,9 @@ typedef struct KOS_STACK_S {
 #define KOS_MAX_LOCALS 16
 
 struct KOS_THREAD_CONTEXT_S {
-    KOS_CONTEXT   next;     /* List of thread roots in instance */
-    KOS_CONTEXT   prev;
+    KOS_CONTEXT          next;     /* List of thread roots in instance */
+    KOS_CONTEXT          prev;
+    KOS_ATOMIC(uint32_t) gc_state;
 
     KOS_INSTANCE *inst;
     KOS_PAGE     *cur_page;
@@ -108,11 +116,11 @@ struct KOS_THREAD_CONTEXT_S {
     KOS_OBJ_ID    stack;        /* Topmost container for registers & stack frames */
     uint32_t      regs_idx;     /* Index of first register in current frame       */
     uint32_t      stack_depth;
+    uint32_t      tmp_ref_count;
+    uint32_t      helper_ref_count;
     KOS_OBJ_ID    local_refs;   /* Object id refs on user's local stack           */
     KOS_OBJ_ID   *tmp_refs[12]; /* Object id refs during object creation          */
     KOS_OBJ_ID   *helper_refs[KOS_MAX_LOCALS]; /* Helper when pushing locals stack*/
-    uint32_t      tmp_ref_count;
-    uint32_t      helper_ref_count;
 };
 
 struct KOS_PROTOTYPES_S {
@@ -321,6 +329,10 @@ typedef struct KOS_GC_STATS_S {
 
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
                         KOS_GC_STATS *out_stats);
+
+void KOS_suspend_context(KOS_CONTEXT ctx);
+
+void KOS_resume_context(KOS_CONTEXT ctx);
 
 #ifdef __cplusplus
 }
