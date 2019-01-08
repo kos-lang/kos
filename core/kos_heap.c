@@ -1242,9 +1242,9 @@ static int mark_object_black(KOS_OBJ_ID obj_id)
 static void gray_to_black_in_pages(KOS_HEAP *heap)
 {
     int32_t   marked = 0;
-    KOS_PAGE *page   = 0;
+    KOS_PAGE *page   = get_next_page(heap, &heap->gray_pages, 0);
 
-    while ((page = get_next_page(heap, &heap->gray_pages, page))) {
+    for ( ; page; page = get_next_page(heap, &heap->gray_pages, page)) {
 
         uint32_t num_slots_used = 0;
 
@@ -1829,9 +1829,9 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
 static void update_pages_after_evacuation(KOS_HEAP *heap)
 {
-    KOS_PAGE *page = 0;
+    KOS_PAGE *page = get_next_page(heap, &heap->update_pages, 0);
 
-    while ((page = get_next_page(heap, &heap->update_pages, page))) {
+    for ( ; page; page = get_next_page(heap, &heap->update_pages, page)) {
 
         uint8_t       *ptr = (uint8_t *)page + KOS_SLOTS_OFFS;
         uint8_t *const end = ptr + (get_num_active_slots(page) << KOS_OBJ_ALIGN_BITS);
@@ -2137,7 +2137,9 @@ static int help_gc(KOS_CONTEXT ctx)
 
     kos_heap_release_thread_page(ctx);
 
-    while ((gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state))) {
+    gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state);
+
+    for ( ; gc_state != GC_INACTIVE; gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state)) {
 
         assert( ! ctx->cur_page);
 
