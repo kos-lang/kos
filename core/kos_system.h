@@ -60,6 +60,6 @@ enum KOS_PROTECT_E {
 
 int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect);
 
-int64_t kos_get_time_ms(void);
+int64_t kos_get_time_us(void);
 
 #endif

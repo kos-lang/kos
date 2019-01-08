@@ -2257,7 +2257,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     /***********************************************************************/
     /* Phase 1: Initialize GC and clear marking */
 
-    time_0 = kos_get_time_ms();
+    time_0 = kos_get_time_us();
 
     kos_lock_mutex(&ctx->inst->threads.mutex);
 
@@ -2339,15 +2339,15 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     if ( ! error && KOS_is_exception_pending(ctx))
         error = KOS_ERROR_EXCEPTION;
 
-    time_1 = kos_get_time_ms();
+    time_1 = kos_get_time_us();
 
-    stats.time_ms = (unsigned)(time_1 - time_0);
+    stats.time_us = (unsigned)(time_1 - time_0);
 
     if (ctx->inst->flags & KOS_INST_DEBUG) {
-        printf("GC used/total [B] %x/%x -> %x/%x : time %u ms : gray passes %u\n",
+        printf("GC used/total [B] %x/%x -> %x/%x : time %u us : gray passes %u\n",
                stats.initial_used_size, stats.initial_heap_size,
                stats.used_size, stats.heap_size,
-               stats.time_ms, stats.num_gray_passes);
+               stats.time_us, stats.num_gray_passes);
     }
 
     verify_heap_used_size(heap);

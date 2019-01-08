@@ -324,7 +324,7 @@ typedef struct KOS_GC_STATS_S {
     unsigned initial_used_size;
     unsigned heap_size;
     unsigned used_size;
-    unsigned time_ms;
+    unsigned time_us;
 } KOS_GC_STATS;
 
 int KOS_collect_garbage(KOS_CONTEXT   ctx,

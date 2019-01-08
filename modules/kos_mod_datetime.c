@@ -33,7 +33,7 @@ static const char str_err_cannot_get_time[] = "failed to get system time";
  *
  *     now()
  *
- * Returns current time, in milliseconds since the Epoch.
+ * Returns current time, in microseconds since the Epoch.
  *
  */
 static KOS_OBJ_ID now(KOS_CONTEXT ctx,
@@ -41,10 +41,10 @@ static KOS_OBJ_ID now(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID    ret     = KOS_BADPTR;
-    const int64_t time_ms = kos_get_time_ms();
+    const int64_t time_us = kos_get_time_us();
 
-    if (time_ms)
-        ret = KOS_new_int(ctx, time_ms);
+    if (time_us)
+        ret = KOS_new_int(ctx, time_us);
     else
         KOS_raise_exception_cstring(ctx, str_err_cannot_get_time);
 

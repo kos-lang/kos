@@ -1007,7 +1007,7 @@ static int _compile_module(KOS_CONTEXT ctx,
     unsigned            num_opt_passes    = 0;
     int                 pushed            = 0;
 
-    time_0 = kos_get_time_ms();
+    time_0 = kos_get_time_us();
 
     TRY(KOS_push_locals(ctx, &pushed, 1, &module_obj));
 
@@ -1043,7 +1043,7 @@ static int _compile_module(KOS_CONTEXT ctx,
     }
     TRY(error);
 
-    time_1 = kos_get_time_ms();
+    time_1 = kos_get_time_us();
 
     /* Save base module index */
     if (module_idx == 0)
@@ -1079,7 +1079,7 @@ static int _compile_module(KOS_CONTEXT ctx,
     }
     TRY(error);
 
-    time_2 = kos_get_time_ms();
+    time_2 = kos_get_time_us();
 
     /* Print number of optimization passes */
     if (inst->flags & KOS_INST_DEBUG) {
@@ -1089,8 +1089,8 @@ static int _compile_module(KOS_CONTEXT ctx,
         error = KOS_string_to_cstr_vec(ctx, OBJPTR(MODULE, module_obj)->name, &cname);
 
         if ( ! error) {
-            printf("%s: parsing             : %u ms\n", cname.buffer, (unsigned)(time_1 - time_0));
-            printf("%s: compilation         : %u ms\n", cname.buffer, (unsigned)(time_2 - time_1));
+            printf("%s: parsing             : %u us\n", cname.buffer, (unsigned)(time_1 - time_0));
+            printf("%s: compilation         : %u us\n", cname.buffer, (unsigned)(time_2 - time_1));
             printf("%s: optimization passes : %u\n",    cname.buffer, num_opt_passes);
         }
 

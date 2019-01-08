@@ -315,54 +315,54 @@ int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect)
 #endif
 
 #ifdef _WIN32
-int64_t kos_get_time_ms(void)
+int64_t kos_get_time_us(void)
 {
-    const int64_t epoch = (int64_t)116444736 * (int64_t)100000;
-    int64_t       time_ms;
+    const int64_t epoch = (int64_t)116444736 * (int64_t)100000000;
+    int64_t       time_us;
     FILETIME      ft;
 
     GetSystemTimeAsFileTime(&ft);
 
-    time_ms = (int64_t)ft.dwLowDateTime;
+    time_us = (int64_t)ft.dwLowDateTime;
 
-    time_ms += (int64_t)ft.dwHighDateTime << 32;
+    time_us += (int64_t)ft.dwHighDateTime << 32;
 
-    /* Convert from 100s of ns to ms */
-    time_ms /= 10000;
+    /* Convert from 100s of ns to us */
+    time_us /= 10;
 
     /* Convert from Windows time (1601) to Epoch time (1970) */
-    time_ms -= epoch;
+    time_us -= epoch;
 
-    return time_ms;
+    return time_us;
 }
 #elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
-int64_t kos_get_time_ms(void)
+int64_t kos_get_time_us(void)
 {
-    int64_t         time_ms = 0;
+    int64_t         time_us = 0;
     struct timespec ts;
 
     if (!clock_gettime(CLOCK_REALTIME, &ts)) {
 
-        time_ms = (int64_t)ts.tv_sec * 1000;
+        time_us = (int64_t)ts.tv_sec * 1000000;
 
-        time_ms += (int64_t)ts.tv_nsec / 1000000;
+        time_us += (int64_t)ts.tv_nsec / 1000;
     }
 
-    return time_ms;
+    return time_us;
 }
 #else
-int64_t kos_get_time_ms(void)
+int64_t kos_get_time_us(void)
 {
-    int64_t        time_ms = 0;
+    int64_t        time_us = 0;
     struct timeval tv;
 
     if (!gettimeofday(&tv, 0)) {
 
-        time_ms = (int64_t)tv.tv_sec * 1000;
+        time_us = (int64_t)tv.tv_sec * 1000000;
 
-        time_ms += (int64_t)tv.tv_usec / 1000;
+        time_us += (int64_t)tv.tv_usec;
     }
 
-    return time_ms;
+    return time_us;
 }
 #endif

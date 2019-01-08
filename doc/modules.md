@@ -2556,7 +2556,7 @@ now()
 
     now()
 
-Returns current time, in milliseconds since the Epoch.
+Returns current time, in microseconds since the Epoch.
 
 
 debug
