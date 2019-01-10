@@ -103,38 +103,28 @@ the variable's contents can be modified.
 Types
 -----
 
-There are nine built-in data types in Kos.
+The following table lists all the types in Kos and their properties.
 
-Immutable types:
+| Type     | Mutable | Properties | Prototype | Notes                   |
+|----------|---------|------------|-----------|-------------------------|
+| integer  | no      | no         | number    | 64-bit signed integer   |
+| float    | no      | no         | number    | 64-bit floating point   |
+| string   | no      | no         | object    | Character string        |
+| void     | no      | no         | -         | An "empty" type         |
+| boolean  | no      | no         | object    | `true` or `false`       |
+| array    | yes     | no         | object    | Regular array           |
+| buffer   | yes     | no         | object    | Array of bytes          |
+| object   | yes     | yes        | void      | Object with properties  |
+| function | no      | no         | object    | Regular function        |
+| class    | yes\*   | yes        | function  | Constructor for objects |
 
-* Integer
-* Floating-point
-* String
-* Void
-* Boolean
-* Function
-
-Mutable types:
-
-* Array
-* Buffer
-* Object
-* Class
+Most types in Kos are immutable.  The "class" type is mutable in the sense that
+it has properties which can be added/modified/deleted, just like in the "object"
+type, however the underlying function cannot be modified.
 
 The `typeof` unary operator can be used to determine the type of data at run
-time.  The returned value is a string.  The `typeof` operator returns the
-following strings for respective data types:
-
-* "integer" - for integer numbers.
-* "float" - for floating-point numbers.
-* "string" - for strings.
-* "void" - for `void` values.
-* "boolean" - for `true` and `false` values.
-* "array" - for arrays.
-* "buffer" - for buffers.
-* "object" - for objects.
-* "function" - for functions.
-* "class" - for classes.
+time.  It returns a string which is the literal name of the type, as in the
+first column in the above table.
 
 Example use of the `typeof` operator:
 
