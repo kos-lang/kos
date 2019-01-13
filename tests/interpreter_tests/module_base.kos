@@ -21,18 +21,7 @@
 #
 
 import base
-
-fun expect_fail(function)
-{
-    var failed = false
-    try {
-        function()
-    }
-    catch const e {
-        failed = true
-    }
-    assert failed
-}
+import test_tools.expect_fail
 
 ##############################################################################
 # base.number
@@ -2639,28 +2628,6 @@ do {
     }
     assert typeof e == "object"
     assert e.value == "something"
-}
-
-do {
-    fun thrower
-    {
-        try {
-            throw "hello"
-        }
-        catch const e {
-        }
-    }
-
-    for var i = 200; i; i -= 1 {
-        const t1 = async thrower()
-        const t2 = async thrower()
-        const t3 = async thrower()
-        const t4 = async thrower()
-        t1.wait()
-        t2.wait()
-        t3.wait()
-        t4.wait()
-    }
 }
 
 do {
