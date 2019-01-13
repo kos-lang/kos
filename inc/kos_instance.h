@@ -330,6 +330,8 @@ typedef struct KOS_GC_STATS_S {
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
                         KOS_GC_STATS *out_stats);
 
+void KOS_help_gc(KOS_CONTEXT ctx);
+
 void KOS_suspend_context(KOS_CONTEXT ctx);
 
 void KOS_resume_context(KOS_CONTEXT ctx);

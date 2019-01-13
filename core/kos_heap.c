@@ -38,6 +38,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if 0
+#define gc_trace(x) printf x
+#else
+#define gc_trace(x) do {} while (0)
+#endif
+
 enum GC_STATE_E {
     GC_INACTIVE,
 
@@ -46,7 +52,6 @@ enum GC_STATE_E {
     GC_ENGAGED,
 
     /* heap->gc_state */
-    GC_LOCKED,
     GC_INIT,
     GC_MARK,
     GC_EVACUATE,
@@ -63,7 +68,7 @@ typedef struct KOS_SLOT_PLACEHOLDER_S {
     uint8_t dummy[1 << KOS_OBJ_ALIGN_BITS];
 } KOS_SLOT;
 
-static int help_gc(KOS_CONTEXT ctx);
+static void help_gc(KOS_CONTEXT ctx);
 
 #ifdef CONFIG_MAD_GC
 #define KOS_MAX_LOCKED_PAGES 128
@@ -136,6 +141,8 @@ static void *list_pop(void **list_ptr)
 
 #endif
 
+static void clear_marking_in_pages(KOS_PAGE *page);
+
 #ifdef __cplusplus
 static inline KOS_HEAP *get_heap(KOS_CONTEXT ctx)
 {
@@ -177,6 +184,13 @@ int kos_heap_init(KOS_INSTANCE *inst)
 
     return kos_create_mutex(&heap->mutex);
 }
+
+#if !defined(NDEBUG) || defined(CONFIG_MAD_GC)
+int kos_gc_active(KOS_CONTEXT ctx)
+{
+    return KOS_atomic_read_u32(get_heap(ctx)->gc_state) >= GC_MARK;
+}
+#endif
 
 static uint32_t get_num_active_slots(KOS_PAGE *page)
 {
@@ -253,13 +267,14 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
             uint32_t                   i;
             struct KOS_LOCKED_PAGES_S *del;
 
-            for (i = 0 ; i < locked_pages->num_pages; i++) {
+            for (i = 0; i < locked_pages->num_pages; i++) {
 
                 KOS_PAGE *page      = locked_pages->pages[i].page;
                 uint32_t  num_slots = locked_pages->pages[i].num_slots;
 
                 assert(num_slots == KOS_SLOTS_PER_PAGE);
-                kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
+                if (page)
+                    kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
             }
 
             del = locked_pages;
@@ -289,6 +304,38 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
 
     kos_destroy_mutex(&inst->heap.mutex);
 }
+
+#ifdef CONFIG_MAD_GC
+static KOS_PAGE *unlock_one_page(KOS_HEAP *heap)
+{
+    struct KOS_LOCKED_PAGES_S *locked_pages = heap->locked_pages_first;
+
+    while (locked_pages) {
+
+        uint32_t i;
+
+        for (i = 0; i < locked_pages->num_pages; i++) {
+
+            KOS_PAGE *page = locked_pages->pages[i].page;
+
+            assert(locked_pages->pages[i].num_slots == KOS_SLOTS_PER_PAGE);
+
+            if (page) {
+                locked_pages->pages[i].page = 0;
+
+                kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
+
+                assert(page->num_slots == KOS_SLOTS_PER_PAGE);
+                page->next = 0;
+
+                return page;
+            }
+        }
+    }
+
+    return 0;
+}
+#endif
 
 enum KOS_WALK_STAGE_E {
     WALK_NON_FULL,
@@ -372,6 +419,7 @@ static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
 
 static void wait_for_walk_end(KOS_HEAP *heap)
 {
+    KOS_atomic_release_barrier();
     while (KOS_atomic_read_u32(*(KOS_ATOMIC(uint32_t) *)&heap->walk_active)) {
         kos_yield();
         KOS_atomic_acquire_barrier();
@@ -487,6 +535,13 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
 {
     KOS_PAGE *page = heap->free_pages;
 
+#ifdef CONFIG_MAD_GC
+    if ( ! page && KOS_atomic_read_u32(heap->gc_state) == GC_INACTIVE &&
+        (heap->heap_size + KOS_POOL_SIZE > KOS_MAX_HEAP_SIZE))
+
+        page = unlock_one_page(heap);
+#endif
+
     if ( ! page) {
 
         if (alloc_page_pool(heap))
@@ -497,6 +552,8 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
         assert(page);
     }
 
+    gc_trace(("alloc page %p\n", (void *)page));
+
     assert(page->num_slots == KOS_SLOTS_PER_PAGE);
     assert(KOS_atomic_read_u32(page->num_allocated) == 0);
     assert(page->next == 0 || page < page->next);
@@ -505,6 +562,8 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
 
     KOS_PERF_CNT(alloc_free_page);
 
+    KOS_atomic_write_u32(page->num_used, 0U);
+    page->next = 0;
     return page;
 }
 
@@ -608,6 +667,14 @@ static void release_current_page_locked(KOS_CONTEXT ctx)
     if (page) {
 
         KOS_HEAP *heap = get_heap(ctx);
+
+        if (KOS_atomic_read_u32(heap->gc_state) != GC_INACTIVE) {
+            page->next = 0;
+            clear_marking_in_pages(page);
+            KOS_atomic_release_barrier();
+        }
+
+        gc_trace(("release cur page %p ctx=%p\n", (void *)page, (void *)ctx));
 
         PUSH_LIST(heap->non_full_pages, page);
 
@@ -838,8 +905,6 @@ static void *alloc_object(KOS_CONTEXT ctx,
         const uint32_t gc_state = KOS_atomic_read_u32(heap->gc_state);
 
         if (gc_state != GC_INACTIVE && KOS_atomic_read_u32(ctx->gc_state) == GC_INACTIVE) {
-            assert(gc_state != GC_LOCKED);
-
             kos_unlock_mutex(&heap->mutex);
 
             help_gc(ctx);
@@ -894,7 +959,9 @@ static void *alloc_object(KOS_CONTEXT ctx,
                     }
                 }
 
-                ctx->cur_page = old_page;
+                KOS_atomic_write_u32(old_page->num_used, 0U);
+                old_page->next = 0;
+                ctx->cur_page  = old_page;
             }
             else
                 heap->used_size += non_full_page_size(old_page);
@@ -957,13 +1024,9 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
     kos_trigger_mad_gc(ctx);
 
     if (size > (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
-    {
         return alloc_huge_object(ctx, object_type, size);
-    }
     else
-    {
         return alloc_object(ctx, object_type, size);
-    }
 }
 
 void *kos_alloc_object_page(KOS_CONTEXT ctx,
@@ -976,13 +1039,14 @@ static void stop_the_world(KOS_INSTANCE *inst)
 {
     KOS_CONTEXT ctx = &inst->threads.main_thread;
 
+    KOS_atomic_full_barrier();
+
     while (ctx) {
 
         const enum GC_STATE_E gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(ctx->gc_state);
 
         if (gc_state == GC_INACTIVE) {
             kos_yield();
-            KOS_atomic_acquire_barrier();
             continue;
         }
 
@@ -997,16 +1061,13 @@ enum KOS_MARK_STATE_E {
     COLORMASK = 3
 };
 
-static void set_marking_in_pages(KOS_PAGE             *page,
-                                 enum KOS_MARK_STATE_E state)
+static void clear_marking_in_pages(KOS_PAGE *page)
 {
-    const int mask = (int)state * 0x55;
-
     while (page) {
 
         uint32_t *const bitmap = (uint32_t *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
-        memset(bitmap, mask, KOS_BITMAP_SIZE);
+        memset(bitmap, WHITE * 0x55, KOS_BITMAP_SIZE);
 
         KOS_atomic_write_u32(page->num_used, 0);
 
@@ -1016,9 +1077,8 @@ static void set_marking_in_pages(KOS_PAGE             *page,
 
 static void clear_marking(KOS_HEAP *heap)
 {
-    set_marking_in_pages(heap->non_full_pages, WHITE);
-    set_marking_in_pages(heap->full_pages,     WHITE);
-    set_marking_in_pages(heap->free_pages,     GRAY);
+    clear_marking_in_pages(heap->non_full_pages);
+    clear_marking_in_pages(heap->full_pages);
 }
 
 struct KOS_MARK_LOC_S {
@@ -1058,8 +1118,8 @@ static uint32_t get_marking(const struct KOS_MARK_LOC_S *mark_loc)
     return (marking >> mark_loc->mask_idx) & COLORMASK;
 }
 
-static int set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
-                              enum KOS_MARK_STATE_E state)
+static void set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
+                               enum KOS_MARK_STATE_E state)
 {
     const uint32_t mask = (uint32_t)state << mark_loc.mask_idx;
 
@@ -1068,16 +1128,14 @@ static int set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
     while ( ! (value & mask)) {
 
         if (KOS_atomic_cas_u32(*mark_loc.bitmap, value, value | mask))
-            return 1;
+            break;
 
         value = KOS_atomic_read_u32(*mark_loc.bitmap);
     }
-
-    return 0;
 }
 
-static int set_mark_state(KOS_OBJ_ID            obj_id,
-                          enum KOS_MARK_STATE_E state)
+static void set_mark_state(KOS_OBJ_ID            obj_id,
+                           enum KOS_MARK_STATE_E state)
 {
     assert(((uintptr_t)obj_id & 0xFFFFFFFFU) != 0xDDDDDDDDU);
 
@@ -1086,10 +1144,8 @@ static int set_mark_state(KOS_OBJ_ID            obj_id,
 
         const struct KOS_MARK_LOC_S mark_loc = get_mark_location(obj_id);
 
-        return set_mark_state_loc(mark_loc, state);
+        set_mark_state_loc(mark_loc, state);
     }
-    else
-        return 0;
 }
 
 static void mark_children_gray(KOS_OBJ_ID obj_id)
@@ -1223,20 +1279,16 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
     }
 }
 
-static int mark_object_black(KOS_OBJ_ID obj_id)
+static void mark_object_black(KOS_OBJ_ID obj_id)
 {
-    int marked = 0;
-
     if (IS_HEAP_OBJECT(obj_id)) {
 
         assert( ! IS_BAD_PTR(obj_id));
 
-        marked = set_mark_state(obj_id, BLACK);
+        set_mark_state(obj_id, BLACK);
 
         mark_children_gray(obj_id);
     }
-
-    return marked;
 }
 
 static void gray_to_black_in_pages(KOS_HEAP *heap)
@@ -1263,8 +1315,9 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
             const uint32_t        color = get_marking(&mark_loc);
 
             if (color == GRAY) {
-                marked         += set_mark_state_loc(mark_loc, BLACK);
+                set_mark_state_loc(mark_loc, BLACK);
                 num_slots_used += slots;
+                marked = 1;
 
                 mark_children_gray((KOS_OBJ_ID)((intptr_t)hdr + 1));
             }
@@ -1299,6 +1352,8 @@ static uint32_t gray_to_black(KOS_HEAP *heap)
 static void mark_roots_in_context(KOS_CONTEXT ctx)
 {
     uint32_t i;
+
+    assert(KOS_atomic_read_u32(ctx->gc_state) != GC_INACTIVE);
 
     if ( ! IS_BAD_PTR(ctx->exception))
         mark_object_black(ctx->exception);
@@ -1518,6 +1573,9 @@ static void unlock_pages(KOS_HEAP *heap)
             KOS_PAGE *const page      = cur_locked_page_list->pages[i].page;
             KOS_PAGE       *cur;
 
+            if ( ! page)
+                continue;
+
             assert(num_slots == KOS_SLOTS_PER_PAGE);
             kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
 
@@ -1575,6 +1633,8 @@ static unsigned push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
     while (begin < end) {
 
         KOS_PAGE *page = *(begin++);
+
+        assert(page->num_slots == KOS_SLOTS_PER_PAGE);
 
         KOS_atomic_write_u32(page->num_allocated, 0);
 
@@ -1859,7 +1919,11 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
 
     update_pages_after_evacuation(heap);
 
+    wait_for_walk_end(heap);
+
     /* Update object pointers in instance */
+
+    kos_lock_mutex(&inst->threads.mutex);
 
     {
         int i;
@@ -1893,39 +1957,35 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
 
     /* Update object pointers in thread contexts */
 
-    {
-        ctx = &inst->threads.main_thread;
+    ctx = &inst->threads.main_thread;
 
-        kos_lock_mutex(&inst->threads.mutex);
+    while (ctx) {
 
-        while (ctx) {
+        uint32_t i;
 
-            uint32_t i;
+        assert(KOS_atomic_read_u32(ctx->gc_state) != GC_INACTIVE);
 
-            update_child_ptr(&ctx->exception);
-            update_child_ptr(&ctx->retval);
-            update_child_ptr(&ctx->stack);
-            update_child_ptr(&ctx->local_refs);
+        update_child_ptr(&ctx->exception);
+        update_child_ptr(&ctx->retval);
+        update_child_ptr(&ctx->stack);
+        update_child_ptr(&ctx->local_refs);
 
-            for (i = 0; i < ctx->tmp_ref_count; ++i) {
-                KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
-                if (obj_id_ptr)
-                    update_child_ptr(obj_id_ptr);
-            }
-
-            for (i = 0; i < ctx->helper_ref_count; ++i) {
-                KOS_OBJ_ID *const obj_id_ptr = ctx->helper_refs[i];
-                if (obj_id_ptr)
-                    update_child_ptr(obj_id_ptr);
-            }
-
-            ctx = ctx->next;
+        for (i = 0; i < ctx->tmp_ref_count; ++i) {
+            KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
+            if (obj_id_ptr)
+                update_child_ptr(obj_id_ptr);
         }
 
-        kos_unlock_mutex(&inst->threads.mutex);
+        for (i = 0; i < ctx->helper_ref_count; ++i) {
+            KOS_OBJ_ID *const obj_id_ptr = ctx->helper_refs[i];
+            if (obj_id_ptr)
+                update_child_ptr(obj_id_ptr);
+        }
+
+        ctx = ctx->next;
     }
 
-    wait_for_walk_end(heap);
+    kos_unlock_mutex(&inst->threads.mutex);
 }
 
 static void finalize_object(KOS_CONTEXT     ctx,
@@ -2005,6 +2065,8 @@ static int evacuate(KOS_CONTEXT   ctx,
         #define UNUSED_SLOTS ((KOS_SLOTS_PER_PAGE * (100U - KOS_MIGRATION_THRESH)) / 100U)
         if (num_allocated - num_slots_used < UNUSED_SLOTS || num_slots_used > KOS_SLOTS_PER_PAGE) {
 
+            gc_trace(("GC ctx=%p retain page %p\n", (void *)ctx, (void *)page));
+
             /* Mark unused objects as opaque so they don't participate in
              * pointer update after evacuation. */
             if (num_slots_used < num_allocated) {
@@ -2042,6 +2104,7 @@ static int evacuate(KOS_CONTEXT   ctx,
             continue;
         }
 #endif
+        gc_trace(("GC ctx=%p -- evac page %p\n", (void *)ctx, (void *)page));
 
         while (ptr < end) {
 
@@ -2129,25 +2192,40 @@ static void update_gc_threshold(KOS_HEAP *heap)
     heap->gc_threshold = heap->used_size + KOS_GC_STEP;
 }
 
-static int help_gc(KOS_CONTEXT ctx)
+static void help_gc(KOS_CONTEXT ctx)
 {
     KOS_HEAP *const heap    = get_heap(ctx);
     int             engaged = 0;
     enum GC_STATE_E gc_state;
 
-    kos_heap_release_thread_page(ctx);
-
     gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state);
 
-    for ( ; gc_state != GC_INACTIVE; gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state)) {
+    if (gc_state == GC_INACTIVE)
+        return;
+
+    kos_heap_release_thread_page(ctx);
+
+    for (;;) {
 
         assert( ! ctx->cur_page);
 
-        if (gc_state == GC_LOCKED)
-            break;
-
         switch (gc_state) {
 
+            case GC_INACTIVE:
+                kos_lock_mutex(&ctx->inst->threads.mutex);
+
+                gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state);
+
+                if (gc_state == GC_INACTIVE && engaged)
+                    KOS_atomic_write_u32(ctx->gc_state, GC_INACTIVE);
+
+                kos_unlock_mutex(&ctx->inst->threads.mutex);
+
+                if (gc_state == GC_INACTIVE)
+                    return;
+                break;
+
+#if 0
             case GC_MARK:
                 gray_to_black_in_pages(heap);
                 break;
@@ -2157,6 +2235,7 @@ static int help_gc(KOS_CONTEXT ctx)
             case GC_UPDATE:
                 update_pages_after_evacuation(heap);
                 break;
+#endif
 
             default:
                 if ( ! engaged) {
@@ -2169,11 +2248,17 @@ static int help_gc(KOS_CONTEXT ctx)
         }
 
         KOS_atomic_acquire_barrier();
+
+        gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state);
     }
+}
 
-    KOS_atomic_write_u32(ctx->gc_state, GC_INACTIVE);
+void KOS_help_gc(KOS_CONTEXT ctx)
+{
+    assert(KOS_atomic_read_u32(ctx->gc_state) == GC_INACTIVE);
 
-    return KOS_SUCCESS;
+    if (KOS_atomic_read_u32(get_heap(ctx)->gc_state) >= GC_INIT)
+        help_gc(ctx);
 }
 
 #ifdef CONFIG_MAD_GC
@@ -2201,9 +2286,13 @@ void KOS_resume_context(KOS_CONTEXT ctx)
 {
     enum GC_STATE_E gc_state;
 
+    assert(KOS_atomic_read_u32(ctx->gc_state) == GC_SUSPENDED);
+
     kos_lock_mutex(&ctx->inst->threads.mutex);
 
     KOS_atomic_write_u32(ctx->gc_state, GC_INACTIVE);
+
+    KOS_atomic_full_barrier();
 
     gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(get_heap(ctx)->gc_state);
 
@@ -2211,37 +2300,6 @@ void KOS_resume_context(KOS_CONTEXT ctx)
 
     if (gc_state >= GC_INIT)
         help_gc(ctx);
-}
-
-/* Used during register thread */
-void kos_lock_gc(KOS_CONTEXT ctx)
-{
-    KOS_HEAP *heap = get_heap(ctx);
-
-    kos_lock_mutex(&heap->mutex);
-
-    while ( ! KOS_atomic_cas_u32(heap->gc_state, GC_INACTIVE, GC_LOCKED)) {
-
-        const enum GC_STATE_E gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state);
-
-        kos_unlock_mutex(&heap->mutex);
-
-        if (gc_state >= GC_INIT)
-            help_gc(ctx);
-
-        kos_lock_mutex(&heap->mutex);
-    }
-}
-
-void kos_unlock_gc(KOS_CONTEXT ctx)
-{
-    KOS_HEAP *heap = get_heap(ctx);
-
-    assert(KOS_atomic_read_u32(heap->gc_state) == GC_LOCKED);
-
-    KOS_atomic_write_u32(heap->gc_state, GC_INACTIVE);
-
-    kos_unlock_mutex(&heap->mutex);
 }
 
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
@@ -2261,27 +2319,21 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     time_0 = kos_get_time_us();
 
-    kos_lock_mutex(&ctx->inst->threads.mutex);
-
     stats.initial_heap_size = heap->heap_size;
     stats.initial_used_size = heap->used_size;
 
     if ( ! KOS_atomic_cas_u32(heap->gc_state, GC_INACTIVE, GC_INIT)) {
 
-        const enum GC_STATE_E gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state);
+        KOS_help_gc(ctx);
 
-        assert(gc_state != GC_LOCKED);
-
-        kos_unlock_mutex(&ctx->inst->threads.mutex);
-
-        return gc_state >= GC_INIT ? help_gc(ctx) : KOS_SUCCESS;
+        return KOS_SUCCESS;
     }
+
+    gc_trace(("GC ctx=%p begin cycle %u\n", (void *)ctx, KOS_atomic_read_u32(heap->gc_cycles)));
 
     KOS_atomic_write_u32(heap->gc_cycles, KOS_atomic_read_u32(heap->gc_cycles) + 1U);
 
     KOS_atomic_write_u32(ctx->gc_state, GC_ENGAGED);
-
-    kos_unlock_mutex(&ctx->inst->threads.mutex);
 
     kos_heap_release_thread_page(ctx);
 
@@ -2332,6 +2384,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     stats.num_gray_passes = num_gray_passes;
     stats.heap_size       = heap->heap_size;
     stats.used_size       = heap->used_size;
+
+    gc_trace(("GC ctx=%p end cycle\n", (void *)ctx));
 
     KOS_atomic_write_u32(ctx->gc_state, GC_INACTIVE);
 

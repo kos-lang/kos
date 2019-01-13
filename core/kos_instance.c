@@ -123,6 +123,11 @@ static int _register_thread(KOS_INSTANCE *inst,
     int    error = KOS_SUCCESS;
     size_t i;
 
+    if (kos_tls_get(inst->threads.thread_key)) {
+        KOS_resume_context(ctx);
+        RAISE_EXCEPTION(str_err_thread_registered);
+    }
+
     assert( ! kos_tls_get(inst->threads.thread_key));
 
     /* Note: ctx->cur_page and ctx->gc_state are set by the caller */
@@ -141,8 +146,8 @@ static int _register_thread(KOS_INSTANCE *inst,
     for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); ++i)
         ctx->tmp_refs[i] = 0;
 
-    if (kos_tls_get(inst->threads.thread_key))
-        RAISE_EXCEPTION(str_err_thread_registered);
+    for (i = 0; i < sizeof(ctx->helper_refs) / sizeof(ctx->helper_refs[0]); ++i)
+        ctx->helper_refs[i] = 0;
 
     kos_tls_set(inst->threads.thread_key, ctx);
 
@@ -160,15 +165,22 @@ cleanup:
 static void _unregister_thread(KOS_INSTANCE *inst,
                                KOS_CONTEXT   ctx)
 {
+    assert(ctx != &inst->threads.main_thread);
+
+    while ( ! IS_BAD_PTR(ctx->local_refs)) {
+        const KOS_OBJ_ID next = OBJPTR(LOCAL_REFS, ctx->local_refs)->next;
+
+        OBJPTR(LOCAL_REFS, ctx->local_refs)->header.num_tracked = 0;
+        ctx->local_refs = next;
+    }
+
     kos_heap_release_thread_page(ctx);
+
+    KOS_suspend_context(ctx);
 
     kos_tls_set(inst->threads.thread_key, 0);
 
-    /* TODO mark thread as excluded from GC */
-
     kos_lock_mutex(&inst->threads.mutex);
-
-    assert(ctx != &inst->threads.main_thread);
 
     if (ctx->prev)
         ctx->prev->next = ctx->next;
@@ -184,12 +196,10 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 {
     int error;
 
-    ctx->inst = inst;
+    ctx->inst     = inst;
     ctx->cur_page = 0;
 
     KOS_suspend_context(ctx);
-
-    kos_lock_gc(ctx);
 
     kos_lock_mutex(&inst->threads.mutex);
 
@@ -200,8 +210,6 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
         ctx->next->prev            = ctx;
 
     kos_unlock_mutex(&inst->threads.mutex);
-
-    kos_unlock_gc(ctx);
 
     error = _register_thread(inst, ctx);
 
@@ -374,6 +382,7 @@ static void _clear_instance(KOS_INSTANCE *inst)
     inst->threads.main_thread.thread_obj  = KOS_BADPTR;
     inst->threads.main_thread.exception   = KOS_BADPTR;
     inst->threads.main_thread.retval      = KOS_BADPTR;
+    inst->threads.main_thread.local_refs  = KOS_BADPTR;
     inst->threads.main_thread.stack       = KOS_BADPTR;
     inst->threads.main_thread.stack_depth = 0;
 }
@@ -778,9 +787,11 @@ void KOS_raise_exception(KOS_CONTEXT ctx,
            GET_OBJ_TYPE(exception_obj) == OBJ_DYNAMIC_PROP);
 
 #ifdef CONFIG_MAD_GC
-    kos_track_refs(ctx, 1, &exception_obj);
-    kos_trigger_mad_gc(ctx);
-    kos_untrack_refs(ctx, 1);
+    if ( ! kos_gc_active(ctx)) {
+        kos_track_refs(ctx, 1, &exception_obj);
+        kos_trigger_mad_gc(ctx);
+        kos_untrack_refs(ctx, 1);
+    }
 #endif
 
     if (IS_BAD_PTR(ctx->exception))
@@ -922,6 +933,7 @@ static int have_room_for_locals(KOS_CONTEXT ctx, int num_entries)
     const KOS_OBJ_ID local_refs = ctx->local_refs;
     unsigned         num_tracked;
 
+    assert( ! kos_gc_active(ctx));
     assert( ! IS_BAD_PTR(local_refs));
     assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
 
@@ -937,6 +949,7 @@ static int reserve_locals(KOS_CONTEXT ctx, int num_entries)
     const KOS_OBJ_ID local_refs = ctx->local_refs;
     unsigned         num_tracked;
 
+    assert( ! kos_gc_active(ctx));
     assert( ! IS_BAD_PTR(local_refs));
     assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
 
@@ -978,6 +991,7 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
 
         local_refs = ctx->local_refs;
 
+        assert( ! kos_gc_active(ctx));
         assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
 
         OBJPTR(LOCAL_REFS, local_refs)->refs[
@@ -1002,6 +1016,7 @@ void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
     if (IS_BAD_PTR(*prev_scope))
         return;
 
+    assert( ! kos_gc_active(ctx));
     assert( ! IS_BAD_PTR(local_refs));
 
     for (;;) {
@@ -1040,6 +1055,7 @@ void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
         OBJPTR(LOCAL_REFS, local_refs)->header.prev_scope = KOS_LOOK_FURTHER;
     }
 
+    assert( ! kos_gc_active(ctx));
     ctx->local_refs = local_refs;
 }
 
@@ -1062,6 +1078,7 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
         KOS_OBJ_ID     **ptr;
         KOS_OBJ_ID     **end;
 
+        assert( ! kos_gc_active(ctx));
         assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
 
         num_tracked = OBJPTR(LOCAL_REFS, local_refs)->header.num_tracked;
@@ -1080,6 +1097,7 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
         KOS_OBJ_ID **helper_refs = &ctx->helper_refs[0];
         KOS_OBJ_ID **end         = helper_refs + num_entries;
 
+        assert( ! kos_gc_active(ctx));
         assert(ctx->helper_ref_count == 0);
 
         do {
@@ -1097,6 +1115,7 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
             uint8_t          num_tracked;
             KOS_OBJ_ID     **ptr;
 
+            assert( ! kos_gc_active(ctx));
             assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
 
             helper_refs = &ctx->helper_refs[0];
@@ -1130,6 +1149,7 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int push_status)
         KOS_OBJ_ID local_refs = ctx->local_refs;
         unsigned   num_tracked;
 
+        assert( ! kos_gc_active(ctx));
         assert( ! IS_BAD_PTR(local_refs));
         assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
 
@@ -1163,6 +1183,7 @@ void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
     uint32_t i;
     uint32_t end;
 
+    assert( ! kos_gc_active(ctx));
     assert(num_entries > 0);
     assert((size_t)(ctx->tmp_ref_count + num_entries) <=
            sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]));
@@ -1186,6 +1207,7 @@ void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
 
 void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries)
 {
+    assert( ! kos_gc_active(ctx));
     assert(num_entries > 0 && (unsigned)num_entries <= ctx->tmp_ref_count);
 
     ctx->tmp_ref_count -= num_entries;

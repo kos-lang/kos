@@ -235,10 +235,6 @@ typedef struct KOS_LOCAL_REFS_S {
     KOS_OBJ_ID           *refs[64 - 3];
 } KOS_LOCAL_REFS;
 
-void kos_lock_gc(KOS_CONTEXT ctx);
-
-void kos_unlock_gc(KOS_CONTEXT ctx);
-
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
 
 void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries);

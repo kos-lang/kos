@@ -50,4 +50,8 @@ void kos_trigger_mad_gc(KOS_CONTEXT ctx);
 #define kos_trigger_mad_gc(ctx) ((void)0)
 #endif
 
+#if !defined(NDEBUG) || defined(CONFIG_MAD_GC)
+int kos_gc_active(KOS_CONTEXT ctx);
+#endif
+
 #endif

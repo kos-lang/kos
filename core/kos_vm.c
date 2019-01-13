@@ -2440,6 +2440,8 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             case INSTR_JUMP: { /* <delta.int32> */
+                KOS_help_gc(ctx);
+
                 delta = 5 + (int32_t)_load_32(bytecode+1);
 #ifdef CONFIG_FUZZ
                 if (delta < 5)
@@ -2453,6 +2455,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 const unsigned rsrc = bytecode[5];
 
                 assert(rsrc < num_regs);
+
+                KOS_help_gc(ctx);
 
                 delta = 6;
 
@@ -2470,6 +2474,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 const unsigned rsrc = bytecode[5];
 
                 assert(rsrc < num_regs);
+
+                KOS_help_gc(ctx);
 
                 delta = 6;
 

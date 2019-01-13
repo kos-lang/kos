@@ -677,7 +677,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                 if (oldval != CLOSED) {
 
                     /* If this is a dynamic property, throw it */
-                    if ( ! IS_BAD_PTR(oldval)  &&
+                    if ( ! IS_BAD_PTR(oldval) &&
                         GET_OBJ_TYPE(oldval) == OBJ_DYNAMIC_PROP &&
                         value != TOMBSTONE) {
 
