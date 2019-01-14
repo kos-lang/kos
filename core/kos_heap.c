@@ -1148,6 +1148,8 @@ static void set_mark_state(KOS_OBJ_ID            obj_id,
     }
 }
 
+/* TODO Explore returning the number of objects turned to gray.
+ *      This could help get rid of the last gray-to-black pass. */
 static void mark_children_gray(KOS_OBJ_ID obj_id)
 {
     switch (READ_OBJ_TYPE(obj_id)) {
