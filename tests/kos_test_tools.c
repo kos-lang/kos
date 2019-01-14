@@ -121,8 +121,12 @@ int join_thread(KOS_CONTEXT ctx,
             return KOS_ERROR_EXCEPTION;
         }
 
+        KOS_suspend_context(ctx);
+
         WaitForSingleObject(thread->thread_handle, INFINITE);
         CloseHandle(thread->thread_handle);
+
+        KOS_resume_context(ctx);
 
         if ( ! IS_BAD_PTR(thread->exception)) {
             KOS_raise_exception(ctx, thread->exception);
@@ -205,7 +209,11 @@ int join_thread(KOS_CONTEXT ctx,
             return KOS_ERROR_EXCEPTION;
         }
 
+        KOS_suspend_context(ctx);
+
         pthread_join(thread->thread_handle, &ret);
+
+        KOS_resume_context(ctx);
 
         if (ret) {
             KOS_raise_exception(ctx, (KOS_OBJ_ID)ret);
