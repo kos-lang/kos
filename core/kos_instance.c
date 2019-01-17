@@ -477,13 +477,9 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     *out_ctx = ctx;
 
-#ifdef CONFIG_MAD_GC /* TODO always enable automatic GC */
-    /* Enable automatic GC */
-    inst->flags = 0;
-#endif
-
-    /* Set user flags */
-    inst->flags |= flags;
+    /* Set user flags.
+     * Also, enable automatic GC unless disabled by user */
+    inst->flags = flags;
 
 cleanup:
     if (error) {

@@ -42,7 +42,7 @@
 #elif defined(CONFIG_MAD_GC)
 #   define KOS_MAX_HEAP_SIZE   (16U * 1024U * 1024U)
 #else
-#   define KOS_MAX_HEAP_SIZE   (1024U * 1024U * 1024U)
+#   define KOS_MAX_HEAP_SIZE   (64U * 1024U * 1024U)
 #endif
 
 #endif
