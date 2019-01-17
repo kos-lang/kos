@@ -66,6 +66,7 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
                 break;
             }
 
+            KOS_help_gc(ctx);
             kos_yield();
         }
         if (stage == ~0U)
