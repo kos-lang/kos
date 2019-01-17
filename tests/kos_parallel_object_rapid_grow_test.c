@@ -109,8 +109,10 @@ static void _read_props(KOS_CONTEXT ctx,
                         void       *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
-    while (!KOS_atomic_read_u32(test->test->go))
-        KOS_atomic_full_barrier();
+    while (!KOS_atomic_read_u32(test->test->go)) {
+        KOS_help_gc(ctx);
+        kos_yield();
+    }
     if (_read_props_inner(ctx, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
 }

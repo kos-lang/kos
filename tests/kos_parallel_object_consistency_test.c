@@ -53,8 +53,10 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
     const int         first_prop = data->first_prop;
     int               i;
 
-    while ( ! KOS_atomic_read_u32(test->go))
-        KOS_atomic_full_barrier();
+    while ( ! KOS_atomic_read_u32(test->go)) {
+        KOS_help_gc(ctx);
+        kos_yield();
+    }
 
     for (i = 0; i < test->num_loops; i++) {
         const int rnd_num   = (int)kos_rng_random_range(&data->rng, ((unsigned)test->num_props / 4U) - 1U);

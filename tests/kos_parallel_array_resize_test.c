@@ -66,7 +66,7 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
                 break;
             }
 
-            kos_yield();
+            KOS_help_gc(ctx);
         }
         if (stage == ~0U)
             break;
@@ -138,7 +138,6 @@ int main(void)
         THREAD             *threads         = 0;
         int                 num_threads     = 0;
         int                 num_idcs;
-        KOS_OBJ_ID          obj;
         int                 i_loop;
         int                 i;
 
@@ -149,8 +148,13 @@ int main(void)
 
         num_idcs = num_threads * max_idcs_per_th;
 
-        obj = KOS_new_array(ctx, (uint32_t)num_idcs);
-        TEST( ! IS_BAD_PTR(obj));
+        data.object = KOS_new_array(ctx, (uint32_t)num_idcs);
+        TEST( ! IS_BAD_PTR(data.object));
+
+        {
+            int pushed = 0;
+            TEST(KOS_push_locals(ctx, &pushed, 1, &data.object) == KOS_SUCCESS);
+        }
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
@@ -166,7 +170,6 @@ int main(void)
         }
 
         data.inst     = &inst;
-        data.object   = obj;
         data.num_idcs = max_idcs_per_th;
         data.stage    = 0U;
         data.done     = 0U;
@@ -179,7 +182,7 @@ int main(void)
             KOS_atomic_add_i32(data.stage, 1);
 
             do {
-                TEST(kos_array_copy_storage(ctx, obj) == KOS_SUCCESS);
+                TEST(kos_array_copy_storage(ctx, data.object) == KOS_SUCCESS);
                 kos_yield();
             } while (KOS_atomic_read_u32(data.done) != (uint32_t)num_threads);
 
@@ -188,7 +191,7 @@ int main(void)
             TEST( ! data.error);
 
             for (i = 0; i < num_idcs; i++) {
-                KOS_OBJ_ID value = KOS_array_read(ctx, obj, i);
+                KOS_OBJ_ID value = KOS_array_read(ctx, data.object, i);
                 TEST_NO_EXCEPTION();
                 TEST(value == TO_SMALL_INT(-i));
             }

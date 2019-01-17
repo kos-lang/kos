@@ -54,7 +54,6 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
 
     for (;;) {
 
-        KOS_OBJ_ID object;
         int        i_prop;
         const int  first_prop = data->first_prop;
         const int  end_prop   = first_prop + test->num_props;
@@ -72,44 +71,42 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
         if (stage == ~0U)
             break;
 
-        object = test->object;
-
         for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
             const KOS_OBJ_ID key   = test->prop_names[i_prop];
             const KOS_OBJ_ID value = TO_SMALL_INT(i_prop);
 
-            TEST(KOS_set_property(ctx, object, key, value) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, test->object, key, value) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
             const KOS_OBJ_ID key      = test->prop_names[i_prop-1];
             const KOS_OBJ_ID expected = TO_SMALL_INT(i_prop-1);
-            const KOS_OBJ_ID actual   = KOS_get_property(ctx, object, key);
+            const KOS_OBJ_ID actual   = KOS_get_property(ctx, test->object, key);
             const KOS_OBJ_ID new_val  = TO_SMALL_INT(-(i_prop-1));
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
 
-            TEST(KOS_set_property(ctx, object, key, new_val) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, test->object, key, new_val) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
             const KOS_OBJ_ID key      = test->prop_names[i_prop];
             const KOS_OBJ_ID expected = TO_SMALL_INT(-i_prop);
-            const KOS_OBJ_ID actual   = KOS_get_property(ctx, object, key);
+            const KOS_OBJ_ID actual   = KOS_get_property(ctx, test->object, key);
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
 
-            TEST(KOS_delete_property(ctx, object, key) == KOS_SUCCESS);
+            TEST(KOS_delete_property(ctx, test->object, key) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
             const KOS_OBJ_ID key   = test->prop_names[i_prop-1];
-            const KOS_OBJ_ID value = KOS_get_property(ctx, object, key);
+            const KOS_OBJ_ID value = KOS_get_property(ctx, test->object, key);
 
             TEST(IS_BAD_PTR(value));
             TEST_EXCEPTION();
@@ -154,11 +151,16 @@ int main(void)
         int                 num_props;
         KOS_OBJ_ID         *props;
         struct KOS_RNG      rng;
-        KOS_OBJ_ID          obj              = KOS_new_object(ctx);
         int                 i_loop;
         int                 i;
 
-        TEST( ! IS_BAD_PTR(obj));
+        data.object = KOS_new_object(ctx);
+        TEST( ! IS_BAD_PTR(data.object));
+
+        {
+            int pushed = 0;
+            TEST(KOS_push_locals(ctx, &pushed, 1, &data.object) == KOS_SUCCESS);
+        }
 
         num_threads = num_cpus;
 
@@ -187,6 +189,7 @@ int main(void)
         for (i = 0; i < num_props; i++) {
             char     buf[8];
             unsigned k;
+            int      pushed = 0;
 
             for (k = 0; k < sizeof(buf); k++) {
                 if (k + 4U < sizeof(buf))
@@ -197,10 +200,11 @@ int main(void)
 
             props[i] = KOS_new_string(ctx, buf, sizeof(buf));
             TEST( ! IS_BAD_PTR(props[i]));
+
+            TEST(KOS_push_locals(ctx, &pushed, 1, &props[i]) == KOS_SUCCESS);
         }
 
         data.inst       = &inst;
-        data.object     = obj;
         data.prop_names = props;
         data.num_props  = max_props_per_th;
         data.stage      = 0U;
@@ -218,7 +222,7 @@ int main(void)
 
             do {
                 if (copies_left-- > 0)
-                    TEST(kos_object_copy_prop_table(ctx, obj) == KOS_SUCCESS);
+                    TEST(kos_object_copy_prop_table(ctx, data.object) == KOS_SUCCESS);
                 kos_yield();
             } while (KOS_atomic_read_u32(data.done) != (uint32_t)num_threads);
 
@@ -227,7 +231,7 @@ int main(void)
             TEST( ! data.error);
 
             for (i = 0; i < num_props; i++) {
-                KOS_OBJ_ID value = KOS_get_property(ctx, obj, props[i]);
+                KOS_OBJ_ID value = KOS_get_property(ctx, data.object, props[i]);
                 TEST(IS_BAD_PTR(value));
                 TEST_EXCEPTION();
             }

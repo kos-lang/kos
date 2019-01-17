@@ -51,8 +51,10 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
     struct TEST_DATA *test = data->test;
     int               i;
 
-    while ( ! KOS_atomic_read_u32(test->go))
-        KOS_atomic_full_barrier();
+    while ( ! KOS_atomic_read_u32(test->go)) {
+        KOS_help_gc(ctx);
+        kos_yield();
+    }
 
     for (i = 0; i < test->num_loops; i++) {
         const unsigned action = (unsigned)kos_rng_random_range(&data->rng, 4);

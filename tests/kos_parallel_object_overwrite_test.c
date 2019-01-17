@@ -126,19 +126,26 @@ int main(void)
         KOS_VECTOR          mem_buf;
         THREAD             *threads     = 0;
         int                 num_threads = 0;
-        KOS_OBJ_ID          o           = KOS_new_object(ctx);
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
         int                 i;
 
+        KOS_OBJ_ID props[4] = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
+        data.object = KOS_BADPTR;
+        {
+            int pushed = 0;
+            TEST(KOS_push_locals(ctx, &pushed, 5, &data.object,
+                                 &props[0], &props[1], &props[2], &props[3]) == KOS_SUCCESS);
+        }
+
         /* These strings cause lots of collisions in the hash table */
-        KOS_OBJ_ID props[4];
         props[0] = KOS_new_const_ascii_string(ctx, "\x00", 1);
         props[1] = KOS_new_const_ascii_string(ctx, "\x80", 1);
         props[2] = KOS_new_const_ascii_string(ctx, "\x01", 1);
         props[3] = KOS_new_const_ascii_string(ctx, "\x80", 1);
 
-        TEST(!IS_BAD_PTR(o));
+        data.object = KOS_new_object(ctx);
+        TEST(!IS_BAD_PTR(data.object));
 
         num_threads = num_cpus;
 
@@ -153,7 +160,6 @@ int main(void)
         threads        = (THREAD *)(thread_cookies + num_threads);
 
         data.inst       = &inst;
-        data.object     = o;
         data.prop_names = props;
         data.num_props  = sizeof(props)/sizeof(props[0]);
         data.num_loops  = 1000000;
@@ -183,7 +189,7 @@ int main(void)
         TEST(data.error == KOS_SUCCESS);
 
         for (i = 0; i < (int)(sizeof(props)/sizeof(props[0])); i++) {
-            KOS_OBJ_ID value = KOS_get_property(ctx, o, props[i]);
+            KOS_OBJ_ID value = KOS_get_property(ctx, data.object, props[i]);
             if (IS_BAD_PTR(value)) {
                 TEST(KOS_is_exception_pending(ctx));
                 KOS_clear_exception(ctx);
