@@ -159,6 +159,7 @@ int kos_heap_init(KOS_INSTANCE *inst)
     KOS_atomic_write_u32(heap->gc_state, GC_INACTIVE);
     heap->heap_size      = 0;
     heap->used_size      = 0;
+    heap->max_size       = KOS_MAX_HEAP_SIZE;
     heap->gc_threshold   = KOS_GC_STEP;
     heap->free_pages     = 0;
     heap->non_full_pages = 0;
@@ -433,7 +434,7 @@ static KOS_POOL *alloc_pool(KOS_HEAP *heap,
     KOS_POOL *pool_hdr;
     uint8_t  *pool;
 
-    if (heap->heap_size + alloc_size > KOS_MAX_HEAP_SIZE)
+    if (heap->heap_size + alloc_size > heap->max_size)
         return 0;
 
     pool = (uint8_t *)kos_malloc_aligned(alloc_size, (size_t)KOS_PAGE_SIZE);
@@ -538,7 +539,7 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
 
 #ifdef CONFIG_MAD_GC
     if ( ! page && KOS_atomic_read_u32(heap->gc_state) == GC_INACTIVE &&
-        (heap->heap_size + KOS_POOL_SIZE > KOS_MAX_HEAP_SIZE))
+        (heap->heap_size + KOS_POOL_SIZE > heap->max_size))
 
         page = unlock_one_page(heap);
 #endif
