@@ -142,7 +142,11 @@ int main(void)
     /************************************************************************/
     /* This test writes and deletes unique properties from multiple threads, checking for consistency */
     {
+#ifdef CONFIG_MAD_GC
+        const int           num_loops        = 1;
+#else
         const int           num_loops        = 1000 / (num_cpus > 100 ? 100 : num_cpus);
+#endif
         const int           max_props_per_th = 100;
         KOS_VECTOR          mem_buf;
         struct THREAD_DATA *thread_cookies;
