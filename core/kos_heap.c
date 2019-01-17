@@ -188,7 +188,8 @@ int kos_heap_init(KOS_INSTANCE *inst)
 #if !defined(NDEBUG) || defined(CONFIG_MAD_GC)
 int kos_gc_active(KOS_CONTEXT ctx)
 {
-    return KOS_atomic_read_u32(get_heap(ctx)->gc_state) >= GC_MARK;
+    return KOS_atomic_read_u32(ctx->gc_state) != GC_INACTIVE ||
+           KOS_atomic_read_u32(get_heap(ctx)->gc_state) >= GC_MARK;
 }
 #endif
 
@@ -674,6 +675,8 @@ static void release_current_page_locked(KOS_CONTEXT ctx)
             KOS_atomic_release_barrier();
         }
 
+        assert(KOS_atomic_read_u32(page->num_used) == 0U);
+
         gc_trace(("release cur page %p ctx=%p\n", (void *)page, (void *)ctx));
 
         PUSH_LIST(heap->non_full_pages, page);
@@ -737,6 +740,7 @@ static KOS_OBJ_HEADER *setup_huge_object_in_page(KOS_HEAP *heap,
     PUSH_LIST(heap->full_pages, page);
 
     assert(page->num_slots > KOS_SLOTS_PER_PAGE);
+    assert(KOS_atomic_read_u32(page->num_used) == 0U);
 
     heap->used_size += full_page_size(page);
 
@@ -819,6 +823,8 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
                 page->num_slots = num_slots;
 
+                KOS_atomic_write_u32(page->num_used, 0U);
+
                 hdr = setup_huge_object_in_page(heap, page, object_type, size);
 
                 assert((uint8_t *)hdr + size <= (uint8_t *)page + accum);
@@ -845,6 +851,8 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
             page->num_slots = (pool->alloc_size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
 
             assert((page->num_slots << KOS_OBJ_ALIGN_BITS) >= size);
+
+            KOS_atomic_write_u32(page->num_used, 0U);
 
             hdr = setup_huge_object_in_page(heap,
                                             page,
@@ -1331,6 +1339,7 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
             ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
         }
 
+        assert(num_slots_used <= KOS_atomic_read_u32(page->num_allocated));
         assert(num_slots_used >= KOS_atomic_read_u32(page->num_used));
 
         KOS_atomic_write_u32(page->num_used, num_slots_used);
@@ -2197,12 +2206,12 @@ static void update_gc_threshold(KOS_HEAP *heap)
 static void help_gc(KOS_CONTEXT ctx)
 {
     KOS_HEAP *const heap    = get_heap(ctx);
-    int             engaged = 0;
+    int             engaged = KOS_atomic_read_u32(ctx->gc_state) == GC_ENGAGED;
     enum GC_STATE_E gc_state;
 
     gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(heap->gc_state);
 
-    if (gc_state == GC_INACTIVE)
+    if (gc_state == GC_INACTIVE && ! engaged)
         return;
 
     kos_heap_release_thread_page(ctx);
@@ -2292,15 +2301,15 @@ void KOS_resume_context(KOS_CONTEXT ctx)
 
     kos_lock_mutex(&ctx->inst->threads.mutex);
 
-    KOS_atomic_write_u32(ctx->gc_state, GC_INACTIVE);
+    gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(get_heap(ctx)->gc_state);
+
+    KOS_atomic_write_u32(ctx->gc_state, gc_state == GC_INIT ? GC_INACTIVE : GC_ENGAGED);
 
     KOS_atomic_full_barrier();
 
-    gc_state = (enum GC_STATE_E)KOS_atomic_read_u32(get_heap(ctx)->gc_state);
-
     kos_unlock_mutex(&ctx->inst->threads.mutex);
 
-    if (gc_state >= GC_INIT)
+    if (gc_state != GC_INIT)
         help_gc(ctx);
 }
 

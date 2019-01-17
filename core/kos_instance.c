@@ -196,8 +196,10 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 {
     int error;
 
-    ctx->inst     = inst;
-    ctx->cur_page = 0;
+    ctx->inst             = inst;
+    ctx->cur_page         = 0;
+    ctx->tmp_ref_count    = 0;
+    ctx->helper_ref_count = 0;
 
     KOS_suspend_context(ctx);
 
