@@ -139,6 +139,11 @@ int main(void)
 
     TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
+#ifdef CONFIG_MAD_GC
+    /* Mad GC needs a bigger heap */
+    inst.heap.max_size *= 2U;
+#endif
+
     /************************************************************************/
     /* This test writes and deletes unique properties from multiple threads, checking for consistency */
     {

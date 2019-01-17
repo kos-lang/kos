@@ -126,10 +126,19 @@ int main(void)
 
     TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
+#ifdef CONFIG_MAD_GC
+    /* Mad GC needs a bigger heap */
+    inst.heap.max_size *= 2U;
+#endif
+
     /************************************************************************/
     /* This test writes and deletes unique properties from multiple threads, checking for consistency */
     {
+#ifdef CONFIG_MAD_GC
+        const int           num_loops        = 8;
+#else
         const int           num_loops        = 1024;
+#endif
         const int           num_thread_loops = 3;
         const int           max_props_per_th = 16;
         KOS_VECTOR          mem_buf;
