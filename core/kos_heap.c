@@ -347,8 +347,6 @@ enum KOS_WALK_STAGE_E {
 
 static KOS_PAGE *get_pages_head(KOS_HEAP *heap)
 {
-    KOS_atomic_write_u32(heap->walk_active, 0U);
-
     if (heap->non_full_pages) {
         KOS_atomic_write_u32(heap->walk_stage, WALK_NON_FULL);
         return heap->non_full_pages;
@@ -359,8 +357,7 @@ static KOS_PAGE *get_pages_head(KOS_HEAP *heap)
 }
 
 static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
-                               KOS_ATOMIC(KOS_PAGE *) *page_ptr,
-                               KOS_PAGE               *prev_page)
+                               KOS_ATOMIC(KOS_PAGE *) *page_ptr)
 {
     KOS_PAGE *page = 0;
 
@@ -410,18 +407,27 @@ static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
         kos_unlock_mutex(&heap->mutex);
     }
 
-    if (page && ! prev_page)
-        KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&heap->walk_active, 1);
-
-    if (prev_page && ! page)
-        KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&heap->walk_active, -1);
-
     return page;
+}
+
+static KOS_PAGE *begin_page_walk(KOS_HEAP               *heap,
+                                 KOS_ATOMIC(KOS_PAGE *) *page_ptr)
+{
+    KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&heap->walk_active, 1);
+
+    return get_next_page(heap, page_ptr);
+}
+
+static void end_page_walk(KOS_HEAP *heap)
+{
+    assert(KOS_atomic_read_u32(heap->walk_active) > 0U);
+
+    KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&heap->walk_active, -1);
 }
 
 static void wait_for_walk_end(KOS_HEAP *heap)
 {
-    KOS_atomic_release_barrier();
+    KOS_atomic_acquire_barrier();
     while (KOS_atomic_read_u32(*(KOS_ATOMIC(uint32_t) *)&heap->walk_active)) {
         kos_yield();
         KOS_atomic_acquire_barrier();
@@ -1305,9 +1311,9 @@ static void mark_object_black(KOS_OBJ_ID obj_id)
 static void gray_to_black_in_pages(KOS_HEAP *heap)
 {
     int32_t   marked = 0;
-    KOS_PAGE *page   = get_next_page(heap, &heap->gray_pages, 0);
+    KOS_PAGE *page   = begin_page_walk(heap, &heap->gray_pages);
 
-    for ( ; page; page = get_next_page(heap, &heap->gray_pages, page)) {
+    for ( ; page; page = get_next_page(heap, &heap->gray_pages)) {
 
         uint32_t num_slots_used = 0;
 
@@ -1347,6 +1353,8 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
     }
 
     KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&heap->gray_marked, marked);
+
+    end_page_walk(heap);
 }
 
 static uint32_t gray_to_black(KOS_HEAP *heap)
@@ -1901,9 +1909,9 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
 static void update_pages_after_evacuation(KOS_HEAP *heap)
 {
-    KOS_PAGE *page = get_next_page(heap, &heap->update_pages, 0);
+    KOS_PAGE *page = begin_page_walk(heap, &heap->update_pages);
 
-    for ( ; page; page = get_next_page(heap, &heap->update_pages, page)) {
+    for ( ; page; page = get_next_page(heap, &heap->update_pages)) {
 
         uint8_t       *ptr = (uint8_t *)page + KOS_SLOTS_OFFS;
         uint8_t *const end = ptr + (get_num_active_slots(page) << KOS_OBJ_ALIGN_BITS);
@@ -1918,6 +1926,8 @@ static void update_pages_after_evacuation(KOS_HEAP *heap)
             ptr += size;
         }
     }
+
+    end_page_walk(heap);
 }
 
 static void update_after_evacuation(KOS_CONTEXT ctx)
@@ -1976,6 +1986,7 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
         uint32_t i;
 
         assert(KOS_atomic_read_u32(ctx->gc_state) != GC_INACTIVE);
+        assert(!ctx->cur_page);
 
         update_child_ptr(&ctx->exception);
         update_child_ptr(&ctx->retval);
