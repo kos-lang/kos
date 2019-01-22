@@ -67,7 +67,6 @@ CFLAGS  ?=
 LDFLAGS ?=
 CONFIG_DEBUG ?= 0
 CONFIG_NATIVE ?= 0
-CFLAGS += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(CONFIG_DEBUG), 0)
@@ -106,6 +105,7 @@ ifeq ($(UNAME), Windows)
 else
     ifeq ($(CONFIG_DEBUG), 0)
         CFLAGS += -O3 -DNDEBUG -ffunction-sections -fdata-sections
+        CFLAGS += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
         STRIP  ?= strip
         ifeq ($(UNAME), Linux)
             LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
