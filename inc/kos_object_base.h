@@ -444,11 +444,18 @@ static inline KOS_OBJ_ID KOS_atomic_read_relaxed_obj(KOS_ATOMIC(KOS_OBJ_ID)& src
     return (KOS_OBJ_ID)KOS_atomic_read_relaxed_ptr(src);
 }
 
+static inline KOS_OBJ_ID KOS_atomic_read_acquire_obj(KOS_ATOMIC(KOS_OBJ_ID)& src)
+{
+    return (KOS_OBJ_ID)KOS_atomic_read_acquire_ptr(src);
+}
+
 #else
 
 #define KOS_get_bool(obj_id) ((obj_id) == KOS_TRUE)
 
 #define KOS_atomic_read_relaxed_obj(src) ((KOS_OBJ_ID)KOS_atomic_read_relaxed_ptr(src))
+
+#define KOS_atomic_read_acquire_obj(src) ((KOS_OBJ_ID)KOS_atomic_read_acquire_ptr(src))
 
 #endif
 

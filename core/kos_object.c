@@ -178,10 +178,7 @@ static int _is_key_equal(KOS_OBJ_ID key,
 
 static KOS_OBJ_ID _read_props(KOS_ATOMIC(KOS_OBJ_ID) *ptr)
 {
-    const KOS_OBJ_ID obj_id = KOS_atomic_read_relaxed_obj(*ptr);
-    /* TODO use read with acquire semantics */
-    KOS_atomic_acquire_barrier();
-    return obj_id;
+    return KOS_atomic_read_acquire_obj(*ptr);
 }
 
 static int _salvage_item(KOS_CONTEXT ctx,

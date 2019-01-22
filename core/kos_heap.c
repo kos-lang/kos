@@ -427,11 +427,8 @@ static void end_page_walk(KOS_HEAP *heap)
 
 static void wait_for_walk_end(KOS_HEAP *heap)
 {
-    KOS_atomic_acquire_barrier();
-    while (KOS_atomic_read_relaxed_u32(*(KOS_ATOMIC(uint32_t) *)&heap->walk_active)) {
+    while (KOS_atomic_read_acquire_u32(*(KOS_ATOMIC(uint32_t) *)&heap->walk_active))
         kos_yield();
-        KOS_atomic_acquire_barrier();
-    }
 }
 
 static KOS_POOL *alloc_pool(KOS_HEAP *heap,
@@ -2262,17 +2259,14 @@ static void help_gc(KOS_CONTEXT ctx)
 
             default:
                 if ( ! engaged) {
-                    KOS_atomic_release_barrier();
-                    KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_ENGAGED);
+                    KOS_atomic_write_release_u32(ctx->gc_state, GC_ENGAGED);
                     engaged = 1;
                 }
                 kos_yield();
                 break;
         }
 
-        KOS_atomic_acquire_barrier();
-
-        gc_state = (enum GC_STATE_E)KOS_atomic_read_relaxed_u32(heap->gc_state);
+        gc_state = (enum GC_STATE_E)KOS_atomic_read_acquire_u32(heap->gc_state);
     }
 }
 
@@ -2315,9 +2309,7 @@ void KOS_resume_context(KOS_CONTEXT ctx)
 
     gc_state = (enum GC_STATE_E)KOS_atomic_read_relaxed_u32(get_heap(ctx)->gc_state);
 
-    KOS_atomic_write_relaxed_u32(ctx->gc_state, gc_state == GC_INIT ? GC_INACTIVE : GC_ENGAGED);
-
-    KOS_atomic_full_barrier();
+    KOS_atomic_write_release_u32(ctx->gc_state, gc_state == GC_INIT ? GC_INACTIVE : GC_ENGAGED);
 
     kos_unlock_mutex(&ctx->inst->threads.mutex);
 
@@ -2373,8 +2365,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     mark_roots(ctx);
 
-    KOS_atomic_release_barrier();
-    KOS_atomic_write_relaxed_u32(heap->gc_state, GC_MARK);
+    KOS_atomic_write_release_u32(heap->gc_state, GC_MARK);
 
     kos_unlock_mutex(&ctx->inst->threads.mutex);
 
@@ -2384,13 +2375,11 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     /***********************************************************************/
     /* Phase 3: Evacuate */
 
-    KOS_atomic_release_barrier();
-    KOS_atomic_write_relaxed_u32(heap->gc_state, GC_EVACUATE);
+    KOS_atomic_write_release_u32(heap->gc_state, GC_EVACUATE);
 
     error = evacuate(ctx, &free_pages, &stats);
 
-    KOS_atomic_release_barrier();
-    KOS_atomic_write_relaxed_u32(heap->gc_state, GC_UPDATE);
+    KOS_atomic_write_release_u32(heap->gc_state, GC_UPDATE);
 
     update_after_evacuation(ctx);
 
@@ -2412,8 +2401,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_INACTIVE);
 
-    KOS_atomic_release_barrier();
-    KOS_atomic_write_relaxed_u32(heap->gc_state, GC_INACTIVE);
+    KOS_atomic_write_release_u32(heap->gc_state, GC_INACTIVE);
 
     if ( ! error && KOS_is_exception_pending(ctx))
         error = KOS_ERROR_EXCEPTION;

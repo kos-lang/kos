@@ -67,11 +67,8 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
     }
 #endif
 
-    if (data) {
-        /* TODO use write with release semantics */
-        KOS_atomic_release_barrier();
-        KOS_atomic_write_relaxed_u32(data->capacity, capacity);
-    }
+    if (data)
+        KOS_atomic_write_release_u32(data->capacity, capacity);
 
     return data;
 }
@@ -100,12 +97,9 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
 
             kos_untrack_refs(ctx, 1);
 
-            if (data) {
-                /* TODO use write with release semantics */
-                KOS_atomic_release_barrier();
-                KOS_atomic_write_relaxed_ptr(OBJPTR(BUFFER, obj_id)->data,
-                                     OBJID(BUFFER_STORAGE, data));
-            }
+            if (data)
+                KOS_atomic_write_release_ptr(OBJPTR(BUFFER, obj_id)->data,
+                                             OBJID(BUFFER_STORAGE, data));
             else
                 obj_id = KOS_BADPTR;
         }
@@ -116,17 +110,13 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
 
 static KOS_BUFFER_STORAGE *_get_data(KOS_OBJ_ID obj_id)
 {
-    const KOS_OBJ_ID buf_obj = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data);
-    /* TODO use read with acquire semantics */
-    KOS_atomic_acquire_barrier();
+    const KOS_OBJ_ID buf_obj = KOS_atomic_read_acquire_obj(OBJPTR(BUFFER, obj_id)->data);
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(BUFFER_STORAGE, buf_obj);
 }
 
 static KOS_OBJ_ID get_storage(KOS_OBJ_ID obj_id)
 {
-    const KOS_OBJ_ID storage_obj = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data);
-    /* TODO use read with acquire semantics */
-    KOS_atomic_acquire_barrier();
+    const KOS_OBJ_ID storage_obj = KOS_atomic_read_acquire_obj(OBJPTR(BUFFER, obj_id)->data);
     return storage_obj;
 }
 

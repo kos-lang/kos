@@ -162,14 +162,12 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
 static KOS_ARRAY_STORAGE *_get_data(KOS_OBJ_ID obj_id)
 {
     const KOS_OBJ_ID buf_obj = kos_get_array_storage(obj_id);
-    /* TODO use read with acquire semantics */
-    KOS_atomic_acquire_barrier();
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
 }
 
 static KOS_ARRAY_STORAGE *_get_next(KOS_ARRAY_STORAGE *storage)
 {
-    const KOS_OBJ_ID buf_obj = KOS_atomic_read_relaxed_obj(storage->next);
+    const KOS_OBJ_ID buf_obj = KOS_atomic_read_acquire_obj(storage->next);
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
 }
 
