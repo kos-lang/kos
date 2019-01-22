@@ -323,8 +323,8 @@ static KOS_OBJ_ID alloc_empty_array(KOS_CONTEXT  ctx,
     if (IS_BAD_PTR(obj_id))
         return KOS_BADPTR;
 
-    KOS_atomic_write_u32(OBJPTR(ARRAY, obj_id)->size, 0U);
-    KOS_atomic_write_ptr(OBJPTR(ARRAY, obj_id)->data, KOS_BADPTR);
+    KOS_atomic_write_relaxed_u32(OBJPTR(ARRAY, obj_id)->size, 0U);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY, obj_id)->data, KOS_BADPTR);
 
     *num_objs   = 1;
     *total_size = get_obj_size(obj_id);
@@ -343,9 +343,9 @@ static int verify_array(KOS_OBJ_ID obj_id)
     v = kos_get_array_storage(obj_id);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_ARRAY_STORAGE);
-    TEST(KOS_atomic_read_u32(OBJPTR(ARRAY_STORAGE, v)->capacity) == 1);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY_STORAGE, v)->capacity) == 1);
 
-    v = KOS_atomic_read_obj(OBJPTR(ARRAY_STORAGE, v)->buf[0]);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, v)->buf[0]);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 43);
@@ -367,13 +367,13 @@ static KOS_OBJ_ID alloc_array(KOS_CONTEXT  ctx,
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    KOS_atomic_write_u32(OBJPTR(ARRAY, obj_id[0])->size, 1U);
-    KOS_atomic_write_ptr(OBJPTR(ARRAY, obj_id[0])->data, obj_id[1]);
+    KOS_atomic_write_relaxed_u32(OBJPTR(ARRAY, obj_id[0])->size, 1U);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY, obj_id[0])->data, obj_id[1]);
 
-    KOS_atomic_write_u32(OBJPTR(ARRAY_STORAGE, obj_id[1])->capacity,       1U);
-    KOS_atomic_write_u32(OBJPTR(ARRAY_STORAGE, obj_id[1])->num_slots_open, 0U);
-    KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, obj_id[1])->next,           KOS_BADPTR);
-    KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, obj_id[1])->buf[0],         obj_id[2]);
+    KOS_atomic_write_relaxed_u32(OBJPTR(ARRAY_STORAGE, obj_id[1])->capacity,       1U);
+    KOS_atomic_write_relaxed_u32(OBJPTR(ARRAY_STORAGE, obj_id[1])->num_slots_open, 0U);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY_STORAGE, obj_id[1])->next,           KOS_BADPTR);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY_STORAGE, obj_id[1])->buf[0],         obj_id[2]);
 
     OBJPTR(INTEGER, obj_id[2])->value = 43;
 
@@ -388,7 +388,7 @@ static int verify_empty_buffer(KOS_OBJ_ID obj_id)
 {
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
     TEST(KOS_get_buffer_size(obj_id) == 0);
-    TEST(IS_BAD_PTR(KOS_atomic_read_obj(OBJPTR(BUFFER, obj_id)->data)));
+    TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data)));
     return 0;
 }
 
@@ -402,8 +402,8 @@ static KOS_OBJ_ID alloc_empty_buffer(KOS_CONTEXT  ctx,
     if (IS_BAD_PTR(obj_id))
         return KOS_BADPTR;
 
-    KOS_atomic_write_u32(OBJPTR(BUFFER, obj_id)->size, 0U);
-    KOS_atomic_write_ptr(OBJPTR(BUFFER, obj_id)->data, KOS_BADPTR);
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id)->size, 0U);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(BUFFER, obj_id)->data, KOS_BADPTR);
 
     *num_objs   = 1;
     *total_size = get_obj_size(obj_id);
@@ -421,10 +421,10 @@ static int verify_buffer(KOS_OBJ_ID obj_id)
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
     TEST(KOS_get_buffer_size(obj_id) == sizeof(buffer_test));
 
-    v = KOS_atomic_read_obj(OBJPTR(BUFFER, obj_id)->data);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_BUFFER_STORAGE);
-    TEST(KOS_atomic_read_u32(OBJPTR(BUFFER_STORAGE, v)->capacity) == sizeof(buffer_test));
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER_STORAGE, v)->capacity) == sizeof(buffer_test));
 
     TEST(memcmp(&OBJPTR(BUFFER_STORAGE, v)->buf[0], buffer_test, sizeof(buffer_test)) == 0);
     return 0;
@@ -444,10 +444,10 @@ static KOS_OBJ_ID alloc_buffer(KOS_CONTEXT  ctx,
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    KOS_atomic_write_u32(OBJPTR(BUFFER, obj_id[0])->size, (uint32_t)sizeof(buffer_test));
-    KOS_atomic_write_ptr(OBJPTR(BUFFER, obj_id[0])->data, obj_id[1]);
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id[0])->size, (uint32_t)sizeof(buffer_test));
+    KOS_atomic_write_relaxed_ptr(OBJPTR(BUFFER, obj_id[0])->data, obj_id[1]);
 
-    KOS_atomic_write_u32(OBJPTR(BUFFER_STORAGE, obj_id[1])->capacity, (uint32_t)sizeof(buffer_test));
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER_STORAGE, obj_id[1])->capacity, (uint32_t)sizeof(buffer_test));
     memcpy(&OBJPTR(BUFFER_STORAGE, obj_id[1])->buf[0], buffer_test, sizeof(buffer_test));
 
     *num_objs   = NELEMS(obj_id);
@@ -460,7 +460,7 @@ static KOS_OBJ_ID alloc_buffer(KOS_CONTEXT  ctx,
 static int verify_empty_object(KOS_OBJ_ID obj_id)
 {
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
-    TEST(IS_BAD_PTR(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->props)));
+    TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props)));
     TEST(IS_BAD_PTR(OBJPTR(OBJECT, obj_id)->prototype));
     TEST(KOS_object_get_private_ptr(obj_id) == 0);
     return 0;
@@ -492,7 +492,7 @@ static int verify_object(KOS_OBJ_ID obj_id)
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
-    v = KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->priv);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->priv);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 44);
@@ -502,18 +502,18 @@ static int verify_object(KOS_OBJ_ID obj_id)
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 45);
 
-    v = KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->props);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_OBJECT_STORAGE);
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, v)->capacity)       == 4);
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, v)->num_slots_used) == 1);
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, v)->num_slots_open) == 0);
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, v)->active_copies)  == 0);
-    TEST(IS_BAD_PTR(KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, v)->new_prop_table)));
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, v)->capacity)       == 4);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, v)->num_slots_used) == 1);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, v)->num_slots_open) == 0);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, v)->active_copies)  == 0);
+    TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, v)->new_prop_table)));
 
     for (i = 0; i < 4; i++) {
-        const KOS_OBJ_ID key   = KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, v)->items[i].key);
-        const KOS_OBJ_ID value = KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, v)->items[i].value);
+        const KOS_OBJ_ID key   = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, v)->items[i].key);
+        const KOS_OBJ_ID value = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, v)->items[i].value);
         const uint32_t   hash  = OBJPTR(OBJECT_STORAGE, v)->items[i].hash.hash;
 
         TEST(hash == i);
@@ -557,27 +557,27 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
         return KOS_BADPTR;
 
     kos_init_object(OBJPTR(OBJECT, obj_id[0]), obj_id[3]);
-    KOS_atomic_write_ptr(OBJPTR(OBJECT, obj_id[0])->props, obj_id[1]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT, obj_id[0])->props, obj_id[1]);
     KOS_object_set_private(obj_id[0], obj_id[2]);
 
-    KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->capacity,       4);
-    KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->num_slots_used, 1);
-    KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->num_slots_open, 0);
-    KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->active_copies,  0);
-    KOS_atomic_write_ptr(OBJPTR(OBJECT_STORAGE, obj_id[1])->new_prop_table, KOS_BADPTR);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->capacity,       4);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->num_slots_used, 1);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->num_slots_open, 0);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->active_copies,  0);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[1])->new_prop_table, KOS_BADPTR);
 
     for (i = 0; i < 4; i++) {
         KOS_PITEM *item = &OBJPTR(OBJECT_STORAGE, obj_id[1])->items[i];
 
-        KOS_atomic_write_u32(item->hash.hash, i);
+        KOS_atomic_write_relaxed_u32(item->hash.hash, i);
 
         if (i == 2) {
-            KOS_atomic_write_ptr(item->key,   obj_id[5]);
-            KOS_atomic_write_ptr(item->value, obj_id[4]);
+            KOS_atomic_write_relaxed_ptr(item->key,   obj_id[5]);
+            KOS_atomic_write_relaxed_ptr(item->value, obj_id[4]);
         }
         else {
-            KOS_atomic_write_ptr(item->key,   KOS_BADPTR);
-            KOS_atomic_write_ptr(item->value, KOS_BADPTR);
+            KOS_atomic_write_relaxed_ptr(item->key,   KOS_BADPTR);
+            KOS_atomic_write_relaxed_ptr(item->value, KOS_BADPTR);
         }
     }
 
@@ -604,7 +604,7 @@ static void finalize_47(KOS_CONTEXT ctx, KOS_OBJ_ID priv)
 static int verify_finalize(KOS_OBJ_ID obj_id)
 {
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
-    TEST(IS_BAD_PTR(KOS_atomic_read_obj(OBJPTR(OBJECT, obj_id)->props)));
+    TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props)));
     TEST(IS_BAD_PTR(OBJPTR(OBJECT, obj_id)->prototype));
     TEST(KOS_object_get_private_ptr(obj_id) != 0);
     return 0;
@@ -746,21 +746,21 @@ static int verify_class(KOS_OBJ_ID obj_id)
 
     TEST(OBJPTR(CLASS, obj_id)->handler == &handler);
 
-    v = KOS_atomic_read_obj(OBJPTR(CLASS, obj_id)->prototype);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->prototype);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 55);
 
-    v = KOS_atomic_read_obj(OBJPTR(CLASS, obj_id)->props);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_OBJECT_STORAGE);
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, v)->capacity)       == 1);
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, v)->num_slots_used) == 0);
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, v)->num_slots_open) == 0);
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_STORAGE, v)->active_copies)  == 0);
-    TEST(IS_BAD_PTR(KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, v)->new_prop_table)));
-    TEST(IS_BAD_PTR(KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, v)->items[0].key)));
-    TEST(IS_BAD_PTR(KOS_atomic_read_obj(OBJPTR(OBJECT_STORAGE, v)->items[0].value)));
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, v)->capacity)       == 1);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, v)->num_slots_used) == 0);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, v)->num_slots_open) == 0);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, v)->active_copies)  == 0);
+    TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, v)->new_prop_table)));
+    TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, v)->items[0].key)));
+    TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, v)->items[0].value)));
 
     return 0;
 }
@@ -792,21 +792,21 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
     OBJPTR(CLASS, obj_id[0])->module          = obj_id[1];
     OBJPTR(CLASS, obj_id[0])->closures        = obj_id[2];
     OBJPTR(CLASS, obj_id[0])->defaults        = obj_id[3];
-    KOS_atomic_write_ptr(OBJPTR(CLASS, obj_id[0])->prototype, obj_id[4]);
-    KOS_atomic_write_ptr(OBJPTR(CLASS, obj_id[0])->props,     obj_id[5]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->prototype, obj_id[4]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->props,     obj_id[5]);
 
     OBJPTR(INTEGER, obj_id[1])->value = 52;
     OBJPTR(INTEGER, obj_id[2])->value = 53;
     OBJPTR(INTEGER, obj_id[3])->value = 54;
     OBJPTR(INTEGER, obj_id[4])->value = 55;
 
-    KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->capacity,       1);
-    KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->num_slots_used, 0);
-    KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->num_slots_open, 0);
-    KOS_atomic_write_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->active_copies,  0);
-    KOS_atomic_write_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->new_prop_table, KOS_BADPTR);
-    KOS_atomic_write_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->items[0].key,   KOS_BADPTR);
-    KOS_atomic_write_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->items[0].value, KOS_BADPTR);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->capacity,       1);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->num_slots_used, 0);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->num_slots_open, 0);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->active_copies,  0);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->new_prop_table, KOS_BADPTR);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->items[0].key,   KOS_BADPTR);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->items[0].value, KOS_BADPTR);
 
     *num_objs   = NELEMS(obj_id);
     *total_size = get_obj_sizes(obj_id, NELEMS(obj_id));
@@ -908,7 +908,7 @@ static int verify_object_walk(KOS_OBJ_ID obj_id)
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT_WALK);
 
-    TEST(KOS_atomic_read_u32(OBJPTR(OBJECT_WALK, obj_id)->index) == 58);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_WALK, obj_id)->index) == 58);
 
     v = OBJPTR(OBJECT_WALK, obj_id)->obj;
     TEST( ! IS_BAD_PTR(v));
@@ -920,12 +920,12 @@ static int verify_object_walk(KOS_OBJ_ID obj_id)
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 60);
 
-    v = KOS_atomic_read_obj(OBJPTR(OBJECT_WALK, obj_id)->last_key);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_WALK, obj_id)->last_key);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 61);
 
-    v = KOS_atomic_read_obj(OBJPTR(OBJECT_WALK, obj_id)->last_value);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_WALK, obj_id)->last_value);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 62);
@@ -952,9 +952,9 @@ static KOS_OBJ_ID alloc_object_walk(KOS_CONTEXT  ctx,
 
     OBJPTR(OBJECT_WALK, obj_id[0])->obj       = obj_id[1];
     OBJPTR(OBJECT_WALK, obj_id[0])->key_table = obj_id[2];
-    KOS_atomic_write_u32(OBJPTR(OBJECT_WALK, obj_id[0])->index,      58);
-    KOS_atomic_write_ptr(OBJPTR(OBJECT_WALK, obj_id[0])->last_key,   obj_id[3]);
-    KOS_atomic_write_ptr(OBJPTR(OBJECT_WALK, obj_id[0])->last_value, obj_id[4]);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_WALK, obj_id[0])->index,      58);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_WALK, obj_id[0])->last_key,   obj_id[3]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_WALK, obj_id[0])->last_value, obj_id[4]);
 
     OBJPTR(INTEGER, obj_id[1])->value = 59;
     OBJPTR(INTEGER, obj_id[2])->value = 60;
@@ -1062,11 +1062,11 @@ static int verify_stack(KOS_OBJ_ID obj_id)
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_STACK);
     TEST(OBJPTR(STACK, obj_id)->capacity == 4);
-    TEST(KOS_atomic_read_u32(OBJPTR(STACK, obj_id)->size) == 4);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, obj_id)->size) == 4);
 
     for (i = 0; i < 4; i++)
     {
-        const KOS_OBJ_ID v = KOS_atomic_read_obj(OBJPTR(STACK, obj_id)->buf[i]);
+        const KOS_OBJ_ID v = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, obj_id)->buf[i]);
 
         TEST( ! IS_BAD_PTR(v));
         TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
@@ -1094,11 +1094,11 @@ static KOS_OBJ_ID alloc_stack(KOS_CONTEXT  ctx,
         return KOS_BADPTR;
 
     OBJPTR(STACK, obj_id[0])->capacity = 4;
-    KOS_atomic_write_u32(OBJPTR(STACK, obj_id[0])->size,   4);
-    KOS_atomic_write_ptr(OBJPTR(STACK, obj_id[0])->buf[0], obj_id[1]);
-    KOS_atomic_write_ptr(OBJPTR(STACK, obj_id[0])->buf[1], obj_id[2]);
-    KOS_atomic_write_ptr(OBJPTR(STACK, obj_id[0])->buf[2], obj_id[3]);
-    KOS_atomic_write_ptr(OBJPTR(STACK, obj_id[0])->buf[3], obj_id[4]);
+    KOS_atomic_write_relaxed_u32(OBJPTR(STACK, obj_id[0])->size,   4);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, obj_id[0])->buf[0], obj_id[1]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, obj_id[0])->buf[1], obj_id[2]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, obj_id[0])->buf[2], obj_id[3]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, obj_id[0])->buf[3], obj_id[4]);
 
     OBJPTR(INTEGER, obj_id[1])->value = 69;
     OBJPTR(INTEGER, obj_id[2])->value = 70;

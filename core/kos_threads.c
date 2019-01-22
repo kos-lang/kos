@@ -62,7 +62,7 @@ void kos_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
         dest += ptr_count - 1;
 
         do {
-            KOS_atomic_write_ptr(*dest, KOS_atomic_read_ptr(*src));
+            KOS_atomic_write_relaxed_ptr(*dest, KOS_atomic_read_relaxed_ptr(*src));
             --src;
             --dest;
         }
@@ -72,7 +72,7 @@ void kos_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
         KOS_ATOMIC(void *) *const end = src + ptr_count;
 
         do {
-            KOS_atomic_write_ptr(*dest, KOS_atomic_read_ptr(*src));
+            KOS_atomic_write_relaxed_ptr(*dest, KOS_atomic_read_relaxed_ptr(*src));
             ++src;
             ++dest;
         }

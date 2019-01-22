@@ -233,7 +233,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
 
         for (i = 0; i < length; i++) {
 
-            const KOS_OBJ_ID elem = KOS_atomic_read_obj(OBJPTR(ARRAY_STORAGE, codes)->buf[i]);
+            const KOS_OBJ_ID elem = KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, codes)->buf[i]);
             int64_t          code;
 
             if ( ! IS_NUMERIC_OBJ(elem))
@@ -274,7 +274,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
             for (i = 0; i < length; i++) {
 
                 int64_t          code;
-                const KOS_OBJ_ID elem = KOS_atomic_read_obj(
+                const KOS_OBJ_ID elem = KOS_atomic_read_relaxed_obj(
                                         OBJPTR(ARRAY_STORAGE, codes)->buf[i]);
 
                 TRY(KOS_get_integer(ctx, elem, &code));
@@ -289,7 +289,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
             for (i = 0; i < length; i++) {
 
                 int64_t          code;
-                const KOS_OBJ_ID elem = KOS_atomic_read_obj(
+                const KOS_OBJ_ID elem = KOS_atomic_read_relaxed_obj(
                                         OBJPTR(ARRAY_STORAGE, codes)->buf[i]);
 
                 TRY(KOS_get_integer(ctx, elem, &code));
@@ -306,7 +306,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
             for (i = 0; i < length; i++) {
 
                 int64_t          code;
-                const KOS_OBJ_ID elem = KOS_atomic_read_obj(
+                const KOS_OBJ_ID elem = KOS_atomic_read_relaxed_obj(
                                         OBJPTR(ARRAY_STORAGE, codes)->buf[i]);
 
                 TRY(KOS_get_integer(ctx, elem, &code));
@@ -347,7 +347,7 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
 
     size = end - begin;
 
-    utf8_buf = KOS_atomic_read_obj(OBJPTR(BUFFER, utf8_buf)->data);
+    utf8_buf = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, utf8_buf)->data);
 
     length = kos_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                               size, KOS_UTF8_NO_ESCAPE, &max_code);
@@ -514,7 +514,7 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
     assert( ! IS_BAD_PTR(obj_id));
     assert(GET_OBJ_TYPE(obj_id) == OBJ_STRING);
 
-    hash = KOS_atomic_read_u32(str->header.hash);
+    hash = KOS_atomic_read_relaxed_u32(str->header.hash);
 
     if (!hash) {
 
@@ -558,7 +558,7 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
 
         assert(hash);
 
-        KOS_atomic_write_u32(str->header.hash, hash);
+        KOS_atomic_write_relaxed_u32(str->header.hash, hash);
     }
 
     return hash;

@@ -1532,11 +1532,11 @@ static KOS_OBJ_ID _expand_for_sort(KOS_CONTEXT ctx,
 
     while (i < size) {
 
-        val = KOS_atomic_read_obj(OBJPTR(ARRAY_STORAGE, src)->buf[i]);
+        val = KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, src)->buf[i]);
 
         if (key_func == KOS_VOID) {
-            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest],     val);
-            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 1], TO_SMALL_INT(i));
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest],     val);
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 1], TO_SMALL_INT(i));
         }
         else {
             KOS_OBJ_ID key;
@@ -1545,9 +1545,9 @@ static KOS_OBJ_ID _expand_for_sort(KOS_CONTEXT ctx,
             key = KOS_call_function(ctx, key_func, KOS_VOID, key_args);
             TRY_OBJID(key);
 
-            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest],     key);
-            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 1], TO_SMALL_INT(i));
-            KOS_atomic_write_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 2], val);
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest],     key);
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 1], TO_SMALL_INT(i));
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ARRAY_STORAGE, dest)->buf[i_dest + 2], val);
         }
 
         ++i;
@@ -1586,8 +1586,8 @@ static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
                         int                     step,
                         int                     reverse)
 {
-    const KOS_OBJ_ID pivot_key = KOS_atomic_read_obj(*(end - step));
-    const KOS_OBJ_ID pivot_idx = KOS_atomic_read_obj(*(end - step + 1));
+    const KOS_OBJ_ID pivot_key = KOS_atomic_read_relaxed_obj(*(end - step));
+    const KOS_OBJ_ID pivot_idx = KOS_atomic_read_relaxed_obj(*(end - step + 1));
 
     KOS_ATOMIC(KOS_OBJ_ID)  *mid = begin - step;
     KOS_ATOMIC(KOS_OBJ_ID)  *p   = begin;
@@ -1597,24 +1597,24 @@ static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
     end -= step;
 
     while (p < end) {
-        const KOS_OBJ_ID key = KOS_atomic_read_obj(p[0]);
-        const KOS_OBJ_ID idx = KOS_atomic_read_obj(p[1]);
+        const KOS_OBJ_ID key = KOS_atomic_read_relaxed_obj(p[0]);
+        const KOS_OBJ_ID idx = KOS_atomic_read_relaxed_obj(p[1]);
 
         if (_is_less_for_sort(key, idx, lt, gt, pivot_key, pivot_idx)) {
 
             mid += step;
 
-            KOS_atomic_write_ptr(p[0], KOS_atomic_read_obj(mid[0]));
-            KOS_atomic_write_ptr(p[1], KOS_atomic_read_obj(mid[1]));
+            KOS_atomic_write_relaxed_ptr(p[0], KOS_atomic_read_relaxed_obj(mid[0]));
+            KOS_atomic_write_relaxed_ptr(p[1], KOS_atomic_read_relaxed_obj(mid[1]));
 
-            KOS_atomic_write_ptr(mid[0], key);
-            KOS_atomic_write_ptr(mid[1], idx);
+            KOS_atomic_write_relaxed_ptr(mid[0], key);
+            KOS_atomic_write_relaxed_ptr(mid[1], idx);
 
             if (step == 3) {
-                const KOS_OBJ_ID val = KOS_atomic_read_obj(p[2]);
+                const KOS_OBJ_ID val = KOS_atomic_read_relaxed_obj(p[2]);
 
-                KOS_atomic_write_ptr(p[2], KOS_atomic_read_obj(mid[2]));
-                KOS_atomic_write_ptr(mid[2], val);
+                KOS_atomic_write_relaxed_ptr(p[2], KOS_atomic_read_relaxed_obj(mid[2]));
+                KOS_atomic_write_relaxed_ptr(mid[2], val);
             }
         }
 
@@ -1624,21 +1624,21 @@ static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
     mid += step;
 
     {
-        const KOS_OBJ_ID key = KOS_atomic_read_obj(mid[0]);
-        const KOS_OBJ_ID idx = KOS_atomic_read_obj(mid[1]);
+        const KOS_OBJ_ID key = KOS_atomic_read_relaxed_obj(mid[0]);
+        const KOS_OBJ_ID idx = KOS_atomic_read_relaxed_obj(mid[1]);
 
         if (_is_less_for_sort(pivot_key, pivot_idx, lt, gt, key, idx)) {
-            KOS_atomic_write_ptr(end[0], key);
-            KOS_atomic_write_ptr(end[1], idx);
+            KOS_atomic_write_relaxed_ptr(end[0], key);
+            KOS_atomic_write_relaxed_ptr(end[1], idx);
 
-            KOS_atomic_write_ptr(mid[0], pivot_key);
-            KOS_atomic_write_ptr(mid[1], pivot_idx);
+            KOS_atomic_write_relaxed_ptr(mid[0], pivot_key);
+            KOS_atomic_write_relaxed_ptr(mid[1], pivot_idx);
 
             if (step == 3) {
-                const KOS_OBJ_ID pivot_val = KOS_atomic_read_obj(end[2]);
+                const KOS_OBJ_ID pivot_val = KOS_atomic_read_relaxed_obj(end[2]);
 
-                KOS_atomic_write_ptr(end[2], KOS_atomic_read_obj(mid[2]));
-                KOS_atomic_write_ptr(mid[2], pivot_val);
+                KOS_atomic_write_relaxed_ptr(end[2], KOS_atomic_read_relaxed_obj(mid[2]));
+                KOS_atomic_write_relaxed_ptr(mid[2], pivot_val);
             }
         }
     }
@@ -1673,8 +1673,8 @@ static void _copy_sort_results(KOS_CONTEXT ctx,
 
     while (src < src_end) {
 
-        const KOS_OBJ_ID val = KOS_atomic_read_obj(*src);
-        KOS_atomic_write_ptr(*dest, val);
+        const KOS_OBJ_ID val = KOS_atomic_read_relaxed_obj(*src);
+        KOS_atomic_write_relaxed_ptr(*dest, val);
 
         src += step;
         ++dest;

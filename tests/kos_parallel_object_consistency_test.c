@@ -53,7 +53,7 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
     const int         first_prop = data->first_prop;
     int               i;
 
-    while ( ! KOS_atomic_read_u32(test->go)) {
+    while ( ! KOS_atomic_read_relaxed_u32(test->go)) {
         KOS_help_gc(ctx);
         kos_yield();
     }
@@ -211,7 +211,7 @@ int main(void)
             for (i = 1; i < num_threads; i++)
                 TEST(create_thread(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
-            KOS_atomic_write_u32(data.go, 1);
+            KOS_atomic_write_relaxed_u32(data.go, 1);
             TEST(_run_test(ctx, thread_cookies) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 

@@ -1210,8 +1210,8 @@ static KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID                a,
 
     for ( ; a_buf < a_end; ++a_buf, ++b_buf) {
 
-        cmp = _compare(KOS_atomic_read_obj(*a_buf),
-                       KOS_atomic_read_obj(*b_buf),
+        cmp = _compare(KOS_atomic_read_relaxed_obj(*a_buf),
+                       KOS_atomic_read_relaxed_obj(*b_buf),
                        &this_ref);
 
         if (cmp)

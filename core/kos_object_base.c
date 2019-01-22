@@ -105,7 +105,7 @@ static KOS_OBJ_ID _get_prototype(KOS_CONTEXT ctx,
 
         KOS_CLASS *const func = OBJPTR(CLASS, this_obj);
 
-        ret = KOS_atomic_read_obj(func->prototype);
+        ret = KOS_atomic_read_relaxed_obj(func->prototype);
 
         assert( ! IS_BAD_PTR(ret));
     }
@@ -134,7 +134,7 @@ static KOS_OBJ_ID _set_prototype(KOS_CONTEXT ctx,
             const KOS_FUNCTION_HANDLER handler = OBJPTR(CLASS, this_obj)->handler;
 
             if ( ! handler) {
-                KOS_atomic_write_ptr(OBJPTR(CLASS, this_obj)->prototype, arg);
+                KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, this_obj)->prototype, arg);
                 ret = this_obj;
             }
             else
@@ -172,8 +172,8 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         OBJPTR(CLASS, func_obj)->defaults        = KOS_VOID;
         OBJPTR(CLASS, func_obj)->handler         = 0;
         OBJPTR(CLASS, func_obj)->instr_offs      = ~0U;
-        KOS_atomic_write_ptr(OBJPTR(CLASS, func_obj)->prototype, proto_obj);
-        KOS_atomic_write_ptr(OBJPTR(CLASS, func_obj)->props,     KOS_BADPTR);
+        KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func_obj)->prototype, proto_obj);
+        KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func_obj)->props,     KOS_BADPTR);
 
         error = KOS_set_builtin_dynamic_property(ctx,
                                                  func_obj,

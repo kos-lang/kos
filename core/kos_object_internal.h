@@ -81,21 +81,21 @@ typedef struct KOS_ARRAY_STORAGE_S {
 
 static inline KOS_ATOMIC(KOS_OBJ_ID) *kos_get_array_buffer(KOS_ARRAY *array)
 {
-    const KOS_OBJ_ID buf_obj = KOS_atomic_read_obj(array->data);
+    const KOS_OBJ_ID buf_obj = KOS_atomic_read_relaxed_obj(array->data);
     assert( ! IS_BAD_PTR(buf_obj));
     return &OBJPTR(ARRAY_STORAGE, buf_obj)->buf[0];
 }
 
 static inline KOS_OBJ_ID kos_get_array_storage(KOS_OBJ_ID obj_id)
 {
-    return KOS_atomic_read_obj(OBJPTR(ARRAY, obj_id)->data);
+    return KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY, obj_id)->data);
 }
 
 #else
 
-#define kos_get_array_buffer(array) (&OBJPTR(ARRAY_STORAGE, KOS_atomic_read_obj((array)->data))->buf[0])
+#define kos_get_array_buffer(array) (&OBJPTR(ARRAY_STORAGE, KOS_atomic_read_relaxed_obj((array)->data))->buf[0])
 
-#define kos_get_array_storage(obj_id) (KOS_atomic_read_obj(OBJPTR(ARRAY, (obj_id))->data))
+#define kos_get_array_storage(obj_id) (KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY, (obj_id))->data))
 
 #endif
 

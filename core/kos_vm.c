@@ -477,7 +477,7 @@ static uint32_t get_num_regs(KOS_OBJ_ID stack, uint32_t regs_idx)
     assert( ! IS_BAD_PTR(stack));
     assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
 
-    size = KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
     assert(regs_idx + 1U < size);
 
@@ -612,8 +612,8 @@ static int init_registers(KOS_CONTEXT ctx,
             src_buf += num_to_move - num_non_def_args;
 
             do
-                KOS_atomic_write_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++],
-                                     KOS_atomic_read_ptr(*(src_buf++)));
+                KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++],
+                                     KOS_atomic_read_relaxed_ptr(*(src_buf++)));
             while (src_buf < src_end);
         }
     }
@@ -672,13 +672,13 @@ static int init_registers(KOS_CONTEXT ctx,
             --pushed;
         }
 
-        KOS_atomic_write_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], rest_obj);
+        KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], rest_obj);
     }
 
     if ( ! IS_BAD_PTR(ellipsis_obj))
-        KOS_atomic_write_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], ellipsis_obj);
+        KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], ellipsis_obj);
 
-    KOS_atomic_write_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], this_obj);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], this_obj);
 
     assert( ! IS_BAD_PTR(OBJPTR(FUNCTION, func_obj)->closures));
 
@@ -697,8 +697,8 @@ static int init_registers(KOS_CONTEXT ctx,
         end     = src_buf + src_len;
 
         while (src_buf < end)
-            KOS_atomic_write_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++],
-                                 KOS_atomic_read_obj(*(src_buf++)));
+            KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++],
+                                 KOS_atomic_read_relaxed_obj(*(src_buf++)));
     }
     else {
         assert(GET_OBJ_TYPE(OBJPTR(FUNCTION, func_obj)->closures) == OBJ_VOID);
@@ -718,11 +718,11 @@ static void set_handler_reg(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
     assert(OBJPTR(STACK, stack)->header.flags & KOS_REENTRANT_STACK);
 
-    size = KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
 
-    assert(KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[size - 1]) == TO_SMALL_INT(1));
-    KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[size - 2], obj_id);
+    assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]) == TO_SMALL_INT(1));
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[size - 2], obj_id);
 }
 
 static KOS_OBJ_ID get_handler_reg(KOS_CONTEXT ctx)
@@ -733,12 +733,12 @@ static KOS_OBJ_ID get_handler_reg(KOS_CONTEXT ctx)
     assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
     assert(OBJPTR(STACK, stack)->header.flags & KOS_REENTRANT_STACK);
 
-    size = KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
 
-    assert(KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[size - 1]) == TO_SMALL_INT(1));
+    assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]) == TO_SMALL_INT(1));
 
-    return KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[size - 2]);
+    return KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 2]);
 }
 
 static void write_to_yield_reg(KOS_CONTEXT ctx,
@@ -749,7 +749,7 @@ static void write_to_yield_reg(KOS_CONTEXT ctx,
 
     assert(yield_reg < get_num_regs(stack, ctx->regs_idx));
 
-    KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[ctx->regs_idx + yield_reg], obj_id);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[ctx->regs_idx + yield_reg], obj_id);
 }
 
 static int _prepare_call(KOS_CONTEXT        ctx,
@@ -808,7 +808,7 @@ static int _prepare_call(KOS_CONTEXT        ctx,
         case KOS_CTOR:
             if (*this_obj == NEW_THIS) {
                 KOS_CLASS *const class_ptr = OBJPTR(CLASS, func_obj);
-                const KOS_OBJ_ID proto_obj = KOS_atomic_read_obj(class_ptr->prototype);
+                const KOS_OBJ_ID proto_obj = KOS_atomic_read_relaxed_obj(class_ptr->prototype);
                 assert( ! IS_BAD_PTR(proto_obj));
 
                 if (OBJPTR(FUNCTION, func_obj)->handler)
@@ -885,7 +885,7 @@ static int _prepare_call(KOS_CONTEXT        ctx,
                     KOS_OBJ_ID value;
 
                     if (IS_BAD_PTR(args_obj))
-                        value = num_args ? KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[regs_idx + rarg1]) : KOS_VOID;
+                        value = num_args ? KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[regs_idx + rarg1]) : KOS_VOID;
 
                     else {
 
@@ -1030,7 +1030,7 @@ static KOS_OBJ_ID _read_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
     assert(GET_OBJ_TYPE(objptr) == OBJ_STACK);
     assert(OBJPTR(STACK, objptr)->header.flags & KOS_REENTRANT_STACK);
 
-    size = KOS_atomic_read_u32(OBJPTR(STACK, objptr)->size);
+    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->size);
     assert(size >= 1 + KOS_STACK_EXTRA);
 
     if (idx < 0)
@@ -1043,7 +1043,7 @@ static KOS_OBJ_ID _read_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
         ret = KOS_VOID;
     }
     else
-        ret = KOS_atomic_read_obj(OBJPTR(STACK, objptr)->buf[idx]);
+        ret = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, objptr)->buf[idx]);
 
     return ret;
 }
@@ -1056,7 +1056,7 @@ static int _write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID 
     assert(GET_OBJ_TYPE(objptr) == OBJ_STACK);
     assert(OBJPTR(STACK, objptr)->header.flags & KOS_REENTRANT_STACK);
 
-    size = KOS_atomic_read_u32(OBJPTR(STACK, objptr)->size);
+    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->size);
     assert(size >= 1 + KOS_STACK_EXTRA);
 
     if (idx < 0)
@@ -1070,7 +1070,7 @@ static int _write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID 
         error = KOS_ERROR_EXCEPTION;
     }
     else
-        KOS_atomic_write_ptr(OBJPTR(STACK, objptr)->buf[idx], value);
+        KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, objptr)->buf[idx], value);
 
     return error;
 }
@@ -1084,12 +1084,12 @@ static void _set_closure_stack_size(KOS_CONTEXT ctx, unsigned closure_size)
     if (OBJPTR(STACK, stack)->header.flags & KOS_REENTRANT_STACK) {
 
         const uint32_t size     = closure_size + 1U + KOS_STACK_EXTRA;
-        const uint32_t old_size = KOS_atomic_read_u32(OBJPTR(STACK, stack)->size);
+        const uint32_t old_size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
 
         assert(size <= old_size);
 
-        KOS_atomic_write_u32(OBJPTR(STACK, stack)->size, size);
-        KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[size - 1], TO_SMALL_INT((int)closure_size));
+        KOS_atomic_write_relaxed_u32(OBJPTR(STACK, stack)->size, size);
+        KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[size - 1], TO_SMALL_INT((int)closure_size));
 
         ctx->stack_depth -= old_size - size;
     }
@@ -1122,7 +1122,7 @@ static int64_t load_instr_offs(KOS_OBJ_ID stack,
 
     assert(regs_idx >= 1);
 
-    instr_offs = KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[regs_idx - 1]);
+    instr_offs = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[regs_idx - 1]);
 
     assert(IS_SMALL_INT(instr_offs));
 
@@ -1133,7 +1133,7 @@ static void store_instr_offs(KOS_OBJ_ID stack,
                              uint32_t   regs_idx,
                              uint32_t   instr_offs)
 {
-    KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[regs_idx - 1],
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[regs_idx - 1],
                          TO_SMALL_INT((int64_t)instr_offs));
 }
 
@@ -1141,7 +1141,7 @@ static uint32_t get_catch(KOS_OBJ_ID stack,
                           uint32_t   regs_idx,
                           uint8_t   *catch_reg)
 {
-    const KOS_OBJ_ID catch_data_obj = KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[regs_idx - 2]);
+    const KOS_OBJ_ID catch_data_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[regs_idx - 2]);
     uint64_t         catch_data;
     uint32_t         catch_offs;
 
@@ -1162,7 +1162,7 @@ static void set_catch(KOS_OBJ_ID stack,
 {
     const uint64_t catch_data = (((uint64_t)catch_offs << 8) | catch_reg);
     assert(catch_offs < KOS_NO_CATCH);
-    KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[regs_idx - 2],
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[regs_idx - 2],
                          TO_SMALL_INT((intptr_t)(int64_t)catch_data));
 }
 
@@ -1170,7 +1170,7 @@ static void clear_catch(KOS_OBJ_ID stack,
                         uint32_t   regs_idx)
 {
     const intptr_t catch_data = KOS_NO_CATCH << 8;
-    KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[regs_idx - 2], TO_SMALL_INT(catch_data));
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[regs_idx - 2], TO_SMALL_INT(catch_data));
 }
 
 static uint32_t _load_32(const uint8_t *bytecode)
@@ -1181,8 +1181,8 @@ static uint32_t _load_32(const uint8_t *bytecode)
            ((uint32_t)bytecode[3] << 24);
 }
 
-#define REGISTER(reg) KOS_atomic_read_obj(OBJPTR(STACK, stack)->buf[regs_idx + (reg)])
-#define WRITE_REGISTER(reg, value) KOS_atomic_write_ptr(OBJPTR(STACK, stack)->buf[regs_idx + (reg)], (value))
+#define REGISTER(reg) KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[regs_idx + (reg)])
+#define WRITE_REGISTER(reg, value) KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[regs_idx + (reg)], (value))
 
 static int exec_function(KOS_CONTEXT ctx)
 {
@@ -1258,7 +1258,7 @@ static int exec_function(KOS_CONTEXT ctx)
                                                                 (uint32_t)value + 1U);
 
                     if ( ! IS_BAD_PTR(proto_obj))
-                        KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
+                        KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
                     else
                         out = KOS_BADPTR;
                 }
@@ -1283,7 +1283,7 @@ static int exec_function(KOS_CONTEXT ctx)
                                                                 value + 1);
 
                     if ( ! IS_BAD_PTR(proto_obj))
-                        KOS_atomic_write_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
+                        KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
                     else
                         out = KOS_BADPTR;
                 }
@@ -2424,7 +2424,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 if (GET_OBJ_TYPE(constr_obj) == OBJ_CLASS) {
                     KOS_CLASS *const constr    = OBJPTR(CLASS, constr_obj);
-                    KOS_OBJ_ID       proto_obj = KOS_atomic_read_obj(constr->prototype);
+                    KOS_OBJ_ID       proto_obj = KOS_atomic_read_relaxed_obj(constr->prototype);
 
                     assert( ! IS_BAD_PTR(proto_obj));
 

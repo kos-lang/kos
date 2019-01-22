@@ -87,7 +87,7 @@ int kos_seq_fail(void)
 
         kos_vector_destroy(&cstr);
 
-        KOS_atomic_write_u32(_kos_seq, 0);
+        KOS_atomic_write_relaxed_u32(_kos_seq, 0);
 
         _kos_seq_init = 1;
     }
@@ -532,15 +532,15 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
 
 #ifdef CONFIG_PERF
 #   define PERF_RATIO(a) do {                                             \
-        const uint32_t va = KOS_atomic_read_u32(_kos_perf.a##_success);   \
-        const uint32_t vb = KOS_atomic_read_u32(_kos_perf.a##_fail);      \
+        const uint32_t va = KOS_atomic_read_relaxed_u32(_kos_perf.a##_success);   \
+        const uint32_t vb = KOS_atomic_read_relaxed_u32(_kos_perf.a##_fail);      \
         uint32_t       total = va + vb;                                   \
         if (total == 0) total = 1;                                        \
         fprintf(stderr, "    " #a "\t%u / %u (%u%%)\n",                   \
                 va, total, va * 100 / total);                             \
     } while (0)
 #   define PERF_VALUE(a) do {                                             \
-        const uint32_t va = KOS_atomic_read_u32(_kos_perf.a);             \
+        const uint32_t va = KOS_atomic_read_relaxed_u32(_kos_perf.a);             \
         fprintf(stderr, "    " #a "\t%u\n", va);                          \
     } while (0)
     printf("Performance stats:\n");

@@ -77,24 +77,46 @@ static inline void KOS_atomic_release_barrier()
     std::atomic_thread_fence(std::memory_order_release);
 }
 
-static inline uint32_t KOS_atomic_read_u32(KOS_ATOMIC(uint32_t)& src)
+static inline uint32_t KOS_atomic_read_relaxed_u32(KOS_ATOMIC(uint32_t)& src)
+{
+    return src.load(std::memory_order_relaxed);
+}
+
+static inline uint32_t KOS_atomic_read_acquire_u32(KOS_ATOMIC(uint32_t)& src)
+{
+    return src.load(std::memory_order_acquire);
+}
+
+template<typename T>
+T* KOS_atomic_read_relaxed_ptr(KOS_ATOMIC(T*)& src)
 {
     return src.load(std::memory_order_relaxed);
 }
 
 template<typename T>
-T* KOS_atomic_read_ptr(KOS_ATOMIC(T*)& src)
+T* KOS_atomic_read_acquire_ptr(KOS_ATOMIC(T*)& src)
 {
-    return src.load(std::memory_order_relaxed);
+    return src.load(std::memory_order_acquire);
 }
 
-static inline void KOS_atomic_write_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t value)
+static inline void KOS_atomic_write_relaxed_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t value)
+{
+    dest.store(value, std::memory_order_relaxed);
+}
+
+static inline void KOS_atomic_write_release_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t value)
+{
+    dest.store(value, std::memory_order_release);
+}
+
+template<typename T>
+void KOS_atomic_write_relaxed_ptr(KOS_ATOMIC(T*)& dest, T* value)
 {
     dest.store(value, std::memory_order_relaxed);
 }
 
 template<typename T>
-void KOS_atomic_write_ptr(KOS_ATOMIC(T*)& dest, T* value)
+void KOS_atomic_write_release_ptr(KOS_ATOMIC(T*)& dest, T* value)
 {
     dest.store(value, std::memory_order_relaxed);
 }
@@ -143,13 +165,21 @@ T* KOS_atomic_swap_ptr(KOS_ATOMIC(T*)& dest, T* value)
 
 #define KOS_atomic_release_barrier() atomic_thread_fence(memory_order_release)
 
-#define KOS_atomic_read_u32(src) atomic_load_explicit(&(src), memory_order_relaxed)
+#define KOS_atomic_read_relaxed_u32(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
-#define KOS_atomic_read_ptr(src) atomic_load_explicit(&(src), memory_order_relaxed)
+#define KOS_atomic_read_acquire_u32(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
-#define KOS_atomic_write_u32(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
+#define KOS_atomic_read_relaxed_ptr(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
-#define KOS_atomic_write_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
+#define KOS_atomic_read_acquire_ptr(src) atomic_load_explicit(&(src), memory_order_relaxed)
+
+#define KOS_atomic_write_relaxed_u32(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
+
+#define KOS_atomic_write_release_u32(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
+
+#define KOS_atomic_write_relaxed_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
+
+#define KOS_atomic_write_release_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
 
 #define KOS_atomic_cas_u32(dest, oldv, newv) kos_atomic_cas_u32(&(dest), (oldv), (newv))
 
@@ -189,22 +219,36 @@ static inline int kos_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *ne
 #define KOS_atomic_full_barrier __faststorefence
 #elif defined(_M_IX86)
 #define KOS_atomic_full_barrier() do { volatile uint32_t barrier; __asm { xchg barrier, eax }; } while (0)
+#else
+#error "Atomic operations not implemented for this compiler or architecture"
 #endif
 
 #define KOS_atomic_acquire_barrier() KOS_atomic_full_barrier()
 
 #define KOS_atomic_release_barrier() KOS_atomic_full_barrier()
 
-#define KOS_atomic_read_u32(src) \
+#define KOS_atomic_read_relaxed_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
 
-#define KOS_atomic_read_ptr(src) \
+#define KOS_atomic_read_acquire_u32(src) \
+        (*(uint32_t volatile const *)(&(src)))
+
+#define KOS_atomic_read_relaxed_ptr(src) \
         (*(void *volatile const *)(&(src)))
 
-#define KOS_atomic_write_u32(dest, value) \
+#define KOS_atomic_read_acquire_ptr(src) \
+        (*(void *volatile const *)(&(src)))
+
+#define KOS_atomic_write_relaxed_u32(dest, value) \
         (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
 
-#define KOS_atomic_write_ptr(dest, value) \
+#define KOS_atomic_write_release_u32(dest, value) \
+        (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
+
+#define KOS_atomic_write_relaxed_ptr(dest, value) \
+        (*(void *volatile *)(&(dest)) = (void *)(value))
+
+#define KOS_atomic_write_release_ptr(dest, value) \
         (*(void *volatile *)(&(dest)) = (void *)(value))
 
 #define KOS_atomic_cas_u32(dest, oldv, newv) \
@@ -260,13 +304,21 @@ static inline int kos_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *ne
 
 #define KOS_atomic_release_barrier() __atomic_thread_fence(__ATOMIC_RELEASE)
 
-#define KOS_atomic_read_u32(src) __atomic_load_n(&(src), __ATOMIC_RELAXED)
+#define KOS_atomic_read_relaxed_u32(src) __atomic_load_n(&(src), __ATOMIC_RELAXED)
 
-#define KOS_atomic_read_ptr(src) __atomic_load_n(&(src), __ATOMIC_RELAXED)
+#define KOS_atomic_read_acquire_u32(src) __atomic_load_n(&(src), __ATOMIC_ACQUIRE)
 
-#define KOS_atomic_write_u32(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELAXED)
+#define KOS_atomic_read_relaxed_ptr(src) __atomic_load_n(&(src), __ATOMIC_RELAXED)
 
-#define KOS_atomic_write_ptr(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELAXED)
+#define KOS_atomic_read_acquire_ptr(src) __atomic_load_n(&(src), __ATOMIC_ACQUIRE)
+
+#define KOS_atomic_write_relaxed_u32(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELAXED)
+
+#define KOS_atomic_write_release_u32(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELEASE)
+
+#define KOS_atomic_write_relaxed_ptr(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELAXED)
+
+#define KOS_atomic_write_release_ptr(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELEASE)
 
 #define KOS_atomic_cas_u32(dest, oldv, newv) kos_atomic_cas_u32(&(dest), (oldv), (newv))
 
@@ -315,16 +367,28 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 
 #define KOS_atomic_release_barrier() KOS_atomic_full_barrier()
 
-#define KOS_atomic_read_u32(src) \
+#define KOS_atomic_read_relaxed_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
 
-#define KOS_atomic_read_ptr(src) \
+#define KOS_atomic_read_acquire_u32(src) \
+        (*(uint32_t volatile const *)(&(src)))
+
+#define KOS_atomic_read_relaxed_ptr(src) \
         (*(void *volatile const *)(&(src)))
 
-#define KOS_atomic_write_u32(dest, value) \
+#define KOS_atomic_read_acquire_ptr(src) \
+        (*(void *volatile const *)(&(src)))
+
+#define KOS_atomic_write_relaxed_u32(dest, value) \
         (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
 
-#define KOS_atomic_write_ptr(dest, value) \
+#define KOS_atomic_write_release_u32(dest, value) \
+        (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
+
+#define KOS_atomic_write_relaxed_ptr(dest, value) \
+        (*(void *volatile *)(&(dest)) = (void *)(value))
+
+#define KOS_atomic_write_release_ptr(dest, value) \
         (*(void *volatile *)(&(dest)) = (void *)(value))
 
 #define KOS_atomic_cas_u32(dest, oldv, newv)                     \
@@ -400,16 +464,28 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 
 #define KOS_atomic_release_barrier() KOS_atomic_full_barrier()
 
-#define KOS_atomic_read_u32(src) \
+#define KOS_atomic_read_relaxed_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
 
-#define KOS_atomic_read_ptr(src) \
+#define KOS_atomic_read_acquire_u32(src) \
+        (*(uint32_t volatile const *)(&(src)))
+
+#define KOS_atomic_read_relaxed_ptr(src) \
         (*(void *volatile const *)(&(src)))
 
-#define KOS_atomic_write_u32(dest, value) \
+#define KOS_atomic_read_acquire_ptr(src) \
+        (*(void *volatile const *)(&(src)))
+
+#define KOS_atomic_write_relaxed_u32(dest, value) \
         (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
 
-#define KOS_atomic_write_ptr(dest, value) \
+#define KOS_atomic_write_release_u32(dest, value) \
+        (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
+
+#define KOS_atomic_write_relaxed_ptr(dest, value) \
+        (*(void *volatile *)(&(dest)) = (void *)(value))
+
+#define KOS_atomic_write_release_ptr(dest, value) \
         (*(void *volatile *)(&(dest)) = (void *)(value))
 
 #define KOS_atomic_cas_u32(dest, oldv, newv)                     \

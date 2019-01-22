@@ -73,7 +73,7 @@ static void _write_props(KOS_CONTEXT ctx,
                          void       *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
-    while (!KOS_atomic_read_u32(test->test->go)) {
+    while (!KOS_atomic_read_relaxed_u32(test->test->go)) {
         KOS_help_gc(ctx);
         kos_yield();
     }
@@ -111,7 +111,7 @@ static void _read_props(KOS_CONTEXT ctx,
                         void       *cookie)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
-    while (!KOS_atomic_read_u32(test->test->go)) {
+    while (!KOS_atomic_read_relaxed_u32(test->test->go)) {
         KOS_help_gc(ctx);
         kos_yield();
     }
@@ -201,7 +201,7 @@ int main(void)
             }
 
             i = (int)kos_rng_random_range(&rng, 0x7FFFFFFF);
-            KOS_atomic_write_u32(data.go, 1);
+            KOS_atomic_write_relaxed_u32(data.go, 1);
             TEST(_write_props_inner(ctx, &data, (unsigned)i) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 

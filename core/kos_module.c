@@ -1832,7 +1832,7 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
                               func_obj,
                               0));
 
-    *ret_proto = KOS_atomic_read_obj(OBJPTR(CLASS, func_obj)->prototype);
+    *ret_proto = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, func_obj)->prototype);
     assert( ! IS_BAD_PTR(*ret_proto));
 
 cleanup:

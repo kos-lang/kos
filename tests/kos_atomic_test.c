@@ -42,63 +42,63 @@ int main(void)
     {
         KOS_ATOMIC(uint32_t) value;
         value = 0xCAFE;
-        TEST(KOS_atomic_read_u32(value) == 0xCAFE);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0xCAFE);
     }
 
     {
         KOS_ATOMIC(uint32_t) value;
         value = 0xBEEF;
-        KOS_atomic_write_u32(value, 0xFEED);
-        TEST(KOS_atomic_read_u32(value) == 0xFEED);
+        KOS_atomic_write_relaxed_u32(value, 0xFEED);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0xFEED);
     }
 
     {
         KOS_ATOMIC(void *) value;
         value = _ptr(0xCAFE);
-        TEST(KOS_atomic_read_ptr(value) == _ptr(0xCAFE));
+        TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xCAFE));
     }
 
     {
         KOS_ATOMIC(void *) value;
         value = _ptr(0xBEEF);
-        KOS_atomic_write_ptr(value, _ptr(0xFEED));
-        TEST(KOS_atomic_read_ptr(value) == _ptr(0xFEED));
+        KOS_atomic_write_relaxed_ptr(value, _ptr(0xFEED));
+        TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xFEED));
     }
 
     {
         KOS_ATOMIC(uint32_t) value;
         value = 0xBEAD;
         TEST( ! KOS_atomic_cas_u32(value, 0xC0DE, 0xFEED));
-        TEST(KOS_atomic_read_u32(value) == 0xBEAD);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0xBEAD);
         TEST(KOS_atomic_cas_u32(value, 0xBEAD, 0xFEED));
-        TEST(KOS_atomic_read_u32(value) == 0xFEED);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0xFEED);
     }
 
     {
         KOS_ATOMIC(void *) value;
         value = _ptr(0xBEAD);
         TEST( ! KOS_atomic_cas_ptr(value, _ptr(0xC0DE), _ptr(0xFEED)));
-        TEST(KOS_atomic_read_ptr(value) == _ptr(0xBEAD));
+        TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xBEAD));
         TEST(KOS_atomic_cas_ptr(value, _ptr(0xBEAD), _ptr(0xFEED)));
-        TEST(KOS_atomic_read_ptr(value) == _ptr(0xFEED));
+        TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xFEED));
     }
 
     {
         KOS_ATOMIC(uint32_t) value;
         value = 0xF00D;
         TEST(KOS_atomic_add_i32(value, 2) == 0xF00D);
-        TEST(KOS_atomic_read_u32(value) == 0xF00F);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0xF00F);
         TEST(KOS_atomic_add_i32(value, 0xEE0-2) == 0xF00F);
-        TEST(KOS_atomic_read_u32(value) == 0xFEED);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0xFEED);
     }
 
     {
         KOS_ATOMIC(uint32_t) value;
         value = 0xCAFE;
         TEST(KOS_atomic_swap_u32(value, 0xBEEF) == 0xCAFE);
-        TEST(KOS_atomic_read_u32(value) == 0xBEEF);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0xBEEF);
         TEST(KOS_atomic_swap_u32(value, 0xF00D) == 0xBEEF);
-        TEST(KOS_atomic_read_u32(value) ==  0xF00D);
+        TEST(KOS_atomic_read_relaxed_u32(value) ==  0xF00D);
     }
 
     /* Test if compare-and-swap is strong */
@@ -113,7 +113,7 @@ int main(void)
             uint32_t newv = (i & 1) ? 0xBEEFU : 0xFACEU;
 
             TEST(KOS_atomic_cas_u32(value, oldv, newv));
-            TEST(KOS_atomic_read_u32(value) == newv);
+            TEST(KOS_atomic_read_relaxed_u32(value) == newv);
         }
     }
 
@@ -129,7 +129,7 @@ int main(void)
             void *newv = (i & 1) ? (void *)0      : (void *)&value;
 
             TEST(KOS_atomic_cas_ptr(value, oldv, newv));
-            TEST(KOS_atomic_read_ptr(value) == newv);
+            TEST(KOS_atomic_read_relaxed_ptr(value) == newv);
         }
     }
 

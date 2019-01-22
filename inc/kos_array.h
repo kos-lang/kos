@@ -33,12 +33,12 @@ static inline uint32_t KOS_get_array_size(KOS_OBJ_ID obj_id)
 {
     assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
     KOS_ARRAY *const array = OBJPTR(ARRAY, obj_id);
-    return KOS_atomic_read_u32(array->size);
+    return KOS_atomic_read_relaxed_u32(array->size);
 }
 
 #else
 
-#define KOS_get_array_size(obj_id) (KOS_atomic_read_u32(OBJPTR(ARRAY, (obj_id))->size))
+#define KOS_get_array_size(obj_id) (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, (obj_id))->size))
 
 #endif
 
