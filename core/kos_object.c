@@ -195,7 +195,7 @@ static int _salvage_item(KOS_CONTEXT ctx,
     int            ret;
 
     /* Attempt to close an empty or deleted slot early */
-    if (KOS_atomic_cas_ptr(old_item->value, TOMBSTONE, CLOSED))
+    if (KOS_atomic_cas_strong_ptr(old_item->value, TOMBSTONE, CLOSED))
         return 1;
 
     value = KOS_atomic_read_relaxed_obj(old_item->value);
@@ -214,7 +214,7 @@ static int _salvage_item(KOS_CONTEXT ctx,
 
         new_item = OBJPTR(OBJECT_STORAGE, new_table)->items + idx;
 
-        if (KOS_atomic_cas_ptr(new_item->key, KOS_BADPTR, key)) {
+        if (KOS_atomic_cas_strong_ptr(new_item->key, KOS_BADPTR, key)) {
             KOS_atomic_write_relaxed_u32(new_item->hash.hash, hash);
             KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, new_table)->num_slots_used, 1);
             break;
@@ -231,7 +231,7 @@ static int _salvage_item(KOS_CONTEXT ctx,
     }
 
     /* Mark the value as reserved */
-    if ( ! KOS_atomic_cas_ptr(new_item->value, TOMBSTONE, RESERVED))
+    if ( ! KOS_atomic_cas_strong_ptr(new_item->value, TOMBSTONE, RESERVED))
         /* Another thread salvaged this slot */
         return 0;
 
@@ -250,7 +250,7 @@ static int _salvage_item(KOS_CONTEXT ctx,
 
     /* Store the value in the new table, unless another thread already
      * wrote something newer */
-    if (KOS_atomic_cas_ptr(new_item->value, RESERVED, value))
+    if (KOS_atomic_cas_strong_ptr(new_item->value, RESERVED, value))
         return ret;
 
     return ret;
@@ -304,7 +304,7 @@ static void _copy_table(KOS_CONTEXT ctx,
     }
 
     props = _get_properties(src_obj_id);
-    if (KOS_atomic_cas_ptr(*props, old_table, new_table)) {
+    if (KOS_atomic_cas_strong_ptr(*props, old_table, new_table)) {
 #ifndef NDEBUG
         for (i = 0; i < old_capacity; i++) {
             KOS_PITEM *item  = OBJPTR(OBJECT_STORAGE, old_table)->items + i;
@@ -385,7 +385,7 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
             }
 
             if ( ! IS_BAD_PTR(old_table)) {
-                if (KOS_atomic_cas_ptr(OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table,
+                if (KOS_atomic_cas_strong_ptr(OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table,
                                        KOS_BADPTR,
                                        new_table)) {
 
@@ -408,7 +408,7 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
             else {
                 KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
-                if ( ! KOS_atomic_cas_ptr(*props,
+                if ( ! KOS_atomic_cas_strong_ptr(*props,
                                           KOS_BADPTR,
                                           new_table)) {
                     /* Somebody already resized it */
@@ -634,7 +634,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                     }
 
                     /* Attempt to write the new key */
-                    if ( ! KOS_atomic_cas_ptr(cur_item->key, KOS_BADPTR, prop))
+                    if ( ! KOS_atomic_cas_strong_ptr(cur_item->key, KOS_BADPTR, prop))
                         /* Reprobe the slot if another thread has written a key */
                         continue;
 
@@ -684,7 +684,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                     }
 
                     /* It's OK if someone else wrote in the mean time */
-                    if ( ! KOS_atomic_cas_ptr(cur_item->value, oldval, value))
+                    if ( ! KOS_atomic_cas_strong_ptr(cur_item->value, oldval, value))
                         /* Re-read in case it was moved to the new table */
                         oldval = KOS_atomic_read_relaxed_obj(cur_item->value);
                 }

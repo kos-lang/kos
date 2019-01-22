@@ -159,7 +159,7 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
                 if (size)
                     memcpy(&buf->buf[0], &OBJPTR(BUFFER_STORAGE, old_buf)->buf[0], size);
 
-                (void)KOS_atomic_cas_ptr(OBJPTR(BUFFER, obj_id)->data,
+                (void)KOS_atomic_cas_strong_ptr(OBJPTR(BUFFER, obj_id)->data,
                                          old_buf,
                                          OBJID(BUFFER_STORAGE, buf));
             }
@@ -251,7 +251,7 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
                     return 0;
             }
 
-            if (KOS_atomic_cas_u32(OBJPTR(BUFFER, obj_id)->size, old_size, new_size)) {
+            if (KOS_atomic_cas_strong_u32(OBJPTR(BUFFER, obj_id)->size, old_size, new_size)) {
                 ret = KOS_buffer_data(obj_id) + old_size;
                 break;
             }

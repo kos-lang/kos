@@ -37,14 +37,24 @@ static const char str_err_join_self[] = "thread cannot join itself";
 static const char str_err_thread[]    = "failed to create thread";
 
 #ifdef KOS_GCC_ATOMIC_EXTENSION
-int kos_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
+int kos_atomic_cas_strong_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
-    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 }
 
-int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv)
+int kos_atomic_cas_weak_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
-    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+}
+
+int kos_atomic_cas_strong_ptr(void *volatile *dest, void *oldv, void *newv)
+{
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+}
+
+int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv)
+{
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 }
 #endif
 

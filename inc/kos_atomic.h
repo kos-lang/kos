@@ -121,15 +121,26 @@ void KOS_atomic_write_release_ptr(KOS_ATOMIC(T*)& dest, T* value)
     dest.store(value, std::memory_order_relaxed);
 }
 
-static inline bool KOS_atomic_cas_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t oldv, uint32_t newv)
+static inline bool KOS_atomic_cas_strong_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t oldv, uint32_t newv)
 {
-    return dest.compare_exchange_strong(oldv, newv);
+    return dest.compare_exchange_strong(oldv, newv, std::memory_order_seq_cst, std::memory_order_relaxed);
+}
+
+static inline bool KOS_atomic_cas_weak_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t oldv, uint32_t newv)
+{
+    return dest.compare_exchange_weak(oldv, newv, std::memory_order_seq_cst, std::memory_order_relaxed);
 }
 
 template<typename T>
-bool KOS_atomic_cas_ptr(KOS_ATOMIC(T*)& dest, T* oldv, T* newv)
+bool KOS_atomic_cas_strong_ptr(KOS_ATOMIC(T*)& dest, T* oldv, T* newv)
 {
-    return dest.compare_exchange_strong(oldv, newv);
+    return dest.compare_exchange_strong(oldv, newv, std::memory_order_seq_cst, std::memory_order_relaxed);
+}
+
+template<typename T>
+bool KOS_atomic_cas_weak_ptr(KOS_ATOMIC(T*)& dest, T* oldv, T* newv)
+{
+    return dest.compare_exchange_weak(oldv, newv, std::memory_order_seq_cst, std::memory_order_relaxed);
 }
 
 template<typename T>
@@ -181,18 +192,32 @@ T* KOS_atomic_swap_ptr(KOS_ATOMIC(T*)& dest, T* value)
 
 #define KOS_atomic_write_release_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
 
-#define KOS_atomic_cas_u32(dest, oldv, newv) kos_atomic_cas_u32(&(dest), (oldv), (newv))
+#define KOS_atomic_cas_strong_u32(dest, oldv, newv) kos_atomic_cas_strong_u32(&(dest), (oldv), (newv))
 
-static inline int kos_atomic_cas_u32(_Atomic(uint32_t) *dest, uint32_t oldv, uint32_t newv)
+static inline int kos_atomic_cas_strong_u32(_Atomic(uint32_t) *dest, uint32_t oldv, uint32_t newv)
 {
-    return atomic_compare_exchange_strong(dest, &oldv, newv);
+    return atomic_compare_exchange_strong_explicit(dest, &oldv, newv, memory_order_seq_cst, memory_order_relaxed);
 }
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv) kos_atomic_cas_ptr((_Atomic(void *) *)&(dest), (void *)(oldv), (void *)(newv))
+#define KOS_atomic_cas_weak_u32(dest, oldv, newv) kos_atomic_cas_weak_u32(&(dest), (oldv), (newv))
 
-static inline int kos_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *newv)
+static inline int kos_atomic_cas_weak_u32(_Atomic(uint32_t) *dest, uint32_t oldv, uint32_t newv)
 {
-    return atomic_compare_exchange_strong(dest, &oldv, newv);
+    return atomic_compare_exchange_weak_explicit(dest, &oldv, newv, memory_order_seq_cst, memory_order_relaxed);
+}
+
+#define KOS_atomic_cas_strong_ptr(dest, oldv, newv) kos_atomic_cas_strong_ptr((_Atomic(void *) *)&(dest), (void *)(oldv), (void *)(newv))
+
+static inline int kos_atomic_cas_strong_ptr(_Atomic(void *) *dest, void *oldv, void *newv)
+{
+    return atomic_compare_exchange_strong_explicit(dest, &oldv, newv, memory_order_seq_cst, memory_order_relaxed);
+}
+
+#define KOS_atomic_cas_weak_ptr(dest, oldv, newv) kos_atomic_cas_weak_ptr((_Atomic(void *) *)&(dest), (void *)(oldv), (void *)(newv))
+
+static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, void *newv)
+{
+    return atomic_compare_exchange_weak_explicit(dest, &oldv, newv, memory_order_seq_cst, memory_order_relaxed);
 }
 
 #define KOS_atomic_add_i32(dest, value) ((int32_t)atomic_fetch_add(&(dest), (value)))
@@ -251,22 +276,26 @@ static inline int kos_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *ne
 #define KOS_atomic_write_release_ptr(dest, value) \
         (*(void *volatile *)(&(dest)) = (void *)(value))
 
-#define KOS_atomic_cas_u32(dest, oldv, newv) \
+#define KOS_atomic_cas_strong_u32(dest, oldv, newv) \
         (_InterlockedCompareExchange((long volatile *)(&(dest)), \
                                      (long)(newv), \
                                      (long)(oldv)) == ((long)(oldv)))
 
+#define KOS_atomic_cas_weak_u32 KOS_atomic_cas_strong_u32
+
 #ifdef _M_AMD64
-#define KOS_atomic_cas_ptr(dest, oldv, newv) \
+#define KOS_atomic_cas_strong_ptr(dest, oldv, newv) \
          (_InterlockedCompareExchange64((int64_t volatile *)(intptr_t volatile *)(&(dest)), \
                                         (intptr_t)(newv), \
                                         (intptr_t)(oldv)) == (intptr_t)(oldv))
 #else
-#define KOS_atomic_cas_ptr(dest, oldv, newv) \
+#define KOS_atomic_cas_strong_ptr(dest, oldv, newv) \
          (_InterlockedCompareExchange((long volatile *)(&(dest)), \
                                       (long)(newv), \
                                       (long)(oldv)) == ((long)(oldv)))
 #endif
+
+#define KOS_atomic_cas_weak_ptr KOS_atomic_cas_strong_ptr
 
 #define KOS_atomic_add_i32(dest, value) \
         ((int32_t)_InterlockedExchangeAdd((long volatile *)&(dest), \
@@ -320,24 +349,40 @@ static inline int kos_atomic_cas_ptr(_Atomic(void *) *dest, void *oldv, void *ne
 
 #define KOS_atomic_write_release_ptr(dest, value) __atomic_store_n(&(dest), (value), __ATOMIC_RELEASE)
 
-#define KOS_atomic_cas_u32(dest, oldv, newv) kos_atomic_cas_u32(&(dest), (oldv), (newv))
+#define KOS_atomic_cas_strong_u32(dest, oldv, newv) kos_atomic_cas_strong_u32(&(dest), (oldv), (newv))
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv) kos_atomic_cas_ptr((void *volatile *)&(dest), (void *)(oldv), (void *)(newv))
+#define KOS_atomic_cas_weak_u32(dest, oldv, newv) kos_atomic_cas_weak_u32(&(dest), (oldv), (newv))
+
+#define KOS_atomic_cas_strong_ptr(dest, oldv, newv) kos_atomic_cas_strong_ptr((void *volatile *)&(dest), (void *)(oldv), (void *)(newv))
+
+#define KOS_atomic_cas_weak_ptr(dest, oldv, newv) kos_atomic_cas_weak_ptr((void *volatile *)&(dest), (void *)(oldv), (void *)(newv))
 
 #if defined(__cplusplus) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)) || !defined(__STRICT_ANSI__)
-static inline int kos_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
+static inline int kos_atomic_cas_strong_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
-    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 }
 
-static inline int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv)
+static inline int kos_atomic_cas_weak_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv)
 {
-    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+}
+
+static inline int kos_atomic_cas_strong_ptr(void *volatile *dest, void *oldv, void *newv)
+{
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+}
+
+static inline int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv)
+{
+    return __atomic_compare_exchange_n(dest, &oldv, newv, 1, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
 }
 #else
 #define KOS_GCC_ATOMIC_EXTENSION 1
-int kos_atomic_cas_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv);
-int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
+int kos_atomic_cas_strong_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv);
+int kos_atomic_cas_weak_u32(uint32_t volatile *dest, uint32_t oldv, uint32_t newv);
+int kos_atomic_cas_strong_ptr(void *volatile *dest, void *oldv, void *newv);
+int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
 #endif
 
 #define KOS_atomic_add_i32(dest, value) ((int32_t)__atomic_fetch_add(&(dest), (value), __ATOMIC_SEQ_CST))
@@ -391,7 +436,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 #define KOS_atomic_write_release_ptr(dest, value) \
         (*(void *volatile *)(&(dest)) = (void *)(value))
 
-#define KOS_atomic_cas_u32(dest, oldv, newv)                     \
+#define KOS_atomic_cas_strong_u32(dest, oldv, newv)              \
     __extension__ ({                                             \
        uint32_t           at_ret;                                \
        uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
@@ -402,7 +447,9 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
        at_ret == oldv;                                           \
     })
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv)               \
+#define KOS_atomic_cas_weak_u32 KOS_atomic_cas_strong_u32
+
+#define KOS_atomic_cas_strong_ptr(dest, oldv, newv)        \
     __extension__ ({                                       \
        void           *at_ret;                             \
        void *volatile *at_ptr = (void *volatile *)&(dest); \
@@ -412,6 +459,8 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
                     : "memory");                           \
        at_ret == oldv;                                     \
     })
+
+#define KOS_atomic_cas_weak_ptr KOS_atomic_cas_strong_ptr
 
 #define KOS_atomic_add_i32(dest, value)                           \
     __extension__ ({                                              \
@@ -488,7 +537,7 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
 #define KOS_atomic_write_release_ptr(dest, value) \
         (*(void *volatile *)(&(dest)) = (void *)(value))
 
-#define KOS_atomic_cas_u32(dest, oldv, newv)                     \
+#define KOS_atomic_cas_strong_u32(dest, oldv, newv)              \
     __extension__ ({                                             \
        uint32_t           at_ret;                                \
        uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
@@ -499,7 +548,9 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
        at_ret == oldv;                                           \
     })
 
-#define KOS_atomic_cas_ptr(dest, oldv, newv)               \
+#define KOS_atomic_cas_weak_u32 KOS_atomic_cas_strong_u32
+
+#define KOS_atomic_cas_strong_ptr(dest, oldv, newv)        \
     __extension__ ({                                       \
        void           *at_ret;                             \
        void *volatile *at_ptr = (void *volatile *)&(dest); \
@@ -509,6 +560,8 @@ int kos_atomic_cas_ptr(void *volatile *dest, void *oldv, void *newv);
                     : "memory");                           \
        at_ret == oldv;                                     \
     })
+
+#define KOS_atomic_cas_weak_ptr KOS_atomic_cas_strong_ptr
 
 #define KOS_atomic_add_i32(dest, value)                           \
     __extension__ ({                                              \

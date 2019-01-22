@@ -195,13 +195,13 @@ static void _copy_buf(KOS_CONTEXT        ctx,
                 break;
 
             /* Write value to new buffer */
-            if ( ! KOS_atomic_cas_ptr(dst[i], in_dst, value))
+            if ( ! KOS_atomic_cas_strong_ptr(dst[i], in_dst, value))
                 /* Another thread wrote something to dest */
                 break;
             in_dst = value;
 
             /* Close the slot in the old buffer */
-            if (KOS_atomic_cas_ptr(src[i], value, CLOSED)) {
+            if (KOS_atomic_cas_strong_ptr(src[i], value, CLOSED)) {
                 salvaged = 1;
                 break;
             }
@@ -227,7 +227,7 @@ static void _copy_buf(KOS_CONTEXT        ctx,
             i = 0;
     }
 
-    (void)KOS_atomic_cas_ptr(array->data,
+    (void)KOS_atomic_cas_strong_ptr(array->data,
                              OBJID(ARRAY_STORAGE, old_buf),
                              OBJID(ARRAY_STORAGE, new_buf));
 }
@@ -300,7 +300,7 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
                     buf = new_buf;
                 }
                 else {
-                    if (KOS_atomic_cas_ptr(buf->buf[bufidx], cur, value)) {
+                    if (KOS_atomic_cas_strong_ptr(buf->buf[bufidx], cur, value)) {
                         error = KOS_SUCCESS;
                         break;
                     }
@@ -335,8 +335,8 @@ static int _resize_storage(KOS_CONTEXT ctx,
     _atomic_fill_ptr(&new_buf->buf[0], KOS_atomic_read_relaxed_u32(new_buf->capacity), TOMBSTONE);
 
     if (!old_buf)
-        (void)KOS_atomic_cas_ptr(OBJPTR(ARRAY, obj_id)->data, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf));
-    else if (KOS_atomic_cas_ptr(old_buf->next, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf)))
+        (void)KOS_atomic_cas_strong_ptr(OBJPTR(ARRAY, obj_id)->data, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf));
+    else if (KOS_atomic_cas_strong_ptr(old_buf->next, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf)))
         _copy_buf(ctx, OBJPTR(ARRAY, obj_id), old_buf, new_buf);
     else {
         KOS_ARRAY_STORAGE *const buf = _get_next(old_buf);
@@ -688,7 +688,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
 
         /* TODO this is not atomic wrt pop! */
 
-        if (KOS_atomic_cas_u32(OBJPTR(ARRAY, obj_id)->size, len, len+1))
+        if (KOS_atomic_cas_strong_u32(OBJPTR(ARRAY, obj_id)->size, len, len+1))
             break;
     }
 
@@ -704,7 +704,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
 
         /* TODO What if cur_value != TOMBSTONE ??? ABA? */
 
-        if (KOS_atomic_cas_ptr(buf->buf[len], cur_value, value))
+        if (KOS_atomic_cas_strong_ptr(buf->buf[len], cur_value, value))
             break;
     }
 
@@ -781,7 +781,7 @@ int KOS_array_fill(KOS_CONTEXT ctx,
             buf = new_buf;
         }
         else {
-            if (KOS_atomic_cas_ptr(buf->buf[begin], cur, value))
+            if (KOS_atomic_cas_strong_ptr(buf->buf[begin], cur, value))
                 ++begin;
         }
     }

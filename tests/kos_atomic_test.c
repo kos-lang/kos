@@ -68,18 +68,18 @@ int main(void)
     {
         KOS_ATOMIC(uint32_t) value;
         value = 0xBEAD;
-        TEST( ! KOS_atomic_cas_u32(value, 0xC0DE, 0xFEED));
+        TEST( ! KOS_atomic_cas_strong_u32(value, 0xC0DE, 0xFEED));
         TEST(KOS_atomic_read_relaxed_u32(value) == 0xBEAD);
-        TEST(KOS_atomic_cas_u32(value, 0xBEAD, 0xFEED));
+        TEST(KOS_atomic_cas_strong_u32(value, 0xBEAD, 0xFEED));
         TEST(KOS_atomic_read_relaxed_u32(value) == 0xFEED);
     }
 
     {
         KOS_ATOMIC(void *) value;
         value = _ptr(0xBEAD);
-        TEST( ! KOS_atomic_cas_ptr(value, _ptr(0xC0DE), _ptr(0xFEED)));
+        TEST( ! KOS_atomic_cas_strong_ptr(value, _ptr(0xC0DE), _ptr(0xFEED)));
         TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xBEAD));
-        TEST(KOS_atomic_cas_ptr(value, _ptr(0xBEAD), _ptr(0xFEED)));
+        TEST(KOS_atomic_cas_strong_ptr(value, _ptr(0xBEAD), _ptr(0xFEED)));
         TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xFEED));
     }
 
@@ -112,7 +112,7 @@ int main(void)
             uint32_t oldv = (i & 1) ? 0xFACEU : 0xBEEFU;
             uint32_t newv = (i & 1) ? 0xBEEFU : 0xFACEU;
 
-            TEST(KOS_atomic_cas_u32(value, oldv, newv));
+            TEST(KOS_atomic_cas_strong_u32(value, oldv, newv));
             TEST(KOS_atomic_read_relaxed_u32(value) == newv);
         }
     }
@@ -128,7 +128,7 @@ int main(void)
             void *oldv = (i & 1) ? (void *)&value : (void *)0;
             void *newv = (i & 1) ? (void *)0      : (void *)&value;
 
-            TEST(KOS_atomic_cas_ptr(value, oldv, newv));
+            TEST(KOS_atomic_cas_strong_ptr(value, oldv, newv));
             TEST(KOS_atomic_read_relaxed_ptr(value) == newv);
         }
     }

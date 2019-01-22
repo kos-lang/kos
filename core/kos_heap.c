@@ -374,7 +374,7 @@ static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
         next = page->next;
 
         if (next) {
-            if (KOS_atomic_cas_ptr(*page_ptr, page, next))
+            if (KOS_atomic_cas_strong_ptr(*page_ptr, page, next))
                 break;
             else
                 continue;
@@ -1139,7 +1139,7 @@ static void set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
 
     while ( ! (value & mask)) {
 
-        if (KOS_atomic_cas_u32(*mark_loc.bitmap, value, value | mask))
+        if (KOS_atomic_cas_strong_u32(*mark_loc.bitmap, value, value | mask))
             break;
 
         value = KOS_atomic_read_relaxed_u32(*mark_loc.bitmap);
@@ -2337,7 +2337,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     stats.initial_heap_size = heap->heap_size;
     stats.initial_used_size = heap->used_size;
 
-    if ( ! KOS_atomic_cas_u32(heap->gc_state, GC_INACTIVE, GC_INIT)) {
+    if ( ! KOS_atomic_cas_strong_u32(heap->gc_state, GC_INACTIVE, GC_INIT)) {
 
         KOS_help_gc(ctx);
 
