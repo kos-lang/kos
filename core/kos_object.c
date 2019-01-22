@@ -386,8 +386,8 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
 
             if ( ! IS_BAD_PTR(old_table)) {
                 if (KOS_atomic_cas_strong_ptr(OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table,
-                                       KOS_BADPTR,
-                                       new_table)) {
+                                              KOS_BADPTR,
+                                              new_table)) {
 
                     _copy_table(ctx, obj_id, old_table, new_table);
 
@@ -409,8 +409,8 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
                 KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
                 if ( ! KOS_atomic_cas_strong_ptr(*props,
-                                          KOS_BADPTR,
-                                          new_table)) {
+                                                 KOS_BADPTR,
+                                                 new_table)) {
                     /* Somebody already resized it */
                     KOS_PERF_CNT(object_resize_fail);
                 }
@@ -634,7 +634,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                     }
 
                     /* Attempt to write the new key */
-                    if ( ! KOS_atomic_cas_strong_ptr(cur_item->key, KOS_BADPTR, prop))
+                    if ( ! KOS_atomic_cas_weak_ptr(cur_item->key, KOS_BADPTR, prop))
                         /* Reprobe the slot if another thread has written a key */
                         continue;
 

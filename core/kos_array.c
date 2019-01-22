@@ -201,7 +201,7 @@ static void _copy_buf(KOS_CONTEXT        ctx,
             in_dst = value;
 
             /* Close the slot in the old buffer */
-            if (KOS_atomic_cas_strong_ptr(src[i], value, CLOSED)) {
+            if (KOS_atomic_cas_weak_ptr(src[i], value, CLOSED)) {
                 salvaged = 1;
                 break;
             }
@@ -228,8 +228,8 @@ static void _copy_buf(KOS_CONTEXT        ctx,
     }
 
     (void)KOS_atomic_cas_strong_ptr(array->data,
-                             OBJID(ARRAY_STORAGE, old_buf),
-                             OBJID(ARRAY_STORAGE, new_buf));
+                                    OBJID(ARRAY_STORAGE, old_buf),
+                                    OBJID(ARRAY_STORAGE, new_buf));
 }
 
 KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
@@ -300,7 +300,7 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
                     buf = new_buf;
                 }
                 else {
-                    if (KOS_atomic_cas_strong_ptr(buf->buf[bufidx], cur, value)) {
+                    if (KOS_atomic_cas_weak_ptr(buf->buf[bufidx], cur, value)) {
                         error = KOS_SUCCESS;
                         break;
                     }
@@ -688,7 +688,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
 
         /* TODO this is not atomic wrt pop! */
 
-        if (KOS_atomic_cas_strong_u32(OBJPTR(ARRAY, obj_id)->size, len, len+1))
+        if (KOS_atomic_cas_weak_u32(OBJPTR(ARRAY, obj_id)->size, len, len+1))
             break;
     }
 
@@ -704,7 +704,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
 
         /* TODO What if cur_value != TOMBSTONE ??? ABA? */
 
-        if (KOS_atomic_cas_strong_ptr(buf->buf[len], cur_value, value))
+        if (KOS_atomic_cas_weak_ptr(buf->buf[len], cur_value, value))
             break;
     }
 
@@ -781,7 +781,7 @@ int KOS_array_fill(KOS_CONTEXT ctx,
             buf = new_buf;
         }
         else {
-            if (KOS_atomic_cas_strong_ptr(buf->buf[begin], cur, value))
+            if (KOS_atomic_cas_weak_ptr(buf->buf[begin], cur, value))
                 ++begin;
         }
     }
