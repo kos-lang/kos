@@ -503,6 +503,8 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     uint32_t    num_modules = KOS_get_array_size(inst->modules.modules);
     KOS_CONTEXT ctx         = &inst->threads.main_thread;
 
+    /* TODO stop all threads and delete all other contexts */
+
     for (i = 0; i < num_modules; i++) {
         KOS_OBJ_ID module_obj = KOS_array_read(ctx, inst->modules.modules, (int)i);
         assert(!IS_BAD_PTR(module_obj));

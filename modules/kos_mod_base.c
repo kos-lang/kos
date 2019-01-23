@@ -1233,8 +1233,6 @@ cleanup:
 static void _thread_finalize(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  priv)
 {
-    /* TODO don't block GC: add detection for finished threads, put thread
-     *      on a list for GC to retry to join */
     if ( ! IS_BAD_PTR(priv)) {
         assert(GET_OBJ_TYPE(priv) == OBJ_THREAD);
 
@@ -1356,8 +1354,6 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
         KOS_raise_exception_cstring(ctx, str_err_already_joined);
         return KOS_BADPTR;
     }
-
-    /* TODO don't block GC */
 
     return kos_thread_join(ctx, thread);
 }

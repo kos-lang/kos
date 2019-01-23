@@ -123,6 +123,10 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
     KOS_THREAD *thread;
     int         pushed = 0;
 
+    /* TODO store all thread objects in heap,
+     *      this will solve all kinds of issues, including the problem
+     *      with finalize */
+
     if (KOS_push_locals(ctx, &pushed, 3, &thread_func, &this_obj, &args_obj))
         return KOS_BADPTR;
 
