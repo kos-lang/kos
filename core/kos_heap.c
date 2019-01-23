@@ -244,8 +244,15 @@ static void finalize_objects(KOS_CONTEXT ctx,
 
                 KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
 
-                if (obj->finalize)
+                if (obj->finalize) {
+
                     obj->finalize(ctx, KOS_atomic_read_relaxed_obj(obj->priv));
+
+                    obj->finalize = 0;
+                    KOS_atomic_write_relaxed_ptr(obj->priv, TO_SMALL_INT(0));
+
+                    assert( ! KOS_is_exception_pending(ctx));
+                }
             }
 
             ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
@@ -257,6 +264,9 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
 {
     assert(inst->threads.main_thread.prev == 0);
     assert(inst->threads.main_thread.next == 0);
+
+    /* Disable GC */
+    inst->flags |= KOS_INST_MANUAL_GC;
 
     kos_heap_release_thread_page(&inst->threads.main_thread);
 
@@ -2020,6 +2030,8 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
             obj->finalize(ctx, KOS_atomic_read_relaxed_obj(obj->priv));
 
+            assert( ! KOS_is_exception_pending(ctx));
+
             ++stats->num_objs_finalized;
         }
     }
@@ -2389,13 +2401,15 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     reclaim_free_pages(heap, free_pages, &stats);
 
     /***********************************************************************/
-    /* Phase 5: Finish GC */
+    /* Done, finish GC */
 
     update_gc_threshold(heap);
 
     stats.num_gray_passes = num_gray_passes;
     stats.heap_size       = heap->heap_size;
     stats.used_size       = heap->used_size;
+
+    verify_heap_used_size(heap);
 
     gc_trace(("GC ctx=%p end cycle\n", (void *)ctx));
 
@@ -2416,8 +2430,6 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
                stats.used_size, stats.heap_size,
                stats.time_us, stats.num_gray_passes);
     }
-
-    verify_heap_used_size(heap);
 
     if (out_stats)
         *out_stats = stats;
