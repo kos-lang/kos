@@ -42,6 +42,7 @@ if [ -z "$JOBS" ]; then
         Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
         *)                                       JOBS=2 ;;
     esac
+    [ $JOBS -lt 32 ] || JOBS=32
 fi
 
 case "$UNAME" in
