@@ -328,7 +328,7 @@ static const char *const keywords[] = {
     "yield"
 };
 
-static unsigned _prefetch_next(KOS_LEXER *lexer, const char **begin, const char **end)
+static unsigned prefetch_next(KOS_LEXER *lexer, const char **begin, const char **end)
 {
     unsigned lt;
 
@@ -400,58 +400,58 @@ static unsigned _prefetch_next(KOS_LEXER *lexer, const char **begin, const char 
     return lt;
 }
 
-static void _retract(KOS_LEXER *lexer, const char *back)
+static void retract(KOS_LEXER *lexer, const char *back)
 {
     lexer->prefetch_end = back;
     lexer->pos          = lexer->old_pos;
 }
 
-static void _collect_whitespace(KOS_LEXER *lexer)
+static void collect_whitespace(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
-    unsigned c = _prefetch_next(lexer, &begin, &end);
+    unsigned c = prefetch_next(lexer, &begin, &end);
 
     while (c == LT_WHITESPACE)
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
 
-    _retract(lexer, begin);
+    retract(lexer, begin);
 }
 
-static void _collect_all_until_eol(KOS_LEXER *lexer)
+static void collect_all_until_eol(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
-    unsigned c = _prefetch_next(lexer, &begin, &end);
+    unsigned c = prefetch_next(lexer, &begin, &end);
 
     while ((c & LT_EOL) == 0 && c != LT_INVALID_UTF8)
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
 
-    _retract(lexer, begin);
+    retract(lexer, begin);
 }
 
-static int _char_is_hex(char c)
+static int char_is_hex(char c)
 {
     return hex_and_operator_map[(unsigned char)c] == OMI_HEX;
 }
 
-static int _char_is_hex_or_underscore(char c)
+static int char_is_hex_or_underscore(char c)
 {
     return hex_and_operator_map[(unsigned char)c] == OMI_HEX || c == '_';
 }
 
-static int _char_is_bin_or_underscore(char c)
+static int char_is_bin_or_underscore(char c)
 {
     return c == '0' || c == '1' || c == '_';
 }
 
-static int _collect_escape(KOS_LEXER *lexer, int *format)
+static int collect_escape(KOS_LEXER *lexer, int *format)
 {
     const char *begin, *end;
 
     int error = KOS_SUCCESS;
 
-    unsigned c = _prefetch_next(lexer, &begin, &end);
+    unsigned c = prefetch_next(lexer, &begin, &end);
 
     if (c == LT_EOF) {
         lexer->error_str = str_err_eof_esc;
@@ -460,7 +460,7 @@ static int _collect_escape(KOS_LEXER *lexer, int *format)
     else {
         const char esc_type = kos_escape_sequence_map[(unsigned char)*begin];
         if (esc_type == KOS_ET_HEX) {
-            c = _prefetch_next(lexer, &begin, &end);
+            c = prefetch_next(lexer, &begin, &end);
             if (c == LT_EOF) {
                 lexer->error_str = str_err_eof_esc;
                 error = KOS_ERROR_SCANNING_FAILED;
@@ -468,7 +468,7 @@ static int _collect_escape(KOS_LEXER *lexer, int *format)
             else if (*begin == '{') {
                 int count = 0;
                 for (;; ++count) {
-                    c = _prefetch_next(lexer, &begin, &end);
+                    c = prefetch_next(lexer, &begin, &end);
                     if (c == LT_EOF) {
                         lexer->error_str = str_err_eof_esc;
                         error = KOS_ERROR_SCANNING_FAILED;
@@ -476,7 +476,7 @@ static int _collect_escape(KOS_LEXER *lexer, int *format)
                     }
                     else if (*begin == '}')
                         break;
-                    else if (!_char_is_hex(*begin)) {
+                    else if (!char_is_hex(*begin)) {
                         lexer->error_str = str_err_hex;
                         error = KOS_ERROR_SCANNING_FAILED;
                         break;
@@ -491,13 +491,13 @@ static int _collect_escape(KOS_LEXER *lexer, int *format)
                     error = KOS_ERROR_SCANNING_FAILED;
                 }
             }
-            else if (_char_is_hex(*begin)) {
-                c = _prefetch_next(lexer, &begin, &end);
+            else if (char_is_hex(*begin)) {
+                c = prefetch_next(lexer, &begin, &end);
                 if (c == LT_EOF) {
                     lexer->error_str = str_err_eof_esc;
                     error = KOS_ERROR_SCANNING_FAILED;
                 }
-                else if (!_char_is_hex(*begin)) {
+                else if (!char_is_hex(*begin)) {
                     lexer->error_str = str_err_hex;
                     error = KOS_ERROR_SCANNING_FAILED;
                 }
@@ -514,24 +514,24 @@ static int _collect_escape(KOS_LEXER *lexer, int *format)
     return error;
 }
 
-static int _collect_string(KOS_LEXER *lexer)
+static int collect_string(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
     int error = KOS_SUCCESS;
 
-    unsigned   c      = _prefetch_next(lexer, &begin, &end);
+    unsigned   c      = prefetch_next(lexer, &begin, &end);
     int        format = 0;
 
     while ((c != LT_EOF) && (c != LT_INVALID_UTF8) && (c != LT_STRING)) {
 
         if (c == LT_BACKSLASH) {
-            error = _collect_escape(lexer, &format);
+            error = collect_escape(lexer, &format);
             if (error || format)
                 break;
         }
 
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
     }
 
     if (!error) {
@@ -548,23 +548,23 @@ static int _collect_string(KOS_LEXER *lexer)
     return error;
 }
 
-static int _collect_raw_string(KOS_LEXER *lexer)
+static int collect_raw_string(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
     int error = KOS_SUCCESS;
 
-    unsigned c = _prefetch_next(lexer, &begin, &end);
+    unsigned c = prefetch_next(lexer, &begin, &end);
 
     while ((c != LT_EOF) && (c != LT_INVALID_UTF8) && (c != LT_STRING)) {
 
         if (c == LT_BACKSLASH) {
-            c = _prefetch_next(lexer, &begin, &end);
+            c = prefetch_next(lexer, &begin, &end);
             if (c == LT_EOF || c == LT_INVALID_UTF8)
                 break;
         }
 
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
     }
 
     if (c == LT_EOF) {
@@ -579,31 +579,31 @@ static int _collect_raw_string(KOS_LEXER *lexer)
     return error;
 }
 
-static void _collect_identifier(KOS_LEXER *lexer)
+static void collect_identifier(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
-    unsigned c = _prefetch_next(lexer, &begin, &end);
+    unsigned c = prefetch_next(lexer, &begin, &end);
 
     while ((c & LT_ALPHANUMERIC) != 0)
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
 
-    _retract(lexer, begin);
+    retract(lexer, begin);
 }
 
-static void _collect_block_comment(KOS_LEXER *lexer)
+static void collect_block_comment(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
-    unsigned c = _prefetch_next(lexer, &begin, &end);
+    unsigned c = prefetch_next(lexer, &begin, &end);
 
     while (c != LT_EOF) {
         const char prev = *begin;
 
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
 
         if (c == LT_INVALID_UTF8) {
-            _retract(lexer, begin);
+            retract(lexer, begin);
             break;
         }
 
@@ -612,12 +612,12 @@ static void _collect_block_comment(KOS_LEXER *lexer)
     }
 }
 
-static int _is_digit_or_underscore(unsigned c)
+static int is_digit_or_underscore(unsigned c)
 {
     return c == LT_DIGIT || c == LT_UNDERSCORE;
 }
 
-static int _collect_decimal(KOS_LEXER *lexer)
+static int collect_decimal(KOS_LEXER *lexer)
 {
     const char *begin, *end;
     unsigned    c;
@@ -625,37 +625,37 @@ static int _collect_decimal(KOS_LEXER *lexer)
 
     if (*lexer->prefetch_begin != '0') {
         do
-            c = _prefetch_next(lexer, &begin, &end);
-        while (_is_digit_or_underscore(c));
+            c = prefetch_next(lexer, &begin, &end);
+        while (is_digit_or_underscore(c));
     }
     else
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
 
     if (c == LT_OPERATOR && *begin == '.')
         do
-            c = _prefetch_next(lexer, &begin, &end);
-        while (_is_digit_or_underscore(c));
+            c = prefetch_next(lexer, &begin, &end);
+        while (is_digit_or_underscore(c));
 
     if (c == LT_LETTER && (*begin == 'e' || *begin == 'E' || *begin == 'p' || *begin == 'P')) {
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
 
         if (c == LT_OPERATOR && (*begin == '+' || *begin == '-'))
-            c = _prefetch_next(lexer, &begin, &end);
+            c = prefetch_next(lexer, &begin, &end);
 
-        if (_is_digit_or_underscore(c)) {
+        if (is_digit_or_underscore(c)) {
             if (*begin != '0') {
                 do
-                    c = _prefetch_next(lexer, &begin, &end);
-                while (_is_digit_or_underscore(c));
+                    c = prefetch_next(lexer, &begin, &end);
+                while (is_digit_or_underscore(c));
             }
             else
-                c = _prefetch_next(lexer, &begin, &end);
+                c = prefetch_next(lexer, &begin, &end);
         }
         else
             c = LT_DIGIT; /* trigger error */
     }
 
-    _retract(lexer, begin);
+    retract(lexer, begin);
 
     if ((c & LT_ALPHANUMERIC) != 0) {
         lexer->error_str = str_err_invalid_dec;
@@ -665,57 +665,57 @@ static int _collect_decimal(KOS_LEXER *lexer)
     return error;
 }
 
-static int _collect_hex(KOS_LEXER *lexer)
+static int collect_hex(KOS_LEXER *lexer)
 {
     int error = KOS_SUCCESS;
     const char *begin, *end;
 
-    unsigned c = _prefetch_next(lexer, &begin, &end);
+    unsigned c = prefetch_next(lexer, &begin, &end);
 
     if (c == LT_EOF) {
         lexer->error_str = str_err_eof_hex;
         error = KOS_ERROR_SCANNING_FAILED;
     }
-    else if (!_char_is_hex_or_underscore(*begin)) {
+    else if (!char_is_hex_or_underscore(*begin)) {
         lexer->error_str = str_err_hex;
         error = KOS_ERROR_SCANNING_FAILED;
     }
     else {
         do
-            c = _prefetch_next(lexer, &begin, &end);
-        while (c != LT_EOF && _char_is_hex_or_underscore(*begin));
-        _retract(lexer, begin);
+            c = prefetch_next(lexer, &begin, &end);
+        while (c != LT_EOF && char_is_hex_or_underscore(*begin));
+        retract(lexer, begin);
     }
 
     return error;
 }
 
-static int _collect_bin(KOS_LEXER *lexer)
+static int collect_bin(KOS_LEXER *lexer)
 {
     int error = KOS_SUCCESS;
     const char *begin, *end;
 
-    unsigned c = _prefetch_next(lexer, &begin, &end);
+    unsigned c = prefetch_next(lexer, &begin, &end);
 
     if (c == LT_EOF) {
         lexer->error_str = str_err_eof_bin;
         error = KOS_ERROR_SCANNING_FAILED;
     }
-    else if (!_char_is_bin_or_underscore(*begin)) {
+    else if (!char_is_bin_or_underscore(*begin)) {
         lexer->error_str = str_err_bin;
         error = KOS_ERROR_SCANNING_FAILED;
     }
     else {
         do
-            c = _prefetch_next(lexer, &begin, &end);
-        while (c != LT_EOF && _char_is_bin_or_underscore(*begin));
-        _retract(lexer, begin);
+            c = prefetch_next(lexer, &begin, &end);
+        while (c != LT_EOF && char_is_bin_or_underscore(*begin));
+        retract(lexer, begin);
     }
 
     return error;
 }
 
-static void _collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
+static void collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
 {
     const struct KOS_OP_SPECIFIER_S *op_group =
             operator_map[hex_and_operator_map[(unsigned char)*lexer->prefetch_begin]];
@@ -730,7 +730,7 @@ static void _collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
         cur = op_group->str[idx];
         *op = op_group->type;
 
-        c = _prefetch_next(lexer, &begin, &end);
+        c = prefetch_next(lexer, &begin, &end);
 
         if (c != LT_OPERATOR)
             break;
@@ -748,10 +748,10 @@ static void _collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
     }
     while (cur && *begin == cur);
 
-    _retract(lexer, begin);
+    retract(lexer, begin);
 }
 
-static void _find_keyword(const char *begin, const char *end, KOS_KEYWORD_TYPE *kw)
+static void find_keyword(const char *begin, const char *end, KOS_KEYWORD_TYPE *kw)
 {
     const int     num  = (int)(end - begin);
     unsigned char low  = 1;
@@ -831,7 +831,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
             error               = KOS_ERROR_SCANNING_FAILED;
         }
         else {
-            error = _collect_string(lexer);
+            error = collect_string(lexer);
             end   = lexer->prefetch_end;
             if (*(end-1) == '(')
                 token->type = TT_STRING_OPEN;
@@ -839,12 +839,12 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
     }
     else {
 
-        unsigned c = _prefetch_next(lexer, &begin, &end);
+        unsigned c = prefetch_next(lexer, &begin, &end);
 
         switch (c) {
             case LT_WHITESPACE:
                 token->type = TT_WHITESPACE;
-                _collect_whitespace(lexer);
+                collect_whitespace(lexer);
                 end = lexer->prefetch_end;
                 break;
             case LT_EOL:
@@ -853,26 +853,26 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
             case LT_LETTER:
                 if (*begin == 'r' || *begin == 'R') {
                     const char *end2;
-                    c = _prefetch_next(lexer, &end, &end2);
+                    c = prefetch_next(lexer, &end, &end2);
                     if (c == LT_STRING) {
                         token->type = TT_STRING;
-                        error = _collect_raw_string(lexer);
+                        error = collect_raw_string(lexer);
                         end = lexer->prefetch_end;
                         break;
                     }
                     else
-                        _retract(lexer, end);
+                        retract(lexer, end);
                 }
                 /* fall through */
             case LT_UNDERSCORE:
-                _collect_identifier(lexer);
+                collect_identifier(lexer);
                 end = lexer->prefetch_end;
-                _find_keyword(begin, end, &token->keyword);
+                find_keyword(begin, end, &token->keyword);
                 token->type = (token->keyword == KW_NONE) ? TT_IDENTIFIER : TT_KEYWORD;
                 break;
             case LT_STRING:
                 token->type = TT_STRING;
-                error = _collect_string(lexer);
+                error = collect_string(lexer);
                 end = lexer->prefetch_end;
                 if (*(end-1) == '(')
                     token->type = TT_STRING_OPEN;
@@ -881,29 +881,29 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
                 token->type = TT_NUMERIC;
                 if (*begin == '0') {
                     const char *end2;
-                    c = _prefetch_next(lexer, &end, &end2);
+                    c = prefetch_next(lexer, &end, &end2);
                     if (c != LT_EOF && (*end == 'x' || *end == 'X')) {
-                        error = _collect_hex(lexer);
+                        error = collect_hex(lexer);
                         end   = lexer->prefetch_end;
                     }
                     else if (c != LT_EOF && (*end == 'b' || *end == 'B')) {
-                        error = _collect_bin(lexer);
+                        error = collect_bin(lexer);
                         end   = lexer->prefetch_end;
                     }
                     else {
-                        _retract(lexer, end);
-                        error = _collect_decimal(lexer);
+                        retract(lexer, end);
+                        error = collect_decimal(lexer);
                         end   = lexer->prefetch_end;
                     }
                 }
                 else {
-                    error = _collect_decimal(lexer);
+                    error = collect_decimal(lexer);
                     end = lexer->prefetch_end;
                 }
                 break;
             case LT_OPERATOR:
                 token->type = TT_OPERATOR;
-                _collect_operator(lexer, &token->op);
+                collect_operator(lexer, &token->op);
                 end = lexer->prefetch_end;
                 break;
             case LT_SEPARATOR:
@@ -913,22 +913,22 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
                 break;
             case LT_SLASH: {
                 const char *begin2;
-                c = _prefetch_next(lexer, &begin2, &end);
+                c = prefetch_next(lexer, &begin2, &end);
                 if (c != LT_EOF) {
                     if (c == LT_SLASH) {
                         token->type = TT_COMMENT;
-                        _collect_all_until_eol(lexer);
+                        collect_all_until_eol(lexer);
                         end = lexer->prefetch_end;
                     }
                     else if (*begin2 == '*') {
                         token->type = TT_COMMENT;
-                        _collect_block_comment(lexer);
+                        collect_block_comment(lexer);
                         end = lexer->prefetch_end;
                     }
                     else {
                         token->type = TT_OPERATOR;
-                        _retract(lexer, begin2);
-                        _collect_operator(lexer, &token->op);
+                        retract(lexer, begin2);
+                        collect_operator(lexer, &token->op);
                         end = lexer->prefetch_end;
                     }
                 }
@@ -938,7 +938,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
             }
             case LT_COMMENT:
                 token->type = TT_COMMENT;
-                _collect_all_until_eol(lexer);
+                collect_all_until_eol(lexer);
                 end = lexer->prefetch_end;
                 break;
             case LT_EOF:
@@ -969,7 +969,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
 
     if (error) {
         if (lexer->pos.column == 1)
-            _retract(lexer, lexer->prefetch_end);
+            retract(lexer, lexer->prefetch_end);
         else
             lexer->pos.column--;
     }
