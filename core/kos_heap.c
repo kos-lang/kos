@@ -1442,6 +1442,9 @@ static void mark_roots(KOS_CONTEXT ctx)
     mark_object_black(inst->modules.modules);
     mark_object_black(inst->modules.module_inits);
 
+    if ( ! IS_BAD_PTR(inst->threads.threads))
+        mark_object_black(inst->threads.threads);
+
     mark_object_black(inst->args);
 
     ctx = &inst->threads.main_thread;
@@ -1981,6 +1984,7 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     update_child_ptr(&inst->modules.module_names);
     update_child_ptr(&inst->modules.modules);
     update_child_ptr(&inst->modules.module_inits);
+    update_child_ptr(&inst->threads.threads);
 
     update_child_ptr(&inst->args);
 

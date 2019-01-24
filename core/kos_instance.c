@@ -387,6 +387,8 @@ static void _clear_instance(KOS_INSTANCE *inst)
     inst->threads.main_thread.local_refs  = KOS_BADPTR;
     inst->threads.main_thread.stack       = KOS_BADPTR;
     inst->threads.main_thread.stack_depth = 0;
+    inst->threads.threads                 = KOS_BADPTR;
+    inst->threads.num_threads             = 0;
 }
 
 int KOS_instance_init(KOS_INSTANCE *inst,

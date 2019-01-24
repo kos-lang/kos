@@ -142,19 +142,21 @@ struct KOS_PROTOTYPES_S {
 };
 
 struct KOS_MODULE_MGMT_S {
-    KOS_OBJ_ID search_paths;
-    KOS_OBJ_ID module_names;
-    KOS_OBJ_ID modules;
-    KOS_OBJ_ID init_module;  /* Initial module for top-level stack frame */
-    KOS_OBJ_ID module_inits; /* Registered built-in module initializers  */
+    KOS_OBJ_ID search_paths; /* Paths where new modules are loaded from   */
+    KOS_OBJ_ID module_names; /* Object which maps module names to indices */
+    KOS_OBJ_ID modules;      /* Array of loaded modules                   */
+    KOS_OBJ_ID init_module;  /* Initial module for top-level stack frame  */
+    KOS_OBJ_ID module_inits; /* Registered built-in module initializers   */
 
     KOS_MODULE_LOAD_CHAIN *load_chain;
 };
 
 struct KOS_THREAD_MGMT_S {
-    KOS_TLS_KEY                 thread_key;
-    struct KOS_THREAD_CONTEXT_S main_thread;
-    KOS_MUTEX                   mutex;
+    KOS_TLS_KEY                 thread_key;  /* TLS key for current context ptr */
+    struct KOS_THREAD_CONTEXT_S main_thread; /* Main thread's context           */
+    KOS_MUTEX                   mutex;       /* Mutex for registering threads   */
+    KOS_OBJ_ID                  threads;     /* Array of thread objects         */
+    uint32_t                    num_threads; /* Number of used thread slots     */
 };
 
 enum KOS_STR_E {
