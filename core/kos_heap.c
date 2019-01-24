@@ -1455,13 +1455,13 @@ static void mark_roots(KOS_CONTEXT ctx)
 
 static void get_flat_list(KOS_PAGE *page, KOS_PAGE ***begin, KOS_PAGE ***end)
 {
-    uint8_t *const ptr       = (uint8_t *)page + KOS_BITMAP_OFFS;
-    const uint32_t num_slots = KOS_min(page->num_slots, (uint32_t)KOS_SLOTS_PER_PAGE);
+    uint8_t *const ptr = (uint8_t *)page +
+                         KOS_align_up((int)KOS_BITMAP_OFFS, (int)sizeof(void *));
 
     *begin = (KOS_PAGE **)ptr;
 
     if (end)
-        *end = (KOS_PAGE **)(ptr + KOS_BITMAP_SIZE + (num_slots << KOS_OBJ_ALIGN_BITS));
+        *end = (KOS_PAGE **)((uint8_t *)page + KOS_PAGE_SIZE);
 }
 
 static void get_flat_page_list(KOS_HEAP  *heap,
@@ -1498,29 +1498,33 @@ static void get_flat_page_list(KOS_HEAP  *heap,
 
         num_pages = ((size - 1U) >> KOS_PAGE_BITS) + 1U;
 
-        if ((intptr_t)num_pages > end - dest)
-            break;
-
         while (size) {
 
-            const unsigned this_size = KOS_min(size, KOS_PAGE_SIZE);
+            assert(size >= KOS_PAGE_SIZE);
 
-            assert(this_size >= (KOS_SLOTS_OFFS + (KOS_PAGE_SIZE >> 3)));
-
-            page->num_slots = (this_size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
-            assert(page->num_slots == KOS_SLOTS_PER_PAGE);
+            page->num_slots = KOS_SLOTS_PER_PAGE;
 
             *(dest++) = page;
 
-            page = (KOS_PAGE *)((uintptr_t)page + this_size);
+            page = (KOS_PAGE *)((uintptr_t)page + KOS_PAGE_SIZE);
 
-            size -= this_size;
+            size -= KOS_PAGE_SIZE;
+            --num_pages;
+
+            if ((intptr_t)num_pages > end - dest) {
+                page->num_slots = (size - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
+                page->next      = next;
+                next            = page;
+                break;
+            }
         }
 
         page = next;
     }
 
     KOS_atomic_write_relaxed_u32(first->num_allocated, (unsigned)(dest - begin));
+
+    assert(first != page);
 
     first->next = *list;
     *list       = first;
