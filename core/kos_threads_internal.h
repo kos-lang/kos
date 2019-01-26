@@ -37,19 +37,20 @@
 #endif
 
 typedef struct KOS_THREAD_S {
-    KOS_OBJ_HEADER  header;
-    KOS_INSTANCE   *inst;
-    KOS_OBJ_ID      thread_func;
-    KOS_OBJ_ID      this_obj;
-    KOS_OBJ_ID      args_obj;
-    KOS_OBJ_ID      retval;
-    KOS_OBJ_ID      exception;
+    KOS_OBJ_HEADER         header;
+    KOS_INSTANCE          *inst;
+    KOS_OBJ_ID             thread_func;
+    KOS_OBJ_ID             this_obj;
+    KOS_OBJ_ID             args_obj;
+    KOS_OBJ_ID             retval;
+    KOS_ATOMIC(KOS_OBJ_ID) exception;
 #ifdef _WIN32
-    HANDLE          thread_handle;
-    DWORD           thread_id;
+    HANDLE                 thread_handle;
+    DWORD                  thread_id;
 #else
-    pthread_t       thread_handle;
+    pthread_t              thread_handle;
 #endif
+    unsigned               thread_idx; /* Index to the threads array in instance */
 } KOS_THREAD;
 
 #endif

@@ -155,8 +155,8 @@ struct KOS_THREAD_MGMT_S {
     KOS_TLS_KEY                 thread_key;  /* TLS key for current context ptr */
     struct KOS_THREAD_CONTEXT_S main_thread; /* Main thread's context           */
     KOS_MUTEX                   mutex;       /* Mutex for registering threads   */
-    KOS_OBJ_ID                  threads;     /* Array of thread objects         */
-    uint32_t                    num_threads; /* Number of used thread slots     */
+    KOS_ATOMIC(KOS_OBJ_ID)      threads;     /* Array of thread objects         */
+    KOS_ATOMIC(uint32_t)        num_threads; /* Number of used thread slots     */
 };
 
 enum KOS_STR_E {

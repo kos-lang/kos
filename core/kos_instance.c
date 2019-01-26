@@ -200,6 +200,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     ctx->cur_page         = 0;
     ctx->tmp_ref_count    = 0;
     ctx->helper_ref_count = 0;
+    ctx->gc_state         = 0;
 
     KOS_suspend_context(ctx);
 

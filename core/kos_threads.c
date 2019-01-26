@@ -21,11 +21,13 @@
  */
 
 #include "kos_threads_internal.h"
+#include "../inc/kos_array.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_malloc.h"
+#include "kos_object_internal.h"
 #include "kos_try.h"
 #include <assert.h>
 
@@ -120,59 +122,149 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
 {
-    KOS_THREAD *thread;
-    int         pushed = 0;
+    KOS_INSTANCE *inst       = ctx->inst;
+    KOS_THREAD   *thread;
+    KOS_OBJ_ID    thread_obj = KOS_BADPTR;
+    int           pushed     = 0;
 
-    /* TODO store all thread objects in heap,
-     *      this will solve all kinds of issues, including the problem
-     *      with finalize */
-
-    if (KOS_push_locals(ctx, &pushed, 3, &thread_func, &this_obj, &args_obj))
+    if (KOS_push_locals(ctx, &pushed, 4, &thread_func, &this_obj, &args_obj, &thread_obj))
         return KOS_BADPTR;
 
     thread = (KOS_THREAD *)kos_alloc_object(ctx, OBJ_THREAD, sizeof(KOS_THREAD));
 
     if (thread) {
         assert(thread->header.type == OBJ_THREAD);
-        thread->inst        = ctx->inst;
+        thread->inst        = inst;
         thread->thread_func = thread_func;
         thread->this_obj    = this_obj;
         thread->args_obj    = args_obj;
         thread->retval      = KOS_BADPTR;
         thread->exception   = KOS_BADPTR;
+        thread->thread_idx  = ~0U;
 #ifdef _WIN32
         thread->thread_handle = 0;
         thread->thread_id     = 0;
 #endif
+        thread_obj          = OBJID(THREAD, thread);
     }
+
+    if (IS_BAD_PTR(KOS_atomic_read_relaxed_obj(inst->threads.threads))) {
+        KOS_OBJ_ID new_threads = KOS_new_array(ctx, 8);
+
+        if (IS_BAD_PTR(new_threads)) {
+            KOS_pop_locals(ctx, pushed);
+            return KOS_BADPTR;
+        }
+
+        /* Attempt to write the new thread array, ignore failure */
+        (void)KOS_atomic_cas_strong_ptr(inst->threads.threads, KOS_BADPTR, new_threads);
+    }
+
+    /* TODO use KOS_array_cas instead of suspending the thread */
+
+    KOS_suspend_context(ctx);
+
+    kos_lock_mutex(&inst->threads.mutex);
+
+    for (;;) {
+        const uint32_t size        = KOS_get_array_size(inst->threads.threads);
+        const uint32_t num_threads = KOS_atomic_read_relaxed_u32(inst->threads.num_threads);
+
+        if (num_threads < size) {
+            const KOS_OBJ_ID        array = kos_get_array_storage(inst->threads.threads);
+            KOS_ATOMIC(KOS_OBJ_ID) *buf;
+            KOS_ATOMIC(KOS_OBJ_ID) *end;
+            uint32_t                i;
+
+            buf = &OBJPTR(ARRAY_STORAGE, array)->buf[0];
+            end = buf + size;
+
+            for (i = 0; buf < end; ++buf, ++i) {
+                if (KOS_atomic_read_relaxed_obj(*buf) == KOS_VOID)
+                    break;
+            }
+
+            assert(buf < end);
+
+            OBJPTR(THREAD, thread_obj)->thread_idx = i;
+
+            KOS_atomic_write_relaxed_ptr(*buf, thread_obj);
+            KOS_atomic_write_relaxed_u32(inst->threads.num_threads, num_threads + 1U);
+            break;
+        }
+
+        kos_unlock_mutex(&inst->threads.mutex);
+
+        KOS_resume_context(ctx);
+
+        if (KOS_array_resize(ctx, inst->threads.threads, size * 2U)) {
+            KOS_pop_locals(ctx, pushed);
+            return KOS_BADPTR;
+        }
+
+        KOS_suspend_context(ctx);
+
+        kos_lock_mutex(&inst->threads.mutex);
+    }
+
+    kos_unlock_mutex(&inst->threads.mutex);
+
+    KOS_resume_context(ctx);
 
     KOS_pop_locals(ctx, pushed);
 
-    return OBJID(THREAD, thread);
+    return thread_obj;
+}
+
+static void release_thread(KOS_CONTEXT ctx, KOS_OBJ_ID thread)
+{
+    KOS_INSTANCE *inst = ctx->inst;
+    uint32_t      thread_idx;
+
+    assert(GET_OBJ_TYPE(thread) == OBJ_THREAD);
+
+    thread_idx = OBJPTR(THREAD, thread)->thread_idx;
+
+    assert(thread_idx != ~0U);
+
+    (void)KOS_array_write(ctx, inst->threads.threads, thread_idx, KOS_VOID);
+
+    KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&inst->threads.num_threads, -1);
+}
+
+typedef struct THREAD_INITIALIZER_S {
+    KOS_INSTANCE *inst;
+    uint32_t      thread_idx;
+} THREAD_INIT;
+
+static KOS_OBJ_ID get_thread_obj(void *init_ptr)
+{
+    KOS_INSTANCE *const inst  = ((THREAD_INIT *)init_ptr)->inst;
+    const uint32_t      idx   = ((THREAD_INIT *)init_ptr)->thread_idx;
+    KOS_OBJ_ID          array = KOS_atomic_read_relaxed_obj(inst->threads.threads);
+
+    assert( ! IS_BAD_PTR(array));
+
+    array = kos_get_array_storage(array);
+    assert(GET_OBJ_TYPE(array) == OBJ_ARRAY_STORAGE);
+
+    return KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, array)->buf[idx]);
+}
+
+static void set_thread_exception(KOS_CONTEXT ctx, KOS_OBJ_ID thread)
+{
+    assert(GET_OBJ_TYPE(thread) == OBJ_THREAD);
+
+    assert(KOS_is_exception_pending(ctx));
+
+    KOS_atomic_write_relaxed_ptr(OBJPTR(THREAD, thread)->exception, KOS_get_exception(ctx));
 }
 
 #ifdef _WIN32
-
-#define THREAD_PTR(void_ptr) OBJPTR(THREAD, ((THREAD_INIT *)(void_ptr))->thread_obj)
-
-typedef struct THREAD_INITIALIZER_S {
-    KOS_OBJ_ID         thread_obj;
-    CRITICAL_SECTION   start_cs;
-    CONDITION_VARIABLE start_cv;
-    int                started;
-} THREAD_INIT;
-
-static void release_thread_parent(LPVOID thread_ptr)
-{
-    THREAD_INIT *init = (THREAD_INIT *)thread_ptr;
-
-    EnterCriticalSection(&init->start_cs);
-    init->started = 1;
-    WakeConditionVariable(&init->start_cv);
-    LeaveCriticalSection(&init->start_cs);
-}
-
 static DWORD WINAPI thread_proc(LPVOID thread_ptr)
+#else
+static void *thread_proc(void *thread_ptr)
+#endif
 {
     struct KOS_THREAD_CONTEXT_S thread_ctx;
     KOS_OBJ_ID                  thread_obj = KOS_BADPTR;
@@ -180,22 +272,20 @@ static DWORD WINAPI thread_proc(LPVOID thread_ptr)
     {
         int pushed = 0;
 
-        if (KOS_instance_register_thread(THREAD_PTR(thread_ptr)->inst, &thread_ctx) ||
+        if (KOS_instance_register_thread(((THREAD_INIT *)thread_ptr)->inst, &thread_ctx) ||
             KOS_push_locals(&thread_ctx, &pushed, 1, &thread_obj)) {
 
-            assert(KOS_is_exception_pending(&thread_ctx));
+            set_thread_exception(&thread_ctx, get_thread_obj(thread_ptr));
 
-            THREAD_PTR(thread_ptr)->exception = KOS_get_exception(&thread_ctx);
-
-            release_thread_parent(thread_ptr);
+            kos_free(thread_ptr);
 
             return 0;
         }
     }
 
-    thread_obj = ((THREAD_INIT *)thread_ptr)->thread_obj;
+    thread_obj = get_thread_obj(thread_ptr);
 
-    release_thread_parent(thread_ptr);
+    kos_free(thread_ptr);
 
     {
         KOS_OBJ_ID retval;
@@ -205,13 +295,8 @@ static DWORD WINAPI thread_proc(LPVOID thread_ptr)
                                    OBJPTR(THREAD, thread_obj)->this_obj,
                                    OBJPTR(THREAD, thread_obj)->args_obj);
 
-        OBJPTR(THREAD, thread_obj)->retval = retval;
-
-        if (IS_BAD_PTR(retval)) {
-            assert(KOS_is_exception_pending(&thread_ctx));
-
-            OBJPTR(THREAD, thread_obj)->exception = KOS_get_exception(&thread_ctx);
-        }
+        if (IS_BAD_PTR(retval))
+            set_thread_exception(&thread_ctx, thread_obj);
         else {
             assert( ! KOS_is_exception_pending(&thread_ctx));
 
@@ -224,50 +309,55 @@ static DWORD WINAPI thread_proc(LPVOID thread_ptr)
     return 0;
 }
 
+#ifdef _WIN32
+
+#define THREAD_PTR(void_ptr) OBJPTR(THREAD, ((THREAD_INIT *)(void_ptr))->thread_obj)
+
 KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  thread_func,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    int         error  = KOS_SUCCESS;
-    int         pushed = 0;
-    THREAD_INIT init;
+    int          error      = KOS_SUCCESS;
+    KOS_OBJ_ID   thread_obj = KOS_BADPTR;
+    THREAD_INIT *init;
 
-    InitializeCriticalSection(&init.start_cs);
-    InitializeConditionVariable(&init.start_cv);
+    init = (THREAD_INIT *)kos_malloc(sizeof(THREAD_INIT));
 
-    init.started = 0;
+    if ( ! init) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
-    init.thread_obj = alloc_thread(ctx, thread_func, this_obj, args_obj);
-    TRY_OBJID(init.thread_obj);
+    init->inst = ctx->inst;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &init.thread_obj));
+    thread_obj = alloc_thread(ctx, thread_func, this_obj, args_obj);
+    TRY_OBJID(thread_obj);
 
-    OBJPTR(THREAD, init.thread_obj)->thread_handle = kos_seq_fail() ? 0 :
+    init->thread_idx = OBJPTR(THREAD, thread_obj)->thread_idx;
+
+    OBJPTR(THREAD, thread_obj)->thread_handle = kos_seq_fail() ? 0 :
         CreateThread(0,
                      0,
                      thread_proc,
-                     &init,
+                     init,
                      0,
-                     &OBJPTR(THREAD, init.thread_obj)->thread_id);
+                     &OBJPTR(THREAD, thread_obj)->thread_id);
 
-    if ( ! OBJPTR(THREAD, init.thread_obj)->thread_handle)
+    if ( ! OBJPTR(THREAD, thread_obj)->thread_handle)
         RAISE_EXCEPTION(str_err_thread);
 
-    KOS_suspend_context(ctx);
-
-    EnterCriticalSection(&init.start_cs);
-    while ( ! init.started)
-        SleepConditionVariableCS(&init.start_cv, &init.start_cs, INFINITE);
-    LeaveCriticalSection(&init.start_cs);
-
-    KOS_resume_context(ctx);
-
 cleanup:
-    KOS_pop_locals(ctx, pushed);
-    DeleteCriticalSection(&init.start_cs);
+    if (error) {
+        kos_free(init);
 
-    return error ? KOS_BADPTR : init.thread_obj;
+        if ( ! IS_BAD_PTR(thread_obj))
+            release_thread(ctx, thread_obj);
+
+        thread_obj = KOS_BADPTR;
+    }
+
+    return thread_obj;
 }
 
 KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
@@ -299,6 +389,8 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, OBJPTR(THREAD, thread)->exception);
         error = KOS_ERROR_EXCEPTION;
     }
+
+    release_thread(ctx, thread);
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
@@ -390,117 +482,46 @@ void kos_tls_set(KOS_TLS_KEY key, void *value)
 
 #else
 
-#define THREAD_PTR(void_ptr) OBJPTR(THREAD, ((THREAD_INIT *)(void_ptr))->thread_obj)
-
-typedef struct THREAD_INITIALIZER_S {
-    KOS_OBJ_ID         thread_obj;
-    pthread_mutex_t    start_mutex;
-    pthread_cond_t     start_cv;
-    int                started;
-} THREAD_INIT;
-
-static void release_thread_parent(void *thread_ptr)
-{
-    THREAD_INIT *init = (THREAD_INIT *)thread_ptr;
-
-    pthread_mutex_lock(&init->start_mutex);
-    init->started = 1;
-    pthread_cond_signal(&init->start_cv);
-    pthread_mutex_unlock(&init->start_mutex);
-}
-
-static void *thread_proc(void *thread_ptr)
-{
-    struct KOS_THREAD_CONTEXT_S thread_ctx;
-    KOS_OBJ_ID                  thread_obj = KOS_BADPTR;
-
-    {
-        int pushed = 0;
-
-        if (KOS_instance_register_thread(THREAD_PTR(thread_ptr)->inst, &thread_ctx) ||
-            KOS_push_locals(&thread_ctx, &pushed, 1, &thread_obj)) {
-
-            assert(KOS_is_exception_pending(&thread_ctx));
-
-            THREAD_PTR(thread_ptr)->exception = KOS_get_exception(&thread_ctx);
-
-            release_thread_parent(thread_ptr);
-
-            return 0;
-        }
-    }
-
-    thread_obj = ((THREAD_INIT *)thread_ptr)->thread_obj;
-
-    release_thread_parent(thread_ptr);
-
-    {
-        KOS_OBJ_ID retval;
-
-        retval = KOS_call_function(&thread_ctx,
-                                   OBJPTR(THREAD, thread_obj)->thread_func,
-                                   OBJPTR(THREAD, thread_obj)->this_obj,
-                                   OBJPTR(THREAD, thread_obj)->args_obj);
-
-        OBJPTR(THREAD, thread_obj)->retval = retval;
-
-        if (IS_BAD_PTR(retval)) {
-            assert(KOS_is_exception_pending(&thread_ctx));
-
-            OBJPTR(THREAD, thread_obj)->exception = KOS_get_exception(&thread_ctx);
-        }
-        else {
-            assert( ! KOS_is_exception_pending(&thread_ctx));
-
-            OBJPTR(THREAD, thread_obj)->retval = retval;
-        }
-    }
-
-    KOS_instance_unregister_thread(thread_ctx.inst, &thread_ctx);
-
-    return 0;
-}
-
 KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  thread_func,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    int         error  = KOS_SUCCESS;
-    int         pushed = 0;
-    THREAD_INIT init;
+    int          error      = KOS_SUCCESS;
+    KOS_OBJ_ID   thread_obj = KOS_BADPTR;
+    THREAD_INIT *init;
 
-    pthread_mutex_init(&init.start_mutex, NULL);
-    pthread_cond_init(&init.start_cv, NULL);
+    init = (THREAD_INIT *)kos_malloc(sizeof(THREAD_INIT));
 
-    init.started = 0;
+    if ( ! init) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
-    init.thread_obj = alloc_thread(ctx, thread_func, this_obj, args_obj);
-    TRY_OBJID(init.thread_obj);
+    init->inst = ctx->inst;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &init.thread_obj));
+    thread_obj = alloc_thread(ctx, thread_func, this_obj, args_obj);
+    TRY_OBJID(thread_obj);
 
-    if (kos_seq_fail() || pthread_create(&OBJPTR(THREAD, init.thread_obj)->thread_handle,
+    init->thread_idx = OBJPTR(THREAD, thread_obj)->thread_idx;
+
+    if (kos_seq_fail() || pthread_create(&OBJPTR(THREAD, thread_obj)->thread_handle,
                                          0,
                                          thread_proc,
-                                         &init))
+                                         init))
         RAISE_EXCEPTION(str_err_thread);
 
-    KOS_suspend_context(ctx);
-
-    pthread_mutex_lock(&init.start_mutex);
-    while ( ! init.started)
-        pthread_cond_wait(&init.start_cv, &init.start_mutex);
-    pthread_mutex_unlock(&init.start_mutex);
-
-    KOS_resume_context(ctx);
-
 cleanup:
-    KOS_pop_locals(ctx, pushed);
-    pthread_cond_destroy(&init.start_cv);
-    pthread_mutex_destroy(&init.start_mutex);
+    if (error) {
+        kos_free(init);
 
-    return error ? KOS_BADPTR : init.thread_obj;
+        if ( ! IS_BAD_PTR(thread_obj))
+            release_thread(ctx, thread_obj);
+
+        thread_obj = KOS_BADPTR;
+    }
+
+    return thread_obj;
 }
 
 KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
@@ -531,6 +552,8 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, OBJPTR(THREAD, thread)->exception);
         error = KOS_ERROR_EXCEPTION;
     }
+
+    release_thread(ctx, thread);
 
 cleanup:
     KOS_pop_locals(ctx, pushed);

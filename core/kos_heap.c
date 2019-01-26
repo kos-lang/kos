@@ -156,6 +156,7 @@ int kos_heap_init(KOS_INSTANCE *inst)
 {
     KOS_HEAP *heap = &inst->heap;
 
+    KOS_atomic_write_release_u32(inst->threads.main_thread.gc_state, GC_INACTIVE);
     KOS_atomic_write_relaxed_u32(heap->gc_state, GC_INACTIVE);
     heap->heap_size      = 0;
     heap->used_size      = 0;
@@ -1915,7 +1916,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
                 update_child_ptr(&((KOS_THREAD *)hdr)->this_obj);
                 update_child_ptr(&((KOS_THREAD *)hdr)->args_obj);
                 update_child_ptr(&((KOS_THREAD *)hdr)->retval);
-                update_child_ptr(&((KOS_THREAD *)hdr)->exception);
+                update_child_ptr((KOS_OBJ_ID *)&((KOS_THREAD *)hdr)->exception);
             }
             break;
     }
@@ -1988,7 +1989,7 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     update_child_ptr(&inst->modules.module_names);
     update_child_ptr(&inst->modules.modules);
     update_child_ptr(&inst->modules.module_inits);
-    update_child_ptr(&inst->threads.threads);
+    update_child_ptr((KOS_OBJ_ID *)&inst->threads.threads);
 
     update_child_ptr(&inst->args);
 
@@ -2315,6 +2316,8 @@ void kos_trigger_mad_gc(KOS_CONTEXT ctx)
 
 void KOS_suspend_context(KOS_CONTEXT ctx)
 {
+    assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
+
     kos_heap_release_thread_page(ctx);
     KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_SUSPENDED);
 }
@@ -2335,6 +2338,8 @@ void KOS_resume_context(KOS_CONTEXT ctx)
 
     if (gc_state != GC_INIT)
         help_gc(ctx);
+    else
+        kos_trigger_mad_gc(ctx);
 }
 
 int KOS_collect_garbage(KOS_CONTEXT   ctx,

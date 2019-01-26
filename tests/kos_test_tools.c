@@ -181,6 +181,7 @@ int create_thread(KOS_CONTEXT ctx,
                   THREAD     *thread)
 {
     int    error      = KOS_SUCCESS;
+    /* TODO heap use after free in GC through local refs, caught by asan in kos_parallel_object_overwrite_test! */
     THREAD new_thread = (THREAD)kos_malloc(sizeof(struct THREAD_S));
 
     if (new_thread) {
