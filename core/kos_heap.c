@@ -684,11 +684,9 @@ static void release_current_page_locked(KOS_CONTEXT ctx)
 
         KOS_HEAP *heap = get_heap(ctx);
 
-        if (KOS_atomic_read_relaxed_u32(heap->gc_state) != GC_INACTIVE) {
-            page->next = 0;
-            clear_marking_in_pages(page);
-            KOS_atomic_release_barrier();
-        }
+        assert(KOS_atomic_read_relaxed_u32(heap->gc_state) == GC_INACTIVE ||
+               KOS_atomic_read_relaxed_u32(ctx->gc_state)  == GC_ENGAGED ||
+               KOS_atomic_read_relaxed_u32(heap->gc_state) == GC_INIT);
 
         assert(KOS_atomic_read_relaxed_u32(page->num_used) == 0U);
 
@@ -1777,6 +1775,14 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 
         KOS_OBJ_ID new_obj = ((KOS_OBJ_HEADER *)((intptr_t)obj_id - 1))->alloc_size;
 
+#ifdef CONFIG_MAD_GC
+        const struct KOS_MARK_LOC_S mark_loc = get_mark_location(obj_id);
+        const uint32_t              color    = get_marking(&mark_loc);
+
+        assert(color & BLACK);
+        assert(IS_HEAP_OBJECT(new_obj));
+#endif
+
         /* Objects in pages retained keep their size in their size field */
         if (IS_HEAP_OBJECT(new_obj)) {
             *obj_id_ptr = new_obj;
@@ -2266,7 +2272,6 @@ static void help_gc(KOS_CONTEXT ctx)
                     return;
                 break;
 
-#if 0
             case GC_MARK:
                 gray_to_black_in_pages(heap);
                 break;
@@ -2276,7 +2281,6 @@ static void help_gc(KOS_CONTEXT ctx)
             case GC_UPDATE:
                 update_pages_after_evacuation(heap);
                 break;
-#endif
 
             default:
                 if ( ! engaged) {
@@ -2355,7 +2359,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     int          error           = KOS_SUCCESS;
 
     /***********************************************************************/
-    /* Phase 1: Initialize GC and clear marking */
+    /* Initialize GC */
 
     time_0 = kos_get_time_us();
 
@@ -2379,20 +2383,23 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     verify_heap_used_size(heap);
 
-    clear_marking(heap);
-
     /***********************************************************************/
-    /* Phase 2: Perform marking */
+    /* Phase 1: Stop all threads, clear marking and mark roots */
 
     kos_lock_mutex(&ctx->inst->threads.mutex);
 
     stop_the_world(ctx->inst); /* Remaining threads enter help_gc() */
+
+    clear_marking(heap);
 
     mark_roots(ctx);
 
     KOS_atomic_write_release_u32(heap->gc_state, GC_MARK);
 
     kos_unlock_mutex(&ctx->inst->threads.mutex);
+
+    /***********************************************************************/
+    /* Phase 2: Perform marking */
 
     do ++num_gray_passes;
     while (gray_to_black(heap));

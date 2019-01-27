@@ -1236,6 +1236,7 @@ static void _thread_finalize(KOS_CONTEXT ctx,
     if ( ! IS_BAD_PTR(priv)) {
         assert(GET_OBJ_TYPE(priv) == OBJ_THREAD);
 
+        /* TODO this cannot be done during GC, postpone this after GC */
         kos_thread_join(ctx, priv);
     }
 }
