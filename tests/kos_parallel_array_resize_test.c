@@ -135,7 +135,7 @@ int main(void)
         KOS_VECTOR          mem_buf;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
-        THREAD             *threads         = 0;
+        KOS_OBJ_ID         *threads         = 0;
         int                 num_threads     = 0;
         int                 num_idcs;
         int                 i_loop;
@@ -158,10 +158,10 @@ int main(void)
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
-                num_threads * (sizeof(THREAD) + sizeof(struct THREAD_DATA))
+                num_threads * (sizeof(KOS_OBJ_ID) + sizeof(struct THREAD_DATA))
             ) == KOS_SUCCESS);
         thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
-        threads        = (THREAD *)(thread_cookies + num_threads);
+        threads        = (KOS_OBJ_ID *)(thread_cookies + num_threads);
 
         for (i = 0; i < num_threads; i++) {
             thread_cookies[i].test      = &data;
@@ -175,8 +175,11 @@ int main(void)
         data.done     = 0U;
         data.error    = KOS_SUCCESS;
 
-        for (i = 0; i < num_threads; i++)
+        for (i = 0; i < num_threads; i++) {
+            int pushed = 0;
             TEST(create_thread(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+            TEST(KOS_push_locals(ctx, &pushed, 1, &threads[i]) == KOS_SUCCESS);
+        }
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             KOS_atomic_add_i32(data.stage, 1);

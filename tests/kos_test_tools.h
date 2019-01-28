@@ -24,19 +24,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct THREAD_S;
-typedef struct THREAD_S *THREAD;
-
 typedef void (*THREAD_PROC)(KOS_CONTEXT ctx,
                             void       *cookie);
 
 int create_thread(KOS_CONTEXT ctx,
                   THREAD_PROC proc,
                   void       *cookie,
-                  THREAD     *thread);
+                  KOS_OBJ_ID *thread);
 
 int join_thread(KOS_CONTEXT ctx,
-                THREAD      thread);
+                KOS_OBJ_ID  thread);
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)

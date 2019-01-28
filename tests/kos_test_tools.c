@@ -21,231 +21,64 @@
  */
 
 #include "kos_test_tools.h"
+#include "../inc/kos_array.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_system.h"
+#include "../core/kos_try.h"
 
-#ifdef _WIN32
-#   define WIN32_LEAN_AND_MEAN
-#   pragma warning( push )
-#   pragma warning( disable : 4255 4668 )
-#   include <windows.h>
-#   pragma warning( pop )
-#else
-#   include <pthread.h>
-#endif
-
-static const char str_err_join_self[] = "thread cannot join itself";
-static const char str_err_thread[]    = "failed to create thread";
-
-#ifdef _WIN32
-
-struct THREAD_S {
-    HANDLE          thread_handle;
-    DWORD           thread_id;
-    KOS_INSTANCE   *inst;
-    THREAD_PROC proc;
-    void           *cookie;
-    KOS_OBJ_ID      exception;
-};
-
-static DWORD WINAPI _thread_proc(LPVOID thread_obj)
+static KOS_OBJ_ID handler(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
-    struct KOS_THREAD_CONTEXT_S thread_ctx;
-    DWORD                       ret        = 0;
-    int                         unregister = 0;
+    const KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
-    if (KOS_instance_register_thread(((THREAD)thread_obj)->inst, &thread_ctx) == KOS_SUCCESS) {
-        ((THREAD)thread_obj)->proc(&thread_ctx, ((THREAD)thread_obj)->cookie);
-        unregister = 1;
-    }
+    assert( ! IS_BAD_PTR(arg));
 
-    if (KOS_is_exception_pending(&thread_ctx)) {
-        ((THREAD)thread_obj)->exception = KOS_get_exception(&thread_ctx);
-        ret = 1;
-    }
+    ((THREAD_PROC)(void *)this_obj)(ctx, (void *)arg);
 
-    if (unregister)
-        KOS_instance_unregister_thread(((THREAD)thread_obj)->inst, &thread_ctx);
-
-    return ret;
+    return KOS_VOID;
 }
 
 int create_thread(KOS_CONTEXT ctx,
                   THREAD_PROC proc,
                   void       *cookie,
-                  THREAD     *thread)
+                  KOS_OBJ_ID *thread)
 {
-    int    error      = KOS_SUCCESS;
-    THREAD new_thread = (THREAD)kos_malloc(sizeof(struct THREAD_S));
+    int        error    = KOS_SUCCESS;
+    int        pushed   = 0;
+    KOS_OBJ_ID func_obj = KOS_BADPTR;
+    KOS_OBJ_ID args_obj = KOS_BADPTR;
 
-    if (new_thread) {
-        int pushed = 0;
+    TRY(KOS_push_locals(ctx, &pushed, 2, &func_obj, &args_obj));
 
-        new_thread->thread_id = 0;
-        new_thread->inst      = ctx->inst;
-        new_thread->proc      = proc;
-        new_thread->cookie    = cookie;
-        new_thread->exception = KOS_BADPTR;
+    func_obj = KOS_new_builtin_function(ctx, handler, 1);
+    TRY_OBJID(func_obj);
 
-        error = KOS_push_locals(ctx, &pushed, 1, &new_thread->exception);
-        if (error)
-            return error;
+    args_obj = KOS_new_array(ctx, 1);
+    TRY_OBJID(args_obj);
 
-        new_thread->thread_handle = CreateThread(0,
-                                                 0,
-                                                 _thread_proc,
-                                                 new_thread,
-                                                 0,
-                                                 &new_thread->thread_id);
+    TRY(KOS_array_write(ctx, args_obj, 0, (KOS_OBJ_ID)cookie));
 
-        if (!new_thread->thread_handle) {
-            kos_free(new_thread);
-            KOS_raise_exception_cstring(ctx, str_err_thread);
-            error = KOS_ERROR_EXCEPTION;
-        }
-        else
-            *thread = new_thread;
-    }
-    else
-        error = KOS_ERROR_OUT_OF_MEMORY;
+    *thread = kos_thread_create(ctx, func_obj, (KOS_OBJ_ID)(void *)proc, args_obj);
+
+    TRY_OBJID(*thread);
+
+cleanup:
+    KOS_pop_locals(ctx, pushed);
 
     return error;
 }
 
 int join_thread(KOS_CONTEXT ctx,
-                THREAD      thread)
+                KOS_OBJ_ID  thread)
 {
-    int error = KOS_SUCCESS;
+    const KOS_OBJ_ID retval = kos_thread_join(ctx, thread);
 
-    if (thread) {
-        if (GetCurrentThreadId() == thread->thread_id) {
-            KOS_raise_exception_cstring(ctx, str_err_join_self);
-            return KOS_ERROR_EXCEPTION;
-        }
-
-        KOS_suspend_context(ctx);
-
-        WaitForSingleObject(thread->thread_handle, INFINITE);
-        CloseHandle(thread->thread_handle);
-
-        KOS_resume_context(ctx);
-
-        if ( ! IS_BAD_PTR(thread->exception)) {
-            KOS_raise_exception(ctx, thread->exception);
-            error = KOS_ERROR_EXCEPTION;
-        }
-
-        KOS_pop_locals(ctx, 1);
-
-        kos_free(thread);
-    }
-
-    return error;
+    return IS_BAD_PTR(retval) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
-
-#else
-
-struct THREAD_S {
-    pthread_t     thread_handle;
-    KOS_INSTANCE *inst;
-    THREAD_PROC   proc;
-    void         *cookie;
-    KOS_OBJ_ID    exception;
-};
-
-static void *_thread_proc(void *thread_obj)
-{
-    struct KOS_THREAD_CONTEXT_S thread_ctx;
-    int                         unregister = 0;
-
-    if (KOS_instance_register_thread(((THREAD)thread_obj)->inst, &thread_ctx) == KOS_SUCCESS) {
-        ((THREAD)thread_obj)->proc(&thread_ctx, ((THREAD)thread_obj)->cookie);
-        unregister = 1;
-    }
-
-    if (KOS_is_exception_pending(&thread_ctx))
-        ((THREAD)thread_obj)->exception = KOS_get_exception(&thread_ctx);
-
-    if (unregister)
-        KOS_instance_unregister_thread(((THREAD)thread_obj)->inst, &thread_ctx);
-
-    return 0;
-}
-
-int create_thread(KOS_CONTEXT ctx,
-                  THREAD_PROC proc,
-                  void       *cookie,
-                  THREAD     *thread)
-{
-    int    error      = KOS_SUCCESS;
-    /* TODO heap use after free in GC through local refs, caught by asan in kos_parallel_object_overwrite_test! */
-    THREAD new_thread = (THREAD)kos_malloc(sizeof(struct THREAD_S));
-
-    if (new_thread) {
-        int pushed = 0;
-
-        new_thread->inst      = ctx->inst;
-        new_thread->proc      = proc;
-        new_thread->cookie    = cookie;
-        new_thread->exception = KOS_BADPTR;
-
-        error = KOS_push_locals(ctx, &pushed, 1, &new_thread->exception);
-
-        if (error) {
-            kos_free(new_thread);
-            return error;
-        }
-
-        if (pthread_create(&new_thread->thread_handle, 0, _thread_proc, new_thread)) {
-            kos_free(new_thread);
-            KOS_raise_exception_cstring(ctx, str_err_thread);
-            error = KOS_ERROR_EXCEPTION;
-        }
-        else
-            *thread = new_thread;
-    }
-    else
-        error = KOS_ERROR_OUT_OF_MEMORY;
-
-    return error;
-}
-
-int join_thread(KOS_CONTEXT ctx,
-                THREAD      thread)
-{
-    int error = KOS_SUCCESS;
-
-    if (thread) {
-        void *ret = 0;
-
-        if (pthread_equal(pthread_self(), thread->thread_handle)) {
-            KOS_raise_exception_cstring(ctx, str_err_join_self);
-            return KOS_ERROR_EXCEPTION;
-        }
-
-        KOS_suspend_context(ctx);
-
-        pthread_join(thread->thread_handle, &ret);
-
-        KOS_resume_context(ctx);
-
-        if ( ! IS_BAD_PTR(thread->exception)) {
-            KOS_raise_exception(ctx, thread->exception);
-            error = KOS_ERROR_EXCEPTION;
-        }
-
-        KOS_pop_locals(ctx, 1);
-
-        kos_free(thread);
-    }
-
-    return error;
-}
-
-#endif
 
 int get_num_cpus(void)
 {

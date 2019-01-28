@@ -117,7 +117,7 @@ int main(void)
         KOS_VECTOR          mem_buf;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
-        THREAD             *threads          = 0;
+        KOS_OBJ_ID         *threads          = 0;
         KOS_OBJ_ID          prev_locals      = KOS_BADPTR;
         int                 num_threads      = 0;
         int                 i_loop;
@@ -129,10 +129,10 @@ int main(void)
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
-                num_threads * (sizeof(THREAD) + sizeof(struct THREAD_DATA))
+                num_threads * (sizeof(KOS_OBJ_ID) + sizeof(struct THREAD_DATA))
             ) == KOS_SUCCESS);
         thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
-        threads        = (THREAD *)(thread_cookies + num_threads);
+        threads        = (KOS_OBJ_ID *)(thread_cookies + num_threads);
 
         for (i = 0; i < num_threads; i++) {
             kos_rng_init(&thread_cookies[i].rng);
@@ -170,16 +170,20 @@ int main(void)
             }
 
             /* Start with 1, because 0 is for the main thread, which participates */
-            for (i = 1; i < num_threads; i++)
+            for (i = 1; i < num_threads; i++) {
+                int pushed = 0;
                 TEST(create_thread(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(KOS_push_locals(ctx, &pushed, 1, &threads[i]) == KOS_SUCCESS);
+            }
 
             KOS_atomic_write_relaxed_u32(data.go, 1);
             TEST(_run_test(ctx, thread_cookies) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
-            for (i = 1; i < num_threads; i++) {
+            for (i = num_threads - 1; i > 0; i--) {
                 join_thread(ctx, threads[i]);
                 TEST_NO_EXCEPTION();
+                KOS_pop_locals(ctx, 1);
             }
 
             TEST(data.error == KOS_SUCCESS);

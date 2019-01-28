@@ -137,7 +137,7 @@ int main(void)
 #endif
         const int           num_props   = 128;
         KOS_VECTOR          mem_buf;
-        THREAD             *threads     = 0;
+        KOS_OBJ_ID         *threads     = 0;
         int                 num_threads = 0;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
@@ -154,12 +154,12 @@ int main(void)
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
-                num_threads * (sizeof(THREAD) + sizeof(struct THREAD_DATA))
+                num_threads * (sizeof(KOS_OBJ_ID) + sizeof(struct THREAD_DATA))
                 + num_props * sizeof(KOS_OBJ_ID)
             ) == KOS_SUCCESS);
         props          = (KOS_OBJ_ID *)mem_buf.buffer;
         thread_cookies = (struct THREAD_DATA *)(props + num_props);
-        threads        = (THREAD *)(thread_cookies + num_threads);
+        threads        = (KOS_OBJ_ID *)(thread_cookies + num_threads);
 
         kos_rng_init(&rng);
 
@@ -195,9 +195,11 @@ int main(void)
             TEST(KOS_push_locals(ctx, &pushed, 1, &data.object) == KOS_SUCCESS);
 
             for (i = 0; i < num_threads; i++) {
+                int pushed2 = 0;
                 thread_cookies[i].test      = &data;
                 thread_cookies[i].rand_init = (unsigned)kos_rng_random_range(&rng, 0xFFFFFFFFU);
                 TEST(create_thread(ctx, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(KOS_push_locals(ctx, &pushed2, 1, &threads[i]) == KOS_SUCCESS);
             }
 
             i = (int)kos_rng_random_range(&rng, 0x7FFFFFFF);
@@ -205,9 +207,10 @@ int main(void)
             TEST(_write_props_inner(ctx, &data, (unsigned)i) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
-            for (i = 0; i < num_threads; i++) {
+            for (i = num_threads - 1; i >= 0; i--) {
                 join_thread(ctx, threads[i]);
                 TEST_NO_EXCEPTION();
+                KOS_pop_locals(ctx, 1);
             }
 
             TEST(data.error == KOS_SUCCESS);
