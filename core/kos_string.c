@@ -47,7 +47,6 @@ static const char str_err_invalid_utf8[]         = "invalid UTF-8 sequence";
 static const char str_err_not_array[]            = "object is not an array";
 static const char str_err_not_string[]           = "object is not a string";
 static const char str_err_null_pointer[]         = "null pointer";
-static const char str_err_out_of_memory[]        = "out of memory";
 static const char str_err_too_many_repeats[]     = "repeated string too long";
 
 #ifdef CONFIG_STRING16
@@ -493,7 +492,7 @@ int KOS_string_to_cstr_vec(KOS_CONTEXT ctx,
     error = kos_vector_resize(str_vec, str_len+1);
 
     if (error) {
-        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -1606,7 +1605,7 @@ int kos_append_cstr(KOS_CONTEXT ctx,
     int          error = kos_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
 
     if (error) {
-        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
         error = KOS_ERROR_EXCEPTION;
     }
     else

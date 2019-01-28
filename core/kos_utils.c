@@ -55,7 +55,6 @@ static const char str_err_invalid_string[]      = "invalid string";
 static const char str_err_not_array[]           = "object is not an array";
 static const char str_err_not_number[]          = "object is not a number";
 static const char str_err_number_out_of_range[] = "number out of range";
-static const char str_err_out_of_memory[]       = "out of memory";
 static const char str_err_unsup_operand_types[] = "unsupported operand types";
 static const char str_function_open[]           = "<function ";
 static const char str_object_close[]            = "}";
@@ -309,7 +308,7 @@ static int _int_to_str(KOS_CONTEXT ctx,
 
 cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
         error = KOS_ERROR_EXCEPTION;
     }
 
@@ -345,7 +344,7 @@ static int _float_to_str(KOS_CONTEXT ctx,
 
 cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
         error = KOS_ERROR_EXCEPTION;
     }
 
@@ -381,7 +380,7 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
     error = kos_vector_resize(cstr_vec, pos + str_len + 1 + (quote_str ? 2 : 0));
 
     if (error) {
-        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -414,7 +413,7 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
             error = kos_vector_resize(cstr_vec, cstr_vec->size + extra_len);
 
             if (error) {
-                KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+                KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
                 return KOS_ERROR_EXCEPTION;
             }
 
@@ -679,8 +678,10 @@ static int _vector_append_buffer(KOS_CONTEXT ctx,
     size = KOS_get_buffer_size(obj_id);
 
     error = kos_vector_reserve(cstr_vec, cstr_vec->size + size * 3 + 2);
-    if (error)
-        RAISE_EXCEPTION(str_err_out_of_memory);
+    if (error) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
     assert(sizeof(str_buffer_open)  == 2);
     assert(sizeof(str_buffer_close) == 2);
 
@@ -1033,7 +1034,7 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
 
 cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception_cstring(ctx, str_err_out_of_memory);
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
         error = KOS_ERROR_EXCEPTION;
     }
 
