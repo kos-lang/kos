@@ -27,7 +27,6 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
-#include "../core/kos_heap.h" /* TODO until we have GC */
 #include "../core/kos_malloc.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
@@ -37,10 +36,8 @@ static const char str_err_invalid_range[] = "invalid range";
 static const char str_err_invalid_seed[]  = "invalid seed";
 static const char str_err_no_max_value[]  = "max argument missing";
 static const char str_err_not_random[]    = "invalid this";
-static const char str_err_out_of_memory[] = "out of memory";
 
 typedef struct KOS_RNG_CONTAINER_S {
-    KOS_OBJ_HEADER       header; /* TODO remove this when we switch to malloc */
     KOS_ATOMIC(uint32_t) lock;
     struct KOS_RNG       rng;
 } KOS_RNG_CONTAINER;
@@ -48,10 +45,8 @@ typedef struct KOS_RNG_CONTAINER_S {
 static void finalize(KOS_CONTEXT ctx,
                      KOS_OBJ_ID  priv)
 {
-    /* TODO free
     if (priv)
-        kos_free_buffer(ctx, priv, sizeof(KOS_RNG_CONTAINER));
-    */
+        kos_free((void *)priv);
 }
 
 /* @item random random()
@@ -102,8 +97,6 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
     ret = KOS_new_object_with_prototype(ctx, this_obj);
     TRY_OBJID(ret);
 
-    KOS_object_set_private(ret, KOS_BADPTR);
-
     OBJPTR(OBJECT, ret)->finalize = finalize;
 
     if (KOS_get_array_size(args_obj) > 0) {
@@ -117,16 +110,12 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
             RAISE_EXCEPTION(str_err_invalid_seed);
     }
 
-    /* TODO malloc when GC supports finalize */
-    /*
     rng = (KOS_RNG_CONTAINER *)kos_malloc(sizeof(KOS_RNG_CONTAINER));
-    */
-    rng = (KOS_RNG_CONTAINER *)kos_alloc_object(ctx,
-                                                OBJ_OPAQUE,
-                                                sizeof(KOS_RNG_CONTAINER));
 
-    if ( ! rng)
-        RAISE_EXCEPTION(str_err_out_of_memory);
+    if ( ! rng) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+    }
 
     rng->lock = 0;
 
@@ -141,14 +130,12 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
         kos_rng_init_seed(&rng->rng, (uint64_t)seed);
     }
 
-    KOS_object_set_private(ret, OBJID(OPAQUE, (KOS_OPAQUE *)rng));
+    KOS_object_set_private_ptr(ret, rng);
     rng = 0;
 
 cleanup:
-    /* TODO free
     if (rng)
-        kos_free_buffer(ctx, rng, sizeof(KOS_RNG_CONTAINER));
-    */
+        kos_free(rng);
 
     return error ? KOS_BADPTR : ret;
 }
@@ -157,19 +144,19 @@ static int _get_rng(KOS_CONTEXT         ctx,
                     KOS_OBJ_ID          this_obj,
                     KOS_RNG_CONTAINER **rng)
 {
-    int        error = KOS_SUCCESS;
-    KOS_OBJ_ID rng_obj;
+    int                error = KOS_SUCCESS;
+    KOS_RNG_CONTAINER *rng_ptr;
 
     assert( ! IS_BAD_PTR(this_obj));
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT)
         RAISE_EXCEPTION(str_err_not_random);
 
-    rng_obj = KOS_object_get_private(this_obj);
-    if (IS_BAD_PTR(rng_obj) || IS_SMALL_INT(rng_obj))
+    rng_ptr = (KOS_RNG_CONTAINER *)KOS_object_get_private_ptr(this_obj);
+    if ( ! rng_ptr)
         RAISE_EXCEPTION(str_err_not_random);
 
-    *rng = (KOS_RNG_CONTAINER *)OBJPTR(OPAQUE, rng_obj);
+    *rng = rng_ptr;
 
 cleanup:
     return error;
