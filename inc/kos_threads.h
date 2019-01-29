@@ -45,6 +45,8 @@ KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
 KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  thread);
 
+void kos_thread_disown(KOS_OBJ_ID thread);
+
 int kos_is_current_thread(KOS_OBJ_ID thread);
 
 int kos_create_mutex(KOS_MUTEX *mutex);

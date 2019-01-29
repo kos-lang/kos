@@ -42,7 +42,7 @@ typedef struct KOS_THREAD_S {
     KOS_OBJ_ID             thread_func;
     KOS_OBJ_ID             this_obj;
     KOS_OBJ_ID             args_obj;
-    KOS_OBJ_ID             retval;
+    KOS_ATOMIC(KOS_OBJ_ID) retval;
     KOS_ATOMIC(KOS_OBJ_ID) exception;
 #ifdef _WIN32
     HANDLE                 thread_handle;
@@ -51,6 +51,15 @@ typedef struct KOS_THREAD_S {
     pthread_t              thread_handle;
 #endif
     unsigned               thread_idx; /* Index to the threads array in instance */
+    KOS_ATOMIC(uint32_t)   flags;
 } KOS_THREAD;
+
+enum KOS_THREAD_FLAGS_E {
+    KOS_THREAD_DISOWNED = 1,
+    KOS_THREAD_FINISHED = 2,
+    KOS_THREAD_JOINED   = 4
+};
+
+int kos_release_finished_threads(KOS_CONTEXT ctx);
 
 #endif

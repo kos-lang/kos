@@ -45,9 +45,9 @@ void *kos_heap_early_alloc(KOS_INSTANCE *inst,
 void kos_heap_release_thread_page(KOS_CONTEXT ctx);
 
 #ifdef CONFIG_MAD_GC
-void kos_trigger_mad_gc(KOS_CONTEXT ctx);
+int kos_trigger_mad_gc(KOS_CONTEXT ctx);
 #else
-#define kos_trigger_mad_gc(ctx) ((void)0)
+#define kos_trigger_mad_gc(ctx) 0
 #endif
 
 #if !defined(NDEBUG) || defined(CONFIG_MAD_GC)

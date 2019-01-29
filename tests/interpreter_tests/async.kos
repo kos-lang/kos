@@ -108,3 +108,23 @@ do {
     assert o.value == 42
     assert val == 43
 }
+
+# Test recursive spawn of a thread from the spawned thread
+do {
+    fun respawn(f, o)
+    {
+        const count = o[0]
+        if count == 0 {
+            o[1] = 1
+        }
+        else {
+            o[0] = count - 1
+            async f(f, o)
+        }
+    }
+
+    const o = [20, 0]
+    respawn(respawn, o)
+    while o[1] == 0 {
+    }
+}

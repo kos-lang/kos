@@ -126,6 +126,7 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
     KOS_THREAD   *thread;
     KOS_OBJ_ID    thread_obj = KOS_BADPTR;
     int           pushed     = 0;
+    int           error      = KOS_SUCCESS;
 
     if (KOS_push_locals(ctx, &pushed, 4, &thread_func, &this_obj, &args_obj, &thread_obj))
         return KOS_BADPTR;
@@ -141,6 +142,7 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
         thread->retval      = KOS_BADPTR;
         thread->exception   = KOS_BADPTR;
         thread->thread_idx  = ~0U;
+        thread->flags       = 0;
 #ifdef _WIN32
         thread->thread_handle = 0;
         thread->thread_id     = 0;
@@ -195,9 +197,12 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
 
         kos_unlock_mutex(&inst->threads.mutex);
 
-        KOS_resume_context(ctx);
+        error = KOS_resume_context(ctx);
 
-        if (KOS_array_resize(ctx, inst->threads.threads, size * 2U)) {
+        if ( ! error)
+            error = KOS_array_resize(ctx, inst->threads.threads, size * 2U);
+
+        if (error) {
             KOS_pop_locals(ctx, pushed);
             return KOS_BADPTR;
         }
@@ -209,11 +214,25 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
 
     kos_unlock_mutex(&inst->threads.mutex);
 
-    KOS_resume_context(ctx);
+    error = KOS_resume_context(ctx);
 
     KOS_pop_locals(ctx, pushed);
 
-    return thread_obj;
+    return error ? KOS_BADPTR : thread_obj;
+}
+
+static void set_thread_flags(KOS_OBJ_ID thread, uint32_t new_flags)
+{
+    assert(new_flags);
+
+    for (;;) {
+        const uint32_t flags = KOS_atomic_read_relaxed_u32(OBJPTR(THREAD, thread)->flags);
+
+        assert((flags & new_flags) == 0);
+
+        if (KOS_atomic_cas_weak_u32(OBJPTR(THREAD, thread)->flags, flags, flags | new_flags))
+            break;
+    }
 }
 
 static void release_thread(KOS_CONTEXT ctx, KOS_OBJ_ID thread)
@@ -227,9 +246,18 @@ static void release_thread(KOS_CONTEXT ctx, KOS_OBJ_ID thread)
 
     assert(thread_idx != ~0U);
 
+    OBJPTR(THREAD, thread)->thread_idx = ~0U;
+
+    set_thread_flags(thread, KOS_THREAD_JOINED);
+
     (void)KOS_array_write(ctx, inst->threads.threads, thread_idx, KOS_VOID);
 
     KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&inst->threads.num_threads, -1);
+}
+
+void kos_thread_disown(KOS_OBJ_ID thread)
+{
+    set_thread_flags(thread, KOS_THREAD_DISOWNED);
 }
 
 typedef struct THREAD_INITIALIZER_S {
@@ -258,6 +286,40 @@ static void set_thread_exception(KOS_CONTEXT ctx, KOS_OBJ_ID thread)
     assert(KOS_is_exception_pending(ctx));
 
     KOS_atomic_write_relaxed_ptr(OBJPTR(THREAD, thread)->exception, KOS_get_exception(ctx));
+}
+
+int kos_release_finished_threads(KOS_CONTEXT ctx)
+{
+    int            error       = KOS_SUCCESS;
+    KOS_INSTANCE  *inst        = ctx->inst;
+    const uint32_t num_threads = IS_BAD_PTR(inst->threads.threads) ? 0U : KOS_get_array_size(inst->threads.threads);
+    KOS_OBJ_ID     thread      = KOS_BADPTR;
+    uint32_t       i;
+
+    kos_track_refs(ctx, TRACK_ONE_REF, &thread);
+
+    for (i = 0; i < num_threads && ! error; i++) {
+
+        thread = KOS_array_read(ctx, inst->threads.threads, i);
+
+        if (IS_BAD_PTR(thread)) {
+            KOS_clear_exception(ctx);
+            continue;
+        }
+
+        if (thread == KOS_VOID)
+            continue;
+
+        if (KOS_atomic_read_relaxed_u32(OBJPTR(THREAD, thread)->flags) == 3) {
+            const KOS_OBJ_ID retval = kos_thread_join(ctx, thread);
+            TRY_OBJID(retval);
+        }
+    }
+
+cleanup:
+    kos_untrack_refs(ctx, 1);
+
+    return error;
 }
 
 #ifdef _WIN32
@@ -303,6 +365,8 @@ static void *thread_proc(void *thread_ptr)
             OBJPTR(THREAD, thread_obj)->retval = retval;
         }
     }
+
+    set_thread_flags(thread_obj, KOS_THREAD_FINISHED);
 
     KOS_instance_unregister_thread(thread_ctx.inst, &thread_ctx);
 
@@ -364,12 +428,11 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  thread)
 {
     int        error  = KOS_SUCCESS;
-    int        pushed = 0;
     KOS_OBJ_ID retval = KOS_BADPTR;
 
     assert( ! IS_BAD_PTR(thread));
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &thread));
+    kos_track_refs(ctx, TRACK_ONE_REF, &thread);
 
     if (kos_is_current_thread(thread))
         RAISE_EXCEPTION(str_err_join_self);
@@ -379,21 +442,23 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
     WaitForSingleObject(OBJPTR(THREAD, thread)->thread_handle, INFINITE);
     CloseHandle(OBJPTR(THREAD, thread)->thread_handle);
 
-    KOS_resume_context(ctx);
+    error = KOS_resume_context(ctx);
 
-    if (IS_BAD_PTR(OBJPTR(THREAD, thread)->exception)) {
-        retval = OBJPTR(THREAD, thread)->retval;
-        assert( ! IS_BAD_PTR(retval));
-    }
-    else {
-        KOS_raise_exception(ctx, OBJPTR(THREAD, thread)->exception);
-        error = KOS_ERROR_EXCEPTION;
+    if ( ! error) {
+        if (IS_BAD_PTR(OBJPTR(THREAD, thread)->exception)) {
+            retval = OBJPTR(THREAD, thread)->retval;
+            assert( ! IS_BAD_PTR(retval));
+        }
+        else {
+            KOS_raise_exception(ctx, OBJPTR(THREAD, thread)->exception);
+            error = KOS_ERROR_EXCEPTION;
+        }
     }
 
     release_thread(ctx, thread);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    kos_untrack_refs(ctx, 1);
 
     return error ? KOS_BADPTR : retval;
 }
@@ -528,12 +593,15 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  thread)
 {
     int        error  = KOS_SUCCESS;
-    int        pushed = 0;
     KOS_OBJ_ID retval = KOS_BADPTR;
 
     assert( ! IS_BAD_PTR(thread));
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &thread));
+#ifdef CONFIG_MAD_GC
+    kos_track_refs(ctx, 0x1234, &thread);
+#else
+    kos_track_refs(ctx, 1, &thread);
+#endif
 
     if (kos_is_current_thread(thread))
         RAISE_EXCEPTION(str_err_join_self);
@@ -542,21 +610,23 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
 
     pthread_join(OBJPTR(THREAD, thread)->thread_handle, NULL);
 
-    KOS_resume_context(ctx);
+    error = KOS_resume_context(ctx);
 
-    if (IS_BAD_PTR(OBJPTR(THREAD, thread)->exception)) {
-        retval = OBJPTR(THREAD, thread)->retval;
-        assert( ! IS_BAD_PTR(retval));
-    }
-    else {
-        KOS_raise_exception(ctx, OBJPTR(THREAD, thread)->exception);
-        error = KOS_ERROR_EXCEPTION;
+    if ( ! error) {
+        if (IS_BAD_PTR(OBJPTR(THREAD, thread)->exception)) {
+            retval = OBJPTR(THREAD, thread)->retval;
+            assert( ! IS_BAD_PTR(retval));
+        }
+        else {
+            KOS_raise_exception(ctx, OBJPTR(THREAD, thread)->exception);
+            error = KOS_ERROR_EXCEPTION;
+        }
     }
 
     release_thread(ctx, thread);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    kos_untrack_refs(ctx, 1);
 
     return error ? KOS_BADPTR : retval;
 }

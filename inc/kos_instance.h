@@ -337,7 +337,7 @@ void KOS_help_gc(KOS_CONTEXT ctx);
 
 void KOS_suspend_context(KOS_CONTEXT ctx);
 
-void KOS_resume_context(KOS_CONTEXT ctx);
+int KOS_resume_context(KOS_CONTEXT ctx);
 
 #ifdef __cplusplus
 }

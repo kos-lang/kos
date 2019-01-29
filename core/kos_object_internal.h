@@ -222,6 +222,12 @@ struct KOS_PAGE_HEADER_S {
 
 #define KOS_LOOK_FURTHER 255
 
+#ifdef CONFIG_MAD_GC
+#define TRACK_ONE_REF 0x1234
+#else
+#define TRACK_ONE_REF 1
+#endif
+
 typedef struct KOS_LOCAL_REFS_HEADER_S {
     KOS_OBJ_ID alloc_size;
     uint8_t    type;

@@ -583,13 +583,14 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
     return page;
 }
 
-static void try_collect_garbage(KOS_CONTEXT ctx)
+static int try_collect_garbage(KOS_CONTEXT ctx)
 {
-    KOS_HEAP *const heap = get_heap(ctx);
+    KOS_HEAP *const heap  = get_heap(ctx);
+    int             error = KOS_SUCCESS;
 
     /* Don't try to collect garbage when the garbage collector is running */
     if (KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE)
-        return;
+        return KOS_SUCCESS;
 
 #ifdef CONFIG_MAD_GC
     if ( ! (ctx->inst->flags & KOS_INST_MANUAL_GC))
@@ -601,10 +602,12 @@ static void try_collect_garbage(KOS_CONTEXT ctx)
 
         kos_unlock_mutex(&heap->mutex);
 
-        KOS_collect_garbage(ctx, 0);
+        error = KOS_collect_garbage(ctx, 0);
 
         kos_lock_mutex(&heap->mutex);
     }
+
+    return error;
 }
 
 static void *alloc_slots_from_page(KOS_PAGE *page, uint32_t num_slots)
@@ -777,7 +780,10 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     kos_lock_mutex(&heap->mutex);
 
-    try_collect_garbage(ctx);
+    if (try_collect_garbage(ctx)) {
+        kos_unlock_mutex(&heap->mutex);
+        return 0;
+    }
 
     page_ptr = &heap->free_pages;
     page     = *page_ptr;
@@ -1009,7 +1015,10 @@ static void *alloc_object(KOS_CONTEXT ctx,
             ctx->cur_page = 0;
         }
 
-        try_collect_garbage(ctx);
+        if (try_collect_garbage(ctx)) {
+            kos_unlock_mutex(&heap->mutex);
+            return 0;
+        }
 
         /* Allocate a new page */
         page = alloc_page(heap);
@@ -1042,7 +1051,8 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
 {
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
 
-    kos_trigger_mad_gc(ctx);
+    if (kos_trigger_mad_gc(ctx))
+        return 0;
 
     if (size > (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
         return alloc_huge_object(ctx, object_type, size);
@@ -1921,7 +1931,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
                 update_child_ptr(&((KOS_THREAD *)hdr)->thread_func);
                 update_child_ptr(&((KOS_THREAD *)hdr)->this_obj);
                 update_child_ptr(&((KOS_THREAD *)hdr)->args_obj);
-                update_child_ptr(&((KOS_THREAD *)hdr)->retval);
+                update_child_ptr((KOS_OBJ_ID *)&((KOS_THREAD *)hdr)->retval);
                 update_child_ptr((KOS_OBJ_ID *)&((KOS_THREAD *)hdr)->exception);
             }
             break;
@@ -2304,17 +2314,20 @@ void KOS_help_gc(KOS_CONTEXT ctx)
 }
 
 #ifdef CONFIG_MAD_GC
-void kos_trigger_mad_gc(KOS_CONTEXT ctx)
+int kos_trigger_mad_gc(KOS_CONTEXT ctx)
 {
     KOS_HEAP *const heap = get_heap(ctx);
+    int             error;
 
     /* Don't try to collect garbage when the garbage collector is running */
     if (KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE)
-        return;
+        return KOS_SUCCESS;
 
     kos_lock_mutex(&heap->mutex);
-    try_collect_garbage(ctx);
+    error = try_collect_garbage(ctx);
     kos_unlock_mutex(&heap->mutex);
+
+    return error;
 }
 #endif
 
@@ -2326,9 +2339,10 @@ void KOS_suspend_context(KOS_CONTEXT ctx)
     KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_SUSPENDED);
 }
 
-void KOS_resume_context(KOS_CONTEXT ctx)
+int KOS_resume_context(KOS_CONTEXT ctx)
 {
     enum GC_STATE_E gc_state;
+    int             error = KOS_SUCCESS;
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_SUSPENDED);
 
@@ -2343,7 +2357,9 @@ void KOS_resume_context(KOS_CONTEXT ctx)
     if (gc_state != GC_INIT)
         help_gc(ctx);
     else
-        kos_trigger_mad_gc(ctx);
+        error = kos_trigger_mad_gc(ctx);
+
+    return error;
 }
 
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
@@ -2453,6 +2469,9 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     if (out_stats)
         *out_stats = stats;
+
+    if ( ! error)
+        error = kos_release_finished_threads(ctx);
 
     return error;
 }

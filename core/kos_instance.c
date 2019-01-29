@@ -124,7 +124,7 @@ static int _register_thread(KOS_INSTANCE *inst,
     size_t i;
 
     if (kos_tls_get(inst->threads.thread_key)) {
-        KOS_resume_context(ctx);
+        TRY(KOS_resume_context(ctx));
         RAISE_EXCEPTION(str_err_thread_registered);
     }
 
@@ -151,7 +151,7 @@ static int _register_thread(KOS_INSTANCE *inst,
 
     kos_tls_set(inst->threads.thread_key, ctx);
 
-    KOS_resume_context(ctx);
+    TRY(KOS_resume_context(ctx));
 
     TRY(_push_local_refs_object(ctx));
 
@@ -792,7 +792,7 @@ void KOS_raise_exception(KOS_CONTEXT ctx,
 #ifdef CONFIG_MAD_GC
     if ( ! kos_gc_active(ctx)) {
         kos_track_refs(ctx, 1, &exception_obj);
-        kos_trigger_mad_gc(ctx);
+        (void)kos_trigger_mad_gc(ctx);
         kos_untrack_refs(ctx, 1);
     }
 #endif
@@ -1140,7 +1140,7 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
 
     if ( ! error) {
         *push_status = num_entries;
-        kos_trigger_mad_gc(ctx);
+        error = kos_trigger_mad_gc(ctx);
     }
 
     return error;
@@ -1186,8 +1186,16 @@ void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
     uint32_t i;
     uint32_t end;
 
-    assert( ! kos_gc_active(ctx));
+#ifdef CONFIG_MAD_GC
+    int run_mad_gc = 1;
+    if (num_entries == TRACK_ONE_REF) {
+        run_mad_gc  = 0;
+        num_entries = 1;
+    }
+#endif
+
     assert(num_entries > 0);
+    assert( ! kos_gc_active(ctx));
     assert((size_t)(ctx->tmp_ref_count + num_entries) <=
            sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]));
 
@@ -1205,7 +1213,12 @@ void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
 
     va_end(args);
 
-    kos_trigger_mad_gc(ctx);
+#ifdef CONFIG_MAD_GC
+    if (run_mad_gc)
+        if (kos_trigger_mad_gc(ctx))
+            /* Ignore stray exception from another thread or GC failure */
+            KOS_clear_exception(ctx);
+#endif
 }
 
 void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries)
