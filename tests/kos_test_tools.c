@@ -29,40 +29,25 @@
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
 
-static KOS_OBJ_ID handler(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
-{
-    const KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
-
-    assert( ! IS_BAD_PTR(arg));
-
-    ((THREAD_PROC)(void *)this_obj)(ctx, (void *)arg);
-
-    return KOS_VOID;
-}
-
-int create_thread(KOS_CONTEXT ctx,
-                  THREAD_PROC proc,
-                  void       *cookie,
-                  KOS_OBJ_ID *thread)
+int create_thread(KOS_CONTEXT          ctx,
+                  KOS_FUNCTION_HANDLER proc,
+                  void                *cookie,
+                  KOS_OBJ_ID          *thread)
 {
     int        error    = KOS_SUCCESS;
     int        pushed   = 0;
     KOS_OBJ_ID func_obj = KOS_BADPTR;
     KOS_OBJ_ID args_obj = KOS_BADPTR;
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &func_obj, &args_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 1, &func_obj));
 
-    func_obj = KOS_new_builtin_function(ctx, handler, 1);
+    func_obj = KOS_new_builtin_function(ctx, proc, 0);
     TRY_OBJID(func_obj);
 
-    args_obj = KOS_new_array(ctx, 1);
+    args_obj = KOS_new_array(ctx, 0);
     TRY_OBJID(args_obj);
 
-    TRY(KOS_array_write(ctx, args_obj, 0, (KOS_OBJ_ID)cookie));
-
-    *thread = kos_thread_create(ctx, func_obj, (KOS_OBJ_ID)(void *)proc, args_obj);
+    *thread = kos_thread_create(ctx, func_obj, (KOS_OBJ_ID)cookie, args_obj);
 
     TRY_OBJID(*thread);
 

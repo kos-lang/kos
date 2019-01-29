@@ -24,13 +24,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef void (*THREAD_PROC)(KOS_CONTEXT ctx,
-                            void       *cookie);
-
-int create_thread(KOS_CONTEXT ctx,
-                  THREAD_PROC proc,
-                  void       *cookie,
-                  KOS_OBJ_ID *thread);
+int create_thread(KOS_CONTEXT          ctx,
+                  KOS_FUNCTION_HANDLER proc,
+                  void                *cookie,
+                  KOS_OBJ_ID          *thread);
 
 int join_thread(KOS_CONTEXT ctx,
                 KOS_OBJ_ID  thread);

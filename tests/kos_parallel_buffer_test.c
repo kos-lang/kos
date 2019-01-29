@@ -87,13 +87,16 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
     return 0;
 }
 
-static void _test_thread_func(KOS_CONTEXT ctx,
-                              void       *cookie)
+static KOS_OBJ_ID test_thread_func(KOS_CONTEXT ctx,
+                                   KOS_OBJ_ID  this_obj,
+                                   KOS_OBJ_ID  args_obj)
 {
-    struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
+    struct THREAD_DATA *test = (struct THREAD_DATA *)this_obj;
 
     if (_run_test(ctx, test))
         KOS_atomic_add_i32(test->test->error, 1);
+
+    return KOS_VOID;
 }
 
 int main(void)
@@ -172,7 +175,7 @@ int main(void)
             /* Start with 1, because 0 is for the main thread, which participates */
             for (i = 1; i < num_threads; i++) {
                 int pushed = 0;
-                TEST(create_thread(ctx, _test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(create_thread(ctx, test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
                 TEST(KOS_push_locals(ctx, &pushed, 1, &threads[i]) == KOS_SUCCESS);
             }
 

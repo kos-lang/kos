@@ -69,16 +69,21 @@ static int _write_props_inner(KOS_CONTEXT       ctx,
     return 0;
 }
 
-static void _write_props(KOS_CONTEXT ctx,
-                         void       *cookie)
+static KOS_OBJ_ID write_props(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
 {
-    struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
+    struct THREAD_DATA *test = (struct THREAD_DATA *)this_obj;
+
     while (!KOS_atomic_read_relaxed_u32(test->test->go)) {
         KOS_help_gc(ctx);
         kos_yield();
     }
+
     if (_write_props_inner(ctx, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
+
+    return KOS_VOID;
 }
 
 static int _read_props_inner(KOS_CONTEXT       ctx,
@@ -107,16 +112,21 @@ static int _read_props_inner(KOS_CONTEXT       ctx,
     return 0;
 }
 
-static void _read_props(KOS_CONTEXT ctx,
-                        void       *cookie)
+static KOS_OBJ_ID read_props(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
 {
-    struct THREAD_DATA *test = (struct THREAD_DATA *)cookie;
+    struct THREAD_DATA *test = (struct THREAD_DATA *)this_obj;
+
     while (!KOS_atomic_read_relaxed_u32(test->test->go)) {
         KOS_help_gc(ctx);
         kos_yield();
     }
+
     if (_read_props_inner(ctx, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
+
+    return KOS_VOID;
 }
 
 int main(void)
@@ -198,7 +208,7 @@ int main(void)
                 int pushed2 = 0;
                 thread_cookies[i].test      = &data;
                 thread_cookies[i].rand_init = (unsigned)kos_rng_random_range(&rng, 0xFFFFFFFFU);
-                TEST(create_thread(ctx, ((i & 7)) ? _write_props : _read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
+                TEST(create_thread(ctx, ((i & 7)) ? write_props : read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
                 TEST(KOS_push_locals(ctx, &pushed2, 1, &threads[i]) == KOS_SUCCESS);
             }
 
