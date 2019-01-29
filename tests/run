@@ -204,8 +204,10 @@ if [ "$RUN_MADGC" = "1" ]; then
     if [ "$RUN_SEQFAIL" = "1" ]; then
         export CONFIG_SEQFAIL=1
     fi
+    MAD_GC_CPUS=$TEST_CPUS
+    [[ $MAD_GC_CPUS -gt 4 ]] && MAD_GC_CPUS=4
     export CONFIG_MAD_GC=1
-    runtests c++11 c++11
+    TEST_CPUS=$MAD_GC_CPUS runtests c++11 c++11
     unset CONFIG_MAD_GC
     unset CONFIG_SEQFAIL
 fi
