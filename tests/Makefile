@@ -117,6 +117,11 @@ $(foreach test, $(parser_test_list), $(eval $(call PARSER_TEST,$(test))))
 
 interpreter_test_list = $(filter-out interpreter_tests/fail_% interpreter_tests/module_base_print.kos, $(wildcard interpreter_tests/*.kos))
 
+# Ignore some tests with Valgrind
+ifneq ($(CONFIG_TOOL), )
+    simple_tests = $(filter-out interpreter_tests/async_throw.kos, $(simple_tests))
+endif
+
 define INTERPRETER_TEST
 $1:
 	@echo Test kos $(notdir $1)
