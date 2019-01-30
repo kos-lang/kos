@@ -1855,3 +1855,14 @@ do {
     assert dummy(10) == 11
     assert thing == void
 }
+
+# local variable with the same name as variable in the outer scope
+do {
+    fun one { }
+    fun two
+    {
+        var one = { one: 1 }
+        return one.one
+    }
+    assert two() == 1
+}

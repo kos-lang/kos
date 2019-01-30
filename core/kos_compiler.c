@@ -445,6 +445,23 @@ static int _lookup_var(KOS_COMP_UNIT   *program,
     return var ? KOS_SUCCESS : KOS_ERROR_INTERNAL;
 }
 
+static void lookup_module_var(KOS_COMP_UNIT   *program,
+                              const KOS_TOKEN *token,
+                              KOS_VAR        **out_var)
+{
+    KOS_REG *reg        = 0;
+    KOS_VAR *module_var = 0;
+
+    (void)_lookup_local_var(program, token, &reg);
+
+    if (reg)
+        _free_reg(program, reg);
+    else if ( ! _lookup_var(program, token, &module_var, 0)) {
+        if (module_var->type == VAR_MODULE)
+            *out_var = module_var;
+    }
+}
+
 static int _compare_strings(const char *a, unsigned len_a, KOS_UTF8_ESCAPE escape_a,
                             const char *b, unsigned len_b, KOS_UTF8_ESCAPE escape_b)
 {
@@ -2692,12 +2709,8 @@ static int _refinement(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    if (node->type == NT_IDENTIFIER) {
-        if (!_lookup_var(program, &node->token, &module_var, 0)) {
-            if (module_var->type != VAR_MODULE)
-                module_var = 0;
-        }
-    }
+    if (node->type == NT_IDENTIFIER)
+        lookup_module_var(program, &node->token, &module_var);
 
     if (module_var) {
 
