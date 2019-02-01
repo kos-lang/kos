@@ -404,6 +404,7 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
     kos_untrack_refs(ctx, 1);
     if (error)
         return error;
+    error = KOS_ERROR_EXCEPTION;
 #endif
 
     if (IS_BAD_PTR(obj_id))
