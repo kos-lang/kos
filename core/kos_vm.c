@@ -2735,6 +2735,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                                     assert(IS_BAD_PTR(ret_val) || GET_OBJ_TYPE(ret_val) <= OBJ_LAST_TYPE);
 
+                                    assert(ctx->tmp_ref_count == 0);
+
                                     KOS_pop_local_scope(ctx, &prev_locals);
                                 }
                             }

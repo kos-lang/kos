@@ -421,9 +421,12 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
 
             kos_track_refs(ctx, 1, &obj_id);
 
-            TRY(KOS_array_reserve(ctx, obj_id, new_cap));
+            error = KOS_array_reserve(ctx, obj_id, new_cap);
 
             kos_untrack_refs(ctx, 1);
+
+            if (error)
+                goto cleanup;
 
             buf = _get_data(obj_id);
         }
