@@ -37,6 +37,7 @@
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_system.h"
+#include "kos_threads_internal.h"
 #include "kos_try.h"
 #include <assert.h>
 #include <stdarg.h>
@@ -502,11 +503,21 @@ cleanup:
 
 void KOS_instance_destroy(KOS_INSTANCE *inst)
 {
+    int         error;
     uint32_t    i;
     uint32_t    num_modules = KOS_get_array_size(inst->modules.modules);
     KOS_CONTEXT ctx         = &inst->threads.main_thread;
 
-    /* TODO stop all threads and delete all other contexts */
+    KOS_instance_validate(ctx);
+
+    error = kos_join_finished_threads(ctx, KOS_JOIN_ALL);
+
+    if (error == KOS_ERROR_EXCEPTION)
+        KOS_print_exception(ctx);
+    else if (error) {
+        assert(error == KOS_ERROR_OUT_OF_MEMORY);
+        fprintf(stderr, "Out of memory\n");
+    }
 
     for (i = 0; i < num_modules; i++) {
         KOS_OBJ_ID module_obj = KOS_array_read(ctx, inst->modules.modules, (int)i);

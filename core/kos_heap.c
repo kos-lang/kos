@@ -2471,7 +2471,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
         *out_stats = stats;
 
     if ( ! error)
-        error = kos_release_finished_threads(ctx);
+        error = kos_join_finished_threads(ctx, KOS_ONLY_DISOWNED);
 
     return error;
 }

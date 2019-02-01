@@ -22,18 +22,15 @@
 
 #include "kos_threads_internal.h"
 #include "../inc/kos_array.h"
-#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_instance.h"
+#include "../inc/kos_utils.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_malloc.h"
 #include "kos_object_internal.h"
 #include "kos_try.h"
 #include <assert.h>
-
-#ifndef _WIN32
-#   include <sched.h>
-#endif
 
 static const char str_err_join_self[] = "thread cannot join itself";
 static const char str_err_thread[]    = "failed to create thread";
@@ -288,36 +285,101 @@ static void set_thread_exception(KOS_CONTEXT ctx, KOS_OBJ_ID thread)
     KOS_atomic_write_relaxed_ptr(OBJPTR(THREAD, thread)->exception, KOS_get_exception(ctx));
 }
 
-int kos_release_finished_threads(KOS_CONTEXT ctx)
+int kos_join_finished_threads(KOS_CONTEXT                      ctx,
+                              enum KOS_THREAD_RELEASE_ACTION_E action)
 {
-    int            error       = KOS_SUCCESS;
-    KOS_INSTANCE  *inst        = ctx->inst;
-    const uint32_t num_threads = IS_BAD_PTR(inst->threads.threads) ? 0U : KOS_get_array_size(inst->threads.threads);
-    KOS_OBJ_ID     thread      = KOS_BADPTR;
-    uint32_t       i;
+    int           error        = KOS_SUCCESS;
+    KOS_INSTANCE *inst         = ctx->inst;
+    uint32_t      num_threads  = IS_BAD_PTR(inst->threads.threads) ? 0U : KOS_get_array_size(inst->threads.threads);
+    KOS_OBJ_ID    thread       = KOS_BADPTR;
+    KOS_OBJ_ID    exception    = KOS_BADPTR;
+    int           num_tracked  = 1;
+    int           num_pending  = 0;
+    uint32_t      num_finished = 0;
+    int           join_rest    = 0;
+    uint32_t      i            = 0;
 
     kos_track_refs(ctx, TRACK_ONE_REF, &thread);
 
-    for (i = 0; i < num_threads && ! error; i++) {
+    while (i < num_threads) {
+
+        if (i == 0) {
+            num_pending  = 0;
+            num_finished = 0;
+        }
 
         thread = KOS_array_read(ctx, inst->threads.threads, i);
 
-        if (IS_BAD_PTR(thread)) {
-            KOS_clear_exception(ctx);
-            continue;
+        assert( ! IS_BAD_PTR(thread));
+
+        if (thread != KOS_VOID) {
+
+            const uint32_t flags = KOS_atomic_read_relaxed_u32(OBJPTR(THREAD, thread)->flags);
+
+            if (flags == (KOS_THREAD_DISOWNED | KOS_THREAD_FINISHED) ||
+                     (action && flags == KOS_THREAD_DISOWNED) || join_rest) {
+
+                if (KOS_atomic_cas_strong_u32(OBJPTR(THREAD, thread)->flags, flags, flags | KOS_THREAD_JOINING)) {
+
+                    const KOS_OBJ_ID retval = kos_thread_join(ctx, thread);
+
+                    if (IS_BAD_PTR(retval)) {
+                        assert(KOS_is_exception_pending(ctx));
+
+                        if ( ! action) {
+                            error = KOS_ERROR_EXCEPTION;
+                            break;
+                        }
+
+                        /* We are joining all threads, so print the previous exception and continue */
+                        if (IS_BAD_PTR(exception)) {
+                            kos_track_refs(ctx, TRACK_ONE_REF, &exception);
+
+                            exception = KOS_get_exception(ctx);
+                            KOS_clear_exception(ctx);
+
+                            assert(num_tracked == 1);
+                            num_tracked = 2;
+                        }
+                        else {
+                            const KOS_OBJ_ID prev_exception = exception;
+
+                            exception = KOS_get_exception(ctx);
+                            KOS_clear_exception(ctx);
+
+                            KOS_raise_exception(ctx, prev_exception);
+                            KOS_print_exception(ctx);
+                        }
+                    }
+                }
+                else
+                    ++num_pending;
+            }
+            else if ((flags & (KOS_THREAD_JOINED | KOS_THREAD_DISOWNED)) == 0) {
+                if (flags == KOS_THREAD_FINISHED)
+                    ++num_finished;
+                ++num_pending;
+            }
         }
 
-        if (thread == KOS_VOID)
-            continue;
+        i++;
 
-        if (KOS_atomic_read_relaxed_u32(OBJPTR(THREAD, thread)->flags) == 3) {
-            const KOS_OBJ_ID retval = kos_thread_join(ctx, thread);
-            TRY_OBJID(retval);
+        if (action && i == num_threads && num_pending) {
+            i = 0;
+            kos_yield();
+            KOS_help_gc(ctx);
+            num_threads = IS_BAD_PTR(inst->threads.threads) ? 0U : KOS_get_array_size(inst->threads.threads);
+            if (num_finished == KOS_atomic_read_relaxed_u32(inst->threads.num_threads))
+                join_rest = 1;
         }
     }
 
-cleanup:
-    kos_untrack_refs(ctx, 1);
+    kos_untrack_refs(ctx, num_tracked);
+
+    if ( ! error && ! IS_BAD_PTR(exception)) {
+        KOS_raise_exception(ctx, exception);
+        error = KOS_ERROR_EXCEPTION;
+    }
 
     return error;
 }
@@ -429,6 +491,7 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
 {
     int        error  = KOS_SUCCESS;
     KOS_OBJ_ID retval = KOS_BADPTR;
+    HANDLE     handle;
 
     assert( ! IS_BAD_PTR(thread));
 
@@ -437,10 +500,12 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
     if (kos_is_current_thread(thread))
         RAISE_EXCEPTION(str_err_join_self);
 
+    handle = OBJPTR(THREAD, thread)->thread_handle;
+
     KOS_suspend_context(ctx);
 
-    WaitForSingleObject(OBJPTR(THREAD, thread)->thread_handle, INFINITE);
-    CloseHandle(OBJPTR(THREAD, thread)->thread_handle);
+    WaitForSingleObject(handle, INFINITE);
+    CloseHandle(handle);
 
     error = KOS_resume_context(ctx);
 
@@ -594,6 +659,7 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
 {
     int        error  = KOS_SUCCESS;
     KOS_OBJ_ID retval = KOS_BADPTR;
+    pthread_t  handle;
 
     assert( ! IS_BAD_PTR(thread));
 
@@ -606,9 +672,11 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
     if (kos_is_current_thread(thread))
         RAISE_EXCEPTION(str_err_join_self);
 
+    handle = OBJPTR(THREAD, thread)->thread_handle;
+
     KOS_suspend_context(ctx);
 
-    pthread_join(OBJPTR(THREAD, thread)->thread_handle, NULL);
+    pthread_join(handle, NULL);
 
     error = KOS_resume_context(ctx);
 

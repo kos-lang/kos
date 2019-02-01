@@ -57,9 +57,16 @@ typedef struct KOS_THREAD_S {
 enum KOS_THREAD_FLAGS_E {
     KOS_THREAD_DISOWNED = 1,
     KOS_THREAD_FINISHED = 2,
-    KOS_THREAD_JOINED   = 4
+    KOS_THREAD_JOINING  = 4,
+    KOS_THREAD_JOINED   = 8
 };
 
-int kos_release_finished_threads(KOS_CONTEXT ctx);
+enum KOS_THREAD_RELEASE_ACTION_E {
+    KOS_ONLY_DISOWNED,
+    KOS_JOIN_ALL
+};
+
+int kos_join_finished_threads(KOS_CONTEXT                      ctx,
+                              enum KOS_THREAD_RELEASE_ACTION_E action);
 
 #endif
