@@ -35,6 +35,13 @@ matrix:
         script:
           - tests/run valgrind
 
+      - name: "Mad GC"
+        os: linux
+        dist: xenial
+        compiler: gcc
+        script:
+          - tests/run madgc
+
       - name: "Coverage"
         os: linux
         dist: trusty
