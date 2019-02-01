@@ -123,8 +123,41 @@ do {
         }
     }
 
-    const o = [20, 0]
+    const o = [5, 0]
     respawn(respawn, o)
     while o[1] == 0 {
     }
+
+    assert o[0] == 0
+}
+
+# THIS MUST COME LAST!
+# Recursively spawn threads and keep them waiting on children
+do {
+    fun thread
+    {
+        for var i = 0; i < 100; i += 1 {
+        }
+    }
+
+    fun start(f, count)
+    {
+        fun respawn(r, f, count)
+        {
+            var thread = void
+
+            if count == 0 {
+                thread = async f()
+            }
+            else {
+                thread = async r(r, f, count - 1)
+            }
+
+            thread.wait()
+        }
+
+        async respawn(respawn, f, count)
+    }
+
+    async start(thread, 16)
 }
