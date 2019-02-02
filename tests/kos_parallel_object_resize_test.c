@@ -131,7 +131,7 @@ static KOS_OBJ_ID test_thread_func(KOS_CONTEXT ctx,
         KOS_atomic_add_i32(test->test->error, 1);
     }
 
-    return KOS_VOID;
+    return KOS_is_exception_pending(ctx) ? KOS_BADPTR : KOS_VOID;
 }
 
 int main(void)
@@ -153,7 +153,7 @@ int main(void)
 #ifdef CONFIG_MAD_GC
         const int           num_loops        = 1;
 #else
-        const int           num_loops        = 1000 / (num_cpus > 100 ? 100 : num_cpus);
+        const int           num_loops        = 500 / (num_cpus > 100 ? 100 : num_cpus);
 #endif
         const int           max_props_per_th = 100;
         KOS_VECTOR          mem_buf;

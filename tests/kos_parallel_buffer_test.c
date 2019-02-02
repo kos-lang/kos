@@ -96,7 +96,7 @@ static KOS_OBJ_ID test_thread_func(KOS_CONTEXT ctx,
     if (_run_test(ctx, test))
         KOS_atomic_add_i32(test->test->error, 1);
 
-    return KOS_VOID;
+    return KOS_is_exception_pending(ctx) ? KOS_BADPTR : KOS_VOID;
 }
 
 int main(void)

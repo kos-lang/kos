@@ -82,7 +82,7 @@ static KOS_OBJ_ID write_props(KOS_CONTEXT ctx,
     if (_write_props_inner(ctx, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
 
-    return KOS_VOID;
+    return KOS_is_exception_pending(ctx) ? KOS_BADPTR : KOS_VOID;
 }
 
 static int _read_props_inner(KOS_CONTEXT       ctx,
@@ -123,7 +123,7 @@ static KOS_OBJ_ID read_props(KOS_CONTEXT ctx,
     if (_read_props_inner(ctx, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
 
-    return KOS_VOID;
+    return KOS_is_exception_pending(ctx) ? KOS_BADPTR : KOS_VOID;
 }
 
 int main(void)
