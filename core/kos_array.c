@@ -299,11 +299,9 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
                     _copy_buf(ctx, OBJPTR(ARRAY, obj_id), buf, new_buf);
                     buf = new_buf;
                 }
-                else {
-                    if (KOS_atomic_cas_weak_ptr(buf->buf[bufidx], cur, value)) {
-                        error = KOS_SUCCESS;
-                        break;
-                    }
+                else if (KOS_atomic_cas_weak_ptr(buf->buf[bufidx], cur, value)) {
+                    error = KOS_SUCCESS;
+                    break;
                 }
             }
         }
@@ -312,6 +310,57 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
     }
 
     return error;
+}
+
+KOS_OBJ_ID KOS_array_cas(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  obj_id,
+                         int         idx,
+                         KOS_OBJ_ID  old_value,
+                         KOS_OBJ_ID  new_value)
+{
+    KOS_OBJ_ID retval = KOS_BADPTR;
+
+    if (IS_BAD_PTR(obj_id))
+        KOS_raise_exception_cstring(ctx, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+        KOS_raise_exception_cstring(ctx, str_err_not_array);
+    else {
+        const uint32_t   size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
+        const uint32_t   bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
+
+        if (bufidx < size) {
+
+            KOS_ARRAY_STORAGE *buf = _get_data(obj_id);
+
+            for (;;) {
+
+                KOS_OBJ_ID cur = KOS_atomic_read_relaxed_obj(buf->buf[bufidx]);
+
+                if (cur == TOMBSTONE) {
+                    KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+                    break;
+                }
+
+                if (cur == CLOSED) {
+                    KOS_ARRAY_STORAGE *new_buf = _get_next(buf);
+                    _copy_buf(ctx, OBJPTR(ARRAY, obj_id), buf, new_buf);
+                    buf = new_buf;
+                }
+                else if (cur != old_value) {
+                    retval = cur;
+                    break;
+                }
+                else if (KOS_atomic_cas_weak_ptr(buf->buf[bufidx], cur, new_value)) {
+                    retval = cur;
+                    break;
+                }
+            }
+        }
+        else
+            KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+    }
+
+    return retval;
 }
 
 static int _resize_storage(KOS_CONTEXT ctx,

@@ -58,6 +58,12 @@ int KOS_array_write(KOS_CONTEXT ctx,
                     int         idx,
                     KOS_OBJ_ID  value);
 
+KOS_OBJ_ID KOS_array_cas(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  obj_id,
+                         int         idx,
+                         KOS_OBJ_ID  old_value,
+                         KOS_OBJ_ID  new_value);
+
 int KOS_array_reserve(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  obj_id,
                       uint32_t    new_capacity);
