@@ -41,6 +41,7 @@ standalone_tests += kos_parallel_object_rapid_grow_test
 standalone_tests += kos_parallel_object_resize_test
 standalone_tests += kos_parse_num_test
 standalone_tests += kos_string_test
+standalone_tests += kos_utf8_len
 standalone_tests += kos_vm_test
 standalone_tests += kos_vm_unit_test
 
