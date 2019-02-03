@@ -162,18 +162,75 @@ static uint32_t _parse_escape_sequence(const char **str_ptr,
     return code;
 }
 
+static int is_aligned(const char *ptr)
+{
+    return ! ((uintptr_t)ptr & (uintptr_t)(sizeof(uintptr_t) - 1U));
+}
+
 unsigned kos_utf8_get_len(const char     *str,
                           unsigned        length,
                           KOS_UTF8_ESCAPE escape,
                           uint32_t       *max_code)
 {
-    const char *const end   = str + length;
-    unsigned          count = 0;
-    uint32_t          max_c = 0;
+    unsigned  count = 0;
+    uint32_t  max_c = 0;
+    uintptr_t single_byte_mask;
+    uintptr_t backslash_mask;
+    uintptr_t mask7;
+    uintptr_t one;
 
-    for ( ; str < end; ++count) {
-        const uint8_t c = (uint8_t)*(str++);
-        uint32_t      code;
+    if (sizeof(uintptr_t) == 4) {
+        single_byte_mask = 0x80808080U;
+        backslash_mask   = 0x23232323U;
+        mask7            = 0x7F7F7F7FU;
+        one              = 0x01010101U;
+    }
+    else {
+        assert(sizeof(uintptr_t) == 8);
+        single_byte_mask = (uintptr_t)0x80808080U | ((uintptr_t)0x80808080U << 32);
+        backslash_mask   = (uintptr_t)0x23232323U | ((uintptr_t)0x23232323U << 32);
+        mask7            = (uintptr_t)0x7F7F7F7FU | ((uintptr_t)0x7F7F7F7FU << 32);
+        one              = (uintptr_t)0x01010101U | ((uintptr_t)0x01010101U << 32);
+    }
+
+    for ( ; length; ++count) {
+        uint8_t  c;
+        uint32_t code;
+
+        /* Fast path, count multiple single-byte code points, excluding escape sequences. */
+        if (is_aligned(str)) {
+
+            while (length >= (unsigned)sizeof(uintptr_t)) {
+
+                uintptr_t bytes = *(const uintptr_t *)str;
+
+                if (bytes & single_byte_mask)
+                    break;
+
+                if (escape) {
+
+                    /* By XOR-ing with negation of backslash character (0x5C),
+                     * any byte containing backslash will turn into 0x7F. */
+                    bytes ^= backslash_mask;
+
+                    /* Detect if any byte is 0x7F.  Each byte has bit 7 clear, because
+                     * we have already rejected multi-byte sequences.  Use overflow
+                     * into bit 7 to detect if any byte is 0x7F. */
+                    if ((bytes + one) & single_byte_mask)
+                        break;
+                }
+
+                str    += sizeof(uintptr_t);
+                length -= sizeof(uintptr_t);
+                count  += sizeof(uintptr_t);
+            }
+
+            if ( ! length)
+                break;
+        }
+
+        c = (uint8_t)*(str++);
+        --length;
 
         if (c < 0x80)
             code = c;
@@ -181,7 +238,7 @@ unsigned kos_utf8_get_len(const char     *str,
 
             unsigned code_len = _utf8_len[c >> 3];
 
-            if (code_len == 0 || str + code_len - 1 > end) {
+            if (code_len == 0 || code_len - 1 > length) {
                 count = ~0U;
                 break;
             }
@@ -189,6 +246,7 @@ unsigned kos_utf8_get_len(const char     *str,
             code = c & ((0x80U >> code_len) - 1);
             for (--code_len; code_len; --code_len) {
                 const uint32_t next_c = (uint8_t)*(str++);
+                --length;
                 if ((next_c & 0xC0U) != 0x80U)
                     return KOS_INVALID_ESC;
                 code = (code << 6) | (next_c & 0x3FU);
@@ -199,7 +257,11 @@ unsigned kos_utf8_get_len(const char     *str,
         }
 
         if (escape && code == '\\') {
-            code = _parse_escape_sequence(&str, end);
+            const char *start_str = str;
+
+            code = _parse_escape_sequence(&str, str + length);
+
+            length -= str - start_str;
 
             if (code == KOS_INVALID_ESC) {
                 count = ~0U;
@@ -211,7 +273,7 @@ unsigned kos_utf8_get_len(const char     *str,
         }
     }
 
-    if (str != end)
+    if (length)
         count = ~0U;
 
     *max_code = max_c;
