@@ -176,20 +176,17 @@ unsigned kos_utf8_get_len(const char     *str,
     uint32_t  max_c = 0;
     uintptr_t single_byte_mask;
     uintptr_t backslash_mask;
-    uintptr_t mask7;
     uintptr_t one;
 
     if (sizeof(uintptr_t) == 4) {
         single_byte_mask = 0x80808080U;
         backslash_mask   = 0x23232323U;
-        mask7            = 0x7F7F7F7FU;
         one              = 0x01010101U;
     }
     else {
         assert(sizeof(uintptr_t) == 8);
         single_byte_mask = (uintptr_t)0x80808080U | ((uintptr_t)0x80808080U << 32);
         backslash_mask   = (uintptr_t)0x23232323U | ((uintptr_t)0x23232323U << 32);
-        mask7            = (uintptr_t)0x7F7F7F7FU | ((uintptr_t)0x7F7F7F7FU << 32);
         one              = (uintptr_t)0x01010101U | ((uintptr_t)0x01010101U << 32);
     }
 
