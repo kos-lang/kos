@@ -249,7 +249,9 @@ unsigned kos_utf8_get_len(const char     *str,
 
             code = _parse_escape_sequence(&str, str + length);
 
-            length -= str - start_str;
+            assert((unsigned)(str - start_str) <= length);
+
+            length -= (unsigned)(str - start_str);
 
             if (code == KOS_INVALID_ESC) {
                 count = ~0U;
