@@ -24,6 +24,7 @@ set -e
 
 # Ensure that the interpreter doesn't pull anything from KOSPATH
 unset KOSPATH
+export KOSNODEFAULTPATH=1
 
 # Check the number of args passed to the script
 if [ $# -ne 2 ]; then

@@ -44,6 +44,7 @@ DIR="$2/module_loading"
 rm -rf "$DIR"
 mkdir -p "$DIR"
 export KOSPATH="$DIR"
+export KOSNODEFAULTPATH=1
 
 kos()
 {

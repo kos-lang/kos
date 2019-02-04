@@ -34,3 +34,24 @@ c_files += kos_modules_init.c
 
 include ../build/rules.mk
 include ../build/lib.mk
+
+######################################################################
+# Copy modules for the interpreter
+
+modules=$(wildcard *.kos)
+
+ifeq ($(UNAME), Windows)
+modules_dir=$(out_dir)/interpreter/modules
+else
+modules_dir=$(out_dir)/share/kos/modules
+endif
+
+all: $(addprefix $(modules_dir)/,$(modules))
+
+define COPY_MODULE
+$(modules_dir)/$1: $1
+	@mkdir -p $(modules_dir)
+	@cp $1 $(modules_dir)/$1
+endef
+
+$(foreach module, $(modules), $(eval $(call COPY_MODULE,$(module))))

@@ -126,7 +126,7 @@ endif
 define INTERPRETER_TEST
 $1:
 	@echo Test kos $(notdir $1)
-	@env KOSPATH=../modules $(CONFIG_TOOL) $(out_dir)/interpreter/kos$(exe_suffix) $1
+	@env $(CONFIG_TOOL) $(out_dir)/interpreter/kos$(exe_suffix) $1
 endef
 
 $(foreach test, $(interpreter_test_list), $(eval $(call INTERPRETER_TEST,$(test))))
@@ -136,7 +136,7 @@ interpreter_fail_test_list = $(filter interpreter_tests/fail_%, $(wildcard inter
 define INTERPRETER_FAIL_TEST
 $1:
 	@echo Test kos $(notdir $1)
-	@env KOSPATH=../modules interpreter_tests/fail $(out_dir)/tests/$1 $(CONFIG_TOOL) $(out_dir)/interpreter/kos$(exe_suffix) $1
+	@env interpreter_tests/fail $(out_dir)/tests/$1 $(CONFIG_TOOL) $(out_dir)/interpreter/kos$(exe_suffix) $1
 endef
 
 $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TEST,$(test))))
@@ -159,15 +159,15 @@ module_loading:
 
 interactive:
 	@echo Test interactive
-	@env KOSPATH=../modules interpreter_tests/interactive $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
+	@env interpreter_tests/interactive $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
 disasm:
 	@echo Test disasm
-	@env KOSPATH=../modules interpreter_tests/disasm $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
+	@env interpreter_tests/disasm $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
 module_base_print:
 	@echo Test module_base_print
-	@env KOSPATH=../modules interpreter_tests/module_base_print $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
+	@env interpreter_tests/module_base_print $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
 
 module_paths:
 	@echo Test module_paths
@@ -184,7 +184,7 @@ sequential_test_list =
 define SEQFAIL_RULE
 sequential_fail.$1:
 	@echo Test sequential fail $1
-	@env KOSPATH=../modules sequential_fail/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests $1 200
+	@env sequential_fail/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests $1 200
 
 sequential_test_list += sequential_fail.$1
 endef

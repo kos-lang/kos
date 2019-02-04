@@ -63,6 +63,6 @@ install: build.interpreter
 doc: build.interpreter
 	@echo Extract docs
 	@mkdir -p "$(out_dir)/doc"
-	@env KOSPATH=modules $(out_dir)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
+	@env $(out_dir)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
 
 .PHONY: cldep doc install test fuzz

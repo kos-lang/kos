@@ -155,7 +155,10 @@ int main(int argc, char *argv[])
     inst_ok = 1;
 
     /* Use executable path from OS to find modules */
-    error = KOS_instance_add_default_path(ctx, 0);
+    /* KOSNODEFAULTPATH=1 disables default paths */
+    if (kos_get_env("KOSNODEFAULTPATH", &buf) || buf.size != 2 ||
+                buf.buffer[0] != '1' || buf.buffer[1] != 0)
+        error = KOS_instance_add_default_path(ctx, 0);
 
     /* Fallback: use argv[0] to find modules */
     if (error)
