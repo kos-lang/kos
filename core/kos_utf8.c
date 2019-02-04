@@ -172,23 +172,14 @@ unsigned kos_utf8_get_len(const char     *str,
                           KOS_UTF8_ESCAPE escape,
                           uint32_t       *max_code)
 {
-    unsigned  count = 0;
-    uint32_t  max_c = 0;
-    uintptr_t single_byte_mask;
-    uintptr_t backslash_mask;
-    uintptr_t one;
+    unsigned        count = 0;
+    uint32_t        max_c = 0;
+    const uintptr_t one   = 0x01010101U
+                          | ((uintptr_t)0x01010101U << (sizeof(uintptr_t) * 8 - 32));
+    const uintptr_t single_byte_mask = one * 0x80U;
+    const uintptr_t backslash_mask   = one * 0x23U;
 
-    if (sizeof(uintptr_t) == 4) {
-        single_byte_mask = 0x80808080U;
-        backslash_mask   = 0x23232323U;
-        one              = 0x01010101U;
-    }
-    else {
-        assert(sizeof(uintptr_t) == 8);
-        single_byte_mask = (uintptr_t)0x80808080U | ((uintptr_t)0x80808080U << 32);
-        backslash_mask   = (uintptr_t)0x23232323U | ((uintptr_t)0x23232323U << 32);
-        one              = (uintptr_t)0x01010101U | ((uintptr_t)0x01010101U << 32);
-    }
+    assert (sizeof(uintptr_t) == 4 || sizeof(uintptr_t) == 8);
 
     for ( ; length; ++count) {
         uint8_t  c;
