@@ -42,7 +42,7 @@ syn keyword kosBoolean          true false
 syn keyword kosVoid             void
 syn keyword kosIdentifier       __line__ this var const
 syn keyword kosException        throw assert
-syn keyword kosReserved         set get static extends
+syn keyword kosReserved         set get static extends super
 syn keyword kosClass            class
 
 if exists("kos_fold")

@@ -53,6 +53,7 @@ static int _get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_FUN:            /* fall through */
         case INSTR_LOAD_ARRAY8:         /* fall through */
         case INSTR_LOAD_ARRAY:          /* fall through */
+        case INSTR_LOAD_PROTO:          /* fall through */
         case INSTR_MOVE:                /* fall through */
         case INSTR_GET_GLOBAL:          /* fall through */
         case INSTR_SET_GLOBAL:          /* fall through */
@@ -344,6 +345,7 @@ void kos_disassemble(const char                           *filename,
         "LOAD.ARRAY8",
         "LOAD.ARRAY",
         "LOAD.OBJ",
+        "LOAD.PROTO",
         "MOVE",
         "GET",
         "GET.ELEM",

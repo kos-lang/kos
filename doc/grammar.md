@@ -171,7 +171,7 @@ The following reserved keywords are defined:
 * `delete`
 * `do`
 * `else`
-* `extends` (reserved)
+* `extends`
 * `fallthrough`
 * `false`
 * `for`
@@ -186,6 +186,7 @@ The following reserved keywords are defined:
 * `return`
 * `set` (reserved)
 * `static` (reserved)
+* `super` (reserved)
 * `switch`
 * `this`
 * `throw`
@@ -582,7 +583,9 @@ Argument variables are assignable inside the function body.
 Class statement
 ---------------
 
-    ClassDeclaration   ::= "class" Identifier ClassBody
+    ClassDeclaration   ::= "class" Identifier [ ExtendsDeclaration ] ClassBody
+
+    ExtendsDeclaration ::= "extends" MemberExpression
 
     ClassBody          ::= "{" ( ClassMember )* "}"
 
@@ -1162,7 +1165,7 @@ Member specification
 
     CompoundFunctionLiteral ::= "fun" [ ParameterList ] CompoundStatement
 
-    ClassLiteral ::= "class" ClassBody
+    ClassLiteral ::= "class" [ ExtendsDeclaration ] ClassBody
 
     Invocation ::= "(" [ ArgumentList ] ")"
 

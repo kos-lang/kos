@@ -158,7 +158,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(?&lt;!\.)\b(extends|get|set|static)\b(?!\$)</string>
+			<string>(?&lt;!\.)\b(extends|get|set|static|super)\b(?!\$)</string>
 			<key>name</key>
 			<string>keyword.other.kos</string>
 		</dict>

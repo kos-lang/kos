@@ -31,7 +31,8 @@ class {
 
 (scope 1 1
     (class 1 1 class
-        (object 1 1 class)
+        (empty 1 7 {)
+        (object 1 7 {)
         (constructor 1 1 class
             (name 1 1 class)
             (parameters 1 7 {)
@@ -44,7 +45,8 @@ class {
     ))
 
     (class 4 1 class
-        (object 4 1 class
+        (empty 4 7 {)
+        (object 4 7 {
             (property 5 5 cat
                 (string 5 5 cat)
                 (function 5 5 cat
@@ -130,7 +132,8 @@ class {
     ))
 
     (class 22 1 class
-        (object 22 1 class
+        (empty 22 7 {)
+        (object 22 7 {
             (property 23 5 aaa
                 (string 23 5 aaa)
                 (function 23 5 aaa
@@ -199,7 +202,8 @@ class onlyctor {
             (identifier 1 7 named)
         )
         (class 1 7 named
-            (object 1 7 named
+            (empty 1 13 {)
+            (object 1 13 {
                 (property 4 5 fun1
                     (string 4 5 fun1)
                     (function 4 5 fun1
@@ -265,7 +269,8 @@ class onlyctor {
             (identifier 9 7 onlyctor)
         )
         (class 9 7 onlyctor
-            (object 9 7 onlyctor)
+            (empty 9 16 {)
+            (object 9 16 {)
             (constructor 10 5 constructor
                 (name_const 10 5 constructor
                     (identifier 9 7 onlyctor))
@@ -287,6 +292,50 @@ class onlyctor {
                 ))
                 (landmark 10 35 })
     )))
+)
+
+@------------------------------------------------------------------------------
+class x extends a { }
+
+class y extends a.b { }
+
+@ 0
+
+(scope 1 1
+    (assignment 1 1 class
+        (const 1 1 class
+            (identifier 1 7 x))
+        (class 1 7 x
+            (identifier 1 17 a)
+            (object 1 19 {)
+            (constructor 1 7 x
+                (name_const 1 7 x
+                    (identifier 1 7 x))
+                (parameters 1 9 extends)
+                (landmark 1 9 extends)
+                (scope 1 9 extends
+                    (return 1 9 extends
+                        (this 1 9 extends)))
+                (landmark 1 9 extends)))
+    )
+    (assignment 3 1 class
+        (const 3 1 class
+            (identifier 3 7 y))
+        (class 3 7 y
+            (refinement 3 18 .
+                (identifier 3 17 a)
+                (string 3 19 b))
+            (object 3 21 {)
+            (constructor 3 7 y
+                (name_const 3 7 y
+                    (identifier 3 7 y))
+                (parameters 3 9 extends)
+                (landmark 3 9 extends)
+                (scope 3 9 extends
+                    (return 3 9 extends
+                        (this 3 9 extends)))
+                (landmark 3 9 extends)))
+    )
 )
 
 @------------------------------------------------------------------------------
@@ -346,3 +395,9 @@ class {
 class { : }
 
 @ 10 2 9
+
+@------------------------------------------------------------------------------
+# Invalid extends clause
+class x extends a + b { }
+
+@ 10 2 19

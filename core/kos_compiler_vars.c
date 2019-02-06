@@ -841,6 +841,8 @@ static int _assignment(KOS_COMP_UNIT      *program,
     assert(node);
     assert(node->next);
 
+    /* TODO handle extends clause in classes */
+
     if (_is_self_ref_func(node)) {
 
         TRY(_visit_node(program, node));
@@ -1031,6 +1033,8 @@ void kos_activate_self_ref_func(KOS_COMP_UNIT      *program,
                                 const KOS_AST_NODE *node)
 {
     if (_is_self_ref_func(node)) {
+
+        /* TODO handle extends clause in classes */
 
         KOS_VAR *var;
 

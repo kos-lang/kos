@@ -437,3 +437,64 @@ do {
     assert o1.b == "a"
     assert o2.b == "b"
 }
+
+# extends
+do {
+    class c0 {
+        a { return 1 }
+        b { return 2 }
+    }
+
+    class c1 extends c0 {
+        c { return 3 }
+    }
+
+    const x0 = c0()
+    const x1 = c1()
+
+    assert "a" in x0
+    assert "b" in x0
+    assert ! ("c" in x0)
+
+    assert "a" in x1
+    assert "b" in x1
+    assert "c" in x1
+
+    assert x0.a() == 1
+    assert x0.b() == 2
+    expect_fail(() => x0.c())
+    assert x0 instanceof c0
+
+    assert x1.a() == 1
+    assert x1.b() == 2
+    assert x1.c() == 3
+    assert x1 instanceof c0
+    assert x1 instanceof c1
+
+    assert "iterator" in x0
+    assert "iterator" in x1
+
+    class c2 extends void {
+        d { return 4 }
+    }
+
+    const x2 = c2()
+
+    assert x2 instanceof c2
+
+    assert "d" in x2
+    assert ! ("iterator" in x2)
+    assert x2.d() == 4
+}
+
+# Invalid extends
+do {
+    # Base object must be a class
+    expect_fail(() => class extends true { })
+    expect_fail(() => class extends 1 { })
+    expect_fail(() => class extends 1.5 { })
+    expect_fail(() => class extends "x" { })
+    expect_fail(() => class extends {} { })
+    expect_fail(() => class extends [] { })
+    expect_fail(() => class extends () => { } { })
+}

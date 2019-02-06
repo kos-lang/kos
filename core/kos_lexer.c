@@ -315,6 +315,7 @@ static const char *const keywords[] = {
     "return",
     "set",
     "static",
+    "super",
     "switch",
     "this",
     "throw",

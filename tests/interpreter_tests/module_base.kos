@@ -599,6 +599,60 @@ do {
     }
 }
 
+do {
+    class c {
+        constructor {
+            this.a = () => 1
+        }
+        b { return 2 }
+    }
+
+    const o = c()
+
+    assert o.a() == 1
+    assert o.b() == 2
+    assert o instanceof c
+    assert o instanceof base.object
+}
+
+do {
+    class b {
+        c { return 3 }
+    }
+
+    class c extends b {
+        constructor {
+            this.a = () => 1
+        }
+        b { return 2 }
+    }
+
+    const o = c()
+
+    assert o.a() == 1
+    assert o.b() == 2
+    assert o.c() == 3
+    assert o instanceof c
+    assert o instanceof b
+    assert o instanceof base.object
+}
+
+do {
+    class c extends void {
+        constructor {
+            this.a = () => 1
+        }
+        b { return 2 }
+    }
+
+    const o = c()
+
+    assert o.a() == 1
+    assert o.b() == 2
+    assert o instanceof c
+    assert ! (o instanceof base.object)
+}
+
 ##############################################################################
 # base.array
 

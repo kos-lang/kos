@@ -393,6 +393,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_return",       KW_RETURN);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_set",          KW_SET);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_static",       KW_STATIC);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_super",        KW_SUPER);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_switch",       KW_SWITCH);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_this",         KW_THIS);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "keyword_throw",        KW_THROW);

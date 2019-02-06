@@ -4835,13 +4835,28 @@ static int _prop_compare_node(KOS_RED_BLACK_NODE *a,
 
 static int _object_literal(KOS_COMP_UNIT      *program,
                            const KOS_AST_NODE *node,
-                           KOS_REG           **reg)
+                           KOS_REG           **reg,
+                           KOS_REG            *prototype)
 {
     int                 error;
     KOS_RED_BLACK_NODE *prop_str_idcs = 0;
 
-    TRY(_gen_reg(program, reg));
-    TRY(_gen_instr1(program, INSTR_LOAD_OBJ, (*reg)->reg));
+    if (prototype) {
+        assert(*reg);
+
+        if (*reg == prototype && ! prototype->tmp) {
+            *reg = 0;
+            TRY(_gen_reg(program, reg));
+        }
+
+        TRY(_gen_instr2(program, INSTR_LOAD_PROTO, (*reg)->reg, prototype->reg));
+    }
+    else {
+        TRY(_gen_reg(program, reg));
+        TRY(_gen_instr1(program, INSTR_LOAD_OBJ, (*reg)->reg));
+    }
+
+    assert(*reg);
 
     for (node = node->children; node; node = node->next) {
 
@@ -4899,11 +4914,18 @@ static int _class_literal(KOS_COMP_UNIT      *program,
 
     assert(node->children);
     node = node->children;
+    assert(node->next);
+
+    /* Handle 'extends' clause */
+    if (node->type != NT_EMPTY)
+        TRY(_visit_node(program, node, &proto_reg));
+
+    node = node->next;
     assert(node->type == NT_OBJECT_LITERAL);
     assert(node->next);
 
-    if (node->children) {
-        TRY(_object_literal(program, node, &proto_reg));
+    if (node->children || proto_reg) {
+        TRY(_object_literal(program, node, &proto_reg, proto_reg));
         assert(proto_reg);
     }
 
@@ -5045,7 +5067,7 @@ static int _visit_node(KOS_COMP_UNIT      *program,
             error = _array_literal(program, node, reg);
             break;
         case NT_OBJECT_LITERAL:
-            error = _object_literal(program, node, reg);
+            error = _object_literal(program, node, reg, 0);
             break;
         case NT_CLASS_LITERAL:
             error = _class_literal(program, node, reg);

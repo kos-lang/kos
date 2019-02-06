@@ -86,6 +86,7 @@ typedef enum KOS_KEYWORD_TYPE_E {
     KW_RETURN,
     KW_SET,
     KW_STATIC,
+    KW_SUPER,
     KW_SWITCH,
     KW_THIS,
     KW_THROW,

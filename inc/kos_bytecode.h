@@ -53,6 +53,8 @@ typedef enum KOS_BYTECODE_INSTR_U {
     INSTR_LOAD_ARRAY,
     /* LOAD.OBJ <r.dest> */
     INSTR_LOAD_OBJ,
+    /* LOAD.PROTO <r.dest>, <r.src> */
+    INSTR_LOAD_PROTO,
 
     /* TODO SAVE.ARRAY <r.dest>, <r.src>, <size.uint8>
      * Save `size` registers starting with r.src into a new array. */

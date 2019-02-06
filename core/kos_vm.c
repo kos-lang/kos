@@ -50,6 +50,7 @@ static const char str_err_invalid_byte_value[]   = "buffer element value out of 
 static const char str_err_invalid_index[]        = "index out of range";
 static const char str_err_invalid_instruction[]  = "invalid instruction";
 static const char str_err_not_callable[]         = "object is not callable";
+static const char str_err_not_class[]            = "base object is not a class";
 static const char str_err_not_generator[]        = "function is not a generator";
 static const char str_err_not_indexable[]        = "object is not indexable";
 static const char str_err_slice_not_function[]   = "slice is not a function";
@@ -1347,10 +1348,40 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
+            case INSTR_LOAD_PROTO: { /* <r.dest>, <r.src> */
+                const unsigned rsrc = bytecode[2];
+                KOS_OBJ_ID     constr_obj;
+
+                assert(rsrc < num_regs);
+
+                constr_obj = REGISTER(rsrc);
+
+                if (GET_OBJ_TYPE(constr_obj) == OBJ_CLASS) {
+
+                    const KOS_OBJ_ID proto_obj =
+                        KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, constr_obj)->prototype);
+
+                    assert( ! IS_BAD_PTR(proto_obj));
+
+                    out = KOS_new_object_with_prototype(ctx, proto_obj);
+                }
+                else if (constr_obj == KOS_VOID)
+                    out = KOS_new_object_with_prototype(ctx, KOS_VOID);
+
+                else {
+                    KOS_raise_exception_cstring(ctx, str_err_not_class);
+                    error = KOS_ERROR_EXCEPTION;
+                }
+
+                rdest = bytecode[1];
+                delta = 3;
+                break;
+            }
+
             case INSTR_MOVE: { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
 
-                assert(rsrc  < num_regs);
+                assert(rsrc < num_regs);
 
                 rdest = bytecode[1];
                 out   = REGISTER(rsrc);

@@ -268,6 +268,8 @@ static int set_function_name(KOS_PARSER   *parser,
         assert(node);
         node = node->next;
         assert(node);
+        node = node->next;
+        assert(node);
         assert( ! node->next);
         assert(node->type == NT_CONSTRUCTOR_LITERAL);
     }
@@ -630,7 +632,7 @@ cleanup:
 }
 
 static int class_literal(KOS_PARSER    *parser,
-                          KOS_AST_NODE **ret)
+                         KOS_AST_NODE **ret)
 {
     int           error           = KOS_SUCCESS;
     int           had_constructor = 0;
@@ -639,11 +641,26 @@ static int class_literal(KOS_PARSER    *parser,
 
     TRY(new_node(parser, ret, NT_CLASS_LITERAL));
 
-    TRY(push_node(parser, *ret, NT_OBJECT_LITERAL, &members_node));
-
     TRY(gen_empty_constructor(parser, &empty_ctor));
 
+    TRY(next_token(parser));
+
+    if (parser->token.keyword == KW_EXTENDS) {
+        KOS_AST_NODE *extends_node = 0;
+
+        TRY(member_expr(parser, &extends_node));
+
+        ast_push(*ret, extends_node);
+    }
+    else {
+        TRY(push_node(parser, *ret, NT_EMPTY, 0));
+
+        parser->unget = 1;
+    }
+
     TRY(assume_separator(parser, ST_CURLY_OPEN));
+
+    TRY(push_node(parser, *ret, NT_OBJECT_LITERAL, &members_node));
 
     for (;;) {
 
