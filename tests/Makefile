@@ -118,11 +118,6 @@ $(foreach test, $(parser_test_list), $(eval $(call PARSER_TEST,$(test))))
 
 interpreter_test_list = $(filter-out interpreter_tests/fail_% interpreter_tests/module_base_print.kos, $(wildcard interpreter_tests/*.kos))
 
-# Ignore some tests with Valgrind
-ifneq ($(CONFIG_TOOL),)
-    simple_tests = $(filter-out interpreter_tests/async_throw.kos, $(simple_tests))
-endif
-
 define INTERPRETER_TEST
 $1:
 	@echo Test kos $(notdir $1)
@@ -175,7 +170,14 @@ module_paths:
 
 all_tests = $(standalone_tests) $(parser_test_list) module_loading interactive disasm module_base_print module_paths $(interpreter_test_list) $(interpreter_fail_test_list)
 
-simple_tests = $(filter-out kos_parallel%, $(all_tests))
+all_simple_tests = $(filter-out kos_parallel%, $(all_tests))
+
+# Ignore some tests with Valgrind
+ifeq ($(CONFIG_TOOL),)
+    simple_tests = $(all_simple_tests)
+else
+    simple_tests = $(filter-out interpreter_tests/async_throw.kos, $(all_simple_tests))
+endif
 
 simple_test: $(simple_tests)
 
