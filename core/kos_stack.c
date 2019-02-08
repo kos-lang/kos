@@ -40,7 +40,7 @@ static int _unchain_reentrant_frame(KOS_CONTEXT ctx)
 {
     KOS_OBJ_ID old_stack = ctx->stack;
 
-    if (OBJPTR(STACK, old_stack)->header.flags & KOS_REENTRANT_STACK) {
+    if (OBJPTR(STACK, old_stack)->flags & KOS_REENTRANT_STACK) {
 
         KOS_OBJ_ID gen_stack = old_stack;
         uint32_t   idx;
@@ -105,11 +105,11 @@ static int _init_stack(KOS_CONTEXT ctx,
 
     if (stack) {
         uint8_t *const begin = (uint8_t *)stack;
-        uint8_t *const end   = begin + GET_SMALL_INT(stack->header.alloc_size);
+        uint8_t *const end   = begin + kos_get_object_size(stack->header);
         uint8_t *const buf   = (uint8_t *)&stack->buf[0];
 
-        stack->capacity         = (uint32_t)(end - buf) / sizeof(KOS_OBJ_ID);
-        stack->header.yield_reg = 0xFFU;
+        stack->capacity  = (uint32_t)(end - buf) / sizeof(KOS_OBJ_ID);
+        stack->yield_reg = 0xFFU;
         KOS_atomic_write_relaxed_u32(stack->size, 1);
 
         if ( ! IS_BAD_PTR(ctx->stack))
@@ -128,7 +128,7 @@ static int _push_new_stack(KOS_CONTEXT ctx)
     KOS_STACK *const new_stack = (KOS_STACK *)kos_alloc_object_page(ctx,
                                                                     OBJ_STACK);
     if (new_stack)
-        new_stack->header.flags = KOS_NORMAL_STACK;
+        new_stack->flags = KOS_NORMAL_STACK;
 
     return _init_stack(ctx, new_stack);
 }
@@ -141,7 +141,7 @@ static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
                                                                 OBJ_STACK,
                                                                 (uint32_t)alloc_size);
     if (new_stack)
-        new_stack->header.flags = KOS_REENTRANT_STACK;
+        new_stack->flags = KOS_REENTRANT_STACK;
 
     assert( ! IS_BAD_PTR(ctx->stack));
 
@@ -172,14 +172,14 @@ int kos_stack_push(KOS_CONTEXT ctx,
     base_idx   = stack_size;
 
     assert( ! OBJPTR(FUNCTION, func_obj)->handler ||
-           OBJPTR(FUNCTION, func_obj)->header.num_regs == 0);
+           OBJPTR(FUNCTION, func_obj)->num_regs == 0);
     num_regs = OBJPTR(FUNCTION, func_obj)->handler
-               ? 1 : OBJPTR(FUNCTION, func_obj)->header.num_regs;
+               ? 1 : OBJPTR(FUNCTION, func_obj)->num_regs;
     room = num_regs + KOS_STACK_EXTRA;
 
     /* Prepare stack for accommodating new stack frame */
     if (OBJPTR(FUNCTION, func_obj)->state < KOS_GEN_INIT &&
-        ! (OBJPTR(FUNCTION, func_obj)->header.flags & KOS_FUN_CLOSURE)) {
+        ! (OBJPTR(FUNCTION, func_obj)->flags & KOS_FUN_CLOSURE)) {
 
         if ( ! stack || stack_size + room > stack->capacity) {
 
@@ -281,7 +281,7 @@ void kos_stack_pop(KOS_CONTEXT ctx)
            IS_SMALL_INT(KOS_atomic_read_relaxed_obj(stack->buf[size - 1])));
 
     if (size > 1) {
-        if ( ! (stack->header.flags & KOS_REENTRANT_STACK)) {
+        if ( ! (stack->flags & KOS_REENTRANT_STACK)) {
 
             const uint32_t num_regs_u = size - ctx->regs_idx - 1U;
             const uint32_t delta      = num_regs_u + KOS_STACK_EXTRA;
@@ -348,7 +348,7 @@ void kos_stack_pop(KOS_CONTEXT ctx)
 
             KOS_STACK *new_stack;
 
-            assert( ! (stack->header.flags & KOS_REENTRANT_STACK));
+            assert( ! (stack->flags & KOS_REENTRANT_STACK));
 
             --size;
             KOS_atomic_write_relaxed_u32(stack->size, size);
@@ -356,7 +356,7 @@ void kos_stack_pop(KOS_CONTEXT ctx)
             assert(GET_OBJ_TYPE(new_stack_obj) == OBJ_STACK);
             new_stack = OBJPTR(STACK, new_stack_obj);
 
-            assert(new_stack->header.flags & KOS_REENTRANT_STACK);
+            assert(new_stack->flags & KOS_REENTRANT_STACK);
             size = KOS_atomic_read_relaxed_u32(new_stack->size);
             assert(size > KOS_STACK_EXTRA);
 
@@ -391,7 +391,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 
     while (size) {
 
-        const int reentrant = OBJPTR(STACK, stack)->header.flags & KOS_REENTRANT_STACK;
+        const int reentrant = OBJPTR(STACK, stack)->flags & KOS_REENTRANT_STACK;
 
         if (size == 1) {
 
@@ -403,7 +403,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
             else {
                 assert( ! IS_BAD_PTR(stack));
                 assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
-                assert( ! (OBJPTR(STACK, stack)->header.flags & KOS_REENTRANT_STACK));
+                assert( ! (OBJPTR(STACK, stack)->flags & KOS_REENTRANT_STACK));
 
                 size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
 
@@ -452,7 +452,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
                 assert(GET_OBJ_TYPE(num_regs_obj) == OBJ_STACK);
                 assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, num_regs_obj)->size) > 0);
                 assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, num_regs_obj)->buf[0]) == stack);
-                assert(OBJPTR(STACK, num_regs_obj)->header.flags & KOS_REENTRANT_STACK);
+                assert(OBJPTR(STACK, num_regs_obj)->flags & KOS_REENTRANT_STACK);
                 assert( ! reentrant);
 
                 prev_size = size;

@@ -74,10 +74,7 @@ enum KOS_STACK_HEADER_FLAGS_E {
 };
 
 typedef struct KOS_STACK_HEADER_S {
-    KOS_OBJ_ID alloc_size;
-    uint8_t    type;
-    uint8_t    flags;
-    uint8_t    yield_reg; /* In a generator stack, this is the index of the yield register */
+    KOS_OBJ_ID size_and_type;
 } KOS_STACK_HEADER;
 
 /* Stack management:
@@ -99,6 +96,8 @@ typedef struct KOS_STACK_S {
     KOS_STACK_HEADER       header;
     uint32_t               capacity;
     KOS_ATOMIC(uint32_t)   size;
+    uint8_t                flags;
+    uint8_t                yield_reg; /* In a generator stack, this is the index of the yield register */
     KOS_ATOMIC(KOS_OBJ_ID) buf[1]; /* Actual stack */
 } KOS_STACK;
 

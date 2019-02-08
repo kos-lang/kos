@@ -143,6 +143,25 @@ static void *list_pop(void **list_ptr)
 
 static void clear_marking_in_pages(KOS_PAGE *page);
 
+#ifndef NDEBUG
+KOS_TYPE kos_get_object_type_gc_safe(KOS_OBJ_ID obj)
+{
+    KOS_OBJ_HEADER *hdr;
+
+    if ( ! IS_HEAP_OBJECT(obj))
+        return GET_OBJ_TYPE(obj);
+
+    hdr = (KOS_OBJ_HEADER *)((intptr_t)obj - 1);
+
+    if ( ! IS_HEAP_OBJECT(hdr->size_and_type))
+        return kos_get_object_type(*hdr);
+
+    hdr = (KOS_OBJ_HEADER *)((intptr_t)hdr->size_and_type - 1);
+
+    return kos_get_object_type(*hdr);
+}
+#endif
+
 #ifdef __cplusplus
 static inline KOS_HEAP *get_heap(KOS_CONTEXT ctx)
 {
@@ -236,12 +255,12 @@ static void finalize_objects(KOS_CONTEXT ctx,
         while (ptr < end) {
 
             KOS_OBJ_HEADER *hdr  = (KOS_OBJ_HEADER *)ptr;
-            const uint32_t  size = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+            const uint32_t  size = kos_get_object_size(*hdr);
 
             assert(size > 0U);
             assert(size <= (size_t)((uint8_t *)page_end - (uint8_t *)ptr));
 
-            if (hdr->type == OBJ_OBJECT) {
+            if (kos_get_object_type(*hdr) == OBJ_OBJECT) {
 
                 KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
 
@@ -638,8 +657,9 @@ static KOS_OBJ_HEADER *alloc_object_from_page(KOS_PAGE *page,
     KOS_OBJ_HEADER *const hdr = (KOS_OBJ_HEADER *)alloc_slots_from_page(page, num_slots);
 
     if (hdr) {
-        hdr->alloc_size = TO_SMALL_INT(num_slots << KOS_OBJ_ALIGN_BITS);
-        hdr->type       = (uint8_t)object_type;
+        kos_set_object_type_size(*hdr,
+                                 object_type,
+                                 num_slots << KOS_OBJ_ALIGN_BITS);
 
         KOS_PERF_CNT(alloc_object);
     }
@@ -748,8 +768,9 @@ static KOS_OBJ_HEADER *setup_huge_object_in_page(KOS_HEAP *heap,
 
     assert( ! ((uintptr_t)hdr & 7U));
 
-    hdr->alloc_size = TO_SMALL_INT(KOS_align_up(size, 1U << KOS_OBJ_ALIGN_BITS));
-    hdr->type       = (uint8_t)object_type;
+    kos_set_object_type_size(*hdr,
+                             object_type,
+                             KOS_align_up(size, 1U << KOS_OBJ_ALIGN_BITS));
 
     KOS_PERF_CNT(alloc_huge_object);
 
@@ -1291,7 +1312,7 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
         case OBJ_LOCAL_REFS:
             {
                 KOS_OBJ_ID **ref = &OBJPTR(LOCAL_REFS, obj_id)->refs[0];
-                KOS_OBJ_ID **end = ref + OBJPTR(LOCAL_REFS, obj_id)->header.num_tracked;
+                KOS_OBJ_ID **end = ref + OBJPTR(LOCAL_REFS, obj_id)->num_tracked;
 
                 set_mark_state(OBJPTR(LOCAL_REFS, obj_id)->next, GRAY);
 
@@ -1343,7 +1364,7 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
         while (ptr < end) {
 
             KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)ptr;
-            const uint32_t        size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+            const uint32_t        size  = kos_get_object_size(*hdr);
             const uint32_t        slots = size >> KOS_OBJ_ALIGN_BITS;
             const uint32_t        color = get_marking(&mark_loc);
 
@@ -1751,7 +1772,7 @@ static int evacuate_object(KOS_CONTEXT     ctx,
                            uint32_t        size)
 {
     int             error = KOS_SUCCESS;
-    const KOS_TYPE  type  = (KOS_TYPE)hdr->type;
+    const KOS_TYPE  type  = kos_get_object_type(*hdr);
     KOS_OBJ_HEADER *new_obj;
 
 #ifdef CONFIG_MAD_GC
@@ -1767,7 +1788,7 @@ static int evacuate_object(KOS_CONTEXT     ctx,
     if (new_obj) {
         memcpy(new_obj, hdr, size);
 
-        hdr->alloc_size = (KOS_OBJ_ID)((intptr_t)new_obj + 1);
+        hdr->size_and_type = (KOS_OBJ_ID)((intptr_t)new_obj + 1);
     }
     else
         error = KOS_ERROR_EXCEPTION;
@@ -1783,7 +1804,7 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 
         /* TODO use relaxed atomic loads/stores ??? */
 
-        KOS_OBJ_ID new_obj = ((KOS_OBJ_HEADER *)((intptr_t)obj_id - 1))->alloc_size;
+        KOS_OBJ_ID new_obj = ((KOS_OBJ_HEADER *)((intptr_t)obj_id - 1))->size_and_type;
 
 #ifdef CONFIG_MAD_GC
         const struct KOS_MARK_LOC_S mark_loc = get_mark_location(obj_id);
@@ -1794,16 +1815,14 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 #endif
 
         /* Objects in pages retained keep their size in their size field */
-        if (IS_HEAP_OBJECT(new_obj)) {
+        if (IS_HEAP_OBJECT(new_obj))
             *obj_id_ptr = new_obj;
-            assert(READ_OBJ_TYPE(obj_id) == READ_OBJ_TYPE(new_obj));
-        }
     }
 }
 
 static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
 {
-    switch (hdr->type) {
+    switch (kos_get_object_type(*hdr)) {
 
         case OBJ_INTEGER:
             /* fall through */
@@ -1821,8 +1840,6 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
                 KOS_OBJ_ID     new_ref_obj  = old_ref_obj;
                 intptr_t       delta;
 
-                assert(OBJPTR(STRING, old_ref_obj)->header.flags & KOS_STRING_LOCAL);
-
                 update_child_ptr(&new_ref_obj);
 
                 delta = (intptr_t)new_ref_obj - (intptr_t)old_ref_obj;
@@ -1833,7 +1850,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         default:
-            assert(hdr->type == OBJ_OBJECT);
+            assert(kos_get_object_type(*hdr) == OBJ_OBJECT);
             update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->props);
             update_child_ptr(&((KOS_OBJECT *)hdr)->prototype);
             update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->priv);
@@ -1917,7 +1934,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
         case OBJ_LOCAL_REFS:
             {
                 KOS_OBJ_ID **ref = &((KOS_LOCAL_REFS *)hdr)->refs[0];
-                KOS_OBJ_ID **end = ref + ((KOS_LOCAL_REFS *)hdr)->header.num_tracked;
+                KOS_OBJ_ID **end = ref + ((KOS_LOCAL_REFS *)hdr)->num_tracked;
 
                 update_child_ptr(&((KOS_LOCAL_REFS *)hdr)->next);
 
@@ -1950,7 +1967,7 @@ static void update_pages_after_evacuation(KOS_HEAP *heap)
         while (ptr < end) {
 
             KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
-            const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+            const uint32_t  size  = kos_get_object_size(*hdr);
 
             update_child_ptrs(hdr);
 
@@ -2047,7 +2064,7 @@ static void finalize_object(KOS_CONTEXT     ctx,
                             KOS_OBJ_HEADER *hdr,
                             KOS_GC_STATS   *stats)
 {
-    if (hdr->type == OBJ_OBJECT) {
+    if (kos_get_object_type(*hdr) == OBJ_OBJECT) {
 
         KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
 
@@ -2130,7 +2147,7 @@ static int evacuate(KOS_CONTEXT   ctx,
                 while (ptr < end) {
 
                     KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
-                    const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+                    const uint32_t  size  = kos_get_object_size(*hdr);
                     const uint32_t  color = get_marking(&mark_loc);
 
                     assert(size > 0U);
@@ -2139,7 +2156,7 @@ static int evacuate(KOS_CONTEXT   ctx,
 
                     if ( ! color) {
                         finalize_object(ctx, hdr, &stats);
-                        hdr->type = OBJ_OPAQUE;
+                        kos_set_object_type(*hdr, OBJ_OPAQUE);
                     }
 
                     advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
@@ -2166,7 +2183,7 @@ static int evacuate(KOS_CONTEXT   ctx,
         while (ptr < end) {
 
             KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
-            const uint32_t  size  = (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+            const uint32_t  size  = kos_get_object_size(*hdr);
             const uint32_t  color = get_marking(&mark_loc);
 
             assert(size > 0U);

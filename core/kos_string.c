@@ -71,7 +71,7 @@ static KOS_STRING *_new_empty_string(KOS_CONTEXT      ctx,
                                          sizeof(KOS_STR_HEADER) + (length << elem_size));
 
     if (str) {
-        assert(str->header.type == OBJ_STRING);
+        assert(kos_get_object_type(str->header) == OBJ_STRING);
         str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_LOCAL;
         str->header.length = (uint16_t)length;
         str->header.hash   = 0;
@@ -118,7 +118,7 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
 
             void *ptr;
 
-            assert(str->header.type == OBJ_STRING);
+            assert(kos_get_object_type(str->header) == OBJ_STRING);
 
             str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_LOCAL;
             str->header.length = (uint16_t)count;
@@ -196,7 +196,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT      ctx,
                                              sizeof(struct KOS_STRING_PTR_S));
 
         if (str) {
-            assert(str->header.type == OBJ_STRING);
+            assert(kos_get_object_type(str->header) == OBJ_STRING);
 
             str->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_PTR;
             str->header.length = (uint16_t)length;
@@ -858,7 +858,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
 
                         buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id)) + (begin << elem_size);
 
-                        assert(OBJPTR(STRING, new_str)->header.type == OBJ_STRING);
+                        assert(READ_OBJ_TYPE(new_str) == OBJ_STRING);
 
                         OBJPTR(STRING, new_str)->header.flags  = (uint8_t)elem_size | (uint8_t)KOS_STRING_REF;
                         OBJPTR(STRING, new_str)->header.length = (uint16_t)new_len;

@@ -256,7 +256,7 @@ static KOS_OBJ_ID _alloc_module(KOS_CONTEXT ctx,
                sizeof(*module_ptr) - sizeof(module_ptr->header));
     }
 
-    assert(OBJPTR(MODULE, module)->header.type == OBJ_MODULE);
+    assert(READ_OBJ_TYPE(module) == OBJ_MODULE);
 
     OBJPTR(MODULE, module)->name         = module_name;
     OBJPTR(MODULE, module)->inst         = ctx->inst;
@@ -521,13 +521,13 @@ static int _alloc_constants(KOS_CONTEXT    ctx,
                     func = OBJPTR(FUNCTION, obj_id);
                 }
 
-                func->header.flags    = (uint8_t)(func_const->flags &
-                                        (KOS_COMP_FUN_ELLIPSIS | KOS_COMP_FUN_CLOSURE));
-                func->header.num_args = func_const->num_args;
-                func->header.num_regs = func_const->num_regs;
-                func->args_reg        = func_const->args_reg;
-                func->instr_offs      = OBJPTR(MODULE, module_obj)->bytecode_size + func_const->offset;
-                func->module          = module_obj;
+                func->flags      = (uint8_t)(func_const->flags &
+                                             (KOS_COMP_FUN_ELLIPSIS | KOS_COMP_FUN_CLOSURE));
+                func->num_args   = func_const->num_args;
+                func->num_regs   = func_const->num_regs;
+                func->args_reg   = func_const->args_reg;
+                func->instr_offs = OBJPTR(MODULE, module_obj)->bytecode_size + func_const->offset;
+                func->module     = module_obj;
 
                 if (func_const->flags & KOS_COMP_FUN_GENERATOR)
                     func->state = KOS_GEN_INIT;

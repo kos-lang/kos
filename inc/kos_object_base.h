@@ -27,34 +27,38 @@
 #include <stdint.h>
 #include "kos_atomic.h"
 
+/* Note: object types are always even.  See the description of size_and_type field
+ * to find out why. */
 typedef enum KOS_OBJECT_TYPE_E {
-    OBJ_SMALL_INTEGER,  /* Returned by GET_OBJ_TYPE, never used in any object */
+    OBJ_SMALL_INTEGER  = 0, /* Returned by GET_OBJ_TYPE, never used in any object */
 
     /* Language types */
-    OBJ_INTEGER,
-    OBJ_FLOAT,
-    OBJ_VOID,
-    OBJ_BOOLEAN,
-    OBJ_STRING,
-    OBJ_OBJECT,
-    OBJ_ARRAY,
-    OBJ_BUFFER,
-    OBJ_FUNCTION,
-    OBJ_CLASS,
+    OBJ_INTEGER        = 2,
+    OBJ_FLOAT          = 4,
+    OBJ_VOID           = 6,
+    OBJ_BOOLEAN        = 8,
+    OBJ_STRING         = 10,
+    OBJ_OBJECT         = 12,
+    OBJ_ARRAY          = 14,
+    OBJ_BUFFER         = 16,
+    OBJ_FUNCTION       = 18,
+    OBJ_CLASS          = 20,
 
     OBJ_LAST_TYPE = OBJ_CLASS, /* Last type exposed to the language */
 
-    OBJ_OPAQUE,         /* Contains binary user data, contents not recognized by GC */
+    /* Internal types */
 
-    OBJ_OBJECT_STORAGE,
-    OBJ_ARRAY_STORAGE,
-    OBJ_BUFFER_STORAGE,
-    OBJ_DYNAMIC_PROP,
-    OBJ_OBJECT_WALK,
-    OBJ_MODULE,
-    OBJ_STACK,
-    OBJ_LOCAL_REFS,
-    OBJ_THREAD
+    OBJ_OPAQUE         = 22, /* Contains binary user data, contents not recognized by GC */
+
+    OBJ_OBJECT_STORAGE = 24,
+    OBJ_ARRAY_STORAGE  = 26,
+    OBJ_BUFFER_STORAGE = 28,
+    OBJ_DYNAMIC_PROP   = 30,
+    OBJ_OBJECT_WALK    = 32,
+    OBJ_MODULE         = 34,
+    OBJ_STACK          = 36,
+    OBJ_LOCAL_REFS     = 38,
+    OBJ_THREAD         = 40
 } KOS_TYPE;
 
 struct KOS_OBJECT_PLACEHOLDER;
@@ -76,15 +80,17 @@ typedef struct KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
 #define KOS_BADPTR ((KOS_OBJ_ID)(intptr_t)1)
 
 typedef struct KOS_OBJ_HEADER_S {
-    /* During normal operation, alloc_size contains a small integer, which
-     * encodes size of the allocation.
+    /* During normal operation, size_and_type contains a small integer, which
+     * encodes size of the allocation and object type.
+     *
+     * Bits 0..7 contain object type, with bit 0 always being set to 0.
+     * Bits 8..n contain allocation size in bytes.
      *
      * When objects are moved to a new page during garbage collections,
-     * alloc_size contains an object identifier of the new, target object that
+     * size_and_type contains an object identifier of the new, target object that
      * has been allocated in the new page.
      */
-    KOS_OBJ_ID alloc_size;
-    uint8_t    type;        /* KOS_TYPE */
+    KOS_OBJ_ID size_and_type;
 } KOS_OBJ_HEADER;
 
 #ifdef __cplusplus
@@ -109,16 +115,15 @@ static inline KOS_TYPE READ_OBJ_TYPE(KOS_OBJ_ID obj_id) {
     assert( ! IS_SMALL_INT(obj_id));
     assert( ! IS_BAD_PTR(obj_id));
     return static_cast<KOS_TYPE>(
-               reinterpret_cast<const KOS_OBJ_HEADER *>(
-                   reinterpret_cast<intptr_t>(obj_id) - 1)->type);
+               static_cast<uint8_t>(
+                   reinterpret_cast<uintptr_t>(
+                       reinterpret_cast<const KOS_OBJ_HEADER *>(
+                           reinterpret_cast<intptr_t>(obj_id) - 1)->size_and_type)));
 }
 static inline KOS_TYPE GET_OBJ_TYPE(KOS_OBJ_ID obj_id) {
     if (IS_SMALL_INT(obj_id))
         return OBJ_SMALL_INTEGER;
-    assert( ! IS_BAD_PTR(obj_id));
-    return static_cast<KOS_TYPE>(
-               reinterpret_cast<const KOS_OBJ_HEADER *>(
-                   reinterpret_cast<intptr_t>(obj_id) - 1)->type);
+    return READ_OBJ_TYPE(obj_id);
 }
 static inline bool IS_NUMERIC_OBJ(KOS_OBJ_ID obj_id) {
     return GET_OBJ_TYPE(obj_id) <= OBJ_FLOAT;
@@ -134,7 +139,11 @@ static inline T* KOS_object_ptr(KOS_OBJ_ID obj_id, KOS_TYPE type) {
 template<typename T>
 static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 {
-    assert( ! ptr || ptr->header.type == type);
+    assert( ! ptr || type ==
+           static_cast<KOS_TYPE>(
+               static_cast<uint8_t>(
+                   reinterpret_cast<uintptr_t>(
+                       ptr->header.size_and_type))));
     return reinterpret_cast<KOS_OBJ_ID>(reinterpret_cast<uint8_t *>(ptr) + 1);
 }
 #define OBJID(tag, ptr) KOS_object_id<KOS_##tag>(OBJ_##tag, ptr)
@@ -149,7 +158,7 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 #define IS_BAD_PTR(obj_id)     ( (intptr_t)(obj_id) == 1                           )
 #define IS_HEAP_OBJECT(obj_id) ( ((intptr_t)(obj_id) & 7) == 1                     )
 #define OBJID(tag, ptr)        ( (KOS_OBJ_ID) ((intptr_t)(ptr) + 1)                )
-#define READ_OBJ_TYPE(obj_id)  ( (KOS_TYPE) ((KOS_OBJ_HEADER *)((uint8_t *)(obj_id) - 1))->type   )
+#define READ_OBJ_TYPE(obj_id)  ( (KOS_TYPE)(uint8_t)(uintptr_t)(((KOS_OBJ_HEADER *)((uint8_t *)(obj_id) - 1))->size_and_type) )
 #define GET_OBJ_TYPE(obj_id)   ( IS_SMALL_INT(obj_id) ? OBJ_SMALL_INTEGER : READ_OBJ_TYPE(obj_id) )
 
 #endif
@@ -177,8 +186,7 @@ typedef struct KOS_VOID_S {
 typedef union KOS_BOOLEAN_U {
     KOS_OBJ_HEADER header;
     struct {
-        KOS_OBJ_ID alloc_size;
-        uint8_t    type;
+        KOS_OBJ_ID size_and_type;
         uint8_t    value;
     }              boolean;
 } KOS_BOOLEAN;
@@ -189,12 +197,11 @@ typedef struct KOS_OPAQUE_S {
 
 struct KOS_CONST_OBJECT_S {
     uint32_t align4;
-    uint8_t  alloc_size[sizeof(KOS_OBJ_ID)];
-    uint8_t  type;
+    uint8_t  size_and_type[sizeof(KOS_OBJ_ID)];
     uint8_t  value;
 };
 
-#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).alloc_size + 1) )
+#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).size_and_type + 1) )
 
 #ifdef KOS_CPP11
 #   define DECLARE_CONST_OBJECT(name) alignas(8) const struct KOS_CONST_OBJECT_S name
@@ -211,7 +218,8 @@ struct KOS_CONST_OBJECT_S {
 #   define DECLARE_STATIC_CONST_OBJECT(name) __declspec(align(8)) static const struct KOS_CONST_OBJECT_S name
 #endif
 
-#define KOS_CONST_OBJECT_INIT(type, value) { 0, "", (type), (value) }
+/* TODO this breaks on big endian! */
+#define KOS_CONST_OBJECT_INIT(type, value) { 0, {(type)}, (value) }
 
 #ifdef __cplusplus
 extern "C" {
@@ -243,11 +251,10 @@ typedef enum KOS_STRING_FLAGS_E {
 } KOS_STRING_FLAGS;
 
 typedef struct KOS_STR_HEADER_S {
-    KOS_OBJ_ID           alloc_size;
-    uint8_t              type;
-    uint8_t              flags;
-    uint16_t             length;
+    KOS_OBJ_ID           size_and_type;
     KOS_ATOMIC(uint32_t) hash;
+    uint16_t             length;
+    uint8_t              flags;
 } KOS_STR_HEADER;
 
 struct KOS_STRING_LOCAL_S {
@@ -306,21 +313,16 @@ typedef enum KOS_FUNCTION_STATE_E {
     KOS_GEN_DONE        /* generator function reached the return statement      */
 } KOS_FUNCTION_STATE;
 
-typedef struct KOS_FUN_HEADER_S {
-    KOS_OBJ_ID alloc_size;
-    uint8_t    type;
-    uint8_t    flags;
-    uint8_t    num_args;
-    uint8_t    num_regs;
-} KOS_FUN_HEADER;
-
 enum KOS_FUNCTION_FLAGS_E {
     KOS_FUN_CLOSURE  = 1, /* Function's stack frame is a closure */
     KOS_FUN_ELLIPSIS = 2  /* Store remaining args in array       */
 };
 
 typedef struct KOS_FUNCTION_S {
-    KOS_FUN_HEADER       header;
+    KOS_OBJ_HEADER       header;
+    uint8_t              flags;
+    uint8_t              num_args;
+    uint8_t              num_regs;
     uint8_t              args_reg;
     uint8_t              state;    /* TODO convert to KOS_ATOMIC(uint32_t) */
     uint32_t             instr_offs;
@@ -332,7 +334,10 @@ typedef struct KOS_FUNCTION_S {
 } KOS_FUNCTION;
 
 typedef struct KOS_CLASS_S {
-    KOS_FUN_HEADER         header;
+    KOS_OBJ_HEADER         header;
+    uint8_t                flags;
+    uint8_t                num_args;
+    uint8_t                num_regs;
     uint8_t                args_reg;
     uint8_t                dummy;
     uint32_t               instr_offs;

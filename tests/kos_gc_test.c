@@ -91,7 +91,7 @@ static int alloc_page_with_objects(KOS_CONTEXT        ctx,
     if ( ! storage)
         return KOS_ERROR_EXCEPTION;
 
-    total_size = (uint32_t)GET_SMALL_INT(((KOS_OBJ_HEADER *)storage)->alloc_size);
+    total_size = kos_get_object_size(*(KOS_OBJ_HEADER *)storage);
 
     for ( ; num_objs; --num_objs, ++descs, ++dest) {
 
@@ -100,8 +100,7 @@ static int alloc_page_with_objects(KOS_CONTEXT        ctx,
 
         assert(total_size > size);
 
-        hdr->alloc_size = TO_SMALL_INT((int)size);
-        hdr->type       = (uint8_t)descs->type;
+        kos_set_object_type_size(*hdr, descs->type, size);
 
         total_size -= size;
         storage    += size;
@@ -113,8 +112,7 @@ static int alloc_page_with_objects(KOS_CONTEXT        ctx,
     {
         KOS_OBJ_HEADER *hdr = (KOS_OBJ_HEADER *)storage;
 
-        hdr->alloc_size = TO_SMALL_INT((int)total_size);
-        hdr->type       = OBJ_OPAQUE;
+        kos_set_object_type_size(*hdr, OBJ_OPAQUE, total_size);
     }
 
     return KOS_SUCCESS;
@@ -139,7 +137,7 @@ static KOS_OBJ_ID alloc_page_with_object(KOS_CONTEXT ctx,
 static uint32_t get_obj_size(KOS_OBJ_ID obj_id)
 {
     KOS_OBJ_HEADER *hdr = (KOS_OBJ_HEADER *)((intptr_t)obj_id - 1);
-    return (uint32_t)GET_SMALL_INT(hdr->alloc_size);
+    return kos_get_object_size(*hdr);
 }
 
 static uint32_t get_obj_sizes(KOS_OBJ_ID *obj_ids, uint32_t num_objs)
@@ -645,12 +643,12 @@ static int verify_function(KOS_OBJ_ID obj_id)
     KOS_OBJ_ID v;
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION);
-    TEST(OBJPTR(FUNCTION, obj_id)->header.flags    == KOS_FUN);
-    TEST(OBJPTR(FUNCTION, obj_id)->header.num_args == 1);
-    TEST(OBJPTR(FUNCTION, obj_id)->header.num_regs == 2);
-    TEST(OBJPTR(FUNCTION, obj_id)->args_reg        == 3);
-    TEST(OBJPTR(FUNCTION, obj_id)->state           == 0);
-    TEST(OBJPTR(FUNCTION, obj_id)->instr_offs      == 0);
+    TEST(OBJPTR(FUNCTION, obj_id)->flags      == KOS_FUN);
+    TEST(OBJPTR(FUNCTION, obj_id)->num_args   == 1);
+    TEST(OBJPTR(FUNCTION, obj_id)->num_regs   == 2);
+    TEST(OBJPTR(FUNCTION, obj_id)->args_reg   == 3);
+    TEST(OBJPTR(FUNCTION, obj_id)->state      == 0);
+    TEST(OBJPTR(FUNCTION, obj_id)->instr_offs == 0);
 
     v = OBJPTR(FUNCTION, obj_id)->module;
     TEST( ! IS_BAD_PTR(v));
@@ -694,16 +692,16 @@ static KOS_OBJ_ID alloc_function(KOS_CONTEXT  ctx,
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    OBJPTR(FUNCTION, obj_id[0])->header.flags    = KOS_FUN;
-    OBJPTR(FUNCTION, obj_id[0])->header.num_args = 1;
-    OBJPTR(FUNCTION, obj_id[0])->header.num_regs = 2;
-    OBJPTR(FUNCTION, obj_id[0])->args_reg        = 3;
-    OBJPTR(FUNCTION, obj_id[0])->state           = 0;
-    OBJPTR(FUNCTION, obj_id[0])->instr_offs      = 0;
-    OBJPTR(FUNCTION, obj_id[0])->handler         = &handler;
-    OBJPTR(FUNCTION, obj_id[0])->module          = obj_id[1];
-    OBJPTR(FUNCTION, obj_id[0])->closures        = obj_id[2];
-    OBJPTR(FUNCTION, obj_id[0])->defaults        = obj_id[3];
+    OBJPTR(FUNCTION, obj_id[0])->flags      = KOS_FUN;
+    OBJPTR(FUNCTION, obj_id[0])->num_args   = 1;
+    OBJPTR(FUNCTION, obj_id[0])->num_regs   = 2;
+    OBJPTR(FUNCTION, obj_id[0])->args_reg   = 3;
+    OBJPTR(FUNCTION, obj_id[0])->state      = 0;
+    OBJPTR(FUNCTION, obj_id[0])->instr_offs = 0;
+    OBJPTR(FUNCTION, obj_id[0])->handler    = &handler;
+    OBJPTR(FUNCTION, obj_id[0])->module     = obj_id[1];
+    OBJPTR(FUNCTION, obj_id[0])->closures   = obj_id[2];
+    OBJPTR(FUNCTION, obj_id[0])->defaults   = obj_id[3];
     OBJPTR(FUNCTION, obj_id[0])->generator_stack_frame = obj_id[4];
 
     OBJPTR(INTEGER, obj_id[1])->value = 48;
@@ -723,11 +721,11 @@ static int verify_class(KOS_OBJ_ID obj_id)
     KOS_OBJ_ID v;
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
-    TEST(OBJPTR(CLASS, obj_id)->header.flags    == KOS_FUN);
-    TEST(OBJPTR(CLASS, obj_id)->header.num_args == 1);
-    TEST(OBJPTR(CLASS, obj_id)->header.num_regs == 2);
-    TEST(OBJPTR(CLASS, obj_id)->args_reg        == 3);
-    TEST(OBJPTR(CLASS, obj_id)->instr_offs      == 0);
+    TEST(OBJPTR(CLASS, obj_id)->flags      == KOS_FUN);
+    TEST(OBJPTR(CLASS, obj_id)->num_args   == 1);
+    TEST(OBJPTR(CLASS, obj_id)->num_regs   == 2);
+    TEST(OBJPTR(CLASS, obj_id)->args_reg   == 3);
+    TEST(OBJPTR(CLASS, obj_id)->instr_offs == 0);
 
     v = OBJPTR(CLASS, obj_id)->module;
     TEST( ! IS_BAD_PTR(v));
@@ -783,15 +781,15 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    OBJPTR(CLASS, obj_id[0])->header.flags    = KOS_FUN;
-    OBJPTR(CLASS, obj_id[0])->header.num_args = 1;
-    OBJPTR(CLASS, obj_id[0])->header.num_regs = 2;
-    OBJPTR(CLASS, obj_id[0])->args_reg        = 3;
-    OBJPTR(CLASS, obj_id[0])->instr_offs      = 0;
-    OBJPTR(CLASS, obj_id[0])->handler         = &handler;
-    OBJPTR(CLASS, obj_id[0])->module          = obj_id[1];
-    OBJPTR(CLASS, obj_id[0])->closures        = obj_id[2];
-    OBJPTR(CLASS, obj_id[0])->defaults        = obj_id[3];
+    OBJPTR(CLASS, obj_id[0])->flags      = KOS_FUN;
+    OBJPTR(CLASS, obj_id[0])->num_args   = 1;
+    OBJPTR(CLASS, obj_id[0])->num_regs   = 2;
+    OBJPTR(CLASS, obj_id[0])->args_reg   = 3;
+    OBJPTR(CLASS, obj_id[0])->instr_offs = 0;
+    OBJPTR(CLASS, obj_id[0])->handler    = &handler;
+    OBJPTR(CLASS, obj_id[0])->module     = obj_id[1];
+    OBJPTR(CLASS, obj_id[0])->closures   = obj_id[2];
+    OBJPTR(CLASS, obj_id[0])->defaults   = obj_id[3];
     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->prototype, obj_id[4]);
     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->props,     obj_id[5]);
 
@@ -1136,9 +1134,9 @@ static KOS_OBJ_ID alloc_local_refs(KOS_CONTEXT  ctx,
     if (obj_id == KOS_BADPTR)
         return KOS_BADPTR;
 
-    OBJPTR(LOCAL_REFS, obj_id)->header.num_tracked = 0;
-    OBJPTR(LOCAL_REFS, obj_id)->header.prev_scope  = 0;
-    OBJPTR(LOCAL_REFS, obj_id)->next               = KOS_BADPTR;
+    OBJPTR(LOCAL_REFS, obj_id)->num_tracked = 0;
+    OBJPTR(LOCAL_REFS, obj_id)->prev_scope  = 0;
+    OBJPTR(LOCAL_REFS, obj_id)->next        = KOS_BADPTR;
 
     for (i = 0; i < NELEMS(OBJPTR(LOCAL_REFS, obj_id)->refs); i++)
         OBJPTR(LOCAL_REFS, obj_id)->refs[i] = 0;
@@ -1627,7 +1625,7 @@ int main(void)
         big_string = (KOS_STRING *)kos_alloc_object_page(ctx, OBJ_STRING);
         TEST(big_string);
 
-        size = (uint32_t)(int)GET_SMALL_INT(big_string->header.alloc_size);
+        size = kos_get_object_size(big_string->header);
         len  = size - (uint32_t)sizeof(struct KOS_STRING_LOCAL_S) + 1U;
 
         big_string->header.flags  = KOS_STRING_LOCAL;
@@ -1649,17 +1647,16 @@ int main(void)
         {
             const uint32_t small_size = KOS_align_up((uint32_t)sizeof(struct KOS_STRING_REF_S),
                                                      1U << KOS_OBJ_ALIGN_BITS);
-            const uint32_t alloc_size = (uint32_t)(int)GET_SMALL_INT(small_string->header.alloc_size);
+            const uint32_t alloc_size = kos_get_object_size(small_string->header);
 
-            small_string->header.alloc_size = TO_SMALL_INT((int64_t)small_size);
+            kos_set_object_size(small_string->header, small_size);
 
             held_string = (KOS_STRING *)((uint8_t *)small_string + small_size);
 
             size = alloc_size - small_size;
             len  = size - (uint32_t)sizeof(struct KOS_STRING_LOCAL_S) + 1U;
         }
-        held_string->header.alloc_size = TO_SMALL_INT((int64_t)size);
-        held_string->header.type       = OBJ_STRING;
+        kos_set_object_type_size(held_string->header, OBJ_STRING, size);
         held_string->header.flags      = KOS_STRING_LOCAL;
         held_string->header.length     = (uint16_t)len;
         held_string->header.hash       = 0;

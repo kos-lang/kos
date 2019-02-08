@@ -74,12 +74,12 @@ static KOS_OBJ_ID _create_func_obj(KOS_CONTEXT        ctx,
         func   = OBJPTR(FUNCTION, obj_id);
     }
 
-    func->header.flags    = flags;
-    func->header.num_args = num_args;
-    func->header.num_regs = num_regs;
-    func->args_reg        = args_reg;
-    func->instr_offs      = offset;
-    func->module          = ctx->inst->modules.init_module;
+    func->flags      = flags;
+    func->num_args   = num_args;
+    func->num_regs   = num_regs;
+    func->args_reg   = args_reg;
+    func->instr_offs = offset;
+    func->module     = ctx->inst->modules.init_module;
 
     if (create == CREATE_GEN)
         func->state = KOS_GEN_INIT;
@@ -131,7 +131,8 @@ static KOS_OBJ_ID _run_code(KOS_INSTANCE  *inst,
 
     memset(((uint8_t *)module) + sizeof(KOS_OBJ_HEADER), 0, sizeof(*module) - sizeof(KOS_OBJ_HEADER));
 
-    module->header.type   = OBJ_MODULE;
+    kos_set_object_type(module->header, OBJ_MODULE);
+
     module->inst          = inst;
     module->constants     = KOS_new_array(ctx, num_constants + 1);
     module->bytecode      = bytecode;

@@ -1234,7 +1234,7 @@ static void _thread_finalize(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  priv)
 {
     if ( ! IS_BAD_PTR(priv)) {
-        assert(GET_OBJ_TYPE(priv) == OBJ_THREAD);
+        assert(GET_OBJ_TYPE_GC_SAFE(priv) == OBJ_THREAD);
 
         kos_thread_disown(priv);
     }
@@ -3759,7 +3759,7 @@ static KOS_OBJ_ID _get_registers(KOS_CONTEXT ctx,
 
         KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
 
-        ret = KOS_new_int(ctx, (int64_t)func->header.num_regs);
+        ret = KOS_new_int(ctx, (int64_t)func->num_regs);
     }
     else
         KOS_raise_exception_cstring(ctx, str_err_not_function);

@@ -136,7 +136,8 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
-    assert(thread->header.type == OBJ_THREAD);
+    assert(kos_get_object_type(thread->header) == OBJ_THREAD);
+
     thread->inst        = inst;
     thread->thread_func = thread_func;
     thread->this_obj    = this_obj;

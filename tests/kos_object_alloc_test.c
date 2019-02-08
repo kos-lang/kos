@@ -125,7 +125,7 @@ static KOS_OBJ_ID _alloc_opaque(KOS_CONTEXT ctx,
     if ( ! object)
         return KOS_BADPTR;
 
-    actual_size = (unsigned)GET_SMALL_INT(((KOS_OPAQUE *)object)->header.alloc_size);
+    actual_size = kos_get_object_size(((KOS_OPAQUE *)object)->header);
 
     memset(object + sizeof(KOS_OPAQUE), fill, actual_size - sizeof(KOS_OPAQUE));
 
@@ -151,7 +151,7 @@ static int _check_opaque(KOS_OBJ_ID obj_id,
                          uint8_t    value)
 {
     uint8_t *object = (uint8_t *)OBJPTR(OPAQUE, obj_id);
-    unsigned size   = (unsigned)GET_SMALL_INT(OBJPTR(OPAQUE, obj_id)->header.alloc_size);
+    unsigned size   = kos_get_object_size(OBJPTR(OPAQUE, obj_id)->header);
     unsigned i;
 
     for (i = sizeof(KOS_OPAQUE); i < size; ++i) {
@@ -216,11 +216,11 @@ int main(void)
     {
         DECLARE_STATIC_CONST_OBJECT(const_obj) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 2);
 
-        KOS_BOOLEAN *bool_obj = (KOS_BOOLEAN *)&const_obj.alloc_size;
+        KOS_BOOLEAN *bool_obj = (KOS_BOOLEAN *)&const_obj.size_and_type;
 
-        TEST(bool_obj->header.alloc_size == 0);
-        TEST(bool_obj->header.type       == OBJ_BOOLEAN);
-        TEST(bool_obj->boolean.value     == 2);
+        TEST(kos_get_object_size(bool_obj->header) == 0);
+        TEST(kos_get_object_type(bool_obj->header) == OBJ_BOOLEAN);
+        TEST(bool_obj->boolean.value               == 2);
     }
 
     /************************************************************************/
@@ -244,7 +244,7 @@ int main(void)
             objects[j] = (*alloc[i].alloc_func)(ctx);
             TEST(objects[j]);
 
-            TEST(((uint8_t *)objects[j])[sizeof(KOS_OBJ_ID)] == alloc[i].type);
+            TEST(*((uint8_t *)objects[j]) == alloc[i].type);
 
             TEST(((intptr_t)objects[j] & 7) == 0);
 

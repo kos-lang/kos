@@ -30,6 +30,94 @@
 #include "kos_red_black.h"
 
 /*==========================================================================*/
+/* Object size and type                                                     */
+/*==========================================================================*/
+
+#ifdef __cplusplus
+
+template<typename T>
+static inline void kos_set_object_size(T& header, uint32_t size)
+{
+    uintptr_t size_and_type = reinterpret_cast<uintptr_t>(header.size_and_type);
+
+    size_and_type &= static_cast<uintptr_t>(0xFFU);
+
+    size_and_type |= static_cast<uintptr_t>(size) << 8;
+
+    header.size_and_type = reinterpret_cast<KOS_OBJ_ID>(size_and_type);
+}
+
+template<typename T>
+static inline void kos_set_object_type(T& header, KOS_TYPE type)
+{
+    uintptr_t size_and_type = reinterpret_cast<uintptr_t>(header.size_and_type);
+
+    assert((static_cast<uint8_t>(type) & 1U) == 0U);
+
+    size_and_type &= ~static_cast<uintptr_t>(0xFFU);
+
+    size_and_type |= static_cast<uintptr_t>(type);
+
+    header.size_and_type = reinterpret_cast<KOS_OBJ_ID>(size_and_type);
+}
+
+template<typename T>
+static inline void kos_set_object_type_size(T& header, KOS_TYPE type, uint32_t size)
+{
+    const uintptr_t size_and_type = (static_cast<uintptr_t>(size) << 8)
+                                  | static_cast<uintptr_t>(type);
+    header.size_and_type = reinterpret_cast<KOS_OBJ_ID>(size_and_type);
+}
+
+template<typename T>
+static inline KOS_TYPE kos_get_object_type(T& header)
+{
+    return static_cast<KOS_TYPE>(
+               static_cast<uint8_t>(
+                   reinterpret_cast<uintptr_t>(header.size_and_type)));
+}
+
+template<typename T>
+static inline uint32_t kos_get_object_size(T& header)
+{
+    return static_cast<uint32_t>(
+               reinterpret_cast<uintptr_t>(
+                   header.size_and_type) >> 8);
+}
+
+#else
+
+#define kos_set_object_size(header, size) do {                 \
+    (header).size_and_type = (KOS_OBJ_ID)(                     \
+        ((uintptr_t)(header).size_and_type & (uintptr_t)0xFFU) \
+        | ((uintptr_t)(size) << 8));                           \
+} while (0)
+
+#define kos_set_object_type(header, type) do {                  \
+    (header).size_and_type = (KOS_OBJ_ID)(                      \
+        ((uintptr_t)(header).size_and_type & ~(uintptr_t)0xFFU) \
+        | ((uintptr_t)(type)));                                 \
+} while (0)
+
+#define kos_set_object_type_size(header, type, size) do {    \
+    (header).size_and_type = (KOS_OBJ_ID)(                   \
+            ((uintptr_t)(size) << 8) | ((uintptr_t)(type))); \
+} while (0)
+
+#define kos_get_object_type(header) ((KOS_TYPE)(uint8_t)(uintptr_t)(header).size_and_type)
+
+#define kos_get_object_size(header) ((uint32_t)((uintptr_t)(header).size_and_type) >> 8)
+
+#endif
+
+#ifdef NDEBUG
+#define GET_OBJ_TYPE_GC_SAFE(obj) OBJ_OPAQUE
+#else
+#define GET_OBJ_TYPE_GC_SAFE(obj) kos_get_object_type_gc_safe(obj)
+KOS_TYPE kos_get_object_type_gc_safe(KOS_OBJ_ID obj);
+#endif
+
+/*==========================================================================*/
 /* KOS_OBJECT                                                               */
 /*==========================================================================*/
 
@@ -228,17 +316,12 @@ struct KOS_PAGE_HEADER_S {
 #define TRACK_ONE_REF 1
 #endif
 
-typedef struct KOS_LOCAL_REFS_HEADER_S {
-    KOS_OBJ_ID alloc_size;
-    uint8_t    type;
-    uint8_t    num_tracked;
-    uint8_t    prev_scope;
-} KOS_LOCAL_REFS_HEADER;
-
 typedef struct KOS_LOCAL_REFS_S {
-    KOS_LOCAL_REFS_HEADER header;
-    KOS_OBJ_ID            next;
-    KOS_OBJ_ID           *refs[64 - 3];
+    KOS_OBJ_HEADER header;
+    KOS_OBJ_ID     next;
+    uint8_t        num_tracked;
+    uint8_t        prev_scope;
+    KOS_OBJ_ID    *refs[64 - 3];
 } KOS_LOCAL_REFS;
 
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);

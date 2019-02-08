@@ -99,7 +99,7 @@ KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
     kos_untrack_refs(ctx, 1);
 
     if (obj) {
-        assert(obj->header.type == OBJ_OBJECT);
+        assert(kos_get_object_type(obj->header) == OBJ_OBJECT);
         kos_init_object(obj, prototype);
     }
 
@@ -144,7 +144,7 @@ static KOS_OBJ_ID _alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
                                    (capacity - 1) * sizeof(KOS_PITEM));
 
     if (storage) {
-        assert(storage->header.type == OBJ_OBJECT_STORAGE);
+        assert(kos_get_object_type(storage->header) == OBJ_OBJECT_STORAGE);
     }
 
     return OBJID(OBJECT_STORAGE, storage);
@@ -876,12 +876,13 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
     if (IS_BAD_PTR(walk_id))
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-    OBJPTR(OBJECT_WALK, walk_id)->header.type = OBJ_OBJECT_WALK;
-    OBJPTR(OBJECT_WALK, walk_id)->obj         = obj_id;
-    OBJPTR(OBJECT_WALK, walk_id)->key_table   = KOS_BADPTR;
-    OBJPTR(OBJECT_WALK, walk_id)->index       = 0;
-    OBJPTR(OBJECT_WALK, walk_id)->last_key    = KOS_BADPTR;
-    OBJPTR(OBJECT_WALK, walk_id)->last_value  = KOS_BADPTR;
+    assert(READ_OBJ_TYPE(walk_id) == OBJ_OBJECT_WALK);
+
+    OBJPTR(OBJECT_WALK, walk_id)->obj        = obj_id;
+    OBJPTR(OBJECT_WALK, walk_id)->key_table  = KOS_BADPTR;
+    OBJPTR(OBJECT_WALK, walk_id)->index      = 0;
+    OBJPTR(OBJECT_WALK, walk_id)->last_key   = KOS_BADPTR;
+    OBJPTR(OBJECT_WALK, walk_id)->last_value = KOS_BADPTR;
 
     key_table_obj = KOS_new_object(ctx);
     TRY_OBJID(key_table_obj);

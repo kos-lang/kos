@@ -333,9 +333,10 @@ static int _test_instr(KOS_CONTEXT           ctx,
     code[words++] = 0;
     code[words++] = regs - 1U;
 
+    kos_set_object_type(module->header, OBJ_MODULE);
+
     module->name          = KOS_BADPTR;
     module->path          = KOS_BADPTR;
-    module->header.type   = OBJ_MODULE;
     module->inst          = ctx->inst;
     module->bytecode      = &code[0];
     module->bytecode_size = words;
@@ -357,9 +358,9 @@ static int _test_instr(KOS_CONTEXT           ctx,
                 return KOS_ERROR_EXCEPTION;
             }
 
-            OBJPTR(FUNCTION, func_obj)->header.num_regs = regs;
-            OBJPTR(FUNCTION, func_obj)->instr_offs      = 0;
-            OBJPTR(FUNCTION, func_obj)->module          = OBJID(MODULE, module);
+            OBJPTR(FUNCTION, func_obj)->num_regs   = regs;
+            OBJPTR(FUNCTION, func_obj)->instr_offs = 0;
+            OBJPTR(FUNCTION, func_obj)->module     = OBJID(MODULE, module);
         }
     }
 

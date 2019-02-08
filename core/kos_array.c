@@ -75,7 +75,8 @@ static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
         KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
 
     if (buf) {
-        assert(buf->header.type == OBJ_ARRAY_STORAGE);
+        assert(kos_get_object_type(buf->header) == OBJ_ARRAY_STORAGE);
+
         capacity = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
         KOS_atomic_write_relaxed_u32(buf->capacity,       capacity);
         KOS_atomic_write_relaxed_u32(buf->num_slots_open, capacity);
@@ -105,14 +106,13 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
                 const uint32_t capacity = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
 
                 storage = (KOS_ARRAY_STORAGE *)((uint8_t *)array + array_obj_size);
-                storage->header.alloc_size = TO_SMALL_INT(buf_alloc_size);
-                storage->header.type       = OBJ_ARRAY_STORAGE;
+                kos_set_object_type_size(storage->header, OBJ_ARRAY_STORAGE, buf_alloc_size);
 
                 KOS_atomic_write_relaxed_u32(storage->capacity,       capacity);
                 KOS_atomic_write_relaxed_u32(storage->num_slots_open, capacity);
                 KOS_atomic_write_relaxed_ptr(storage->next,           KOS_BADPTR);
 
-                array->header.alloc_size = TO_SMALL_INT(array_obj_size);
+                kos_set_object_size(array->header, array_obj_size);
 
                 KOS_atomic_write_relaxed_ptr(array->data, OBJID(ARRAY_STORAGE, storage));
             }
