@@ -438,6 +438,91 @@ do {
     assert o2.b == "b"
 }
 
+# changed prototype
+do {
+    class c1 {
+        constructor {
+            this.a = 3
+        }
+        getvalue {
+            return this.a
+        }
+        geta {
+            return -this.a
+        }
+    }
+
+    class c2 {
+        constructor {
+            this.b = 4
+        }
+        getvalue {
+            return this.b
+        }
+        getb {
+            return -this.b
+        }
+    }
+
+    const o1 = c1()
+    const o2 = c2()
+
+    assert o1 instanceof c1
+    assert o2 instanceof c2
+    assert ! (o1 instanceof c2)
+    assert ! (o2 instanceof c1)
+
+    assert o1.getvalue() == 3
+    assert o2.getvalue() == 4
+    assert "a" in o1
+    assert "b" in o2
+    assert "geta" in o1
+    assert "getb" in o2
+    assert o1.a == 3
+    assert o2.b == 4
+    assert o1.geta() == -3
+    assert o2.getb() == -4
+
+    # now swap the prototypes
+    do {
+        const tmp = c1.prototype
+        c1.prototype = c2.prototype
+        c2.prototype = tmp
+    }
+
+    assert o1 instanceof c2
+    assert o2 instanceof c1
+    assert ! (o1 instanceof c1)
+    assert ! (o2 instanceof c2)
+
+    assert o1.getvalue() == 3
+    assert o2.getvalue() == 4
+    assert "a" in o1
+    assert "b" in o2
+    assert "geta" in o1
+    assert "getb" in o2
+    assert o1.a == 3
+    assert o2.b == 4
+    assert o1.geta() == -3
+    assert o2.getb() == -4
+
+    const x1 = c1()
+    const x2 = c2()
+
+    assert "a" in x1
+    assert "b" in x2
+    assert "getb" in x1
+    assert "geta" in x2
+    assert x1.a == 3
+    assert x2.b == 4
+    expect_fail(() => x1.geta())
+    expect_fail(() => x1.getb())
+    expect_fail(() => x2.geta())
+    expect_fail(() => x2.getb())
+    expect_fail(() => x1.getvalue())
+    expect_fail(() => x2.getvalue())
+}
+
 # extends
 do {
     class c0 {
