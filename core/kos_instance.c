@@ -467,6 +467,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(ctx));
 
     TRY_OBJID(init_module->name          = KOS_new_const_ascii_string(ctx, str_init, sizeof(str_init) - 1));
+    TRY_OBJID(init_module->path          = KOS_get_string(ctx, KOS_STR_EMPTY));
     TRY_OBJID(init_module->globals       = KOS_new_array(ctx, 0));
     TRY_OBJID(init_module->global_names  = KOS_new_object(ctx));
     TRY_OBJID(init_module->module_names  = KOS_new_object(ctx));
