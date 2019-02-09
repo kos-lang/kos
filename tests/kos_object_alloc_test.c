@@ -220,7 +220,7 @@ int main(void)
 
         TEST(kos_get_object_size(bool_obj->header) == 0);
         TEST(kos_get_object_type(bool_obj->header) == OBJ_BOOLEAN);
-        TEST(bool_obj->boolean.value               == 2);
+        TEST(bool_obj->value                       == 2);
     }
 
     /************************************************************************/

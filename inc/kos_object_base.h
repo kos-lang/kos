@@ -109,7 +109,7 @@ static inline bool IS_BAD_PTR(KOS_OBJ_ID obj_id) {
     return reinterpret_cast<intptr_t>(obj_id) == 1;
 }
 static inline bool IS_HEAP_OBJECT(KOS_OBJ_ID obj_id) {
-    return (reinterpret_cast<intptr_t>(obj_id) & 7) == 1;
+    return (reinterpret_cast<intptr_t>(obj_id) & 15) == 1;
 }
 static inline KOS_TYPE READ_OBJ_TYPE(KOS_OBJ_ID obj_id) {
     assert( ! IS_SMALL_INT(obj_id));
@@ -156,7 +156,7 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 #define IS_NUMERIC_OBJ(obj_id) ( GET_OBJ_TYPE(obj_id) <= OBJ_FLOAT                 )
 #define OBJPTR(tag, obj_id)    ( (KOS_##tag *) ((intptr_t)(obj_id) - 1)            )
 #define IS_BAD_PTR(obj_id)     ( (intptr_t)(obj_id) == 1                           )
-#define IS_HEAP_OBJECT(obj_id) ( ((intptr_t)(obj_id) & 7) == 1                     )
+#define IS_HEAP_OBJECT(obj_id) ( ((intptr_t)(obj_id) & 15) == 1                    )
 #define OBJID(tag, ptr)        ( (KOS_OBJ_ID) ((intptr_t)(ptr) + 1)                )
 #define READ_OBJ_TYPE(obj_id)  ( (KOS_TYPE)(uint8_t)(uintptr_t)(((KOS_OBJ_HEADER *)((uint8_t *)(obj_id) - 1))->size_and_type) )
 #define GET_OBJ_TYPE(obj_id)   ( IS_SMALL_INT(obj_id) ? OBJ_SMALL_INTEGER : READ_OBJ_TYPE(obj_id) )
@@ -183,12 +183,9 @@ typedef struct KOS_VOID_S {
     KOS_OBJ_HEADER header;
 } KOS_VOID;
 
-typedef union KOS_BOOLEAN_U {
+typedef struct KOS_BOOLEAN_S {
     KOS_OBJ_HEADER header;
-    struct {
-        KOS_OBJ_ID size_and_type;
-        uint8_t    value;
-    }              boolean;
+    uint8_t        value;
 } KOS_BOOLEAN;
 
 typedef struct KOS_OPAQUE_S {
@@ -196,30 +193,29 @@ typedef struct KOS_OPAQUE_S {
 } KOS_OPAQUE;
 
 struct KOS_CONST_OBJECT_S {
-    uint32_t align4;
-    uint8_t  size_and_type[sizeof(KOS_OBJ_ID)];
-    uint8_t  value;
+    uint64_t  align8;
+    uintptr_t size_and_type;
+    uint8_t   value;
 };
 
 #define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).size_and_type + 1) )
 
 #ifdef KOS_CPP11
-#   define DECLARE_CONST_OBJECT(name) alignas(8) const struct KOS_CONST_OBJECT_S name
-#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(8) static const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_CONST_OBJECT(name) alignas(16) const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(16) static const struct KOS_CONST_OBJECT_S name
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #   include <stdalign.h>
-#   define DECLARE_CONST_OBJECT(name) alignas(8) const struct KOS_CONST_OBJECT_S name
-#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(8) static const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_CONST_OBJECT(name) alignas(16) const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(16) static const struct KOS_CONST_OBJECT_S name
 #elif defined(__GNUC__)
-#   define DECLARE_CONST_OBJECT(name) const struct KOS_CONST_OBJECT_S name __attribute__ ((aligned (8)))
-#   define DECLARE_STATIC_CONST_OBJECT(name) static const struct KOS_CONST_OBJECT_S name __attribute__ ((aligned (8)))
+#   define DECLARE_CONST_OBJECT(name) const struct KOS_CONST_OBJECT_S name __attribute__ ((aligned (16)))
+#   define DECLARE_STATIC_CONST_OBJECT(name) static const struct KOS_CONST_OBJECT_S name __attribute__ ((aligned (16)))
 #elif defined(_MSC_VER)
-#   define DECLARE_CONST_OBJECT(name) __declspec(align(8)) const struct KOS_CONST_OBJECT_S name
-#   define DECLARE_STATIC_CONST_OBJECT(name) __declspec(align(8)) static const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_CONST_OBJECT(name) __declspec(align(16)) const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_STATIC_CONST_OBJECT(name) __declspec(align(16)) static const struct KOS_CONST_OBJECT_S name
 #endif
 
-/* TODO this breaks on big endian! */
-#define KOS_CONST_OBJECT_INIT(type, value) { 0, {(type)}, (value) }
+#define KOS_CONST_OBJECT_INIT(type, value) { 0, (type), (value) }
 
 #ifdef __cplusplus
 extern "C" {
