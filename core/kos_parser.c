@@ -393,42 +393,23 @@ cleanup:
     return error;
 }
 
-typedef struct KOS_SAVED_STATE_S {
-    int           unary_depth;
-    int           allow_continue;
-    int           allow_break;
-    int           allow_fallthrough;
-    KOS_AST_NODE *last_fallthrough;
-    int           in_constructor;
-} KOS_SAVED_STATE;
-
-static void save_function_state(KOS_PARSER      *parser,
-                                KOS_SAVED_STATE *state)
+static void save_function_state(KOS_PARSER       *parser,
+                                KOS_PARSER_STATE *state)
 {
-    state->unary_depth       = parser->unary_depth;
-    state->allow_continue    = parser->allow_continue;
-    state->allow_break       = parser->allow_break;
-    state->allow_fallthrough = parser->allow_fallthrough;
-    state->last_fallthrough  = parser->last_fallthrough;
-    state->in_constructor    = parser->in_constructor;
+    *state = parser->state;
 
-    parser->unary_depth       = 0;
-    parser->allow_continue    = 0;
-    parser->allow_break       = 0;
-    parser->allow_fallthrough = 0;
-    parser->last_fallthrough  = 0;
-    parser->in_constructor    = 0;
+    parser->state.last_fallthrough  = 0;
+    parser->state.unary_depth       = 0;
+    parser->state.allow_continue    = 0;
+    parser->state.allow_break       = 0;
+    parser->state.allow_fallthrough = 0;
+    parser->state.in_constructor    = 0;
 }
 
-static void restore_function_state(KOS_PARSER      *parser,
-                                   KOS_SAVED_STATE *state)
+static void restore_function_state(KOS_PARSER       *parser,
+                                   KOS_PARSER_STATE *state)
 {
-    parser->unary_depth       = state->unary_depth;
-    parser->allow_continue    = state->allow_continue;
-    parser->allow_break       = state->allow_break;
-    parser->allow_fallthrough = state->allow_fallthrough;
-    parser->last_fallthrough  = state->last_fallthrough;
-    parser->in_constructor    = state->in_constructor;
+    parser->state = *state;
 }
 
 static int function_literal(KOS_PARSER      *parser,
@@ -438,13 +419,13 @@ static int function_literal(KOS_PARSER      *parser,
     int       error       = KOS_SUCCESS;
     const int constructor = keyword == KW_CONSTRUCTOR;
 
-    KOS_AST_NODE   *node = 0;
-    KOS_AST_NODE   *args;
-    KOS_SAVED_STATE state;
+    KOS_AST_NODE    *node = 0;
+    KOS_AST_NODE    *args;
+    KOS_PARSER_STATE state;
 
     save_function_state(parser, &state);
 
-    parser->in_constructor = constructor;
+    parser->state.in_constructor = constructor;
 
     TRY(new_node(parser, ret,
                  constructor ? NT_CONSTRUCTOR_LITERAL : NT_FUNCTION_LITERAL));
@@ -480,7 +461,7 @@ static int function_literal(KOS_PARSER      *parser,
 
     TRY(push_node(parser, *ret, NT_LANDMARK, 0));
 
-    assert(parser->unary_depth == 0);
+    assert(parser->state.unary_depth == 0);
 
 cleanup:
     restore_function_state(parser, &state);
@@ -540,10 +521,10 @@ static int lambda_literal_body(KOS_PARSER    *parser,
                                KOS_AST_NODE  *args,
                                KOS_AST_NODE **ret)
 {
-    int             error       = KOS_SUCCESS;
-    KOS_AST_NODE   *node        = 0;
-    KOS_AST_NODE   *return_node = 0;
-    KOS_SAVED_STATE state;
+    int              error       = KOS_SUCCESS;
+    KOS_AST_NODE    *node        = 0;
+    KOS_AST_NODE    *return_node = 0;
+    KOS_PARSER_STATE state;
 
     save_function_state(parser, &state);
 
@@ -556,7 +537,7 @@ static int lambda_literal_body(KOS_PARSER    *parser,
 
     ast_push(*ret, args);
 
-    parser->unary_depth = 1;
+    parser->state.unary_depth = 1;
 
     TRY(push_node(parser, *ret, NT_LANDMARK, 0));
 
@@ -570,7 +551,7 @@ static int lambda_literal_body(KOS_PARSER    *parser,
 
     TRY(push_node(parser, *ret, NT_LANDMARK, 0));
 
-    assert(parser->unary_depth == 1);
+    assert(parser->state.unary_depth == 1);
 
 cleanup:
     restore_function_state(parser, &state);
@@ -880,9 +861,9 @@ cleanup:
 static int primary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int       error             = next_token(parser);
-    const int saved_unary_depth = parser->unary_depth;
+    const int saved_unary_depth = parser->state.unary_depth;
 
-    ++parser->unary_depth;
+    ++parser->state.unary_depth;
 
     if (!error) {
         const KOS_TOKEN *token = &parser->token;
@@ -977,8 +958,8 @@ static int primary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
         }
     }
 
-    assert(parser->unary_depth == saved_unary_depth + 1);
-    parser->unary_depth = saved_unary_depth;
+    assert(parser->state.unary_depth == saved_unary_depth + 1);
+    parser->state.unary_depth = saved_unary_depth;
 
     return error;
 }
@@ -986,7 +967,7 @@ static int primary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 static int unary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int           error             = KOS_SUCCESS;
-    const int     saved_unary_depth = parser->unary_depth;
+    const int     saved_unary_depth = parser->state.unary_depth;
     KOS_AST_NODE *node              = 0;
 
     TRY(next_token(parser));
@@ -997,7 +978,7 @@ static int unary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         TRY(increase_ast_depth(parser));
 
-        ++parser->unary_depth;
+        ++parser->state.unary_depth;
 
         TRY(new_node(parser, ret, NT_OPERATOR));
 
@@ -1008,7 +989,7 @@ static int unary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         --parser->ast_depth;
 
-        assert(parser->unary_depth == saved_unary_depth + 1);
+        assert(parser->state.unary_depth == saved_unary_depth + 1);
     }
     else {
 
@@ -1016,11 +997,11 @@ static int unary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         TRY(member_expr(parser, ret));
 
-        assert(parser->unary_depth == saved_unary_depth);
+        assert(parser->state.unary_depth == saved_unary_depth);
     }
 
 cleanup:
-    parser->unary_depth = saved_unary_depth;
+    parser->state.unary_depth = saved_unary_depth;
 
     return error;
 }
@@ -1041,7 +1022,7 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
         KOS_OPERATOR_TYPE last_op = parser->token.op;
 
         if ((last_op == OT_ADD || last_op == OT_SUB)
-            && parser->had_eol && parser->unary_depth == 0)
+            && parser->had_eol && parser->state.unary_depth == 0)
         {
             parser->error_str = str_err_eol_before_op;
             error = KOS_ERROR_PARSE_FAILED;
@@ -1061,7 +1042,7 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
             if (parser->token.op == OT_ADD || parser->token.op == OT_SUB) {
 
-                if (parser->had_eol && parser->unary_depth == 0) {
+                if (parser->had_eol && parser->state.unary_depth == 0) {
                     parser->error_str = str_err_eol_before_op;
                     error = KOS_ERROR_PARSE_FAILED;
                     goto cleanup;
@@ -1307,7 +1288,7 @@ static int conditional_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int           error             = KOS_SUCCESS;
     KOS_AST_NODE *node              = 0;
-    const int     saved_unary_depth = parser->unary_depth;
+    const int     saved_unary_depth = parser->state.unary_depth;
 
     TRY(logical_expr(parser, &node));
 
@@ -1322,11 +1303,11 @@ static int conditional_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
         ast_push(*ret, node);
         node = 0;
 
-        ++parser->unary_depth;
+        ++parser->state.unary_depth;
 
         TRY(conditional_expr(parser, &node));
 
-        --parser->unary_depth;
+        --parser->state.unary_depth;
 
         ast_push(*ret, node);
         node = 0;
@@ -1344,10 +1325,10 @@ static int conditional_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
         *ret = node;
     }
 
-    assert(parser->unary_depth == saved_unary_depth);
+    assert(parser->state.unary_depth == saved_unary_depth);
 
 cleanup:
-    parser->unary_depth = saved_unary_depth;
+    parser->state.unary_depth = saved_unary_depth;
 
     return error;
 }
@@ -1403,10 +1384,10 @@ static int async_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     if (parser->token.keyword == KW_DO) {
 
-        KOS_AST_NODE   *fun_node = 0;
-        KOS_AST_NODE   *tmp_node = 0;
-        KOS_AST_NODE   *sub_node = 0;
-        KOS_SAVED_STATE state;
+        KOS_AST_NODE    *fun_node = 0;
+        KOS_AST_NODE    *tmp_node = 0;
+        KOS_AST_NODE    *sub_node = 0;
+        KOS_PARSER_STATE state;
 
         save_function_state(parser, &state);
 
@@ -1435,10 +1416,10 @@ static int async_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         TRY(new_node(parser, &sub_node, NT_RETURN));
 
-        parser->unary_depth = 0;
+        parser->state.unary_depth = 0;
 
         error = do_stmt(parser, &tmp_node);
-        assert(error || parser->unary_depth == 0);
+        assert(error || parser->state.unary_depth == 0);
         restore_function_state(parser, &state);
         if (error)
             goto cleanup;
@@ -1485,7 +1466,7 @@ static int right_hand_side_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     if (parser->token.keyword == KW_YIELD) {
 
-        if (parser->in_constructor) {
+        if (parser->state.in_constructor) {
             parser->error_str = str_err_yield_in_constructor;
             error = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
@@ -1692,11 +1673,11 @@ cleanup:
 static int member_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int       error;
-    const int saved_unary_depth = parser->unary_depth;
+    const int saved_unary_depth = parser->state.unary_depth;
 
     error = primary_expr(parser, ret);
 
-    ++parser->unary_depth;
+    ++parser->state.unary_depth;
 
     while (!error) {
         error = next_token(parser);
@@ -1708,7 +1689,7 @@ static int member_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                 error = refinement_identifier(parser, ret);
 
             else if (token->sep == ST_SQUARE_OPEN) {
-                if (parser->had_eol && parser->unary_depth == 1) {
+                if (parser->had_eol && parser->state.unary_depth == 1) {
                     parser->error_str = str_err_eol_before_sq;
                     error = KOS_ERROR_PARSE_FAILED;
                 }
@@ -1716,7 +1697,7 @@ static int member_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                     error = refinement_expr(parser, ret);
             }
             else if (token->sep == ST_PAREN_OPEN) {
-                if (parser->had_eol && parser->unary_depth == 1) {
+                if (parser->had_eol && parser->state.unary_depth == 1) {
                     parser->error_str = str_err_eol_before_par;
                     error = KOS_ERROR_PARSE_FAILED;
                 }
@@ -1730,8 +1711,8 @@ static int member_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
         }
     }
 
-    assert(parser->unary_depth == saved_unary_depth + 1);
-    parser->unary_depth = saved_unary_depth;
+    assert(parser->state.unary_depth == saved_unary_depth + 1);
+    parser->state.unary_depth = saved_unary_depth;
 
     return error;
 }
@@ -2446,9 +2427,9 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     KOS_AST_NODE *node = 0;
 
-    KOS_AST_NODE *saved_fallthrough = parser->last_fallthrough;
+    KOS_AST_NODE *saved_fallthrough = parser->state.last_fallthrough;
 
-    parser->last_fallthrough = 0;
+    parser->state.last_fallthrough = 0;
 
     TRY(new_node(parser, ret, NT_SWITCH));
 
@@ -2459,8 +2440,8 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     TRY(assume_separator(parser, ST_CURLY_OPEN));
 
-    ++parser->allow_break;
-    ++parser->allow_fallthrough;
+    ++parser->state.allow_break;
+    ++parser->state.allow_fallthrough;
 
     TRY(next_token(parser));
 
@@ -2528,7 +2509,7 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
             TRY(assume_separator(parser, ST_COLON));
         }
 
-        parser->last_fallthrough = 0;
+        parser->state.last_fallthrough = 0;
 
         TRY(push_node(parser, case_node, NT_SCOPE, &scope_node));
 
@@ -2570,17 +2551,17 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
         }
     }
 
-    --parser->allow_break;
-    --parser->allow_fallthrough;
+    --parser->state.allow_break;
+    --parser->state.allow_fallthrough;
 
-    if (parser->last_fallthrough) {
-        parser->token     = parser->last_fallthrough->token;
+    if (parser->state.last_fallthrough) {
+        parser->token     = parser->state.last_fallthrough->token;
         parser->error_str = str_err_fallthrough_in_last_case;
         error             = KOS_ERROR_PARSE_FAILED;
     }
 
 cleanup:
-    parser->last_fallthrough = saved_fallthrough;
+    parser->state.last_fallthrough = saved_fallthrough;
 
     return error;
 }
@@ -2597,13 +2578,13 @@ static int loop_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     TRY(push_node(parser, *ret, NT_EMPTY, 0));
 
-    ++parser->allow_continue;
-    ++parser->allow_break;
+    ++parser->state.allow_continue;
+    ++parser->state.allow_break;
 
     TRY(compound_stmt(parser, &node));
 
-    --parser->allow_continue;
-    --parser->allow_break;
+    --parser->state.allow_continue;
+    --parser->state.allow_break;
 
     ast_push(*ret, node);
     node = 0;
@@ -2620,13 +2601,13 @@ static int repeat_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     TRY(new_node(parser, ret, NT_REPEAT));
 
-    ++parser->allow_continue;
-    ++parser->allow_break;
+    ++parser->state.allow_continue;
+    ++parser->state.allow_break;
 
     TRY(compound_stmt(parser, &node));
 
-    --parser->allow_continue;
-    --parser->allow_break;
+    --parser->state.allow_continue;
+    --parser->state.allow_break;
 
     ast_push(*ret, node);
     node = 0;
@@ -2639,7 +2620,7 @@ static int repeat_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
         goto cleanup;
     }
 
-    assert(parser->unary_depth == 0);
+    assert(parser->state.unary_depth == 0);
 
     TRY(right_hand_side_expr(parser, &node));
 
@@ -2667,13 +2648,13 @@ static int while_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     TRY(push_node(parser, *ret, NT_EMPTY, 0));
 
-    ++parser->allow_continue;
-    ++parser->allow_break;
+    ++parser->state.allow_continue;
+    ++parser->state.allow_break;
 
     TRY(compound_stmt(parser, &node));
 
-    --parser->allow_continue;
-    --parser->allow_break;
+    --parser->state.allow_continue;
+    --parser->state.allow_break;
 
     ast_push(*ret, node);
     node = 0;
@@ -2844,13 +2825,13 @@ static int for_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
     if (has_paren)
         TRY(assume_separator(parser, ST_PAREN_CLOSE));
 
-    ++parser->allow_continue;
-    ++parser->allow_break;
+    ++parser->state.allow_continue;
+    ++parser->state.allow_break;
 
     TRY(compound_stmt(parser, &node));
 
-    --parser->allow_continue;
-    --parser->allow_break;
+    --parser->state.allow_continue;
+    --parser->state.allow_break;
 
     ast_push(for_node, node);
     node = 0;
@@ -2863,7 +2844,7 @@ static int continue_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    if (!parser->allow_continue) {
+    if (!parser->state.allow_continue) {
         parser->error_str = str_err_unexpected_continue;
         error = KOS_ERROR_PARSE_FAILED;
     }
@@ -2881,7 +2862,7 @@ static int break_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    if (!parser->allow_break) {
+    if (!parser->state.allow_break) {
         parser->error_str = str_err_unexpected_break;
         error = KOS_ERROR_PARSE_FAILED;
     }
@@ -2899,7 +2880,7 @@ static int fallthrough_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
 
-    if (!parser->allow_fallthrough) {
+    if (!parser->state.allow_fallthrough) {
         parser->error_str = str_err_unexpected_fallthrough;
         error = KOS_ERROR_PARSE_FAILED;
     }
@@ -2908,7 +2889,7 @@ static int fallthrough_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
         error = new_node(parser, ret, NT_FALLTHROUGH);
 
     if (!error) {
-        parser->last_fallthrough = *ret;
+        parser->state.last_fallthrough = *ret;
         error = assume_separator(parser, ST_SEMICOLON);
     }
 
@@ -3001,7 +2982,7 @@ static int return_throw_assert_stmt(KOS_PARSER    *parser,
 
     if (type == NT_RETURN && end_of_return(parser)) {
 
-        if (parser->in_constructor) {
+        if (parser->state.in_constructor) {
             TRY(push_node(parser, *ret, NT_THIS_LITERAL, &node));
             node->token = (*ret)->token;
         }
@@ -3011,7 +2992,7 @@ static int return_throw_assert_stmt(KOS_PARSER    *parser,
     }
     else {
 
-        if (parser->in_constructor && parser->token.keyword != KW_THIS) {
+        if (parser->state.in_constructor && parser->token.keyword != KW_THIS) {
             parser->error_str = str_err_expected_this;
             error = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
@@ -3050,7 +3031,7 @@ static int next_statement(KOS_PARSER *parser, KOS_AST_NODE **ret)
     if ( ! error) {
         const KOS_TOKEN *token = &parser->token;
 
-        assert(parser->unary_depth == 0);
+        assert(parser->state.unary_depth == 0);
 
         switch (token->keyword) {
             case KW_FUN:
@@ -3173,24 +3154,24 @@ void kos_parser_init(KOS_PARSER           *parser,
 {
     kos_lexer_init(&parser->lexer, file_id, begin, end);
 
-    parser->ast_buf           = mempool;
-    parser->error_str         = 0;
-    parser->unget             = 0;
-    parser->had_eol           = 0;
-    parser->allow_continue    = 0;
-    parser->allow_break       = 0;
-    parser->allow_fallthrough = 0;
-    parser->last_fallthrough  = 0;
-    parser->in_constructor    = 0;
-    parser->ast_depth         = 0;
-    parser->unary_depth       = 0;
+    parser->ast_buf                 = mempool;
+    parser->error_str               = 0;
+    parser->unget                   = 0;
+    parser->had_eol                 = 0;
+    parser->ast_depth               = 0;
+    parser->state.last_fallthrough  = 0;
+    parser->state.unary_depth       = 0;
+    parser->state.allow_continue    = 0;
+    parser->state.allow_break       = 0;
+    parser->state.allow_fallthrough = 0;
+    parser->state.in_constructor    = 0;
 
-    parser->token.length      = 0;
-    parser->token.pos         = parser->lexer.pos;
-    parser->token.type        = TT_EOF;
-    parser->token.keyword     = KW_NONE;
-    parser->token.op          = OT_NONE;
-    parser->token.sep         = ST_NONE;
+    parser->token.length            = 0;
+    parser->token.pos               = parser->lexer.pos;
+    parser->token.type              = TT_EOF;
+    parser->token.keyword           = KW_NONE;
+    parser->token.op                = OT_NONE;
+    parser->token.sep               = ST_NONE;
 }
 
 int kos_parser_parse(KOS_PARSER    *parser,

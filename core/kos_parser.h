@@ -29,20 +29,24 @@ struct KOS_AST_NODE_S;
 
 struct KOS_MEMPOOL_S;
 
-typedef struct KOS_PARSER_S {
-    struct KOS_MEMPOOL_S  *ast_buf;
-    const char            *error_str;
-    KOS_LEXER              lexer;
-    KOS_TOKEN              token;
-    int                    unget;
-    int                    had_eol;
+typedef struct KOS_PARSER_STATE_S {
+    struct KOS_AST_NODE_S *last_fallthrough;
+    int                    unary_depth; /* For detecting ambiguous syntax */
     int                    allow_continue;
     int                    allow_break;
     int                    allow_fallthrough;
-    struct KOS_AST_NODE_S *last_fallthrough;
     int                    in_constructor;
-    int                    ast_depth;   /* For limiting statement/expression depth */
-    int                    unary_depth; /* For detecting ambiguous syntax */
+} KOS_PARSER_STATE;
+
+typedef struct KOS_PARSER_S {
+    struct KOS_MEMPOOL_S *ast_buf;
+    const char           *error_str;
+    KOS_LEXER             lexer;
+    KOS_TOKEN             token;
+    int                   unget;
+    int                   had_eol;
+    int                   ast_depth;   /* For limiting statement/expression depth */
+    KOS_PARSER_STATE      state;
 } KOS_PARSER;
 
 void kos_parser_init(KOS_PARSER           *parser,
