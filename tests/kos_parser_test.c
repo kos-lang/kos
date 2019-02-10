@@ -75,6 +75,8 @@ static const char *const node_types[] = {
     "number",
     "string",
     "this",
+    "super-ctor",
+    "super-proto",
     "line",
     "bool",
     "void",

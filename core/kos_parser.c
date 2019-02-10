@@ -70,6 +70,8 @@ static const char str_err_unexpected_continue[]       = "unexpected 'continue' s
 static const char str_err_unexpected_ctor[]           = "constructor already defined for this class";
 static const char str_err_unexpected_import[]         = "unexpected 'import' statement";
 static const char str_err_unexpected_fallthrough[]    = "unexpected 'fallthrough' statement; can only be used inside a switch";
+static const char str_err_unexpected_super[]          = "unexpected 'super' literal; can only be used inside a derived class member function";
+static const char str_err_unexpected_super_ctor[]     = "'super()' constructor can only be invoked from another constructor";
 static const char str_err_unsupported_slice_assign[]  = "unsupported assignment to slice, expected '='";
 static const char str_err_yield_in_constructor[]      = "'yield' not allowed in constructors";
 
@@ -404,6 +406,8 @@ static void save_function_state(KOS_PARSER       *parser,
     parser->state.allow_break       = 0;
     parser->state.allow_fallthrough = 0;
     parser->state.in_constructor    = 0;
+    parser->state.in_derived_class  = 0;
+    parser->state.in_class_member   = 0;
 }
 
 static void restore_function_state(KOS_PARSER       *parser,
@@ -416,8 +420,9 @@ static int function_literal(KOS_PARSER      *parser,
                             KOS_KEYWORD_TYPE keyword,
                             KOS_AST_NODE   **ret)
 {
-    int       error       = KOS_SUCCESS;
-    const int constructor = keyword == KW_CONSTRUCTOR;
+    int       error        = KOS_SUCCESS;
+    const int constructor  = keyword == KW_CONSTRUCTOR;
+    const int class_member = parser->state.in_derived_class;
 
     KOS_AST_NODE    *node = 0;
     KOS_AST_NODE    *args;
@@ -425,7 +430,7 @@ static int function_literal(KOS_PARSER      *parser,
 
     save_function_state(parser, &state);
 
-    parser->state.in_constructor = constructor;
+    parser->state.in_constructor  = constructor;
 
     TRY(new_node(parser, ret,
                  constructor ? NT_CONSTRUCTOR_LITERAL : NT_FUNCTION_LITERAL));
@@ -448,6 +453,8 @@ static int function_literal(KOS_PARSER      *parser,
     parser->unget = 1;
 
     TRY(push_node(parser, *ret, NT_LANDMARK, 0));
+
+    parser->state.in_class_member = class_member;
 
     TRY(compound_stmt(parser, &node));
 
@@ -620,6 +627,8 @@ static int class_literal(KOS_PARSER    *parser,
     KOS_AST_NODE *members_node    = 0;
     KOS_AST_NODE *empty_ctor      = 0;
 
+    assert( ! parser->state.in_derived_class);
+
     TRY(new_node(parser, ret, NT_CLASS_LITERAL));
 
     TRY(gen_empty_constructor(parser, &empty_ctor));
@@ -632,6 +641,8 @@ static int class_literal(KOS_PARSER    *parser,
         TRY(member_expr(parser, &extends_node));
 
         ast_push(*ret, extends_node);
+
+        parser->state.in_derived_class = 1;
     }
     else {
         TRY(push_node(parser, *ret, NT_EMPTY, 0));
@@ -691,6 +702,8 @@ static int class_literal(KOS_PARSER    *parser,
     TRY(assume_separator(parser, ST_CURLY_CLOSE));
 
 cleanup:
+    parser->state.in_derived_class = 0;
+
     return error;
 }
 
@@ -905,6 +918,14 @@ static int primary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                         break;
                     case KW_THIS:
                         error = new_node(parser, ret, NT_THIS_LITERAL);
+                        break;
+                    case KW_SUPER:
+                        if (parser->state.in_class_member)
+                            error = new_node(parser, ret, NT_SUPER_PROTO_LITERAL);
+                        else {
+                            parser->error_str = str_err_unexpected_super;
+                            error = KOS_ERROR_PARSE_FAILED;
+                        }
                         break;
                     case KW_LINE:
                         error = new_node(parser, ret, NT_LINE_LITERAL);
@@ -1358,6 +1379,16 @@ static int stream_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         TRY(conditional_expr(parser, &fun_node));
 
+        if (fun_node->type == NT_SUPER_PROTO_LITERAL) {
+            if ( ! parser->state.in_constructor) {
+                parser->token     = fun_node->token;
+                parser->error_str = str_err_unexpected_super_ctor;
+                RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
+            }
+
+            fun_node->type = NT_SUPER_CTOR_LITERAL;
+        }
+
         ast_push(*ret, fun_node);
         ast_push(*ret, arg_node);
 
@@ -1624,6 +1655,16 @@ static int invocation(KOS_PARSER *parser, KOS_AST_NODE **ret)
     *ret = 0;
 
     TRY(new_node(parser, ret, NT_INVOCATION));
+
+    if (node->type == NT_SUPER_PROTO_LITERAL) {
+        if ( ! parser->state.in_constructor) {
+            parser->token     = node->token;
+            parser->error_str = str_err_unexpected_super_ctor;
+            RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
+        }
+
+        node->type = NT_SUPER_CTOR_LITERAL;
+    }
 
     ast_push(*ret, node);
     node = 0;
@@ -3165,6 +3206,8 @@ void kos_parser_init(KOS_PARSER           *parser,
     parser->state.allow_break       = 0;
     parser->state.allow_fallthrough = 0;
     parser->state.in_constructor    = 0;
+    parser->state.in_derived_class  = 0;
+    parser->state.in_class_member   = 0;
 
     parser->token.length            = 0;
     parser->token.pos               = parser->lexer.pos;

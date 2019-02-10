@@ -32,10 +32,12 @@ struct KOS_MEMPOOL_S;
 typedef struct KOS_PARSER_STATE_S {
     struct KOS_AST_NODE_S *last_fallthrough;
     int                    unary_depth; /* For detecting ambiguous syntax */
-    int                    allow_continue;
-    int                    allow_break;
-    int                    allow_fallthrough;
-    int                    in_constructor;
+    char                   allow_continue;
+    char                   allow_break;
+    char                   allow_fallthrough;
+    char                   in_constructor;
+    char                   in_derived_class;
+    char                   in_class_member;
 } KOS_PARSER_STATE;
 
 typedef struct KOS_PARSER_S {
@@ -43,10 +45,10 @@ typedef struct KOS_PARSER_S {
     const char           *error_str;
     KOS_LEXER             lexer;
     KOS_TOKEN             token;
-    int                   unget;
-    int                   had_eol;
-    int                   ast_depth;   /* For limiting statement/expression depth */
     KOS_PARSER_STATE      state;
+    char                  unget;
+    char                  had_eol;
+    int                   ast_depth;   /* For limiting statement/expression depth */
 } KOS_PARSER;
 
 void kos_parser_init(KOS_PARSER           *parser,

@@ -1187,6 +1187,7 @@ non-whitespace, non-comment token on the line if the `Refinement` is
 part of the outermost `MemberExpression`.
 
     PrimaryExpression ::= "this"
+                        | "super"
                         | "__line__"
                         | Literal
                         | Identifier

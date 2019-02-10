@@ -339,6 +339,50 @@ class y extends a.b { }
 )
 
 @------------------------------------------------------------------------------
+class extends x {
+    constructor {
+        super()
+        super
+    }
+    super {
+        return super
+    }
+}
+
+@ 0
+
+(scope 1 1
+    (class 1 1 class
+        (identifier 1 15 x)
+        (object 1 17 {
+            (property 6 5 super
+                (string 6 5 super)
+                (function 6 5 super
+                    (name 6 5 super
+                        (identifier 6 5 super))
+                    (parameters 6 11 {)
+                    (landmark 6 11 {)
+                    (scope 6 11 {
+                        (return 7 9 return
+                            (super-proto 7 16 super))
+                        (return 8 5 }
+                            (void 8 5 })))
+                    (landmark 8 5 }))))
+        (constructor 2 5 constructor
+            (name 2 5 constructor)
+            (parameters 2 17 {)
+            (landmark 2 17 {)
+            (scope 2 17 {                
+                (invocation 3 14 paren_open
+                    (super-ctor 3 9 super))
+                (super-proto 4 9 super)
+                (return 5 5 }
+                    (this 5 5 })))
+            (landmark 5 5 }))
+    )
+)
+
+@------------------------------------------------------------------------------
 class failed
 {
     constructor { }
@@ -401,3 +445,56 @@ class { : }
 class x extends a + b { }
 
 @ 10 2 19
+
+@------------------------------------------------------------------------------
+# super outside of class
+super
+
+@ 10 2 1
+
+@------------------------------------------------------------------------------
+# super outside of class
+fun x { super }
+
+@ 10 2 9
+
+@------------------------------------------------------------------------------
+# super not directly in a class member (is not capturing)
+class C extends a {
+    xyz {
+        fun zzz {
+            super
+        }
+    }
+}
+
+@ 10 5 13
+
+@------------------------------------------------------------------------------
+# super not allowed in arguments
+class abc extends a {
+    xyz(a = super.x) {
+    }
+}
+
+@ 10 3 13
+
+@------------------------------------------------------------------------------
+# super in a non-derived class
+class abc {
+    xyz {
+        return super.x
+    }
+}
+
+@ 10 4 16
+
+@------------------------------------------------------------------------------
+# super invocation outside of constructor
+class abc extends def {
+    xyz {
+        super()
+    }
+}
+
+@ 10 4 9
