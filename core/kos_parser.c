@@ -88,7 +88,7 @@ static int next_token(KOS_PARSER *parser)
     if ( ! parser->unget) {
 
         KOS_TOKEN_TYPE type;
-        int            had_eol = 0;
+        char           had_eol = 0;
 
         for (;;) {
 
@@ -420,9 +420,9 @@ static int function_literal(KOS_PARSER      *parser,
                             KOS_KEYWORD_TYPE keyword,
                             KOS_AST_NODE   **ret)
 {
-    int       error        = KOS_SUCCESS;
-    const int constructor  = keyword == KW_CONSTRUCTOR;
-    const int class_member = parser->state.in_derived_class;
+    int        error        = KOS_SUCCESS;
+    const char constructor  = keyword == KW_CONSTRUCTOR;
+    const char class_member = parser->state.in_derived_class;
 
     KOS_AST_NODE    *node = 0;
     KOS_AST_NODE    *args;
@@ -430,7 +430,7 @@ static int function_literal(KOS_PARSER      *parser,
 
     save_function_state(parser, &state);
 
-    parser->state.in_constructor  = constructor;
+    parser->state.in_constructor = constructor;
 
     TRY(new_node(parser, ret,
                  constructor ? NT_CONSTRUCTOR_LITERAL : NT_FUNCTION_LITERAL));
@@ -1386,6 +1386,8 @@ static int stream_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                 RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
             }
 
+            assert(parser->state.in_class_member);
+
             fun_node->type = NT_SUPER_CTOR_LITERAL;
         }
 
@@ -1662,6 +1664,8 @@ static int invocation(KOS_PARSER *parser, KOS_AST_NODE **ret)
             parser->error_str = str_err_unexpected_super_ctor;
             RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
         }
+
+        assert(parser->state.in_class_member);
 
         node->type = NT_SUPER_CTOR_LITERAL;
     }
