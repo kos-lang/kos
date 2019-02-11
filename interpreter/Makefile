@@ -31,6 +31,7 @@ all: $(out_dir)/interpreter/kos$(exe_suffix)
 
 $(out_dir)/interpreter/kos$(exe_suffix): $(o_files) $(out_dir)/modules/libkos_modules$(a_suffix) $(out_dir)/core/libkos_lang$(a_suffix)
 	$(call LINK,$@,$^)
+	@echo Exe $(@:../%=%)
 
 install: $(out_dir)/interpreter/kos$(exe_suffix) $(wildcard ../modules/*.kos)
 	@./install.sh $(out_dir) $(DESTDIR)
