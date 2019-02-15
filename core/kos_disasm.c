@@ -55,6 +55,7 @@ static int _get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_ARRAY:          /* fall through */
         case INSTR_LOAD_PROTO:          /* fall through */
         case INSTR_MOVE:                /* fall through */
+        case INSTR_GET_PROTO:           /* fall through */
         case INSTR_GET_GLOBAL:          /* fall through */
         case INSTR_SET_GLOBAL:          /* fall through */
         case INSTR_DEL:                 /* fall through */
@@ -351,6 +352,7 @@ void kos_disassemble(const char                           *filename,
         "GET.ELEM",
         "GET.RANGE",
         "GET.PROP",
+        "GET.PROTO",
         "GET.GLOBAL",
         "GET.MOD",
         "GET.MOD.ELEM",

@@ -656,6 +656,15 @@ int main(void)
     TEST_INSTR INSTR_GET_PROP,   { V_EXCEPT                            }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
 
     /*========================================================================*/
+    /* GET.PROTO */
+    TEST_INSTR INSTR_GET_PROTO,  { V_VOID                              }, { { V_VOID                            } }                                        END
+    TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_FALSE                           } }                                        END
+    TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_INT32, 123                      } }                                        END
+    TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_STR1                            } }                                        END
+    TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_ARRAY, 2                        } }                                        END
+    TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_OBJECT                          } }                                        END
+
+    /*========================================================================*/
     /* HAS */
     TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_VOID                            }, { V_STR0                            } } END
     TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_FALSE                           }, { V_STR0                            } } END

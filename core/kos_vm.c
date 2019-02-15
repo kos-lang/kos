@@ -1389,6 +1389,33 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
+            case INSTR_GET_PROTO: { /* <r.dest>, <r.src> */
+                const unsigned rsrc = bytecode[2];
+                KOS_OBJ_ID     constr_obj;
+
+                assert(rsrc < num_regs);
+
+                constr_obj = REGISTER(rsrc);
+
+                if (GET_OBJ_TYPE(constr_obj) == OBJ_CLASS) {
+
+                    out = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, constr_obj)->prototype);
+
+                    assert( ! IS_BAD_PTR(out));
+                }
+                else if (constr_obj == KOS_VOID)
+                    out = KOS_VOID;
+
+                else {
+                    KOS_raise_exception_cstring(ctx, str_err_not_class);
+                    error = KOS_ERROR_EXCEPTION;
+                }
+
+                rdest = bytecode[1];
+                delta = 3;
+                break;
+            }
+
             case INSTR_GET_GLOBAL: { /* <r.dest>, <int32> */
                 const int32_t  idx = (int32_t)_load_32(bytecode+2);
 

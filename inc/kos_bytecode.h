@@ -54,7 +54,7 @@ typedef enum KOS_BYTECODE_INSTR_U {
     /* LOAD.OBJ <r.dest> */
     INSTR_LOAD_OBJ,
     /* LOAD.PROTO <r.dest>, <r.src> */
-    INSTR_LOAD_PROTO,
+    INSTR_LOAD_PROTO, /* TODO change to INSTR_LOAD_OBJ_PROTO */
 
     /* TODO SAVE.ARRAY <r.dest>, <r.src>, <size.uint8>
      * Save `size` registers starting with r.src into a new array. */
@@ -74,6 +74,8 @@ typedef enum KOS_BYTECODE_INSTR_U {
     INSTR_GET_RANGE,
     /* GET.PROP <r.dest>, <r.src>, <str.idx.int32> */
     INSTR_GET_PROP,
+    /* GET.PROTO <r.dest>, <r.src> */
+    INSTR_GET_PROTO,
     /* GET.GLOBAL <r.dest>, <int32> */
     INSTR_GET_GLOBAL,
     /* GET.MOD <r.dest>, <int32>, <r.glob> */

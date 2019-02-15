@@ -1099,6 +1099,23 @@ int main(void)
     }
 
     /************************************************************************/
+    /* GET.PROTO */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_FUN8,  0, 0,
+            INSTR_GET_PROTO,  0, 0,
+            INSTR_RETURN,     0, 0
+        };
+
+        KOS_OBJ_ID constants[2];
+        constants[0] = _create_class(ctx, 0, 1, 0, 0, 0);
+        constants[1] = TO_SMALL_INT(42); /* prototype */
+
+        TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 1, constants, 2) == TO_SMALL_INT(42));
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
     /* LOAD.CONST (generator), CALL - instantiate generator */
     {
         const uint8_t code[] = {
