@@ -994,8 +994,6 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
 
         if (error)
             return error;
-
-        local_refs = ctx->local_refs;
     }
     else
         prev_locals = TO_SMALL_INT(OBJPTR(LOCAL_REFS, local_refs)->prev_scope);
