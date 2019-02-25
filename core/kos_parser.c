@@ -3037,7 +3037,7 @@ static int return_throw_assert_stmt(KOS_PARSER    *parser,
     }
     else {
 
-        if (parser->state.in_constructor && parser->token.keyword != KW_THIS) {
+        if (parser->state.in_constructor && type == NT_RETURN && parser->token.keyword != KW_THIS) {
             parser->error_str = str_err_expected_this;
             error = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
