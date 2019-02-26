@@ -814,12 +814,13 @@ static void _identifier(KOS_COMP_UNIT      *program,
 static int _assignment(KOS_COMP_UNIT *program,
                        KOS_AST_NODE  *node)
 {
-    int           error     = KOS_SUCCESS;
-    int           is_lhs;
-    int           t;
-    KOS_AST_NODE *lhs_node  = node->children;
-    KOS_AST_NODE *rhs_node;
-    KOS_NODE_TYPE assg_type = node->type;
+    int               error     = KOS_SUCCESS;
+    int               is_lhs;
+    int               t;
+    KOS_AST_NODE     *lhs_node  = node->children;
+    KOS_AST_NODE     *rhs_node;
+    KOS_NODE_TYPE     assg_type = node->type;
+    KOS_OPERATOR_TYPE assg_op   = node->token.op;
 
     assert(lhs_node);
     assert(lhs_node->next);
@@ -870,13 +871,20 @@ static int _assignment(KOS_COMP_UNIT *program,
             else {
                 assert( ! var->is_const);
                 ++var->num_assignments;
+                if (assg_op != OT_SET)
+                    ++var->num_reads;
 
-                if (is_local)
+                if (is_local) {
                     ++var->local_assignments;
+                    if (assg_op != OT_SET)
+                        ++var->local_reads;
+                }
             }
         }
         else {
-            assert(node->type != NT_LINE_LITERAL && node->type != NT_THIS_LITERAL);
+            assert(node->type != NT_LINE_LITERAL &&
+                   node->type != NT_THIS_LITERAL &&
+                   node->type != NT_SUPER_PROTO_LITERAL);
             TRY(_visit_node(program, node, &t));
         }
     }
@@ -1678,6 +1686,10 @@ static int _visit_node(KOS_COMP_UNIT *program,
         case NT_STRING_LITERAL:
             /* fall through */
         case NT_THIS_LITERAL:
+            /* fall through */
+        case NT_SUPER_CTOR_LITERAL:
+            /* fall through */
+        case NT_SUPER_PROTO_LITERAL:
             /* fall through */
         case NT_BOOL_LITERAL:
             /* fall through */

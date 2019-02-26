@@ -400,7 +400,9 @@ static int _assignment(KOS_COMP_UNIT *program,
                 var->is_active = VAR_ACTIVE;
         }
         else {
-            assert(node->type != NT_LINE_LITERAL && node->type != NT_THIS_LITERAL);
+            assert(node->type != NT_LINE_LITERAL &&
+                   node->type != NT_THIS_LITERAL &&
+                   node->type != NT_SUPER_PROTO_LITERAL);
             TRY(_visit_node(program, node));
         }
     }
@@ -537,6 +539,10 @@ static int _visit_node(KOS_COMP_UNIT *program,
         case NT_STRING_LITERAL:
             /* fall through */
         case NT_THIS_LITERAL:
+            /* fall through */
+        case NT_SUPER_CTOR_LITERAL:
+            /* fall through */
+        case NT_SUPER_PROTO_LITERAL:
             /* fall through */
         case NT_LINE_LITERAL:
             /* fall through */

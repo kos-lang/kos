@@ -1856,13 +1856,62 @@ do {
     assert thing == void
 }
 
-# local variable with the same name as variable in the outer scope
+# Closure used only for storing data
 do {
-    fun one { }
-    fun two
+    fun external
     {
-        var one = { one: 1 }
-        return one.one
+        var a = 0
+
+        return fun(x)
+        {
+            a += x
+        }
     }
-    assert two() == 1
+
+    const f = external()
+    f(1)
+    f(2)
+}
+
+# Closures and constructors
+do {
+    fun make_it(z)
+    {
+        var a = 101
+
+        fun inner(y)
+        {
+            var b = 102
+
+            class Base
+            {
+                constructor
+                {
+                    this.c = 103
+                }
+            }
+
+            class Derived extends Base
+            {
+                constructor(x)
+                {
+                    super()
+                    a += x
+                    this.a = a
+                    b += x
+                    this.b = b
+                }
+            }
+
+            return Derived(y)
+        }
+
+        return inner(z)
+    }
+
+    const o = make_it(30)
+
+    assert o.a == 131
+    assert o.b == 132
+    assert o.c == 103
 }

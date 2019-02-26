@@ -203,6 +203,24 @@ static int _push_function(KOS_COMP_UNIT      *program,
     return error;
 }
 
+/* TODO can't we just do program->cur_frame ??? */
+KOS_SCOPE *kos_get_frame_scope(KOS_COMP_UNIT *program)
+{
+    KOS_SCOPE *scope = program->scope_stack;
+
+    assert(scope);
+
+    while (scope->next && ! scope->is_function)
+        scope = scope->next;
+
+    assert((scope->next && scope->is_function) ||
+           ( ! scope->next && ! scope->is_function));
+
+    assert(scope->has_frame || ! scope->is_function);
+
+    return scope;
+}
+
 KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
                       const KOS_TOKEN    *token)
 {
@@ -289,16 +307,11 @@ static int _lookup_and_mark_var(KOS_COMP_UNIT      *program,
                                 KOS_VAR           **out_var)
 {
     int        error;
-    KOS_VAR   *var   = 0;
-    KOS_SCOPE *scope = program->scope_stack;
-    KOS_SCOPE *local_fun_scope;
+    KOS_VAR   *var             = 0;
+    KOS_SCOPE *scope           = kos_get_frame_scope(program);
+    KOS_SCOPE *local_fun_scope = scope;
 
     assert(scope);
-
-    /* Skip local scopes */
-    while (scope->next && ! scope->is_function)
-        scope = scope->next;
-    local_fun_scope = scope;
 
     /* Browse outer scopes (closures, global) to find the variable */
     for ( ; scope; scope = scope->next) {
@@ -382,9 +395,7 @@ static int _define_local_var(KOS_COMP_UNIT      *program,
         program->globals = var;
     }
     else {
-        scope = program->scope_stack;
-        while (scope->next && ! scope->is_function)
-            scope = scope->next;
+        scope = kos_get_frame_scope(program);
 
         var->next            = scope->fun_vars_list;
         scope->fun_vars_list = var;
@@ -537,11 +548,9 @@ static int _yield(KOS_COMP_UNIT      *program,
                   const KOS_AST_NODE *node)
 {
     int        error;
-    KOS_SCOPE *scope;
+    KOS_SCOPE *scope = kos_get_frame_scope(program);
 
-    for (scope = program->scope_stack; scope && ! scope->is_function; scope = scope->next);
-
-    if (scope) {
+    if (scope->is_function) {
         if ( ! ((KOS_FRAME *)scope)->yield_token)
             ((KOS_FRAME *)scope)->yield_token = &node->token;
         error = KOS_SUCCESS;
@@ -595,7 +604,9 @@ static int _left_hand_side(KOS_COMP_UNIT      *program,
             }
         }
         else {
-            assert(node->type != NT_LINE_LITERAL && node->type != NT_THIS_LITERAL);
+            assert(node->type != NT_LINE_LITERAL &&
+                   node->type != NT_THIS_LITERAL &&
+                   node->type != NT_SUPER_PROTO_LITERAL);
             TRY(_visit_node(program, node));
         }
     }
@@ -621,11 +632,9 @@ static int _this_literal(KOS_COMP_UNIT      *program,
                          const KOS_AST_NODE *node)
 {
     int        error;
-    KOS_SCOPE *scope;
+    KOS_SCOPE *scope = kos_get_frame_scope(program);
 
-    for (scope = program->scope_stack; scope && ! scope->is_function; scope = scope->next);
-
-    if (scope) {
+    if (scope->is_function) {
         scope->uses_this = 1;
         error            = KOS_SUCCESS;
     }
@@ -636,6 +645,24 @@ static int _this_literal(KOS_COMP_UNIT      *program,
     }
 
     return error;
+}
+
+static void _super_ctor_literal(KOS_COMP_UNIT *program)
+{
+    KOS_SCOPE *const scope = kos_get_frame_scope(program);
+
+    assert(scope && scope->is_function);
+
+    ((KOS_FRAME *)scope)->uses_base_ctor = 1;
+}
+
+static void _super_proto_literal(KOS_COMP_UNIT *program)
+{
+    KOS_SCOPE *const scope = kos_get_frame_scope(program);
+
+    assert(scope && scope->is_function);
+
+    ((KOS_FRAME *)scope)->uses_base_proto = 1;
 }
 
 static int _parameter_defaults(KOS_COMP_UNIT      *program,
@@ -888,6 +915,14 @@ static int _visit_node(KOS_COMP_UNIT      *program,
             break;
         case NT_THIS_LITERAL:
             error = _this_literal(program, node);
+            break;
+        case NT_SUPER_CTOR_LITERAL:
+            _super_ctor_literal(program);
+            error = KOS_SUCCESS;
+            break;
+        case NT_SUPER_PROTO_LITERAL:
+            _super_proto_literal(program);
+            error = KOS_SUCCESS;
             break;
         case NT_FUNCTION_LITERAL:
             /* fall through */
