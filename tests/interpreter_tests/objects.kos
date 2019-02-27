@@ -839,3 +839,100 @@ do {
     assert od.c == 22
     assert od.add_2(20) == 23
 }
+
+# prototype chain
+do {
+    class c1 {
+        get_c() { return 11 }
+        get_x() { return this.x }
+    }
+
+    class c2 extends c1 {
+        get_c() { return 22 }
+        get_c1() { return super.get_c() }
+    }
+
+    class c3 extends c2 {
+        get_c() { return 33 }
+        get_c2() { return super.get_c() }
+    }
+
+    class c4 extends c3 {
+        get_c() { return 44 }
+        get_c3() { return super.get_c() }
+        constructor { this.x = 55 }
+    }
+
+    const o = c4()
+
+    assert o.get_c1() == 11
+    assert o.get_c2() == 22
+    assert o.get_c3() == 33
+    assert o.get_c() == 44
+    assert o.get_x() == 55
+}
+
+# invoking functions in base prototype should keep top-level this
+do {
+    class X {
+        execute {
+            return 11
+        }
+    }
+
+    class Y extends X {
+        constructor(exec33) {
+            if exec33 {
+                this.execute = fun { return 33 }
+            }
+        }
+        execute {
+            return 22
+        }
+        run {
+            return super.execute()
+        }
+    }
+
+    assert X().execute()      == 11
+    assert Y(false).execute() == 22
+    assert Y(true).execute()  == 33
+}
+
+# assigning to this in base constructor shadows derived prototype
+do {
+    class AAA {
+        constructor {
+            this.get_value = fun { return this.x }
+        }
+    }
+
+    class BBB extends AAA {
+        constructor {
+            this.x = 11
+            this.y = 22
+        }
+        get_value { return this.y }
+    }
+
+    const o = BBB ()
+    assert o.x == 11
+    assert o.y == 22
+    assert o.get_value() == 11
+}
+
+# a class function named "constructor"
+do {
+    class classA {
+        constructor {
+            this.m = "m"
+        }
+    }
+    classA.prototype.constructor = fun { return this.m + "h" }
+
+    const o = classA()
+    assert o.m == "m"
+    assert "constructor" in o
+    assert typeof o.constructor == "function"
+    assert o.constructor() == "mh"
+}
