@@ -2985,7 +2985,7 @@ cleanup:
         _free_reg(program, args_regs[0]);
     if (args_regs[1])
         _free_reg(program, args_regs[1]);
-    if ( ! reg || apply_fun != *reg)
+    if (apply_fun && ( ! reg || apply_fun != *reg))
         _free_reg(program, apply_fun);
 
     return error;
