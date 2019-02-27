@@ -5,7 +5,7 @@
 
 * Change division to produce float, add integer division operator //
 
-* ? Add buffer strings b""
+* ? Add buffer strings b"" or buffer literals <01 fa>
 
 * ? Empty array, buffer, string, object (shallow) are all falsy
 
@@ -31,11 +31,7 @@
     - Write test to use constructors with map function.
     - Determine interaction with generators and iterators.
 
-* Class improvements
-
-    - Add class inheritance.
-    - ? Add 'static' functions in classes.
-    - ? Add 'super'.
+* Add 'static' functions in classes.
 
 * Invocation with explicit argument names, e.g.:
 
