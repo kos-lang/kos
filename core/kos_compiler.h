@@ -135,8 +135,8 @@ typedef struct KOS_FRAME_S {
     int                         num_binds;        /* Number of binds */
     int                         num_non_def_args; /* Number of args without default values */
     int                         num_def_args;     /* Number of args with default values */
-    int                         uses_base_ctor   : 1;
-    int                         uses_base_proto  : 1;
+    unsigned                    uses_base_ctor  : 1;
+    unsigned                    uses_base_proto : 1;
 } KOS_FRAME;
 
 typedef struct KOS_SCOPE_REF_S {
