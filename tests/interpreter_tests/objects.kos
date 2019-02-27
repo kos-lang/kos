@@ -765,3 +765,77 @@ do {
     assert o.abc == 42
     assert o.bcd == 84
 }
+
+# no implicit super()
+do {
+    class add_x {
+        constructor {
+            this.x = 256
+        }
+    }
+
+    const oa = add_x()
+    assert "x" in oa
+    assert oa.x == 256
+
+    class derived extends add_x {
+        constructor(x) {
+            if x {
+                super()
+            }
+        }
+    }
+
+    const od = derived(false)
+
+    assert ! ("x" in od)
+    expect_fail(() => od.x)
+
+    # implicit super() NOT optimized-out
+    class optim extends add_x {
+        constructor {
+            if false { # optimized-out
+                super()
+            }
+        }
+    }
+
+    const oo = optim()
+    assert ! ("x" in oo)
+    expect_fail(() => oo.x)
+}
+
+# access super prototype
+do {
+    class b {
+        add_2(x) { return x + 2 }
+        get_a { return this.a }
+        constructor(x) {
+            this.a = x
+        }
+    }
+
+    class d extends b {
+        add_2(x) { return x + 3 }
+        super_add_2(x) { return super.add_2(x) }
+        get_a { return this.b }
+        constructor(x, y) {
+            super(x)
+            this.b = y
+            this.c = super.add_2(x)
+        }
+    }
+
+    const ob = b(10)
+    assert ob.add_2(20) == 22
+    assert ob.get_a() == 10
+    assert ob.a == 10
+
+    const od = d(20, 30)
+    assert od.get_a() == 30
+    assert od.super_add_2(80) == 82
+    assert od.a == 20
+    assert od.b == 30
+    assert od.c == 22
+    assert od.add_2(20) == 23
+}

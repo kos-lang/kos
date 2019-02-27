@@ -4736,6 +4736,7 @@ cleanup:
 static int _function_literal(KOS_COMP_UNIT      *program,
                              const KOS_AST_NODE *node,
                              KOS_REG            *base_ctor_reg,
+                             KOS_REG            *base_proto_reg,
                              KOS_REG           **reg)
 {
     int        error = KOS_SUCCESS;
@@ -4785,7 +4786,7 @@ static int _function_literal(KOS_COMP_UNIT      *program,
                             INSTR_BIND,
                             (*reg)->reg,
                             bind_idx++,
-                            0)); /* TODO */
+                            base_proto_reg->reg));
 
         /* Binds for outer scopes */
         bind_args.program      = program;
@@ -5011,7 +5012,11 @@ static int _object_literal(KOS_COMP_UNIT      *program,
         assert(prop_node);
         assert(!prop_node->next);
 
-        TRY(_visit_node(program, prop_node, &prop));
+        assert(prop_node->type != NT_CONSTRUCTOR_LITERAL);
+        if (prop_node->type == NT_FUNCTION_LITERAL && prototype)
+            TRY(_function_literal(program, prop_node, 0, prototype, &prop));
+        else
+            TRY(_visit_node(program, prop_node, &prop));
         assert(prop);
 
         TRY(_gen_instr3(program, INSTR_SET_PROP, (*reg)->reg, str_idx, prop->reg));
@@ -5070,6 +5075,7 @@ static int _class_literal(KOS_COMP_UNIT      *program,
 {
     int      error          = KOS_SUCCESS;
     int      void_proto     = 0;
+    int      ctor_uses_bp   = 0;
     KOS_REG *base_ctor_reg  = 0;
     KOS_REG *base_proto_reg = 0;
     KOS_REG *proto_reg      = 0;
@@ -5090,8 +5096,11 @@ static int _class_literal(KOS_COMP_UNIT      *program,
     assert(node->next);
 
     if (base_ctor_reg) {
-        const int need_base_proto = find_uses_of_base_proto(program, node)
-                                  + uses_base_proto(program, node->next);
+        int need_base_proto;
+
+        ctor_uses_bp = uses_base_proto(program, node->next);
+
+        need_base_proto = find_uses_of_base_proto(program, node) + ctor_uses_bp;
 
         TRY(_gen_reg(program, &base_proto_reg));
 
@@ -5126,7 +5135,7 @@ static int _class_literal(KOS_COMP_UNIT      *program,
     assert( ! node->next);
 
     /* Build constructor */
-    TRY(_function_literal(program, node, base_ctor_reg, reg));
+    TRY(_function_literal(program, node, base_ctor_reg, ctor_uses_bp ? base_proto_reg : 0, reg));
     assert(*reg);
 
     /* Set prototype on the constructor */
@@ -5267,7 +5276,7 @@ static int _visit_node(KOS_COMP_UNIT      *program,
         case NT_FUNCTION_LITERAL:
             /* fall through */
         case NT_CONSTRUCTOR_LITERAL:
-            error = _function_literal(program, node, 0, reg);
+            error = _function_literal(program, node, 0, 0, reg);
             break;
         case NT_ARRAY_LITERAL:
             error = _array_literal(program, node, reg);
