@@ -70,9 +70,9 @@ static int _gen_new_reg(KOS_COMP_UNIT *program,
     KOS_FRAME *frame = program->cur_frame;
     KOS_REG   *reg;
 
-    assert(frame->num_regs <= 256);
+    assert(frame->num_regs < 256);
 
-    if (frame->num_regs == 256) {
+    if (frame->num_regs == 255) {
 
         KOS_TOKEN *token = (KOS_TOKEN *)
             kos_mempool_alloc(&program->allocator, sizeof(KOS_TOKEN));
@@ -1227,6 +1227,8 @@ static KOS_COMP_FUNCTION *_alloc_func_constant(KOS_COMP_UNIT *program,
     constant = (KOS_COMP_FUNCTION *)kos_mempool_alloc(&program->allocator,
                                                        sizeof(KOS_COMP_FUNCTION));
     if (constant) {
+
+        assert(frame->num_regs < 256);
 
         constant->header.type = KOS_COMP_CONST_FUNCTION;
         constant->offset      = 0;
