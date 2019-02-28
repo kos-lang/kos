@@ -3320,6 +3320,9 @@ static int _log_not(KOS_COMP_UNIT      *program,
 
     _update_jump_offs(program, offs2, program->cur_offs);
 
+    if (src != *reg)
+        _free_reg(program, src);
+
 cleanup:
     return error;
 }
