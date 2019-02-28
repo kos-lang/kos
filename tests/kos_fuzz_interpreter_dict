@@ -1,6 +1,7 @@
 # Keywords
 "__line__"
 "assert"
+"async"
 "break"
 "case"
 "catch"
@@ -13,6 +14,7 @@
 "delete"
 "do"
 "else"
+"extends"
 "fallthrough"
 "false"
 "for"
@@ -27,6 +29,7 @@
 "return"
 "set"
 "static"
+"super"
 "switch"
 "this"
 "throw"
