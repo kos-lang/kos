@@ -43,6 +43,15 @@ assert typeof false   == "boolean"
 assert typeof {}      == "object"
 assert typeof []      == "array"
 assert typeof (()=>0) == "function"
+do {
+    fun double_typeof(x)
+    {
+        x = typeof typeof x
+        return x
+    }
+    assert double_typeof(1)  == "string"
+    assert double_typeof([]) == "string"
+}
 
 ##############################################################################
 # +
@@ -717,6 +726,16 @@ do {
     a = ~a
     assert a == 1
 }
+do {
+    fun double_neg(x)
+    {
+        x = ~~x
+        return x
+    }
+    assert double_neg(1)    == 1
+    assert double_neg(10)   == 10
+    assert double_neg(-100) == -100
+}
 
 ##############################################################################
 # !
@@ -746,6 +765,20 @@ do {
     const a = 10
     const c = ! a
     assert c == false
+}
+do {
+    fun double_neg(x)
+    {
+        x = !!x
+        return x
+    }
+    assert double_neg(false) == false
+    assert double_neg(true)  == true
+    assert double_neg(void)  == false
+    assert double_neg(0)     == false
+    assert double_neg(0.0)   == false
+    assert double_neg(1)     == true
+    assert double_neg([])    == true
 }
 
 ##############################################################################
