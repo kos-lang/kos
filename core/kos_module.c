@@ -113,30 +113,44 @@ static int _find_module(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  module_name,
                         const char *maybe_path,
                         unsigned    length,
+                        int         is_path,
                         KOS_OBJ_ID *out_abs_dir,
                         KOS_OBJ_ID *out_abs_path)
 {
-    int        error  = KOS_ERROR_INTERNAL;
-    KOS_OBJ_ID path   = KOS_BADPTR;
-    KOS_OBJ_ID dir    = KOS_BADPTR;
+    int        error   = KOS_ERROR_INTERNAL;
+    KOS_OBJ_ID path    = KOS_BADPTR;
+    KOS_OBJ_ID dir     = KOS_BADPTR;
     KOS_VECTOR cpath;
     unsigned   i;
-    int        pushed = 0;
+    int        pushed  = 0;
+    int        has_dot = 0;
 
     kos_vector_init(&cpath);
 
     TRY(KOS_push_locals(ctx, &pushed, 3, &module_name, &path, &dir));
 
-    /* Find dot or path separator, it indicates it's a path to a file */
-    if (_rfind_path(maybe_path, length, '.') > 0) {
+    /* Check if module name is a path and a path is allowed */
+    has_dot = _rfind_path(maybe_path, length, '.') > 0;
+    if (has_dot && ! is_path)
+        RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+
+    /* Check if file exists */
+    if (is_path) {
         TRY(kos_vector_resize(&cpath, length+1));
         memcpy(cpath.buffer, maybe_path, length);
         cpath.buffer[length] = 0;
 
         TRY(kos_get_absolute_path(&cpath));
 
-        if (!kos_does_file_exist(cpath.buffer))
-            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+        if (!kos_does_file_exist(cpath.buffer)) {
+            if (has_dot)
+                RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+            else
+                is_path = 0;
+        }
+    }
+
+    if (is_path) {
 
         path = KOS_new_string(ctx, cpath.buffer, (unsigned)(cpath.size-1));
         TRY_OBJID(path);
@@ -725,6 +739,7 @@ int KOS_load_module(KOS_CONTEXT ctx, const char *path)
     KOS_OBJ_ID module = kos_module_import(ctx,
                                           path,
                                           (unsigned)strlen(path),
+                                          1,
                                           0,
                                           0,
                                           &idx);
@@ -741,6 +756,7 @@ int KOS_load_module_from_memory(KOS_CONTEXT ctx,
     KOS_OBJ_ID module = kos_module_import(ctx,
                                           module_name,
                                           (unsigned)strlen(module_name),
+                                          0,
                                           buf,
                                           buf_size,
                                           &idx);
@@ -758,7 +774,7 @@ static int _import_module(void       *vframe,
 
     assert(module_idx);
 
-    module_obj = kos_module_import(ctx, name, length, 0, 0, module_idx);
+    module_obj = kos_module_import(ctx, name, length, 0, 0, 0, module_idx);
 
     return IS_BAD_PTR(module_obj) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
@@ -1325,6 +1341,7 @@ static void _handle_interpreter_error(KOS_CONTEXT ctx, int error)
 KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
                              const char *module_name,
                              unsigned    name_size,
+                             int         is_path,
                              const char *data,
                              unsigned    data_size,
                              int        *out_module_idx)
@@ -1367,6 +1384,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
                              actual_module_name,
                              module_name,
                              name_size,
+                             is_path,
                              (KOS_OBJ_ID *)&module_dir,
                              (KOS_OBJ_ID *)&module_path);
     if (error) {
@@ -1407,7 +1425,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
         if (inst->flags & KOS_INST_VERBOSE)
             _print_search_paths(ctx, inst->modules.search_paths);
 
-        base_obj = kos_module_import(ctx, base, sizeof(base)-1, 0, 0, &base_idx);
+        base_obj = kos_module_import(ctx, base, sizeof(base)-1, 0, 0, 0, &base_idx);
         TRY_OBJID(base_obj);
         assert(base_idx == 0);
     }
