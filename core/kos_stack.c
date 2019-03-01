@@ -59,7 +59,11 @@ static int _unchain_reentrant_frame(KOS_CONTEXT ctx)
 
             ctx->stack = old_stack;
 
+            kos_track_refs(ctx, 1, &gen_stack);
+
             error = _push_new_stack(ctx);
+
+            kos_untrack_refs(ctx, 1);
 
             if (error) {
                 ctx->stack = gen_stack;
@@ -68,8 +72,13 @@ static int _unchain_reentrant_frame(KOS_CONTEXT ctx)
 
             old_stack = ctx->stack;
             idx       = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, old_stack)->size);
+
+            KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, gen_stack)->buf[0], old_stack);
         }
 
+        assert(GET_OBJ_TYPE(gen_stack) == OBJ_STACK);
+
+        assert(old_stack == OBJPTR(STACK, gen_stack)->buf[0]);
         KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, old_stack)->buf[idx], gen_stack);
         KOS_atomic_write_relaxed_u32(OBJPTR(STACK, old_stack)->size,     idx + 1);
 
@@ -177,6 +186,9 @@ int kos_stack_push(KOS_CONTEXT ctx,
                ? 1 : OBJPTR(FUNCTION, func_obj)->num_regs;
     room = num_regs + KOS_STACK_EXTRA;
 
+    if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
+        RAISE_EXCEPTION(str_err_stack_overflow);
+
     /* Prepare stack for accommodating new stack frame */
     if (OBJPTR(FUNCTION, func_obj)->state < KOS_GEN_INIT &&
         ! (OBJPTR(FUNCTION, func_obj)->flags & KOS_FUN_CLOSURE)) {
@@ -254,11 +266,6 @@ int kos_stack_push(KOS_CONTEXT ctx,
     }
 
     ctx->stack_depth += room;
-
-    if (ctx->stack_depth > KOS_MAX_STACK_DEPTH) {
-        kos_stack_pop(ctx);
-        RAISE_EXCEPTION(str_err_stack_overflow);
-    }
 
 cleanup:
     kos_untrack_refs(ctx, 1);
