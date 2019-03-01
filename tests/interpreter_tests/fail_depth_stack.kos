@@ -1,5 +1,4 @@
-#!/bin/sh
-
+#
 # Copyright (c) 2014-2019 Chris Dragan
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,46 +18,5 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-
-set -e
-
-if [ $# -lt 2 ]; then
-    echo "Usage: $0 <dir> <command> ..."
-    exit 1
-fi
-
-OUTPUT="$1"
-shift
-
-mkdir -p "$OUTPUT"
-
-EC=0
-"$@" >"$OUTPUT/stdout" 2>"$OUTPUT/stderr" || EC=$?
-
-if [ "$EC" != "1" ]; then
-    echo "Failed command: $@"
-    echo "Unexpected exit code: $EC"
-    echo "stdout:"
-    sed 's/^/    /' "$OUTPUT/stdout"
-    echo "stderr:"
-    sed 's/^/    /' "$OUTPUT/stderr"
-    exit 1
-fi
-
-if [ $(wc -c < "$OUTPUT/stdout") != 0 ]; then
-    echo "Failed command: $@"
-    echo "Unexpected output on stdout (expected no output)"
-    echo "stdout:"
-    sed 's/^/    /' "$OUTPUT/stdout"
-    exit 1
-fi
-
-if [ "$1" != "valgrind" ]; then
-    if [ $(wc -l < "$OUTPUT/stderr") -gt 3 ] && ! grep -q "stack overflow" < "$OUTPUT/stderr"; then
-        echo "Failed command: $@"
-        echo "Unexpected output on stderr (expected at most 3 lines)"
-        echo "stderr:"
-        sed 's/^/    /' "$OUTPUT/stderr"
-        exit 1
-    fi
-fi
+#
+(e=>e(e))(e=>(e(e=>(G=>(e(e)))(e))))
