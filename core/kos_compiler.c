@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+static const char str_err_catch_nesting_too_deep[]    = "too many nesting levels of 'try'/'defer'/'with' statements";
 static const char str_err_duplicate_property[]        = "duplicate object property";
 static const char str_err_expected_refinement[]       = "expected .identifier or '[' in argument to 'delete'";
 static const char str_err_expected_refinement_ident[] = "expected identifier";
@@ -2010,7 +2011,12 @@ static int _restore_catch(KOS_COMP_UNIT *program,
         KOS_CATCH_REF *cur_catch_ref = &cur_scope->catch_ref;
         int            offs_idx      = cur_catch_ref->num_catch_offs;
 
-        assert((size_t)offs_idx < sizeof(cur_catch_ref->catch_offs) / sizeof(int));
+        if ((size_t)offs_idx == sizeof(cur_catch_ref->catch_offs) / sizeof(int)) {
+            program->error_token = &cur_scope->scope_node->token;
+            program->error_str   = str_err_catch_nesting_too_deep;
+            return KOS_ERROR_COMPILE_FAILED;
+        }
+
         assert(cur_catch_ref->catch_offs[offs_idx] == 0);
 
         cur_catch_ref->catch_offs[offs_idx] = program->cur_offs;
