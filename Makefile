@@ -30,9 +30,9 @@ build.interpreter:
 
 include build/dirs.mk
 
-CONFIG_DEBUG ?= 0
+debug ?= 0
 
-ifeq ($(CONFIG_DEBUG), 0)
+ifeq ($(debug), 0)
     out_dir ?= Out/release
 else
     out_dir ?= Out/debug
@@ -51,7 +51,7 @@ test: build.interpreter build.tests
 	@$(MAKE) -C tests $@
 
 cldep:
-	@$(MAKE) -C build/cldep CONFIG_DEBUG=0
+	@$(MAKE) -C build/cldep debug=0
 
 ifneq (,$(filter CYGWIN% MINGW% MSYS%, $(shell uname -s)))
 $(addprefix build., $(modules)): cldep

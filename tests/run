@@ -87,7 +87,7 @@ echo "Using $JOBS jobs"
 export TEST_CPUS="$JOBS"
 
 # Optimize for the current architecture
-export CONFIG_NATIVE=1
+export native=1
 
 # Save for overriding
 ORIG_JOBS=$JOBS
@@ -97,7 +97,7 @@ runtests()
     echo "***************************************************************************"
     local MODE
     MODE="RELEASE"
-    [ "$CONFIG_DEBUG" = "1" ] && MODE="DEBUG"
+    [ "$debug" = "1" ] && MODE="DEBUG"
 
     local PRINT_CLANG
     PRINT_CLANG=$(echo "$1" | tr 'c' 'C')
@@ -116,8 +116,8 @@ runtests()
 
     local WITH_TOOL
     WITH_TOOL=""
-    [ -n "$CONFIG_TOOL" ] && WITH_TOOL=" with $CONFIG_TOOL"
-    [ -n "$CONFIG_GCOV" ] && WITH_TOOL=" with gcov"
+    [ -n "$tool" ] && WITH_TOOL=" with $tool"
+    [ -n "$gcov" ] && WITH_TOOL=" with gcov"
 
     if [ -n "$SANITIZER" ]; then
         local CFLAGS
@@ -137,16 +137,16 @@ runtests()
     echo "***************************************************************************"
 
     [ "$3" = "noclean" ] || rm -rf Out
-    $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 CONFIG_STRICT=1 --warn-undefined-variables
+    $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 strict=1 --warn-undefined-variables
 }
 
 cd "$(dirname $0)"/..
 
 unset SANITIZER
-unset CONFIG_TOOL
-unset CONFIG_GCOV
-unset CONFIG_SEQFAIL
-export CONFIG_DEBUG=1
+unset tool
+unset gcov
+unset seqfail
+export debug=1
 
 if [ "$RUN_C89" = "1" -o "$RUN_VALGRIND" = "1" ]; then
     runtests c89 c++98
@@ -163,7 +163,7 @@ if [ "$RUN_VALGRIND" = "1" ]; then
         exit 1
     fi
 
-    export CONFIG_TOOL="valgrind --error-exitcode=1 --track-origins=yes"
+    export tool="valgrind --error-exitcode=1 --track-origins=yes"
 
     # Limit number of jobs to reduce memory pressure
     JOBS=$(($JOBS / 2))
@@ -171,7 +171,7 @@ if [ "$RUN_VALGRIND" = "1" ]; then
 
     TEST_CPUS=2 runtests c89 c++98 noclean
 
-    unset CONFIG_TOOL
+    unset tool
     JOBS=$ORIG_JOBS
 fi
 
@@ -188,7 +188,7 @@ if [ "$RUN_ASAN" = "1" ]; then
 fi
 
 if [ "$RUN_SEQFAIL" = "1" ]; then
-    export CONFIG_SEQFAIL=1
+    export seqfail=1
     RUN_CPP14="1"
 fi
 
@@ -197,22 +197,22 @@ if [ "$RUN_CPP14" = "1" ]; then
 fi
 
 unset SANITIZER
-unset CONFIG_SEQFAIL
+unset seqfail
 JOBS=$ORIG_JOBS
 
 if [ "$RUN_MADGC" = "1" ]; then
     if [ "$RUN_SEQFAIL" = "1" ]; then
-        export CONFIG_SEQFAIL=1
+        export seqfail=1
     fi
     MAD_GC_CPUS=$TEST_CPUS
     [ $MAD_GC_CPUS -gt 4 ] && MAD_GC_CPUS=4
-    export CONFIG_MAD_GC=1
+    export mad_gc=1
     TEST_CPUS=$MAD_GC_CPUS runtests c++11 c++11
-    unset CONFIG_MAD_GC
-    unset CONFIG_SEQFAIL
+    unset mad_gc
+    unset seqfail
 fi
 
-unset CONFIG_DEBUG
+unset debug
 if [ "$RUN_RELEASE" = "1" ]; then
     runtests c11 c++11
 fi
@@ -222,13 +222,13 @@ if [ "$RUN_GCOV" = "1" ]; then
         echo "Error: gcov not supported on Windows!" >&2
         exit 1
     fi
-    export CONFIG_GCOV=1
-    export CONFIG_DEBUG=1
-    export CONFIG_SEQFAIL=1
+    export gcov=1
+    export debug=1
+    export seqfail=1
     runtests c99 c++14
-    unset CONFIG_GCOV
-    unset CONFIG_DEBUG
-    unset CONFIG_SEQFAIL
+    unset gcov
+    unset debug
+    unset seqfail
 else
     rm -rf Out
 fi

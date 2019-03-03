@@ -65,11 +65,11 @@ inv_path = $(subst $(space),/,$(patsubst %,..,$(subst /,$(space),$1)))
 
 CFLAGS  ?=
 LDFLAGS ?=
-CONFIG_DEBUG ?= 0
-CONFIG_NATIVE ?= 0
+debug ?= 0
+native ?= 0
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
-    ifeq ($(CONFIG_DEBUG), 0)
+    ifeq ($(debug), 0)
         CFLAGS   += -O2 -DNDEBUG -Gs4096 -GL -MT
         LDFLAGS  += -LTCG
         LIBFLAGS += -LTCG
@@ -101,9 +101,9 @@ ifeq ($(UNAME), Windows)
     CFLAGS += -wd5039 # pointer or reference to potentially throwing function passed to extern C function under -EHc
     CFLAGS += -wd5045 # compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
 
-    CONFIG_GCOV := 0
+    gcov := 0
 else
-    ifeq ($(CONFIG_DEBUG), 0)
+    ifeq ($(debug), 0)
         CFLAGS += -O3 -DNDEBUG -ffunction-sections -fdata-sections
         CFLAGS += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
         STRIP  ?= strip
@@ -113,7 +113,7 @@ else
         ifeq ($(UNAME), Darwin)
             LDFLAGS += -Wl,-dead_strip
         endif
-        ifeq ($(CONFIG_NATIVE), 1)
+        ifeq ($(native), 1)
             CFLAGS  += -march=native
             LDFLAGS += -march=native
         endif
@@ -122,19 +122,19 @@ else
         ifeq ($(UNAME), Linux)
             LTOAR ?= $(shell $(call inv_path, $(depth))/build/find_lto ar $(CC))
             ifeq (,$(LTOAR))
-                CONFIG_LTO ?= 0
+                lto ?= 0
             else
-                CONFIG_LTO ?= 1
+                lto ?= 1
             endif
-            ifneq ($(CONFIG_LTO), 0)
+            ifneq ($(lto), 0)
                 AR =  $(LTOAR)
             endif
         endif
         ifeq ($(UNAME), Darwin)
-            CONFIG_LTO ?= 1
+            lto ?= 1
         endif
-        CONFIG_LTO ?= 0
-        ifneq ($(CONFIG_LTO), 0)
+        lto ?= 0
+        ifneq ($(lto), 0)
             CFLAGS  += -flto
             LDFLAGS += -ffunction-sections -fdata-sections -flto
         endif
@@ -171,15 +171,15 @@ else
     endif
 
     # Configure gcov
-    CONFIG_GCOV ?= 0
-    ifneq ($(CONFIG_GCOV), 0)
+    gcov ?= 0
+    ifneq ($(gcov), 0)
         CFLAGS  += -fprofile-arcs -ftest-coverage -fno-inline
         LDFLAGS += -fprofile-arcs -ftest-coverage
     endif
 
     # Special handling of fuzzer
-    CONFIG_FUZZ ?= 0
-    ifneq ($(CONFIG_FUZZ), 0)
+    fuzz ?= 0
+    ifneq ($(fuzz), 0)
         CFLAGS += -DCONFIG_FUZZ
     endif
 endif
@@ -189,46 +189,46 @@ ifeq ($(UNAME), Darwin)
     LDFLAGS += -mmacosx-version-min=10.9
 endif
 
-CONFIG_PERF ?= 0
+perf ?= 0
 
-ifneq ($(CONFIG_PERF), 0)
+ifneq ($(perf), 0)
     CFLAGS += -DCONFIG_PERF
 endif
 
-CONFIG_STRING ?= 8
+min_string_size ?= 8
 
-ifeq ($(CONFIG_STRING), 16)
+ifeq ($(min_string_size), 16)
     CFLAGS += -DCONFIG_STRING16
 endif
-ifeq ($(CONFIG_STRING), 32)
+ifeq ($(min_string_size), 32)
     CFLAGS += -DCONFIG_STRING32
 endif
 
-CONFIG_SEQFAIL ?= 0
+seqfail ?= 0
 
-ifneq ($(CONFIG_SEQFAIL), 0)
+ifneq ($(seqfail), 0)
     CFLAGS += -DCONFIG_SEQFAIL
 endif
 
-CONFIG_MAD_GC ?= 0
+mad_gc ?= 0
 
-ifneq ($(CONFIG_MAD_GC), 0)
+ifneq ($(mad_gc), 0)
     CFLAGS += -DCONFIG_MAD_GC
 endif
 
 ##############################################################################
 # Optionally treat warnings as errors and add more checks
 
-CONFIG_STRICT ?= 0 # Old compilers don't like it, disable by default
+strict ?= 0 # Old compilers don't like it, disable by default
 
-ifeq ($(CONFIG_STRICT), 1)
+ifeq ($(strict), 1)
     CFLAGS += $(STRICTFLAGS)
 endif
 
 ##############################################################################
 # Set default output directory
 
-ifeq ($(CONFIG_DEBUG), 0)
+ifeq ($(debug), 0)
     out_dir ?= $(call inv_path, $(depth))/Out/release
 else
     out_dir ?= $(call inv_path, $(depth))/Out/debug
@@ -321,7 +321,7 @@ endef
 
 else #------------------------------------------------------------------------
 
-ifeq ($(CONFIG_DEBUG), 0)
+ifeq ($(debug), 0)
 define LINK
 	@basename $1 | xargs echo Link
 	@$(CXX) $2 -o $1 $(LDFLAGS)

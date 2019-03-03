@@ -84,14 +84,14 @@ GCOV ?= gcov
 include ../build/rules.mk
 
 ifneq ($(UNAME), Windows)
-ifeq ($(CONFIG_STRICT), 1)
+ifeq ($(strict), 1)
 $(out_dir)/$(depth)/kos_vm_unit_test$(o_suffix): CFLAGS += -Wno-missing-field-initializers
 endif
 endif
 
 all: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/tests/, $(all_tests)))
 
-CONFIG_TOOL ?=
+tool ?=
 
 define LINK_TEST
 $(out_dir)/tests/$1$(exe_suffix): $(out_dir)/tests/$1$(o_suffix) $(out_dir)/modules/libkos_modules$(a_suffix) $(out_dir)/core/libkos_lang$(a_suffix)
@@ -111,7 +111,7 @@ parser_test_list = $(wildcard parser_tests/*.kos)
 define PARSER_TEST
 $1:
 	@echo Test kos_parser_test $(notdir $1)
-	@$(CONFIG_TOOL) $(out_dir)/tests/kos_parser_test$(exe_suffix) $1
+	@$(tool) $(out_dir)/tests/kos_parser_test$(exe_suffix) $1
 endef
 
 $(foreach test, $(parser_test_list), $(eval $(call PARSER_TEST,$(test))))
@@ -121,7 +121,7 @@ interpreter_test_list = $(filter-out interpreter_tests/fail_% interpreter_tests/
 define INTERPRETER_TEST
 $1:
 	@echo Test kos $(notdir $1)
-	@env $(CONFIG_TOOL) $(out_dir)/interpreter/kos$(exe_suffix) $1
+	@env $(tool) $(out_dir)/interpreter/kos$(exe_suffix) $1
 endef
 
 $(foreach test, $(interpreter_test_list), $(eval $(call INTERPRETER_TEST,$(test))))
@@ -131,7 +131,7 @@ interpreter_fail_test_list = $(filter interpreter_tests/fail_%, $(wildcard inter
 define INTERPRETER_FAIL_TEST
 $1:
 	@echo Test kos $(notdir $1)
-	@env interpreter_tests/fail $(out_dir)/tests/$1 $(CONFIG_TOOL) $(out_dir)/interpreter/kos$(exe_suffix) $1
+	@env interpreter_tests/fail $(out_dir)/tests/$1 $(tool) $(out_dir)/interpreter/kos$(exe_suffix) $1
 endef
 
 $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TEST,$(test))))
@@ -139,7 +139,7 @@ $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TE
 define RUN_STANDALONE_TEST
 $1:
 	@echo Test $1
-	@$(CONFIG_TOOL) $(out_dir)/tests/$1$(exe_suffix)
+	@$(tool) $(out_dir)/tests/$1$(exe_suffix)
 endef
 
 $(foreach test, $(standalone_tests), $(eval $(call RUN_STANDALONE_TEST,$(test))))
@@ -173,7 +173,7 @@ all_tests = $(standalone_tests) $(parser_test_list) module_loading interactive d
 all_simple_tests = $(filter-out kos_parallel%, $(all_tests))
 
 # Ignore some tests with Valgrind
-ifeq ($(CONFIG_TOOL),)
+ifeq ($(tool),)
     simple_tests = $(all_simple_tests)
 else
     simple_tests = $(filter-out interpreter_tests/async_throw.kos, $(all_simple_tests))
@@ -215,7 +215,7 @@ $(eval $(call SEQFAIL_RULE,4000))
 $(eval $(call SEQFAIL_RULE,4200))
 $(eval $(call SEQFAIL_RULE,4400))
 
-ifneq ($(CONFIG_SEQFAIL), 0)
+ifneq ($(seqfail), 0)
 simple_test: $(sequential_test_list)
 endif
 
@@ -238,7 +238,7 @@ gcov.pre.clean:
 # Execute parallel tests last, make them depend on each other so that they are executed alone
 # Don't run parallel tests with valgrind, since they are slow
 
-ifeq ($(CONFIG_TOOL),)
+ifeq ($(tool),)
 # Normal testing
 kos_parallel_object_consistency_test: simple_test
 kos_parallel_object_resize_test:      kos_parallel_object_consistency_test
@@ -252,7 +252,7 @@ else
 test:                                 simple_test
 endif
 
-ifneq ($(CONFIG_GCOV), 0)
+ifneq ($(gcov), 0)
 test: gcov
 
 $(all_tests): gcov.pre.clean

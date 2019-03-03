@@ -34,12 +34,12 @@ $(out_dir)/interpreter/kos$(exe_suffix): $(o_files) $(out_dir)/modules/libkos_mo
 	@echo Exe $(@:../%=%)
 
 install: $(out_dir)/interpreter/kos$(exe_suffix) $(wildcard ../modules/*.kos)
-	@./install.sh $(out_dir) $(DESTDIR)
+	@./install.sh $(out_dir) $(destdir)
 
 ifeq ($(UNAME), Windows)
-DESTDIR ?= c:/Program\ Files
+destdir ?= c:/Program\ Files
 else
-DESTDIR ?= /usr
+destdir ?= /usr
 endif
 
 .PHONY: all install

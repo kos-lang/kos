@@ -34,19 +34,19 @@ to run `make` with `sudo`:
     sudo make install
 
 To specify a different installation directory than the default, especially
-when only installing for the current user, use the `DESTDIR` variable,
+when only installing for the current user, use the `destdir` variable,
 like so:
 
-    make install DESTDIR=../mydir
+    make install destdir=../mydir
 
 Both absolute and relative directories are supported.  If directory names
 contain spaces, double quotes must be used and the spaces must be escaped
 with a backslash:
 
-    make install "DESTDIR=../my\ dir"
+    make install "destdir=../my\ dir"
 
-The Kos executable is installed in $DESTDIR/bin and Kos modules are installed
-in $DESTDIR/share/kos/modules.
+The Kos executable is installed in `$destdir/bin` and Kos modules are installed
+in `$destdir/share/kos/modules`.
 
 Finally, if Kos is installed in non-default directory, the PATH environment
 variable must be updated in shell startup scripts to point to the Kos
@@ -80,7 +80,7 @@ the script:
 Note: Examine your environment to find the right variable pointing to
 Common Tools directory, VC140COMNTOOLS is right for Visual Studio 2015.
 
-When installing Kos on Windows, DESTDIR defaults to `C:\Program Files`
+When installing Kos on Windows, `destdir` defaults to `C:\Program Files`
 directory, Kos executable is installed in `C:\Program Files\Kos` and
 modules are installed in `C:\Program Files\Kos\modules`.
 
@@ -106,8 +106,8 @@ Optional configuration
 These optional settings can be either passed to make on the command line or
 set as environment variables:
 
-* **CONFIG_DEBUG=1** - Enables debug build (default is release).
-* **CONFIG_STRICT=1** - Enables strict warnings, treats warnings as errors.
-* **CONFIG_NATIVE=1** - (Non-Windows platforms) Enables optimizations for the
+* **debug=1** - Enables debug build (default is release).
+* **strict=1** - Enables strict warnings, treats warnings as errors.
+* **native=1** - (Non-Windows platforms) Enables optimizations for the
 current system; the produced executables may not work on other, older systems.
-* **DESTDIR=path** - Specifies installation directory, relative or absolute.
+* **destdir=path** - Specifies installation directory, relative or absolute.
