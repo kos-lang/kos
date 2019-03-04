@@ -40,7 +40,7 @@
 #define KOS_GC_STEP            (1024U * 1024U)
 #define KOS_MIN_REG_CAPACITY   32U
 #define KOS_MAX_ARGS_IN_REGS   32U
-#define KOS_MAX_STACK_DEPTH    4096U
+#define KOS_MAX_STACK_DEPTH    2048U
 #ifdef CONFIG_FUZZ
 #   define KOS_MAX_HEAP_SIZE   (32U * 1024U * 1024U)
 #elif defined(CONFIG_MAD_GC)
