@@ -106,7 +106,7 @@ static inline uint32_t kos_get_object_size(T& header)
 
 #define kos_get_object_type(header) ((KOS_TYPE)(uint8_t)(uintptr_t)(header).size_and_type)
 
-#define kos_get_object_size(header) ((uint32_t)((uintptr_t)(header).size_and_type) >> 8)
+#define kos_get_object_size(header) ((uint32_t)((uintptr_t)(header).size_and_type >> 8))
 
 #endif
 
