@@ -521,11 +521,9 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
     else {
         const uint32_t len = KOS_get_array_size(obj_id);
 
-        kos_track_refs(ctx, 1, &obj_id);
+        kos_track_refs(ctx, 2, &obj_id, &ret);
 
         ret = KOS_new_array(ctx, 0);
-
-        kos_track_refs(ctx, 1, &ret);
 
         if (len && ! IS_BAD_PTR(ret)) {
 
@@ -546,7 +544,7 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
 
                 KOS_ARRAY_STORAGE *dest_buf = _alloc_buffer(ctx, new_len);
 
-                if (dest_buf && ! IS_BAD_PTR(ret)) {
+                if (dest_buf) {
                     KOS_ARRAY   *const new_array = OBJPTR(ARRAY, ret);
                     KOS_ARRAY_STORAGE *src_buf   = _get_data(obj_id);
                     uint32_t           idx       = 0;
