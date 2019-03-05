@@ -86,7 +86,7 @@ typedef struct KOS_OBJ_HEADER_S {
      * Bits 0..7 contain object type, with bit 0 always being set to 0.
      * Bits 8..n contain allocation size in bytes.
      *
-     * When objects are moved to a new page during garbage collections,
+     * When objects are being moved to a new page during garbage collections,
      * size_and_type contains an object identifier of the new, target object that
      * has been allocated in the new page.
      */
