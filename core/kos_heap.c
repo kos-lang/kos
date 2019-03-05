@@ -71,7 +71,7 @@ typedef struct KOS_SLOT_PLACEHOLDER_S {
 static void help_gc(KOS_CONTEXT ctx);
 
 #ifdef CONFIG_MAD_GC
-#define KOS_MAX_LOCKED_PAGES 128
+#define KOS_MAX_LOCKED_PAGES 256
 
 struct KOS_LOCKED_PAGE_S {
     KOS_PAGE *page;
@@ -798,6 +798,11 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
     KOS_PAGE       *page;
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_SUSPENDED);
+
+    if (size > (1U << (32U - OBJECT_TYPE_BITS)) - 1U) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        return 0;
+    }
 
     kos_lock_mutex(&heap->mutex);
 
