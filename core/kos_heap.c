@@ -923,6 +923,18 @@ static int is_page_full(KOS_PAGE *page)
     return KOS_atomic_read_relaxed_u32(page->num_allocated) == page->num_slots;
 }
 
+static void push_page_with_objects(KOS_HEAP *heap, KOS_PAGE *page)
+{
+    if (is_page_full(page)) {
+        heap->used_size += full_page_size(page);
+        PUSH_LIST(heap->full_pages, page);
+    }
+    else {
+        heap->used_size += non_full_page_size(page);
+        PUSH_LIST(heap->non_full_pages, page);
+    }
+}
+
 static void *alloc_object(KOS_CONTEXT ctx,
                           KOS_TYPE    object_type,
                           uint32_t    size)
@@ -1002,14 +1014,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
                 if (page) {
                     assert(page == ctx->cur_page);
                     assert(page->num_slots == KOS_SLOTS_PER_PAGE);
-                    if (is_page_full(page)) {
-                        heap->used_size += full_page_size(page);
-                        PUSH_LIST(heap->full_pages, page);
-                    }
-                    else {
-                        heap->used_size += non_full_page_size(page);
-                        PUSH_LIST(heap->non_full_pages, page);
-                    }
+                    push_page_with_objects(heap, page);
                 }
 
                 KOS_atomic_write_relaxed_u32(old_page->num_used, 0U);
@@ -1029,14 +1034,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
         /* Release thread's current page */
         if (page) {
 
-            if (is_page_full(page)) {
-                PUSH_LIST(heap->full_pages, page);
-                heap->used_size += full_page_size(page);
-            }
-            else {
-                PUSH_LIST(heap->non_full_pages, page);
-                heap->used_size += non_full_page_size(page);
-            }
+            push_page_with_objects(heap, page);
 
             ctx->cur_page = 0;
         }
@@ -1624,57 +1622,6 @@ static void lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
         heap->locked_pages_last->pages[i].num_slots = num_slots;
     }
 }
-
-static void unlock_pages(KOS_HEAP *heap)
-{
-    struct KOS_LOCKED_PAGES_S *locked_pages = heap->locked_pages_first;
-    KOS_PAGE                 **insert_at    = &heap->free_pages;
-
-    while (locked_pages) {
-        struct KOS_LOCKED_PAGES_S *cur_locked_page_list = locked_pages;
-
-        uint32_t i;
-
-        locked_pages = locked_pages->next;
-
-        for (i = 0; i < cur_locked_page_list->num_pages; ++i) {
-            const uint32_t  num_slots = cur_locked_page_list->pages[i].num_slots;
-            KOS_PAGE *const page      = cur_locked_page_list->pages[i].page;
-            KOS_PAGE       *cur;
-
-            if ( ! page)
-                continue;
-
-            assert(num_slots == KOS_SLOTS_PER_PAGE);
-            kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
-
-            /* Put page on free list */
-            cur = *insert_at;
-
-            if (page < cur) {
-                insert_at = &heap->free_pages;
-                cur       = heap->free_pages;
-            }
-
-            while (cur && page > cur) {
-                insert_at = &cur->next;
-                cur       = cur->next;
-            }
-
-            assert(page < cur || ! cur);
-
-            page->next = cur;
-            *insert_at = page;
-            if (cur)
-                insert_at = &page->next;
-        }
-
-        kos_free(cur_locked_page_list);
-    }
-
-    heap->locked_pages_first = 0;
-    heap->locked_pages_last  = 0;
-}
 #endif
 
 static unsigned push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
@@ -1771,6 +1718,95 @@ static void reclaim_free_pages(KOS_HEAP     *heap,
         lists = next;
     }
 }
+
+#ifdef CONFIG_MAD_GC
+static unsigned unlock_pages(KOS_HEAP     *heap,
+                             KOS_PAGE    **free_pages,
+                             KOS_GC_STATS *stats)
+{
+    struct KOS_LOCKED_PAGES_S *locked_pages = heap->locked_pages_first;
+    KOS_PAGE                 **insert_at    = &heap->free_pages;
+    unsigned                   num_unlocked = 0U;
+
+    while (locked_pages) {
+        struct KOS_LOCKED_PAGES_S *cur_locked_page_list = locked_pages;
+
+        uint32_t i;
+
+        locked_pages = locked_pages->next;
+
+        for (i = 0; i < cur_locked_page_list->num_pages; ++i) {
+            const uint32_t  num_slots = cur_locked_page_list->pages[i].num_slots;
+            KOS_PAGE *const page      = cur_locked_page_list->pages[i].page;
+            KOS_PAGE       *cur;
+
+            if ( ! page)
+                continue;
+
+            assert(num_slots == KOS_SLOTS_PER_PAGE);
+            kos_mem_protect(page, KOS_PAGE_SIZE, KOS_READ_WRITE);
+
+            /* Put page on free list */
+            cur = *insert_at;
+
+            if (page < cur) {
+                insert_at = &heap->free_pages;
+                cur       = heap->free_pages;
+            }
+
+            while (cur && page > cur) {
+                insert_at = &cur->next;
+                cur       = cur->next;
+            }
+
+            assert(page < cur || ! cur);
+
+            page->next = cur;
+            *insert_at = page;
+            if (cur)
+                insert_at = &page->next;
+            ++num_unlocked;
+        }
+
+        kos_free(cur_locked_page_list);
+    }
+
+    heap->locked_pages_first = 0;
+    heap->locked_pages_last  = 0;
+
+    return num_unlocked;
+}
+#else
+static unsigned unlock_pages(KOS_HEAP     *heap,
+                             KOS_PAGE    **free_pages,
+                             KOS_GC_STATS *stats)
+{
+    KOS_PAGE  *page         = *free_pages;
+    KOS_PAGE  *reclaimed    = 0;
+    unsigned   num_unlocked = 0U;
+
+    /* Find all free pages which had no evacuated objects and make them available */
+    while (page) {
+
+        if (KOS_atomic_read_relaxed_u32(page->num_allocated)) {
+            free_pages = &page->next;
+            page       = *free_pages;
+        }
+        else {
+            *free_pages = page->next;
+            page->next  = reclaimed;
+            reclaimed    = page;
+            page        = *free_pages;
+            ++num_unlocked;
+        }
+    }
+
+    if (reclaimed)
+        reclaim_free_pages(heap, reclaimed, stats);
+
+    return num_unlocked;
+}
+#endif
 
 static int evacuate_object(KOS_CONTEXT     ctx,
                            KOS_OBJ_HEADER *hdr,
@@ -2170,14 +2206,7 @@ static int evacuate(KOS_CONTEXT   ctx,
                 }
             }
 
-            if (is_page_full(page)) {
-                PUSH_LIST(heap->full_pages, page);
-                heap->used_size += full_page_size(page);
-            }
-            else {
-                PUSH_LIST(heap->non_full_pages, page);
-                heap->used_size += non_full_page_size(page);
-            }
+            push_page_with_objects(heap, page);
             ++stats.num_pages_kept;
             stats.size_kept += num_slots_used << KOS_OBJ_ALIGN_BITS;
             continue;
@@ -2202,29 +2231,31 @@ static int evacuate(KOS_CONTEXT   ctx,
 
                     release_current_page_locked(ctx);
 
-#ifdef CONFIG_MAD_GC
-                    unlock_pages(heap);
-#else
-                    /* TODO find all free pages and make them available; a free
-                     * page which had no objects to evacuate is marked with
-                     * num_allocated == 0 */
-                    assert(0);
-#endif
+                    unlock_pages(heap, free_pages, &stats);
+
                     error = evacuate_object(ctx, hdr, size);
 
                     if (error) {
-                        /* TODO failed mid-evacuation, therefore we have to do the
-                         * following:
-                         * 1) Put back the remaining pages on the full or half-full
-                         *    list.
-                         * 2) Update pointers after evacuation.
-                         * 3) Set size of the first object to the size of
-                         *    the area that was evacuated successfully and set
-                         *    the type to OBJ_OPAQUE - this will make sure this
-                         *    area remains reserved until the next evacuation.
-                         */
 
-                        assert(0);
+                        /* Put back the remaining pages on full or non-full list. */
+                        push_page_with_objects(heap, page);
+                        for (page = next; page; page = next) {
+
+                            heap->used_size -= non_full_turn ? non_full_page_size(page)
+                                                             : full_page_size(page);
+
+                            next = page->next;
+
+                            if ( ! next && non_full_pages) {
+                                next = non_full_pages;
+                                non_full_pages = 0;
+                                non_full_turn = 1;
+                            }
+
+                            push_page_with_objects(heap, page);
+                        }
+
+                        error = KOS_ERROR_OUT_OF_MEMORY;
 
                         goto cleanup;
                     }
@@ -2249,8 +2280,15 @@ static int evacuate(KOS_CONTEXT   ctx,
 
         /* Mark page which has no evacuated objects, such page can be re-used
          * early before the end of evacuation when the heap is full. */
-        if ( ! num_evac)
+        if ( ! num_evac) {
             KOS_atomic_write_relaxed_u32(page->num_allocated, 0);
+
+#ifndef NDEBUG
+            memset(((uint8_t *)page) + KOS_BITMAP_OFFS,
+                   0xDDU,
+                   (KOS_SLOTS_OFFS - KOS_BITMAP_OFFS) + (page->num_slots << KOS_OBJ_ALIGN_BITS));
+#endif
+        }
 
         PUSH_LIST(*free_pages, page);
     }
