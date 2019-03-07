@@ -34,6 +34,7 @@
 #include "kos_perf.h"
 #include "kos_system.h"
 #include "kos_threads_internal.h"
+#include "kos_try.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2255,9 +2256,8 @@ static int evacuate(KOS_CONTEXT   ctx,
                             push_page_with_objects(heap, page);
                         }
 
-                        error = KOS_ERROR_OUT_OF_MEMORY;
-
-                        goto cleanup;
+                        assert(KOS_is_exception_pending(ctx));
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
                     }
 
                 }
