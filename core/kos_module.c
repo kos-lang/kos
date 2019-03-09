@@ -140,9 +140,9 @@ static int _find_module(KOS_CONTEXT ctx,
         memcpy(cpath.buffer, maybe_path, length);
         cpath.buffer[length] = 0;
 
-        TRY(kos_get_absolute_path(&cpath));
+        if (kos_get_absolute_path(&cpath) ||
+            ! kos_does_file_exist(cpath.buffer)) {
 
-        if (!kos_does_file_exist(cpath.buffer)) {
             if (has_dot)
                 RAISE_ERROR(KOS_ERROR_NOT_FOUND);
             else
