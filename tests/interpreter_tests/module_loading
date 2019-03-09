@@ -145,27 +145,32 @@ if kos "$DIR/zero"; then
 fi
 
 note "test 12"
+if kos nonexistent > "$DIR/nonexistent"; then
+    die "Failed: Interpreter exited successfuly even if non existent module was loaded"
+fi
+
+note "test 13"
 echo "import empty;" > "$DIR/base.kos"
 if ! kos "$DIR/zero"; then
     die "Failed: Interpreter failed to load empty module from base"
 fi
 
 if [ "$UNAME" != "Windows" -a "$UNAME" != "Haiku" ]; then
-    note "test 13"
+    note "test 14"
     chmod 000 "$DIR/base.kos"
     if kos "$DIR/zero"; then
         die "Failed: Interpreter loaded unreadable file base.kos"
     fi
 fi
 
-note "test 14"
+note "test 15"
 rm -f "$DIR/base.kos"
 mkdir "$DIR/base.kos"
 if kos "$DIR/zero"; then
     die "Failed: Interpreter failed to detect base.kos being a directory"
 fi
 
-note "test 15"
+note "test 16"
 if kos "/../bad/path"; then
     die "Failed: Interpreter succeeded with badly formatted path"
 fi

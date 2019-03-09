@@ -380,6 +380,19 @@ if ! sed -n "1 p" "$OUTPUT" | grep -q "$SIGNATURE"; then
 fi
 
 ##############################################################################
+# Load base by module name
+
+"$KOS" base > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -ne 0 ]; then
+    echo "Expected zero lines of output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+##############################################################################
 # Help
 
 "$KOS" -h | remove_cr > "$OUTPUT"
