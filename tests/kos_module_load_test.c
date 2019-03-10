@@ -37,10 +37,7 @@ int main(void)
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
-    {
-        static const char module[] = "0";
-        TEST(KOS_load_module_from_memory(ctx, "base.kos", module, sizeof(module)) != KOS_SUCCESS);
-    }
+    TEST(KOS_load_module_from_memory(ctx, "base.kos", 0, 0) != KOS_SUCCESS);
 
     KOS_instance_destroy(&inst);
 
