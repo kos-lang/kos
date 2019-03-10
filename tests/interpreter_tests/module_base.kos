@@ -1293,6 +1293,10 @@ do {
         }
     }
     assert name_from_iter == "regular_func"
+
+    fun some_func { return __line__ }
+    assert "line" in some_func
+    assert some_func.line == some_func()
 }
 
 do {
