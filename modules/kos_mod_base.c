@@ -3615,6 +3615,35 @@ static KOS_OBJ_ID _reverse(KOS_CONTEXT ctx,
     return KOS_string_reverse(ctx, this_obj);
 }
 
+/* @item base function.prototype.line
+ *
+ *     function.prototype.line
+ *
+ * Read-only line at which the function was defined in the source code.
+ */
+static KOS_OBJ_ID _get_function_line(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID     ret  = KOS_BADPTR;
+    const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
+
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
+
+        KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
+        unsigned      line = 0U;
+
+        if ( ! IS_BAD_PTR(func->module) && func->instr_offs != ~0U)
+            line = KOS_module_addr_to_func_line(OBJPTR(MODULE, func->module),
+                                                func->instr_offs);
+        ret = TO_SMALL_INT((int64_t)line);
+    }
+    else
+        KOS_raise_exception_cstring(ctx, str_err_not_function);
+
+    return ret;
+}
+
 /* @item base function.prototype.name
  *
  *     function.prototype.name
@@ -3872,6 +3901,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "apply",         _apply,             2);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "async",         _async,             2);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "instructions",  _get_instructions,  0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "line",          _get_function_line, 0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "name",          _get_function_name, 0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "registers",     _get_registers,     0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "size",          _get_code_size,     0);

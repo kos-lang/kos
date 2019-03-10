@@ -51,6 +51,7 @@ Table of Contents
       * [function.prototype.apply()](#functionprototypeapply)
       * [function.prototype.async()](#functionprototypeasync)
       * [function.prototype.instructions](#functionprototypeinstructions)
+      * [function.prototype.line](#functionprototypeline)
       * [function.prototype.name](#functionprototypename)
       * [function.prototype.registers](#functionprototyperegisters)
       * [function.prototype.size](#functionprototypesize)
@@ -1217,6 +1218,13 @@ Example:
 
     > count.instructions
     26
+
+function.prototype.line
+-----------------------
+
+    function.prototype.line
+
+Read-only line at which the function was defined in the source code.
 
 function.prototype.name
 -----------------------
