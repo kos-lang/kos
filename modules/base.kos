@@ -961,7 +961,7 @@ fun keys(iterable)
  */
 fun map(op, args...)
 {
-    assert typeof op == "function"
+    assert op instanceof function
 
     fun map_f(source)
     {
@@ -1009,7 +1009,7 @@ fun map(op, args...)
  */
 fun filter(op, args...)
 {
-    assert typeof op == "function"
+    assert op instanceof function
 
     fun filter_f(source)
     {
@@ -1062,7 +1062,7 @@ fun filter(op, args...)
  */
 fun reduce(op, init, args...)
 {
-    assert typeof op == "function"
+    assert op instanceof function
 
     fun reduce_f(source)
     {
@@ -1143,7 +1143,7 @@ fun sum(iterable, total = 0)
  */
 fun count(op, args...)
 {
-    var count_f = typeof op == "function" ?
+    var count_f = op instanceof function ?
         fun(source)
         {
             const test  = op
@@ -1215,7 +1215,7 @@ fun count(op, args...)
  */
 fun all(op, args...)
 {
-    var all_f = typeof op == "function" ?
+    var all_f = op instanceof function ?
         fun(source)
         {
             const test = op
@@ -1285,7 +1285,7 @@ fun all(op, args...)
  */
 fun any(op, args...)
 {
-    var any_f = typeof op == "function" ?
+    var any_f = op instanceof function ?
         fun(source)
         {
             const test = op
@@ -1512,7 +1512,7 @@ fun method(obj, func)
     if typeof func == "string" {
         func = obj[func]
     }
-    assert typeof func == "function"
+    assert func instanceof function
     return (args...) => func.apply(obj, args)
 }
 
