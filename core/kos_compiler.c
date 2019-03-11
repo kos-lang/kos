@@ -3340,10 +3340,11 @@ static int _log_and_or(KOS_COMP_UNIT      *program,
                        KOS_REG           **reg)
 {
     int                     error;
-    int                     offs;
-    const KOS_OPERATOR_TYPE op    = node->token.op;
-    KOS_REG                *left  = 0;
-    KOS_REG                *right = 0;
+    int                     left_offs;
+    int                     right_offs = 0;
+    const KOS_OPERATOR_TYPE op         = node->token.op;
+    KOS_REG                *left       = 0;
+    KOS_REG                *right      = 0;
 
     assert(op == OT_LOGAND || op == OT_LOGOR);
 
@@ -3358,31 +3359,50 @@ static int _log_and_or(KOS_COMP_UNIT      *program,
     assert(node);
     assert(!node->next);
 
-    offs = program->cur_offs;
+    left_offs = program->cur_offs;
 
-    if (op == OT_LOGAND)
-        TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, left->reg));
-    else
-        TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, left->reg));
+    TRY(_gen_instr2(program,
+                    (op == OT_LOGAND) ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND,
+                    0,
+                    left->reg));
 
-    right = left;
+    if (left->tmp) {
+        right = left;
+
+        if ( ! *reg)
+            *reg = left;
+    }
 
     TRY(_visit_node(program, node, &right));
     assert(right);
 
-    if (left != right) {
-        TRY(_gen_instr2(program, INSTR_MOVE, left->reg, right->reg));
+    if ( ! *reg) {
+        if (right->tmp)
+            *reg = right;
+        else
+            TRY(_gen_reg(program, reg));
+    }
+
+    if (*reg != right && left != right) {
+        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, right->reg));
         _free_reg(program, right);
     }
 
-    _update_jump_offs(program, offs, program->cur_offs);
+    if (*reg != left && left != right) {
+        right_offs = program->cur_offs;
 
-    if ( ! *reg)
-        *reg = left;
-    else if (*reg != left) {
+        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+    }
+
+    _update_jump_offs(program, left_offs, program->cur_offs);
+
+    if (*reg != left) {
         TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, left->reg));
         _free_reg(program, left);
     }
+
+    if (right_offs)
+        _update_jump_offs(program, right_offs, program->cur_offs);
 
 cleanup:
     return error;
