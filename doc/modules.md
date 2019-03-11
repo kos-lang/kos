@@ -45,6 +45,7 @@ Table of Contents
     * [eol](#eol)
     * [exception()](#exception)
       * [exception.prototype.print()](#exceptionprototypeprint)
+    * [expand()](#expand)
     * [filter()](#filter)
     * [float()](#float)
     * [function()](#function)
@@ -1089,6 +1090,23 @@ exception.prototype.print()
     exception.prototype.print()
 
 Prints the exception object on stdout.
+
+expand()
+--------
+
+    expand(iterable)
+
+Creates an array containing elements from the `iterable` object.
+
+This function is useful with the `->` operator when normal array expansion
+cannot be used.
+
+Examples:
+
+    > range(3) -> expand
+    [0, 1, 2]
+    > "abc" -> expand
+    ["a", "b", "c"]
 
 filter()
 --------
