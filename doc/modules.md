@@ -172,6 +172,8 @@ Table of Contents
     * [random()](#random)
       * [random.prototype.float()](#randomprototypefloat)
       * [random.prototype.integer()](#randomprototypeinteger)
+      * [random.prototype.shuffle()](#randomprototypeshuffle)
+    * [shuffle()](#shuffle)
 <!--te-->
 base
 ====
@@ -3382,4 +3384,38 @@ Examples:
     0
     > r.integer(-10, 10)
     -2
+
+random.prototype.shuffle()
+--------------------------
+
+    random.prototype.shuffle(iterable)
+
+Generates a pseudo-random permutation of elements from an iterable object.
+
+The pseudo-random number generator object `this` is used to generate
+the permutation.
+
+Returns an array containing a permutation of the elements extracted
+from the `iterable` using its `iterator()` function.
+
+Example:
+
+    > const r = random.random(42)
+    > range(10) -> r.shuffle
+    [7, 4, 6, 5, 2, 0, 1, 3, 8, 9]
+
+shuffle()
+---------
+
+    shuffle(iterable)
+
+Generates a pseudo-random permutation of elements from an iterable object.
+
+Returns an array containing a permutation of the elements extracted
+from the `iterable` using its `iterator()` function.
+
+Example:
+
+    > range(10) -> shuffle
+    [9, 4, 3, 0, 5, 7, 1, 6, 8, 2]
 
