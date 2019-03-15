@@ -2588,6 +2588,20 @@ do {
     assert a[10]  == "21"
 }
 
+# Use class for sorting key
+do {
+    const input = [1, 5, 10, 50, 100, 500]
+    const a = base.sort(base.string, input)
+    assert typeof a == "array"
+    assert a.size == 6
+    assert a[0] == 1
+    assert a[1] == 10
+    assert a[2] == 100
+    assert a[3] == 5
+    assert a[4] == 50
+    assert a[5] == 500
+}
+
 ##############################################################################
 # base.args
 
