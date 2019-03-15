@@ -216,8 +216,11 @@ static KOS_OBJ_ID _rand_integer(KOS_CONTEXT ctx,
 
         TRY(KOS_get_integer(ctx, arg, &max_value));
 
-        if (min_value >= max_value)
+        if (min_value > max_value)
             RAISE_EXCEPTION(str_err_invalid_range);
+
+        if (min_value == max_value)
+            return KOS_new_int(ctx, min_value);
 
         min_max = 1;
     }
