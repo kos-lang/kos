@@ -120,14 +120,28 @@ static int _push_local_refs_object(KOS_CONTEXT ctx)
 
 static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
 {
-    memset(ctx, 0, sizeof(*ctx));
+    size_t i;
 
+    ctx->next             = 0;
+    ctx->prev             = 0;
+    ctx->gc_state         = 0;
     ctx->inst             = inst;
+    ctx->cur_page         = 0;
     ctx->thread_obj       = KOS_BADPTR;
     ctx->exception        = KOS_BADPTR;
     ctx->retval           = KOS_BADPTR;
     ctx->stack            = KOS_BADPTR;
+    ctx->regs_idx         = 0;
+    ctx->stack_depth      = 0;
+    ctx->tmp_ref_count    = 0;
+    ctx->helper_ref_count = 0;
     ctx->local_refs       = KOS_BADPTR;
+
+    for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); i++)
+        ctx->tmp_refs[i] = 0;
+
+    for (i = 0; i < sizeof(ctx->helper_refs) / sizeof(ctx->helper_refs[0]); i++)
+        ctx->helper_refs[i] = 0;
 }
 
 static int _register_thread(KOS_INSTANCE *inst,
