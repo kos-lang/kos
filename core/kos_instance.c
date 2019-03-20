@@ -60,7 +60,7 @@ DECLARE_CONST_OBJECT(KOS_false) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
 DECLARE_CONST_OBJECT(KOS_true)  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
 
 #ifdef CONFIG_PERF
-struct KOS_PERF_S _kos_perf = {
+struct KOS_PERF_S kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
     0, 0,
     0, 0, 0, 0
@@ -68,13 +68,13 @@ struct KOS_PERF_S _kos_perf = {
 #endif
 
 #ifdef CONFIG_SEQFAIL
-static int                  _kos_seq_init      = 0;
-static KOS_ATOMIC(uint32_t) _kos_seq;
-static uint32_t             _kos_seq_threshold = ~0U;
+static int                  kos_seq_init      = 0;
+static KOS_ATOMIC(uint32_t) kos_seq;
+static uint32_t             kos_seq_threshold = ~0U;
 
 int kos_seq_fail(void)
 {
-    if ( ! _kos_seq_init) {
+    if ( ! kos_seq_init) {
 
         KOS_VECTOR cstr;
         int64_t    value = -1;
@@ -84,23 +84,23 @@ int kos_seq_fail(void)
         if (kos_get_env("KOSSEQFAIL", &cstr) == KOS_SUCCESS
                 && cstr.size > 0
                 && kos_parse_int(cstr.buffer, cstr.buffer + cstr.size - 1, &value) == KOS_SUCCESS)
-            _kos_seq_threshold = (uint32_t)value;
+            kos_seq_threshold = (uint32_t)value;
 
         kos_vector_destroy(&cstr);
 
-        KOS_atomic_write_relaxed_u32(_kos_seq, 0);
+        KOS_atomic_write_relaxed_u32(kos_seq, 0);
 
-        _kos_seq_init = 1;
+        kos_seq_init = 1;
     }
 
-    if ((uint32_t)KOS_atomic_add_i32(_kos_seq, 1) >= _kos_seq_threshold)
+    if ((uint32_t)KOS_atomic_add_i32(kos_seq, 1) >= kos_seq_threshold)
         return KOS_ERROR_INTERNAL;
 
     return KOS_SUCCESS;
 }
 #endif
 
-static int _push_local_refs_object(KOS_CONTEXT ctx)
+static int push_local_refs_object(KOS_CONTEXT ctx)
 {
     int             error      = KOS_ERROR_EXCEPTION;
     KOS_LOCAL_REFS *local_refs = (KOS_LOCAL_REFS *)
@@ -144,8 +144,8 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
         ctx->helper_refs[i] = 0;
 }
 
-static int _register_thread(KOS_INSTANCE *inst,
-                            KOS_CONTEXT   ctx)
+static int register_thread(KOS_INSTANCE *inst,
+                           KOS_CONTEXT   ctx)
 {
     int error = KOS_SUCCESS;
 
@@ -160,7 +160,7 @@ static int _register_thread(KOS_INSTANCE *inst,
 
     TRY(KOS_resume_context(ctx));
 
-    TRY(_push_local_refs_object(ctx));
+    TRY(push_local_refs_object(ctx));
 
 cleanup:
     if (error)
@@ -169,8 +169,8 @@ cleanup:
     return error;
 }
 
-static void _unregister_thread(KOS_INSTANCE *inst,
-                               KOS_CONTEXT   ctx)
+static void unregister_thread(KOS_INSTANCE *inst,
+                              KOS_CONTEXT   ctx)
 {
     assert(ctx != &inst->threads.main_thread);
 
@@ -217,10 +217,10 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 
     kos_unlock_mutex(&inst->threads.mutex);
 
-    error = _register_thread(inst, ctx);
+    error = register_thread(inst, ctx);
 
     if (error)
-        _unregister_thread(inst, ctx);
+        unregister_thread(inst, ctx);
 
     return error;
 }
@@ -230,10 +230,10 @@ void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
 {
     assert((KOS_CONTEXT)kos_tls_get(inst->threads.thread_key) == ctx);
 
-    _unregister_thread(inst, ctx);
+    unregister_thread(inst, ctx);
 }
 
-static int _add_multiple_paths(KOS_CONTEXT ctx, KOS_VECTOR *cpaths)
+static int add_multiple_paths(KOS_CONTEXT ctx, KOS_VECTOR *cpaths)
 {
     int   error = KOS_SUCCESS;
     char *buf   = cpaths->buffer;
@@ -255,7 +255,7 @@ static int _add_multiple_paths(KOS_CONTEXT ctx, KOS_VECTOR *cpaths)
     return error;
 }
 
-static int _init_search_paths(KOS_CONTEXT ctx)
+static int init_search_paths(KOS_CONTEXT ctx)
 {
 #ifdef CONFIG_DISABLE_KOSPATH
     return KOS_SUCCESS;
@@ -266,7 +266,7 @@ static int _init_search_paths(KOS_CONTEXT ctx)
     kos_vector_init(&cpaths);
 
     if (kos_get_env("KOSPATH", &cpaths) == KOS_SUCCESS)
-        error = _add_multiple_paths(ctx, &cpaths);
+        error = add_multiple_paths(ctx, &cpaths);
 
     kos_vector_destroy(&cpaths);
 
@@ -274,7 +274,7 @@ static int _init_search_paths(KOS_CONTEXT ctx)
 #endif
 }
 
-static KOS_OBJ_ID _alloc_empty_string(KOS_CONTEXT ctx)
+static KOS_OBJ_ID alloc_empty_string(KOS_CONTEXT ctx)
 {
     KOS_STRING *str = (KOS_STRING *)kos_alloc_object(ctx,
                                                      OBJ_STRING,
@@ -294,8 +294,8 @@ struct KOS_INIT_STRING_S {
     const char    *text;
 };
 
-static int _init_common_strings(KOS_CONTEXT   ctx,
-                                KOS_INSTANCE *inst)
+static int init_common_strings(KOS_CONTEXT   ctx,
+                               KOS_INSTANCE *inst)
 {
     int    error = KOS_SUCCESS;
     size_t i;
@@ -333,7 +333,7 @@ static int _init_common_strings(KOS_CONTEXT   ctx,
         { KOS_STR_XBUILTINX,  "<builtin>" }
     };
 
-    inst->common_strings[KOS_STR_EMPTY] = _alloc_empty_string(ctx);
+    inst->common_strings[KOS_STR_EMPTY] = alloc_empty_string(ctx);
     TRY_OBJID(inst->common_strings[KOS_STR_EMPTY]);
 
     for (i = 0; i < sizeof(init) / sizeof(init[0]); ++i) {
@@ -438,11 +438,11 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     inst->modules.init_module = OBJID(MODULE, init_module);
 
     KOS_suspend_context(&inst->threads.main_thread);
-    TRY(_register_thread(inst, &inst->threads.main_thread));
+    TRY(register_thread(inst, &inst->threads.main_thread));
 
     ctx = &inst->threads.main_thread;
 
-    TRY(_init_common_strings(ctx, inst));
+    TRY(init_common_strings(ctx, inst));
 
     TRY_OBJID(inst->prototypes.object_proto        = KOS_new_object_with_prototype(ctx, KOS_VOID));
     TRY_OBJID(inst->prototypes.number_proto        = KOS_new_object(ctx));
@@ -471,7 +471,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     TRY_OBJID(inst->args = KOS_new_array(ctx, 0));
 
-    TRY(_init_search_paths(ctx));
+    TRY(init_search_paths(ctx));
 
     *out_ctx = ctx;
 
@@ -541,17 +541,17 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     clear_instance(inst);
 
 #ifdef CONFIG_PERF
-#   define PERF_RATIO(a) do {                                             \
-        const uint32_t va = KOS_atomic_read_relaxed_u32(_kos_perf.a##_success);   \
-        const uint32_t vb = KOS_atomic_read_relaxed_u32(_kos_perf.a##_fail);      \
-        uint32_t       total = va + vb;                                   \
-        if (total == 0) total = 1;                                        \
-        fprintf(stderr, "    " #a "\t%u / %u (%u%%)\n",                   \
-                va, total, va * 100 / total);                             \
+#   define PERF_RATIO(a) do {                                                  \
+        const uint32_t va = KOS_atomic_read_relaxed_u32(kos_perf.a##_success); \
+        const uint32_t vb = KOS_atomic_read_relaxed_u32(kos_perf.a##_fail);    \
+        uint32_t       total = va + vb;                                        \
+        if (total == 0) total = 1;                                             \
+        fprintf(stderr, "    " #a "\t%u / %u (%u%%)\n",                        \
+                va, total, va * 100 / total);                                  \
     } while (0)
-#   define PERF_VALUE(a) do {                                             \
-        const uint32_t va = KOS_atomic_read_relaxed_u32(_kos_perf.a);             \
-        fprintf(stderr, "    " #a "\t%u\n", va);                          \
+#   define PERF_VALUE(a) do {                                                  \
+        const uint32_t va = KOS_atomic_read_relaxed_u32(kos_perf.a);           \
+        fprintf(stderr, "    " #a "\t%u\n", va);                               \
     } while (0)
     printf("Performance stats:\n");
     PERF_RATIO(object_get);
@@ -968,7 +968,7 @@ static int reserve_locals(KOS_CONTEXT ctx, int num_entries)
          sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs[0])))
         return KOS_SUCCESS;
 
-    return _push_local_refs_object(ctx);
+    return push_local_refs_object(ctx);
 }
 
 int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
@@ -983,7 +983,7 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
 
         prev_locals = TO_SMALL_INT(KOS_LOOK_FURTHER);
 
-        error = _push_local_refs_object(ctx);
+        error = push_local_refs_object(ctx);
 
         if (error)
             return error;

@@ -26,9 +26,9 @@
 #include "../inc/kos_atomic.h"
 
 #ifdef CONFIG_PERF
-#   define KOS_PERF_CNT(stat)            KOS_atomic_add_i32(_kos_perf.stat, 1)
-#   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_i32(_kos_perf.stat[idx], 1)
-#   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_i32(_kos_perf.stat, (num))
+#   define KOS_PERF_CNT(stat)            KOS_atomic_add_i32(kos_perf.stat, 1)
+#   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_i32(kos_perf.stat[idx], 1)
+#   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_i32(kos_perf.stat, (num))
 
 struct KOS_PERF_S {
     KOS_ATOMIC(uint32_t) object_get_success;
@@ -52,7 +52,7 @@ struct KOS_PERF_S {
     KOS_ATOMIC(uint32_t) alloc_free_page;
 };
 
-extern struct KOS_PERF_S _kos_perf;
+extern struct KOS_PERF_S kos_perf;
 
 #else
 #   define KOS_PERF_CNT(stat)            (void)0
