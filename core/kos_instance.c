@@ -118,11 +118,22 @@ static int _push_local_refs_object(KOS_CONTEXT ctx)
     return error;
 }
 
+static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
+{
+    memset(ctx, 0, sizeof(*ctx));
+
+    ctx->inst             = inst;
+    ctx->thread_obj       = KOS_BADPTR;
+    ctx->exception        = KOS_BADPTR;
+    ctx->retval           = KOS_BADPTR;
+    ctx->stack            = KOS_BADPTR;
+    ctx->local_refs       = KOS_BADPTR;
+}
+
 static int _register_thread(KOS_INSTANCE *inst,
                             KOS_CONTEXT   ctx)
 {
-    int    error = KOS_SUCCESS;
-    size_t i;
+    int error = KOS_SUCCESS;
 
     if (kos_tls_get(inst->threads.thread_key)) {
         TRY(KOS_resume_context(ctx));
@@ -130,25 +141,6 @@ static int _register_thread(KOS_INSTANCE *inst,
     }
 
     assert( ! kos_tls_get(inst->threads.thread_key));
-
-    /* Note: ctx->cur_page and ctx->gc_state are set by the caller */
-
-    ctx->inst             = inst;
-    ctx->thread_obj       = KOS_BADPTR;
-    ctx->exception        = KOS_BADPTR;
-    ctx->retval           = KOS_BADPTR;
-    ctx->stack            = KOS_BADPTR;
-    ctx->regs_idx         = 0;
-    ctx->stack_depth      = 0;
-    ctx->tmp_ref_count    = 0;
-    ctx->helper_ref_count = 0;
-    ctx->local_refs       = KOS_BADPTR;
-
-    for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); ++i)
-        ctx->tmp_refs[i] = 0;
-
-    for (i = 0; i < sizeof(ctx->helper_refs) / sizeof(ctx->helper_refs[0]); ++i)
-        ctx->helper_refs[i] = 0;
 
     kos_tls_set(inst->threads.thread_key, ctx);
 
@@ -197,11 +189,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 {
     int error;
 
-    ctx->inst             = inst;
-    ctx->cur_page         = 0;
-    ctx->tmp_ref_count    = 0;
-    ctx->helper_ref_count = 0;
-    ctx->gc_state         = 0;
+    init_context(ctx, inst);
 
     KOS_suspend_context(ctx);
 
@@ -345,7 +333,7 @@ cleanup:
     return error;
 }
 
-static void _clear_instance(KOS_INSTANCE *inst)
+static void clear_instance(KOS_INSTANCE *inst)
 {
     int i;
 
@@ -379,18 +367,9 @@ static void _clear_instance(KOS_INSTANCE *inst)
     inst->modules.init_module             = KOS_BADPTR;
     inst->modules.module_inits            = KOS_BADPTR;
     inst->modules.load_chain              = 0;
-    inst->threads.main_thread.next        = 0;
-    inst->threads.main_thread.prev        = 0;
-    inst->threads.main_thread.inst        = inst;
-    inst->threads.main_thread.cur_page    = 0;
-    inst->threads.main_thread.thread_obj  = KOS_BADPTR;
-    inst->threads.main_thread.exception   = KOS_BADPTR;
-    inst->threads.main_thread.retval      = KOS_BADPTR;
-    inst->threads.main_thread.local_refs  = KOS_BADPTR;
-    inst->threads.main_thread.stack       = KOS_BADPTR;
-    inst->threads.main_thread.stack_depth = 0;
     inst->threads.threads                 = KOS_BADPTR;
     inst->threads.num_threads             = 0;
+    init_context(&inst->threads.main_thread, inst);
 }
 
 int KOS_instance_init(KOS_INSTANCE *inst,
@@ -407,7 +386,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     assert(!IS_HEAP_OBJECT(KOS_FALSE));
     assert(!IS_HEAP_OBJECT(KOS_TRUE));
 
-    _clear_instance(inst);
+    clear_instance(inst);
 
     TRY(kos_tls_create(&inst->threads.thread_key));
     error = kos_create_mutex(&inst->threads.mutex);
@@ -545,7 +524,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
 
     kos_destroy_mutex(&inst->threads.mutex);
 
-    _clear_instance(inst);
+    clear_instance(inst);
 
 #ifdef CONFIG_PERF
 #   define PERF_RATIO(a) do {                                             \
