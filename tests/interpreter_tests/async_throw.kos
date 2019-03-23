@@ -30,7 +30,7 @@ do {
         }
     }
 
-    for var i = 200; i; i -= 1 {
+    for var i = 20; i; i -= 1 {
         const t1 = async thrower()
         const t2 = async thrower()
         const t3 = async thrower()
