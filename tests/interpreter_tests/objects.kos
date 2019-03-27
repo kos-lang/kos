@@ -936,3 +936,27 @@ do {
     assert typeof o.constructor == "function"
     assert o.constructor() == "mh"
 }
+
+# invoke constructor through apply
+do {
+    class Abc {
+        constructor(x = 42) {
+            this.x = x
+        }
+        x_plus_1 {
+            return this.x + 1
+        }
+    }
+
+    const o = Abc()
+    assert o.x == 42
+    assert o.x_plus_1() == 43
+
+    const p = Abc.apply(void, [])
+    assert p.x == 42
+    assert p.x_plus_1() == 43
+
+    const q = Abc.apply(void, [-107])
+    assert q.x == -107
+    assert q.x_plus_1() == -106
+}

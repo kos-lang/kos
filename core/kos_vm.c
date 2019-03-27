@@ -2995,7 +2995,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
     if (error)
         return KOS_BADPTR;
 
-    if (type == OBJ_CLASS && call_flavor != KOS_APPLY_FUNCTION)
+    if (type == OBJ_CLASS && (call_flavor != KOS_APPLY_FUNCTION || this_obj == KOS_VOID))
         this_obj = NEW_THIS;
 
     error = _prepare_call(ctx, INSTR_CALL, func_obj, &this_obj, args_obj, 0, 0);
