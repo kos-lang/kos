@@ -1,9 +1,9 @@
 ﻿Enhancement proposals
 =====================
 
-* Add syntax coloring for Sublime, Eclipse, IntelliJ IDEA
+* Add syntax coloring for Eclipse, IntelliJ IDEA
 
-* Change division to produce float, add integer division operator //
+* ? Change division to produce float, add integer division operator //
 
 * ? Add buffer strings b"" or buffer literals <01 fa>
 
@@ -26,10 +26,7 @@
         myobj.prop = set fun { };
         myobj.prop = get fun { };
 
-* Constructor functions
-
-    - Write test to use constructors with map function.
-    - Determine interaction with generators and iterators.
+* Constructor functions - determine interaction with generators and iterators.
 
 * Add 'static' functions in classes.
 
