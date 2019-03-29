@@ -1956,6 +1956,24 @@ do {
     expect_fail(iter)
 }
 
+do {
+    class encap {
+        constructor(x) {
+            this.x = x + 1
+        }
+        get_value {
+            return this.x * 10
+        }
+    }
+
+    var i = 10
+    for const v in base.range(0, 8, 2) -> base.map(encap) {
+        assert v.get_value() == i
+        i += 20
+    }
+    assert i == 90
+}
+
 ##############################################################################
 # base.filter
 
