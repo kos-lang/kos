@@ -1,0 +1,205 @@
+#!/usr/bin/env kos
+
+# Copyright (c) 2014-2019 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+import base.*
+import iter
+import random.random
+
+do { # Don't put anything in global scope
+
+# Flags from command line
+var f_debug      = false
+var f_seed       = void
+var f_difficulty = 4
+var f_base       = 3
+
+# Process arguments
+do {
+    const next_arg = args.iterator()
+
+    next_arg() # Skip script
+
+    for const arg in next_arg {
+        switch arg {
+
+            case "-h":
+                print("Usage: sudoku.kos [FLAGS]")
+                print()
+                print("Flags:")
+                print("    -s SEED     - Set seed")
+                print("    -m LEVEL    - Set max difficulty level")
+                print("    -b BASE     - Block size (default=3)")
+                print("    -d          - Enable debug checks and prints")
+                return;
+
+            case "-d":
+                f_debug = true
+
+            case "-s":
+                f_seed = integer(next_arg())
+
+            case "-m":
+                f_difficulty = integer(next_arg())
+                assert f_difficulty > 0
+
+            case "-b":
+                f_base = integer(next_arg())
+                assert f_base > 1
+                assert f_base <= 4
+
+            default:
+                print("Unrecognized argument: \(arg)")
+                print("Run with -h to get the list of valid options")
+                throw "bad argument" # TODO add a way to return non-zero exit code w/o exception
+        }
+    }
+}
+
+# Full row/column size, also the number of possible symbols
+const f_size = f_base * f_base
+
+# Get random seed if not set by user
+if f_seed == void {
+    f_seed = random().integer()
+}
+print("Seed: \(f_seed)")
+
+# Setup RNG
+const random = random(f_seed)
+
+# Prints a message only if -d was specified
+fun dprint(args...)
+{
+    if (f_debug) {
+        print(args...)
+    }
+}
+
+# Makes a copy of game board
+fun clone(board)
+{
+    return {
+        data: [ board.data... ],
+        rows: [ board.rows... ],
+        cols: [ board.cols... ],
+        blocks: [ board.blocks... ]
+    }
+}
+
+# Prints game board
+fun print_board(board)
+{
+    const next  = board.data.iterator()
+    const len   = f_base > 3 ? 2 : 1
+    const blank = " ".repeat(len) + "."
+    for const irow in range(f_size) {
+        const disp_row = []
+
+        for const icol in range(f_size) {
+            const val = next()
+            if val == void {
+                disp_row.push(blank)
+            }
+            else {
+                disp_row.push(" ")
+                disp_row.push(string(val).rjust(len))
+            }
+
+            if icol % f_base == f_base - 1 && icol != f_size - 1 {
+                disp_row.push(" |")
+            }
+        }
+
+        print(string.apply(void, disp_row))
+
+        if irow % f_base == f_base - 1 && irow != f_size - 1 {
+            print("-".repeat(f_size * (len + 1) + (f_base - 1) * 2 + 1))
+        }
+    }
+}
+
+# Generates fully filled game board
+fun generate_board()
+{
+    var board = {
+        data: [void].repeat(f_size * f_size),
+        rows: [0].repeat(f_size),
+        cols: [0].repeat(f_size),
+        blocks: [0].repeat(f_size)
+    }
+
+    const bit_mask = (1 << (f_size + 1)) - 2
+
+    const poss_values = []
+    poss_values.reserve(f_size)
+
+    const board_stack = []
+    var num_back_tracks = 0
+
+    for var irow, idx = [0, 0]; irow < f_size; irow += 1 {
+        board_stack.push(clone(board))
+        const blk_base = (irow / f_base) * f_base
+        var row_ok = true
+        for var icol = 0; icol < f_size; icol += 1, idx += 1 {
+            const iblk = blk_base + (icol / f_base)
+
+            const has = board.rows[irow] | board.cols[icol] | board.blocks[iblk]
+            const possible = ~has & bit_mask
+
+            if ! possible {
+                const num_rows_back = irow > f_base ? (irow % f_base) + 1 : 1
+                dprint("Generation failed at \(irow),\(icol), go back \(num_rows_back) rows")
+                for const i in range(num_rows_back) {
+                    idx = irow * f_size
+                    irow -= 1
+                    board = board_stack.pop()
+                }
+                num_back_tracks += 1
+                break
+            }
+
+            poss_values.resize(0)
+            for const v in range(1, f_size + 1) {
+                if possible & (1 << v) {
+                    poss_values.push(v)
+                }
+            }
+
+            const v = poss_values[random.integer(0, poss_values.size - 1)]
+            const v_mask = 1 << v
+            board.data[idx] = v
+            board.rows[irow] |= v_mask
+            board.cols[icol] |= v_mask
+            board.blocks[iblk] |= v_mask
+        }
+    }
+
+    dprint("Number of back tracks: \(num_back_tracks)")
+
+    return board
+}
+
+const board = generate_board()
+
+print_board(board)
+
+}
