@@ -200,6 +200,83 @@ fun generate_board()
 
 const board = generate_board()
 
+# Attempts to solve a single cell on the board
+# Returns [value, level] where value is the solved value for that cell,
+# if found and level is the level of the algorithm necessary to find it
+# (difficulty level).  If not able to find the solution, returns
+# [void, void].
+fun solve_cell(board, irow, icol, idx)
+{
+    assert board.data[idx] == void
+    # TODO
+    return [void, void]
+}
+
+# Clears one cell
+fun clear_cell(board, irow, icol, idx)
+{
+    const orig_val = board.data[idx]
+    assert orig_val != void
+    const val_mask = ~(1 << orig_val)
+
+    const iblk = (irow / f_base) * f_base + icol / f_base
+
+    board.data[idx] = void
+    board.rows[irow] &= val_mask
+    board.cols[icol] &= val_mask
+    board.blocks[iblk] &= val_mask
+
+    return orig_val
+}
+
+# Sets one cell
+fun set_cell(board, irow, icol, idx, val)
+{
+    assert board.data[idx] == void
+    const val_mask = 1 << val
+
+    const iblk = (irow / f_base) * f_base + icol / f_base
+
+    board.data[idx] = val
+    board.rows[irow] |= val_mask
+    board.cols[icol] |= val_mask
+    board.blocks[iblk] |= val_mask
+}
+
+# Blank out cells in the board, as long as it's still solvable
+fun blank_out_cells(board, difficulty)
+{
+    const positions = [ iter.iproduct(f_size, f_size) -> random.shuffle ... ]
+
+    var ipos = 0
+
+    loop {
+        # Pick random field on the board (positions are shuffled)
+        const irow, icol = positions[ipos]
+        const idx = irow * f_size + icol
+
+        # Try to solve the cell
+        const orig_val = clear_cell(board, irow, icol, idx)
+        const val, level = solve_cell(board, irow, icol, idx)
+        if val == void || level > difficulty {
+            set_cell(board, irow, icol, idx, orig_val)
+            ipos += 1
+            if ipos >= positions.size {
+                break
+            }
+            continue
+        }
+
+        # Cell is solvable, remove position from the list and continue
+        positions.insert(ipos, ipos + 1, [])
+        ipos = 0
+    }
+}
+
+const orig_board = clone(board)
+
+blank_out_cells(board, f_difficulty)
+
 print_board(board)
 
 }
