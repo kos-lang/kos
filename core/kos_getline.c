@@ -26,11 +26,57 @@
 #include "kos_system.h"
 #include "kos_memory.h"
 #include "kos_try.h"
+#include <setjmp.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 
 static const char str_prompt_first_line[]      = "> ";
 static const char str_prompt_subsequent_line[] = "_ ";
+
+#ifdef _WIN32
+
+static jmp_buf jmpbuf;
+
+static void ctrlc_signal_handler(int sig)
+{
+    if (sig == SIGINT)
+        longjmp(jmpbuf, sig);
+}
+
+typedef sig_t signal_handler;
+
+#define install_set_jmp() setjmp(jmpbuf)
+
+#define install_ctrlc_signal(handler, old_action) do {                        \
+    *(old_action) = signal(SIGINT, (handler)); /* TODO handle return value */ \
+} while (0)
+
+#define restore_ctrlc_signal(old_action) signal(SIGINT, *(old_action))
+
+#else
+
+static sigjmp_buf jmpbuf;
+
+static void ctrlc_signal_handler(int sig)
+{
+    if (sig == SIGINT)
+        siglongjmp(jmpbuf, sig);
+}
+
+typedef struct sigaction signal_handler;
+
+#define install_set_jmp() sigsetjmp(jmpbuf, 1)
+
+#define install_ctrlc_signal(handler, old_action) do {                   \
+    signal_handler sa;                                                   \
+    sa.sa_handler = (handler);                                           \
+    sigaction(SIGINT, &sa, (old_action)); /* TODO handle return value */ \
+} while (0)
+
+#define restore_ctrlc_signal(old_action) sigaction(SIGINT, (old_action), NULL)
+
+#endif /* !_WIN32 */
 
 #ifdef CONFIG_READLINE
 
@@ -41,6 +87,7 @@ static const char str_prompt_subsequent_line[] = "_ ";
 int kos_getline_init(KOS_GETLINE *state)
 {
     rl_initialize();
+    rl_catch_signals = 0;
     return KOS_SUCCESS;
 }
 
@@ -48,13 +95,23 @@ int kos_getline(KOS_GETLINE      *state,
                 enum KOS_PROMPT_E prompt,
                 KOS_VECTOR       *buf)
 {
-    int         error;
-    const char* str_prompt = prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
-                                                         : str_prompt_subsequent_line;
+    int            error;
+    signal_handler old_signal;
+    char*          line       = 0;
+    const char*    str_prompt = prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
+                                                            : str_prompt_subsequent_line;
 
-    char *line = readline(str_prompt);
+    if (install_set_jmp() == 0) {
+        install_ctrlc_signal(ctrlc_signal_handler, &old_signal);
 
-    /* TODO hook SIGINT to return empty line */
+        line = readline(str_prompt);
+
+        restore_ctrlc_signal(&old_signal);
+    }
+    else {
+        printf("\n");
+        restore_ctrlc_signal(&old_signal);
+    }
 
     if (line) {
         const size_t num_read = strlen(line);
@@ -150,8 +207,9 @@ int kos_getline(KOS_GETLINE      *state,
                 enum KOS_PROMPT_E prompt,
                 KOS_VECTOR       *buf)
 {
-    int         count = 0;
-    const char *line;
+    int            count = 0;
+    const char    *line;
+    signal_handler old_signal;
 
     if (stdin_eof)
         return KOS_SUCCESS_RETURN;
@@ -159,9 +217,17 @@ int kos_getline(KOS_GETLINE      *state,
     el_set(state->e, EL_PROMPT, prompt == PROMPT_FIRST_LINE ? _prompt_first_line
                                                             : _prompt_subsequent_line);
 
-    /* TODO hook SIGINT to return empty line */
+    if (install_set_jmp() == 0) {
+        install_ctrlc_signal(ctrlc_signal_handler, &old_signal);
 
-    line = el_gets(state->e, &count);
+        line = el_gets(state->e, &count);
+
+        restore_ctrlc_signal(&old_signal);
+    }
+    else {
+        printf("\n");
+        restore_ctrlc_signal(&old_signal);
+    }
 
     if (count > 0) {
 
@@ -203,19 +269,31 @@ int kos_getline(KOS_GETLINE      *state,
         printf("%s", prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
                                                  : str_prompt_subsequent_line);
 
-    /* TODO hook SIGINT to return empty line */
-
     for (;;) {
-        const size_t old_size  = buf->size;
-        const size_t increment = KOS_BUF_ALLOC_SIZE;
-        size_t       num_read;
+        const size_t   old_size  = buf->size;
+        const size_t   increment = KOS_BUF_ALLOC_SIZE;
+        size_t         num_read;
+        signal_handler old_signal;
+        char*          ret_buf;
 
         if (kos_vector_resize(buf, old_size + increment)) {
             fprintf(stderr, "Out of memory\n");
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
         }
 
-        if ( ! fgets(buf->buffer + old_size, (int)increment, stdin)) {
+        if (install_set_jmp() == 0) {
+            install_ctrlc_signal(ctrlc_signal_handler, &old_signal);
+
+            ret_buf = fgets(buf->buffer + old_size, (int)increment, stdin);
+
+            restore_ctrlc_signal(&old_signal);
+        }
+        else {
+            printf("\n");
+            restore_ctrlc_signal(&old_signal);
+        }
+
+        if ( ! ret_buf) {
 
             buf->size = old_size;
 
