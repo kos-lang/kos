@@ -36,6 +36,8 @@ static const char str_prompt_subsequent_line[] = "_ ";
 
 #ifdef _WIN32
 
+#pragma warning( disable : 4611 ) /* interaction between '_setjmp' and C++ object destruction is non-portable */
+
 static jmp_buf jmpbuf;
 
 static void ctrlc_signal_handler(int sig)
