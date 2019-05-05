@@ -44,9 +44,9 @@ static void ctrlc_signal_handler(int sig)
         longjmp(jmpbuf, sig);
 }
 
-typedef sig_t signal_handler;
+typedef void (*signal_handler)(int);
 
-#define install_set_jmp() setjmp(jmpbuf)
+#define set_jump() setjmp(jmpbuf)
 
 #define install_ctrlc_signal(handler, old_action) do {                        \
     *(old_action) = signal(SIGINT, (handler)); /* TODO handle return value */ \
@@ -66,7 +66,7 @@ static void ctrlc_signal_handler(int sig)
 
 typedef struct sigaction signal_handler;
 
-#define install_set_jmp() sigsetjmp(jmpbuf, 1)
+#define set_jump() sigsetjmp(jmpbuf, 1)
 
 #define install_ctrlc_signal(handler, old_action) do {                   \
     signal_handler sa;                                                   \
@@ -97,11 +97,13 @@ int kos_getline(KOS_GETLINE      *state,
 {
     int            error;
     signal_handler old_signal;
-    char*          line       = 0;
+    static char*   line       = 0;
     const char*    str_prompt = prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
                                                             : str_prompt_subsequent_line;
 
-    if (install_set_jmp() == 0) {
+    line = 0;
+
+    if ( ! set_jump()) {
         install_ctrlc_signal(ctrlc_signal_handler, &old_signal);
 
         line = readline(str_prompt);
@@ -217,7 +219,7 @@ int kos_getline(KOS_GETLINE      *state,
     el_set(state->e, EL_PROMPT, prompt == PROMPT_FIRST_LINE ? _prompt_first_line
                                                             : _prompt_subsequent_line);
 
-    if (install_set_jmp() == 0) {
+    if ( ! set_jump()) {
         install_ctrlc_signal(ctrlc_signal_handler, &old_signal);
 
         line = el_gets(state->e, &count);
@@ -281,7 +283,7 @@ int kos_getline(KOS_GETLINE      *state,
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
         }
 
-        if (install_set_jmp() == 0) {
+        if ( ! set_jump()) {
             install_ctrlc_signal(ctrlc_signal_handler, &old_signal);
 
             ret_buf = fgets(buf->buffer + old_size, (int)increment, stdin);
