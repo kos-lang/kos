@@ -20,6 +20,9 @@ the Kos test suite:
 
     make test
 
+Note: Kos Makefiles use GNU make.  On some Operating Systems, like FreeBSD, you
+need to invoke `gmake` instead of `make`.
+
 
 Installation
 ============
