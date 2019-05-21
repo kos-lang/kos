@@ -154,7 +154,7 @@ int kos_load_file(const char  *filename,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     if (size != fread((char *)file_buf->buffer, 1, size, file)) {
-        free(file_buf->buffer);
+        free((void *)file_buf->buffer);
         file_buf->buffer = 0;
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
     }
@@ -172,7 +172,7 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
     if (file_buf->buffer) {
-        free(file_buf->buffer);
+        free((void *)file_buf->buffer);
         file_buf->buffer = 0;
         file_buf->size   = 0;
     }
