@@ -285,7 +285,7 @@ array.prototype.fill()
     array.prototype.fill(begin, value)
     array.prototype.fill(begin, end, value)
 
-Fill specified portion of the array with a value.
+Fills specified portion of the array with a value.
 
 Returns the array object being filled (`this`).
 
@@ -687,7 +687,7 @@ buffer.prototype.fill()
     buffer.prototype.fill(begin, value)
     buffer.prototype.fill(begin, end, value)
 
-Fill specified portion of the buffer with a value.
+Fills specified portion of the buffer with a value.
 
 Returns the buffer object being filled (`this`).
 
