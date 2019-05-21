@@ -297,9 +297,9 @@ cleanup:
     return error ? KOS_BADPTR : module;
 }
 
-static int _load_file(KOS_CONTEXT ctx,
-                      KOS_OBJ_ID  path,
-                      KOS_VECTOR *file_buf)
+static int _load_file(KOS_CONTEXT  ctx,
+                      KOS_OBJ_ID   path,
+                      KOS_FILEBUF *file_buf)
 {
     int        error = KOS_SUCCESS;
     KOS_VECTOR cpath;
@@ -764,10 +764,10 @@ int KOS_load_module_from_memory(KOS_CONTEXT ctx,
     return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 
-static int _import_module(void       *vframe,
-                          const char *name,
-                          unsigned    length,
-                          int        *module_idx)
+int kos_comp_import_module(void       *vframe,
+                           const char *name,
+                           unsigned    length,
+                           int        *module_idx)
 {
     KOS_CONTEXT ctx = (KOS_CONTEXT)vframe;
     KOS_OBJ_ID  module_obj;
@@ -779,11 +779,11 @@ static int _import_module(void       *vframe,
     return IS_BAD_PTR(module_obj) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 
-static int _get_global_idx(void       *vframe,
-                           int         module_idx,
-                           const char *name,
-                           unsigned    length,
-                           int        *global_idx)
+int kos_comp_get_global_idx(void       *vframe,
+                            int         module_idx,
+                            const char *name,
+                            unsigned    length,
+                            int        *global_idx)
 {
     int           error = KOS_SUCCESS;
     KOS_OBJ_ID    str;
@@ -819,10 +819,10 @@ cleanup:
     return error;
 }
 
-static int _walk_globals(void                          *vframe,
-                         int                            module_idx,
-                         KOS_COMP_WALL_GLOBALS_CALLBACK callback,
-                         void                          *cookie)
+int kos_comp_walk_globals(void                          *vframe,
+                          int                            module_idx,
+                          KOS_COMP_WALL_GLOBALS_CALLBACK callback,
+                          void                          *cookie)
 {
     int                 error  = KOS_SUCCESS;
     int                 pushed = 0;
@@ -1066,10 +1066,7 @@ static int _compile_module(KOS_CONTEXT ctx,
         TRY(KOS_array_write(ctx, inst->modules.modules, module_idx, module_obj));
 
     /* Prepare compiler */
-    program.ctx            = ctx;
-    program.import_module  = _import_module;
-    program.get_global_idx = _get_global_idx;
-    program.walk_globals   = _walk_globals;
+    program.ctx = ctx;
     TRY(_predefine_globals(ctx,
                            &program,
                            OBJPTR(MODULE, module_obj)->global_names,
@@ -1360,9 +1357,9 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     KOS_OBJ_ID            prev_locals        = KOS_BADPTR;
     KOS_INSTANCE   *const inst               = ctx->inst;
     KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
-    KOS_VECTOR            file_buf;
+    KOS_FILEBUF           file_buf;
 
-    kos_vector_init(&file_buf);
+    kos_filebuf_init(&file_buf);
 
     _get_module_name(module_name, name_size, &loading);
 
@@ -1531,7 +1528,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     TRY(_compile_module(ctx, module_obj, module_idx, data, data_size, 0));
 
     /* Free file buffer */
-    kos_vector_destroy(&file_buf);
+    kos_unload_file(&file_buf);
 
     /* Put module on the list */
     TRY(KOS_array_write(ctx, inst->modules.modules, module_idx, module_obj));
@@ -1551,7 +1548,7 @@ cleanup:
 
     KOS_pop_local_scope(ctx, &prev_locals);
 
-    kos_vector_destroy(&file_buf);
+    kos_unload_file(&file_buf);
 
     /* TODO remove module from array if it failed to load? */
 

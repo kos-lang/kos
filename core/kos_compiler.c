@@ -1064,11 +1064,7 @@ static int _import(KOS_COMP_UNIT      *program,
 
         info.program = program;
 
-        assert(program->import_module);
-        assert(program->get_global_idx);
-        assert(program->walk_globals);
-
-        TRY(program->import_module(program->ctx,
+        TRY(kos_comp_import_module(program->ctx,
                                    node->token.begin,
                                    node->token.length,
                                    &module_idx));
@@ -1079,7 +1075,7 @@ static int _import(KOS_COMP_UNIT      *program,
 
             info.pos = node->token.pos;
 
-            error = program->walk_globals(program->ctx,
+            error = kos_comp_walk_globals(program->ctx,
                                           module_idx,
                                           _import_global,
                                           &info);
@@ -1092,7 +1088,7 @@ static int _import(KOS_COMP_UNIT      *program,
 
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-                error = program->get_global_idx(program->ctx,
+                error = kos_comp_get_global_idx(program->ctx,
                                                 module_idx,
                                                 node->token.begin,
                                                 node->token.length,
@@ -2574,11 +2570,10 @@ static int _refinement_module(KOS_COMP_UNIT      *program,
         unsigned        length;
         KOS_UTF8_ESCAPE escape;
 
-        /* TODO this does not work for escaped strings, get_global_idx assumes NO_ESCAPE */
+        /* TODO this does not work for escaped strings, kos_comp_get_global_idx assumes NO_ESCAPE */
         _get_token_str(&node->token, &begin, &length, &escape);
 
-        assert(program->get_global_idx);
-        error = program->get_global_idx(program->ctx, module_var->array_idx, begin, length, &global_idx);
+        error = kos_comp_get_global_idx(program->ctx, module_var->array_idx, begin, length, &global_idx);
         if (error) {
             program->error_token = &node->token;
             program->error_str   = str_err_no_such_module_variable;
@@ -4161,8 +4156,7 @@ static int _interpolated_string(KOS_COMP_UNIT      *program,
     KOS_REG          *args         = *reg;
     static const char str_string[] = "stringify";
 
-    assert(program->get_global_idx);
-    error = program->get_global_idx(program->ctx, 0, str_string, sizeof(str_string)-1, &string_idx);
+    error = kos_comp_get_global_idx(program->ctx, 0, str_string, sizeof(str_string)-1, &string_idx);
     if (error) {
         program->error_token = &node->token;
         program->error_str   = str_err_no_such_module_variable;

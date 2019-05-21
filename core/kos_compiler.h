@@ -226,28 +226,6 @@ enum KOS_IMPORT_TYPE_E {
     KOS_IMPORT_DIRECT
 };
 
-typedef int (*KOS_COMP_IMPORT_MODULE)(void       *ctx,
-                                      const char *name,
-                                      unsigned    length,
-                                      int        *module_idx);
-
-typedef int (*KOS_COMP_GET_GLOBAL_IDX)(void       *ctx,
-                                       int         module_idx,
-                                       const char *name,
-                                       unsigned    length,
-                                       int        *global_idx);
-
-typedef int (*KOS_COMP_WALL_GLOBALS_CALLBACK)(const char *global_name,
-                                              unsigned    global_length,
-                                              int         module_idx,
-                                              int         global_idx,
-                                              void       *cookie);
-
-typedef int (*KOS_COMP_WALK_GLOBALS)(void                          *ctx,
-                                     int                            module_idx,
-                                     KOS_COMP_WALL_GLOBALS_CALLBACK callback,
-                                     void                          *cookie);
-
 typedef struct KOS_COMP_UNIT_S {
     const KOS_TOKEN         *error_token;
     const char              *error_str;
@@ -269,9 +247,6 @@ typedef struct KOS_COMP_UNIT_S {
     int                      num_globals;
 
     void                    *ctx;
-    KOS_COMP_IMPORT_MODULE   import_module;
-    KOS_COMP_GET_GLOBAL_IDX  get_global_idx;
-    KOS_COMP_WALK_GLOBALS    walk_globals;
 
     KOS_VAR                 *modules;
     int                      num_modules;
@@ -351,5 +326,29 @@ int kos_scope_compare_item(void               *what,
 
 KOS_SCOPE_REF *kos_find_scope_ref(KOS_FRAME *frame,
                                   KOS_SCOPE *closure);
+
+/* Interface between the compiler and the code driving it */
+
+int kos_comp_import_module(void       *ctx,
+                           const char *name,
+                           unsigned    length,
+                           int        *module_idx);
+
+int kos_comp_get_global_idx(void       *ctx,
+                            int         module_idx,
+                            const char *name,
+                            unsigned    length,
+                            int        *global_idx);
+
+typedef int (*KOS_COMP_WALL_GLOBALS_CALLBACK)(const char *global_name,
+                                              unsigned    global_length,
+                                              int         module_idx,
+                                              int         global_idx,
+                                              void       *cookie);
+
+int kos_comp_walk_globals(void                          *ctx,
+                          int                            module_idx,
+                          KOS_COMP_WALL_GLOBALS_CALLBACK callback,
+                          void                          *cookie);
 
 #endif

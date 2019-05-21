@@ -27,6 +27,7 @@
 #include "../core/kos_ast.h"
 #include "../core/kos_system.h"
 #include "../core/kos_memory.h"
+#include "../core/kos_misc.h"
 #include "../core/kos_parser.h"
 #include "../inc/kos_error.h"
 
@@ -173,12 +174,12 @@ static void append_int(char **out, char *end, int value)
 
 #define WALK_BUF_SIZE 512
 
-static int compare_output(const char *actual,
-                          char      **expected,
-                          const char *expected_end)
+static int compare_output(const char  *actual,
+                          const char **expected,
+                          const char  *expected_end)
 {
-    char *exp   = *expected;
-    int   error = KOS_SUCCESS;
+    const char *exp   = *expected;
+    int         error = KOS_SUCCESS;
 
     for (;;) {
 
@@ -210,7 +211,7 @@ static int compare_output(const char *actual,
 static int _walk_tree(const KOS_AST_NODE *node,
                       int                 level,
                       int                 print,
-                      char              **compare,
+                      const char        **compare,
                       const char         *compare_end)
 {
     char             buf[WALK_BUF_SIZE];
@@ -289,9 +290,9 @@ static int _walk_tree(const KOS_AST_NODE *node,
     return error;
 }
 
-static void scan_until_eol(char **buf, const char *end)
+static void scan_until_eol(const char **buf, const char *end)
 {
-    char *ptr = *buf;
+    const char *ptr = *buf;
 
     for ( ; ptr < end && *ptr != '\r' && *ptr != '\n'; ++ptr) { }
 
@@ -304,9 +305,9 @@ static void scan_until_eol(char **buf, const char *end)
     *buf = ptr;
 }
 
-static void skip_spaces(char **buf, const char *end)
+static void skip_spaces(const char **buf, const char *end)
 {
-    char *ptr = *buf;
+    const char *ptr = *buf;
 
     while (ptr < end && (unsigned char)*ptr <= 0x20)
         ++ptr;
@@ -314,11 +315,11 @@ static void skip_spaces(char **buf, const char *end)
     *buf = ptr;
 }
 
-static int scan_int(char **buf, const char *end, int *value)
+static int scan_int(const char **buf, const char *end, int *value)
 {
-    int   error = KOS_SUCCESS;
-    char *ptr   = *buf;
-    char *value_str;
+    int         error = KOS_SUCCESS;
+    const char *ptr   = *buf;
+    const char *value_str;
 
     skip_spaces(&ptr, end);
 
@@ -331,10 +332,17 @@ static int scan_int(char **buf, const char *end, int *value)
         error =  KOS_ERROR_INTERNAL;
     }
     else {
-        const char saved_ch = *ptr;
-        *ptr   = 0;
-        *value = atoi(value_str);
-        *ptr   = saved_ch;
+        int64_t value64 = 0;
+        error = kos_parse_int(value_str, ptr, &value64);
+
+        if ( ! error) {
+            if (value64 < 0 || value64 > 1024) {
+                printf("Invalid input - expected integer!\n");
+                error = KOS_ERROR_INTERNAL;
+            }
+            else
+                *value = (int)value64;
+        }
     }
 
     *buf = ptr;
@@ -345,16 +353,16 @@ static int scan_int(char **buf, const char *end, int *value)
 int main(int argc, char *argv[])
 {
     KOS_PARSER           parser;
-    KOS_VECTOR           file_buf;
+    struct KOS_FILEBUF_S file_buf;
     struct KOS_MEMPOOL_S allocator;
-    char                *file_end;
-    char                *buf;
+    const char          *file_end;
+    const char          *buf;
     int                  error;
     int                  test  = 1;
     int                  print = 0;
     const char          *usage = "Usage: kos_parser_test [-verbose] [-notest] <testfile>\n";
 
-    kos_vector_init(&file_buf);
+    kos_filebuf_init(&file_buf);
 
     kos_mempool_init(&allocator);
 
@@ -379,13 +387,6 @@ int main(int argc, char *argv[])
 
         error = kos_load_file(argv[iarg], &file_buf);
 
-        /* Alloc one more char and set it to 0 */
-        if (!error) {
-            error = kos_vector_resize(&file_buf, file_buf.size+1);
-            if (!error)
-                file_buf.buffer[file_buf.size-1] = 0;
-        }
-
         switch (error) {
 
             case KOS_SUCCESS:
@@ -408,15 +409,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    file_end = file_buf.buffer + file_buf.size - 1; /* allocated one char more */
+    file_end = file_buf.buffer + file_buf.size;
     buf      = file_buf.buffer;
 
     while (buf < file_end) {
 
-        int   expected_error;
-        int   line   = 0;
-        int   column = 0;
-        char *end;
+        int         expected_error;
+        int         line   = 0;
+        int         column = 0;
+        const char *end;
 
         for (end = buf; end < file_end; ++end) {
             if (*end == '@' &&
@@ -502,7 +503,7 @@ int main(int argc, char *argv[])
 
     kos_mempool_destroy(&allocator);
 
-    kos_vector_destroy(&file_buf);
+    kos_unload_file(&file_buf);
 
     if (error) {
 

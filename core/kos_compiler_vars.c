@@ -468,8 +468,7 @@ static int _import(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    assert(program->import_module);
-    TRY(program->import_module(program->ctx,
+    TRY(kos_comp_import_module(program->ctx,
                                node->token.begin,
                                node->token.length,
                                &module_idx));
@@ -507,8 +506,7 @@ static int _import(KOS_COMP_UNIT      *program,
             info.program = program;
             info.node    = node;
 
-            assert(program->walk_globals);
-            error = program->walk_globals(program->ctx,
+            error = kos_comp_walk_globals(program->ctx,
                                           module_idx,
                                           _import_global,
                                           &info);

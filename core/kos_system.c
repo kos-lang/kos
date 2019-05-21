@@ -41,6 +41,7 @@
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
+#   include <fcntl.h>
 #   include <sys/time.h>
 #   include <sys/types.h>
 #   include <sys/mman.h>
@@ -110,13 +111,27 @@ static int _is_file(const char *filename)
 }
 #endif
 
-int kos_load_file(const char *filename,
-                  KOS_VECTOR *buf)
+#ifdef _WIN32
+void kos_filebuf_init(KOS_FILEBUF *file_buf)
+{
+    assert(file_buf);
+    file_buf->buffer = 0;
+    file_buf->size   = 0;
+}
+
+/* TODO Use MapViewOfFile() */
+int kos_load_file(const char  *filename,
+                  KOS_FILEBUF *file_buf)
 {
     int    error;
     long   lsize;
     size_t size;
     FILE  *file = 0;
+
+    assert(filename);
+    assert(file_buf);
+    assert( ! file_buf->buffer);
+    assert( ! file_buf->size);
 
     TRY(_is_file(filename));
 
@@ -134,10 +149,17 @@ int kos_load_file(const char *filename,
     if (0 != fseek(file, 0, SEEK_SET))
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
 
-    TRY(kos_vector_resize(buf, size));
+    file_buf->buffer = (const char *)malloc(size);
+    if ( ! file_buf->buffer)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
-    if (size != fread(buf->buffer, 1, size, file))
+    if (size != fread((char *)file_buf->buffer, 1, size, file)) {
+        free(file_buf->buffer);
+        file_buf->buffer = 0;
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
+    }
+
+    file_buf->size = size;
 
 cleanup:
     if (file)
@@ -145,6 +167,81 @@ cleanup:
 
     return error;
 }
+
+void kos_unload_file(KOS_FILEBUF *file_buf)
+{
+    assert(file_buf);
+    if (file_buf->buffer) {
+        free(file_buf->buffer);
+        file_buf->buffer = 0;
+        file_buf->size   = 0;
+    }
+}
+#else
+void kos_filebuf_init(KOS_FILEBUF *file_buf)
+{
+    assert(file_buf);
+    file_buf->buffer = 0;
+    file_buf->size   = 0;
+    file_buf->fd     = -1;
+}
+
+int kos_load_file(const char  *filename,
+                  KOS_FILEBUF *file_buf)
+{
+    int         error = KOS_SUCCESS;
+    int         fd    = -1;
+    struct stat st;
+    void       *addr  = 0;
+
+    assert(filename);
+    assert(file_buf);
+    assert( ! file_buf->buffer);
+    assert( ! file_buf->size);
+    assert(file_buf->fd == -1);
+
+    fd = open(filename, O_RDONLY);
+    if (fd == -1)
+        RAISE_ERROR(_errno_to_error());
+
+    if (fstat(fd, &st) != 0)
+        RAISE_ERROR(_errno_to_error());
+
+    if (st.st_size) {
+        addr = mmap(0, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
+        if (addr == MAP_FAILED)
+            RAISE_ERROR(_errno_to_error());
+    }
+    else {
+        close(fd);
+        fd = -1;
+    }
+
+    file_buf->buffer = (const char *)addr;
+    file_buf->size   = st.st_size;
+    file_buf->fd     = fd;
+
+cleanup:
+    if (error && fd != -1)
+        close(fd);
+
+    return error;
+}
+
+void kos_unload_file(KOS_FILEBUF *file_buf)
+{
+    assert(file_buf);
+    if (file_buf->buffer) {
+        munmap((void *)file_buf->buffer, file_buf->size);
+        file_buf->buffer = 0;
+        file_buf->size   = 0;
+    }
+    if (file_buf->fd != -1) {
+        close(file_buf->fd);
+        file_buf->fd = -1;
+    }
+}
+#endif
 
 int kos_does_file_exist(const char *filename)
 {

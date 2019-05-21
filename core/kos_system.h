@@ -23,6 +23,7 @@
 #ifndef KOS_FILE_H_INCLUDED
 #define KOS_FILE_H_INCLUDED
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef _WIN32
@@ -41,9 +42,6 @@ struct KOS_VECTOR_S;
 
 int kos_is_stdin_interactive(void);
 
-int kos_load_file(const char          *filename,
-                  struct KOS_VECTOR_S *buf);
-
 int kos_does_file_exist(const char *filename);
 
 int kos_get_absolute_path(struct KOS_VECTOR_S *path);
@@ -61,5 +59,27 @@ enum KOS_PROTECT_E {
 int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect);
 
 int64_t kos_get_time_us(void);
+
+#ifdef _WIN32
+struct KOS_FILEBUF_S {
+    const char *buffer;
+    size_t      size;
+};
+#else
+struct KOS_FILEBUF_S {
+    const char *buffer;
+    size_t      size;
+    int         fd;
+};
+#endif
+
+typedef struct KOS_FILEBUF_S KOS_FILEBUF;
+
+void kos_filebuf_init(KOS_FILEBUF *file_buf);
+
+int kos_load_file(const char  *filename,
+                  KOS_FILEBUF *file_buf);
+
+void kos_unload_file(KOS_FILEBUF *file_buf);
 
 #endif
