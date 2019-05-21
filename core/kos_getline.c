@@ -88,6 +88,7 @@ typedef struct sigaction signal_handler;
 
 int kos_getline_init(KOS_GETLINE *state)
 {
+    rl_readline_name = "kos";
     rl_initialize();
     rl_catch_signals = 0;
     return KOS_SUCCESS;
@@ -115,6 +116,11 @@ int kos_getline(KOS_GETLINE      *state,
     else {
         printf("\n");
         restore_ctrlc_signal(&old_signal);
+        rl_cleanup_after_signal();
+
+        line = (char *)malloc(1);
+        if (line)
+            *line = 0;
     }
 
     if (line) {
@@ -295,6 +301,8 @@ int kos_getline(KOS_GETLINE      *state,
         else {
             printf("\n");
             restore_ctrlc_signal(&old_signal);
+            ret_buf = buf->buffer + old_size;
+            *ret_buf = 0;
         }
 
         if ( ! ret_buf) {
