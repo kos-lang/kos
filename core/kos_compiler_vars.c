@@ -203,20 +203,24 @@ static int _push_function(KOS_COMP_UNIT      *program,
     return error;
 }
 
-/* TODO can't we just do program->cur_frame ??? */
 KOS_SCOPE *kos_get_frame_scope(KOS_COMP_UNIT *program)
 {
-    KOS_SCOPE *scope = program->scope_stack;
+    KOS_SCOPE *scope;
 
-    assert(scope);
+    if (program->cur_frame)
+        scope = &program->cur_frame->scope;
+    else {
+        scope = program->scope_stack;
+        assert(scope);
 
-    while (scope->next && ! scope->is_function)
-        scope = scope->next;
+        while (scope->next && ! scope->is_function)
+            scope = scope->next;
 
-    assert((scope->next && scope->is_function) ||
-           ( ! scope->next && ! scope->is_function));
+        assert((scope->next && scope->is_function) ||
+               ( ! scope->next && ! scope->is_function));
 
-    assert(scope->has_frame || ! scope->is_function);
+        assert(scope->has_frame || ! scope->is_function);
+    }
 
     return scope;
 }
