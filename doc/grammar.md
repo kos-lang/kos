@@ -1006,9 +1006,9 @@ Expressions
                                    | ArithAssignmentExpression
                                    | RHSExpression
 
-    AssignmentExpression         ::= MemberList AssignmentOperator RHSExpression
+    AssignmentExpression         ::= AssignmentTargetList AssignmentOperator RHSExpression
 
-    ArithAssignmentExpression    ::= MemberExpression ArithAssignmentOperator RHSExpression
+    ArithAssignmentExpression    ::= MutableAssignmentTarget ArithAssignmentOperator RHSExpression
 
     VariableDefinitionExpression ::= ( VarList | ConstList ) "=" RHSExpression
 
@@ -1018,7 +1018,16 @@ Expressions
 
     IdentifierList ::= Identifier ( "," Identifier )*
 
-    MemberList ::= MemberExpression ( "," MemberExpression )*
+    AssignmentTargetList ::= MutableAssignmentTarget |
+                             MultiAssignmentTargetList
+
+    MultiAssignmentTargetList ::= AssignmentTarget "," AssignmentTarget ( "," AssignmentTarget )*
+
+    MutableAssignmentTarget ::= Identifier |
+                                ( MemberExpression Refinement )
+
+    AssignmentTarget ::= MutableAssignmentTarget |
+                         VOID_LITERAL
 
     RHSExpression ::= YieldExpression
 

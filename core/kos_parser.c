@@ -35,7 +35,7 @@ static const char str_err_eol_before_par[]            = "ambiguous syntax: end o
 static const char str_err_eol_before_sq[]             = "ambiguous syntax: end of line before '[' - consider adding a ';'";
 static const char str_err_eol_before_op[]             = "ambiguous syntax: end of line before operator - consider adding a ';'";
 static const char str_err_exceeded_ast_depth[]        = "expression depth exceeded";
-static const char str_err_expected_assignable[]       = "expected identifier, refinement or slice for multi-assignment";
+static const char str_err_expected_assignable[]       = "expected identifier, refinement, slice or 'void' for multi-assignment";
 static const char str_err_expected_case[]             = "expected 'case'";
 static const char str_err_expected_case_or_default[]  = "expected 'case' or 'default'";
 static const char str_err_expected_case_statements[]  = "expected statements after 'case'";
@@ -1854,9 +1854,9 @@ static int check_multi_assgn_lhs(KOS_PARSER         *parser,
 {
     const KOS_NODE_TYPE type = node->type;
 
-    /* TODO add NT_VOID_LITERAL */
     if (type == NT_REFINEMENT ||
         type == NT_IDENTIFIER ||
+        type == NT_VOID_LITERAL ||
         type == NT_SLICE)
 
         return KOS_SUCCESS;
@@ -1882,7 +1882,8 @@ static int expr_no_var(KOS_PARSER *parser, KOS_AST_NODE **ret)
     TRY(next_token(parser));
 
     if (parser->token.sep == ST_SEMICOLON || parser->token.sep == ST_PAREN_CLOSE
-        || (node_type != NT_IDENTIFIER && node_type != NT_REFINEMENT && node_type != NT_SLICE)
+        || (node_type != NT_IDENTIFIER && node_type != NT_REFINEMENT &&
+            node_type != NT_SLICE && node_type != NT_VOID_LITERAL)
         || (parser->token.sep != ST_COMMA && ! (parser->token.op & OT_ASSIGNMENT) && parser->had_eol)
         || parser->token.type == TT_EOF)
     {
@@ -1899,6 +1900,11 @@ static int expr_no_var(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         if (parser->token.sep == ST_COMMA)
             TRY(check_multi_assgn_lhs(parser, node));
+        else if (node_type == NT_VOID_LITERAL) {
+            parser->error_str = str_err_expected_semicolon;
+            error = KOS_ERROR_PARSE_FAILED;
+            goto cleanup;
+        }
 
         ast_push(lhs, node);
         node = 0;

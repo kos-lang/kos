@@ -4096,7 +4096,7 @@ static int _assignment(KOS_COMP_UNIT      *program,
             else if (node->type == NT_IDENTIFIER)
                 TRY(_assign_non_local(program, assg_node->token.op, node, reg));
 
-            else {
+            else if (node->type != NT_VOID_LITERAL) {
 
                 assert(node->type == NT_SLICE);
                 assert(assg_node->token.op == OT_SET);

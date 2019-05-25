@@ -509,6 +509,34 @@ a=b in c instanceof d; # Mixed comparison operators
 )
 
 @------------------------------------------------------------------------------
+# Multi-assignment
+a, a.a, void, b = x
+void, void = x
+
+@0
+(scope 1 1
+    (multi_assignment 2 17 =
+        (left_hand_side 2 2 ,
+            (identifier 2 1 a)
+            (refinement 2 5 .
+                (identifier 2 4 a)
+                (string 2 6 a))
+            (void 2 9 void)
+            (identifier 2 15 b))
+        (identifier 2 19 x))
+    (multi_assignment 3 12 =
+        (left_hand_side 3 5 ,
+            (void 3 1 void)
+            (void 3 7 void))
+        (identifier 3 14 x))
+)
+
+@------------------------------------------------------------------------------
+# Cannot assign to void with single assignment
+void = 1
+@10 2 6
+
+@------------------------------------------------------------------------------
 a = b = c; # Double assignment
 @ 10 1 7
 

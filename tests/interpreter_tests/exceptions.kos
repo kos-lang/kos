@@ -847,3 +847,25 @@ do {
 
     assert order.sequence == 12345
 }
+
+# not enough elements for multi-assignment
+do {
+    var a, b, c = [ void, void, void ]
+    assert a == void
+    assert b == void
+    assert c == void
+
+    var exception = void
+    try {
+        void, void, a, b, c = [ 1, 2, 3, 4 ]
+    }
+    catch const e {
+        exception = e
+    }
+    assert typeof exception != "void"
+    assert exception
+
+    assert a == 3
+    assert b == 4
+    assert c == void
+}

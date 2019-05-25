@@ -34,15 +34,16 @@ fun expect_fail(function)
 
 ##############################################################################
 # typeof
-assert typeof 0       == "integer"
-assert typeof 0.0     == "float"
-assert typeof 0e0     == "float"
-assert typeof ""      == "string"
-assert typeof void    == "void"
-assert typeof false   == "boolean"
-assert typeof {}      == "object"
-assert typeof []      == "array"
-assert typeof (()=>0) == "function"
+assert typeof 0        == "integer"
+assert typeof 0.0      == "float"
+assert typeof 0e0      == "float"
+assert typeof ""       == "string"
+assert typeof void     == "void"
+assert typeof false    == "boolean"
+assert typeof {}       == "object"
+assert typeof []       == "array"
+assert typeof (()=>0)  == "function"
+assert typeof class {} == "class"
 do {
     fun double_typeof(x)
     {
@@ -1462,4 +1463,30 @@ do {
 
     assert cnt  == 1
     assert type == "array"
+}
+
+##############################################################################
+# multi-assignment
+do {
+    const input = [ "a", "b", "c", "d" ]
+    var obj = { }
+    obj.a, obj.b, obj.c, obj.d = input
+    assert obj.a == "a"
+    assert obj.b == "b"
+    assert obj.c == "c"
+    assert obj.d == "d"
+
+    obj = { }
+    obj.a, void, obj.b, obj.a = input
+    assert obj.a == "d"
+    assert obj.b == "c"
+
+    obj = { }
+    var ary = [ 0, 0 ]
+    var c = void
+    void, ary[1], obj["a"], c = input
+    assert ary[0] == 0
+    assert ary[1] == "b"
+    assert obj.a == "c"
+    assert c == "d"
 }
