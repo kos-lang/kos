@@ -85,12 +85,18 @@ typedef enum KOS_NODE_TYPE_U {
     NT_OBJECT_LITERAL
 } KOS_NODE_TYPE;
 
+struct KOS_VAR_S;
+struct KOS_SCOPE_S;
+
 typedef struct KOS_AST_NODE_S {
     struct KOS_AST_NODE_S *next;
     struct KOS_AST_NODE_S *children;
     struct KOS_AST_NODE_S *last_child;
+    struct KOS_VAR_S      *var;
+    struct KOS_SCOPE_S    *var_scope;
     KOS_TOKEN              token;
     KOS_NODE_TYPE          type;
+    int                    is_local_var;
 } KOS_AST_NODE;
 
 #endif

@@ -293,8 +293,8 @@ int kos_node_is_truthy(KOS_COMP_UNIT      *program,
 int kos_node_is_falsy(KOS_COMP_UNIT      *program,
                       const KOS_AST_NODE *node);
 
-int kos_compiler_process_vars(KOS_COMP_UNIT      *program,
-                              const KOS_AST_NODE *ast);
+int kos_compiler_process_vars(KOS_COMP_UNIT *program,
+                              KOS_AST_NODE  *ast);
 
 int kos_optimize(KOS_COMP_UNIT *program,
                  KOS_AST_NODE  *ast);

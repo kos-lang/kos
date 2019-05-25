@@ -291,62 +291,43 @@ static int _count_used_regs(KOS_COMP_UNIT *program)
 }
 #endif
 
-static int _lookup_local_var_even_inactive(KOS_COMP_UNIT   *program,
-                                           const KOS_TOKEN *token,
-                                           int              only_active,
-                                           KOS_REG        **reg)
+/* Lookup variable in local scopes.
+ * Arguments in registers, including ellipsis, are treated as local variables.
+ * Skip other arguments, globals and modules. */
+static int _lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
+                                           const KOS_AST_NODE *node,
+                                           int                 only_active,
+                                           KOS_REG           **reg)
 {
-    int        error = KOS_SUCCESS;
-    KOS_VAR   *var   = 0;
-    KOS_SCOPE *scope;
+    int error = KOS_SUCCESS;
 
-    /* Lookup variable in local scopes until we find the current function.
-     * Skip global scope, because it's handled by _lookup_var().
-     * Function scope holds arguments, not local variables, so skip it.
-     * Function scope is handled by _lookup_var() - arguments are accessed
-     * via the arguments array. */
-    for (scope = program->scope_stack; scope && scope->next && ! scope->is_function; scope = scope->next) {
+    if (node->is_local_var) {
 
-        var = kos_find_var(scope->vars, token);
+        KOS_VAR *var = node->var;
 
-        if (var && (var->is_active || ! only_active)) {
-            assert( ! (var->type & VAR_ARGUMENT));
+        if (var->type & VAR_LOCAL) {
 
-            if ( ! var->reg) {
-                error = _gen_reg(program, &var->reg);
-                if ( ! error)
-                    var->reg->tmp = 0;
+            assert(node->var_scope);
+
+            if (var == node->var_scope->ellipsis) {
+                assert(var->is_active);
+                assert(var->reg);
+                *reg = var->reg;
             }
+            else if (var->is_active || ! only_active) {
 
-            *reg = var->reg;
-            break;
+                if ( ! var->reg) {
+                    error = _gen_reg(program, &var->reg);
+                    if ( ! error)
+                        var->reg->tmp = 0;
+                }
+
+                *reg = var->reg;
+            }
         }
-
-        var = 0;
-    }
-
-    /* Lookup arguments in registers */
-    if ( ! var && scope && scope->is_function) {
-
-        var = kos_find_var(scope->vars, token);
-
-        if (var && (var->type & VAR_ARGUMENT_IN_REG)) {
-            assert(var->reg);
-            *reg = var->reg;
-        }
-        else
-            var = 0;
-    }
-
-    /* Access arguments list */
-    if ( ! var && scope && scope->is_function && scope->ellipsis) {
-
-        var = kos_find_var(scope->vars, token);
-        if (var != scope->ellipsis)
-            var = 0;
-
-        if (var) {
-            assert(var->is_active);
+        else if (var->type & VAR_ARGUMENT_IN_REG) {
+            assert(node->var_scope);
+            assert(node->var_scope->is_function);
             assert(var->reg);
             *reg = var->reg;
         }
@@ -355,42 +336,32 @@ static int _lookup_local_var_even_inactive(KOS_COMP_UNIT   *program,
     return error;
 }
 
-static int _lookup_local_var(KOS_COMP_UNIT   *program,
-                             const KOS_TOKEN *token,
-                             KOS_REG        **reg)
+static int _lookup_local_var(KOS_COMP_UNIT      *program,
+                             const KOS_AST_NODE *node,
+                             KOS_REG           **reg)
 {
-    return _lookup_local_var_even_inactive(program, token, 1, reg);
+    return _lookup_local_var_even_inactive(program, node, 1, reg);
 }
 
-static int _lookup_var(KOS_COMP_UNIT   *program,
-                       const KOS_TOKEN *token,
-                       KOS_VAR        **out_var,
-                       KOS_REG        **reg)
+static int _lookup_var(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *node,
+                       KOS_VAR           **out_var,
+                       KOS_REG           **reg)
 {
     KOS_VAR   *var          = 0;
-    KOS_SCOPE *scope        = kos_get_frame_scope(program);
+    KOS_SCOPE *scope        = 0;
     int        is_local_arg = 1;
     int        is_global    = 0;
 
-    /* Find variable in args, closures and globals */
-    for ( ; scope; scope = scope->next) {
-
-        var = kos_find_var(scope->vars, token);
-
-        if (var && var->is_active) {
-            /* Global scope */
-            if ( ! scope->next) {
-                assert(!scope->is_function);
-                is_local_arg = 0;
-                is_global    = 1;
-            }
-            break;
-        }
-
+    var = node->var;
+    if (var && ! var->is_active)
         var = 0;
 
-        /* We are dealing with a local argument only on the first loop. */
-        is_local_arg = 0;
+    if (var) {
+        scope        = node->var_scope;
+        is_global    = scope->next == 0;
+        is_local_arg = node->is_local_var &&
+                       ((var->type & VAR_ARGUMENT) || (var->type & VAR_ARGUMENT_IN_REG));
     }
 
     if (var) {
@@ -436,23 +407,23 @@ static int _lookup_var(KOS_COMP_UNIT   *program,
         }
     }
     else
-        program->error_token = token;
+        program->error_token = &node->token;
 
     return var ? KOS_SUCCESS : KOS_ERROR_INTERNAL;
 }
 
-static void lookup_module_var(KOS_COMP_UNIT   *program,
-                              const KOS_TOKEN *token,
-                              KOS_VAR        **out_var)
+static void lookup_module_var(KOS_COMP_UNIT      *program,
+                              const KOS_AST_NODE *node,
+                              KOS_VAR           **out_var)
 {
     KOS_REG *reg        = 0;
     KOS_VAR *module_var = 0;
 
-    (void)_lookup_local_var(program, token, &reg);
+    (void)_lookup_local_var(program, node, &reg);
 
     if (reg)
         _free_reg(program, reg);
-    else if ( ! _lookup_var(program, token, &module_var, 0)) {
+    else if ( ! _lookup_var(program, node, &module_var, 0)) {
         if (module_var->type == VAR_MODULE)
             *out_var = module_var;
     }
@@ -1921,7 +1892,7 @@ static int _for_in(KOS_COMP_UNIT      *program,
 
     if ( ! var_node->next) {
 
-        TRY(_lookup_local_var(program, &var_node->token, &item_reg));
+        TRY(_lookup_local_var(program, var_node, &item_reg));
         assert(item_reg);
     }
     else
@@ -1952,7 +1923,7 @@ static int _for_in(KOS_COMP_UNIT      *program,
 
             KOS_REG *var_reg = 0;
 
-            TRY(_lookup_local_var(program, &var_node->token, &var_reg));
+            TRY(_lookup_local_var(program, var_node, &var_reg));
             assert(var_reg);
 
             TRY(_gen_instr4(program, INSTR_CALL_FUN, var_reg->reg, value_iter_reg->reg, 255, 0));
@@ -2355,13 +2326,14 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
         assert(!variable->children);
         assert(!variable->next);
 
-        except_var = kos_find_var(program->scope_stack->vars, &variable->token);
+        except_var = variable->var;
         assert(except_var);
+        assert(except_var == kos_find_var(program->scope_stack->vars, &variable->token));
 
         assert(except_var->is_active == VAR_INACTIVE);
         except_var->is_active = VAR_ACTIVE;
 
-        TRY(_lookup_local_var(program, &variable->token, &except_reg));
+        TRY(_lookup_local_var(program, variable, &except_reg));
         assert(except_reg);
 
         except_var->is_active = VAR_INACTIVE;
@@ -2713,7 +2685,7 @@ static int _refinement(KOS_COMP_UNIT      *program,
     assert(node);
 
     if (node->type == NT_IDENTIFIER)
-        lookup_module_var(program, &node->token, &module_var);
+        lookup_module_var(program, node, &module_var);
 
     if (module_var) {
 
@@ -3905,7 +3877,7 @@ static int _assign_non_local(KOS_COMP_UNIT      *program,
 
     assert(node->type == NT_IDENTIFIER);
 
-    TRY(_lookup_var(program, &node->token, &var, &container_reg));
+    TRY(_lookup_var(program, node, &var, &container_reg));
 
     assert(var->type != VAR_LOCAL);
     assert(var->type != VAR_ARGUMENT_IN_REG);
@@ -4057,7 +4029,7 @@ static int _assignment(KOS_COMP_UNIT      *program,
                     assg_node->token.op == OT_SETADD ? CHECK_NUMERIC_OR_STRING : CHECK_NUMERIC));
 
         if (node->type == NT_IDENTIFIER)
-            TRY(_lookup_local_var_even_inactive(program, &node->token, is_lhs, &reg));
+            TRY(_lookup_local_var_even_inactive(program, node, is_lhs, &reg));
 
         if (reg && assg_node->token.op == OT_SET)
             rhs = reg;
@@ -4072,7 +4044,7 @@ static int _assignment(KOS_COMP_UNIT      *program,
     for ( ; node; node = node->next) {
 
         if ( ! reg && node->type == NT_IDENTIFIER)
-            TRY(_lookup_local_var_even_inactive(program, &node->token, is_lhs, &reg));
+            TRY(_lookup_local_var_even_inactive(program, node, is_lhs, &reg));
 
         if (reg) {
 
@@ -4217,7 +4189,7 @@ static int _identifier(KOS_COMP_UNIT      *program,
     int      error   = KOS_SUCCESS;
     KOS_REG *src_reg = 0;
 
-    TRY(_lookup_local_var(program, &node->token, &src_reg));
+    TRY(_lookup_local_var(program, node, &src_reg));
 
     if (src_reg)
         *reg = src_reg;
@@ -4229,7 +4201,7 @@ static int _identifier(KOS_COMP_UNIT      *program,
 
         TRY(_gen_reg(program, reg));
 
-        TRY(_lookup_var(program, &node->token, &var, &container_reg));
+        TRY(_lookup_var(program, node, &var, &container_reg));
 
         assert(var->type != VAR_LOCAL);
         assert(var->type != VAR_ARGUMENT_IN_REG);
@@ -4566,8 +4538,9 @@ static int _gen_function(KOS_COMP_UNIT      *program,
             KOS_AST_NODE *ident_node =
                 arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
 
-            var = kos_find_var(scope->vars, &ident_node->token);
+            var = ident_node->var;
             assert(var);
+            assert(var == kos_find_var(scope->vars, &ident_node->token));
 
             if (arg_node->type == NT_IDENTIFIER)
                 ++frame->num_non_def_args;
@@ -4844,9 +4817,10 @@ static int _function_literal(KOS_COMP_UNIT      *program,
         assert(name_node->children->type == NT_IDENTIFIER);
         assert(name_node->children->token.type == TT_IDENTIFIER);
 
-        fun_var = kos_find_var(program->scope_stack->vars, &name_node->children->token);
+        fun_var = name_node->children->var;
         assert(fun_var);
         assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
+        assert(fun_var == kos_find_var(program->scope_stack->vars, &name_node->children->token));
 
         if ((fun_var->type & VAR_LOCAL) && fun_var->is_active)
             fun_var->is_active = VAR_INACTIVE;

@@ -108,10 +108,13 @@ static void _promote(KOS_COMP_UNIT      *program,
                              kos_scope_compare_node);
     }
 
-    node->children   = child->children;
-    node->last_child = child->last_child;
-    node->token      = child->token;
-    node->type       = child->type;
+    node->children     = child->children;
+    node->last_child   = child->last_child;
+    node->var          = child->var;
+    node->var_scope    = child->var_scope;
+    node->token        = child->token;
+    node->type         = child->type;
+    node->is_local_var = child->is_local_var;
 }
 
 static int _get_nonzero(const KOS_TOKEN *token, int *non_zero)
@@ -162,61 +165,20 @@ static int _get_nonzero(const KOS_TOKEN *token, int *non_zero)
     return KOS_SUCCESS;
 }
 
-static void _lookup_var(KOS_COMP_UNIT   *program,
-                        const KOS_TOKEN *token,
-                        int              only_active,
-                        KOS_VAR        **out_var,
-                        int             *is_local)
+static void _lookup_var(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *node,
+                        int                 only_active,
+                        KOS_VAR           **out_var,
+                        int                *is_local)
 {
-    KOS_SCOPE *scope     = program->scope_stack;
-    KOS_SCOPE *fun_scope = 0;
-    KOS_VAR   *var       = 0;
+    KOS_VAR *var = node->var;
 
-    assert(scope);
-
-    for (scope = program->scope_stack; scope->next && ! scope->is_function; scope = scope->next) {
-
-        var = kos_find_var(scope->vars, token);
-
-        if (var && (var->is_active || ! only_active)) {
-            *out_var  = var;
-            *is_local = 1;
-            return;
-        }
+    if (only_active) {
+        assert(var->is_active);
     }
 
-    assert( ! scope->next || scope->is_function);
-
-    if (scope->is_function)
-        fun_scope = scope;
-
-    *is_local = 0;
-
-    if ( ! scope->next && ! only_active) {
-
-        var = kos_find_var(scope->vars, token);
-
-        if (var) {
-            *is_local = 1; /* This is global scope, but mark it as "local" access */
-            scope     = 0;
-        }
-    }
-
-    for ( ; scope; scope = scope->next) {
-
-        var = kos_find_var(scope->vars, token);
-
-        if (var && var->is_active) {
-            *is_local = scope == fun_scope || ! scope->next ? 1 : 0; /* current func's arguments are "local" */
-            break;
-        }
-
-        var = 0;
-    }
-
-    assert(var);
-
-    *out_var = var;
+    *out_var  = var;
+    *is_local = node->is_local_var;
 }
 
 const KOS_AST_NODE *kos_get_const(KOS_COMP_UNIT      *program,
@@ -228,7 +190,7 @@ const KOS_AST_NODE *kos_get_const(KOS_COMP_UNIT      *program,
     if ( ! node || node->type != NT_IDENTIFIER)
         return node;
 
-    _lookup_var(program, &node->token, 1, &var, &is_local);
+    _lookup_var(program, node, 1, &var, &is_local);
 
     return var->is_const ? var->value : 0;
 }
@@ -592,7 +554,7 @@ static int _try_stmt(KOS_COMP_UNIT *program,
         assert( ! var_node->next);
         assert(var_node->type == NT_IDENTIFIER);
 
-        _lookup_var(program, &var_node->token, 0, &var, &is_local);
+        _lookup_var(program, var_node, 0, &var, &is_local);
 
         assert(var);
         assert(var->is_active == VAR_INACTIVE);
@@ -738,9 +700,11 @@ static int _parameter_defaults(KOS_COMP_UNIT *program,
         assert(name_node->children->type == NT_IDENTIFIER);
         assert(name_node->children->token.type == TT_IDENTIFIER);
 
-        fun_var = kos_find_var(program->scope_stack->vars, &name_node->children->token);
+        fun_var = name_node->children->var;
         assert(fun_var);
         assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
+        assert(fun_var == kos_find_var(program->scope_stack->vars, &name_node->children->token));
+        assert( ! name_node->children->is_local_var);
 
         if ((fun_var->type & VAR_LOCAL) && fun_var->is_active)
             fun_var->is_active = VAR_INACTIVE;
@@ -803,7 +767,7 @@ static void _identifier(KOS_COMP_UNIT      *program,
     KOS_VAR *var;
     int      is_local;
 
-    _lookup_var(program, &node->token, 1, &var, &is_local);
+    _lookup_var(program, node, 1, &var, &is_local);
 
     ++var->num_reads;
 
@@ -859,7 +823,7 @@ static int _assignment(KOS_COMP_UNIT *program,
             KOS_VAR *var = 0;
             int      is_local;
 
-            _lookup_var(program, &node->token, is_lhs, &var, &is_local);
+            _lookup_var(program, node, is_lhs, &var, &is_local);
 
             if ( ! is_lhs) {
                 if (var->is_active == VAR_INACTIVE)
