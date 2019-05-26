@@ -124,7 +124,7 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
     KOS_OBJ_ID    thread_obj = KOS_BADPTR;
     int           pushed     = 0;
     int           error      = KOS_SUCCESS;
-    int           i;
+    uint32_t      i;
 
     if (KOS_push_locals(ctx, &pushed, 4, &thread_func, &this_obj, &args_obj, &thread_obj))
         return KOS_BADPTR;
@@ -163,8 +163,8 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
     }
 
     for (i = 0; ! error; ) {
-        const int size        = (int)KOS_get_array_size(inst->threads.threads);
-        const int num_threads = (int)KOS_atomic_read_relaxed_u32(inst->threads.num_threads);
+        const uint32_t size        = KOS_get_array_size(inst->threads.threads);
+        const uint32_t num_threads = KOS_atomic_read_relaxed_u32(inst->threads.num_threads);
 
         if (num_threads > inst->threads.max_threads) {
             KOS_raise_exception_cstring(ctx, "too many threads");
@@ -189,9 +189,9 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
 
             KOS_OBJ_ID prev;
 
-            OBJPTR(THREAD, thread_obj)->thread_idx = (uint32_t)i;
+            OBJPTR(THREAD, thread_obj)->thread_idx = i;
 
-            prev = KOS_array_cas(ctx, inst->threads.threads, i, KOS_VOID, thread_obj);
+            prev = KOS_array_cas(ctx, inst->threads.threads, (int)i, KOS_VOID, thread_obj);
 
             if (prev == KOS_VOID) {
                 KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&inst->threads.num_threads, 1);
