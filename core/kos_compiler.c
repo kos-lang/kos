@@ -2973,10 +2973,11 @@ static int _invocation(KOS_COMP_UNIT      *program,
                        unsigned            tail_closure_size)
 {
     int      error;
-    KOS_REG *obj   = 0;
-    KOS_REG *fun   = 0;
     KOS_REG *args;
-    int32_t  rdest = (int32_t)tail_closure_size;
+    KOS_REG *obj        = 0;
+    KOS_REG *fun        = 0;
+    int32_t  rdest      = (int32_t)tail_closure_size;
+    int      interp_str = node->type == NT_INTERPOLATED_STRING;
     int      num_contig_args;
 
     assert(tail_closure_size <= 255U);
@@ -2992,9 +2993,29 @@ static int _invocation(KOS_COMP_UNIT      *program,
 
     node = node->children;
 
-    TRY(_maybe_refinement(program, node, &fun, &obj));
+    if (interp_str) {
 
-    node = node->next;
+        static const char str_string[] = "stringify";
+        int               string_idx   = 0;
+
+        error = kos_comp_get_global_idx(program->ctx, 0, str_string, sizeof(str_string)-1,
+                                        &string_idx);
+        if (error) {
+            program->error_token = &node->token;
+            program->error_str   = str_err_no_such_module_variable;
+            RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+        }
+
+        TRY(_gen_reg(program, &fun));
+
+        TRY(_gen_instr3(program, INSTR_GET_MOD_ELEM, fun->reg, 0, string_idx));
+    }
+    else {
+
+        TRY(_maybe_refinement(program, node, &fun, &obj));
+
+        node = node->next;
+    }
 
     num_contig_args = _count_contig_arg_siblings(node);
 
@@ -4118,44 +4139,6 @@ cleanup:
     return error;
 }
 
-static int _interpolated_string(KOS_COMP_UNIT      *program,
-                                const KOS_AST_NODE *node,
-                                KOS_REG           **reg)
-{
-    int               error;
-    int               string_idx   = 0;
-    KOS_REG          *func_reg     = 0;
-    KOS_REG          *args         = *reg;
-    static const char str_string[] = "stringify";
-
-    error = kos_comp_get_global_idx(program->ctx, 0, str_string, sizeof(str_string)-1, &string_idx);
-    if (error) {
-        program->error_token = &node->token;
-        program->error_str   = str_err_no_such_module_variable;
-        RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
-    }
-
-    /* TODO use INSTR_CALL_FUN if possible, reuse portion of _invocation() */
-
-    TRY(_gen_array(program, node->children, &args));
-
-    if ( ! *reg)
-        *reg = args;
-
-    TRY(_gen_reg(program, &func_reg));
-
-    TRY(_gen_instr3(program, INSTR_GET_MOD_ELEM, func_reg->reg, 0, string_idx));
-
-    TRY(_gen_instr4(program, INSTR_CALL, (*reg)->reg, func_reg->reg, args->reg, args->reg));
-
-    _free_reg(program, func_reg);
-    if (args != *reg)
-        _free_reg(program, args);
-
-cleanup:
-    return error;
-}
-
 static int _expression_list(KOS_COMP_UNIT      *program,
                             const KOS_AST_NODE *node,
                             KOS_REG           **reg)
@@ -5234,6 +5217,8 @@ static int _visit_node(KOS_COMP_UNIT      *program,
             error = _slice(program, node, reg);
             break;
         case NT_INVOCATION:
+            /* fall through */
+        case NT_INTERPOLATED_STRING:
             error = _invocation(program, node, reg, INSTR_CALL, 0);
             break;
         case NT_OPERATOR:
@@ -5243,9 +5228,6 @@ static int _visit_node(KOS_COMP_UNIT      *program,
             /* fall through */
         case NT_MULTI_ASSIGNMENT:
             error = _assignment(program, node);
-            break;
-        case NT_INTERPOLATED_STRING:
-            error = _interpolated_string(program, node, reg);
             break;
         case NT_EXPRESSION_LIST:
             error = _expression_list(program, node, reg);
