@@ -383,6 +383,7 @@ static void clear_instance(KOS_INSTANCE *inst)
     inst->modules.load_chain              = 0;
     inst->threads.threads                 = KOS_BADPTR;
     inst->threads.num_threads             = 0;
+    inst->threads.max_threads             = KOS_MAX_THREADS;
     init_context(&inst->threads.main_thread, inst);
 }
 

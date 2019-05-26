@@ -166,14 +166,11 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
         const int size        = (int)KOS_get_array_size(inst->threads.threads);
         const int num_threads = (int)KOS_atomic_read_relaxed_u32(inst->threads.num_threads);
 
-        /* TODO add limit for the number of threads */
-#ifdef CONFIG_FUZZ
-        if (num_threads > 2) {
+        if (num_threads > inst->threads.max_threads) {
             KOS_raise_exception_cstring(ctx, "too many threads");
             error = KOS_ERROR_EXCEPTION;
             break;
         }
-#endif
 
         if (num_threads >= size) {
             error = KOS_array_resize(ctx, inst->threads.threads, size * 2U);

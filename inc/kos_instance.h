@@ -156,6 +156,7 @@ struct KOS_THREAD_MGMT_S {
     KOS_MUTEX                   mutex;       /* Mutex for registering threads   */
     KOS_ATOMIC(KOS_OBJ_ID)      threads;     /* Array of thread objects         */
     KOS_ATOMIC(uint32_t)        num_threads; /* Number of used thread slots     */
+    uint32_t                    max_threads; /* Maximum number of threads       */
 };
 
 enum KOS_STR_E {
