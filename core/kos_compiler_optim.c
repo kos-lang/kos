@@ -1491,6 +1491,28 @@ static int _stringify(KOS_COMP_UNIT       *program,
     }
 }
 
+static void remove_empty_strings(KOS_AST_NODE **node_ptr)
+{
+    unsigned num_children = 0;
+
+    while (*node_ptr) {
+
+        KOS_AST_NODE *node = *node_ptr;
+
+        if (node->type == NT_STRING_LITERAL && (node->next || num_children)) {
+            if ((node->token.type == TT_STRING      && node->token.length == 2) ||
+                (node->token.type == TT_STRING_OPEN && node->token.length == 3)) {
+
+                *node_ptr = node->next;
+                continue;
+            }
+        }
+
+        node_ptr = &node->next;
+        ++num_children;
+    }
+}
+
 static int _interpolated_string(KOS_COMP_UNIT *program,
                                 KOS_AST_NODE  *node)
 {
@@ -1530,7 +1552,11 @@ static int _interpolated_string(KOS_COMP_UNIT *program,
 
     assert(node->children);
 
-    if ( ! node->children->next)
+    remove_empty_strings(&node->children);
+
+    assert(node->children);
+
+    if ( ! node->children->next && node->children->type == NT_STRING_LITERAL)
         _promote(program, node, node->children);
 
 cleanup:
