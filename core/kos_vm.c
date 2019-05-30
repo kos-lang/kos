@@ -3046,8 +3046,16 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
                            call_flavor == KOS_CALL_GENERATOR ? INSTR_CALL_GEN : INSTR_CALL,
                            func_obj, this_obj, &state);
 
-        if (state == KOS_GEN_DONE)
+        if (state == KOS_GEN_DONE) {
+            if (call_flavor == KOS_CALL_GENERATOR &&
+                KOS_is_exception_pending(ctx) &&
+                _is_generator_end_exception(ctx)) {
+
+                KOS_clear_exception(ctx);
+            }
+
             ret = KOS_BADPTR;
+        }
     }
 
     KOS_pop_locals(ctx, pushed);

@@ -2870,6 +2870,11 @@ do {
         assert a + b + c == strings[i]
         i += 1
     }
+
+    const a = [ base.zip(base.range(2), "abc", base.range(10)) ... ]
+    assert a.size == 2
+    assert a[0] == [0, "a", 0]
+    assert a[1] == [1, "b", 1]
 }
 
 ##############################################################################
