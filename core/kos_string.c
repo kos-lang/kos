@@ -46,7 +46,7 @@ static const char str_err_invalid_string[]       = "invalid string";
 static const char str_err_invalid_utf8[]         = "invalid UTF-8 sequence";
 static const char str_err_not_array[]            = "object is not an array";
 static const char str_err_not_string[]           = "object is not a string";
-static const char str_err_null_pointer[]         = "null pointer";
+static const char str_err_null_ptr[]             = "null pointer";
 static const char str_err_too_many_repeats[]     = "repeated string too long";
 
 #ifdef CONFIG_STRING16
@@ -647,7 +647,7 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
                 new_str_id = KOS_BADPTR;
                 new_len    = 0;
                 KOS_raise_exception_cstring(ctx, IS_BAD_PTR(cur_str) ?
-                                            str_err_null_pointer : str_err_not_string);
+                                            str_err_null_ptr : str_err_not_string);
                 break;
             }
 
@@ -796,7 +796,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
-                                    str_err_null_pointer: str_err_not_string);
+                                    str_err_null_ptr: str_err_not_string);
     else {
         const KOS_STRING_FLAGS elem_size =
             kos_get_string_elem_size(OBJPTR(STRING, obj_id));
@@ -892,7 +892,7 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
-                                    str_err_null_pointer : str_err_not_string);
+                                    str_err_null_ptr : str_err_not_string);
     else {
         const KOS_STRING_FLAGS elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
         const int              len       = (int)OBJPTR(STRING, obj_id)->header.length;
@@ -947,7 +947,7 @@ unsigned KOS_string_get_char_code(KOS_CONTEXT ctx,
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
-                                    str_err_null_pointer : str_err_not_string);
+                                    str_err_null_ptr : str_err_not_string);
     else {
         KOS_STRING            *str       = OBJPTR(STRING, obj_id);
         const KOS_STRING_FLAGS elem_size = kos_get_string_elem_size(str);
