@@ -1097,10 +1097,9 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
         }
 
         case OBJ_FUNCTION: {
-            const KOS_FUNCTION_STATE state =
-                    (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, value)->state;
+            KOS_FUNCTION_STATE state;
 
-            if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE)
+            if ( ! KOS_is_generator(value, &state))
                 RAISE_EXCEPTION(str_err_cannot_expand);
 
             if (state != KOS_GEN_DONE) {
@@ -1312,4 +1311,18 @@ KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
                                KOS_OBJ_ID b)
 {
     return _compare(a, b, 0);
+}
+
+int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state)
+{
+    KOS_FUNCTION_STATE state;
+
+    assert(GET_OBJ_TYPE(fun_obj) == OBJ_FUNCTION || GET_OBJ_TYPE(fun_obj) == OBJ_CLASS);
+
+    state = (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, fun_obj)->state;
+
+    if (fun_state)
+        *fun_state = state;
+
+    return state == KOS_GEN_READY || state == KOS_GEN_ACTIVE || state == KOS_GEN_DONE;
 }

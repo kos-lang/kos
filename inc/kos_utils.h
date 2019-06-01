@@ -97,6 +97,8 @@ KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
 KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  full_path);
 
+int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state);
+
 #ifdef __cplusplus
 }
 #endif

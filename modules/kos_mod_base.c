@@ -948,10 +948,9 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
             }
 
             case OBJ_FUNCTION: {
-                const KOS_FUNCTION_STATE state =
-                        (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, arg)->state;
+                KOS_FUNCTION_STATE state;
 
-                if (state != KOS_GEN_READY && state != KOS_GEN_ACTIVE && state != KOS_GEN_DONE) {
+                if ( ! KOS_is_generator(arg, &state)) {
                     KOS_raise_exception_cstring(ctx, str_err_cannot_convert_to_buffer);
                     return KOS_BADPTR;
                 }
