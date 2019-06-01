@@ -733,7 +733,7 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
                                         TRY(KOS_array_resize(ctx, codes, 0));
                                     }
 
-                                    TRY(KOS_array_push(ctx, codes, TO_SMALL_INT(value), 0));
+                                    TRY(KOS_array_push(ctx, codes, TO_SMALL_INT((int)value), 0));
                                     break;
                                 }
 
