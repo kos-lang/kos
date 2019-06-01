@@ -501,6 +501,41 @@ do {
     expect_fail(()=>o.size)
 }
 
+do {
+    const s = base.string([0x30],                                     # "0"
+                          fun { yield 0x31; yield 0x32 } (),          # "12"
+                          fun { yield "a"; yield "b" } (),            # "ab"
+                          fun { if false { yield 0 } } (),            # nothing
+                          fun { yield base.buffer([0x33, 0x34]) } (), # "34"
+                          "x")
+    assert s == "012ab34x"
+}
+
+do {
+    const s = base.string(fun { yield 0x41; yield 0x42; yield 0x43 } ())
+    assert s == "ABC"
+}
+
+do {
+    const s = base.string(fun { yield [0x41]; yield [0x42]; yield [0x43] } ())
+    assert s == "ABC"
+}
+
+do {
+    const s = base.string(fun { yield 0x41; yield 0x42; yield "c" } ())
+    assert s == "ABc"
+}
+
+do {
+    expect_fail(() => base.string(fun { }))
+    expect_fail(() => base.string(fun { yield void }))
+    expect_fail(() => base.string(class { }))
+    expect_fail(() => base.string(fun { yield void } ()))
+    expect_fail(() => base.string(fun { yield true } ()))
+    expect_fail(() => base.string(fun { yield (fun { yield 0 } ()) } ()))
+    expect_fail(() => base.string(fun { throw void ; yield 0 } ()))
+}
+
 ##############################################################################
 # base.object
 

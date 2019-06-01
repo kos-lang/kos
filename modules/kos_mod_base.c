@@ -46,6 +46,7 @@ static const char str_err_cannot_convert_to_string[] = "unsupported type passed 
 static const char str_err_gen_not_callable[]         = "generator class is not not callable";
 static const char str_err_invalid_array_size[]       = "array size out of range";
 static const char str_err_invalid_byte_value[]       = "buffer element value out of range";
+static const char str_err_invalid_char_code[]        = "invalid character code";
 static const char str_err_invalid_buffer_size[]      = "buffer size out of range";
 static const char str_err_invalid_key_type[]         = "invalid key type, must be function or void";
 static const char str_err_invalid_pack_format[]      = "invalid pack format";
@@ -605,24 +606,31 @@ static KOS_OBJ_ID _boolean_constructor(KOS_CONTEXT ctx,
  *
  * If no arguments are provided, returns an empty string.
  *
- * Each argument can be a string, an integer, a float, an array or a buffer.
- * Any other argument type triggers an exception.
+ * For multiple arguments, constructs a string which is a concatenation of
+ * strings created from each argument.  The following argument types are
+ * supported:
  *
- * A string argument undergoes no conversion (concatenation still applies).
- *
- * An integer or a float argument is converted to a string by creating
- * a string which can be parsed back to that number.
- *
- * An array argument must contain numbers, which are unicode code points
- * in the range from 0 to 0x1FFFFF, inclusive.  Float numbers are converted
- * to integers using floor operation.  Any array elements which are not
- * numbers or exceed the above range trigger an exception.  The new string
- * created from the array contains characters corresponding to the specified
- * code points and the string length is equal to the length of the array.
- *
- * A buffer argument is treated as if contains an UTF-8 string and the
- * string is decoded from it.  Any errors in the UTF-8 sequence trigger
- * an exception.
+ *  * integer  - An integer is converted to its string representation.
+ *  * float    - An float is converted to its string representation.
+ *  * array    - The array must contain numbers from 0 to 0x1FFFFF, inclusive.
+ *               Float numbers are converted to integers using floor operation.
+ *               Any other types of array elements trigger an exception.  The
+ *               array's elements are code points from which a new string is
+ *               created.  The new string's length is equal to the length of
+ *               the array.
+ *  * string   - No conversion is performed.
+ *  * buffer   - A buffer is treated as an UTF-8 sequence and it is decoded
+ *               into a string.
+ *  * function - If the function is an iterator (a primed generator),
+ *               subsequent elements are obtained from it and added to the
+ *               string.  The acceptable types of values returned from the
+ *               iterator are: number from 0 to 0x1FFFFF inclusive, which
+ *               is treated as a code point, array of numbers from 0 to
+ *               0x1FFFFF, each treated as a code point, buffer treated
+ *               as a UTF-8 sequence and string.  All elements returned
+ *               by the iterator are concatenated in the order they are
+ *               returned.
+ *               If the function is not an iterator, an exception is thrown.
  *
  * The prototype of `string.prototype` is `object.prototype`.
  *
@@ -637,12 +645,15 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
                                       KOS_OBJ_ID  this_obj,
                                       KOS_OBJ_ID  args_obj)
 {
-    int            error    = KOS_SUCCESS;
-    int            pushed   = 0;
-    const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_ID     ret      = KOS_BADPTR;
+    int            error      = KOS_SUCCESS;
+    int            pushed     = 0;
+    const uint32_t num_args   = KOS_get_array_size(args_obj);
+    KOS_OBJ_ID     ret        = KOS_BADPTR;
+    KOS_OBJ_ID     obj        = KOS_BADPTR;
+    KOS_OBJ_ID     codes      = KOS_BADPTR;
+    KOS_OBJ_ID     substrings = KOS_BADPTR;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &args_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 5, &args_obj, &obj, &ret, &codes, &substrings));
 
     if (num_args == 0)
         ret = KOS_new_string(ctx, 0, 0);
@@ -652,7 +663,7 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
         uint32_t i;
 
         for (i = 0; i < num_args; i++) {
-            KOS_OBJ_ID obj = KOS_array_read(ctx, args_obj, (int)i);
+            obj = KOS_array_read(ctx, args_obj, (int)i);
             TRY_OBJID(obj);
 
             if (IS_NUMERIC_OBJ(obj))
@@ -670,6 +681,107 @@ static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
                 case OBJ_BUFFER:
                     obj = KOS_new_string_from_buffer(ctx, obj, 0, KOS_get_buffer_size(obj));
                     break;
+
+
+                case OBJ_FUNCTION: {
+                    KOS_FUNCTION_STATE state;
+
+                    if ( ! KOS_is_generator(obj, &state))
+                        RAISE_EXCEPTION(str_err_cannot_convert_to_string);
+
+                    if (IS_BAD_PTR(substrings)) {
+                        substrings = KOS_new_array(ctx, 32);
+                        TRY_OBJID(substrings);
+                    }
+
+                    TRY(KOS_array_resize(ctx, substrings, 0));
+
+                    if (state != KOS_GEN_DONE) {
+
+                        for (;;) {
+                            KOS_TYPE   type;
+                            KOS_OBJ_ID gen_args;
+
+                            gen_args = KOS_new_array(ctx, 0);
+                            TRY_OBJID(gen_args);
+
+                            ret = KOS_call_generator(ctx, obj, KOS_VOID, gen_args);
+                            if (IS_BAD_PTR(ret)) { /* end of iterator */
+                                if (KOS_is_exception_pending(ctx))
+                                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                                break;
+                            }
+
+                            type = GET_OBJ_TYPE(ret);
+
+                            switch (type) {
+
+                                case OBJ_SMALL_INTEGER:
+                                    /* fall through */
+                                case OBJ_INTEGER:
+                                    /* fall through */
+                                case OBJ_FLOAT: {
+                                    int64_t value;
+                                    TRY(KOS_get_integer(ctx, ret, &value));
+
+                                    if (value < 0 || value > 0x1FFFFF)
+                                        RAISE_EXCEPTION(str_err_invalid_char_code);
+
+                                    if (IS_BAD_PTR(codes)) {
+                                        codes = KOS_new_array(ctx, 128);
+                                        TRY_OBJID(codes);
+                                        TRY(KOS_array_resize(ctx, codes, 0));
+                                    }
+
+                                    TRY(KOS_array_push(ctx, codes, TO_SMALL_INT(value), 0));
+                                    break;
+                                }
+
+                                case OBJ_ARRAY:
+                                    /* fall through */
+                                case OBJ_STRING:
+                                    /* fall through */
+                                case OBJ_BUFFER:
+
+                                    if ( ! IS_BAD_PTR(codes) && KOS_get_array_size(codes)) {
+                                        KOS_OBJ_ID str = KOS_new_string_from_codes(ctx, codes);
+                                        TRY_OBJID(str);
+
+                                        TRY(KOS_array_push(ctx, substrings, str, 0));
+
+                                        TRY(KOS_array_resize(ctx, codes, 0));
+                                    }
+
+                                    if (type == OBJ_ARRAY) {
+                                        ret = KOS_new_string_from_codes(ctx, ret);
+                                        TRY_OBJID(ret);
+                                    }
+                                    else if (type == OBJ_BUFFER) {
+                                        ret = KOS_new_string_from_buffer(ctx, ret, 0, KOS_get_buffer_size(ret));
+                                        TRY_OBJID(ret);
+                                    }
+
+                                    TRY(KOS_array_push(ctx, substrings, ret, 0));
+                                    break;
+
+                                default:
+                                    RAISE_EXCEPTION(str_err_cannot_convert_to_string);
+                            }
+                        }
+
+                        if ( ! IS_BAD_PTR(codes) && KOS_get_array_size(codes)) {
+                            KOS_OBJ_ID str = KOS_new_string_from_codes(ctx, codes);
+                            TRY_OBJID(str);
+
+                            TRY(KOS_array_push(ctx, substrings, str, 0));
+
+                            TRY(KOS_array_resize(ctx, codes, 0));
+                        }
+
+                        obj = KOS_string_add(ctx, substrings);
+                    }
+                    break;
+                }
 
                 default:
                     RAISE_EXCEPTION(str_err_cannot_convert_to_string);
@@ -828,7 +940,7 @@ static KOS_OBJ_ID _array_constructor(KOS_CONTEXT ctx,
  * The second variant constructs a buffer from one or more non-numeric objects.
  * Each of these input arguments is converted to a buffer and the resulting
  * buffers are concatenated, producing the final buffer, which is returned
- * by the class.  The following input types are supported:
+ * by the class.  The following argument types are supported:
  *
  *  * array    - The array must contain numbers from 0 to 255 (floor operation
  *               is applied to floats).  Any other array elements trigger an

@@ -606,7 +606,7 @@ to 0.  If size is greater than 0, the buffer is filled with zeroes.
 The second variant constructs a buffer from one or more non-numeric objects.
 Each of these input arguments is converted to a buffer and the resulting
 buffers are concatenated, producing the final buffer, which is returned
-by the class.  The following input types are supported:
+by the class.  The following argument types are supported:
 
  * array    - The array must contain numbers from 0 to 255 (floor operation
               is applied to floats).  Any other array elements trigger an
@@ -1953,24 +1953,31 @@ and concatenating them.
 
 If no arguments are provided, returns an empty string.
 
-Each argument can be a string, an integer, a float, an array or a buffer.
-Any other argument type triggers an exception.
+For multiple arguments, constructs a string which is a concatenation of
+strings created from each argument.  The following argument types are
+supported:
 
-A string argument undergoes no conversion (concatenation still applies).
-
-An integer or a float argument is converted to a string by creating
-a string which can be parsed back to that number.
-
-An array argument must contain numbers, which are unicode code points
-in the range from 0 to 0x1FFFFF, inclusive.  Float numbers are converted
-to integers using floor operation.  Any array elements which are not
-numbers or exceed the above range trigger an exception.  The new string
-created from the array contains characters corresponding to the specified
-code points and the string length is equal to the length of the array.
-
-A buffer argument is treated as if contains an UTF-8 string and the
-string is decoded from it.  Any errors in the UTF-8 sequence trigger
-an exception.
+ * integer  - An integer is converted to its string representation.
+ * float    - An float is converted to its string representation.
+ * array    - The array must contain numbers from 0 to 0x1FFFFF, inclusive.
+              Float numbers are converted to integers using floor operation.
+              Any other types of array elements trigger an exception.  The
+              array's elements are code points from which a new string is
+              created.  The new string's length is equal to the length of
+              the array.
+ * string   - No conversion is performed.
+ * buffer   - A buffer is treated as an UTF-8 sequence and it is decoded
+              into a string.
+ * function - If the function is an iterator (a primed generator),
+              subsequent elements are obtained from it and added to the
+              string.  The acceptable types of values returned from the
+              iterator are: number from 0 to 0x1FFFFF inclusive, which
+              is treated as a code point, array of numbers from 0 to
+              0x1FFFFF, each treated as a code point, buffer treated
+              as a UTF-8 sequence and string.  All elements returned
+              by the iterator are concatenated in the order they are
+              returned.
+              If the function is not an iterator, an exception is thrown.
 
 The prototype of `string.prototype` is `object.prototype`.
 
