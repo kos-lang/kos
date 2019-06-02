@@ -73,6 +73,8 @@ typedef struct sigaction signal_handler;
 #define install_ctrlc_signal(handler, old_action) do {                   \
     signal_handler sa;                                                   \
     sa.sa_handler = (handler);                                           \
+    sa.sa_flags   = 0;                                                   \
+    sigemptyset(&sa.sa_mask);                                            \
     sigaction(SIGINT, &sa, (old_action)); /* TODO handle return value */ \
 } while (0)
 
