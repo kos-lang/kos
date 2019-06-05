@@ -242,6 +242,19 @@ do {
     }
 }
 
+do {
+    const b = buffer(10, 15)
+    assert b.size == 10
+    for var i = 0; i < 10; i += 1 {
+        assert b[i] == 15
+    }
+}
+
+do {
+    expect_fail(()=>buffer(10, -1))
+    expect_fail(()=>buffer(10, 256))
+}
+
 ##############################################################################
 # base.buffer.prototype.size
 

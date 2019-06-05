@@ -595,13 +595,15 @@ Examples:
 buffer()
 --------
 
-    buffer(size = 0)
+    buffer(size = 0, value = 0)
     buffer(args...)
 
 Buffer type class.
 
 The first variant constructs a buffer of the specified size.  `size` defaults
-to 0.  If size is greater than 0, the buffer is filled with zeroes.
+to 0.  `value` is the value to fill the buffer with is `size` is greater than
+0.  `value` must be a number from 0 to 255 (floor operation is applied to
+floats), it defaults to 0 if it's not specified.
 
 The second variant constructs a buffer from one or more non-numeric objects.
 Each of these input arguments is converted to a buffer and the resulting

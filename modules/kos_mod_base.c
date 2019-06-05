@@ -929,13 +929,15 @@ static KOS_OBJ_ID _array_constructor(KOS_CONTEXT ctx,
 
 /* @item base buffer()
  *
- *     buffer(size = 0)
+ *     buffer(size = 0, value = 0)
  *     buffer(args...)
  *
  * Buffer type class.
  *
  * The first variant constructs a buffer of the specified size.  `size` defaults
- * to 0.  If size is greater than 0, the buffer is filled with zeroes.
+ * to 0.  `value` is the value to fill the buffer with is `size` is greater than
+ * 0.  `value` must be a number from 0 to 255 (floor operation is applied to
+ * floats), it defaults to 0 if it's not specified.
  *
  * The second variant constructs a buffer from one or more non-numeric objects.
  * Each of these input arguments is converted to a buffer and the resulting
@@ -995,18 +997,31 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
         arg = KOS_array_read(ctx, args_obj, (int)i_arg);
         TRY_OBJID(arg);
 
-        if (i_arg == 0 && num_args == 1 && IS_NUMERIC_OBJ(arg)) {
-            int64_t value;
+        if (i_arg == 0 && num_args < 3 && IS_NUMERIC_OBJ(arg)) {
+            int64_t size;
+            int64_t value = 0;
 
-            TRY(KOS_get_integer(ctx, arg, &value));
+            TRY(KOS_get_integer(ctx, arg, &size));
 
-            if (value < 0 || value > INT_MAX)
+            if (size < 0 || size > INT_MAX)
                 RAISE_EXCEPTION(str_err_invalid_buffer_size);
 
-            if (value) {
-                TRY(KOS_buffer_resize(ctx, buffer, (uint32_t)value));
+            if (num_args == 2) {
+                arg = KOS_array_read(ctx, args_obj, 1);
+                TRY_OBJID(arg);
 
-                memset(KOS_buffer_data(buffer), 0, (size_t)value);
+                TRY(KOS_get_integer(ctx, arg, &value));
+
+                if (value < 0 || value > 255)
+                    RAISE_EXCEPTION(str_err_cannot_convert_to_buffer);
+
+                ++i_arg;
+            }
+
+            if (size) {
+                TRY(KOS_buffer_resize(ctx, buffer, (uint32_t)size));
+
+                memset(KOS_buffer_data(buffer), (int)value, (size_t)size);
             }
 
             continue;
