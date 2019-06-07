@@ -41,6 +41,7 @@ static const char str_err_already_joined[]           = "thread already joined";
 static const char str_err_args_not_array[]           = "function arguments are not an array";
 static const char str_err_bad_number[]               = "number parse failed";
 static const char str_err_bad_pack_value[]           = "invalid value type for pack format";
+static const char str_err_cannot_convert_to_array[]  = "unsupported type passed to array class";
 static const char str_err_cannot_convert_to_buffer[] = "unsupported type passed to buffer class";
 static const char str_err_cannot_convert_to_string[] = "unsupported type passed to string class";
 static const char str_err_gen_not_callable[]         = "generator class is not not callable";
@@ -902,13 +903,53 @@ static KOS_OBJ_ID _object_constructor(KOS_CONTEXT ctx,
     return KOS_new_object(ctx);
 }
 
+static int make_room_in_array(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID *array_obj_ptr,
+                              uint32_t    size)
+{
+    if (size) {
+
+        KOS_OBJ_ID array_obj = *array_obj_ptr;
+
+        if (IS_BAD_PTR(array_obj)) {
+
+            array_obj = KOS_new_array(ctx, size);
+            if (IS_BAD_PTR(array_obj))
+                return KOS_ERROR_EXCEPTION;
+
+            *array_obj_ptr = array_obj;
+        }
+        else
+            return KOS_array_resize(ctx, array_obj, KOS_get_array_size(array_obj) + size);
+    }
+
+    return KOS_SUCCESS;
+}
+
 /* @item base array()
  *
- *     array([element, ...])
+ *     array(size = 0, value = void)
+ *     array(arg, ...)
  *
  * Array type class.
  *
- * Creates an array from arguments.
+ * The first variant constructs an array of the specified size.  `size` defaults
+ * to 0.  `value` is the value to fill the array with if `size` is greater than
+ * 0.
+ *
+ * The second variant constructs an from one or more non-numeric objects.
+ * Each of these input arguments is converted to an array and the resulting
+ * arrays are concatenated, producing the final array, which is returned
+ * by the class.  The following argument types are supported:
+ *
+ *  * array    - The array is simply appended to the new array without conversion.
+ *               This can be used to make a copy of an array.
+ *  * string   - All characters in the string are converted to code points (integers)
+ *               and then each code point is subsequently appended to the new array.
+ *  * buffer   - Buffer's bytes are appended to the new array as integers.
+ *  * function - If the function is an iterator (a primed generator), subsequent
+ *               elements are obtained from it and appended to the array.
+ *               For non-iterator functions an exception is thrown.
  *
  * The prototype of `array.prototype` is `object.prototype`.
  *
@@ -916,11 +957,11 @@ static KOS_OBJ_ID _object_constructor(KOS_CONTEXT ctx,
  *
  *     > array()
  *     []
- *     > array(1, 2, 3)
- *     [1, 2, 3]
+ *     > array(3, "abc")
+ *     ["abc", "abc", "abc"]
  *     > array("hello")
- *     ["hello"]
- *     > array(range(5)...)
+ *     [104, 101, 108, 108, 111]
+ *     > array(range(5))
  *     [0, 1, 2, 3, 4]
  *     > array(shallow({one: 1, two: 2, three: 3})...)
  *     [["one", 1], ["two", 2], ["three", 3]]
@@ -929,13 +970,183 @@ static KOS_OBJ_ID _array_constructor(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  this_obj,
                                      KOS_OBJ_ID  args_obj)
 {
-    return args_obj;
+    int            error     = KOS_SUCCESS;
+    const uint32_t num_args  = KOS_get_array_size(args_obj);
+    uint32_t       i_arg     = 0;
+    uint32_t       cur_size  = 0;
+    int            pushed    = 0;
+    KOS_OBJ_ID     new_array = KOS_BADPTR;
+    KOS_OBJ_ID     arg       = KOS_BADPTR;
+    KOS_OBJ_ID     gen_args  = KOS_BADPTR;
+
+    if (num_args == 0)
+        return KOS_new_array(ctx, 0);
+
+    TRY(KOS_push_locals(ctx, &pushed, 4, &args_obj, &new_array, &arg, &gen_args));
+
+    arg = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(arg);
+
+    if (num_args < 3 && IS_NUMERIC_OBJ(arg)) {
+
+        int64_t size;
+
+        TRY(KOS_get_integer(ctx, arg, &size));
+
+        if (size < 0 || size > INT_MAX)
+            RAISE_EXCEPTION(str_err_invalid_array_size);
+
+        if (num_args == 2) {
+            arg = KOS_array_read(ctx, args_obj, 1);
+            TRY_OBJID(arg);
+
+            ++i_arg;
+        }
+
+        assert(IS_BAD_PTR(new_array));
+
+        new_array = KOS_new_array(ctx, (uint32_t)size);
+        TRY_OBJID(new_array);
+
+        if (size && num_args == 2)
+            TRY(KOS_array_fill(ctx, new_array, 0, size, arg));
+
+        return new_array;
+    }
+
+    do {
+
+        if (i_arg) {
+            arg = KOS_array_read(ctx, args_obj, (int)i_arg);
+            TRY_OBJID(arg);
+        }
+
+        switch (GET_OBJ_TYPE(arg)) {
+
+            case OBJ_ARRAY: {
+                const uint32_t src_size = KOS_get_array_size(arg);
+
+                if (src_size) {
+
+                    TRY(make_room_in_array(ctx, &new_array, src_size));
+
+                    TRY(KOS_array_insert(ctx, new_array, cur_size, cur_size + src_size,
+                                         arg, 0, src_size));
+
+                    cur_size += src_size;
+                }
+                break;
+            }
+
+            case OBJ_STRING: {
+                const uint32_t str_size = KOS_get_string_length(arg);
+
+                if (str_size) {
+
+                    uint32_t i;
+
+                    TRY(make_room_in_array(ctx, &new_array, str_size));
+
+                    for (i = 0; i < str_size; i++) {
+
+                        const unsigned code = KOS_string_get_char_code(ctx, arg, i);
+
+                        KOS_OBJ_ID value = KOS_new_int(ctx, (int64_t)code);
+                        TRY_OBJID(value);
+
+                        TRY(KOS_array_write(ctx, new_array, cur_size + i, value));
+                    }
+
+                    cur_size += str_size;
+                }
+                break;
+            }
+
+            case OBJ_BUFFER: {
+                const uint32_t buf_size = KOS_get_buffer_size(arg);
+
+                if (buf_size) {
+
+                    uint32_t i;
+
+                    TRY(make_room_in_array(ctx, &new_array, buf_size));
+
+                    for (i = 0; i < buf_size; i++) {
+
+                        const uint8_t value = KOS_buffer_data(arg)[i];
+
+                        TRY(KOS_array_write(ctx, new_array,
+                                            cur_size + i, TO_SMALL_INT((int)value)));
+                    }
+
+                    cur_size += buf_size;
+                }
+                break;
+            }
+
+            /* TODO OBJ_OBJECT */
+
+            case OBJ_FUNCTION: {
+                KOS_FUNCTION_STATE state;
+
+                if ( ! KOS_is_generator(arg, &state)) {
+                    KOS_raise_exception_cstring(ctx, str_err_cannot_convert_to_array);
+                    return KOS_BADPTR;
+                }
+
+                if (state != KOS_GEN_DONE) {
+
+                    gen_args = KOS_new_array(ctx, 0);
+                    TRY_OBJID(gen_args);
+
+                    for (;;) {
+
+                        KOS_OBJ_ID ret = KOS_call_generator(ctx, arg, KOS_VOID, gen_args);
+                        if (IS_BAD_PTR(ret)) { /* end of iterator */
+                            if (KOS_is_exception_pending(ctx))
+                                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                            break;
+                        }
+
+                        if (IS_BAD_PTR(new_array)) {
+                            kos_track_refs(ctx, 1, &ret);
+                            new_array = KOS_new_array(ctx, 1);
+                            kos_untrack_refs(ctx, 1);
+                            TRY_OBJID(new_array);
+
+                            TRY(KOS_array_write(ctx, new_array, 0, ret));
+                        }
+                        else
+                            TRY(KOS_array_push(ctx, new_array, ret, 0));
+
+                        ++cur_size;
+                    }
+                }
+                break;
+            }
+
+            default:
+                KOS_raise_exception_cstring(ctx, str_err_cannot_convert_to_array);
+                return KOS_BADPTR;
+        }
+
+        ++i_arg;
+
+    } while (i_arg < num_args);
+
+    if ( ! cur_size) {
+        assert(IS_BAD_PTR(new_array));
+        new_array = KOS_new_array(ctx, 0);
+    }
+
+cleanup:
+    return error ? KOS_BADPTR : new_array;
 }
 
 /* @item base buffer()
  *
  *     buffer(size = 0, value = 0)
- *     buffer(args...)
+ *     buffer(arg, ...)
  *
  * Buffer type class.
  *

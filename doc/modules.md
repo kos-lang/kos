@@ -45,7 +45,6 @@ Table of Contents
     * [eol](#eol)
     * [exception()](#exception)
       * [exception.prototype.print()](#exceptionprototypeprint)
-    * [expand()](#expand)
     * [filter()](#filter)
     * [float()](#float)
     * [function()](#function)
@@ -257,11 +256,28 @@ Examples:
 array()
 -------
 
-    array([element, ...])
+    array(size = 0, value = void)
+    array(arg, ...)
 
 Array type class.
 
-Creates an array from arguments.
+The first variant constructs an array of the specified size.  `size` defaults
+to 0.  `value` is the value to fill the array with if `size` is greater than
+0.
+
+The second variant constructs an from one or more non-numeric objects.
+Each of these input arguments is converted to an array and the resulting
+arrays are concatenated, producing the final array, which is returned
+by the class.  The following argument types are supported:
+
+ * array    - The array is simply appended to the new array without conversion.
+              This can be used to make a copy of an array.
+ * string   - All characters in the string are converted to code points (integers)
+              and then each code point is subsequently appended to the new array.
+ * buffer   - Buffer's bytes are appended to the new array as integers.
+ * function - If the function is an iterator (a primed generator), subsequent
+              elements are obtained from it and appended to the array.
+              For non-iterator functions an exception is thrown.
 
 The prototype of `array.prototype` is `object.prototype`.
 
@@ -269,11 +285,11 @@ Examples:
 
     > array()
     []
-    > array(1, 2, 3)
-    [1, 2, 3]
+    > array(3, "abc")
+    ["abc", "abc", "abc"]
     > array("hello")
-    ["hello"]
-    > array(range(5)...)
+    [104, 101, 108, 108, 111]
+    > array(range(5))
     [0, 1, 2, 3, 4]
     > array(shallow({one: 1, two: 2, three: 3})...)
     [["one", 1], ["two", 2], ["three", 3]]
@@ -596,7 +612,7 @@ buffer()
 --------
 
     buffer(size = 0, value = 0)
-    buffer(args...)
+    buffer(arg, ...)
 
 Buffer type class.
 
@@ -1094,23 +1110,6 @@ exception.prototype.print()
     exception.prototype.print()
 
 Prints the exception object on stdout.
-
-expand()
---------
-
-    expand(iterable)
-
-Creates an array containing elements from the `iterable` object.
-
-This function is useful with the `->` operator when normal array expansion
-cannot be used.
-
-Examples:
-
-    > range(3) -> expand
-    [0, 1, 2]
-    > "abc" -> expand
-    ["a", "b", "c"]
 
 filter()
 --------

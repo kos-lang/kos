@@ -707,42 +707,68 @@ do {
 do {
     const a = base.array(1)
     assert a.size == 1
-    assert a[0]   == 1
+    assert a[0]   == void
 }
 
 do {
-    const a = base.array(-1)
-    assert a.size == 1
-    assert a[0] == -1
+    const a = base.array(5)
+    assert a.size == 5
+    assert a[0]   == void
+    assert a[1]   == void
+    assert a[2]   == void
+    assert a[3]   == void
+    assert a[4]   == void
+}
+
+do {
+    const a = base.array(4, 72.5)
+    assert a.size == 4
+    assert a[0]   == 72.5
+    assert a[1]   == 72.5
+    assert a[2]   == 72.5
+    assert a[3]   == 72.5
+}
+
+do {
+    expect_fail(()=>base.array(-1))
+    expect_fail(()=>base.array(1, 1, 0))
 }
 
 do {
     const a = base.array([8])
     assert typeof a    == "array"
     assert a.size      == 1
-    assert typeof a[0] == "array"
-    assert a[0].size   == 1
-    assert a[0][0]     == 8
+    assert typeof a[0] == "integer"
+    assert a[0]        == 8
     expect_fail(()=>a[1])
 }
 
 do {
-    const a = base.array("xy", true)
+    const a = base.array("ab", base.buffer([100, 101]))
     assert typeof a == "array"
-    assert a.size   == 2
-    assert a[0]     == "xy"
-    assert a[1]     == true
-    expect_fail(()=>a[2])
+    assert a.size   == 4
+    assert a[0]     == 0x61
+    assert a[1]     == 0x62
+    assert a[2]     == 100
+    assert a[3]     == 101
+    expect_fail(()=>a[4])
+}
+
+do {
+    const a = base.array("", base.buffer(0), "", [])
+    assert typeof a == "array"
+    assert a.size   == 0
 }
 
 do {
     const a = base.array(2.1)
-    assert a.size == 1
-    assert a[0]   == 2.1
+    assert a.size == 2
+    assert a[0]   == void
+    assert a[1]   == void
 }
 
 do {
-    const a = base.array(base.range(4)...)
+    const a = base.array(base.range(4))
     assert typeof a == "array"
     assert a.size   == 4
     for var i = 0; i < 4; i += 1 {
@@ -751,7 +777,7 @@ do {
 }
 
 do {
-    const a = base.array(base.shallow({a: void, b: void, c: void})...)
+    const a = base.array(base.shallow({a: void, b: void, c: void}))
     assert typeof a == "array"
     assert a.size   == 3
     const had = { "a": false, "b": false, "c": false }
@@ -761,6 +787,25 @@ do {
         assert ! had[key]
         had[key] = true
     }
+}
+
+do {
+    fun gen
+    {
+        yield "abc"
+        yield 10.25
+        yield -8
+        yield true
+        yield ["x", 2]
+    }
+
+    const a = base.array(gen())
+    assert a.size == 5
+    assert a[0]   == "abc"
+    assert a[1]   == 10.25
+    assert a[2]   == -8
+    assert a[3]   == true
+    assert a[4]   == ["x", 2]
 }
 
 do {
@@ -782,7 +827,7 @@ do {
 }
 
 do {
-    const a = base.array([10, 20]..., [30]...)
+    const a = base.array([10, 20], [30])
     assert a.size == 3
     assert a[0]     == 10
     assert a[1]     == 20
@@ -808,7 +853,7 @@ do {
 
 do {
     const a = [1, 2, 100]
-    const b = base.array.apply(void, a)
+    const b = base.array.apply(void, [a])
     assert typeof b == "array"
     assert b        == a
     assert b.size   == a.size
@@ -842,7 +887,7 @@ do {
         buf[i] = i + 20
     }
 
-    const a = base.array(buf...)
+    const a = base.array(buf)
 
     assert a.size == 10
 
@@ -858,9 +903,7 @@ do {
     const a = base.array(base.buffer())
 
     assert typeof a    == "array"
-    assert a.size      == 1
-    assert typeof a[0] == "buffer"
-    assert a[0].size   == 0
+    assert a.size      == 0
 }
 
 do {
@@ -1801,11 +1844,11 @@ do {
         return base[type].apply(void, args)
     }
 
-    const a = new_type("array", "xy"..., 2)
+    const a = new_type("array", "xy", [2])
     assert typeof a == "array"
     assert a.size   == 3
-    assert a[0]     == "x"
-    assert a[1]     == "y"
+    assert a[0]     == "x".code()
+    assert a[1]     == "y".code()
     assert a[2]     == 2
 
     const i = new_type("integer")

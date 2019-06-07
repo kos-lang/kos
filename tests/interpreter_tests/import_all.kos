@@ -22,7 +22,7 @@
 import base . *
 
 do {
-    const a = array(range(10)...)
+    const a = array("abcdefghij")
     assert typeof a == "array"
     assert a.size   == 10
 
