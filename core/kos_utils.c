@@ -746,6 +746,7 @@ static int _vector_append_object(KOS_CONTEXT ctx,
 {
     int        error     = KOS_SUCCESS;
     KOS_OBJ_ID walk;
+    KOS_OBJ_ID value     = KOS_BADPTR;
     uint32_t   num_elems = 0;
     int        pushed    = 0;
 
@@ -754,7 +755,7 @@ static int _vector_append_object(KOS_CONTEXT ctx,
     walk = KOS_new_object_walk(ctx, obj_id, KOS_SHALLOW);
     TRY_OBJID(walk);
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &walk));
+    TRY(KOS_push_locals(ctx, &pushed, 2, &walk, &value));
 
     TRY(kos_append_cstr(ctx, cstr_vec, str_object_open, sizeof(str_object_open)-1));
 
@@ -770,7 +771,27 @@ static int _vector_append_object(KOS_CONTEXT ctx,
 
         TRY(kos_append_cstr(ctx, cstr_vec, str_object_colon, sizeof(str_object_colon)-1));
 
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, KOS_get_walk_value(walk), KOS_QUOTE_STRINGS, 0, cstr_vec));
+        value = KOS_get_walk_value(walk);
+        assert( ! IS_BAD_PTR(value));
+
+        if (GET_OBJ_TYPE(value) == OBJ_DYNAMIC_PROP) {
+
+            KOS_OBJ_ID args = KOS_new_array(ctx, 0);
+            TRY_OBJID(args);
+
+            value = KOS_call_function(ctx,
+                                      OBJPTR(DYNAMIC_PROP, value)->getter,
+                                      OBJPTR(OBJECT_WALK, walk)->obj,
+                                      args);
+            if (IS_BAD_PTR(value)) {
+                assert(KOS_is_exception_pending(ctx));
+                KOS_clear_exception(ctx);
+
+                value = OBJPTR(DYNAMIC_PROP, KOS_get_walk_value(walk))->getter;
+            }
+        }
+
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, value, KOS_QUOTE_STRINGS, 0, cstr_vec));
 
         ++num_elems;
     }

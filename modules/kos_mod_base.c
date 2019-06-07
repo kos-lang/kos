@@ -199,7 +199,12 @@ static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                  ctx,
                                           OBJPTR(DYNAMIC_PROP, value)->getter,
                                           OBJPTR(OBJECT_WALK, walk)->obj,
                                           args);
-                TRY_OBJID(value);
+                if (IS_BAD_PTR(value)) {
+                    assert(KOS_is_exception_pending(ctx));
+                    KOS_clear_exception(ctx);
+
+                    value = OBJPTR(DYNAMIC_PROP, KOS_get_walk_value(walk))->getter;
+                }
             }
 
             TRY(KOS_array_write(ctx, array, 0, KOS_get_walk_key(walk)));
