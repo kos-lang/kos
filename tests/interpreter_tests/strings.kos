@@ -19,19 +19,12 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-import base: print, stringify
 
-fun expect_fail(function)
-{
-    var failed = false
-    try {
-        function()
-    }
-    catch const e {
-        failed = true
-    }
-    assert failed
-}
+import base: print, stringify
+import base
+import test_tools.expect_fail
+
+##############################################################################
 
 do {
     const str = "\0a\x0a\x{0}\x{80}\x{ffFFff}"
@@ -587,4 +580,184 @@ do {
         == stringify(2555555555555555555555551555555555555555555555555555555555555.57)
     assert "\(2555555555555555555555551555555555555555555555555555555555555.57)"
         == "\((x => x) (2555555555555555555555551555555555555555555555555555555555555.57) )"
+}
+
+##############################################################################
+# base.string
+
+do {
+    assert typeof base.string           == "class"
+    assert typeof base.string.prototype == "object"
+    assert base.string instanceof base.function
+    assert base.string instanceof base.class
+}
+
+do {
+    assert base.string()             == ""
+    assert base.string(123)          == "123"
+    assert base.string("x", 5, "z")  == "x5z"
+    assert base.string()             == ""
+    assert base.string(8)            == "8"
+    assert base.string([], [])       == ""
+    assert base.string([0x30, 0x41]) == "0A"
+    assert base.string([0x100, 2])   == "\x{100}\x02"
+
+    expect_fail(()=>base.string([void]))
+    expect_fail(()=>base.string({}))
+    expect_fail(()=>base.string(void))
+    expect_fail(()=>base.string(false))
+    expect_fail(()=>base.string(()=>void))
+    expect_fail(()=>base.string([0x200000]))
+    expect_fail(()=>base.string([-1]))
+}
+
+do {
+    const elements = [0x1FFFFF, 1, 2, 3, 4, 5]
+    const s        = base.string(elements)
+    const size     = s.size
+    assert typeof s == "string"
+    assert size     == elements.size
+    for var i = 0; i < size; i += 1 {
+        assert s.code(i) == elements[i]
+    }
+}
+
+do {
+    const elements = [0x1FFFFF, 1, 2, 3, 4, 5, 6]
+    const s        = base.string(elements)
+    const size     = s.size
+    assert typeof s == "string"
+    assert size     == elements.size
+    for var i = 0; i < size; i += 1 {
+        assert s.code(i) == elements[i]
+    }
+}
+
+do {
+    expect_fail(()=>"x".add_2("y"))
+    base.string.prototype.add_2 = x => this + x
+    assert "x".add_2("y") == "xy"
+}
+
+do {
+    const str = "123"
+    assert str instanceof base.string
+    assert str == "123"
+
+    assert "x\(1)y" instanceof base.string
+}
+
+do {
+    const value = (()=>"abc")()
+    assert value instanceof base.string
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.boolean)
+}
+
+do {
+    class ctor { }
+
+    ctor.prototype = base.string.prototype
+
+    const o = ctor()
+
+    expect_fail(()=>o.size)
+}
+
+do {
+    const s = base.string([0x30],                                     # "0"
+                          fun { yield 0x31; yield 0x32 } (),          # "12"
+                          fun { yield "a"; yield "b" } (),            # "ab"
+                          fun { if false { yield 0 } } (),            # nothing
+                          fun { yield base.buffer([0x33, 0x34]) } (), # "34"
+                          "x")
+    assert s == "012ab34x"
+}
+
+do {
+    const s = base.string(fun { yield 0x41; yield 0x42; yield 0x43 } ())
+    assert s == "ABC"
+}
+
+do {
+    const s = base.string(fun { yield [0x41]; yield [0x42]; yield [0x43] } ())
+    assert s == "ABC"
+}
+
+do {
+    const s = base.string(fun { yield 0x41; yield 0x42; yield "c" } ())
+    assert s == "ABc"
+}
+
+do {
+    expect_fail(() => base.string(fun { }))
+    expect_fail(() => base.string(fun { yield void }))
+    expect_fail(() => base.string(class { }))
+    expect_fail(() => base.string(fun { yield void } ()))
+    expect_fail(() => base.string(fun { yield true } ()))
+    expect_fail(() => base.string(fun { yield (fun { yield 0 } ()) } ()))
+    expect_fail(() => base.string(fun { throw void ; yield 0 } ()))
+}
+
+##############################################################################
+# base.string.prototype.indices
+
+do {
+    const it = "".indices()
+    expect_fail(()=>it())
+}
+do {
+    const it = "abcd".indices()
+    assert it() == 0
+    assert it() == 1
+    assert it() == 2
+    assert it() == 3
+    expect_fail(()=>it())
+}
+
+##############################################################################
+# base.string.prototype.ljust
+
+do {
+    assert "abcd".ljust(3)      == "abcd"
+    assert "abcd".ljust(4)      == "abcd"
+    assert "abcd".ljust(5)      == "abcd "
+    assert "abcd".ljust(6, "x") == "abcdxx"
+
+    expect_fail(()=>"abcd".ljust())
+    expect_fail(()=>"abcd".ljust(1, ""))
+    expect_fail(()=>"abcd".ljust(1, "oo"))
+}
+
+##############################################################################
+# base.string.prototype.rjust
+
+do {
+    assert "abcd".rjust(3)      == "abcd"
+    assert "abcd".rjust(4)      == "abcd"
+    assert "abcd".rjust(5)      == " abcd"
+    assert "abcd".rjust(6, "x") == "xxabcd"
+
+    expect_fail(()=>"abcd".rjust())
+    expect_fail(()=>"abcd".rjust(1, ""))
+    expect_fail(()=>"abcd".rjust(1, "oo"))
+}
+
+##############################################################################
+# base.string.prototype.zfill
+
+do {
+    assert "abcd".zfill(3)      == "abcd"
+    assert "abcd".zfill(4)      == "abcd"
+    assert "abcd".zfill(5)      == "0abcd"
+    assert "abcd".zfill(6, "x") == "xxabcd"
+    assert "--a".zfill(4, "*")  == "-*-a"
+    assert "++b".zfill(5, "#")  == "+##+b"
+
+    expect_fail(()=>"abcd".zfill())
+    expect_fail(()=>"abcd".zfill(1, ""))
+    expect_fail(()=>"abcd".zfill(1, "oo"))
 }

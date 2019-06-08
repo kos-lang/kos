@@ -20,8 +20,11 @@
 # IN THE SOFTWARE.
 #
 
+import base
 import base.generator_end
 import test_tools.expect_fail
+
+##############################################################################
 
 do {
     fun no_work
@@ -1914,4 +1917,321 @@ do {
     assert o.a == 131
     assert o.b == 132
     assert o.c == 103
+}
+
+##############################################################################
+# Iterate over functions
+do {
+    fun func
+    {
+        return 42
+    }
+
+    class ctor {
+        constructor {
+            this.xyz = 42
+        }
+    }
+
+    fun gen
+    {
+        yield 1
+        yield 2
+    }
+
+    assert typeof func == "function"
+    assert typeof ctor == "class"
+    assert typeof gen  == "function"
+
+    assert func instanceof base.function
+    assert ctor instanceof base.class
+    assert gen  instanceof base.generator
+
+    const a = []
+    for const x in func {
+        a.push(x)
+    }
+    assert a.size == 1
+    assert a[0] == func
+
+    a.resize(0)
+    for const x in func() {
+        a.push(x)
+    }
+    assert a.size == 1
+    assert a[0] == 42
+
+    a.resize(0)
+    for const x in ctor {
+        a.push(x)
+    }
+    assert a.size == 1
+    assert a[0] == ctor
+
+    a.resize(0)
+    for const x in ctor() {
+        a.push(x)
+    }
+    assert a.size == 1
+    assert typeof a[0] == "array"
+    assert a[0][0] == "xyz"
+    assert a[0][1] == 42
+
+    a.resize(0)
+    var except = void
+    try {
+        for const x in gen {
+            a.push(x)
+        }
+    }
+    catch const e {
+        except = e
+    }
+    assert a.size == 0
+    assert except != void
+
+    a.resize(0)
+    for const x in gen() {
+        a.push(x)
+    }
+    assert a.size == 2
+    assert a[0] == 1
+    assert a[1] == 2
+}
+
+##############################################################################
+# base.function.prototype.prototype
+
+do {
+    class ctor { }
+
+    ctor.prototype = base.function.prototype
+
+    const o = ctor()
+
+    expect_fail(()=>o.prototype)
+}
+
+##############################################################################
+# base.function.prototype.*statistics*
+
+do {
+    assert "name"         in base.function.prototype
+    assert "registers"    in base.function.prototype
+    assert "instructions" in base.function.prototype
+    assert "size"         in base.function.prototype
+
+    expect_fail(()=>base.function.prototype.name)
+    expect_fail(()=>base.function.prototype.registers)
+    expect_fail(()=>base.function.prototype.instructions)
+    expect_fail(()=>base.function.prototype.size)
+
+    fun f { }
+
+    assert f.name         == "f"
+    assert f.registers    == 1
+    assert f.instructions == 2 # LOAD.VOID, RETURN
+    assert f.size         == 5
+
+    assert base.function.name         == "<builtin>"
+    assert base.function.registers    == 0
+    assert base.function.instructions == 0
+    assert base.function.size         == 0
+}
+
+##############################################################################
+# base.function.prototype.apply
+
+do {
+    fun method(arg)
+    {
+        return this + arg
+    }
+
+    assert method.apply(500, [70]) == 570
+
+    expect_fail(()=>method.apply(void, []))
+    expect_fail(()=>method.apply(void, void))
+    expect_fail(()=>method.apply(void))
+    expect_fail(()=>method.apply())
+}
+
+do {
+    fun method
+    {
+        throw ""
+    }
+
+    expect_fail(()=>method.apply(void, []))
+}
+
+do {
+    fun method(args...)
+    {
+        args.resize(1)
+        args[0] = 123
+    }
+
+    const args = [1, 2, 3]
+    method.apply(void, args)
+
+    assert args.size == 3
+    assert args[0]   == 1
+    assert args[1]   == 2
+    assert args[2]   == 3
+}
+
+do {
+    class ctor {
+        constructor {
+            this.a = 42
+        }
+    }
+    ctor.prototype.x = -1
+
+    assert typeof ctor == "class"
+
+    const co = ctor()
+    assert typeof co == "object"
+    assert "a" in co
+    assert "x" in co
+    assert co.a == 42
+    assert co.x == -1
+    assert co instanceof ctor
+
+    const o = { b: 39 }
+    assert typeof o == "object"
+    assert ! ("a" in o)
+    assert o.b == 39
+    assert ! (o instanceof ctor)
+
+    const ret = ctor.apply(o, [])
+    assert ret == o
+    assert "a" in o
+    assert "b" in o
+    assert ! ("x" in o)
+    assert o.a == 42
+    assert o.b == 39
+    assert ret.a == 42
+    assert ret.b == 39
+    assert ! (o instanceof ctor)
+    assert ! (ret instanceof ctor)
+    expect_fail(()=>o.x)
+    expect_fail(()=>ret.x)
+}
+
+do {
+    expect_fail(fun {
+        (()=>void) . apply . apply(void, [])
+    })
+}
+
+do {
+    const arg_list = [ 1, 2, 3 ]
+    fun(args...) {
+        args[0] = 4
+        args[1] = 5
+        args[2] = 6
+    } . apply(void, arg_list)
+
+    fun resize(args...) { args.resize(1) }
+
+    for var i = 0; i < 3; i += 1 {
+        resize(arg_list...)
+    }
+    for var i = 0; i < 3; i += 1 {
+        resize.apply(void, arg_list)
+    }
+    for var i = 0; i < 3; i += 1 {
+        resize(arg_list...)
+        resize.apply(void, arg_list)
+        resize(arg_list...)
+        resize.apply(void, arg_list)
+    }
+
+    assert arg_list.size == 3
+    assert arg_list[0] == 1
+    assert arg_list[1] == 2
+    assert arg_list[2] == 3
+}
+
+##############################################################################
+# function constuctors
+
+do {
+    fun f
+    {
+    }
+
+    class c
+    {
+    }
+
+    fun g
+    {
+        yield void
+    }
+
+    assert f instanceof base.function
+    assert ! (f instanceof base.class)
+    assert ! (f instanceof base.generator)
+
+    assert c instanceof base.function
+    assert c instanceof base.class
+    assert ! (c instanceof base.generator)
+
+    assert g instanceof base.function
+    assert ! (g instanceof base.class)
+    assert g instanceof base.generator
+}
+
+##############################################################################
+# base.generator.slice
+
+do {
+    fun primes
+    {
+        for const v in [2, 3, 5, 7, 11, 13, 17, 19] {
+            yield v
+        }
+    }
+
+    const all = [ primes()[:] ... ]
+    assert typeof all == "array"
+    assert all.size   == 8
+    assert all[0]     == 2
+    assert all[1]     == 3
+    assert all[2]     == 5
+    assert all[3]     == 7
+    assert all[4]     == 11
+    assert all[5]     == 13
+    assert all[6]     == 17
+    assert all[7]     == 19
+
+    const some4 = [ primes()[3:7] ... ]
+    assert typeof some4 == "array"
+    assert some4.size   == 4
+    assert some4[0]     == 7
+    assert some4[1]     == 11
+    assert some4[2]     == 13
+    assert some4[3]     == 17
+
+    const somend = [ primes()[5:] ... ]
+    assert typeof somend == "array"
+    assert somend.size   == 3
+    assert somend[0]     == 13
+    assert somend[1]     == 17
+    assert somend[2]     == 19
+
+    const negative1 = primes()[-5:5]
+    assert typeof negative1 == "array"
+    assert negative1.size   == 2
+    assert negative1[0]     == 7
+    assert negative1[1]     == 11
+
+    const negative2 = primes()[:-6]
+    assert typeof negative2 == "array"
+    assert negative2.size   == 2
+    assert negative2[0]     == 2
+    assert negative2[1]     == 3
 }

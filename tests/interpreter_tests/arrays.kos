@@ -19,17 +19,11 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
-fun expect_fail(function)
-{
-    var failed = false
-    try {
-        function()
-    }
-    catch const e {
-        failed = true
-    }
-    assert failed
-}
+
+import base
+import test_tools.expect_fail
+
+##############################################################################
 
 do {
     assert ["a", "b", "c"][0]  == "a"
@@ -589,4 +583,904 @@ do {
     b[1] = a
 
     assert a != b
+}
+
+##############################################################################
+# base.array
+
+do {
+    assert typeof base.array           == "class"
+    assert typeof base.array.prototype == "object"
+    assert base.array instanceof base.function
+    assert base.array instanceof base.class
+}
+
+do {
+    const a = base.array()
+    assert typeof a == "array"
+    assert a.size   == 0
+}
+
+do {
+    const a = base.array(1)
+    assert a.size == 1
+    assert a[0]   == void
+}
+
+do {
+    const a = base.array(5)
+    assert a.size == 5
+    assert a[0]   == void
+    assert a[1]   == void
+    assert a[2]   == void
+    assert a[3]   == void
+    assert a[4]   == void
+}
+
+do {
+    const a = base.array(4, 72.5)
+    assert a.size == 4
+    assert a[0]   == 72.5
+    assert a[1]   == 72.5
+    assert a[2]   == 72.5
+    assert a[3]   == 72.5
+}
+
+do {
+    expect_fail(()=>base.array(-1))
+    expect_fail(()=>base.array(1, 1, 0))
+}
+
+do {
+    const a = base.array([8])
+    assert typeof a    == "array"
+    assert a.size      == 1
+    assert typeof a[0] == "integer"
+    assert a[0]        == 8
+    expect_fail(()=>a[1])
+}
+
+do {
+    const a = base.array("ab", base.buffer([100, 101]))
+    assert typeof a == "array"
+    assert a.size   == 4
+    assert a[0]     == 0x61
+    assert a[1]     == 0x62
+    assert a[2]     == 100
+    assert a[3]     == 101
+    expect_fail(()=>a[4])
+}
+
+do {
+    const a = base.array("", base.buffer(0), "", [])
+    assert typeof a == "array"
+    assert a.size   == 0
+}
+
+do {
+    const a = base.array(2.1)
+    assert a.size == 2
+    assert a[0]   == void
+    assert a[1]   == void
+}
+
+do {
+    const a = base.array(base.range(4))
+    assert typeof a == "array"
+    assert a.size   == 4
+    for var i = 0; i < 4; i += 1 {
+        assert a[i] == i
+    }
+}
+
+do {
+    const a = base.array(base.shallow({a: void, b: void, c: void}))
+    assert typeof a == "array"
+    assert a.size   == 3
+    const had = { "a": false, "b": false, "c": false }
+    for var i = 0; i < a.size; i += 1 {
+        const key, value = a[i]
+        assert key == "a" || key == "b" || key == "c"
+        assert ! had[key]
+        had[key] = true
+    }
+}
+
+do {
+    fun gen
+    {
+        yield "abc"
+        yield 10.25
+        yield -8
+        yield true
+        yield ["x", 2]
+    }
+
+    const a = base.array(gen())
+    assert a.size == 5
+    assert a[0]   == "abc"
+    assert a[1]   == 10.25
+    assert a[2]   == -8
+    assert a[3]   == true
+    assert a[4]   == ["x", 2]
+}
+
+do {
+    expect_fail(fun {
+        base.array.prototype = {}
+    })
+}
+
+do {
+    const a = [ "a", "b", "c", "d", "e" ]
+
+    expect_fail(()=>a.ret_elem_3())
+
+    base.array.prototype.ret_elem_3 = fun {
+        return this[3]
+    }
+
+    assert a.ret_elem_3() == "d"
+}
+
+do {
+    const a = base.array([10, 20], [30])
+    assert a.size == 3
+    assert a[0]     == 10
+    assert a[1]     == 20
+    assert a[2]     == 30
+    expect_fail(()=>a[3])
+}
+
+do {
+    assert [] instanceof base.array
+    assert [] instanceof base.object
+}
+
+do {
+    const value = (()=>[])()
+    assert value instanceof base.array
+    assert value instanceof base.object
+    assert ! (value instanceof base.integer)
+    assert ! (value instanceof base.float)
+    assert ! (value instanceof base.number)
+    assert ! (value instanceof base.boolean)
+    assert ! (value instanceof base.string)
+}
+
+do {
+    const a = [1, 2, 100]
+    const b = base.array.apply(void, [a])
+    assert typeof b == "array"
+    assert b        == a
+    assert b.size   == a.size
+    for var i = 0; i < b.size; i += 1 {
+        assert b[i] == a[i]
+    }
+    b.push(0)
+    assert b.size == a.size + 1
+    assert b      != a
+}
+
+do {
+    class fake_array { }
+
+    fake_array.prototype = base.array.prototype
+
+    const o = fake_array()
+
+    assert typeof o == "object"
+    assert o instanceof base.array
+    expect_fail(()=>o.size)
+    assert typeof o.resize == "function"
+    expect_fail(()=>o.resize(10))
+    expect_fail(()=>o[0])
+}
+
+do {
+    const buf = base.buffer(10)
+    const size = buf.size
+    for var i = 0; i < size; i += 1 {
+        buf[i] = i + 20
+    }
+
+    const a = base.array(buf)
+
+    assert a.size == 10
+
+    var count = 0
+    for var elem in a {
+        assert elem == count + 20
+        count += 1
+    }
+    assert count == 10
+}
+
+do {
+    const a = base.array(base.buffer())
+
+    assert typeof a    == "array"
+    assert a.size      == 0
+}
+
+do {
+    expect_fail(fun { [].reserve(-1) })
+    expect_fail(fun { base.array.prototype.reserve(void, [0]) })
+
+    const a = []
+    a.reserve(100)
+    assert a.size == 0
+}
+
+do {
+    expect_fail(fun { base.array.prototype.push(0) })
+    expect_fail(fun { base.array.prototype.pop() })
+    expect_fail(fun { [].push.apply("", ["a"]) })
+    expect_fail(fun { [].pop.apply("a", []) })
+
+    const a = []
+    assert a.push(1)       == 0
+    assert a.push(2, 3, 4) == 1
+    assert a.push(5)       == 4
+    assert a.push(6)       == 5
+    assert a.push()        == 6
+    assert a.size          == 6
+
+    assert a.size == 6
+    assert a[0]   == 1
+    assert a[1]   == 2
+    assert a[2]   == 3
+    assert a[3]   == 4
+    assert a[4]   == 5
+    assert a[5]   == 6
+
+    assert a.pop() == 6
+    assert a.size  == 5
+    assert a[0]    == 1
+    assert a[4]    == 5
+
+    const b = a.pop(3)
+    assert typeof b == "array"
+    assert b.size   == 3
+    assert b[0]     == 3
+    assert b[1]     == 4
+    assert b[2]     == 5
+    assert a.size   == 2
+    assert a[0]     == 1
+    assert a[1]     == 2
+
+    const c = a.pop(0)
+    assert typeof c == "void"
+    assert a.size   == 2
+
+    expect_fail(()=>a.pop(3))
+    assert a.size == 0
+
+    assert [1, 2].pop() == 2
+
+    expect_fail(()=>[].pop())
+    expect_fail(()=>[1].pop(2))
+    expect_fail(()=>[1].pop(-1))
+}
+
+##############################################################################
+# base.array.prototype.slice
+
+do {
+    const a = []
+    const b = a.slice(10, -20)
+
+    assert typeof b == "array"
+    assert b.size == 0
+}
+
+do {
+    const a = [1, 2, 3, 4]
+    const b = a.slice(1, -1)
+
+    assert typeof b == "array"
+    assert b.size == 2
+    assert b[0] == 2
+    assert b[1] == 3
+}
+
+do {
+    const a = ["a", "b", "c", "d", "e"]
+
+    do {
+        const b = a.slice(void, void)
+        assert b.size == 5
+        assert b[0] == "a"
+        assert b[-1] == "e"
+    }
+
+    do {
+        const b = a.slice(2, void)
+        assert b.size == 3
+        assert b[0] == "c"
+        assert b[-1] == "e"
+    }
+
+    do {
+        const b = a.slice(void, -3)
+        assert b.size == 2
+        assert b[0] == "a"
+        assert b[1] == "b"
+    }
+
+    do {
+        expect_fail(()=>[].slice(0, false))
+        expect_fail(()=>[].slice(false, 0))
+    }
+}
+
+##############################################################################
+# generic slice function
+
+do {
+    const obj = {
+        slice: fun {
+            return 42
+        }
+    }
+
+    const x = obj[10:100]
+
+    assert typeof x == "integer"
+    assert x == 42
+}
+do {
+    const obj = {
+        slice: 10
+    }
+
+    # slice is not a function
+    expect_fail(()=>obj[10:100])
+}
+
+##############################################################################
+# base.array.prototype.insert (with array)
+
+do {
+    const a = [1, 2, 3, 4]
+    const b = ["x", "y"]
+    const c = a.insert(2, b)
+
+    assert a == c
+    assert a.size == 6
+    assert a[0] == 1
+    assert a[1] == 2
+    assert a[2] == "x"
+    assert a[3] == "y"
+    assert a[4] == 3
+    assert a[5] == 4
+}
+
+do {
+    const a = [1, 2]
+    const c = a.insert(0, a)
+
+    assert a == c
+    assert a.size == 4
+    assert a[0] == 1
+    assert a[1] == 2
+    assert a[2] == 1
+    assert a[3] == 2
+}
+
+do {
+    const a = [1, 2]
+    const c = a.insert(void, a)
+
+    assert a == c
+    assert a.size == 4
+    assert a[0] == 1
+    assert a[1] == 2
+    assert a[2] == 1
+    assert a[3] == 2
+}
+
+do {
+    fun test_case(test)
+    {
+        test.args[-1] = test.args[-1] || test.array
+        const out = [].insert.apply(test.array, test.args)
+        const size = out.size
+        assert out  == test.array
+        assert size == test.result.size
+        for var i = 0; i < size; i += 1 {
+            assert out[i] == test.result[i]
+        }
+    }
+
+    test_case({ array: [ 1, 2, 3 ], args: [   -4,       []           ], result: [ 1, 2, 3 ]           })
+    test_case({ array: [ 1, 2, 3 ], args: [   -3,       []           ], result: [ 1, 2, 3 ]           })
+    test_case({ array: [ 1, 2, 3 ], args: [    0,       []           ], result: [ 1, 2, 3 ]           })
+    test_case({ array: [ 1, 2, 3 ], args: [    1,       []           ], result: [ 1, 2, 3 ]           })
+    test_case({ array: [ 1, 2, 3 ], args: [   -2,       []           ], result: [ 1, 2, 3 ]           })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,       []           ], result: [ 1, 2, 3 ]           })
+    test_case({ array: [ 1, 2, 3 ], args: [    4,       []           ], result: [ 1, 2, 3 ]           })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,    1, []           ], result: [ 2, 3 ]              })
+    test_case({ array: [ 1, 2, 3 ], args: [    1,    2, []           ], result: [ 1, 3 ]              })
+    test_case({ array: [ 1, 2, 3 ], args: [   -1, void, []           ], result: [ 1, 2 ]              })
+    test_case({ array: [ 1, 2, 3 ], args: [ void, void, []           ], result: [ ]                   })
+    test_case({ array: [ 1, 2, 3 ], args: [   -4,       [ "x" ]      ], result: [ "x", 1, 2, 3 ]      })
+    test_case({ array: [ 1, 2, 3 ], args: [   -3,       [ "x" ]      ], result: [ "x", 1, 2, 3 ]      })
+    test_case({ array: [ 1, 2, 3 ], args: [    0,       [ "x" ]      ], result: [ "x", 1, 2, 3 ]      })
+    test_case({ array: [ 1, 2, 3 ], args: [    1,       [ "x" ]      ], result: [ 1, "x", 2, 3 ]      })
+    test_case({ array: [ 1, 2, 3 ], args: [   -1,       [ "x" ]      ], result: [ 1, 2, "x", 3 ]      })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,       [ "x" ]      ], result: [ 1, 2, 3, "x" ]      })
+    test_case({ array: [ 1, 2, 3 ], args: [    4,       [ "x" ]      ], result: [ 1, 2, 3, "x" ]      })
+    test_case({ array: [ 1, 2, 3 ], args: [   -4,    1, [ "x" ]      ], result: [ "x", 2, 3 ]         })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,    1, [ "x" ]      ], result: [ "x", 2, 3 ]         })
+    test_case({ array: [ 1, 2, 3 ], args: [   -2,    2, [ "x" ]      ], result: [ 1, "x", 3 ]         })
+    test_case({ array: [ 1, 2, 3 ], args: [   -1, void, [ "x" ]      ], result: [ 1, 2, "x" ]         })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,    2, [ "x" ]      ], result: [ "x", 3 ]            })
+    test_case({ array: [ 1, 2, 3 ], args: [    1, void, [ "x" ]      ], result: [ 1, "x" ]            })
+    test_case({ array: [ 1, 2, 3 ], args: [ void, void, [ "x" ]      ], result: [ "x" ]               })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,    0, [ "x", "y" ] ], result: [ "x", "y", 1, 2, 3 ] })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,    1, [ "x", "y" ] ], result: [ "x", "y", 2, 3 ]    })
+    test_case({ array: [ 1, 2, 3 ], args: [   -2,    2, [ "x", "y" ] ], result: [ 1, "x", "y", 3 ]    })
+    test_case({ array: [ 1, 2, 3 ], args: [   -1, void, [ "x", "y" ] ], result: [ 1, 2, "x", "y" ]    })
+    test_case({ array: [ 1, 2, 3 ], args: [   -1, void, [ "x", "y" ] ], result: [ 1, 2, "x", "y" ]    })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,    2, [ "x", "y" ] ], result: [ "x", "y", 3 ]       })
+    test_case({ array: [ 1, 2, 3 ], args: [   -2, void, [ "x", "y" ] ], result: [ 1, "x", "y" ]       })
+    test_case({ array: [ 1, 2, 3 ], args: [ void, void, [ "x", "y" ] ], result: [ "x", "y" ]          })
+    test_case({ array: [ 1, 2, 3 ], args: [    0,       void         ], result: [ 1, 2, 3, 1, 2, 3 ]  })
+    test_case({ array: [ 1, 2, 3 ], args: [    1,       void         ], result: [ 1, 1, 2, 3, 2, 3 ]  })
+    test_case({ array: [ 1, 2, 3 ], args: [    2,       void         ], result: [ 1, 2, 1, 2, 3, 3 ]  })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,       void         ], result: [ 1, 2, 3, 1, 2, 3 ]  })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,    1, void         ], result: [ 1, 2, 3, 2, 3 ]     })
+    test_case({ array: [ 1, 2, 3 ], args: [    1,    2, void         ], result: [ 1, 1, 2, 3, 3 ]     })
+    test_case({ array: [ 1, 2, 3 ], args: [    2, void, void         ], result: [ 1, 2, 1, 2, 3 ]     })
+    test_case({ array: [ 1, 2, 3 ], args: [ void,    2, void         ], result: [ 1, 2, 3, 3 ]        })
+    test_case({ array: [ 1, 2, 3 ], args: [    1, void, void         ], result: [ 1, 1, 2, 3 ]        })
+    test_case({ array: [ 1, 2, 3 ], args: [ void, void, void         ], result: [ 1, 2, 3 ]           })
+}
+
+do {
+    expect_fail(()=>[].insert("", 0, []))
+    expect_fail(()=>[].insert(0, "", []))
+}
+
+##############################################################################
+# base.array.prototype.insert
+
+do {
+    const a = []
+
+    a.insert(0, "abc")
+    assert a.size == 3
+    assert a[0]   == "a"
+    assert a[2]   == "c"
+
+    a.insert(void, base.buffer())
+    assert a.size == 3
+    assert a[0]   == "a"
+    assert a[2]   == "c"
+
+    const buf   = base.buffer(4)
+    const size1 = buf.size
+    for var i = 0; i < size1; i += 1 {
+        buf[i] = buf.size - i
+    }
+
+    a.insert(void, buf)
+    assert a.size == 7
+    assert a[2]   == "c"
+    assert a[3]   == 4
+    assert a[6]   == 1
+
+    const size2 = buf.size
+    for var i = 0; i < size2; i += 1 {
+        buf[i] = 10 + i
+    }
+
+    a[1:-1] = buf
+    assert a.size == 6
+    assert a[0]   == "a"
+    assert a[1]   == 10
+    assert a[2]   == 11
+    assert a[3]   == 12
+    assert a[4]   == 13
+    assert a[5]   == 1
+}
+
+##############################################################################
+# base.array.prototype.indices
+
+do {
+    const it = [ true, void, -2 ].indices()
+    assert it() == 0
+    assert it() == 1
+    assert it() == 2
+    expect_fail(()=>it())
+}
+
+##############################################################################
+# base.array.prototype.fill
+
+do {
+    const a = base.array()
+    a.resize(10)
+
+    assert a.size == 10
+
+    for var e in a {
+        assert e == void
+    }
+
+    a.fill("abc")
+
+    for var e in a {
+        assert e == "abc"
+    }
+
+    a.fill(-3, 42)
+
+    for var i = 0; i < a.size; i += 1 {
+        if i < 7 {
+            assert a[i] == "abc"
+        }
+        else {
+            assert a[i] == 42
+        }
+    }
+
+    const obj = { x : 1, y : 2 }
+    a.fill(2, 8, obj)
+
+    for var i = 0; i < a.size; i += 1 {
+        if i < 2 {
+            assert a[i] == "abc"
+        }
+        else if i < 8 {
+            const e = a[i]
+            assert typeof e == "object"
+            assert e == obj
+        }
+        else {
+            assert a[i] == 42
+        }
+    }
+
+    expect_fail(()=>base.array.prototype.fill.apply(void, [1]))
+    expect_fail(()=>a.fill())
+}
+
+##############################################################################
+# base.array.prototype.sort
+
+do {
+    const a = []
+    const b = a.sort()
+    assert typeof b == "array"
+    assert b == a
+    assert a == []
+}
+
+do {
+    const a = ["x"]
+    const b = a.sort()
+    assert typeof b == "array"
+    assert b == a
+    assert a.size == 1
+    assert a[0] == "x"
+}
+
+do {
+    const a = [3, 10, 5, 1]
+    const b = a.sort(true)
+    assert a == b
+    assert a[0] == 10
+    assert a[1] == 5
+    assert a[2] == 3
+    assert a[3] == 1
+    assert b[0] == 10
+    assert b[1] == 5
+    assert b[2] == 3
+    assert b[3] == 1
+}
+
+do {
+    const a = ["base", 101, "array", 42, 60, "sort", -10, "size"]
+    const b = a.sort(x => typeof x, true)
+    assert a == b
+    assert a[0] == "size"
+    assert a[1] == "sort"
+    assert a[2] == "array"
+    assert a[3] == "base"
+    assert a[4] == -10
+    assert a[5] == 60
+    assert a[6] == 42
+    assert a[7] == 101
+}
+
+do {
+    const a = ["base", 101, "array", 42, 60, "sort", -10, "size"]
+    const b = a.sort(x => typeof x)
+    assert a == b
+    assert a[0] == 101
+    assert a[1] == 42
+    assert a[2] == 60
+    assert a[3] == -10
+    assert a[4] == "base"
+    assert a[5] == "array"
+    assert a[6] == "sort"
+    assert a[7] == "size"
+}
+
+##############################################################################
+# base.sort
+
+do {
+    const empty = []
+    const a = base.sort(empty)
+    assert typeof a == "array"
+    assert a.size == 0
+    assert a == empty
+
+    empty.push(0)
+    assert empty.size == 1
+    assert a.size == 0
+}
+
+do {
+    fun empty
+    {
+        if false { yield void }
+    }
+
+    const a = base.sort(false, empty())
+    assert typeof a == "array"
+    assert a.size == 0
+}
+
+do {
+    const a = [8]
+    const b = base.sort(a)
+    assert a.size == 1
+    assert a[0] == 8
+    assert a == b
+    a.push(0)
+    assert a.size == 2
+    assert b.size == 1
+    assert b[0] == 8
+}
+
+do {
+    const a = [0, 1]
+    const b = base.sort(a)
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 2
+    assert b[0] == 0
+    assert b[1] == 1
+    b.push(2)
+    assert b.size == a.size + 1
+}
+
+do {
+    const a = [0, 1]
+    const b = base.sort(true, a)
+    a.push(2)
+    assert typeof b == "array"
+    assert b.size == 2
+    assert b[0] == 1
+    assert b[1] == 0
+}
+
+do {
+    const a = [1, 0]
+    const b = base.sort(a)
+    assert typeof b == "array"
+    assert a != b
+    assert b.size == 2
+    assert b[0] == 0
+    assert b[1] == 1
+}
+
+do {
+    const a = [1, 1]
+    const b = base.sort(a)
+    assert typeof b == "array"
+    assert a == b
+    assert b.size == 2
+    assert b[0] == 1
+    assert b[1] == 1
+    b.push(0)
+    assert b.size == a.size + 1
+}
+
+do {
+    const a = [1, 2, 3]
+    const b = base.sort(a)
+    assert typeof b == "array"
+    assert a == b
+    a[1] = 0
+    assert b.size == 3
+    assert b[0] == 1
+    assert b[1] == 2
+    assert b[2] == 3
+}
+
+do {
+    const a = [3, 2, 1]
+    const b = base.sort(a)
+    assert typeof b == "array"
+    assert a != b
+    assert b.size == 3
+    assert b[0] == 1
+    assert b[1] == 2
+    assert b[2] == 3
+}
+
+do {
+    const a = [1, 3, 2]
+    const b = base.sort(a)
+    assert typeof b == "array"
+    assert a != b
+    assert b.size == 3
+    assert b[0] == 1
+    assert b[1] == 2
+    assert b[2] == 3
+}
+
+do {
+    const a = [3, 3, 2]
+    const b = base.sort(a)
+    assert typeof b == "array"
+    assert a != b
+    assert b.size == 3
+    assert b[0] == 2
+    assert b[1] == 3
+    assert b[2] == 3
+}
+
+do {
+    const a = [2, 2, 2]
+    const b = base.sort(a)
+    assert typeof b == "array"
+    assert a == b
+    a[0] = 0
+    assert b.size == 3
+    assert b[0] == 2
+    assert b[1] == 2
+    assert b[2] == 2
+}
+
+do {
+    class sortable {
+        constructor(key) {
+            this.key = key
+        }
+    }
+
+    const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]
+    const b = base.sort(x => x.key, a)
+    assert b[0].key == 10
+    assert b[1].key == 20
+    assert b[2].key == 25
+    assert b[3].key == 30
+    assert b[4].key == 40
+}
+
+do {
+    class sortable {
+        constructor(key) {
+            this.key = key
+        }
+    }
+
+    const a = [ sortable(40), sortable(20), sortable(30), sortable(10), sortable(25) ]
+    const b = base.sort(x => x.key, true, a)
+    assert b[0].key == 40
+    assert b[1].key == 30
+    assert b[2].key == 25
+    assert b[3].key == 20
+    assert b[4].key == 10
+}
+
+do {
+    const a = [ 5, 4, 2, 3, 1 ]
+    const s = base.sort(a)
+    assert typeof s == "array"
+    assert s.size == 5
+    assert s[0] == 1
+    assert s[1] == 2
+    assert s[2] == 3
+    assert s[3] == 4
+    assert s[4] == 5
+    assert a.size == 5
+    assert a[0] == 5
+    assert a[1] == 4
+    assert a[2] == 2
+    assert a[3] == 3
+    assert a[4] == 1
+}
+
+do {
+    const s = base.sort("foobar")
+    assert typeof s == "array"
+    assert s.size == 6
+    assert s[0] == "a"
+    assert s[1] == "b"
+    assert s[2] == "f"
+    assert s[3] == "o"
+    assert s[4] == "o"
+    assert s[5] == "r"
+}
+
+do {
+    const s = base.sort(true, "fooba")
+    assert typeof s == "array"
+    assert s.size == 5
+    assert s[0] == "o"
+    assert s[1] == "o"
+    assert s[2] == "f"
+    assert s[3] == "b"
+    assert s[4] == "a"
+}
+
+do {
+    const s = [10, 11, 9, 8] -> base.sort
+    assert typeof s == "array"
+    assert s.size == 4
+    assert s[0] == 8
+    assert s[1] == 9
+    assert s[2] == 10
+    assert s[3] == 11
+}
+
+do {
+    const s = [10, 11, 9, 8] -> base.sort(true)
+    assert typeof s == "array"
+    assert s.size == 4
+    assert s[0] == 11
+    assert s[1] == 10
+    assert s[2] == 9
+    assert s[3] == 8
+}
+
+do {
+    const it = [30, 1, 20, -2] -> base.sort -> base.map(x => x + 1)
+    assert typeof it == "function"
+    assert it() == -1
+    assert it() == 2
+    assert it() == 21
+    assert it() == 31
+    expect_fail(it)
+}
+
+# Order of "equal" elements must be preserved
+do {
+    const input = ["020", 1, 20, "21", 5, 3, "0020", "8", "5", "05", "0001"]
+    const a = base.sort(x => base.integer(x), input)
+    assert typeof a == "array"
+    assert a.size == 11
+    assert a[0]   == 1
+    assert a[1]   == "0001"
+    assert a[2]   == 3
+    assert a[3]   == 5
+    assert a[4]   == "5"
+    assert a[5]   == "05"
+    assert a[6]   == "8"
+    assert a[7]   == "020"
+    assert a[8]   == 20
+    assert a[9]   == "0020"
+    assert a[10]  == "21"
+}
+
+# Use class for sorting key
+do {
+    const input = [1, 5, 10, 50, 100, 500]
+    const a = base.sort(base.string, input)
+    assert typeof a == "array"
+    assert a.size == 6
+    assert a[0] == 1
+    assert a[1] == 10
+    assert a[2] == 100
+    assert a[3] == 5
+    assert a[4] == 50
+    assert a[5] == 500
 }
