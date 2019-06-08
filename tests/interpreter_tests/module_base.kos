@@ -2422,6 +2422,13 @@ do {
     assert base.stringify(false, 2, "o") == "false2o"
 }
 
+# TODO detect infinite loops
+#do {
+#    const a = []
+#    a.push(a)
+#    assert base.stringify(a) == "[[...]]"
+#}
+
 ##############################################################################
 # base.hex
 
