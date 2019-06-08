@@ -1947,6 +1947,44 @@ do {
     assert ! has_apply
 }
 
+do {
+    const a = base.array({ a: 11 })
+    assert typeof a    == "array"
+    assert a.size      == 1
+    assert typeof a[0] == "array"
+    assert a[0].size   == 2
+    assert a[0][0]     == "a"
+    assert a[0][1]     == 11
+}
+
+do {
+    class abase {
+        f1 { }
+        f2 { }
+    }
+    class derived extends abase {
+        constructor {
+            this.first = 101
+            this.second = "102"
+        }
+        f3 { }
+    }
+    const a = base.array(derived())
+    assert typeof a == "array"
+    assert a.size   == 2
+    a.sort()
+    assert a[0][0] == "first"
+    assert a[0][1] == 101
+    assert a[1][0] == "second"
+    assert a[1][1] == "102"
+}
+
+do {
+    expect_fail(() => base.array(true))
+    expect_fail(() => base.array(false))
+    expect_fail(() => base.array(fun { }))
+}
+
 ##############################################################################
 # base.range
 

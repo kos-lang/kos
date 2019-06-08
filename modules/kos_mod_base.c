@@ -616,17 +616,16 @@ static KOS_OBJ_ID _boolean_constructor(KOS_CONTEXT ctx,
  * strings created from each argument.  The following argument types are
  * supported:
  *
- *  * integer  - An integer is converted to its string representation.
- *  * float    - An float is converted to its string representation.
  *  * array    - The array must contain numbers from 0 to 0x1FFFFF, inclusive.
  *               Float numbers are converted to integers using floor operation.
  *               Any other types of array elements trigger an exception.  The
  *               array's elements are code points from which a new string is
  *               created.  The new string's length is equal to the length of
  *               the array.
- *  * string   - No conversion is performed.
  *  * buffer   - A buffer is treated as an UTF-8 sequence and it is decoded
  *               into a string.
+ *  * integer  - An integer is converted to its string representation.
+ *  * float    - An float is converted to its string representation.
  *  * function - If the function is an iterator (a primed generator),
  *               subsequent elements are obtained from it and added to the
  *               string.  The acceptable types of values returned from the
@@ -637,6 +636,7 @@ static KOS_OBJ_ID _boolean_constructor(KOS_CONTEXT ctx,
  *               by the iterator are concatenated in the order they are
  *               returned.
  *               If the function is not an iterator, an exception is thrown.
+ *  * string   - No conversion is performed.
  *
  * The prototype of `string.prototype` is `object.prototype`.
  *
@@ -944,12 +944,16 @@ static int make_room_in_array(KOS_CONTEXT ctx,
  *
  *  * array    - The array is simply appended to the new array without conversion.
  *               This can be used to make a copy of an array.
- *  * string   - All characters in the string are converted to code points (integers)
- *               and then each code point is subsequently appended to the new array.
  *  * buffer   - Buffer's bytes are appended to the new array as integers.
  *  * function - If the function is an iterator (a primed generator), subsequent
  *               elements are obtained from it and appended to the array.
  *               For non-iterator functions an exception is thrown.
+ *  * object   - Object's elements are extracted using shallow operation, i.e.
+ *               without traversing its prototypes, then subsequent properties
+ *               are appended to the array as two-element arrays containing
+ *               the property name (key) and property value.
+ *  * string   - All characters in the string are converted to code points (integers)
+ *               and then each code point is subsequently appended to the new array.
  *
  * The prototype of `array.prototype` is `object.prototype`.
  *
@@ -963,26 +967,28 @@ static int make_room_in_array(KOS_CONTEXT ctx,
  *     [104, 101, 108, 108, 111]
  *     > array(range(5))
  *     [0, 1, 2, 3, 4]
- *     > array(shallow({one: 1, two: 2, three: 3})...)
+ *     > array({ one: 1, two: 2, three: 3 })
  *     [["one", 1], ["two", 2], ["three", 3]]
  */
 static KOS_OBJ_ID _array_constructor(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  this_obj,
                                      KOS_OBJ_ID  args_obj)
 {
-    int            error     = KOS_SUCCESS;
-    const uint32_t num_args  = KOS_get_array_size(args_obj);
-    uint32_t       i_arg     = 0;
-    uint32_t       cur_size  = 0;
-    int            pushed    = 0;
-    KOS_OBJ_ID     new_array = KOS_BADPTR;
-    KOS_OBJ_ID     arg       = KOS_BADPTR;
-    KOS_OBJ_ID     gen_args  = KOS_BADPTR;
+    int            error      = KOS_SUCCESS;
+    const uint32_t num_args   = KOS_get_array_size(args_obj);
+    uint32_t       i_arg      = 0;
+    uint32_t       cur_size   = 0;
+    int            pushed     = 0;
+    KOS_OBJ_ID     new_array  = KOS_BADPTR;
+    KOS_OBJ_ID     arg        = KOS_BADPTR;
+    KOS_OBJ_ID     gen_args   = KOS_BADPTR;
+    KOS_OBJ_ID     walk       = KOS_BADPTR;
+    KOS_OBJ_ID     walk_value = KOS_BADPTR;
 
     if (num_args == 0)
         return KOS_new_array(ctx, 0);
 
-    TRY(KOS_push_locals(ctx, &pushed, 4, &args_obj, &new_array, &arg, &gen_args));
+    TRY(KOS_push_locals(ctx, &pushed, 6, &args_obj, &new_array, &arg, &gen_args, &walk, &walk_value));
 
     arg = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(arg);
@@ -1084,7 +1090,52 @@ static KOS_OBJ_ID _array_constructor(KOS_CONTEXT ctx,
                 break;
             }
 
-            /* TODO OBJ_OBJECT */
+            case OBJ_OBJECT: {
+                walk = KOS_new_object_walk(ctx, arg, KOS_SHALLOW);
+                TRY_OBJID(walk);
+
+                while ( ! KOS_object_walk(ctx, walk)) {
+
+                    walk_value = KOS_get_walk_value(walk);
+
+                    assert( ! IS_BAD_PTR(KOS_get_walk_key(walk)));
+                    assert( ! IS_BAD_PTR(walk_value));
+
+                    if (GET_OBJ_TYPE(walk_value) == OBJ_DYNAMIC_PROP) {
+                        KOS_OBJ_ID args = KOS_new_array(ctx, 0);
+                        TRY_OBJID(args);
+
+                        walk_value = KOS_call_function(ctx,
+                                                       OBJPTR(DYNAMIC_PROP, walk_value)->getter,
+                                                       OBJPTR(OBJECT_WALK, walk)->obj,
+                                                       args);
+                        if (IS_BAD_PTR(walk_value)) {
+                            assert(KOS_is_exception_pending(ctx));
+                            KOS_clear_exception(ctx);
+
+                            walk_value = OBJPTR(DYNAMIC_PROP, KOS_get_walk_value(walk))->getter;
+                        }
+                    }
+
+                    gen_args = KOS_new_array(ctx, 2);
+                    TRY_OBJID(gen_args);
+
+                    TRY(KOS_array_write(ctx, gen_args, 0, KOS_get_walk_key(walk)));
+                    TRY(KOS_array_write(ctx, gen_args, 1, walk_value));
+
+                    if (IS_BAD_PTR(new_array)) {
+                        new_array = KOS_new_array(ctx, 1);
+                        TRY_OBJID(new_array);
+
+                        TRY(KOS_array_write(ctx, new_array, 0, gen_args));
+                    }
+                    else
+                        TRY(KOS_array_push(ctx, new_array, gen_args, 0));
+
+                    ++cur_size;
+                }
+                break;
+            }
 
             case OBJ_FUNCTION: {
                 KOS_FUNCTION_STATE state;
@@ -1164,8 +1215,6 @@ cleanup:
  *               is applied to floats).  Any other array elements trigger an
  *               exception.  The array is converted to a buffer containing
  *               bytes with values from the array.
- *  * string   - The string is converted to an UTF-8 representation stored
- *               into a buffer.
  *  * buffer   - A buffer is simply concatenated with other input arguments without
  *               any transformation.
  *               This can be used to make a copy of a buffer.
@@ -1175,6 +1224,8 @@ cleanup:
  *               (floor operation is applied to floats), any other values trigger
  *               an exception.
  *               For non-iterator functions an exception is thrown.
+ *  * string   - The string is converted to an UTF-8 representation stored
+ *               into a buffer.
  *
  * The prototype of `buffer.prototype` is `object.prototype`.
  *

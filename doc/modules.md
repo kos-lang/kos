@@ -272,12 +272,16 @@ by the class.  The following argument types are supported:
 
  * array    - The array is simply appended to the new array without conversion.
               This can be used to make a copy of an array.
- * string   - All characters in the string are converted to code points (integers)
-              and then each code point is subsequently appended to the new array.
  * buffer   - Buffer's bytes are appended to the new array as integers.
  * function - If the function is an iterator (a primed generator), subsequent
               elements are obtained from it and appended to the array.
               For non-iterator functions an exception is thrown.
+ * object   - Object's elements are extracted using shallow operation, i.e.
+              without traversing its prototypes, then subsequent properties
+              are appended to the array as two-element arrays containing
+              the property name (key) and property value.
+ * string   - All characters in the string are converted to code points (integers)
+              and then each code point is subsequently appended to the new array.
 
 The prototype of `array.prototype` is `object.prototype`.
 
@@ -291,7 +295,7 @@ Examples:
     [104, 101, 108, 108, 111]
     > array(range(5))
     [0, 1, 2, 3, 4]
-    > array(shallow({one: 1, two: 2, three: 3})...)
+    > array({ one: 1, two: 2, three: 3 })
     [["one", 1], ["two", 2], ["three", 3]]
 
 array.prototype.fill()
@@ -630,8 +634,6 @@ by the class.  The following argument types are supported:
               is applied to floats).  Any other array elements trigger an
               exception.  The array is converted to a buffer containing
               bytes with values from the array.
- * string   - The string is converted to an UTF-8 representation stored
-              into a buffer.
  * buffer   - A buffer is simply concatenated with other input arguments without
               any transformation.
               This can be used to make a copy of a buffer.
@@ -641,6 +643,8 @@ by the class.  The following argument types are supported:
               (floor operation is applied to floats), any other values trigger
               an exception.
               For non-iterator functions an exception is thrown.
+ * string   - The string is converted to an UTF-8 representation stored
+              into a buffer.
 
 The prototype of `buffer.prototype` is `object.prototype`.
 
@@ -1958,17 +1962,16 @@ For multiple arguments, constructs a string which is a concatenation of
 strings created from each argument.  The following argument types are
 supported:
 
- * integer  - An integer is converted to its string representation.
- * float    - An float is converted to its string representation.
  * array    - The array must contain numbers from 0 to 0x1FFFFF, inclusive.
               Float numbers are converted to integers using floor operation.
               Any other types of array elements trigger an exception.  The
               array's elements are code points from which a new string is
               created.  The new string's length is equal to the length of
               the array.
- * string   - No conversion is performed.
  * buffer   - A buffer is treated as an UTF-8 sequence and it is decoded
               into a string.
+ * integer  - An integer is converted to its string representation.
+ * float    - An float is converted to its string representation.
  * function - If the function is an iterator (a primed generator),
               subsequent elements are obtained from it and added to the
               string.  The acceptable types of values returned from the
@@ -1979,6 +1982,7 @@ supported:
               by the iterator are concatenated in the order they are
               returned.
               If the function is not an iterator, an exception is thrown.
+ * string   - No conversion is performed.
 
 The prototype of `string.prototype` is `object.prototype`.
 
