@@ -640,9 +640,6 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT        ctx,
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
 
-    new_guard.next       = guard;
-    new_guard.obj_id_ptr = &obj_id;
-
     length = KOS_get_array_size(obj_id);
 
     if (length == 0)
@@ -650,6 +647,9 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT        ctx,
                                           sizeof(str_empty_array) - 1);
 
     TRY(KOS_push_locals(ctx, &pushed, 4, &obj_id, &str_comma, &aux_array_id, &val_id));
+
+    new_guard.next       = guard;
+    new_guard.obj_id_ptr = &obj_id;
 
     aux_array_id = KOS_new_array(ctx, length * 4 + 1);
     TRY_OBJID(aux_array_id);
@@ -807,7 +807,7 @@ static int _vector_append_object(KOS_CONTEXT        ctx,
                                  KOS_STR_REC_GUARD *guard)
 {
     int               error     = KOS_SUCCESS;
-    KOS_OBJ_ID        walk;
+    KOS_OBJ_ID        walk      = KOS_BADPTR;
     KOS_OBJ_ID        value     = KOS_BADPTR;
     uint32_t          num_elems = 0;
     int               pushed    = 0;
