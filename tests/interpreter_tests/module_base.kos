@@ -1210,12 +1210,26 @@ do {
     assert base.stringify(false, 2, "o") == "false2o"
 }
 
-# TODO detect infinite loops
-#do {
-#    const a = []
-#    a.push(a)
-#    assert base.stringify(a) == "[[...]]"
-#}
+do {
+    const a = []
+    a.push(a)
+    assert base.stringify(a) == "[[...]]"
+}
+
+do {
+    const o = {}
+    o.o = o
+    assert base.stringify(o) == "{\"o\": {...}}"
+}
+
+do {
+    const a = []
+    const o = {}
+    o.a = a
+    a.push(o)
+    assert base.stringify(o) == "{\"a\": [{...}]}"
+    assert base.stringify(a) == "[{\"a\": [...]}]"
+}
 
 ##############################################################################
 # base.hex
