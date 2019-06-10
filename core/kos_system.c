@@ -200,6 +200,12 @@ int kos_load_file(const char  *filename,
     assert( ! file_buf->size);
     assert(file_buf->fd == -1);
 
+    if (kos_seq_fail())
+        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
+
+    if (kos_seq_fail())
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
     fd = open(filename, O_RDONLY);
     if (fd == -1)
         RAISE_ERROR(_errno_to_error());

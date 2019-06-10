@@ -171,6 +171,17 @@ if kos "$DIR/zero"; then
 fi
 
 note "test 16"
+rmdir "$DIR/base.kos"
+touch "$DIR/base.kos"
 if kos "/../bad/path"; then
     die "Failed: Interpreter succeeded with badly formatted path"
 fi
+
+note "test 17"
+echo "" > "$DIR/noaccess.kos"
+chmod 000 "$DIR/noaccess.kos"
+if kos "$DIR/noaccess.kos"; then
+    die "Failed: Interpreter succeeded to read an inaccessible file"
+fi
+chmod 644 "$DIR/noaccess.kos"
+rm -f "$DIR/noaccess.kos"
