@@ -584,16 +584,17 @@ static KOS_OBJ_ID _get_line(KOS_CONTEXT ctx,
 
             if (c == '\r') {
                 buf++;
-                if (buf < end)
+                if (buf < end) {
                     c = *buf;
-            }
-            if (c == '\n') {
-                buf++;
-                c = '\r';
-            }
-
-            if (c == '\r')
+                    if (c == '\n')
+                        buf++;
+                }
                 break;
+            }
+            else if (c == '\n') {
+                buf++;
+                break;
+            }
         }
     }
 

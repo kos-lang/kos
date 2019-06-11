@@ -429,3 +429,28 @@ if ! grep -q "^Kos [0-9]\." "$OUTPUT"; then
     cat "$OUTPUT"
     exit 1
 fi
+
+##############################################################################
+# CR and TAB
+
+echo "rrnr/*t*/xxx" | tr 'rnt' '\r\n\t' | "$KOS" 2>&1 | remove_cr > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -ne 3 ]; then
+    echo "Expected 3 lines of output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+if ! grep -q "stdin.*:4:11:" "$OUTPUT"; then
+    echo "Expected error at line 4, column 11" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+if ! grep -q "^          ^" "$OUTPUT"; then
+    echo "Expected cursor at column 11" >&2
+    cat "$OUTPUT"
+    exit 1
+fi

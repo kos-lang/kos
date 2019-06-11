@@ -51,6 +51,7 @@ enum KOS_LEXEM_TYPE_E {
     LT_OPERATOR,
     LT_SLASH,
     LT_STRING,
+    LT_TAB,
 
     LT_ALPHANUMERIC = 0x10,
     LT_DIGIT        = 0x10,
@@ -75,7 +76,7 @@ static const unsigned char lexem_types[] = {
     /* 8 */
     LT_INVALID,
     /* 9(TAB) */
-    LT_INVALID,
+    LT_TAB,
     /* 10(LF) */
     LT_EOL,
     /* 11(VTAB), 12(FF) */
@@ -356,7 +357,7 @@ static unsigned prefetch_next(KOS_LEXER *lexer, const char **begin, const char *
             else {
                 unsigned code = ((((unsigned char)*b) << len) & 0xFFU) >> len;
                 unsigned i;
-                for (i=1; i < len; ++i) {
+                for (i = 1; i < len; ++i) {
                     const unsigned char c = (unsigned char)b[i];
                     if (lexem_types[c] != LT_UTF8_TAIL) {
                         lt = LT_INVALID_UTF8;
@@ -395,6 +396,8 @@ static unsigned prefetch_next(KOS_LEXER *lexer, const char **begin, const char *
         lexer->pos.line   = line + 1;
         lexer->pos.column = 1;
     }
+    else if (lt == LT_TAB)
+        lexer->pos.column = ((col + 8U) & ~7U) + 1U;
     else
         lexer->pos.column = col + 1;
 
@@ -945,11 +948,12 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
             case LT_EOF:
                 token->type = TT_EOF;
                 break;
+            case LT_TAB:
+                lexer->error_str = str_err_tab;
+                error = KOS_ERROR_SCANNING_FAILED;
+                break;
             case LT_INVALID:
-                if (*begin == '\t')
-                    lexer->error_str = str_err_tab;
-                else
-                    lexer->error_str = str_err_invalid_char;
+                lexer->error_str = str_err_invalid_char;
                 error = KOS_ERROR_SCANNING_FAILED;
                 break;
             case LT_INVALID_UTF8:
