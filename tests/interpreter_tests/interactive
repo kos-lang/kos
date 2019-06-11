@@ -37,6 +37,17 @@ remove_prompt()
     grep -v "> \|_ "
 }
 
+find_in_output()
+{
+    if ! grep -q "$1" "$OUTPUT"; then
+        echo "Regex failed to match the output: '$1'" >&2
+        echo "-- Output: -----------------------------"
+        cat "$OUTPUT"
+        echo "----------------------------------------"
+        exit 1
+    fi
+}
+
 KOS="$1"
 OUTPUT="$2/interactive"
 SIGNATURE="^Kos .* interactive interpreter"
@@ -61,16 +72,8 @@ fi
 
 "$KOS" -v -c 'print("Hello")' | remove_cr > "$OUTPUT"
 
-if ! grep -q "Kos module search paths: \., " "$OUTPUT"; then
-    echo "Expected output to contain module search paths, but they are missing" >&2
-    cat "$OUTPUT"
-    exit 1
-fi
-if ! grep -q "Kos loading module base from" "$OUTPUT"; then
-    echo "Expected output to contain information about loaded module base, but it is missing" >&2
-    cat "$OUTPUT"
-    exit 1
-fi
+find_in_output "Kos module search paths: \., "
+find_in_output "Kos loading module base from"
 
 ##############################################################################
 # Test -c in conjunction with script arguments
@@ -405,11 +408,7 @@ if [ $COUNT -ne 6 ]; then
     exit 1
 fi
 
-if ! grep -q "^Usage: kos" "$OUTPUT"; then
-    echo "Expected usage" >&2
-    cat "$OUTPUT"
-    exit 1
-fi
+find_in_output "^Usage: kos"
 
 ##############################################################################
 # Version
@@ -424,11 +423,7 @@ if [ $COUNT -ne 1 ]; then
     exit 1
 fi
 
-if ! grep -q "^Kos [0-9]\." "$OUTPUT"; then
-    echo "Expected version" >&2
-    cat "$OUTPUT"
-    exit 1
-fi
+find_in_output "^Kos [0-9]\."
 
 ##############################################################################
 # CR and TAB
@@ -443,14 +438,23 @@ if [ $COUNT -ne 3 ]; then
     exit 1
 fi
 
-if ! grep -q "stdin.*:4:11:" "$OUTPUT"; then
-    echo "Expected error at line 4, column 11" >&2
+find_in_output "stdin.*:4:11:"
+find_in_output "^          ^"
+
+##############################################################################
+# -vv
+
+"$KOS" -vv -c 'print("Hello")' | remove_cr > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -lt 7 ]; then
+    echo "Expected at least 7 lines of output" >&2
     cat "$OUTPUT"
     exit 1
 fi
 
-if ! grep -q "^          ^" "$OUTPUT"; then
-    echo "Expected cursor at column 11" >&2
-    cat "$OUTPUT"
-    exit 1
-fi
+find_in_output "^base: parsing *:"
+find_in_output "^base: compilation *:"
+find_in_output "^base: optimization passes *:"
+find_in_output "^Hello$"
