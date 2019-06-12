@@ -1079,6 +1079,11 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
     if (kos_trigger_mad_gc(ctx))
         return 0;
 
+    if (kos_seq_fail()) {
+        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        return 0;
+    }
+
     if (size > (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
         return alloc_huge_object(ctx, object_type, size);
     else
