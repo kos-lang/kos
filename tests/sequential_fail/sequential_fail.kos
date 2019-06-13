@@ -32,6 +32,16 @@ do {
         e.print()
     }
     assert caught
+
+    caught = void
+    try {
+        throw { theval: 72 }
+    }
+    catch const e {
+        caught = e.value
+        e.print()
+    }
+    assert caught.theval == 72
 }
 
 do {

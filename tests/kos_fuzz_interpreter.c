@@ -45,7 +45,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
             error = KOS_load_module_from_memory(ctx, "base", (const char *)data, (unsigned)size);
 
         if (error == KOS_ERROR_EXCEPTION)
-            KOS_print_exception(ctx);
+            KOS_print_exception(ctx, KOS_STDERR);
         else if (error) {
             assert(error == KOS_ERROR_OUT_OF_MEMORY);
             fprintf(stderr, "Out of memory\n");

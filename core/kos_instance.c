@@ -510,7 +510,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     error = kos_join_finished_threads(ctx, KOS_JOIN_ALL);
 
     if (error == KOS_ERROR_EXCEPTION)
-        KOS_print_exception(ctx);
+        KOS_print_exception(ctx, KOS_STDERR);
     else if (error) {
         assert(error == KOS_ERROR_OUT_OF_MEMORY);
         fprintf(stderr, "Out of memory\n");

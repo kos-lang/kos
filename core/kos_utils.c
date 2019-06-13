@@ -191,10 +191,11 @@ static KOS_OBJ_ID _get_exception_string(KOS_CONTEXT ctx,
     return KOS_BADPTR;
 }
 
-void KOS_print_exception(KOS_CONTEXT ctx)
+void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 {
     KOS_VECTOR cstr;
     KOS_OBJ_ID exception;
+    FILE      *dest = print_where == KOS_STDERR ? stderr : stdout;
 
     kos_vector_init(&cstr);
 
@@ -205,7 +206,7 @@ void KOS_print_exception(KOS_CONTEXT ctx)
 
     if (GET_OBJ_TYPE(exception) == OBJ_STRING) {
         if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, exception, &cstr))
-            fprintf(stderr, "%s\n", cstr.buffer);
+            fprintf(dest, "%s\n", cstr.buffer);
     }
     else {
         KOS_OBJ_ID formatted;
@@ -230,10 +231,8 @@ void KOS_print_exception(KOS_CONTEXT ctx)
                 KOS_clear_exception(ctx);
             }
 
-            if (IS_BAD_PTR(str) || KOS_string_to_cstr_vec(ctx, str, &cstr))
-                fprintf(stderr, "Exception: <unable to format>\n");
-            else
-                fprintf(stderr, "%s\n", cstr.buffer);
+            if ( ! IS_BAD_PTR(str) && KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, str, &cstr))
+                fprintf(dest, "%s\n", cstr.buffer);
         }
         else {
             uint32_t i;
@@ -248,8 +247,9 @@ void KOS_print_exception(KOS_CONTEXT ctx)
             for (i = 0; i < lines; i++) {
                 KOS_OBJ_ID line = KOS_array_read(ctx, exception, (int)i);
                 assert(!KOS_is_exception_pending(ctx));
-                if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, line, &cstr))
-                    fprintf(stderr, "%s\n", cstr.buffer);
+                if (KOS_string_to_cstr_vec(ctx, line, &cstr))
+                    break;
+                fprintf(dest, "%s\n", cstr.buffer);
             }
         }
 
@@ -257,6 +257,13 @@ void KOS_print_exception(KOS_CONTEXT ctx)
     }
 
     kos_vector_destroy(&cstr);
+
+    if (KOS_is_exception_pending(ctx)) {
+        fprintf(stderr, "Exception: <unable to format>\n");
+
+        if (print_where == KOS_STDERR)
+            KOS_clear_exception(ctx);
+    }
 }
 
 KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,

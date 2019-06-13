@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
     }
 
     if (error == KOS_ERROR_EXCEPTION)
-        KOS_print_exception(ctx);
+        KOS_print_exception(ctx, KOS_STDERR);
     else if (error) {
         assert(error == KOS_ERROR_OUT_OF_MEMORY);
         fprintf(stderr, "Out of memory\n");
@@ -402,7 +402,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         buf->size = 0;
 
         if (IS_BAD_PTR(ret)) {
-            KOS_print_exception(ctx);
+            KOS_print_exception(ctx, KOS_STDERR);
             KOS_clear_exception(ctx);
             continue;
         }

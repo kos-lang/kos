@@ -358,7 +358,7 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
                             KOS_clear_exception(ctx);
 
                             KOS_raise_exception(ctx, prev_exception);
-                            KOS_print_exception(ctx);
+                            KOS_print_exception(ctx, KOS_STDERR);
                         }
                     }
                 }

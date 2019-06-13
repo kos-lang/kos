@@ -4199,44 +4199,22 @@ static KOS_OBJ_ID _print_exception(KOS_CONTEXT ctx,
                                    KOS_OBJ_ID  this_obj,
                                    KOS_OBJ_ID  args_obj)
 {
-    int        error;
-    KOS_OBJ_ID ret = KOS_BADPTR;
-    uint32_t   i;
-    uint32_t   lines;
-    KOS_OBJ_ID formatted;
-    KOS_VECTOR cstr;
-
-    kos_vector_init(&cstr);
+    int error;
 
     {
         int pushed = 0;
         TRY(KOS_push_locals(ctx, &pushed, 1, &this_obj));
     }
 
-    formatted = KOS_format_exception(ctx, this_obj);
-    TRY_OBJID(formatted);
+    KOS_raise_exception(ctx, this_obj);
 
-    assert(GET_OBJ_TYPE(formatted) == OBJ_ARRAY);
+    KOS_print_exception(ctx, KOS_STDOUT);
 
-    lines = KOS_get_array_size(formatted);
-
-    for (i = 0; i < lines; i++) {
-        KOS_OBJ_ID line = KOS_array_read(ctx, formatted, (int)i);
-        TRY_OBJID(line);
-        TRY(KOS_string_to_cstr_vec(ctx, line, &cstr));
-        if (cstr.size) {
-            cstr.buffer[cstr.size - 1] = '\n';
-            fwrite(cstr.buffer, 1, cstr.size, stdout);
-        }
-        else
-            printf("\n");
-    }
-
-    ret = this_obj;
+    if (KOS_is_exception_pending(ctx))
+        error = KOS_ERROR_EXCEPTION;
 
 cleanup:
-    kos_vector_destroy(&cstr);
-    return ret;
+    return error ? KOS_BADPTR : this_obj;
 }
 
 int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)

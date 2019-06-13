@@ -64,7 +64,12 @@ int KOS_get_integer(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id,
                     int64_t    *ret);
 
-void KOS_print_exception(KOS_CONTEXT ctx);
+enum KOS_PRINT_WHERE_E {
+    KOS_STDOUT,
+    KOS_STDERR
+};
+
+void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where);
 
 typedef enum KOS_QUOTE_STR_E {
     KOS_DONT_QUOTE,
