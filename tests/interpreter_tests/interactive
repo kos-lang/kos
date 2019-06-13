@@ -429,7 +429,7 @@ find_in_output "^Kos [0-9]\."
 # CR and TAB
 
 rm -f "$OUTPUT.data"
-"$KOS" -c 'import io ; io.stdout.write(buffer([13, 13, 10, 13], "/*", [9], "*/xxx"))' > "$OUTPUT.data"
+"$KOS" -c 'import io; io.create(args[1]).write(buffer([13, 13, 10, 13], "/*", [9], "*/xxx"))' "$OUTPUT.data"
 "$KOS" "$OUTPUT.data" 2>&1 | remove_cr > "$OUTPUT"
 
 COUNT=$(wc -l < "$OUTPUT")
