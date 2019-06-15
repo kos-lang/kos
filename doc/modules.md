@@ -1035,17 +1035,22 @@ each()
 Applies a function to every element of an iterable object.
 
 The first variant invokes function `op` on every element from the `iterable`
-object.
+object and returns the number of elements encountered.
 
 The second and third variant return a function which can be applied to any
-iterable object.  With the third variant, the returned function will simply
-extract all elements from an iterable object.
+iterable object.
+
+With the third variant, the returned function will simply extract all
+elements from an iterable object.  This can be useful to cycle through
+all elements of an iterator.
 
 The function returned by the second variant invokes function `op` on every
-element from the `iterable` object.
+element from the `iterable` object and returns the number of elements
+encountered.
 
 The function returned by the third variant simply iterates over the
-`iterable` object, but doesn't do anything with the elements.
+`iterable` object, but doesn't do anything with the elements.  It also
+returns the number of elements encountered.
 
 Elements are extracted from `iterable` object through its `iterator()`
 function.
@@ -1055,14 +1060,16 @@ operators `->`.
 
 Examples:
 
-    > range(3) -> each(print)
+    > range(0, 21, 10) -> each(print)
     0
-    1
-    2
+    10
+    20
+    3
     > "abc" -> map(x => print(x + "_")) -> each()
     a_
     b_
     c_
+    3
 
 enumerate()
 -----------
