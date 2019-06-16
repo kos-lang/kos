@@ -62,6 +62,7 @@ Table of Contents
     * [hex()](#hex)
     * [integer()](#integer)
       * [integer.prototype.hex()](#integerprototypehex)
+    * [join()](#join)
     * [keys()](#keys)
     * [map()](#map)
     * [method()](#method)
@@ -88,6 +89,7 @@ Table of Contents
       * [string.prototype.find()](#stringprototypefind)
       * [string.prototype.indices()](#stringprototypeindices)
       * [string.prototype.iterator()](#stringprototypeiterator)
+      * [string.prototype.join()](#stringprototypejoin)
       * [string.prototype.ljust()](#stringprototypeljust)
       * [string.prototype.lstrip()](#stringprototypelstrip)
       * [string.prototype.repeat()](#stringprototyperepeat)
@@ -1446,6 +1448,39 @@ Examples:
     > 123 .hex(4)
     "0x007b"
 
+join()
+------
+
+    join(sep, iterable)
+    join(sep)
+
+Connects strings together using a separator.
+
+The first variant returns a string, which is a concatenation of all elements
+from the `iterable` object with the `sep` separator inserted in-between the
+elements.
+
+The second variant returns a function, which takes one argument `iterable`
+and will return a concatenation of all elements with `sep` in-between.
+
+`sep` must be a string.
+
+`iterable` can return objects of any type accepted by the `string` constructor.
+
+Elements are extracted from `iterable` object through its `iterator()`
+function.
+
+Examples:
+
+    > join("-", ["kos", "programming", "language"])
+    "kos-programming-language"
+    > join(" ", "lang")
+    "l a n g"
+    > ["apple", "banana", "orange"] -> join(", ")
+    "apple, banana, orange"
+    > range(4) -> join(" ")
+    "0 1 2 3"
+
 keys()
 ------
 
@@ -2105,6 +2140,31 @@ Examples:
     f
     o
     o
+
+string.prototype.join()
+-----------------------
+
+    string.prototype.join(iterable)
+
+Connects strings together using `this` string as separator.
+
+Returns a string, which is a concatenation of all elements
+from the `iterable` object with the `this` string inserted in-between the
+elements.
+
+`iterable` can return objects of any type accepted by the `string` constructor.
+
+Elements are extracted from `iterable` object through its `iterator()`
+function.
+
+Examples:
+
+    > "=".join(["answer", 42, "question", "?"])
+    "answer=42=question=?"
+    > ", ".join(["apple", "banana", "orange"])
+    "apple, banana, orange"
+    > range(5, 10) -> "_".join
+    "5_6_7_8_9"
 
 string.prototype.ljust()
 ------------------------

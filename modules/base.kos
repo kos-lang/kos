@@ -2002,7 +2002,6 @@ fun count_elements(iterable)
  *     c_
  *     3
  */
-
 fun each(args...)
 {
     const num_args = args.size
@@ -2029,4 +2028,93 @@ fun each(args...)
             return count
         }
     }
+}
+
+/* @item base join()
+ *
+ *     join(sep, iterable)
+ *     join(sep)
+ *
+ * Connects strings together using a separator.
+ *
+ * The first variant returns a string, which is a concatenation of all elements
+ * from the `iterable` object with the `sep` separator inserted in-between the
+ * elements.
+ *
+ * The second variant returns a function, which takes one argument `iterable`
+ * and will return a concatenation of all elements with `sep` in-between.
+ *
+ * `sep` must be a string.
+ *
+ * `iterable` can return objects of any type accepted by the `string` constructor.
+ *
+ * Elements are extracted from `iterable` object through its `iterator()`
+ * function.
+ *
+ * Examples:
+ *
+ *     > join("-", ["kos", "programming", "language"])
+ *     "kos-programming-language"
+ *     > join(" ", "lang")
+ *     "l a n g"
+ *     > ["apple", "banana", "orange"] -> join(", ")
+ *     "apple, banana, orange"
+ *     > range(4) -> join(" ")
+ *     "0 1 2 3"
+ */
+fun join(sep, args...)
+{
+    assert typeof sep == "string"
+    fun inner_join(to_join)
+    {
+        if typeof to_join != "array" {
+            to_join = [ to_join ... ]
+        }
+
+        const num_in = to_join.size
+        const num_pieces = num_in * 2 - 1
+        const pieces = array(num_pieces > 0 ? num_pieces : 0, sep)
+        var dest_i = 0
+        for var src_i = 0; src_i < num_in; src_i += 1, dest_i += 2 {
+            pieces[dest_i] = to_join[src_i]
+        }
+
+        return string.apply(void, pieces)
+    }
+
+    if args.size {
+        return inner_join(args[0])
+    }
+    else {
+        return inner_join
+    }
+}
+
+/* @item base string.prototype.join()
+ *
+ *     string.prototype.join(iterable)
+ *
+ * Connects strings together using `this` string as separator.
+ *
+ * Returns a string, which is a concatenation of all elements
+ * from the `iterable` object with the `this` string inserted in-between the
+ * elements.
+ *
+ * `iterable` can return objects of any type accepted by the `string` constructor.
+ *
+ * Elements are extracted from `iterable` object through its `iterator()`
+ * function.
+ *
+ * Examples:
+ *
+ *     > "=".join(["answer", 42, "question", "?"])
+ *     "answer=42=question=?"
+ *     > ", ".join(["apple", "banana", "orange"])
+ *     "apple, banana, orange"
+ *     > range(5, 10) -> "_".join
+ *     "5_6_7_8_9"
+ */
+string.prototype.join = fun(to_join)
+{
+    return join(this, to_join)
 }

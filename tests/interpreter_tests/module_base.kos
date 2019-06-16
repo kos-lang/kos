@@ -1524,3 +1524,27 @@ do {
 
     assert sum == 123
 }
+
+##############################################################################
+# base.join
+
+do {
+    assert base.join("", [])               == ""
+    assert base.join("-", [])              == ""
+    assert base.join("", ["a"])            == "a"
+    assert base.join("-", ["a"])           == "a"
+    assert base.join("", ["a", "b", "c"])  == "abc"
+    assert base.join("-", ["a", "b", "c"]) == "a-b-c"
+    assert base.join(" :x: ", [1, base.buffer([0x33, 0x30]), "a"]) == "1 :x: 30 :x: a"
+
+    assert base.join("")([])     == ""
+    assert base.join("")([""])   == ""
+    assert base.join("_")("xy")  == "x_y"
+    assert base.join("_")("xyz") == "x_y_z"
+
+    expect_fail(() => base.join(void, []))
+    expect_fail(() => base.join({}, []))
+    expect_fail(() => base.join([], []))
+    expect_fail(() => base.join([], void))
+    expect_fail(() => base.join([], {}))
+}

@@ -761,3 +761,16 @@ do {
     expect_fail(()=>"abcd".zfill(1, ""))
     expect_fail(()=>"abcd".zfill(1, "oo"))
 }
+
+##############################################################################
+# base.string.prototype.join
+
+do {
+    assert "".join([])      == ""
+    assert ":".join([])     == ""
+    assert ":".join([""])   == ""
+    assert ":".join("join") == "j:o:i:n"
+    assert ":".join(["this", 42]) == "this:42"
+
+    expect_fail(() => "".join())
+}
