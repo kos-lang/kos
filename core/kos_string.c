@@ -1671,8 +1671,12 @@ KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             uint32_t       *dest = (uint32_t *)kos_get_string_buffer(new_str);
 
             for (i = 0; i < len; i++) {
-                const uint32_t c = *(src++);
-                *(dest++) = (uint32_t)kos_unicode_to_lower(c);
+                uint32_t c = *(src++);
+
+                if (c < 0x10000U)
+                    c = (uint32_t)kos_unicode_to_lower((uint16_t)c);
+
+                *(dest++) = c;
             }
             break;
         }
@@ -1733,13 +1737,18 @@ KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
         }
 
         default: {
-            assert(elem_size == KOS_STRING_ELEM_32);
             const uint32_t *src  = (const uint32_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id));
             uint32_t       *dest = (uint32_t *)kos_get_string_buffer(new_str);
 
+            assert(elem_size == KOS_STRING_ELEM_32);
+
             for (i = 0; i < len; i++) {
-                const uint32_t c = *(src++);
-                *(dest++) = (uint32_t)kos_unicode_to_upper(c);
+                uint32_t c = *(src++);
+
+                if (c < 0x10000U)
+                    c = (uint32_t)kos_unicode_to_upper((uint16_t)c);
+
+                *(dest++) = c;
             }
             break;
         }
