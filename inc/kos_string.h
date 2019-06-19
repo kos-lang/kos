@@ -152,6 +152,10 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  obj_id,
                              unsigned    num_repeat);
 
+KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
+
+KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
+
 #ifdef __cplusplus
 }
 #endif

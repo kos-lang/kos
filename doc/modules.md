@@ -91,6 +91,7 @@ Table of Contents
       * [string.prototype.iterator()](#stringprototypeiterator)
       * [string.prototype.join()](#stringprototypejoin)
       * [string.prototype.ljust()](#stringprototypeljust)
+      * [string.prototype.lowercase()](#stringprototypelowercase)
       * [string.prototype.lstrip()](#stringprototypelstrip)
       * [string.prototype.repeat()](#stringprototyperepeat)
       * [string.prototype.reverse()](#stringprototypereverse)
@@ -105,6 +106,7 @@ Table of Contents
       * [string.prototype.split\_lines()](#stringprototypesplit_lines)
       * [string.prototype.starts\_with()](#stringprototypestarts_with)
       * [string.prototype.strip()](#stringprototypestrip)
+      * [string.prototype.uppercase()](#stringprototypeuppercase)
       * [string.prototype.zfill()](#stringprototypezfill)
     * [stringify()](#stringify)
     * [sum()](#sum)
@@ -2193,6 +2195,21 @@ Examples:
     > "abc".ljust(1)
     "abc"
 
+string.prototype.lowercase()
+----------------------------
+
+    string.prototype.lowercase(str)
+
+Returns a copy of the string with all alphabetical characters converted to
+lowercase.
+
+Examples:
+
+    > "Kos".lowercase()
+    "kos"
+    > "Text 123 stRIng".lowercase()
+    "text 123 string"
+
 string.prototype.lstrip()
 -------------------------
 
@@ -2507,6 +2524,21 @@ Example:
 
     > "  foo  ".strip()
     "foo"
+
+string.prototype.uppercase()
+----------------------------
+
+    string.prototype.uppercase(str)
+
+Returns a copy of the string with all alphabetical characters converted to
+uppercase.
+
+Examples:
+
+    > "Kos".uppercase()
+    "KOS"
+    > "Text 123 stRIng".uppercase()
+    "TEXT 123 STRING"
 
 string.prototype.zfill()
 ------------------------

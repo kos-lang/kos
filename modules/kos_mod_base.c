@@ -3963,6 +3963,48 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item base string.prototype.lowercase()
+ *
+ *     string.prototype.lowercase(str)
+ *
+ * Returns a copy of the string with all alphabetical characters converted to
+ * lowercase.
+ *
+ * Examples:
+ *
+ *     > "Kos".lowercase()
+ *     "kos"
+ *     > "Text 123 stRIng".lowercase()
+ *     "text 123 string"
+ */
+static KOS_OBJ_ID _lowercase(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
+{
+    return KOS_string_lowercase(ctx, this_obj);
+}
+
+/* @item base string.prototype.uppercase()
+ *
+ *     string.prototype.uppercase(str)
+ *
+ * Returns a copy of the string with all alphabetical characters converted to
+ * uppercase.
+ *
+ * Examples:
+ *
+ *     > "Kos".uppercase()
+ *     "KOS"
+ *     > "Text 123 stRIng".uppercase()
+ *     "TEXT 123 STRING"
+ */
+static KOS_OBJ_ID _uppercase(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
+{
+    return KOS_string_uppercase(ctx, this_obj);
+}
+
 /* @item base string.prototype.size
  *
  *     string.prototype.size
@@ -4280,6 +4322,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "ends_with",     _ends_with,         1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "find",          _find,              1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "code",          _code,              0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "lowercase",     _lowercase,         0);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "repeat",        _repeat,            1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "rfind",         _rfind,             1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "rscan",         _rscan,             1);
@@ -4287,6 +4330,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "scan",          _scan,              1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "slice",         _slice,             2);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "starts_with",   _starts_with,       1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "uppercase",     _uppercase,         0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(string),     "size",          _get_string_size,   0);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(thread),     "wait",          _wait,              0);

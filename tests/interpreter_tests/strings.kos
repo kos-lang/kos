@@ -774,3 +774,35 @@ do {
 
     expect_fail(() => "".join())
 }
+
+##############################################################################
+# base.string.prototype.lowercase
+
+do {
+    assert "".lowercase()             == ""
+    assert "1".lowercase()            == "1"
+    assert "a".lowercase()            == "a"
+    assert "A".lowercase()            == "a"
+    assert "TeSt 123 StR".lowercase() == "test 123 str"
+    assert "\x{37E}aBc1".lowercase()  == "\x{37e}abc1"
+    assert "\x{10180}aBc1".lowercase()== "\x{10180}abc1"
+
+    expect_fail(() => "".lowercase.apply(void, []))
+    expect_fail(() => "".lowercase.apply(1, []))
+}
+
+##############################################################################
+# base.string.prototype.uppercase
+
+do {
+    assert "".uppercase()             == ""
+    assert "1".uppercase()            == "1"
+    assert "a".uppercase()            == "A"
+    assert "A".uppercase()            == "A"
+    assert "TeSt 123 StR".uppercase() == "TEST 123 STR"
+    assert "\x{37E}aBc1".uppercase()  == "\x{37e}ABC1"
+    assert "\x{10180}aBc1".uppercase()== "\x{10180}ABC1"
+
+    expect_fail(() => "".uppercase.apply(void, []))
+    expect_fail(() => "".uppercase.apply(1, []))
+}

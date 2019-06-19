@@ -1613,3 +1613,137 @@ int kos_append_cstr(KOS_CONTEXT ctx,
 
     return error;
 }
+
+KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+{
+    KOS_STRING*      new_str;
+    unsigned         len;
+    unsigned         i;
+    KOS_STRING_FLAGS elem_size;
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
+        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        return KOS_BADPTR;
+    }
+
+    len       = KOS_get_string_length(obj_id);
+    elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
+
+    if (len == 0)
+        return KOS_get_string(ctx, KOS_STR_EMPTY);
+
+    kos_track_refs(ctx, 1, &obj_id);
+
+    new_str = _new_empty_string(ctx, len, elem_size);
+
+    kos_untrack_refs(ctx, 1);
+
+    if ( ! new_str)
+        len = 0;
+
+    switch (elem_size) {
+
+        case KOS_STRING_ELEM_8: {
+            const uint8_t *src  = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id));
+            uint8_t       *dest = (uint8_t *)kos_get_string_buffer(new_str);
+
+            for (i = 0; i < len; i++) {
+                const uint8_t c = *(src++);
+                *(dest++) = (uint8_t)kos_unicode_to_lower(c);
+            }
+            break;
+        }
+
+        case KOS_STRING_ELEM_16: {
+            const uint16_t *src  = (const uint16_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id));
+            uint16_t       *dest = (uint16_t *)kos_get_string_buffer(new_str);
+
+            for (i = 0; i < len; i++) {
+                const uint16_t c = *(src++);
+                *(dest++) = (uint16_t)kos_unicode_to_lower(c);
+            }
+            break;
+        }
+
+        default: {
+            assert(elem_size == KOS_STRING_ELEM_32);
+            const uint32_t *src  = (const uint32_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id));
+            uint32_t       *dest = (uint32_t *)kos_get_string_buffer(new_str);
+
+            for (i = 0; i < len; i++) {
+                const uint32_t c = *(src++);
+                *(dest++) = (uint32_t)kos_unicode_to_lower(c);
+            }
+            break;
+        }
+    }
+
+    return OBJID(STRING, new_str);
+}
+
+KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+{
+    KOS_STRING*      new_str;
+    unsigned         len;
+    unsigned         i;
+    KOS_STRING_FLAGS elem_size;
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
+        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        return KOS_BADPTR;
+    }
+
+    len       = KOS_get_string_length(obj_id);
+    elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
+
+    if (len == 0)
+        return KOS_get_string(ctx, KOS_STR_EMPTY);
+
+    kos_track_refs(ctx, 1, &obj_id);
+
+    new_str = _new_empty_string(ctx, len, elem_size);
+
+    kos_untrack_refs(ctx, 1);
+
+    if ( ! new_str)
+        len = 0;
+
+    switch (elem_size) {
+
+        case KOS_STRING_ELEM_8: {
+            const uint8_t *src  = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id));
+            uint8_t       *dest = (uint8_t *)kos_get_string_buffer(new_str);
+
+            for (i = 0; i < len; i++) {
+                const uint8_t c = *(src++);
+                *(dest++) = (uint8_t)kos_unicode_to_upper(c);
+            }
+            break;
+        }
+
+        case KOS_STRING_ELEM_16: {
+            const uint16_t *src  = (const uint16_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id));
+            uint16_t       *dest = (uint16_t *)kos_get_string_buffer(new_str);
+
+            for (i = 0; i < len; i++) {
+                const uint16_t c = *(src++);
+                *(dest++) = (uint16_t)kos_unicode_to_upper(c);
+            }
+            break;
+        }
+
+        default: {
+            assert(elem_size == KOS_STRING_ELEM_32);
+            const uint32_t *src  = (const uint32_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id));
+            uint32_t       *dest = (uint32_t *)kos_get_string_buffer(new_str);
+
+            for (i = 0; i < len; i++) {
+                const uint32_t c = *(src++);
+                *(dest++) = (uint32_t)kos_unicode_to_upper(c);
+            }
+            break;
+        }
+    }
+
+    return OBJID(STRING, new_str);
+}
