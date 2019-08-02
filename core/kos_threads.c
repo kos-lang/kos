@@ -194,7 +194,7 @@ static KOS_OBJ_ID alloc_thread(KOS_CONTEXT ctx,
             prev = KOS_array_cas(ctx, inst->threads.threads, (int)i, KOS_VOID, thread_obj);
 
             if (prev == KOS_VOID) {
-                KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&inst->threads.num_threads, 1);
+                KOS_atomic_add_u32(inst->threads.num_threads, 1);
                 break;
             }
 
@@ -253,7 +253,7 @@ static void release_thread(KOS_CONTEXT ctx, KOS_OBJ_ID thread)
 
     (void)KOS_array_write(ctx, inst->threads.threads, thread_idx, KOS_VOID);
 
-    KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&inst->threads.num_threads, -1);
+    KOS_atomic_add_u32(inst->threads.num_threads, -1);
 }
 
 void kos_thread_disown(KOS_OBJ_ID thread)

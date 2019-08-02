@@ -444,7 +444,7 @@ static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
 static KOS_PAGE *begin_page_walk(KOS_HEAP               *heap,
                                  KOS_ATOMIC(KOS_PAGE *) *page_ptr)
 {
-    KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&heap->walk_active, 1);
+    KOS_atomic_add_u32(heap->walk_active, 1);
 
     return get_next_page(heap, page_ptr);
 }
@@ -453,12 +453,12 @@ static void end_page_walk(KOS_HEAP *heap)
 {
     assert(KOS_atomic_read_relaxed_u32(heap->walk_active) > 0U);
 
-    KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&heap->walk_active, -1);
+    KOS_atomic_add_u32(heap->walk_active, -1);
 }
 
 static void wait_for_walk_end(KOS_HEAP *heap)
 {
-    while (KOS_atomic_read_acquire_u32(*(KOS_ATOMIC(uint32_t) *)&heap->walk_active))
+    while (KOS_atomic_read_acquire_u32(heap->walk_active))
         kos_yield();
 }
 
@@ -1398,7 +1398,7 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
         KOS_atomic_write_relaxed_u32(page->num_used, num_slots_used);
     }
 
-    KOS_atomic_add_i32(*(KOS_ATOMIC(int32_t) *)&heap->gray_marked, marked);
+    KOS_atomic_add_u32(heap->gray_marked, marked);
 
     end_page_walk(heap);
 }

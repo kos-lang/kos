@@ -149,6 +149,12 @@ int32_t KOS_atomic_add_i32(KOS_ATOMIC(T)& dest, int32_t value)
     return static_cast<int32_t>(dest.fetch_add(static_cast<T>(value)));
 }
 
+template<typename T>
+uint32_t KOS_atomic_add_u32(KOS_ATOMIC(T)& dest, uint32_t value)
+{
+    return static_cast<int32_t>(dest.fetch_add(static_cast<T>(value)));
+}
+
 static inline uint32_t KOS_atomic_swap_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t value)
 {
     return dest.exchange(value);
@@ -221,6 +227,8 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 }
 
 #define KOS_atomic_add_i32(dest, value) ((int32_t)atomic_fetch_add(&(dest), (value)))
+
+#define KOS_atomic_add_u32(dest, value) ((uint32_t)atomic_fetch_add(&(dest), (value)))
 
 #define KOS_atomic_swap_u32(dest, value) atomic_exchange(&(dest), (value))
 
@@ -300,6 +308,10 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 #define KOS_atomic_add_i32(dest, value) \
         ((int32_t)_InterlockedExchangeAdd((long volatile *)&(dest), \
                                           (long)(value)))
+
+#define KOS_atomic_add_u32(dest, value) \
+        ((uint32_t)_InterlockedExchangeAdd((long volatile *)&(dest), \
+                                           (long)(value)))
 
 #define KOS_atomic_swap_u32(dest, value) \
         ((uint32_t)_InterlockedExchange((long volatile *)&(dest), \
@@ -387,6 +399,8 @@ int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
 
 #define KOS_atomic_add_i32(dest, value) ((int32_t)__atomic_fetch_add(&(dest), (value), __ATOMIC_SEQ_CST))
 
+#define KOS_atomic_add_u32(dest, value) ((uint32_t)__atomic_fetch_add(&(dest), (value), __ATOMIC_SEQ_CST))
+
 #define KOS_atomic_swap_u32(dest, value) __atomic_exchange_n(&(dest), (value), __ATOMIC_SEQ_CST)
 
 #define KOS_atomic_swap_ptr(dest, value) __atomic_exchange_n(&(dest), (value), __ATOMIC_SEQ_CST)
@@ -465,6 +479,16 @@ int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
 #define KOS_atomic_add_i32(dest, value)                           \
     __extension__ ({                                              \
         int32_t            at_ret = (int32_t)(value);             \
+        uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
+        __asm__ volatile("lock xaddl %0, %1\n"                    \
+                    : "+r" (at_ret), "+m" (*at_ptr)               \
+                    : : "memory", "cc");                          \
+        at_ret;                                                   \
+    })
+
+#define KOS_atomic_add_u32(dest, value)                           \
+    __extension__ ({                                              \
+        uint32_t           at_ret = (uint32_t)(value);            \
         uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
         __asm__ volatile("lock xaddl %0, %1\n"                    \
                     : "+r" (at_ret), "+m" (*at_ptr)               \
@@ -566,6 +590,16 @@ int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
 #define KOS_atomic_add_i32(dest, value)                           \
     __extension__ ({                                              \
         int32_t            at_ret = (int32_t)(value);             \
+        uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
+        __asm__ volatile("lock xaddl %0, %1\n"                    \
+                    : "+r" (at_ret), "+m" (*at_ptr)               \
+                    : : "memory", "cc");                          \
+        at_ret;                                                   \
+    })
+
+#define KOS_atomic_add_u32(dest, value)                           \
+    __extension__ ({                                              \
+        uint32_t           at_ret = (uint32_t)(value);            \
         uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
         __asm__ volatile("lock xaddl %0, %1\n"                    \
                     : "+r" (at_ret), "+m" (*at_ptr)               \
