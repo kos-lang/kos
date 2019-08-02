@@ -253,7 +253,7 @@ static void release_thread(KOS_CONTEXT ctx, KOS_OBJ_ID thread)
 
     (void)KOS_array_write(ctx, inst->threads.threads, thread_idx, KOS_VOID);
 
-    KOS_atomic_add_u32(inst->threads.num_threads, -1);
+    KOS_atomic_add_u32(inst->threads.num_threads, (uint32_t)-1);
 }
 
 void kos_thread_disown(KOS_OBJ_ID thread)

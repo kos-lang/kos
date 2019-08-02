@@ -453,7 +453,7 @@ static void end_page_walk(KOS_HEAP *heap)
 {
     assert(KOS_atomic_read_relaxed_u32(heap->walk_active) > 0U);
 
-    KOS_atomic_add_u32(heap->walk_active, -1);
+    KOS_atomic_add_u32(heap->walk_active, (uint32_t)-1);
 }
 
 static void wait_for_walk_end(KOS_HEAP *heap)
