@@ -585,6 +585,43 @@ do {
     assert a != b
 }
 
+# Resize array
+do {
+    const a = [ 1, 2, 3 ]
+    a.resize(4)
+    assert a.size == 4
+    assert a[0] == 1
+    assert a[1] == 2
+    assert a[2] == 3
+    assert a[3] == void
+}
+
+# Resize array, with value
+do {
+    const a = [ -1, -2 ]
+    a.resize(5, 42)
+    assert a.size == 5
+    assert a[0] == -1
+    assert a[1] == -2
+    assert a[2] == 42
+    assert a[3] == 42
+    assert a[4] == 42
+}
+
+# Resize array, with value being another array
+do {
+    const a = [ 8 ]
+    a.resize(3, [])
+    assert a.size == 3
+    assert a[0] == 8
+    assert typeof a[1] == "array"
+    assert a[1].size == 0
+    assert a[1] == a[2]
+    a[1].push(77)
+    assert a[1][0] == 77
+    assert a[2][0] == 77
+}
+
 ##############################################################################
 # base.array
 

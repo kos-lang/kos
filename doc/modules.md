@@ -488,7 +488,7 @@ Returns the array object itself (`this`).
 array.prototype.resize()
 ------------------------
 
-    array.prototype.resize(size)
+    array.prototype.resize(size, value = void)
 
 Resizes an array.
 
@@ -496,7 +496,7 @@ Returns the array being resized (`this`).
 
 `size` is the new size of the array.
 
-If `size` is greater than the current array size, `void` elements are
+If `size` is greater than the current array size, `value` elements are
 appended to expand the array.
 
 Example:
@@ -846,7 +846,7 @@ Returns the buffer object itself (`this`).
 buffer.prototype.resize()
 -------------------------
 
-    buffer.prototype.resize(size)
+    buffer.prototype.resize(size, value = 0)
 
 Resizes a buffer.
 
@@ -854,7 +854,7 @@ Returns the buffer being resized (`this`).
 
 `size` is the new size of the buffer.
 
-If `size` is greater than the current buffer size, `0` elements are
+If `size` is greater than the current buffer size, `value` elements are
 appended to expand the buffer.
 
 Example:

@@ -2219,7 +2219,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_CONTEXT ctx,
 
 /* @item base array.prototype.resize()
  *
- *     array.prototype.resize(size)
+ *     array.prototype.resize(size, value = void)
  *
  * Resizes an array.
  *
@@ -2227,7 +2227,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_CONTEXT ctx,
  *
  * `size` is the new size of the array.
  *
- * If `size` is greater than the current array size, `void` elements are
+ * If `size` is greater than the current array size, `value` elements are
  * appended to expand the array.
  *
  * Example:
@@ -2239,7 +2239,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_CONTEXT ctx,
 
 /* @item base buffer.prototype.resize()
  *
- *     buffer.prototype.resize(size)
+ *     buffer.prototype.resize(size, value = 0)
  *
  * Resizes a buffer.
  *
@@ -2247,7 +2247,7 @@ static KOS_OBJ_ID _get_buffer_size(KOS_CONTEXT ctx,
  *
  * `size` is the new size of the buffer.
  *
- * If `size` is greater than the current buffer size, `0` elements are
+ * If `size` is greater than the current buffer size, `value` elements are
  * appended to expand the buffer.
  *
  * Example:
@@ -2260,12 +2260,13 @@ static KOS_OBJ_ID _resize(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int        error  = KOS_SUCCESS;
-    int        pushed = 0;
-    KOS_OBJ_ID size_obj;
+    int        error     = KOS_SUCCESS;
+    int        pushed    = 0;
+    KOS_OBJ_ID value_obj = KOS_VOID;
+    KOS_OBJ_ID size_obj  = KOS_VOID;
     int64_t    size;
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &args_obj));
+    TRY(KOS_push_locals(ctx, &pushed, 3, &this_obj, &args_obj, &value_obj));
 
     size_obj = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(size_obj);
@@ -2276,24 +2277,55 @@ static KOS_OBJ_ID _resize(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_BUFFER) {
         const uint32_t old_size = KOS_get_buffer_size(this_obj);
+        int64_t        value    = 0;
 
         if (size < 0 || size > INT_MAX) {
             KOS_raise_exception_cstring(ctx, str_err_invalid_buffer_size);
             return KOS_BADPTR;
         }
 
+        if (KOS_get_array_size(args_obj) > 1) {
+            value_obj = KOS_array_read(ctx, args_obj, 1);
+            TRY_OBJID(value_obj);
+
+            if (!IS_NUMERIC_OBJ(value_obj))
+                RAISE_EXCEPTION(str_err_cannot_convert_to_buffer);
+
+            TRY(KOS_get_integer(ctx, value_obj, &value));
+
+            if (value < 0 || value > 255)
+                RAISE_EXCEPTION(str_err_cannot_convert_to_buffer);
+        }
+        else
+            value_obj = TO_SMALL_INT(0);
+
         TRY(KOS_buffer_resize(ctx, this_obj, (uint32_t)size));
 
         if (size > old_size)
-            memset(KOS_buffer_data(this_obj) + old_size, 0, (uint32_t)(size - old_size));
+            memset(KOS_buffer_data(this_obj) + old_size, (int)value, (uint32_t)(size - old_size));
     }
     else {
+        uint32_t old_size;
+
+        if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
+            RAISE_EXCEPTION(str_err_not_array);
+
         if (size < 0 || size > INT_MAX) {
             KOS_raise_exception_cstring(ctx, str_err_invalid_array_size);
             return KOS_BADPTR;
         }
 
+        if (KOS_get_array_size(args_obj) > 1) {
+            value_obj = KOS_array_read(ctx, args_obj, 1);
+            TRY_OBJID(value_obj);
+        }
+
+        old_size = KOS_get_array_size(this_obj);
+
         TRY(KOS_array_resize(ctx, this_obj, (uint32_t)size));
+
+        if ((uint32_t)size > old_size && value_obj != KOS_VOID)
+            TRY(KOS_array_fill(ctx, this_obj, old_size, size, value_obj));
     }
 
 cleanup:

@@ -1006,6 +1006,26 @@ do {
     }
 }
 
+# Resize buffer with value
+do {
+    const b = buffer([4, 5])
+    b.resize(5, 8)
+    assert b.size == 5
+    assert b[0] == 4
+    assert b[1] == 5
+    assert b[2] == 8
+    assert b[3] == 8
+    assert b[4] == 8
+}
+
+# Resize with invalid value
+do {
+    expect_fail(() => buffer([]).resize(3, buffer()))
+    expect_fail(() => buffer([]).resize(3, void))
+    expect_fail(() => buffer([]).resize(3, -1))
+    expect_fail(() => buffer([]).resize(3, 256))
+}
+
 ##############################################################################
 # base.buffer.prototype.reverse()
 do {
