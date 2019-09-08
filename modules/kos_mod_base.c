@@ -1299,11 +1299,12 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
             case OBJ_ARRAY: {
                 const uint32_t size = KOS_get_array_size(arg);
                 uint32_t       i;
-                uint8_t       *data;
+                uint8_t       *data = 0;
 
                 TRY(KOS_buffer_resize(ctx, buffer, cur_size + size));
 
-                data = KOS_buffer_data(buffer) + cur_size;
+                if (size + cur_size)
+                    data = KOS_buffer_data(buffer) + cur_size;
 
                 for (i = 0; i < size; i++) {
                     int64_t value;
