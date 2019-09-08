@@ -116,8 +116,9 @@ runtests()
 
     local WITH_TOOL
     WITH_TOOL=""
-    [ -n "$tool" ] && WITH_TOOL=" with $tool"
-    [ -n "$gcov" ] && WITH_TOOL=" with gcov"
+    [ -n "$tool"   ] && WITH_TOOL=" with $tool"
+    [ -n "$gcov"   ] && WITH_TOOL="$WITH_TOOL with gcov"
+    [ -n "$mad_gc" ] && WITH_TOOL="$WITH_TOOL with mad GC"
 
     if [ -n "$SANITIZER" ]; then
         local CFLAGS
