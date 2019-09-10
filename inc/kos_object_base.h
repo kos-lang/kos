@@ -69,8 +69,8 @@ struct KOS_OBJECT_PLACEHOLDER;
  *
  * KOS_OBJ_ID's layout is:
  * - "Small" integer       ...iiii iiii iiii iii0 (31- or 63-bit signed integer)
- * - Heap object pointer   ...pppp pppp pppp p001 (8 byte-aligned pointer)
- * - Static object pointer ...pppp pppp pppp p101 (8 byte-aligned pointer)
+ * - Heap object pointer   ...pppp pppp ppp0 0001 (16 byte-aligned pointer)
+ * - Static object pointer ...pppp pppp ppp0 1001 (8 byte-aligned pointer)
  *
  * If bit 0 is a '1', the rest of KOS_OBJ_ID is treated as the pointer without
  * that bit set.  The actual pointer to the object is KOS_OBJ_ID minus 1.
@@ -107,9 +107,6 @@ static inline KOS_OBJ_ID TO_SMALL_INT(intptr_t value) {
 }
 static inline bool IS_BAD_PTR(KOS_OBJ_ID obj_id) {
     return reinterpret_cast<intptr_t>(obj_id) == 1;
-}
-static inline bool IS_HEAP_OBJECT(KOS_OBJ_ID obj_id) {
-    return (reinterpret_cast<intptr_t>(obj_id) & 15) == 1;
 }
 static inline KOS_TYPE READ_OBJ_TYPE(KOS_OBJ_ID obj_id) {
     assert( ! IS_SMALL_INT(obj_id));
@@ -156,7 +153,6 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
 #define IS_NUMERIC_OBJ(obj_id) ( GET_OBJ_TYPE(obj_id) <= OBJ_FLOAT                 )
 #define OBJPTR(tag, obj_id)    ( (KOS_##tag *) ((intptr_t)(obj_id) - 1)            )
 #define IS_BAD_PTR(obj_id)     ( (intptr_t)(obj_id) == 1                           )
-#define IS_HEAP_OBJECT(obj_id) ( ((intptr_t)(obj_id) & 15) == 1                    )
 #define OBJID(tag, ptr)        ( (KOS_OBJ_ID) ((intptr_t)(ptr) + 1)                )
 #define READ_OBJ_TYPE(obj_id)  ( (KOS_TYPE)(uint8_t)(uintptr_t)(((KOS_OBJ_HEADER *)((uint8_t *)(obj_id) - 1))->size_and_type) )
 #define GET_OBJ_TYPE(obj_id)   ( IS_SMALL_INT(obj_id) ? OBJ_SMALL_INTEGER : READ_OBJ_TYPE(obj_id) )

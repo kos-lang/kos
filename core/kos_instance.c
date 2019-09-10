@@ -399,9 +399,9 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     KOS_MODULE *init_module;
     KOS_CONTEXT ctx;
 
-    assert(!IS_HEAP_OBJECT(KOS_VOID));
-    assert(!IS_HEAP_OBJECT(KOS_FALSE));
-    assert(!IS_HEAP_OBJECT(KOS_TRUE));
+    assert(!kos_is_heap_object(KOS_VOID));
+    assert(!kos_is_heap_object(KOS_FALSE));
+    assert(!kos_is_heap_object(KOS_TRUE));
 
     clear_instance(inst);
 

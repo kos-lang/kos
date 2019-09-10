@@ -149,12 +149,12 @@ KOS_TYPE kos_get_object_type_gc_safe(KOS_OBJ_ID obj)
 {
     KOS_OBJ_HEADER *hdr;
 
-    if ( ! IS_HEAP_OBJECT(obj))
+    if ( ! kos_is_heap_object(obj))
         return GET_OBJ_TYPE(obj);
 
     hdr = (KOS_OBJ_HEADER *)((intptr_t)obj - 1);
 
-    if ( ! IS_HEAP_OBJECT(hdr->size_and_type))
+    if ( ! kos_is_heap_object(hdr->size_and_type))
         return kos_get_object_type(*hdr);
 
     hdr = (KOS_OBJ_HEADER *)((intptr_t)hdr->size_and_type - 1);
@@ -1201,7 +1201,7 @@ static void set_mark_state(KOS_OBJ_ID            obj_id,
     assert(((uintptr_t)obj_id & 0xFFFFFFFFU) != 0xDDDDDDDDU);
 
     /* TODO can we get rid of IS_BAD_PTR ? */
-    if (IS_HEAP_OBJECT(obj_id) && ! IS_BAD_PTR(obj_id)) {
+    if (kos_is_heap_object(obj_id) && ! IS_BAD_PTR(obj_id)) {
 
         const struct KOS_MARK_LOC_S mark_loc = get_mark_location(obj_id);
 
@@ -1344,7 +1344,7 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
 
 static void mark_object_black(KOS_OBJ_ID obj_id)
 {
-    if (IS_HEAP_OBJECT(obj_id)) {
+    if (kos_is_heap_object(obj_id)) {
 
         assert( ! IS_BAD_PTR(obj_id));
 
@@ -1847,7 +1847,7 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 {
     KOS_OBJ_ID obj_id = *obj_id_ptr;
 
-    if (IS_HEAP_OBJECT(obj_id) && ! IS_BAD_PTR(obj_id)) {
+    if (kos_is_heap_object(obj_id) && ! IS_BAD_PTR(obj_id)) {
 
         /* TODO use relaxed atomic loads/stores ??? */
 
@@ -1858,11 +1858,11 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
         const uint32_t              color    = get_marking(&mark_loc);
 
         assert(color & BLACK);
-        assert(IS_HEAP_OBJECT(new_obj));
+        assert(kos_is_heap_object(new_obj));
 #endif
 
         /* Objects in pages retained keep their size in their size field */
-        if (IS_HEAP_OBJECT(new_obj))
+        if (kos_is_heap_object(new_obj))
             *obj_id_ptr = new_obj;
     }
 }

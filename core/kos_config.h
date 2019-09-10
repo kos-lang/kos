@@ -31,7 +31,7 @@
 #endif
 #define KOS_POOL_SIZE          (1U << KOS_POOL_BITS)
 #define KOS_PAGE_SIZE          (1U << KOS_PAGE_BITS)
-#define KOS_OBJ_ALIGN_BITS     4
+#define KOS_OBJ_ALIGN_BITS     5
 #define KOS_MAX_PAGE_SEEK      8   /* Max number of non-full pages to check for free space */
 #define KOS_MIGRATION_THRESH   90U /* Percentage of page utilization after GC */
 #define KOS_GC_STEP            (1024U * 1024U)

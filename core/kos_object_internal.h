@@ -26,6 +26,7 @@
 #include "../inc/kos_atomic.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_string.h"
+#include "kos_config.h"
 #include "kos_heap.h"
 #include "kos_red_black.h"
 
@@ -35,8 +36,14 @@
 
 #define OBJECT_TYPE_BITS 8U
 #define OBJECT_TYPE_MASK ((1U << OBJECT_TYPE_BITS) - 1U)
+#define OBJECT_PLACEMENT_MASK ((1 << KOS_OBJ_ALIGN_BITS) - 1)
 
 #ifdef __cplusplus
+
+static inline bool kos_is_heap_object(KOS_OBJ_ID obj_id)
+{
+    return (reinterpret_cast<intptr_t>(obj_id) & OBJECT_PLACEMENT_MASK) == 1;
+}
 
 template<typename T>
 static inline void kos_set_object_size(T& header, uint32_t size)
@@ -89,6 +96,8 @@ static inline uint32_t kos_get_object_size(T& header)
 }
 
 #else
+
+#define kos_is_heap_object(obj_id) ( ((intptr_t)(obj_id) & OBJECT_PLACEMENT_MASK) == 1)
 
 #define kos_set_object_size(header, size) do {                            \
     (header).size_and_type = (KOS_OBJ_ID)(                                \
