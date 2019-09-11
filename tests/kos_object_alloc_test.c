@@ -214,9 +214,9 @@ int main(void)
 
     /************************************************************************/
     {
-        DECLARE_STATIC_CONST_OBJECT(const_obj) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 2);
+        DECLARE_STATIC_CONST_OBJECT(const_obj, OBJ_BOOLEAN, 2);
 
-        KOS_BOOLEAN *bool_obj = (KOS_BOOLEAN *)&const_obj.size_and_type;
+        KOS_BOOLEAN *bool_obj = (KOS_BOOLEAN *)&const_obj.object;
 
         TEST(kos_get_object_size(bool_obj->header) == 0);
         TEST(kos_get_object_type(bool_obj->header) == OBJ_BOOLEAN);

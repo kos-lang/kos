@@ -69,8 +69,8 @@ struct KOS_OBJECT_PLACEHOLDER;
  *
  * KOS_OBJ_ID's layout is:
  * - "Small" integer       ...iiii iiii iiii iii0 (31- or 63-bit signed integer)
- * - Heap object pointer   ...pppp pppp ppp0 0001 (16 byte-aligned pointer)
- * - Static object pointer ...pppp pppp ppp0 1001 (8 byte-aligned pointer)
+ * - Heap object pointer   ...pppp pppp ppp0 0001 (32 byte-aligned pointer)
+ * - Static object pointer ...pppp pppp ppp1 0001 (16 byte-aligned pointer)
  *
  * If bit 0 is a '1', the rest of KOS_OBJ_ID is treated as the pointer without
  * that bit set.  The actual pointer to the object is KOS_OBJ_ID minus 1.
@@ -189,29 +189,33 @@ typedef struct KOS_OPAQUE_S {
 } KOS_OPAQUE;
 
 struct KOS_CONST_OBJECT_S {
-    uint64_t  align8;
-    uintptr_t size_and_type;
-    uint8_t   value;
+    uint64_t align16[2];
+    struct {
+        uintptr_t size_and_type;
+        uint8_t   value;
+    } object;
 };
 
-#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).size_and_type + 1) )
+#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).object + 1) )
 
 #ifdef KOS_CPP11
-#   define DECLARE_CONST_OBJECT(name) alignas(16) const struct KOS_CONST_OBJECT_S name
-#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(16) static const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_ALIGNED(alignment, object) alignas(alignment) object
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #   include <stdalign.h>
-#   define DECLARE_CONST_OBJECT(name) alignas(16) const struct KOS_CONST_OBJECT_S name
-#   define DECLARE_STATIC_CONST_OBJECT(name) alignas(16) static const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_ALIGNED(alignment, object) alignas(alignment) object
 #elif defined(__GNUC__)
-#   define DECLARE_CONST_OBJECT(name) const struct KOS_CONST_OBJECT_S name __attribute__ ((aligned (16)))
-#   define DECLARE_STATIC_CONST_OBJECT(name) static const struct KOS_CONST_OBJECT_S name __attribute__ ((aligned (16)))
+#   define DECLARE_ALIGNED(alignment, object) object __attribute__((aligned(alignment)))
 #elif defined(_MSC_VER)
-#   define DECLARE_CONST_OBJECT(name) __declspec(align(16)) const struct KOS_CONST_OBJECT_S name
-#   define DECLARE_STATIC_CONST_OBJECT(name) __declspec(align(16)) static const struct KOS_CONST_OBJECT_S name
+#   define DECLARE_ALIGNED(alignment, object) __declspec(align(alignment)) object
 #endif
 
-#define KOS_CONST_OBJECT_INIT(type, value) { 0, (type), (value) }
+#define DECLARE_CONST_OBJECT(name, type, value) \
+    DECLARE_ALIGNED(32, const struct KOS_CONST_OBJECT_S name) = \
+    { { 0, 0 }, { (type), (value) } }
+
+#define DECLARE_STATIC_CONST_OBJECT(name, type, value) \
+    DECLARE_ALIGNED(32, static const struct KOS_CONST_OBJECT_S name) = \
+    { { 0, 0 }, { (type), (value) } }
 
 #ifdef __cplusplus
 extern "C" {

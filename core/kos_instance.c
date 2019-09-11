@@ -55,9 +55,9 @@ static const char str_format_module[]           = "' in ";
 static const char str_format_offset[]           = "  ";
 static const char str_format_question_marks[]   = "???";
 
-DECLARE_CONST_OBJECT(KOS_void)  = KOS_CONST_OBJECT_INIT(OBJ_VOID,    0);
-DECLARE_CONST_OBJECT(KOS_false) = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 0);
-DECLARE_CONST_OBJECT(KOS_true)  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
+DECLARE_CONST_OBJECT(KOS_void,  OBJ_VOID,    0);
+DECLARE_CONST_OBJECT(KOS_false, OBJ_BOOLEAN, 0);
+DECLARE_CONST_OBJECT(KOS_true,  OBJ_BOOLEAN, 1);
 
 #ifdef CONFIG_PERF
 struct KOS_PERF_S kos_perf = {

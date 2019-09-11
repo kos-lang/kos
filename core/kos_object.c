@@ -66,9 +66,9 @@ static const char str_err_not_string[]        = "property name is not a string";
 static const char str_err_no_property[]       = "no such property";
 static const char str_err_no_own_properties[] = "object has no own properties";
 
-DECLARE_STATIC_CONST_OBJECT(tombstone) = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB0);
-DECLARE_STATIC_CONST_OBJECT(closed)    = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB1);
-DECLARE_STATIC_CONST_OBJECT(reserved)  = KOS_CONST_OBJECT_INIT(OBJ_OPAQUE, 0xB2);
+DECLARE_STATIC_CONST_OBJECT(tombstone, OBJ_OPAQUE, 0xB0);
+DECLARE_STATIC_CONST_OBJECT(closed,    OBJ_OPAQUE, 0xB1);
+DECLARE_STATIC_CONST_OBJECT(reserved,  OBJ_OPAQUE, 0xB2);
 
 /* When a key is deleted, it remains in the table, but its value is marked
  * as TOMBSTONE. */
