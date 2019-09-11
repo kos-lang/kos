@@ -29,6 +29,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "kos_config.h"
+#include "kos_const_strings.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_malloc.h"
@@ -276,21 +277,6 @@ static int init_search_paths(KOS_CONTEXT ctx)
 #endif
 }
 
-static KOS_OBJ_ID alloc_empty_string(KOS_CONTEXT ctx)
-{
-    KOS_STRING *str = (KOS_STRING *)kos_alloc_object(ctx,
-                                                     OBJ_STRING,
-                                                     sizeof(KOS_STRING));
-
-    if (str) {
-        str->header.flags  = (uint8_t)KOS_STRING_ELEM_8 | (uint8_t)KOS_STRING_LOCAL;
-        str->header.length = 0;
-        str->header.hash   = 0;
-    }
-
-    return OBJID(STRING, str);
-}
-
 struct KOS_INIT_STRING_S {
     enum KOS_STR_E str_id;
     const char    *text;
@@ -303,10 +289,6 @@ static int init_common_strings(KOS_CONTEXT   ctx,
     size_t i;
 
     static const struct KOS_INIT_STRING_S init[] = {
-
-        /* Init this one first before anything else */
-        { KOS_STR_OUT_OF_MEMORY, "out of memory" },
-
         { KOS_STR_ARGS,       "args"      },
         { KOS_STR_ARRAY,      "array"     },
         { KOS_STR_BACKTRACE,  "backtrace" },
@@ -337,9 +319,6 @@ static int init_common_strings(KOS_CONTEXT   ctx,
         { KOS_STR_XBUILTINX,  "<builtin>" }
     };
 
-    inst->common_strings[KOS_STR_EMPTY] = alloc_empty_string(ctx);
-    TRY_OBJID(inst->common_strings[KOS_STR_EMPTY]);
-
     for (i = 0; i < sizeof(init) / sizeof(init[0]); ++i) {
         const KOS_OBJ_ID str_id = KOS_new_const_ascii_cstring(ctx, init[i].text);
         TRY_OBJID(str_id);
@@ -357,9 +336,6 @@ static void clear_instance(KOS_INSTANCE *inst)
 
     for (i = 0; i < KOS_STR_NUM; ++i)
         inst->common_strings[i] = KOS_BADPTR;
-
-    /* Set to an innocuous value in case initial allocation fails */
-    inst->common_strings[KOS_STR_OUT_OF_MEMORY] = KOS_VOID;
 
     /* Disable GC during early init */
     inst->flags = KOS_INST_MANUAL_GC;
@@ -404,6 +380,10 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     assert(!kos_is_heap_object(KOS_VOID));
     assert(!kos_is_heap_object(KOS_FALSE));
     assert(!kos_is_heap_object(KOS_TRUE));
+    assert(!kos_is_heap_object(KOS_STR_EMPTY));
+    assert(KOS_get_string_length(KOS_STR_EMPTY) == 0);
+    assert(!kos_is_heap_object(KOS_STR_OUT_OF_MEMORY));
+    assert(KOS_get_string_length(KOS_STR_OUT_OF_MEMORY) == 13);
 
     clear_instance(inst);
 
@@ -465,7 +445,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(ctx));
 
     TRY_OBJID(init_module->name          = KOS_new_const_ascii_string(ctx, str_init, sizeof(str_init) - 1));
-    TRY_OBJID(init_module->path          = KOS_get_string(ctx, KOS_STR_EMPTY));
+    TRY_OBJID(init_module->path          = KOS_STR_EMPTY);
     TRY_OBJID(init_module->globals       = KOS_new_array(ctx, 0));
     TRY_OBJID(init_module->global_names  = KOS_new_object(ctx));
     TRY_OBJID(init_module->module_names  = KOS_new_object(ctx));
@@ -864,7 +844,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
     TRY_OBJID(array);
 
     if (kos_vector_reserve(&cstr, 80) != KOS_SUCCESS) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     TRY(kos_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));

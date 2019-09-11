@@ -26,6 +26,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_utils.h"
+#include "../core/kos_const_strings.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_utf8.h"
@@ -1239,7 +1240,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID empty = KOS_get_string(ctx, KOS_STR_EMPTY);
+        KOS_OBJ_ID empty = KOS_STR_EMPTY;
 
         TEST(!IS_BAD_PTR(empty));
         TEST(GET_OBJ_TYPE(empty) == OBJ_STRING);
@@ -1298,7 +1299,7 @@ int main(void)
         TEST(KOS_string_add(ctx, KOS_VOID) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_string_add(ctx, KOS_get_string(ctx, KOS_STR_EMPTY)) == KOS_BADPTR);
+        TEST(KOS_string_add(ctx, KOS_STR_EMPTY) == KOS_BADPTR);
         TEST_EXCEPTION();
 
         array = KOS_new_array(ctx, 0);
@@ -1317,7 +1318,7 @@ int main(void)
         TEST(KOS_string_add(ctx, array) == KOS_BADPTR);
         TEST_EXCEPTION();
 
-        TEST(KOS_array_write(ctx, array, 0, KOS_get_string(ctx, KOS_STR_EMPTY)) == KOS_SUCCESS);
+        TEST(KOS_array_write(ctx, array, 0, KOS_STR_EMPTY) == KOS_SUCCESS);
 
         str = KOS_string_add(ctx, array);
         TEST( ! IS_BAD_PTR(str));
@@ -1427,7 +1428,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID str = KOS_string_slice(ctx, KOS_get_string(ctx, KOS_STR_EMPTY), 0, 1);
+        KOS_OBJ_ID str = KOS_string_slice(ctx, KOS_STR_EMPTY, 0, 1);
         TEST( ! IS_BAD_PTR(str));
         TEST_NO_EXCEPTION();
         TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);

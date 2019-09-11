@@ -188,52 +188,6 @@ typedef struct KOS_OPAQUE_S {
     KOS_OBJ_HEADER header;
 } KOS_OPAQUE;
 
-struct KOS_CONST_OBJECT_S {
-    uint64_t align16[2];
-    struct {
-        uintptr_t size_and_type;
-        uint8_t   value;
-    } object;
-};
-
-#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).object + 1) )
-
-#ifdef KOS_CPP11
-#   define DECLARE_ALIGNED(alignment, object) alignas(alignment) object
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-#   include <stdalign.h>
-#   define DECLARE_ALIGNED(alignment, object) alignas(alignment) object
-#elif defined(__GNUC__)
-#   define DECLARE_ALIGNED(alignment, object) object __attribute__((aligned(alignment)))
-#elif defined(_MSC_VER)
-#   define DECLARE_ALIGNED(alignment, object) __declspec(align(alignment)) object
-#endif
-
-#define DECLARE_CONST_OBJECT(name, type, value) \
-    DECLARE_ALIGNED(32, const struct KOS_CONST_OBJECT_S name) = \
-    { { 0, 0 }, { (type), (value) } }
-
-#define DECLARE_STATIC_CONST_OBJECT(name, type, value) \
-    DECLARE_ALIGNED(32, static const struct KOS_CONST_OBJECT_S name) = \
-    { { 0, 0 }, { (type), (value) } }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern const struct KOS_CONST_OBJECT_S KOS_void;
-extern const struct KOS_CONST_OBJECT_S KOS_false;
-extern const struct KOS_CONST_OBJECT_S KOS_true;
-
-#ifdef __cplusplus
-}
-#endif
-
-#define KOS_VOID    KOS_CONST_ID(KOS_void)
-#define KOS_FALSE   KOS_CONST_ID(KOS_false)
-#define KOS_TRUE    KOS_CONST_ID(KOS_true)
-#define KOS_BOOL(v) ( (v) ? KOS_TRUE : KOS_FALSE )
-
 typedef enum KOS_STRING_FLAGS_E {
     /* Two lowest bits specify string element (character) size in bytes */
     KOS_STRING_ELEM_8    = 0,
@@ -275,6 +229,67 @@ typedef union KOS_STRING_U {
     struct KOS_STRING_PTR_S   ptr;
     struct KOS_STRING_REF_S   ref;
 } KOS_STRING;
+
+#define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).object + 1) )
+
+#ifdef KOS_CPP11
+#   define KOS_DECLARE_ALIGNED(alignment, object) alignas(alignment) object
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#   include <stdalign.h>
+#   define KOS_DECLARE_ALIGNED(alignment, object) alignas(alignment) object
+#elif defined(__GNUC__)
+#   define KOS_DECLARE_ALIGNED(alignment, object) object __attribute__((aligned(alignment)))
+#elif defined(_MSC_VER)
+#   define KOS_DECLARE_ALIGNED(alignment, object) __declspec(align(alignment)) object
+#endif
+
+struct KOS_CONST_OBJECT_S {
+    uint64_t align16[2];
+    struct {
+        uintptr_t size_and_type;
+        uint8_t   value;
+    } object;
+};
+
+struct KOS_CONST_STRING_S {
+    uint64_t align16[2];
+    struct {
+        uintptr_t   size_and_type;
+        uint32_t    hash;
+        uint16_t    length;
+        uint8_t     flags;
+        const char *data_ptr;
+    } object;
+};
+
+#define DECLARE_CONST_OBJECT(name, type, value) \
+    KOS_DECLARE_ALIGNED(32, const struct KOS_CONST_OBJECT_S name) = \
+    { { 0, 0 }, { (type), (value) } }
+
+#define DECLARE_STATIC_CONST_OBJECT(name, type, value) \
+    KOS_DECLARE_ALIGNED(32, static const struct KOS_CONST_OBJECT_S name) = \
+    { { 0, 0 }, { (type), (value) } }
+
+#define DECLARE_CONST_STRING(name, length, str) \
+    KOS_DECLARE_ALIGNED(32, struct KOS_CONST_STRING_S name) = \
+    { { 0, 0 }, { OBJ_STRING, 0, (length), KOS_STRING_ELEM_8 | KOS_STRING_PTR, (str) } }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern const struct KOS_CONST_OBJECT_S KOS_void;
+extern const struct KOS_CONST_OBJECT_S KOS_false;
+extern const struct KOS_CONST_OBJECT_S KOS_true;
+
+#ifdef __cplusplus
+}
+#endif
+
+#define KOS_VOID    KOS_CONST_ID(KOS_void)
+#define KOS_FALSE   KOS_CONST_ID(KOS_false)
+#define KOS_TRUE    KOS_CONST_ID(KOS_true)
+#define KOS_BOOL(v) ( (v) ? KOS_TRUE : KOS_FALSE )
 
 typedef void (*KOS_FINALIZE)(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  priv);

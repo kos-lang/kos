@@ -29,6 +29,7 @@ c_files += kos_compiler.c
 c_files += kos_compiler_args.c
 c_files += kos_compiler_optim.c
 c_files += kos_compiler_vars.c
+c_files += kos_const_strings.c
 c_files += kos_disasm.c
 c_files += kos_getline.c
 c_files += kos_heap.c

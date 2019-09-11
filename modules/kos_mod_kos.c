@@ -30,6 +30,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "../inc/kos_version.h"
+#include "../core/kos_const_strings.h"
 #include "../core/kos_heap.h"
 #include "../core/kos_lexer.h"
 #include "../core/kos_malloc.h"
@@ -126,7 +127,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
 
         lexer = (KOS_LEXER_OBJ *)kos_malloc(sizeof(KOS_LEXER_OBJ) + buf_size - 1);
         if ( ! lexer) {
-            KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             goto cleanup;
         }
 

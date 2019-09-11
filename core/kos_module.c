@@ -29,6 +29,7 @@
 #include "../inc/kos_utils.h"
 #include "kos_compiler.h"
 #include "kos_config.h"
+#include "kos_const_strings.h"
 #include "kos_debug.h"
 #include "kos_disasm.h"
 #include "kos_heap.h"
@@ -324,7 +325,7 @@ static int _load_file(KOS_CONTEXT  ctx,
             break;
 
         case KOS_ERROR_OUT_OF_MEMORY:
-            KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             error = KOS_ERROR_EXCEPTION;
             break;
 
@@ -635,7 +636,7 @@ static KOS_OBJ_ID _get_line(KOS_CONTEXT ctx,
         ret = KOS_new_string(ctx, line_buf.buffer, len);
     }
     else
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
 
     kos_vector_destroy(&line_buf);
 
@@ -711,7 +712,7 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT  ctx,
 
     error = kos_vector_resize(&cstr, pos.column);
     if (error) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         goto cleanup;
     }
 
@@ -1328,7 +1329,7 @@ static void _handle_interpreter_error(KOS_CONTEXT ctx, int error)
         assert(KOS_is_exception_pending(ctx));
     else if (error == KOS_ERROR_OUT_OF_MEMORY) {
         if ( ! KOS_is_exception_pending(ctx))
-            KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
     }
     else {
         if ( ! KOS_is_exception_pending(ctx))
@@ -1374,7 +1375,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
     /* Find module source file */
     if (data) {
-        module_dir  = KOS_get_string(ctx, KOS_STR_EMPTY);
+        module_dir  = KOS_STR_EMPTY;
         module_path = actual_module_name;
     }
     else

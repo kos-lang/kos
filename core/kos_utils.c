@@ -28,6 +28,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "kos_const_strings.h"
 #include "kos_math.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
@@ -317,7 +318,7 @@ static int _int_to_str(KOS_CONTEXT ctx,
 
 cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         error = KOS_ERROR_EXCEPTION;
     }
 
@@ -353,7 +354,7 @@ static int _float_to_str(KOS_CONTEXT ctx,
 
 cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         error = KOS_ERROR_EXCEPTION;
     }
 
@@ -389,7 +390,7 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
     error = kos_vector_resize(cstr_vec, pos + str_len + 1 + (quote_str ? 2 : 0));
 
     if (error) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -422,7 +423,7 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
             error = kos_vector_resize(cstr_vec, cstr_vec->size + extra_len);
 
             if (error) {
-                KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+                KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
                 return KOS_ERROR_EXCEPTION;
             }
 
@@ -747,7 +748,7 @@ static int _vector_append_buffer(KOS_CONTEXT ctx,
 
     error = kos_vector_reserve(cstr_vec, cstr_vec->size + size * 3 + 2);
     if (error) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     assert(sizeof(str_buffer_open)  == 2);
@@ -1151,7 +1152,7 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
 
 cleanup:
     if (error == KOS_ERROR_OUT_OF_MEMORY) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         error = KOS_ERROR_EXCEPTION;
     }
 

@@ -27,6 +27,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
+#include "../core/kos_const_strings.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
@@ -113,7 +114,7 @@ static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
     rng = (KOS_RNG_CONTAINER *)kos_malloc(sizeof(KOS_RNG_CONTAINER));
 
     if ( ! rng) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     }
 

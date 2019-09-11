@@ -26,6 +26,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "kos_config.h"
+#include "kos_const_strings.h"
 #include "kos_debug.h"
 #include "kos_malloc.h"
 #include "kos_math.h"
@@ -801,7 +802,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_SUSPENDED);
 
     if (size > (1U << (32U - OBJECT_TYPE_BITS)) - 1U) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return 0;
     }
 
@@ -909,7 +910,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
         }
         else {
             kos_unlock_mutex(&heap->mutex);
-            KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             kos_lock_mutex(&heap->mutex);
         }
     }
@@ -1065,7 +1066,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
     kos_unlock_mutex(&heap->mutex);
 
     if ( ! hdr)
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
 
     return hdr;
 }
@@ -1082,7 +1083,7 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
         return 0;
 
     if (kos_seq_fail()) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return 0;
     }
 

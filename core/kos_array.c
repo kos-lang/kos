@@ -26,6 +26,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "kos_config.h"
+#include "kos_const_strings.h"
 #include "kos_heap.h"
 #include "kos_math.h"
 #include "kos_misc.h"
@@ -72,7 +73,7 @@ static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
                                                     OBJ_ARRAY_STORAGE,
                                                     buf_alloc_size);
     else
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
 
     if (buf) {
         assert(kos_get_object_type(buf->header) == OBJ_ARRAY_STORAGE);

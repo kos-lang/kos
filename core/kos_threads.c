@@ -25,6 +25,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_utils.h"
+#include "kos_const_strings.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_malloc.h"
@@ -477,7 +478,7 @@ KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
     init = (THREAD_INIT *)kos_malloc(sizeof(THREAD_INIT));
 
     if ( ! init) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -650,7 +651,7 @@ KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
     init = (THREAD_INIT *)kos_malloc(sizeof(THREAD_INIT));
 
     if ( ! init) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 

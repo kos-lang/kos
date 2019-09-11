@@ -27,6 +27,7 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_utils.h"
+#include "kos_const_strings.h"
 #include "kos_heap.h"
 #include "kos_math.h"
 #include "kos_memory.h"
@@ -147,7 +148,7 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
         }
     }
     else
-        str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
+        str = OBJPTR(STRING, KOS_STR_EMPTY);
 
     return OBJID(STRING, str);
 }
@@ -205,7 +206,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT      ctx,
         }
     }
     else
-        str = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
+        str = OBJPTR(STRING, KOS_STR_EMPTY);
 
     return OBJID(STRING, str);
 }
@@ -263,7 +264,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
             goto cleanup;
     }
     else
-        ret = OBJPTR(STRING, KOS_get_string(ctx, KOS_STR_EMPTY));
+        ret = OBJPTR(STRING, KOS_STR_EMPTY);
 
     str_buf = (void *)kos_get_string_buffer(ret);
 
@@ -338,7 +339,7 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
 
     size = KOS_get_buffer_size(utf8_buf);
     if ( ! size && begin == end)
-        return KOS_get_string(ctx, KOS_STR_EMPTY);
+        return KOS_STR_EMPTY;
     if (begin > end || end > size) {
         KOS_raise_exception_cstring(ctx, str_err_invalid_buffer_index);
         goto cleanup;
@@ -492,7 +493,7 @@ int KOS_string_to_cstr_vec(KOS_CONTEXT ctx,
     error = kos_vector_resize(str_vec, str_len+1);
 
     if (error) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -636,7 +637,7 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
         KOS_OBJ_ID       *cur_ptr;
         KOS_OBJ_ID        non_0_str = KOS_VOID;
 
-        new_str_id = KOS_get_string(ctx, KOS_STR_EMPTY);
+        new_str_id = KOS_STR_EMPTY;
 
         for (cur_ptr = str_id_array; cur_ptr != end; ++cur_ptr) {
             KOS_OBJ_ID       cur_str = *cur_ptr;
@@ -722,7 +723,7 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
         unsigned         i;
         KOS_OBJ_ID       non_0_str = KOS_VOID;
 
-        new_str_id = KOS_get_string(ctx, KOS_STR_EMPTY);
+        new_str_id = KOS_STR_EMPTY;
 
         for (i = 0; i < num_strings; ++i) {
             KOS_OBJ_ID       cur_str = KOS_array_read(ctx, str_array_id, i);
@@ -875,10 +876,10 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                 kos_untrack_refs(ctx, 1);
             }
             else
-                new_str = KOS_get_string(ctx, KOS_STR_EMPTY);
+                new_str = KOS_STR_EMPTY;
         }
         else
-            new_str = KOS_get_string(ctx, KOS_STR_EMPTY);
+            new_str = KOS_STR_EMPTY;
     }
 
     return new_str;
@@ -1560,7 +1561,7 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
     len = KOS_get_string_length(obj_id);
 
     if (len == 0 || num_repeat == 0)
-        return KOS_get_string(ctx, KOS_STR_EMPTY);
+        return KOS_STR_EMPTY;
 
     if (num_repeat == 1)
         return obj_id;
@@ -1605,7 +1606,7 @@ int kos_append_cstr(KOS_CONTEXT ctx,
     int          error = kos_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
 
     if (error) {
-        KOS_raise_exception(ctx, KOS_get_string(ctx, KOS_STR_OUT_OF_MEMORY));
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         error = KOS_ERROR_EXCEPTION;
     }
     else
@@ -1630,7 +1631,7 @@ KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
     elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
 
     if (len == 0)
-        return KOS_get_string(ctx, KOS_STR_EMPTY);
+        return KOS_STR_EMPTY;
 
     kos_track_refs(ctx, 1, &obj_id);
 
@@ -1702,7 +1703,7 @@ KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
     elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
 
     if (len == 0)
-        return KOS_get_string(ctx, KOS_STR_EMPTY);
+        return KOS_STR_EMPTY;
 
     kos_track_refs(ctx, 1, &obj_id);
 
