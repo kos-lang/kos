@@ -1074,6 +1074,8 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
                        KOS_TYPE    object_type,
                        uint32_t    size)
 {
+    void *obj;
+
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
 
     if (kos_trigger_mad_gc(ctx))
@@ -1085,9 +1087,22 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
     }
 
     if (size > (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
-        return alloc_huge_object(ctx, object_type, size);
+        obj = alloc_huge_object(ctx, object_type, size);
     else
-        return alloc_object(ctx, object_type, size);
+        obj = alloc_object(ctx, object_type, size);
+
+#ifdef CONFIG_PERF
+    if (size <= 32)
+        KOS_PERF_CNT(alloc_object_size[0]);
+    else if (size <= 128)
+        KOS_PERF_CNT(alloc_object_size[1]);
+    else if (size <= 512)
+        KOS_PERF_CNT(alloc_object_size[2]);
+    else
+        KOS_PERF_CNT(alloc_object_size[3]);
+#endif
+
+    return obj;
 }
 
 void *kos_alloc_object_page(KOS_CONTEXT ctx,
@@ -1836,6 +1851,17 @@ static int evacuate_object(KOS_CONTEXT     ctx,
         memcpy(new_obj, hdr, size);
 
         hdr->size_and_type = (KOS_OBJ_ID)((intptr_t)new_obj + 1);
+
+#ifdef CONFIG_PERF
+    if (size <= 32)
+        KOS_PERF_CNT(evac_object_size[0]);
+    else if (size <= 128)
+        KOS_PERF_CNT(evac_object_size[1]);
+    else if (size <= 512)
+        KOS_PERF_CNT(evac_object_size[2]);
+    else
+        KOS_PERF_CNT(evac_object_size[3]);
+#endif
     }
     else
         error = KOS_ERROR_EXCEPTION;
@@ -2455,6 +2481,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     }
 
     gc_trace(("GC ctx=%p begin cycle %u\n", (void *)ctx, KOS_atomic_read_relaxed_u32(heap->gc_cycles)));
+
+    KOS_PERF_CNT(gc_cycles);
 
     KOS_atomic_write_relaxed_u32(heap->gc_cycles, KOS_atomic_read_relaxed_u32(heap->gc_cycles) + 1U);
 

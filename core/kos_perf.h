@@ -50,6 +50,10 @@ struct KOS_PERF_S {
     KOS_ATOMIC(uint32_t) alloc_huge_object;
     KOS_ATOMIC(uint32_t) alloc_new_page;
     KOS_ATOMIC(uint32_t) alloc_free_page;
+    KOS_ATOMIC(uint32_t) gc_cycles;
+
+    KOS_ATOMIC(uint32_t) alloc_object_size[4];
+    KOS_ATOMIC(uint32_t) evac_object_size[4];
 };
 
 extern struct KOS_PERF_S kos_perf;

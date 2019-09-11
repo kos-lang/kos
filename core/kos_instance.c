@@ -63,7 +63,9 @@ DECLARE_CONST_OBJECT(KOS_true)  = KOS_CONST_OBJECT_INIT(OBJ_BOOLEAN, 1);
 struct KOS_PERF_S kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
     0, 0,
-    0, 0, 0, 0
+    0, 0, 0, 0, 0,
+    { 0, 0, 0, 0 },
+    { 0, 0, 0, 0 }
 };
 #endif
 
@@ -552,11 +554,12 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
         fprintf(stderr, "    " #a "\t%u / %u (%u%%)\n",                        \
                 va, total, va * 100 / total);                                  \
     } while (0)
-#   define PERF_VALUE(a) do {                                                  \
+#   define PERF_VALUE_NAME(name, a) do {                                       \
         const uint32_t va = KOS_atomic_read_relaxed_u32(kos_perf.a);           \
-        fprintf(stderr, "    " #a "\t%u\n", va);                               \
+        fprintf(stderr, "    " #name "\t%u\n", va);                            \
     } while (0)
-    printf("Performance stats:\n");
+#   define PERF_VALUE(a) PERF_VALUE_NAME(a, a)
+    fprintf(stderr, "Performance stats:\n");
     PERF_RATIO(object_get);
     PERF_RATIO(object_set);
     PERF_RATIO(object_delete);
@@ -571,6 +574,15 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     PERF_VALUE(alloc_huge_object);
     PERF_VALUE(alloc_new_page);
     PERF_VALUE(alloc_free_page);
+    PERF_VALUE(gc_cycles);
+    PERF_VALUE_NAME(alloc_object_32,        alloc_object_size[0]);
+    PERF_VALUE_NAME(alloc_object_64_128,    alloc_object_size[1]);
+    PERF_VALUE_NAME(alloc_object_256_512,   alloc_object_size[2]);
+    PERF_VALUE_NAME(alloc_object_1024_plus, alloc_object_size[3]);
+    PERF_VALUE_NAME(evac_object_32,         evac_object_size[0]);
+    PERF_VALUE_NAME(evac_object_64_128,     evac_object_size[1]);
+    PERF_VALUE_NAME(evac_object_256_512,    evac_object_size[2]);
+    PERF_VALUE_NAME(evac_object_1024_plus,  evac_object_size[3]);
 #endif
 }
 
