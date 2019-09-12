@@ -79,10 +79,10 @@ ifeq ($(UNAME), Windows)
     endif
 
     STRICTFLAGS = -WX
-    STRICTFLAGS += -wd4100 # unreferenced formal parameter
 
     # Disable warnings which don't make any sense for this project
     CFLAGS += -wd4061 # enumerator 'x' in switch of enum 'y' is not explicitly handled by a case label
+    CFLAGS += -wd4100 # unreferenced formal parameter
     CFLAGS += -wd4365 # conversion from 'x' to 'y' (in MS headers)
     CFLAGS += -wd4464 # relative path contains '..'
     CFLAGS += -wd4514 # unreferenced inline function has been removed
