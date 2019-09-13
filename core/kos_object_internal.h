@@ -276,7 +276,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 /*
  * The heap is comprised of pools containing pages.  Each pool is an individual
  * memory allocation.
- * Page size preferably matches CPU page size.
+ * Page size preferably matches or is a multiple of CPU page size.
  * All pages are aligned on page size.
  *
  * Layout of a page on the heap:
@@ -320,6 +320,15 @@ struct KOS_PAGE_HEADER_S {
 #define KOS_BITMAP_SIZE    (((KOS_SLOTS_PER_PAGE + 15U) & ~15U) >> 2)
 #define KOS_BITMAP_OFFS    ((KOS_PAGE_HDR_SIZE + 3U) & ~3U)
 #define KOS_SLOTS_OFFS     (KOS_PAGE_SIZE - (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS))
+
+#ifdef KOS_CPP11
+static_assert(KOS_BITMAP_OFFS >= KOS_PAGE_HDR_SIZE, "Unexpected bitmap offset");
+static_assert(KOS_SLOTS_PER_PAGE * 2 <= KOS_BITMAP_SIZE * 32, "Unexpected bitmap size");
+static_assert(KOS_SLOTS_OFFS >= KOS_BITMAP_OFFS + KOS_BITMAP_SIZE, "Unexpected slots offset");
+static_assert(KOS_SLOTS_OFFS + (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) <= KOS_PAGE_SIZE, "Unexpected slots offset");
+static_assert(KOS_PAGE_SIZE >= KOS_BITMAP_OFFS + KOS_BITMAP_SIZE + (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS), "Unexpected number of slots");
+static_assert(KOS_PAGE_SIZE - KOS_BITMAP_OFFS - KOS_BITMAP_SIZE - (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) < (1 << KOS_OBJ_ALIGN_BITS), "Wasted space in pages");
+#endif
 
 #define KOS_LOOK_FURTHER 255
 
