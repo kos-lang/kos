@@ -243,8 +243,12 @@ typedef union KOS_STRING_U {
 #   define KOS_DECLARE_ALIGNED(alignment, object) __declspec(align(alignment)) object
 #endif
 
+struct KOS_CONST_OBJECT_ALIGNMENT_S {
+    uint64_t align[2];
+};
+
 struct KOS_CONST_OBJECT_S {
-    uint64_t align16[2];
+    struct KOS_CONST_OBJECT_ALIGNMENT_S align;
     struct {
         uintptr_t size_and_type;
         uint8_t   value;
@@ -252,7 +256,7 @@ struct KOS_CONST_OBJECT_S {
 };
 
 struct KOS_CONST_STRING_S {
-    uint64_t align16[2];
+    struct KOS_CONST_OBJECT_ALIGNMENT_S align;
     struct {
         uintptr_t   size_and_type;
         uint32_t    hash;
@@ -262,17 +266,27 @@ struct KOS_CONST_STRING_S {
     } object;
 };
 
-#define DECLARE_CONST_OBJECT(name, type, value) \
+#define DECLARE_CONST_OBJECT(name, type, value)                     \
     KOS_DECLARE_ALIGNED(32, const struct KOS_CONST_OBJECT_S name) = \
     { { 0, 0 }, { (type), (value) } }
 
-#define DECLARE_STATIC_CONST_OBJECT(name, type, value) \
+#define DECLARE_STATIC_CONST_OBJECT(name, type, value)                     \
     KOS_DECLARE_ALIGNED(32, static const struct KOS_CONST_OBJECT_S name) = \
     { { 0, 0 }, { (type), (value) } }
 
-#define DECLARE_CONST_STRING(name, length, str) \
-    KOS_DECLARE_ALIGNED(32, struct KOS_CONST_STRING_S name) = \
+#define KOS_DECLARE_CONST_STRING_WITH_LENGTH(name, length, str) \
+    KOS_DECLARE_ALIGNED(32, struct KOS_CONST_STRING_S name) =  \
     { { 0, 0 }, { OBJ_STRING, 0, (length), KOS_STRING_ELEM_8 | KOS_STRING_PTR, (str) } }
+
+#define KOS_CONCAT_NAME_INTERNAL(a, b) a ## b
+
+#define KOS_CONCAT_NAME(a, b) KOS_CONCAT_NAME_INTERNAL(a, b)
+
+#define KOS_DECLARE_CONST_STRING(name, str)                               \
+    static const char KOS_CONCAT_NAME(str_ ## name, __LINE__)[] = (str);  \
+    KOS_DECLARE_CONST_STRING_WITH_LENGTH(name,                            \
+            (uint16_t)sizeof(KOS_CONCAT_NAME(str_##name, __LINE__)) - 1U, \
+            KOS_CONCAT_NAME(str_##name, __LINE__))
 
 #ifdef __cplusplus
 extern "C" {
