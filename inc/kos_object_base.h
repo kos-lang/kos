@@ -283,7 +283,7 @@ struct KOS_CONST_STRING_S {
 #define KOS_CONCAT_NAME(a, b) KOS_CONCAT_NAME_INTERNAL(a, b)
 
 #define KOS_DECLARE_CONST_STRING(name, str)                               \
-    static const char KOS_CONCAT_NAME(str_ ## name, __LINE__)[] = (str);  \
+    static const char KOS_CONCAT_NAME(str_ ## name, __LINE__)[] = str;    \
     KOS_DECLARE_CONST_STRING_WITH_LENGTH(name,                            \
             (uint16_t)sizeof(KOS_CONCAT_NAME(str_##name, __LINE__)) - 1U, \
             KOS_CONCAT_NAME(str_##name, __LINE__))
