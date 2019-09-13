@@ -145,6 +145,7 @@ static int _push_new_stack(KOS_CONTEXT ctx)
 static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
                                      unsigned    room)
 {
+    int              error;
     const size_t     alloc_size = sizeof(KOS_STACK) + sizeof(KOS_OBJ_ID) * room;
     KOS_STACK *const new_stack  = (KOS_STACK *)kos_alloc_object(ctx,
                                                                 OBJ_STACK,
@@ -154,7 +155,12 @@ static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
 
     assert( ! IS_BAD_PTR(ctx->stack));
 
-    return _init_stack(ctx, new_stack);
+    error = _init_stack(ctx, new_stack);
+
+    if ( ! error)
+        new_stack->capacity = room;
+
+    return error;
 }
 
 int kos_stack_push(KOS_CONTEXT ctx,
