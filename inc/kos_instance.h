@@ -67,15 +67,11 @@ enum KOS_CATCH_STATE_E {
 };
 
 /* Stack header flags */
-enum KOS_STACK_HEADER_FLAGS_E {
+enum KOS_STACK_FLAGS_E {
     KOS_NORMAL_STACK    = 0U,
     KOS_REENTRANT_STACK = 1U,   /* Stack of a generator or closure      */
     KOS_CAN_YIELD       = 2U    /* Indicates that a generator can yield */
 };
-
-typedef struct KOS_STACK_HEADER_S {
-    KOS_OBJ_ID size_and_type;
-} KOS_STACK_HEADER;
 
 /* Stack management:
  * - If this is not the root stack object, the first element on the stack
@@ -93,7 +89,7 @@ typedef struct KOS_STACK_HEADER_S {
  */
 
 typedef struct KOS_STACK_S {
-    KOS_STACK_HEADER       header;
+    KOS_OBJ_HEADER         header;
     uint32_t               capacity;
     KOS_ATOMIC(uint32_t)   size;
     uint8_t                flags;
