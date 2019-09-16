@@ -245,13 +245,18 @@ int kos_stack_push(KOS_CONTEXT ctx,
         if (IS_BAD_PTR(ctx->stack))
             TRY(_push_new_stack(ctx));
 
-        TRY(_push_new_reentrant_stack(ctx, room));
+        /* +1 because item at index 0 is used to point to previous stack frame,
+         * we still need to have 'room' left */
+        TRY(_push_new_reentrant_stack(ctx, room + 1));
 
         OBJPTR(FUNCTION, func_obj)->generator_stack_frame = ctx->stack;
 
         new_stack = OBJPTR(STACK, ctx->stack);
         base_idx  = KOS_atomic_read_relaxed_u32(new_stack->size);
     }
+
+    assert(room == num_regs + 4);
+    assert(base_idx + room <= new_stack->capacity);
 
     /* Initialize new stack frame */
     KOS_atomic_write_relaxed_u32(new_stack->size,              base_idx + room);
