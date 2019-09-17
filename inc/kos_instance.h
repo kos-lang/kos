@@ -38,8 +38,9 @@ typedef struct KOS_MODULE_LOAD_CHAIN_S KOS_MODULE_LOAD_CHAIN;
 typedef struct KOS_HEAP_S {
     KOS_MUTEX              mutex;
     KOS_ATOMIC(uint32_t)   gc_state;
-    uint32_t               heap_size;      /* Total amount of memory owned by the heap */
+    uint32_t               heap_size;      /* Total amount of memory allocated         */
     uint32_t               used_size;      /* Size used in full_ and non_full_pages    */
+    uint32_t               off_heap_size;  /* Amount of memory in tracked objs off heap*/
     uint32_t               max_size;       /* Maximum allowed heap size                */
     uint32_t               gc_threshold;   /* Next used size that triggers GC          */
     KOS_PAGE              *free_pages;     /* Pages which are currently unused         */

@@ -50,15 +50,16 @@ typedef enum KOS_OBJECT_TYPE_E {
 
     OBJ_OPAQUE         = 22, /* Contains binary user data, contents not recognized by GC */
 
-    OBJ_OBJECT_STORAGE = 24,
-    OBJ_ARRAY_STORAGE  = 26,
-    OBJ_BUFFER_STORAGE = 28,
-    OBJ_DYNAMIC_PROP   = 30,
-    OBJ_OBJECT_WALK    = 32,
-    OBJ_MODULE         = 34,
-    OBJ_STACK          = 36,
-    OBJ_LOCAL_REFS     = 38,
-    OBJ_THREAD         = 40
+    OBJ_HUGE_TRACKER   = 24,
+    OBJ_OBJECT_STORAGE = 26,
+    OBJ_ARRAY_STORAGE  = 28,
+    OBJ_BUFFER_STORAGE = 30,
+    OBJ_DYNAMIC_PROP   = 32,
+    OBJ_OBJECT_WALK    = 34,
+    OBJ_MODULE         = 36,
+    OBJ_STACK          = 38,
+    OBJ_LOCAL_REFS     = 40,
+    OBJ_THREAD         = 42
 } KOS_TYPE;
 
 struct KOS_OBJECT_PLACEHOLDER;
@@ -68,12 +69,15 @@ struct KOS_OBJECT_PLACEHOLDER;
  * number.
  *
  * KOS_OBJ_ID's layout is:
- * - "Small" integer       ...iiii iiii iiii iii0 (31- or 63-bit signed integer)
- * - Heap object pointer   ...pppp pppp ppp0 0001 (32 byte-aligned pointer)
- * - Static object pointer ...pppp pppp ppp1 0001 (16 byte-aligned pointer)
+ * - "Small" integer         ...iiii iiii iiii iii0 (31- or 63-bit signed integer)
+ * - Heap object pointer     ...pppp pppp ppp0 0001 (32 byte-aligned pointer)
+ * - Off-heap object pointer ...pppp pppp ppp0 1001 (8 byte-aligned pointer)
+ * - Static object pointer   ...pppp pppp ppp1 0001 (16 byte-aligned pointer)
  *
  * If bit 0 is a '1', the rest of KOS_OBJ_ID is treated as the pointer without
  * that bit set.  The actual pointer to the object is KOS_OBJ_ID minus 1.
+ *
+ * Heap objects are tracked by the garbage collector.
  */
 typedef struct KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
 
@@ -89,6 +93,10 @@ typedef struct KOS_OBJ_HEADER_S {
      * When objects are being moved to a new page during garbage collections,
      * size_and_type contains an object identifier of the new, target object that
      * has been allocated in the new page.
+     *
+     * For off-heap objects, the size field stores the offset from the pointer
+     * to the allocation to the object itself (where the object header is).
+     * For static objects (e.g. KOS_VOID, KOS_TRUE), the size field is zero.
      */
     KOS_OBJ_ID size_and_type;
 } KOS_OBJ_HEADER;
@@ -187,6 +195,14 @@ typedef struct KOS_BOOLEAN_S {
 typedef struct KOS_OPAQUE_S {
     KOS_OBJ_HEADER header;
 } KOS_OPAQUE;
+
+/* Huge object tracker, allocated on the heap */
+typedef struct KOS_HUGE_TRACKER_S {
+    KOS_OBJ_HEADER header;
+    void          *data;   /* Pointer to the memory allocation   */
+    KOS_OBJ_ID     object; /* Id of the object in the allocation */
+    uint32_t       size;   /* Size of the memory allocation      */
+} KOS_HUGE_TRACKER;
 
 typedef enum KOS_STRING_FLAGS_E {
     /* Two lowest bits specify string element (character) size in bytes */

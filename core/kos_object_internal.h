@@ -36,13 +36,19 @@
 
 #define OBJECT_TYPE_BITS 8U
 #define OBJECT_TYPE_MASK ((1U << OBJECT_TYPE_BITS) - 1U)
-#define OBJECT_PLACEMENT_MASK ((1 << KOS_OBJ_ALIGN_BITS) - 1)
+#define KOS_HEAP_OBJECT_MASK ((1 << KOS_OBJ_ALIGN_BITS) - 1)
+#define KOS_TRACKED_OBJECT_MASK (((1 << KOS_OBJ_ALIGN_BITS) - 1) ^ 8)
 
 #ifdef __cplusplus
 
 static inline bool kos_is_heap_object(KOS_OBJ_ID obj_id)
 {
-    return (reinterpret_cast<intptr_t>(obj_id) & OBJECT_PLACEMENT_MASK) == 1;
+    return (reinterpret_cast<intptr_t>(obj_id) & KOS_HEAP_OBJECT_MASK) == 1;
+}
+
+static inline bool kos_is_tracked_object(KOS_OBJ_ID obj_id)
+{
+    return (reinterpret_cast<intptr_t>(obj_id) & KOS_TRACKED_OBJECT_MASK) == 1;
 }
 
 template<typename T>
@@ -97,7 +103,9 @@ static inline uint32_t kos_get_object_size(T& header)
 
 #else
 
-#define kos_is_heap_object(obj_id) ( ((intptr_t)(obj_id) & OBJECT_PLACEMENT_MASK) == 1)
+#define kos_is_heap_object(obj_id) ( ((intptr_t)(obj_id) & KOS_HEAP_OBJECT_MASK) == 1)
+
+#define kos_is_tracked_object(obj_id) ( ((intptr_t)(obj_id) & KOS_TRACKED_OBJECT_MASK) == 1)
 
 #define kos_set_object_size(header, size) do {                            \
     (header).size_and_type = (KOS_OBJ_ID)(                                \
@@ -297,15 +305,10 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
  */
 struct KOS_PAGE_HEADER_S {
     KOS_PAGE            *next;
-    uint32_t             num_slots;       /* Total number of slots in this page */
     KOS_ATOMIC(uint32_t) num_allocated;   /* Number of slots allocated          */
     KOS_ATOMIC(uint32_t) num_used;        /* Number of slots used, only for GC  */
 
     /* TODO
-     * - Distinguish between number of slots that the page has and the number of
-     *   slots usable for allocating small objects.  This will enable allocating
-     *   a big object far in the page and using the rest of the page for small
-     *   objects.
      * - Distinguish between old pages and new page.  New objects should never
      *   be allocated in old pages, objects can only be moved from new pages
      *   to old pages.  Old pages can just be put on full_pages list.  is_page_full()

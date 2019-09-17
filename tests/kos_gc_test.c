@@ -1579,7 +1579,7 @@ int main(void)
                 TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
 #ifndef CONFIG_MAD_GC
-                TEST(stats.num_pages_kept     >= num_objs);
+                TEST(stats.num_pages_kept     >  0);
                 TEST(stats.num_pages_freed    <  4);
                 TEST(stats.size_kept          >  0);
 #endif

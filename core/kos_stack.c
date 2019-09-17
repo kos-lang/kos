@@ -134,8 +134,9 @@ static int _init_stack(KOS_CONTEXT ctx,
 
 static int _push_new_stack(KOS_CONTEXT ctx)
 {
-    KOS_STACK *const new_stack = (KOS_STACK *)kos_alloc_object_page(ctx,
-                                                                    OBJ_STACK);
+    KOS_STACK *const new_stack = (KOS_STACK *)
+        kos_alloc_object(ctx, OBJ_STACK, KOS_STACK_OBJ_SIZE);
+
     if (new_stack)
         new_stack->flags = KOS_NORMAL_STACK;
 

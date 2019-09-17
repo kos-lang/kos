@@ -34,7 +34,6 @@
 #define KOS_OBJ_ALIGN_BITS     5
 #define KOS_MAX_PAGE_SEEK      8   /* Max number of non-full pages to check for free space */
 #define KOS_MIGRATION_THRESH   90U /* Percentage of page utilization after GC */
-#define KOS_GC_STEP            (1024U * 1024U)
 
 #define KOS_MAX_AST_DEPTH      100
 #define KOS_BUF_ALLOC_SIZE     4096U
@@ -54,5 +53,8 @@
 #else
 #   define KOS_MAX_HEAP_SIZE   (64U * 1024U * 1024U)
 #endif
+#define KOS_GC_STEP            (KOS_MAX_HEAP_SIZE / 8U)
+#define KOS_MAX_HEAP_OBJ_SIZE  512U
+#define KOS_STACK_OBJ_SIZE     4096U
 
 #endif
