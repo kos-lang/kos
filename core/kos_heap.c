@@ -183,7 +183,6 @@ int kos_heap_init(KOS_INSTANCE *inst)
     heap->non_full_pages = 0;
     heap->full_pages     = 0;
     heap->pools          = 0;
-    heap->pool_headers   = 0;
 
     KOS_atomic_write_relaxed_ptr(heap->gray_pages,   (KOS_PAGE *)0);
     KOS_atomic_write_relaxed_ptr(heap->update_pages, (KOS_PAGE *)0);
@@ -1587,6 +1586,8 @@ static void debug_fill_slots(KOS_PAGE* page)
 
 static unsigned push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
 {
+    /* TODO remove page sorting, make this simple; page sorting not needed anymore */
+
     KOS_PAGE **begin;
     KOS_PAGE **end;
     KOS_PAGE **insert_at;

@@ -47,7 +47,6 @@ typedef struct KOS_HEAP_S {
     KOS_PAGE              *non_full_pages; /* Pages in which new objects are allocated */
     KOS_PAGE              *full_pages;     /* Pages which have no room for new objects */
     KOS_POOL              *pools;          /* Allocated memory - page pools            */
-    KOS_POOL              *pool_headers;   /* List of pool headers for new pools       */
 
     KOS_ATOMIC(KOS_PAGE *) gray_pages;     /* Page pointer for gray-to-black marking   */
     KOS_ATOMIC(KOS_PAGE *) update_pages;   /* Page pointer for update-after-evac       */
