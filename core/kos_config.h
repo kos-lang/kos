@@ -53,7 +53,7 @@
 #else
 #   define KOS_MAX_HEAP_SIZE   (64U * 1024U * 1024U)
 #endif
-#define KOS_GC_STEP            (KOS_MAX_HEAP_SIZE / 8U)
+#define KOS_GC_STEP            (2U * 1024U * 1024U)
 #define KOS_MAX_HEAP_OBJ_SIZE  512U
 #define KOS_STACK_OBJ_SIZE     4096U
 
