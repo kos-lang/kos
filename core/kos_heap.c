@@ -70,6 +70,8 @@ typedef struct KOS_SLOT_PLACEHOLDER_S {
     uint8_t dummy[1 << KOS_OBJ_ALIGN_BITS];
 } KOS_SLOT;
 
+static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr);
+
 static void help_gc(KOS_CONTEXT ctx);
 
 #ifdef CONFIG_MAD_GC
@@ -82,61 +84,42 @@ struct KOS_LOCKED_PAGES_S {
 };
 #endif
 
-#ifdef __cplusplus
+static int is_page_full(KOS_PAGE *page)
+{
+    return KOS_atomic_read_relaxed_u32(page->num_allocated) == KOS_SLOTS_PER_PAGE;
+}
 
-namespace {
-    template<typename T>
-    void list_push(T*& list, T* value)
-    {
-        value->next = list;
-        list        = value;
-    }
+static uint32_t used_page_size(KOS_PAGE *page)
+{
+    return KOS_SLOTS_OFFS + (KOS_atomic_read_relaxed_u32(page->num_allocated) << KOS_OBJ_ALIGN_BITS);
+}
 
-    template<typename T>
-    T* list_pop(T*& list)
-    {
-        T* const ret = list;
+static void push_page(KOS_PAGE_LIST *list, KOS_PAGE *page)
+{
+    /* Non-full pages are put in front, full pages go in the back */
+    if (is_page_full(page)) {
 
-        if (ret) {
-            T* const next = ret->next;
+        page->next = 0;
 
-            list = next;
+        if (list->tail)
+            list->tail->next = page;
+        else {
+            assert( ! list->head);
+            list->head = page;
         }
 
-        return ret;
+        list->tail = page;
+    }
+    else {
+        KOS_PAGE *old_head = list->head;
+
+        page->next = old_head;
+        list->head = page;
+
+        if ( ! old_head)
+            list->tail = page;
     }
 }
-
-#define PUSH_LIST(list, value) list_push(list, value)
-
-#define POP_LIST(list) list_pop(list)
-
-#else
-
-static void list_push(void **list_ptr, void *value, void **next_ptr)
-{
-    *next_ptr = *list_ptr;
-    *list_ptr = value;
-}
-
-static void *list_pop(void **list_ptr)
-{
-    void *ret = *list_ptr;
-
-    if (ret) {
-        void *next = *(void **)ret;
-
-        *list_ptr = next;
-    }
-
-    return ret;
-}
-
-#define PUSH_LIST(list, value) list_push((void **)&(list), (void *)(value), (void **)&(value)->next)
-
-#define POP_LIST(list) list_pop((void **)&(list))
-
-#endif
 
 static void clear_marking_in_pages(KOS_PAGE *page);
 
@@ -174,15 +157,15 @@ int kos_heap_init(KOS_INSTANCE *inst)
 
     KOS_atomic_write_release_u32(inst->threads.main_thread.gc_state, GC_INACTIVE);
     KOS_atomic_write_relaxed_u32(heap->gc_state, GC_INACTIVE);
-    heap->heap_size      = 0;
-    heap->used_size      = 0;
-    heap->off_heap_size  = 0;
-    heap->max_size       = KOS_MAX_HEAP_SIZE;
-    heap->gc_threshold   = KOS_GC_STEP;
-    heap->free_pages     = 0;
-    heap->non_full_pages = 0;
-    heap->full_pages     = 0;
-    heap->pools          = 0;
+    heap->heap_size       = 0;
+    heap->used_size       = 0;
+    heap->off_heap_size   = 0;
+    heap->max_size        = KOS_MAX_HEAP_SIZE;
+    heap->gc_threshold    = KOS_GC_STEP;
+    heap->free_pages      = 0;
+    heap->used_pages.head = 0;
+    heap->used_pages.tail = 0;
+    heap->pools           = 0;
 
     KOS_atomic_write_relaxed_ptr(heap->gray_pages,   (KOS_PAGE *)0);
     KOS_atomic_write_relaxed_ptr(heap->update_pages, (KOS_PAGE *)0);
@@ -224,6 +207,16 @@ static void finalize_object(KOS_CONTEXT     ctx,
             KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
 
             if (obj->finalize) {
+
+                /* This function gets called during GC.
+                 * If priv is a heap object, it could have been moved by
+                 * the GC to a new page, so we need to make sure we
+                 * have the current pointer.
+                 * This currently happens for thread objects.
+                 * TODO Long term, we need to stop supporting putting
+                 * object pointers in priv and only support opaque user pointers!.
+                 */
+                update_child_ptr((KOS_OBJ_ID *)&obj->priv);
 
                 obj->finalize(ctx, KOS_atomic_read_relaxed_obj(obj->priv));
 
@@ -267,31 +260,14 @@ static void finalize_object(KOS_CONTEXT     ctx,
 static void finalize_objects(KOS_CONTEXT ctx,
                              KOS_HEAP   *heap)
 {
-    KOS_PAGE    *page           = heap->full_pages;
-    KOS_PAGE    *non_full_pages = heap->non_full_pages;
-    KOS_PAGE    *next;
-    KOS_GC_STATS gc_stats       = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
-                                    0U, 0U, 0U, 0U };
+    KOS_PAGE    *page     = heap->used_pages.head;
+    KOS_GC_STATS gc_stats = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+                              0U, 0U, 0U, 0U };
 
-    heap->full_pages     = 0;
-    heap->non_full_pages = 0;
-
-    if ( ! page) {
-        page = non_full_pages;
-        non_full_pages = 0;
-    }
-
-    for ( ; page; page = next) {
+    for ( ; page; page = page->next) {
 
         KOS_SLOT *ptr = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
         KOS_SLOT *end = ptr + KOS_atomic_read_relaxed_u32(page->num_allocated);
-
-        next = page->next;
-
-        if ( ! next && non_full_pages) {
-            next = non_full_pages;
-            non_full_pages = 0;
-        }
 
         while (ptr < end) {
 
@@ -347,11 +323,13 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
     finalize_objects(&inst->threads.main_thread, &inst->heap);
 
     for (;;) {
-        KOS_POOL *pool = (KOS_POOL *)POP_LIST(inst->heap.pools);
         void     *memory;
+        KOS_POOL *pool = inst->heap.pools;
 
         if ( ! pool)
             break;
+
+        inst->heap.pools = pool->next;
 
         memory = pool->memory;
         kos_free_aligned(memory);
@@ -392,21 +370,9 @@ static KOS_PAGE *unlock_one_page(KOS_HEAP *heap)
 #endif
 
 enum KOS_WALK_STAGE_E {
-    WALK_NON_FULL,
-    WALK_FULL,
-    WALK_DONE
+    WALK_DONE,
+    WALK_ACTIVE
 };
-
-static KOS_PAGE *get_pages_head(KOS_HEAP *heap)
-{
-    if (heap->non_full_pages) {
-        KOS_atomic_write_relaxed_u32(heap->walk_stage, WALK_NON_FULL);
-        return heap->non_full_pages;
-    }
-
-    KOS_atomic_write_relaxed_u32(heap->walk_stage, WALK_FULL);
-    return heap->full_pages;
-}
 
 static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
                                KOS_ATOMIC(KOS_PAGE *) *page_ptr)
@@ -432,6 +398,7 @@ static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
                 continue;
         }
 
+        /* TODO try to replace all this below with atomic_write(walk_stage, WALK_DONE) */
         kos_lock_mutex(&heap->mutex);
 
         stage = (enum KOS_WALK_STAGE_E)KOS_atomic_read_relaxed_u32(heap->walk_stage);
@@ -441,14 +408,7 @@ static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
             continue;
         }
 
-        if (stage == WALK_NON_FULL && heap->full_pages) {
-            KOS_atomic_write_relaxed_ptr(*page_ptr, heap->full_pages);
-            KOS_atomic_write_relaxed_u32(heap->walk_stage, WALK_FULL);
-
-            kos_unlock_mutex(&heap->mutex);
-            break;
-        }
-        else if (stage != WALK_DONE) {
+        if (stage == WALK_ACTIVE) {
             KOS_atomic_write_relaxed_ptr(*page_ptr, (KOS_PAGE *)0);
             KOS_atomic_write_relaxed_u32(heap->walk_stage, WALK_DONE);
 
@@ -511,7 +471,8 @@ static KOS_POOL *alloc_pool(KOS_HEAP *heap,
     pool_hdr->memory     = pool;
     pool_hdr->alloc_size = alloc_size;
 
-    PUSH_LIST(heap->pools, pool_hdr);
+    pool_hdr->next = heap->pools;
+    heap->pools    = pool_hdr;
 
     return pool_hdr;
 }
@@ -706,11 +667,6 @@ void *kos_heap_early_alloc(KOS_INSTANCE *inst,
     return alloc_object_from_page(ctx->cur_page, object_type, num_slots);
 }
 
-static uint32_t non_full_page_size(KOS_PAGE *page)
-{
-    return KOS_SLOTS_OFFS + (KOS_atomic_read_relaxed_u32(page->num_allocated) << KOS_OBJ_ALIGN_BITS);
-}
-
 static void release_current_page_locked(KOS_CONTEXT ctx)
 {
     KOS_PAGE *page = ctx->cur_page;
@@ -727,9 +683,9 @@ static void release_current_page_locked(KOS_CONTEXT ctx)
 
         gc_trace(("release cur page %p ctx=%p\n", (void *)page, (void *)ctx));
 
-        PUSH_LIST(heap->non_full_pages, page);
+        push_page(&heap->used_pages, page);
 
-        heap->used_size += non_full_page_size(page);
+        heap->used_size += used_page_size(page);
 
         ctx->cur_page = 0;
     }
@@ -757,11 +713,8 @@ static void verify_heap_used_size(KOS_HEAP *heap)
 
     kos_lock_mutex(&heap->mutex);
 
-    for (page = heap->non_full_pages; page; page = page->next)
-        used_size += non_full_page_size(page);
-
-    for (page = heap->full_pages; page; page = page->next)
-        used_size += KOS_PAGE_SIZE;
+    for (page = heap->used_pages.head; page; page = page->next)
+        used_size += used_page_size(page);
 
     assert(used_size == heap->used_size);
 
@@ -771,21 +724,10 @@ static void verify_heap_used_size(KOS_HEAP *heap)
 #define verify_heap_used_size(heap) ((void)0)
 #endif
 
-static int is_page_full(KOS_PAGE *page)
-{
-    return KOS_atomic_read_relaxed_u32(page->num_allocated) == KOS_SLOTS_PER_PAGE;
-}
-
 static void push_page_with_objects(KOS_HEAP *heap, KOS_PAGE *page)
 {
-    if (is_page_full(page)) {
-        heap->used_size += KOS_PAGE_SIZE;
-        PUSH_LIST(heap->full_pages, page);
-    }
-    else {
-        heap->used_size += non_full_page_size(page);
-        PUSH_LIST(heap->non_full_pages, page);
-    }
+    push_page(&heap->used_pages, page);
+    heap->used_size += used_page_size(page);
 }
 
 static void *alloc_object(KOS_CONTEXT ctx,
@@ -797,6 +739,8 @@ static void *alloc_object(KOS_CONTEXT ctx,
     unsigned        seek_depth = KOS_MAX_PAGE_SEEK;
     KOS_HEAP       *heap;
     KOS_PAGE      **page_ptr;
+    KOS_PAGE       *old_page;
+    KOS_PAGE       *prev_page;
     KOS_OBJ_HEADER *hdr        = 0;
 
     assert(num_slots <= KOS_SLOTS_PER_PAGE);
@@ -824,10 +768,9 @@ static void *alloc_object(KOS_CONTEXT ctx,
         const uint32_t gc_state = KOS_atomic_read_relaxed_u32(heap->gc_state);
 
         if (gc_state != GC_INACTIVE && KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE) {
+
             kos_unlock_mutex(&heap->mutex);
-
             help_gc(ctx);
-
             kos_lock_mutex(&heap->mutex);
 
             assert( ! ctx->cur_page);
@@ -835,49 +778,67 @@ static void *alloc_object(KOS_CONTEXT ctx,
         }
     }
 
-    /* Check if any of the non-full pages contains enough space */
+    /* Check if any of the non-full page contains enough space */
 
-    page_ptr = &heap->non_full_pages;
+    page_ptr  = &heap->used_pages.head;
+    prev_page = 0;
 
-    while (seek_depth--) {
+    for ( ; seek_depth--; prev_page = old_page, page_ptr = &old_page->next) {
 
-        KOS_PAGE *old_page = *page_ptr;
-        uint32_t  page_size;
+        uint32_t num_allocated;
+
+        old_page = *page_ptr;
 
         if ( ! old_page)
             break;
 
-        page_size = non_full_page_size(old_page);
+        num_allocated = KOS_atomic_read_relaxed_u32(old_page->num_allocated);
+
+        if (num_allocated == KOS_SLOTS_PER_PAGE)
+            break;
+
+        if (num_slots > KOS_SLOTS_PER_PAGE - num_allocated)
+            continue;
 
         hdr = alloc_object_from_page(old_page, object_type, num_slots);
 
-        if (hdr) {
-            heap->used_size -= page_size;
+        if ( ! hdr)
+            continue;
 
-            if (is_page_full(old_page)) {
+        heap->used_size += num_slots << KOS_OBJ_ALIGN_BITS;
+
+        /* Move full page to the back of the list */
+        if (is_page_full(old_page)) {
+            if (old_page->next) {
                 *page_ptr = old_page->next;
-                PUSH_LIST(heap->full_pages, old_page);
-                heap->used_size += KOS_PAGE_SIZE;
+                push_page(&heap->used_pages, old_page);
             }
-            else if ( ! page || (page && KOS_atomic_read_relaxed_u32(page->num_allocated)
-                                         > KOS_atomic_read_relaxed_u32(old_page->num_allocated))) {
-                *page_ptr = old_page->next;
+        }
+        /* If the page is still not full and has more room than current page,
+         * then use it as current page */
+        else if ( ! page || (page && KOS_atomic_read_relaxed_u32(page->num_allocated)
+                                     > KOS_atomic_read_relaxed_u32(old_page->num_allocated))) {
 
-                if (page) {
-                    assert(page == ctx->cur_page);
-                    push_page_with_objects(heap, page);
-                }
+            KOS_PAGE *next_page = old_page->next;
 
-                KOS_atomic_write_relaxed_u32(old_page->num_used, 0U);
-                old_page->next = 0;
-                ctx->cur_page  = old_page;
+            *page_ptr = next_page;
+
+            if ( ! next_page)
+                heap->used_pages.tail = prev_page;
+
+            heap->used_size -= used_page_size(old_page);
+
+            if (page) {
+                assert(page == ctx->cur_page);
+                push_page_with_objects(heap, page);
             }
-            else
-                heap->used_size += non_full_page_size(old_page);
-            break;
+
+            KOS_atomic_write_relaxed_u32(old_page->num_used, 0U);
+            old_page->next = 0;
+            ctx->cur_page  = old_page;
         }
 
-        page_ptr = &old_page->next;
+        break;
     }
 
     if ( ! hdr) {
@@ -1093,8 +1054,7 @@ static void clear_marking_in_pages(KOS_PAGE *page)
 
 static void clear_marking(KOS_HEAP *heap)
 {
-    clear_marking_in_pages(heap->non_full_pages);
-    clear_marking_in_pages(heap->full_pages);
+    clear_marking_in_pages(heap->used_pages.head);
 }
 
 struct KOS_MARK_LOC_S {
@@ -1384,7 +1344,8 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
 static uint32_t gray_to_black(KOS_HEAP *heap)
 {
     KOS_atomic_write_relaxed_u32(heap->gray_marked, 0);
-    KOS_atomic_write_relaxed_ptr(heap->gray_pages,  get_pages_head(heap));
+    KOS_atomic_write_relaxed_ptr(heap->gray_pages,  heap->used_pages.head);
+    KOS_atomic_write_relaxed_u32(heap->walk_stage,  WALK_ACTIVE);
 
     gray_to_black_in_pages(heap);
 
@@ -1994,7 +1955,8 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     KOS_INSTANCE *const inst = ctx->inst;
     KOS_HEAP           *heap = &inst->heap;
 
-    KOS_atomic_write_relaxed_ptr(heap->update_pages, get_pages_head(heap));
+    KOS_atomic_write_relaxed_ptr(heap->update_pages, heap->used_pages.head);
+    KOS_atomic_write_relaxed_u32(heap->walk_stage,   WALK_ACTIVE);
 
     assert( ! ctx->cur_page);
 
@@ -2075,26 +2037,18 @@ static int evacuate(KOS_CONTEXT   ctx,
                     KOS_PAGE    **free_pages,
                     KOS_GC_STATS *out_stats)
 {
-    KOS_HEAP   *heap           = get_heap(ctx);
-    int         error          = KOS_SUCCESS;
-    KOS_PAGE   *page           = heap->full_pages;
-    KOS_PAGE   *non_full_pages = heap->non_full_pages;
-    KOS_PAGE   *next;
-    KOS_OBJ_ID  exception      = KOS_get_exception(ctx);
-    int         non_full_turn  = 0;
+    KOS_HEAP  *heap      = get_heap(ctx);
+    int        error     = KOS_SUCCESS;
+    KOS_PAGE  *page      = heap->used_pages.head;
+    KOS_PAGE  *next;
+    KOS_OBJ_ID exception = KOS_get_exception(ctx);
 
     KOS_GC_STATS stats = *out_stats;
 
     KOS_clear_exception(ctx);
 
-    heap->full_pages     = 0;
-    heap->non_full_pages = 0;
-
-    if ( ! page) {
-        non_full_turn = 1;
-        page = non_full_pages;
-        non_full_pages = 0;
-    }
+    heap->used_pages.head = 0;
+    heap->used_pages.tail = 0;
 
     for ( ; page; page = next) {
 
@@ -2111,15 +2065,9 @@ static int evacuate(KOS_CONTEXT   ctx,
         const uint32_t num_slots_used = KOS_atomic_read_relaxed_u32(page->num_used);
 #endif
 
-        heap->used_size -= non_full_turn ? non_full_page_size(page) : KOS_PAGE_SIZE;
+        heap->used_size -= used_page_size(page);
 
         next = page->next;
-
-        if ( ! next && non_full_pages) {
-            next = non_full_pages;
-            non_full_pages = 0;
-            non_full_turn = 1;
-        }
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
@@ -2192,16 +2140,9 @@ static int evacuate(KOS_CONTEXT   ctx,
                         push_page_with_objects(heap, page);
                         for (page = next; page; page = next) {
 
-                            heap->used_size -= non_full_turn ? non_full_page_size(page)
-                                                             : KOS_PAGE_SIZE;
+                            heap->used_size -= used_page_size(page);
 
                             next = page->next;
-
-                            if ( ! next && non_full_pages) {
-                                next = non_full_pages;
-                                non_full_pages = 0;
-                                non_full_turn = 1;
-                            }
 
                             push_page_with_objects(heap, page);
                         }
@@ -2236,7 +2177,8 @@ static int evacuate(KOS_CONTEXT   ctx,
             debug_fill_slots(page);
         }
 
-        PUSH_LIST(*free_pages, page);
+        page->next  = *free_pages;
+        *free_pages = page;
     }
 
 cleanup:

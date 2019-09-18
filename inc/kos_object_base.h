@@ -328,7 +328,7 @@ typedef struct KOS_OBJECT_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(KOS_OBJ_ID) props;
     KOS_OBJ_ID             prototype;
-    KOS_ATOMIC(KOS_OBJ_ID) priv;
+    KOS_ATOMIC(KOS_OBJ_ID) priv; /* TODO only support opaque user pointer! priv gets messed up by GC */
     KOS_FINALIZE           finalize;
 } KOS_OBJECT;
 

@@ -35,6 +35,11 @@ typedef struct KOS_PAGE_HEADER_S       KOS_PAGE;
 typedef struct KOS_POOL_HEADER_S       KOS_POOL;
 typedef struct KOS_MODULE_LOAD_CHAIN_S KOS_MODULE_LOAD_CHAIN;
 
+typedef struct KOS_PAGE_LIST_S {
+    KOS_PAGE *head;
+    KOS_PAGE *tail;
+} KOS_PAGE_LIST;
+
 typedef struct KOS_HEAP_S {
     KOS_MUTEX              mutex;
     KOS_ATOMIC(uint32_t)   gc_state;
@@ -44,8 +49,7 @@ typedef struct KOS_HEAP_S {
     uint32_t               max_size;       /* Maximum allowed heap size                */
     uint32_t               gc_threshold;   /* Next used size that triggers GC          */
     KOS_PAGE              *free_pages;     /* Pages which are currently unused         */
-    KOS_PAGE              *non_full_pages; /* Pages in which new objects are allocated */
-    KOS_PAGE              *full_pages;     /* Pages which have no room for new objects */
+    KOS_PAGE_LIST          used_pages;     /* Pages which contain objects              */
     KOS_POOL              *pools;          /* Allocated memory - page pools            */
 
     KOS_ATOMIC(KOS_PAGE *) gray_pages;     /* Page pointer for gray-to-black marking   */
