@@ -238,7 +238,7 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
                 gc_trace(("free huge %p\n", (void *)obj->data));
 
-                kos_free(obj->data);
+                kos_free_aligned(obj->data);
 
                 get_heap(ctx)->heap_size     -= obj->size;
                 get_heap(ctx)->off_heap_size -= obj->size;
@@ -886,11 +886,10 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
     KOS_OBJ_ID        tracker_obj;
     KOS_HEAP         *heap;
     intptr_t          ptrval;
-    uint32_t          delta;
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_SUSPENDED);
 
-    size += 32;
+    size += KOS_OBJ_TRACK_BIT;
 
     heap = get_heap(ctx);
 
@@ -918,7 +917,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
             goto oom;
     }
 
-    ptrval = (intptr_t)kos_malloc(size);
+    ptrval = (intptr_t)kos_malloc_aligned(size, 32);
 
     if (!ptrval)
         goto oom;
@@ -928,19 +927,11 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
     OBJPTR(HUGE_TRACKER, tracker_obj)->size = size;
     OBJPTR(HUGE_TRACKER, tracker_obj)->data = (void *)ptrval;
 
-    delta = 0;
-    do
-        delta += 8;
-    while (kos_is_heap_object((KOS_OBJ_ID)(ptrval + delta + 1)) ||
-           ! kos_is_tracked_object((KOS_OBJ_ID)(ptrval + delta + 1)));
-
-    assert(delta < 32);
-
-    hdr = (KOS_OBJ_HEADER *)(ptrval + delta);
+    hdr = (KOS_OBJ_HEADER *)(ptrval + KOS_OBJ_TRACK_BIT);
 
     *(KOS_OBJ_ID *)((intptr_t)hdr - sizeof(KOS_OBJ_ID)) = tracker_obj;
 
-    kos_set_object_type_size(*hdr, object_type, size - delta);
+    kos_set_object_type_size(*hdr, object_type, size - KOS_OBJ_TRACK_BIT);
 
     OBJPTR(HUGE_TRACKER, tracker_obj)->object = (KOS_OBJ_ID)((intptr_t)hdr + 1);
 

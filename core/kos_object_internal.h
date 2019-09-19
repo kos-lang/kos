@@ -34,10 +34,11 @@
 /* Object size and type                                                     */
 /*==========================================================================*/
 
-#define OBJECT_TYPE_BITS 8U
-#define OBJECT_TYPE_MASK ((1U << OBJECT_TYPE_BITS) - 1U)
+#define KOS_OBJ_TYPE_FIELD_BITS 8U
+#define KOS_OBJ_TYPE_FIELD_MASK ((1U << KOS_OBJ_TYPE_FIELD_BITS) - 1U)
 #define KOS_HEAP_OBJECT_MASK ((1 << KOS_OBJ_ALIGN_BITS) - 1)
-#define KOS_TRACKED_OBJECT_MASK (((1 << KOS_OBJ_ALIGN_BITS) - 1) ^ 8)
+#define KOS_OBJ_TRACK_BIT 8
+#define KOS_TRACKED_OBJECT_MASK (((1 << KOS_OBJ_ALIGN_BITS) - 1) ^ KOS_OBJ_TRACK_BIT)
 
 #ifdef __cplusplus
 
@@ -56,9 +57,9 @@ static inline void kos_set_object_size(T& header, uint32_t size)
 {
     uintptr_t size_and_type = reinterpret_cast<uintptr_t>(header.size_and_type);
 
-    size_and_type &= static_cast<uintptr_t>(OBJECT_TYPE_MASK);
+    size_and_type &= static_cast<uintptr_t>(KOS_OBJ_TYPE_FIELD_MASK);
 
-    size_and_type |= static_cast<uintptr_t>(size) << OBJECT_TYPE_BITS;
+    size_and_type |= static_cast<uintptr_t>(size) << KOS_OBJ_TYPE_FIELD_BITS;
 
     header.size_and_type = reinterpret_cast<KOS_OBJ_ID>(size_and_type);
 }
@@ -70,7 +71,7 @@ static inline void kos_set_object_type(T& header, KOS_TYPE type)
 
     assert((static_cast<uint8_t>(type) & 1U) == 0U);
 
-    size_and_type &= ~static_cast<uintptr_t>(OBJECT_TYPE_MASK);
+    size_and_type &= ~static_cast<uintptr_t>(KOS_OBJ_TYPE_FIELD_MASK);
 
     size_and_type |= static_cast<uintptr_t>(type);
 
@@ -80,7 +81,7 @@ static inline void kos_set_object_type(T& header, KOS_TYPE type)
 template<typename T>
 static inline void kos_set_object_type_size(T& header, KOS_TYPE type, uint32_t size)
 {
-    const uintptr_t size_and_type = (static_cast<uintptr_t>(size) << OBJECT_TYPE_BITS)
+    const uintptr_t size_and_type = (static_cast<uintptr_t>(size) << KOS_OBJ_TYPE_FIELD_BITS)
                                   | static_cast<uintptr_t>(type);
     header.size_and_type = reinterpret_cast<KOS_OBJ_ID>(size_and_type);
 }
@@ -98,7 +99,7 @@ static inline uint32_t kos_get_object_size(T& header)
 {
     return static_cast<uint32_t>(
                reinterpret_cast<uintptr_t>(
-                   header.size_and_type) >> OBJECT_TYPE_BITS);
+                   header.size_and_type) >> KOS_OBJ_TYPE_FIELD_BITS);
 }
 
 #else
@@ -107,26 +108,26 @@ static inline uint32_t kos_get_object_size(T& header)
 
 #define kos_is_tracked_object(obj_id) ( ((intptr_t)(obj_id) & KOS_TRACKED_OBJECT_MASK) == 1)
 
-#define kos_set_object_size(header, size) do {                            \
-    (header).size_and_type = (KOS_OBJ_ID)(                                \
-        ((uintptr_t)(header).size_and_type & (uintptr_t)OBJECT_TYPE_MASK) \
-        | ((uintptr_t)(size) << OBJECT_TYPE_BITS));                       \
+#define kos_set_object_size(header, size) do {                                   \
+    (header).size_and_type = (KOS_OBJ_ID)(                                       \
+        ((uintptr_t)(header).size_and_type & (uintptr_t)KOS_OBJ_TYPE_FIELD_MASK) \
+        | ((uintptr_t)(size) << KOS_OBJ_TYPE_FIELD_BITS));                       \
 } while (0)
 
-#define kos_set_object_type(header, type) do {                             \
-    (header).size_and_type = (KOS_OBJ_ID)(                                 \
-        ((uintptr_t)(header).size_and_type & ~(uintptr_t)OBJECT_TYPE_MASK) \
-        | ((uintptr_t)(type)));                                            \
+#define kos_set_object_type(header, type) do {                                    \
+    (header).size_and_type = (KOS_OBJ_ID)(                                        \
+        ((uintptr_t)(header).size_and_type & ~(uintptr_t)KOS_OBJ_TYPE_FIELD_MASK) \
+        | ((uintptr_t)(type)));                                                   \
 } while (0)
 
-#define kos_set_object_type_size(header, type, size) do {                   \
-    (header).size_and_type = (KOS_OBJ_ID)(                                  \
-            ((uintptr_t)(size) << OBJECT_TYPE_BITS) | ((uintptr_t)(type))); \
+#define kos_set_object_type_size(header, type, size) do {                          \
+    (header).size_and_type = (KOS_OBJ_ID)(                                         \
+            ((uintptr_t)(size) << KOS_OBJ_TYPE_FIELD_BITS) | ((uintptr_t)(type))); \
 } while (0)
 
 #define kos_get_object_type(header) ((KOS_TYPE)(uint8_t)(uintptr_t)(header).size_and_type)
 
-#define kos_get_object_size(header) ((uint32_t)((uintptr_t)(header).size_and_type >> OBJECT_TYPE_BITS))
+#define kos_get_object_size(header) ((uint32_t)((uintptr_t)(header).size_and_type >> KOS_OBJ_TYPE_FIELD_BITS))
 
 #endif
 
