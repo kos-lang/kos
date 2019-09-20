@@ -23,7 +23,7 @@ do {
     var head = []
 
     # Initially allocate a lot of persistent memory to speed up triggering OOM
-    head.resize(1536 * 1024)
+    head.resize(2 * 1024 * 1024 - 12 * 1024) # 1536 * 1024
 
     var idx = 0
 
