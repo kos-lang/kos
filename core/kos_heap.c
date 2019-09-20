@@ -908,12 +908,14 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     kos_lock_mutex(&heap->mutex);
 
-    if (heap->heap_size + size > heap->max_size) {
+    /* TODO track max heap size and max malloc size separately */
+    /* TODO use better names for used_size and off_heap_size */
+    if (heap->used_size + heap->off_heap_size + size > heap->max_size) {
 
         if (try_collect_garbage(ctx))
             goto cleanup;
 
-        if (heap->heap_size + size > heap->max_size)
+        if (heap->used_size + heap->off_heap_size + size > heap->max_size)
             goto oom;
     }
 
