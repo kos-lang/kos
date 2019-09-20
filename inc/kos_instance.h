@@ -42,22 +42,23 @@ typedef struct KOS_PAGE_LIST_S {
 
 typedef struct KOS_HEAP_S {
     KOS_MUTEX              mutex;
-    KOS_ATOMIC(uint32_t)   gc_state;
-    uint32_t               heap_size;      /* Total amount of memory allocated         */
-    uint32_t               used_size;      /* Size used in full_ and non_full_pages    */
-    uint32_t               off_heap_size;  /* Amount of memory in tracked objs off heap*/
-    uint32_t               max_size;       /* Maximum allowed heap size                */
-    uint32_t               gc_threshold;   /* Next used size that triggers GC          */
-    KOS_PAGE              *free_pages;     /* Pages which are currently unused         */
-    KOS_PAGE_LIST          used_pages;     /* Pages which contain objects              */
-    KOS_POOL              *pools;          /* Allocated memory - page pools            */
+    KOS_ATOMIC(uint32_t)   gc_state;       /* Says what the GC is doing                      */
+    uint32_t               heap_size;      /* Total num bytes allocated for the heap         */
+    uint32_t               used_heap_size; /* Num bytes allocated for objects on heap        */
+    uint32_t               malloc_size;    /* Num bytes allocated for objs with malloc       */
+    uint32_t               max_heap_size;  /* Maximum allowed heap size                      */
+    uint32_t               max_malloc_size;/* Maximum allowed bytes allocated with malloc    */
+    uint32_t               gc_threshold;   /* Next value of used_heap_size which triggers GC */
+    KOS_PAGE              *free_pages;     /* Pages which are currently unused               */
+    KOS_PAGE_LIST          used_pages;     /* Pages which contain objects                    */
+    KOS_POOL              *pools;          /* Allocated memory for heap, in page pools       */
 
-    KOS_ATOMIC(KOS_PAGE *) gray_pages;     /* Page pointer for gray-to-black marking   */
-    KOS_ATOMIC(KOS_PAGE *) update_pages;   /* Page pointer for update-after-evac       */
-    KOS_ATOMIC(uint32_t)   gray_marked;    /* Number of objects marked                 */
-    KOS_ATOMIC(uint32_t)   walk_stage;     /* Stage of walking page lists              */
-    KOS_ATOMIC(uint32_t)   walk_active;    /* Number of thread walking pages           */
-    KOS_ATOMIC(uint32_t)   gc_cycles;      /* Number of GC cycles commenced            */
+    KOS_ATOMIC(KOS_PAGE *) gray_pages;     /* Page pointer for gray-to-black marking         */
+    KOS_ATOMIC(KOS_PAGE *) update_pages;   /* Page pointer for update-after-evac             */
+    KOS_ATOMIC(uint32_t)   gray_marked;    /* Number of objects marked                       */
+    KOS_ATOMIC(uint32_t)   walk_stage;     /* Stage of walking page lists                    */
+    KOS_ATOMIC(uint32_t)   walk_active;    /* Number of threads which are walking pages      */
+    KOS_ATOMIC(uint32_t)   gc_cycles;      /* Number of GC cycles started                    */
 
 #ifdef CONFIG_MAD_GC
     struct KOS_LOCKED_PAGES_S *locked_pages_first;
@@ -323,9 +324,11 @@ typedef struct KOS_GC_STATS_S {
     unsigned size_kept;
     unsigned num_gray_passes;
     unsigned initial_heap_size;
-    unsigned initial_used_size;
+    unsigned initial_used_heap_size;
+    unsigned initial_malloc_size;
     unsigned heap_size;
-    unsigned used_size;
+    unsigned used_heap_size;
+    unsigned malloc_size;
     unsigned time_us;
 } KOS_GC_STATS;
 

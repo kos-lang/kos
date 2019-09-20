@@ -158,9 +158,10 @@ int kos_heap_init(KOS_INSTANCE *inst)
     KOS_atomic_write_release_u32(inst->threads.main_thread.gc_state, GC_INACTIVE);
     KOS_atomic_write_relaxed_u32(heap->gc_state, GC_INACTIVE);
     heap->heap_size       = 0;
-    heap->used_size       = 0;
-    heap->off_heap_size   = 0;
-    heap->max_size        = KOS_MAX_HEAP_SIZE;
+    heap->used_heap_size  = 0;
+    heap->malloc_size     = 0;
+    heap->max_heap_size   = KOS_MAX_HEAP_SIZE;
+    heap->max_malloc_size = KOS_MAX_HEAP_SIZE;
     heap->gc_threshold    = KOS_GC_STEP;
     heap->free_pages      = 0;
     heap->used_pages.head = 0;
@@ -240,8 +241,7 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
                 kos_free_aligned(obj->data);
 
-                get_heap(ctx)->heap_size     -= obj->size;
-                get_heap(ctx)->off_heap_size -= obj->size;
+                get_heap(ctx)->malloc_size -= obj->size;
 
                 stats->size_freed += obj->size;
 
@@ -262,7 +262,7 @@ static void finalize_objects(KOS_CONTEXT ctx,
 {
     KOS_PAGE    *page     = heap->used_pages.head;
     KOS_GC_STATS gc_stats = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
-                              0U, 0U, 0U, 0U };
+                              0U, 0U, 0U, 0U, 0U, 0U };
 
     for ( ; page; page = page->next) {
 
@@ -449,7 +449,7 @@ static KOS_POOL *alloc_pool(KOS_HEAP *heap,
     KOS_POOL *pool_hdr;
     uint8_t  *pool;
 
-    if (heap->heap_size + alloc_size > heap->max_size)
+    if (heap->heap_size + alloc_size > heap->max_heap_size)
         return 0;
 
     pool = (uint8_t *)kos_malloc_aligned(alloc_size, (size_t)KOS_PAGE_SIZE);
@@ -552,7 +552,7 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
 
 #ifdef CONFIG_MAD_GC
     if ( ! page && KOS_atomic_read_relaxed_u32(heap->gc_state) == GC_INACTIVE &&
-        (heap->heap_size + KOS_POOL_SIZE > heap->max_size))
+        (heap->heap_size + KOS_POOL_SIZE > heap->max_heap_size))
 
         page = unlock_one_page(heap);
 #endif
@@ -593,7 +593,7 @@ static int try_collect_garbage(KOS_CONTEXT ctx)
 #ifdef CONFIG_MAD_GC
     if ( ! (ctx->inst->flags & KOS_INST_MANUAL_GC))
 #else
-    if (heap->used_size + heap->off_heap_size > heap->gc_threshold &&
+    if (heap->used_heap_size + heap->malloc_size > heap->gc_threshold &&
         ! (ctx->inst->flags & KOS_INST_MANUAL_GC))
 #endif
     {
@@ -685,7 +685,7 @@ static void release_current_page_locked(KOS_CONTEXT ctx)
 
         push_page(&heap->used_pages, page);
 
-        heap->used_size += used_page_size(page);
+        heap->used_heap_size += used_page_size(page);
 
         ctx->cur_page = 0;
     }
@@ -716,7 +716,7 @@ static void verify_heap_used_size(KOS_HEAP *heap)
     for (page = heap->used_pages.head; page; page = page->next)
         used_size += used_page_size(page);
 
-    assert(used_size == heap->used_size);
+    assert(used_size == heap->used_heap_size);
 
     kos_unlock_mutex(&heap->mutex);
 }
@@ -727,7 +727,7 @@ static void verify_heap_used_size(KOS_HEAP *heap)
 static void push_page_with_objects(KOS_HEAP *heap, KOS_PAGE *page)
 {
     push_page(&heap->used_pages, page);
-    heap->used_size += used_page_size(page);
+    heap->used_heap_size += used_page_size(page);
 }
 
 static void *alloc_object(KOS_CONTEXT ctx,
@@ -805,7 +805,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
         if ( ! hdr)
             continue;
 
-        heap->used_size += num_slots << KOS_OBJ_ALIGN_BITS;
+        heap->used_heap_size += num_slots << KOS_OBJ_ALIGN_BITS;
 
         /* Move full page to the back of the list */
         if (is_page_full(old_page)) {
@@ -826,7 +826,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
             if ( ! next_page)
                 heap->used_pages.tail = prev_page;
 
-            heap->used_size -= used_page_size(old_page);
+            heap->used_heap_size -= used_page_size(old_page);
 
             if (page) {
                 assert(page == ctx->cur_page);
@@ -908,14 +908,12 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     kos_lock_mutex(&heap->mutex);
 
-    /* TODO track max heap size and max malloc size separately */
-    /* TODO use better names for used_size and off_heap_size */
-    if (heap->used_size + heap->off_heap_size + size > heap->max_size) {
+    if (heap->malloc_size + size > heap->max_malloc_size) {
 
         if (try_collect_garbage(ctx))
             goto cleanup;
 
-        if (heap->used_size + heap->off_heap_size + size > heap->max_size)
+        if (heap->malloc_size + size > heap->max_malloc_size)
             goto oom;
     }
 
@@ -937,8 +935,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     OBJPTR(HUGE_TRACKER, tracker_obj)->object = (KOS_OBJ_ID)((intptr_t)hdr + 1);
 
-    heap->heap_size     += size;
-    heap->off_heap_size += size;
+    heap->malloc_size += size;
 
     assert(kos_is_heap_object(tracker_obj));
     assert(kos_is_tracked_object((KOS_OBJ_ID)((intptr_t)hdr + 1)));
@@ -2058,7 +2055,7 @@ static int evacuate(KOS_CONTEXT   ctx,
         const uint32_t num_slots_used = KOS_atomic_read_relaxed_u32(page->num_used);
 #endif
 
-        heap->used_size -= used_page_size(page);
+        heap->used_heap_size -= used_page_size(page);
 
         next = page->next;
 
@@ -2133,7 +2130,7 @@ static int evacuate(KOS_CONTEXT   ctx,
                         push_page_with_objects(heap, page);
                         for (page = next; page; page = next) {
 
-                            heap->used_size -= used_page_size(page);
+                            heap->used_heap_size -= used_page_size(page);
 
                             next = page->next;
 
@@ -2187,7 +2184,7 @@ cleanup:
 
 static void update_gc_threshold(KOS_HEAP *heap)
 {
-    heap->gc_threshold = heap->used_size + heap->off_heap_size + KOS_GC_STEP;
+    heap->gc_threshold = heap->used_heap_size + heap->malloc_size + KOS_GC_STEP;
 }
 
 static void help_gc(KOS_CONTEXT ctx)
@@ -2311,7 +2308,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     KOS_HEAP    *heap            = get_heap(ctx);
     KOS_PAGE    *free_pages      = 0;
     KOS_GC_STATS stats           = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
-                                     0U, 0U, 0U, 0U };
+                                     0U, 0U, 0U, 0U, 0U, 0U };
     unsigned     num_gray_passes = 0U;
     int          error           = KOS_SUCCESS;
 
@@ -2320,8 +2317,9 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     time_0 = kos_get_time_us();
 
-    stats.initial_heap_size = heap->heap_size;
-    stats.initial_used_size = heap->used_size + heap->off_heap_size;
+    stats.initial_heap_size      = heap->heap_size;
+    stats.initial_used_heap_size = heap->used_heap_size;
+    stats.initial_malloc_size    = heap->malloc_size;
 
     if ( ! KOS_atomic_cas_strong_u32(heap->gc_state, GC_INACTIVE, GC_INIT)) {
 
@@ -2386,7 +2384,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     stats.num_gray_passes = num_gray_passes;
     stats.heap_size       = heap->heap_size;
-    stats.used_size       = heap->used_size + heap->off_heap_size;
+    stats.used_heap_size  = heap->used_heap_size;
+    stats.malloc_size     = heap->malloc_size;
 
     verify_heap_used_size(heap);
 
@@ -2404,9 +2403,10 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     stats.time_us = (unsigned)(time_1 - time_0);
 
     if (ctx->inst->flags & KOS_INST_DEBUG) {
-        printf("GC used/total [B] %x/%x -> %x/%x : time %u us : gray passes %u\n",
-               stats.initial_used_size, stats.initial_heap_size,
-               stats.used_size, stats.heap_size,
+        printf("GC used/total [B] %x/%x -> %x/%x | malloc [B] %x -> %x : time %u us : gray passes %u\n",
+               stats.initial_used_heap_size, stats.initial_heap_size,
+               stats.used_heap_size, stats.heap_size,
+               stats.initial_malloc_size, stats.malloc_size,
                stats.time_us, stats.num_gray_passes);
     }
 
