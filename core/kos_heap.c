@@ -570,7 +570,6 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
     gc_trace(("alloc page %p\n", (void *)page));
 
     assert(KOS_atomic_read_relaxed_u32(page->num_allocated) == 0);
-    assert(page->next == 0 || page < page->next);
 
     heap->free_pages = page->next;
 
@@ -1421,70 +1420,6 @@ static void mark_roots(KOS_CONTEXT ctx)
         mark_roots_in_context(ctx);
 }
 
-static void get_flat_list(KOS_PAGE *page, KOS_PAGE ***begin, KOS_PAGE ***end)
-{
-    uint8_t *const ptr = (uint8_t *)page +
-                         KOS_align_up((int)KOS_BITMAP_OFFS, (int)sizeof(void *));
-
-    *begin = (KOS_PAGE **)ptr;
-
-    if (end)
-        *end = (KOS_PAGE **)((uint8_t *)page + KOS_PAGE_SIZE);
-}
-
-static void get_flat_page_list(KOS_HEAP  *heap,
-                               KOS_PAGE **list,
-                               KOS_PAGE **pages)
-{
-    KOS_PAGE  *page  = *pages;
-    KOS_PAGE  *first = *pages;
-    KOS_PAGE **dest;
-    KOS_PAGE **begin;
-    KOS_PAGE **end;
-
-    assert(page);
-
-    get_flat_list(first, &begin, &end);
-
-    dest = begin;
-
-    while (page && dest < end) {
-
-        KOS_PAGE *next = page->next;
-
-        assert(((uintptr_t)page & (KOS_PAGE_SIZE - 1U)) == 0U);
-
-        *(dest++) = page;
-        page = next;
-    }
-
-    KOS_atomic_write_relaxed_u32(first->num_allocated, (unsigned)(dest - begin));
-
-    assert(first != page);
-
-    first->next = *list;
-    *list       = first;
-
-    *pages = page;
-}
-
-static int sort_compare(const void *a, const void *b)
-{
-    KOS_PAGE *const pa = *(KOS_PAGE *const *)a;
-    KOS_PAGE *const pb = *(KOS_PAGE *const *)b;
-
-    return (pa < pb) ? -1 : (pa > pb) ?  1 : 0;
-}
-
-static void sort_flat_page_list(KOS_PAGE *list)
-{
-    KOS_PAGE **begin;
-
-    get_flat_list(list, &begin, 0);
-
-    qsort(begin, KOS_atomic_read_relaxed_u32(list->num_allocated), sizeof(void *), sort_compare);
-}
-
 #ifdef CONFIG_MAD_GC
 static void lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
 {
@@ -1535,92 +1470,41 @@ static void debug_fill_slots(KOS_PAGE* page)
 }
 #endif
 
-static unsigned push_sorted_list(KOS_HEAP *heap, KOS_PAGE *list)
-{
-    /* TODO remove page sorting, make this simple; page sorting not needed anymore */
-
-    KOS_PAGE **begin;
-    KOS_PAGE **end;
-    KOS_PAGE **insert_at;
-    KOS_PAGE  *page_at;
-    unsigned   num_pages = 0;
-#ifdef CONFIG_MAD_GC
-    KOS_PAGE  *to_lock = 0;
-#endif
-
-    get_flat_list(list, &begin, 0);
-
-    end = begin + KOS_atomic_read_relaxed_u32(list->num_allocated);
-
-#ifdef CONFIG_MAD_GC
-    insert_at = &to_lock;
-#else
-    insert_at = &heap->free_pages;
-#endif
-    page_at   = *insert_at;
-
-    while (begin < end) {
-
-        KOS_PAGE *page = *(begin++);
-
-        KOS_atomic_write_relaxed_u32(page->num_allocated, 0);
-
-        if (page != list)
-            debug_fill_slots(page);
-
-        while (page_at && page > page_at) {
-
-            insert_at = &page_at->next;
-            page_at   = *insert_at;
-        }
-
-        page->next = page_at;
-        *insert_at = page;
-        insert_at  = &page->next;
-
-        assert(begin + 1 >= end || *(begin + 1) > page);
-
-        ++num_pages;
-    }
-
-    debug_fill_slots(list);
-
-#ifdef CONFIG_MAD_GC
-    lock_pages(heap, to_lock);
-#endif
-
-    return num_pages;
-}
-
 static void reclaim_free_pages(KOS_HEAP     *heap,
                                KOS_PAGE     *free_pages,
                                KOS_GC_STATS *stats)
 {
-    KOS_PAGE *lists = 0;
+    KOS_PAGE *tail     = 0;
+    unsigned  num_free = 1;
 
     if ( ! free_pages)
         return;
 
-    do
-        get_flat_page_list(heap, &lists, &free_pages);
-    while (free_pages);
+    tail = free_pages;
 
-    free_pages = lists;
+    for (;;) {
+        KOS_PAGE *next;
 
-    while (free_pages) {
-        sort_flat_page_list(free_pages);
-        free_pages = free_pages->next;
+        debug_fill_slots(tail);
+
+        KOS_atomic_write_relaxed_u32(tail->num_allocated, 0);
+
+        next = tail->next;
+        if ( ! next)
+            break;
+
+        ++num_free;
+        tail = next;
     }
 
-    while (lists) {
+#ifdef CONFIG_MAD_GC
+    lock_pages(heap, free_pages);
+#else
+    tail->next       = heap->free_pages;
+    heap->free_pages = free_pages;
+#endif
 
-        KOS_PAGE *next      = lists->next;
-        unsigned  num_pages = push_sorted_list(heap, lists);
-
-        stats->num_pages_freed += num_pages;
-
-        lists = next;
-    }
+    stats->num_pages_freed += num_free;
 }
 
 #ifdef CONFIG_MAD_GC
@@ -1697,14 +1581,13 @@ static unsigned unlock_pages(KOS_HEAP     *heap,
         else {
             *free_pages = page->next;
             page->next  = reclaimed;
-            reclaimed    = page;
+            reclaimed   = page;
             page        = *free_pages;
             ++num_unlocked;
         }
     }
 
-    if (reclaimed)
-        reclaim_free_pages(heap, reclaimed, stats);
+    reclaim_free_pages(heap, reclaimed, stats);
 
     return num_unlocked;
 }
