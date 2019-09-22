@@ -20,52 +20,15 @@
 # IN THE SOFTWARE.
 #
 
-modules  = interpreter
-modules += core
-modules += modules
-modules += tests
+module = kos
+depth  = tests/perf/time_us
 
-# By default, only build the interpreter
-build.interpreter:
+c_files = time_us.c
 
-include build/dirs.mk
+include ../../../build/rules.mk
 
-debug ?= 0
+all: $(out_dir)/$(depth)/time_us$(exe_suffix)
 
-ifeq ($(debug), 0)
-    out_dir ?= Out/release
-else
-    out_dir ?= Out/debug
-endif
-
-clean:
-	rm -rf $(out_dir)
-	rm -f */*.gcov */*.gcda */*.gcno
-
-build.interpreter build.tests: build.core build.modules
-
-fuzz: build.core build.modules
-	@$(MAKE) -C tests fuzz
-
-test: build.interpreter build.tests
-	@$(MAKE) -C tests $@
-
-cldep:
-	@$(MAKE) -C build/cldep debug=0
-
-time_us: build.core
-	@$(MAKE) -C tests/perf/time_us
-
-ifneq (,$(filter CYGWIN% MINGW% MSYS%, $(shell uname -s)))
-$(addprefix build., $(modules)): cldep
-endif
-
-install: build.interpreter
-	@$(MAKE) -C interpreter $@
-
-doc: build.interpreter
-	@echo Extract docs
-	@mkdir -p "$(out_dir)/doc"
-	@env $(out_dir)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
-
-.PHONY: cldep doc install test fuzz time_us
+$(out_dir)/$(depth)/time_us$(exe_suffix): $(o_files) $(out_dir)/core/libkos_lang$(a_suffix)
+	$(call LINK,$@,$^)
+	@echo Exe $(@:../../../%=%)
