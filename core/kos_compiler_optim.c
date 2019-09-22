@@ -899,12 +899,14 @@ static int _optimize_binary_op(KOS_COMP_UNIT      *program,
         if (numeric_a.type == KOS_FLOAT_VALUE || numeric_b.type == KOS_FLOAT_VALUE) {
 
             if (numeric_a.type == KOS_INTEGER_VALUE) {
-                numeric_a.u.d  = (double)numeric_a.u.i;
+                const double value = (double)numeric_a.u.i;
+                numeric_a.u.d  = value;
                 numeric_a.type = KOS_FLOAT_VALUE;
             }
 
             if (numeric_b.type == KOS_INTEGER_VALUE) {
-                numeric_b.u.d  = (double)numeric_b.u.i;
+                const double value = (double)numeric_b.u.i;
+                numeric_b.u.d  = value;
                 numeric_b.type = KOS_FLOAT_VALUE;
             }
         }

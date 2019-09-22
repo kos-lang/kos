@@ -151,13 +151,16 @@ static KOS_OBJ_ID _exp(KOS_CONTEXT ctx,
 
     if (KOS_get_numeric_arg(ctx, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
+        double value;
+
         if (numeric.type == KOS_INTEGER_VALUE)
-            numeric.u.d = (double)numeric.u.i;
+            value = (double)numeric.u.i;
         else {
             assert(numeric.type == KOS_FLOAT_VALUE);
+            value = numeric.u.d;
         }
 
-        ret = KOS_new_float(ctx, exp(numeric.u.d));
+        ret = KOS_new_float(ctx, exp(value));
     }
 
     return ret;
@@ -187,13 +190,16 @@ static KOS_OBJ_ID _expm1(KOS_CONTEXT ctx,
 
     if (KOS_get_numeric_arg(ctx, args_obj, 0, &numeric) == KOS_SUCCESS) {
 
+        double value;
+
         if (numeric.type == KOS_INTEGER_VALUE)
-            numeric.u.d = (double)numeric.u.i;
+            value = (double)numeric.u.i;
         else {
             assert(numeric.type == KOS_FLOAT_VALUE);
+            value = numeric.u.d;
         }
 
-        ret = KOS_new_float(ctx, expm1(numeric.u.d));
+        ret = KOS_new_float(ctx, expm1(value));
     }
 
     return ret;
@@ -348,34 +354,38 @@ static KOS_OBJ_ID _pow(KOS_CONTEXT ctx,
     KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC arg1;
     KOS_NUMERIC arg2;
+    double      val1;
+    double      val2;
 
     TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &arg1));
     TRY(KOS_get_numeric_arg(ctx, args_obj, 1, &arg2));
 
     if (arg1.type == KOS_INTEGER_VALUE)
-        arg1.u.d = (double)arg1.u.i;
+        val1 = (double)arg1.u.i;
     else {
         assert(arg1.type == KOS_FLOAT_VALUE);
+        val1 = arg1.u.d;
     }
 
     if (arg2.type == KOS_INTEGER_VALUE)
-        arg2.u.d = (double)arg2.u.i;
+        val2 = (double)arg2.u.i;
     else {
         assert(arg2.type == KOS_FLOAT_VALUE);
+        val2 = arg2.u.d;
     }
 
-    if (arg1.u.d == 0) {
-        if (arg2.u.d == 0)
+    if (val1 == 0) {
+        if (val2 == 0)
             RAISE_EXCEPTION(str_err_pow_0_0);
         else
             ret = TO_SMALL_INT(0);
     }
-    else if (arg1.u.d == 1 || arg2.u.d == 0)
+    else if (val1 == 1 || val2 == 0)
         ret = TO_SMALL_INT(1);
-    else if (arg1.u.d < 0 && ceil(arg2.u.d) != arg2.u.d)
+    else if (val1 < 0 && ceil(val2) != val2)
         RAISE_EXCEPTION(str_err_negative_root);
     else
-        ret = KOS_new_float(ctx, pow(arg1.u.d, arg2.u.d));
+        ret = KOS_new_float(ctx, pow(val1, val2));
 
 cleanup:
     return error ? KOS_BADPTR : ret;
@@ -403,21 +413,23 @@ static KOS_OBJ_ID _sqrt(KOS_CONTEXT ctx,
     int         error = KOS_SUCCESS;
     KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    double      value;
 
     TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
 
     if (numeric.type == KOS_INTEGER_VALUE) {
         if (numeric.u.i < 0)
             RAISE_EXCEPTION(str_err_negative_root);
-        numeric.u.d = (double)numeric.u.i;
+        value = (double)numeric.u.i;
     }
     else {
         assert(numeric.type == KOS_FLOAT_VALUE);
-        if (numeric.u.d < 0)
+        value = numeric.u.d;
+        if (value < 0)
             RAISE_EXCEPTION(str_err_negative_root);
     }
 
-    ret = KOS_new_float(ctx, sqrt(numeric.u.d));
+    ret = KOS_new_float(ctx, sqrt(value));
 
 cleanup:
     return error ? KOS_BADPTR : ret;

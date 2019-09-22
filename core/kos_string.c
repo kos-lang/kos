@@ -1640,7 +1640,7 @@ KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
     kos_untrack_refs(ctx, 1);
 
     if ( ! new_str)
-        len = 0;
+        return OBJID(STRING, new_str);
 
     switch (elem_size) {
 
