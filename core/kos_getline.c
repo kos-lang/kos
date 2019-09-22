@@ -131,14 +131,12 @@ int kos_getline(KOS_GETLINE      *state,
         if (num_read)
             add_history(line);
 
-        error = kos_vector_resize(buf, num_read + 1);
+        error = kos_vector_resize(buf, num_read);
 
         if (error)
             fprintf(stderr, "Out of memory\n");
-        else {
-            memcpy(buf->buffer, line, num_read + 1);
-            kos_vector_resize(buf, num_read); /* Discard trailing NUL */
-        }
+        else
+            memcpy(buf->buffer, line, num_read);
 
         free(line);
     }

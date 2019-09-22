@@ -1301,10 +1301,12 @@ static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
                 uint32_t       i;
                 uint8_t       *data = 0;
 
+                if ( ! size)
+                    break;
+
                 TRY(KOS_buffer_resize(ctx, buffer, cur_size + size));
 
-                if (size + cur_size)
-                    data = KOS_buffer_data(buffer) + cur_size;
+                data = KOS_buffer_data(buffer) + cur_size;
 
                 for (i = 0; i < size; i++) {
                     int64_t value;
