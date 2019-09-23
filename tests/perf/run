@@ -1,0 +1,74 @@
+#!/bin/sh
+
+# Copyright (c) 2014-2019 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+set -e
+
+UNAME=$(uname -s)
+MAKE=make
+
+if [ -z "$JOBS" ]; then
+    case "$UNAME" in
+        Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
+        Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
+        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ; UNAME="Windows" ;;
+        Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
+        *)                                       JOBS=2 ;;
+    esac
+    [ $JOBS -lt 32 ] || JOBS=32
+fi
+
+case "$UNAME" in
+    FreeBSD|OpenBSD|NetBSD|DragonFly)
+        MAKE=gmake
+        ;;
+esac
+
+echo "Using $JOBS jobs"
+
+rm -rf Out
+
+$MAKE -k -j "$JOBS" time_us build.interpreter native=1
+
+runtest()
+{
+    local LOOPS
+    LOOPS="$1"
+    shift
+
+    local SCRIPT
+    SCRIPT="$1"
+
+    local PREFIX
+    PREFIX=""
+    echo "$SCRIPT" | grep -q "\.kos$" && PREFIX=Out/release/interpreter/kos
+
+    tests/perf/measure -t "$1" -n "$LOOPS" $PREFIX "$@"
+}
+
+runtest 20 doc/extract_docs.kos modules/*.kos modules/*.c
+runtest 10 tests/perf/primes.kos
+runtest 10 tests/perf/primes.py
+runtest 10 tests/perf/sort_strings.kos
+runtest 10 tests/perf/sort_strings.py
+runtest 10 tests/perf/fib_class_flat.kos
+runtest 10 tests/perf/fib_class_proto.kos
+runtest 10 tests/perf/fib_class.py

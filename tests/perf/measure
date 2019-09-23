@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# Copyright (c) 2014-2019 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+set -eu
+
+if [[ -z ${TIME_US:-} ]]; then
+    OUT_DIR="$(dirname "$0")/../../Out"
+    TIME_US="$OUT_DIR/release/tests/perf/time_us/time_us"
+    [[ -x $TIME_US ]] || TIME_US="$OUT_DIR/debug/tests/perf/time_us/time_us"
+fi
+if [[ ! -x $TIME_US ]]; then
+    echo "Unable to find time_us tool!" >&2
+    exit 1
+fi
+
+STDOUT=""
+STDERR=""
+
+cleanup()
+{
+    [[ -z $STDOUT ]] || rm -f "$STDOUT" || true
+    [[ -z $STDERR ]] || rm -f "$STDERR" || true
+}
+
+trap cleanup EXIT
+
+STDOUT=$(mktemp -t measure_stdout)
+STDERR=$(mktemp -t measure_stderr)
+
+LOOPS=10
+NAME=""
+VERBOSE=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -n)
+            shift
+            LOOPS="$1"
+            shift
+            ;;
+        -t)
+            shift
+            NAME="$1"
+            shift
+            ;;
+        -v)
+            VERBOSE=1
+            shift
+            ;;
+        -h|--help)
+            [[ $# -gt 1 ]] && echo "Warning: Arguments ignored!" >&2
+            echo "Usage: measure [-n LOOPS] [-t NAME] [-v] <program> <args...>"
+            [[ $# -gt 1 ]] && exit 1
+            exit 0
+            ;;
+        *)
+            break
+    esac
+done
+
+[[ -n $NAME ]] || NAME="$@"
+
+RUNTIMES=( )
+
+for I in $(seq $LOOPS); do
+
+    [[ $VERBOSE = 1 ]] && echo "Loop $I..."
+
+    EXIT_CODE=0
+    TIME0=$("$TIME_US")
+    "$@" >"$STDOUT" 2>"$STDERR" || EXIT_CODE=$?
+    TIME1=$("$TIME_US")
+
+    if [[ $EXIT_CODE -ne 0 ]]; then
+        echo "Error: Test failed to execute" >&2
+
+        echo "-- stderr: -----------------------------" >&2
+        cat "$STDERR" >&2
+        echo "----------------------------------------" >&2
+
+        echo "-- stdout: -----------------------------"
+        cat "$STDOUT"
+        echo "----------------------------------------"
+
+        exit $EXIT_CODE
+    fi
+
+    TIME=$(($TIME1 - $TIME0))
+    [[ $VERBOSE = 1 ]] && echo "$TIME us"
+    RUNTIMES+=( $TIME )
+done
+
+print_array()
+{
+    while [[ $# -gt 0 ]]; do
+        echo "$1"
+        shift
+    done
+}
+
+RUNTIMES=( $(print_array "${RUNTIMES[@]}" | sort -n) )
+
+echo "min ${RUNTIMES[0]} us, med ${RUNTIMES[$((${#RUNTIMES} / 2))]} us: $NAME"
