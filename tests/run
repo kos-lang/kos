@@ -205,12 +205,18 @@ if [ "$RUN_MADGC" = "1" ]; then
     if [ "$RUN_SEQFAIL" = "1" ]; then
         export seqfail=1
     fi
+    export mad_gc=1
+
     MAD_GC_CPUS=$TEST_CPUS
     [ $MAD_GC_CPUS -gt 4 ] && MAD_GC_CPUS=4
-    export mad_gc=1
+
+    JOBS=$(($JOBS * 2))
+
     TEST_CPUS=$MAD_GC_CPUS runtests c++11 c++11
+
     unset mad_gc
     unset seqfail
+    JOBS=$ORIG_JOBS
 fi
 
 unset debug
