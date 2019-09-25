@@ -220,6 +220,8 @@ $(eval $(call SEQFAIL_RULE,4600))
 $(eval $(call SEQFAIL_RULE,4800))
 $(eval $(call SEQFAIL_RULE,5000))
 $(eval $(call SEQFAIL_RULE,5200))
+$(eval $(call SEQFAIL_RULE,5400))
+$(eval $(call SEQFAIL_RULE,5600))
 
 ifneq ($(seqfail), 0)
 simple_test: $(sequential_test_list)
