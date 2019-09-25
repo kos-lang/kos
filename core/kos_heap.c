@@ -94,22 +94,26 @@ static uint32_t used_page_size(KOS_PAGE *page)
     return KOS_SLOTS_OFFS + (KOS_atomic_read_relaxed_u32(page->num_allocated) << KOS_OBJ_ALIGN_BITS);
 }
 
+static void push_page_back(KOS_PAGE_LIST *list, KOS_PAGE *page)
+{
+    page->next = 0;
+
+    if (list->tail)
+        list->tail->next = page;
+    else {
+        assert( ! list->head);
+        list->head = page;
+    }
+
+    list->tail = page;
+}
+
 static void push_page(KOS_PAGE_LIST *list, KOS_PAGE *page)
 {
     /* Non-full pages are put in front, full pages go in the back */
-    if (is_page_full(page)) {
+    if (is_page_full(page))
+        push_page_back(list, page);
 
-        page->next = 0;
-
-        if (list->tail)
-            list->tail->next = page;
-        else {
-            assert( ! list->head);
-            list->head = page;
-        }
-
-        list->tail = page;
-    }
     else {
         KOS_PAGE *old_head = list->head;
 
@@ -217,7 +221,13 @@ static void finalize_object(KOS_CONTEXT     ctx,
                  * TODO Long term, we need to stop supporting putting
                  * object pointers in priv and only support opaque user pointers!.
                  */
-                update_child_ptr((KOS_OBJ_ID *)&obj->priv);
+                {
+                    KOS_OBJ_ID priv_id = (KOS_OBJ_ID)obj->priv;
+
+                    if (kos_is_heap_object(priv_id) && ! IS_BAD_PTR(priv_id))
+                        if ( ! IS_SMALL_INT(((KOS_OBJ_HEADER *)((intptr_t)priv_id - 1))->size_and_type))
+                            update_child_ptr((KOS_OBJ_ID *)&obj->priv);
+                }
 
                 obj->finalize(ctx, KOS_atomic_read_relaxed_obj(obj->priv));
 
@@ -257,6 +267,11 @@ static void finalize_object(KOS_CONTEXT     ctx,
     }
 }
 
+static KOS_SLOT *get_slots(KOS_PAGE *page)
+{
+    return (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
+}
+
 static void finalize_objects(KOS_CONTEXT ctx,
                              KOS_HEAP   *heap)
 {
@@ -266,7 +281,7 @@ static void finalize_objects(KOS_CONTEXT ctx,
 
     for ( ; page; page = page->next) {
 
-        KOS_SLOT *ptr = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
+        KOS_SLOT *ptr = get_slots(page);
         KOS_SLOT *end = ptr + KOS_atomic_read_relaxed_u32(page->num_allocated);
 
         while (ptr < end) {
@@ -363,6 +378,8 @@ static KOS_PAGE *unlock_one_page(KOS_HEAP *heap)
                 return page;
             }
         }
+
+        locked_pages = locked_pages->next;
     }
 
     return 0;
@@ -617,7 +634,7 @@ static void *alloc_slots_from_page(KOS_PAGE *page, uint32_t num_slots)
 
     if (new_num_slots <= KOS_SLOTS_PER_PAGE) {
 
-        slot = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS) + num_allocated;
+        slot = get_slots(page) + num_allocated;
 
         assert(slot == (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS + (num_allocated << KOS_OBJ_ALIGN_BITS)));
 
@@ -851,6 +868,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
         }
 
         if (try_collect_garbage(ctx)) {
+            KOS_clear_exception(ctx);
             kos_unlock_mutex(&heap->mutex);
             return 0;
         }
@@ -869,9 +887,6 @@ static void *alloc_object(KOS_CONTEXT ctx,
     }
 
     kos_unlock_mutex(&heap->mutex);
-
-    if ( ! hdr)
-        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
 
     return hdr;
 }
@@ -894,7 +909,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     tracker = (KOS_HUGE_TRACKER *)alloc_object(ctx, OBJ_HUGE_TRACKER, sizeof(KOS_HUGE_TRACKER));
 
-    if (!tracker)
+    if ( ! tracker)
         return 0;
 
     tracker->data   = 0;
@@ -909,17 +924,19 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     if (heap->malloc_size + size > heap->max_malloc_size) {
 
-        if (try_collect_garbage(ctx))
+        if (try_collect_garbage(ctx)) {
+            KOS_clear_exception(ctx);
             goto cleanup;
+        }
 
         if (heap->malloc_size + size > heap->max_malloc_size)
-            goto oom;
+            goto cleanup;
     }
 
     ptrval = (intptr_t)kos_malloc_aligned(size, 32);
 
-    if (!ptrval)
-        goto oom;
+    if ( ! ptrval)
+        goto cleanup;
 
     gc_trace(("alloc huge %p\n", (void *)ptrval));
 
@@ -948,15 +965,6 @@ cleanup:
     kos_untrack_refs(ctx, 1);
 
     return hdr;
-
-oom:
-    kos_unlock_mutex(&heap->mutex);
-
-    KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-
-    kos_untrack_refs(ctx, 1);
-
-    return hdr;
 }
 
 void *kos_alloc_object(KOS_CONTEXT ctx,
@@ -980,6 +988,9 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
     else
         obj = alloc_object(ctx, object_type, size);
 
+    if ( ! obj)
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+
 #ifdef CONFIG_PERF
     if (size <= 32)
         KOS_PERF_CNT(alloc_object_size[0]);
@@ -998,7 +1009,12 @@ void *kos_alloc_object_page(KOS_CONTEXT ctx,
                             KOS_TYPE    object_type)
 {
     /* TODO actually allocate the page and set up the object in it */
-    return alloc_object(ctx, object_type, KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS);
+    void *obj = alloc_object(ctx, object_type, KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS);
+
+    if ( ! obj)
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+
+    return obj;
 }
 
 static void stop_the_world(KOS_INSTANCE *inst)
@@ -1097,6 +1113,17 @@ static void set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
 
         value = KOS_atomic_read_relaxed_u32(*mark_loc.bitmap);
     }
+}
+
+static void clear_mark_state(KOS_OBJ_ID obj_id)
+{
+    struct KOS_MARK_LOC_S mark_lock = get_mark_location(obj_id);
+
+    const uint32_t mask = ~((uint32_t)COLORMASK << mark_lock.mask_idx);
+
+    const uint32_t value = KOS_atomic_read_relaxed_u32(*mark_lock.bitmap);
+
+    KOS_atomic_write_relaxed_u32(*mark_lock.bitmap, value & mask);
 }
 
 static void set_mark_state(KOS_OBJ_ID            obj_id,
@@ -1292,7 +1319,7 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
 
         struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
 
-        KOS_SLOT *ptr = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
+        KOS_SLOT *ptr = get_slots(page);
         KOS_SLOT *end = ptr + KOS_atomic_read_relaxed_u32(page->num_allocated);
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
@@ -1470,17 +1497,17 @@ static void debug_fill_slots(KOS_PAGE* page)
 }
 #endif
 
-static void reclaim_free_pages(KOS_HEAP     *heap,
-                               KOS_PAGE     *free_pages,
-                               KOS_GC_STATS *stats)
+static void reclaim_free_pages(KOS_HEAP      *heap,
+                               KOS_PAGE_LIST *free_pages,
+                               KOS_GC_STATS  *stats)
 {
     KOS_PAGE *tail     = 0;
     unsigned  num_free = 1;
 
-    if ( ! free_pages)
-        return;
+    tail = free_pages->head;
 
-    tail = free_pages;
+    if ( ! tail)
+        return;
 
     for (;;) {
         KOS_PAGE *next;
@@ -1498,19 +1525,22 @@ static void reclaim_free_pages(KOS_HEAP     *heap,
     }
 
 #ifdef CONFIG_MAD_GC
-    lock_pages(heap, free_pages);
+    lock_pages(heap, free_pages->head);
 #else
     tail->next       = heap->free_pages;
-    heap->free_pages = free_pages;
+    heap->free_pages = free_pages->head;
 #endif
+
+    free_pages->head = 0;
+    free_pages->tail = 0;
 
     stats->num_pages_freed += num_free;
 }
 
 #ifdef CONFIG_MAD_GC
-static unsigned unlock_pages(KOS_HEAP     *heap,
-                             KOS_PAGE    **free_pages,
-                             KOS_GC_STATS *stats)
+static unsigned unlock_pages(KOS_HEAP      *heap,
+                             KOS_PAGE_LIST *free_pages,
+                             KOS_GC_STATS  *stats)
 {
     struct KOS_LOCKED_PAGES_S *locked_pages = heap->locked_pages_first;
     KOS_PAGE                 **insert_at    = &heap->free_pages;
@@ -1563,31 +1593,36 @@ static unsigned unlock_pages(KOS_HEAP     *heap,
     return num_unlocked;
 }
 #else
-static unsigned unlock_pages(KOS_HEAP     *heap,
-                             KOS_PAGE    **free_pages,
-                             KOS_GC_STATS *stats)
+static unsigned unlock_pages(KOS_HEAP      *heap,
+                             KOS_PAGE_LIST *free_pages,
+                             KOS_GC_STATS  *stats)
 {
-    KOS_PAGE  *page         = *free_pages;
-    KOS_PAGE  *reclaimed    = 0;
-    unsigned   num_unlocked = 0U;
+    KOS_PAGE    **page_ptr     = &free_pages->head;
+    KOS_PAGE     *page         = *page_ptr;
+    KOS_PAGE     *prev         = 0;
+    KOS_PAGE_LIST reclaimed    = { 0, 0 };
+    unsigned      num_unlocked = 0U;
 
     /* Find all free pages which had no evacuated objects and make them available */
     while (page) {
 
         if (KOS_atomic_read_relaxed_u32(page->num_allocated)) {
-            free_pages = &page->next;
-            page       = *free_pages;
+            page_ptr = &page->next;
+            prev     = page;
+            page     = *page_ptr;
         }
         else {
-            *free_pages = page->next;
-            page->next  = reclaimed;
-            reclaimed   = page;
-            page        = *free_pages;
+            KOS_PAGE *next = page->next;
+            *page_ptr      = next;
+            if ( ! next)
+                free_pages->tail = prev;
+            push_page_back(&reclaimed, page);
+            page = next;
             ++num_unlocked;
         }
     }
 
-    reclaim_free_pages(heap, reclaimed, stats);
+    reclaim_free_pages(heap, &reclaimed, stats);
 
     return num_unlocked;
 }
@@ -1620,7 +1655,7 @@ static int evacuate_object(KOS_CONTEXT     ctx,
 #endif
     }
     else
-        error = KOS_ERROR_EXCEPTION;
+        error = KOS_ERROR_OUT_OF_MEMORY;
 
     return error;
 }
@@ -1800,25 +1835,28 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
     }
 }
 
+static void update_page_after_evacuation(KOS_PAGE *page)
+{
+    uint8_t       *ptr = (uint8_t *)get_slots(page);
+    uint8_t *const end = ptr + (KOS_atomic_read_relaxed_u32(page->num_allocated) << KOS_OBJ_ALIGN_BITS);
+
+    while (ptr < end) {
+
+        KOS_OBJ_HEADER *hdr  = (KOS_OBJ_HEADER *)ptr;
+        const uint32_t  size = kos_get_object_size(*hdr);
+
+        update_child_ptrs(hdr);
+
+        ptr += size;
+    }
+}
+
 static void update_pages_after_evacuation(KOS_HEAP *heap)
 {
     KOS_PAGE *page = begin_page_walk(heap, &heap->update_pages);
 
-    for ( ; page; page = get_next_page(heap, &heap->update_pages)) {
-
-        uint8_t       *ptr = (uint8_t *)page + KOS_SLOTS_OFFS;
-        uint8_t *const end = ptr + (KOS_atomic_read_relaxed_u32(page->num_allocated) << KOS_OBJ_ALIGN_BITS);
-
-        while (ptr < end) {
-
-            KOS_OBJ_HEADER *hdr  = (KOS_OBJ_HEADER *)ptr;
-            const uint32_t  size = kos_get_object_size(*hdr);
-
-            update_child_ptrs(hdr);
-
-            ptr += size;
-        }
-    }
+    for ( ; page; page = get_next_page(heap, &heap->update_pages))
+        update_page_after_evacuation(page);
 
     end_page_walk(heap);
 }
@@ -1906,19 +1944,17 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     kos_unlock_mutex(&inst->threads.mutex);
 }
 
-static int evacuate(KOS_CONTEXT   ctx,
-                    KOS_PAGE    **free_pages,
-                    KOS_GC_STATS *out_stats)
+static int evacuate(KOS_CONTEXT    ctx,
+                    KOS_PAGE_LIST *free_pages,
+                    KOS_GC_STATS  *out_stats)
 {
-    KOS_HEAP  *heap      = get_heap(ctx);
-    int        error     = KOS_SUCCESS;
-    KOS_PAGE  *page      = heap->used_pages.head;
-    KOS_PAGE  *next;
-    KOS_OBJ_ID exception = KOS_get_exception(ctx);
-
+    KOS_HEAP    *heap  = get_heap(ctx);
+    int          error = KOS_SUCCESS;
+    KOS_PAGE    *page  = heap->used_pages.head;
+    KOS_PAGE    *next;
     KOS_GC_STATS stats = *out_stats;
 
-    KOS_clear_exception(ctx);
+    assert( ! KOS_is_exception_pending(ctx));
 
     heap->used_pages.head = 0;
     heap->used_pages.tail = 0;
@@ -1927,9 +1963,9 @@ static int evacuate(KOS_CONTEXT   ctx,
 
         struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
 
-        unsigned  num_evac = 0;
+        unsigned       num_evac      = 0;
         const uint32_t num_allocated = KOS_atomic_read_relaxed_u32(page->num_allocated);
-        KOS_SLOT      *ptr           = (KOS_SLOT *)((uint8_t *)page + KOS_SLOTS_OFFS);
+        KOS_SLOT      *ptr           = get_slots(page);
         KOS_SLOT      *end           = ptr + num_allocated;
 #ifndef NDEBUG
         KOS_SLOT *page_end = ptr + num_allocated;
@@ -1948,7 +1984,7 @@ static int evacuate(KOS_CONTEXT   ctx,
         /* If the number of slots used reaches the threshold, then the page is
          * exempt from evacuation. */
         #define UNUSED_SLOTS ((KOS_SLOTS_PER_PAGE * (100U - KOS_MIGRATION_THRESH)) / 100U)
-        if (num_allocated - num_slots_used < UNUSED_SLOTS || num_slots_used > KOS_SLOTS_PER_PAGE) {
+        if (num_allocated - num_slots_used < UNUSED_SLOTS) {
 
             gc_trace(("GC ctx=%p retain page %p\n", (void *)ctx, (void *)page));
 
@@ -1995,21 +2031,36 @@ static int evacuate(KOS_CONTEXT   ctx,
             assert(size <= (size_t)((uint8_t *)page_end - (uint8_t *)ptr));
 
             if (color) {
-                if (evacuate_object(ctx, hdr, size)) {
+                error = evacuate_object(ctx, hdr, size);
 
-                    KOS_clear_exception(ctx);
+                if (error) {
+
+                    assert( ! KOS_is_exception_pending(ctx));
+
+                    /* First attempt to recover:
+                     * Try to release any pages which had no objects evacuated
+                     * and put them in the free pool. */
 
                     release_current_page_locked(ctx);
 
-                    unlock_pages(heap, free_pages, &stats);
-
-                    error = evacuate_object(ctx, hdr, size);
-
-                    /* TODO add a way to avoid hitting the objects that were already evacuated */
+                    if (unlock_pages(heap, free_pages, &stats))
+                        error = evacuate_object(ctx, hdr, size);
 
                     if (error) {
 
-                        /* Put back the remaining pages on full or non-full list. */
+                        KOS_OBJ_HEADER *first_hdr = (KOS_OBJ_HEADER *)get_slots(page);
+
+                        assert( ! ctx->cur_page);
+
+                        /* Mark all objects/slots that have been processed on this page so far
+                         * as one contiguous region and clear mark bits for them, so that
+                         * these objects will not be processed again by a subsequent evacuation
+                         * pass. */
+                        kos_set_object_size(*first_hdr,
+                                            (uint32_t)((uintptr_t)hdr - (uintptr_t)first_hdr));
+                        clear_mark_state((KOS_OBJ_ID)((uintptr_t)first_hdr + 1));
+
+                        /* Put back the remaining pages on the heap. */
                         push_page_with_objects(heap, page);
                         for (page = next; page; page = next) {
 
@@ -2017,11 +2068,12 @@ static int evacuate(KOS_CONTEXT   ctx,
 
                             next = page->next;
 
-                            push_page_with_objects(heap, page);
+                            push_page(&heap->used_pages, page);
                         }
 
-                        assert(KOS_is_exception_pending(ctx));
-                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                        stats.num_objs_evacuated += num_evac;
+
+                        goto cleanup;
                     }
 
                 }
@@ -2050,17 +2102,13 @@ static int evacuate(KOS_CONTEXT   ctx,
             debug_fill_slots(page);
         }
 
-        page->next  = *free_pages;
-        *free_pages = page;
+        push_page_back(free_pages, page);
     }
 
 cleanup:
     *out_stats = stats;
 
     release_current_page_locked(ctx);
-
-    if ( ! IS_BAD_PTR(exception))
-        ctx->exception = exception;
 
     return error;
 }
@@ -2186,14 +2234,14 @@ int KOS_resume_context(KOS_CONTEXT ctx)
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
                         KOS_GC_STATS *out_stats)
 {
-    uint64_t     time_0;
-    uint64_t     time_1;
-    KOS_HEAP    *heap            = get_heap(ctx);
-    KOS_PAGE    *free_pages      = 0;
-    KOS_GC_STATS stats           = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
-                                     0U, 0U, 0U, 0U, 0U, 0U };
-    unsigned     num_gray_passes = 0U;
-    int          error           = KOS_SUCCESS;
+    uint64_t      time_0;
+    uint64_t      time_1;
+    KOS_HEAP     *heap            = get_heap(ctx);
+    KOS_PAGE_LIST free_pages      = { 0, 0 };
+    KOS_GC_STATS  stats           = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
+                                      0U, 0U, 0U, 0U, 0U, 0U };
+    unsigned      num_gray_passes = 0U;
+    int           error           = KOS_SUCCESS;
 
     /***********************************************************************/
     /* Initialize GC */
@@ -2245,20 +2293,32 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     while (gray_to_black(heap));
 
     /***********************************************************************/
-    /* Phase 3: Evacuate */
+    /* Phase 3: Evacuate and reclaim free pages */
 
-    KOS_atomic_write_release_u32(heap->gc_state, GC_EVACUATE);
+    do {
+        uint32_t prev_num_freed;
 
-    error = evacuate(ctx, &free_pages, &stats);
+        KOS_atomic_write_release_u32(heap->gc_state, GC_EVACUATE);
 
-    KOS_atomic_write_release_u32(heap->gc_state, GC_UPDATE);
+        error = evacuate(ctx, &free_pages, &stats);
 
-    update_after_evacuation(ctx);
+        KOS_atomic_write_release_u32(heap->gc_state, GC_UPDATE);
 
-    /***********************************************************************/
-    /* Phase 4: Reclaim free pages */
+        update_after_evacuation(ctx);
 
-    reclaim_free_pages(heap, free_pages, &stats);
+        prev_num_freed = stats.num_pages_freed;
+
+        reclaim_free_pages(heap, &free_pages, &stats);
+
+        /* If there was an error during evacuation and we cannot
+         * reclaim any freed pages, throw OOM exception. */
+        if (error && prev_num_freed == stats.num_pages_freed) {
+            assert(error == KOS_ERROR_OUT_OF_MEMORY);
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            error = KOS_ERROR_EXCEPTION;
+            break;
+        }
+    } while (error);
 
     /***********************************************************************/
     /* Done, finish GC */
