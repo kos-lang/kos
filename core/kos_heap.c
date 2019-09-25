@@ -568,9 +568,7 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
     KOS_PAGE *page = heap->free_pages;
 
 #ifdef CONFIG_MAD_GC
-    if ( ! page && KOS_atomic_read_relaxed_u32(heap->gc_state) == GC_INACTIVE &&
-        (heap->heap_size + KOS_POOL_SIZE > heap->max_heap_size))
-
+    if ( ! page && (heap->heap_size + KOS_POOL_SIZE > heap->max_heap_size))
         page = unlock_one_page(heap);
 #endif
 
