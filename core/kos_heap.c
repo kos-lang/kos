@@ -2041,8 +2041,16 @@ static int evacuate(KOS_CONTEXT    ctx,
 
                     release_current_page_locked(ctx);
 
-                    if (unlock_pages(heap, free_pages, &stats))
+                    if (unlock_pages(heap, free_pages, &stats)) {
                         error = evacuate_object(ctx, hdr, size);
+
+                        if (ctx->inst->flags & KOS_INST_VERBOSE) {
+                            if (error)
+                                printf("GC is memory constrained\n");
+                            else
+                                printf("GC is memory constrained, but recovered\n");
+                        }
+                    }
 
                     if (error) {
 
@@ -2312,6 +2320,10 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
          * reclaim any freed pages, throw OOM exception. */
         if (error && prev_num_freed == stats.num_pages_freed) {
             assert(error == KOS_ERROR_OUT_OF_MEMORY);
+
+            if (ctx->inst->flags & KOS_INST_VERBOSE)
+                printf("GC ran out of memory\n");
+
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             error = KOS_ERROR_EXCEPTION;
             break;
