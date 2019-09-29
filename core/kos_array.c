@@ -642,9 +642,12 @@ int KOS_array_insert(KOS_CONTEXT ctx,
     if (src_delta > dest_delta) {
         kos_track_refs(ctx, 2, &dest_obj_id, &src_obj_id);
 
-        TRY(KOS_array_resize(ctx, dest_obj_id, dest_len - dest_delta + src_delta));
+        error = KOS_array_resize(ctx, dest_obj_id, dest_len - dest_delta + src_delta);
 
         kos_untrack_refs(ctx, 2);
+
+        if (error)
+            goto cleanup;
     }
 
     dest_buf = _get_data(dest_obj_id);
@@ -732,9 +735,12 @@ int KOS_array_push(KOS_CONTEXT ctx,
 
             kos_track_refs(ctx, 2, &obj_id, &value);
 
-            TRY(KOS_array_reserve(ctx, obj_id, new_cap));
+            error = KOS_array_reserve(ctx, obj_id, new_cap);
 
             kos_untrack_refs(ctx, 2);
+
+            if (error)
+                goto cleanup;
 
             buf = _get_data(obj_id);
             continue;
