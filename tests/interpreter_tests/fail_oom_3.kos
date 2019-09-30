@@ -19,25 +19,23 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 #
+import base.buffer
+
 do {
-    var head = []
-
-    # Initially allocate a lot of persistent memory to speed up triggering OOM
-    head.resize(2 * 1024 * 1024 - 12 * 1024) # 1536 * 1024
-
-    var idx = 0
-
+    var a = []
+    var size = 1024 * 1024
+    a.resize(1536 * 1024)
+    var i = 0
     loop {
-        # Allocate large, persistent object
-        const new_array = []
-        new_array.resize(256) # 1024 (32-bit) or 2048 (64-bit) bytes
-
-        # Chain new array
-        head[idx] = new_array
-        idx += 1
-
-        # Allocate small throw-away object
-        const throw_away = [void]
-        throw_away[0] = new_array
+        try {
+            a[i] = buffer(size)
+            i += 1
+        }
+        catch const e {
+            if size <= 512 {
+                throw e
+            }
+            size >>= 1
+        }
     }
 }

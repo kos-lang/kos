@@ -125,8 +125,6 @@ static void push_page(KOS_PAGE_LIST *list, KOS_PAGE *page)
     }
 }
 
-static void clear_marking_in_pages(KOS_PAGE *page);
-
 #ifndef NDEBUG
 KOS_TYPE kos_get_object_type_gc_safe(KOS_OBJ_ID obj)
 {
@@ -595,28 +593,48 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
     return page;
 }
 
+static int collect_garbage_last_resort_locked(KOS_CONTEXT ctx, KOS_GC_STATS *stats)
+{
+    KOS_HEAP *const heap = get_heap(ctx);
+    int             error;
+
+    if (KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE)
+        return KOS_SUCCESS;
+
+    kos_unlock_mutex(&heap->mutex);
+
+    error = KOS_collect_garbage(ctx, stats);
+
+    kos_lock_mutex(&heap->mutex);
+
+    return error;
+}
+
 static int try_collect_garbage(KOS_CONTEXT ctx)
 {
+#ifndef CONFIG_MAD_GC
     KOS_HEAP *const heap  = get_heap(ctx);
+#endif
     int             error = KOS_SUCCESS;
 
     /* Don't try to collect garbage when the garbage collector is running */
     if (KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE)
         return KOS_SUCCESS;
 
-#ifdef CONFIG_MAD_GC
-    if ( ! (ctx->inst->flags & KOS_INST_MANUAL_GC))
-#else
-    if (heap->used_heap_size + heap->malloc_size > heap->gc_threshold &&
-        ! (ctx->inst->flags & KOS_INST_MANUAL_GC))
+    if (ctx->inst->flags & KOS_INST_MANUAL_GC)
+        return error;
+
+#ifndef CONFIG_MAD_GC
+    if (heap->used_heap_size + heap->malloc_size > heap->gc_threshold ||
+        heap->malloc_size > heap->max_malloc_size)
 #endif
     {
+        KOS_GC_STATS stats;
 
-        kos_unlock_mutex(&heap->mutex);
+        error = collect_garbage_last_resort_locked(ctx, &stats);
 
-        error = KOS_collect_garbage(ctx, 0);
-
-        kos_lock_mutex(&heap->mutex);
+        if ( ! error && stats.heap_size)
+            error = KOS_SUCCESS_RETURN;
     }
 
     return error;
@@ -681,6 +699,12 @@ void *kos_heap_early_alloc(KOS_INSTANCE *inst,
     return alloc_object_from_page(ctx->cur_page, object_type, num_slots);
 }
 
+static void push_page_with_objects(KOS_HEAP *heap, KOS_PAGE *page)
+{
+    push_page(&heap->used_pages, page);
+    heap->used_heap_size += used_page_size(page);
+}
+
 static void release_current_page_locked(KOS_CONTEXT ctx)
 {
     KOS_PAGE *page = ctx->cur_page;
@@ -697,9 +721,7 @@ static void release_current_page_locked(KOS_CONTEXT ctx)
 
         gc_trace(("release cur page %p ctx=%p\n", (void *)page, (void *)ctx));
 
-        push_page(&heap->used_pages, page);
-
-        heap->used_heap_size += used_page_size(page);
+        push_page_with_objects(heap, page);
 
         ctx->cur_page = 0;
     }
@@ -737,12 +759,6 @@ static void verify_heap_used_size(KOS_HEAP *heap)
 #else
 #define verify_heap_used_size(heap) ((void)0)
 #endif
-
-static void push_page_with_objects(KOS_HEAP *heap, KOS_PAGE *page)
-{
-    push_page(&heap->used_pages, page);
-    heap->used_heap_size += used_page_size(page);
-}
 
 static void *alloc_object(KOS_CONTEXT ctx,
                           KOS_TYPE    object_type,
@@ -857,15 +873,13 @@ static void *alloc_object(KOS_CONTEXT ctx,
 
     if ( ! hdr) {
 
-        /* Release thread's current page */
-        if (page) {
+        int error;
 
-            push_page_with_objects(heap, page);
+        release_current_page_locked(ctx);
 
-            ctx->cur_page = 0;
-        }
+        error = try_collect_garbage(ctx);
 
-        if (try_collect_garbage(ctx)) {
+        if (error && error != KOS_SUCCESS_RETURN) {
             KOS_clear_exception(ctx);
             kos_unlock_mutex(&heap->mutex);
             return 0;
@@ -873,6 +887,16 @@ static void *alloc_object(KOS_CONTEXT ctx,
 
         /* Allocate a new page */
         page = alloc_page(heap);
+
+        /* If failed, collect garbage and try again */
+        if ( ! page && ! error) {
+            error = collect_garbage_last_resort_locked(ctx, 0);
+
+            if (error)
+                KOS_clear_exception(ctx);
+
+            page = alloc_page(heap);
+        }
 
         if (page) {
 
@@ -922,10 +946,10 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     if (heap->malloc_size + size > heap->max_malloc_size) {
 
-        if (try_collect_garbage(ctx)) {
+        const int error = collect_garbage_last_resort_locked(ctx, 0);
+
+        if (error)
             KOS_clear_exception(ctx);
-            goto cleanup;
-        }
 
         if (heap->malloc_size + size > heap->max_malloc_size)
             goto cleanup;
@@ -1015,6 +1039,33 @@ void *kos_alloc_object_page(KOS_CONTEXT ctx,
     return obj;
 }
 
+#if 0
+static void print_heap(KOS_HEAP *heap)
+{
+    unsigned  used_pages = 0;
+    unsigned  free_pages = 0;
+    KOS_PAGE *page       = heap->used_pages.head;
+
+    for ( ; page; page = page->next) {
+        ++used_pages;
+        printf("used page %p, %u/%u slots allocated, %u slots used\n",
+               (void *)page,
+               KOS_atomic_read_relaxed_u32(page->num_allocated),
+               (unsigned)KOS_SLOTS_PER_PAGE,
+               KOS_atomic_read_relaxed_u32(page->num_used));
+    }
+
+    page = heap->free_pages;
+
+    for ( ; page; page = page->next) {
+        ++free_pages;
+        printf("free page %p\n", (void *)page);
+    }
+
+    printf("total %u pages used, %u pages free\n", used_pages, free_pages);
+}
+#endif
+
 static void stop_the_world(KOS_INSTANCE *inst)
 {
     KOS_CONTEXT ctx = &inst->threads.main_thread;
@@ -1041,15 +1092,17 @@ enum KOS_MARK_STATE_E {
     COLORMASK = 3
 };
 
-static void clear_marking_in_pages(KOS_PAGE *page)
+static void set_marking_in_pages(KOS_PAGE             *page,
+                                 enum KOS_MARK_STATE_E state,
+                                 uint32_t              num_used)
 {
     while (page) {
 
         uint32_t *const bitmap = (uint32_t *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
-        memset(bitmap, WHITE * 0x55, KOS_BITMAP_SIZE);
+        memset(bitmap, state * 0x55, KOS_BITMAP_SIZE);
 
-        KOS_atomic_write_relaxed_u32(page->num_used, 0);
+        KOS_atomic_write_relaxed_u32(page->num_used, num_used);
 
         page = page->next;
     }
@@ -1057,7 +1110,7 @@ static void clear_marking_in_pages(KOS_PAGE *page)
 
 static void clear_marking(KOS_HEAP *heap)
 {
-    clear_marking_in_pages(heap->used_pages.head);
+    set_marking_in_pages(heap->used_pages.head, WHITE, 0);
 }
 
 struct KOS_MARK_LOC_S {
@@ -1833,10 +1886,12 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
     }
 }
 
-static void update_page_after_evacuation(KOS_PAGE *page)
+static void update_page_after_evacuation(KOS_PAGE *page, uint32_t offset)
 {
     uint8_t       *ptr = (uint8_t *)get_slots(page);
     uint8_t *const end = ptr + (KOS_atomic_read_relaxed_u32(page->num_allocated) << KOS_OBJ_ALIGN_BITS);
+
+    ptr += offset;
 
     while (ptr < end) {
 
@@ -1849,12 +1904,55 @@ static void update_page_after_evacuation(KOS_PAGE *page)
     }
 }
 
+struct KOS_INCOMPLETE_S {
+    KOS_PAGE *page;
+    uint32_t  offset;
+};
+
+static void update_incomplete_page(KOS_HEAP                *heap,
+                                   struct KOS_INCOMPLETE_S *incomplete)
+{
+    KOS_OBJ_HEADER *hdr;
+
+    if ( ! incomplete->page)
+        return;
+
+    update_page_after_evacuation(incomplete->page, incomplete->offset);
+
+    hdr = (KOS_OBJ_HEADER *)get_slots(incomplete->page);
+
+    /* Mark all objects/slots that have been processed on this page so far
+     * as one contiguous region and clear mark bits for them, so that
+     * these objects will not be processed again by a subsequent evacuation
+     * pass. */
+    kos_set_object_type_size(*hdr, OBJ_OPAQUE, incomplete->offset);
+    clear_mark_state((KOS_OBJ_ID)((uintptr_t)hdr + 1));
+
+    push_page_with_objects(heap, incomplete->page);
+}
+
+static int save_incomplete_page(KOS_OBJ_HEADER          *hdr,
+                                KOS_PAGE                *page,
+                                struct KOS_INCOMPLETE_S *incomplete)
+{
+    KOS_OBJ_HEADER *first_hdr = (KOS_OBJ_HEADER *)get_slots(page);
+
+    if (first_hdr == hdr)
+        return 0;
+
+    /* Pass the incomplete page to update_incomplete_page() */
+    incomplete->page   = page;
+    incomplete->offset = (uint32_t)((uintptr_t)hdr - (uintptr_t)first_hdr);
+
+    return 1;
+}
+
 static void update_pages_after_evacuation(KOS_HEAP *heap)
 {
     KOS_PAGE *page = begin_page_walk(heap, &heap->update_pages);
 
     for ( ; page; page = get_next_page(heap, &heap->update_pages))
-        update_page_after_evacuation(page);
+        update_page_after_evacuation(page, 0);
 
     end_page_walk(heap);
 }
@@ -1942,9 +2040,12 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     kos_unlock_mutex(&inst->threads.mutex);
 }
 
-static int evacuate(KOS_CONTEXT    ctx,
-                    KOS_PAGE_LIST *free_pages,
-                    KOS_GC_STATS  *out_stats)
+#define PAGE_ALREADY_EVACED 0xF00DBA5E
+
+static int evacuate(KOS_CONTEXT              ctx,
+                    KOS_PAGE_LIST           *free_pages,
+                    KOS_GC_STATS            *out_stats,
+                    struct KOS_INCOMPLETE_S *incomplete)
 {
     KOS_HEAP    *heap  = get_heap(ctx);
     int          error = KOS_SUCCESS;
@@ -1961,15 +2062,13 @@ static int evacuate(KOS_CONTEXT    ctx,
 
         struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
 
-        unsigned       num_evac      = 0;
-        const uint32_t num_allocated = KOS_atomic_read_relaxed_u32(page->num_allocated);
-        KOS_SLOT      *ptr           = get_slots(page);
-        KOS_SLOT      *end           = ptr + num_allocated;
-#ifndef NDEBUG
-        KOS_SLOT *page_end = ptr + num_allocated;
-#endif
-#ifndef CONFIG_MAD_GC
+        unsigned       num_evac       = 0;
+        const uint32_t num_allocated  = KOS_atomic_read_relaxed_u32(page->num_allocated);
         const uint32_t num_slots_used = KOS_atomic_read_relaxed_u32(page->num_used);
+        KOS_SLOT      *ptr            = get_slots(page);
+        KOS_SLOT      *end            = ptr + num_allocated;
+#ifndef NDEBUG
+        KOS_SLOT      *page_end       = ptr + num_allocated;
 #endif
 
         heap->used_heap_size -= used_page_size(page);
@@ -1978,11 +2077,15 @@ static int evacuate(KOS_CONTEXT    ctx,
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
-#ifndef CONFIG_MAD_GC
         /* If the number of slots used reaches the threshold, then the page is
          * exempt from evacuation. */
         #define UNUSED_SLOTS ((KOS_SLOTS_PER_PAGE * (100U - KOS_MIGRATION_THRESH)) / 100U)
-        if (num_allocated - num_slots_used < UNUSED_SLOTS) {
+
+        if (num_slots_used == PAGE_ALREADY_EVACED
+#ifndef CONFIG_MAD_GC
+            || (num_allocated - num_slots_used < UNUSED_SLOTS)
+#endif
+            ) {
 
             gc_trace(("GC ctx=%p retain page %p\n", (void *)ctx, (void *)page));
 
@@ -2011,11 +2114,14 @@ static int evacuate(KOS_CONTEXT    ctx,
             }
 
             push_page_with_objects(heap, page);
-            ++stats.num_pages_kept;
-            stats.size_kept += num_slots_used << KOS_OBJ_ALIGN_BITS;
+
+            if (num_slots_used != PAGE_ALREADY_EVACED) {
+                ++stats.num_pages_kept;
+                stats.size_kept += num_slots_used << KOS_OBJ_ALIGN_BITS;
+            }
             continue;
         }
-#endif
+
         gc_trace(("GC ctx=%p -- evac page %p\n", (void *)ctx, (void *)page));
 
         while (ptr < end) {
@@ -2054,26 +2160,16 @@ static int evacuate(KOS_CONTEXT    ctx,
 
                     if (error) {
 
-                        KOS_OBJ_HEADER *first_hdr = (KOS_OBJ_HEADER *)get_slots(page);
-
                         assert( ! ctx->cur_page);
 
-                        /* Mark all objects/slots that have been processed on this page so far
-                         * as one contiguous region and clear mark bits for them, so that
-                         * these objects will not be processed again by a subsequent evacuation
-                         * pass. */
-                        kos_set_object_size(*first_hdr,
-                                            (uint32_t)((uintptr_t)hdr - (uintptr_t)first_hdr));
-                        clear_mark_state((KOS_OBJ_ID)((uintptr_t)first_hdr + 1));
+                        set_marking_in_pages(heap->used_pages.head, BLACK, PAGE_ALREADY_EVACED);
+
+                        if ( ! save_incomplete_page(hdr, page, incomplete))
+                            push_page_with_objects(heap, page);
 
                         /* Put back the remaining pages on the heap. */
-                        push_page_with_objects(heap, page);
                         for (page = next; page; page = next) {
-
-                            heap->used_heap_size -= used_page_size(page);
-
                             next = page->next;
-
                             push_page(&heap->used_pages, page);
                         }
 
@@ -2202,6 +2298,9 @@ int kos_trigger_mad_gc(KOS_CONTEXT ctx)
     error = try_collect_garbage(ctx);
     kos_unlock_mutex(&heap->mutex);
 
+    if (error == KOS_SUCCESS_RETURN)
+        error = KOS_SUCCESS;
+
     return error;
 }
 #endif
@@ -2254,16 +2353,18 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     time_0 = kos_get_time_us();
 
-    stats.initial_heap_size      = heap->heap_size;
-    stats.initial_used_heap_size = heap->used_heap_size;
-    stats.initial_malloc_size    = heap->malloc_size;
-
     if ( ! KOS_atomic_cas_strong_u32(heap->gc_state, GC_INACTIVE, GC_INIT)) {
 
         KOS_help_gc(ctx);
 
+        if (out_stats)
+            *out_stats = stats;
+
         return KOS_SUCCESS;
     }
+
+    stats.initial_heap_size   = heap->heap_size;
+    stats.initial_malloc_size = heap->malloc_size;
 
     gc_trace(("GC ctx=%p begin cycle %u\n", (void *)ctx, KOS_atomic_read_relaxed_u32(heap->gc_cycles)));
 
@@ -2284,6 +2385,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     stop_the_world(ctx->inst); /* Remaining threads enter help_gc() */
 
+    stats.initial_used_heap_size = heap->used_heap_size;
+
     clear_marking(heap);
 
     mark_roots(ctx);
@@ -2302,15 +2405,20 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     /* Phase 3: Evacuate and reclaim free pages */
 
     do {
-        uint32_t prev_num_freed;
+        uint32_t                prev_num_freed;
+        struct KOS_INCOMPLETE_S incomplete = { 0, 0 };
 
         KOS_atomic_write_release_u32(heap->gc_state, GC_EVACUATE);
 
-        error = evacuate(ctx, &free_pages, &stats);
+        error = evacuate(ctx, &free_pages, &stats, &incomplete);
 
         KOS_atomic_write_release_u32(heap->gc_state, GC_UPDATE);
 
+        assert( ! incomplete.page || error);
+
         update_after_evacuation(ctx);
+
+        update_incomplete_page(heap, &incomplete);
 
         prev_num_freed = stats.num_pages_freed;
 
