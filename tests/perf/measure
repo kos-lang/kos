@@ -43,8 +43,8 @@ cleanup()
 
 trap cleanup EXIT
 
-STDOUT=$(mktemp -t measure_stdout)
-STDERR=$(mktemp -t measure_stderr)
+STDOUT=$(mktemp -t measure_stdout.XXXXXX)
+STDERR=$(mktemp -t measure_stderr.XXXXXX)
 
 LOOPS=10
 NAME=""
