@@ -24,7 +24,7 @@
 #define KOS_CONFIG_H_INCLUDED
 
 #define KOS_POOL_BITS          19
-#ifdef __powerpc64__
+#if defined(__powerpc64__) || defined(CONFIG_MAD_GC)
 #   define KOS_PAGE_BITS       16
 #else
 #   define KOS_PAGE_BITS       12
