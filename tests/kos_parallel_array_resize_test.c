@@ -189,7 +189,9 @@ int main(void)
 
             do {
                 TEST(kos_array_copy_storage(ctx, data.object) == KOS_SUCCESS);
+                KOS_suspend_context(ctx);
                 kos_yield();
+                KOS_resume_context(ctx);
             } while (KOS_atomic_read_relaxed_u32(data.done) != (uint32_t)num_threads);
 
             KOS_atomic_write_relaxed_u32(data.done, 0U);

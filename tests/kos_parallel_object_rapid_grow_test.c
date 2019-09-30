@@ -76,8 +76,9 @@ static KOS_OBJ_ID write_props(KOS_CONTEXT ctx,
     struct THREAD_DATA *test = (struct THREAD_DATA *)this_obj;
 
     while (!KOS_atomic_read_relaxed_u32(test->test->go)) {
-        KOS_help_gc(ctx);
+        KOS_suspend_context(ctx);
         kos_yield();
+        KOS_resume_context(ctx);
     }
 
     if (_write_props_inner(ctx, test->test, test->rand_init))
@@ -119,8 +120,9 @@ static KOS_OBJ_ID read_props(KOS_CONTEXT ctx,
     struct THREAD_DATA *test = (struct THREAD_DATA *)this_obj;
 
     while (!KOS_atomic_read_relaxed_u32(test->test->go)) {
-        KOS_help_gc(ctx);
+        KOS_suspend_context(ctx);
         kos_yield();
+        KOS_resume_context(ctx);
     }
 
     if (_read_props_inner(ctx, test->test, test->rand_init))

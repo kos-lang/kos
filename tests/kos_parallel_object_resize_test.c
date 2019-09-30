@@ -66,8 +66,9 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
                 break;
             }
 
-            KOS_help_gc(ctx);
+            KOS_suspend_context(ctx);
             kos_yield();
+            KOS_resume_context(ctx);
         }
         if (stage == ~0U)
             break;
@@ -239,7 +240,9 @@ int main(void)
             do {
                 if (copies_left-- > 0)
                     TEST(kos_object_copy_prop_table(ctx, data.object) == KOS_SUCCESS);
+                KOS_suspend_context(ctx);
                 kos_yield();
+                KOS_resume_context(ctx);
             } while (KOS_atomic_read_relaxed_u32(data.done) != (uint32_t)num_threads);
 
             KOS_atomic_write_relaxed_u32(data.done, 0U);

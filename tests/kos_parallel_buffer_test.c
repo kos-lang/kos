@@ -52,8 +52,9 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
     int               i;
 
     while ( ! KOS_atomic_read_relaxed_u32(test->go)) {
-        KOS_help_gc(ctx);
+        KOS_suspend_context(ctx);
         kos_yield();
+        KOS_resume_context(ctx);
     }
 
     for (i = 0; i < test->num_loops; i++) {
