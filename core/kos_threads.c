@@ -379,8 +379,6 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
 
 cleanup:
     if (error) {
-        kos_free(init);
-
         release_thread(ctx, thread);
 
         thread = 0;
