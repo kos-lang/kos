@@ -32,7 +32,7 @@
 int create_thread(KOS_CONTEXT          ctx,
                   KOS_FUNCTION_HANDLER proc,
                   void                *cookie,
-                  KOS_OBJ_ID          *thread)
+                  KOS_THREAD         **thread)
 {
     int        error    = KOS_SUCCESS;
     int        pushed   = 0;
@@ -49,7 +49,8 @@ int create_thread(KOS_CONTEXT          ctx,
 
     *thread = kos_thread_create(ctx, func_obj, (KOS_OBJ_ID)cookie, args_obj);
 
-    TRY_OBJID(*thread);
+    if ( ! *thread)
+        error = KOS_ERROR_EXCEPTION;
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
@@ -58,7 +59,7 @@ cleanup:
 }
 
 int join_thread(KOS_CONTEXT ctx,
-                KOS_OBJ_ID  thread)
+                KOS_THREAD *thread)
 {
     const KOS_OBJ_ID retval = kos_thread_join(ctx, thread);
 

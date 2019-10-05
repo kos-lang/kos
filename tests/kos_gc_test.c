@@ -32,7 +32,6 @@
 #include "../core/kos_math.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
-#include "../core/kos_threads_internal.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -490,10 +489,7 @@ static int verify_object(KOS_OBJ_ID obj_id)
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
-    v = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->priv);
-    TEST( ! IS_BAD_PTR(v));
-    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 44);
+    TEST((intptr_t)KOS_object_get_private_ptr(obj_id) == 44);
 
     v = OBJPTR(OBJECT, obj_id)->prototype;
     TEST( ! IS_BAD_PTR(v));
@@ -541,11 +537,10 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
                                VERIFY_FUNC *verify)
 {
     uint32_t    i;
-    KOS_OBJ_ID  obj_id[6];
-    OBJECT_DESC desc[6] = {
+    KOS_OBJ_ID  obj_id[5];
+    OBJECT_DESC desc[5] = {
         { OBJ_OBJECT,         (uint32_t)sizeof(KOS_OBJECT)  },
         { OBJ_OBJECT_STORAGE, (uint32_t)(sizeof(KOS_OBJECT_STORAGE) + sizeof(KOS_PITEM) * 3) },
-        { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER) },
         { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER) },
         { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER) },
         { OBJ_STRING,         (uint32_t)sizeof(struct KOS_STRING_LOCAL_S) }
@@ -554,9 +549,9 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    kos_init_object(OBJPTR(OBJECT, obj_id[0]), obj_id[3]);
+    kos_init_object(OBJPTR(OBJECT, obj_id[0]), obj_id[2]);
     KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT, obj_id[0])->props, obj_id[1]);
-    KOS_object_set_private(obj_id[0], obj_id[2]);
+    KOS_object_set_private_ptr(obj_id[0], (void *)(intptr_t)44);
 
     KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->capacity,       4);
     KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->num_slots_used, 1);
@@ -570,8 +565,8 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
         KOS_atomic_write_relaxed_u32(item->hash.hash, i);
 
         if (i == 2) {
-            KOS_atomic_write_relaxed_ptr(item->key,   obj_id[5]);
-            KOS_atomic_write_relaxed_ptr(item->value, obj_id[4]);
+            KOS_atomic_write_relaxed_ptr(item->key,   obj_id[4]);
+            KOS_atomic_write_relaxed_ptr(item->value, obj_id[3]);
         }
         else {
             KOS_atomic_write_relaxed_ptr(item->key,   KOS_BADPTR);
@@ -579,13 +574,12 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
         }
     }
 
-    OBJPTR(INTEGER, obj_id[2])->value = 44;
-    OBJPTR(INTEGER, obj_id[3])->value = 45;
-    OBJPTR(INTEGER, obj_id[4])->value = 46;
+    OBJPTR(INTEGER, obj_id[2])->value = 45;
+    OBJPTR(INTEGER, obj_id[3])->value = 46;
 
-    OBJPTR(STRING, obj_id[5])->header.flags  = KOS_STRING_LOCAL;
-    OBJPTR(STRING, obj_id[5])->header.length = (uint16_t)(sizeof(string_local_test) - 1);
-    memcpy(&OBJPTR(STRING, obj_id[5])->local.data[0], string_local_test, sizeof(string_local_test) - 1);
+    OBJPTR(STRING, obj_id[4])->header.flags  = KOS_STRING_LOCAL;
+    OBJPTR(STRING, obj_id[4])->header.length = (uint16_t)(sizeof(string_local_test) - 1);
+    memcpy(&OBJPTR(STRING, obj_id[4])->local.data[0], string_local_test, sizeof(string_local_test) - 1);
 
     *num_objs   = NELEMS(obj_id);
     *total_size = get_obj_sizes(obj_id, NELEMS(obj_id));
@@ -594,7 +588,7 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
     return obj_id[0];
 }
 
-static void finalize_47(KOS_CONTEXT ctx, KOS_OBJ_ID priv)
+static void finalize_47(KOS_CONTEXT ctx, void *priv)
 {
     *(int *)priv = 47;
 }
@@ -1148,79 +1142,6 @@ static KOS_OBJ_ID alloc_local_refs(KOS_CONTEXT  ctx,
     return obj_id;
 }
 
-static int verify_thread(KOS_OBJ_ID obj_id)
-{
-    KOS_OBJ_ID v;
-
-    TEST(GET_OBJ_TYPE(obj_id) == OBJ_THREAD);
-    TEST(OBJPTR(THREAD, obj_id)->inst == 0);
-
-    v = OBJPTR(THREAD, obj_id)->thread_func;
-    TEST( ! IS_BAD_PTR(v));
-    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 73);
-
-    v = OBJPTR(THREAD, obj_id)->this_obj;
-    TEST( ! IS_BAD_PTR(v));
-    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 74);
-
-    v = OBJPTR(THREAD, obj_id)->args_obj;
-    TEST( ! IS_BAD_PTR(v));
-    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 75);
-
-    v = OBJPTR(THREAD, obj_id)->retval;
-    TEST( ! IS_BAD_PTR(v));
-    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 76);
-
-    v = OBJPTR(THREAD, obj_id)->exception;
-    TEST( ! IS_BAD_PTR(v));
-    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 77);
-
-    return 0;
-}
-
-static KOS_OBJ_ID alloc_thread(KOS_CONTEXT  ctx,
-                               uint32_t    *num_objs,
-                               uint32_t    *total_size,
-                               VERIFY_FUNC *verify)
-{
-    KOS_OBJ_ID  obj_id[6];
-    OBJECT_DESC desc[6] = {
-        { OBJ_THREAD,  (uint32_t)sizeof(KOS_THREAD)  },
-        { OBJ_INTEGER, (uint32_t)sizeof(KOS_INTEGER) },
-        { OBJ_INTEGER, (uint32_t)sizeof(KOS_INTEGER) },
-        { OBJ_INTEGER, (uint32_t)sizeof(KOS_INTEGER) },
-        { OBJ_INTEGER, (uint32_t)sizeof(KOS_INTEGER) },
-        { OBJ_INTEGER, (uint32_t)sizeof(KOS_INTEGER) }
-    };
-
-    if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
-        return KOS_BADPTR;
-
-    OBJPTR(THREAD, obj_id[0])->inst        = 0;
-    OBJPTR(THREAD, obj_id[0])->thread_func = obj_id[1];
-    OBJPTR(THREAD, obj_id[0])->this_obj    = obj_id[2];
-    OBJPTR(THREAD, obj_id[0])->args_obj    = obj_id[3];
-    OBJPTR(THREAD, obj_id[0])->retval      = obj_id[4];
-    OBJPTR(THREAD, obj_id[0])->exception   = obj_id[5];
-
-    OBJPTR(INTEGER, obj_id[1])->value = 73;
-    OBJPTR(INTEGER, obj_id[2])->value = 74;
-    OBJPTR(INTEGER, obj_id[3])->value = 75;
-    OBJPTR(INTEGER, obj_id[4])->value = 76;
-    OBJPTR(INTEGER, obj_id[5])->value = 77;
-
-    *num_objs   = NELEMS(obj_id);
-    *total_size = get_obj_sizes(obj_id, NELEMS(obj_id));
-    *verify     = &verify_thread;
-
-    return obj_id[0];
-}
-
 static int test_object(ALLOC_FUNC    alloc_object_func,
                        KOS_GC_STATS *orig_stats)
 {
@@ -1371,7 +1292,6 @@ int main(void)
         TEST(test_object(alloc_module,       &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_stack,        &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_local_refs,   &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_thread,       &base_stats) == KOS_SUCCESS);
     }
 
     /************************************************************************/

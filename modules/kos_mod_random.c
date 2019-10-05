@@ -44,10 +44,10 @@ typedef struct KOS_RNG_CONTAINER_S {
 } KOS_RNG_CONTAINER;
 
 static void finalize(KOS_CONTEXT ctx,
-                     KOS_OBJ_ID  priv)
+                     void       *priv)
 {
     if (priv)
-        kos_free((void *)priv);
+        kos_free(priv);
 }
 
 /* @item random random()

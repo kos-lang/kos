@@ -36,8 +36,7 @@
 #   include <sched.h>
 #endif
 
-typedef struct KOS_THREAD_S {
-    KOS_OBJ_HEADER         header;
+struct KOS_THREAD_S {
     KOS_INSTANCE          *inst;
     KOS_OBJ_ID             thread_func;
     KOS_OBJ_ID             this_obj;
@@ -52,7 +51,8 @@ typedef struct KOS_THREAD_S {
 #endif
     unsigned               thread_idx; /* Index to the threads array in instance */
     KOS_ATOMIC(uint32_t)   flags;
-} KOS_THREAD;
+    KOS_ATOMIC(uint32_t)   ref_count;
+};
 
 enum KOS_THREAD_FLAGS_E {
     KOS_THREAD_DISOWNED = 1,

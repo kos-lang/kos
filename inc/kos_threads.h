@@ -25,29 +25,29 @@
 
 #include "kos_object_base.h"
 
-struct KOS_MUTEX_OBJECT_S;
 typedef struct KOS_MUTEX_OBJECT_S *KOS_MUTEX;
 
 #ifdef _WIN32
 typedef uint32_t KOS_TLS_KEY;
 #else
-struct KOS_TLS_OBJECT_S;
 typedef struct KOS_TLS_OBJECT_S *KOS_TLS_KEY;
 #endif
 
+typedef struct KOS_THREAD_S KOS_THREAD;
+
 void kos_yield(void);
 
-KOS_OBJ_ID kos_thread_create(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  thread_func,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj);
+KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  thread_func,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj);
 
 KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  thread);
+                           KOS_THREAD *thread);
 
-void kos_thread_disown(KOS_OBJ_ID thread);
+void kos_thread_disown(KOS_THREAD *thread);
 
-int kos_is_current_thread(KOS_OBJ_ID thread);
+int kos_is_current_thread(KOS_THREAD *thread);
 
 int kos_create_mutex(KOS_MUTEX *mutex);
 void kos_destroy_mutex(KOS_MUTEX *mutex);

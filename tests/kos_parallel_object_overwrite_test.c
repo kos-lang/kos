@@ -140,7 +140,7 @@ int main(void)
     /* This test performs multiple reads and writes at the same locations in the property table */
     {
         KOS_VECTOR          mem_buf;
-        KOS_OBJ_ID         *threads     = 0;
+        KOS_THREAD        **threads     = 0;
         int                 num_threads = 0;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
@@ -173,7 +173,7 @@ int main(void)
                 num_threads * (sizeof(KOS_OBJ_ID) + sizeof(struct THREAD_DATA))
             ) == KOS_SUCCESS);
         thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
-        threads        = (KOS_OBJ_ID *)(thread_cookies + num_threads);
+        threads        = (KOS_THREAD **)(thread_cookies + num_threads);
 
         data.inst       = &inst;
         data.prop_names = props;
@@ -189,11 +189,9 @@ int main(void)
         srand((unsigned)time(0));
 
         for (i = 0; i < num_threads; i++) {
-            int pushed = 0;
             thread_cookies[i].test      = &data;
             thread_cookies[i].rand_init = rand();
             TEST(create_thread(ctx, ((i & 1)) ? write_props : read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
-            TEST(KOS_push_locals(ctx, &pushed, 1, &threads[i]) == KOS_SUCCESS);
         }
 
         i = rand();

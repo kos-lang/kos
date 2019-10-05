@@ -155,7 +155,7 @@ void kos_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
     obj->prototype = prototype;
     obj->finalize  = 0;
 
-    KOS_atomic_write_relaxed_ptr(obj->priv,  TO_SMALL_INT(0));
+    KOS_atomic_write_relaxed_ptr(obj->priv,  (void *)0);
     KOS_atomic_write_relaxed_ptr(obj->props, KOS_BADPTR);
 }
 

@@ -92,11 +92,6 @@ static void *_alloc_local_refs(KOS_CONTEXT ctx)
     return kos_alloc_object(ctx, OBJ_LOCAL_REFS, sizeof(KOS_LOCAL_REFS));
 }
 
-static void *_alloc_thread(KOS_CONTEXT ctx)
-{
-    return kos_alloc_object(ctx, OBJ_THREAD, sizeof(KOS_THREAD));
-}
-
 typedef void *(* ALLOC_FUNC)(KOS_CONTEXT ctx);
 
 struct RANDOM_OBJECT_S {
@@ -201,8 +196,7 @@ int main(void)
         { _alloc_object_walk,  OBJ_OBJECT_WALK,  sizeof(KOS_OBJECT_WALK)  },
         { _alloc_module,       OBJ_MODULE,       sizeof(KOS_MODULE)       },
         { _alloc_stack,        OBJ_STACK,        sizeof(KOS_STACK)        },
-        { _alloc_local_refs,   OBJ_LOCAL_REFS,   sizeof(KOS_LOCAL_REFS)   },
-        { _alloc_thread,       OBJ_THREAD,       sizeof(KOS_THREAD)       }
+        { _alloc_local_refs,   OBJ_LOCAL_REFS,   sizeof(KOS_LOCAL_REFS)   }
     };
 
     /************************************************************************/

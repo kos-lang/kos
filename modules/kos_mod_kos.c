@@ -71,12 +71,10 @@ typedef enum IDS_E {
 } IDS;
 
 static void finalize(KOS_CONTEXT ctx,
-                     KOS_OBJ_ID  priv)
+                     void       *priv)
 {
-    assert(IS_SMALL_INT(priv));
-
     if (priv)
-        kos_free((void *)priv);
+        kos_free(priv);
 }
 
 static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
@@ -183,7 +181,7 @@ static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
     else {
         assert(GET_OBJ_TYPE(lexer_obj_id) == OBJ_OBJECT);
 
-        lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(lexer_obj_id);
+        lexer = (KOS_LEXER_OBJ *)KOS_object_get_private_ptr(lexer_obj_id);
 
         if (KOS_get_array_size(args_obj) > 0) {
 

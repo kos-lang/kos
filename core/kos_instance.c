@@ -361,7 +361,7 @@ static void clear_instance(KOS_INSTANCE *inst)
     inst->modules.init_module             = KOS_BADPTR;
     inst->modules.module_inits            = KOS_BADPTR;
     inst->modules.load_chain              = 0;
-    inst->threads.threads                 = KOS_BADPTR;
+    inst->threads.threads                 = 0;
     inst->threads.num_threads             = 0;
     inst->threads.max_threads             = KOS_MAX_THREADS;
     init_context(&inst->threads.main_thread, inst);
@@ -422,6 +422,14 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     inst->modules.init_module = OBJID(MODULE, init_module);
 
+    inst->threads.threads = (KOS_ATOMIC(KOS_THREAD *) *)
+        kos_malloc(sizeof(KOS_THREAD *) * inst->threads.max_threads);
+    if ( ! inst->threads.threads) {
+        error = KOS_ERROR_OUT_OF_MEMORY;
+        goto cleanup;
+    }
+    memset((void *)inst->threads.threads, 0, sizeof(KOS_THREAD *) * inst->threads.max_threads);
+
     KOS_suspend_context(&inst->threads.main_thread);
     TRY(register_thread(inst, &inst->threads.main_thread));
 
@@ -473,6 +481,9 @@ cleanup:
             kos_tls_destroy(inst->threads.thread_key);
             kos_destroy_mutex(&inst->threads.mutex);
         }
+
+        if (inst->threads.threads)
+            kos_free((void *)inst->threads.threads);
     }
 
     inst->threads.main_thread.retval = KOS_BADPTR;
@@ -522,6 +533,8 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     kos_tls_destroy(inst->threads.thread_key);
 
     kos_destroy_mutex(&inst->threads.mutex);
+
+    kos_free((void *)inst->threads.threads);
 
     clear_instance(inst);
 
@@ -1060,7 +1073,7 @@ void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
     ctx->local_refs = local_refs;
 }
 
-#define IS_VALID(obj_id) (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) <= OBJ_THREAD)
+#define IS_VALID(obj_id) (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) <= OBJ_LAST)
 
 int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...)
 {

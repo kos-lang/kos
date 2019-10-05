@@ -72,9 +72,9 @@ static void _fix_path_separators(KOS_VECTOR *buf)
 }
 
 static void finalize(KOS_CONTEXT ctx,
-                     KOS_OBJ_ID  priv)
+                     void       *priv)
 {
-    if (priv && IS_SMALL_INT(priv))
+    if (priv)
         fclose((FILE *)priv);
 }
 

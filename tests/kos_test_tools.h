@@ -21,16 +21,17 @@
  */
 
 #include "../inc/kos_object_base.h"
+#include "../inc/kos_threads.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 int create_thread(KOS_CONTEXT          ctx,
                   KOS_FUNCTION_HANDLER proc,
                   void                *cookie,
-                  KOS_OBJ_ID          *thread);
+                  KOS_THREAD         **thread);
 
 int join_thread(KOS_CONTEXT ctx,
-                KOS_OBJ_ID  thread);
+                KOS_THREAD *thread);
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)

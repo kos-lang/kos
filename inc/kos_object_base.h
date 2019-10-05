@@ -59,7 +59,9 @@ typedef enum KOS_OBJECT_TYPE_E {
     OBJ_MODULE         = 36,
     OBJ_STACK          = 38,
     OBJ_LOCAL_REFS     = 40,
-    OBJ_THREAD         = 42
+
+    /* Just the last valid object id, not a real object type */
+    OBJ_LAST           = OBJ_LOCAL_REFS
 } KOS_TYPE;
 
 struct KOS_OBJECT_PLACEHOLDER;
@@ -322,13 +324,13 @@ extern const struct KOS_CONST_OBJECT_S KOS_true;
 #define KOS_BOOL(v) ( (v) ? KOS_TRUE : KOS_FALSE )
 
 typedef void (*KOS_FINALIZE)(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  priv);
+                             void       *priv);
 
 typedef struct KOS_OBJECT_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(KOS_OBJ_ID) props;
     KOS_OBJ_ID             prototype;
-    KOS_ATOMIC(KOS_OBJ_ID) priv; /* TODO only support opaque user pointer! priv gets messed up by GC */
+    KOS_ATOMIC(void *)     priv;
     KOS_FINALIZE           finalize;
 } KOS_OBJECT;
 

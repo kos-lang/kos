@@ -31,6 +31,7 @@
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
+#include "../core/kos_threads_internal.h"
 #include "../core/kos_try.h"
 #include <assert.h>
 #include <limits.h>
@@ -1627,13 +1628,10 @@ cleanup:
 }
 
 static void _thread_finalize(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  priv)
+                             void       *priv)
 {
-    if ( ! IS_BAD_PTR(priv)) {
-        assert(GET_OBJ_TYPE_GC_SAFE(priv) == OBJ_THREAD);
-
-        kos_thread_disown(priv);
-    }
+    if (priv)
+        kos_thread_disown((KOS_THREAD *)priv);
 }
 
 /* @item base function.prototype.async()
@@ -1661,12 +1659,12 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
                          KOS_OBJ_ID  args_obj)
 {
-    KOS_OBJ_ID thread_obj = KOS_BADPTR;
-    KOS_OBJ_ID arg_this;
-    KOS_OBJ_ID arg_args;
-    KOS_OBJ_ID thread_priv_obj;
-    int        error      = KOS_SUCCESS;
-    int        pushed     = 0;
+    KOS_OBJ_ID  thread_obj = KOS_BADPTR;
+    KOS_OBJ_ID  arg_this;
+    KOS_OBJ_ID  arg_args;
+    KOS_THREAD *thread;
+    int         error      = KOS_SUCCESS;
+    int         pushed     = 0;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_FUNCTION) {
         KOS_raise_exception_cstring(ctx, str_err_not_function);
@@ -1679,7 +1677,7 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
             ctx->inst->prototypes.thread_proto);
     TRY_OBJID(thread_obj);
 
-    KOS_object_set_private(thread_obj, KOS_BADPTR);
+    KOS_object_set_private_ptr(thread_obj, (void *)0);
 
     arg_this = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(arg_this);
@@ -1689,10 +1687,15 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(arg_args) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_args_not_array);
 
-    thread_priv_obj = kos_thread_create(ctx, this_obj, arg_this, arg_args);
-    TRY_OBJID(thread_priv_obj);
+    thread = kos_thread_create(ctx, this_obj, arg_this, arg_args);
+    if ( ! thread) {
+        error = KOS_ERROR_EXCEPTION;
+        goto cleanup;
+    }
 
-    KOS_object_set_private(thread_obj, thread_priv_obj);
+    KOS_atomic_add_u32(thread->ref_count, 1);
+
+    KOS_object_set_private_ptr(thread_obj, thread);
 
     OBJPTR(OBJECT, thread_obj)->finalize = _thread_finalize;
 
@@ -1724,7 +1727,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    KOS_OBJ_ID          thread;
+    KOS_THREAD         *thread;
     KOS_INSTANCE *const inst  = ctx->inst;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
@@ -1737,16 +1740,16 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
-    thread = KOS_object_get_private(this_obj);
+    thread = (KOS_THREAD *)KOS_object_get_private_ptr(this_obj);
 
-    if ( ! IS_BAD_PTR(thread) && ! IS_SMALL_INT(thread) && kos_is_current_thread(thread)) {
+    if (thread && kos_is_current_thread(thread)) {
         KOS_raise_exception_cstring(ctx, str_err_join_self);
         return KOS_BADPTR;
     }
 
-    thread = KOS_object_swap_private(this_obj, KOS_BADPTR);
+    thread = (KOS_THREAD *)KOS_object_swap_private_ptr(this_obj, (void *)0);
 
-    if (IS_BAD_PTR(thread) || ! thread) {
+    if ( ! thread) {
         KOS_raise_exception_cstring(ctx, str_err_already_joined);
         return KOS_BADPTR;
     }

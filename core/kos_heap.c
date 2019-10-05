@@ -211,28 +211,12 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
             if (obj->finalize) {
 
-                /* This function gets called during GC.
-                 * If priv is a heap object, it could have been moved by
-                 * the GC to a new page, so we need to make sure we
-                 * have the current pointer.
-                 * This currently happens for thread objects.
-                 * TODO Long term, we need to stop supporting putting
-                 * object pointers in priv and only support opaque user pointers!.
-                 */
-                {
-                    KOS_OBJ_ID priv_id = (KOS_OBJ_ID)obj->priv;
-
-                    if (kos_is_heap_object(priv_id) && ! IS_BAD_PTR(priv_id))
-                        if ( ! IS_SMALL_INT(((KOS_OBJ_HEADER *)((intptr_t)priv_id - 1))->size_and_type))
-                            update_child_ptr((KOS_OBJ_ID *)&obj->priv);
-                }
-
-                obj->finalize(ctx, KOS_atomic_read_relaxed_obj(obj->priv));
+                obj->finalize(ctx, KOS_atomic_read_relaxed_ptr(obj->priv));
 
                 assert( ! KOS_is_exception_pending(ctx));
 
                 obj->finalize = 0;
-                KOS_atomic_write_relaxed_ptr(obj->priv, TO_SMALL_INT(0));
+                KOS_atomic_write_relaxed_ptr(obj->priv, (void *)0);
 
                 ++stats->num_objs_finalized;
             }
@@ -1230,7 +1214,6 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
             assert(READ_OBJ_TYPE(obj_id) == OBJ_OBJECT);
             set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props), GRAY);
             set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
-            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->priv), GRAY);
             break;
 
         case OBJ_ARRAY:
@@ -1322,15 +1305,6 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
 
             for ( ; ref < end; ++ref)
                 set_mark_state(**ref, GRAY);
-            break;
-        }
-
-        case OBJ_THREAD: {
-            set_mark_state(OBJPTR(THREAD, obj_id)->thread_func, GRAY);
-            set_mark_state(OBJPTR(THREAD, obj_id)->this_obj,    GRAY);
-            set_mark_state(OBJPTR(THREAD, obj_id)->args_obj,    GRAY);
-            set_mark_state(OBJPTR(THREAD, obj_id)->retval,      GRAY);
-            set_mark_state(OBJPTR(THREAD, obj_id)->exception,   GRAY);
             break;
         }
 
@@ -1455,6 +1429,26 @@ static void mark_roots_in_context(KOS_CONTEXT ctx)
     }
 }
 
+static void mark_roots_in_threads(KOS_INSTANCE *inst)
+{
+    uint32_t       i;
+    const uint32_t max_threads = inst->threads.max_threads;
+
+    for (i = 0; i < max_threads; i++)
+    {
+        KOS_THREAD *thread = (KOS_THREAD *)KOS_atomic_read_relaxed_ptr(inst->threads.threads[i]);
+
+        if ( ! thread)
+            continue;
+
+        set_mark_state(thread->thread_func, GRAY);
+        set_mark_state(thread->this_obj,    GRAY);
+        set_mark_state(thread->args_obj,    GRAY);
+        set_mark_state(thread->retval,      GRAY);
+        set_mark_state(thread->exception,   GRAY);
+    }
+}
+
 static void mark_roots(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *const inst = ctx->inst;
@@ -1487,8 +1481,7 @@ static void mark_roots(KOS_CONTEXT ctx)
     mark_object_black(inst->modules.modules);
     mark_object_black(inst->modules.module_inits);
 
-    if ( ! IS_BAD_PTR(inst->threads.threads))
-        mark_object_black(inst->threads.threads);
+    mark_roots_in_threads(inst);
 
     mark_object_black(inst->args);
 
@@ -1768,7 +1761,6 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             assert(kos_get_object_type(*hdr) == OBJ_OBJECT);
             update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->props);
             update_child_ptr(&((KOS_OBJECT *)hdr)->prototype);
-            update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT *)hdr)->priv);
             break;
 
         case OBJ_HUGE_TRACKER: {
@@ -1873,16 +1865,6 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
                     update_child_ptr(*ref);
             }
             break;
-
-        case OBJ_THREAD:
-            {
-                update_child_ptr(&((KOS_THREAD *)hdr)->thread_func);
-                update_child_ptr(&((KOS_THREAD *)hdr)->this_obj);
-                update_child_ptr(&((KOS_THREAD *)hdr)->args_obj);
-                update_child_ptr((KOS_OBJ_ID *)&((KOS_THREAD *)hdr)->retval);
-                update_child_ptr((KOS_OBJ_ID *)&((KOS_THREAD *)hdr)->exception);
-            }
-            break;
     }
 }
 
@@ -1957,6 +1939,29 @@ static void update_pages_after_evacuation(KOS_HEAP *heap)
     end_page_walk(heap);
 }
 
+static void update_threads_after_evacuation(KOS_INSTANCE *inst)
+{
+    uint32_t       i;
+    const uint32_t max_threads = inst->threads.max_threads;
+
+    if ( ! inst->threads.threads)
+        return;
+
+    for (i = 0; i < max_threads; i++)
+    {
+        KOS_THREAD *thread = inst->threads.threads[i];
+
+        if ( ! thread)
+            continue;
+
+        update_child_ptr(&thread->thread_func);
+        update_child_ptr(&thread->this_obj);
+        update_child_ptr(&thread->args_obj);
+        update_child_ptr((KOS_OBJ_ID *)&thread->retval);
+        update_child_ptr((KOS_OBJ_ID *)&thread->exception);
+    }
+}
+
 static void update_after_evacuation(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *const inst = ctx->inst;
@@ -2005,6 +2010,8 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     update_child_ptr((KOS_OBJ_ID *)&inst->threads.threads);
 
     update_child_ptr(&inst->args);
+
+    update_threads_after_evacuation(inst);
 
     /* Update object pointers in thread contexts */
 
