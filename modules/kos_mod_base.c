@@ -31,7 +31,6 @@
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
-#include "../core/kos_threads_internal.h"
 #include "../core/kos_try.h"
 #include <assert.h>
 #include <limits.h>
@@ -1693,7 +1692,7 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
         goto cleanup;
     }
 
-    KOS_atomic_add_u32(thread->ref_count, 1);
+    kos_thread_add_ref(thread);
 
     KOS_object_set_private_ptr(thread_obj, thread);
 

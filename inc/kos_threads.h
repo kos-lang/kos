@@ -45,6 +45,8 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
 KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
                            KOS_THREAD *thread);
 
+void kos_thread_add_ref(KOS_THREAD *thread);
+
 void kos_thread_disown(KOS_THREAD *thread);
 
 int kos_is_current_thread(KOS_THREAD *thread);

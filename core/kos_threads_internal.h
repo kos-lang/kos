@@ -49,7 +49,7 @@ struct KOS_THREAD_S {
 #else
     pthread_t              thread_handle;
 #endif
-    unsigned               thread_idx; /* Index to the threads array in instance */
+    KOS_ATOMIC(uint32_t)   thread_idx; /* Index to the threads array in instance */
     KOS_ATOMIC(uint32_t)   flags;
     KOS_ATOMIC(uint32_t)   ref_count;
 };
