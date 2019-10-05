@@ -1014,7 +1014,6 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
 void *kos_alloc_object_page(KOS_CONTEXT ctx,
                             KOS_TYPE    object_type)
 {
-    /* TODO actually allocate the page and set up the object in it */
     void *obj = alloc_object(ctx, object_type, KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS);
 
     if ( ! obj)
@@ -1719,7 +1718,6 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
         const uint32_t              color    = get_marking(&mark_loc);
 
         assert(color & BLACK);
-        assert(kos_is_heap_object(new_obj));
 #endif
 
         /* Objects in pages retained keep their size in their size field */
