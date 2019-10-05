@@ -1728,6 +1728,7 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
 {
     KOS_THREAD         *thread;
     KOS_INSTANCE *const inst  = ctx->inst;
+    KOS_OBJ_ID          retval;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
         KOS_raise_exception_cstring(ctx, str_err_not_thread);
@@ -1753,7 +1754,11 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
-    return kos_thread_join(ctx, thread);
+    retval = kos_thread_join(ctx, thread);
+
+    kos_thread_disown(thread);
+
+    return retval;
 }
 
 /* @item base string.prototype.slice()
