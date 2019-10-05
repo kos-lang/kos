@@ -1237,7 +1237,7 @@ typedef struct CHECKSUMMED_OPAQUE_S {
     uint8_t        data[1];
 } CHECKSUMMED_OPAQUE;
 
-static uint8_t calc_checksum(KOS_OBJ_ID obj)
+static uint32_t calc_checksum(KOS_OBJ_ID obj)
 {
     CHECKSUMMED_OPAQUE *opaque = (CHECKSUMMED_OPAQUE *)OBJPTR(OPAQUE, obj);
     uint8_t            *ptr    = &opaque->data[0];
