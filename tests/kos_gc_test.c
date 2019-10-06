@@ -64,7 +64,7 @@ static int alloc_page_with_objects(KOS_CONTEXT        ctx,
         KOS_OBJ_HEADER *hdr  = (KOS_OBJ_HEADER *)storage;
         const uint32_t  size = KOS_align_up(descs->size, 1U << KOS_OBJ_ALIGN_BITS);
 
-        assert(total_size > size);
+        assert(total_size >= size);
 
         kos_set_object_type_size(*hdr, descs->type, size);
 
@@ -73,9 +73,7 @@ static int alloc_page_with_objects(KOS_CONTEXT        ctx,
         *dest       = (KOS_OBJ_ID)((intptr_t)hdr + 1);
     }
 
-    assert(total_size > sizeof(KOS_OPAQUE));
-
-    {
+    if (total_size >= sizeof(KOS_OPAQUE)) {
         KOS_OBJ_HEADER *hdr = (KOS_OBJ_HEADER *)storage;
 
         kos_set_object_type_size(*hdr, OBJ_OPAQUE, total_size);
@@ -359,7 +357,7 @@ static KOS_OBJ_ID alloc_array_storage_page(KOS_CONTEXT ctx)
         return KOS_BADPTR;
 
     usable_size = kos_get_object_size(array->header) - sizeof(KOS_ARRAY_STORAGE) + sizeof(KOS_OBJ_ID);
-    capacity    = usable_size >> KOS_OBJ_ALIGN_BITS;
+    capacity    = usable_size / sizeof(KOS_OBJ_ID);
 
     KOS_atomic_write_relaxed_u32(array->capacity,       capacity);
     KOS_atomic_write_relaxed_u32(array->num_slots_open, 0U);
@@ -1378,6 +1376,66 @@ static int verify_full_pages(KOS_OBJ_ID array)
     return KOS_SUCCESS;
 }
 
+static KOS_OBJ_ID alloc_balast(KOS_CONTEXT ctx,
+                               uint32_t    num_slots,
+                               unsigned   *num_objs_out)
+{
+    KOS_ARRAY_STORAGE *array;
+    KOS_OBJ_ID         obj_id;
+    unsigned           num_objs  = 0;
+    uint32_t           size_left = num_slots << KOS_OBJ_ALIGN_BITS;
+    uint32_t           size;
+    uint32_t           capacity;
+    uint32_t           i;
+
+    size = KOS_min(size_left, KOS_MAX_HEAP_OBJ_SIZE);
+
+    array = (KOS_ARRAY_STORAGE *)kos_alloc_object(ctx, OBJ_ARRAY_STORAGE, size);
+    if ( ! array)
+        return KOS_BADPTR;
+
+    capacity = (size - sizeof(KOS_ARRAY_STORAGE) + sizeof(KOS_OBJ_ID)) / sizeof(KOS_OBJ_ID);
+
+    KOS_atomic_write_relaxed_u32(array->capacity,       capacity);
+    KOS_atomic_write_relaxed_u32(array->num_slots_open, 0U);
+    KOS_atomic_write_relaxed_ptr(array->next,           KOS_BADPTR);
+
+    for (i = 0; i < capacity; i++)
+        KOS_atomic_write_relaxed_ptr(array->buf[i], KOS_BADPTR);
+
+    size_left -= size;
+
+    obj_id = OBJID(ARRAY_STORAGE, array);
+
+    kos_track_refs(ctx, 1, &obj_id);
+
+    while (size_left) {
+        KOS_OBJ_ID next_obj;
+
+        size      =  KOS_min(size_left, KOS_MAX_HEAP_OBJ_SIZE);
+        size_left -= size;
+
+        next_obj = OBJID(OPAQUE, (KOS_OPAQUE *)kos_alloc_object(ctx, OBJ_OPAQUE, size));
+
+        if (IS_BAD_PTR(next_obj)) {
+            kos_untrack_refs(ctx, 1);
+            return KOS_BADPTR;
+        }
+
+        assert(num_objs < capacity);
+
+        write_array_storage(obj_id, num_objs, next_obj);
+
+        ++num_objs;
+    }
+
+    kos_untrack_refs(ctx, 1);
+
+    *num_objs_out = num_objs + 1;
+
+    return obj_id;
+}
+
 int main(void)
 {
     KOS_INSTANCE   inst;
@@ -1386,7 +1444,7 @@ int main(void)
     struct KOS_RNG rng;
     unsigned       max_pages   = 0;
     const uint32_t inst_flags  = KOS_INST_MANUAL_GC;
-    const uint32_t force_slots = (100U - KOS_MIGRATION_THRESH) * (KOS_PAGE_SIZE >> KOS_OBJ_ALIGN_BITS) / 100U;
+    const uint32_t force_slots = (KOS_SLOTS_PER_PAGE * (100U - KOS_MIGRATION_THRESH)) / 100U;
 
     kos_rng_init(&rng);
 
@@ -1652,49 +1710,8 @@ int main(void)
         TEST(stats.num_pages_freed    == 0);
         TEST(stats.size_evacuated     == 0);
         TEST(stats.size_freed         == 0);
-        TEST(stats.size_kept          >  base_stats.size_kept);
-        TEST(stats.malloc_size        == 0);
-#endif
-
-        TEST(verify_full_pages(array) == KOS_SUCCESS);
-
-        KOS_instance_destroy(&inst);
-    }
-
-    /************************************************************************/
-    /* Allocate all pages minus two, then evac */
-    {
-        KOS_OBJ_ID   prev_locals;
-        KOS_OBJ_ID   array     = KOS_BADPTR;
-        int          pushed    = 0;
-        uint32_t     num_pages = 0;
-        KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
-        uint32_t     i;
-
-        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
-        inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-        TEST(KOS_push_locals(ctx, &pushed, 1, &array) == KOS_SUCCESS);
-
-        TEST(alloc_full_pages(ctx, &rng, &array, max_pages - 2U, &num_pages) == KOS_SUCCESS);
-
-        TEST(num_pages == max_pages - 2U);
-
-        /* Trigger evacuation */
-        for (i = 0; i < force_slots; i++)
-            TEST( ! IS_BAD_PTR(KOS_new_cstring(ctx, "abc")));
-
-        TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
-
-#ifndef CONFIG_MAD_GC
-        TEST(stats.num_objs_freed     == force_slots);
-        TEST(stats.num_objs_finalized == 0);
-        TEST(stats.num_pages_kept     == num_pages);
-        TEST(stats.num_pages_freed    == 1);
-        TEST(stats.size_evacuated     == base_stats.size_kept);
-        TEST(stats.size_freed         == force_slots << KOS_OBJ_ALIGN_BITS);
-        TEST(stats.size_kept          >  base_stats.size_kept);
+        TEST(stats.size_kept          == base_stats.size_kept
+                                         + (max_pages - 1U) * (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS));
         TEST(stats.malloc_size        == 0);
 #endif
 
@@ -1707,19 +1724,26 @@ int main(void)
     /* Restore freed pages mid-evacuation */
     {
         KOS_OBJ_ID   prev_locals;
-        KOS_OBJ_ID   array     = KOS_BADPTR;
-        int          pushed    = 0;
-        uint32_t     num_pages = 0;
-        uint32_t     big_size  = (3U * KOS_PAGE_SIZE) / 4U;
-        KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
+        KOS_OBJ_ID   array        = KOS_BADPTR;
+        KOS_OBJ_ID   ballast      = KOS_BADPTR;
+        int          pushed       = 0;
+        uint32_t     num_pages    = 0;
+        uint32_t     big_size     = (KOS_SLOTS_PER_PAGE - force_slots) << KOS_OBJ_ALIGN_BITS;
+        uint32_t     ballast_size = force_slots << KOS_OBJ_ALIGN_BITS;
+        unsigned     ballast_objs = 0;
+        KOS_GC_STATS stats        = KOS_GC_STATS_INIT(~0U);
         OBJECT_DESC  desc[2];
-        KOS_OBJ_ID   obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
+        KOS_OBJ_ID   obj_id[2]    = { KOS_BADPTR, KOS_BADPTR };
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-        TEST(KOS_push_locals(ctx, &pushed, 2, &array, &obj_id[1]) == KOS_SUCCESS);
+        TEST(KOS_push_locals(ctx, &pushed, 3, &array, &ballast, &obj_id[1]) == KOS_SUCCESS);
+
+        /* Allocate ballast to make sure big object won't fit in existing page */
+        ballast = alloc_balast(ctx, force_slots, &ballast_objs);
+        TEST( ! IS_BAD_PTR(ballast));
 
         TEST(alloc_full_pages(ctx, &rng, &array, max_pages - 2U, &num_pages) == KOS_SUCCESS);
 
@@ -1733,21 +1757,30 @@ int main(void)
          * - one big object to evacuate */
 
         desc[0].type = OBJ_OPAQUE;
-        desc[0].size = force_slots << KOS_OBJ_ALIGN_BITS;
+        desc[0].size = ballast_size;
         desc[1].type = OBJ_OPAQUE;
         desc[1].size = big_size;
 
         TEST(alloc_page_with_objects(ctx, obj_id, desc, NELEMS(desc)) == KOS_SUCCESS);
 
+#ifdef CONFIG_MAD_GC
+        TEST(KOS_collect_garbage(ctx, &stats) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+#else
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
+#endif
 
 #ifndef CONFIG_MAD_GC
         TEST(stats.num_objs_evacuated == 1);
-        TEST(stats.num_objs_freed     == 3);
+        TEST(stats.num_objs_freed     == 2);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == num_pages + 1U);
         TEST(stats.num_pages_freed    == 2);
         TEST(stats.size_evacuated     == big_size);
+        TEST(stats.size_freed         == (force_slots + KOS_SLOTS_PER_PAGE) << KOS_OBJ_ALIGN_BITS);
+        TEST(stats.size_kept          == base_stats.size_kept
+                                         + num_pages * (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS)
+                                         + ballast_size);
         TEST(stats.malloc_size        == 0);
 #endif
 
@@ -1760,19 +1793,26 @@ int main(void)
     /* OOM mid-evacuation */
     {
         KOS_OBJ_ID   prev_locals;
-        KOS_OBJ_ID   array     = KOS_BADPTR;
-        int          pushed    = 0;
-        uint32_t     num_pages = 0;
-        uint32_t     big_size  = (3U * KOS_PAGE_SIZE) / 4U;
-        KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
+        KOS_OBJ_ID   array        = KOS_BADPTR;
+        KOS_OBJ_ID   ballast      = KOS_BADPTR;
+        int          pushed       = 0;
+        uint32_t     num_pages    = 0;
+        uint32_t     big_size     = (KOS_SLOTS_PER_PAGE - force_slots) << KOS_OBJ_ALIGN_BITS;
+        uint32_t     ballast_size = force_slots << KOS_OBJ_ALIGN_BITS;
+        unsigned     ballast_objs = 0;
+        KOS_GC_STATS stats        = KOS_GC_STATS_INIT(~0U);
         OBJECT_DESC  desc[2];
-        KOS_OBJ_ID   obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
+        KOS_OBJ_ID   obj_id[2]    = { KOS_BADPTR, KOS_BADPTR };
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-        TEST(KOS_push_locals(ctx, &pushed, 2, &array, &obj_id[1]) == KOS_SUCCESS);
+        TEST(KOS_push_locals(ctx, &pushed, 3, &array, &ballast, &obj_id[1]) == KOS_SUCCESS);
+
+        /* Allocate ballast to make sure big object won't fit in existing page */
+        ballast = alloc_balast(ctx, force_slots, &ballast_objs);
+        TEST( ! IS_BAD_PTR(ballast));
 
         TEST(alloc_full_pages(ctx, &rng, &array, max_pages - 1U, &num_pages) == KOS_SUCCESS);
 
@@ -1783,7 +1823,7 @@ int main(void)
          * - one big object to evacuate */
 
         desc[0].type = OBJ_OPAQUE;
-        desc[0].size = force_slots << KOS_OBJ_ALIGN_BITS;
+        desc[0].size = ballast_size;
         desc[1].type = OBJ_OPAQUE;
         desc[1].size = big_size;
 
@@ -1800,6 +1840,10 @@ int main(void)
         TEST(stats.num_pages_kept     == num_pages + 1U);
         TEST(stats.num_pages_freed    == 0);
         TEST(stats.size_evacuated     == 0);
+        TEST(stats.size_freed         == ballast_size);
+        TEST(stats.size_kept          == base_stats.size_kept
+                                         + num_pages * (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS)
+                                         + ballast_size);
         TEST(stats.malloc_size        == 0);
 #endif
 
