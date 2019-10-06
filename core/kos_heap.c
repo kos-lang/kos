@@ -1021,20 +1021,31 @@ void *kos_alloc_object_page(KOS_CONTEXT ctx,
     return obj;
 }
 
-#if 0
-static void print_heap(KOS_HEAP *heap)
+static void print_heap_locked(KOS_HEAP *heap, KOS_PAGE *cur_page)
 {
     unsigned  used_pages = 0;
     unsigned  free_pages = 0;
     KOS_PAGE *page       = heap->used_pages.head;
 
-    for ( ; page; page = page->next) {
+    for (;;) {
+        if ( ! page) {
+            page = cur_page;
+            if ( ! page)
+                break;
+        }
+
         ++used_pages;
-        printf("used page %p, %u/%u slots allocated, %u slots used\n",
+        printf("%s page %p, %u/%u slots allocated, %u slots used\n",
+               page == cur_page ? "cur" : "used",
                (void *)page,
                KOS_atomic_read_relaxed_u32(page->num_allocated),
                (unsigned)KOS_SLOTS_PER_PAGE,
                KOS_atomic_read_relaxed_u32(page->num_used));
+
+        if (page == cur_page)
+            break;
+
+        page = page->next;
     }
 
     page = heap->free_pages;
@@ -1044,9 +1055,18 @@ static void print_heap(KOS_HEAP *heap)
         printf("free page %p\n", (void *)page);
     }
 
-    printf("total %u pages used, %u pages free\n", used_pages, free_pages);
+    printf("total %u pages used, %u pages free, %u bytes malloc'd\n",
+           used_pages, free_pages, heap->malloc_size);
 }
-#endif
+
+void kos_print_heap(KOS_CONTEXT ctx)
+{
+    kos_lock_mutex(&ctx->inst->threads.mutex);
+
+    print_heap_locked(&ctx->inst->heap, ctx->cur_page);
+
+    kos_unlock_mutex(&ctx->inst->threads.mutex);
+}
 
 static void stop_the_world(KOS_INSTANCE *inst)
 {

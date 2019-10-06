@@ -44,6 +44,8 @@ void *kos_heap_early_alloc(KOS_INSTANCE *inst,
 
 void kos_heap_release_thread_page(KOS_CONTEXT ctx);
 
+void kos_print_heap(KOS_CONTEXT ctx);
+
 #ifdef CONFIG_MAD_GC
 int kos_trigger_mad_gc(KOS_CONTEXT ctx);
 #else
