@@ -332,6 +332,10 @@ typedef struct KOS_GC_STATS_S {
     unsigned time_us;
 } KOS_GC_STATS;
 
+#define KOS_GC_STATS_INIT(val) \
+    { (val), (val), (val), (val), (val), (val), (val), (val), (val), (val), \
+      (val), (val), (val), (val), (val), (val) }
+
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
                         KOS_GC_STATS *out_stats);
 

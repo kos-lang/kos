@@ -1141,13 +1141,14 @@ static KOS_OBJ_ID alloc_local_refs(KOS_CONTEXT  ctx,
 }
 
 static int test_object(ALLOC_FUNC    alloc_object_func,
+                       uint32_t      inst_flags,
                        KOS_GC_STATS *orig_stats)
 {
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
     KOS_OBJ_ID   prev_locals;
     KOS_OBJ_ID   obj_id;
-    KOS_GC_STATS stats;
+    KOS_GC_STATS stats  = KOS_GC_STATS_INIT(~0U);
     VERIFY_FUNC  verify;
     int64_t      size;
     int          pushed = 0;
@@ -1157,7 +1158,7 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
 
     /* Test case when the object is evacuated to existing page */
 
-    TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
     TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
@@ -1194,13 +1195,14 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     TEST(stats.size_evacuated     == (unsigned)total_size);
     TEST(stats.size_freed         == (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) - (unsigned)total_size);
     TEST(stats.size_kept          == orig_stats->size_kept);
+    TEST(stats.malloc_size        == 0);
 #endif
 
     KOS_instance_destroy(&inst);
 
     /* Test case when the object is destroyed */
 
-    TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+    TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
     TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
@@ -1221,6 +1223,7 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     TEST(stats.size_evacuated     == 0);
     TEST(stats.size_freed         == (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS));
     TEST(stats.size_kept          == orig_stats->size_kept);
+    TEST(stats.malloc_size        == 0);
 #endif
 
     TEST(!f47 || private_test == 47);
@@ -1379,9 +1382,11 @@ int main(void)
 {
     KOS_INSTANCE   inst;
     KOS_CONTEXT    ctx;
-    KOS_GC_STATS   base_stats;
+    KOS_GC_STATS   base_stats  = KOS_GC_STATS_INIT(~0U);
     struct KOS_RNG rng;
-    unsigned       max_pages = 0;
+    unsigned       max_pages   = 0;
+    const uint32_t inst_flags  = KOS_INST_MANUAL_GC;
+    const uint32_t force_slots = (100U - KOS_MIGRATION_THRESH) * (KOS_PAGE_SIZE >> KOS_OBJ_ALIGN_BITS) / 100U;
 
     kos_rng_init(&rng);
 
@@ -1390,7 +1395,7 @@ int main(void)
     {
         KOS_OBJ_ID prev_locals;
 
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
@@ -1405,6 +1410,7 @@ int main(void)
         TEST(base_stats.size_evacuated     == 0);
         TEST(base_stats.size_freed         == 0);
         TEST(base_stats.size_kept          >  0);
+        TEST(base_stats.malloc_size        == 0);
 #endif
 
         KOS_instance_destroy(&inst);
@@ -1418,34 +1424,34 @@ int main(void)
      * - run garbage collector while there are no references to the object.
      */
     {
-        TEST(test_object(alloc_integer,      &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_float,        &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_string_local, &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_string_ptr,   &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_string_ref,   &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_empty_array,  &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_array,        &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_empty_buffer, &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_buffer,       &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_empty_object, &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_object,       &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_finalize,     &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_function,     &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_class,        &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_opaque,       &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_dynamic_prop, &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_object_walk,  &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_module,       &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_stack,        &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_local_refs,   &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_integer,      inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_float,        inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_string_local, inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_string_ptr,   inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_string_ref,   inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_empty_array,  inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_array,        inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_empty_buffer, inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_buffer,       inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_empty_object, inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_object,       inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_finalize,     inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_function,     inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_class,        inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_opaque,       inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_dynamic_prop, inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_object_walk,  inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_module,       inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_stack,        inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_local_refs,   inst_flags, &base_stats) == KOS_SUCCESS);
     }
 
     /************************************************************************/
     /* Test release of current thread page */
     {
-        KOS_GC_STATS stats;
+        KOS_GC_STATS stats = KOS_GC_STATS_INIT(~0U);
 
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_new_array(ctx, 0) != KOS_BADPTR);
 
@@ -1464,6 +1470,7 @@ int main(void)
         TEST(stats.size_evacuated     == base_stats.size_evacuated);
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          >  0);
+        TEST(stats.malloc_size        == 0);
 #endif
 
         KOS_instance_destroy(&inst);
@@ -1472,11 +1479,11 @@ int main(void)
     /************************************************************************/
     /* Test internal tracked refs */
     {
-        KOS_GC_STATS stats;
+        KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
         KOS_OBJ_ID   obj_id    = KOS_BADPTR;
         int          finalized = 0;
 
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
         kos_track_refs(ctx, 1, &obj_id);
 
@@ -1497,6 +1504,7 @@ int main(void)
         TEST(stats.size_evacuated     == 0);
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          == base_stats.size_kept + get_obj_size(obj_id));
+        TEST(stats.malloc_size        == 0);
 #endif
 
         kos_untrack_refs(ctx, 1);
@@ -1514,6 +1522,7 @@ int main(void)
         TEST(stats.size_evacuated     == 0);
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          == base_stats.size_kept);
+        TEST(stats.malloc_size        == 0);
 #endif
 
         KOS_instance_destroy(&inst);
@@ -1527,7 +1536,7 @@ int main(void)
         KOS_OBJ_ID obj_id[NELEMS(((KOS_LOCAL_REFS *)0)->refs)];
         size_t     i;
 
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
@@ -1569,7 +1578,7 @@ int main(void)
         int        finalized = 0;
         int        pushed    = 0;
 
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
@@ -1590,6 +1599,8 @@ int main(void)
         TEST(finalized == 47);
     }
 
+#define SMALL_HEAP_PAGES (1U << (KOS_POOL_BITS - KOS_PAGE_BITS))
+
     /************************************************************************/
     /* Allocate as many pages as possible, up to OOM */
     {
@@ -1597,14 +1608,15 @@ int main(void)
         KOS_OBJ_ID array  = KOS_BADPTR;
         int        pushed = 0;
 
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+        inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
         TEST(KOS_push_locals(ctx, &pushed, 1, &array) == KOS_SUCCESS);
 
         TEST(alloc_full_pages(ctx, &rng, &array, ~0U, &max_pages) == KOS_SUCCESS);
 
-        TEST(max_pages == (KOS_MAX_HEAP_SIZE >> KOS_PAGE_BITS) - 1);
+        TEST(max_pages == SMALL_HEAP_PAGES - 1U);
 
         TEST(verify_full_pages(array) == KOS_SUCCESS);
 
@@ -1618,9 +1630,10 @@ int main(void)
         KOS_OBJ_ID   array     = KOS_BADPTR;
         int          pushed    = 0;
         uint32_t     num_pages = 0;
-        KOS_GC_STATS stats;
+        KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
 
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+        inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
         TEST(KOS_push_locals(ctx, &pushed, 1, &array) == KOS_SUCCESS);
@@ -1640,6 +1653,7 @@ int main(void)
         TEST(stats.size_evacuated     == 0);
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          >  base_stats.size_kept);
+        TEST(stats.malloc_size        == 0);
 #endif
 
         TEST(verify_full_pages(array) == KOS_SUCCESS);
@@ -1654,11 +1668,11 @@ int main(void)
         KOS_OBJ_ID   array     = KOS_BADPTR;
         int          pushed    = 0;
         uint32_t     num_pages = 0;
-        KOS_GC_STATS stats;
+        KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
         uint32_t     i;
-        uint32_t     num_freed = (100U - KOS_MIGRATION_THRESH) * (KOS_PAGE_SIZE >> KOS_OBJ_ALIGN_BITS) / 100U;
 
-        TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+        inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
         TEST(KOS_push_locals(ctx, &pushed, 1, &array) == KOS_SUCCESS);
@@ -1668,19 +1682,125 @@ int main(void)
         TEST(num_pages == max_pages - 2U);
 
         /* Trigger evacuation */
-        for (i = 0; i < num_freed; i++)
+        for (i = 0; i < force_slots; i++)
             TEST( ! IS_BAD_PTR(KOS_new_cstring(ctx, "abc")));
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
 #ifndef CONFIG_MAD_GC
-        TEST(stats.num_objs_freed     == num_freed);
+        TEST(stats.num_objs_freed     == force_slots);
         TEST(stats.num_objs_finalized == 0);
         TEST(stats.num_pages_kept     == num_pages);
         TEST(stats.num_pages_freed    == 1);
         TEST(stats.size_evacuated     == base_stats.size_kept);
-        TEST(stats.size_freed         == num_freed << KOS_OBJ_ALIGN_BITS);
+        TEST(stats.size_freed         == force_slots << KOS_OBJ_ALIGN_BITS);
         TEST(stats.size_kept          >  base_stats.size_kept);
+        TEST(stats.malloc_size        == 0);
+#endif
+
+        TEST(verify_full_pages(array) == KOS_SUCCESS);
+
+        KOS_instance_destroy(&inst);
+    }
+
+    /************************************************************************/
+    /* Restore freed pages mid-evacuation */
+    {
+        KOS_OBJ_ID   prev_locals;
+        KOS_OBJ_ID   array     = KOS_BADPTR;
+        int          pushed    = 0;
+        uint32_t     num_pages = 0;
+        uint32_t     big_size  = (3U * KOS_PAGE_SIZE) / 4U;
+        KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
+        OBJECT_DESC  desc[2];
+        KOS_OBJ_ID   obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
+
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+        inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
+
+        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
+        TEST(KOS_push_locals(ctx, &pushed, 2, &array, &obj_id[1]) == KOS_SUCCESS);
+
+        TEST(alloc_full_pages(ctx, &rng, &array, max_pages - 2U, &num_pages) == KOS_SUCCESS);
+
+        TEST(num_pages == max_pages - 2U);
+
+        /* Allocate throwaway page */
+        TEST(kos_alloc_object_page(ctx, OBJ_OPAQUE) != 0);
+
+        /* Allocate a page with:
+         * - one throwaway object to force evacuation and
+         * - one big object to evacuate */
+
+        desc[0].type = OBJ_OPAQUE;
+        desc[0].size = force_slots << KOS_OBJ_ALIGN_BITS;
+        desc[1].type = OBJ_OPAQUE;
+        desc[1].size = big_size;
+
+        TEST(alloc_page_with_objects(ctx, obj_id, desc, NELEMS(desc)) == KOS_SUCCESS);
+
+        TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
+
+#ifndef CONFIG_MAD_GC
+        TEST(stats.num_objs_evacuated == 1);
+        TEST(stats.num_objs_freed     == 3);
+        TEST(stats.num_objs_finalized == 0);
+        TEST(stats.num_pages_kept     == num_pages + 1U);
+        TEST(stats.num_pages_freed    == 2);
+        TEST(stats.size_evacuated     == big_size);
+        TEST(stats.malloc_size        == 0);
+#endif
+
+        TEST(verify_full_pages(array) == KOS_SUCCESS);
+
+        KOS_instance_destroy(&inst);
+    }
+
+    /************************************************************************/
+    /* OOM mid-evacuation */
+    {
+        KOS_OBJ_ID   prev_locals;
+        KOS_OBJ_ID   array     = KOS_BADPTR;
+        int          pushed    = 0;
+        uint32_t     num_pages = 0;
+        uint32_t     big_size  = (3U * KOS_PAGE_SIZE) / 4U;
+        KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
+        OBJECT_DESC  desc[2];
+        KOS_OBJ_ID   obj_id[2] = { KOS_BADPTR, KOS_BADPTR };
+
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+        inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
+
+        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
+        TEST(KOS_push_locals(ctx, &pushed, 2, &array, &obj_id[1]) == KOS_SUCCESS);
+
+        TEST(alloc_full_pages(ctx, &rng, &array, max_pages - 1U, &num_pages) == KOS_SUCCESS);
+
+        TEST(num_pages == max_pages - 1U);
+
+        /* Allocate a page with:
+         * - one throwaway object to force evacuation and
+         * - one big object to evacuate */
+
+        desc[0].type = OBJ_OPAQUE;
+        desc[0].size = force_slots << KOS_OBJ_ALIGN_BITS;
+        desc[1].type = OBJ_OPAQUE;
+        desc[1].size = big_size;
+
+        TEST(alloc_page_with_objects(ctx, obj_id, desc, NELEMS(desc)) == KOS_SUCCESS);
+
+        TEST(KOS_collect_garbage(ctx, &stats) == KOS_ERROR_EXCEPTION);
+
+        TEST_EXCEPTION();
+
+#ifndef CONFIG_MAD_GC
+        TEST(stats.num_objs_evacuated == 0);
+        TEST(stats.num_objs_freed     == 1);
+        TEST(stats.num_objs_finalized == 0);
+        TEST(stats.num_pages_kept     == num_pages + 1U);
+        TEST(stats.num_pages_freed    == 0);
+        TEST(stats.size_evacuated     == 0);
+        TEST(stats.malloc_size        == 0);
 #endif
 
         TEST(verify_full_pages(array) == KOS_SUCCESS);

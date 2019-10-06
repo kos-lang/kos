@@ -258,8 +258,7 @@ static void finalize_objects(KOS_CONTEXT ctx,
                              KOS_HEAP   *heap)
 {
     KOS_PAGE    *page     = heap->used_pages.head;
-    KOS_GC_STATS gc_stats = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
-                              0U, 0U, 0U, 0U, 0U, 0U };
+    KOS_GC_STATS gc_stats = KOS_GC_STATS_INIT(0U);
 
     for ( ; page; page = page->next) {
 
@@ -2348,8 +2347,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     uint64_t      time_1;
     KOS_HEAP     *heap            = get_heap(ctx);
     KOS_PAGE_LIST free_pages      = { 0, 0 };
-    KOS_GC_STATS  stats           = { 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U,
-                                      0U, 0U, 0U, 0U, 0U, 0U };
+    KOS_GC_STATS  stats           = KOS_GC_STATS_INIT(0U);
     unsigned      num_gray_passes = 0U;
     int           error           = KOS_SUCCESS;
 
