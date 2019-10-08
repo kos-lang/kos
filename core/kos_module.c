@@ -1973,11 +1973,13 @@ KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_CONTEXT ctx,
 {
     const KOS_FUNC_ADDR *addr2func = _addr_to_func(module, offs);
 
+    KOS_DECLARE_STATIC_CONST_STRING(str_global, "global");
+
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (addr2func) {
         if (addr2func->str_idx == ~0U)
-            ret = KOS_get_string(ctx, KOS_STR_GLOBAL);
+            ret = KOS_CONST_ID(str_global);
         else
             ret = KOS_array_read(ctx, module->constants, (int)addr2func->str_idx);
     }

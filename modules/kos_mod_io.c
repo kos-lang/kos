@@ -670,13 +670,10 @@ cleanup:
     return error;
 }
 
-#define TRY_ADD_STD_FILE(ctx, module, proto, name, file)                             \
-do {                                                                                 \
-    static const char str_name[] = name;                                             \
-    KOS_OBJ_ID        str        = KOS_new_const_ascii_string((ctx), str_name,       \
-                                                              sizeof(str_name) - 1); \
-    TRY_OBJID(str);                                                                  \
-    TRY(_add_std_file((ctx), (module), (proto), str, (file)));                       \
+#define TRY_ADD_STD_FILE(ctx, module, proto, name, file)                          \
+do {                                                                              \
+    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                              \
+    TRY(_add_std_file((ctx), (module), (proto), KOS_CONST_ID(str_name), (file))); \
 } while (0)
 
 int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)

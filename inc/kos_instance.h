@@ -160,39 +160,6 @@ struct KOS_THREAD_MGMT_S {
     uint32_t                    max_threads; /* Maximum number of threads       */
 };
 
-enum KOS_STR_E {
-    KOS_STR_ARGS,
-    KOS_STR_ARRAY,
-    KOS_STR_BACKTRACE,
-    KOS_STR_BOOLEAN,
-    KOS_STR_BUFFER,
-    KOS_STR_CLASS,
-    KOS_STR_FALSE,
-    KOS_STR_FILE,
-    KOS_STR_FLOAT,
-    KOS_STR_FUNCTION,
-    KOS_STR_GLOBAL,
-    KOS_STR_INTEGER,
-    KOS_STR_LINE,
-    KOS_STR_LOCALS,
-    KOS_STR_MODULE,
-    KOS_STR_OBJECT,
-    KOS_STR_OFFSET,
-    KOS_STR_PROTOTYPE,
-    KOS_STR_QUOTE_MARK,
-    KOS_STR_RECURSIVEA,
-    KOS_STR_RECURSIVEO,
-    KOS_STR_RESULT,
-    KOS_STR_SLICE,
-    KOS_STR_STRING,
-    KOS_STR_TRUE,
-    KOS_STR_VALUE,
-    KOS_STR_VOID,
-    KOS_STR_XBUILTINX,
-
-    KOS_STR_NUM /* number of pre-allocated strings */
-};
-
 enum KOS_INSTANCE_FLAGS_E {
     KOS_INST_NO_FLAGS  = 0,
     KOS_INST_VERBOSE   = 1,
@@ -204,7 +171,6 @@ enum KOS_INSTANCE_FLAGS_E {
 struct KOS_INSTANCE_S {
     uint32_t                 flags;
     KOS_HEAP                 heap;
-    KOS_OBJ_ID               common_strings[KOS_STR_NUM]; /* For KOS_get_string() */
     KOS_OBJ_ID               args;
     struct KOS_PROTOTYPES_S  prototypes;
     struct KOS_MODULE_MGMT_S modules;
@@ -263,9 +229,6 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 
 void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
                                     KOS_CONTEXT   ctx);
-
-KOS_OBJ_ID KOS_get_string(KOS_CONTEXT    ctx,
-                          enum KOS_STR_E str_id);
 
 #ifdef NDEBUG
 #define KOS_instance_validate(ctx) ((void)0)

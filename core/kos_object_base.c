@@ -160,6 +160,8 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 
         int error;
 
+        KOS_DECLARE_STATIC_CONST_STRING(str_prototype, "prototype");
+
         assert(READ_OBJ_TYPE(func_obj) == OBJ_CLASS);
 
         OBJPTR(CLASS, func_obj)->flags      = 0;
@@ -177,7 +179,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 
         error = KOS_set_builtin_dynamic_property(ctx,
                                                  func_obj,
-                                                 KOS_get_string(ctx, KOS_STR_PROTOTYPE),
+                                                 KOS_CONST_ID(str_prototype),
                                                  ctx->inst->modules.init_module,
                                                  _get_prototype,
                                                  _set_prototype);

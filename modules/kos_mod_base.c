@@ -27,6 +27,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
+#include "../core/kos_const_strings.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
@@ -67,16 +68,14 @@ static const char str_err_unpack_buf_too_short[]     = "unpacked buffer too shor
 static const char str_err_unsup_operand_types[]      = "unsupported operand types";
 static const char str_err_use_async[]                = "use async to launch threads";
 
-#define TRY_CREATE_CONSTRUCTOR(name, module)                                         \
-do {                                                                                 \
-    static const char str_name[] = #name;                                            \
-    str_id = KOS_new_const_ascii_string((ctx), str_name, sizeof(str_name) - 1);      \
-    TRY_OBJID(str_id);                                                               \
-    TRY(_create_class(ctx,                                                           \
-                      module,                                                        \
-                      str_id,                                                        \
-                      _##name##_constructor,                                         \
-                      ctx->inst->prototypes.name##_proto));                          \
+#define TRY_CREATE_CONSTRUCTOR(name, module)                \
+do {                                                        \
+    KOS_DECLARE_STATIC_CONST_STRING(str_name, #name);       \
+    TRY(_create_class(ctx,                                  \
+                      module,                               \
+                      KOS_CONST_ID(str_name),               \
+                      _##name##_constructor,                \
+                      ctx->inst->prototypes.name##_proto)); \
 } while (0)
 
 #define PROTO(type) (ctx->inst->prototypes.type##_proto)
@@ -4145,7 +4144,7 @@ static KOS_OBJ_ID _get_function_name(KOS_CONTEXT ctx,
 
         /* TODO add builtin function name */
         if (IS_BAD_PTR(func->module) || func->instr_offs == ~0U)
-            ret = KOS_get_string(ctx, KOS_STR_XBUILTINX);
+            ret = KOS_STR_XBUILTINX;
         else
             ret = KOS_module_addr_to_func_name(ctx,
                                                OBJPTR(MODULE, func->module),
@@ -4304,10 +4303,9 @@ cleanup:
 int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
     int        error  = KOS_SUCCESS;
-    KOS_OBJ_ID str_id = KOS_BADPTR;
     int        pushed = 0;
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &str_id));
+    TRY(KOS_push_locals(ctx, &pushed, 1, &module));
 
     TRY_ADD_FUNCTION( ctx, module, "print",      _print,     0);
     TRY_ADD_FUNCTION( ctx, module, "print_",     _print_,    0);
@@ -4315,7 +4313,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_GENERATOR(ctx, module, "deep",       _deep,      1);
     TRY_ADD_GENERATOR(ctx, module, "shallow",    _shallow,   1);
 
-    TRY(KOS_module_add_global(ctx, module, KOS_get_string(ctx, KOS_STR_ARGS), ctx->inst->args, 0));
+    TRY_ADD_GLOBAL(   ctx, module, "args",       ctx->inst->args);
 
     TRY_CREATE_CONSTRUCTOR(array,         module);
     TRY_CREATE_CONSTRUCTOR(boolean,       module);

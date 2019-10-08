@@ -28,6 +28,7 @@
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_config.h"
+#include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_vm.h"
 #include <stdio.h>
@@ -1529,7 +1530,7 @@ int main(void)
         KOS_OBJ_ID obj = _run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, 0);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_get_property(ctx, obj, KOS_get_string(ctx, KOS_STR_VALUE)) == TO_SMALL_INT(1));
+        TEST(KOS_get_property(ctx, obj, KOS_STR_VALUE) == TO_SMALL_INT(1));
         TEST_NO_EXCEPTION();
     }
 
@@ -1586,7 +1587,7 @@ int main(void)
         KOS_OBJ_ID obj = _run_code(&inst, ctx, &code[0], sizeof(code), 3, &func, 1);
         TEST_NO_EXCEPTION();
 
-        TEST(KOS_get_property(ctx, obj, KOS_get_string(ctx, KOS_STR_VALUE)) == TO_SMALL_INT(42));
+        TEST(KOS_get_property(ctx, obj, KOS_STR_VALUE) == TO_SMALL_INT(42));
         TEST_NO_EXCEPTION();
     }
 
@@ -1634,7 +1635,7 @@ int main(void)
         };
 
         KOS_OBJ_ID constants[4];
-        constants[0] = KOS_get_string(ctx, KOS_STR_VALUE);
+        constants[0] = KOS_STR_VALUE;
         constants[1] = _create_func(ctx,  42, 3, 0, 0, 0);
         constants[2] = _create_func(ctx,  86, 3, 0, 0, 0);
         constants[3] = _create_func(ctx, 130, 2, 0, 0, 0);

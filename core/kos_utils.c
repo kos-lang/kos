@@ -179,8 +179,7 @@ static KOS_OBJ_ID _get_exception_string(KOS_CONTEXT ctx,
 
         if (proto == ctx->inst->prototypes.exception_proto) {
 
-            const KOS_OBJ_ID obj_id = KOS_get_property(ctx, exception,
-                                                       KOS_get_string(ctx, KOS_STR_VALUE));
+            const KOS_OBJ_ID obj_id = KOS_get_property(ctx, exception, KOS_STR_VALUE);
 
             if (IS_BAD_PTR(obj_id))
                 KOS_clear_exception(ctx);
@@ -676,13 +675,11 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT        ctx,
 
         if (GET_OBJ_TYPE(val_id) == OBJ_STRING) {
 
-            TRY(KOS_array_write(ctx, aux_array_id, i_out,
-                                KOS_get_string(ctx, KOS_STR_QUOTE_MARK)));
+            KOS_DECLARE_STATIC_CONST_STRING(str_quote, "\"");
 
+            TRY(KOS_array_write(ctx, aux_array_id, i_out,     KOS_CONST_ID(str_quote)));
             TRY(KOS_array_write(ctx, aux_array_id, i_out + 1, val_id));
-
-            TRY(KOS_array_write(ctx, aux_array_id, i_out + 2,
-                                KOS_get_string(ctx, KOS_STR_QUOTE_MARK)));
+            TRY(KOS_array_write(ctx, aux_array_id, i_out + 2, KOS_CONST_ID(str_quote)));
 
             i_out += 3;
         }
@@ -691,11 +688,13 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT        ctx,
             if (is_to_string_recursive(&new_guard, val_id)) {
                 const KOS_TYPE type = GET_OBJ_TYPE(val_id);
 
+                KOS_DECLARE_STATIC_CONST_STRING(str_recursive_array,  "[...]");
+                KOS_DECLARE_STATIC_CONST_STRING(str_recursive_object, "{...}");
+
                 assert(type == OBJ_ARRAY || type == OBJ_OBJECT);
 
-                val_id = KOS_get_string(ctx,
-                                        type == OBJ_ARRAY ? KOS_STR_RECURSIVEA
-                                                          : KOS_STR_RECURSIVEO);
+                val_id = type == OBJ_ARRAY ? KOS_CONST_ID(str_recursive_array)
+                                           : KOS_CONST_ID(str_recursive_object);
             }
             else
                 TRY(object_to_string_or_cstr_vec(ctx, val_id, KOS_QUOTE_STRINGS,
@@ -1042,21 +1041,25 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
             if (cstr_vec)
                 error = kos_append_cstr(ctx, cstr_vec, "void", 4);
             else if (str)
-                *str = KOS_get_string(ctx, KOS_STR_VOID);
+                *str = KOS_STR_VOID;
             break;
 
         case OBJ_BOOLEAN:
             if (KOS_get_bool(obj_id)) {
                 if (cstr_vec)
                     error = kos_append_cstr(ctx, cstr_vec, "true", 4);
-                else if (str)
-                    *str = KOS_get_string(ctx, KOS_STR_TRUE);
+                else if (str) {
+                    KOS_DECLARE_STATIC_CONST_STRING(str_true, "true");
+                    *str = KOS_CONST_ID(str_true);
+                }
             }
             else {
                 if (cstr_vec)
                     error = kos_append_cstr(ctx, cstr_vec, "false", 5);
-                else if (str)
-                    *str = KOS_get_string(ctx, KOS_STR_FALSE);
+                else if (str) {
+                    KOS_DECLARE_STATIC_CONST_STRING(str_false, "false");
+                    *str = KOS_CONST_ID(str_false);
+                }
             }
             break;
 

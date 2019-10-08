@@ -293,7 +293,11 @@ struct KOS_CONST_STRING_S {
     { { { 0, 0 } }, { (type), (value) } }
 
 #define KOS_DECLARE_CONST_STRING_WITH_LENGTH(name, length, str) \
-    KOS_DECLARE_ALIGNED(32, struct KOS_CONST_STRING_S name) =  \
+    KOS_DECLARE_ALIGNED(32, struct KOS_CONST_STRING_S name) =   \
+    { { { 0, 0 } }, { OBJ_STRING, 0, (length), KOS_STRING_ELEM_8 | KOS_STRING_PTR, (str) } }
+
+#define KOS_DECLARE_STATIC_CONST_STRING_WITH_LENGTH(name, length, str) \
+    KOS_DECLARE_ALIGNED(32, static struct KOS_CONST_STRING_S name) =   \
     { { { 0, 0 } }, { OBJ_STRING, 0, (length), KOS_STRING_ELEM_8 | KOS_STRING_PTR, (str) } }
 
 #define KOS_CONCAT_NAME_INTERNAL(a, b) a ## b
@@ -303,6 +307,12 @@ struct KOS_CONST_STRING_S {
 #define KOS_DECLARE_CONST_STRING(name, str)                               \
     static const char KOS_CONCAT_NAME(str_ ## name, __LINE__)[] = str;    \
     KOS_DECLARE_CONST_STRING_WITH_LENGTH(name,                            \
+            (uint16_t)sizeof(KOS_CONCAT_NAME(str_##name, __LINE__)) - 1U, \
+            KOS_CONCAT_NAME(str_##name, __LINE__))
+
+#define KOS_DECLARE_STATIC_CONST_STRING(name, str)                        \
+    static const char KOS_CONCAT_NAME(str_ ## name, __LINE__)[] = str;    \
+    KOS_DECLARE_STATIC_CONST_STRING_WITH_LENGTH(name,                     \
             (uint16_t)sizeof(KOS_CONCAT_NAME(str_##name, __LINE__)) - 1U, \
             KOS_CONCAT_NAME(str_##name, __LINE__))
 

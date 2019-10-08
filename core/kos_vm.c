@@ -30,6 +30,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "kos_config.h"
+#include "kos_const_strings.h"
 #include "kos_math.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
@@ -454,7 +455,7 @@ static int _is_generator_end_exception(KOS_CONTEXT ctx)
         KOS_clear_exception(ctx);
 
         kos_track_refs(ctx, 1, &exception);
-        value = KOS_get_property(ctx, exception, KOS_get_string(ctx, KOS_STR_VALUE));
+        value = KOS_get_property(ctx, exception, KOS_STR_VALUE);
         kos_untrack_refs(ctx, 1);
 
         if (IS_BAD_PTR(value)) {
@@ -1600,6 +1601,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 }
 
                 if ( ! error) {
+                    KOS_DECLARE_STATIC_CONST_STRING(str_slice, "slice");
+
                     if (GET_OBJ_TYPE(src) == OBJ_STRING)
                         out = KOS_string_slice(ctx, src, begin_idx, end_idx);
                     else if (GET_OBJ_TYPE(src) == OBJ_BUFFER)
@@ -1607,9 +1610,8 @@ static int exec_function(KOS_CONTEXT ctx)
                     else if (GET_OBJ_TYPE(src) == OBJ_ARRAY)
                         out = KOS_array_slice(ctx, src, begin_idx, end_idx);
                     else {
-                        out = KOS_get_property(ctx,
-                                               src,
-                                               KOS_get_string(ctx, KOS_STR_SLICE));
+                        out = KOS_get_property(ctx, src, KOS_CONST_ID(str_slice));
+
                         if (IS_BAD_PTR(out))
                             error = KOS_ERROR_EXCEPTION;
                         else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
@@ -2275,6 +2277,30 @@ static int exec_function(KOS_CONTEXT ctx)
             case INSTR_TYPE: { /* <r.dest>, <r.src> */
                 const unsigned rsrc  = bytecode[2];
                 KOS_OBJ_ID     src;
+                unsigned       type_idx;
+
+                KOS_DECLARE_STATIC_CONST_STRING(str_integer,  "integer");
+                KOS_DECLARE_STATIC_CONST_STRING(str_float,    "float");
+                KOS_DECLARE_STATIC_CONST_STRING(str_boolean,  "boolean");
+                KOS_DECLARE_STATIC_CONST_STRING(str_string,   "string");
+                KOS_DECLARE_STATIC_CONST_STRING(str_object,   "object");
+                KOS_DECLARE_STATIC_CONST_STRING(str_array,    "array");
+                KOS_DECLARE_STATIC_CONST_STRING(str_buffer,   "buffer");
+                KOS_DECLARE_STATIC_CONST_STRING(str_class,    "class");
+
+                static const KOS_OBJ_ID obj_type_map[11] = {
+                    KOS_CONST_ID(str_integer),
+                    KOS_CONST_ID(str_integer),
+                    KOS_CONST_ID(str_float),
+                    KOS_STR_VOID,
+                    KOS_CONST_ID(str_boolean),
+                    KOS_CONST_ID(str_string),
+                    KOS_CONST_ID(str_object),
+                    KOS_CONST_ID(str_array),
+                    KOS_CONST_ID(str_buffer),
+                    KOS_STR_FUNCTION,
+                    KOS_CONST_ID(str_class)
+                };
 
                 assert(rsrc  < num_regs);
 
@@ -2283,50 +2309,12 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 assert(!IS_BAD_PTR(src));
 
-                if (IS_SMALL_INT(src))
-                    out = KOS_get_string(ctx, KOS_STR_INTEGER);
+                type_idx = GET_OBJ_TYPE(src) >> 1;
 
-                else switch (GET_OBJ_TYPE(src)) {
-                    case OBJ_INTEGER:
-                        out = KOS_get_string(ctx, KOS_STR_INTEGER);
-                        break;
-
-                    case OBJ_FLOAT:
-                        out = KOS_get_string(ctx, KOS_STR_FLOAT);
-                        break;
-
-                    case OBJ_STRING:
-                        out = KOS_get_string(ctx, KOS_STR_STRING);
-                        break;
-
-                    case OBJ_VOID:
-                        out = KOS_get_string(ctx, KOS_STR_VOID);
-                        break;
-
-                    case OBJ_BOOLEAN:
-                        out = KOS_get_string(ctx, KOS_STR_BOOLEAN);
-                        break;
-
-                    case OBJ_ARRAY:
-                        out = KOS_get_string(ctx, KOS_STR_ARRAY);
-                        break;
-
-                    case OBJ_BUFFER:
-                        out = KOS_get_string(ctx, KOS_STR_BUFFER);
-                        break;
-
-                    case OBJ_FUNCTION:
-                        out = KOS_get_string(ctx, KOS_STR_FUNCTION);
-                        break;
-
-                    case OBJ_CLASS:
-                        out = KOS_get_string(ctx, KOS_STR_CLASS);
-                        break;
-
-                    default:
-                        out = KOS_get_string(ctx, KOS_STR_OBJECT);
-                        break;
-                }
+                if (type_idx >= sizeof(obj_type_map) / sizeof(obj_type_map[0]))
+                    out = KOS_CONST_ID(str_object);
+                else
+                    out = obj_type_map[type_idx];
 
                 delta = 3;
                 break;

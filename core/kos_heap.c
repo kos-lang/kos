@@ -1471,13 +1471,6 @@ static void mark_roots(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *const inst = ctx->inst;
 
-    {
-        int i;
-
-        for (i = 0; i < KOS_STR_NUM; ++i)
-            mark_object_black(inst->common_strings[i]);
-    }
-
     mark_object_black(inst->prototypes.object_proto);
     mark_object_black(inst->prototypes.number_proto);
     mark_object_black(inst->prototypes.integer_proto);
@@ -1996,13 +1989,6 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     /* Update object pointers in instance */
 
     kos_lock_mutex(&inst->threads.mutex);
-
-    {
-        int i;
-
-        for (i = 0; i < KOS_STR_NUM; ++i)
-            update_child_ptr(&inst->common_strings[i]);
-    }
 
     update_child_ptr(&inst->prototypes.object_proto);
     update_child_ptr(&inst->prototypes.number_proto);

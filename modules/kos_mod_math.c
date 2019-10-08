@@ -437,11 +437,10 @@ cleanup:
 
 int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 {
-    int        error  = KOS_SUCCESS;
-    int        pushed = 0;
-    KOS_OBJ_ID str_id = KOS_BADPTR;
+    int error  = KOS_SUCCESS;
+    int pushed = 0;
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &str_id));
+    TRY(KOS_push_locals(ctx, &pushed, 1, &module));
 
     /* @item math infinity
      *
@@ -450,18 +449,15 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      * Constant float value representing positive infinity.
      */
     {
-        static const char str_infinity[] = "infinity";
         KOS_NUMERIC_VALUE value;
         KOS_OBJ_ID        value_obj;
 
         value.i = (uint64_t)0x7FF00000U << 32;
 
-        str_id = KOS_new_const_ascii_string(ctx, str_infinity, sizeof(str_infinity) - 1);
-        TRY_OBJID(str_id);
-
         value_obj = KOS_new_float(ctx, value.d);
+        TRY_OBJID(value_obj);
 
-        TRY(KOS_module_add_global(ctx, module, str_id, value_obj, 0));
+        TRY_ADD_GLOBAL(ctx, module, "infinity", value_obj);
     }
 
     /* @item math nan
@@ -471,18 +467,15 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      * Constant float value representing "not-a-number".
      */
     {
-        static const char str_nan[] = "nan";
         KOS_NUMERIC_VALUE value;
         KOS_OBJ_ID        value_obj;
 
         value.i = ((uint64_t)0x7FF00000U << 32) | 1U;
 
-        str_id = KOS_new_const_ascii_string(ctx, str_nan, sizeof(str_nan) - 1);
-        TRY_OBJID(str_id);
-
         value_obj = KOS_new_float(ctx, value.d);
+        TRY_OBJID(value_obj);
 
-        TRY(KOS_module_add_global(ctx, module, str_id, value_obj, 0));
+        TRY_ADD_GLOBAL(ctx, module, "nan", value_obj);
     }
 
     TRY_ADD_FUNCTION(ctx, module, "abs",         _abs,         1);

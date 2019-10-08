@@ -21,6 +21,7 @@
  */
 
 #include "../inc/kos.h"
+#include "kos_const_strings.h"
 
 namespace kos {
 
@@ -203,7 +204,7 @@ std::string exception::get_exception_string(stack_frame ctx)
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
 
-        obj_id = KOS_get_property(ctx, obj_id, KOS_get_string(ctx, KOS_STR_VALUE));
+        obj_id = KOS_get_property(ctx, obj_id, KOS_STR_VALUE);
 
         assert( ! IS_BAD_PTR(obj_id));
 

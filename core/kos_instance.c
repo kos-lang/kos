@@ -277,66 +277,8 @@ static int init_search_paths(KOS_CONTEXT ctx)
 #endif
 }
 
-struct KOS_INIT_STRING_S {
-    enum KOS_STR_E str_id;
-    const char    *text;
-};
-
-static int init_common_strings(KOS_CONTEXT   ctx,
-                               KOS_INSTANCE *inst)
-{
-    int    error = KOS_SUCCESS;
-    size_t i;
-
-    static const struct KOS_INIT_STRING_S init[] = {
-        { KOS_STR_ARGS,       "args"      },
-        { KOS_STR_ARRAY,      "array"     },
-        { KOS_STR_BACKTRACE,  "backtrace" },
-        { KOS_STR_BOOLEAN,    "boolean"   },
-        { KOS_STR_BUFFER,     "buffer"    },
-        { KOS_STR_CLASS,      "class"     },
-        { KOS_STR_FALSE,      "false"     },
-        { KOS_STR_FILE,       "file"      },
-        { KOS_STR_FLOAT,      "float"     },
-        { KOS_STR_FUNCTION,   "function"  },
-        { KOS_STR_GLOBAL,     "global"    },
-        { KOS_STR_INTEGER,    "integer"   },
-        { KOS_STR_LINE,       "line"      },
-        { KOS_STR_LOCALS,     " locals "  },
-        { KOS_STR_MODULE,     "module"    },
-        { KOS_STR_OBJECT,     "object"    },
-        { KOS_STR_OFFSET,     "offset"    },
-        { KOS_STR_PROTOTYPE,  "prototype" },
-        { KOS_STR_QUOTE_MARK, "\""        },
-        { KOS_STR_RECURSIVEA, "[...]"     },
-        { KOS_STR_RECURSIVEO, "{...}"     },
-        { KOS_STR_RESULT,     "result"    },
-        { KOS_STR_SLICE,      "slice"     },
-        { KOS_STR_STRING,     "string"    },
-        { KOS_STR_TRUE,       "true"      },
-        { KOS_STR_VALUE,      "value"     },
-        { KOS_STR_VOID,       "void"      },
-        { KOS_STR_XBUILTINX,  "<builtin>" }
-    };
-
-    for (i = 0; i < sizeof(init) / sizeof(init[0]); ++i) {
-        const KOS_OBJ_ID str_id = KOS_new_const_ascii_cstring(ctx, init[i].text);
-        TRY_OBJID(str_id);
-
-        inst->common_strings[init[i].str_id] = str_id;
-    }
-
-cleanup:
-    return error;
-}
-
 static void clear_instance(KOS_INSTANCE *inst)
 {
-    int i;
-
-    for (i = 0; i < KOS_STR_NUM; ++i)
-        inst->common_strings[i] = KOS_BADPTR;
-
     /* Disable GC during early init */
     inst->flags = KOS_INST_MANUAL_GC;
 
@@ -434,8 +376,6 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY(register_thread(inst, &inst->threads.main_thread));
 
     ctx = &inst->threads.main_thread;
-
-    TRY(init_common_strings(ctx, inst));
 
     TRY_OBJID(inst->prototypes.object_proto        = KOS_new_object_with_prototype(ctx, KOS_VOID));
     TRY_OBJID(inst->prototypes.number_proto        = KOS_new_object(ctx));
@@ -769,14 +709,6 @@ cleanup:
     return error;
 }
 
-KOS_OBJ_ID KOS_get_string(KOS_CONTEXT    ctx,
-                          enum KOS_STR_E str_id)
-{
-    assert((int)str_id >= 0 && str_id < KOS_STR_NUM);
-
-    return ctx->inst->common_strings[str_id];
-}
-
 #ifndef NDEBUG
 void KOS_instance_validate(KOS_CONTEXT ctx)
 {
@@ -841,10 +773,10 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
     kos_vector_init(&cstr);
 
-    value = KOS_get_property(ctx, exception, KOS_get_string(ctx, KOS_STR_VALUE));
+    value = KOS_get_property(ctx, exception, KOS_STR_VALUE);
     TRY_OBJID(value);
 
-    backtrace = KOS_get_property(ctx, exception, KOS_get_string(ctx, KOS_STR_BACKTRACE));
+    backtrace = KOS_get_property(ctx, exception, KOS_STR_BACKTRACE);
     TRY_OBJID(backtrace);
 
     if (GET_OBJ_TYPE(backtrace) != OBJ_ARRAY)
@@ -886,7 +818,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY(kos_append_cstr(ctx, &cstr, str_format_offset,
                             sizeof(str_format_offset) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_OFFSET));
+        str = KOS_get_property(ctx, frame_desc, KOS_STR_OFFSET);
         TRY_OBJID(str);
         if (IS_SMALL_INT(str)) {
             snprintf(cbuf, sizeof(cbuf), "0x%X", (unsigned)GET_SMALL_INT(str));
@@ -899,14 +831,14 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY(kos_append_cstr(ctx, &cstr, str_format_function,
                             sizeof(str_format_function) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_FUNCTION));
+        str = KOS_get_property(ctx, frame_desc, KOS_STR_FUNCTION);
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
         TRY(kos_append_cstr(ctx, &cstr, str_format_module,
                             sizeof(str_format_module) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_FILE));
+        str = KOS_get_property(ctx, frame_desc, KOS_STR_FILE);
         TRY_OBJID(str);
         str = KOS_get_file_name(ctx, str);
         TRY_OBJID(str);
@@ -915,7 +847,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY(kos_append_cstr(ctx, &cstr, str_format_line,
                             sizeof(str_format_line) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_get_string(ctx, KOS_STR_LINE));
+        str = KOS_get_property(ctx, frame_desc, KOS_STR_LINE);
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
