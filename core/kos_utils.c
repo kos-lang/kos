@@ -688,12 +688,12 @@ static KOS_OBJ_ID _array_to_str(KOS_CONTEXT        ctx,
             if (is_to_string_recursive(&new_guard, val_id)) {
                 const KOS_TYPE type = GET_OBJ_TYPE(val_id);
 
-                KOS_DECLARE_STATIC_CONST_STRING(str_recursive_array,  "[...]");
-                KOS_DECLARE_STATIC_CONST_STRING(str_recursive_object, "{...}");
+                KOS_DECLARE_STATIC_CONST_STRING(str_recursive_array_obj, "[...]");
+                KOS_DECLARE_STATIC_CONST_STRING(str_recursive_object,    "{...}");
 
                 assert(type == OBJ_ARRAY || type == OBJ_OBJECT);
 
-                val_id = type == OBJ_ARRAY ? KOS_CONST_ID(str_recursive_array)
+                val_id = type == OBJ_ARRAY ? KOS_CONST_ID(str_recursive_array_obj)
                                            : KOS_CONST_ID(str_recursive_object);
             }
             else
