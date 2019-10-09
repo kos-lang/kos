@@ -2394,9 +2394,13 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     stop_the_world(ctx->inst); /* Remaining threads enter help_gc() */
 
+    kos_lock_mutex(&heap->mutex);
+
     stats.initial_used_heap_size = heap->used_heap_size;
 
     clear_marking(heap);
+
+    kos_unlock_mutex(&heap->mutex);
 
     mark_roots(ctx);
 
