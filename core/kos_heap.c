@@ -170,12 +170,13 @@ int kos_heap_init(KOS_INSTANCE *inst)
     heap->used_pages.tail = 0;
     heap->pools           = 0;
 
-    KOS_atomic_write_relaxed_ptr(heap->gray_pages,   (KOS_PAGE *)0);
-    KOS_atomic_write_relaxed_ptr(heap->update_pages, (KOS_PAGE *)0);
-    KOS_atomic_write_relaxed_u32(heap->gray_marked,  0U);
-    KOS_atomic_write_relaxed_u32(heap->walk_stage,   0U);
-    KOS_atomic_write_relaxed_u32(heap->walk_active,  0U);
-    KOS_atomic_write_relaxed_u32(heap->gc_cycles,    0U);
+    KOS_atomic_write_relaxed_u32(heap->gray_marked, 0U);
+    KOS_atomic_write_relaxed_u32(heap->gc_cycles,   0U);
+
+    KOS_atomic_write_relaxed_ptr(heap->walk_mark.pages,         (KOS_PAGE *)0);
+    KOS_atomic_write_relaxed_u32(heap->walk_mark.num_threads,   0U);
+    KOS_atomic_write_relaxed_ptr(heap->walk_update.pages,       (KOS_PAGE *)0);
+    KOS_atomic_write_relaxed_u32(heap->walk_update.num_threads, 0U);
 
 #ifdef CONFIG_MAD_GC
     heap->locked_pages_first = 0;
@@ -367,77 +368,46 @@ static KOS_PAGE *unlock_one_page(KOS_HEAP *heap)
 }
 #endif
 
-enum KOS_WALK_STAGE_E {
-    WALK_DONE,
-    WALK_ACTIVE
-};
-
-static KOS_PAGE *get_next_page(KOS_HEAP               *heap,
-                               KOS_ATOMIC(KOS_PAGE *) *page_ptr)
+static KOS_PAGE *get_next_page(KOS_PAGE_WALK *walk)
 {
     KOS_PAGE *page = 0;
+    KOS_PAGE *next;
 
-    for (;;) {
-
-        enum KOS_WALK_STAGE_E stage;
-        KOS_PAGE             *next;
-
-        page = (KOS_PAGE *)KOS_atomic_read_relaxed_ptr(*page_ptr);
+    do {
+        page = (KOS_PAGE *)KOS_atomic_read_relaxed_ptr(walk->pages);
 
         if ( ! page)
             break;
 
         next = page->next;
 
-        if (next) {
-            if (KOS_atomic_cas_weak_ptr(*page_ptr, page, next))
-                break;
-            else
-                continue;
-        }
-
-        /* TODO try to replace all this below with atomic_write(walk_stage, WALK_DONE) */
-        kos_lock_mutex(&heap->mutex);
-
-        stage = (enum KOS_WALK_STAGE_E)KOS_atomic_read_relaxed_u32(heap->walk_stage);
-
-        if (page != (KOS_PAGE *)KOS_atomic_read_relaxed_ptr(*page_ptr)) {
-            kos_unlock_mutex(&heap->mutex);
-            continue;
-        }
-
-        if (stage == WALK_ACTIVE) {
-            KOS_atomic_write_relaxed_ptr(*page_ptr, (KOS_PAGE *)0);
-            KOS_atomic_write_relaxed_u32(heap->walk_stage, WALK_DONE);
-
-            kos_unlock_mutex(&heap->mutex);
-            break;
-        }
-
-        kos_unlock_mutex(&heap->mutex);
-    }
+    } while ( ! KOS_atomic_cas_weak_ptr(walk->pages, page, next));
 
     return page;
 }
 
-static KOS_PAGE *begin_page_walk(KOS_HEAP               *heap,
-                                 KOS_ATOMIC(KOS_PAGE *) *page_ptr)
+static void begin_page_walk(KOS_PAGE_WALK *walk)
 {
-    KOS_atomic_add_u32(heap->walk_active, 1);
-
-    return get_next_page(heap, page_ptr);
+    KOS_atomic_add_u32(walk->num_threads, 1);
 }
 
-static void end_page_walk(KOS_HEAP *heap)
+static void end_page_walk(KOS_PAGE_WALK *walk, uint32_t num_pages)
 {
-    assert(KOS_atomic_read_relaxed_u32(heap->walk_active) > 0U);
+    assert(KOS_atomic_read_relaxed_u32(walk->num_threads) > 0U);
 
-    KOS_atomic_add_u32(heap->walk_active, (uint32_t)-1);
+    KOS_atomic_add_u32(walk->num_threads, (uint32_t)-1);
+
+    if ( ! num_pages)
+        kos_yield();
 }
 
-static void wait_for_walk_end(KOS_HEAP *heap)
+static void wait_for_walk_end(KOS_PAGE_WALK *walk)
 {
-    while (KOS_atomic_read_acquire_u32(heap->walk_active))
+    assert( ! KOS_atomic_read_relaxed_ptr(walk->pages));
+
+    KOS_atomic_release_barrier();
+
+    while (KOS_atomic_read_acquire_u32(walk->num_threads))
         kos_yield();
 }
 
@@ -1353,10 +1323,13 @@ static void mark_object_black(KOS_OBJ_ID obj_id)
 
 static void gray_to_black_in_pages(KOS_HEAP *heap)
 {
-    int32_t   marked = 0;
-    KOS_PAGE *page   = begin_page_walk(heap, &heap->gray_pages);
+    int32_t   marked    = 0;
+    uint32_t  num_pages = 0;
+    KOS_PAGE *page;
 
-    for ( ; page; page = get_next_page(heap, &heap->gray_pages)) {
+    begin_page_walk(&heap->walk_mark);
+
+    while ((page = get_next_page(&heap->walk_mark))) {
 
         uint32_t num_slots_used = 0;
 
@@ -1364,6 +1337,8 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
 
         KOS_SLOT *ptr = get_slots(page);
         KOS_SLOT *end = ptr + KOS_atomic_read_relaxed_u32(page->num_allocated);
+
+        ++num_pages;
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
@@ -1397,18 +1372,17 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
 
     KOS_atomic_add_u32(heap->gray_marked, marked);
 
-    end_page_walk(heap);
+    end_page_walk(&heap->walk_mark, num_pages);
 }
 
 static uint32_t gray_to_black(KOS_HEAP *heap)
 {
-    KOS_atomic_write_relaxed_u32(heap->gray_marked, 0);
-    KOS_atomic_write_relaxed_ptr(heap->gray_pages,  heap->used_pages.head);
-    KOS_atomic_write_relaxed_u32(heap->walk_stage,  WALK_ACTIVE);
+    KOS_atomic_write_relaxed_u32(heap->gray_marked,     0);
+    KOS_atomic_write_release_ptr(heap->walk_mark.pages, heap->used_pages.head);
 
     gray_to_black_in_pages(heap);
 
-    wait_for_walk_end(heap);
+    wait_for_walk_end(&heap->walk_mark);
 
     return KOS_atomic_read_relaxed_u32(heap->gray_marked);
 }
@@ -1941,12 +1915,17 @@ static int save_incomplete_page(KOS_OBJ_HEADER          *hdr,
 
 static void update_pages_after_evacuation(KOS_HEAP *heap)
 {
-    KOS_PAGE *page = begin_page_walk(heap, &heap->update_pages);
+    KOS_PAGE *page;
+    uint32_t  num_pages = 0;
 
-    for ( ; page; page = get_next_page(heap, &heap->update_pages))
+    begin_page_walk(&heap->walk_update);
+
+    while ((page = get_next_page(&heap->walk_update))) {
         update_page_after_evacuation(page, 0);
+        ++num_pages;
+    }
 
-    end_page_walk(heap);
+    end_page_walk(&heap->walk_update, num_pages);
 }
 
 static void update_threads_after_evacuation(KOS_INSTANCE *inst)
@@ -1977,14 +1956,13 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     KOS_INSTANCE *const inst = ctx->inst;
     KOS_HEAP           *heap = &inst->heap;
 
-    KOS_atomic_write_relaxed_ptr(heap->update_pages, heap->used_pages.head);
-    KOS_atomic_write_relaxed_u32(heap->walk_stage,   WALK_ACTIVE);
+    KOS_atomic_write_relaxed_ptr(heap->walk_update.pages, heap->used_pages.head);
 
     assert( ! ctx->cur_page);
 
     update_pages_after_evacuation(heap);
 
-    wait_for_walk_end(heap);
+    wait_for_walk_end(&heap->walk_update);
 
     /* Update object pointers in instance */
 

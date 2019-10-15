@@ -40,6 +40,11 @@ typedef struct KOS_PAGE_LIST_S {
     KOS_PAGE *tail;
 } KOS_PAGE_LIST;
 
+typedef struct KOS_PAGE_WALK_S {
+    KOS_ATOMIC(KOS_PAGE *) pages;       /* List of pages remaining  */
+    KOS_ATOMIC(uint32_t)   num_threads; /* Number of active threads */
+} KOS_PAGE_WALK;
+
 typedef struct KOS_HEAP_S {
     KOS_MUTEX              mutex;
     KOS_ATOMIC(uint32_t)   gc_state;       /* Says what the GC is doing                      */
@@ -54,11 +59,10 @@ typedef struct KOS_HEAP_S {
     KOS_POOL              *pools;          /* Allocated memory for heap, in page pools       */
 
     KOS_ATOMIC(KOS_PAGE *) gray_pages;     /* Page pointer for gray-to-black marking         */
-    KOS_ATOMIC(KOS_PAGE *) update_pages;   /* Page pointer for update-after-evac             */
     KOS_ATOMIC(uint32_t)   gray_marked;    /* Number of objects marked                       */
-    KOS_ATOMIC(uint32_t)   walk_stage;     /* Stage of walking page lists                    */
-    KOS_ATOMIC(uint32_t)   walk_active;    /* Number of threads which are walking pages      */
     KOS_ATOMIC(uint32_t)   gc_cycles;      /* Number of GC cycles started                    */
+    KOS_PAGE_WALK          walk_mark;      /* Multi-threaded page marking                    */
+    KOS_PAGE_WALK          walk_update;    /* Multi-threaded page update after evacuation    */
 
 #ifdef CONFIG_MAD_GC
     struct KOS_LOCKED_PAGES_S *locked_pages_first;
