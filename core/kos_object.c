@@ -372,16 +372,16 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
         if ( ! IS_BAD_PTR(new_table)) {
             unsigned i;
 
-            KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, new_table)->capacity, new_capacity);
-            OBJPTR(OBJECT_STORAGE, new_table)->num_slots_used = 0;
-            OBJPTR(OBJECT_STORAGE, new_table)->num_slots_open = new_capacity;
-            OBJPTR(OBJECT_STORAGE, new_table)->active_copies  = 0;
-            OBJPTR(OBJECT_STORAGE, new_table)->new_prop_table = KOS_BADPTR;
+            KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, new_table)->capacity,       new_capacity);
+            KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, new_table)->num_slots_used, 0);
+            KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, new_table)->num_slots_open, new_capacity);
+            KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, new_table)->active_copies,  0);
+            KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, new_table)->new_prop_table, KOS_BADPTR);
 
             for (i = 0; i < new_capacity; i++) {
-                OBJPTR(OBJECT_STORAGE, new_table)->items[i].key       = KOS_BADPTR;
-                OBJPTR(OBJECT_STORAGE, new_table)->items[i].hash.hash = 0;
-                OBJPTR(OBJECT_STORAGE, new_table)->items[i].value     = TOMBSTONE;
+                KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, new_table)->items[i].key,       KOS_BADPTR);
+                KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, new_table)->items[i].hash.hash, 0);
+                KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, new_table)->items[i].value,     TOMBSTONE);
             }
 
             if ( ! IS_BAD_PTR(old_table)) {
