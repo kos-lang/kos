@@ -1329,7 +1329,9 @@ static void gray_to_black_in_pages(KOS_HEAP *heap)
 
     begin_page_walk(&heap->walk_mark);
 
-    while ((page = get_next_page(&heap->walk_mark))) {
+    page = get_next_page(&heap->walk_mark);
+
+    for ( ; page; page = get_next_page(&heap->walk_mark)) {
 
         uint32_t num_slots_used = 0;
 
@@ -1920,7 +1922,9 @@ static void update_pages_after_evacuation(KOS_HEAP *heap)
 
     begin_page_walk(&heap->walk_update);
 
-    while ((page = get_next_page(&heap->walk_update))) {
+    page = get_next_page(&heap->walk_update);
+
+    for ( ; page; page = get_next_page(&heap->walk_update)) {
         update_page_after_evacuation(page, 0);
         ++num_pages;
     }
