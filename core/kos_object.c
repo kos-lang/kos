@@ -380,7 +380,7 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
 
             for (i = 0; i < new_capacity; i++) {
                 KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, new_table)->items[i].key,       KOS_BADPTR);
-                KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, new_table)->items[i].hash.hash, 0);
+                KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, new_table)->items[i].hash.hash, 0);
                 KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, new_table)->items[i].value,     TOMBSTONE);
             }
 
