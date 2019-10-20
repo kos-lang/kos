@@ -132,7 +132,6 @@ Table of Contents
       * [file.prototype.error](#fileprototypeerror)
       * [file.prototype.position](#fileprototypeposition)
       * [file.prototype.print()](#fileprototypeprint)
-      * [file.prototype.print\_()](#fileprototypeprint_)
       * [file.prototype.print\_lines()](#fileprototypeprint_lines)
       * [file.prototype.read()](#fileprototyperead)
       * [file.prototype.read\_line()](#fileprototyperead_line)
@@ -2862,21 +2861,6 @@ Written values are separated with a single space.
 After printing all values writes an EOL character.  If no values are
 provided, just writes an EOL character.
 
-file.prototype.print_()
------------------------
-
-    file.prototype.print_(values...)
-
-Converts all arguments to printable strings and writes them to the file.
-
-Returns the file object to which the strings were written.
-
-Accepts zero or more arguments to write.
-
-Written values are separated with a single space.
-
-Unlike `file.prototype.print()`, does not write an EOL character after finishing writing.
-
 file.prototype.print_lines()
 ----------------------------
 
@@ -2987,14 +2971,20 @@ Read-only size of the opened file object.
 file.prototype.write()
 ----------------------
 
-    file.prototype.write(buffer)
+    file.prototype.write(values...)
 
-Writes a buffer containing bytes into an opened file object.
+Writes strings or buffers containing bytes into an opened file object.
 
-Returns the file object to which bytes has been written.
+Returns the file object to which data has been written.
 
-`buffer` is a buffer object.  Its size can be zero, in which case nothing
-is written.
+Each argument is either a buffer or a string object.  Empty buffers
+or strings are ignored and nothing is written to the file.
+
+If an argument is a string, it is converted to UTF-8 bytes representation
+before being written.
+
+Invoking this function without any arguments doesn't write anything
+to the file but ensures that the file object is correct.
 
 open()
 ------

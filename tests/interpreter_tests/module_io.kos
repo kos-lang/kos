@@ -337,7 +337,7 @@ do {
 }
 
 ##############################################################################
-# file.print, file.print_
+# file.print
 
 do {
     const name = "./__text_file"
@@ -345,9 +345,9 @@ do {
     assert ! fs.is_file(name)
 
     with const f = io.create(name) {
-        f.print_(false, void)
-        f.print_()
-        f.print_(":")
+        f.write("false", " ", "void")
+        f.write()
+        f.write(":")
         f.print()
         f.print("Hello,", "World!")
         f.print_lines([1, 2, 3]);
@@ -388,7 +388,7 @@ do {
     assert ! fs.is_file(name)
 
     with const f = io.create(name) {
-        const data = base.string(f.print_("abcdefghijklmnopqrstuvwxyz").seek(-8).read(4))
+        const data = base.string(f.write("abcdefghijklmnopqrstuvwxyz").seek(-8).read(4))
         assert data == "stuv"
     }
 

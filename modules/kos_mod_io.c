@@ -47,7 +47,8 @@ static const char str_err_file_not_open[]       = "file not open";
 static const char str_err_file_read[]           = "file read error";
 static const char str_err_file_write[]          = "file write error";
 static const char str_err_invalid_buffer_size[] = "buffer size out of range";
-static const char str_err_not_buffer[]          = "argument to file write is not a buffer";
+static const char str_err_not_buffer[]          = "argument to file.read_some is not a buffer";
+static const char str_err_not_buffer_or_str[]   = "argument to file.write is neither a buffer nor a string";
 static const char str_err_too_many_to_read[]    = "requested read size exceeds buffer size limit";
 static const char str_position[]                = "position";
 
@@ -257,44 +258,6 @@ cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item io file.prototype.print_()
- *
- *     file.prototype.print_(values...)
- *
- * Converts all arguments to printable strings and writes them to the file.
- *
- * Returns the file object to which the strings were written.
- *
- * Accepts zero or more arguments to write.
- *
- * Written values are separated with a single space.
- *
- * Unlike `file.prototype.print()`, does not write an EOL character after finishing writing.
- */
-static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
-{
-    FILE      *file  = 0;
-    int        error = _get_file_object(ctx, this_obj, &file, 0);
-    KOS_VECTOR cstr;
-
-    kos_vector_init(&cstr);
-
-    if ( ! error && file) {
-
-        TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
-
-        if (cstr.size)
-            fwrite(cstr.buffer, 1, cstr.size - 1, file);
-    }
-
-cleanup:
-    kos_vector_destroy(&cstr);
-
-    return error ? KOS_BADPTR : this_obj;
-}
-
 static int _is_eol(char c)
 {
     return c == '\n' || c == '\r';
@@ -459,45 +422,88 @@ cleanup:
 
 /* @item io file.prototype.write()
  *
- *     file.prototype.write(buffer)
+ *     file.prototype.write(values...)
  *
- * Writes a buffer containing bytes into an opened file object.
+ * Writes strings or buffers containing bytes into an opened file object.
  *
- * Returns the file object to which bytes has been written.
+ * Returns the file object to which data has been written.
  *
- * `buffer` is a buffer object.  Its size can be zero, in which case nothing
- * is written.
+ * Each argument is either a buffer or a string object.  Empty buffers
+ * or strings are ignored and nothing is written to the file.
+ *
+ * If an argument is a string, it is converted to UTF-8 bytes representation
+ * before being written.
+ *
+ * Invoking this function without any arguments doesn't write anything
+ * to the file but ensures that the file object is correct.
  */
 static KOS_OBJ_ID _write(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
                          KOS_OBJ_ID  args_obj)
 {
-    int        error    = KOS_SUCCESS;
-    FILE      *file     = 0;
-    KOS_OBJ_ID arg;
-    size_t     to_write;
-    size_t     num_writ = 0;
+    int            error      = KOS_SUCCESS;
+    const uint32_t num_args   = KOS_get_array_size(args_obj);
+    FILE      *    file       = 0;
+    uint32_t       i_arg;
+    KOS_OBJ_ID     arg        = KOS_BADPTR;
+    KOS_OBJ_ID     print_args = KOS_BADPTR;
+    KOS_VECTOR     cstr;
+
+    kos_vector_init(&cstr);
+
+    {
+        int pushed = 0;
+        TRY(KOS_push_locals(ctx, &pushed, 2, &arg, &print_args));
+    }
 
     TRY(_get_file_object(ctx, this_obj, &file, 1));
 
-    /* TODO support multiple buffers */
+    for (i_arg = 0; i_arg < num_args; i_arg++) {
 
-    arg = KOS_array_read(ctx, args_obj, 0);
+        size_t num_writ = 0;
 
-    TRY_OBJID(arg);
+        arg = KOS_array_read(ctx, args_obj, i_arg);
+        TRY_OBJID(arg);
 
-    if (GET_OBJ_TYPE(arg) != OBJ_BUFFER)
-        RAISE_EXCEPTION(str_err_not_buffer);
+        if (GET_OBJ_TYPE(arg) == OBJ_BUFFER) {
 
-    to_write = (size_t)KOS_get_buffer_size(arg);
+            const size_t to_write = (size_t)KOS_get_buffer_size(arg);
 
-    if (to_write > 0)
-        num_writ = fwrite(KOS_buffer_data(arg), 1, to_write, file);
+            if (to_write > 0)
+                num_writ = fwrite(KOS_buffer_data(arg), 1, to_write, file);
 
-    if (num_writ < to_write)
-        RAISE_EXCEPTION(str_err_file_write);
+            if (num_writ < to_write)
+                RAISE_EXCEPTION(str_err_file_write); /* TODO error from errno */
+        }
+        else if (GET_OBJ_TYPE(arg) == OBJ_STRING) {
+
+            if (IS_BAD_PTR(print_args)) {
+                print_args = KOS_new_array(ctx, 1);
+                TRY_OBJID(print_args);
+            }
+
+            TRY(KOS_array_write(ctx, print_args, 0, arg));
+
+            TRY(KOS_print_to_cstr_vec(ctx, print_args, KOS_DONT_QUOTE, &cstr, " ", 1));
+
+            if (cstr.size) {
+                KOS_suspend_context(ctx);
+                num_writ = fwrite(cstr.buffer, 1, cstr.size - 1, file);
+                KOS_resume_context(ctx);
+            }
+
+            if (num_writ < cstr.size - 1)
+                RAISE_EXCEPTION(str_err_file_write);
+
+            cstr.size = 0;
+        }
+        else
+            RAISE_EXCEPTION(str_err_not_buffer_or_str);
+    }
 
 cleanup:
+    kos_vector_destroy(&cstr);
+
     return error ? KOS_BADPTR : this_obj;
 }
 
@@ -687,12 +693,11 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_CONSTRUCTOR(    ctx, module,        "file",      _open,           1, &proto);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "close",     _close,          0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "print",     _print,          0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "print_",    _print_,         0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "read_line", _read_line,      0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "read_some", _read_some,      0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "release",   _close,          0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "seek",      _set_file_pos,   1);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "write",     _write,          1);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "write",     _write,          0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "eof",       _get_file_eof,   0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "error",     _get_file_error, 0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "position",  _get_file_pos,   0);
