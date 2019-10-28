@@ -70,27 +70,25 @@ This program prints "Hello, World!":
 This program prints 30 terms of the Fibonacci series:
 
     #!/usr/bin/env kos
-    import base.print_
+    import base: print, range
 
     const terms = 30
     var   a     = 0
     var   b     = 1
 
-    print_("Fib series: \(a)")
+    print("Fib series: \(a)")
 
     for var i in range(terms) {
-        print_(" \(b)")
+        print("    \(b)")
         const next = a + b
         a = b
         b = next
     }
 
-    print_("\n")
-
 This program prints the first 1000 prime numbers:
 
     #!/usr/bin/env kos
-    import base.print_
+    import base.print
 
     # Prime number generator with a fixed-size sieve
     fun primes(max_number)
@@ -122,13 +120,13 @@ This program prints the first 1000 prime numbers:
         }
     }
 
-    print_("Prime numbers:")
+    print("Prime numbers:")
 
     var count = 0
 
     for var value in primes(7920) {
-        print_(" \(value)")
+        print("    \(value)")
         count += 1
     }
 
-    print_("\nPrinted \(count) primes\n")
+    print("Printed \(count) primes")

@@ -1866,7 +1866,7 @@ fun zip(a, b...)
  * Prints all elements from an iterable object on stdout.
  *
  * Elements are extracted from `iterable` object through its `iterator()`
- * function, then printed using `base.print_()` function.
+ * function, then printed to stdout.
  *
  * The optional `separator` is a string to be printed between
  * the items.  It defaults to a comma.

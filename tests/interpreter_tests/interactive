@@ -55,9 +55,7 @@ SIGNATURE="^Kos .* interactive interpreter"
 ##############################################################################
 # Test -c with a script which prints one line in two statements
 
-"$KOS" -c 'print_("Hello, ")
-print("Kos")
-' | remove_cr > "$OUTPUT"
+"$KOS" -c 'print("Hello,", "Kos")' | remove_cr > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
@@ -204,7 +202,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with import statements
 
-"$KOS" -c 'print_("import io\nio.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
+"$KOS" -c 'print("import io"); print("io.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -223,7 +221,7 @@ fi
 ##############################################################################
 # Test interactive interpreter with two lines of input and several EOLs
 
-"$KOS" -c 'print_("\nprint(true)\n\nprint(void)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
+"$KOS" -c 'print() ; print("print(true)") ; print() ; print("print(void)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -250,7 +248,7 @@ fi
 ##############################################################################
 # Test quoted strings from interactive interpreter
 
-"$KOS" -c 'print_("\"a\\xffb\"")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
+"$KOS" -c 'print("\"a\\xffb\"")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -269,7 +267,7 @@ fi
 ##############################################################################
 # Test various outputs from interactive interpreter
 
-"$KOS" -c 'print_("true\nvoid\n1\n\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"\n\"\"\n\"x\"")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
+"$KOS" -c 'print("true") ; print("void") ; print("1") ; print("\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"") ; print("\"\"") ; print("\"x\"")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
     echo "Expected first line to have interactive interpreter signature" >&2
@@ -320,7 +318,7 @@ fi
 ##############################################################################
 # Test multiple input lines
 
-"$KOS" -c 'print_("fun(x) {\n return x + 1\n } (41)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
+"$KOS" -c 'print("fun(x) {") ; print("return x + 1") ; print("} (41)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 COUNT=$(wc -l < "$OUTPUT")
 

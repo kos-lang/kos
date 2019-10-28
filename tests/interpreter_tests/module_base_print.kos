@@ -21,7 +21,6 @@
 #
 
 import base.print
-import base.print_
 import base.print_elements
 import base.buffer
 
@@ -39,9 +38,7 @@ do {
     }
 }
 
-print_()
-
-print_(void, true, false, "abc", -10, "\n")
+print(void, true, false, "abc", -10)
 
 print()
 
