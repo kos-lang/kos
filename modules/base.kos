@@ -45,16 +45,16 @@
  *
  * Examples:
  *
- *     > range(5) -> print_elements
- *     0, 1, 2, 3, 4
- *     > range(1, 5) -> print_elements
- *     1, 2, 3, 4
- *     > range(0, 16, 4) -> print_elements
- *     0, 4, 8, 12
- *     > range(0) -> print_elements
- *     
- *     > range(2, -8, -2) -> print_elements
- *     2, 0, -2, -4, -6
+ *     > range(5) -> array
+ *     [0, 1, 2, 3, 4]
+ *     > range(1, 5) -> array
+ *     [1, 2, 3, 4]
+ *     > range(0, 16, 4) -> array
+ *     [0, 4, 8, 12]
+ *     > range(0) -> array
+ *     []
+ *     > range(2, -8, -2) -> array
+ *     [2, 0, -2, -4, -6]
  *     > for const x in range(2) { print(x) }
  *     0
  *     1
@@ -116,12 +116,12 @@ fun range(start, args...)
  *
  * Examples:
  *
- *     > { red: 1, green: 10, blue: 100 }.iterator() -> print_elements
- *     ["red", 1], ["green", 10], ["blue", 100]
- *     > 1.5.iterator() -> print_elements
- *     1.5
- *     > true.iterator() -> print_elements
- *     true
+ *     > { red: 1, green: 10, blue: 100 }.iterator() -> array
+ *     [["red", 1], ["green", 10], ["blue", 100]]
+ *     > 1.5.iterator() -> array
+ *     [1.5]
+ *     > true.iterator() -> array
+ *     [true]
  *     > for const k, v in { x: 10, y: -2 } { print(k, v) }
  *     x 10
  *     y -2
@@ -180,8 +180,8 @@ do {
      *
      * Examples:
      *
-     *     > "koslang".iterator() -> print_elements
-     *     k, o, s, l, a, n, g
+     *     > "koslang".iterator() -> array
+     *     ["k", "o", "s", "l", "a", "n", "g"]
      *     > for const v in "foo" { print(v) }
      *     f
      *     o
@@ -203,8 +203,8 @@ do {
      *
      * Examples:
      *
-     *     > buffer([1, 2, 3]).iterator() -> print_elements
-     *     1, 2, 3
+     *     > buffer([1, 2, 3]).iterator() -> array
+     *     [1, 2, 3]
      *     > for const v in buffer([10, 11, 12]) { print(v) }
      *     10
      *     11
@@ -260,10 +260,10 @@ generator.prototype.iterator = () => this
  *
  * Examples:
  *
- *     > range(10).slice(3, 6) -> print_elements
- *     3, 4, 5
- *     > range(10).slice(7, void) -> print_elements
- *     7, 8, 9
+ *     > range(10).slice(3, 6) -> array
+ *     [3, 4, 5]
+ *     > range(10).slice(7, void) -> array
+ *     [7, 8, 9]
  */
 generator.prototype.slice = fun(begin, end)
 {
@@ -503,8 +503,8 @@ do {
      *
      * Example:
      *
-     *     > [ "a", "b", "c" ].indices() -> print_elements
-     *     0, 1, 2
+     *     > [ "a", "b", "c" ].indices() -> array
+     *     [0, 1, 2]
      */
     array.prototype.indices = indices
 
@@ -522,8 +522,8 @@ do {
      *
      * Example:
      *
-     *     > "foobar".indices() -> print_elements
-     *     0, 1, 2, 3, 4, 5
+     *     > "foobar".indices() -> array
+     *     [0, 1, 2, 3, 4, 5]
      */
     string.prototype.indices = indices
 
@@ -541,8 +541,8 @@ do {
      *
      * Example:
      *
-     *     > buffer(4).indices() -> print_elements
-     *     0, 1, 2, 3
+     *     > buffer(4).indices() -> array
+     *     [0, 1, 2, 3]
      */
     buffer.prototype.indices = indices
 }
@@ -789,10 +789,10 @@ string.prototype.strip = fun(chars = whitespace)
  *
  * Examples:
  *
- *     > "a  b    c     d".split() -> print_elements
- *     a, b, c, d
- *     > "a--b--c--d--e--f".split("--", 3) -> print_elements
- *     a, b, c--d--e--f
+ *     > "a  b    c     d".split() -> array
+ *     ["a", "b", "c", "d"]
+ *     > "a--b--c--d--e--f".split("--", 3) -> array
+ *     ["a", "b", "c--d--e--f"]
  */
 string.prototype.split = fun(sep = void, max_split = -1)
 {
@@ -867,8 +867,8 @@ string.prototype.split = fun(sep = void, max_split = -1)
  *
  * Examples:
  *
- *     > "line1\nline2\nline3".split_lines() -> print_elements
- *     line1, line2, line3
+ *     > "line1\nline2\nline3".split_lines() -> array
+ *     ["line1", "line2", "line3"]
  */
 string.prototype.split_lines = fun(keep_ends = false)
 {
@@ -920,10 +920,10 @@ string.prototype.split_lines = fun(keep_ends = false)
  *
  * Examples:
  *
- *     > keys({ A: 1, B: 2, C: 3}) -> print_elements
- *     A, C, B
- *     > keys(["kos", "lang", "first"]) -> print_elements
- *     k, l, f
+ *     > keys({ A: 1, B: 2, C: 3}) -> array
+ *     ["A", "C", "B"]
+ *     > keys(["kos", "lang", "first"]) -> array
+ *     ["k", "l", "f"]
  */
 fun keys(iterable)
 {
@@ -953,11 +953,11 @@ fun keys(iterable)
  *
  * Examples:
  *
- *     > map(x => x*10, [1, 2, 3, 4]) -> print_elements
- *     10, 20, 30, 40
+ *     > map(x => x*10, [1, 2, 3, 4]) -> array
+ *     [10, 20, 30, 40]
  *     > const plus2 = map(x => x + 2)
- *     > plus2([10, 11, 12, 13]) -> print_elements
- *     12, 13, 14, 15
+ *     > plus2([10, 11, 12, 13]) -> array
+ *     [12, 13, 14, 15]
  */
 fun map(op, args...)
 {
@@ -1001,11 +1001,11 @@ fun map(op, args...)
  *
  * Examples:
  *
- *     > filter(x => x < 0, [1, -2, 3, 4, -5, -6]) -> print_elements
- *     -2, -5, -6
+ *     > filter(x => x < 0, [1, -2, 3, 4, -5, -6]) -> array
+ *     [-2, -5, -6]
  *     > const odd = filter(x => x & 1)
- *     > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> print_elements
- *     9, 7, 5, 3, 1
+ *     > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> array
+ *     [9, 7, 5, 3, 1]
  */
 fun filter(op, args...)
 {
@@ -1328,8 +1328,8 @@ fun any(op, args...)
  *
  * Example:
  *
- *     > [1, 3, 5, 7].map(x => x * 2) -> print_elements
- *     2, 6, 10, 14
+ *     > [1, 3, 5, 7].map(x => x * 2) -> array
+ *     [2, 6, 10, 14]
  */
 object.prototype.map = fun(transform)
 {
@@ -1348,8 +1348,8 @@ object.prototype.map = fun(transform)
  *
  * Example:
  *
- *     > [1, 2, 3, 4, 5, 6].filter(x => x & 1) -> print_elements
- *     1, 3, 5
+ *     > [1, 2, 3, 4, 5, 6].filter(x => x & 1) -> array
+ *     [1, 3, 5]
  */
 object.prototype.filter = fun(op)
 {
@@ -1732,10 +1732,10 @@ buffer.prototype.repeat = fun(num)
  *
  * Examples:
  *
- *     > sort("kos language") -> print_elements
- *      , a, a, e, g, g, k, l, n, o, s, u
- *     > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> print_elements
- *     [bar, 2], [baz, 3], [foo, 1]
+ *     > sort("kos language") -> array
+ *     [" ", "a", "a", "e", "g", "g", "k", "l", "n", "o", "s", "u"]
+ *     > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> array
+ *     [["bar", 2], ["baz", 3], ["foo", 1]]
  */
 fun sort(key = void, args...)
 {
@@ -1799,10 +1799,10 @@ fun sort(key = void, args...)
  *
  * Examples:
  *
- *     > enumerate(["kos", "lang", "uage"]) -> print_elements
- *     [0, kos], [1, lang], [2, uage]
- *     > enumerate("lang") -> print_elements
- *     [0, l], [1, a], [2, n], [3, g]
+ *     > enumerate(["kos", "lang", "uage"]) -> array
+ *     [[0, "kos"], [1, "lang"], [2, "uage"]]
+ *     > enumerate("lang") -> array
+ *     [[0, "l"], [1, "a"], [2, "n"], [3, "g"]]
  */
 fun enumerate(iterable)
 {
@@ -1825,8 +1825,8 @@ fun enumerate(iterable)
  *
  * Example:
  *
- *     > zip(range(4), "abcd") -> print_elements
- *     [0, a], [1, b], [2, c], [3, d]
+ *     > zip(range(4), "abcd") -> array
+ *     [[0, "a"], [1, "b"], [2, "c"], [3, "d"]]
  */
 fun zip(a, b...)
 {
@@ -1857,47 +1857,6 @@ fun zip(a, b...)
             yield out
         }
     } (a, b)
-}
-
-/* @item base print_elements()
- *
- *     print_elements(iterable, separator = ", ", end = "\n")
- *
- * Prints all elements from an iterable object on stdout.
- *
- * Elements are extracted from `iterable` object through its `iterator()`
- * function, then printed to stdout.
- *
- * The optional `separator` is a string to be printed between
- * the items.  It defaults to a comma.
- *
- * The optional `end` is a string to be printed after the last item
- * or if there are no items.  It defaults to a new line character.
- *
- * Examples:
- *
- *     > print_elements("kos")
- *     k, o, s
- *     > print_elements("kos", "\n", "")
- *     k
- *     o
- *     s
- *     > range(5) -> print_elements
- *     0, 1, 2, 3, 4
- */
-fun print_elements(iterable, separator = ", ", end = "\n")
-{
-    var first = true
-    for const elem in iterable {
-        if first {
-            first = false
-        }
-        else {
-            print_(separator)
-        }
-        print_(elem)
-    }
-    print_(end)
 }
 
 /* @item base print_lines()

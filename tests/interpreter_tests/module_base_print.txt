@@ -4,5 +4,9 @@ Exception: raised
 void true false abc -10
 
 xyz  false void true 4096 1.2 ["a", 1] <ff 00>
-k, o, s
-2, 3, 5
+k
+o
+s
+20
+30
+x

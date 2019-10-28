@@ -117,38 +117,6 @@ cleanup:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-/* @item base print_()
- *
- *     print_(values...)
- *
- * Converts all arguments to printable strings and prints them on stdout.
- *
- * Accepts zero or more arguments to print.
- *
- * Printed values are separated with a single space.
- *
- * Unlike `print()`, does not print an EOL character after finishing printing.
- */
-static KOS_OBJ_ID _print_(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
-{
-    int        error = KOS_SUCCESS;
-    KOS_VECTOR cstr;
-
-    kos_vector_init(&cstr);
-
-    TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
-
-    if (cstr.size > 1)
-        fwrite(cstr.buffer, 1, cstr.size - 1, stdout);
-
-cleanup:
-    kos_vector_destroy(&cstr);
-
-    return error ? KOS_BADPTR : KOS_VOID;
-}
-
 static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                  ctx,
                                    KOS_OBJ_ID                   regs_obj,
                                    KOS_OBJ_ID                   args_obj,
@@ -4308,7 +4276,6 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY(KOS_push_locals(ctx, &pushed, 1, &module));
 
     TRY_ADD_FUNCTION( ctx, module, "print",      _print,     0);
-    TRY_ADD_FUNCTION( ctx, module, "print_",     _print_,    0);
     TRY_ADD_FUNCTION( ctx, module, "stringify",  _stringify, 0);
     TRY_ADD_GENERATOR(ctx, module, "deep",       _deep,      1);
     TRY_ADD_GENERATOR(ctx, module, "shallow",    _shallow,   1);

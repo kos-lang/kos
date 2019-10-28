@@ -76,8 +76,6 @@ Table of Contents
       * [object.prototype.map()](#objectprototypemap)
       * [object.prototype.reduce()](#objectprototypereduce)
     * [print()](#print)
-    * [print\_()](#print_)
-    * [print\_elements()](#print_elements)
     * [print\_lines()](#print_lines)
     * [range()](#range)
     * [reduce()](#reduce)
@@ -344,8 +342,8 @@ array.
 
 Example:
 
-    > [ "a", "b", "c" ].indices() -> print_elements
-    0, 1, 2
+    > [ "a", "b", "c" ].indices() -> array
+    [0, 1, 2]
 
 array.prototype.insert()
 ------------------------
@@ -749,8 +747,8 @@ buffer.
 
 Example:
 
-    > buffer(4).indices() -> print_elements
-    0, 1, 2, 3
+    > buffer(4).indices() -> array
+    [0, 1, 2, 3]
 
 buffer.prototype.insert()
 -------------------------
@@ -794,8 +792,8 @@ statement.
 
 Examples:
 
-    > buffer([1, 2, 3]).iterator() -> print_elements
-    1, 2, 3
+    > buffer([1, 2, 3]).iterator() -> array
+    [1, 2, 3]
     > for const v in buffer([10, 11, 12]) { print(v) }
     10
     11
@@ -1086,10 +1084,10 @@ consecutive indices and elements from the iterable object.
 
 Examples:
 
-    > enumerate(["kos", "lang", "uage"]) -> print_elements
-    [0, kos], [1, lang], [2, uage]
-    > enumerate("lang") -> print_elements
-    [0, l], [1, a], [2, n], [3, g]
+    > enumerate(["kos", "lang", "uage"]) -> array
+    [[0, "kos"], [1, "lang"], [2, "uage"]]
+    > enumerate("lang") -> array
+    [[0, "l"], [1, "a"], [2, "n"], [3, "g"]]
 
 eol
 ---
@@ -1148,11 +1146,11 @@ elements of it, which are then filtered.
 
 Examples:
 
-    > filter(x => x < 0, [1, -2, 3, 4, -5, -6]) -> print_elements
-    -2, -5, -6
+    > filter(x => x < 0, [1, -2, 3, 4, -5, -6]) -> array
+    [-2, -5, -6]
     > const odd = filter(x => x & 1)
-    > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> print_elements
-    9, 7, 5, 3, 1
+    > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> array
+    [9, 7, 5, 3, 1]
 
 float()
 -------
@@ -1362,10 +1360,10 @@ This function is invoked by the slice operator.
 
 Examples:
 
-    > range(10).slice(3, 6) -> print_elements
-    3, 4, 5
-    > range(10).slice(7, void) -> print_elements
-    7, 8, 9
+    > range(10).slice(3, 6) -> array
+    [3, 4, 5]
+    > range(10).slice(7, void) -> array
+    [7, 8, 9]
 
 generator_end()
 ---------------
@@ -1502,10 +1500,10 @@ sequence to just keys.
 
 Examples:
 
-    > keys({ A: 1, B: 2, C: 3}) -> print_elements
-    A, C, B
-    > keys(["kos", "lang", "first"]) -> print_elements
-    k, l, f
+    > keys({ A: 1, B: 2, C: 3}) -> array
+    ["A", "C", "B"]
+    > keys(["kos", "lang", "first"]) -> array
+    ["k", "l", "f"]
 
 map()
 -----
@@ -1529,11 +1527,11 @@ elements of it, which are then mapped.
 
 Examples:
 
-    > map(x => x*10, [1, 2, 3, 4]) -> print_elements
-    10, 20, 30, 40
+    > map(x => x*10, [1, 2, 3, 4]) -> array
+    [10, 20, 30, 40]
     > const plus2 = map(x => x + 2)
-    > plus2([10, 11, 12, 13]) -> print_elements
-    12, 13, 14, 15
+    > plus2([10, 11, 12, 13]) -> array
+    [12, 13, 14, 15]
 
 method()
 --------
@@ -1702,8 +1700,8 @@ obtained through the `iterator()` function.
 
 Example:
 
-    > [1, 2, 3, 4, 5, 6].filter(x => x & 1) -> print_elements
-    1, 3, 5
+    > [1, 2, 3, 4, 5, 6].filter(x => x & 1) -> array
+    [1, 3, 5]
 
 object.prototype.iterator()
 ---------------------------
@@ -1733,12 +1731,12 @@ statement.
 
 Examples:
 
-    > { red: 1, green: 10, blue: 100 }.iterator() -> print_elements
-    ["red", 1], ["green", 10], ["blue", 100]
-    > 1.5.iterator() -> print_elements
-    1.5
-    > true.iterator() -> print_elements
-    true
+    > { red: 1, green: 10, blue: 100 }.iterator() -> array
+    [["red", 1], ["green", 10], ["blue", 100]]
+    > 1.5.iterator() -> array
+    [1.5]
+    > true.iterator() -> array
+    [true]
     > for const k, v in { x: 10, y: -2 } { print(k, v) }
     x 10
     y -2
@@ -1756,8 +1754,8 @@ are obtained through the `iterator()` function.
 
 Example:
 
-    > [1, 3, 5, 7].map(x => x * 2) -> print_elements
-    2, 6, 10, 14
+    > [1, 3, 5, 7].map(x => x * 2) -> array
+    [2, 6, 10, 14]
 
 object.prototype.reduce()
 -------------------------
@@ -1794,46 +1792,6 @@ Printed values are separated with a single space.
 
 After printing all values prints an EOL character.  If no values are
 provided, just prints an EOL character.
-
-print_()
---------
-
-    print_(values...)
-
-Converts all arguments to printable strings and prints them on stdout.
-
-Accepts zero or more arguments to print.
-
-Printed values are separated with a single space.
-
-Unlike `print()`, does not print an EOL character after finishing printing.
-
-print_elements()
-----------------
-
-    print_elements(iterable, separator = ", ", end = "\n")
-
-Prints all elements from an iterable object on stdout.
-
-Elements are extracted from `iterable` object through its `iterator()`
-function, then printed using `base.print_()` function.
-
-The optional `separator` is a string to be printed between
-the items.  It defaults to a comma.
-
-The optional `end` is a string to be printed after the last item
-or if there are no items.  It defaults to a new line character.
-
-Examples:
-
-    > print_elements("kos")
-    k, o, s
-    > print_elements("kos", "\n", "")
-    k
-    o
-    s
-    > range(5) -> print_elements
-    0, 1, 2, 3, 4
 
 print_lines()
 -------------
@@ -1884,16 +1842,16 @@ The iterator terminates when it reaches or exceeds `stop`.
 
 Examples:
 
-    > range(5) -> print_elements
-    0, 1, 2, 3, 4
-    > range(1, 5) -> print_elements
-    1, 2, 3, 4
-    > range(0, 16, 4) -> print_elements
-    0, 4, 8, 12
-    > range(0) -> print_elements
-    
-    > range(2, -8, -2) -> print_elements
-    2, 0, -2, -4, -6
+    > range(5) -> array
+    [0, 1, 2, 3, 4]
+    > range(1, 5) -> array
+    [1, 2, 3, 4]
+    > range(0, 16, 4) -> array
+    [0, 4, 8, 12]
+    > range(0) -> array
+    []
+    > range(2, -8, -2) -> array
+    [2, 0, -2, -4, -6]
     > for const x in range(2) { print(x) }
     0
     1
@@ -1984,10 +1942,10 @@ order.
 
 Examples:
 
-    > sort("kos language") -> print_elements
-     , a, a, e, g, g, k, l, n, o, s, u
-    > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> print_elements
-    [bar, 2], [baz, 3], [foo, 1]
+    > sort("kos language") -> array
+    [" ", "a", "a", "e", "g", "g", "k", "l", "n", "o", "s", "u"]
+    > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> array
+    [["bar", 2], ["baz", 3], ["foo", 1]]
 
 string()
 --------
@@ -2117,8 +2075,8 @@ string.
 
 Example:
 
-    > "foobar".indices() -> print_elements
-    0, 1, 2, 3, 4, 5
+    > "foobar".indices() -> array
+    [0, 1, 2, 3, 4, 5]
 
 string.prototype.iterator()
 ---------------------------
@@ -2135,8 +2093,8 @@ statement.
 
 Examples:
 
-    > "koslang".iterator() -> print_elements
-    k, o, s, l, a, n, g
+    > "koslang".iterator() -> array
+    ["k", "o", "s", "l", "a", "n", "g"]
     > for const v in "foo" { print(v) }
     f
     o
@@ -2459,10 +2417,10 @@ of resulting parts is unlimited.
 
 Examples:
 
-    > "a  b    c     d".split() -> print_elements
-    a, b, c, d
-    > "a--b--c--d--e--f".split("--", 3) -> print_elements
-    a, b, c--d--e--f
+    > "a  b    c     d".split() -> array
+    ["a", "b", "c", "d"]
+    > "a--b--c--d--e--f".split("--", 3) -> array
+    ["a", "b", "c--d--e--f"]
 
 string.prototype.split_lines()
 ------------------------------
@@ -2484,8 +2442,8 @@ should be kept at the ends of the lines.  It defaults to `false`.
 
 Examples:
 
-    > "line1\nline2\nline3".split_lines() -> print_elements
-    line1, line2, line3
+    > "line1\nline2\nline3".split_lines() -> array
+    ["line1", "line2", "line3"]
 
 string.prototype.starts_with()
 ------------------------------
@@ -2683,8 +2641,8 @@ one element from each input iterable object.
 
 Example:
 
-    > zip(range(4), "abcd") -> print_elements
-    [0, a], [1, b], [2, c], [3, d]
+    > zip(range(4), "abcd") -> array
+    [[0, "a"], [1, "b"], [2, "c"], [3, "d"]]
 
 datetime
 ========
@@ -3141,10 +3099,10 @@ is outermost.
 
 Example:
 
-    > iter.iproduct(2, 3) -> print_elements
-    [0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2]
-    > iter.iproduct(3, 2) -> print_elements
-    [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
+    > iter.iproduct(2, 3) -> array
+    [[0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2]]
+    > iter.iproduct(3, 2) -> array
+    [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]]
 
 product()
 ---------
@@ -3162,8 +3120,8 @@ to obtain generators for each iterable object.
 
 Example:
 
-    > iter.product(range(5, 7), "xyz") -> print_elements
-    [5, x], [6, x], [5, y], [6, y], [5, z], [6, z]
+    > iter.product(range(5, 7), "xyz") -> array
+    [[5, x], [6, x], [5, y], [6, y], [5, z], [6, z]]
 
 reverse()
 ---------
@@ -3180,8 +3138,8 @@ elements of the iterable object in backwards order.
 
 Examples:
 
-    > iter.reverse(range(4)) -> print_elements
-    3, 2, 1, 0
+    > iter.reverse(range(4)) -> array
+    [3, 2, 1, 0]
     > iter.reverse("language")
     "egaugnal"
 

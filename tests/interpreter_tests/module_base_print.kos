@@ -21,7 +21,7 @@
 #
 
 import base.print
-import base.print_elements
+import base.each
 import base.buffer
 
 do {
@@ -44,6 +44,6 @@ print()
 
 print("xyz", "", false, void, true, 0x1000, 1.2, ["a", 1], buffer([255, 0]))
 
-print_elements("kos")
+"kos" -> each(print)
 
-fun { yield 2; yield 3 ; yield 5 } () -> print_elements
+fun { yield 20; yield 30 ; yield "x" } () -> each(print)

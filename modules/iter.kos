@@ -102,10 +102,10 @@ fun empty
  *
  * Example:
  *
- *     > iter.iproduct(2, 3) -> print_elements
- *     [0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2]
- *     > iter.iproduct(3, 2) -> print_elements
- *     [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
+ *     > iter.iproduct(2, 3) -> array
+ *     [[0, 0], [1, 0], [0, 1], [1, 1], [0, 2], [1, 2]]
+ *     > iter.iproduct(3, 2) -> array
+ *     [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]]
  */
 fun iproduct(args...)
 {
@@ -166,8 +166,8 @@ fun iproduct(args...)
  *
  * Example:
  *
- *     > iter.product(range(5, 7), "xyz") -> print_elements
- *     [5, x], [6, x], [5, y], [6, y], [5, z], [6, z]
+ *     > iter.product(range(5, 7), "xyz") -> array
+ *     [[5, x], [6, x], [5, y], [6, y], [5, z], [6, z]]
  */
 fun product(args...)
 {
@@ -252,8 +252,8 @@ fun cycle(iterable)
  *
  * Examples:
  *
- *     > iter.reverse(range(4)) -> print_elements
- *     3, 2, 1, 0
+ *     > iter.reverse(range(4)) -> array
+ *     [3, 2, 1, 0]
  *     > iter.reverse("language")
  *     "egaugnal"
  */
