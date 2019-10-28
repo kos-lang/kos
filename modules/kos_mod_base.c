@@ -68,14 +68,14 @@ static const char str_err_unpack_buf_too_short[]     = "unpacked buffer too shor
 static const char str_err_unsup_operand_types[]      = "unsupported operand types";
 static const char str_err_use_async[]                = "use async to launch threads";
 
-#define TRY_CREATE_CONSTRUCTOR(name, module)                \
-do {                                                        \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, #name);       \
-    TRY(_create_class(ctx,                                  \
-                      module,                               \
-                      KOS_CONST_ID(str_name),               \
-                      _##name##_constructor,                \
-                      ctx->inst->prototypes.name##_proto)); \
+#define TRY_CREATE_CONSTRUCTOR(name, module)               \
+do {                                                       \
+    KOS_DECLARE_STATIC_CONST_STRING(str_name, #name);      \
+    TRY(create_class(ctx,                                  \
+                     module,                               \
+                     KOS_CONST_ID(str_name),               \
+                     name##_constructor,                   \
+                     ctx->inst->prototypes.name##_proto)); \
 } while (0)
 
 #define PROTO(type) (ctx->inst->prototypes.type##_proto)
@@ -93,9 +93,9 @@ do {                                                        \
  * After printing all values prints an EOL character.  If no values are
  * provided, just prints an EOL character.
  */
-static KOS_OBJ_ID _print(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID print(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_VECTOR cstr;
@@ -117,10 +117,10 @@ cleanup:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_ID _object_iterator(KOS_CONTEXT                  ctx,
-                                   KOS_OBJ_ID                   regs_obj,
-                                   KOS_OBJ_ID                   args_obj,
-                                   enum KOS_OBJECT_WALK_DEPTH_E deep)
+static KOS_OBJ_ID object_iterator(KOS_CONTEXT                  ctx,
+                                  KOS_OBJ_ID                   regs_obj,
+                                  KOS_OBJ_ID                   args_obj,
+                                  enum KOS_OBJECT_WALK_DEPTH_E deep)
 {
     int        error  = KOS_SUCCESS;
     int        pushed = 0;
@@ -203,11 +203,11 @@ cleanup:
  *     > [ shallow({x:0, y:1}) ... ]
  *     [["y", 1], ["x", 0]]
  */
-static KOS_OBJ_ID _shallow(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  regs_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID shallow(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  regs_obj,
+                          KOS_OBJ_ID  args_obj)
 {
-    return _object_iterator(ctx, regs_obj, args_obj, KOS_SHALLOW);
+    return object_iterator(ctx, regs_obj, args_obj, KOS_SHALLOW);
 }
 
 /* @item base deep()
@@ -228,18 +228,18 @@ static KOS_OBJ_ID _shallow(KOS_CONTEXT ctx,
  *      ["count", <function>], ["reduce", <function>], ["iterator", <function>],
  *      ["map", <function>], ["y", 1], ["x", 0]]
  */
-static KOS_OBJ_ID _deep(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  regs_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID deep(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  regs_obj,
+                       KOS_OBJ_ID  args_obj)
 {
-    return _object_iterator(ctx, regs_obj, args_obj, KOS_DEEP);
+    return object_iterator(ctx, regs_obj, args_obj, KOS_DEEP);
 }
 
-static int _create_class(KOS_CONTEXT          ctx,
-                         KOS_OBJ_ID           module_obj,
-                         KOS_OBJ_ID           str_name,
-                         KOS_FUNCTION_HANDLER constructor,
-                         KOS_OBJ_ID           prototype)
+static int create_class(KOS_CONTEXT          ctx,
+                        KOS_OBJ_ID           module_obj,
+                        KOS_OBJ_ID           str_name,
+                        KOS_FUNCTION_HANDLER constructor,
+                        KOS_OBJ_ID           prototype)
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID func_obj = KOS_BADPTR;
@@ -296,9 +296,9 @@ cleanup:
  *     > number("0x100")
  *     256
  */
-static KOS_OBJ_ID _number_constructor(KOS_CONTEXT ctx,
-                                      KOS_OBJ_ID  this_obj,
-                                      KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID number_constructor(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -379,9 +379,9 @@ static KOS_OBJ_ID _number_constructor(KOS_CONTEXT ctx,
  *     > integer("123")
  *     123
  */
-static KOS_OBJ_ID _integer_constructor(KOS_CONTEXT ctx,
-                                       KOS_OBJ_ID  this_obj,
-                                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID integer_constructor(KOS_CONTEXT ctx,
+                                      KOS_OBJ_ID  this_obj,
+                                      KOS_OBJ_ID  args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -456,9 +456,9 @@ static KOS_OBJ_ID _integer_constructor(KOS_CONTEXT ctx,
  *     > float("123.5")
  *     123.5
  */
-static KOS_OBJ_ID _float_constructor(KOS_CONTEXT ctx,
-                                     KOS_OBJ_ID  this_obj,
-                                     KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID float_constructor(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  this_obj,
+                                    KOS_OBJ_ID  args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -549,9 +549,9 @@ static KOS_OBJ_ID _float_constructor(KOS_CONTEXT ctx,
  *     > boolean("false")
  *     true
  */
-static KOS_OBJ_ID _boolean_constructor(KOS_CONTEXT ctx,
-                                       KOS_OBJ_ID  this_obj,
-                                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID boolean_constructor(KOS_CONTEXT ctx,
+                                      KOS_OBJ_ID  this_obj,
+                                      KOS_OBJ_ID  args_obj)
 {
     const uint32_t num_args = KOS_get_array_size(args_obj);
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -614,9 +614,9 @@ static KOS_OBJ_ID _boolean_constructor(KOS_CONTEXT ctx,
  *     > string("kos", [108, 97, 110, 103], 32)
  *     "koslang32"
  */
-static KOS_OBJ_ID _string_constructor(KOS_CONTEXT ctx,
-                                      KOS_OBJ_ID  this_obj,
-                                      KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
 {
     int            error      = KOS_SUCCESS;
     int            pushed     = 0;
@@ -809,9 +809,9 @@ cleanup:
  *     > stringify(true, "true", 42, [10, "str"])
  *     "truetrue42[10, str]"
  */
-static KOS_OBJ_ID _stringify(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID stringify(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
@@ -863,9 +863,9 @@ cleanup:
  *     > object()
  *     {}
  */
-static KOS_OBJ_ID _object_constructor(KOS_CONTEXT ctx,
-                                      KOS_OBJ_ID  this_obj,
-                                      KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID object_constructor(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
 {
     return KOS_new_object(ctx);
 }
@@ -937,9 +937,9 @@ static int make_room_in_array(KOS_CONTEXT ctx,
  *     > array({ one: 1, two: 2, three: 3 })
  *     [["one", 1], ["two", 2], ["three", 3]]
  */
-static KOS_OBJ_ID _array_constructor(KOS_CONTEXT ctx,
-                                     KOS_OBJ_ID  this_obj,
-                                     KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  this_obj,
+                                    KOS_OBJ_ID  args_obj)
 {
     int            error      = KOS_SUCCESS;
     const uint32_t num_args   = KOS_get_array_size(args_obj);
@@ -1207,9 +1207,9 @@ cleanup:
  *     > buffer(range(4))
  *     <00 01 02 03>
  */
-static KOS_OBJ_ID _buffer_constructor(KOS_CONTEXT ctx,
-                                      KOS_OBJ_ID  this_obj,
-                                      KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
     int            pushed   = 0;
@@ -1385,9 +1385,9 @@ cleanup:
  *
  * The prototype of `function.prototype` is `object.prototype`.
  */
-static KOS_OBJ_ID _function_constructor(KOS_CONTEXT ctx,
-                                        KOS_OBJ_ID  this_obj,
-                                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID function_constructor(KOS_CONTEXT ctx,
+                                       KOS_OBJ_ID  this_obj,
+                                       KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -1424,9 +1424,9 @@ static KOS_OBJ_ID _function_constructor(KOS_CONTEXT ctx,
  *
  * The prototype of `class.prototype` is `function.prototype`.
  */
-static KOS_OBJ_ID _class_constructor(KOS_CONTEXT ctx,
-                                     KOS_OBJ_ID  this_obj,
-                                     KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID class_constructor(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  this_obj,
+                                    KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -1460,9 +1460,9 @@ static KOS_OBJ_ID _class_constructor(KOS_CONTEXT ctx,
  *
  * The prototype of `generator.prototype` is `function.prototype`.
  */
-static KOS_OBJ_ID _generator_constructor(KOS_CONTEXT ctx,
-                                         KOS_OBJ_ID  this_obj,
-                                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID generator_constructor(KOS_CONTEXT ctx,
+                                        KOS_OBJ_ID  this_obj,
+                                        KOS_OBJ_ID  args_obj)
 {
     KOS_raise_exception_cstring(ctx, str_err_gen_not_callable);
     return KOS_BADPTR;
@@ -1486,9 +1486,9 @@ static KOS_OBJ_ID _generator_constructor(KOS_CONTEXT ctx,
  *
  * The prototype of `exception.prototype` is `object.prototype`.
  */
-static KOS_OBJ_ID _exception_constructor(KOS_CONTEXT ctx,
-                                         KOS_OBJ_ID  this_obj,
-                                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID exception_constructor(KOS_CONTEXT ctx,
+                                        KOS_OBJ_ID  this_obj,
+                                        KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID     exception = KOS_VOID;
     const uint32_t num_args  = KOS_get_array_size(args_obj);
@@ -1515,9 +1515,9 @@ static KOS_OBJ_ID _exception_constructor(KOS_CONTEXT ctx,
  *
  * The prototype of `generator_end.prototype` is `object.prototype`.
  */
-static KOS_OBJ_ID _generator_end_constructor(KOS_CONTEXT ctx,
-                                             KOS_OBJ_ID  this_obj,
-                                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID generator_end_constructor(KOS_CONTEXT ctx,
+                                            KOS_OBJ_ID  this_obj,
+                                            KOS_OBJ_ID  args_obj)
 {
     KOS_raise_generator_end(ctx);
     return KOS_BADPTR;
@@ -1538,9 +1538,9 @@ static KOS_OBJ_ID _generator_end_constructor(KOS_CONTEXT ctx,
  *
  * The prototype of `thread.prototype` is `object.prototype`.
  */
-static KOS_OBJ_ID _thread_constructor(KOS_CONTEXT ctx,
-                                      KOS_OBJ_ID  this_obj,
-                                      KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID thread_constructor(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
 {
     KOS_raise_exception_cstring(ctx, str_err_use_async);
     return KOS_BADPTR;
@@ -1566,9 +1566,9 @@ static KOS_OBJ_ID _thread_constructor(KOS_CONTEXT ctx,
  *     > f.apply(1, [2])
  *     3
  */
-static KOS_OBJ_ID _apply(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID apply(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
 {
     int        error    = KOS_SUCCESS;
     int        pushed   = 0;
@@ -1593,8 +1593,8 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static void _thread_finalize(KOS_CONTEXT ctx,
-                             void       *priv)
+static void thread_finalize(KOS_CONTEXT ctx,
+                            void       *priv)
 {
     if (priv)
         kos_thread_disown((KOS_THREAD *)priv);
@@ -1621,9 +1621,9 @@ static void _thread_finalize(KOS_CONTEXT ctx,
  *     > t.wait()
  *     3
  */
-static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID async(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID  thread_obj = KOS_BADPTR;
     KOS_OBJ_ID  arg_this;
@@ -1663,7 +1663,7 @@ static KOS_OBJ_ID _async(KOS_CONTEXT ctx,
 
     KOS_object_set_private_ptr(thread_obj, thread);
 
-    OBJPTR(OBJECT, thread_obj)->finalize = _thread_finalize;
+    OBJPTR(OBJECT, thread_obj)->finalize = thread_finalize;
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
@@ -1689,9 +1689,9 @@ cleanup:
  *     > t.wait()
  *     42
  */
-static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID wait(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
 {
     KOS_THREAD         *thread;
     KOS_INSTANCE *const inst  = ctx->inst;
@@ -1816,9 +1816,9 @@ static KOS_OBJ_ID _wait(KOS_CONTEXT ctx,
  *     > buffer([1, 2, 3, 4, 5, 6, 7, 8]).slice(-5, -1)
  *     <4, 5, 6, 7>
  */
-static KOS_OBJ_ID _slice(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID slice(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
@@ -1862,9 +1862,9 @@ cleanup:
     return ret;
 }
 
-static KOS_OBJ_ID _expand_for_sort(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  iterable,
-                                   KOS_OBJ_ID  key_func)
+static KOS_OBJ_ID expand_for_sort(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  iterable,
+                                  KOS_OBJ_ID  key_func)
 {
     int            error    = KOS_SUCCESS;
     int            pushed   = 0;
@@ -1926,12 +1926,12 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _is_less_for_sort(KOS_OBJ_ID         left_key,
-                             KOS_OBJ_ID         left_idx,
-                             KOS_COMPARE_RESULT lt,
-                             KOS_COMPARE_RESULT gt,
-                             KOS_OBJ_ID         right_key,
-                             KOS_OBJ_ID         right_idx)
+static int is_less_for_sort(KOS_OBJ_ID         left_key,
+                            KOS_OBJ_ID         left_idx,
+                            KOS_COMPARE_RESULT lt,
+                            KOS_COMPARE_RESULT gt,
+                            KOS_OBJ_ID         right_key,
+                            KOS_OBJ_ID         right_idx)
 {
     const KOS_COMPARE_RESULT cmp = KOS_compare(left_key, right_key);
 
@@ -1947,10 +1947,10 @@ static int _is_less_for_sort(KOS_OBJ_ID         left_key,
         return (intptr_t)left_idx > (intptr_t)right_idx;
 }
 
-static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
-                        KOS_ATOMIC(KOS_OBJ_ID) *end,
-                        int                     step,
-                        int                     reverse)
+static void sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
+                       KOS_ATOMIC(KOS_OBJ_ID) *end,
+                       int                     step,
+                       int                     reverse)
 {
     const KOS_OBJ_ID pivot_key = KOS_atomic_read_relaxed_obj(*(end - step));
     const KOS_OBJ_ID pivot_idx = KOS_atomic_read_relaxed_obj(*(end - step + 1));
@@ -1966,7 +1966,7 @@ static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
         const KOS_OBJ_ID key = KOS_atomic_read_relaxed_obj(p[0]);
         const KOS_OBJ_ID idx = KOS_atomic_read_relaxed_obj(p[1]);
 
-        if (_is_less_for_sort(key, idx, lt, gt, pivot_key, pivot_idx)) {
+        if (is_less_for_sort(key, idx, lt, gt, pivot_key, pivot_idx)) {
 
             mid += step;
 
@@ -1993,7 +1993,7 @@ static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
         const KOS_OBJ_ID key = KOS_atomic_read_relaxed_obj(mid[0]);
         const KOS_OBJ_ID idx = KOS_atomic_read_relaxed_obj(mid[1]);
 
-        if (_is_less_for_sort(pivot_key, pivot_idx, lt, gt, key, idx)) {
+        if (is_less_for_sort(pivot_key, pivot_idx, lt, gt, key, idx)) {
             KOS_atomic_write_relaxed_ptr(end[0], key);
             KOS_atomic_write_relaxed_ptr(end[1], idx);
 
@@ -2010,15 +2010,15 @@ static void _sort_range(KOS_ATOMIC(KOS_OBJ_ID) *begin,
     }
 
     if (begin + step < mid)
-        _sort_range(begin, mid, step, reverse);
+        sort_range(begin, mid, step, reverse);
     if (mid + step < end)
-        _sort_range(mid + step, end + step, step, reverse);
+        sort_range(mid + step, end + step, step, reverse);
 }
 
-static void _copy_sort_results(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  ret,
-                               KOS_OBJ_ID  sorted,
-                               uint32_t    step)
+static void copy_sort_results(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  ret,
+                              KOS_OBJ_ID  sorted,
+                              uint32_t    step)
 {
     KOS_ATOMIC(KOS_OBJ_ID) *src;
     KOS_ATOMIC(KOS_OBJ_ID) *src_end;
@@ -2073,9 +2073,9 @@ static void _copy_sort_results(KOS_CONTEXT ctx,
  *     > [8, 5, 6, 0, 10, 2].sort()
  *     [0, 2, 5, 6, 8, 10]
  */
-static KOS_OBJ_ID _sort(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
 {
     int                     error    = KOS_SUCCESS;
     int                     pushed   = 0;
@@ -2119,17 +2119,17 @@ static KOS_OBJ_ID _sort(KOS_CONTEXT ctx,
 
         TRY(KOS_push_locals(ctx, &pushed, 3, &this_obj, &key, &aux));
 
-        aux = _expand_for_sort(ctx, this_obj, key);
+        aux = expand_for_sort(ctx, this_obj, key);
         TRY_OBJID(aux);
 
         src = kos_get_array_buffer(OBJPTR(ARRAY, aux));
 
-        _sort_range(src,
-                    src + KOS_get_array_size(aux),
-                    (key == KOS_VOID) ? 2 : 3,
-                    (int)KOS_get_bool(reverse));
+        sort_range(src,
+                   src + KOS_get_array_size(aux),
+                   (key == KOS_VOID) ? 2 : 3,
+                   (int)KOS_get_bool(reverse));
 
-        _copy_sort_results(ctx, this_obj, aux, (key == KOS_VOID) ? 2 : 3);
+        copy_sort_results(ctx, this_obj, aux, (key == KOS_VOID) ? 2 : 3);
     }
 
 cleanup:
@@ -2147,9 +2147,9 @@ cleanup:
  *     > [1, 10, 100].size
  *     3
  */
-static KOS_OBJ_ID _get_array_size(KOS_CONTEXT ctx,
-                                  KOS_OBJ_ID  this_obj,
-                                  KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_array_size(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  this_obj,
+                                 KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -2176,9 +2176,9 @@ static KOS_OBJ_ID _get_array_size(KOS_CONTEXT ctx,
  *     > buffer([1, 10, 100]).size
  *     3
  */
-static KOS_OBJ_ID _get_buffer_size(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  this_obj,
-                                   KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_buffer_size(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  this_obj,
+                                  KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -2233,9 +2233,9 @@ static KOS_OBJ_ID _get_buffer_size(KOS_CONTEXT ctx,
  *     > b.resize(5)
  *     <00 00 00 00 00>
  */
-static KOS_OBJ_ID _resize(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  this_obj,
+                         KOS_OBJ_ID  args_obj)
 {
     int        error     = KOS_SUCCESS;
     int        pushed    = 0;
@@ -2365,9 +2365,9 @@ cleanup:
  *     > b.fill(0x20)
  *     <20 20 20 20 20>
  */
-static KOS_OBJ_ID _fill(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID fill(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
@@ -2456,7 +2456,7 @@ typedef int (*KOS_PACK_FORMAT_FUNC)(KOS_CONTEXT               ctx,
                                     unsigned                  size,
                                     unsigned                  count);
 
-static int _is_whitespace(unsigned char_code)
+static int is_whitespace(unsigned char_code)
 {
     return char_code == 0      || /* NUL */
            char_code == 9      || /* TAB */
@@ -2469,9 +2469,9 @@ static int _is_whitespace(unsigned char_code)
            char_code == 0xFEFF;   /* BOM */
 }
 
-static void _pack_format_skip_spaces(KOS_CONTEXT ctx,
-                                     KOS_OBJ_ID  fmt_str,
-                                     unsigned   *i_ptr)
+static void pack_format_skip_spaces(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  fmt_str,
+                                    unsigned   *i_ptr)
 {
     const unsigned size = KOS_get_string_length(fmt_str);
     unsigned       i    = *i_ptr;
@@ -2484,17 +2484,17 @@ static void _pack_format_skip_spaces(KOS_CONTEXT ctx,
         c = KOS_string_get_char_code(ctx, fmt_str, (int)i++);
         assert(c != ~0U);
     }
-    while (i < size && _is_whitespace(c));
+    while (i < size && is_whitespace(c));
 
-    if (i < size || ! _is_whitespace(c))
+    if (i < size || ! is_whitespace(c))
         i--;
 
     *i_ptr = i;
 }
 
-static unsigned _pack_format_get_count(KOS_CONTEXT ctx,
-                                       KOS_OBJ_ID  fmt_str,
-                                       unsigned   *i_ptr)
+static unsigned pack_format_get_count(KOS_CONTEXT ctx,
+                                      KOS_OBJ_ID  fmt_str,
+                                      unsigned   *i_ptr)
 {
     const unsigned size  = KOS_get_string_length(fmt_str);
     unsigned       i     = *i_ptr;
@@ -2527,10 +2527,10 @@ static unsigned _pack_format_get_count(KOS_CONTEXT ctx,
     return count;
 }
 
-static int _process_pack_format(KOS_CONTEXT               ctx,
-                                KOS_OBJ_ID                buffer_obj,
-                                KOS_PACK_FORMAT_FUNC      handler,
-                                struct KOS_PACK_FORMAT_S *fmt)
+static int process_pack_format(KOS_CONTEXT               ctx,
+                               KOS_OBJ_ID                buffer_obj,
+                               KOS_PACK_FORMAT_FUNC      handler,
+                               struct KOS_PACK_FORMAT_S *fmt)
 {
     int            error    = KOS_SUCCESS;
     const unsigned fmt_size = KOS_get_string_length(fmt->fmt_str);
@@ -2547,7 +2547,7 @@ static int _process_pack_format(KOS_CONTEXT               ctx,
         unsigned size  = 1;
         unsigned c;
 
-        _pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
+        pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
 
         if (i_fmt >= fmt_size)
             break;
@@ -2557,10 +2557,10 @@ static int _process_pack_format(KOS_CONTEXT               ctx,
 
         if (c >= '0' && c <= '9') {
             --i_fmt;
-            count = _pack_format_get_count(ctx, fmt->fmt_str, &i_fmt);
+            count = pack_format_get_count(ctx, fmt->fmt_str, &i_fmt);
             assert(count != ~0U);
 
-            _pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
+            pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
 
             if (i_fmt >= fmt_size)
                 RAISE_EXCEPTION(str_err_invalid_pack_format);
@@ -2592,12 +2592,12 @@ static int _process_pack_format(KOS_CONTEXT               ctx,
                 /* fall through */
             case 's': {
                 unsigned next_c;
-                _pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
+                pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
                 next_c = (i_fmt < fmt_size)
                          ? KOS_string_get_char_code(ctx, fmt->fmt_str, (int)i_fmt)
                          : ~0U;
                 if (next_c >= '0' && next_c <= '9') {
-                    size = _pack_format_get_count(ctx, fmt->fmt_str, &i_fmt);
+                    size = pack_format_get_count(ctx, fmt->fmt_str, &i_fmt);
                 }
                 else if (c == 's') {
                     size = ~0U;
@@ -2619,12 +2619,12 @@ cleanup:
     return error;
 }
 
-static int _pack_format(KOS_CONTEXT               ctx,
-                        struct KOS_PACK_FORMAT_S *fmt,
-                        KOS_OBJ_ID                buffer_obj,
-                        char                      value_fmt,
-                        unsigned                  size,
-                        unsigned                  count)
+static int pack_format(KOS_CONTEXT               ctx,
+                       struct KOS_PACK_FORMAT_S *fmt,
+                       KOS_OBJ_ID                buffer_obj,
+                       char                      value_fmt,
+                       unsigned                  size,
+                       unsigned                  count)
 {
     int        error  = KOS_SUCCESS;
     int        pushed = 0;
@@ -2835,12 +2835,12 @@ cleanup:
     return error;
 }
 
-static int _unpack_format(KOS_CONTEXT               ctx,
-                          struct KOS_PACK_FORMAT_S *fmt,
-                          KOS_OBJ_ID                buffer_obj,
-                          char                      value_fmt,
-                          unsigned                  size,
-                          unsigned                  count)
+static int unpack_format(KOS_CONTEXT               ctx,
+                         struct KOS_PACK_FORMAT_S *fmt,
+                         KOS_OBJ_ID                buffer_obj,
+                         char                      value_fmt,
+                         unsigned                  size,
+                         unsigned                  count)
 {
     int            error     = KOS_SUCCESS;
     int            pushed    = 0;
@@ -2977,9 +2977,9 @@ cleanup:
  *
  * TODO - refine format
  */
-static KOS_OBJ_ID _pack(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID pack(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
 {
     int                      error;
     struct KOS_PACK_FORMAT_S fmt;
@@ -2998,7 +2998,7 @@ static KOS_OBJ_ID _pack(KOS_CONTEXT ctx,
     }
 
     if (GET_OBJ_TYPE(fmt.fmt_str) == OBJ_STRING)
-        error = _process_pack_format(ctx, this_obj, _pack_format, &fmt);
+        error = process_pack_format(ctx, this_obj, pack_format, &fmt);
     else {
         KOS_raise_exception_cstring(ctx, str_err_not_string);
         error = KOS_ERROR_EXCEPTION;
@@ -3023,9 +3023,9 @@ static KOS_OBJ_ID _pack(KOS_CONTEXT ctx,
  *
  * TODO - refine format
  */
-static KOS_OBJ_ID _unpack(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  this_obj,
+                         KOS_OBJ_ID  args_obj)
 {
     int                      error;
     struct KOS_PACK_FORMAT_S fmt;
@@ -3067,7 +3067,7 @@ static KOS_OBJ_ID _unpack(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(fmt.fmt_str) != OBJ_STRING)
         RAISE_EXCEPTION(str_err_not_string);
 
-    TRY(_process_pack_format(ctx, this_obj, _unpack_format, &fmt));
+    TRY(process_pack_format(ctx, this_obj, unpack_format, &fmt));
 
 cleanup:
     return error ? KOS_BADPTR : fmt.data;
@@ -3115,9 +3115,9 @@ cleanup:
  *     > dst.copy_buffer(2, src)
  *     <01 01 02 02 02>
  */
-static KOS_OBJ_ID _copy_buffer(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
 {
     int            error      = KOS_SUCCESS;
     const uint32_t num_args   = KOS_get_array_size(args_obj);
@@ -3250,9 +3250,9 @@ cleanup:
  *
  * Returns the buffer object itself (`this`).
  */
-static KOS_OBJ_ID _reserve(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID reserve(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     int        error  = KOS_SUCCESS;
     int        pushed = 0;
@@ -3296,9 +3296,9 @@ cleanup:
  * `array.prototype.insert_array()` requires the iterable argument to be
  * an array.
  */
-static KOS_OBJ_ID _insert_array(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID insert_array(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  this_obj,
+                               KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
     const uint32_t num_args = KOS_get_array_size(args_obj);
@@ -3374,9 +3374,9 @@ cleanup:
  *     > [1, 2, 3, 4, 5].pop()
  *     5
  */
-static KOS_OBJ_ID _pop(KOS_CONTEXT ctx,
-                       KOS_OBJ_ID  this_obj,
-                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID pop(KOS_CONTEXT ctx,
+                      KOS_OBJ_ID  this_obj,
+                      KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
     KOS_OBJ_ID     ret      = KOS_BADPTR;
@@ -3432,9 +3432,9 @@ cleanup:
  *     > [1, 1, 1].push(10, 20)
  *     3
  */
-static KOS_OBJ_ID _push(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID push(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
 {
     int            error    = KOS_SUCCESS;
     int            pushed   = 0;
@@ -3489,9 +3489,9 @@ cleanup:
  *     > "foobar".ends_with("foo")
  *     false
  */
-static KOS_OBJ_ID _ends_with(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID ends_with(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID arg;
@@ -3539,9 +3539,9 @@ cleanup:
  *     > "foo".repeat(5)
  *     "foofoofoofoofoo"
  */
-static KOS_OBJ_ID _repeat(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID repeat(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  this_obj,
+                         KOS_OBJ_ID  args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID arg   = KOS_array_read(ctx, args_obj, 0);
@@ -3592,9 +3592,9 @@ cleanup:
  *     > "language".find("g", -3)
  *     6
  */
-static KOS_OBJ_ID _find(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID find(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
 {
     int        error   = KOS_SUCCESS;
     int        pos     = 0;
@@ -3651,9 +3651,9 @@ cleanup:
  *     > "language".find("a", 4)
  *     1
  */
-static KOS_OBJ_ID _rfind(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID rfind(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
 {
     int        error   = KOS_SUCCESS;
     int        pos     = -1;
@@ -3724,9 +3724,9 @@ cleanup:
  *     > "language".scan("uga", -5, false)
  *     7
  */
-static KOS_OBJ_ID _scan(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID scan(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
 {
     int                     error   = KOS_SUCCESS;
     int                     pos     = 0;
@@ -3808,9 +3808,9 @@ cleanup:
  *     > "language".rscan("uga", -2, false)
  *     2
  */
-static KOS_OBJ_ID _rscan(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID rscan(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
 {
     int                     error   = KOS_SUCCESS;
     int                     pos     = -1;
@@ -3891,9 +3891,9 @@ cleanup:
  *     > "language".code(-2)
  *     103
  */
-static KOS_OBJ_ID _code(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID code(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
@@ -3939,9 +3939,9 @@ cleanup:
  *     > "foobar".starts_with("bar")
  *     false
  */
-static KOS_OBJ_ID _starts_with(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID starts_with(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID arg;
@@ -3986,9 +3986,9 @@ cleanup:
  *     > "Text 123 stRIng".lowercase()
  *     "text 123 string"
  */
-static KOS_OBJ_ID _lowercase(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID lowercase(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
 {
     return KOS_string_lowercase(ctx, this_obj);
 }
@@ -4007,9 +4007,9 @@ static KOS_OBJ_ID _lowercase(KOS_CONTEXT ctx,
  *     > "Text 123 stRIng".uppercase()
  *     "TEXT 123 STRING"
  */
-static KOS_OBJ_ID _uppercase(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID uppercase(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
 {
     return KOS_string_uppercase(ctx, this_obj);
 }
@@ -4025,9 +4025,9 @@ static KOS_OBJ_ID _uppercase(KOS_CONTEXT ctx,
  *     > "rain\x{2601}".size
  *     5
  */
-static KOS_OBJ_ID _get_string_size(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  this_obj,
-                                   KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_string_size(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  this_obj,
+                                  KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -4052,9 +4052,9 @@ static KOS_OBJ_ID _get_string_size(KOS_CONTEXT ctx,
  *     > "kos".reverse()
  *     "sok"
  */
-static KOS_OBJ_ID _reverse(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID reverse(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     return KOS_string_reverse(ctx, this_obj);
 }
@@ -4065,9 +4065,9 @@ static KOS_OBJ_ID _reverse(KOS_CONTEXT ctx,
  *
  * Read-only line at which the function was defined in the source code.
  */
-static KOS_OBJ_ID _get_function_line(KOS_CONTEXT ctx,
-                                     KOS_OBJ_ID  this_obj,
-                                     KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_function_line(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  this_obj,
+                                    KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID     ret  = KOS_BADPTR;
     const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
@@ -4099,9 +4099,9 @@ static KOS_OBJ_ID _get_function_line(KOS_CONTEXT ctx,
  *     > count.name
  *     "count"
  */
-static KOS_OBJ_ID _get_function_name(KOS_CONTEXT ctx,
-                                     KOS_OBJ_ID  this_obj,
-                                     KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_function_name(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  this_obj,
+                                    KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID     ret  = KOS_BADPTR;
     const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
@@ -4137,9 +4137,9 @@ static KOS_OBJ_ID _get_function_name(KOS_CONTEXT ctx,
  *     > count.instructions
  *     26
  */
-static KOS_OBJ_ID _get_instructions(KOS_CONTEXT ctx,
-                                    KOS_OBJ_ID  this_obj,
-                                    KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_instructions(KOS_CONTEXT ctx,
+                                   KOS_OBJ_ID  this_obj,
+                                   KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID     ret  = KOS_BADPTR;
     const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
@@ -4174,9 +4174,9 @@ static KOS_OBJ_ID _get_instructions(KOS_CONTEXT ctx,
  *     > count.size
  *     133
  */
-static KOS_OBJ_ID _get_code_size(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_code_size(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID     ret  = KOS_BADPTR;
     const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
@@ -4221,9 +4221,9 @@ static KOS_OBJ_ID _get_code_size(KOS_CONTEXT ctx,
  *     > count.registers
  *     5
  */
-static KOS_OBJ_ID _get_registers(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_registers(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID     ret  = KOS_BADPTR;
     const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
@@ -4246,9 +4246,9 @@ static KOS_OBJ_ID _get_registers(KOS_CONTEXT ctx,
  *
  * Prints the exception object on stdout.
  */
-static KOS_OBJ_ID _print_exception(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  this_obj,
-                                   KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID print_exception(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  this_obj,
+                                  KOS_OBJ_ID  args_obj)
 {
     int error;
 
@@ -4275,10 +4275,10 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 
     TRY(KOS_push_locals(ctx, &pushed, 1, &module));
 
-    TRY_ADD_FUNCTION( ctx, module, "print",      _print,     0);
-    TRY_ADD_FUNCTION( ctx, module, "stringify",  _stringify, 0);
-    TRY_ADD_GENERATOR(ctx, module, "deep",       _deep,      1);
-    TRY_ADD_GENERATOR(ctx, module, "shallow",    _shallow,   1);
+    TRY_ADD_FUNCTION( ctx, module, "print",      print,     0);
+    TRY_ADD_FUNCTION( ctx, module, "stringify",  stringify, 0);
+    TRY_ADD_GENERATOR(ctx, module, "deep",       deep,      1);
+    TRY_ADD_GENERATOR(ctx, module, "shallow",    shallow,   1);
 
     TRY_ADD_GLOBAL(   ctx, module, "args",       ctx->inst->args);
 
@@ -4297,50 +4297,50 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_CREATE_CONSTRUCTOR(string,        module);
     TRY_CREATE_CONSTRUCTOR(thread,        module);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "insert_array",  _insert_array,      2);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "fill",          _fill,              1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "pop",           _pop,               0);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "push",          _push,              0);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "reserve",       _reserve,           1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "resize",        _resize,            1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "slice",         _slice,             2);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "sort",          _sort,              0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(array),      "size",          _get_array_size,    0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "insert_array",  insert_array,      2);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "fill",          fill,              1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "pop",           pop,               0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "push",          push,              0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "reserve",       reserve,           1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "resize",        resize,            1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "slice",         slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "sort",          sort,              0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(array),      "size",          get_array_size,    0);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "copy_buffer",   _copy_buffer,       1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "fill",          _fill,              1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "pack",          _pack,              1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "reserve",       _reserve,           1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "resize",        _resize,            1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "slice",         _slice,             2);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "unpack",        _unpack,            1);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(buffer),     "size",          _get_buffer_size,   0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "copy_buffer",   copy_buffer,       1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "fill",          fill,              1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "pack",          pack,              1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "reserve",       reserve,           1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "resize",        resize,            1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "slice",         slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(buffer),     "unpack",        unpack,            1);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(buffer),     "size",          get_buffer_size,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(exception),  "print",         _print_exception,   0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(exception),  "print",         print_exception,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "apply",         _apply,             2);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "async",         _async,             2);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "instructions",  _get_instructions,  0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "line",          _get_function_line, 0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "name",          _get_function_name, 0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "registers",     _get_registers,     0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "size",          _get_code_size,     0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "apply",         apply,             2);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(function),   "async",         async,             2);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "instructions",  get_instructions,  0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "line",          get_function_line, 0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "name",          get_function_name, 0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "registers",     get_registers,     0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "size",          get_code_size,     0);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "ends_with",     _ends_with,         1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "find",          _find,              1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "code",          _code,              0);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "lowercase",     _lowercase,         0);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "repeat",        _repeat,            1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "rfind",         _rfind,             1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "rscan",         _rscan,             1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "reverse",       _reverse,           0);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "scan",          _scan,              1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "slice",         _slice,             2);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "starts_with",   _starts_with,       1);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "uppercase",     _uppercase,         0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(string),     "size",          _get_string_size,   0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "ends_with",     ends_with,         1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "find",          find,              1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "code",          code,              0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "lowercase",     lowercase,         0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "repeat",        repeat,            1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "rfind",         rfind,             1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "rscan",         rscan,             1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "reverse",       reverse,           0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "scan",          scan,              1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "slice",         slice,             2);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "starts_with",   starts_with,       1);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(string),     "uppercase",     uppercase,         0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(string),     "size",          get_string_size,   0);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(thread),     "wait",          _wait,              0);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(thread),     "wait",          wait,              0);
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
