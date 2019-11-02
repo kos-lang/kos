@@ -54,9 +54,9 @@ static const char str_err_pow_0_0[]       = "0 to the power of 0";
  *     > math.abs(-math.infinity)
  *     infinity
  */
-static KOS_OBJ_ID _abs(KOS_CONTEXT ctx,
-                       KOS_OBJ_ID  this_obj,
-                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_abs(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
@@ -97,9 +97,9 @@ static KOS_OBJ_ID _abs(KOS_CONTEXT ctx,
  *     > math.ceil(-0.1)
  *     -0.0
  */
-static KOS_OBJ_ID _ceil(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_ceil(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
@@ -142,9 +142,9 @@ static KOS_OBJ_ID _ceil(KOS_CONTEXT ctx,
  *     > math.exp(-1)
  *     0.367879441171442
  */
-static KOS_OBJ_ID _exp(KOS_CONTEXT ctx,
-                       KOS_OBJ_ID  this_obj,
-                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_exp(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID  ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
@@ -181,9 +181,9 @@ static KOS_OBJ_ID _exp(KOS_CONTEXT ctx,
  *     > math.expm1(2)
  *     6.38905609893065
  */
-static KOS_OBJ_ID _expm1(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_expm1(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID  ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
@@ -221,9 +221,9 @@ static KOS_OBJ_ID _expm1(KOS_CONTEXT ctx,
  *     > math.floor(-0.1)
  *     -1.0
  */
-static KOS_OBJ_ID _floor(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_floor(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
@@ -267,9 +267,9 @@ static KOS_OBJ_ID _floor(KOS_CONTEXT ctx,
  *     > math.is_infinity(1e60)
  *     false
  */
-static KOS_OBJ_ID _is_infinity(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_is_infinity(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  this_obj,
+                                  KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
@@ -305,9 +305,9 @@ static KOS_OBJ_ID _is_infinity(KOS_CONTEXT ctx,
  *     > math.is_nan([])
  *     false
  */
-static KOS_OBJ_ID _is_nan(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_is_nan(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
@@ -346,9 +346,9 @@ static KOS_OBJ_ID _is_nan(KOS_CONTEXT ctx,
  *     > math.pow(10, -2)
  *     0.01
  */
-static KOS_OBJ_ID _pow(KOS_CONTEXT ctx,
-                       KOS_OBJ_ID  this_obj,
-                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_pow(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     int         error = KOS_SUCCESS;
     KOS_OBJ_ID  ret   = KOS_BADPTR;
@@ -406,9 +406,9 @@ cleanup:
  *     > math.sqrt(4)
  *     2.0
  */
-static KOS_OBJ_ID _sqrt(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_sqrt(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
 {
     int         error = KOS_SUCCESS;
     KOS_OBJ_ID  ret   = KOS_BADPTR;
@@ -478,15 +478,15 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
         TRY_ADD_GLOBAL(ctx, module, "nan", value_obj);
     }
 
-    TRY_ADD_FUNCTION(ctx, module, "abs",         _abs,         1);
-    TRY_ADD_FUNCTION(ctx, module, "ceil",        _ceil,        1);
-    TRY_ADD_FUNCTION(ctx, module, "exp",         _exp,         1);
-    TRY_ADD_FUNCTION(ctx, module, "expm1",       _expm1,       1);
-    TRY_ADD_FUNCTION(ctx, module, "floor",       _floor,       1);
-    TRY_ADD_FUNCTION(ctx, module, "is_infinity", _is_infinity, 1);
-    TRY_ADD_FUNCTION(ctx, module, "is_nan",      _is_nan,      1);
-    TRY_ADD_FUNCTION(ctx, module, "pow",         _pow,         2);
-    TRY_ADD_FUNCTION(ctx, module, "sqrt",        _sqrt,        1);
+    TRY_ADD_FUNCTION(ctx, module, "abs",         kos_abs,         1);
+    TRY_ADD_FUNCTION(ctx, module, "ceil",        kos_ceil,        1);
+    TRY_ADD_FUNCTION(ctx, module, "exp",         kos_exp,         1);
+    TRY_ADD_FUNCTION(ctx, module, "expm1",       kos_expm1,       1);
+    TRY_ADD_FUNCTION(ctx, module, "floor",       kos_floor,       1);
+    TRY_ADD_FUNCTION(ctx, module, "is_infinity", kos_is_infinity, 1);
+    TRY_ADD_FUNCTION(ctx, module, "is_nan",      kos_is_nan,      1);
+    TRY_ADD_FUNCTION(ctx, module, "pow",         kos_pow,         2);
+    TRY_ADD_FUNCTION(ctx, module, "sqrt",        kos_sqrt,        1);
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
