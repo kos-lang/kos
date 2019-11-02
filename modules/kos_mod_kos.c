@@ -77,9 +77,9 @@ static void finalize(KOS_CONTEXT ctx,
         kos_free(priv);
 }
 
-static KOS_OBJ_ID _raw_lexer(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  regs_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  regs_obj,
+                            KOS_OBJ_ID  args_obj)
 {
     int                 error        = KOS_SUCCESS;
     KOS_OBJ_ID          retval       = KOS_BADPTR;
@@ -344,7 +344,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 
     TRY(KOS_push_locals(ctx, &pushed, 1, &module));
 
-    TRY_ADD_GENERATOR(       ctx, module, "raw_lexer",    _raw_lexer, 1);
+    TRY_ADD_GENERATOR(       ctx, module, "raw_lexer", raw_lexer, 1);
 
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "version_major",        KOS_VERSION_MAJOR);
     TRY_ADD_INTEGER_CONSTANT(ctx, module, "version_minor",        KOS_VERSION_MINOR);
