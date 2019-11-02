@@ -606,15 +606,23 @@ static void _pcg_init(struct KOS_RNG_PCG32 *pcg,
 
 void kos_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
 {
-#define BITS64_U64(x) ((x)<<60) | ((x)<<56) | ((x)<<52) | ((x)<<48) | \
-                      ((x)<<44) | ((x)<<40) | ((x)<<36) | ((x)<<32) | \
-                      ((x)<<28) | ((x)<<24) | ((x)<<20) | ((x)<<16) | \
-                      ((x)<<12) | ((x)<<8)  | ((x)<<4)  | ((x)<<0)
-#define BITS64(y) ((uint64_t)BITS64_U64((uint64_t)(y)))
-    _pcg_init(&rng->pcg[0], seed & BITS64(0x4U), seed & BITS64(0x1U));
-    _pcg_init(&rng->pcg[1], seed & BITS64(0x8U), seed & BITS64(0x2U));
-#undef BITS64
-#undef BITS64_U64
+    struct KOS_RNG_PCG32 init_pcg;
+    int                  ipcg;
+
+    _pcg_init(&init_pcg, seed, ~seed);
+
+    for (ipcg = 0; ipcg < 2; ipcg++) {
+
+        uint32_t new_seed[4];
+        int      iseed;
+
+        for (iseed = 0; iseed < 4; iseed++)
+            new_seed[iseed] = _pcg_random(&init_pcg);
+
+        _pcg_init(&rng->pcg[ipcg],
+                  ((uint64_t)new_seed[0] << 32) | new_seed[1],
+                  ((uint64_t)new_seed[2] << 32) | new_seed[3]);
+    }
 }
 
 void kos_rng_init(struct KOS_RNG *rng)
