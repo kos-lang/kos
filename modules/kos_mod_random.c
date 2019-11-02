@@ -81,9 +81,9 @@ static void finalize(KOS_CONTEXT ctx,
  *     > r.integer()
  *     -474045495260715754
  */
-static KOS_OBJ_ID _random(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID random(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  this_obj,
+                         KOS_OBJ_ID  args_obj)
 {
     int                error    = KOS_SUCCESS;
     KOS_RNG_CONTAINER *rng      = 0;
@@ -141,9 +141,9 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _get_rng(KOS_CONTEXT         ctx,
-                    KOS_OBJ_ID          this_obj,
-                    KOS_RNG_CONTAINER **rng)
+static int get_rng(KOS_CONTEXT         ctx,
+                   KOS_OBJ_ID          this_obj,
+                   KOS_RNG_CONTAINER **rng)
 {
     int                error = KOS_SUCCESS;
     KOS_RNG_CONTAINER *rng_ptr;
@@ -187,9 +187,9 @@ cleanup:
  *     > r.integer(-10, 10)
  *     -2
  */
-static KOS_OBJ_ID _rand_integer(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  this_obj,
+                               KOS_OBJ_ID  args_obj)
 {
     KOS_RNG_CONTAINER *rng       = 0;
     int                error     = KOS_SUCCESS;
@@ -198,7 +198,7 @@ static KOS_OBJ_ID _rand_integer(KOS_CONTEXT ctx,
     int64_t            min_value = 0;
     int64_t            max_value = 0;
 
-    TRY(_get_rng(ctx, this_obj, &rng));
+    TRY(get_rng(ctx, this_obj, &rng));
 
     if (KOS_get_array_size(args_obj) == 1)
         RAISE_EXCEPTION(str_err_no_max_value);
@@ -257,9 +257,9 @@ cleanup:
  *     > r.float()
  *     0.782519239019594
  */
-static KOS_OBJ_ID _rand_float(KOS_CONTEXT ctx,
-                              KOS_OBJ_ID  this_obj,
-                              KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID rand_float(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
 {
     KOS_RNG_CONTAINER *rng   = 0;
     int                error = KOS_SUCCESS;
@@ -267,7 +267,7 @@ static KOS_OBJ_ID _rand_float(KOS_CONTEXT ctx,
 
     value.i = 0;
 
-    TRY(_get_rng(ctx, this_obj, &rng));
+    TRY(get_rng(ctx, this_obj, &rng));
 
     kos_spin_lock(&rng->lock);
 
@@ -293,9 +293,9 @@ int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 
     TRY(KOS_push_locals(ctx, &pushed, 2, &module, &proto));
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module,        "random",  _random,       0, &proto);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "integer", _rand_integer, 0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "float",   _rand_float,   0);
+    TRY_ADD_CONSTRUCTOR(    ctx, module,        "random",  random,       0, &proto);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "integer", rand_integer, 0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "float",   rand_float,   0);
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
