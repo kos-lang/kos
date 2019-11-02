@@ -39,7 +39,7 @@
 #   include <unistd.h>
 #endif
 
-static void _fix_path_separators(KOS_VECTOR *buf)
+static void fix_path_separators(KOS_VECTOR *buf)
 {
     char       *ptr = buf->buffer;
     char *const end = ptr + buf->size;
@@ -59,9 +59,9 @@ static void _fix_path_separators(KOS_VECTOR *buf)
  *
  * Returns `true` if `pathname` exists and is a file, or `false` otherwise.
  */
-static KOS_OBJ_ID _is_file(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID is_file(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     int        error        = KOS_SUCCESS;
     KOS_OBJ_ID ret          = KOS_BADPTR;
@@ -74,7 +74,7 @@ static KOS_OBJ_ID _is_file(KOS_CONTEXT ctx,
 
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
-    _fix_path_separators(&filename_cstr);
+    fix_path_separators(&filename_cstr);
 
     ret = KOS_BOOL(kos_does_file_exist(filename_cstr.buffer));
 
@@ -94,9 +94,9 @@ cleanup:
  * the file could not be deleted or if it did not exist in the first
  * place.
  */
-static KOS_OBJ_ID _remove(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  this_obj,
+                         KOS_OBJ_ID  args_obj)
 {
     int        error        = KOS_SUCCESS;
     KOS_OBJ_ID ret          = KOS_BADPTR;
@@ -109,7 +109,7 @@ static KOS_OBJ_ID _remove(KOS_CONTEXT ctx,
 
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
-    _fix_path_separators(&filename_cstr);
+    fix_path_separators(&filename_cstr);
 
 #ifdef _WIN32
     ret = KOS_BOOL(DeleteFile(filename_cstr.buffer));
@@ -130,8 +130,8 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 
     TRY(KOS_push_locals(ctx, &pushed, 1, &module));
 
-    TRY_ADD_FUNCTION(ctx, module, "is_file", _is_file, 1);
-    TRY_ADD_FUNCTION(ctx, module, "remove",  _remove,  1);
+    TRY_ADD_FUNCTION(ctx, module, "is_file", is_file, 1);
+    TRY_ADD_FUNCTION(ctx, module, "remove",  remove,  1);
 
 cleanup:
     KOS_pop_locals(ctx, pushed);
