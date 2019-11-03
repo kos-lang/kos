@@ -453,7 +453,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
     {
         int pushed = 0;
-        TRY(KOS_push_locals(ctx, &pushed, 2, &arg, &print_args));
+        TRY(KOS_push_locals(ctx, &pushed, 4, &this_obj, &args_obj, &arg, &print_args));
     }
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
