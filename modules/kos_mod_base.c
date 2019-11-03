@@ -3898,7 +3898,7 @@ static KOS_OBJ_ID code(KOS_CONTEXT ctx,
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
     int64_t    idx   = 0;
-    unsigned   code;
+    unsigned   char_code;
 
     if (KOS_get_array_size(args_obj) > 0) {
 
@@ -3911,11 +3911,11 @@ static KOS_OBJ_ID code(KOS_CONTEXT ctx,
             RAISE_EXCEPTION(str_err_invalid_string_idx);
     }
 
-    code = KOS_string_get_char_code(ctx, this_obj, (int)idx);
-    if (code == ~0U)
+    char_code = KOS_string_get_char_code(ctx, this_obj, (int)idx);
+    if (char_code == ~0U)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-    ret = KOS_new_int(ctx, (int64_t)code);
+    ret = KOS_new_int(ctx, (int64_t)char_code);
 
 cleanup:
     return error ? KOS_BADPTR : ret;
