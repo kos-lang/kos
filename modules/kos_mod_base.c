@@ -104,12 +104,16 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
 
     TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
+    KOS_suspend_context(ctx);
+
     if (cstr.size) {
         cstr.buffer[cstr.size - 1] = '\n';
         fwrite(cstr.buffer, 1, cstr.size, stdout);
     }
     else
         printf("\n");
+
+    KOS_resume_context(ctx);
 
 cleanup:
     kos_vector_destroy(&cstr);

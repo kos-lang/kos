@@ -28,8 +28,10 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
-#include "../core/kos_system.h"
 #include "../core/kos_memory.h"
+#include "../core/kos_const_strings.h"
+#include "../core/kos_object_internal.h"
+#include "../core/kos_system.h"
 #include "../core/kos_try.h"
 #include <limits.h>
 #include <stdio.h>
@@ -141,7 +143,11 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
         TRY(KOS_string_to_cstr_vec(ctx, flags_obj, &flags_cstr));
     }
 
+    KOS_suspend_context(ctx);
+
     file = fopen(filename_cstr.buffer, flags_cstr.size ? flags_cstr.buffer : "r+b");
+
+    KOS_resume_context(ctx);
 
     if ( ! file)
         RAISE_EXCEPTION(str_err_cannot_open_file);
@@ -244,12 +250,20 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
 
         TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
+        kos_track_refs(ctx, 1, &this_obj);
+
+        KOS_suspend_context(ctx);
+
         if (cstr.size) {
             cstr.buffer[cstr.size - 1] = '\n';
             fwrite(cstr.buffer, 1, cstr.size, file);
         }
         else
             fprintf(file, "\n");
+
+        KOS_resume_context(ctx);
+
+        kos_untrack_refs(ctx, 1);
     }
 
 cleanup:
@@ -311,6 +325,8 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
         size_delta = (int)iarg + 1;
     }
 
+    KOS_suspend_context(ctx);
+
     do {
         char *ret;
 
@@ -331,6 +347,8 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
     } while (num_read != 0 &&
              num_read+1 == size_delta &&
              ! is_eol(buf.buffer[last_size-1]));
+
+    KOS_resume_context(ctx);
 
     line = KOS_new_string(ctx, buf.buffer, (unsigned)last_size);
 
@@ -365,6 +383,7 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     int        error = KOS_SUCCESS;
     FILE      *file  = 0;
     KOS_OBJ_ID buf   = KOS_BADPTR;
+    uint8_t   *data;
     uint32_t   offset;
     int64_t    to_read;
     size_t     num_read;
@@ -407,7 +426,16 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
 
     TRY(KOS_buffer_resize(ctx, buf, (unsigned)(offset + to_read)));
 
-    num_read = fread(KOS_buffer_data_volatile(buf)+offset, 1, (size_t)to_read, file);
+    data = KOS_buffer_data(ctx, buf);
+
+    if ( ! data)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+    KOS_suspend_context(ctx);
+
+    num_read = fread(data + offset, 1, (size_t)to_read, file);
+
+    KOS_resume_context(ctx);
 
     assert(num_read <= (size_t)to_read);
 
@@ -469,8 +497,30 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
             const size_t to_write = (size_t)KOS_get_buffer_size(arg);
 
-            if (to_write > 0)
-                num_writ = fwrite(KOS_buffer_data_volatile(arg), 1, to_write, file);
+            if (to_write > 0) {
+
+                uint8_t *data = KOS_buffer_data_volatile(arg);
+
+                if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg)->data))) {
+
+                    if (kos_vector_resize(&cstr, to_write)) {
+                        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                    }
+
+                    memcpy(cstr.buffer, data, to_write);
+                    data = (uint8_t *)cstr.buffer;
+                }
+                else {
+                    assert(kos_is_tracked_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg)->data)));
+                }
+
+                KOS_suspend_context(ctx);
+
+                num_writ = fwrite(data, 1, to_write, file);
+
+                KOS_resume_context(ctx);
+            }
 
             if (num_writ < to_write)
                 RAISE_EXCEPTION(str_err_file_write); /* TODO error from errno */
@@ -488,7 +538,9 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
             if (cstr.size) {
                 KOS_suspend_context(ctx);
+
                 num_writ = fwrite(cstr.buffer, 1, cstr.size - 1, file);
+
                 KOS_resume_context(ctx);
             }
 
@@ -600,7 +652,11 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
+    KOS_suspend_context(ctx);
+
     pos = ftell(file);
+
+    KOS_resume_context(ctx);
 
     if (pos < 0)
         RAISE_EXCEPTION(str_err_cannot_get_position);
@@ -644,8 +700,12 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     if (pos < 0)
         whence = SEEK_END;
 
+    KOS_suspend_context(ctx);
+
     if (fseek(file, (long)pos, whence))
         RAISE_EXCEPTION(str_err_cannot_set_position);
+
+    KOS_resume_context(ctx);
 
 cleanup:
     return error ? KOS_BADPTR : this_obj;
