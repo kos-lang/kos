@@ -210,6 +210,44 @@ int KOS_buffer_resize(KOS_CONTEXT ctx,
     return error;
 }
 
+uint8_t *KOS_buffer_data(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  obj_id)
+{
+    uint8_t *ret = 0;
+
+    if (IS_BAD_PTR(obj_id))
+        KOS_raise_exception_cstring(ctx, str_err_null_ptr);
+    else if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
+        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+    else {
+
+        KOS_OBJ_ID buf_id = get_storage(obj_id);
+
+        if (IS_BAD_PTR(buf_id) || kos_is_heap_object(buf_id)) {
+
+            int error;
+
+            kos_track_refs(ctx, 1, &obj_id);
+
+            error = KOS_buffer_reserve(ctx, obj_id, KOS_MAX_HEAP_OBJ_SIZE * 2U);
+
+            kos_untrack_refs(ctx, 1);
+
+            if (error)
+                goto cleanup;
+
+            buf_id = get_storage(obj_id);
+        }
+
+        assert(kos_is_tracked_object(buf_id) && ! kos_is_heap_object(buf_id));
+
+        ret = &OBJPTR(BUFFER_STORAGE, buf_id)->buf[0];
+    }
+
+cleanup:
+    return ret;
+}
+
 uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id,
                               unsigned    size_delta)

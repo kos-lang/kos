@@ -76,6 +76,9 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id,
                               unsigned    size_delta);
 
+uint8_t *KOS_buffer_data(KOS_CONTEXT ctx,
+                         KOS_OBJ_ID  obj_id);
+
 int KOS_buffer_fill(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id,
                     int64_t     begin,
