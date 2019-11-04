@@ -124,7 +124,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 128);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(buf);
+        data = KOS_buffer_data_volatile(buf);
 
         for (i = 0; i < 128; i++)
             data[0] = (uint8_t)i;
@@ -148,7 +148,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 0);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(buf);
+        data = KOS_buffer_data_volatile(buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
 
@@ -158,7 +158,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 100);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(buf);
+        data = KOS_buffer_data_volatile(buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
     }
@@ -215,7 +215,7 @@ int main(void)
         TEST(KOS_buffer_fill(ctx, buf, 0, -1, 0x55) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(buf);
+        data = KOS_buffer_data_volatile(buf);
         TEST(data);
 
         for (i = 0; i < 127; i++)
@@ -229,7 +229,7 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 512);
 
-        data = KOS_buffer_data(buf);
+        data = KOS_buffer_data_volatile(buf);
         TEST(data);
 
         for (i = 0; i < 90; i++)
@@ -238,7 +238,7 @@ int main(void)
         TEST(KOS_buffer_fill(ctx, buf, -500, 50, 0xAA) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data(buf);
+        data = KOS_buffer_data_volatile(buf);
         TEST(data);
 
         for (i = 0; i < 12; i++)
@@ -280,7 +280,7 @@ int main(void)
         TEST_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 3);
 
-        data = KOS_buffer_data(buf);
+        data = KOS_buffer_data_volatile(buf);
         TEST(data[0] == 0x51);
         TEST(data[1] == 0x52);
         TEST(data[2] == 0x40);
@@ -308,7 +308,7 @@ int main(void)
 
         TEST(KOS_buffer_copy(ctx, buf1, 2, buf2, -4, 4) == KOS_SUCCESS);
 
-        data = KOS_buffer_data(buf1);
+        data = KOS_buffer_data_volatile(buf1);
         for (i = 0; i < 2; i++)
             TEST(data[i] == 1);
         for (i = 2; i < 5; i++)
@@ -318,7 +318,7 @@ int main(void)
 
         TEST(KOS_buffer_copy(ctx, buf1, -2, buf2, -100, 100) == KOS_SUCCESS);
 
-        data = KOS_buffer_data(buf1);
+        data = KOS_buffer_data_volatile(buf1);
         for (i = 0; i < 2; i++)
             TEST(data[i] == 1);
         for (i = 2; i < 5; i++)
@@ -328,7 +328,7 @@ int main(void)
         for (i = 8; i < 10; i++)
             TEST(data[i] == 2);
 
-        data = KOS_buffer_data(buf2);
+        data = KOS_buffer_data_volatile(buf2);
         for (i = 0; i < 5; i++)
             TEST(data[i] == 2);
 
@@ -367,7 +367,7 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf1) == 10);
 
-        data = KOS_buffer_data(buf1);
+        data = KOS_buffer_data_volatile(buf1);
         for (i = 0; i < 10; i++)
             data[i] = (uint8_t)i;
 
@@ -381,7 +381,7 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf2) == 4);
 
-        data = KOS_buffer_data(buf2);
+        data = KOS_buffer_data_volatile(buf2);
 
         TEST(data[0] == 6);
         TEST(data[1] == 7);

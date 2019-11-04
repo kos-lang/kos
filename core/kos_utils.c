@@ -756,7 +756,7 @@ static int _vector_append_buffer(KOS_CONTEXT ctx,
     TRY(kos_append_cstr(ctx, cstr_vec, str_buffer_open, sizeof(str_buffer_open)-1));
 
     dest = cstr_vec->buffer + cstr_vec->size - 1;
-    src  = KOS_buffer_data(obj_id);
+    src  = KOS_buffer_data_volatile(obj_id);
     end  = src + size;
 
     while (src < end) {
@@ -1206,7 +1206,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
             TRY(KOS_array_resize(ctx, array, cur_size + size));
 
             if (size) {
-                buf = KOS_buffer_data(value);
+                buf = KOS_buffer_data_volatile(value);
                 assert(buf);
             }
 
@@ -1350,8 +1350,11 @@ static KOS_COMPARE_RESULT _compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
     const uint32_t a_size   = KOS_get_buffer_size(a);
     const uint32_t b_size   = KOS_get_buffer_size(b);
     const uint32_t cmp_size = KOS_min(a_size, b_size);
+    const int      min_cmp  = memcmp(KOS_buffer_data_volatile(a),
+                                     KOS_buffer_data_volatile(b),
+                                     cmp_size);
 
-    const int cmp = cmp_size ? memcmp(KOS_buffer_data(a), KOS_buffer_data(b), cmp_size) : 0;
+    const int cmp = cmp_size ? min_cmp : 0;
 
     if (cmp)
         return cmp > 0 ? KOS_GREATER_THAN : KOS_LESS_THAN;

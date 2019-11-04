@@ -250,7 +250,7 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
             }
 
             if (KOS_atomic_cas_strong_u32(OBJPTR(BUFFER, obj_id)->size, old_size, new_size)) {
-                ret = KOS_buffer_data(obj_id) + old_size;
+                ret = KOS_buffer_data_volatile(obj_id) + old_size;
                 break;
             }
         }

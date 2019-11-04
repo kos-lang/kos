@@ -407,7 +407,7 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
 
     TRY(KOS_buffer_resize(ctx, buf, (unsigned)(offset + to_read)));
 
-    num_read = fread(KOS_buffer_data(buf)+offset, 1, (size_t)to_read, file);
+    num_read = fread(KOS_buffer_data_volatile(buf)+offset, 1, (size_t)to_read, file);
 
     assert(num_read <= (size_t)to_read);
 
@@ -470,7 +470,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
             const size_t to_write = (size_t)KOS_get_buffer_size(arg);
 
             if (to_write > 0)
-                num_writ = fwrite(KOS_buffer_data(arg), 1, to_write, file);
+                num_writ = fwrite(KOS_buffer_data_volatile(arg), 1, to_write, file);
 
             if (num_writ < to_write)
                 RAISE_EXCEPTION(str_err_file_write); /* TODO error from errno */

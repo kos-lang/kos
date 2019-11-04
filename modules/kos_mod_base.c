@@ -1046,7 +1046,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
 
                     for (i = 0; i < buf_size; i++) {
 
-                        const uint8_t value = KOS_buffer_data(arg)[i];
+                        const uint8_t value = KOS_buffer_data_volatile(arg)[i];
 
                         TRY(KOS_array_write(ctx, new_array,
                                             cur_size + i, TO_SMALL_INT((int)value)));
@@ -1255,7 +1255,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
             if (size) {
                 TRY(KOS_buffer_resize(ctx, buffer, (uint32_t)size));
 
-                memset(KOS_buffer_data(buffer), (int)value, (size_t)size);
+                memset(KOS_buffer_data_volatile(buffer), (int)value, (size_t)size);
             }
 
             continue;
@@ -1273,7 +1273,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
 
                 TRY(KOS_buffer_resize(ctx, buffer, cur_size + size));
 
-                data = KOS_buffer_data(buffer) + cur_size;
+                data = KOS_buffer_data_volatile(buffer) + cur_size;
 
                 for (i = 0; i < size; i++) {
                     int64_t value;
@@ -1296,7 +1296,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
 
                 TRY(KOS_buffer_resize(ctx, buffer, cur_size + size));
 
-                KOS_string_to_utf8(arg, KOS_buffer_data(buffer) + cur_size, size);
+                KOS_string_to_utf8(arg, KOS_buffer_data_volatile(buffer) + cur_size, size);
                 break;
             }
 
@@ -1305,8 +1305,8 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
 
                 TRY(KOS_buffer_resize(ctx, buffer, cur_size + size));
 
-                memcpy(KOS_buffer_data(buffer) + cur_size,
-                       KOS_buffer_data(arg),
+                memcpy(KOS_buffer_data_volatile(buffer) + cur_size,
+                       KOS_buffer_data_volatile(arg),
                        size);
                 break;
             }
@@ -1352,7 +1352,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
                             TRY(KOS_buffer_resize(ctx, buffer, capacity));
                         }
 
-                        data = KOS_buffer_data(buffer) + size;
+                        data = KOS_buffer_data_volatile(buffer) + size;
 
                         *data = (uint8_t)(uint64_t)value;
                         ++size;
@@ -2279,7 +2279,9 @@ static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
         TRY(KOS_buffer_resize(ctx, this_obj, (uint32_t)size));
 
         if (size > old_size)
-            memset(KOS_buffer_data(this_obj) + old_size, (int)value, (uint32_t)(size - old_size));
+            memset(KOS_buffer_data_volatile(this_obj) + old_size,
+                   (int)value,
+                   (uint32_t)(size - old_size));
     }
     else {
         uint32_t old_size;
@@ -2774,7 +2776,7 @@ static int pack_format(KOS_CONTEXT               ctx,
 
                 data_size = KOS_get_buffer_size(value_obj);
                 if (data_size)
-                    data = KOS_buffer_data(value_obj);
+                    data = KOS_buffer_data_volatile(value_obj);
 
                 copy_size = size > data_size ? data_size : size;
 
@@ -2862,7 +2864,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
     TRY(KOS_push_locals(ctx, &pushed, 1, &buffer_obj));
 
     assert(data_size);
-    assert(KOS_buffer_data(buffer_obj));
+    assert(KOS_buffer_data_volatile(buffer_obj));
 
     offs = fmt->idx;
 
@@ -2885,7 +2887,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
 
                 for (i = 0; i < size; i++) {
                     const unsigned rel_offs = big_end ? i : (size - 1 - i);
-                    value = (value << 8) | KOS_buffer_data(buffer_obj)[offs + rel_offs];
+                    value = (value << 8) | KOS_buffer_data_volatile(buffer_obj)[offs + rel_offs];
                 }
 
                 if (value_fmt == 'i' && size < 8) {
@@ -2932,7 +2934,9 @@ static int unpack_format(KOS_CONTEXT               ctx,
                 TRY_OBJID(obj);
 
                 if (size)
-                    memcpy(KOS_buffer_data(obj), &KOS_buffer_data(buffer_obj)[offs], size);
+                    memcpy(KOS_buffer_data_volatile(obj),
+                           &KOS_buffer_data_volatile(buffer_obj)[offs],
+                           size);
 
                 TRY(KOS_array_push(ctx, fmt->data, obj, 0));
 
