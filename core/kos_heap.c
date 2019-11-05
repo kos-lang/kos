@@ -575,7 +575,7 @@ static int try_collect_garbage(KOS_CONTEXT ctx)
         return KOS_SUCCESS;
 
     if (ctx->inst->flags & KOS_INST_MANUAL_GC)
-        return error;
+        return KOS_SUCCESS;
 
 #ifndef CONFIG_MAD_GC
     if (heap->used_heap_size + heap->malloc_size > heap->gc_threshold ||
