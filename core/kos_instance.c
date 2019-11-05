@@ -208,7 +208,17 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 
     init_context(ctx, inst);
 
+    /* Note: register_thread() calls KOS_resume_context() */
     KOS_suspend_context(ctx);
+
+#if defined(CONFIG_THREADS) && (CONFIG_THREADS == 0)
+    {
+        KOS_DECLARE_STATIC_CONST_STRING(str_no_threads, "Kos was compiled without supports for threads");
+
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_no_threads));
+    }
+    error = KOS_ERROR_EXCEPTION;
+#else
 
     kos_lock_mutex(&inst->threads.mutex);
 
@@ -224,6 +234,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
 
     if (error)
         unregister_thread(inst, ctx);
+#endif
 
     return error;
 }
@@ -372,6 +383,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     }
     memset((void *)inst->threads.threads, 0, sizeof(KOS_THREAD *) * inst->threads.max_threads);
 
+    /* Note: register_thread() calls KOS_resume_context() */
     KOS_suspend_context(&inst->threads.main_thread);
     TRY(register_thread(inst, &inst->threads.main_thread));
 

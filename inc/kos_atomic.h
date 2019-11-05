@@ -53,10 +53,76 @@
 #endif
 
 /*==========================================================================*/
+/* No atomics                                                               */
+/*==========================================================================*/
+
+#if defined(CONFIG_THREADS) && (CONFIG_THREADS == 0)
+
+#define KOS_ATOMIC(type) type volatile
+
+#define KOS_atomic_full_barrier() ((void)0)
+
+#define KOS_atomic_acquire_barrier() ((void)0)
+
+#define KOS_atomic_release_barrier() ((void)0)
+
+#define KOS_atomic_read_relaxed_u32(src) \
+        (*(uint32_t volatile const *)(&(src)))
+
+#define KOS_atomic_read_acquire_u32(src) \
+        (*(uint32_t volatile const *)(&(src)))
+
+#define KOS_atomic_read_relaxed_ptr(src) \
+        (*(void *volatile const *)(&(src)))
+
+#define KOS_atomic_read_acquire_ptr(src) \
+        (*(void *volatile const *)(&(src)))
+
+#define KOS_atomic_write_relaxed_u32(dest, value) \
+        (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
+
+#define KOS_atomic_write_release_u32(dest, value) \
+        (*(uint32_t volatile *)(&(dest)) = (uint32_t)(value))
+
+#define KOS_atomic_write_relaxed_ptr(dest, value) \
+        (*(void *volatile *)(&(dest)) = (void *)(value))
+
+#define KOS_atomic_write_release_ptr(dest, value) \
+        (*(void *volatile *)(&(dest)) = (void *)(value))
+
+#define KOS_atomic_cas_strong_u32(dest, oldv, newv) \
+    (*(uint32_t volatile *)&(dest) == (oldv)        \
+     ? (*(uint32_t volatile *)&(dest) = (newv), 1)  \
+     : 0)
+
+#define KOS_atomic_cas_weak_u32 KOS_atomic_cas_strong_u32
+
+#define KOS_atomic_cas_strong_ptr(dest, oldv, newv) \
+    (*(void *volatile *)&(dest) == (oldv)           \
+     ? (*(void *volatile *)&(dest) = (newv), 1)     \
+     : 0)
+
+#define KOS_atomic_cas_weak_ptr KOS_atomic_cas_strong_ptr
+
+#define KOS_atomic_add_i32(dest, value) \
+    ((*(int32_t volatile *)&(dest) += (value)) - (value))
+
+#define KOS_atomic_add_u32(dest, value) \
+    ((*(uint32_t volatile *)&(dest) += (value)) - (value))
+
+uint32_t kos_atomic_swap_u32(uint32_t volatile *dest, uint32_t value);
+
+#define KOS_atomic_swap_u32(dest, value) kos_atomic_swap_u32(&(dest), (value))
+
+void *kos_atomic_swap_ptr(void *volatile *dest, void *value);
+
+#define KOS_atomic_swap_ptr(dest, value) kos_atomic_swap_ptr((void *volatile *)&(dest), (value))
+
+/*==========================================================================*/
 /* <atomic>                                                                 */
 /*==========================================================================*/
 
-#ifdef KOS_CPP11
+#elif defined(KOS_CPP11)
 
 #include <atomic>
 

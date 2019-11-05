@@ -189,6 +189,15 @@ ifeq ($(UNAME), Darwin)
     LDFLAGS += -mmacosx-version-min=10.9
 endif
 
+##############################################################################
+# Various options
+
+threads ?= 1
+
+ifneq ($(threads), 1)
+    CFLAGS += -DCONFIG_THREADS=0
+endif
+
 perf ?= 0
 
 ifneq ($(perf), 0)
