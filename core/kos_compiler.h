@@ -67,8 +67,8 @@ typedef struct KOS_VAR_S {
     int                 local_reads;       /* Number of local reads from a variable                */
     int                 local_assignments; /* Number of local writes to a variable                 */
     int                 array_idx;
-    int                 type         : 7;
-    int                 is_active    : 3;  /* Becomes active/searchable after the node, which declares it. */
+    unsigned            type         : 7;
+    unsigned            is_active    : 3;  /* Becomes active/searchable after the node, which declares it. */
     unsigned            is_const     : 1;
     unsigned            has_defaults : 1;
 } KOS_VAR;
