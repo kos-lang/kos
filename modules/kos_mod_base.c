@@ -2676,7 +2676,7 @@ static int pack_format(KOS_CONTEXT               ctx,
             assert(size == 1);
 
             if (count)
-                memset(dst, 0, size * count);
+                memset(dst, 0, count);
             break;
 
         case 'u':
