@@ -21,6 +21,7 @@
 #
 
 import base
+import datetime
 import fs
 import io
 
@@ -390,6 +391,48 @@ do {
     with const f = io.create(name) {
         const data = base.string(f.write("abcdefghijklmnopqrstuvwxyz").seek(-8).read(4))
         assert data == "stuv"
+    }
+
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
+}
+
+##############################################################################
+# file.info
+
+do {
+    const name = "./__text_file_info"
+    fs.remove(name)
+    assert ! fs.is_file(name)
+
+    const time_before = datetime.now() / 1_000_000
+
+    with const f = io.create(name) {
+        base.buffer(5001) -> f.write
+    }
+
+    with const f = io.open(name, io.ro) {
+        const info = f.info
+
+        const time_after = datetime.now() / 1_000_000
+
+        assert info.type == "file"
+        assert info.size == 5001
+        assert info.blocks * info.block_size >= info.size
+        assert info.block_size >= 1
+        assert info.hard_links == 1
+
+        assert info.atime / 1_000_000 >= time_before
+        assert info.atime / 1_000_000 <= time_after
+        assert time_after - info.atime / 1_000_000 < 10
+
+        assert info.mtime / 1_000_000 >= time_before
+        assert info.mtime / 1_000_000 <= time_after
+        assert time_after - info.mtime / 1_000_000 < 10
+
+        assert info.ctime / 1_000_000 >= time_before
+        assert info.ctime / 1_000_000 <= time_after
+        assert time_after - info.ctime / 1_000_000 < 10
     }
 
     assert fs.remove(name)
