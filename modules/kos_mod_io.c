@@ -618,13 +618,13 @@ static KOS_OBJ_ID get_file_error(KOS_CONTEXT ctx,
 }
 
 #ifdef _WIN32
-static int64_t get_epoch_time_s(const LARGE_INTEGER *time)
+static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
 {
-    const int64_t epoch  = (int64_t)116444736 * (int64_t)100;
+    const int64_t epoch  = (int64_t)116444736 * (int64_t)100000000;
     int64_t       time_s = (int64_t)time->QuadPart;
 
-    /* Convert from 100s of ns to s */
-    time_s /= 10000000;
+    /* Convert from 100s of ns to us */
+    time_s /= 10;
 
     /* Convert from Windows time (1601) to Epoch time (1970) */
     time_s -= epoch;
@@ -642,21 +642,30 @@ static int64_t get_epoch_time_s(const LARGE_INTEGER *time)
  * This property populates a new object on every read.
  *
  * The property is an object containing the following elements:
- *  - type - type of the object, one of the following strings:
- *           `"file"`, `"directory"`, `"char"` (character device),
- *           `"device"` (block device), `"fifo"`, `"symlink"`, `"socket"`
- *  - size - size of the file object, in bytes
- *  - blocks - number of blocks allocated for the file object
- *  - block_size - ideal block size for reading/writing
- *  - flags - bitflags representing OS-specific file attributes
- *  - inode - inode number
- *  - hard_links - number of hard links
- *  - uid - id of the owner
- *  - gid - id of the owning group
- *  - device - array containing major and minor device numbers if the object is a device
- *  - atime - last access time (number of seconds since Epoch)
- *  - mtime - last modification time (number of seconds since Epoch)
- *  - ctime - creation time (number of seconds since Epoch)
+ *
+ *  * type       - type of the object, one of the following strings:
+ *                 `"file"`, `"directory"`, `"char"` (character device),
+ *                 `"device"` (block device), `"fifo"`, `"symlink"`, `"socket"`
+ *  * size       - size of the file object, in bytes
+ *  * blocks     - number of blocks allocated for the file object
+ *  * block_size - ideal block size for reading/writing
+ *  * flags      - bitflags representing OS-specific file attributes
+ *  * inode      - inode number
+ *  * hard_links - number of hard links
+ *  * uid        - id of the owner
+ *  * gid        - id of the owning group
+ *  * device     - array containing major and minor device numbers if the object is a device
+ *  * atime      - last access time, in microseconds since Epoch)
+ *  * mtime      - last modification time, in microseconds since Epoch)
+ *  * ctime      - creation time, in microseconds since Epoch)
+ *
+ * The precision of time properties is OS-dependent.  For example,
+ * on POSIX-compatible OS-es these properties have 1 second precision.
+ *
+ * On Windows, the `inode`, `uid` and `gid` elements are not produced.
+ *
+ * The `device` element is only produced for device objects on some
+ * OS-es, for example Linux, *BSD, or MacOSX.
  */
 static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  this_obj,
@@ -729,9 +738,9 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
                                             + storage_info.LogicalBytesPerSector - 1)
                                                 / storage_info.LogicalBytesPerSector);
         SET_INT_PROPERTY("block_size", storage_info.LogicalBytesPerSector);
-        SET_INT_PROPERTY("atime",      get_epoch_time_s(&basic_info.LastAccessTime));
-        SET_INT_PROPERTY("mtime",      get_epoch_time_s(&basic_info.LastWriteTime));
-        SET_INT_PROPERTY("ctime",      get_epoch_time_s(&basic_info.ChangeTime));
+        SET_INT_PROPERTY("atime",      get_epoch_time_us(&basic_info.LastAccessTime));
+        SET_INT_PROPERTY("mtime",      get_epoch_time_us(&basic_info.LastWriteTime));
+        SET_INT_PROPERTY("ctime",      get_epoch_time_us(&basic_info.ChangeTime));
 
         if (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
@@ -775,9 +784,9 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         SET_INT_PROPERTY("size",       st.st_size);
         SET_INT_PROPERTY("blocks",     st.st_blocks);
         SET_INT_PROPERTY("block_size", st.st_blksize);
-        SET_INT_PROPERTY("atime",      st.st_atime);
-        SET_INT_PROPERTY("mtime",      st.st_mtime);
-        SET_INT_PROPERTY("ctime",      st.st_ctime);
+        SET_INT_PROPERTY("atime",      st.st_atime * (int64_t)1000000);
+        SET_INT_PROPERTY("mtime",      st.st_mtime * (int64_t)1000000);
+        SET_INT_PROPERTY("ctime",      st.st_ctime * (int64_t)1000000);
 
 #if !defined(__HAIKU__)
         if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) {
