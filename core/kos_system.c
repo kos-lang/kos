@@ -111,7 +111,7 @@ static int _is_file(const char *filename)
 }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__HAIKU__)
 void kos_filebuf_init(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
@@ -119,7 +119,7 @@ void kos_filebuf_init(KOS_FILEBUF *file_buf)
     file_buf->size   = 0;
 }
 
-/* TODO Use MapViewOfFile() */
+/* TODO Consider using MapViewOfFile() on Windows */
 int kos_load_file(const char  *filename,
                   KOS_FILEBUF *file_buf)
 {

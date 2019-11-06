@@ -41,6 +41,9 @@
 #   include <sys/stat.h>
 #   include <sys/types.h>
 #endif
+#ifdef __linux__
+#   include <sys/sysmacros.h>
+#endif
 #ifdef _WIN32
 #   pragma warning( disable : 4996 ) /* 'fopen': This function may be unsafe */
 #endif
@@ -732,7 +735,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
 #endif
 #else
-        struct stat stat;
+        struct stat st;
         int         pushed = 0;
 
         KOS_DECLARE_STATIC_CONST_STRING(str_type,         "type");
@@ -747,7 +750,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
 
         KOS_suspend_context(ctx);
 
-        error = fstat(fileno(file), &stat);
+        error = fstat(fileno(file), &st);
 
         KOS_resume_context(ctx);
 
@@ -759,45 +762,47 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         info = KOS_new_object(ctx);
         TRY_OBJID(info);
 
-        SET_INT_PROPERTY("flags",      stat.st_mode);
-        SET_INT_PROPERTY("hard_links", stat.st_nlink);
-        SET_INT_PROPERTY("inode",      stat.st_ino);
-        SET_INT_PROPERTY("uid",        stat.st_uid);
-        SET_INT_PROPERTY("gid",        stat.st_gid);
-        SET_INT_PROPERTY("size",       stat.st_size);
-        SET_INT_PROPERTY("blocks",     stat.st_blocks);
-        SET_INT_PROPERTY("block_size", stat.st_blksize);
-        SET_INT_PROPERTY("atime",      stat.st_atime);
-        SET_INT_PROPERTY("mtime",      stat.st_mtime);
-        SET_INT_PROPERTY("ctime",      stat.st_ctime);
+        SET_INT_PROPERTY("flags",      st.st_mode);
+        SET_INT_PROPERTY("hard_links", st.st_nlink);
+        SET_INT_PROPERTY("inode",      st.st_ino);
+        SET_INT_PROPERTY("uid",        st.st_uid);
+        SET_INT_PROPERTY("gid",        st.st_gid);
+        SET_INT_PROPERTY("size",       st.st_size);
+        SET_INT_PROPERTY("blocks",     st.st_blocks);
+        SET_INT_PROPERTY("block_size", st.st_blksize);
+        SET_INT_PROPERTY("atime",      st.st_atime);
+        SET_INT_PROPERTY("mtime",      st.st_mtime);
+        SET_INT_PROPERTY("ctime",      st.st_ctime);
 
-        if (S_ISCHR(stat.st_mode) || S_ISBLK(stat.st_mode)) {
+#if !defined(__HAIKU__)
+        if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) {
             KOS_OBJ_ID a = KOS_new_array(ctx, 2);
             TRY_OBJID(a);
 
             pushed = 0;
             TRY(KOS_push_locals(ctx, &pushed, 1, &a));
 
-            TRY(KOS_array_write(ctx, a, 0, TO_SMALL_INT(major(stat.st_rdev))));
-            TRY(KOS_array_write(ctx, a, 1, TO_SMALL_INT(minor(stat.st_rdev))));
+            TRY(KOS_array_write(ctx, a, 0, TO_SMALL_INT(major(st.st_rdev))));
+            TRY(KOS_array_write(ctx, a, 1, TO_SMALL_INT(minor(st.st_rdev))));
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type_device), a));
 
             KOS_pop_locals(ctx, pushed);
         }
+#endif
 
-        if (S_ISREG(stat.st_mode))
+        if (S_ISREG(st.st_mode))
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
-        else if (S_ISDIR(stat.st_mode))
+        else if (S_ISDIR(st.st_mode))
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
-        else if (S_ISCHR(stat.st_mode))
+        else if (S_ISCHR(st.st_mode))
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_char)));
-        else if (S_ISBLK(stat.st_mode))
+        else if (S_ISBLK(st.st_mode))
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_device)));
-        else if (S_ISFIFO(stat.st_mode))
+        else if (S_ISFIFO(st.st_mode))
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_fifo)));
-        else if (S_ISLNK(stat.st_mode))
+        else if (S_ISLNK(st.st_mode))
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_link)));
-        else if (S_ISSOCK(stat.st_mode))
+        else if (S_ISSOCK(st.st_mode))
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_socket)));
         else
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_unknown)));
