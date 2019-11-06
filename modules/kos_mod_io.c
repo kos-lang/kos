@@ -37,6 +37,11 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef _WIN32
+#else
+#   include <sys/stat.h>
+#   include <sys/types.h>
+#endif
+#ifdef _WIN32
 #   pragma warning( disable : 4996 ) /* 'fopen': This function may be unsafe */
 #endif
 
@@ -47,6 +52,7 @@ static const char str_err_cannot_open_file[]    = "unable to open file";
 static const char str_err_cannot_set_position[] = "unable to update file position";
 static const char str_err_file_not_open[]       = "file not open";
 static const char str_err_file_read[]           = "file read error";
+static const char str_err_file_stat[]           = "unable to obtain information about file";
 static const char str_err_file_write[]          = "file write error";
 static const char str_err_invalid_buffer_size[] = "buffer size out of range";
 static const char str_err_not_buffer[]          = "argument to file.read_some is not a buffer";
@@ -601,6 +607,207 @@ static KOS_OBJ_ID get_file_error(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
+#ifdef _WIN32
+static int64_t get_epoch_time_s(const LARGE_INTEGER *time)
+{
+    const int64_t epoch  = (int64_t)116444736 * (int64_t)100;
+    int64_t       time_s = (int64_t)time->QuadPart;
+
+    /* Convert from 100s of ns to s */
+    time_s /= 10000000;
+
+    /* Convert from Windows time (1601) to Epoch time (1970) */
+    time_s -= epoch;
+
+    return time_s;
+}
+#endif
+
+/* @item io file.prototype.info
+ *
+ *     file.prototype.info
+ *
+ * A read-only property which returns information about the file.
+ *
+ * This property populates a new object on every read.
+ *
+ * The property is an object containing the following elements:
+ *  - type - type of the object, one of the following strings:
+ *           `"file"`, `"directory"`, `"char"` (character device),
+ *           `"device"` (block device), `"fifo"`, `"symlink"`, `"socket"`
+ *  - size - size of the file object, in bytes
+ *  - blocks - number of blocks allocated for the file object
+ *  - block_size - ideal block size for reading/writing
+ *  - flags - bitflags representing OS-specific file attributes
+ *  - inode - inode number
+ *  - hard_links - number of hard links
+ *  - uid - id of the owner
+ *  - gid - id of the owning group
+ *  - device - array containing major and minor device numbers if the object is a device
+ *  - atime - last access time (number of seconds since Epoch)
+ *  - mtime - last modification time (number of seconds since Epoch)
+ *  - ctime - creation time (number of seconds since Epoch)
+ */
+static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
+{
+    FILE      *file  = 0;
+    int        error = get_file_object(ctx, this_obj, &file, 1);
+    KOS_OBJ_ID info  = KOS_BADPTR;
+
+    if ( ! error) {
+#define SET_INT_PROPERTY(name, value)                                         \
+        do {                                                                  \
+            KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                  \
+                                                                              \
+            KOS_OBJ_ID obj_id = KOS_new_int(ctx, (int64_t)(value));           \
+            TRY_OBJID(obj_id);                                                \
+                                                                              \
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_name), obj_id)); \
+        } while (0)
+
+#ifdef _WIN32
+#if 0
+        HANDLE                    handle;
+        FILE_BASIC_INFO           basic_info;
+        FILE_STANDARD_INFO        std_info;
+        FILE_STORAGE_INFO         storage_info;
+        BOOL                      ok           = FALSE;
+        BOOL                      have_storage = FALSE;
+        int                       pushed       = 0;
+
+        KOS_DECLARE_STATIC_CONST_STRING(str_type,        "type");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_file,   "file");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_dir,    "directory");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_dev,    "device");
+
+        KOS_suspend_context(ctx);
+
+        handle = (HANDLE)_get_osfhandle(_fileno(file));
+
+        ok = handle != INVALID_HANDLE_VALUE;
+
+        if (ok)
+            ok = GetFileInformationByHandleEx(handle, FileBasicInfo,
+                                              &basic_info, sizeof(basic_info));
+
+        if (ok)
+            ok = GetFileInformationByHandleEx(handle, FileStandardInfo,
+                                              &std_info, sizeof(std_info));
+
+        if (ok)
+            have_storage = GetFileInformationByHandleEx(handle, FileStorageInfo,
+                                                        &storage_info, sizeof(storage_info));
+
+        KOS_resume_context(ctx);
+
+        if ( ! ok)
+            RAISE_EXCEPTION(str_err_file_stat);
+
+        if ( ! have_storage)
+            storage_info.LogicalBytesPerSector = 1;
+
+        TRY(KOS_push_locals(ctx, &pushed, 1, &info));
+
+        info = KOS_new_object(ctx);
+        TRY_OBJID(info);
+
+        SET_INT_PROPERTY("flags",      basic_info.FileAttributes);
+        SET_INT_PROPERTY("hard_links", std_info.NumberOfLinks);
+        SET_INT_PROPERTY("size",       std_info.EndOfFile.QuadPart);
+        SET_INT_PROPERTY("blocks",     (std_info.AllocationSize.QuadPart
+                                            + storage_info.LogicalBytesPerSector - 1)
+                                                / storage_info.LogicalBytesPerSector);
+        SET_INT_PROPERTY("block_size", storage_info.LogicalBytesPerSector);
+        SET_INT_PROPERTY("atime",      get_epoch_time_s(&basic_info.LastAccessTime));
+        SET_INT_PROPERTY("mtime",      get_epoch_time_s(&basic_info.LastWriteTime));
+        SET_INT_PROPERTY("ctime",      get_epoch_time_s(&basic_info.ChangeTime));
+
+        if (basic_info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
+        else if (basic_info.dwFileAttributes & FILE_ATTRIBUTE_DEVICE)
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dev)));
+        else
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
+#endif
+#else
+        struct stat stat;
+        int         pushed = 0;
+
+        KOS_DECLARE_STATIC_CONST_STRING(str_type,         "type");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_file,    "file");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_dir,     "directory");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_char,    "char");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_device,  "device");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_fifo,    "fifo");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_link,    "symlink");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_socket,  "socket");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_unknown, "unknown");
+
+        KOS_suspend_context(ctx);
+
+        error = fstat(fileno(file), &stat);
+
+        KOS_resume_context(ctx);
+
+        if (error)
+            RAISE_EXCEPTION(str_err_file_stat); /* TODO error from errno */
+
+        TRY(KOS_push_locals(ctx, &pushed, 1, &info));
+
+        info = KOS_new_object(ctx);
+        TRY_OBJID(info);
+
+        SET_INT_PROPERTY("flags",      stat.st_mode);
+        SET_INT_PROPERTY("hard_links", stat.st_nlink);
+        SET_INT_PROPERTY("inode",      stat.st_ino);
+        SET_INT_PROPERTY("uid",        stat.st_uid);
+        SET_INT_PROPERTY("gid",        stat.st_gid);
+        SET_INT_PROPERTY("size",       stat.st_size);
+        SET_INT_PROPERTY("blocks",     stat.st_blocks);
+        SET_INT_PROPERTY("block_size", stat.st_blksize);
+        SET_INT_PROPERTY("atime",      stat.st_atime);
+        SET_INT_PROPERTY("mtime",      stat.st_mtime);
+        SET_INT_PROPERTY("ctime",      stat.st_ctime);
+
+        if (S_ISCHR(stat.st_mode) || S_ISBLK(stat.st_mode)) {
+            KOS_OBJ_ID a = KOS_new_array(ctx, 2);
+            TRY_OBJID(a);
+
+            pushed = 0;
+            TRY(KOS_push_locals(ctx, &pushed, 1, &a));
+
+            TRY(KOS_array_write(ctx, a, 0, TO_SMALL_INT(major(stat.st_rdev))));
+            TRY(KOS_array_write(ctx, a, 1, TO_SMALL_INT(minor(stat.st_rdev))));
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type_device), a));
+
+            KOS_pop_locals(ctx, pushed);
+        }
+
+        if (S_ISREG(stat.st_mode))
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
+        else if (S_ISDIR(stat.st_mode))
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
+        else if (S_ISCHR(stat.st_mode))
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_char)));
+        else if (S_ISBLK(stat.st_mode))
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_device)));
+        else if (S_ISFIFO(stat.st_mode))
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_fifo)));
+        else if (S_ISLNK(stat.st_mode))
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_link)));
+        else if (S_ISSOCK(stat.st_mode))
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_socket)));
+        else
+            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_unknown)));
+#endif
+    }
+
+cleanup:
+    return error ? KOS_BADPTR : info;
+}
+
 /* @item io file.prototype.size
  *
  *     file.prototype.size
@@ -641,6 +848,11 @@ cleanup:
  *     file.prototype.position
  *
  * Read-only position of the read/write pointer in the opened file object.
+ *
+ * This property is also added to every file object and is writable
+ * and shadows the `position` property from the prototype.
+ * Writing the `position` property on an open file object will move the
+ * file pointer in the same way as invoking the `seek` function.
  */
 static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
@@ -678,6 +890,9 @@ cleanup:
  * the file.  If it is a float, it is converted to integer using floor mode.
  *
  * Throws an exception if the pointer cannot be moved for whatever reason.
+ *
+ * Each open file object also has a `postition` property which can be
+ * written to in order to move the file pointer instead of invoking `seek`.
  */
 static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
@@ -760,6 +975,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "write",     kos_write,      0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "eof",       get_file_eof,   0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "error",     get_file_error, 0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "info",      get_file_info,  0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "position",  get_file_pos,   0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "size",      get_file_size,  0);
 

@@ -128,6 +128,7 @@ Table of Contents
       * [file.prototype.close()](#fileprototypeclose)
       * [file.prototype.eof](#fileprototypeeof)
       * [file.prototype.error](#fileprototypeerror)
+      * [file.prototype.info](#fileprototypeinfo)
       * [file.prototype.position](#fileprototypeposition)
       * [file.prototype.print()](#fileprototypeprint)
       * [file.prototype.print\_lines()](#fileprototypeprint_lines)
@@ -2796,12 +2797,43 @@ file.prototype.error
 A boolean read-only flag indicating whether there was an error during the
 last file operation on the file object.
 
+file.prototype.info
+-------------------
+
+    file.prototype.info
+
+A read-only property which returns information about the file.
+
+This property populates a new object on every read.
+
+The property is an object containing the following elements:
+ - type - type of the object, one of the following strings:
+          `"file"`, `"directory"`, `"char"` (character device),
+          `"device"` (block device), `"fifo"`, `"symlink"`, `"socket"`
+ - size - size of the file object, in bytes
+ - blocks - number of blocks allocated for the file object
+ - block_size - ideal block size for reading/writing
+ - flags - bitflags representing OS-specific file attributes
+ - inode - inode number
+ - hard_links - number of hard links
+ - uid - id of the owner
+ - gid - id of the owning group
+ - device - array containing major and minor device numbers if the object is a device
+ - atime - last access time (number of seconds since Epoch)
+ - mtime - last modification time (number of seconds since Epoch)
+ - ctime - creation time (number of seconds since Epoch)
+
 file.prototype.position
 -----------------------
 
     file.prototype.position
 
 Read-only position of the read/write pointer in the opened file object.
+
+This property is also added to every file object and is writable
+and shadows the `position` property from the prototype.
+Writing the `position` property on an open file object will move the
+file pointer in the same way as invoking the `seek` function.
 
 file.prototype.print()
 ----------------------
@@ -2918,6 +2950,9 @@ is moved.  If it is negative, the pointer is moved relative to the end of
 the file.  If it is a float, it is converted to integer using floor mode.
 
 Throws an exception if the pointer cannot be moved for whatever reason.
+
+Each open file object also has a `postition` property which can be
+written to in order to move the file pointer instead of invoking `seek`.
 
 file.prototype.size
 -------------------
