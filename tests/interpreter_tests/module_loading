@@ -177,11 +177,13 @@ if kos "/../bad/path"; then
     die "Failed: Interpreter succeeded with badly formatted path"
 fi
 
-note "test 17"
-echo "" > "$DIR/noaccess.kos"
-chmod 000 "$DIR/noaccess.kos"
-if kos "$DIR/noaccess.kos"; then
-    die "Failed: Interpreter succeeded to read an inaccessible file"
+if [ "$UNAME" != "Windows" -a "$UNAME" != "Haiku" ]; then
+    note "test 17"
+    echo "" > "$DIR/noaccess.kos"
+    chmod 000 "$DIR/noaccess.kos"
+    if kos "$DIR/noaccess.kos"; then
+        die "Failed: Interpreter succeeded to read an inaccessible file"
+    fi
+    chmod 644 "$DIR/noaccess.kos"
+    rm -f "$DIR/noaccess.kos"
 fi
-chmod 644 "$DIR/noaccess.kos"
-rm -f "$DIR/noaccess.kos"
