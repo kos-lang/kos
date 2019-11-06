@@ -37,6 +37,13 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef _WIN32
+#   include <io.h>
+#   define WIN32_LEAN_AND_MEAN
+#   pragma warning( push )
+#   pragma warning( disable : 4255 4668 )
+#   include <windows.h>
+#   pragma warning( pop )
+#   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
 #   include <sys/stat.h>
 #   include <sys/types.h>
@@ -671,11 +678,10 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         } while (0)
 
 #ifdef _WIN32
-#if 0
         HANDLE                    handle;
-        FILE_BASIC_INFO           basic_info;
-        FILE_STANDARD_INFO        std_info;
-        FILE_STORAGE_INFO         storage_info;
+        FILE_BASIC_INFO           basic_info   = { 0 };
+        FILE_STANDARD_INFO        std_info     = { 0 };
+        FILE_STORAGE_INFO         storage_info = { 0 };
         BOOL                      ok           = FALSE;
         BOOL                      have_storage = FALSE;
         int                       pushed       = 0;
@@ -727,13 +733,12 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         SET_INT_PROPERTY("mtime",      get_epoch_time_s(&basic_info.LastWriteTime));
         SET_INT_PROPERTY("ctime",      get_epoch_time_s(&basic_info.ChangeTime));
 
-        if (basic_info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        if (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
-        else if (basic_info.dwFileAttributes & FILE_ATTRIBUTE_DEVICE)
+        else if (basic_info.FileAttributes & FILE_ATTRIBUTE_DEVICE)
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dev)));
         else
             TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
-#endif
 #else
         struct stat st;
         int         pushed = 0;
