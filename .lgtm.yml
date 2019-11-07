@@ -1,0 +1,11 @@
+extraction:
+    cpp:
+        before_index:
+            - grep -c ^proc /proc/cpuinfo
+            - export TEST_CPUS=$(grep -c ^proc /proc/cpuinfo)
+        index:
+            build_command:
+                - which make
+                - which cc
+                - cc --version
+                - make -j $(grep -c ^proc /proc/cpuinfo) test
