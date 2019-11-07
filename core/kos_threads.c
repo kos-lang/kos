@@ -175,7 +175,6 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
 
         if (i >= max_threads) {
             KOS_raise_exception_cstring(ctx, "too many threads");
-            error = KOS_ERROR_EXCEPTION;
             kos_free(thread);
             return 0;
         }
