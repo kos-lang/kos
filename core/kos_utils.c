@@ -1315,15 +1315,16 @@ static KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID                a,
     this_ref.b    = b;
     this_ref.next = cmp_ref;
 
+    /* Check recursive arrays */
     while (cmp_ref) {
         const int aa = a == cmp_ref->a;
         const int bb = b == cmp_ref->b;
         const int ab = a == cmp_ref->b;
         const int ba = b == cmp_ref->a;
 
-        if (aa && bb)
+        if (aa & bb)
             return KOS_EQUAL;
-        else if (aa || bb || ab || ba)
+        else if (aa | bb | ab | ba)
             return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
 
         cmp_ref = cmp_ref->next;
