@@ -348,26 +348,18 @@ static int _lookup_var(KOS_COMP_UNIT      *program,
                        KOS_VAR           **out_var,
                        KOS_REG           **reg)
 {
-    KOS_VAR   *var          = 0;
-    KOS_SCOPE *scope        = 0;
-    int        is_local_arg = 1;
-    int        is_global    = 0;
+    KOS_VAR *var = node->var;
 
-    var = node->var;
     if (var && ! var->is_active)
         var = 0;
 
     if (var) {
-        scope        = node->var_scope;
-        is_global    = scope->next == 0;
-        is_local_arg = node->is_local_var &&
-                       ((var->type & VAR_ARGUMENT) || (var->type & VAR_ARGUMENT_IN_REG));
-    }
-
-    if (var) {
-
-        const int is_var        = var->type == VAR_INDEPENDENT_LOCAL;
-        const int is_arg_in_reg = var->type == VAR_INDEPENDENT_ARG_IN_REG;
+        const int  is_var        = var->type == VAR_INDEPENDENT_LOCAL;
+        const int  is_arg_in_reg = var->type == VAR_INDEPENDENT_ARG_IN_REG;
+        const int  is_local_arg  = node->is_local_var &&
+                                   (var->type & (VAR_ARGUMENT | VAR_ARGUMENT_IN_REG));
+        KOS_SCOPE *scope         = node->var_scope;
+        const int  is_global     = scope->next == 0;
 
         *out_var = var;
 
