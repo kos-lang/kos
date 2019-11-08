@@ -3291,6 +3291,58 @@ cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item base array.prototype.cas()
+ *
+ *     array.prototype.cas(pos, old_val, new_val)
+ *
+ * Atomic compare-and-swap for an array element.
+ *
+ * If array element at index `pos` equals to `old_val`, it is swapped
+ * with element `new_val`.  If the current array element at that index
+ * is not `old_val`, it is left unchanged.
+ *
+ * The compare-and-swap operation is performed atomically, but without any ordering
+ * guarantees.
+ *
+ * The element comparison is done by comparing object reference, not contents.
+ *
+ * Returns the element stored in the array at index `pos`.
+ */
+static KOS_OBJ_ID array_cas(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
+{
+    int            error = KOS_SUCCESS;
+    int64_t        pos   = 0;
+    KOS_OBJ_ID     ret   = KOS_BADPTR;
+    KOS_OBJ_ID     pos_obj;
+    KOS_OBJ_ID     old_val;
+    KOS_OBJ_ID     new_val;
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
+        RAISE_EXCEPTION(str_err_not_array);
+
+    pos_obj = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(pos_obj);
+
+    old_val = KOS_array_read(ctx, args_obj, 1);
+    TRY_OBJID(pos_obj);
+
+    new_val = KOS_array_read(ctx, args_obj, 2);
+    TRY_OBJID(pos_obj);
+
+    if (!IS_NUMERIC_OBJ(pos_obj))
+        RAISE_EXCEPTION(str_err_unsup_operand_types);
+
+    TRY(KOS_get_integer(ctx, pos_obj, &pos));
+
+    ret = KOS_array_cas(ctx, this_obj, (int)pos, old_val, new_val);
+
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
+}
+
 /* @item base array.prototype.insert_array()
  *
  *     array.prototype.insert_array(pos, array)
@@ -4305,6 +4357,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_CREATE_CONSTRUCTOR(string,        module);
     TRY_CREATE_CONSTRUCTOR(thread,        module);
 
+    TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "cas",           array_cas,         3);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "insert_array",  insert_array,      2);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "fill",          fill,              1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module, PROTO(array),      "pop",           pop,               0);

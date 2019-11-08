@@ -6,6 +6,7 @@ Table of Contents
     * [all()](#all)
     * [any()](#any)
     * [array()](#array)
+      * [array.prototype.cas()](#arrayprototypecas)
       * [array.prototype.fill()](#arrayprototypefill)
       * [array.prototype.indices()](#arrayprototypeindices)
       * [array.prototype.insert()](#arrayprototypeinsert)
@@ -299,6 +300,24 @@ Examples:
     [0, 1, 2, 3, 4]
     > array({ one: 1, two: 2, three: 3 })
     [["one", 1], ["two", 2], ["three", 3]]
+
+array.prototype.cas()
+---------------------
+
+    array.prototype.cas(pos, old_val, new_val)
+
+Atomic compare-and-swap for an array element.
+
+If array element at index `pos` equals to `old_val`, it is swapped
+with element `new_val`.  If the current array element at that index
+is not `old_val`, it is left unchanged.
+
+The compare-and-swap operation is performed atomically, but without any ordering
+guarantees.
+
+The element comparison is done by comparing object reference, not contents.
+
+Returns the element stored in the array at index `pos`.
 
 array.prototype.fill()
 ----------------------

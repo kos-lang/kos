@@ -326,8 +326,8 @@ KOS_OBJ_ID KOS_array_cas(KOS_CONTEXT ctx,
     else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception_cstring(ctx, str_err_not_array);
     else {
-        const uint32_t   size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
-        const uint32_t   bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
+        const uint32_t size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
+        const uint32_t bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
 
         if (bufidx < size) {
 

@@ -1521,3 +1521,23 @@ do {
     assert a[4] == 50
     assert a[5] == 500
 }
+
+##############################################################################
+# base.array.prototype.cas
+
+do {
+    const input = [1, 2, 3, 4]
+    assert input.cas(1, 2, 5) == 2
+    assert input.cas(2, 2, 6) == 3
+    assert input.cas(-1, 4, 7) == 4
+    assert input.cas(-4, 1, "x") == 1
+    assert input[0] == "x"
+    assert input[1] == 5
+    assert input[2] == 3
+    assert input[3] == 7
+    expect_fail(()=>input.cas(4, 0, 0))
+    expect_fail(()=>input.cas(-5, 0, 0))
+    expect_fail(()=>input.cas())
+    expect_fail(()=>input.cas(0))
+    expect_fail(()=>input.cas(0, 0))
+}
