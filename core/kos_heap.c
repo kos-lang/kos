@@ -799,8 +799,8 @@ static void *alloc_object(KOS_CONTEXT ctx,
         }
         /* If the page is still not full and has more room than current page,
          * then use it as current page */
-        else if ( ! page || (page && KOS_atomic_read_relaxed_u32(page->num_allocated)
-                                     > KOS_atomic_read_relaxed_u32(old_page->num_allocated))) {
+        else if ( ! page || (KOS_atomic_read_relaxed_u32(page->num_allocated)
+                             > KOS_atomic_read_relaxed_u32(old_page->num_allocated))) {
 
             KOS_PAGE *next_page = old_page->next;
 
