@@ -61,7 +61,7 @@ void     kos_rng_init(struct KOS_RNG *rng);
 void     kos_rng_init_seed(struct KOS_RNG *rng, uint64_t seed);
 uint64_t kos_rng_random(struct KOS_RNG *rng);
 uint64_t kos_rng_random_range(struct KOS_RNG *rng, uint64_t max_value);
-void     kos_get_entropy_fallback(uint8_t *bytes);
+void     kos_get_entropy_fallback(uint8_t *bytes, unsigned size);
 
 int64_t kos_fix_index(int64_t idx, unsigned length);
 

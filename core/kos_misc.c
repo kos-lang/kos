@@ -522,55 +522,54 @@ unsigned kos_print_float(char *buf, unsigned size, double value)
     return (unsigned)(end - buf);
 }
 
-void kos_get_entropy_fallback(uint8_t *bytes)
+void kos_get_entropy_fallback(uint8_t *bytes, unsigned size)
 {
     const uint32_t multiplier = 0x8088405U;
     uint32_t       state      = (uint32_t)time(0);
-    uint8_t *const end        = bytes + 32;
-    int            i;
+    unsigned       i;
 
     /* Trivial LCG to init the state from time */
 
     for (i = 0; i < 4; i++)
         state = state * multiplier + 1;
 
-    for ( ; bytes < end; bytes++) {
+    for (i = 0; i < size; i++) {
 
         state = state * multiplier + 1;
 
-        *bytes = (uint8_t)(state >> 24);
+        bytes[i] = (uint8_t)(state >> 24);
     }
 }
 
 #ifdef _WIN32
-static void _get_entropy(uint8_t *bytes)
+static void get_entropy(uint8_t *bytes, unsigned size)
 {
     HCRYPTPROV crypt_prov;
 
     if (CryptAcquireContext(&crypt_prov, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
 
-        if ( ! CryptGenRandom(crypt_prov, 32, bytes))
-            kos_get_entropy_fallback(bytes);
+        if ( ! CryptGenRandom(crypt_prov, size, bytes))
+            kos_get_entropy_fallback(bytes, size);
 
         CryptReleaseContext(crypt_prov, 0);
     }
     else
-        kos_get_entropy_fallback(bytes);
+        kos_get_entropy_fallback(bytes, size);
 }
 #else
-static void _get_entropy(uint8_t *bytes)
+static void get_entropy(uint8_t *bytes, unsigned size)
 {
     const int fd = open("/dev/urandom", O_RDONLY);
 
     if (fd == -1)
-        kos_get_entropy_fallback(bytes);
+        kos_get_entropy_fallback(bytes, size);
 
     else {
 
-        const ssize_t num_read = read(fd, bytes, 32);
+        const ssize_t num_read = read(fd, bytes, size);
 
-        if (num_read != 32)
-            kos_get_entropy_fallback(bytes);
+        if ((unsigned)num_read != size)
+            kos_get_entropy_fallback(bytes, size);
 
         close(fd);
     }
@@ -628,7 +627,7 @@ void kos_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
 void kos_rng_init(struct KOS_RNG *rng)
 {
     uint64_t entropy[4];
-    _get_entropy((uint8_t *)&entropy);
+    get_entropy((uint8_t *)&entropy, sizeof(entropy));
 
     _pcg_init(&rng->pcg[0], entropy[0], entropy[1]);
     _pcg_init(&rng->pcg[1], entropy[2], entropy[3]);

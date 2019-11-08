@@ -40,7 +40,7 @@ int main(void)
 
         memset(bytes, 0, sizeof(bytes));
 
-        kos_get_entropy_fallback(bytes);
+        kos_get_entropy_fallback(bytes, sizeof(bytes));
 
         for (i = 0; i < (int)sizeof(bytes); i++) {
 
