@@ -404,6 +404,7 @@ int kos_executable_path(KOS_VECTOR *buf)
 }
 #endif
 
+#ifdef CONFIG_MAD_GC
 #ifdef _WIN32
 int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect)
 {
@@ -415,6 +416,7 @@ int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect)
 {
     return mprotect(ptr, size, protect == KOS_NO_ACCESS ? PROT_NONE : PROT_READ | PROT_WRITE);
 }
+#endif
 #endif
 
 #ifdef _WIN32
