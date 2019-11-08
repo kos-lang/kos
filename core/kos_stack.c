@@ -446,7 +446,6 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
                 uint32_t   frame_size;
 
                 assert(size > KOS_STACK_EXTRA);
-                assert(IS_SMALL_INT(num_regs_obj));
 
                 num_regs = GET_SMALL_INT(num_regs_obj);
 
