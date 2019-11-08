@@ -12,7 +12,7 @@ case "$UNAME" in
 esac
 
 if [ "$DEST_DIR" = "${DEST_DIR#/}" ]; then
-    if [ "$UNAME" != "Windows" -o "$DEST_DIR" = "${DEST_DIR#?:}" ]; then
+    if [ "$UNAME" != "Windows" ] || [ "$DEST_DIR" = "${DEST_DIR#?:}" ]; then
         DEST_DIR="$(pwd)/../$DEST_DIR"
     fi
 fi
@@ -32,6 +32,6 @@ fi
 install -d "$BIN_DIR"
 install -d "$MODULES_DIR"
 install -m 0755 "$KOS_EXE" "$BIN_DIR"
-for FILE in $(ls ../modules/*.kos); do
+for FILE in ../modules/*.kos; do
     install -m 0644 "$FILE" "$MODULES_DIR"
 done
