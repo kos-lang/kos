@@ -39,7 +39,7 @@ Branch health (master)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/kos-lang/kos?branch=master&svg=true)](https://ci.appveyor.com/project/cdragan/kos)
 [![Coverage Status](https://coveralls.io/repos/github/kos-lang/kos/badge.svg?branch=master)](https://coveralls.io/github/kos-lang/kos?branch=master)
 [![Coverity Scan](https://scan.coverity.com/projects/10189/badge.svg)](https://scan.coverity.com/projects/kos)
-
+[![Lgtm alerts](https://img.shields.io/lgtm/alerts/g/kos-lang/kos.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/kos-lang/kos/alerts/)
 
 Documentation
 =============
@@ -88,7 +88,7 @@ This program prints 30 terms of the Fibonacci series:
 This program prints the first 1000 prime numbers:
 
     #!/usr/bin/env kos
-    import base.print
+    import base: print, range
 
     # Prime number generator with a fixed-size sieve
     fun primes(max_number)
@@ -103,7 +103,8 @@ This program prints the first 1000 prime numbers:
         const len = max_number >> 1
         sieve.resize(len)
 
-        for var value = 3; value < max_number; value += 2 {
+        # Find and yield all odd primes
+        for var value in range(3, max_number, 2) {
 
             const idx = value >> 1
 
