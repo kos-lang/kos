@@ -1307,7 +1307,7 @@ static KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID                a,
 
     KOS_ATOMIC(KOS_OBJ_ID)       *a_buf    = a_size ? kos_get_array_buffer(OBJPTR(ARRAY, a)) : 0;
     KOS_ATOMIC(KOS_OBJ_ID)       *b_buf    = b_size ? kos_get_array_buffer(OBJPTR(ARRAY, b)) : 0;
-    KOS_ATOMIC(KOS_OBJ_ID) *const a_end    = a_buf + cmp_size;
+    KOS_ATOMIC(KOS_OBJ_ID) *const a_end    = a_size ? a_buf + cmp_size : 0;
     KOS_COMPARE_RESULT            cmp      = KOS_EQUAL;
     struct KOS_COMPARE_REF_S      this_ref;
 
