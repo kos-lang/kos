@@ -425,20 +425,21 @@ void kos_disassemble(const char                           *filename,
     }
 
     while (size) {
-        int           i;
-        int           iop;
-        int           num_operands;
-        int           instr_size   = 1;
-        uint32_t      constant     = ~0U;
-        int           has_constant = 0;
-        char          bin[64];
-        unsigned      bin_len;
-        char          dis[128];
-        size_t        dis_size;
-        const char   *const_str    = "";
-        const int     mnem_align   = 44;
-        const char   *str_opcode;
-        const uint8_t opcode = *bytecode;
+        int            i;
+        int            iop;
+        int            num_operands;
+        int            instr_size   = 1;
+        uint32_t       constant     = ~0U;
+        int            has_constant = 0;
+        char           bin[64];
+        unsigned       bin_len;
+        char           dis[128];
+        size_t         dis_size;
+        const char    *const_str    = "";
+        const unsigned mnem_align   = 44;
+        const char    *str_opcode;
+        const uint8_t  opcode = *bytecode;
+
         assert((unsigned)(opcode - INSTR_BREAKPOINT) <= sizeof(str_instr)/sizeof(str_instr[0]));
 
         assert(line_addrs == line_addrs_end ||
