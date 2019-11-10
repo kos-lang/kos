@@ -27,6 +27,6 @@
 
 int main()
 {
-    printf("%" PRId64, kos_get_time_us());
+    printf("%" PRId64 "\n", kos_get_time_us());
     return 0;
 }
