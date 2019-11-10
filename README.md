@@ -108,13 +108,13 @@ This program prints the first 1000 prime numbers:
 
             const idx = value >> 1
 
-            # Yield this number as prime if it hasn't been sieved-out
+            # Yield this number as prime if it hasn't been sifted-out
             if ! sieve[idx] {
 
                 yield value
 
                 # Mark all multiplicities of this prime as non-primes
-                for var i = idx + value; i < len; i += value {
+                for var i in range(idx + value, len, value) {
                     sieve[i] = true # Mark a non-prime
                 }
             }
