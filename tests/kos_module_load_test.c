@@ -34,10 +34,12 @@ int main(void)
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
 
+    static const char base[] = "base.kos";
+
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
-    TEST(KOS_load_module_from_memory(ctx, "base.kos", 0, 0) != KOS_SUCCESS);
+    TEST(KOS_load_module_from_memory(ctx, base, sizeof(base) - 1, 0, 0) != KOS_SUCCESS);
 
     KOS_instance_destroy(&inst);
 

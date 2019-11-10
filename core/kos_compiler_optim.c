@@ -1166,51 +1166,72 @@ static void _collapse_typeof(KOS_COMP_UNIT      *program,
                              KOS_AST_NODE       *node,
                              const KOS_AST_NODE *a)
 {
-    const KOS_NODE_TYPE a_type = a->type;
-    const char         *type   = 0;
+    const KOS_NODE_TYPE a_type   = a->type;
+    const char         *type     = 0;
+    unsigned            type_len = 0;
 
     switch (a_type) {
 
-        case NT_NUMERIC_LITERAL:
+        case NT_NUMERIC_LITERAL: {
+            static const char quoted_integer[] = "\"integer\"";
+            static const char quoted_float[]   = "\"float\"";
+
             if (a->token.type == TT_NUMERIC_BINARY) {
                 const KOS_NUMERIC *value = (const KOS_NUMERIC *)
                     a->token.begin;
                 assert(a->token.length == sizeof(KOS_NUMERIC));
-                if (value->type == KOS_INTEGER_VALUE)
-                    type = "\"integer\"";
+                if (value->type == KOS_INTEGER_VALUE) {
+                    type     = quoted_integer;
+                    type_len = sizeof(quoted_integer) - 1;
+                }
                 else {
                     assert(value->type == KOS_FLOAT_VALUE);
-                    type = "\"float\"";
+                    type     = quoted_float;
+                    type_len = sizeof(quoted_float) - 1;
                 }
             }
             else {
-                if (kos_is_integer(a->token.begin, a->token.begin + a->token.length))
-                    type = "\"integer\"";
-                else
-                    type = "\"float\"";
+                if (kos_is_integer(a->token.begin, a->token.begin + a->token.length)) {
+                    type     = quoted_integer;
+                    type_len = sizeof(quoted_integer) - 1;
+                }
+                else {
+                    type     = quoted_float;
+                    type_len = sizeof(quoted_float) - 1;
+                }
             }
             break;
+        }
 
         case NT_STRING_LITERAL:
             /* fall through */
-        case NT_INTERPOLATED_STRING:
-            type = "\"string\"";
+        case NT_INTERPOLATED_STRING: {
+            static const char quoted_string[] = "\"string\"";
+            type     = quoted_string;
+            type_len = sizeof(quoted_string) - 1;
             break;
+        }
 
-        case NT_BOOL_LITERAL:
-            type = "\"boolean\"";
+        case NT_BOOL_LITERAL: {
+            static const char quoted_boolean[] = "\"boolean\"";
+            type     = quoted_boolean;
+            type_len = sizeof(quoted_boolean) - 1;
             break;
+        }
 
-        case NT_VOID_LITERAL:
-            type = "\"void\"";
+        case NT_VOID_LITERAL: {
+            static const char quoted_void[] = "\"void\"";
+            type     = quoted_void;
+            type_len = sizeof(quoted_void) - 1;
             break;
+        }
 
         default:
             break;
     }
 
     if (type) {
-        _collapse(node, NT_STRING_LITERAL, TT_STRING, KW_NONE, type, (unsigned)strlen(type));
+        _collapse(node, NT_STRING_LITERAL, TT_STRING, KW_NONE, type, type_len);
         ++program->num_optimizations;
     }
 }
@@ -1422,17 +1443,24 @@ static int _stringify(KOS_COMP_UNIT       *program,
 
             _copy_node_as_string(tmp_node, *node_ptr);
 
-            if (type == NT_VOID_LITERAL)
-                tmp_node->token.begin = "\"void\"";
-            else if (kw == KW_TRUE)
-                tmp_node->token.begin = "\"true\"";
+            if (type == NT_VOID_LITERAL) {
+                static const char quoted_void[] = "\"void\"";
+                tmp_node->token.begin  = quoted_void;
+                tmp_node->token.length = sizeof(quoted_void) - 1;
+            }
+            else if (kw == KW_TRUE) {
+                static const char quoted_true[] = "\"true\"";
+                tmp_node->token.begin  = quoted_true;
+                tmp_node->token.length = sizeof(quoted_true) - 1;
+            }
             else {
+                static const char quoted_false[] = "\"false\"";
                 assert(kw == KW_FALSE);
-                tmp_node->token.begin = "\"false\"";
+                tmp_node->token.begin  = quoted_false;
+                tmp_node->token.length = sizeof(quoted_false) - 1;
             }
 
-            tmp_node->token.length = (unsigned)strlen(tmp_node->token.begin);
-            *node_ptr              = tmp_node;
+            *node_ptr = tmp_node;
             return 1;
         }
 
@@ -1441,6 +1469,7 @@ static int _stringify(KOS_COMP_UNIT       *program,
             KOS_NUMERIC      numeric;
             const KOS_TOKEN *token    = &(*node_ptr)->token;
             char            *store;
+            unsigned         len;
             const unsigned   max_size = 34;
 
             if (token->type == TT_NUMERIC_BINARY) {
@@ -1463,10 +1492,10 @@ static int _stringify(KOS_COMP_UNIT       *program,
             if ( ! store)
                 return 0; /* Malloc errors are handled later */
 
-            store[max_size] = 0;
-
             if (numeric.type == KOS_INTEGER_VALUE) {
-                snprintf(store, max_size, "\"%" PRId64 "\"", numeric.u.i);
+                len = (unsigned)snprintf(store, max_size, "\"%" PRId64 "\"", numeric.u.i);
+                if (len >= max_size)
+                    len = max_size - 1;
             }
             else {
                 unsigned size;
@@ -1480,10 +1509,12 @@ static int _stringify(KOS_COMP_UNIT       *program,
 
                 store[size + 1] = '"';
                 store[size + 2] = 0;
+
+                len = size + 2;
             }
 
             tmp_node->token.begin  = store;
-            tmp_node->token.length = (unsigned)strlen(store);
+            tmp_node->token.length = len;
             *node_ptr              = tmp_node;
             return 1;
         }

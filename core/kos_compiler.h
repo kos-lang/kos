@@ -271,11 +271,13 @@ void kos_compiler_init(KOS_COMP_UNIT *program,
 
 int kos_compiler_predefine_global(KOS_COMP_UNIT *program,
                                   const char    *name,
+                                  size_t         name_len,
                                   int            idx,
                                   int            is_const);
 
 int kos_compiler_predefine_module(KOS_COMP_UNIT *program,
                                   const char    *name,
+                                  size_t         name_len,
                                   int            idx);
 
 int kos_compiler_compile(KOS_COMP_UNIT *program,

@@ -367,6 +367,7 @@ static int _predefine_globals(KOS_CONTEXT    ctx,
 
         TRY(kos_compiler_predefine_global(program,
                                           cpath.buffer,
+                                          cpath.size - 1,
                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk)),
                                           is_repl ? 0 : 1));
     }
@@ -380,7 +381,7 @@ static int _predefine_globals(KOS_CONTEXT    ctx,
 
         TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(walk), &cpath));
 
-        TRY(kos_compiler_predefine_module(program, cpath.buffer,
+        TRY(kos_compiler_predefine_module(program, cpath.buffer, cpath.size - 1,
                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk))));
     }
 
@@ -735,12 +736,12 @@ cleanup:
     return ret;
 }
 
-int KOS_load_module(KOS_CONTEXT ctx, const char *path)
+int KOS_load_module(KOS_CONTEXT ctx, const char *path, unsigned path_len)
 {
     int        idx;
     KOS_OBJ_ID module = kos_module_import(ctx,
                                           path,
-                                          (unsigned)strlen(path),
+                                          path_len,
                                           1,
                                           0,
                                           0,
@@ -751,6 +752,7 @@ int KOS_load_module(KOS_CONTEXT ctx, const char *path)
 
 int KOS_load_module_from_memory(KOS_CONTEXT ctx,
                                 const char *module_name,
+                                unsigned    module_name_len,
                                 const char *buf,
                                 unsigned    buf_size)
 {

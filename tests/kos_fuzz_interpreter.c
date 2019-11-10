@@ -35,6 +35,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
 
+    static const char base[] = "base";
+
     error = KOS_instance_init(&inst, 0, &ctx);
 
     if ( ! error) {
@@ -42,7 +44,11 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         error = KOS_instance_add_default_path(ctx, 0);
 
         if ( ! error)
-            error = KOS_load_module_from_memory(ctx, "base", (const char *)data, (unsigned)size);
+            error = KOS_load_module_from_memory(ctx,
+                                                base,
+                                                sizeof(base) - 1,
+                                                (const char *)data,
+                                                (unsigned)size);
 
         if (error == KOS_ERROR_EXCEPTION)
             KOS_print_exception(ctx, KOS_STDERR);

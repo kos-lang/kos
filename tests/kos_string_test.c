@@ -1573,10 +1573,10 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID  str;
-        const char *expected = "4611686018427387904";
-        unsigned    size     = (unsigned)strlen(expected);
-        unsigned    i;
+        KOS_OBJ_ID        str;
+        static const char expected[] = "4611686018427387904";
+        const unsigned    size       = sizeof(expected) - 1;
+        unsigned          i;
 
         KOS_OBJ_ID v = KOS_new_int(ctx, ((int64_t)1) << 62);
         TEST( ! IS_BAD_PTR(v));
@@ -1595,10 +1595,10 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID  str;
-        const char *expected = "1.0";
-        unsigned    size     = (unsigned)strlen(expected);
-        unsigned    i;
+        KOS_OBJ_ID        str;
+        static const char expected[] = "1.0";
+        const unsigned    size       = sizeof(expected) - 1;
+        unsigned          i;
 
         KOS_OBJ_ID v = KOS_new_float(ctx, 1);
         TEST( ! IS_BAD_PTR(v));
@@ -1631,10 +1631,10 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID  str;
-        const char *expected = "void";
-        unsigned    size     = (unsigned)strlen(expected);
-        unsigned    i;
+        KOS_OBJ_ID        str;
+        static const char expected[] = "void";
+        const unsigned    size       = sizeof(expected) - 1;
+        unsigned          i;
 
         str = KOS_object_to_string(ctx, KOS_VOID);
         TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);
@@ -1647,10 +1647,10 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID  str;
-        const char *expected = "true";
-        unsigned    size     = (unsigned)strlen(expected);
-        unsigned    i;
+        KOS_OBJ_ID        str;
+        static const char expected[] = "true";
+        const unsigned    size       = sizeof(expected) - 1;
+        unsigned          i;
 
         str = KOS_object_to_string(ctx, KOS_TRUE);
         TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);
@@ -1663,10 +1663,10 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID  str;
-        const char *expected = "false";
-        unsigned    size     = (unsigned)strlen(expected);
-        unsigned    i;
+        KOS_OBJ_ID        str;
+        static const char expected[] = "false";
+        const unsigned    size       = sizeof(expected) - 1;
+        unsigned          i;
 
         str = KOS_object_to_string(ctx, KOS_FALSE);
         TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);

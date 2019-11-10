@@ -1131,21 +1131,21 @@ int kos_compiler_process_vars(KOS_COMP_UNIT *program,
     return _visit_node(program, ast);
 }
 
-static int _predefine_global(KOS_COMP_UNIT      *program,
-                             const char         *name,
-                             int                 idx,
-                             int                 is_const,
-                             enum KOS_VAR_TYPE_E type)
+static int predefine_global(KOS_COMP_UNIT      *program,
+                            const char         *name,
+                            size_t              name_len,
+                            int                 idx,
+                            int                 is_const,
+                            enum KOS_VAR_TYPE_E type)
 {
-    int            error = KOS_SUCCESS;
-    const unsigned len   = (unsigned)strlen(name);
+    int error = KOS_SUCCESS;
 
     KOS_PRE_GLOBAL *global = (KOS_PRE_GLOBAL *)
-        kos_mempool_alloc(&program->allocator, sizeof(KOS_PRE_GLOBAL) + len);
+        kos_mempool_alloc(&program->allocator, sizeof(KOS_PRE_GLOBAL) + name_len);
 
     if (global) {
         memset(&global->node, 0, sizeof(global->node));
-        memcpy(global->name_buf, name, len+1);
+        memcpy(global->name_buf, name, name_len + 1);
 
         global->next                   = program->pre_globals;
         global->type                   = type;
@@ -1153,7 +1153,7 @@ static int _predefine_global(KOS_COMP_UNIT      *program,
         global->is_const               = is_const;
         global->node.type              = NT_IDENTIFIER;
         global->node.token.begin       = global->name_buf;
-        global->node.token.length      = len;
+        global->node.token.length      = name_len;
         global->node.token.pos.file_id = (unsigned)program->file_id;
         global->node.token.type        = TT_IDENTIFIER;
         program->pre_globals           = global;
@@ -1166,15 +1166,17 @@ static int _predefine_global(KOS_COMP_UNIT      *program,
 
 int kos_compiler_predefine_global(KOS_COMP_UNIT *program,
                                   const char    *name,
+                                  size_t         name_len,
                                   int            idx,
                                   int            is_const)
 {
-    return _predefine_global(program, name, idx, is_const, VAR_GLOBAL);
+    return predefine_global(program, name, name_len, idx, is_const, VAR_GLOBAL);
 }
 
 int kos_compiler_predefine_module(KOS_COMP_UNIT *program,
                                   const char    *name,
+                                  size_t         name_len,
                                   int            idx)
 {
-    return _predefine_global(program, name, idx, 1, VAR_MODULE);
+    return predefine_global(program, name, name_len, idx, 1, VAR_MODULE);
 }

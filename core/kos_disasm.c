@@ -332,6 +332,7 @@ void kos_disassemble(const char                           *filename,
     const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs_end  = func_addrs + num_func_addrs;
     KOS_VECTOR                            const_buf;
     const size_t                          max_const_chars = 32;
+    const size_t                          max_instr_len   = 15;
 
     static const char *const str_instr[] = {
         "BREAKPOINT",
@@ -431,6 +432,7 @@ void kos_disassemble(const char                           *filename,
         uint32_t      constant     = ~0U;
         int           has_constant = 0;
         char          bin[64];
+        unsigned      bin_len;
         char          dis[128];
         size_t        dis_size;
         const char   *const_str    = "";
@@ -467,9 +469,9 @@ void kos_disassemble(const char                           *filename,
         num_operands = _get_num_operands((KOS_BYTECODE_INSTR)opcode);
 
         dis[sizeof(dis)-1] = 0;
-        dis_size           = strlen(str_opcode);
+        dis_size           = strnlen(str_opcode, max_instr_len);
         memcpy(dis, str_opcode, dis_size);
-        while (dis_size < 16)
+        while (dis_size < max_instr_len + 1)
             dis[dis_size++] = ' ';
         dis[dis_size] = 0;
 
@@ -490,15 +492,17 @@ void kos_disassemble(const char                           *filename,
 
             tail = _get_offset_operand_tail((KOS_BYTECODE_INSTR)opcode, iop);
             if (tail >= 0)
-                snprintf(&dis[dis_size], sizeof(dis)-dis_size, "%08X", value + offs + instr_size + opsize + tail);
+                dis_size += (size_t)snprintf(&dis[dis_size], sizeof(dis)-dis_size, "%08X",
+                                             value + offs + instr_size + opsize + tail);
             else if (kos_is_register((KOS_BYTECODE_INSTR)opcode, iop))
-                snprintf(&dis[dis_size], sizeof(dis)-dis_size, "r%d", value);
+                dis_size += (size_t)snprintf(&dis[dis_size], sizeof(dis)-dis_size, "r%d",
+                                             value);
             else {
                 if (opsize == 1 && kos_is_signed_op((KOS_BYTECODE_INSTR)opcode, iop))
                     value = (int32_t)(int8_t)value;
-                snprintf(&dis[dis_size], sizeof(dis)-dis_size, "%d", value);
+                dis_size += (size_t)snprintf(&dis[dis_size], sizeof(dis)-dis_size, "%d",
+                                             value);
             }
-            dis_size = strlen(dis);
 
             if (iop+1 < num_operands) {
                 dis[dis_size++] = ',';
@@ -526,16 +530,14 @@ void kos_disassemble(const char                           *filename,
             }
         }
 
-        snprintf(bin, sizeof(bin), "%08X: ", (unsigned)offs);
-        bin[sizeof(bin)-1] = 0;
+        bin_len = (unsigned)snprintf(bin, sizeof(bin), "%08X: ", (unsigned)offs);
         for (i = 0; i < instr_size; i++) {
-            size_t pos = strlen(bin);
-            snprintf(&bin[pos], sizeof(bin)-pos, "%02X ", (int)bytecode[i]);
+            snprintf(&bin[bin_len], sizeof(bin) - bin_len, "%02X ", (int)bytecode[i]);
+            bin_len += 3;
         }
-        i = (int)strlen(bin);
-        while (i < mnem_align)
-            bin[i++] = ' ';
-        bin[i] = 0;
+        while (bin_len < mnem_align)
+            bin[bin_len++] = ' ';
+        bin[bin_len] = 0;
 
         printf("%s%s%s\n", bin, dis, const_str);
 

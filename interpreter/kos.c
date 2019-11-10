@@ -203,23 +203,33 @@ int main(int argc, char *argv[])
 
     if (i_module) {
 
+        const unsigned mod_name_len = strlen(argv[i_module]);
+
         /* Load script from command line */
         if (is_script) {
-            error = KOS_load_module_from_memory(ctx, str_cmdline, str_import_base, sizeof(str_import_base) - 1);
+            error = KOS_load_module_from_memory(ctx,
+                                                str_cmdline,
+                                                sizeof(str_cmdline) - 1,
+                                                str_import_base,
+                                                sizeof(str_import_base) - 1);
 
             if ( ! error) {
-                KOS_OBJ_ID ret = KOS_repl(ctx, str_cmdline, argv[i_module], (unsigned)strlen(argv[i_module]));
+                KOS_OBJ_ID ret = KOS_repl(ctx, str_cmdline, argv[i_module], mod_name_len);
                 if (IS_BAD_PTR(ret))
                     error = KOS_ERROR_EXCEPTION;
             }
         }
         /* Load script from a file */
         else
-            error = KOS_load_module(ctx, argv[i_module]);
+            error = KOS_load_module(ctx, argv[i_module], mod_name_len);
     }
     else {
 
-        error = KOS_load_module_from_memory(ctx, str_stdin, str_import_base, sizeof(str_import_base) - 1);
+        error = KOS_load_module_from_memory(ctx,
+                                            str_stdin,
+                                            sizeof(str_stdin) - 1,
+                                            str_import_base,
+                                            sizeof(str_import_base) - 1);
 
         if ( ! error) {
 

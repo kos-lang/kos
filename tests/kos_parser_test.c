@@ -162,14 +162,14 @@ static void append_str_len(char **out, char *end, const char *str, unsigned len)
 
 static void append_str(char **out, char *end, const char *str)
 {
-    append_str_len(out, end, str, (unsigned)strlen(str));
+    append_str_len(out, end, str, (unsigned)strnlen(str, 19));
 }
 
 static void append_int(char **out, char *end, int value)
 {
     char buf[16];
-    snprintf(buf, sizeof(buf), "%d", value);
-    append_str(out, end, buf);
+    const int len = snprintf(buf, sizeof(buf), "%d", value);
+    append_str_len(out, end, buf, (unsigned)len);
 }
 
 #define WALK_BUF_SIZE 512
@@ -208,11 +208,11 @@ static int compare_output(const char  *actual,
     return error;
 }
 
-static int _walk_tree(const KOS_AST_NODE *node,
-                      int                 level,
-                      int                 print,
-                      const char        **compare,
-                      const char         *compare_end)
+static int walk_tree(const KOS_AST_NODE *node,
+                     int                 level,
+                     int                 print,
+                     const char        **compare,
+                     const char         *compare_end)
 {
     char             buf[WALK_BUF_SIZE];
     const KOS_TOKEN *token    = &node->token;
@@ -227,40 +227,40 @@ static int _walk_tree(const KOS_AST_NODE *node,
     assert(level<50);
 
     append_str_len(&out, end, indent, (unsigned)(level * indent_shift));
-    append_str(&out, end, "(");
+    append_str_len(&out, end, "(", 1);
     append_str(&out, end, node_types[node->type]);
-    append_str(&out, end, " ");
+    append_str_len(&out, end, " ", 1);
     append_int(&out, end, (int)token->pos.line);
-    append_str(&out, end, " ");
+    append_str_len(&out, end, " ", 1);
     append_int(&out, end, (int)token->pos.column);
 
     if (token->type == TT_OPERATOR) {
-        append_str(&out, end, " ");
+        append_str_len(&out, end, " ", 1);
         for (i=0; operators[i].op != token->op &&
                   operators[i].op != OT_NONE; ++i);
         append_str(&out, end, operators[i].name);
     }
     else if (node->type == NT_OPERATOR) {
-        append_str(&out, end, " ");
+        append_str_len(&out, end, " ", 1);
         append_str_len(&out, end, token->begin, token->length);
     }
     else if (token->type == TT_SEPARATOR) {
-        append_str(&out, end, " ");
+        append_str_len(&out, end, " ", 1);
         append_str(&out, end, separators[token->sep]);
     }
     else if (token->type == TT_NUMERIC     || token->type == TT_IDENTIFIER ||
              token->type == TT_STRING_OPEN || token->type == TT_STRING     ||
              token->type == TT_KEYWORD) {
-        append_str(&out, end, " ");
+        append_str_len(&out, end, " ", 1);
         append_str_len(&out, end, token->begin, token->length);
     }
     else if (node->type == NT_BOOL_LITERAL) {
-        append_str(&out, end, " ");
+        append_str_len(&out, end, " ", 1);
         append_str_len(&out, end, token->begin, token->length);
     }
 
     if (one_line)
-        append_str(&out, end, ")");
+        append_str_len(&out, end, ")", 1);
 
     *out = 0;
 
@@ -273,7 +273,7 @@ static int _walk_tree(const KOS_AST_NODE *node,
     if (!error) {
 
         for (node = node->children; node; node = node->next) {
-            error = _walk_tree(node, level + 1, print, compare, compare_end);
+            error = walk_tree(node, level + 1, print, compare, compare_end);
             if (error)
                 break;
         }
@@ -462,7 +462,7 @@ int main(int argc, char *argv[])
             }
 
             if (!test_error)
-                error = _walk_tree(ast, 0, print, test ? &end : 0, file_end);
+                error = walk_tree(ast, 0, print, test ? &end : 0, file_end);
 
             else if (test) {
                 const KOS_FILE_POS pos = parser.token.pos;

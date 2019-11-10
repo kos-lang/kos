@@ -2243,10 +2243,11 @@ cleanup:
 static int gen_fake_const(KOS_PARSER   *parser,
                           KOS_AST_NODE *parent_node)
 {
-    int           error;
-    KOS_AST_NODE *node    = 0;
-    char*         name    = 0;
-    const size_t  max_len = 32;
+    int            error;
+    KOS_AST_NODE  *node    = 0;
+    char*          name    = 0;
+    unsigned       name_len;
+    const unsigned max_len = 32;
 
     TRY(push_node(parser, parent_node, NT_CONST, &node));
 
@@ -2259,10 +2260,11 @@ static int gen_fake_const(KOS_PARSER   *parser,
         goto cleanup;
     }
 
-    snprintf(name, max_len, "%u:%u", parser->token.pos.line, parser->token.pos.column);
+    name_len = (unsigned)snprintf(name, max_len, "%u:%u",
+                                  parser->token.pos.line, parser->token.pos.column);
 
     node->token.begin   = name;
-    node->token.length  = (unsigned)strlen(name);
+    node->token.length  = name_len >= max_len ? max_len - 1 : name_len;
     node->token.type    = TT_IDENTIFIER;
     node->token.keyword = KW_NONE;
     node->token.op      = OT_NONE;

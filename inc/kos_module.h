@@ -30,10 +30,12 @@ extern "C" {
 #endif
 
 int KOS_load_module(KOS_CONTEXT ctx,
-                    const char *path);
+                    const char *path,
+                    unsigned    path_len);
 
 int KOS_load_module_from_memory(KOS_CONTEXT ctx,
                                 const char *module_name,
+                                unsigned    module_name_len,
                                 const char *buf,
                                 unsigned    buf_size);
 
