@@ -469,7 +469,7 @@ int main(int argc, char *argv[])
                 if ((unsigned)line   != pos.line ||
                     (unsigned)column != pos.column) {
 
-                    printf("Invalid error location: %d:%d, but expected %d:%d\n",
+                    printf("Invalid error location: %u:%u, but expected %d:%d\n",
                            pos.line, pos.column, line, column);
                     error = KOS_ERROR_INTERNAL;
                 }
