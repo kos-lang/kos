@@ -153,12 +153,17 @@ static void print_error(int error)
 
 static int check_tree(struct MYNODE *n)
 {
-    int error = check_tree_order(n);
+    int error;
+
+    if ( ! n)
+        return KOS_SUCCESS;
+
+    error = check_tree_order(n);
     if (!error)
         error = check_walk_order(n);
     if (!error) {
         const int num_black = count_black_nodes(n);
-        if (n && (n->node.left || n->node.right || n->node.red))
+        if (n->node.left || n->node.right || n->node.red)
             error = check_black_nodes(n, num_black);
     }
     print_error(error);
@@ -252,6 +257,11 @@ int main(int argc, char *argv[])
         return 1;
 
     size = argc == 2 ? atoi(argv[1]) : 10000;
+
+    if (size < 1 || size > 1000000) {
+        printf("Invalid size parameter, must be between 1 and 1000000\n");
+        return 1;
+    }
 
     /* Ascending */
     {
