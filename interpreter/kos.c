@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 
     if (i_module) {
 
-        const unsigned mod_name_len = strlen(argv[i_module]);
+        const unsigned mod_name_len = (unsigned)strlen(argv[i_module]);
 
         /* Load script from command line */
         if (is_script) {

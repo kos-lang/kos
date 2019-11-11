@@ -1153,7 +1153,7 @@ static int predefine_global(KOS_COMP_UNIT      *program,
         global->is_const               = is_const;
         global->node.type              = NT_IDENTIFIER;
         global->node.token.begin       = global->name_buf;
-        global->node.token.length      = name_len;
+        global->node.token.length      = (unsigned)name_len;
         global->node.token.pos.file_id = (unsigned)program->file_id;
         global->node.token.type        = TT_IDENTIFIER;
         program->pre_globals           = global;
