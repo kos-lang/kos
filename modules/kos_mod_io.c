@@ -357,7 +357,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
                 break;
         }
 
-        num_read = (int)strnlen(buf.buffer + last_size, size_delta);
+        num_read = (int)strlen(buf.buffer + last_size);
 
         last_size += num_read;
     } while (num_read != 0 &&

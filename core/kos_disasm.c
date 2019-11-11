@@ -470,7 +470,7 @@ void kos_disassemble(const char                           *filename,
         num_operands = _get_num_operands((KOS_BYTECODE_INSTR)opcode);
 
         dis[sizeof(dis)-1] = 0;
-        dis_size           = strnlen(str_opcode, max_instr_len);
+        dis_size           = strlen(str_opcode);
         memcpy(dis, str_opcode, dis_size);
         while (dis_size < max_instr_len + 1)
             dis[dis_size++] = ' ';

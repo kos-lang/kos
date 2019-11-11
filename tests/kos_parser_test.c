@@ -162,7 +162,7 @@ static void append_str_len(char **out, char *end, const char *str, unsigned len)
 
 static void append_str(char **out, char *end, const char *str)
 {
-    append_str_len(out, end, str, (unsigned)strnlen(str, 19));
+    append_str_len(out, end, str, (unsigned)strlen(str));
 }
 
 static void append_int(char **out, char *end, int value)
