@@ -24,10 +24,9 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
+#include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
@@ -75,6 +74,9 @@ int main(void)
     KOS_OBJ_ID str_aaa;
     KOS_OBJ_ID str_bbb;
     KOS_OBJ_ID str_ccc;
+
+    struct KOS_RNG rng;
+    kos_rng_init(&rng);
 
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
@@ -315,10 +317,8 @@ int main(void)
         o = KOS_new_object(ctx);
         TEST(!IS_BAD_PTR(o));
 
-        srand((unsigned)time(0));
-
         for (i=0; i < NUM_PROPS * 4; i++) {
-            const int r   = rand();
+            const int r   = (int)kos_rng_random_range(&rng, 3 * NUM_PROPS);
             const int idx = r % NUM_PROPS;
             const int f   = (r / NUM_PROPS) % 3;
 
@@ -454,10 +454,8 @@ int main(void)
         TEST(!IS_BAD_PTR(o[1]));
         TEST(!IS_BAD_PTR(o[2]));
 
-        srand((unsigned)time(0));
-
         for (i=0; i < NUM_PROPS * 16; i++) {
-            const int r      = rand();
+            const int r      = (int)kos_rng_random_range(&rng, 3 * 3 * NUM_PROPS);
             const int i_prop = r % NUM_PROPS;
             const int f      = (r / NUM_PROPS) % 3;
             const int i_obj  = (r / (3*NUM_PROPS)) % 3;

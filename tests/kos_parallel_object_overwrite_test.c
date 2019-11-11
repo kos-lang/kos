@@ -27,9 +27,9 @@
 #include "../inc/kos_threads.h"
 #include "../core/kos_system.h"
 #include "../core/kos_memory.h"
+#include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
 #include "kos_test_tools.h"
-#include <time.h>
 
 struct TEST_DATA {
     KOS_INSTANCE        *inst;
@@ -134,6 +134,10 @@ int main(void)
     KOS_CONTEXT  ctx;
     const int    num_cpus = get_num_cpus();
 
+    struct KOS_RNG rng;
+
+    kos_rng_init(&rng);
+
     TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
@@ -186,15 +190,13 @@ int main(void)
         data.go         = 0;
         data.error      = KOS_SUCCESS;
 
-        srand((unsigned)time(0));
-
         for (i = 0; i < num_threads; i++) {
             thread_cookies[i].test      = &data;
-            thread_cookies[i].rand_init = rand();
+            thread_cookies[i].rand_init = (int)kos_rng_random_range(&rng, 0xFFFFFFFFU);
             TEST(create_thread(ctx, ((i & 1)) ? write_props : read_props, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
         }
 
-        i = rand();
+        i = (int)kos_rng_random_range(&rng, 0xFFFFFFFFU);
         KOS_atomic_write_relaxed_u32(data.go, 1);
         TEST(_write_props_inner(ctx, &data, i) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
