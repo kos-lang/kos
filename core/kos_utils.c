@@ -294,20 +294,22 @@ static int _int_to_str(KOS_CONTEXT ctx,
                        KOS_OBJ_ID *str,
                        KOS_VECTOR *cstr_vec)
 {
-    int     error = KOS_SUCCESS;
-    uint8_t buf[64];
-    char   *ptr   = (char *)buf;
+    int      error = KOS_SUCCESS;
+    uint8_t  buf[64];
+    char    *ptr   = (char *)buf;
+    unsigned len;
 
     if (cstr_vec) {
         TRY(kos_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
         ptr = &cstr_vec->buffer[cstr_vec->size ? cstr_vec->size - 1 : 0];
     }
 
-    snprintf(ptr, sizeof(buf), "%" PRId64, value);
+    len = (unsigned)snprintf(ptr, sizeof(buf), "%" PRId64, value);
 
     if (cstr_vec) {
-        TRY(kos_vector_resize(cstr_vec, cstr_vec->size + strlen(ptr) +
-                    (cstr_vec->size ? 0 : 1)));
+        TRY(kos_vector_resize(cstr_vec,
+                              cstr_vec->size + KOS_min(len, (unsigned)(sizeof(buf) - 1)) +
+                                  (cstr_vec->size ? 0 : 1)));
     }
     else if (str) {
         KOS_OBJ_ID ret = KOS_new_cstring(ctx, ptr);
@@ -919,6 +921,7 @@ static int _vector_append_function(KOS_CONTEXT ctx,
     int           error = KOS_SUCCESS;
     KOS_FUNCTION *func;
     char          cstr_ptr[22];
+    unsigned      len;
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION ||
            GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
@@ -933,7 +936,8 @@ static int _vector_append_function(KOS_CONTEXT ctx,
     if (func->handler) {
         /* TODO get built-in function name */
         TRY(kos_append_cstr(ctx, cstr_vec, str_builtin, sizeof(str_builtin) - 1));
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">", (uint64_t)(uintptr_t)func->handler);
+        len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">",
+                                 (uint64_t)(uintptr_t)func->handler);
     }
     else {
         KOS_OBJ_ID name_str = KOS_module_addr_to_func_name(ctx,
@@ -941,9 +945,10 @@ static int _vector_append_function(KOS_CONTEXT ctx,
                                                            func->instr_offs);
         TRY_OBJID(name_str);
         TRY(_vector_append_str(ctx, cstr_vec, name_str, KOS_DONT_QUOTE));
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%X>", (unsigned)func->instr_offs);
+        len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%X>",
+                                 (unsigned)func->instr_offs);
     }
-    TRY(kos_append_cstr(ctx, cstr_vec, cstr_ptr, strlen(cstr_ptr)));
+    TRY(kos_append_cstr(ctx, cstr_vec, cstr_ptr, KOS_min(len, (unsigned)(sizeof(cstr_ptr) - 1))));
 
 cleanup:
     return error;

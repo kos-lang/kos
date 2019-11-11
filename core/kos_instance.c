@@ -33,6 +33,7 @@
 #include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_malloc.h"
+#include "kos_math.h"
 #include "kos_memory.h"
 #include "kos_misc.h"
 #include "kos_object_internal.h"
@@ -833,8 +834,9 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         str = KOS_get_property(ctx, frame_desc, KOS_STR_OFFSET);
         TRY_OBJID(str);
         if (IS_SMALL_INT(str)) {
-            snprintf(cbuf, sizeof(cbuf), "0x%X", (unsigned)GET_SMALL_INT(str));
-            TRY(kos_append_cstr(ctx, &cstr, cbuf, strlen(cbuf)));
+            const unsigned len = (unsigned)snprintf(cbuf, sizeof(cbuf), "0x%X",
+                                                    (unsigned)GET_SMALL_INT(str));
+            TRY(kos_append_cstr(ctx, &cstr, cbuf, KOS_min(len, (unsigned)(sizeof(cbuf) - 1))));
         }
         else
             TRY(kos_append_cstr(ctx, &cstr, str_format_question_marks,

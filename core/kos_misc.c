@@ -21,6 +21,7 @@
  */
 
 #include "kos_misc.h"
+#include "kos_math.h"
 #include "kos_try.h"
 #include "../inc/kos_error.h"
 #include <assert.h>
@@ -510,9 +511,9 @@ unsigned kos_print_float(char *buf, unsigned size, double value)
         }
     }
     else {
-        snprintf(buf, size, "%.15f", value);
+        const unsigned len = (unsigned)snprintf(buf, size, "%.15f", value);
 
-        for (end = buf + strlen(buf) - 1; end > buf && *end == '0'; --end);
+        for (end = buf + KOS_min(len, size - 1) - 1; end > buf && *end == '0'; --end);
         if (*end == '.')
             ++end;
         ++end;
