@@ -815,7 +815,8 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
     for (i = 0; i < depth; i++) {
 
-        char cbuf[16];
+        char     cbuf[16];
+        unsigned len;
 
         frame_desc = KOS_array_read(ctx, backtrace, (int)i);
         TRY_OBJID(frame_desc);
@@ -825,8 +826,8 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY(kos_append_cstr(ctx, &cstr, str_format_hash,
                             sizeof(str_format_hash) - 1));
 
-        snprintf(cbuf, sizeof(cbuf), "%u", i);
-        TRY(kos_append_cstr(ctx, &cstr, cbuf, strlen(cbuf)));
+        len = (unsigned)snprintf(cbuf, sizeof(cbuf), "%u", i);
+        TRY(kos_append_cstr(ctx, &cstr, cbuf, KOS_min(len, (unsigned)(sizeof(cbuf) - 1))));
 
         TRY(kos_append_cstr(ctx, &cstr, str_format_offset,
                             sizeof(str_format_offset) - 1));
@@ -834,8 +835,8 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         str = KOS_get_property(ctx, frame_desc, KOS_STR_OFFSET);
         TRY_OBJID(str);
         if (IS_SMALL_INT(str)) {
-            const unsigned len = (unsigned)snprintf(cbuf, sizeof(cbuf), "0x%X",
-                                                    (unsigned)GET_SMALL_INT(str));
+            len = (unsigned)snprintf(cbuf, sizeof(cbuf), "0x%X",
+                                     (unsigned)GET_SMALL_INT(str));
             TRY(kos_append_cstr(ctx, &cstr, cbuf, KOS_min(len, (unsigned)(sizeof(cbuf) - 1))));
         }
         else
