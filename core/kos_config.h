@@ -23,7 +23,11 @@
 #ifndef KOS_CONFIG_H_INCLUDED
 #define KOS_CONFIG_H_INCLUDED
 
-#define KOS_POOL_BITS          19
+#ifdef CONFIG_FUZZ
+#   define KOS_POOL_BITS       16
+#else
+#   define KOS_POOL_BITS       19
+#endif
 #if defined(__powerpc64__) || defined(CONFIG_MAD_GC)
 #   define KOS_PAGE_BITS       16
 #else
@@ -39,15 +43,19 @@
 #define KOS_BUF_ALLOC_SIZE     4096U
 #define KOS_VEC_MAX_INC_SIZE   262144U
 #ifdef CONFIG_FUZZ
-#define KOS_MAX_THREADS        2U
+#   define KOS_MAX_THREADS     2U
 #else
-#define KOS_MAX_THREADS        32U
+#   define KOS_MAX_THREADS     32U
 #endif
 #define KOS_MIN_REG_CAPACITY   32U
 #define KOS_MAX_ARGS_IN_REGS   32U
-#define KOS_MAX_STACK_DEPTH    2048U
 #ifdef CONFIG_FUZZ
-#   define KOS_MAX_HEAP_SIZE   (32U * 1024U * 1024U)
+#   define KOS_MAX_STACK_DEPTH 256U
+#else
+#   define KOS_MAX_STACK_DEPTH 2048U
+#endif
+#ifdef CONFIG_FUZZ
+#   define KOS_MAX_HEAP_SIZE   (2U * KOS_POOL_SIZE)
 #elif defined(CONFIG_MAD_GC)
 #   define KOS_MAX_HEAP_SIZE   (16U * 1024U * 1024U)
 #else
