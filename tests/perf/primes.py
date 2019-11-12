@@ -1,15 +1,16 @@
 #!/usr/bin/env python
+""" Test which generates prime numbers """
 
-# Prime number generator with a fixed-size sieve
 def primes(max_number):
+    """ Prime number generator with a fixed-size sieve """
 
     yield 2 # Yield the only even prime number from the generator
 
     # Fill array with False values.
     # We set size to half of the max number checked, because
     # we ignore even numbers and only check odd numbers.
-    len   = max_number >> 1
-    sieve = [ False ] * len
+    size = max_number >> 1
+    sieve = [False] * size
 
     value = 3
     while value < max_number:
@@ -23,17 +24,22 @@ def primes(max_number):
 
             # Mark all multiplicities of this prime as non-primes
             i = idx + value
-            while i < len:
+            while i < size:
                 sieve[i] = True # Mark a non-prime
                 i += value
 
         value += 2
 
-count = 0
-last  = None
+def run():
+    """ Runs the test """
 
-for value in primes(15485864):
-    last  = value
-    count += 1
+    count = 0
+    last = None
 
-print(str(count)+"th prime is "+str(last))
+    for value in primes(15485864):
+        last = value
+        count += 1
+
+    print(str(count)+"th prime is "+str(last))
+
+run()

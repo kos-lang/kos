@@ -1,43 +1,56 @@
 #!/usr/bin/env python
+""" A test which generates Fibonacci's sequence """
 
 class Fib:
+    """ Fibonacci sequence generator """
 
     def __init__(self):
+        """ Initializes the generator """
         self.prev = 1
-        self.cur  = 1
+        self.cur = 1
 
-    def Reset(self):
+    def reset(self):
+        """ Resets state of the generator """
         self.prev = 1
-        self.cur  = 1
+        self.cur = 1
 
-    def GetPrev(self):
+    def get_prev(self):
+        """ Returns the previous number in the sequence """
         return self.prev
 
-    def GetCur(self):
+    def get_cur(self):
+        """ Returns the current number in the sequence """
         return self.cur
 
-    def SetNext(self, next):
+    def set_next(self, next_val):
+        """ Sets the next number in the sequence """
         self.prev = self.cur
-        self.cur  = next
+        self.cur = next_val
 
-    def Advance(self):
-        self.SetNext(self.GetPrev() + self.GetCur())
+    def advance(self):
+        """ Advances the generator """
+        self.set_next(self.get_prev() + self.get_cur())
 
-    def Execute(self, n):
+    def execute(self, n):
+        """ Runs one or more iterations of the generator """
         i = 0
         while i < n:
-            self.Advance()
+            self.advance()
             i += 1
-        ret = self.GetCur()
-        self.Reset()
+        ret = self.get_cur()
+        self.reset()
         return ret
 
-fib = Fib()
-orig = fib.Execute(50)
-i = 0
-while i < 10000:
-    if orig != fib.Execute(50):
-        raise Exception("Error")
-    i += 1
+def run():
+    """ Performs test loops """
+    fib = Fib()
+    orig = fib.execute(50)
+    i = 0
+    while i < 10000:
+        if orig != fib.execute(50):
+            raise Exception("Error")
+        i += 1
 
-print(orig)
+    print(orig)
+
+run()
