@@ -24,6 +24,17 @@ matrix:
         script:
           - tests/run c89
 
+      - name: "Non-x86"
+        os: linux
+        arch:
+          - arm64
+          - ppc64le
+          - s390x
+        script:
+          - cc --version
+          - uname -a
+          - tests/run c89 cpp14
+
       - name: "Valgrind"
         os: linux
         dist: xenial
