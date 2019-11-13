@@ -24,11 +24,27 @@ matrix:
         script:
           - tests/run c89
 
-      - name: "Non-x86"
+      - name: "ARMv8"
         os: linux
         arch:
           - arm64
+        script:
+          - cc --version
+          - uname -a
+          - tests/run c89 cpp14
+
+      - name: "IBM Power"
+        os: linux
+        arch:
           - ppc64le
+        script:
+          - cc --version
+          - uname -a
+          - tests/run c89 cpp14
+
+      - name: "IBM Z"
+        os: linux
+        arch:
           - s390x
         script:
           - cc --version
