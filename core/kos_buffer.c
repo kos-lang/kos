@@ -52,7 +52,7 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
         static struct KOS_RNG rng;
         static int            init = 0;
         uint64_t             *buf = (uint64_t *)&data->buf[0];
-        uint64_t             *end = buf + capacity / sizeof(uint64_t);
+        uint64_t             *end = (uint64_t *)((intptr_t)buf + capacity);
 
         assert(kos_get_object_type(data->header) == OBJ_BUFFER_STORAGE);
 
@@ -66,7 +66,7 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
             buf = (uint64_t *)((intptr_t)buf + 1);
         }
 
-        while (buf < end)
+        while (buf + 1 <= end)
             *(buf++) = kos_rng_random(&rng);
     }
 #endif
