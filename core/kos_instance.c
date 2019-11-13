@@ -315,7 +315,7 @@ struct KOS_CONST_MODULE_S {
     KOS_MODULE                          object;
 };
 
-static KOS_OBJ_ID get_init_module()
+static KOS_OBJ_ID get_init_module(void)
 {
     KOS_DECLARE_ALIGNED(32, static struct KOS_CONST_MODULE_S) init_module;
 
