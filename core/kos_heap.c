@@ -586,7 +586,7 @@ static int try_collect_garbage(KOS_CONTEXT ctx)
         heap->malloc_size > heap->max_malloc_size)
 #endif
     {
-        KOS_GC_STATS stats;
+        KOS_GC_STATS stats = KOS_GC_STATS_INIT(0U);
 
         error = collect_garbage_last_resort_locked(ctx, &stats);
 
