@@ -63,7 +63,7 @@ static KOS_OBJ_ID is_file(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int        error        = KOS_SUCCESS;
+    int        error;
     KOS_OBJ_ID ret          = KOS_BADPTR;
     KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
     KOS_VECTOR filename_cstr;
@@ -98,7 +98,7 @@ static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
                          KOS_OBJ_ID  args_obj)
 {
-    int        error        = KOS_SUCCESS;
+    int        error;
     KOS_OBJ_ID ret          = KOS_BADPTR;
     KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
     KOS_VECTOR filename_cstr;

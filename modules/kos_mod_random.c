@@ -81,9 +81,9 @@ static void finalize(KOS_CONTEXT ctx,
  *     > r.integer()
  *     -474045495260715754
  */
-static KOS_OBJ_ID random(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
 {
     int                error    = KOS_SUCCESS;
     KOS_RNG_CONTAINER *rng      = 0;
@@ -293,7 +293,7 @@ int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
 
     TRY(KOS_push_locals(ctx, &pushed, 2, &module, &proto));
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module,        "random",  random,       0, &proto);
+    TRY_ADD_CONSTRUCTOR(    ctx, module,        "random",  kos_random,   0, &proto);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "integer", rand_integer, 0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "float",   rand_float,   0);
 

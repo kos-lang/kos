@@ -126,7 +126,7 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT                  ctx,
                                   KOS_OBJ_ID                   args_obj,
                                   enum KOS_OBJECT_WALK_DEPTH_E deep)
 {
-    int        error  = KOS_SUCCESS;
+    int        error;
     int        pushed = 0;
     KOS_OBJ_ID ret    = KOS_BADPTR;
     KOS_OBJ_ID array  = KOS_BADPTR;
@@ -1026,9 +1026,9 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
 
                     for (i = 0; i < str_size; i++) {
 
-                        const unsigned code = KOS_string_get_char_code(ctx, arg, i);
+                        const unsigned ch_code = KOS_string_get_char_code(ctx, arg, i);
 
-                        KOS_OBJ_ID value = KOS_new_int(ctx, (int64_t)code);
+                        KOS_OBJ_ID value = KOS_new_int(ctx, (int64_t)ch_code);
                         TRY_OBJID(value);
 
                         TRY(KOS_array_write(ctx, new_array, cur_size + i, value));
@@ -1824,7 +1824,7 @@ static KOS_OBJ_ID slice(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    int        error = KOS_SUCCESS;
+    int        error;
     KOS_OBJ_ID ret   = KOS_BADPTR;
     KOS_OBJ_ID a_obj;
     KOS_OBJ_ID b_obj;
@@ -2081,11 +2081,11 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  this_obj,
                        KOS_OBJ_ID  args_obj)
 {
-    int                     error    = KOS_SUCCESS;
-    int                     pushed   = 0;
-    const uint32_t          num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_ID              key      = KOS_VOID;
-    KOS_OBJ_ID              reverse  = KOS_FALSE;
+    int                     error       = KOS_SUCCESS;
+    int                     pushed      = 0;
+    const uint32_t          num_args    = KOS_get_array_size(args_obj);
+    KOS_OBJ_ID              key         = KOS_VOID;
+    KOS_OBJ_ID              reverse_id  = KOS_FALSE;
     KOS_ATOMIC(KOS_OBJ_ID) *src;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
@@ -2101,17 +2101,17 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
         type = GET_OBJ_TYPE(key);
 
         if (type == OBJ_BOOLEAN) {
-            reverse = key;
-            key     = KOS_VOID;
+            reverse_id = key;
+            key        = KOS_VOID;
         }
         else {
             if (type != OBJ_VOID && type != OBJ_FUNCTION && type != OBJ_CLASS)
                 RAISE_EXCEPTION(str_err_invalid_key_type);
 
             if (num_args > 1) {
-                reverse = KOS_array_read(ctx, args_obj, 1);
-                TRY_OBJID(reverse);
-                if (reverse != KOS_TRUE && reverse != KOS_FALSE)
+                reverse_id = KOS_array_read(ctx, args_obj, 1);
+                TRY_OBJID(reverse_id);
+                if (reverse_id != KOS_TRUE && reverse_id != KOS_FALSE)
                     RAISE_EXCEPTION(str_err_invalid_reverse_type);
             }
         }
@@ -2131,7 +2131,7 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
         sort_range(src,
                    src + KOS_get_array_size(aux),
                    (key == KOS_VOID) ? 2 : 3,
-                   (int)KOS_get_bool(reverse));
+                   (int)KOS_get_bool(reverse_id));
 
         copy_sort_results(ctx, this_obj, aux, (key == KOS_VOID) ? 2 : 3);
     }
