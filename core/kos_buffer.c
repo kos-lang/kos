@@ -61,6 +61,11 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
             init = 1;
         }
 
+        while (((intptr_t)buf & 7) && buf < end) {
+            *(uint8_t *)buf = (uint8_t)kos_rng_random(&rng);
+            buf = (uint64_t *)((intptr_t)buf + 1);
+        }
+
         while (buf < end)
             *(buf++) = kos_rng_random(&rng);
     }
