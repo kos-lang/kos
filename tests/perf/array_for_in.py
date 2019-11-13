@@ -1,15 +1,21 @@
 #!/usr/bin/env python
+""" Tests iteration over array using for-in loop. """
 
-loops = 3000
-size  = 10000
-a     = list(range(size))
-total = 0
+def run():
+    """ Body of the test """
 
-l = 0
-while l < loops:
-    l += 1
+    loops = 3000
+    size = 10000
+    a = list(range(size))
+    total = 0
 
-    for elem in a:
-        total += elem
+    l = 0
+    while l < loops:
+        l += 1
 
-print(total)
+        for elem in a:
+            total += elem
+
+    print(total)
+
+run()

@@ -1,21 +1,27 @@
 #!/usr/bin/env python
+""" Generates an array of random strings and then sorts it. """
 
 from random import randint
 
-a = []
+def run():
+    """ Body of the test """
 
-i = 0
-while i < 100000:
-    i += 1
+    a = []
 
-    r = randint(0, 0x7FFFFFFFFFFFFFFF)
+    i = 0
+    while i < 100000:
+        i += 1
 
-    s = ""
+        r = randint(0, 0x7FFFFFFFFFFFFFFF)
 
-    while r:
-        s += chr((r & 0x3F) + 0x20)
-        r >>= 7
+        s = ""
 
-    a.append(s)
+        while r:
+            s += chr((r & 0x3F) + 0x20)
+            r >>= 7
 
-a.sort()
+        a.append(s)
+
+    a.sort()
+
+run()
