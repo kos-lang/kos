@@ -136,7 +136,7 @@ static int _init_stack(KOS_CONTEXT ctx,
 static int _push_new_stack(KOS_CONTEXT ctx)
 {
     KOS_STACK *const new_stack = (KOS_STACK *)
-        kos_alloc_object(ctx, OBJ_STACK, KOS_STACK_OBJ_SIZE);
+        kos_alloc_object(ctx, KOS_ALLOC_IMMOVABLE, OBJ_STACK, KOS_STACK_OBJ_SIZE);
 
     if (new_stack)
         new_stack->flags = KOS_NORMAL_STACK;
@@ -150,6 +150,7 @@ static int _push_new_reentrant_stack(KOS_CONTEXT ctx,
     int              error;
     const size_t     alloc_size = sizeof(KOS_STACK) + sizeof(KOS_OBJ_ID) * room;
     KOS_STACK *const new_stack  = (KOS_STACK *)kos_alloc_object(ctx,
+                                                                KOS_ALLOC_IMMOVABLE,
                                                                 OBJ_STACK,
                                                                 (uint32_t)alloc_size);
     if (new_stack)

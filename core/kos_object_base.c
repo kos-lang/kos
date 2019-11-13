@@ -45,6 +45,7 @@ KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
         return obj_id;
 
     integer = (KOS_INTEGER *)kos_alloc_object(ctx,
+                                              KOS_ALLOC_MOVABLE,
                                               OBJ_INTEGER,
                                               sizeof(KOS_INTEGER));
 
@@ -59,6 +60,7 @@ KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
 KOS_OBJ_ID KOS_new_float(KOS_CONTEXT ctx, double value)
 {
     KOS_FLOAT *number = (KOS_FLOAT *)kos_alloc_object(ctx,
+                                                      KOS_ALLOC_MOVABLE,
                                                       OBJ_FLOAT,
                                                       sizeof(KOS_FLOAT));
 
@@ -73,6 +75,7 @@ KOS_OBJ_ID KOS_new_float(KOS_CONTEXT ctx, double value)
 KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
 {
     KOS_FUNCTION *func = (KOS_FUNCTION *)kos_alloc_object(ctx,
+                                                          KOS_ALLOC_MOVABLE,
                                                           OBJ_FUNCTION,
                                                           sizeof(KOS_FUNCTION));
 
@@ -154,7 +157,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
     kos_track_refs(ctx, 2, &func_obj, &proto_obj);
 
     func_obj = OBJID(CLASS, (KOS_CLASS *)
-                     kos_alloc_object(ctx, OBJ_CLASS, sizeof(KOS_CLASS)));
+                     kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_CLASS, sizeof(KOS_CLASS)));
 
     if ( ! IS_BAD_PTR(func_obj)) {
 
@@ -234,6 +237,7 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx)
 {
     KOS_DYNAMIC_PROP *dyn_prop = (KOS_DYNAMIC_PROP *)kos_alloc_object(ctx,
+                                                                      KOS_ALLOC_MOVABLE,
                                                                       OBJ_DYNAMIC_PROP,
                                                                       sizeof(KOS_DYNAMIC_PROP));
 

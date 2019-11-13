@@ -26,21 +26,22 @@
 #include "../inc/kos_object_base.h"
 #include <stddef.h>
 
+typedef enum KOS_ALLOC_FLAG_E {
+    KOS_ALLOC_MOVABLE,
+    KOS_ALLOC_IMMOVABLE
+} KOS_ALLOC_FLAG;
+
 int   kos_heap_init(KOS_INSTANCE *inst);
 
 void  kos_heap_destroy(KOS_INSTANCE *inst);
 
-void *kos_alloc_object(KOS_CONTEXT ctx,
-                       KOS_TYPE    object_type,
-                       uint32_t    size);
+void *kos_alloc_object(KOS_CONTEXT    ctx,
+                       KOS_ALLOC_FLAG flags,
+                       KOS_TYPE       object_type,
+                       uint32_t       size);
 
 void *kos_alloc_object_page(KOS_CONTEXT ctx,
                             KOS_TYPE    object_type);
-
-void *kos_heap_early_alloc(KOS_INSTANCE *inst,
-                           KOS_CONTEXT   ctx,
-                           KOS_TYPE      object_type,
-                           uint32_t      size);
 
 void kos_heap_release_thread_page(KOS_CONTEXT ctx);
 

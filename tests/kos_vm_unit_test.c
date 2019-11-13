@@ -100,6 +100,7 @@ static int _test_instr(KOS_CONTEXT           ctx,
     KOS_OBJ_ID  ret             = KOS_BADPTR;
 
     module = (KOS_MODULE *)kos_alloc_object(ctx,
+                                            KOS_ALLOC_IMMOVABLE,
                                             OBJ_MODULE,
                                             sizeof(KOS_MODULE));
     if ( ! module) {

@@ -554,6 +554,10 @@ static int collect_garbage_last_resort_locked(KOS_CONTEXT ctx, KOS_GC_STATS *sta
     if (KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE)
         return KOS_SUCCESS;
 
+    /* No garbage to collect, bail out early.  This can happen on init. */
+    if ( ! heap->used_pages.head)
+        return KOS_SUCCESS;
+
     kos_unlock_mutex(&heap->mutex);
 
     error = KOS_collect_garbage(ctx, stats);
@@ -628,28 +632,6 @@ static KOS_OBJ_HEADER *alloc_object_from_page(KOS_PAGE *page,
     }
 
     return hdr;
-}
-
-void *kos_heap_early_alloc(KOS_INSTANCE *inst,
-                           KOS_CONTEXT   ctx,
-                           KOS_TYPE      object_type,
-                           uint32_t      size)
-{
-    const uint32_t num_slots = (size + sizeof(KOS_SLOT) - 1) >> KOS_OBJ_ALIGN_BITS;
-
-    if ( ! ctx->cur_page) {
-
-        kos_lock_mutex(&inst->heap.mutex);
-
-        ctx->cur_page = alloc_page(&inst->heap);
-
-        kos_unlock_mutex(&inst->heap.mutex);
-
-        if ( ! ctx->cur_page)
-            return 0;
-    }
-
-    return alloc_object_from_page(ctx->cur_page, object_type, num_slots);
 }
 
 static void push_page_with_objects(KOS_HEAP *heap, KOS_PAGE *page)
@@ -942,9 +924,10 @@ cleanup:
     return hdr;
 }
 
-void *kos_alloc_object(KOS_CONTEXT ctx,
-                       KOS_TYPE    object_type,
-                       uint32_t    size)
+void *kos_alloc_object(KOS_CONTEXT    ctx,
+                       KOS_ALLOC_FLAG flags,
+                       KOS_TYPE       object_type,
+                       uint32_t       size)
 {
     void *obj;
 
@@ -958,7 +941,7 @@ void *kos_alloc_object(KOS_CONTEXT ctx,
         return 0;
     }
 
-    if (size > KOS_MAX_HEAP_OBJ_SIZE)
+    if (size > KOS_MAX_HEAP_OBJ_SIZE || flags == KOS_ALLOC_IMMOVABLE)
         obj = alloc_huge_object(ctx, object_type, size);
     else
         obj = alloc_object(ctx, object_type, size);

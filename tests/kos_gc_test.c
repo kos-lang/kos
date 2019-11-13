@@ -41,6 +41,9 @@
 #define TRIGGER_SIZE ((1U + (100U - KOS_MIGRATION_THRESH) * KOS_SLOTS_PER_PAGE / 100U) << KOS_OBJ_ALIGN_BITS)
 #define NELEMS(array) (sizeof(array) / sizeof((array)[0]))
 
+/* Init module is allocated as immovable */
+#define MODULE_SIZE ((unsigned)(sizeof(KOS_MODULE) + KOS_OBJ_TRACK_BIT))
+
 typedef struct OBJECT_DESC_S {
     KOS_TYPE type;
     uint32_t size;
@@ -1193,7 +1196,7 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     TEST(stats.size_evacuated     == (unsigned)total_size);
     TEST(stats.size_freed         == (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) - (unsigned)total_size);
     TEST(stats.size_kept          == orig_stats->size_kept);
-    TEST(stats.malloc_size        == 0);
+    TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
     KOS_instance_destroy(&inst);
@@ -1221,7 +1224,7 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     TEST(stats.size_evacuated     == 0);
     TEST(stats.size_freed         == (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS));
     TEST(stats.size_kept          == orig_stats->size_kept);
-    TEST(stats.malloc_size        == 0);
+    TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
     TEST(!f47 || private_test == 47);
@@ -1390,7 +1393,7 @@ static KOS_OBJ_ID alloc_balast(KOS_CONTEXT ctx,
 
     size = KOS_min(size_left, KOS_MAX_HEAP_OBJ_SIZE);
 
-    array = (KOS_ARRAY_STORAGE *)kos_alloc_object(ctx, OBJ_ARRAY_STORAGE, size);
+    array = (KOS_ARRAY_STORAGE *)kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_ARRAY_STORAGE, size);
     if ( ! array)
         return KOS_BADPTR;
 
@@ -1415,7 +1418,7 @@ static KOS_OBJ_ID alloc_balast(KOS_CONTEXT ctx,
         size      =  KOS_min(size_left, KOS_MAX_HEAP_OBJ_SIZE);
         size_left -= size;
 
-        next_obj = OBJID(OPAQUE, (KOS_OPAQUE *)kos_alloc_object(ctx, OBJ_OPAQUE, size));
+        next_obj = OBJID(OPAQUE, (KOS_OPAQUE *)kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_OPAQUE, size));
 
         if (IS_BAD_PTR(next_obj)) {
             kos_untrack_refs(ctx, 1);
@@ -1468,7 +1471,7 @@ int main(void)
         TEST(base_stats.size_evacuated     == 0);
         TEST(base_stats.size_freed         == 0);
         TEST(base_stats.size_kept          >  0);
-        TEST(base_stats.malloc_size        == 0);
+        TEST(base_stats.malloc_size        == MODULE_SIZE);
 #endif
 
         KOS_instance_destroy(&inst);
@@ -1528,7 +1531,7 @@ int main(void)
         TEST(stats.size_evacuated     == base_stats.size_evacuated);
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          >  0);
-        TEST(stats.malloc_size        == 0);
+        TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
         KOS_instance_destroy(&inst);
@@ -1562,7 +1565,7 @@ int main(void)
         TEST(stats.size_evacuated     == 0);
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          == base_stats.size_kept + get_obj_size(obj_id));
-        TEST(stats.malloc_size        == 0);
+        TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
         kos_untrack_refs(ctx, 1);
@@ -1580,7 +1583,7 @@ int main(void)
         TEST(stats.size_evacuated     == 0);
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          == base_stats.size_kept);
-        TEST(stats.malloc_size        == 0);
+        TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
         KOS_instance_destroy(&inst);
@@ -1712,7 +1715,7 @@ int main(void)
         TEST(stats.size_freed         == 0);
         TEST(stats.size_kept          == base_stats.size_kept
                                          + (max_pages - 1U) * (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS));
-        TEST(stats.malloc_size        == 0);
+        TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
         TEST(verify_full_pages(array) == KOS_SUCCESS);
@@ -1781,7 +1784,7 @@ int main(void)
         TEST(stats.size_kept          == base_stats.size_kept
                                          + num_pages * (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS)
                                          + ballast_size);
-        TEST(stats.malloc_size        == 0);
+        TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
         TEST(verify_full_pages(array) == KOS_SUCCESS);
@@ -1844,7 +1847,7 @@ int main(void)
         TEST(stats.size_kept          == base_stats.size_kept
                                          + num_pages * (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS)
                                          + ballast_size);
-        TEST(stats.malloc_size        == 0);
+        TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
         TEST(verify_full_pages(array) == KOS_SUCCESS);

@@ -38,7 +38,7 @@ if [ "$COUNT" != "1" ]; then
     exit 1
 fi
 
-if ! grep -q "total 1 pages used,.*, 0 bytes malloc'd" "$OUTPUT"; then
+if ! grep -q "total 1 pages used,.*, 120 bytes malloc'd" "$OUTPUT"; then
     echo "Unexpected output" >&2
     grep "^total" "$OUTPUT" | sed "s/^/> /" >&2
     exit 1

@@ -46,7 +46,6 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char str_init[]                    = "init";
 static const char str_err_not_array[]           = "object is not an array";
 static const char str_err_thread_registered[]   = "thread already registered";
 static const char str_format_exception[]        = "Exception: ";
@@ -108,7 +107,7 @@ static int push_local_refs_object(KOS_CONTEXT ctx)
 {
     int             error      = KOS_ERROR_EXCEPTION;
     KOS_LOCAL_REFS *local_refs = (KOS_LOCAL_REFS *)
-        kos_alloc_object(ctx, OBJ_LOCAL_REFS, (uint32_t)sizeof(KOS_LOCAL_REFS));
+        kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_LOCAL_REFS, (uint32_t)sizeof(KOS_LOCAL_REFS));
 
     if (local_refs) {
         local_refs->num_tracked = 0;
@@ -289,35 +288,76 @@ static int init_search_paths(KOS_CONTEXT ctx)
 #endif
 }
 
+static void setup_init_module(KOS_MODULE *init_module)
+{
+    KOS_DECLARE_STATIC_CONST_STRING(str_init, "init");
+
+    assert(kos_get_object_type(init_module->header) == OBJ_MODULE);
+
+    init_module->flags          = 0;
+    init_module->name           = KOS_CONST_ID(str_init);
+    init_module->path           = KOS_STR_EMPTY;
+    init_module->inst           = 0;
+    init_module->constants      = KOS_BADPTR;
+    init_module->global_names   = KOS_BADPTR;
+    init_module->globals        = KOS_BADPTR;
+    init_module->module_names   = KOS_BADPTR;
+    init_module->bytecode       = 0;
+    init_module->line_addrs     = 0;
+    init_module->func_addrs     = 0;
+    init_module->num_line_addrs = 0;
+    init_module->num_func_addrs = 0;
+    init_module->bytecode_size  = 0;
+}
+
+struct KOS_CONST_MODULE_S {
+    struct KOS_CONST_OBJECT_ALIGNMENT_S align;
+    KOS_MODULE                          object;
+};
+
+static KOS_OBJ_ID get_init_module()
+{
+    KOS_DECLARE_ALIGNED(32, static struct KOS_CONST_MODULE_S) init_module;
+
+    kos_set_object_type_size(init_module.object.header, OBJ_MODULE, 0);
+
+    setup_init_module(&init_module.object);
+
+    assert( ! kos_is_heap_object(KOS_CONST_ID(init_module)));
+
+    return KOS_CONST_ID(init_module);
+}
+
 static void clear_instance(KOS_INSTANCE *inst)
 {
     /* Disable GC during early init */
     inst->flags = KOS_INST_MANUAL_GC;
 
-    inst->args                            = KOS_BADPTR;
-    inst->prototypes.object_proto         = KOS_BADPTR;
-    inst->prototypes.number_proto         = KOS_BADPTR;
-    inst->prototypes.integer_proto        = KOS_BADPTR;
-    inst->prototypes.float_proto          = KOS_BADPTR;
-    inst->prototypes.string_proto         = KOS_BADPTR;
-    inst->prototypes.boolean_proto        = KOS_BADPTR;
-    inst->prototypes.array_proto          = KOS_BADPTR;
-    inst->prototypes.buffer_proto         = KOS_BADPTR;
-    inst->prototypes.function_proto       = KOS_BADPTR;
-    inst->prototypes.class_proto          = KOS_BADPTR;
-    inst->prototypes.generator_proto      = KOS_BADPTR;
-    inst->prototypes.exception_proto      = KOS_BADPTR;
-    inst->prototypes.generator_end_proto  = KOS_BADPTR;
-    inst->prototypes.thread_proto         = KOS_BADPTR;
-    inst->modules.search_paths            = KOS_BADPTR;
-    inst->modules.module_names            = KOS_BADPTR;
-    inst->modules.modules                 = KOS_BADPTR;
-    inst->modules.init_module             = KOS_BADPTR;
-    inst->modules.module_inits            = KOS_BADPTR;
-    inst->modules.load_chain              = 0;
-    inst->threads.threads                 = 0;
-    inst->threads.num_threads             = 0;
-    inst->threads.max_threads             = KOS_MAX_THREADS;
+    inst->args                           = KOS_BADPTR;
+    inst->prototypes.object_proto        = KOS_BADPTR;
+    inst->prototypes.number_proto        = KOS_BADPTR;
+    inst->prototypes.integer_proto       = KOS_BADPTR;
+    inst->prototypes.float_proto         = KOS_BADPTR;
+    inst->prototypes.string_proto        = KOS_BADPTR;
+    inst->prototypes.boolean_proto       = KOS_BADPTR;
+    inst->prototypes.array_proto         = KOS_BADPTR;
+    inst->prototypes.buffer_proto        = KOS_BADPTR;
+    inst->prototypes.function_proto      = KOS_BADPTR;
+    inst->prototypes.class_proto         = KOS_BADPTR;
+    inst->prototypes.generator_proto     = KOS_BADPTR;
+    inst->prototypes.exception_proto     = KOS_BADPTR;
+    inst->prototypes.generator_end_proto = KOS_BADPTR;
+    inst->prototypes.thread_proto        = KOS_BADPTR;
+    inst->modules.search_paths           = KOS_BADPTR;
+    inst->modules.module_names           = KOS_BADPTR;
+    inst->modules.modules                = KOS_BADPTR;
+    inst->modules.init_module            = get_init_module();
+    inst->modules.module_inits           = KOS_BADPTR;
+    inst->modules.load_chain             = 0;
+    inst->threads.threads                = 0;
+    inst->threads.num_threads            = 0;
+    inst->threads.max_threads            = KOS_MAX_THREADS;
+
     init_context(&inst->threads.main_thread, inst);
 }
 
@@ -352,36 +392,10 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY(kos_heap_init(inst));
     heap_ok = 1;
 
-    init_module = (KOS_MODULE *)kos_heap_early_alloc(inst,
-                                                     &inst->threads.main_thread,
-                                                     OBJ_MODULE,
-                                                     (uint32_t)sizeof(KOS_MODULE));
-    if ( ! init_module)
-        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
-
-    init_module->flags          = 0;
-    init_module->name           = KOS_BADPTR;
-    init_module->path           = KOS_BADPTR;
-    init_module->inst           = inst;
-    init_module->constants      = KOS_BADPTR;
-    init_module->global_names   = KOS_BADPTR;
-    init_module->globals        = KOS_BADPTR;
-    init_module->module_names   = KOS_BADPTR;
-    init_module->bytecode       = 0;
-    init_module->line_addrs     = 0;
-    init_module->func_addrs     = 0;
-    init_module->num_line_addrs = 0;
-    init_module->num_func_addrs = 0;
-    init_module->bytecode_size  = 0;
-
-    inst->modules.init_module = OBJID(MODULE, init_module);
-
     inst->threads.threads = (KOS_ATOMIC(KOS_THREAD *) *)
         kos_malloc(sizeof(KOS_THREAD *) * inst->threads.max_threads);
-    if ( ! inst->threads.threads) {
-        error = KOS_ERROR_OUT_OF_MEMORY;
-        goto cleanup;
-    }
+    if ( ! inst->threads.threads)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     memset((void *)inst->threads.threads, 0, sizeof(KOS_THREAD *) * inst->threads.max_threads);
 
     /* Note: register_thread() calls KOS_resume_context() */
@@ -404,18 +418,23 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY_OBJID(inst->prototypes.exception_proto     = KOS_new_object(ctx));
     TRY_OBJID(inst->prototypes.generator_end_proto = KOS_new_object(ctx));
     TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(ctx));
+    TRY_OBJID(inst->modules.module_names           = KOS_new_object(ctx));
+    TRY_OBJID(inst->modules.modules                = KOS_new_array(ctx, 0));
+    TRY_OBJID(inst->modules.search_paths           = KOS_new_array(ctx, 0));
+    TRY_OBJID(inst->modules.module_inits           = KOS_new_object(ctx));
+    TRY_OBJID(inst->args                           = KOS_new_array(ctx, 0));
 
-    TRY_OBJID(init_module->name          = KOS_new_const_ascii_string(ctx, str_init, sizeof(str_init) - 1));
-    TRY_OBJID(init_module->path          = KOS_STR_EMPTY);
+    init_module = (KOS_MODULE *)kos_alloc_object(ctx, KOS_ALLOC_IMMOVABLE, OBJ_MODULE, sizeof(KOS_MODULE));
+    if ( ! init_module)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+    setup_init_module(init_module);
+
+    init_module->inst                    = inst;
     TRY_OBJID(init_module->globals       = KOS_new_array(ctx, 0));
     TRY_OBJID(init_module->global_names  = KOS_new_object(ctx));
     TRY_OBJID(init_module->module_names  = KOS_new_object(ctx));
-    TRY_OBJID(inst->modules.module_names = KOS_new_object(ctx));
-    TRY_OBJID(inst->modules.modules      = KOS_new_array(ctx, 0));
-    TRY_OBJID(inst->modules.search_paths = KOS_new_array(ctx, 0));
-    TRY_OBJID(inst->modules.module_inits = KOS_new_object(ctx));
 
-    TRY_OBJID(inst->args = KOS_new_array(ctx, 0));
+    inst->modules.init_module = OBJID(MODULE, init_module);
 
     TRY(init_search_paths(ctx));
 
@@ -703,6 +722,7 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
     kos_track_refs(ctx, 1, &module_name);
 
     mod_init = (struct KOS_MODULE_INIT_S *)kos_alloc_object(ctx,
+                                                            KOS_ALLOC_MOVABLE,
                                                             OBJ_OPAQUE,
                                                             sizeof(struct KOS_MODULE_INIT_S));
 

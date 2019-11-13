@@ -1203,13 +1203,8 @@ static int exec_function(KOS_CONTEXT ctx)
     assert(OBJPTR(MODULE, module)->inst);
     bytecode = OBJPTR(MODULE, module)->bytecode + load_instr_offs(stack, regs_idx);
 
-    {
-        int pushed = 0;
-        error = KOS_push_locals(ctx, &pushed, 2, &module, &stack);
-        if (error)
-            return error;
-        assert(pushed == 2);
-    }
+    assert( ! kos_is_heap_object(module));
+    assert( ! kos_is_heap_object(stack));
 
     for (;;) { /* Exit condition at the end of the loop */
 
@@ -2953,8 +2948,6 @@ static int exec_function(KOS_CONTEXT ctx)
 
     store_instr_offs(stack, regs_idx,
                      (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
-
-    KOS_pop_locals(ctx, 2);
 
     return error;
 }

@@ -68,6 +68,7 @@ static KOS_STRING *_new_empty_string(KOS_CONTEXT      ctx,
     assert(length > 0U);
 
     str = (KOS_STRING *)kos_alloc_object(ctx,
+                                         KOS_ALLOC_MOVABLE,
                                          OBJ_STRING,
                                          sizeof(KOS_STR_HEADER) + (length << elem_size));
 
@@ -107,6 +108,7 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
             _override_elem_size(elem_size);
 
             str = (KOS_STRING *)kos_alloc_object(ctx,
+                                                 KOS_ALLOC_MOVABLE,
                                                  OBJ_STRING,
                                                  sizeof(KOS_STR_HEADER) + (length << elem_size));
         }
@@ -193,6 +195,7 @@ KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT      ctx,
 
     if (length) {
         str = (KOS_STRING *)kos_alloc_object(ctx,
+                                             KOS_ALLOC_MOVABLE,
                                              OBJ_STRING,
                                              sizeof(struct KOS_STRING_PTR_S));
 
@@ -851,6 +854,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
 
                     new_str = OBJID(STRING, (KOS_STRING *)
                               kos_alloc_object(ctx,
+                                               KOS_ALLOC_MOVABLE,
                                                OBJ_STRING,
                                                sizeof(struct KOS_STRING_REF_S)));
 

@@ -260,7 +260,7 @@ static KOS_OBJ_ID _alloc_module(KOS_CONTEXT ctx,
     kos_track_refs(ctx, 3, &module_name, &module, &obj_id);
 
     module = OBJID(MODULE, (KOS_MODULE *)
-            kos_alloc_object(ctx, OBJ_MODULE, sizeof(KOS_MODULE)));
+            kos_alloc_object(ctx, KOS_ALLOC_IMMOVABLE, OBJ_MODULE, sizeof(KOS_MODULE)));
     TRY_OBJID(module);
 
     {
