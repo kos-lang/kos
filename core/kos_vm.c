@@ -2117,8 +2117,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 if (!error) {
                     error = KOS_get_integer(ctx, REGISTER(rsrc2), &b);
                     if (!error) {
-                        if (b > 63 || b < -63)
-                            out = TO_SMALL_INT(a < 0 && b < 0 ? -1 : 0);
+                        if (b > 63 || b < -62)
+                            out = TO_SMALL_INT((a < 0 && b < 0) ? -1 : 0);
                         else if (b < 0)
                             out = KOS_new_int(ctx, a >> -b);
                         else
@@ -2145,8 +2145,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 if (!error) {
                     error = KOS_get_integer(ctx, REGISTER(rsrc2), &b);
                     if (!error) {
-                        if (b > 63 || b < -63)
-                            out = TO_SMALL_INT(a < 0 && b > 0 ? -1 : 0);
+                        if (b > 62 || b < -63)
+                            out = TO_SMALL_INT((a < 0 && b > 0) ? -1 : 0);
                         else if (b < 0)
                             out = KOS_new_int(ctx, (int64_t)((uint64_t)a << -b));
                         else

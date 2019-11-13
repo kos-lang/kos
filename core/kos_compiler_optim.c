@@ -997,7 +997,7 @@ static int _optimize_binary_op(KOS_COMP_UNIT      *program,
             break;
 
         case OT_SHL:
-            if (numeric_b.u.i > 63 || numeric_b.u.i < -63)
+            if (numeric_b.u.i > 63 || numeric_b.u.i < -62)
                 numeric_a.u.i = (numeric_a.u.i < 0 && numeric_b.u.i < 0) ? -1 : 0;
             else if (numeric_b.u.i < 0)
                 numeric_a.u.i >>= -numeric_b.u.i;
@@ -1006,7 +1006,7 @@ static int _optimize_binary_op(KOS_COMP_UNIT      *program,
             break;
 
         case OT_SHR:
-            if (numeric_b.u.i > 63 || numeric_b.u.i < -63)
+            if (numeric_b.u.i > 62 || numeric_b.u.i < -63)
                 numeric_a.u.i = (numeric_a.u.i < 0 && numeric_b.u.i > 0) ? -1 : 0;
             else if (numeric_b.u.i < 0)
                 numeric_a.u.i = (int64_t)((uint64_t)numeric_a.u.i << -numeric_b.u.i);
