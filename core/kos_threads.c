@@ -238,7 +238,6 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
     int            error        = KOS_SUCCESS;
     KOS_INSTANCE  *inst         = ctx->inst;
     const uint32_t max_threads  = inst->threads.max_threads;
-    KOS_THREAD    *thread       = 0;
     KOS_OBJ_ID     exception    = KOS_BADPTR;
     int            num_tracked  = 0;
     int            num_pending  = 0;
@@ -250,6 +249,8 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
         return KOS_SUCCESS;
 
     while (i < max_threads) {
+
+        KOS_THREAD *thread = 0;
 
         if (i == 0) {
             num_pending  = 0;
@@ -462,8 +463,15 @@ int kos_create_mutex(KOS_MUTEX *mutex)
     assert(mutex);
     *mutex = (KOS_MUTEX)kos_malloc(sizeof(struct KOS_MUTEX_OBJECT_S));
 
-    if (*mutex)
-        InitializeCriticalSection(&(*mutex)->cs);
+    if (*mutex) {
+        __try {
+            InitializeCriticalSection(&(*mutex)->cs);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            error = KOS_ERROR_EXCEPTION;
+        }
+
+    }
     else
         error = KOS_ERROR_EXCEPTION;
 
@@ -483,7 +491,11 @@ void kos_lock_mutex(KOS_MUTEX *mutex)
 {
     assert(mutex && *mutex);
 
-    EnterCriticalSection(&(*mutex)->cs);
+    __try {
+        EnterCriticalSection(&(*mutex)->cs);
+    }
+    __except (EXCEPTION_CONTINUE_SEARCH) {
+    }
 }
 
 void kos_unlock_mutex(KOS_MUTEX *mutex)
