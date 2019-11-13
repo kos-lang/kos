@@ -1202,7 +1202,6 @@ static int comparison_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
     int error = KOS_SUCCESS;
 
     KOS_AST_NODE *node = 0;
-    KOS_AST_NODE *aux  = 0;
 
     TRY(arithm_bitwise_expr(parser, &node));
 
@@ -1211,6 +1210,8 @@ static int comparison_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
     if ((parser->token.op & OT_MASK) == OT_COMPARISON
         || parser->token.keyword == KW_IN
         || parser->token.keyword == KW_INSTANCEOF) {
+
+        KOS_AST_NODE *aux = 0;
 
         TRY(new_node(parser, ret, NT_OPERATOR));
 
@@ -1226,10 +1227,8 @@ static int comparison_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
         ast_push(*ret, node);
         node = 0;
 
-        if (aux) {
+        if (aux)
             ast_push(*ret, aux);
-            aux = 0;
-        }
     }
     else {
         parser->unget = 1;
