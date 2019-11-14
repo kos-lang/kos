@@ -3,17 +3,17 @@
 
 * Add syntax coloring for Eclipse, IntelliJ IDEA
 
-* ? Change division to produce float, add integer division operator //
+* ? Change division to produce float, add integer division operator, e.g. //
 
 * ? Add buffer strings b"" or buffer literals <01 fa>
 
 * ? Empty array, buffer, string, object (shallow) are all falsy
 
-* ? if, while, switch variable declarations
+* if, while, switch variable declarations
 
 * ? remove C-style for loop
 
-* `private` keyword to make globals module-private
+* `public` keyword to make globals public (should be private by default)
 
 * ? Support multi-line strings the Python way or the C way?
 
@@ -41,3 +41,4 @@
     - Hoist constants outside of loops.  Reuse constants.
     - Function inlining for simple functions, esp. inside loops.
     - Stack reuse in tail calls.
+    - Replace binds for non-global functions with LOAD.CONST
