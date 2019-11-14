@@ -50,7 +50,7 @@
 #define KOS_MIN_REG_CAPACITY   32U
 #define KOS_MAX_ARGS_IN_REGS   32U
 #ifdef CONFIG_FUZZ
-#   define KOS_MAX_STACK_DEPTH 256U
+#   define KOS_MAX_STACK_DEPTH 64U
 #else
 #   define KOS_MAX_STACK_DEPTH 2048U
 #endif

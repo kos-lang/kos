@@ -23,6 +23,7 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
+#include "../inc/kos_modules_init.h"
 #include "../inc/kos_utils.h"
 #include <stdio.h>
 
@@ -42,6 +43,9 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     if ( ! error) {
 
         error = KOS_instance_add_default_path(ctx, 0);
+
+        if ( ! error)
+            error = KOS_modules_init(ctx);
 
         if ( ! error)
             error = KOS_load_module_from_memory(ctx,
