@@ -114,6 +114,7 @@ static KOS_VAR *_alloc_var(KOS_COMP_UNIT      *program,
         var->is_const     = is_const;
         var->is_active    = VAR_ALWAYS_ACTIVE;
         var->has_defaults = 0;
+        var->num_reads    = -1;
 
         kos_red_black_insert(&program->scope_stack->vars,
                              (KOS_RED_BLACK_NODE *)var,
@@ -1059,8 +1060,11 @@ static int _visit_node(KOS_COMP_UNIT *program,
 void kos_activate_var(KOS_COMP_UNIT      *program,
                       const KOS_AST_NODE *node)
 {
-
     KOS_VAR *var;
+
+    /* Result of optimization */
+    if (node->type == NT_VOID_LITERAL)
+        return;
 
     assert(node->type == NT_IDENTIFIER);
 

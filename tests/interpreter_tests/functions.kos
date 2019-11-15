@@ -1919,6 +1919,18 @@ do {
     assert o.c == 103
 }
 
+# Writes to variable which is never read should be optimized out
+# Test case from fuzzer.
+do {
+    fun {
+        var a = void
+        fun {
+            a = 42
+        }
+        . size
+    } ()
+}
+
 ##############################################################################
 # Iterate over functions
 do {

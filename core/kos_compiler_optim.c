@@ -258,6 +258,7 @@ static int _reset_var_state(KOS_RED_BLACK_NODE *node,
     if (var->is_active == VAR_ACTIVE)
         var->is_active = VAR_INACTIVE;
 
+    var->num_reads_prev    = var->num_reads;
     var->num_reads         = 0;
     var->num_assignments   = 0;
     var->local_reads       = 0;
@@ -286,11 +287,16 @@ static KOS_SCOPE *_push_scope(KOS_COMP_UNIT      *program,
     return scope;
 }
 
-static int _count_and_update_vars(KOS_RED_BLACK_NODE *node,
-                                  void               *cookie)
+typedef struct UPDATE_VARS_S {
+    KOS_COMP_UNIT *program;
+    KOS_SCOPE     *scope;
+} UPDATE_VARS;
+
+static int count_and_update_vars(KOS_RED_BLACK_NODE *node,
+                                 void               *cookie)
 {
     KOS_VAR   *var   = (KOS_VAR *)node;
-    KOS_SCOPE *scope = (KOS_SCOPE *)cookie;
+    KOS_SCOPE *scope = ((UPDATE_VARS *)cookie)->scope;
 
     /* Change to const if the variable was never modified */
     if ((var->type & VAR_LOCALS_AND_ARGS) && ! var->is_const && ! var->num_assignments) {
@@ -322,16 +328,21 @@ static int _count_and_update_vars(KOS_RED_BLACK_NODE *node,
         assert(scope->is_function || ! scope->next);
     }
 
+    /* Trigger another optimization pass if variable is not needed */
+    if (var->num_assignments && ! var->num_reads && var->type != VAR_GLOBAL)
+        ++((UPDATE_VARS *)cookie)->program->num_optimizations;
+
     return KOS_SUCCESS;
 }
 
 static void _pop_scope(KOS_COMP_UNIT *program)
 {
-    KOS_SCOPE *scope = program->scope_stack;
+    KOS_SCOPE  *scope      = program->scope_stack;
+    UPDATE_VARS update_ctx = { program, scope };
 
     assert(scope);
 
-    kos_red_black_walk(scope->vars, _count_and_update_vars, scope);
+    kos_red_black_walk(scope->vars, count_and_update_vars, &update_ctx);
 
     if ( ! scope->is_function && scope->next) {
         scope->next->num_vars       += scope->num_vars;
@@ -781,8 +792,10 @@ static int _assignment(KOS_COMP_UNIT *program,
     int               error     = KOS_SUCCESS;
     int               is_lhs;
     int               t;
+    int               num_used  = 0;
     KOS_AST_NODE     *lhs_node  = node->children;
     KOS_AST_NODE     *rhs_node;
+    KOS_AST_NODE     *assg_node = node;
     KOS_NODE_TYPE     assg_type = node->type;
     KOS_OPERATOR_TYPE assg_op   = node->token.op;
 
@@ -811,10 +824,7 @@ static int _assignment(KOS_COMP_UNIT *program,
     TRY(_visit_node(program, rhs_node, &t));
     assert(t == TERM_NONE);
 
-    /* TODO
-     * - optimize multi assignment from array literal (don't create array)
-     * - optimize var/const if the variable is never used afterwards
-     */
+    /* TODO optimize multi assignment from array literal (don't create array) */
 
     for ( ; node; node = node->next) {
 
@@ -832,26 +842,40 @@ static int _assignment(KOS_COMP_UNIT *program,
                 if (assg_type == NT_ASSIGNMENT)
                     var->value = rhs_node;
             }
-            else {
-                assert( ! var->is_const);
-                ++var->num_assignments;
-                if (assg_op != OT_SET)
-                    ++var->num_reads;
 
-                if (is_local) {
-                    ++var->local_assignments;
+            if ( ! var->num_reads_prev && var->type != VAR_GLOBAL) {
+                _collapse(node, NT_VOID_LITERAL, TT_KEYWORD, KW_VOID, 0, 0);
+                ++program->num_optimizations;
+            }
+            else {
+
+                ++num_used;
+
+                if (is_lhs) {
+                    assert( ! var->is_const);
+                    ++var->num_assignments;
                     if (assg_op != OT_SET)
-                        ++var->local_reads;
+                        ++var->num_reads;
+
+                    if (is_local) {
+                        ++var->local_assignments;
+                        if (assg_op != OT_SET)
+                            ++var->local_reads;
+                    }
                 }
             }
         }
-        else {
+        else if (node->type != NT_VOID_LITERAL) {
             assert(node->type != NT_LINE_LITERAL &&
                    node->type != NT_THIS_LITERAL &&
                    node->type != NT_SUPER_PROTO_LITERAL);
+            ++num_used;
             TRY(_visit_node(program, node, &t));
         }
     }
+
+    if (num_used == 0)
+        _promote(program, assg_node, rhs_node);
 
 cleanup:
     return error;
@@ -1636,7 +1660,7 @@ static int _visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_CONTINUE:
             assert( ! node->children);
-            error        = _visit_child_nodes(program, node);
+            error        = KOS_SUCCESS;
             *is_terminal = TERM_BREAK;
             break;
 

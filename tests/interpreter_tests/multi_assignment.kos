@@ -54,9 +54,19 @@ do {
     assert c == 2
 }
 
+# Extraction of last element fails
 expect_fail(fun {
     var a, b, c = "xy"
+    return a
 })
+
+# No failure, last element not extracted, because results are unused and therefore
+# the assignment is optimized-out
+do {
+    fun {
+        var a, b, c = "xy"
+    } ()
+}
 
 var global = void
 do {

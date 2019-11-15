@@ -62,10 +62,11 @@ typedef struct KOS_VAR_S {
     const KOS_TOKEN    *token;
     KOS_REG            *reg;
     const KOS_AST_NODE *value;
-    int                 num_reads;         /* Number of reads from a variable (including closures) */
-    int                 num_assignments;   /* Number of writes to a variable (including closures)  */
-    int                 local_reads;       /* Number of local reads from a variable                */
-    int                 local_assignments; /* Number of local writes to a variable                 */
+    int                 num_reads;         /* Number of reads from a variable (including closures)  */
+    int                 num_reads_prev;    /* num_reads from prev pass, for assignment optimization */
+    int                 num_assignments;   /* Number of writes to a variable (including closures)   */
+    int                 local_reads;       /* Number of local reads from a variable                 */
+    int                 local_assignments; /* Number of local writes to a variable                  */
     int                 array_idx;
     unsigned            type         : 7;
     unsigned            is_active    : 3;  /* Becomes active/searchable after the node, which declares it. */
