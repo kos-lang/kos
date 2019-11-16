@@ -329,7 +329,7 @@ static int count_and_update_vars(KOS_RED_BLACK_NODE *node,
     }
 
     /* Trigger another optimization pass if variable is not needed */
-    if (var->num_assignments && ! var->num_reads && var->type != VAR_GLOBAL)
+    if ((var->num_assignments || var->num_reads_prev == -1) && ! var->num_reads && var->type != VAR_GLOBAL)
         ++((UPDATE_VARS *)cookie)->program->num_optimizations;
 
     return KOS_SUCCESS;
