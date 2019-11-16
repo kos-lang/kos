@@ -335,10 +335,49 @@ static int count_and_update_vars(KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
+static int is_dummy_load(KOS_AST_NODE *node)
+{
+    switch (node->type) {
+
+        case NT_IDENTIFIER:
+            /* fall through */
+        case NT_NUMERIC_LITERAL:
+            /* fall through */
+        case NT_STRING_LITERAL:
+            /* fall through */
+        case NT_THIS_LITERAL:
+            /* fall through */
+        case NT_SUPER_CTOR_LITERAL:
+            /* fall through */
+        case NT_SUPER_PROTO_LITERAL:
+            /* fall through */
+        case NT_LINE_LITERAL:
+            /* fall through */
+        case NT_BOOL_LITERAL:
+            /* fall through */
+        case NT_VOID_LITERAL:
+            /* fall through */
+        case NT_FUNCTION_LITERAL:
+            /* fall through */
+        case NT_CONSTRUCTOR_LITERAL:
+            /* fall through */
+        case NT_CLASS_LITERAL:
+            /* fall through */
+            return 1;
+
+        default:
+            break;
+    }
+    return 0;
+}
+
 static void _pop_scope(KOS_COMP_UNIT *program)
 {
-    KOS_SCOPE  *scope      = program->scope_stack;
-    UPDATE_VARS update_ctx = { program, scope };
+    KOS_SCOPE  *scope = program->scope_stack;
+    UPDATE_VARS update_ctx;
+
+    update_ctx.program = program;
+    update_ctx.scope   = scope;
 
     assert(scope);
 
@@ -356,13 +395,28 @@ static int _scope(KOS_COMP_UNIT *program,
                   KOS_AST_NODE  *node,
                   int           *is_terminal)
 {
-    int error = KOS_SUCCESS;
+    int            error    = KOS_SUCCESS;
+    KOS_AST_NODE **node_ptr = &node->children;
+    const int      global   = ! program->scope_stack;
 
     _push_scope(program, node);
 
     *is_terminal = TERM_NONE;
 
-    for (node = node->children; node; node = node->next) {
+    for (;;) {
+
+        node = *node_ptr;
+
+        if ( ! node)
+            break;
+
+        /* Remove unneeded references to constants or variables */
+        if (is_dummy_load(node) && (node->next || ! global)) {
+            *node_ptr = node->next;
+            continue;
+        }
+
+        /* TODO change array and object literals to their contents only */
 
         error = _visit_node(program, node, is_terminal);
         if (error)
@@ -372,6 +426,8 @@ static int _scope(KOS_COMP_UNIT *program,
             node->next = 0;
             ++program->num_optimizations;
         }
+
+        node_ptr = &node->next;
     }
 
     _pop_scope(program);
