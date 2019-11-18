@@ -4027,7 +4027,10 @@ static int _assignment(KOS_COMP_UNIT      *program,
 
     is_lhs = (node->type == NT_LEFT_HAND_SIDE) ? 1 : 0;
 
-    assert(is_lhs || (node->children && node->children->type == NT_IDENTIFIER));
+    assert(is_lhs ||
+            (node->children &&
+                (node->children->type == NT_IDENTIFIER ||
+                 node->children->type == NT_VOID_LITERAL)));
 
     node = node->children;
     assert(node);
@@ -4035,6 +4038,7 @@ static int _assignment(KOS_COMP_UNIT      *program,
     if (node_type == NT_ASSIGNMENT) {
 
         assert( ! node->next);
+        assert(node->type != NT_VOID_LITERAL);
 
         if (assg_node->token.op != OT_SET)
             /* TODO check lhs variable type */
