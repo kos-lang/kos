@@ -350,7 +350,7 @@ do {
         f.write()
         f.write(":")
         f.print()
-        f.print("Hello,", "World!")
+        f.print("", "Hello,", "World!")
         f.print_lines([1, 2, 3]);
         ["a", "b", "c"] -> base.method(f, f.print_lines)
         f.print("END")
@@ -358,7 +358,7 @@ do {
 
     with const f = io.open(name, io.ro) {
         const expected = [ "false void:",
-                           "Hello, World!",
+                           " Hello, World!",
                            "1", "2", "3", "a", "b", "c",
                            "END" ]
         var i = 0

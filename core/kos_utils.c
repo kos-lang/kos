@@ -1151,8 +1151,8 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
 
         if (i >= first_sep_i && sep_len) {
             const size_t pos = cstr_vec->size;
-            TRY(kos_vector_resize(cstr_vec, pos + sep_len));
-            memcpy(&cstr_vec->buffer[pos-1], sep, sep_len+1);
+            TRY(kos_vector_resize(cstr_vec, pos + sep_len + (pos ? 0 : 1)));
+            memcpy(&cstr_vec->buffer[pos - (pos ? 1 : 0)], sep, sep_len + 1);
         }
 
         TRY(KOS_object_to_string_or_cstr_vec(ctx, obj, quote_str, 0, cstr_vec));
