@@ -42,17 +42,16 @@
 #define KOS_MAX_AST_DEPTH      100
 #define KOS_BUF_ALLOC_SIZE     4096U
 #define KOS_VEC_MAX_INC_SIZE   262144U
-#ifdef CONFIG_FUZZ
-#   define KOS_MAX_THREADS     2U
-#else
-#   define KOS_MAX_THREADS     32U
-#endif
 #define KOS_MIN_REG_CAPACITY   32U
 #define KOS_MAX_ARGS_IN_REGS   32U
 #ifdef CONFIG_FUZZ
+#   define KOS_MAX_CODE_SIZE   0x10000U
 #   define KOS_MAX_STACK_DEPTH 64U
+#   define KOS_MAX_THREADS     2U
 #else
+#   define KOS_MAX_CODE_SIZE   0x800000U
 #   define KOS_MAX_STACK_DEPTH 2048U
+#   define KOS_MAX_THREADS     32U
 #endif
 #ifdef CONFIG_FUZZ
 #   define KOS_MAX_HEAP_SIZE   (2U * KOS_POOL_SIZE)
