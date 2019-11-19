@@ -511,13 +511,16 @@ unsigned kos_print_float(char *buf, unsigned size, double value)
         }
     }
     else {
-        const unsigned len = (unsigned)snprintf(buf, size, "%.15f", value);
+        const int len = snprintf(buf, size, "%.15f", value);
 
-        for (end = buf + KOS_min(len, size - 1) - 1; end > buf && *end == '0'; --end);
+        if (len < 0)
+            return 0U;
+
+        for (end = buf + KOS_min((unsigned)len, size - 1) - 1; end > buf && *end == '0'; --end);
         if (*end == '.')
             ++end;
-        ++end;
-        *end = 0;
+        if (*end)
+            ++end;
     }
 
     return (unsigned)(end - buf);
