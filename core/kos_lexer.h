@@ -82,6 +82,7 @@ typedef enum KOS_KEYWORD_TYPE_E {
     KW_IN,
     KW_INSTANCEOF,
     KW_LOOP,
+    KW_PUBLIC,
     KW_REPEAT,
     KW_RETURN,
     KW_SET,

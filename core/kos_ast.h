@@ -47,6 +47,7 @@ typedef enum KOS_NODE_TYPE_U {
     NT_INVOCATION,
     NT_VAR,
     NT_CONST,
+    NT_EXPORT,
     NT_OPERATOR,
     NT_YIELD,
     NT_ASYNC,

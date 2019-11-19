@@ -59,7 +59,7 @@
  *     0
  *     1
  */
-fun range(start, args...)
+public fun range(start, args...)
 {
     var   stop  = 0
     var   step  = 1
@@ -679,7 +679,7 @@ string.prototype.zfill = fun(size, fill = "0")
  * A string containing all characters considered as whitespace by some
  * functions.
  */
-const whitespace = " \r\n\t\f\v\xA0\x{2028}\x{2029}\x{FEFF}"
+public const whitespace = " \r\n\t\f\v\xA0\x{2028}\x{2029}\x{FEFF}"
 
 /* @item base eol
  *
@@ -688,7 +688,7 @@ const whitespace = " \r\n\t\f\v\xA0\x{2028}\x{2029}\x{FEFF}"
  * A string containing all characters considered as end of line markers by
  * some functions.
  */
-const eol = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
+public const eol = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
 
 /* @item base string.prototype.lstrip()
  *
@@ -925,7 +925,7 @@ string.prototype.split_lines = fun(keep_ends = false)
  *     > keys(["kos", "lang", "first"]) -> array
  *     ["k", "l", "f"]
  */
-fun keys(iterable)
+public fun keys(iterable)
 {
     for const x in iterable {
         yield x.iterator()()
@@ -959,7 +959,7 @@ fun keys(iterable)
  *     > plus2([10, 11, 12, 13]) -> array
  *     [12, 13, 14, 15]
  */
-fun map(op, args...)
+public fun map(op, args...)
 {
     assert op instanceof function
 
@@ -1007,7 +1007,7 @@ fun map(op, args...)
  *     > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> array
  *     [9, 7, 5, 3, 1]
  */
-fun filter(op, args...)
+public fun filter(op, args...)
 {
     assert op instanceof function
 
@@ -1060,7 +1060,7 @@ fun filter(op, args...)
  *     > count_non_zero([0, 0, 4, 0, 0, 5, 6, 0])
  *     3
  */
-fun reduce(op, init, args...)
+public fun reduce(op, init, args...)
 {
     assert op instanceof function
 
@@ -1104,7 +1104,7 @@ fun reduce(op, init, args...)
  *     > sum(["Hello", ", ", "World!"], "")
  *     "Hello, World!"
  */
-fun sum(iterable, total = 0)
+public fun sum(iterable, total = 0)
 {
     for const elem in iterable {
         total += elem
@@ -1141,7 +1141,7 @@ fun sum(iterable, total = 0)
  *     > count("o", "monologue")
  *     3
  */
-fun count(op, args...)
+public fun count(op, args...)
 {
     var count_f = op instanceof function ?
         fun(source)
@@ -1213,7 +1213,7 @@ fun count(op, args...)
  *     > all_numbers([1, 2, "foo", 3])
  *     false
  */
-fun all(op, args...)
+public fun all(op, args...)
 {
     var all_f = op instanceof function ?
         fun(source)
@@ -1283,7 +1283,7 @@ fun all(op, args...)
  *     > any_numbers(["a", "b", "c"])
  *     false
  */
-fun any(op, args...)
+public fun any(op, args...)
 {
     var any_f = op instanceof function ?
         fun(source)
@@ -1507,7 +1507,7 @@ object.prototype.any = fun(op)
  *     > my_array
  *     [10, 20]
  */
-fun method(obj, func)
+public fun method(obj, func)
 {
     if typeof func == "string" {
         func = obj[func]
@@ -1516,7 +1516,7 @@ fun method(obj, func)
     return (args...) => func.apply(obj, args)
 }
 
-var hex = void
+public var hex = void
 
 do {
     const hex_digits = [ 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
@@ -1737,7 +1737,7 @@ buffer.prototype.repeat = fun(num)
  *     > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> array
  *     [["bar", 2], ["baz", 3], ["foo", 1]]
  */
-fun sort(key = void, args...)
+public fun sort(key = void, args...)
 {
     var reverse  = false
     var iterable = void
@@ -1804,7 +1804,7 @@ fun sort(key = void, args...)
  *     > enumerate("lang") -> array
  *     [[0, "l"], [1, "a"], [2, "n"], [3, "g"]]
  */
-fun enumerate(iterable)
+public fun enumerate(iterable)
 {
     var   i  = 0
     const _1 = 1
@@ -1828,7 +1828,7 @@ fun enumerate(iterable)
  *     > zip(range(4), "abcd") -> array
  *     [[0, "a"], [1, "b"], [2, "c"], [3, "d"]]
  */
-fun zip(a, b...)
+public fun zip(a, b...)
 {
     if b.size == 0 {
         return a
@@ -1881,7 +1881,7 @@ fun zip(a, b...)
  *     1
  *     2
  */
-fun print_lines(iterable)
+public fun print_lines(iterable)
 {
     for const elem in iterable {
         print(elem)
@@ -1906,7 +1906,7 @@ fun print_lines(iterable)
  *     > range(2, 10, 2) -> count_elements
  *     4
  */
-fun count_elements(iterable)
+public fun count_elements(iterable)
 {
     var num_elems = 0
     const _1 = 1
@@ -1961,7 +1961,7 @@ fun count_elements(iterable)
  *     c_
  *     3
  */
-fun each(args...)
+public fun each(args...)
 {
     const num_args = args.size
     if num_args > 1 {
@@ -2021,7 +2021,7 @@ fun each(args...)
  *     > range(4) -> join(" ")
  *     "0 1 2 3"
  */
-fun join(sep, args...)
+public fun join(sep, args...)
 {
     assert typeof sep == "string"
     fun inner_join(to_join)

@@ -52,6 +52,7 @@ static const char *const node_types[] = {
     "invocation",
     "var",
     "const",
+    "export",
     "operator",
     "yield",
     "async",

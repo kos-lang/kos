@@ -26,6 +26,7 @@
 "instanceof"
 "loop"
 "prototype"
+"public"
 "repeat"
 "return"
 "set"

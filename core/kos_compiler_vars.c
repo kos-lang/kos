@@ -378,19 +378,37 @@ cleanup:
     return error;
 }
 
-static int _define_local_var(KOS_COMP_UNIT *program,
-                             unsigned       is_const,
-                             KOS_AST_NODE  *node,
-                             KOS_VAR      **out_var)
+enum DEFINE_VAR_CONST {
+    VARIABLE,
+    CONSTANT
+};
+
+enum DEFINE_VAR_GLOBAL {
+    LOCAL,
+    GLOBAL
+};
+
+static int define_var(KOS_COMP_UNIT         *program,
+                      enum DEFINE_VAR_CONST  is_const,
+                      enum DEFINE_VAR_GLOBAL global,
+                      KOS_AST_NODE          *node,
+                      KOS_VAR              **out_var)
 {
-    int      error = KOS_SUCCESS;
+    int      error  = KOS_SUCCESS;
     KOS_VAR *var;
-    int      global;
 
     assert(node->type == NT_IDENTIFIER);
     assert(program->scope_stack);
 
-    global = ! program->scope_stack->next;
+    if (node->children) {
+        assert(node->children->type == NT_EXPORT);
+        assert( ! node->children->next);
+        assert( ! program->scope_stack->next);
+        global = GLOBAL;
+    }
+
+    if (program->is_interactive && ! program->scope_stack->next)
+        global = GLOBAL;
 
     if (kos_find_var(program->scope_stack->vars, &node->token)) {
         program->error_token = &node->token;
@@ -468,7 +486,7 @@ static int _import_global(const char *global_name,
 
         g_node->type = NT_IDENTIFIER;
 
-        error = _define_local_var(info->program, 1, g_node, &var);
+        error = define_var(info->program, CONSTANT, GLOBAL, g_node, &var);
     }
     else
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -540,7 +558,7 @@ static int _import(KOS_COMP_UNIT *program,
 
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-                error = _define_local_var(program, 1, node, &var);
+                error = define_var(program, CONSTANT, GLOBAL, node, &var);
             }
         }
     }
@@ -590,12 +608,12 @@ static int _yield(KOS_COMP_UNIT *program,
 static int _var(KOS_COMP_UNIT *program,
                 KOS_AST_NODE  *node)
 {
-    int            error    = KOS_SUCCESS;
-    const unsigned is_const = node->type == NT_CONST ? 1U : 0U;
-    KOS_VAR       *var;
+    int                         error    = KOS_SUCCESS;
+    const enum DEFINE_VAR_CONST is_const = node->type == NT_CONST ? CONSTANT : VARIABLE;
+    KOS_VAR                    *var;
 
     for (node = node->children; node; node = node->next) {
-        TRY(_define_local_var(program, is_const, node, &var));
+        TRY(define_var(program, is_const, LOCAL, node, &var));
         var->is_active = VAR_INACTIVE;
     }
 
@@ -781,7 +799,7 @@ static int _function_literal(KOS_COMP_UNIT *program,
             assert(arg_node->type == NT_IDENTIFIER);
         }
 
-        TRY(_define_local_var(program, 0, ident_node, &var));
+        TRY(define_var(program, VARIABLE, LOCAL, ident_node, &var));
         assert(ident_node->var == var);
 
         if (ellipsis)

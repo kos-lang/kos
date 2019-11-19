@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 #
 
-fun lexer(filename, input)
+public fun lexer(filename, input)
 {
     const next = raw_lexer(input)
 

@@ -146,6 +146,12 @@
 		</dict>
 		<dict>
 			<key>match</key>
+			<string>(?&lt;!\.)\b(public)\b(?!\$)</string>
+			<key>name</key>
+			<string>storage.type.placement.kos</string>
+		</dict>
+		<dict>
+			<key>match</key>
 			<string>(?&lt;!\.)\b(assert|async|break|case|catch|continue|default|defer|do|else|fallthrough|for|if|loop|repeat|return|switch|throw|try|while|with)\b(?!\$)</string>
 			<key>name</key>
 			<string>keyword.control.kos</string>
@@ -158,7 +164,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(?&lt;!\.)\b(extends|get|set|static|super)\b(?!\$)</string>
+			<string>(?&lt;!\.)\b(extends|get|set|static)\b(?!\$)</string>
 			<key>name</key>
 			<string>keyword.other.kos</string>
 		</dict>
@@ -170,7 +176,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(?&lt;!\.)\b(this)\b</string>
+			<string>(?&lt;!\.)\b(this|super)\b</string>
 			<key>name</key>
 			<string>variable.language.kos</string>
 		</dict>

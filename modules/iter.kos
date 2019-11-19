@@ -41,7 +41,7 @@ import base: array, print
  * generator upon instantiation will be equivalent to calling
  * `iterable.iterator()`.
  */
-fun generator(iterable)
+public fun generator(iterable)
 {
     if typeof iterable == "function" {
         const cache       = []
@@ -77,7 +77,7 @@ fun generator(iterable)
  * This generator, when instantiated, never yields any objects and
  * terminates immediately.
  */
-fun empty
+public fun empty
 {
     if false {
         yield void
@@ -107,7 +107,7 @@ fun empty
  *     > iter.iproduct(3, 2) -> array
  *     [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]]
  */
-fun iproduct(args...)
+public fun iproduct(args...)
 {
     const dim = args.size
 
@@ -169,7 +169,7 @@ fun iproduct(args...)
  *     > iter.product(range(5, 7), "xyz") -> array
  *     [[5, x], [6, x], [5, y], [6, y], [5, z], [6, z]]
  */
-fun product(args...)
+public fun product(args...)
 {
     const dim = args.size
 
@@ -228,7 +228,7 @@ fun product(args...)
  * `iterable` is a function, the elements are cached, so they can be yielded
  * again.
  */
-fun cycle(iterable)
+public fun cycle(iterable)
 {
     const gen = generator(iterable)
     loop {
@@ -257,7 +257,7 @@ fun cycle(iterable)
  *     > iter.reverse("language")
  *     "egaugnal"
  */
-fun reverse(iterable)
+public fun reverse(iterable)
 {
     switch typeof iterable {
 

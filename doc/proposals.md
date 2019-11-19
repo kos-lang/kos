@@ -13,8 +13,6 @@
 
 * ? remove C-style for loop
 
-* `public` keyword to make globals public (should be private by default)
-
 * ? Support multi-line strings the Python way or the C way?
 
 * set/get:

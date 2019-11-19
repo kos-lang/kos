@@ -1,0 +1,127 @@
+# Valid public statements
+public const a = 1
+public var   a = 1
+public fun   a { }
+public const a = b => b
+public fun   a(b) { return b }
+public class a { f { } }
+
+@ 0
+
+(scope 1 1
+    (assignment 2 16 =
+        (const 2 8 const
+            (identifier 2 14 a
+                (export 2 14 a)))
+        (number 2 18 1))
+    (assignment 3 16 =
+        (var 3 8 var
+            (identifier 3 14 a
+                (export 3 14 a)))
+        (number 3 18 1))
+    (assignment 4 8 fun
+        (const 4 8 fun
+            (identifier 4 14 a
+                (export 4 14 a)))
+        (function 4 14 a
+            (name_const 4 14 a
+                (identifier 4 14 a))
+            (parameters 4 16 {)
+            (landmark 4 16 {)
+            (scope 4 16 {
+                (return 4 18 }
+                    (void 4 18 })))
+            (landmark 4 18 })))
+    (assignment 5 16 =
+        (const 5 8 const
+            (identifier 5 14 a
+                (export 5 14 a)))
+        (function 5 20 =>
+            (name_const 5 20 =>
+                (identifier 5 14 a))
+            (parameters 5 20 =>
+                (identifier 5 18 b))
+            (landmark 5 20 =>)
+            (scope 5 20 =>
+                (return 5 20 =>
+                    (identifier 5 23 b)))
+            (landmark 6 1 public)))
+    (assignment 6 8 fun
+        (const 6 8 fun
+            (identifier 6 14 a
+                (export 6 14 a)))
+        (function 6 14 a
+            (name_const 6 14 a
+                (identifier 6 14 a))
+            (parameters 6 15 paren_open
+                (identifier 6 16 b))
+            (landmark 6 19 {)
+            (scope 6 19 {
+                (return 6 21 return
+                    (identifier 6 28 b))
+                (return 6 30 }
+                    (void 6 30 })))
+            (landmark 6 30 })))
+    (assignment 7 8 class
+        (const 7 8 class
+            (identifier 7 14 a
+                (export 7 14 a)))
+        (class 7 14 a
+            (empty 7 16 {)
+            (object 7 16 {
+                (property 7 18 f
+                    (string 7 18 f)
+                    (function 7 18 f
+                        (name 7 18 f
+                            (identifier 7 18 f))
+                        (parameters 7 20 {)
+                        (landmark 7 20 {)
+                        (scope 7 20 {
+                            (return 7 22 }
+                                (void 7 22 })))
+                        (landmark 7 22 }))))
+            (constructor 7 14 a
+                (name_const 7 14 a
+                    (identifier 7 14 a)
+                )
+                (parameters 7 16 {)
+                (landmark 7 16 {)
+                (scope 7 16 {
+                    (return 7 16 {
+                        (this 7 16 {)))
+                (landmark 7 16 {))))
+)
+
+@------------------------------------------------------------------------------
+public with const a = b { print(a) }
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+public for const a in b { print(a) }
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+public do { a() }
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+public defer { a() }
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+# Missing value
+public const a
+public const b
+@ 10 3 1
+
+@------------------------------------------------------------------------------
+public fun { }
+@ 10 1 12
+
+@------------------------------------------------------------------------------
+public fun () { }
+@ 10 1 12
+
+@------------------------------------------------------------------------------
+public class { }
+@ 10 1 14

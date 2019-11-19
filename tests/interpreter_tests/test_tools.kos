@@ -23,7 +23,7 @@
 import base.print
 import datetime.now
 
-const print_time = fun
+public const print_time = fun
 {
     var last = void
     return fun(line)
@@ -36,7 +36,7 @@ const print_time = fun
     }
 } ()
 
-fun expect_fail(function)
+public fun expect_fail(function)
 {
     var failed = false
     try {

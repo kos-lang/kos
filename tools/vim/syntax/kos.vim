@@ -33,16 +33,18 @@ syn match   kosTab              "\t"
 
 syn match   kosNumber           "\<\([1-9][0-9_]*\|0\)\(\.[0-9_]*\)\=\([eEpP][+-]\=[0-9_]\+\)\=\>\|0[bB][01_]\+\|0[xX][0-9a-fA-F_]\+\>"
 
-syn keyword kosConditional      if else switch case default
+syn keyword kosConditional      if else switch
+syn keyword kosLabel            case default
 syn keyword kosRepeat           while for repeat loop
 syn keyword kosBranch           break continue fallthrough
-syn keyword kosOperator         delete instanceof typeof yield async in
-syn keyword kosStatement        return with import try catch defer do
+syn keyword kosOperator         delete instanceof typeof yield async in extends
+syn keyword kosStatement        return with import defer do
 syn keyword kosBoolean          true false
 syn keyword kosVoid             void
-syn keyword kosIdentifier       __line__ this var const
-syn keyword kosException        throw assert
-syn keyword kosReserved         set get static extends super
+syn keyword kosIdentifier       __line__ this super
+syn keyword kosVarConst         var const public
+syn keyword kosException        throw assert try catch
+syn keyword kosReserved         set get static
 syn keyword kosClass            class
 
 if exists("kos_fold")
@@ -90,11 +92,12 @@ if version >= 508 || !exists("did_kos_syn_inits")
     HiLink kosStatement           Statement
     HiLink kosFunction            Function
     HiLink kosBraces              Function
-    HiLink kosClass               StorageClass
+    HiLink kosClass               Structure
     HiLink kosTab                 Error
     HiLink kosVoid                Keyword
     HiLink kosBoolean             Boolean
-
+    HiLink kosLabel               Label
+    HiLink kosVarConst            StorageClass
     HiLink kosIdentifier          Identifier
     HiLink kosException           Exception
     HiLink kosReserved            Keyword

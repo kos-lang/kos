@@ -31,7 +31,7 @@ import base: buffer, string, eol
  *
  * File must exist if this flag is used, or else exception is thrown.
  */
-const ro = "rb"
+public const ro = "rb"
 
 /* @item io rw
  *
@@ -42,7 +42,7 @@ const ro = "rb"
  *
  * File must exist if this flag is used, or else exception is thrown.
  */
-const rw = "r+b"
+public const rw = "r+b"
 
 /* @item io create_flag
  *
@@ -52,7 +52,7 @@ const rw = "r+b"
  * be created if it does not exist or truncated if it exists and then opened
  * for reading and writing.
  */
-const create_flag = "w+b"
+public const create_flag = "w+b"
 
 /* @item io append_flag
  *
@@ -62,7 +62,7 @@ const create_flag = "w+b"
  * be created if it does not exist or opened at at the end for appending.
  * The file is always opened for reading and writing with this flag.
  */
-const append_flag = "a+b"
+public const append_flag = "a+b"
 
 /* @item io open()
  *
@@ -83,7 +83,7 @@ const append_flag = "a+b"
  *
  *     > with const f = file.open("my.txt", file.create_flag) { f.print("hello") }
  */
-fun open(filename, flags = rw)
+public fun open(filename, flags = rw)
 {
     return file(filename, flags)
 }
@@ -105,7 +105,7 @@ fun open(filename, flags = rw)
  *
  *     > with const f = file.create("my.txt") { f.print("hello") }
  */
-fun create(filename)
+public fun create(filename)
 {
     return file(filename, create_flag)
 }
@@ -128,7 +128,7 @@ fun create(filename)
  *
  *     > with const f = file.append("my.txt") { f.print("hello") }
  */
-fun append(filename)
+public fun append(filename)
 {
     return file(filename, append_flag)
 }
@@ -284,7 +284,7 @@ file.prototype.read_lines = fun(keep_ends = false, gran = 0x1000)
  *
  *     > for const line in file.read_lines("README.txt") { print(line) }
  */
-fun read_lines(filename, keep_ends = false, gran = 0x1000)
+public fun read_lines(filename, keep_ends = false, gran = 0x1000)
 {
     with const f = open(filename, ro) {
         for const line in f.read_lines(keep_ends, gran) {

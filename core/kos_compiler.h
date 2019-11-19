@@ -248,6 +248,7 @@ typedef struct KOS_COMP_UNIT_S {
     int                      num_globals;
 
     void                    *ctx;
+    int                      is_interactive; /* Forces top-level scope vars to be globals */
 
     KOS_VAR                 *modules;
     int                      num_modules;

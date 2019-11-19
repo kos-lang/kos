@@ -359,7 +359,7 @@ static int _lookup_var(KOS_COMP_UNIT      *program,
         const int  is_local_arg  = node->is_local_var &&
                                    (var->type & (VAR_ARGUMENT | VAR_ARGUMENT_IN_REG));
         KOS_SCOPE *scope         = node->var_scope;
-        const int  is_global     = scope->next == 0;
+        const int  is_global     = var->type == VAR_GLOBAL || var->type == VAR_MODULE;
 
         *out_var = var;
 
@@ -5276,7 +5276,7 @@ static int _visit_node(KOS_COMP_UNIT      *program,
 }
 
 void kos_compiler_init(KOS_COMP_UNIT *program,
-                       int           file_id)
+                       int            file_id)
 {
     memset(program, 0, sizeof(*program));
 

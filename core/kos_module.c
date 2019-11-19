@@ -1070,7 +1070,8 @@ static int _compile_module(KOS_CONTEXT ctx,
         TRY(KOS_array_write(ctx, inst->modules.modules, module_idx, module_obj));
 
     /* Prepare compiler */
-    program.ctx = ctx;
+    program.ctx            = ctx;
+    program.is_interactive = is_repl;
     TRY(_predefine_globals(ctx,
                            &program,
                            OBJPTR(MODULE, module_obj)->global_names,

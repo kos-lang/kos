@@ -20,6 +20,8 @@
 # IN THE SOFTWARE.
 #
 
+const rand = random()
+
 /* @item random rand_integer()
  *
  *     rand_integer()
@@ -42,6 +44,11 @@
  *     42
  */
 
+public fun rand_integer(args...)
+{
+    return rand.integer.apply(rand, args)
+}
+
 /* @item random rand_float()
  *
  *     rand_float()
@@ -57,15 +64,10 @@
  *     > random.rand_float()
  *     0.05080192760294
  */
-const rand_integer, rand_float = fun {
-
-    const rand = random()
-
-    return [
-        fun(args...) { return rand.integer.apply(rand, args) },
-        fun()        { return rand.float.apply(rand, []) }
-    ]
-}()
+public fun rand_float
+{
+    return rand.float.apply(rand, [])
+}
 
 /* @item random random.prototype.shuffle()
  *
@@ -118,7 +120,7 @@ random.prototype.shuffle = fun(iterable) {
  *     > range(10) -> shuffle
  *     [9, 4, 3, 0, 5, 7, 1, 6, 8, 2]
  */
-fun shuffle(iterable)
+public fun shuffle(iterable)
 {
     return random().shuffle(iterable)
 }

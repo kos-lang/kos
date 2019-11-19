@@ -182,6 +182,7 @@ The following reserved keywords are defined:
 * `in`
 * `instanceof`
 * `loop`
+* `public`
 * `repeat`
 * `return`
 * `set` (reserved)
@@ -437,7 +438,7 @@ statements.
 An empty source file or a source file which contains only spaces or comments
 is still a valid source file.
 
-    SourceFile ::= ( ImportStatement )* ( Statement )*
+    SourceFile ::= ( ImportStatement )* ( Statement | PublicStatement )*
 
 
 Statement
@@ -463,6 +464,7 @@ Statement
                 | ReturnStatement
                 | ThrowStatement
                 | AssertStatement
+                | PublicStatement
 
 
 Semicolons
@@ -983,7 +985,7 @@ Assert statement
 The assert statement checks a condition expression, and if the condition is
 not truthy, it throws an exception.
 
-    AssertStatement :== "assert" RHSExpression OptSemicolon
+    AssertStatement ::= "assert" RHSExpression OptSemicolon
 
 The following two pieces of code are equivalent:
 
@@ -992,6 +994,22 @@ The following two pieces of code are equivalent:
     if ! (n > 0) {
         throw "Assertion failed: n > 0";
     }
+
+
+Public statement
+----------------
+
+The public statement declares global variables exported from the module.
+These variables can be accessed from other modules.
+
+Any variables declared without the public statement are not visible
+outside of the current module.
+
+    PublicStatement ::= "public" PublicDeclaration
+
+    PublicDeclaration ::= FunctionDeclaration
+                        | ClassDeclaration
+                        | VariableDefinitionExpression
 
 
 Expressions

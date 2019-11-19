@@ -26,7 +26,7 @@
  *
  * The mathematical constant π=3.1415... represented as float.
  */
-const pi = 3.141592653589793238
+public const pi = 3.141592653589793238
 
 /* @item math e
  *
@@ -34,4 +34,4 @@ const pi = 3.141592653589793238
  *
  * The mathematical constant e=2.7182... represented as float.
  */
-const e = 2.718281828459045235
+public const e = 2.718281828459045235

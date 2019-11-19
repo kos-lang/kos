@@ -63,6 +63,7 @@ static const char str_err_expected_var_or_const[]     = "expected 'var' or 'cons
 static const char str_err_expected_var_assignment[]   = "expected '=' in variable declaration";
 static const char str_err_expected_while[]            = "expected 'while'";
 static const char str_err_fallthrough_in_last_case[]  = "unexpected 'fallthrough' statement in last switch case";
+static const char str_err_invalid_public[]            = "incorrect 'public' declaration, must be a constant, variable, function or class";
 static const char str_err_mixed_operators[]           = "mixed operators, consider using parentheses";
 static const char str_err_too_many_non_default[]      = "too many non-default arguments (more than 255) preceding an argument with default value";
 static const char str_err_unexpected_break[]          = "unexpected 'break' statement; can only be used inside a loop or switch";
@@ -70,6 +71,7 @@ static const char str_err_unexpected_continue[]       = "unexpected 'continue' s
 static const char str_err_unexpected_ctor[]           = "constructor already defined for this class";
 static const char str_err_unexpected_import[]         = "unexpected 'import' statement";
 static const char str_err_unexpected_fallthrough[]    = "unexpected 'fallthrough' statement; can only be used inside a switch";
+static const char str_err_unexpected_public[]         = "'public' declaration can only occur in global scope";
 static const char str_err_unexpected_super[]          = "unexpected 'super' literal; can only be used inside a derived class member function";
 static const char str_err_unexpected_super_ctor[]     = "'super()' constructor can only be invoked from another constructor";
 static const char str_err_unsupported_slice_assign[]  = "unsupported assignment to slice, expected '='";
@@ -1767,6 +1769,7 @@ static int member_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 static int expr_var_const(KOS_PARSER    *parser,
                           int            allow_in,
                           int            allow_multi_assignment,
+                          int            is_public,
                           KOS_AST_NODE **ret)
 {
     int           error         = KOS_SUCCESS;
@@ -1787,6 +1790,9 @@ static int expr_var_const(KOS_PARSER    *parser,
     }
 
     TRY(push_node(parser, node, NT_IDENTIFIER, &ident_node));
+
+    if (is_public)
+        TRY(push_node(parser, ident_node, NT_EXPORT, 0));
 
     TRY(next_token(parser));
 
@@ -1967,7 +1973,7 @@ static int expr(KOS_PARSER *parser, int allow_in, int allow_var, KOS_AST_NODE **
 
         if (!error) {
             if (parser->token.keyword == KW_VAR || parser->token.keyword == KW_CONST)
-                error = expr_var_const(parser, allow_in, 1, ret);
+                error = expr_var_const(parser, allow_in, 1, 0, ret);
             else {
                 parser->unget = 1;
                 error = expr_no_var(parser, ret);
@@ -2024,7 +2030,7 @@ cleanup:
     return error;
 }
 
-static int function_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
+static int function_stmt(KOS_PARSER *parser, int is_public, KOS_AST_NODE **ret)
 {
     int              error        = KOS_SUCCESS;
     KOS_AST_NODE    *const_node;
@@ -2036,7 +2042,8 @@ static int function_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     if (parser->token.type == TT_IDENTIFIER) {
 
-        KOS_TOKEN fun_name_token = parser->token;
+        KOS_TOKEN     fun_name_token = parser->token;
+        KOS_AST_NODE *ident_node     = 0;
 
         /* To simplify operator selection in the compiler */
         fun_kw_token.op = OT_SET;
@@ -2047,7 +2054,10 @@ static int function_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
         TRY(push_node(parser, *ret, NT_CONST, &const_node));
         const_node->token = fun_kw_token;
 
-        TRY(push_node(parser, const_node, NT_IDENTIFIER, 0));
+        TRY(push_node(parser, const_node, NT_IDENTIFIER, &ident_node));
+
+        if (is_public)
+            TRY(push_node(parser, ident_node, NT_EXPORT, 0));
 
         if (fun_keyword == KW_CLASS)
             TRY(class_literal(parser, &fun_node));
@@ -2058,6 +2068,10 @@ static int function_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         ast_push(*ret, fun_node);
         fun_node = 0;
+    }
+    else if (is_public) {
+        parser->error_str = str_err_expected_identifier;
+        error = KOS_ERROR_PARSE_FAILED;
     }
     else {
 
@@ -2384,7 +2398,7 @@ static int with_stmt_continued(KOS_PARSER   *parser,
     KOS_AST_NODE *try_node = 0;
 
     if (parser->token.keyword == KW_CONST)
-        TRY(expr_var_const(parser, 0, 0, &node));
+        TRY(expr_var_const(parser, 0, 0, 0, &node));
 
     else {
 
@@ -3076,6 +3090,36 @@ cleanup:
     return error;
 }
 
+static int public_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
+{
+    int error = next_token(parser);
+
+    if ( ! error) {
+
+        switch (parser->token.keyword) {
+
+            case KW_VAR:
+                /* fall through */
+            case KW_CONST:
+                error = expr_var_const(parser, 0, 0, 1, ret);
+                break;
+
+            case KW_FUN:
+                /* fall through */
+            case KW_CLASS:
+                error = function_stmt(parser, 1, ret);
+                break;
+
+            default:
+                parser->error_str = str_err_invalid_public;
+                error = KOS_ERROR_PARSE_FAILED;
+                break;
+        }
+    }
+
+    return error;
+}
+
 static int next_statement(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = next_token(parser);
@@ -3092,7 +3136,7 @@ static int next_statement(KOS_PARSER *parser, KOS_AST_NODE **ret)
             case KW_FUN:
                 /* fall through */
             case KW_CLASS:
-                error = function_stmt(parser, ret);
+                error = function_stmt(parser, 0, ret);
                 break;
             case KW_DO:
                 error = do_stmt(parser, ret);
@@ -3145,6 +3189,14 @@ static int next_statement(KOS_PARSER *parser, KOS_AST_NODE **ret)
             case KW_IMPORT:
                 parser->error_str = str_err_unexpected_import;
                 error = KOS_ERROR_PARSE_FAILED;
+                break;
+            case KW_PUBLIC:
+                if (parser->ast_depth == 1)
+                    error = public_stmt(parser, ret);
+                else {
+                    parser->error_str = str_err_unexpected_public;
+                    error = KOS_ERROR_PARSE_FAILED;
+                }
                 break;
             case KW_NONE:
                 if (token->sep == ST_SEMICOLON) {
