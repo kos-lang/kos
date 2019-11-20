@@ -131,6 +131,22 @@ do {
     assert o[0] == 0
 }
 
+# Run a generator on a new thread
+do {
+    fun run_async(f)
+    {
+        return async f()
+    }
+
+    fun gen_10
+    {
+        yield 10
+    }
+
+    const th = run_async(gen_10())
+    assert th.wait() == 10
+}
+
 # THIS MUST COME LAST!
 # Recursively spawn threads and keep them waiting on children
 do {
