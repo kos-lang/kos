@@ -1,0 +1,127 @@
+#
+# Copyright (c) 2014-2019 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+
+# Force more than 256 constants to be used, so that the longer LOAD.CONST32
+# instruction is generated in the defer statements
+public const abc = [
+    50000, 50001, 50002, 50003, 50004, 50005, 50006, 50007, 50008, 50009,
+    50010, 50011, 50012, 50013, 50014, 50015, 50016, 50017, 50018, 50019,
+    50020, 50021, 50022, 50023, 50024, 50025, 50026, 50027, 50028, 50029,
+    50030, 50031, 50032, 50033, 50034, 50035, 50036, 50037, 50038, 50039,
+    50040, 50041, 50042, 50043, 50044, 50045, 50046, 50047, 50048, 50049,
+    50050, 50051, 50052, 50053, 50054, 50055, 50056, 50057, 50058, 50059,
+    50060, 50061, 50062, 50063, 50064, 50065, 50066, 50067, 50068, 50069,
+    50070, 50071, 50072, 50073, 50074, 50075, 50076, 50077, 50078, 50079,
+    50080, 50081, 50082, 50083, 50084, 50085, 50086, 50087, 50088, 50089,
+    50090, 50091, 50092, 50093, 50094, 50095, 50096, 50097, 50098, 50099,
+    50100, 50101, 50102, 50103, 50104, 50105, 50106, 50107, 50108, 50109,
+    50110, 50111, 50112, 50113, 50114, 50115, 50116, 50117, 50118, 50119,
+    50120, 50121, 50122, 50123, 50124, 50125, 50126, 50127, 50128, 50129,
+    50130, 50131, 50132, 50133, 50134, 50135, 50136, 50137, 50138, 50139,
+    50140, 50141, 50142, 50143, 50144, 50145, 50146, 50147, 50148, 50149,
+    50150, 50151, 50152, 50153, 50154, 50155, 50156, 50157, 50158, 50159,
+    50160, 50161, 50162, 50163, 50164, 50165, 50166, 50167, 50168, 50169,
+    50170, 50171, 50172, 50173, 50174, 50175, 50176, 50177, 50178, 50179,
+    50180, 50181, 50182, 50183, 50184, 50185, 50186, 50187, 50188, 50189,
+    50190, 50191, 50192, 50193, 50194, 50195, 50196, 50197, 50198, 50199,
+    50200, 50201, 50202, 50203, 50204, 50205, 50206, 50207, 50208, 50209,
+    50210, 50211, 50212, 50213, 50214, 50215, 50216, 50217, 50218, 50219,
+    50220, 50221, 50222, 50223, 50224, 50225, 50226, 50227, 50228, 50229,
+    50230, 50231, 50232, 50233, 50234, 50235, 50236, 50237, 50238, 50239,
+    50240, 50241, 50242, 50243, 50244, 50245, 50246, 50247, 50248, 50249,
+    50250, 50251, 50252, 50253, 50254, 50255, 50256, 50257, 50258, 50259,
+    50260, 50261, 50262, 50263, 50264, 50265, 50266, 50267, 50268, 50269,
+    50270, 50271, 50272, 50273, 50274, 50275, 50276, 50277, 50278, 50279,
+    50280, 50281, 50282, 50283, 50284, 50285, 50286, 50287, 50288, 50289,
+    50290, 50291, 50292, 50293, 50294, 50295, 50296, 50297, 50298, 50299 ]
+
+fun(x) {
+    var a = void
+    defer {
+        a = x(1000, 2000, 3000)
+        defer {
+            a = x(1001, 2001, 3001)
+            defer {
+                a = x(1002, 2002, 3002)
+                defer {
+                    a = x(1003, 2003, 3003)
+                    defer {
+                        a = x(1004, 2004, 3004)
+                        defer {
+                            a = x(1005, 2005, 3005)
+                            defer {
+                                a = x(1006, 2006, 3006)
+                                defer {
+                                    a = x(1007, 2007, 3007)
+                                    defer {
+                                        a = x(1008, 2008, 3008)
+                                        defer {
+                                            a = x(1009, 2009, 3009)
+                                            defer {
+                                                a = x(1010, 2010, 3010)
+                                                defer {
+                                                    a = x(1011, 2011, 3011)
+                                                    defer {
+                                                        a = x(1012, 2012, 3012)
+                                                        defer {
+                                                            a = x(1013, 2013, 3013)
+                                                            defer {
+                                                                a = x(1014, 2014, 3014)
+                                                                defer {
+                                                                    a = x(1015, 2015, 3015)
+                                                                    defer {
+                                                                        a = x(1016, 2016, 3016)
+                                                                    }
+                                                                    return a
+                                                                }
+                                                                return
+                                                            }
+                                                            return
+                                                        }
+                                                        return
+                                                    }
+                                                    return
+                                                }
+                                                return
+                                            }
+                                            return
+                                        }
+                                        return
+                                    }
+                                    return
+                                }
+                                return
+                            }
+                            return
+                        }
+                        return
+                    }
+                    return
+                }
+                return
+            }
+            return
+        }
+        return
+    }
+    return
+} ((x...) => x)
