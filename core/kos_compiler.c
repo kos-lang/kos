@@ -767,7 +767,7 @@ static int _gen_instr(KOS_COMP_UNIT *program,
     int error    = kos_vector_resize(&program->code_gen_buf,
                                     (size_t)cur_offs + 1 + 4 * num_args); /* Over-estimate */
 
-    if (program->code_gen_buf.size > KOS_MAX_CODE_SIZE)
+    if (program->code_buf.size + program->code_gen_buf.size > KOS_MAX_CODE_SIZE)
         error = KOS_ERROR_OUT_OF_MEMORY;
 
     if (!error) {
