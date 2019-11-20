@@ -224,11 +224,18 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 
             if (IS_BAD_PTR(str)) {
 
+                KOS_OBJ_ID last_exception = KOS_get_exception(ctx);
+
+                kos_track_refs(ctx, 1, &last_exception);
+
                 KOS_clear_exception(ctx);
 
                 str = _get_exception_string(ctx, exception);
 
-                KOS_clear_exception(ctx);
+                kos_untrack_refs(ctx, 1);
+
+                if (IS_BAD_PTR(str))
+                    KOS_raise_exception(ctx, last_exception);
             }
 
             if ( ! IS_BAD_PTR(str) && KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, str, &cstr))
