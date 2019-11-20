@@ -232,7 +232,9 @@ int kos_stack_push(KOS_CONTEXT ctx,
         assert( ! IS_BAD_PTR(gen_stack));
         assert(GET_OBJ_TYPE(gen_stack) == OBJ_STACK);
         assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, gen_stack)->size) > KOS_STACK_EXTRA);
-        assert(stack);
+
+        if (IS_BAD_PTR(ctx->stack))
+            TRY(_push_new_stack(ctx));
 
         TRY(_chain_stack_frame(ctx, gen_stack));
 
