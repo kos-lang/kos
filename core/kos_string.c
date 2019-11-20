@@ -86,7 +86,7 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
     KOS_STRING      *str;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
 
-    if (length > 0xFFFFU) {
+    if (length > 4U * 0xFFFFU) {
         KOS_raise_exception_cstring(ctx, str_err_string_too_long);
         str = 0;
     }

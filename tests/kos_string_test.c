@@ -134,6 +134,13 @@ int main(void)
 
     /************************************************************************/
     {
+        const KOS_OBJ_ID s = KOS_new_string(ctx, 0, 0x100000);
+        TEST(IS_BAD_PTR(s));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
         const KOS_OBJ_ID s = KOS_new_cstring(ctx, "\t\n\r 09AZaz~\x7F");
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
