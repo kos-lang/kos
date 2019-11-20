@@ -49,7 +49,7 @@
 #   define KOS_MAX_STACK_DEPTH 64U
 #   define KOS_MAX_THREADS     2U
 #else
-#   define KOS_MAX_CODE_SIZE   0x800000U
+#   define KOS_MAX_CODE_SIZE   0x200000U
 #   define KOS_MAX_STACK_DEPTH 2048U
 #   define KOS_MAX_THREADS     32U
 #endif

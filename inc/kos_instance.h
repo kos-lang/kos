@@ -72,7 +72,7 @@ typedef struct KOS_HEAP_S {
 
 /* Stored on the stack as catch offset */
 enum KOS_CATCH_STATE_E {
-    KOS_NO_CATCH = 0x7FFFFF
+    KOS_NO_CATCH = 0x1FFFFF
 };
 
 /* Stack header flags */
