@@ -24,8 +24,8 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_atomic.h"
 #include "../inc/kos_buffer.h"
-#include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_utils.h"
 #include "kos_const_strings.h"
 #include "kos_heap.h"
@@ -39,16 +39,12 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char str_err_array_too_large[]      = "input array too large";
-static const char str_err_invalid_char_code[]    = "invalid character code";
-static const char str_err_invalid_index[]        = "string index is out of range";
-static const char str_err_invalid_buffer_index[] = "buffer index is out of range";
-static const char str_err_invalid_string[]       = "invalid string";
-static const char str_err_invalid_utf8[]         = "invalid UTF-8 sequence";
-static const char str_err_not_array[]            = "object is not an array";
-static const char str_err_not_string[]           = "object is not a string";
-static const char str_err_null_ptr[]             = "null pointer";
-static const char str_err_too_many_repeats[]     = "repeated string too long";
+static const char str_err_invalid_index[]   = "string index is out of range";
+static const char str_err_invalid_string[]  = "invalid string";
+static const char str_err_invalid_utf8[]    = "invalid UTF-8 sequence";
+static const char str_err_not_string[]      = "object is not a string";
+static const char str_err_null_ptr[]        = "null pointer";
+static const char str_err_string_too_long[] = "string too long";
 
 #ifdef CONFIG_STRING16
 #define _override_elem_size(size) do { (size) = (size) < KOS_STRING_ELEM_16 ? KOS_STRING_ELEM_16 : (size); } while (0)
@@ -90,13 +86,15 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
     KOS_STRING      *str;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
 
-    if (length) {
+    if (length > 0xFFFFU) {
+        KOS_raise_exception_cstring(ctx, str_err_string_too_long);
+        str = 0;
+    }
+    else if (length) {
         uint32_t max_code;
         unsigned count = kos_utf8_get_len(s, length, escape, &max_code);
 
-        if (count != ~0U) {
-
-            assert(count <= 0xFFFFU);
+        if (count < 0xFFFFU) {
 
             if (max_code > 0xFFFFU)
                 elem_size = KOS_STRING_ELEM_32;
@@ -113,7 +111,8 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
                                                  sizeof(KOS_STR_HEADER) + (length << elem_size));
         }
         else {
-            KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+            KOS_raise_exception_cstring(ctx,
+                    count == ~0U ? str_err_invalid_utf8 : str_err_string_too_long);
             str = 0;
         }
 
@@ -228,8 +227,11 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
 
     length = KOS_get_array_size(codes);
 
-    if (length > 0xFFFFU)
-        RAISE_EXCEPTION(str_err_array_too_large);
+    if (length > 0xFFFFU) {
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_array_too_large, "input array too large");
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_array_too_large));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
     if (length) {
         codes = kos_get_array_storage(codes);
@@ -239,13 +241,19 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
             const KOS_OBJ_ID elem = KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, codes)->buf[i]);
             int64_t          code;
 
-            if ( ! IS_NUMERIC_OBJ(elem))
-                RAISE_EXCEPTION(str_err_invalid_char_code);
+            KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_char_code, "invalid character code");
+
+            if ( ! IS_NUMERIC_OBJ(elem)) {
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_char_code));
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             TRY(KOS_get_integer(ctx, elem, &code));
 
-            if (code < 0 || code > 0x1FFFFF)
-                RAISE_EXCEPTION(str_err_invalid_char_code);
+            if (code < 0 || code > 0x1FFFFF) {
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_char_code));
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             if (code > 0xFF) {
                 if (code > 0xFFFF)
@@ -344,7 +352,8 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     if ( ! size && begin == end)
         return KOS_STR_EMPTY;
     if (begin > end || end > size) {
-        KOS_raise_exception_cstring(ctx, str_err_invalid_buffer_index);
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_buffer_index, "buffer index is out of range");
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_buffer_index));
         goto cleanup;
     }
 
@@ -370,6 +379,12 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
         elem_size = KOS_STRING_ELEM_8;
 
     _override_elem_size(elem_size);
+
+    if (length > 0xFFFFU) {
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_buffer_too_large, "input buffer too large");
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_buffer_too_large));
+        goto cleanup;
+    }
 
     str = _new_empty_string(ctx, length, elem_size);
     if ( ! str)
@@ -675,7 +690,10 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
         else if (new_len) {
             _override_elem_size(elem_size);
 
-            new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+            if (new_len <= 0xFFFFU)
+                new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+            else
+                KOS_raise_exception_cstring(ctx, str_err_string_too_long);
 
             if ( ! IS_BAD_PTR(new_str_id)) {
 
@@ -703,7 +721,8 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
     unsigned   num_strings;
 
     if (IS_BAD_PTR(str_array_id) || GET_OBJ_TYPE(str_array_id) != OBJ_ARRAY) {
-        KOS_raise_exception_cstring(ctx, str_err_not_array);
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array, "object is not an array");
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
         return KOS_BADPTR;
     }
 
@@ -761,7 +780,10 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
         else if (new_len) {
             _override_elem_size(elem_size);
 
-            new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+            if (new_len <= 0xFFFFU)
+                new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+            else
+                KOS_raise_exception_cstring(ctx, str_err_string_too_long);
 
             if ( ! IS_BAD_PTR(new_str_id)) {
 
@@ -1571,7 +1593,8 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
         return obj_id;
 
     if (num_repeat > 0xFFFFU || (len * num_repeat) > 0xFFFFU) {
-        KOS_raise_exception_cstring(ctx, str_err_too_many_repeats);
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats, "repeated string too long");
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_too_many_repeats));
         return KOS_BADPTR;
     }
 
