@@ -45,10 +45,12 @@ FUZZ="kos_fuzz_interpreter"
 CORPUS="$PWD/tests/kos_fuzz_interpreter_corpus"
 DICT="$PWD/tests/kos_fuzz_interpreter_dict"
 MERGE=0
+MINIMIZE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --merge) MERGE=1 ;;
+        --minimize) shift ; MINIMIZE="$1" ;;
         -j) shift ; JOBS="$1" ;;
         *) echo "Unrecognized parameter: $1" >&2 ; exit 1 ;;
     esac
@@ -66,6 +68,11 @@ if [ "$MERGE" = "1" -a -d "$CORPUS" ]; then
     mkdir -p "$CORPUS"
     "./$FUZZ" -merge=1 "-jobs=$JOBS" "-workers=$JOBS" "$CORPUS" "$CORPUS.old"
     rm -rf "$CORPUS.old"
+    exit 0
+fi
+
+if [ -n "$MINIMIZE" ]; then
+    "./$FUZZ" -minimize_crash=1 -runs=10000 "$MINIMIZE"
     exit 0
 fi
 
