@@ -1411,6 +1411,8 @@ static void mark_roots_in_threads(KOS_INSTANCE *inst)
     uint32_t       i;
     const uint32_t max_threads = inst->threads.max_threads;
 
+    kos_lock_mutex(&inst->threads.new_mutex);
+
     for (i = 0; i < max_threads; i++) {
 
         KOS_THREAD *thread = (KOS_THREAD *)KOS_atomic_read_relaxed_ptr(inst->threads.threads[i]);
@@ -1424,6 +1426,8 @@ static void mark_roots_in_threads(KOS_INSTANCE *inst)
         set_mark_state(thread->retval,      GRAY);
         set_mark_state(thread->exception,   GRAY);
     }
+
+    kos_unlock_mutex(&inst->threads.new_mutex);
 }
 
 static void mark_roots(KOS_CONTEXT ctx)
@@ -1923,6 +1927,8 @@ static void update_threads_after_evacuation(KOS_INSTANCE *inst)
     if ( ! inst->threads.threads)
         return;
 
+    kos_lock_mutex(&inst->threads.new_mutex);
+
     for (i = 0; i < max_threads; i++) {
 
         KOS_THREAD *thread = (KOS_THREAD *)KOS_atomic_read_relaxed_ptr(inst->threads.threads[i]);
@@ -1936,6 +1942,8 @@ static void update_threads_after_evacuation(KOS_INSTANCE *inst)
         update_child_ptr((KOS_OBJ_ID *)&thread->retval);
         update_child_ptr((KOS_OBJ_ID *)&thread->exception);
     }
+
+    kos_unlock_mutex(&inst->threads.new_mutex);
 }
 
 static void update_after_evacuation(KOS_CONTEXT ctx)
