@@ -6,12 +6,10 @@ matrix:
         os: linux
         dist: bionic
         compiler: gcc
-        addons:
-            apt:
-                sources:
-                  - ubuntu-toolchain-r-test
-                packages:
-                  - g++-9
+        before_install:
+          - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          - sudo apt-get -q update
+          - sudo apt-get -y install g++-9
         install:
           - if [ "$CXX" = "g++" ]; then export CXX="g++-9" CC="gcc-9" GCOV="gcov-9"; fi
         script:
