@@ -10,7 +10,8 @@ environment:
 build_script:
   - cmd: call "%MY_VSSDK%"\..\VC\Auxiliary\Build\vcvarsall.bat %PLATFORM%
   - cmd: sh -c set
-  - cmd: sh -c "ls c:/msys64"
+  - cmd: sh -c "ls /usr/bin"
+  - cmd: sh -c "ls -R /usr"
   - cmd: sh -c "tests/run default seqfail"
 
 branches:
