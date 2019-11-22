@@ -7,16 +7,10 @@ platform:
 environment:
   MY_VSSDK: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VSSDK"
 
-install:
-  - ps: $env:PATH = 'C:\cygwin64\bin;' + $env:PATH
-
 build_script:
   - cmd: call "%MY_VSSDK%"\..\VC\Auxiliary\Build\vcvarsall.bat %PLATFORM%
   - cmd: sh -c set
-  - cmd: sh -c "which sh"
-  - cmd: sh -c "ls c:/"
-  - cmd: sh -c "ls c:/mingw"
-  - cmd: sh -c "ls c:/cygwin64/bin"
+  - cmd: sh -c "ls c:/msys64"
   - cmd: sh -c "tests/run default seqfail"
 
 branches:
