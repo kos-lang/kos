@@ -1,17 +1,18 @@
-image: Visual Studio 2019
+image: Visual Studio 2017
 
 platform:
   - x86
   - x64
 
 environment:
-  MY_VSSDK: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VSSDK"
+  MY_VSSDK: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VSSDK"
+
+install:
+  - ps: $env:PATH = 'C:\cygwin64\bin;' + $env:PATH
 
 build_script:
   - cmd: call "%MY_VSSDK%"\..\VC\Auxiliary\Build\vcvarsall.bat %PLATFORM%
   - cmd: sh -c set
-  - cmd: sh -c "ls /usr/bin"
-  - cmd: sh -c "ls -R /usr"
   - cmd: sh -c "tests/run default seqfail"
 
 branches:
