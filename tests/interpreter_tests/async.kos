@@ -172,7 +172,10 @@ do {
             thread.wait()
         }
 
-        async respawn(respawn, f, count)
+        try {
+            async respawn(respawn, f, count)
+        }
+        catch const e { }
     }
 
     async start(thread, 16)
