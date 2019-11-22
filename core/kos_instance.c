@@ -355,6 +355,7 @@ static void clear_instance(KOS_INSTANCE *inst)
     inst->modules.module_inits           = KOS_BADPTR;
     inst->modules.load_chain             = 0;
     inst->threads.threads                = 0;
+    inst->threads.can_create             = 0;
     inst->threads.num_threads            = 0;
     inst->threads.max_threads            = KOS_MAX_THREADS;
 
@@ -384,6 +385,12 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY(kos_tls_create(&inst->threads.thread_key));
     error = kos_create_mutex(&inst->threads.mutex);
     if (error) {
+        kos_tls_destroy(inst->threads.thread_key);
+        goto cleanup;
+    }
+    error = kos_create_mutex(&inst->threads.new_mutex);
+    if (error) {
+        kos_destroy_mutex(&inst->threads.mutex);
         kos_tls_destroy(inst->threads.thread_key);
         goto cleanup;
     }
@@ -444,6 +451,9 @@ int KOS_instance_init(KOS_INSTANCE *inst,
      * Also, enable automatic GC unless disabled by user */
     inst->flags = flags;
 
+    /* Enable creation of new threads */
+    inst->threads.can_create = 1U;
+
 cleanup:
     if (error) {
         if (heap_ok)
@@ -451,6 +461,7 @@ cleanup:
 
         if (thread_ok) {
             kos_tls_destroy(inst->threads.thread_key);
+            kos_destroy_mutex(&inst->threads.new_mutex);
             kos_destroy_mutex(&inst->threads.mutex);
         }
 
@@ -504,6 +515,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
 
     kos_tls_destroy(inst->threads.thread_key);
 
+    kos_destroy_mutex(&inst->threads.new_mutex);
     kos_destroy_mutex(&inst->threads.mutex);
 
     kos_free((void *)inst->threads.threads);

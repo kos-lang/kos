@@ -139,13 +139,14 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
     KOS_INSTANCE  *inst        = ctx->inst;
     KOS_THREAD    *thread      = 0;
     const uint32_t max_threads = inst->threads.max_threads;
-    int            error       = KOS_SUCCESS;
     uint32_t       i;
 
     thread = (KOS_THREAD *)kos_malloc(sizeof(KOS_THREAD));
 
-    if ( ! thread)
+    if ( ! thread) {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return 0;
+    }
 
     thread->inst        = inst;
     thread->thread_func = thread_func;
@@ -160,24 +161,38 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
     thread->thread_id     = 0;
 #endif
 
-    for (i = 0; ! error; ) {
+    kos_lock_mutex(&inst->threads.new_mutex);
 
-        KOS_atomic_write_release_u32(thread->thread_idx, i);
+    if ( ! inst->threads.can_create)
+        i = max_threads;
 
-        if (KOS_atomic_cas_strong_ptr(inst->threads.threads[i], (KOS_THREAD *)0, thread)) {
-            KOS_atomic_add_u32(inst->threads.num_threads, 1);
-            break;
+    else {
+        for (i = 0; i < max_threads; i++) {
+
+            KOS_atomic_write_release_u32(thread->thread_idx, i);
+
+            if ( ! KOS_atomic_read_relaxed_ptr(inst->threads.threads[i])) {
+
+                KOS_atomic_write_relaxed_ptr(inst->threads.threads[i], thread);
+
+                KOS_atomic_add_u32(inst->threads.num_threads, 1);
+                break;
+            }
+
+            KOS_atomic_write_relaxed_u32(thread->thread_idx, KOS_NO_THREAD_IDX);
         }
+    }
 
-        KOS_atomic_write_relaxed_u32(thread->thread_idx, KOS_NO_THREAD_IDX);
+    kos_unlock_mutex(&inst->threads.new_mutex);
 
-        ++i;
+    if (i >= max_threads) {
 
-        if (i >= max_threads) {
-            KOS_raise_exception_cstring(ctx, "too many threads");
-            kos_free(thread);
-            return 0;
-        }
+        KOS_DECLARE_STATIC_CONST_STRING(str_too_many_threads, "too many threads");
+
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_too_many_threads));
+
+        kos_free(thread);
+        thread = 0;
     }
 
     return thread;
@@ -244,6 +259,14 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
     uint32_t       num_finished = 0;
     int            join_rest    = 0;
     uint32_t       i            = 0;
+
+    if (join_all) {
+        kos_lock_mutex(&inst->threads.new_mutex);
+
+        inst->threads.can_create = 0U;
+
+        kos_unlock_mutex(&inst->threads.new_mutex);
+    }
 
     if ( ! KOS_atomic_read_relaxed_u32(inst->threads.num_threads))
         return KOS_SUCCESS;
@@ -380,12 +403,10 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  this_obj,
                               KOS_OBJ_ID  args_obj)
 {
-    int         error  = KOS_SUCCESS;
-    KOS_THREAD *thread = 0;
+    KOS_THREAD *thread = alloc_thread(ctx, thread_func, this_obj, args_obj);
 
-    thread = alloc_thread(ctx, thread_func, this_obj, args_obj);
     if ( ! thread)
-        goto cleanup;
+        return 0;
 
     thread->thread_handle = kos_seq_fail() ? 0 :
         CreateThread(0,
@@ -395,11 +416,9 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
                      0,
                      &thread->thread_id);
 
-    if ( ! thread->thread_handle)
-        RAISE_EXCEPTION(str_err_thread);
+    if ( ! thread->thread_handle) {
+        KOS_raise_exception_cstring(ctx, str_err_thread);
 
-cleanup:
-    if (error) {
         release_thread(thread);
 
         thread = 0;
@@ -545,21 +564,18 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  this_obj,
                               KOS_OBJ_ID  args_obj)
 {
-    int         error  = KOS_SUCCESS;
-    KOS_THREAD *thread = 0;
+    KOS_THREAD *thread = alloc_thread(ctx, thread_func, this_obj, args_obj);
 
-    thread = alloc_thread(ctx, thread_func, this_obj, args_obj);
     if ( ! thread)
-        goto cleanup;
+        return 0;
 
     if (kos_seq_fail() || pthread_create(&thread->thread_handle,
                                          0,
                                          thread_proc,
-                                         thread))
-        RAISE_EXCEPTION(str_err_thread);
+                                         thread)) {
 
-cleanup:
-    if (error) {
+        KOS_raise_exception_cstring(ctx, str_err_thread);
+
         release_thread(thread);
 
         thread = 0;

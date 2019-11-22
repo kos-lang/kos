@@ -1411,8 +1411,8 @@ static void mark_roots_in_threads(KOS_INSTANCE *inst)
     uint32_t       i;
     const uint32_t max_threads = inst->threads.max_threads;
 
-    for (i = 0; i < max_threads; i++)
-    {
+    for (i = 0; i < max_threads; i++) {
+
         KOS_THREAD *thread = (KOS_THREAD *)KOS_atomic_read_relaxed_ptr(inst->threads.threads[i]);
 
         if ( ! thread)
@@ -1923,9 +1923,9 @@ static void update_threads_after_evacuation(KOS_INSTANCE *inst)
     if ( ! inst->threads.threads)
         return;
 
-    for (i = 0; i < max_threads; i++)
-    {
-        KOS_THREAD *thread = inst->threads.threads[i];
+    for (i = 0; i < max_threads; i++) {
+
+        KOS_THREAD *thread = (KOS_THREAD *)KOS_atomic_read_relaxed_ptr(inst->threads.threads[i]);
 
         if ( ! thread)
             continue;
@@ -1975,7 +1975,6 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     update_child_ptr(&inst->modules.module_names);
     update_child_ptr(&inst->modules.modules);
     update_child_ptr(&inst->modules.module_inits);
-    update_child_ptr((KOS_OBJ_ID *)&inst->threads.threads);
 
     update_child_ptr(&inst->args);
 
