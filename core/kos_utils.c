@@ -964,43 +964,43 @@ cleanup:
 static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
                                    KOS_OBJ_ID  obj_id)
 {
-    int           error = KOS_SUCCESS;
-    KOS_OBJ_ID    ret   = KOS_BADPTR;
-    KOS_FUNCTION *func;
-    const char   *str_func;
-    unsigned      str_func_len;
-    KOS_OBJ_ID    strings[3];
+    int           error  = KOS_SUCCESS;
+    int           pushed = 0;
+    KOS_OBJ_ID    ret    = KOS_BADPTR;
+    KOS_OBJ_ID    strings[3] = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
     char          cstr_ptr[22];
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION ||
            GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
 
-    func = OBJPTR(FUNCTION, obj_id);
-
     if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION) {
-        str_func     = str_function_open;
-        str_func_len = sizeof(str_function_open) - 1;
+        KOS_DECLARE_STATIC_CONST_STRING(str_open_function, "<function ");
+
+        strings[0] = KOS_CONST_ID(str_open_function);
     }
     else {
-        str_func     = str_class_open;
-        str_func_len = sizeof(str_class_open) - 1;
+        KOS_DECLARE_STATIC_CONST_STRING(str_open_class, "<class ");
+
+        strings[0] = KOS_CONST_ID(str_open_class);
     }
 
-    strings[0] = KOS_new_const_ascii_string(ctx, str_func, str_func_len);
-    TRY_OBJID(strings[0]);
-    if (func->handler) {
+    TRY(KOS_push_locals(ctx, &pushed, 3, &obj_id, &strings[1], &strings[2]));
+
+    if (OBJPTR(FUNCTION, obj_id)->handler) {
         /* TODO get built-in function name */
         strings[1] = KOS_new_const_ascii_string(ctx, str_builtin,
                                                 sizeof(str_builtin) - 1);
         TRY_OBJID(strings[1]);
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">", (uint64_t)(uintptr_t)func->handler);
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">",
+                 (uint64_t)(uintptr_t)OBJPTR(FUNCTION, obj_id)->handler);
     }
     else {
         strings[1] = KOS_module_addr_to_func_name(ctx,
-                                                  OBJPTR(MODULE, func->module),
-                                                  func->instr_offs);
+                                                  OBJPTR(MODULE, OBJPTR(FUNCTION, obj_id)->module),
+                                                  OBJPTR(FUNCTION, obj_id)->instr_offs);
         TRY_OBJID(strings[1]);
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>", (unsigned)func->instr_offs);
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>",
+                 (unsigned)OBJPTR(FUNCTION, obj_id)->instr_offs);
     }
     strings[2] = KOS_new_cstring(ctx, cstr_ptr);
     TRY_OBJID(strings[2]);
@@ -1008,6 +1008,8 @@ static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
     ret = KOS_string_add_n(ctx, strings, sizeof(strings) / sizeof(strings[0]));
 
 cleanup:
+    KOS_pop_locals(ctx, pushed);
+
     return error ? KOS_BADPTR : ret;
 }
 
