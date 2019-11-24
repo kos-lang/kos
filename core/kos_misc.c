@@ -180,28 +180,84 @@ int kos_parse_int(const char *begin,
     return error;
 }
 
-static void _multiply_by_10(uint64_t *mantissa, int *exponent)
-{
-    const uint64_t high  = 5 * (*mantissa >> 3);
-    const unsigned low   = 5 * ((unsigned)*mantissa & 7U);
-    const unsigned carry = (low >> 2) & 1;
+/*
+ * How rounding works:
+ * - L is the least significant bit of mantissa
+ * - G is the guard bit
+ * - R is the round bit
+ * - S is the sticky bit
+ *
+ * If LGRS = x0xx -> round down
+ * If LGRS = 0100 -> round down
+ * If LGRS = 1100 -> round up
+ * If LGRS = x101 -> round up
+ * If LGRS = x11x -> round up
+ */
 
-    *mantissa = high + (low >> 3) + carry;
-    *exponent += 4;
-}
-
-static void _divide_by_10(uint64_t *mantissa, int *exponent)
+static void multiply_by_10_and_add(uint64_t *mantissa, int *exponent, unsigned digit)
 {
-    *mantissa /= 5;
-    --*exponent;
-}
+    const uint64_t high1 = 5 * (*mantissa >> 3);
+    const uint32_t low   = 5 * ((uint32_t)*mantissa & 7U);
+    const uint64_t high  = high1 + (low >> 3) + ((uint64_t)digit << (59 - *exponent));
 
-static void _renormalize(uint64_t *mantissa, int *exponent)
-{
-    while ( ! (*mantissa & ((uint64_t)1U << 63)) ) {
-        *mantissa <<= 1;
-        --*exponent;
+    if (high & ((uint64_t)1U << 63)) {
+        const uint32_t lgrs_mask = 0xFU;
+        const uint32_t g_mask    = 0x4U;
+        const uint32_t carry     = (low & lgrs_mask) != g_mask ? (low & g_mask) : 0U;
+
+        *mantissa = high + (carry >> 2);
+        *exponent += 4;
     }
+    else if (high & ((uint64_t)1U << 62)) {
+        const uint32_t lgr_mask = 0x7U;
+        const uint32_t g_mask   = 0x2U;
+        const uint32_t carry    = (low & lgr_mask) != g_mask ? (low & g_mask) : 0U;
+
+        *mantissa = (high << 1) + ((low >> 2) & 1U) + (carry >> 1);
+        *exponent += 3;
+    }
+    else if (high & ((uint64_t)1U << 61)) {
+        const uint32_t lg    = low & 0x3U;
+        const uint32_t carry = lg == 3U ? 1U : 0U;
+
+        *mantissa = (high << 2) + ((low >> 1) & 3U) + carry;
+        *exponent += 2;
+    }
+    else {
+        const uint32_t carry = low & 1U;
+
+        *mantissa = (high << 3) + (low & 7U) + carry;
+        *exponent += 1;
+    }
+}
+
+static void divide_by_10(uint64_t *mantissa, int *exponent)
+{
+    const uint64_t high = (*mantissa & ~(uint64_t)0xFFFFFFFFU) / 5;
+    const uint64_t low  = (*mantissa << 32) / 5 + (high & 0xFFFFFFFFU);
+
+    assert( ! (high >> 62));
+
+    if (high & ((uint64_t)1U << 61)) {
+        const uint32_t lgrs_mask = 0x7FFFFFFFU;
+        const uint32_t g_mask    = 0x20000000U;
+        const uint32_t carry     = ((uint32_t)low & lgrs_mask) != g_mask ?
+                                   ((uint32_t)low & g_mask) : 0U;
+
+        *mantissa = (high << 2) + ((low + carry) >> 30);
+        *exponent -= 3;
+    }
+    else {
+        const uint32_t lgrs_mask = 0x3FFFFFFFU;
+        const uint32_t g_mask    = 0x10000000U;
+        const uint32_t carry     = ((uint32_t)low & lgrs_mask) != g_mask ?
+                                   ((uint32_t)low & g_mask) : 0U;
+
+        *mantissa = (high << 3) + ((low + carry) >> 29);
+        *exponent -= 4;
+    }
+
+    assert(*mantissa & ((uint64_t)1U << 63));
 }
 
 int kos_parse_double(const char *begin,
@@ -327,7 +383,7 @@ int kos_parse_double(const char *begin,
         /* Parse consecutive digits */
         while (begin < end) {
 
-            uint64_t digit;
+            unsigned digit;
             int      lost_precision;
 
             char c = *(begin++);
@@ -359,15 +415,11 @@ int kos_parse_double(const char *begin,
             /* Detect loss of precision, ignore further digits */
             lost_precision = (exponent > 53) ? 1 : 0;
 
-            _multiply_by_10(&mantissa, &exponent);
-
             /* If we lost precision, round the last digit to nearest */
             if (lost_precision)
                 digit = (digit >= 5) ? 10U : 5U;
 
-            mantissa += digit << (63 - exponent);
-
-            _renormalize(&mantissa, &exponent);
+            multiply_by_10_and_add(&mantissa, &exponent, digit);
 
             ++i_digit;
 
@@ -385,15 +437,13 @@ int kos_parse_double(const char *begin,
         /* Apply decimal exponent */
         if (decimal_exponent < 0) {
             while (decimal_exponent) {
-                _divide_by_10(&mantissa, &exponent);
-                _renormalize(&mantissa, &exponent);
+                divide_by_10(&mantissa, &exponent);
                 ++decimal_exponent;
             }
         }
         else if (decimal_exponent > 0) {
             while (decimal_exponent) {
-                _multiply_by_10(&mantissa, &exponent);
-                _renormalize(&mantissa, &exponent);
+                multiply_by_10_and_add(&mantissa, &exponent, 0);
                 --decimal_exponent;
             }
         }
@@ -420,18 +470,19 @@ int kos_parse_double(const char *begin,
         exponent = -0x3FF;
 
     /* Round mantissa to nearest */
-    if (mantissa & 0x400U) {
+    if (mantissa) {
+        const uint32_t lgrs_mask = 0xFFFU;
+        const uint32_t g_mask    = 0x400U;
+        const uint32_t low       = (uint32_t)mantissa;
+        const uint32_t carry     = (low & lgrs_mask) != g_mask ? (low & g_mask) : 0U;
 
-        mantissa = (mantissa | 0x3FFU) + 1;
+        mantissa = (mantissa >> 11) + (carry >> 10);
 
-        /* Cope with carry after rounding */
-        if (mantissa == 0) {
-            mantissa = (uint64_t)1U << 63;
+        /* Renormalize number after carry */
+        if (mantissa & ((uint64_t)1U << 53)) {
+            mantissa >>= 1;
             ++exponent;
         }
-        /* Renormalize number after carry */
-        else if ((mantissa & ((uint64_t)1U << 63)) != 0 && exponent == -0x3FF)
-            ++exponent;
     }
 
     {
@@ -439,7 +490,7 @@ int kos_parse_double(const char *begin,
 
         conv.u = ((uint64_t)sign << 63)
                | ((uint64_t)(exponent + 0x3FFU) << 52)
-               | ((mantissa >> 11) & (((uint64_t)1U << 52)-1U));
+               | (mantissa & (((uint64_t)1U << 52)-1U));
 
         *value = conv.d;
     }
