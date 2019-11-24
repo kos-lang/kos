@@ -555,7 +555,7 @@ static int collect_garbage_last_resort_locked(KOS_CONTEXT ctx, KOS_GC_STATS *sta
         return KOS_SUCCESS;
 
     /* No garbage to collect, bail out early.  This can happen on init. */
-    if ( ! heap->used_pages.head)
+    if ( ! heap->used_pages.head && ! ctx->cur_page)
         return KOS_SUCCESS;
 
     kos_unlock_mutex(&heap->mutex);
