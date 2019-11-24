@@ -228,3 +228,13 @@ do {
     assert get_second([10, 20]) == 20
     assert get_second(range(1000, 2000)) == 1001
 }
+
+expect_fail(fun {
+    const a, b = () => 0
+    return a
+})
+
+expect_fail(fun {
+    const a, b = () => 0
+    return b
+})

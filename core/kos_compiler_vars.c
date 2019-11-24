@@ -894,8 +894,15 @@ static int _is_self_ref_func(const KOS_AST_NODE *node)
         node->next->type != NT_CLASS_LITERAL)
         return 0;
 
-    assert(node->children->type == NT_IDENTIFIER);
-    assert( ! node->children->next);
+    assert(node->children->type == NT_IDENTIFIER ||
+           node->children->type == NT_VOID_LITERAL);
+
+    /* Multi-assignment */
+    if (node->children->next) {
+        assert(node->children->next->type == NT_IDENTIFIER ||
+               node->children->next->type == NT_VOID_LITERAL);
+        return 0;
+    }
 
     return 1;
 }
