@@ -593,6 +593,10 @@ do {
         base.string(base.buffer(0xF000, 0x41)) + base.string(base.buffer(0x4000, 0x42))
     })
     assert "".size == 0
+
+    expect_fail(fun {
+        return "\([base.buffer(22000), base.buffer(22000)])"
+    })
 }
 
 ##############################################################################
