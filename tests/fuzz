@@ -66,7 +66,7 @@ cd "$OUT"
 if [ "$MERGE" = "1" -a -d "$CORPUS" ]; then
     mv "$CORPUS" "$CORPUS.old"
     mkdir -p "$CORPUS"
-    "./$FUZZ" -merge=1 "-jobs=$JOBS" "-workers=$JOBS" "$CORPUS" "$CORPUS.old"
+    "./$FUZZ" -merge=1 "$CORPUS" "$CORPUS.old"
     rm -rf "$CORPUS.old"
     exit 0
 fi
