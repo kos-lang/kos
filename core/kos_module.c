@@ -1138,8 +1138,6 @@ static int _compile_module(KOS_CONTEXT ctx,
             KOS_FUNC_ADDR *func_addr;
             KOS_FUNC_ADDR *end_func_addr;
 
-            assert(module->line_addrs);
-
             assert(module->bytecode_size);
             assert(code_buf->size);
             TRY(_append_buf(&module->bytecode, module->bytecode_size,
@@ -1147,10 +1145,19 @@ static int _compile_module(KOS_CONTEXT ctx,
             module->bytecode_size += (uint32_t)code_buf->size;
 
             if (addr_to_line->size) {
-                assert(module->num_line_addrs);
-                TRY(_append_buf((const uint8_t **)&module->line_addrs, module->num_line_addrs * sizeof(KOS_LINE_ADDR),
-                                (const uint8_t *)addr_to_line->buffer, (uint32_t)addr_to_line->size));
-                module->num_line_addrs += (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
+                if (old_num_line_addrs) {
+                    assert(module->line_addrs);
+                    TRY(_append_buf((const uint8_t **)&module->line_addrs, module->num_line_addrs * sizeof(KOS_LINE_ADDR),
+                                    (const uint8_t *)addr_to_line->buffer, (uint32_t)addr_to_line->size));
+                    module->num_line_addrs += (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
+                }
+                else {
+                    assert( ! module->line_addrs);
+                    module->line_addrs     = (KOS_LINE_ADDR *)addr_to_line->buffer;
+                    module->num_line_addrs = (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
+                    module->flags         |= KOS_MODULE_OWN_LINE_ADDRS;
+                    addr_to_line->buffer   = 0;
+                }
             }
 
             if (addr_to_func->size) {
@@ -1595,6 +1602,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     {
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
+            KOS_clear_exception(ctx);
             _raise_3(ctx, str_err_module, module_name_str, str_err_not_found);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
@@ -1690,6 +1698,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     {
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
+            KOS_clear_exception(ctx);
             _raise_3(ctx, str_err_module, module_name_str, str_err_not_found);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
