@@ -582,8 +582,17 @@ do {
         == "\((x => x) (2555555555555555555555551555555555555555555555555555555555555.57) )"
 }
 
+# test case from fuzzer
 do {
     assert "\(() => 0)".size != 0
+}
+
+# add two strings which are too long
+do {
+    expect_fail(fun {
+        base.string(base.buffer(0xF000, 0x41)) + base.string(base.buffer(0x4000, 0x42))
+    })
+    assert "".size == 0
 }
 
 ##############################################################################
