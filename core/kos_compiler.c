@@ -4449,7 +4449,7 @@ static int _free_arg_regs(KOS_RED_BLACK_NODE *node,
     KOS_VAR       *var     = (KOS_VAR *)node;
     KOS_COMP_UNIT *program = (KOS_COMP_UNIT *)cookie;
 
-    if ((var->type & VAR_ARGUMENT_IN_REG) && var->reg->tmp) {
+    if ((var->type & VAR_ARGUMENT_IN_REG) && var->reg && var->reg->tmp) {
         _free_reg(program, var->reg);
         var->reg = 0;
     }
@@ -4508,6 +4508,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
 
         KOS_AST_NODE *arg_node  = fun_node->children;
         int           rest_used = 0;
+        int           have_rest = 0;
         int           i;
 
         assert(arg_node);
@@ -4525,31 +4526,43 @@ static int _gen_function(KOS_COMP_UNIT      *program,
             assert(var);
             assert(var == kos_find_var(scope->vars, &ident_node->token));
 
-            if (arg_node->type == NT_IDENTIFIER)
-                ++frame->num_non_def_args;
-            else
+            if (arg_node->type != NT_IDENTIFIER)
                 ++frame->num_def_args;
 
-            if (var->type & VAR_ARGUMENT_IN_REG) {
+            if (i < scope->num_args) {
 
-                assert( ! var->reg);
-                TRY(_gen_reg(program, &var->reg));
+                if (arg_node->type == NT_IDENTIFIER)
+                    ++frame->num_non_def_args;
 
-                assert(var->reg->reg == ++last_reg);
+                if (var->type & VAR_ARGUMENT_IN_REG) {
 
-                if (var->num_reads || var->num_assignments)
-                    var->reg->tmp = 0;
+                    assert( ! var->reg);
 
-                var->array_idx = (var->type & VAR_INDEPENDENT) ? var->reg->reg : 0;
+                    TRY(_gen_reg(program, &var->reg));
+
+                    assert(var->reg->reg == ++last_reg);
+
+                    if (var->num_reads || var->num_assignments)
+                        var->reg->tmp = 0;
+
+                    var->array_idx = (var->type & VAR_INDEPENDENT) ? var->reg->reg : 0;
+                }
+                else {
+                    have_rest = 1;
+                    assert(scope->have_rest);
+
+                    if (var->num_reads || var->num_assignments)
+                        rest_used = 1;
+                }
             }
-            else if (var->num_reads || var->num_assignments) {
-                assert(scope->have_rest);
-                rest_used = 1;
+            else {
+                assert( ! var->num_reads);
+                assert( ! var->num_assignments);
             }
         }
 
         /* Generate register for the remaining args */
-        if (scope->have_rest) {
+        if (have_rest) {
             TRY(_gen_reg(program, &frame->args_reg));
             if (rest_used)
                 frame->args_reg->tmp = 0;
@@ -4815,14 +4828,14 @@ static int _function_literal(KOS_COMP_UNIT      *program,
     if (scope->num_args > frame->num_non_def_args) {
 
         int      i;
+        int      opcode;
         KOS_REG *defaults_reg = 0;
 
         TRY(_gen_reg(program, &defaults_reg));
 
-        if (frame->num_def_args < 256)
-            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, defaults_reg->reg, frame->num_def_args));
-        else
-            TRY(_gen_instr2(program, INSTR_LOAD_ARRAY, defaults_reg->reg, frame->num_def_args));
+        opcode = frame->num_def_args < 256 ? INSTR_LOAD_ARRAY8 : INSTR_LOAD_ARRAY;
+
+        TRY(_gen_instr2(program, opcode, defaults_reg->reg, frame->num_def_args));
 
         for (i = 0; node && node->type == NT_ASSIGNMENT; node = node->next, ++i) {
 
