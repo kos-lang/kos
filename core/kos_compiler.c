@@ -4526,13 +4526,22 @@ static int _gen_function(KOS_COMP_UNIT      *program,
             assert(var);
             assert(var == kos_find_var(scope->vars, &ident_node->token));
 
+            /* Enumerate all args with default values, even if they are unused,
+             * because we need to execute code used for initializing them,
+             * even if these args will not be default-assigned in practice. */
             if (arg_node->type != NT_IDENTIFIER)
                 ++frame->num_def_args;
 
+            /* Process all args up to the last one which is being used,
+             * effectively ignoring the tail of unused arguments. */
             if (i < scope->num_args) {
 
+                /* This counts only arguments which don't have a default value
+                 * up to the last argument which is used.  The tail of the arguments
+                 * list which are not used is discarded and not enumerated.
+                 * However, any following default arguments will still be counted. */
                 if (arg_node->type == NT_IDENTIFIER)
-                    ++frame->num_non_def_args;
+                    ++frame->num_used_non_def_args;
 
                 if (var->type & VAR_ARGUMENT_IN_REG) {
 
@@ -4669,7 +4678,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     constant->args_reg = (uint8_t)scope->num_indep_vars;
-    constant->num_args = (uint8_t)frame->num_non_def_args;
+    constant->num_args = (uint8_t)frame->num_used_non_def_args;
     constant->flags    = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
@@ -4700,8 +4709,8 @@ static int _gen_function(KOS_COMP_UNIT      *program,
 
     /* Choose instruction for loading the function */
     frame->load_instr =
-        (fun_node->type == NT_CONSTRUCTOR_LITERAL  ||
-         scope->num_args > frame->num_non_def_args ||
+        (fun_node->type == NT_CONSTRUCTOR_LITERAL       ||
+         scope->num_args > frame->num_used_non_def_args ||
          frame->num_binds)
             ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
             : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST);
@@ -4825,7 +4834,7 @@ static int _function_literal(KOS_COMP_UNIT      *program,
     }
 
     /* Generate array with default args */
-    if (scope->num_args > frame->num_non_def_args) {
+    if (scope->num_args > frame->num_used_non_def_args) {
 
         int      i;
         int      opcode;

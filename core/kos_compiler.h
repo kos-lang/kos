@@ -134,7 +134,7 @@ typedef struct KOS_FRAME_S {
     int                         load_instr;       /* Instruction used for loading the function */
     int                         bind_delta;       /* First bound register */
     int                         num_binds;        /* Number of binds */
-    int                         num_non_def_args; /* Number of args without default values */
+    int                         num_used_non_def_args; /* Number of args without default values */
     int                         num_def_args;     /* Number of args with default values */
     unsigned                    uses_base_ctor  : 1;
     unsigned                    uses_base_proto : 1;
