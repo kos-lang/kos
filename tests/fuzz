@@ -43,16 +43,17 @@ PWD="$(pwd)"
 OUT="$PWD/Out/debug/tests"
 FUZZ="kos_fuzz_interpreter"
 CORPUS="$PWD/tests/kos_fuzz_interpreter_corpus"
+AFL_CORPUS="$PWD/tests/kos_fuzz_interpreter_afl"
 DICT="$PWD/tests/kos_fuzz_interpreter_dict"
 MERGE=0
 MINIMIZE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --merge) MERGE=1 ;;
+        --merge)    MERGE=1 ;;
         --minimize) shift ; MINIMIZE="$1" ;;
-        -j) shift ; JOBS="$1" ;;
-        *) echo "Unrecognized parameter: $1" >&2 ; exit 1 ;;
+        -j)         shift ; JOBS="$1" ;;
+        *)          echo "Unrecognized parameter: $1" >&2 ; exit 1 ;;
     esac
     shift
 done
@@ -76,5 +77,14 @@ if [ -n "$MINIMIZE" ]; then
     exit 0
 fi
 
+run_parallel_fuzzer()
+{
+    "./$FUZZ" "-jobs=$JOBS" "-workers=$JOBS" "-dict=$DICT" "$@"
+}
+
 mkdir -p "$CORPUS"
-"./$FUZZ" "$CORPUS" "-jobs=$JOBS" "-workers=$JOBS" "-dict=$DICT"
+if [[ -d "$AFL_CORPUS" ]]; then
+    run_parallel_fuzzer "$CORPUS" "$AFL_CORPUS"
+else
+    run_parallel_fuzzer "$CORPUS"
+fi
