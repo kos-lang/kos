@@ -1165,6 +1165,24 @@ do {
     assert count == 11
     assert unused_defaults(5) == 5
     assert count == 11
+
+    fun lots_of_unused_defaults(a0,  a1,  a2,  a3,  a4,  a5,  a6,  a7,  a8,  a9,
+                                a10, a11, a12, a13, a14, a15, a16, a17, a18, a19,
+                                a20, a21, a22, a23, a24, a25, a26, a27, a28, a29,
+                                a30, a31, a32, a33, a34, a35, a36, a37, a38, a39,
+                                a40 = 42, a41 = 2 + increment() * 3, a42 = 44)
+    {
+        return a0 + a1
+    }
+
+    const args = [ 100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
+                   110, 111, 112, 113, 114, 115, 116, 117, 118, 119,
+                   120, 121, 122, 123, 124, 125, 126, 127, 128, 129,
+                   130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
+                   140, 141, 142, 143, 144, 145, 146, 147, 148, 149 ]
+
+    assert lots_of_unused_defaults.apply(void, args) == 201
+    assert count == 12
 }
 
 # test correct placement of arguments for generator with independent variables
@@ -1857,6 +1875,22 @@ do {
     thing = void
     assert dummy(10) == 11
     assert thing == void
+}
+
+# Unused default args and a closure
+do {
+    fun less_than(a, b)
+    {
+        fun greater_than_a(b, c = 4)
+        {
+            return b > a
+        }
+
+        return greater_than_a(b)
+    }
+
+    assert less_than(1, 2)
+    assert ! less_than(5, -5)
 }
 
 # Closure used only for storing data

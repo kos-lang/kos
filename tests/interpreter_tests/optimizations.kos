@@ -630,7 +630,7 @@ do {
     }
     assert collapse_if_numeric(10, 20) == 10
 
-    check(collapse_if_numeric, { registers: 3, instructions: 1, size: 3 })
+    check(collapse_if_numeric, { registers: 2, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -686,7 +686,7 @@ do {
     assert f(-10) == -10
 
     check(optimize_default_args, { registers: 1, instructions: 2, size: 6 })
-    check(f,                     { registers: 4, instructions: 1, size: 3 })
+    check(f,                     { registers: 2, instructions: 1, size: 3 })
 }
 
 #============================================================================#
@@ -762,5 +762,5 @@ do {
     assert unused_default(10) == 11
     assert unused_default(20, 40) == 21
 
-    check(unused_default, { registers: 3, instructions: 3, size: 10 })
+    check(unused_default, { registers: 2, instructions: 3, size: 10 })
 }
