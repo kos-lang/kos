@@ -1108,6 +1108,11 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
             break;
     }
 
+    if ( ! error && str && IS_BAD_PTR(*str)) {
+        error = KOS_ERROR_EXCEPTION;
+        assert(KOS_is_exception_pending(ctx));
+    }
+
     return error;
 }
 
