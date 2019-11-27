@@ -1,7 +1,19 @@
 ﻿Enhancement proposals
 =====================
 
+* 'in' operator should be shallow.
+
+    - How to handle deep check?
+
+* if, switch variable declarations
+
+* Use _ as operator for empty extraction instead of void, like in Python
+
 * Add syntax coloring for Eclipse, IntelliJ IDEA
+
+* ? Support multi-line strings the Python way
+
+* ? Remove //-style single-line comments
 
 * ? Change division to produce float, add integer division operator, e.g. //
 
@@ -9,11 +21,7 @@
 
 * ? Empty array, buffer, string, object (shallow) are all falsy
 
-* if, while, switch variable declarations
-
 * ? remove C-style for loop
-
-* ? Support multi-line strings the Python way or the C way?
 
 * set/get:
 
