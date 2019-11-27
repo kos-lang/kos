@@ -4833,78 +4833,76 @@ static int _function_literal(KOS_COMP_UNIT      *program,
             fun_var = 0;
     }
 
-    /* Generate array with default args */
-    if (scope->num_args > frame->num_used_non_def_args) {
+    /* Generate array with default args and init code for unused default args */
+    if (frame->num_def_args) {
 
-        int      i;
-        int      opcode;
-        KOS_REG *defaults_reg = 0;
+        int       i;
+        const int num_used_def_args = scope->num_args - frame->num_used_non_def_args;
+        KOS_REG  *defaults_reg = 0;
 
-        TRY(_gen_reg(program, &defaults_reg));
+        assert(num_used_def_args <= frame->num_def_args);
 
-        opcode = frame->num_def_args < 256 ? INSTR_LOAD_ARRAY8 : INSTR_LOAD_ARRAY;
+        if (num_used_def_args > 0) {
 
-        TRY(_gen_instr2(program, opcode, defaults_reg->reg, frame->num_def_args));
+            int opcode;
+
+            TRY(_gen_reg(program, &defaults_reg));
+
+            opcode = num_used_def_args < 256 ? INSTR_LOAD_ARRAY8 : INSTR_LOAD_ARRAY;
+
+            TRY(_gen_instr2(program, opcode, defaults_reg->reg, num_used_def_args));
+        }
 
         for (i = 0; node && node->type == NT_ASSIGNMENT; node = node->next, ++i) {
 
             const KOS_AST_NODE *def_node = node->children;
-            KOS_REG            *arg = 0;
+            KOS_REG            *arg      = 0;
+            const int           used     = i < num_used_def_args;
 
             assert(def_node);
             assert(def_node->type == NT_IDENTIFIER);
             def_node = def_node->next;
             assert(def_node);
             assert( ! def_node->next);
+
+            /* Skip executing the init code for the default arg if:
+             *  - the default arg is unused and
+             *  - the init value is a constant expression or variable.
+             */
+            if ( ! used) {
+
+                KOS_NODE_TYPE       type;
+                const KOS_AST_NODE *const_node = kos_get_const(program, def_node);
+
+                if ( ! const_node)
+                    continue;
+
+                type = const_node->type;
+
+                if (type == NT_IDENTIFIER      ||
+                    type == NT_NUMERIC_LITERAL ||
+                    type == NT_STRING_LITERAL  ||
+                    type == NT_THIS_LITERAL    ||
+                    type == NT_LINE_LITERAL    ||
+                    type == NT_BOOL_LITERAL    ||
+                    type == NT_VOID_LITERAL)
+
+                    continue;
+            }
 
             TRY(_visit_node(program, def_node, &arg));
             assert(arg);
 
-            TRY(_gen_instr3(program, INSTR_SET_ELEM, defaults_reg->reg, i, arg->reg));
+            if (used)
+                TRY(_gen_instr3(program, INSTR_SET_ELEM, defaults_reg->reg, i, arg->reg));
 
             _free_reg(program, arg);
         }
 
-        TRY(_gen_instr2(program, INSTR_BIND_DEFAULTS, (*reg)->reg, defaults_reg->reg));
+        if (num_used_def_args > 0) {
+            TRY(_gen_instr2(program, INSTR_BIND_DEFAULTS, (*reg)->reg, defaults_reg->reg));
 
-        _free_reg(program, defaults_reg);
-    }
-    /* Generate code for unused non-constant defaults */
-    else if (frame->num_def_args) {
-
-        for ( ; node && node->type == NT_ASSIGNMENT; node = node->next) {
-
-            const KOS_AST_NODE *def_node = node->children;
-            KOS_NODE_TYPE       type;
-
-            assert(def_node);
-            assert(def_node->type == NT_IDENTIFIER);
-            def_node = def_node->next;
-            assert(def_node);
-            assert( ! def_node->next);
-
-            def_node = kos_get_const(program, def_node);
-
-            if ( ! def_node)
-                continue;
-
-            type = def_node->type;
-
-            if (type != NT_IDENTIFIER      &&
-                type != NT_NUMERIC_LITERAL &&
-                type != NT_STRING_LITERAL  &&
-                type != NT_THIS_LITERAL    &&
-                type != NT_LINE_LITERAL    &&
-                type != NT_BOOL_LITERAL    &&
-                type != NT_VOID_LITERAL) {
-
-                KOS_REG *out = 0;
-
-                TRY(_visit_node(program, def_node, &out));
-                assert(out);
-
-                _free_reg(program, out);
-            }
+            _free_reg(program, defaults_reg);
         }
     }
 
