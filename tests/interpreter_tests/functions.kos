@@ -597,78 +597,8 @@ do {
               30 + 2 * add_1(
               31 + 2 * add_1(
               32 + 2 * add_1(
-              33 + 2 * add_1(
-              34 + 2 * add_1(
-              35 + 2 * add_1(
-              36 + 2 * add_1(
-              37 + 2 * add_1(
-              38 + 2 * add_1(
-              39 + 2 * add_1(
-              40 + 2 * add_1(
-              41 + 2 * add_1(
-              42 + 2 * add_1(
-              43 + 2 * add_1(
-              44 + 2 * add_1(
-              45 + 2 * add_1(
-              46 + 2 * add_1(
-              47 + 2 * add_1(
-              48 + 2 * add_1(
-              49 + 2 * add_1(
-              50 + 2 * add_1(
-              51 + 2 * add_1(
-              52 + 2 * add_1(
-              53 + 2 * add_1(
-              54 + 2 * add_1(
-              55 + 2 * add_1(
-              56 + 2 * add_1(
-              57 + 2 * add_1(
-              58 + 2 * add_1(
-              59 + 2 * add_1(
-              60 + 2 * add_1(
-              61 + 2 * add_1(
-              62 + 2 * add_1(
-              63 + 2 * add_1(
-              64)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+              33))))))))))))))))))))))))))))))))
     }
-    #          64 + 2 * add_1(
-    #          65 + 2 * add_1(
-    #          66 + 2 * add_1(
-    #          67 + 2 * add_1(
-    #          68 + 2 * add_1(
-    #          69 + 2 * add_1(
-    #          70 + 2 * add_1(
-    #          71 + 2 * add_1(
-    #          72 + 2 * add_1(
-    #          73 + 2 * add_1(
-    #          74 + 2 * add_1(
-    #          75 + 2 * add_1(
-    #          76 + 2 * add_1(
-    #          77 + 2 * add_1(
-    #          78 + 2 * add_1(
-    #          79 + 2 * add_1(
-    #          80 + 2 * add_1(
-    #          81 + 2 * add_1(
-    #          82 + 2 * add_1(
-    #          83 + 2 * add_1(
-    #          84 + 2 * add_1(
-    #          85 + 2 * add_1(
-    #          86 + 2 * add_1(
-    #          87 + 2 * add_1(
-    #          88 + 2 * add_1(
-    #          89 + 2 * add_1(
-    #          90 + 2 * add_1(
-    #          91 + 2 * add_1(
-    #          92 + 2 * add_1(
-    #          93 + 2 * add_1(
-    #          94 + 2 * add_1(
-    #          95 + 2 * add_1(
-    #          96 + 2 * add_1(
-    #          97 + 2 * add_1(
-    #          98 + 2 * add_1(
-    #          99 + 2 * add_1(
-    #          100
-    #          )))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
-    #}
 
     fun recursive(x, stop)
     {
@@ -678,7 +608,7 @@ do {
         return x + 2 * add_1(recursive(x+1, stop))
     }
 
-    assert expr() == recursive(1, 64)
+    assert expr() == recursive(1, 33)
 }
 
 do {
@@ -1610,23 +1540,24 @@ do {
                  a0F0=0X0F0, a0F1=0X0F1, a0F2=0X0F2, a0F3=0X0F3, a0F4=0X0F4, a0F5=0X0F5, a0F6=0X0F6, a0F7=0X0F7, a0F8=0X0F8, a0F9=0X0F9, a0FA=0X0FA, a0FB=0X0FB, a0FC=0X0FC, a0FD=0X0FD, a0FE=0X0FE, a0FF=0X0FF,
                  a100=0x100)
     {
-        return a000 + a001 + a002 + a003 + a004 + a005 + a006 + a007 + a008 + a009 + a00A + a00B + a00C + a00D + a00E + a00F +
-               a010 + a011 + a012 + a013 + a014 + a015 + a016 + a017 + a018 + a019 + a01A + a01B + a01C + a01D + a01E + a01F +
-               a020 + a021 + a022 + a023 + a024 + a025 + a026 + a027 + a028 + a029 + a02A + a02B + a02C + a02D + a02E + a02F +
-               a030 + a031 + a032 + a033 + a034 + a035 + a036 + a037 + a038 + a039 + a03A + a03B + a03C + a03D + a03E + a03F +
-               a040 + a041 + a042 + a043 + a044 + a045 + a046 + a047 + a048 + a049 + a04A + a04B + a04C + a04D + a04E + a04F +
-               a050 + a051 + a052 + a053 + a054 + a055 + a056 + a057 + a058 + a059 + a05A + a05B + a05C + a05D + a05E + a05F +
-               a060 + a061 + a062 + a063 + a064 + a065 + a066 + a067 + a068 + a069 + a06A + a06B + a06C + a06D + a06E + a06F +
-               a070 + a071 + a072 + a073 + a074 + a075 + a076 + a077 + a078 + a079 + a07A + a07B + a07C + a07D + a07E + a07F +
-               a080 + a081 + a082 + a083 + a084 + a085 + a086 + a087 + a088 + a089 + a08A + a08B + a08C + a08D + a08E + a08F +
-               a090 + a091 + a092 + a093 + a094 + a095 + a096 + a097 + a098 + a099 + a09A + a09B + a09C + a09D + a09E + a09F +
-               a0A0 + a0A1 + a0A2 + a0A3 + a0A4 + a0A5 + a0A6 + a0A7 + a0A8 + a0A9 + a0AA + a0AB + a0AC + a0AD + a0AE + a0AF +
-               a0B0 + a0B1 + a0B2 + a0B3 + a0B4 + a0B5 + a0B6 + a0B7 + a0B8 + a0B9 + a0BA + a0BB + a0BC + a0BD + a0BE + a0BF +
-               a0C0 + a0C1 + a0C2 + a0C3 + a0C4 + a0C5 + a0C6 + a0C7 + a0C8 + a0C9 + a0CA + a0CB + a0CC + a0CD + a0CE + a0CF +
-               a0D0 + a0D1 + a0D2 + a0D3 + a0D4 + a0D5 + a0D6 + a0D7 + a0D8 + a0D9 + a0DA + a0DB + a0DC + a0DD + a0DE + a0DF +
-               a0E0 + a0E1 + a0E2 + a0E3 + a0E4 + a0E5 + a0E6 + a0E7 + a0E8 + a0E9 + a0EA + a0EB + a0EC + a0ED + a0EE + a0EF +
-               a0F0 + a0F1 + a0F2 + a0F3 + a0F4 + a0F5 + a0F6 + a0F7 + a0F8 + a0F9 + a0FA + a0FB + a0FC + a0FD + a0FE + a0FF +
-               a100
+        var a = a000 + a001 + a002 + a003 + a004 + a005 + a006 + a007 + a008 + a009 + a00A + a00B + a00C + a00D + a00E + a00F +
+                a010 + a011 + a012 + a013 + a014 + a015 + a016 + a017 + a018 + a019 + a01A + a01B + a01C + a01D + a01E + a01F +
+                a020 + a021 + a022 + a023 + a024 + a025 + a026 + a027 + a028 + a029 + a02A + a02B + a02C + a02D + a02E + a02F +
+                a030 + a031 + a032 + a033 + a034 + a035 + a036 + a037 + a038 + a039 + a03A + a03B + a03C + a03D + a03E + a03F
+        a +=    a040 + a041 + a042 + a043 + a044 + a045 + a046 + a047 + a048 + a049 + a04A + a04B + a04C + a04D + a04E + a04F +
+                a050 + a051 + a052 + a053 + a054 + a055 + a056 + a057 + a058 + a059 + a05A + a05B + a05C + a05D + a05E + a05F +
+                a060 + a061 + a062 + a063 + a064 + a065 + a066 + a067 + a068 + a069 + a06A + a06B + a06C + a06D + a06E + a06F +
+                a070 + a071 + a072 + a073 + a074 + a075 + a076 + a077 + a078 + a079 + a07A + a07B + a07C + a07D + a07E + a07F
+        a +=    a080 + a081 + a082 + a083 + a084 + a085 + a086 + a087 + a088 + a089 + a08A + a08B + a08C + a08D + a08E + a08F +
+                a090 + a091 + a092 + a093 + a094 + a095 + a096 + a097 + a098 + a099 + a09A + a09B + a09C + a09D + a09E + a09F +
+                a0A0 + a0A1 + a0A2 + a0A3 + a0A4 + a0A5 + a0A6 + a0A7 + a0A8 + a0A9 + a0AA + a0AB + a0AC + a0AD + a0AE + a0AF +
+                a0B0 + a0B1 + a0B2 + a0B3 + a0B4 + a0B5 + a0B6 + a0B7 + a0B8 + a0B9 + a0BA + a0BB + a0BC + a0BD + a0BE + a0BF
+        a +=    a0C0 + a0C1 + a0C2 + a0C3 + a0C4 + a0C5 + a0C6 + a0C7 + a0C8 + a0C9 + a0CA + a0CB + a0CC + a0CD + a0CE + a0CF +
+                a0D0 + a0D1 + a0D2 + a0D3 + a0D4 + a0D5 + a0D6 + a0D7 + a0D8 + a0D9 + a0DA + a0DB + a0DC + a0DD + a0DE + a0DF +
+                a0E0 + a0E1 + a0E2 + a0E3 + a0E4 + a0E5 + a0E6 + a0E7 + a0E8 + a0E9 + a0EA + a0EB + a0EC + a0ED + a0EE + a0EF +
+                a0F0 + a0F1 + a0F2 + a0F3 + a0F4 + a0F5 + a0F6 + a0F7 + a0F8 + a0F9 + a0FA + a0FB + a0FC + a0FD + a0FE + a0FF +
+                a100
+        return a
     }
 
     const result = the_call(7)

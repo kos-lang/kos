@@ -1045,6 +1045,7 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     if ((parser->token.op & OT_ARITHMETIC)) {
 
+        int               depth   = 0;
         KOS_OPERATOR_TYPE last_op = parser->token.op;
 
         if ((last_op == OT_ADD || last_op == OT_SUB)
@@ -1065,6 +1066,9 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
         TRY(next_token(parser));
 
         for (;;) {
+
+            TRY(increase_ast_depth(parser));
+            ++depth;
 
             if (parser->token.op == OT_ADD || parser->token.op == OT_SUB) {
 
@@ -1091,7 +1095,12 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
             }
             else if ((parser->token.op & OT_MASK) == OT_MULTIPLICATIVE) {
 
-                while ((parser->token.op & OT_MASK) == OT_MULTIPLICATIVE) {
+                int mul_depth = 0;
+
+                do {
+
+                    TRY(increase_ast_depth(parser));
+                    ++mul_depth;
 
                     if ((last_op & OT_MASK) == OT_MULTIPLICATIVE) {
 
@@ -1123,7 +1132,10 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                     }
 
                     TRY(next_token(parser));
-                }
+
+                } while ((parser->token.op & OT_MASK) == OT_MULTIPLICATIVE);
+
+                parser->ast_depth -= mul_depth;
             }
             else
                 break;
@@ -1131,6 +1143,8 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         ast_push(*ret, node);
         node = 0;
+
+        parser->ast_depth -= depth;
 
         if ((parser->token.op & OT_MASK) == OT_BITWISE) {
             parser->error_str = str_err_mixed_operators;
@@ -1142,12 +1156,16 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
     }
     else if ((parser->token.op & OT_MASK) == OT_BITWISE) {
 
-        const KOS_OPERATOR_TYPE op = parser->token.op;
+        int                     depth = 0;
+        const KOS_OPERATOR_TYPE op    = parser->token.op;
 
         *ret = node;
         node = 0;
 
-        while (parser->token.op == op) {
+        do {
+
+            TRY(increase_ast_depth(parser));
+            ++depth;
 
             TRY(new_node(parser, &node, NT_OPERATOR));
 
@@ -1161,7 +1179,9 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
             node = 0;
 
             TRY(next_token(parser));
-        }
+        } while (parser->token.op == op);
+
+        parser->ast_depth -= depth;
 
         {
             const KOS_OPERATOR_TYPE next_op = parser->token.op;
