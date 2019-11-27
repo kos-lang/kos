@@ -828,13 +828,41 @@ static int function_literal(KOS_COMP_UNIT *program,
     return error;
 }
 
-static void identifier(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node)
+static void identifier(KOS_COMP_UNIT *program,
+                       KOS_AST_NODE  *node)
 {
     KOS_VAR *var;
     int      is_local;
 
     lookup_var(program, node, 1, &var, &is_local);
+
+    if ( ! is_local && var->is_const && var->value) {
+
+        const KOS_AST_NODE *const const_node = var->value;
+
+        switch (const_node->type) {
+
+            case NT_NUMERIC_LITERAL:
+                /* fall through */
+            case NT_STRING_LITERAL:
+                /* fall through */
+            case NT_BOOL_LITERAL:
+                /* fall through */
+            case NT_VOID_LITERAL:
+                collapse(node,
+                         const_node->type,
+                         const_node->token.type,
+                         const_node->token.keyword,
+                         const_node->token.begin,
+                         const_node->token.length);
+
+                ++program->num_optimizations;
+                return;
+
+            default:
+                break;
+        }
+    }
 
     ++var->num_reads;
 
