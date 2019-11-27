@@ -83,7 +83,7 @@ run_parallel_fuzzer()
 }
 
 mkdir -p "$CORPUS"
-if [[ -d "$AFL_CORPUS" ]]; then
+if [ -d "$AFL_CORPUS" ]; then
     run_parallel_fuzzer "$CORPUS" "$AFL_CORPUS"
 else
     run_parallel_fuzzer "$CORPUS"
