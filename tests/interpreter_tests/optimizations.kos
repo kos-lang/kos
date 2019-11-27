@@ -692,6 +692,20 @@ do {
 #============================================================================#
 
 do {
+    fun optimize_default_args(a = 1, b = 2)
+    {
+        return a
+    }
+
+    assert optimize_default_args() == 1
+    assert optimize_default_args(-100) == -100
+
+    check(optimize_default_args, { registers: 2, instructions: 1, size: 3 })
+}
+
+#============================================================================#
+
+do {
     fun optimize_switch(x)
     {
         switch x
