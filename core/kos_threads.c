@@ -487,7 +487,8 @@ int kos_create_mutex(KOS_MUTEX *mutex)
             InitializeCriticalSection(&(*mutex)->cs);
         }
         __except (EXCEPTION_EXECUTE_HANDLER) {
-            error = KOS_ERROR_EXCEPTION;
+            kos_free(*mutex);
+            error = KOS_ERROR_OUT_OF_MEMORY;
         }
 
     }
@@ -510,11 +511,7 @@ void kos_lock_mutex(KOS_MUTEX *mutex)
 {
     assert(mutex && *mutex);
 
-    __try {
-        EnterCriticalSection(&(*mutex)->cs);
-    }
-    __except (EXCEPTION_CONTINUE_SEARCH) {
-    }
+    EnterCriticalSection(&(*mutex)->cs);
 }
 
 void kos_unlock_mutex(KOS_MUTEX *mutex)
