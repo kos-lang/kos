@@ -2448,6 +2448,8 @@ static int with_stmt_continued(KOS_PARSER   *parser,
 
         KOS_AST_NODE *scope_node = 0;
 
+        TRY(increase_ast_depth(parser));
+
         TRY(next_token(parser));
 
         if (parser->token.keyword == KW_VAR        ||
@@ -2463,6 +2465,8 @@ static int with_stmt_continued(KOS_PARSER   *parser,
         TRY(push_node(parser, try_node, NT_SCOPE, &scope_node));
 
         TRY(with_stmt_continued(parser, has_paren, scope_node));
+
+        --parser->ast_depth;
     }
     else {
 
