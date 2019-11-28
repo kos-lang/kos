@@ -63,11 +63,23 @@ echo "Using $JOBS jobs"
 [ -f "$OUT/$FUZZ" ] || rm -rf Out
 
 make -k -j "$JOBS" fuzz debug=1 fuzz=1 strict=1 CLANG_VER=c99 --warn-undefined-variables
+
 cd "$OUT"
+
+merge_corpus()
+{
+    "./$FUZZ" -merge=1 "$CORPUS" "$@"
+}
+
 if [ "$MERGE" = "1" -a -d "$CORPUS" ]; then
     mv "$CORPUS" "$CORPUS.old"
     mkdir -p "$CORPUS"
-    "./$FUZZ" -merge=1 "$CORPUS" "$CORPUS.old"
+    if [ -d "$AFL_CORPUS" ]; then
+        merge_corpus "$CORPUS.old" "$AFL_CORPUS"
+        rm -rf "$AFL_CORPUS"
+    else
+        merge_corpus "$CORPUS.old"
+    fi
     rm -rf "$CORPUS.old"
     exit 0
 fi
