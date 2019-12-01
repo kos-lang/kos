@@ -54,14 +54,24 @@ do {
 
 do {
     const line = __line__
-    const obj  = { a : line, b : line + 1 }
-    for const key, value in shallow(obj) {
-        switch key {
-            case "a": assert value == line
-            case "b": assert value == line + 1
-            default:  throw "invalid " + "key"
+    fun go(line)
+    {
+        const obj  = { a : line, b : line + 1 }
+        const yield_arg = fun(x) { yield x }
+        for const key, value in shallow(obj) {
+
+            const key2 = yield_arg(key, 0, 0, 0, 0, 0, 0, 0)()
+            assert key2 == key
+
+            switch key {
+                case "a": assert value == line
+                case "b": assert value == line + 1
+                default:  throw "invalid " + "key"
+            }
         }
+        return line + 1
     }
+    assert go(line) == line + 1
 }
 
 do {
