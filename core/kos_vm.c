@@ -858,6 +858,10 @@ static int _prepare_call(KOS_CONTEXT        ctx,
             else {
                 if (IS_BAD_PTR(args_obj)) {
                     args_obj = make_args(ctx, stack, regs_idx + rarg1, num_args);
+                    if (IS_BAD_PTR(args_obj)) {
+                        kos_stack_pop(ctx);
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                    }
                     TRY_OBJID(args_obj);
                 }
                 set_handler_reg(ctx, args_obj);
@@ -868,6 +872,8 @@ static int _prepare_call(KOS_CONTEXT        ctx,
             OBJPTR(STACK, ctx->stack)->flags |= KOS_CAN_YIELD;
 
             kos_stack_pop(ctx);
+
+            assert(ctx->regs_idx == regs_idx);
 
             *this_obj = func_obj;
             break;
@@ -1525,6 +1531,8 @@ static int exec_function(KOS_CONTEXT ctx)
                                 assert(KOS_is_exception_pending(ctx));
                                 error = KOS_ERROR_EXCEPTION;
                             }
+
+                            assert(ctx->regs_idx == regs_idx);
                         }
                     }
 
@@ -1628,6 +1636,8 @@ static int exec_function(KOS_CONTEXT ctx)
                                 buf[1] = REGISTER(rend);
 
                                 out = KOS_call_function(ctx, out, src, args);
+
+                                assert(ctx->regs_idx == regs_idx);
                             }
                             else
                                 error = KOS_ERROR_EXCEPTION;
@@ -1671,6 +1681,8 @@ static int exec_function(KOS_CONTEXT ctx)
                                 assert(KOS_is_exception_pending(ctx));
                                 error = KOS_ERROR_EXCEPTION;
                             }
+
+                            assert(ctx->regs_idx == regs_idx);
                         }
                     }
 
@@ -1749,6 +1761,8 @@ static int exec_function(KOS_CONTEXT ctx)
                                 assert(KOS_is_exception_pending(ctx));
                                 error = KOS_ERROR_EXCEPTION;
                             }
+
+                            assert(ctx->regs_idx == regs_idx);
                         }
                         else
                             error = KOS_ERROR_EXCEPTION;
@@ -1834,6 +1848,8 @@ static int exec_function(KOS_CONTEXT ctx)
                                 assert(KOS_is_exception_pending(ctx));
                                 error = KOS_ERROR_EXCEPTION;
                             }
+
+                            assert(ctx->regs_idx == regs_idx);
                         }
                         else
                             error = KOS_ERROR_EXCEPTION;
@@ -2786,6 +2802,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                         out = _finish_call(ctx, instr, func_obj, this_obj, &state);
 
+                        assert(ctx->regs_idx == regs_idx);
+
                         if (instr == INSTR_CALL_GEN) {
                             if (error == KOS_ERROR_EXCEPTION && state == KOS_GEN_DONE
                                     && _is_generator_end_exception(ctx)) {
@@ -2811,6 +2829,7 @@ static int exec_function(KOS_CONTEXT ctx)
                         _set_closure_stack_size(ctx, rdest);
                     }
                 }
+                assert(ctx->stack == stack);
                 KOS_pop_locals(ctx, pushed);
                 break;
             }
