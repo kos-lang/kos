@@ -502,8 +502,7 @@ void kos_disassemble(const char                           *filename,
             else {
                 if (opsize == 1 && kos_is_signed_op((KOS_BYTECODE_INSTR)opcode, iop))
                     value = (int32_t)(int8_t)value;
-                pr_size = (size_t)snprintf(&dis[dis_size], sizeof(dis) - dis_size, "%d",
-                                           value);
+                pr_size = snprintf(&dis[dis_size], sizeof(dis) - dis_size, "%d", value);
             }
 
             dis_size += (size_t)pr_size;
