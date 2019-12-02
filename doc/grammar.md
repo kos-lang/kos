@@ -187,7 +187,7 @@ The following reserved keywords are defined:
 * `return`
 * `set` (reserved)
 * `static` (reserved)
-* `super` (reserved)
+* `super`
 * `switch`
 * `this`
 * `throw`
