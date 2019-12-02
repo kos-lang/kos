@@ -119,10 +119,7 @@ int kos_getline(KOS_GETLINE      *state,
         printf("\n");
         restore_ctrlc_signal(&old_signal);
         rl_cleanup_after_signal();
-
-        line = (char *)malloc(1);
-        if (line)
-            *line = 0;
+        return KOS_ERROR_INTERRUPTED;
     }
 
     if (line) {
@@ -239,6 +236,7 @@ int kos_getline(KOS_GETLINE      *state,
     else {
         printf("\n");
         restore_ctrlc_signal(&old_signal);
+        return KOS_ERROR_INTERRUPTED;
     }
 
     if (count > 0) {
@@ -305,6 +303,8 @@ int kos_getline(KOS_GETLINE      *state,
             restore_ctrlc_signal(&old_signal);
             ret_buf = buf->buffer + old_size;
             *ret_buf = 0;
+            buf->size = old_size;
+            return KOS_ERROR_INTERRUPTED;
         }
 
         if ( ! ret_buf) {

@@ -374,6 +374,9 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
         error = kos_getline(&state, PROMPT_FIRST_LINE, buf);
         if (error) {
+            if (error == KOS_ERROR_INTERRUPTED)
+                continue;
+
             assert(error == KOS_SUCCESS_RETURN || error == KOS_ERROR_OUT_OF_MEMORY);
             break;
         }
@@ -388,6 +391,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
             if (error) {
                 assert(error == KOS_ERROR_OUT_OF_MEMORY    ||
                        error == KOS_ERROR_CANNOT_READ_FILE ||
+                       error == KOS_ERROR_INTERRUPTED      ||
                        error == KOS_SUCCESS_RETURN);
                 break;
             }
@@ -402,8 +406,12 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
             if (error)
                 break;
         }
-        if (error)
-            break;
+        if (error) {
+            if (error == KOS_ERROR_INTERRUPTED)
+                buf->size = 0;
+            else
+                break;
+        }
 
         if ( ! buf->size)
             continue;
