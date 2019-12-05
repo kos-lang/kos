@@ -1506,12 +1506,20 @@ static void lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
 
 #ifdef NDEBUG
 #define debug_fill_slots(page) ((void)0)
+#define clear_opaque(hdr) ((void)0)
 #else
 static void debug_fill_slots(KOS_PAGE* page)
 {
-    memset(((uint8_t *)page) + KOS_BITMAP_OFFS,
+    memset((uint8_t *)page + KOS_BITMAP_OFFS,
            0xDDU,
            KOS_PAGE_SIZE - KOS_BITMAP_OFFS);
+}
+
+static void clear_opaque(KOS_OBJ_HEADER *hdr)
+{
+    memset((uint8_t *)hdr + sizeof(KOS_OPAQUE),
+           0xDDU,
+           kos_get_object_size(*hdr) - sizeof(KOS_OPAQUE));
 }
 #endif
 
@@ -1678,6 +1686,39 @@ static int evacuate_object(KOS_CONTEXT     ctx,
     return error;
 }
 
+static void mark_unused_objects_opaque(KOS_CONTEXT   ctx,
+                                       KOS_PAGE     *page,
+                                       KOS_GC_STATS *stats)
+{
+    struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
+
+    KOS_SLOT *ptr = get_slots(page);
+    KOS_SLOT *end = ptr + KOS_atomic_read_relaxed_u32(page->num_allocated);
+
+    mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
+
+    while (ptr < end) {
+
+        KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)ptr;
+        const uint32_t        size  = kos_get_object_size(*hdr);
+        const uint32_t        color = get_marking(&mark_loc);
+
+        assert(size > 0U);
+        assert(color != GRAY);
+        assert(size <= (size_t)((uint8_t *)end - (uint8_t *)ptr));
+
+        if ( ! color) {
+            finalize_object(ctx, hdr, stats);
+            kos_set_object_type(*hdr, OBJ_OPAQUE);
+            clear_opaque(hdr);
+        }
+
+        advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
+
+        ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
+    }
+}
+
 static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 {
     KOS_OBJ_ID obj_id = *obj_id_ptr;
@@ -1694,6 +1735,8 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 
         assert(color & BLACK);
 #endif
+
+        assert(IS_SMALL_INT(new_obj) || READ_OBJ_TYPE(new_obj) <= OBJ_LAST);
 
         /* Objects in pages retained keep their size in their size field */
         if (kos_is_heap_object(new_obj))
@@ -1882,6 +1925,7 @@ static void update_incomplete_page(KOS_HEAP                *heap,
      * pass. */
     kos_set_object_type_size(*hdr, OBJ_OPAQUE, incomplete->offset);
     clear_mark_state((KOS_OBJ_ID)((uintptr_t)hdr + 1));
+    clear_opaque(hdr);
 
     push_page_with_objects(heap, incomplete->page);
 }
@@ -2049,9 +2093,6 @@ static int evacuate(KOS_CONTEXT              ctx,
         const uint32_t num_slots_used = KOS_atomic_read_relaxed_u32(page->num_used);
         KOS_SLOT      *ptr            = get_slots(page);
         KOS_SLOT      *end            = ptr + num_allocated;
-#ifndef NDEBUG
-        KOS_SLOT      *page_end       = ptr + num_allocated;
-#endif
 
         heap->used_heap_size -= used_page_size(page);
 
@@ -2069,31 +2110,12 @@ static int evacuate(KOS_CONTEXT              ctx,
 #endif
             ) {
 
-            gc_trace(("GC ctx=%p retain page %p\n", (void *)ctx, (void *)page));
+            gc_trace(("GC ctx=%p -- retain page %p\n", (void *)ctx, (void *)page));
 
             /* Mark unused objects as opaque so they don't participate in
              * pointer update after evacuation. */
-            if (num_slots_used < num_allocated) {
-                while (ptr < end) {
-
-                    KOS_OBJ_HEADER *hdr   = (KOS_OBJ_HEADER *)ptr;
-                    const uint32_t  size  = kos_get_object_size(*hdr);
-                    const uint32_t  color = get_marking(&mark_loc);
-
-                    assert(size > 0U);
-                    assert(color != GRAY);
-                    assert(size <= (size_t)((uint8_t *)page_end - (uint8_t *)ptr));
-
-                    if ( ! color) {
-                        finalize_object(ctx, hdr, &stats);
-                        kos_set_object_type(*hdr, OBJ_OPAQUE);
-                    }
-
-                    advance_marking(&mark_loc, size >> KOS_OBJ_ALIGN_BITS);
-
-                    ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
-                }
-            }
+            if (num_slots_used < num_allocated)
+                mark_unused_objects_opaque(ctx, page, &stats);
 
             push_page_with_objects(heap, page);
 
@@ -2114,7 +2136,7 @@ static int evacuate(KOS_CONTEXT              ctx,
 
             assert(size > 0U);
             assert(color != GRAY);
-            assert(size <= (size_t)((uint8_t *)page_end - (uint8_t *)ptr));
+            assert(size <= (size_t)((uint8_t *)end - (uint8_t *)ptr));
 
             if (color) {
                 error = evacuate_object(ctx, hdr, size);
@@ -2146,12 +2168,15 @@ static int evacuate(KOS_CONTEXT              ctx,
 
                         set_marking_in_pages(heap->used_pages.head, BLACK, PAGE_ALREADY_EVACED);
 
-                        if ( ! save_incomplete_page(hdr, page, incomplete))
+                        if ( ! save_incomplete_page(hdr, page, incomplete)) {
+                            mark_unused_objects_opaque(ctx, page, &stats);
                             push_page_with_objects(heap, page);
+                        }
 
                         /* Put back the remaining pages on the heap. */
                         for (page = next; page; page = next) {
                             next = page->next;
+                            mark_unused_objects_opaque(ctx, page, &stats);
                             push_page(&heap->used_pages, page);
                         }
 
@@ -2181,6 +2206,8 @@ static int evacuate(KOS_CONTEXT              ctx,
         /* Mark page which has no evacuated objects, such page can be re-used
          * early before the end of evacuation when the heap is full. */
         if ( ! num_evac) {
+            gc_trace(("GC ctx=%p -- drop page %p\n", (void *)ctx, (void *)page));
+
             KOS_atomic_write_relaxed_u32(page->num_allocated, 0);
 
             debug_fill_slots(page);
