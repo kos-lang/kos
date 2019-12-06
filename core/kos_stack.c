@@ -389,6 +389,10 @@ void kos_stack_pop(KOS_CONTEXT ctx)
             ctx->regs_idx = 4U;
         }
     }
+    else {
+        ctx->regs_idx = 0U;
+        ctx->stack    = KOS_BADPTR;
+    }
 }
 
 typedef int (*KOS_WALK_STACK)(KOS_OBJ_ID stack,
