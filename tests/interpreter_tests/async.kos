@@ -147,6 +147,16 @@ do {
     assert th.wait() == 10
 }
 
+# Run a generator on a new thread
+do {
+    fun gen(x)
+    {
+        yield x
+    }
+
+    (async gen(0)).wait()
+}
+
 # THIS MUST COME LAST!
 # Recursively spawn threads and keep them waiting on children
 do {
