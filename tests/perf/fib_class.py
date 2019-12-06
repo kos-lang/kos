@@ -31,12 +31,12 @@ class Fib:
         """ Advances the generator """
         self.set_next(self.get_prev() + self.get_cur())
 
-    def execute(self, n):
+    def execute(self, num_loops):
         """ Runs one or more iterations of the generator """
-        i = 0
-        while i < n:
+        loop_idx = 0
+        while loop_idx < num_loops:
             self.advance()
-            i += 1
+            loop_idx += 1
         ret = self.get_cur()
         self.reset()
         return ret
@@ -45,11 +45,11 @@ def run():
     """ Performs test loops """
     fib = Fib()
     orig = fib.execute(50)
-    i = 0
-    while i < 10000:
+    loop_idx = 0
+    while loop_idx < 10000:
         if orig != fib.execute(50):
             raise Exception("Error")
-        i += 1
+        loop_idx += 1
 
     print(orig)
 

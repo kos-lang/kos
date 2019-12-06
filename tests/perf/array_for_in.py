@@ -6,14 +6,14 @@ def run():
 
     loops = 3000
     size = 10000
-    a = list(range(size))
+    elements = list(range(size))
     total = 0
 
-    l = 0
-    while l < loops:
-        l += 1
+    loop_idx = 0
+    while loop_idx < loops:
+        loop_idx += 1
 
-        for elem in a:
+        for elem in elements:
             total += elem
 
     print(total)

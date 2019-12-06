@@ -5,22 +5,22 @@ def run():
     """ Body of the test """
 
     loops = 10000
-    size  = 10000
-    a     = list(range(size))
+    size = 10000
+    elements = list(range(size))
     total = 0
 
-    l = 0
-    while l < loops:
-        l += 1
+    loop_idx = 0
+    while loop_idx < loops:
+        loop_idx += 1
 
         i = 0
         while i < size:
-            a[i] = i
+            elements[i] = i
             i += 1
 
         i = 0
         while i < size:
-            total += a[i]
+            total += elements[i]
             i += 1
 
     print(total)

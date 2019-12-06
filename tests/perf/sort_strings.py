@@ -6,22 +6,22 @@ from random import randint
 def run():
     """ Body of the test """
 
-    a = []
+    ary = []
 
-    i = 0
-    while i < 100000:
-        i += 1
+    loop_idx = 0
+    while loop_idx < 100000:
+        loop_idx += 1
 
-        r = randint(0, 0x7FFFFFFFFFFFFFFF)
+        rnd_num = randint(0, 0x7FFFFFFFFFFFFFFF)
 
-        s = ""
+        new_string = ""
 
-        while r:
-            s += chr((r & 0x3F) + 0x20)
-            r >>= 7
+        while rnd_num:
+            new_string += chr((rnd_num & 0x3F) + 0x20)
+            rnd_num >>= 7
 
-        a.append(s)
+        ary.append(new_string)
 
-    a.sort()
+    ary.sort()
 
 run()
