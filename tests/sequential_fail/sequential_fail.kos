@@ -110,3 +110,16 @@ do {
     assert o.to_string(stuff).starts_with("<class");
     assert o.to_string(print).starts_with("<function");
 }
+
+do {
+    var val = 0
+
+    fun doit(x)
+    {
+        return { release: fun { val = x } }
+    }
+
+    with doit(101) { }
+
+    assert val == 101
+}
