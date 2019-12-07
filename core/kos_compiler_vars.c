@@ -258,9 +258,6 @@ static int _lookup_local_var(KOS_COMP_UNIT *program,
             error              = KOS_SUCCESS;
             break;
         }
-
-        if (scope->is_function)
-            break;
     }
 
     return error;

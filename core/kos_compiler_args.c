@@ -119,11 +119,8 @@ static int _visit_child_nodes(KOS_COMP_UNIT *program,
 {
     int error = KOS_SUCCESS;
 
-    for (node = node->children; node; node = node->next) {
+    for (node = node->children; node && ! error; node = node->next)
         error = _visit_node(program, node);
-        if (error)
-            break;
-    }
 
     return error;
 }
