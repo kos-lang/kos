@@ -498,3 +498,13 @@ class abc extends def {
 }
 
 @ 10 4 9
+
+@------------------------------------------------------------------------------
+# super invocation outside of constructor (stream operator)
+class abc extends def {
+    xyz(a) {
+        a -> super
+    }
+}
+
+@ 10 4 14

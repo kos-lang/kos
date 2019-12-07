@@ -1896,6 +1896,27 @@ do {
     } ()
 }
 
+# Super with stream operator
+do {
+    var value = void
+
+    class call_super_base {
+        constructor(x) {
+            value = x
+        }
+    }
+
+    class call_super extends call_super_base {
+        constructor(x) {
+            x + 1 -> super
+        }
+    }
+
+    assert value == void
+    call_super(55)
+    assert value == 56
+}
+
 ##############################################################################
 # Iterate over functions
 do {
