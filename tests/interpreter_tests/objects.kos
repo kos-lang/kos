@@ -350,6 +350,25 @@ do {
     assert empty.b == 2
 }
 
+# Multiple return paths in constructor
+do {
+    class make {
+        constructor(a, b = void) {
+            this.a = a
+            if ! b { return }
+            this.b = b
+        }
+    }
+
+    const o = make(1, 2)
+    assert o.a == 1
+    assert o.b == 2
+
+    const p = make(3)
+    assert p.a == 3
+    assert ! ("b" in p)
+}
+
 # prototype preservation
 do {
     fun get_class(a)
