@@ -21,6 +21,7 @@
 #
 
 import base.*
+import random
 
 do {
     var caught = false
