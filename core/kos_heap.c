@@ -1736,7 +1736,7 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
         assert(color & BLACK);
 #endif
 
-        assert(IS_SMALL_INT(new_obj) || READ_OBJ_TYPE(new_obj) <= OBJ_LAST);
+        assert(IS_SMALL_INT(new_obj) || IS_BAD_PTR(new_obj) || READ_OBJ_TYPE(new_obj) <= OBJ_LAST);
 
         /* Objects in pages retained keep their size in their size field */
         if (kos_is_heap_object(new_obj))
