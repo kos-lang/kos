@@ -1700,8 +1700,19 @@ static void mark_unused_objects_opaque(KOS_CONTEXT   ctx,
     while (ptr < end) {
 
         KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)ptr;
-        const uint32_t        size  = kos_get_object_size(*hdr);
         const uint32_t        color = get_marking(&mark_loc);
+        KOS_OBJ_HEADER        st    = *hdr;
+        uint32_t              size;
+
+        if ( ! IS_SMALL_INT(st.size_and_type)) {
+            const KOS_OBJ_ID new_obj = st.size_and_type;
+            assert( ! IS_BAD_PTR(new_obj));
+            assert(kos_is_heap_object(new_obj));
+            assert(READ_OBJ_TYPE(new_obj) <= OBJ_LAST);
+            st = *(KOS_OBJ_HEADER *)((intptr_t)new_obj - 1);
+        }
+
+        size = kos_get_object_size(st);
 
         assert(size > 0U);
         assert(color != GRAY);
@@ -2122,6 +2133,7 @@ static int evacuate(KOS_CONTEXT              ctx,
             if (num_slots_used != PAGE_ALREADY_EVACED) {
                 ++stats.num_pages_kept;
                 stats.size_kept += num_slots_used << KOS_OBJ_ALIGN_BITS;
+                KOS_atomic_write_relaxed_u32(page->num_used, PAGE_ALREADY_EVACED);
             }
             continue;
         }
@@ -2154,12 +2166,9 @@ static int evacuate(KOS_CONTEXT              ctx,
                     if (unlock_pages(heap, free_pages, &stats)) {
                         error = evacuate_object(ctx, hdr, size);
 
-                        if (ctx->inst->flags & KOS_INST_VERBOSE) {
-                            if (error)
-                                printf("GC is memory constrained\n");
-                            else
-                                printf("GC is memory constrained, but recovered\n");
-                        }
+                        if (ctx->inst->flags & KOS_INST_VERBOSE)
+                            printf(error ? "GC is memory constrained\n"
+                                         : "GC is memory constrained, but recovered\n");
                     }
 
                     if (error) {
@@ -2168,9 +2177,15 @@ static int evacuate(KOS_CONTEXT              ctx,
 
                         set_marking_in_pages(heap->used_pages.head, BLACK, PAGE_ALREADY_EVACED);
 
+                        mark_unused_objects_opaque(ctx, page, &stats);
+
                         if ( ! save_incomplete_page(hdr, page, incomplete)) {
-                            mark_unused_objects_opaque(ctx, page, &stats);
+                            gc_trace(("GC OOM during evac\n"));
                             push_page_with_objects(heap, page);
+                        }
+                        else {
+                            gc_trace(("GC OOM, incomplete evac, page %p, end %p, evac obj %p\n",
+                                      (void *)page, (void *)end, (void *)hdr));
                         }
 
                         /* Put back the remaining pages on the heap. */
