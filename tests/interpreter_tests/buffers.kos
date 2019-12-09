@@ -255,6 +255,20 @@ do {
     expect_fail(()=>buffer(10, 256))
 }
 
+# Push expand a buffer
+do {
+    fun args(a...)
+    {
+        return a
+    }
+
+    const a = args(buffer("ab")...)
+    assert typeof a == "array"
+    assert a.size == 2
+    assert a[0] == 97
+    assert a[1] == 98
+}
+
 ##############################################################################
 # base.buffer.prototype.size
 
