@@ -338,6 +338,60 @@ do {
 }
 
 ##############################################################################
+# file.read_some
+
+do {
+    const name = "./__text_file"
+    fs.remove(name)
+    assert ! fs.is_file(name)
+
+    with const f = io.create(name) {
+        f.write(base.buffer(base.range(10, 20)))
+    }
+
+    with const f = io.open(name, io.ro) {
+        f.position = 2
+
+        const a = f.read_some(0)
+        assert typeof a == "buffer"
+        assert a.size == 1
+        assert a[0] == 12
+
+        expect_fail(() => f.read_some(1, void))
+        expect_fail(() => f.read_some(1, 1))
+        expect_fail(() => f.read_some(1, [0]))
+        expect_fail(() => f.read_some(1, "0"))
+
+        const b = f.read_some()
+        assert typeof b == "buffer"
+        assert b.size == 7
+        assert b[0] == 13
+        assert b[-1] == 19
+    }
+
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
+}
+
+##############################################################################
+# file.write - bad input
+
+do {
+    const name = "./__text_file"
+    fs.remove(name)
+    assert ! fs.is_file(name)
+
+    with const f = io.create(name) {
+        expect_fail(() => f.write([0]))
+        expect_fail(() => f.write(0))
+        expect_fail(() => f.write(void))
+    }
+
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
+}
+
+##############################################################################
 # file.print
 
 do {
@@ -437,4 +491,29 @@ do {
 
     assert fs.remove(name)
     assert ! fs.is_file(name)
+}
+
+do {
+    fun test_file(name, type)
+    {
+        var f = void
+
+        try {
+            f = io.open(name, io.ro)
+        }
+        catch const e {
+            return
+        }
+
+        defer {
+            f.close()
+        }
+
+        const info = f.info
+
+        assert info.type == type
+    }
+
+    test_file("/dev", "directory")
+    test_file("/dev/null", "char")
 }
