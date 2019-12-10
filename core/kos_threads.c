@@ -286,7 +286,10 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
 
             const uint32_t flags = KOS_atomic_read_relaxed_u32(thread->flags);
 
-            if (flags == (KOS_THREAD_DISOWNED | KOS_THREAD_FINISHED) ||
+            if (flags & KOS_THREAD_JOINING)
+                ++num_pending;
+
+            else if (flags == (KOS_THREAD_DISOWNED | KOS_THREAD_FINISHED) ||
                      (join_all && flags == KOS_THREAD_DISOWNED) || join_rest) {
 
                 if (KOS_atomic_cas_strong_u32(thread->flags, flags, flags | KOS_THREAD_JOINING)) {
