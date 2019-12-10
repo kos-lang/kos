@@ -754,6 +754,15 @@ static void collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
     while (cur && *begin == cur);
 
     retract(lexer, begin);
+
+    /* operator_map currently poorly handles the transition from
+     * . to ... - for now we need to fix it up to avoid incorrectly
+     * interpreting two dots */
+    if (*op == OT_MORE && lexer->prefetch_end - lexer->prefetch_begin == 2) {
+        *op = OT_DOT;
+        --lexer->prefetch_end;
+        --lexer->pos.column;
+    }
 }
 
 static void find_keyword(const char *begin, const char *end, KOS_KEYWORD_TYPE *kw)

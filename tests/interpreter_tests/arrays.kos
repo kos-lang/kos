@@ -387,7 +387,7 @@ do {
 
 # Cannot expand these
 do {
-    expect_fail(() => [1...])
+    expect_fail(() => [1 ...])
     expect_fail(() => [1.5...])
     expect_fail(() => [true...])
     expect_fail(() => [void...])

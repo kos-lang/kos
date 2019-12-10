@@ -84,7 +84,7 @@ a = [1,,]; # Missing member expression
 
 @------------------------------------------------------------------------------
 [1,
- 2...,
+ 2 ...,
  3,
  4()...,
  5,
@@ -96,7 +96,7 @@ a = [1,,]; # Missing member expression
     (array 1 1 [
         (number 1 2 1)
         (expand 2 4 ...
-            (number 2 2 2.)
+            (number 2 2 2)
         )
         (number 3 2 3)
         (expand 4 5 ...
@@ -111,3 +111,13 @@ a = [1,,]; # Missing member expression
 [1, 2, ...] # Missing expression before expansion
 
 @ 10 1 8
+
+@------------------------------------------------------------------------------
+[x..] # One dot missing
+
+@ 10 1 4
+
+@------------------------------------------------------------------------------
+[1...] # First dot interpreted as part of the numeric constant
+
+@ 10 1 5
