@@ -1,9 +1,31 @@
 Roadmap
 =======
 
-Features leading to version v0.1, first public alpha release:
+The following features are planned before first release:
 
-* Basic modules: base, debug, fs, io, math, net, random, regex, thread, time
-* Integers of unlimited size
+* Update C++ API for GC
+* Language features:
+    - Shallow in operator
+    - set/get
+    - static
+    - Named arguments
+* Optimizations:
+    - Inlining
+    - Compute local variable use range, release registers early
+    - Reduce cost of function calls
+    - Hoist constants outside of loops
+    - Use linear search for small objects
+* Modules:
+    - regex
+    - debug
+    - fs improvements (e.g. directory scanning)
+    - datetime improvements (e.g. timestamp formatting)
+    - net
+    - run (for launching other programs)
+* Debugger:
+    - Build symbol table for debugger
+    - Export debugger API (debug module)
+    - The debugger written in Kos
+* Integers of unlimited size (bigint)
 * Missing functionality (TODOs)
-* Usability fixes
+* Usability fixes (e.g. better error messages)
