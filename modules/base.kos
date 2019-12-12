@@ -1209,7 +1209,7 @@ public fun count(op, args...)
  * passed as an argument and then its return value is used as the result
  * of the test.
  *
- * If `op` is not a function, the test is performed by comparing each element
+ * If `op` is not a function, the test is performed by comparing `op`
  * against each element using the `==` operator.
  *
  * Examples:
@@ -1279,7 +1279,7 @@ public fun all(op, args...)
  * passed as an argument and then its return value is used as the result
  * of the test.
  *
- * If `op` is not a function, the test is performed by comparing each element
+ * If `op` is not a function, the test is performed by comparing `op`
  * against each element using the `==` operator.
  *
  * Examples:
@@ -1451,7 +1451,7 @@ object.prototype.count = fun(args...)
  * passed as an argument and then its return value is used as the result
  * of the test.
  *
- * If `op` is not a function, the test is performed by comparing each element
+ * If `op` is not a function, the test is performed by comparing `op`
  * against each element using the `==` operator.
  *
  * Example:
@@ -1482,7 +1482,7 @@ object.prototype.all = fun(op)
  * passed as an argument and then its return value is used as the result
  * of the test.
  *
- * If `op` is not a function, the test is performed by comparing each element
+ * If `op` is not a function, the test is performed by comparing `op`
  * against each element using the `==` operator.
  *
  * Example:
@@ -1737,9 +1737,9 @@ buffer.prototype.repeat = fun(num)
  *
  * Examples:
  *
- *     > sort("kos language") -> array
+ *     > sort("kos language")
  *     [" ", "a", "a", "e", "g", "g", "k", "l", "n", "o", "s", "u"]
- *     > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> array
+ *     > sort(x => x[0], { foo: 1, bar: 2, baz: 3 })
  *     [["bar", 2], ["baz", 3], ["foo", 1]]
  */
 public fun sort(key = void, args...)

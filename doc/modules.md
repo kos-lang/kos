@@ -203,7 +203,7 @@ If the `op` predicate is a function, it is invoked for each element
 passed as an argument and then its return value is used as the result
 of the test.
 
-If `op` is not a function, the test is performed by comparing each element
+If `op` is not a function, the test is performed by comparing `op`
 against each element using the `==` operator.
 
 Examples:
@@ -241,7 +241,7 @@ If the `op` predicate is a function, it is invoked for each element
 passed as an argument and then its return value is used as the result
 of the test.
 
-If `op` is not a function, the test is performed by comparing each element
+If `op` is not a function, the test is performed by comparing `op`
 against each element using the `==` operator.
 
 Examples:
@@ -1645,7 +1645,7 @@ If the `op` predicate is a function, it is invoked for each element
 passed as an argument and then its return value is used as the result
 of the test.
 
-If `op` is not a function, the test is performed by comparing each element
+If `op` is not a function, the test is performed by comparing `op`
 against each element using the `==` operator.
 
 Example:
@@ -1672,7 +1672,7 @@ If the `op` predicate is a function, it is invoked for each element
 passed as an argument and then its return value is used as the result
 of the test.
 
-If `op` is not a function, the test is performed by comparing each element
+If `op` is not a function, the test is performed by comparing `op`
 against each element using the `==` operator.
 
 Example:
@@ -1887,26 +1887,41 @@ Performs left fold operation on subsequent elements of an iterable object.
 The first variant returns a function which can then be directly applied
 to any iterable object.
 
-The second variant performs the application of the left fold operation as
-follows:
+The second variant performs the application immediately.
 
-    const a = [e1, e2, e3, ...]
-    const reduce = op(op(op(op(init, e1), e2), e3), ...)
+`op` is the function which is the reduction operator.  It has two arguments,
+the first argument is the accumulator value and the second argument is the
+subsequent value from the iterable object.
 
-`op` is the function which is the reduction operator.
+The `op` function is invoked as many times as there are elements in
+the iterable object, once for every subsequent element, in the order from
+first to last.  On the first invocation, the accumulator value (first
+argument) is set to `init`.  On subsequent invocations of the `op` function,
+the accumulator has the value returned by the previous invocation of
+the `op` function.
 
 `init` is the initial element to use for the fold.
 
 `iterable` is an object on which `iterator()` is invoked to obtain subsequent
 elements of it, on which the reduction is performed.
 
+The reduce (left fold) operation can also be written as follows:
+
+    const a = [e1, e2, e3, ...]
+    const reduce = op(op(op(op(init, e1), e2), e3), ...)
+
 Examples:
 
-    > reduce((x, y) => x + y, 0, [1, 1, 1, 2, 5])
-    10
-    > const count_non_zero = reduce((x, y) => x + (y ? 1 : 0), 0)
+    > reduce((acc, val) => acc * val, 1, [1, 2, 1, 3, 5])
+    30
+    > const count_non_zero = reduce((acc, x) => acc + (x ? 1 : 0), 0)
     > count_non_zero([0, 0, 4, 0, 0, 5, 6, 0])
     3
+    > const fruit = [ { name: "apple",  number: 5 },
+    _                 { name: "orange", number: 3 },
+    _                 { name: "pear",   number: 7 } ]
+    > fruit -> reduce((acc, obj) => acc + obj.number, 0)
+    15
 
 shallow()
 ---------
@@ -1962,9 +1977,9 @@ order.
 
 Examples:
 
-    > sort("kos language") -> array
+    > sort("kos language")
     [" ", "a", "a", "e", "g", "g", "k", "l", "n", "o", "s", "u"]
-    > sort(x => x[0], { foo: 1, bar: 2, baz: 3 }) -> array
+    > sort(x => x[0], { foo: 1, bar: 2, baz: 3 })
     [["bar", 2], ["baz", 3], ["foo", 1]]
 
 string()
