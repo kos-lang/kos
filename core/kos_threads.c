@@ -278,12 +278,15 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
 
     while (i < max_threads) {
 
-        KOS_THREAD *thread = 0;
+        KOS_THREAD *thread     = 0;
+        int         new_locked = 1;
 
         if (i == 0) {
             num_pending  = 0;
             num_finished = 0;
         }
+
+        kos_lock_mutex(&inst->threads.new_mutex);
 
         thread = (KOS_THREAD *)KOS_atomic_read_relaxed_ptr(inst->threads.threads[i]);
 
@@ -291,15 +294,22 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
 
             const uint32_t flags = KOS_atomic_read_relaxed_u32(thread->flags);
 
-            if (flags & KOS_THREAD_JOINING)
-                ++num_pending;
-
-            else if (flags == (KOS_THREAD_DISOWNED | KOS_THREAD_FINISHED) ||
+            if (flags == (KOS_THREAD_DISOWNED | KOS_THREAD_FINISHED) ||
                      (join_all && flags == KOS_THREAD_DISOWNED) || join_rest) {
 
                 if (KOS_atomic_cas_strong_u32(thread->flags, flags, flags | KOS_THREAD_JOINING)) {
 
-                    const KOS_OBJ_ID retval = kos_thread_join(ctx, thread);
+                    KOS_OBJ_ID retval;
+
+                    /* Prevent race between KOS_instance_destroy() and GC */
+                    KOS_atomic_add_u32(thread->ref_count, 1U);
+
+                    kos_unlock_mutex(&inst->threads.new_mutex);
+                    new_locked = 0;
+
+                    retval = kos_thread_join(ctx, thread);
+
+                    release_thread(thread);
 
                     if (IS_BAD_PTR(retval)) {
                         assert(KOS_is_exception_pending(ctx));
@@ -339,6 +349,9 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
                 ++num_pending;
             }
         }
+
+        if (new_locked)
+            kos_unlock_mutex(&inst->threads.new_mutex);
 
         i++;
 
