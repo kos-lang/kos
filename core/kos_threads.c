@@ -139,6 +139,7 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
     KOS_INSTANCE  *inst        = ctx->inst;
     KOS_THREAD    *thread      = 0;
     const uint32_t max_threads = inst->threads.max_threads;
+    uint32_t       can_create;
     uint32_t       i;
 
     thread = (KOS_THREAD *)kos_malloc(sizeof(KOS_THREAD));
@@ -163,7 +164,9 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
 
     kos_lock_mutex(&inst->threads.new_mutex);
 
-    if ( ! inst->threads.can_create)
+    can_create = inst->threads.can_create;
+
+    if ( ! can_create)
         i = max_threads;
 
     else {
@@ -188,8 +191,10 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
     if (i >= max_threads) {
 
         KOS_DECLARE_STATIC_CONST_STRING(str_too_many_threads, "too many threads");
+        KOS_DECLARE_STATIC_CONST_STRING(str_shutdown,         "cannot create threads on exit");
 
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_too_many_threads));
+        KOS_raise_exception(ctx, can_create ? KOS_CONST_ID(str_too_many_threads)
+                                            : KOS_CONST_ID(str_shutdown));
 
         kos_free(thread);
         thread = 0;
