@@ -57,8 +57,8 @@ void throw_string(const std::string& str)
 
 int main()
 try {
-    kos::instance    inst;
-    kos::stack_frame ctx(inst);
+    kos::instance inst;
+    kos::context  ctx(inst);
 
     {
         const int a = from_object_ptr(ctx, TO_SMALL_INT(123));

@@ -26,7 +26,7 @@
 namespace kos {
 
 template<typename T>
-T numeric_from_object_ptr(stack_frame ctx, KOS_OBJ_ID obj_id)
+T numeric_from_object_ptr(context ctx, KOS_OBJ_ID obj_id)
 {
     T ret = 0;
 
@@ -61,19 +61,19 @@ T numeric_from_object_ptr(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-int value_from_object_ptr<int>(stack_frame ctx, KOS_OBJ_ID obj_id)
+int value_from_object_ptr<int>(context ctx, KOS_OBJ_ID obj_id)
 {
     return numeric_from_object_ptr<int>(ctx, obj_id);
 }
 
 template<>
-int64_t value_from_object_ptr<int64_t>(stack_frame ctx, KOS_OBJ_ID obj_id)
+int64_t value_from_object_ptr<int64_t>(context ctx, KOS_OBJ_ID obj_id)
 {
     return numeric_from_object_ptr<int64_t>(ctx, obj_id);
 }
 
 template<>
-integer value_from_object_ptr<integer>(stack_frame ctx, KOS_OBJ_ID obj_id)
+integer value_from_object_ptr<integer>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if ( ! IS_SMALL_INT(obj_id) && GET_OBJ_TYPE(obj_id) != OBJ_INTEGER)
@@ -83,13 +83,13 @@ integer value_from_object_ptr<integer>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-double value_from_object_ptr<double>(stack_frame ctx, KOS_OBJ_ID obj_id)
+double value_from_object_ptr<double>(context ctx, KOS_OBJ_ID obj_id)
 {
     return numeric_from_object_ptr<double>(ctx, obj_id);
 }
 
 template<>
-floating value_from_object_ptr<floating>(stack_frame ctx, KOS_OBJ_ID obj_id)
+floating value_from_object_ptr<floating>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_FLOAT)
@@ -99,7 +99,7 @@ floating value_from_object_ptr<floating>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-bool value_from_object_ptr<bool>(stack_frame ctx, KOS_OBJ_ID obj_id)
+bool value_from_object_ptr<bool>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_BOOLEAN)
@@ -109,7 +109,7 @@ bool value_from_object_ptr<bool>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-boolean value_from_object_ptr<boolean>(stack_frame ctx, KOS_OBJ_ID obj_id)
+boolean value_from_object_ptr<boolean>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_BOOLEAN)
@@ -119,7 +119,7 @@ boolean value_from_object_ptr<boolean>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-std::string value_from_object_ptr<std::string>(stack_frame ctx, KOS_OBJ_ID obj_id)
+std::string value_from_object_ptr<std::string>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
@@ -133,7 +133,7 @@ std::string value_from_object_ptr<std::string>(stack_frame ctx, KOS_OBJ_ID obj_i
 }
 
 template<>
-string value_from_object_ptr<string>(stack_frame ctx, KOS_OBJ_ID obj_id)
+string value_from_object_ptr<string>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
@@ -143,7 +143,7 @@ string value_from_object_ptr<string>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-void_type value_from_object_ptr<void_type>(stack_frame ctx, KOS_OBJ_ID obj_id)
+void_type value_from_object_ptr<void_type>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_VOID)
@@ -153,7 +153,7 @@ void_type value_from_object_ptr<void_type>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-object value_from_object_ptr<object>(stack_frame ctx, KOS_OBJ_ID obj_id)
+object value_from_object_ptr<object>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_OBJECT)
@@ -163,7 +163,7 @@ object value_from_object_ptr<object>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-array value_from_object_ptr<array>(stack_frame ctx, KOS_OBJ_ID obj_id)
+array value_from_object_ptr<array>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
@@ -173,7 +173,7 @@ array value_from_object_ptr<array>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-buffer value_from_object_ptr<buffer>(stack_frame ctx, KOS_OBJ_ID obj_id)
+buffer value_from_object_ptr<buffer>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
@@ -183,7 +183,7 @@ buffer value_from_object_ptr<buffer>(stack_frame ctx, KOS_OBJ_ID obj_id)
 }
 
 template<>
-function value_from_object_ptr<function>(stack_frame ctx, KOS_OBJ_ID obj_id)
+function value_from_object_ptr<function>(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
     if (GET_OBJ_TYPE(obj_id) != OBJ_FUNCTION)
@@ -192,12 +192,12 @@ function value_from_object_ptr<function>(stack_frame ctx, KOS_OBJ_ID obj_id)
     return function(ctx, obj_id);
 }
 
-void stack_frame::raise(const char* desc)
+void context::raise(const char* desc)
 {
-    KOS_raise_exception(_ctx, KOS_new_cstring(_ctx, desc));
+    KOS_raise_exception(ctx_, KOS_new_cstring(ctx_, desc));
 }
 
-std::string exception::get_exception_string(stack_frame ctx)
+std::string exception::get_exception_string(context ctx)
 {
     KOS_OBJ_ID obj_id = KOS_get_exception(ctx);
     assert( ! IS_BAD_PTR(obj_id));
@@ -216,20 +216,20 @@ std::string exception::get_exception_string(stack_frame ctx)
     return from_object_ptr(ctx, obj_id);
 }
 
-object::const_iterator::const_iterator(stack_frame             ctx,
+object::const_iterator::const_iterator(context             ctx,
                                        KOS_OBJ_ID              obj_id,
                                        KOS_OBJECT_WALK_DEPTH_E depth)
-    : _ctx(ctx), _elem(KOS_BADPTR, KOS_BADPTR)
+    : ctx_(ctx), elem_(KOS_BADPTR, KOS_BADPTR)
 {
-    _walk = ctx.check_error(KOS_new_object_walk(ctx, obj_id, depth));
+    walk_ = ctx.check_error(KOS_new_object_walk(ctx, obj_id, depth));
     operator++();
 }
 
 object::const_iterator& object::const_iterator::operator=(const const_iterator& it)
 {
-    _ctx  = it._ctx;
-    _walk = KOS_new_object_walk_copy(_ctx, it._walk);
-    _elem = it._elem;
+    ctx_  = it.ctx_;
+    walk_ = KOS_new_object_walk_copy(ctx_, it.walk_);
+    elem_ = it.elem_;
     return *this;
 }
 
