@@ -67,6 +67,7 @@ CFLAGS  ?=
 LDFLAGS ?=
 debug ?= 0
 native ?= 0
+target ?=
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(debug), 0)
@@ -157,8 +158,10 @@ else
     endif
 
     ifeq ($(UNAME), Darwin)
-        CFLAGS  += -DCONFIG_EDITLINE
-        LDFLAGS += -ledit -ltermcap
+        ifneq ($(target), ios)
+            CFLAGS  += -DCONFIG_EDITLINE
+            LDFLAGS += -ledit -ltermcap
+        endif
     else
         ifeq (true,$(shell $(call inv_path, $(depth))/build/have_readline $(CC)))
             CFLAGS  += -DCONFIG_READLINE
@@ -185,8 +188,13 @@ else
 endif
 
 ifeq ($(UNAME), Darwin)
-    CFLAGS  += -mmacosx-version-min=10.9
-    LDFLAGS += -mmacosx-version-min=10.9
+    ifeq ($(target), ios)
+        APPLE_FLAGS ?= -mios-version-min=7.0 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
+    else
+        APPLE_FLAGS ?= -mmacosx-version-min=10.9
+    endif
+    CFLAGS  += $(APPLE_FLAGS)
+    LDFLAGS += $(APPLE_FLAGS)
 endif
 
 ##############################################################################
