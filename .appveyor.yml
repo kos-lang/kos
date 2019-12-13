@@ -1,11 +1,11 @@
-image: Visual Studio 2017
+image: Visual Studio 2019
 
 platform:
   - x86
   - x64
 
 environment:
-  MY_VSSDK: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VSSDK"
+  MY_VSSDK: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VSSDK"
 
 install:
   - ps: $env:PATH = 'C:\cygwin64\bin;' + $env:PATH
