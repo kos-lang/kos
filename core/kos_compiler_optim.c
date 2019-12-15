@@ -391,9 +391,9 @@ static void pop_scope(KOS_COMP_UNIT *program)
     program->scope_stack = scope->next;
 }
 
-static int scope(KOS_COMP_UNIT *program,
-                 KOS_AST_NODE  *node,
-                 int           *is_terminal)
+static int process_scope(KOS_COMP_UNIT *program,
+                         KOS_AST_NODE  *node,
+                         int           *is_terminal)
 {
     int            error    = KOS_SUCCESS;
     KOS_AST_NODE **node_ptr = &node->children;
@@ -1749,7 +1749,7 @@ static int visit_node(KOS_COMP_UNIT *program,
             break;
 
         case NT_SCOPE:
-            error = scope(program, node, is_terminal);
+            error = process_scope(program, node, is_terminal);
             break;
         case NT_IF:
             error = if_stmt(program, node, is_terminal);

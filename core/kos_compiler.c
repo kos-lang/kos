@@ -54,18 +54,18 @@ enum KOS_BOOL_E {
     KOS_TRUE_VALUE
 };
 
-static int _visit_node(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       KOS_REG           **reg);
+static int visit_node(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node,
+                      KOS_REG           **reg);
 
-static int _invocation(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       KOS_REG           **reg,
-                       KOS_BYTECODE_INSTR  instr,
-                       unsigned            tail_closure_size);
+static int invocation(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node,
+                      KOS_REG           **reg,
+                      KOS_BYTECODE_INSTR  instr,
+                      unsigned            tail_closure_size);
 
-static int _gen_new_reg(KOS_COMP_UNIT *program,
-                        KOS_REG      **out_reg)
+static int gen_new_reg(KOS_COMP_UNIT *program,
+                       KOS_REG      **out_reg)
 {
     int        error = KOS_SUCCESS;
     KOS_FRAME *frame = program->cur_frame;
@@ -113,8 +113,8 @@ static int _gen_new_reg(KOS_COMP_UNIT *program,
     return error;
 }
 
-static void _mark_reg_as_used(KOS_FRAME *frame,
-                              KOS_REG   *reg)
+static void mark_reg_as_used(KOS_FRAME *frame,
+                             KOS_REG   *reg)
 {
     reg->prev = 0;
     reg->next = frame->used_regs;
@@ -125,8 +125,8 @@ static void _mark_reg_as_used(KOS_FRAME *frame,
     frame->used_regs = reg;
 }
 
-static int _gen_reg(KOS_COMP_UNIT *program,
-                    KOS_REG      **out_reg)
+static int gen_reg(KOS_COMP_UNIT *program,
+                   KOS_REG      **out_reg)
 {
     int error = KOS_SUCCESS;
 
@@ -135,7 +135,7 @@ static int _gen_reg(KOS_COMP_UNIT *program,
         KOS_REG   *reg   = frame->free_regs;
 
         if ( ! reg) {
-            error = _gen_new_reg(program, &reg);
+            error = gen_new_reg(program, &reg);
             assert(error || reg);
         }
 
@@ -143,7 +143,7 @@ static int _gen_reg(KOS_COMP_UNIT *program,
             if (frame->free_regs == reg)
                 frame->free_regs = reg->next;
 
-            _mark_reg_as_used(frame, reg);
+            mark_reg_as_used(frame, reg);
 
             reg->tmp = 1;
 
@@ -154,9 +154,9 @@ static int _gen_reg(KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _gen_reg_range(KOS_COMP_UNIT *program,
-                          KOS_REG      **out_reg,
-                          int            num_regs)
+static int gen_reg_range(KOS_COMP_UNIT *program,
+                         KOS_REG      **out_reg,
+                         int            num_regs)
 {
     int        error     = KOS_SUCCESS;
     KOS_FRAME *frame     = program->cur_frame;
@@ -193,7 +193,7 @@ static int _gen_reg_range(KOS_COMP_UNIT *program,
         for ( ; count; --count, --num_regs) {
             KOS_REG *next = reg->next;
 
-            _mark_reg_as_used(frame, reg);
+            mark_reg_as_used(frame, reg);
 
             *(out_reg++) = reg;
             *first_reg   = next;
@@ -204,11 +204,11 @@ static int _gen_reg_range(KOS_COMP_UNIT *program,
     while (num_regs--) {
         reg = 0;
 
-        error = _gen_new_reg(program, &reg);
+        error = gen_new_reg(program, &reg);
         if (error)
             break;
 
-        _mark_reg_as_used(frame, reg);
+        mark_reg_as_used(frame, reg);
 
         reg->tmp = 1;
 
@@ -218,9 +218,9 @@ static int _gen_reg_range(KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _gen_dest_reg(KOS_COMP_UNIT *program,
-                         KOS_REG      **dest,
-                         KOS_REG       *src_reg)
+static int gen_dest_reg(KOS_COMP_UNIT *program,
+                        KOS_REG      **dest,
+                        KOS_REG       *src_reg)
 {
     int      error    = KOS_SUCCESS;
     KOS_REG *dest_reg = *dest;
@@ -229,7 +229,7 @@ static int _gen_dest_reg(KOS_COMP_UNIT *program,
 
     if ( ! src_reg->tmp && (src_reg == dest_reg || ! dest_reg)) {
         *dest = 0;
-        error = _gen_reg(program, dest);
+        error = gen_reg(program, dest);
     }
     else if ( ! dest_reg)
         *dest = src_reg;
@@ -237,8 +237,8 @@ static int _gen_dest_reg(KOS_COMP_UNIT *program,
     return error;
 }
 
-static void _free_reg(KOS_COMP_UNIT *program,
-                      KOS_REG       *reg)
+static void free_reg(KOS_COMP_UNIT *program,
+                     KOS_REG       *reg)
 {
     assert(reg);
     if (reg->tmp) {
@@ -263,8 +263,8 @@ static void _free_reg(KOS_COMP_UNIT *program,
     }
 }
 
-static void _free_all_regs(KOS_COMP_UNIT *program,
-                           KOS_REG       *reg)
+static void free_all_regs(KOS_COMP_UNIT *program,
+                          KOS_REG       *reg)
 {
     if (reg) {
         KOS_REG *first_reg = reg;
@@ -278,7 +278,7 @@ static void _free_all_regs(KOS_COMP_UNIT *program,
 }
 
 #ifndef NDEBUG
-static int _count_used_regs(KOS_COMP_UNIT *program)
+static int count_used_regs(KOS_COMP_UNIT *program)
 {
     int        count = 0;
     KOS_FRAME *frame = program->cur_frame;
@@ -294,10 +294,10 @@ static int _count_used_regs(KOS_COMP_UNIT *program)
 /* Lookup variable in local scopes.
  * Arguments in registers, including ellipsis, are treated as local variables.
  * Skip other arguments, globals and modules. */
-static int _lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
-                                           const KOS_AST_NODE *node,
-                                           int                 only_active,
-                                           KOS_REG           **reg)
+static int lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
+                                          const KOS_AST_NODE *node,
+                                          int                 only_active,
+                                          KOS_REG           **reg)
 {
     int error = KOS_SUCCESS;
 
@@ -317,7 +317,7 @@ static int _lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
             else if (var->is_active || ! only_active) {
 
                 if ( ! var->reg) {
-                    error = _gen_reg(program, &var->reg);
+                    error = gen_reg(program, &var->reg);
                     if ( ! error)
                         var->reg->tmp = 0;
                 }
@@ -336,17 +336,17 @@ static int _lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
     return error;
 }
 
-static int _lookup_local_var(KOS_COMP_UNIT      *program,
-                             const KOS_AST_NODE *node,
-                             KOS_REG           **reg)
+static int lookup_local_var(KOS_COMP_UNIT      *program,
+                            const KOS_AST_NODE *node,
+                            KOS_REG           **reg)
 {
-    return _lookup_local_var_even_inactive(program, node, 1, reg);
+    return lookup_local_var_even_inactive(program, node, 1, reg);
 }
 
-static int _lookup_var(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       KOS_VAR           **out_var,
-                       KOS_REG           **reg)
+static int lookup_var(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node,
+                      KOS_VAR           **out_var,
+                      KOS_REG           **reg)
 {
     KOS_VAR *var = node->var;
 
@@ -411,18 +411,18 @@ static void lookup_module_var(KOS_COMP_UNIT      *program,
     KOS_REG *reg        = 0;
     KOS_VAR *module_var = 0;
 
-    (void)_lookup_local_var(program, node, &reg);
+    (void)lookup_local_var(program, node, &reg);
 
     if (reg)
-        _free_reg(program, reg);
-    else if ( ! _lookup_var(program, node, &module_var, 0)) {
+        free_reg(program, reg);
+    else if ( ! lookup_var(program, node, &module_var, 0)) {
         if (module_var->type == VAR_MODULE)
             *out_var = module_var;
     }
 }
 
-static int _compare_strings(const char *a, unsigned len_a, KOS_UTF8_ESCAPE escape_a,
-                            const char *b, unsigned len_b, KOS_UTF8_ESCAPE escape_b)
+static int compare_strings(const char *a, unsigned len_a, KOS_UTF8_ESCAPE escape_a,
+                           const char *b, unsigned len_b, KOS_UTF8_ESCAPE escape_b)
 {
     const unsigned min_len = (len_a <= len_b) ? len_a : len_b;
     int            result;
@@ -440,10 +440,10 @@ static int _compare_strings(const char *a, unsigned len_a, KOS_UTF8_ESCAPE escap
     return result;
 }
 
-static void _get_token_str(const KOS_TOKEN *token,
-                           const char     **out_begin,
-                           unsigned        *out_length,
-                           KOS_UTF8_ESCAPE *out_escape)
+static void get_token_str(const KOS_TOKEN *token,
+                          const char     **out_begin,
+                          unsigned        *out_length,
+                          KOS_UTF8_ESCAPE *out_escape)
 {
     const char *begin  = token->begin;
     unsigned    length = token->length;
@@ -474,8 +474,8 @@ static void _get_token_str(const KOS_TOKEN *token,
     *out_length = length;
 }
 
-static int _numbers_compare_item(void               *what,
-                                 KOS_RED_BLACK_NODE *node)
+static int numbers_compare_item(void               *what,
+                                KOS_RED_BLACK_NODE *node)
 {
     const KOS_NUMERIC    *numeric  = (const KOS_NUMERIC *)what;
     const KOS_COMP_CONST *constant = (const KOS_COMP_CONST *)node;
@@ -494,8 +494,8 @@ static int _numbers_compare_item(void               *what,
                numeric->u.d <  ((const KOS_COMP_FLOAT *)constant)->value ? -1 : 1;
 }
 
-static int _strings_compare_item(void               *what,
-                                 KOS_RED_BLACK_NODE *node)
+static int strings_compare_item(void               *what,
+                                KOS_RED_BLACK_NODE *node)
 {
     const KOS_TOKEN       *token = (const KOS_TOKEN       *)what;
     const KOS_COMP_STRING *str   = (const KOS_COMP_STRING *)node;
@@ -506,14 +506,14 @@ static int _strings_compare_item(void               *what,
     if (str->header.type != KOS_COMP_CONST_STRING)
         return (int)KOS_COMP_CONST_STRING < (int)str->header.type ? -1 : 1;
 
-    _get_token_str(token, &begin, &length, &escape);
+    get_token_str(token, &begin, &length, &escape);
 
-    return _compare_strings(begin,    length,      escape,
-                            str->str, str->length, str->escape);
+    return compare_strings(begin,    length,      escape,
+                           str->str, str->length, str->escape);
 }
 
-static int _constants_compare_node(KOS_RED_BLACK_NODE *a,
-                                   KOS_RED_BLACK_NODE *b)
+static int constants_compare_node(KOS_RED_BLACK_NODE *a,
+                                  KOS_RED_BLACK_NODE *b)
 {
     const KOS_COMP_CONST *const_a = (const KOS_COMP_CONST *)a;
     const KOS_COMP_CONST *const_b = (const KOS_COMP_CONST *)b;
@@ -537,8 +537,8 @@ static int _constants_compare_node(KOS_RED_BLACK_NODE *a,
         case KOS_COMP_CONST_STRING: {
             const KOS_COMP_STRING *str_a = (const KOS_COMP_STRING *)const_a;
             const KOS_COMP_STRING *str_b = (const KOS_COMP_STRING *)const_b;
-            return _compare_strings(str_a->str, str_a->length, str_a->escape,
-                                    str_b->str, str_b->length, str_b->escape);
+            return compare_strings(str_a->str, str_a->length, str_a->escape,
+                                   str_b->str, str_b->length, str_b->escape);
         }
 
         case KOS_COMP_CONST_FUNCTION:
@@ -551,8 +551,8 @@ static int _constants_compare_node(KOS_RED_BLACK_NODE *a,
     }
 }
 
-static void _add_constant(KOS_COMP_UNIT  *program,
-                          KOS_COMP_CONST *constant)
+static void add_constant(KOS_COMP_UNIT  *program,
+                         KOS_COMP_CONST *constant)
 {
     constant->index = program->num_constants++;
     constant->next  = 0;
@@ -566,20 +566,20 @@ static void _add_constant(KOS_COMP_UNIT  *program,
 
     kos_red_black_insert(&program->constants,
                           &constant->rb_tree_node,
-                          _constants_compare_node);
+                          constants_compare_node);
 }
 
-static int _gen_str_esc(KOS_COMP_UNIT   *program,
-                        const KOS_TOKEN *token,
-                        KOS_UTF8_ESCAPE  escape,
-                        int             *str_idx)
+static int gen_str_esc(KOS_COMP_UNIT   *program,
+                       const KOS_TOKEN *token,
+                       KOS_UTF8_ESCAPE  escape,
+                       int             *str_idx)
 {
     int error = KOS_SUCCESS;
 
     KOS_COMP_STRING *str =
             (KOS_COMP_STRING *)kos_red_black_find(program->constants,
                                                   (KOS_TOKEN *)token,
-                                                  _strings_compare_item);
+                                                  strings_compare_item);
 
     if (!str) {
 
@@ -592,7 +592,7 @@ static int _gen_str_esc(KOS_COMP_UNIT   *program,
             unsigned        length;
             KOS_UTF8_ESCAPE tok_escape;
 
-            _get_token_str(token, &begin, &length, &tok_escape);
+            get_token_str(token, &begin, &length, &tok_escape);
 
             if (tok_escape == KOS_UTF8_NO_ESCAPE)
                 escape = KOS_UTF8_NO_ESCAPE;
@@ -602,7 +602,7 @@ static int _gen_str_esc(KOS_COMP_UNIT   *program,
             str->length      = length;
             str->escape      = escape;
 
-            _add_constant(program, (KOS_COMP_CONST *)str);
+            add_constant(program, (KOS_COMP_CONST *)str);
         }
         else
             error = KOS_ERROR_OUT_OF_MEMORY;
@@ -614,15 +614,15 @@ static int _gen_str_esc(KOS_COMP_UNIT   *program,
     return error;
 }
 
-static int _gen_str(KOS_COMP_UNIT   *program,
-                    const KOS_TOKEN *token,
-                    int             *str_idx)
+static int gen_str(KOS_COMP_UNIT   *program,
+                   const KOS_TOKEN *token,
+                   int             *str_idx)
 {
-    return _gen_str_esc(program, token, KOS_UTF8_WITH_ESCAPE, str_idx);
+    return gen_str_esc(program, token, KOS_UTF8_WITH_ESCAPE, str_idx);
 }
 
-static unsigned _calc_assert_str_len(const char *begin,
-                                     const char *end)
+static unsigned calc_assert_str_len(const char *begin,
+                                    const char *end)
 {
     unsigned length         = 0;
     int      last_printable = 0;
@@ -642,10 +642,10 @@ static unsigned _calc_assert_str_len(const char *begin,
     return length;
 }
 
-static void _get_assert_str(const char *begin,
-                            const char *end,
-                            char       *buf,
-                            char *const buf_end)
+static void get_assert_str(const char *begin,
+                           const char *end,
+                           char       *buf,
+                           char *const buf_end)
 {
     int last_printable = 0;
 
@@ -664,9 +664,9 @@ static void _get_assert_str(const char *begin,
     }
 }
 
-static int _gen_assert_str(KOS_COMP_UNIT      *program,
-                           const KOS_AST_NODE *node,
-                           int                *str_idx)
+static int gen_assert_str(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          int                *str_idx)
 {
     int            error = KOS_SUCCESS;
     const char    *begin;
@@ -694,7 +694,7 @@ static int _gen_assert_str(KOS_COMP_UNIT      *program,
     assert(begin < end);
     assert((uint8_t)*begin > 0x20);
 
-    length = _calc_assert_str_len(begin, end) + sizeof(assertion_failed) - 1;
+    length = calc_assert_str_len(begin, end) + sizeof(assertion_failed) - 1;
 
     if (length > max_length)
         length = max_length;
@@ -706,14 +706,14 @@ static int _gen_assert_str(KOS_COMP_UNIT      *program,
         KOS_TOKEN token;
 
         memcpy(buf, assertion_failed, sizeof(assertion_failed) - 1);
-        _get_assert_str(begin, end, buf + sizeof(assertion_failed) - 1, buf + length);
+        get_assert_str(begin, end, buf + sizeof(assertion_failed) - 1, buf + length);
 
         memset(&token, 0, sizeof(token));
         token.begin  = buf;
         token.length = length;
         token.type   = TT_IDENTIFIER;
 
-        error = _gen_str_esc(program, &token, KOS_UTF8_NO_ESCAPE, str_idx);
+        error = gen_str_esc(program, &token, KOS_UTF8_NO_ESCAPE, str_idx);
     }
     else
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -721,9 +721,9 @@ static int _gen_assert_str(KOS_COMP_UNIT      *program,
     return error;
 }
 
-static int _add_addr2line(KOS_COMP_UNIT   *program,
-                          const KOS_TOKEN *token,
-                          enum KOS_BOOL_E  force)
+static int add_addr2line(KOS_COMP_UNIT   *program,
+                         const KOS_TOKEN *token,
+                         enum KOS_BOOL_E  force)
 {
     int                            error;
     KOS_VECTOR                    *addr2line = &program->addr2line_gen_buf;
@@ -759,9 +759,9 @@ static int _add_addr2line(KOS_COMP_UNIT   *program,
     return error;
 }
 
-static int _gen_instr(KOS_COMP_UNIT *program,
-                      int            num_args,
-                      ...)
+static int gen_instr(KOS_COMP_UNIT *program,
+                     int            num_args,
+                     ...)
 {
     int cur_offs = program->cur_offs;
     int error    = kos_vector_resize(&program->code_gen_buf,
@@ -818,55 +818,55 @@ static int _gen_instr(KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _gen_instr1(KOS_COMP_UNIT *program,
-                       int            opcode,
-                       int32_t        operand1)
+static int gen_instr1(KOS_COMP_UNIT *program,
+                      int            opcode,
+                      int32_t        operand1)
 {
-    return _gen_instr(program, 1, opcode, operand1);
+    return gen_instr(program, 1, opcode, operand1);
 }
 
-static int _gen_instr2(KOS_COMP_UNIT *program,
-                       int            opcode,
-                       int32_t        operand1,
-                       int32_t        operand2)
+static int gen_instr2(KOS_COMP_UNIT *program,
+                      int            opcode,
+                      int32_t        operand1,
+                      int32_t        operand2)
 {
-    return _gen_instr(program, 2, opcode, operand1, operand2);
+    return gen_instr(program, 2, opcode, operand1, operand2);
 }
 
-static int _gen_instr3(KOS_COMP_UNIT *program,
-                       int            opcode,
-                       int32_t        operand1,
-                       int32_t        operand2,
-                       int32_t        operand3)
+static int gen_instr3(KOS_COMP_UNIT *program,
+                      int            opcode,
+                      int32_t        operand1,
+                      int32_t        operand2,
+                      int32_t        operand3)
 {
-    return _gen_instr(program, 3, opcode, operand1, operand2, operand3);
+    return gen_instr(program, 3, opcode, operand1, operand2, operand3);
 }
 
-static int _gen_instr4(KOS_COMP_UNIT *program,
-                       int            opcode,
-                       int32_t        operand1,
-                       int32_t        operand2,
-                       int32_t        operand3,
-                       int32_t        operand4)
+static int gen_instr4(KOS_COMP_UNIT *program,
+                      int            opcode,
+                      int32_t        operand1,
+                      int32_t        operand2,
+                      int32_t        operand3,
+                      int32_t        operand4)
 {
-    return _gen_instr(program, 4, opcode, operand1, operand2, operand3, operand4);
+    return gen_instr(program, 4, opcode, operand1, operand2, operand3, operand4);
 }
 
-static int _gen_instr5(KOS_COMP_UNIT *program,
-                       int            opcode,
-                       int32_t        operand1,
-                       int32_t        operand2,
-                       int32_t        operand3,
-                       int32_t        operand4,
-                       int32_t        operand5)
+static int gen_instr5(KOS_COMP_UNIT *program,
+                      int            opcode,
+                      int32_t        operand1,
+                      int32_t        operand2,
+                      int32_t        operand3,
+                      int32_t        operand4,
+                      int32_t        operand5)
 {
-    return _gen_instr(program, 5, opcode, operand1, operand2, operand3, operand4, operand5);
+    return gen_instr(program, 5, opcode, operand1, operand2, operand3, operand4, operand5);
 }
 
-static void _write_jump_offs(KOS_COMP_UNIT *program,
-                             KOS_VECTOR    *vec,
-                             int            jump_instr_offs,
-                             int            target_offs)
+static void write_jump_offs(KOS_COMP_UNIT *program,
+                            KOS_VECTOR    *vec,
+                            int            jump_instr_offs,
+                            int            target_offs)
 {
     uint8_t *buf;
     uint8_t *end;
@@ -907,18 +907,18 @@ static void _write_jump_offs(KOS_COMP_UNIT *program,
     }
 }
 
-static void _update_jump_offs(KOS_COMP_UNIT *program,
-                              int            jump_instr_offs,
-                              int            target_offs)
+static void update_jump_offs(KOS_COMP_UNIT *program,
+                             int            jump_instr_offs,
+                             int            target_offs)
 {
     assert(jump_instr_offs <  program->cur_offs);
     assert(target_offs     <= program->cur_offs);
 
-    _write_jump_offs(program, &program->code_gen_buf, jump_instr_offs, target_offs);
+    write_jump_offs(program, &program->code_gen_buf, jump_instr_offs, target_offs);
 }
 
-static void _remove_last_instr(KOS_COMP_UNIT *program,
-                               int            offs)
+static void remove_last_instr(KOS_COMP_UNIT *program,
+                              int            offs)
 {
     --program->cur_frame->num_instr;
     program->cur_offs = offs;
@@ -933,8 +933,8 @@ int kos_scope_compare_item(void               *what,
     return (int)((intptr_t)scope_node - (intptr_t)scope->scope_node);
 }
 
-static KOS_SCOPE *_push_scope(KOS_COMP_UNIT      *program,
-                              const KOS_AST_NODE *node)
+static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
+                             const KOS_AST_NODE *node)
 {
     KOS_SCOPE *scope = (KOS_SCOPE *)
             kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
@@ -950,27 +950,27 @@ static KOS_SCOPE *_push_scope(KOS_COMP_UNIT      *program,
     return scope;
 }
 
-static int _free_scope_regs(KOS_RED_BLACK_NODE *node,
-                            void               *cookie)
+static int free_scope_regs(KOS_RED_BLACK_NODE *node,
+                           void               *cookie)
 {
     KOS_VAR       *var     = (KOS_VAR *)node;
     KOS_COMP_UNIT *program = (KOS_COMP_UNIT *)cookie;
 
     if (var->reg && var->type != VAR_INDEPENDENT_LOCAL) {
         var->reg->tmp = 1;
-        _free_reg(program, var->reg);
+        free_reg(program, var->reg);
         var->reg = 0;
     }
 
     return KOS_SUCCESS;
 }
 
-static void _pop_scope(KOS_COMP_UNIT *program)
+static void pop_scope(KOS_COMP_UNIT *program)
 {
     assert(program->scope_stack);
 
     if (program->scope_stack->vars)
-        kos_red_black_walk(program->scope_stack->vars, _free_scope_regs, (void *)program);
+        kos_red_black_walk(program->scope_stack->vars, free_scope_regs, (void *)program);
 
     program->scope_stack = program->scope_stack->next;
 }
@@ -980,11 +980,11 @@ typedef struct KOS_IMPORT_INFO_S {
     KOS_FILE_POS   pos;
 } KOS_IMPORT_INFO;
 
-static int _import_global(const char *global_name,
-                          unsigned    global_length,
-                          int         module_idx,
-                          int         global_idx,
-                          void       *cookie)
+static int import_global(const char *global_name,
+                         unsigned    global_length,
+                         int         module_idx,
+                         int         global_idx,
+                         void       *cookie)
 {
     int              error = KOS_SUCCESS;
     KOS_IMPORT_INFO *info  = (KOS_IMPORT_INFO *)cookie;
@@ -1004,20 +1004,20 @@ static int _import_global(const char *global_name,
     assert(var);
     assert(var->type == VAR_GLOBAL);
 
-    TRY(_gen_reg(info->program, &reg));
+    TRY(gen_reg(info->program, &reg));
 
-    TRY(_gen_instr3(info->program, INSTR_GET_MOD_ELEM, reg->reg, module_idx, global_idx));
+    TRY(gen_instr3(info->program, INSTR_GET_MOD_ELEM, reg->reg, module_idx, global_idx));
 
-    TRY(_gen_instr2(info->program, INSTR_SET_GLOBAL, var->array_idx, reg->reg));
+    TRY(gen_instr2(info->program, INSTR_SET_GLOBAL, var->array_idx, reg->reg));
 
-    _free_reg(info->program, reg);
+    free_reg(info->program, reg);
 
 cleanup:
     return error;
 }
 
-static int _import(KOS_COMP_UNIT      *program,
-                   const KOS_AST_NODE *node)
+static int import(KOS_COMP_UNIT      *program,
+                  const KOS_AST_NODE *node)
 {
     int error = KOS_SUCCESS;
 
@@ -1044,7 +1044,7 @@ static int _import(KOS_COMP_UNIT      *program,
 
             error = kos_comp_walk_globals(program->ctx,
                                           module_idx,
-                                          _import_global,
+                                          import_global,
                                           &info);
         }
         else {
@@ -1068,11 +1068,11 @@ static int _import(KOS_COMP_UNIT      *program,
 
                 info.pos = node->token.pos;
 
-                TRY(_import_global(node->token.begin,
-                                   node->token.length,
-                                   module_idx,
-                                   global_idx,
-                                   &info));
+                TRY(import_global(node->token.begin,
+                                  node->token.length,
+                                  module_idx,
+                                  global_idx,
+                                  &info));
             }
         }
     }
@@ -1081,10 +1081,10 @@ cleanup:
     return error;
 }
 
-static int _append_frame(KOS_COMP_UNIT      *program,
-                         const KOS_AST_NODE *name_node,
-                         int                 fun_start_offs,
-                         size_t              addr2line_start_offs)
+static int append_frame(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *name_node,
+                        int                 fun_start_offs,
+                        size_t              addr2line_start_offs)
 {
     int               error;
     const size_t      fun_end_offs = (size_t)program->cur_offs;
@@ -1129,7 +1129,7 @@ static int _append_frame(KOS_COMP_UNIT      *program,
 
         name_token = &global;
     }
-    TRY(_gen_str(program, name_token, &str_idx));
+    TRY(gen_str(program, name_token, &str_idx));
 
     memcpy(program->code_buf.buffer + fun_new_offs,
            program->code_gen_buf.buffer + fun_start_offs,
@@ -1183,8 +1183,8 @@ cleanup:
     return error;
 }
 
-static KOS_COMP_FUNCTION *_alloc_func_constant(KOS_COMP_UNIT *program,
-                                               KOS_FRAME     *frame)
+static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
+                                              KOS_FRAME     *frame)
 {
     KOS_COMP_FUNCTION *constant;
 
@@ -1205,34 +1205,34 @@ static KOS_COMP_FUNCTION *_alloc_func_constant(KOS_COMP_UNIT *program,
     return constant;
 }
 
-static int _finish_global_scope(KOS_COMP_UNIT *program,
-                                KOS_REG       *reg)
+static int finish_global_scope(KOS_COMP_UNIT *program,
+                               KOS_REG       *reg)
 {
     int                error;
     KOS_COMP_FUNCTION *constant;
 
     if ( ! reg) {
-        TRY(_gen_reg(program, &reg));
-        TRY(_gen_instr1(program, INSTR_LOAD_VOID, reg->reg));
+        TRY(gen_reg(program, &reg));
+        TRY(gen_instr1(program, INSTR_LOAD_VOID, reg->reg));
     }
 
-    TRY(_gen_instr2(program, INSTR_RETURN, program->scope_stack->num_indep_vars, reg->reg));
+    TRY(gen_instr2(program, INSTR_RETURN, program->scope_stack->num_indep_vars, reg->reg));
 
-    _free_reg(program, reg);
+    free_reg(program, reg);
     reg = 0;
 
-    constant = _alloc_func_constant(program, program->cur_frame);
+    constant = alloc_func_constant(program, program->cur_frame);
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     if (program->scope_stack->num_indep_vars)
         constant->flags |= KOS_COMP_FUN_CLOSURE;
 
-    _add_constant(program, &constant->header);
+    add_constant(program, &constant->header);
 
     program->cur_frame->constant = constant;
 
-    TRY(_append_frame(program, 0, 0, 0));
+    TRY(append_frame(program, 0, 0, 0));
 
     assert(program->code_gen_buf.size == 0);
 
@@ -1240,8 +1240,8 @@ cleanup:
     return error;
 }
 
-static int _scope(KOS_COMP_UNIT      *program,
-                  const KOS_AST_NODE *node)
+static int process_scope(KOS_COMP_UNIT      *program,
+                         const KOS_AST_NODE *node)
 {
     int       error  = KOS_SUCCESS;
     const int global = program->scope_stack == 0;
@@ -1255,7 +1255,7 @@ static int _scope(KOS_COMP_UNIT      *program,
         int      skip_tmp = 0;
 #endif
 
-        _push_scope(program, node);
+        push_scope(program, node);
 
         /* Init global scope */
         if (global) {
@@ -1269,7 +1269,7 @@ static int _scope(KOS_COMP_UNIT      *program,
             /* Generate registers for local (non-global) independent variables */
             for (var = program->scope_stack->fun_vars_list; var; var = var->next)
                 if (var->type == VAR_INDEPENDENT_LOCAL) {
-                    TRY(_gen_reg(program, &var->reg));
+                    TRY(gen_reg(program, &var->reg));
                     var->reg->tmp  = 0;
                     var->array_idx = var->reg->reg;
                 }
@@ -1279,17 +1279,17 @@ static int _scope(KOS_COMP_UNIT      *program,
         for ( ; child; child = child->next) {
 
 #ifndef NDEBUG
-            const int initial_used_regs = _count_used_regs(program) - skip_tmp;
+            const int initial_used_regs = count_used_regs(program) - skip_tmp;
 #endif
 
-            TRY(_add_addr2line(program, &child->token, KOS_FALSE_VALUE));
+            TRY(add_addr2line(program, &child->token, KOS_FALSE_VALUE));
 
             if (reg) {
-                _free_reg(program, reg);
+                free_reg(program, reg);
                 reg = 0;
             }
 
-            TRY(_visit_node(program, child, &reg));
+            TRY(visit_node(program, child, &reg));
 
 #ifndef NDEBUG
             skip_tmp = (reg && reg->tmp) ? 1 : 0;
@@ -1301,26 +1301,26 @@ static int _scope(KOS_COMP_UNIT      *program,
                     ((child->type != NT_ASSIGNMENT && child->type != NT_MULTI_ASSIGNMENT)
                         || (child->children->type == NT_LEFT_HAND_SIDE))) {
 
-                const int used_regs = _count_used_regs(program);
+                const int used_regs = count_used_regs(program);
                 assert(used_regs == initial_used_regs + skip_tmp);
             }
 #endif
         }
 
         if (global)
-            TRY(_finish_global_scope(program, reg));
+            TRY(finish_global_scope(program, reg));
         else if (reg)
-            _free_reg(program, reg);
+            free_reg(program, reg);
 
-        _pop_scope(program);
+        pop_scope(program);
     }
 
 cleanup:
     return error;
 }
 
-static int _if(KOS_COMP_UNIT      *program,
-               const KOS_AST_NODE *node)
+static int if_stmt(KOS_COMP_UNIT      *program,
+                   const KOS_AST_NODE *node)
 {
     int error = KOS_SUCCESS;
     int offs  = -1;
@@ -1328,7 +1328,7 @@ static int _if(KOS_COMP_UNIT      *program,
 
     KOS_REG *reg = 0;
 
-    TRY(_add_addr2line(program, &node->token, KOS_FALSE_VALUE));
+    TRY(add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
     node = node->children;
     assert(node);
@@ -1337,46 +1337,46 @@ static int _if(KOS_COMP_UNIT      *program,
 
     if ( ! always_truthy) {
 
-        TRY(_visit_node(program, node, &reg));
+        TRY(visit_node(program, node, &reg));
         assert(reg);
 
         offs = program->cur_offs;
-        TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, reg->reg));
+        TRY(gen_instr2(program, INSTR_JUMP_NOT_COND, 0, reg->reg));
 
-        _free_reg(program, reg);
+        free_reg(program, reg);
         reg = 0;
     }
 
     node = node->next;
     assert(node);
-    TRY(_visit_node(program, node, &reg));
+    TRY(visit_node(program, node, &reg));
     assert(!reg);
 
     node = node->next;
     if (node && ! always_truthy) {
 
         const int jump_offs = program->cur_offs;
-        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+        TRY(gen_instr1(program, INSTR_JUMP, 0));
 
         assert(offs >= 0);
 
-        _update_jump_offs(program, offs, program->cur_offs);
+        update_jump_offs(program, offs, program->cur_offs);
         offs = jump_offs;
 
-        TRY(_visit_node(program, node, &reg));
+        TRY(visit_node(program, node, &reg));
         assert(!reg);
 
         assert(!node->next);
     }
 
     if (offs >= 0)
-        _update_jump_offs(program, offs, program->cur_offs);
+        update_jump_offs(program, offs, program->cur_offs);
 
 cleanup:
     return error;
 }
 
-static KOS_SCOPE *_find_try_scope(KOS_SCOPE *scope)
+static KOS_SCOPE *find_try_scope(KOS_SCOPE *scope)
 {
     while (scope && ! scope->is_function && ! scope->catch_ref.catch_reg)
         scope = scope->next;
@@ -1387,7 +1387,7 @@ static KOS_SCOPE *_find_try_scope(KOS_SCOPE *scope)
     return scope;
 }
 
-static int _get_closure_size(KOS_COMP_UNIT *program)
+static int get_closure_size(KOS_COMP_UNIT *program)
 {
     int        closure_size;
     KOS_SCOPE *scope = kos_get_frame_scope(program);
@@ -1398,14 +1398,14 @@ static int _get_closure_size(KOS_COMP_UNIT *program)
     return closure_size;
 }
 
-static int _gen_return(KOS_COMP_UNIT *program,
-                       int            reg)
+static int gen_return(KOS_COMP_UNIT *program,
+                      int            reg)
 {
     int        error = KOS_SUCCESS;
-    KOS_SCOPE *scope = _find_try_scope(program->scope_stack);
+    KOS_SCOPE *scope = find_try_scope(program->scope_stack);
 
     while (scope && ! scope->catch_ref.finally_active)
-        scope = _find_try_scope(scope->next);
+        scope = find_try_scope(scope->next);
 
     if (scope) {
 
@@ -1418,22 +1418,22 @@ static int _gen_return(KOS_COMP_UNIT *program,
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
         if (reg != return_reg)
-            TRY(_gen_instr2(program, INSTR_MOVE, return_reg, reg));
+            TRY(gen_instr2(program, INSTR_MOVE, return_reg, reg));
 
         return_offs->next               = program->cur_frame->return_offs;
         return_offs->offs               = program->cur_offs;
         program->cur_frame->return_offs = return_offs;
 
-        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+        TRY(gen_instr1(program, INSTR_JUMP, 0));
     }
     else
-        TRY(_gen_instr2(program, INSTR_RETURN, _get_closure_size(program), reg));
+        TRY(gen_instr2(program, INSTR_RETURN, get_closure_size(program), reg));
 
 cleanup:
     return error;
 }
 
-static int _is_generator(KOS_COMP_UNIT *program)
+static int is_generator(KOS_COMP_UNIT *program)
 {
     KOS_SCOPE *const scope = kos_get_frame_scope(program);
 
@@ -1442,12 +1442,12 @@ static int _is_generator(KOS_COMP_UNIT *program)
     return scope->is_function && ((KOS_FRAME *)scope)->yield_token;
 }
 
-static int _return(KOS_COMP_UNIT      *program,
-                   const KOS_AST_NODE *node)
+static int return_stmt(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *node)
 {
     int        error;
     KOS_REG   *reg       = 0;
-    KOS_SCOPE *try_scope = _find_try_scope(program->scope_stack);
+    KOS_SCOPE *try_scope = find_try_scope(program->scope_stack);
     int        tail_call = 0;
 
     if (try_scope)
@@ -1455,26 +1455,26 @@ static int _return(KOS_COMP_UNIT      *program,
 
     if (node->children) {
 
-        if (node->children->type != NT_VOID_LITERAL && _is_generator(program)) {
+        if (node->children->type != NT_VOID_LITERAL && is_generator(program)) {
             program->error_token = &node->token;
             program->error_str   = str_err_return_in_generator;
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
         }
 
         if ( ! try_scope && node->children->type == NT_INVOCATION) {
-            const int closure_size = _get_closure_size(program);
+            const int closure_size = get_closure_size(program);
             tail_call = 1;
-            TRY(_invocation(program, node->children, &reg, INSTR_TAIL_CALL, (unsigned)closure_size));
+            TRY(invocation(program, node->children, &reg, INSTR_TAIL_CALL, (unsigned)closure_size));
             assert( ! reg);
         }
         else {
-            TRY(_visit_node(program, node->children, &reg));
+            TRY(visit_node(program, node->children, &reg));
             assert(reg);
         }
     }
     else {
-        TRY(_gen_reg(program, &reg));
-        TRY(_gen_instr1(program, INSTR_LOAD_VOID, reg->reg));
+        TRY(gen_reg(program, &reg));
+        TRY(gen_instr1(program, INSTR_LOAD_VOID, reg->reg));
     }
 
     if (tail_call) {
@@ -1483,63 +1483,63 @@ static int _return(KOS_COMP_UNIT      *program,
     }
     else {
 
-        error = _gen_return(program, reg->reg);
+        error = gen_return(program, reg->reg);
 
         if ( ! try_scope || reg != try_scope->catch_ref.catch_reg)
-            _free_reg(program, reg);
+            free_reg(program, reg);
     }
 
 cleanup:
     return error;
 }
 
-static int _yield(KOS_COMP_UNIT      *program,
-                  const KOS_AST_NODE *node,
-                  KOS_REG           **reg)
+static int yield(KOS_COMP_UNIT      *program,
+                 const KOS_AST_NODE *node,
+                 KOS_REG           **reg)
 {
     int      error;
     KOS_REG *src = *reg;
 
     assert(node->children);
 
-    TRY(_visit_node(program, node->children, &src));
+    TRY(visit_node(program, node->children, &src));
     assert(src);
 
-    TRY(_gen_dest_reg(program, reg, src));
+    TRY(gen_dest_reg(program, reg, src));
 
     if (src != *reg)
-        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
+        TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
 
-    TRY(_gen_instr1(program, INSTR_YIELD, (*reg)->reg));
+    TRY(gen_instr1(program, INSTR_YIELD, (*reg)->reg));
 
     if (src != *reg)
-        _free_reg(program, src);
+        free_reg(program, src);
 
 cleanup:
     return error;
 }
 
-static int _throw(KOS_COMP_UNIT      *program,
-                  const KOS_AST_NODE *node)
+static int throw_op(KOS_COMP_UNIT      *program,
+                    const KOS_AST_NODE *node)
 {
     int      error;
     KOS_REG *reg = 0;
 
     assert(node->children);
 
-    TRY(_visit_node(program, node->children, &reg));
+    TRY(visit_node(program, node->children, &reg));
     assert(reg);
 
-    TRY(_gen_instr1(program, INSTR_THROW, reg->reg));
+    TRY(gen_instr1(program, INSTR_THROW, reg->reg));
 
-    _free_reg(program, reg);
+    free_reg(program, reg);
 
 cleanup:
     return error;
 }
 
-static int _assert_stmt(KOS_COMP_UNIT      *program,
-                        const KOS_AST_NODE *node)
+static int assert_stmt(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *node)
 {
     int      error;
     int      jump_instr_offs;
@@ -1548,42 +1548,42 @@ static int _assert_stmt(KOS_COMP_UNIT      *program,
 
     assert(node->children);
 
-    TRY(_visit_node(program, node->children, &reg));
+    TRY(visit_node(program, node->children, &reg));
     assert(reg);
 
     jump_instr_offs = program->cur_offs;
-    TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+    TRY(gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
 
     assert(node->children);
     assert(node->children->next);
     assert(node->children->next->type == NT_LANDMARK);
     assert( ! node->children->next->next);
 
-    _free_reg(program, reg);
+    free_reg(program, reg);
     reg = 0;
 
-    TRY(_gen_assert_str(program, node, &str_idx));
+    TRY(gen_assert_str(program, node, &str_idx));
 
-    TRY(_gen_reg(program, &reg));
+    TRY(gen_reg(program, &reg));
 
-    TRY(_gen_instr2(program,
+    TRY(gen_instr2(program,
                     str_idx < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
                     reg->reg,
                     str_idx));
 
-    TRY(_gen_instr1(program, INSTR_THROW, reg->reg));
+    TRY(gen_instr1(program, INSTR_THROW, reg->reg));
 
-    _update_jump_offs(program, jump_instr_offs, program->cur_offs);
+    update_jump_offs(program, jump_instr_offs, program->cur_offs);
 
-    _free_reg(program, reg);
+    free_reg(program, reg);
 
 cleanup:
     return error;
 }
 
-static void _finish_break_continue(KOS_COMP_UNIT  *program,
-                                   int             continue_tgt_offs,
-                                   KOS_BREAK_OFFS *old_break_offs)
+static void finish_break_continue(KOS_COMP_UNIT  *program,
+                                  int             continue_tgt_offs,
+                                  KOS_BREAK_OFFS *old_break_offs)
 {
     KOS_BREAK_OFFS     *break_offs      = program->cur_frame->break_offs;
     const int           break_tgt_offs  = program->cur_offs;
@@ -1602,7 +1602,7 @@ static void _finish_break_continue(KOS_COMP_UNIT  *program,
             old_break_offs   = break_offs;
         }
         else
-            _update_jump_offs(program, break_offs->offs,
+            update_jump_offs(program, break_offs->offs,
                     break_offs->type != NT_BREAK
                     ? continue_tgt_offs : break_tgt_offs);
 
@@ -1612,7 +1612,7 @@ static void _finish_break_continue(KOS_COMP_UNIT  *program,
     program->cur_frame->break_offs = old_break_offs;
 }
 
-static void _finish_fallthrough(KOS_COMP_UNIT *program)
+static void finish_fallthrough(KOS_COMP_UNIT *program)
 {
     KOS_BREAK_OFFS **remaining_offs       = &program->cur_frame->break_offs;
     KOS_BREAK_OFFS  *break_offs           = *remaining_offs;
@@ -1625,7 +1625,7 @@ static void _finish_fallthrough(KOS_COMP_UNIT *program)
         KOS_BREAK_OFFS *next = break_offs->next;
 
         if (break_offs->type == NT_FALLTHROUGH)
-            _update_jump_offs(program, break_offs->offs, fallthrough_tgt_offs);
+            update_jump_offs(program, break_offs->offs, fallthrough_tgt_offs);
         else {
             break_offs->next = *remaining_offs;
             *remaining_offs  = break_offs;
@@ -1636,10 +1636,10 @@ static void _finish_fallthrough(KOS_COMP_UNIT *program)
 }
 
 /* Saves last try scope before the loop, used for restoring catch offset */
-static KOS_SCOPE *_push_try_scope(KOS_COMP_UNIT *program)
+static KOS_SCOPE *push_try_scope(KOS_COMP_UNIT *program)
 {
     KOS_SCOPE *prev_try_scope = program->cur_frame->last_try_scope;
-    KOS_SCOPE *scope          = _find_try_scope(program->scope_stack);
+    KOS_SCOPE *scope          = find_try_scope(program->scope_stack);
 
     if (scope)
         program->cur_frame->last_try_scope = scope;
@@ -1647,8 +1647,8 @@ static KOS_SCOPE *_push_try_scope(KOS_COMP_UNIT *program)
     return prev_try_scope;
 }
 
-static int _repeat(KOS_COMP_UNIT      *program,
-                   const KOS_AST_NODE *node)
+static int repeat(KOS_COMP_UNIT      *program,
+                  const KOS_AST_NODE *node)
 {
     int             error;
     int             jump_instr_offs;
@@ -1656,21 +1656,21 @@ static int _repeat(KOS_COMP_UNIT      *program,
     const int       loop_start_offs = program->cur_offs;
     KOS_REG        *reg             = 0;
     KOS_BREAK_OFFS *old_break_offs  = program->cur_frame->break_offs;
-    KOS_SCOPE      *prev_try_scope  = _push_try_scope(program);
+    KOS_SCOPE      *prev_try_scope  = push_try_scope(program);
 
     program->cur_frame->break_offs = 0;
 
     node = node->children;
     assert(node);
-    TRY(_visit_node(program, node, &reg));
+    TRY(visit_node(program, node, &reg));
     assert(!reg);
 
-    TRY(_add_addr2line(program, &node->token, KOS_FALSE_VALUE));
+    TRY(add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
     node = node->next;
     assert(node);
 
-    TRY(_add_addr2line(program, &node->token, KOS_FALSE_VALUE));
+    TRY(add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
     test_instr_offs = program->cur_offs;
 
@@ -1679,7 +1679,7 @@ static int _repeat(KOS_COMP_UNIT      *program,
         const int is_truthy = kos_node_is_truthy(program, node);
 
         if ( ! is_truthy) {
-            TRY(_visit_node(program, node, &reg));
+            TRY(visit_node(program, node, &reg));
             assert(reg);
         }
 
@@ -1688,17 +1688,17 @@ static int _repeat(KOS_COMP_UNIT      *program,
         jump_instr_offs = program->cur_offs;
 
         if (reg)
-            TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+            TRY(gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
         else
-            TRY(_gen_instr1(program, INSTR_JUMP, 0));
+            TRY(gen_instr1(program, INSTR_JUMP, 0));
 
-        _update_jump_offs(program, jump_instr_offs, loop_start_offs);
+        update_jump_offs(program, jump_instr_offs, loop_start_offs);
     }
 
-    _finish_break_continue(program, test_instr_offs, old_break_offs);
+    finish_break_continue(program, test_instr_offs, old_break_offs);
 
     if (reg)
-        _free_reg(program, reg);
+        free_reg(program, reg);
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
@@ -1706,13 +1706,13 @@ cleanup:
     return error;
 }
 
-static int _for(KOS_COMP_UNIT      *program,
-                const KOS_AST_NODE *node)
+static int for_stmt(KOS_COMP_UNIT      *program,
+                    const KOS_AST_NODE *node)
 {
     int                 error          = KOS_SUCCESS;
     const KOS_AST_NODE *cond_node      = node->children;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
-    KOS_SCOPE          *prev_try_scope = _push_try_scope(program);
+    KOS_SCOPE          *prev_try_scope = push_try_scope(program);
 
     assert(cond_node);
 
@@ -1737,15 +1737,15 @@ static int _for(KOS_COMP_UNIT      *program,
 
         if ( ! is_truthy) {
 
-            TRY(_add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
+            TRY(add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
 
-            TRY(_visit_node(program, cond_node, &reg));
+            TRY(visit_node(program, cond_node, &reg));
             assert(reg);
 
             cond_jump_instr_offs = program->cur_offs;
-            TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, reg->reg));
+            TRY(gen_instr2(program, INSTR_JUMP_NOT_COND, 0, reg->reg));
 
-            _free_reg(program, reg);
+            free_reg(program, reg);
             reg = 0;
         }
 
@@ -1758,14 +1758,14 @@ static int _for(KOS_COMP_UNIT      *program,
         assert(node);
         assert( ! node->next);
 
-        TRY(_visit_node(program, node, &reg));
+        TRY(visit_node(program, node, &reg));
         assert( ! reg);
 
-        TRY(_add_addr2line(program, &step_node->token, KOS_FALSE_VALUE));
+        TRY(add_addr2line(program, &step_node->token, KOS_FALSE_VALUE));
 
         continue_tgt_offs = program->cur_offs;
 
-        TRY(_visit_node(program, step_node, &reg));
+        TRY(visit_node(program, step_node, &reg));
         assert( ! reg);
 
         if (program->cur_offs == continue_tgt_offs && is_truthy)
@@ -1776,28 +1776,28 @@ static int _for(KOS_COMP_UNIT      *program,
 
         else {
 
-            TRY(_add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
+            TRY(add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
 
-            TRY(_visit_node(program, cond_node, &reg));
+            TRY(visit_node(program, cond_node, &reg));
         }
 
         final_jump_instr_offs = program->cur_offs;
 
         if (reg) {
 
-            TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+            TRY(gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
 
-            _free_reg(program, reg);
+            free_reg(program, reg);
             reg = 0;
         }
         else
-            TRY(_gen_instr1(program, INSTR_JUMP, 0));
+            TRY(gen_instr1(program, INSTR_JUMP, 0));
 
-        _update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
+        update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
         if (cond_jump_instr_offs > -1)
-            _update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
+            update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
 
-        _finish_break_continue(program, continue_tgt_offs, old_break_offs);
+        finish_break_continue(program, continue_tgt_offs, old_break_offs);
     }
 
     program->cur_frame->last_try_scope = prev_try_scope;
@@ -1806,8 +1806,8 @@ cleanup:
     return error;
 }
 
-static int _invoke_get_iterator(KOS_COMP_UNIT *program,
-                                KOS_REG       **reg)
+static int invoke_get_iterator(KOS_COMP_UNIT *program,
+                               KOS_REG       **reg)
 {
     int               error          = KOS_SUCCESS;
     int               str_idx;
@@ -1818,30 +1818,30 @@ static int _invoke_get_iterator(KOS_COMP_UNIT *program,
 
     if ( ! (*reg)->tmp) {
         *reg = 0;
-        TRY(_gen_reg(program, reg));
+        TRY(gen_reg(program, reg));
     }
 
-    TRY(_gen_reg(program, &func_reg));
+    TRY(gen_reg(program, &func_reg));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_iterator;
     token.length = sizeof(str_iterator) - 1;
     token.type   = TT_IDENTIFIER;
 
-    TRY(_gen_str(program, &token, &str_idx));
+    TRY(gen_str(program, &token, &str_idx));
 
-    TRY(_gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
+    TRY(gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
 
-    TRY(_gen_instr5(program, INSTR_CALL_N, (*reg)->reg, func_reg->reg, obj_reg->reg, 255, 0));
+    TRY(gen_instr5(program, INSTR_CALL_N, (*reg)->reg, func_reg->reg, obj_reg->reg, 255, 0));
 
-    _free_reg(program, func_reg);
+    free_reg(program, func_reg);
 
 cleanup:
     return error;
 }
 
-static int _for_in(KOS_COMP_UNIT      *program,
-                   const KOS_AST_NODE *node)
+static int for_in(KOS_COMP_UNIT      *program,
+                  const KOS_AST_NODE *node)
 {
     int                 error;
     int                 loop_start_offs;
@@ -1856,11 +1856,11 @@ static int _for_in(KOS_COMP_UNIT      *program,
     KOS_REG            *iter_reg       = 0;
     KOS_REG            *item_reg       = 0;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
-    KOS_SCOPE          *prev_try_scope = _push_try_scope(program);
+    KOS_SCOPE          *prev_try_scope = push_try_scope(program);
 
     program->cur_frame->break_offs = 0;
 
-    _push_scope(program, node);
+    push_scope(program, node);
 
     assg_node = node->children;
     assert(assg_node);
@@ -1877,31 +1877,31 @@ static int _for_in(KOS_COMP_UNIT      *program,
     var_node = var_node->children;
     assert(var_node);
 
-    TRY(_visit_node(program, expr_node, &iter_reg));
+    TRY(visit_node(program, expr_node, &iter_reg));
     assert(iter_reg);
 
     kos_activate_new_vars(program, assg_node->children);
 
-    TRY(_invoke_get_iterator(program, &iter_reg));
+    TRY(invoke_get_iterator(program, &iter_reg));
 
-    TRY(_add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
+    TRY(add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
 
     if ( ! var_node->next) {
 
-        TRY(_lookup_local_var(program, var_node, &item_reg));
+        TRY(lookup_local_var(program, var_node, &item_reg));
         assert(item_reg);
     }
     else
-        TRY(_gen_reg(program, &item_reg));
+        TRY(gen_reg(program, &item_reg));
 
-    TRY(_gen_reg(program, &final_reg));
+    TRY(gen_reg(program, &final_reg));
 
-    TRY(_gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, final_reg->reg));
+    TRY(gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, final_reg->reg));
 
     cond_jump_instr_offs = program->cur_offs;
-    TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, final_reg->reg));
+    TRY(gen_instr2(program, INSTR_JUMP_COND, 0, final_reg->reg));
 
-    _free_reg(program, final_reg);
+    free_reg(program, final_reg);
 
     loop_start_offs = program->cur_offs;
 
@@ -1911,7 +1911,7 @@ static int _for_in(KOS_COMP_UNIT      *program,
 
         assert(value_iter_reg->tmp);
 
-        TRY(_invoke_get_iterator(program, &value_iter_reg));
+        TRY(invoke_get_iterator(program, &value_iter_reg));
 
         assert(value_iter_reg == item_reg);
 
@@ -1919,10 +1919,10 @@ static int _for_in(KOS_COMP_UNIT      *program,
 
             KOS_REG *var_reg = 0;
 
-            TRY(_lookup_local_var(program, var_node, &var_reg));
+            TRY(lookup_local_var(program, var_node, &var_reg));
             assert(var_reg);
 
-            TRY(_gen_instr4(program, INSTR_CALL_FUN, var_reg->reg, value_iter_reg->reg, 255, 0));
+            TRY(gen_instr4(program, INSTR_CALL_FUN, var_reg->reg, value_iter_reg->reg, 255, 0));
         }
     }
 
@@ -1930,29 +1930,29 @@ static int _for_in(KOS_COMP_UNIT      *program,
     assert(node);
     assert(!node->next);
 
-    TRY(_visit_node(program, node, &reg));
+    TRY(visit_node(program, node, &reg));
     assert(!reg);
 
-    TRY(_add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
+    TRY(add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
 
     continue_offs = program->cur_offs;
 
-    TRY(_gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, final_reg->reg));
+    TRY(gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, final_reg->reg));
 
     final_jump_instr_offs = program->cur_offs;
-    TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, final_reg->reg));
+    TRY(gen_instr2(program, INSTR_JUMP_NOT_COND, 0, final_reg->reg));
 
-    _update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
-    _update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
-    _finish_break_continue(program, continue_offs, old_break_offs);
+    update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
+    update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
+    finish_break_continue(program, continue_offs, old_break_offs);
 
     final_reg = 0;
-    _free_reg(program, item_reg);
+    free_reg(program, item_reg);
     item_reg = 0;
-    _free_reg(program, iter_reg);
+    free_reg(program, iter_reg);
     iter_reg = 0;
 
-    _pop_scope(program);
+    pop_scope(program);
 
     program->cur_frame->last_try_scope = prev_try_scope;
 
@@ -1960,8 +1960,8 @@ cleanup:
     return error;
 }
 
-static int _restore_catch(KOS_COMP_UNIT *program,
-                          KOS_SCOPE     *outer_scope)
+static int restore_catch(KOS_COMP_UNIT *program,
+                         KOS_SCOPE     *outer_scope)
 {
     KOS_SCOPE *cur_scope = program->scope_stack;
     int        error;
@@ -1992,27 +1992,27 @@ static int _restore_catch(KOS_COMP_UNIT *program,
             outer_scope->catch_ref.child_scopes = cur_scope;
         }
 
-        error = _gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
+        error = gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
     }
     else
-        error = _gen_instr(program, 0, INSTR_CANCEL);
+        error = gen_instr(program, 0, INSTR_CANCEL);
 
     return error;
 }
 
-static int _restore_parent_scope_catch(KOS_COMP_UNIT *program)
+static int restore_parent_scope_catch(KOS_COMP_UNIT *program)
 {
     KOS_SCOPE *scope = program->scope_stack;
 
     assert(scope && ! scope->is_function);
 
-    scope = _find_try_scope(scope->next);
+    scope = find_try_scope(scope->next);
 
-    return _restore_catch(program, scope);
+    return restore_catch(program, scope);
 }
 
-static int _push_break_offs(KOS_COMP_UNIT *program,
-                            KOS_NODE_TYPE  type)
+static int push_break_offs(KOS_COMP_UNIT *program,
+                           KOS_NODE_TYPE  type)
 {
     int                   error      = KOS_SUCCESS;
     KOS_BREAK_OFFS *const break_offs = (KOS_BREAK_OFFS *)
@@ -2029,24 +2029,24 @@ static int _push_break_offs(KOS_COMP_UNIT *program,
     return error;
 }
 
-static int _break_continue_fallthrough(KOS_COMP_UNIT      *program,
-                                       const KOS_AST_NODE *node)
+static int break_continue_fallthrough(KOS_COMP_UNIT      *program,
+                                      const KOS_AST_NODE *node)
 {
     int error;
 
-    TRY(_push_break_offs(program, node->type));
+    TRY(push_break_offs(program, node->type));
 
     if (program->cur_frame->last_try_scope) {
 
-        _push_scope(program, node);
+        push_scope(program, node);
 
-        TRY(_restore_catch(program, program->cur_frame->last_try_scope));
+        TRY(restore_catch(program, program->cur_frame->last_try_scope));
 
-        _pop_scope(program);
+        pop_scope(program);
     }
 
     program->cur_frame->break_offs->offs = program->cur_offs;
-    TRY(_gen_instr1(program, INSTR_JUMP, 0));
+    TRY(gen_instr1(program, INSTR_JUMP, 0));
 
 cleanup:
     return error;
@@ -2057,7 +2057,7 @@ typedef struct KOS_SWITCH_CASE_S {
     int final_jump_offs;
 } KOS_SWITCH_CASE;
 
-static int _count_siblings(const KOS_AST_NODE *node)
+static int count_siblings(const KOS_AST_NODE *node)
 {
     int count = 0;
 
@@ -2069,8 +2069,8 @@ static int _count_siblings(const KOS_AST_NODE *node)
     return count;
 }
 
-static int _switch(KOS_COMP_UNIT      *program,
-                   const KOS_AST_NODE *node)
+static int switch_stmt(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *node)
 {
     int                 error;
     KOS_REG            *value_reg       = 0;
@@ -2087,17 +2087,17 @@ static int _switch(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    TRY(_visit_node(program, node, &value_reg));
+    TRY(visit_node(program, node, &value_reg));
     assert(value_reg);
 
     node = node->next;
 
     if ( ! node) {
-        _free_reg(program, value_reg);
+        free_reg(program, value_reg);
         return error;
     }
 
-    num_cases = _count_siblings(node);
+    num_cases = count_siblings(node);
 
     assert(num_cases);
 
@@ -2114,11 +2114,11 @@ static int _switch(KOS_COMP_UNIT      *program,
         node = node->next;
         assert( ! node->next || (node->next->type == NT_FALLTHROUGH && ! node->next->next));
 
-        _free_reg(program, value_reg);
+        free_reg(program, value_reg);
         value_reg = 0;
 
         if (node->type != NT_FALLTHROUGH) {
-            TRY(_visit_node(program, node, &value_reg));
+            TRY(visit_node(program, node, &value_reg));
             assert( ! value_reg);
         }
 
@@ -2163,23 +2163,23 @@ static int _switch(KOS_COMP_UNIT      *program,
                     break;
             }
 
-            TRY(_visit_node(program, node->children, &case_reg));
+            TRY(visit_node(program, node->children, &case_reg));
             assert(case_reg);
 
             if (case_reg->tmp)
                 result_reg = case_reg;
             else
-                TRY(_gen_reg(program, &result_reg));
+                TRY(gen_reg(program, &result_reg));
 
-            TRY(_gen_instr3(program, INSTR_CMP_EQ, result_reg->reg, value_reg->reg, case_reg->reg));
+            TRY(gen_instr3(program, INSTR_CMP_EQ, result_reg->reg, value_reg->reg, case_reg->reg));
 
             cases[i_case].to_jump_offs = program->cur_offs;
 
-            TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, result_reg->reg));
+            TRY(gen_instr2(program, INSTR_JUMP_COND, 0, result_reg->reg));
 
-            _free_reg(program, case_reg);
+            free_reg(program, case_reg);
             if (case_reg != result_reg)
-                _free_reg(program, result_reg);
+                free_reg(program, result_reg);
         }
         else {
 
@@ -2192,7 +2192,7 @@ static int _switch(KOS_COMP_UNIT      *program,
         }
     }
 
-    _free_reg(program, value_reg);
+    free_reg(program, value_reg);
     value_reg = 0;
 
     if (i_default_case >= 0)
@@ -2200,7 +2200,7 @@ static int _switch(KOS_COMP_UNIT      *program,
     else
         final_jump_offs = program->cur_offs;
 
-    TRY(_gen_instr1(program, INSTR_JUMP, 0));
+    TRY(gen_instr1(program, INSTR_JUMP, 0));
 
     node = first_case_node;
 
@@ -2214,22 +2214,22 @@ static int _switch(KOS_COMP_UNIT      *program,
 
         assert(cases[i_case].to_jump_offs > 0);
 
-        _update_jump_offs(program, cases[i_case].to_jump_offs, program->cur_offs);
+        update_jump_offs(program, cases[i_case].to_jump_offs, program->cur_offs);
 
         if (i_case)
-            _finish_fallthrough(program);
+            finish_fallthrough(program);
 
         cases[i_case].final_jump_offs = -1;
 
         if (child_node->type != NT_FALLTHROUGH) {
 
-            TRY(_visit_node(program, child_node, &value_reg));
+            TRY(visit_node(program, child_node, &value_reg));
             assert( ! value_reg);
 
             if ( ! child_node->next) {
                 cases[i_case].final_jump_offs = program->cur_offs;
 
-                TRY(_gen_instr1(program, INSTR_JUMP, 0));
+                TRY(gen_instr1(program, INSTR_JUMP, 0));
             }
             else {
                 assert(child_node->next->type == NT_FALLTHROUGH ||
@@ -2243,23 +2243,23 @@ static int _switch(KOS_COMP_UNIT      *program,
     }
 
     if (final_jump_offs >= 0)
-        _update_jump_offs(program, final_jump_offs, program->cur_offs);
+        update_jump_offs(program, final_jump_offs, program->cur_offs);
 
     for (i_case = 0; i_case < num_cases; ++i_case) {
 
         const int offs = cases[i_case].final_jump_offs;
 
         if (offs >= 0)
-            _update_jump_offs(program, offs, program->cur_offs);
+            update_jump_offs(program, offs, program->cur_offs);
     }
 
-    _finish_break_continue(program, -1, old_break_offs);
+    finish_break_continue(program, -1, old_break_offs);
 
 cleanup:
     return error;
 }
 
-static void _update_child_scope_catch(KOS_COMP_UNIT *program)
+static void update_child_scope_catch(KOS_COMP_UNIT *program)
 {
     KOS_SCOPE *scope     = program->scope_stack;
     const int  dest_offs = program->cur_offs;
@@ -2274,15 +2274,15 @@ static void _update_child_scope_catch(KOS_COMP_UNIT *program)
         for (i = 0; i < num_catch_offs; i++) {
             const int instr_offs = scope->catch_ref.catch_offs[i];
             if (instr_offs)
-                _update_jump_offs(program, instr_offs, dest_offs);
+                update_jump_offs(program, instr_offs, dest_offs);
         }
     }
 
     program->scope_stack->catch_ref.child_scopes = 0;
 }
 
-static int _try_stmt(KOS_COMP_UNIT      *program,
-                     const KOS_AST_NODE *node)
+static int try_stmt(KOS_COMP_UNIT      *program,
+                    const KOS_AST_NODE *node)
 {
     int                 error;
     int                 catch_offs;
@@ -2296,7 +2296,7 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
     const KOS_AST_NODE *defer_node     = 0;
     KOS_SCOPE          *scope;
 
-    scope = _push_scope(program, node);
+    scope = push_scope(program, node);
 
     program->cur_frame->break_offs = 0;
 
@@ -2329,7 +2329,7 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
         assert(except_var->is_active == VAR_INACTIVE);
         except_var->is_active = VAR_ACTIVE;
 
-        TRY(_lookup_local_var(program, variable, &except_reg));
+        TRY(lookup_local_var(program, variable, &except_reg));
         assert(except_reg);
 
         except_var->is_active = VAR_INACTIVE;
@@ -2343,25 +2343,25 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
         assert(node_type == NT_TRY_DEFER);
         assert(defer_node->type == NT_SCOPE);
 
-        TRY(_gen_reg(program, &except_reg));
+        TRY(gen_reg(program, &except_reg));
 
         scope->catch_ref.catch_reg = except_reg;
 
         scope->catch_ref.finally_active = 1;
         program->cur_frame->return_offs = 0;
 
-        TRY(_gen_instr1(program, INSTR_LOAD_VOID, except_reg->reg));
+        TRY(gen_instr1(program, INSTR_LOAD_VOID, except_reg->reg));
     }
 
     /* Try section */
 
     catch_offs = program->cur_offs;
-    TRY(_gen_instr2(program, INSTR_CATCH, except_reg->reg, 0));
+    TRY(gen_instr2(program, INSTR_CATCH, except_reg->reg, 0));
 
     assert(try_node->type == NT_SCOPE);
-    TRY(_scope(program, try_node));
+    TRY(process_scope(program, try_node));
 
-    /* We're done with the try scope, prevent _find_try_scope() from finding this
+    /* We're done with the try scope, prevent find_try_scope() from finding this
      * catch target again when inside catch or defer clause. */
     scope->catch_ref.catch_reg = 0;
 
@@ -2371,16 +2371,16 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
 
         int jump_end_offs;
 
-        TRY(_restore_parent_scope_catch(program));
+        TRY(restore_parent_scope_catch(program));
 
         jump_end_offs = program->cur_offs;
-        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+        TRY(gen_instr1(program, INSTR_JUMP, 0));
 
-        _update_child_scope_catch(program);
+        update_child_scope_catch(program);
 
-        _update_jump_offs(program, catch_offs, program->cur_offs);
+        update_jump_offs(program, catch_offs, program->cur_offs);
 
-        TRY(_restore_parent_scope_catch(program));
+        TRY(restore_parent_scope_catch(program));
 
         node = node->next;
         assert(node);
@@ -2390,11 +2390,11 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
         assert(except_var->is_active == VAR_INACTIVE);
         except_var->is_active = VAR_ACTIVE;
 
-        TRY(_scope(program, node));
+        TRY(process_scope(program, node));
 
         except_var->is_active = VAR_INACTIVE;
 
-        _update_jump_offs(program, jump_end_offs, program->cur_offs);
+        update_jump_offs(program, jump_end_offs, program->cur_offs);
     }
 
     /* Defer section */
@@ -2414,19 +2414,19 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
             scope->catch_ref.finally_active = 0;
         }
 
-        _update_child_scope_catch(program);
+        update_child_scope_catch(program);
 
-        _update_jump_offs(program, catch_offs, program->cur_offs);
+        update_jump_offs(program, catch_offs, program->cur_offs);
 
-        TRY(_restore_parent_scope_catch(program));
+        TRY(restore_parent_scope_catch(program));
 
-        TRY(_scope(program, defer_node));
+        TRY(process_scope(program, defer_node));
 
         skip_throw_offs = program->cur_offs;
 
-        TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, except_reg->reg));
+        TRY(gen_instr2(program, INSTR_JUMP_NOT_COND, 0, except_reg->reg));
 
-        TRY(_gen_instr1(program, INSTR_THROW, except_reg->reg));
+        TRY(gen_instr1(program, INSTR_THROW, except_reg->reg));
 
         /* Defer section for break, continue and fallthrough */
 
@@ -2461,16 +2461,16 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
 
                 for (break_offs = try_break_offs; break_offs; break_offs = break_offs->next)
                     if (break_offs->type == type)
-                        _update_jump_offs(program, break_offs->offs, program->cur_offs);
+                        update_jump_offs(program, break_offs->offs, program->cur_offs);
 
-                TRY(_restore_parent_scope_catch(program));
+                TRY(restore_parent_scope_catch(program));
 
-                TRY(_scope(program, defer_node));
+                TRY(process_scope(program, defer_node));
 
-                TRY(_push_break_offs(program, type));
+                TRY(push_break_offs(program, type));
                 program->cur_frame->break_offs->offs = program->cur_offs;
 
-                TRY(_gen_instr1(program, INSTR_JUMP, 0));
+                TRY(gen_instr1(program, INSTR_JUMP, 0));
             }
         }
 
@@ -2479,16 +2479,16 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
         if (return_offs) {
 
             for ( ; return_offs; return_offs = return_offs->next)
-                _update_jump_offs(program, return_offs->offs, program->cur_offs);
+                update_jump_offs(program, return_offs->offs, program->cur_offs);
 
-            TRY(_restore_parent_scope_catch(program));
+            TRY(restore_parent_scope_catch(program));
 
-            TRY(_scope(program, defer_node));
+            TRY(process_scope(program, defer_node));
 
-            TRY(_gen_return(program, except_reg->reg));
+            TRY(gen_return(program, except_reg->reg));
         }
 
-        _update_jump_offs(program, skip_throw_offs, program->cur_offs);
+        update_jump_offs(program, skip_throw_offs, program->cur_offs);
     }
 
     if (old_break_offs) {
@@ -2505,9 +2505,9 @@ static int _try_stmt(KOS_COMP_UNIT      *program,
             program->cur_frame->break_offs = old_break_offs;
     }
 
-    _free_reg(program, except_reg);
+    free_reg(program, except_reg);
 
-    _pop_scope(program);
+    pop_scope(program);
 
 cleanup:
     return error;
@@ -2521,10 +2521,10 @@ static KOS_REG *super_prototype(KOS_COMP_UNIT      *program,
     return program->cur_frame->base_proto_reg;
 }
 
-static int _refinement_module(KOS_COMP_UNIT      *program,
-                              KOS_VAR            *module_var,
-                              const KOS_AST_NODE *node, /* the second child of the refinement node */
-                              KOS_REG           **reg)
+static int refinement_module(KOS_COMP_UNIT      *program,
+                             KOS_VAR            *module_var,
+                             const KOS_AST_NODE *node, /* the second child of the refinement node */
+                             KOS_REG           **reg)
 {
     int        error;
     KOS_VECTOR cstr;
@@ -2539,7 +2539,7 @@ static int _refinement_module(KOS_COMP_UNIT      *program,
         KOS_UTF8_ESCAPE escape;
 
         /* TODO this does not work for escaped strings, kos_comp_get_global_idx assumes NO_ESCAPE */
-        _get_token_str(&node->token, &begin, &length, &escape);
+        get_token_str(&node->token, &begin, &length, &escape);
 
         error = kos_comp_get_global_idx(program->ctx, module_var->array_idx, begin, length, &global_idx);
         if (error) {
@@ -2548,23 +2548,23 @@ static int _refinement_module(KOS_COMP_UNIT      *program,
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
         }
 
-        TRY(_gen_reg(program, reg));
+        TRY(gen_reg(program, reg));
 
-        TRY(_gen_instr3(program, INSTR_GET_MOD_ELEM, (*reg)->reg, module_var->array_idx, global_idx));
+        TRY(gen_instr3(program, INSTR_GET_MOD_ELEM, (*reg)->reg, module_var->array_idx, global_idx));
     }
     else {
 
         KOS_REG *prop = 0;
 
-        TRY(_visit_node(program, node, &prop));
+        TRY(visit_node(program, node, &prop));
         assert(prop);
 
-        TRY(_gen_dest_reg(program, reg, prop));
+        TRY(gen_dest_reg(program, reg, prop));
 
-        TRY(_gen_instr3(program, INSTR_GET_MOD, (*reg)->reg, module_var->array_idx, prop->reg));
+        TRY(gen_instr3(program, INSTR_GET_MOD, (*reg)->reg, module_var->array_idx, prop->reg));
 
         if (*reg != prop)
-            _free_reg(program, prop);
+            free_reg(program, prop);
     }
 
 cleanup:
@@ -2573,8 +2573,8 @@ cleanup:
     return error;
 }
 
-static int _maybe_int(const KOS_AST_NODE *node,
-                      int64_t            *value)
+static int maybe_int(const KOS_AST_NODE *node,
+                     int64_t            *value)
 {
     KOS_NUMERIC numeric;
 
@@ -2607,10 +2607,10 @@ static int _maybe_int(const KOS_AST_NODE *node,
     return 1;
 }
 
-static int _refinement_object(KOS_COMP_UNIT      *program,
-                              const KOS_AST_NODE *node,
-                              KOS_REG           **reg, /* the first child of the refinement node */
-                              KOS_REG           **out_obj)
+static int refinement_object(KOS_COMP_UNIT      *program,
+                             const KOS_AST_NODE *node,
+                             KOS_REG           **reg, /* the first child of the refinement node */
+                             KOS_REG           **out_obj)
 {
     int      error;
     KOS_REG *obj = 0;
@@ -2619,15 +2619,15 @@ static int _refinement_object(KOS_COMP_UNIT      *program,
     if (node->type == NT_SUPER_PROTO_LITERAL)
         obj = super_prototype(program, node);
     else
-        TRY(_visit_node(program, node, &obj));
+        TRY(visit_node(program, node, &obj));
     assert(obj);
 
     if (out_obj) {
         *out_obj = obj;
-        TRY(_gen_reg(program, reg));
+        TRY(gen_reg(program, reg));
     }
     else
-        TRY(_gen_dest_reg(program, reg, obj));
+        TRY(gen_dest_reg(program, reg, obj));
 
     node = node->next;
     assert(node);
@@ -2636,11 +2636,11 @@ static int _refinement_object(KOS_COMP_UNIT      *program,
     if (node->type == NT_STRING_LITERAL) {
 
         int str_idx;
-        TRY(_gen_str(program, &node->token, &str_idx));
+        TRY(gen_str(program, &node->token, &str_idx));
 
-        TRY(_gen_instr3(program, INSTR_GET_PROP, (*reg)->reg, obj->reg, str_idx));
+        TRY(gen_instr3(program, INSTR_GET_PROP, (*reg)->reg, obj->reg, str_idx));
     }
-    else if (_maybe_int(node, &idx)) {
+    else if (maybe_int(node, &idx)) {
 
         if (idx > INT_MAX || idx < INT_MIN) {
             program->error_token = &node->token;
@@ -2648,31 +2648,31 @@ static int _refinement_object(KOS_COMP_UNIT      *program,
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
         }
 
-        TRY(_gen_instr3(program, INSTR_GET_ELEM, (*reg)->reg, obj->reg, (int)idx));
+        TRY(gen_instr3(program, INSTR_GET_ELEM, (*reg)->reg, obj->reg, (int)idx));
     }
     else {
 
         KOS_REG *prop = 0;
 
-        TRY(_visit_node(program, node, &prop));
+        TRY(visit_node(program, node, &prop));
         assert(prop);
 
-        TRY(_gen_instr3(program, INSTR_GET, (*reg)->reg, obj->reg, prop->reg));
+        TRY(gen_instr3(program, INSTR_GET, (*reg)->reg, obj->reg, prop->reg));
 
-        _free_reg(program, prop);
+        free_reg(program, prop);
     }
 
     if (obj != *reg && ! out_obj)
-        _free_reg(program, obj);
+        free_reg(program, obj);
 
 cleanup:
     return error;
 }
 
-static int _refinement(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       KOS_REG           **reg,
-                       KOS_REG           **out_obj)
+static int refinement(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node,
+                      KOS_REG           **reg,
+                      KOS_REG           **out_obj)
 {
     int      error;
     KOS_VAR *module_var = 0;
@@ -2689,27 +2689,27 @@ static int _refinement(KOS_COMP_UNIT      *program,
         assert(node);
         assert(!node->next);
 
-        error = _refinement_module(program, module_var, node, reg);
+        error = refinement_module(program, module_var, node, reg);
     }
     else
-        error = _refinement_object(program, node, reg, out_obj);
+        error = refinement_object(program, node, reg, out_obj);
 
     return error;
 }
 
-static int _maybe_refinement(KOS_COMP_UNIT      *program,
-                             const KOS_AST_NODE *node,
-                             KOS_REG           **reg,
-                             KOS_REG           **out_obj)
+static int maybe_refinement(KOS_COMP_UNIT      *program,
+                            const KOS_AST_NODE *node,
+                            KOS_REG           **reg,
+                            KOS_REG           **out_obj)
 {
     int error;
 
     assert(out_obj);
 
     if (node->type == NT_REFINEMENT)
-        error = _refinement(program, node, reg, out_obj);
+        error = refinement(program, node, reg, out_obj);
     else {
-        error = _visit_node(program, node, reg);
+        error = visit_node(program, node, reg);
         *out_obj = 0;
     }
 
@@ -2718,9 +2718,9 @@ static int _maybe_refinement(KOS_COMP_UNIT      *program,
     return error;
 }
 
-static int _slice(KOS_COMP_UNIT      *program,
-                  const KOS_AST_NODE *node,
-                  KOS_REG           **reg)
+static int slice(KOS_COMP_UNIT      *program,
+                 const KOS_AST_NODE *node,
+                 KOS_REG           **reg)
 {
     int      error;
     KOS_REG *obj_reg   = 0;
@@ -2730,43 +2730,43 @@ static int _slice(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    TRY(_visit_node(program, node, &obj_reg));
+    TRY(visit_node(program, node, &obj_reg));
     assert(obj_reg);
 
     node = node->next;
     assert(node);
 
-    TRY(_visit_node(program, node, &begin_reg));
+    TRY(visit_node(program, node, &begin_reg));
     assert(begin_reg);
 
     node = node->next;
     assert(node);
     assert( ! node->next);
 
-    TRY(_visit_node(program, node, &end_reg));
+    TRY(visit_node(program, node, &end_reg));
     assert(end_reg);
 
     if ( ! *reg) {
         if (obj_reg->tmp)
             *reg = obj_reg;
         else
-            TRY(_gen_reg(program, reg));
+            TRY(gen_reg(program, reg));
     }
 
-    TRY(_gen_instr4(program, INSTR_GET_RANGE, (*reg)->reg, obj_reg->reg,
+    TRY(gen_instr4(program, INSTR_GET_RANGE, (*reg)->reg, obj_reg->reg,
                                               begin_reg->reg, end_reg->reg));
 
-    _free_reg(program, end_reg);
-    _free_reg(program, begin_reg);
+    free_reg(program, end_reg);
+    free_reg(program, begin_reg);
     if (obj_reg != *reg)
-        _free_reg(program, obj_reg);
+        free_reg(program, obj_reg);
 
 cleanup:
     return error;
 }
 
-static int _find_var_by_reg(KOS_RED_BLACK_NODE *node,
-                            void               *cookie)
+static int find_var_by_reg(KOS_RED_BLACK_NODE *node,
+                           void               *cookie)
 {
     KOS_VAR *var = (KOS_VAR *)node;
     KOS_REG *reg = (KOS_REG *)cookie;
@@ -2782,9 +2782,9 @@ static int _find_var_by_reg(KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
-static int _is_var_used(KOS_COMP_UNIT      *program,
-                        const KOS_AST_NODE *node,
-                        KOS_REG            *reg)
+static int is_var_used(KOS_COMP_UNIT      *program,
+                       const KOS_AST_NODE *node,
+                       KOS_REG            *reg)
 {
     if ( ! reg || reg->tmp)
         return 0;
@@ -2797,7 +2797,7 @@ static int _is_var_used(KOS_COMP_UNIT      *program,
 
             for (scope = program->scope_stack; scope && scope->next; scope = scope->next) {
 
-                const int error = kos_red_black_walk(scope->vars, _find_var_by_reg, reg);
+                const int error = kos_red_black_walk(scope->vars, find_var_by_reg, reg);
 
                 if (error == KOS_SUCCESS_RETURN)
                     return 1;
@@ -2807,14 +2807,14 @@ static int _is_var_used(KOS_COMP_UNIT      *program,
             }
         }
 
-        if (_is_var_used(program, node->children, reg))
+        if (is_var_used(program, node->children, reg))
             return 1;
     }
 
     return 0;
 }
 
-static int _count_non_expanded_siblings(const KOS_AST_NODE *node)
+static int count_non_expanded_siblings(const KOS_AST_NODE *node)
 {
     int count = 0;
 
@@ -2828,7 +2828,7 @@ static int _count_non_expanded_siblings(const KOS_AST_NODE *node)
 
 #define MAX_CONTIG_REGS 4
 
-static int _count_contig_arg_siblings(const KOS_AST_NODE *node)
+static int count_contig_arg_siblings(const KOS_AST_NODE *node)
 {
     int count = 0;
 
@@ -2844,22 +2844,22 @@ static int _count_contig_arg_siblings(const KOS_AST_NODE *node)
     return count;
 }
 
-static int _gen_array(KOS_COMP_UNIT      *program,
-                      const KOS_AST_NODE *node,
-                      KOS_REG           **reg)
+static int gen_array(KOS_COMP_UNIT      *program,
+                     const KOS_AST_NODE *node,
+                     KOS_REG           **reg)
 {
     int       error;
     int       i;
-    const int num_fixed = _count_non_expanded_siblings(node);
+    const int num_fixed = count_non_expanded_siblings(node);
 
-    if (_is_var_used(program, node, *reg))
+    if (is_var_used(program, node, *reg))
         *reg = 0;
 
-    TRY(_gen_reg(program, reg));
+    TRY(gen_reg(program, reg));
     if (num_fixed < 256)
-        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, (*reg)->reg, num_fixed));
+        TRY(gen_instr2(program, INSTR_LOAD_ARRAY8, (*reg)->reg, num_fixed));
     else
-        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY, (*reg)->reg, num_fixed));
+        TRY(gen_instr2(program, INSTR_LOAD_ARRAY, (*reg)->reg, num_fixed));
 
     for (i = 0; node; node = node->next, ++i) {
 
@@ -2871,21 +2871,21 @@ static int _gen_array(KOS_COMP_UNIT      *program,
             assert( ! node->children->next);
             assert(node->children->type != NT_EXPAND);
             assert(i >= num_fixed);
-            TRY(_visit_node(program, node->children, &arg));
+            TRY(visit_node(program, node->children, &arg));
         }
         else
-            TRY(_visit_node(program, node, &arg));
+            TRY(visit_node(program, node, &arg));
 
         assert(arg);
 
         if (i < num_fixed)
-            TRY(_gen_instr3(program, INSTR_SET_ELEM, (*reg)->reg, i, arg->reg));
+            TRY(gen_instr3(program, INSTR_SET_ELEM, (*reg)->reg, i, arg->reg));
         else if (expand)
-            TRY(_gen_instr2(program, INSTR_PUSH_EX, (*reg)->reg, arg->reg));
+            TRY(gen_instr2(program, INSTR_PUSH_EX, (*reg)->reg, arg->reg));
         else
-            TRY(_gen_instr2(program, INSTR_PUSH, (*reg)->reg, arg->reg));
+            TRY(gen_instr2(program, INSTR_PUSH, (*reg)->reg, arg->reg));
 
-        _free_reg(program, arg);
+        free_reg(program, arg);
     }
 
 cleanup:
@@ -2905,7 +2905,7 @@ static int super_invocation(KOS_COMP_UNIT      *program,
     KOS_REG            *base_ctor_reg;
     const KOS_AST_NODE *inv_node      = node;
 
-    TRY(_gen_reg_range(program, &args_regs[0], 2));
+    TRY(gen_reg_range(program, &args_regs[0], 2));
 
     if (node) {
         node = node->children;
@@ -2914,29 +2914,29 @@ static int super_invocation(KOS_COMP_UNIT      *program,
         assert(node->type == NT_SUPER_CTOR_LITERAL);
         node = node->next;
 
-        TRY(_gen_array(program, node, &args_regs[1]));
+        TRY(gen_array(program, node, &args_regs[1]));
     }
     else
-        TRY(_gen_instr2(program, INSTR_LOAD_ARRAY8, args_regs[1]->reg, 0));
+        TRY(gen_instr2(program, INSTR_LOAD_ARRAY8, args_regs[1]->reg, 0));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_apply;
     token.length = sizeof(str_apply) - 1;
     token.type   = TT_IDENTIFIER;
 
-    TRY(_gen_str(program, &token, &str_idx));
+    TRY(gen_str(program, &token, &str_idx));
 
     assert(program->cur_frame->base_ctor_reg);
     base_ctor_reg = program->cur_frame->base_ctor_reg;
 
-    if (reg && _is_var_used(program, inv_node, *reg)) {
-        TRY(_gen_reg(program, &apply_fun));
+    if (reg && is_var_used(program, inv_node, *reg)) {
+        TRY(gen_reg(program, &apply_fun));
         assert(apply_fun);
         assert(*reg);
     }
     else {
         if ( ! reg || ! *reg) {
-            TRY(_gen_reg(program, &apply_fun));
+            TRY(gen_reg(program, &apply_fun));
             if (reg)
                 *reg = apply_fun;
         }
@@ -2944,29 +2944,29 @@ static int super_invocation(KOS_COMP_UNIT      *program,
             apply_fun = *reg;
     }
 
-    TRY(_gen_instr3(program, INSTR_GET_PROP, apply_fun->reg, base_ctor_reg->reg, str_idx));
+    TRY(gen_instr3(program, INSTR_GET_PROP, apply_fun->reg, base_ctor_reg->reg, str_idx));
 
     assert(program->cur_frame->this_reg);
-    TRY(_gen_instr2(program, INSTR_MOVE, args_regs[0]->reg, program->cur_frame->this_reg->reg));
+    TRY(gen_instr2(program, INSTR_MOVE, args_regs[0]->reg, program->cur_frame->this_reg->reg));
 
-    TRY(_gen_instr5(program, INSTR_CALL_N, apply_fun->reg, apply_fun->reg, base_ctor_reg->reg, args_regs[0]->reg, 2));
+    TRY(gen_instr5(program, INSTR_CALL_N, apply_fun->reg, apply_fun->reg, base_ctor_reg->reg, args_regs[0]->reg, 2));
 
 cleanup:
     if (args_regs[0])
-        _free_reg(program, args_regs[0]);
+        free_reg(program, args_regs[0]);
     if (args_regs[1])
-        _free_reg(program, args_regs[1]);
+        free_reg(program, args_regs[1]);
     if (apply_fun && ( ! reg || apply_fun != *reg))
-        _free_reg(program, apply_fun);
+        free_reg(program, apply_fun);
 
     return error;
 }
 
-static int _invocation(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       KOS_REG           **reg,
-                       KOS_BYTECODE_INSTR  instr,
-                       unsigned            tail_closure_size)
+static int invocation(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node,
+                      KOS_REG           **reg,
+                      KOS_BYTECODE_INSTR  instr,
+                      unsigned            tail_closure_size)
 {
     int      error;
     KOS_REG *args;
@@ -2985,7 +2985,7 @@ static int _invocation(KOS_COMP_UNIT      *program,
         return super_invocation(program, node, reg);
     }
 
-    args = _is_var_used(program, node, *reg) ? 0 : *reg;
+    args = is_var_used(program, node, *reg) ? 0 : *reg;
 
     node = node->children;
 
@@ -3002,18 +3002,18 @@ static int _invocation(KOS_COMP_UNIT      *program,
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
         }
 
-        TRY(_gen_reg(program, &fun));
+        TRY(gen_reg(program, &fun));
 
-        TRY(_gen_instr3(program, INSTR_GET_MOD_ELEM, fun->reg, 0, string_idx));
+        TRY(gen_instr3(program, INSTR_GET_MOD_ELEM, fun->reg, 0, string_idx));
     }
     else {
 
-        TRY(_maybe_refinement(program, node, &fun, &obj));
+        TRY(maybe_refinement(program, node, &fun, &obj));
 
         node = node->next;
     }
 
-    num_contig_args = _count_contig_arg_siblings(node);
+    num_contig_args = count_contig_arg_siblings(node);
 
     if (num_contig_args <= MAX_CONTIG_REGS) {
 
@@ -3021,7 +3021,7 @@ static int _invocation(KOS_COMP_UNIT      *program,
         int      i;
 
         if (num_contig_args > 1)
-            TRY(_gen_reg_range(program, &argn[0], num_contig_args));
+            TRY(gen_reg_range(program, &argn[0], num_contig_args));
 
         for (i = 0; node; node = node->next, i++) {
 
@@ -3030,7 +3030,7 @@ static int _invocation(KOS_COMP_UNIT      *program,
             assert(i == 0 || arg);
             assert(i == 0 || arg->reg == argn[i-1]->reg + 1);
 
-            TRY(_visit_node(program, node, &arg));
+            TRY(visit_node(program, node, &arg));
             assert(arg);
 
             if ( ! argn[i]) {
@@ -3039,7 +3039,7 @@ static int _invocation(KOS_COMP_UNIT      *program,
             }
             else if (arg != argn[i]) {
                 assert( ! arg->tmp);
-                TRY(_gen_instr2(program, INSTR_MOVE, argn[i]->reg, arg->reg));
+                TRY(gen_instr2(program, INSTR_MOVE, argn[i]->reg, arg->reg));
             }
         }
 
@@ -3055,7 +3055,7 @@ static int _invocation(KOS_COMP_UNIT      *program,
                 }
             }
             if ( ! *reg)
-                TRY(_gen_reg(program, reg));
+                TRY(gen_reg(program, reg));
 
             rdest = (*reg)->reg;
         }
@@ -3063,56 +3063,56 @@ static int _invocation(KOS_COMP_UNIT      *program,
         if (obj) {
             instr = (instr == INSTR_CALL) ? INSTR_CALL_N : INSTR_TAIL_CALL_N;
 
-            TRY(_gen_instr5(program, instr, rdest, fun->reg, obj->reg,
-                            num_contig_args ? argn[0]->reg : 255,
-                            num_contig_args));
+            TRY(gen_instr5(program, instr, rdest, fun->reg, obj->reg,
+                           num_contig_args ? argn[0]->reg : 255,
+                           num_contig_args));
         }
         else {
             instr = (instr == INSTR_CALL) ? INSTR_CALL_FUN : INSTR_TAIL_CALL_FUN;
 
-            TRY(_gen_instr4(program, instr, rdest, fun->reg,
-                            num_contig_args ? argn[0]->reg : 255,
-                            num_contig_args));
+            TRY(gen_instr4(program, instr, rdest, fun->reg,
+                           num_contig_args ? argn[0]->reg : 255,
+                           num_contig_args));
         }
 
         while (num_contig_args) {
             KOS_REG *arg = argn[--num_contig_args];
             if (arg != *reg)
-                _free_reg(program, arg);
+                free_reg(program, arg);
         }
     }
     else {
 
-        TRY(_gen_array(program, node, &args));
+        TRY(gen_array(program, node, &args));
 
         if ( ! *reg && instr == INSTR_CALL)
             *reg = args;
 
         if ( ! obj) {
-            TRY(_gen_reg(program, &obj));
-            TRY(_gen_instr1(program, INSTR_LOAD_VOID, obj->reg));
+            TRY(gen_reg(program, &obj));
+            TRY(gen_instr1(program, INSTR_LOAD_VOID, obj->reg));
         }
 
         if (instr == INSTR_CALL)
             rdest = (*reg)->reg;
 
-        TRY(_gen_instr4(program, instr, rdest, fun->reg, obj->reg, args->reg));
+        TRY(gen_instr4(program, instr, rdest, fun->reg, obj->reg, args->reg));
 
         if (args != *reg)
-            _free_reg(program, args);
+            free_reg(program, args);
     }
 
-    _free_reg(program, fun);
+    free_reg(program, fun);
     if (obj)
-        _free_reg(program, obj);
+        free_reg(program, obj);
 
 cleanup:
     return error;
 }
 
-static int _async(KOS_COMP_UNIT      *program,
-                  const KOS_AST_NODE *node,
-                  KOS_REG           **reg)
+static int async(KOS_COMP_UNIT      *program,
+                 const KOS_AST_NODE *node,
+                 KOS_REG           **reg)
 {
     int               error       = KOS_SUCCESS;
     KOS_REG          *argn[2]     = { 0, 0 };
@@ -3128,7 +3128,7 @@ static int _async(KOS_COMP_UNIT      *program,
     assert( ! node->next);
     assert(node->type == NT_INVOCATION);
 
-    TRY(_gen_reg_range(program, &argn[0], 2));
+    TRY(gen_reg_range(program, &argn[0], 2));
 
     obj = argn[0];
 
@@ -3138,45 +3138,45 @@ static int _async(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    TRY(_maybe_refinement(program, node, &fun, &obj));
+    TRY(maybe_refinement(program, node, &fun, &obj));
 
     node = node->next;
 
-    TRY(_gen_array(program, node, &argn[1]));
+    TRY(gen_array(program, node, &argn[1]));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_async;
     token.length = sizeof(str_async) - 1;
     token.type   = TT_IDENTIFIER;
 
-    TRY(_gen_str(program, &token, &str_idx));
+    TRY(gen_str(program, &token, &str_idx));
 
     if (*reg && fun != *reg)
         async = *reg;
 
     if (obj && obj != argn[0]) {
-        TRY(_gen_instr2(program, INSTR_MOVE, argn[0]->reg, obj->reg));
-        _free_reg(program, obj);
+        TRY(gen_instr2(program, INSTR_MOVE, argn[0]->reg, obj->reg));
+        free_reg(program, obj);
     }
 
-    TRY(_gen_reg(program, &async));
+    TRY(gen_reg(program, &async));
 
     if ( ! *reg)
         *reg = async;
 
-    TRY(_gen_instr3(program, INSTR_GET_PROP, async->reg, fun->reg, str_idx));
+    TRY(gen_instr3(program, INSTR_GET_PROP, async->reg, fun->reg, str_idx));
 
     if ( ! obj)
-        TRY(_gen_instr1(program, INSTR_LOAD_VOID, argn[0]->reg));
+        TRY(gen_instr1(program, INSTR_LOAD_VOID, argn[0]->reg));
 
-    TRY(_gen_instr5(program, INSTR_CALL_N, (*reg)->reg, async->reg, fun->reg, argn[0]->reg, 2));
+    TRY(gen_instr5(program, INSTR_CALL_N, (*reg)->reg, async->reg, fun->reg, argn[0]->reg, 2));
 
     if (fun != *reg)
-        _free_reg(program, fun);
+        free_reg(program, fun);
     if (async != *reg)
-        _free_reg(program, async);
-    _free_reg(program, argn[0]);
-    _free_reg(program, argn[1]);
+        free_reg(program, async);
+    free_reg(program, argn[0]);
+    free_reg(program, argn[1]);
 
 cleanup:
     return error;
@@ -3188,9 +3188,9 @@ enum CHECK_TYPE_E {
     CHECK_NUMERIC_OR_STRING = 3
 };
 
-static int _check_const_literal(KOS_COMP_UNIT      *program,
-                                const KOS_AST_NODE *node,
-                                enum CHECK_TYPE_E   expected_type)
+static int check_const_literal(KOS_COMP_UNIT      *program,
+                               const KOS_AST_NODE *node,
+                               enum CHECK_TYPE_E   expected_type)
 {
     KOS_NODE_TYPE       cur_node_type;
     const KOS_AST_NODE *const_node = kos_get_const(program, node);
@@ -3233,9 +3233,9 @@ static int _check_const_literal(KOS_COMP_UNIT      *program,
     }
 }
 
-static int _pos_neg(KOS_COMP_UNIT      *program,
-                    const KOS_AST_NODE *node,
-                    KOS_REG           **reg)
+static int pos_neg(KOS_COMP_UNIT      *program,
+                   const KOS_AST_NODE *node,
+                   KOS_REG           **reg)
 {
     int                     error;
     const KOS_OPERATOR_TYPE op  = node->token.op;
@@ -3247,30 +3247,30 @@ static int _pos_neg(KOS_COMP_UNIT      *program,
     assert(node);
     assert(!node->next);
 
-    TRY(_check_const_literal(program, node, CHECK_NUMERIC));
+    TRY(check_const_literal(program, node, CHECK_NUMERIC));
 
-    TRY(_visit_node(program, node, &src));
+    TRY(visit_node(program, node, &src));
     assert(src);
 
     if (op == OT_SUB) {
 
         KOS_REG *val = 0;
 
-        TRY(_gen_dest_reg(program, reg, src));
+        TRY(gen_dest_reg(program, reg, src));
 
-        TRY(_gen_reg(program, &val));
-        TRY(_gen_instr2(program, INSTR_LOAD_INT8, val->reg, 0));
+        TRY(gen_reg(program, &val));
+        TRY(gen_instr2(program, INSTR_LOAD_INT8, val->reg, 0));
 
-        TRY(_gen_instr3(program,
-                        INSTR_SUB,
-                        (*reg)->reg,
-                        val->reg,
-                        src->reg));
+        TRY(gen_instr3(program,
+                       INSTR_SUB,
+                       (*reg)->reg,
+                       val->reg,
+                       src->reg));
 
-        _free_reg(program, val);
+        free_reg(program, val);
 
         if (src != *reg)
-            _free_reg(program, src);
+            free_reg(program, src);
     }
     else
         /* TODO: enforce numeric */
@@ -3280,9 +3280,9 @@ cleanup:
     return error;
 }
 
-static int _log_not(KOS_COMP_UNIT      *program,
-                    const KOS_AST_NODE *node,
-                    KOS_REG           **reg)
+static int log_not(KOS_COMP_UNIT      *program,
+                   const KOS_AST_NODE *node,
+                   KOS_REG           **reg)
 {
     int      error;
     int      offs1;
@@ -3293,35 +3293,35 @@ static int _log_not(KOS_COMP_UNIT      *program,
     assert(node);
     assert(!node->next);
 
-    TRY(_visit_node(program, node, &src));
+    TRY(visit_node(program, node, &src));
     assert(src);
 
-    TRY(_gen_dest_reg(program, reg, src));
+    TRY(gen_dest_reg(program, reg, src));
 
     offs1 = program->cur_offs;
-    TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, src->reg));
+    TRY(gen_instr2(program, INSTR_JUMP_COND, 0, src->reg));
 
-    TRY(_gen_instr1(program, INSTR_LOAD_TRUE, (*reg)->reg));
+    TRY(gen_instr1(program, INSTR_LOAD_TRUE, (*reg)->reg));
 
     offs2 = program->cur_offs;
-    TRY(_gen_instr1(program, INSTR_JUMP, 0));
+    TRY(gen_instr1(program, INSTR_JUMP, 0));
 
-    _update_jump_offs(program, offs1, program->cur_offs);
+    update_jump_offs(program, offs1, program->cur_offs);
 
-    TRY(_gen_instr1(program, INSTR_LOAD_FALSE, (*reg)->reg));
+    TRY(gen_instr1(program, INSTR_LOAD_FALSE, (*reg)->reg));
 
-    _update_jump_offs(program, offs2, program->cur_offs);
+    update_jump_offs(program, offs2, program->cur_offs);
 
     if (src != *reg)
-        _free_reg(program, src);
+        free_reg(program, src);
 
 cleanup:
     return error;
 }
 
-static int _log_and_or(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       KOS_REG           **reg)
+static int log_and_or(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node,
+                      KOS_REG           **reg)
 {
     int                     error;
     int                     left_offs;
@@ -3336,7 +3336,7 @@ static int _log_and_or(KOS_COMP_UNIT      *program,
     assert(node);
     assert(node->next);
 
-    TRY(_visit_node(program, node, &left));
+    TRY(visit_node(program, node, &left));
     assert(left);
 
     node = node->next;
@@ -3345,10 +3345,10 @@ static int _log_and_or(KOS_COMP_UNIT      *program,
 
     left_offs = program->cur_offs;
 
-    TRY(_gen_instr2(program,
-                    (op == OT_LOGAND) ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND,
-                    0,
-                    left->reg));
+    TRY(gen_instr2(program,
+                   (op == OT_LOGAND) ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND,
+                   0,
+                   left->reg));
 
     if (left->tmp) {
         right = left;
@@ -3357,44 +3357,44 @@ static int _log_and_or(KOS_COMP_UNIT      *program,
             *reg = left;
     }
 
-    TRY(_visit_node(program, node, &right));
+    TRY(visit_node(program, node, &right));
     assert(right);
 
     if ( ! *reg) {
         if (right->tmp)
             *reg = right;
         else
-            TRY(_gen_reg(program, reg));
+            TRY(gen_reg(program, reg));
     }
 
     if (*reg != right && left != right) {
-        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, right->reg));
-        _free_reg(program, right);
+        TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, right->reg));
+        free_reg(program, right);
     }
 
     if (*reg != left && left != right) {
         right_offs = program->cur_offs;
 
-        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+        TRY(gen_instr1(program, INSTR_JUMP, 0));
     }
 
-    _update_jump_offs(program, left_offs, program->cur_offs);
+    update_jump_offs(program, left_offs, program->cur_offs);
 
     if (*reg != left) {
-        TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, left->reg));
-        _free_reg(program, left);
+        TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, left->reg));
+        free_reg(program, left);
     }
 
     if (right_offs)
-        _update_jump_offs(program, right_offs, program->cur_offs);
+        update_jump_offs(program, right_offs, program->cur_offs);
 
 cleanup:
     return error;
 }
 
-static int _log_tri(KOS_COMP_UNIT      *program,
-                    const KOS_AST_NODE *node,
-                    KOS_REG           **reg)
+static int log_tri(KOS_COMP_UNIT      *program,
+                   const KOS_AST_NODE *node,
+                   KOS_REG           **reg)
 {
     int      error;
     int      offs1;
@@ -3407,44 +3407,44 @@ static int _log_tri(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    TRY(_visit_node(program, node, &cond_reg));
+    TRY(visit_node(program, node, &cond_reg));
     assert(cond_reg);
 
     offs1 = program->cur_offs;
-    TRY(_gen_instr2(program, INSTR_JUMP_NOT_COND, 0, cond_reg->reg));
+    TRY(gen_instr2(program, INSTR_JUMP_NOT_COND, 0, cond_reg->reg));
 
-    _free_reg(program, cond_reg);
+    free_reg(program, cond_reg);
 
     node = node->next;
     assert(node);
 
     offs2 = program->cur_offs;
-    TRY(_visit_node(program, node, &src));
+    TRY(visit_node(program, node, &src));
     assert(src);
 
     if (program->cur_offs != offs2 || src != *reg) {
 
         if (src != *reg) {
             if ( ! *reg)
-                TRY(_gen_dest_reg(program, reg, src));
+                TRY(gen_dest_reg(program, reg, src));
 
-            TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
+            TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
 
             if (src != *reg) {
-                _free_reg(program, src);
+                free_reg(program, src);
                 src = *reg;
             }
         }
 
         offs3 = program->cur_offs;
-        TRY(_gen_instr1(program, INSTR_JUMP, 0));
+        TRY(gen_instr1(program, INSTR_JUMP, 0));
 
-        _update_jump_offs(program, offs1, program->cur_offs);
+        update_jump_offs(program, offs1, program->cur_offs);
     }
     else {
-        _remove_last_instr(program, offs1);
+        remove_last_instr(program, offs1);
         offs3 = offs1;
-        TRY(_gen_instr2(program, INSTR_JUMP_COND, 0, cond_reg->reg));
+        TRY(gen_instr2(program, INSTR_JUMP_COND, 0, cond_reg->reg));
     }
 
     node = node->next;
@@ -3452,54 +3452,54 @@ static int _log_tri(KOS_COMP_UNIT      *program,
     assert(!node->next);
 
     offs4 = program->cur_offs;
-    TRY(_visit_node(program, node, &src));
+    TRY(visit_node(program, node, &src));
 
     if (program->cur_offs != offs4 || src != *reg) {
 
         if (src != *reg) {
-            TRY(_gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
-            _free_reg(program, src);
+            TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
+            free_reg(program, src);
         }
 
-        _update_jump_offs(program, offs3, program->cur_offs);
+        update_jump_offs(program, offs3, program->cur_offs);
     }
     else {
-        _remove_last_instr(program, offs3);
+        remove_last_instr(program, offs3);
         if (offs3 > offs1)
-            _update_jump_offs(program, offs1, program->cur_offs);
+            update_jump_offs(program, offs1, program->cur_offs);
     }
 
 cleanup:
     return error;
 }
 
-static int _has_prop(KOS_COMP_UNIT      *program,
-                     const KOS_AST_NODE *node,
-                     KOS_REG           **reg)
+static int has_prop(KOS_COMP_UNIT      *program,
+                    const KOS_AST_NODE *node,
+                    KOS_REG           **reg)
 {
     int      error;
     int      str_idx;
     KOS_REG *src = *reg;
 
-    TRY(_visit_node(program, node->children, &src));
+    TRY(visit_node(program, node->children, &src));
     assert(src);
 
-    TRY(_gen_dest_reg(program, reg, src));
+    TRY(gen_dest_reg(program, reg, src));
 
-    TRY(_gen_str(program, &node->children->next->token, &str_idx));
+    TRY(gen_str(program, &node->children->next->token, &str_idx));
 
-    TRY(_gen_instr3(program, INSTR_HAS_PROP, (*reg)->reg, src->reg, str_idx));
+    TRY(gen_instr3(program, INSTR_HAS_PROP, (*reg)->reg, src->reg, str_idx));
 
     if (src != *reg)
-        _free_reg(program, src);
+        free_reg(program, src);
 
 cleanup:
     return error;
 }
 
-static int _delete(KOS_COMP_UNIT      *program,
-                   const KOS_AST_NODE *node,
-                   KOS_REG           **reg)
+static int delete_op(KOS_COMP_UNIT      *program,
+                     const KOS_AST_NODE *node,
+                     KOS_REG           **reg)
 {
     int      error;
     KOS_REG *obj = 0;
@@ -3517,7 +3517,7 @@ static int _delete(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    TRY(_visit_node(program, node, &obj));
+    TRY(visit_node(program, node, &obj));
     assert(obj);
 
     node = node->next;
@@ -3527,9 +3527,9 @@ static int _delete(KOS_COMP_UNIT      *program,
     if (node->type == NT_STRING_LITERAL) {
 
         int str_idx;
-        TRY(_gen_str(program, &node->token, &str_idx));
+        TRY(gen_str(program, &node->token, &str_idx));
 
-        TRY(_gen_instr2(program, INSTR_DEL_PROP, obj->reg, str_idx));
+        TRY(gen_instr2(program, INSTR_DEL_PROP, obj->reg, str_idx));
     }
     else if (node->type == NT_NUMERIC_LITERAL) {
 
@@ -3541,26 +3541,26 @@ static int _delete(KOS_COMP_UNIT      *program,
 
         KOS_REG *prop = 0;
 
-        TRY(_visit_node(program, node, &prop));
+        TRY(visit_node(program, node, &prop));
         assert(prop);
 
-        TRY(_gen_instr2(program, INSTR_DEL, obj->reg, prop->reg));
+        TRY(gen_instr2(program, INSTR_DEL, obj->reg, prop->reg));
 
-        _free_reg(program, prop);
+        free_reg(program, prop);
     }
 
-    _free_reg(program, obj);
+    free_reg(program, obj);
 
-    TRY(_gen_reg(program, reg));
-    TRY(_gen_instr1(program, INSTR_LOAD_VOID, (*reg)->reg));
+    TRY(gen_reg(program, reg));
+    TRY(gen_instr1(program, INSTR_LOAD_VOID, (*reg)->reg));
 
 cleanup:
     return error;
 }
 
-static int _operator(KOS_COMP_UNIT      *program,
-                     const KOS_AST_NODE *node,
-                     KOS_REG           **reg)
+static int process_operator(KOS_COMP_UNIT      *program,
+                            const KOS_AST_NODE *node,
+                            KOS_REG           **reg)
 {
     int                     error    = KOS_SUCCESS;
     const KOS_OPERATOR_TYPE op       = node->token.op;
@@ -3580,15 +3580,15 @@ static int _operator(KOS_COMP_UNIT      *program,
             /* fall through */
         default:
             assert(op == OT_LOGNOT);
-            return _log_not(program, node, reg);
+            return log_not(program, node, reg);
 
         case OT_LOGAND:
             /* fall through */
         case OT_LOGOR:
-            return _log_and_or(program, node, reg);
+            return log_and_or(program, node, reg);
 
         case OT_LOGTRI:
-            return _log_tri(program, node, reg);
+            return log_tri(program, node, reg);
 
         case OT_NONE:
             switch (kw) {
@@ -3599,13 +3599,13 @@ static int _operator(KOS_COMP_UNIT      *program,
                     break;
 
                 case KW_DELETE:
-                    return _delete(program, node, reg);
+                    return delete_op(program, node, reg);
 
                 case KW_IN:
                     {
                         const KOS_AST_NODE *second = node->children->next;
                         if (second && second->type == NT_STRING_LITERAL)
-                            return _has_prop(program, node, reg);
+                            return has_prop(program, node, reg);
                     }
                     opcode   = INSTR_HAS;
                     operands = 2;
@@ -3623,14 +3623,14 @@ static int _operator(KOS_COMP_UNIT      *program,
 
         case OT_ADD:
             if (!node->children->next)
-                return _pos_neg(program, node, reg);
+                return pos_neg(program, node, reg);
             opcode   = INSTR_ADD;
             operands = 2;
             break;
 
         case OT_SUB:
             if (!node->children->next)
-                return _pos_neg(program, node, reg);
+                return pos_neg(program, node, reg);
             opcode   = INSTR_SUB;
             operands = 2;
             break;
@@ -3671,19 +3671,19 @@ static int _operator(KOS_COMP_UNIT      *program,
 
                         if (a_type == NT_STRING_LITERAL ||
                             (a_type != NT_NUMERIC_LITERAL && b_type == NT_STRING_LITERAL)) {
-                            TRY(_check_const_literal(program, node,       CHECK_STRING));
-                            TRY(_check_const_literal(program, node->next, CHECK_STRING));
+                            TRY(check_const_literal(program, node,       CHECK_STRING));
+                            TRY(check_const_literal(program, node->next, CHECK_STRING));
                         }
                         else {
-                            TRY(_check_const_literal(program, node,       CHECK_NUMERIC));
-                            TRY(_check_const_literal(program, node->next, CHECK_NUMERIC));
+                            TRY(check_const_literal(program, node,       CHECK_NUMERIC));
+                            TRY(check_const_literal(program, node->next, CHECK_NUMERIC));
                         }
                     }
                     else
-                        TRY(_check_const_literal(program, node, CHECK_NUMERIC_OR_STRING));
+                        TRY(check_const_literal(program, node, CHECK_NUMERIC_OR_STRING));
                 }
                 else
-                    TRY(_check_const_literal(program, node->next, CHECK_NUMERIC_OR_STRING));
+                    TRY(check_const_literal(program, node->next, CHECK_NUMERIC_OR_STRING));
 
                 break;
             }
@@ -3709,17 +3709,17 @@ static int _operator(KOS_COMP_UNIT      *program,
         case OT_SHR:
             /* fall through */
         case OT_SHRU:
-            TRY(_check_const_literal(program, node, CHECK_NUMERIC));
+            TRY(check_const_literal(program, node, CHECK_NUMERIC));
 
             if (node->next)
-                TRY(_check_const_literal(program, node->next, CHECK_NUMERIC));
+                TRY(check_const_literal(program, node->next, CHECK_NUMERIC));
             break;
 
         default:
             break;
     }
 
-    TRY(_visit_node(program, node, &reg1));
+    TRY(visit_node(program, node, &reg1));
     assert(reg1);
 
     node = node->next;
@@ -3727,7 +3727,7 @@ static int _operator(KOS_COMP_UNIT      *program,
 
         assert(node);
 
-        TRY(_visit_node(program, node, &reg2));
+        TRY(visit_node(program, node, &reg2));
         assert(reg2);
 
         assert(!node->next);
@@ -3743,7 +3743,7 @@ static int _operator(KOS_COMP_UNIT      *program,
         else if (operands == 2 && reg2->tmp)
             *reg = reg2;
         else
-            TRY(_gen_reg(program, reg));
+            TRY(gen_reg(program, reg));
     }
 
     if (operands == 2) {
@@ -3752,23 +3752,23 @@ static int _operator(KOS_COMP_UNIT      *program,
             reg1         = reg2;
             reg2         = tmp;
         }
-        error = _gen_instr3(program, opcode, (*reg)->reg, reg1->reg, reg2->reg);
+        error = gen_instr3(program, opcode, (*reg)->reg, reg1->reg, reg2->reg);
     }
     else {
         assert( ! swap);
-        error = _gen_instr2(program, opcode, (*reg)->reg, reg1->reg);
+        error = gen_instr2(program, opcode, (*reg)->reg, reg1->reg);
     }
 
     if (*reg != reg1)
-        _free_reg(program, reg1);
+        free_reg(program, reg1);
     if (reg2 && *reg != reg2)
-        _free_reg(program, reg2);
+        free_reg(program, reg2);
 
 cleanup:
     return error;
 }
 
-static int _assign_instr(KOS_OPERATOR_TYPE op)
+static int assign_instr(KOS_OPERATOR_TYPE op)
 {
     switch (op) {
         case OT_SETADD: return INSTR_ADD;
@@ -3788,10 +3788,10 @@ static int _assign_instr(KOS_OPERATOR_TYPE op)
     }
 }
 
-static int _assign_member(KOS_COMP_UNIT      *program,
-                          KOS_OPERATOR_TYPE   assg_op,
-                          const KOS_AST_NODE *node,
-                          KOS_REG            *src)
+static int assign_member(KOS_COMP_UNIT      *program,
+                         KOS_OPERATOR_TYPE   assg_op,
+                         const KOS_AST_NODE *node,
+                         KOS_REG            *src)
 {
     int      error;
     int      str_idx = 0;
@@ -3804,7 +3804,7 @@ static int _assign_member(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    TRY(_visit_node(program, node, &obj));
+    TRY(visit_node(program, node, &obj));
     assert(obj);
 
     node = node->next;
@@ -3812,22 +3812,22 @@ static int _assign_member(KOS_COMP_UNIT      *program,
     assert(!node->next);
 
     if (node->type == NT_STRING_LITERAL) {
-        TRY(_gen_str(program, &node->token, &str_idx));
+        TRY(gen_str(program, &node->token, &str_idx));
 
         if (assg_op != OT_SET) {
 
-            TRY(_gen_reg(program, &tmp_reg));
+            TRY(gen_reg(program, &tmp_reg));
 
-            TRY(_gen_instr3(program, INSTR_GET_PROP, tmp_reg->reg, obj->reg, str_idx));
+            TRY(gen_instr3(program, INSTR_GET_PROP, tmp_reg->reg, obj->reg, str_idx));
 
-            TRY(_gen_instr3(program, _assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+            TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
             src = tmp_reg;
         }
 
-        TRY(_gen_instr3(program, INSTR_SET_PROP, obj->reg, str_idx, src->reg));
+        TRY(gen_instr3(program, INSTR_SET_PROP, obj->reg, str_idx, src->reg));
     }
-    else if (_maybe_int(node, &idx)) {
+    else if (maybe_int(node, &idx)) {
 
         assert(node->type == NT_NUMERIC_LITERAL);
 
@@ -3839,53 +3839,53 @@ static int _assign_member(KOS_COMP_UNIT      *program,
 
         if (assg_op != OT_SET) {
 
-            TRY(_gen_reg(program, &tmp_reg));
+            TRY(gen_reg(program, &tmp_reg));
 
-            TRY(_gen_instr3(program, INSTR_GET_ELEM, tmp_reg->reg, obj->reg, (int)idx));
+            TRY(gen_instr3(program, INSTR_GET_ELEM, tmp_reg->reg, obj->reg, (int)idx));
 
-            TRY(_gen_instr3(program, _assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+            TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
             src = tmp_reg;
         }
 
-        TRY(_gen_instr3(program, INSTR_SET_ELEM, obj->reg, (int)idx, src->reg));
+        TRY(gen_instr3(program, INSTR_SET_ELEM, obj->reg, (int)idx, src->reg));
     }
     else {
 
         KOS_REG *prop    = 0;
 
-        TRY(_visit_node(program, node, &prop));
+        TRY(visit_node(program, node, &prop));
         assert(prop);
 
         if (assg_op != OT_SET) {
 
-            TRY(_gen_reg(program, &tmp_reg));
+            TRY(gen_reg(program, &tmp_reg));
 
-            TRY(_gen_instr3(program, INSTR_GET, tmp_reg->reg, obj->reg, prop->reg));
+            TRY(gen_instr3(program, INSTR_GET, tmp_reg->reg, obj->reg, prop->reg));
 
-            TRY(_gen_instr3(program, _assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+            TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
             src = tmp_reg;
         }
 
-        TRY(_gen_instr3(program, INSTR_SET, obj->reg, prop->reg, src->reg));
+        TRY(gen_instr3(program, INSTR_SET, obj->reg, prop->reg, src->reg));
 
-        _free_reg(program, prop);
+        free_reg(program, prop);
     }
 
     if (tmp_reg)
-        _free_reg(program, tmp_reg);
+        free_reg(program, tmp_reg);
 
-    _free_reg(program, obj);
+    free_reg(program, obj);
 
 cleanup:
     return error;
 }
 
-static int _assign_non_local(KOS_COMP_UNIT      *program,
-                             KOS_OPERATOR_TYPE   assg_op,
-                             const KOS_AST_NODE *node,
-                             KOS_REG            *src)
+static int assign_non_local(KOS_COMP_UNIT      *program,
+                            KOS_OPERATOR_TYPE   assg_op,
+                            const KOS_AST_NODE *node,
+                            KOS_REG            *src)
 {
     int      error;
     KOS_VAR *var     = 0;
@@ -3894,7 +3894,7 @@ static int _assign_non_local(KOS_COMP_UNIT      *program,
 
     assert(node->type == NT_IDENTIFIER);
 
-    TRY(_lookup_var(program, node, &var, &container_reg));
+    TRY(lookup_var(program, node, &var, &container_reg));
 
     assert(var->type != VAR_LOCAL);
     assert(var->type != VAR_ARGUMENT_IN_REG);
@@ -3902,33 +3902,33 @@ static int _assign_non_local(KOS_COMP_UNIT      *program,
 
     if (assg_op != OT_SET) {
 
-        TRY(_gen_reg(program, &tmp_reg));
+        TRY(gen_reg(program, &tmp_reg));
 
         if (var->type == VAR_GLOBAL)
-            TRY(_gen_instr2(program, INSTR_GET_GLOBAL, tmp_reg->reg, var->array_idx));
+            TRY(gen_instr2(program, INSTR_GET_GLOBAL, tmp_reg->reg, var->array_idx));
         else
-            TRY(_gen_instr3(program, INSTR_GET_ELEM, tmp_reg->reg, container_reg->reg, var->array_idx));
+            TRY(gen_instr3(program, INSTR_GET_ELEM, tmp_reg->reg, container_reg->reg, var->array_idx));
 
-        TRY(_gen_instr3(program, _assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+        TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
         src = tmp_reg;
     }
 
     if (var->type == VAR_GLOBAL)
-        TRY(_gen_instr2(program, INSTR_SET_GLOBAL, var->array_idx, src->reg));
+        TRY(gen_instr2(program, INSTR_SET_GLOBAL, var->array_idx, src->reg));
     else
-        TRY(_gen_instr3(program, INSTR_SET_ELEM, container_reg->reg, var->array_idx, src->reg));
+        TRY(gen_instr3(program, INSTR_SET_ELEM, container_reg->reg, var->array_idx, src->reg));
 
     if (tmp_reg)
-        _free_reg(program, tmp_reg);
+        free_reg(program, tmp_reg);
 
 cleanup:
     return error;
 }
 
-static int _assign_slice(KOS_COMP_UNIT      *program,
-                         const KOS_AST_NODE *node,
-                         KOS_REG            *src)
+static int assign_slice(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *node,
+                        KOS_REG            *src)
 {
     int                 error;
     int                 str_idx;
@@ -3940,12 +3940,12 @@ static int _assign_slice(KOS_COMP_UNIT      *program,
     static const char   str_insert[] = "insert";
     KOS_TOKEN           token;
 
-    _free_reg(program, src);
+    free_reg(program, src);
 
-    TRY(_gen_reg_range(program, &argn[0], 3));
+    TRY(gen_reg_range(program, &argn[0], 3));
 
     if (src_reg != argn[2]->reg)
-        TRY(_gen_instr2(program, INSTR_MOVE, argn[2]->reg, src_reg));
+        TRY(gen_instr2(program, INSTR_MOVE, argn[2]->reg, src_reg));
 
     node = node->children;
     assert(node);
@@ -3955,12 +3955,12 @@ static int _assign_slice(KOS_COMP_UNIT      *program,
     assert(node);
 
     obj_reg = argn[0];
-    TRY(_visit_node(program, node, &obj_reg));
+    TRY(visit_node(program, node, &obj_reg));
     assert(obj_reg);
 
     if (obj_reg != argn[0]) {
-        TRY(_gen_instr2(program, INSTR_MOVE, argn[0]->reg, obj_reg->reg));
-        _free_reg(program, obj_reg);
+        TRY(gen_instr2(program, INSTR_MOVE, argn[0]->reg, obj_reg->reg));
+        free_reg(program, obj_reg);
     }
 
     node = node->next;
@@ -3968,16 +3968,16 @@ static int _assign_slice(KOS_COMP_UNIT      *program,
     assert( ! node->next);
 
     obj_reg = argn[1];
-    TRY(_visit_node(program, node, &obj_reg));
+    TRY(visit_node(program, node, &obj_reg));
     assert(obj_reg);
 
     if (obj_reg != argn[1]) {
-        TRY(_gen_instr2(program, INSTR_MOVE, argn[1]->reg, obj_reg->reg));
-        _free_reg(program, obj_reg);
+        TRY(gen_instr2(program, INSTR_MOVE, argn[1]->reg, obj_reg->reg));
+        free_reg(program, obj_reg);
     }
 
     obj_reg = 0;
-    TRY(_visit_node(program, obj_node, &obj_reg));
+    TRY(visit_node(program, obj_node, &obj_reg));
     assert(obj_reg);
 
     memset(&token, 0, sizeof(token));
@@ -3985,26 +3985,26 @@ static int _assign_slice(KOS_COMP_UNIT      *program,
     token.length = sizeof(str_insert) - 1;
     token.type   = TT_IDENTIFIER;
 
-    TRY(_gen_str(program, &token, &str_idx));
+    TRY(gen_str(program, &token, &str_idx));
 
-    TRY(_gen_reg(program, &func_reg));
+    TRY(gen_reg(program, &func_reg));
 
-    TRY(_gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
+    TRY(gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
 
-    TRY(_gen_instr5(program, INSTR_CALL_N, func_reg->reg, func_reg->reg, obj_reg->reg, argn[0]->reg, 3));
+    TRY(gen_instr5(program, INSTR_CALL_N, func_reg->reg, func_reg->reg, obj_reg->reg, argn[0]->reg, 3));
 
-    _free_reg(program, argn[2]);
-    _free_reg(program, argn[1]);
-    _free_reg(program, argn[0]);
-    _free_reg(program, func_reg);
-    _free_reg(program, obj_reg);
+    free_reg(program, argn[2]);
+    free_reg(program, argn[1]);
+    free_reg(program, argn[0]);
+    free_reg(program, func_reg);
+    free_reg(program, obj_reg);
 
 cleanup:
     return error;
 }
 
-static int _assignment(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *assg_node)
+static int assignment(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *assg_node)
 {
     int                 error;
     int                 is_lhs;
@@ -4046,26 +4046,26 @@ static int _assignment(KOS_COMP_UNIT      *program,
 
         if (assg_node->token.op != OT_SET)
             /* TODO check lhs variable type */
-            TRY(_check_const_literal(program, rhs_node,
+            TRY(check_const_literal(program, rhs_node,
                     assg_node->token.op == OT_SETADD ? CHECK_NUMERIC_OR_STRING : CHECK_NUMERIC));
 
         if (node->type == NT_IDENTIFIER)
-            TRY(_lookup_local_var_even_inactive(program, node, is_lhs, &reg));
+            TRY(lookup_local_var_even_inactive(program, node, is_lhs, &reg));
 
         if (reg && assg_node->token.op == OT_SET)
             rhs = reg;
     }
 
-    TRY(_visit_node(program, rhs_node, &rhs));
+    TRY(visit_node(program, rhs_node, &rhs));
     assert(rhs);
 
     if (node_type == NT_MULTI_ASSIGNMENT)
-        TRY(_invoke_get_iterator(program, &rhs));
+        TRY(invoke_get_iterator(program, &rhs));
 
     for ( ; node; node = node->next) {
 
         if ( ! reg && node->type == NT_IDENTIFIER)
-            TRY(_lookup_local_var_even_inactive(program, node, is_lhs, &reg));
+            TRY(lookup_local_var_even_inactive(program, node, is_lhs, &reg));
 
         if (reg) {
 
@@ -4075,13 +4075,13 @@ static int _assignment(KOS_COMP_UNIT      *program,
 
                     assert(reg != rhs);
 
-                    TRY(_gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, 255, 0));
+                    TRY(gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, 255, 0));
                 }
                 else {
 
                     if (rhs != reg) {
-                        TRY(_gen_instr2(program, INSTR_MOVE, reg->reg, rhs->reg));
-                        _free_reg(program, rhs);
+                        TRY(gen_instr2(program, INSTR_MOVE, reg->reg, rhs->reg));
+                        free_reg(program, rhs);
                     }
                 }
             }
@@ -4089,9 +4089,9 @@ static int _assignment(KOS_COMP_UNIT      *program,
 
                 assert(node_type == NT_ASSIGNMENT);
 
-                TRY(_gen_instr3(program, _assign_instr(assg_node->token.op), reg->reg, reg->reg, rhs->reg));
+                TRY(gen_instr3(program, assign_instr(assg_node->token.op), reg->reg, reg->reg, rhs->reg));
 
-                _free_reg(program, rhs);
+                free_reg(program, rhs);
             }
 
             if ( ! is_lhs)
@@ -4104,44 +4104,44 @@ static int _assignment(KOS_COMP_UNIT      *program,
 
             if (node_type == NT_MULTI_ASSIGNMENT) {
 
-                TRY(_gen_reg(program, &reg));
+                TRY(gen_reg(program, &reg));
 
-                TRY(_gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, 255, 0));
+                TRY(gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, 255, 0));
             }
             else
                 reg = rhs;
 
             if (node->type == NT_REFINEMENT)
-                TRY(_assign_member(program, assg_node->token.op, node, reg));
+                TRY(assign_member(program, assg_node->token.op, node, reg));
 
             else if (node->type == NT_IDENTIFIER)
-                TRY(_assign_non_local(program, assg_node->token.op, node, reg));
+                TRY(assign_non_local(program, assg_node->token.op, node, reg));
 
             else if (node->type != NT_VOID_LITERAL) {
 
                 assert(node->type == NT_SLICE);
                 assert(assg_node->token.op == OT_SET);
-                TRY(_assign_slice(program, node, reg));
-                reg = 0; /* _assign_slice frees the register */
+                TRY(assign_slice(program, node, reg));
+                reg = 0; /* assign_slice frees the register */
             }
 
             if (reg)
-                _free_reg(program, reg);
+                free_reg(program, reg);
         }
 
         reg = 0;
     }
 
     if (node_type == NT_MULTI_ASSIGNMENT)
-        _free_reg(program, rhs);
+        free_reg(program, rhs);
 
 cleanup:
     return error;
 }
 
-static int _expression_list(KOS_COMP_UNIT      *program,
-                            const KOS_AST_NODE *node,
-                            KOS_REG           **reg)
+static int expression_list(KOS_COMP_UNIT      *program,
+                           const KOS_AST_NODE *node,
+                           KOS_REG           **reg)
 {
     int error = KOS_SUCCESS;
 
@@ -4151,28 +4151,28 @@ static int _expression_list(KOS_COMP_UNIT      *program,
 
         KOS_REG *tmp_reg = 0;
 
-        error = _add_addr2line(program, &node->token, KOS_FALSE_VALUE);
+        error = add_addr2line(program, &node->token, KOS_FALSE_VALUE);
         if (error)
             break;
 
-        error = _visit_node(program, node, &tmp_reg);
+        error = visit_node(program, node, &tmp_reg);
         if (error)
             break;
         if (tmp_reg)
-            _free_reg(program, tmp_reg);
+            free_reg(program, tmp_reg);
     }
 
     return error;
 }
 
-static int _identifier(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       KOS_REG           **reg)
+static int identifier(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node,
+                      KOS_REG           **reg)
 {
     int      error   = KOS_SUCCESS;
     KOS_REG *src_reg = 0;
 
-    TRY(_lookup_local_var(program, node, &src_reg));
+    TRY(lookup_local_var(program, node, &src_reg));
 
     if (src_reg)
         *reg = src_reg;
@@ -4182,9 +4182,9 @@ static int _identifier(KOS_COMP_UNIT      *program,
         KOS_VAR *var           = 0;
         KOS_REG *container_reg = 0;
 
-        TRY(_gen_reg(program, reg));
+        TRY(gen_reg(program, reg));
 
-        TRY(_lookup_var(program, node, &var, &container_reg));
+        TRY(lookup_var(program, node, &var, &container_reg));
 
         assert(var->type != VAR_LOCAL);
         assert(var->type != VAR_ARGUMENT_IN_REG);
@@ -4192,7 +4192,7 @@ static int _identifier(KOS_COMP_UNIT      *program,
         switch (var->type) {
 
             case VAR_GLOBAL:
-                TRY(_gen_instr2(program, INSTR_GET_GLOBAL, (*reg)->reg, var->array_idx));
+                TRY(gen_instr2(program, INSTR_GET_GLOBAL, (*reg)->reg, var->array_idx));
                 break;
 
             case VAR_MODULE:
@@ -4203,7 +4203,7 @@ static int _identifier(KOS_COMP_UNIT      *program,
 
             default:
                 assert(container_reg);
-                TRY(_gen_instr3(program, INSTR_GET_ELEM, (*reg)->reg, container_reg->reg, var->array_idx));
+                TRY(gen_instr3(program, INSTR_GET_ELEM, (*reg)->reg, container_reg->reg, var->array_idx));
                 break;
         }
     }
@@ -4212,14 +4212,14 @@ cleanup:
     return error;
 }
 
-static int _numeric_literal(KOS_COMP_UNIT      *program,
-                            const KOS_AST_NODE *node,
-                            KOS_REG           **reg)
+static int numeric_literal(KOS_COMP_UNIT      *program,
+                           const KOS_AST_NODE *node,
+                           KOS_REG           **reg)
 {
     KOS_NUMERIC numeric;
     int         error;
 
-    TRY(_gen_reg(program, reg));
+    TRY(gen_reg(program, reg));
 
     if (node->token.type == TT_NUMERIC_BINARY) {
 
@@ -4241,13 +4241,13 @@ static int _numeric_literal(KOS_COMP_UNIT      *program,
     }
     else if (numeric.type == KOS_INTEGER_VALUE &&
              (uint64_t)((numeric.u.i >> 7) + 1) <= 1U)
-        TRY(_gen_instr2(program, INSTR_LOAD_INT8, (*reg)->reg, (int32_t)numeric.u.i));
+        TRY(gen_instr2(program, INSTR_LOAD_INT8, (*reg)->reg, (int32_t)numeric.u.i));
     else {
 
         KOS_COMP_CONST *constant =
             (KOS_COMP_CONST *)kos_red_black_find(program->constants,
                                                  &numeric,
-                                                 _numbers_compare_item);
+                                                 numbers_compare_item);
 
         if ( ! constant) {
             constant = (KOS_COMP_CONST *)
@@ -4267,10 +4267,10 @@ static int _numeric_literal(KOS_COMP_UNIT      *program,
                 ((KOS_COMP_FLOAT *)constant)->value = numeric.u.d;
             }
 
-            _add_constant(program, constant);
+            add_constant(program, constant);
         }
 
-        TRY(_gen_instr2(program,
+        TRY(gen_instr2(program,
                         constant->index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
                         (*reg)->reg,
                         (int32_t)constant->index));
@@ -4280,59 +4280,59 @@ cleanup:
     return error;
 }
 
-static int _string_literal(KOS_COMP_UNIT      *program,
-                           const KOS_AST_NODE *node,
-                           KOS_REG           **reg)
+static int string_literal(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          KOS_REG           **reg)
 {
     int error;
     int str_idx;
 
-    error = _gen_str(program, &node->token, &str_idx);
+    error = gen_str(program, &node->token, &str_idx);
 
     if (!error) {
-        error = _gen_reg(program, reg);
+        error = gen_reg(program, reg);
 
         if (!error)
-            error = _gen_instr2(program,
-                                str_idx < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
-                                (*reg)->reg,
-                                str_idx);
+            error = gen_instr2(program,
+                               str_idx < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
+                               (*reg)->reg,
+                               str_idx);
     }
 
     return error;
 }
 
-static int _this_literal(KOS_COMP_UNIT      *program,
-                         const KOS_AST_NODE *node,
-                         KOS_REG           **reg)
+static int this_literal(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *node,
+                        KOS_REG           **reg)
 {
     assert(program->cur_frame->this_reg);
     *reg = program->cur_frame->this_reg;
     return KOS_SUCCESS;
 }
 
-static int _bool_literal(KOS_COMP_UNIT      *program,
-                         const KOS_AST_NODE *node,
-                         KOS_REG           **reg)
+static int bool_literal(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *node,
+                        KOS_REG           **reg)
 {
-    int error = _gen_reg(program, reg);
+    int error = gen_reg(program, reg);
 
     const int opcode = node->token.keyword == KW_TRUE ? INSTR_LOAD_TRUE : INSTR_LOAD_FALSE;
 
     if (!error)
-        error = _gen_instr1(program, opcode, (*reg)->reg);
+        error = gen_instr1(program, opcode, (*reg)->reg);
 
     return error;
 }
 
-static int _void_literal(KOS_COMP_UNIT      *program,
-                         const KOS_AST_NODE *node,
-                         KOS_REG           **reg)
+static int void_literal(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *node,
+                        KOS_REG           **reg)
 {
-    int error = _gen_reg(program, reg);
+    int error = gen_reg(program, reg);
 
     if (!error)
-        error = _gen_instr1(program, INSTR_LOAD_VOID, (*reg)->reg);
+        error = gen_instr1(program, INSTR_LOAD_VOID, (*reg)->reg);
 
     return error;
 }
@@ -4342,8 +4342,8 @@ typedef struct KOS_GEN_CLOSURE_ARGS_S {
     int           *num_binds;
 } KOS_GEN_CLOSURE_ARGS;
 
-static int _gen_closure_regs(KOS_RED_BLACK_NODE *node,
-                             void               *cookie)
+static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
+                            void               *cookie)
 {
     int error = KOS_SUCCESS;
 
@@ -4352,7 +4352,7 @@ static int _gen_closure_regs(KOS_RED_BLACK_NODE *node,
 
     if (ref->exported_locals) {
         ++*(args->num_binds);
-        error = _gen_reg(args->program, &ref->vars_reg);
+        error = gen_reg(args->program, &ref->vars_reg);
         if ( ! error) {
             ref->vars_reg->tmp = 0;
             ref->vars_reg_idx  = ref->vars_reg->reg;
@@ -4361,7 +4361,7 @@ static int _gen_closure_regs(KOS_RED_BLACK_NODE *node,
 
     if ( ! error && ref->exported_args) {
         ++*(args->num_binds);
-        error = _gen_reg(args->program, &ref->args_reg);
+        error = gen_reg(args->program, &ref->args_reg);
         if ( ! error) {
             ref->args_reg->tmp = 0;
             ref->args_reg_idx  = ref->args_reg->reg;
@@ -4378,8 +4378,8 @@ typedef struct KOS_BIND_ARGS_S {
     int            delta;
 } KOS_BIND_ARGS;
 
-static int _gen_binds(KOS_RED_BLACK_NODE *node,
-                      void               *cookie)
+static int gen_binds(KOS_RED_BLACK_NODE *node,
+                     void               *cookie)
 {
     int error = KOS_SUCCESS;
 
@@ -4395,20 +4395,20 @@ static int _gen_binds(KOS_RED_BLACK_NODE *node,
         assert(ref->closure->has_frame);
 
         if (args->parent_frame == (KOS_FRAME *)(ref->closure))
-            TRY(_gen_instr2(program,
-                            INSTR_BIND_SELF,
-                            args->func_reg->reg,
-                            ref->vars_reg_idx - delta));
+            TRY(gen_instr2(program,
+                           INSTR_BIND_SELF,
+                           args->func_reg->reg,
+                           ref->vars_reg_idx - delta));
         else {
 
             KOS_SCOPE_REF *other_ref =
                     kos_find_scope_ref(args->parent_frame, ref->closure);
 
-            TRY(_gen_instr3(program,
-                            INSTR_BIND,
-                            args->func_reg->reg,
-                            ref->vars_reg_idx - delta,
-                            other_ref->vars_reg_idx));
+            TRY(gen_instr3(program,
+                           INSTR_BIND,
+                           args->func_reg->reg,
+                           ref->vars_reg_idx - delta,
+                           other_ref->vars_reg_idx));
         }
     }
 
@@ -4432,35 +4432,35 @@ static int _gen_binds(KOS_RED_BLACK_NODE *node,
             src_reg = other_ref->args_reg_idx;
         }
 
-        TRY(_gen_instr3(program,
-                        INSTR_BIND,
-                        args->func_reg->reg,
-                        ref->args_reg_idx - delta,
-                        src_reg));
+        TRY(gen_instr3(program,
+                       INSTR_BIND,
+                       args->func_reg->reg,
+                       ref->args_reg_idx - delta,
+                       src_reg));
     }
 
 cleanup:
     return error;
 }
 
-static int _free_arg_regs(KOS_RED_BLACK_NODE *node,
-                          void               *cookie)
+static int free_arg_regs(KOS_RED_BLACK_NODE *node,
+                         void               *cookie)
 {
     KOS_VAR       *var     = (KOS_VAR *)node;
     KOS_COMP_UNIT *program = (KOS_COMP_UNIT *)cookie;
 
     if ((var->type & VAR_ARGUMENT_IN_REG) && var->reg && var->reg->tmp) {
-        _free_reg(program, var->reg);
+        free_reg(program, var->reg);
         var->reg = 0;
     }
 
     return KOS_SUCCESS;
 }
 
-static int _gen_function(KOS_COMP_UNIT      *program,
-                         const KOS_AST_NODE *node,
-                         int                 needs_super_ctor,
-                         KOS_SCOPE         **out_scope)
+static int gen_function(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *node,
+                        int                 needs_super_ctor,
+                        KOS_SCOPE         **out_scope)
 {
     int        error        = KOS_SUCCESS;
     KOS_SCOPE *scope;
@@ -4488,7 +4488,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
     if (frame->constant)
         return KOS_SUCCESS;
 
-    _push_scope(program, node);
+    push_scope(program, node);
 
     frame->fun_token    = &fun_node->token;
     frame->parent_frame = last_frame;
@@ -4497,7 +4497,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
     /* Generate registers for local independent variables */
     for (var = scope->fun_vars_list; var; var = var->next)
         if (var->type == VAR_INDEPENDENT_LOCAL) {
-            TRY(_gen_reg(program, &var->reg));
+            TRY(gen_reg(program, &var->reg));
             var->reg->tmp  = 0;
             var->array_idx = var->reg->reg;
             assert(var->reg->reg == ++last_reg);
@@ -4547,7 +4547,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
 
                     assert( ! var->reg);
 
-                    TRY(_gen_reg(program, &var->reg));
+                    TRY(gen_reg(program, &var->reg));
 
                     assert(var->reg->reg == ++last_reg);
 
@@ -4572,7 +4572,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
 
         /* Generate register for the remaining args */
         if (have_rest) {
-            TRY(_gen_reg(program, &frame->args_reg));
+            TRY(gen_reg(program, &frame->args_reg));
             if (rest_used)
                 frame->args_reg->tmp = 0;
             assert(frame->args_reg->reg == ++last_reg);
@@ -4583,19 +4583,19 @@ static int _gen_function(KOS_COMP_UNIT      *program,
     if (scope->ellipsis) {
         if (scope->ellipsis->type == VAR_INDEPENDENT_LOCAL) {
             assert(scope->ellipsis->reg);
-            TRY(_gen_reg(program, &ellipsis_reg));
+            TRY(gen_reg(program, &ellipsis_reg));
             assert(ellipsis_reg->reg == ++last_reg);
         }
         else {
             assert( ! scope->ellipsis->reg);
-            TRY(_gen_reg(program, &scope->ellipsis->reg));
+            TRY(gen_reg(program, &scope->ellipsis->reg));
             scope->ellipsis->reg->tmp = 0;
             assert(scope->ellipsis->reg->reg == ++last_reg);
         }
     }
 
     /* Generate register for 'this' */
-    TRY(_gen_reg(program, &frame->this_reg));
+    TRY(gen_reg(program, &frame->this_reg));
     assert(frame->this_reg->reg == ++last_reg);
     frame->bind_delta = frame->this_reg->reg + 1;
     if (scope->uses_this)
@@ -4607,14 +4607,14 @@ static int _gen_function(KOS_COMP_UNIT      *program,
 
         /* Base class constructor */
         if (needs_super_ctor) {
-            TRY(_gen_reg(program, &frame->base_ctor_reg));
+            TRY(gen_reg(program, &frame->base_ctor_reg));
             frame->base_ctor_reg->tmp = 0;
             ++frame->num_binds;
         }
 
         /* Base class prototype */
         if (frame->uses_base_proto) {
-            TRY(_gen_reg(program, &frame->base_proto_reg));
+            TRY(gen_reg(program, &frame->base_proto_reg));
             frame->base_proto_reg->tmp = 0;
             ++frame->num_binds;
         }
@@ -4622,7 +4622,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
         /* Closures from outer scopes */
         args.program   = program;
         args.num_binds = &frame->num_binds;
-        TRY(kos_red_black_walk(frame->closures, _gen_closure_regs, &args));
+        TRY(kos_red_black_walk(frame->closures, gen_closure_regs, &args));
     }
 
     assert(name_node);
@@ -4644,37 +4644,37 @@ static int _gen_function(KOS_COMP_UNIT      *program,
     fun_start_offs       = program->cur_offs;
     addr2line_start_offs = program->addr2line_gen_buf.size;
 
-    TRY(_add_addr2line(program, &open_node->token, KOS_TRUE_VALUE));
+    TRY(add_addr2line(program, &open_node->token, KOS_TRUE_VALUE));
 
     /* Move ellipsis into place */
     if (ellipsis_reg) {
-        TRY(_gen_instr2(program, INSTR_MOVE, scope->ellipsis->reg->reg, ellipsis_reg->reg));
-        _free_reg(program, ellipsis_reg);
+        TRY(gen_instr2(program, INSTR_MOVE, scope->ellipsis->reg->reg, ellipsis_reg->reg));
+        free_reg(program, ellipsis_reg);
         ellipsis_reg = 0;
     }
 
     /* Release unused registers */
     if (frame->args_reg && frame->args_reg->tmp) {
-        _free_reg(program, frame->args_reg);
+        free_reg(program, frame->args_reg);
         frame->args_reg = 0;
     }
     if (frame->this_reg->tmp) {
-        _free_reg(program, frame->this_reg);
+        free_reg(program, frame->this_reg);
         frame->this_reg = 0;
     }
     if (scope->num_args)
-        TRY(kos_red_black_walk(scope->vars, _free_arg_regs, program));
+        TRY(kos_red_black_walk(scope->vars, free_arg_regs, program));
 
     /* Invoke super constructor if not invoked explicitly */
     if (needs_super_ctor && ! frame->uses_base_ctor)
         TRY(super_invocation(program, 0, 0));
 
     /* Generate code for function body */
-    TRY(_visit_node(program, node, &scope_reg));
+    TRY(visit_node(program, node, &scope_reg));
     assert(!scope_reg);
 
     /* Create constant template for LOAD.CONST */
-    constant = _alloc_func_constant(program, frame);
+    constant = alloc_func_constant(program, frame);
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     constant->args_reg = (uint8_t)scope->num_indep_vars;
@@ -4689,7 +4689,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
     if (scope->num_indep_vars || scope->num_indep_args)
         constant->flags |= KOS_COMP_FUN_CLOSURE;
 
-    _add_constant(program, &constant->header);
+    add_constant(program, &constant->header);
 
     frame->constant = constant;
 
@@ -4704,7 +4704,7 @@ static int _gen_function(KOS_COMP_UNIT      *program,
 
         proto_const->type = KOS_COMP_CONST_PROTOTYPE;
 
-        _add_constant(program, proto_const);
+        add_constant(program, proto_const);
     }
 
     /* Choose instruction for loading the function */
@@ -4716,19 +4716,19 @@ static int _gen_function(KOS_COMP_UNIT      *program,
             : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST);
 
     /* Move the function code to final code_buf */
-    TRY(_append_frame(program, name_node, fun_start_offs, addr2line_start_offs));
+    TRY(append_frame(program, name_node, fun_start_offs, addr2line_start_offs));
 
     program->cur_frame = last_frame;
 
-    TRY(_add_addr2line(program, &fun_node->token, KOS_FALSE_VALUE));
+    TRY(add_addr2line(program, &fun_node->token, KOS_FALSE_VALUE));
 
     program->cur_frame = frame;
-    _pop_scope(program);
+    pop_scope(program);
     program->cur_frame = last_frame;
 
     /* Free register objects */
-    _free_all_regs(program, frame->used_regs);
-    _free_all_regs(program, frame->free_regs);
+    free_all_regs(program, frame->used_regs);
+    free_all_regs(program, frame->free_regs);
     frame->used_regs = 0;
     frame->free_regs = 0;
 
@@ -4736,11 +4736,11 @@ cleanup:
     return error;
 }
 
-static int _function_literal(KOS_COMP_UNIT      *program,
-                             const KOS_AST_NODE *node,
-                             KOS_REG            *base_ctor_reg,
-                             KOS_REG            *base_proto_reg,
-                             KOS_REG           **reg)
+static int function_literal(KOS_COMP_UNIT      *program,
+                            const KOS_AST_NODE *node,
+                            KOS_REG            *base_ctor_reg,
+                            KOS_REG            *base_proto_reg,
+                            KOS_REG           **reg)
 {
     int        error = KOS_SUCCESS;
     KOS_SCOPE *scope;
@@ -4751,7 +4751,7 @@ static int _function_literal(KOS_COMP_UNIT      *program,
     const KOS_AST_NODE *name_node = fun_node->children;
 
     /* Generate code for the function */
-    TRY(_gen_function(program, node, base_ctor_reg != 0, &scope));
+    TRY(gen_function(program, node, base_ctor_reg != 0, &scope));
 
     assert(scope->has_frame);
     frame = (KOS_FRAME *)scope;
@@ -4762,9 +4762,9 @@ static int _function_literal(KOS_COMP_UNIT      *program,
     /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
     assert(frame->num_regs > 0);
     assert(frame->num_regs >= frame->bind_delta);
-    TRY(_gen_reg(program, reg));
+    TRY(gen_reg(program, reg));
 
-    TRY(_gen_instr2(program,
+    TRY(gen_instr2(program,
                     frame->load_instr,
                     (*reg)->reg,
                     (int32_t)frame->constant->header.index));
@@ -4777,26 +4777,26 @@ static int _function_literal(KOS_COMP_UNIT      *program,
 
         /* Bind base class constructor */
         if (base_ctor_reg)
-            TRY(_gen_instr3(program,
-                            INSTR_BIND,
-                            (*reg)->reg,
-                            bind_idx++,
-                            base_ctor_reg->reg));
+            TRY(gen_instr3(program,
+                           INSTR_BIND,
+                           (*reg)->reg,
+                           bind_idx++,
+                           base_ctor_reg->reg));
 
         /* Bind base class prototype */
         if (frame->uses_base_proto)
-            TRY(_gen_instr3(program,
-                            INSTR_BIND,
-                            (*reg)->reg,
-                            bind_idx++,
-                            base_proto_reg->reg));
+            TRY(gen_instr3(program,
+                           INSTR_BIND,
+                           (*reg)->reg,
+                           bind_idx++,
+                           base_proto_reg->reg));
 
         /* Binds for outer scopes */
         bind_args.program      = program;
         bind_args.func_reg     = *reg;
         bind_args.parent_frame = program->cur_frame;
         bind_args.delta        = frame->bind_delta;
-        TRY(kos_red_black_walk(frame->closures, _gen_binds, &bind_args));
+        TRY(kos_red_black_walk(frame->closures, gen_binds, &bind_args));
     }
 
     /* Find the first default arg */
@@ -4846,11 +4846,11 @@ static int _function_literal(KOS_COMP_UNIT      *program,
 
             int opcode;
 
-            TRY(_gen_reg(program, &defaults_reg));
+            TRY(gen_reg(program, &defaults_reg));
 
             opcode = num_used_def_args < 256 ? INSTR_LOAD_ARRAY8 : INSTR_LOAD_ARRAY;
 
-            TRY(_gen_instr2(program, opcode, defaults_reg->reg, num_used_def_args));
+            TRY(gen_instr2(program, opcode, defaults_reg->reg, num_used_def_args));
         }
 
         for (i = 0; node && node->type == NT_ASSIGNMENT; node = node->next, ++i) {
@@ -4890,19 +4890,19 @@ static int _function_literal(KOS_COMP_UNIT      *program,
                     continue;
             }
 
-            TRY(_visit_node(program, def_node, &arg));
+            TRY(visit_node(program, def_node, &arg));
             assert(arg);
 
             if (used)
-                TRY(_gen_instr3(program, INSTR_SET_ELEM, defaults_reg->reg, i, arg->reg));
+                TRY(gen_instr3(program, INSTR_SET_ELEM, defaults_reg->reg, i, arg->reg));
 
-            _free_reg(program, arg);
+            free_reg(program, arg);
         }
 
         if (num_used_def_args > 0) {
-            TRY(_gen_instr2(program, INSTR_BIND_DEFAULTS, (*reg)->reg, defaults_reg->reg));
+            TRY(gen_instr2(program, INSTR_BIND_DEFAULTS, (*reg)->reg, defaults_reg->reg));
 
-            _free_reg(program, defaults_reg);
+            free_reg(program, defaults_reg);
         }
     }
 
@@ -4913,20 +4913,20 @@ cleanup:
     return error;
 }
 
-static int _array_literal(KOS_COMP_UNIT      *program,
-                          const KOS_AST_NODE *node,
-                          KOS_REG           **reg)
+static int array_literal(KOS_COMP_UNIT      *program,
+                         const KOS_AST_NODE *node,
+                         KOS_REG           **reg)
 {
     KOS_REG *array_reg = *reg;
 
-    int error = _gen_array(program, node->children, &array_reg);
+    int error = gen_array(program, node->children, &array_reg);
 
     if ( ! error) {
         if ( ! *reg)
             *reg = array_reg;
         else if (array_reg != *reg) {
-            error = _gen_instr2(program, INSTR_MOVE, (*reg)->reg, array_reg->reg);
-            _free_reg(program, array_reg);
+            error = gen_instr2(program, INSTR_MOVE, (*reg)->reg, array_reg->reg);
+            free_reg(program, array_reg);
         }
     }
 
@@ -4938,8 +4938,8 @@ typedef struct KOS_OBJECT_PROP_DUPE_S {
     int                str_idx;
 } KOS_OBJECT_PROP_DUPE;
 
-static int _prop_compare_item(void               *what,
-                              KOS_RED_BLACK_NODE *node)
+static int prop_compare_item(void               *what,
+                             KOS_RED_BLACK_NODE *node)
 {
     const int             str_idx   = (int)(intptr_t)what;
     KOS_OBJECT_PROP_DUPE *prop_node = (KOS_OBJECT_PROP_DUPE *)node;
@@ -4947,8 +4947,8 @@ static int _prop_compare_item(void               *what,
     return str_idx - prop_node->str_idx;
 }
 
-static int _prop_compare_node(KOS_RED_BLACK_NODE *a,
-                              KOS_RED_BLACK_NODE *b)
+static int prop_compare_node(KOS_RED_BLACK_NODE *a,
+                             KOS_RED_BLACK_NODE *b)
 {
     KOS_OBJECT_PROP_DUPE *a_node = (KOS_OBJECT_PROP_DUPE *)a;
     KOS_OBJECT_PROP_DUPE *b_node = (KOS_OBJECT_PROP_DUPE *)b;
@@ -4956,10 +4956,10 @@ static int _prop_compare_node(KOS_RED_BLACK_NODE *a,
     return a_node->str_idx - b_node->str_idx;
 }
 
-static int _object_literal(KOS_COMP_UNIT      *program,
-                           const KOS_AST_NODE *node,
-                           KOS_REG           **reg,
-                           KOS_REG            *prototype)
+static int object_literal(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          KOS_REG           **reg,
+                          KOS_REG            *prototype)
 {
     int                 error;
     KOS_RED_BLACK_NODE *prop_str_idcs = 0;
@@ -4967,14 +4967,14 @@ static int _object_literal(KOS_COMP_UNIT      *program,
     if (prototype) {
         if ( ! *reg || (*reg == prototype && ! prototype->tmp)) {
             *reg = 0;
-            TRY(_gen_reg(program, reg));
+            TRY(gen_reg(program, reg));
         }
 
-        TRY(_gen_instr2(program, INSTR_LOAD_OBJ_PROTO, (*reg)->reg, prototype->reg));
+        TRY(gen_instr2(program, INSTR_LOAD_OBJ_PROTO, (*reg)->reg, prototype->reg));
     }
     else {
-        TRY(_gen_reg(program, reg));
-        TRY(_gen_instr1(program, INSTR_LOAD_OBJ, (*reg)->reg));
+        TRY(gen_reg(program, reg));
+        TRY(gen_instr1(program, INSTR_LOAD_OBJ, (*reg)->reg));
     }
 
     assert(*reg);
@@ -4989,9 +4989,9 @@ static int _object_literal(KOS_COMP_UNIT      *program,
         assert(prop_node);
         assert(prop_node->type == NT_STRING_LITERAL);
 
-        TRY(_gen_str(program, &prop_node->token, &str_idx));
+        TRY(gen_str(program, &prop_node->token, &str_idx));
 
-        if (kos_red_black_find(prop_str_idcs, (void *)(intptr_t)str_idx, _prop_compare_item)) {
+        if (kos_red_black_find(prop_str_idcs, (void *)(intptr_t)str_idx, prop_compare_item)) {
             program->error_token = &prop_node->token;
             program->error_str   = str_err_duplicate_property;
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
@@ -5007,7 +5007,7 @@ static int _object_literal(KOS_COMP_UNIT      *program,
 
             kos_red_black_insert(&prop_str_idcs,
                                  (KOS_RED_BLACK_NODE *)new_node,
-                                 _prop_compare_node);
+                                 prop_compare_node);
         }
 
         prop_node = prop_node->next;
@@ -5016,14 +5016,14 @@ static int _object_literal(KOS_COMP_UNIT      *program,
 
         assert(prop_node->type != NT_CONSTRUCTOR_LITERAL);
         if (prop_node->type == NT_FUNCTION_LITERAL && prototype)
-            TRY(_function_literal(program, prop_node, 0, prototype, &prop));
+            TRY(function_literal(program, prop_node, 0, prototype, &prop));
         else
-            TRY(_visit_node(program, prop_node, &prop));
+            TRY(visit_node(program, prop_node, &prop));
         assert(prop);
 
-        TRY(_gen_instr3(program, INSTR_SET_PROP, (*reg)->reg, str_idx, prop->reg));
+        TRY(gen_instr3(program, INSTR_SET_PROP, (*reg)->reg, str_idx, prop->reg));
 
-        _free_reg(program, prop);
+        free_reg(program, prop);
     }
 
 cleanup:
@@ -5071,9 +5071,9 @@ static int find_uses_of_base_proto(KOS_COMP_UNIT *program, const KOS_AST_NODE *n
     return need_base_proto;
 }
 
-static int _class_literal(KOS_COMP_UNIT      *program,
-                          const KOS_AST_NODE *node,
-                          KOS_REG           **reg)
+static int class_literal(KOS_COMP_UNIT      *program,
+                         const KOS_AST_NODE *node,
+                         KOS_REG           **reg)
 {
     int      error          = KOS_SUCCESS;
     int      void_proto     = 0;
@@ -5088,7 +5088,7 @@ static int _class_literal(KOS_COMP_UNIT      *program,
 
     /* Handle 'extends' clause */
     if (node->type != NT_EMPTY && node->type != NT_VOID_LITERAL) {
-        TRY(_visit_node(program, node, &base_ctor_reg));
+        TRY(visit_node(program, node, &base_ctor_reg));
         assert(base_ctor_reg);
     }
     void_proto = node->type == NT_VOID_LITERAL;
@@ -5104,30 +5104,30 @@ static int _class_literal(KOS_COMP_UNIT      *program,
 
         need_base_proto = find_uses_of_base_proto(program, node) + ctor_uses_bp;
 
-        TRY(_gen_reg(program, &base_proto_reg));
+        TRY(gen_reg(program, &base_proto_reg));
 
         /* If this class has no own properties in prototype, we will attach the
          * prototype of the base class directly to this class' constructor */
         if ( ! need_base_proto)
             proto_reg = base_proto_reg;
 
-        TRY(_gen_instr2(program, INSTR_GET_PROTO, base_proto_reg->reg, base_ctor_reg->reg));
+        TRY(gen_instr2(program, INSTR_GET_PROTO, base_proto_reg->reg, base_ctor_reg->reg));
     }
 
     /* Build prototype */
     if (node->children || base_ctor_reg || void_proto) {
         if (void_proto) {
             assert( ! base_proto_reg);
-            TRY(_gen_reg(program, &base_proto_reg));
+            TRY(gen_reg(program, &base_proto_reg));
 
-            TRY(_gen_instr1(program, INSTR_LOAD_VOID, base_proto_reg->reg));
+            TRY(gen_instr1(program, INSTR_LOAD_VOID, base_proto_reg->reg));
         }
 
-        TRY(_object_literal(program, node, &proto_reg, base_proto_reg));
+        TRY(object_literal(program, node, &proto_reg, base_proto_reg));
         assert(proto_reg);
 
         if (void_proto) {
-            _free_reg(program, base_proto_reg);
+            free_reg(program, base_proto_reg);
             base_proto_reg = 0;
         }
     }
@@ -5137,7 +5137,7 @@ static int _class_literal(KOS_COMP_UNIT      *program,
     assert( ! node->next);
 
     /* Build constructor */
-    TRY(_function_literal(program, node, base_ctor_reg, ctor_uses_bp ? base_proto_reg : 0, reg));
+    TRY(function_literal(program, node, base_ctor_reg, ctor_uses_bp ? base_proto_reg : 0, reg));
     assert(*reg);
 
     /* Set prototype on the constructor */
@@ -5152,17 +5152,17 @@ static int _class_literal(KOS_COMP_UNIT      *program,
         token.length = sizeof(str_prototype) - 1;
         token.type   = TT_IDENTIFIER;
 
-        TRY(_gen_str(program, &token, &str_idx));
+        TRY(gen_str(program, &token, &str_idx));
 
-        TRY(_gen_instr3(program, INSTR_SET_PROP, (*reg)->reg, str_idx, proto_reg->reg));
+        TRY(gen_instr3(program, INSTR_SET_PROP, (*reg)->reg, str_idx, proto_reg->reg));
     }
 
     if (base_ctor_reg)
-        _free_reg(program, base_ctor_reg);
+        free_reg(program, base_ctor_reg);
     if (base_proto_reg && base_proto_reg != base_ctor_reg)
-        _free_reg(program, base_proto_reg);
+        free_reg(program, base_proto_reg);
     if (proto_reg && proto_reg != base_proto_reg && proto_reg != base_ctor_reg)
-        _free_reg(program, proto_reg);
+        free_reg(program, proto_reg);
 
 cleanup:
     return error;
@@ -5172,9 +5172,9 @@ cleanup:
     - on input, the desired register in which we prefer the return value
     - on output, the actual register containing the value computed
 */
-static int _visit_node(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       KOS_REG           **reg)
+static int visit_node(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node,
+                      KOS_REG           **reg)
 {
     int error = KOS_ERROR_INTERNAL;
 
@@ -5183,86 +5183,86 @@ static int _visit_node(KOS_COMP_UNIT      *program,
             error = KOS_SUCCESS;
             break;
         case NT_IMPORT:
-            error = _import(program, node);
+            error = import(program, node);
             break;
         case NT_SCOPE:
-            error = _scope(program, node);
+            error = process_scope(program, node);
             break;
         case NT_IF:
-            error = _if(program, node);
+            error = if_stmt(program, node);
             break;
         case NT_RETURN:
-            error = _return(program, node);
+            error = return_stmt(program, node);
             break;
         case NT_YIELD:
-            error = _yield(program, node, reg);
+            error = yield(program, node, reg);
             break;
         case NT_ASYNC:
-            error = _async(program, node, reg);
+            error = async(program, node, reg);
             break;
         case NT_THROW:
-            error = _throw(program, node);
+            error = throw_op(program, node);
             break;
         case NT_ASSERT:
-            error = _assert_stmt(program, node);
+            error = assert_stmt(program, node);
             break;
         case NT_REPEAT:
-            error = _repeat(program, node);
+            error = repeat(program, node);
             break;
         case NT_FOR:
-            error = _for(program, node);
+            error = for_stmt(program, node);
             break;
         case NT_FOR_IN:
-            error = _for_in(program, node);
+            error = for_in(program, node);
             break;
         case NT_CONTINUE:
             /* fall through */
         case NT_BREAK:
             /* fall through */
         case NT_FALLTHROUGH:
-            error = _break_continue_fallthrough(program, node);
+            error = break_continue_fallthrough(program, node);
             break;
         case NT_SWITCH:
-            error = _switch(program, node);
+            error = switch_stmt(program, node);
             break;
         case NT_TRY_CATCH:
             /* fall through */
         case NT_TRY_DEFER:
-            error = _try_stmt(program, node);
+            error = try_stmt(program, node);
             break;
         case NT_REFINEMENT:
-            error = _refinement(program, node, reg, 0);
+            error = refinement(program, node, reg, 0);
             break;
         case NT_SLICE:
-            error = _slice(program, node, reg);
+            error = slice(program, node, reg);
             break;
         case NT_INVOCATION:
             /* fall through */
         case NT_INTERPOLATED_STRING:
-            error = _invocation(program, node, reg, INSTR_CALL, 0);
+            error = invocation(program, node, reg, INSTR_CALL, 0);
             break;
         case NT_OPERATOR:
-            error = _operator(program, node, reg);
+            error = process_operator(program, node, reg);
             break;
         case NT_ASSIGNMENT:
             /* fall through */
         case NT_MULTI_ASSIGNMENT:
-            error = _assignment(program, node);
+            error = assignment(program, node);
             break;
         case NT_EXPRESSION_LIST:
-            error = _expression_list(program, node, reg);
+            error = expression_list(program, node, reg);
             break;
         case NT_IDENTIFIER:
-            error = _identifier(program, node, reg);
+            error = identifier(program, node, reg);
             break;
         case NT_NUMERIC_LITERAL:
-            error = _numeric_literal(program, node, reg);
+            error = numeric_literal(program, node, reg);
             break;
         case NT_STRING_LITERAL:
-            error = _string_literal(program, node, reg);
+            error = string_literal(program, node, reg);
             break;
         case NT_THIS_LITERAL:
-            error = _this_literal(program, node, reg);
+            error = this_literal(program, node, reg);
             break;
         case NT_SUPER_CTOR_LITERAL:
             /* fall through */
@@ -5272,27 +5272,27 @@ static int _visit_node(KOS_COMP_UNIT      *program,
             error = KOS_ERROR_COMPILE_FAILED;
             break;
         case NT_BOOL_LITERAL:
-            error = _bool_literal(program, node, reg);
+            error = bool_literal(program, node, reg);
             break;
         case NT_FUNCTION_LITERAL:
             /* fall through */
         case NT_CONSTRUCTOR_LITERAL:
-            error = _function_literal(program, node, 0, 0, reg);
+            error = function_literal(program, node, 0, 0, reg);
             break;
         case NT_ARRAY_LITERAL:
-            error = _array_literal(program, node, reg);
+            error = array_literal(program, node, reg);
             break;
         case NT_OBJECT_LITERAL:
-            error = _object_literal(program, node, reg, 0);
+            error = object_literal(program, node, reg, 0);
             break;
         case NT_CLASS_LITERAL:
-            error = _class_literal(program, node, reg);
+            error = class_literal(program, node, reg);
             break;
         case NT_VOID_LITERAL:
             /* fall through */
         default:
             assert(node->type == NT_VOID_LITERAL);
-            error = _void_literal(program, node, reg);
+            error = void_literal(program, node, reg);
             break;
     }
 
@@ -5342,7 +5342,7 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
 
     TRY(kos_allocate_args(program, ast));
 
-    TRY(_visit_node(program, ast, &reg));
+    TRY(visit_node(program, ast, &reg));
     assert(!reg);
 
     if (num_opt_passes)
