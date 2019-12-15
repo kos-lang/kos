@@ -3,7 +3,7 @@ Roadmap
 
 The following features are planned before first release:
 
-* Update C++ API for GC
+* Update C++ API to be compatible with GC
 * Language features:
     - Shallow in operator
     - set/get
@@ -15,6 +15,7 @@ The following features are planned before first release:
     - Reduce cost of function calls
     - Hoist constants outside of loops
     - Use linear search for small objects
+    - Use GCC's computed goto extension for instruction dispatch
 * Modules:
     - regex
     - debug
