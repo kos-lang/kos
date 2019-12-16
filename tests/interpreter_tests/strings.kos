@@ -599,6 +599,21 @@ do {
     })
 }
 
+# string addition results in a string which is too long
+do {
+    var exception = false
+    try {
+        const init = "0123456789ABCDEF"
+        const str = init.repeat(0x10000 / init.size - 1)
+        # Trigger exception - string too long
+        "\(init)\(str)\(init)"
+    }
+    catch const e {
+        exception = e
+    }
+    assert exception
+}
+
 ##############################################################################
 # base.string
 
