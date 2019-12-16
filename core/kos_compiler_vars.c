@@ -704,29 +704,7 @@ static int parameter_defaults(KOS_COMP_UNIT      *program,
                               const KOS_AST_NODE *node,
                               const KOS_AST_NODE *name_node)
 {
-    int      error   = KOS_SUCCESS;
-    KOS_VAR *fun_var = 0;
-
-    assert(name_node);
-    if (name_node->type == NT_NAME_CONST) {
-        KOS_AST_NODE *fun_var_node = name_node->children;
-
-        assert(fun_var_node);
-        assert(fun_var_node->type == NT_IDENTIFIER);
-        assert(fun_var_node->token.type == TT_IDENTIFIER);
-
-        fun_var = kos_find_var(program->scope_stack->vars, &fun_var_node->token);
-        assert(fun_var);
-        assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
-        assert( ! fun_var_node->var);
-        fun_var_node->var       = fun_var;
-        fun_var_node->var_scope = program->scope_stack;
-
-        if ((fun_var->type & VAR_LOCAL) && fun_var->is_active)
-            fun_var->is_active = VAR_INACTIVE;
-        else
-            fun_var = 0;
-    }
+    int error = KOS_SUCCESS;
 
     assert(node);
     assert(node->type == NT_PARAMETERS);
@@ -748,15 +726,13 @@ static int parameter_defaults(KOS_COMP_UNIT      *program,
         }
     }
 
-    if (fun_var)
-        fun_var->is_active = VAR_ACTIVE;
-
 cleanup:
     return error;
 }
 
 static int function_literal(KOS_COMP_UNIT *program,
-                            KOS_AST_NODE  *node)
+                            KOS_AST_NODE  *node,
+                            KOS_VAR       *fun_var)
 {
     int                 error;
     int                 i;
@@ -819,7 +795,11 @@ static int function_literal(KOS_COMP_UNIT *program,
     assert(node);
     assert(node->type == NT_SCOPE);
 
+    kos_activate_self_ref_func(program, fun_var);
+
     TRY(visit_node(program, node));
+
+    kos_deactivate_self_ref_func(program, fun_var);
 
     node = node->next;
     assert(node->type == NT_LANDMARK);
@@ -828,6 +808,54 @@ static int function_literal(KOS_COMP_UNIT *program,
     pop_scope(program);
 
     TRY(parameter_defaults(program, arg_node, name_node));
+
+cleanup:
+    return error;
+}
+
+static int class_literal(KOS_COMP_UNIT *program,
+                         KOS_AST_NODE  *node,
+                         KOS_VAR       *fun_var)
+{
+    int           error;
+    KOS_AST_NODE *ctor_node;
+    KOS_AST_NODE *prop_node;
+
+    assert(node->type == NT_CLASS_LITERAL);
+
+    /* extends clause */
+    node = node->children;
+    assert(node);
+    TRY(visit_node(program, node));
+
+    /* Prototype */
+    node = node->next;
+    assert(node);
+    assert(node->type == NT_OBJECT_LITERAL);
+    ctor_node = node->next;
+    for (prop_node = node->children; prop_node; prop_node = prop_node->next) {
+        assert(prop_node->type == NT_PROPERTY);
+
+        node = prop_node->children;
+        assert(node);
+        assert(node->type == NT_STRING_LITERAL);
+        TRY(visit_node(program, node));
+
+        node = node->next;
+        assert(node);
+        assert( ! node->next);
+        assert(node->type != NT_CONSTRUCTOR_LITERAL);
+        if (node->type == NT_FUNCTION_LITERAL)
+            TRY(function_literal(program, node, fun_var));
+        else
+            TRY(visit_node(program, node));
+    }
+
+    /* Constructor */
+    assert(ctor_node);
+    assert(ctor_node->type == NT_CONSTRUCTOR_LITERAL);
+    assert( ! ctor_node->next);
+    TRY(function_literal(program, ctor_node, fun_var));
 
 cleanup:
     return error;
@@ -878,7 +906,7 @@ static int assert_stmt(KOS_COMP_UNIT *program,
     return visit_node(program, node);
 }
 
-static int is_self_ref_func(const KOS_AST_NODE *node)
+int kos_is_self_ref_func(const KOS_AST_NODE *node)
 {
     if (node->type != NT_CONST)
         return 0;
@@ -886,8 +914,7 @@ static int is_self_ref_func(const KOS_AST_NODE *node)
     assert(node->children);
     assert(node->next);
 
-    if (node->next->type != NT_FUNCTION_LITERAL    &&
-        node->next->type != NT_CONSTRUCTOR_LITERAL &&
+    if (node->next->type != NT_FUNCTION_LITERAL &&
         node->next->type != NT_CLASS_LITERAL)
         return 0;
 
@@ -917,25 +944,30 @@ static int assignment(KOS_COMP_UNIT *program,
     assert(node);
     assert(node->next);
 
-    /* TODO handle extends clause in classes */
+    if (kos_is_self_ref_func(node)) {
 
-    if (is_self_ref_func(node)) {
+        KOS_VAR *fun_var;
 
         TRY(visit_node(program, node));
 
-        kos_activate_self_ref_func(program, node);
+        fun_var = node->children->var;
+        assert(fun_var);
+        assert( ! fun_var->is_active);
 
         node = node->next;
         assert( ! node->next);
 
-        TRY(visit_node(program, node));
+        if (node->type == NT_FUNCTION_LITERAL)
+            TRY(function_literal(program, node, fun_var));
+        else {
+            assert(node->type == NT_CLASS_LITERAL);
+            TRY(class_literal(program, node, fun_var));
+        }
     }
-    else {
-
+    else
         TRY(visit_child_nodes(program, input_node));
 
-        kos_activate_new_vars(program, node);
-    }
+    kos_activate_new_vars(program, input_node->children);
 
 cleanup:
     return error;
@@ -974,9 +1006,10 @@ static int visit_node(KOS_COMP_UNIT *program,
             error = KOS_SUCCESS;
             break;
         case NT_FUNCTION_LITERAL:
-            /* fall through */
-        case NT_CONSTRUCTOR_LITERAL:
-            error = function_literal(program, node);
+            error = function_literal(program, node, 0);
+            break;
+        case NT_CLASS_LITERAL:
+            error = class_literal(program, node, 0);
             break;
         case NT_ASSIGNMENT:
             error = assignment(program, node);
@@ -1069,8 +1102,6 @@ static int visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_OBJECT_LITERAL:
             /* fall through */
-        case NT_CLASS_LITERAL:
-            /* fall through */
         case NT_ASYNC:
             error = visit_child_nodes(program, node);
             break;
@@ -1117,20 +1148,21 @@ void kos_activate_new_vars(KOS_COMP_UNIT      *program,
     }
 }
 
-void kos_activate_self_ref_func(KOS_COMP_UNIT      *program,
-                                const KOS_AST_NODE *node)
+void kos_activate_self_ref_func(KOS_COMP_UNIT *program,
+                                KOS_VAR       *fun_var)
 {
-    if (is_self_ref_func(node)) {
+    if (fun_var) {
+        assert( ! fun_var->is_active);
+        fun_var->is_active = VAR_ACTIVE;
+    }
+}
 
-        /* TODO handle extends clause in classes */
-
-        KOS_VAR *var;
-
-        var = node->children->var;
-        assert(var);
-        assert(var == kos_find_var(program->scope_stack->vars, &node->children->token));
-
-        var->is_active = VAR_ACTIVE;
+void kos_deactivate_self_ref_func(KOS_COMP_UNIT *program,
+                                  KOS_VAR       *fun_var)
+{
+    if (fun_var) {
+        assert(fun_var->is_active == VAR_ACTIVE);
+        fun_var->is_active = VAR_INACTIVE;
     }
 }
 

@@ -64,6 +64,18 @@ static int invocation(KOS_COMP_UNIT      *program,
                       KOS_BYTECODE_INSTR  instr,
                       unsigned            tail_closure_size);
 
+static int function_literal(KOS_COMP_UNIT      *program,
+                            const KOS_AST_NODE *node,
+                            KOS_VAR            *fun_var,
+                            KOS_REG            *base_ctor_reg,
+                            KOS_REG            *base_proto_reg,
+                            KOS_REG           **reg);
+
+static int class_literal(KOS_COMP_UNIT      *program,
+                         const KOS_AST_NODE *node,
+                         KOS_VAR            *class_var,
+                         KOS_REG           **reg);
+
 static int gen_new_reg(KOS_COMP_UNIT *program,
                        KOS_REG      **out_reg)
 {
@@ -4009,6 +4021,7 @@ static int assignment(KOS_COMP_UNIT      *program,
     int                 error;
     int                 is_lhs;
     const KOS_AST_NODE *node;
+    const KOS_AST_NODE *lhs_node;
     const KOS_AST_NODE *rhs_node;
     KOS_REG            *reg       = 0;
     KOS_REG            *rhs       = 0;
@@ -4018,6 +4031,7 @@ static int assignment(KOS_COMP_UNIT      *program,
 
     node = assg_node->children;
     assert(node);
+    lhs_node = node;
 
     rhs_node = node->next;
     assert(rhs_node);
@@ -4026,8 +4040,6 @@ static int assignment(KOS_COMP_UNIT      *program,
     assert(node->type == NT_LEFT_HAND_SIDE ||
            node->type == NT_VAR ||
            node->type == NT_CONST);
-
-    kos_activate_self_ref_func(program, node);
 
     is_lhs = (node->type == NT_LEFT_HAND_SIDE) ? 1 : 0;
 
@@ -4056,7 +4068,20 @@ static int assignment(KOS_COMP_UNIT      *program,
             rhs = reg;
     }
 
-    TRY(visit_node(program, rhs_node, &rhs));
+    if (kos_is_self_ref_func(lhs_node)) {
+        KOS_VAR *fun_var = lhs_node->children->var;
+        assert(fun_var);
+        assert( ! fun_var->is_active);
+
+        if (rhs_node->type == NT_FUNCTION_LITERAL)
+            TRY(function_literal(program, rhs_node, fun_var, 0, 0, &rhs));
+        else {
+            assert(rhs_node->type == NT_CLASS_LITERAL);
+            TRY(class_literal(program, rhs_node, fun_var, &rhs));
+        }
+    }
+    else
+        TRY(visit_node(program, rhs_node, &rhs));
     assert(rhs);
 
     if (node_type == NT_MULTI_ASSIGNMENT)
@@ -4459,6 +4484,7 @@ static int free_arg_regs(KOS_RED_BLACK_NODE *node,
 
 static int gen_function(KOS_COMP_UNIT      *program,
                         const KOS_AST_NODE *node,
+                        KOS_VAR            *fun_var,
                         int                 needs_super_ctor,
                         KOS_SCOPE         **out_scope)
 {
@@ -4669,9 +4695,13 @@ static int gen_function(KOS_COMP_UNIT      *program,
     if (needs_super_ctor && ! frame->uses_base_ctor)
         TRY(super_invocation(program, 0, 0));
 
+    kos_activate_self_ref_func(program, fun_var);
+
     /* Generate code for function body */
     TRY(visit_node(program, node, &scope_reg));
     assert(!scope_reg);
+
+    kos_deactivate_self_ref_func(program, fun_var);
 
     /* Create constant template for LOAD.CONST */
     constant = alloc_func_constant(program, frame);
@@ -4738,6 +4768,7 @@ cleanup:
 
 static int function_literal(KOS_COMP_UNIT      *program,
                             const KOS_AST_NODE *node,
+                            KOS_VAR            *fun_var,
                             KOS_REG            *base_ctor_reg,
                             KOS_REG            *base_proto_reg,
                             KOS_REG           **reg)
@@ -4745,13 +4776,11 @@ static int function_literal(KOS_COMP_UNIT      *program,
     int        error = KOS_SUCCESS;
     KOS_SCOPE *scope;
     KOS_FRAME *frame;
-    KOS_VAR   *fun_var;
 
-    const KOS_AST_NODE *fun_node  = node;
-    const KOS_AST_NODE *name_node = fun_node->children;
+    const KOS_AST_NODE *fun_node = node;
 
     /* Generate code for the function */
-    TRY(gen_function(program, node, base_ctor_reg != 0, &scope));
+    TRY(gen_function(program, node, fun_var, base_ctor_reg != 0, &scope));
 
     assert(scope->has_frame);
     frame = (KOS_FRAME *)scope;
@@ -4812,25 +4841,6 @@ static int function_literal(KOS_COMP_UNIT      *program,
                 break;
         }
         assert(node);
-    }
-
-    /* Disable variable to which the function is assigned to prevent it from
-     * being used by the argument defaults. */
-    fun_var = 0;
-    if (name_node->type == NT_NAME_CONST) {
-        assert(name_node->children);
-        assert(name_node->children->type == NT_IDENTIFIER);
-        assert(name_node->children->token.type == TT_IDENTIFIER);
-
-        fun_var = name_node->children->var;
-        assert(fun_var);
-        assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
-        assert(fun_var == kos_find_var(program->scope_stack->vars, &name_node->children->token));
-
-        if ((fun_var->type & VAR_LOCAL) && fun_var->is_active)
-            fun_var->is_active = VAR_INACTIVE;
-        else
-            fun_var = 0;
     }
 
     /* Generate array with default args and init code for unused default args */
@@ -4906,9 +4916,6 @@ static int function_literal(KOS_COMP_UNIT      *program,
         }
     }
 
-    if (fun_var)
-        fun_var->is_active = VAR_ACTIVE;
-
 cleanup:
     return error;
 }
@@ -4959,6 +4966,7 @@ static int prop_compare_node(KOS_RED_BLACK_NODE *a,
 static int object_literal(KOS_COMP_UNIT      *program,
                           const KOS_AST_NODE *node,
                           KOS_REG           **reg,
+                          KOS_VAR            *class_var,
                           KOS_REG            *prototype)
 {
     int                 error;
@@ -5015,8 +5023,8 @@ static int object_literal(KOS_COMP_UNIT      *program,
         assert(!prop_node->next);
 
         assert(prop_node->type != NT_CONSTRUCTOR_LITERAL);
-        if (prop_node->type == NT_FUNCTION_LITERAL && prototype)
-            TRY(function_literal(program, prop_node, 0, prototype, &prop));
+        if (prop_node->type == NT_FUNCTION_LITERAL)
+            TRY(function_literal(program, prop_node, class_var, 0, prototype, &prop));
         else
             TRY(visit_node(program, prop_node, &prop));
         assert(prop);
@@ -5073,6 +5081,7 @@ static int find_uses_of_base_proto(KOS_COMP_UNIT *program, const KOS_AST_NODE *n
 
 static int class_literal(KOS_COMP_UNIT      *program,
                          const KOS_AST_NODE *node,
+                         KOS_VAR            *class_var,
                          KOS_REG           **reg)
 {
     int      error          = KOS_SUCCESS;
@@ -5123,7 +5132,7 @@ static int class_literal(KOS_COMP_UNIT      *program,
             TRY(gen_instr1(program, INSTR_LOAD_VOID, base_proto_reg->reg));
         }
 
-        TRY(object_literal(program, node, &proto_reg, base_proto_reg));
+        TRY(object_literal(program, node, &proto_reg, class_var, base_proto_reg));
         assert(proto_reg);
 
         if (void_proto) {
@@ -5137,7 +5146,7 @@ static int class_literal(KOS_COMP_UNIT      *program,
     assert( ! node->next);
 
     /* Build constructor */
-    TRY(function_literal(program, node, base_ctor_reg, ctor_uses_bp ? base_proto_reg : 0, reg));
+    TRY(function_literal(program, node, class_var, base_ctor_reg, ctor_uses_bp ? base_proto_reg : 0, reg));
     assert(*reg);
 
     /* Set prototype on the constructor */
@@ -5277,16 +5286,16 @@ static int visit_node(KOS_COMP_UNIT      *program,
         case NT_FUNCTION_LITERAL:
             /* fall through */
         case NT_CONSTRUCTOR_LITERAL:
-            error = function_literal(program, node, 0, 0, reg);
+            error = function_literal(program, node, 0, 0, 0, reg);
             break;
         case NT_ARRAY_LITERAL:
             error = array_literal(program, node, reg);
             break;
         case NT_OBJECT_LITERAL:
-            error = object_literal(program, node, reg, 0);
+            error = object_literal(program, node, reg, 0, 0);
             break;
         case NT_CLASS_LITERAL:
-            error = class_literal(program, node, reg);
+            error = class_literal(program, node, 0, reg);
             break;
         case NT_VOID_LITERAL:
             /* fall through */

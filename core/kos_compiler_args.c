@@ -238,25 +238,7 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
                               KOS_AST_NODE  *node,
                               KOS_AST_NODE  *name_node)
 {
-    int      error   = KOS_SUCCESS;
-    KOS_VAR *fun_var = 0;
-
-    assert(name_node);
-    if (name_node->type == NT_NAME_CONST) {
-        assert(name_node->children);
-        assert(name_node->children->type == NT_IDENTIFIER);
-        assert(name_node->children->token.type == TT_IDENTIFIER);
-
-        fun_var = name_node->children->var;
-        assert(fun_var);
-        assert((fun_var->type & VAR_LOCAL) || fun_var->type == VAR_GLOBAL);
-        assert(fun_var == kos_find_var(program->scope_stack->vars, &name_node->children->token));
-
-        if ((fun_var->type & VAR_LOCAL) && fun_var->is_active)
-            fun_var->is_active = VAR_INACTIVE;
-        else
-            fun_var = 0;
-    }
+    int error = KOS_SUCCESS;
 
     assert(node);
     assert(node->type == NT_PARAMETERS);
@@ -280,15 +262,13 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
         TRY(visit_node(program, def_node));
     }
 
-    if (fun_var)
-        fun_var->is_active = VAR_ACTIVE;
-
 cleanup:
     return error;
 }
 
 static int function_literal(KOS_COMP_UNIT *program,
-                            KOS_AST_NODE  *node)
+                            KOS_AST_NODE  *node,
+                            KOS_VAR       *fun_var)
 {
     int           error;
     KOS_AST_NODE *name_node;
@@ -300,13 +280,80 @@ static int function_literal(KOS_COMP_UNIT *program,
 
     update_arguments(program, name_node->next);
 
-    error = visit_child_nodes(program, node);
+    node = name_node->next;
+    assert(node);
+    assert(node->type == NT_PARAMETERS);
+
+    node = node->next;
+    assert(node);
+    assert(node->type == NT_LANDMARK);
+
+    node = node->next;
+    assert(node);
+    assert(node->type == NT_SCOPE);
+    assert(node->next);
+    assert(node->next->type == NT_LANDMARK);
+    assert( ! node->next->next);
+
+    kos_activate_self_ref_func(program, fun_var);
+
+    error = visit_node(program, node);
+
+    kos_deactivate_self_ref_func(program, fun_var);
 
     pop_scope(program);
 
     if ( ! error)
         error = parameter_defaults(program, name_node->next, name_node);
 
+    return error;
+}
+
+static int class_literal(KOS_COMP_UNIT *program,
+                         KOS_AST_NODE  *node,
+                         KOS_VAR       *fun_var)
+{
+    int           error;
+    KOS_AST_NODE *ctor_node;
+    KOS_AST_NODE *prop_node;
+
+    assert(node->type == NT_CLASS_LITERAL);
+
+    /* extends clause */
+    node = node->children;
+    assert(node);
+    TRY(visit_node(program, node));
+
+    /* Prototype */
+    node = node->next;
+    assert(node);
+    assert(node->type == NT_OBJECT_LITERAL);
+    ctor_node = node->next;
+    for (prop_node = node->children; prop_node; prop_node = prop_node->next) {
+        assert(prop_node->type == NT_PROPERTY);
+
+        node = prop_node->children;
+        assert(node);
+        assert(node->type == NT_STRING_LITERAL);
+        TRY(visit_node(program, node));
+
+        node = node->next;
+        assert(node);
+        assert( ! node->next);
+        assert(node->type != NT_CONSTRUCTOR_LITERAL);
+        if (node->type == NT_FUNCTION_LITERAL)
+            TRY(function_literal(program, node, fun_var));
+        else
+            TRY(visit_node(program, node));
+    }
+
+    /* Constructor */
+    assert(ctor_node);
+    assert(ctor_node->type == NT_CONSTRUCTOR_LITERAL);
+    assert( ! ctor_node->next);
+    TRY(function_literal(program, ctor_node, fun_var));
+
+cleanup:
     return error;
 }
 
@@ -346,9 +393,21 @@ static int assignment(KOS_COMP_UNIT *program,
     assert(rhs_node);
     assert( ! rhs_node->next);
 
-    kos_activate_self_ref_func(program, lhs_node);
+    if (kos_is_self_ref_func(lhs_node)) {
 
-    TRY(visit_node(program, rhs_node));
+        KOS_VAR *fun_var = lhs_node->children->var;
+        assert(fun_var);
+        assert( ! fun_var->is_active);
+
+        if (rhs_node->type == NT_FUNCTION_LITERAL)
+            TRY(function_literal(program, rhs_node, fun_var));
+        else {
+            assert(rhs_node->type == NT_CLASS_LITERAL);
+            TRY(class_literal(program, rhs_node, fun_var));
+        }
+    }
+    else
+        TRY(visit_node(program, rhs_node));
 
     for ( ; node; node = node->next) {
 
@@ -464,9 +523,11 @@ static int visit_node(KOS_COMP_UNIT *program,
             break;
 
         case NT_FUNCTION_LITERAL:
-            /* fall through */
-        case NT_CONSTRUCTOR_LITERAL:
-            error = function_literal(program, node);
+            error = function_literal(program, node, 0);
+            break;
+
+        case NT_CLASS_LITERAL:
+            error = class_literal(program, node, 0);
             break;
 
         case NT_IDENTIFIER:
@@ -556,8 +617,6 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_ARRAY_LITERAL:
             /* fall through */
         case NT_OBJECT_LITERAL:
-            /* fall through */
-        case NT_CLASS_LITERAL:
             /* fall through */
         case NT_RETURN:
             /* fall through */

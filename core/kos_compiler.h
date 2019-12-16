@@ -317,8 +317,13 @@ void kos_activate_var(KOS_COMP_UNIT      *program,
 void kos_activate_new_vars(KOS_COMP_UNIT      *program,
                            const KOS_AST_NODE *node);
 
-void kos_activate_self_ref_func(KOS_COMP_UNIT      *program,
-                                const KOS_AST_NODE *node);
+int kos_is_self_ref_func(const KOS_AST_NODE *node);
+
+void kos_activate_self_ref_func(KOS_COMP_UNIT *program,
+                                KOS_VAR       *fun_var);
+
+void kos_deactivate_self_ref_func(KOS_COMP_UNIT *program,
+                                  KOS_VAR       *fun_var);
 
 void kos_deactivate_vars(KOS_SCOPE *scope);
 
