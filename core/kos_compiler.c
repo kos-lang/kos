@@ -3122,9 +3122,9 @@ cleanup:
     return error;
 }
 
-static int async(KOS_COMP_UNIT      *program,
-                 const KOS_AST_NODE *node,
-                 KOS_REG           **reg)
+static int async_op(KOS_COMP_UNIT      *program,
+                    const KOS_AST_NODE *node,
+                    KOS_REG           **reg)
 {
     int               error       = KOS_SUCCESS;
     KOS_REG          *argn[2]     = { 0, 0 };
@@ -5207,7 +5207,7 @@ static int visit_node(KOS_COMP_UNIT      *program,
             error = yield(program, node, reg);
             break;
         case NT_ASYNC:
-            error = async(program, node, reg);
+            error = async_op(program, node, reg);
             break;
         case NT_THROW:
             error = throw_op(program, node);

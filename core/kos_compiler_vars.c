@@ -602,8 +602,8 @@ static int yield(KOS_COMP_UNIT *program,
     return error;
 }
 
-static int var(KOS_COMP_UNIT *program,
-               KOS_AST_NODE  *node)
+static int var_node(KOS_COMP_UNIT *program,
+                    KOS_AST_NODE  *node)
 {
     int                         error    = KOS_SUCCESS;
     const enum DEFINE_VAR_CONST is_const = node->type == NT_CONST ? CONSTANT : VARIABLE;
@@ -1024,7 +1024,7 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_VAR:
             /* fall through */
         case NT_CONST:
-            error = var(program, node);
+            error = var_node(program, node);
             break;
 
         case NT_MULTI_ASSIGNMENT:
