@@ -784,8 +784,10 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
 
             if (new_len <= 0xFFFFU)
                 new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
-            else
+            else {
                 KOS_raise_exception_cstring(ctx, str_err_string_too_long);
+                new_str_id = KOS_BADPTR;
+            }
 
             if ( ! IS_BAD_PTR(new_str_id)) {
 
