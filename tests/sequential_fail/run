@@ -1,0 +1,93 @@
+#!/bin/bash
+
+set -euo pipefail
+
+die()
+{
+    echo "Error: $@"
+    exit 1
+}
+
+[[ $# -le 2 ]] || die "Too many parameters"
+
+[[ $# -gt 0 ]] || die "Need script as first argument"
+
+[[ -f $1 ]] || die "Script $1 does not exist"
+
+INITSEQ=0
+[[ $# -gt 1 ]] && INITSEQ="$2"
+
+rm -rf seq.done
+
+run_seq()
+{
+    local SCRIPT="$1"
+    local JOB="$2"
+    local JOBS="$3"
+
+    local KOSSEQFAIL="$(($JOB + $INITSEQ))"
+    export KOSSEQFAIL
+    local PASSES=0
+    local FIRSTPASS="N/A"
+    local RET
+
+    while true; do
+        [[ -f seq.done ]] && return
+
+        [[ $(($KOSSEQFAIL % 200)) -eq 0 ]] && echo "Sequence point $KOSSEQFAIL"
+
+        RET=$?
+        Out/debug/interpreter/kos -v "$SCRIPT" -print - -kosarg > stdout.$JOB.txt 2> stderr.$JOB.txt || RET=$?
+
+        if [[ $RET = 0 ]]; then
+            [[ $PASSES = 0 ]] && FIRSTPASS="$KOSSEQFAIL"
+            PASSES=$(($PASSES + 1))
+        else
+            PASSES=0
+            FIRSTPASS="N/A"
+        fi
+
+        if [[ $PASSES -gt $(($JOBS * 10)) ]]; then
+            break
+        fi
+
+        if [[ $RET -gt 1 ]]; then
+            echo "Failed at sequence point $KOSSEQFAIL with exit code $RET"
+            break
+        fi
+
+        KOSSEQFAIL=$(($KOSSEQFAIL + $JOBS))
+    done
+
+    [[ $RET = 0 ]] && echo "Passed at sequence point $FIRSTPASS"
+
+    touch seq.done
+}
+
+UNAME=$(uname -s)
+case "$UNAME" in
+    Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
+    Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
+    CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ; UNAME="Windows" ;;
+    Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
+    *)                                       JOBS=2 ;;
+esac
+
+echo "Running $JOBS jobs"
+
+if [[ $UNAME != Windows ]]; then
+    export CFLAGS=-fsanitize=address
+    export LDFLAGS=-fsanitize=address
+fi
+make debug=1 clean
+make -j "$JOBS" debug=1 seqfail=1 build.interpreter CLANG_VER=c++14 CLANG_VER=c++14
+
+trap 'touch seq.done' EXIT
+
+for JOB in $(seq 0 $(($JOBS - 1))); do
+    run_seq "$1" "$JOB" "$JOBS" &
+done
+
+while ! test -e seq.done; do
+    sleep 1
+done
