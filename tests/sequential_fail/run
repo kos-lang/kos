@@ -36,7 +36,7 @@ run_seq()
 
         [[ $(($KOSSEQFAIL % 200)) -eq 0 ]] && echo "Sequence point $KOSSEQFAIL"
 
-        RET=$?
+        RET=0
         Out/debug/interpreter/kos -v "$SCRIPT" -print - -kosarg > stdout.$JOB.txt 2> stderr.$JOB.txt || RET=$?
 
         if [[ $RET = 0 ]]; then
