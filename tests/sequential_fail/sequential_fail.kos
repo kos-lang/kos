@@ -23,6 +23,8 @@
 import base.*
 import random
 
+fun(a...) { return a } (0)
+
 do {
     var caught = false
     try {
