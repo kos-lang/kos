@@ -858,10 +858,6 @@ static int _prepare_call(KOS_CONTEXT        ctx,
             else {
                 if (IS_BAD_PTR(args_obj)) {
                     args_obj = make_args(ctx, stack, regs_idx + rarg1, num_args);
-                    if (IS_BAD_PTR(args_obj)) {
-                        kos_stack_pop(ctx);
-                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                    }
                     TRY_OBJID(args_obj);
                 }
                 set_handler_reg(ctx, args_obj);
@@ -925,6 +921,8 @@ static int _prepare_call(KOS_CONTEXT        ctx,
     }
 
 cleanup:
+    if (error && stack != ctx->stack)
+        kos_stack_pop(ctx);
     KOS_pop_locals(ctx, pushed);
     return error;
 }
