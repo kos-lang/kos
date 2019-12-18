@@ -921,7 +921,7 @@ static int _prepare_call(KOS_CONTEXT        ctx,
     }
 
 cleanup:
-    if (error && stack != ctx->stack)
+    if (error && (stack != ctx->stack || regs_idx != ctx->regs_idx))
         kos_stack_pop(ctx);
     KOS_pop_locals(ctx, pushed);
     return error;
