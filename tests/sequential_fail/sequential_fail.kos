@@ -23,7 +23,16 @@
 import base.*
 import random
 
-fun(a...) { return a } (0)
+assert [0] == fun(a...) { return a } (0)
+
+do {
+    fun recursive(x)
+    {
+        return x ? recursive(x - 1) : 0
+    }
+
+    assert recursive(16) == 0
+}
 
 do {
     var caught = false
