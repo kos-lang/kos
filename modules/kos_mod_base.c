@@ -1897,7 +1897,7 @@ static KOS_OBJ_ID expand_for_sort(KOS_CONTEXT ctx,
 
     if (key_func != KOS_VOID) {
         key_args = KOS_new_array(ctx, 1);
-        TRY_OBJID(ret);
+        TRY_OBJID(key_args);
     }
 
     while (i < size) {
