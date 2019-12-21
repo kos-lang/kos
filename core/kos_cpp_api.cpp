@@ -126,9 +126,25 @@ std::string value_from_object_ptr<std::string>(context ctx, KOS_OBJ_ID obj_id)
         ctx.raise_and_signal_error("source type is not a string");
 
     const unsigned len = KOS_string_to_utf8(obj_id, 0, 0);
-    std::string    str(static_cast<size_t>(len), '\0');
+    if (len == ~0U)
+        ctx.raise_and_signal_error("invalid string");
+
+    std::string str(static_cast<size_t>(len), '\0');
 
     KOS_string_to_utf8(obj_id, &str[0], len);
+    return str;
+}
+
+kos::string::operator std::string() const
+{
+    const unsigned len = KOS_string_to_utf8(obj_id_, 0, 0);
+    if (len == ~0U)
+        throw std::runtime_error("invalid string");
+        //ctx.raise_and_signal_error("invalid string");
+
+    std::string str(static_cast<size_t>(len), '\0');
+
+    KOS_string_to_utf8(obj_id_, &str[0], len);
     return str;
 }
 

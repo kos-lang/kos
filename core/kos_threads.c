@@ -297,12 +297,15 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
             if (flags == (KOS_THREAD_DISOWNED | KOS_THREAD_FINISHED) ||
                      (join_all && flags == KOS_THREAD_DISOWNED) || join_rest) {
 
+                assert( ! (flags & KOS_THREAD_JOINING));
+
                 if (KOS_atomic_cas_strong_u32(thread->flags, flags, flags | KOS_THREAD_JOINING)) {
 
                     KOS_OBJ_ID retval;
 
                     /* Prevent race between KOS_instance_destroy() and GC */
                     KOS_atomic_add_u32(thread->ref_count, 1U);
+                    assert(KOS_atomic_read_relaxed_u32(thread->ref_count) >= 2U);
 
                     kos_unlock_mutex(&inst->threads.new_mutex);
                     new_locked = 0;

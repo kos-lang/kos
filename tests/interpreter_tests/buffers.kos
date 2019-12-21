@@ -269,6 +269,18 @@ do {
     assert a[1] == 98
 }
 
+# Convert invalid string to buffer
+do {
+    var exception = void
+    try {
+        "\(buffer("\x{fa6faB}"))"
+    }
+    catch const e {
+        exception = e.value
+    }
+    assert exception
+}
+
 ##############################################################################
 # base.buffer.prototype.size
 

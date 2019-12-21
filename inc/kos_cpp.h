@@ -327,13 +327,7 @@ class string: public object_base {
         {
         }
 
-        operator std::string() const {
-            const unsigned len = KOS_string_to_utf8(obj_id_, 0, 0);
-            std::string    str(static_cast<size_t>(len), '\0');
-
-            KOS_string_to_utf8(obj_id_, &str[0], len);
-            return str;
-        }
+        operator std::string() const;
 };
 
 class boolean: public object_base {

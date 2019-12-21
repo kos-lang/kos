@@ -53,6 +53,7 @@ static const char str_err_invalid_buffer_size[]      = "buffer size out of range
 static const char str_err_invalid_key_type[]         = "invalid key type, must be function or void";
 static const char str_err_invalid_pack_format[]      = "invalid pack format";
 static const char str_err_invalid_reverse_type[]     = "invalid reverse type, must be boolean";
+static const char str_err_invalid_string[]           = "invalid string";
 static const char str_err_invalid_string_idx[]       = "string index is out of range";
 static const char str_err_join_self[]                = "thread cannot join itself";
 static const char str_err_not_array[]                = "object is not an array";
@@ -1297,6 +1298,11 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
 
             case OBJ_STRING: {
                 const uint32_t size = KOS_string_to_utf8(arg, 0, 0);
+
+                if (size == ~0U) {
+                    KOS_raise_exception_cstring(ctx, str_err_invalid_string);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
 
                 TRY(KOS_buffer_resize(ctx, buffer, cur_size + size));
 
