@@ -29,6 +29,8 @@
 
 #define RAISE_EXCEPTION(err_obj) do { KOS_raise_exception_cstring(ctx, (err_obj)); RAISE_ERROR(KOS_ERROR_EXCEPTION); } while (0)
 
+#define RAISE_EXCEPTION_STR(cstr_obj) do { KOS_raise_exception(ctx, KOS_CONST_ID(cstr_obj)); RAISE_ERROR(KOS_ERROR_EXCEPTION); } while (0)
+
 #define RAISE_ERROR(code) do { error = (code); goto cleanup; } while (0)
 
 #endif

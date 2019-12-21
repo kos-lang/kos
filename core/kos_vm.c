@@ -42,21 +42,21 @@
 #include <math.h>
 #include <string.h>
 
-static const char str_err_args_not_array[]       = "function arguments are not an array";
-static const char str_err_cannot_yield[]         = "function is not a generator";
-static const char str_err_corrupted_defaults[]   = "argument defaults are corrupted";
-static const char str_err_div_by_zero[]          = "division by zero";
-static const char str_err_generator_running[]    = "generator is running";
-static const char str_err_invalid_byte_value[]   = "buffer element value out of range";
-static const char str_err_invalid_index[]        = "index out of range";
-static const char str_err_invalid_instruction[]  = "invalid instruction";
-static const char str_err_not_callable[]         = "object is not callable";
-static const char str_err_not_class[]            = "base object is not a class";
-static const char str_err_not_generator[]        = "function is not a generator";
-static const char str_err_not_indexable[]        = "object is not indexable";
-static const char str_err_slice_not_function[]   = "slice is not a function";
-static const char str_err_too_few_args[]         = "not enough arguments passed to a function";
-static const char str_err_unsup_operand_types[]  = "unsupported operand types";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_args_not_array,      "function arguments are not an array");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_yield,        "function is not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_corrupted_defaults,  "argument defaults are corrupted");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_div_by_zero,         "division by zero");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_running,   "generator is running");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,  "buffer element value out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index,       "index out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_instruction, "invalid instruction");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_callable,        "object is not callable");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_class,           "base object is not a class");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,       "function is not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_indexable,       "object is not indexable");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_slice_not_function,  "slice is not a function");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_few_args,        "not enough arguments passed to a function");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types, "unsupported operand types");
 
 DECLARE_STATIC_CONST_OBJECT(new_this, OBJ_OPAQUE, 0xC0);
 
@@ -82,7 +82,7 @@ static KOS_OBJ_ID _add_integer(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             ret = KOS_BADPTR;
     }
 
@@ -109,7 +109,7 @@ static KOS_OBJ_ID _add_float(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             return KOS_BADPTR;
     }
 
@@ -136,7 +136,7 @@ static KOS_OBJ_ID _sub_integer(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             ret = KOS_BADPTR;
             break;
     }
@@ -164,7 +164,7 @@ static KOS_OBJ_ID _sub_float(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             return KOS_BADPTR;
     }
 
@@ -191,7 +191,7 @@ static KOS_OBJ_ID _mul_integer(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             ret = KOS_BADPTR;
             break;
     }
@@ -219,7 +219,7 @@ static KOS_OBJ_ID _mul_float(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             return KOS_BADPTR;
     }
 
@@ -239,7 +239,7 @@ static KOS_OBJ_ID _div_integer(KOS_CONTEXT ctx,
         if (b)
             ret = KOS_new_int(ctx, a / b);
         else {
-            KOS_raise_exception_cstring(ctx, str_err_div_by_zero);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
             ret = KOS_BADPTR;
         }
     }
@@ -252,7 +252,7 @@ static KOS_OBJ_ID _div_integer(KOS_CONTEXT ctx,
             if (b != 0)
                 ret = KOS_new_float(ctx, (double)a / b);
             else {
-                KOS_raise_exception_cstring(ctx, str_err_div_by_zero);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
                 ret = KOS_BADPTR;
             }
             break;
@@ -265,14 +265,14 @@ static KOS_OBJ_ID _div_integer(KOS_CONTEXT ctx,
             if (b)
                 ret = KOS_new_int(ctx, a / b);
             else {
-                KOS_raise_exception_cstring(ctx, str_err_div_by_zero);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
                 ret = KOS_BADPTR;
             }
             break;
         }
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             ret = KOS_BADPTR;
             break;
     }
@@ -301,14 +301,14 @@ static KOS_OBJ_ID _div_float(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             return KOS_BADPTR;
     }
 
     if (b != 0)
         ret = KOS_new_float(ctx, a / b);
     else {
-        KOS_raise_exception_cstring(ctx, str_err_div_by_zero);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
         ret = KOS_BADPTR;
     }
 
@@ -328,7 +328,7 @@ static KOS_OBJ_ID _mod_integer(KOS_CONTEXT ctx,
         if (b)
             ret = KOS_new_int(ctx, a % b);
         else {
-            KOS_raise_exception_cstring(ctx, str_err_div_by_zero);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
             ret = KOS_BADPTR;
         }
     }
@@ -341,7 +341,7 @@ static KOS_OBJ_ID _mod_integer(KOS_CONTEXT ctx,
             if (b != 0)
                 ret = KOS_new_float(ctx, fmod((double)a, b));
             else {
-                KOS_raise_exception_cstring(ctx, str_err_div_by_zero);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
                 ret = KOS_BADPTR;
             }
             break;
@@ -354,14 +354,14 @@ static KOS_OBJ_ID _mod_integer(KOS_CONTEXT ctx,
             if (b)
                 ret = KOS_new_int(ctx, a % b);
             else {
-                KOS_raise_exception_cstring(ctx, str_err_div_by_zero);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
                 ret = KOS_BADPTR;
             }
             break;
         }
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             ret = KOS_BADPTR;
             break;
     }
@@ -390,14 +390,14 @@ static KOS_OBJ_ID _mod_float(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             return KOS_BADPTR;
     }
 
     if (b != 0)
         ret = KOS_new_float(ctx, fmod(a, b));
     else {
-        KOS_raise_exception_cstring(ctx, str_err_div_by_zero);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
         ret = KOS_BADPTR;
     }
 
@@ -789,18 +789,18 @@ static int _prepare_call(KOS_CONTEXT        ctx,
 
     if (IS_BAD_PTR(args_obj)) {
         if (num_args < OBJPTR(FUNCTION, func_obj)->num_args)
-            RAISE_EXCEPTION(str_err_too_few_args);
+            RAISE_EXCEPTION_STR(str_err_too_few_args);
     }
     else {
         if (GET_OBJ_TYPE(args_obj) != OBJ_ARRAY)
-            RAISE_EXCEPTION(str_err_args_not_array);
+            RAISE_EXCEPTION_STR(str_err_args_not_array);
 
         if (KOS_get_array_size(args_obj) < OBJPTR(FUNCTION, func_obj)->num_args)
-            RAISE_EXCEPTION(str_err_too_few_args);
+            RAISE_EXCEPTION_STR(str_err_too_few_args);
     }
 
     if (instr == INSTR_CALL_GEN && state < KOS_GEN_READY)
-        RAISE_EXCEPTION(str_err_not_generator);
+        RAISE_EXCEPTION_STR(str_err_not_generator);
 
     TRY(KOS_push_locals(ctx, &pushed, 3, &func_obj, &args_obj, &stack));
 
@@ -912,7 +912,7 @@ static int _prepare_call(KOS_CONTEXT        ctx,
         }
 
         case KOS_GEN_RUNNING:
-            RAISE_EXCEPTION(str_err_generator_running);
+            RAISE_EXCEPTION_STR(str_err_generator_running);
 
         default:
             assert(state == KOS_GEN_DONE);
@@ -988,7 +988,7 @@ static KOS_OBJ_ID _read_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
         idx += (int)size;
 
     if ((uint32_t)idx >= size)  {
-        KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_index));
         ret = KOS_VOID;
     }
     else {
@@ -1010,7 +1010,7 @@ static int _write_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID
     TRY(KOS_get_integer(ctx, value, &byte_value));
 
     if (byte_value < 0 || byte_value > 255)
-        RAISE_EXCEPTION(str_err_invalid_byte_value);
+        RAISE_EXCEPTION_STR(str_err_invalid_byte_value);
 
     size = KOS_get_buffer_size(objptr);
 
@@ -1018,7 +1018,7 @@ static int _write_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID
         idx += (int)size;
 
     if ((uint32_t)idx >= size)
-        RAISE_EXCEPTION(str_err_invalid_index);
+        RAISE_EXCEPTION_STR(str_err_invalid_index);
     else {
         uint8_t *const buf = KOS_buffer_data_volatile(objptr);
         buf[idx] = (uint8_t)byte_value;
@@ -1045,7 +1045,7 @@ static KOS_OBJ_ID _read_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
         idx += KOS_STACK_EXTRA;
 
     if ((uint32_t)idx >= size)  {
-        KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_index));
         ret = KOS_VOID;
     }
     else
@@ -1072,7 +1072,7 @@ static int _write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID 
 
 
     if ((uint32_t)idx >= size) {
-        KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_index));
         error = KOS_ERROR_EXCEPTION;
     }
     else
@@ -1389,7 +1389,7 @@ static int exec_function(KOS_CONTEXT ctx)
                     out = KOS_VOID;
 
                 else {
-                    KOS_raise_exception_cstring(ctx, str_err_not_class);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_class));
                     error = KOS_ERROR_EXCEPTION;
                 }
 
@@ -1494,7 +1494,7 @@ static int exec_function(KOS_CONTEXT ctx)
                     error = KOS_get_integer(ctx, prop, &idx);
                     if (!error) {
                         if (idx > INT_MAX || idx < INT_MIN) {
-                            KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+                            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_index));
                             error = KOS_ERROR_EXCEPTION;
                         }
                     }
@@ -1564,7 +1564,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 else if (type == OBJ_STACK)
                     out = _read_stack(ctx, src, idx);
                 else
-                    KOS_raise_exception_cstring(ctx, str_err_not_indexable);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_indexable));
 
                 delta = 7;
                 break;
@@ -1616,7 +1616,7 @@ static int exec_function(KOS_CONTEXT ctx)
                         if (IS_BAD_PTR(out))
                             error = KOS_ERROR_EXCEPTION;
                         else if (GET_OBJ_TYPE(out) != OBJ_FUNCTION)
-                            KOS_raise_exception_cstring(ctx, str_err_slice_not_function);
+                            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_slice_not_function));
                         else {
                             KOS_OBJ_ID args;
 
@@ -1710,7 +1710,7 @@ static int exec_function(KOS_CONTEXT ctx)
                     error = KOS_get_integer(ctx, prop, &idx);
                     if (!error) {
                         if (idx > INT_MAX || idx < INT_MIN) {
-                            KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+                            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_index));
                             error = KOS_ERROR_EXCEPTION;
                         }
                     }
@@ -1793,7 +1793,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 else if (type == OBJ_STACK)
                     error = _write_stack(ctx, dest, idx, REGISTER(rsrc));
                 else
-                    KOS_raise_exception_cstring(ctx, str_err_not_indexable);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_indexable));
 
                 delta = 7;
                 break;
@@ -1958,12 +1958,12 @@ static int exec_function(KOS_CONTEXT ctx)
                                 KOS_pop_locals(ctx, pushed);
                             }
                             else
-                                KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+                                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
                             break;
                         }
 
                         default:
-                            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+                            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
                             break;
                     }
                 }
@@ -2000,7 +2000,7 @@ static int exec_function(KOS_CONTEXT ctx)
                         break;
 
                     default:
-                        KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
                         break;
                 }
 
@@ -2036,7 +2036,7 @@ static int exec_function(KOS_CONTEXT ctx)
                         break;
 
                     default:
-                        KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
                         break;
                 }
 
@@ -2072,7 +2072,7 @@ static int exec_function(KOS_CONTEXT ctx)
                         break;
 
                     default:
-                        KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
                         break;
                 }
 
@@ -2108,7 +2108,7 @@ static int exec_function(KOS_CONTEXT ctx)
                         break;
 
                     default:
-                        KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
                         break;
                 }
 
@@ -2541,7 +2541,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                     if (type != OBJ_FUNCTION && type != OBJ_CLASS) {
                         dest = KOS_BADPTR;
-                        KOS_raise_exception_cstring(ctx, str_err_not_callable);
+                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_callable));
                     }
                 }
 
@@ -2598,14 +2598,14 @@ static int exec_function(KOS_CONTEXT ctx)
                 dest = REGISTER(rdest);
 
                 if (GET_OBJ_TYPE(src) != OBJ_ARRAY)
-                    KOS_raise_exception_cstring(ctx, str_err_corrupted_defaults);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_corrupted_defaults));
                 else {
                     const KOS_TYPE type = GET_OBJ_TYPE(dest);
 
                     if (type == OBJ_FUNCTION || type == OBJ_CLASS)
                         OBJPTR(FUNCTION, dest)->defaults = src;
                     else
-                        KOS_raise_exception_cstring(ctx, str_err_not_callable);
+                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_callable));
                 }
 
                 delta = 3;
@@ -2733,7 +2733,7 @@ static int exec_function(KOS_CONTEXT ctx)
                         break;
 
                     default:
-                        KOS_raise_exception_cstring(ctx, str_err_not_callable);
+                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_callable));
                         error = KOS_ERROR_EXCEPTION;
                         break;
                 }
@@ -2868,7 +2868,7 @@ static int exec_function(KOS_CONTEXT ctx)
                     error =  KOS_SUCCESS_RETURN;
                 }
                 else
-                    KOS_raise_exception_cstring(ctx, str_err_cannot_yield);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_cannot_yield));
 
                 delta = 2;
                 break;
@@ -2912,7 +2912,7 @@ static int exec_function(KOS_CONTEXT ctx)
                     /* TODO simply call a debugger function from instance */
                 }
                 else
-                    KOS_raise_exception_cstring(ctx, str_err_invalid_instruction);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_instruction));
                 delta = 1;
                 break;
         }
@@ -2985,7 +2985,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
     type = GET_OBJ_TYPE(func_obj);
 
     if (type != OBJ_FUNCTION && type != OBJ_CLASS) {
-        KOS_raise_exception_cstring(ctx, str_err_not_callable);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_callable));
         return KOS_BADPTR;
     }
 

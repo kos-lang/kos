@@ -39,12 +39,18 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char str_err_invalid_index[]   = "string index is out of range";
-static const char str_err_invalid_string[]  = "invalid string";
-static const char str_err_invalid_utf8[]    = "invalid UTF-8 sequence";
-static const char str_err_not_string[]      = "object is not a string";
-static const char str_err_null_ptr[]        = "null pointer";
-static const char str_err_string_too_long[] = "string too long";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_array_too_large,      "input array too large");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_buffer_too_large,     "input buffer too large");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_buffer_index, "buffer index is out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_char_code,    "invalid character code");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index,        "string index is out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string,       "invalid string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_utf8,         "invalid UTF-8 sequence");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,            "object is not an array");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,           "object is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_null_ptr,             "null pointer");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_string_too_long,      "string too long");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats,     "repeated string too long");
 
 #ifdef CONFIG_STRING16
 #define _override_elem_size(size) do { (size) = (size) < KOS_STRING_ELEM_16 ? KOS_STRING_ELEM_16 : (size); } while (0)
@@ -87,7 +93,7 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
 
     if (length > 4U * 0xFFFFU) {
-        KOS_raise_exception_cstring(ctx, str_err_string_too_long);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
         str = 0;
     }
     else if (length) {
@@ -111,8 +117,9 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
                                                  sizeof(KOS_STR_HEADER) + (length << elem_size));
         }
         else {
-            KOS_raise_exception_cstring(ctx,
-                    count == ~0U ? str_err_invalid_utf8 : str_err_string_too_long);
+            KOS_raise_exception(ctx, count == ~0U ?
+                                     KOS_CONST_ID(str_err_invalid_utf8) :
+                                     KOS_CONST_ID(str_err_string_too_long));
             str = 0;
         }
 
@@ -130,19 +137,19 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
 
             if (elem_size == KOS_STRING_ELEM_8) {
                 if (KOS_SUCCESS != kos_utf8_decode_8(s, length, escape, (uint8_t *)ptr)) {
-                    KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
                     str = 0; /* object is garbage-collected */
                 }
             }
             else if (elem_size == KOS_STRING_ELEM_16) {
                 if (KOS_SUCCESS != kos_utf8_decode_16(s, length, escape, (uint16_t *)ptr)) {
-                    KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
                     str = 0; /* object is garbage-collected */
                 }
             }
             else {
                 if (KOS_SUCCESS != kos_utf8_decode_32(s, length, escape, (uint32_t *)ptr)) {
-                    KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
                     str = 0; /* object is garbage-collected */
                 }
             }
@@ -227,11 +234,8 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
 
     length = KOS_get_array_size(codes);
 
-    if (length > 0xFFFFU) {
-        KOS_DECLARE_STATIC_CONST_STRING(str_err_array_too_large, "input array too large");
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_array_too_large));
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+    if (length > 0xFFFFU)
+        RAISE_EXCEPTION_STR(str_err_array_too_large);
 
     if (length) {
         codes = kos_get_array_storage(codes);
@@ -241,19 +245,13 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
             const KOS_OBJ_ID elem = KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, codes)->buf[i]);
             int64_t          code;
 
-            KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_char_code, "invalid character code");
-
-            if ( ! IS_NUMERIC_OBJ(elem)) {
-                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_char_code));
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
-            }
+            if ( ! IS_NUMERIC_OBJ(elem))
+                RAISE_EXCEPTION_STR(str_err_invalid_char_code);
 
             TRY(KOS_get_integer(ctx, elem, &code));
 
-            if (code < 0 || code > 0x1FFFFF) {
-                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_char_code));
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
-            }
+            if (code < 0 || code > 0x1FFFFF)
+                RAISE_EXCEPTION_STR(str_err_invalid_char_code);
 
             if (code > 0xFF) {
                 if (code > 0xFFFF)
@@ -352,7 +350,6 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     if ( ! size && begin == end)
         return KOS_STR_EMPTY;
     if (begin > end || end > size) {
-        KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_buffer_index, "buffer index is out of range");
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_buffer_index));
         goto cleanup;
     }
@@ -364,7 +361,7 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     length = kos_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                               size, KOS_UTF8_NO_ESCAPE, &max_code);
     if (length == ~0U) {
-        KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
         goto cleanup;
     }
 
@@ -381,7 +378,6 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     _override_elem_size(elem_size);
 
     if (length > 0xFFFFU) {
-        KOS_DECLARE_STATIC_CONST_STRING(str_err_buffer_too_large, "input buffer too large");
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_buffer_too_large));
         goto cleanup;
     }
@@ -395,21 +391,21 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     if (elem_size == KOS_STRING_ELEM_8) {
         if (KOS_SUCCESS != kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                                              size, KOS_UTF8_NO_ESCAPE, (uint8_t *)ptr)) {
-            KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
             str = 0; /* object is garbage-collected */
         }
     }
     else if (elem_size == KOS_STRING_ELEM_16) {
         if (KOS_SUCCESS != kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                                               size, KOS_UTF8_NO_ESCAPE, (uint16_t *)ptr)) {
-            KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
             str = 0; /* object is garbage-collected */
         }
     }
     else {
         if (KOS_SUCCESS != kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
                                               size, KOS_UTF8_NO_ESCAPE, (uint32_t *)ptr)) {
-            KOS_raise_exception_cstring(ctx, str_err_invalid_utf8);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
             str = 0; /* object is garbage-collected */
         }
     }
@@ -493,7 +489,7 @@ int KOS_string_to_cstr_vec(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(obj_id));
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -503,7 +499,7 @@ int KOS_string_to_cstr_vec(KOS_CONTEXT ctx,
         assert(str_len > 0);
 
         if (str_len == ~0U) {
-            KOS_raise_exception_cstring(ctx, str_err_invalid_string);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_string));
             return KOS_ERROR_EXCEPTION;
         }
     }
@@ -665,8 +661,9 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
             if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
                 new_str_id = KOS_BADPTR;
                 new_len    = 0;
-                KOS_raise_exception_cstring(ctx, IS_BAD_PTR(cur_str) ?
-                                            str_err_null_ptr : str_err_not_string);
+                KOS_raise_exception(ctx, IS_BAD_PTR(cur_str) ?
+                                         KOS_CONST_ID(str_err_null_ptr) :
+                                         KOS_CONST_ID(str_err_not_string));
                 break;
             }
 
@@ -694,7 +691,7 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
                 new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
             else {
                 new_str_id = KOS_BADPTR;
-                KOS_raise_exception_cstring(ctx, str_err_string_too_long);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
             }
 
             if ( ! IS_BAD_PTR(new_str_id)) {
@@ -723,7 +720,6 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
     unsigned   num_strings;
 
     if (IS_BAD_PTR(str_array_id) || GET_OBJ_TYPE(str_array_id) != OBJ_ARRAY) {
-        KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array, "object is not an array");
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
         return KOS_BADPTR;
     }
@@ -736,7 +732,7 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
         new_str_id = KOS_array_read(ctx, str_array_id, 0);
 
         if ( ! IS_BAD_PTR(new_str_id) && GET_OBJ_TYPE(new_str_id) != OBJ_STRING) {
-            KOS_raise_exception_cstring(ctx, str_err_not_string);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
             new_str_id = KOS_BADPTR;
         }
     }
@@ -758,7 +754,7 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
                 new_str_id = KOS_BADPTR;
                 new_len    = 0;
                 if ( ! IS_BAD_PTR(cur_str))
-                    KOS_raise_exception_cstring(ctx, str_err_not_string);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
                 break;
             }
 
@@ -785,7 +781,7 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
             if (new_len <= 0xFFFFU)
                 new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
             else {
-                KOS_raise_exception_cstring(ctx, str_err_string_too_long);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
                 new_str_id = KOS_BADPTR;
             }
 
@@ -800,7 +796,7 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
                     if (IS_BAD_PTR(str_obj) || GET_OBJ_TYPE(str_obj) != OBJ_STRING) {
                         new_str_id = KOS_BADPTR;
                         if ( ! IS_BAD_PTR(str_obj))
-                            KOS_raise_exception_cstring(ctx, str_err_not_string);
+                            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
                         break;
                     }
 
@@ -825,8 +821,9 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
     KOS_OBJ_ID new_str = KOS_BADPTR;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
-                                    str_err_null_ptr: str_err_not_string);
+        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id) ?
+                                 KOS_CONST_ID(str_err_null_ptr) :
+                                 KOS_CONST_ID(str_err_not_string));
     else {
         const KOS_STRING_FLAGS elem_size =
             kos_get_string_elem_size(OBJPTR(STRING, obj_id));
@@ -922,8 +919,9 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
     KOS_STRING *new_str = 0;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
-                                    str_err_null_ptr : str_err_not_string);
+        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id) ?
+                                 KOS_CONST_ID(str_err_null_ptr) :
+                                 KOS_CONST_ID(str_err_not_string));
     else {
         const KOS_STRING_FLAGS elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
         const int              len       = (int)OBJPTR(STRING, obj_id)->header.length;
@@ -964,7 +962,7 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
             }
         }
         else
-            KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_index));
     }
 
     return OBJID(STRING, new_str);
@@ -977,8 +975,9 @@ unsigned KOS_string_get_char_code(KOS_CONTEXT ctx,
     uint32_t code = ~0U;
 
     if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception_cstring(ctx, IS_BAD_PTR(obj_id) ?
-                                    str_err_null_ptr : str_err_not_string);
+        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id) ?
+                                 KOS_CONST_ID(str_err_null_ptr) :
+                                 KOS_CONST_ID(str_err_not_string));
     else {
         KOS_STRING            *str       = OBJPTR(STRING, obj_id);
         const KOS_STRING_FLAGS elem_size = kos_get_string_elem_size(str);
@@ -1007,7 +1006,7 @@ unsigned KOS_string_get_char_code(KOS_CONTEXT ctx,
             }
         }
         else
-            KOS_raise_exception_cstring(ctx, str_err_invalid_index);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_index));
     }
 
     return code;
@@ -1345,7 +1344,7 @@ int KOS_string_find(KOS_CONTEXT         ctx,
     if (GET_OBJ_TYPE(obj_id_text) != OBJ_STRING ||
         GET_OBJ_TYPE(obj_id_pattern) != OBJ_STRING) {
 
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -1387,7 +1386,7 @@ int KOS_string_scan(KOS_CONTEXT             ctx,
     if (GET_OBJ_TYPE(obj_id_text) != OBJ_STRING ||
         GET_OBJ_TYPE(obj_id_pattern) != OBJ_STRING) {
 
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         return KOS_ERROR_EXCEPTION;
     }
 
@@ -1520,7 +1519,7 @@ KOS_OBJ_ID KOS_string_reverse(KOS_CONTEXT ctx,
     unsigned    len;
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         return KOS_BADPTR;
     }
 
@@ -1584,7 +1583,7 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
     uint8_t         *end_buf;
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         return KOS_BADPTR;
     }
 
@@ -1597,7 +1596,6 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
         return obj_id;
 
     if (num_repeat > 0xFFFFU || (len * num_repeat) > 0xFFFFU) {
-        KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats, "repeated string too long");
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_too_many_repeats));
         return KOS_BADPTR;
     }
@@ -1654,7 +1652,7 @@ KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
     KOS_STRING_FLAGS elem_size;
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         return KOS_BADPTR;
     }
 
@@ -1726,7 +1724,7 @@ KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
     KOS_STRING_FLAGS elem_size;
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         return KOS_BADPTR;
     }
 

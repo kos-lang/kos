@@ -44,21 +44,21 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char str_cur_dir[]              = ".";
-static const char str_eol[]                  = "\n";
-static const char str_err_circular_deps[]    = "circular dependencies detected for module \"";
-static const char str_err_duplicate_global[] = "duplicate global \"";
-static const char str_err_end[]              = "\"";
-static const char str_err_internal[]         = "internal error";
-static const char str_err_module[]           = "module \"";
-static const char str_err_not_found[]        = "\" not found";
-static const char str_err_stdin[]            = "failed reading from stdin";
-static const char str_err_unable_to_open[]   = "unable to open file \"";
-static const char str_err_unable_to_read[]   = "unable to read file \"";
-static const char str_format_colon[]         = ":";
-static const char str_format_error[]         = ": error: ";
-static const char str_path_sep[]             = KOS_PATH_SEPARATOR_STR;
-static const char str_script_ext[]           = ".kos";
+KOS_DECLARE_STATIC_CONST_STRING(str_cur_dir,              ".");
+KOS_DECLARE_STATIC_CONST_STRING(str_eol,                  "\n");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_circular_deps,    "circular dependencies detected for module \"");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_duplicate_global, "duplicate global \"");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_end,              "\"");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_internal,         "internal error");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_module,           "module \"");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_found,        "\" not found");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_stdin,            "failed reading from stdin");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_unable_to_open,   "unable to open file \"");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_unable_to_read,   "unable to read file \"");
+KOS_DECLARE_STATIC_CONST_STRING(str_format_colon,         ":");
+KOS_DECLARE_STATIC_CONST_STRING(str_format_error,         ": error: ");
+KOS_DECLARE_STATIC_CONST_STRING(str_path_sep,             KOS_PATH_SEPARATOR_STR);
+KOS_DECLARE_STATIC_CONST_STRING(str_script_ext,           ".kos");
 
 struct KOS_MODULE_LOAD_CHAIN_S {
     KOS_MODULE_LOAD_CHAIN *next;
@@ -67,32 +67,25 @@ struct KOS_MODULE_LOAD_CHAIN_S {
 };
 
 static void _raise_3(KOS_CONTEXT ctx,
-                     const char *s1,
+                     KOS_OBJ_ID  s1,
                      KOS_OBJ_ID  s2,
-                     const char *s3)
+                     KOS_OBJ_ID  s3)
 {
     KOS_OBJ_ID str_err[3];
+    KOS_OBJ_ID str_err_full;
 
-    str_err[0] = KOS_BADPTR;
+    str_err[0] = s1;
     str_err[1] = s2;
-    str_err[2] = KOS_BADPTR;
+    str_err[2] = s3;
 
-    kos_track_refs(ctx, 3, &str_err[0], &str_err[1], &str_err[2]);
+    kos_track_refs(ctx, 1, &str_err[1]);
 
-    str_err[0] = KOS_new_const_ascii_cstring(ctx, s1);
-    if ( ! IS_BAD_PTR(str_err[0])) {
-        str_err[2] = KOS_new_const_ascii_cstring(ctx, s3);
+    str_err_full = KOS_string_add_n(ctx, str_err, 3);
 
-        if ( ! IS_BAD_PTR(str_err[2])) {
+    if ( ! IS_BAD_PTR(str_err_full))
+        KOS_raise_exception(ctx, str_err_full);
 
-            const KOS_OBJ_ID str_err_full = KOS_string_add_n(ctx, str_err, 3);
-
-            if ( ! IS_BAD_PTR(str_err_full))
-                KOS_raise_exception(ctx, str_err_full);
-        }
-    }
-
-    kos_untrack_refs(ctx, 3);
+    kos_untrack_refs(ctx, 1);
 }
 
 static unsigned _rfind_path(const char *path,
@@ -173,32 +166,22 @@ static int _find_module(KOS_CONTEXT ctx,
         KOS_OBJ_ID components[4];
 
         components[0] = KOS_BADPTR;
-        components[1] = KOS_BADPTR;
-        components[2] = KOS_BADPTR;
-        components[3] = KOS_BADPTR;
+        components[1] = KOS_CONST_ID(str_path_sep);
+        components[2] = module_name;
+        components[3] = KOS_CONST_ID(str_script_ext);
 
         if (!num_paths)
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-        TRY(KOS_push_locals(ctx, &pushed2, 4,
-                            &components[0], &components[1], &components[2], &components[3]));
+        TRY(KOS_push_locals(ctx, &pushed2, 2,
+                            &components[0], &components[2]));
         pushed += pushed2;
 
         for (i = 0; i < num_paths; i++) {
             components[0] = KOS_BADPTR;
-            components[1] = KOS_BADPTR;
-            components[2] = KOS_BADPTR;
-            components[3] = KOS_BADPTR;
 
             components[0] = KOS_array_read(ctx, inst->modules.search_paths, (int)i);
             TRY_OBJID(components[0]);
-            components[1] = KOS_new_const_ascii_string(ctx, str_path_sep,
-                                                       sizeof(str_path_sep) - 1);
-            TRY_OBJID(components[1]);
-            components[2] = module_name;
-            components[3] = KOS_new_const_ascii_string(ctx, str_script_ext,
-                                                       sizeof(str_script_ext) - 1);
-            TRY_OBJID(components[3]);
 
             path = KOS_string_add_n(ctx, components, sizeof(components)/sizeof(components[0]));
             TRY_OBJID(path);
@@ -315,12 +298,18 @@ static int _load_file(KOS_CONTEXT  ctx,
     switch (error) {
 
         case KOS_ERROR_CANNOT_OPEN_FILE:
-            _raise_3(ctx, str_err_unable_to_open, path, str_err_end);
+            _raise_3(ctx,
+                     KOS_CONST_ID(str_err_unable_to_open),
+                     path,
+                     KOS_CONST_ID(str_err_end));
             error = KOS_ERROR_EXCEPTION;
             break;
 
         case KOS_ERROR_CANNOT_READ_FILE:
-            _raise_3(ctx, str_err_unable_to_read, path, str_err_end);
+            _raise_3(ctx,
+                     KOS_CONST_ID(str_err_unable_to_read),
+                     path,
+                     KOS_CONST_ID(str_err_end));
             error = KOS_ERROR_EXCEPTION;
             break;
 
@@ -658,58 +647,42 @@ static KOS_OBJ_ID _format_error(KOS_CONTEXT  ctx,
     KOS_OBJ_ID parts[11];
 
     parts[0]  = KOS_BADPTR;
-    parts[1]  = KOS_BADPTR;
     parts[2]  = KOS_BADPTR;
-    parts[3]  = KOS_BADPTR;
     parts[4]  = KOS_BADPTR;
-    parts[5]  = KOS_BADPTR;
     parts[6]  = KOS_BADPTR;
-    parts[7]  = KOS_BADPTR;
     parts[8]  = KOS_BADPTR;
-    parts[9]  = KOS_BADPTR;
     parts[10] = KOS_BADPTR;
 
     kos_vector_init(&cstr);
 
-    TRY(KOS_push_locals(ctx, &pushed, 12,
-                &parts[0], &parts[1], &parts[2], &parts[3], &parts[4],
-                &parts[5], &parts[6], &parts[7], &parts[8], &parts[9],
+    TRY(KOS_push_locals(ctx, &pushed, 7,
+                &parts[0], &parts[2], &parts[4], &parts[6], &parts[8],
                 &parts[10], &module_obj));
 
     parts[0] = KOS_get_file_name(ctx, OBJPTR(MODULE, module_obj)->path);
     TRY_OBJID(parts[0]);
 
-    parts[1] = KOS_new_const_ascii_string(ctx, str_format_colon,
-                                          sizeof(str_format_colon) - 1);
-    TRY_OBJID(parts[1]);
+    parts[1] = KOS_CONST_ID(str_format_colon);
 
     parts[2] = KOS_object_to_string(ctx, TO_SMALL_INT((int)pos.line));
     TRY_OBJID(parts[2]);
 
-    parts[3] = KOS_new_const_ascii_string(ctx, str_format_colon,
-                                          sizeof(str_format_colon) - 1);
-    TRY_OBJID(parts[3]);
+    parts[3] = KOS_CONST_ID(str_format_colon);
 
     parts[4] = KOS_object_to_string(ctx, TO_SMALL_INT((int)pos.column));
     TRY_OBJID(parts[4]);
 
-    parts[5] = KOS_new_const_ascii_string(ctx, str_format_error,
-                                          sizeof(str_format_error) - 1);
-    TRY_OBJID(parts[5]);
+    parts[5] = KOS_CONST_ID(str_format_error);
 
     parts[6] = KOS_new_const_ascii_cstring(ctx, error_str);
     TRY_OBJID(parts[6]);
 
-    parts[7] = KOS_new_const_ascii_string(ctx, str_eol,
-                                          sizeof(str_eol) - 1);
-    TRY_OBJID(parts[7]);
+    parts[7] = KOS_CONST_ID(str_eol);
 
     parts[8] = _get_line(ctx, data, data_size, pos.line);
     TRY_OBJID(parts[8]);
 
-    parts[9] = KOS_new_const_ascii_string(ctx, str_eol,
-                                          sizeof(str_eol) - 1);
-    TRY_OBJID(parts[9]);
+    parts[9] = KOS_CONST_ID(str_eol);
 
     error = kos_vector_resize(&cstr, pos.column);
     if (error) {
@@ -1343,7 +1316,7 @@ static void _handle_interpreter_error(KOS_CONTEXT ctx, int error)
     }
     else {
         if ( ! KOS_is_exception_pending(ctx))
-            KOS_raise_exception_cstring(ctx, str_err_internal);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_internal));
     }
 }
 
@@ -1398,7 +1371,10 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
                              (KOS_OBJ_ID *)&module_path);
     if (error) {
         if (error == KOS_ERROR_NOT_FOUND) {
-            _raise_3(ctx, str_err_module, actual_module_name, str_err_not_found);
+            _raise_3(ctx,
+                     KOS_CONST_ID(str_err_module),
+                     actual_module_name,
+                     KOS_CONST_ID(str_err_not_found));
             error = KOS_ERROR_EXCEPTION;
         }
         goto cleanup;
@@ -1420,10 +1396,8 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
         /* Add search path - path of the topmost module being loaded */
         path_array = KOS_new_array(ctx, 1);
         TRY_OBJID(path_array);
-        if (KOS_get_string_length(module_dir) == 0) {
-            dir = KOS_new_const_ascii_string(ctx, str_cur_dir, sizeof(str_cur_dir) - 1);
-            TRY_OBJID(dir);
-        }
+        if (KOS_get_string_length(module_dir) == 0)
+            dir = KOS_CONST_ID(str_cur_dir);
         else
             dir = module_dir;
         TRY(KOS_array_write(ctx, path_array, 0, dir));
@@ -1454,7 +1428,10 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
                 name_str = KOS_new_string(ctx, module_name, name_size);
                 if (!IS_BAD_PTR(name_str))
-                    _raise_3(ctx, str_err_circular_deps, name_str, str_err_end);
+                    _raise_3(ctx,
+                             KOS_CONST_ID(str_err_circular_deps),
+                             name_str,
+                             KOS_CONST_ID(str_err_end));
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -1603,7 +1580,10 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             KOS_clear_exception(ctx);
-            _raise_3(ctx, str_err_module, module_name_str, str_err_not_found);
+            _raise_3(ctx,
+                     KOS_CONST_ID(str_err_module),
+                     module_name_str,
+                     KOS_CONST_ID(str_err_not_found));
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
@@ -1654,7 +1634,7 @@ static int _load_stdin(KOS_CONTEXT ctx, KOS_VECTOR *buf)
             TRY(kos_vector_resize(buf, last_size + num_read));
 
             if (ferror(stdin)) {
-                KOS_raise_exception_cstring(ctx, str_err_stdin);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_stdin));
                 error = KOS_ERROR_EXCEPTION;
             }
             else {
@@ -1699,7 +1679,10 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             KOS_clear_exception(ctx);
-            _raise_3(ctx, str_err_module, module_name_str, str_err_not_found);
+            _raise_3(ctx,
+                     KOS_CONST_ID(str_err_module),
+                     module_name_str,
+                     KOS_CONST_ID(str_err_not_found));
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
@@ -1756,7 +1739,10 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     KOS_clear_exception(ctx);
 
     if ( ! IS_BAD_PTR(prop)) {
-        _raise_3(ctx, str_err_duplicate_global, name, str_err_end);
+        _raise_3(ctx,
+                 KOS_CONST_ID(str_err_duplicate_global),
+                 name,
+                 KOS_CONST_ID(str_err_end));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
