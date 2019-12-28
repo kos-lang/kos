@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int _get_num_operands(KOS_BYTECODE_INSTR instr)
+static int get_num_operands(KOS_BYTECODE_INSTR instr)
 {
     switch (instr) {
 
@@ -176,7 +176,7 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
 }
 
 /* Returns number of bytes after the offset in the instruction or -1 if not offset */
-static int _get_offset_operand_tail(KOS_BYTECODE_INSTR instr, int op)
+static int get_offset_operand_tail(KOS_BYTECODE_INSTR instr, int op)
 {
     switch (instr) {
 
@@ -295,7 +295,7 @@ int kos_is_signed_op(KOS_BYTECODE_INSTR instr, int op)
     return 0;
 }
 
-static int _is_constant(KOS_BYTECODE_INSTR instr, int op)
+static int is_constant(KOS_BYTECODE_INSTR instr, int op)
 {
     switch (instr) {
 
@@ -477,7 +477,7 @@ void kos_disassemble(const char                           *filename,
         }
 
         str_opcode   = str_instr[opcode - INSTR_BREAKPOINT];
-        num_operands = _get_num_operands((KOS_BYTECODE_INSTR)opcode);
+        num_operands = get_num_operands((KOS_BYTECODE_INSTR)opcode);
 
         dis[sizeof(dis)-1] = 0;
         dis_size           = strlen(str_opcode);
@@ -498,12 +498,12 @@ void kos_disassemble(const char                           *filename,
             for (i = 0; i < opsize; i++)
                 value |= (int32_t)((uint32_t)bytecode[instr_size+i] << (8*i));
 
-            if (_is_constant((KOS_BYTECODE_INSTR)opcode, iop)) {
+            if (is_constant((KOS_BYTECODE_INSTR)opcode, iop)) {
                 constant     = (uint32_t)value;
                 has_constant = 1;
             }
 
-            tail = _get_offset_operand_tail((KOS_BYTECODE_INSTR)opcode, iop);
+            tail = get_offset_operand_tail((KOS_BYTECODE_INSTR)opcode, iop);
             avail_size = sizeof(dis) - dis_size;
             if (tail >= 0)
                 pr_size = snprintf(&dis[dis_size], avail_size, "%08X",

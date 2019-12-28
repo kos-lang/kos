@@ -65,7 +65,7 @@ static const char str_object_sep[]              = ", ";
 static const char str_recursive_array[]         = "[...]";
 static const char str_recursive_object[]        = "{...}";
 
-static const int8_t _extra_len[256] = {
+static const int8_t extra_len_map[256] = {
     /* 0 .. 127 */
     3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
     3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
@@ -91,7 +91,7 @@ static const int8_t _extra_len[256] = {
     3,  3,  3,  3,  3,  3,  3,  3
 };
 
-static const char _hex_digits[] = "0123456789abcdef";
+static const char hex_digits[] = "0123456789abcdef";
 
 int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
                         KOS_OBJ_ID   args_obj,
@@ -170,8 +170,8 @@ int KOS_get_integer(KOS_CONTEXT ctx,
     return error;
 }
 
-static KOS_OBJ_ID _get_exception_string(KOS_CONTEXT ctx,
-                                        KOS_OBJ_ID  exception)
+static KOS_OBJ_ID get_exception_string(KOS_CONTEXT ctx,
+                                       KOS_OBJ_ID  exception)
 {
     if (GET_OBJ_TYPE(exception) == OBJ_OBJECT) {
 
@@ -230,7 +230,7 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 
                 kos_track_refs(ctx, 1, &last_exception);
 
-                str = _get_exception_string(ctx, exception);
+                str = get_exception_string(ctx, exception);
 
                 kos_untrack_refs(ctx, 1);
 
@@ -296,10 +296,10 @@ KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
     return KOS_string_slice(ctx, full_path, i, len);
 }
 
-static int _int_to_str(KOS_CONTEXT ctx,
-                       int64_t     value,
-                       KOS_OBJ_ID *str,
-                       KOS_VECTOR *cstr_vec)
+static int int_to_str(KOS_CONTEXT ctx,
+                      int64_t     value,
+                      KOS_OBJ_ID *str,
+                      KOS_VECTOR *cstr_vec)
 {
     int      error = KOS_SUCCESS;
     uint8_t  buf[64];
@@ -333,10 +333,10 @@ cleanup:
     return error;
 }
 
-static int _float_to_str(KOS_CONTEXT ctx,
-                         double      value,
-                         KOS_OBJ_ID *str,
-                         KOS_VECTOR *cstr_vec)
+static int float_to_str(KOS_CONTEXT ctx,
+                        double      value,
+                        KOS_OBJ_ID *str,
+                        KOS_VECTOR *cstr_vec)
 {
     int      error = KOS_SUCCESS;
     uint8_t  buf[32];
@@ -369,10 +369,10 @@ cleanup:
     return error;
 }
 
-static int _vector_append_str(KOS_CONTEXT   ctx,
-                              KOS_VECTOR   *cstr_vec,
-                              KOS_OBJ_ID    obj,
-                              KOS_QUOTE_STR quote_str)
+static int vector_append_str(KOS_CONTEXT   ctx,
+                             KOS_VECTOR   *cstr_vec,
+                             KOS_OBJ_ID    obj,
+                             KOS_QUOTE_STR quote_str)
 {
     unsigned str_len = 0;
     size_t   pos     = cstr_vec->size;
@@ -419,7 +419,7 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
 
             const uint8_t c = (uint8_t)cstr_vec->buffer[pos + i];
 
-            extra_len += _extra_len[c];
+            extra_len += extra_len_map[c];
         }
 
         if (extra_len) {
@@ -442,7 +442,7 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
 
                 const uint8_t c = (uint8_t)*(--src);
 
-                const int esc_len = _extra_len[c];
+                const int esc_len = extra_len_map[c];
 
                 switch (esc_len) {
 
@@ -483,8 +483,8 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
                         dst   -= 4;
                         *dst   = '\\';
                         dst[1] = 'x';
-                        dst[2] = _hex_digits[hi];
-                        dst[3] = _hex_digits[lo];
+                        dst[2] = hex_digits[hi];
+                        dst[3] = hex_digits[lo];
 
                         break;
                     }
@@ -499,7 +499,7 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
                         *(--dst) = '}';
 
                         for (i = (unsigned)esc_len - 3U; i > 0; i--) {
-                            *(--dst) = _hex_digits[code[0] & 0xFU];
+                            *(--dst) = hex_digits[code[0] & 0xFU];
                             code[0]   >>= 4;
                         }
 
@@ -530,10 +530,10 @@ static int _vector_append_str(KOS_CONTEXT   ctx,
     return KOS_SUCCESS;
 }
 
-static int _make_quoted_str(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  obj_id,
-                            KOS_OBJ_ID *str,
-                            KOS_VECTOR *cstr_vec)
+static int make_quoted_str(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  obj_id,
+                           KOS_OBJ_ID *str,
+                           KOS_VECTOR *cstr_vec)
 {
     int    error;
     size_t old_size;
@@ -542,7 +542,7 @@ static int _make_quoted_str(KOS_CONTEXT ctx,
 
     old_size = cstr_vec->size;
 
-    error = _vector_append_str(ctx, cstr_vec, obj_id, KOS_QUOTE_STRINGS);
+    error = vector_append_str(ctx, cstr_vec, obj_id, KOS_QUOTE_STRINGS);
 
     if ( ! error) {
         const char  *buf     = &cstr_vec->buffer[old_size ? old_size - 1 : 0];
@@ -588,10 +588,10 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
                                         KOS_VECTOR        *cstr_vec,
                                         KOS_STR_REC_GUARD *guard);
 
-static int _vector_append_array(KOS_CONTEXT        ctx,
-                                KOS_VECTOR        *cstr_vec,
-                                KOS_OBJ_ID         obj_id,
-                                KOS_STR_REC_GUARD *guard)
+static int vector_append_array(KOS_CONTEXT        ctx,
+                               KOS_VECTOR        *cstr_vec,
+                               KOS_OBJ_ID         obj_id,
+                               KOS_STR_REC_GUARD *guard)
 {
     int               error;
     uint32_t          length;
@@ -638,9 +638,9 @@ cleanup:
     return error;
 }
 
-static KOS_OBJ_ID _array_to_str(KOS_CONTEXT        ctx,
-                                KOS_OBJ_ID         obj_id,
-                                KOS_STR_REC_GUARD *guard)
+static KOS_OBJ_ID array_to_str(KOS_CONTEXT        ctx,
+                               KOS_OBJ_ID         obj_id,
+                               KOS_STR_REC_GUARD *guard)
 {
     int               error;
     int               pushed       = 0;
@@ -740,9 +740,9 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _vector_append_buffer(KOS_CONTEXT ctx,
-                                 KOS_VECTOR *cstr_vec,
-                                 KOS_OBJ_ID  obj_id)
+static int vector_append_buffer(KOS_CONTEXT ctx,
+                                KOS_VECTOR *cstr_vec,
+                                KOS_OBJ_ID  obj_id)
 {
     int            error;
     uint32_t       size;
@@ -772,8 +772,8 @@ static int _vector_append_buffer(KOS_CONTEXT ctx,
 
         const uint8_t b = *(src++);
 
-        dest[0] = _hex_digits[b >> 4];
-        dest[1] = _hex_digits[b & 15];
+        dest[0] = hex_digits[b >> 4];
+        dest[1] = hex_digits[b & 15];
         dest[2] = ' ';
 
         dest += 3;
@@ -790,8 +790,8 @@ cleanup:
     return error;
 }
 
-static KOS_OBJ_ID _buffer_to_str(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  obj_id)
+static KOS_OBJ_ID buffer_to_str(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  obj_id)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
@@ -805,7 +805,7 @@ static KOS_OBJ_ID _buffer_to_str(KOS_CONTEXT ctx,
 
     kos_vector_init(&cstr_vec);
 
-    TRY(_vector_append_buffer(ctx, &cstr_vec, obj_id));
+    TRY(vector_append_buffer(ctx, &cstr_vec, obj_id));
 
     assert(cstr_vec.size > 1);
 
@@ -817,10 +817,10 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _vector_append_object(KOS_CONTEXT        ctx,
-                                 KOS_VECTOR        *cstr_vec,
-                                 KOS_OBJ_ID         obj_id,
-                                 KOS_STR_REC_GUARD *guard)
+static int vector_append_object(KOS_CONTEXT        ctx,
+                                KOS_VECTOR        *cstr_vec,
+                                KOS_OBJ_ID         obj_id,
+                                KOS_STR_REC_GUARD *guard)
 {
     int               error     = KOS_SUCCESS;
     KOS_OBJ_ID        walk      = KOS_BADPTR;
@@ -849,7 +849,7 @@ static int _vector_append_object(KOS_CONTEXT        ctx,
         if (num_elems)
             TRY(kos_append_cstr(ctx, cstr_vec, str_object_sep, sizeof(str_object_sep)-1));
 
-        TRY(_vector_append_str(ctx, cstr_vec, KOS_get_walk_key(walk), KOS_QUOTE_STRINGS));
+        TRY(vector_append_str(ctx, cstr_vec, KOS_get_walk_key(walk), KOS_QUOTE_STRINGS));
 
         TRY(kos_append_cstr(ctx, cstr_vec, str_object_colon, sizeof(str_object_colon)-1));
 
@@ -897,9 +897,9 @@ cleanup:
     return error;
 }
 
-static KOS_OBJ_ID _object_to_str(KOS_CONTEXT        ctx,
-                                 KOS_OBJ_ID         obj_id,
-                                 KOS_STR_REC_GUARD *guard)
+static KOS_OBJ_ID object_to_str(KOS_CONTEXT        ctx,
+                                KOS_OBJ_ID         obj_id,
+                                KOS_STR_REC_GUARD *guard)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID ret   = KOS_BADPTR;
@@ -909,7 +909,7 @@ static KOS_OBJ_ID _object_to_str(KOS_CONTEXT        ctx,
 
     kos_vector_init(&cstr_vec);
 
-    TRY(_vector_append_object(ctx, &cstr_vec, obj_id, guard));
+    TRY(vector_append_object(ctx, &cstr_vec, obj_id, guard));
 
     assert(cstr_vec.size > 1);
 
@@ -921,9 +921,9 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-static int _vector_append_function(KOS_CONTEXT ctx,
-                                   KOS_VECTOR *cstr_vec,
-                                   KOS_OBJ_ID  obj_id)
+static int vector_append_function(KOS_CONTEXT ctx,
+                                  KOS_VECTOR *cstr_vec,
+                                  KOS_OBJ_ID  obj_id)
 {
     int           error = KOS_SUCCESS;
     KOS_FUNCTION *func;
@@ -951,7 +951,7 @@ static int _vector_append_function(KOS_CONTEXT ctx,
                                                            OBJPTR(MODULE, func->module),
                                                            func->instr_offs);
         TRY_OBJID(name_str);
-        TRY(_vector_append_str(ctx, cstr_vec, name_str, KOS_DONT_QUOTE));
+        TRY(vector_append_str(ctx, cstr_vec, name_str, KOS_DONT_QUOTE));
         len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%X>",
                                  (unsigned)func->instr_offs);
     }
@@ -961,8 +961,8 @@ cleanup:
     return error;
 }
 
-static KOS_OBJ_ID _function_to_str(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  obj_id)
+static KOS_OBJ_ID function_to_str(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  obj_id)
 {
     int           error  = KOS_SUCCESS;
     int           pushed = 0;
@@ -1027,23 +1027,23 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
     assert( ! str || ! cstr_vec || quote_str);
 
     if (IS_SMALL_INT(obj_id))
-        error = _int_to_str(ctx, GET_SMALL_INT(obj_id), str, cstr_vec);
+        error = int_to_str(ctx, GET_SMALL_INT(obj_id), str, cstr_vec);
 
     else switch (READ_OBJ_TYPE(obj_id)) {
 
         case OBJ_INTEGER:
-            error = _int_to_str(ctx, OBJPTR(INTEGER, obj_id)->value, str, cstr_vec);
+            error = int_to_str(ctx, OBJPTR(INTEGER, obj_id)->value, str, cstr_vec);
             break;
 
         case OBJ_FLOAT:
-            error = _float_to_str(ctx, OBJPTR(FLOAT, obj_id)->value, str, cstr_vec);
+            error = float_to_str(ctx, OBJPTR(FLOAT, obj_id)->value, str, cstr_vec);
             break;
 
         case OBJ_STRING:
             if ( ! str)
-                error = _vector_append_str(ctx, cstr_vec, obj_id, quote_str);
+                error = vector_append_str(ctx, cstr_vec, obj_id, quote_str);
             else if (quote_str)
-                error = _make_quoted_str(ctx, obj_id, str, cstr_vec);
+                error = make_quoted_str(ctx, obj_id, str, cstr_vec);
             else
                 *str = obj_id;
             break;
@@ -1079,32 +1079,32 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
 
         case OBJ_ARRAY:
             if (cstr_vec)
-                error = _vector_append_array(ctx, cstr_vec, obj_id, guard);
+                error = vector_append_array(ctx, cstr_vec, obj_id, guard);
             else if (str)
-                *str = _array_to_str(ctx, obj_id, guard);
+                *str = array_to_str(ctx, obj_id, guard);
             break;
 
         case OBJ_BUFFER:
             if (cstr_vec)
-                error = _vector_append_buffer(ctx, cstr_vec, obj_id);
+                error = vector_append_buffer(ctx, cstr_vec, obj_id);
             else if (str)
-                *str = _buffer_to_str(ctx, obj_id);
+                *str = buffer_to_str(ctx, obj_id);
             break;
 
         case OBJ_OBJECT:
             if (cstr_vec)
-                error = _vector_append_object(ctx, cstr_vec, obj_id, guard);
+                error = vector_append_object(ctx, cstr_vec, obj_id, guard);
             else if (str)
-                *str = _object_to_str(ctx, obj_id, guard);
+                *str = object_to_str(ctx, obj_id, guard);
             break;
 
         case OBJ_FUNCTION:
             /* fall through */
         case OBJ_CLASS:
             if (cstr_vec)
-                error = _vector_append_function(ctx, cstr_vec, obj_id);
+                error = vector_append_function(ctx, cstr_vec, obj_id);
             else if (str)
-                *str = _function_to_str(ctx, obj_id);
+                *str = function_to_str(ctx, obj_id);
             break;
     }
 
@@ -1275,14 +1275,14 @@ cleanup:
     return error;
 }
 
-static KOS_COMPARE_RESULT _compare_int(int64_t a, int64_t b)
+static KOS_COMPARE_RESULT compare_int(int64_t a, int64_t b)
 {
     return a < b ? KOS_LESS_THAN    :
            a > b ? KOS_GREATER_THAN :
                    KOS_EQUAL;
 }
 
-static double _get_float(KOS_OBJ_ID obj_id)
+static double get_float(KOS_OBJ_ID obj_id)
 {
     if (IS_SMALL_INT(obj_id))
         return (double)GET_SMALL_INT(obj_id);
@@ -1292,10 +1292,10 @@ static double _get_float(KOS_OBJ_ID obj_id)
         return OBJPTR(FLOAT, obj_id)->value;
 }
 
-static KOS_COMPARE_RESULT _compare_float(KOS_OBJ_ID a, KOS_OBJ_ID b)
+static KOS_COMPARE_RESULT compare_float(KOS_OBJ_ID a, KOS_OBJ_ID b)
 {
-    const double a_float = _get_float(a);
-    const double b_float = _get_float(b);
+    const double a_float = get_float(a);
+    const double b_float = get_float(b);
 
     if (a_float != a_float || b_float != b_float)
         return KOS_INDETERMINATE;
@@ -1312,13 +1312,13 @@ struct KOS_COMPARE_REF_S {
     struct KOS_COMPARE_REF_S *next;
 };
 
-static KOS_COMPARE_RESULT _compare(KOS_OBJ_ID                a,
-                                   KOS_OBJ_ID                b,
-                                   struct KOS_COMPARE_REF_S *cmp_ref);
+static KOS_COMPARE_RESULT compare(KOS_OBJ_ID                a,
+                                  KOS_OBJ_ID                b,
+                                  struct KOS_COMPARE_REF_S *cmp_ref);
 
-static KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID                a,
-                                         KOS_OBJ_ID                b,
-                                         struct KOS_COMPARE_REF_S *cmp_ref)
+static KOS_COMPARE_RESULT compare_array(KOS_OBJ_ID                a,
+                                        KOS_OBJ_ID                b,
+                                        struct KOS_COMPARE_REF_S *cmp_ref)
 {
     const uint32_t a_size   = KOS_get_array_size(a);
     const uint32_t b_size   = KOS_get_array_size(b);
@@ -1344,14 +1344,14 @@ static KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID                a,
         if (aa & bb)
             return KOS_EQUAL;
         else if (aa | bb | ab | ba)
-            return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
+            return compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
 
         cmp_ref = cmp_ref->next;
     }
 
     for ( ; a_buf < a_end; ++a_buf, ++b_buf) {
 
-        cmp = _compare(KOS_atomic_read_relaxed_obj(*a_buf),
+        cmp = compare(KOS_atomic_read_relaxed_obj(*a_buf),
                        KOS_atomic_read_relaxed_obj(*b_buf),
                        &this_ref);
 
@@ -1365,7 +1365,7 @@ static KOS_COMPARE_RESULT _compare_array(KOS_OBJ_ID                a,
                              KOS_EQUAL;
 }
 
-static KOS_COMPARE_RESULT _compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
+static KOS_COMPARE_RESULT compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
 {
     const uint32_t a_size   = KOS_get_buffer_size(a);
     const uint32_t b_size   = KOS_get_buffer_size(b);
@@ -1384,9 +1384,9 @@ static KOS_COMPARE_RESULT _compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
                                  KOS_EQUAL;
 }
 
-static KOS_COMPARE_RESULT _compare(KOS_OBJ_ID                a,
-                                   KOS_OBJ_ID                b,
-                                   struct KOS_COMPARE_REF_S *cmp_ref)
+static KOS_COMPARE_RESULT compare(KOS_OBJ_ID                a,
+                                  KOS_OBJ_ID                b,
+                                  struct KOS_COMPARE_REF_S *cmp_ref)
 {
     const KOS_TYPE a_type = GET_OBJ_TYPE(a);
     const KOS_TYPE b_type = GET_OBJ_TYPE(b);
@@ -1409,9 +1409,9 @@ static KOS_COMPARE_RESULT _compare(KOS_OBJ_ID                a,
                        a_type == OBJ_FLOAT);
 
                 if (a_type == OBJ_FLOAT || b_type == OBJ_FLOAT)
-                    return _compare_float(a, b);
+                    return compare_float(a, b);
                 else if (a_type == OBJ_SMALL_INTEGER && b_type == OBJ_SMALL_INTEGER)
-                    return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
+                    return compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
                 else {
                     const int64_t a_int = a_type == OBJ_SMALL_INTEGER
                                         ? GET_SMALL_INT(a)
@@ -1419,11 +1419,11 @@ static KOS_COMPARE_RESULT _compare(KOS_OBJ_ID                a,
                     const int64_t b_int = b_type == OBJ_SMALL_INTEGER
                                         ? GET_SMALL_INT(b)
                                         : OBJPTR(INTEGER, b)->value;
-                    return _compare_int(a_int, b_int);
+                    return compare_int(a_int, b_int);
                 }
 
             case OBJ_BOOLEAN:
-                return _compare_int((int)KOS_get_bool(a), (int)KOS_get_bool(b));
+                return compare_int((int)KOS_get_bool(a), (int)KOS_get_bool(b));
 
             case OBJ_STRING: {
                 const int cmp = KOS_string_compare(a, b);
@@ -1433,18 +1433,18 @@ static KOS_COMPARE_RESULT _compare(KOS_OBJ_ID                a,
             }
 
             case OBJ_OBJECT:
-                return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
+                return compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
 
             case OBJ_ARRAY:
-                return _compare_array(a, b, cmp_ref);
+                return compare_array(a, b, cmp_ref);
 
             case OBJ_BUFFER:
-                return _compare_buf(a, b);
+                return compare_buf(a, b);
 
             case OBJ_FUNCTION:
                 /* fall through */
             case OBJ_CLASS:
-                return _compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
+                return compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
         }
     }
     else
@@ -1454,7 +1454,7 @@ static KOS_COMPARE_RESULT _compare(KOS_OBJ_ID                a,
 KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
                                KOS_OBJ_ID b)
 {
-    return _compare(a, b, 0);
+    return compare(a, b, 0);
 }
 
 int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state)
