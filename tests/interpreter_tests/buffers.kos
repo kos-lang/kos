@@ -291,7 +291,8 @@ do {
     const obj = new_obj()
 
     assert typeof obj == "object"
-    assert "size" in obj
+    assert "size" propertyof obj
+    assert ! ("size" in obj)
     expect_fail(()=>obj.size)
 }
 

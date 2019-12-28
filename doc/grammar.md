@@ -182,6 +182,7 @@ The following reserved keywords are defined:
 * `in`
 * `instanceof`
 * `loop`
+* `propertyof`
 * `public`
 * `repeat`
 * `return`
@@ -1150,6 +1151,7 @@ Operators
                               | ">"
                               | "in"
                               | "instanceof"
+                              | "propertyof"
 
     BitwiseOrOperator       ::= "|"
 

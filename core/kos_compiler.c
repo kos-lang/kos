@@ -3487,7 +3487,8 @@ cleanup:
 
 static int has_prop(KOS_COMP_UNIT      *program,
                     const KOS_AST_NODE *node,
-                    KOS_REG           **reg)
+                    KOS_REG           **reg,
+                    int                 instr)
 {
     int      error;
     int      str_idx;
@@ -3500,7 +3501,7 @@ static int has_prop(KOS_COMP_UNIT      *program,
 
     TRY(gen_str(program, &node->children->next->token, &str_idx));
 
-    TRY(gen_instr3(program, INSTR_HAS_PROP, (*reg)->reg, src->reg, str_idx));
+    TRY(gen_instr3(program, instr, (*reg)->reg, src->reg, str_idx));
 
     if (src != *reg)
         free_reg(program, src);
@@ -3617,9 +3618,19 @@ static int process_operator(KOS_COMP_UNIT      *program,
                     {
                         const KOS_AST_NODE *second = node->children->next;
                         if (second && second->type == NT_STRING_LITERAL)
-                            return has_prop(program, node, reg);
+                            return has_prop(program, node, reg, INSTR_HAS_SH_PROP);
                     }
-                    opcode   = INSTR_HAS;
+                    opcode   = INSTR_HAS_SH;
+                    operands = 2;
+                    break;
+
+                case KW_PROPERTYOF:
+                    {
+                        const KOS_AST_NODE *second = node->children->next;
+                        if (second && second->type == NT_STRING_LITERAL)
+                            return has_prop(program, node, reg, INSTR_HAS_DP_PROP);
+                    }
+                    opcode   = INSTR_HAS_DP;
                     operands = 2;
                     break;
 

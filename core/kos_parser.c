@@ -1231,14 +1231,16 @@ static int comparison_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     if ((parser->token.op & OT_MASK) == OT_COMPARISON
         || parser->token.keyword == KW_IN
-        || parser->token.keyword == KW_INSTANCEOF) {
+        || parser->token.keyword == KW_INSTANCEOF
+        || parser->token.keyword == KW_PROPERTYOF) {
 
         KOS_AST_NODE *aux = 0;
 
         TRY(new_node(parser, ret, NT_OPERATOR));
 
-        /* Swap operands of the 'in' operator */
-        if (parser->token.keyword == KW_IN)
+        /* Swap operands of the 'in' and 'propertyof' operator */
+        if (parser->token.keyword == KW_IN
+            || parser->token.keyword == KW_PROPERTYOF)
             aux = node;
         else
             ast_push(*ret, node);
@@ -2334,7 +2336,7 @@ static int gen_acquire(KOS_PARSER   *parser,
     TRY(push_node(parser, if_node, NT_OPERATOR, &node));
 
     node->token         = const_node->token;
-    node->token.keyword = KW_IN;
+    node->token.keyword = KW_PROPERTYOF;
     node->token.op      = OT_NONE;
     node->token.sep     = ST_NONE;
     node->token.type    = TT_IDENTIFIER;

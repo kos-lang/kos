@@ -424,9 +424,10 @@ static int _resize_prop_table(KOS_CONTEXT ctx,
     return error;
 }
 
-KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  obj_id,
-                            KOS_OBJ_ID  prop)
+KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
+                                       KOS_OBJ_ID                   obj_id,
+                                       KOS_OBJ_ID                   prop,
+                                       enum KOS_OBJECT_WALK_DEPTH_E deep)
 {
     KOS_OBJ_ID retval = KOS_BADPTR;
 
@@ -438,16 +439,20 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
         KOS_ATOMIC(KOS_OBJ_ID) *props = _get_properties(obj_id);
 
         /* Find non-empty property table in this object or in a prototype */
-        while ( ! props || IS_BAD_PTR(_read_props(props))) {
-            obj_id = KOS_get_prototype(ctx, obj_id);
+        if (deep) {
+            while ( ! props || IS_BAD_PTR(_read_props(props))) {
+                obj_id = KOS_get_prototype(ctx, obj_id);
 
-            if (IS_BAD_PTR(obj_id)) {
-                props = 0;
-                break;
+                if (IS_BAD_PTR(obj_id)) {
+                    props = 0;
+                    break;
+                }
+
+                props = _get_properties(obj_id);
             }
-
-            props = _get_properties(obj_id);
         }
+        else if (props && IS_BAD_PTR(_read_props(props)))
+            props = 0;
 
         if (props) {
             const uint32_t hash         = KOS_string_get_hash(prop);
@@ -501,14 +506,18 @@ KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
                 if (IS_BAD_PTR(cur_key)) {
 
                     /* Find non-empty property table in a prototype */
-                    do {
-                        obj_id = KOS_get_prototype(ctx, obj_id);
+                    if (deep) {
+                        do {
+                            obj_id = KOS_get_prototype(ctx, obj_id);
 
-                        if (IS_BAD_PTR(obj_id)) /* end of prototype chain */
-                            break;
+                            if (IS_BAD_PTR(obj_id)) /* end of prototype chain */
+                                break;
 
-                        props = _get_properties(obj_id);
-                    } while ( ! props || IS_BAD_PTR(_read_props(props)));
+                            props = _get_properties(obj_id);
+                        } while ( ! props || IS_BAD_PTR(_read_props(props)));
+                    }
+                    else
+                        obj_id = KOS_BADPTR;
 
                     if (IS_BAD_PTR(obj_id)) {
                         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_no_property));

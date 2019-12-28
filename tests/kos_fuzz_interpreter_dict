@@ -25,6 +25,7 @@
 "in"
 "instanceof"
 "loop"
+"propertyof"
 "prototype"
 "public"
 "repeat"

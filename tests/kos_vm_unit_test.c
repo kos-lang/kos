@@ -666,29 +666,54 @@ int main(void)
     TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_OBJECT                          } }                                        END
 
     /*========================================================================*/
-    /* HAS */
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_VOID                            }, { V_STR0                            } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_FALSE                           }, { V_STR0                            } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_INT32, 0,                       }, { V_STR0                            } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_FLOAT, 0,           0x3FF00000U }, { V_STR0                            } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_STR1                            }, { V_STR0                            } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_ARRAY, 10                       }, { V_STR0                            } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_OBJECT                          }, { V_STR0                            } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_OBJECT                          }, { V_VOID                            } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_OBJECT                          }, { V_FALSE                           } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_OBJECT                          }, { V_INT32, 1                        } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_OBJECT                          }, { V_ARRAY, 5                        } } END
-    TEST_INSTR INSTR_HAS,        { V_FALSE                             }, { { V_OBJECT                          }, { V_OBJECT                          } } END
+    /* HAS.DP */
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_VOID                            }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_FALSE                           }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_INT32, 0,                       }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_FLOAT, 0,           0x3FF00000U }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_STR1                            }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_ARRAY, 10                       }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_OBJECT                          }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_OBJECT                          }, { V_VOID                            } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_OBJECT                          }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_OBJECT                          }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_OBJECT                          }, { V_ARRAY, 5                        } } END
+    TEST_INSTR INSTR_HAS_DP,     { V_FALSE                             }, { { V_OBJECT                          }, { V_OBJECT                          } } END
 
     /*========================================================================*/
-    /* HAS.PROP */
-    TEST_INSTR INSTR_HAS_PROP,   { V_FALSE                             }, { { V_VOID                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_PROP,   { V_FALSE                             }, { { V_FALSE                           }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_PROP,   { V_FALSE                             }, { { V_INT32, 0,                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_PROP,   { V_FALSE                             }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_PROP,   { V_FALSE                             }, { { V_STR1                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_PROP,   { V_FALSE                             }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_PROP,   { V_FALSE                             }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
+    /* HAS.SH */
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_VOID                            }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_FALSE                           }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_INT32, 0,                       }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_FLOAT, 0,           0x3FF00000U }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_STR1                            }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_ARRAY, 10                       }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_OBJECT                          }, { V_STR0                            } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_OBJECT                          }, { V_VOID                            } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_OBJECT                          }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_OBJECT                          }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_OBJECT                          }, { V_ARRAY, 5                        } } END
+    TEST_INSTR INSTR_HAS_SH,     { V_FALSE                             }, { { V_OBJECT                          }, { V_OBJECT                          } } END
+
+    /*========================================================================*/
+    /* HAS.DP.PROP */
+    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_VOID                            }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_FALSE                           }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_INT32, 0,                       }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_STR1                            }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
+
+    /*========================================================================*/
+    /* HAS.SH.PROP */
+    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_VOID                            }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_FALSE                           }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_INT32, 0,                       }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_STR1                            }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
 
     /*========================================================================*/
     /* DEL */

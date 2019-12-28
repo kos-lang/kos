@@ -293,6 +293,22 @@ n=o in p||q instanceof r||true;
 )
 
 @------------------------------------------------------------------------------
+# propertyof operator
+"x" propertyof b || c propertyof b
+
+@0
+
+(scope 1 1
+    (operator 2 18 ||
+        (operator 2 5 propertyof
+            (identifier 2 16 b)
+            (string 2 1 "x"))
+        (operator 2 23 propertyof
+            (identifier 2 34 b)
+            (identifier 2 21 c)))
+)
+
+@------------------------------------------------------------------------------
 # Ternary operator
 a=b?c?d:e:f;
 g=h?i:j?k:l;
@@ -410,6 +426,10 @@ a=b==c==d; # Too many comparison operators
 
 @------------------------------------------------------------------------------
 a=b in c instanceof d; # Mixed comparison operators
+@ 10 1 10
+
+@------------------------------------------------------------------------------
+a=b in c propertyof d; # Mixed comparison operators
 @ 10 1 10
 
 @------------------------------------------------------------------------------

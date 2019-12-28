@@ -459,8 +459,9 @@ do {
     assert constructor_func instanceof base.class
     assert ! (constructor_func instanceof base.generator)
 
-    assert ! ("prototype" in regular_func)
-    assert ! ("prototype" in generator_func)
+    assert ! ("prototype" propertyof regular_func)
+    assert ! ("prototype" propertyof generator_func)
+    assert "prototype" propertyof constructor_func
     assert "prototype" in constructor_func
 
     assert typeof constructor_func.prototype == "object"
@@ -478,7 +479,8 @@ do {
     assert name_from_iter == "regular_func"
 
     fun some_func { return __line__ }
-    assert "line" in some_func
+    assert "line" propertyof some_func
+    assert ! ("line" in some_func)
     assert some_func.line == some_func()
 }
 
@@ -1411,7 +1413,7 @@ do {
 
 do {
     const obj = { }
-    assert ! ("xyz" in obj)
+    assert ! ("xyz" propertyof obj)
 
     fun fff
     {
@@ -1421,6 +1423,7 @@ do {
     const t = fff.async(obj, [])
     t.wait()
 
+    assert "xyz" propertyof obj
     assert "xyz" in obj
     assert obj.xyz == "42"
 }

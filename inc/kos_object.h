@@ -71,9 +71,15 @@ KOS_OBJ_ID KOS_new_object(KOS_CONTEXT ctx);
 KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
                                          KOS_OBJ_ID  prototype);
 
-KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  obj_id,
-                            KOS_OBJ_ID  prop);
+enum KOS_OBJECT_WALK_DEPTH_E {
+    KOS_SHALLOW,
+    KOS_DEEP
+};
+
+KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
+                                       KOS_OBJ_ID                   obj_id,
+                                       KOS_OBJ_ID                   prop,
+                                       enum KOS_OBJECT_WALK_DEPTH_E deep);
 
 int KOS_set_property(KOS_CONTEXT ctx,
                      KOS_OBJ_ID  obj_id,
@@ -98,11 +104,6 @@ int KOS_has_prototype(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  obj_id,
                       KOS_OBJ_ID  proto_id);
 
-enum KOS_OBJECT_WALK_DEPTH_E {
-    KOS_SHALLOW,
-    KOS_DEEP
-};
-
 KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
                                KOS_OBJ_ID                   obj_id,
                                enum KOS_OBJECT_WALK_DEPTH_E deep);
@@ -115,6 +116,17 @@ int KOS_object_walk(KOS_CONTEXT ctx,
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+static inline KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
+                                          KOS_OBJ_ID  obj_id,
+                                          KOS_OBJ_ID  prop)
+{
+    return KOS_get_property_with_depth(ctx, obj_id, prop, KOS_DEEP);
+}
+#else
+#define KOS_get_property(ctx, obj_id, prop) KOS_get_property_with_depth(ctx, obj_id, prop, KOS_DEEP)
 #endif
 
 #endif

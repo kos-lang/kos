@@ -142,10 +142,14 @@ typedef enum KOS_BYTECODE_INSTR_U {
     /* CMP.LT <r.dest>, <r.src1>, <r.src2> */
     INSTR_CMP_LT,
 
-    /* HAS <r.dest>, <r.src>, <r.prop> */
-    INSTR_HAS,
-    /* HAS.PROP <r.dest>, <r.src>, <str.idx.int32> */
-    INSTR_HAS_PROP,
+    /* HAS.DP <r.dest>, <r.src>, <r.prop> */
+    INSTR_HAS_DP,
+    /* HAS.DP.PROP <r.dest>, <r.src>, <str.idx.int32> */
+    INSTR_HAS_DP_PROP,
+    /* HAS.SH <r.dest>, <r.src>, <r.prop> */
+    INSTR_HAS_SH,
+    /* HAS.SH.PROP <r.dest>, <r.src>, <str.idx.int32> */
+    INSTR_HAS_SH_PROP,
     /* INSTANCEOF <r.dest>, <r.src>, <r.func> */
     INSTR_INSTANCEOF,
 

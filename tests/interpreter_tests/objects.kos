@@ -176,8 +176,10 @@ do {
 do {
     const obj = {}
     assert ! ("xyz" in obj)
+    assert ! ("xyz" propertyof obj)
     obj.xyz = void
     assert "xyz" in obj
+    assert "xyz" propertyof obj
 }
 
 do {
@@ -185,8 +187,10 @@ do {
     const prop  = "xyz"
     const value = 123
     assert ! (prop in obj)
+    assert ! (prop propertyof obj)
     obj[prop] = value
     assert prop in obj
+    assert prop propertyof obj
     assert prop  == "xyz"
     assert value == 123
 }
@@ -367,6 +371,7 @@ do {
     const p = make(3)
     assert p.a == 3
     assert ! ("b" in p)
+    assert ! ("b" propertyof p)
 }
 
 # prototype preservation
@@ -396,19 +401,27 @@ do {
 
     assert ! ("b" in o1)
     assert ! ("b" in o2)
+    assert ! ("b" propertyof o1)
+    assert ! ("b" propertyof o2)
     expect_fail(()=>o1.b)
     expect_fail(()=>o2.b)
     assert ! ("b" in c1.prototype)
     assert ! ("b" in c2.prototype)
+    assert ! ("b" propertyof c1.prototype)
+    assert ! ("b" propertyof c2.prototype)
     expect_fail(()=>c1.prototype.b)
     expect_fail(()=>c2.prototype.b)
 
     c1.prototype.b = 8
 
-    assert "b" in o1
-    assert "b" in o2
+    assert ! ("b" in o1)
+    assert ! ("b" in o2)
     assert "b" in c1.prototype
     assert "b" in c2.prototype
+    assert "b" propertyof o1
+    assert "b" propertyof o2
+    assert "b" propertyof c1.prototype
+    assert "b" propertyof c2.prototype
     assert o1.b == 8
     assert o2.b == 8
     assert o1.a == 42
@@ -445,6 +458,7 @@ do {
 
     c1.prototype.b = "a"
     assert ! ("b" in c2.prototype)
+    assert ! ("b" propertyof c2.prototype)
     c2.prototype.b = "b"
 
     assert o1.b == "a"
@@ -489,8 +503,12 @@ do {
     assert o2.getvalue() == 4
     assert "a" in o1
     assert "b" in o2
-    assert "geta" in o1
-    assert "getb" in o2
+    assert ! ("geta" in o1)
+    assert ! ("getb" in o2)
+    assert "a" propertyof o1
+    assert "b" propertyof o2
+    assert "geta" propertyof o1
+    assert "getb" propertyof o2
     assert o1.a == 3
     assert o2.b == 4
     assert o1.geta() == -3
@@ -512,8 +530,12 @@ do {
     assert o2.getvalue() == 4
     assert "a" in o1
     assert "b" in o2
-    assert "geta" in o1
-    assert "getb" in o2
+    assert ! ("geta" in o1)
+    assert ! ("getb" in o2)
+    assert "a" propertyof o1
+    assert "b" propertyof o2
+    assert "geta" propertyof o1
+    assert "getb" propertyof o2
     assert o1.a == 3
     assert o2.b == 4
     assert o1.geta() == -3
@@ -524,8 +546,12 @@ do {
 
     assert "a" in x1
     assert "b" in x2
-    assert "getb" in x1
-    assert "geta" in x2
+    assert ! ("getb" in x1)
+    assert ! ("geta" in x2)
+    assert "a" propertyof x1
+    assert "b" propertyof x2
+    assert "getb" propertyof x1
+    assert "geta" propertyof x2
     assert x1.a == 3
     assert x2.b == 4
     expect_fail(() => x1.geta())
@@ -550,13 +576,21 @@ do {
     const x0 = c0()
     const x1 = c1()
 
-    assert "a" in x0
-    assert "b" in x0
+    assert ! ("a" in x0)
+    assert ! ("b" in x0)
     assert ! ("c" in x0)
 
-    assert "a" in x1
-    assert "b" in x1
-    assert "c" in x1
+    assert "a" propertyof x0
+    assert "b" propertyof x0
+    assert ! ("c" propertyof x0)
+
+    assert ! ("a" in x1)
+    assert ! ("b" in x1)
+    assert ! ("c" in x1)
+
+    assert "a" propertyof x1
+    assert "b" propertyof x1
+    assert "c" propertyof x1
 
     assert x0.a() == 1
     assert x0.b() == 2
@@ -569,8 +603,11 @@ do {
     assert x1 instanceof c0
     assert x1 instanceof c1
 
-    assert "iterator" in x0
-    assert "iterator" in x1
+    assert ! ("iterator" in x0)
+    assert ! ("iterator" in x1)
+
+    assert "iterator" propertyof x0
+    assert "iterator" propertyof x1
 
     class c2 extends void {
         d { return 4 }
@@ -580,8 +617,10 @@ do {
 
     assert x2 instanceof c2
 
-    assert "d" in x2
+    assert ! ("d" in x2)
+    assert "d" propertyof x2
     assert ! ("iterator" in x2)
+    assert ! ("iterator" propertyof x2)
     assert x2.d() == 4
 }
 
@@ -623,8 +662,14 @@ do {
     assert "x" in o1
     assert "x" in o2
 
+    assert "x" propertyof o1
+    assert "x" propertyof o2
+
     assert ! ("getx" in o1)
-    assert "getx" in o2
+    assert ! ("getx" in o2)
+
+    assert ! ("getx" propertyof o1)
+    assert "getx" propertyof o2
 
     assert o2.getx() == "xyz"
 }
@@ -769,6 +814,7 @@ do {
     class second extends first {
         constructor {
             assert "abc" in this
+            assert "abc" propertyof this
             assert this.abc == 42
             this.bcd = 84
         }
@@ -789,6 +835,7 @@ do {
 
     const oa = add_x()
     assert "x" in oa
+    assert "x" propertyof oa
     assert oa.x == 256
 
     class derived extends add_x {
@@ -802,6 +849,7 @@ do {
     const od = derived(false)
 
     assert ! ("x" in od)
+    assert ! ("x" propertyof od)
     expect_fail(() => od.x)
 
     # implicit super() NOT optimized-out
@@ -815,6 +863,7 @@ do {
 
     const oo = optim()
     assert ! ("x" in oo)
+    assert ! ("x" propertyof oo)
     expect_fail(() => oo.x)
 }
 
@@ -945,7 +994,8 @@ do {
 
     const o = classA()
     assert o.m == "m"
-    assert "constructor" in o
+    assert ! ("constructor" in o)
+    assert "constructor" propertyof o
     assert typeof o.constructor == "function"
     assert o.constructor() == "mh"
 }
@@ -972,6 +1022,74 @@ do {
     const q = Abc.apply(void, [-107])
     assert q.x == -107
     assert q.x_plus_1() == -106
+}
+
+# multiple prototype levels
+do {
+    class aaa {
+        constructor {
+            this.this_a = 1
+        }
+    }
+    aaa.prototype.proto_a = 2
+
+    class bbb extends aaa {
+        constructor {
+            this.this_b = 3
+        }
+    }
+    bbb.prototype.proto_b = 4
+
+    class ccc extends bbb {
+        constructor {
+            this.this_c = 5
+        }
+    }
+    ccc.prototype.proto_c = 6
+
+    const o = ccc()
+
+    assert "this_a" propertyof o
+    assert "this_b" propertyof o
+    assert "this_c" propertyof o
+    assert "proto_a" propertyof o
+    assert "proto_b" propertyof o
+    assert "proto_c" propertyof o
+
+    assert "this_a" in o
+    assert "this_b" in o
+    assert "this_c" in o
+    assert ! ("proto_a" in o)
+    assert ! ("proto_b" in o)
+    assert ! ("proto_c" in o)
+
+    assert o.this_a == 1
+    assert o.this_b == 3
+    assert o.this_c == 5
+    assert o.proto_a == 2
+    assert o.proto_b == 4
+    assert o.proto_c == 6
+
+    const p = bbb()
+
+    assert "this_a" propertyof p
+    assert "this_b" propertyof p
+    assert ! ("this_c" propertyof p)
+    assert "proto_a" propertyof p
+    assert "proto_b" propertyof p
+    assert ! ("proto_c" propertyof p)
+
+    assert "this_a" in p
+    assert "this_b" in p
+    assert ! ("this_c" in p)
+    assert ! ("proto_a" in p)
+    assert ! ("proto_b" in p)
+    assert ! ("proto_c" in p)
+
+    assert p.this_a == 1
+    assert p.this_b == 3
+    assert p.proto_a == 2
+    assert p.proto_b == 4
 }
 
 ##############################################################################

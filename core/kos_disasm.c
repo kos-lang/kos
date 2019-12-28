@@ -95,8 +95,10 @@ static int _get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_CMP_NE:              /* fall through */
         case INSTR_CMP_LE:              /* fall through */
         case INSTR_CMP_LT:              /* fall through */
-        case INSTR_HAS:                 /* fall through */
-        case INSTR_HAS_PROP:            /* fall through */
+        case INSTR_HAS_DP:              /* fall through */
+        case INSTR_HAS_DP_PROP:         /* fall through */
+        case INSTR_HAS_SH:              /* fall through */
+        case INSTR_HAS_SH_PROP:         /* fall through */
         case INSTR_INSTANCEOF:          /* fall through */
         case INSTR_BIND:                /* fall through */
         case INSTR_CALL_GEN:
@@ -160,7 +162,9 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_GET_PROP:
             /* fall through */
-        case INSTR_HAS_PROP:
+        case INSTR_HAS_DP_PROP:
+            /* fall through */
+        case INSTR_HAS_SH_PROP:
             if (op == 2)
                 return 4;
             break;
@@ -230,7 +234,9 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_GET_PROP:
             /* fall through */
-        case INSTR_HAS_PROP:
+        case INSTR_HAS_DP_PROP:
+            /* fall through */
+        case INSTR_HAS_SH_PROP:
             return op > 1 ? 0 : 1;
 
         case INSTR_GET_MOD:
@@ -307,7 +313,9 @@ static int _is_constant(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_DEL_PROP:
             /* fall through */
-        case INSTR_HAS_PROP:
+        case INSTR_HAS_DP_PROP:
+            /* fall through */
+        case INSTR_HAS_SH_PROP:
             return ! kos_is_register(instr, op);
 
         default:
@@ -382,8 +390,10 @@ void kos_disassemble(const char                           *filename,
         "CMP.NE",
         "CMP.LE",
         "CMP.LT",
-        "HAS",
-        "HAS.PROP",
+        "HAS.DP",
+        "HAS.DP.PROP",
+        "HAS.SH",
+        "HAS.SH.PROP",
         "INSTANCEOF",
         "JUMP",
         "JUMP.COND",

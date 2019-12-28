@@ -158,7 +158,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(?&lt;!\.)\b(delete|in|instanceof|typeof|yield)\b(?!\$)</string>
+			<string>(?&lt;!\.)\b(delete|in|instanceof|propertyof|typeof|yield)\b(?!\$)</string>
 			<key>name</key>
 			<string>keyword.operator.kos</string>
 		</dict>

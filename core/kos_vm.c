@@ -2404,7 +2404,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
-            case INSTR_HAS: { /* <r.dest>, <r.src>, <r.prop> */
+            case INSTR_HAS_DP: { /* <r.dest>, <r.src>, <r.prop> */
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rprop = bytecode[3];
 
@@ -2423,7 +2423,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
-            case INSTR_HAS_PROP: { /* <r.dest>, <r.src>, <str.idx.int32> */
+            case INSTR_HAS_DP_PROP: { /* <r.dest>, <r.src>, <str.idx.int32> */
                 const unsigned rsrc  = bytecode[2];
                 const int32_t  idx   = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_ID     prop;
@@ -2437,6 +2437,48 @@ static int exec_function(KOS_CONTEXT ctx)
                 if (!IS_BAD_PTR(prop)) {
 
                     KOS_OBJ_ID obj = KOS_get_property(ctx, REGISTER(rsrc), prop);
+                    KOS_clear_exception(ctx);
+
+                    out = KOS_BOOL( ! IS_BAD_PTR(obj));
+                }
+
+                delta = 7;
+                break;
+            }
+
+            case INSTR_HAS_SH: { /* <r.dest>, <r.src>, <r.prop> */
+                const unsigned rsrc  = bytecode[2];
+                const unsigned rprop = bytecode[3];
+
+                KOS_OBJ_ID obj;
+
+                assert(rsrc  < num_regs);
+                assert(rprop < num_regs);
+
+                rdest = bytecode[1];
+
+                obj = KOS_get_property_with_depth(ctx, REGISTER(rsrc), REGISTER(rprop), KOS_SHALLOW);
+                KOS_clear_exception(ctx);
+
+                out   = KOS_BOOL( ! IS_BAD_PTR(obj));
+                delta = 4;
+                break;
+            }
+
+            case INSTR_HAS_SH_PROP: { /* <r.dest>, <r.src>, <str.idx.int32> */
+                const unsigned rsrc  = bytecode[2];
+                const int32_t  idx   = (int32_t)_load_32(bytecode+3);
+                KOS_OBJ_ID     prop;
+
+                assert(rsrc  < num_regs);
+
+                rdest = bytecode[1];
+
+                prop = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, idx);
+
+                if (!IS_BAD_PTR(prop)) {
+
+                    KOS_OBJ_ID obj = KOS_get_property_with_depth(ctx, REGISTER(rsrc), prop, KOS_SHALLOW);
                     KOS_clear_exception(ctx);
 
                     out = KOS_BOOL( ! IS_BAD_PTR(obj));

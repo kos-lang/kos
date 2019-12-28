@@ -371,16 +371,35 @@ int main(void)
     }
 
     /************************************************************************/
-    /* SET.PROP, HAS.PROP */
+    /* SET.PROP, HAS.SH.PROP */
     {
         static const char prop5[]  = "prop5";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop5);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,   0,
-            INSTR_LOAD_INT8,  1, (uint8_t)(int8_t)-9,
-            INSTR_SET_PROP,   0, IMM32(0)/*"prop5"*/, 1,
-            INSTR_HAS_PROP,   2, 0, IMM32(0),/*"prop5"*/
-            INSTR_RETURN,     0, 2
+            INSTR_LOAD_OBJ,    0,
+            INSTR_LOAD_INT8,   1, (uint8_t)(int8_t)-9,
+            INSTR_SET_PROP,    0, IMM32(0)/*"prop5"*/, 1,
+            INSTR_HAS_SH_PROP, 2, 0, IMM32(0),/*"prop5"*/
+            INSTR_RETURN,      0, 2
+        };
+
+        TEST(!IS_BAD_PTR(str_prop));
+
+        TEST(_run_code(&inst, ctx, &code[0], sizeof(code), 3, &str_prop, 1) == KOS_TRUE);
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* SET.PROP, HAS.DP.PROP */
+    {
+        static const char prop5[]  = "prop5";
+        KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop5);
+        const uint8_t code[] = {
+            INSTR_LOAD_OBJ,    0,
+            INSTR_LOAD_INT8,   1, (uint8_t)(int8_t)-9,
+            INSTR_SET_PROP,    0, IMM32(0)/*"prop5"*/, 1,
+            INSTR_HAS_DP_PROP, 2, 0, IMM32(0),/*"prop5"*/
+            INSTR_RETURN,      0, 2
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -476,12 +495,12 @@ int main(void)
         static const char prop6[]  = "prop6";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop6);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,   0,
-            INSTR_LOAD_INT8,  1, (uint8_t)(int8_t)-10,
-            INSTR_SET_PROP,   0, IMM32(0),/*"prop6"*/ 1,
-            INSTR_DEL_PROP,   0, IMM32(0),/*"prop6"*/
-            INSTR_HAS_PROP,   1, 0, IMM32(0),/*"prop6"*/
-            INSTR_RETURN,     0, 1
+            INSTR_LOAD_OBJ,    0,
+            INSTR_LOAD_INT8,   1, (uint8_t)(int8_t)-10,
+            INSTR_SET_PROP,    0, IMM32(0),/*"prop6"*/ 1,
+            INSTR_DEL_PROP,    0, IMM32(0),/*"prop6"*/
+            INSTR_HAS_DP_PROP, 1, 0, IMM32(0),/*"prop6"*/
+            INSTR_RETURN,      0, 1
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -496,10 +515,10 @@ int main(void)
         static const char prop6[]  = "prop6";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop6);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ, 0,
-            INSTR_DEL_PROP, 0, IMM32(0),/*"prop6"*/
-            INSTR_HAS_PROP, 0, 0, IMM32(0),/*"prop6"*/
-            INSTR_RETURN,   0, 0
+            INSTR_LOAD_OBJ,    0,
+            INSTR_DEL_PROP,    0, IMM32(0),/*"prop6"*/
+            INSTR_HAS_DP_PROP, 0, 0, IMM32(0),/*"prop6"*/
+            INSTR_RETURN,      0, 0
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -519,7 +538,7 @@ int main(void)
             INSTR_SET_PROP,     0, IMM32(0)/*"prop7"*/, 1,
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop7*/
             INSTR_DEL,          0, 1,
-            INSTR_HAS_PROP,     1, 0, IMM32(0),/*"prop7"*/
+            INSTR_HAS_DP_PROP,  1, 0, IMM32(0),/*"prop7"*/
             INSTR_RETURN,       0, 1
         };
 
@@ -538,7 +557,7 @@ int main(void)
             INSTR_LOAD_OBJ,     0,
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop7*/
             INSTR_DEL,          0, 1,
-            INSTR_HAS_PROP,     1, 0, IMM32(0),/*"prop7"*/
+            INSTR_HAS_DP_PROP,  1, 0, IMM32(0),/*"prop7"*/
             INSTR_RETURN,       0, 1
         };
 

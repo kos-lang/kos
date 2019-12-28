@@ -1,10 +1,6 @@
 ﻿Enhancement proposals
 =====================
 
-* 'in' operator should be shallow.
-
-    - How to handle deep check?
-
 * if, switch variable declarations
 
 * Use _ as operator for empty extraction instead of void, like in Python

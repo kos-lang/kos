@@ -5,7 +5,6 @@ The following features are planned before first release:
 
 * Update C++ API to be compatible with GC
 * Language features:
-    - Shallow in operator
     - set/get
     - static
     - Named arguments
