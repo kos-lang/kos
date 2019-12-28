@@ -346,13 +346,19 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
     do {
         char *ret;
 
-        TRY(kos_vector_resize(&buf, (size_t)(last_size + size_delta)));
+        if (kos_vector_resize(&buf, (size_t)(last_size + size_delta))) {
+            KOS_resume_context(ctx);
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
 
         ret = fgets(buf.buffer + last_size, size_delta, file);
 
         if ( ! ret) {
-            if (ferror(file))
+            if (ferror(file)) {
+                KOS_resume_context(ctx);
                 RAISE_EXCEPTION(str_err_file_read);
+            }
             else
                 break;
         }
