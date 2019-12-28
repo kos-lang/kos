@@ -226,9 +226,9 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 
                 KOS_OBJ_ID last_exception = KOS_get_exception(ctx);
 
-                kos_track_refs(ctx, 1, &last_exception);
-
                 KOS_clear_exception(ctx);
+
+                kos_track_refs(ctx, 1, &last_exception);
 
                 str = _get_exception_string(ctx, exception);
 
