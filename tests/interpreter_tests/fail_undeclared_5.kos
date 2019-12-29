@@ -23,4 +23,4 @@ do {
     global = 0;
 }
 
-var global = void;
+public var global = void;

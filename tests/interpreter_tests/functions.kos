@@ -115,8 +115,8 @@ do {
     assert next(-20) == 3
 }
 
-var global_a = "a"
-var global_b = "b"
+public var global_a = "a"
+public var global_b = "b"
 
 do {
     var indep_c = "c"
@@ -639,7 +639,7 @@ do {
     assert obj == 13
 }
 
-var global = 1
+public var global = 1
 do {
     var global = global + 9
     assert global == 10

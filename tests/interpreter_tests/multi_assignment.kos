@@ -68,7 +68,7 @@ do {
     } ()
 }
 
-var global = void
+public var global = void
 do {
     const obj   = {}
     const array = [void, void]
