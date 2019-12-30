@@ -2,21 +2,19 @@
 
 import base: print, range
 
-do {
-    const loops = 10000
-    const size  = 10000
-    const a     = [range(size)...]
-    var   total = 0
+const loops = 10000
+const size  = 10000
+const a     = [range(size)...]
+var   total = 0
 
-    for var l = 0; l < loops; l += 1 {
-        for var i = 0; i < size; i += 1 {
-            a[i] = i
-        }
-
-        for var i = 0; i < size; i += 1 {
-            total += a[i]
-        }
+for var l = 0; l < loops; l += 1 {
+    for var i = 0; i < size; i += 1 {
+        a[i] = i
     }
 
-    print(total)
+    for var i = 0; i < size; i += 1 {
+        total += a[i]
+    }
 }
+
+print(total)
