@@ -2882,7 +2882,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
     TRY(KOS_push_locals(ctx, &pushed, 1, &buffer_obj));
 
     assert(data_size || ! size);
-    assert(KOS_buffer_data_volatile(buffer_obj));
+    assert( ! size || KOS_buffer_data_volatile(buffer_obj));
 
     offs = fmt->idx;
 
@@ -2970,7 +2970,10 @@ static int unpack_format(KOS_CONTEXT               ctx,
         default: {
             assert(value_fmt == 's');
             for ( ; count; count--) {
-                obj = KOS_new_string_from_buffer(ctx, buffer_obj, offs, offs + size);
+                if (size)
+                    obj = KOS_new_string_from_buffer(ctx, buffer_obj, offs, offs + size);
+                else
+                    obj = KOS_new_string(ctx, 0, 0);
 
                 TRY_OBJID(obj);
 
