@@ -1013,6 +1013,14 @@ do {
     expect_fail(()=>buffer().unpack("u1"))
 }
 
+do {
+    assert buffer().unpack("s") == [""]
+    assert buffer().unpack("0 x") == []
+    expect_fail(()=>buffer([1,2,3,4]).unpack("u0"))
+    expect_fail(()=>buffer([1,2,3,4]).unpack("4294967295 u1"))
+    expect_fail(()=>buffer([1,2,3,4]).unpack("429496729 u1"))
+}
+
 ##############################################################################
 # base.buffer.prototype.resize()
 

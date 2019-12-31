@@ -2532,6 +2532,11 @@ static unsigned pack_format_get_count(KOS_CONTEXT ctx,
             break;
         }
 
+        if (count >= 429496729) {
+            i--;
+            break;
+        }
+
         count = count * 10 + (c - (unsigned)'0');
     }
 
@@ -2871,9 +2876,12 @@ static int unpack_format(KOS_CONTEXT               ctx,
     if (fmt->idx + size * count > data_size)
         RAISE_EXCEPTION(str_err_unpack_buf_too_short);
 
+    if ( ! count)
+        return KOS_SUCCESS;
+
     TRY(KOS_push_locals(ctx, &pushed, 1, &buffer_obj));
 
-    assert(data_size);
+    assert(data_size || ! size);
     assert(KOS_buffer_data_volatile(buffer_obj));
 
     offs = fmt->idx;
@@ -2890,7 +2898,9 @@ static int unpack_format(KOS_CONTEXT               ctx,
         case 'i':
             /* fall through */
         case 'u': {
-            assert(size == 1 || size == 2 || size == 4 || size == 8);
+            if (size != 1 && size != 2 && size != 4 && size != 8)
+                RAISE_EXCEPTION(str_err_invalid_pack_format);
+
             for ( ; count; count--) {
                 uint64_t value = 0;
                 unsigned i;
