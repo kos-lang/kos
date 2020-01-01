@@ -1188,7 +1188,14 @@ static uint32_t _load_32(const uint8_t *bytecode)
 }
 
 #define REGISTER(reg) KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[regs_idx + (reg)])
-#define WRITE_REGISTER(reg, value) KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[regs_idx + (reg)], (value))
+
+#define WRITE_REGISTER(reg, value) do {                                       \
+    const KOS_OBJ_ID out_val = (value);                                       \
+    assert(GET_OBJ_TYPE(out_val) <= OBJ_LAST_TYPE);                           \
+    assert(reg < num_regs);                                                   \
+    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[regs_idx + (reg)], \
+                                 out_val);                                    \
+} while (0)
 
 static int exec_function(KOS_CONTEXT ctx)
 {
@@ -1227,6 +1234,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, value);
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 3;
                 break;
             }
@@ -1238,6 +1247,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, value);
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 6;
                 break;
@@ -1264,6 +1275,8 @@ static int exec_function(KOS_CONTEXT ctx)
                     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
                 }
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 3;
                 break;
             }
@@ -1288,6 +1301,8 @@ static int exec_function(KOS_CONTEXT ctx)
                     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
                 }
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 6;
                 break;
             }
@@ -1296,7 +1311,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 const int8_t value = (int8_t)bytecode[2];
 
                 rdest = bytecode[1];
-                out   = TO_SMALL_INT(value);
+
+                WRITE_REGISTER(rdest, TO_SMALL_INT(value));
 
                 bytecode += 3;
                 break;
@@ -1304,7 +1320,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
             case INSTR_LOAD_TRUE: { /* <r.dest> */
                 rdest = bytecode[1];
-                out   = KOS_TRUE;
+
+                WRITE_REGISTER(rdest, KOS_TRUE);
 
                 bytecode += 2;
                 break;
@@ -1312,7 +1329,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
             case INSTR_LOAD_FALSE: { /* <r.dest> */
                 rdest = bytecode[1];
-                out   = KOS_FALSE;
+
+                WRITE_REGISTER(rdest, KOS_FALSE);
 
                 bytecode += 2;
                 break;
@@ -1320,7 +1338,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
             case INSTR_LOAD_VOID: { /* <r.dest> */
                 rdest = bytecode[1];
-                out   = KOS_VOID;
+
+                WRITE_REGISTER(rdest, KOS_VOID);
 
                 bytecode += 2;
                 break;
@@ -1334,6 +1353,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 out = KOS_new_array(ctx, size);
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 3;
                 break;
             }
@@ -1346,6 +1367,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 out = KOS_new_array(ctx, size);
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 6;
                 break;
             }
@@ -1355,6 +1378,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 out = KOS_new_object(ctx);
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 2;
                 break;
@@ -1370,6 +1395,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 rdest = bytecode[1];
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 3;
                 break;
             }
@@ -1382,7 +1409,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 rdest = bytecode[1];
 
                 out = REGISTER(rsrc);
-                assert( ! IS_BAD_PTR(out));
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
                 break;
@@ -1410,6 +1438,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 rdest = bytecode[1];
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 3;
                 break;
             }
@@ -1421,6 +1451,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 out = KOS_array_read(ctx, OBJPTR(MODULE, module)->globals, idx);
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 6;
                 break;
@@ -1436,6 +1468,7 @@ static int exec_function(KOS_CONTEXT ctx)
                                     OBJPTR(MODULE, module)->globals,
                                     idx,
                                     REGISTER(rsrc)));
+
                 bytecode += 6;
                 break;
             }
@@ -1467,6 +1500,8 @@ static int exec_function(KOS_CONTEXT ctx)
                                      (int)GET_SMALL_INT(glob_idx));
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 7;
                 break;
             }
@@ -1486,6 +1521,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 out = KOS_array_read(ctx, OBJPTR(MODULE, module_obj)->globals, glob_idx);
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 10;
                 break;
@@ -1545,6 +1582,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -1574,6 +1613,8 @@ static int exec_function(KOS_CONTEXT ctx)
                     RAISE_EXCEPTION_STR(str_err_not_indexable);
 
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 7;
                 break;
@@ -1644,6 +1685,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 5;
                 break;
             }
@@ -1682,6 +1725,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                     assert(ctx->regs_idx == regs_idx);
                 }
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 7;
                 break;
@@ -1959,6 +2004,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -1996,6 +2043,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 }
 
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2035,6 +2084,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -2072,6 +2123,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 }
 
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2111,6 +2164,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -2137,6 +2192,8 @@ static int exec_function(KOS_CONTEXT ctx)
                     out = KOS_new_int(ctx, (int64_t)((uint64_t)a << b));
 
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2165,6 +2222,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -2192,6 +2251,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -2208,6 +2269,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 out = KOS_new_int(ctx, ~a);
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
                 break;
@@ -2230,6 +2293,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 out = KOS_new_int(ctx, a & b);
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -2251,6 +2316,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 out = KOS_new_int(ctx, a | b);
                 TRY_OBJID(out);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -2271,6 +2338,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 out = KOS_new_int(ctx, a ^ b);
                 TRY_OBJID(out);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2318,6 +2387,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 else
                     out = obj_type_map[type_idx];
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 3;
                 break;
             }
@@ -2336,6 +2407,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 src2  = REGISTER(rsrc2);
 
                 out = KOS_BOOL(KOS_compare(src1, src2) == KOS_EQUAL);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2359,6 +2432,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 cmp = KOS_compare(src1, src2);
                 out = KOS_BOOL(cmp);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -2377,6 +2452,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 src2  = REGISTER(rsrc2);
 
                 out = KOS_BOOL(KOS_compare(src1, src2) <= KOS_LESS_THAN);
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2397,6 +2474,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 out = KOS_BOOL(KOS_compare(src1, src2) == KOS_LESS_THAN);
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 4;
                 break;
             }
@@ -2414,6 +2493,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 KOS_clear_exception(ctx);
 
                 out = KOS_BOOL( ! IS_BAD_PTR(out));
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2436,6 +2517,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 out = KOS_BOOL( ! IS_BAD_PTR(out));
 
+                WRITE_REGISTER(rdest, out);
+
                 bytecode += 7;
                 break;
             }
@@ -2453,6 +2536,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 KOS_clear_exception(ctx);
 
                 out = KOS_BOOL( ! IS_BAD_PTR(out));
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2474,6 +2559,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 KOS_clear_exception(ctx);
 
                 out = KOS_BOOL( ! IS_BAD_PTR(out));
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 7;
                 break;
@@ -2503,6 +2590,8 @@ static int exec_function(KOS_CONTEXT ctx)
                     if (KOS_has_prototype(ctx, REGISTER(rsrc), proto_obj))
                         out = KOS_TRUE;
                 }
+
+                WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
                 break;
@@ -2899,6 +2988,9 @@ static int exec_function(KOS_CONTEXT ctx)
                     return KOS_SUCCESS;
                 }
 
+                if (instr != INSTR_CALL_GEN || ! IS_BAD_PTR(out))
+                    WRITE_REGISTER(rdest, out);
+
                 bytecode += delta;
                 break;
             }
@@ -3009,13 +3101,6 @@ cleanup:
         }
 
         assert( ! KOS_is_exception_pending(ctx));
-
-        if ( ! IS_BAD_PTR(out)) {
-            assert(GET_OBJ_TYPE(out) <= OBJ_LAST_TYPE);
-            assert(rdest < num_regs);
-            WRITE_REGISTER(rdest, out);
-        }
-
         assert((uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode) < OBJPTR(MODULE, module)->bytecode_size);
     }
 }
