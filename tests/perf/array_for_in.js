@@ -15,4 +15,4 @@ for (let l = 0; l < loops; l += 1) {
     }
 }
 
-print(total);
+console.log(total);

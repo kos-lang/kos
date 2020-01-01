@@ -13,4 +13,4 @@ for (let l = 0; l < loops; l++) {
     }
 }
 
-print(total);
+console.log(total);

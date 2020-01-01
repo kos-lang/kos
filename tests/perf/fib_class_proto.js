@@ -36,9 +36,9 @@ const orig = fib.execute(50);
 
 for (let i = 0; i < 10000; i++) {
     if (orig != fib.execute(50)) {
-        print("FAIL loop " + i);
+        console.log("FAIL loop " + i);
         break;
     }
 }
 
-print(orig);
+console.log(orig);

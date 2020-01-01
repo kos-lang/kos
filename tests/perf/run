@@ -77,12 +77,17 @@ fi
 
 if [ $JS = 1 ]; then
     [ -n "$JS_INTERPRETER" ] || die "JS_INTERPRETER not specified"
-    [ -x "$JS_INTERPRETER" ] || die "$JS_INTERPRETER is not accessible"
+    [ -f "$JS_INTERPRETER"/Makefile ] || die "$JS_INTERPRETER is not accessible"
 fi
 
 rm -rf Out
 
 $MAKE -k -j "$JOBS" time_us build.interpreter native=1
+
+if [ $JS = 1 ]; then
+    rm -rf "$JS_INTERPRETER/Out"
+    $MAKE -k -j "$JOBS" native=1 -C "$JS_INTERPRETER"
+fi
 
 runtest()
 {
@@ -101,7 +106,7 @@ runtest()
     PREFIX=""
 
     echo "$SCRIPT" | grep -q "\.kos$" && PREFIX=Out/release/interpreter/kos
-    echo "$SCRIPT" | grep -q "\.js$"  && PREFIX="$JS_INTERPRETER"
+    echo "$SCRIPT" | grep -q "\.js$"  && PREFIX="$JS_INTERPRETER/Out/release/js/js"
 
     tests/perf/measure -t "$1" -n "$LOOPS" $PREFIX "$@"
 }

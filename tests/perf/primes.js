@@ -35,4 +35,4 @@ primes(15485863, function(value) {
     count += 1
 });
 
-print(count + "th prime is " + last)
+console.log(count + "th prime is " + last)
