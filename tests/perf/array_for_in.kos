@@ -2,7 +2,7 @@
 
 import base: print, range
 
-const loops = 3000
+const loops = 300
 const size  = 10000
 const a     = [range(size)...]
 var   total = 0

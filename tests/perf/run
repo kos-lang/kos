@@ -44,6 +44,42 @@ esac
 
 echo "Using $JOBS jobs"
 
+die()
+{
+    echo "$@"
+    exit 1
+}
+
+KOS=1
+PY=1
+JS=1
+
+if [ -n "$JS_INTERPRETER" ]; then
+    [ -x "$JS_INTERPRETER" ] || JS=0
+else
+    JS=0
+fi
+
+if [ $# -gt 0 ]; then
+    KOS=0
+    PY=0
+    JS=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            kos) KOS=1 ;;
+            py)  PY=1  ;;
+            js)  JS=1  ;;
+            *)   die "Invalid option: $1"
+        esac
+        shift
+    done
+fi
+
+if [ $JS = 1 ]; then
+    [ -n "$JS_INTERPRETER" ] || die "JS_INTERPRETER not specified"
+    [ -x "$JS_INTERPRETER" ] || die "$JS_INTERPRETER is not accessible"
+fi
+
 rm -rf Out
 
 $MAKE -k -j "$JOBS" time_us build.interpreter native=1
@@ -57,18 +93,40 @@ runtest()
     local SCRIPT
     SCRIPT="$1"
 
+    if echo "$SCRIPT" | grep -q "\.kos$"; then [ $KOS = 1 ] || return 0; fi
+    if echo "$SCRIPT" | grep -q "\.py$" ; then [ $PY  = 1 ] || return 0; fi
+    if echo "$SCRIPT" | grep -q "\.js$" ; then [ $JS  = 1 ] || return 0; fi
+
     local PREFIX
     PREFIX=""
+
     echo "$SCRIPT" | grep -q "\.kos$" && PREFIX=Out/release/interpreter/kos
+    echo "$SCRIPT" | grep -q "\.js$"  && PREFIX="$JS_INTERPRETER"
 
     tests/perf/measure -t "$1" -n "$LOOPS" $PREFIX "$@"
 }
 
 runtest 20 doc/extract_docs.kos modules/*.kos modules/*.c
+
 runtest 10 tests/perf/primes.kos
 runtest 10 tests/perf/primes.py
+runtest 10 tests/perf/primes.js
+
+runtest 10 tests/perf/array_for_in.kos
+runtest 10 tests/perf/array_for_in.py
+runtest 10 tests/perf/array_for_in.js
+
+runtest 10 tests/perf/array_index_iter.kos
+runtest 10 tests/perf/array_index_iter.py
+runtest 10 tests/perf/array_index_iter.js
+
 runtest 10 tests/perf/sort_strings.kos
 runtest 10 tests/perf/sort_strings.py
+runtest 10 tests/perf/sort_strings.js
+
 runtest 10 tests/perf/fib_class_flat.kos
-runtest 10 tests/perf/fib_class_proto.kos
 runtest 10 tests/perf/fib_class.py
+runtest 10 tests/perf/fib_class_flat.js
+
+runtest 10 tests/perf/fib_class_proto.kos
+runtest 10 tests/perf/fib_class_proto.js

@@ -4,7 +4,7 @@
 def run():
     """ Body of the test """
 
-    loops = 3000
+    loops = 300
     size = 10000
     elements = list(range(size))
     total = 0
