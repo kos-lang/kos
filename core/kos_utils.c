@@ -197,6 +197,10 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
     KOS_OBJ_ID exception;
     FILE      *dest = print_where == KOS_STDERR ? stderr : stdout;
 
+#ifdef CONFIG_FUZZ
+    dest = fopen("/dev/null", "r+");
+#endif
+
     kos_vector_init(&cstr);
 
     exception = KOS_get_exception(ctx);
@@ -271,6 +275,10 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
         if (print_where == KOS_STDERR)
             KOS_clear_exception(ctx);
     }
+
+#ifdef CONFIG_FUZZ
+    fclose(dest);
+#endif
 }
 
 KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
