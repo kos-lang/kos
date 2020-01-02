@@ -1702,6 +1702,22 @@ do {
     assert a2[0] == 200
 }
 
+# independent variables inside a constructor
+do {
+    var o = { }
+    assert ! ("x" propertyof o)
+    class {
+        constructor(arg) {
+            class {
+                constructor {
+                    arg.x = 42
+                }
+            } ()
+        }
+    } (o)
+    assert o["x"] == 42
+}
+
 # shadowing (test case from fuzzer)
 do {
     const foo = 0
