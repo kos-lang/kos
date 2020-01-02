@@ -244,9 +244,6 @@ int kos_stack_push(KOS_CONTEXT ctx,
     }
     else {
 
-        assert(type == OBJ_FUNCTION ||
-               IS_BAD_PTR(OBJPTR(FUNCTION, func_obj)->generator_stack_frame));
-
         if (IS_BAD_PTR(ctx->stack))
             TRY(_push_new_stack(ctx));
 
