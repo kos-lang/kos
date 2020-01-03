@@ -2661,6 +2661,7 @@ static int pack_format(KOS_CONTEXT               ctx,
         if (KOS_get_array_size(obj) > 1) {
 
             obj = KOS_array_read(ctx, obj, 1);
+            TRY_OBJID(obj);
 
             if (GET_OBJ_TYPE(obj) == OBJ_ARRAY) {
                 fmt->data = obj;
@@ -2829,8 +2830,14 @@ static int pack_format(KOS_CONTEXT               ctx,
 
                 copy_size = size > str_buf.size-1 ? (uint32_t)str_buf.size-1 : size;
 
-                if (size == ~0U)
+                if (size == ~0U) {
                     dst = KOS_buffer_make_room(ctx, buffer_obj, copy_size);
+                    if ( ! dst)
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+                else {
+                    assert(dst || ! copy_size);
+                }
 
                 if (copy_size)
                     memcpy(dst, str_buf.buffer, copy_size);
