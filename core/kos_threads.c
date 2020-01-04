@@ -217,32 +217,38 @@ static void set_thread_flags(KOS_THREAD *thread, uint32_t new_flags)
     }
 }
 
+void kos_thread_add_ref(KOS_THREAD *thread)
+{
+    KOS_atomic_add_u32(thread->ref_count, 1);
+}
+
 static void release_thread(KOS_THREAD *thread)
+{
+    if (KOS_atomic_add_u32(thread->ref_count, (uint32_t)-1) == 1)
+        kos_free(thread);
+}
+
+static void remove_thread(KOS_THREAD *thread)
 {
     KOS_INSTANCE  *inst       = thread->inst;
     const uint32_t thread_idx = KOS_atomic_swap_u32(thread->thread_idx, KOS_NO_THREAD_IDX);
 
     if (thread_idx != KOS_NO_THREAD_IDX) {
-        KOS_atomic_write_relaxed_ptr(inst->threads.threads[thread_idx], (KOS_THREAD *)0);
+        if ( ! KOS_atomic_cas_strong_ptr(inst->threads.threads[thread_idx], thread, (KOS_THREAD *)0)) {
+            assert( ! "invalid thread release");
+        }
 
         KOS_atomic_add_u32(inst->threads.num_threads, (uint32_t)-1);
     }
 
-    if (KOS_atomic_add_u32(thread->ref_count, (uint32_t)-1) == 1)
-        kos_free(thread);
-}
-
-void kos_thread_add_ref(KOS_THREAD *thread)
-{
-    KOS_atomic_add_u32(thread->ref_count, 1);
+    release_thread(thread);
 }
 
 void kos_thread_disown(KOS_THREAD *thread)
 {
     set_thread_flags(thread, KOS_THREAD_DISOWNED);
 
-    if (KOS_atomic_add_u32(thread->ref_count, (uint32_t)-1) == 1)
-        kos_free(thread);
+    release_thread(thread);
 }
 
 static void set_thread_exception(KOS_CONTEXT ctx, KOS_THREAD *thread)
@@ -304,7 +310,7 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
                     KOS_OBJ_ID retval;
 
                     /* Prevent race between KOS_instance_destroy() and GC */
-                    KOS_atomic_add_u32(thread->ref_count, 1U);
+                    kos_thread_add_ref(thread);
                     assert(KOS_atomic_read_relaxed_u32(thread->ref_count) >= 2U);
 
                     kos_unlock_mutex(&inst->threads.new_mutex);
@@ -420,18 +426,18 @@ static void *thread_proc(void *thread_ptr)
     return 0;
 }
 
-#ifdef _WIN32
-
 KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  thread_func,
                               KOS_OBJ_ID  this_obj,
                               KOS_OBJ_ID  args_obj)
 {
     KOS_THREAD *thread = alloc_thread(ctx, thread_func, this_obj, args_obj);
+    int         error  = KOS_SUCCESS;
 
     if ( ! thread)
         return 0;
 
+#ifdef _WIN32
     thread->thread_handle = kos_seq_fail() ? 0 :
         CreateThread(0,
                      0,
@@ -440,10 +446,22 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
                      0,
                      &thread->thread_id);
 
-    if ( ! thread->thread_handle) {
+    if ( ! thread->thread_handle)
+        error = KOS_ERROR_OUT_OF_MEMORY;
+
+#else
+
+    if (kos_seq_fail() || pthread_create(&thread->thread_handle,
+                                         0,
+                                         thread_proc,
+                                         thread))
+        error = KOS_ERROR_OUT_OF_MEMORY;
+#endif
+
+    if (error) {
         KOS_raise_exception_cstring(ctx, str_err_thread);
 
-        release_thread(thread);
+        remove_thread(thread);
 
         thread = 0;
     }
@@ -464,8 +482,12 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
+#ifdef _WIN32
     WaitForSingleObject(thread->thread_handle, INFINITE);
     CloseHandle(thread->thread_handle);
+#else
+    pthread_join(thread->thread_handle, NULL);
+#endif
 
     error = KOS_resume_context(ctx);
 
@@ -482,11 +504,13 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
 
     set_thread_flags(thread, KOS_THREAD_JOINED);
 
-    release_thread(thread);
+    remove_thread(thread);
 
 cleanup:
     return error ? KOS_BADPTR : retval;
 }
+
+#ifdef _WIN32
 
 int kos_is_current_thread(KOS_THREAD *thread)
 {
@@ -579,67 +603,6 @@ void kos_tls_set(KOS_TLS_KEY key, void *value)
 }
 
 #else
-
-KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
-                              KOS_OBJ_ID  thread_func,
-                              KOS_OBJ_ID  this_obj,
-                              KOS_OBJ_ID  args_obj)
-{
-    KOS_THREAD *thread = alloc_thread(ctx, thread_func, this_obj, args_obj);
-
-    if ( ! thread)
-        return 0;
-
-    if (kos_seq_fail() || pthread_create(&thread->thread_handle,
-                                         0,
-                                         thread_proc,
-                                         thread)) {
-
-        KOS_raise_exception_cstring(ctx, str_err_thread);
-
-        release_thread(thread);
-
-        thread = 0;
-    }
-
-    return thread;
-}
-
-KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
-                           KOS_THREAD *thread)
-{
-    int        error  = KOS_SUCCESS;
-    KOS_OBJ_ID retval = KOS_BADPTR;
-
-    assert(thread);
-
-    if (kos_is_current_thread(thread))
-        RAISE_EXCEPTION(str_err_join_self);
-
-    KOS_suspend_context(ctx);
-
-    pthread_join(thread->thread_handle, NULL);
-
-    error = KOS_resume_context(ctx);
-
-    if ( ! error) {
-        if (IS_BAD_PTR(thread->exception)) {
-            retval = thread->retval;
-            assert( ! IS_BAD_PTR(retval));
-        }
-        else {
-            KOS_raise_exception(ctx, thread->exception);
-            error = KOS_ERROR_EXCEPTION;
-        }
-    }
-
-    set_thread_flags(thread, KOS_THREAD_JOINED);
-
-    release_thread(thread);
-
-cleanup:
-    return error ? KOS_BADPTR : retval;
-}
 
 int kos_is_current_thread(KOS_THREAD *thread)
 {
