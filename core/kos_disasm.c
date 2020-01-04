@@ -491,7 +491,7 @@ void kos_disassemble(const char                           *filename,
             int32_t   value  = 0;
             int       tail   = 0;
             int       pr_size;
-            size_t    avail_size;
+            char      dis_num[12];
 
             assert(opsize == 1 || opsize == 4);
 
@@ -504,18 +504,18 @@ void kos_disassemble(const char                           *filename,
             }
 
             tail = get_offset_operand_tail((KOS_BYTECODE_INSTR)opcode, iop);
-            avail_size = sizeof(dis) - dis_size;
             if (tail >= 0)
-                pr_size = snprintf(&dis[dis_size], avail_size, "%08X",
+                pr_size = snprintf(dis_num, sizeof(dis_num), "%08X",
                                    value + offs + instr_size + opsize + tail);
             else if (kos_is_register((KOS_BYTECODE_INSTR)opcode, iop))
-                pr_size = snprintf(&dis[dis_size], avail_size, "r%d", value);
+                pr_size = snprintf(dis_num, sizeof(dis_num), "r%d", value);
             else {
                 if (opsize == 1 && kos_is_signed_op((KOS_BYTECODE_INSTR)opcode, iop))
                     value = (int32_t)(int8_t)value;
-                pr_size = snprintf(&dis[dis_size], avail_size, "%d", value);
+                pr_size = snprintf(dis_num, sizeof(dis_num), "%d", value);
             }
 
+            memcpy(&dis[dis_size], dis_num, pr_size);
             dis_size += (size_t)pr_size;
 
             if (iop + 1 < num_operands) {
@@ -523,6 +523,8 @@ void kos_disassemble(const char                           *filename,
                 dis[dis_size++] = ' ';
                 dis[dis_size]   = 0;
             }
+            else
+                dis[dis_size]   = 0;
 
             assert(dis_size < sizeof(dis));
 
