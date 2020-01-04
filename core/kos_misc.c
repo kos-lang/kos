@@ -580,7 +580,7 @@ unsigned kos_print_float(char *buf, unsigned size, double value)
 void kos_get_entropy_fallback(uint8_t *bytes, unsigned size)
 {
     const uint32_t multiplier = 0x8088405U;
-    uint32_t       state      = (uint32_t)time(0);
+    uint32_t       state      = ((uint32_t)time(0) << 1) | 1U;
     unsigned       i;
 
     /* Trivial LCG to init the state from time */
@@ -592,7 +592,7 @@ void kos_get_entropy_fallback(uint8_t *bytes, unsigned size)
 
         state = state * multiplier + 1;
 
-        bytes[i] = (uint8_t)(state >> 24);
+        bytes[i] = (uint8_t)(state >> 23);
     }
 }
 
