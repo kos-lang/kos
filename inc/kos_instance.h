@@ -106,6 +106,8 @@ typedef struct KOS_STACK_S {
     KOS_ATOMIC(KOS_OBJ_ID) buf[1]; /* Actual stack */
 } KOS_STACK;
 
+typedef struct KOS_LOCAL_S KOS_LOCAL;
+
 #define KOS_MAX_LOCALS 16
 
 struct KOS_THREAD_CONTEXT_S {
@@ -123,6 +125,7 @@ struct KOS_THREAD_CONTEXT_S {
     uint32_t      stack_depth;
     uint32_t      tmp_ref_count;
     uint32_t      helper_ref_count;
+    KOS_LOCAL    *local_list;
     KOS_OBJ_ID    local_refs;   /* Object id refs on user's local stack           */
     KOS_OBJ_ID   *tmp_refs[12]; /* Object id refs during object creation          */
     KOS_OBJ_ID   *helper_refs[KOS_MAX_LOCALS]; /* Helper when pushing locals stack*/
@@ -281,6 +284,23 @@ void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...);
 
 void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
+
+struct KOS_LOCAL_S {
+    KOS_LOCAL  *next;
+    KOS_LOCAL  *prev;
+    KOS_OBJ_ID  obj_id;
+    KOS_CONTEXT ctx;
+};
+
+void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
+
+void KOS_init_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals);
+
+void KOS_destroy_local(KOS_LOCAL *local);
+
+void KOS_destroy_locals(KOS_LOCAL *locals, int num_locals);
+
+void KOS_init_move_local(KOS_LOCAL *dest, KOS_LOCAL *src);
 
 typedef struct KOS_GC_STATS_S {
     unsigned num_objs_evacuated;

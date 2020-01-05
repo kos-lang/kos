@@ -138,6 +138,7 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
     ctx->stack_depth      = 0;
     ctx->tmp_ref_count    = 0;
     ctx->helper_ref_count = 0;
+    ctx->local_list       = 0;
     ctx->local_refs       = KOS_BADPTR;
 
     for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); i++)
@@ -1195,4 +1196,123 @@ void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries)
     assert(num_entries > 0 && (unsigned)num_entries <= ctx->tmp_ref_count);
 
     ctx->tmp_ref_count -= num_entries;
+}
+
+void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
+{
+    KOS_LOCAL *next = ctx->local_list;
+
+    local->prev     = 0;
+    local->next     = next;
+    local->obj_id   = KOS_BADPTR;
+    local->ctx      = ctx;
+    ctx->local_list = local;
+
+    if (next)
+        next->prev = local;
+}
+
+void KOS_init_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals)
+{
+    KOS_LOCAL *tail;
+    KOS_LOCAL *prev;
+
+    if ( ! num_locals)
+        return;
+
+    tail            = ctx->local_list;
+    prev            = 0;
+    ctx->local_list = locals;
+
+    for ( ; num_locals; --num_locals) {
+        KOS_LOCAL *next = locals + 1;
+
+        locals->prev   = prev;
+        locals->next   = next;
+        locals->obj_id = KOS_BADPTR;
+        locals->ctx    = ctx;
+        prev           = locals;
+        locals         = next;
+    }
+
+    --locals;
+    locals->next = tail;
+
+    if (tail)
+        tail->prev = locals;
+}
+
+void KOS_destroy_local(KOS_LOCAL *local)
+{
+    KOS_LOCAL  *prev      = local->prev;
+    KOS_LOCAL  *next      = local->next;
+    KOS_CONTEXT ctx       = local->ctx;
+    KOS_LOCAL **prev_next = prev ? &prev->next : &ctx->local_list;
+
+    *prev_next = next;
+
+    if (next)
+        next->prev = prev;
+
+#ifndef NDEBUG
+    local->prev   = 0;
+    local->next   = 0;
+    local->obj_id = KOS_BADPTR;
+    local->ctx    = 0;
+#endif
+}
+
+void KOS_destroy_locals(KOS_LOCAL *locals, int num_locals)
+{
+    KOS_LOCAL  *prev      = locals->prev;
+    KOS_LOCAL  *after     = locals[num_locals-1].next;
+    KOS_CONTEXT ctx       = locals->ctx;
+    KOS_LOCAL **prev_next = prev ? &prev->next : &ctx->local_list;
+
+    *prev_next = after;
+
+    if (after)
+        after->prev = prev;
+
+#ifndef NDEBUG
+    for ( ; num_locals; --num_locals) {
+        KOS_LOCAL *next = num_locals > 1 ? locals + 1 : after;
+
+        assert(locals->prev == prev);
+        assert(locals->next == next);
+        assert(locals->ctx  == ctx);
+
+        locals->prev   = 0;
+        locals->next   = 0;
+        locals->obj_id = KOS_BADPTR;
+        locals->ctx    = 0;
+        prev           = locals;
+        locals         = next;
+    }
+#endif
+}
+
+void KOS_init_move_local(KOS_LOCAL *dest, KOS_LOCAL *src)
+{
+    KOS_LOCAL  *prev      = src->prev;
+    KOS_LOCAL  *next      = src->next;
+    KOS_CONTEXT ctx       = src->ctx;
+    KOS_LOCAL **prev_next = prev ? &prev->next : &ctx->local_list;
+
+    dest->prev   = prev;
+    dest->next   = next;
+    dest->obj_id = src->obj_id;
+    dest->ctx    = ctx;
+
+    *prev_next = dest;
+
+    if (next)
+        next->prev = dest;
+
+#ifndef NDEBUG
+    src->prev   = 0;
+    src->next   = 0;
+    src->obj_id = KOS_BADPTR;
+    src->ctx    = 0;
+#endif
 }
