@@ -20,6 +20,9 @@
  * IN THE SOFTWARE.
  */
 
+#ifndef KOS_TEST_TOOLS_H_INCLUDED
+#define KOS_TEST_TOOLS_H_INCLUDED
+
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_threads.h"
 #include <stdio.h>
@@ -38,3 +41,5 @@ int join_thread(KOS_CONTEXT ctx,
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
 int get_num_cpus(void);
+
+#endif
