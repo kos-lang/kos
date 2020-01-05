@@ -1630,16 +1630,202 @@ int main(void)
         for (i = 0; i < NELEMS(((KOS_LOCAL_REFS *)0)->refs); i++)
             TEST(finalized[i] == 0);
 
-
+        /* Unregister locals, objects not tracked by GC anymore */
         for (i = 0; i < NELEMS(((KOS_LOCAL_REFS *)0)->refs); i++)
             KOS_pop_locals(ctx, 1);
 
+        /* Destroy untracked objects with GC */
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
+        /* Make sure all were destroyed */
         for (i = 0; i < NELEMS(((KOS_LOCAL_REFS *)0)->refs); i++)
             TEST(finalized[i] == 47);
 
         KOS_instance_destroy(&inst);
+    }
+
+    /************************************************************************/
+    /* Test local refs, one at a time, destroy all */
+    {
+        KOS_LOCAL  local[3];
+        int        finalized[NELEMS(local)];
+        size_t     i;
+
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+
+        for (i = 0; i < NELEMS(local); i++) {
+            KOS_init_local(ctx, &local[i]);
+
+            local[i].obj_id = KOS_new_object(ctx);
+            TEST( ! IS_BAD_PTR(local[i].obj_id));
+
+            finalized[i] = 0;
+            KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
+            OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
+        }
+
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        for (i = 0; i < NELEMS(local); i++)
+            TEST(finalized[i] == 0);
+
+        /* Destroy locals, objects not tracked by GC anymore */
+        for (i = 0; i < NELEMS(local); i++) {
+            KOS_destroy_local(&local[i]);
+#ifndef NDEBUG
+            TEST(IS_BAD_PTR(local[i].obj_id));
+#endif
+        }
+
+        /* Destroy untracked objects with GC */
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        /* Make sure all were destroyed */
+        for (i = 0; i < NELEMS(local); i++)
+            TEST(finalized[i] == 47);
+
+        KOS_instance_destroy(&inst);
+    }
+
+    /************************************************************************/
+    /* Test local refs, destroy by instance exit */
+    {
+        KOS_LOCAL  local[3];
+        int        finalized[NELEMS(local)];
+        size_t     i;
+
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+
+        for (i = 0; i < NELEMS(local); i++) {
+            KOS_init_local(ctx, &local[i]);
+
+            local[i].obj_id = KOS_new_object(ctx);
+            TEST( ! IS_BAD_PTR(local[i].obj_id));
+
+            finalized[i] = 0;
+            KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
+            OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
+        }
+
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        for (i = 0; i < NELEMS(local); i++)
+            TEST(finalized[i] == 0);
+
+        KOS_instance_destroy(&inst);
+
+        /* Make sure all were destroyed */
+        for (i = 0; i < NELEMS(local); i++)
+            TEST(finalized[i] == 47);
+    }
+
+    /************************************************************************/
+    /* Test local refs using an array, destroy all */
+    {
+        KOS_LOCAL  local[3];
+        int        finalized[NELEMS(local)];
+        size_t     i;
+
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+
+        KOS_init_locals(ctx, local, NELEMS(local));
+
+        for (i = 0; i < NELEMS(local); i++) {
+            local[i].obj_id = KOS_new_object(ctx);
+            TEST( ! IS_BAD_PTR(local[i].obj_id));
+
+            finalized[i] = 0;
+            KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
+            OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
+        }
+
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        for (i = 0; i < NELEMS(local); i++)
+            TEST(finalized[i] == 0);
+
+        /* Destroy locals, objects not tracked by GC anymore */
+        KOS_destroy_locals(local, 3);
+#ifndef NDEBUG
+        for (i = 0; i < NELEMS(local); i++)
+            TEST(IS_BAD_PTR(local[i].obj_id));
+#endif
+
+        /* Destroy untracked objects with GC */
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        /* Make sure all were destroyed */
+        for (i = 0; i < NELEMS(local); i++)
+            TEST(finalized[i] == 47);
+
+        KOS_instance_destroy(&inst);
+    }
+
+    /************************************************************************/
+    /* Test local refs, destroy one at a time */
+    {
+        const int destroy_order[][3] = {
+            { 0, 1, 2 },
+            { 1, 0, 2 },
+            { 2, 0, 1 },
+            { 2, 1, 0 },
+            { 0, 2, 1 },
+            { 1, 2, 0 }
+        };
+        size_t order;
+
+        for (order = 0; order < NELEMS(destroy_order); order++) {
+            KOS_LOCAL local[3];
+            int       finalized[NELEMS(local)];
+            int       destroyed[NELEMS(local)];
+            size_t    dest_idx;
+            size_t    i;
+
+            TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+
+            for (i = 0; i < NELEMS(local); i++) {
+                KOS_init_local(ctx, &local[i]);
+
+                local[i].obj_id = KOS_new_object(ctx);
+                TEST( ! IS_BAD_PTR(local[i].obj_id));
+
+                finalized[i] = 0;
+                destroyed[i] = 0;
+                KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
+                OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
+            }
+
+            TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+            for (i = 0; i < NELEMS(local); i++)
+                TEST(finalized[i] == 0);
+
+            /* Destroy locals in specific order, GC after each */
+            for (dest_idx = 0; dest_idx < NELEMS(local); dest_idx++) {
+
+                const size_t target_idx = destroy_order[order][dest_idx];
+
+                KOS_destroy_local(&local[target_idx]);
+                destroyed[target_idx] = 1;
+#ifndef NDEBUG
+                TEST(IS_BAD_PTR(local[target_idx].obj_id));
+#endif
+                /* Destroy untracked objects with GC */
+                TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+                /* Make sure all were destroyed */
+                for (i = 0; i < NELEMS(local); i++) {
+                    if (i == target_idx) {
+                        TEST(finalized[i] == 47);
+                        finalized[i] = 0;
+                    }
+                    else
+                        TEST(finalized[i] == 0);
+                }
+            }
+
+            KOS_instance_destroy(&inst);
+        }
     }
 
     /************************************************************************/
