@@ -1777,7 +1777,6 @@ int main(void)
         for (order = 0; order < NELEMS(destroy_order); order++) {
             KOS_LOCAL local[3];
             int       finalized[NELEMS(local)];
-            int       destroyed[NELEMS(local)];
             size_t    dest_idx;
             size_t    i;
 
@@ -1790,7 +1789,6 @@ int main(void)
                 TEST( ! IS_BAD_PTR(local[i].obj_id));
 
                 finalized[i] = 0;
-                destroyed[i] = 0;
                 KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
                 OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
             }
@@ -1806,7 +1804,6 @@ int main(void)
                 const size_t target_idx = destroy_order[order][dest_idx];
 
                 KOS_destroy_local(&local[target_idx]);
-                destroyed[target_idx] = 1;
 #ifndef NDEBUG
                 TEST(IS_BAD_PTR(local[target_idx].obj_id));
 #endif
