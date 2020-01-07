@@ -44,6 +44,7 @@
 
 namespace kos {
 
+class handle;
 class array;
 class buffer;
 class function;
@@ -128,11 +129,7 @@ class context {
             check_error(KOS_module_add_global(ctx_, module, name, value, idx));
         }
 
-        KOS_OBJ_ID get_global(KOS_OBJ_ID module, KOS_OBJ_ID name, unsigned* idx = 0) {
-            KOS_OBJ_ID ret = KOS_BADPTR;
-            check_error(KOS_module_get_global(ctx_, module, name, &ret, idx));
-            return ret;
-        }
+        handle get_global(KOS_OBJ_ID module, KOS_OBJ_ID name, unsigned* idx = 0);
 
         // Invoke Kos function from C++
         // ============================
@@ -222,7 +219,7 @@ class instance {
             }
         }
 
-        ~instance() {
+        ~instance() NOEXCEPT {
             KOS_instance_destroy(&inst_);
         }
 
@@ -248,7 +245,7 @@ class thread_ctx {
             KOS_instance_register_thread(inst, &thread_ctx_);
         }
 
-        ~thread_ctx() {
+        ~thread_ctx() NOEXCEPT {
             KOS_instance_unregister_thread(thread_ctx_.inst, &thread_ctx_);
         }
 
@@ -260,224 +257,291 @@ class thread_ctx {
         struct KOS_THREAD_CONTEXT_S thread_ctx_;
 };
 
-class object_base {
+class handle {
     public:
-        object_base(KOS_OBJ_ID obj_id)
-            : obj_id_(obj_id)
-        {
-            assert( ! IS_BAD_PTR(obj_id));
+        handle() {
+            local_.prev   = 0;
+            local_.next   = 0;
+            local_.obj_id = KOS_BADPTR;
+            local_.ctx    = 0;
+        }
+
+        handle(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id) {
+            KOS_init_local(ctx, &local_);
+            local_.obj_id = obj_id;
+        }
+
+        ~handle() NOEXCEPT {
+            KOS_destroy_local(&local_);
+        }
+
+        handle(const handle& h) {
+            KOS_init_local(h.local_.ctx, &local_);
+            local_.obj_id = h.local_.obj_id;
+        }
+
+        handle& operator=(const handle& h) {
+            if ( ! local_.ctx && local_.ctx != h.local_.ctx)
+                KOS_init_local(h.local_.ctx, &local_);
+            local_.obj_id = h.local_.obj_id;
+            return *this;
         }
 
         operator KOS_OBJ_ID() const {
-            return obj_id_;
+            return local_.obj_id;
+        }
+
+        context get_context() const {
+            return local_.ctx;
         }
 
         KOS_TYPE type() const {
-            return GET_OBJ_TYPE(obj_id_);
+            return GET_OBJ_TYPE(local_.obj_id);
         }
 
-    protected:
-        KOS_OBJ_ID obj_id_;
+    private:
+        KOS_LOCAL local_;
 };
 
-class integer: public object_base {
+class object: public handle {
     public:
-        integer(KOS_OBJ_ID obj_id)
-            : object_base(obj_id)
+        object() { }
+
+        object(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+            : handle(ctx, obj_id)
+        {
+        }
+
+        explicit object(const handle& h)
+            : handle(h)
+        {
+        }
+
+        object(const object& h)
+            : handle(h)
+        {
+        }
+
+        object& operator=(const object& h) {
+            handle::operator=(h);
+            return *this;
+        }
+
+        class const_property;
+
+        class property;
+
+        template<typename T>
+        const_property operator[](const T& key) const;
+
+        template<typename T>
+        property operator[](const T& key);
+
+        class const_iterator;
+
+        const_iterator        begin()  const;
+        static const_iterator end();
+        const_iterator        cbegin() const;
+        static const_iterator cend();
+};
+
+class integer: public object {
+    public:
+        integer() { }
+
+        integer(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+            : object(ctx, obj_id)
         {
             assert(IS_SMALL_INT(obj_id) || READ_OBJ_TYPE(obj_id) == OBJ_INTEGER);
         }
 
-        integer(int v)
-        : object_base(TO_SMALL_INT(v))
+        integer(KOS_CONTEXT ctx, int value)
+            : object(ctx, TO_SMALL_INT(value))
         {
         }
 
+        explicit integer(const handle& h)
+            : object(h)
+        {
+            assert(IS_SMALL_INT(*this) || READ_OBJ_TYPE(*this) == OBJ_INTEGER);
+        }
+
+        integer(const integer& h)
+            : object(h)
+        {
+        }
+
+        integer& operator=(const integer& h) {
+            object::operator=(h);
+            return *this;
+        }
+
         operator int64_t() const {
-            if (IS_SMALL_INT(obj_id_))
-                return GET_SMALL_INT(obj_id_);
+            const KOS_OBJ_ID obj_id = *this;
+            if (IS_SMALL_INT(obj_id))
+                return GET_SMALL_INT(obj_id);
             else
-                return OBJPTR(INTEGER, obj_id_)->value;
+                return OBJPTR(INTEGER, obj_id)->value;
         }
 };
 
-class floating: public object_base {
+class floating: public object {
     public:
-        floating(KOS_OBJ_ID obj_id)
-            : object_base(obj_id)
+        floating() { }
+
+        floating(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+            : object(ctx, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_FLOAT);
         }
 
+        explicit floating(const handle& h): object(h) {
+            assert(GET_OBJ_TYPE(*this) == OBJ_FLOAT);
+        }
+
+        floating(const floating& h)
+            : object(h)
+        {
+        }
+
+        floating& operator=(const floating& h) {
+            object::operator=(h);
+            return *this;
+        }
+
         operator double() const {
-            return OBJPTR(FLOAT, obj_id_)->value;
+            return OBJPTR(FLOAT, *this)->value;
         }
 };
 
-class string: public object_base {
+class string: public object {
     public:
-        string(KOS_OBJ_ID obj_id)
-            : object_base(obj_id)
+        string() { }
+
+        string(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+            : object(ctx, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_STRING);
         }
 
-        string(KOS_STRING& v)
-            : object_base(OBJID(STRING, &v))
+        explicit string(const handle& h)
+            : object(h)
+        {
+            assert(GET_OBJ_TYPE(*this) == OBJ_STRING);
+        }
+
+        string(const string& h)
+            : object(h)
         {
         }
 
+        string& operator=(const string& h) {
+            object::operator=(h);
+            return *this;
+        }
+
         operator std::string() const;
+
+        bool operator==(const string& s) const {
+            return KOS_string_compare(*this, s) == 0;
+        }
+
+        bool operator!=(const string& s) const {
+            return KOS_string_compare(*this, s) != 0;
+        }
+
+        bool operator<(const string& s) const {
+            return KOS_string_compare(*this, s) < 0;
+        }
+
+        bool operator<=(const string& s) const {
+            return KOS_string_compare(*this, s) <= 0;
+        }
+
+        bool operator>(const string& s) const {
+            return KOS_string_compare(*this, s) > 0;
+        }
+
+        bool operator>=(const string& s) const {
+            return KOS_string_compare(*this, s) >= 0;
+        }
 };
 
-class boolean: public object_base {
+class boolean: public object {
     public:
-        boolean(KOS_OBJ_ID obj_id)
-            : object_base(obj_id)
+        boolean() { }
+
+        boolean(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+            : object(ctx, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_BOOLEAN);
         }
 
+        boolean(KOS_CONTEXT ctx, bool b)
+            : object(ctx, KOS_BOOL(b))
+        {
+        }
+
+        explicit boolean(const handle& h)
+            : object(h)
+        {
+            assert(GET_OBJ_TYPE(*this) == OBJ_BOOLEAN);
+        }
+
+        boolean(const boolean& h)
+            : object(h)
+        {
+        }
+
+        boolean& operator=(const boolean& h) {
+            object::operator=(h);
+            return *this;
+        }
+
         operator bool() const {
-            return !! KOS_get_bool(obj_id_);
+            return !! KOS_get_bool(*this);
         }
 
         bool operator!() const {
-            return ! KOS_get_bool(obj_id_);
+            return ! KOS_get_bool(*this);
         }
 };
 
-class void_type: public object_base {
+class void_type: public object {
     public:
-        void_type(KOS_OBJ_ID obj_id)
-            : object_base(obj_id)
+        void_type() { }
+
+        void_type(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
+            : object(ctx, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_VOID);
         }
-};
 
-class object: public object_base {
-    public:
-        object(context ctx, KOS_OBJ_ID obj_id)
-            : object_base(obj_id),
-              ctx_(ctx)
+        void_type(KOS_CONTEXT ctx, void_)
+            : object(ctx, KOS_VOID)
         {
         }
 
-        class const_property {
-            public:
-                const_property(context ctx, KOS_OBJ_ID obj_id, const string& key)
-                    : ctx_(ctx),
-                      obj_id_(obj_id),
-                      key_(key)
-                {
-                }
-
-                template<typename T>
-                operator T() const {
-                    return value_from_object_ptr<T>(ctx_, ctx_.check_error(KOS_get_property(ctx_, obj_id_, key_)));
-                }
-
-                void erase() {
-                    ctx_.check_error(KOS_delete_property(ctx_, obj_id_, key_));
-                }
-
-            protected:
-                mutable context ctx_;
-                KOS_OBJ_ID          obj_id_;
-                const string        key_;
-        };
-
-        class property: public const_property {
-            public:
-                property(context ctx, KOS_OBJ_ID obj_id, const string& key)
-                    : const_property(ctx, obj_id, key)
-                {
-                }
-
-                template<typename T>
-                property& operator=(const T& obj) {
-                    ctx_.check_error(KOS_set_property(ctx_, obj_id_, key_, to_object_ptr(ctx_, obj)));
-                    return *this;
-                }
-        };
-
-        template<typename T>
-        const_property operator[](const T& key) const {
-            return const_property(ctx_, obj_id_, to_object_ptr(ctx_, key));
+        explicit void_type(KOS_CONTEXT ctx)
+            : object(ctx, KOS_VOID)
+        {
         }
 
-        template<typename T>
-        property operator[](const T& key) {
-            return property(ctx_, obj_id_, to_object_ptr(ctx_, key));
+        explicit void_type(const handle& h)
+            : object(h)
+        {
+            assert(GET_OBJ_TYPE(*this) == OBJ_VOID);
         }
 
-        class const_iterator {
-            public:
-                typedef std::forward_iterator_tag         iterator_category;
-                typedef std::pair<KOS_OBJ_ID, KOS_OBJ_ID> value_type;
-                typedef void                              difference_type;
-                typedef const value_type*                 pointer;
-                typedef const value_type&                 reference;
+        void_type(const void_type& h)
+            : object(h)
+        {
+        }
 
-                const_iterator()
-                    : ctx_(0), walk_(KOS_BADPTR), elem_(KOS_BADPTR, KOS_BADPTR)
-                {
-                }
-
-                const_iterator(context ctx, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH_E depth);
-
-                const_iterator(const const_iterator& it)
-                    : ctx_(0), walk_(KOS_BADPTR), elem_(KOS_BADPTR, KOS_BADPTR)
-                {
-                    *this = it;
-                }
-
-                const_iterator& operator=(const const_iterator& it);
-
-                bool operator==(const const_iterator& it) const {
-                    return elem_.first == it.elem_.first;
-                }
-
-                bool operator!=(const const_iterator& it) const {
-                    return ! (elem_.first == it.elem_.first);
-                }
-
-                const_iterator& operator++() {
-                    if (KOS_object_walk(ctx_, walk_))
-                        elem_ = value_type(KOS_BADPTR, KOS_BADPTR);
-                    else
-                        elem_ = value_type(KOS_get_walk_key(walk_), KOS_get_walk_value(walk_));
-                    return *this;
-                }
-
-                const_iterator operator++(int) {
-                    const_iterator tmp(*this);
-                    operator++();
-                    return tmp;
-                }
-
-                reference operator*() const {
-                    return elem_;
-                }
-
-                pointer operator->() const {
-                    return &elem_;
-                }
-
-            private:
-                mutable context  ctx_;
-                KOS_OBJ_ID       walk_;
-                value_type       elem_;
-        };
-
-        const_iterator        begin()  const { return const_iterator(ctx_, obj_id_, KOS_SHALLOW); }
-        static const_iterator end()          { return const_iterator(); }
-        const_iterator        cbegin() const { return const_iterator(ctx_, obj_id_, KOS_SHALLOW); }
-        static const_iterator cend()         { return const_iterator(); }
-
-    protected:
-        mutable context ctx_;
+        void_type& operator=(const void_type& h) {
+            object::operator=(h);
+            return *this;
+        }
 };
 
 template<typename element_type>
@@ -489,12 +553,9 @@ class random_access_iterator {
         typedef element_type*                             pointer;   // TODO pointer to actual element
         typedef element_type&                             reference; // TODO reference to actual element
 
-        random_access_iterator()
-            : elem_(0, KOS_BADPTR, 0)
-        {
-        }
+        random_access_iterator() { }
 
-        random_access_iterator(context ctx, KOS_OBJ_ID obj_id, int idx)
+        random_access_iterator(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
             : elem_(ctx, obj_id, idx)
         {
         }
@@ -506,7 +567,7 @@ class random_access_iterator {
         }
 
         operator random_access_iterator<const value_type>() const {
-            return random_access_iterator<const value_type>(elem_.get_context(), elem_.object(), elem_.index());
+            return random_access_iterator<const value_type>(elem_.get_context(), elem_.get_object(), elem_.get_index());
         }
 
         random_access_iterator& operator++() {
@@ -520,23 +581,23 @@ class random_access_iterator {
         }
 
         random_access_iterator operator++(int) {
-            random_access_iterator tmp(elem_.get_context(), elem_.object(), elem_.index());
+            random_access_iterator tmp(elem_.get_context(), elem_.get_object(), elem_.get_index());
             operator++();
             return tmp;
         }
 
         random_access_iterator operator--(int) {
-            random_access_iterator tmp(elem_.get_context(), elem_.object(), elem_.index());
+            random_access_iterator tmp(elem_.get_context(), elem_.get_object(), elem_.get_index());
             operator--();
             return tmp;
         }
 
         random_access_iterator operator+(int delta) const {
-            return random_access_iterator(elem_.get_context(), elem_.object(), elem_.index() + delta);
+            return random_access_iterator(elem_.get_context(), elem_.get_object(), elem_.get_index() + delta);
         }
 
         random_access_iterator operator-(int delta) const {
-            return random_access_iterator(elem_.get_context(), elem_.object(), elem_.index() - delta);
+            return random_access_iterator(elem_.get_context(), elem_.get_object(), elem_.get_index() - delta);
         }
 
         random_access_iterator& operator+=(int delta) {
@@ -550,37 +611,37 @@ class random_access_iterator {
         }
 
         difference_type operator-(const random_access_iterator& it) const {
-            return elem_.index() - it.elem_.index();
+            return elem_.get_index() - it.elem_.get_index();
         }
 
         bool operator==(const random_access_iterator& it) const {
-            return elem_.object() == it.elem_.object() &&
-                   elem_.index()  == it.elem_.index();
+            return elem_.get_object() == it.elem_.get_object() &&
+                   elem_.get_index()  == it.elem_.get_index();
         }
 
         bool operator!=(const random_access_iterator& it) const {
-            return elem_.object() != it.elem_.object() ||
-                   elem_.index()  != it.elem_.index();
+            return elem_.get_object() != it.elem_.get_object() ||
+                   elem_.get_index()  != it.elem_.get_index();
         }
 
         bool operator<(const random_access_iterator& it) const {
-            return elem_.object() == it.elem_.object() &&
-                   elem_.index()  <  it.elem_.index();
+            return elem_.get_object() == it.elem_.get_object() &&
+                   elem_.get_index()  <  it.elem_.get_index();
         }
 
         bool operator>(const random_access_iterator& it) const {
-            return elem_.object() == it.elem_.object() &&
-                   elem_.index()  >  it.elem_.index();
+            return elem_.get_object() == it.elem_.get_object() &&
+                   elem_.get_index()  >  it.elem_.get_index();
         }
 
         bool operator<=(const random_access_iterator& it) const {
-            return elem_.object() == it.elem_.object() &&
-                   elem_.index()  <= it.elem_.index();
+            return elem_.get_object() == it.elem_.get_object() &&
+                   elem_.get_index()  <= it.elem_.get_index();
         }
 
         bool operator>=(const random_access_iterator& it) const {
-            return elem_.object() == it.elem_.object() &&
-                   elem_.index()  >= it.elem_.index();
+            return elem_.get_object() == it.elem_.get_object() &&
+                   elem_.get_index()  >= it.elem_.get_index();
         }
 
         // TODO reference to actual element
@@ -595,47 +656,67 @@ class random_access_iterator {
 
 class array: public object {
     public:
-        array(context ctx, KOS_OBJ_ID obj_id)
+        array() { }
+
+        array(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
         }
 
+        explicit array(const handle& h)
+            : object(h)
+        {
+            assert(GET_OBJ_TYPE(*this) == OBJ_ARRAY);
+        }
+
+        array(const array& h)
+            : object(h)
+        {
+        }
+
+        array& operator=(const array& h) {
+            object::operator=(h);
+            return *this;
+        }
+
         void reserve(uint32_t capacity) {
-            ctx_.check_error(KOS_array_reserve(ctx_, obj_id_, capacity));
+            context ctx(get_context());
+            ctx.check_error(KOS_array_reserve(ctx, *this, capacity));
         }
 
         void resize(uint32_t length) {
-            ctx_.check_error(KOS_array_resize(ctx_, obj_id_, length));
+            context ctx(get_context());
+            ctx.check_error(KOS_array_resize(ctx, *this, length));
         }
 
         uint32_t size() const {
-            return KOS_get_array_size(obj_id_);
+            return KOS_get_array_size(*this);
         }
 
         class const_element {
             public:
-                const_element(context ctx, KOS_OBJ_ID obj_id, int idx)
-                    : ctx_(ctx),
-                      obj_id_(obj_id),
+                const_element(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
+                    : elem_(ctx, obj_id),
                       idx_(idx)
                 {
                 }
 
                 template<typename T>
                 operator T() const {
-                    return value_from_object_ptr<T>(ctx_, ctx_.check_error(KOS_array_read(ctx_, obj_id_, idx_)));
+                    context ctx(elem_.get_context());
+                    return value_from_object_ptr<T>(ctx, ctx.check_error(KOS_array_read(ctx, elem_, idx_)));
                 }
 
                 context get_context() const {
-                    return ctx_;
+                    return elem_.get_context();
                 }
 
-                KOS_OBJ_ID object() const {
-                    return obj_id_;
+                KOS_OBJ_ID get_object() const {
+                    return elem_;
                 }
 
-                int index() const {
+                int get_index() const {
                     return idx_;
                 }
 
@@ -660,9 +741,8 @@ class array: public object {
                 }
 
             protected:
-                mutable context ctx_;
-                KOS_OBJ_ID      obj_id_;
-                int             idx_;
+                handle elem_;
+                int    idx_;
 
 #ifdef KOS_CPP11
             public:
@@ -675,14 +755,15 @@ class array: public object {
 
         class element: public const_element {
             public:
-                element(context ctx, KOS_OBJ_ID obj_id, int idx)
+                element(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
                     : const_element(ctx, obj_id, idx)
                 {
                 }
 
                 template<typename T>
                 element& operator=(const T& v) {
-                    ctx_.check_error(KOS_array_write(ctx_, obj_id_, idx_, to_object_ptr(ctx_, v)));
+                    context ctx(elem_.get_context());
+                    ctx.check_error(KOS_array_write(ctx, elem_, idx_, to_object_ptr(ctx, v)));
                     return *this;
                 }
 
@@ -708,26 +789,27 @@ class array: public object {
         };
 
         const_element operator[](int idx) const {
-            return const_element(ctx_, obj_id_, idx);
+            return const_element(get_context(), *this, idx);
         }
 
         element operator[](int idx) {
-            return element(ctx_, obj_id_, idx);
+            return element(get_context(), *this, idx);
         }
 
         array slice(int64_t begin_idx, int64_t end_idx) const {
-            return array(ctx_, ctx_.check_error(KOS_array_slice(ctx_, obj_id_, begin_idx, end_idx)));
+            context ctx(get_context());
+            return array(ctx, ctx.check_error(KOS_array_slice(ctx, *this, begin_idx, end_idx)));
         }
 
         typedef random_access_iterator<element>       iterator;
         typedef random_access_iterator<const_element> const_iterator;
 
-        iterator       begin()        { return iterator(ctx_, obj_id_, 0); }
-        iterator       end()          { return iterator(ctx_, obj_id_, static_cast<int>(size())); }
+        iterator       begin()        { return iterator(get_context(), *this, 0); }
+        iterator       end()          { return iterator(get_context(), *this, static_cast<int>(size())); }
         const_iterator begin()  const { return cbegin(); }
         const_iterator end()    const { return cend(); }
-        const_iterator cbegin() const { return const_iterator(ctx_, obj_id_, 0); }
-        const_iterator cend()   const { return const_iterator(ctx_, obj_id_, static_cast<int>(size())); }
+        const_iterator cbegin() const { return const_iterator(get_context(), *this, 0); }
+        const_iterator cend()   const { return const_iterator(get_context(), *this, static_cast<int>(size())); }
 
         typedef std::reverse_iterator<iterator>       reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
@@ -742,52 +824,71 @@ class array: public object {
 
 class buffer: public object {
     public:
-        buffer(context ctx, KOS_OBJ_ID obj_id)
+        buffer() { }
+
+        buffer(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
         {
             assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
         }
 
+        explicit buffer(const handle& h)
+            : object(h)
+        {
+            assert(GET_OBJ_TYPE(*this) == OBJ_BUFFER);
+        }
+
+        buffer(const buffer& h)
+            : object(h)
+        {
+        }
+
+        buffer& operator=(const buffer& h) {
+            object::operator=(h);
+            return *this;
+        }
+
         void reserve(uint32_t capacity) {
-            ctx_.check_error(KOS_buffer_reserve(ctx_, obj_id_, capacity));
+            context ctx(get_context());
+            ctx.check_error(KOS_buffer_reserve(ctx, *this, capacity));
         }
 
         void resize(uint32_t length) {
-            ctx_.check_error(KOS_buffer_resize(ctx_, obj_id_, length));
+            context ctx(get_context());
+            ctx.check_error(KOS_buffer_resize(ctx, *this, length));
         }
 
         uint32_t size() const {
-            return KOS_get_buffer_size(obj_id_);
+            return KOS_get_buffer_size(*this);
         }
 
         class const_element {
             public:
-                const_element(context ctx, KOS_OBJ_ID obj_id, int idx)
-                    : ctx_(ctx),
-                      obj_id_(obj_id),
+                const_element(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
+                    : elem_(ctx, obj_id),
                       idx_(idx)
                 {
                 }
 
                 operator char() const {
-                    const uint32_t size = KOS_get_buffer_size(obj_id_);
+                    const uint32_t size = KOS_get_buffer_size(elem_);
                     const uint32_t idx = static_cast<uint32_t>(idx_ < 0 ? (idx_ + static_cast<int>(size)) : idx_);
                     if (idx >= size)
                         throw std::out_of_range("buffer index out of range");
-                    uint8_t* const buf = KOS_buffer_data_volatile(obj_id_);
+                    uint8_t* const buf = KOS_buffer_data_volatile(elem_);
                     assert(buf);
                     return static_cast<char>(buf[idx]);
                 }
 
                 context get_context() const {
-                    return ctx_;
+                    return elem_.get_context();
                 }
 
-                KOS_OBJ_ID object() const {
-                    return obj_id_;
+                KOS_OBJ_ID get_object() const {
+                    return elem_;
                 }
 
-                int index() const {
+                int get_index() const {
                     return idx_;
                 }
 
@@ -812,9 +913,8 @@ class buffer: public object {
                 }
 
             protected:
-                context    ctx_;
-                KOS_OBJ_ID obj_id_;
-                int        idx_;
+                handle elem_;
+                int    idx_;
 
 #ifdef KOS_CPP11
             public:
@@ -827,17 +927,17 @@ class buffer: public object {
 
         class element: public const_element {
             public:
-                element(context ctx, KOS_OBJ_ID obj_id, int idx)
+                element(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
                     : const_element(ctx, obj_id, idx)
                 {
                 }
 
                 element& operator=(char v) {
-                    const uint32_t size = KOS_get_buffer_size(obj_id_);
+                    const uint32_t size = KOS_get_buffer_size(elem_);
                     const uint32_t idx = static_cast<uint32_t>(idx_ < 0 ? (idx_ + static_cast<int>(size)) : idx_);
                     if (idx >= size)
                         throw std::out_of_range("buffer index out of range");
-                    uint8_t* const buf = KOS_buffer_data_volatile(obj_id_);
+                    uint8_t* const buf = KOS_buffer_data_volatile(elem_);
                     assert(buf);
                     buf[idx] = static_cast<uint8_t>(v);
                     return *this;
@@ -865,22 +965,22 @@ class buffer: public object {
         };
 
         const_element operator[](int idx) const {
-            return const_element(ctx_, obj_id_, idx);
+            return const_element(get_context(), *this, idx);
         }
 
         element operator[](int idx) {
-            return element(ctx_, obj_id_, idx);
+            return element(get_context(), *this, idx);
         }
 
         typedef random_access_iterator<element>       iterator;
         typedef random_access_iterator<const_element> const_iterator;
 
-        iterator       begin()        { return iterator(ctx_, obj_id_, 0); }
-        iterator       end()          { return iterator(ctx_, obj_id_, static_cast<int>(size())); }
+        iterator       begin()        { return iterator(get_context(), *this, 0); }
+        iterator       end()          { return iterator(get_context(), *this, static_cast<int>(size())); }
         const_iterator begin()  const { return cbegin(); }
         const_iterator end()    const { return cend(); }
-        const_iterator cbegin() const { return const_iterator(ctx_, obj_id_, 0); }
-        const_iterator cend()   const { return const_iterator(ctx_, obj_id_, static_cast<int>(size())); }
+        const_iterator cbegin() const { return const_iterator(get_context(), *this, 0); }
+        const_iterator cend()   const { return const_iterator(get_context(), *this, static_cast<int>(size())); }
 
         typedef std::reverse_iterator<iterator>       reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
@@ -916,45 +1016,63 @@ array context::make_array(Args... args)
 
 class function: public object {
     public:
-        function(context ctx, KOS_OBJ_ID obj_id)
+        function() { }
+
+        function(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
         {
-            assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION);
+            assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION || GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
+        }
+
+        explicit function(const handle& h)
+            : object(h)
+        {
+            assert(GET_OBJ_TYPE(*this) == OBJ_FUNCTION || GET_OBJ_TYPE(*this) == OBJ_CLASS);
+        }
+
+        function(const function& h)
+            : object(h)
+        {
+        }
+
+        function& operator=(const function& h) {
+            object::operator=(h);
+            return *this;
         }
 
         obj_id_converter call(array args) const {
-            return obj_id_converter(ctx_, ctx_.call(obj_id_, args));
+            return obj_id_converter(get_context(), get_context().call(*this, args));
         }
 
-        obj_id_converter call(object_base this_obj, array args) const {
-            return obj_id_converter(ctx_, ctx_.call(obj_id_, args, this_obj));
+        obj_id_converter call(handle this_obj, array args) const {
+            return obj_id_converter(get_context(), get_context().call(*this, args, this_obj));
         }
 
 #ifdef KOS_CPP11
         template<typename... Args>
         obj_id_converter operator()(Args... args) const {
-            return call(ctx_.make_array(args...));
+            return call(get_context().make_array(args...));
         }
 
         template<typename... Args>
-        obj_id_converter apply(object_base this_obj, Args... args) const {
-            return call(this_obj, ctx_.make_array(args...));
+        obj_id_converter apply(handle this_obj, Args... args) const {
+            return call(this_obj, get_context().make_array(args...));
         }
 #else
         obj_id_converter operator()() const {
-            return call(ctx_.new_array(0));
+            return call(get_context().new_array(0));
         }
 
         template<typename T1>
         obj_id_converter operator()(T1 arg1) const {
-            array args(ctx_.new_array(1));
+            array args(get_context().new_array(1));
             args[0] = arg1;
             return call(args);
         }
 
         template<typename T1, typename T2>
         obj_id_converter operator()(T1 arg1, T2 arg2) const {
-            array args(ctx_.new_array(2));
+            array args(get_context().new_array(2));
             args[0] = arg1;
             args[1] = arg2;
             return call(args);
@@ -962,7 +1080,7 @@ class function: public object {
 
         template<typename T1, typename T2, typename T3>
         obj_id_converter operator()(T1 arg1, T2 arg2, T3 arg3) const {
-            array args(ctx_.new_array(3));
+            array args(get_context().new_array(3));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -971,7 +1089,7 @@ class function: public object {
 
         template<typename T1, typename T2, typename T3, typename T4>
         obj_id_converter operator()(T1 arg1, T2 arg2, T3 arg3, T4 arg4) const {
-            array args(ctx_.new_array(4));
+            array args(get_context().new_array(4));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -979,28 +1097,28 @@ class function: public object {
             return call(args);
         }
 
-        obj_id_converter apply(object_base this_obj) const {
-            return call(this_obj, ctx_.new_array(0));
+        obj_id_converter apply(handle this_obj) const {
+            return call(this_obj, get_context().new_array(0));
         }
 
         template<typename T1>
-        obj_id_converter apply(object_base this_obj, T1 arg1) const {
-            array args(ctx_.new_array(1));
+        obj_id_converter apply(handle this_obj, T1 arg1) const {
+            array args(get_context().new_array(1));
             args[0] = arg1;
             return call(this_obj, args);
         }
 
         template<typename T1, typename T2>
-        obj_id_converter apply(object_base this_obj, T1 arg1, T2 arg2) const {
-            array args(ctx_.new_array(2));
+        obj_id_converter apply(handle this_obj, T1 arg1, T2 arg2) const {
+            array args(get_context().new_array(2));
             args[0] = arg1;
             args[1] = arg2;
             return call(this_obj, args);
         }
 
         template<typename T1, typename T2, typename T3>
-        obj_id_converter apply(object_base this_obj, T1 arg1, T2 arg2, T3 arg3) const {
-            array args(ctx_.new_array(3));
+        obj_id_converter apply(handle this_obj, T1 arg1, T2 arg2, T3 arg3) const {
+            array args(get_context().new_array(3));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -1008,8 +1126,8 @@ class function: public object {
         }
 
         template<typename T1, typename T2, typename T3, typename T4>
-        obj_id_converter apply(object_base this_obj, T1 arg1, T2 arg2, T3 arg3, T4 arg4) const {
-            array args(ctx_.new_array(4));
+        obj_id_converter apply(handle this_obj, T1 arg1, T2 arg2, T3 arg3, T4 arg4) const {
+            array args(get_context().new_array(4));
             args[0] = arg1;
             args[1] = arg2;
             args[2] = arg3;
@@ -1019,28 +1137,29 @@ class function: public object {
 #endif
 };
 
-class exception: public std::runtime_error {
+class exception: public std::runtime_error, public handle {
     public:
         explicit exception(context ctx)
             : std::runtime_error(get_exception_string(ctx)),
-              obj_(KOS_get_exception(ctx))
+              handle(ctx, KOS_get_exception(ctx))
         {
             KOS_clear_exception(ctx);
         }
 
-        operator object_base() const {
-            return obj_;
-        }
-
         static std::string get_exception_string(context ctx);
-
-    private:
-        KOS_OBJ_ID obj_;
 };
 
 inline void context::signal_error()
 {
+    assert(KOS_is_exception_pending(*this));
     throw exception(*this);
+}
+
+inline handle context::get_global(KOS_OBJ_ID module, KOS_OBJ_ID name, unsigned* idx)
+{
+    KOS_OBJ_ID ret;
+    check_error(KOS_module_get_global(ctx_, module, name, &ret, idx));
+    return handle(ctx_, ret);
 }
 
 inline object context::new_object()
@@ -1567,62 +1686,180 @@ function context::new_function()
     return new_function(wrapper<T, fun>, num_args(fun));
 }
 
+// object functions
+// ================
+
+class object::const_property {
+    public:
+        const_property(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, const string& key)
+            : handle_(ctx, obj_id), key_(key)
+        {
+        }
+
+        template<typename T>
+        operator T() const {
+            context ctx(handle_.get_context());
+            return value_from_object_ptr<T>(ctx, ctx.check_error(
+                        KOS_get_property(ctx, handle_, key_)));
+        }
+
+        void erase() {
+            context ctx(handle_.get_context());
+            ctx.check_error(KOS_delete_property(ctx, handle_, key_));
+        }
+
+    protected:
+        handle       handle_;
+        const string key_;
+};
+
+class object::property: public const_property {
+    public:
+        property(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, const string& key)
+            : const_property(ctx, obj_id, key)
+        {
+        }
+
+        template<typename T>
+        property& operator=(const T& obj) {
+            context ctx(handle_.get_context());
+            ctx.check_error(KOS_set_property(ctx, handle_, key_, to_object_ptr(ctx, obj)));
+            return *this;
+        }
+};
+
+template<typename T>
+inline object::const_property object::operator[](const T& key) const {
+    context ctx(get_context());
+    return const_property(ctx, *this, to_object_ptr(ctx, key));
+}
+
+template<typename T>
+inline object::property object::operator[](const T& key) {
+    context ctx(get_context());
+    return property(ctx, *this, to_object_ptr(ctx, key));
+}
+
+class object::const_iterator {
+    public:
+        typedef std::forward_iterator_tag iterator_category;
+        typedef std::pair<string, handle> value_type;
+        typedef void                      difference_type;
+        typedef const value_type*         pointer;
+        typedef const value_type&         reference;
+
+        const_iterator() { }
+
+        const_iterator(context ctx, KOS_OBJ_ID obj_id, KOS_OBJECT_WALK_DEPTH_E depth);
+
+        const_iterator(const const_iterator& it);
+
+        const_iterator& operator=(const const_iterator& it);
+
+        bool operator==(const const_iterator& it) const {
+            const KOS_OBJ_ID left  = elem_.first;
+            const KOS_OBJ_ID right = it.elem_.first;
+            return left == right;
+        }
+
+        bool operator!=(const const_iterator& it) const {
+            const KOS_OBJ_ID left  = elem_.first;
+            const KOS_OBJ_ID right = it.elem_.first;
+            return left != right;
+        }
+
+        const_iterator& operator++();
+
+        const_iterator operator++(int) {
+            const_iterator tmp(*this);
+            operator++();
+            return tmp;
+        }
+
+        reference operator*() const {
+            return elem_;
+        }
+
+        pointer operator->() const {
+            return &elem_;
+        }
+
+    private:
+        handle     walk_;
+        value_type elem_;
+};
+
+inline object::const_iterator object::begin() const
+{
+    return const_iterator(get_context(), *this, KOS_SHALLOW);
+}
+
+inline object::const_iterator object::end()
+{
+    return const_iterator();
+}
+
+inline object::const_iterator object::cbegin() const
+{
+    return const_iterator(get_context(), *this, KOS_SHALLOW);
+}
+
+inline object::const_iterator object::cend()
+{
+    return const_iterator();
+}
+
 // value -> object ptr
 // ===================
 
-inline object_base to_object_ptr(context ctx, KOS_OBJ_ID obj_id)
+inline handle to_object_ptr(context ctx, KOS_OBJ_ID obj_id)
 {
-    return obj_id;
+    return handle(ctx, obj_id);
 }
 
-inline object_base to_object_ptr(context ctx, obj_id_converter obj_id)
+inline handle to_object_ptr(context ctx, obj_id_converter obj_id)
 {
-    return static_cast<KOS_OBJ_ID>(obj_id);
+    return handle(ctx, static_cast<KOS_OBJ_ID>(obj_id));
 }
 
 inline integer to_object_ptr(context ctx, int v)
 {
-    return ctx.check_error(KOS_new_int(ctx, v));
+    return integer(ctx, ctx.check_error(KOS_new_int(ctx, v)));
 }
 
 inline integer to_object_ptr(context ctx, unsigned v)
 {
-    return ctx.check_error(KOS_new_int(ctx, static_cast<int64_t>(v)));
+    return integer(ctx, ctx.check_error(KOS_new_int(ctx, static_cast<int64_t>(v))));
 }
 
 inline integer to_object_ptr(context ctx, int64_t v)
 {
-    return ctx.check_error(KOS_new_int(ctx, v));
+    return integer(ctx, ctx.check_error(KOS_new_int(ctx, v)));
 }
 
 inline floating to_object_ptr(context ctx, double v)
 {
-    return ctx.check_error(KOS_new_float(ctx, v));
+    return floating(ctx, ctx.check_error(KOS_new_float(ctx, v)));
 }
 
 inline string to_object_ptr(context ctx, const char* v)
 {
-    return ctx.check_error(KOS_new_cstring(ctx, v));
+    return string(ctx, ctx.check_error(KOS_new_cstring(ctx, v)));
 }
 
 inline string to_object_ptr(context ctx, const std::string& v)
 {
-    return ctx.check_error(KOS_new_string(ctx, v.c_str(), static_cast<unsigned>(v.length())));
-}
-
-inline string to_object_ptr(context ctx, KOS_STRING& v)
-{
-    return string(v);
+    return string(ctx, ctx.check_error(KOS_new_string(ctx, v.c_str(), static_cast<unsigned>(v.length()))));
 }
 
 inline boolean to_object_ptr(context ctx, bool v)
 {
-    return boolean(KOS_BOOL(v));
+    return boolean(ctx, KOS_BOOL(v));
 }
 
 inline void_type to_object_ptr(context ctx, void_)
 {
-    return void_type(KOS_VOID);
+    return void_type(ctx, KOS_VOID);
 }
 
 template<typename T>

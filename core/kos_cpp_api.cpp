@@ -79,7 +79,7 @@ integer value_from_object_ptr<integer>(context ctx, KOS_OBJ_ID obj_id)
     if ( ! IS_SMALL_INT(obj_id) && GET_OBJ_TYPE(obj_id) != OBJ_INTEGER)
         ctx.raise_and_signal_error("source type is not an integer");
 
-    return integer(obj_id);
+    return integer(ctx, obj_id);
 }
 
 template<>
@@ -95,7 +95,7 @@ floating value_from_object_ptr<floating>(context ctx, KOS_OBJ_ID obj_id)
     if (GET_OBJ_TYPE(obj_id) != OBJ_FLOAT)
         ctx.raise_and_signal_error("source type is not a float");
 
-    return floating(obj_id);
+    return floating(ctx, obj_id);
 }
 
 template<>
@@ -115,7 +115,7 @@ boolean value_from_object_ptr<boolean>(context ctx, KOS_OBJ_ID obj_id)
     if (GET_OBJ_TYPE(obj_id) != OBJ_BOOLEAN)
         ctx.raise_and_signal_error("source type is not a boolean");
 
-    return boolean(obj_id);
+    return boolean(ctx, obj_id);
 }
 
 template<>
@@ -137,14 +137,14 @@ std::string value_from_object_ptr<std::string>(context ctx, KOS_OBJ_ID obj_id)
 
 kos::string::operator std::string() const
 {
-    const unsigned len = KOS_string_to_utf8(obj_id_, 0, 0);
+    const unsigned len = KOS_string_to_utf8(*this, 0, 0);
     if (len == ~0U)
         throw std::runtime_error("invalid string");
         //ctx.raise_and_signal_error("invalid string");
 
     std::string str(static_cast<size_t>(len), '\0');
 
-    KOS_string_to_utf8(obj_id_, &str[0], len);
+    KOS_string_to_utf8(*this, &str[0], len);
     return str;
 }
 
@@ -155,7 +155,7 @@ string value_from_object_ptr<string>(context ctx, KOS_OBJ_ID obj_id)
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         ctx.raise_and_signal_error("source type is not a string");
 
-    return string(obj_id);
+    return string(ctx, obj_id);
 }
 
 template<>
@@ -165,7 +165,7 @@ void_type value_from_object_ptr<void_type>(context ctx, KOS_OBJ_ID obj_id)
     if (GET_OBJ_TYPE(obj_id) != OBJ_VOID)
         ctx.raise_and_signal_error("source type is not a void");
 
-    return void_type(obj_id);
+    return void_type(ctx, obj_id);
 }
 
 template<>
@@ -232,20 +232,37 @@ std::string exception::get_exception_string(context ctx)
     return from_object_ptr(ctx, obj_id);
 }
 
-object::const_iterator::const_iterator(context             ctx,
+object::const_iterator::const_iterator(context                 ctx,
                                        KOS_OBJ_ID              obj_id,
                                        KOS_OBJECT_WALK_DEPTH_E depth)
-    : ctx_(ctx), elem_(KOS_BADPTR, KOS_BADPTR)
+    : walk_(ctx, ctx.check_error(KOS_new_object_walk(ctx, obj_id, depth)))
 {
-    walk_ = ctx.check_error(KOS_new_object_walk(ctx, obj_id, depth));
     operator++();
+}
+
+object::const_iterator::const_iterator(const const_iterator& it)
+    : elem_(it.elem_)
+{
+    context ctx(it.walk_.get_context());
+    walk_ = handle(ctx, ctx.check_error(KOS_new_object_walk_copy(ctx, it.walk_)));
 }
 
 object::const_iterator& object::const_iterator::operator=(const const_iterator& it)
 {
-    ctx_  = it.ctx_;
-    walk_ = KOS_new_object_walk_copy(ctx_, it.walk_);
+    context ctx(walk_.get_context());
+    walk_ = handle(ctx, ctx.check_error(KOS_new_object_walk_copy(ctx, it.walk_)));
     elem_ = it.elem_;
+    return *this;
+}
+
+object::const_iterator& object::const_iterator::operator++()
+{
+    context ctx(walk_.get_context());
+    if (KOS_object_walk(ctx, walk_))
+        elem_ = value_type();
+    else
+        elem_ = std::make_pair<string, handle>(string(ctx, KOS_get_walk_key(walk_)),
+                                               handle(ctx, KOS_get_walk_value(walk_)));
     return *this;
 }
 

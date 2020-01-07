@@ -519,7 +519,7 @@ try {
         ctx.add_global(module, name, TO_SMALL_INT(42));
 
         unsigned idx = ~0U;
-        kos::integer value = ctx.get_global(module, name, &idx);
+        kos::integer value(ctx.get_global(module, name, &idx));
 
         TEST(idx == 0);
         TEST(value == 42);
