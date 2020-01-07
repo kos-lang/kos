@@ -234,9 +234,14 @@ static void remove_thread(KOS_THREAD *thread)
     const uint32_t thread_idx = KOS_atomic_swap_u32(thread->thread_idx, KOS_NO_THREAD_IDX);
 
     if (thread_idx != KOS_NO_THREAD_IDX) {
-        if ( ! KOS_atomic_cas_strong_ptr(inst->threads.threads[thread_idx], thread, (KOS_THREAD *)0)) {
-            assert( ! "invalid thread release");
-        }
+
+        kos_lock_mutex(&inst->threads.new_mutex);
+
+        assert(KOS_atomic_read_relaxed_ptr(inst->threads.threads[thread_idx]) == thread);
+
+        KOS_atomic_write_relaxed_ptr(inst->threads.threads[thread_idx], (KOS_THREAD *)0);
+
+        kos_unlock_mutex(&inst->threads.new_mutex);
 
         KOS_atomic_add_u32(inst->threads.num_threads, (uint32_t)-1);
     }
