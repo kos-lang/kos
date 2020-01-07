@@ -40,6 +40,7 @@ run_afl()
     "$AFL"/bin/afl-fuzz -i tests/kos_fuzz_interpreter_corpus \
                         -o tests/kos_fuzz_interpreter_afl \
                         -x tests/kos_fuzz_interpreter_dict \
+                        -t 1000+ \
                         "$@" \
                         -- Out/debug/interpreter/kos \
                         2>&1 > Out/debug/$2.log
