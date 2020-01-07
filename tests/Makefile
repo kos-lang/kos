@@ -36,6 +36,7 @@ standalone_tests += kos_random_test
 standalone_tests += kos_red_black_test
 standalone_tests += kos_parallel_array_resize_test
 standalone_tests += kos_parallel_buffer_test
+standalone_tests += kos_parallel_instance_destroy
 standalone_tests += kos_parallel_object_consistency_test
 standalone_tests += kos_parallel_object_overwrite_test
 standalone_tests += kos_parallel_object_rapid_grow_test
@@ -65,6 +66,7 @@ c_files += kos_random_test.c
 c_files += kos_red_black_test.c
 c_files += kos_parallel_array_resize_test.c
 c_files += kos_parallel_buffer_test.c
+c_files += kos_parallel_instance_destroy.c
 c_files += kos_parallel_object_consistency_test.c
 c_files += kos_parallel_object_overwrite_test.c
 c_files += kos_parallel_object_rapid_grow_test.c
@@ -248,7 +250,8 @@ gcov.pre.clean:
 
 ifeq ($(tool),)
 # Normal testing
-kos_parallel_object_consistency_test: simple_test
+kos_parallel_instance_destroy:        simple_test
+kos_parallel_object_consistency_test: kos_parallel_instance_destroy
 kos_parallel_object_resize_test:      kos_parallel_object_consistency_test
 kos_parallel_object_overwrite_test:   kos_parallel_object_resize_test
 kos_parallel_object_rapid_grow_test:  kos_parallel_object_overwrite_test
