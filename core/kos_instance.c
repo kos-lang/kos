@@ -1249,6 +1249,9 @@ void KOS_destroy_local(KOS_LOCAL *local)
     KOS_CONTEXT ctx       = local->ctx;
     KOS_LOCAL **prev_next = prev ? &prev->next : &ctx->local_list;
 
+    if ( ! ctx)
+        return;
+
     *prev_next = next;
 
     if (next)
@@ -1289,30 +1292,5 @@ void KOS_destroy_locals(KOS_LOCAL *locals, int num_locals)
         prev           = locals;
         locals         = next;
     }
-#endif
-}
-
-void KOS_init_move_local(KOS_LOCAL *dest, KOS_LOCAL *src)
-{
-    KOS_LOCAL  *prev      = src->prev;
-    KOS_LOCAL  *next      = src->next;
-    KOS_CONTEXT ctx       = src->ctx;
-    KOS_LOCAL **prev_next = prev ? &prev->next : &ctx->local_list;
-
-    dest->prev   = prev;
-    dest->next   = next;
-    dest->obj_id = src->obj_id;
-    dest->ctx    = ctx;
-
-    *prev_next = dest;
-
-    if (next)
-        next->prev = dest;
-
-#ifndef NDEBUG
-    src->prev   = 0;
-    src->next   = 0;
-    src->obj_id = KOS_BADPTR;
-    src->ctx    = 0;
 #endif
 }

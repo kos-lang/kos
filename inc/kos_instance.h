@@ -300,8 +300,6 @@ void KOS_destroy_local(KOS_LOCAL *local);
 
 void KOS_destroy_locals(KOS_LOCAL *locals, int num_locals);
 
-void KOS_init_move_local(KOS_LOCAL *dest, KOS_LOCAL *src);
-
 typedef struct KOS_GC_STATS_S {
     unsigned num_objs_evacuated;
     unsigned num_objs_freed;
