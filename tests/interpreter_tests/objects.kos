@@ -1243,3 +1243,14 @@ do {
     assert o instanceof c
     assert ! (o instanceof base.object)
 }
+
+do {
+    class some extends void
+    {
+        constructor() {
+            this.x = super.x # void is not a class
+        }
+    }
+    expect_fail(some)
+}
+    
