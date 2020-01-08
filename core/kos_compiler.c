@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+static const char str_err_cannot_invoke_void_ctor[]   = "cannot invoke void constructor";
 static const char str_err_catch_nesting_too_deep[]    = "too many nesting levels of 'try'/'defer'/'with' statements";
 static const char str_err_duplicate_property[]        = "duplicate object property";
 static const char str_err_expected_refinement[]       = "expected .identifier or '[' in argument to 'delete'";
@@ -2938,7 +2939,13 @@ static int super_invocation(KOS_COMP_UNIT      *program,
 
     TRY(gen_str(program, &token, &str_idx));
 
-    assert(program->cur_frame->base_ctor_reg);
+    if ( ! program->cur_frame->base_ctor_reg) {
+        assert(inv_node);
+        program->error_token = &inv_node->children->token;
+        program->error_str   = str_err_cannot_invoke_void_ctor;
+        RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+    }
+
     base_ctor_reg = program->cur_frame->base_ctor_reg;
 
     if (reg && is_var_used(program, inv_node, *reg)) {
@@ -4824,12 +4831,14 @@ static int function_literal(KOS_COMP_UNIT      *program,
                            base_ctor_reg->reg));
 
         /* Bind base class prototype */
-        if (frame->uses_base_proto)
+        if (base_proto_reg) {
+            assert(frame->uses_base_proto);
             TRY(gen_instr3(program,
                            INSTR_BIND,
                            (*reg)->reg,
                            bind_idx++,
                            base_proto_reg->reg));
+        }
 
         /* Binds for outer scopes */
         bind_args.program      = program;
