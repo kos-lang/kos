@@ -27,6 +27,8 @@ export AFL_PATH="$AFL"/lib/afl
 export CC="$AFL"/bin/afl-clang-fast
 export CXX="$AFL"/bin/afl-clang-fast++
 export AFL_HARDEN=1
+export AFL_NO_AFFINITY=1
+#export AFL_NO_ARITH=1
 
 [ -n "$JOBS" ] || JOBS="$(grep -c ^processor /proc/cpuinfo)"
 
