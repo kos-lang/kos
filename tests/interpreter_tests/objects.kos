@@ -1254,3 +1254,16 @@ do {
     expect_fail(some)
 }
     
+do {
+    class base { }
+    class derived extends base {
+        get_ctor {
+            return derived
+        }
+    }
+
+    const o = derived()
+    const ctor = o.get_ctor()
+    assert typeof ctor == "class"
+    assert ctor == derived
+}
