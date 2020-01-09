@@ -703,7 +703,4 @@ void kos_atomic_move_ptr(KOS_ATOMIC(void *) *dest,
                          KOS_ATOMIC(void *) *src,
                          unsigned            ptr_count);
 
-void kos_spin_lock(KOS_ATOMIC(uint32_t) *lock);
-void kos_spin_unlock(KOS_ATOMIC(uint32_t) *lock);
-
 #endif
