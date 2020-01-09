@@ -27,6 +27,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_object_base.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_threads.h"
 #include "../core/kos_const_strings.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_misc.h"
@@ -37,17 +38,23 @@ static const char str_err_invalid_range[] = "invalid range";
 static const char str_err_invalid_seed[]  = "invalid seed";
 static const char str_err_no_max_value[]  = "max argument missing";
 static const char str_err_not_random[]    = "invalid this";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_mutex_fail, "failed to allocate mutex");
 
 typedef struct KOS_RNG_CONTAINER_S {
-    KOS_ATOMIC(uint32_t) lock;
-    struct KOS_RNG       rng;
+    KOS_MUTEX      mutex;
+    struct KOS_RNG rng;
 } KOS_RNG_CONTAINER;
 
 static void finalize(KOS_CONTEXT ctx,
                      void       *priv)
 {
-    if (priv)
+    if (priv) {
+        KOS_RNG_CONTAINER *rng = (KOS_RNG_CONTAINER *)priv;
+
+        kos_destroy_mutex(&rng->mutex);
+
         kos_free(priv);
+    }
 }
 
 /* @item random random()
@@ -118,8 +125,6 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     }
 
-    rng->lock = 0;
-
     if (IS_BAD_PTR(seed_obj))
         kos_rng_init(&rng->rng);
     else {
@@ -130,6 +135,9 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
 
         kos_rng_init_seed(&rng->rng, (uint64_t)seed);
     }
+
+    if (kos_create_mutex(&rng->mutex))
+        RAISE_EXCEPTION_STR(str_err_mutex_fail);
 
     KOS_object_set_private_ptr(ret, rng);
     rng = 0;
@@ -226,7 +234,7 @@ static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,
         min_max = 1;
     }
 
-    kos_spin_lock(&rng->lock);
+    kos_lock_mutex(&rng->mutex);
 
     if (min_max)
         value = min_value +
@@ -235,7 +243,7 @@ static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,
     else
         value = (int64_t)kos_rng_random(&rng->rng);
 
-    kos_spin_unlock(&rng->lock);
+    kos_unlock_mutex(&rng->mutex);
 
 cleanup:
     return error ? KOS_BADPTR : KOS_new_int(ctx, value);
@@ -269,11 +277,11 @@ static KOS_OBJ_ID rand_float(KOS_CONTEXT ctx,
 
     TRY(get_rng(ctx, this_obj, &rng));
 
-    kos_spin_lock(&rng->lock);
+    kos_lock_mutex(&rng->mutex);
 
     value.i = (int64_t)kos_rng_random(&rng->rng);
 
-    kos_spin_unlock(&rng->lock);
+    kos_unlock_mutex(&rng->mutex);
 
     /* Set sign bit to 0 and exponent field to 0x3FF, which corresponds to
      * exponent value 0, making this value uniformly distributed
