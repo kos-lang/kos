@@ -4831,14 +4831,12 @@ static int function_literal(KOS_COMP_UNIT      *program,
                            base_ctor_reg->reg));
 
         /* Bind base class prototype */
-        if (base_proto_reg) {
-            assert(frame->uses_base_proto);
+        if (base_proto_reg)
             TRY(gen_instr3(program,
                            INSTR_BIND,
                            (*reg)->reg,
                            bind_idx++,
                            base_proto_reg->reg));
-        }
 
         /* Binds for outer scopes */
         bind_args.program      = program;
