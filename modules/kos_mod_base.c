@@ -4210,6 +4210,43 @@ static KOS_OBJ_ID get_function_name(KOS_CONTEXT ctx,
     return ret;
 }
 
+/* @item base function.prototype.offset
+ *
+ *     function.prototype.offset
+ *
+ * Read-only offset of function's bytecode.
+ *
+ * Zero, if this is a built-in function.
+ *
+ * Example:
+ *
+ *     > count.offset
+ *     2973
+ */
+static KOS_OBJ_ID get_function_offs(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  this_obj,
+                                    KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID     ret  = KOS_BADPTR;
+    const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
+
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
+
+        KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
+
+        uint32_t offs = func->instr_offs;
+
+        if (offs == ~0U)
+            offs = 0;
+
+        ret = KOS_new_int(ctx, offs);
+    }
+    else
+        KOS_raise_exception_cstring(ctx, str_err_not_function);
+
+    return ret;
+}
+
 /* @item base function.prototype.instructions
  *
  *     function.prototype.instructions
@@ -4410,6 +4447,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "instructions",  get_instructions,  0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "line",          get_function_line, 0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "name",          get_function_name, 0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "offset",        get_function_offs, 0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "registers",     get_registers,     0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module, PROTO(function),   "size",          get_code_size,     0);
 

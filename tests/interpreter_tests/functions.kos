@@ -2044,6 +2044,7 @@ do {
     expect_fail(()=>base.function.prototype.registers)
     expect_fail(()=>base.function.prototype.instructions)
     expect_fail(()=>base.function.prototype.size)
+    expect_fail(()=>base.function.prototype.offset)
 
     fun f { }
 
@@ -2051,11 +2052,13 @@ do {
     assert f.registers    == 1
     assert f.instructions == 2 # LOAD.VOID, RETURN
     assert f.size         == 5
+    assert f.offset       >  0
 
     assert base.function.name         == "<builtin>"
     assert base.function.registers    == 0
     assert base.function.instructions == 0
     assert base.function.size         == 0
+    assert base.function.offset       == 0
 }
 
 ##############################################################################
