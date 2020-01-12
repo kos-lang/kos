@@ -64,4 +64,10 @@
 #   define KOS_MAX_ARGS_IN_REGS 32U
 #endif
 
+#if defined(__GNUC__) && defined(CONFIG_FAST_DISPATCH)
+#   define KOS_DISPATCH_TABLE   1
+#else
+#   define KOS_DISPATCH_TABLE   0
+#endif
+
 #endif

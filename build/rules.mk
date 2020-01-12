@@ -37,8 +37,8 @@ ifeq ($(UNAME), Windows)
     CLANG   = -TC
     CPPLANG = -TP -EHsc
 else
-    CLANG   = -x c
-    CPPLANG = -x c++
+    CLANG       = -x c
+    CPPLANG     = -x c++
     CLANG_VER   ?=
     CPPLANG_VER ?=
     ifneq (,$(CLANG_VER))
@@ -65,9 +65,10 @@ inv_path = $(subst $(space),/,$(patsubst %,..,$(subst /,$(space),$1)))
 
 CFLAGS  ?=
 LDFLAGS ?=
-debug ?= 0
-native ?= 0
-target ?=
+debug   ?= 0
+native  ?= 0
+target  ?=
+nofastdispatch ?= 0
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(debug), 0)
@@ -151,6 +152,20 @@ else
     STRICTFLAGS += -Wdouble-promotion
     STRICTFLAGS += -Wformat=2
     #STRICTFLAGS += -Wconversion
+
+    ifeq ($(nofastdispatch), 0)
+        COMPILER_VER := $(shell $(CC) --version 2>&1)
+        ifneq (,$(filter clang gcc,$(COMPILER_VER)))
+            ifeq (,$(filter clang,$(COMPILER_VER)))
+                CLANG   := $(patsubst -std=c%,-std=gnu%,$(CLANG))
+                CPPLANG := $(patsubst -std=c%,-std=gnu%,$(CPPLANG))
+            endif
+            ifneq (,$(filter clang,$(COMPILER_VER)))
+                CFLAGS += -Wno-gnu-label-as-value
+            endif
+            CFLAGS += -DCONFIG_FAST_DISPATCH
+        endif
+    endif
 
     ifeq ($(UNAME), Linux)
         CFLAGS  += -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L

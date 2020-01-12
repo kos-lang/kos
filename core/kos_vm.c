@@ -1159,15 +1159,41 @@ static uint32_t _load_32(const uint8_t *bytecode)
                                  out_val);                                    \
 } while (0)
 
+#if KOS_DISPATCH_TABLE
+#   define BEGIN_INSTRUCTION(instr)     OP_##instr
+#   define BEGIN_BREAKPOINT_INSTRUCTION OP_BREAKPOINT
+#   define NEXT_INSTRUCTION             instr     = (KOS_BYTECODE_INSTR)*bytecode;               \
+                                        jump_offs = (uint8_t)(instr - INSTR_BREAKPOINT);         \
+                                        if (jump_offs >= (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) \
+                                            goto OP_BREAKPOINT;                                  \
+                                        goto* dispatch_table[jump_offs];
+#else
+#   define BEGIN_INSTRUCTION(instr)     case INSTR_##instr
+#   define BEGIN_BREAKPOINT_INSTRUCTION default
+#   define NEXT_INSTRUCTION             break
+#endif
+
 static int exec_function(KOS_CONTEXT ctx)
 {
-    const uint8_t *bytecode;
-    KOS_OBJ_ID     module;
-    KOS_OBJ_ID     stack    = ctx->stack;
-    int            error    = KOS_SUCCESS;
-    uint32_t       regs_idx = ctx->regs_idx;
+    const uint8_t     *bytecode;
+    KOS_BYTECODE_INSTR instr;
+    KOS_OBJ_ID         out;
+    KOS_OBJ_ID         module;
+    KOS_OBJ_ID         stack    = ctx->stack;
+    int                error    = KOS_SUCCESS;
+    uint32_t           regs_idx = ctx->regs_idx;
+    unsigned           rdest;
 #ifndef NDEBUG
-    const uint32_t num_regs = get_num_regs(stack, regs_idx);
+    const uint32_t     num_regs = get_num_regs(stack, regs_idx);
+#endif
+
+#if KOS_DISPATCH_TABLE
+    uint8_t            jump_offs;
+    static void       *dispatch_table[] = {
+#   define DEFINE_INSTRUCTION(name, value) &&OP_##name,
+#   include "../inc/kos_opcodes.h"
+#   undef DEFINE_INSTRUCTION
+    };
 #endif
 
     module = KOS_get_module(ctx);
@@ -1179,16 +1205,19 @@ static int exec_function(KOS_CONTEXT ctx)
     assert( ! kos_is_heap_object(module));
     assert( ! kos_is_heap_object(stack));
 
-    for (;;) { /* Exit condition at the end of the loop */
+#if KOS_DISPATCH_TABLE
+    NEXT_INSTRUCTION;
+#else
+    for (;;) {
+        assert( ! KOS_is_exception_pending(ctx));
+        assert((uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode) < OBJPTR(MODULE, module)->bytecode_size);
 
-        KOS_OBJ_ID out   = KOS_BADPTR;
-        unsigned   rdest = 0;
-
-        const KOS_BYTECODE_INSTR instr = (KOS_BYTECODE_INSTR)*bytecode;
+        instr = (KOS_BYTECODE_INSTR)*bytecode;
 
         switch (instr) {
+#endif
 
-            case INSTR_LOAD_CONST8: { /* <r.dest>, <uint8> */
+            BEGIN_INSTRUCTION(LOAD_CONST8): { /* <r.dest>, <uint8> */
                 const uint8_t value = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1199,10 +1228,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_CONST: { /* <r.dest>, <uint32> */
+            BEGIN_INSTRUCTION(LOAD_CONST): { /* <r.dest>, <uint32> */
                 const uint32_t value = _load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1213,10 +1242,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 6;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_FUN8: { /* <r.dest>, <uint8> */
+            BEGIN_INSTRUCTION(LOAD_FUN8): { /* <r.dest>, <uint8> */
                 const uint8_t value = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1240,10 +1269,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_FUN: { /* <r.dest>, <uint32> */
+            BEGIN_INSTRUCTION(LOAD_FUN): { /* <r.dest>, <uint32> */
                 const uint32_t value = _load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1266,10 +1295,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 6;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_INT8: { /* <r.dest>, <int8> */
+            BEGIN_INSTRUCTION(LOAD_INT8): { /* <r.dest>, <int8> */
                 const int8_t value = (int8_t)bytecode[2];
 
                 rdest = bytecode[1];
@@ -1277,37 +1306,37 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, TO_SMALL_INT(value));
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_TRUE: { /* <r.dest> */
+            BEGIN_INSTRUCTION(LOAD_TRUE): { /* <r.dest> */
                 rdest = bytecode[1];
 
                 WRITE_REGISTER(rdest, KOS_TRUE);
 
                 bytecode += 2;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_FALSE: { /* <r.dest> */
+            BEGIN_INSTRUCTION(LOAD_FALSE): { /* <r.dest> */
                 rdest = bytecode[1];
 
                 WRITE_REGISTER(rdest, KOS_FALSE);
 
                 bytecode += 2;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_VOID: { /* <r.dest> */
+            BEGIN_INSTRUCTION(LOAD_VOID): { /* <r.dest> */
                 rdest = bytecode[1];
 
                 WRITE_REGISTER(rdest, KOS_VOID);
 
                 bytecode += 2;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_ARRAY8: { /* <r.dest>, <size.uint8> */
+            BEGIN_INSTRUCTION(LOAD_ARRAY8): { /* <r.dest>, <size.uint8> */
                 const uint8_t size = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1318,10 +1347,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_ARRAY: { /* <r.dest>, <size.int32> */
+            BEGIN_INSTRUCTION(LOAD_ARRAY): { /* <r.dest>, <size.int32> */
                 const uint32_t size = _load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1332,10 +1361,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 6;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_OBJ: { /* <r.dest> */
+            BEGIN_INSTRUCTION(LOAD_OBJ): { /* <r.dest> */
                 rdest = bytecode[1];
 
                 out = KOS_new_object(ctx);
@@ -1344,10 +1373,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 2;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_LOAD_OBJ_PROTO: { /* <r.dest>, <r.src> */
+            BEGIN_INSTRUCTION(LOAD_OBJ_PROTO): { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
 
                 assert(rsrc < num_regs);
@@ -1360,10 +1389,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_MOVE: { /* <r.dest>, <r.src> */
+            BEGIN_INSTRUCTION(MOVE): { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
 
                 assert(rsrc < num_regs);
@@ -1375,10 +1404,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_GET_PROTO: { /* <r.dest>, <r.src> */
+            BEGIN_INSTRUCTION(GET_PROTO): { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
                 KOS_OBJ_ID     constr_obj;
 
@@ -1403,10 +1432,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_GET_GLOBAL: { /* <r.dest>, <int32> */
+            BEGIN_INSTRUCTION(GET_GLOBAL): { /* <r.dest>, <int32> */
                 const int32_t  idx = (int32_t)_load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1417,10 +1446,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 6;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_SET_GLOBAL: { /* <int32>, <r.src> */
+            BEGIN_INSTRUCTION(SET_GLOBAL): { /* <int32>, <r.src> */
                 const int32_t  idx  = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
@@ -1432,10 +1461,10 @@ static int exec_function(KOS_CONTEXT ctx)
                                     REGISTER(rsrc)));
 
                 bytecode += 6;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_GET_MOD: { /* <r.dest>, <int32>, <r.glob> */
+            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <int32>, <r.glob> */
                 const int      mod_idx    = (int32_t)_load_32(bytecode+2);
                 const unsigned rglob      = bytecode[6];
                 KOS_OBJ_ID     glob_idx;
@@ -1465,10 +1494,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 7;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_GET_MOD_ELEM: { /* <r.dest>, <int32>, <int32> */
+            BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <int32>, <int32> */
                 const int  mod_idx    = (int32_t)_load_32(bytecode+2);
                 const int  glob_idx   = (int32_t)_load_32(bytecode+6);
                 KOS_OBJ_ID module_obj = KOS_array_read(ctx,
@@ -1487,10 +1516,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 10;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_GET: { /* <r.dest>, <r.src>, <r.prop> */
+            BEGIN_INSTRUCTION(GET): { /* <r.dest>, <r.src>, <r.prop> */
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rprop = bytecode[3];
                 KOS_OBJ_ID     src;
@@ -1547,10 +1576,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_GET_ELEM: { /* <r.dest>, <r.src>, <int32> */
+            BEGIN_INSTRUCTION(GET_ELEM): { /* <r.dest>, <r.src>, <int32> */
                 const unsigned rsrc = bytecode[2];
                 const int32_t  idx  = (int32_t)_load_32(bytecode+3);
                 KOS_OBJ_ID     src;
@@ -1579,10 +1608,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 7;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_GET_RANGE: { /* <r.dest>, <r.src>, <r.begin>, <r.end> */
+            BEGIN_INSTRUCTION(GET_RANGE): { /* <r.dest>, <r.src>, <r.begin>, <r.end> */
                 const unsigned rsrc   = bytecode[2];
                 const unsigned rbegin = bytecode[3];
                 const unsigned rend   = bytecode[4];
@@ -1650,10 +1679,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 5;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_GET_PROP8: { /* <r.dest>, <r.src>, <str.idx.uint8> */
+            BEGIN_INSTRUCTION(GET_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
                 const unsigned rsrc = bytecode[2];
                 const uint8_t  idx  = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -1691,10 +1720,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_SET: { /* <r.dest>, <r.prop>, <r.src> */
+            BEGIN_INSTRUCTION(SET): { /* <r.dest>, <r.prop>, <r.src> */
                 const unsigned rprop = bytecode[2];
                 const unsigned rsrc  = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -1764,10 +1793,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 }
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_SET_ELEM: { /* <r.dest>, <int32>, <r.src> */
+            BEGIN_INSTRUCTION(SET_ELEM): { /* <r.dest>, <int32>, <r.src> */
                 const int32_t  idx  = (int32_t)_load_32(bytecode+2);
                 const unsigned rsrc = bytecode[6];
                 KOS_OBJ_ID     dest;
@@ -1792,10 +1821,10 @@ static int exec_function(KOS_CONTEXT ctx)
                     RAISE_EXCEPTION_STR(str_err_not_indexable);
 
                 bytecode += 7;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_SET_PROP8: { /* <r.dest>, <str.idx.uint8>, <r.src> */
+            BEGIN_INSTRUCTION(SET_PROP8): { /* <r.dest>, <str.idx.uint8>, <r.src> */
                 const uint8_t  idx  = bytecode[2];
                 const unsigned rsrc = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -1848,10 +1877,10 @@ static int exec_function(KOS_CONTEXT ctx)
                     goto cleanup;
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_PUSH: { /* <r.dest>, <r.src> */
+            BEGIN_INSTRUCTION(PUSH): { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1862,10 +1891,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 TRY(KOS_array_push(ctx, REGISTER(rdest), REGISTER(rsrc), 0));
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_PUSH_EX: { /* <r.dest>, <r.src> */
+            BEGIN_INSTRUCTION(PUSH_EX): { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1876,10 +1905,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 TRY(KOS_array_push_expand(ctx, REGISTER(rdest), REGISTER(rsrc)));
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_DEL: { /* <r.dest>, <r.prop> */
+            BEGIN_INSTRUCTION(DEL): { /* <r.dest>, <r.prop> */
                 const unsigned rprop = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1890,10 +1919,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 TRY(KOS_delete_property(ctx, REGISTER(rdest), REGISTER(rprop)));
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_DEL_PROP8: { /* <r.dest>, <str.idx.uint8> */
+            BEGIN_INSTRUCTION(DEL_PROP8): { /* <r.dest>, <str.idx.uint8> */
                 const uint8_t idx = bytecode[2];
                 KOS_OBJ_ID    prop;
 
@@ -1907,10 +1936,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 TRY(KOS_delete_property(ctx, REGISTER(rdest), prop));
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_ADD: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(ADD): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -1969,10 +1998,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_SUB: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(SUB): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2009,10 +2038,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_MUL: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(MUL): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2049,10 +2078,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_DIV: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(DIV): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2089,10 +2118,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_MOD: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(MOD): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2129,10 +2158,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_SHL: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(SHL): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2158,10 +2187,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_SHR: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(SHR): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2187,10 +2216,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_SHRU: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(SHRU): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2216,10 +2245,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_NOT: { /* <r.dest>, <r.src> */
+            BEGIN_INSTRUCTION(NOT): { /* <r.dest>, <r.src> */
                 const unsigned rsrc = bytecode[2];
                 int64_t        a;
 
@@ -2235,10 +2264,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_AND: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(AND): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2258,10 +2287,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_OR: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(OR): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2281,10 +2310,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_XOR: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(XOR): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2304,10 +2333,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_TYPE: { /* <r.dest>, <r.src> */
+            BEGIN_INSTRUCTION(TYPE): { /* <r.dest>, <r.src> */
                 const unsigned rsrc  = bytecode[2];
                 KOS_OBJ_ID     src;
                 unsigned       type_idx;
@@ -2352,10 +2381,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_CMP_EQ: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(CMP_EQ): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 KOS_OBJ_ID     src1;
@@ -2373,10 +2402,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_CMP_NE: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(CMP_NE): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 KOS_OBJ_ID     src1;
@@ -2397,10 +2426,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_CMP_LE: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(CMP_LE): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 KOS_OBJ_ID     src1;
@@ -2418,10 +2447,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_CMP_LT: { /* <r.dest>, <r.src1>, <r.src2> */
+            BEGIN_INSTRUCTION(CMP_LT): { /* <r.dest>, <r.src1>, <r.src2> */
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 KOS_OBJ_ID     src1;
@@ -2439,10 +2468,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_HAS_DP: { /* <r.dest>, <r.src>, <r.prop> */
+            BEGIN_INSTRUCTION(HAS_DP): { /* <r.dest>, <r.src>, <r.prop> */
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rprop = bytecode[3];
 
@@ -2459,12 +2488,12 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_HAS_DP_PROP8: { /* <r.dest>, <r.src>, <str.idx.uint8> */
+            BEGIN_INSTRUCTION(HAS_DP_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
                 const unsigned rsrc  = bytecode[2];
-                const uint8_t  idx   = bytecode[3];
+                const int32_t  idx   = bytecode[3];
                 KOS_OBJ_ID     prop;
 
                 assert(rsrc  < num_regs);
@@ -2482,10 +2511,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_HAS_SH: { /* <r.dest>, <r.src>, <r.prop> */
+            BEGIN_INSTRUCTION(HAS_SH): { /* <r.dest>, <r.src>, <r.prop> */
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rprop = bytecode[3];
 
@@ -2502,10 +2531,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_HAS_SH_PROP8: { /* <r.dest>, <r.src>, <str.idx.uint8> */
+            BEGIN_INSTRUCTION(HAS_SH_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
                 const unsigned rsrc  = bytecode[2];
                 const uint8_t  idx   = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -2525,10 +2554,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_INSTANCEOF: { /* <r.dest>, <r.src>, <r.func> */
+            BEGIN_INSTRUCTION(INSTANCEOF): { /* <r.dest>, <r.src>, <r.func> */
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rfunc = bytecode[3];
                 KOS_OBJ_ID     constr_obj;
@@ -2556,10 +2585,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 WRITE_REGISTER(rdest, out);
 
                 bytecode += 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_JUMP: { /* <delta.int32> */
+            BEGIN_INSTRUCTION(JUMP): { /* <delta.int32> */
                 int delta;
 
                 KOS_help_gc(ctx);
@@ -2570,10 +2599,10 @@ static int exec_function(KOS_CONTEXT ctx)
                     delta = 5;
 #endif
                 bytecode += delta;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_JUMP_COND: { /* <delta.int32>, <r.src> */
+            BEGIN_INSTRUCTION(JUMP_COND): { /* <delta.int32>, <r.src> */
                 const int32_t  offs = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
                 int            delta;
@@ -2591,10 +2620,10 @@ static int exec_function(KOS_CONTEXT ctx)
                     delta = 6;
 #endif
                 bytecode += delta;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_JUMP_NOT_COND: { /* <delta.int32>, <r.src> */
+            BEGIN_INSTRUCTION(JUMP_NOT_COND): { /* <delta.int32>, <r.src> */
                 const int32_t  offs = (int32_t)_load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
                 int            delta;
@@ -2612,12 +2641,12 @@ static int exec_function(KOS_CONTEXT ctx)
                     delta = 6;
 #endif
                 bytecode += delta;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_BIND_SELF: /* <r.dest>, <slot.idx.uint8> */
+            BEGIN_INSTRUCTION(BIND_SELF): /* <r.dest>, <slot.idx.uint8> */
                 /* fall through */
-            case INSTR_BIND: { /* <r.dest>, <slot.idx.uint8>, <r.src> */
+            BEGIN_INSTRUCTION(BIND): { /* <r.dest>, <slot.idx.uint8>, <r.src> */
                 const unsigned idx = bytecode[2];
 
                 KOS_OBJ_ID dest;
@@ -2673,10 +2702,10 @@ static int exec_function(KOS_CONTEXT ctx)
                 TRY(KOS_array_write(ctx, closures, (int)idx, regs_obj));
 
                 bytecode += (instr == INSTR_BIND_SELF) ? 3 : 4;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_BIND_DEFAULTS: { /* <r.dest>, <r.src> */
+            BEGIN_INSTRUCTION(BIND_DEFAULTS): { /* <r.dest>, <r.src> */
                 KOS_OBJ_ID     src;
                 KOS_OBJ_ID     dest;
                 KOS_TYPE       type;
@@ -2701,22 +2730,22 @@ static int exec_function(KOS_CONTEXT ctx)
                     RAISE_EXCEPTION_STR(str_err_not_callable);
 
                 bytecode += 3;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_TAIL_CALL: /* <closure.size.uint8>, <r.func>, <r.this>, <r.args> */
+            BEGIN_INSTRUCTION(TAIL_CALL): /* <closure.size.uint8>, <r.func>, <r.this>, <r.args> */
                 /* fall through */
-            case INSTR_TAIL_CALL_N: /* <closure.size.uint8>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(TAIL_CALL_N): /* <closure.size.uint8>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
-            case INSTR_TAIL_CALL_FUN: /* <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(TAIL_CALL_FUN): /* <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
-            case INSTR_CALL: /* <r.dest>, <r.func>, <r.this>, <r.args> */
+            BEGIN_INSTRUCTION(CALL): /* <r.dest>, <r.func>, <r.this>, <r.args> */
                 /* fall through */
-            case INSTR_CALL_N: /* <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(CALL_N): /* <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
-            case INSTR_CALL_FUN: /* <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(CALL_FUN): /* <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
-            case INSTR_CALL_GEN: { /* <r.dest>, <r.func>, <r.final> */
+            BEGIN_INSTRUCTION(CALL_GEN): { /* <r.dest>, <r.func>, <r.final> */
                 const unsigned rfunc     = bytecode[2];
                 unsigned       rthis     = ~0U;
                 unsigned       rfinal    = ~0U;
@@ -2954,10 +2983,10 @@ static int exec_function(KOS_CONTEXT ctx)
                     WRITE_REGISTER(rdest, out);
 
                 bytecode += delta;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_RETURN: { /* <closure.size.uint8>, <r.src> */
+            BEGIN_INSTRUCTION(RETURN): { /* <closure.size.uint8>, <r.src> */
                 const unsigned closure_size = bytecode[1];
                 const unsigned rsrc         = bytecode[2];
 
@@ -2975,7 +3004,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 return KOS_SUCCESS;
             }
 
-            case INSTR_YIELD: { /* <r.src> */
+            BEGIN_INSTRUCTION(YIELD): { /* <r.src> */
                 const uint8_t rsrc = bytecode[1];
 
                 assert(rsrc < num_regs);
@@ -2996,7 +3025,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 return KOS_SUCCESS;
             }
 
-            case INSTR_CATCH: { /* <r.dest>, <delta.int32> */
+            BEGIN_INSTRUCTION(CATCH): { /* <r.dest>, <delta.int32> */
                 const int32_t  rel_offs = (int32_t)_load_32(bytecode+2);
                 const uint32_t offset   = (uint32_t)((bytecode + 6 + rel_offs) - OBJPTR(MODULE, module)->bytecode);
 
@@ -3008,16 +3037,16 @@ static int exec_function(KOS_CONTEXT ctx)
                 set_catch(stack, regs_idx, offset, (uint8_t)rdest);
 
                 bytecode += 6;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            case INSTR_CANCEL: {
+            BEGIN_INSTRUCTION(CANCEL): {
                 clear_catch(stack, regs_idx);
                 bytecode += 1;
-                break;
+                NEXT_INSTRUCTION;
             }
 
-            default:
+            BEGIN_BREAKPOINT_INSTRUCTION:
                 assert(instr == INSTR_BREAKPOINT);
                 if (instr != INSTR_BREAKPOINT)
                     RAISE_EXCEPTION_STR(str_err_invalid_instruction);
@@ -3025,15 +3054,16 @@ static int exec_function(KOS_CONTEXT ctx)
                 /* TODO simply call a debugger function from instance */
 
                 bytecode += 1;
-                break;
+                NEXT_INSTRUCTION;
 
-            case INSTR_THROW: { /* <r.src> */
+            BEGIN_INSTRUCTION(THROW): { /* <r.src> */
                 const unsigned rsrc = bytecode[1];
 
                 assert(rsrc < num_regs);
 
                 KOS_raise_exception(ctx, REGISTER(rsrc));
             }
+
 cleanup:
             assert(KOS_is_exception_pending(ctx));
             {
@@ -3058,13 +3088,13 @@ cleanup:
 
                 clear_catch(stack, regs_idx);
                 KOS_clear_exception(ctx);
-                break;
+                NEXT_INSTRUCTION;
             }
-        }
 
-        assert( ! KOS_is_exception_pending(ctx));
-        assert((uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode) < OBJPTR(MODULE, module)->bytecode_size);
-    }
+#if ! KOS_DISPATCH_TABLE
+        } /* end of switch statement */
+    } /* end of for loop */
+#endif
 }
 
 KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,

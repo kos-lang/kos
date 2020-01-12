@@ -105,6 +105,9 @@ runtests()
     local PRINT_CPPLANG
     PRINT_CPPLANG=$(echo "$2" | tr 'c' 'C')
 
+    local EXTRA_OPTS
+    [ "$1" = "c89" ] && EXTRA_OPTS="nofastdispatch=1"
+
     local PRINT_LANG
     if [ "$UNAME" = "Windows" ]; then
         PRINT_LANG="C and C++"
@@ -138,7 +141,7 @@ runtests()
     echo "***************************************************************************"
 
     [ "$3" = "noclean" ] || rm -rf Out
-    $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 strict=1 --warn-undefined-variables
+    $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 strict=1 $EXTRA_OPTS --warn-undefined-variables
 }
 
 cd "$(dirname $0)"/..
