@@ -955,7 +955,7 @@ TODO - refine format
 class()
 -------
 
-    class()
+    class(func)
 
 Class type class.
 
@@ -963,9 +963,10 @@ Because `class` is a keyword, this class can only be referenced
 indirectly via the base module, it cannot be referenced if it is imported
 directly into the current module.
 
-The argument is a class object which is returned by
-this class, no new object is created by it.
-Throws an exception if the argument is not a class.
+Returns a copy of the `func` class object without copying any properties,
+not even the prototype.
+
+Throws an exception if the `func` argument is not a class.
 
 The prototype of `class.prototype` is `function.prototype`.
 
@@ -1210,8 +1211,18 @@ function()
 
 Function type class.
 
-The argument is a function object which is returned by
-this class, no new object is created by it.
+The argument is a function object.
+
+ * For regular functions, returns the same function object which was
+   passed.
+ * For classes (constuctor functions), returns a copy of
+   the function object without copying any properties,
+   not even the prototype.
+ * For generator functions (not instantiated), returns the same generator
+   function which was passed.
+ * For instantiated generator functions (iterators), returns a copy of
+   the generator function object, uninstantiated.
+
 Throws an exception if the argument is not a function.
 
 The prototype of `function.prototype` is `object.prototype`.
@@ -1337,14 +1348,21 @@ Example:
 generator()
 -----------
 
-    generator()
+    generator(func)
 
 Generator function class.
 
-The purpose of this class is to be used with the `instanceof`
-operator to detect generator functions.
+This class can be used with the `instanceof` operator to detect generator
+functions.
 
-Calling this class throws an exception.
+The `func` argument must be a generator function.
+
+ * For generator functions (not instantiated), returns the same generator
+   function which was passed.
+ * For instantiated generator functions (iterators), returns a copy of
+   the generator function object, uninstantiated.
+
+Throws an exception if the `func` argument is not a generator.
 
 The prototype of `generator.prototype` is `function.prototype`.
 

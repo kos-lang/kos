@@ -536,8 +536,111 @@ do {
 do {
     const f1 = class { }
     const f2 = base.class(f1)
-    assert f1 == f2
-    expect_fail(()=>base.function(f1))
+    assert f1 != f2
+    const f3 = base.function(f1)
+    assert f1 != f3
+}
+
+do {
+    class c1 { hello { return "hello" } }
+    c1.prototype.x = 42
+
+    const o1 = c1()
+    assert o1.hello() == "hello"
+    assert o1.x == 42
+
+    const c2 = base.class(c1)
+
+    assert typeof c2.prototype == "void"
+
+    const o2 = c2()
+    assert ! ("hello" propertyof o2)
+    assert ! ("x" propertyof o2)
+
+    assert ! ("o2" instanceof c1)
+    assert o2 instanceof c2
+
+    c2.prototype = c1.prototype
+
+    const o3 = c2()
+    assert o3.hello() == "hello"
+    assert o3.x == 42
+
+    assert o3 instanceof c1
+    assert o3 instanceof c2
+}
+
+do {
+    class c1 { }
+    c1.prototype.x = 42
+
+    const c2 = base.function(c1)
+
+    assert c1 != c2
+
+    const o1 = c1()
+    const o2 = c2()
+
+    assert "x" propertyof o1
+    assert ! ("x" propertyof o2)
+    assert o1.x == 42
+
+    assert "x" in c1.prototype
+    assert ! ("x" propertyof c2.prototype)
+}
+
+do {
+    fun g1 {
+        yield 10
+        yield 20
+    }
+
+    const g2 = base.function(g1)
+
+    assert g1 == g2
+
+    const g3 = g1()
+    assert g3() == 10
+
+    assert g1 != g3
+
+    const g4 = base.function(g3)
+
+    assert g3 != g4
+    assert g1 != g4
+
+    assert g3() == 20
+
+    const g5 = g4()
+    assert typeof g5 == "function"
+    assert g5() == 10
+}
+
+do {
+    fun g1 {
+        yield 10
+        yield 20
+    }
+
+    const g2 = base.generator(g1)
+
+    assert g1 == g2
+
+    const g3 = g1()
+    assert g3() == 10
+
+    assert g1 != g3
+
+    const g4 = base.generator(g3)
+
+    assert g3 != g4
+    assert g1 != g4
+
+    assert g3() == 20
+
+    const g5 = g4()
+    assert typeof g5 == "function"
+    assert g5() == 10
 }
 
 do {
@@ -547,6 +650,28 @@ do {
     expect_fail(()=>base.function(""))
     expect_fail(()=>base.function([]))
     expect_fail(()=>base.function({}))
+}
+
+do {
+    expect_fail(()=>base.class())
+    expect_fail(()=>base.class(void))
+    expect_fail(()=>base.class(0))
+    expect_fail(()=>base.class(""))
+    expect_fail(()=>base.class([]))
+    expect_fail(()=>base.class({}))
+    expect_fail(()=>base.class(fun {yield 0}))
+    expect_fail(()=>base.class(fun {}))
+}
+
+do {
+    expect_fail(()=>base.generator())
+    expect_fail(()=>base.generator(void))
+    expect_fail(()=>base.generator(0))
+    expect_fail(()=>base.generator(""))
+    expect_fail(()=>base.generator([]))
+    expect_fail(()=>base.generator({}))
+    expect_fail(()=>base.generator(class{}))
+    expect_fail(()=>base.generator(fun{}))
 }
 
 ##############################################################################

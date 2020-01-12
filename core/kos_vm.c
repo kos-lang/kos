@@ -404,44 +404,6 @@ static KOS_OBJ_ID _mod_float(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _copy_function(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  obj_id)
-{
-    KOS_FUNCTION *src;
-    KOS_FUNCTION *dest;
-    KOS_OBJ_ID    ret;
-
-    kos_track_refs(ctx, 1, &obj_id);
-
-    if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION)
-        ret = KOS_new_function(ctx);
-    else {
-        assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
-        ret = KOS_new_class(ctx, KOS_VOID);
-    }
-
-    kos_untrack_refs(ctx, 1);
-
-    if (IS_BAD_PTR(ret))
-        return ret;
-
-    src  = OBJPTR(FUNCTION, obj_id);
-    dest = OBJPTR(FUNCTION, ret);
-
-    dest->flags      = src->flags;
-    dest->num_args   = src->num_args;
-    dest->num_regs   = src->num_regs;
-    dest->args_reg   = src->args_reg;
-    dest->state      = src->state;
-    dest->instr_offs = src->instr_offs;
-    dest->module     = src->module;
-    dest->closures   = src->closures;
-    dest->defaults   = src->defaults;
-    dest->handler    = src->handler;
-
-    return ret;
-}
-
 static int _is_generator_end_exception(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *const inst      = ctx->inst;
@@ -840,7 +802,7 @@ static int _prepare_call(KOS_CONTEXT        ctx,
 
         /* Instantiate a generator function */
         case KOS_GEN_INIT: {
-            func_obj = _copy_function(ctx, func_obj);
+            func_obj = kos_copy_function(ctx, func_obj);
             TRY_OBJID(func_obj);
 
             TRY(kos_stack_push(ctx, func_obj));
@@ -1262,7 +1224,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, value);
                 TRY_OBJID(out);
 
-                out = _copy_function(ctx, out);
+                out = kos_copy_function(ctx, out);
                 TRY_OBJID(out);
 
                 if (GET_OBJ_TYPE(out) == OBJ_CLASS) {
@@ -1289,7 +1251,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, value);
                 TRY_OBJID(out);
 
-                out = _copy_function(ctx, out);
+                out = kos_copy_function(ctx, out);
                 TRY_OBJID(out);
 
                 if (GET_OBJ_TYPE(out) == OBJ_CLASS) {

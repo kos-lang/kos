@@ -98,6 +98,44 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
     return OBJID(FUNCTION, func);
 }
 
+KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  obj_id)
+{
+    KOS_FUNCTION *src;
+    KOS_FUNCTION *dest;
+    KOS_OBJ_ID    ret;
+
+    kos_track_refs(ctx, 1, &obj_id);
+
+    if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION)
+        ret = KOS_new_function(ctx);
+    else {
+        assert(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
+        ret = KOS_new_class(ctx, KOS_VOID);
+    }
+
+    kos_untrack_refs(ctx, 1);
+
+    if (IS_BAD_PTR(ret))
+        return ret;
+
+    src  = OBJPTR(FUNCTION, obj_id);
+    dest = OBJPTR(FUNCTION, ret);
+
+    dest->flags      = src->flags;
+    dest->num_args   = src->num_args;
+    dest->num_regs   = src->num_regs;
+    dest->args_reg   = src->args_reg;
+    dest->state      = src->state;
+    dest->instr_offs = src->instr_offs;
+    dest->module     = src->module;
+    dest->closures   = src->closures;
+    dest->defaults   = src->defaults;
+    dest->handler    = src->handler;
+
+    return ret;
+}
+
 static KOS_OBJ_ID _get_prototype(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  this_obj,
                                  KOS_OBJ_ID  args_obj)

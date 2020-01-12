@@ -45,7 +45,6 @@ static const char str_err_bad_pack_value[]           = "invalid value type for p
 static const char str_err_cannot_convert_to_array[]  = "unsupported type passed to array class";
 static const char str_err_cannot_convert_to_buffer[] = "unsupported type passed to buffer class";
 static const char str_err_cannot_convert_to_string[] = "unsupported type passed to string class";
-static const char str_err_gen_not_callable[]         = "generator class is not not callable";
 static const char str_err_invalid_array_size[]       = "array size out of range";
 static const char str_err_invalid_byte_value[]       = "buffer element value out of range";
 static const char str_err_invalid_char_code[]        = "invalid character code";
@@ -62,6 +61,7 @@ static const char str_err_not_buffer[]               = "object is not a buffer";
 static const char str_err_not_class[]                = "object is not a class";
 static const char str_err_not_enough_pack_values[]   = "insufficient number of packed values";
 static const char str_err_not_function[]             = "object is not a function";
+static const char str_err_not_generator[]            = "object is not a generator";
 static const char str_err_not_string[]               = "object is not a string";
 static const char str_err_not_thread[]               = "object is not a thread";
 static const char str_err_too_many_repeats[]         = "invalid string repeat count";
@@ -1389,8 +1389,18 @@ cleanup:
  *
  * Function type class.
  *
- * The argument is a function object which is returned by
- * this class, no new object is created by it.
+ * The argument is a function object.
+ *
+ *  * For regular functions, returns the same function object which was
+ *    passed.
+ *  * For classes (constuctor functions), returns a copy of
+ *    the function object without copying any properties,
+ *    not even the prototype.
+ *  * For generator functions (not instantiated), returns the same generator
+ *    function which was passed.
+ *  * For instantiated generator functions (iterators), returns a copy of
+ *    the generator function object, uninstantiated.
+ *
  * Throws an exception if the argument is not a function.
  *
  * The prototype of `function.prototype` is `object.prototype`.
@@ -1408,9 +1418,29 @@ static KOS_OBJ_ID function_constructor(KOS_CONTEXT ctx,
 
         ret = KOS_array_read(ctx, args_obj, 0);
         if ( ! IS_BAD_PTR(ret)) {
-            if (GET_OBJ_TYPE(ret) != OBJ_FUNCTION) {
+            const KOS_TYPE type = GET_OBJ_TYPE(ret);
+
+            if (type != OBJ_FUNCTION && type != OBJ_CLASS) {
                 KOS_raise_exception_cstring(ctx, str_err_not_function);
                 ret = KOS_BADPTR;
+            }
+            else {
+                const KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)
+                    OBJPTR(FUNCTION, ret)->state;
+
+                switch (state) {
+
+                    case KOS_FUN:
+                        /* fall through */
+                    case KOS_GEN_INIT:
+                        break;
+
+                    default:
+                        ret = kos_copy_function(ctx, ret);
+
+                        if (state > KOS_GEN_INIT)
+                            OBJPTR(FUNCTION, ret)->state = KOS_GEN_INIT;
+                }
             }
         }
     }
@@ -1420,7 +1450,7 @@ static KOS_OBJ_ID function_constructor(KOS_CONTEXT ctx,
 
 /* @item base class()
  *
- *     class()
+ *     class(func)
  *
  * Class type class.
  *
@@ -1428,9 +1458,10 @@ static KOS_OBJ_ID function_constructor(KOS_CONTEXT ctx,
  * indirectly via the base module, it cannot be referenced if it is imported
  * directly into the current module.
  *
- * The argument is a class object which is returned by
- * this class, no new object is created by it.
- * Throws an exception if the argument is not a class.
+ * Returns a copy of the `func` class object without copying any properties,
+ * not even the prototype.
+ *
+ * Throws an exception if the `func` argument is not a class.
  *
  * The prototype of `class.prototype` is `function.prototype`.
  */
@@ -1447,7 +1478,9 @@ static KOS_OBJ_ID class_constructor(KOS_CONTEXT ctx,
 
         ret = KOS_array_read(ctx, args_obj, 0);
         if ( ! IS_BAD_PTR(ret)) {
-            if (GET_OBJ_TYPE(ret) != OBJ_CLASS) {
+            if (GET_OBJ_TYPE(ret) == OBJ_CLASS)
+                ret = kos_copy_function(ctx, ret);
+            else {
                 KOS_raise_exception_cstring(ctx, str_err_not_class);
                 ret = KOS_BADPTR;
             }
@@ -1459,14 +1492,21 @@ static KOS_OBJ_ID class_constructor(KOS_CONTEXT ctx,
 
 /* @item base generator()
  *
- *     generator()
+ *     generator(func)
  *
  * Generator function class.
  *
- * The purpose of this class is to be used with the `instanceof`
- * operator to detect generator functions.
+ * This class can be used with the `instanceof` operator to detect generator
+ * functions.
  *
- * Calling this class throws an exception.
+ * The `func` argument must be a generator function.
+ *
+ *  * For generator functions (not instantiated), returns the same generator
+ *    function which was passed.
+ *  * For instantiated generator functions (iterators), returns a copy of
+ *    the generator function object, uninstantiated.
+ *
+ * Throws an exception if the `func` argument is not a generator.
  *
  * The prototype of `generator.prototype` is `function.prototype`.
  */
@@ -1474,8 +1514,48 @@ static KOS_OBJ_ID generator_constructor(KOS_CONTEXT ctx,
                                         KOS_OBJ_ID  this_obj,
                                         KOS_OBJ_ID  args_obj)
 {
-    KOS_raise_exception_cstring(ctx, str_err_gen_not_callable);
-    return KOS_BADPTR;
+    KOS_OBJ_ID ret = KOS_BADPTR;
+
+    if (KOS_get_array_size(args_obj) != 1)
+        KOS_raise_exception_cstring(ctx, str_err_not_generator);
+
+    else {
+
+        ret = KOS_array_read(ctx, args_obj, 0);
+        if ( ! IS_BAD_PTR(ret)) {
+            const KOS_TYPE type = GET_OBJ_TYPE(ret);
+
+            if (type != OBJ_FUNCTION) {
+                KOS_raise_exception_cstring(ctx, str_err_not_generator);
+                ret = KOS_BADPTR;
+            }
+            else {
+                const KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)
+                    OBJPTR(FUNCTION, ret)->state;
+
+                switch (state) {
+
+                    case KOS_FUN:
+                        /* fall through */
+                    case KOS_CTOR:
+                        KOS_raise_exception_cstring(ctx, str_err_not_generator);
+                        ret = KOS_BADPTR;
+                        break;
+
+                    case KOS_GEN_INIT:
+                        break;
+
+                    default:
+                        ret = kos_copy_function(ctx, ret);
+
+                        if (state > KOS_GEN_INIT)
+                            OBJPTR(FUNCTION, ret)->state = KOS_GEN_INIT;
+                }
+            }
+        }
+    }
+
+    return ret;
 }
 
 /* @item base exception()
