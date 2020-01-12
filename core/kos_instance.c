@@ -1244,13 +1244,15 @@ void KOS_init_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals)
 
 void KOS_destroy_local(KOS_LOCAL *local)
 {
-    KOS_LOCAL  *prev      = local->prev;
-    KOS_LOCAL  *next      = local->next;
-    KOS_CONTEXT ctx       = local->ctx;
-    KOS_LOCAL **prev_next = prev ? &prev->next : &ctx->local_list;
+    KOS_LOCAL  *prev = local->prev;
+    KOS_LOCAL  *next = local->next;
+    KOS_CONTEXT ctx  = local->ctx;
+    KOS_LOCAL **prev_next;
 
     if ( ! ctx)
         return;
+
+    prev_next = prev ? &prev->next : &ctx->local_list;
 
     *prev_next = next;
 
