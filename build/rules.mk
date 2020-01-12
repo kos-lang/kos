@@ -68,7 +68,6 @@ LDFLAGS ?=
 debug   ?= 0
 native  ?= 0
 target  ?=
-nofastdispatch ?= 0
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(debug), 0)
@@ -153,18 +152,17 @@ else
     STRICTFLAGS += -Wformat=2
     #STRICTFLAGS += -Wconversion
 
-    ifeq ($(nofastdispatch), 0)
+    fastdispatch ?= 1
+    ifeq ($(fastdispatch), 1)
         COMPILER_VER := $(shell $(CC) --version 2>&1)
-        ifneq (,$(filter clang gcc,$(COMPILER_VER)))
-            ifeq (,$(filter clang,$(COMPILER_VER)))
-                CLANG   := $(patsubst -std=c%,-std=gnu%,$(CLANG))
-                CPPLANG := $(patsubst -std=c%,-std=gnu%,$(CPPLANG))
-            endif
-            ifneq (,$(filter clang,$(COMPILER_VER)))
-                CFLAGS += -Wno-gnu-label-as-value
-            endif
-            CFLAGS += -DCONFIG_FAST_DISPATCH
+        ifeq (,$(filter clang gcc,$(COMPILER_VER)))
+            fastdispatch := 0
         endif
+    endif
+    ifeq ($(fastdispatch), 1)
+        CFLAGS += -DCONFIG_FAST_DISPATCH
+    else
+        STRICTFLAGS += -pedantic
     endif
 
     ifeq ($(UNAME), Linux)
@@ -330,13 +328,13 @@ else
 	@echo C++ $(notdir $@)
 endif
 	@mkdir -p $(dir $@)
-	@$(CC) -Wall -pedantic $(CFLAGS) -c -MD $(CLANG)   $< -o $@
+	@$(CC) -Wall $(CFLAGS) -c -MD $(CLANG)   $< -o $@
 	@test -f $(<:.c=.d)   && mv $(<:.c=.d)   $(dir $@) || true # WAR for very old gcc
 
 $(out_dir)/$(depth)/$(notdir %.o): %.cpp
 	@echo C++ $(notdir $@)
 	@mkdir -p $(dir $@)
-	@$(CC) -Wall -pedantic $(CFLAGS) -c -MD $(CPPLANG) $< -o $@
+	@$(CC) -Wall $(CFLAGS) -c -MD $(CPPLANG) $< -o $@
 	@test -f $(<:.cpp=.d) && mv $(<:.cpp=.d) $(dir $@) || true # WAR for very old gcc
 
 endif
