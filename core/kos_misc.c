@@ -180,6 +180,17 @@ int kos_parse_int(const char *begin,
     return error;
 }
 
+static uint64_t shift_digit(unsigned digit, int exponent)
+{
+    const int shift = 59 - exponent;
+    if (shift >= 0)
+        return (uint64_t)digit << shift;
+    else if (shift >= -4)
+        return (uint64_t)digit >> -shift;
+    else
+        return 0;
+}
+
 /*
  * How rounding works:
  * - L is the least significant bit of mantissa
@@ -198,7 +209,7 @@ static void multiply_by_10_and_add(uint64_t *mantissa, int *exponent, unsigned d
 {
     const uint64_t high1 = 5 * (*mantissa >> 3);
     const uint32_t low   = 5 * ((uint32_t)*mantissa & 7U);
-    const uint64_t high  = high1 + (low >> 3) + ((uint64_t)digit << (59 - *exponent));
+    const uint64_t high  = high1 + (low >> 3) + shift_digit(digit, *exponent);
 
     if (high & ((uint64_t)1U << 63)) {
         const uint32_t lgrs_mask = 0xFU;
