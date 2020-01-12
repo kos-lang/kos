@@ -1177,7 +1177,7 @@ static int exec_function(KOS_CONTEXT ctx)
 {
     const uint8_t     *bytecode;
     KOS_BYTECODE_INSTR instr;
-    KOS_OBJ_ID         out;
+    KOS_OBJ_ID         out      = KOS_BADPTR;
     KOS_OBJ_ID         module;
     KOS_OBJ_ID         stack    = ctx->stack;
     int                error    = KOS_SUCCESS;
