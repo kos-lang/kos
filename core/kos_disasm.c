@@ -59,7 +59,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_GET_GLOBAL:          /* fall through */
         case INSTR_SET_GLOBAL:          /* fall through */
         case INSTR_DEL:                 /* fall through */
-        case INSTR_DEL_PROP:            /* fall through */
+        case INSTR_DEL_PROP8:           /* fall through */
         case INSTR_NOT:                 /* fall through */
         case INSTR_TYPE:                /* fall through */
         case INSTR_JUMP_COND:           /* fall through */
@@ -74,12 +74,12 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
 
         case INSTR_GET:                 /* fall through */
         case INSTR_GET_ELEM:            /* fall through */
-        case INSTR_GET_PROP:            /* fall through */
+        case INSTR_GET_PROP8:           /* fall through */
         case INSTR_GET_MOD:             /* fall through */
         case INSTR_GET_MOD_ELEM:        /* fall through */
         case INSTR_SET:                 /* fall through */
         case INSTR_SET_ELEM:            /* fall through */
-        case INSTR_SET_PROP:            /* fall through */
+        case INSTR_SET_PROP8:           /* fall through */
         case INSTR_ADD:                 /* fall through */
         case INSTR_SUB:                 /* fall through */
         case INSTR_MUL:                 /* fall through */
@@ -96,9 +96,9 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_CMP_LE:              /* fall through */
         case INSTR_CMP_LT:              /* fall through */
         case INSTR_HAS_DP:              /* fall through */
-        case INSTR_HAS_DP_PROP:         /* fall through */
+        case INSTR_HAS_DP_PROP8:        /* fall through */
         case INSTR_HAS_SH:              /* fall through */
-        case INSTR_HAS_SH_PROP:         /* fall through */
+        case INSTR_HAS_SH_PROP8:        /* fall through */
         case INSTR_INSTANCEOF:          /* fall through */
         case INSTR_BIND:                /* fall through */
         case INSTR_CALL_GEN:
@@ -131,8 +131,6 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_GET_MOD_ELEM:
             /* fall through */
-        case INSTR_DEL_PROP:
-            /* fall through */
         case INSTR_CATCH:
             if (op > 0)
                 return 4;
@@ -152,19 +150,11 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
         case INSTR_GET_MOD:
             /* fall through */
         case INSTR_SET_ELEM:
-            /* fall through */
-        case INSTR_SET_PROP:
             if (op == 1)
                 return 4;
             break;
 
         case INSTR_GET_ELEM:
-            /* fall through */
-        case INSTR_GET_PROP:
-            /* fall through */
-        case INSTR_HAS_DP_PROP:
-            /* fall through */
-        case INSTR_HAS_SH_PROP:
             if (op == 2)
                 return 4;
             break;
@@ -223,7 +213,7 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_GET_MOD_ELEM:
             /* fall through */
-        case INSTR_DEL_PROP:
+        case INSTR_DEL_PROP8:
             /* fall through */
         case INSTR_BIND_SELF:
             /* fall through */
@@ -232,18 +222,18 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
 
         case INSTR_GET_ELEM:
             /* fall through */
-        case INSTR_GET_PROP:
+        case INSTR_GET_PROP8:
             /* fall through */
-        case INSTR_HAS_DP_PROP:
+        case INSTR_HAS_DP_PROP8:
             /* fall through */
-        case INSTR_HAS_SH_PROP:
+        case INSTR_HAS_SH_PROP8:
             return op > 1 ? 0 : 1;
 
         case INSTR_GET_MOD:
             /* fall through */
         case INSTR_SET_ELEM:
             /* fall through */
-        case INSTR_SET_PROP:
+        case INSTR_SET_PROP8:
             /* fall through */
         case INSTR_BIND:
             return op == 1 ? 0 : 1;
@@ -307,15 +297,15 @@ static int is_constant(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_LOAD_FUN:
             /* fall through */
-        case INSTR_GET_PROP:
+        case INSTR_GET_PROP8:
             /* fall through */
-        case INSTR_SET_PROP:
+        case INSTR_SET_PROP8:
             /* fall through */
-        case INSTR_DEL_PROP:
+        case INSTR_DEL_PROP8:
             /* fall through */
-        case INSTR_HAS_DP_PROP:
+        case INSTR_HAS_DP_PROP8:
             /* fall through */
-        case INSTR_HAS_SH_PROP:
+        case INSTR_HAS_SH_PROP8:
             return ! kos_is_register(instr, op);
 
         default:
@@ -360,19 +350,19 @@ void kos_disassemble(const char                           *filename,
         "GET",
         "GET.ELEM",
         "GET.RANGE",
-        "GET.PROP",
+        "GET.PROP8",
         "GET.PROTO",
         "GET.GLOBAL",
         "GET.MOD",
         "GET.MOD.ELEM",
         "SET",
         "SET.ELEM",
-        "SET.PROP",
+        "SET.PROP8",
         "SET.GLOBAL",
         "PUSH",
         "PUSH.EX",
         "DEL",
-        "DEL.PROP",
+        "DEL.PROP8",
         "ADD",
         "SUB",
         "MUL",
@@ -391,9 +381,9 @@ void kos_disassemble(const char                           *filename,
         "CMP.LE",
         "CMP.LT",
         "HAS.DP",
-        "HAS.DP.PROP",
+        "HAS.DP.PROP8",
         "HAS.SH",
-        "HAS.SH.PROP",
+        "HAS.SH.PROP8",
         "INSTANCEOF",
         "JUMP",
         "JUMP.COND",

@@ -1653,9 +1653,9 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
-            case INSTR_GET_PROP: { /* <r.dest>, <r.src>, <str.idx.int32> */
+            case INSTR_GET_PROP8: { /* <r.dest>, <r.src>, <str.idx.uint8> */
                 const unsigned rsrc = bytecode[2];
-                const int32_t  idx  = (int32_t)_load_32(bytecode+3);
+                const uint8_t  idx  = bytecode[3];
                 KOS_OBJ_ID     prop;
                 KOS_OBJ_ID     obj;
 
@@ -1690,7 +1690,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 WRITE_REGISTER(rdest, out);
 
-                bytecode += 7;
+                bytecode += 4;
                 break;
             }
 
@@ -1795,9 +1795,9 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
-            case INSTR_SET_PROP: { /* <r.dest>, <str.idx.int32>, <r.src> */
-                const int32_t  idx  = (int32_t)_load_32(bytecode+2);
-                const unsigned rsrc = bytecode[6];
+            case INSTR_SET_PROP8: { /* <r.dest>, <str.idx.uint8>, <r.src> */
+                const uint8_t  idx  = bytecode[2];
+                const unsigned rsrc = bytecode[3];
                 KOS_OBJ_ID     prop;
                 KOS_OBJ_ID     obj;
                 KOS_OBJ_ID     value;
@@ -1847,7 +1847,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 else if (error)
                     goto cleanup;
 
-                bytecode += 7;
+                bytecode += 4;
                 break;
             }
 
@@ -1893,8 +1893,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
-            case INSTR_DEL_PROP: { /* <r.dest>, <str.idx.int32> */
-                const int32_t idx = (int32_t)_load_32(bytecode+2);
+            case INSTR_DEL_PROP8: { /* <r.dest>, <str.idx.uint8> */
+                const uint8_t idx = bytecode[2];
                 KOS_OBJ_ID    prop;
 
                 rdest = bytecode[1];
@@ -1906,7 +1906,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 TRY(KOS_delete_property(ctx, REGISTER(rdest), prop));
 
-                bytecode += 6;
+                bytecode += 3;
                 break;
             }
 
@@ -2462,9 +2462,9 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
-            case INSTR_HAS_DP_PROP: { /* <r.dest>, <r.src>, <str.idx.int32> */
+            case INSTR_HAS_DP_PROP8: { /* <r.dest>, <r.src>, <str.idx.uint8> */
                 const unsigned rsrc  = bytecode[2];
-                const int32_t  idx   = (int32_t)_load_32(bytecode+3);
+                const uint8_t  idx   = bytecode[3];
                 KOS_OBJ_ID     prop;
 
                 assert(rsrc  < num_regs);
@@ -2481,7 +2481,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 WRITE_REGISTER(rdest, out);
 
-                bytecode += 7;
+                bytecode += 4;
                 break;
             }
 
@@ -2505,9 +2505,9 @@ static int exec_function(KOS_CONTEXT ctx)
                 break;
             }
 
-            case INSTR_HAS_SH_PROP: { /* <r.dest>, <r.src>, <str.idx.int32> */
+            case INSTR_HAS_SH_PROP8: { /* <r.dest>, <r.src>, <str.idx.uint8> */
                 const unsigned rsrc  = bytecode[2];
-                const int32_t  idx   = (int32_t)_load_32(bytecode+3);
+                const uint8_t  idx   = bytecode[3];
                 KOS_OBJ_ID     prop;
 
                 assert(rsrc  < num_regs);
@@ -2524,7 +2524,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 WRITE_REGISTER(rdest, out);
 
-                bytecode += 7;
+                bytecode += 4;
                 break;
             }
 

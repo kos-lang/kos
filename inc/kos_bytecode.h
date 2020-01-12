@@ -72,8 +72,8 @@ typedef enum KOS_BYTECODE_INSTR_U {
     /* TODO GET.ELEM8 <r.dest>, <r.src>, <int8> */
     /* GET.RANGE <r.dest>, <r.src>, <r.begin>, <r.end> */
     INSTR_GET_RANGE,
-    /* GET.PROP <r.dest>, <r.src>, <str.idx.int32> */
-    INSTR_GET_PROP,
+    /* GET.PROP8 <r.dest>, <r.src>, <str.idx.uint8> */
+    INSTR_GET_PROP8,
     /* GET.PROTO <r.dest>, <r.src> */
     INSTR_GET_PROTO,
     /* GET.GLOBAL <r.dest>, <int32> */
@@ -88,8 +88,8 @@ typedef enum KOS_BYTECODE_INSTR_U {
     /* SET.ELEM <r.dest>, <int32>, <r.src> */
     INSTR_SET_ELEM,
     /* TODO SET.ELEM8 <r.dest>, <int8>, <r.src> */
-    /* SET.PROP <r.dest>, <str.idx.int32>, <r.src> */
-    INSTR_SET_PROP,
+    /* SET.PROP8 <r.dest>, <str.idx.uint8>, <r.src> */
+    INSTR_SET_PROP8,
     /* SET.GLOBAL <int32>, <r.src> */
     INSTR_SET_GLOBAL,
 
@@ -102,8 +102,8 @@ typedef enum KOS_BYTECODE_INSTR_U {
 
     /* DEL <r.dest>, <r.prop> */
     INSTR_DEL,
-    /* DEL.PROP <r.dest>, <str.idx.int32> */
-    INSTR_DEL_PROP,
+    /* DEL.PROP8 <r.dest>, <str.idx.uint8> */
+    INSTR_DEL_PROP8,
 
     /* ADD <r.dest>, <r.src1>, <r.src2> */
     INSTR_ADD,
@@ -144,12 +144,12 @@ typedef enum KOS_BYTECODE_INSTR_U {
 
     /* HAS.DP <r.dest>, <r.src>, <r.prop> */
     INSTR_HAS_DP,
-    /* HAS.DP.PROP <r.dest>, <r.src>, <str.idx.int32> */
-    INSTR_HAS_DP_PROP,
+    /* HAS.DP.PROP8 <r.dest>, <r.src>, <str.idx.uint8> */
+    INSTR_HAS_DP_PROP8,
     /* HAS.SH <r.dest>, <r.src>, <r.prop> */
     INSTR_HAS_SH,
-    /* HAS.SH.PROP <r.dest>, <r.src>, <str.idx.int32> */
-    INSTR_HAS_SH_PROP,
+    /* HAS.SH.PROP8 <r.dest>, <r.src>, <str.idx.uint8> */
+    INSTR_HAS_SH_PROP8,
     /* INSTANCEOF <r.dest>, <r.src>, <r.func> */
     INSTR_INSTANCEOF,
 

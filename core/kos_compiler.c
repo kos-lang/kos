@@ -1819,6 +1819,61 @@ cleanup:
     return error;
 }
 
+static int gen_get_prop_instr(KOS_COMP_UNIT *program,
+                              int            rdest,
+                              int            robj,
+                              int            str_idx)
+{
+    int error;
+
+    if (str_idx > 255) {
+        KOS_REG *tmp   = 0;
+        int      rprop = rdest;
+
+        if (rprop == robj) {
+            TRY(gen_reg(program, &tmp));
+            rprop = tmp->reg;
+        }
+
+        TRY(gen_instr2(program, INSTR_LOAD_CONST, rprop, str_idx));
+
+        TRY(gen_instr3(program, INSTR_GET, rdest, robj, rprop));
+
+        if (tmp)
+            free_reg(program, tmp);
+    }
+    else
+        error = gen_instr3(program, INSTR_GET_PROP8, rdest, robj, str_idx);
+
+cleanup:
+    return error;
+}
+
+static int gen_set_prop_instr(KOS_COMP_UNIT *program,
+                              int            rdest,
+                              int            str_idx,
+                              int            rsrc)
+{
+    int error;
+
+    if (str_idx > 255) {
+        KOS_REG *tmp = 0;
+
+        TRY(gen_reg(program, &tmp));
+
+        TRY(gen_instr2(program, INSTR_LOAD_CONST, tmp->reg, str_idx));
+
+        TRY(gen_instr3(program, INSTR_SET, rdest, tmp->reg, rsrc));
+
+        free_reg(program, tmp);
+    }
+    else
+        error = gen_instr3(program, INSTR_SET_PROP8, rdest, str_idx, rsrc);
+
+cleanup:
+    return error;
+}
+
 static int invoke_get_iterator(KOS_COMP_UNIT *program,
                                KOS_REG       **reg)
 {
@@ -1843,7 +1898,7 @@ static int invoke_get_iterator(KOS_COMP_UNIT *program,
 
     TRY(gen_str(program, &token, &str_idx));
 
-    TRY(gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
+    TRY(gen_get_prop_instr(program, func_reg->reg, obj_reg->reg, str_idx));
 
     TRY(gen_instr5(program, INSTR_CALL_N, (*reg)->reg, func_reg->reg, obj_reg->reg, 255, 0));
 
@@ -2651,7 +2706,7 @@ static int refinement_object(KOS_COMP_UNIT      *program,
         int str_idx;
         TRY(gen_str(program, &node->token, &str_idx));
 
-        TRY(gen_instr3(program, INSTR_GET_PROP, (*reg)->reg, obj->reg, str_idx));
+        TRY(gen_get_prop_instr(program, (*reg)->reg, obj->reg, str_idx));
     }
     else if (maybe_int(node, &idx)) {
 
@@ -2963,7 +3018,7 @@ static int super_invocation(KOS_COMP_UNIT      *program,
             apply_fun = *reg;
     }
 
-    TRY(gen_instr3(program, INSTR_GET_PROP, apply_fun->reg, base_ctor_reg->reg, str_idx));
+    TRY(gen_get_prop_instr(program, apply_fun->reg, base_ctor_reg->reg, str_idx));
 
     assert(program->cur_frame->this_reg);
     TRY(gen_instr2(program, INSTR_MOVE, args_regs[0]->reg, program->cur_frame->this_reg->reg));
@@ -3183,7 +3238,7 @@ static int async_op(KOS_COMP_UNIT      *program,
     if ( ! *reg)
         *reg = async;
 
-    TRY(gen_instr3(program, INSTR_GET_PROP, async->reg, fun->reg, str_idx));
+    TRY(gen_get_prop_instr(program, async->reg, fun->reg, str_idx));
 
     if ( ! obj)
         TRY(gen_instr1(program, INSTR_LOAD_VOID, argn[0]->reg));
@@ -3508,7 +3563,26 @@ static int has_prop(KOS_COMP_UNIT      *program,
 
     TRY(gen_str(program, &node->children->next->token, &str_idx));
 
-    TRY(gen_instr3(program, instr, (*reg)->reg, src->reg, str_idx));
+    if (str_idx > 255) {
+        KOS_REG *tmp   = 0;
+        int      rprop = (*reg)->reg;
+
+        if (rprop == src->reg) {
+            TRY(gen_reg(program, &tmp));
+            rprop = tmp->reg;
+        }
+
+        TRY(gen_instr2(program, INSTR_LOAD_CONST, rprop, str_idx));
+
+        instr = (instr == INSTR_HAS_DP_PROP8) ? INSTR_HAS_DP : INSTR_HAS_SH;
+
+        TRY(gen_instr3(program, instr, (*reg)->reg, src->reg, rprop));
+
+        if (tmp)
+            free_reg(program, tmp);
+    }
+    else
+        TRY(gen_instr3(program, instr, (*reg)->reg, src->reg, str_idx));
 
     if (src != *reg)
         free_reg(program, src);
@@ -3549,7 +3623,15 @@ static int delete_op(KOS_COMP_UNIT      *program,
         int str_idx;
         TRY(gen_str(program, &node->token, &str_idx));
 
-        TRY(gen_instr2(program, INSTR_DEL_PROP, obj->reg, str_idx));
+        if (str_idx > 255) {
+            TRY(gen_reg(program, reg));
+
+            TRY(gen_instr2(program, INSTR_LOAD_CONST, (*reg)->reg, str_idx));
+
+            TRY(gen_instr2(program, INSTR_DEL, obj->reg, (*reg)->reg));
+        }
+        else
+            TRY(gen_instr2(program, INSTR_DEL_PROP8, obj->reg, str_idx));
     }
     else if (node->type == NT_NUMERIC_LITERAL) {
 
@@ -3559,14 +3641,10 @@ static int delete_op(KOS_COMP_UNIT      *program,
     }
     else {
 
-        KOS_REG *prop = 0;
+        TRY(visit_node(program, node, reg));
+        assert(*reg);
 
-        TRY(visit_node(program, node, &prop));
-        assert(prop);
-
-        TRY(gen_instr2(program, INSTR_DEL, obj->reg, prop->reg));
-
-        free_reg(program, prop);
+        TRY(gen_instr2(program, INSTR_DEL, obj->reg, (*reg)->reg));
     }
 
     free_reg(program, obj);
@@ -3625,7 +3703,7 @@ static int process_operator(KOS_COMP_UNIT      *program,
                     {
                         const KOS_AST_NODE *second = node->children->next;
                         if (second && second->type == NT_STRING_LITERAL)
-                            return has_prop(program, node, reg, INSTR_HAS_SH_PROP);
+                            return has_prop(program, node, reg, INSTR_HAS_SH_PROP8);
                     }
                     opcode   = INSTR_HAS_SH;
                     operands = 2;
@@ -3635,7 +3713,7 @@ static int process_operator(KOS_COMP_UNIT      *program,
                     {
                         const KOS_AST_NODE *second = node->children->next;
                         if (second && second->type == NT_STRING_LITERAL)
-                            return has_prop(program, node, reg, INSTR_HAS_DP_PROP);
+                            return has_prop(program, node, reg, INSTR_HAS_DP_PROP8);
                     }
                     opcode   = INSTR_HAS_DP;
                     operands = 2;
@@ -3848,14 +3926,14 @@ static int assign_member(KOS_COMP_UNIT      *program,
 
             TRY(gen_reg(program, &tmp_reg));
 
-            TRY(gen_instr3(program, INSTR_GET_PROP, tmp_reg->reg, obj->reg, str_idx));
+            TRY(gen_get_prop_instr(program, tmp_reg->reg, obj->reg, str_idx));
 
             TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
             src = tmp_reg;
         }
 
-        TRY(gen_instr3(program, INSTR_SET_PROP, obj->reg, str_idx, src->reg));
+        TRY(gen_set_prop_instr(program, obj->reg, str_idx, src->reg));
     }
     else if (maybe_int(node, &idx)) {
 
@@ -4019,7 +4097,7 @@ static int assign_slice(KOS_COMP_UNIT      *program,
 
     TRY(gen_reg(program, &func_reg));
 
-    TRY(gen_instr3(program, INSTR_GET_PROP, func_reg->reg, obj_reg->reg, str_idx));
+    TRY(gen_get_prop_instr(program, func_reg->reg, obj_reg->reg, str_idx));
 
     TRY(gen_instr5(program, INSTR_CALL_N, func_reg->reg, func_reg->reg, obj_reg->reg, argn[0]->reg, 3));
 
@@ -5047,7 +5125,7 @@ static int object_literal(KOS_COMP_UNIT      *program,
             TRY(visit_node(program, prop_node, &prop));
         assert(prop);
 
-        TRY(gen_instr3(program, INSTR_SET_PROP, (*reg)->reg, str_idx, prop->reg));
+        TRY(gen_set_prop_instr(program, (*reg)->reg, str_idx, prop->reg));
 
         free_reg(program, prop);
     }
@@ -5181,7 +5259,7 @@ static int class_literal(KOS_COMP_UNIT      *program,
 
         TRY(gen_str(program, &token, &str_idx));
 
-        TRY(gen_instr3(program, INSTR_SET_PROP, (*reg)->reg, str_idx, proto_reg->reg));
+        TRY(gen_set_prop_instr(program, (*reg)->reg, str_idx, proto_reg->reg));
     }
 
     if (base_ctor_reg)

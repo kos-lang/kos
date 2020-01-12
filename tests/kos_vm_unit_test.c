@@ -306,13 +306,13 @@ static int _test_instr(KOS_CONTEXT           ctx,
 
         code[words++] = (uint8_t)instr;
 
-        if (instr != INSTR_SET      &&
-            instr != INSTR_SET_ELEM &&
-            instr != INSTR_SET_PROP &&
-            instr != INSTR_PUSH     &&
-            instr != INSTR_PUSH_EX  &&
-            instr != INSTR_DEL      &&
-            instr != INSTR_DEL_PROP)
+        if (instr != INSTR_SET       &&
+            instr != INSTR_SET_ELEM  &&
+            instr != INSTR_SET_PROP8 &&
+            instr != INSTR_PUSH      &&
+            instr != INSTR_PUSH_EX   &&
+            instr != INSTR_DEL       &&
+            instr != INSTR_DEL_PROP8)
 
             code[words++] = regs - 1U;
 
@@ -648,13 +648,13 @@ int main(void)
 
     /*========================================================================*/
     /* GET.PROP */
-    TEST_INSTR INSTR_GET_PROP,   { V_EXCEPT                            }, { { V_VOID                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_PROP,   { V_EXCEPT                            }, { { V_FALSE                           }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_PROP,   { V_EXCEPT                            }, { { V_INT32, 0,                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_PROP,   { V_EXCEPT                            }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_PROP,   { V_EXCEPT                            }, { { V_STR1                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_PROP,   { V_EXCEPT                            }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_PROP,   { V_EXCEPT                            }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_VOID                            }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_FALSE                           }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_INT32, 0,                       }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_STR1                            }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_ARRAY, 10                       }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_OBJECT                          }, { V_IMM8,  0                        } } END
 
     /*========================================================================*/
     /* GET.PROTO */
@@ -697,23 +697,23 @@ int main(void)
 
     /*========================================================================*/
     /* HAS.DP.PROP */
-    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_VOID                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_FALSE                           }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_INT32, 0,                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_STR1                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_DP_PROP,{ V_FALSE                             }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_DP_PROP8, { V_FALSE                           }, { { V_VOID                            }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_DP_PROP8, { V_FALSE                           }, { { V_FALSE                           }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_DP_PROP8, { V_FALSE                           }, { { V_INT32, 0,                       }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_DP_PROP8, { V_FALSE                           }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_DP_PROP8, { V_FALSE                           }, { { V_STR1                            }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_DP_PROP8, { V_FALSE                           }, { { V_ARRAY, 10                       }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_DP_PROP8, { V_FALSE                           }, { { V_OBJECT                          }, { V_IMM8, 0                         } } END
 
     /*========================================================================*/
     /* HAS.SH.PROP */
-    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_VOID                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_FALSE                           }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_INT32, 0,                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_STR1                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_HAS_SH_PROP,{ V_FALSE                             }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_HAS_SH_PROP8, { V_FALSE                           }, { { V_VOID                            }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_SH_PROP8, { V_FALSE                           }, { { V_FALSE                           }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_SH_PROP8, { V_FALSE                           }, { { V_INT32, 0,                       }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_SH_PROP8, { V_FALSE                           }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_SH_PROP8, { V_FALSE                           }, { { V_STR1                            }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_SH_PROP8, { V_FALSE                           }, { { V_ARRAY, 10                       }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_HAS_SH_PROP8, { V_FALSE                           }, { { V_OBJECT                          }, { V_IMM8, 0                         } } END
 
     /*========================================================================*/
     /* DEL */
@@ -735,13 +735,13 @@ int main(void)
 
     /*========================================================================*/
     /* DEL.PROP */
-    TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_VOID                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_FALSE                           }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_INT32, 0,                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_STR1                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_DEL_PROP,   { V_OK                                }, { { V_OBJECT                          }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_VOID                            }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_FALSE                           }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_INT32, 0,                       }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_STR1                            }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_ARRAY, 10                       }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_OBJECT                          }, { V_IMM8, 0                         } } END
 
     /*========================================================================*/
     /* PUSH */
