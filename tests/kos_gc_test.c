@@ -1450,6 +1450,7 @@ static KOS_OBJ_ID alloc_ballast(KOS_CONTEXT ctx,
     return obj_id;
 }
 
+#ifndef CONFIG_MAD_GC
 static uint32_t off_heap_array_size(KOS_OBJ_ID obj_id)
 {
     assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
@@ -1469,6 +1470,7 @@ static uint32_t off_heap_array_size(KOS_OBJ_ID obj_id)
 
     return kos_get_object_size(OBJPTR(ARRAY_STORAGE, obj_id)->header) + KOS_OBJ_TRACK_BIT;
 }
+#endif
 
 int main(void)
 {
