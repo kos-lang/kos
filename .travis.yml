@@ -30,12 +30,21 @@ matrix:
         dist: trusty
         compiler: gcc
         script:
-          - tests/run c89 release
+          - tests/run c89 release slowdispatch
 
       - name: "Ubuntu 12.04"
         if: branch != coverity_scan
         os: linux
         dist: precise
+        compiler: gcc
+        script:
+          - tests/run c89
+
+      - name: "ARM64"
+        if: branch != coverity_scan
+        arch: arm64
+        os: linux
+        dist: bionic
         compiler: gcc
         script:
           - tests/run c89 release
