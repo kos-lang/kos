@@ -22,28 +22,33 @@
 
 set -e
 
-RUN_C89=1
-RUN_CPP14=1
-RUN_RELEASE=1
-RUN_ASAN=1
+RUN_C89=0
+RUN_CPP14=0
+RUN_RELEASE=0
+RUN_ASAN=0
 RUN_VALGRIND=0
 RUN_GCOV=0
 RUN_SEQFAIL=0
 RUN_MADGC=0
 
 UNAME=$(uname -s)
-MAKE=make
+
+case "$UNAME" in
+    CYGWIN*|MINGW*|MSYS*) UNAME="Windows" ;;
+esac
 
 if [ -z "$JOBS" ]; then
     case "$UNAME" in
         Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
         Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
-        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ; UNAME="Windows" ;;
+        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ;;
         Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
         *)                                       JOBS=2 ;;
     esac
     [ $JOBS -lt 32 ] || JOBS=32
 fi
+
+MAKE=make
 
 case "$UNAME" in
     FreeBSD|OpenBSD|NetBSD|DragonFly)
@@ -51,32 +56,29 @@ case "$UNAME" in
         ;;
 esac
 
-if [ "$UNAME" = "Windows" ]; then
-    RUN_ASAN=0
-fi
+set_defaults()
+{
+    RUN_C89=1
+    RUN_CPP14=1
+    RUN_RELEASE=1
+    [ "$UNAME" = "Windows" ] || RUN_ASAN=1
+}
 
-if [ $# -gt 0 ]; then
-    if [ "$1" = "default" ]; then
-        shift
-    else
-        RUN_C89=0
-        RUN_CPP14=0
-        RUN_RELEASE=0
-        RUN_ASAN=0
-    fi
-fi
+[ $# -gt 0 ] || set_defaults
 
 while [ $# -gt 0 ]; do
     case $1 in
-        c89)      RUN_C89=1      ;;
-        cpp14)    RUN_CPP14=1    ;;
-        release)  RUN_RELEASE=1  ;;
-        asan)     RUN_ASAN=1     ;;
-        valgrind) RUN_VALGRIND=1 ;;
-        gcov)     RUN_GCOV=1     ;;
-        seqfail)  RUN_SEQFAIL=1  ;;
-        madgc)    RUN_MADGC=1    ;;
-        *)        echo "Error: Unrecognized parameter - $1" >&2 ; exit 1
+        c89)          RUN_C89=1      ;;
+        cpp14)        RUN_CPP14=1    ;;
+        release)      RUN_RELEASE=1  ;;
+        asan)         RUN_ASAN=1     ;;
+        valgrind)     RUN_VALGRIND=1 ;;
+        gcov)         RUN_GCOV=1     ;;
+        seqfail)      RUN_SEQFAIL=1  ;;
+        madgc)        RUN_MADGC=1    ;;
+        default)      set_defaults   ;;
+        slowdispatch) export fastdispatch=0 ; set_defaults ;;
+        *)            echo "Error: Unrecognized parameter - $1" >&2 ; exit 1
     esac
     shift
 done
@@ -119,6 +121,7 @@ runtests()
     [ -n "$tool"   ] && WITH_TOOL=" with $tool"
     [ -n "$gcov"   ] && WITH_TOOL="$WITH_TOOL with gcov"
     [ -n "$mad_gc" ] && WITH_TOOL="$WITH_TOOL with mad GC"
+    [ -n "$fastdispatch" ] && [ "$fastdispatch" = "0" ] && WITH_TOOL=" with slow dispatch"
 
     if [ -n "$SANITIZER" ]; then
         local CFLAGS
@@ -221,9 +224,7 @@ fi
 
 unset debug
 if [ "$RUN_RELEASE" = "1" ]; then
-    export fastdispatch=0
     runtests c11 c++11
-    unset fastdispatch
 fi
 
 if [ "$RUN_GCOV" = "1" ]; then
