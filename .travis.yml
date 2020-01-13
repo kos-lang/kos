@@ -47,6 +47,17 @@ matrix:
         dist: bionic
         compiler: gcc
         script:
+          - export JOBS=16
+          - tests/run c89 release
+
+      - name: "PPC64LE"
+        if: branch != coverity_scan
+        arch: ppc64le
+        os: linux
+        dist: bionic
+        compiler: gcc
+        script:
+          - export JOBS=16
           - tests/run c89 release
 
       - name: "Slow Dispatch"
