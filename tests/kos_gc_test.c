@@ -2225,7 +2225,11 @@ int main(void)
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == num_pages + 1U);
             TEST(stats.num_pages_freed    == test_pages);
+#ifdef __powerpc64__
+            printf("stats.malloc_size=%u MODULE_SIZE=%u\n", (unsigned)stats.malloc_size, (unsigned)MODULE_SIZE);
+#else
             TEST(stats.malloc_size        == MODULE_SIZE);
+#endif
 #endif
 
             TEST(verify_full_pages(array) == KOS_SUCCESS);
