@@ -89,7 +89,9 @@ echo "Using $JOBS jobs"
 export TEST_CPUS="$JOBS"
 
 # Optimize for the current architecture
-export native=1
+if [ "$(uname -m)" != "ppc64le" ]; then
+    export native=1
+fi
 
 # Save for overriding
 ORIG_JOBS=$JOBS
