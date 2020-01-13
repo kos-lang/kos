@@ -57,8 +57,6 @@ matrix:
         dist: bionic
         compiler: gcc
         script:
-          - grep -c ^proc /proc/cpuinfo
-          - export JOBS=16
           - tests/run c89 release
 
       - name: "S390"
@@ -68,8 +66,7 @@ matrix:
         dist: bionic
         compiler: gcc
         script:
-          - grep -c ^proc /proc/cpuinfo
-          - uname -m
+          - getconf PAGESIZE
           - tests/run cpp14
 
       - name: "Slow Dispatch"

@@ -28,7 +28,7 @@
 #else
 #   define KOS_POOL_BITS        19
 #endif
-#if defined(__powerpc64__) || defined(CONFIG_MAD_GC)
+#if defined(__powerpc64__) || defined(__s390x__) || defined(CONFIG_MAD_GC)
 #   define KOS_PAGE_BITS        16
 #else
 #   define KOS_PAGE_BITS        12
