@@ -77,7 +77,7 @@ while [ $# -gt 0 ]; do
         seqfail)      RUN_SEQFAIL=1  ;;
         madgc)        RUN_MADGC=1    ;;
         default)      set_defaults   ;;
-        slowdispatch) export fastdispatch=0 ; set_defaults ;;
+        slowdispatch) export fastdispatch=0 ;;
         *)            echo "Error: Unrecognized parameter - $1" >&2 ; exit 1
     esac
     shift
