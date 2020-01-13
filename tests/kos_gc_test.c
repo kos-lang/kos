@@ -1450,6 +1450,26 @@ static KOS_OBJ_ID alloc_ballast(KOS_CONTEXT ctx,
     return obj_id;
 }
 
+static uint32_t off_heap_array_size(KOS_OBJ_ID obj_id)
+{
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
+
+    obj_id = OBJPTR(ARRAY, obj_id)->data;
+
+    if (IS_BAD_PTR(obj_id))
+        return 0U;
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY_STORAGE);
+
+    if (kos_is_heap_object(obj_id))
+        return 0U;
+
+    if ( ! kos_is_tracked_object(obj_id))
+        return 0U;
+
+    return kos_get_object_size(OBJPTR(ARRAY_STORAGE, obj_id)->header) + KOS_OBJ_TRACK_BIT;
+}
+
 int main(void)
 {
     KOS_INSTANCE   inst;
@@ -2225,11 +2245,7 @@ int main(void)
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == num_pages + 1U);
             TEST(stats.num_pages_freed    == test_pages);
-#ifdef __powerpc64__
-            printf("stats.malloc_size=%u MODULE_SIZE=%u\n", (unsigned)stats.malloc_size, (unsigned)MODULE_SIZE);
-#else
-            TEST(stats.malloc_size        == MODULE_SIZE);
-#endif
+            TEST(stats.malloc_size        == MODULE_SIZE + off_heap_array_size(ballast));
 #endif
 
             TEST(verify_full_pages(array) == KOS_SUCCESS);
