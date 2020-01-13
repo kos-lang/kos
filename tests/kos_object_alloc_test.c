@@ -241,23 +241,7 @@ int main(void)
             objects[j] = (*alloc[i].alloc_func)(ctx);
             TEST(objects[j]);
 
-#ifdef __s390x__
-            {
-#else
-            if (*((uint8_t *)objects[j]) != alloc[i].type) {
-#endif
-                uint8_t *bytes = (uint8_t *)objects[j];
-                printf("TEST at index %u, object %d\n", (unsigned)i, j);
-                printf("    allocated object at %p\n", objects[j]);
-                printf("    expected type %u\n", alloc[i].type);
-                printf("    got type %u\n", bytes[0]);
-                printf("    bytes <%02x %02x %02x %02x>\n", bytes[0], bytes[1], bytes[2], bytes[3]);
-                printf("    pointer size %u\n", (unsigned)sizeof(void*));
-                printf("    long size %u\n", (unsigned)sizeof(long));
-                printf("    int size %u\n", (unsigned)sizeof(int));
-            }
-
-            TEST(*((uint8_t *)objects[j]) == alloc[i].type);
+            TEST(kos_get_object_type(*(KOS_OBJ_HEADER *)objects[j]) == alloc[i].type);
 
             TEST(((intptr_t)objects[j] & 7) == 0);
 
