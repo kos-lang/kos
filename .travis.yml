@@ -57,8 +57,20 @@ matrix:
         dist: bionic
         compiler: gcc
         script:
+          - grep -c ^proc /proc/cpuinfo
           - export JOBS=16
           - tests/run c89 release
+
+      - name: "S390"
+        if: branch != coverity_scan
+        arch: s390x
+        os: linux
+        dist: bionic
+        compiler: gcc
+        script:
+          - grep -c ^proc /proc/cpuinfo
+          - uname -m
+          - tests/run cpp14
 
       - name: "Slow Dispatch"
         if: branch != coverity_scan
