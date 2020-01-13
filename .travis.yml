@@ -2,7 +2,8 @@ language: cpp
 
 matrix:
     include:
-      - name: "Ubuntu 18.04"
+      - name: "Ubuntu 18.04 + gcc-9"
+        if: branch != coverity_scan
         os: linux
         dist: bionic
         compiler: gcc
@@ -15,21 +16,40 @@ matrix:
         script:
           - tests/run default seqfail
 
+      - name: "Ubuntu 16.04"
+        if: branch != coverity_scan
+        os: linux
+        dist: xenial
+        compiler: gcc
+        script:
+          - tests/run c89 release
+
       - name: "Ubuntu 14.04"
+        if: branch != coverity_scan
         os: linux
         dist: trusty
         compiler: gcc
         script:
-          - tests/run c89
+          - tests/run c89 release
 
       - name: "Ubuntu 12.04"
+        if: branch != coverity_scan
         os: linux
         dist: precise
         compiler: gcc
         script:
-          - tests/run c89
+          - tests/run c89 release
+
+      - name: "Slow Dispatch"
+        if: branch != coverity_scan
+        os: linux
+        dist: bionic
+        compiler: gcc
+        script:
+          - tests/run slowdispatch
 
       - name: "Valgrind"
+        if: branch != coverity_scan
         os: linux
         dist: xenial
         compiler: gcc
@@ -41,6 +61,7 @@ matrix:
           - tests/run valgrind
 
       - name: "Mad GC"
+        if: branch != coverity_scan
         os: linux
         dist: xenial
         compiler: gcc
@@ -48,6 +69,7 @@ matrix:
           - tests/run madgc
 
       - name: "Coverage"
+        if: branch != coverity_scan
         os: linux
         dist: trusty
         compiler: gcc
@@ -68,6 +90,7 @@ matrix:
           - coveralls --exclude lib --exclude tests --no-gcov
 
       - name: "Coverity"
+        if: branch = coverity_scan
         os: linux
         dist: trusty
         compiler: gcc
@@ -86,6 +109,7 @@ matrix:
           - tests/run c89
 
       - name: "MacOSX"
+        if: branch != coverity_scan
         os: osx
         compiler: clang
         script:
