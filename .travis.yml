@@ -30,7 +30,7 @@ matrix:
         dist: trusty
         compiler: gcc
         script:
-          - tests/run c89 release slowdispatch
+          - tests/run c89 release slowdispatch # Buggy LTO in gcc-4.8
 
       - name: "Ubuntu 12.04"
         if: branch != coverity_scan
@@ -46,8 +46,9 @@ matrix:
         os: linux
         dist: bionic
         compiler: gcc
+        install:
+          - export JOBS=16 # WAR hang with 32 jobs
         script:
-          - export JOBS=16
           - tests/run c89 release
 
       - name: "PPC64LE"
@@ -59,7 +60,7 @@ matrix:
         script:
           - tests/run c89 release
 
-      - name: "S390"
+      - name: "IBM Z"
         if: branch != coverity_scan
         arch: s390x
         os: linux
@@ -74,7 +75,7 @@ matrix:
         dist: bionic
         compiler: gcc
         script:
-          - tests/run slowdispatch
+          - tests/run default slowdispatch
 
       - name: "Valgrind"
         if: branch != coverity_scan
