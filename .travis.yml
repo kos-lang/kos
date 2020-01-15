@@ -12,7 +12,7 @@ matrix:
           - sudo apt-get -q update
           - sudo apt-get -y install g++-9
         install:
-          - if [ "$CXX" = "g++" ]; then export CXX="g++-9" CC="gcc-9" GCOV="gcov-9"; fi
+          - export CXX=g++-9 CC=gcc-9
         script:
           - tests/run default seqfail
 
@@ -80,7 +80,7 @@ matrix:
       - name: "Valgrind"
         if: branch != coverity_scan
         os: linux
-        dist: xenial
+        dist: bionic
         compiler: gcc
         addons:
             apt:
@@ -92,7 +92,7 @@ matrix:
       - name: "Mad GC"
         if: branch != coverity_scan
         os: linux
-        dist: xenial
+        dist: bionic
         compiler: gcc
         script:
           - tests/run madgc
@@ -100,16 +100,8 @@ matrix:
       - name: "Coverage"
         if: branch != coverity_scan
         os: linux
-        dist: trusty
+        dist: bionic
         compiler: gcc
-        addons:
-            apt:
-                sources:
-                  - ubuntu-toolchain-r-test
-                packages:
-                  - g++-5
-        install:
-          - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5" GCOV="gcov-5"; fi
         before_install:
           - pip install --user urllib3[secure] # Fix for coveralls upload failure
           - pip install --user cpp-coveralls
@@ -121,7 +113,7 @@ matrix:
       - name: "Coverity"
         if: branch = coverity_scan
         os: linux
-        dist: trusty
+        dist: bionic
         compiler: gcc
         addons:
             coverity_scan:
