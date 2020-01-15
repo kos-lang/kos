@@ -558,6 +558,63 @@ void kos_unlock_mutex(KOS_MUTEX *mutex)
     LeaveCriticalSection(&(*mutex)->cs);
 }
 
+struct KOS_COND_VAR_OBJECT_S {
+    CONDITION_VARIABLE cond;
+};
+
+int kos_create_cond_var(KOS_COND_VAR *cond_var)
+{
+    int error = KOS_SUCCESS;
+
+    assert(cond_var);
+    *cond_var = (KOS_MUTEX)kos_malloc(sizeof(struct KOS_COND_VAR));
+
+    if (*cond_var)
+        InitializeConditionVariable(&(*cond_var)->cond);
+    else
+        error = KOS_ERROR_EXCEPTION;
+
+    return error;
+}
+
+void kos_cond_var_destroy(KOS_COND_VAR *cond_var)
+{
+    assert(cond_var && *cond_var);
+
+    kos_free(*mutex);
+}
+
+void kos_cond_var_signal(KOS_COND_VAR *cond_var)
+{
+    assert(cond_var && *cond_var);
+
+    WakeConditionVariable(&(*cond_var)->cond);
+}
+
+void kos_cond_var_broadcast(KOS_COND_VAR *cond_var)
+{
+    assert(cond_var && *cond_var);
+
+    WakeAllConditionVariable(&(*cond_var)->cond);
+}
+
+void kos_cond_var_wait(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex)
+{
+#ifndef NDEBUG
+    BOOL ok;
+#endif
+
+    assert(cond_var && *cond_var);
+    assert(mutex && *mutex);
+
+#ifndef NDEBUG
+    ok =
+#endif
+    SleepConditionVariableCS(&(*cond_var)->cond, &(*mutex)->cs, INFINITE);
+
+    assert(ok);
+}
+
 int kos_tls_create(KOS_TLS_KEY *key)
 {
     int   error   = KOS_SUCCESS;
@@ -661,6 +718,95 @@ void kos_unlock_mutex(KOS_MUTEX *mutex)
     ret =
 #endif
     pthread_mutex_unlock(&(*mutex)->mutex);
+
+    assert(ret == 0);
+}
+
+struct KOS_COND_VAR_OBJECT_S {
+    pthread_cond_t cond;
+};
+
+int kos_create_cond_var(KOS_COND_VAR *cond_var)
+{
+    int error = KOS_SUCCESS;
+
+    assert(cond_var);
+    *cond_var = (KOS_COND_VAR)kos_malloc(sizeof(struct KOS_COND_VAR_OBJECT_S));
+
+    if (*cond_var) {
+        if (kos_seq_fail() || pthread_cond_init(&(*cond_var)->cond, 0)) {
+            kos_free(*cond_var);
+            *cond_var = 0;
+            error = KOS_ERROR_OUT_OF_MEMORY;
+        }
+    }
+    else
+        error = KOS_ERROR_OUT_OF_MEMORY;
+
+    return error;
+}
+
+void kos_cond_var_destroy(KOS_COND_VAR *cond_var)
+{
+#ifndef NDEBUG
+    int ret;
+#endif
+
+    assert(cond_var && *cond_var);
+
+#ifndef NDEBUG
+    ret =
+#endif
+    pthread_cond_destroy(&(*cond_var)->cond);
+
+    assert(ret == 0);
+}
+
+void kos_cond_var_signal(KOS_COND_VAR *cond_var)
+{
+#ifndef NDEBUG
+    int ret;
+#endif
+
+    assert(cond_var && *cond_var);
+
+#ifndef NDEBUG
+    ret =
+#endif
+    pthread_cond_signal(&(*cond_var)->cond);
+
+    assert(ret == 0);
+}
+
+void kos_cond_var_broadcast(KOS_COND_VAR *cond_var)
+{
+#ifndef NDEBUG
+    int ret;
+#endif
+
+    assert(cond_var && *cond_var);
+
+#ifndef NDEBUG
+    ret =
+#endif
+    pthread_cond_broadcast(&(*cond_var)->cond);
+
+    assert(ret == 0);
+}
+
+void kos_cond_var_wait(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex)
+{
+#ifndef NDEBUG
+    int ret;
+#endif
+
+    assert(cond_var && *cond_var);
+    assert(mutex && *mutex);
+
+#ifndef NDEBUG
+    ret =
+#endif
+    pthread_cond_wait(&(*cond_var)->cond, &(*mutex)->mutex);
 
     assert(ret == 0);
 }

@@ -25,7 +25,8 @@
 
 #include "kos_object_base.h"
 
-typedef struct KOS_MUTEX_OBJECT_S *KOS_MUTEX;
+typedef struct KOS_MUTEX_OBJECT_S    *KOS_MUTEX;
+typedef struct KOS_COND_VAR_OBJECT_S *KOS_COND_VAR;
 
 #ifdef _WIN32
 typedef uint32_t KOS_TLS_KEY;
@@ -55,6 +56,12 @@ int kos_create_mutex(KOS_MUTEX *mutex);
 void kos_destroy_mutex(KOS_MUTEX *mutex);
 void kos_lock_mutex(KOS_MUTEX *mutex);
 void kos_unlock_mutex(KOS_MUTEX *mutex);
+
+int kos_create_cond_var(KOS_COND_VAR *cond_var);
+void kos_cond_var_destroy(KOS_COND_VAR *cond_var);
+void kos_cond_var_signal(KOS_COND_VAR *cond_var);
+void kos_cond_var_broadcast(KOS_COND_VAR *cond_var);
+void kos_cond_var_wait(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex);
 
 int   kos_tls_create(KOS_TLS_KEY *key);
 void  kos_tls_destroy(KOS_TLS_KEY key);
