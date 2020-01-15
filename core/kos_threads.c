@@ -567,7 +567,7 @@ int kos_create_cond_var(KOS_COND_VAR *cond_var)
     int error = KOS_SUCCESS;
 
     assert(cond_var);
-    *cond_var = (KOS_MUTEX)kos_malloc(sizeof(struct KOS_COND_VAR));
+    *cond_var = (KOS_COND_VAR)kos_malloc(sizeof(struct KOS_COND_VAR_OBJECT_S));
 
     if (*cond_var)
         InitializeConditionVariable(&(*cond_var)->cond);
@@ -581,7 +581,7 @@ void kos_cond_var_destroy(KOS_COND_VAR *cond_var)
 {
     assert(cond_var && *cond_var);
 
-    kos_free(*mutex);
+    kos_free(*cond_var);
 }
 
 void kos_cond_var_signal(KOS_COND_VAR *cond_var)
