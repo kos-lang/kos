@@ -46,8 +46,6 @@ matrix:
         os: linux
         dist: bionic
         compiler: gcc
-        install:
-          - export JOBS=16 # WAR hang with 32 jobs
         script:
           - tests/run c89 release
 
