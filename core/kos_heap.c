@@ -627,7 +627,7 @@ static int try_collect_garbage(KOS_CONTEXT ctx)
         return KOS_SUCCESS;
 
 #ifndef CONFIG_MAD_GC
-    if (heap->used_heap_size + heap->malloc_size > heap->gc_threshold ||
+    if (heap->used_heap_size > heap->gc_threshold ||
         heap->malloc_size > heap->max_malloc_size)
 #endif
     {
@@ -2314,7 +2314,7 @@ cleanup:
 
 static void update_gc_threshold(KOS_HEAP *heap)
 {
-    heap->gc_threshold = heap->used_heap_size + heap->malloc_size + KOS_GC_STEP;
+    heap->gc_threshold = heap->used_heap_size + KOS_GC_STEP;
 }
 
 static void engage_in_gc(KOS_CONTEXT ctx, enum GC_STATE_E new_state)
