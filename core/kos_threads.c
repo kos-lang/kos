@@ -577,28 +577,28 @@ int kos_create_cond_var(KOS_COND_VAR *cond_var)
     return error;
 }
 
-void kos_cond_var_destroy(KOS_COND_VAR *cond_var)
+void kos_destroy_cond_var(KOS_COND_VAR *cond_var)
 {
     assert(cond_var && *cond_var);
 
     kos_free(*cond_var);
 }
 
-void kos_cond_var_signal(KOS_COND_VAR *cond_var)
+void kos_signal_cond_var(KOS_COND_VAR *cond_var)
 {
     assert(cond_var && *cond_var);
 
     WakeConditionVariable(&(*cond_var)->cond);
 }
 
-void kos_cond_var_broadcast(KOS_COND_VAR *cond_var)
+void kos_broadcast_cond_var(KOS_COND_VAR *cond_var)
 {
     assert(cond_var && *cond_var);
 
     WakeAllConditionVariable(&(*cond_var)->cond);
 }
 
-void kos_cond_var_wait(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex)
+void kos_wait_cond_var(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex)
 {
 #ifndef NDEBUG
     BOOL ok;
@@ -746,7 +746,7 @@ int kos_create_cond_var(KOS_COND_VAR *cond_var)
     return error;
 }
 
-void kos_cond_var_destroy(KOS_COND_VAR *cond_var)
+void kos_destroy_cond_var(KOS_COND_VAR *cond_var)
 {
 #ifndef NDEBUG
     int ret;
@@ -764,7 +764,7 @@ void kos_cond_var_destroy(KOS_COND_VAR *cond_var)
     kos_free(*cond_var);
 }
 
-void kos_cond_var_signal(KOS_COND_VAR *cond_var)
+void kos_signal_cond_var(KOS_COND_VAR *cond_var)
 {
 #ifndef NDEBUG
     int ret;
@@ -780,7 +780,7 @@ void kos_cond_var_signal(KOS_COND_VAR *cond_var)
     assert(ret == 0);
 }
 
-void kos_cond_var_broadcast(KOS_COND_VAR *cond_var)
+void kos_broadcast_cond_var(KOS_COND_VAR *cond_var)
 {
 #ifndef NDEBUG
     int ret;
@@ -796,7 +796,7 @@ void kos_cond_var_broadcast(KOS_COND_VAR *cond_var)
     assert(ret == 0);
 }
 
-void kos_cond_var_wait(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex)
+void kos_wait_cond_var(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex)
 {
 #ifndef NDEBUG
     int ret;

@@ -188,15 +188,15 @@ int kos_heap_init(KOS_INSTANCE *inst)
 
     error = kos_create_cond_var(&heap->walk_cond);
     if (error) {
-        kos_cond_var_destroy(&heap->engagement_cond);
+        kos_destroy_cond_var(&heap->engagement_cond);
         kos_destroy_mutex(&heap->mutex);
         return error;
     }
 
     error = kos_create_cond_var(&heap->helper_cond);
     if (error) {
-        kos_cond_var_destroy(&heap->walk_cond);
-        kos_cond_var_destroy(&heap->engagement_cond);
+        kos_destroy_cond_var(&heap->walk_cond);
+        kos_destroy_cond_var(&heap->engagement_cond);
         kos_destroy_mutex(&heap->mutex);
         return error;
     }
@@ -362,9 +362,9 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
         kos_free(pool);
     }
 
-    kos_cond_var_destroy(&inst->heap.helper_cond);
-    kos_cond_var_destroy(&inst->heap.walk_cond);
-    kos_cond_var_destroy(&inst->heap.engagement_cond);
+    kos_destroy_cond_var(&inst->heap.helper_cond);
+    kos_destroy_cond_var(&inst->heap.walk_cond);
+    kos_destroy_cond_var(&inst->heap.engagement_cond);
     kos_destroy_mutex(&inst->heap.mutex);
 }
 
@@ -419,7 +419,7 @@ static KOS_PAGE *get_next_page(KOS_HEAP *heap)
 
 static void release_helper_threads(KOS_HEAP *heap)
 {
-    kos_cond_var_broadcast(&heap->helper_cond);
+    kos_broadcast_cond_var(&heap->helper_cond);
 }
 
 static int begin_page_walk(KOS_HEAP               *heap,
@@ -447,10 +447,10 @@ static void end_page_walk(KOS_HEAP               *heap,
 
     if (--heap->walk_threads == 0) {
         if (helper)
-            kos_cond_var_signal(&heap->walk_cond);
+            kos_signal_cond_var(&heap->walk_cond);
     }
     else if ( ! helper) {
-        do kos_cond_var_wait(&heap->walk_cond, &heap->mutex);
+        do kos_wait_cond_var(&heap->walk_cond, &heap->mutex);
         while (heap->walk_threads);
     }
 }
@@ -1095,7 +1095,7 @@ static void stop_the_world(KOS_INSTANCE *inst)
         if ( ! num_to_stop)
             break;
 
-        kos_cond_var_wait(&heap->engagement_cond, &heap->mutex);
+        kos_wait_cond_var(&heap->engagement_cond, &heap->mutex);
     }
 }
 
@@ -2325,7 +2325,7 @@ static void engage_in_gc(KOS_CONTEXT ctx, enum GC_STATE_E new_state)
 
     if (heap->gc_state == GC_INIT) {
         if (--heap->threads_to_stop == 0)
-            kos_cond_var_signal(&heap->engagement_cond);
+            kos_signal_cond_var(&heap->engagement_cond);
     }
     else {
         assert( ! heap->threads_to_stop);
@@ -2374,7 +2374,7 @@ static void help_gc(KOS_CONTEXT ctx)
 
         /* Wait for GC state to change or for more pages to be available for
          * processing by helper threads. */
-        kos_cond_var_wait(&heap->helper_cond, &heap->mutex);
+        kos_wait_cond_var(&heap->helper_cond, &heap->mutex);
 
         gc_state = (enum GC_STATE_E)heap->gc_state;
 

@@ -58,10 +58,10 @@ void kos_lock_mutex(KOS_MUTEX *mutex);
 void kos_unlock_mutex(KOS_MUTEX *mutex);
 
 int kos_create_cond_var(KOS_COND_VAR *cond_var);
-void kos_cond_var_destroy(KOS_COND_VAR *cond_var);
-void kos_cond_var_signal(KOS_COND_VAR *cond_var);
-void kos_cond_var_broadcast(KOS_COND_VAR *cond_var);
-void kos_cond_var_wait(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex);
+void kos_destroy_cond_var(KOS_COND_VAR *cond_var);
+void kos_signal_cond_var(KOS_COND_VAR *cond_var);
+void kos_broadcast_cond_var(KOS_COND_VAR *cond_var);
+void kos_wait_cond_var(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex);
 
 int   kos_tls_create(KOS_TLS_KEY *key);
 void  kos_tls_destroy(KOS_TLS_KEY key);
