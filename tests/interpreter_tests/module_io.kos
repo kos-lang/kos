@@ -478,9 +478,9 @@ do {
 
         # Temporary, for debugging intermittent failures on Linux
         if info.atime / 1_000_000 < time_before {
-            base.print("into.atime=\(into.atime)")
-            base.print("into.mtime=\(into.mtime)")
-            base.print("into.ctime=\(into.ctime)")
+            base.print("info.atime=\(info.atime)")
+            base.print("info.mtime=\(info.mtime)")
+            base.print("info.ctime=\(info.ctime)")
             base.print("time_before=\(time_before)")
         }
 
