@@ -940,12 +940,16 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     if (pos < 0)
         whence = SEEK_END;
 
+    kos_track_refs(ctx, 1, &this_obj);
+
     KOS_suspend_context(ctx);
 
     if (fseek(file, (long)pos, whence))
         RAISE_EXCEPTION(str_err_cannot_set_position);
 
     KOS_resume_context(ctx);
+
+    kos_untrack_refs(ctx, 1);
 
 cleanup:
     return error ? KOS_BADPTR : this_obj;
