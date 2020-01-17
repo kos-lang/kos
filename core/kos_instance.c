@@ -127,7 +127,7 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
 
     ctx->next             = 0;
     ctx->prev             = 0;
-    ctx->gc_state         = 0;
+    ctx->gc_state         = GC_SUSPENDED;
     ctx->inst             = inst;
     ctx->cur_page         = 0;
     ctx->thread_obj       = KOS_BADPTR;
@@ -185,13 +185,11 @@ static void unregister_thread(KOS_INSTANCE *inst,
         ctx->local_refs = next;
     }
 
-    kos_heap_release_thread_page(ctx);
-
     KOS_suspend_context(ctx);
 
     kos_tls_set(inst->threads.thread_key, 0);
 
-    kos_lock_mutex(&inst->threads.mutex);
+    kos_lock_mutex(&inst->threads.ctx_mutex);
 
     if (ctx->prev)
         ctx->prev->next = ctx->next;
@@ -199,7 +197,7 @@ static void unregister_thread(KOS_INSTANCE *inst,
     if (ctx->next)
         ctx->next->prev = ctx->prev;
 
-    kos_unlock_mutex(&inst->threads.mutex);
+    kos_unlock_mutex(&inst->threads.ctx_mutex);
 }
 
 int KOS_instance_register_thread(KOS_INSTANCE *inst,
@@ -208,9 +206,6 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     int error;
 
     init_context(ctx, inst);
-
-    /* Note: register_thread() calls KOS_resume_context() */
-    KOS_suspend_context(ctx);
 
 #if defined(CONFIG_THREADS) && (CONFIG_THREADS == 0)
     {
@@ -221,7 +216,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     error = KOS_ERROR_EXCEPTION;
 #else
 
-    kos_lock_mutex(&inst->threads.mutex);
+    kos_lock_mutex(&inst->threads.ctx_mutex);
 
     ctx->prev                      = &inst->threads.main_thread;
     ctx->next                      = inst->threads.main_thread.next;
@@ -229,7 +224,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     if (ctx->next)
         ctx->next->prev            = ctx;
 
-    kos_unlock_mutex(&inst->threads.mutex);
+    kos_unlock_mutex(&inst->threads.ctx_mutex);
 
     error = register_thread(inst, ctx);
 
@@ -384,14 +379,14 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     clear_instance(inst);
 
     TRY(kos_tls_create(&inst->threads.thread_key));
-    error = kos_create_mutex(&inst->threads.mutex);
+    error = kos_create_mutex(&inst->threads.ctx_mutex);
     if (error) {
         kos_tls_destroy(inst->threads.thread_key);
         goto cleanup;
     }
     error = kos_create_mutex(&inst->threads.new_mutex);
     if (error) {
-        kos_destroy_mutex(&inst->threads.mutex);
+        kos_destroy_mutex(&inst->threads.ctx_mutex);
         kos_tls_destroy(inst->threads.thread_key);
         goto cleanup;
     }
@@ -406,8 +401,6 @@ int KOS_instance_init(KOS_INSTANCE *inst,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     memset((void *)inst->threads.threads, 0, sizeof(KOS_THREAD *) * inst->threads.max_threads);
 
-    /* Note: register_thread() calls KOS_resume_context() */
-    KOS_suspend_context(&inst->threads.main_thread);
     TRY(register_thread(inst, &inst->threads.main_thread));
 
     ctx = &inst->threads.main_thread;
@@ -463,7 +456,7 @@ cleanup:
         if (thread_ok) {
             kos_tls_destroy(inst->threads.thread_key);
             kos_destroy_mutex(&inst->threads.new_mutex);
-            kos_destroy_mutex(&inst->threads.mutex);
+            kos_destroy_mutex(&inst->threads.ctx_mutex);
         }
 
         if (inst->threads.threads)
@@ -517,7 +510,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     kos_tls_destroy(inst->threads.thread_key);
 
     kos_destroy_mutex(&inst->threads.new_mutex);
-    kos_destroy_mutex(&inst->threads.mutex);
+    kos_destroy_mutex(&inst->threads.ctx_mutex);
 
     kos_free((void *)inst->threads.threads);
 

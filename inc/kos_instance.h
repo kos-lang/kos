@@ -40,14 +40,9 @@ typedef struct KOS_PAGE_LIST_S {
     KOS_PAGE *tail;
 } KOS_PAGE_LIST;
 
-typedef struct KOS_PAGE_WALK_S {
-    KOS_ATOMIC(KOS_PAGE *) pages;       /* List of pages remaining  */
-    KOS_ATOMIC(uint32_t)   num_threads; /* Number of active threads */
-} KOS_PAGE_WALK;
-
 typedef struct KOS_HEAP_S {
     KOS_MUTEX              mutex;
-    KOS_ATOMIC(uint32_t)   gc_state;       /* Says what the GC is doing                      */
+    uint32_t               gc_state;       /* Says what the GC is doing                      */
     uint32_t               heap_size;      /* Total num bytes allocated for the heap         */
     uint32_t               used_heap_size; /* Num bytes allocated for objects on heap        */
     uint32_t               malloc_size;    /* Num bytes allocated for objs with malloc       */
@@ -58,11 +53,15 @@ typedef struct KOS_HEAP_S {
     KOS_PAGE_LIST          used_pages;     /* Pages which contain objects                    */
     KOS_POOL              *pools;          /* Allocated memory for heap, in page pools       */
 
-    KOS_ATOMIC(KOS_PAGE *) gray_pages;     /* Page pointer for gray-to-black marking         */
+    KOS_ATOMIC(KOS_PAGE *) walk_pages;     /* Multi-threaded page marking/updating           */
     KOS_ATOMIC(uint32_t)   gray_marked;    /* Number of objects marked                       */
-    KOS_ATOMIC(uint32_t)   gc_cycles;      /* Number of GC cycles started                    */
-    KOS_PAGE_WALK          walk_mark;      /* Multi-threaded page marking                    */
-    KOS_PAGE_WALK          walk_update;    /* Multi-threaded page update after evacuation    */
+    uint32_t               walk_threads;   /* Number of threads helping with page walking    */
+    uint32_t               threads_to_stop;/* Number of threads on which GC is waiting       */
+    uint32_t               gc_cycles;      /* Number of GC cycles started                    */
+
+    KOS_COND_VAR           engagement_cond;
+    KOS_COND_VAR           walk_cond;
+    KOS_COND_VAR           helper_cond;
 
 #ifdef CONFIG_MAD_GC
     struct KOS_LOCKED_PAGES_S *locked_pages_first;
@@ -161,7 +160,7 @@ struct KOS_MODULE_MGMT_S {
 struct KOS_THREAD_MGMT_S {
     KOS_TLS_KEY                 thread_key;  /* TLS key for current context ptr */
     struct KOS_THREAD_CONTEXT_S main_thread; /* Main thread's context           */
-    KOS_MUTEX                   mutex;       /* Mutex for registering threads   */
+    KOS_MUTEX                   ctx_mutex;   /* Mutex for registering contexts  */
     KOS_MUTEX                   new_mutex;   /* Mutex for creating threads      */
     KOS_ATOMIC(KOS_THREAD *)   *threads;     /* Array of thread objects         */
     KOS_ATOMIC(uint32_t)        num_threads; /* Number of used thread slots     */

@@ -31,6 +31,20 @@ typedef enum KOS_ALLOC_FLAG_E {
     KOS_ALLOC_IMMOVABLE
 } KOS_ALLOC_FLAG;
 
+enum GC_STATE_E {
+    GC_INACTIVE,
+
+    /* ctx->gc_state */
+    GC_SUSPENDED,
+    GC_ENGAGED,
+
+    /* heap->gc_state */
+    GC_INIT,
+    GC_MARK,
+    GC_EVACUATE,
+    GC_UPDATE
+};
+
 int   kos_heap_init(KOS_INSTANCE *inst);
 
 void  kos_heap_destroy(KOS_INSTANCE *inst);
