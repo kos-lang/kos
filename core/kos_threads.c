@@ -760,6 +760,8 @@ void kos_cond_var_destroy(KOS_COND_VAR *cond_var)
     pthread_cond_destroy(&(*cond_var)->cond);
 
     assert(ret == 0);
+
+    kos_free(*cond_var);
 }
 
 void kos_cond_var_signal(KOS_COND_VAR *cond_var)
