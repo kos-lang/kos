@@ -1200,26 +1200,29 @@ void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
     ctx->local_list = local;
 }
 
-void KOS_init_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals)
+void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
 {
-    KOS_LOCAL *tail;
+    va_list     args;
+    KOS_LOCAL  *head = 0;
+    KOS_LOCAL **prev = &head;
 
-    if ( ! num_locals)
-        return;
+    assert(num_locals);
 
-    tail            = ctx->local_list;
-    ctx->local_list = locals;
+    va_start(args, num_locals);
 
     for ( ; num_locals; --num_locals) {
-        KOS_LOCAL *next = locals + 1;
+        KOS_LOCAL *local = (KOS_LOCAL *)va_arg(args, KOS_LOCAL *);
 
-        locals->next   = next;
-        locals->obj_id = KOS_BADPTR;
-        locals         = next;
+        *prev = local;
+        prev  = &local->next;
+
+        local->obj_id = KOS_BADPTR;
     }
 
-    --locals;
-    locals->next = tail;
+    *prev           = ctx->local_list;
+    ctx->local_list = head;
+
+    va_end(args);
 }
 
 void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
@@ -1250,35 +1253,38 @@ void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
 #endif
 }
 
-void KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals)
+void KOS_destroy_locals(KOS_CONTEXT ctx, int num_locals, KOS_LOCAL *local)
 {
-    KOS_LOCAL **prev_next;
+    KOS_LOCAL  *next;
+    KOS_LOCAL **prev_next = &ctx->local_list;
 
-    if ( ! ctx)
-        return;
-
-    prev_next = &ctx->local_list;
+    assert(num_locals);
 
     for (;;) {
         KOS_LOCAL *next_ptr = *prev_next;
 
         assert(next_ptr);
 
-        if (next_ptr == locals)
+        if (next_ptr == local)
             break;
 
         prev_next = &next_ptr->next;
     }
 
-    *prev_next = locals[num_locals - 1].next;
+    for (;;) {
+        --num_locals;
+        next = local->next;
 
 #ifndef NDEBUG
-    for ( ; num_locals; --num_locals, ++locals) {
-        if (num_locals > 1)
-            assert(locals->next == locals + 1);
-
-        locals->next   = 0;
-        locals->obj_id = KOS_BADPTR;
-    }
+        local->next   = 0;
+        local->obj_id = KOS_BADPTR;
 #endif
+
+        if ( ! num_locals)
+            break;
+
+        local = next;
+    }
+
+    *prev_next = next;
 }

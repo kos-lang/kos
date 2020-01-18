@@ -1750,7 +1750,7 @@ int main(void)
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
-        KOS_init_locals(ctx, local, NELEMS(local));
+        KOS_init_locals(ctx, 3, &local[0], &local[1], &local[2]);
 
         for (i = 0; i < NELEMS(local); i++) {
             local[i].obj_id = KOS_new_object(ctx);
@@ -1767,7 +1767,7 @@ int main(void)
             TEST(finalized[i] == 0);
 
         /* Destroy locals, objects not tracked by GC anymore */
-        KOS_destroy_locals(ctx, local, 3);
+        KOS_destroy_locals(ctx, 3, &local[0]);
 #ifndef NDEBUG
         for (i = 0; i < NELEMS(local); i++)
             TEST(IS_BAD_PTR(local[i].obj_id));

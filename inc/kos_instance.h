@@ -291,11 +291,11 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
 
 void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
-void KOS_init_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals);
+void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...);
 
 void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
-void KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals);
+void KOS_destroy_locals(KOS_CONTEXT ctx, int num_locals, KOS_LOCAL *local);
 
 typedef struct KOS_GC_STATS_S {
     unsigned num_objs_evacuated;
