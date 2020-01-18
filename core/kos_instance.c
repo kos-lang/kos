@@ -1253,38 +1253,34 @@ void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
 #endif
 }
 
-void KOS_destroy_locals(KOS_CONTEXT ctx, int num_locals, KOS_LOCAL *local)
+void KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last)
 {
-    KOS_LOCAL  *next;
     KOS_LOCAL **prev_next = &ctx->local_list;
-
-    assert(num_locals);
 
     for (;;) {
         KOS_LOCAL *next_ptr = *prev_next;
 
         assert(next_ptr);
 
-        if (next_ptr == local)
+        if (next_ptr == first)
             break;
 
         prev_next = &next_ptr->next;
     }
 
-    for (;;) {
-        --num_locals;
-        next = local->next;
+    *prev_next = last->next;
 
 #ifndef NDEBUG
-        local->next = 0;
-        local->o    = KOS_BADPTR;
-#endif
+    for (;;) {
+        KOS_LOCAL *next = first->next;
 
-        if ( ! num_locals)
+        first->next = 0;
+        first->o    = KOS_BADPTR;
+
+        if (first == last)
             break;
 
-        local = next;
+        first = next;
     }
-
-    *prev_next = next;
+#endif
 }

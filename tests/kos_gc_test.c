@@ -1767,7 +1767,7 @@ int main(void)
             TEST(finalized[i] == 0);
 
         /* Destroy locals, objects not tracked by GC anymore */
-        KOS_destroy_locals(ctx, 3, &local[0]);
+        KOS_destroy_locals(ctx, &local[0], &local[2]);
 #ifndef NDEBUG
         for (i = 0; i < NELEMS(local); i++)
             TEST(IS_BAD_PTR(local[i].o));
