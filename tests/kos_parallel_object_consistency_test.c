@@ -25,10 +25,11 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
-#include "../core/kos_system.h"
+#include "../core/kos_math.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
+#include "../core/kos_system.h"
 #include "kos_test_tools.h"
 
 struct TEST_DATA {
@@ -122,11 +123,23 @@ static KOS_OBJ_ID test_thread_func(KOS_CONTEXT ctx,
     return KOS_is_exception_pending(ctx) ? KOS_BADPTR : KOS_VOID;
 }
 
+static int calc_props_per_th(int desired_value, int num_threads)
+{
+    const int step = 8;
+
+    assert(num_threads >= 2);
+    num_threads = KOS_align_up(num_threads, step) / step;
+
+    desired_value /= num_threads;
+
+    return desired_value > 2 ? desired_value : 2;
+}
+
 int main(void)
 {
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
-    const int    num_cpus = get_num_cpus();
+    const int    num_threads = get_num_cpus();
 
     TEST(KOS_instance_init(&inst, 0, &ctx) == KOS_SUCCESS);
 
@@ -144,21 +157,16 @@ int main(void)
         const int           num_loops        = 1024;
 #endif
         const int           num_thread_loops = 3;
-        const int           max_props_per_th = 16;
+        const int           max_props_per_th = calc_props_per_th(16, num_threads);
         KOS_VECTOR          mem_buf;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
         KOS_THREAD        **threads          = 0;
-        int                 num_threads      = 0;
         int                 num_props;
         KOS_OBJ_ID         *props;
         KOS_OBJ_ID          prev_locals;
         int                 i_loop;
         int                 i;
-
-        num_threads = num_cpus;
-        if (num_threads < 2)
-            num_threads = 2;
 
         num_props = num_threads * max_props_per_th;
 

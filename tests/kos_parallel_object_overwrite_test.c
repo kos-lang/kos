@@ -145,7 +145,7 @@ int main(void)
     {
         KOS_VECTOR          mem_buf;
         KOS_THREAD        **threads     = 0;
-        int                 num_threads = 0;
+        const int           num_threads = num_cpus > 2 ? num_cpus - 1 : num_cpus;
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
         int                 i;
@@ -167,11 +167,6 @@ int main(void)
         data.object = KOS_new_object(ctx);
         TEST(!IS_BAD_PTR(data.object));
 
-        num_threads = num_cpus;
-
-        if (num_threads > 2)
-            --num_threads; /* The main thread participates */
-
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
                 num_threads * (sizeof(KOS_OBJ_ID) + sizeof(struct THREAD_DATA))
@@ -189,6 +184,8 @@ int main(void)
 #endif
         data.go         = 0;
         data.error      = KOS_SUCCESS;
+
+        data.num_loops /= (num_threads >> 2) + 1;
 
         for (i = 0; i < num_threads; i++) {
             thread_cookies[i].test      = &data;
