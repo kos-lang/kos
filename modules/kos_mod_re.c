@@ -44,22 +44,21 @@ static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int        error;
-    int        pushed    = 0;
-    KOS_OBJ_ID regex_str = KOS_BADPTR;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL regex_str;
 
     assert(KOS_get_array_size(args_obj) > 0);
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &regex_str));
+    KOS_init_locals(ctx, 1, &regex_str);
 
-    regex_str = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(regex_str);
+    regex_str.o = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(regex_str.o);
 
-    if (GET_OBJ_TYPE(regex_str) != OBJ_STRING)
+    if (GET_OBJ_TYPE(regex_str.o) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_regex_not_a_string);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_locals(ctx, 1, &regex_str);
 
     return error ? KOS_BADPTR : KOS_VOID;
 }
