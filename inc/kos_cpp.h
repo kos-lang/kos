@@ -280,13 +280,6 @@ class handle {
             local_.obj_id = h.local_.obj_id;
         }
 
-#ifdef KOS_CPP11
-        // Explicitly silence Coverity.  Coverity insists on move assignment
-        // operator, but it has no benefit here, since we have to register
-        // a new pointer anyway.
-        handle& operator=(handle&&) = delete;
-#endif
-
         handle& operator=(const handle& h) {
             if ( ! local_.ctx && local_.ctx != h.local_.ctx)
                 KOS_init_local(h.local_.ctx, &local_);
