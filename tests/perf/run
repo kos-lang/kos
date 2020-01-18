@@ -52,6 +52,7 @@ die()
 
 KOS=1
 PY=1
+PY3=0
 JS=1
 
 if [ -n "$JS_INTERPRETER" ]; then
@@ -68,6 +69,7 @@ if [ $# -gt 0 ]; then
         case "$1" in
             kos) KOS=1 ;;
             py)  PY=1  ;;
+            py3) PY=1 ; PY3=1 ;;
             js)  JS=1  ;;
             *)   die "Invalid option: $1"
         esac
@@ -105,6 +107,7 @@ runtest()
     local PREFIX
     PREFIX=""
 
+    echo "$SCRIPT" | grep -q "\.py$" && [ $PY3 = 1 ] && PREFIX=python3
     echo "$SCRIPT" | grep -q "\.kos$" && PREFIX=Out/release/interpreter/kos
     echo "$SCRIPT" | grep -q "\.js$"  && PREFIX="$JS_INTERPRETER/Out/release/js/js"
 
