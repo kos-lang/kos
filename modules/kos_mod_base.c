@@ -38,36 +38,36 @@
 #include <memory.h>
 #include <stdio.h>
 
-static const char str_err_already_joined[]           = "thread already joined";
-static const char str_err_args_not_array[]           = "function arguments are not an array";
-static const char str_err_bad_number[]               = "number parse failed";
-static const char str_err_bad_pack_value[]           = "invalid value type for pack format";
-static const char str_err_cannot_convert_to_array[]  = "unsupported type passed to array class";
-static const char str_err_cannot_convert_to_buffer[] = "unsupported type passed to buffer class";
-static const char str_err_cannot_convert_to_string[] = "unsupported type passed to string class";
-static const char str_err_invalid_array_size[]       = "array size out of range";
-static const char str_err_invalid_byte_value[]       = "buffer element value out of range";
-static const char str_err_invalid_char_code[]        = "invalid character code";
-static const char str_err_invalid_buffer_size[]      = "buffer size out of range";
-static const char str_err_invalid_key_type[]         = "invalid key type, must be function or void";
-static const char str_err_invalid_pack_format[]      = "invalid pack format";
-static const char str_err_invalid_reverse_type[]     = "invalid reverse type, must be boolean";
-static const char str_err_invalid_string[]           = "invalid string";
-static const char str_err_invalid_string_idx[]       = "string index is out of range";
-static const char str_err_join_self[]                = "thread cannot join itself";
-static const char str_err_not_array[]                = "object is not an array";
-static const char str_err_not_boolean[]              = "object is not a boolean";
-static const char str_err_not_buffer[]               = "object is not a buffer";
-static const char str_err_not_class[]                = "object is not a class";
-static const char str_err_not_enough_pack_values[]   = "insufficient number of packed values";
-static const char str_err_not_function[]             = "object is not a function";
-static const char str_err_not_generator[]            = "object is not a generator";
-static const char str_err_not_string[]               = "object is not a string";
-static const char str_err_not_thread[]               = "object is not a thread";
-static const char str_err_too_many_repeats[]         = "invalid string repeat count";
-static const char str_err_unpack_buf_too_short[]     = "unpacked buffer too short";
-static const char str_err_unsup_operand_types[]      = "unsupported operand types";
-static const char str_err_use_async[]                = "use async to launch threads";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_already_joined,           "thread already joined");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_args_not_array,           "function arguments are not an array");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_number,               "number parse failed");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_pack_value,           "invalid value type for pack format");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_convert_to_array,  "unsupported type passed to array class");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_convert_to_buffer, "unsupported type passed to buffer class");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_convert_to_string, "unsupported type passed to string class");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_array_size,       "array size out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,       "buffer element value out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_char_code,        "invalid character code");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_buffer_size,      "buffer size out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_key_type,         "invalid key type, must be function or void");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_pack_format,      "invalid pack format");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_reverse_type,     "invalid reverse type, must be boolean");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string,           "invalid string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string_idx,       "string index is out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_join_self,                "thread cannot join itself");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,                "object is not an array");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_boolean,              "object is not a boolean");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,               "object is not a buffer");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_class,                "object is not a class");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_enough_pack_values,   "insufficient number of packed values");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_function,             "object is not a function");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,            "object is not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,               "object is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_thread,               "object is not a thread");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats,         "invalid string repeat count");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_unpack_buf_too_short,     "unpacked buffer too short");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types,      "unsupported operand types");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_use_async,                "use async to launch threads");
 
 #define TRY_CREATE_CONSTRUCTOR(name, module)               \
 do {                                                       \
@@ -339,13 +339,13 @@ static KOS_OBJ_ID number_constructor(KOS_CONTEXT ctx,
                     }
                 }
                 else
-                    KOS_raise_exception_cstring(ctx, str_err_bad_number);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_bad_number));
             }
 
             kos_vector_destroy(&cstr);
         }
         else
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
     }
 
     return ret;
@@ -418,7 +418,7 @@ static KOS_OBJ_ID integer_constructor(KOS_CONTEXT ctx,
                 error = kos_parse_int(begin, end, &value);
 
                 if (error)
-                    KOS_raise_exception_cstring(ctx, str_err_bad_number);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_bad_number));
                 else
                     ret = KOS_new_int(ctx, value);
             }
@@ -426,7 +426,7 @@ static KOS_OBJ_ID integer_constructor(KOS_CONTEXT ctx,
             kos_vector_destroy(&cstr);
         }
         else if ( ! IS_BAD_PTR(arg))
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
     }
 
     return ret;
@@ -508,7 +508,7 @@ static KOS_OBJ_ID float_constructor(KOS_CONTEXT ctx,
                 error = kos_parse_double(begin, end, &value);
 
                 if (error)
-                    KOS_raise_exception_cstring(ctx, str_err_bad_number);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_bad_number));
                 else
                     ret = KOS_new_float(ctx, value);
             }
@@ -518,7 +518,7 @@ static KOS_OBJ_ID float_constructor(KOS_CONTEXT ctx,
         }
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             break;
     }
 
@@ -665,7 +665,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                     KOS_FUNCTION_STATE state;
 
                     if ( ! KOS_is_generator(obj, &state))
-                        RAISE_EXCEPTION(str_err_cannot_convert_to_string);
+                        RAISE_EXCEPTION_STR(str_err_cannot_convert_to_string);
 
                     if (IS_BAD_PTR(substrings)) {
                         substrings = KOS_new_array(ctx, 32);
@@ -703,7 +703,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                                     TRY(KOS_get_integer(ctx, ret, &value));
 
                                     if (value < 0 || value > 0x1FFFFF)
-                                        RAISE_EXCEPTION(str_err_invalid_char_code);
+                                        RAISE_EXCEPTION_STR(str_err_invalid_char_code);
 
                                     if (IS_BAD_PTR(codes)) {
                                         codes = KOS_new_array(ctx, 128);
@@ -743,7 +743,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                                     break;
 
                                 default:
-                                    RAISE_EXCEPTION(str_err_cannot_convert_to_string);
+                                    RAISE_EXCEPTION_STR(str_err_cannot_convert_to_string);
                             }
                         }
 
@@ -762,7 +762,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                 }
 
                 default:
-                    RAISE_EXCEPTION(str_err_cannot_convert_to_string);
+                    RAISE_EXCEPTION_STR(str_err_cannot_convert_to_string);
             }
 
             TRY_OBJID(obj);
@@ -972,7 +972,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
         TRY(KOS_get_integer(ctx, arg, &size));
 
         if (size < 0 || size > INT_MAX)
-            RAISE_EXCEPTION(str_err_invalid_array_size);
+            RAISE_EXCEPTION_STR(str_err_invalid_array_size);
 
         if (num_args == 2) {
             arg = KOS_array_read(ctx, args_obj, 1);
@@ -1113,7 +1113,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
                 KOS_FUNCTION_STATE state;
 
                 if ( ! KOS_is_generator(arg, &state)) {
-                    KOS_raise_exception_cstring(ctx, str_err_cannot_convert_to_array);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_cannot_convert_to_array));
                     return KOS_BADPTR;
                 }
 
@@ -1149,7 +1149,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
             }
 
             default:
-                KOS_raise_exception_cstring(ctx, str_err_cannot_convert_to_array);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_cannot_convert_to_array));
                 return KOS_BADPTR;
         }
 
@@ -1243,7 +1243,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
             TRY(KOS_get_integer(ctx, arg, &size));
 
             if (size < 0 || size > INT_MAX)
-                RAISE_EXCEPTION(str_err_invalid_buffer_size);
+                RAISE_EXCEPTION_STR(str_err_invalid_buffer_size);
 
             if (num_args == 2) {
                 arg = KOS_array_read(ctx, args_obj, 1);
@@ -1252,7 +1252,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
                 TRY(KOS_get_integer(ctx, arg, &value));
 
                 if (value < 0 || value > 255)
-                    RAISE_EXCEPTION(str_err_cannot_convert_to_buffer);
+                    RAISE_EXCEPTION_STR(str_err_cannot_convert_to_buffer);
 
                 ++i_arg;
             }
@@ -1289,7 +1289,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
                     TRY(KOS_get_integer(ctx, elem, &value));
 
                     if (value < 0 || value > 255)
-                        RAISE_EXCEPTION(str_err_invalid_byte_value);
+                        RAISE_EXCEPTION_STR(str_err_invalid_byte_value);
 
                     *(data++) = (uint8_t)(uint64_t)value;
                 }
@@ -1299,10 +1299,8 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
             case OBJ_STRING: {
                 const uint32_t size = KOS_string_to_utf8(arg, 0, 0);
 
-                if (size == ~0U) {
-                    KOS_raise_exception_cstring(ctx, str_err_invalid_string);
-                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                }
+                if (size == ~0U)
+                    RAISE_EXCEPTION_STR(str_err_invalid_string);
 
                 TRY(KOS_buffer_resize(ctx, buffer, cur_size + size));
 
@@ -1325,7 +1323,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
                 KOS_FUNCTION_STATE state;
 
                 if ( ! KOS_is_generator(arg, &state)) {
-                    KOS_raise_exception_cstring(ctx, str_err_cannot_convert_to_buffer);
+                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_cannot_convert_to_buffer));
                     return KOS_BADPTR;
                 }
 
@@ -1355,7 +1353,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
                         TRY(KOS_get_integer(ctx, ret, &value));
 
                         if (value < 0 || value > 255)
-                            RAISE_EXCEPTION(str_err_invalid_byte_value);
+                            RAISE_EXCEPTION_STR(str_err_invalid_byte_value);
 
                         if (size >= capacity) {
                             capacity *= 2;
@@ -1374,7 +1372,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
             }
 
             default:
-                KOS_raise_exception_cstring(ctx, str_err_cannot_convert_to_buffer);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_cannot_convert_to_buffer));
                 return KOS_BADPTR;
         }
     }
@@ -1412,7 +1410,7 @@ static KOS_OBJ_ID function_constructor(KOS_CONTEXT ctx,
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (KOS_get_array_size(args_obj) != 1)
-        KOS_raise_exception_cstring(ctx, str_err_not_function);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
 
     else {
 
@@ -1421,7 +1419,7 @@ static KOS_OBJ_ID function_constructor(KOS_CONTEXT ctx,
             const KOS_TYPE type = GET_OBJ_TYPE(ret);
 
             if (type != OBJ_FUNCTION && type != OBJ_CLASS) {
-                KOS_raise_exception_cstring(ctx, str_err_not_function);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
                 ret = KOS_BADPTR;
             }
             else {
@@ -1472,7 +1470,7 @@ static KOS_OBJ_ID class_constructor(KOS_CONTEXT ctx,
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (KOS_get_array_size(args_obj) != 1)
-        KOS_raise_exception_cstring(ctx, str_err_not_class);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_class));
 
     else {
 
@@ -1481,7 +1479,7 @@ static KOS_OBJ_ID class_constructor(KOS_CONTEXT ctx,
             if (GET_OBJ_TYPE(ret) == OBJ_CLASS)
                 ret = kos_copy_function(ctx, ret);
             else {
-                KOS_raise_exception_cstring(ctx, str_err_not_class);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_class));
                 ret = KOS_BADPTR;
             }
         }
@@ -1517,7 +1515,7 @@ static KOS_OBJ_ID generator_constructor(KOS_CONTEXT ctx,
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (KOS_get_array_size(args_obj) != 1)
-        KOS_raise_exception_cstring(ctx, str_err_not_generator);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_generator));
 
     else {
 
@@ -1526,7 +1524,7 @@ static KOS_OBJ_ID generator_constructor(KOS_CONTEXT ctx,
             const KOS_TYPE type = GET_OBJ_TYPE(ret);
 
             if (type != OBJ_FUNCTION) {
-                KOS_raise_exception_cstring(ctx, str_err_not_generator);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_generator));
                 ret = KOS_BADPTR;
             }
             else {
@@ -1538,7 +1536,7 @@ static KOS_OBJ_ID generator_constructor(KOS_CONTEXT ctx,
                     case KOS_FUN:
                         /* fall through */
                     case KOS_CTOR:
-                        KOS_raise_exception_cstring(ctx, str_err_not_generator);
+                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_generator));
                         ret = KOS_BADPTR;
                         break;
 
@@ -1632,7 +1630,7 @@ static KOS_OBJ_ID thread_constructor(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  this_obj,
                                      KOS_OBJ_ID  args_obj)
 {
-    KOS_raise_exception_cstring(ctx, str_err_use_async);
+    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_use_async));
     return KOS_BADPTR;
 }
 
@@ -1723,7 +1721,7 @@ static KOS_OBJ_ID async(KOS_CONTEXT ctx,
     int         pushed     = 0;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_FUNCTION) {
-        KOS_raise_exception_cstring(ctx, str_err_not_function);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
         return KOS_BADPTR;
     }
 
@@ -1741,7 +1739,7 @@ static KOS_OBJ_ID async(KOS_CONTEXT ctx,
     arg_args = KOS_array_read(ctx, args_obj, 1);
     TRY_OBJID(arg_args);
     if (GET_OBJ_TYPE(arg_args) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_args_not_array);
+        RAISE_EXCEPTION_STR(str_err_args_not_array);
 
     thread = kos_thread_create(ctx, this_obj, arg_this, arg_args);
     if ( ! thread) {
@@ -1788,26 +1786,26 @@ static KOS_OBJ_ID wait(KOS_CONTEXT ctx,
     KOS_OBJ_ID          retval;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
-        KOS_raise_exception_cstring(ctx, str_err_not_thread);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_thread));
         return KOS_BADPTR;
     }
 
     if ( ! KOS_has_prototype(ctx, this_obj, inst->prototypes.thread_proto)) {
-        KOS_raise_exception_cstring(ctx, str_err_not_thread);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_thread));
         return KOS_BADPTR;
     }
 
     thread = (KOS_THREAD *)KOS_object_get_private_ptr(this_obj);
 
     if (thread && kos_is_current_thread(thread)) {
-        KOS_raise_exception_cstring(ctx, str_err_join_self);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_join_self));
         return KOS_BADPTR;
     }
 
     thread = (KOS_THREAD *)KOS_object_swap_private_ptr(this_obj, (void *)0);
 
     if ( ! thread) {
-        KOS_raise_exception_cstring(ctx, str_err_already_joined);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_already_joined));
         return KOS_BADPTR;
     }
 
@@ -1928,7 +1926,7 @@ static KOS_OBJ_ID slice(KOS_CONTEXT ctx,
     else if (READ_OBJ_TYPE(a_obj) == OBJ_VOID)
         idx_a = 0;
     else {
-        KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
         return KOS_BADPTR;
     }
 
@@ -1937,7 +1935,7 @@ static KOS_OBJ_ID slice(KOS_CONTEXT ctx,
     else if (READ_OBJ_TYPE(b_obj) == OBJ_VOID)
         idx_b = MAX_INT64;
     else {
-        KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
         return KOS_BADPTR;
     }
 
@@ -2175,7 +2173,7 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
     KOS_ATOMIC(KOS_OBJ_ID) *src;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
+        RAISE_EXCEPTION_STR(str_err_not_array);
 
     if (num_args > 0) {
 
@@ -2192,13 +2190,13 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
         }
         else {
             if (type != OBJ_VOID && type != OBJ_FUNCTION && type != OBJ_CLASS)
-                RAISE_EXCEPTION(str_err_invalid_key_type);
+                RAISE_EXCEPTION_STR(str_err_invalid_key_type);
 
             if (num_args > 1) {
                 reverse_id = KOS_array_read(ctx, args_obj, 1);
                 TRY_OBJID(reverse_id);
                 if (reverse_id != KOS_TRUE && reverse_id != KOS_FALSE)
-                    RAISE_EXCEPTION(str_err_invalid_reverse_type);
+                    RAISE_EXCEPTION_STR(str_err_invalid_reverse_type);
             }
         }
     }
@@ -2248,7 +2246,7 @@ static KOS_OBJ_ID get_array_size(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(this_obj) == OBJ_ARRAY)
         ret = KOS_new_int(ctx, (int64_t)KOS_get_array_size(this_obj));
     else {
-        KOS_raise_exception_cstring(ctx, str_err_not_array);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
         ret = KOS_BADPTR;
     }
 
@@ -2277,7 +2275,7 @@ static KOS_OBJ_ID get_buffer_size(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(this_obj) == OBJ_BUFFER)
         ret = KOS_new_int(ctx, (int64_t)KOS_get_buffer_size(this_obj));
     else {
-        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
         ret = KOS_BADPTR;
     }
 
@@ -2347,7 +2345,7 @@ static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
         int64_t        value    = 0;
 
         if (size < 0 || size > INT_MAX) {
-            KOS_raise_exception_cstring(ctx, str_err_invalid_buffer_size);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_buffer_size));
             return KOS_BADPTR;
         }
 
@@ -2356,12 +2354,12 @@ static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
             TRY_OBJID(value_obj);
 
             if (!IS_NUMERIC_OBJ(value_obj))
-                RAISE_EXCEPTION(str_err_cannot_convert_to_buffer);
+                RAISE_EXCEPTION_STR(str_err_cannot_convert_to_buffer);
 
             TRY(KOS_get_integer(ctx, value_obj, &value));
 
             if (value < 0 || value > 255)
-                RAISE_EXCEPTION(str_err_cannot_convert_to_buffer);
+                RAISE_EXCEPTION_STR(str_err_cannot_convert_to_buffer);
         }
         else
             value_obj = TO_SMALL_INT(0);
@@ -2377,10 +2375,10 @@ static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
         uint32_t old_size;
 
         if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
-            RAISE_EXCEPTION(str_err_not_array);
+            RAISE_EXCEPTION_STR(str_err_not_array);
 
         if (size < 0 || size > INT_MAX) {
-            KOS_raise_exception_cstring(ctx, str_err_invalid_array_size);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_array_size));
             return KOS_BADPTR;
         }
 
@@ -2474,7 +2472,7 @@ static KOS_OBJ_ID fill(KOS_CONTEXT ctx,
         else if (READ_OBJ_TYPE(arg) == OBJ_VOID)
             begin = 0;
         else {
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             return KOS_BADPTR;
         }
 
@@ -2486,7 +2484,7 @@ static KOS_OBJ_ID fill(KOS_CONTEXT ctx,
         else if (READ_OBJ_TYPE(arg) == OBJ_VOID)
             end = MAX_INT64;
         else {
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             return KOS_BADPTR;
         }
 
@@ -2500,7 +2498,7 @@ static KOS_OBJ_ID fill(KOS_CONTEXT ctx,
         else if (READ_OBJ_TYPE(arg) == OBJ_VOID)
             begin = 0;
         else {
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
             return KOS_BADPTR;
         }
 
@@ -2525,7 +2523,7 @@ static KOS_OBJ_ID fill(KOS_CONTEXT ctx,
         TRY(KOS_get_integer(ctx, arg, &value));
 
         if (value < 0 || value > 255)
-            RAISE_EXCEPTION(str_err_invalid_byte_value);
+            RAISE_EXCEPTION_STR(str_err_invalid_byte_value);
 
         error = KOS_buffer_fill(ctx, this_obj, begin, end, (uint8_t)value);
     }
@@ -2660,7 +2658,7 @@ static int process_pack_format(KOS_CONTEXT               ctx,
             pack_format_skip_spaces(ctx, fmt->fmt_str, &i_fmt);
 
             if (i_fmt >= fmt_size)
-                RAISE_EXCEPTION(str_err_invalid_pack_format);
+                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
 
             c = KOS_string_get_char_code(ctx, fmt->fmt_str, (int)i_fmt++);
             assert(c != ~0U);
@@ -2700,12 +2698,12 @@ static int process_pack_format(KOS_CONTEXT               ctx,
                     size = ~0U;
                 }
                 else
-                    RAISE_EXCEPTION(str_err_invalid_pack_format);
+                    RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
                 break;
             }
 
             default:
-                RAISE_EXCEPTION(str_err_invalid_pack_format);
+                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
         }
 
         if (c != '<' && c != '>')
@@ -2758,7 +2756,7 @@ static int pack_format(KOS_CONTEXT               ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     else if (size == ~0U && value_fmt != 's')
-        RAISE_EXCEPTION(str_err_invalid_pack_format);
+        RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
 
     big_end = fmt->big_end;
 
@@ -2776,10 +2774,10 @@ static int pack_format(KOS_CONTEXT               ctx,
         case 'i': {
 
             if (size != 1 && size != 2 && size != 4 && size != 8)
-                RAISE_EXCEPTION(str_err_invalid_pack_format);
+                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
-                RAISE_EXCEPTION(str_err_not_enough_pack_values);
+                RAISE_EXCEPTION_STR(str_err_not_enough_pack_values);
 
             for ( ; count; count--) {
                 unsigned   i;
@@ -2789,7 +2787,7 @@ static int pack_format(KOS_CONTEXT               ctx,
                 TRY_OBJID(value_obj);
 
                 if ( ! IS_NUMERIC_OBJ(value_obj))
-                    RAISE_EXCEPTION(str_err_bad_pack_value);
+                    RAISE_EXCEPTION_STR(str_err_bad_pack_value);
 
                 TRY(KOS_get_integer(ctx, value_obj, &value));
 
@@ -2807,10 +2805,10 @@ static int pack_format(KOS_CONTEXT               ctx,
         case 'f': {
 
             if (size != 4 && size != 8)
-                RAISE_EXCEPTION(str_err_invalid_pack_format);
+                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
-                RAISE_EXCEPTION(str_err_not_enough_pack_values);
+                RAISE_EXCEPTION_STR(str_err_not_enough_pack_values);
 
             for ( ; count; count--) {
                 unsigned   i;
@@ -2834,7 +2832,7 @@ static int pack_format(KOS_CONTEXT               ctx,
                         break;
 
                     default:
-                        RAISE_EXCEPTION(str_err_bad_pack_value);
+                        RAISE_EXCEPTION_STR(str_err_bad_pack_value);
                         break;
                 }
 
@@ -2857,7 +2855,7 @@ static int pack_format(KOS_CONTEXT               ctx,
         case 'b': {
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
-                RAISE_EXCEPTION(str_err_not_enough_pack_values);
+                RAISE_EXCEPTION_STR(str_err_not_enough_pack_values);
 
             for ( ; count; count--) {
                 KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data, fmt->idx++);
@@ -2868,7 +2866,7 @@ static int pack_format(KOS_CONTEXT               ctx,
                 TRY_OBJID(value_obj);
 
                 if (GET_OBJ_TYPE(value_obj) != OBJ_BUFFER)
-                    RAISE_EXCEPTION(str_err_bad_pack_value);
+                    RAISE_EXCEPTION_STR(str_err_bad_pack_value);
 
                 data_size = KOS_get_buffer_size(value_obj);
                 if (data_size)
@@ -2895,7 +2893,7 @@ static int pack_format(KOS_CONTEXT               ctx,
             assert(value_fmt == 's');
 
             if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data))
-                RAISE_EXCEPTION(str_err_not_enough_pack_values);
+                RAISE_EXCEPTION_STR(str_err_not_enough_pack_values);
 
             for ( ; count; count--) {
                 KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data, fmt->idx++);
@@ -2904,7 +2902,7 @@ static int pack_format(KOS_CONTEXT               ctx,
                 TRY_OBJID(value_obj);
 
                 if (GET_OBJ_TYPE(value_obj) != OBJ_STRING)
-                    RAISE_EXCEPTION(str_err_bad_pack_value);
+                    RAISE_EXCEPTION_STR(str_err_bad_pack_value);
 
                 TRY(KOS_string_to_cstr_vec(ctx, value_obj, &str_buf));
 
@@ -2955,13 +2953,13 @@ static int unpack_format(KOS_CONTEXT               ctx,
 
     if (size == ~0U) {
         if (value_fmt != 's' || count != 1)
-            RAISE_EXCEPTION(str_err_invalid_pack_format);
+            RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
 
         size = data_size - fmt->idx;
     }
 
     if (fmt->idx + size * count > data_size)
-        RAISE_EXCEPTION(str_err_unpack_buf_too_short);
+        RAISE_EXCEPTION_STR(str_err_unpack_buf_too_short);
 
     if ( ! count)
         return KOS_SUCCESS;
@@ -2986,7 +2984,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
             /* fall through */
         case 'u': {
             if (size != 1 && size != 2 && size != 4 && size != 8)
-                RAISE_EXCEPTION(str_err_invalid_pack_format);
+                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
 
             for ( ; count; count--) {
                 uint64_t value = 0;
@@ -3114,7 +3112,7 @@ static KOS_OBJ_ID pack(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(fmt.fmt_str) == OBJ_STRING)
         error = process_pack_format(ctx, this_obj, pack_format, &fmt);
     else {
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         error = KOS_ERROR_EXCEPTION;
     }
 
@@ -3152,7 +3150,7 @@ static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(this_obj));
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_BUFFER)
-        RAISE_EXCEPTION(str_err_not_buffer);
+        RAISE_EXCEPTION_STR(str_err_not_buffer);
 
     fmt.fmt_str = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(fmt.fmt_str);
@@ -3179,7 +3177,7 @@ static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
     }
 
     if (GET_OBJ_TYPE(fmt.fmt_str) != OBJ_STRING)
-        RAISE_EXCEPTION(str_err_not_string);
+        RAISE_EXCEPTION_STR(str_err_not_string);
 
     TRY(process_pack_format(ctx, this_obj, unpack_format, &fmt));
 
@@ -3246,7 +3244,7 @@ static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(ctx, arg, &dest_begin));
         else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-            RAISE_EXCEPTION(str_err_unsup_operand_types);
+            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
         src = KOS_array_read(ctx, args_obj, 1);
         TRY_OBJID(src);
@@ -3257,7 +3255,7 @@ static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(ctx, arg, &src_begin));
         else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-            RAISE_EXCEPTION(str_err_unsup_operand_types);
+            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
         arg = KOS_array_read(ctx, args_obj, 3);
         TRY_OBJID(arg);
@@ -3265,7 +3263,7 @@ static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(ctx, arg, &src_end));
         else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-            RAISE_EXCEPTION(str_err_unsup_operand_types);
+            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
     }
     else if (num_args > 2) {
 
@@ -3290,7 +3288,7 @@ static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
         if (IS_NUMERIC_OBJ(arg))
             TRY(KOS_get_integer(ctx, arg, &src_begin));
         else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-            RAISE_EXCEPTION(str_err_unsup_operand_types);
+            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
         if (arg_idx == 1) {
 
@@ -3300,7 +3298,7 @@ static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
             if (IS_NUMERIC_OBJ(arg))
                 TRY(KOS_get_integer(ctx, arg, &src_end));
             else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-                RAISE_EXCEPTION(str_err_unsup_operand_types);
+                RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
         }
     }
     else if (num_args > 1) {
@@ -3323,7 +3321,7 @@ static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
             if (IS_NUMERIC_OBJ(arg))
                 TRY(KOS_get_integer(ctx, arg, &src_begin));
             else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-                RAISE_EXCEPTION(str_err_unsup_operand_types);
+                RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
         }
     }
     else {
@@ -3382,13 +3380,13 @@ static KOS_OBJ_ID reserve(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_BUFFER) {
         if (size < 0 || size > INT_MAX)
-            RAISE_EXCEPTION(str_err_invalid_buffer_size);
+            RAISE_EXCEPTION_STR(str_err_invalid_buffer_size);
 
         TRY(KOS_buffer_reserve(ctx, this_obj, (uint32_t)size));
     }
     else {
         if (size < 0 || size > INT_MAX)
-            RAISE_EXCEPTION(str_err_invalid_array_size);
+            RAISE_EXCEPTION_STR(str_err_invalid_array_size);
 
         TRY(KOS_array_reserve(ctx, this_obj, (uint32_t)size));
     }
@@ -3426,7 +3424,7 @@ static KOS_OBJ_ID array_cas(KOS_CONTEXT ctx,
     KOS_OBJ_ID     new_val;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
+        RAISE_EXCEPTION_STR(str_err_not_array);
 
     pos_obj = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(pos_obj);
@@ -3438,7 +3436,7 @@ static KOS_OBJ_ID array_cas(KOS_CONTEXT ctx,
     TRY_OBJID(pos_obj);
 
     if (!IS_NUMERIC_OBJ(pos_obj))
-        RAISE_EXCEPTION(str_err_unsup_operand_types);
+        RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
     TRY(KOS_get_integer(ctx, pos_obj, &pos));
 
@@ -3495,21 +3493,21 @@ static KOS_OBJ_ID insert_array(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY ||
         GET_OBJ_TYPE(src_obj)  != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
+        RAISE_EXCEPTION_STR(str_err_not_array);
 
     if (IS_NUMERIC_OBJ(begin_obj))
         TRY(KOS_get_integer(ctx, begin_obj, &begin));
     else if (READ_OBJ_TYPE(begin_obj) == OBJ_VOID)
         begin = num_args == 2 ? MAX_INT64 : 0;
     else
-        RAISE_EXCEPTION(str_err_unsup_operand_types);
+        RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
     if (IS_NUMERIC_OBJ(end_obj))
         TRY(KOS_get_integer(ctx, end_obj, &end));
     else if (READ_OBJ_TYPE(end_obj) == OBJ_VOID)
         end = MAX_INT64;
     else
-        RAISE_EXCEPTION(str_err_unsup_operand_types);
+        RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
     src_len = MAX_INT64;
 
@@ -3561,7 +3559,7 @@ static KOS_OBJ_ID pop(KOS_CONTEXT ctx,
         TRY(KOS_get_integer(ctx, arg, &num));
 
         if (num < 0 || num > INT_MAX)
-            RAISE_EXCEPTION(str_err_invalid_array_size);
+            RAISE_EXCEPTION_STR(str_err_invalid_array_size);
 
         TRY(KOS_push_locals(ctx, &pushed, 3, &this_obj, &ret, &arg));
 
@@ -3611,7 +3609,7 @@ static KOS_OBJ_ID push(KOS_CONTEXT ctx,
     TRY(KOS_push_locals(ctx, &pushed, 2, &this_obj, &args_obj));
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
+        RAISE_EXCEPTION_STR(str_err_not_array);
 
     ret = KOS_new_int(ctx, (int64_t)KOS_get_array_size(this_obj));
     TRY_OBJID(ret);
@@ -3669,7 +3667,7 @@ static KOS_OBJ_ID ends_with(KOS_CONTEXT ctx,
     TRY_OBJID(arg);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(arg) != OBJ_STRING)
-        RAISE_EXCEPTION(str_err_not_string);
+        RAISE_EXCEPTION_STR(str_err_not_string);
 
     this_len = KOS_get_string_length(this_obj);
     arg_len  = KOS_get_string_length(arg);
@@ -3718,14 +3716,14 @@ static KOS_OBJ_ID repeat(KOS_CONTEXT ctx,
     TRY_OBJID(arg);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_STRING)
-        RAISE_EXCEPTION(str_err_not_string);
+        RAISE_EXCEPTION_STR(str_err_not_string);
 
     TRY(KOS_get_integer(ctx, arg, &num));
 
     text_len = KOS_get_string_length(this_obj);
 
     if (num < 0 || num > 0xFFFFU || (num * text_len) > 0xFFFFU)
-        RAISE_EXCEPTION(str_err_too_many_repeats);
+        RAISE_EXCEPTION_STR(str_err_too_many_repeats);
 
     ret = KOS_string_repeat(ctx, this_obj, (unsigned)num);
 
@@ -3769,7 +3767,7 @@ static KOS_OBJ_ID find(KOS_CONTEXT ctx,
     TRY_OBJID(pattern);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(pattern) != OBJ_STRING)
-        RAISE_EXCEPTION(str_err_not_string);
+        RAISE_EXCEPTION_STR(str_err_not_string);
 
     if (KOS_get_array_size(args_obj) > 1) {
 
@@ -3829,7 +3827,7 @@ static KOS_OBJ_ID rfind(KOS_CONTEXT ctx,
     TRY_OBJID(pattern);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(pattern) != OBJ_STRING)
-        RAISE_EXCEPTION(str_err_not_string);
+        RAISE_EXCEPTION_STR(str_err_not_string);
 
     text_len = KOS_get_string_length(this_obj);
     pos      = (int)(text_len - KOS_get_string_length(pattern));
@@ -3902,7 +3900,7 @@ static KOS_OBJ_ID scan(KOS_CONTEXT ctx,
     TRY_OBJID(pattern);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(pattern) != OBJ_STRING)
-        RAISE_EXCEPTION(str_err_not_string);
+        RAISE_EXCEPTION_STR(str_err_not_string);
 
     if (KOS_get_array_size(args_obj) > 1) {
 
@@ -3932,7 +3930,7 @@ static KOS_OBJ_ID scan(KOS_CONTEXT ctx,
                         include = KOS_SCAN_EXCLUDE;
                 }
                 else
-                    RAISE_EXCEPTION(str_err_not_boolean);
+                    RAISE_EXCEPTION_STR(str_err_not_boolean);
             }
         }
     }
@@ -3987,7 +3985,7 @@ static KOS_OBJ_ID rscan(KOS_CONTEXT ctx,
     TRY_OBJID(pattern);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(pattern) != OBJ_STRING)
-        RAISE_EXCEPTION(str_err_not_string);
+        RAISE_EXCEPTION_STR(str_err_not_string);
 
     text_len = KOS_get_string_length(this_obj);
     pos      = (int)(text_len - 1);
@@ -4026,7 +4024,7 @@ static KOS_OBJ_ID rscan(KOS_CONTEXT ctx,
                         include = KOS_SCAN_EXCLUDE;
                 }
                 else
-                    RAISE_EXCEPTION(str_err_not_boolean);
+                    RAISE_EXCEPTION_STR(str_err_not_boolean);
             }
         }
     }
@@ -4074,7 +4072,7 @@ static KOS_OBJ_ID code(KOS_CONTEXT ctx,
         TRY(KOS_get_integer(ctx, arg, &idx));
 
         if (idx < INT_MIN || idx > INT_MAX)
-            RAISE_EXCEPTION(str_err_invalid_string_idx);
+            RAISE_EXCEPTION_STR(str_err_invalid_string_idx);
     }
 
     char_code = KOS_string_get_char_code(ctx, this_obj, (int)idx);
@@ -4119,7 +4117,7 @@ static KOS_OBJ_ID starts_with(KOS_CONTEXT ctx,
     TRY_OBJID(arg);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_STRING || GET_OBJ_TYPE(arg) != OBJ_STRING)
-        RAISE_EXCEPTION(str_err_not_string);
+        RAISE_EXCEPTION_STR(str_err_not_string);
 
     this_len = KOS_get_string_length(this_obj);
     arg_len  = KOS_get_string_length(arg);
@@ -4200,7 +4198,7 @@ static KOS_OBJ_ID get_string_size(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(this_obj) == OBJ_STRING)
         ret = KOS_new_int(ctx, (int64_t)KOS_get_string_length(this_obj));
     else {
-        KOS_raise_exception_cstring(ctx, str_err_not_string);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         ret = KOS_BADPTR;
     }
 
@@ -4249,7 +4247,7 @@ static KOS_OBJ_ID get_function_line(KOS_CONTEXT ctx,
         ret = TO_SMALL_INT((int64_t)line);
     }
     else
-        KOS_raise_exception_cstring(ctx, str_err_not_function);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
 
     return ret;
 }
@@ -4285,7 +4283,7 @@ static KOS_OBJ_ID get_function_name(KOS_CONTEXT ctx,
                                                func->instr_offs);
     }
     else
-        KOS_raise_exception_cstring(ctx, str_err_not_function);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
 
     return ret;
 }
@@ -4322,7 +4320,7 @@ static KOS_OBJ_ID get_function_offs(KOS_CONTEXT ctx,
         ret = KOS_new_int(ctx, offs);
     }
     else
-        KOS_raise_exception_cstring(ctx, str_err_not_function);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
 
     return ret;
 }
@@ -4359,7 +4357,7 @@ static KOS_OBJ_ID get_instructions(KOS_CONTEXT ctx,
         ret = KOS_new_int(ctx, (int64_t)num_instr);
     }
     else
-        KOS_raise_exception_cstring(ctx, str_err_not_function);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
 
     return ret;
 }
@@ -4396,7 +4394,7 @@ static KOS_OBJ_ID get_code_size(KOS_CONTEXT ctx,
         ret = KOS_new_int(ctx, (int64_t)code_size);
     }
     else
-        KOS_raise_exception_cstring(ctx, str_err_not_function);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
 
     return ret;
 }
@@ -4438,7 +4436,7 @@ static KOS_OBJ_ID get_registers(KOS_CONTEXT ctx,
         ret = KOS_new_int(ctx, (int64_t)func->num_regs);
     }
     else
-        KOS_raise_exception_cstring(ctx, str_err_not_function);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
 
     return ret;
 }
