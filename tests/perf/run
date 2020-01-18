@@ -55,7 +55,7 @@ PY=1
 JS=1
 
 if [ -n "$JS_INTERPRETER" ]; then
-    [ -x "$JS_INTERPRETER" ] || JS=0
+    [ -d "$JS_INTERPRETER" ] || JS=0
 else
     JS=0
 fi
