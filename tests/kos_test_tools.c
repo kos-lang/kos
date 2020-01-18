@@ -24,6 +24,7 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
+#include "../core/kos_config.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_system.h"
@@ -83,6 +84,10 @@ int get_num_cpus(void)
     }
 
     kos_vector_destroy(&cstr);
+
+    /* Don't try to create more threads than the max number of threads supported */
+    if ((unsigned)num_cpus > KOS_MAX_THREADS)
+        num_cpus = KOS_MAX_THREADS;
 
     return num_cpus;
 }
