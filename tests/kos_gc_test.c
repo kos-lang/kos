@@ -1693,7 +1693,7 @@ int main(void)
 
         /* Destroy locals, objects not tracked by GC anymore */
         for (i = 0; i < NELEMS(local); i++) {
-            KOS_destroy_local(&local[i]);
+            KOS_destroy_local(ctx, &local[i]);
 #ifndef NDEBUG
             TEST(IS_BAD_PTR(local[i].obj_id));
 #endif
@@ -1767,7 +1767,7 @@ int main(void)
             TEST(finalized[i] == 0);
 
         /* Destroy locals, objects not tracked by GC anymore */
-        KOS_destroy_locals(local, 3);
+        KOS_destroy_locals(ctx, local, 3);
 #ifndef NDEBUG
         for (i = 0; i < NELEMS(local); i++)
             TEST(IS_BAD_PTR(local[i].obj_id));
@@ -1825,7 +1825,7 @@ int main(void)
 
                 const size_t target_idx = destroy_order[order][dest_idx];
 
-                KOS_destroy_local(&local[target_idx]);
+                KOS_destroy_local(ctx, &local[target_idx]);
 #ifndef NDEBUG
                 TEST(IS_BAD_PTR(local[target_idx].obj_id));
 #endif

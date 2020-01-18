@@ -107,6 +107,11 @@ typedef struct KOS_STACK_S {
 
 typedef struct KOS_LOCAL_S KOS_LOCAL;
 
+struct KOS_LOCAL_S {
+    KOS_LOCAL  *next;
+    KOS_OBJ_ID  obj_id;
+};
+
 #define KOS_MAX_LOCALS 16
 
 struct KOS_THREAD_CONTEXT_S {
@@ -284,20 +289,13 @@ int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...);
 
 void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
 
-struct KOS_LOCAL_S {
-    KOS_LOCAL  *next;
-    KOS_LOCAL  *prev;
-    KOS_OBJ_ID  obj_id;
-    KOS_CONTEXT ctx;
-};
-
 void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
 void KOS_init_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals);
 
-void KOS_destroy_local(KOS_LOCAL *local);
+void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
-void KOS_destroy_locals(KOS_LOCAL *locals, int num_locals);
+void KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals);
 
 typedef struct KOS_GC_STATS_S {
     unsigned num_objs_evacuated;

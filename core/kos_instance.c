@@ -1195,97 +1195,90 @@ void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
 {
     KOS_LOCAL *next = ctx->local_list;
 
-    local->prev     = 0;
     local->next     = next;
     local->obj_id   = KOS_BADPTR;
-    local->ctx      = ctx;
     ctx->local_list = local;
-
-    if (next)
-        next->prev = local;
 }
 
 void KOS_init_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals)
 {
     KOS_LOCAL *tail;
-    KOS_LOCAL *prev;
 
     if ( ! num_locals)
         return;
 
     tail            = ctx->local_list;
-    prev            = 0;
     ctx->local_list = locals;
 
     for ( ; num_locals; --num_locals) {
         KOS_LOCAL *next = locals + 1;
 
-        locals->prev   = prev;
         locals->next   = next;
         locals->obj_id = KOS_BADPTR;
-        locals->ctx    = ctx;
-        prev           = locals;
         locals         = next;
     }
 
     --locals;
     locals->next = tail;
-
-    if (tail)
-        tail->prev = locals;
 }
 
-void KOS_destroy_local(KOS_LOCAL *local)
+void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
 {
-    KOS_LOCAL  *prev = local->prev;
-    KOS_LOCAL  *next = local->next;
-    KOS_CONTEXT ctx  = local->ctx;
     KOS_LOCAL **prev_next;
 
     if ( ! ctx)
         return;
 
-    prev_next = prev ? &prev->next : &ctx->local_list;
+    prev_next = &ctx->local_list;
 
-    *prev_next = next;
+    for (;;) {
+        KOS_LOCAL *next_ptr = *prev_next;
 
-    if (next)
-        next->prev = prev;
+        assert(next_ptr);
+
+        if (next_ptr == local)
+            break;
+
+        prev_next = &next_ptr->next;
+    }
+
+    *prev_next = local->next;
 
 #ifndef NDEBUG
-    local->prev   = 0;
     local->next   = 0;
     local->obj_id = KOS_BADPTR;
-    local->ctx    = 0;
 #endif
 }
 
-void KOS_destroy_locals(KOS_LOCAL *locals, int num_locals)
+void KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *locals, int num_locals)
 {
-    KOS_LOCAL  *prev      = locals->prev;
-    KOS_LOCAL  *after     = locals[num_locals-1].next;
-    KOS_CONTEXT ctx       = locals->ctx;
-    KOS_LOCAL **prev_next = prev ? &prev->next : &ctx->local_list;
+    KOS_LOCAL **prev_next;
 
-    *prev_next = after;
+    if ( ! ctx)
+        return;
 
-    if (after)
-        after->prev = prev;
+    prev_next = &ctx->local_list;
+
+    for (;;) {
+        KOS_LOCAL *next_ptr = *prev_next;
+
+        assert(next_ptr);
+
+        if (next_ptr == locals)
+            break;
+
+        prev_next = &next_ptr->next;
+    }
+
+    *prev_next = locals[num_locals - 1].next;
 
 #ifndef NDEBUG
-    for ( ; num_locals; --num_locals) {
-        KOS_LOCAL *next = num_locals > 1 ? locals + 1 : after;
+    for ( ; num_locals; --num_locals, ++locals) {
+        if (num_locals > 1)
+            assert(locals->next == locals + 1);
 
-        assert(locals->prev == prev);
-        assert(locals->next == next);
-        assert(locals->ctx  == ctx);
-
-        locals->prev   = 0;
         locals->next   = 0;
         locals->obj_id = KOS_BADPTR;
-        locals->ctx    = 0;
-        prev           = locals;
-        locals         = next;
     }
 #endif
 }
