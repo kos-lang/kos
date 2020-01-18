@@ -45,7 +45,6 @@ if [ -z "$JOBS" ]; then
         Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
         *)                                       JOBS=2 ;;
     esac
-    [ $JOBS -lt 32 ] || JOBS=32
 fi
 
 MAKE=make
@@ -173,6 +172,7 @@ if [ "$RUN_VALGRIND" = "1" ]; then
 
     # Limit number of jobs to reduce memory pressure
     JOBS=$(($JOBS / 2))
+    [ $JOBS -eq 0 ] && JOBS=1
     [ $JOBS -gt 8 ] && JOBS=8
 
     TEST_CPUS=2 runtests c89 c++98 noclean
@@ -188,8 +188,6 @@ if [ "$RUN_ASAN" = "1" ]; then
     fi
 
     export SANITIZER="address"
-    [ $JOBS -gt 2 ] && JOBS=$(($JOBS / 2))
-    [ $JOBS = 0 ] && JOBS=1
     RUN_CPP14="1"
 fi
 
