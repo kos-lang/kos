@@ -3,6 +3,8 @@ const size  = 10000;
 const a     = [];
 let   total = 0;
 
+a.length = size;
+
 for (let l = 0; l < loops; l++) {
     for (let i = 0; i < size; i++) {
         a[i] = i;

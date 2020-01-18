@@ -6,7 +6,7 @@ def run():
 
     loops = 1000
     size = 10000
-    elements = list(range(size))
+    elements = [None] * size
     total = 0
 
     loop_idx = 0

@@ -1,10 +1,10 @@
 #!/usr/bin/env kos
 
-import base: print, range
+import base: array, print, range
 
 const loops = 1000
 const size  = 10000
-const a     = [range(size)...]
+const a     = array(size)
 var   total = 0
 
 for var l = 0; l < loops; l += 1 {
