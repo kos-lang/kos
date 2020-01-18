@@ -1196,7 +1196,7 @@ void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
     KOS_LOCAL *next = ctx->local_list;
 
     local->next     = next;
-    local->obj_id   = KOS_BADPTR;
+    local->o        = KOS_BADPTR;
     ctx->local_list = local;
 }
 
@@ -1216,7 +1216,7 @@ void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
         *prev = local;
         prev  = &local->next;
 
-        local->obj_id = KOS_BADPTR;
+        local->o = KOS_BADPTR;
     }
 
     *prev           = ctx->local_list;
@@ -1248,8 +1248,8 @@ void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
     *prev_next = local->next;
 
 #ifndef NDEBUG
-    local->next   = 0;
-    local->obj_id = KOS_BADPTR;
+    local->next = 0;
+    local->o    = KOS_BADPTR;
 #endif
 }
 
@@ -1276,8 +1276,8 @@ void KOS_destroy_locals(KOS_CONTEXT ctx, int num_locals, KOS_LOCAL *local)
         next = local->next;
 
 #ifndef NDEBUG
-        local->next   = 0;
-        local->obj_id = KOS_BADPTR;
+        local->next = 0;
+        local->o    = KOS_BADPTR;
 #endif
 
         if ( ! num_locals)

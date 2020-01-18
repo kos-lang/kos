@@ -108,8 +108,8 @@ typedef struct KOS_STACK_S {
 typedef struct KOS_LOCAL_S KOS_LOCAL;
 
 struct KOS_LOCAL_S {
-    KOS_LOCAL  *next;
-    KOS_OBJ_ID  obj_id;
+    KOS_LOCAL *next;
+    KOS_OBJ_ID o;
 };
 
 #define KOS_MAX_LOCALS 16

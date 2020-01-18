@@ -1678,12 +1678,12 @@ int main(void)
         for (i = 0; i < NELEMS(local); i++) {
             KOS_init_local(ctx, &local[i]);
 
-            local[i].obj_id = KOS_new_object(ctx);
-            TEST( ! IS_BAD_PTR(local[i].obj_id));
+            local[i].o = KOS_new_object(ctx);
+            TEST( ! IS_BAD_PTR(local[i].o));
 
             finalized[i] = 0;
-            KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
-            OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
+            KOS_object_set_private_ptr(local[i].o, &finalized[i]);
+            OBJPTR(OBJECT, local[i].o)->finalize = finalize_47;
         }
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
@@ -1695,7 +1695,7 @@ int main(void)
         for (i = 0; i < NELEMS(local); i++) {
             KOS_destroy_local(ctx, &local[i]);
 #ifndef NDEBUG
-            TEST(IS_BAD_PTR(local[i].obj_id));
+            TEST(IS_BAD_PTR(local[i].o));
 #endif
         }
 
@@ -1721,12 +1721,12 @@ int main(void)
         for (i = 0; i < NELEMS(local); i++) {
             KOS_init_local(ctx, &local[i]);
 
-            local[i].obj_id = KOS_new_object(ctx);
-            TEST( ! IS_BAD_PTR(local[i].obj_id));
+            local[i].o = KOS_new_object(ctx);
+            TEST( ! IS_BAD_PTR(local[i].o));
 
             finalized[i] = 0;
-            KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
-            OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
+            KOS_object_set_private_ptr(local[i].o, &finalized[i]);
+            OBJPTR(OBJECT, local[i].o)->finalize = finalize_47;
         }
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
@@ -1753,12 +1753,12 @@ int main(void)
         KOS_init_locals(ctx, 3, &local[0], &local[1], &local[2]);
 
         for (i = 0; i < NELEMS(local); i++) {
-            local[i].obj_id = KOS_new_object(ctx);
-            TEST( ! IS_BAD_PTR(local[i].obj_id));
+            local[i].o = KOS_new_object(ctx);
+            TEST( ! IS_BAD_PTR(local[i].o));
 
             finalized[i] = 0;
-            KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
-            OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
+            KOS_object_set_private_ptr(local[i].o, &finalized[i]);
+            OBJPTR(OBJECT, local[i].o)->finalize = finalize_47;
         }
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
@@ -1770,7 +1770,7 @@ int main(void)
         KOS_destroy_locals(ctx, 3, &local[0]);
 #ifndef NDEBUG
         for (i = 0; i < NELEMS(local); i++)
-            TEST(IS_BAD_PTR(local[i].obj_id));
+            TEST(IS_BAD_PTR(local[i].o));
 #endif
 
         /* Destroy untracked objects with GC */
@@ -1807,12 +1807,12 @@ int main(void)
             for (i = 0; i < NELEMS(local); i++) {
                 KOS_init_local(ctx, &local[i]);
 
-                local[i].obj_id = KOS_new_object(ctx);
-                TEST( ! IS_BAD_PTR(local[i].obj_id));
+                local[i].o = KOS_new_object(ctx);
+                TEST( ! IS_BAD_PTR(local[i].o));
 
                 finalized[i] = 0;
-                KOS_object_set_private_ptr(local[i].obj_id, &finalized[i]);
-                OBJPTR(OBJECT, local[i].obj_id)->finalize = finalize_47;
+                KOS_object_set_private_ptr(local[i].o, &finalized[i]);
+                OBJPTR(OBJECT, local[i].o)->finalize = finalize_47;
             }
 
             TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
@@ -1827,7 +1827,7 @@ int main(void)
 
                 KOS_destroy_local(ctx, &local[target_idx]);
 #ifndef NDEBUG
-                TEST(IS_BAD_PTR(local[target_idx].obj_id));
+                TEST(IS_BAD_PTR(local[target_idx].o));
 #endif
                 /* Destroy untracked objects with GC */
                 TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);

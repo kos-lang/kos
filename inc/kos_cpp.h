@@ -260,13 +260,13 @@ class thread_ctx {
 class handle {
     public:
         handle() : ctx_(0) {
-            local_.next   = 0;
-            local_.obj_id = KOS_BADPTR;
+            local_.next = 0;
+            local_.o    = KOS_BADPTR;
         }
 
         handle(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id) : ctx_(ctx) {
             KOS_init_local(ctx, &local_);
-            local_.obj_id = obj_id;
+            local_.o = obj_id;
         }
 
         ~handle() NOEXCEPT {
@@ -275,7 +275,7 @@ class handle {
 
         handle(const handle& h): ctx_(h.ctx_) {
             KOS_init_local(h.ctx_, &local_);
-            local_.obj_id = h.local_.obj_id;
+            local_.o = h.local_.o;
         }
 
         handle& operator=(const handle& h) {
@@ -284,12 +284,12 @@ class handle {
                 ctx_ = h.ctx_;
             }
             assert(ctx_ == h.ctx_ || ! h.ctx_);
-            local_.obj_id = h.local_.obj_id;
+            local_.o = h.local_.o;
             return *this;
         }
 
         operator KOS_OBJ_ID() const {
-            return local_.obj_id;
+            return local_.o;
         }
 
         context get_context() const {
@@ -297,7 +297,7 @@ class handle {
         }
 
         KOS_TYPE type() const {
-            return GET_OBJ_TYPE(local_.obj_id);
+            return GET_OBJ_TYPE(local_.o);
         }
 
     private:

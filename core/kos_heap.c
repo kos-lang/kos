@@ -1465,7 +1465,7 @@ static void mark_roots_in_context(KOS_CONTEXT ctx)
     }
 
     for (local = ctx->local_list; local; local = local->next) {
-        const KOS_OBJ_ID obj_id = local->obj_id;
+        const KOS_OBJ_ID obj_id = local->o;
         if ( ! IS_BAD_PTR(obj_id))
             mark_object_black(obj_id);
     }
@@ -2142,7 +2142,7 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
         }
 
         for (local = ctx->local_list; local; local = local->next)
-            update_child_ptr(&local->obj_id);
+            update_child_ptr(&local->o);
 
         ctx = ctx->next;
     }
