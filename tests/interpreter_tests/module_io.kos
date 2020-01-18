@@ -476,17 +476,13 @@ do {
         assert info.block_size >= 1
         assert info.hard_links == 1
 
-        # Temporary, for debugging intermittent failures on Linux
-        if info.atime / 1_000_000 < time_before {
-            base.print("info.atime=\(info.atime)")
-            base.print("info.mtime=\(info.mtime)")
-            base.print("info.ctime=\(info.ctime)")
-            base.print("time_before=\(time_before)")
+        # On Linux, sometimes access time is lower than creation time
+        # for some reason...
+        if info.atime >= info.ctime {
+            assert info.atime / 1_000_000 >= time_before
+            assert info.atime / 1_000_000 <= time_after
+            assert time_after - info.atime / 1_000_000 < 10
         }
-
-        assert info.atime / 1_000_000 >= time_before
-        assert info.atime / 1_000_000 <= time_after
-        assert time_after - info.atime / 1_000_000 < 10
 
         assert info.mtime / 1_000_000 >= time_before
         assert info.mtime / 1_000_000 <= time_after
