@@ -291,6 +291,8 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
 
 void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
+void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);
+
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...);
 
 void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local);

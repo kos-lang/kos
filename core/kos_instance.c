@@ -1200,6 +1200,13 @@ void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
     ctx->local_list = local;
 }
 
+void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id)
+{
+    KOS_init_local(ctx, local);
+
+    local->o = obj_id;
+}
+
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
 {
     va_list     args;
