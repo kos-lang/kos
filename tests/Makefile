@@ -52,10 +52,14 @@ all_tests += kos_parser_test
 all_tests += kos_print_heap_test
 all_tests += kos_module_path_test
 
+fuzz_tests  = kos_fuzz_compiler
+fuzz_tests += kos_fuzz_interpreter
+
 c_files  = kos_array_test.c
 c_files += kos_atomic_test.c
 c_files += kos_basic_object_test.c
 c_files += kos_buffer_test.c
+c_files += kos_fuzz_compiler.c
 c_files += kos_fuzz_interpreter.c
 c_files += kos_gc_test.c
 c_files += kos_module_load_test.c
@@ -150,9 +154,9 @@ endef
 
 $(foreach test, $(standalone_tests), $(eval $(call RUN_STANDALONE_TEST,$(test))))
 
-fuzz: $(out_dir)/tests/kos_fuzz_interpreter$(exe_suffix)
+fuzz: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/tests/, $(fuzz_tests)))
 
-$(eval $(call LINK_TEST,kos_fuzz_interpreter))
+$(foreach test, $(fuzz_tests), $(eval $(call LINK_TEST,$(test))))
 
 interactive_scripts  = disasm
 interactive_scripts += interactive
@@ -271,4 +275,4 @@ $(all_tests): gcov.pre.clean
 $(addprefix gcov., $(gcov_modules)): $(all_tests)
 endif
 
-.PHONY: all test simple_test gcov kos_fuzz_interpreter $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) $(interactive_scripts) module_paths print_heap_test $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: all test simple_test gcov fuzz $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) $(interactive_scripts) module_paths print_heap_test $(interpreter_test_list) $(interpreter_fail_test_list)

@@ -27,35 +27,61 @@ export LDFLAGS=-fsanitize=fuzzer,address
 export CC=clang
 export CXX=clang++
 
-UNAME=$(uname -s)
+show_help()
+{
+    echo "Usage: tests/fuzz [OPTIONS]"
+    echo
+    echo "Options:"
+    echo "    --test NAME       Run test: interpreter (default) or compiler"
+    echo "    --merge           Merge corpus (deduplicate, etc.)"
+    echo "    --minimize NAME   Minimize a crashing test case"
+    echo "    -j N              Run N jobs (default is autodetect)"
+}
 
 if [ -z "$JOBS" ]; then
-    case "$UNAME" in
+    case "$(uname -s)" in
         Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
         Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
-        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ; UNAME="Windows" ;;
+        CYGWIN*|MINGW*|MSYS*)                    JOBS="$NUMBER_OF_PROCESSORS" ;;
         Haiku|BeOS)                              JOBS="$(sysinfo | grep -c 'CPU #')" ;;
         *)                                       JOBS=2 ;;
     esac
 fi
 
+CORPORA_BASE=(
+    kos_fuzz_interpreter
+    kos_fuzz_compiler
+)
+
 PWD="$(pwd)"
 OUT="$PWD/Out/debug/tests"
-FUZZ="kos_fuzz_interpreter"
-CORPUS="$PWD/tests/kos_fuzz_interpreter_corpus"
-AFL_CORPUS="$PWD/tests/kos_fuzz_interpreter_afl"
+FUZZ="${CORPORA_BASE[0]}"
 DICT="$PWD/tests/kos_fuzz_interpreter_dict"
 MERGE=0
 MINIMIZE=""
 
+# Handle command line args
 while [ $# -gt 0 ]; do
     case "$1" in
         --merge)    MERGE=1 ;;
         --minimize) shift ; MINIMIZE="$1" ;;
+        --test)     shift ; FUZZ="kos_fuzz_$1" ;;
         -j)         shift ; JOBS="$1" ;;
-        *)          echo "Unrecognized parameter: $1" >&2 ; exit 1 ;;
+        -h|--help)  show_help ; exit 0 ;;
+        *)          echo "Unrecognized parameter: $1" >&2 ; echo ; show_help ; exit 1 ;;
     esac
     shift
+done
+
+# Get list of corpora (input and output)
+CORPUS="$PWD/tests/${FUZZ}_corpus"
+INPUT_CORPORA=( )
+for CUR_CORP in "${CORPORA_BASE[@]}"; do
+    [ "$CUR_CORP" = "$FUZZ" ] && continue
+    for CORP_SUFFIX in _corpus _afl; do
+        CORP_DIR="$PWD/tests/${CUR_CORP}${CORP_SUFFIX}"
+        [ -d "$CORP_DIR" ] && INPUT_CORPORA+=( "$CORP_DIR" )
+    done
 done
 
 echo "Using $JOBS jobs"
@@ -74,9 +100,9 @@ merge_corpus()
 if [ "$MERGE" = "1" -a -d "$CORPUS" ]; then
     mv "$CORPUS" "$CORPUS.old"
     mkdir -p "$CORPUS"
-    if [ -d "$AFL_CORPUS" ]; then
-        merge_corpus "$CORPUS.old" "$AFL_CORPUS"
-        rm -rf "$AFL_CORPUS"
+    if [ ${#INPUT_CORPORA[*]} -gt 0 ]; then
+        merge_corpus "$CORPUS.old" "${INPUT_CORPORA[@]}"
+        rm -rf "${INPUT_CORPORA[@]}"
     else
         merge_corpus "$CORPUS.old"
     fi
@@ -95,8 +121,4 @@ run_parallel_fuzzer()
 }
 
 mkdir -p "$CORPUS"
-if [ -d "$AFL_CORPUS" ]; then
-    run_parallel_fuzzer "$CORPUS" "$AFL_CORPUS"
-else
-    run_parallel_fuzzer "$CORPUS"
-fi
+run_parallel_fuzzer "$CORPUS" "${INPUT_CORPORA[@]}"
