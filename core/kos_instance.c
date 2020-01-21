@@ -1232,50 +1232,50 @@ void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
     va_end(args);
 }
 
-void KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
+static KOS_LOCAL **find_hookup_for_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
 {
-    KOS_LOCAL **prev_next;
-
-    if ( ! ctx)
-        return;
-
-    prev_next = &ctx->local_list;
+    KOS_LOCAL **hookup = &ctx->local_list;
 
     for (;;) {
-        KOS_LOCAL *next_ptr = *prev_next;
+        KOS_LOCAL *next_ptr = *hookup;
 
         assert(next_ptr);
 
         if (next_ptr == local)
             break;
 
-        prev_next = &next_ptr->next;
+        hookup = &next_ptr->next;
     }
 
-    *prev_next = local->next;
-
-#ifndef NDEBUG
-    local->next = 0;
-    local->o    = KOS_BADPTR;
-#endif
+    return hookup;
 }
 
-void KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last)
+KOS_OBJ_ID KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
 {
-    KOS_LOCAL **prev_next = &ctx->local_list;
+    KOS_OBJ_ID ret = KOS_BADPTR;
 
-    for (;;) {
-        KOS_LOCAL *next_ptr = *prev_next;
+    if (ctx) {
+        KOS_LOCAL **hookup = find_hookup_for_local(ctx, local);
 
-        assert(next_ptr);
+        *hookup = local->next;
 
-        if (next_ptr == first)
-            break;
+        ret = local->o;
 
-        prev_next = &next_ptr->next;
+#ifndef NDEBUG
+        local->next = 0;
+        local->o    = KOS_BADPTR;
+#endif
     }
 
-    *prev_next = last->next;
+    return ret;
+}
+
+KOS_OBJ_ID KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last)
+{
+    KOS_LOCAL **hookup = find_hookup_for_local(ctx, first);
+    KOS_OBJ_ID  ret    = last->o;
+
+    *hookup = last->next;
 
 #ifndef NDEBUG
     for (;;) {
@@ -1290,4 +1290,6 @@ void KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last)
         first = next;
     }
 #endif
+
+    return ret;
 }
