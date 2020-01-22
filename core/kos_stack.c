@@ -399,42 +399,39 @@ typedef int (*KOS_WALK_STACK)(KOS_OBJ_ID stack,
 
 static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 {
-    int        error;
-    KOS_OBJ_ID stack     = ctx->stack;
-    uint32_t   size;
-    uint32_t   prev_size = ~0U;
-    int        pushed    = 0;
+    int       error;
+    KOS_LOCAL stack;
+    uint32_t  size;
+    uint32_t  prev_size = ~0U;
 
-    error = KOS_push_locals(ctx, &pushed, 1, &stack);
-    if (error)
-        return error;
+    KOS_init_local_with(ctx, &stack, ctx->stack);
 
-    assert( ! IS_BAD_PTR(stack));
-    assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
-    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
+    assert( ! IS_BAD_PTR(stack.o));
+    assert(GET_OBJ_TYPE(stack.o) == OBJ_STACK);
+    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack.o)->size);
 
     while (size) {
 
-        const int reentrant = OBJPTR(STACK, stack)->flags & KOS_REENTRANT_STACK;
+        const int reentrant = OBJPTR(STACK, stack.o)->flags & KOS_REENTRANT_STACK;
 
         if (size == 1) {
 
-            const KOS_OBJ_ID prev = stack;
+            const KOS_OBJ_ID prev = stack.o;
 
-            stack = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[0]);
-            if (IS_BAD_PTR(stack))
+            stack.o = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack.o)->buf[0]);
+            if (IS_BAD_PTR(stack.o))
                 --size;
             else {
-                assert( ! IS_BAD_PTR(stack));
-                assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
-                assert( ! (OBJPTR(STACK, stack)->flags & KOS_REENTRANT_STACK));
+                assert( ! IS_BAD_PTR(stack.o));
+                assert(GET_OBJ_TYPE(stack.o) == OBJ_STACK);
+                assert( ! (OBJPTR(STACK, stack.o)->flags & KOS_REENTRANT_STACK));
 
-                size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
+                size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack.o)->size);
 
                 if (reentrant && prev != ctx->stack) {
                     assert(size > 0);
                     assert(prev_size != ~0U);
-                    assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[prev_size - 1]) == prev);
+                    assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack.o)->buf[prev_size - 1]) == prev);
 
                     size      = prev_size - 1;
                     prev_size = ~0U;
@@ -443,7 +440,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
         }
         else {
 
-            KOS_OBJ_ID num_regs_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]);
+            KOS_OBJ_ID num_regs_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack.o)->buf[size - 1]);
 
             if (IS_SMALL_INT(num_regs_obj)) {
                 int64_t    num_regs;
@@ -461,7 +458,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 
                 assert( ! reentrant || size == frame_size + 1);
 
-                error = walk(stack,
+                error = walk(stack.o,
                              size - frame_size,
                              frame_size,
                              cookie);
@@ -474,18 +471,18 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 
                 assert(GET_OBJ_TYPE(num_regs_obj) == OBJ_STACK);
                 assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, num_regs_obj)->size) > 0);
-                assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, num_regs_obj)->buf[0]) == stack);
+                assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, num_regs_obj)->buf[0]) == stack.o);
                 assert(OBJPTR(STACK, num_regs_obj)->flags & KOS_REENTRANT_STACK);
                 assert( ! reentrant);
 
                 prev_size = size;
-                stack     = num_regs_obj;
-                size      = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
+                stack.o   = num_regs_obj;
+                size      = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack.o)->size);
             }
         }
     }
 
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_local(ctx, &stack);
 
     return error;
 }
@@ -503,7 +500,7 @@ static int _get_depth(KOS_OBJ_ID stack,
 typedef struct KOS_DUMP_CONTEXT_S {
     KOS_CONTEXT ctx;
     uint32_t    idx;
-    KOS_OBJ_ID  backtrace;
+    KOS_LOCAL   backtrace;
 } KOS_DUMP_CONTEXT;
 
 static uint32_t _get_instr_offs(KOS_ATOMIC(KOS_OBJ_ID) *stack_frame)
@@ -528,112 +525,111 @@ static int _dump_stack(KOS_OBJ_ID stack,
     KOS_CONTEXT             ctx         = dump_ctx->ctx;
     KOS_ATOMIC(KOS_OBJ_ID) *stack_frame = &OBJPTR(STACK, stack)->buf[frame_idx];
     KOS_FUNCTION           *func        = OBJPTR(FUNCTION, KOS_atomic_read_relaxed_obj(*stack_frame));
-    KOS_OBJ_ID              module      = func->module;
     const uint32_t          instr_offs  = _get_instr_offs(stack_frame);
-    const unsigned          line        = KOS_module_addr_to_line(IS_BAD_PTR(module) ? 0 : OBJPTR(MODULE, module), instr_offs);
-    KOS_OBJ_ID              func_name;
-    KOS_OBJ_ID              module_name = KOS_STR_XBUILTINX;
-    KOS_OBJ_ID              module_path = KOS_STR_XBUILTINX;
+    const unsigned          line        = KOS_module_addr_to_line(IS_BAD_PTR(func->module)
+                                                                      ? 0 : OBJPTR(MODULE, func->module),
+                                                                  instr_offs);
     int                     error       = KOS_SUCCESS;
-    KOS_OBJ_ID              frame_desc  = KOS_BADPTR;
-    int                     pushed      = 0;
+    KOS_LOCAL               module;
+    KOS_LOCAL               func_name;
+    KOS_LOCAL               module_name;
+    KOS_LOCAL               module_path;
+    KOS_LOCAL               frame_desc;
 
-    func_name = KOS_module_addr_to_func_name(ctx, IS_BAD_PTR(module) ? 0 : OBJPTR(MODULE, module), instr_offs);
-    if (IS_BAD_PTR(func_name)) {
+    KOS_init_locals(ctx, 5, &module, &func_name, &module_name, &module_path, &frame_desc);
+
+    module.o      = func->module;
+    module_name.o = KOS_STR_XBUILTINX;
+    module_path.o = KOS_STR_XBUILTINX;
+
+    func_name.o = KOS_module_addr_to_func_name(ctx, IS_BAD_PTR(module.o) ? 0 : OBJPTR(MODULE, module.o), instr_offs);
+    if (IS_BAD_PTR(func_name.o)) {
         if (KOS_is_exception_pending(ctx))
             goto cleanup;
 
         /* TODO add builtin function name */
-        func_name = KOS_STR_XBUILTINX;
+        func_name.o = KOS_STR_XBUILTINX;
     }
 
-    TRY(KOS_push_locals(ctx, &pushed, 5, &module, &func_name, &module_name, &module_path, &frame_desc));
+    frame_desc.o = KOS_new_object(ctx);
+    TRY_OBJID(frame_desc.o);
 
-    frame_desc = KOS_new_object(ctx);
-    TRY_OBJID(frame_desc);
-
-    assert(dump_ctx->idx < KOS_get_array_size(dump_ctx->backtrace));
-    TRY(KOS_array_write(ctx, dump_ctx->backtrace, (int)dump_ctx->idx, frame_desc));
+    assert(dump_ctx->idx < KOS_get_array_size(dump_ctx->backtrace.o));
+    TRY(KOS_array_write(ctx, dump_ctx->backtrace.o, (int)dump_ctx->idx, frame_desc.o));
 
     /* TODO use builtin function pointer for offset */
 
-    if ( ! IS_BAD_PTR(module)) {
-        module_name = OBJPTR(MODULE, module)->name;
-        module_path = OBJPTR(MODULE, module)->path;
+    if ( ! IS_BAD_PTR(module.o)) {
+        module_name.o = OBJPTR(MODULE, module.o)->name;
+        module_path.o = OBJPTR(MODULE, module.o)->path;
     }
 
-    TRY(KOS_set_property(ctx, frame_desc, KOS_CONST_ID(str_module), module_name));
-    TRY(KOS_set_property(ctx, frame_desc, KOS_STR_FILE,             module_path));
-    TRY(KOS_set_property(ctx, frame_desc, KOS_STR_LINE,             TO_SMALL_INT((int)line)));
-    TRY(KOS_set_property(ctx, frame_desc, KOS_STR_OFFSET,           TO_SMALL_INT((int)instr_offs)));
-    TRY(KOS_set_property(ctx, frame_desc, KOS_STR_FUNCTION,         func_name));
+    TRY(KOS_set_property(ctx, frame_desc.o, KOS_CONST_ID(str_module), module_name.o));
+    TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_FILE,             module_path.o));
+    TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_LINE,             TO_SMALL_INT((int)line)));
+    TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_OFFSET,           TO_SMALL_INT((int)instr_offs)));
+    TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_FUNCTION,         func_name.o));
 
     ++dump_ctx->idx;
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_locals(ctx, &module, &frame_desc);
 
     return error;
 }
 
 void kos_wrap_exception(KOS_CONTEXT ctx)
 {
-    int                 error         = KOS_SUCCESS;
+    int                 error        = KOS_SUCCESS;
     unsigned            depth;
-    KOS_OBJ_ID          exception     = KOS_BADPTR;
-    KOS_OBJ_ID          backtrace     = KOS_BADPTR;
-    KOS_OBJ_ID          thrown_object = ctx->exception;
-    KOS_INSTANCE *const inst          = ctx->inst;
-    int                 partial_wrap  = 0;
+    KOS_INSTANCE *const inst         = ctx->inst;
+    int                 partial_wrap = 0;
     KOS_DUMP_CONTEXT    dump_ctx;
-    KOS_OBJ_ID          prev_locals   = KOS_BADPTR;
-    int                 pushed        = 0;
+    KOS_LOCAL           exception;
+    KOS_LOCAL           backtrace;
+    KOS_LOCAL           thrown_object;
 
-    assert(!IS_BAD_PTR(thrown_object));
+    assert(!IS_BAD_PTR(ctx->exception));
 
-    if (GET_OBJ_TYPE(thrown_object) == OBJ_OBJECT) {
+    if (GET_OBJ_TYPE(ctx->exception) == OBJ_OBJECT) {
 
-        const KOS_OBJ_ID proto = KOS_get_prototype(ctx, thrown_object);
+        const KOS_OBJ_ID proto = KOS_get_prototype(ctx, ctx->exception);
 
         if (proto == inst->prototypes.exception_proto)
             /* Exception already wrapped */
             return;
     }
 
+    KOS_init_locals(ctx, 4, &exception, &backtrace, &thrown_object, &dump_ctx.backtrace);
+
+    thrown_object.o = ctx->exception;
+
     KOS_clear_exception(ctx);
 
-    TRY(KOS_push_local_scope(ctx, &prev_locals));
+    exception.o = KOS_new_object_with_prototype(ctx, inst->prototypes.exception_proto);
+    TRY_OBJID(exception.o);
 
-    dump_ctx.backtrace = KOS_BADPTR;
-    TRY(KOS_push_locals(ctx, &pushed, 4,
-                        &exception, &backtrace, &thrown_object, &dump_ctx.backtrace));
-
-    exception = KOS_new_object_with_prototype(ctx, inst->prototypes.exception_proto);
-    TRY_OBJID(exception);
-
-    TRY(KOS_set_property(ctx, exception, KOS_STR_VALUE, thrown_object));
+    TRY(KOS_set_property(ctx, exception.o, KOS_STR_VALUE, thrown_object.o));
 
     partial_wrap = 1;
 
     depth = 0;
     TRY(_walk_stack(ctx, _get_depth, &depth));
 
-    backtrace = KOS_new_array(ctx, depth);
-    TRY_OBJID(backtrace);
+    backtrace.o = KOS_new_array(ctx, depth);
+    TRY_OBJID(backtrace.o);
 
-    TRY(KOS_set_property(ctx, exception, KOS_STR_BACKTRACE, backtrace));
+    TRY(KOS_set_property(ctx, exception.o, KOS_STR_BACKTRACE, backtrace.o));
 
-    dump_ctx.ctx       = ctx;
-    dump_ctx.idx       = 0;
-    dump_ctx.backtrace = backtrace;
+    dump_ctx.ctx         = ctx;
+    dump_ctx.idx         = 0;
+    dump_ctx.backtrace.o = backtrace.o;
 
     TRY(_walk_stack(ctx, _dump_stack, &dump_ctx));
 
-    ctx->exception = exception;
-
 cleanup:
-    KOS_pop_local_scope(ctx, &prev_locals);
+    ctx->exception = partial_wrap ? exception.o : thrown_object.o;
 
-    if (error)
-        ctx->exception = partial_wrap ? exception : thrown_object;
+    assert(ctx->local_list == &exception);
+    KOS_destroy_locals(ctx, &exception, &dump_ctx.backtrace);
 }
