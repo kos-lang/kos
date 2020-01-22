@@ -670,8 +670,7 @@ static int init_registers(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    assert(ctx->local_list == &func);
-    KOS_destroy_locals(ctx, &func, &rest);
+    KOS_destroy_top_locals(ctx, &func, &rest);
     return error;
 }
 
@@ -890,8 +889,7 @@ static int _prepare_call(KOS_CONTEXT        ctx,
 cleanup:
     if (error && (stack.o != ctx->stack || regs_idx != ctx->regs_idx))
         kos_stack_pop(ctx);
-    assert(ctx->local_list == &func);
-    KOS_destroy_locals(ctx, &func, &stack);
+    KOS_destroy_top_locals(ctx, &func, &stack);
     return error;
 }
 
@@ -2862,14 +2860,14 @@ static int exec_function(KOS_CONTEXT ctx)
                         break;
 
                     default:
-                        KOS_destroy_locals(ctx, &func, &args);
+                        KOS_destroy_top_locals(ctx, &func, &args);
                         RAISE_EXCEPTION_STR(str_err_not_callable);
                 }
 
                 error = _prepare_call(ctx, instr, func.o, &this_.o,
                                       args.o, num_args ? rarg1 : 0, num_args);
                 if (error) {
-                    KOS_destroy_locals(ctx, &func, &args);
+                    KOS_destroy_top_locals(ctx, &func, &args);
                     goto cleanup;
                 }
 
@@ -2965,8 +2963,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 }
 
                 assert(ctx->stack == stack);
-                assert(ctx->local_list == &func);
-                KOS_destroy_locals(ctx, &func, &args);
+                KOS_destroy_top_locals(ctx, &func, &args);
 
                 if (error) {
                     assert(KOS_is_exception_pending(ctx));
@@ -3136,7 +3133,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
     error = _prepare_call(ctx, INSTR_CALL, func.o, &this_.o, args.o, 0, 0);
 
     if (error) {
-        KOS_destroy_locals(ctx, &func, &ret);
+        KOS_destroy_top_locals(ctx, &func, &ret);
         return KOS_BADPTR;
     }
 
@@ -3196,8 +3193,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         }
     }
 
-    assert(ctx->local_list == &func);
-    ret.o = KOS_destroy_locals(ctx, &func, &ret);
+    ret.o = KOS_destroy_top_locals(ctx, &func, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }

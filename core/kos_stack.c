@@ -482,7 +482,7 @@ static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
         }
     }
 
-    KOS_destroy_local(ctx, &stack);
+    KOS_destroy_top_local(ctx, &stack);
 
     return error;
 }
@@ -573,7 +573,7 @@ static int _dump_stack(KOS_OBJ_ID stack,
     ++dump_ctx->idx;
 
 cleanup:
-    KOS_destroy_locals(ctx, &module, &frame_desc);
+    KOS_destroy_top_locals(ctx, &module, &frame_desc);
 
     return error;
 }
@@ -630,6 +630,5 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
 cleanup:
     ctx->exception = partial_wrap ? exception.o : thrown_object.o;
 
-    assert(ctx->local_list == &exception);
-    KOS_destroy_locals(ctx, &exception, &dump_ctx.backtrace);
+    KOS_destroy_top_locals(ctx, &exception, &dump_ctx.backtrace);
 }
