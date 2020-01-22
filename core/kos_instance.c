@@ -1191,9 +1191,23 @@ void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries)
     ctx->tmp_ref_count -= num_entries;
 }
 
+#ifdef NDEBUG
+#define check_local_list(ctx, local) ((void)0)
+#else
+static void check_local_list(KOS_LOCAL *list, KOS_LOCAL *local)
+{
+    while (list) {
+        assert(list != local);
+        list = list->next;
+    }
+}
+#endif
+
 void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
 {
     KOS_LOCAL *next = ctx->local_list;
+
+    check_local_list(next, local);
 
     local->next     = next;
     local->o        = KOS_BADPTR;
@@ -1210,8 +1224,8 @@ void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id)
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
 {
     va_list     args;
-    KOS_LOCAL  *head = 0;
-    KOS_LOCAL **prev = &head;
+    KOS_LOCAL  *head     = 0;
+    KOS_LOCAL **tail_ptr = &head;
 
     assert(num_locals);
 
@@ -1220,13 +1234,19 @@ void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
     for ( ; num_locals; --num_locals) {
         KOS_LOCAL *local = (KOS_LOCAL *)va_arg(args, KOS_LOCAL *);
 
-        *prev = local;
-        prev  = &local->next;
+        check_local_list(head, local);
+        check_local_list(ctx->local_list, local);
+
+        *tail_ptr = local;
+        tail_ptr  = &local->next;
 
         local->o = KOS_BADPTR;
+#ifndef NDEBUG
+        local->next = 0;
+#endif
     }
 
-    *prev           = ctx->local_list;
+    *tail_ptr       = ctx->local_list;
     ctx->local_list = head;
 
     va_end(args);
