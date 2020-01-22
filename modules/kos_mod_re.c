@@ -58,7 +58,7 @@ static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
         RAISE_EXCEPTION_STR(str_err_regex_not_a_string);
 
 cleanup:
-    KOS_destroy_locals(ctx, &regex_str, &regex_str);
+    KOS_destroy_top_locals(ctx, &regex_str, &regex_str);
 
     return error ? KOS_BADPTR : KOS_VOID;
 }
