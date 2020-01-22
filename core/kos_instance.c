@@ -1203,14 +1203,14 @@ static void check_local_list(KOS_LOCAL *list, KOS_LOCAL *local)
 }
 #endif
 
-void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
+void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id)
 {
     KOS_LOCAL *next = ctx->local_list;
 
     check_local_list(next, local);
 
     local->next     = next;
-    local->o        = KOS_BADPTR;
+    local->o        = obj_id;
     ctx->local_list = local;
 }
 
