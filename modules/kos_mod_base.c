@@ -187,7 +187,7 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT                  ctx,
     }
 
 cleanup:
-    KOS_destroy_locals(ctx, &regs, &value);
+    KOS_destroy_top_locals(ctx, &regs, &value);
 
     return ret;
 }
@@ -266,7 +266,7 @@ static int create_class(KOS_CONTEXT          ctx,
                               0));
 
 cleanup:
-    KOS_destroy_local(ctx, &module);
+    KOS_destroy_top_local(ctx, &module);
     return error;
 }
 
@@ -778,7 +778,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    ret.o = KOS_destroy_locals(ctx, &args, &ret);
+    ret.o = KOS_destroy_top_locals(ctx, &args, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }
@@ -853,7 +853,7 @@ static KOS_OBJ_ID stringify(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    KOS_destroy_local(ctx, &args);
+    KOS_destroy_top_local(ctx, &args);
 
     return error ? KOS_BADPTR : ret;
 }
@@ -1168,7 +1168,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    ret.o = KOS_destroy_locals(ctx, &args, &ret);
+    ret.o = KOS_destroy_top_locals(ctx, &args, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }
@@ -1386,7 +1386,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    buffer.o = KOS_destroy_locals(ctx, &args, &buffer);
+    buffer.o = KOS_destroy_top_locals(ctx, &args, &buffer);
 
     return error ? KOS_BADPTR : buffer.o;
 }
@@ -1691,7 +1691,7 @@ static KOS_OBJ_ID apply(KOS_CONTEXT ctx,
     ret = KOS_apply_function(ctx, func.o, arg_this.o, arg_args.o);
 
 cleanup:
-    KOS_destroy_locals(ctx, &func, &arg_args);
+    KOS_destroy_top_locals(ctx, &func, &arg_args);
     return error ? KOS_BADPTR : ret;
 }
 
@@ -1771,7 +1771,7 @@ static KOS_OBJ_ID async(KOS_CONTEXT ctx,
     OBJPTR(OBJECT, thread_obj.o)->finalize = thread_finalize;
 
 cleanup:
-    thread_obj.o = KOS_destroy_locals(ctx, &func, &thread_obj);
+    thread_obj.o = KOS_destroy_top_locals(ctx, &func, &thread_obj);
 
     return error ? KOS_BADPTR : thread_obj.o;
 }
@@ -2030,7 +2030,7 @@ static KOS_OBJ_ID expand_for_sort(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    expanded.o = KOS_destroy_locals(ctx, &iterable, &expanded);
+    expanded.o = KOS_destroy_top_locals(ctx, &iterable, &expanded);
 
     return error ? KOS_BADPTR : expanded.o;
 }
@@ -2245,7 +2245,7 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
         copy_sort_results(ctx, to_expand.o, expanded.o, (sort_key.o == KOS_VOID) ? 2 : 3);
 
         this_obj = to_expand.o;
-        KOS_destroy_locals(ctx, &to_expand, &sort_key);
+        KOS_destroy_top_locals(ctx, &to_expand, &sort_key);
     }
 
 cleanup:
@@ -2425,7 +2425,7 @@ static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    array.o = KOS_destroy_locals(ctx, &args, &array);
+    array.o = KOS_destroy_top_locals(ctx, &args, &array);
 
     return error ? KOS_BADPTR : array.o;
 }
@@ -2740,7 +2740,7 @@ static int process_pack_format(KOS_CONTEXT               ctx,
     }
 
 cleanup:
-    KOS_destroy_local(ctx, &buffer);
+    KOS_destroy_top_local(ctx, &buffer);
 
     return error;
 }
@@ -2963,7 +2963,7 @@ static int pack_format(KOS_CONTEXT               ctx,
     }
 
 cleanup:
-    KOS_destroy_local(ctx, &buffer);
+    KOS_destroy_top_local(ctx, &buffer);
     kos_vector_destroy(&str_buf);
     return error;
 }
@@ -3104,7 +3104,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
     fmt->idx = offs;
 
 cleanup:
-    KOS_destroy_local(ctx, &buffer);
+    KOS_destroy_top_local(ctx, &buffer);
     return error;
 }
 
@@ -3146,7 +3146,7 @@ static KOS_OBJ_ID pack(KOS_CONTEXT ctx,
         error = KOS_ERROR_EXCEPTION;
     }
 
-    buffer.o = KOS_destroy_locals(ctx, &fmt.fmt_str, &buffer);
+    buffer.o = KOS_destroy_top_locals(ctx, &fmt.fmt_str, &buffer);
 
     return error ? KOS_BADPTR : buffer.o;
 }
@@ -3216,7 +3216,7 @@ static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
     TRY(process_pack_format(ctx, buffer.o, unpack_format, &fmt));
 
 cleanup:
-    fmt.data.o = KOS_destroy_locals(ctx, &buffer, &fmt.data);
+    fmt.data.o = KOS_destroy_top_locals(ctx, &buffer, &fmt.data);
 
     return error ? KOS_BADPTR : fmt.data.o;
 }
@@ -3428,7 +3428,7 @@ static KOS_OBJ_ID reserve(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    self.o = KOS_destroy_local(ctx, &self);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
     return error ? KOS_BADPTR : self.o;
 }
@@ -3554,7 +3554,7 @@ static KOS_OBJ_ID insert_array(KOS_CONTEXT ctx,
     TRY(KOS_array_insert(ctx, self.o, begin, end, src_obj, 0, src_len));
 
 cleanup:
-    self.o = KOS_destroy_locals(ctx, &args, &self);
+    self.o = KOS_destroy_top_locals(ctx, &args, &self);
 
     return error ? KOS_BADPTR : self.o;
 }
@@ -3624,7 +3624,7 @@ static KOS_OBJ_ID pop(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    new_array.o = KOS_destroy_locals(ctx, &self, &new_array);
+    new_array.o = KOS_destroy_top_locals(ctx, &self, &new_array);
 
     return error ? KOS_BADPTR : new_array.o;
 }
@@ -3684,7 +3684,7 @@ static KOS_OBJ_ID push(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    old_size.o = KOS_destroy_locals(ctx, &self, &old_size);
+    old_size.o = KOS_destroy_top_locals(ctx, &self, &old_size);
 
     return error ? KOS_BADPTR : old_size.o;
 }
@@ -4517,7 +4517,7 @@ static KOS_OBJ_ID print_exception(KOS_CONTEXT ctx,
     if (KOS_is_exception_pending(ctx))
         error = KOS_ERROR_EXCEPTION;
 
-    self.o = KOS_destroy_local(ctx, &self);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
     return error ? KOS_BADPTR : self.o;
 }
@@ -4599,7 +4599,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(thread),     "wait",          wait,              0);
 
 cleanup:
-    KOS_destroy_local(ctx, &module);
+    KOS_destroy_top_local(ctx, &module);
 
     return error;
 }
