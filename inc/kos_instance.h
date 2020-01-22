@@ -291,13 +291,15 @@ void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
 
 void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
-void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);
-
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...);
 
 KOS_OBJ_ID KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
 KOS_OBJ_ID KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last);
+
+KOS_OBJ_ID KOS_destroy_top_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
+
+KOS_OBJ_ID KOS_destroy_top_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last);
 
 typedef struct KOS_GC_STATS_S {
     unsigned num_objs_evacuated;
@@ -333,6 +335,20 @@ int KOS_resume_context(KOS_CONTEXT ctx);
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+static inline void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id)
+{
+    KOS_init_local(ctx, local);
+    local->o = obj_id;
+}
+#else
+#define KOS_init_local_with(ctx, local, obj_id) do { \
+    KOS_LOCAL *const wloc = (local);                 \
+    KOS_init_local((ctx), wloc);                     \
+    wloc->o = (obj_id);                              \
+} while (0)
 #endif
 
 #endif

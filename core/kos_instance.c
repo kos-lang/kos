@@ -1214,13 +1214,6 @@ void KOS_init_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
     ctx->local_list = local;
 }
 
-void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id)
-{
-    KOS_init_local(ctx, local);
-
-    local->o = obj_id;
-}
-
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
 {
     va_list     args;
@@ -1294,6 +1287,50 @@ KOS_OBJ_ID KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last
 {
     KOS_LOCAL **hookup = find_hookup_for_local(ctx, first);
     KOS_OBJ_ID  ret    = last->o;
+
+    *hookup = last->next;
+
+#ifndef NDEBUG
+    for (;;) {
+        KOS_LOCAL *next = first->next;
+
+        first->next = 0;
+        first->o    = KOS_BADPTR;
+
+        if (first == last)
+            break;
+
+        first = next;
+    }
+#endif
+
+    return ret;
+}
+
+KOS_OBJ_ID KOS_destroy_top_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
+{
+    KOS_OBJ_ID ret = KOS_BADPTR;
+
+    assert(ctx->local_list == local);
+
+    ctx->local_list = local->next;
+
+    ret = local->o;
+
+#ifndef NDEBUG
+    local->next = 0;
+    local->o    = KOS_BADPTR;
+#endif
+
+    return ret;
+}
+
+KOS_OBJ_ID KOS_destroy_top_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last)
+{
+    KOS_LOCAL **hookup = &ctx->local_list;
+    KOS_OBJ_ID  ret    = last->o;
+
+    assert(ctx->local_list == first);
 
     *hookup = last->next;
 
