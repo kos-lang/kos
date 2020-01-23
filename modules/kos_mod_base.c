@@ -2191,6 +2191,11 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
     KOS_OBJ_ID              key        = KOS_VOID;
     KOS_OBJ_ID              reverse_id = KOS_FALSE;
     KOS_ATOMIC(KOS_OBJ_ID) *src;
+    KOS_LOCAL               to_expand;
+    KOS_LOCAL               expanded;
+    KOS_LOCAL               sort_key;
+
+    KOS_init_locals(ctx, 3, &to_expand, &expanded, &sort_key);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
@@ -2222,15 +2227,8 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
     }
 
     if (KOS_get_array_size(this_obj) > 1) {
-
-        KOS_LOCAL to_expand;
-        KOS_LOCAL expanded;
-        KOS_LOCAL sort_key;
-
-        KOS_init_locals(ctx, 3, &to_expand, &expanded, &sort_key);
-
         to_expand.o = this_obj;
-        sort_key.o   = key;
+        sort_key.o  = key;
 
         expanded.o = expand_for_sort(ctx, to_expand.o, sort_key.o);
         TRY_OBJID(expanded.o);
@@ -2245,10 +2243,11 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
         copy_sort_results(ctx, to_expand.o, expanded.o, (sort_key.o == KOS_VOID) ? 2 : 3);
 
         this_obj = to_expand.o;
-        KOS_destroy_top_locals(ctx, &to_expand, &sort_key);
     }
 
 cleanup:
+    KOS_destroy_top_locals(ctx, &to_expand, &sort_key);
+
     return error ? KOS_BADPTR : this_obj;
 }
 
