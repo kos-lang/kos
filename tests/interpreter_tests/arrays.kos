@@ -1247,6 +1247,10 @@ do {
     assert a[7] == "size"
 }
 
+do {
+    expect_fail(() => [false,true].sort(base.integer))
+}
+
 ##############################################################################
 # base.sort
 
