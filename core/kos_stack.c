@@ -399,7 +399,7 @@ typedef int (*KOS_WALK_STACK)(KOS_OBJ_ID stack,
 
 static int _walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 {
-    int       error;
+    int       error     = KOS_SUCCESS;
     KOS_LOCAL stack;
     uint32_t  size;
     uint32_t  prev_size = ~0U;
