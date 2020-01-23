@@ -61,6 +61,10 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
             init = 1;
         }
 
+        /* Cheat, reuse ctx_mutex to ensure the RNG is not banged from
+         * multiple threads. */
+        kos_lock_mutex(&ctx->inst->threads.ctx_mutex);
+
         while (((intptr_t)buf & 7) && buf < end) {
             *(uint8_t *)buf = (uint8_t)kos_rng_random(&rng);
             buf = (uint64_t *)((intptr_t)buf + 1);
@@ -68,6 +72,8 @@ static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 
         while (buf + 1 <= end)
             *(buf++) = kos_rng_random(&rng);
+
+        kos_unlock_mutex(&ctx->inst->threads.ctx_mutex);
     }
 #endif
 
