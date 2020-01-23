@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright (c) 2014-2020 Chris Dragan
 #
@@ -38,7 +38,7 @@ show_help()
     echo "    -j N              Run N jobs (default is autodetect)"
 }
 
-if [ -z "$JOBS" ]; then
+if [[ -z "$JOBS" ]]; then
     case "$(uname -s)" in
         Linux)                                   JOBS="$(grep -c ^processor /proc/cpuinfo)" ;;
         Darwin|FreeBSD|OpenBSD|NetBSD|DragonFly) JOBS="$(sysctl -n hw.ncpu)" ;;
@@ -61,7 +61,7 @@ MERGE=0
 MINIMIZE=""
 
 # Handle command line args
-while [ $# -gt 0 ]; do
+while [[ $# -gt 0 ]]; do
     case "$1" in
         --merge)    MERGE=1 ;;
         --minimize) shift ; MINIMIZE="$1" ;;
@@ -77,16 +77,16 @@ done
 CORPUS="$PWD/tests/${FUZZ}_corpus"
 INPUT_CORPORA=( )
 for CUR_CORP in "${CORPORA_BASE[@]}"; do
-    [ "$CUR_CORP" = "$FUZZ" ] && continue
+    [[ "$CUR_CORP" = "$FUZZ" ]] && continue
     for CORP_SUFFIX in _corpus _afl; do
         CORP_DIR="$PWD/tests/${CUR_CORP}${CORP_SUFFIX}"
-        [ -d "$CORP_DIR" ] && INPUT_CORPORA+=( "$CORP_DIR" )
+        [[ -d "$CORP_DIR" ]] && INPUT_CORPORA+=( "$CORP_DIR" )
     done
 done
 
 echo "Using $JOBS jobs"
 
-[ -f "$OUT/$FUZZ" ] || rm -rf Out
+[[ -f "$OUT/$FUZZ" ]] || rm -rf Out
 
 make -k -j "$JOBS" fuzz debug=1 fuzz=1 strict=1 CLANG_VER=c99 --warn-undefined-variables
 
@@ -97,20 +97,18 @@ merge_corpus()
     "./$FUZZ" -merge=1 "$CORPUS" "$@"
 }
 
-if [ "$MERGE" = "1" -a -d "$CORPUS" ]; then
+if [[ "$MERGE" = "1" ]] && [[ -d "$CORPUS" ]]; then
     mv "$CORPUS" "$CORPUS.old"
     mkdir -p "$CORPUS"
-    if [ ${#INPUT_CORPORA[*]} -gt 0 ]; then
-        merge_corpus "$CORPUS.old" "${INPUT_CORPORA[@]}"
+    merge_corpus "$CORPUS.old" "${INPUT_CORPORA[@]}"
+    if [[ ${#INPUT_CORPORA[*]} -gt 0 ]]; then
         rm -rf "${INPUT_CORPORA[@]}"
-    else
-        merge_corpus "$CORPUS.old"
     fi
     rm -rf "$CORPUS.old"
     exit 0
 fi
 
-if [ -n "$MINIMIZE" ]; then
+if [[ -n "$MINIMIZE" ]]; then
     "./$FUZZ" -minimize_crash=1 -runs=10000 "$MINIMIZE"
     exit 0
 fi
