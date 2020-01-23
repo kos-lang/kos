@@ -1373,8 +1373,6 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
                         ++size;
                     }
 
-                    gen_args.o = KOS_BADPTR;
-
                     TRY(KOS_buffer_resize(ctx, buffer.o, size));
                 }
                 break;
