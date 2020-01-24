@@ -107,12 +107,14 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
+#ifndef CONFIG_FUZZ
     if (cstr.size) {
         cstr.buffer[cstr.size - 1] = '\n';
         fwrite(cstr.buffer, 1, cstr.size, stdout);
     }
     else
         printf("\n");
+#endif
 
     KOS_resume_context(ctx);
 
@@ -1444,7 +1446,7 @@ static KOS_OBJ_ID function_constructor(KOS_CONTEXT ctx,
                     default:
                         ret = kos_copy_function(ctx, ret);
 
-                        if (state > KOS_GEN_INIT)
+                        if (state > KOS_GEN_INIT && ! IS_BAD_PTR(ret))
                             OBJPTR(FUNCTION, ret)->state = KOS_GEN_INIT;
                 }
             }
@@ -1554,7 +1556,7 @@ static KOS_OBJ_ID generator_constructor(KOS_CONTEXT ctx,
                     default:
                         ret = kos_copy_function(ctx, ret);
 
-                        if (state > KOS_GEN_INIT)
+                        if (state > KOS_GEN_INIT && ! IS_BAD_PTR(ret))
                             OBJPTR(FUNCTION, ret)->state = KOS_GEN_INIT;
                 }
             }
