@@ -782,7 +782,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
         }
     }
 
-    /* Check if any of the non-full page contains enough space */
+    /* Check if any of the non-full pages contains enough space */
 
     page_ptr  = &heap->used_pages.head;
     prev_page = 0;
@@ -843,6 +843,15 @@ static void *alloc_object(KOS_CONTEXT ctx,
         }
 
         break;
+    }
+
+    if (seek_depth < KOS_MAX_PAGE_SEEK) {
+        if (seek_depth) {
+            KOS_PERF_CNT(non_full_seek);
+        }
+        else {
+            KOS_PERF_CNT(non_full_seek_max);
+        }
     }
 
     if ( ! hdr) {
@@ -993,7 +1002,7 @@ void *kos_alloc_object(KOS_CONTEXT    ctx,
         KOS_PERF_CNT(alloc_object_size[0]);
     else if (size <= 128)
         KOS_PERF_CNT(alloc_object_size[1]);
-    else if (size <= 512)
+    else if (size <= 256)
         KOS_PERF_CNT(alloc_object_size[2]);
     else
         KOS_PERF_CNT(alloc_object_size[3]);
@@ -1743,7 +1752,7 @@ static int evacuate_object(KOS_CONTEXT     ctx,
             KOS_PERF_CNT(evac_object_size[0]);
         else if (size <= 128)
             KOS_PERF_CNT(evac_object_size[1]);
-        else if (size <= 512)
+        else if (size <= 256)
             KOS_PERF_CNT(evac_object_size[2]);
         else
             KOS_PERF_CNT(evac_object_size[3]);

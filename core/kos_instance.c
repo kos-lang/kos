@@ -64,9 +64,10 @@ DECLARE_CONST_OBJECT(KOS_true,  OBJ_BOOLEAN, 1);
 struct KOS_PERF_S kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
     0, 0,
-    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
     { 0, 0, 0, 0 },
-    { 0, 0, 0, 0 }
+    { 0, 0, 0, 0 },
+    0
 };
 #endif
 
@@ -542,18 +543,21 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     PERF_VALUE(object_collision[3]);
     PERF_RATIO(array_salvage);
     PERF_VALUE(alloc_object);
+    PERF_VALUE_NAME(alloc_object_32,        alloc_object_size[0]);
+    PERF_VALUE_NAME(alloc_object_64_128,    alloc_object_size[1]);
+    PERF_VALUE_NAME(alloc_object_160_256,   alloc_object_size[2]);
+    PERF_VALUE_NAME(alloc_object_288_512,   alloc_object_size[3]);
     PERF_VALUE(alloc_huge_object);
+    PERF_VALUE(non_full_seek);
+    PERF_VALUE(non_full_seek_max);
     PERF_VALUE(alloc_new_page);
     PERF_VALUE(alloc_free_page);
     PERF_VALUE(gc_cycles);
-    PERF_VALUE_NAME(alloc_object_32,        alloc_object_size[0]);
-    PERF_VALUE_NAME(alloc_object_64_128,    alloc_object_size[1]);
-    PERF_VALUE_NAME(alloc_object_256_512,   alloc_object_size[2]);
-    PERF_VALUE_NAME(alloc_object_1024_plus, alloc_object_size[3]);
     PERF_VALUE_NAME(evac_object_32,         evac_object_size[0]);
     PERF_VALUE_NAME(evac_object_64_128,     evac_object_size[1]);
-    PERF_VALUE_NAME(evac_object_256_512,    evac_object_size[2]);
-    PERF_VALUE_NAME(evac_object_1024_plus,  evac_object_size[3]);
+    PERF_VALUE_NAME(evac_object_160_256,    evac_object_size[2]);
+    PERF_VALUE_NAME(evac_object_288_512,    evac_object_size[3]);
+    PERF_VALUE(instructions);
 #endif
 }
 

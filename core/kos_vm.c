@@ -35,6 +35,7 @@
 #include "kos_memory.h"
 #include "kos_misc.h"
 #include "kos_object_internal.h"
+#include "kos_perf.h"
 #include "kos_try.h"
 #include "kos_vm.h"
 #include <assert.h>
@@ -1166,7 +1167,8 @@ static uint32_t _load_32(const uint8_t *bytecode)
 #if KOS_DISPATCH_TABLE
 #   define BEGIN_INSTRUCTION(instr)     OP_##instr
 #   define BEGIN_BREAKPOINT_INSTRUCTION OP_BREAKPOINT
-#   define NEXT_INSTRUCTION             instr     = (KOS_BYTECODE_INSTR)*bytecode;               \
+#   define NEXT_INSTRUCTION             KOS_PERF_CNT(instructions);                              \
+                                        instr     = (KOS_BYTECODE_INSTR)*bytecode;               \
                                         jump_offs = (uint8_t)(instr - INSTR_BREAKPOINT);         \
                                         if (jump_offs >= (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) \
                                             goto OP_BREAKPOINT;                                  \
@@ -1215,6 +1217,8 @@ static int exec_function(KOS_CONTEXT ctx)
     for (;;) {
         assert( ! KOS_is_exception_pending(ctx));
         assert((uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode) < OBJPTR(MODULE, module)->bytecode_size);
+
+        KOS_PERF_CNT(instructions);
 
         instr = (KOS_BYTECODE_INSTR)*bytecode;
 
