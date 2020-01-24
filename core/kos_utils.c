@@ -270,7 +270,7 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
     kos_vector_destroy(&cstr);
 
     if (KOS_is_exception_pending(ctx)) {
-        fprintf(stderr, "Exception: <unable to format>\n");
+        fprintf(dest, "Exception: <unable to format>\n");
 
         if (print_where == KOS_STDERR)
             KOS_clear_exception(ctx);
@@ -1190,56 +1190,61 @@ cleanup:
 }
 
 int KOS_array_push_expand(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  array,
-                          KOS_OBJ_ID  value)
+                          KOS_OBJ_ID  array_obj,
+                          KOS_OBJ_ID  value_obj)
 {
-    int      error  = KOS_SUCCESS;
-    uint32_t cur_size;
-    int      pushed = 0;
+    int       error  = KOS_SUCCESS;
+    uint32_t  cur_size;
+    KOS_LOCAL array;
+    KOS_LOCAL value;
+    KOS_LOCAL gen_args;
 
-    if (GET_OBJ_TYPE(array) != OBJ_ARRAY)
+    KOS_init_locals(ctx, 3, &array, &value, &gen_args);
+
+    array.o = array_obj;
+    value.o = value_obj;
+
+    if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_not_array);
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &array, &value));
+    cur_size = KOS_get_array_size(array.o);
 
-    cur_size = KOS_get_array_size(array);
-
-    switch (GET_OBJ_TYPE(value)) {
+    switch (GET_OBJ_TYPE(value.o)) {
 
         case OBJ_ARRAY:
-            TRY(KOS_array_insert(ctx, array, cur_size, cur_size,
-                                 value, 0, (int32_t)KOS_get_array_size(value)));
+            TRY(KOS_array_insert(ctx, array.o, cur_size, cur_size,
+                                 value.o, 0, (int32_t)KOS_get_array_size(value.o)));
             break;
 
         case OBJ_STRING: {
-            const uint32_t len = KOS_get_string_length(value);
+            const uint32_t len = KOS_get_string_length(value.o);
             uint32_t       i;
 
-            TRY(KOS_array_resize(ctx, array, cur_size + len));
+            TRY(KOS_array_resize(ctx, array.o, cur_size + len));
 
             for (i = 0; i < len; i++) {
-                KOS_OBJ_ID ch = KOS_string_get_char(ctx, value, (int)i);
+                KOS_OBJ_ID ch = KOS_string_get_char(ctx, value.o, (int)i);
                 TRY_OBJID(ch);
-                TRY(KOS_array_write(ctx, array, (int)(cur_size + i), ch));
+                TRY(KOS_array_write(ctx, array.o, (int)(cur_size + i), ch));
             }
             break;
         }
 
         case OBJ_BUFFER: {
-            const uint32_t size = KOS_get_buffer_size(value);
+            const uint32_t size = KOS_get_buffer_size(value.o);
             uint32_t       i;
             uint8_t       *buf  = 0;
 
-            TRY(KOS_array_resize(ctx, array, cur_size + size));
+            TRY(KOS_array_resize(ctx, array.o, cur_size + size));
 
             if (size) {
-                buf = KOS_buffer_data_volatile(value);
+                buf = KOS_buffer_data_volatile(value.o);
                 assert(buf);
             }
 
             for (i = 0; i < size; i++) {
                 const KOS_OBJ_ID byte = TO_SMALL_INT((int)buf[i]);
-                TRY(KOS_array_write(ctx, array, (int)(cur_size + i), byte));
+                TRY(KOS_array_write(ctx, array.o, (int)(cur_size + i), byte));
             }
             break;
         }
@@ -1247,28 +1252,21 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
         case OBJ_FUNCTION: {
             KOS_FUNCTION_STATE state;
 
-            if ( ! KOS_is_generator(value, &state))
+            if ( ! KOS_is_generator(value.o, &state))
                 RAISE_EXCEPTION(str_err_cannot_expand);
 
             if (state != KOS_GEN_DONE) {
-                KOS_OBJ_ID void_obj = KOS_VOID;
-                KOS_OBJ_ID gen_args = KOS_new_array(ctx, 0);
-                TRY_OBJID(gen_args);
-
-                {
-                    int pushed2 = 0;
-                    TRY(KOS_push_locals(ctx, &pushed2, 1, &gen_args));
-                    pushed += pushed2;
-                }
+                gen_args.o = KOS_new_array(ctx, 0);
+                TRY_OBJID(gen_args.o);
 
                 for (;;) {
-                    KOS_OBJ_ID ret = KOS_call_generator(ctx, value, void_obj, gen_args);
+                    KOS_OBJ_ID ret = KOS_call_generator(ctx, value.o, KOS_VOID, gen_args.o);
                     if (IS_BAD_PTR(ret)) { /* end of iterator */
                         if (KOS_is_exception_pending(ctx))
                             error = KOS_ERROR_EXCEPTION;
                         break;
                     }
-                    TRY(KOS_array_push(ctx, array, ret, 0));
+                    TRY(KOS_array_push(ctx, array.o, ret, 0));
                 }
             }
             break;
@@ -1279,7 +1277,8 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_locals(ctx, &array, &gen_args);
+
     return error;
 }
 
