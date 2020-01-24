@@ -68,7 +68,7 @@ static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
     KOS_ARRAY_STORAGE *buf            = 0;
     const uint32_t     buf_alloc_size = KOS_buffer_alloc_size(capacity);
 
-    if (capacity < 256U * 1024U * 1024U)
+    if (capacity < KOS_MAX_ARRAY_SIZE)
         buf = (KOS_ARRAY_STORAGE *)kos_alloc_object(ctx,
                                                     KOS_ALLOC_MOVABLE,
                                                     OBJ_ARRAY_STORAGE,
