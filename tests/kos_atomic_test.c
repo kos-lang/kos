@@ -29,76 +29,130 @@
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 
-static void *_ptr(int value)
+static void *ptrv(uint32_t hi32, uint32_t lo32)
 {
-    const uintptr_t hi = (value >> 8) & 0xFFU;
-    const uintptr_t lo = value & 0xFFU;
-    const uintptr_t v  = (hi << (sizeof(uintptr_t) * 8 - 8)) | lo;
+    const uintptr_t hi = hi32;
+    const uintptr_t lo = lo32;
+    const uintptr_t v  = (hi << (sizeof(uintptr_t) * 8 - sizeof(uint32_t))) ^ lo;
     return (void *)v;
+}
+
+static uint64_t val64(uint32_t hi32, uint32_t lo32)
+{
+    const uint64_t hi = hi32;
+    const uint64_t lo = lo32;
+    return (hi << 32) + lo;
 }
 
 int main(void)
 {
     {
         KOS_ATOMIC(uint32_t) value;
-        value = 0xCAFE;
-        TEST(KOS_atomic_read_relaxed_u32(value) == 0xCAFE);
+        value = 0x87654321U;
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0x87654321U);
     }
 
     {
         KOS_ATOMIC(uint32_t) value;
-        value = 0xBEEF;
-        KOS_atomic_write_relaxed_u32(value, 0xFEED);
-        TEST(KOS_atomic_read_relaxed_u32(value) == 0xFEED);
-    }
-
-    {
-        KOS_ATOMIC(void *) value;
-        value = _ptr(0xCAFE);
-        TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xCAFE));
-    }
-
-    {
-        KOS_ATOMIC(void *) value;
-        value = _ptr(0xBEEF);
-        KOS_atomic_write_relaxed_ptr(value, _ptr(0xFEED));
-        TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xFEED));
+        value = 0x87654321U;
+        TEST(KOS_atomic_read_acquire_u32(value) == 0x87654321U);
     }
 
     {
         KOS_ATOMIC(uint32_t) value;
-        value = 0xBEAD;
+        value = 0x87654321U;
+        KOS_atomic_write_relaxed_u32(value, 0x12345678U);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0x12345678U);
+    }
+
+    {
+        KOS_ATOMIC(uint32_t) value;
+        value = 0x87654321U;
+        KOS_atomic_write_release_u32(value, 0x12345678U);
+        TEST(KOS_atomic_read_acquire_u32(value) == 0x12345678U);
+    }
+
+    {
+        KOS_ATOMIC(void *) value;
+        value = ptrv(0xFEDCBA98U, 0x76543210U);
+        TEST(KOS_atomic_read_relaxed_ptr(value) == ptrv(0xFEDCBA98U, 0x76543210U));
+    }
+
+    {
+        KOS_ATOMIC(void *) value;
+        value = ptrv(0xFEDCBA98U, 0x76543210U);
+        TEST(KOS_atomic_read_acquire_ptr(value) == ptrv(0xFEDCBA98U, 0x76543210U));
+    }
+
+    {
+        KOS_ATOMIC(void *) value;
+        value = ptrv(0xFEDCBA98U, 0x76543210U);
+        KOS_atomic_write_relaxed_ptr(value, ptrv(0xF00DFACEU, 0xBEADC0DE));
+        TEST(KOS_atomic_read_relaxed_ptr(value) == ptrv(0xF00DFACEU, 0xBEADC0DE));
+    }
+
+    {
+        KOS_ATOMIC(void *) value;
+        value = ptrv(0xFEDCBA98U, 0x76543210U);
+        KOS_atomic_write_release_ptr(value, ptrv(0xF00DFACEU, 0xBEADC0DE));
+        TEST(KOS_atomic_read_acquire_ptr(value) == ptrv(0xF00DFACEU, 0xBEADC0DE));
+    }
+
+    {
+        KOS_ATOMIC(uint32_t) value;
+        value = 0x87654321U;
         TEST( ! KOS_atomic_cas_strong_u32(value, 0xC0DE, 0xFEED));
-        TEST(KOS_atomic_read_relaxed_u32(value) == 0xBEAD);
-        TEST(KOS_atomic_cas_strong_u32(value, 0xBEAD, 0xFEED));
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0x87654321U);
+        TEST(KOS_atomic_cas_strong_u32(value, 0x87654321U, 0xFEED));
         TEST(KOS_atomic_read_relaxed_u32(value) == 0xFEED);
     }
 
     {
         KOS_ATOMIC(void *) value;
-        value = _ptr(0xBEAD);
-        TEST( ! KOS_atomic_cas_strong_ptr(value, _ptr(0xC0DE), _ptr(0xFEED)));
-        TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xBEAD));
-        TEST(KOS_atomic_cas_strong_ptr(value, _ptr(0xBEAD), _ptr(0xFEED)));
-        TEST(KOS_atomic_read_relaxed_ptr(value) == _ptr(0xFEED));
+        value = ptrv(0xFEDCBA98U, 0x76543210U);
+        TEST( ! KOS_atomic_cas_strong_ptr(value, ptrv(1, 2), ptrv(3, 4)));
+        TEST(KOS_atomic_read_relaxed_ptr(value) == ptrv(0xFEDCBA98U, 0x76543210U));
+        TEST(KOS_atomic_cas_strong_ptr(value, ptrv(0xFEDCBA98U, 0x76543210U), ptrv(0xF00DFACEU, 0xBEADC0DE)));
+        TEST(KOS_atomic_read_relaxed_ptr(value) == ptrv(0xF00DFACEU, 0xBEADC0DE));
     }
 
     {
         KOS_ATOMIC(uint32_t) value;
-        value = 0xF00D;
-        TEST(KOS_atomic_add_i32(value, 2) == 0xF00D);
-        TEST(KOS_atomic_read_relaxed_u32(value) == 0xF00F);
-        TEST(KOS_atomic_add_i32(value, 0xEE0-2) == 0xF00F);
-        TEST(KOS_atomic_read_relaxed_u32(value) == 0xFEED);
+        value = 0x87654321U;
+        TEST(KOS_atomic_add_u32(value, 2) == 0x87654321U);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0x87654323U);
+        TEST(KOS_atomic_add_u32(value, 0x120-2) == 0x87654323U);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0x87654441U);
     }
 
     {
         KOS_ATOMIC(uint32_t) value;
-        value = 0xCAFE;
-        TEST(KOS_atomic_swap_u32(value, 0xBEEF) == 0xCAFE);
-        TEST(KOS_atomic_read_relaxed_u32(value) == 0xBEEF);
-        TEST(KOS_atomic_swap_u32(value, 0xF00D) == 0xBEEF);
-        TEST(KOS_atomic_read_relaxed_u32(value) ==  0xF00D);
+        value = 0x17654321U;
+        TEST(KOS_atomic_add_i32(value, 2) == 0x17654321);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0x17654323U);
+        TEST(KOS_atomic_add_i32(value, 0x120-2) == 0x17654323);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0x17654441U);
+    }
+
+#ifndef KOS_NO_64BIT_ATOMICS
+    {
+        KOS_ATOMIC(uint64_t) value;
+        value = val64(0xFEDCBA98U, 0x76543210U);
+        TEST(KOS_atomic_read_relaxed_u64(value) == val64(0xFEDCBA98U, 0x76543210U));
+        TEST(KOS_atomic_add_u64(value, 2) == val64(0xFEDCBA98U, 0x76543210U));
+        TEST(KOS_atomic_read_relaxed_u64(value) == val64(0xFEDCBA98U, 0x76543212U));
+        TEST(KOS_atomic_add_u64(value, 1) == val64(0xFEDCBA98U, 0x76543212U));
+        TEST(KOS_atomic_read_relaxed_u64(value) == val64(0xFEDCBA98U, 0x76543213U));
+    }
+#endif
+
+    {
+        KOS_ATOMIC(uint32_t) value;
+        value = 0x87654321U;
+        TEST(KOS_atomic_swap_u32(value, 0x12345678U) == 0x87654321U);
+        TEST(KOS_atomic_read_relaxed_u32(value) == 0x12345678U);
+        TEST(KOS_atomic_swap_u32(value, 0x89ABCDEFU) == 0x12345678U);
+        TEST(KOS_atomic_read_relaxed_u32(value) ==  0x89ABCDEFU);
     }
 
     /* Test if compare-and-swap is strong */
@@ -106,11 +160,11 @@ int main(void)
         KOS_ATOMIC(uint32_t) value;
         int                  i;
 
-        value = 0xBEEFU;
+        value = 0x87654321U;
 
         for (i = 0; i < 1024; i++) {
-            uint32_t oldv = (i & 1) ? 0xFACEU : 0xBEEFU;
-            uint32_t newv = (i & 1) ? 0xBEEFU : 0xFACEU;
+            uint32_t oldv = (i & 1) ? 0x89ABCDEFU : 0x87654321U;
+            uint32_t newv = (i & 1) ? 0x87654321U : 0x89ABCDEFU;
 
             TEST(KOS_atomic_cas_strong_u32(value, oldv, newv));
             TEST(KOS_atomic_read_relaxed_u32(value) == newv);

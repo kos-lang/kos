@@ -69,6 +69,9 @@
 #define KOS_atomic_read_relaxed_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
 
+#define KOS_atomic_read_relaxed_u64(src) \
+        (*(uint64_t volatile const *)(&(src)))
+
 #define KOS_atomic_read_acquire_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
 
@@ -110,6 +113,9 @@
 #define KOS_atomic_add_u32(dest, value) \
     ((*(uint32_t volatile *)&(dest) += (value)) - (value))
 
+#define KOS_atomic_add_u64(dest, value) \
+    ((*(uint64_t volatile *)&(dest) += (value)) - (value))
+
 uint32_t kos_atomic_swap_u32(uint32_t volatile *dest, uint32_t value);
 
 #define KOS_atomic_swap_u32(dest, value) kos_atomic_swap_u32(&(dest), (value))
@@ -144,6 +150,11 @@ static inline void KOS_atomic_release_barrier()
 }
 
 static inline uint32_t KOS_atomic_read_relaxed_u32(KOS_ATOMIC(uint32_t)& src)
+{
+    return src.load(std::memory_order_relaxed);
+}
+
+static inline uint64_t KOS_atomic_read_relaxed_u64(KOS_ATOMIC(uint64_t)& src)
 {
     return src.load(std::memory_order_relaxed);
 }
@@ -218,7 +229,13 @@ int32_t KOS_atomic_add_i32(KOS_ATOMIC(T)& dest, int32_t value)
 template<typename T>
 uint32_t KOS_atomic_add_u32(KOS_ATOMIC(T)& dest, uint32_t value)
 {
-    return static_cast<int32_t>(dest.fetch_add(static_cast<T>(value)));
+    return static_cast<uint32_t>(dest.fetch_add(static_cast<T>(value)));
+}
+
+template<typename T>
+uint64_t KOS_atomic_add_u64(KOS_ATOMIC(T)& dest, uint64_t value)
+{
+    return static_cast<uint64_t>(dest.fetch_add(static_cast<T>(value)));
 }
 
 static inline uint32_t KOS_atomic_swap_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t value)
@@ -249,6 +266,8 @@ T* KOS_atomic_swap_ptr(KOS_ATOMIC(T*)& dest, T* value)
 #define KOS_atomic_release_barrier() atomic_thread_fence(memory_order_release)
 
 #define KOS_atomic_read_relaxed_u32(src) atomic_load_explicit(&(src), memory_order_relaxed)
+
+#define KOS_atomic_read_relaxed_u64(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
 #define KOS_atomic_read_acquire_u32(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
@@ -296,6 +315,8 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 
 #define KOS_atomic_add_u32(dest, value) ((uint32_t)atomic_fetch_add(&(dest), (value)))
 
+#define KOS_atomic_add_u64(dest, value) ((uint64_t)atomic_fetch_add(&(dest), (value)))
+
 #define KOS_atomic_swap_u32(dest, value) atomic_exchange(&(dest), (value))
 
 #define KOS_atomic_swap_ptr(dest, value) atomic_exchange(&(dest), (value))
@@ -328,6 +349,9 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 
 #define KOS_atomic_read_relaxed_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
+
+#define KOS_atomic_read_relaxed_u64(src) \
+        (*(uint64_t volatile const *)(&(src)))
 
 #define KOS_atomic_read_acquire_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
@@ -378,6 +402,9 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 #define KOS_atomic_add_u32(dest, value) \
         ((uint32_t)_InterlockedExchangeAdd((long volatile *)&(dest), \
                                            (long)(value)))
+#define KOS_atomic_add_u64(dest, value) \
+        ((uint64_t)_InterlockedExchangeAdd64((long volatile *)&(dest), \
+                                             (long)(value)))
 
 #define KOS_atomic_swap_u32(dest, value) \
         ((uint32_t)_InterlockedExchange((long volatile *)&(dest), \
@@ -412,6 +439,8 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 #define KOS_atomic_release_barrier() __atomic_thread_fence(__ATOMIC_RELEASE)
 
 #define KOS_atomic_read_relaxed_u32(src) __atomic_load_n(&(src), __ATOMIC_RELAXED)
+
+#define KOS_atomic_read_relaxed_u64(src) __atomic_load_n(&(src), __ATOMIC_RELAXED)
 
 #define KOS_atomic_read_acquire_u32(src) __atomic_load_n(&(src), __ATOMIC_ACQUIRE)
 
@@ -467,6 +496,8 @@ int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
 
 #define KOS_atomic_add_u32(dest, value) ((uint32_t)__atomic_fetch_add(&(dest), (value), __ATOMIC_SEQ_CST))
 
+#define KOS_atomic_add_u64(dest, value) ((uint64_t)__atomic_fetch_add(&(dest), (value), __ATOMIC_SEQ_CST))
+
 #define KOS_atomic_swap_u32(dest, value) __atomic_exchange_n(&(dest), (value), __ATOMIC_SEQ_CST)
 
 #define KOS_atomic_swap_ptr(dest, value) __atomic_exchange_n(&(dest), (value), __ATOMIC_SEQ_CST)
@@ -476,6 +507,10 @@ int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
 /*==========================================================================*/
 
 #elif defined(__GNUC__) && defined(__i386)
+
+/* TODO: KOS_atomic_read_relaxed_u64() - fild + fistp
+ *       KOS_atomic_add_u64() - loop with lock cmpxchg8b */
+#define KOS_NO_64BIT_ATOMICS
 
 #define KOS_ATOMIC(type) type volatile
 
@@ -488,9 +523,9 @@ int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
                     : : "memory", "cc");                      \
         } while (0)
 
-#define KOS_atomic_acquire_barrier() KOS_atomic_full_barrier()
+#define KOS_atomic_acquire_barrier() ((void)0)
 
-#define KOS_atomic_release_barrier() KOS_atomic_full_barrier()
+#define KOS_atomic_release_barrier() ((void)0)
 
 #define KOS_atomic_read_relaxed_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
@@ -590,21 +625,20 @@ int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
 
 #define KOS_ATOMIC(type) type volatile
 
-#define KOS_atomic_full_barrier() do {                        \
-        uint32_t volatile  barrier = 0;                       \
-        uint32_t volatile *barrier_ptr = &barrier;            \
-        uint32_t           barrier_ret = 0;                   \
-        __asm__ volatile("lock or %0, %1\n"                   \
-                    : "+r" (barrier_ret), "+m" (*barrier_ptr) \
-                    : : "memory", "cc");                      \
+#define KOS_atomic_full_barrier() do {     \
+        __asm__ volatile("mfence\n"        \
+                    : : : "memory", "cc"); \
         } while (0)
 
-#define KOS_atomic_acquire_barrier() KOS_atomic_full_barrier()
+#define KOS_atomic_acquire_barrier() ((void)0)
 
-#define KOS_atomic_release_barrier() KOS_atomic_full_barrier()
+#define KOS_atomic_release_barrier() ((void)0)
 
 #define KOS_atomic_read_relaxed_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
+
+#define KOS_atomic_read_relaxed_u64(src) \
+        (*(uint64_t volatile const *)(&(src)))
 
 #define KOS_atomic_read_acquire_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
@@ -668,6 +702,16 @@ int kos_atomic_cas_weak_ptr(void *volatile *dest, void *oldv, void *newv);
         uint32_t           at_ret = (uint32_t)(value);            \
         uint32_t volatile *at_ptr = (uint32_t volatile *)&(dest); \
         __asm__ volatile("lock xaddl %0, %1\n"                    \
+                    : "+r" (at_ret), "+m" (*at_ptr)               \
+                    : : "memory", "cc");                          \
+        at_ret;                                                   \
+    })
+
+#define KOS_atomic_add_u64(dest, value)                           \
+    __extension__ ({                                              \
+        uint64_t           at_ret = (uint64_t)(value);            \
+        uint64_t volatile *at_ptr = (uint64_t volatile *)&(dest); \
+        __asm__ volatile("lock xaddq %0, %1\n"                    \
                     : "+r" (at_ret), "+m" (*at_ptr)               \
                     : : "memory", "cc");                          \
         at_ret;                                                   \
