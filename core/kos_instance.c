@@ -42,6 +42,8 @@
 #include "kos_threads_internal.h"
 #include "kos_try.h"
 #include <assert.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -518,17 +520,17 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     clear_instance(inst);
 
 #ifdef CONFIG_PERF
-#   define PERF_RATIO(a) do {                                                  \
-        const uint32_t va = KOS_atomic_read_relaxed_u32(kos_perf.a##_success); \
-        const uint32_t vb = KOS_atomic_read_relaxed_u32(kos_perf.a##_fail);    \
-        uint32_t       total = va + vb;                                        \
-        if (total == 0) total = 1;                                             \
-        fprintf(stderr, "    " #a "\t%u / %u (%u%%)\n",                        \
-                va, total, va * 100 / total);                                  \
+#   define PERF_RATIO(a) do {                                                      \
+        const uint64_t va = KOS_atomic_read_relaxed_u64(kos_perf.a##_success);     \
+        const uint64_t vb = KOS_atomic_read_relaxed_u64(kos_perf.a##_fail);        \
+        uint64_t       total = va + vb;                                            \
+        if (total == 0) total = 1;                                                 \
+        fprintf(stderr, "    " #a "\t%" PRIu64 " / %" PRIu64 " (%" PRIu64 "%%)\n", \
+                va, total, va * 100 / total);                                      \
     } while (0)
-#   define PERF_VALUE_NAME(name, a) do {                                       \
-        const uint32_t va = KOS_atomic_read_relaxed_u32(kos_perf.a);           \
-        fprintf(stderr, "    " #name "\t%u\n", va);                            \
+#   define PERF_VALUE_NAME(name, a) do {                             \
+        const uint64_t va = KOS_atomic_read_relaxed_u64(kos_perf.a); \
+        fprintf(stderr, "    " #name "\t%" PRIu64 " \n", va);        \
     } while (0)
 #   define PERF_VALUE(a) PERF_VALUE_NAME(a, a)
     fprintf(stderr, "Performance stats:\n");
