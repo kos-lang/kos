@@ -334,7 +334,7 @@ struct KOS_PAGE_HEADER_S {
 
 #ifdef KOS_CPP11
 static_assert(KOS_BITMAP_OFFS >= KOS_PAGE_HDR_SIZE, "Unexpected bitmap offset");
-static_assert(KOS_SLOTS_PER_PAGE * 2 <= KOS_BITMAP_SIZE * 32, "Unexpected bitmap size");
+static_assert(KOS_SLOTS_PER_PAGE * 2 <= KOS_BITMAP_SIZE * 8, "Unexpected bitmap size");
 static_assert(KOS_SLOTS_OFFS >= KOS_BITMAP_OFFS + KOS_BITMAP_SIZE, "Unexpected slots offset");
 static_assert(KOS_SLOTS_OFFS + (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) <= KOS_PAGE_SIZE, "Unexpected slots offset");
 static_assert(KOS_PAGE_SIZE >= KOS_BITMAP_OFFS + KOS_BITMAP_SIZE + (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS), "Unexpected number of slots");
