@@ -1489,7 +1489,9 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
-        while ((color = skip_white(&ptr, end, &mark_loc))) {
+        color = skip_white(&ptr, end, &mark_loc);
+
+        while (color) {
 
             KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)ptr;
             const uint32_t        size  = kos_get_object_size(*hdr);
@@ -1507,6 +1509,8 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
             advance_marking(&mark_loc, slots);
 
             ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
+
+            color = skip_white(&ptr, end, &mark_loc);
         }
 
         assert(num_slots_used <= KOS_atomic_read_relaxed_u32(page->num_allocated));
