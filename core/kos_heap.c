@@ -1166,6 +1166,11 @@ static struct KOS_MARK_LOC_S get_mark_location(KOS_OBJ_ID obj_id)
     return mark_loc;
 }
 
+static KOS_ATOMIC(uint32_t) *get_bitmap(KOS_PAGE *page)
+{
+    return (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
+}
+
 static void advance_marking(struct KOS_MARK_LOC_S *mark_loc,
                             uint32_t               num_slots)
 {
@@ -1513,7 +1518,7 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
         KOS_SLOT *ptr = get_slots(page);
         KOS_SLOT *end = ptr + KOS_atomic_read_relaxed_u32(page->num_allocated);
 
-        mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
+        mark_loc.bitmap = get_bitmap(page);
 
         color = skip_white(&ptr, end, &mark_loc);
 
@@ -1897,7 +1902,7 @@ static void mark_unused_objects_opaque(KOS_CONTEXT   ctx,
     KOS_SLOT *ptr = get_slots(page);
     KOS_SLOT *end = ptr + KOS_atomic_read_relaxed_u32(page->num_allocated);
 
-    mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
+    mark_loc.bitmap = get_bitmap(page);
 
     while (ptr < end) {
 
@@ -2315,7 +2320,7 @@ static int evacuate(KOS_CONTEXT              ctx,
 
         next = page->next;
 
-        mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
+        mark_loc.bitmap = get_bitmap(page);
 
         /* If the number of slots used reaches the threshold, then the page is
          * exempt from evacuation. */
