@@ -1272,20 +1272,22 @@ static uint32_t get_marking(const struct KOS_MARK_LOC_S *mark_loc)
     return (marking >> mark_loc->mask_idx) & COLORMASK;
 }
 
-static void set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
-                               enum KOS_MARK_STATE_E state)
+static uint32_t set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
+                                   enum KOS_MARK_STATE_E state)
 {
-    const uint32_t mask = (uint32_t)state << mark_loc.mask_idx;
+    const uint32_t mask   = (uint32_t)state << mark_loc.mask_idx;
 
     uint32_t value = KOS_atomic_read_relaxed_u32(*mark_loc.bitmap);
 
     while ( ! (value & mask)) {
 
         if (KOS_atomic_cas_weak_u32(*mark_loc.bitmap, value, value | mask))
-            break;
+            return 1;
 
         value = KOS_atomic_read_relaxed_u32(*mark_loc.bitmap);
     }
+
+    return 0;
 }
 
 static void apply_mask(KOS_ATOMIC(uint32_t) *bitmap, uint32_t mask)
@@ -1326,9 +1328,11 @@ static void clear_mark_state(KOS_OBJ_ID obj_id, uint32_t size)
     apply_mask(mark_lock.bitmap, ~0U << (num_slots * 2));
 }
 
-static void set_mark_state(KOS_OBJ_ID            obj_id,
-                           enum KOS_MARK_STATE_E state)
+static uint32_t set_mark_state(KOS_OBJ_ID            obj_id,
+                               enum KOS_MARK_STATE_E state)
 {
+    uint32_t marked = 0;
+
     assert(((uintptr_t)obj_id & 0xFFFFFFFFU) != 0xDDDDDDDDU);
 
     /* TODO can we get rid of IS_BAD_PTR ? */
@@ -1351,14 +1355,16 @@ static void set_mark_state(KOS_OBJ_ID            obj_id,
             mark_loc = get_mark_location(back_ref);
         }
 
-        set_mark_state_loc(mark_loc, state);
+        marked += set_mark_state_loc(mark_loc, state);
     }
+
+    return marked;
 }
 
-/* TODO Explore returning the number of objects turned to gray.
- *      This could help get rid of the last gray-to-black pass. */
-static void mark_children_gray(KOS_OBJ_ID obj_id)
+static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
 {
+    uint32_t marked = 0;
+
     switch (READ_OBJ_TYPE(obj_id)) {
 
         case OBJ_INTEGER:
@@ -1372,49 +1378,49 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_STRING:
             if (OBJPTR(STRING, obj_id)->header.flags & KOS_STRING_REF)
-                set_mark_state(OBJPTR(STRING, obj_id)->ref.obj_id, GRAY);
+                marked += set_mark_state(OBJPTR(STRING, obj_id)->ref.obj_id, GRAY);
             break;
 
         default:
             assert(READ_OBJ_TYPE(obj_id) == OBJ_OBJECT);
-            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props), GRAY);
-            set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props), GRAY);
+            marked += set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
             break;
 
         case OBJ_ARRAY:
-            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY, obj_id)->data), GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY, obj_id)->data), GRAY);
             break;
 
         case OBJ_BUFFER:
-            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data), GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data), GRAY);
             break;
 
         case OBJ_FUNCTION:
             /* TODO make these atomic */
-            set_mark_state(OBJPTR(FUNCTION, obj_id)->module,   GRAY);
-            set_mark_state(OBJPTR(FUNCTION, obj_id)->closures, GRAY);
-            set_mark_state(OBJPTR(FUNCTION, obj_id)->defaults, GRAY);
-            set_mark_state(OBJPTR(FUNCTION, obj_id)->generator_stack_frame, GRAY);
+            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->module,   GRAY);
+            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->closures, GRAY);
+            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->defaults, GRAY);
+            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->generator_stack_frame, GRAY);
             break;
 
         case OBJ_CLASS:
-            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->prototype), GRAY);
-            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props), GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->prototype), GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props), GRAY);
             /* TODO make these atomic */
-            set_mark_state(OBJPTR(CLASS, obj_id)->module,   GRAY);
-            set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
-            set_mark_state(OBJPTR(CLASS, obj_id)->defaults, GRAY);
+            marked += set_mark_state(OBJPTR(CLASS, obj_id)->module,   GRAY);
+            marked += set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
+            marked += set_mark_state(OBJPTR(CLASS, obj_id)->defaults, GRAY);
             break;
 
         case OBJ_OBJECT_STORAGE: {
             KOS_PITEM *item = &OBJPTR(OBJECT_STORAGE, obj_id)->items[0];
             KOS_PITEM *end  = item + OBJPTR(OBJECT_STORAGE, obj_id)->capacity;
             for ( ; item < end; ++item) {
-                set_mark_state(KOS_atomic_read_relaxed_obj(item->key), GRAY);
-                set_mark_state(KOS_atomic_read_relaxed_obj(item->value), GRAY);
+                marked += set_mark_state(KOS_atomic_read_relaxed_obj(item->key), GRAY);
+                marked += set_mark_state(KOS_atomic_read_relaxed_obj(item->value), GRAY);
             }
 
-            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, obj_id)->new_prop_table), GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, obj_id)->new_prop_table), GRAY);
             break;
         }
 
@@ -1422,43 +1428,43 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
             KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(ARRAY_STORAGE, obj_id)->buf[0];
             KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(ARRAY_STORAGE, obj_id)->capacity;
             for ( ; item < end; ++item)
-                set_mark_state(KOS_atomic_read_relaxed_obj(*item), GRAY);
+                marked += set_mark_state(KOS_atomic_read_relaxed_obj(*item), GRAY);
 
-            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, obj_id)->next), GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, obj_id)->next), GRAY);
             break;
         }
 
         case OBJ_DYNAMIC_PROP:
             /* TODO make these atomic */
-            set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->getter, GRAY);
-            set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->setter, GRAY);
+            marked += set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->getter, GRAY);
+            marked += set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->setter, GRAY);
             break;
 
         case OBJ_OBJECT_WALK:
             /* TODO make these atomic */
-            set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->obj,         GRAY);
-            set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->key_table,   GRAY);
-            set_mark_state(KOS_atomic_read_relaxed_obj(
-                           OBJPTR(OBJECT_WALK, obj_id)->last_key),   GRAY);
-            set_mark_state(KOS_atomic_read_relaxed_obj(
-                           OBJPTR(OBJECT_WALK, obj_id)->last_value), GRAY);
+            marked += set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->obj,         GRAY);
+            marked += set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->key_table,   GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
+                                     OBJPTR(OBJECT_WALK, obj_id)->last_key),   GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
+                                     OBJPTR(OBJECT_WALK, obj_id)->last_value), GRAY);
             break;
 
         case OBJ_MODULE:
             /* TODO lock gc during module setup */
-            set_mark_state(OBJPTR(MODULE, obj_id)->name,         GRAY);
-            set_mark_state(OBJPTR(MODULE, obj_id)->path,         GRAY);
-            set_mark_state(OBJPTR(MODULE, obj_id)->constants,    GRAY);
-            set_mark_state(OBJPTR(MODULE, obj_id)->global_names, GRAY);
-            set_mark_state(OBJPTR(MODULE, obj_id)->globals,      GRAY);
-            set_mark_state(OBJPTR(MODULE, obj_id)->module_names, GRAY);
+            marked += set_mark_state(OBJPTR(MODULE, obj_id)->name,         GRAY);
+            marked += set_mark_state(OBJPTR(MODULE, obj_id)->path,         GRAY);
+            marked += set_mark_state(OBJPTR(MODULE, obj_id)->constants,    GRAY);
+            marked += set_mark_state(OBJPTR(MODULE, obj_id)->global_names, GRAY);
+            marked += set_mark_state(OBJPTR(MODULE, obj_id)->globals,      GRAY);
+            marked += set_mark_state(OBJPTR(MODULE, obj_id)->module_names, GRAY);
             break;
 
         case OBJ_STACK: {
             KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(STACK, obj_id)->buf[0];
             KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(STACK, obj_id)->size;
             for ( ; item < end; ++item)
-                set_mark_state(KOS_atomic_read_relaxed_obj(*item), GRAY);
+                marked += set_mark_state(KOS_atomic_read_relaxed_obj(*item), GRAY);
             break;
         }
 
@@ -1466,10 +1472,10 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
             KOS_OBJ_ID **ref = &OBJPTR(LOCAL_REFS, obj_id)->refs[0];
             KOS_OBJ_ID **end = ref + OBJPTR(LOCAL_REFS, obj_id)->num_tracked;
 
-            set_mark_state(OBJPTR(LOCAL_REFS, obj_id)->next, GRAY);
+            marked += set_mark_state(OBJPTR(LOCAL_REFS, obj_id)->next, GRAY);
 
             for ( ; ref < end; ++ref)
-                set_mark_state(**ref, GRAY);
+                marked += set_mark_state(**ref, GRAY);
             break;
         }
 
@@ -1479,11 +1485,13 @@ static void mark_children_gray(KOS_OBJ_ID obj_id)
             if ( ! IS_BAD_PTR(object)) {
                 assert(kos_is_tracked_object(object));
                 assert( ! kos_is_heap_object(object));
-                mark_children_gray(object);
+                marked += mark_children_gray(object);
             }
             break;
         }
     }
+
+    return marked;
 }
 
 static void mark_object_black(KOS_OBJ_ID obj_id)
@@ -1500,7 +1508,7 @@ static void mark_object_black(KOS_OBJ_ID obj_id)
 
 static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helper)
 {
-    int32_t   marked = 0;
+    uint32_t  marked = 0;
     KOS_PAGE *page;
 
     if ( ! begin_page_walk(heap, helper))
@@ -1530,9 +1538,8 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
 
             if (color == GRAY) {
                 set_mark_state_loc(mark_loc, BLACK);
-                marked = 1;
 
-                mark_children_gray((KOS_OBJ_ID)((intptr_t)hdr + 1));
+                marked += mark_children_gray((KOS_OBJ_ID)((intptr_t)hdr + 1));
             }
 
             num_slots_used += slots;
