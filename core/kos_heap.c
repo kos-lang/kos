@@ -1143,11 +1143,11 @@ struct KOS_MARK_LOC_S {
 
 static struct KOS_MARK_LOC_S get_mark_location(KOS_OBJ_ID obj_id)
 {
-    const uintptr_t offs_in_page  = (uintptr_t)obj_id & (uintptr_t)(KOS_PAGE_SIZE - 1);
-    const uint32_t  slot_idx      = (uint32_t)(offs_in_page - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
+    const uintptr_t offs_in_page = (uintptr_t)obj_id & (uintptr_t)(KOS_PAGE_SIZE - 1);
+    const uint32_t  slot_idx     = (uint32_t)(offs_in_page - KOS_SLOTS_OFFS) >> KOS_OBJ_ALIGN_BITS;
 
-    const uintptr_t page_addr     = (uintptr_t)obj_id & ~(uintptr_t)(KOS_PAGE_SIZE - 1);
-    uint32_t *const bitmap        = (uint32_t *)(page_addr + KOS_BITMAP_OFFS) + (slot_idx >> 4);
+    const uintptr_t page_addr    = (uintptr_t)obj_id & ~(uintptr_t)(KOS_PAGE_SIZE - 1);
+    uint32_t *const bitmap       = (uint32_t *)(page_addr + KOS_BITMAP_OFFS) + (slot_idx >> 4);
 
     struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
 
@@ -1164,6 +1164,74 @@ static void advance_marking(struct KOS_MARK_LOC_S *mark_loc,
 
     mark_loc->bitmap   += mask_idx >> 5;
     mark_loc->mask_idx =  mask_idx & 0x1FU;
+}
+
+static uint32_t skip_white(KOS_SLOT             **out_ptr,
+                           KOS_SLOT              *end,
+                           struct KOS_MARK_LOC_S *mark_loc)
+{
+    KOS_SLOT *ptr;
+    uint32_t  value    = KOS_atomic_read_relaxed_u32(*mark_loc->bitmap);
+    uint32_t  mask_idx = mark_loc->mask_idx;
+
+    value >>= mask_idx;
+
+    if (value & 3U)
+        return value & 3U;
+
+    ptr = *out_ptr;
+
+    if ( ! value) {
+
+        ptr -= mask_idx >> 1;
+
+        mask_idx = 0;
+
+        do {
+            ++mark_loc->bitmap;
+            ptr += 16U;
+
+            if (ptr >= end)
+                return 0U;
+
+            value = KOS_atomic_read_relaxed_u32(*mark_loc->bitmap);
+        } while ( ! value);
+    }
+
+    /* TODO use bit scan */
+    if ( ! (value & 0xFFFFU)) {
+        ptr      +=  8U;
+        mask_idx +=  16U;
+        value    >>= 16;
+    }
+
+    if ( ! (value & 0xFFU)) {
+        ptr      +=  4U;
+        mask_idx +=  8U;
+        value    >>= 8;
+    }
+
+    if ( ! (value & 0xFU)) {
+        ptr      +=  2U;
+        mask_idx +=  4U;
+        value    >>= 4;
+    }
+
+    if ( ! (value & 3U)) {
+        ptr      +=  1U;
+        mask_idx +=  2U;
+        value    >>= 2;
+    }
+
+    assert(value & 3U);
+
+    value &= 3U;
+
+    mark_loc->mask_idx = mask_idx;
+
+    *out_ptr = ptr;
+
+    return value;
 }
 
 static uint32_t get_marking(const struct KOS_MARK_LOC_S *mark_loc)
@@ -1189,15 +1257,42 @@ static void set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
     }
 }
 
-static void clear_mark_state(KOS_OBJ_ID obj_id)
+static void apply_mask(KOS_ATOMIC(uint32_t) *bitmap, uint32_t mask)
+{
+    const uint32_t value = KOS_atomic_read_relaxed_u32(*bitmap);
+
+    KOS_atomic_write_relaxed_u32(*bitmap, value & mask);
+}
+
+static void clear_mark_state(KOS_OBJ_ID obj_id, uint32_t size)
 {
     struct KOS_MARK_LOC_S mark_lock = get_mark_location(obj_id);
 
-    const uint32_t mask = ~((uint32_t)COLORMASK << mark_lock.mask_idx);
+    uint32_t num_slots = size >> KOS_OBJ_ALIGN_BITS;
 
-    const uint32_t value = KOS_atomic_read_relaxed_u32(*mark_lock.bitmap);
+    uint32_t mask = ~0U << mark_lock.mask_idx;
 
-    KOS_atomic_write_relaxed_u32(*mark_lock.bitmap, value & mask);
+    if (mark_lock.mask_idx + num_slots * 2 <= 32) {
+
+        mask &= ~(mask << (num_slots * 2));
+
+        apply_mask(mark_lock.bitmap, ~mask);
+
+        return;
+    }
+
+    apply_mask(mark_lock.bitmap, ~mask);
+    num_slots -= (32U - mark_lock.mask_idx) >> 1;
+
+    ++mark_lock.bitmap;
+
+    while (num_slots >= 16U) {
+        KOS_atomic_write_relaxed_u32(*mark_lock.bitmap, 0U);
+
+        num_slots -= 16U;
+    }
+
+    apply_mask(mark_lock.bitmap, ~0U << (num_slots * 2));
 }
 
 static void set_mark_state(KOS_OBJ_ID            obj_id,
@@ -1384,6 +1479,7 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
 
     for ( ; page; page = get_next_page(heap)) {
 
+        uint32_t color;
         uint32_t num_slots_used = 0;
 
         struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
@@ -1393,22 +1489,20 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
 
         mark_loc.bitmap = (KOS_ATOMIC(uint32_t) *)((uint8_t *)page + KOS_BITMAP_OFFS);
 
-        while (ptr < end) {
+        while ((color = skip_white(&ptr, end, &mark_loc))) {
 
             KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)ptr;
             const uint32_t        size  = kos_get_object_size(*hdr);
             const uint32_t        slots = size >> KOS_OBJ_ALIGN_BITS;
-            const uint32_t        color = get_marking(&mark_loc);
 
             if (color == GRAY) {
                 set_mark_state_loc(mark_loc, BLACK);
-                num_slots_used += slots;
                 marked = 1;
 
                 mark_children_gray((KOS_OBJ_ID)((intptr_t)hdr + 1));
             }
-            else if (color)
-                num_slots_used += slots;
+
+            num_slots_used += slots;
 
             advance_marking(&mark_loc, slots);
 
@@ -2013,7 +2107,7 @@ static void update_incomplete_page(KOS_HEAP                *heap,
      * these objects will not be processed again by a subsequent evacuation
      * pass. */
     kos_set_object_type_size(*hdr, OBJ_OPAQUE, incomplete->offset);
-    clear_mark_state((KOS_OBJ_ID)((uintptr_t)hdr + 1));
+    clear_mark_state((KOS_OBJ_ID)((uintptr_t)hdr + 1), incomplete->offset);
     clear_opaque(hdr);
 
     push_page_with_objects(heap, incomplete->page);
