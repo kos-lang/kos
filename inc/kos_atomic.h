@@ -350,9 +350,6 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 #define KOS_atomic_read_relaxed_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
 
-#define KOS_atomic_read_relaxed_u64(src) \
-        (*(uint64_t volatile const *)(&(src)))
-
 #define KOS_atomic_read_acquire_u32(src) \
         (*(uint32_t volatile const *)(&(src)))
 
@@ -402,9 +399,16 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 #define KOS_atomic_add_u32(dest, value) \
         ((uint32_t)_InterlockedExchangeAdd((long volatile *)&(dest), \
                                            (long)(value)))
+
+#if defined(_M_AMD64) || defined(_M_ARM)
 #define KOS_atomic_add_u64(dest, value) \
-        ((uint64_t)_InterlockedExchangeAdd64((long volatile *)&(dest), \
-                                             (long)(value)))
+        ((uint64_t)_InterlockedExchangeAdd64((__int64 volatile *)&(dest), \
+                                             (__int64)(value)))
+#else
+/* TODO: KOS_atomic_read_relaxed_u64() - fild + fistp
+ *       KOS_atomic_add_u64() - loop with lock cmpxchg8b */
+#define KOS_NO_64BIT_ATOMICS
+#endif
 
 #define KOS_atomic_swap_u32(dest, value) \
         ((uint32_t)_InterlockedExchange((long volatile *)&(dest), \
