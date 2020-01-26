@@ -1519,13 +1519,20 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
 
     for ( ; page; page = get_next_page(heap)) {
 
-        uint32_t color;
-        uint32_t num_slots_used = 0;
+        uint32_t       color;
+        uint32_t       num_slots_used = 0;
+        const uint32_t num_allocated  = KOS_atomic_read_relaxed_u32(page->num_allocated);
+        KOS_SLOT      *ptr;
+        KOS_SLOT      *end;
 
         struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
 
-        KOS_SLOT *ptr = get_slots(page);
-        KOS_SLOT *end = ptr + KOS_atomic_read_relaxed_u32(page->num_allocated);
+        /* Skip page if all objects are already marked black */
+        if (KOS_atomic_read_relaxed_u32(page->num_used) == num_allocated)
+            continue;
+
+        ptr = get_slots(page);
+        end = ptr + num_allocated;
 
         mark_loc.bitmap = get_bitmap(page);
 
@@ -1552,7 +1559,7 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
             color = skip_white(&ptr, end, &mark_loc);
         }
 
-        assert(num_slots_used <= KOS_atomic_read_relaxed_u32(page->num_allocated));
+        assert(num_slots_used <= num_allocated);
         assert(num_slots_used >= KOS_atomic_read_relaxed_u32(page->num_used));
 
         KOS_atomic_write_relaxed_u32(page->num_used, num_slots_used);
