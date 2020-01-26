@@ -1177,8 +1177,15 @@ static void advance_marking(struct KOS_MARK_LOC_S *mark_loc,
 
 static int find_first_set(uint32_t value)
 {
-#if (defined(__GNUC__) && ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))) || \
-    (defined(__clang__) && __has_builtin(__builtin_ctz))
+#if defined(__GNUC__) && ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
+#   define KOS_HAS_BUILTIN_CTZ
+#elif defined(__clang__)
+#   if __has_builtin(__builtin_ctz)
+#       define KOS_HAS_BUILTIN_CTZ
+#   endif
+#endif
+
+#ifdef KOS_HAS_BUILTIN_CTZ
     return __builtin_ctz(value);
 #elif defined(_MSC_VER)
     unsigned long bit;
