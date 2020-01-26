@@ -1335,8 +1335,7 @@ static uint32_t set_mark_state(KOS_OBJ_ID            obj_id,
 
     assert(((uintptr_t)obj_id & 0xFFFFFFFFU) != 0xDDDDDDDDU);
 
-    /* TODO can we get rid of IS_BAD_PTR ? */
-    if (kos_is_tracked_object(obj_id) && ! IS_BAD_PTR(obj_id)) {
+    if ( ! IS_BAD_PTR(obj_id) && kos_is_tracked_object(obj_id)) {
 
         struct KOS_MARK_LOC_S mark_loc;
 
@@ -1361,6 +1360,8 @@ static uint32_t set_mark_state(KOS_OBJ_ID            obj_id,
     return marked;
 }
 
+static uint32_t mark_object_black(KOS_OBJ_ID obj_id);
+
 static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
 {
     uint32_t marked = 0;
@@ -1383,16 +1384,16 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
 
         default:
             assert(READ_OBJ_TYPE(obj_id) == OBJ_OBJECT);
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props), GRAY);
+            marked += mark_object_black(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props));
             marked += set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
             break;
 
         case OBJ_ARRAY:
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY, obj_id)->data), GRAY);
+            marked += mark_object_black(KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY, obj_id)->data));
             break;
 
         case OBJ_BUFFER:
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data), GRAY);
+            set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data), BLACK);
             break;
 
         case OBJ_FUNCTION:
@@ -1405,7 +1406,7 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_CLASS:
             marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->prototype), GRAY);
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props), GRAY);
+            marked += mark_object_black(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props));
             /* TODO make these atomic */
             marked += set_mark_state(OBJPTR(CLASS, obj_id)->module,   GRAY);
             marked += set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
@@ -1436,8 +1437,8 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_DYNAMIC_PROP:
             /* TODO make these atomic */
-            marked += set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->getter, GRAY);
-            marked += set_mark_state(OBJPTR(DYNAMIC_PROP, obj_id)->setter, GRAY);
+            marked += mark_object_black(OBJPTR(DYNAMIC_PROP, obj_id)->getter);
+            marked += mark_object_black(OBJPTR(DYNAMIC_PROP, obj_id)->setter);
             break;
 
         case OBJ_OBJECT_WALK:
@@ -1452,12 +1453,12 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_MODULE:
             /* TODO lock gc during module setup */
-            marked += set_mark_state(OBJPTR(MODULE, obj_id)->name,         GRAY);
-            marked += set_mark_state(OBJPTR(MODULE, obj_id)->path,         GRAY);
-            marked += set_mark_state(OBJPTR(MODULE, obj_id)->constants,    GRAY);
-            marked += set_mark_state(OBJPTR(MODULE, obj_id)->global_names, GRAY);
-            marked += set_mark_state(OBJPTR(MODULE, obj_id)->globals,      GRAY);
-            marked += set_mark_state(OBJPTR(MODULE, obj_id)->module_names, GRAY);
+            marked += mark_object_black(OBJPTR(MODULE, obj_id)->name);
+            marked += mark_object_black(OBJPTR(MODULE, obj_id)->path);
+            marked += mark_object_black(OBJPTR(MODULE, obj_id)->constants);
+            marked += mark_object_black(OBJPTR(MODULE, obj_id)->global_names);
+            marked += mark_object_black(OBJPTR(MODULE, obj_id)->globals);
+            marked += mark_object_black(OBJPTR(MODULE, obj_id)->module_names);
             break;
 
         case OBJ_STACK: {
@@ -1475,7 +1476,7 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
             marked += set_mark_state(OBJPTR(LOCAL_REFS, obj_id)->next, GRAY);
 
             for ( ; ref < end; ++ref)
-                marked += set_mark_state(**ref, GRAY);
+                marked += mark_object_black(**ref);
             break;
         }
 
@@ -1494,16 +1495,16 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
     return marked;
 }
 
-static void mark_object_black(KOS_OBJ_ID obj_id)
+static uint32_t mark_object_black(KOS_OBJ_ID obj_id)
 {
-    if (kos_is_tracked_object(obj_id)) {
+    uint32_t marked = 0;
 
-        assert( ! IS_BAD_PTR(obj_id));
+    set_mark_state(obj_id, BLACK);
 
-        set_mark_state(obj_id, BLACK);
+    if ( ! IS_BAD_PTR(obj_id) && kos_is_tracked_object(obj_id))
+        marked += mark_children_gray(obj_id);
 
-        mark_children_gray(obj_id);
-    }
+    return marked;
 }
 
 static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helper)
@@ -1582,21 +1583,16 @@ static void mark_roots_in_context(KOS_CONTEXT ctx)
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE);
 
-    if ( ! IS_BAD_PTR(ctx->exception))
-        mark_object_black(ctx->exception);
-    if ( ! IS_BAD_PTR(ctx->retval))
-        mark_object_black(ctx->retval);
-    if ( ! IS_BAD_PTR(ctx->stack))
-        mark_object_black(ctx->stack);
-    if ( ! IS_BAD_PTR(ctx->local_refs))
-        mark_object_black(ctx->local_refs);
+    mark_object_black(ctx->exception);
+    mark_object_black(ctx->retval);
+    mark_object_black(ctx->stack);
+    mark_object_black(ctx->local_refs);
 
     for (i = 0; i < ctx->tmp_ref_count; ++i) {
         KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
         if (obj_id_ptr) {
             const KOS_OBJ_ID obj_id = *obj_id_ptr;
-            if ( ! IS_BAD_PTR(obj_id))
-                mark_object_black(obj_id);
+            mark_object_black(obj_id);
         }
     }
 
@@ -1604,15 +1600,13 @@ static void mark_roots_in_context(KOS_CONTEXT ctx)
         KOS_OBJ_ID *const obj_id_ptr = ctx->helper_refs[i];
         if (obj_id_ptr) {
             const KOS_OBJ_ID obj_id = *obj_id_ptr;
-            if ( ! IS_BAD_PTR(obj_id))
-                mark_object_black(obj_id);
+            mark_object_black(obj_id);
         }
     }
 
     for (local = ctx->local_list; local; local = local->next) {
         const KOS_OBJ_ID obj_id = local->o;
-        if ( ! IS_BAD_PTR(obj_id))
-            mark_object_black(obj_id);
+        mark_object_black(obj_id);
     }
 }
 
