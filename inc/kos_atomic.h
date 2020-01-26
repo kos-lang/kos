@@ -401,6 +401,9 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
                                            (long)(value)))
 
 #if defined(_M_AMD64) || defined(_M_ARM)
+#define KOS_atomic_read_relaxed_u64(src) \
+        (*(uint64_t volatile const *)(&(src)))
+
 #define KOS_atomic_add_u64(dest, value) \
         ((uint64_t)_InterlockedExchangeAdd64((__int64 volatile *)&(dest), \
                                              (__int64)(value)))
