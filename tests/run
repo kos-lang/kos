@@ -104,18 +104,16 @@ runtests()
 
     local PRINT_CLANG
     PRINT_CLANG=$(echo "$1" | tr 'c' 'C')
+    if [ "$UNAME" = "Windows" ]; then
+        echo "$1" | grep -q "c++" || PRINT_CLANG=C
+    fi
 
     local PRINT_CPPLANG
     PRINT_CPPLANG=$(echo "$2" | tr 'c' 'C')
 
     local PRINT_LANG
-    if [ "$UNAME" = "Windows" ]; then
-        PRINT_LANG="C and C++"
-        echo "$1" | grep -q "c++" && PRINT_LANG="C++"
-    else
-        PRINT_LANG="$PRINT_CLANG and $PRINT_CPPLANG"
-        [ "$1" = "$2" ] && PRINT_LANG="$PRINT_CLANG"
-    fi
+    PRINT_LANG="$PRINT_CLANG and $PRINT_CPPLANG"
+    [ "$1" = "$2" ] && PRINT_LANG="$PRINT_CLANG"
 
     local WITH_TOOL
     WITH_TOOL=""
