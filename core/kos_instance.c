@@ -806,52 +806,51 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  exception)
 {
     int        error;
-    int        pushed = 0;
     unsigned   i;
     unsigned   depth;
-    KOS_OBJ_ID value;
-    KOS_OBJ_ID backtrace;
-    KOS_OBJ_ID array      = KOS_BADPTR;
-    KOS_OBJ_ID frame_desc = KOS_BADPTR;
+    KOS_LOCAL  value;
+    KOS_LOCAL  backtrace;
+    KOS_LOCAL  frame_desc;
+    KOS_LOCAL  array;
     KOS_OBJ_ID str;
     KOS_VECTOR cstr;
 
     kos_vector_init(&cstr);
 
-    value = KOS_get_property(ctx, exception, KOS_STR_VALUE);
-    TRY_OBJID(value);
+    KOS_init_locals(ctx, 4, &value, &backtrace, &frame_desc, &array);
 
-    backtrace = KOS_get_property(ctx, exception, KOS_STR_BACKTRACE);
-    TRY_OBJID(backtrace);
+    value.o = KOS_get_property(ctx, exception, KOS_STR_VALUE);
+    TRY_OBJID(value.o);
 
-    if (GET_OBJ_TYPE(backtrace) != OBJ_ARRAY)
+    backtrace.o = KOS_get_property(ctx, exception, KOS_STR_BACKTRACE);
+    TRY_OBJID(backtrace.o);
+
+    if (GET_OBJ_TYPE(backtrace.o) != OBJ_ARRAY)
         RAISE_EXCEPTION(str_err_not_array);
 
-    TRY(KOS_push_locals(ctx, &pushed, 4, &value, &backtrace, &array, &frame_desc));
-
-    depth = KOS_get_array_size(backtrace);
-    array = KOS_new_array(ctx, 1 + depth);
-    TRY_OBJID(array);
+    depth   = KOS_get_array_size(backtrace.o);
+    array.o = KOS_new_array(ctx, 1 + depth);
+    TRY_OBJID(array.o);
 
     if (kos_vector_reserve(&cstr, 80) != KOS_SUCCESS) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     TRY(kos_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));
-    TRY(KOS_object_to_string_or_cstr_vec(ctx, value, KOS_DONT_QUOTE, 0, &cstr));
+    TRY(KOS_object_to_string_or_cstr_vec(ctx, value.o, KOS_DONT_QUOTE, 0, &cstr));
 
     str = KOS_new_string(ctx, cstr.buffer, (unsigned)(cstr.size - 1));
     TRY_OBJID(str);
 
-    TRY(KOS_array_write(ctx, array, 0, str));
+    TRY(KOS_array_write(ctx, array.o, 0, str));
 
     for (i = 0; i < depth; i++) {
 
         char     cbuf[16];
         unsigned len;
 
-        frame_desc = KOS_array_read(ctx, backtrace, (int)i);
-        TRY_OBJID(frame_desc);
+        frame_desc.o = KOS_array_read(ctx, backtrace.o, (int)i);
+        TRY_OBJID(frame_desc.o);
 
         cstr.size = 0;
 
@@ -864,7 +863,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY(kos_append_cstr(ctx, &cstr, str_format_offset,
                             sizeof(str_format_offset) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_STR_OFFSET);
+        str = KOS_get_property(ctx, frame_desc.o, KOS_STR_OFFSET);
         TRY_OBJID(str);
         if (IS_SMALL_INT(str)) {
             len = (unsigned)snprintf(cbuf, sizeof(cbuf), "0x%X",
@@ -878,14 +877,14 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY(kos_append_cstr(ctx, &cstr, str_format_function,
                             sizeof(str_format_function) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_STR_FUNCTION);
+        str = KOS_get_property(ctx, frame_desc.o, KOS_STR_FUNCTION);
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
         TRY(kos_append_cstr(ctx, &cstr, str_format_module,
                             sizeof(str_format_module) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_STR_FILE);
+        str = KOS_get_property(ctx, frame_desc.o, KOS_STR_FILE);
         TRY_OBJID(str);
         str = KOS_get_file_name(ctx, str);
         TRY_OBJID(str);
@@ -894,22 +893,22 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY(kos_append_cstr(ctx, &cstr, str_format_line,
                             sizeof(str_format_line) - 1));
 
-        str = KOS_get_property(ctx, frame_desc, KOS_STR_LINE);
+        str = KOS_get_property(ctx, frame_desc.o, KOS_STR_LINE);
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
         str = KOS_new_string(ctx, cstr.buffer, (unsigned)(cstr.size - 1));
         TRY_OBJID(str);
 
-        TRY(KOS_array_write(ctx, array, 1+(int)i, str));
+        TRY(KOS_array_write(ctx, array.o, 1+(int)i, str));
     }
 
 cleanup:
+    array.o = KOS_destroy_top_locals(ctx, &value, &array);
+
     kos_vector_destroy(&cstr);
 
-    KOS_pop_locals(ctx, pushed);
-
-    return error ? KOS_BADPTR : array;
+    return error ? KOS_BADPTR : array.o;
 }
 
 void KOS_raise_generator_end(KOS_CONTEXT ctx)
