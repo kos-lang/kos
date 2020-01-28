@@ -343,7 +343,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 {
     int         error;
     KOS_GETLINE state;
-    KOS_OBJ_ID  print_args;
+    KOS_LOCAL   print_args;
     int         genline_init = 0;
     KOS_VECTOR  tmp_buf;
 
@@ -351,13 +351,8 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
-    print_args = KOS_new_array(ctx, 1);
-    TRY_OBJID(print_args);
-
-    {
-        int pushed = 0;
-        TRY(KOS_push_locals(ctx, &pushed, 1, &print_args));
-    }
+    KOS_init_local_with(ctx, &print_args, KOS_new_array(ctx, 1));
+    TRY_OBJID(print_args.o);
 
     error = kos_getline_init(&state);
     if (error) {
@@ -428,10 +423,10 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         if ( ! IS_SMALL_INT(ret) && GET_OBJ_TYPE(ret) == OBJ_VOID)
             continue;
 
-        TRY(KOS_array_write(ctx, print_args, 0, ret));
+        TRY(KOS_array_write(ctx, print_args.o, 0, ret));
 
         TRY(KOS_print_to_cstr_vec(ctx,
-                                  print_args,
+                                  print_args.o,
                                   KOS_QUOTE_STRINGS,
                                   buf,
                                   "",
