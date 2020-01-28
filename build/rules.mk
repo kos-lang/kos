@@ -33,14 +33,19 @@ endif
 ##############################################################################
 # Determine language version for source files
 
+CLANG_VER   ?=
+CPPLANG_VER ?=
+
 ifeq ($(UNAME), Windows)
     CLANG   = -TC
     CPPLANG = -TP -EHsc
+    VSCPPLANG_VER = $(filter-out c89 c99 c11 c++98 c++11,$(CPPLANG_VER))
+    ifneq (,$(VSCPPLANG_VER))
+        CPPLANG += -std:$(VSCPPLANG_VER) -Zc:__cplusplus
+    endif
 else
-    CLANG       = -x c
-    CPPLANG     = -x c++
-    CLANG_VER   ?=
-    CPPLANG_VER ?=
+    CLANG   = -x c
+    CPPLANG = -x c++
     ifneq (,$(CLANG_VER))
         CLANG += -std=$(CLANG_VER)
     endif
