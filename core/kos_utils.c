@@ -194,7 +194,8 @@ static KOS_OBJ_ID get_exception_string(KOS_CONTEXT ctx,
 void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 {
     KOS_VECTOR cstr;
-    KOS_OBJ_ID exception;
+    KOS_LOCAL  exception;
+    KOS_LOCAL  last_exception;
     FILE      *dest = print_where == KOS_STDERR ? stderr : stdout;
 
 #ifdef CONFIG_FUZZ
@@ -203,43 +204,39 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 
     kos_vector_init(&cstr);
 
-    exception = KOS_get_exception(ctx);
-    assert(!IS_BAD_PTR(exception));
+    KOS_init_locals(ctx, 2, &exception, &last_exception);
+
+    exception.o = KOS_get_exception(ctx);
+    assert(!IS_BAD_PTR(exception.o));
 
     KOS_clear_exception(ctx);
 
-    if (GET_OBJ_TYPE(exception) == OBJ_STRING) {
-        if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, exception, &cstr))
+    if (GET_OBJ_TYPE(exception.o) == OBJ_STRING) {
+        if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, exception.o, &cstr))
             fprintf(dest, "%s\n", cstr.buffer);
     }
     else {
         KOS_OBJ_ID formatted;
 
-        kos_track_refs(ctx, 1, &exception);
-
-        formatted = KOS_format_exception(ctx, exception);
+        formatted = KOS_format_exception(ctx, exception.o);
 
         if (IS_BAD_PTR(formatted)) {
             KOS_OBJ_ID str;
 
             KOS_clear_exception(ctx);
 
-            str = KOS_object_to_string(ctx, exception);
+            str = KOS_object_to_string(ctx, exception.o);
 
             if (IS_BAD_PTR(str)) {
 
-                KOS_OBJ_ID last_exception = KOS_get_exception(ctx);
+                last_exception.o = KOS_get_exception(ctx);
 
                 KOS_clear_exception(ctx);
 
-                kos_track_refs(ctx, 1, &last_exception);
-
-                str = get_exception_string(ctx, exception);
-
-                kos_untrack_refs(ctx, 1);
+                str = get_exception_string(ctx, exception.o);
 
                 if (IS_BAD_PTR(str))
-                    KOS_raise_exception(ctx, last_exception);
+                    KOS_raise_exception(ctx, last_exception.o);
             }
 
             if ( ! IS_BAD_PTR(str) && KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, str, &cstr))
@@ -249,23 +246,23 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
             uint32_t i;
             uint32_t lines;
 
-            exception = formatted;
+            exception.o = formatted;
 
-            assert(GET_OBJ_TYPE(exception) == OBJ_ARRAY);
+            assert(GET_OBJ_TYPE(exception.o) == OBJ_ARRAY);
 
-            lines = KOS_get_array_size(exception);
+            lines = KOS_get_array_size(exception.o);
 
             for (i = 0; i < lines; i++) {
-                KOS_OBJ_ID line = KOS_array_read(ctx, exception, (int)i);
+                KOS_OBJ_ID line = KOS_array_read(ctx, exception.o, (int)i);
                 assert(!KOS_is_exception_pending(ctx));
                 if (KOS_string_to_cstr_vec(ctx, line, &cstr))
                     break;
                 fprintf(dest, "%s\n", cstr.buffer);
             }
         }
-
-        kos_untrack_refs(ctx, 1);
     }
+
+    KOS_destroy_top_locals(ctx, &exception, &last_exception);
 
     kos_vector_destroy(&cstr);
 
@@ -647,88 +644,90 @@ cleanup:
 }
 
 static KOS_OBJ_ID array_to_str(KOS_CONTEXT        ctx,
-                               KOS_OBJ_ID         obj_id,
+                               KOS_OBJ_ID         array_obj,
                                KOS_STR_REC_GUARD *guard)
 {
     int               error;
-    int               pushed       = 0;
     uint32_t          length;
     uint32_t          i;
     uint32_t          i_out;
     KOS_OBJ_ID        ret          = KOS_BADPTR;
     KOS_OBJ_ID        str;
-    KOS_OBJ_ID        str_comma    = KOS_BADPTR;
-    KOS_OBJ_ID        aux_array_id = KOS_BADPTR;
-    KOS_OBJ_ID        val_id       = KOS_BADPTR;
+    KOS_LOCAL         array;
+    KOS_LOCAL         str_comma;
+    KOS_LOCAL         aux_array;
+    KOS_LOCAL         value;
     KOS_STR_REC_GUARD new_guard;
 
-    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
+    assert(GET_OBJ_TYPE(array_obj) == OBJ_ARRAY);
 
-    length = KOS_get_array_size(obj_id);
+    length = KOS_get_array_size(array_obj);
 
     if (length == 0)
         return KOS_new_const_ascii_string(ctx, str_empty_array,
                                           sizeof(str_empty_array) - 1);
 
-    TRY(KOS_push_locals(ctx, &pushed, 4, &obj_id, &str_comma, &aux_array_id, &val_id));
+    KOS_init_locals(ctx, 4, &array, &str_comma, &aux_array, &value);
+
+    array.o = array_obj;
 
     new_guard.next       = guard;
-    new_guard.obj_id_ptr = &obj_id;
+    new_guard.obj_id_ptr = &array.o;
 
-    aux_array_id = KOS_new_array(ctx, length * 4 + 1);
-    TRY_OBJID(aux_array_id);
+    aux_array.o = KOS_new_array(ctx, length * 4 + 1);
+    TRY_OBJID(aux_array.o);
 
     str = KOS_new_const_ascii_string(ctx, str_array_open,
                                      sizeof(str_array_open) - 1);
     TRY_OBJID(str);
-    TRY(KOS_array_write(ctx, aux_array_id, 0, str));
+    TRY(KOS_array_write(ctx, aux_array.o, 0, str));
 
     i_out = 1;
 
     for (i = 0; i < length; ++i) {
 
-        val_id = KOS_array_read(ctx, obj_id, i);
-        TRY_OBJID(val_id);
+        value.o = KOS_array_read(ctx, array.o, i);
+        TRY_OBJID(value.o);
 
-        if (GET_OBJ_TYPE(val_id) == OBJ_STRING) {
+        if (GET_OBJ_TYPE(value.o) == OBJ_STRING) {
 
             KOS_DECLARE_STATIC_CONST_STRING(str_quote, "\"");
 
-            TRY(KOS_array_write(ctx, aux_array_id, i_out,     KOS_CONST_ID(str_quote)));
-            TRY(KOS_array_write(ctx, aux_array_id, i_out + 1, val_id));
-            TRY(KOS_array_write(ctx, aux_array_id, i_out + 2, KOS_CONST_ID(str_quote)));
+            TRY(KOS_array_write(ctx, aux_array.o, i_out,     KOS_CONST_ID(str_quote)));
+            TRY(KOS_array_write(ctx, aux_array.o, i_out + 1, value.o));
+            TRY(KOS_array_write(ctx, aux_array.o, i_out + 2, KOS_CONST_ID(str_quote)));
 
             i_out += 3;
         }
         else {
 
-            if (is_to_string_recursive(&new_guard, val_id)) {
-                const KOS_TYPE type = GET_OBJ_TYPE(val_id);
+            if (is_to_string_recursive(&new_guard, value.o)) {
+                const KOS_TYPE type = GET_OBJ_TYPE(value.o);
 
                 KOS_DECLARE_STATIC_CONST_STRING(str_recursive_array_obj,  "[...]");
                 KOS_DECLARE_STATIC_CONST_STRING(str_recursive_object_obj, "{...}");
 
                 assert(type == OBJ_ARRAY || type == OBJ_OBJECT);
 
-                val_id = type == OBJ_ARRAY ? KOS_CONST_ID(str_recursive_array_obj)
-                                           : KOS_CONST_ID(str_recursive_object_obj);
+                value.o = type == OBJ_ARRAY ? KOS_CONST_ID(str_recursive_array_obj)
+                                            : KOS_CONST_ID(str_recursive_object_obj);
             }
             else
-                TRY(object_to_string_or_cstr_vec(ctx, val_id, KOS_QUOTE_STRINGS,
-                                                 &val_id, 0, &new_guard));
+                TRY(object_to_string_or_cstr_vec(ctx, value.o, KOS_QUOTE_STRINGS,
+                                                 &value.o, 0, &new_guard));
 
-            TRY(KOS_array_write(ctx, aux_array_id, i_out, val_id));
+            TRY(KOS_array_write(ctx, aux_array.o, i_out, value.o));
 
             ++i_out;
         }
 
         if (i + 1 < length) {
-            if (str_comma == KOS_BADPTR) {
-                str_comma = KOS_new_const_ascii_string(ctx, str_array_comma,
-                                                       sizeof(str_array_comma) - 1);
-                TRY_OBJID(str_comma);
+            if (str_comma.o == KOS_BADPTR) {
+                str_comma.o = KOS_new_const_ascii_string(ctx, str_array_comma,
+                                                         sizeof(str_array_comma) - 1);
+                TRY_OBJID(str_comma.o);
             }
-            TRY(KOS_array_write(ctx, aux_array_id, i_out, str_comma));
+            TRY(KOS_array_write(ctx, aux_array.o, i_out, str_comma.o));
             ++i_out;
         }
     }
@@ -736,14 +735,14 @@ static KOS_OBJ_ID array_to_str(KOS_CONTEXT        ctx,
     str = KOS_new_const_ascii_string(ctx, str_array_close,
                                      sizeof(str_array_close) - 1);
     TRY_OBJID(str);
-    TRY(KOS_array_write(ctx, aux_array_id, i_out, str));
+    TRY(KOS_array_write(ctx, aux_array.o, i_out, str));
     ++i_out;
-    TRY(KOS_array_resize(ctx, aux_array_id, i_out));
+    TRY(KOS_array_resize(ctx, aux_array.o, i_out));
 
-    ret = KOS_string_add(ctx, aux_array_id);
+    ret = KOS_string_add(ctx, aux_array.o);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_locals(ctx, &array, &value);
 
     return error ? KOS_BADPTR : ret;
 }
@@ -831,68 +830,70 @@ static int vector_append_object(KOS_CONTEXT        ctx,
                                 KOS_STR_REC_GUARD *guard)
 {
     int               error     = KOS_SUCCESS;
-    KOS_OBJ_ID        walk      = KOS_BADPTR;
-    KOS_OBJ_ID        value     = KOS_BADPTR;
     uint32_t          num_elems = 0;
-    int               pushed    = 0;
     KOS_STR_REC_GUARD new_guard;
+    KOS_LOCAL         obj;
+    KOS_LOCAL         walk;
+    KOS_LOCAL         value;
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
+    KOS_init_locals(ctx, 3, &obj, &walk, &value);
+
+    obj.o = obj_id;
+
     new_guard.next       = guard;
-    new_guard.obj_id_ptr = &obj_id;
+    new_guard.obj_id_ptr = &obj.o;
 
-    TRY(KOS_push_locals(ctx, &pushed, 3, &obj_id, &walk, &value));
-
-    walk = KOS_new_object_walk(ctx, obj_id, KOS_SHALLOW);
-    TRY_OBJID(walk);
+    walk.o = KOS_new_object_walk(ctx, obj.o, KOS_SHALLOW);
+    TRY_OBJID(walk.o);
 
     TRY(kos_append_cstr(ctx, cstr_vec, str_object_open, sizeof(str_object_open)-1));
 
-    while ( ! KOS_object_walk(ctx, walk)) {
+    while ( ! KOS_object_walk(ctx, walk.o)) {
 
-        assert(GET_OBJ_TYPE(KOS_get_walk_key(walk)) == OBJ_STRING);
-        assert( ! IS_BAD_PTR(KOS_get_walk_value(walk)));
+        assert(GET_OBJ_TYPE(KOS_get_walk_key(walk.o)) == OBJ_STRING);
+        assert( ! IS_BAD_PTR(KOS_get_walk_value(walk.o)));
 
         if (num_elems)
             TRY(kos_append_cstr(ctx, cstr_vec, str_object_sep, sizeof(str_object_sep)-1));
 
-        TRY(vector_append_str(ctx, cstr_vec, KOS_get_walk_key(walk), KOS_QUOTE_STRINGS));
+        TRY(vector_append_str(ctx, cstr_vec, KOS_get_walk_key(walk.o), KOS_QUOTE_STRINGS));
 
         TRY(kos_append_cstr(ctx, cstr_vec, str_object_colon, sizeof(str_object_colon)-1));
 
-        value = KOS_get_walk_value(walk);
-        assert( ! IS_BAD_PTR(value));
+        value.o = KOS_get_walk_value(walk.o);
+        assert( ! IS_BAD_PTR(value.o));
 
-        if (GET_OBJ_TYPE(value) == OBJ_DYNAMIC_PROP) {
+        if (GET_OBJ_TYPE(value.o) == OBJ_DYNAMIC_PROP) {
 
             KOS_OBJ_ID args = KOS_new_array(ctx, 0);
             TRY_OBJID(args);
 
-            value = KOS_call_function(ctx,
-                                      OBJPTR(DYNAMIC_PROP, value)->getter,
-                                      OBJPTR(OBJECT_WALK, walk)->obj,
-                                      args);
-            if (IS_BAD_PTR(value)) {
+            value.o = KOS_call_function(ctx,
+                                        OBJPTR(DYNAMIC_PROP, value.o)->getter,
+                                        OBJPTR(OBJECT_WALK, walk.o)->obj,
+                                        args);
+            if (IS_BAD_PTR(value.o)) {
                 assert(KOS_is_exception_pending(ctx));
                 KOS_clear_exception(ctx);
 
-                value = OBJPTR(DYNAMIC_PROP, KOS_get_walk_value(walk))->getter;
+                value.o = OBJPTR(DYNAMIC_PROP, KOS_get_walk_value(walk.o))->getter;
             }
         }
 
-        if (is_to_string_recursive(&new_guard, value)) {
-            if (GET_OBJ_TYPE(value) == OBJ_ARRAY)
+        if (is_to_string_recursive(&new_guard, value.o)) {
+            if (GET_OBJ_TYPE(value.o) == OBJ_ARRAY)
                 TRY(kos_append_cstr(ctx, cstr_vec,
                                     str_recursive_array, sizeof(str_recursive_array)-1));
             else {
-                assert(GET_OBJ_TYPE(value) == OBJ_OBJECT);
+                assert(GET_OBJ_TYPE(value.o) == OBJ_OBJECT);
                 TRY(kos_append_cstr(ctx, cstr_vec,
                                     str_recursive_object, sizeof(str_recursive_object)-1));
             }
         }
         else
-            TRY(object_to_string_or_cstr_vec(ctx, value, KOS_QUOTE_STRINGS,
+            TRY(object_to_string_or_cstr_vec(ctx, value.o, KOS_QUOTE_STRINGS,
                                              0, cstr_vec, &new_guard));
 
         ++num_elems;
@@ -901,7 +902,8 @@ static int vector_append_object(KOS_CONTEXT        ctx,
     TRY(kos_append_cstr(ctx, cstr_vec, str_object_close, sizeof(str_object_close)-1));
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_locals(ctx, &obj, &value);
+
     return error;
 }
 
