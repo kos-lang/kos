@@ -1951,44 +1951,39 @@ static int exec_function(KOS_CONTEXT ctx)
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
-                KOS_OBJ_ID src[2];
+                KOS_LOCAL src[2];
 
                 assert(rsrc1 < num_regs);
                 assert(rsrc2 < num_regs);
 
-                rdest  = bytecode[1];
-                src[0] = REGISTER(rsrc1);
-                src[1] = REGISTER(rsrc2);
+                rdest    = bytecode[1];
+                src[0].o = REGISTER(rsrc1);
+                src[1].o = REGISTER(rsrc2);
 
-                if (IS_SMALL_INT(src[0])) {
-                    const int64_t a = GET_SMALL_INT(src[0]);
-                    out             = _add_integer(ctx, a, src[1]);
+                if (IS_SMALL_INT(src[0].o)) {
+                    const int64_t a = GET_SMALL_INT(src[0].o);
+                    out             = _add_integer(ctx, a, src[1].o);
                 }
                 else {
 
-                    switch (GET_OBJ_TYPE(src[0])) {
+                    switch (GET_OBJ_TYPE(src[0].o)) {
 
                         case OBJ_INTEGER:
-                            out = _add_integer(ctx, OBJPTR(INTEGER, src[0])->value, src[1]);
+                            out = _add_integer(ctx, OBJPTR(INTEGER, src[0].o)->value, src[1].o);
                             break;
 
                         case OBJ_FLOAT:
-                            out = _add_float(ctx, OBJPTR(FLOAT, src[0])->value, src[1]);
+                            out = _add_float(ctx, OBJPTR(FLOAT, src[0].o)->value, src[1].o);
                             break;
 
                         case OBJ_STRING: {
-                            if (GET_OBJ_TYPE(src[1]) == OBJ_STRING) {
-                                int pushed = 0;
+                            if (GET_OBJ_TYPE(src[1].o) == OBJ_STRING) {
+                                KOS_init_local_with(ctx, &src[0], src[0].o);
+                                KOS_init_local_with(ctx, &src[1], src[1].o);
 
-                                error = KOS_push_locals(ctx, &pushed, 2, &src[0], &src[1]);
+                                out = KOS_string_add_n(ctx, src, 2);
 
-                                if ( ! error)
-                                    out = KOS_string_add_n(ctx, src, 2);
-
-                                KOS_pop_locals(ctx, pushed);
-
-                                if (error)
-                                    goto cleanup;
+                                KOS_destroy_top_locals(ctx, &src[1], &src[0]);
                             }
                             else
                                 RAISE_EXCEPTION_STR(str_err_unsup_operand_types);

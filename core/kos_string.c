@@ -238,6 +238,8 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
         RAISE_EXCEPTION_STR(str_err_array_too_large);
 
     if (length) {
+        KOS_LOCAL save_codes;
+
         codes = kos_get_array_storage(codes);
 
         for (i = 0; i < length; i++) {
@@ -263,11 +265,11 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
 
         _override_elem_size(elem_size);
 
-        kos_track_refs(ctx, 1, &codes);
+        KOS_init_local_with(ctx, &save_codes, codes);
 
         ret = _new_empty_string(ctx, length, elem_size);
 
-        kos_untrack_refs(ctx, 1);
+        codes = KOS_destroy_top_local(ctx, &save_codes);
 
         if ( ! ret)
             goto cleanup;
@@ -332,23 +334,26 @@ cleanup:
 }
 
 KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
-                                      KOS_OBJ_ID  utf8_buf,
+                                      KOS_OBJ_ID  utf8_buf_id,
                                       unsigned    begin,
                                       unsigned    end)
 {
     KOS_STRING      *str       = 0;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
-    int              pushed    = 0;
+    KOS_LOCAL        utf8_buf;
     uint32_t         size;
     uint32_t         max_code;
     unsigned         length;
     void            *ptr;
 
-    assert(GET_OBJ_TYPE(utf8_buf) == OBJ_BUFFER);
+    assert(GET_OBJ_TYPE(utf8_buf_id) == OBJ_BUFFER);
 
-    size = KOS_get_buffer_size(utf8_buf);
+    size = KOS_get_buffer_size(utf8_buf_id);
     if ( ! size && begin == end)
         return KOS_STR_EMPTY;
+
+    KOS_init_local_with(ctx, &utf8_buf, utf8_buf_id);
+
     if (begin > end || end > size) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_buffer_index));
         goto cleanup;
@@ -356,17 +361,14 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
 
     size = end - begin;
 
-    utf8_buf = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, utf8_buf)->data);
+    utf8_buf.o = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, utf8_buf.o)->data);
 
-    length = kos_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
+    length = kos_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
                               size, KOS_UTF8_NO_ESCAPE, &max_code);
     if (length == ~0U) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
         goto cleanup;
     }
-
-    if (KOS_push_locals(ctx, &pushed, 1, &utf8_buf))
-        goto cleanup;
 
     if (max_code > 0xFFFFU)
         elem_size = KOS_STRING_ELEM_32;
@@ -389,21 +391,21 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     ptr = (void *)kos_get_string_buffer(str);
 
     if (elem_size == KOS_STRING_ELEM_8) {
-        if (KOS_SUCCESS != kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
+        if (KOS_SUCCESS != kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
                                              size, KOS_UTF8_NO_ESCAPE, (uint8_t *)ptr)) {
             KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
             str = 0; /* object is garbage-collected */
         }
     }
     else if (elem_size == KOS_STRING_ELEM_16) {
-        if (KOS_SUCCESS != kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
+        if (KOS_SUCCESS != kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
                                               size, KOS_UTF8_NO_ESCAPE, (uint16_t *)ptr)) {
             KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
             str = 0; /* object is garbage-collected */
         }
     }
     else {
-        if (KOS_SUCCESS != kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf)->buf[begin],
+        if (KOS_SUCCESS != kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
                                               size, KOS_UTF8_NO_ESCAPE, (uint32_t *)ptr)) {
             KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
             str = 0; /* object is garbage-collected */
@@ -411,7 +413,7 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_local(ctx, &utf8_buf);
 
     return OBJID(STRING, str);
 }
@@ -632,35 +634,35 @@ static void _init_empty_string(KOS_STRING *dest,
     }
 }
 
-KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID *str_id_array,
-                            unsigned    num_strings)
+KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
+                            struct KOS_LOCAL_S *str_array,
+                            unsigned            num_strings)
 {
-    KOS_OBJ_ID new_str_id = KOS_BADPTR;
+    KOS_LOCAL new_str;
 
-    kos_track_refs(ctx, 1, &new_str_id);
+    KOS_init_local(ctx, &new_str);
 
     if (num_strings == 1)
-        new_str_id = *str_id_array;
+        new_str.o = str_array->o;
 
     else {
         KOS_STRING_FLAGS  elem_size = KOS_STRING_ELEM_8;
         unsigned          new_len   = 0;
         unsigned          num_non_0 = 0;
-        KOS_OBJ_ID *const end       = str_id_array + num_strings;
-        KOS_OBJ_ID       *cur_ptr;
+        KOS_LOCAL  *const end       = str_array + num_strings;
+        KOS_LOCAL        *cur_ptr;
         KOS_OBJ_ID        non_0_str = KOS_VOID;
 
-        new_str_id = KOS_STR_EMPTY;
+        new_str.o = KOS_STR_EMPTY;
 
-        for (cur_ptr = str_id_array; cur_ptr != end; ++cur_ptr) {
-            KOS_OBJ_ID       cur_str = *cur_ptr;
+        for (cur_ptr = str_array; cur_ptr != end; ++cur_ptr) {
+            KOS_OBJ_ID       cur_str = cur_ptr->o;
             KOS_STRING_FLAGS cur_elem_size;
             unsigned         cur_len;
 
             if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
-                new_str_id = KOS_BADPTR;
-                new_len    = 0;
+                new_str.o = KOS_BADPTR;
+                new_len   = 0;
                 KOS_raise_exception(ctx, IS_BAD_PTR(cur_str) ?
                                          KOS_CONST_ID(str_err_null_ptr) :
                                          KOS_CONST_ID(str_err_not_string));
@@ -682,41 +684,42 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
         }
 
         if (num_non_0 == 1 && new_len)
-            new_str_id = non_0_str;
+            new_str.o = non_0_str;
 
         else if (new_len) {
             _override_elem_size(elem_size);
 
             if (new_len <= 0xFFFFU)
-                new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+                new_str.o = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
             else {
-                new_str_id = KOS_BADPTR;
+                new_str.o = KOS_BADPTR;
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
             }
 
-            if ( ! IS_BAD_PTR(new_str_id)) {
+            if ( ! IS_BAD_PTR(new_str.o)) {
 
                 unsigned pos = 0;
 
-                for (cur_ptr = str_id_array; cur_ptr != end; ++cur_ptr) {
-                    KOS_OBJ_ID     str_obj = *cur_ptr;
+                for (cur_ptr = str_array; cur_ptr != end; ++cur_ptr) {
+                    KOS_OBJ_ID     str_obj = cur_ptr->o;
                     const unsigned cur_len = OBJPTR(STRING, str_obj)->header.length;
-                    _init_empty_string(OBJPTR(STRING, new_str_id), pos, OBJPTR(STRING, str_obj), cur_len);
+                    _init_empty_string(OBJPTR(STRING, new_str.o), pos, OBJPTR(STRING, str_obj), cur_len);
                     pos += cur_len;
                 }
             }
         }
     }
 
-    kos_untrack_refs(ctx, 1);
+    new_str.o = KOS_destroy_top_local(ctx, &new_str);
 
-    return new_str_id;
+    return new_str.o;
 }
 
 KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  str_array_id)
 {
-    KOS_OBJ_ID new_str_id = KOS_BADPTR;
+    KOS_LOCAL  new_str;
+    KOS_LOCAL  str_array;
     unsigned   num_strings;
 
     if (IS_BAD_PTR(str_array_id) || GET_OBJ_TYPE(str_array_id) != OBJ_ARRAY) {
@@ -724,16 +727,18 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
-    num_strings = KOS_get_array_size(str_array_id);
+    KOS_init_locals(ctx, 2, &str_array, &new_str);
 
-    kos_track_refs(ctx, 2, &new_str_id, &str_array_id);
+    str_array.o = str_array_id;
+
+    num_strings = KOS_get_array_size(str_array.o);
 
     if (num_strings == 1) {
-        new_str_id = KOS_array_read(ctx, str_array_id, 0);
+        new_str.o = KOS_array_read(ctx, str_array.o, 0);
 
-        if ( ! IS_BAD_PTR(new_str_id) && GET_OBJ_TYPE(new_str_id) != OBJ_STRING) {
+        if ( ! IS_BAD_PTR(new_str.o) && GET_OBJ_TYPE(new_str.o) != OBJ_STRING) {
             KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
-            new_str_id = KOS_BADPTR;
+            new_str.o = KOS_BADPTR;
         }
     }
     else {
@@ -743,16 +748,16 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
         unsigned         i;
         KOS_OBJ_ID       non_0_str = KOS_VOID;
 
-        new_str_id = KOS_STR_EMPTY;
+        new_str.o = KOS_STR_EMPTY;
 
         for (i = 0; i < num_strings; ++i) {
-            KOS_OBJ_ID       cur_str = KOS_array_read(ctx, str_array_id, i);
+            KOS_OBJ_ID       cur_str = KOS_array_read(ctx, str_array.o, i);
             KOS_STRING_FLAGS cur_elem_size;
             unsigned         cur_len;
 
             if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
-                new_str_id = KOS_BADPTR;
-                new_len    = 0;
+                new_str.o = KOS_BADPTR;
+                new_len   = 0;
                 if ( ! IS_BAD_PTR(cur_str))
                     KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
                 break;
@@ -773,44 +778,44 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
         }
 
         if (num_non_0 == 1 && new_len)
-            new_str_id = non_0_str;
+            new_str.o = non_0_str;
 
         else if (new_len) {
             _override_elem_size(elem_size);
 
             if (new_len <= 0xFFFFU)
-                new_str_id = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+                new_str.o = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
             else {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
-                new_str_id = KOS_BADPTR;
+                new_str.o = KOS_BADPTR;
             }
 
-            if ( ! IS_BAD_PTR(new_str_id)) {
+            if ( ! IS_BAD_PTR(new_str.o)) {
 
                 unsigned pos = 0;
 
                 for (i = 0; i < num_strings; ++i) {
-                    KOS_OBJ_ID str_obj = KOS_array_read(ctx, str_array_id, i);
+                    KOS_OBJ_ID str_obj = KOS_array_read(ctx, str_array.o, i);
                     unsigned   cur_len;
 
                     if (IS_BAD_PTR(str_obj) || GET_OBJ_TYPE(str_obj) != OBJ_STRING) {
-                        new_str_id = KOS_BADPTR;
+                        new_str.o = KOS_BADPTR;
                         if ( ! IS_BAD_PTR(str_obj))
                             KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
                         break;
                     }
 
                     cur_len = OBJPTR(STRING, str_obj)->header.length;
-                    _init_empty_string(OBJPTR(STRING, new_str_id), pos, OBJPTR(STRING, str_obj), cur_len);
+                    _init_empty_string(OBJPTR(STRING, new_str.o), pos, OBJPTR(STRING, str_obj), cur_len);
                     pos += cur_len;
                 }
             }
         }
     }
 
-    kos_untrack_refs(ctx, 2);
+    new_str.o = KOS_destroy_top_locals(ctx, &str_array, &new_str);
 
-    return new_str_id;
+    return new_str.o;
 }
 
 KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
@@ -858,19 +863,21 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
             if (new_len == len)
                 new_str = obj_id;
             else if (new_len) {
-                kos_track_refs(ctx, 1, &obj_id);
+                KOS_LOCAL in_str;
+
+                KOS_init_local_with(ctx, &in_str, obj_id);
 
                 if ((new_len << elem_size) <= 2 * sizeof(void *)) {
                     new_str = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
-                    buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id)) + (begin << elem_size);
+                    buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, in_str.o)) + (begin << elem_size);
                     if ( ! IS_BAD_PTR(new_str))
                         memcpy((void *)kos_get_string_buffer(OBJPTR(STRING, new_str)),
                                buf,
                                new_len << elem_size);
                 }
                 /* if KOS_STRING_PTR */
-                else if ( ! (OBJPTR(STRING, obj_id)->header.flags & ~KOS_STRING_ELEM_MASK)) {
-                    buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id)) + (begin << elem_size);
+                else if ( ! (OBJPTR(STRING, in_str.o)->header.flags & ~KOS_STRING_ELEM_MASK)) {
+                    buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, in_str.o)) + (begin << elem_size);
                     new_str = KOS_new_const_string(ctx, buf, new_len, elem_size);
                 }
                 else {
@@ -884,7 +891,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                     if ( ! IS_BAD_PTR(new_str)) {
                         struct KOS_STRING_REF_S *const ref = &OBJPTR(STRING, new_str)->ref;
 
-                        buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id)) + (begin << elem_size);
+                        buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, in_str.o)) + (begin << elem_size);
 
                         assert(READ_OBJ_TYPE(new_str) == OBJ_STRING);
 
@@ -893,14 +900,14 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                         OBJPTR(STRING, new_str)->header.hash   = 0;
                         ref->data_ptr                          = buf;
 
-                        if (OBJPTR(STRING, obj_id)->header.flags & KOS_STRING_REF)
-                            ref->obj_id = OBJPTR(STRING, obj_id)->ref.obj_id;
+                        if (OBJPTR(STRING, in_str.o)->header.flags & KOS_STRING_REF)
+                            ref->obj_id = OBJPTR(STRING, in_str.o)->ref.obj_id;
                         else
-                            ref->obj_id = obj_id;
+                            ref->obj_id = in_str.o;
                     }
                 }
 
-                kos_untrack_refs(ctx, 1);
+                KOS_destroy_top_local(ctx, &in_str);
             }
             else
                 new_str = KOS_STR_EMPTY;
@@ -931,11 +938,13 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
 
         if (idx >= 0 && idx < len) {
 
-            kos_track_refs(ctx, 1, &obj_id);
+            KOS_LOCAL save_obj_id;
+
+            KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
             new_str = _new_empty_string(ctx, 1, elem_size);
 
-            kos_untrack_refs(ctx, 1);
+            obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
             if (new_str) {
 
@@ -1515,6 +1524,7 @@ int KOS_string_scan(KOS_CONTEXT             ctx,
 KOS_OBJ_ID KOS_string_reverse(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id)
 {
+    KOS_LOCAL   save_obj_id;
     KOS_STRING *ret;
     unsigned    len;
 
@@ -1528,11 +1538,11 @@ KOS_OBJ_ID KOS_string_reverse(KOS_CONTEXT ctx,
     if (len < 2)
         return obj_id;
 
-    kos_track_refs(ctx, 1, &obj_id);
+    KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
     ret = _new_empty_string(ctx, len, kos_get_string_elem_size(OBJPTR(STRING, obj_id)));
 
-    kos_untrack_refs(ctx, 1);
+    obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
     if ( ! ret)
         return KOS_BADPTR;
@@ -1575,12 +1585,13 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  obj_id,
                              unsigned    num_repeat)
 {
-    unsigned         len;
-    KOS_STRING_FLAGS elem_size;
+    KOS_LOCAL        save_obj_id;
     KOS_STRING      *new_str;
     uint8_t         *in_buf;
     uint8_t         *new_buf;
     uint8_t         *end_buf;
+    KOS_STRING_FLAGS elem_size;
+    unsigned         len;
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
@@ -1602,11 +1613,11 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
 
     elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
 
-    kos_track_refs(ctx, 1, &obj_id);
+    KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
     new_str = _new_empty_string(ctx, len * num_repeat, elem_size);
 
-    kos_untrack_refs(ctx, 1);
+    obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
     if ( ! new_str)
         return KOS_BADPTR;
@@ -1646,6 +1657,7 @@ int kos_append_cstr(KOS_CONTEXT ctx,
 
 KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
 {
+    KOS_LOCAL        save_obj_id;
     KOS_STRING*      new_str;
     unsigned         len;
     unsigned         i;
@@ -1662,11 +1674,11 @@ KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
     if (len == 0)
         return KOS_STR_EMPTY;
 
-    kos_track_refs(ctx, 1, &obj_id);
+    KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
     new_str = _new_empty_string(ctx, len, elem_size);
 
-    kos_untrack_refs(ctx, 1);
+    obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
     if ( ! new_str)
         return OBJID(STRING, new_str);
@@ -1718,6 +1730,7 @@ KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
 
 KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
 {
+    KOS_LOCAL        save_obj_id;
     KOS_STRING*      new_str;
     unsigned         len;
     unsigned         i;
@@ -1734,11 +1747,11 @@ KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
     if (len == 0)
         return KOS_STR_EMPTY;
 
-    kos_track_refs(ctx, 1, &obj_id);
+    KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
     new_str = _new_empty_string(ctx, len, elem_size);
 
-    kos_untrack_refs(ctx, 1);
+    obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
     if ( ! new_str)
         return OBJID(STRING, new_str);

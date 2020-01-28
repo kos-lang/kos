@@ -28,6 +28,7 @@
 #include <stddef.h>
 
 struct KOS_VECTOR_S;
+struct KOS_LOCAL_S;
 
 #ifdef __cplusplus
 
@@ -88,9 +89,9 @@ int KOS_string_to_cstr_vec(KOS_CONTEXT          ctx,
 
 uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id);
 
-KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID *str_id_array,
-                            unsigned    num_strings);
+KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
+                            struct KOS_LOCAL_S *str_array,
+                            unsigned            num_strings);
 
 KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  str_array_id);
