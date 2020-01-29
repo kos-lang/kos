@@ -34,7 +34,7 @@
 
 struct TEST_DATA {
     KOS_INSTANCE        *inst;
-    KOS_OBJ_ID           buf;
+    KOS_LOCAL            buf;
     int                  num_loops;
     KOS_ATOMIC(uint32_t) go;
     KOS_ATOMIC(uint32_t) error;
@@ -63,20 +63,20 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
         switch (action) {
 
             case 0: {
-                TEST(KOS_buffer_fill(ctx, test->buf, -8, -4, data->id) == KOS_SUCCESS);
+                TEST(KOS_buffer_fill(ctx, test->buf.o, -8, -4, data->id) == KOS_SUCCESS);
                 TEST_NO_EXCEPTION();
                 break;
             }
 
             case 1: {
-                TEST(KOS_buffer_copy(ctx, test->buf, -8, test->buf, 0, 8) == KOS_SUCCESS);
+                TEST(KOS_buffer_copy(ctx, test->buf.o, -8, test->buf.o, 0, 8) == KOS_SUCCESS);
                 TEST_NO_EXCEPTION();
                 break;
             }
 
             default: {
                 const unsigned delta = 64;
-                uint8_t *b = KOS_buffer_make_room(ctx, test->buf, delta);
+                uint8_t *b = KOS_buffer_make_room(ctx, test->buf.o, delta);
                 TEST(b != 0);
                 TEST_NO_EXCEPTION();
                 memset(b, data->id, delta);
@@ -148,24 +148,20 @@ int main(void)
         data.inst      = &inst;
         data.num_loops = num_thread_loops;
         data.error     = KOS_SUCCESS;
-        data.buf       = KOS_BADPTR;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-        {
-            int pushed = 0;
-            TEST(KOS_push_locals(ctx, &pushed, 1, &data.buf) == KOS_SUCCESS);
-        }
+        KOS_init_local(ctx, &data.buf);
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {
             const unsigned size = 64;
-            data.buf            = KOS_new_buffer(ctx, size);
+            data.buf.o          = KOS_new_buffer(ctx, size);
             data.go             = 0;
 
-            TEST(!IS_BAD_PTR(data.buf));
+            TEST(!IS_BAD_PTR(data.buf.o));
 
             /* Fill buffer with expected data */
             {
-                uint8_t       *b   = KOS_buffer_data_volatile(data.buf);
+                uint8_t       *b   = KOS_buffer_data_volatile(data.buf.o);
                 uint8_t *const end = b + size;
 
                 i = 0;
@@ -190,8 +186,8 @@ int main(void)
 
             /* Check buffer contents */
             {
-                const size_t   endsize = KOS_get_buffer_size(data.buf);
-                uint8_t       *b       = KOS_buffer_data_volatile(data.buf);
+                const size_t   endsize = KOS_get_buffer_size(data.buf.o);
+                uint8_t       *b       = KOS_buffer_data_volatile(data.buf.o);
                 uint8_t *const end     = b + endsize;
 
                 for (i = 0 ; b < end; i++, b++) {

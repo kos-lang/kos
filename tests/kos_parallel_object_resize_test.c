@@ -33,8 +33,8 @@
 
 struct TEST_DATA {
     KOS_INSTANCE        *inst;
-    KOS_OBJ_ID           object;
-    KOS_OBJ_ID          *prop_names;
+    KOS_LOCAL            object;
+    KOS_LOCAL           *prop_names;
     int                  num_props;
     KOS_ATOMIC(uint32_t) stage;
     KOS_ATOMIC(uint32_t) done;
@@ -74,41 +74,41 @@ static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
             break;
 
         for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
-            const KOS_OBJ_ID key   = test->prop_names[i_prop];
+            const KOS_OBJ_ID key   = test->prop_names[i_prop].o;
             const KOS_OBJ_ID value = TO_SMALL_INT(i_prop);
 
-            TEST(KOS_set_property(ctx, test->object, key, value) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, test->object.o, key, value) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
-            const KOS_OBJ_ID key      = test->prop_names[i_prop-1];
+            const KOS_OBJ_ID key      = test->prop_names[i_prop-1].o;
             const KOS_OBJ_ID expected = TO_SMALL_INT(i_prop-1);
-            const KOS_OBJ_ID actual   = KOS_get_property(ctx, test->object, key);
+            const KOS_OBJ_ID actual   = KOS_get_property(ctx, test->object.o, key);
             const KOS_OBJ_ID new_val  = TO_SMALL_INT(-(i_prop-1));
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
 
-            TEST(KOS_set_property(ctx, test->object, key, new_val) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, test->object.o, key, new_val) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = first_prop; i_prop < end_prop; i_prop++) {
-            const KOS_OBJ_ID key      = test->prop_names[i_prop];
+            const KOS_OBJ_ID key      = test->prop_names[i_prop].o;
             const KOS_OBJ_ID expected = TO_SMALL_INT(-i_prop);
-            const KOS_OBJ_ID actual   = KOS_get_property(ctx, test->object, key);
+            const KOS_OBJ_ID actual   = KOS_get_property(ctx, test->object.o, key);
 
             TEST_NO_EXCEPTION();
             TEST(actual == expected);
 
-            TEST(KOS_delete_property(ctx, test->object, key) == KOS_SUCCESS);
+            TEST(KOS_delete_property(ctx, test->object.o, key) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
         }
 
         for (i_prop = end_prop; i_prop > first_prop; i_prop--) {
-            const KOS_OBJ_ID key   = test->prop_names[i_prop-1];
-            const KOS_OBJ_ID value = KOS_get_property(ctx, test->object, key);
+            const KOS_OBJ_ID key   = test->prop_names[i_prop-1].o;
+            const KOS_OBJ_ID value = KOS_get_property(ctx, test->object.o, key);
 
             TEST(IS_BAD_PTR(value));
             TEST_EXCEPTION();
@@ -163,18 +163,15 @@ int main(void)
         KOS_THREAD        **threads          = 0;
         int                 num_threads      = 0;
         int                 num_props;
-        KOS_OBJ_ID         *props;
+        KOS_LOCAL          *props;
         struct KOS_RNG      rng;
         int                 i_loop;
         int                 i;
 
-        data.object = KOS_new_object(ctx);
-        TEST( ! IS_BAD_PTR(data.object));
+        KOS_init_local(ctx, &data.object);
 
-        {
-            int pushed = 0;
-            TEST(KOS_push_locals(ctx, &pushed, 1, &data.object) == KOS_SUCCESS);
-        }
+        data.object.o = KOS_new_object(ctx);
+        TEST( ! IS_BAD_PTR(data.object.o));
 
         num_threads = num_cpus;
 
@@ -188,9 +185,9 @@ int main(void)
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
                 num_threads * (sizeof(KOS_OBJ_ID) + sizeof(struct THREAD_DATA))
-                + num_props * sizeof(KOS_OBJ_ID)
+                + num_props * sizeof(KOS_LOCAL)
             ) == KOS_SUCCESS);
-        props          = (KOS_OBJ_ID *)mem_buf.buffer;
+        props          = (KOS_LOCAL *)mem_buf.buffer;
         thread_cookies = (struct THREAD_DATA *)(props + num_props);
         threads        = (KOS_THREAD **)(thread_cookies + num_threads);
 
@@ -203,7 +200,6 @@ int main(void)
         for (i = 0; i < num_props; i++) {
             char     buf[8];
             unsigned k;
-            int      pushed = 0;
 
             for (k = 0; k < sizeof(buf); k++) {
                 if (k + 4U < sizeof(buf))
@@ -212,10 +208,10 @@ int main(void)
                     buf[k] = (char)((i >> ((sizeof(buf) - 1 - k) * 7) & 0x7F));
             }
 
-            props[i] = KOS_new_string(ctx, buf, sizeof(buf));
-            TEST( ! IS_BAD_PTR(props[i]));
+            KOS_init_local(ctx, &props[i]);
 
-            TEST(KOS_push_locals(ctx, &pushed, 1, &props[i]) == KOS_SUCCESS);
+            props[i].o = KOS_new_string(ctx, buf, sizeof(buf));
+            TEST( ! IS_BAD_PTR(props[i].o));
         }
 
         data.inst       = &inst;
@@ -236,7 +232,7 @@ int main(void)
 
             do {
                 if (copies_left-- > 0)
-                    TEST(kos_object_copy_prop_table(ctx, data.object) == KOS_SUCCESS);
+                    TEST(kos_object_copy_prop_table(ctx, data.object.o) == KOS_SUCCESS);
                 KOS_suspend_context(ctx);
                 kos_yield();
                 KOS_resume_context(ctx);
@@ -247,7 +243,7 @@ int main(void)
             TEST( ! data.error);
 
             for (i = 0; i < num_props; i++) {
-                KOS_OBJ_ID value = KOS_get_property(ctx, data.object, props[i]);
+                KOS_OBJ_ID value = KOS_get_property(ctx, data.object.o, props[i].o);
                 TEST(IS_BAD_PTR(value));
                 TEST_EXCEPTION();
             }

@@ -36,25 +36,24 @@ int create_thread(KOS_CONTEXT          ctx,
                   KOS_THREAD         **thread)
 {
     int        error    = KOS_SUCCESS;
-    int        pushed   = 0;
-    KOS_OBJ_ID func_obj = KOS_BADPTR;
     KOS_OBJ_ID args_obj = KOS_BADPTR;
+    KOS_LOCAL  func;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &func_obj));
+    KOS_init_local(ctx, &func);
 
-    func_obj = KOS_new_builtin_function(ctx, proc, 0);
-    TRY_OBJID(func_obj);
+    func.o = KOS_new_builtin_function(ctx, proc, 0);
+    TRY_OBJID(func.o);
 
     args_obj = KOS_new_array(ctx, 0);
     TRY_OBJID(args_obj);
 
-    *thread = kos_thread_create(ctx, func_obj, (KOS_OBJ_ID)cookie, args_obj);
+    *thread = kos_thread_create(ctx, func.o, (KOS_OBJ_ID)cookie, args_obj);
 
     if ( ! *thread)
         error = KOS_ERROR_EXCEPTION;
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_local(ctx, &func);
 
     return error;
 }

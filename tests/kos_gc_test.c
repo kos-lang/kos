@@ -108,6 +108,28 @@ static KOS_OBJ_ID alloc_page_with_object(KOS_CONTEXT ctx,
     return obj_id;
 }
 
+static int alloc_page_with_locals(KOS_CONTEXT        ctx,
+                                  KOS_LOCAL         *dest,
+                                  const OBJECT_DESC *descs,
+                                  uint32_t           num_objs)
+{
+    int        error;
+    uint32_t   i;
+    KOS_OBJ_ID obj_ids[5];
+
+    assert(num_objs <= sizeof(obj_ids) / sizeof(obj_ids[0]));
+
+    error = alloc_page_with_objects(ctx, obj_ids, descs, num_objs);
+
+    if (error)
+        return error;
+
+    for (i = 0; i < num_objs; i++)
+        KOS_init_local_with(ctx, dest + i, obj_ids[i]);
+
+    return KOS_SUCCESS;
+}
+
 static uint32_t get_obj_size(KOS_OBJ_ID obj_id)
 {
     KOS_OBJ_HEADER *hdr = (KOS_OBJ_HEADER *)((intptr_t)obj_id - 1);
@@ -1162,11 +1184,10 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
     KOS_OBJ_ID   prev_locals;
-    KOS_OBJ_ID   obj_id;
+    KOS_LOCAL    obj;
     KOS_GC_STATS stats  = KOS_GC_STATS_INIT(~0U);
     VERIFY_FUNC  verify;
     int64_t      size;
-    int          pushed = 0;
     uint32_t     f47    = 0;
     uint32_t     num_objs;
     uint32_t     total_size;
@@ -1179,25 +1200,25 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
 
     TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
-    obj_id = alloc_object_func(ctx, &num_objs, &total_size, &verify);
-    TEST( ! IS_BAD_PTR(obj_id));
-    TEST(verify(obj_id) == KOS_SUCCESS);
+    obj.o = alloc_object_func(ctx, &num_objs, &total_size, &verify);
+    TEST( ! IS_BAD_PTR(obj.o));
+    TEST(verify(obj.o) == KOS_SUCCESS);
 
-    size = get_obj_size(obj_id);
+    size = get_obj_size(obj.o);
 
-    if (GET_OBJ_TYPE(obj_id) == OBJ_OBJECT && OBJPTR(OBJECT, obj_id)->finalize == finalize_47)
+    if (GET_OBJ_TYPE(obj.o) == OBJ_OBJECT && OBJPTR(OBJECT, obj.o)->finalize == finalize_47)
         f47 = 1;
 
     TEST(!f47 || private_test == 1);
 
-    TEST(KOS_push_locals(ctx, &pushed, 1, &obj_id) == KOS_SUCCESS);
+    KOS_init_local_with(ctx, &obj, obj.o);
 
     TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
-    KOS_pop_locals(ctx, pushed);
+    obj.o = KOS_destroy_top_local(ctx, &obj);
 
-    TEST(get_obj_size(obj_id) == size);
-    TEST(verify(obj_id) == KOS_SUCCESS);
+    TEST(get_obj_size(obj.o) == size);
+    TEST(verify(obj.o) == KOS_SUCCESS);
 
     TEST(!f47 || private_test == 1);
 
@@ -1223,9 +1244,9 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
 
     TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
-    obj_id = alloc_object_func(ctx, &num_objs, &total_size, &verify);
-    TEST( ! IS_BAD_PTR(obj_id));
-    TEST(verify(obj_id) == KOS_SUCCESS);
+    obj.o = alloc_object_func(ctx, &num_objs, &total_size, &verify);
+    TEST( ! IS_BAD_PTR(obj.o));
+    TEST(verify(obj.o) == KOS_SUCCESS);
 
     TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -1623,50 +1644,6 @@ int main(void)
     }
 
     /************************************************************************/
-    /* Test local refs */
-    {
-        KOS_OBJ_ID prev_locals;
-        int        finalized[NELEMS(((KOS_LOCAL_REFS *)0)->refs)];
-        KOS_OBJ_ID obj_id[NELEMS(((KOS_LOCAL_REFS *)0)->refs)];
-        size_t     i;
-
-        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-
-        for (i = 0; i < NELEMS(((KOS_LOCAL_REFS *)0)->refs); i++) {
-            int pushed = 0;
-
-            obj_id[i] = KOS_new_object(ctx);
-            TEST( ! IS_BAD_PTR(obj_id[i]));
-
-            TEST(KOS_push_locals(ctx, &pushed, 1, &obj_id[i]) == KOS_SUCCESS);
-
-            finalized[i] = 0;
-            KOS_object_set_private_ptr(obj_id[i], &finalized[i]);
-            OBJPTR(OBJECT, obj_id[i])->finalize = finalize_47;
-        }
-
-        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
-
-        for (i = 0; i < NELEMS(((KOS_LOCAL_REFS *)0)->refs); i++)
-            TEST(finalized[i] == 0);
-
-        /* Unregister locals, objects not tracked by GC anymore */
-        for (i = 0; i < NELEMS(((KOS_LOCAL_REFS *)0)->refs); i++)
-            KOS_pop_locals(ctx, 1);
-
-        /* Destroy untracked objects with GC */
-        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
-
-        /* Make sure all were destroyed */
-        for (i = 0; i < NELEMS(((KOS_LOCAL_REFS *)0)->refs); i++)
-            TEST(finalized[i] == 47);
-
-        KOS_instance_destroy(&inst);
-    }
-
-    /************************************************************************/
     /* Test local refs, one at a time, destroy all */
     {
         KOS_LOCAL  local[3];
@@ -1851,21 +1828,20 @@ int main(void)
     /* Test object finalization when destroying instance */
     {
         KOS_OBJ_ID prev_locals;
-        KOS_OBJ_ID obj_id    = KOS_BADPTR;
+        KOS_LOCAL  obj;
         int        finalized = 0;
-        int        pushed    = 0;
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
-        obj_id = KOS_new_object(ctx);
-        TEST( ! IS_BAD_PTR(obj_id));
+        KOS_init_local(ctx, &obj);
 
-        TEST(KOS_push_locals(ctx, &pushed, 1, &obj_id) == KOS_SUCCESS);
+        obj.o = KOS_new_object(ctx);
+        TEST( ! IS_BAD_PTR(obj.o));
 
-        KOS_object_set_private_ptr(obj_id, &finalized);
-        OBJPTR(OBJECT, obj_id)->finalize = finalize_47;
+        KOS_object_set_private_ptr(obj.o, &finalized);
+        OBJPTR(OBJECT, obj.o)->finalize = finalize_47;
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
@@ -1882,20 +1858,20 @@ int main(void)
     /* Allocate as many pages as possible, up to OOM */
     {
         KOS_OBJ_ID prev_locals;
-        KOS_OBJ_ID array  = KOS_BADPTR;
-        int        pushed = 0;
+        KOS_LOCAL  array;
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-        TEST(KOS_push_locals(ctx, &pushed, 1, &array) == KOS_SUCCESS);
 
-        TEST(alloc_full_pages(ctx, &rng, &array, ~0U, &max_pages) == KOS_SUCCESS);
+        KOS_init_local(ctx, &array);
+
+        TEST(alloc_full_pages(ctx, &rng, &array.o, ~0U, &max_pages) == KOS_SUCCESS);
 
         TEST(max_pages == SMALL_HEAP_PAGES - 1U);
 
-        TEST(verify_full_pages(array) == KOS_SUCCESS);
+        TEST(verify_full_pages(array.o) == KOS_SUCCESS);
 
         KOS_instance_destroy(&inst);
     }
@@ -1904,8 +1880,7 @@ int main(void)
     /* Allocate all pages minus one, so that there is no space for evac */
     {
         KOS_OBJ_ID   prev_locals;
-        KOS_OBJ_ID   array     = KOS_BADPTR;
-        int          pushed    = 0;
+        KOS_LOCAL    array;
         uint32_t     num_pages = 0;
         KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
 
@@ -1913,9 +1888,10 @@ int main(void)
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-        TEST(KOS_push_locals(ctx, &pushed, 1, &array) == KOS_SUCCESS);
 
-        TEST(alloc_full_pages(ctx, &rng, &array, max_pages - 1U, &num_pages) == KOS_SUCCESS);
+        KOS_init_local(ctx, &array);
+
+        TEST(alloc_full_pages(ctx, &rng, &array.o, max_pages - 1U, &num_pages) == KOS_SUCCESS);
 
         TEST(num_pages == max_pages - 1U);
 
@@ -1934,7 +1910,7 @@ int main(void)
         TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
-        TEST(verify_full_pages(array) == KOS_SUCCESS);
+        TEST(verify_full_pages(array.o) == KOS_SUCCESS);
 
         KOS_instance_destroy(&inst);
     }
@@ -1943,9 +1919,9 @@ int main(void)
     /* Restore freed pages mid-evacuation */
     {
         KOS_OBJ_ID   prev_locals;
-        KOS_OBJ_ID   array        = KOS_BADPTR;
-        KOS_OBJ_ID   ballast      = KOS_BADPTR;
-        int          pushed       = 0;
+        KOS_LOCAL    array;
+        KOS_LOCAL    ballast;
+        KOS_LOCAL    obj;
         uint32_t     num_pages    = 0;
         uint32_t     big_size     = (KOS_SLOTS_PER_PAGE - force_slots) << KOS_OBJ_ALIGN_BITS;
         uint32_t     ballast_size = force_slots << KOS_OBJ_ALIGN_BITS;
@@ -1958,13 +1934,13 @@ int main(void)
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-        TEST(KOS_push_locals(ctx, &pushed, 3, &array, &ballast, &obj_id[1]) == KOS_SUCCESS);
+        KOS_init_locals(ctx, 3, &array, &ballast, &obj);
 
         /* Allocate ballast to make sure big object won't fit in existing page */
-        ballast = alloc_ballast(ctx, force_slots, &ballast_objs);
-        TEST( ! IS_BAD_PTR(ballast));
+        ballast.o = alloc_ballast(ctx, force_slots, &ballast_objs);
+        TEST( ! IS_BAD_PTR(ballast.o));
 
-        TEST(alloc_full_pages(ctx, &rng, &array, max_pages - 2U, &num_pages) == KOS_SUCCESS);
+        TEST(alloc_full_pages(ctx, &rng, &array.o, max_pages - 2U, &num_pages) == KOS_SUCCESS);
 
         TEST(num_pages == max_pages - 2U);
 
@@ -1981,6 +1957,8 @@ int main(void)
         desc[1].size = big_size;
 
         TEST(alloc_page_with_objects(ctx, obj_id, desc, NELEMS(desc)) == KOS_SUCCESS);
+
+        obj.o = obj_id[1];
 
 #ifdef CONFIG_MAD_GC
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_ERROR_EXCEPTION);
@@ -2003,7 +1981,7 @@ int main(void)
         TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
-        TEST(verify_full_pages(array) == KOS_SUCCESS);
+        TEST(verify_full_pages(array.o) == KOS_SUCCESS);
 
         KOS_instance_destroy(&inst);
     }
@@ -2012,9 +1990,9 @@ int main(void)
     /* OOM mid-evacuation */
     {
         KOS_OBJ_ID   prev_locals;
-        KOS_OBJ_ID   array        = KOS_BADPTR;
-        KOS_OBJ_ID   ballast      = KOS_BADPTR;
-        int          pushed       = 0;
+        KOS_LOCAL    array;
+        KOS_LOCAL    ballast;
+        KOS_LOCAL    obj;
         uint32_t     num_pages    = 0;
         uint32_t     big_size     = (KOS_SLOTS_PER_PAGE - force_slots) << KOS_OBJ_ALIGN_BITS;
         uint32_t     ballast_size = force_slots << KOS_OBJ_ALIGN_BITS;
@@ -2027,13 +2005,13 @@ int main(void)
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
         TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-        TEST(KOS_push_locals(ctx, &pushed, 3, &array, &ballast, &obj_id[1]) == KOS_SUCCESS);
+        KOS_init_locals(ctx, 3, &array, &ballast, &obj);
 
         /* Allocate ballast to make sure big object won't fit in existing page */
-        ballast = alloc_ballast(ctx, force_slots, &ballast_objs);
-        TEST( ! IS_BAD_PTR(ballast));
+        ballast.o = alloc_ballast(ctx, force_slots, &ballast_objs);
+        TEST( ! IS_BAD_PTR(ballast.o));
 
-        TEST(alloc_full_pages(ctx, &rng, &array, max_pages - 1U, &num_pages) == KOS_SUCCESS);
+        TEST(alloc_full_pages(ctx, &rng, &array.o, max_pages - 1U, &num_pages) == KOS_SUCCESS);
 
         TEST(num_pages == max_pages - 1U);
 
@@ -2047,6 +2025,8 @@ int main(void)
         desc[1].size = big_size;
 
         TEST(alloc_page_with_objects(ctx, obj_id, desc, NELEMS(desc)) == KOS_SUCCESS);
+
+        obj.o = obj_id[1];
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_ERROR_EXCEPTION);
 
@@ -2066,7 +2046,7 @@ int main(void)
         TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
-        TEST(verify_full_pages(array) == KOS_SUCCESS);
+        TEST(verify_full_pages(array.o) == KOS_SUCCESS);
 
         KOS_instance_destroy(&inst);
     }
@@ -2085,15 +2065,14 @@ int main(void)
         for (dir = 0; dir < 2; dir++) {
 
             KOS_OBJ_ID   prev_locals;
-            KOS_OBJ_ID   array     = KOS_BADPTR;
-            KOS_OBJ_ID   ballast   = KOS_BADPTR;
-            int          pushed    = 0;
+            KOS_LOCAL    array;
+            KOS_LOCAL    ballast;
             uint32_t     num_pages = 0;
             KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
 
             /* This page will be completely unused and will be re-used mid-evacuation */
-            KOS_OBJ_ID   obj_id_page1[3] = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
-            OBJECT_DESC  desc_page1[3]   = {
+            KOS_LOCAL    obj_page1[3];
+            OBJECT_DESC  desc_page1[3] = {
                 /* Small object at the beginning of the page, which will be discarded */
                 { OBJ_INTEGER, sizeof(KOS_INTEGER) },
                 /* Victim object, this will be referenced by another unused object from page 4 */
@@ -2103,8 +2082,8 @@ int main(void)
             };
 
             /* This page will be mostly used, except for one object at the beginning */
-            KOS_OBJ_ID   obj_id_page2[2] = { KOS_BADPTR, KOS_BADPTR };
-            OBJECT_DESC  desc_page2[2]   = {
+            KOS_LOCAL    obj_page2[2];
+            OBJECT_DESC  desc_page2[2] = {
                 /* Small object at the beginning of the page, which will be discarded */
                 { OBJ_OPAQUE, MIN_GC_SIZE },
                 /* The remainder of the page, this will be evacuated */
@@ -2112,8 +2091,8 @@ int main(void)
             };
 
             /* This page will trigger another GC cycle */
-            KOS_OBJ_ID   obj_id_page3[3] = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
-            OBJECT_DESC  desc_page3[3]   = {
+            KOS_LOCAL    obj_page3[3];
+            OBJECT_DESC  desc_page3[3] = {
                 /* Small object at the beginning of the page, which will be discarded */
                 { OBJ_OPAQUE, MIN_GC_SIZE },
                 /* This object will be evacuated and will fill up page 1 */
@@ -2123,8 +2102,8 @@ int main(void)
             };
 
             /* This page will contain an unused object referencing unused object from page 1 */
-            KOS_OBJ_ID   obj_id_page4[3] = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
-            OBJECT_DESC  desc_page4[3]   = {
+            KOS_LOCAL    obj_page4[3];
+            OBJECT_DESC  desc_page4[3] = {
                 /* Small object at the beginning of the page, which will be discarded */
                 { OBJ_OPAQUE,        MIN_GC_SIZE - sizeof(KOS_ARRAY_STORAGE) },
                 /* This object will be unused, but it will reference an object from page 1 */
@@ -2134,70 +2113,56 @@ int main(void)
             };
 
             /* This page will be discareded (just for the test from the opposite direction) */
-            KOS_OBJ_ID   obj_id_page5[1] = { KOS_BADPTR };
-            OBJECT_DESC  desc_page5[1]   = { { OBJ_OPAQUE, REMAINING_SIZE } };
+            KOS_LOCAL    obj_page5[1];
+            OBJECT_DESC  desc_page5[1] = { { OBJ_OPAQUE, REMAINING_SIZE } };
 
             TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
             inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
             TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
-            TEST(KOS_push_locals(ctx, &pushed, 2, &array, &ballast) == KOS_SUCCESS);
-            pushed = 0;
-            TEST(KOS_push_locals(ctx, &pushed, 3,
-                                 &obj_id_page1[0], &obj_id_page1[1], &obj_id_page1[2]) == KOS_SUCCESS);
-            pushed = 0;
-            TEST(KOS_push_locals(ctx, &pushed, 2,
-                                 &obj_id_page2[0], &obj_id_page2[1]) == KOS_SUCCESS);
-            pushed = 0;
-            TEST(KOS_push_locals(ctx, &pushed, 3,
-                                 &obj_id_page3[0], &obj_id_page3[1], &obj_id_page3[2]) == KOS_SUCCESS);
-            pushed = 0;
-            TEST(KOS_push_locals(ctx, &pushed, 3,
-                                 &obj_id_page4[0], &obj_id_page4[1], &obj_id_page4[2]) == KOS_SUCCESS);
-            pushed = 0;
-            TEST(KOS_push_locals(ctx, &pushed, 1, &obj_id_page5[0]) == KOS_SUCCESS);
+            KOS_init_locals(ctx, 2, &array, &ballast);
 
             /* Prepare the desired scenario */
             if (dir == 0) {
-                TEST(alloc_page_with_objects(ctx, obj_id_page1, desc_page1, NELEMS(obj_id_page1)) == KOS_SUCCESS);
-                TEST(alloc_page_with_objects(ctx, obj_id_page2, desc_page2, NELEMS(obj_id_page2)) == KOS_SUCCESS);
-                TEST(alloc_page_with_objects(ctx, obj_id_page3, desc_page3, NELEMS(obj_id_page3)) == KOS_SUCCESS);
-                TEST(alloc_page_with_objects(ctx, obj_id_page4, desc_page4, NELEMS(obj_id_page4)) == KOS_SUCCESS);
-                init_array_storage(obj_id_page4[1]);
-                TEST(alloc_page_with_objects(ctx, obj_id_page5, desc_page5, NELEMS(obj_id_page5)) == KOS_SUCCESS);
+                TEST(alloc_page_with_locals(ctx, obj_page1, desc_page1, NELEMS(obj_page1)) == KOS_SUCCESS);
+                TEST(alloc_page_with_locals(ctx, obj_page2, desc_page2, NELEMS(obj_page2)) == KOS_SUCCESS);
+                TEST(alloc_page_with_locals(ctx, obj_page3, desc_page3, NELEMS(obj_page3)) == KOS_SUCCESS);
+                TEST(alloc_page_with_locals(ctx, obj_page4, desc_page4, NELEMS(obj_page4)) == KOS_SUCCESS);
+                init_array_storage(obj_page4[1].o);
+                TEST(alloc_page_with_locals(ctx, obj_page5, desc_page5, NELEMS(obj_page5)) == KOS_SUCCESS);
             }
             else {
-                TEST(alloc_page_with_objects(ctx, obj_id_page5, desc_page5, NELEMS(obj_id_page5)) == KOS_SUCCESS);
-                TEST(alloc_page_with_objects(ctx, obj_id_page4, desc_page4, NELEMS(obj_id_page4)) == KOS_SUCCESS);
-                init_array_storage(obj_id_page4[1]);
-                TEST(alloc_page_with_objects(ctx, obj_id_page3, desc_page3, NELEMS(obj_id_page3)) == KOS_SUCCESS);
-                TEST(alloc_page_with_objects(ctx, obj_id_page2, desc_page2, NELEMS(obj_id_page2)) == KOS_SUCCESS);
-                TEST(alloc_page_with_objects(ctx, obj_id_page1, desc_page1, NELEMS(obj_id_page1)) == KOS_SUCCESS);
+                TEST(alloc_page_with_locals(ctx, obj_page5, desc_page5, NELEMS(obj_page5)) == KOS_SUCCESS);
+                TEST(alloc_page_with_locals(ctx, obj_page4, desc_page4, NELEMS(obj_page4)) == KOS_SUCCESS);
+                init_array_storage(obj_page4[1].o);
+                TEST(alloc_page_with_locals(ctx, obj_page3, desc_page3, NELEMS(obj_page3)) == KOS_SUCCESS);
+                TEST(alloc_page_with_locals(ctx, obj_page2, desc_page2, NELEMS(obj_page2)) == KOS_SUCCESS);
+                TEST(alloc_page_with_locals(ctx, obj_page1, desc_page1, NELEMS(obj_page1)) == KOS_SUCCESS);
             }
 
             /* Fill opaque objects with random data */
-            fill_opaque_with_random(obj_id_page1[2], &rng);
-            fill_opaque_with_random(obj_id_page2[0], &rng);
-            fill_opaque_with_random(obj_id_page2[1], &rng);
-            fill_opaque_with_random(obj_id_page3[0], &rng);
-            fill_opaque_with_random(obj_id_page3[1], &rng);
-            fill_opaque_with_random(obj_id_page3[2], &rng);
-            fill_opaque_with_random(obj_id_page4[0], &rng);
-            fill_opaque_with_random(obj_id_page4[2], &rng);
-            fill_opaque_with_random(obj_id_page5[0], &rng);
+            fill_opaque_with_random(obj_page1[2].o, &rng);
+            fill_opaque_with_random(obj_page2[0].o, &rng);
+            fill_opaque_with_random(obj_page2[1].o, &rng);
+            fill_opaque_with_random(obj_page3[0].o, &rng);
+            fill_opaque_with_random(obj_page3[1].o, &rng);
+            fill_opaque_with_random(obj_page3[2].o, &rng);
+            fill_opaque_with_random(obj_page4[0].o, &rng);
+            fill_opaque_with_random(obj_page4[2].o, &rng);
+            fill_opaque_with_random(obj_page5[0].o, &rng);
 
             /* Create the desired object reference */
-            write_array_storage(obj_id_page4[1], 0, obj_id_page1[1]);
+            write_array_storage(obj_page4[1].o, 0, obj_page1[1].o);
 
             /* Allocate all remaining free pages */
-            TEST(alloc_full_pages(ctx, &rng, &array, max_pages - test_pages, &num_pages) == KOS_SUCCESS);
+            TEST(alloc_full_pages(ctx, &rng, &array.o, max_pages - test_pages, &num_pages) == KOS_SUCCESS);
 
             TEST(num_pages + test_pages == max_pages);
 
             /* Allocate any remaining free bytes from the heap */
-            ballast = KOS_new_array(ctx, 0);
-            TEST( ! IS_BAD_PTR(ballast));
-            TEST(KOS_array_reserve(ctx, ballast, KOS_MAX_HEAP_OBJ_SIZE >> KOS_OBJ_ALIGN_BITS) == KOS_SUCCESS);
+            ballast.o = KOS_new_array(ctx, 0);
+            TEST( ! IS_BAD_PTR(ballast.o));
+            TEST(KOS_array_reserve(ctx, ballast.o, KOS_MAX_HEAP_OBJ_SIZE >> KOS_OBJ_ALIGN_BITS) == KOS_SUCCESS);
             {
                 uint32_t alloc_size = KOS_MAX_HEAP_OBJ_SIZE;
 
@@ -2221,20 +2186,20 @@ int main(void)
 
                         fill_opaque_with_random(OBJID(OPAQUE, opaque), &rng);
 
-                        TEST(KOS_array_push(ctx, ballast, OBJID(OPAQUE, opaque), 0) == KOS_SUCCESS);
+                        TEST(KOS_array_push(ctx, ballast.o, OBJID(OPAQUE, opaque), 0) == KOS_SUCCESS);
                     }
                 }
             }
 
             /* Discard objects to create the test scenario */
-            obj_id_page1[0] = KOS_BADPTR;
-            obj_id_page1[1] = KOS_BADPTR;
-            obj_id_page1[2] = KOS_BADPTR;
-            obj_id_page2[0] = KOS_BADPTR;
-            obj_id_page3[0] = KOS_BADPTR;
-            obj_id_page4[0] = KOS_BADPTR;
-            obj_id_page4[1] = KOS_BADPTR;
-            obj_id_page5[0] = KOS_BADPTR;
+            obj_page1[0].o = KOS_BADPTR;
+            obj_page1[1].o = KOS_BADPTR;
+            obj_page1[2].o = KOS_BADPTR;
+            obj_page2[0].o = KOS_BADPTR;
+            obj_page3[0].o = KOS_BADPTR;
+            obj_page4[0].o = KOS_BADPTR;
+            obj_page4[1].o = KOS_BADPTR;
+            obj_page5[0].o = KOS_BADPTR;
 
             /* Trigger GC */
             TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
@@ -2247,15 +2212,15 @@ int main(void)
             TEST(stats.num_objs_finalized == 0);
             TEST(stats.num_pages_kept     == num_pages + 1U);
             TEST(stats.num_pages_freed    == test_pages);
-            TEST(stats.malloc_size        == MODULE_SIZE + off_heap_array_size(ballast));
+            TEST(stats.malloc_size        == MODULE_SIZE + off_heap_array_size(ballast.o));
 #endif
 
-            TEST(verify_full_pages(array) == KOS_SUCCESS);
+            TEST(verify_full_pages(array.o) == KOS_SUCCESS);
 
-            TEST(verify_opaque_checksum(obj_id_page2[1]) == KOS_SUCCESS);
-            TEST(verify_opaque_checksum(obj_id_page3[1]) == KOS_SUCCESS);
-            TEST(verify_opaque_checksum(obj_id_page3[2]) == KOS_SUCCESS);
-            TEST(verify_opaque_checksum(obj_id_page4[2]) == KOS_SUCCESS);
+            TEST(verify_opaque_checksum(obj_page2[1].o) == KOS_SUCCESS);
+            TEST(verify_opaque_checksum(obj_page3[1].o) == KOS_SUCCESS);
+            TEST(verify_opaque_checksum(obj_page3[2].o) == KOS_SUCCESS);
+            TEST(verify_opaque_checksum(obj_page4[2].o) == KOS_SUCCESS);
 
             KOS_instance_destroy(&inst);
         }

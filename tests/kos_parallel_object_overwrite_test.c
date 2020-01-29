@@ -31,11 +31,24 @@
 #include "../core/kos_object_internal.h"
 #include "kos_test_tools.h"
 
+/* These strings cause lots of collisions in the hash table */
+KOS_DECLARE_STATIC_CONST_STRING_WITH_LENGTH(key0, 1, "\x00");
+KOS_DECLARE_STATIC_CONST_STRING_WITH_LENGTH(key1, 1, "\x80");
+KOS_DECLARE_STATIC_CONST_STRING_WITH_LENGTH(key2, 1, "\x01");
+KOS_DECLARE_STATIC_CONST_STRING_WITH_LENGTH(key3, 1, "\x80");
+
+static KOS_OBJ_ID props[4] = {
+    KOS_CONST_ID(key0),
+    KOS_CONST_ID(key1),
+    KOS_CONST_ID(key2),
+    KOS_CONST_ID(key3)
+};
+
+static const uint32_t num_props = (uint32_t)(sizeof(props) / sizeof(props[0]));
+
 struct TEST_DATA {
     KOS_INSTANCE        *inst;
-    KOS_OBJ_ID           object;
-    KOS_OBJ_ID          *prop_names;
-    size_t               num_props;
+    KOS_LOCAL            object;
     size_t               num_loops;
     KOS_ATOMIC(uint32_t) go;
     KOS_ATOMIC(uint32_t) error;
@@ -54,12 +67,12 @@ static int _write_props_inner(KOS_CONTEXT       ctx,
     unsigned n = (unsigned)rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
-        KOS_OBJ_ID key   = test->prop_names[n % test->num_props];
+        KOS_OBJ_ID key   = props[n % num_props];
         KOS_OBJ_ID value = TO_SMALL_INT((int)((n % 32) - 16));
         if (!((n & 0xF00U)))
-            TEST(KOS_delete_property(ctx, test->object, key) == KOS_SUCCESS);
+            TEST(KOS_delete_property(ctx, test->object.o, key) == KOS_SUCCESS);
         else
-            TEST(KOS_set_property(ctx, test->object, key, value) == KOS_SUCCESS);
+            TEST(KOS_set_property(ctx, test->object.o, key, value) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
         n = n * 0x8088405 + 1;
@@ -94,8 +107,8 @@ static int _read_props_inner(KOS_CONTEXT       ctx,
     unsigned n = (unsigned)rand_init;
 
     for (i = 0; i < test->num_loops; i++) {
-        KOS_OBJ_ID key   = test->prop_names[n % test->num_props];
-        KOS_OBJ_ID value = KOS_get_property(ctx, test->object, key);
+        KOS_OBJ_ID key   = props[n % num_props];
+        KOS_OBJ_ID value = KOS_get_property(ctx, test->object.o, key);
         if (IS_BAD_PTR(value))
             TEST_EXCEPTION();
         else {
@@ -150,22 +163,10 @@ int main(void)
         struct TEST_DATA    data;
         int                 i;
 
-        KOS_OBJ_ID props[4] = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
-        data.object = KOS_BADPTR;
-        {
-            int pushed = 0;
-            TEST(KOS_push_locals(ctx, &pushed, 5, &data.object,
-                                 &props[0], &props[1], &props[2], &props[3]) == KOS_SUCCESS);
-        }
+        KOS_init_local(ctx, &data.object);
 
-        /* These strings cause lots of collisions in the hash table */
-        props[0] = KOS_new_const_ascii_string(ctx, "\x00", 1);
-        props[1] = KOS_new_const_ascii_string(ctx, "\x80", 1);
-        props[2] = KOS_new_const_ascii_string(ctx, "\x01", 1);
-        props[3] = KOS_new_const_ascii_string(ctx, "\x80", 1);
-
-        data.object = KOS_new_object(ctx);
-        TEST(!IS_BAD_PTR(data.object));
+        data.object.o = KOS_new_object(ctx);
+        TEST(!IS_BAD_PTR(data.object.o));
 
         kos_vector_init(&mem_buf);
         TEST(kos_vector_resize(&mem_buf,
@@ -175,8 +176,6 @@ int main(void)
         threads        = (KOS_THREAD **)(thread_cookies + num_threads);
 
         data.inst       = &inst;
-        data.prop_names = props;
-        data.num_props  = sizeof(props)/sizeof(props[0]);
 #ifdef CONFIG_MAD_GC
         data.num_loops  = 10000;
 #else
@@ -207,8 +206,8 @@ int main(void)
 
         TEST(data.error == KOS_SUCCESS);
 
-        for (i = 0; i < (int)(sizeof(props)/sizeof(props[0])); i++) {
-            KOS_OBJ_ID value = KOS_get_property(ctx, data.object, props[i]);
+        for (i = 0; i < (int)num_props; i++) {
+            KOS_OBJ_ID value = KOS_get_property(ctx, data.object.o, props[i]);
             if (IS_BAD_PTR(value)) {
                 TEST(KOS_is_exception_pending(ctx));
                 KOS_clear_exception(ctx);
