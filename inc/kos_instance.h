@@ -285,10 +285,6 @@ int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 
 void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 
-int KOS_push_locals(KOS_CONTEXT ctx, int* push_status, int num_entries, ...);
-
-void KOS_pop_locals(KOS_CONTEXT ctx, int push_status);
-
 void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);
 
 #define KOS_init_local(ctx, local) KOS_init_local_with((ctx), (local), KOS_BADPTR)
