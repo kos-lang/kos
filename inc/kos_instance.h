@@ -128,11 +128,8 @@ struct KOS_THREAD_CONTEXT_S {
     uint32_t      regs_idx;     /* Index of first register in current frame       */
     uint32_t      stack_depth;
     uint32_t      tmp_ref_count;
-    uint32_t      helper_ref_count;
     KOS_LOCAL    *local_list;
-    KOS_OBJ_ID    local_refs;   /* Object id refs on user's local stack           */
     KOS_OBJ_ID   *tmp_refs[12]; /* Object id refs during object creation          */
-    KOS_OBJ_ID   *helper_refs[KOS_MAX_LOCALS]; /* Helper when pushing locals stack*/
 };
 
 struct KOS_PROTOTYPES_S {
@@ -280,10 +277,6 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
 
 #define KOS_apply_function(ctx, func_obj, this_obj, args_obj) \
     kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
-
-int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
-
-void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope);
 
 void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);
 

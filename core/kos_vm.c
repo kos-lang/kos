@@ -2889,36 +2889,28 @@ static int exec_function(KOS_CONTEXT ctx)
                             error = KOS_ERROR_EXCEPTION;
                         }
                         else {
-                            KOS_OBJ_ID prev_locals;
+                            ret_val = OBJPTR(FUNCTION, func.o)->handler(ctx, this_.o, args.o);
 
-                            error = KOS_push_local_scope(ctx, &prev_locals);
+                            assert(IS_BAD_PTR(ret_val) || GET_OBJ_TYPE(ret_val) <= OBJ_LAST_TYPE);
 
-                            if ( ! error) {
-                                ret_val = OBJPTR(FUNCTION, func.o)->handler(ctx, this_.o, args.o);
+                            assert(ctx->tmp_ref_count == 0);
 
-                                assert(IS_BAD_PTR(ret_val) || GET_OBJ_TYPE(ret_val) <= OBJ_LAST_TYPE);
+                            assert(ctx->local_list == &func);
 
-                                assert(ctx->tmp_ref_count == 0);
+                            if (state >= KOS_GEN_INIT) {
+                                /* Avoid detecting as end of iterator in _finish_call() */
+                                if ( ! IS_BAD_PTR(ret_val))
+                                    OBJPTR(STACK, ctx->stack)->flags &= ~KOS_CAN_YIELD;
 
-                                assert(ctx->local_list == &func);
-
-                                KOS_pop_local_scope(ctx, &prev_locals);
-
-                                if (state >= KOS_GEN_INIT) {
-                                    /* Avoid detecting as end of iterator in _finish_call() */
-                                    if ( ! IS_BAD_PTR(ret_val))
-                                        OBJPTR(STACK, ctx->stack)->flags &= ~KOS_CAN_YIELD;
-
-                                    if (KOS_is_exception_pending(ctx))
-                                        error = KOS_ERROR_EXCEPTION;
-                                }
-                                else if (IS_BAD_PTR(ret_val)) {
-                                    assert(KOS_is_exception_pending(ctx));
+                                if (KOS_is_exception_pending(ctx))
                                     error = KOS_ERROR_EXCEPTION;
-                                }
-                                else {
-                                    assert( ! KOS_is_exception_pending(ctx));
-                                }
+                            }
+                            else if (IS_BAD_PTR(ret_val)) {
+                                assert(KOS_is_exception_pending(ctx));
+                                error = KOS_ERROR_EXCEPTION;
+                            }
+                            else {
+                                assert( ! KOS_is_exception_pending(ctx));
                             }
                         }
 
@@ -3143,18 +3135,11 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, func.o)->state;
 
         if (OBJPTR(FUNCTION, func.o)->handler)  {
-            KOS_OBJ_ID prev_locals;
             KOS_OBJ_ID retval = KOS_BADPTR;
 
-            error = KOS_push_local_scope(ctx, &prev_locals);
+            retval = OBJPTR(FUNCTION, func.o)->handler(ctx, this_.o, args.o);
 
-            if ( ! error) {
-                retval = OBJPTR(FUNCTION, func.o)->handler(ctx, this_.o, args.o);
-
-                assert(ctx->local_list == &func);
-
-                KOS_pop_local_scope(ctx, &prev_locals);
-            }
+            assert(ctx->local_list == &func);
 
             /* Avoid detecting as end of iterator in _finish_call() */
             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(retval))

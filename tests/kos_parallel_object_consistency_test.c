@@ -164,7 +164,6 @@ int main(void)
         KOS_THREAD        **threads          = 0;
         int                 num_props;
         KOS_LOCAL          *props;
-        KOS_OBJ_ID          prev_locals;
         int                 i_loop;
         int                 i;
 
@@ -184,8 +183,6 @@ int main(void)
             thread_cookies[i].test       = &data;
             thread_cookies[i].first_prop = i * max_props_per_th;
         }
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
         for (i = 0; i < num_props; i++) {
             char     buf[8];

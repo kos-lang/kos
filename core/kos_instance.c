@@ -106,24 +106,6 @@ int kos_seq_fail(void)
 }
 #endif
 
-static int push_local_refs_object(KOS_CONTEXT ctx)
-{
-    int             error      = KOS_ERROR_EXCEPTION;
-    KOS_LOCAL_REFS *local_refs = (KOS_LOCAL_REFS *)
-        kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_LOCAL_REFS, (uint32_t)sizeof(KOS_LOCAL_REFS));
-
-    if (local_refs) {
-        local_refs->num_tracked = 0;
-        local_refs->prev_scope  = KOS_LOOK_FURTHER;
-        local_refs->next        = ctx->local_refs;
-        ctx->local_refs         = OBJID(LOCAL_REFS, local_refs);
-
-        error = KOS_SUCCESS;
-    }
-
-    return error;
-}
-
 static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
 {
     size_t i;
@@ -140,15 +122,10 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
     ctx->regs_idx         = 0;
     ctx->stack_depth      = 0;
     ctx->tmp_ref_count    = 0;
-    ctx->helper_ref_count = 0;
     ctx->local_list       = 0;
-    ctx->local_refs       = KOS_BADPTR;
 
     for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); i++)
         ctx->tmp_refs[i] = 0;
-
-    for (i = 0; i < sizeof(ctx->helper_refs) / sizeof(ctx->helper_refs[0]); i++)
-        ctx->helper_refs[i] = 0;
 }
 
 static int register_thread(KOS_INSTANCE *inst,
@@ -167,8 +144,6 @@ static int register_thread(KOS_INSTANCE *inst,
 
     TRY(KOS_resume_context(ctx));
 
-    TRY(push_local_refs_object(ctx));
-
 cleanup:
     if (error)
         kos_heap_release_thread_page(ctx);
@@ -180,13 +155,6 @@ static void unregister_thread(KOS_INSTANCE *inst,
                               KOS_CONTEXT   ctx)
 {
     assert(ctx != &inst->threads.main_thread);
-
-    while ( ! IS_BAD_PTR(ctx->local_refs)) {
-        const KOS_OBJ_ID next = OBJPTR(LOCAL_REFS, ctx->local_refs)->next;
-
-        OBJPTR(LOCAL_REFS, ctx->local_refs)->num_tracked = 0;
-        ctx->local_refs = next;
-    }
 
     KOS_suspend_context(ctx);
 
@@ -920,113 +888,6 @@ void KOS_raise_generator_end(KOS_CONTEXT ctx)
 
     if ( ! IS_BAD_PTR(exception))
         KOS_raise_exception(ctx, exception);
-}
-
-static int have_room_for_locals(KOS_CONTEXT ctx, int num_entries)
-{
-    const KOS_OBJ_ID local_refs = ctx->local_refs;
-    unsigned         num_tracked;
-
-    assert( ! kos_gc_active(ctx));
-    assert( ! IS_BAD_PTR(local_refs));
-    assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
-
-    num_tracked = OBJPTR(LOCAL_REFS, local_refs)->num_tracked;
-
-    return (num_tracked + (unsigned)num_entries) <=
-           (sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs) /
-            sizeof(OBJPTR(LOCAL_REFS, local_refs)->refs[0]));
-}
-
-static int reserve_locals(KOS_CONTEXT ctx, int num_entries)
-{
-    if (have_room_for_locals(ctx, num_entries))
-        return KOS_SUCCESS;
-
-    return push_local_refs_object(ctx);
-}
-
-int KOS_push_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
-{
-    KOS_OBJ_ID local_refs  = ctx->local_refs;
-    KOS_OBJ_ID prev_locals;
-    int        error;
-
-    *prev_scope = KOS_BADPTR;
-
-    if (IS_BAD_PTR(local_refs)) {
-
-        prev_locals = TO_SMALL_INT(KOS_LOOK_FURTHER);
-
-        error = push_local_refs_object(ctx);
-
-        if (error)
-            return error;
-    }
-    else
-        prev_locals = TO_SMALL_INT(OBJPTR(LOCAL_REFS, local_refs)->prev_scope);
-
-    error = reserve_locals(ctx, 1);
-
-    if ( ! error) {
-
-        local_refs = ctx->local_refs;
-
-        assert( ! kos_gc_active(ctx));
-        assert(GET_OBJ_TYPE(local_refs) == OBJ_LOCAL_REFS);
-
-        OBJPTR(LOCAL_REFS, local_refs)->refs[
-            OBJPTR(LOCAL_REFS, local_refs)->num_tracked++]
-                = prev_scope;
-
-        *prev_scope = prev_locals;
-
-        OBJPTR(LOCAL_REFS, local_refs)->prev_scope =
-            OBJPTR(LOCAL_REFS, local_refs)->num_tracked - 1;
-    }
-
-    return error;
-}
-
-void KOS_pop_local_scope(KOS_CONTEXT ctx, KOS_OBJ_ID *prev_scope)
-{
-    KOS_OBJ_ID prev_scope_idx;
-    KOS_OBJ_ID local_refs  = ctx->local_refs;
-    uint8_t    num_tracked = 0;
-
-    if (IS_BAD_PTR(*prev_scope))
-        return;
-
-    assert( ! kos_gc_active(ctx));
-    assert( ! IS_BAD_PTR(local_refs));
-
-    for (;;) {
-
-        num_tracked = OBJPTR(LOCAL_REFS, local_refs)->prev_scope;
-
-        if (num_tracked != KOS_LOOK_FURTHER)
-            break;
-
-        local_refs = OBJPTR(LOCAL_REFS, local_refs)->next;
-
-        assert( ! IS_BAD_PTR(local_refs));
-    }
-
-    assert(prev_scope == OBJPTR(LOCAL_REFS, local_refs)->refs[num_tracked]);
-
-    prev_scope_idx = *(OBJPTR(LOCAL_REFS, local_refs)->refs[num_tracked]);
-
-    assert(IS_SMALL_INT(prev_scope_idx));
-
-    OBJPTR(LOCAL_REFS, local_refs)->num_tracked = num_tracked;
-    OBJPTR(LOCAL_REFS, local_refs)->prev_scope  = (uint8_t)GET_SMALL_INT(prev_scope_idx);
-
-    assert(num_tracked ||
-           ! IS_BAD_PTR(OBJPTR(LOCAL_REFS, local_refs)->next) ||
-           GET_SMALL_INT(prev_scope_idx) == KOS_LOOK_FURTHER);
-
-    assert( ! kos_gc_active(ctx));
-    ctx->local_refs = local_refs;
 }
 
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)

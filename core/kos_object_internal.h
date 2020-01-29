@@ -349,14 +349,6 @@ static_assert(KOS_PAGE_SIZE - KOS_BITMAP_OFFS - KOS_BITMAP_SIZE - (KOS_SLOTS_PER
 #define TRACK_ONE_REF 1
 #endif
 
-typedef struct KOS_LOCAL_REFS_S {
-    KOS_OBJ_HEADER header;
-    KOS_OBJ_ID     next;
-    uint8_t        num_tracked;
-    uint8_t        prev_scope;
-    KOS_OBJ_ID    *refs[64 - 3];
-} KOS_LOCAL_REFS;
-
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
 
 void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries);

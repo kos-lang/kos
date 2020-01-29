@@ -155,7 +155,6 @@ int main(void)
         struct TEST_DATA    data;
         struct KOS_RNG      rng;
         KOS_LOCAL          *props;
-        KOS_OBJ_ID          prev_locals;
         int                 i_loop;
         int                 i;
 
@@ -174,8 +173,6 @@ int main(void)
         threads        = (KOS_THREAD **)(thread_cookies + num_threads);
 
         kos_rng_init(&rng);
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
         for (i = 0; i < num_props; i++) {
             char     buf[3];

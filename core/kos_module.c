@@ -1324,7 +1324,6 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     KOS_LOCAL             mod_init;
     KOS_LOCAL             module;
     KOS_OBJ_ID            ret;
-    KOS_OBJ_ID            prev_locals        = KOS_BADPTR;
     KOS_INSTANCE   *const inst               = ctx->inst;
     KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
     KOS_FILEBUF           file_buf;
@@ -1333,7 +1332,6 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
     get_module_name(module_name, name_size, &loading);
 
-    TRY(KOS_push_local_scope(ctx, &prev_locals));
     KOS_init_locals(ctx, 8,
                     &actual_module_name, &module_dir, &module_path, &path_array,
                     &dir, &name_str, &mod_init, &module);
@@ -1457,7 +1455,6 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
         KOS_clear_exception(ctx);
     else {
         KOS_OBJ_ID func_obj;
-        KOS_OBJ_ID prev_init_locals = KOS_BADPTR;
 
         func_obj = KOS_new_function(ctx);
         TRY_OBJID(func_obj);
@@ -1466,11 +1463,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
         TRY(kos_stack_push(ctx, func_obj));
 
-        TRY(KOS_push_local_scope(ctx, &prev_init_locals));
-
         error = ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, mod_init.o))->init(ctx, module.o);
-
-        KOS_pop_local_scope(ctx, &prev_init_locals);
 
         kos_stack_pop(ctx);
 
@@ -1502,8 +1495,6 @@ cleanup:
     if (chain_init)
         inst->modules.load_chain = loading.next;
 
-    KOS_pop_local_scope(ctx, &prev_locals);
-
     module.o = KOS_destroy_top_locals(ctx, &actual_module_name, &module);
 
     kos_unload_file(&file_buf);
@@ -1533,9 +1524,6 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     KOS_OBJ_ID    module_name_str;
     KOS_OBJ_ID    ret         = KOS_BADPTR;
     KOS_INSTANCE *inst        = ctx->inst;
-    KOS_OBJ_ID    prev_locals = KOS_BADPTR;
-
-    TRY(KOS_push_local_scope(ctx, &prev_locals));
 
     KOS_init_local(ctx, &module);
 
@@ -1572,7 +1560,6 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);
-    KOS_pop_local_scope(ctx, &prev_locals);
 
     if (error)
         handle_interpreter_error(ctx, error);
@@ -1624,13 +1611,10 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     KOS_LOCAL           module;
     KOS_OBJ_ID          module_name_str;
     KOS_OBJ_ID          ret         = KOS_BADPTR;
-    KOS_OBJ_ID          prev_locals = KOS_BADPTR;
     KOS_INSTANCE *const inst        = ctx->inst;
     KOS_VECTOR          buf;
 
     kos_vector_init(&buf);
-
-    TRY(KOS_push_local_scope(ctx, &prev_locals));
 
     KOS_init_local(ctx, &module);
 
@@ -1678,7 +1662,6 @@ cleanup:
     }
 
     KOS_destroy_top_local(ctx, &module);
-    KOS_pop_local_scope(ctx, &prev_locals);
 
     kos_vector_destroy(&buf);
 

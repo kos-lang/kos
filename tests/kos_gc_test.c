@@ -1139,51 +1139,12 @@ static KOS_OBJ_ID alloc_stack(KOS_CONTEXT  ctx,
     return obj_id[0];
 }
 
-static int verify_local_refs(KOS_OBJ_ID obj_id)
-{
-    size_t i;
-
-    TEST(GET_OBJ_TYPE(obj_id) == OBJ_LOCAL_REFS);
-    TEST(OBJPTR(LOCAL_REFS, obj_id)->next == KOS_BADPTR);
-
-    for (i = 0; i < NELEMS(OBJPTR(LOCAL_REFS, obj_id)->refs); i++)
-        TEST(OBJPTR(LOCAL_REFS, obj_id)->refs[i] == 0);
-
-    return 0;
-}
-
-static KOS_OBJ_ID alloc_local_refs(KOS_CONTEXT  ctx,
-                                   uint32_t    *num_objs,
-                                   uint32_t    *total_size,
-                                   VERIFY_FUNC *verify)
-{
-    size_t     i;
-    KOS_OBJ_ID obj_id = alloc_page_with_object(ctx, OBJ_LOCAL_REFS, sizeof(KOS_LOCAL_REFS));
-
-    if (obj_id == KOS_BADPTR)
-        return KOS_BADPTR;
-
-    OBJPTR(LOCAL_REFS, obj_id)->num_tracked = 0;
-    OBJPTR(LOCAL_REFS, obj_id)->prev_scope  = 0;
-    OBJPTR(LOCAL_REFS, obj_id)->next        = KOS_BADPTR;
-
-    for (i = 0; i < NELEMS(OBJPTR(LOCAL_REFS, obj_id)->refs); i++)
-        OBJPTR(LOCAL_REFS, obj_id)->refs[i] = 0;
-
-    *num_objs   = 1;
-    *total_size = get_obj_size(obj_id);
-    *verify     = &verify_local_refs;
-
-    return obj_id;
-}
-
 static int test_object(ALLOC_FUNC    alloc_object_func,
                        uint32_t      inst_flags,
                        KOS_GC_STATS *orig_stats)
 {
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
-    KOS_OBJ_ID   prev_locals;
     KOS_LOCAL    obj;
     KOS_GC_STATS stats  = KOS_GC_STATS_INIT(~0U);
     VERIFY_FUNC  verify;
@@ -1195,8 +1156,6 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     /* Test case when the object is evacuated to existing page */
 
     TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
-
-    TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
     TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
@@ -1239,8 +1198,6 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     /* Test case when the object is destroyed */
 
     TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
-
-    TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
     TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 
@@ -1508,11 +1465,7 @@ int main(void)
     /************************************************************************/
     /* Test garbage collection on a freshly initialized instance */
     {
-        KOS_OBJ_ID prev_locals;
-
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
         TEST(KOS_collect_garbage(ctx, &base_stats) == KOS_SUCCESS);
 
@@ -1558,7 +1511,6 @@ int main(void)
         TEST(test_object(alloc_object_walk,  inst_flags, &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_module,       inst_flags, &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_stack,        inst_flags, &base_stats) == KOS_SUCCESS);
-        TEST(test_object(alloc_local_refs,   inst_flags, &base_stats) == KOS_SUCCESS);
     }
 
     /************************************************************************/
@@ -1827,13 +1779,10 @@ int main(void)
     /************************************************************************/
     /* Test object finalization when destroying instance */
     {
-        KOS_OBJ_ID prev_locals;
-        KOS_LOCAL  obj;
-        int        finalized = 0;
+        KOS_LOCAL obj;
+        int       finalized = 0;
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
         KOS_init_local(ctx, &obj);
 
@@ -1857,13 +1806,10 @@ int main(void)
     /************************************************************************/
     /* Allocate as many pages as possible, up to OOM */
     {
-        KOS_OBJ_ID prev_locals;
-        KOS_LOCAL  array;
+        KOS_LOCAL array;
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
         KOS_init_local(ctx, &array);
 
@@ -1879,15 +1825,12 @@ int main(void)
     /************************************************************************/
     /* Allocate all pages minus one, so that there is no space for evac */
     {
-        KOS_OBJ_ID   prev_locals;
         KOS_LOCAL    array;
         uint32_t     num_pages = 0;
         KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
         KOS_init_local(ctx, &array);
 
@@ -1918,7 +1861,6 @@ int main(void)
     /************************************************************************/
     /* Restore freed pages mid-evacuation */
     {
-        KOS_OBJ_ID   prev_locals;
         KOS_LOCAL    array;
         KOS_LOCAL    ballast;
         KOS_LOCAL    obj;
@@ -1933,7 +1875,6 @@ int main(void)
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
         KOS_init_locals(ctx, 3, &array, &ballast, &obj);
 
         /* Allocate ballast to make sure big object won't fit in existing page */
@@ -1989,7 +1930,6 @@ int main(void)
     /************************************************************************/
     /* OOM mid-evacuation */
     {
-        KOS_OBJ_ID   prev_locals;
         KOS_LOCAL    array;
         KOS_LOCAL    ballast;
         KOS_LOCAL    obj;
@@ -2004,7 +1944,6 @@ int main(void)
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
         KOS_init_locals(ctx, 3, &array, &ballast, &obj);
 
         /* Allocate ballast to make sure big object won't fit in existing page */
@@ -2064,7 +2003,6 @@ int main(void)
 
         for (dir = 0; dir < 2; dir++) {
 
-            KOS_OBJ_ID   prev_locals;
             KOS_LOCAL    array;
             KOS_LOCAL    ballast;
             uint32_t     num_pages = 0;
@@ -2119,7 +2057,6 @@ int main(void)
             TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
             inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
-            TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
             KOS_init_locals(ctx, 2, &array, &ballast);
 
             /* Prepare the desired scenario */

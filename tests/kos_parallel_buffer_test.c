@@ -122,7 +122,6 @@ int main(void)
         struct THREAD_DATA *thread_cookies;
         struct TEST_DATA    data;
         KOS_THREAD        **threads          = 0;
-        KOS_OBJ_ID          prev_locals      = KOS_BADPTR;
         int                 num_threads      = 0;
         int                 i_loop;
         int                 i;
@@ -149,7 +148,6 @@ int main(void)
         data.num_loops = num_thread_loops;
         data.error     = KOS_SUCCESS;
 
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
         KOS_init_local(ctx, &data.buf);
 
         for (i_loop = 0; i_loop < num_loops; i_loop++) {

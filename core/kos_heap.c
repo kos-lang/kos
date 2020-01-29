@@ -1469,17 +1469,6 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
             break;
         }
 
-        case OBJ_LOCAL_REFS: {
-            KOS_OBJ_ID **ref = &OBJPTR(LOCAL_REFS, obj_id)->refs[0];
-            KOS_OBJ_ID **end = ref + OBJPTR(LOCAL_REFS, obj_id)->num_tracked;
-
-            marked += set_mark_state(OBJPTR(LOCAL_REFS, obj_id)->next, GRAY);
-
-            for ( ; ref < end; ++ref)
-                marked += mark_object_black(**ref);
-            break;
-        }
-
         case OBJ_HUGE_TRACKER: {
             KOS_OBJ_ID object = OBJPTR(HUGE_TRACKER, obj_id)->object;
 
@@ -1593,18 +1582,9 @@ static void mark_roots_in_context(KOS_CONTEXT ctx)
     mark_object_black(ctx->exception);
     mark_object_black(ctx->retval);
     mark_object_black(ctx->stack);
-    mark_object_black(ctx->local_refs);
 
     for (i = 0; i < ctx->tmp_ref_count; ++i) {
         KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
-        if (obj_id_ptr) {
-            const KOS_OBJ_ID obj_id = *obj_id_ptr;
-            mark_object_black(obj_id);
-        }
-    }
-
-    for (i = 0; i < ctx->helper_ref_count; ++i) {
-        KOS_OBJ_ID *const obj_id_ptr = ctx->helper_refs[i];
         if (obj_id_ptr) {
             const KOS_OBJ_ID obj_id = *obj_id_ptr;
             mark_object_black(obj_id);
@@ -2095,18 +2075,6 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
                     update_child_ptr((KOS_OBJ_ID *)item);
             }
             break;
-
-        case OBJ_LOCAL_REFS:
-            {
-                KOS_OBJ_ID **ref = &((KOS_LOCAL_REFS *)hdr)->refs[0];
-                KOS_OBJ_ID **end = ref + ((KOS_LOCAL_REFS *)hdr)->num_tracked;
-
-                update_child_ptr(&((KOS_LOCAL_REFS *)hdr)->next);
-
-                for ( ; ref < end; ++ref)
-                    update_child_ptr(*ref);
-            }
-            break;
     }
 }
 
@@ -2273,16 +2241,9 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
         update_child_ptr(&ctx->exception);
         update_child_ptr(&ctx->retval);
         update_child_ptr(&ctx->stack);
-        update_child_ptr(&ctx->local_refs);
 
         for (i = 0; i < ctx->tmp_ref_count; ++i) {
             KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
-            if (obj_id_ptr)
-                update_child_ptr(obj_id_ptr);
-        }
-
-        for (i = 0; i < ctx->helper_ref_count; ++i) {
-            KOS_OBJ_ID *const obj_id_ptr = ctx->helper_refs[i];
             if (obj_id_ptr)
                 update_child_ptr(obj_id_ptr);
         }

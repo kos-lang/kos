@@ -54,15 +54,12 @@ int main(void)
     for (i_loop = 0; i_loop < num_loops; i_loop++) {
         KOS_INSTANCE inst;
         KOS_CONTEXT  ctx;
-        KOS_OBJ_ID   prev_locals;
         int          i_thread;
         INIT_DATA    go;
 
         KOS_atomic_write_relaxed_u32(go.go, 0U);
 
         TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
-
-        TEST(KOS_push_local_scope(ctx, &prev_locals) == KOS_SUCCESS);
 
         for (i_thread = 0; i_thread < num_threads; i_thread++) {
 

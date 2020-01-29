@@ -58,10 +58,9 @@ typedef enum KOS_OBJECT_TYPE_E {
     OBJ_OBJECT_WALK    = 34,
     OBJ_MODULE         = 36,
     OBJ_STACK          = 38,
-    OBJ_LOCAL_REFS     = 40,
 
     /* Just the last valid object id, not a real object type */
-    OBJ_LAST           = OBJ_LOCAL_REFS
+    OBJ_LAST           = OBJ_STACK
 } KOS_TYPE;
 
 struct KOS_OBJECT_PLACEHOLDER;
