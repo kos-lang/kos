@@ -435,12 +435,12 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int error  = KOS_SUCCESS;
-    int pushed = 0;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL module;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &module));
+    KOS_init_local_with(ctx, &module, module_obj);
 
     /* @item math infinity
      *
@@ -457,7 +457,7 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
         value_obj = KOS_new_float(ctx, value.d);
         TRY_OBJID(value_obj);
 
-        TRY_ADD_GLOBAL(ctx, module, "infinity", value_obj);
+        TRY_ADD_GLOBAL(ctx, module.o, "infinity", value_obj);
     }
 
     /* @item math nan
@@ -475,20 +475,21 @@ int kos_module_math_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
         value_obj = KOS_new_float(ctx, value.d);
         TRY_OBJID(value_obj);
 
-        TRY_ADD_GLOBAL(ctx, module, "nan", value_obj);
+        TRY_ADD_GLOBAL(ctx, module.o, "nan", value_obj);
     }
 
-    TRY_ADD_FUNCTION(ctx, module, "abs",         kos_abs,         1);
-    TRY_ADD_FUNCTION(ctx, module, "ceil",        kos_ceil,        1);
-    TRY_ADD_FUNCTION(ctx, module, "exp",         kos_exp,         1);
-    TRY_ADD_FUNCTION(ctx, module, "expm1",       kos_expm1,       1);
-    TRY_ADD_FUNCTION(ctx, module, "floor",       kos_floor,       1);
-    TRY_ADD_FUNCTION(ctx, module, "is_infinity", kos_is_infinity, 1);
-    TRY_ADD_FUNCTION(ctx, module, "is_nan",      kos_is_nan,      1);
-    TRY_ADD_FUNCTION(ctx, module, "pow",         kos_pow,         2);
-    TRY_ADD_FUNCTION(ctx, module, "sqrt",        kos_sqrt,        1);
+    TRY_ADD_FUNCTION(ctx, module.o, "abs",         kos_abs,         1);
+    TRY_ADD_FUNCTION(ctx, module.o, "ceil",        kos_ceil,        1);
+    TRY_ADD_FUNCTION(ctx, module.o, "exp",         kos_exp,         1);
+    TRY_ADD_FUNCTION(ctx, module.o, "expm1",       kos_expm1,       1);
+    TRY_ADD_FUNCTION(ctx, module.o, "floor",       kos_floor,       1);
+    TRY_ADD_FUNCTION(ctx, module.o, "is_infinity", kos_is_infinity, 1);
+    TRY_ADD_FUNCTION(ctx, module.o, "is_nan",      kos_is_nan,      1);
+    TRY_ADD_FUNCTION(ctx, module.o, "pow",         kos_pow,         2);
+    TRY_ADD_FUNCTION(ctx, module.o, "sqrt",        kos_sqrt,        1);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_local(ctx, &module);
+
     return error;
 }

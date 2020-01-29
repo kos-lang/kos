@@ -63,17 +63,19 @@ cleanup:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-int kos_module_re_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_re_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int        error  = KOS_SUCCESS;
-    int        pushed = 0;
-    KOS_OBJ_ID proto  = KOS_BADPTR;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL module;
+    KOS_LOCAL proto;
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &proto));
+    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local(     ctx, &proto);
 
-    TRY_ADD_CONSTRUCTOR(ctx, module, "re", re_ctor, 1, &proto);
+    TRY_ADD_CONSTRUCTOR(ctx, module.o, "re", re_ctor, 1, &proto.o);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_locals(ctx, &proto, &module);
+
     return error;
 }

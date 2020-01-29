@@ -125,22 +125,25 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  args_obj)
 {
     int        error        = KOS_SUCCESS;
-    KOS_OBJ_ID ret          = KOS_BADPTR;
     KOS_OBJ_ID pos_id;
+    KOS_OBJ_ID filename_obj;
     FILE      *file         = 0;
-    KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
+    KOS_LOCAL  this_;
+    KOS_LOCAL  args;
+    KOS_LOCAL  ret;
     KOS_VECTOR filename_cstr;
     KOS_VECTOR flags_cstr;
 
     kos_vector_init(&filename_cstr);
     kos_vector_init(&flags_cstr);
 
-    TRY_OBJID(filename_obj);
+    KOS_init_locals(ctx, 3, &this_, &args, &ret);
 
-    {
-        int pushed = 0;
-        TRY(KOS_push_locals(ctx, &pushed, 4, &this_obj, &args_obj, &ret, &filename_obj));
-    }
+    this_.o = this_obj;
+    args.o  = args_obj;
+
+    filename_obj = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(filename_obj);
 
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
@@ -148,8 +151,8 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 
     /* TODO use own flags */
 
-    if (KOS_get_array_size(args_obj) > 1) {
-        KOS_OBJ_ID flags_obj = KOS_array_read(ctx, args_obj, 1);
+    if (KOS_get_array_size(args.o) > 1) {
+        KOS_OBJ_ID flags_obj = KOS_array_read(ctx, args.o, 1);
 
         TRY_OBJID(flags_obj);
 
@@ -168,22 +171,22 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     if ( ! file)
         RAISE_EXCEPTION(str_err_cannot_open_file);
 
-    ret = KOS_new_object_with_prototype(ctx, this_obj);
-    TRY_OBJID(ret);
+    ret.o = KOS_new_object_with_prototype(ctx, this_.o);
+    TRY_OBJID(ret.o);
 
     pos_id = KOS_new_const_ascii_string(ctx, str_position, sizeof(str_position) - 1);
     TRY_OBJID(pos_id);
 
     TRY(KOS_set_builtin_dynamic_property(ctx,
-                                         ret,
+                                         ret.o,
                                          pos_id,
                                          KOS_get_module(ctx),
                                          get_file_pos,
                                          set_file_pos));
 
-    OBJPTR(OBJECT, ret)->finalize = finalize;
+    OBJPTR(OBJECT, ret.o)->finalize = finalize;
 
-    KOS_object_set_private_ptr(ret, file);
+    KOS_object_set_private_ptr(ret.o, file);
     file = 0;
 
 cleanup:
@@ -192,7 +195,9 @@ cleanup:
     if (file)
         fclose(file);
 
-    return error ? KOS_BADPTR : ret;
+    ret.o = KOS_destroy_top_locals(ctx, &this_, &ret);
+
+    return error ? KOS_BADPTR : ret.o;
 }
 
 static int get_file_object(KOS_CONTEXT ctx,
@@ -404,16 +409,20 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
 {
     int        error = KOS_SUCCESS;
     FILE      *file  = 0;
-    KOS_OBJ_ID buf   = KOS_BADPTR;
+    KOS_LOCAL  args;
+    KOS_LOCAL  buf;
     uint8_t   *data;
     uint32_t   offset;
     int64_t    to_read;
     size_t     num_read;
 
+    KOS_init_local(     ctx, &buf);
+    KOS_init_local_with(ctx, &args, args_obj);
+
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
-    if (KOS_get_array_size(args_obj) > 0) {
-        KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
+    if (KOS_get_array_size(args.o) > 0) {
+        KOS_OBJ_ID arg = KOS_array_read(ctx, args.o, 0);
 
         TRY_OBJID(arg);
 
@@ -425,30 +434,25 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     if (to_read < 1)
         to_read = 1;
 
-    {
-        int pushed = 0;
-        TRY(KOS_push_locals(ctx, &pushed, 2, &args_obj, &buf));
-    }
+    if (KOS_get_array_size(args.o) > 1) {
+        buf.o = KOS_array_read(ctx, args.o, 1);
 
-    if (KOS_get_array_size(args_obj) > 1) {
-        buf = KOS_array_read(ctx, args_obj, 1);
+        TRY_OBJID(buf.o);
 
-        TRY_OBJID(buf);
-
-        if (GET_OBJ_TYPE(buf) != OBJ_BUFFER)
+        if (GET_OBJ_TYPE(buf.o) != OBJ_BUFFER)
             RAISE_EXCEPTION(str_err_not_buffer);
     }
     else
-        buf = KOS_new_buffer(ctx, 0);
+        buf.o = KOS_new_buffer(ctx, 0);
 
-    offset = KOS_get_buffer_size(buf);
+    offset = KOS_get_buffer_size(buf.o);
 
     if (to_read > (int64_t)(0xFFFFFFFFU - offset))
         RAISE_EXCEPTION(str_err_too_many_to_read);
 
-    TRY(KOS_buffer_resize(ctx, buf, (unsigned)(offset + to_read)));
+    TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + to_read)));
 
-    data = KOS_buffer_data(ctx, buf);
+    data = KOS_buffer_data(ctx, buf.o);
 
     if ( ! data)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -461,13 +465,15 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
 
     assert(num_read <= (size_t)to_read);
 
-    TRY(KOS_buffer_resize(ctx, buf, (unsigned)(offset + num_read)));
+    TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
 
     if (num_read < (size_t)to_read && ferror(file))
         RAISE_EXCEPTION(str_err_file_read);
 
 cleanup:
-    return error ? KOS_BADPTR : buf;
+    buf.o = KOS_destroy_top_locals(ctx, &args, &buf);
+
+    return error ? KOS_BADPTR : buf.o;
 }
 
 /* @item io file.prototype.write()
@@ -495,35 +501,37 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
     const uint32_t num_args   = KOS_get_array_size(args_obj);
     FILE      *    file       = 0;
     uint32_t       i_arg;
-    KOS_OBJ_ID     arg        = KOS_BADPTR;
-    KOS_OBJ_ID     print_args = KOS_BADPTR;
     KOS_VECTOR     cstr;
+    KOS_LOCAL      print_args;
+    KOS_LOCAL      arg;
+    KOS_LOCAL      args;
+    KOS_LOCAL      this_;
 
     kos_vector_init(&cstr);
 
-    {
-        int pushed = 0;
-        TRY(KOS_push_locals(ctx, &pushed, 4, &this_obj, &args_obj, &arg, &print_args));
-    }
+    KOS_init_locals(ctx, 4, &print_args, &arg, &args, &this_);
 
-    TRY(get_file_object(ctx, this_obj, &file, 1));
+    args.o  = args_obj;
+    this_.o = this_obj;
+
+    TRY(get_file_object(ctx, this_.o, &file, 1));
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
 
         size_t num_writ = 0;
 
-        arg = KOS_array_read(ctx, args_obj, i_arg);
-        TRY_OBJID(arg);
+        arg.o = KOS_array_read(ctx, args.o, i_arg);
+        TRY_OBJID(arg.o);
 
-        if (GET_OBJ_TYPE(arg) == OBJ_BUFFER) {
+        if (GET_OBJ_TYPE(arg.o) == OBJ_BUFFER) {
 
-            const size_t to_write = (size_t)KOS_get_buffer_size(arg);
+            const size_t to_write = (size_t)KOS_get_buffer_size(arg.o);
 
             if (to_write > 0) {
 
-                uint8_t *data = KOS_buffer_data_volatile(arg);
+                uint8_t *data = KOS_buffer_data_volatile(arg.o);
 
-                if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg)->data))) {
+                if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data))) {
 
                     if (kos_vector_resize(&cstr, to_write)) {
                         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -534,7 +542,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
                     data = (uint8_t *)cstr.buffer;
                 }
                 else {
-                    assert(kos_is_tracked_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg)->data)));
+                    assert(kos_is_tracked_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data)));
                 }
 
                 KOS_suspend_context(ctx);
@@ -547,16 +555,16 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
             if (num_writ < to_write)
                 RAISE_EXCEPTION(str_err_file_write); /* TODO error from errno */
         }
-        else if (GET_OBJ_TYPE(arg) == OBJ_STRING) {
+        else if (GET_OBJ_TYPE(arg.o) == OBJ_STRING) {
 
-            if (IS_BAD_PTR(print_args)) {
-                print_args = KOS_new_array(ctx, 1);
-                TRY_OBJID(print_args);
+            if (IS_BAD_PTR(print_args.o)) {
+                print_args.o = KOS_new_array(ctx, 1);
+                TRY_OBJID(print_args.o);
             }
 
-            TRY(KOS_array_write(ctx, print_args, 0, arg));
+            TRY(KOS_array_write(ctx, print_args.o, 0, arg.o));
 
-            TRY(KOS_print_to_cstr_vec(ctx, print_args, KOS_DONT_QUOTE, &cstr, " ", 1));
+            TRY(KOS_print_to_cstr_vec(ctx, print_args.o, KOS_DONT_QUOTE, &cstr, " ", 1));
 
             if (cstr.size) {
                 KOS_suspend_context(ctx);
@@ -576,9 +584,11 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
     }
 
 cleanup:
+    this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
+
     kos_vector_destroy(&cstr);
 
-    return error ? KOS_BADPTR : this_obj;
+    return error ? KOS_BADPTR : this_.o;
 }
 
 /* @item io file.prototype.eof
@@ -677,29 +687,31 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  this_obj,
                                 KOS_OBJ_ID  args_obj)
 {
-    FILE      *file  = 0;
-    int        error = get_file_object(ctx, this_obj, &file, 1);
-    KOS_OBJ_ID info  = KOS_BADPTR;
+    FILE     *file  = 0;
+    int       error = get_file_object(ctx, this_obj, &file, 1);
+    KOS_LOCAL info;
+    KOS_LOCAL aux;
+
+    KOS_init_locals(ctx, 2, &aux, &info);
 
     if ( ! error) {
-#define SET_INT_PROPERTY(name, value)                                         \
-        do {                                                                  \
-            KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                  \
-                                                                              \
-            KOS_OBJ_ID obj_id = KOS_new_int(ctx, (int64_t)(value));           \
-            TRY_OBJID(obj_id);                                                \
-                                                                              \
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_name), obj_id)); \
+#define SET_INT_PROPERTY(name, value)                                           \
+        do {                                                                    \
+            KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                    \
+                                                                                \
+            KOS_OBJ_ID obj_id = KOS_new_int(ctx, (int64_t)(value));             \
+            TRY_OBJID(obj_id);                                                  \
+                                                                                \
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_name), obj_id)); \
         } while (0)
 
 #ifdef _WIN32
-        HANDLE                    handle;
-        FILE_BASIC_INFO           basic_info   = { 0 };
-        FILE_STANDARD_INFO        std_info     = { 0 };
-        FILE_STORAGE_INFO         storage_info = { 0 };
-        BOOL                      ok           = FALSE;
-        BOOL                      have_storage = FALSE;
-        int                       pushed       = 0;
+        HANDLE             handle;
+        FILE_BASIC_INFO    basic_info   = { 0 };
+        FILE_STANDARD_INFO std_info     = { 0 };
+        FILE_STORAGE_INFO  storage_info = { 0 };
+        BOOL               ok           = FALSE;
+        BOOL               have_storage = FALSE;
 
         KOS_DECLARE_STATIC_CONST_STRING(str_type,        "type");
         KOS_DECLARE_STATIC_CONST_STRING(str_type_file,   "file");
@@ -732,10 +744,8 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         if ( ! have_storage)
             storage_info.LogicalBytesPerSector = 1;
 
-        TRY(KOS_push_locals(ctx, &pushed, 1, &info));
-
-        info = KOS_new_object(ctx);
-        TRY_OBJID(info);
+        info.o = KOS_new_object(ctx);
+        TRY_OBJID(info.o);
 
         SET_INT_PROPERTY("flags",      basic_info.FileAttributes);
         SET_INT_PROPERTY("hard_links", std_info.NumberOfLinks);
@@ -749,14 +759,13 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         SET_INT_PROPERTY("ctime",      get_epoch_time_us(&basic_info.ChangeTime));
 
         if (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
         else if (basic_info.FileAttributes & FILE_ATTRIBUTE_DEVICE)
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dev)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dev)));
         else
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
 #else
         struct stat st;
-        int         pushed = 0;
 
         KOS_DECLARE_STATIC_CONST_STRING(str_type,         "type");
         KOS_DECLARE_STATIC_CONST_STRING(str_type_file,    "file");
@@ -777,10 +786,8 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         if (error)
             RAISE_EXCEPTION(str_err_file_stat); /* TODO error from errno */
 
-        TRY(KOS_push_locals(ctx, &pushed, 1, &info));
-
-        info = KOS_new_object(ctx);
-        TRY_OBJID(info);
+        info.o = KOS_new_object(ctx);
+        TRY_OBJID(info.o);
 
         SET_INT_PROPERTY("flags",      st.st_mode);
         SET_INT_PROPERTY("hard_links", st.st_nlink);
@@ -796,41 +803,38 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
 
 #if !defined(__HAIKU__)
         if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) {
-            KOS_OBJ_ID a = KOS_new_array(ctx, 2);
-            TRY_OBJID(a);
+            aux.o = KOS_new_array(ctx, 2);
+            TRY_OBJID(aux.o);
 
-            pushed = 0;
-            TRY(KOS_push_locals(ctx, &pushed, 1, &a));
-
-            TRY(KOS_array_write(ctx, a, 0, TO_SMALL_INT(major(st.st_rdev))));
-            TRY(KOS_array_write(ctx, a, 1, TO_SMALL_INT(minor(st.st_rdev))));
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type_device), a));
-
-            KOS_pop_locals(ctx, pushed);
+            TRY(KOS_array_write(ctx, aux.o, 0, TO_SMALL_INT(major(st.st_rdev))));
+            TRY(KOS_array_write(ctx, aux.o, 1, TO_SMALL_INT(minor(st.st_rdev))));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type_device), aux.o));
         }
 #endif
 
         if (S_ISREG(st.st_mode))
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
         else if (S_ISDIR(st.st_mode))
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
         else if (S_ISCHR(st.st_mode))
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_char)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_char)));
         else if (S_ISBLK(st.st_mode))
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_device)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_device)));
         else if (S_ISFIFO(st.st_mode))
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_fifo)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_fifo)));
         else if (S_ISLNK(st.st_mode))
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_link)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_link)));
         else if (S_ISSOCK(st.st_mode))
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_socket)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_socket)));
         else
-            TRY(KOS_set_property(ctx, info, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_unknown)));
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_unknown)));
 #endif
     }
 
 cleanup:
-    return error ? KOS_BADPTR : info;
+    info.o = KOS_destroy_top_locals(ctx, &aux, &info);
+
+    return error ? KOS_BADPTR : info.o;
 }
 
 /* @item io file.prototype.size
@@ -956,26 +960,28 @@ cleanup:
 }
 
 static int add_std_file(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  module,
-                        KOS_OBJ_ID  proto,
-                        KOS_OBJ_ID  str_name,
+                        KOS_OBJ_ID  module_obj,
+                        KOS_OBJ_ID  proto_obj,
+                        KOS_OBJ_ID  name_obj,
                         FILE       *file)
 {
     int        error  = KOS_SUCCESS;
-    int        pushed = 0;
     KOS_OBJ_ID obj;
+    KOS_LOCAL  module;
+    KOS_LOCAL  name;
 
-    TRY(KOS_push_locals(ctx, &pushed, 3, &module, &proto, &str_name));
+    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local_with(ctx, &name,   name_obj);
 
-    obj = KOS_new_object_with_prototype(ctx, proto);
+    obj = KOS_new_object_with_prototype(ctx, proto_obj);
     TRY_OBJID(obj);
 
     KOS_object_set_private_ptr(obj, file);
 
-    error = KOS_module_add_global(ctx, module, str_name, obj, 0);
+    error = KOS_module_add_global(ctx, module.o, name.o, obj, 0);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_locals(ctx, &name, &module);
 
     return error;
 }
@@ -986,27 +992,28 @@ do {                                                                            
     TRY(add_std_file((ctx), (module), (proto), KOS_CONST_ID(str_name), (file))); \
 } while (0)
 
-int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int        error  = KOS_SUCCESS;
-    int        pushed = 0;
-    KOS_OBJ_ID proto  = KOS_BADPTR;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL module;
+    KOS_LOCAL proto;
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &proto));
+    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local(     ctx, &proto);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module,        "file",      kos_open,       1, &proto);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "close",     kos_close,      0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "print",     print,          0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "read_line", read_line,      0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "read_some", read_some,      0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "release",   kos_close,      0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "seek",      set_file_pos,   1);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "write",     kos_write,      0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "eof",       get_file_eof,   0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "error",     get_file_error, 0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "info",      get_file_info,  0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "position",  get_file_pos,   0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, "size",      get_file_size,  0);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "file",      kos_open,       1, &proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "close",     kos_close,      0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "print",     print,          0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "read_line", read_line,      0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "read_some", read_some,      0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "release",   kos_close,      0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "seek",      set_file_pos,   1);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "write",     kos_write,      0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "eof",       get_file_eof,   0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "error",     get_file_error, 0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "info",      get_file_info,  0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "position",  get_file_pos,   0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "size",      get_file_size,  0);
 
     /* @item io stderr
      *
@@ -1014,7 +1021,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      *
      * Write-only file object corresponding to standard error.
      */
-    TRY_ADD_STD_FILE(       ctx, module, proto, "stderr",    stderr);
+    TRY_ADD_STD_FILE(       ctx, module.o, proto.o, "stderr",    stderr);
 
     /* @item io stdin
      *
@@ -1022,7 +1029,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      *
      * Read-only file object corresponding to standard input.
      */
-    TRY_ADD_STD_FILE(       ctx, module, proto, "stdin",     stdin);
+    TRY_ADD_STD_FILE(       ctx, module.o, proto.o, "stdin",     stdin);
 
     /* @item io stdout
      *
@@ -1032,9 +1039,10 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
      *
      * Calling `file.stdout.print()` is equivalent to `base.print()`.
      */
-    TRY_ADD_STD_FILE(       ctx, module, proto, "stdout",    stdout);
+    TRY_ADD_STD_FILE(       ctx, module.o, proto.o, "stdout",    stdout);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_locals(ctx, &proto, &module);
+
     return error;
 }

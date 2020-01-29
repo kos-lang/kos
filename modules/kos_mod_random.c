@@ -94,27 +94,27 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
 {
     int                error    = KOS_SUCCESS;
     KOS_RNG_CONTAINER *rng      = 0;
-    KOS_OBJ_ID         ret      = KOS_BADPTR;
-    KOS_OBJ_ID         seed_obj = KOS_BADPTR;
+    KOS_LOCAL          args;
+    KOS_LOCAL          seed;
+    KOS_LOCAL          ret;
 
-    {
-        int pushed = 0;
-        TRY(KOS_push_locals(ctx, &pushed, 4, &this_obj, &args_obj, &ret, &seed_obj));
-    }
+    KOS_init_locals(ctx, 3, &args, &seed, &ret);
 
-    ret = KOS_new_object_with_prototype(ctx, this_obj);
-    TRY_OBJID(ret);
+    args.o = args_obj;
 
-    OBJPTR(OBJECT, ret)->finalize = finalize;
+    ret.o = KOS_new_object_with_prototype(ctx, this_obj);
+    TRY_OBJID(ret.o);
 
-    if (KOS_get_array_size(args_obj) > 0) {
+    OBJPTR(OBJECT, ret.o)->finalize = finalize;
 
-        seed_obj = KOS_array_read(ctx, args_obj, 0);
-        TRY_OBJID(seed_obj);
+    if (KOS_get_array_size(args.o) > 0) {
 
-        assert( ! IS_BAD_PTR(seed_obj));
+        seed.o = KOS_array_read(ctx, args.o, 0);
+        TRY_OBJID(seed.o);
 
-        if ( ! IS_NUMERIC_OBJ(seed_obj))
+        assert( ! IS_BAD_PTR(seed.o));
+
+        if ( ! IS_NUMERIC_OBJ(seed.o))
             RAISE_EXCEPTION(str_err_invalid_seed);
     }
 
@@ -125,28 +125,30 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     }
 
-    if (IS_BAD_PTR(seed_obj))
+    if (IS_BAD_PTR(seed.o))
         kos_rng_init(&rng->rng);
     else {
 
-        int64_t seed;
+        int64_t seed_value;
 
-        TRY(KOS_get_integer(ctx, seed_obj, &seed));
+        TRY(KOS_get_integer(ctx, seed.o, &seed_value));
 
-        kos_rng_init_seed(&rng->rng, (uint64_t)seed);
+        kos_rng_init_seed(&rng->rng, (uint64_t)seed_value);
     }
 
     if (kos_create_mutex(&rng->mutex))
         RAISE_EXCEPTION_STR(str_err_mutex_fail);
 
-    KOS_object_set_private_ptr(ret, rng);
+    KOS_object_set_private_ptr(ret.o, rng);
     rng = 0;
 
 cleanup:
     if (rng)
         kos_free(rng);
 
-    return error ? KOS_BADPTR : ret;
+    ret.o = KOS_destroy_top_locals(ctx, &args, &ret);
+
+    return error ? KOS_BADPTR : ret.o;
 }
 
 static int get_rng(KOS_CONTEXT         ctx,
@@ -293,19 +295,21 @@ cleanup:
     return error ? KOS_BADPTR : KOS_new_float(ctx, value.d - 1.0);
 }
 
-int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int        error  = KOS_SUCCESS;
-    int        pushed = 0;
-    KOS_OBJ_ID proto  = KOS_BADPTR;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL module;
+    KOS_LOCAL proto;
 
-    TRY(KOS_push_locals(ctx, &pushed, 2, &module, &proto));
+    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local(     ctx, &proto);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module,        "random",  kos_random,   0, &proto);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "integer", rand_integer, 0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, "float",   rand_float,   0);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "random",  kos_random,   0, &proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "integer", rand_integer, 0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "float",   rand_float,   0);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_locals(ctx, &proto, &module);
+
     return error;
 }

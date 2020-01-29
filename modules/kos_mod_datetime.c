@@ -51,16 +51,17 @@ static KOS_OBJ_ID now(KOS_CONTEXT ctx,
     return ret;
 }
 
-int kos_module_datetime_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_datetime_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int error  = KOS_SUCCESS;
-    int pushed = 0;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL module;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &module));
+    KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTION(ctx, module, "now", now, 0);
+    TRY_ADD_FUNCTION(ctx, module.o, "now", now, 0);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_local(ctx, &module);
+
     return error;
 }

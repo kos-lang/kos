@@ -123,17 +123,18 @@ cleanup:
     return ret;
 }
 
-int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int error  = KOS_SUCCESS;
-    int pushed = 0;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL module;
 
-    TRY(KOS_push_locals(ctx, &pushed, 1, &module));
+    KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTION(ctx, module, "is_file", is_file, 1);
-    TRY_ADD_FUNCTION(ctx, module, "remove",  remove,  1);
+    TRY_ADD_FUNCTION(ctx, module.o, "is_file", is_file, 1);
+    TRY_ADD_FUNCTION(ctx, module.o, "remove",  remove,  1);
 
 cleanup:
-    KOS_pop_locals(ctx, pushed);
+    KOS_destroy_top_local(ctx, &module);
+
     return error;
 }
