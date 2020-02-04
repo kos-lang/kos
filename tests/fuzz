@@ -77,9 +77,9 @@ done
 CORPUS="$PWD/tests/${FUZZ}_corpus"
 INPUT_CORPORA=( )
 for CUR_CORP in "${CORPORA_BASE[@]}"; do
-    [[ "$CUR_CORP" = "$FUZZ" ]] && continue
     for CORP_SUFFIX in _corpus _afl; do
         CORP_DIR="$PWD/tests/${CUR_CORP}${CORP_SUFFIX}"
+        [[ "$CORP_DIR" = "$CORPUS" ]] && continue
         [[ -d "$CORP_DIR" ]] && INPUT_CORPORA+=( "$CORP_DIR" )
     done
 done
