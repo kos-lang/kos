@@ -68,6 +68,11 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats,         "invalid strin
 KOS_DECLARE_STATIC_CONST_STRING(str_err_unpack_buf_too_short,     "unpacked buffer too short");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types,      "unsupported operand types");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_use_async,                "use async to launch threads");
+KOS_DECLARE_STATIC_CONST_STRING(str_gen_init,                     "init");
+KOS_DECLARE_STATIC_CONST_STRING(str_gen_ready,                    "ready");
+KOS_DECLARE_STATIC_CONST_STRING(str_gen_active,                   "active");
+KOS_DECLARE_STATIC_CONST_STRING(str_gen_running,                  "running");
+KOS_DECLARE_STATIC_CONST_STRING(str_gen_done,                     "done");
 
 #define TRY_CREATE_CONSTRUCTOR(name, module)               \
 do {                                                       \
@@ -4452,6 +4457,70 @@ static KOS_OBJ_ID get_code_size(KOS_CONTEXT ctx,
     return ret;
 }
 
+/* @item base generator.prototype.state
+ *
+ *     generator.prototype.state
+ *
+ * Read-only state of the generator function.
+ *
+ * This is a string describing the current state of the generator function:
+ *
+ *  * "init" - the generator function,
+ *  * "ready" - the generator function has been instantiated, but not invoked,
+ *  * "active" - the generator function has been instantiated and invoked, but not finished,
+ *  * "running" - the generator function is currently running (e.g. when inside the function),
+ *  * "done" - the generator has finished and exited.
+ *
+ * Example:
+ *
+ *     > range.state
+ *     init
+ *     > range(10).state
+ *     ready
+ *     > const it = range(10) ; it() ; it.state
+ *     active
+ */
+static KOS_OBJ_ID get_gen_state(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID ret = KOS_BADPTR;
+
+    if (GET_OBJ_TYPE(this_obj) == OBJ_FUNCTION) {
+
+        switch (OBJPTR(FUNCTION, this_obj)->state) {
+
+            case KOS_GEN_INIT:
+                ret = KOS_CONST_ID(str_gen_init);
+                break;
+
+            case KOS_GEN_READY:
+                ret = KOS_CONST_ID(str_gen_ready);
+                break;
+
+            case KOS_GEN_ACTIVE:
+                ret = KOS_CONST_ID(str_gen_active);
+                break;
+
+            case KOS_GEN_RUNNING:
+                ret = KOS_CONST_ID(str_gen_running);
+                break;
+
+            case KOS_GEN_DONE:
+                ret = KOS_CONST_ID(str_gen_done);
+                break;
+
+            default:
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_generator));
+                break;
+        }
+    }
+    else
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
+
+    return ret;
+}
+
 /* @item base class.prototype.prototype
  *
  *     class.prototype.prototype
@@ -4580,6 +4649,8 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "offset",        get_function_offs, 0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "registers",     get_registers,     0);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "size",          get_code_size,     0);
+
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(generator),  "state",         get_gen_state,     0);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),     "ends_with",     ends_with,         1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),     "find",          find,              1);

@@ -59,7 +59,9 @@ Table of Contents
       * [function.prototype.size](#functionprototypesize)
     * [generator()](#generator)
       * [generator.prototype.iterator()](#generatorprototypeiterator)
+      * [generator.prototype.next()](#generatorprototypenext)
       * [generator.prototype.slice()](#generatorprototypeslice)
+      * [generator.prototype.state](#generatorprototypestate)
     * [generator\_end()](#generator_end)
     * [hex()](#hex)
     * [integer()](#integer)
@@ -177,6 +179,8 @@ Table of Contents
       * [random.prototype.integer()](#randomprototypeinteger)
       * [random.prototype.shuffle()](#randomprototypeshuffle)
     * [shuffle()](#shuffle)
+  * [re](#re)
+    * [re()](#re)
 <!--te-->
 base
 ====
@@ -1385,6 +1389,31 @@ Examples:
     0
     1
 
+generator.prototype.next()
+--------------------------
+
+    generator.prototype.next([value])
+
+Returns the next item from an instantiated generator (iterator function).
+
+This is equivalent to just calling the iterator function itself to obtain
+the next element.
+
+The optional `value` argument is passed to the generator and is returned
+from the `yield` expression inside the generator - whether the generator
+will use this value is generator-specific.
+
+This function throws an exception if the generator function hasn't been
+instantiated.
+
+Examples:
+
+    > const it = range(10)
+    > it.next()
+    0
+    > it.next()
+    1
+
 generator.prototype.slice()
 ---------------------------
 
@@ -1417,6 +1446,30 @@ Examples:
     [3, 4, 5]
     > range(10).slice(7, void) -> array
     [7, 8, 9]
+
+generator.prototype.state
+-------------------------
+
+    generator.prototype.state
+
+Read-only state of the generator function.
+
+This is a string describing the current state of the generator function:
+
+ * "init" - the generator function,
+ * "ready" - the generator function has been instantiated, but not invoked,
+ * "active" - the generator function has been instantiated and invoked, but not finished,
+ * "running" - the generator function is currently running (e.g. when inside the function),
+ * "done" - the generator has finished and exited.
+
+Example:
+
+    > range.state
+    init
+    > range(10).state
+    ready
+    > const it = range(10) ; it() ; it.state
+    active
 
 generator_end()
 ---------------
@@ -3588,4 +3641,20 @@ Example:
 
     > range(10) -> shuffle
     [9, 4, 3, 0, 5, 7, 1, 6, 8, 2]
+
+re
+==
+
+re()
+----
+
+    re(regex)
+
+Regular expression class.
+
+`regex` is a string containing a regular expression.
+
+Example:
+
+    > re("...")
 

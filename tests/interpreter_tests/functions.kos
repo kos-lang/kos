@@ -1222,6 +1222,98 @@ do {
     assert ex.value   == "finished"
 }
 
+# generator.prototype.next function
+do {
+    fun gen
+    {
+        yield 1
+        yield 2
+        yield 3
+        yield 4
+    }
+
+    const it = gen()
+    assert it() == 1
+    assert it.next() == 2
+    assert it() == 3
+    assert it.next() == 4
+    expect_fail(() => it.next())
+}
+
+# incorrect uses of generator.prototype.next function
+do {
+    fun gen { yield 42 }
+
+    assert gen.next.apply(gen(), []) == 42
+
+    expect_fail(() => gen.next.apply(fun{}, []))
+    expect_fail(() => gen.next.apply(class{}, []))
+    expect_fail(() => gen.next.apply(gen, []))
+    expect_fail(() => gen.next())
+}
+
+# pass argument through generator.prototype.next function
+do {
+    fun gen(a)
+    {
+        a.push(yield 1)
+        a.push(yield 2)
+    }
+
+    var a = []
+    const it = gen(a)
+    assert it("a") == 1
+    assert it("b") == 2
+    expect_fail(() => it("c"))
+
+    assert a.size == 2
+    assert a[0] == "b"
+    assert a[1] == "c"
+}
+
+# test generator state
+do {
+    var it = void
+
+    fun gen(a)
+    {
+        a.push(it.state)
+        a.push(yield 1)
+        a.push(yield 2)
+        a.push(it.state)
+    }
+
+    var a = []
+    it = gen(a)
+
+    assert gen instanceof base.generator
+    assert gen.state == "init"
+    assert it instanceof base.generator
+    assert it.state == "ready"
+    assert a.size == 0
+
+    assert it("a") == 1
+    assert it.state == "active"
+    assert a.size == 1
+    assert a[0] == "running"
+
+    assert it("b") == 2
+    assert it.state == "active"
+    assert a.size == 2
+    assert a[0] == "running"
+    assert a[1] == "b"
+
+    expect_fail(() => it("c"))
+    assert it.state == "done"
+    assert a.size == 4
+    assert a[0] == "running"
+    assert a[1] == "b"
+    assert a[2] == "c"
+    assert a[3] == "running"
+
+    expect_fail(() => base.generator.prototype.state)
+}
+
 # pass function as a default arg
 do {
     fun do_something(x, something = x => x + 1)

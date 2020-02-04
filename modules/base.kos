@@ -231,6 +231,36 @@ buffer.prototype.iterator = iterator
  */
 generator.prototype.iterator = () => this
 
+/* @item base generator.prototype.next()
+ *
+ *     generator.prototype.next([value])
+ *
+ * Returns the next item from an instantiated generator (iterator function).
+ *
+ * This is equivalent to just calling the iterator function itself to obtain
+ * the next element.
+ *
+ * The optional `value` argument is passed to the generator and is returned
+ * from the `yield` expression inside the generator - whether the generator
+ * will use this value is generator-specific.
+ *
+ * This function throws an exception if the generator function hasn't been
+ * instantiated.
+ *
+ * Examples:
+ *
+ *     > const it = range(10)
+ *     > it.next()
+ *     0
+ *     > it.next()
+ *     1
+ */
+generator.prototype.next = fun(args...)
+{
+    assert this.state != "init"
+    return this.apply(void, args)
+}
+
 /* @item base generator.prototype.slice()
  *
  *     generator.prototype.slice(begin, end)
