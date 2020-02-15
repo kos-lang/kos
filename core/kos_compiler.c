@@ -4502,7 +4502,6 @@ static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
 
     if (ref->exported_locals) {
         ++*(args->num_binds);
-        assert(*args->num_binds <= KOS_MAX_REGS);
         error = gen_reg(args->program, &ref->vars_reg);
         if ( ! error) {
             ref->vars_reg->tmp = 0;
@@ -4512,7 +4511,6 @@ static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
 
     if ( ! error && ref->exported_args) {
         ++*(args->num_binds);
-        assert(*args->num_binds <= KOS_MAX_REGS);
         error = gen_reg(args->program, &ref->args_reg);
         if ( ! error) {
             ref->args_reg->tmp = 0;
@@ -4876,12 +4874,12 @@ static int gen_function(KOS_COMP_UNIT      *program,
     }
 
     /* Choose instruction for loading the function */
-    constant->load_instr =
-        (fun_node->type == NT_CONSTRUCTOR_LITERAL ||
-         scope->num_args > constant->num_args     ||
-         constant->num_binds)
-            ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
-            : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST);
+    constant->load_instr = (uint8_t)
+        ((fun_node->type == NT_CONSTRUCTOR_LITERAL ||
+          scope->num_args > constant->num_args     ||
+          constant->num_binds)
+             ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
+             : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST));
 
     /* Move the function code to final code_buf */
     TRY(append_frame(program, name_node, constant->header.index, fun_start_offs, addr2line_start_offs));
