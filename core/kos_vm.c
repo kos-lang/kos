@@ -516,8 +516,8 @@ static int init_registers(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj)
 {
     int            error            = KOS_SUCCESS;
-    uint32_t       reg              = OBJPTR(FUNCTION, func_obj)->args_reg;
-    const uint32_t num_non_def_args = OBJPTR(FUNCTION, func_obj)->num_args;
+    uint32_t       reg              = OBJPTR(FUNCTION, func_obj)->opts.args_reg;
+    const uint32_t num_non_def_args = OBJPTR(FUNCTION, func_obj)->opts.min_args;
     const uint32_t num_def_args     = GET_OBJ_TYPE(OBJPTR(FUNCTION, func_obj)->defaults) == OBJ_ARRAY
                                        ? KOS_get_array_size(OBJPTR(FUNCTION, func_obj)->defaults) : 0;
     const uint32_t num_named_args   = num_non_def_args + num_def_args;
@@ -541,18 +541,19 @@ static int init_registers(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(this_.o) <= OBJ_LAST_TYPE);
     assert( ! IS_BAD_PTR(args.o) || GET_OBJ_TYPE(stack.o) == OBJ_STACK);
     assert( ! OBJPTR(FUNCTION, func.o)->handler);
+    assert(OBJPTR(FUNCTION, func_obj)->opts.num_def_args == num_def_args);
 
-    if (OBJPTR(FUNCTION, func.o)->flags & KOS_FUN_ELLIPSIS) {
+    if (OBJPTR(FUNCTION, func.o)->opts.ellipsis_reg != KOS_NO_REG) {
         /* args, ellipsis, this */
-        assert(OBJPTR(FUNCTION, func.o)->num_regs >= reg + num_arg_regs + 2);
+        assert(OBJPTR(FUNCTION, func.o)->opts.num_regs >= reg + num_arg_regs + 2);
     }
     else {
         /* args, this */
-        assert(OBJPTR(FUNCTION, func.o)->num_regs >= reg + num_arg_regs + 1);
+        assert(OBJPTR(FUNCTION, func.o)->opts.num_regs >= reg + num_arg_regs + 1);
     }
     assert(num_input_args >= num_non_def_args);
 
-    if (OBJPTR(FUNCTION, func.o)->flags & KOS_FUN_ELLIPSIS)  {
+    if (OBJPTR(FUNCTION, func.o)->opts.ellipsis_reg != KOS_NO_REG)  {
         if (num_input_args > num_arg_regs)
             ellipsis.o = slice_args(ctx, args.o, stack.o, rarg1_idx, num_args, num_named_args, ~0U);
         else
@@ -591,6 +592,8 @@ static int init_registers(KOS_CONTEXT ctx,
                                      KOS_atomic_read_relaxed_ptr(*(src_buf++)));
             while (src_buf < src_end);
         }
+
+        assert(OBJPTR(FUNCTION, func_obj)->opts.rest_reg == KOS_NO_REG);
     }
     else {
         const uint32_t num_to_move = KOS_min(num_input_args, KOS_MAX_ARGS_IN_REGS - 1U);
@@ -638,12 +641,17 @@ static int init_registers(KOS_CONTEXT ctx,
                                  MAX_INT64));
         }
 
+        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func_obj)->opts.rest_reg);
         KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], rest.o);
     }
 
-    if ( ! IS_BAD_PTR(ellipsis.o))
+    if ( ! IS_BAD_PTR(ellipsis.o)) {
+        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func_obj)->opts.ellipsis_reg);
         KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], ellipsis.o);
+    }
 
+    assert(OBJPTR(FUNCTION, func_obj)->opts.this_reg == KOS_NO_REG ||
+           OBJPTR(FUNCTION, func_obj)->opts.this_reg == reg - ctx->regs_idx);
     KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], this_.o);
 
     assert( ! IS_BAD_PTR(OBJPTR(FUNCTION, func.o)->closures));
@@ -662,12 +670,17 @@ static int init_registers(KOS_CONTEXT ctx,
         src_buf = kos_get_array_buffer(OBJPTR(ARRAY, OBJPTR(FUNCTION, func.o)->closures));
         end     = src_buf + src_len;
 
+        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func_obj)->opts.bind_reg);
+        assert(OBJPTR(FUNCTION, func_obj)->opts.num_binds == src_len);
+
         while (src_buf < end)
             KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++],
                                  KOS_atomic_read_relaxed_obj(*(src_buf++)));
     }
     else {
         assert(GET_OBJ_TYPE(OBJPTR(FUNCTION, func.o)->closures) == OBJ_VOID);
+        assert(OBJPTR(FUNCTION, func_obj)->opts.bind_reg  == KOS_NO_REG);
+        assert(OBJPTR(FUNCTION, func_obj)->opts.num_binds == 0);
     }
 
 cleanup:
@@ -751,20 +764,20 @@ static int _prepare_call(KOS_CONTEXT        ctx,
            GET_OBJ_TYPE(func.o) == OBJ_CLASS);
 
     state = (GET_OBJ_TYPE(func.o) == OBJ_FUNCTION)
-        ? (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, func.o)->state
+        ? (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func.o)->state)
         : KOS_CTOR;
 
     assert(GET_OBJ_TYPE(func.o) == OBJ_CLASS || state != KOS_CTOR);
 
     if (IS_BAD_PTR(args.o)) {
-        if (num_args < OBJPTR(FUNCTION, func.o)->num_args)
+        if (num_args < OBJPTR(FUNCTION, func.o)->opts.min_args)
             RAISE_EXCEPTION_STR(str_err_too_few_args);
     }
     else {
         if (GET_OBJ_TYPE(args.o) != OBJ_ARRAY)
             RAISE_EXCEPTION_STR(str_err_args_not_array);
 
-        if (KOS_get_array_size(args.o) < OBJPTR(FUNCTION, func.o)->num_args)
+        if (KOS_get_array_size(args.o) < OBJPTR(FUNCTION, func.o)->opts.min_args)
             RAISE_EXCEPTION_STR(str_err_too_few_args);
     }
 
@@ -812,7 +825,7 @@ static int _prepare_call(KOS_CONTEXT        ctx,
 
             TRY(kos_stack_push(ctx, func.o));
 
-            OBJPTR(FUNCTION, func.o)->state = KOS_GEN_READY;
+            KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func.o)->state, KOS_GEN_READY);
 
             if ( ! OBJPTR(FUNCTION, func.o)->handler)
                 TRY(init_registers(ctx,
@@ -830,7 +843,7 @@ static int _prepare_call(KOS_CONTEXT        ctx,
                 set_handler_reg(ctx, args.o);
             }
 
-            OBJPTR(FUNCTION, func.o)->num_args = 0;
+            OBJPTR(FUNCTION, func.o)->opts.min_args = 0;
 
             OBJPTR(STACK, ctx->stack)->flags |= KOS_CAN_YIELD;
 
@@ -871,8 +884,9 @@ static int _prepare_call(KOS_CONTEXT        ctx,
             else
                 *this_obj = get_handler_reg(ctx);
 
-            /* TODO perform CAS for thread safety */
-            OBJPTR(FUNCTION, func.o)->state = KOS_GEN_RUNNING;
+            if ( ! KOS_atomic_cas_strong_u32(OBJPTR(FUNCTION, func.o)->state, state, KOS_GEN_RUNNING)) {
+                /* TODO error */
+            }
 
             OBJPTR(STACK, ctx->stack)->flags |= KOS_CAN_YIELD;
             break;
@@ -915,7 +929,7 @@ static KOS_OBJ_ID _finish_call(KOS_CONTEXT         ctx,
         if (*state >= KOS_GEN_INIT) {
             if (OBJPTR(STACK, ctx->stack)->flags & KOS_CAN_YIELD) {
                 *state = KOS_GEN_DONE;
-                OBJPTR(FUNCTION, func_obj)->state = KOS_GEN_DONE;
+                KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, KOS_GEN_DONE);
                 if (instr != INSTR_CALL_GEN)
                     KOS_raise_generator_end(ctx);
             }
@@ -924,14 +938,14 @@ static KOS_OBJ_ID _finish_call(KOS_CONTEXT         ctx,
                     OBJPTR(FUNCTION, func_obj)->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
 
                 *state = end_state;
-                OBJPTR(FUNCTION, func_obj)->state = (uint8_t)end_state;
+                KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, (uint32_t)end_state);
             }
         }
     }
     else {
         if (*state >= KOS_GEN_INIT) {
             *state = KOS_GEN_DONE;
-            OBJPTR(FUNCTION, func_obj)->state = KOS_GEN_DONE;
+            KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, KOS_GEN_DONE);
         }
     }
 
@@ -2749,14 +2763,15 @@ static int exec_function(KOS_CONTEXT ctx)
             BEGIN_INSTRUCTION(CALL_FUN): /* <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
             BEGIN_INSTRUCTION(CALL_GEN): { /* <r.dest>, <r.func>, <r.final> */
-                const unsigned rfunc     = bytecode[2];
-                unsigned       rthis     = ~0U;
-                unsigned       rfinal    = ~0U;
-                unsigned       rargs     = ~0U;
-                unsigned       rarg1     = ~0U;
-                unsigned       num_args  = 0;
-                int            tail_call = 0;
-                int            delta;
+                const unsigned     rfunc     = bytecode[2];
+                unsigned           rthis     = ~0U;
+                unsigned           rfinal    = ~0U;
+                unsigned           rargs     = ~0U;
+                unsigned           rarg1     = ~0U;
+                unsigned           num_args  = 0;
+                int                tail_call = 0;
+                int                delta;
+                KOS_FUNCTION_STATE state;
 
                 KOS_LOCAL      func;
                 KOS_LOCAL      this_;
@@ -2870,12 +2885,12 @@ static int exec_function(KOS_CONTEXT ctx)
                     goto cleanup;
                 }
 
-                if (OBJPTR(FUNCTION, func.o)->state == KOS_GEN_INIT)
+                state = (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func.o)->state);
+
+                if (state == KOS_GEN_INIT)
                     out = this_.o;
 
                 else {
-                    KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, func.o)->state;
-
                     /* TODO optimize INSTR_TAIL_CALL */
 
                     if (OBJPTR(FUNCTION, func.o)->handler)  {
@@ -3097,12 +3112,13 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
                              KOS_OBJ_ID             args_obj,
                              enum KOS_CALL_FLAVOR_E call_flavor)
 {
-    int        error  = KOS_SUCCESS;
-    KOS_TYPE   type;
-    KOS_LOCAL  func;
-    KOS_LOCAL  this_;
-    KOS_LOCAL  args;
-    KOS_LOCAL  ret;
+    int                error  = KOS_SUCCESS;
+    KOS_TYPE           type;
+    KOS_FUNCTION_STATE state;
+    KOS_LOCAL          func;
+    KOS_LOCAL          this_;
+    KOS_LOCAL          args;
+    KOS_LOCAL          ret;
 
     KOS_instance_validate(ctx);
 
@@ -3128,12 +3144,12 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         return KOS_BADPTR;
     }
 
-    if (OBJPTR(FUNCTION, func.o)->state == KOS_GEN_INIT)
+    state = (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func.o)->state);
+
+    if (state == KOS_GEN_INIT)
         ret.o = this_.o;
 
     else {
-        KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, func.o)->state;
-
         if (OBJPTR(FUNCTION, func.o)->handler)  {
             KOS_OBJ_ID retval = KOS_BADPTR;
 

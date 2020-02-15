@@ -826,8 +826,8 @@ KOS_OBJ_ID KOS_get_prototype(KOS_CONTEXT ctx,
             break;
 
         case OBJ_FUNCTION: {
-            const KOS_FUNCTION_STATE state =
-                (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, obj_id)->state;
+            const KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)
+                KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, obj_id)->state);
             if (state == KOS_FUN)
                 ret = inst->prototypes.function_proto;
             else

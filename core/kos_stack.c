@@ -172,6 +172,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     int            error      = KOS_SUCCESS;
     uint32_t       stack_size;
     uint32_t       base_idx;
+    uint32_t       state;
     const int64_t  catch_init = (int64_t)KOS_NO_CATCH << 8;
     unsigned       num_regs;
     unsigned       room;
@@ -190,17 +191,17 @@ int kos_stack_push(KOS_CONTEXT ctx,
     base_idx   = stack_size;
 
     assert( ! OBJPTR(FUNCTION, func_obj)->handler ||
-           OBJPTR(FUNCTION, func_obj)->num_regs == 0);
+           OBJPTR(FUNCTION, func_obj)->opts.num_regs == 0);
     num_regs = OBJPTR(FUNCTION, func_obj)->handler
-               ? 1 : OBJPTR(FUNCTION, func_obj)->num_regs;
+               ? 1 : OBJPTR(FUNCTION, func_obj)->opts.num_regs;
     room = num_regs + KOS_STACK_EXTRA;
 
     if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
         RAISE_EXCEPTION(str_err_stack_overflow);
 
     /* Prepare stack for accommodating new stack frame */
-    if (OBJPTR(FUNCTION, func_obj)->state < KOS_GEN_INIT &&
-        ! (OBJPTR(FUNCTION, func_obj)->flags & KOS_FUN_CLOSURE)) {
+    state = KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state);
+    if (state < KOS_GEN_INIT && ! (OBJPTR(FUNCTION, func_obj)->opts.closure_size)) {
 
         if ( ! stack || stack_size + room > stack->capacity) {
 
@@ -225,7 +226,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
             assert(base_idx + room <= new_stack->capacity);
         }
     }
-    else if (OBJPTR(FUNCTION, func_obj)->state > KOS_GEN_INIT) {
+    else if (state > KOS_GEN_INIT) {
 
         const KOS_OBJ_ID gen_stack = OBJPTR(FUNCTION, func_obj)->generator_stack_frame;
 

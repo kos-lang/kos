@@ -519,13 +519,33 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                     func = OBJPTR(FUNCTION, obj_id);
                 }
 
-                func->flags      = (uint8_t)(func_const->flags &
-                                             (KOS_COMP_FUN_ELLIPSIS | KOS_COMP_FUN_CLOSURE));
-                func->num_args   = func_const->min_args;
-                func->num_regs   = func_const->num_regs;
-                func->args_reg   = func_const->args_reg;
-                func->instr_offs = OBJPTR(MODULE, module.o)->bytecode_size + func_const->offset;
-                func->module     = module.o;
+                if (func_const->flags & KOS_COMP_FUN_ELLIPSIS) {
+                    assert(func_const->ellipsis_reg != KOS_NO_REG);
+                }
+                else {
+                    assert(func_const->ellipsis_reg == KOS_NO_REG);
+                }
+                if (func_const->flags & KOS_COMP_FUN_CLOSURE) {
+                    assert(func_const->closure_size);
+                }
+                else {
+                    assert( ! func_const->closure_size);
+                }
+
+                func->opts.num_regs     = func_const->num_regs;
+                func->opts.closure_size = func_const->closure_size;
+                func->opts.min_args     = func_const->min_args;
+                func->opts.max_args     = func_const->max_args;
+                func->opts.num_def_args = func_const->num_def_args;
+                func->opts.num_binds    = func_const->num_binds;
+                func->opts.args_reg     = func_const->args_reg;
+                func->opts.rest_reg     = func_const->rest_reg;
+                func->opts.ellipsis_reg = func_const->ellipsis_reg;
+                func->opts.this_reg     = func_const->this_reg;
+                func->opts.bind_reg     = func_const->bind_reg;
+
+                func->instr_offs   = OBJPTR(MODULE, module.o)->bytecode_size + func_const->offset;
+                func->module       = module.o;
 
                 if (func_const->flags & KOS_COMP_FUN_GENERATOR)
                     func->state = KOS_GEN_INIT;
@@ -974,6 +994,7 @@ static int print_const(void       *cookie,
     return KOS_SUCCESS;
 }
 
+#if 0
 static const char *lalign(unsigned number)
 {
     return number < 10  ? "  " :
@@ -1001,6 +1022,7 @@ static void print_regs(unsigned *reg_idx, unsigned num_regs, const char *tag)
         *reg_idx += num_regs;
     }
 }
+#endif
 
 static int print_func(void *cookie, uint32_t func_index)
 {
@@ -1008,8 +1030,10 @@ static int print_func(void *cookie, uint32_t func_index)
     KOS_OBJ_ID              func;
     KOS_TYPE                type;
     KOS_FUNCTION_STATE      state;
+#if 0
     unsigned                reg_idx = 0;
     unsigned                num_args;
+#endif
 
     func = KOS_array_read(data->ctx, data->constants, func_index);
 
@@ -1022,19 +1046,24 @@ static int print_func(void *cookie, uint32_t func_index)
     if (type != OBJ_FUNCTION && type != OBJ_CLASS)
         return KOS_ERROR_INVALID_NUMBER;
 
-    state = (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, func)->state;
+    state = (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func)->state);
     printf("  %s\n", state == KOS_FUN  ? "function" :
                      state == KOS_CTOR ? "class"    :
                                          "generator");
 
-    if (OBJPTR(FUNCTION, func)->flags & KOS_FUN_CLOSURE)
-        printf("  - closure\n");
-    if (OBJPTR(FUNCTION, func)->flags & KOS_FUN_ELLIPSIS)
-        printf("  - ellipsis\n");
-    printf("  num_args   %u\n", OBJPTR(FUNCTION, func)->num_args);
-    printf("  num_regs   %u\n", OBJPTR(FUNCTION, func)->num_regs);
-    printf("  args_reg   %u\n", OBJPTR(FUNCTION, func)->args_reg);
+    printf("  num_regs     %u\n", OBJPTR(FUNCTION, func)->opts.num_regs);
+    printf("  closure_size %u\n", OBJPTR(FUNCTION, func)->opts.closure_size);
+    printf("  min_args     %u\n", OBJPTR(FUNCTION, func)->opts.min_args);
+    printf("  max_args     %u\n", OBJPTR(FUNCTION, func)->opts.max_args);
+    printf("  num_def_args %u\n", OBJPTR(FUNCTION, func)->opts.num_def_args);
+    printf("  num_binds    %u\n", OBJPTR(FUNCTION, func)->opts.num_binds);
+    printf("  args_reg     %u\n", OBJPTR(FUNCTION, func)->opts.args_reg);
+    printf("  rest_reg     %u\n", OBJPTR(FUNCTION, func)->opts.rest_reg);
+    printf("  ellipsis_reg %u\n", OBJPTR(FUNCTION, func)->opts.ellipsis_reg);
+    printf("  this_reg     %u\n", OBJPTR(FUNCTION, func)->opts.this_reg);
+    printf("  bind_reg     %u\n", OBJPTR(FUNCTION, func)->opts.bind_reg);
 
+#if 0
     num_args = OBJPTR(FUNCTION, func)->num_args;
 
     if (num_args <= KOS_MAX_ARGS_IN_REGS)
@@ -1050,6 +1079,7 @@ static int print_func(void *cookie, uint32_t func_index)
     print_regs(&reg_idx, 1, "this");
 
     print_regs(&reg_idx, OBJPTR(FUNCTION, func)->num_regs - reg_idx, "local variables");
+#endif
 
     return KOS_SUCCESS;
 }

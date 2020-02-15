@@ -1474,7 +1474,7 @@ int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state)
 
     assert(GET_OBJ_TYPE(fun_obj) == OBJ_FUNCTION || GET_OBJ_TYPE(fun_obj) == OBJ_CLASS);
 
-    state = (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, fun_obj)->state;
+    state = (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, fun_obj)->state);
 
     if (fun_state)
         *fun_state = state;

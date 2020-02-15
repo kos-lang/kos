@@ -1439,7 +1439,7 @@ static KOS_OBJ_ID function_constructor(KOS_CONTEXT ctx,
             }
             else {
                 const KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)
-                    OBJPTR(FUNCTION, ret)->state;
+                    KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, ret)->state);
 
                 switch (state) {
 
@@ -1544,7 +1544,7 @@ static KOS_OBJ_ID generator_constructor(KOS_CONTEXT ctx,
             }
             else {
                 const KOS_FUNCTION_STATE state = (KOS_FUNCTION_STATE)
-                    OBJPTR(FUNCTION, ret)->state;
+                    KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, ret)->state);
 
                 switch (state) {
 
@@ -4488,7 +4488,7 @@ static KOS_OBJ_ID get_gen_state(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_FUNCTION) {
 
-        switch (OBJPTR(FUNCTION, this_obj)->state) {
+        switch (KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, this_obj)->state)) {
 
             case KOS_GEN_INIT:
                 ret = KOS_CONST_ID(str_gen_init);
@@ -4555,7 +4555,7 @@ static KOS_OBJ_ID get_registers(KOS_CONTEXT ctx,
 
         KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
 
-        ret = KOS_new_int(ctx, (int64_t)func->num_regs);
+        ret = KOS_new_int(ctx, (int64_t)func->opts.num_regs);
     }
     else
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));

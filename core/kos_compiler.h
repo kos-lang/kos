@@ -191,24 +191,23 @@ typedef struct KOS_COMP_STRING_S {
 typedef struct KOS_COMP_FUNCTION_S {
     KOS_COMP_CONST header;
     uint32_t       offset;
+    uint8_t        flags;
     uint8_t        num_regs;     /* Number of registers used by the function */
     uint8_t        closure_size; /* Number of registers preserved for a closure */
-    uint8_t        flags;
 
     uint8_t        load_instr;   /* Instruction used for loading the function */
 
+    uint8_t        min_args;     /* Number of args without default values */
+    uint8_t        max_args;     /* Max number of named args (not counting ellipsis) */
     uint8_t        num_def_args; /* Number of args with default values */
 
-    uint8_t        bind_reg;     /* First bound register */
     uint8_t        num_binds;    /* Number of binds */
 
     uint8_t        args_reg;     /* Register where first argument is stored */
-    uint8_t        min_args;     /* Number of args without default values */
-    uint8_t        max_args;     /* Max number of named args (not counting ellipsis) */
-
     uint8_t        rest_reg;     /* Register containing rest args */
     uint8_t        ellipsis_reg; /* Register containing ellipsis */
     uint8_t        this_reg;     /* Register containing 'this' */
+    uint8_t        bind_reg;     /* First bound register */
 } KOS_COMP_FUNCTION;
 
 typedef struct KOS_PRE_GLOBAL_S {

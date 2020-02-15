@@ -82,17 +82,22 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
     if (func) {
         assert(kos_get_object_type(func->header) == OBJ_FUNCTION);
 
-        func->flags                 = 0;
-        func->num_args              = 0;
-        func->num_regs              = 0;
-        func->args_reg              = 0;
+        memset(&func->opts, 0, sizeof(func->opts));
+
+        func->opts.args_reg     = KOS_NO_REG;
+        func->opts.rest_reg     = KOS_NO_REG;
+        func->opts.ellipsis_reg = KOS_NO_REG;
+        func->opts.this_reg     = KOS_NO_REG;
+        func->opts.bind_reg     = KOS_NO_REG;
+
         func->module                = KOS_BADPTR;
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;
         func->handler               = 0;
         func->generator_stack_frame = KOS_BADPTR;
         func->instr_offs            = ~0U;
-        func->state                 = KOS_FUN;
+
+        KOS_atomic_write_relaxed_u32(func->state, KOS_FUN);
     }
 
     return OBJID(FUNCTION, func);
@@ -122,11 +127,9 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
     src  = OBJPTR(FUNCTION, obj_id);
     dest = OBJPTR(FUNCTION, ret);
 
-    dest->flags      = src->flags;
-    dest->num_args   = src->num_args;
-    dest->num_regs   = src->num_regs;
-    dest->args_reg   = src->args_reg;
-    dest->state      = src->state;
+    KOS_atomic_write_relaxed_u32(dest->state, KOS_atomic_read_relaxed_u32(src->state));
+
+    dest->opts       = src->opts;
     dest->instr_offs = src->instr_offs;
     dest->module     = src->module;
     dest->closures   = src->closures;
@@ -205,10 +208,14 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 
         assert(READ_OBJ_TYPE(func_obj) == OBJ_CLASS);
 
-        OBJPTR(CLASS, func_obj)->flags      = 0;
-        OBJPTR(CLASS, func_obj)->num_args   = 0;
-        OBJPTR(CLASS, func_obj)->num_regs   = 0;
-        OBJPTR(CLASS, func_obj)->args_reg   = 0;
+        memset(&OBJPTR(CLASS, func_obj)->opts, 0, sizeof(OBJPTR(CLASS, func_obj)->opts));
+
+        OBJPTR(CLASS, func_obj)->opts.args_reg     = KOS_NO_REG;
+        OBJPTR(CLASS, func_obj)->opts.rest_reg     = KOS_NO_REG;
+        OBJPTR(CLASS, func_obj)->opts.ellipsis_reg = KOS_NO_REG;
+        OBJPTR(CLASS, func_obj)->opts.this_reg     = KOS_NO_REG;
+        OBJPTR(CLASS, func_obj)->opts.bind_reg     = KOS_NO_REG;
+
         OBJPTR(CLASS, func_obj)->dummy      = KOS_CTOR;
         OBJPTR(CLASS, func_obj)->module     = KOS_BADPTR;
         OBJPTR(CLASS, func_obj)->closures   = KOS_VOID;
@@ -243,8 +250,8 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
     if ( ! IS_BAD_PTR(func_obj)) {
         assert(min_args >= 0 && min_args < 256);
 
-        OBJPTR(FUNCTION, func_obj)->num_args = (uint8_t)min_args;
-        OBJPTR(FUNCTION, func_obj)->handler  = handler;
+        OBJPTR(FUNCTION, func_obj)->opts.min_args = (uint8_t)min_args;
+        OBJPTR(FUNCTION, func_obj)->handler       = handler;
     }
 
     return func_obj;
@@ -264,8 +271,8 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
         if ( ! IS_BAD_PTR(func_obj)) {
             assert(min_args >= 0 && min_args < 256);
 
-            OBJPTR(CLASS, func_obj)->num_args = (uint8_t)min_args;
-            OBJPTR(CLASS, func_obj)->handler  = handler;
+            OBJPTR(CLASS, func_obj)->opts.min_args = (uint8_t)min_args;
+            OBJPTR(CLASS, func_obj)->handler       = handler;
         }
     }
 
@@ -304,7 +311,7 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
 
         if ( ! IS_BAD_PTR(func_obj)) {
             OBJPTR(FUNCTION, func_obj)->module         = module_obj;
-            OBJPTR(FUNCTION, func_obj)->num_args       = 0;
+            OBJPTR(FUNCTION, func_obj)->opts.min_args  = 0;
             OBJPTR(FUNCTION, func_obj)->handler        = getter;
             OBJPTR(DYNAMIC_PROP, dyn_prop_obj)->getter = func_obj;
         }
@@ -318,7 +325,7 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
 
         if ( ! IS_BAD_PTR(func_obj)) {
             OBJPTR(FUNCTION, func_obj)->module         = module_obj;
-            OBJPTR(FUNCTION, func_obj)->num_args       = 0;
+            OBJPTR(FUNCTION, func_obj)->opts.min_args  = 0;
             OBJPTR(FUNCTION, func_obj)->handler        = setter;
             OBJPTR(DYNAMIC_PROP, dyn_prop_obj)->setter = func_obj;
         }

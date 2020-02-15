@@ -1218,10 +1218,10 @@ static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
         constant->num_regs     = (uint8_t)frame->num_regs;
         constant->load_instr   = INSTR_BREAKPOINT;
         constant->args_reg     = KOS_NO_REG;
-        constant->bind_reg     = KOS_NO_REG;
         constant->rest_reg     = KOS_NO_REG;
         constant->ellipsis_reg = KOS_NO_REG;
         constant->this_reg     = KOS_NO_REG;
+        constant->bind_reg     = KOS_NO_REG;
     }
 
     return constant;
@@ -1247,8 +1247,10 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
-    if (program->scope_stack->num_indep_vars)
-        constant->flags |= KOS_COMP_FUN_CLOSURE;
+    if (program->scope_stack->num_indep_vars) {
+        constant->flags       |= KOS_COMP_FUN_CLOSURE;
+        constant->closure_size = program->scope_stack->num_indep_vars;
+    }
 
     add_constant(program, &constant->header);
 
@@ -2614,6 +2616,7 @@ static KOS_REG *super_prototype(KOS_COMP_UNIT      *program,
                                 const KOS_AST_NODE *node)
 {
     assert(program->cur_frame->base_proto_reg);
+    assert(program->cur_frame->uses_base_proto);
 
     return program->cur_frame->base_proto_reg;
 }
@@ -4728,10 +4731,10 @@ static int gen_function(KOS_COMP_UNIT      *program,
         /* Generate register for the remaining args */
         if (have_rest) {
             TRY(gen_reg(program, &frame->args_reg));
-            if (rest_used) {
+            if (rest_used)
                 frame->args_reg->tmp = 0;
-                constant->rest_reg   = (uint8_t)frame->args_reg->reg;
-            }
+            /* TODO don't generate rest reg if unused */
+            constant->rest_reg = (uint8_t)frame->args_reg->reg;
             assert(frame->args_reg->reg == ++last_reg);
         }
     }
@@ -4768,6 +4771,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Generate registers for closures */
     {
         KOS_GEN_CLOSURE_ARGS args;
+
+        assert( ! constant->num_binds);
 
         /* Base class constructor */
         if (needs_super_ctor) {
@@ -4993,6 +4998,8 @@ static int function_literal(KOS_COMP_UNIT      *program,
         KOS_REG  *defaults_reg = 0;
 
         assert(num_used_def_args <= (int)constant->num_def_args);
+        assert(num_used_def_args >= 0);
+        constant->num_def_args = (uint8_t)num_used_def_args;
 
         if (num_used_def_args > 0) {
 
@@ -5264,6 +5271,8 @@ static int class_literal(KOS_COMP_UNIT      *program,
 
         TRY(gen_instr2(program, INSTR_GET_PROTO, base_proto_reg->reg, base_ctor_reg->reg));
     }
+    else if (void_proto)
+        ctor_uses_bp = uses_base_proto(program, node->next);
 
     /* Build prototype */
     if (node->children || base_ctor_reg || void_proto) {
@@ -5277,7 +5286,7 @@ static int class_literal(KOS_COMP_UNIT      *program,
         TRY(object_literal(program, node, &proto_reg, class_var, base_proto_reg));
         assert(proto_reg);
 
-        if (void_proto) {
+        if (void_proto && ! ctor_uses_bp) {
             free_reg(program, base_proto_reg);
             base_proto_reg = 0;
         }

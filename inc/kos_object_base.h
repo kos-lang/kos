@@ -365,18 +365,29 @@ typedef enum KOS_FUNCTION_STATE_E {
     KOS_GEN_DONE        /* generator function reached the return statement      */
 } KOS_FUNCTION_STATE;
 
-enum KOS_FUNCTION_FLAGS_E {
-    KOS_FUN_CLOSURE  = 1, /* Function's stack frame is a closure */
-    KOS_FUN_ELLIPSIS = 2  /* Store remaining args in array       */
-};
+#define KOS_NO_REG 255U
+
+typedef struct KOS_FUNCTION_OPTS_S {
+    uint8_t num_regs;     /* Number of registers used by the function */
+    uint8_t closure_size; /* Number of registers preserved for a closure */
+
+    uint8_t min_args;     /* Number of args without default values */
+    uint8_t max_args;     /* Max number of named args (not counting ellipsis) */
+    uint8_t num_def_args; /* Number of args with default values */
+
+    uint8_t num_binds;    /* Number of binds */
+
+    uint8_t args_reg;     /* Register where first argument is stored */
+    uint8_t rest_reg;     /* Register containing rest args */
+    uint8_t ellipsis_reg; /* Register containing ellipsis */
+    uint8_t this_reg;     /* Register containing 'this' */
+    uint8_t bind_reg;     /* First bound register */
+} KOS_FUNCTION_OPTS;
 
 typedef struct KOS_FUNCTION_S {
     KOS_OBJ_HEADER       header;
-    uint8_t              flags;
-    uint8_t              num_args;
-    uint8_t              num_regs;
-    uint8_t              args_reg;
-    uint8_t              state;    /* TODO convert to KOS_ATOMIC(uint32_t) */
+    KOS_FUNCTION_OPTS    opts;
+    KOS_ATOMIC(uint32_t) state;
     uint32_t             instr_offs;
     KOS_OBJ_ID           module;
     KOS_OBJ_ID           closures;
@@ -387,11 +398,8 @@ typedef struct KOS_FUNCTION_S {
 
 typedef struct KOS_CLASS_S {
     KOS_OBJ_HEADER         header;
-    uint8_t                flags;
-    uint8_t                num_args;
-    uint8_t                num_regs;
-    uint8_t                args_reg;
-    uint8_t                dummy;
+    KOS_FUNCTION_OPTS      opts;
+    uint32_t               dummy;
     uint32_t               instr_offs;
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             closures;

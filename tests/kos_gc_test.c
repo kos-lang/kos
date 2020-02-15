@@ -672,12 +672,11 @@ static int verify_function(KOS_OBJ_ID obj_id)
     KOS_OBJ_ID v;
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION);
-    TEST(OBJPTR(FUNCTION, obj_id)->flags      == KOS_FUN);
-    TEST(OBJPTR(FUNCTION, obj_id)->num_args   == 1);
-    TEST(OBJPTR(FUNCTION, obj_id)->num_regs   == 2);
-    TEST(OBJPTR(FUNCTION, obj_id)->args_reg   == 3);
-    TEST(OBJPTR(FUNCTION, obj_id)->state      == 0);
-    TEST(OBJPTR(FUNCTION, obj_id)->instr_offs == 0);
+    TEST(OBJPTR(FUNCTION, obj_id)->opts.min_args == 1);
+    TEST(OBJPTR(FUNCTION, obj_id)->opts.num_regs == 2);
+    TEST(OBJPTR(FUNCTION, obj_id)->opts.args_reg == 3);
+    TEST(OBJPTR(FUNCTION, obj_id)->instr_offs    == 0);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, obj_id)->state) == 0);
 
     v = OBJPTR(FUNCTION, obj_id)->module;
     TEST( ! IS_BAD_PTR(v));
@@ -721,16 +720,15 @@ static KOS_OBJ_ID alloc_function(KOS_CONTEXT  ctx,
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    OBJPTR(FUNCTION, obj_id[0])->flags      = KOS_FUN;
-    OBJPTR(FUNCTION, obj_id[0])->num_args   = 1;
-    OBJPTR(FUNCTION, obj_id[0])->num_regs   = 2;
-    OBJPTR(FUNCTION, obj_id[0])->args_reg   = 3;
-    OBJPTR(FUNCTION, obj_id[0])->state      = 0;
-    OBJPTR(FUNCTION, obj_id[0])->instr_offs = 0;
-    OBJPTR(FUNCTION, obj_id[0])->handler    = &handler;
-    OBJPTR(FUNCTION, obj_id[0])->module     = obj_id[1];
-    OBJPTR(FUNCTION, obj_id[0])->closures   = obj_id[2];
-    OBJPTR(FUNCTION, obj_id[0])->defaults   = obj_id[3];
+    KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, obj_id[0])->state, 0);
+    OBJPTR(FUNCTION, obj_id[0])->opts.min_args = 1;
+    OBJPTR(FUNCTION, obj_id[0])->opts.num_regs = 2;
+    OBJPTR(FUNCTION, obj_id[0])->opts.args_reg = 3;
+    OBJPTR(FUNCTION, obj_id[0])->instr_offs    = 0;
+    OBJPTR(FUNCTION, obj_id[0])->handler       = &handler;
+    OBJPTR(FUNCTION, obj_id[0])->module        = obj_id[1];
+    OBJPTR(FUNCTION, obj_id[0])->closures      = obj_id[2];
+    OBJPTR(FUNCTION, obj_id[0])->defaults      = obj_id[3];
     OBJPTR(FUNCTION, obj_id[0])->generator_stack_frame = obj_id[4];
 
     OBJPTR(INTEGER, obj_id[1])->value = 48;
@@ -750,11 +748,10 @@ static int verify_class(KOS_OBJ_ID obj_id)
     KOS_OBJ_ID v;
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
-    TEST(OBJPTR(CLASS, obj_id)->flags      == KOS_FUN);
-    TEST(OBJPTR(CLASS, obj_id)->num_args   == 1);
-    TEST(OBJPTR(CLASS, obj_id)->num_regs   == 2);
-    TEST(OBJPTR(CLASS, obj_id)->args_reg   == 3);
-    TEST(OBJPTR(CLASS, obj_id)->instr_offs == 0);
+    TEST(OBJPTR(CLASS, obj_id)->opts.min_args == 1);
+    TEST(OBJPTR(CLASS, obj_id)->opts.num_regs == 2);
+    TEST(OBJPTR(CLASS, obj_id)->opts.args_reg == 3);
+    TEST(OBJPTR(CLASS, obj_id)->instr_offs    == 0);
 
     v = OBJPTR(CLASS, obj_id)->module;
     TEST( ! IS_BAD_PTR(v));
@@ -810,15 +807,14 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    OBJPTR(CLASS, obj_id[0])->flags      = KOS_FUN;
-    OBJPTR(CLASS, obj_id[0])->num_args   = 1;
-    OBJPTR(CLASS, obj_id[0])->num_regs   = 2;
-    OBJPTR(CLASS, obj_id[0])->args_reg   = 3;
-    OBJPTR(CLASS, obj_id[0])->instr_offs = 0;
-    OBJPTR(CLASS, obj_id[0])->handler    = &handler;
-    OBJPTR(CLASS, obj_id[0])->module     = obj_id[1];
-    OBJPTR(CLASS, obj_id[0])->closures   = obj_id[2];
-    OBJPTR(CLASS, obj_id[0])->defaults   = obj_id[3];
+    OBJPTR(CLASS, obj_id[0])->opts.min_args = 1;
+    OBJPTR(CLASS, obj_id[0])->opts.num_regs = 2;
+    OBJPTR(CLASS, obj_id[0])->opts.args_reg = 3;
+    OBJPTR(CLASS, obj_id[0])->instr_offs    = 0;
+    OBJPTR(CLASS, obj_id[0])->handler       = &handler;
+    OBJPTR(CLASS, obj_id[0])->module        = obj_id[1];
+    OBJPTR(CLASS, obj_id[0])->closures      = obj_id[2];
+    OBJPTR(CLASS, obj_id[0])->defaults      = obj_id[3];
     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->prototype, obj_id[4]);
     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->props,     obj_id[5]);
 

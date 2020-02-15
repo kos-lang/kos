@@ -359,9 +359,9 @@ static int _test_instr(KOS_CONTEXT           ctx,
                 return KOS_ERROR_EXCEPTION;
             }
 
-            OBJPTR(FUNCTION, func_obj)->num_regs   = regs;
-            OBJPTR(FUNCTION, func_obj)->instr_offs = 0;
-            OBJPTR(FUNCTION, func_obj)->module     = OBJID(MODULE, module);
+            OBJPTR(FUNCTION, func_obj)->opts.num_regs = regs;
+            OBJPTR(FUNCTION, func_obj)->instr_offs    = 0;
+            OBJPTR(FUNCTION, func_obj)->module        = OBJID(MODULE, module);
         }
     }
 
