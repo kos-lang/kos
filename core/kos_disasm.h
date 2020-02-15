@@ -40,6 +40,9 @@ typedef int (*KOS_PRINT_CONST)(void                *cookie,
                                struct KOS_VECTOR_S *cstr_buf,
                                uint32_t             const_index);
 
+typedef int (*KOS_PRINT_FUNC)(void    *cookie,
+                              uint32_t func_index);
+
 void kos_disassemble(const char                           *filename,
                      uint32_t                              offs,
                      const uint8_t                        *bytecode,
@@ -50,6 +53,7 @@ void kos_disassemble(const char                           *filename,
                      const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs,
                      uint32_t                              num_func_addrs,
                      KOS_PRINT_CONST                       print_const,
-                     void                                 *print_const_cookie);
+                     KOS_PRINT_FUNC                        print_func,
+                     void                                 *print_cookie);
 
 #endif

@@ -324,7 +324,8 @@ void kos_disassemble(const char                           *filename,
                      const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs,
                      uint32_t                              num_func_addrs,
                      KOS_PRINT_CONST                       print_const,
-                     void                                 *print_const_cookie)
+                     KOS_PRINT_FUNC                        print_func,
+                     void                                 *print_cookie)
 {
     const struct KOS_COMP_ADDR_TO_LINE_S *line_addrs_end  = line_addrs + num_line_addrs;
     const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs_end  = func_addrs + num_func_addrs;
@@ -450,13 +451,14 @@ void kos_disassemble(const char                           *filename,
         if (func_addrs < func_addrs_end &&
             offs == func_addrs->offs) {
 
+            const char *const name = func_names ? *(func_names++) : "fun";
+
             printf("\n");
-            if (func_names) {
-                printf("-- %s() --\n", *func_names);
-                ++func_names;
-            }
-            else
-                printf("-- fun() --\n");
+            printf("-- %s() --\n", name);
+
+            if (print_func)
+                print_func(print_cookie, func_addrs->fun_idx);
+
             ++func_addrs;
         }
         if (line_addrs < line_addrs_end &&
@@ -525,7 +527,7 @@ void kos_disassemble(const char                           *filename,
             static const char header[] = " # ";
             memcpy(const_buf.buffer, header, sizeof(header));
             const_buf.size = sizeof(header);
-            if ( ! print_const(print_const_cookie, &const_buf, constant)) {
+            if ( ! print_const(print_cookie, &const_buf, constant)) {
                 const_str = const_buf.buffer;
                 if (const_buf.size > max_const_chars + 1) {
                     static const char dotdotdot[] = "...";

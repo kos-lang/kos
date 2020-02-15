@@ -951,17 +951,107 @@ static int print_const(void       *cookie,
 {
     KOS_PRINT_CONST_COOKIE *data = (KOS_PRINT_CONST_COOKIE *)cookie;
     KOS_OBJ_ID              constant;
+    int                     error;
 
     constant = KOS_array_read(data->ctx, data->constants, const_index);
 
-    if (IS_BAD_PTR(constant))
-        return KOS_ERROR_EXCEPTION;
+    if (IS_BAD_PTR(constant)) {
+        KOS_clear_exception(data->ctx);
+        return KOS_ERROR_INVALID_NUMBER;
+    }
 
-    return KOS_object_to_string_or_cstr_vec(data->ctx,
-                                            constant,
-                                            KOS_QUOTE_STRINGS,
-                                            0,
-                                            cstr_buf);
+    error = KOS_object_to_string_or_cstr_vec(data->ctx,
+                                             constant,
+                                             KOS_QUOTE_STRINGS,
+                                             0,
+                                             cstr_buf);
+
+    if (error) {
+        KOS_clear_exception(data->ctx);
+        return KOS_ERROR_INVALID_NUMBER;
+    }
+
+    return KOS_SUCCESS;
+}
+
+static const char *lalign(unsigned number)
+{
+    return number < 10  ? "  " :
+           number < 100 ? " "  :
+                          "";
+}
+
+static void print_regs(unsigned *reg_idx, unsigned num_regs, const char *tag)
+{
+    if ( ! num_regs)
+        return;
+
+    assert(num_regs <= 255);
+    assert(*reg_idx + num_regs <= 255);
+
+    if (num_regs == 1) {
+        printf("  r%u%s       %s\n", *reg_idx, lalign(*reg_idx), tag);
+        ++(*reg_idx);
+    }
+    else {
+        const unsigned first = *reg_idx;
+        const unsigned last  = first + num_regs - 1;
+
+        printf("  r%u-r%u%s%s  %s\n", first, last, lalign(first), lalign(last), tag);
+        *reg_idx += num_regs;
+    }
+}
+
+static int print_func(void *cookie, uint32_t func_index)
+{
+    KOS_PRINT_CONST_COOKIE *data = (KOS_PRINT_CONST_COOKIE *)cookie;
+    KOS_OBJ_ID              func;
+    KOS_TYPE                type;
+    KOS_FUNCTION_STATE      state;
+    unsigned                reg_idx = 0;
+    unsigned                num_args;
+
+    func = KOS_array_read(data->ctx, data->constants, func_index);
+
+    if (IS_BAD_PTR(func)) {
+        KOS_clear_exception(data->ctx);
+        return KOS_ERROR_INVALID_NUMBER;
+    }
+
+    type = GET_OBJ_TYPE(func);
+    if (type != OBJ_FUNCTION && type != OBJ_CLASS)
+        return KOS_ERROR_INVALID_NUMBER;
+
+    state = (KOS_FUNCTION_STATE)OBJPTR(FUNCTION, func)->state;
+    printf("  %s\n", state == KOS_FUN  ? "function" :
+                     state == KOS_CTOR ? "class"    :
+                                         "generator");
+
+    if (OBJPTR(FUNCTION, func)->flags & KOS_FUN_CLOSURE)
+        printf("  - closure\n");
+    if (OBJPTR(FUNCTION, func)->flags & KOS_FUN_ELLIPSIS)
+        printf("  - ellipsis\n");
+    printf("  num_args   %u\n", OBJPTR(FUNCTION, func)->num_args);
+    printf("  num_regs   %u\n", OBJPTR(FUNCTION, func)->num_regs);
+    printf("  args_reg   %u\n", OBJPTR(FUNCTION, func)->args_reg);
+
+    num_args = OBJPTR(FUNCTION, func)->num_args;
+
+    if (num_args <= KOS_MAX_ARGS_IN_REGS)
+        print_regs(&reg_idx, num_args, "args");
+    else {
+        print_regs(&reg_idx, KOS_MAX_ARGS_IN_REGS - 1, "args");
+        print_regs(&reg_idx, 1, "rest");
+    }
+
+    if (OBJPTR(FUNCTION, func)->flags & KOS_FUN_ELLIPSIS)
+        print_regs(&reg_idx, 1, "ellipsis");
+
+    print_regs(&reg_idx, 1, "this");
+
+    print_regs(&reg_idx, OBJPTR(FUNCTION, func)->num_regs - reg_idx, "local variables");
+
+    return KOS_SUCCESS;
 }
 
 static int compile_module(KOS_CONTEXT ctx,
@@ -1179,7 +1269,7 @@ static int compile_module(KOS_CONTEXT ctx,
 
         const KOS_FUNC_ADDR *const func_addrs     = module_ptr->func_addrs;
         const uint32_t             num_func_addrs = module_ptr->num_func_addrs;
-        KOS_PRINT_CONST_COOKIE     print_const_cookie;
+        KOS_PRINT_CONST_COOKIE     print_cookie;
 
         kos_vector_init(&cname);
         kos_vector_init(&ptrs);
@@ -1262,8 +1352,8 @@ static int compile_module(KOS_CONTEXT ctx,
             func_names = (const char *const *)ptrs.buffer;
         }
 
-        print_const_cookie.ctx       = ctx;
-        print_const_cookie.constants = module_ptr->constants;
+        print_cookie.ctx       = ctx;
+        print_cookie.constants = module_ptr->constants;
 
         kos_disassemble(filename,
                         old_bytecode_size,
@@ -1275,7 +1365,8 @@ static int compile_module(KOS_CONTEXT ctx,
                         (struct KOS_COMP_ADDR_TO_FUNC_S *)func_addrs,
                         num_func_addrs,
                         print_const,
-                        &print_const_cookie);
+                        print_func,
+                        &print_cookie);
 
         kos_vector_destroy(&ptrs);
         kos_vector_destroy(&cname);

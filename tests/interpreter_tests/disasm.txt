@@ -1,11 +1,21 @@
 ==============================================================================
 
 -- fun() --
+   function
+   num_args   0
+   num_regs   1
+   args_reg   0
+   r0         this
 @disasm.kos:3:
 00000000: 82 00 00                          LOAD.CONST8     r0, 0 # "My String"
 00000003: BE 00 00                          RETURN          0, r0
 
 -- <global>() --
+   function
+   num_args   0
+   num_regs   1
+   args_reg   255
+   r0         this
 @disasm.kos:1:
 00000006: 82 00 01                          LOAD.CONST8     r0, 1 # <function fun @ 0x0>
 00000009: BE 00 00                          RETURN          0, r0
