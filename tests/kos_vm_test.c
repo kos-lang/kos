@@ -188,8 +188,9 @@ static KOS_OBJ_ID run_code(KOS_INSTANCE  *inst,
     }
 
     if ( ! error) {
-        /* TODO pass global closure size??? */
-        const uint8_t closure_size = (uint8_t)num_regs;
+        /* TODO Set closure size in RETURN instructions to enforce closure for
+         *      tests which use BIND.SELF instruction! */
+        const uint8_t closure_size = 1;
         KOS_OBJ_ID func_obj = create_func_obj(ctx, CREATE_FUNC, 0, (uint8_t)num_regs, 0, 0, 0, KOS_NO_REG, KOS_NO_REG, closure_size, KOS_NO_REG, 0);
 
         if (IS_BAD_PTR(func_obj))

@@ -1248,8 +1248,9 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     if (program->scope_stack->num_indep_vars) {
+        assert(program->scope_stack->num_indep_vars <= KOS_MAX_REGS);
         constant->flags       |= KOS_COMP_FUN_CLOSURE;
-        constant->closure_size = program->scope_stack->num_indep_vars;
+        constant->closure_size = (uint8_t)program->scope_stack->num_indep_vars;
     }
 
     add_constant(program, &constant->header);

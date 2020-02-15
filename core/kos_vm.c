@@ -1062,11 +1062,28 @@ static int _write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID 
     return error;
 }
 
-static void _set_closure_stack_size(KOS_CONTEXT ctx, unsigned closure_size)
+static void set_closure_stack_size(KOS_CONTEXT ctx, unsigned closure_size)
 {
     const KOS_OBJ_ID stack = ctx->stack;
 
     assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
+
+#ifndef NDEBUG
+    {
+        KOS_OBJ_ID func_obj;
+
+        assert(ctx->regs_idx >= 3);
+
+        func_obj = OBJPTR(STACK, ctx->stack)->buf[ctx->regs_idx - 3];
+
+        assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION ||
+               GET_OBJ_TYPE(func_obj) == OBJ_CLASS);
+
+#if 0 /* TODO Fix handling of BIND.SELF in kos_vm_test */
+        assert(OBJPTR(FUNCTION, func_obj)->opts.closure_size == closure_size);
+#endif
+    }
+#endif
 
     if (OBJPTR(STACK, stack)->flags & KOS_REENTRANT_STACK) {
 
@@ -2981,7 +2998,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 if (tail_call) {
                     ctx->retval = out;
 
-                    _set_closure_stack_size(ctx, rdest);
+                    set_closure_stack_size(ctx, rdest);
 
                     store_instr_offs(stack, regs_idx,
                                      (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
@@ -3006,7 +3023,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 assert(GET_OBJ_TYPE(ctx->retval) <= OBJ_LAST_TYPE);
 
-                _set_closure_stack_size(ctx, closure_size);
+                set_closure_stack_size(ctx, closure_size);
 
                 store_instr_offs(stack, regs_idx,
                                  (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
