@@ -1262,6 +1262,31 @@ cleanup:
     return error;
 }
 
+static int gen_indep_vars(KOS_COMP_UNIT *program,
+                          KOS_SCOPE     *scope,
+                          int           *last_reg)
+{
+    int      error = KOS_SUCCESS;
+    KOS_VAR *var;
+
+    assert(scope->has_frame);
+
+    for (var = scope->fun_vars_list; var; var = var->next)
+        if (var->type == VAR_INDEPENDENT_LOCAL &&
+            (var->num_reads       > var->local_reads ||
+             var->num_assignments > var->local_assignments)) {
+
+            TRY(gen_reg(program, &var->reg));
+            var->reg->tmp  = 0;
+            var->array_idx = var->reg->reg;
+
+            assert(var->reg->reg == ++*last_reg);
+        }
+
+cleanup:
+    return error;
+}
+
 static int process_scope(KOS_COMP_UNIT      *program,
                          const KOS_AST_NODE *node)
 {
@@ -1282,19 +1307,14 @@ static int process_scope(KOS_COMP_UNIT      *program,
         /* Init global scope */
         if (global) {
 
-            KOS_VAR *var = 0;
+            int last_reg = -1;
 
             assert(program->scope_stack->has_frame);
 
             program->cur_frame = (KOS_FRAME *)program->scope_stack;
 
             /* Generate registers for local (non-global) independent variables */
-            for (var = program->scope_stack->fun_vars_list; var; var = var->next)
-                if (var->type == VAR_INDEPENDENT_LOCAL) {
-                    TRY(gen_reg(program, &var->reg));
-                    var->reg->tmp  = 0;
-                    var->array_idx = var->reg->reg;
-                }
+            TRY(gen_indep_vars(program, program->scope_stack, &last_reg));
         }
 
         /* Process inner nodes */
@@ -4604,9 +4624,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     KOS_REG   *ellipsis_reg = 0;
     int        fun_start_offs;
     size_t     addr2line_start_offs;
-#ifndef NDEBUG
     int        last_reg     = -1;
-#endif
 
     const KOS_AST_NODE *fun_node  = node;
     const KOS_AST_NODE *open_node;
@@ -4633,13 +4651,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     program->cur_frame  = frame;
 
     /* Generate registers for local independent variables */
-    for (var = scope->fun_vars_list; var; var = var->next)
-        if (var->type == VAR_INDEPENDENT_LOCAL) {
-            TRY(gen_reg(program, &var->reg));
-            var->reg->tmp  = 0;
-            var->array_idx = var->reg->reg;
-            assert(var->reg->reg == ++last_reg);
-        }
+    TRY(gen_indep_vars(program, scope, &last_reg));
     assert(last_reg + 1 == scope->num_indep_vars);
 
     /* Generate registers for function arguments */
@@ -4774,6 +4786,9 @@ static int gen_function(KOS_COMP_UNIT      *program,
         args.num_binds = &constant->num_binds;
         TRY(kos_red_black_walk(frame->closures, gen_closure_regs, &args));
     }
+
+    if ( ! constant->num_binds)
+        constant->bind_reg = KOS_NO_REG;
 
     assert(name_node);
     assert(name_node->type == NT_NAME || name_node->type == NT_NAME_CONST);
@@ -4914,7 +4929,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
 
     /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
     assert(frame->num_regs > 0);
-    assert(frame->num_regs >= constant->bind_reg);
+    assert(frame->num_regs > constant->this_reg);
     TRY(gen_reg(program, reg));
 
     TRY(gen_instr2(program,
