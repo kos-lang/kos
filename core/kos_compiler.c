@@ -1429,7 +1429,7 @@ static KOS_SCOPE *find_try_scope(KOS_SCOPE *scope)
     return scope;
 }
 
-static int get_closure_size(KOS_COMP_UNIT *program)
+static uint8_t get_closure_size(KOS_COMP_UNIT *program)
 {
     int        closure_size;
     KOS_SCOPE *scope = kos_get_frame_scope(program);
@@ -1437,7 +1437,7 @@ static int get_closure_size(KOS_COMP_UNIT *program)
     closure_size = scope->num_indep_vars + scope->num_indep_args;
 
     assert(closure_size <= KOS_MAX_REGS);
-    return closure_size;
+    return (uint8_t)(unsigned)closure_size;
 }
 
 static int gen_return(KOS_COMP_UNIT *program,
@@ -1504,9 +1504,9 @@ static int return_stmt(KOS_COMP_UNIT      *program,
         }
 
         if ( ! try_scope && node->children->type == NT_INVOCATION) {
-            const int closure_size = get_closure_size(program);
+            const uint8_t closure_size = get_closure_size(program);
             tail_call = 1;
-            TRY(invocation(program, node->children, &reg, INSTR_TAIL_CALL, (unsigned)closure_size));
+            TRY(invocation(program, node->children, &reg, INSTR_TAIL_CALL, closure_size));
             assert( ! reg);
         }
         else {
@@ -3167,14 +3167,14 @@ static int invocation(KOS_COMP_UNIT      *program,
             instr = (instr == INSTR_CALL) ? INSTR_CALL_N : INSTR_TAIL_CALL_N;
 
             TRY(gen_instr5(program, instr, rdest, fun->reg, obj->reg,
-                           num_contig_args ? argn[0]->reg : KOS_NO_REG,
+                           num_contig_args ? (unsigned)argn[0]->reg : KOS_NO_REG,
                            num_contig_args));
         }
         else {
             instr = (instr == INSTR_CALL) ? INSTR_CALL_FUN : INSTR_TAIL_CALL_FUN;
 
             TRY(gen_instr4(program, instr, rdest, fun->reg,
-                           num_contig_args ? argn[0]->reg : KOS_NO_REG,
+                           num_contig_args ? (unsigned)argn[0]->reg : KOS_NO_REG,
                            num_contig_args));
         }
 
@@ -4732,7 +4732,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
             TRY(gen_reg(program, &frame->args_reg));
             if (rest_used) {
                 frame->args_reg->tmp = 0;
-                constant->rest_reg   = frame->args_reg->reg;
+                constant->rest_reg   = (uint8_t)frame->args_reg->reg;
             }
             assert(frame->args_reg->reg == ++last_reg);
         }
@@ -4744,22 +4744,22 @@ static int gen_function(KOS_COMP_UNIT      *program,
             assert(scope->ellipsis->reg);
             TRY(gen_reg(program, &ellipsis_reg));
             assert(ellipsis_reg->reg == ++last_reg);
-            constant->ellipsis_reg = ellipsis_reg->reg;
+            constant->ellipsis_reg = (uint8_t)ellipsis_reg->reg;
         }
         else {
             assert( ! scope->ellipsis->reg);
             TRY(gen_reg(program, &scope->ellipsis->reg));
             scope->ellipsis->reg->tmp = 0;
             assert(scope->ellipsis->reg->reg == ++last_reg);
-            constant->ellipsis_reg = scope->ellipsis->reg->reg;
+            constant->ellipsis_reg = (uint8_t)scope->ellipsis->reg->reg;
         }
     }
 
     /* Generate register for 'this' */
     TRY(gen_reg(program, &frame->this_reg));
     assert(frame->this_reg->reg == ++last_reg);
-    constant->this_reg = frame->this_reg->reg;
-    constant->bind_reg = frame->this_reg->reg + 1;
+    constant->this_reg = (uint8_t)frame->this_reg->reg;
+    constant->bind_reg = (uint8_t)frame->this_reg->reg + 1;
     if (scope->uses_this)
         frame->this_reg->tmp = 0;
 
