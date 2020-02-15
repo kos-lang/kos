@@ -4696,7 +4696,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
                  * list which are not used is discarded and not enumerated.
                  * However, any following default arguments will still be counted. */
                 if (arg_node->type == NT_IDENTIFIER)
-                    ++constant->num_args;
+                    ++constant->min_args;
 
                 if (var->type & VAR_ARGUMENT_IN_REG) {
 
@@ -4735,6 +4735,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
             assert(frame->args_reg->reg == ++last_reg);
         }
     }
+    assert(scope->num_args <= KOS_MAX_REGS);
 
     /* Generate register for ellipsis */
     if (scope->ellipsis) {
@@ -4754,12 +4755,15 @@ static int gen_function(KOS_COMP_UNIT      *program,
     }
 
     /* Generate register for 'this' */
+    /* TODO Don't generate register for 'this' if it's not used */
     TRY(gen_reg(program, &frame->this_reg));
     assert(frame->this_reg->reg == ++last_reg);
     constant->this_reg = (uint8_t)frame->this_reg->reg;
     constant->bind_reg = (uint8_t)frame->this_reg->reg + 1;
     if (scope->uses_this)
         frame->this_reg->tmp = 0;
+    else
+        constant->this_reg = KOS_NO_REG;
 
     /* Generate registers for closures */
     {
@@ -4845,6 +4849,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     constant->closure_size = get_closure_size(program);
     constant->num_regs     = (uint8_t)frame->num_regs;
     constant->args_reg     = (uint8_t)scope->num_indep_vars;
+    constant->max_args     = (uint8_t)scope->num_args;
     constant->flags        = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
@@ -4876,7 +4881,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Choose instruction for loading the function */
     constant->load_instr = (uint8_t)
         ((fun_node->type == NT_CONSTRUCTOR_LITERAL ||
-          scope->num_args > constant->num_args     ||
+          scope->num_args > constant->min_args     ||
           constant->num_binds)
              ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
              : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST));
@@ -4927,7 +4932,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
 
     /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
     assert(frame->num_regs > 0);
-    assert(frame->num_regs > constant->this_reg);
+    assert(constant->this_reg == KOS_NO_REG || frame->num_regs > constant->this_reg);
     TRY(gen_reg(program, reg));
 
     TRY(gen_instr2(program,
@@ -4984,7 +4989,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
     if (constant->num_def_args) {
 
         int       i;
-        const int num_used_def_args = scope->num_args - constant->num_args;
+        const int num_used_def_args = scope->num_args - constant->min_args;
         KOS_REG  *defaults_reg = 0;
 
         assert(num_used_def_args <= (int)constant->num_def_args);

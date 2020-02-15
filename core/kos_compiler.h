@@ -203,7 +203,8 @@ typedef struct KOS_COMP_FUNCTION_S {
     uint8_t        num_binds;    /* Number of binds */
 
     uint8_t        args_reg;     /* Register where first argument is stored */
-    uint8_t        num_args;     /* Number of args without default values */
+    uint8_t        min_args;     /* Number of args without default values */
+    uint8_t        max_args;     /* Max number of named args (not counting ellipsis) */
 
     uint8_t        rest_reg;     /* Register containing rest args */
     uint8_t        ellipsis_reg; /* Register containing ellipsis */

@@ -521,7 +521,7 @@ static int alloc_constants(KOS_CONTEXT    ctx,
 
                 func->flags      = (uint8_t)(func_const->flags &
                                              (KOS_COMP_FUN_ELLIPSIS | KOS_COMP_FUN_CLOSURE));
-                func->num_args   = func_const->num_args;
+                func->num_args   = func_const->min_args;
                 func->num_regs   = func_const->num_regs;
                 func->args_reg   = func_const->args_reg;
                 func->instr_offs = OBJPTR(MODULE, module.o)->bytecode_size + func_const->offset;
