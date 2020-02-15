@@ -131,11 +131,6 @@ typedef struct KOS_FRAME_S {
     struct KOS_COMP_FUNCTION_S *constant;         /* The template for the constant object, used with LOAD.CONST */
     int                         num_regs;
     uint32_t                    num_instr;
-    int                         load_instr;       /* Instruction used for loading the function */
-    int                         bind_delta;       /* First bound register */
-    int                         num_binds;        /* Number of binds */
-    int                         num_used_non_def_args; /* Number of args without default values */
-    int                         num_def_args;     /* Number of args with default values */
     unsigned                    uses_base_ctor  : 1;
     unsigned                    uses_base_proto : 1;
 } KOS_FRAME;
@@ -191,13 +186,28 @@ typedef struct KOS_COMP_STRING_S {
     KOS_UTF8_ESCAPE escape;
 } KOS_COMP_STRING;
 
+#define KOS_NO_REG 255U
+
 typedef struct KOS_COMP_FUNCTION_S {
     KOS_COMP_CONST header;
     uint32_t       offset;
-    uint8_t        num_regs;
-    uint8_t        args_reg;
-    uint8_t        num_args;
+    uint8_t        num_regs;     /* Number of registers used by the function */
+    uint8_t        closure_size; /* Number of registers preserved for a closure */
     uint8_t        flags;
+
+    uint8_t        load_instr;   /* Instruction used for loading the function */
+
+    uint8_t        num_def_args; /* Number of args with default values */
+
+    uint8_t        bind_reg;     /* First bound register */
+    uint8_t        num_binds;    /* Number of binds */
+
+    uint8_t        args_reg;     /* Register where first argument is stored */
+    uint8_t        num_args;     /* Number of args without default values */
+
+    uint8_t        rest_reg;     /* Register containing rest args */
+    uint8_t        ellipsis_reg; /* Register containing ellipsis */
+    uint8_t        this_reg;     /* Register containing 'this' */
 } KOS_COMP_FUNCTION;
 
 typedef struct KOS_PRE_GLOBAL_S {
@@ -218,6 +228,7 @@ struct KOS_COMP_ADDR_TO_FUNC_S {
     uint32_t offs;
     uint32_t line;
     uint32_t str_idx;
+    uint32_t fun_idx;
     uint32_t num_instr;
     uint32_t code_size;
 };

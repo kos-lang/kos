@@ -413,11 +413,12 @@ typedef struct KOS_LINE_ADDR_S {
 } KOS_LINE_ADDR;
 
 typedef struct KOS_FUNC_ADDR_S {
-    uint32_t offs;
-    uint32_t line;
-    uint32_t str_idx;
-    uint32_t num_instr;
-    uint32_t code_size;
+    uint32_t offs;      /* Offset of the function's bytecode in the module         */
+    uint32_t line;      /* First line in source code where the function is defined */
+    uint32_t str_idx;   /* Index of module constant containing function name       */
+    uint32_t fun_idx;   /* Index of module constant containing function object     */
+    uint32_t num_instr; /* Number of instructions in the function                  */
+    uint32_t code_size; /* Number of bytes used by the function's bytecode         */
 } KOS_FUNC_ADDR;
 
 typedef struct KOS_MODULE_S {

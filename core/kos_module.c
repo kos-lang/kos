@@ -1883,6 +1883,7 @@ static const KOS_FUNC_ADDR *addr_to_func(KOS_MODULE *module,
         0,
         1,
         ~0U,
+        ~0U,
         0,
         0
     };

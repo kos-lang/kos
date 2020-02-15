@@ -35,6 +35,8 @@
 #include <stdarg.h>
 #include <string.h>
 
+#define KOS_MAX_REGS 255
+
 static const char str_err_cannot_invoke_void_ctor[]   = "cannot invoke void constructor";
 static const char str_err_catch_nesting_too_deep[]    = "too many nesting levels of 'try'/'defer'/'with' statements";
 static const char str_err_duplicate_property[]        = "duplicate object property";
@@ -47,7 +49,8 @@ static const char str_err_no_such_module_variable[]   = "no such global in modul
 static const char str_err_operand_not_numeric[]       = "operand is not a numeric constant";
 static const char str_err_operand_not_string[]        = "operand is not a string";
 static const char str_err_return_in_generator[]       = "complex return statement in a generator function, return value always ignored";
-static const char str_err_too_many_registers[]        = "register capacity exceeded";
+static const char str_err_too_many_args[]             = "too many arguments passed to a function";
+static const char str_err_too_many_registers[]        = "register capacity exceeded, try to refactor the program";
 static const char str_err_unexpected_super[]          = "'super' cannot be used in this context";
 
 enum KOS_BOOL_E {
@@ -84,22 +87,22 @@ static int gen_new_reg(KOS_COMP_UNIT *program,
     KOS_FRAME *frame = program->cur_frame;
     KOS_REG   *reg;
 
-    assert(frame->num_regs < 256);
+    assert(frame->num_regs <= KOS_MAX_REGS);
 
-    if (frame->num_regs == 255) {
+    if (frame->num_regs == KOS_MAX_REGS) {
 
         KOS_TOKEN *token = (KOS_TOKEN *)
             kos_mempool_alloc(&program->allocator, sizeof(KOS_TOKEN));
 
         if (token) {
             memset(token, 0, sizeof(*token));
+            /* TODO use token from frame */
             token->begin       = "";
             token->pos.file_id = program->file_id;
             token->pos.line    = 1;
             token->pos.column  = 1;
             token->type        = TT_EOF;
 
-            /* TODO improve either detection or handling of this error */
             program->error_token = token;
             program->error_str   = str_err_too_many_registers;
         }
@@ -1096,6 +1099,7 @@ cleanup:
 
 static int append_frame(KOS_COMP_UNIT      *program,
                         const KOS_AST_NODE *name_node,
+                        uint32_t            const_idx,
                         int                 fun_start_offs,
                         size_t              addr2line_start_offs)
 {
@@ -1188,6 +1192,7 @@ static int append_frame(KOS_COMP_UNIT      *program,
         else
             ptr->line  = 1;
         ptr->str_idx   = (uint32_t)str_idx;
+        ptr->fun_idx   = const_idx;
         ptr->num_instr = program->cur_frame->num_instr;
         ptr->code_size = (uint32_t)fun_size;
     }
@@ -1202,17 +1207,21 @@ static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
     KOS_COMP_FUNCTION *constant;
 
     constant = (KOS_COMP_FUNCTION *)kos_mempool_alloc(&program->allocator,
-                                                       sizeof(KOS_COMP_FUNCTION));
+                                                      sizeof(KOS_COMP_FUNCTION));
     if (constant) {
 
-        assert(frame->num_regs < 256);
+        assert(frame->num_regs <= KOS_MAX_REGS);
 
-        constant->header.type = KOS_COMP_CONST_FUNCTION;
-        constant->offset      = 0;
-        constant->num_regs    = (uint8_t)frame->num_regs;
-        constant->args_reg    = 0;
-        constant->num_args    = 0;
-        constant->flags       = 0;
+        memset(constant, 0, sizeof(KOS_COMP_FUNCTION));
+
+        constant->header.type  = KOS_COMP_CONST_FUNCTION;
+        constant->num_regs     = (uint8_t)frame->num_regs;
+        constant->load_instr   = INSTR_BREAKPOINT;
+        constant->args_reg     = KOS_NO_REG;
+        constant->bind_reg     = KOS_NO_REG;
+        constant->rest_reg     = KOS_NO_REG;
+        constant->ellipsis_reg = KOS_NO_REG;
+        constant->this_reg     = KOS_NO_REG;
     }
 
     return constant;
@@ -1245,7 +1254,7 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
 
     program->cur_frame->constant = constant;
 
-    TRY(append_frame(program, 0, 0, 0));
+    TRY(append_frame(program, 0, constant->header.index, 0, 0));
 
     assert(program->code_gen_buf.size == 0);
 
@@ -1407,7 +1416,7 @@ static int get_closure_size(KOS_COMP_UNIT *program)
 
     closure_size = scope->num_indep_vars + scope->num_indep_args;
 
-    assert(closure_size <= 255);
+    assert(closure_size <= KOS_MAX_REGS);
     return closure_size;
 }
 
@@ -1580,9 +1589,9 @@ static int assert_stmt(KOS_COMP_UNIT      *program,
     TRY(gen_reg(program, &reg));
 
     TRY(gen_instr2(program,
-                    str_idx < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
-                    reg->reg,
-                    str_idx));
+                   str_idx < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
+                   reg->reg,
+                   str_idx));
 
     TRY(gen_instr1(program, INSTR_THROW, reg->reg));
 
@@ -1900,7 +1909,7 @@ static int invoke_get_iterator(KOS_COMP_UNIT *program,
 
     TRY(gen_get_prop_instr(program, func_reg->reg, obj_reg->reg, str_idx));
 
-    TRY(gen_instr5(program, INSTR_CALL_N, (*reg)->reg, func_reg->reg, obj_reg->reg, 255, 0));
+    TRY(gen_instr5(program, INSTR_CALL_N, (*reg)->reg, func_reg->reg, obj_reg->reg, KOS_NO_REG, 0));
 
     free_reg(program, func_reg);
 
@@ -1990,7 +1999,7 @@ static int for_in(KOS_COMP_UNIT      *program,
             TRY(lookup_local_var(program, var_node, &var_reg));
             assert(var_reg);
 
-            TRY(gen_instr4(program, INSTR_CALL_FUN, var_reg->reg, value_iter_reg->reg, 255, 0));
+            TRY(gen_instr4(program, INSTR_CALL_FUN, var_reg->reg, value_iter_reg->reg, KOS_NO_REG, 0));
         }
     }
 
@@ -3050,7 +3059,7 @@ static int invocation(KOS_COMP_UNIT      *program,
     int      interp_str = node->type == NT_INTERPOLATED_STRING;
     int      num_contig_args;
 
-    assert(tail_closure_size <= 255U);
+    assert(tail_closure_size <= KOS_MAX_REGS);
     assert(node->children);
 
     if (node->children->type == NT_SUPER_CTOR_LITERAL) {
@@ -3138,14 +3147,14 @@ static int invocation(KOS_COMP_UNIT      *program,
             instr = (instr == INSTR_CALL) ? INSTR_CALL_N : INSTR_TAIL_CALL_N;
 
             TRY(gen_instr5(program, instr, rdest, fun->reg, obj->reg,
-                           num_contig_args ? argn[0]->reg : 255,
+                           num_contig_args ? argn[0]->reg : KOS_NO_REG,
                            num_contig_args));
         }
         else {
             instr = (instr == INSTR_CALL) ? INSTR_CALL_FUN : INSTR_TAIL_CALL_FUN;
 
             TRY(gen_instr4(program, instr, rdest, fun->reg,
-                           num_contig_args ? argn[0]->reg : 255,
+                           num_contig_args ? argn[0]->reg : KOS_NO_REG,
                            num_contig_args));
         }
 
@@ -4196,7 +4205,7 @@ static int assignment(KOS_COMP_UNIT      *program,
 
                     assert(reg != rhs);
 
-                    TRY(gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, 255, 0));
+                    TRY(gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, KOS_NO_REG, 0));
                 }
                 else {
 
@@ -4227,7 +4236,7 @@ static int assignment(KOS_COMP_UNIT      *program,
 
                 TRY(gen_reg(program, &reg));
 
-                TRY(gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, 255, 0));
+                TRY(gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, KOS_NO_REG, 0));
             }
             else
                 reg = rhs;
@@ -4392,9 +4401,9 @@ static int numeric_literal(KOS_COMP_UNIT      *program,
         }
 
         TRY(gen_instr2(program,
-                        constant->index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
-                        (*reg)->reg,
-                        (int32_t)constant->index));
+                       constant->index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST,
+                       (*reg)->reg,
+                       (int32_t)constant->index));
     }
 
 cleanup:
@@ -4460,7 +4469,7 @@ static int void_literal(KOS_COMP_UNIT      *program,
 
 typedef struct KOS_GEN_CLOSURE_ARGS_S {
     KOS_COMP_UNIT *program;
-    int           *num_binds;
+    uint8_t       *num_binds;
 } KOS_GEN_CLOSURE_ARGS;
 
 static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
@@ -4473,6 +4482,7 @@ static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
 
     if (ref->exported_locals) {
         ++*(args->num_binds);
+        assert(*args->num_binds <= KOS_MAX_REGS);
         error = gen_reg(args->program, &ref->vars_reg);
         if ( ! error) {
             ref->vars_reg->tmp = 0;
@@ -4482,6 +4492,7 @@ static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
 
     if ( ! error && ref->exported_args) {
         ++*(args->num_binds);
+        assert(*args->num_binds <= KOS_MAX_REGS);
         error = gen_reg(args->program, &ref->args_reg);
         if ( ! error) {
             ref->args_reg->tmp = 0;
@@ -4610,6 +4621,11 @@ static int gen_function(KOS_COMP_UNIT      *program,
     if (frame->constant)
         return KOS_SUCCESS;
 
+    /* Create constant template for LOAD.CONST */
+    constant = alloc_func_constant(program, frame);
+    if ( ! constant)
+        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
     push_scope(program, node);
 
     frame->fun_token    = &fun_node->token;
@@ -4624,6 +4640,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
             var->array_idx = var->reg->reg;
             assert(var->reg->reg == ++last_reg);
         }
+    assert(last_reg + 1 == scope->num_indep_vars);
 
     /* Generate registers for function arguments */
     if (scope->num_args) {
@@ -4644,6 +4661,12 @@ static int gen_function(KOS_COMP_UNIT      *program,
             KOS_AST_NODE *ident_node =
                 arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
 
+            if (i >= KOS_MAX_REGS) {
+                program->error_token = &ident_node->token;
+                program->error_str   = str_err_too_many_args;
+                RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+            }
+
             var = ident_node->var;
             assert(var);
             assert(var == kos_find_var(scope->vars, &ident_node->token));
@@ -4652,7 +4675,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
              * because we need to execute code used for initializing them,
              * even if these args will not be default-assigned in practice. */
             if (arg_node->type != NT_IDENTIFIER)
-                ++frame->num_def_args;
+                ++constant->num_def_args;
 
             /* Process all args up to the last one which is being used,
              * effectively ignoring the tail of unused arguments. */
@@ -4663,7 +4686,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
                  * list which are not used is discarded and not enumerated.
                  * However, any following default arguments will still be counted. */
                 if (arg_node->type == NT_IDENTIFIER)
-                    ++frame->num_used_non_def_args;
+                    ++constant->num_args;
 
                 if (var->type & VAR_ARGUMENT_IN_REG) {
 
@@ -4695,8 +4718,10 @@ static int gen_function(KOS_COMP_UNIT      *program,
         /* Generate register for the remaining args */
         if (have_rest) {
             TRY(gen_reg(program, &frame->args_reg));
-            if (rest_used)
+            if (rest_used) {
                 frame->args_reg->tmp = 0;
+                constant->rest_reg   = frame->args_reg->reg;
+            }
             assert(frame->args_reg->reg == ++last_reg);
         }
     }
@@ -4707,19 +4732,22 @@ static int gen_function(KOS_COMP_UNIT      *program,
             assert(scope->ellipsis->reg);
             TRY(gen_reg(program, &ellipsis_reg));
             assert(ellipsis_reg->reg == ++last_reg);
+            constant->ellipsis_reg = ellipsis_reg->reg;
         }
         else {
             assert( ! scope->ellipsis->reg);
             TRY(gen_reg(program, &scope->ellipsis->reg));
             scope->ellipsis->reg->tmp = 0;
             assert(scope->ellipsis->reg->reg == ++last_reg);
+            constant->ellipsis_reg = scope->ellipsis->reg->reg;
         }
     }
 
     /* Generate register for 'this' */
     TRY(gen_reg(program, &frame->this_reg));
     assert(frame->this_reg->reg == ++last_reg);
-    frame->bind_delta = frame->this_reg->reg + 1;
+    constant->this_reg = frame->this_reg->reg;
+    constant->bind_reg = frame->this_reg->reg + 1;
     if (scope->uses_this)
         frame->this_reg->tmp = 0;
 
@@ -4731,19 +4759,19 @@ static int gen_function(KOS_COMP_UNIT      *program,
         if (needs_super_ctor) {
             TRY(gen_reg(program, &frame->base_ctor_reg));
             frame->base_ctor_reg->tmp = 0;
-            ++frame->num_binds;
+            ++constant->num_binds;
         }
 
         /* Base class prototype */
         if (frame->uses_base_proto) {
             TRY(gen_reg(program, &frame->base_proto_reg));
             frame->base_proto_reg->tmp = 0;
-            ++frame->num_binds;
+            ++constant->num_binds;
         }
 
         /* Closures from outer scopes */
         args.program   = program;
-        args.num_binds = &frame->num_binds;
+        args.num_binds = &constant->num_binds;
         TRY(kos_red_black_walk(frame->closures, gen_closure_regs, &args));
     }
 
@@ -4769,6 +4797,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     TRY(add_addr2line(program, &open_node->token, KOS_TRUE_VALUE));
 
     /* Move ellipsis into place */
+    /* TODO use ellipsis_reg_idx in function desc to avoid this */
     if (ellipsis_reg) {
         TRY(gen_instr2(program, INSTR_MOVE, scope->ellipsis->reg->reg, ellipsis_reg->reg));
         free_reg(program, ellipsis_reg);
@@ -4799,13 +4828,11 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
     kos_deactivate_self_ref_func(program, fun_var);
 
-    /* Create constant template for LOAD.CONST */
-    constant = alloc_func_constant(program, frame);
-    if ( ! constant)
-        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
-    constant->args_reg = (uint8_t)scope->num_indep_vars;
-    constant->num_args = (uint8_t)frame->num_used_non_def_args;
-    constant->flags    = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
+    /* Set up constant template for LOAD.CONST */
+    constant->closure_size = get_closure_size(program);
+    constant->num_regs     = (uint8_t)frame->num_regs;
+    constant->args_reg     = (uint8_t)scope->num_indep_vars;
+    constant->flags        = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
         constant->flags |= KOS_COMP_FUN_CLASS;
@@ -4834,15 +4861,15 @@ static int gen_function(KOS_COMP_UNIT      *program,
     }
 
     /* Choose instruction for loading the function */
-    frame->load_instr =
-        (fun_node->type == NT_CONSTRUCTOR_LITERAL       ||
-         scope->num_args > frame->num_used_non_def_args ||
-         frame->num_binds)
+    constant->load_instr =
+        (fun_node->type == NT_CONSTRUCTOR_LITERAL ||
+         scope->num_args > constant->num_args     ||
+         constant->num_binds)
             ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
             : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST);
 
     /* Move the function code to final code_buf */
-    TRY(append_frame(program, name_node, fun_start_offs, addr2line_start_offs));
+    TRY(append_frame(program, name_node, constant->header.index, fun_start_offs, addr2line_start_offs));
 
     program->cur_frame = last_frame;
 
@@ -4869,33 +4896,34 @@ static int function_literal(KOS_COMP_UNIT      *program,
                             KOS_REG            *base_proto_reg,
                             KOS_REG           **reg)
 {
-    int        error = KOS_SUCCESS;
-    KOS_SCOPE *scope;
-    KOS_FRAME *frame;
-
+    int                 error    = KOS_SUCCESS;
+    KOS_SCOPE          *scope;
+    KOS_FRAME          *frame;
+    KOS_COMP_FUNCTION  *constant;
     const KOS_AST_NODE *fun_node = node;
 
     /* Generate code for the function */
     TRY(gen_function(program, node, fun_var, base_ctor_reg != 0, &scope));
 
     assert(scope->has_frame);
-    frame = (KOS_FRAME *)scope;
-    assert(frame->constant);
+    frame    = (KOS_FRAME *)scope;
+    constant = frame->constant;
+    assert(constant);
     assert( ! frame->uses_base_ctor || base_ctor_reg);
-    assert( ! base_ctor_reg || frame->num_binds);
+    assert( ! base_ctor_reg || constant->num_binds);
 
     /* Generate LOAD.CONST/LOAD.FUN instruction in the parent frame */
     assert(frame->num_regs > 0);
-    assert(frame->num_regs >= frame->bind_delta);
+    assert(frame->num_regs >= constant->bind_reg);
     TRY(gen_reg(program, reg));
 
     TRY(gen_instr2(program,
-                    frame->load_instr,
-                    (*reg)->reg,
-                    (int32_t)frame->constant->header.index));
+                   constant->load_instr,
+                   (*reg)->reg,
+                   (int32_t)frame->constant->header.index));
 
     /* Generate BIND instructions in the parent frame */
-    if (frame->num_binds) {
+    if (constant->num_binds) {
         KOS_BIND_ARGS bind_args;
 
         int bind_idx = 0;
@@ -4920,12 +4948,12 @@ static int function_literal(KOS_COMP_UNIT      *program,
         bind_args.program      = program;
         bind_args.func_reg     = *reg;
         bind_args.parent_frame = program->cur_frame;
-        bind_args.delta        = frame->bind_delta;
+        bind_args.delta        = constant->bind_reg;
         TRY(kos_red_black_walk(frame->closures, gen_binds, &bind_args));
     }
 
     /* Find the first default arg */
-    if (frame->num_def_args) {
+    if (constant->num_def_args) {
         node = fun_node->children;
         assert(node);
         node = node->next;
@@ -4940,13 +4968,13 @@ static int function_literal(KOS_COMP_UNIT      *program,
     }
 
     /* Generate array with default args and init code for unused default args */
-    if (frame->num_def_args) {
+    if (constant->num_def_args) {
 
         int       i;
-        const int num_used_def_args = scope->num_args - frame->num_used_non_def_args;
+        const int num_used_def_args = scope->num_args - constant->num_args;
         KOS_REG  *defaults_reg = 0;
 
-        assert(num_used_def_args <= frame->num_def_args);
+        assert(num_used_def_args <= (int)constant->num_def_args);
 
         if (num_used_def_args > 0) {
 
