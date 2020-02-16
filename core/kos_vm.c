@@ -541,7 +541,7 @@ static int init_registers(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(this_.o) <= OBJ_LAST_TYPE);
     assert( ! IS_BAD_PTR(args.o) || GET_OBJ_TYPE(stack.o) == OBJ_STACK);
     assert( ! OBJPTR(FUNCTION, func.o)->handler);
-    assert(OBJPTR(FUNCTION, func_obj)->opts.num_def_args == num_def_args);
+    assert(OBJPTR(FUNCTION, func.o)->opts.num_def_args == num_def_args);
 
     if (OBJPTR(FUNCTION, func.o)->opts.ellipsis_reg != KOS_NO_REG) {
         /* args, ellipsis, this */
@@ -593,7 +593,7 @@ static int init_registers(KOS_CONTEXT ctx,
             while (src_buf < src_end);
         }
 
-        assert(OBJPTR(FUNCTION, func_obj)->opts.rest_reg == KOS_NO_REG);
+        assert(OBJPTR(FUNCTION, func.o)->opts.rest_reg == KOS_NO_REG);
     }
     else {
         const uint32_t num_to_move = KOS_min(num_input_args, KOS_MAX_ARGS_IN_REGS - 1U);
@@ -641,17 +641,17 @@ static int init_registers(KOS_CONTEXT ctx,
                                  MAX_INT64));
         }
 
-        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func_obj)->opts.rest_reg);
+        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func.o)->opts.rest_reg);
         KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], rest.o);
     }
 
     if ( ! IS_BAD_PTR(ellipsis.o)) {
-        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func_obj)->opts.ellipsis_reg);
+        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func.o)->opts.ellipsis_reg);
         KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], ellipsis.o);
     }
 
-    assert(OBJPTR(FUNCTION, func_obj)->opts.this_reg == KOS_NO_REG ||
-           OBJPTR(FUNCTION, func_obj)->opts.this_reg == reg - ctx->regs_idx);
+    assert(OBJPTR(FUNCTION, func.o)->opts.this_reg == KOS_NO_REG ||
+           OBJPTR(FUNCTION, func.o)->opts.this_reg == reg - ctx->regs_idx);
     KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++], this_.o);
 
     assert( ! IS_BAD_PTR(OBJPTR(FUNCTION, func.o)->closures));
@@ -670,8 +670,8 @@ static int init_registers(KOS_CONTEXT ctx,
         src_buf = kos_get_array_buffer(OBJPTR(ARRAY, OBJPTR(FUNCTION, func.o)->closures));
         end     = src_buf + src_len;
 
-        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func_obj)->opts.bind_reg);
-        assert(OBJPTR(FUNCTION, func_obj)->opts.num_binds == src_len);
+        assert(reg - ctx->regs_idx == OBJPTR(FUNCTION, func.o)->opts.bind_reg);
+        assert(OBJPTR(FUNCTION, func.o)->opts.num_binds == src_len);
 
         while (src_buf < end)
             KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[reg++],
@@ -679,8 +679,8 @@ static int init_registers(KOS_CONTEXT ctx,
     }
     else {
         assert(GET_OBJ_TYPE(OBJPTR(FUNCTION, func.o)->closures) == OBJ_VOID);
-        assert(OBJPTR(FUNCTION, func_obj)->opts.bind_reg  == KOS_NO_REG);
-        assert(OBJPTR(FUNCTION, func_obj)->opts.num_binds == 0);
+        assert(OBJPTR(FUNCTION, func.o)->opts.bind_reg  == KOS_NO_REG);
+        assert(OBJPTR(FUNCTION, func.o)->opts.num_binds == 0);
     }
 
 cleanup:
