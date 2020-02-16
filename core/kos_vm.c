@@ -2640,8 +2640,6 @@ static int exec_function(KOS_CONTEXT ctx)
                 KOS_help_gc(ctx);
 
                 delta = 5 + (int32_t)_load_32(bytecode+1);
-                if (delta < 5)
-                    delta = 5;
                 bytecode += delta;
                 NEXT_INSTRUCTION;
             }
@@ -2659,8 +2657,6 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 if (kos_is_truthy(REGISTER(rsrc)))
                     delta += offs;
-                if (delta < 6)
-                    delta = 6;
                 bytecode += delta;
                 NEXT_INSTRUCTION;
             }
@@ -2678,8 +2674,6 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 if ( ! kos_is_truthy(REGISTER(rsrc)))
                     delta += offs;
-                if (delta < 6)
-                    delta = 6;
                 bytecode += delta;
                 NEXT_INSTRUCTION;
             }
