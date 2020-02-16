@@ -329,6 +329,10 @@ static void clear_instance(KOS_INSTANCE *inst)
     init_context(&inst->threads.main_thread, inst);
 }
 
+#ifdef CONFIG_FUZZ
+KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
+#endif
+
 int KOS_instance_init(KOS_INSTANCE *inst,
                       uint32_t      flags,
                       KOS_CONTEXT  *out_ctx)
@@ -346,6 +350,10 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     assert(KOS_get_string_length(KOS_STR_EMPTY) == 0);
     assert(!kos_is_heap_object(KOS_STR_OUT_OF_MEMORY));
     assert(KOS_get_string_length(KOS_STR_OUT_OF_MEMORY) == 13);
+
+#ifdef CONFIG_FUZZ
+    KOS_atomic_write_relaxed_u32(kos_fuzz_instructions, 0U);
+#endif
 
     clear_instance(inst);
 

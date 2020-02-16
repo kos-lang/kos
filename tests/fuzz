@@ -27,6 +27,8 @@ export LDFLAGS=-fsanitize=fuzzer,address
 export CC=clang
 export CXX=clang++
 
+MAX_LEN=16384
+
 show_help()
 {
     echo "Usage: tests/fuzz [OPTIONS]"
@@ -94,7 +96,7 @@ cd "$OUT"
 
 merge_corpus()
 {
-    "./$FUZZ" -merge=1 "$CORPUS" "$@"
+    "./$FUZZ" -merge=1 "-max_len=$MAX_LEN" "$CORPUS" "$@"
 }
 
 if [[ "$MERGE" = "1" ]] && [[ -d "$CORPUS" ]]; then
@@ -115,7 +117,7 @@ fi
 
 run_parallel_fuzzer()
 {
-    "./$FUZZ" "-jobs=$JOBS" "-workers=$JOBS" "-dict=$DICT" "$@"
+    "./$FUZZ" "-jobs=$JOBS" "-max_len=$MAX_LEN" "-workers=$JOBS" "-dict=$DICT" "$@"
 }
 
 mkdir -p "$CORPUS"

@@ -1195,10 +1195,22 @@ static uint32_t _load_32(const uint8_t *bytecode)
                                  out_val);                                    \
 } while (0)
 
+#ifdef CONFIG_FUZZ
+extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
+#   define MAX_FUZZ_INSTR 8192U
+#   define FUZZ_LIMIT() do {                                                 \
+        if (KOS_atomic_add_u32(kos_fuzz_instructions, 1U) >= MAX_FUZZ_INSTR) \
+            RAISE_EXCEPTION_STR(str_err_invalid_instruction);                \
+    } while (0)
+#else
+#   define FUZZ_LIMIT() ((void)0)
+#endif
+
 #if KOS_DISPATCH_TABLE
 #   define BEGIN_INSTRUCTION(instr)     OP_##instr
 #   define BEGIN_BREAKPOINT_INSTRUCTION OP_BREAKPOINT
-#   define NEXT_INSTRUCTION             KOS_PERF_CNT(instructions);                              \
+#   define NEXT_INSTRUCTION             FUZZ_LIMIT();                                            \
+                                        KOS_PERF_CNT(instructions);                              \
                                         instr     = (KOS_BYTECODE_INSTR)*bytecode;               \
                                         jump_offs = (uint8_t)(instr - INSTR_BREAKPOINT);         \
                                         if (jump_offs >= (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) \
@@ -1207,7 +1219,7 @@ static uint32_t _load_32(const uint8_t *bytecode)
 #else
 #   define BEGIN_INSTRUCTION(instr)     case INSTR_##instr
 #   define BEGIN_BREAKPOINT_INSTRUCTION default
-#   define NEXT_INSTRUCTION             break
+#   define NEXT_INSTRUCTION             FUZZ_LIMIT(); break
 #endif
 
 static int exec_function(KOS_CONTEXT ctx)
@@ -2628,10 +2640,8 @@ static int exec_function(KOS_CONTEXT ctx)
                 KOS_help_gc(ctx);
 
                 delta = 5 + (int32_t)_load_32(bytecode+1);
-#ifdef CONFIG_FUZZ
                 if (delta < 5)
                     delta = 5;
-#endif
                 bytecode += delta;
                 NEXT_INSTRUCTION;
             }
@@ -2649,10 +2659,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 if (kos_is_truthy(REGISTER(rsrc)))
                     delta += offs;
-#ifdef CONFIG_FUZZ
                 if (delta < 6)
                     delta = 6;
-#endif
                 bytecode += delta;
                 NEXT_INSTRUCTION;
             }
@@ -2670,10 +2678,8 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 if ( ! kos_is_truthy(REGISTER(rsrc)))
                     delta += offs;
-#ifdef CONFIG_FUZZ
                 if (delta < 6)
                     delta = 6;
-#endif
                 bytecode += delta;
                 NEXT_INSTRUCTION;
             }
