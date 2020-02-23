@@ -301,6 +301,8 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
 {
     KOS_OBJ_ID dyn_prop_obj = KOS_BADPTR;
 
+    assert(getter);
+
     kos_track_refs(ctx, 2, &module_obj, &dyn_prop_obj);
 
     dyn_prop_obj = KOS_new_dynamic_prop(ctx);
@@ -321,16 +323,19 @@ KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
 
     if ( ! IS_BAD_PTR(dyn_prop_obj)) {
 
-        KOS_OBJ_ID func_obj = KOS_new_function(ctx);
+        if (setter) {
 
-        if ( ! IS_BAD_PTR(func_obj)) {
-            OBJPTR(FUNCTION, func_obj)->module         = module_obj;
-            OBJPTR(FUNCTION, func_obj)->opts.min_args  = 0;
-            OBJPTR(FUNCTION, func_obj)->handler        = setter;
-            OBJPTR(DYNAMIC_PROP, dyn_prop_obj)->setter = func_obj;
+            KOS_OBJ_ID func_obj = KOS_new_function(ctx);
+
+            if ( ! IS_BAD_PTR(func_obj)) {
+                OBJPTR(FUNCTION, func_obj)->module         = module_obj;
+                OBJPTR(FUNCTION, func_obj)->opts.min_args  = 0;
+                OBJPTR(FUNCTION, func_obj)->handler        = setter;
+                OBJPTR(DYNAMIC_PROP, dyn_prop_obj)->setter = func_obj;
+            }
+            else
+                dyn_prop_obj = KOS_BADPTR;
         }
-        else
-            dyn_prop_obj = KOS_BADPTR;
     }
 
     kos_untrack_refs(ctx, 2);

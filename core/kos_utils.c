@@ -867,19 +867,23 @@ static int vector_append_object(KOS_CONTEXT        ctx,
 
         if (GET_OBJ_TYPE(value.o) == OBJ_DYNAMIC_PROP) {
 
+            KOS_OBJ_ID actual;
+
             KOS_OBJ_ID args = KOS_new_array(ctx, 0);
             TRY_OBJID(args);
 
-            value.o = KOS_call_function(ctx,
-                                        OBJPTR(DYNAMIC_PROP, value.o)->getter,
-                                        OBJPTR(OBJECT_WALK, walk.o)->obj,
-                                        args);
-            if (IS_BAD_PTR(value.o)) {
+            actual = KOS_call_function(ctx,
+                                       OBJPTR(DYNAMIC_PROP, value.o)->getter,
+                                       OBJPTR(OBJECT_WALK, walk.o)->obj,
+                                       args);
+            if (IS_BAD_PTR(actual)) {
                 assert(KOS_is_exception_pending(ctx));
                 KOS_clear_exception(ctx);
 
-                value.o = OBJPTR(DYNAMIC_PROP, KOS_get_walk_value(walk.o))->getter;
+                value.o = OBJPTR(DYNAMIC_PROP, value.o)->getter;
             }
+            else
+                value.o = actual;
         }
 
         if (is_to_string_recursive(&new_guard, value.o)) {

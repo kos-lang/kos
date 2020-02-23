@@ -51,6 +51,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_running,   "generator is runni
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,  "buffer element value out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index,       "index out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_instruction, "invalid instruction");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_no_setter,           "property is read-only");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_callable,        "object is not callable");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_class,           "base object is not a class");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,       "function is not a generator");
@@ -1824,6 +1825,10 @@ static int exec_function(KOS_CONTEXT ctx)
                                          (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                         setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
 
+                        if (IS_BAD_PTR(setter))
+                            /* TODO print property name */
+                            RAISE_EXCEPTION_STR(str_err_no_setter);
+
                         kos_track_refs(ctx, 2, &setter, &obj);
                         args = KOS_new_array(ctx, 1);
                         kos_untrack_refs(ctx, 2);
@@ -1908,6 +1913,10 @@ static int exec_function(KOS_CONTEXT ctx)
                     store_instr_offs(stack, regs_idx,
                                      (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                     setter = OBJPTR(DYNAMIC_PROP, setter)->setter;
+
+                    if (IS_BAD_PTR(setter))
+                        /* TODO print property name */
+                        RAISE_EXCEPTION_STR(str_err_no_setter);
 
                     kos_track_refs(ctx, 1, &setter);
                     args = KOS_new_array(ctx, 1);

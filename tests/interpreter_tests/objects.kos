@@ -1092,6 +1092,17 @@ do {
     assert p.proto_b == 4
 }
 
+# expand built-in dynamic properties on incorrect object
+do {
+    const s = "\(base.array.prototype)"
+    assert s.find("\"size\": <function") > 0
+}
+
+# attempt to set a dynamic property without a setter
+do {
+    expect_fail(fun { base.array.prototype.size = 0 })
+}
+
 ##############################################################################
 # base.object
 
