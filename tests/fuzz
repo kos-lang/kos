@@ -27,7 +27,7 @@ export LDFLAGS=-fsanitize=fuzzer,address
 export CC=clang
 export CXX=clang++
 
-MAX_LEN=16384
+MAX_LEN=4096
 
 show_help()
 {

@@ -1197,7 +1197,7 @@ static uint32_t _load_32(const uint8_t *bytecode)
 
 #ifdef CONFIG_FUZZ
 extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
-#   define MAX_FUZZ_INSTR 8192U
+#   define MAX_FUZZ_INSTR 1024U
 #   define FUZZ_LIMIT() do {                                                 \
         if (KOS_atomic_add_u32(kos_fuzz_instructions, 1U) >= MAX_FUZZ_INSTR) \
             RAISE_EXCEPTION_STR(str_err_invalid_instruction);                \
