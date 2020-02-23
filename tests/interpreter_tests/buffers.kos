@@ -795,6 +795,26 @@ do {
     assert b[7]   == 0x5e
 }
 
+# pack buffer into itself
+do {
+    const b = buffer([1, 2, 3])
+    b.pack("2 b5", b, b)
+    assert b.size == 13
+    assert b[0]   == 1
+    assert b[1]   == 2
+    assert b[2]   == 3
+    assert b[3]   == 1
+    assert b[4]   == 2
+    assert b[5]   == 3
+    assert b[6]   == 0
+    assert b[7]   == 0
+    assert b[8]   == 1
+    assert b[9]   == 2
+    assert b[10]  == 3
+    assert b[11]  == 1
+    assert b[12]  == 2
+}
+
 do {
     expect_fail(()=>buffer().pack(1))
     expect_fail(()=>buffer().pack())

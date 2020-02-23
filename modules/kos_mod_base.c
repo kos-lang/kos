@@ -2894,8 +2894,8 @@ static int pack_format(KOS_CONTEXT               ctx,
 
             for ( ; count; count--) {
                 KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
-                uint8_t   *data      = 0;
-                uint32_t   data_size;
+                uint8_t   *src       = 0;
+                uint32_t   src_size;
                 uint32_t   copy_size;
 
                 TRY_OBJID(value_obj);
@@ -2903,15 +2903,20 @@ static int pack_format(KOS_CONTEXT               ctx,
                 if (GET_OBJ_TYPE(value_obj) != OBJ_BUFFER)
                     RAISE_EXCEPTION_STR(str_err_bad_pack_value);
 
-                data_size = KOS_get_buffer_size(value_obj);
-                if (data_size)
-                    data = KOS_buffer_data_volatile(value_obj);
+                src_size = KOS_get_buffer_size(value_obj);
+                if (src_size)
+                    src = KOS_buffer_data_volatile(value_obj);
 
-                copy_size = size > data_size ? data_size : size;
+                copy_size = size > src_size ? src_size : size;
 
-                if (copy_size)
-                    /* TODO what if input buf == output buf ? */
-                    memcpy(dst, data, copy_size);
+                if (copy_size) {
+                    uint8_t *const src_end = src + copy_size;
+
+                    if (src_end > dst && src < dst)
+                        copy_size = (uint32_t)(dst - src);
+
+                    memcpy(dst, src, copy_size);
+                }
 
                 if (copy_size < size)
                     memset(dst + copy_size, 0, size - copy_size);
