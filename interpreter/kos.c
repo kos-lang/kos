@@ -171,8 +171,8 @@ int main(int argc, char *argv[])
 
     if (i_first_arg) {
 
-        char *saved   = argv[i_first_arg - 1];
-        char  empty[] = "";
+        char *saved    = argv[i_first_arg - 1];
+        char  empty[1] = { '\0' };
 
         argv[i_first_arg - 1] = i_module ? argv[i_module] : &empty[0];
 

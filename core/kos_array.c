@@ -108,7 +108,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
 
                 const uint32_t capacity = 1U + (buf_alloc_size - sizeof(KOS_ARRAY_STORAGE)) / sizeof(KOS_OBJ_ID);
 
-                storage = (KOS_ARRAY_STORAGE *)((uint8_t *)array + array_obj_size);
+                storage = (KOS_ARRAY_STORAGE *)((uintptr_t)array + array_obj_size);
                 kos_set_object_type_size(storage->header, OBJ_ARRAY_STORAGE, buf_alloc_size);
 
                 KOS_atomic_write_relaxed_u32(storage->capacity,       capacity);

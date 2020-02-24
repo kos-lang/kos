@@ -220,7 +220,8 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
 
     /* If deleted node has two children, swap it with the successor and delete the successor */
     if (node->left && node->right) {
-        KOS_RED_BLACK_NODE *a, *b;
+        KOS_RED_BLACK_NODE *a;
+        KOS_RED_BLACK_NODE *b;
         int color;
 
         succ = node->right;

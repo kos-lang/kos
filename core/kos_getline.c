@@ -31,6 +31,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef CONFIG_READLINE
+#   include <readline/readline.h>
+#   include <readline/history.h>
+#   include <stdlib.h>
+#endif
+
 static const char str_prompt_first_line[]      = "> ";
 static const char str_prompt_subsequent_line[] = "_ ";
 
@@ -83,10 +89,6 @@ typedef struct sigaction signal_handler;
 #endif /* !_WIN32 */
 
 #ifdef CONFIG_READLINE
-
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <stdlib.h>
 
 int kos_getline_init(KOS_GETLINE *state)
 {

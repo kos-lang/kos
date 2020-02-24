@@ -155,9 +155,10 @@ static void update_arguments(KOS_COMP_UNIT *program,
 
     assert(node);
     assert(node->type == NT_PARAMETERS);
-    node = node->children;
+    node     = node->children;
+    arg_node = node;
 
-    for (i = 0, arg_node = node; arg_node; arg_node = arg_node->next, ++i) {
+    for (i = 0; arg_node; ++i) {
 
         KOS_AST_NODE *ident_node;
         KOS_VAR      *var;
@@ -196,12 +197,15 @@ static void update_arguments(KOS_COMP_UNIT *program,
             else
                 max_used = i;
         }
+
+        arg_node = arg_node->next;
     }
 
     num_args  = have_ellipsis ? num_non_def + num_def : max_used + 1;
     have_rest = num_args > (int)KOS_MAX_ARGS_IN_REGS;
+    arg_node  = node;
 
-    for (i = 0, arg_node = node; arg_node && arg_node->type != NT_ELLIPSIS; arg_node = arg_node->next, ++i) {
+    for (i = 0; arg_node && (arg_node->type != NT_ELLIPSIS); ++i) {
 
         KOS_AST_NODE *ident_node = arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
         KOS_VAR      *var        = ident_node->var;
@@ -224,6 +228,8 @@ static void update_arguments(KOS_COMP_UNIT *program,
         }
         else
             var->array_idx -= (int)KOS_MAX_ARGS_IN_REGS - 1;
+
+        arg_node = arg_node->next;
     }
 
     scope->num_args       = num_args;
@@ -247,7 +253,7 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
     while (node && node->type == NT_IDENTIFIER)
         node = node->next;
 
-    for ( ; node && node->type != NT_ELLIPSIS; node = node->next) {
+    for ( ; node && (node->type != NT_ELLIPSIS); node = node->next) {
 
         KOS_AST_NODE *def_node = node->children;
 

@@ -131,7 +131,7 @@ std::string value_from_object_ptr<std::string>(context ctx, KOS_OBJ_ID obj_id)
 
     std::string str(static_cast<size_t>(len), '\0');
 
-    KOS_string_to_utf8(obj_id, &str[0], len);
+    (void)KOS_string_to_utf8(obj_id, &str[0], len);
     return str;
 }
 
@@ -144,7 +144,7 @@ kos::string::operator std::string() const
 
     std::string str(static_cast<size_t>(len), '\0');
 
-    KOS_string_to_utf8(*this, &str[0], len);
+    (void)KOS_string_to_utf8(*this, &str[0], len);
     return str;
 }
 

@@ -602,9 +602,9 @@ static void _init_empty_string(KOS_STRING *dest,
         else switch (kos_get_string_elem_size(dest)) {
 
             case KOS_STRING_ELEM_16: {
-                uint16_t *pdest = (uint16_t *)dest_buf + offs;
-                uint8_t  *psrc  = (uint8_t  *)src_buf;
-                uint8_t  *pend  = psrc + len;
+                uint16_t      *pdest = (uint16_t *)dest_buf + offs;
+                const uint8_t *psrc  = (const uint8_t *)src_buf;
+                const uint8_t *pend  = psrc + len;
                 assert(kos_get_string_elem_size(src) == KOS_STRING_ELEM_8);
                 for ( ; psrc != pend; ++pdest, ++psrc)
                     *pdest = *psrc;
@@ -616,16 +616,16 @@ static void _init_empty_string(KOS_STRING *dest,
                 assert(kos_get_string_elem_size(src) == KOS_STRING_ELEM_8 ||
                        kos_get_string_elem_size(src) == KOS_STRING_ELEM_16);
                 if (kos_get_string_elem_size(src) == KOS_STRING_ELEM_8) {
-                    uint32_t *pdest = (uint32_t *)dest_buf + offs;
-                    uint8_t  *psrc  = (uint8_t  *)src_buf;
-                    uint8_t  *pend  = psrc + len;
+                    uint32_t      *pdest = (uint32_t *)dest_buf + offs;
+                    const uint8_t *psrc  = (const uint8_t *)src_buf;
+                    const uint8_t *pend  = psrc + len;
                     for ( ; psrc != pend; ++pdest, ++psrc)
                         *pdest = *psrc;
                 }
                 else {
-                    uint32_t *pdest = (uint32_t *)dest_buf + offs;
-                    uint16_t *psrc  = (uint16_t *)src_buf;
-                    uint16_t *pend  = psrc + len;
+                    uint32_t       *pdest = (uint32_t *)dest_buf + offs;
+                    const uint16_t *psrc  = (const uint16_t *)src_buf;
+                    const uint16_t *pend  = psrc + len;
                     for ( ; psrc != pend; ++pdest, ++psrc)
                         *pdest = *psrc;
                 }

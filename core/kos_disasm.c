@@ -31,8 +31,6 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
 {
     switch (instr) {
 
-        case INSTR_BREAKPOINT:          /* fall through */
-        case INSTR_CANCEL:              /* fall through */
         default:
             assert(instr == INSTR_BREAKPOINT || instr == INSTR_CANCEL);
             return 0;

@@ -76,7 +76,7 @@ int kos_parse_int(const char *begin,
 {
     int         error = KOS_SUCCESS;
     const char *s;
-    const int   minus = (begin < end && *begin == '-') ? 1 : 0;
+    const int   minus = ((begin < end) && (*begin == '-')) ? 1 : 0;
     int         radix = 10;
     int         idx;
 
@@ -171,7 +171,7 @@ int kos_parse_int(const char *begin,
 
         if ( ! error) {
             if (minus)
-                *value = (int64_t)((uint64_t)0U - v);
+                *value = -(int64_t)v;
             else
                 *value = (int64_t)v;
         }
@@ -229,7 +229,7 @@ static void multiply_by_10_and_add(uint64_t *mantissa, int *exponent, unsigned d
     }
     else if (high & ((uint64_t)1U << 61)) {
         const uint32_t lg    = low & 0x3U;
-        const uint32_t carry = lg == 3U ? 1U : 0U;
+        const uint32_t carry = (lg == 3U) ? 1U : 0U;
 
         *mantissa = (high << 2) + ((low >> 1) & 3U) + carry;
         *exponent += 2;
