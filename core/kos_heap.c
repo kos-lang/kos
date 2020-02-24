@@ -2347,8 +2347,8 @@ static int evacuate(KOS_CONTEXT              ctx,
                         error = evacuate_object(ctx, hdr, size);
 
                         if (ctx->inst->flags & KOS_INST_VERBOSE)
-                            printf(error ? "GC is memory constrained\n"
-                                         : "GC is memory constrained, but recovered\n");
+                            printf("GC is memory constrained%s\n",
+                                   error ? "" : ", but recovered");
                     }
 
                     if (error) {

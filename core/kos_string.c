@@ -1211,22 +1211,22 @@ static int _compare_slice(KOS_STRING *str_a,
     else {
         const int neg = a_elem_size < b_elem_size ? 1 : -1;
         if (neg < 0) {
-            unsigned    utmp;
+            unsigned    tmp2;
             KOS_STRING *tmp = str_a;
             str_a           = str_b;
             str_b           = tmp;
 
-            utmp    = a_begin;
+            tmp2    = a_begin;
             a_begin = b_begin;
-            b_begin = utmp;
+            b_begin = tmp2;
 
-            utmp  = a_len;
+            tmp2  = a_len;
             a_len = b_len;
-            b_len = utmp;
+            b_len = tmp2;
 
-            utmp        = a_elem_size;
+            tmp2        = a_elem_size;
             a_elem_size = b_elem_size;
-            b_elem_size = utmp;
+            b_elem_size = tmp2;
         }
 
         if (a_elem_size == KOS_STRING_ELEM_8) {

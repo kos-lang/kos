@@ -890,11 +890,9 @@ static int vector_append_object(KOS_CONTEXT        ctx,
             if (GET_OBJ_TYPE(value.o) == OBJ_ARRAY)
                 TRY(kos_append_cstr(ctx, cstr_vec,
                                     str_recursive_array, sizeof(str_recursive_array)-1));
-            else {
-                assert(GET_OBJ_TYPE(value.o) == OBJ_OBJECT);
+            else
                 TRY(kos_append_cstr(ctx, cstr_vec,
                                     str_recursive_object, sizeof(str_recursive_object)-1));
-            }
         }
         else
             TRY(object_to_string_or_cstr_vec(ctx, value.o, KOS_QUOTE_STRINGS,

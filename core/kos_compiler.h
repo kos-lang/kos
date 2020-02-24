@@ -89,9 +89,9 @@ typedef struct KOS_CATCH_REF_S {
     struct KOS_SCOPE_S *next;           /* Used by child_scopes */
     struct KOS_SCOPE_S *child_scopes;   /* List of child scopes which need to update catch offset to this scope */
     KOS_REG            *catch_reg;      /* Exception register used in this scope, or -1 if no catch */
-    int                 catch_offs[25]; /* Catch instructions offsets in this scope, which update catch offsets for the parent scope */
-    int                 num_catch_offs; /* Number of active offsets in catch_offs */
     int                 finally_active; /* For return statements inside try/catch */
+    int                 num_catch_offs; /* Number of active offsets in catch_offs */
+    int                 catch_offs[25]; /* Catch instructions offsets in this scope, which update catch offsets for the parent scope */
 } KOS_CATCH_REF;
 
 typedef struct KOS_SCOPE_S {
