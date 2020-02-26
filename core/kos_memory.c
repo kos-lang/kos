@@ -54,7 +54,7 @@ void kos_mempool_destroy(struct KOS_MEMPOOL_S *mempool)
     }
 }
 
-static void *_alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
+static void *alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
 {
     const size_t alloc_size = size + sizeof(struct MEMPOOL_BUF);
 
@@ -95,7 +95,7 @@ void *kos_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
 
         /* Special handling for unusually large allocation requests */
         if (size > (KOS_BUF_ALLOC_SIZE / 16U))
-            return _alloc_large(mempool, size);
+            return alloc_large(mempool, size);
 
         buf = (struct MEMPOOL_BUF *)kos_malloc(KOS_BUF_ALLOC_SIZE);
 
@@ -121,14 +121,14 @@ void *kos_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
 
 void kos_vector_init(KOS_VECTOR *vector)
 {
-    vector->buffer   = (char *)(void *)&vector->_local_buffer;
+    vector->buffer   = (char *)(void *)&vector->local_buffer_;
     vector->size     = 0;
-    vector->capacity = sizeof(vector->_local_buffer);
+    vector->capacity = sizeof(vector->local_buffer_);
 }
 
 void kos_vector_destroy(KOS_VECTOR *vector)
 {
-    if (vector->capacity > sizeof(vector->_local_buffer)) {
+    if (vector->capacity > sizeof(vector->local_buffer_)) {
         kos_free(vector->buffer);
 
         kos_vector_init(vector);
@@ -148,7 +148,7 @@ int kos_vector_reserve(KOS_VECTOR *vector, size_t capacity)
             if (vector->size)
                 memcpy(new_buf, vector->buffer, vector->size);
 
-            if (vector->capacity > sizeof(vector->_local_buffer))
+            if (vector->capacity > sizeof(vector->local_buffer_))
                 kos_free(vector->buffer);
 
             vector->buffer = new_buf;

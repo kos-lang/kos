@@ -76,15 +76,15 @@ struct INSTR_DEF_S {
 
 #define END \
     }; \
-    if (_test_instr(ctx, instr.instr, __LINE__, &instr.out, &instr.in[0]) != KOS_SUCCESS) \
+    if (test_instr(ctx, instr.instr, __LINE__, &instr.out, &instr.in[0]) != KOS_SUCCESS) \
         return 1; \
 }
 
-static int _test_instr(KOS_CONTEXT           ctx,
-                       KOS_BYTECODE_INSTR    instr,
-                       int                   line,
-                       struct INSTR_VALUE_S *ret_val,
-                       struct INSTR_VALUE_S *args)
+static int test_instr(KOS_CONTEXT           ctx,
+                      KOS_BYTECODE_INSTR    instr,
+                      int                   line,
+                      struct INSTR_VALUE_S *ret_val,
+                      struct INSTR_VALUE_S *args)
 {
     uint8_t     code[64]        = { 0 };
     uint32_t    parms[MAX_ARGS] = { 0 };

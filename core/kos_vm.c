@@ -64,9 +64,9 @@ DECLARE_STATIC_CONST_OBJECT(new_this, OBJ_OPAQUE, 0xC0);
 
 #define NEW_THIS KOS_CONST_ID(new_this)
 
-static KOS_OBJ_ID _add_integer(KOS_CONTEXT ctx,
-                               int64_t     a,
-                               KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID add_integer(KOS_CONTEXT ctx,
+                              int64_t     a,
+                              KOS_OBJ_ID  bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -91,9 +91,9 @@ static KOS_OBJ_ID _add_integer(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _add_float(KOS_CONTEXT ctx,
-                             double      a,
-                             KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID add_float(KOS_CONTEXT ctx,
+                            double      a,
+                            KOS_OBJ_ID  bobj)
 {
     double b;
 
@@ -118,9 +118,9 @@ static KOS_OBJ_ID _add_float(KOS_CONTEXT ctx,
     return KOS_new_float(ctx, a + b);
 }
 
-static KOS_OBJ_ID _sub_integer(KOS_CONTEXT ctx,
-                               int64_t     a,
-                               KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID sub_integer(KOS_CONTEXT ctx,
+                              int64_t     a,
+                              KOS_OBJ_ID  bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -146,9 +146,9 @@ static KOS_OBJ_ID _sub_integer(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _sub_float(KOS_CONTEXT ctx,
-                             double      a,
-                             KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID sub_float(KOS_CONTEXT ctx,
+                            double      a,
+                            KOS_OBJ_ID  bobj)
 {
     double b;
 
@@ -173,9 +173,9 @@ static KOS_OBJ_ID _sub_float(KOS_CONTEXT ctx,
     return KOS_new_float(ctx, a - b);
 }
 
-static KOS_OBJ_ID _mul_integer(KOS_CONTEXT ctx,
-                               int64_t     a,
-                               KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID mul_integer(KOS_CONTEXT ctx,
+                              int64_t     a,
+                              KOS_OBJ_ID  bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -201,9 +201,9 @@ static KOS_OBJ_ID _mul_integer(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _mul_float(KOS_CONTEXT ctx,
-                             double      a,
-                             KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID mul_float(KOS_CONTEXT ctx,
+                            double      a,
+                            KOS_OBJ_ID  bobj)
 {
     double b;
 
@@ -228,9 +228,9 @@ static KOS_OBJ_ID _mul_float(KOS_CONTEXT ctx,
     return KOS_new_float(ctx, a * b);
 }
 
-static KOS_OBJ_ID _div_integer(KOS_CONTEXT ctx,
-                               int64_t     a,
-                               KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID div_integer(KOS_CONTEXT ctx,
+                              int64_t     a,
+                              KOS_OBJ_ID  bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -282,9 +282,9 @@ static KOS_OBJ_ID _div_integer(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _div_float(KOS_CONTEXT ctx,
-                             double      a,
-                             KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID div_float(KOS_CONTEXT ctx,
+                            double      a,
+                            KOS_OBJ_ID  bobj)
 {
     KOS_OBJ_ID ret;
     double     b;
@@ -317,9 +317,9 @@ static KOS_OBJ_ID _div_float(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _mod_integer(KOS_CONTEXT ctx,
-                               int64_t     a,
-                               KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID mod_integer(KOS_CONTEXT ctx,
+                              int64_t     a,
+                              KOS_OBJ_ID  bobj)
 {
     KOS_OBJ_ID ret;
 
@@ -371,9 +371,9 @@ static KOS_OBJ_ID _mod_integer(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _mod_float(KOS_CONTEXT ctx,
-                             double      a,
-                             KOS_OBJ_ID  bobj)
+static KOS_OBJ_ID mod_float(KOS_CONTEXT ctx,
+                            double      a,
+                            KOS_OBJ_ID  bobj)
 {
     KOS_OBJ_ID ret;
     double     b;
@@ -406,7 +406,7 @@ static KOS_OBJ_ID _mod_float(KOS_CONTEXT ctx,
     return ret;
 }
 
-static int _is_generator_end_exception(KOS_CONTEXT ctx)
+static int is_generator_end_exception(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *const inst      = ctx->inst;
     const KOS_OBJ_ID    exception = KOS_get_exception(ctx);
@@ -732,13 +732,13 @@ static void write_to_yield_reg(KOS_CONTEXT ctx,
     KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[ctx->regs_idx + yield_reg], obj_id);
 }
 
-static int _prepare_call(KOS_CONTEXT        ctx,
-                         KOS_BYTECODE_INSTR instr,
-                         KOS_OBJ_ID         func_obj,
-                         KOS_OBJ_ID        *this_obj,
-                         KOS_OBJ_ID         args_obj,
-                         uint32_t           rarg1,
-                         unsigned           num_args)
+static int prepare_call(KOS_CONTEXT        ctx,
+                        KOS_BYTECODE_INSTR instr,
+                        KOS_OBJ_ID         func_obj,
+                        KOS_OBJ_ID        *this_obj,
+                        KOS_OBJ_ID         args_obj,
+                        uint32_t           rarg1,
+                        unsigned           num_args)
 {
     int                error    = KOS_SUCCESS;
     KOS_FUNCTION_STATE state;
@@ -909,11 +909,11 @@ cleanup:
     return error;
 }
 
-static KOS_OBJ_ID _finish_call(KOS_CONTEXT         ctx,
-                               KOS_BYTECODE_INSTR  instr,
-                               KOS_OBJ_ID          func_obj,
-                               KOS_OBJ_ID          this_obj,
-                               KOS_FUNCTION_STATE *state)
+static KOS_OBJ_ID finish_call(KOS_CONTEXT         ctx,
+                              KOS_BYTECODE_INSTR  instr,
+                              KOS_OBJ_ID          func_obj,
+                              KOS_OBJ_ID          this_obj,
+                              KOS_FUNCTION_STATE *state)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -957,7 +957,7 @@ static KOS_OBJ_ID _finish_call(KOS_CONTEXT         ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _read_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
+static KOS_OBJ_ID read_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
 {
     uint32_t   size;
     KOS_OBJ_ID ret;
@@ -981,7 +981,7 @@ static KOS_OBJ_ID _read_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
     return ret;
 }
 
-static int _write_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID value)
+static int write_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID value)
 {
     int      error;
     uint32_t size;
@@ -1010,7 +1010,7 @@ cleanup:
     return error;
 }
 
-static KOS_OBJ_ID _read_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
+static KOS_OBJ_ID read_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
 {
     uint32_t   size;
     KOS_OBJ_ID ret;
@@ -1036,7 +1036,7 @@ static KOS_OBJ_ID _read_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
     return ret;
 }
 
-static int _write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID value)
+static int write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID value)
 {
     int      error = KOS_SUCCESS;
     uint32_t size;
@@ -1178,7 +1178,7 @@ static void clear_catch(KOS_OBJ_ID stack,
     KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[regs_idx - 2], TO_SMALL_INT(catch_data));
 }
 
-static uint32_t _load_32(const uint8_t *bytecode)
+static uint32_t load_32(const uint8_t *bytecode)
 {
     return (uint32_t)bytecode[0] +
            ((uint32_t)bytecode[1] << 8) +
@@ -1284,7 +1284,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_CONST): { /* <r.dest>, <uint32> */
-                const uint32_t value = _load_32(bytecode+2);
+                const uint32_t value = load_32(bytecode+2);
 
                 rdest = bytecode[1];
 
@@ -1325,7 +1325,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_FUN): { /* <r.dest>, <uint32> */
-                const uint32_t value = _load_32(bytecode+2);
+                const uint32_t value = load_32(bytecode+2);
 
                 rdest = bytecode[1];
 
@@ -1403,7 +1403,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_ARRAY): { /* <r.dest>, <size.int32> */
-                const uint32_t size = _load_32(bytecode+2);
+                const uint32_t size = load_32(bytecode+2);
 
                 rdest = bytecode[1];
 
@@ -1488,7 +1488,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_GLOBAL): { /* <r.dest>, <int32> */
-                const int32_t  idx = (int32_t)_load_32(bytecode+2);
+                const int32_t  idx = (int32_t)load_32(bytecode+2);
 
                 rdest = bytecode[1];
 
@@ -1502,7 +1502,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SET_GLOBAL): { /* <int32>, <r.src> */
-                const int32_t  idx  = (int32_t)_load_32(bytecode+1);
+                const int32_t  idx  = (int32_t)load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
                 assert(rsrc < num_regs);
@@ -1517,7 +1517,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <int32>, <r.glob> */
-                const int      mod_idx    = (int32_t)_load_32(bytecode+2);
+                const int      mod_idx    = (int32_t)load_32(bytecode+2);
                 const unsigned rglob      = bytecode[6];
                 KOS_OBJ_ID     glob_idx;
                 KOS_OBJ_ID     module_obj = KOS_array_read(ctx,
@@ -1550,8 +1550,8 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <int32>, <int32> */
-                const int  mod_idx    = (int32_t)_load_32(bytecode+2);
-                const int  glob_idx   = (int32_t)_load_32(bytecode+6);
+                const int  mod_idx    = (int32_t)load_32(bytecode+2);
+                const int  glob_idx   = (int32_t)load_32(bytecode+6);
                 KOS_OBJ_ID module_obj = KOS_array_read(ctx,
                                                        OBJPTR(MODULE, module)->inst->modules.modules,
                                                        mod_idx);
@@ -1597,7 +1597,7 @@ static int exec_function(KOS_CONTEXT ctx)
                     if (type == OBJ_STRING)
                         out = KOS_string_get_char(ctx, src, (int)idx);
                     else if (type == OBJ_BUFFER)
-                        out = _read_buffer(ctx, src, (int)idx);
+                        out = read_buffer(ctx, src, (int)idx);
                     else
                         out = KOS_array_read(ctx, src, (int)idx);
                 }
@@ -1633,7 +1633,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
             BEGIN_INSTRUCTION(GET_ELEM): { /* <r.dest>, <r.src>, <int32> */
                 const unsigned rsrc = bytecode[2];
-                const int32_t  idx  = (int32_t)_load_32(bytecode+3);
+                const int32_t  idx  = (int32_t)load_32(bytecode+3);
                 KOS_OBJ_ID     src;
                 KOS_TYPE       type;
 
@@ -1649,9 +1649,9 @@ static int exec_function(KOS_CONTEXT ctx)
                 else if (type == OBJ_STRING)
                     out = KOS_string_get_char(ctx, src, idx);
                 else if (type == OBJ_BUFFER)
-                    out = _read_buffer(ctx, src, idx);
+                    out = read_buffer(ctx, src, idx);
                 else if (type == OBJ_STACK)
-                    out = _read_stack(ctx, src, idx);
+                    out = read_stack(ctx, src, idx);
                 else
                     RAISE_EXCEPTION_STR(str_err_not_indexable);
 
@@ -1799,7 +1799,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                     obj = REGISTER(rdest);
                     if (GET_OBJ_TYPE(obj) == OBJ_BUFFER)
-                        TRY(_write_buffer(ctx, obj, (int)idx, REGISTER(rsrc)));
+                        TRY(write_buffer(ctx, obj, (int)idx, REGISTER(rsrc)));
                     else
                         TRY(KOS_array_write(ctx, obj, (int)idx, REGISTER(rsrc)));
                 }
@@ -1853,7 +1853,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SET_ELEM): { /* <r.dest>, <int32>, <r.src> */
-                const int32_t  idx  = (int32_t)_load_32(bytecode+2);
+                const int32_t  idx  = (int32_t)load_32(bytecode+2);
                 const unsigned rsrc = bytecode[6];
                 KOS_OBJ_ID     dest;
                 KOS_TYPE       type;
@@ -1870,9 +1870,9 @@ static int exec_function(KOS_CONTEXT ctx)
                 if (type == OBJ_ARRAY)
                     TRY(KOS_array_write(ctx, dest, idx, REGISTER(rsrc)));
                 else if (type == OBJ_BUFFER)
-                    TRY(_write_buffer(ctx, dest, idx, REGISTER(rsrc)));
+                    TRY(write_buffer(ctx, dest, idx, REGISTER(rsrc)));
                 else if (type == OBJ_STACK)
-                    TRY(_write_stack(ctx, dest, idx, REGISTER(rsrc)));
+                    TRY(write_stack(ctx, dest, idx, REGISTER(rsrc)));
                 else
                     RAISE_EXCEPTION_STR(str_err_not_indexable);
 
@@ -2014,18 +2014,18 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 if (IS_SMALL_INT(src[0].o)) {
                     const int64_t a = GET_SMALL_INT(src[0].o);
-                    out             = _add_integer(ctx, a, src[1].o);
+                    out             = add_integer(ctx, a, src[1].o);
                 }
                 else {
 
                     switch (GET_OBJ_TYPE(src[0].o)) {
 
                         case OBJ_INTEGER:
-                            out = _add_integer(ctx, OBJPTR(INTEGER, src[0].o)->value, src[1].o);
+                            out = add_integer(ctx, OBJPTR(INTEGER, src[0].o)->value, src[1].o);
                             break;
 
                         case OBJ_FLOAT:
-                            out = _add_float(ctx, OBJPTR(FLOAT, src[0].o)->value, src[1].o);
+                            out = add_float(ctx, OBJPTR(FLOAT, src[0].o)->value, src[1].o);
                             break;
 
                         case OBJ_STRING: {
@@ -2071,16 +2071,16 @@ static int exec_function(KOS_CONTEXT ctx)
                 src2  = REGISTER(rsrc2);
 
                 if (IS_SMALL_INT(src1))
-                    out = _sub_integer(ctx, GET_SMALL_INT(src1), src2);
+                    out = sub_integer(ctx, GET_SMALL_INT(src1), src2);
 
                 else switch (GET_OBJ_TYPE(src1)) {
 
                     case OBJ_INTEGER:
-                        out = _sub_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
+                        out = sub_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
                         break;
 
                     case OBJ_FLOAT:
-                        out = _sub_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
+                        out = sub_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
                         break;
 
                     default:
@@ -2111,16 +2111,16 @@ static int exec_function(KOS_CONTEXT ctx)
                 src2  = REGISTER(rsrc2);
 
                 if (IS_SMALL_INT(src1))
-                    out = _mul_integer(ctx, GET_SMALL_INT(src1), src2);
+                    out = mul_integer(ctx, GET_SMALL_INT(src1), src2);
 
                 else switch (GET_OBJ_TYPE(src1)) {
 
                     case OBJ_INTEGER:
-                        out = _mul_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
+                        out = mul_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
                         break;
 
                     case OBJ_FLOAT:
-                        out = _mul_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
+                        out = mul_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
                         break;
 
                     default:
@@ -2151,16 +2151,16 @@ static int exec_function(KOS_CONTEXT ctx)
                 src2  = REGISTER(rsrc2);
 
                 if (IS_SMALL_INT(src1))
-                    out = _div_integer(ctx, GET_SMALL_INT(src1), src2);
+                    out = div_integer(ctx, GET_SMALL_INT(src1), src2);
 
                 else switch (GET_OBJ_TYPE(src1)) {
 
                     case OBJ_INTEGER:
-                        out = _div_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
+                        out = div_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
                         break;
 
                     case OBJ_FLOAT:
-                        out = _div_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
+                        out = div_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
                         break;
 
                     default:
@@ -2191,16 +2191,16 @@ static int exec_function(KOS_CONTEXT ctx)
                 src2  = REGISTER(rsrc2);
 
                 if (IS_SMALL_INT(src1))
-                    out = _mod_integer(ctx, GET_SMALL_INT(src1), src2);
+                    out = mod_integer(ctx, GET_SMALL_INT(src1), src2);
 
                 else switch (GET_OBJ_TYPE(src1)) {
 
                     case OBJ_INTEGER:
-                        out = _mod_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
+                        out = mod_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
                         break;
 
                     case OBJ_FLOAT:
-                        out = _mod_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
+                        out = mod_float(ctx, OBJPTR(FLOAT, src1)->value, src2);
                         break;
 
                     default:
@@ -2648,13 +2648,13 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 KOS_help_gc(ctx);
 
-                delta = 5 + (int32_t)_load_32(bytecode+1);
+                delta = 5 + (int32_t)load_32(bytecode+1);
                 bytecode += delta;
                 NEXT_INSTRUCTION;
             }
 
             BEGIN_INSTRUCTION(JUMP_COND): { /* <delta.int32>, <r.src> */
-                const int32_t  offs = (int32_t)_load_32(bytecode+1);
+                const int32_t  offs = (int32_t)load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
                 int            delta;
 
@@ -2671,7 +2671,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(JUMP_NOT_COND): { /* <delta.int32>, <r.src> */
-                const int32_t  offs = (int32_t)_load_32(bytecode+1);
+                const int32_t  offs = (int32_t)load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
                 int            delta;
 
@@ -2904,8 +2904,8 @@ static int exec_function(KOS_CONTEXT ctx)
                         RAISE_EXCEPTION_STR(str_err_not_callable);
                 }
 
-                error = _prepare_call(ctx, instr, func.o, &this_.o,
-                                      args.o, num_args ? rarg1 : 0, num_args);
+                error = prepare_call(ctx, instr, func.o, &this_.o,
+                                     args.o, num_args ? rarg1 : 0, num_args);
                 if (error) {
                     KOS_destroy_top_locals(ctx, &func, &args);
                     goto cleanup;
@@ -2939,7 +2939,7 @@ static int exec_function(KOS_CONTEXT ctx)
                             assert(ctx->local_list == &func);
 
                             if (state >= KOS_GEN_INIT) {
-                                /* Avoid detecting as end of iterator in _finish_call() */
+                                /* Avoid detecting as end of iterator in finish_call() */
                                 if ( ! IS_BAD_PTR(ret_val))
                                     OBJPTR(STACK, ctx->stack)->flags &= ~KOS_CAN_YIELD;
 
@@ -2969,7 +2969,7 @@ static int exec_function(KOS_CONTEXT ctx)
                     assert(error || ! KOS_is_exception_pending(ctx));
                     assert(ctx->local_list == &func);
 
-                    out = _finish_call(ctx, instr, func.o, this_.o, &state);
+                    out = finish_call(ctx, instr, func.o, this_.o, &state);
 
                     assert(ctx->regs_idx == regs_idx);
 
@@ -2978,7 +2978,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                     if (instr == INSTR_CALL_GEN) {
                         if (error && state == KOS_GEN_DONE
-                                && _is_generator_end_exception(ctx)) {
+                                && is_generator_end_exception(ctx)) {
                             KOS_clear_exception(ctx);
                             error = KOS_SUCCESS;
                         }
@@ -3061,7 +3061,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(CATCH): { /* <r.dest>, <delta.int32> */
-                const int32_t  rel_offs = (int32_t)_load_32(bytecode+2);
+                const int32_t  rel_offs = (int32_t)load_32(bytecode+2);
                 const uint32_t offset   = (uint32_t)((bytecode + 6 + rel_offs) - OBJPTR(MODULE, module)->bytecode);
 
                 rdest = bytecode[1];
@@ -3163,7 +3163,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
     if (type == OBJ_CLASS && (call_flavor != KOS_APPLY_FUNCTION || this_.o == KOS_VOID))
         this_.o = NEW_THIS;
 
-    error = _prepare_call(ctx, INSTR_CALL, func.o, &this_.o, args.o, 0, 0);
+    error = prepare_call(ctx, INSTR_CALL, func.o, &this_.o, args.o, 0, 0);
 
     if (error) {
         KOS_destroy_top_locals(ctx, &func, &ret);
@@ -3183,7 +3183,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
 
             assert(ctx->local_list == &func);
 
-            /* Avoid detecting as end of iterator in _finish_call() */
+            /* Avoid detecting as end of iterator in finish_call() */
             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(retval))
                 OBJPTR(STACK, ctx->stack)->flags &= ~KOS_CAN_YIELD;
 
@@ -3203,14 +3203,14 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
             assert(ctx->local_list == &func);
         }
 
-        ret.o = _finish_call(ctx,
-                           call_flavor == KOS_CALL_GENERATOR ? INSTR_CALL_GEN : INSTR_CALL,
-                           func.o, this_.o, &state);
+        ret.o = finish_call(ctx,
+                            call_flavor == KOS_CALL_GENERATOR ? INSTR_CALL_GEN : INSTR_CALL,
+                            func.o, this_.o, &state);
 
         if (state == KOS_GEN_DONE) {
             if (call_flavor == KOS_CALL_GENERATOR &&
                 KOS_is_exception_pending(ctx) &&
-                _is_generator_end_exception(ctx)) {
+                is_generator_end_exception(ctx)) {
 
                 KOS_clear_exception(ctx);
             }

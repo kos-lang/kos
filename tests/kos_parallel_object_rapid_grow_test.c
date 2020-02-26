@@ -47,9 +47,9 @@ struct THREAD_DATA {
     unsigned          rand_init;
 };
 
-static int _write_props_inner(KOS_CONTEXT       ctx,
-                              struct TEST_DATA *test,
-                              unsigned          rand_init)
+static int write_props_inner(KOS_CONTEXT       ctx,
+                             struct TEST_DATA *test,
+                             unsigned          rand_init)
 {
     size_t   i;
     unsigned n = rand_init;
@@ -81,15 +81,15 @@ static KOS_OBJ_ID write_props(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
     }
 
-    if (_write_props_inner(ctx, test->test, test->rand_init))
+    if (write_props_inner(ctx, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
 
     return KOS_is_exception_pending(ctx) ? KOS_BADPTR : KOS_VOID;
 }
 
-static int _read_props_inner(KOS_CONTEXT       ctx,
-                             struct TEST_DATA *test,
-                             unsigned          rand_init)
+static int read_props_inner(KOS_CONTEXT       ctx,
+                            struct TEST_DATA *test,
+                            unsigned          rand_init)
 {
     size_t   i;
     unsigned n = rand_init;
@@ -125,7 +125,7 @@ static KOS_OBJ_ID read_props(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
     }
 
-    if (_read_props_inner(ctx, test->test, test->rand_init))
+    if (read_props_inner(ctx, test->test, test->rand_init))
         KOS_atomic_add_i32(test->test->error, 1);
 
     return KOS_is_exception_pending(ctx) ? KOS_BADPTR : KOS_VOID;
@@ -210,7 +210,7 @@ int main(void)
 
             i = (int)kos_rng_random_range(&rng, 0x7FFFFFFF);
             KOS_atomic_write_relaxed_u32(data.go, 1);
-            TEST(_write_props_inner(ctx, &data, (unsigned)i) == KOS_SUCCESS);
+            TEST(write_props_inner(ctx, &data, (unsigned)i) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             for (i = num_threads - 1; i >= 0; i--) {

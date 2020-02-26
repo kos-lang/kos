@@ -37,52 +37,52 @@
 
 #define NUM_OBJECTS (16 * 1024)
 
-static void *_alloc_integer(KOS_CONTEXT ctx)
+static void *alloc_integer(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_INTEGER, sizeof(KOS_INTEGER));
 }
 
-static void *_alloc_float(KOS_CONTEXT ctx)
+static void *alloc_float(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_FLOAT, sizeof(KOS_FLOAT));
 }
 
-static void *_alloc_string(KOS_CONTEXT ctx)
+static void *alloc_string(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_STRING, sizeof(KOS_STRING));
 }
 
-static void *_alloc_array(KOS_CONTEXT ctx)
+static void *alloc_array(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_ARRAY, sizeof(KOS_ARRAY));
 }
 
-static void *_alloc_buffer(KOS_CONTEXT ctx)
+static void *alloc_buffer(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_BUFFER, sizeof(KOS_BUFFER));
 }
 
-static void *_alloc_function(KOS_CONTEXT ctx)
+static void *alloc_function(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_FUNCTION, sizeof(KOS_FUNCTION));
 }
 
-static void *_alloc_dynamic_prop(KOS_CONTEXT ctx)
+static void *alloc_dynamic_prop(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP));
 }
 
-static void *_alloc_object_walk(KOS_CONTEXT ctx)
+static void *alloc_object_walk(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_OBJECT_WALK, sizeof(KOS_OBJECT_WALK));
 }
 
-static void *_alloc_module(KOS_CONTEXT ctx)
+static void *alloc_module(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_MODULE, sizeof(KOS_MODULE));
 }
 
-static void *_alloc_stack(KOS_CONTEXT ctx)
+static void *alloc_stack(KOS_CONTEXT ctx)
 {
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_STACK, sizeof(KOS_STACK));
 }
@@ -103,9 +103,9 @@ typedef union KOS_BYTES_U {
     }              bytes;
 } KOS_BYTES;
 
-static KOS_OBJ_ID _alloc_opaque(KOS_CONTEXT ctx,
-                                uint8_t     fill,
-                                size_t      size)
+static KOS_OBJ_ID alloc_opaque(KOS_CONTEXT ctx,
+                               uint8_t     fill,
+                               size_t      size)
 {
     unsigned actual_size;
     uint8_t *object = (uint8_t *)kos_alloc_object(ctx,
@@ -123,8 +123,8 @@ static KOS_OBJ_ID _alloc_opaque(KOS_CONTEXT ctx,
     return OBJID(OPAQUE, (KOS_OPAQUE *)object);
 }
 
-static KOS_OBJ_ID _alloc_bytes(KOS_CONTEXT ctx,
-                               uint8_t     fill)
+static KOS_OBJ_ID alloc_bytes(KOS_CONTEXT ctx,
+                              uint8_t     fill)
 {
     KOS_BYTES *object = (KOS_BYTES *)kos_alloc_object(ctx,
                                                       KOS_ALLOC_MOVABLE,
@@ -139,8 +139,8 @@ static KOS_OBJ_ID _alloc_bytes(KOS_CONTEXT ctx,
     return OBJID(OPAQUE, (KOS_OPAQUE *)object);
 }
 
-static int _check_opaque(KOS_OBJ_ID obj_id,
-                         uint8_t    value)
+static int check_opaque(KOS_OBJ_ID obj_id,
+                        uint8_t    value)
 {
     uint8_t *object = (uint8_t *)OBJPTR(OPAQUE, obj_id);
     unsigned size   = kos_get_object_size(OBJPTR(OPAQUE, obj_id)->header);
@@ -159,8 +159,8 @@ static int _check_opaque(KOS_OBJ_ID obj_id,
     return 1;
 }
 
-static int _check_bytes(KOS_OBJ_ID obj_id,
-                        uint8_t    value)
+static int check_bytes(KOS_OBJ_ID obj_id,
+                       uint8_t    value)
 {
     KOS_BYTES *object = (KOS_BYTES *)OBJPTR(OPAQUE, obj_id);
     unsigned   i;
@@ -183,16 +183,16 @@ int main(void)
         KOS_TYPE   type;
         size_t     size;
     } alloc[] = {
-        { _alloc_integer,      OBJ_INTEGER,      sizeof(KOS_INTEGER)      },
-        { _alloc_float,        OBJ_FLOAT,        sizeof(KOS_FLOAT)        },
-        { _alloc_string,       OBJ_STRING,       sizeof(KOS_STRING)       },
-        { _alloc_array,        OBJ_ARRAY,        sizeof(KOS_ARRAY)        },
-        { _alloc_buffer,       OBJ_BUFFER,       sizeof(KOS_BUFFER)       },
-        { _alloc_function,     OBJ_FUNCTION,     sizeof(KOS_FUNCTION)     },
-        { _alloc_dynamic_prop, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP) },
-        { _alloc_object_walk,  OBJ_OBJECT_WALK,  sizeof(KOS_OBJECT_WALK)  },
-        { _alloc_module,       OBJ_MODULE,       sizeof(KOS_MODULE)       },
-        { _alloc_stack,        OBJ_STACK,        sizeof(KOS_STACK)        }
+        { alloc_integer,      OBJ_INTEGER,      sizeof(KOS_INTEGER)      },
+        { alloc_float,        OBJ_FLOAT,        sizeof(KOS_FLOAT)        },
+        { alloc_string,       OBJ_STRING,       sizeof(KOS_STRING)       },
+        { alloc_array,        OBJ_ARRAY,        sizeof(KOS_ARRAY)        },
+        { alloc_buffer,       OBJ_BUFFER,       sizeof(KOS_BUFFER)       },
+        { alloc_function,     OBJ_FUNCTION,     sizeof(KOS_FUNCTION)     },
+        { alloc_dynamic_prop, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP) },
+        { alloc_object_walk,  OBJ_OBJECT_WALK,  sizeof(KOS_OBJECT_WALK)  },
+        { alloc_module,       OBJ_MODULE,       sizeof(KOS_MODULE)       },
+        { alloc_stack,        OBJ_STACK,        sizeof(KOS_STACK)        }
     };
 
     /************************************************************************/
@@ -448,11 +448,11 @@ int main(void)
          * Allocate objects in one page until the page is full, put the page
          * on the list of full pages. */
 
-        group_one[0] = _alloc_opaque(ctx, 0xFEU, 90U * KOS_PAGE_SIZE / 100U);
+        group_one[0] = alloc_opaque(ctx, 0xFEU, 90U * KOS_PAGE_SIZE / 100U);
         TEST( ! IS_BAD_PTR(group_one[0]));
 
         for (i = 1; i < sizeof(group_one) / sizeof(group_one[0]); ++i) {
-            group_one[i] = _alloc_bytes(ctx, (uint8_t)i);
+            group_one[i] = alloc_bytes(ctx, (uint8_t)i);
             TEST( ! IS_BAD_PTR(group_one[i]));
         }
 
@@ -467,7 +467,7 @@ int main(void)
                     ? (KOS_PAGE_SIZE / 2U)
                     : (90U * KOS_PAGE_SIZE / 100U);
 
-            group_two[i] = _alloc_opaque(ctx, (uint8_t)i, size);
+            group_two[i] = alloc_opaque(ctx, (uint8_t)i, size);
             TEST( ! IS_BAD_PTR(group_two[i]));
         }
 
@@ -475,7 +475,7 @@ int main(void)
          * Allocate lots of small objects to migrate a non-full page to full set. */
 
         for (i = 0; i < sizeof(group_three) / sizeof(group_three[0]); ++i) {
-            group_three[i] = _alloc_bytes(ctx, (uint8_t)i);
+            group_three[i] = alloc_bytes(ctx, (uint8_t)i);
             TEST( ! IS_BAD_PTR(group_three[i]));
         }
 
@@ -483,7 +483,7 @@ int main(void)
          * Allocate huge objects spanning multiple free pages. */
 
         for (i = 0; i < sizeof(group_four) / sizeof(group_four[0]); ++i) {
-            group_four[i] = _alloc_opaque(ctx, (uint8_t)(0x80U + i), 3U * KOS_PAGE_SIZE / 2U);
+            group_four[i] = alloc_opaque(ctx, (uint8_t)(0x80U + i), 3U * KOS_PAGE_SIZE / 2U);
             TEST( ! IS_BAD_PTR(group_four[i]));
         }
 
@@ -491,28 +491,28 @@ int main(void)
          * Allocate huge objects which cannot be accommodated in existing full pages. */
 
         for (i = 0; i < sizeof(group_five) / sizeof(group_five[0]); ++i) {
-            group_five[i] = _alloc_opaque(ctx, (uint8_t)(0x90U + i), KOS_POOL_SIZE / 2U);
+            group_five[i] = alloc_opaque(ctx, (uint8_t)(0x90U + i), KOS_POOL_SIZE / 2U);
             TEST( ! IS_BAD_PTR(group_five[i]));
         }
 
         /* Check contents of all objects */
 
-        TEST(_check_opaque(group_one[0], 0xFEU));
+        TEST(check_opaque(group_one[0], 0xFEU));
 
         for (i = 1; i < sizeof(group_one) / sizeof(group_one[0]); ++i)
-            TEST(_check_bytes(group_one[i], (uint8_t)i));
+            TEST(check_bytes(group_one[i], (uint8_t)i));
 
         for (i = 0; i < sizeof(group_two) / sizeof(group_two[0]); ++i)
-            TEST(_check_opaque(group_two[i], (uint8_t)i));
+            TEST(check_opaque(group_two[i], (uint8_t)i));
 
         for (i = 0; i < sizeof(group_three) / sizeof(group_three[0]); ++i)
-            TEST(_check_bytes(group_three[i], (uint8_t)i));
+            TEST(check_bytes(group_three[i], (uint8_t)i));
 
         for (i = 0; i < sizeof(group_four) / sizeof(group_four[0]); ++i)
-            TEST(_check_opaque(group_four[i], (uint8_t)(0x80U + i)));
+            TEST(check_opaque(group_four[i], (uint8_t)(0x80U + i)));
 
         for (i = 0; i < sizeof(group_five) / sizeof(group_five[0]); ++i)
-            TEST(_check_opaque(group_five[i], (uint8_t)(0x90U + i)));
+            TEST(check_opaque(group_five[i], (uint8_t)(0x90U + i)));
 
         KOS_instance_destroy(&inst);
     }

@@ -139,9 +139,9 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _get_prototype(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_prototype(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret;
 
@@ -161,9 +161,9 @@ static KOS_OBJ_ID _get_prototype(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID _set_prototype(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID set_prototype(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -229,8 +229,8 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
                                                  func_obj,
                                                  KOS_CONST_ID(str_prototype),
                                                  ctx->inst->modules.init_module,
-                                                 _get_prototype,
-                                                 _set_prototype);
+                                                 get_prototype,
+                                                 set_prototype);
 
         if (error)
             func_obj = KOS_BADPTR; /* object is garbage collected */

@@ -48,7 +48,7 @@ struct THREAD_DATA {
     struct KOS_RNG    rng;
 };
 
-static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
+static int run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
 {
     struct TEST_DATA *test       = data->test;
     const int         first_prop = data->first_prop;
@@ -117,7 +117,7 @@ static KOS_OBJ_ID test_thread_func(KOS_CONTEXT ctx,
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)this_obj;
 
-    if (_run_test(ctx, test))
+    if (run_test(ctx, test))
         KOS_atomic_add_i32(test->test->error, 1);
 
     return KOS_is_exception_pending(ctx) ? KOS_BADPTR : KOS_VOID;
@@ -219,7 +219,7 @@ int main(void)
                 TEST(create_thread(ctx, test_thread_func, &thread_cookies[i], &threads[i]) == KOS_SUCCESS);
 
             KOS_atomic_write_relaxed_u32(data.go, 1);
-            TEST(_run_test(ctx, thread_cookies) == KOS_SUCCESS);
+            TEST(run_test(ctx, thread_cookies) == KOS_SUCCESS);
             TEST_NO_EXCEPTION();
 
             for (i = num_threads - 1; i > 0; i--) {

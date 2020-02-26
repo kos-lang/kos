@@ -32,11 +32,11 @@
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
-static int _walk_object(KOS_CONTEXT                  ctx,
-                        KOS_OBJ_ID                   obj,
-                        KOS_OBJ_ID                  *expected,
-                        unsigned                     num_expected,
-                        enum KOS_OBJECT_WALK_DEPTH_E deep)
+static int walk_object(KOS_CONTEXT                  ctx,
+                       KOS_OBJ_ID                   obj,
+                       KOS_OBJ_ID                  *expected,
+                       unsigned                     num_expected,
+                       enum KOS_OBJECT_WALK_DEPTH_E deep)
 {
     KOS_OBJ_ID walk;
     unsigned   count = 0;
@@ -555,8 +555,8 @@ int main(void)
             expected[4] = str_3;
             expected[6] = str_5;
 
-            TEST(_walk_object(ctx, obj_a, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
-            TEST(_walk_object(ctx, obj_b, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
+            TEST(walk_object(ctx, obj_a, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
+            TEST(walk_object(ctx, obj_b, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
         }
 
         {
@@ -578,7 +578,7 @@ int main(void)
             expected[0] = str_2;
             expected[2] = str_4;
 
-            TEST(_walk_object(ctx, obj_c, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
+            TEST(walk_object(ctx, obj_c, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
         }
 
         {
@@ -595,7 +595,7 @@ int main(void)
             expected[6] = str_4;
             expected[8] = str_5;
 
-            TEST(_walk_object(ctx, obj_c, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
+            TEST(walk_object(ctx, obj_c, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
         }
 
         {
@@ -606,7 +606,7 @@ int main(void)
             expected[0] = str_5;
             expected[2] = str_6;
 
-            TEST(_walk_object(ctx, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
+            TEST(walk_object(ctx, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
         }
 
         {
@@ -625,7 +625,7 @@ int main(void)
             expected[8]  = str_5;
             expected[10] = str_6;
 
-            TEST(_walk_object(ctx, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
+            TEST(walk_object(ctx, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
         }
     }
 

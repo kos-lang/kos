@@ -34,7 +34,7 @@ static const char str_err_null_ptr[]       = "null pointer";
 
 #define KOS_buffer_alloc_size(cap) (sizeof(KOS_BUFFER_STORAGE) + ((cap) - 1U))
 
-static KOS_BUFFER_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
+static KOS_BUFFER_STORAGE *alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 {
     KOS_BUFFER_STORAGE *const data = (KOS_BUFFER_STORAGE *)
             kos_alloc_object(ctx,
@@ -104,7 +104,7 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
 
             kos_track_refs(ctx, 1, &obj_id);
 
-            data = _alloc_buffer(ctx, capacity);
+            data = alloc_buffer(ctx, capacity);
 
             kos_untrack_refs(ctx, 1);
 
@@ -119,7 +119,7 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
     return obj_id;
 }
 
-static KOS_BUFFER_STORAGE *_get_data(KOS_OBJ_ID obj_id)
+static KOS_BUFFER_STORAGE *get_data(KOS_OBJ_ID obj_id)
 {
     const KOS_OBJ_ID buf_obj = KOS_atomic_read_acquire_obj(OBJPTR(BUFFER, obj_id)->data);
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(BUFFER_STORAGE, buf_obj);
@@ -158,7 +158,7 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
             if (new_capacity > capacity) {
 
                 uint32_t                  size;
-                KOS_BUFFER_STORAGE *const buf = _alloc_buffer(ctx, new_capacity);
+                KOS_BUFFER_STORAGE *const buf = alloc_buffer(ctx, new_capacity);
                 if ( ! buf)
                     break;
 
@@ -202,7 +202,7 @@ int KOS_buffer_resize(KOS_CONTEXT ctx,
 
         if (size > old_size) {
 
-            KOS_BUFFER_STORAGE *const data = _get_data(obj_id);
+            KOS_BUFFER_STORAGE *const data = get_data(obj_id);
             const uint32_t capacity = data ? KOS_atomic_read_relaxed_u32(data->capacity) : 0;
 
             if (size > capacity) {
@@ -325,7 +325,7 @@ int KOS_buffer_fill(KOS_CONTEXT ctx,
         KOS_raise_exception_cstring(ctx, str_err_not_buffer);
     else {
         uint32_t size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->size);
-        KOS_BUFFER_STORAGE *const data = _get_data(obj_id);
+        KOS_BUFFER_STORAGE *const data = get_data(obj_id);
 
         begin = kos_fix_index(begin, size);
         end   = kos_fix_index(end,   size);
@@ -355,10 +355,10 @@ int KOS_buffer_copy(KOS_CONTEXT ctx,
         KOS_raise_exception_cstring(ctx, str_err_not_buffer);
     else {
         uint32_t dest_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, destptr)->size);
-        KOS_BUFFER_STORAGE *const dest_data = _get_data(destptr);
+        KOS_BUFFER_STORAGE *const dest_data = get_data(destptr);
 
         uint32_t src_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, srcptr)->size);
-        KOS_BUFFER_STORAGE *const src_data = _get_data(srcptr);
+        KOS_BUFFER_STORAGE *const src_data = get_data(srcptr);
 
         dest_begin = kos_fix_index(dest_begin, dest_size);
         src_begin  = kos_fix_index(src_begin, src_size);
@@ -417,8 +417,8 @@ KOS_OBJ_ID KOS_buffer_slice(KOS_CONTEXT ctx,
             kos_untrack_refs(ctx, 1);
 
             if (new_size && ! IS_BAD_PTR(ret)) {
-                KOS_BUFFER_STORAGE *const dst_data = _get_data(ret);
-                memcpy(dst_data->buf, &_get_data(obj_id)->buf[begin], new_size);
+                KOS_BUFFER_STORAGE *const dst_data = get_data(ret);
+                memcpy(dst_data->buf, &get_data(obj_id)->buf[begin], new_size);
             }
         }
         else

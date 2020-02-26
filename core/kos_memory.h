@@ -42,7 +42,7 @@ struct KOS_VECTOR_S {
     char  *buffer;
     size_t size;
     size_t capacity;
-    double _local_buffer[2];
+    double local_buffer_[2];
 };
 
 typedef struct KOS_VECTOR_S KOS_VECTOR;

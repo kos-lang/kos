@@ -83,9 +83,9 @@ int kos_red_black_walk(KOS_RED_BLACK_NODE *node,
     return error;
 }
 
-static void _insert_binary(KOS_RED_BLACK_NODE       **node,
-                           KOS_RED_BLACK_NODE        *new_node,
-                           KOS_RED_BLACK_COMPARE_NODE compare)
+static void insert_binary(KOS_RED_BLACK_NODE       **node,
+                          KOS_RED_BLACK_NODE        *new_node,
+                          KOS_RED_BLACK_COMPARE_NODE compare)
 {
     KOS_RED_BLACK_NODE *parent = 0;
 
@@ -101,8 +101,8 @@ static void _insert_binary(KOS_RED_BLACK_NODE       **node,
     new_node->parent = parent;
 }
 
-static void _left_rotate(KOS_RED_BLACK_NODE **root,
-                         KOS_RED_BLACK_NODE  *node)
+static void left_rotate(KOS_RED_BLACK_NODE **root,
+                        KOS_RED_BLACK_NODE  *node)
 {
     KOS_RED_BLACK_NODE *other = node->right;
 
@@ -127,8 +127,8 @@ static void _left_rotate(KOS_RED_BLACK_NODE **root,
     node->parent = other;
 }
 
-static void _right_rotate(KOS_RED_BLACK_NODE **root,
-                          KOS_RED_BLACK_NODE  *node)
+static void right_rotate(KOS_RED_BLACK_NODE **root,
+                         KOS_RED_BLACK_NODE  *node)
 {
     KOS_RED_BLACK_NODE *other = node->left;
 
@@ -161,7 +161,7 @@ void kos_red_black_insert(KOS_RED_BLACK_NODE       **out_root,
     new_node->left  = 0;
     new_node->right = 0;
 
-    _insert_binary(out_root, new_node, compare);
+    insert_binary(out_root, new_node, compare);
 
     /* Restore red-black property */
     while (new_node != *out_root && new_node->parent->red) {
@@ -179,11 +179,11 @@ void kos_red_black_insert(KOS_RED_BLACK_NODE       **out_root,
             else {
                 if (new_node == new_node->parent->right) {
                     new_node = new_node->parent;
-                    _left_rotate(out_root, new_node);
+                    left_rotate(out_root, new_node);
                 }
                 new_node->parent->red = 0;
                 new_node->parent->parent->red = 1;
-                _right_rotate(out_root, new_node->parent->parent);
+                right_rotate(out_root, new_node->parent->parent);
             }
         }
         else {
@@ -197,11 +197,11 @@ void kos_red_black_insert(KOS_RED_BLACK_NODE       **out_root,
             else {
                 if (new_node == new_node->parent->left) {
                     new_node = new_node->parent;
-                    _right_rotate(out_root, new_node);
+                    right_rotate(out_root, new_node);
                 }
                 new_node->parent->red = 0;
                 new_node->parent->parent->red = 1;
-                _left_rotate(out_root, new_node->parent->parent);
+                left_rotate(out_root, new_node->parent->parent);
             }
         }
     }
@@ -328,9 +328,9 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
         if (sibling->red) {
             assert( ! parent->red);
             if (sibling_left)
-                _right_rotate(&root, parent);
+                right_rotate(&root, parent);
             else
-                _left_rotate(&root, parent);
+                left_rotate(&root, parent);
             parent->red  = 1;
             sibling->red = 0;
         }
@@ -339,7 +339,7 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
             int right_red = sibling->right && sibling->right->red ? 1 : 0;
 
             if (sibling_left && left_red) {
-                _right_rotate(&root, parent);
+                right_rotate(&root, parent);
                 sibling->red       = parent->red;
                 parent->red        = 0;
                 sibling->left->red = 0;
@@ -347,7 +347,7 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
                 node               = parent;
             }
             else if (!sibling_left && right_red) {
-                _left_rotate(&root, parent);
+                left_rotate(&root, parent);
                 sibling->red        = parent->red;
                 parent->red         = 0;
                 sibling->right->red = 0;
@@ -357,12 +357,12 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
             else if (left_red) {
                 sibling->left->red = 0;
                 sibling->red       = 1;
-                _right_rotate(&root, sibling);
+                right_rotate(&root, sibling);
             }
             else if (right_red) {
                 sibling->right->red = 0;
                 sibling->red        = 1;
-                _left_rotate(&root, sibling);
+                left_rotate(&root, sibling);
             }
             else {
                 parent->red  = parent->red ? 0 : 2;

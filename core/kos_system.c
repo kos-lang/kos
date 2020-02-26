@@ -53,7 +53,7 @@
 #   include <mach-o/dyld.h>
 #endif
 
-static int _errno_to_error(void)
+static int errno_to_error(void)
 {
     int error;
 
@@ -85,7 +85,7 @@ int kos_is_stdin_interactive(void)
 }
 
 #ifdef _WIN32
-static int _is_file(const char *filename)
+static int is_file(const char *filename)
 {
     const DWORD attr = GetFileAttributes(filename);
 
@@ -95,7 +95,7 @@ static int _is_file(const char *filename)
            ? KOS_SUCCESS : KOS_ERROR_NOT_FOUND;
 }
 #else
-static int _is_file(const char *filename)
+static int is_file(const char *filename)
 {
     int         error = KOS_SUCCESS;
     struct stat statbuf;
@@ -105,7 +105,7 @@ static int _is_file(const char *filename)
             error = KOS_ERROR_NOT_FOUND;
     }
     else
-        error = _errno_to_error();
+        error = errno_to_error();
 
     return error;
 }
@@ -133,7 +133,7 @@ int kos_load_file(const char  *filename,
     assert( ! file_buf->buffer);
     assert( ! file_buf->size);
 
-    TRY(_is_file(filename));
+    TRY(is_file(filename));
 
     file = fopen(filename, "rb");
     if (!file || kos_seq_fail())
@@ -208,15 +208,15 @@ int kos_load_file(const char  *filename,
 
     fd = open(filename, O_RDONLY);
     if (fd == -1)
-        RAISE_ERROR(_errno_to_error());
+        RAISE_ERROR(errno_to_error());
 
     if (fstat(fd, &st) != 0)
-        RAISE_ERROR(_errno_to_error());
+        RAISE_ERROR(errno_to_error());
 
     if (st.st_size) {
         addr = mmap(0, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
         if (addr == MAP_FAILED)
-            RAISE_ERROR(_errno_to_error());
+            RAISE_ERROR(errno_to_error());
     }
     else {
         close(fd);
@@ -251,7 +251,7 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
 
 int kos_does_file_exist(const char *filename)
 {
-    return _is_file(filename) == KOS_SUCCESS;
+    return is_file(filename) == KOS_SUCCESS;
 }
 
 int kos_get_absolute_path(KOS_VECTOR *path)
@@ -289,7 +289,7 @@ int kos_get_absolute_path(KOS_VECTOR *path)
             free(resolved_path);
     }
     else
-        error = _errno_to_error();
+        error = errno_to_error();
 
     return error;
 }

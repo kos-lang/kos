@@ -46,7 +46,7 @@ struct THREAD_DATA {
     KOS_ATOMIC(uint32_t) num_loops;
 };
 
-static int _run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
+static int run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
 {
     struct TEST_DATA *test  = data->test;
     uint32_t          stage = 0;
@@ -113,7 +113,7 @@ static KOS_OBJ_ID test_thread_func(KOS_CONTEXT ctx,
 {
     struct THREAD_DATA *test  = (struct THREAD_DATA *)this_obj;
 
-    if (_run_test(ctx, test)) {
+    if (run_test(ctx, test)) {
         KOS_atomic_add_i32(test->test->done, 1);
         KOS_atomic_add_i32(test->test->error, 1);
     }

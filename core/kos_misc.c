@@ -643,7 +643,7 @@ static void get_entropy(uint8_t *bytes, unsigned size)
 #endif
 
 /* The PCG XSH RR 32 algorithm by Melissa O'Neill, http://www.pcg-random.org */
-static uint32_t _pcg_random(struct KOS_RNG_PCG32 *pcg)
+static uint32_t pcg_random(struct KOS_RNG_PCG32 *pcg)
 {
     uint32_t xorshifted;
     int      rot;
@@ -660,13 +660,13 @@ static uint32_t _pcg_random(struct KOS_RNG_PCG32 *pcg)
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
 
-static void _pcg_init(struct KOS_RNG_PCG32 *pcg,
-                      uint64_t              init_state,
-                      uint64_t              init_stream)
+static void pcg_init(struct KOS_RNG_PCG32 *pcg,
+                     uint64_t              init_state,
+                     uint64_t              init_stream)
 {
     pcg->stream = (init_stream << 1) | 1U;
     pcg->state  = pcg->stream + init_state;
-    _pcg_random(pcg);
+    pcg_random(pcg);
 }
 
 void kos_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
@@ -674,7 +674,7 @@ void kos_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
     struct KOS_RNG_PCG32 init_pcg;
     int                  ipcg;
 
-    _pcg_init(&init_pcg, seed, ~seed);
+    pcg_init(&init_pcg, seed, ~seed);
 
     for (ipcg = 0; ipcg < 2; ipcg++) {
 
@@ -682,11 +682,11 @@ void kos_rng_init_seed(struct KOS_RNG *rng, uint64_t seed)
         int      iseed;
 
         for (iseed = 0; iseed < 4; iseed++)
-            new_seed[iseed] = _pcg_random(&init_pcg);
+            new_seed[iseed] = pcg_random(&init_pcg);
 
-        _pcg_init(&rng->pcg[ipcg],
-                  ((uint64_t)new_seed[0] << 32) | new_seed[1],
-                  ((uint64_t)new_seed[2] << 32) | new_seed[3]);
+        pcg_init(&rng->pcg[ipcg],
+                 ((uint64_t)new_seed[0] << 32) | new_seed[1],
+                 ((uint64_t)new_seed[2] << 32) | new_seed[3]);
     }
 }
 
@@ -695,14 +695,14 @@ void kos_rng_init(struct KOS_RNG *rng)
     uint64_t entropy[4];
     get_entropy((uint8_t *)&entropy, sizeof(entropy));
 
-    _pcg_init(&rng->pcg[0], entropy[0], entropy[1]);
-    _pcg_init(&rng->pcg[1], entropy[2], entropy[3]);
+    pcg_init(&rng->pcg[0], entropy[0], entropy[1]);
+    pcg_init(&rng->pcg[1], entropy[2], entropy[3]);
 }
 
 uint64_t kos_rng_random(struct KOS_RNG *rng)
 {
-    const uint64_t low  = _pcg_random(&rng->pcg[0]);
-    const uint64_t high = _pcg_random(&rng->pcg[1]);
+    const uint64_t low  = pcg_random(&rng->pcg[0]);
+    const uint64_t high = pcg_random(&rng->pcg[1]);
     return (high << 32U) | low;
 }
 
@@ -712,7 +712,7 @@ uint64_t kos_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
         return kos_rng_random(rng);
 
     if (max_value == (uint32_t)(int32_t)-1)
-        return _pcg_random(&rng->pcg[0]);
+        return pcg_random(&rng->pcg[0]);
 
     if (max_value < (uint32_t)(int32_t)-1) {
 
@@ -721,7 +721,7 @@ uint64_t kos_rng_random_range(struct KOS_RNG *rng, uint64_t max_value)
         int            sel       = 0;
 
         for (;; sel ^= 1) {
-            const uint32_t r = _pcg_random(&rng->pcg[sel]);
+            const uint32_t r = pcg_random(&rng->pcg[sel]);
             if (r >= threshold)
                 return r % mask;
         }

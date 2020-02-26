@@ -147,19 +147,19 @@ int kos_getline(KOS_GETLINE      *state,
 
 #elif defined(CONFIG_EDITLINE)
 
-static char *_prompt_first_line(EditLine *e)
+static char *prompt_first_line(EditLine *e)
 {
     return (char *)str_prompt_first_line;
 }
 
-static char *_prompt_subsequent_line(EditLine *e)
+static char *prompt_subsequent_line(EditLine *e)
 {
     return (char *)str_prompt_subsequent_line;
 }
 
 static int stdin_eof = 0;
 
-static int _get_cfn(EditLine *e, char *c)
+static int get_cfn(EditLine *e, char *c)
 {
     int read_c = fgetc(stdin);
 
@@ -201,7 +201,7 @@ int kos_getline_init(KOS_GETLINE *state)
 
     el_set(state->e, EL_EDITOR, "emacs");
 
-    el_set(state->e, EL_GETCFN, _get_cfn);
+    el_set(state->e, EL_GETCFN, get_cfn);
 
     el_source(state->e, 0);
 
@@ -225,8 +225,8 @@ int kos_getline(KOS_GETLINE      *state,
     if (stdin_eof)
         return KOS_SUCCESS_RETURN;
 
-    el_set(state->e, EL_PROMPT, prompt == PROMPT_FIRST_LINE ? _prompt_first_line
-                                                            : _prompt_subsequent_line);
+    el_set(state->e, EL_PROMPT, prompt == PROMPT_FIRST_LINE ? prompt_first_line
+                                                            : prompt_subsequent_line);
 
     if ( ! set_jump()) {
         install_ctrlc_signal(ctrlc_signal_handler, &old_signal);

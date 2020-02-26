@@ -37,14 +37,14 @@ void set_global(const std::string& s)
 
 class test_class {
     public:
-        test_class(int a, const char* b) : _a(a), _b(b) { }
-        int                get_a() const { return _a; }
-        const std::string& get_b() const { return _b; }
-        int64_t            add_a(bool b, int v) { if (b) _a += v; return _a; }
+        test_class(int a, const char* b) : a_(a), b_(b) { }
+        int                get_a() const { return a_; }
+        const std::string& get_b() const { return b_; }
+        int64_t            add_a(bool b, int v) { if (b) a_ += v; return a_; }
 
     private:
-        int         _a;
-        std::string _b;
+        int         a_;
+        std::string b_;
 };
 
 void throw_string(const std::string& str)

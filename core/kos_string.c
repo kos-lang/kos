@@ -53,16 +53,16 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_string_too_long,      "string too long")
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats,     "repeated string too long");
 
 #ifdef CONFIG_STRING16
-#define _override_elem_size(size) do { (size) = (size) < KOS_STRING_ELEM_16 ? KOS_STRING_ELEM_16 : (size); } while (0)
+#define override_elem_size(size) do { (size) = (size) < KOS_STRING_ELEM_16 ? KOS_STRING_ELEM_16 : (size); } while (0)
 #elif defined(CONFIG_STRING32)
-#define _override_elem_size(size) do { (size) = KOS_STRING_ELEM_32; } while (0)
+#define override_elem_size(size) do { (size) = KOS_STRING_ELEM_32; } while (0)
 #else
-#define _override_elem_size(size) do { } while (0)
+#define override_elem_size(size) do { } while (0)
 #endif
 
-static KOS_STRING *_new_empty_string(KOS_CONTEXT      ctx,
-                                     unsigned         length,
-                                     KOS_STRING_FLAGS elem_size)
+static KOS_STRING *new_empty_string(KOS_CONTEXT      ctx,
+                                    unsigned         length,
+                                    KOS_STRING_FLAGS elem_size)
 {
     KOS_STRING *str;
 
@@ -84,10 +84,10 @@ static KOS_STRING *_new_empty_string(KOS_CONTEXT      ctx,
     return str;
 }
 
-static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
-                              const char     *s,
-                              unsigned        length,
-                              KOS_UTF8_ESCAPE escape)
+static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
+                             const char     *s,
+                             unsigned        length,
+                             KOS_UTF8_ESCAPE escape)
 {
     KOS_STRING      *str;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
@@ -109,7 +109,7 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
             else
                 elem_size = KOS_STRING_ELEM_8;
 
-            _override_elem_size(elem_size);
+            override_elem_size(elem_size);
 
             str = (KOS_STRING *)kos_alloc_object(ctx,
                                                  KOS_ALLOC_MOVABLE,
@@ -163,17 +163,17 @@ static KOS_OBJ_ID _new_string(KOS_CONTEXT     ctx,
 
 KOS_OBJ_ID KOS_new_cstring(KOS_CONTEXT ctx, const char *utf8_str)
 {
-    return _new_string(ctx, utf8_str, utf8_str ? (unsigned)strlen(utf8_str) : 0U, KOS_UTF8_NO_ESCAPE);
+    return new_string(ctx, utf8_str, utf8_str ? (unsigned)strlen(utf8_str) : 0U, KOS_UTF8_NO_ESCAPE);
 }
 
 KOS_OBJ_ID KOS_new_string(KOS_CONTEXT ctx, const char *utf8_str, unsigned length)
 {
-    return _new_string(ctx, utf8_str, length, KOS_UTF8_NO_ESCAPE);
+    return new_string(ctx, utf8_str, length, KOS_UTF8_NO_ESCAPE);
 }
 
 KOS_OBJ_ID KOS_new_string_esc(KOS_CONTEXT ctx, const char *utf8_str, unsigned length)
 {
-    return _new_string(ctx, utf8_str, length, KOS_UTF8_WITH_ESCAPE);
+    return new_string(ctx, utf8_str, length, KOS_UTF8_WITH_ESCAPE);
 }
 
 KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_CONTEXT ctx,
@@ -263,11 +263,11 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
             }
         }
 
-        _override_elem_size(elem_size);
+        override_elem_size(elem_size);
 
         KOS_init_local_with(ctx, &save_codes, codes);
 
-        ret = _new_empty_string(ctx, length, elem_size);
+        ret = new_empty_string(ctx, length, elem_size);
 
         codes = KOS_destroy_top_local(ctx, &save_codes);
 
@@ -377,14 +377,14 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     else
         elem_size = KOS_STRING_ELEM_8;
 
-    _override_elem_size(elem_size);
+    override_elem_size(elem_size);
 
     if (length > 0xFFFFU) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_buffer_too_large));
         goto cleanup;
     }
 
-    str = _new_empty_string(ctx, length, elem_size);
+    str = new_empty_string(ctx, length, elem_size);
     if ( ! str)
         goto cleanup;
 
@@ -580,10 +580,10 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
     return hash;
 }
 
-static void _init_empty_string(KOS_STRING *dest,
-                               unsigned    offs,
-                               KOS_STRING *src,
-                               unsigned    len)
+static void init_empty_string(KOS_STRING *dest,
+                              unsigned    offs,
+                              KOS_STRING *src,
+                              unsigned    len)
 {
     if (len) {
         void       *dest_buf = (void *)kos_get_string_buffer(dest);
@@ -687,10 +687,10 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
             new_str.o = non_0_str;
 
         else if (new_len) {
-            _override_elem_size(elem_size);
+            override_elem_size(elem_size);
 
             if (new_len <= 0xFFFFU)
-                new_str.o = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+                new_str.o = OBJID(STRING, new_empty_string(ctx, new_len, elem_size));
             else {
                 new_str.o = KOS_BADPTR;
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
@@ -703,7 +703,7 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
                 for (cur_ptr = str_array; cur_ptr != end; ++cur_ptr) {
                     KOS_OBJ_ID     str_obj = cur_ptr->o;
                     const unsigned cur_len = OBJPTR(STRING, str_obj)->header.length;
-                    _init_empty_string(OBJPTR(STRING, new_str.o), pos, OBJPTR(STRING, str_obj), cur_len);
+                    init_empty_string(OBJPTR(STRING, new_str.o), pos, OBJPTR(STRING, str_obj), cur_len);
                     pos += cur_len;
                 }
             }
@@ -781,10 +781,10 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
             new_str.o = non_0_str;
 
         else if (new_len) {
-            _override_elem_size(elem_size);
+            override_elem_size(elem_size);
 
             if (new_len <= 0xFFFFU)
-                new_str.o = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+                new_str.o = OBJID(STRING, new_empty_string(ctx, new_len, elem_size));
             else {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
                 new_str.o = KOS_BADPTR;
@@ -806,7 +806,7 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
                     }
 
                     cur_len = OBJPTR(STRING, str_obj)->header.length;
-                    _init_empty_string(OBJPTR(STRING, new_str.o), pos, OBJPTR(STRING, str_obj), cur_len);
+                    init_empty_string(OBJPTR(STRING, new_str.o), pos, OBJPTR(STRING, str_obj), cur_len);
                     pos += cur_len;
                 }
             }
@@ -868,7 +868,7 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                 KOS_init_local_with(ctx, &in_str, obj_id);
 
                 if ((new_len << elem_size) <= 2 * sizeof(void *)) {
-                    new_str = OBJID(STRING, _new_empty_string(ctx, new_len, elem_size));
+                    new_str = OBJID(STRING, new_empty_string(ctx, new_len, elem_size));
                     buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, in_str.o)) + (begin << elem_size);
                     if ( ! IS_BAD_PTR(new_str))
                         memcpy((void *)kos_get_string_buffer(OBJPTR(STRING, new_str)),
@@ -942,7 +942,7 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
 
             KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
-            new_str = _new_empty_string(ctx, 1, elem_size);
+            new_str = new_empty_string(ctx, 1, elem_size);
 
             obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
@@ -1021,12 +1021,12 @@ unsigned KOS_string_get_char_code(KOS_CONTEXT ctx,
     return code;
 }
 
-static int _strcmp_8_16(KOS_STRING *a,
-                        unsigned    a_begin,
-                        unsigned    a_len,
-                        KOS_STRING *b,
-                        unsigned    b_begin,
-                        unsigned    b_len)
+static int strcmp_8_16(KOS_STRING *a,
+                       unsigned    a_begin,
+                       unsigned    a_len,
+                       KOS_STRING *b,
+                       unsigned    b_begin,
+                       unsigned    b_len)
 {
     const unsigned  cmp_len = KOS_min(a_len, b_len);
     const uint8_t  *pa      = (const uint8_t  *)kos_get_string_buffer(a) + a_begin;
@@ -1054,12 +1054,12 @@ static int _strcmp_8_16(KOS_STRING *a,
     return result;
 }
 
-static int _strcmp_8_32(KOS_STRING *a,
-                        unsigned    a_begin,
-                        unsigned    a_len,
-                        KOS_STRING *b,
-                        unsigned    b_begin,
-                        unsigned    b_len)
+static int strcmp_8_32(KOS_STRING *a,
+                       unsigned    a_begin,
+                       unsigned    a_len,
+                       KOS_STRING *b,
+                       unsigned    b_begin,
+                       unsigned    b_len)
 {
     const unsigned  cmp_len = KOS_min(a_len, b_len);
     const uint8_t  *pa      = (const uint8_t  *)kos_get_string_buffer(a) + a_begin;
@@ -1087,12 +1087,12 @@ static int _strcmp_8_32(KOS_STRING *a,
     return result;
 }
 
-static int _strcmp_16_32(KOS_STRING *a,
-                         unsigned    a_begin,
-                         unsigned    a_len,
-                         KOS_STRING *b,
-                         unsigned    b_begin,
-                         unsigned    b_len)
+static int strcmp_16_32(KOS_STRING *a,
+                        unsigned    a_begin,
+                        unsigned    a_len,
+                        KOS_STRING *b,
+                        unsigned    b_begin,
+                        unsigned    b_len)
 {
     const unsigned  cmp_len = KOS_min(a_len, b_len);
     const uint16_t *pa      = (const uint16_t *)kos_get_string_buffer(a) + a_begin;
@@ -1120,12 +1120,12 @@ static int _strcmp_16_32(KOS_STRING *a,
     return result;
 }
 
-static int _compare_slice(KOS_STRING *str_a,
-                          unsigned    a_begin,
-                          unsigned    a_end,
-                          KOS_STRING *str_b,
-                          unsigned    b_begin,
-                          unsigned    b_end)
+static int compare_slice(KOS_STRING *str_a,
+                         unsigned    a_begin,
+                         unsigned    a_end,
+                         KOS_STRING *str_b,
+                         unsigned    b_begin,
+                         unsigned    b_end)
 {
     int      result      = 0;
     unsigned a_len       = a_end - a_begin;
@@ -1231,15 +1231,15 @@ static int _compare_slice(KOS_STRING *str_a,
 
         if (a_elem_size == KOS_STRING_ELEM_8) {
             if (b_elem_size == KOS_STRING_ELEM_16)
-                result = _strcmp_8_16(str_a, a_begin, a_len, str_b, b_begin, b_len);
+                result = strcmp_8_16(str_a, a_begin, a_len, str_b, b_begin, b_len);
             else {
                 assert(b_elem_size == KOS_STRING_ELEM_32);
-                result = _strcmp_8_32(str_a, a_begin, a_len, str_b, b_begin, b_len);
+                result = strcmp_8_32(str_a, a_begin, a_len, str_b, b_begin, b_len);
             }
         }
         else {
             assert(a_elem_size == KOS_STRING_ELEM_16 && b_elem_size == KOS_STRING_ELEM_32);
-            result = _strcmp_16_32(str_a, a_begin, a_len, str_b, b_begin, b_len);
+            result = strcmp_16_32(str_a, a_begin, a_len, str_b, b_begin, b_len);
         }
 
         result *= neg;
@@ -1260,12 +1260,12 @@ int KOS_string_compare(KOS_OBJ_ID obj_id_a,
     len_a = KOS_get_string_length(obj_id_a);
     len_b = KOS_get_string_length(obj_id_b);
 
-    return _compare_slice(OBJPTR(STRING, obj_id_a),
-                          0,
-                          len_a,
-                          OBJPTR(STRING, obj_id_b),
-                          0,
-                          len_b);
+    return compare_slice(OBJPTR(STRING, obj_id_a),
+                         0,
+                         len_a,
+                         OBJPTR(STRING, obj_id_b),
+                         0,
+                         len_b);
 }
 
 int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
@@ -1306,18 +1306,18 @@ int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
     if (b_end < b_begin)
         b_end = b_begin;
 
-    return _compare_slice(OBJPTR(STRING, obj_id_a),
-                          (unsigned)a_begin,
-                          (unsigned)a_end,
-                          OBJPTR(STRING, obj_id_b),
-                          (unsigned)b_begin,
-                          (unsigned)b_end);
+    return compare_slice(OBJPTR(STRING, obj_id_a),
+                         (unsigned)a_begin,
+                         (unsigned)a_end,
+                         OBJPTR(STRING, obj_id_b),
+                         (unsigned)b_begin,
+                         (unsigned)b_end);
 }
 
-static void _string_find_brute_force(KOS_OBJ_ID          obj_id_text,
-                                     KOS_OBJ_ID          obj_id_pattern,
-                                     enum KOS_FIND_DIR_E reverse,
-                                     int                *pos)
+static void string_find_brute_force(KOS_OBJ_ID          obj_id_text,
+                                    KOS_OBJ_ID          obj_id_pattern,
+                                    enum KOS_FIND_DIR_E reverse,
+                                    int                *pos)
 {
     const int text_len     = (int)KOS_get_string_length(obj_id_text);
     const int pat_len      = (int)KOS_get_string_length(obj_id_pattern);
@@ -1327,8 +1327,8 @@ static void _string_find_brute_force(KOS_OBJ_ID          obj_id_text,
 
     while (text_pos != end_text_pos) {
 
-        if (_compare_slice(OBJPTR(STRING, obj_id_text), (unsigned)text_pos, (unsigned)(text_pos + pat_len),
-                           OBJPTR(STRING, obj_id_pattern), 0, (unsigned)pat_len) == 0) {
+        if (compare_slice(OBJPTR(STRING, obj_id_text), (unsigned)text_pos, (unsigned)(text_pos + pat_len),
+                          OBJPTR(STRING, obj_id_pattern), 0, (unsigned)pat_len) == 0) {
 
             *pos = text_pos;
             return;
@@ -1375,7 +1375,7 @@ int KOS_string_find(KOS_CONTEXT         ctx,
 
     /* TODO Optimize */
 
-    _string_find_brute_force(obj_id_text, obj_id_pattern, reverse, pos);
+    string_find_brute_force(obj_id_text, obj_id_pattern, reverse, pos);
     return KOS_SUCCESS;
 }
 
@@ -1540,7 +1540,7 @@ KOS_OBJ_ID KOS_string_reverse(KOS_CONTEXT ctx,
 
     KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
-    ret = _new_empty_string(ctx, len, kos_get_string_elem_size(OBJPTR(STRING, obj_id)));
+    ret = new_empty_string(ctx, len, kos_get_string_elem_size(OBJPTR(STRING, obj_id)));
 
     obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
@@ -1615,7 +1615,7 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
 
     KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
-    new_str = _new_empty_string(ctx, len * num_repeat, elem_size);
+    new_str = new_empty_string(ctx, len * num_repeat, elem_size);
 
     obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
@@ -1676,7 +1676,7 @@ KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
 
     KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
-    new_str = _new_empty_string(ctx, len, elem_size);
+    new_str = new_empty_string(ctx, len, elem_size);
 
     obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 
@@ -1749,7 +1749,7 @@ KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
 
     KOS_init_local_with(ctx, &save_obj_id, obj_id);
 
-    new_str = _new_empty_string(ctx, len, elem_size);
+    new_str = new_empty_string(ctx, len, elem_size);
 
     obj_id = KOS_destroy_top_local(ctx, &save_obj_id);
 

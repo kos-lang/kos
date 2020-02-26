@@ -52,9 +52,9 @@ DECLARE_STATIC_CONST_OBJECT(closed,    OBJ_OPAQUE, 0xA1);
                                                    + (uint32_t)(((cap) - 1) * sizeof(KOS_OBJ_ID)), \
                                                  1U << KOS_OBJ_ALIGN_BITS))
 
-static void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
-                             unsigned                count,
-                             KOS_OBJ_ID              value)
+static void atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
+                            unsigned                count,
+                            KOS_OBJ_ID              value)
 {
     KOS_ATOMIC(KOS_OBJ_ID) *const end = dest + count;
     while (dest < end) {
@@ -63,7 +63,7 @@ static void _atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
     }
 }
 
-static KOS_ARRAY_STORAGE *_alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
+static KOS_ARRAY_STORAGE *alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
 {
     KOS_ARRAY_STORAGE *buf            = 0;
     const uint32_t     buf_alloc_size = KOS_buffer_alloc_size(capacity);
@@ -130,7 +130,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
             array_id = OBJID(ARRAY, array);
             kos_track_refs(ctx, 1, &array_id);
 
-            storage = _alloc_buffer(ctx, size);
+            storage = alloc_buffer(ctx, size);
 
             kos_untrack_refs(ctx, 1);
 
@@ -151,10 +151,10 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
                 const uint32_t capacity = KOS_atomic_read_relaxed_u32(storage->capacity);
 
                 if (size)
-                    _atomic_fill_ptr(&storage->buf[0], size, KOS_VOID);
+                    atomic_fill_ptr(&storage->buf[0], size, KOS_VOID);
 
                 if (size < capacity)
-                    _atomic_fill_ptr(&storage->buf[size], capacity - size, TOMBSTONE);
+                    atomic_fill_ptr(&storage->buf[size], capacity - size, TOMBSTONE);
             }
         }
     }
@@ -162,22 +162,22 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
     return OBJID(ARRAY, array);
 }
 
-static KOS_ARRAY_STORAGE *_get_data(KOS_OBJ_ID obj_id)
+static KOS_ARRAY_STORAGE *get_data(KOS_OBJ_ID obj_id)
 {
     const KOS_OBJ_ID buf_obj = kos_get_array_storage(obj_id);
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
 }
 
-static KOS_ARRAY_STORAGE *_get_next(KOS_ARRAY_STORAGE *storage)
+static KOS_ARRAY_STORAGE *get_next(KOS_ARRAY_STORAGE *storage)
 {
     const KOS_OBJ_ID buf_obj = KOS_atomic_read_acquire_obj(storage->next);
     return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
 }
 
-static void _copy_buf(KOS_CONTEXT        ctx,
-                      KOS_ARRAY         *array,
-                      KOS_ARRAY_STORAGE *old_buf,
-                      KOS_ARRAY_STORAGE *new_buf)
+static void copy_buf(KOS_CONTEXT        ctx,
+                     KOS_ARRAY         *array,
+                     KOS_ARRAY_STORAGE *old_buf,
+                     KOS_ARRAY_STORAGE *new_buf)
 {
     KOS_ATOMIC(KOS_OBJ_ID) *src      = &old_buf->buf[0];
     KOS_ATOMIC(KOS_OBJ_ID) *dst      = &new_buf->buf[0];
@@ -248,7 +248,7 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
         const uint32_t bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
 
         if (bufidx < size) {
-            KOS_ARRAY_STORAGE *buf = _get_data(obj_id);
+            KOS_ARRAY_STORAGE *buf = get_data(obj_id);
 
             for (;;) {
                 elem = KOS_atomic_read_relaxed_obj(buf->buf[bufidx]);
@@ -260,7 +260,7 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
                 }
 
                 if (elem == CLOSED)
-                    buf = _get_next(buf);
+                    buf = get_next(buf);
                 else
                     break;
             }
@@ -286,7 +286,7 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
 
         if (bufidx < size) {
 
-            KOS_ARRAY_STORAGE *buf = _get_data(obj_id);
+            KOS_ARRAY_STORAGE *buf = get_data(obj_id);
 
             for (;;) {
 
@@ -298,8 +298,8 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
                 }
 
                 if (cur == CLOSED) {
-                    KOS_ARRAY_STORAGE *new_buf = _get_next(buf);
-                    _copy_buf(ctx, OBJPTR(ARRAY, obj_id), buf, new_buf);
+                    KOS_ARRAY_STORAGE *new_buf = get_next(buf);
+                    copy_buf(ctx, OBJPTR(ARRAY, obj_id), buf, new_buf);
                     buf = new_buf;
                 }
                 else if (KOS_atomic_cas_weak_ptr(buf->buf[bufidx], cur, value)) {
@@ -333,7 +333,7 @@ KOS_OBJ_ID KOS_array_cas(KOS_CONTEXT ctx,
 
         if (bufidx < size) {
 
-            KOS_ARRAY_STORAGE *buf = _get_data(obj_id);
+            KOS_ARRAY_STORAGE *buf = get_data(obj_id);
 
             for (;;) {
 
@@ -345,8 +345,8 @@ KOS_OBJ_ID KOS_array_cas(KOS_CONTEXT ctx,
                 }
 
                 if (cur == CLOSED) {
-                    KOS_ARRAY_STORAGE *new_buf = _get_next(buf);
-                    _copy_buf(ctx, OBJPTR(ARRAY, obj_id), buf, new_buf);
+                    KOS_ARRAY_STORAGE *new_buf = get_next(buf);
+                    copy_buf(ctx, OBJPTR(ARRAY, obj_id), buf, new_buf);
                     buf = new_buf;
                 }
                 else if (cur != old_value) {
@@ -366,34 +366,34 @@ KOS_OBJ_ID KOS_array_cas(KOS_CONTEXT ctx,
     return retval;
 }
 
-static int _resize_storage(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  obj_id,
-                           uint32_t    new_capacity)
+static int resize_storage(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  obj_id,
+                          uint32_t    new_capacity)
 {
     KOS_ARRAY_STORAGE *old_buf;
     KOS_ARRAY_STORAGE *new_buf;
 
     kos_track_refs(ctx, 1, &obj_id);
 
-    new_buf = _alloc_buffer(ctx, new_capacity);
+    new_buf = alloc_buffer(ctx, new_capacity);
 
     kos_untrack_refs(ctx, 1);
 
     if ( ! new_buf)
         return KOS_ERROR_EXCEPTION;
 
-    old_buf = _get_data(obj_id);
+    old_buf = get_data(obj_id);
 
-    _atomic_fill_ptr(&new_buf->buf[0], KOS_atomic_read_relaxed_u32(new_buf->capacity), TOMBSTONE);
+    atomic_fill_ptr(&new_buf->buf[0], KOS_atomic_read_relaxed_u32(new_buf->capacity), TOMBSTONE);
 
     if (!old_buf)
         (void)KOS_atomic_cas_strong_ptr(OBJPTR(ARRAY, obj_id)->data, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf));
     else if (KOS_atomic_cas_strong_ptr(old_buf->next, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf)))
-        _copy_buf(ctx, OBJPTR(ARRAY, obj_id), old_buf, new_buf);
+        copy_buf(ctx, OBJPTR(ARRAY, obj_id), old_buf, new_buf);
     else {
-        KOS_ARRAY_STORAGE *const buf = _get_next(old_buf);
+        KOS_ARRAY_STORAGE *const buf = get_next(old_buf);
 
-        _copy_buf(ctx, OBJPTR(ARRAY, obj_id), old_buf, buf);
+        copy_buf(ctx, OBJPTR(ARRAY, obj_id), old_buf, buf);
     }
 
     return KOS_SUCCESS;
@@ -408,10 +408,10 @@ int kos_array_copy_storage(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(obj_id));
     assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
 
-    buf      = _get_data(obj_id);
+    buf      = get_data(obj_id);
     capacity = buf ? KOS_atomic_read_relaxed_u32(buf->capacity) : 0U;
 
-    return _resize_storage(ctx, obj_id, capacity);
+    return resize_storage(ctx, obj_id, capacity);
 }
 
 int KOS_array_reserve(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t new_capacity)
@@ -423,7 +423,7 @@ int KOS_array_reserve(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t new_capacity)
     else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
-        KOS_ARRAY_STORAGE *old_buf  = _get_data(obj_id);
+        KOS_ARRAY_STORAGE *old_buf  = get_data(obj_id);
         uint32_t           capacity = old_buf ? KOS_atomic_read_relaxed_u32(old_buf->capacity) : 0U;
 
         kos_track_refs(ctx, 1, &obj_id);
@@ -431,11 +431,11 @@ int KOS_array_reserve(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t new_capacity)
         error = KOS_SUCCESS;
 
         while (new_capacity > capacity) {
-            error = _resize_storage(ctx, obj_id, new_capacity);
+            error = resize_storage(ctx, obj_id, new_capacity);
             if (error)
                 break;
 
-            old_buf = _get_data(obj_id);
+            old_buf = get_data(obj_id);
             assert(old_buf);
             capacity = KOS_atomic_read_relaxed_u32(old_buf->capacity);
         }
@@ -464,7 +464,7 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
     else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
-        KOS_ARRAY_STORAGE *buf      = _get_data(obj_id);
+        KOS_ARRAY_STORAGE *buf      = get_data(obj_id);
         const uint32_t     capacity = buf ? KOS_atomic_read_relaxed_u32(buf->capacity) : 0U;
         uint32_t           old_size;
 
@@ -480,7 +480,7 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
             if (error)
                 goto cleanup;
 
-            buf = _get_data(obj_id);
+            buf = get_data(obj_id);
         }
 
         old_size = KOS_atomic_swap_u32(OBJPTR(ARRAY, obj_id)->size, size);
@@ -545,11 +545,11 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
 
             if (new_len) {
 
-                KOS_ARRAY_STORAGE *dest_buf = _alloc_buffer(ctx, new_len);
+                KOS_ARRAY_STORAGE *dest_buf = alloc_buffer(ctx, new_len);
 
                 if (dest_buf) {
                     KOS_ARRAY   *const new_array = OBJPTR(ARRAY, ret);
-                    KOS_ARRAY_STORAGE *src_buf   = _get_data(obj_id);
+                    KOS_ARRAY_STORAGE *src_buf   = get_data(obj_id);
                     uint32_t           idx       = 0;
 
                     KOS_ATOMIC(KOS_OBJ_ID) *dest = &dest_buf->buf[0];
@@ -567,7 +567,7 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
                         }
 
                         if (value == CLOSED) {
-                            src_buf = _get_next(src_buf);
+                            src_buf = get_next(src_buf);
                             continue;
                         }
 
@@ -578,9 +578,9 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
                     KOS_atomic_write_relaxed_u32(new_array->size, new_len);
 
                     if (new_len < KOS_atomic_read_relaxed_u32(dest_buf->capacity))
-                        _atomic_fill_ptr(&dest_buf->buf[new_len],
-                                         KOS_atomic_read_relaxed_u32(dest_buf->capacity) - new_len,
-                                         TOMBSTONE);
+                        atomic_fill_ptr(&dest_buf->buf[new_len],
+                                        KOS_atomic_read_relaxed_u32(dest_buf->capacity) - new_len,
+                                        TOMBSTONE);
                 }
                 else
                     ret = KOS_BADPTR;
@@ -652,9 +652,9 @@ int KOS_array_insert(KOS_CONTEXT ctx,
             goto cleanup;
     }
 
-    dest_buf = _get_data(dest_obj_id);
+    dest_buf = get_data(dest_obj_id);
     if (src_begin != src_end)
-        src_buf = _get_data(src_obj_id);
+        src_buf = get_data(src_obj_id);
 
     if (src_obj_id != dest_obj_id || src_end <= dest_begin || src_begin >= dest_end || ! src_delta) {
 
@@ -723,7 +723,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
     else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
 
-    buf = _get_data(obj_id);
+    buf = get_data(obj_id);
 
     /* Increment index */
     for (;;) {
@@ -744,7 +744,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
             if (error)
                 goto cleanup;
 
-            buf = _get_data(obj_id);
+            buf = get_data(obj_id);
             continue;
         }
 
@@ -760,7 +760,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
         const KOS_OBJ_ID cur_value = KOS_atomic_read_relaxed_ptr(buf->buf[len]);
 
         if (cur_value == CLOSED) {
-            buf = _get_next(buf);
+            buf = get_next(buf);
             continue;
         }
 
@@ -828,7 +828,7 @@ int KOS_array_fill(KOS_CONTEXT ctx,
     begin = kos_fix_index(begin, len);
     end   = kos_fix_index(end, len);
 
-    buf = _get_data(obj_id);
+    buf = get_data(obj_id);
 
     while (begin < end) {
 
@@ -838,8 +838,8 @@ int KOS_array_fill(KOS_CONTEXT ctx,
             break;
 
         if (cur == CLOSED) {
-            KOS_ARRAY_STORAGE *new_buf = _get_next(buf);
-            _copy_buf(ctx, OBJPTR(ARRAY, obj_id), buf, new_buf);
+            KOS_ARRAY_STORAGE *new_buf = get_next(buf);
+            copy_buf(ctx, OBJPTR(ARRAY, obj_id), buf, new_buf);
             buf = new_buf;
         }
         else {

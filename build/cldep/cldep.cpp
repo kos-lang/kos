@@ -34,9 +34,9 @@ using std::string;
 
 class Handle {
     public:
-        Handle() : _handle(INVALID_HANDLE_VALUE) { }
+        Handle() : handle_(INVALID_HANDLE_VALUE) { }
 
-        Handle(const Handle& h) : _handle(INVALID_HANDLE_VALUE) {
+        Handle(const Handle& h) : handle_(INVALID_HANDLE_VALUE) {
             *this = h;
         }
 
@@ -46,38 +46,38 @@ class Handle {
 
         Handle& operator=(HANDLE handle) {
             close();
-            _handle = handle;
+            handle_ = handle;
             return *this;
         }
 
         bool duplicate(const Handle& h) {
             const HANDLE process = GetCurrentProcess();
             HANDLE new_handle    = INVALID_HANDLE_VALUE;
-            if (!DuplicateHandle(process, h._handle,
+            if (!DuplicateHandle(process, h.handle_,
                                  process, &new_handle,
                                  0, TRUE, DUPLICATE_SAME_ACCESS)) {
-                _handle = INVALID_HANDLE_VALUE;
+                handle_ = INVALID_HANDLE_VALUE;
                 printf("Error: Failed to duplicate handle\n");
                 return false;
             }
             close();
-            _handle = new_handle;
+            handle_ = new_handle;
             return true;
         }
 
         void close() {
-            if (_handle != INVALID_HANDLE_VALUE) {
-                CloseHandle(_handle);
-                _handle = INVALID_HANDLE_VALUE;
+            if (handle_ != INVALID_HANDLE_VALUE) {
+                CloseHandle(handle_);
+                handle_ = INVALID_HANDLE_VALUE;
             }
         }
 
         operator HANDLE() const {
-            return _handle;
+            return handle_;
         }
 
     private:
-        HANDLE _handle;
+        HANDLE handle_;
 };
 
 bool create_pipe(Handle* read, Handle* write)
@@ -107,17 +107,17 @@ class DepGenerator {
                      HANDLE        dep_file,
                      const string& dep_file_name,
                      const string& obj_file_name)
-            : _console(      console),
-              _dep_file(     dep_file),
-              _dep_file_name(dep_file_name),
-              _obj_file_name(obj_file_name),
-              _cygwin(       false),
-              _line_num(     0)
+            : console_(      console),
+              dep_file_(     dep_file),
+              dep_file_name_(dep_file_name),
+              obj_file_name_(obj_file_name),
+              cygwin_(       false),
+              line_num_(     0)
         {
             char buf[8] = { };
             GetEnvironmentVariable("OSTYPE", buf, sizeof(buf));
             if (0 == strncmp(buf, "cygwin", sizeof(buf)))
-                _cygwin = true;
+                cygwin_ = true;
         }
 
         bool process_line(string& line)
@@ -127,14 +127,14 @@ class DepGenerator {
             if (line.size() > sizeof(note_including) &&
                 0 == memcmp(&line[0], note_including, sizeof(note_including)-1)) {
 
-                string rule = _obj_file_name + " : ";
+                string rule = obj_file_name_ + " : ";
 
                 size_t i = sizeof(note_including) - 1;
                 while (i < line.size() && line[i] == ' ')
                     i++;
 
                 if (i + 2 < line.size() && line[i+1] == ':') {
-                    if (_cygwin)
+                    if (cygwin_)
                         rule += "/cygdrive/";
                     else
                         rule += '/';
@@ -157,22 +157,22 @@ class DepGenerator {
                 rule += '\n';
 
                 DWORD num_written = 0;
-                if (!WriteFile(_dep_file,
+                if (!WriteFile(dep_file_,
                                &rule[0],
                                (DWORD)rule.size(),
                                &num_written,
                                0) || num_written != rule.size()) {
-                    printf("Error: Failed to write dep file \"%s\"\n", _dep_file_name.c_str());
+                    printf("Error: Failed to write dep file \"%s\"\n", dep_file_name_.c_str());
                     return false;
                 }
             }
             else {
                 // Skip first line which shows file name
-                if (++_line_num == 1)
+                if (++line_num_ == 1)
                     return true;
 
                 DWORD num_written = 0;
-                if (!WriteFile(_console,
+                if (!WriteFile(console_,
                                &line[0],
                                (DWORD)line.size(),
                                &num_written,
@@ -188,33 +188,33 @@ class DepGenerator {
     private:
         DepGenerator& operator=(const DepGenerator&);
 
-        HANDLE        _console;
-        HANDLE        _dep_file;
-        const string& _dep_file_name;
-        const string& _obj_file_name;
-        bool          _cygwin;
-        int           _line_num;
+        HANDLE        console_;
+        HANDLE        dep_file_;
+        const string& dep_file_name_;
+        const string& obj_file_name_;
+        bool          cygwin_;
+        int           line_num_;
 };
 
 class FileDeletor {
     public:
         FileDeletor(HANDLE handle, const string& file_name)
-            : _handle(handle),
-              _file_name(file_name)
+            : handle_(handle),
+              file_name_(file_name)
         { }
         ~FileDeletor() {
-            if (_handle != INVALID_HANDLE_VALUE) {
-                CloseHandle(_handle);
-                DeleteFile(_file_name.c_str());
+            if (handle_ != INVALID_HANDLE_VALUE) {
+                CloseHandle(handle_);
+                DeleteFile(file_name_.c_str());
             }
         }
         void cancel() {
-            _handle = INVALID_HANDLE_VALUE;
+            handle_ = INVALID_HANDLE_VALUE;
         }
 
     private:
-        HANDLE _handle;
-        string _file_name;
+        HANDLE handle_;
+        string file_name_;
 };
 
 int main(int argc, char *argv[])
