@@ -910,8 +910,8 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
                                uint32_t    size)
 {
     KOS_OBJ_HEADER   *hdr = 0;
-    KOS_HUGE_TRACKER *tracker;
-    KOS_OBJ_ID        tracker_obj;
+    KOS_HUGE_TRACKER *new_tracker;
+    KOS_LOCAL         tracker;
     KOS_HEAP         *heap;
     intptr_t          ptrval;
 
@@ -921,18 +921,16 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     heap = get_heap(ctx);
 
-    tracker = (KOS_HUGE_TRACKER *)alloc_object(ctx, OBJ_HUGE_TRACKER, sizeof(KOS_HUGE_TRACKER));
+    new_tracker = (KOS_HUGE_TRACKER *)alloc_object(ctx, OBJ_HUGE_TRACKER, sizeof(KOS_HUGE_TRACKER));
 
-    if ( ! tracker)
+    if ( ! new_tracker)
         return 0;
 
-    tracker->data   = 0;
-    tracker->object = KOS_BADPTR;
-    tracker->size   = 0;
+    new_tracker->data   = 0;
+    new_tracker->object = KOS_BADPTR;
+    new_tracker->size   = 0;
 
-    tracker_obj = OBJID(HUGE_TRACKER, tracker);
-
-    kos_track_refs(ctx, 1, &tracker_obj);
+    KOS_init_local_with(ctx, &tracker, OBJID(HUGE_TRACKER, new_tracker));
 
     kos_lock_mutex(&heap->mutex);
 
@@ -954,20 +952,20 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     gc_trace(("alloc huge %p\n", (void *)ptrval));
 
-    OBJPTR(HUGE_TRACKER, tracker_obj)->size = size;
-    OBJPTR(HUGE_TRACKER, tracker_obj)->data = (void *)ptrval;
+    OBJPTR(HUGE_TRACKER, tracker.o)->size = size;
+    OBJPTR(HUGE_TRACKER, tracker.o)->data = (void *)ptrval;
 
     hdr = (KOS_OBJ_HEADER *)(ptrval + KOS_OBJ_TRACK_BIT);
 
-    *(KOS_OBJ_ID *)((intptr_t)hdr - sizeof(KOS_OBJ_ID)) = tracker_obj;
+    *(KOS_OBJ_ID *)((intptr_t)hdr - sizeof(KOS_OBJ_ID)) = tracker.o;
 
     kos_set_object_type_size(*hdr, object_type, size - KOS_OBJ_TRACK_BIT);
 
-    OBJPTR(HUGE_TRACKER, tracker_obj)->object = (KOS_OBJ_ID)((intptr_t)hdr + 1);
+    OBJPTR(HUGE_TRACKER, tracker.o)->object = (KOS_OBJ_ID)((intptr_t)hdr + 1);
 
     heap->malloc_size += size;
 
-    assert(kos_is_heap_object(tracker_obj));
+    assert(kos_is_heap_object(tracker.o));
     assert(kos_is_tracked_object((KOS_OBJ_ID)((intptr_t)hdr + 1)));
     assert( ! kos_is_heap_object((KOS_OBJ_ID)((intptr_t)hdr + 1)));
 
@@ -976,7 +974,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 cleanup:
     kos_unlock_mutex(&heap->mutex);
 
-    kos_untrack_refs(ctx, 1);
+    KOS_destroy_top_local(ctx, &tracker);
 
     return hdr;
 }

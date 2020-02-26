@@ -253,8 +253,7 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
     int            error        = KOS_SUCCESS;
     KOS_INSTANCE  *inst         = ctx->inst;
     const uint32_t max_threads  = inst->threads.max_threads;
-    KOS_OBJ_ID     exception    = KOS_BADPTR;
-    int            num_tracked  = 0;
+    KOS_LOCAL      exception;
     int            num_pending  = 0;
     uint32_t       num_finished = 0;
     int            join_rest    = 0;
@@ -270,6 +269,8 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
 
     if ( ! KOS_atomic_read_relaxed_u32(inst->threads.num_threads))
         return KOS_SUCCESS;
+
+    KOS_init_local(ctx, &exception);
 
     while (i < max_threads) {
 
@@ -318,19 +319,14 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
                         }
 
                         /* We are joining all threads, so print the previous exception and continue */
-                        if (IS_BAD_PTR(exception)) {
-                            kos_track_refs(ctx, TRACK_ONE_REF, &exception);
-
-                            exception = KOS_get_exception(ctx);
+                        if (IS_BAD_PTR(exception.o)) {
+                            exception.o = KOS_get_exception(ctx);
                             KOS_clear_exception(ctx);
-
-                            assert(num_tracked == 0);
-                            num_tracked = 1;
                         }
                         else {
-                            const KOS_OBJ_ID prev_exception = exception;
+                            const KOS_OBJ_ID prev_exception = exception.o;
 
-                            exception = KOS_get_exception(ctx);
+                            exception.o = KOS_get_exception(ctx);
                             KOS_clear_exception(ctx);
 
                             KOS_raise_exception(ctx, prev_exception);
@@ -365,13 +361,12 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
         }
     }
 
-    if (num_tracked)
-        kos_untrack_refs(ctx, num_tracked);
-
-    if ( ! error && ! IS_BAD_PTR(exception)) {
-        KOS_raise_exception(ctx, exception);
+    if ( ! error && ! IS_BAD_PTR(exception.o)) {
+        KOS_raise_exception(ctx, exception.o);
         error = KOS_ERROR_EXCEPTION;
     }
+
+    KOS_destroy_top_local(ctx, &exception);
 
     return error;
 }

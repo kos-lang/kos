@@ -269,9 +269,11 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
 
     if ( ! error && file) {
 
+        KOS_LOCAL this_;
+
         TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
-        kos_track_refs(ctx, 1, &this_obj);
+        KOS_init_local_with(ctx, &this_, this_obj);
 
         KOS_suspend_context(ctx);
 
@@ -284,7 +286,7 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
 
         KOS_resume_context(ctx);
 
-        kos_untrack_refs(ctx, 1);
+        this_obj = KOS_destroy_top_local(ctx, &this_);
     }
 
 cleanup:
@@ -932,6 +934,7 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     int        whence = SEEK_SET;
     int64_t    pos;
     KOS_OBJ_ID arg;
+    KOS_LOCAL  this_;
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
@@ -944,7 +947,7 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     if (pos < 0)
         whence = SEEK_END;
 
-    kos_track_refs(ctx, 1, &this_obj);
+    KOS_init_local_with(ctx, &this_, this_obj);
 
     KOS_suspend_context(ctx);
 
@@ -953,7 +956,7 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
 
     KOS_resume_context(ctx);
 
-    kos_untrack_refs(ctx, 1);
+    this_obj = KOS_destroy_top_local(ctx, &this_);
 
 cleanup:
     return error ? KOS_BADPTR : this_obj;

@@ -904,14 +904,6 @@ void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
     uint32_t i;
     uint32_t end;
 
-#ifdef CONFIG_MAD_GC
-    int run_mad_gc = 1;
-    if (num_entries == TRACK_ONE_REF) {
-        run_mad_gc  = 0;
-        num_entries = 1;
-    }
-#endif
-
     assert(num_entries > 0);
     assert( ! kos_gc_active(ctx));
     assert((size_t)(ctx->tmp_ref_count + num_entries) <=
@@ -932,10 +924,9 @@ void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
     va_end(args);
 
 #ifdef CONFIG_MAD_GC
-    if (run_mad_gc)
-        if (kos_trigger_mad_gc(ctx))
-            /* Ignore stray exception from another thread or GC failure */
-            KOS_clear_exception(ctx);
+    if (kos_trigger_mad_gc(ctx))
+        /* Ignore stray exception from another thread or GC failure */
+        KOS_clear_exception(ctx);
 #endif
 }
 

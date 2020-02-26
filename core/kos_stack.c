@@ -60,11 +60,9 @@ static int unchain_reentrant_frame(KOS_CONTEXT ctx)
 
             ctx->stack = old_stack;
 
-            kos_track_refs(ctx, 1, &gen_stack);
+            assert( ! kos_is_heap_object(gen_stack));
 
             error = push_new_stack(ctx);
-
-            kos_untrack_refs(ctx, 1);
 
             if (error) {
                 ctx->stack = gen_stack;
@@ -179,8 +177,9 @@ int kos_stack_push(KOS_CONTEXT ctx,
     const KOS_TYPE type       = GET_OBJ_TYPE(func_obj);
     KOS_STACK     *stack;
     KOS_STACK     *new_stack;
+    KOS_LOCAL      func;
 
-    kos_track_refs(ctx, 1, &func_obj);
+    KOS_init_local_with(ctx, &func, func_obj);
 
     if (type != OBJ_FUNCTION && type != OBJ_CLASS)
         RAISE_EXCEPTION(str_err_not_callable);
@@ -190,18 +189,18 @@ int kos_stack_push(KOS_CONTEXT ctx,
     stack_size = stack ? KOS_atomic_read_relaxed_u32(stack->size) : 0;
     base_idx   = stack_size;
 
-    assert( ! OBJPTR(FUNCTION, func_obj)->handler ||
-           OBJPTR(FUNCTION, func_obj)->opts.num_regs == 0);
-    num_regs = OBJPTR(FUNCTION, func_obj)->handler
-               ? 1 : OBJPTR(FUNCTION, func_obj)->opts.num_regs;
+    assert( ! OBJPTR(FUNCTION, func.o)->handler ||
+           OBJPTR(FUNCTION, func.o)->opts.num_regs == 0);
+    num_regs = OBJPTR(FUNCTION, func.o)->handler
+               ? 1 : OBJPTR(FUNCTION, func.o)->opts.num_regs;
     room = num_regs + KOS_STACK_EXTRA;
 
     if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
         RAISE_EXCEPTION(str_err_stack_overflow);
 
     /* Prepare stack for accommodating new stack frame */
-    state = KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state);
-    if (state < KOS_GEN_INIT && ! (OBJPTR(FUNCTION, func_obj)->opts.closure_size)) {
+    state = KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func.o)->state);
+    if (state < KOS_GEN_INIT && ! (OBJPTR(FUNCTION, func.o)->opts.closure_size)) {
 
         if ( ! stack || stack_size + room > stack->capacity) {
 
@@ -228,7 +227,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     }
     else if (state > KOS_GEN_INIT) {
 
-        const KOS_OBJ_ID gen_stack = OBJPTR(FUNCTION, func_obj)->generator_stack_frame;
+        const KOS_OBJ_ID gen_stack = OBJPTR(FUNCTION, func.o)->generator_stack_frame;
 
         assert( ! IS_BAD_PTR(gen_stack));
         assert(GET_OBJ_TYPE(gen_stack) == OBJ_STACK);
@@ -252,7 +251,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
          * we still need to have 'room' left */
         TRY(push_new_reentrant_stack(ctx, room + 1));
 
-        OBJPTR(FUNCTION, func_obj)->generator_stack_frame = ctx->stack;
+        OBJPTR(FUNCTION, func.o)->generator_stack_frame = ctx->stack;
 
         new_stack = OBJPTR(STACK, ctx->stack);
         base_idx  = KOS_atomic_read_relaxed_u32(new_stack->size);
@@ -263,9 +262,9 @@ int kos_stack_push(KOS_CONTEXT ctx,
 
     /* Initialize new stack frame */
     KOS_atomic_write_relaxed_u32(new_stack->size,              base_idx + room);
-    KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx],     func_obj);
+    KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx],     func.o);
     KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx + 1], TO_SMALL_INT((int64_t)catch_init));
-    KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx + 2], TO_SMALL_INT((int64_t)OBJPTR(FUNCTION, func_obj)->instr_offs));
+    KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx + 2], TO_SMALL_INT((int64_t)OBJPTR(FUNCTION, func.o)->instr_offs));
     KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx + 3 + num_regs],
                                                        TO_SMALL_INT((int64_t)num_regs));
     ctx->regs_idx = base_idx + 3;
@@ -282,7 +281,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     ctx->stack_depth += room;
 
 cleanup:
-    kos_untrack_refs(ctx, 1);
+    KOS_destroy_top_local(ctx, &func);
 
     return error;
 }

@@ -1373,7 +1373,7 @@ static KOS_OBJ_ID alloc_ballast(KOS_CONTEXT ctx,
                                 unsigned   *num_objs_out)
 {
     KOS_ARRAY_STORAGE *array;
-    KOS_OBJ_ID         obj_id;
+    KOS_LOCAL          obj;
     unsigned           num_objs  = 0;
     uint32_t           size_left = num_slots << KOS_OBJ_ALIGN_BITS;
     uint32_t           size;
@@ -1389,9 +1389,7 @@ static KOS_OBJ_ID alloc_ballast(KOS_CONTEXT ctx,
 
     size_left -= size;
 
-    obj_id = OBJID(ARRAY_STORAGE, array);
-
-    kos_track_refs(ctx, 1, &obj_id);
+    KOS_init_local_with(ctx, &obj, OBJID(ARRAY_STORAGE, array));
 
     while (size_left) {
         KOS_OBJ_ID next_obj;
@@ -1402,26 +1400,24 @@ static KOS_OBJ_ID alloc_ballast(KOS_CONTEXT ctx,
         next_obj = OBJID(OPAQUE, (KOS_OPAQUE *)kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_OPAQUE, size));
 
         if (IS_BAD_PTR(next_obj)) {
-            kos_untrack_refs(ctx, 1);
+            KOS_destroy_top_local(ctx, &obj);
             return KOS_BADPTR;
         }
 
         assert(num_objs < capacity);
         if (num_objs >= capacity) {
-            obj_id = KOS_BADPTR;
+            obj.o = KOS_BADPTR;
             break;
         }
 
-        write_array_storage(obj_id, num_objs, next_obj);
+        write_array_storage(obj.o, num_objs, next_obj);
 
         ++num_objs;
     }
 
-    kos_untrack_refs(ctx, 1);
-
     *num_objs_out = num_objs + 1;
 
-    return obj_id;
+    return KOS_destroy_top_local(ctx, &obj);
 }
 
 #ifndef CONFIG_MAD_GC
@@ -1543,16 +1539,14 @@ int main(void)
     /* Test internal tracked refs */
     {
         KOS_GC_STATS stats     = KOS_GC_STATS_INIT(~0U);
-        KOS_OBJ_ID   obj_id    = KOS_BADPTR;
         int          finalized = 0;
+        KOS_LOCAL    obj;
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
-        kos_track_refs(ctx, 1, &obj_id);
-
-        obj_id = KOS_new_object(ctx);
-        KOS_object_set_private_ptr(obj_id, &finalized);
-        OBJPTR(OBJECT, obj_id)->finalize = finalize_47;
+        KOS_init_local_with(ctx, &obj, KOS_new_object(ctx));
+        KOS_object_set_private_ptr(obj.o, &finalized);
+        OBJPTR(OBJECT, obj.o)->finalize = finalize_47;
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -1566,11 +1560,11 @@ int main(void)
         TEST(stats.num_pages_freed    == 0);
         TEST(stats.size_evacuated     == 0);
         TEST(stats.size_freed         == 0);
-        TEST(stats.size_kept          == base_stats.size_kept + get_obj_size(obj_id));
+        TEST(stats.size_kept          == base_stats.size_kept + get_obj_size(obj.o));
         TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
-        kos_untrack_refs(ctx, 1);
+        KOS_destroy_top_local(ctx, &obj);
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 

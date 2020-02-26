@@ -343,12 +343,6 @@ static_assert(KOS_PAGE_SIZE - KOS_BITMAP_OFFS - KOS_BITMAP_SIZE - (KOS_SLOTS_PER
 
 #define KOS_LOOK_FURTHER 255
 
-#ifdef CONFIG_MAD_GC
-#define TRACK_ONE_REF 0x1234
-#else
-#define TRACK_ONE_REF 1
-#endif
-
 void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
 
 void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries);
