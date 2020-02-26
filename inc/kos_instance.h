@@ -105,12 +105,10 @@ typedef struct KOS_STACK_S {
     KOS_ATOMIC(KOS_OBJ_ID) buf[1]; /* Actual stack */
 } KOS_STACK;
 
-typedef struct KOS_LOCAL_S KOS_LOCAL;
-
-struct KOS_LOCAL_S {
-    KOS_LOCAL *next;
-    KOS_OBJ_ID o;
-};
+typedef struct KOS_LOCAL_S {
+    struct KOS_LOCAL_S *next;
+    KOS_OBJ_ID          o;
+} KOS_LOCAL;
 
 #define KOS_MAX_LOCALS 16
 
