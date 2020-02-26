@@ -527,20 +527,20 @@ static int init_registers(KOS_CONTEXT ctx,
 
     KOS_LOCAL      func;
     KOS_LOCAL      args;
-    KOS_LOCAL      stack;
     KOS_LOCAL      this_;
     KOS_LOCAL      ellipsis;
     KOS_LOCAL      rest;
 
-    KOS_init_locals(ctx, 6, &func, &args, &stack, &this_, &ellipsis, &rest);
+    KOS_init_locals(ctx, 5, &func, &args, &this_, &ellipsis, &rest);
+
+    assert(IS_BAD_PTR(stack_obj) || ! kos_is_heap_object(stack_obj));
 
     this_.o = this_obj;
-    stack.o = stack_obj;
     args.o  = args_obj;
     func.o  = func_obj;
 
     assert(GET_OBJ_TYPE(this_.o) <= OBJ_LAST_TYPE);
-    assert( ! IS_BAD_PTR(args.o) || GET_OBJ_TYPE(stack.o) == OBJ_STACK);
+    assert( ! IS_BAD_PTR(args.o) || GET_OBJ_TYPE(stack_obj) == OBJ_STACK);
     assert( ! OBJPTR(FUNCTION, func.o)->handler);
     assert(OBJPTR(FUNCTION, func.o)->opts.num_def_args == num_def_args);
 
@@ -556,7 +556,7 @@ static int init_registers(KOS_CONTEXT ctx,
 
     if (OBJPTR(FUNCTION, func.o)->opts.ellipsis_reg != KOS_NO_REG)  {
         if (num_input_args > num_arg_regs)
-            ellipsis.o = slice_args(ctx, args.o, stack.o, rarg1_idx, num_args, num_named_args, ~0U);
+            ellipsis.o = slice_args(ctx, args.o, stack_obj, rarg1_idx, num_args, num_named_args, ~0U);
         else
             ellipsis.o = KOS_new_array(ctx, 0);
         TRY_OBJID(ellipsis.o);
@@ -573,7 +573,7 @@ static int init_registers(KOS_CONTEXT ctx,
         if (num_to_move) {
             kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&OBJPTR(STACK, ctx->stack)->buf[reg],
                                 (KOS_ATOMIC(void *) *)(IS_BAD_PTR(args.o)
-                                    ? &OBJPTR(STACK, stack.o)->buf[rarg1_idx]
+                                    ? &OBJPTR(STACK, stack_obj)->buf[rarg1_idx]
                                     : kos_get_array_buffer(OBJPTR(ARRAY, args.o))),
                                 num_to_move);
             reg += num_to_move;
@@ -599,13 +599,13 @@ static int init_registers(KOS_CONTEXT ctx,
     else {
         const uint32_t num_to_move = KOS_min(num_input_args, KOS_MAX_ARGS_IN_REGS - 1U);
 
-        rest.o = slice_args(ctx, args.o, stack.o, rarg1_idx, num_args, KOS_MAX_ARGS_IN_REGS - 1, num_named_args);
+        rest.o = slice_args(ctx, args.o, stack_obj, rarg1_idx, num_args, KOS_MAX_ARGS_IN_REGS - 1, num_named_args);
         TRY_OBJID(rest.o);
 
         if (num_to_move) {
             kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&OBJPTR(STACK, ctx->stack)->buf[reg],
                                 (KOS_ATOMIC(void *) *)(IS_BAD_PTR(args.o)
-                                    ? &OBJPTR(STACK, stack.o)->buf[rarg1_idx]
+                                    ? &OBJPTR(STACK, stack_obj)->buf[rarg1_idx]
                                     : kos_get_array_buffer(OBJPTR(ARRAY, args.o))),
                                 num_to_move);
             reg += num_to_move;
@@ -740,16 +740,17 @@ static int prepare_call(KOS_CONTEXT        ctx,
                         uint32_t           rarg1,
                         unsigned           num_args)
 {
-    int                error    = KOS_SUCCESS;
+    int                error     = KOS_SUCCESS;
     KOS_FUNCTION_STATE state;
-    const uint32_t     regs_idx = ctx->regs_idx;
+    const uint32_t     regs_idx  = ctx->regs_idx;
+    KOS_OBJ_ID         stack_obj = ctx->stack;
     KOS_LOCAL          func;
     KOS_LOCAL          args;
-    KOS_LOCAL          stack;
 
-    KOS_init_local_with(ctx, &stack, ctx->stack);
     KOS_init_local_with(ctx, &args, args_obj);
     KOS_init_local_with(ctx, &func, func_obj);
+
+    assert(IS_BAD_PTR(stack_obj) || ! kos_is_heap_object(stack_obj));
 
     assert( ! IS_BAD_PTR(func.o));
     if (IS_BAD_PTR(args.o)) {
@@ -811,7 +812,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
                 TRY(init_registers(ctx,
                                    func.o,
                                    args.o,
-                                   stack.o,
+                                   stack_obj,
                                    regs_idx + rarg1,
                                    num_args,
                                    *this_obj));
@@ -832,13 +833,13 @@ static int prepare_call(KOS_CONTEXT        ctx,
                 TRY(init_registers(ctx,
                                    func.o,
                                    args.o,
-                                   stack.o,
+                                   stack_obj,
                                    regs_idx + rarg1,
                                    num_args,
                                    *this_obj));
             else {
                 if (IS_BAD_PTR(args.o)) {
-                    args.o = make_args(ctx, stack.o, regs_idx + rarg1, num_args);
+                    args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
                     TRY_OBJID(args.o);
                 }
                 set_handler_reg(ctx, args.o);
@@ -870,7 +871,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
                     KOS_OBJ_ID value;
 
                     if (IS_BAD_PTR(args.o))
-                        value = num_args ? KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack.o)->buf[regs_idx + rarg1]) : KOS_VOID;
+                        value = num_args ? KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[regs_idx + rarg1]) : KOS_VOID;
 
                     else {
 
@@ -903,9 +904,9 @@ static int prepare_call(KOS_CONTEXT        ctx,
     }
 
 cleanup:
-    if (error && (stack.o != ctx->stack || regs_idx != ctx->regs_idx))
+    if (error && (stack_obj != ctx->stack || regs_idx != ctx->regs_idx))
         kos_stack_pop(ctx);
-    KOS_destroy_top_locals(ctx, &func, &stack);
+    KOS_destroy_top_locals(ctx, &func, &args);
     return error;
 }
 

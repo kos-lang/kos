@@ -400,39 +400,39 @@ typedef int (*KOS_WALK_STACK)(KOS_OBJ_ID stack,
 
 static int walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 {
-    int       error     = KOS_SUCCESS;
-    KOS_LOCAL stack;
-    uint32_t  size;
-    uint32_t  prev_size = ~0U;
+    int        error     = KOS_SUCCESS;
+    uint32_t   size;
+    uint32_t   prev_size = ~0U;
+    KOS_OBJ_ID stack_obj = ctx->stack;
 
-    KOS_init_local_with(ctx, &stack, ctx->stack);
-
-    assert( ! IS_BAD_PTR(stack.o));
-    assert(GET_OBJ_TYPE(stack.o) == OBJ_STACK);
-    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack.o)->size);
+    assert( ! IS_BAD_PTR(stack_obj));
+    assert(GET_OBJ_TYPE(stack_obj) == OBJ_STACK);
+    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack_obj)->size);
 
     while (size) {
 
-        const int reentrant = OBJPTR(STACK, stack.o)->flags & KOS_REENTRANT_STACK;
+        const int reentrant = OBJPTR(STACK, stack_obj)->flags & KOS_REENTRANT_STACK;
+
+        assert( ! kos_is_heap_object(ctx->stack));
 
         if (size == 1) {
 
-            const KOS_OBJ_ID prev = stack.o;
+            const KOS_OBJ_ID prev = stack_obj;
 
-            stack.o = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack.o)->buf[0]);
-            if (IS_BAD_PTR(stack.o))
+            stack_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[0]);
+            if (IS_BAD_PTR(stack_obj))
                 --size;
             else {
-                assert( ! IS_BAD_PTR(stack.o));
-                assert(GET_OBJ_TYPE(stack.o) == OBJ_STACK);
-                assert( ! (OBJPTR(STACK, stack.o)->flags & KOS_REENTRANT_STACK));
+                assert( ! IS_BAD_PTR(stack_obj));
+                assert(GET_OBJ_TYPE(stack_obj) == OBJ_STACK);
+                assert( ! (OBJPTR(STACK, stack_obj)->flags & KOS_REENTRANT_STACK));
 
-                size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack.o)->size);
+                size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack_obj)->size);
 
                 if (reentrant && prev != ctx->stack) {
                     assert(size > 0);
                     assert(prev_size != ~0U);
-                    assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack.o)->buf[prev_size - 1]) == prev);
+                    assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[prev_size - 1]) == prev);
 
                     size      = prev_size - 1;
                     prev_size = ~0U;
@@ -441,7 +441,7 @@ static int walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
         }
         else {
 
-            KOS_OBJ_ID num_regs_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack.o)->buf[size - 1]);
+            KOS_OBJ_ID num_regs_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[size - 1]);
 
             if (IS_SMALL_INT(num_regs_obj)) {
                 int64_t    num_regs;
@@ -459,7 +459,7 @@ static int walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 
                 assert( ! reentrant || size == frame_size + 1);
 
-                error = walk(stack.o,
+                error = walk(stack_obj,
                              size - frame_size,
                              frame_size,
                              cookie);
@@ -472,18 +472,16 @@ static int walk_stack(KOS_CONTEXT ctx, KOS_WALK_STACK walk, void *cookie)
 
                 assert(GET_OBJ_TYPE(num_regs_obj) == OBJ_STACK);
                 assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, num_regs_obj)->size) > 0);
-                assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, num_regs_obj)->buf[0]) == stack.o);
+                assert(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, num_regs_obj)->buf[0]) == stack_obj);
                 assert(OBJPTR(STACK, num_regs_obj)->flags & KOS_REENTRANT_STACK);
                 assert( ! reentrant);
 
                 prev_size = size;
-                stack.o   = num_regs_obj;
-                size      = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack.o)->size);
+                stack_obj   = num_regs_obj;
+                size      = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack_obj)->size);
             }
         }
     }
-
-    KOS_destroy_top_local(ctx, &stack);
 
     return error;
 }
