@@ -53,16 +53,10 @@ int main(void)
         TEST(KOS_buffer_reserve(ctx, str, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_reserve(ctx, KOS_BADPTR, 10) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
         TEST(KOS_buffer_resize(ctx, TO_SMALL_INT(1), 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_resize(ctx, str, 10) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
-        TEST(KOS_buffer_resize(ctx, KOS_BADPTR, 10) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_make_room(ctx, TO_SMALL_INT(1), 1U) == 0);
@@ -71,16 +65,10 @@ int main(void)
         TEST(KOS_buffer_make_room(ctx, str, 1U) == 0);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_make_room(ctx, KOS_BADPTR, 1U) == 0);
-        TEST_EXCEPTION();
-
         TEST(KOS_buffer_fill(ctx, TO_SMALL_INT(1), 1, 2, 3U) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_fill(ctx, str, 1, 2, 3U) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
-        TEST(KOS_buffer_fill(ctx, KOS_BADPTR, 1, 2, 3U) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_copy(ctx, TO_SMALL_INT(1), 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
@@ -89,25 +77,16 @@ int main(void)
         TEST(KOS_buffer_copy(ctx, str, 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(ctx, KOS_BADPTR, 0, buf, 0, 1) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
         TEST(KOS_buffer_copy(ctx, buf, 0, TO_SMALL_INT(1), 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_copy(ctx, buf, 0, str, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
-        TEST(KOS_buffer_copy(ctx, buf, 0, KOS_BADPTR, 0, 1) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
         TEST(KOS_buffer_slice(ctx, TO_SMALL_INT(1), 1, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
 
         TEST(KOS_buffer_slice(ctx, str, 1, 2) == KOS_BADPTR);
-        TEST_EXCEPTION();
-
-        TEST(KOS_buffer_slice(ctx, KOS_BADPTR, 1, 2) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 

@@ -1263,11 +1263,6 @@ int main(void)
         TEST(!IS_BAD_PTR(str_str));
         TEST(GET_OBJ_TYPE(str_str) == OBJ_STRING);
 
-        a[0].o = str_str;
-        a[1].o = KOS_BADPTR;
-        TEST(KOS_string_add_n(ctx, a, 2) == KOS_BADPTR);
-        TEST_EXCEPTION();
-
         a[0].o = TO_SMALL_INT(1);
         a[1].o = str_str;
         TEST(KOS_string_add_n(ctx, a, 2) == KOS_BADPTR);
@@ -1299,9 +1294,6 @@ int main(void)
         KOS_OBJ_ID array;
         KOS_OBJ_ID in_str;
         KOS_OBJ_ID str;
-
-        TEST(KOS_string_add(ctx, KOS_BADPTR) == KOS_BADPTR);
-        TEST_EXCEPTION();
 
         TEST(KOS_string_add(ctx, KOS_VOID) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1420,9 +1412,6 @@ int main(void)
 
     /************************************************************************/
     {
-        TEST(KOS_string_slice(ctx, KOS_BADPTR, 0, 1) == KOS_BADPTR);
-        TEST_EXCEPTION();
-
         TEST(KOS_string_slice(ctx, TO_SMALL_INT(1), 0, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
 
@@ -1490,9 +1479,6 @@ int main(void)
 
     /************************************************************************/
     {
-        TEST(KOS_string_get_char(ctx, KOS_BADPTR, 0) == KOS_BADPTR);
-        TEST_EXCEPTION();
-
         TEST(KOS_string_get_char(ctx, TO_SMALL_INT(2), 0) == KOS_BADPTR);
         TEST_EXCEPTION();
 
@@ -1505,9 +1491,6 @@ int main(void)
 
     /************************************************************************/
     {
-        TEST(KOS_string_get_char_code(ctx, KOS_BADPTR, 0) == ~0U);
-        TEST_EXCEPTION();
-
         TEST(KOS_string_get_char_code(ctx, TO_SMALL_INT(2), 0) == ~0U);
         TEST_EXCEPTION();
 

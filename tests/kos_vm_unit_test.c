@@ -26,6 +26,7 @@
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
+#include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
@@ -79,6 +80,8 @@ struct INSTR_DEF_S {
     if (test_instr(ctx, instr.instr, __LINE__, &instr.out, &instr.in[0]) != KOS_SUCCESS) \
         return 1; \
 }
+
+KOS_DECLARE_CONST_STRING(str_module_name, "kos_vm_unit_test");
 
 static int test_instr(KOS_CONTEXT           ctx,
                       KOS_BYTECODE_INSTR    instr,
@@ -336,8 +339,8 @@ static int test_instr(KOS_CONTEXT           ctx,
 
     kos_set_object_type(module->header, OBJ_MODULE);
 
-    module->name          = KOS_BADPTR;
-    module->path          = KOS_BADPTR;
+    module->name          = KOS_CONST_ID(str_module_name);
+    module->path          = KOS_STR_EMPTY;
     module->inst          = ctx->inst;
     module->bytecode      = &code[0];
     module->bytecode_size = words;

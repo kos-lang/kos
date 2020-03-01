@@ -48,7 +48,6 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string,       "invalid string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_utf8,         "invalid UTF-8 sequence");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,            "object is not an array");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,           "object is not a string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_null_ptr,             "null pointer");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_string_too_long,      "string too long");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats,     "repeated string too long");
 
@@ -660,12 +659,12 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
             KOS_STRING_FLAGS cur_elem_size;
             unsigned         cur_len;
 
-            if (IS_BAD_PTR(cur_str) || GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
+            assert( ! IS_BAD_PTR(cur_str));
+
+            if (GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
                 new_str.o = KOS_BADPTR;
                 new_len   = 0;
-                KOS_raise_exception(ctx, IS_BAD_PTR(cur_str) ?
-                                         KOS_CONST_ID(str_err_null_ptr) :
-                                         KOS_CONST_ID(str_err_not_string));
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
                 break;
             }
 
@@ -825,10 +824,10 @@ KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
 {
     KOS_OBJ_ID new_str = KOS_BADPTR;
 
-    if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id) ?
-                                 KOS_CONST_ID(str_err_null_ptr) :
-                                 KOS_CONST_ID(str_err_not_string));
+    assert( ! IS_BAD_PTR(obj_id));
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
     else {
         const KOS_STRING_FLAGS elem_size =
             kos_get_string_elem_size(OBJPTR(STRING, obj_id));
@@ -925,10 +924,10 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
 {
     KOS_STRING *new_str = 0;
 
-    if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id) ?
-                                 KOS_CONST_ID(str_err_null_ptr) :
-                                 KOS_CONST_ID(str_err_not_string));
+    assert( ! IS_BAD_PTR(obj_id));
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
     else {
         const KOS_STRING_FLAGS elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
         const int              len       = (int)OBJPTR(STRING, obj_id)->header.length;
@@ -983,10 +982,10 @@ unsigned KOS_string_get_char_code(KOS_CONTEXT ctx,
 {
     uint32_t code = ~0U;
 
-    if (IS_BAD_PTR(obj_id) || GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(ctx, IS_BAD_PTR(obj_id) ?
-                                 KOS_CONST_ID(str_err_null_ptr) :
-                                 KOS_CONST_ID(str_err_not_string));
+    assert( ! IS_BAD_PTR(obj_id));
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
     else {
         KOS_STRING            *str       = OBJPTR(STRING, obj_id);
         const KOS_STRING_FLAGS elem_size = kos_get_string_elem_size(str);

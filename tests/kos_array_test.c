@@ -48,9 +48,6 @@ int main(void)
     /************************************************************************/
     /* Cannot read from a non-array */
     {
-        TEST(KOS_array_read(ctx, KOS_BADPTR, 0) == KOS_BADPTR);
-        TEST_EXCEPTION();
-
         TEST(KOS_array_read(ctx, TO_SMALL_INT(1), 0) == KOS_BADPTR);
         TEST_EXCEPTION();
 
@@ -70,9 +67,6 @@ int main(void)
     /************************************************************************/
     /* Cannot write to a non-array */
     {
-        TEST(KOS_array_write(ctx, KOS_BADPTR, 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
         TEST(KOS_array_write(ctx, TO_SMALL_INT(1), 0, TO_SMALL_INT(1)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
@@ -92,9 +86,6 @@ int main(void)
     /************************************************************************/
     /* Cannot reserve on a non-array */
     {
-        TEST(KOS_array_reserve(ctx, KOS_BADPTR, 128) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
         TEST(KOS_array_reserve(ctx, TO_SMALL_INT(1), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
@@ -114,9 +105,6 @@ int main(void)
     /************************************************************************/
     /* Cannot resize a non-array */
     {
-        TEST(KOS_array_resize(ctx, KOS_BADPTR, 128) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
         TEST(KOS_array_resize(ctx, TO_SMALL_INT(1), 128) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
@@ -136,9 +124,6 @@ int main(void)
     /************************************************************************/
     /* Cannot slice a non-array */
     {
-        TEST(KOS_array_slice(ctx, KOS_BADPTR, 0, 0) == KOS_BADPTR);
-        TEST_EXCEPTION();
-
         TEST(KOS_array_slice(ctx, TO_SMALL_INT(1), 0, 0) == KOS_BADPTR);
         TEST_EXCEPTION();
 
@@ -160,9 +145,6 @@ int main(void)
     {
         KOS_OBJ_ID array = KOS_new_array(ctx, 1);
 
-        TEST(KOS_array_insert(ctx, KOS_BADPTR, 0, 0, array, 0, 1) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
         TEST(KOS_array_insert(ctx, TO_SMALL_INT(1), 0, 0, array, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
@@ -176,9 +158,6 @@ int main(void)
         TEST_EXCEPTION();
 
         TEST(KOS_array_insert(ctx, KOS_new_object(ctx), 0, 0, array, 0, 1) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
-        TEST(KOS_array_insert(ctx, array, 0, 0, KOS_BADPTR, 0, 1) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
 
         TEST(KOS_array_insert(ctx, array, 0, 0, TO_SMALL_INT(1), 0, 1) == KOS_ERROR_EXCEPTION);
@@ -201,9 +180,6 @@ int main(void)
     /* Cannot push to a non-array */
     {
         uint32_t idx = ~0U;
-        TEST(KOS_array_push(ctx, KOS_BADPTR, TO_SMALL_INT(42), &idx) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-        TEST(idx == ~0U);
 
         TEST(KOS_array_push(ctx, TO_SMALL_INT(1), TO_SMALL_INT(42), &idx) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
@@ -229,9 +205,6 @@ int main(void)
     /************************************************************************/
     /* Cannot pop from an non-array */
     {
-        TEST(KOS_array_pop(ctx, KOS_BADPTR) == KOS_BADPTR);
-        TEST_EXCEPTION();
-
         TEST(KOS_array_pop(ctx, TO_SMALL_INT(1)) == KOS_BADPTR);
         TEST_EXCEPTION();
 

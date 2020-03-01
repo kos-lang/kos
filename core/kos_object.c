@@ -64,7 +64,6 @@
 KOS_DECLARE_STATIC_CONST_STRING(str_err_no_own_properties, "object has no own properties");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_no_property,       "no such property");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,        "property name is not a string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_null_ptr,          "null pointer");
 
 DECLARE_STATIC_CONST_OBJECT(tombstone, OBJ_OPAQUE, 0xB0);
 DECLARE_STATIC_CONST_OBJECT(closed,    OBJ_OPAQUE, 0xB1);
@@ -436,9 +435,10 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
 {
     KOS_OBJ_ID retval = KOS_BADPTR;
 
-    if (IS_BAD_PTR(obj_id) || IS_BAD_PTR(prop))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(prop) != OBJ_STRING)
+    assert( ! IS_BAD_PTR(obj_id));
+    assert( ! IS_BAD_PTR(prop));
+
+    if (GET_OBJ_TYPE(prop) != OBJ_STRING)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
     else {
         KOS_ATOMIC(KOS_OBJ_ID) *props = get_properties(obj_id);
@@ -578,13 +578,15 @@ int KOS_set_property(KOS_CONTEXT ctx,
     KOS_LOCAL value;
     int       error = KOS_ERROR_EXCEPTION;
 
+    assert( ! IS_BAD_PTR(obj_id));
+    assert( ! IS_BAD_PTR(prop_obj));
+    assert( ! IS_BAD_PTR(value_obj));
+
     KOS_init_local_with(ctx, &obj,   obj_id);
     KOS_init_local_with(ctx, &prop,  prop_obj);
     KOS_init_local_with(ctx, &value, value_obj);
 
-    if (IS_BAD_PTR(obj.o) || IS_BAD_PTR(prop.o) || IS_BAD_PTR(value.o))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(prop.o) != OBJ_STRING)
+    if (GET_OBJ_TYPE(prop.o) != OBJ_STRING)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
     else if ( ! has_properties(obj.o))
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_no_own_properties));
@@ -760,15 +762,14 @@ int KOS_delete_property(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  obj_id,
                         KOS_OBJ_ID  prop)
 {
-    if (IS_BAD_PTR(prop)) {
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-        return KOS_ERROR_EXCEPTION;
-    }
-    else if (GET_OBJ_TYPE(prop) != OBJ_STRING) {
+    assert( ! IS_BAD_PTR(obj_id));
+    assert( ! IS_BAD_PTR(prop));
+
+    if (GET_OBJ_TYPE(prop) != OBJ_STRING) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
         return KOS_ERROR_EXCEPTION;
     }
-    else if ( ! IS_BAD_PTR(obj_id) && ! has_properties(obj_id))
+    else if ( ! has_properties(obj_id))
         return KOS_SUCCESS;
     else
         return KOS_set_property(ctx, obj_id, prop, TOMBSTONE);

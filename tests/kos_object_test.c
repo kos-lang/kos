@@ -117,7 +117,7 @@ int main(void)
         TEST_EXCEPTION();
 
         /* Invalid property pointer */
-        TEST(KOS_delete_property(ctx, o, KOS_BADPTR) == KOS_ERROR_EXCEPTION);
+        TEST(KOS_delete_property(ctx, o, KOS_VOID) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
     }
 
@@ -208,14 +208,6 @@ int main(void)
         str = KOS_new_const_ascii_cstring(ctx, cstr);
         TEST(!IS_BAD_PTR(str));
 
-        /* Cannot set property when value is null pointer */
-        TEST(KOS_set_property(ctx, o, str, KOS_BADPTR) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
-        /* Cannot set property of null pointer */
-        TEST(KOS_set_property(ctx, KOS_BADPTR, str, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
-
         /* Cannot set property of a number */
         TEST(KOS_set_property(ctx, TO_SMALL_INT(123), str, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
         TEST_EXCEPTION();
@@ -237,10 +229,6 @@ int main(void)
     {
         const KOS_OBJ_ID o = KOS_new_object(ctx);
         TEST(!IS_BAD_PTR(o));
-
-        /* Cannot set property when property name is a null pointer */
-        TEST(KOS_set_property(ctx, o, KOS_BADPTR, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
-        TEST_EXCEPTION();
 
         /* Cannot set property when property name is an object */
         TEST(KOS_set_property(ctx, o, o, TO_SMALL_INT(0)) == KOS_ERROR_EXCEPTION);
@@ -273,14 +261,6 @@ int main(void)
         /* Can set property if name and value are correct */
         TEST(KOS_set_property(ctx, o, str, TO_SMALL_INT(3)) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
-
-        /* Cannot retrieve property of a null pointer */
-        TEST(IS_BAD_PTR(KOS_get_property(ctx, KOS_BADPTR, str)));
-        TEST_EXCEPTION();
-
-        /* Cannot retrieve property when name is a null pointer */
-        TEST(IS_BAD_PTR(KOS_get_property(ctx, o, KOS_BADPTR)));
-        TEST_EXCEPTION();
 
         /* Cannot retrieve property when name is a number */
         TEST(IS_BAD_PTR(KOS_get_property(ctx, o, TO_SMALL_INT(10))));

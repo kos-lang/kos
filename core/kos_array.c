@@ -38,7 +38,6 @@
 KOS_DECLARE_STATIC_CONST_STRING(str_err_empty,         "array is empty");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index, "array index is out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,     "object is not an array");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_null_ptr,      "null pointer");
 
 DECLARE_STATIC_CONST_OBJECT(tombstone, OBJ_OPAQUE, 0xA0);
 DECLARE_STATIC_CONST_OBJECT(closed,    OBJ_OPAQUE, 0xA1);
@@ -238,9 +237,9 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
 {
     KOS_OBJ_ID elem = KOS_BADPTR;
 
-    if (IS_BAD_PTR(obj_id))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    assert( ! IS_BAD_PTR(obj_id));
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
         const uint32_t size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
@@ -275,9 +274,9 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
 {
     int error = KOS_ERROR_EXCEPTION;
 
-    if (IS_BAD_PTR(obj_id))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    assert( ! IS_BAD_PTR(obj_id));
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
         const uint32_t   size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
@@ -322,9 +321,9 @@ KOS_OBJ_ID KOS_array_cas(KOS_CONTEXT ctx,
 {
     KOS_OBJ_ID retval = KOS_BADPTR;
 
-    if (IS_BAD_PTR(obj_id))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    assert( ! IS_BAD_PTR(obj_id));
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
         const uint32_t size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
@@ -422,11 +421,11 @@ int KOS_array_reserve(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t new_capacity)
     int       error = KOS_ERROR_EXCEPTION;
     KOS_LOCAL array;
 
+    assert( ! IS_BAD_PTR(obj_id));
+
     KOS_init_local_with(ctx, &array, obj_id);
 
-    if (IS_BAD_PTR(array.o))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
+    if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
         KOS_ARRAY_STORAGE *old_buf  = get_data(array.o);
@@ -455,6 +454,8 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
     int       error = KOS_ERROR_EXCEPTION;
     KOS_LOCAL array;
 
+    assert( ! IS_BAD_PTR(obj_id));
+
     KOS_init_local_with(ctx, &array, obj_id);
 
 #ifdef CONFIG_MAD_GC
@@ -466,9 +467,7 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
     error = KOS_ERROR_EXCEPTION;
 #endif
 
-    if (IS_BAD_PTR(array.o))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
+    if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
         KOS_ARRAY_STORAGE *buf      = get_data(array.o);
@@ -520,12 +519,12 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
     KOS_LOCAL array;
     KOS_LOCAL ret;
 
+    assert( ! IS_BAD_PTR(obj_id));
+
     KOS_init_local(ctx, &ret);
     KOS_init_local_with(ctx, &array, obj_id);
 
-    if (IS_BAD_PTR(array.o))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
+    if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
         const uint32_t len = KOS_get_array_size(array.o);
@@ -615,15 +614,14 @@ int KOS_array_insert(KOS_CONTEXT ctx,
     KOS_ARRAY_STORAGE *dest_buf;
     KOS_ARRAY_STORAGE *src_buf = 0;
 
+    assert( ! IS_BAD_PTR(src_obj_id));
+    assert( ! IS_BAD_PTR(dest_obj_id));
+
     KOS_init_local_with(ctx, &dest, dest_obj_id);
     KOS_init_local_with(ctx, &src,  src_obj_id);
 
-    if (IS_BAD_PTR(dest.o))
-        RAISE_EXCEPTION_STR(str_err_null_ptr);
-    else if (GET_OBJ_TYPE(dest.o) != OBJ_ARRAY)
+    if (GET_OBJ_TYPE(dest.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
-    else if (src_begin != src_end && IS_BAD_PTR(src.o))
-        RAISE_EXCEPTION_STR(str_err_null_ptr);
     else if (src_begin != src_end && GET_OBJ_TYPE(src.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
 
@@ -721,12 +719,12 @@ int KOS_array_push(KOS_CONTEXT ctx,
     KOS_ARRAY_STORAGE *buf;
     uint32_t           len;
 
+    assert( ! IS_BAD_PTR(obj_id));
+
     KOS_init_local_with(ctx, &value, value_id);
     KOS_init_local_with(ctx, &array, obj_id);
 
-    if (IS_BAD_PTR(array.o))
-        RAISE_EXCEPTION_STR(str_err_null_ptr);
-    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
+    if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
 
     buf = get_data(array.o);
@@ -788,12 +786,12 @@ KOS_OBJ_ID KOS_array_pop(KOS_CONTEXT ctx,
     KOS_LOCAL array;
     KOS_LOCAL ret;
 
+    assert( ! IS_BAD_PTR(obj_id));
+
     KOS_init_local(ctx, &ret);
     KOS_init_local_with(ctx, &array, obj_id);
 
-    if (IS_BAD_PTR(array.o))
-        RAISE_EXCEPTION_STR(str_err_null_ptr);
-    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
+    if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
 
     len = KOS_get_array_size(array.o);
