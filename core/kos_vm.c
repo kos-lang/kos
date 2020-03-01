@@ -548,6 +548,7 @@ static int init_registers(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(args.o) || GET_OBJ_TYPE(stack_obj) == OBJ_STACK);
     assert( ! OBJPTR(FUNCTION, func.o)->handler);
     assert(OBJPTR(FUNCTION, func.o)->opts.num_def_args == num_def_args);
+    assert(OBJPTR(FUNCTION, func.o)->opts.max_args     == num_named_args);
 
     if (OBJPTR(FUNCTION, func.o)->opts.ellipsis_reg != KOS_NO_REG) {
         /* args, ellipsis, this */
@@ -1086,9 +1087,7 @@ static void set_closure_stack_size(KOS_CONTEXT ctx, unsigned closure_size)
         assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION ||
                GET_OBJ_TYPE(func_obj) == OBJ_CLASS);
 
-#if 0 /* TODO Fix handling of BIND.SELF in kos_vm_test */
         assert(OBJPTR(FUNCTION, func_obj)->opts.closure_size == closure_size);
-#endif
     }
 #endif
 
@@ -3053,6 +3052,13 @@ static int exec_function(KOS_CONTEXT ctx)
                 const unsigned closure_size = bytecode[1];
                 const unsigned rsrc         = bytecode[2];
 
+#ifndef NDEBUG
+                assert(regs_idx >= 3);
+                {
+                    const KOS_OBJ_ID func_obj = OBJPTR(STACK, stack)->buf[regs_idx - 3];
+                    assert(closure_size == OBJPTR(FUNCTION, func_obj)->opts.closure_size);
+                }
+#endif
                 assert(closure_size <= num_regs);
                 assert(rsrc         <  num_regs);
 
