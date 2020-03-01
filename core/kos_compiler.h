@@ -190,8 +190,8 @@ typedef struct KOS_COMP_STRING_S {
 
 typedef struct KOS_COMP_FUNCTION_S {
     KOS_COMP_CONST header;
-    uint32_t       offset;
-    uint8_t        flags;
+    uint32_t       offset;       /* Function entry point offset in the module */
+    uint8_t        flags;        /* KOS_COMP_FUN_* flags */
     uint8_t        num_regs;     /* Number of registers used by the function */
     uint8_t        closure_size; /* Number of registers preserved for a closure */
 
@@ -239,44 +239,44 @@ enum KOS_IMPORT_TYPE_E {
 };
 
 typedef struct KOS_COMP_UNIT_S {
-    const KOS_TOKEN         *error_token;
-    const char              *error_str;
+    const KOS_TOKEN     *error_token;
+    const char          *error_str;
 
-    int                      optimize;
-    int                      num_optimizations;
+    int                  optimize;
+    int                  num_optimizations;
 
-    int                      file_id;
-    int                      cur_offs;
-    KOS_FRAME               *cur_frame;
+    int                  file_id;
+    int                  cur_offs;
+    KOS_FRAME           *cur_frame;
 
-    KOS_REG                 *unused_regs; /* Register objects reusable without allocating memory */
+    KOS_REG             *unused_regs; /* Register objects reusable without allocating memory */
 
-    KOS_RED_BLACK_NODE      *scopes;
-    KOS_SCOPE               *scope_stack;
+    KOS_RED_BLACK_NODE  *scopes;
+    KOS_SCOPE           *scope_stack;
 
-    KOS_PRE_GLOBAL          *pre_globals;
-    KOS_VAR                 *globals;
-    int                      num_globals;
+    KOS_PRE_GLOBAL      *pre_globals;
+    KOS_VAR             *globals;
+    int                  num_globals;
 
-    void                    *ctx;
-    int                      is_interactive; /* Forces top-level scope vars to be globals */
+    void                *ctx;
+    int                  is_interactive; /* Forces top-level scope vars to be globals */
 
-    KOS_VAR                 *modules;
-    int                      num_modules;
+    KOS_VAR             *modules;
+    int                  num_modules;
 
-    KOS_RED_BLACK_NODE      *constants;
-    KOS_COMP_CONST          *first_constant;
-    KOS_COMP_CONST          *last_constant;
-    int                      num_constants;
+    KOS_RED_BLACK_NODE  *constants;
+    KOS_COMP_CONST      *first_constant;
+    KOS_COMP_CONST      *last_constant;
+    int                  num_constants;
 
-    struct KOS_MEMPOOL_S     allocator;
+    struct KOS_MEMPOOL_S allocator;
 
-    KOS_VECTOR               code_buf;
-    KOS_VECTOR               code_gen_buf;
+    KOS_VECTOR           code_buf;
+    KOS_VECTOR           code_gen_buf;
 
-    KOS_VECTOR               addr2line_buf;
-    KOS_VECTOR               addr2line_gen_buf;
-    KOS_VECTOR               addr2func_buf;
+    KOS_VECTOR           addr2line_buf;
+    KOS_VECTOR           addr2line_gen_buf;
+    KOS_VECTOR           addr2func_buf;
 } KOS_COMP_UNIT;
 
 void kos_compiler_init(KOS_COMP_UNIT *program,
