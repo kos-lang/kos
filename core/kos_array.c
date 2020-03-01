@@ -123,24 +123,23 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
                 KOS_atomic_write_relaxed_ptr(array->data, KOS_BADPTR);
         }
         else {
-            KOS_OBJ_ID array_id;
+            KOS_LOCAL saved_array;
 
             KOS_atomic_write_relaxed_ptr(array->data, KOS_BADPTR);
 
-            array_id = OBJID(ARRAY, array);
-            kos_track_refs(ctx, 1, &array_id);
+            KOS_init_local_with(ctx, &saved_array, OBJID(ARRAY, array));
 
             storage = alloc_buffer(ctx, size);
 
-            kos_untrack_refs(ctx, 1);
-
             if (storage) {
-                array = OBJPTR(ARRAY, array_id);
+                array = OBJPTR(ARRAY, saved_array.o);
 
                 KOS_atomic_write_relaxed_ptr(array->data, OBJID(ARRAY_STORAGE, storage));
             }
             else
                 array = 0;
+
+            KOS_destroy_top_local(ctx, &saved_array);
         }
 
         if (array) {
@@ -372,31 +371,35 @@ static int resize_storage(KOS_CONTEXT ctx,
 {
     KOS_ARRAY_STORAGE *old_buf;
     KOS_ARRAY_STORAGE *new_buf;
+    KOS_LOCAL          array;
+    int                error = KOS_ERROR_EXCEPTION;
 
-    kos_track_refs(ctx, 1, &obj_id);
+    KOS_init_local_with(ctx, &array, obj_id);
 
     new_buf = alloc_buffer(ctx, new_capacity);
 
-    kos_untrack_refs(ctx, 1);
+    if (new_buf) {
 
-    if ( ! new_buf)
-        return KOS_ERROR_EXCEPTION;
+        old_buf = get_data(array.o);
 
-    old_buf = get_data(obj_id);
+        atomic_fill_ptr(&new_buf->buf[0], KOS_atomic_read_relaxed_u32(new_buf->capacity), TOMBSTONE);
 
-    atomic_fill_ptr(&new_buf->buf[0], KOS_atomic_read_relaxed_u32(new_buf->capacity), TOMBSTONE);
+        if ( ! old_buf)
+            (void)KOS_atomic_cas_strong_ptr(OBJPTR(ARRAY, array.o)->data, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf));
+        else if (KOS_atomic_cas_strong_ptr(old_buf->next, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf)))
+            copy_buf(ctx, OBJPTR(ARRAY, array.o), old_buf, new_buf);
+        else {
+            KOS_ARRAY_STORAGE *const buf = get_next(old_buf);
 
-    if (!old_buf)
-        (void)KOS_atomic_cas_strong_ptr(OBJPTR(ARRAY, obj_id)->data, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf));
-    else if (KOS_atomic_cas_strong_ptr(old_buf->next, KOS_BADPTR, OBJID(ARRAY_STORAGE, new_buf)))
-        copy_buf(ctx, OBJPTR(ARRAY, obj_id), old_buf, new_buf);
-    else {
-        KOS_ARRAY_STORAGE *const buf = get_next(old_buf);
+            copy_buf(ctx, OBJPTR(ARRAY, array.o), old_buf, buf);
+        }
 
-        copy_buf(ctx, OBJPTR(ARRAY, obj_id), old_buf, buf);
+        error = KOS_SUCCESS;
     }
 
-    return KOS_SUCCESS;
+    KOS_destroy_top_local(ctx, &array);
+
+    return error;
 }
 
 int kos_array_copy_storage(KOS_CONTEXT ctx,
@@ -416,74 +419,71 @@ int kos_array_copy_storage(KOS_CONTEXT ctx,
 
 int KOS_array_reserve(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t new_capacity)
 {
-    int error = KOS_ERROR_EXCEPTION;
+    int       error = KOS_ERROR_EXCEPTION;
+    KOS_LOCAL array;
 
-    if (IS_BAD_PTR(obj_id))
+    KOS_init_local_with(ctx, &array, obj_id);
+
+    if (IS_BAD_PTR(array.o))
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
-        KOS_ARRAY_STORAGE *old_buf  = get_data(obj_id);
+        KOS_ARRAY_STORAGE *old_buf  = get_data(array.o);
         uint32_t           capacity = old_buf ? KOS_atomic_read_relaxed_u32(old_buf->capacity) : 0U;
-
-        kos_track_refs(ctx, 1, &obj_id);
 
         error = KOS_SUCCESS;
 
         while (new_capacity > capacity) {
-            error = resize_storage(ctx, obj_id, new_capacity);
+            error = resize_storage(ctx, array.o, new_capacity);
             if (error)
                 break;
 
-            old_buf = get_data(obj_id);
+            old_buf = get_data(array.o);
             assert(old_buf);
             capacity = KOS_atomic_read_relaxed_u32(old_buf->capacity);
         }
-
-        kos_untrack_refs(ctx, 1);
     }
+
+    KOS_destroy_top_local(ctx, &array);
 
     return error;
 }
 
 int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
 {
-    int error = KOS_ERROR_EXCEPTION;
+    int       error = KOS_ERROR_EXCEPTION;
+    KOS_LOCAL array;
+
+    KOS_init_local_with(ctx, &array, obj_id);
 
 #ifdef CONFIG_MAD_GC
-    kos_track_refs(ctx, 1, &obj_id);
     error = kos_trigger_mad_gc(ctx);
-    kos_untrack_refs(ctx, 1);
-    if (error)
+    if (error) {
+        KOS_destroy_top_local(ctx, &array);
         return error;
+    }
     error = KOS_ERROR_EXCEPTION;
 #endif
 
-    if (IS_BAD_PTR(obj_id))
+    if (IS_BAD_PTR(array.o))
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
-        KOS_ARRAY_STORAGE *buf      = get_data(obj_id);
+        KOS_ARRAY_STORAGE *buf      = get_data(array.o);
         const uint32_t     capacity = buf ? KOS_atomic_read_relaxed_u32(buf->capacity) : 0U;
         uint32_t           old_size;
 
         if (size > capacity) {
             const uint32_t new_cap = KOS_max(capacity * 2, size);
 
-            kos_track_refs(ctx, 1, &obj_id);
+            TRY(KOS_array_reserve(ctx, array.o, new_cap));
 
-            error = KOS_array_reserve(ctx, obj_id, new_cap);
-
-            kos_untrack_refs(ctx, 1);
-
-            if (error)
-                goto cleanup;
-
-            buf = get_data(obj_id);
+            buf = get_data(array.o);
         }
 
-        old_size = KOS_atomic_swap_u32(OBJPTR(ARRAY, obj_id)->size, size);
+        old_size = KOS_atomic_swap_u32(OBJPTR(ARRAY, array.o)->size, size);
 
         if (size != old_size) {
             if (size > old_size) {
@@ -507,6 +507,8 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
     }
 
 cleanup:
+    KOS_destroy_top_local(ctx, &array);
+
     return error;
 }
 
@@ -515,20 +517,22 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
                            int64_t     begin,
                            int64_t     end)
 {
-    KOS_OBJ_ID ret = KOS_BADPTR;
+    KOS_LOCAL array;
+    KOS_LOCAL ret;
 
-    if (IS_BAD_PTR(obj_id))
+    KOS_init_local(ctx, &ret);
+    KOS_init_local_with(ctx, &array, obj_id);
+
+    if (IS_BAD_PTR(array.o))
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_null_ptr));
-    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
-        const uint32_t len = KOS_get_array_size(obj_id);
+        const uint32_t len = KOS_get_array_size(array.o);
 
-        kos_track_refs(ctx, 2, &obj_id, &ret);
+        ret.o = KOS_new_array(ctx, 0);
 
-        ret = KOS_new_array(ctx, 0);
-
-        if (len && ! IS_BAD_PTR(ret)) {
+        if (len && ! IS_BAD_PTR(ret.o)) {
 
             uint32_t new_len;
             int64_t  new_len_64;
@@ -548,8 +552,8 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
                 KOS_ARRAY_STORAGE *dest_buf = alloc_buffer(ctx, new_len);
 
                 if (dest_buf) {
-                    KOS_ARRAY   *const new_array = OBJPTR(ARRAY, ret);
-                    KOS_ARRAY_STORAGE *src_buf   = get_data(obj_id);
+                    KOS_ARRAY   *const new_array = OBJPTR(ARRAY, ret.o);
+                    KOS_ARRAY_STORAGE *src_buf   = get_data(array.o);
                     uint32_t           idx       = 0;
 
                     KOS_ATOMIC(KOS_OBJ_ID) *dest = &dest_buf->buf[0];
@@ -583,14 +587,12 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
                                         TOMBSTONE);
                 }
                 else
-                    ret = KOS_BADPTR;
+                    ret.o = KOS_BADPTR;
             }
         }
-
-        kos_untrack_refs(ctx, 2);
     }
 
-    return ret;
+    return KOS_destroy_top_locals(ctx, &array, &ret);
 }
 
 int KOS_array_insert(KOS_CONTEXT ctx,
@@ -606,21 +608,26 @@ int KOS_array_insert(KOS_CONTEXT ctx,
     int                error   = KOS_SUCCESS;
     uint32_t           dest_len;
     uint32_t           src_len = 0;
-    KOS_ARRAY_STORAGE *dest_buf;
-    KOS_ARRAY_STORAGE *src_buf = 0;
     uint32_t           dest_delta;
     uint32_t           src_delta;
+    KOS_LOCAL          src;
+    KOS_LOCAL          dest;
+    KOS_ARRAY_STORAGE *dest_buf;
+    KOS_ARRAY_STORAGE *src_buf = 0;
 
-    if (IS_BAD_PTR(dest_obj_id))
+    KOS_init_local_with(ctx, &dest, dest_obj_id);
+    KOS_init_local_with(ctx, &src,  src_obj_id);
+
+    if (IS_BAD_PTR(dest.o))
         RAISE_EXCEPTION_STR(str_err_null_ptr);
-    else if (GET_OBJ_TYPE(dest_obj_id) != OBJ_ARRAY)
+    else if (GET_OBJ_TYPE(dest.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
-    else if (src_begin != src_end && IS_BAD_PTR(src_obj_id))
+    else if (src_begin != src_end && IS_BAD_PTR(src.o))
         RAISE_EXCEPTION_STR(str_err_null_ptr);
-    else if (src_begin != src_end && GET_OBJ_TYPE(src_obj_id) != OBJ_ARRAY)
+    else if (src_begin != src_end && GET_OBJ_TYPE(src.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
 
-    dest_len = KOS_get_array_size(dest_obj_id);
+    dest_len = KOS_get_array_size(dest.o);
 
     dest_begin = kos_fix_index(dest_begin, dest_len);
     dest_end   = kos_fix_index(dest_end, dest_len);
@@ -631,7 +638,7 @@ int KOS_array_insert(KOS_CONTEXT ctx,
     dest_delta = (uint32_t)(dest_end - dest_begin);
 
     if (src_begin != src_end) {
-        src_len   = KOS_get_array_size(src_obj_id);
+        src_len   = KOS_get_array_size(src.o);
         src_begin = kos_fix_index(src_begin, src_len);
         src_end   = kos_fix_index(src_end, src_len);
 
@@ -641,29 +648,21 @@ int KOS_array_insert(KOS_CONTEXT ctx,
 
     src_delta = (uint32_t)(src_end - src_begin);
 
-    if (src_delta > dest_delta) {
-        kos_track_refs(ctx, 2, &dest_obj_id, &src_obj_id);
+    if (src_delta > dest_delta)
+        TRY(KOS_array_resize(ctx, dest.o, dest_len - dest_delta + src_delta));
 
-        error = KOS_array_resize(ctx, dest_obj_id, dest_len - dest_delta + src_delta);
-
-        kos_untrack_refs(ctx, 2);
-
-        if (error)
-            goto cleanup;
-    }
-
-    dest_buf = get_data(dest_obj_id);
+    dest_buf = get_data(dest.o);
     if (src_begin != src_end)
-        src_buf = get_data(src_obj_id);
+        src_buf = get_data(src.o);
 
-    if (src_obj_id != dest_obj_id || src_end <= dest_begin || src_begin >= dest_end || ! src_delta) {
+    if (src.o != dest.o || src_end <= dest_begin || src_begin >= dest_end || ! src_delta) {
 
         if (src_delta != dest_delta && dest_end < dest_len)
             kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&dest_buf->buf[dest_end - dest_delta + src_delta],
                                 (KOS_ATOMIC(void *) *)&dest_buf->buf[dest_end],
                                 (unsigned)(dest_len - dest_end));
 
-        if (src_obj_id == dest_obj_id && src_begin >= dest_end)
+        if (src.o == dest.o && src_begin >= dest_end)
             src_begin += src_delta - dest_delta;
 
         if (src_delta)
@@ -703,54 +702,54 @@ int KOS_array_insert(KOS_CONTEXT ctx,
     }
 
     if (src_delta < dest_delta)
-        TRY(KOS_array_resize(ctx, dest_obj_id, dest_len - dest_delta + src_delta));
+        TRY(KOS_array_resize(ctx, dest.o, dest_len - dest_delta + src_delta));
 
 cleanup:
+    KOS_destroy_top_locals(ctx, &src, &dest);
+
     return error;
 }
 
 int KOS_array_push(KOS_CONTEXT ctx,
                    KOS_OBJ_ID  obj_id,
-                   KOS_OBJ_ID  value,
+                   KOS_OBJ_ID  value_id,
                    uint32_t   *idx)
 {
     int                error = KOS_SUCCESS;
+    KOS_LOCAL          array;
+    KOS_LOCAL          value;
     KOS_ARRAY_STORAGE *buf;
     uint32_t           len;
 
-    if (IS_BAD_PTR(obj_id))
+    KOS_init_local_with(ctx, &value, value_id);
+    KOS_init_local_with(ctx, &array, obj_id);
+
+    if (IS_BAD_PTR(array.o))
         RAISE_EXCEPTION_STR(str_err_null_ptr);
-    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
 
-    buf = get_data(obj_id);
+    buf = get_data(array.o);
 
     /* Increment index */
     for (;;) {
 
         const uint32_t capacity = buf ? KOS_atomic_read_relaxed_u32(buf->capacity) : 0;
 
-        len = KOS_get_array_size(obj_id);
+        len = KOS_get_array_size(array.o);
 
         if (len >= capacity) {
             const uint32_t new_cap = KOS_max(capacity * 2, len + 1);
 
-            kos_track_refs(ctx, 2, &obj_id, &value);
+            TRY(KOS_array_reserve(ctx, array.o, new_cap));
 
-            error = KOS_array_reserve(ctx, obj_id, new_cap);
-
-            kos_untrack_refs(ctx, 2);
-
-            if (error)
-                goto cleanup;
-
-            buf = get_data(obj_id);
+            buf = get_data(array.o);
             continue;
         }
 
         /* TODO this is not atomic wrt pop! */
 
-        if (KOS_atomic_cas_weak_u32(OBJPTR(ARRAY, obj_id)->size, len, len+1))
+        if (KOS_atomic_cas_weak_u32(OBJPTR(ARRAY, array.o)->size, len, len+1))
             break;
     }
 
@@ -766,7 +765,7 @@ int KOS_array_push(KOS_CONTEXT ctx,
 
         /* TODO What if cur_value != TOMBSTONE ??? ABA? */
 
-        if (KOS_atomic_cas_weak_ptr(buf->buf[len], cur_value, value))
+        if (KOS_atomic_cas_weak_ptr(buf->buf[len], cur_value, value.o))
             break;
     }
 
@@ -774,6 +773,8 @@ int KOS_array_push(KOS_CONTEXT ctx,
         *idx = len;
 
 cleanup:
+    KOS_destroy_top_locals(ctx, &array, &value);
+
     return error;
 }
 
@@ -782,31 +783,33 @@ KOS_OBJ_ID KOS_array_pop(KOS_CONTEXT ctx,
 {
     /* TODO rewrite lock-free */
 
-    int        error = KOS_SUCCESS;
-    uint32_t   len;
-    KOS_OBJ_ID ret = KOS_BADPTR;
+    int       error = KOS_SUCCESS;
+    uint32_t  len;
+    KOS_LOCAL array;
+    KOS_LOCAL ret;
 
-    kos_track_refs(ctx, 2, &obj_id, &ret);
+    KOS_init_local(ctx, &ret);
+    KOS_init_local_with(ctx, &array, obj_id);
 
-    if (IS_BAD_PTR(obj_id))
+    if (IS_BAD_PTR(array.o))
         RAISE_EXCEPTION_STR(str_err_null_ptr);
-    else if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    else if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
 
-    len = KOS_get_array_size(obj_id);
+    len = KOS_get_array_size(array.o);
 
     if (len == 0)
         RAISE_EXCEPTION_STR(str_err_empty);
 
-    ret = KOS_array_read(ctx, obj_id, (int)len-1);
-    TRY_OBJID(ret);
+    ret.o = KOS_array_read(ctx, array.o, (int)len-1);
+    TRY_OBJID(ret.o);
 
-    error = KOS_array_resize(ctx, obj_id, len-1);
+    error = KOS_array_resize(ctx, array.o, len-1);
 
 cleanup:
-    kos_untrack_refs(ctx, 2);
+    ret.o = KOS_destroy_top_locals(ctx, &array, &ret);
 
-    return error ? KOS_BADPTR : ret;
+    return error ? KOS_BADPTR : ret.o;
 }
 
 int KOS_array_fill(KOS_CONTEXT ctx,

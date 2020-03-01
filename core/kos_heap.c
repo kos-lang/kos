@@ -1572,7 +1572,6 @@ static uint32_t gray_to_black(KOS_HEAP *heap)
 
 static void mark_roots_in_context(KOS_CONTEXT ctx)
 {
-    uint32_t   i;
     KOS_LOCAL *local;
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE);
@@ -1580,14 +1579,6 @@ static void mark_roots_in_context(KOS_CONTEXT ctx)
     mark_object_black(ctx->exception);
     mark_object_black(ctx->retval);
     mark_object_black(ctx->stack);
-
-    for (i = 0; i < ctx->tmp_ref_count; ++i) {
-        KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
-        if (obj_id_ptr) {
-            const KOS_OBJ_ID obj_id = *obj_id_ptr;
-            mark_object_black(obj_id);
-        }
-    }
 
     for (local = ctx->local_list; local; local = local->next) {
         const KOS_OBJ_ID obj_id = local->o;
@@ -2230,7 +2221,6 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
 
     while (ctx) {
 
-        uint32_t   i;
         KOS_LOCAL *local;
 
         assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE);
@@ -2239,12 +2229,6 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
         update_child_ptr(&ctx->exception);
         update_child_ptr(&ctx->retval);
         update_child_ptr(&ctx->stack);
-
-        for (i = 0; i < ctx->tmp_ref_count; ++i) {
-            KOS_OBJ_ID *const obj_id_ptr = ctx->tmp_refs[i];
-            if (obj_id_ptr)
-                update_child_ptr(obj_id_ptr);
-        }
 
         for (local = ctx->local_list; local; local = local->next)
             update_child_ptr(&local->o);

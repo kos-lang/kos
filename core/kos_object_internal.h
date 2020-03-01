@@ -341,10 +341,4 @@ static_assert(KOS_PAGE_SIZE >= KOS_BITMAP_OFFS + KOS_BITMAP_SIZE + (KOS_SLOTS_PE
 static_assert(KOS_PAGE_SIZE - KOS_BITMAP_OFFS - KOS_BITMAP_SIZE - (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) < (1 << KOS_OBJ_ALIGN_BITS), "Wasted space in pages");
 #endif
 
-#define KOS_LOOK_FURTHER 255
-
-void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...);
-
-void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries);
-
 #endif

@@ -108,24 +108,18 @@ int kos_seq_fail(void)
 
 static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
 {
-    size_t i;
-
-    ctx->next             = 0;
-    ctx->prev             = 0;
-    ctx->gc_state         = GC_SUSPENDED;
-    ctx->inst             = inst;
-    ctx->cur_page         = 0;
-    ctx->thread_obj       = KOS_BADPTR;
-    ctx->exception        = KOS_BADPTR;
-    ctx->retval           = KOS_BADPTR;
-    ctx->stack            = KOS_BADPTR;
-    ctx->regs_idx         = 0;
-    ctx->stack_depth      = 0;
-    ctx->tmp_ref_count    = 0;
-    ctx->local_list       = 0;
-
-    for (i = 0; i < sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]); i++)
-        ctx->tmp_refs[i] = 0;
+    ctx->next        = 0;
+    ctx->prev        = 0;
+    ctx->gc_state    = GC_SUSPENDED;
+    ctx->inst        = inst;
+    ctx->cur_page    = 0;
+    ctx->thread_obj  = KOS_BADPTR;
+    ctx->exception   = KOS_BADPTR;
+    ctx->retval      = KOS_BADPTR;
+    ctx->stack       = KOS_BADPTR;
+    ctx->regs_idx    = 0;
+    ctx->stack_depth = 0;
+    ctx->local_list  = 0;
 }
 
 static int register_thread(KOS_INSTANCE *inst,
@@ -542,20 +536,13 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
 int KOS_instance_add_path(KOS_CONTEXT ctx, const char *module_search_path)
 {
     int           error;
-    uint32_t      len;
     KOS_OBJ_ID    path_str;
     KOS_INSTANCE *inst = ctx->inst;
 
     path_str = KOS_new_cstring(ctx, module_search_path);
     TRY_OBJID(path_str);
 
-    len = KOS_get_array_size(inst->modules.search_paths);
-
-    kos_track_refs(ctx, 1, &path_str);
-    TRY(KOS_array_resize(ctx, inst->modules.search_paths, len+1));
-    kos_untrack_refs(ctx, 1);
-
-    TRY(KOS_array_write(ctx, inst->modules.search_paths, (int)len, path_str));
+    TRY(KOS_array_push(ctx, inst->modules.search_paths, path_str, 0));
 
 cleanup:
     return error;
@@ -702,19 +689,15 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
     int                       error = KOS_SUCCESS;
     struct KOS_MODULE_INIT_S *mod_init;
     KOS_INSTANCE      *const  inst  = ctx->inst;
-    KOS_OBJ_ID                module_name;
+    KOS_LOCAL                 module_name;
 
-    module_name = KOS_new_cstring(ctx, module);
-    TRY_OBJID(module_name);
-
-    kos_track_refs(ctx, 1, &module_name);
+    KOS_init_local_with(ctx, &module_name, KOS_new_cstring(ctx, module));
+    TRY_OBJID(module_name.o);
 
     mod_init = (struct KOS_MODULE_INIT_S *)kos_alloc_object(ctx,
                                                             KOS_ALLOC_MOVABLE,
                                                             OBJ_OPAQUE,
                                                             sizeof(struct KOS_MODULE_INIT_S));
-
-    kos_untrack_refs(ctx, 1);
 
     if ( ! mod_init)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -723,10 +706,12 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
 
     error = KOS_set_property(ctx,
                              inst->modules.module_inits,
-                             module_name,
+                             module_name.o,
                              OBJID(OPAQUE, (KOS_OPAQUE *)mod_init));
 
 cleanup:
+    KOS_destroy_top_local(ctx, &module_name);
+
     return error;
 }
 
@@ -757,9 +742,11 @@ void KOS_raise_exception(KOS_CONTEXT ctx,
 
 #ifdef CONFIG_MAD_GC
     if ( ! kos_gc_active(ctx)) {
-        kos_track_refs(ctx, 1, &exception_obj);
+        KOS_LOCAL saved_exception;
+
+        KOS_init_local_with(ctx, &saved_exception, exception_obj);
         (void)kos_trigger_mad_gc(ctx);
-        kos_untrack_refs(ctx, 1);
+        exception_obj = KOS_destroy_top_local(ctx, &saved_exception);
     }
 #endif
 
@@ -896,46 +883,6 @@ void KOS_raise_generator_end(KOS_CONTEXT ctx)
 
     if ( ! IS_BAD_PTR(exception))
         KOS_raise_exception(ctx, exception);
-}
-
-void kos_track_refs(KOS_CONTEXT ctx, int num_entries, ...)
-{
-    va_list  args;
-    uint32_t i;
-    uint32_t end;
-
-    assert(num_entries > 0);
-    assert( ! kos_gc_active(ctx));
-    assert((size_t)(ctx->tmp_ref_count + num_entries) <=
-           sizeof(ctx->tmp_refs) / sizeof(ctx->tmp_refs[0]));
-
-    i   = ctx->tmp_ref_count;
-    end = i + num_entries;
-
-    va_start(args, num_entries);
-
-    do {
-        ctx->tmp_refs[i] = (KOS_OBJ_ID *)va_arg(args, KOS_OBJ_ID *);
-        ++i;
-    } while (i < end);
-
-    ctx->tmp_ref_count = end;
-
-    va_end(args);
-
-#ifdef CONFIG_MAD_GC
-    if (kos_trigger_mad_gc(ctx))
-        /* Ignore stray exception from another thread or GC failure */
-        KOS_clear_exception(ctx);
-#endif
-}
-
-void kos_untrack_refs(KOS_CONTEXT ctx, int num_entries)
-{
-    assert( ! kos_gc_active(ctx));
-    assert(num_entries > 0 && (unsigned)num_entries <= ctx->tmp_ref_count);
-
-    ctx->tmp_ref_count -= num_entries;
 }
 
 #ifdef NDEBUG
