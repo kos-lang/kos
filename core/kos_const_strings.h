@@ -23,7 +23,7 @@
 #ifndef KOS_CONST_STRINGS_H_INCLUDED
 #define KOS_CONST_STRINGS_H_INCLUDED
 
-#include "../inc/kos_object_base.h"
+#include "../inc/kos_entity.h"
 
 #ifdef __cplusplus
 extern "C" {

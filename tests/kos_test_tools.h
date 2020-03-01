@@ -23,7 +23,7 @@
 #ifndef KOS_TEST_TOOLS_H_INCLUDED
 #define KOS_TEST_TOOLS_H_INCLUDED
 
-#include "../inc/kos_object_base.h"
+#include "../inc/kos_entity.h"
 #include "../inc/kos_threads.h"
 #include <stdio.h>
 #include <stdlib.h>

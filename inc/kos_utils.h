@@ -23,7 +23,7 @@
 #ifndef KOS_UTILS_H_INCLUDED
 #define KOS_UTILS_H_INCLUDED
 
-#include "kos_object_base.h"
+#include "kos_entity.h"
 #include <stdint.h>
 
 enum KOS_NUMERIC_TYPE_E {

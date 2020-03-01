@@ -22,8 +22,8 @@
 
 #include "../inc/kos_modules_init.h"
 #include "../inc/kos_instance.h"
+#include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
-#include "../inc/kos_object_base.h"
 #include "../core/kos_try.h"
 
 #define MODULE_DEF(module) int kos_module_##module##_init(KOS_CONTEXT ctx, KOS_OBJ_ID module);

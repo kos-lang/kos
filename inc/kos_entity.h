@@ -20,16 +20,16 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef KOS_OBJECT_BASE_H_INCLUDED
-#define KOS_OBJECT_BASE_H_INCLUDED
+#ifndef KOS_ENTITY_H_INCLUDED
+#define KOS_ENTITY_H_INCLUDED
 
 #include <assert.h>
 #include <stdint.h>
 #include "kos_atomic.h"
 
-/* Note: object types are always even.  See the description of size_and_type field
+/* Note: entity types are always even.  See the description of size_and_type field
  * to find out why. */
-typedef enum KOS_OBJECT_TYPE_E {
+typedef enum KOS_ENTITY_TYPE_E {
     OBJ_SMALL_INTEGER  = 0, /* Returned by GET_OBJ_TYPE, never used in any object */
 
     /* Language types */
@@ -44,7 +44,7 @@ typedef enum KOS_OBJECT_TYPE_E {
     OBJ_FUNCTION       = 18,
     OBJ_CLASS          = 20,
 
-    OBJ_LAST_TYPE = OBJ_CLASS, /* Last type exposed to the language */
+    OBJ_LAST_TYPE      = OBJ_CLASS, /* Last type exposed to the language */
 
     /* Internal types */
 
@@ -63,7 +63,7 @@ typedef enum KOS_OBJECT_TYPE_E {
     OBJ_LAST           = OBJ_STACK
 } KOS_TYPE;
 
-struct KOS_OBJECT_PLACEHOLDER;
+struct KOS_ENTITY_PLACEHOLDER;
 
 /* KOS_OBJ_ID contains either a pointer to the object or an integer number.
  * The least significant bit (bit 0) indicates whether it is a pointer or a
@@ -80,7 +80,7 @@ struct KOS_OBJECT_PLACEHOLDER;
  *
  * Heap objects are tracked by the garbage collector.
  */
-typedef struct KOS_OBJECT_PLACEHOLDER *KOS_OBJ_ID;
+typedef struct KOS_ENTITY_PLACEHOLDER *KOS_OBJ_ID;
 
 #define KOS_BADPTR ((KOS_OBJ_ID)(intptr_t)1)
 

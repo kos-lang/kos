@@ -24,7 +24,7 @@
 #define KOS_ARRAY_H_INCLUDED
 
 #include "kos_atomic.h"
-#include "kos_object_base.h"
+#include "kos_entity.h"
 #include <assert.h>
 
 #ifdef __cplusplus

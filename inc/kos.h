@@ -25,10 +25,10 @@
 
 #include "kos_array.h"
 #include "kos_buffer.h"
+#include "kos_entity.h"
 #include "kos_instance.h"
 #include "kos_module.h"
 #include "kos_modules_init.h"
-#include "kos_object_base.h"
 #include "kos_object.h"
 #include "kos_string.h"
 #include "kos_utils.h"

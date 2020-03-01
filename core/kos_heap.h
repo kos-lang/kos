@@ -23,7 +23,7 @@
 #ifndef KOS_OBJECT_ALLOC_H_INCLUDED
 #define KOS_OBJECT_ALLOC_H_INCLUDED
 
-#include "../inc/kos_object_base.h"
+#include "../inc/kos_entity.h"
 #include <stddef.h>
 
 typedef enum KOS_ALLOC_FLAG_E {

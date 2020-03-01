@@ -23,7 +23,7 @@
 #ifndef KOS_THREADS_H_INCLUDED
 #define KOS_THREADS_H_INCLUDED
 
-#include "kos_object_base.h"
+#include "kos_entity.h"
 
 typedef struct KOS_MUTEX_OBJECT_S    *KOS_MUTEX;
 typedef struct KOS_COND_VAR_OBJECT_S *KOS_COND_VAR;

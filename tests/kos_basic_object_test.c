@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "../inc/kos_object_base.h"
+#include "../inc/kos_entity.h"
 #include "../inc/kos_array.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"

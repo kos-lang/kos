@@ -23,7 +23,7 @@
 #ifndef KOS_INSTANCE_H_INCLUDED
 #define KOS_INSTANCE_H_INCLUDED
 
-#include "kos_object_base.h"
+#include "kos_entity.h"
 #include "kos_threads.h"
 #include <stddef.h>
 

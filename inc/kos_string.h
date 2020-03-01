@@ -23,7 +23,7 @@
 #ifndef KOS_STRING_H_INCLUDED
 #define KOS_STRING_H_INCLUDED
 
-#include "kos_object_base.h"
+#include "kos_entity.h"
 #include <assert.h>
 #include <stddef.h>
 

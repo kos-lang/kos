@@ -23,7 +23,7 @@
 #ifndef KOS_MODULE_H_INCLUDED
 #define KOS_MODULE_H_INCLUDED
 
-#include "kos_object_base.h"
+#include "kos_entity.h"
 
 #ifdef __cplusplus
 extern "C" {

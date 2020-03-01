@@ -22,8 +22,8 @@
 
 #include "../inc/kos_atomic.h"
 #include "../inc/kos_instance.h"
+#include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
-#include "../inc/kos_object_base.h"
 #include <stdint.h>
 #include <stdio.h>
 
