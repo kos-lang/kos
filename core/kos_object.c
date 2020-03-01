@@ -62,8 +62,9 @@
  */
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_no_own_properties, "object has no own properties");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_no_property,       "no such property");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_no_property,       "no such property: \"");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,        "property name is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_quote,             "\"");
 
 DECLARE_STATIC_CONST_OBJECT(tombstone, OBJ_OPAQUE, 0xB0);
 DECLARE_STATIC_CONST_OBJECT(closed,    OBJ_OPAQUE, 0xB1);
@@ -428,6 +429,23 @@ static int resize_prop_table(KOS_CONTEXT ctx,
     return error;
 }
 
+static void raise_no_such_property(KOS_CONTEXT ctx, KOS_OBJ_ID prop)
+{
+    KOS_LOCAL strings[3];
+
+    KOS_init_local_with(ctx, &strings[1], prop);
+
+    strings[0].o = KOS_CONST_ID(str_err_no_property);
+    strings[2].o = KOS_CONST_ID(str_err_quote);
+
+    strings[1].o = KOS_string_add_n(ctx, strings, 3);
+
+    if ( ! IS_BAD_PTR(strings[1].o))
+        KOS_raise_exception(ctx, strings[1].o);
+
+    KOS_destroy_top_local(ctx, &strings[1]);
+}
+
 KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
                                        KOS_OBJ_ID                   obj_id,
                                        KOS_OBJ_ID                   prop,
@@ -525,7 +543,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
                         obj_id = KOS_BADPTR;
 
                     if (IS_BAD_PTR(obj_id)) {
-                        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_no_property));
+                        raise_no_such_property(ctx, prop);
                         break;
                     }
                     assert(props);
@@ -544,7 +562,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
             }
         }
         else
-            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_no_property));
+            raise_no_such_property(ctx, prop);
     }
 
     if ( ! IS_BAD_PTR(retval))
