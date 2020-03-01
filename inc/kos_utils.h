@@ -104,6 +104,11 @@ KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
 
 int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state);
 
+void KOS_raise_3(KOS_CONTEXT ctx,
+                 KOS_OBJ_ID  s1,
+                 KOS_OBJ_ID  s2,
+                 KOS_OBJ_ID  s3);
+
 #ifdef __cplusplus
 }
 #endif

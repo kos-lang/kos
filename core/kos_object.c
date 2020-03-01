@@ -26,6 +26,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include "kos_heap.h"
 #include "kos_math.h"
 #include "kos_object_internal.h"
@@ -429,23 +430,6 @@ static int resize_prop_table(KOS_CONTEXT ctx,
     return error;
 }
 
-static void raise_no_such_property(KOS_CONTEXT ctx, KOS_OBJ_ID prop)
-{
-    KOS_LOCAL strings[3];
-
-    KOS_init_local_with(ctx, &strings[1], prop);
-
-    strings[0].o = KOS_CONST_ID(str_err_no_property);
-    strings[2].o = KOS_CONST_ID(str_err_quote);
-
-    strings[1].o = KOS_string_add_n(ctx, strings, 3);
-
-    if ( ! IS_BAD_PTR(strings[1].o))
-        KOS_raise_exception(ctx, strings[1].o);
-
-    KOS_destroy_top_local(ctx, &strings[1]);
-}
-
 KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
                                        KOS_OBJ_ID                   obj_id,
                                        KOS_OBJ_ID                   prop,
@@ -543,7 +527,10 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
                         obj_id = KOS_BADPTR;
 
                     if (IS_BAD_PTR(obj_id)) {
-                        raise_no_such_property(ctx, prop);
+                        KOS_raise_3(ctx,
+                                    KOS_CONST_ID(str_err_no_property),
+                                    prop,
+                                    KOS_CONST_ID(str_err_quote));
                         break;
                     }
                     assert(props);
@@ -562,7 +549,10 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
             }
         }
         else
-            raise_no_such_property(ctx, prop);
+            KOS_raise_3(ctx,
+                        KOS_CONST_ID(str_err_no_property),
+                        prop,
+                        KOS_CONST_ID(str_err_quote));
     }
 
     if ( ! IS_BAD_PTR(retval))

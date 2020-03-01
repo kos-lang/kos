@@ -66,26 +66,6 @@ struct KOS_MODULE_LOAD_CHAIN_S {
     unsigned               length;
 };
 
-static void raise_3(KOS_CONTEXT ctx,
-                    KOS_OBJ_ID  s1,
-                    KOS_OBJ_ID  s2,
-                    KOS_OBJ_ID  s3)
-{
-    KOS_LOCAL  str_err[3];
-    KOS_OBJ_ID str_err_full;
-
-    str_err[0].o = s1;
-    KOS_init_local_with(ctx, &str_err[1], s2);
-    str_err[2].o = s3;
-
-    str_err_full = KOS_string_add_n(ctx, str_err, 3);
-
-    if ( ! IS_BAD_PTR(str_err_full))
-        KOS_raise_exception(ctx, str_err_full);
-
-    KOS_destroy_top_local(ctx, &str_err[1]);
-}
-
 static unsigned rfind_path(const char *path,
                            unsigned    length,
                            char        dot)
@@ -290,18 +270,18 @@ static int load_file(KOS_CONTEXT  ctx,
     switch (error) {
 
         case KOS_ERROR_CANNOT_OPEN_FILE:
-            raise_3(ctx,
-                    KOS_CONST_ID(str_err_unable_to_open),
-                    path.o,
-                    KOS_CONST_ID(str_err_end));
+            KOS_raise_3(ctx,
+                        KOS_CONST_ID(str_err_unable_to_open),
+                        path.o,
+                        KOS_CONST_ID(str_err_end));
             error = KOS_ERROR_EXCEPTION;
             break;
 
         case KOS_ERROR_CANNOT_READ_FILE:
-            raise_3(ctx,
-                    KOS_CONST_ID(str_err_unable_to_read),
-                    path.o,
-                    KOS_CONST_ID(str_err_end));
+            KOS_raise_3(ctx,
+                        KOS_CONST_ID(str_err_unable_to_read),
+                        path.o,
+                        KOS_CONST_ID(str_err_end));
             error = KOS_ERROR_EXCEPTION;
             break;
 
@@ -1476,10 +1456,10 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
                             (KOS_OBJ_ID *)&module_path.o);
     if (error) {
         if (error == KOS_ERROR_NOT_FOUND) {
-            raise_3(ctx,
-                    KOS_CONST_ID(str_err_module),
-                    actual_module_name.o,
-                    KOS_CONST_ID(str_err_not_found));
+            KOS_raise_3(ctx,
+                        KOS_CONST_ID(str_err_module),
+                        actual_module_name.o,
+                        KOS_CONST_ID(str_err_not_found));
             error = KOS_ERROR_EXCEPTION;
         }
         goto cleanup;
@@ -1520,10 +1500,10 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
                 name_str.o = KOS_new_string(ctx, module_name, name_size);
                 if (!IS_BAD_PTR(name_str.o))
-                    raise_3(ctx,
-                            KOS_CONST_ID(str_err_circular_deps),
-                            name_str.o,
-                            KOS_CONST_ID(str_err_end));
+                    KOS_raise_3(ctx,
+                                KOS_CONST_ID(str_err_circular_deps),
+                                name_str.o,
+                                KOS_CONST_ID(str_err_end));
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -1656,10 +1636,10 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             KOS_clear_exception(ctx);
-            raise_3(ctx,
-                    KOS_CONST_ID(str_err_module),
-                    module_name_str,
-                    KOS_CONST_ID(str_err_not_found));
+            KOS_raise_3(ctx,
+                        KOS_CONST_ID(str_err_module),
+                        module_name_str,
+                        KOS_CONST_ID(str_err_not_found));
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
@@ -1749,10 +1729,10 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             KOS_clear_exception(ctx);
-            raise_3(ctx,
-                    KOS_CONST_ID(str_err_module),
-                    module_name_str,
-                    KOS_CONST_ID(str_err_not_found));
+            KOS_raise_3(ctx,
+                        KOS_CONST_ID(str_err_module),
+                        module_name_str,
+                        KOS_CONST_ID(str_err_not_found));
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
@@ -1813,10 +1793,10 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     KOS_clear_exception(ctx);
 
     if ( ! IS_BAD_PTR(prop)) {
-        raise_3(ctx,
-                KOS_CONST_ID(str_err_duplicate_global),
-                name.o,
-                KOS_CONST_ID(str_err_end));
+        KOS_raise_3(ctx,
+                    KOS_CONST_ID(str_err_duplicate_global),
+                    name.o,
+                    KOS_CONST_ID(str_err_end));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
