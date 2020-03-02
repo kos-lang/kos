@@ -157,6 +157,20 @@ do {
     (async gen(0)).wait()
 }
 
+# Ellipsis on a new thread
+do {
+    fun getargs(x...)
+    {
+        return x
+    }
+
+    const out = getargs.async(void, [42]).wait()
+
+    assert typeof out == "array"
+    assert out.size == 1
+    assert out[0] == 42
+}
+
 # THIS MUST COME LAST!
 # Recursively spawn threads and keep them waiting on children
 do {

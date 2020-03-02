@@ -484,7 +484,7 @@ static KOS_OBJ_ID slice_args(KOS_CONTEXT ctx,
     KOS_OBJ_ID new_args;
     KOS_LOCAL  args;
 
-    assert( ! kos_is_heap_object(stack));
+    assert(IS_BAD_PTR(stack) || ! kos_is_heap_object(stack));
 
     KOS_init_local_with(ctx, &args, args_obj);
 
