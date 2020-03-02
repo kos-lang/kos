@@ -1,38 +1,36 @@
 The Kos Programming Language
-============================
+----------------------------
 
 Kos is a general purpose scripting language, which builds on top of the most
 successful scripting languages, but is designed with usability in mind.
 
-* Easy to learn and easy to use.
+  * Easy to learn and easy to use.
 
-* Useful for creating standalone scripts.
+  * Useful for creating standalone scripts.
 
-* Easy to embed in other applications.
+  * Easy to embed in other applications.
 
-* Dynamically typed, object-oriented, with elements of functional programming.
+  * Dynamically typed, object-oriented, with elements of functional programming.
 
-* Stable and reliable syntax, so your scripts will work in the future without
-  any modifications.
+  * Stable and reliable syntax, so your scripts will work in the future without
+    any modifications.
 
-* Small code base and small footprint.
+  * Small code base and small footprint.
 
-* Simple, modern, feature-rich and powerful syntax, designed to reduce common
-  types of bugs.
+  * Simple, modern, feature-rich and powerful syntax, designed to reduce common
+    types of bugs.
 
-* Robust support for native multithreading.
-
+  * Robust support for native multithreading.
 
 Status
-======
+------
 
 Kos is currently in development.  Most language features are already usable.
 
 Refer to [Roadmap](doc/roadmap.md) for list of features planned.
 
-
 Branch health (master)
-======================
+----------------------
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://travis-ci.org/kos-lang/kos.svg?branch=master)](https://travis-ci.org/kos-lang/kos)
@@ -42,23 +40,22 @@ Branch health (master)
 [![Lgtm alerts](https://img.shields.io/lgtm/alerts/g/kos-lang/kos.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/kos-lang/kos/alerts/)
 
 Documentation
-=============
+-------------
 
 To find out more about Kos, follow these links:
 
-* [Quick Start](doc/quickstart.md)
-* [Tutorial](doc/tutorial.md)
-* [Library Reference](doc/modules.md)
-* [How to compile Kos from source](doc/building.md)
-* [Principles and ideas which influenced Kos design](doc/design.md)
-* [List of possible ideas for future development](doc/proposals.md)
-* [Formal description of Kos syntax](doc/grammar.md)
-* [Information on how to contribute to Kos](doc/contributing.md)
-* [Kos license](LICENSE.md)
-
+  * [Quick Start](doc/quickstart.md)
+  * [Tutorial](doc/tutorial.md)
+  * [Library Reference](doc/modules.md)
+  * [How to compile Kos from source](doc/building.md)
+  * [Principles and ideas which influenced Kos design](doc/design.md)
+  * [List of possible ideas for future development](doc/proposals.md)
+  * [Formal description of Kos syntax](doc/grammar.md)
+  * [Information on how to contribute to Kos](doc/contributing.md)
+  * [Kos license](LICENSE.md)
 
 Examples
-========
+--------
 
 This program prints "Hello, World!":
 

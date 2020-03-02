@@ -11,7 +11,6 @@ you.  This way you will be able to easily integrate future updates from
 upstream with your project.  Please see [Contributing](doc/contributing.md)
 for further details on how you can contribute.
 
-
 MIT License
 -----------
 
