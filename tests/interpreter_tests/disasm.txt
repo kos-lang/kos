@@ -5,7 +5,6 @@
    num_regs     1
    closure_size 0
    min_args     0
-   max_args     0
    num_def_args 0
    num_binds    0
    args_reg     0
@@ -22,7 +21,6 @@
    num_regs     1
    closure_size 0
    min_args     0
-   max_args     0
    num_def_args 0
    num_binds    0
    args_reg     255

@@ -551,7 +551,6 @@ static int init_registers(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(args.o) || GET_OBJ_TYPE(stack_obj) == OBJ_STACK);
     assert( ! OBJPTR(FUNCTION, func.o)->handler);
     assert(args_reg_end <= KOS_NO_REG);
-    assert(OBJPTR(FUNCTION, func.o)->opts.max_args == num_named_args);
     assert(num_input_args >= num_non_def_args);
 
     /* Initialize this */
@@ -661,7 +660,6 @@ static int init_registers(KOS_CONTEXT ctx,
     else {
         assert(OBJPTR(FUNCTION, func.o)->opts.min_args     == 0);
         assert(OBJPTR(FUNCTION, func.o)->opts.num_def_args == 0);
-        assert(OBJPTR(FUNCTION, func.o)->opts.max_args     == 0);
         assert(OBJPTR(FUNCTION, func.o)->opts.rest_reg     == KOS_NO_REG);
     }
 

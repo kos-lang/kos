@@ -59,7 +59,6 @@ static KOS_FUNCTION_OPTS create_func_opts(uint8_t num_regs, uint8_t num_args)
 
     opts.num_regs     = num_regs;
     opts.min_args     = num_args;
-    opts.max_args     = num_args;
     opts.rest_reg     = KOS_NO_REG;
     opts.ellipsis_reg = KOS_NO_REG;
     opts.this_reg     = KOS_NO_REG;
@@ -92,10 +91,9 @@ static KOS_OBJ_ID create_func_obj(KOS_CONTEXT              ctx,
         func   = OBJPTR(FUNCTION, obj_id);
     }
 
-    func->opts          = *opts;
-    func->opts.max_args = func->opts.min_args + func->opts.num_def_args;
-    func->instr_offs    = offset;
-    func->module        = ctx->inst->modules.init_module;
+    func->opts       = *opts;
+    func->instr_offs = offset;
+    func->module     = ctx->inst->modules.init_module;
 
     if (create == CREATE_CLASS && func->opts.this_reg == KOS_NO_REG) {
         if (func->opts.rest_reg != KOS_NO_REG)

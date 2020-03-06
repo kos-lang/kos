@@ -198,7 +198,6 @@ typedef struct KOS_COMP_FUNCTION_S {
     uint8_t        load_instr;   /* Instruction used for loading the function */
 
     uint8_t        min_args;     /* Number of args without default values */
-    uint8_t        max_args;     /* Max number of named args (not counting ellipsis) */
     uint8_t        num_def_args; /* Number of args with default values */
 
     uint8_t        num_binds;    /* Number of binds */

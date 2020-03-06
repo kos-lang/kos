@@ -4855,7 +4855,6 @@ static int gen_function(KOS_COMP_UNIT      *program,
     constant->closure_size = get_closure_size(program);
     constant->num_regs     = (uint8_t)frame->num_regs;
     constant->args_reg     = (uint8_t)scope->num_indep_vars;
-    constant->max_args     = (uint8_t)scope->num_args;
     constant->flags        = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)

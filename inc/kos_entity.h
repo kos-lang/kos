@@ -372,7 +372,6 @@ typedef struct KOS_FUNCTION_OPTS_S {
     uint8_t closure_size; /* Number of registers preserved for a closure */
 
     uint8_t min_args;     /* Number of args without default values */
-    uint8_t max_args;     /* Max number of named args (not counting ellipsis) */
     uint8_t num_def_args; /* Number of args with default values */
 
     uint8_t num_binds;    /* Number of binds */

@@ -515,7 +515,6 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                 func->opts.num_regs     = func_const->num_regs;
                 func->opts.closure_size = func_const->closure_size;
                 func->opts.min_args     = func_const->min_args;
-                func->opts.max_args     = func_const->max_args;
                 func->opts.num_def_args = func_const->num_def_args;
                 func->opts.num_binds    = func_const->num_binds;
                 func->opts.args_reg     = func_const->args_reg;
@@ -1034,7 +1033,6 @@ static int print_func(void *cookie, uint32_t func_index)
     printf("  num_regs     %u\n", OBJPTR(FUNCTION, func)->opts.num_regs);
     printf("  closure_size %u\n", OBJPTR(FUNCTION, func)->opts.closure_size);
     printf("  min_args     %u\n", OBJPTR(FUNCTION, func)->opts.min_args);
-    printf("  max_args     %u\n", OBJPTR(FUNCTION, func)->opts.max_args);
     printf("  num_def_args %u\n", OBJPTR(FUNCTION, func)->opts.num_def_args);
     printf("  num_binds    %u\n", OBJPTR(FUNCTION, func)->opts.num_binds);
     printf("  args_reg     %u\n", OBJPTR(FUNCTION, func)->opts.args_reg);
