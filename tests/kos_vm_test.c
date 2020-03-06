@@ -735,11 +735,12 @@ int main(void)
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func;
+        KOS_OBJ_ID        ret;
 
         opts.this_reg = 0;
         func = create_func(ctx, 5, &opts);
 
-        KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
+        ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
 
         TEST(IS_SMALL_INT(ret));
@@ -1435,11 +1436,12 @@ int main(void)
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 0);
         KOS_OBJ_ID        func;
+        KOS_OBJ_ID        ret;
 
         opts.this_reg = 0;
         func = create_gen(ctx, 67, &opts);
 
-        KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, &func, 1);
+        ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, &func, 1);
         TEST_NO_EXCEPTION();
 
         TEST(!IS_BAD_PTR(ret));
