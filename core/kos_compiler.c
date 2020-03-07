@@ -3042,7 +3042,10 @@ static int super_invocation(KOS_COMP_UNIT      *program,
     assert(program->cur_frame->this_reg);
     TRY(gen_instr2(program, INSTR_MOVE, args_regs[0]->reg, program->cur_frame->this_reg->reg));
 
-    /* TODO Why is this apply and not normal invocation? */
+    /* Use apply() to prevent the base class' constructor from creating
+     * a new 'this' object and force it to use the current 'this' object
+     * being created by the derived class' constructor.
+     */
     TRY(gen_instr5(program, INSTR_CALL_N, apply_fun->reg, apply_fun->reg, base_ctor_reg->reg, args_regs[0]->reg, 2));
 
 cleanup:
