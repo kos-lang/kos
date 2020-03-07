@@ -4624,7 +4624,6 @@ static int gen_function(KOS_COMP_UNIT      *program,
     KOS_FRAME *last_frame   = program->cur_frame;
     KOS_VAR   *var;
     KOS_REG   *scope_reg    = 0;
-    KOS_REG   *ellipsis_reg = 0;
     int        fun_start_offs;
     size_t     addr2line_start_offs;
     int        last_reg     = -1;
@@ -4746,9 +4745,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     if (scope->ellipsis) {
         if (scope->ellipsis->type == VAR_INDEPENDENT_LOCAL) {
             assert(scope->ellipsis->reg);
-            TRY(gen_reg(program, &ellipsis_reg));
-            assert(ellipsis_reg->reg == ++last_reg);
-            constant->ellipsis_reg = (uint8_t)ellipsis_reg->reg;
+            constant->ellipsis_reg = (uint8_t)scope->ellipsis->reg->reg;
         }
         else {
             assert( ! scope->ellipsis->reg);
@@ -4821,14 +4818,6 @@ static int gen_function(KOS_COMP_UNIT      *program,
     addr2line_start_offs = program->addr2line_gen_buf.size;
 
     TRY(add_addr2line(program, &open_node->token, KOS_TRUE_VALUE));
-
-    /* Move ellipsis into place */
-    /* TODO use ellipsis_reg_idx in function desc to avoid this */
-    if (ellipsis_reg) {
-        TRY(gen_instr2(program, INSTR_MOVE, scope->ellipsis->reg->reg, ellipsis_reg->reg));
-        free_reg(program, ellipsis_reg);
-        ellipsis_reg = 0;
-    }
 
     /* Release unused registers */
     if (frame->args_reg && frame->args_reg->tmp) {
