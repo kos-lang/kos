@@ -34,6 +34,7 @@
 #include "kos_disasm.h"
 #include "kos_heap.h"
 #include "kos_malloc.h"
+#include "kos_math.h"
 #include "kos_object_internal.h"
 #include "kos_parser.h"
 #include "kos_system.h"
@@ -973,35 +974,29 @@ static int print_const(void       *cookie,
     return KOS_SUCCESS;
 }
 
-#if 0
-static const char *lalign(unsigned number)
+static const char *lalign(const char *tag)
 {
-    return number < 10  ? "  " :
-           number < 100 ? " "  :
-                          "";
+    static const char align[] = "            ";
+
+    const size_t tag_len    = strlen(tag);
+    const size_t max_align  = sizeof(align) - 1U;
+    const size_t align_size = (tag_len > max_align) ? 0U : (max_align - tag_len);
+
+    return &align[max_align - align_size];
 }
 
-static void print_regs(unsigned *reg_idx, unsigned num_regs, const char *tag)
+static void print_regs(unsigned reg_idx, unsigned num_regs, const char *tag)
 {
-    if ( ! num_regs)
+    if (reg_idx == KOS_NO_REG || ! num_regs)
         return;
 
-    assert(num_regs <= 255);
-    assert(*reg_idx + num_regs <= 255);
+    assert(num_regs <= KOS_NO_REG);
 
-    if (num_regs == 1) {
-        printf("  r%u%s       %s\n", *reg_idx, lalign(*reg_idx), tag);
-        ++(*reg_idx);
-    }
-    else {
-        const unsigned first = *reg_idx;
-        const unsigned last  = first + num_regs - 1;
-
-        printf("  r%u-r%u%s%s  %s\n", first, last, lalign(first), lalign(last), tag);
-        *reg_idx += num_regs;
-    }
+    if (num_regs == 1)
+        printf("  %s%s r%u\n", tag, lalign(tag), reg_idx);
+    else
+        printf("  %s%s r%u-r%u\n", tag, lalign(tag), reg_idx, reg_idx + num_regs - 1);
 }
-#endif
 
 static int print_func(void *cookie, uint32_t func_index)
 {
@@ -1009,10 +1004,7 @@ static int print_func(void *cookie, uint32_t func_index)
     KOS_OBJ_ID              func;
     KOS_TYPE                type;
     KOS_FUNCTION_STATE      state;
-#if 0
-    unsigned                reg_idx = 0;
     unsigned                num_args;
-#endif
 
     func = KOS_array_read(data->ctx, data->constants, func_index);
 
@@ -1034,30 +1026,17 @@ static int print_func(void *cookie, uint32_t func_index)
     printf("  closure_size %u\n", OBJPTR(FUNCTION, func)->opts.closure_size);
     printf("  min_args     %u\n", OBJPTR(FUNCTION, func)->opts.min_args);
     printf("  num_def_args %u\n", OBJPTR(FUNCTION, func)->opts.num_def_args);
-    printf("  num_binds    %u\n", OBJPTR(FUNCTION, func)->opts.num_binds);
-    printf("  args_reg     %u\n", OBJPTR(FUNCTION, func)->opts.args_reg);
-    printf("  rest_reg     %u\n", OBJPTR(FUNCTION, func)->opts.rest_reg);
-    printf("  ellipsis_reg %u\n", OBJPTR(FUNCTION, func)->opts.ellipsis_reg);
-    printf("  this_reg     %u\n", OBJPTR(FUNCTION, func)->opts.this_reg);
-    printf("  bind_reg     %u\n", OBJPTR(FUNCTION, func)->opts.bind_reg);
 
-#if 0
-    num_args = OBJPTR(FUNCTION, func)->num_args;
+    num_args = KOS_min((unsigned)OBJPTR(FUNCTION, func)->opts.rest_reg,
+                       (unsigned)OBJPTR(FUNCTION, func)->opts.args_reg +
+                            (unsigned)OBJPTR(FUNCTION, func)->opts.min_args +
+                            (unsigned)OBJPTR(FUNCTION, func)->opts.num_def_args);
 
-    if (num_args <= KOS_MAX_ARGS_IN_REGS)
-        print_regs(&reg_idx, num_args, "args");
-    else {
-        print_regs(&reg_idx, KOS_MAX_ARGS_IN_REGS - 1, "args");
-        print_regs(&reg_idx, 1, "rest");
-    }
-
-    if (OBJPTR(FUNCTION, func)->flags & KOS_FUN_ELLIPSIS)
-        print_regs(&reg_idx, 1, "ellipsis");
-
-    print_regs(&reg_idx, 1, "this");
-
-    print_regs(&reg_idx, OBJPTR(FUNCTION, func)->num_regs - reg_idx, "local variables");
-#endif
+    print_regs(OBJPTR(FUNCTION, func)->opts.args_reg, num_args, "args");
+    print_regs(OBJPTR(FUNCTION, func)->opts.rest_reg, 1, "rest");
+    print_regs(OBJPTR(FUNCTION, func)->opts.ellipsis_reg, 1, "ellipsis");
+    print_regs(OBJPTR(FUNCTION, func)->opts.this_reg, 1, "this");
+    print_regs(OBJPTR(FUNCTION, func)->opts.bind_reg, OBJPTR(FUNCTION, func)->opts.num_binds, "binds");
 
     return KOS_SUCCESS;
 }
