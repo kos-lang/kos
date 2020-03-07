@@ -1,0 +1,464 @@
+#
+# Copyright (c) 2014-2020 Chris Dragan
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+#
+public fun too_many_regs(a0,  a1,  a2,  a3,  a4,  a5,  a6,  a7,  a8,  a9,
+                         a10, a11, a12, a13, a14, a15, a16, a17, a18, a19,
+                         a20, a21, a22, a23, a24, a25, a26, a27, a28, a29,
+                         a30, a31, a32, rest...)
+{
+    const f = rest[-1]
+    const r35  = a1  + f(a2)
+    const r36  = a2  + f(a3)
+    const r37  = a3  + f(a4)
+    const r38  = a4  + f(a5)
+    const r39  = a5  + f(a6)
+    const r40  = a6  + f(a7)
+    const r41  = a7  + f(a8)
+    const r42  = a8  + f(a9)
+    const r43  = a9  + f(a10)
+    const r44  = a10 + f(a11)
+    const r45  = a11 + f(a12)
+    const r46  = a12 + f(a13)
+    const r47  = a13 + f(a14)
+    const r48  = a14 + f(a15)
+    const r49  = a15 + f(a16)
+    const r50  = a16 + f(a17)
+    const r51  = a17 + f(a18)
+    const r52  = a18 + f(a19)
+    const r53  = a19 + f(a20)
+    const r54  = a20 + f(a21)
+    const r55  = a21 + f(a22)
+    const r56  = a22 + f(a23)
+    const r57  = a23 + f(a24)
+    const r58  = a24 + f(a25)
+    const r59  = a25 + f(a26)
+    const r60  = a26 + f(a27)
+    const r61  = a27 + f(a28)
+    const r62  = a28 + f(a29)
+    const r63  = a29 + f(a30)
+    const r64  = a30 + f(a31)
+    const r65  = a31 + f(a32)
+    const r66  = a32 + f(a0)
+    const r67  = rest.size + f(a1)
+    const r68  = this + f(a2)
+    const r69  = a9  + f(a1)
+    const r70  = this + f(a0)
+    const r71  = this + f(a1)
+    const r72  = this + f(a2)
+    const r73  = this + f(a3)
+    const r74  = this + f(a4)
+    const r75  = this + f(a5)
+    const r76  = this + f(a6)
+    const r77  = this + f(a7)
+    const r78  = this + f(a8)
+    const r79  = this + f(a9)
+    const r80  = this + f(a10)
+    const r81  = this + f(a11)
+    const r82  = this + f(a12)
+    const r83  = this + f(a13)
+    const r84  = this + f(a14)
+    const r85  = this + f(a15)
+    const r86  = this + f(a16)
+    const r87  = this + f(a17)
+    const r88  = this + f(a18)
+    const r89  = this + f(a19)
+    const r90  = this + f(a30)
+    const r91  = this + f(a31)
+    const r92  = this + f(a32)
+    const r93  = this + f(r35)
+    const r94  = this + f(r36)
+    const r95  = this + f(r37)
+    const r96  = this + f(r38)
+    const r97  = this + f(r39)
+    const r98  = this + f(r40)
+    const r99  = this + f(r41)
+    const r100 = a0 * f(r40)
+    const r101 = a1 * f(r41)
+    const r102 = a2 * f(r42)
+    const r103 = a3 * f(r43)
+    const r104 = a4 * f(r44)
+    const r105 = a5 * f(r45)
+    const r106 = a6 * f(r46)
+    const r107 = a7 * f(r47)
+    const r108 = a8 * f(r48)
+    const r109 = a9 * f(r49)
+    const r110 = a0 * f(r50)
+    const r111 = a1 * f(r51)
+    const r112 = a2 * f(r52)
+    const r113 = a3 * f(r53)
+    const r114 = a4 * f(r54)
+    const r115 = a5 * f(r55)
+    const r116 = a6 * f(r56)
+    const r117 = a7 * f(r57)
+    const r118 = a8 * f(r58)
+    const r119 = a9 * f(r59)
+    const r120 = a0 * f(r60)
+    const r121 = a1 * f(r61)
+    const r122 = a2 * f(r62)
+    const r123 = a3 * f(r63)
+    const r124 = a4 * f(r64)
+    const r125 = a5 * f(r65)
+    const r126 = a6 * f(r66)
+    const r127 = a7 * f(r67)
+    const r128 = a8 * f(r68)
+    const r129 = a9 * f(r69)
+    const r130 = a0 * f(r70)
+    const r131 = a1 * f(r71)
+    const r132 = a2 * f(r72)
+    const r133 = a3 * f(r73)
+    const r134 = a4 * f(r74)
+    const r135 = a5 * f(r75)
+    const r136 = a6 * f(r76)
+    const r137 = a7 * f(r77)
+    const r138 = a8 * f(r78)
+    const r139 = a9 * f(r79)
+    const r140 = a0 * f(r80)
+    const r141 = a1 * f(r81)
+    const r142 = a2 * f(r82)
+    const r143 = a3 * f(r83)
+    const r144 = a4 * f(r84)
+    const r145 = a5 * f(r85)
+    const r146 = a6 * f(r86)
+    const r147 = a7 * f(r87)
+    const r148 = a8 * f(r88)
+    const r149 = a9 * f(r89)
+    const r150 = a10 * f(r40)
+    const r151 = a11 * f(r41)
+    const r152 = a12 * f(r42)
+    const r153 = a13 * f(r43)
+    const r154 = a14 * f(r44)
+    const r155 = a15 * f(r45)
+    const r156 = a16 * f(r46)
+    const r157 = a17 * f(r47)
+    const r158 = a18 * f(r48)
+    const r159 = a19 * f(r49)
+    const r160 = a10 * f(r50)
+    const r161 = a11 * f(r51)
+    const r162 = a12 * f(r52)
+    const r163 = a13 * f(r53)
+    const r164 = a14 * f(r54)
+    const r165 = a15 * f(r55)
+    const r166 = a16 * f(r56)
+    const r167 = a17 * f(r57)
+    const r168 = a18 * f(r58)
+    const r169 = a19 * f(r59)
+    const r170 = a10 * f(r60)
+    const r171 = a11 * f(r61)
+    const r172 = a12 * f(r62)
+    const r173 = a13 * f(r63)
+    const r174 = a14 * f(r64)
+    const r175 = a15 * f(r65)
+    const r176 = a16 * f(r66)
+    const r177 = a17 * f(r67)
+    const r178 = a18 * f(r68)
+    const r179 = a19 * f(r69)
+    const r180 = a10 * f(r70)
+    const r181 = a11 * f(r71)
+    const r182 = a12 * f(r72)
+    const r183 = a13 * f(r73)
+    const r184 = a14 * f(r74)
+    const r185 = a15 * f(r75)
+    const r186 = a16 * f(r76)
+    const r187 = a17 * f(r77)
+    const r188 = a18 * f(r78)
+    const r189 = a19 * f(r79)
+    const r190 = a10 * f(r80)
+    const r191 = a11 * f(r81)
+    const r192 = a12 * f(r82)
+    const r193 = a13 * f(r83)
+    const r194 = a14 * f(r84)
+    const r195 = a15 * f(r85)
+    const r196 = a16 * f(r86)
+    const r197 = a17 * f(r87)
+    const r198 = a18 * f(r88)
+    const r199 = a19 * f(r89)
+    const r200 = a20 * f(r40)
+    const r201 = a21 * f(r41)
+    const r202 = a22 * f(r42)
+    const r203 = a23 * f(r43)
+    const r204 = a24 * f(r44)
+    const r205 = a25 * f(r45)
+    const r206 = a26 * f(r46)
+    const r207 = a27 * f(r47)
+    const r208 = a28 * f(r48)
+    const r209 = a29 * f(r49)
+    const r210 = a20 * f(r50)
+    const r211 = a21 * f(r51)
+    const r212 = a22 * f(r52)
+    const r213 = a23 * f(r53)
+    const r214 = a24 * f(r54)
+    const r215 = a25 * f(r55)
+    const r216 = a26 * f(r56)
+    const r217 = a27 * f(r57)
+    const r218 = a28 * f(r58)
+    const r219 = a29 * f(r59)
+    const r220 = a20 * f(r60)
+    const r221 = a21 * f(r61)
+    const r222 = a22 * f(r62)
+    const r223 = a23 * f(r63)
+    const r224 = a24 * f(r64)
+    const r225 = a25 * f(r65)
+    const r226 = a26 * f(r66)
+    const r227 = a27 * f(r67)
+    const r228 = a28 * f(r68)
+    const r229 = a29 * f(r69)
+    const r230 = a20 * f(r70)
+    const r231 = a21 * f(r71)
+    const r232 = a22 * f(r72)
+    const r233 = a23 * f(r73)
+    const r234 = a24 * f(r74)
+    const r235 = a25 * f(r75)
+    const r236 = a26 * f(r76)
+    const r237 = a27 * f(r77)
+    const r238 = a28 * f(r78)
+    const r239 = a29 * f(r79)
+    const r240 = a20 * f(r80)
+    const r241 = a21 * f(r81)
+    const r242 = a22 * f(r82)
+    const r243 = a23 * f(r83)
+    const r244 = a24 * f(r84)
+    const r245 = a25 * f(r85)
+    const r246 = a26 * f(r86)
+    const r247 = a27 * f(r87)
+    const r248 = a28 * f(r88)
+    const r249 = a29 * f(r89)
+
+    const r250 = r35  +
+                 r36  +
+                 r37  +
+                 r38  +
+                 r39  +
+                 r40  +
+                 r41  +
+                 r42  +
+                 r43  +
+                 r44  +
+                 r45  +
+                 r46  +
+                 r47  +
+                 r48  +
+                 r49  +
+                 r50  +
+                 r51  +
+                 r52  +
+                 r53  +
+                 r54  +
+                 r55  +
+                 r56  +
+                 r57  +
+                 r58  +
+                 r59  +
+                 r60  +
+                 r61  +
+                 r62  +
+                 r63  +
+                 r64  +
+                 r65  +
+                 r66  +
+                 r67  +
+                 r68  +
+                 r69  +
+                 r70  +
+                 r71  +
+                 r72  +
+                 r73  +
+                 r74  +
+                 r75  +
+                 r76  +
+                 r77  +
+                 r78  +
+                 r79  +
+                 r80  +
+                 r81  +
+                 r82  +
+                 r83  +
+                 r84  +
+                 r85  +
+                 r86  +
+                 r87  +
+                 r88  +
+                 r89  +
+                 r90  +
+                 r91  +
+                 r92  +
+                 r93  +
+                 r94  +
+                 r95  +
+                 r96  +
+                 r97  +
+                 r98
+    const r251 = r99  +
+                 r100 +
+                 r101 +
+                 r102 +
+                 r103 +
+                 r104 +
+                 r105 +
+                 r106 +
+                 r107 +
+                 r108 +
+                 r109 +
+                 r110 +
+                 r111 +
+                 r112 +
+                 r113 +
+                 r114 +
+                 r115 +
+                 r116 +
+                 r117 +
+                 r118 +
+                 r119 +
+                 r120 +
+                 r121 +
+                 r122 +
+                 r123 +
+                 r124 +
+                 r125 +
+                 r126 +
+                 r127 +
+                 r128 +
+                 r129 +
+                 r130 +
+                 r131 +
+                 r132 +
+                 r133 +
+                 r134 +
+                 r135 +
+                 r136 +
+                 r137 +
+                 r138 +
+                 r139 +
+                 r140 +
+                 r141 +
+                 r142 +
+                 r143 +
+                 r144 +
+                 r145 +
+                 r146 +
+                 r147 +
+                 r148 +
+                 r149
+    const r252 = r150 +
+                 r151 +
+                 r152 +
+                 r153 +
+                 r154 +
+                 r155 +
+                 r156 +
+                 r157 +
+                 r158 +
+                 r159 +
+                 r160 +
+                 r161 +
+                 r162 +
+                 r163 +
+                 r164 +
+                 r165 +
+                 r166 +
+                 r167 +
+                 r168 +
+                 r169 +
+                 r170 +
+                 r171 +
+                 r172 +
+                 r173 +
+                 r174 +
+                 r175 +
+                 r176 +
+                 r177 +
+                 r178 +
+                 r179 +
+                 r180 +
+                 r181 +
+                 r182 +
+                 r183 +
+                 r184 +
+                 r185 +
+                 r186 +
+                 r187 +
+                 r188 +
+                 r189 +
+                 r190 +
+                 r191 +
+                 r192 +
+                 r193 +
+                 r194 +
+                 r195 +
+                 r196 +
+                 r197 +
+                 r198 +
+                 r199
+    const r253 = r200 +
+                 r201 +
+                 r202 +
+                 r203 +
+                 r204 +
+                 r205 +
+                 r206 +
+                 r207 +
+                 r208 +
+                 r209 +
+                 r210 +
+                 r211 +
+                 r212 +
+                 r213 +
+                 r214 +
+                 r215 +
+                 r216 +
+                 r217 +
+                 r218 +
+                 r219 +
+                 r220 +
+                 r221 +
+                 r222 +
+                 r223 +
+                 r224 +
+                 r225 +
+                 r226 +
+                 r227 +
+                 r228 +
+                 r229 +
+                 r230 +
+                 r231 +
+                 r232 +
+                 r233 +
+                 r234 +
+                 r235 +
+                 r236 +
+                 r237 +
+                 r238 +
+                 r239 +
+                 r240 +
+                 r241 +
+                 r242 +
+                 r243 +
+                 r244 +
+                 r245 +
+                 r246 +
+                 r247 +
+                 r248 +
+                 r249
+
+    # This line generates an extra register
+    f(r253, r250)
+
+    return r250 * r251 * r252 * r253
+}
