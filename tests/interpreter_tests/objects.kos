@@ -961,6 +961,42 @@ do {
     assert Y(true).execute()  == 33
 }
 
+# base class' constructor must not create a new object
+do {
+    class Base {
+        constructor(a, b) {
+            this[a] = b
+        }
+    }
+
+    class Derived extends Base {
+        constructor(a) {
+            this.a = a + 1
+            super("b", a + 2)
+            this.c = a + 3
+            super("d", a + 4)
+        }
+    }
+
+    const o = Derived(10)
+    assert "a" in o
+    assert "b" in o
+    assert "c" in o
+    assert "d" in o
+    assert o.a == 11
+    assert o.b == 12
+    assert o.c == 13
+    assert o.d == 14
+
+    const b = Base("m", 42)
+    assert "m" in b
+    assert b.m == 42
+    assert ! ("a" propertyof b)
+    assert ! ("b" propertyof b)
+    assert ! ("c" propertyof b)
+    assert ! ("d" propertyof b)
+}
+
 # assigning to this in base constructor shadows derived prototype
 do {
     class AAA {
