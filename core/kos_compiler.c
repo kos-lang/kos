@@ -3056,6 +3056,7 @@ static int super_invocation(KOS_COMP_UNIT      *program,
     assert(program->cur_frame->this_reg);
     TRY(gen_instr2(program, INSTR_MOVE, args_regs[0]->reg, program->cur_frame->this_reg->reg));
 
+    /* TODO Why is this apply and not normal invocation? */
     TRY(gen_instr5(program, INSTR_CALL_N, apply_fun->reg, apply_fun->reg, base_ctor_reg->reg, args_regs[0]->reg, 2));
 
 cleanup:
@@ -4759,17 +4760,19 @@ static int gen_function(KOS_COMP_UNIT      *program,
     }
 
     /* Generate register for 'this' */
-    /* TODO Don't generate register for 'this' if it's not used */
-    TRY(gen_reg(program, &frame->this_reg));
-    assert(frame->this_reg->reg == ++last_reg);
-    constant->this_reg = (uint8_t)frame->this_reg->reg;
-    constant->bind_reg = (uint8_t)frame->this_reg->reg + 1;
-    if (scope->uses_this)
+    if (scope->uses_this) {
+        TRY(gen_reg(program, &frame->this_reg));
+        assert(frame->this_reg->reg == ++last_reg);
         frame->this_reg->tmp = 0;
-    else
-        constant->this_reg = KOS_NO_REG;
+        constant->this_reg = (uint8_t)frame->this_reg->reg;
+    }
+    else {
+        assert( ! frame->this_reg);
+        assert(constant->this_reg == KOS_NO_REG);
+    }
 
     /* Generate registers for closures */
+    constant->bind_reg = (uint8_t)last_reg + 1;
     {
         KOS_GEN_CLOSURE_ARGS args;
 
@@ -4831,10 +4834,6 @@ static int gen_function(KOS_COMP_UNIT      *program,
     if (frame->args_reg && frame->args_reg->tmp) {
         free_reg(program, frame->args_reg);
         frame->args_reg = 0;
-    }
-    if (frame->this_reg->tmp) {
-        free_reg(program, frame->this_reg);
-        frame->this_reg = 0;
     }
     if (scope->num_args)
         TRY(kos_red_black_walk(scope->vars, free_arg_regs, program));
