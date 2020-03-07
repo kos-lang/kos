@@ -186,8 +186,6 @@ typedef struct KOS_COMP_STRING_S {
     KOS_UTF8_ESCAPE escape;
 } KOS_COMP_STRING;
 
-#define KOS_NO_REG 255U
-
 typedef struct KOS_COMP_FUNCTION_S {
     KOS_COMP_CONST header;
     uint32_t       offset;       /* Function entry point offset in the module */
