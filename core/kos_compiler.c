@@ -88,26 +88,12 @@ static int gen_new_reg(KOS_COMP_UNIT *program,
     KOS_REG   *reg;
 
     assert(frame->num_regs <= KOS_MAX_REGS);
+    assert(frame->scope.scope_node);
 
     if (frame->num_regs == KOS_MAX_REGS) {
-
-        KOS_TOKEN *token = (KOS_TOKEN *)
-            kos_mempool_alloc(&program->allocator, sizeof(KOS_TOKEN));
-
-        if (token) {
-            memset(token, 0, sizeof(*token));
-            /* TODO use token from frame */
-            token->begin       = "";
-            token->pos.file_id = program->file_id;
-            token->pos.line    = 1;
-            token->pos.column  = 1;
-            token->type        = TT_EOF;
-
-            program->error_token = token;
-            program->error_str   = str_err_too_many_registers;
-        }
-
-        return token ? KOS_ERROR_COMPILE_FAILED : KOS_ERROR_OUT_OF_MEMORY;
+        program->error_token = &frame->scope.scope_node->token;
+        program->error_str   = str_err_too_many_registers;
+        return KOS_ERROR_COMPILE_FAILED;
     }
 
     if (program->unused_regs) {
