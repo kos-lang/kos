@@ -4480,7 +4480,8 @@ static int void_literal(KOS_COMP_UNIT      *program,
 
 typedef struct KOS_GEN_CLOSURE_ARGS_S {
     KOS_COMP_UNIT *program;
-    uint8_t       *num_binds;
+    uint8_t        num_binds;
+    uint8_t        bind_reg;
 } KOS_GEN_CLOSURE_ARGS;
 
 static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
@@ -4492,20 +4493,30 @@ static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
     KOS_GEN_CLOSURE_ARGS *args = (KOS_GEN_CLOSURE_ARGS *)cookie;
 
     if (ref->exported_locals) {
-        ++*(args->num_binds);
+        ++args->num_binds;
         error = gen_reg(args->program, &ref->vars_reg);
         if ( ! error) {
             ref->vars_reg->tmp = 0;
             ref->vars_reg_idx  = ref->vars_reg->reg;
+            if (args->bind_reg == KOS_NO_REG)
+                args->bind_reg = (uint8_t)ref->vars_reg_idx;
+            else {
+                assert(ref->vars_reg_idx == args->bind_reg + args->num_binds - 1U);
+            }
         }
     }
 
     if ( ! error && ref->exported_args) {
-        ++*(args->num_binds);
+        ++args->num_binds;
         error = gen_reg(args->program, &ref->args_reg);
         if ( ! error) {
             ref->args_reg->tmp = 0;
             ref->args_reg_idx  = ref->args_reg->reg;
+            if (args->bind_reg == KOS_NO_REG)
+                args->bind_reg = (uint8_t)ref->args_reg_idx;
+            else {
+                assert(ref->args_reg_idx == args->bind_reg + args->num_binds - 1U);
+            }
         }
     }
 
@@ -4755,9 +4766,11 @@ static int gen_function(KOS_COMP_UNIT      *program,
     }
 
     /* Generate registers for closures */
-    constant->bind_reg = (uint8_t)last_reg + 1;
     {
         KOS_GEN_CLOSURE_ARGS args;
+        args.program   = program;
+        args.bind_reg  = KOS_NO_REG;
+        args.num_binds = 0;
 
         assert( ! constant->num_binds);
 
@@ -4765,24 +4778,27 @@ static int gen_function(KOS_COMP_UNIT      *program,
         if (needs_super_ctor) {
             TRY(gen_reg(program, &frame->base_ctor_reg));
             frame->base_ctor_reg->tmp = 0;
-            ++constant->num_binds;
+            assert(frame->base_ctor_reg->reg == ++last_reg);
+            args.bind_reg = (uint8_t)frame->base_ctor_reg->reg;
+            ++args.num_binds;
         }
 
         /* Base class prototype */
         if (frame->uses_base_proto) {
             TRY(gen_reg(program, &frame->base_proto_reg));
             frame->base_proto_reg->tmp = 0;
-            ++constant->num_binds;
+            assert(frame->base_proto_reg->reg == ++last_reg);
+            if (args.bind_reg == KOS_NO_REG)
+                args.bind_reg = (uint8_t)frame->base_proto_reg->reg;
+            ++args.num_binds;
         }
 
         /* Closures from outer scopes */
-        args.program   = program;
-        args.num_binds = &constant->num_binds;
         TRY(kos_red_black_walk(frame->closures, gen_closure_regs, &args));
-    }
 
-    if ( ! constant->num_binds)
-        constant->bind_reg = KOS_NO_REG;
+        constant->bind_reg  = args.bind_reg;
+        constant->num_binds = args.num_binds;
+    }
 
     assert(name_node);
     assert(name_node->type == NT_NAME || name_node->type == NT_NAME_CONST);
