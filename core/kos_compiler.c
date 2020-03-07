@@ -4842,7 +4842,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Set up constant template for LOAD.CONST */
     constant->closure_size = get_closure_size(program);
     constant->num_regs     = (uint8_t)frame->num_regs;
-    constant->args_reg     = (uint8_t)scope->num_indep_vars;
+    constant->args_reg     = ((uint32_t)constant->min_args + (uint32_t)constant->num_def_args)
+                             ? (uint8_t)scope->num_indep_vars : KOS_NO_REG;
     constant->flags        = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)

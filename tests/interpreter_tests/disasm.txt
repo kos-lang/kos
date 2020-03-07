@@ -7,7 +7,7 @@
    min_args     0
    num_def_args 0
    num_binds    0
-   args_reg     0
+   args_reg     255
    rest_reg     255
    ellipsis_reg 255
    this_reg     255
