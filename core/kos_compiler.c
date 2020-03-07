@@ -4504,7 +4504,7 @@ static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
             if (args->bind_reg == KOS_NO_REG)
                 args->bind_reg = (uint8_t)ref->vars_reg_idx;
             else {
-                assert(ref->vars_reg_idx == args->bind_reg + args->num_binds - 1U);
+                assert((unsigned)ref->vars_reg_idx == args->bind_reg + args->num_binds - 1U);
             }
         }
     }
@@ -4518,7 +4518,7 @@ static int gen_closure_regs(KOS_RED_BLACK_NODE *node,
             if (args->bind_reg == KOS_NO_REG)
                 args->bind_reg = (uint8_t)ref->args_reg_idx;
             else {
-                assert(ref->args_reg_idx == args->bind_reg + args->num_binds - 1U);
+                assert((unsigned)ref->args_reg_idx == args->bind_reg + args->num_binds - 1U);
             }
         }
     }
