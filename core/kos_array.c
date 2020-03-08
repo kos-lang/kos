@@ -94,10 +94,15 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
     const uint32_t buf_alloc_size = size ? KOS_buffer_alloc_size(size) : 0;
     const int      buf_built_in   = array_obj_size + buf_alloc_size <= 256U;
     const uint32_t alloc_size     = buf_built_in ? array_obj_size + buf_alloc_size : array_obj_size;
-    KOS_ARRAY     *array          = (KOS_ARRAY *)kos_alloc_object(ctx,
-                                                                  KOS_ALLOC_MOVABLE,
-                                                                  OBJ_ARRAY,
-                                                                  alloc_size);
+    KOS_ARRAY     *array          = 0;
+
+    if (size < KOS_MAX_ARRAY_SIZE)
+        array = (KOS_ARRAY *)kos_alloc_object(ctx,
+                                              KOS_ALLOC_MOVABLE,
+                                              OBJ_ARRAY,
+                                              alloc_size);
+    else
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
 
     if (array) {
         KOS_ARRAY_STORAGE *storage = 0;
