@@ -239,6 +239,24 @@ int main(void)
     }
 
     /************************************************************************/
+    /* Attempt to allocate array which is too large */
+    {
+        KOS_OBJ_ID a = KOS_new_array(ctx, 0x1FFFFFFEU);
+        TEST(IS_BAD_PTR(a));
+        TEST_EXCEPTION();
+    }
+    {
+        KOS_OBJ_ID a = KOS_new_array(ctx, 0x7FFFFFFFU);
+        TEST(IS_BAD_PTR(a));
+        TEST_EXCEPTION();
+    }
+    {
+        KOS_OBJ_ID a = KOS_new_array(ctx, 0xFFFFFFFFU);
+        TEST(IS_BAD_PTR(a));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
     /* Resize array 100 times by 1 element and read it each time */
     {
         int i;

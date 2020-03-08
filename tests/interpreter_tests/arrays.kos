@@ -666,6 +666,11 @@ do {
 do {
     expect_fail(()=>base.array(-1))
     expect_fail(()=>base.array(1, 1, 0))
+    expect_fail(()=>base.array(0x1FFFFFFE))
+    expect_fail(()=>base.array(0x7FFFFFFF))
+    expect_fail(()=>base.array(0x80000000))
+    expect_fail(()=>base.array(0xFFFFFFFF))
+    expect_fail(()=>base.array(0x100000000))
 }
 
 do {
