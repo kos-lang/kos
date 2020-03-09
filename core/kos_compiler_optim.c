@@ -31,7 +31,8 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char str_err_div_by_zero[] = "division by zero";
+static const char str_err_div_by_zero[]         = "division by zero";
+static const char str_err_number_out_of_range[] = "number out of range";
 
 enum KOS_TERMINATOR_E {
     TERM_NONE   = 0,
@@ -1088,11 +1089,21 @@ static int optimize_binary_op(KOS_COMP_UNIT      *program,
         assert(op != OT_ADD && op != OT_SUB && op != OT_MUL && op != OT_DIV && op != OT_MOD);
 
         if (numeric_a.type == KOS_FLOAT_VALUE) {
+            if (numeric_a.u.d <= -9223372036854775808.0 || numeric_a.u.d >= 9223372036854775808.0) {
+                program->error_str   = str_err_number_out_of_range;
+                program->error_token = &a->token;
+                RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+            }
             numeric_a.u.i = (int64_t)floor(numeric_a.u.d);
             numeric_a.type = KOS_INTEGER_VALUE;
         }
 
         if (numeric_b.type == KOS_FLOAT_VALUE) {
+            if (numeric_b.u.d <= -9223372036854775808.0 || numeric_b.u.d >= 9223372036854775808.0) {
+                program->error_str   = str_err_number_out_of_range;
+                program->error_token = &b->token;
+                RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+            }
             numeric_b.u.i = (int64_t)floor(numeric_b.u.d);
             numeric_b.type = KOS_INTEGER_VALUE;
         }
