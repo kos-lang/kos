@@ -1799,3 +1799,45 @@ KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
 
     return OBJID(STRING, new_str);
 }
+
+void kos_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id)
+{
+    KOS_STRING_FLAGS elem_size;
+    const uint8_t   *ptr;
+
+    assert( ! IS_BAD_PTR(str_id));
+    assert(GET_OBJ_TYPE(str_id) == OBJ_STRING);
+
+    elem_size = kos_get_string_elem_size(OBJPTR(STRING, str_id));
+
+    ptr = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, str_id));
+
+    iter->ptr       = ptr;
+    iter->end       = ptr + (KOS_get_string_length(str_id) << elem_size);
+    iter->elem_size = elem_size;
+}
+
+uint32_t kos_string_iter_next_code(KOS_STRING_ITER *iter)
+{
+    uint32_t ret;
+
+    switch (iter->elem_size) {
+
+        case KOS_STRING_ELEM_8:
+            ret = *(iter->ptr++);
+            break;
+
+        case KOS_STRING_ELEM_16:
+            ret = *(const uint16_t *)iter->ptr;
+            iter->ptr += 2;
+            break;
+
+        default:
+            assert(iter->elem_size == KOS_STRING_ELEM_32);
+            ret = *(const uint32_t *)iter->ptr;
+            iter->ptr += 4;
+            break;
+    }
+
+    return ret;
+}

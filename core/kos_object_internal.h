@@ -221,6 +221,12 @@ int kos_array_copy_storage(KOS_CONTEXT ctx,
 /* KOS_STRING                                                               */
 /*==========================================================================*/
 
+typedef struct KOS_STRING_ITER_S {
+    const uint8_t   *ptr;
+    const uint8_t   *end;
+    KOS_STRING_FLAGS elem_size;
+} KOS_STRING_ITER;
+
 #ifdef __cplusplus
 
 static inline const void* kos_get_string_buffer(KOS_STRING *str)
@@ -233,6 +239,11 @@ static inline KOS_STRING_FLAGS kos_get_string_elem_size(KOS_STRING *str)
     return (KOS_STRING_FLAGS)(str->header.flags & KOS_STRING_ELEM_MASK);
 }
 
+static inline bool kos_is_string_iter_end(KOS_STRING_ITER *iter)
+{
+    return iter->ptr >= iter->end;
+}
+
 #else
 
 #define kos_get_string_buffer(str) (((str)->header.flags & KOS_STRING_LOCAL) ? \
@@ -241,12 +252,18 @@ static inline KOS_STRING_FLAGS kos_get_string_elem_size(KOS_STRING *str)
 
 #define kos_get_string_elem_size(str) ((KOS_STRING_FLAGS)((str)->header.flags & KOS_STRING_ELEM_MASK))
 
+#define kos_is_string_iter_end(iter) ((iter)->ptr >= (iter)->end)
+
 #endif
 
 int kos_append_cstr(KOS_CONTEXT          ctx,
                     struct KOS_VECTOR_S *cstr_vec,
                     const char          *str,
                     size_t               len);
+
+void kos_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id);
+
+uint32_t kos_string_iter_next_code(KOS_STRING_ITER *iter);
 
 /*==========================================================================*/
 /* KOS_STACK                                                                */

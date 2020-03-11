@@ -1823,6 +1823,77 @@ int main(void)
         TEST_EXCEPTION();
     }
 
+    /************************************************************************/
+    {
+        uint32_t        code;
+        KOS_STRING_ITER iter;
+        KOS_DECLARE_STATIC_CONST_STRING(str8, "abc");
+
+        kos_init_string_iter(&iter, KOS_CONST_ID(str8));
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == 'a');
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == 'b');
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == 'c');
+
+        TEST(kos_is_string_iter_end(&iter));
+    }
+
+    /************************************************************************/
+    {
+        const char       str[] = { '1', '\xEF', '\xBF', '\xBF', '\xC3', '\x80' };
+        uint32_t         code;
+        KOS_STRING_ITER  iter;
+        const KOS_OBJ_ID str_str = KOS_new_string(ctx, str, sizeof(str));
+
+        kos_init_string_iter(&iter, str_str);
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == '1');
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == 0xFFFFU);
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == 0xC0U);
+
+        TEST(kos_is_string_iter_end(&iter));
+    }
+
+    /************************************************************************/
+    {
+        const char       str[] = { '1', '\xF0', '\x90', '\x80', '\x80', '0' };
+        uint32_t         code;
+        KOS_STRING_ITER  iter;
+        const KOS_OBJ_ID str_str = KOS_new_string(ctx, str, sizeof(str));
+
+        kos_init_string_iter(&iter, str_str);
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == '1');
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == 0x10000U);
+
+        TEST( ! kos_is_string_iter_end(&iter));
+        code = kos_string_iter_next_code(&iter);
+        TEST(code == '0');
+
+        TEST(kos_is_string_iter_end(&iter));
+    }
+
     KOS_instance_destroy(&inst);
 
     return 0;
