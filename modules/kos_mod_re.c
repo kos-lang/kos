@@ -31,7 +31,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression 
 
 enum RE_TOKEN {
     /* Any non-special character */
-    T_NONE,
+    T_SINGLE,
 
     /* Characters with special meaning */
     T_ANY,              /* .  One (any) character           */
@@ -76,6 +76,135 @@ enum RE_FLAG {
     T_DOT_ALL     = 8  /* s -  dotall - dot matches any char, including \n (without this flag dot does not match \n) */
 };
 
+struct RE_SCAN_CTX {
+    KOS_STRING_ITER iter;
+    int             idx;
+};
+
+/* End of regular expression */
+#define EORE (~0U)
+
+uint32_t get_next_char(struct RE_SCAN_CTX *scan_ctx)
+{
+    uint32_t code;
+
+    if (kos_is_string_iter_end(&scan_ctx->iter))
+        return EORE;
+
+    code = kos_string_iter_next_code(&scan_ctx->iter);
+
+    ++scan_ctx->idx;
+
+    return code;
+}
+
+static int gen_instr(enum RE_TOKEN token, uint32_t code)
+{
+    return KOS_ERROR_INTERNAL;
+}
+
+static int parse_class(struct RE_SCAN_CTX *scan_ctx)
+{
+    return KOS_ERROR_INTERNAL;
+}
+
+static int parse_escape(struct RE_SCAN_CTX *scan_ctx)
+{
+    return KOS_ERROR_INTERNAL;
+}
+
+static int parse_group(struct RE_SCAN_CTX *scan_ctx, uint32_t group_start_code)
+{
+    int error = KOS_SUCCESS;
+
+    if (group_start_code == '(') {
+        /* TODO parse group type */
+    }
+
+    for (;;) {
+
+        const uint32_t code = get_next_char(scan_ctx);
+
+        switch (code) {
+
+            case EORE:
+                if (group_start_code != 0) {
+                    /* TODO error */
+                }
+                goto cleanup;
+
+            case '.':
+                gen_instr(T_ANY, 0);
+                break;
+
+            case '*':
+                /* TODO */
+                break;
+
+            case '+':
+                /* TODO */
+                break;
+
+            case '?':
+                /* TODO */
+                break;
+
+            case '{':
+                /* TODO */
+                break;
+
+            case '^':
+                gen_instr(T_LINE_BEGIN, 0);
+                break;
+
+            case '$':
+                gen_instr(T_LINE_END, 0);
+                break;
+
+            case '|':
+                /* TODO */
+                break;
+
+            case '[':
+                TRY(parse_class(scan_ctx));
+                break;
+
+            case '\\':
+                TRY(parse_escape(scan_ctx));
+                break;
+
+            case '(':
+                TRY(parse_group(scan_ctx, '('));
+                break;
+
+            case ')':
+                if (group_start_code != '(') {
+                    /* TODO error */
+                }
+                /* TODO */
+                return KOS_SUCCESS;
+
+            default:
+                gen_instr(T_SINGLE, code);
+                break;
+        }
+    }
+
+cleanup:
+    return error;
+}
+
+static int parse_re(KOS_OBJ_ID regex_str)
+{
+    struct RE_SCAN_CTX scan_ctx;
+
+    kos_init_string_iter(&scan_ctx.iter, regex_str);
+
+    scan_ctx.idx = -1;
+
+    return parse_group(&scan_ctx, 0);
+}
+
 /* @item re re()
  *
  *     re(regex)
@@ -92,9 +221,8 @@ static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int             error = KOS_SUCCESS;
-    KOS_LOCAL       regex_str;
-    KOS_STRING_ITER str_iter;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL regex_str;
 
     assert(KOS_get_array_size(args_obj) > 0);
 
@@ -106,7 +234,7 @@ static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(regex_str.o) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_regex_not_a_string);
 
-    kos_init_string_iter(&str_iter, regex_str.o);
+    error = parse_re(regex_str.o);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &regex_str, &regex_str);
