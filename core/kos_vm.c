@@ -748,6 +748,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
                         unsigned           num_args)
 {
     int                error     = KOS_SUCCESS;
+    int                state_set = 0;
     KOS_FUNCTION_STATE state;
     const uint32_t     regs_idx  = ctx->regs_idx;
     KOS_OBJ_ID         stack_obj = ctx->stack;
@@ -870,6 +871,11 @@ static int prepare_call(KOS_CONTEXT        ctx,
         case KOS_GEN_ACTIVE: {
             assert( ! IS_BAD_PTR(OBJPTR(FUNCTION, func.o)->generator_stack_frame));
 
+            if ( ! KOS_atomic_cas_strong_u32(OBJPTR(FUNCTION, func.o)->state, state, KOS_GEN_RUNNING))
+                RAISE_EXCEPTION_STR(str_err_generator_running);
+
+            state_set = 1;
+
             TRY(kos_stack_push(ctx, func.o));
 
             if ( ! OBJPTR(FUNCTION, func.o)->handler) {
@@ -893,10 +899,6 @@ static int prepare_call(KOS_CONTEXT        ctx,
             else
                 *this_obj = get_handler_reg(ctx);
 
-            if ( ! KOS_atomic_cas_strong_u32(OBJPTR(FUNCTION, func.o)->state, state, KOS_GEN_RUNNING)) {
-                /* TODO error */
-            }
-
             OBJPTR(STACK, ctx->stack)->flags |= KOS_CAN_YIELD;
             break;
         }
@@ -911,8 +913,12 @@ static int prepare_call(KOS_CONTEXT        ctx,
     }
 
 cleanup:
-    if (error && (stack_obj != ctx->stack || regs_idx != ctx->regs_idx))
+    if (error && (stack_obj != ctx->stack || regs_idx != ctx->regs_idx)) {
         kos_stack_pop(ctx);
+
+        if (state_set)
+            KOS_atomic_write_release_u32(OBJPTR(FUNCTION, func.o)->state, state);
+    }
     KOS_destroy_top_locals(ctx, &func, &args);
     return error;
 }
@@ -923,7 +929,8 @@ static KOS_OBJ_ID finish_call(KOS_CONTEXT         ctx,
                               KOS_OBJ_ID          this_obj,
                               KOS_FUNCTION_STATE *state)
 {
-    KOS_OBJ_ID ret = KOS_BADPTR;
+    KOS_OBJ_ID ret         = KOS_BADPTR;
+    int        write_state = 0;
 
     if ( ! KOS_is_exception_pending(ctx)) {
 
@@ -937,8 +944,8 @@ static KOS_OBJ_ID finish_call(KOS_CONTEXT         ctx,
 
         if (*state >= KOS_GEN_INIT) {
             if (OBJPTR(STACK, ctx->stack)->flags & KOS_CAN_YIELD) {
-                *state = KOS_GEN_DONE;
-                KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, KOS_GEN_DONE);
+                *state      = KOS_GEN_DONE;
+                write_state = 1;
                 if (instr != INSTR_CALL_GEN)
                     KOS_raise_generator_end(ctx);
             }
@@ -946,21 +953,24 @@ static KOS_OBJ_ID finish_call(KOS_CONTEXT         ctx,
                 const KOS_FUNCTION_STATE end_state =
                     OBJPTR(FUNCTION, func_obj)->handler ? KOS_GEN_READY : KOS_GEN_ACTIVE;
 
-                *state = end_state;
-                KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, (uint32_t)end_state);
+                *state      = end_state;
+                write_state = 1;
             }
         }
     }
     else {
         if (*state >= KOS_GEN_INIT) {
-            *state = KOS_GEN_DONE;
-            KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, KOS_GEN_DONE);
+            *state      = KOS_GEN_DONE;
+            write_state = 1;
         }
     }
 
     ctx->retval = KOS_BADPTR;
 
     kos_stack_pop(ctx);
+
+    if (write_state)
+        KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, *state);
 
     return ret;
 }
