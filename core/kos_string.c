@@ -70,13 +70,12 @@ static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
                              unsigned        length,
                              KOS_UTF8_ESCAPE escape)
 {
-    KOS_STRING      *str;
+    KOS_STRING      *str       = 0;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
 
-    if (length > 4U * 0xFFFFU) {
+    if (length > 4U * 0xFFFFU)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
-        str = 0;
-    }
+
     else if (length) {
         uint32_t max_code;
         unsigned count = kos_utf8_get_len(s, length, escape, &max_code);
@@ -97,12 +96,10 @@ static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
                                                  OBJ_STRING,
                                                  sizeof(KOS_STR_HEADER) + (length << elem_size));
         }
-        else {
+        else
             KOS_raise_exception(ctx, count == ~0U ?
                                      KOS_CONST_ID(str_err_invalid_utf8) :
                                      KOS_CONST_ID(str_err_string_too_long));
-            str = 0;
-        }
 
         if (str) {
 
@@ -116,24 +113,12 @@ static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
 
             ptr = (void *)kos_get_string_buffer(str);
 
-            if (elem_size == KOS_STRING_ELEM_8) {
-                if (KOS_SUCCESS != kos_utf8_decode_8(s, length, escape, (uint8_t *)ptr)) {
-                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
-                    str = 0; /* object is garbage-collected */
-                }
-            }
-            else if (elem_size == KOS_STRING_ELEM_16) {
-                if (KOS_SUCCESS != kos_utf8_decode_16(s, length, escape, (uint16_t *)ptr)) {
-                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
-                    str = 0; /* object is garbage-collected */
-                }
-            }
-            else {
-                if (KOS_SUCCESS != kos_utf8_decode_32(s, length, escape, (uint32_t *)ptr)) {
-                    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
-                    str = 0; /* object is garbage-collected */
-                }
-            }
+            if (elem_size == KOS_STRING_ELEM_8)
+                kos_utf8_decode_8(s, length, escape, (uint8_t *)ptr);
+            else if (elem_size == KOS_STRING_ELEM_16)
+                kos_utf8_decode_16(s, length, escape, (uint16_t *)ptr);
+            else
+                kos_utf8_decode_32(s, length, escape, (uint32_t *)ptr);
         }
     }
     else
@@ -371,27 +356,15 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
 
     ptr = (void *)kos_get_string_buffer(str);
 
-    if (elem_size == KOS_STRING_ELEM_8) {
-        if (KOS_SUCCESS != kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
-                                             size, KOS_UTF8_NO_ESCAPE, (uint8_t *)ptr)) {
-            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
-            str = 0; /* object is garbage-collected */
-        }
-    }
-    else if (elem_size == KOS_STRING_ELEM_16) {
-        if (KOS_SUCCESS != kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
-                                              size, KOS_UTF8_NO_ESCAPE, (uint16_t *)ptr)) {
-            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
-            str = 0; /* object is garbage-collected */
-        }
-    }
-    else {
-        if (KOS_SUCCESS != kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
-                                              size, KOS_UTF8_NO_ESCAPE, (uint32_t *)ptr)) {
-            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
-            str = 0; /* object is garbage-collected */
-        }
-    }
+    if (elem_size == KOS_STRING_ELEM_8)
+        kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
+                          size, KOS_UTF8_NO_ESCAPE, (uint8_t *)ptr);
+    else if (elem_size == KOS_STRING_ELEM_16)
+        kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
+                           size, KOS_UTF8_NO_ESCAPE, (uint16_t *)ptr);
+    else
+        kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
+                           size, KOS_UTF8_NO_ESCAPE, (uint32_t *)ptr);
 
 cleanup:
     KOS_destroy_top_local(ctx, &utf8_buf);
