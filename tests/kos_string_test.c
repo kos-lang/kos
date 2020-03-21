@@ -4,6 +4,7 @@
 
 #include "../inc/kos_string.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_buffer.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
@@ -1874,6 +1875,80 @@ int main(void)
         TEST(code == '0');
 
         TEST(kos_is_string_iter_end(&iter));
+    }
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID str = KOS_new_buffer(ctx, 1);
+
+        TEST( ! IS_BAD_PTR(str));
+
+        str = KOS_new_string_from_buffer(ctx, str, 0, 100);
+
+        TEST(IS_BAD_PTR(str));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID str = KOS_new_buffer(ctx, 1);
+
+        TEST( ! IS_BAD_PTR(str));
+
+        KOS_buffer_data_volatile(str)[0] = 0x80U;
+
+        str = KOS_new_string_from_buffer(ctx, str, 0, 1);
+
+        TEST(IS_BAD_PTR(str));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID str = KOS_new_buffer(ctx, 0x10000);
+
+        TEST( ! IS_BAD_PTR(str));
+
+        str = KOS_new_string_from_buffer(ctx, str, 0, 0x10000);
+
+        TEST(IS_BAD_PTR(str));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID str = KOS_new_buffer(ctx, 2);
+
+        TEST( ! IS_BAD_PTR(str));
+
+        KOS_buffer_data_volatile(str)[0] = 0xC4U;
+        KOS_buffer_data_volatile(str)[1] = 0x80U;
+
+        str = KOS_new_string_from_buffer(ctx, str, 0, 2);
+
+        TEST( ! IS_BAD_PTR(str));
+        TEST(GET_OBJ_TYPE(str) == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == 1);
+        TEST(KOS_string_get_char_code(ctx, str, 0) == 0x100U);
+    }
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID str = KOS_new_buffer(ctx, 4);
+
+        TEST( ! IS_BAD_PTR(str));
+
+        KOS_buffer_data_volatile(str)[0] = 0xF0U;
+        KOS_buffer_data_volatile(str)[1] = 0x90U;
+        KOS_buffer_data_volatile(str)[2] = 0x80U;
+        KOS_buffer_data_volatile(str)[3] = 0x80U;
+
+        str = KOS_new_string_from_buffer(ctx, str, 0, 4);
+
+        TEST( ! IS_BAD_PTR(str));
+        TEST(GET_OBJ_TYPE(str) == OBJ_STRING);
+        TEST(KOS_get_string_length(str) == 1);
+        TEST(KOS_string_get_char_code(ctx, str, 0) == 0x10000U);
     }
 
     KOS_instance_destroy(&inst);

@@ -116,3 +116,12 @@ do {
 
     assert val == 101
 }
+
+do {
+    assert string([0x30]) == "0"
+    assert string(buffer([0x31])) == "1"
+    assert "Uu".uppercase() == "UU"
+    assert "Uu".lowercase() == "uu"
+    assert "Uu".repeat(2) == "UuUu"
+    assert "Uu".reverse() == "uU"
+}

@@ -217,6 +217,12 @@ do {
 }
 
 do {
+    const codes = []
+    codes.resize(0x10000, 0)
+    expect_fail(() => base.string(codes))
+}
+
+do {
     const s = "a B"
     assert s.code(0)  == 0x61
     assert s.code(1)  == 0x20
@@ -456,6 +462,8 @@ do {
     assert "\x{100}\x{100}\x{100}\x01\x{100}".rscan("\x01\x01\x01") == 3
     assert "\x{101}\x{101}\x{101}\x01\x{101}".scan("\x01\x01\x01") == 3
     assert "\x{101}\x{101}\x{101}\x01\x{101}".rscan("\x01\x01\x01") == 3
+    assert "\x{10001}\x{101}\x{101}\x01\x{101}".scan("\x01\x01\x01") == 3
+    assert "\x{10001}\x{101}\x{101}\x01\x{101}".rscan("\x01\x01\x01") == 3
 }
 
 do {
