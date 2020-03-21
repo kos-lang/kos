@@ -946,8 +946,13 @@ static KOS_OBJ_ID finish_call(KOS_CONTEXT         ctx,
             if (OBJPTR(STACK, ctx->stack)->flags & KOS_CAN_YIELD) {
                 *state      = KOS_GEN_DONE;
                 write_state = 1;
-                if (instr != INSTR_CALL_GEN)
+                if (instr != INSTR_CALL_GEN) {
+                    KOS_LOCAL saved_func;
+
+                    KOS_init_local_with(ctx, &saved_func, func_obj);
                     KOS_raise_generator_end(ctx);
+                    func_obj = KOS_destroy_top_local(ctx, &saved_func);
+                }
             }
             else {
                 const KOS_FUNCTION_STATE end_state =
