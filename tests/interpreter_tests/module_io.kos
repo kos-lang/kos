@@ -458,7 +458,7 @@ do {
         assert info.hard_links == 1
 
         # File times have limited precision
-        const wiggle = 1_000_000
+        const wiggle = 2_000_000
 
         assert info.atime + wiggle >= time_before
         assert info.atime - wiggle <= time_after
