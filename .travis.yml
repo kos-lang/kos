@@ -1,6 +1,6 @@
 language: cpp
 
-matrix:
+jobs:
     include:
       - name: "Ubuntu 18.04 + gcc-9"
         if: branch != coverity_scan
