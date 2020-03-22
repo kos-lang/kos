@@ -101,12 +101,11 @@ jobs:
         dist: bionic
         compiler: gcc
         before_install:
-          - pip install --user urllib3[secure] # Fix for coveralls upload failure
           - pip install --user cpp-coveralls
         script:
           - tests/run gcov
         after_success:
-          - coveralls --exclude lib --exclude tests --no-gcov
+          - coveralls --exclude tests --no-gcov
 
       - name: "Coverity"
         if: branch = coverity_scan
