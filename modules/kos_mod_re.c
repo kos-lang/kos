@@ -7,9 +7,95 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_module.h"
 #include "../core/kos_object_internal.h"
+#include "../core/kos_memory.h"
 #include "../core/kos_try.h"
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression is not a string");
+
+/*
+ * Regular expression syntax
+ * -------------------------
+ *
+ * REG_EX ::= AlternateMatchSequence
+ *
+ * AlternateMatchSequence ::= MatchSequence ( "|" MatchSequence )*
+ *
+ * MatchSequence ::= ( SingleMatch [ Multiplicity ] )*
+ *
+ * Multiplicity ::= ZeroOrMore
+ *                | OneOrMore
+ *                | ZeroOrOne
+ *                | Count
+ *
+ * ZeroOrMore ::= "*" [ "?" ]
+ *
+ * OneOrMore ::= "+" [ "?" ]
+ *
+ * ZeroOrOne ::= "?" [ "?" ]
+ *
+ * Count ::= "{" Number [ "," Number ] "}" [ "?" ]
+ *
+ * Number ::= Digit ( Digit )*
+ *
+ * Digit ::= "0" .. "9"
+ *
+ * SingleMatch ::= OneCharacter
+ *               | AnyCharacter
+ *               | LineBegin
+ *               | LineEnd
+ *               | EscapeSequence
+ *               | CharacterClass
+ *               | Group
+ *
+ * OneCharacter ::= UTF8_CHARACTER except ( "." | "*" | "+" | "?" | "^" | "$" | "\\" | "|" | "{" | "(" | "[" )
+ *
+ * AnyCharacter ::= "."
+ *
+ * LineBegin ::= "^"
+ *
+ * LineEnd ::= "$"
+ *
+ * EscapeSequence ::= "\\" ( "\\" | "<" | ">" | "A" | "b" | "B" | "d" | "D" | "s" | "S" | "w" | "W" | "Z" | Digit )
+ *
+ * CharacterClass ::= "[" [ "^" ] ClassGroup ( ClassGroup )* "]"
+ *
+ * ClassGroup ::= ClassCharacter [ "-" ClassCharacter ]
+ *
+ * ClassCharacter ::= OneClassCharacter
+ *                  | EscapedClassCharacter
+ *
+ * OneClassCharacter ::= UTF8_CHARACTER except ( "]" | "-" | "\\" )
+ *
+ * EscapedClassCharacter ::= "\\" ( "]" | "-" | "\\" )
+ *
+ * Group ::= "(" [ GroupOpt ] AlternateMatchSequence ")"
+ *
+ * GroupOpt ::= TODO
+ *
+ *
+ * Instructions
+ * ------------
+ *
+ * - group
+ *      BEGIN_GROUP <group.no> - save string index in group slot
+ *      END_GROUP <group.no> - save string index in group slot
+ * - alternative
+ *      FORK <jump.offs> - push current string index and jump offset, used to retry if matching fails
+ *          -- TODO how to undo group matches during back tracking?
+ *      JUMP <jump.offs>
+ * - count
+ *      BEGIN_COUNT <jump.offs> <min> <max> <lazy|greedy>
+ *          - if greedy (default), at every iteration, push the skip jump on the stack
+ *            and try to match the inside of the loop
+ *          - if lazy, at every iteration, push the inside of the loop on the stack
+ *            and execute the jump skipping the loop
+ *
+ *    +---------+
+ *    v         |
+ *  --+--> a -> + -+->
+ *    |            ^
+ *    +------------+
+ */
 
 enum RE_TOKEN {
     /* Any non-special character */
@@ -58,118 +144,386 @@ enum RE_FLAG {
     T_DOT_ALL     = 8  /* s -  dotall - dot matches any char, including \n (without this flag dot does not match \n) */
 };
 
-struct RE_SCAN_CTX {
+enum RE_INSTR {
+    INSTR_MATCH_ONE_CHAR,
+    INSTR_MATCH_ANY_CHAR,
+    INSTR_MATCH_LINE_BEGIN,
+    INSTR_MATCH_LINE_END,
+    INSTR_BEGIN_GROUP,
+    INSTR_END_GROUP,
+    INSTR_FORK,
+    INSTR_JUMP,
+    INSTR_GREEDY_COUNT,
+    INSTR_LAZY_COUNT
+};
+
+struct RE_CTX {
     KOS_STRING_ITER iter;
     int             idx;
+    unsigned        num_groups;
+    unsigned        group_depth;
+    uint32_t        re_size;
+    KOS_VECTOR      buf;
 };
 
 /* End of regular expression */
 #define EORE (~0U)
 
-uint32_t get_next_char(struct RE_SCAN_CTX *scan_ctx)
+static uint32_t peek_next_char(struct RE_CTX *re_ctx)
 {
     uint32_t code;
 
-    if (kos_is_string_iter_end(&scan_ctx->iter))
+    if (kos_is_string_iter_end(&re_ctx->iter))
         return EORE;
 
-    code = kos_string_iter_next_code(&scan_ctx->iter);
+    code = kos_string_iter_peek_next_code(&re_ctx->iter);
 
-    ++scan_ctx->idx;
+    ++re_ctx->idx;
 
     return code;
 }
 
-static int gen_instr(enum RE_TOKEN token, uint32_t code)
+static void consume_next_char(struct RE_CTX *re_ctx)
 {
+    kos_string_iter_advance(&re_ctx->iter);
+}
+
+#if 0
+static int gen_instr(struct RE_CTX *re_ctx, enum RE_TOKEN token, uint32_t code)
+{
+    const size_t  offs = re_ctx->buf.size;
+    const uint8_t size = (code < 0x100U)   ? 1U :
+                         (code < 0x10000U) ? 2U :
+                                             4U;
+
+    int error = kos_vector_resize(&re_ctx->buf, offs + 1U + size);
+
+    if ( ! error) {
+
+        char *buf = re_ctx->buf.buffer + offs;
+
+        *(buf++) = (char)((uint8_t)token | ((size << 5) & 0xC0U));
+
+        if (code >= 0x10000U) {
+            *(buf++) = (uint8_t)(code >> 24);
+            *(buf++) = (uint8_t)(code >> 16);
+        }
+
+        if (code >= 0x100U)
+            *(buf++) = (uint8_t)(code >> 8);
+
+        *(buf++) = code & 0xFFU;
+    }
+
+    return error;
+}
+#endif
+
+static int emit_instr1(struct RE_CTX *re_ctx, uint8_t code)
+{
+    /* TODO */
+    return KOS_SUCCESS;
+}
+
+static int emit_instr2(struct RE_CTX *re_ctx, uint8_t code, uint32_t arg)
+{
+    /* TODO */
+    return KOS_SUCCESS;
+}
+
+static int emit_instr4(struct RE_CTX *re_ctx, uint8_t code, uint32_t arg1, uint32_t arg2, uint32_t arg3)
+{
+    /* TODO */
+    return KOS_SUCCESS;
+}
+
+static int expect_char(struct RE_CTX *re_ctx, char c)
+{
+    if (peek_next_char(re_ctx) != (uint32_t)(uint8_t)c)
+        return KOS_ERROR_INTERNAL; /* TODO actual error */
+
+    consume_next_char(re_ctx);
+
+    return KOS_SUCCESS;
+}
+
+static void rotate_instr(struct RE_CTX *re_ctx, uint32_t begin, uint32_t mid)
+{
+    /* TODO */
+}
+
+static void patch_jump_offs(struct RE_CTX *re_ctx, uint32_t instr_offs, uint32_t target_offs)
+{
+    /* TODO */
+}
+
+static int parse_alternative_match_seq(struct RE_CTX *re_ctx);
+
+static int parse_number(struct RE_CTX *re_ctx, uint32_t* number)
+{
+    uint32_t value = 0;
+    uint32_t code  = peek_next_char(re_ctx);
+
+    if (code < '0' || code > '9')
+        return KOS_ERROR_INTERNAL; /* TODO actual error */
+
+    value = code - '0';
+
+    for (;;) {
+        uint64_t new_value;
+
+        consume_next_char(re_ctx);
+
+        code = peek_next_char(re_ctx);
+        if (code < '0' || code > '9')
+            break;
+
+        new_value = ((uint64_t)value * 10U) + (code - '0');
+
+        value = (uint32_t)new_value;
+
+        if (value != new_value)
+            return KOS_ERROR_INTERNAL; /* TODO actual error */
+    }
+
+    return KOS_SUCCESS;
+}
+
+static int parse_escape_seq(struct RE_CTX *re_ctx)
+{
+    /* TODO */
     return KOS_ERROR_INTERNAL;
 }
 
-static int parse_class(struct RE_SCAN_CTX *scan_ctx)
+static int parse_char_class(struct RE_CTX *re_ctx)
 {
+    /* TODO */
     return KOS_ERROR_INTERNAL;
 }
 
-static int parse_escape(struct RE_SCAN_CTX *scan_ctx)
+static int parse_group(struct RE_CTX *re_ctx)
 {
-    return KOS_ERROR_INTERNAL;
+    int      error;
+    unsigned group_id = re_ctx->num_groups++;
+
+    error = emit_instr2(re_ctx, INSTR_BEGIN_GROUP, group_id);
+    if (error)
+        return error;
+
+    ++re_ctx->group_depth;
+
+    error = parse_alternative_match_seq(re_ctx);
+
+    --re_ctx->group_depth;
+
+    if ( ! error)
+        error = expect_char(re_ctx, ')');
+
+    if ( ! error)
+        error = emit_instr2(re_ctx, INSTR_END_GROUP, group_id);
+
+    return error;
 }
 
-static int parse_group(struct RE_SCAN_CTX *scan_ctx, uint32_t group_start_code)
+static int parse_single_match(struct RE_CTX *re_ctx)
+{
+    int      error = KOS_SUCCESS;
+    uint32_t code  = peek_next_char(re_ctx);
+
+    switch (code) {
+
+        case '.':
+            consume_next_char(re_ctx);
+            error = emit_instr1(re_ctx, INSTR_MATCH_ANY_CHAR);
+            break;
+
+        case '^':
+            consume_next_char(re_ctx);
+            error = emit_instr1(re_ctx, INSTR_MATCH_LINE_BEGIN);
+            break;
+
+        case '$':
+            consume_next_char(re_ctx);
+            error = emit_instr1(re_ctx, INSTR_MATCH_LINE_END);
+            break;
+
+        case '\\':
+            consume_next_char(re_ctx);
+            error = parse_escape_seq(re_ctx);
+            break;
+
+        case '[':
+            consume_next_char(re_ctx);
+            error = parse_char_class(re_ctx);
+            break;
+
+        case '(':
+            consume_next_char(re_ctx);
+            error = parse_group(re_ctx);
+            break;
+
+        case '|':
+            /* fall through */
+        case '*':
+            /* fall through */
+        case '+':
+            /* fall through */
+        case '?':
+            /* fall through */
+        case '{':
+            break;
+
+        case ')':
+            if (re_ctx->group_depth)
+                break;
+            /* fall through */
+        default:
+            consume_next_char(re_ctx);
+            error = emit_instr2(re_ctx, INSTR_MATCH_ONE_CHAR, code);
+            break;
+    }
+
+    return error;
+}
+
+static int emit_multiplicity(struct RE_CTX *re_ctx,
+                             uint32_t       begin,
+                             uint32_t       min_count,
+                             uint32_t       max_count)
+{
+    int            error;
+    enum RE_INSTR  instr = INSTR_GREEDY_COUNT;
+    const uint32_t pivot = re_ctx->re_size;
+
+    if (peek_next_char(re_ctx) == '?') {
+        consume_next_char(re_ctx);
+        instr = INSTR_LAZY_COUNT;
+    }
+
+    TRY(emit_instr4(re_ctx, instr, pivot - begin, min_count, max_count));
+
+    rotate_instr(re_ctx, begin, pivot);
+
+cleanup:
+    return error;
+}
+
+static int parse_optional_multiplicity(struct RE_CTX *re_ctx, uint32_t begin)
+{
+    int            error = KOS_SUCCESS;
+    const uint32_t code  = peek_next_char(re_ctx);
+
+    switch (code) {
+
+        case '*':
+            consume_next_char(re_ctx);
+            error = emit_multiplicity(re_ctx, begin, 0U, ~0U);
+            break;
+
+        case '+':
+            consume_next_char(re_ctx);
+            error = emit_multiplicity(re_ctx, begin, 1U, ~0U);
+            break;
+
+        case '?':
+            consume_next_char(re_ctx);
+            error = emit_multiplicity(re_ctx, begin, 0U, 1U);
+            break;
+
+        case '{':
+            consume_next_char(re_ctx);
+            {
+                uint32_t min_count = 0U;
+                uint32_t max_count = 0U;
+
+                error = parse_number(re_ctx, &min_count);
+                if (error)
+                    break;
+
+                if (peek_next_char(re_ctx) == ',') {
+                    consume_next_char(re_ctx);
+
+                    error = parse_number(re_ctx, &max_count);
+                    if (error)
+                        break;
+                }
+                else
+                    max_count = min_count;
+
+                error = expect_char(re_ctx, '}');
+                if (error)
+                    break;
+
+                error = emit_multiplicity(re_ctx, begin, min_count, max_count);
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    return error;
+}
+
+static int parse_match_seq(struct RE_CTX *re_ctx)
 {
     int error = KOS_SUCCESS;
 
-    if (group_start_code == '(') {
-        /* TODO parse group type */
+    for (;;) {
+        const uint32_t begin = re_ctx->re_size;
+        const uint32_t code  = peek_next_char(re_ctx);
+        if (code == EORE || code == '|')
+            break;
+
+        error = parse_single_match(re_ctx);
+        if (error)
+            break;
+
+        error = parse_optional_multiplicity(re_ctx, begin);
+        if (error)
+            break;
     }
 
-    for (;;) {
+    return error;
+}
 
-        const uint32_t code = get_next_char(scan_ctx);
+static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
+{
+    uint32_t fork_offs = re_ctx->re_size;
+    uint32_t jump_offs = ~0U;
+    int      error;
+    uint32_t code;
 
-        switch (code) {
+    TRY(parse_match_seq(re_ctx));
 
-            case EORE:
-                if (group_start_code != 0) {
-                    /* TODO error */
-                }
-                goto cleanup;
+    while ((code = peek_next_char(re_ctx)) == '|') {
 
-            case '.':
-                gen_instr(T_ANY, 0);
-                break;
+        const uint32_t pivot = re_ctx->re_size;
 
-            case '*':
-                /* TODO */
-                break;
+        TRY(emit_instr2(re_ctx, INSTR_FORK, 0));
 
-            case '+':
-                /* TODO */
-                break;
+        rotate_instr(re_ctx, fork_offs, pivot);
 
-            case '?':
-                /* TODO */
-                break;
+        if (jump_offs != ~0U)
+            patch_jump_offs(re_ctx, jump_offs, re_ctx->re_size);
 
-            case '{':
-                /* TODO */
-                break;
+        jump_offs = re_ctx->re_size;
 
-            case '^':
-                gen_instr(T_LINE_BEGIN, 0);
-                break;
+        TRY(emit_instr2(re_ctx, INSTR_JUMP, 0));
 
-            case '$':
-                gen_instr(T_LINE_END, 0);
-                break;
+        patch_jump_offs(re_ctx, fork_offs, re_ctx->re_size);
 
-            case '|':
-                /* TODO */
-                break;
+        fork_offs = re_ctx->re_size;
 
-            case '[':
-                TRY(parse_class(scan_ctx));
-                break;
+        TRY(parse_match_seq(re_ctx));
+    }
 
-            case '\\':
-                TRY(parse_escape(scan_ctx));
-                break;
+    if (jump_offs != ~0U)
+        patch_jump_offs(re_ctx, jump_offs, re_ctx->re_size);
 
-            case '(':
-                TRY(parse_group(scan_ctx, '('));
-                break;
-
-            case ')':
-                if (group_start_code != '(') {
-                    /* TODO error */
-                }
-                /* TODO */
-                return KOS_SUCCESS;
-
-            default:
-                gen_instr(T_SINGLE, code);
-                break;
-        }
+    if (code != ')' || ! re_ctx->group_depth) {
+        if (code != EORE)
+            error = KOS_ERROR_INTERNAL; /* TODO actual error */
     }
 
 cleanup:
@@ -178,13 +532,26 @@ cleanup:
 
 static int parse_re(KOS_OBJ_ID regex_str)
 {
-    struct RE_SCAN_CTX scan_ctx;
+    int           error;
+    struct RE_CTX re_ctx;
 
-    kos_init_string_iter(&scan_ctx.iter, regex_str);
+    kos_init_string_iter(&re_ctx.iter, regex_str);
 
-    scan_ctx.idx = -1;
+    kos_vector_init(&re_ctx.buf);
 
-    return parse_group(&scan_ctx, 0);
+    TRY(kos_vector_reserve(&re_ctx.buf, KOS_get_string_length(regex_str) * 2U));
+
+    re_ctx.idx         = -1;
+    re_ctx.num_groups  = 0U;
+    re_ctx.group_depth = 0U;
+    re_ctx.re_size     = 0U;
+
+    error = parse_alternative_match_seq(&re_ctx);
+
+cleanup:
+    kos_vector_destroy(&re_ctx.buf);
+
+    return error;
 }
 
 /* @item re re()
