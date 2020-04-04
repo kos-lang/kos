@@ -226,6 +226,11 @@ static inline bool kos_is_string_iter_end(KOS_STRING_ITER *iter)
     return iter->ptr >= iter->end;
 }
 
+static inline void kos_string_iter_advance(KOS_STRING_ITER *iter)
+{
+    iter->ptr += (1 << iter->elem_size);
+}
+
 #else
 
 #define kos_get_string_buffer(str) (((str)->header.flags & KOS_STRING_LOCAL) ? \
@@ -236,6 +241,8 @@ static inline bool kos_is_string_iter_end(KOS_STRING_ITER *iter)
 
 #define kos_is_string_iter_end(iter) ((iter)->ptr >= (iter)->end)
 
+#define kos_string_iter_advance(iter) do { (iter)->ptr += (1 << (iter)->elem_size); } while (0)
+
 #endif
 
 int kos_append_cstr(KOS_CONTEXT          ctx,
@@ -245,7 +252,7 @@ int kos_append_cstr(KOS_CONTEXT          ctx,
 
 void kos_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id);
 
-uint32_t kos_string_iter_next_code(KOS_STRING_ITER *iter);
+uint32_t kos_string_iter_peek_next_code(KOS_STRING_ITER *iter);
 
 /*==========================================================================*/
 /* KOS_STACK                                                                */

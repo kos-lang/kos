@@ -1772,25 +1772,23 @@ void kos_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id)
     iter->elem_size = elem_size;
 }
 
-uint32_t kos_string_iter_next_code(KOS_STRING_ITER *iter)
+uint32_t kos_string_iter_peek_next_code(KOS_STRING_ITER *iter)
 {
     uint32_t ret;
 
     switch (iter->elem_size) {
 
         case KOS_STRING_ELEM_8:
-            ret = *(iter->ptr++);
+            ret = *iter->ptr;
             break;
 
         case KOS_STRING_ELEM_16:
             ret = *(const uint16_t *)iter->ptr;
-            iter->ptr += 2;
             break;
 
         default:
             assert(iter->elem_size == KOS_STRING_ELEM_32);
             ret = *(const uint32_t *)iter->ptr;
-            iter->ptr += 4;
             break;
     }
 

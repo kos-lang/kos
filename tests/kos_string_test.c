@@ -1815,16 +1815,19 @@ int main(void)
         kos_init_string_iter(&iter, KOS_CONST_ID(str8));
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == 'a');
+        kos_string_iter_advance(&iter);
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == 'b');
+        kos_string_iter_advance(&iter);
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == 'c');
+        kos_string_iter_advance(&iter);
 
         TEST(kos_is_string_iter_end(&iter));
     }
@@ -1839,16 +1842,19 @@ int main(void)
         kos_init_string_iter(&iter, str_str);
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == '1');
+        kos_string_iter_advance(&iter);
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == 0xFFFFU);
+        kos_string_iter_advance(&iter);
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == 0xC0U);
+        kos_string_iter_advance(&iter);
 
         TEST(kos_is_string_iter_end(&iter));
     }
@@ -1863,16 +1869,19 @@ int main(void)
         kos_init_string_iter(&iter, str_str);
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == '1');
+        kos_string_iter_advance(&iter);
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == 0x10000U);
+        kos_string_iter_advance(&iter);
 
         TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_next_code(&iter);
+        code = kos_string_iter_peek_next_code(&iter);
         TEST(code == '0');
+        kos_string_iter_advance(&iter);
 
         TEST(kos_is_string_iter_end(&iter));
     }
