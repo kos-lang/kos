@@ -219,19 +219,19 @@ static int gen_instr(struct RE_CTX *re_ctx, enum RE_TOKEN token, uint32_t code)
 }
 #endif
 
-static int emit_instr1(struct RE_CTX *re_ctx, uint8_t code)
+static int emit_instr1(struct RE_CTX *re_ctx, enum RE_INSTR code)
 {
     /* TODO */
     return KOS_SUCCESS;
 }
 
-static int emit_instr2(struct RE_CTX *re_ctx, uint8_t code, uint32_t arg)
+static int emit_instr2(struct RE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg)
 {
     /* TODO */
     return KOS_SUCCESS;
 }
 
-static int emit_instr4(struct RE_CTX *re_ctx, uint8_t code, uint32_t arg1, uint32_t arg2, uint32_t arg3)
+static int emit_instr4(struct RE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg1, uint32_t arg2, uint32_t arg3)
 {
     /* TODO */
     return KOS_SUCCESS;
