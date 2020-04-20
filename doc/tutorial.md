@@ -257,8 +257,8 @@ Bitwise operators `&`, `|`, `^`, `<<`, `>>`, `>>>` cannot be mixed with
 each other nor with arithmetic operators.  In addition, `&`, `|` and `^`
 bitwise operators can be chained, but the shift operators cannot be.
 
-    var nine   = 15 & 4 & 2  // equals 9
-    var eight  = 2 << 2      // equals 8
+    var nine   = 15 & ~4 & ~2 // equals 9
+    var eight  = 2 << 2       // equals 8
 
     var error1 = 13 & 4 | 2  // ERROR!!! Cannot mix & and |
     var error2 = 1 << 2 << 3 // ERROR!!! Cannot mix shift operators

@@ -292,7 +292,7 @@ A function containing a `yield` statement is a generator.
 
     fun odd_numbers(max)
     {
-        for var i = 1; i <= max; i += 1 {
+        for var i = 1; i <= max; i += 2 {
             yield i
         }
     }
