@@ -17,6 +17,14 @@ void *kos_malloc(size_t size)
     return malloc(size);
 }
 
+void *kos_realloc(void *ptr, size_t size)
+{
+    if (kos_seq_fail())
+        return 0;
+
+    return realloc(ptr, size);
+}
+
 void kos_free(void *ptr)
 {
     free(ptr);

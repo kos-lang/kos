@@ -123,18 +123,16 @@ int kos_vector_reserve(KOS_VECTOR *vector, size_t capacity)
 
     if (capacity > vector->capacity) {
 
-        char *const new_buf = (char *)kos_malloc(capacity);
+        const int in_place = vector->capacity <= sizeof(vector->local_buffer_);
+
+        char *const new_buf = in_place ? (char *)kos_malloc(capacity)
+                                       : (char *)kos_realloc(vector->buffer, capacity);
 
         if (new_buf) {
-
-            if (vector->size)
+            if (in_place && vector->size)
                 memcpy(new_buf, vector->buffer, vector->size);
 
-            if (vector->capacity > sizeof(vector->local_buffer_))
-                kos_free(vector->buffer);
-
-            vector->buffer = new_buf;
-
+            vector->buffer   = new_buf;
             vector->capacity = capacity;
         }
         else
