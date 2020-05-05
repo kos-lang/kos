@@ -589,8 +589,8 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    re->num_groups    = re_ctx.num_groups;
-    re->bytecode_size = re_ctx.buf.size / sizeof(uint16_t);
+    re->num_groups    = (uint16_t)re_ctx.num_groups;
+    re->bytecode_size = (uint16_t)(re_ctx.buf.size / sizeof(uint16_t));
     memcpy(re->bytecode, re_ctx.buf.buffer, re_ctx.buf.size);
 
     OBJPTR(OBJECT, regex)->finalize = finalize;
