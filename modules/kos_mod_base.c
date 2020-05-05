@@ -2565,11 +2565,19 @@ typedef int (*KOS_PACK_FORMAT_FUNC)(KOS_CONTEXT               ctx,
 
 static int is_whitespace(unsigned char_code)
 {
+    /* Common non-white space chars found in format strings */
+    if ((char_code - 33) < (0xA0 - 33))
+        return 0;
+
+    /* Common space character */
+    if (char_code == 32)
+        return 1;
+
+    /* Other characters treated as whitespace */
     return char_code == 0      || /* NUL */
            char_code == 9      || /* TAB */
            char_code == 11     || /* VTAB */
            char_code == 12     || /* FF */
-           char_code == 32     || /* space */
            char_code == 0xA0   || /* NBSP */
            char_code == 0x2028 || /* line separator */
            char_code == 0x2029 || /* paragraph separator */
@@ -2590,8 +2598,7 @@ static void pack_format_skip_spaces(KOS_CONTEXT ctx,
     do {
         c = KOS_string_get_char_code(ctx, fmt_str, (int)i++);
         assert(c != ~0U);
-    }
-    while (i < size && is_whitespace(c));
+    } while (i < size && is_whitespace(c));
 
     if (i < size || ! is_whitespace(c))
         i--;
