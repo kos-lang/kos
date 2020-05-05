@@ -420,7 +420,7 @@ static int emit_multiplicity(struct RE_CTX *re_ctx,
 {
     int            error;
     enum RE_INSTR  instr = INSTR_GREEDY_COUNT;
-    const uint32_t pivot = re_ctx->buf.size;
+    const uint32_t pivot = (uint32_t)re_ctx->buf.size;
 
     if (peek_next_char(re_ctx) == '?') {
         consume_next_char(re_ctx);
@@ -497,7 +497,7 @@ static int parse_match_seq(struct RE_CTX *re_ctx)
     int error = KOS_SUCCESS;
 
     for (;;) {
-        const uint32_t begin = re_ctx->buf.size;
+        const uint32_t begin = (uint32_t)re_ctx->buf.size;
         const uint32_t code  = peek_next_char(re_ctx);
         if (code == EORE || code == '|' || code == ')')
             break;
@@ -516,7 +516,7 @@ static int parse_match_seq(struct RE_CTX *re_ctx)
 
 static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
 {
-    uint32_t fork_offs = re_ctx->buf.size;
+    uint32_t fork_offs = (uint32_t)re_ctx->buf.size;
     uint32_t jump_offs = ~0U;
     int      error;
     uint32_t code;
@@ -525,28 +525,28 @@ static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
 
     while ((code = peek_next_char(re_ctx)) == '|') {
 
-        const uint32_t pivot = re_ctx->buf.size;
+        const uint32_t pivot = (uint32_t)re_ctx->buf.size;
 
         TRY(emit_instr1(re_ctx, INSTR_FORK, 0));
 
         rotate_instr(re_ctx, fork_offs, pivot);
 
         if (jump_offs != ~0U)
-            patch_jump_offs(re_ctx, jump_offs, re_ctx->buf.size);
+            patch_jump_offs(re_ctx, jump_offs, (uint32_t)re_ctx->buf.size);
 
-        jump_offs = re_ctx->buf.size;
+        jump_offs = (uint32_t)re_ctx->buf.size;
 
         TRY(emit_instr1(re_ctx, INSTR_JUMP, 0));
 
-        patch_jump_offs(re_ctx, fork_offs, re_ctx->buf.size);
+        patch_jump_offs(re_ctx, fork_offs, (uint32_t)re_ctx->buf.size);
 
-        fork_offs = re_ctx->buf.size;
+        fork_offs = (uint32_t)re_ctx->buf.size;
 
         TRY(parse_match_seq(re_ctx));
     }
 
     if (jump_offs != ~0U)
-        patch_jump_offs(re_ctx, jump_offs, re_ctx->buf.size);
+        patch_jump_offs(re_ctx, jump_offs, (uint32_t)re_ctx->buf.size);
 
     if (code != ')' || ! re_ctx->group_depth) {
         if (code != EORE)

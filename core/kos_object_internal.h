@@ -228,7 +228,7 @@ static inline bool kos_is_string_iter_end(KOS_STRING_ITER *iter)
 
 static inline void kos_string_iter_advance(KOS_STRING_ITER *iter)
 {
-    iter->ptr += (1 << iter->elem_size);
+    iter->ptr += ((uintptr_t)1 << iter->elem_size);
 }
 
 #else
@@ -241,7 +241,7 @@ static inline void kos_string_iter_advance(KOS_STRING_ITER *iter)
 
 #define kos_is_string_iter_end(iter) ((iter)->ptr >= (iter)->end)
 
-#define kos_string_iter_advance(iter) do { (iter)->ptr += (1 << (iter)->elem_size); } while (0)
+#define kos_string_iter_advance(iter) do { (iter)->ptr += ((uintptr_t)1 << (iter)->elem_size); } while (0)
 
 #endif
 
