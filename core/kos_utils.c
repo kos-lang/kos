@@ -21,6 +21,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <math.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -1484,4 +1485,75 @@ void KOS_raise_3(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, str_err_full);
 
     KOS_destroy_top_locals(ctx, &str_err[2], &str_err[0]);
+}
+
+static KOS_OBJ_ID string_vprintf(KOS_CONTEXT ctx,
+                                 const char *format,
+                                 va_list     args)
+{
+    KOS_VECTOR buf;
+    int        size;
+    va_list    args2;
+    KOS_OBJ_ID str = KOS_BADPTR;
+
+    kos_vector_init(&buf);
+    va_copy(args2, args);
+
+    size = vsnprintf(buf.buffer, (size_t)buf.capacity, format, args);
+
+    if (size > 0) {
+        if ((size_t)(size + 1) > buf.capacity) {
+            const int error = kos_vector_resize(&buf, (size_t)(size + 1));
+
+            if (error) {
+                KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                goto cleanup;
+            }
+
+            vsnprintf(buf.buffer, buf.size, format, args2);
+        }
+
+        str = KOS_new_string(ctx, buf.buffer, (size_t)size);
+    }
+    else
+        str = KOS_STR_EMPTY;
+
+cleanup:
+    va_end(args2);
+    kos_vector_destroy(&buf);
+
+    return str;
+}
+
+KOS_OBJ_ID KOS_string_printf(KOS_CONTEXT ctx,
+                             const char *format,
+                             ...)
+{
+    va_list    args;
+    KOS_OBJ_ID str;
+
+    va_start(args, format);
+
+    str = string_vprintf(ctx, format, args);
+
+    va_end(args);
+
+    return str;
+}
+
+void KOS_raise_printf(KOS_CONTEXT ctx,
+                      const char *format,
+                      ...)
+{
+    va_list    args;
+    KOS_OBJ_ID str;
+
+    va_start(args, format);
+
+    str = string_vprintf(ctx, format, args);
+
+    va_end(args);
+
+    if ( ! IS_BAD_PTR(str))
+        KOS_raise_exception(ctx, str);
 }

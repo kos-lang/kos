@@ -137,6 +137,7 @@ else
     STRICTFLAGS += -Wdouble-promotion
     STRICTFLAGS += -Wformat=2
     #STRICTFLAGS += -Wconversion
+    STRICTFLAGS += -Wno-format-nonliteral # for vsnprintf
 
     fastdispatch ?= 1
     ifeq ($(fastdispatch), 1)

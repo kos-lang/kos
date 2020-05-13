@@ -91,6 +91,20 @@ void KOS_raise_3(KOS_CONTEXT ctx,
                  KOS_OBJ_ID  s2,
                  KOS_OBJ_ID  s3);
 
+#ifdef __GNUC__
+#define KOS_CHECK_FORMAT(fmt_idx, arg_idx) __attribute__((format(printf, fmt_idx, arg_idx)))
+#else
+#define KOS_CHECK_FORMAT(fmt_idx, arg_idx)
+#endif
+
+KOS_OBJ_ID KOS_string_printf(KOS_CONTEXT ctx,
+                             const char *format,
+                             ...) KOS_CHECK_FORMAT(2, 3);
+
+void KOS_raise_printf(KOS_CONTEXT ctx,
+                      const char *format,
+                      ...) KOS_CHECK_FORMAT(2, 3);
+
 #ifdef __cplusplus
 }
 #endif
