@@ -579,7 +579,7 @@ do {
 
 do {
     const b = buffer()
-    b.pack(" i 1 i 1 ", 101, 102)
+    b.pack(" i1 i1 ", 101, 102)
 
     assert b.size == 2
     assert b[0]   == 101
@@ -679,7 +679,7 @@ do {
 
 do {
     const b = buffer()
-    b.pack("    2     i      4   < >   <     > < > <><><>>>>> <<<<",
+    b.pack("    2     i4   < >   <     > < > <><><>>>>> <<<<",
            1, 2)
 
     const expected = [ 1, 0, 0, 0, 2, 0, 0, 0 ]
@@ -696,7 +696,7 @@ do {
 
 do {
     const b = buffer()
-    b.pack("< 1 s 2 0 u 4 0 s 4 > 3 x 2 s 4",
+    b.pack("< 1 s2 0 u4 0 s4 > 3 x 2 s4",
            "abcdef", "ABCDEF", "xz")
 
     const expected = [ 0x61, 0x62, 0x00, 0x00, 0x00, 0x41, 0x42, 0x43, 0x44, 0x78, 0x7A, 0x00, 0x00 ]
@@ -818,6 +818,10 @@ do {
     expect_fail(()=>buffer().pack("2 b4", buffer()))
     expect_fail(()=>buffer().pack("2 b4"))
     expect_fail(()=>buffer().pack("b4", 0))
+    expect_fail(()=>buffer().pack("u 4", 0))
+    expect_fail(()=>buffer().pack("i 4", 0))
+    expect_fail(()=>buffer().pack("f 4", 0))
+    expect_fail(()=>buffer().pack("s 4", 0))
 }
 
 ##############################################################################
@@ -965,7 +969,7 @@ do {
 
 do {
     const b = buffer([ 1, 2, 3, 4, 5, 6, 7, 8 ])
-    const a = b.unpack(2, "i1\ti2\ti1")
+    const a = b.unpack(2, "i1 i2 i1")
 
     assert typeof a    == "array"
     assert a.size      == 3

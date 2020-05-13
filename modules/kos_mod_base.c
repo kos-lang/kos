@@ -23,7 +23,6 @@
 KOS_DECLARE_STATIC_CONST_STRING(str_err_already_joined,           "thread already joined");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_args_not_array,           "function arguments are not an array");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_number,               "number parse failed");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_pack_value,           "invalid value type for pack format");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_convert_to_array,  "unsupported type passed to array class");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_convert_to_buffer, "unsupported type passed to buffer class");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_convert_to_string, "unsupported type passed to string class");
@@ -32,7 +31,6 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,       "buffer elemen
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_char_code,        "invalid character code");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_buffer_size,      "buffer size out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_key_type,         "invalid key type, must be function or void");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_pack_format,      "invalid pack format");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_reverse_type,     "invalid reverse type, must be boolean");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string,           "invalid string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string_idx,       "string index is out of range");
@@ -41,13 +39,11 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,                "object is not
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_boolean,              "object is not a boolean");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,               "object is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_class,                "object is not a class");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_enough_pack_values,   "insufficient number of packed values");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_function,             "object is not a function");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,            "object is not a generator");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,               "object is not a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_thread,               "object is not a thread");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats,         "invalid string repeat count");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_unpack_buf_too_short,     "unpacked buffer too short");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types,      "unsupported operand types");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_use_async,                "use async to launch threads");
 KOS_DECLARE_STATIC_CONST_STRING(str_gen_init,                     "init");
@@ -2558,6 +2554,7 @@ struct KOS_PACK_FORMAT_S {
 
 typedef int (*KOS_PACK_FORMAT_FUNC)(KOS_CONTEXT               ctx,
                                     struct KOS_PACK_FORMAT_S *fmt,
+                                    unsigned                  fmt_offs,
                                     KOS_OBJ_ID                buffer_obj,
                                     char                      value_fmt,
                                     unsigned                  size,
@@ -2565,23 +2562,32 @@ typedef int (*KOS_PACK_FORMAT_FUNC)(KOS_CONTEXT               ctx,
 
 static int is_whitespace(unsigned char_code)
 {
-    /* Common non-white space chars found in format strings */
-    if ((char_code - 33) < (0xA0 - 33))
-        return 0;
+    return char_code == 32;
+}
 
-    /* Common space character */
-    if (char_code == 32)
-        return 1;
+static int need_hex_char_print(unsigned char_code)
+{
+    return (char_code < 0x20) || (char_code >= 0x7F);
+}
 
-    /* Other characters treated as whitespace */
-    return char_code == 0      || /* NUL */
-           char_code == 9      || /* TAB */
-           char_code == 11     || /* VTAB */
-           char_code == 12     || /* FF */
-           char_code == 0xA0   || /* NBSP */
-           char_code == 0x2028 || /* line separator */
-           char_code == 0x2029 || /* paragraph separator */
-           char_code == 0xFEFF;   /* BOM */
+static const char* get_type_str(KOS_OBJ_ID obj_id)
+{
+    switch (GET_OBJ_TYPE(obj_id))
+    {
+        case OBJ_SMALL_INTEGER:
+            /* fall through */
+        case OBJ_INTEGER:   return "integer";
+        case OBJ_FLOAT:     return "float";
+        case OBJ_VOID:      return "void";
+        case OBJ_BOOLEAN:   return "boolean";
+        case OBJ_STRING:    return "string";
+        case OBJ_OBJECT:    return "object";
+        case OBJ_ARRAY:     return "array";
+        case OBJ_BUFFER:    return "buffer";
+        case OBJ_FUNCTION:  return "function";
+        case OBJ_CLASS:     return "class";
+        default:            return "unknown";
+    }
 }
 
 static void pack_format_skip_spaces(KOS_CONTEXT ctx,
@@ -2636,6 +2642,7 @@ static unsigned pack_format_get_count(KOS_CONTEXT ctx,
 
         if (count >= 429496729) {
             i--;
+            count = ~0U;
             break;
         }
 
@@ -2663,11 +2670,14 @@ static int process_pack_format(KOS_CONTEXT               ctx,
         unsigned count = 1;
         unsigned size  = 1;
         unsigned c;
+        unsigned offs;
 
         pack_format_skip_spaces(ctx, fmt->fmt_str.o, &i_fmt);
 
         if (i_fmt >= fmt_size)
             break;
+
+        offs = i_fmt;
 
         c = KOS_string_get_char_code(ctx, fmt->fmt_str.o, (int)i_fmt++);
         assert(c != ~0U);
@@ -2675,13 +2685,21 @@ static int process_pack_format(KOS_CONTEXT               ctx,
         if (c >= '0' && c <= '9') {
             --i_fmt;
             count = pack_format_get_count(ctx, fmt->fmt_str.o, &i_fmt);
-            assert(count != ~0U);
+            if (count == ~0U) {
+                KOS_raise_printf(ctx, "invalid count at position %u", offs + 1);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             pack_format_skip_spaces(ctx, fmt->fmt_str.o, &i_fmt);
 
-            if (i_fmt >= fmt_size)
-                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
+            if (i_fmt >= fmt_size) {
+                KOS_raise_printf(ctx,
+                    "missing format character at the end of format string after count %u at position %u",
+                    count, offs + 1);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
+            offs = i_fmt;
             c = KOS_string_get_char_code(ctx, fmt->fmt_str.o, (int)i_fmt++);
             assert(c != ~0U);
         }
@@ -2708,28 +2726,60 @@ static int process_pack_format(KOS_CONTEXT               ctx,
             case 'b':
                 /* fall through */
             case 's': {
-                unsigned next_c;
-                pack_format_skip_spaces(ctx, fmt->fmt_str.o, &i_fmt);
-                next_c = (i_fmt < fmt_size)
-                         ? KOS_string_get_char_code(ctx, fmt->fmt_str.o, (int)i_fmt)
-                         : ~0U;
+                unsigned next_c = ~0U;
+
+                if (i_fmt >= fmt_size) {
+                    if (c != 's') {
+                        KOS_raise_printf(ctx,
+                            "missing size for format character '%c' at position %u\n",
+                            (char)c, offs + 1);
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                    }
+                }
+                else
+                    next_c = KOS_string_get_char_code(ctx, fmt->fmt_str.o, (int)i_fmt);
+
                 if (next_c >= '0' && next_c <= '9') {
+                    const uint8_t size_offs = i_fmt;
                     size = pack_format_get_count(ctx, fmt->fmt_str.o, &i_fmt);
+                    if (size == ~0U) {
+                        KOS_raise_printf(ctx,
+                            "invalid size for format character '%c' at position %u",
+                            (char)c, size_offs + 1);
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                    }
                 }
                 else if (c == 's') {
                     size = ~0U;
                 }
-                else
-                    RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
+                else {
+                    if (need_hex_char_print(next_c))
+                        KOS_raise_printf(ctx,
+                            "unexpected character '\\x{%x}' at position %u, expected size",
+                            next_c, i_fmt + 1);
+                    else
+                        KOS_raise_printf(ctx,
+                            "unexpected character '%c' at position %u, expected size",
+                            next_c, i_fmt + 1);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
                 break;
             }
 
             default:
-                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
+                if (need_hex_char_print(c))
+                    KOS_raise_printf(ctx,
+                        "invalid format character '\\x{%x}' at position %u",
+                        c, i_fmt);
+                else
+                    KOS_raise_printf(ctx,
+                        "invalid format character '%c' at position %u",
+                        (char)c, i_fmt);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
         if (c != '<' && c != '>')
-            TRY(handler(ctx, fmt, buffer.o, (char)c, size, count));
+            TRY(handler(ctx, fmt, offs, buffer.o, (char)c, size, count));
     }
 
 cleanup:
@@ -2740,6 +2790,7 @@ cleanup:
 
 static int pack_format(KOS_CONTEXT               ctx,
                        struct KOS_PACK_FORMAT_S *fmt,
+                       unsigned                  fmt_offs,
                        KOS_OBJ_ID                buffer_obj,
                        char                      value_fmt,
                        unsigned                  size,
@@ -2779,8 +2830,6 @@ static int pack_format(KOS_CONTEXT               ctx,
         if ( ! dst)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
-    else if (size == ~0U && value_fmt != 's')
-        RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
 
     big_end = fmt->big_end;
 
@@ -2797,11 +2846,20 @@ static int pack_format(KOS_CONTEXT               ctx,
             /* fall through */
         case 'i': {
 
-            if (size != 1 && size != 2 && size != 4 && size != 8)
-                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
+            assert(size != ~0U);
+            if (size != 1 && size != 2 && size != 4 && size != 8) {
+                KOS_raise_printf(ctx, "invalid size in '%c%u' at position %u",
+                                 (char)value_fmt, size, fmt_offs + 1);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
-            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o))
-                RAISE_EXCEPTION_STR(str_err_not_enough_pack_values);
+            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o)) {
+                KOS_raise_printf(ctx,
+                    "not enough values to pack '%c%u' count %u at position %u; input has %u elements but required %u",
+                    (char)value_fmt, size, count, fmt_offs + 1,
+                    KOS_get_array_size(fmt->data.o), (unsigned)fmt->idx + count);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             for ( ; count; count--) {
                 unsigned   i;
@@ -2810,8 +2868,12 @@ static int pack_format(KOS_CONTEXT               ctx,
 
                 TRY_OBJID(value_obj);
 
-                if ( ! IS_NUMERIC_OBJ(value_obj))
-                    RAISE_EXCEPTION_STR(str_err_bad_pack_value);
+                if ( ! IS_NUMERIC_OBJ(value_obj)) {
+                    KOS_raise_printf(ctx,
+                        "expected numeric value at index %u for '%c%u' at position %u, but got element of type '%s'",
+                        fmt->idx - 1, (char)value_fmt, size, fmt_offs + 1, get_type_str(value_obj));
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
 
                 TRY(KOS_get_integer(ctx, value_obj, &value));
 
@@ -2828,11 +2890,20 @@ static int pack_format(KOS_CONTEXT               ctx,
 
         case 'f': {
 
-            if (size != 4 && size != 8)
-                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
+            assert(size != ~0U);
+            if (size != 4 && size != 8) {
+                KOS_raise_printf(ctx, "invalid size in '%c%u' at position %u",
+                                 (char)value_fmt, size, fmt_offs + 1);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
-            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o))
-                RAISE_EXCEPTION_STR(str_err_not_enough_pack_values);
+            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o)) {
+                KOS_raise_printf(ctx,
+                    "not enough values to pack '%c%u' count %u at position %u; input has %u elements but required %u",
+                    (char)value_fmt, size, count, fmt_offs + 1,
+                    KOS_get_array_size(fmt->data.o), (unsigned)fmt->idx + count);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             for ( ; count; count--) {
                 unsigned   i;
@@ -2856,7 +2927,10 @@ static int pack_format(KOS_CONTEXT               ctx,
                         break;
 
                     default:
-                        RAISE_EXCEPTION_STR(str_err_bad_pack_value);
+                        KOS_raise_printf(ctx,
+                            "expected numeric value at index %u for '%c%u' at position %u, but got element of type '%s'",
+                            fmt->idx - 1, (char)value_fmt, size, fmt_offs + 1, get_type_str(value_obj));
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
                         break;
                 }
 
@@ -2878,8 +2952,14 @@ static int pack_format(KOS_CONTEXT               ctx,
 
         case 'b': {
 
-            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o))
-                RAISE_EXCEPTION_STR(str_err_not_enough_pack_values);
+            assert(size != ~0U);
+            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o)) {
+                KOS_raise_printf(ctx,
+                    "not enough values to pack '%c%u' count %u at position %u; input has %u elements but required %u",
+                    (char)value_fmt, size, count, fmt_offs + 1,
+                    KOS_get_array_size(fmt->data.o), (unsigned)fmt->idx + count);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             for ( ; count; count--) {
                 KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
@@ -2889,8 +2969,12 @@ static int pack_format(KOS_CONTEXT               ctx,
 
                 TRY_OBJID(value_obj);
 
-                if (GET_OBJ_TYPE(value_obj) != OBJ_BUFFER)
-                    RAISE_EXCEPTION_STR(str_err_bad_pack_value);
+                if (GET_OBJ_TYPE(value_obj) != OBJ_BUFFER) {
+                    KOS_raise_printf(ctx,
+                        "expected buffer at index %u for '%c%u' at position %u, but got element of type '%s'",
+                        fmt->idx - 1, (char)value_fmt, size, fmt_offs + 1, get_type_str(value_obj));
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
 
                 src_size = KOS_get_buffer_size(value_obj);
                 if (src_size)
@@ -2921,8 +3005,13 @@ static int pack_format(KOS_CONTEXT               ctx,
 
             assert(value_fmt == 's');
 
-            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o))
-                RAISE_EXCEPTION_STR(str_err_not_enough_pack_values);
+            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o)) {
+                KOS_raise_printf(ctx,
+                    "not enough values to pack '%c%u' count %u at position %u; input has %u elements but required %u",
+                    (char)value_fmt, size, count, fmt_offs + 1,
+                    KOS_get_array_size(fmt->data.o), (unsigned)fmt->idx + count);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             for ( ; count; count--) {
                 KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
@@ -2930,8 +3019,12 @@ static int pack_format(KOS_CONTEXT               ctx,
 
                 TRY_OBJID(value_obj);
 
-                if (GET_OBJ_TYPE(value_obj) != OBJ_STRING)
-                    RAISE_EXCEPTION_STR(str_err_bad_pack_value);
+                if (GET_OBJ_TYPE(value_obj) != OBJ_STRING) {
+                    KOS_raise_printf(ctx,
+                        "expected string at index %u for '%c%u' at position %u, but got element of type '%s'",
+                        fmt->idx - 1, (char)value_fmt, size, fmt_offs + 1, get_type_str(value_obj));
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
 
                 TRY(KOS_string_to_cstr_vec(ctx, value_obj, &str_buf));
 
@@ -2968,6 +3061,7 @@ cleanup:
 
 static int unpack_format(KOS_CONTEXT               ctx,
                          struct KOS_PACK_FORMAT_S *fmt,
+                         unsigned                  fmt_offs,
                          KOS_OBJ_ID                buffer_obj,
                          char                      value_fmt,
                          unsigned                  size,
@@ -2983,14 +3077,24 @@ static int unpack_format(KOS_CONTEXT               ctx,
     KOS_init_local_with(ctx, &buffer, buffer_obj);
 
     if (size == ~0U) {
-        if (value_fmt != 's' || count != 1)
-            RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
+        assert(value_fmt == 's');
+        if (count != 1) {
+            KOS_raise_printf(ctx,
+                "invalid count %u for format character 's' without size at position %u, expected count 1",
+                count, fmt_offs + 1);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
 
         size = data_size - fmt->idx;
     }
 
-    if (fmt->idx + size * count > data_size)
-        RAISE_EXCEPTION_STR(str_err_unpack_buf_too_short);
+    if (fmt->idx + size * count > data_size) {
+        KOS_raise_printf(ctx,
+            "buffer with size %u too short to unpack data for format character "
+            "'%c%u' at position %u, need size to be at least %u",
+            data_size, (char)value_fmt, size, fmt_offs + 1, fmt->idx + size * count);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
     if ( ! count)
         goto cleanup;
@@ -3012,8 +3116,12 @@ static int unpack_format(KOS_CONTEXT               ctx,
         case 'i':
             /* fall through */
         case 'u': {
-            if (size != 1 && size != 2 && size != 4 && size != 8)
-                RAISE_EXCEPTION_STR(str_err_invalid_pack_format);
+            if ((value_fmt == 'f' && size != 4 && size != 8) ||
+                (size != 1 && size != 2 && size != 4 && size != 8)) {
+                KOS_raise_printf(ctx, "invalid size in '%c%u' at position %u",
+                                 (char)value_fmt, size, fmt_offs + 1);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             for ( ; count; count--) {
                 uint64_t value = 0;
