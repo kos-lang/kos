@@ -827,13 +827,14 @@ do {
     expect_fail(()=>buffer().pack("s1", void))
     expect_fail(()=>buffer().pack("s1", true))
     expect_fail(()=>buffer().pack("s1", {}))
-    expect_fail(()=>buffer().pack("s1", []))
+    expect_fail(()=>buffer().pack("s1", [[]]))
     expect_fail(()=>buffer().pack("s1", buffer()))
     expect_fail(()=>buffer().pack("s1", fun { }))
     expect_fail(()=>buffer().pack("s1", buffer))
     expect_fail(()=>buffer().pack("u9000000000", 1))
     expect_fail(()=>buffer().pack("\xff", 1))
     expect_fail(()=>buffer().pack("uu", 1))
+    expect_fail(()=>buffer().pack("u\xff", 1))
 }
 
 ##############################################################################

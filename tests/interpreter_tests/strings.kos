@@ -563,7 +563,7 @@ do {
     assert "x".repeat(10)  == "xxxxxxxxxx"
     assert "mno".repeat(2) == "mnomno"
     expect_fail(()=>"x".repeat(0x10000))
-    expect_fail(()=>base.string.prototype.repeat.apply([], []))
+    expect_fail(()=>base.string.prototype.repeat.apply([], [2]))
 }
 
 # test case from fuzzer
