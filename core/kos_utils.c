@@ -1487,19 +1487,21 @@ void KOS_raise_3(KOS_CONTEXT ctx,
     KOS_destroy_top_locals(ctx, &str_err[2], &str_err[0]);
 }
 
+/* We need to know the target size first, so we need to call vsnprintf() twice.
+ * This requires a copy of va_list object.  However, neither C89 nor C++98
+ * have va_copy(), so we need to pass two va_list objects. */
 static KOS_OBJ_ID string_vprintf(KOS_CONTEXT ctx,
                                  const char *format,
-                                 va_list     args)
+                                 va_list     args1,
+                                 va_list     args2)
 {
     KOS_VECTOR buf;
     int        size;
-    va_list    args2;
     KOS_OBJ_ID str = KOS_BADPTR;
 
     kos_vector_init(&buf);
-    va_copy(args2, args);
 
-    size = vsnprintf(buf.buffer, (size_t)buf.capacity, format, args);
+    size = vsnprintf(buf.buffer, (size_t)buf.capacity, format, args1);
 
     if (size > 0) {
         if ((size_t)(size + 1) > buf.capacity) {
@@ -1519,7 +1521,6 @@ static KOS_OBJ_ID string_vprintf(KOS_CONTEXT ctx,
         str = KOS_STR_EMPTY;
 
 cleanup:
-    va_end(args2);
     kos_vector_destroy(&buf);
 
     return str;
@@ -1529,14 +1530,17 @@ KOS_OBJ_ID KOS_string_printf(KOS_CONTEXT ctx,
                              const char *format,
                              ...)
 {
-    va_list    args;
+    va_list    args1;
+    va_list    args2;
     KOS_OBJ_ID str;
 
-    va_start(args, format);
+    va_start(args1, format);
+    va_start(args2, format);
 
-    str = string_vprintf(ctx, format, args);
+    str = string_vprintf(ctx, format, args1, args2);
 
-    va_end(args);
+    va_end(args2);
+    va_end(args1);
 
     return str;
 }
@@ -1545,14 +1549,17 @@ void KOS_raise_printf(KOS_CONTEXT ctx,
                       const char *format,
                       ...)
 {
-    va_list    args;
+    va_list    args1;
+    va_list    args2;
     KOS_OBJ_ID str;
 
-    va_start(args, format);
+    va_start(args1, format);
+    va_start(args2, format);
 
-    str = string_vprintf(ctx, format, args);
+    str = string_vprintf(ctx, format, args1, args2);
 
-    va_end(args);
+    va_end(args2);
+    va_end(args1);
 
     if ( ! IS_BAD_PTR(str))
         KOS_raise_exception(ctx, str);
