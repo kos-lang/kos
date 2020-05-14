@@ -3586,7 +3586,6 @@ static KOS_OBJ_ID array_cas(KOS_CONTEXT ctx,
 
     ret = KOS_array_cas(ctx, this_obj, (int)pos, old_val, new_val);
 
-
 cleanup:
     return error ? KOS_BADPTR : ret;
 }
