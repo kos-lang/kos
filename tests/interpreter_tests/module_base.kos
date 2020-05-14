@@ -1534,6 +1534,12 @@ do {
     assert obj.xyz == "42"
 }
 
+# thread.prototype.wait() called on wrong object
+do {
+    expect_fail(()=>base.thread.prototype.wait.apply([], []))
+    expect_fail(()=>base.thread.prototype.wait.apply({}, []))
+}
+
 ##############################################################################
 # base.count_elements
 

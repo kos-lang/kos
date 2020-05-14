@@ -2133,6 +2133,13 @@ do {
 }
 
 ##############################################################################
+# base.function.prototype.line
+
+do {
+    expect_fail(()=>base.function.prototype.line)
+}
+
+##############################################################################
 # base.function.prototype.apply
 
 do {

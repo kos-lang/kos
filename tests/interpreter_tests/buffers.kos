@@ -822,6 +822,18 @@ do {
     expect_fail(()=>buffer().pack("i 4", 0))
     expect_fail(()=>buffer().pack("f 4", 0))
     expect_fail(()=>buffer().pack("s 4", 0))
+    expect_fail(()=>buffer().pack("s1", 5))
+    expect_fail(()=>buffer().pack("s1", 1.5))
+    expect_fail(()=>buffer().pack("s1", void))
+    expect_fail(()=>buffer().pack("s1", true))
+    expect_fail(()=>buffer().pack("s1", {}))
+    expect_fail(()=>buffer().pack("s1", []))
+    expect_fail(()=>buffer().pack("s1", buffer()))
+    expect_fail(()=>buffer().pack("s1", fun { }))
+    expect_fail(()=>buffer().pack("s1", buffer))
+    expect_fail(()=>buffer().pack("u9000000000", 1))
+    expect_fail(()=>buffer().pack("\xff", 1))
+    expect_fail(()=>buffer().pack("uu", 1))
 }
 
 ##############################################################################
@@ -1025,6 +1037,7 @@ do {
     expect_fail(()=>buffer([1,2,3,4]).unpack("u0"))
     expect_fail(()=>buffer([1,2,3,4]).unpack("4294967295 u1"))
     expect_fail(()=>buffer([1,2,3,4]).unpack("429496729 u1"))
+    expect_fail(()=>buffer([1,2,3,4]).unpack("2s"))
 }
 
 ##############################################################################

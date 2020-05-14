@@ -886,6 +886,32 @@ do {
     expect_fail(()=>[1].pop(-1))
 }
 
+# dynamic property in an object passed to array constructor
+do {
+    const a = base.array(base.array.prototype)
+    var has_size = false
+    for (var i = 0; i < a.size; i += 1) {
+        if a[i][0] == "size" {
+            assert ! has_size
+            has_size = true
+        }
+    }
+    assert has_size
+}
+
+# exception from within a generator passed to array constructor
+do {
+    var exc = void
+    try {
+        base.array(fun { yield 1; throw "xyz" } ())
+    }
+    catch const e {
+        exc = e.value
+    }
+    assert typeof exc == "string"
+    assert exc == "xyz"
+}
+
 ##############################################################################
 # base.array.prototype.slice
 
@@ -1110,6 +1136,27 @@ do {
 }
 
 ##############################################################################
+# base.array.prototype.insert_array
+
+do {
+    const a = [1, 2, 3]
+    const b = [4, 5, 6]
+    a.insert_array(1, b)
+    assert a.size == 6
+    assert b.size == 3
+    assert a[0] == 1
+    assert a[1] == 4
+    assert a[2] == 5
+    assert a[3] == 6
+    assert a[4] == 2
+    assert a[5] == 3
+}
+
+do {
+    expect_fail(()=>base.array.prototype.insert_array.apply(void, [1,2]))
+}
+
+##############################################################################
 # base.array.prototype.indices
 
 do {
@@ -1235,6 +1282,9 @@ do {
 
 do {
     expect_fail(() => [false,true].sort(base.integer))
+    expect_fail(() => base.array.prototype.sort.apply(1, []))
+    expect_fail(() => [].sort(1))
+    expect_fail(() => [].sort(void, void))
 }
 
 ##############################################################################
@@ -1530,4 +1580,6 @@ do {
     expect_fail(()=>input.cas())
     expect_fail(()=>input.cas(0))
     expect_fail(()=>input.cas(0, 0))
+    expect_fail(()=>input.cas(void, 2, 3))
+    expect_fail(()=>base.array.prototype.cas.apply(void, [1,2,3]))
 }

@@ -373,6 +373,7 @@ do {
 
     expect_fail(()=>"".scan.apply(void, [""]))
     expect_fail(()=>"".scan(void))
+    expect_fail(()=>"".scan("", 0, 1))
 
     assert "abcDEF".scan("cba", 0, false) == 3
     assert "abcd".scan("", 2) == 2
@@ -410,6 +411,7 @@ do {
 
     expect_fail(()=>"".rscan.apply(void, [""]))
     expect_fail(()=>"".rscan(void))
+    expect_fail(()=>"".rscan("", 0, 1))
 
     assert "abcDEF".rscan("FED", -1, false) == 2
 }
@@ -561,6 +563,7 @@ do {
     assert "x".repeat(10)  == "xxxxxxxxxx"
     assert "mno".repeat(2) == "mnomno"
     expect_fail(()=>"x".repeat(0x10000))
+    expect_fail(()=>base.string.prototype.repeat.apply([], []))
 }
 
 # test case from fuzzer
@@ -630,6 +633,8 @@ do {
     expect_fail(()=>base.string(()=>void))
     expect_fail(()=>base.string([0x200000]))
     expect_fail(()=>base.string([-1]))
+    expect_fail(()=>base.string(fun { yield -1 } ()))
+    expect_fail(()=>base.string(fun { yield 0xFFFF_FFFF } ()))
 }
 
 do {
