@@ -2740,7 +2740,7 @@ static int process_pack_format(KOS_CONTEXT               ctx,
                     next_c = KOS_string_get_char_code(ctx, fmt->fmt_str.o, (int)i_fmt);
 
                 if (next_c >= '0' && next_c <= '9') {
-                    const uint8_t size_offs = i_fmt;
+                    const unsigned size_offs = i_fmt;
                     size = pack_format_get_count(ctx, fmt->fmt_str.o, &i_fmt);
                     if (size == ~0U) {
                         KOS_raise_printf(ctx,
