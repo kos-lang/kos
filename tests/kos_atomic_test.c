@@ -19,12 +19,14 @@ static void *ptrv(uint32_t hi32, uint32_t lo32)
     return (void *)v;
 }
 
+#ifndef KOS_NO_64BIT_ATOMICS
 static uint64_t val64(uint32_t hi32, uint32_t lo32)
 {
     const uint64_t hi = hi32;
     const uint64_t lo = lo32;
     return (hi << 32) + lo;
 }
+#endif
 
 int main(void)
 {
