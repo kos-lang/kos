@@ -181,6 +181,7 @@ Table of Contents
     * [shuffle()](#shuffle)
   * [re](#re)
     * [re()](#re)
+      * [re.prototype.search()](#reprototypesearch)
 <!--te-->
 base
 ====
@@ -829,13 +830,97 @@ buffer.prototype.pack()
 
     buffer.prototype.pack(format, args...)
 
-Convert parameters to binary form and appends them to a buffer.
+Converts parameters to binary form and appends them to a buffer.
 
 Returns the buffer which has been modified.
 
-`format` is a string, which describes how values are to be packed.
+`format` is a string, which describes how subsequent values are to be packed.
+Formatting characters in the `format` string indicate how coresponding
+subsequent values will be packed.
 
-TODO - refine format
+The following table lists available formatting characters:
+
+| Fmt | Value in buffer                   | Argument in `pack()` | Returned from `unpack()` |
+|-----|-----------------------------------|----------------------|--------------------------|
+| <   | Switch to little endian (default) |                      |                          |
+| >   | Switch to big endian              |                      |                          |
+| u1  | 8-bit unsigned integer            | integer or float     | integer                  |
+| u2  | 16-bit unsigned integer           | integer or float     | integer                  |
+| u4  | 32-bit unsigned integer           | integer or float     | integer                  |
+| u8  | 64-bit unsigned integer           | integer or float     | integer                  |
+| i1  | 8-bit signed integer              | integer or float     | integer                  |
+| i2  | 16-bit signed integer             | integer or float     | integer                  |
+| i4  | 32-bit signed integer             | integer or float     | integer                  |
+| i8  | 64-bit signed integer             | integer or float     | integer                  |
+| f4  | 32-bit floating point             | integer or float     | float                    |
+| f8  | 64-bit floating point             | integer or float     | float                    |
+| s   | UTF-8 string (no size)            | string               | string                   |
+| s#  | UTF-8 string with size `#`        | string               | string                   |
+| b#  | Sequence of bytes with size `#`   | buffer               | buffer                   |
+| x   | Padding byte                      | zero byte written    | ignored                  |
+
+The `<` and `>` characters switch to little endian and big endian mode,
+respectively, for unsigned, signed and floating point values.  They apply to
+formatting characters following them and can be used multiple times if needed.
+If neither `<` nor `>` is specified as the first formatting character, then
+initial unsigned, signed and floating point values are formatted as little
+endian until the first '>' formatting character is encountered.
+
+`u#` and `i#` produce integer values, unsigned and signed, respectively.
+The available sizes for these values are 1, 2, 4 and 8 and correspond to
+how many bytes are written for each number.  The values are formatted as
+little endian or big endian, depending on the current mode.  If a number
+doesn't fit in the number of bytes specified, then it is simply truncated.
+If a value of type float is provided instead of an integer, it is converted
+to integer using "floor" operation.  The signedness does not matter for
+`pack()`, it only makes a difference for `unpack()`.
+
+`f4` and `f8` produce floating point values of 4 and 8 bytes in size.
+The values are formatted as little endian or big endian, depending on the
+current mode.  If an integer value is provided, it is converted to floating
+point.
+
+`s` takes a string argument, converts it to UTF-8 and writes as many bytes
+as specified in the size to the buffer.  If the resulting UTF-8 sequence is
+too short, zero (NUL) bytes are written to fill it up to the specified
+string size.
+
+If `s` is not followed by size, then the string is converted to UTF-8 byte
+sequence and the entire sequence is written to the buffer.
+
+`b` takes a buffer argument and writes as many bytes as specified.  If the
+buffer argument is too short, zero bytes are written to satisfy the requested
+size.
+
+`x` is a padding byte character.  A zero is written for each `x` padding byte
+and no arguments are consumed.
+
+Multiple formatting characters can be optionally separated by spaces for
+better readability.
+
+Every formatting character can be preceded by an optional count number,
+which specifies how many times this value occurs.
+
+All formatting character must have corresponding arguments passed to `pack()`.
+If not enough arguments are passed to match the number of formatting characters,
+`pack()` throws an exception.
+
+Examples:
+
+    > buffer().pack("u4", 0x1234)
+    <34 12 00 00>
+    > buffer().pack(">u4", 0x1234)
+    <00 00 12 34>
+    > buffer().pack("s10", "hello")
+    <68 65 6c 6c 6f 00 00 00 00 00>
+    > buffer().pack("s", "hello")
+    <68 65 6c 6c 6f>
+    > buffer().pack("b3", buffer([1,2,3,4,5,6,7,8,9]))
+    <01 02 03>
+    > buffer().pack("u1 x i1 x f4", -3, -3, 1)
+    <fd 00 fd 00 00 00 80 3f>
+    > buffer().pack("> 3 u2", 0x100F, 0x200F, 0x300F)
+    <10 0F 20 0F 30 0F>
 
 buffer.prototype.repeat()
 -------------------------
@@ -947,14 +1032,28 @@ buffer.prototype.unpack()
 
 Unpacks values from their binary form from a buffer.
 
-Returns an array containing unpacked values.
+Returns an array containing values unpacked from the buffer.
 
 `pos` is the position in the buffer at which to start extracting the values.
 `pos` defaults to `0`.
 
 `format` is a string, which describes how values are to be unpacked.
 
-TODO - refine format
+Refer to [buffer.prototype.pack()](#bufferprototypeunpack) for description
+of the contents of the `format` string.
+
+Differences in behavior from `pack()`:
+
+ * Unpacking signed `i#` and unsigned `u#` values results in different
+   values returned depending on the most significant bit for sizes 1, 2 and 4.
+ * Formatting character `s` must always have a size, unless it is the last
+   formatting character in the format string.  If `s` does not have a size,
+   all remaining bytes from a buffer are converted into a string.
+ * Padding bytes `x` just skip over bytes in the buffer and do not produce
+   any returned values.
+
+If the buffer does not contain enough bytes as required by the formatting
+string, `unpack()` throws an exception.
 
 class()
 -------
@@ -3657,4 +3756,30 @@ Regular expression class.
 Example:
 
     > re("...")
+
+re.prototype.search()
+---------------------
+
+    re.prototype.search(string, pos=0, end_pos=void)
+
+Finds the first location in the `string` which matches the regular
+expression object.
+
+`string` is a string which matched against the regular expression
+object.
+
+`pos` is the starting position for the search.  `pos` defaults to `0`.
+`pos` also matches against `^`.
+
+`end_pos` is the ending position for the search, the regular expression
+will not be matched any characters at or after `end_pos`.  `end_pos`
+defaults to `void`, which indicates the end of the string.  `end_pos`
+also matches against `$`.
+
+Returns a match object if a match was found or `void` if no match was
+found.
+
+Example:
+
+    > re(r"down.*(rabbit)").search("tumbling down the rabbit hole")
 
