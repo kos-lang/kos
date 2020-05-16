@@ -27,21 +27,14 @@
 #include <stdio.h>
 #include <string.h>
 
-KOS_DECLARE_STATIC_CONST_STRING(str_cur_dir,              ".");
-KOS_DECLARE_STATIC_CONST_STRING(str_eol,                  "\n");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_circular_deps,    "circular dependencies detected for module \"");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_duplicate_global, "duplicate global \"");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_end,              "\"");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_internal,         "internal error");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_module,           "module \"");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_found,        "\" not found");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_stdin,            "failed reading from stdin");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_unable_to_open,   "unable to open file \"");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_unable_to_read,   "unable to read file \"");
-KOS_DECLARE_STATIC_CONST_STRING(str_format_colon,         ":");
-KOS_DECLARE_STATIC_CONST_STRING(str_format_error,         ": error: ");
-KOS_DECLARE_STATIC_CONST_STRING(str_path_sep,             KOS_PATH_SEPARATOR_STR);
-KOS_DECLARE_STATIC_CONST_STRING(str_script_ext,           ".kos");
+KOS_DECLARE_STATIC_CONST_STRING(str_cur_dir,      ".");
+KOS_DECLARE_STATIC_CONST_STRING(str_eol,          "\n");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_internal, "internal error");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_stdin,    "failed reading from stdin");
+KOS_DECLARE_STATIC_CONST_STRING(str_format_colon, ":");
+KOS_DECLARE_STATIC_CONST_STRING(str_format_error, ": error: ");
+KOS_DECLARE_STATIC_CONST_STRING(str_path_sep,     KOS_PATH_SEPARATOR_STR);
+KOS_DECLARE_STATIC_CONST_STRING(str_script_ext,   ".kos");
 
 struct KOS_MODULE_LOAD_CHAIN_S {
     KOS_MODULE_LOAD_CHAIN *next;
@@ -240,31 +233,22 @@ static int load_file(KOS_CONTEXT  ctx,
                      KOS_FILEBUF *file_buf)
 {
     int        error = KOS_SUCCESS;
-    KOS_LOCAL  path;
     KOS_VECTOR cpath;
 
-    KOS_init_local_with(ctx, &path, path_obj);
-
     kos_vector_init(&cpath);
-    TRY(KOS_string_to_cstr_vec(ctx, path.o, &cpath));
+    TRY(KOS_string_to_cstr_vec(ctx, path_obj, &cpath));
 
     error = kos_load_file(cpath.buffer, file_buf);
 
     switch (error) {
 
         case KOS_ERROR_CANNOT_OPEN_FILE:
-            KOS_raise_3(ctx,
-                        KOS_CONST_ID(str_err_unable_to_open),
-                        path.o,
-                        KOS_CONST_ID(str_err_end));
+            KOS_raise_printf(ctx, "unable to open file \"%s\"", cpath.buffer);
             error = KOS_ERROR_EXCEPTION;
             break;
 
         case KOS_ERROR_CANNOT_READ_FILE:
-            KOS_raise_3(ctx,
-                        KOS_CONST_ID(str_err_unable_to_read),
-                        path.o,
-                        KOS_CONST_ID(str_err_end));
+            KOS_raise_printf(ctx, "unable to read file \"%s\"", cpath.buffer);
             error = KOS_ERROR_EXCEPTION;
             break;
 
@@ -279,8 +263,6 @@ static int load_file(KOS_CONTEXT  ctx,
 
 cleanup:
     kos_vector_destroy(&cpath);
-
-    KOS_destroy_top_local(ctx, &path);
 
     return error;
 }
@@ -1380,7 +1362,6 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
     KOS_LOCAL             module_path;
     KOS_LOCAL             path_array;
     KOS_LOCAL             dir;
-    KOS_LOCAL             name_str;
     KOS_LOCAL             mod_init;
     KOS_LOCAL             module;
     KOS_OBJ_ID            ret;
@@ -1392,9 +1373,9 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
 
     get_module_name(module_name, name_size, &loading);
 
-    KOS_init_locals(ctx, 8,
+    KOS_init_locals(ctx, 7,
                     &actual_module_name, &module_dir, &module_path, &path_array,
-                    &dir, &name_str, &mod_init, &module);
+                    &dir, &mod_init, &module);
 
     /* Determine actual module name */
     actual_module_name.o = KOS_new_string(ctx, loading.module_name, loading.length);
@@ -1415,10 +1396,8 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
                             (KOS_OBJ_ID *)&module_path.o);
     if (error) {
         if (error == KOS_ERROR_NOT_FOUND) {
-            KOS_raise_3(ctx,
-                        KOS_CONST_ID(str_err_module),
-                        actual_module_name.o,
-                        KOS_CONST_ID(str_err_not_found));
+            KOS_raise_printf(ctx, "module \"%.*s\" not found",
+                             (int)loading.length, loading.module_name);
             error = KOS_ERROR_EXCEPTION;
         }
         goto cleanup;
@@ -1457,12 +1436,8 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
             if (loading.length == chain->length &&
                     0 == memcmp(loading.module_name, chain->module_name, loading.length)) {
 
-                name_str.o = KOS_new_string(ctx, module_name, name_size);
-                if (!IS_BAD_PTR(name_str.o))
-                    KOS_raise_3(ctx,
-                                KOS_CONST_ID(str_err_circular_deps),
-                                name_str.o,
-                                KOS_CONST_ID(str_err_end));
+                KOS_raise_printf(ctx, "circular dependencies detected for module \"%.*s\"",
+                                 name_size, module_name);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -1595,10 +1570,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             KOS_clear_exception(ctx);
-            KOS_raise_3(ctx,
-                        KOS_CONST_ID(str_err_module),
-                        module_name_str,
-                        KOS_CONST_ID(str_err_not_found));
+            KOS_raise_printf(ctx, "module \"%s\" not found", module_name);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
@@ -1688,10 +1660,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
         KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             KOS_clear_exception(ctx);
-            KOS_raise_3(ctx,
-                        KOS_CONST_ID(str_err_module),
-                        module_name_str,
-                        KOS_CONST_ID(str_err_not_found));
+            KOS_raise_printf(ctx, "module \"%s\" not found", module_name);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
         assert(IS_SMALL_INT(module_idx_obj));
@@ -1752,11 +1721,18 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     KOS_clear_exception(ctx);
 
     if ( ! IS_BAD_PTR(prop)) {
-        KOS_raise_3(ctx,
-                    KOS_CONST_ID(str_err_duplicate_global),
-                    name.o,
-                    KOS_CONST_ID(str_err_end));
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        KOS_VECTOR global_cstr;
+
+        kos_vector_init(&global_cstr);
+
+        error = KOS_string_to_cstr_vec(ctx, name.o, &global_cstr);
+        if ( ! error) {
+            KOS_raise_printf(ctx, "duplicate global \"%s\"", global_cstr.buffer);
+            error = KOS_ERROR_EXCEPTION;
+        }
+
+        kos_vector_destroy(&global_cstr);
+        goto cleanup;
     }
 
     TRY(KOS_array_push(ctx, OBJPTR(MODULE, module.o)->globals, value.o, &new_idx));

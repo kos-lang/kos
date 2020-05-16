@@ -1467,26 +1467,6 @@ int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state)
     return state == KOS_GEN_READY || state == KOS_GEN_ACTIVE || state == KOS_GEN_DONE;
 }
 
-void KOS_raise_3(KOS_CONTEXT ctx,
-                 KOS_OBJ_ID  s1,
-                 KOS_OBJ_ID  s2,
-                 KOS_OBJ_ID  s3)
-{
-    KOS_LOCAL  str_err[3];
-    KOS_OBJ_ID str_err_full;
-
-    KOS_init_local_with(ctx, &str_err[0], s1);
-    KOS_init_local_with(ctx, &str_err[1], s2);
-    KOS_init_local_with(ctx, &str_err[2], s3);
-
-    str_err_full = KOS_string_add_n(ctx, str_err, 3);
-
-    if ( ! IS_BAD_PTR(str_err_full))
-        KOS_raise_exception(ctx, str_err_full);
-
-    KOS_destroy_top_locals(ctx, &str_err[2], &str_err[0]);
-}
-
 /* We need to know the target size first, so we need to call vsnprintf() twice.
  * This requires a copy of va_list object.  However, neither C89 nor C++98
  * have va_copy(), so we need to pass two va_list objects. */

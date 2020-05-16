@@ -86,11 +86,6 @@ KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
 
 int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state);
 
-void KOS_raise_3(KOS_CONTEXT ctx,
-                 KOS_OBJ_ID  s1,
-                 KOS_OBJ_ID  s2,
-                 KOS_OBJ_ID  s3);
-
 #ifdef __GNUC__
 #define KOS_CHECK_FORMAT(fmt_idx, arg_idx) __attribute__((format(printf, fmt_idx, arg_idx)))
 #else

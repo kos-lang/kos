@@ -11,6 +11,7 @@
 #include "../inc/kos_utils.h"
 #include "kos_heap.h"
 #include "kos_math.h"
+#include "kos_memory.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_try.h"
@@ -45,9 +46,7 @@
  */
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_no_own_properties, "object has no own properties");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_no_property,       "no such property: \"");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,        "property name is not a string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_quote,             "\"");
 
 DECLARE_STATIC_CONST_OBJECT(tombstone, OBJ_OPAQUE, 0xB0);
 DECLARE_STATIC_CONST_OBJECT(closed,    OBJ_OPAQUE, 0xB1);
@@ -412,6 +411,18 @@ static int resize_prop_table(KOS_CONTEXT ctx,
     return error;
 }
 
+static void raise_no_property(KOS_CONTEXT ctx, KOS_OBJ_ID prop)
+{
+    KOS_VECTOR prop_cstr;
+
+    kos_vector_init(&prop_cstr);
+
+    if ( ! KOS_string_to_cstr_vec(ctx, prop, &prop_cstr))
+        KOS_raise_printf(ctx, "no such property: \"%s\"", prop_cstr.buffer);
+
+    kos_vector_destroy(&prop_cstr);
+}
+
 KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
                                        KOS_OBJ_ID                   obj_id,
                                        KOS_OBJ_ID                   prop,
@@ -509,10 +520,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
                         obj_id = KOS_BADPTR;
 
                     if (IS_BAD_PTR(obj_id)) {
-                        KOS_raise_3(ctx,
-                                    KOS_CONST_ID(str_err_no_property),
-                                    prop,
-                                    KOS_CONST_ID(str_err_quote));
+                        raise_no_property(ctx, prop);
                         break;
                     }
                     assert(props);
@@ -531,10 +539,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
             }
         }
         else
-            KOS_raise_3(ctx,
-                        KOS_CONST_ID(str_err_no_property),
-                        prop,
-                        KOS_CONST_ID(str_err_quote));
+            raise_no_property(ctx, prop);
     }
 
     if ( ! IS_BAD_PTR(retval))
