@@ -257,8 +257,6 @@ int kos_getline(KOS_GETLINE      *state,
                 enum KOS_PROMPT_E prompt,
                 KOS_VECTOR       *buf)
 {
-    int error = KOS_SUCCESS;
-
     if (state->interactive)
         printf("%s", prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
                                                  : str_prompt_subsequent_line);
@@ -272,7 +270,7 @@ int kos_getline(KOS_GETLINE      *state,
 
         if (kos_vector_resize(buf, old_size + increment)) {
             fprintf(stderr, "Out of memory\n");
-            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+            return KOS_ERROR_OUT_OF_MEMORY;
         }
 
         if ( ! set_jump()) {
@@ -296,10 +294,10 @@ int kos_getline(KOS_GETLINE      *state,
             buf->size = old_size;
 
             if (feof(stdin))
-                RAISE_ERROR(KOS_SUCCESS_RETURN);
+                return KOS_SUCCESS_RETURN;
 
             fprintf(stderr, "Failed reading from stdin\n");
-            RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
+            return KOS_ERROR_CANNOT_READ_FILE;
         }
 
         num_read = strlen(buf->buffer + old_size);
@@ -310,8 +308,7 @@ int kos_getline(KOS_GETLINE      *state,
             break;
     }
 
-cleanup:
-    return error;
+    return KOS_SUCCESS;
 }
 
 #endif
