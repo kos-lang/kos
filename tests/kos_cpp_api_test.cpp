@@ -357,8 +357,8 @@ try {
     }
 
     {
-        test_class        myobj(42, "42");
-        kos::object       o  = ctx.new_object(&myobj);
+        test_class  myobj(42, "42");
+        kos::object o  = ctx.new_object(&myobj);
 #ifdef KOS_CPP11
         kos::function fa = ctx.NEW_FUNCTION(&test_class::get_a);
         kos::function fb = ctx.NEW_FUNCTION(&test_class::get_b);
@@ -505,6 +505,45 @@ try {
 
         TEST(idx == 0);
         TEST(value == 42);
+    }
+
+    /* Test signal_error() */
+    {
+        KOS_DECLARE_STATIC_CONST_STRING(str_test, "test");
+
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_test));
+
+        try {
+            ctx.signal_error();
+        }
+        catch (const std::exception& e) {
+            TEST(std::string(e.what()) == "test");
+        }
+    }
+
+    /* Test context ctor */
+    {
+        KOS_CONTEXT ctx2 = ctx;
+
+        kos::context octx(ctx2);
+
+        const KOS_OBJ_ID str = octx.check_error(KOS_new_cstring(octx, "test"));
+
+        kos::handle hstr(ctx2, str);
+        TEST(hstr == str);
+    }
+
+    /* Test check_error(obj) */
+    {
+        kos::array a = ctx.new_array(0);
+        bool exception = false;
+        try {
+            ctx.check_error(KOS_array_read(ctx, a, 0));
+        }
+        catch (const std::exception& e) {
+            exception = true;
+        }
+        TEST(exception);
     }
 
     return 0;
