@@ -220,7 +220,7 @@ gcov.$1: simple_test
 	@echo Gcov $1
 	@rm -f ../$1/*.gcov
 	@cd ../$1 && $(GCOV) --object-directory $(out_dir)/$1 *.c* > /dev/null
-	@rm -f ../core/kos.h.gcov # gcov does not find anything in this file
+	@rm -f ../core/kos.h.gcov ../core/kos_cpp.h.gcov # gcov does not find anything in these files
 endef
 
 $(foreach module, $(gcov_modules), $(eval $(call GCOV_RULE,$(module))))
