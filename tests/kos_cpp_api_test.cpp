@@ -540,7 +540,7 @@ try {
         try {
             ctx.check_error(KOS_array_read(ctx, a, 0));
         }
-        catch (const std::exception& e) {
+        catch (const std::exception&) {
             exception = true;
         }
         TEST(exception);
