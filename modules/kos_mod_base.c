@@ -3218,7 +3218,7 @@ cleanup:
  *
  *     buffer.prototype.pack(format, args...)
  *
- * Converts parameters to binary form and appends them to a buffer.
+ * Converts parameters to binary form and appends them at the end of the buffer.
  *
  * Returns the buffer which has been modified.
  *
@@ -3370,6 +3370,11 @@ static KOS_OBJ_ID pack(KOS_CONTEXT ctx,
  *
  * If the buffer does not contain enough bytes as required by the formatting
  * string, `unpack()` throws an exception.
+ *
+ * Examples:
+ *
+ *     > buffer([1,2, 0x3f,0x80,0,0, 0x41,0x42,0x43]).unpack("u2 >f4 s")
+ *     [513, 1.0, "ABC"]
  */
 static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
