@@ -1562,10 +1562,11 @@ static void mark_roots_in_context(KOS_CONTEXT ctx)
     mark_object_black(ctx->retval);
     mark_object_black(ctx->stack);
 
-    for (local = ctx->local_list; local; local = local->next) {
-        const KOS_OBJ_ID obj_id = local->o;
-        mark_object_black(obj_id);
-    }
+    for (local = ctx->local_list; local; local = local->next)
+        mark_object_black(local->o);
+
+    for (local = (KOS_LOCAL *)ctx->ulocal_list; local; local = local->next)
+        mark_object_black(local->o);
 }
 
 static void mark_roots_in_threads(KOS_INSTANCE *inst)
@@ -2213,6 +2214,9 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
         update_child_ptr(&ctx->stack);
 
         for (local = ctx->local_list; local; local = local->next)
+            update_child_ptr(&local->o);
+
+        for (local = (KOS_LOCAL *)ctx->ulocal_list; local; local = local->next)
             update_child_ptr(&local->o);
 
         ctx = ctx->next;

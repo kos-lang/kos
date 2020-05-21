@@ -102,6 +102,7 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
     ctx->regs_idx    = 0;
     ctx->stack_depth = 0;
     ctx->local_list  = 0;
+    ctx->ulocal_list = 0;
 }
 
 static int register_thread(KOS_INSTANCE *inst,
@@ -890,6 +891,20 @@ void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id)
     ctx->local_list = local;
 }
 
+void KOS_init_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *local)
+{
+    KOS_ULOCAL *next = ctx->ulocal_list;
+
+    check_local_list((KOS_LOCAL *)next, (KOS_LOCAL *)local);
+
+    local->next      = next;
+    local->prev      = 0;
+    local->o         = KOS_BADPTR;
+    ctx->ulocal_list = local;
+    if (next)
+        next->prev   = local;
+}
+
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
 {
     va_list     args;
@@ -921,64 +936,36 @@ void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
     va_end(args);
 }
 
-static KOS_LOCAL **find_hookup_for_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
-{
-    KOS_LOCAL **hookup = &ctx->local_list;
-
-    for (;;) {
-        KOS_LOCAL *next_ptr = *hookup;
-
-        assert(next_ptr);
-
-        if (next_ptr == local)
-            break;
-
-        hookup = &next_ptr->next;
-    }
-
-    return hookup;
-}
-
-KOS_OBJ_ID KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
+KOS_OBJ_ID KOS_destroy_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *local)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     if (ctx) {
-        KOS_LOCAL **hookup = find_hookup_for_local(ctx, local);
+        KOS_ULOCAL *prev = local->prev;
+        KOS_ULOCAL *next = local->next;
 
-        *hookup = local->next;
+        KOS_ULOCAL **prev_hookup = prev ? &prev->next : &ctx->ulocal_list;
+
+        assert(ctx->ulocal_list);
+        if (prev) {
+            assert(ctx->ulocal_list != local);
+        }
+        else {
+            assert(ctx->ulocal_list == local);
+        }
+
+        *prev_hookup = next;
+        if (next)
+            next->prev = prev;
 
         ret = local->o;
 
 #ifndef NDEBUG
         local->next = 0;
+        local->prev = 0;
         local->o    = KOS_BADPTR;
 #endif
     }
-
-    return ret;
-}
-
-KOS_OBJ_ID KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last)
-{
-    KOS_LOCAL **hookup = find_hookup_for_local(ctx, first);
-    KOS_OBJ_ID  ret    = last->o;
-
-    *hookup = last->next;
-
-#ifndef NDEBUG
-    for (;;) {
-        KOS_LOCAL *next = first->next;
-
-        first->next = 0;
-        first->o    = KOS_BADPTR;
-
-        if (first == last)
-            break;
-
-        first = next;
-    }
-#endif
 
     return ret;
 }

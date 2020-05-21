@@ -1570,14 +1570,14 @@ int main(void)
     /************************************************************************/
     /* Test local refs, one at a time, destroy all */
     {
-        KOS_LOCAL  local[3];
+        KOS_ULOCAL local[3];
         int        finalized[NELEMS(local)];
         size_t     i;
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
         for (i = 0; i < NELEMS(local); i++) {
-            KOS_init_local(ctx, &local[i]);
+            KOS_init_ulocal(ctx, &local[i]);
 
             local[i].o = KOS_new_object(ctx);
             TEST( ! IS_BAD_PTR(local[i].o));
@@ -1594,7 +1594,7 @@ int main(void)
 
         /* Destroy locals, objects not tracked by GC anymore */
         for (i = 0; i < NELEMS(local); i++) {
-            KOS_destroy_local(ctx, &local[i]);
+            KOS_destroy_ulocal(ctx, &local[i]);
 #ifndef NDEBUG
             TEST(IS_BAD_PTR(local[i].o));
 #endif
@@ -1668,7 +1668,7 @@ int main(void)
             TEST(finalized[i] == 0);
 
         /* Destroy locals, objects not tracked by GC anymore */
-        KOS_destroy_locals(ctx, &local[0], &local[2]);
+        KOS_destroy_top_locals(ctx, &local[0], &local[2]);
 #ifndef NDEBUG
         for (i = 0; i < NELEMS(local); i++)
             TEST(IS_BAD_PTR(local[i].o));
@@ -1698,15 +1698,15 @@ int main(void)
         size_t order;
 
         for (order = 0; order < NELEMS(destroy_order); order++) {
-            KOS_LOCAL local[3];
-            int       finalized[NELEMS(local)];
-            size_t    dest_idx;
-            size_t    i;
+            KOS_ULOCAL local[3];
+            int        finalized[NELEMS(local)];
+            size_t     dest_idx;
+            size_t     i;
 
             TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
             for (i = 0; i < NELEMS(local); i++) {
-                KOS_init_local(ctx, &local[i]);
+                KOS_init_ulocal(ctx, &local[i]);
 
                 local[i].o = KOS_new_object(ctx);
                 TEST( ! IS_BAD_PTR(local[i].o));
@@ -1726,7 +1726,7 @@ int main(void)
 
                 const size_t target_idx = destroy_order[order][dest_idx];
 
-                KOS_destroy_local(ctx, &local[target_idx]);
+                KOS_destroy_ulocal(ctx, &local[target_idx]);
 #ifndef NDEBUG
                 TEST(IS_BAD_PTR(local[target_idx].o));
 #endif

@@ -87,10 +87,28 @@ typedef struct KOS_STACK_S {
     KOS_ATOMIC(KOS_OBJ_ID) buf[1]; /* Actual stack */
 } KOS_STACK;
 
+/* Used for tracking local Kos objects on the stack.
+ * In other interpreter locals are referred to as GC roots, because they
+ * are treated as roots by GC during garbage collection.
+ * KOS_LOCAL is used specifically for tracking stack-only objects
+ * which must be unregistered in the same order in which they were
+ * registered.
+ */
 typedef struct KOS_LOCAL_S {
     struct KOS_LOCAL_S *next;
     KOS_OBJ_ID          o;
 } KOS_LOCAL;
+
+/* Used for tracking Kos objects outside of the heap.
+ * Locals allocated using this structure can be unregistered in any order.
+ * This structure is interchangeable with KOS_LOCAL when processing
+ * locals in GC.
+ */
+typedef struct KOS_UNORDERED_LOCAL_S {
+    struct KOS_UNORDERED_LOCAL_S *next;
+    KOS_OBJ_ID                    o;
+    struct KOS_UNORDERED_LOCAL_S *prev;
+} KOS_ULOCAL;
 
 struct KOS_THREAD_CONTEXT_S {
     KOS_CONTEXT          next;     /* List of thread roots in instance */
@@ -106,6 +124,7 @@ struct KOS_THREAD_CONTEXT_S {
     uint32_t      regs_idx;     /* Index of first register in current frame       */
     uint32_t      stack_depth;
     KOS_LOCAL    *local_list;
+    KOS_ULOCAL   *ulocal_list;
 };
 
 struct KOS_PROTOTYPES_S {
@@ -260,13 +279,13 @@ void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);
 
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...);
 
-KOS_OBJ_ID KOS_destroy_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
-
-KOS_OBJ_ID KOS_destroy_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last);
+void KOS_init_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *ulocal);
 
 KOS_OBJ_ID KOS_destroy_top_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
 KOS_OBJ_ID KOS_destroy_top_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last);
+
+KOS_OBJ_ID KOS_destroy_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *local);
 
 typedef struct KOS_GC_STATS_S {
     unsigned num_objs_evacuated;

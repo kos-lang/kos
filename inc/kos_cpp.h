@@ -243,26 +243,27 @@ class handle {
     public:
         handle() : ctx_(0) {
             local_.next = 0;
+            local_.prev = 0;
             local_.o    = KOS_BADPTR;
         }
 
         handle(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id) : ctx_(ctx) {
-            KOS_init_local(ctx, &local_);
+            KOS_init_ulocal(ctx, &local_);
             local_.o = obj_id;
         }
 
         ~handle() NOEXCEPT {
-            KOS_destroy_local(ctx_, &local_);
+            KOS_destroy_ulocal(ctx_, &local_);
         }
 
         handle(const handle& h): ctx_(h.ctx_) {
-            KOS_init_local(h.ctx_, &local_);
+            KOS_init_ulocal(h.ctx_, &local_);
             local_.o = h.local_.o;
         }
 
         handle& operator=(const handle& h) {
             if ( ! ctx_ && h.ctx_) {
-                KOS_init_local(h.ctx_, &local_);
+                KOS_init_ulocal(h.ctx_, &local_);
                 ctx_ = h.ctx_;
             }
             assert(ctx_ == h.ctx_ || ! h.ctx_);
@@ -283,7 +284,7 @@ class handle {
         }
 
     private:
-        KOS_LOCAL   local_;
+        KOS_ULOCAL  local_;
         KOS_CONTEXT ctx_;
 };
 
