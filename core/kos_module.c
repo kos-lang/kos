@@ -657,53 +657,6 @@ cleanup:
     return ret;
 }
 
-int KOS_load_module(KOS_CONTEXT ctx, const char *path, unsigned path_len)
-{
-    int        idx;
-    KOS_OBJ_ID module = kos_module_import(ctx,
-                                          path,
-                                          path_len,
-                                          1,
-                                          0,
-                                          0,
-                                          &idx);
-
-    return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
-}
-
-int KOS_load_module_from_memory(KOS_CONTEXT ctx,
-                                const char *module_name,
-                                unsigned    module_name_len,
-                                const char *buf,
-                                unsigned    buf_size)
-{
-    int        idx;
-    KOS_OBJ_ID module = kos_module_import(ctx,
-                                          module_name,
-                                          (unsigned)strlen(module_name),
-                                          0,
-                                          buf,
-                                          buf_size,
-                                          &idx);
-
-    return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
-}
-
-int kos_comp_import_module(void       *vframe,
-                           const char *name,
-                           unsigned    length,
-                           int        *module_idx)
-{
-    KOS_CONTEXT ctx = (KOS_CONTEXT)vframe;
-    KOS_OBJ_ID  module_obj;
-
-    assert(module_idx);
-
-    module_obj = kos_module_import(ctx, name, length, 0, 0, 0, module_idx);
-
-    return IS_BAD_PTR(module_obj) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
-}
-
 int kos_comp_get_global_idx(void       *vframe,
                             int         module_idx,
                             const char *name,
@@ -1345,13 +1298,13 @@ static void handle_interpreter_error(KOS_CONTEXT ctx, int error)
     }
 }
 
-KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
-                             const char *module_name,
-                             unsigned    name_size,
-                             int         is_path,
-                             const char *data,
-                             unsigned    data_size,
-                             int        *out_module_idx)
+static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
+                                 const char *module_name, /* Module name or path, ASCII or UTF-8    */
+                                 unsigned    name_size,   /* Length of module name or path in bytes */
+                                 int         is_path,     /* Module name can be a path              */
+                                 const char *data,        /* Module data or 0 if load from file     */
+                                 unsigned    data_size,   /* Data length if data is not 0           */
+                                 int        *out_module_idx)
 {
     static const char     base[]             = "base";
     int                   error              = KOS_SUCCESS;
@@ -1423,7 +1376,7 @@ KOS_OBJ_ID kos_module_import(KOS_CONTEXT ctx,
         if (inst->flags & KOS_INST_VERBOSE)
             print_search_paths(ctx, inst->modules.search_paths);
 
-        base_obj = kos_module_import(ctx, base, sizeof(base)-1, 0, 0, 0, &base_idx);
+        base_obj = import_and_run(ctx, base, sizeof(base)-1, 0, 0, 0, &base_idx);
         TRY_OBJID(base_obj);
         assert(base_idx == 0);
     }
@@ -1546,6 +1499,47 @@ cleanup:
     }
 
     return module.o;
+}
+
+int KOS_load_module(KOS_CONTEXT ctx, const char *path, unsigned path_len)
+{
+    int        idx;
+    KOS_OBJ_ID module = import_and_run(ctx, path, path_len, 1, 0, 0, &idx);
+
+    return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+}
+
+int KOS_load_module_from_memory(KOS_CONTEXT ctx,
+                                const char *module_name,
+                                unsigned    module_name_len,
+                                const char *buf,
+                                unsigned    buf_size)
+{
+    int        idx;
+    KOS_OBJ_ID module = import_and_run(ctx,
+                                       module_name,
+                                       (unsigned)strlen(module_name),
+                                       0,
+                                       buf,
+                                       buf_size,
+                                       &idx);
+
+    return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+}
+
+int kos_comp_import_module(void       *vframe,
+                           const char *name,
+                           unsigned    length,
+                           int        *module_idx)
+{
+    KOS_CONTEXT ctx = (KOS_CONTEXT)vframe;
+    KOS_OBJ_ID  module_obj;
+
+    assert(module_idx);
+
+    module_obj = import_and_run(ctx, name, length, 0, 0, 0, module_idx);
+
+    return IS_BAD_PTR(module_obj) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 
 KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
