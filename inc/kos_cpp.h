@@ -331,10 +331,10 @@ class object: public handle {
         class property;
 
         template<typename T>
-        const_property operator[](T&& key) const;
+        const_property operator[](const T& key) const;
 
         template<typename T>
-        property operator[](T&& key);
+        property operator[](const T& key);
 
         class const_iterator;
 
@@ -1721,24 +1721,24 @@ class object::property: public const_property {
         }
 
         template<typename T>
-        property& operator=(T&& obj) {
+        property& operator=(const T& obj) {
             context ctx(handle_.get_context());
-            handle value = to_object_ptr(ctx, std::forward<T>(obj));
+            handle value = to_object_ptr(ctx, obj);
             ctx.check_error(KOS_set_property(ctx, handle_, key_, value));
             return *this;
         }
 };
 
 template<typename T>
-inline object::const_property object::operator[](T&& key) const {
+inline object::const_property object::operator[](const T& key) const {
     context ctx(get_context());
-    return const_property(*this, to_object_ptr(ctx, std::forward<T>(key)));
+    return const_property(*this, to_object_ptr(ctx, key));
 }
 
 template<typename T>
-inline object::property object::operator[](T&& key) {
+inline object::property object::operator[](const T& key) {
     context ctx(get_context());
-    return property(*this, to_object_ptr(ctx, std::forward<T>(key)));
+    return property(*this, to_object_ptr(ctx, key));
 }
 
 class object::const_iterator {
