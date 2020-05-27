@@ -13,11 +13,17 @@
 #   define KOS_PATH_SEPARATOR_STR      "\\"
 #   define KOS_PATH_LIST_SEPARATOR     ';'
 #   define KOS_PATH_LIST_SEPARATOR_STR ";"
+#   define KOS_SHARED_LIB_EXT          ".dll"
 #else
 #   define KOS_PATH_SEPARATOR          '/'
 #   define KOS_PATH_SEPARATOR_STR      "/"
 #   define KOS_PATH_LIST_SEPARATOR     ':'
 #   define KOS_PATH_LIST_SEPARATOR_STR ":"
+#   ifdef __APPLE__
+#       define KOS_SHARED_LIB_EXT      ".dylib"
+#   else
+#       define KOS_SHARED_LIB_EXT      ".so"
+#   endif
 #endif
 
 struct KOS_VECTOR_S;

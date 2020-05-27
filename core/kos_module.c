@@ -57,21 +57,63 @@ static unsigned rfind_path(const char *path,
     return i;
 }
 
+static KOS_OBJ_ID load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpath)
+{
+    static const char ext[] = KOS_SHARED_LIB_EXT;
+    unsigned          pos;
+
+    pos = rfind_path(cpath->buffer, cpath->size, '.');
+
+    if (pos && (cpath->buffer[pos - 1] == '.'))
+        cpath->size = pos;
+    else {
+        assert(cpath->size);
+        assert(cpath->buffer[cpath->size - 1] == 0);
+        pos = (unsigned)cpath->size - 1;
+    }
+
+    if (kos_vector_resize(cpath, pos + sizeof(ext)))
+        return KOS_BADPTR;
+
+    memcpy(&cpath->buffer[pos], ext, sizeof(ext));
+
+    /* Prepend ./ if there was no path specified */
+    if ( ! memchr(cpath->buffer, KOS_PATH_SEPARATOR, cpath->size - 1)) {
+        const size_t old_size = cpath->size;
+
+        if (kos_vector_resize(cpath, old_size + 2))
+            return KOS_BADPTR;
+
+        memmove(cpath->buffer + 2, cpath->buffer, old_size);
+
+        cpath->buffer[0] = '.';
+        cpath->buffer[1] = KOS_PATH_SEPARATOR;
+    }
+
+    if (ctx->inst->flags & KOS_INST_VERBOSE)
+        printf("Kos loading native code from %s\n", cpath->buffer);
+
+    /* TODO load library, create init object */
+    return KOS_BADPTR;
+}
+
 static int find_module(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  module_name,
                        const char *maybe_path,
                        unsigned    length,
                        int         is_path,
                        KOS_OBJ_ID *out_abs_dir,
-                       KOS_OBJ_ID *out_abs_path)
+                       KOS_OBJ_ID *out_abs_path,
+                       KOS_OBJ_ID *mod_init)
 {
-    int        error   = KOS_ERROR_INTERNAL;
     KOS_LOCAL  path;
     KOS_LOCAL  dir;
     KOS_LOCAL  components[4];
     KOS_VECTOR cpath;
     unsigned   i;
-    int        has_dot = 0;
+    int        error           = KOS_ERROR_INTERNAL;
+    int        native_mod_init = 1;
+    int        has_dot         = 0;
 
     kos_vector_init(&cpath);
 
@@ -80,6 +122,13 @@ static int find_module(KOS_CONTEXT ctx,
     components[1].o = KOS_CONST_ID(str_path_sep);
     components[2].o = module_name;
     components[3].o = KOS_CONST_ID(str_script_ext);
+
+    /* Try to get native module init object */
+    *mod_init = KOS_get_property(ctx, ctx->inst->modules.module_inits, components[2].o);
+    if (IS_BAD_PTR(*mod_init)) {
+        native_mod_init = 0;
+        KOS_clear_exception(ctx);
+    }
 
     /* Check if module name is a path and a path is allowed */
     has_dot = rfind_path(maybe_path, length, '.') > 0;
@@ -95,8 +144,19 @@ static int find_module(KOS_CONTEXT ctx,
         if (kos_get_absolute_path(&cpath) ||
             ! kos_does_file_exist(cpath.buffer)) {
 
-            if (has_dot)
-                RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+            /* Path was specified, but module source code on that path does not
+             * exist.  Check if we can load module written in native code
+             * (built-in or shared library) without source code.
+             */
+            if (has_dot) {
+                if (native_mod_init)
+                    RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+
+                *mod_init = load_native(ctx, components[2].o, &cpath);
+
+                if (IS_BAD_PTR(*mod_init))
+                    RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+            }
             else
                 is_path = 0;
         }
@@ -114,6 +174,11 @@ static int find_module(KOS_CONTEXT ctx,
 
         dir.o = KOS_new_string(ctx, cpath.buffer, i);
         TRY_OBJID(dir.o);
+
+        if ( ! native_mod_init) {
+            assert(IS_BAD_PTR(*mod_init));
+            *mod_init = load_native(ctx, components[2].o, &cpath);
+        }
     }
     else {
 
@@ -124,6 +189,8 @@ static int find_module(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
         for (i = 0; i < num_paths; i++) {
+            int have_src;
+
             components[0].o = KOS_array_read(ctx, inst->modules.search_paths, (int)i);
             TRY_OBJID(components[0].o);
 
@@ -132,8 +199,22 @@ static int find_module(KOS_CONTEXT ctx,
 
             TRY(KOS_string_to_cstr_vec(ctx, path.o, &cpath));
 
-            if (kos_does_file_exist(cpath.buffer)) {
-                dir.o = components[0].o;
+            have_src = kos_does_file_exist(cpath.buffer);
+
+            dir.o = components[0].o;
+
+            if ( ! native_mod_init) {
+                assert(IS_BAD_PTR(*mod_init));
+
+                *mod_init = load_native(ctx, components[2].o, &cpath);
+
+                if ( ! IS_BAD_PTR(*mod_init)) {
+                    error = KOS_SUCCESS;
+                    break;
+                }
+            }
+
+            if (have_src) {
                 error = KOS_SUCCESS;
                 break;
             }
@@ -1346,7 +1427,8 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
                             name_size,
                             is_path,
                             (KOS_OBJ_ID *)&module_dir.o,
-                            (KOS_OBJ_ID *)&module_path.o);
+                            (KOS_OBJ_ID *)&module_path.o,
+                            (KOS_OBJ_ID *)&mod_init.o);
     if (error) {
         if (error == KOS_ERROR_NOT_FOUND) {
             KOS_raise_printf(ctx, "module \"%.*s\" not found",
@@ -1437,11 +1519,7 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     }
 
     /* Run built-in module initialization */
-    mod_init.o = KOS_get_property(ctx, inst->modules.module_inits, actual_module_name.o);
-
-    if (IS_BAD_PTR(mod_init.o))
-        KOS_clear_exception(ctx);
-    else {
+    if ( ! IS_BAD_PTR(mod_init.o)) {
         KOS_OBJ_ID func_obj;
 
         func_obj = KOS_new_function(ctx);
