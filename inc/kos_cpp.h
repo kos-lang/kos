@@ -16,7 +16,20 @@
 #include <string>
 #include <vector>
 
-#ifdef KOS_CPP11
+// Detect compiler support for exceptions
+#if defined(__cpp_exceptions) && __cpp_exceptions
+#   define KOS_USE_EXCEPTIONS 1
+#elif defined(_MSC_VER) && defined(_CPPUNWIND)
+#   define KOS_USE_EXCEPTIONS 1
+#elif defined(__GNUC__) && defined(__EXCEPTIONS)
+#   define KOS_USE_EXCEPTIONS 1
+#else
+#   define KOS_USE_EXCEPTIONS 0
+#endif
+
+#if !KOS_USE_EXCEPTIONS
+#   define NOEXCEPT
+#elif defined(KOS_CPP11)
 #   define NOEXCEPT noexcept
 #elif defined(_MSC_VER)
 #   define NOEXCEPT __declspec(nothrow)
@@ -101,7 +114,7 @@ class context {
 
 #ifdef KOS_CPP11
         template<typename... Args>
-        array make_array(Args... args);
+        array make_array(Args&&... args);
 #endif
 
         // Globals
@@ -176,8 +189,8 @@ class obj_id_converter {
         }
 
     private:
-        context     ctx_;
-        KOS_OBJ_ID  obj_id_;
+        context    ctx_;
+        KOS_OBJ_ID obj_id_;
 };
 
 inline obj_id_converter from_object_ptr(context ctx, KOS_OBJ_ID obj_id)
@@ -187,7 +200,7 @@ inline obj_id_converter from_object_ptr(context ctx, KOS_OBJ_ID obj_id)
 
 class instance {
     public:
-        explicit instance(uint32_t flags = KOS_INST_MANUAL_GC) {
+        explicit instance(uint32_t flags = 0) {
             KOS_CONTEXT ctx;
 
             int error = KOS_instance_init(&inst_, flags, &ctx);
@@ -225,6 +238,7 @@ class thread_ctx {
     public:
         explicit thread_ctx(instance& inst) {
             KOS_instance_register_thread(inst, &thread_ctx_);
+            // TODO throw kos::exception on error
         }
 
         ~thread_ctx() NOEXCEPT {
@@ -317,10 +331,10 @@ class object: public handle {
         class property;
 
         template<typename T>
-        const_property operator[](const T& key) const;
+        const_property operator[](T&& key) const;
 
         template<typename T>
-        property operator[](const T& key);
+        property operator[](T&& key);
 
         class const_iterator;
 
@@ -540,8 +554,8 @@ class random_access_iterator {
 
         random_access_iterator() { }
 
-        random_access_iterator(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
-            : elem_(ctx, obj_id, idx)
+        random_access_iterator(handle obj, int idx)
+            : elem_(obj, idx)
         {
         }
 
@@ -552,7 +566,7 @@ class random_access_iterator {
         }
 
         operator random_access_iterator<const value_type>() const {
-            return random_access_iterator<const value_type>(elem_.get_context(), elem_.get_object(), elem_.get_index());
+            return random_access_iterator<const value_type>(elem_.get_object(), elem_.get_index());
         }
 
         random_access_iterator& operator++() {
@@ -566,23 +580,23 @@ class random_access_iterator {
         }
 
         random_access_iterator operator++(int) {
-            random_access_iterator tmp(elem_.get_context(), elem_.get_object(), elem_.get_index());
+            random_access_iterator tmp(elem_.get_object(), elem_.get_index());
             operator++();
             return tmp;
         }
 
         random_access_iterator operator--(int) {
-            random_access_iterator tmp(elem_.get_context(), elem_.get_object(), elem_.get_index());
+            random_access_iterator tmp(elem_.get_object(), elem_.get_index());
             operator--();
             return tmp;
         }
 
         random_access_iterator operator+(int delta) const {
-            return random_access_iterator(elem_.get_context(), elem_.get_object(), elem_.get_index() + delta);
+            return random_access_iterator(elem_.get_object(), elem_.get_index() + delta);
         }
 
         random_access_iterator operator-(int delta) const {
-            return random_access_iterator(elem_.get_context(), elem_.get_object(), elem_.get_index() - delta);
+            return random_access_iterator(elem_.get_object(), elem_.get_index() - delta);
         }
 
         random_access_iterator& operator+=(int delta) {
@@ -681,8 +695,8 @@ class array: public object {
 
         class const_element {
             public:
-                const_element(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
-                    : elem_(ctx, obj_id),
+                const_element(handle obj, int idx)
+                    : elem_(obj),
                       idx_(idx)
                 {
                 }
@@ -697,7 +711,7 @@ class array: public object {
                     return elem_.get_context();
                 }
 
-                KOS_OBJ_ID get_object() const {
+                const handle& get_object() const {
                     return elem_;
                 }
 
@@ -740,15 +754,16 @@ class array: public object {
 
         class element: public const_element {
             public:
-                element(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
-                    : const_element(ctx, obj_id, idx)
+                element(handle obj, int idx)
+                    : const_element(obj, idx)
                 {
                 }
 
                 template<typename T>
                 element& operator=(const T& v) {
                     context ctx(elem_.get_context());
-                    ctx.check_error(KOS_array_write(ctx, elem_, idx_, to_object_ptr(ctx, v)));
+                    handle value = to_object_ptr(ctx, v);
+                    ctx.check_error(KOS_array_write(ctx, elem_, idx_, value));
                     return *this;
                 }
 
@@ -774,11 +789,11 @@ class array: public object {
         };
 
         const_element operator[](int idx) const {
-            return const_element(get_context(), *this, idx);
+            return const_element(*this, idx);
         }
 
         element operator[](int idx) {
-            return element(get_context(), *this, idx);
+            return element(*this, idx);
         }
 
         array slice(int64_t begin_idx, int64_t end_idx) const {
@@ -789,12 +804,12 @@ class array: public object {
         typedef random_access_iterator<element>       iterator;
         typedef random_access_iterator<const_element> const_iterator;
 
-        iterator       begin()        { return iterator(get_context(), *this, 0); }
-        iterator       end()          { return iterator(get_context(), *this, static_cast<int>(size())); }
+        iterator       begin()        { return iterator(*this, 0); }
+        iterator       end()          { return iterator(*this, static_cast<int>(size())); }
         const_iterator begin()  const { return cbegin(); }
         const_iterator end()    const { return cend(); }
-        const_iterator cbegin() const { return const_iterator(get_context(), *this, 0); }
-        const_iterator cend()   const { return const_iterator(get_context(), *this, static_cast<int>(size())); }
+        const_iterator cbegin() const { return const_iterator(*this, 0); }
+        const_iterator cend()   const { return const_iterator(*this, static_cast<int>(size())); }
 
         typedef std::reverse_iterator<iterator>       reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
@@ -849,8 +864,8 @@ class buffer: public object {
 
         class const_element {
             public:
-                const_element(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
-                    : elem_(ctx, obj_id),
+                const_element(handle obj, int idx)
+                    : elem_(obj),
                       idx_(idx)
                 {
                 }
@@ -869,7 +884,7 @@ class buffer: public object {
                     return elem_.get_context();
                 }
 
-                KOS_OBJ_ID get_object() const {
+                const handle& get_object() const {
                     return elem_;
                 }
 
@@ -912,8 +927,8 @@ class buffer: public object {
 
         class element: public const_element {
             public:
-                element(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
-                    : const_element(ctx, obj_id, idx)
+                element(handle obj, int idx)
+                    : const_element(obj, idx)
                 {
                 }
 
@@ -950,22 +965,22 @@ class buffer: public object {
         };
 
         const_element operator[](int idx) const {
-            return const_element(get_context(), *this, idx);
+            return const_element(*this, idx);
         }
 
         element operator[](int idx) {
-            return element(get_context(), *this, idx);
+            return element(*this, idx);
         }
 
         typedef random_access_iterator<element>       iterator;
         typedef random_access_iterator<const_element> const_iterator;
 
-        iterator       begin()        { return iterator(get_context(), *this, 0); }
-        iterator       end()          { return iterator(get_context(), *this, static_cast<int>(size())); }
+        iterator       begin()        { return iterator(*this, 0); }
+        iterator       end()          { return iterator(*this, static_cast<int>(size())); }
         const_iterator begin()  const { return cbegin(); }
         const_iterator end()    const { return cend(); }
-        const_iterator cbegin() const { return const_iterator(get_context(), *this, 0); }
-        const_iterator cend()   const { return const_iterator(get_context(), *this, static_cast<int>(size())); }
+        const_iterator cbegin() const { return const_iterator(*this, 0); }
+        const_iterator cend()   const { return const_iterator(*this, static_cast<int>(size())); }
 
         typedef std::reverse_iterator<iterator>       reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
@@ -979,22 +994,22 @@ class buffer: public object {
 };
 
 #ifdef KOS_CPP11
-inline void unpack_args(array args_obj, int idx)
+inline void unpack_args(array& args_obj, int idx)
 {
 }
 
 template<typename Arg1, typename... Args>
-void unpack_args(array args_obj, int idx, Arg1 arg1, Args... args)
+void unpack_args(array& args_obj, int idx, Arg1 arg1, Args&&... args)
 {
     args_obj[idx] = arg1;
-    unpack_args(args_obj, idx+1, args...);
+    unpack_args(args_obj, idx + 1, std::forward<Args>(args)...);
 }
 
 template<typename... Args>
-array context::make_array(Args... args)
+array context::make_array(Args&&... args)
 {
-    array array(new_array(static_cast<unsigned>(sizeof...(args))));
-    unpack_args(array, 0, args...);
+    array array = new_array(static_cast<unsigned>(sizeof...(args)));
+    unpack_args(array, 0, std::forward<Args>(args)...);
     return array;
 }
 #endif
@@ -1035,13 +1050,13 @@ class function: public object {
 
 #ifdef KOS_CPP11
         template<typename... Args>
-        obj_id_converter operator()(Args... args) const {
-            return call(get_context().make_array(args...));
+        obj_id_converter operator()(Args&&... args) const {
+            return call(get_context().make_array(std::forward<Args>(args)...));
         }
 
         template<typename... Args>
-        obj_id_converter apply(handle this_obj, Args... args) const {
-            return call(this_obj, get_context().make_array(args...));
+        obj_id_converter apply(handle this_obj, Args&&... args) const {
+            return call(this_obj, get_context().make_array(std::forward<Args>(args)...));
         }
 #else
         obj_id_converter operator()() const {
@@ -1676,8 +1691,8 @@ function context::new_function()
 
 class object::const_property {
     public:
-        const_property(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, const string& key)
-            : handle_(ctx, obj_id), key_(key)
+        const_property(handle obj, const string& key)
+            : handle_(obj), key_(key)
         {
         }
 
@@ -1700,29 +1715,30 @@ class object::const_property {
 
 class object::property: public const_property {
     public:
-        property(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, const string& key)
-            : const_property(ctx, obj_id, key)
+        property(handle obj, const string& key)
+            : const_property(obj, key)
         {
         }
 
         template<typename T>
-        property& operator=(const T& obj) {
+        property& operator=(T&& obj) {
             context ctx(handle_.get_context());
-            ctx.check_error(KOS_set_property(ctx, handle_, key_, to_object_ptr(ctx, obj)));
+            handle value = to_object_ptr(ctx, std::forward<T>(obj));
+            ctx.check_error(KOS_set_property(ctx, handle_, key_, value));
             return *this;
         }
 };
 
 template<typename T>
-inline object::const_property object::operator[](const T& key) const {
+inline object::const_property object::operator[](T&& key) const {
     context ctx(get_context());
-    return const_property(ctx, *this, to_object_ptr(ctx, key));
+    return const_property(*this, to_object_ptr(ctx, std::forward<T>(key)));
 }
 
 template<typename T>
-inline object::property object::operator[](const T& key) {
+inline object::property object::operator[](T&& key) {
     context ctx(get_context());
-    return property(ctx, *this, to_object_ptr(ctx, key));
+    return property(*this, to_object_ptr(ctx, std::forward<T>(key)));
 }
 
 class object::const_iterator {
