@@ -62,7 +62,7 @@ static KOS_OBJ_ID load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTO
     static const char ext[] = KOS_SHARED_LIB_EXT;
     unsigned          pos;
 
-    pos = rfind_path(cpath->buffer, cpath->size, '.');
+    pos = rfind_path(cpath->buffer, (unsigned)cpath->size, '.');
 
     if (pos && (cpath->buffer[pos - 1] == '.'))
         cpath->size = pos;
