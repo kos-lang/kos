@@ -310,6 +310,18 @@ try {
     }
 
     {
+        kos::array a = ctx.new_array(2);
+        a[0] = "hello";
+        a[1] = "world";
+
+        std::string a0 = a[0];
+        std::string a1 = a[1];
+
+        TEST(a0 == "hello");
+        TEST(a1 == "world");
+    }
+
+    {
         kos::buffer b = ctx.new_buffer(10);
 
         for (int i = 0; i < static_cast<int>(b.size()); i++) {
