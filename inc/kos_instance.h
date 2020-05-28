@@ -9,13 +9,15 @@
 #include "kos_threads.h"
 #include <stddef.h>
 
+struct KOS_LIB_LIST_S;
 struct KOS_MODULE_LOAD_CHAIN_S;
 struct KOS_PAGE_HEADER_S;
 struct KOS_POOL_HEADER_S;
 
+typedef struct KOS_LIB_LIST_S          KOS_LIB_LIST;
+typedef struct KOS_MODULE_LOAD_CHAIN_S KOS_MODULE_LOAD_CHAIN;
 typedef struct KOS_PAGE_HEADER_S       KOS_PAGE;
 typedef struct KOS_POOL_HEADER_S       KOS_POOL;
-typedef struct KOS_MODULE_LOAD_CHAIN_S KOS_MODULE_LOAD_CHAIN;
 
 typedef struct KOS_PAGE_LIST_S {
     KOS_PAGE *head;
@@ -151,7 +153,8 @@ struct KOS_MODULE_MGMT_S {
     KOS_OBJ_ID init_module;  /* Initial module for top-level stack frame  */
     KOS_OBJ_ID module_inits; /* Registered built-in module initializers   */
 
-    KOS_MODULE_LOAD_CHAIN *load_chain;
+    KOS_LIB_LIST          *libs;       /* Module libraries, unloaded at destroy */
+    KOS_MODULE_LOAD_CHAIN *load_chain; /* Chain of modules during loading       */
 };
 
 struct KOS_THREAD_MGMT_S {

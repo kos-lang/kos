@@ -23,6 +23,7 @@
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
+#   include <dlfcn.h>
 #   include <fcntl.h>
 #   include <sys/time.h>
 #   include <sys/types.h>
@@ -453,3 +454,33 @@ int64_t kos_get_time_us(void)
     return time_us;
 }
 #endif
+
+int kos_load_library(const char *filename, KOS_SHARED_LIB *lib)
+{
+#ifdef _WIN32
+    *lib = (KOS_SHARED_LIB)LoadLibrary(filename);
+#else
+    *lib = (KOS_SHARED_LIB)dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+#endif
+    return *lib ? KOS_SUCCESS : KOS_ERROR_NOT_FOUND;
+}
+
+void kos_unload_library(KOS_SHARED_LIB lib)
+{
+    assert(lib);
+#ifdef _WIN32
+    FreeLibrary((HMODULE)lib);
+#else
+    dlclose(lib);
+#endif
+}
+
+void *kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
+{
+    assert(lib);
+#ifdef _WIN32
+    return GetProcAddress((HMODULE)lib, func_name);
+#else
+    return dlsym(lib, func_name);
+#endif
+}

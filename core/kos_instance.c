@@ -44,6 +44,12 @@ DECLARE_CONST_OBJECT(KOS_void,  OBJ_VOID,    0);
 DECLARE_CONST_OBJECT(KOS_false, OBJ_BOOLEAN, 0);
 DECLARE_CONST_OBJECT(KOS_true,  OBJ_BOOLEAN, 1);
 
+struct KOS_LIB_LIST_S {
+    uint32_t       num_libs;
+    uint32_t       capacity;
+    KOS_SHARED_LIB libs[1];
+};
+
 #ifdef CONFIG_PERF
 struct KOS_PERF_S kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
@@ -297,6 +303,7 @@ static void clear_instance(KOS_INSTANCE *inst)
     inst->modules.modules                = KOS_BADPTR;
     inst->modules.init_module            = get_init_module();
     inst->modules.module_inits           = KOS_BADPTR;
+    inst->modules.libs                   = 0;
     inst->modules.load_chain             = 0;
     inst->threads.threads                = 0;
     inst->threads.can_create             = 0;
@@ -462,6 +469,20 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     }
 
     kos_heap_destroy(inst);
+
+    if (inst->modules.libs) {
+        uint32_t      idx;
+        KOS_LIB_LIST *libs = inst->modules.libs;
+
+        for (idx = libs->num_libs; idx > 0; ) {
+            const KOS_SHARED_LIB lib = libs->libs[--idx];
+
+            assert(lib);
+            kos_unload_library(lib);
+        }
+
+        kos_free((void *)libs);
+    }
 
     kos_tls_destroy(inst->threads.thread_key);
 
@@ -665,37 +686,107 @@ cleanup:
     return error;
 }
 
+static int save_module_lib(KOS_CONTEXT ctx, KOS_SHARED_LIB lib)
+{
+    KOS_LIB_LIST *libs;
+
+    if ( ! lib)
+        return KOS_SUCCESS;
+
+    libs = ctx->inst->modules.libs;
+
+    if ( ! libs) {
+        libs = (KOS_LIB_LIST *)kos_malloc(sizeof(KOS_LIB_LIST) + 7 * sizeof(KOS_SHARED_LIB));
+
+        if ( ! libs)
+            return KOS_ERROR_OUT_OF_MEMORY;
+
+        libs->num_libs = 0;
+        libs->capacity = 8;
+
+        ctx->inst->modules.libs = libs;
+    }
+
+    if (libs->num_libs >= libs->capacity) {
+        const uint32_t new_capacity = libs->capacity + 8;
+        KOS_LIB_LIST  *new_libs     = (KOS_LIB_LIST *)kos_realloc(libs,
+                sizeof(KOS_LIB_LIST) + (new_capacity - 1) * sizeof(KOS_SHARED_LIB));
+
+        if ( ! new_libs)
+            return KOS_ERROR_OUT_OF_MEMORY;
+
+        libs                    = new_libs;
+        libs->capacity          = new_capacity;
+        ctx->inst->modules.libs = libs;
+    }
+
+    libs->libs[libs->num_libs++] = lib;
+
+    return KOS_SUCCESS;
+}
+
+KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
+                                    KOS_OBJ_ID       module_name_obj,
+                                    KOS_SHARED_LIB   lib,
+                                    KOS_BUILTIN_INIT init)
+{
+    struct KOS_MODULE_INIT_S *mod_init_ptr;
+    KOS_INSTANCE       *const inst  = ctx->inst;
+    KOS_LOCAL                 module_name;
+    KOS_LOCAL                 mod_init;
+
+    KOS_init_local_with(ctx, &module_name, module_name_obj);
+    KOS_init_local(     ctx, &mod_init);
+
+    mod_init_ptr = (struct KOS_MODULE_INIT_S *)kos_alloc_object(ctx,
+                                                                KOS_ALLOC_MOVABLE,
+                                                                OBJ_OPAQUE,
+                                                                sizeof(struct KOS_MODULE_INIT_S));
+
+    if ( ! mod_init_ptr)
+        goto cleanup;
+
+    mod_init_ptr->lib  = lib;
+    mod_init_ptr->init = init;
+
+    mod_init.o = OBJID(OPAQUE, (KOS_OPAQUE *)mod_init_ptr);
+
+    if (KOS_set_property(ctx,
+                         inst->modules.module_inits,
+                         module_name.o,
+                         mod_init.o) == KOS_SUCCESS) {
+
+        if (save_module_lib(ctx, lib) != KOS_SUCCESS) {
+            assert( ! KOS_is_exception_pending(ctx));
+
+            mod_init_ptr = (struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, mod_init.o);
+            mod_init_ptr->lib  = 0;
+            mod_init_ptr->init = 0;
+
+            mod_init.o = KOS_BADPTR;
+        }
+    }
+    else
+        mod_init.o = KOS_BADPTR;
+
+cleanup:
+    if (IS_BAD_PTR(mod_init.o))
+        kos_unload_library(lib);
+
+    return KOS_destroy_top_locals(ctx, &mod_init, &module_name);
+}
+
 int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
                                   KOS_BUILTIN_INIT init)
 {
-    int                       error = KOS_SUCCESS;
-    struct KOS_MODULE_INIT_S *mod_init;
-    KOS_INSTANCE      *const  inst  = ctx->inst;
-    KOS_LOCAL                 module_name;
+    KOS_OBJ_ID module_name = KOS_new_cstring(ctx, module);
 
-    KOS_init_local_with(ctx, &module_name, KOS_new_cstring(ctx, module));
-    TRY_OBJID(module_name.o);
+    if (IS_BAD_PTR(module_name))
+        return KOS_ERROR_EXCEPTION;
 
-    mod_init = (struct KOS_MODULE_INIT_S *)kos_alloc_object(ctx,
-                                                            KOS_ALLOC_MOVABLE,
-                                                            OBJ_OPAQUE,
-                                                            sizeof(struct KOS_MODULE_INIT_S));
-
-    if ( ! mod_init)
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-
-    mod_init->init = init;
-
-    error = KOS_set_property(ctx,
-                             inst->modules.module_inits,
-                             module_name.o,
-                             OBJID(OPAQUE, (KOS_OPAQUE *)mod_init));
-
-cleanup:
-    KOS_destroy_top_local(ctx, &module_name);
-
-    return error;
+    return IS_BAD_PTR(kos_register_module_init(ctx, module_name, 0, init))
+           ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 
 #ifndef NDEBUG

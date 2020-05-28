@@ -57,23 +57,30 @@ static unsigned rfind_path(const char *path,
     return i;
 }
 
-static KOS_OBJ_ID load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpath)
+static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpath, KOS_OBJ_ID *mod_init)
 {
     static const char ext[] = KOS_SHARED_LIB_EXT;
     unsigned          pos;
+    int               error;
+    KOS_SHARED_LIB    lib;
+    KOS_BUILTIN_INIT  init;
+
+    *mod_init = KOS_BADPTR;
 
     pos = rfind_path(cpath->buffer, (unsigned)cpath->size, '.');
 
     if (pos && (cpath->buffer[pos - 1] == '.'))
-        cpath->size = pos;
+        --pos;
     else {
         assert(cpath->size);
         assert(cpath->buffer[cpath->size - 1] == 0);
         pos = (unsigned)cpath->size - 1;
     }
 
-    if (kos_vector_resize(cpath, pos + sizeof(ext)))
-        return KOS_BADPTR;
+    if (kos_vector_resize(cpath, pos + sizeof(ext))) {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        return KOS_ERROR_EXCEPTION;
+    }
 
     memcpy(&cpath->buffer[pos], ext, sizeof(ext));
 
@@ -81,8 +88,10 @@ static KOS_OBJ_ID load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTO
     if ( ! memchr(cpath->buffer, KOS_PATH_SEPARATOR, cpath->size - 1)) {
         const size_t old_size = cpath->size;
 
-        if (kos_vector_resize(cpath, old_size + 2))
-            return KOS_BADPTR;
+        if (kos_vector_resize(cpath, old_size + 2)) {
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            return KOS_ERROR_EXCEPTION;
+        }
 
         memmove(cpath->buffer + 2, cpath->buffer, old_size);
 
@@ -90,11 +99,40 @@ static KOS_OBJ_ID load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTO
         cpath->buffer[1] = KOS_PATH_SEPARATOR;
     }
 
+    if ( ! kos_does_file_exist(cpath->buffer))
+        return KOS_SUCCESS;
+
     if (ctx->inst->flags & KOS_INST_VERBOSE)
         printf("Kos loading native code from %s\n", cpath->buffer);
 
-    /* TODO load library, create init object */
-    return KOS_BADPTR;
+    {
+        KOS_LOCAL saved_name;
+
+        KOS_init_local_with(ctx, &saved_name, module_name);
+
+        KOS_suspend_context(ctx);
+
+        error = kos_load_library(cpath->buffer, &lib);
+
+        if ( ! error)
+            init = (KOS_BUILTIN_INIT)kos_get_library_function(lib, "init_kos_module");
+
+        KOS_resume_context(ctx);
+
+        module_name = KOS_destroy_top_local(ctx, &saved_name);
+    }
+
+    if (error || ! init) {
+        if ( ! error)
+            kos_unload_library(lib);
+
+        KOS_raise_printf(ctx, "failed to load module native code from %s\n", cpath->buffer);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    *mod_init = kos_register_module_init(ctx, module_name, lib, init);
+
+    return IS_BAD_PTR(*mod_init) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 
 static int find_module(KOS_CONTEXT ctx,
@@ -125,7 +163,9 @@ static int find_module(KOS_CONTEXT ctx,
 
     /* Try to get native module init object */
     *mod_init = KOS_get_property(ctx, ctx->inst->modules.module_inits, components[2].o);
-    if (IS_BAD_PTR(*mod_init)) {
+    if (IS_BAD_PTR(*mod_init) ||
+        ! ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, *mod_init))->init) {
+
         native_mod_init = 0;
         KOS_clear_exception(ctx);
     }
@@ -152,7 +192,7 @@ static int find_module(KOS_CONTEXT ctx,
                 if (native_mod_init)
                     RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-                *mod_init = load_native(ctx, components[2].o, &cpath);
+                TRY(load_native(ctx, components[2].o, &cpath, mod_init));
 
                 if (IS_BAD_PTR(*mod_init))
                     RAISE_ERROR(KOS_ERROR_NOT_FOUND);
@@ -177,7 +217,7 @@ static int find_module(KOS_CONTEXT ctx,
 
         if ( ! native_mod_init) {
             assert(IS_BAD_PTR(*mod_init));
-            *mod_init = load_native(ctx, components[2].o, &cpath);
+            TRY(load_native(ctx, components[2].o, &cpath, mod_init));
         }
     }
     else {
@@ -206,7 +246,7 @@ static int find_module(KOS_CONTEXT ctx,
             if ( ! native_mod_init) {
                 assert(IS_BAD_PTR(*mod_init));
 
-                *mod_init = load_native(ctx, components[2].o, &cpath);
+                TRY(load_native(ctx, components[2].o, &cpath, mod_init));
 
                 if ( ! IS_BAD_PTR(*mod_init)) {
                     error = KOS_SUCCESS;
