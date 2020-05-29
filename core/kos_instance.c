@@ -735,8 +735,8 @@ KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
     KOS_LOCAL                 module_name;
     KOS_LOCAL                 mod_init;
 
-    KOS_init_local_with(ctx, &module_name, module_name_obj);
     KOS_init_local(     ctx, &mod_init);
+    KOS_init_local_with(ctx, &module_name, module_name_obj);
 
     mod_init_ptr = (struct KOS_MODULE_INIT_S *)kos_alloc_object(ctx,
                                                                 KOS_ALLOC_MOVABLE,
@@ -770,17 +770,17 @@ KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
         mod_init.o = KOS_BADPTR;
 
 cleanup:
-    if (IS_BAD_PTR(mod_init.o))
+    if (IS_BAD_PTR(mod_init.o) && lib)
         kos_unload_library(lib);
 
-    return KOS_destroy_top_locals(ctx, &mod_init, &module_name);
+    return KOS_destroy_top_locals(ctx, &module_name, &mod_init);
 }
 
 int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
                                   KOS_BUILTIN_INIT init)
 {
-    KOS_OBJ_ID module_name = KOS_new_cstring(ctx, module);
+    const KOS_OBJ_ID module_name = KOS_new_cstring(ctx, module);
 
     if (IS_BAD_PTR(module_name))
         return KOS_ERROR_EXCEPTION;
