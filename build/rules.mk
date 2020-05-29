@@ -288,39 +288,38 @@ clean:
 ##############################################################################
 # C and C++ rules
 
+$(out_dir)/$(depth):
+	@mkdir -p $@
+
 ifeq ($(UNAME), Windows)
 
 CL = $(out_dir)/../cldep/build/cldep/cldep$(exe_suffix)
 
-$(out_dir)/$(depth)/$(notdir %.obj): %.c
+$(out_dir)/$(depth)/$(notdir %.obj): %.c | $(out_dir)/$(depth)
 ifeq (,$(filter c++%, $(CLANG_VER)))
 	@echo C $(notdir $@)
 else
 	@echo C++ $(notdir $@)
 endif
-	@mkdir -p $(dir $@)
 	@$(CL) -nologo -Wall $(CLANG)   $(CFLAGS) -Fo$@ -c $<
 
-$(out_dir)/$(depth)/$(notdir %.obj): %.cpp
+$(out_dir)/$(depth)/$(notdir %.obj): %.cpp | $(out_dir)/$(depth)
 	@echo C++ $(notdir $@)
-	@mkdir -p $(dir $@)
 	@$(CL) -nologo -Wall $(CPPLANG) $(CFLAGS) -Fo$@ -c $<
 
 else #------------------------------------------------------------------------
 
-$(out_dir)/$(depth)/$(notdir %.o): %.c
+$(out_dir)/$(depth)/$(notdir %.o): %.c | $(out_dir)/$(depth)
 ifeq (,$(filter c++%, $(CLANG_VER)))
 	@echo C $(notdir $@)
 else
 	@echo C++ $(notdir $@)
 endif
-	@mkdir -p $(dir $@)
 	@$(CC) -Wall $(CFLAGS) -c -MD $(CLANG)   $< -o $@
 	@test -f $(<:.c=.d)   && mv $(<:.c=.d)   $(dir $@) || true # WAR for very old gcc
 
-$(out_dir)/$(depth)/$(notdir %.o): %.cpp
+$(out_dir)/$(depth)/$(notdir %.o): %.cpp | $(out_dir)/$(depth)
 	@echo C++ $(notdir $@)
-	@mkdir -p $(dir $@)
 	@$(CC) -Wall $(CFLAGS) -c -MD $(CPPLANG) $< -o $@
 	@test -f $(<:.cpp=.d) && mv $(<:.cpp=.d) $(dir $@) || true # WAR for very old gcc
 

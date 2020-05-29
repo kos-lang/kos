@@ -30,9 +30,11 @@ endif
 
 all: $(addprefix $(modules_dir)/,$(modules))
 
-define COPY_MODULE
-$(modules_dir)/$1: $1
+$(modules_dir):
 	@mkdir -p $(modules_dir)
+
+define COPY_MODULE
+$(modules_dir)/$1: $1 | $(modules_dir)
 	@cp $1 $(modules_dir)/$1
 endef
 
