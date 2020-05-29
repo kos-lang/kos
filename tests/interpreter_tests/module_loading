@@ -158,7 +158,7 @@ note "test 15"
 rm -f "$DIR/base.kos"
 mkdir "$DIR/base.kos"
 if kos "$DIR/zero"; then
-    die "Failed: Interpreter failed to detect base.kos being a directory"
+    die "Failed: Interpreter failed to detect that base.kos is a directory"
 fi
 
 note "test 16"
