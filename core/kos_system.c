@@ -475,12 +475,12 @@ void kos_unload_library(KOS_SHARED_LIB lib)
 #endif
 }
 
-void *kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
+char *kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
 {
     assert(lib);
 #ifdef _WIN32
-    return GetProcAddress((HMODULE)lib, func_name);
+    return (char *)GetProcAddress((HMODULE)lib, func_name);
 #else
-    return dlsym(lib, func_name);
+    return (char *)dlsym(lib, func_name);
 #endif
 }

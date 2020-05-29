@@ -278,8 +278,6 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
 /* KOS_MODULE                                                               */
 /*==========================================================================*/
 
-typedef void *KOS_SHARED_LIB;
-
 struct KOS_MODULE_INIT_S {
     KOS_OBJ_HEADER   hdr;
     KOS_SHARED_LIB   lib;

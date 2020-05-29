@@ -228,6 +228,8 @@ int KOS_instance_set_args(KOS_CONTEXT  ctx,
 
 typedef int (*KOS_BUILTIN_INIT)(KOS_CONTEXT ctx, KOS_OBJ_ID module);
 
+typedef void *KOS_SHARED_LIB;
+
 int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
                                   KOS_BUILTIN_INIT init);
