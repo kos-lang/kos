@@ -167,6 +167,7 @@ static int find_module(KOS_CONTEXT ctx,
         ! ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, *mod_init))->init) {
 
         native_mod_init = 0;
+        *mod_init       = KOS_BADPTR;
         KOS_clear_exception(ctx);
     }
 
