@@ -61,7 +61,6 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
 {
     static const char ext[] = KOS_SHARED_LIB_EXT;
     unsigned          pos;
-    int               error;
     KOS_SHARED_LIB    lib;
     KOS_BUILTIN_INIT  init  = 0;
 
@@ -112,9 +111,9 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
 
         KOS_suspend_context(ctx);
 
-        error = kos_load_library(cpath->buffer, &lib);
+        lib = kos_load_library(cpath->buffer);
 
-        if ( ! error)
+        if (lib)
             init = (KOS_BUILTIN_INIT)kos_get_library_function(lib, "init_kos_module");
 
         KOS_resume_context(ctx);
@@ -122,8 +121,8 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
         module_name = KOS_destroy_top_local(ctx, &saved_name);
     }
 
-    if (error || ! init) {
-        if ( ! error)
+    if ( ! lib || ! init) {
+        if (lib)
             kos_unload_library(lib);
 
         KOS_raise_printf(ctx, "failed to load module native code from %s\n", cpath->buffer);

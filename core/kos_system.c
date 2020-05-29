@@ -455,32 +455,47 @@ int64_t kos_get_time_us(void)
 }
 #endif
 
-int kos_load_library(const char *filename, KOS_SHARED_LIB *lib)
-{
 #ifdef _WIN32
-    *lib = (KOS_SHARED_LIB)LoadLibrary(filename);
-#else
-    *lib = (KOS_SHARED_LIB)dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
-#endif
-    return *lib ? KOS_SUCCESS : KOS_ERROR_NOT_FOUND;
+KOS_SHARED_LIB kos_load_library(const char *filename)
+{
+    return (KOS_SHARED_LIB)LoadLibrary(filename);
 }
+#else
+KOS_SHARED_LIB kos_load_library(const char *filename)
+{
+    return (KOS_SHARED_LIB)dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+}
+#endif
 
+#ifdef _WIN32
 void kos_unload_library(KOS_SHARED_LIB lib)
 {
     assert(lib);
-#ifdef _WIN32
     FreeLibrary((HMODULE)lib);
-#else
-    dlclose(lib);
-#endif
 }
+#else
+void kos_unload_library(KOS_SHARED_LIB lib)
+{
+    assert(lib);
+    dlclose(lib);
+}
+#endif
 
+#ifdef _WIN32
 LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
 {
     assert(lib);
-#ifdef _WIN32
     return (LIB_FUNCTION)GetProcAddress((HMODULE)lib, func_name);
-#else
-    return (LIB_FUNCTION)dlsym(lib, func_name);
-#endif
 }
+#else
+LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
+{
+    assert(lib);
+    union {
+        void        *void_ptr;
+        LIB_FUNCTION func;
+    } convert;
+    convert.void_ptr = dlsym(lib, func_name);
+    return convert.func;
+}
+#endif

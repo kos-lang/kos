@@ -72,7 +72,7 @@ int kos_load_file(const char  *filename,
 
 void kos_unload_file(KOS_FILEBUF *file_buf);
 
-int kos_load_library(const char *filename, KOS_SHARED_LIB *lib);
+KOS_SHARED_LIB kos_load_library(const char *filename);
 
 void kos_unload_library(KOS_SHARED_LIB lib);
 
