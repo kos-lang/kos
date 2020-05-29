@@ -38,7 +38,7 @@ kos()
         echo "% $KOS" "$@"
         "$KOS" "$@" || RET=$?
     else
-        "$KOS" "$@" > /dev/null 2>&1 || RET=$?
+        "$KOS" "$@" >"$DIR/stdout" 2>"$DIR/stderr" || RET=$?
     fi
 
     [ $RET -eq 0 ] || [ $RET -eq 1 ] || die "Unexpected exit code $RET"
@@ -57,6 +57,14 @@ note()
 die()
 {
     echo "$@" >&2
+    if [ -f "$DIR/stdout" ]; then
+        echo "stdout:"
+        sed 's/^/    /' "$DIR/stdout"
+    fi
+    if [ -f "$DIR/stderr" ]; then
+        echo "stderr:"
+        sed 's/^/    /' "$DIR/stderr"
+    fi
     exit 1
 }
 
@@ -170,3 +178,5 @@ if [ "$UNAME" != "Windows" -a "$UNAME" != "Haiku" ]; then
     chmod 644 "$DIR/noaccess.kos"
     rm -f "$DIR/noaccess.kos"
 fi
+
+rm -f "$DIR/stdout" "$DIR/stderr"
