@@ -21,6 +21,7 @@
 #   pragma warning( disable : 4255 4668 )
 #   include <windows.h>
 #   pragma warning( pop )
+#   pragma warning( disable : 4191 ) /* 'type cast': unsafe conversion from 'FARPROC' to 'LIB_FUNCTION' */
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
 #   include <dlfcn.h>

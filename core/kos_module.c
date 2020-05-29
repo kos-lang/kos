@@ -27,6 +27,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _WIN32
+#   pragma warning( disable : 4191 ) /* 'type cast': unsafe conversion from 'LIB_FUNCTION' to 'KOS_BUILTIN_INIT' */
+#endif
+
 KOS_DECLARE_STATIC_CONST_STRING(str_cur_dir,      ".");
 KOS_DECLARE_STATIC_CONST_STRING(str_eol,          "\n");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_internal, "internal error");
