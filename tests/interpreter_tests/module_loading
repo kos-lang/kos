@@ -36,9 +36,9 @@ kos()
 
     if [ -n "$VERBOSE" ]; then
         echo "% $KOS" "$@"
-        "$KOS" "$@" || RET=$?
+        "$KOS" -v "$@" || RET=$?
     else
-        "$KOS" "$@" >"$DIR/stdout" 2>"$DIR/stderr" || RET=$?
+        "$KOS" -v "$@" >"$DIR/stdout" 2>"$DIR/stderr" || RET=$?
     fi
 
     [ $RET -eq 0 ] || [ $RET -eq 1 ] || die "Unexpected exit code $RET"
