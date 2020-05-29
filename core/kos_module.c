@@ -63,7 +63,7 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
     unsigned          pos;
     int               error;
     KOS_SHARED_LIB    lib;
-    KOS_BUILTIN_INIT  init;
+    KOS_BUILTIN_INIT  init  = 0;
 
     *mod_init = KOS_BADPTR;
 
