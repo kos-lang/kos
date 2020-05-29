@@ -84,7 +84,7 @@ static int is_file(const char *filename)
     struct stat statbuf;
 
     if (0 == stat(filename, &statbuf)) {
-        if ((statbuf.st_mode & S_IFMT) == S_IFDIR || kos_seq_fail())
+        if (S_ISDIR(statbuf.st_mode) || kos_seq_fail())
             error = KOS_ERROR_NOT_FOUND;
     }
     else
