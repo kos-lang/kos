@@ -262,6 +262,8 @@ static int find_module(KOS_CONTEXT ctx,
                 error = KOS_SUCCESS;
                 break;
             }
+
+            dir.o = KOS_BADPTR;
         }
 
         if (IS_BAD_PTR(dir.o))
