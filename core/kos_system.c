@@ -490,11 +490,12 @@ LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
 #else
 LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
 {
-    assert(lib);
     union {
         void        *void_ptr;
         LIB_FUNCTION func;
     } convert;
+
+    assert(lib);
     convert.void_ptr = dlsym(lib, func_name);
     return convert.func;
 }
