@@ -76,6 +76,8 @@ int kos_load_library(const char *filename, KOS_SHARED_LIB *lib);
 
 void kos_unload_library(KOS_SHARED_LIB lib);
 
-char *kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name);
+typedef void (* LIB_FUNCTION)(void);
+
+LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name);
 
 #endif
