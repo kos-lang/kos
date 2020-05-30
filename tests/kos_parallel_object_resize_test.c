@@ -180,19 +180,24 @@ int main(void)
         }
 
         for (i = 0; i < num_props; i++) {
-            char     buf[8];
-            unsigned k;
+            char         buf[9];
+            unsigned     k;
+            int          idx_gen = i;
+            const size_t len = sizeof(buf) - 1;
 
-            for (k = 0; k < sizeof(buf); k++) {
-                if (k + 4U < sizeof(buf))
-                    buf[k] = (char)kos_rng_random_range(&rng, 127U);
-                else
-                    buf[k] = (char)((i >> ((sizeof(buf) - 1 - k) * 7) & 0x7F));
+            for (k = 0; k < len / 2; k++)
+                buf[k] = (char)(kos_rng_random_range(&rng, 0x7EU - 0x20U) + 0x20U);
+            for (; k < len; k++) {
+                if ((k > len / 2) && ! idx_gen)
+                    break;
+                buf[k] = (char)((idx_gen & 0x3FU) + 0x30U);
+                idx_gen >>= 6;
             }
+            buf[k] = '\0';
 
             KOS_init_local(ctx, &props[i]);
 
-            props[i].o = KOS_new_string(ctx, buf, sizeof(buf));
+            props[i].o = KOS_new_cstring(ctx, buf);
             TEST( ! IS_BAD_PTR(props[i].o));
         }
 
