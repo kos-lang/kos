@@ -1,52 +1,50 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2020 Chris Dragan
 
+depth =
+
 modules  = interpreter
 modules += core
 modules += modules
 modules += tests
 
+include build/rules.mk
+
 # By default, only build the interpreter
-build.interpreter:
+all: interpreter
 
-include build/dirs.mk
+$(modules):
+	@$(MAKE) -C $@
 
-debug ?= 0
+clean: clean_gcov
 
-ifeq ($(debug), 0)
-    out_dir ?= Out/release
-else
-    out_dir ?= Out/debug
-endif
-
-clean:
-	rm -rf $(out_dir)
+clean_gcov:
 	rm -f */*.gcov */*.gcda */*.gcno
 
-build.interpreter build.tests: build.core build.modules
+interpreter tests: core modules
 
-fuzz: build.core build.modules
+fuzz: core modules
 	@$(MAKE) -C tests fuzz
 
-test: build.interpreter build.tests
+test: interpreter tests
 	@$(MAKE) -C tests $@
 
 cldep:
 	@$(MAKE) -C build/cldep debug=0
 
-time_us: build.core
+time_us: core
 	@$(MAKE) -C tests/perf/time_us
 
-ifneq (,$(filter CYGWIN% MINGW% MSYS%, $(shell uname -s)))
-$(addprefix build., $(modules)): cldep
+ifeq ($(UNAME), Windows)
+$(modules): cldep
 endif
 
-install: build.interpreter
+install: interpreter
 	@$(MAKE) -C interpreter $@
 
-doc: build.interpreter
+doc: interpreter
 	@echo Extract docs
-	@mkdir -p "$(out_dir)/doc"
-	@env $(out_dir)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
+	@mkdir -p "$(out_dir_base_rel)/doc"
+	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
 
-.PHONY: cldep doc install test fuzz time_us
+.PHONY: cldep clean_gcov doc install test fuzz time_us $(modules)

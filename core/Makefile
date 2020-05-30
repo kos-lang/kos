@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2020 Chris Dragan
 
-module = kos_lang
-depth  = core
+depth = core
 
 c_files  = kos_array.c
 c_files += kos_buffer.c
@@ -35,5 +34,7 @@ c_files += kos_vm.c
 cpp_files = kos_cpp_api.cpp
 
 include ../build/rules.mk
-include ../build/lib.mk
 
+$(eval $(call LINK_STATIC_LIB,kos_lang,$(c_files) $(cpp_files)))
+
+all: $(call LIB_TARGET,kos_lang)

@@ -16,7 +16,7 @@ export AFL_NO_AFFINITY=1
 [ -n "$JOBS" ] || JOBS="$(grep -c ^processor /proc/cpuinfo)"
 
 rm -rf Out/debug
-make build.interpreter debug=1 fuzz=1 -j "$JOBS"
+make interpreter debug=1 fuzz=1 -j "$JOBS"
 
 run_afl()
 {

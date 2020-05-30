@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2020 Chris Dragan
 
-module = tests
-depth  = tests
+depth = tests
 
 standalone_tests  = kos_array_test
 standalone_tests += kos_atomic_test
@@ -76,23 +75,23 @@ include ../build/rules.mk
 
 ifneq ($(UNAME), Windows)
 ifeq ($(strict), 1)
-$(out_dir)/$(depth)/kos_vm_unit_test$(o_suffix): CFLAGS += -Wno-missing-field-initializers
+$(out_dir)/kos_vm_unit_test$(o_suffix): CFLAGS += -Wno-missing-field-initializers
 endif
 endif
 
-all: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/tests/, $(all_tests)))
+all: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_tests)))
 
 tool ?=
 
-define LINK_TEST
-$(out_dir)/tests/$1$(exe_suffix): $(out_dir)/tests/$1$(o_suffix) $(out_dir)/modules/libkos_modules$(a_suffix) $(out_dir)/core/libkos_lang$(a_suffix)
-	$(call LINK,$$@,$$^)
-endef
+libs =  $(out_dir_base)/modules/libkos_modules$(a_suffix)
+libs += $(out_dir_base)/core/libkos_lang$(a_suffix)
+
+LINK_TEST = $(call LINK_EXE,$1,$1.c,$(libs))
 
 $(foreach test, $(all_tests), $(eval $(call LINK_TEST,$(test))))
 
 define PARALLEL_DEP
-$(out_dir)/tests/$1$(exe_suffix): $(out_dir)/tests/kos_test_tools$(o_suffix)
+$(out_dir)/$1$(exe_suffix): $(out_dir)/kos_test_tools$(o_suffix)
 endef
 
 $(foreach test, $(filter kos_parallel_%, $(all_tests)), $(eval $(call PARALLEL_DEP,$(test))))
@@ -102,7 +101,7 @@ parser_test_list = $(wildcard parser_tests/*.kos)
 define PARSER_TEST
 $1:
 	@echo Test kos_parser_test $(notdir $1)
-	@$(tool) $(out_dir)/tests/kos_parser_test$(exe_suffix) $1
+	@$(tool) $(out_dir)/kos_parser_test$(exe_suffix) $1
 endef
 
 $(foreach test, $(parser_test_list), $(eval $(call PARSER_TEST,$(test))))
@@ -112,7 +111,7 @@ interpreter_test_list = $(filter-out interpreter_tests/fail_% interpreter_tests/
 define INTERPRETER_TEST
 $1:
 	@echo Test kos $(notdir $1)
-	@env $(tool) $(out_dir)/interpreter/kos$(exe_suffix) $1
+	@env $(tool) $(out_dir_base)/interpreter/kos$(exe_suffix) $1
 endef
 
 $(foreach test, $(interpreter_test_list), $(eval $(call INTERPRETER_TEST,$(test))))
@@ -122,7 +121,7 @@ interpreter_fail_test_list = $(filter interpreter_tests/fail_%, $(wildcard inter
 define INTERPRETER_FAIL_TEST
 $1:
 	@echo Test kos $(notdir $1)
-	@env interpreter_tests/fail $(out_dir)/tests/$1 $(tool) $(out_dir)/interpreter/kos$(exe_suffix) $1
+	@env interpreter_tests/fail $(out_dir)/$1 $(tool) $(out_dir_base)/interpreter/kos$(exe_suffix) $1
 endef
 
 $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TEST,$(test))))
@@ -130,12 +129,12 @@ $(foreach test, $(interpreter_fail_test_list), $(eval $(call INTERPRETER_FAIL_TE
 define RUN_STANDALONE_TEST
 $1:
 	@echo Test $1
-	@$(tool) $(out_dir)/tests/$1$(exe_suffix)
+	@$(tool) $(out_dir)/$1$(exe_suffix)
 endef
 
 $(foreach test, $(standalone_tests), $(eval $(call RUN_STANDALONE_TEST,$(test))))
 
-fuzz: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/tests/, $(fuzz_tests)))
+fuzz: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(fuzz_tests)))
 
 $(foreach test, $(fuzz_tests), $(eval $(call LINK_TEST,$(test))))
 
@@ -146,15 +145,15 @@ interactive_scripts += module_loading
 
 $(interactive_scripts):
 	@echo Test $@
-	@interpreter_tests/$@ $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests
+	@interpreter_tests/$@ $(out_dir_base)/interpreter/kos$(exe_suffix) $(out_dir)
 
 module_paths:
 	@echo Test $@
-	@./$@ $(out_dir)/tests/kos_module_path_test$(exe_suffix) $(out_dir)/interpreter/kos$(exe_suffix)
+	@./$@ $(out_dir)/kos_module_path_test$(exe_suffix) $(out_dir_base)/interpreter/kos$(exe_suffix)
 
 print_heap_test:
 	@echo Test $@
-	@./$@ $(out_dir)/tests/kos_print_heap_test$(exe_suffix) $(out_dir)/tests
+	@./$@ $(out_dir)/kos_print_heap_test$(exe_suffix) $(out_dir)
 
 all_tests = $(standalone_tests) $(parser_test_list) $(interactive_scripts) module_paths print_heap_test $(interpreter_test_list) $(interpreter_fail_test_list)
 
@@ -174,7 +173,7 @@ sequential_test_list =
 define SEQFAIL_RULE
 sequential_fail.$1:
 	@echo Test sequential fail $1
-	@env sequential_fail/sequential_fail $(out_dir)/interpreter/kos$(exe_suffix) $(out_dir)/tests $1 200
+	@env sequential_fail/sequential_fail $(out_dir_base)/interpreter/kos$(exe_suffix) $(out_dir) $1 200
 
 sequential_test_list += sequential_fail.$1
 endef
@@ -219,17 +218,17 @@ define GCOV_RULE
 gcov.$1: simple_test
 	@echo Gcov $1
 	@rm -f ../$1/*.gcov
-	@cd ../$1 && $(GCOV) --object-directory $(out_dir)/$1 *.c* > /dev/null
+	@cd ../$1 && $(GCOV) --object-directory $(out_dir_base)/$1 *.c* > /dev/null
 	@rm -f ../core/kos.h.gcov ../core/kos_cpp.h.gcov # gcov does not find anything in these files
 endef
 
 $(foreach module, $(gcov_modules), $(eval $(call GCOV_RULE,$(module))))
 
 gcov: $(addprefix gcov., $(gcov_modules))
-	@find $(out_dir)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
+	@find $(out_dir_base)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
 
 gcov.pre.clean:
-	@find $(out_dir)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
+	@find $(out_dir_base)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
 
 # Execute parallel tests last, make them depend on each other so that they are executed alone
 # Don't run parallel tests with valgrind, since they are slow

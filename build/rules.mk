@@ -2,6 +2,28 @@
 # Copyright (c) 2014-2020 Chris Dragan
 
 ##############################################################################
+# Function to convert a relative path to a reverse path
+
+empty :=
+space := $(empty) $(empty)
+inv_path = $(if $1,$(subst $(space),/,$(patsubst %,..,$(subst /,$(space),$1)))/,)
+
+##############################################################################
+# Set default output directory
+
+debug ?= 0
+
+ifeq ($(debug), 0)
+    out_dir_base_rel = Out/release
+else
+    out_dir_base_rel = Out/debug
+endif
+
+out_dir_base = $(call inv_path,$(depth))$(out_dir_base_rel)
+out_dir_rel  = $(out_dir_base_rel)/$(depth)
+out_dir      = $(out_dir_base)/$(depth)
+
+##############################################################################
 # Determine target OS
 
 UNAME := $(shell uname -s)
@@ -40,18 +62,10 @@ ifneq (,$(filter c++%, $(CLANG_VER)))
 endif
 
 ##############################################################################
-# Function to convert a relative path to a reverse path
-
-empty :=
-space := $(empty) $(empty)
-inv_path = $(subst $(space),/,$(patsubst %,..,$(subst /,$(space),$1)))
-
-##############################################################################
 # Configure debug and optimization options
 
 CFLAGS  ?=
 LDFLAGS ?=
-debug   ?= 0
 native  ?= 0
 target  ?=
 ifeq ($(UNAME), Windows)
@@ -107,7 +121,7 @@ else
 
         # Configure LTO, if available
         ifeq ($(UNAME), Linux)
-            LTOAR ?= $(shell $(call inv_path, $(depth))/build/find_lto ar $(CC))
+            LTOAR ?= $(shell $(call inv_path,$(depth))build/find_lto ar $(CC))
             ifeq (,$(LTOAR))
                 lto ?= 0
             else
@@ -163,7 +177,7 @@ else
             LDFLAGS += -ledit -ltermcap
         endif
     else
-        ifeq (true,$(shell $(call inv_path, $(depth))/build/have_readline $(CC)))
+        ifeq (true,$(shell $(call inv_path,$(depth))build/have_readline $(CC)))
             CFLAGS  += -DCONFIG_READLINE
             LDFLAGS += -lreadline
         endif
@@ -243,15 +257,6 @@ ifeq ($(strict), 1)
 endif
 
 ##############################################################################
-# Set default output directory
-
-ifeq ($(debug), 0)
-    out_dir ?= $(call inv_path, $(depth))/Out/release
-else
-    out_dir ?= $(call inv_path, $(depth))/Out/debug
-endif
-
-##############################################################################
 # Filenames of object files and dependency files
 
 ifeq ($(UNAME), Windows)
@@ -264,10 +269,13 @@ else
     exe_suffix :=
 endif
 
+OBJECTS_FROM_SOURCES = $(addprefix $(out_dir)/, $(addsuffix $(o_suffix), $(basename $1)))
+DEPS_FROM_SOURCES    = $(addprefix $(out_dir)/, $(addsuffix .d, $(basename $1)))
+
 cpp_files ?=
 c_files   ?=
-o_files = $(addprefix $(out_dir)/$(depth)/, $(c_files:.c=$(o_suffix)) $(cpp_files:.cpp=$(o_suffix)))
-d_files = $(addprefix $(out_dir)/$(depth)/, $(c_files:.c=.d) $(cpp_files:.cpp=.d))
+o_files = $(call OBJECTS_FROM_SOURCES,$(cpp_files) $(c_files))
+d_files = $(call DEPS_FROM_SOURCES,$(cpp_files) $(c_files))
 
 ##############################################################################
 # Declare 'all' as the first/default rule
@@ -283,19 +291,19 @@ all:
 # Clean rule
 
 clean:
-	rm -rf $(out_dir)/$(depth)
+	rm -rf $(out_dir)
 
 ##############################################################################
 # C and C++ rules
 
-$(out_dir)/$(depth):
+$(out_dir):
 	@mkdir -p $@
 
 ifeq ($(UNAME), Windows)
 
-CL = $(out_dir)/../cldep/build/cldep/cldep$(exe_suffix)
+CL = $(out_dir_base)/../release/build/cldep/cldep$(exe_suffix)
 
-$(out_dir)/$(depth)/$(notdir %.obj): %.c | $(out_dir)/$(depth)
+$(out_dir)/$(notdir %.obj): %.c | $(out_dir)
 ifeq (,$(filter c++%, $(CLANG_VER)))
 	@echo C $(notdir $@)
 else
@@ -303,13 +311,13 @@ else
 endif
 	@$(CL) -nologo -Wall $(CLANG)   $(CFLAGS) -Fo$@ -c $<
 
-$(out_dir)/$(depth)/$(notdir %.obj): %.cpp | $(out_dir)/$(depth)
+$(out_dir)/$(notdir %.obj): %.cpp | $(out_dir)
 	@echo C++ $(notdir $@)
 	@$(CL) -nologo -Wall $(CPPLANG) $(CFLAGS) -Fo$@ -c $<
 
 else #------------------------------------------------------------------------
 
-$(out_dir)/$(depth)/$(notdir %.o): %.c | $(out_dir)/$(depth)
+$(out_dir)/$(notdir %.o): %.c | $(out_dir)
 ifeq (,$(filter c++%, $(CLANG_VER)))
 	@echo C $(notdir $@)
 else
@@ -318,7 +326,7 @@ endif
 	@$(CC) -Wall $(CFLAGS) -c -MD $(CLANG)   $< -o $@
 	@test -f $(<:.c=.d)   && mv $(<:.c=.d)   $(dir $@) || true # WAR for very old gcc
 
-$(out_dir)/$(depth)/$(notdir %.o): %.cpp | $(out_dir)/$(depth)
+$(out_dir)/$(notdir %.o): %.cpp | $(out_dir)
 	@echo C++ $(notdir $@)
 	@$(CC) -Wall $(CFLAGS) -c -MD $(CPPLANG) $< -o $@
 	@test -f $(<:.cpp=.d) && mv $(<:.cpp=.d) $(dir $@) || true # WAR for very old gcc
@@ -326,29 +334,57 @@ $(out_dir)/$(depth)/$(notdir %.o): %.cpp | $(out_dir)/$(depth)
 endif
 
 ##############################################################################
-# Link rule
+# Link executable rule
 
 ifeq ($(UNAME), Windows)
 
-define LINK
-	@basename $1 | xargs echo Link
-	@link -nologo $(LDFLAGS) -out:$1 $2
+define LINK_EXE
+$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2)
+	@echo Link $(out_dir_rel)/$1$(exe_suffix)
+	@link -nologo $(LDFLAGS) -out:$$@ $$^ $3
 endef
 
 else #------------------------------------------------------------------------
 
 ifeq ($(debug), 0)
-define LINK
-	@basename $1 | xargs echo Link
-	@$(CXX) $2 -o $1 $(LDFLAGS)
-	@$(STRIP) $1
+define LINK_EXE
+$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2)
+	@echo Link $(out_dir_rel)/$1$(exe_suffix)
+	@$(CXX) $$^ -o $$@ $3 $(LDFLAGS)
+	@$(STRIP) $$@
 endef
 else
-define LINK
-	@basename $1 | xargs echo Link
-	@$(CXX) $2 -o $1 $(LDFLAGS)
+define LINK_EXE
+$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2)
+	@echo Link $(out_dir_rel)/$1$(exe_suffix)
+	@$(CXX) $$^ -o $$@ $3 $(LDFLAGS)
 endef
 endif
+
+endif
+
+##############################################################################
+# Static library rule
+
+LIB_TARGET = $(out_dir)/lib$1$(a_suffix)
+
+ifeq ($(UNAME), Windows)
+
+define LINK_STATIC_LIB
+$$(call LIB_TARGET,$1): $$(call OBJECTS_FROM_SOURCES,$2)
+	@echo Lib $$(notdir $$@)
+	@rm -f $$@
+	@lib -nologo $(LIBFLAGS) $$^ -out:$$@
+endef
+
+else
+
+define LINK_STATIC_LIB
+$$(call LIB_TARGET,$1): $$(call OBJECTS_FROM_SOURCES,$2)
+	@echo Lib $$(notdir $$@)
+	@rm -f $$@
+	@$(AR) rcs $$@ $$^
+endef
 
 endif
 

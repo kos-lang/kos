@@ -1,21 +1,23 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2020 Chris Dragan
 
-module = kos
-depth  = interpreter
+depth = interpreter
 
 c_files = kos.c
 
 include ../build/rules.mk
 
-all: $(out_dir)/interpreter/kos$(exe_suffix)
+kos_exe = $(out_dir)/kos$(exe_suffix)
 
-$(out_dir)/interpreter/kos$(exe_suffix): $(o_files) $(out_dir)/modules/libkos_modules$(a_suffix) $(out_dir)/core/libkos_lang$(a_suffix)
-	$(call LINK,$@,$^)
-	@echo Exe $(@:../%=%)
+all: $(kos_exe)
 
-install: $(out_dir)/interpreter/kos$(exe_suffix) $(wildcard ../modules/*.kos)
-	@./install.sh $(out_dir) $(destdir)
+libs =  $(out_dir_base)/modules/libkos_modules$(a_suffix)
+libs += $(out_dir_base)/core/libkos_lang$(a_suffix)
+
+$(eval $(call LINK_EXE,kos,$(c_files),$(libs)))
+
+install: $(kos_exe) $(wildcard ../modules/*.kos)
+	@./install.sh $(out_dir_base) $(destdir)
 
 ifeq ($(UNAME), Windows)
 destdir ?= c:/Program\ Files

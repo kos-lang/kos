@@ -67,7 +67,7 @@ fi
 
 rm -rf Out
 
-$MAKE -k -j "$JOBS" time_us build.interpreter native=1
+$MAKE -k -j "$JOBS" time_us interpreter native=1
 
 if [ $JS = 1 ]; then
     rm -rf "$JS_INTERPRETER/Out"

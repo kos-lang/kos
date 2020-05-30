@@ -80,7 +80,7 @@ if [[ $UNAME != Windows ]]; then
     export LDFLAGS=-fsanitize=address
 fi
 make debug=1 clean
-make -j "$JOBS" debug=1 seqfail=1 build.interpreter CLANG_VER=c++14 CLANG_VER=c++14
+make -j "$JOBS" debug=1 seqfail=1 interpreter CLANG_VER=c++14 CLANG_VER=c++14
 
 trap 'touch seq.done' EXIT
 
