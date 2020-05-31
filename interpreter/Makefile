@@ -11,8 +11,8 @@ kos_exe = $(out_dir)/kos$(exe_suffix)
 
 all: $(kos_exe)
 
-libs =  $(out_dir_base)/modules/libkos_modules$(a_suffix)
-libs += $(out_dir_base)/core/libkos_lang$(a_suffix)
+libs =  $(out_dir_base)/modules/$(call LIB_NAME,kos_modules)
+libs += $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
 
 $(eval $(call LINK_EXE,kos,$(c_files),$(libs)))
 

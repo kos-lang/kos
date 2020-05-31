@@ -9,6 +9,6 @@ include ../../../build/rules.mk
 
 all: $(out_dir)/time_us$(exe_suffix)
 
-libs = $(out_dir_base)/core/libkos_lang$(a_suffix)
+libs = $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
 
 $(eval $(call LINK_EXE,time_us,$(c_files),$(libs)))

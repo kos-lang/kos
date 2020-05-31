@@ -83,8 +83,8 @@ all: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_tests)))
 
 tool ?=
 
-libs =  $(out_dir_base)/modules/libkos_modules$(a_suffix)
-libs += $(out_dir_base)/core/libkos_lang$(a_suffix)
+libs =  $(out_dir_base)/modules/$(call LIB_NAME,kos_modules)
+libs += $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
 
 LINK_TEST = $(call LINK_EXE,$1,$1.c,$(libs))
 

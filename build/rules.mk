@@ -26,11 +26,11 @@ out_dir      = $(out_dir_base)/$(depth)
 ##############################################################################
 # Determine target OS
 
-UNAME := $(shell uname -s)
+UNAME = $(shell uname -s)
 
 ifneq (,$(filter CYGWIN% MINGW% MSYS%, $(UNAME)))
     # Note: Still use cl.exe on Windows
-    UNAME := Windows
+    UNAME = Windows
 endif
 
 ##############################################################################
@@ -64,10 +64,12 @@ endif
 ##############################################################################
 # Configure debug and optimization options
 
-CFLAGS  ?=
-LDFLAGS ?=
-native  ?= 0
-target  ?=
+CFLAGS         ?=
+LDFLAGS        ?=
+EXE_LDFLAGS    ?=
+SHARED_LDFLAGS ?=
+native         ?= 0
+target         ?=
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(debug), 0)
@@ -102,7 +104,7 @@ ifeq ($(UNAME), Windows)
     CFLAGS += -wd5039 # pointer or reference to potentially throwing function passed to extern C function under -EHc
     CFLAGS += -wd5045 # compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
 
-    gcov := 0
+    gcov = 0
 else
     ifeq ($(debug), 0)
         CFLAGS += -O3 -DNDEBUG -ffunction-sections -fdata-sections
@@ -141,6 +143,15 @@ else
         endif
     else
         CFLAGS += -O0 -g
+        STRIP  ?= true
+    endif
+
+    CFLAGS += -fPIC
+
+    ifeq ($(UNAME), Darwin)
+        SHARED_LDFLAGS += -dynamiclib
+    else
+        SHARED_LDFLAGS += -shared
     endif
 
     STRICTFLAGS = -Wextra -Werror
@@ -167,24 +178,24 @@ else
     endif
 
     ifeq ($(UNAME), Linux)
-        CFLAGS  += -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L
-        LDFLAGS += -lpthread -lrt -ldl
+        CFLAGS      += -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L
+        EXE_LDFLAGS += -lpthread -lrt -ldl
     endif
 
     ifeq ($(UNAME), Darwin)
         ifneq ($(target), ios)
-            CFLAGS  += -DCONFIG_EDITLINE
-            LDFLAGS += -ledit -ltermcap
+            CFLAGS      += -DCONFIG_EDITLINE
+            EXE_LDFLAGS += -ledit -ltermcap
         endif
     else
         ifeq (true,$(shell $(call inv_path,$(depth))build/have_readline $(CC)))
-            CFLAGS  += -DCONFIG_READLINE
-            LDFLAGS += -lreadline
+            CFLAGS      += -DCONFIG_READLINE
+            EXE_LDFLAGS += -lreadline
         endif
     endif
 
     ifneq (,$(filter FreeBSD OpenBSD NetBSD DragonFly,$(UNAME)))
-        LDFLAGS += -lpthread
+        EXE_LDFLAGS += -lpthread
     endif
 
     # Configure gcov
@@ -260,13 +271,19 @@ endif
 # Filenames of object files and dependency files
 
 ifeq ($(UNAME), Windows)
-    o_suffix   := .obj
-    a_suffix   := .lib
-    exe_suffix := .exe
+    o_suffix   = .obj
+    a_suffix   = .lib
+    exe_suffix = .exe
+    so_suffix  = .dll
 else
-    o_suffix   := .o
-    a_suffix   := .a
-    exe_suffix :=
+    o_suffix   = .o
+    a_suffix   = .a
+    exe_suffix =
+    ifeq ($(UNAME), Darwin)
+        so_suffix = .dylib
+    else
+        so_suffix = .so
+    endif
 endif
 
 OBJECTS_FROM_SOURCES = $(addprefix $(out_dir)/, $(addsuffix $(o_suffix), $(basename $1)))
@@ -334,39 +351,61 @@ $(out_dir)/$(notdir %.o): %.cpp | $(out_dir)
 endif
 
 ##############################################################################
-# Link executable rule
+# Rule for linking executables
 
 ifeq ($(UNAME), Windows)
 
 define LINK_EXE
 $(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2)
 	@echo Link $(out_dir_rel)/$1$(exe_suffix)
-	@link -nologo $(LDFLAGS) -out:$$@ $$^ $3
+	@link -nologo $(EXE_LDFLAGS) $(LDFLAGS) -out:$$@ $$^ $3
 endef
 
 else #------------------------------------------------------------------------
 
-ifeq ($(debug), 0)
 define LINK_EXE
 $(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2)
 	@echo Link $(out_dir_rel)/$1$(exe_suffix)
-	@$(CXX) $$^ -o $$@ $3 $(LDFLAGS)
+	@$(CXX) $$^ -o $$@ $3 $(EXE_LDFLAGS) $(LDFLAGS)
 	@$(STRIP) $$@
 endef
-else
-define LINK_EXE
-$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2)
-	@echo Link $(out_dir_rel)/$1$(exe_suffix)
-	@$(CXX) $$^ -o $$@ $3 $(LDFLAGS)
-endef
-endif
 
 endif
 
 ##############################################################################
-# Static library rule
+# Rule for linking shared libraries
 
-LIB_TARGET = $(out_dir)/lib$1$(a_suffix)
+SHARED_TARGET = $(out_dir)/$1$(so_suffix)
+
+ifeq ($(UNAME), Windows)
+
+define LINK_SHARED_LIB
+$$(call SHARED_TARGET,$1): $$(call OBJECTS_FROM_SOURCES,$2)
+	@echo Link $1$(so_suffix)
+	@link -nologo -dll $(SHARED_LDFLAGS) $(LDFLAGS) -out:$$@ $$^ $3
+endef
+
+else #------------------------------------------------------------------------
+
+define LINK_SHARED_LIB
+$$(call SHARED_TARGET,$1): $$(call OBJECTS_FROM_SOURCES,$2)
+	@echo Link $1$(so_suffix)
+	@$(CXX) $$^ -o $$@ $3 $(SHARED_LDFLAGS) $(LDFLAGS)
+	@$(STRIP) $$@
+endef
+
+endif
+
+##############################################################################
+# Rule for static libraries
+
+ifeq ($(UNAME), Windows)
+    LIB_NAME = $1$(a_suffix)
+else
+    LIB_NAME = lib$1$(a_suffix)
+endif
+
+LIB_TARGET = $(out_dir)/$(call LIB_NAME,$1)
 
 ifeq ($(UNAME), Windows)
 
