@@ -5,6 +5,7 @@
 #ifndef KOS_INSTANCE_H_INCLUDED
 #define KOS_INSTANCE_H_INCLUDED
 
+#include "kos_api.h"
 #include "kos_entity.h"
 #include "kos_threads.h"
 #include <stddef.h>
@@ -210,18 +211,23 @@ static inline void KOS_clear_exception(KOS_CONTEXT ctx)
 extern "C" {
 #endif
 
+KOS_API
 int KOS_instance_init(KOS_INSTANCE *inst,
                       uint32_t      flags,
                       KOS_CONTEXT  *out_ctx);
 
+KOS_API
 void KOS_instance_destroy(KOS_INSTANCE *inst);
 
+KOS_API
 int KOS_instance_add_path(KOS_CONTEXT ctx,
                           const char *module_search_path);
 
+KOS_API
 int KOS_instance_add_default_path(KOS_CONTEXT ctx,
                                   const char *argv0);
 
+KOS_API
 int KOS_instance_set_args(KOS_CONTEXT  ctx,
                           int          argc,
                           const char **argv);
@@ -230,31 +236,39 @@ typedef int (*KOS_BUILTIN_INIT)(KOS_CONTEXT ctx, KOS_OBJ_ID module);
 
 typedef void *KOS_SHARED_LIB;
 
+KOS_API
 int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
                                   KOS_BUILTIN_INIT init);
 
+KOS_API
 int KOS_instance_register_thread(KOS_INSTANCE *inst,
                                  KOS_CONTEXT   ctx);
 
+KOS_API
 void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
                                     KOS_CONTEXT   ctx);
 
 #ifdef NDEBUG
 #define KOS_instance_validate(ctx) ((void)0)
 #else
+KOS_API
 void KOS_instance_validate(KOS_CONTEXT ctx);
 #endif
 
+KOS_API
 void KOS_raise_exception(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  exception_obj);
 
+KOS_API
 void KOS_raise_exception_cstring(KOS_CONTEXT ctx,
                                  const char *cstr);
 
+KOS_API
 KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  exception);
 
+KOS_API
 void KOS_raise_generator_end(KOS_CONTEXT ctx);
 
 enum KOS_CALL_FLAVOR_E {
@@ -263,6 +277,7 @@ enum KOS_CALL_FLAVOR_E {
     KOS_APPLY_FUNCTION
 };
 
+KOS_API
 KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
                              KOS_OBJ_ID             func_obj,
                              KOS_OBJ_ID             this_obj,
@@ -278,18 +293,24 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
 #define KOS_apply_function(ctx, func_obj, this_obj, args_obj) \
     kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
 
+KOS_API
 void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);
 
 #define KOS_init_local(ctx, local) KOS_init_local_with((ctx), (local), KOS_BADPTR)
 
+KOS_API
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...);
 
+KOS_API
 void KOS_init_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *ulocal);
 
+KOS_API
 KOS_OBJ_ID KOS_destroy_top_local(KOS_CONTEXT ctx, KOS_LOCAL *local);
 
+KOS_API
 KOS_OBJ_ID KOS_destroy_top_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *last);
 
+KOS_API
 KOS_OBJ_ID KOS_destroy_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *local);
 
 typedef struct KOS_GC_STATS_S {
@@ -315,13 +336,17 @@ typedef struct KOS_GC_STATS_S {
     { (val), (val), (val), (val), (val), (val), (val), (val), (val), (val), \
       (val), (val), (val), (val), (val), (val) }
 
+KOS_API
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
                         KOS_GC_STATS *out_stats);
 
+KOS_API
 void KOS_help_gc(KOS_CONTEXT ctx);
 
+KOS_API
 void KOS_suspend_context(KOS_CONTEXT ctx);
 
+KOS_API
 int KOS_resume_context(KOS_CONTEXT ctx);
 
 #ifdef __cplusplus

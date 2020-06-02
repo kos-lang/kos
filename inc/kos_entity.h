@@ -5,9 +5,10 @@
 #ifndef KOS_ENTITY_H_INCLUDED
 #define KOS_ENTITY_H_INCLUDED
 
+#include "kos_api.h"
+#include "kos_atomic.h"
 #include <assert.h>
 #include <stdint.h>
-#include "kos_atomic.h"
 
 /* Note: entity types are always even.  See the description of size_and_type field
  * to find out why. */
@@ -242,6 +243,14 @@ typedef union KOS_STRING_U {
 #   define KOS_DECLARE_ALIGNED(alignment, object) __declspec(align(alignment)) object
 #endif
 
+#ifdef _MSC_VER
+#   define KOS_DECLARE_ALIGNED_API(alignment, object) KOS_API KOS_DECLARE_ALIGNED(alignment, object)
+#elif defined(__GNUC__)
+#   define KOS_DECLARE_ALIGNED_API(alignment, object) KOS_DECLARE_ALIGNED(alignment, object) KOS_API
+#else
+#   define KOS_DECLARE_ALIGNED_API KOS_DECLARE_ALIGNED
+#endif
+
 struct KOS_CONST_OBJECT_ALIGNMENT_S {
     uint64_t align[2];
 };
@@ -265,8 +274,8 @@ struct KOS_CONST_STRING_S {
     } object;
 };
 
-#define DECLARE_CONST_OBJECT(name, type, value)                     \
-    KOS_DECLARE_ALIGNED(32, const struct KOS_CONST_OBJECT_S name) = \
+#define DECLARE_API_CONST_OBJECT(name, type, value)                     \
+    KOS_DECLARE_ALIGNED_API(32, const struct KOS_CONST_OBJECT_S name) = \
     { { { 0, 0 } }, { (type), (value) } }
 
 #define DECLARE_STATIC_CONST_OBJECT(name, type, value)                     \
@@ -448,27 +457,35 @@ typedef struct KOS_OBJECT_WALK_S {
 extern "C" {
 #endif
 
+KOS_API
 KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx,
                        int64_t     value);
 
+KOS_API
 KOS_OBJ_ID KOS_new_float(KOS_CONTEXT ctx,
                          double      value);
 
+KOS_API
 KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx);
 
+KOS_API
 KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  proto_obj);
 
+KOS_API
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args);
 
+KOS_API
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_FUNCTION_HANDLER handler,
                                  int                  min_args);
 
+KOS_API
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx);
 
+KOS_API
 KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
                                         KOS_OBJ_ID           module_obj,
                                         KOS_FUNCTION_HANDLER getter,
