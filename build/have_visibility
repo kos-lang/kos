@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2020 Chris Dragan
+
+set -e
+
+CC="$1"
+
+SRC=$(mktemp)
+OBJ=$(mktemp)
+
+echo "void test() { }" > "$SRC"
+
+if "$CC" -fvisibility=hidden -c -o "$OBJ" "$SRC" >/dev/null 2>&1; then
+    echo "true"
+fi
+
+rm -f "$SRC" "$OBJ"

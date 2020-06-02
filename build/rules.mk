@@ -148,8 +148,12 @@ else
 
     CFLAGS += -fPIC
 
+    ifeq (true,$(shell $(call inv_path,$(depth))build/have_visibility $(CC)))
+        CFLAGS += -fvisibility=hidden
+    endif
+
     ifeq ($(UNAME), Darwin)
-        SHARED_LDFLAGS += -dynamiclib
+        SHARED_LDFLAGS += -dynamiclib -undefined dynamic_lookup
     else
         SHARED_LDFLAGS += -shared
     endif
@@ -291,7 +295,6 @@ DEPS_FROM_SOURCES    = $(addprefix $(out_dir)/, $(addsuffix .d, $(basename $1)))
 
 cpp_files ?=
 c_files   ?=
-o_files = $(call OBJECTS_FROM_SOURCES,$(cpp_files) $(c_files))
 d_files = $(call DEPS_FROM_SOURCES,$(cpp_files) $(c_files))
 
 ##############################################################################

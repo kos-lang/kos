@@ -457,14 +457,46 @@ int64_t kos_get_time_us(void)
 #endif
 
 #ifdef _WIN32
-KOS_SHARED_LIB kos_load_library(const char *filename)
+static void get_lib_error(KOS_VECTOR *error_cstr)
 {
-    return (KOS_SHARED_LIB)LoadLibrary(filename);
+    const DWORD error = GetLastError();
+    if (KOS_vector_resize(error_cstr, 11) == KOS_SUCCESS)
+        snprintf(error_cstr->buffer, "0x%08x", (unsigned)error);
+    else {
+        KOS_vector_resize(error_cstr, 1);
+        error_cstr->buffer[0] = 0;
+    }
 }
 #else
-KOS_SHARED_LIB kos_load_library(const char *filename)
+static void get_lib_error(KOS_VECTOR *error_cstr)
 {
-    return (KOS_SHARED_LIB)dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+    const char  *error = dlerror();
+    const size_t len   = strlen(error);
+
+    if (kos_vector_resize(error_cstr, len + 1) == KOS_SUCCESS)
+        memcpy(error_cstr->buffer, error, len + 1);
+    else {
+        kos_vector_resize(error_cstr, 1);
+        error_cstr->buffer[0] = 0;
+    }
+}
+#endif
+
+#ifdef _WIN32
+KOS_SHARED_LIB kos_load_library(const char *filename, KOS_VECTOR *error_cstr)
+{
+    const KOS_SHARED_LIB lib = (KOS_SHARED_LIB)LoadLibrary(filename);
+    if ( ! lib)
+        get_lib_error(error_cstr);
+    return lib;
+}
+#else
+KOS_SHARED_LIB kos_load_library(const char *filename, KOS_VECTOR *error_cstr)
+{
+    const KOS_SHARED_LIB lib = (KOS_SHARED_LIB)dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+    if ( ! lib)
+        get_lib_error(error_cstr);
+    return lib;
 }
 #endif
 
@@ -483,13 +515,19 @@ void kos_unload_library(KOS_SHARED_LIB lib)
 #endif
 
 #ifdef _WIN32
-LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
+LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name, KOS_VECTOR *error_cstr)
 {
+    LIB_FUNCTION func;
+
     assert(lib);
-    return (LIB_FUNCTION)GetProcAddress((HMODULE)lib, func_name);
+
+    func = (LIB_FUNCTION)GetProcAddress((HMODULE)lib, func_name);
+    if ( ! func)
+        get_lib_error(error_cstr);
+    return func;
 }
 #else
-LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
+LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name, KOS_VECTOR *error_cstr)
 {
     union {
         void        *void_ptr;
@@ -498,6 +536,9 @@ LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name)
 
     assert(lib);
     convert.void_ptr = dlsym(lib, func_name);
+
+    if ( ! convert.func)
+        get_lib_error(error_cstr);
     return convert.func;
 }
 #endif

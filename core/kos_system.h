@@ -72,12 +72,12 @@ int kos_load_file(const char  *filename,
 
 void kos_unload_file(KOS_FILEBUF *file_buf);
 
-KOS_SHARED_LIB kos_load_library(const char *filename);
+KOS_SHARED_LIB kos_load_library(const char *filename, struct KOS_VECTOR_S *error_cstr);
 
 void kos_unload_library(KOS_SHARED_LIB lib);
 
 typedef void (* LIB_FUNCTION)(void);
 
-LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name);
+LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name, struct KOS_VECTOR_S *error_cstr);
 
 #endif

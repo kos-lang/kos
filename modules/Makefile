@@ -8,12 +8,36 @@ c_files += kos_mod_datetime.c
 c_files += kos_mod_fs.c
 c_files += kos_mod_io.c
 c_files += kos_mod_kos.c
-c_files += kos_mod_math.c
 c_files += kos_mod_random.c
 c_files += kos_mod_re.c
 c_files += kos_modules_init.c
 
 include ../build/rules.mk
+
+######################################################################
+# Module shared libraries
+
+builtin_modules  ?= 1
+external_modules ?=
+
+ifeq ($(builtin_modules), 1)
+    define EXTERNAL_MODULE
+        c_files += $$(c_files_$1)
+    endef
+else
+    define EXTERNAL_MODULE
+        external_modules += $1
+        $$(call OBJECTS_FROM_SOURCES,$$(c_files_$1)): CFLAGS += -DKOS_BUILD_MODULE
+        all: $(call SHARED_TARGET,$1)
+        $$(eval $$(call LINK_SHARED_LIB,$1,$$(c_files_$1)))
+    endef
+endif
+
+c_files_math = kos_mod_math.c
+$(eval $(call EXTERNAL_MODULE,math))
+
+######################################################################
+# Link built-in modules
 
 $(eval $(call LINK_STATIC_LIB,kos_modules,$(c_files) $(cpp_files)))
 
@@ -22,22 +46,33 @@ all: $(call LIB_TARGET,kos_modules)
 ######################################################################
 # Copy modules for the interpreter
 
-modules=$(wildcard *.kos)
+modules = $(wildcard *.kos)
 
 ifeq ($(UNAME), Windows)
-modules_dir=$(out_dir_base)/interpreter/modules
+modules_dir = $(out_dir_base)/interpreter/modules
 else
-modules_dir=$(out_dir_base)/share/kos/modules
+modules_dir = $(out_dir_base)/share/kos/modules
 endif
 
-all: $(addprefix $(modules_dir)/,$(modules))
+all: copy_modules
+
+.PHONY: copy_modules
+
+copy_modules: $(addprefix $(modules_dir)/,$(modules) $(addsuffix $(so_suffix),$(external_modules)))
 
 $(modules_dir):
 	@mkdir -p $(modules_dir)
 
 define COPY_MODULE
 $(modules_dir)/$1: $1 | $(modules_dir)
-	@cp $1 $(modules_dir)/$1
+	@cp $$< $$@
 endef
 
 $(foreach module, $(modules), $(eval $(call COPY_MODULE,$(module))))
+
+define COPY_NATIVE_MODULE
+$(modules_dir)/$1$(so_suffix): $(call SHARED_TARGET,$1) | $$(modules_dir)
+	@cp $$< $$@
+endef
+
+$(foreach module, $(external_modules), $(eval $(call COPY_NATIVE_MODULE,$(module))))

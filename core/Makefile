@@ -35,6 +35,8 @@ cpp_files = kos_cpp_api.cpp
 
 include ../build/rules.mk
 
+CFLAGS += -DKOS_BUILD_CORE # Export public symbols
+
 $(eval $(call LINK_STATIC_LIB,kos_lang,$(c_files) $(cpp_files)))
 
 all: $(call LIB_TARGET,kos_lang)
