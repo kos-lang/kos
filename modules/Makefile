@@ -28,6 +28,7 @@ else
     CFLAGS += -DKOS_EXTERNAL_MODULES
     define EXTERNAL_MODULE
         external_modules += $1
+        $$(call OBJECTS_FROM_SOURCES,$$(c_files_$1)): CFLAGS += -DKOS_PUBLIC_API
         all: $(call SHARED_TARGET,$1)
         $$(eval $$(call LINK_SHARED_LIB,$1,$$(c_files_$1)))
     endef

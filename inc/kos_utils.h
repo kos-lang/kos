@@ -37,11 +37,13 @@ typedef enum KOS_COMPARE_RESULT_E {
 extern "C" {
 #endif
 
+KOS_API
 int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
                         KOS_OBJ_ID   args_obj,
                         int          idx,
                         KOS_NUMERIC *numeric);
 
+KOS_API
 int KOS_get_integer(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id,
                     int64_t    *ret);
@@ -51,6 +53,7 @@ enum KOS_PRINT_WHERE_E {
     KOS_STDERR
 };
 
+KOS_API
 void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where);
 
 typedef enum KOS_QUOTE_STR_E {
@@ -58,15 +61,18 @@ typedef enum KOS_QUOTE_STR_E {
     KOS_QUOTE_STRINGS
 } KOS_QUOTE_STR;
 
+KOS_API
 int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT          ctx,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_QUOTE_STR        quote_str,
                                      KOS_OBJ_ID          *str,
                                      struct KOS_VECTOR_S *cstr_vec);
 
+KOS_API
 KOS_OBJ_ID KOS_object_to_string(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  obj);
 
+KOS_API
 int KOS_print_to_cstr_vec(KOS_CONTEXT          ctx,
                           KOS_OBJ_ID           array,
                           KOS_QUOTE_STR        quote_str,
@@ -74,16 +80,20 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT          ctx,
                           const char          *sep,
                           unsigned             sep_len);
 
+KOS_API
 int KOS_array_push_expand(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  array,
                           KOS_OBJ_ID  value);
 
+KOS_API
 KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
                                KOS_OBJ_ID b);
 
+KOS_API
 KOS_OBJ_ID KOS_get_file_name(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  full_path);
 
+KOS_API
 int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state);
 
 #ifdef __GNUC__
@@ -92,10 +102,12 @@ int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state);
 #define KOS_CHECK_FORMAT(fmt_idx, arg_idx)
 #endif
 
+KOS_API
 KOS_OBJ_ID KOS_string_printf(KOS_CONTEXT ctx,
                              const char *format,
                              ...) KOS_CHECK_FORMAT(2, 3);
 
+KOS_API
 void KOS_raise_printf(KOS_CONTEXT ctx,
                       const char *format,
                       ...) KOS_CHECK_FORMAT(2, 3);

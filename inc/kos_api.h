@@ -16,16 +16,16 @@
 #   define KOS_IMPORT_SYMBOL
 #endif
 
-#ifdef KOS_BUILD_CORE
-#   define KOS_API KOS_EXPORT_SYMBOL
-#else
+#ifdef KOS_PUBLIC_API
 #   define KOS_API KOS_IMPORT_SYMBOL
+#else
+#   define KOS_API KOS_EXPORT_SYMBOL
 #endif
 
-#if defined(_WIN32) && defined(KOS_BUILD_CORE)
-#   define KOS_API_VAR_DEF KOS_API
-#else
+#if !defined(_WIN32) || !defined(KOS_PUBLIC_API)
 #   define KOS_API_VAR_DEF
+#else
+#   define KOS_API_VAR_DEF KOS_API
 #endif
 
 #endif
