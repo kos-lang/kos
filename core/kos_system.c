@@ -460,10 +460,11 @@ int64_t kos_get_time_us(void)
 static void get_lib_error(KOS_VECTOR *error_cstr)
 {
     const DWORD error = GetLastError();
-    if (KOS_vector_resize(error_cstr, 11) == KOS_SUCCESS)
+
+    if (kos_vector_resize(error_cstr, 11) == KOS_SUCCESS)
         snprintf(error_cstr->buffer, "0x%08x", (unsigned)error);
     else {
-        KOS_vector_resize(error_cstr, 1);
+        kos_vector_resize(error_cstr, 1);
         error_cstr->buffer[0] = 0;
     }
 }
