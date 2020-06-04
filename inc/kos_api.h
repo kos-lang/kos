@@ -9,7 +9,11 @@
 #   define KOS_EXPORT_SYMBOL __declspec(dllexport)
 #   define KOS_IMPORT_SYMBOL __declspec(dllimport)
 #elif defined(__GNUC__)
-#   define KOS_EXPORT_SYMBOL __attribute__((visibility("default")))
+#   ifdef KOS_SUPPORTS_VISIBILITY
+#       define KOS_EXPORT_SYMBOL __attribute__((visibility("default")))
+#   else
+#       define KOS_EXPORT_SYMBOL
+#   endif
 #   define KOS_IMPORT_SYMBOL
 #else
 #   define KOS_EXPORT_SYMBOL

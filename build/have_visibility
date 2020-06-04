@@ -12,7 +12,7 @@ OBJ=$(mktemp)
 
 echo "void test() { }" > "$SRC"
 
-if "$CC" -fvisibility=hidden -c -o "$OBJ" "$SRC" >/dev/null 2>&1; then
+if "$CC" -x c -fvisibility=hidden -c -o "$OBJ" "$SRC" >/dev/null 2>&1; then
     echo "true"
 fi
 

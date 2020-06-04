@@ -149,13 +149,14 @@ else
     CFLAGS += -fPIC
 
     ifeq (true,$(shell $(call inv_path,$(depth))build/have_visibility $(CC)))
-        CFLAGS += -fvisibility=hidden
+        CFLAGS += -fvisibility=hidden -DKOS_SUPPORTS_VISIBILITY
     endif
 
     ifeq ($(UNAME), Darwin)
         SHARED_LDFLAGS += -dynamiclib -undefined dynamic_lookup
     else
         SHARED_LDFLAGS += -shared
+        EXE_LDFLAGS += -rdynamic
     endif
 
     STRICTFLAGS = -Wextra -Werror
