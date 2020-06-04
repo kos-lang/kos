@@ -462,7 +462,7 @@ static void get_lib_error(KOS_VECTOR *error_cstr)
     const DWORD error = GetLastError();
 
     if (kos_vector_resize(error_cstr, 11) == KOS_SUCCESS)
-        snprintf(error_cstr->buffer, "0x%08x", (unsigned)error);
+        snprintf(error_cstr->buffer, error_cstr->size, "0x%08x", (unsigned)error);
     else {
         kos_vector_resize(error_cstr, 1);
         error_cstr->buffer[0] = 0;
