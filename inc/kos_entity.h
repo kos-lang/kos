@@ -274,8 +274,8 @@ struct KOS_CONST_STRING_S {
     } object;
 };
 
-#define DECLARE_API_CONST_OBJECT(name, type, value)                     \
-    KOS_DECLARE_ALIGNED_API(32, const struct KOS_CONST_OBJECT_S name) = \
+#define DECLARE_CONST_OBJECT(name, type, value)                     \
+    KOS_DECLARE_ALIGNED(32, const struct KOS_CONST_OBJECT_S name) = \
     { { { 0, 0 } }, { (type), (value) } }
 
 #define DECLARE_STATIC_CONST_OBJECT(name, type, value)                     \
@@ -310,9 +310,9 @@ struct KOS_CONST_STRING_S {
 extern "C" {
 #endif
 
-extern const struct KOS_CONST_OBJECT_S KOS_void;
-extern const struct KOS_CONST_OBJECT_S KOS_false;
-extern const struct KOS_CONST_OBJECT_S KOS_true;
+KOS_API extern const struct KOS_CONST_OBJECT_S KOS_void;
+KOS_API extern const struct KOS_CONST_OBJECT_S KOS_false;
+KOS_API extern const struct KOS_CONST_OBJECT_S KOS_true;
 
 #ifdef __cplusplus
 }

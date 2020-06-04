@@ -5,7 +5,7 @@
 #ifndef KOS_API_H_INCLUDED
 #define KOS_API_H_INCLUDED
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #   define KOS_EXPORT_SYMBOL __declspec(dllexport)
 #   define KOS_IMPORT_SYMBOL __declspec(dllimport)
 #elif defined(__GNUC__)
@@ -20,6 +20,12 @@
 #   define KOS_API KOS_EXPORT_SYMBOL
 #else
 #   define KOS_API KOS_IMPORT_SYMBOL
+#endif
+
+#if defined(_WIN32) && defined(KOS_BUILD_CORE)
+#   define KOS_API_VAR_DEF KOS_API
+#else
+#   define KOS_API_VAR_DEF
 #endif
 
 #endif

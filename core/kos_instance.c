@@ -40,9 +40,9 @@ static const char str_format_module[]           = "' in ";
 static const char str_format_offset[]           = "  ";
 static const char str_format_question_marks[]   = "???";
 
-DECLARE_API_CONST_OBJECT(KOS_void,  OBJ_VOID,    0);
-DECLARE_API_CONST_OBJECT(KOS_false, OBJ_BOOLEAN, 0);
-DECLARE_API_CONST_OBJECT(KOS_true,  OBJ_BOOLEAN, 1);
+KOS_API_VAR_DEF DECLARE_CONST_OBJECT(KOS_void,  OBJ_VOID,    0);
+KOS_API_VAR_DEF DECLARE_CONST_OBJECT(KOS_false, OBJ_BOOLEAN, 0);
+KOS_API_VAR_DEF DECLARE_CONST_OBJECT(KOS_true,  OBJ_BOOLEAN, 1);
 
 struct KOS_LIB_LIST_S {
     uint32_t       num_libs;
