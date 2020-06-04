@@ -156,7 +156,7 @@ do {                                                                   \
                               TO_SMALL_INT((int)(value)), 0));         \
 } while (0)
 
-#ifdef KOS_BUILD_MODULE
+#ifdef KOS_EXTERNAL_MODULES
 #   define KOS_MODULE_INIT(name) KOS_EXPORT_SYMBOL init_kos_module
 #else
 #   define KOS_MODULE_INIT(name) kos_module_##name##_init
