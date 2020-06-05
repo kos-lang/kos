@@ -48,8 +48,10 @@ static inline KOS_OBJ_ID KOS_get_walk_value(KOS_OBJ_ID walk)
 extern "C" {
 #endif
 
+KOS_API
 KOS_OBJ_ID KOS_new_object(KOS_CONTEXT ctx);
 
+KOS_API
 KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
                                          KOS_OBJ_ID  prototype);
 
@@ -58,20 +60,24 @@ enum KOS_OBJECT_WALK_DEPTH_E {
     KOS_DEEP
 };
 
+KOS_API
 KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
                                        KOS_OBJ_ID                   obj_id,
                                        KOS_OBJ_ID                   prop,
                                        enum KOS_OBJECT_WALK_DEPTH_E deep);
 
+KOS_API
 int KOS_set_property(KOS_CONTEXT ctx,
                      KOS_OBJ_ID  obj_id,
                      KOS_OBJ_ID  prop,
                      KOS_OBJ_ID  value);
 
+KOS_API
 int KOS_delete_property(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  obj_id,
                         KOS_OBJ_ID  prop);
 
+KOS_API
 int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop,
@@ -79,20 +85,25 @@ int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                      KOS_FUNCTION_HANDLER getter,
                                      KOS_FUNCTION_HANDLER setter);
 
+KOS_API
 KOS_OBJ_ID KOS_get_prototype(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  obj_id);
 
+KOS_API
 int KOS_has_prototype(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  obj_id,
                       KOS_OBJ_ID  proto_id);
 
+KOS_API
 KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
                                KOS_OBJ_ID                   obj_id,
                                enum KOS_OBJECT_WALK_DEPTH_E deep);
 
+KOS_API
 KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
                                     KOS_OBJ_ID  walk_id);
 
+KOS_API
 int KOS_object_walk(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  walk_id);
 

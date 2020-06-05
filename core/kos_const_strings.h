@@ -11,16 +11,16 @@
 extern "C" {
 #endif
 
-extern struct KOS_CONST_STRING_S KOS_str_empty;
-extern struct KOS_CONST_STRING_S KOS_str_backtrace;
-extern struct KOS_CONST_STRING_S KOS_str_file;
-extern struct KOS_CONST_STRING_S KOS_str_function;
-extern struct KOS_CONST_STRING_S KOS_str_line;
-extern struct KOS_CONST_STRING_S KOS_str_offset;
-extern struct KOS_CONST_STRING_S KOS_str_out_of_memory;
-extern struct KOS_CONST_STRING_S KOS_str_value;
-extern struct KOS_CONST_STRING_S KOS_str_void;
-extern struct KOS_CONST_STRING_S KOS_str_xbuiltinx;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_empty;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_backtrace;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_file;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_function;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_line;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_offset;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_out_of_memory;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_value;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_void;
+KOS_API extern struct KOS_CONST_STRING_S KOS_str_xbuiltinx;
 
 #ifdef __cplusplus
 }

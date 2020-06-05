@@ -30,70 +30,88 @@ static inline unsigned KOS_get_string_length(KOS_OBJ_ID obj_id)
 extern "C" {
 #endif
 
+KOS_API
 KOS_OBJ_ID KOS_new_cstring(KOS_CONTEXT ctx,
                            const char *utf8_str);
 
+KOS_API
 KOS_OBJ_ID KOS_new_string(KOS_CONTEXT ctx,
                           const char *utf8_str,
                           unsigned    length);
 
+KOS_API
 KOS_OBJ_ID KOS_new_string_esc(KOS_CONTEXT ctx,
                               const char *utf8_str,
                               unsigned    length);
 
+KOS_API
 KOS_OBJ_ID KOS_new_const_ascii_cstring(KOS_CONTEXT ctx,
                                        const char *ascii_str);
 
+KOS_API
 KOS_OBJ_ID KOS_new_const_ascii_string(KOS_CONTEXT ctx,
                                       const char *ascii_str,
                                       unsigned    length);
 
+KOS_API
 KOS_OBJ_ID KOS_new_const_string(KOS_CONTEXT      ctx,
                                 const void      *str_data,
                                 unsigned         length,
                                 KOS_STRING_FLAGS elem_size);
 
+KOS_API
 KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  codes);
 
+KOS_API
 KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
                                       KOS_OBJ_ID  utf8_buf,
                                       unsigned    begin,
                                       unsigned    end);
 
+KOS_API
 unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
                             void      *buf,
                             unsigned   buf_size);
 
+KOS_API
 int KOS_string_to_cstr_vec(KOS_CONTEXT          ctx,
                            KOS_OBJ_ID           obj_id,
                            struct KOS_VECTOR_S *str_vec);
 
+KOS_API
 uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id);
 
+KOS_API
 KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
                             struct KOS_LOCAL_S *str_array,
                             unsigned            num_strings);
 
+KOS_API
 KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  str_array_id);
 
+KOS_API
 KOS_OBJ_ID KOS_string_slice(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  obj_id,
                             int64_t     begin,
                             int64_t     end);
 
+KOS_API
 KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  obj_id,
                                int         idx);
 
+KOS_API
 unsigned KOS_string_get_char_code(KOS_CONTEXT ctx,
                                   KOS_OBJ_ID  obj_id,
                                   int         idx);
 
+KOS_API
 int KOS_string_compare(KOS_OBJ_ID obj_id_a,
                        KOS_OBJ_ID obj_id_b);
 
+KOS_API
 int KOS_string_compare_slice(KOS_OBJ_ID obj_id_a,
                              int64_t    a_begin,
                              int64_t    a_end,
@@ -108,6 +126,7 @@ enum KOS_FIND_DIR_E {
 
 /* *pos contains starting search position on input and found position on output.
  * If pattern is not found, returns KOS_SUCCESS and sets *pos to -1. */
+KOS_API
 int KOS_string_find(KOS_CONTEXT         ctx,
                     KOS_OBJ_ID          obj_id_text,
                     KOS_OBJ_ID          obj_id_pattern,
@@ -121,6 +140,7 @@ enum KOS_SCAN_INCLUDE_E {
 
 /* *pos contains starting search position on input and found position on output.
  * If pattern is not found, returns KOS_SUCCESS and sets *pos to -1. */
+KOS_API
 int KOS_string_scan(KOS_CONTEXT             ctx,
                     KOS_OBJ_ID              obj_id_text,
                     KOS_OBJ_ID              obj_id_pattern,
@@ -128,15 +148,19 @@ int KOS_string_scan(KOS_CONTEXT             ctx,
                     enum KOS_SCAN_INCLUDE_E include,
                     int                    *pos);
 
+KOS_API
 KOS_OBJ_ID KOS_string_reverse(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id);
 
+KOS_API
 KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  obj_id,
                              unsigned    num_repeat);
 
+KOS_API
 KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
 
+KOS_API
 KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
 
 #ifdef __cplusplus

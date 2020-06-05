@@ -43,30 +43,37 @@ static inline uint8_t *KOS_buffer_data_volatile(KOS_OBJ_ID obj_id)
 extern "C" {
 #endif
 
+KOS_API
 KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
                           unsigned    size);
 
+KOS_API
 int KOS_buffer_reserve(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  obj_id,
                        unsigned    new_capacity);
 
+KOS_API
 int KOS_buffer_resize(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  obj_id,
                       unsigned    size);
 
+KOS_API
 uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id,
                               unsigned    size_delta);
 
+KOS_API
 uint8_t *KOS_buffer_data(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  obj_id);
 
+KOS_API
 int KOS_buffer_fill(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id,
                     int64_t     begin,
                     int64_t     end,
                     uint8_t     value);
 
+KOS_API
 int KOS_buffer_copy(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  destptr,
                     int64_t     dest_begin,
@@ -74,6 +81,7 @@ int KOS_buffer_copy(KOS_CONTEXT ctx,
                     int64_t     src_begin,
                     int64_t     src_end);
 
+KOS_API
 KOS_OBJ_ID KOS_buffer_slice(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  obj_id,
                             int64_t     begin,
