@@ -9,10 +9,16 @@ include ../build/rules.mk
 
 kos_exe = $(out_dir)/kos$(exe_suffix)
 
+ifeq ($(UNAME), Darwin)
+    LDFLAGS += -Wl,-exported_symbol -Wl,_KOS_*
+endif
+
 all: $(kos_exe)
 
 libs =  $(out_dir_base)/modules/$(call LIB_NAME,kos_modules)
 libs += $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
+
+$(kos_exe): $(libs)
 
 $(eval $(call LINK_EXE,kos,$(c_files),$(libs)))
 

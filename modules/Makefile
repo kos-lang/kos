@@ -26,6 +26,9 @@ ifeq ($(builtin_modules), 1)
     endef
 else
     CFLAGS += -DKOS_EXTERNAL_MODULES
+    ifeq ($(UNAME), Darwin)
+        LDFLAGS += -Wl,-exported_symbol -Wl,_init_kos_module
+    endif
     define EXTERNAL_MODULE
         external_modules += $1
         $$(call OBJECTS_FROM_SOURCES,$$(c_files_$1)): CFLAGS += -DKOS_PUBLIC_API

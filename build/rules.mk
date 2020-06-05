@@ -115,6 +115,9 @@ else
         endif
         ifeq ($(UNAME), Darwin)
             LDFLAGS += -Wl,-dead_strip
+            ifeq ($(STRIP), strip)
+                STRIP += -x
+            endif
         endif
         ifeq ($(native), 1)
             CFLAGS  += -march=native
