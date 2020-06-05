@@ -1529,7 +1529,7 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
                     0 == memcmp(loading.module_name, chain->module_name, loading.length)) {
 
                 KOS_raise_printf(ctx, "circular dependencies detected for module \"%.*s\"",
-                                 name_size, module_name);
+                                 (int)name_size, module_name);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
