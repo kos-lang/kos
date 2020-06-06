@@ -6,7 +6,7 @@
 #define KOS_API_H_INCLUDED
 
 #ifdef _WIN32
-#   define KOS_EXPORT_SYMBOL __declspec(dllexport)
+#   define KOS_EXPORT_SYMBOL
 #   define KOS_IMPORT_SYMBOL __declspec(dllimport)
 #elif defined(__GNUC__)
 #   ifdef KOS_SUPPORTS_VISIBILITY

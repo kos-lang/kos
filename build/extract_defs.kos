@@ -1,0 +1,130 @@
+#!/usr/bin/env kos
+
+import io
+import kos
+import base.*
+
+class create_defs {
+    constructor {
+        this.symbols = []
+    }
+    add_symbol(file_name, token, data) {
+        this.symbols.push({
+            file:  file_name,
+            token: token,
+            data:  data
+        })
+    }
+    extract(file_name, f) {
+        var new_line   = true
+        var new_expr   = true
+        var api_token  = void
+        var prev_token = void
+
+        const lexer = kos.raw_lexer(f.read(), true)
+        for const token in lexer {
+            switch token.type {
+                case kos.token_eol:
+                    new_line = true
+
+                case kos.token_separator:
+                    if token.sep == kos.sep_semicolon
+                       || token.sep == kos.sep_curly_open
+                       || token.sep == kos.sep_curly_close {
+
+                        if api_token && prev_token.type == kos.token_identifier {
+                            this.add_symbol(file_name, prev_token.token, true)
+                        }
+                        new_expr  = true
+                        api_token = void
+                    }
+                    else {
+                        if token.sep == kos.sep_paren_open
+                            && api_token
+                            && prev_token.type == kos.token_identifier {
+
+                            this.add_symbol(file_name, prev_token.token, false)
+                            api_token = void
+                        }
+                        new_expr = false
+                    }
+                    new_line = false
+
+                case kos.token_identifier:
+                    if new_expr && token.token == "KOS_API" {
+                        api_token = token
+                    }
+                    new_line = false
+                    new_expr = false
+
+                # Ignore whitespace and comments.
+                # This also helps ignore KOS_API tokens inside preprocessor
+                # defines, because # is treated as beginning of a comment.
+                case kos.token_whitespace, kos.token_comment:
+                    # When line continuation is encountered in a macro, ignore further lines
+                    if token.token[0] == "#" && token.token[-1] == "\\" {
+                        var need_eols = 2
+                        for const ign_token in lexer {
+                            if ign_token.type == kos.token_eol {
+                                need_eols -= 1
+                                if ! need_eols {
+                                    break
+                                }
+                            }
+                            else if ign_token.token[-1] == "\\" {
+                                need_eols += 1
+                            }
+                        }
+                        new_line = true
+                    }
+                    break
+
+                default:
+                    new_line = false
+                    new_expr = false
+            }
+
+            prev_token = token
+        }
+
+        this.symbols.sort(x => x.token)
+    }
+}
+
+# Gather symbols from headers listed on the command line
+const defs = create_defs()
+
+for const header_file in args[2:] {
+    with const f = io.open(header_file, io.ro) {
+        defs.extract(header_file, f)
+    }
+}
+
+const defs_base_name = args[1]
+
+# Dump symbols for GNU linker
+with const f = io.create(defs_base_name + ".gnu.def") {
+    f.print("{")
+
+    for const t in defs.symbols {
+        f.print("    _\(t.token);")
+    }
+
+    f.print("};")
+}
+
+# Dump symbols for MacOS linker
+with const f = io.create(defs_base_name + ".macos.def") {
+    for const t in defs.symbols {
+        f.print("_\(t.token)")
+    }
+}
+
+# Dump symbols for Windows linker
+with const f = io.create(defs_base_name + ".win.def") {
+    f.print("EXPORTS")
+    for const t in defs.symbols {
+        const data_suffix = t.data ? " DATA" : ""
+        f.print("    \(t.token)\(data_suffix)")
+    }
+}

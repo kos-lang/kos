@@ -9,9 +9,7 @@ include ../build/rules.mk
 
 kos_exe = $(out_dir)/kos$(exe_suffix)
 
-ifeq ($(UNAME), Darwin)
-    LDFLAGS += -Wl,-exported_symbol -Wl,_KOS_*
-endif
+LDFLAGS += $(call LD_DEFS,../core/kos_lang)
 
 all: $(kos_exe)
 

@@ -47,4 +47,9 @@ doc: interpreter
 	@mkdir -p "$(out_dir_base_rel)/doc"
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
 
-.PHONY: cldep clean_gcov doc install test fuzz time_us $(modules)
+defs: interpreter
+	@echo Extract defs
+	@mkdir -p "$(out_dir_base_rel)/doc"
+	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) build/extract_defs.kos core/kos_lang inc/*h core/kos_const_strings.h
+
+.PHONY: cldep clean_gcov defs doc install test fuzz time_us $(modules)

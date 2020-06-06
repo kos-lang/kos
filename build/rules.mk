@@ -105,6 +105,8 @@ ifeq ($(UNAME), Windows)
     CFLAGS += -wd5045 # compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
 
     gcov = 0
+
+    LD_DEFS = -def:$1.win.def
 else
     ifeq ($(debug), 0)
         CFLAGS += -O3 -DNDEBUG -ffunction-sections -fdata-sections
@@ -157,9 +159,10 @@ else
 
     ifeq ($(UNAME), Darwin)
         SHARED_LDFLAGS += -dynamiclib -undefined dynamic_lookup
+        LD_DEFS = -Wl,-exported_symbols_list -Wl,$1.macos.def
     else
         SHARED_LDFLAGS += -shared
-        EXE_LDFLAGS += -rdynamic
+        LD_DEFS = -Wl,-dynamic-list -Wl,$1.gnu.def
     endif
 
     STRICTFLAGS = -Wextra -Werror
