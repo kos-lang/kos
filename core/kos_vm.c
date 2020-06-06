@@ -3179,7 +3179,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
     KOS_LOCAL          args;
     KOS_LOCAL          ret;
 
-    KOS_instance_validate(ctx);
+    kos_validate_context(ctx);
 
     type = GET_OBJ_TYPE(func_obj);
 
@@ -3285,7 +3285,7 @@ KOS_OBJ_ID kos_vm_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     if ( ! error) {
 
-        KOS_instance_validate(ctx);
+        kos_validate_context(ctx);
 
         error = exec_function(ctx);
 

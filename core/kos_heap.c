@@ -743,7 +743,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
     assert(num_slots <= KOS_SLOTS_PER_PAGE);
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_SUSPENDED);
 
-    KOS_instance_validate(ctx);
+    kos_validate_context(ctx);
 
     /* Fast path: allocate from a page held by this thread */
     if (page) {

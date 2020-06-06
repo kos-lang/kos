@@ -438,7 +438,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     uint32_t    num_modules = KOS_get_array_size(inst->modules.modules);
     KOS_CONTEXT ctx         = &inst->threads.main_thread;
 
-    KOS_instance_validate(ctx);
+    kos_validate_context(ctx);
 
     error = kos_join_finished_threads(ctx, KOS_JOIN_ALL);
 
@@ -790,7 +790,7 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
 }
 
 #ifndef NDEBUG
-void KOS_instance_validate(KOS_CONTEXT ctx)
+void kos_validate_context(KOS_CONTEXT ctx)
 {
     KOS_INSTANCE *inst = ctx->inst;
     KOS_CONTEXT   thread_ctx;

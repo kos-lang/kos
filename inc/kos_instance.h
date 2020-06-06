@@ -249,13 +249,6 @@ KOS_API
 void KOS_instance_unregister_thread(KOS_INSTANCE *inst,
                                     KOS_CONTEXT   ctx);
 
-#ifdef NDEBUG
-#define KOS_instance_validate(ctx) ((void)0)
-#else
-KOS_API
-void KOS_instance_validate(KOS_CONTEXT ctx);
-#endif
-
 KOS_API
 void KOS_raise_exception(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  exception_obj);
