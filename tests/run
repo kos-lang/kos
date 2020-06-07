@@ -170,6 +170,7 @@ if [ "$RUN_ASAN" = "1" ]; then
 
     export SANITIZER="address"
     RUN_CPP14="1"
+    export builtin_modules=0
 fi
 
 if [ "$RUN_SEQFAIL" = "1" ]; then
@@ -180,6 +181,8 @@ fi
 if [ "$RUN_CPP14" = "1" ]; then
     runtests c++14 c++14
 fi
+
+unset builtin_modules
 
 unset SANITIZER
 unset seqfail
@@ -205,7 +208,9 @@ fi
 
 unset debug
 if [ "$RUN_RELEASE" = "1" ]; then
+    export builtin_modules=0
     runtests c11 c++11
+    unset builtin_modules
 fi
 
 if [ "$RUN_GCOV" = "1" ]; then
