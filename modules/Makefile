@@ -74,10 +74,19 @@ endef
 
 $(foreach module, $(modules), $(eval $(call COPY_MODULE,$(module))))
 
+DUMPSYMS = ls -l
+ifeq ($(UNAME), Linux)
+DUMPSYMS += objdump --syms
+endif
+ifeq ($(UNAME), Darwin)
+DUMPSYMS += objdump -syms
+endif
+
 define COPY_NATIVE_MODULE
 external: $(modules_dir)/$1$(so_suffix)
 $(modules_dir)/$1$(so_suffix): $(call SHARED_TARGET,$1) | $(modules_dir)
 	@cp $$< $$@
+	@$(DUMPSYMS) $$@
 endef
 
 $(foreach module, $(external_modules), $(eval $(call COPY_NATIVE_MODULE,$(module))))
