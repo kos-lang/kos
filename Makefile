@@ -11,10 +11,13 @@ modules += tests
 include build/rules.mk
 
 # By default, only build the interpreter
-all: interpreter
+all: interpreter modules_ext
 
 $(modules):
 	@$(MAKE) -C $@
+
+modules_ext:
+	@$(MAKE) -C modules external
 
 clean: clean_gcov
 
@@ -23,10 +26,12 @@ clean_gcov:
 
 interpreter tests: core modules
 
+modules_ext: interpreter
+
 fuzz: core modules
 	@$(MAKE) -C tests fuzz
 
-test: interpreter tests
+test: interpreter modules_ext tests
 	@$(MAKE) -C tests $@
 
 cldep:
@@ -39,17 +44,17 @@ ifeq ($(UNAME), Windows)
 $(modules): cldep
 endif
 
-install: interpreter
+install: interpreter modules_ext
 	@$(MAKE) -C interpreter $@
 
-doc: interpreter
+doc: interpreter modules_ext
 	@echo Extract docs
 	@mkdir -p "$(out_dir_base_rel)/doc"
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
 
-defs: interpreter
+defs: interpreter modules_ext
 	@echo Extract defs
 	@mkdir -p "$(out_dir_base_rel)/doc"
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) build/extract_defs.kos core/kos_lang inc/*h core/kos_const_strings.h
 
-.PHONY: cldep clean_gcov defs doc install test fuzz time_us $(modules)
+.PHONY: cldep clean_gcov defs doc install modules_ext test fuzz time_us $(modules)

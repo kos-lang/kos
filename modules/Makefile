@@ -26,13 +26,13 @@ ifeq ($(builtin_modules), 1)
     endef
 else
     CFLAGS += -DKOS_EXTERNAL_MODULES
-    ifeq ($(UNAME), Darwin)
-        LDFLAGS += -Wl,-exported_symbol -Wl,_init_kos_module
+    SHARED_LDFLAGS += $(call LD_DEFS,kos_module)
+    ifeq ($(UNAME), Windows)
+        SHARED_LDFLAGS += $(out_dir_base)/interpreter/kos.lib
     endif
     define EXTERNAL_MODULE
         external_modules += $1
         $$(call OBJECTS_FROM_SOURCES,$$(c_files_$1)): CFLAGS += -DKOS_PUBLIC_API
-        all: $(call SHARED_TARGET,$1)
         $$(eval $$(call LINK_SHARED_LIB,$1,$$(c_files_$1)))
     endef
 endif
@@ -60,9 +60,9 @@ endif
 
 all: copy_modules
 
-.PHONY: copy_modules
+.PHONY: copy_modules external
 
-copy_modules: $(addprefix $(modules_dir)/,$(modules) $(addsuffix $(so_suffix),$(external_modules)))
+copy_modules: $(addprefix $(modules_dir)/,$(modules))
 
 $(modules_dir):
 	@mkdir -p $(modules_dir)
@@ -75,7 +75,8 @@ endef
 $(foreach module, $(modules), $(eval $(call COPY_MODULE,$(module))))
 
 define COPY_NATIVE_MODULE
-$(modules_dir)/$1$(so_suffix): $(call SHARED_TARGET,$1) | $$(modules_dir)
+external: $(modules_dir)/$1$(so_suffix)
+$(modules_dir)/$1$(so_suffix): $(call SHARED_TARGET,$1) | $(modules_dir)
 	@cp $$< $$@
 endef
 
