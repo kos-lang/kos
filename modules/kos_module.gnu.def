@@ -1,3 +1,3 @@
 {
-    _init_kos_module;
+    init_kos_module;
 };

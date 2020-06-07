@@ -107,7 +107,7 @@ with const f = io.create(defs_base_name + ".gnu.def") {
     f.print("{")
 
     for const t in defs.symbols {
-        f.print("    _\(t.token);")
+        f.print("    \(t.token);")
     }
 
     f.print("};")
