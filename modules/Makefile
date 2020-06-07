@@ -76,10 +76,10 @@ $(foreach module, $(modules), $(eval $(call COPY_MODULE,$(module))))
 
 DUMPSYMS = ls -l
 ifeq ($(UNAME), Linux)
-DUMPSYMS += objdump --syms
+DUMPSYMS = objdump --syms
 endif
 ifeq ($(UNAME), Darwin)
-DUMPSYMS += objdump -syms
+DUMPSYMS = objdump -syms
 endif
 
 define COPY_NATIVE_MODULE
