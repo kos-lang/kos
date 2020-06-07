@@ -40,8 +40,7 @@ class create_defs {
                     }
                     else {
                         if token.sep == kos.sep_paren_open
-                            && api_token
-                            && prev_token.type == kos.token_identifier {
+                           && api_token && prev_token.type == kos.token_identifier {
 
                             this.add_symbol(file_name, prev_token.token, false)
                             api_token = void
