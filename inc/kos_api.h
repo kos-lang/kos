@@ -5,6 +5,12 @@
 #ifndef KOS_API_H_INCLUDED
 #define KOS_API_H_INCLUDED
 
+#ifdef __cplusplus
+#   define KOS_EXTERN_C extern "C"
+#else
+#   define KOS_EXTERN_C
+#endif
+
 #ifdef _WIN32
 #   define KOS_EXPORT_SYMBOL
 #   define KOS_IMPORT_SYMBOL __declspec(dllimport)
