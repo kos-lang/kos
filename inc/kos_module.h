@@ -157,9 +157,9 @@ do {                                                                   \
 } while (0)
 
 #ifdef KOS_EXTERNAL_MODULES
-#   define KOS_MODULE_INIT(name) KOS_EXPORT_SYMBOL init_kos_module
+#   define KOS_INIT_MODULE(name) extern "C" KOS_EXPORT_SYMBOL int init_kos_module
 #else
-#   define KOS_MODULE_INIT(name) kos_module_##name##_init
+#   define KOS_INIT_MODULE(name) int kos_module_##name##_init
 #endif
 
 #endif

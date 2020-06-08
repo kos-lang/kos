@@ -417,7 +417,7 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-int KOS_MODULE_INIT(math)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
+KOS_INIT_MODULE(math)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
