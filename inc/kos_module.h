@@ -156,8 +156,14 @@ do {                                                                   \
                               TO_SMALL_INT((int)(value)), 0));         \
 } while (0)
 
+#ifdef __cplusplus
+#   define EXTERN_C extern "C"
+#else
+#   define EXTERN_C
+#endif
+
 #ifdef KOS_EXTERNAL_MODULES
-#   define KOS_INIT_MODULE(name) extern "C" KOS_EXPORT_SYMBOL int init_kos_module
+#   define KOS_INIT_MODULE(name) EXTERN_C KOS_EXPORT_SYMBOL int init_kos_module
 #else
 #   define KOS_INIT_MODULE(name) int kos_module_##name##_init
 #endif
