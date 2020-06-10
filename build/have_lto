@@ -20,7 +20,8 @@ find_program()
 {
     PROGRAM="$1-$2"
     have "$PROGRAM" || PROGRAM="$(echo "$1" | sed 's/[^/]*$/$2/')"
-    have "$PROGRAM" || PROGRAM="$(echo "$1" | sed 's/-gcc$/-$2/')"
+    have "$PROGRAM" || PROGRAM="$(echo "$1" | sed 's/-g?cc$/-$2/')"
+    [ "$PROGRAM" != "$1" ] || PROGRAM=""
     echo "$PROGRAM"
 }
 

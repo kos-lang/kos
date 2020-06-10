@@ -144,7 +144,6 @@ else
                 endif
                 CFLAGS  += -flto -fno-fat-lto-objects
                 LDFLAGS += -ffunction-sections -fdata-sections -flto=auto -fuse-linker-plugin
-                $(info Using LTO)
             endif
         endif
         ifeq ($(UNAME), Darwin)
