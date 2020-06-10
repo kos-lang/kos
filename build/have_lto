@@ -1,0 +1,55 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2020 Chris Dragan
+
+set -e
+
+type_wrap()
+{
+    type "$1" 2>&1 >/dev/null
+}
+
+have()
+{
+    # WAR older bash bug -- type command prints error even if command not found
+    type_wrap "$1" 2>&1 >/dev/null
+}
+
+find_program()
+{
+    PROGRAM="$1-$2"
+    have "$PROGRAM" || PROGRAM="$(echo "$1" | sed 's/[^/]*$/$2/')"
+    have "$PROGRAM" || PROGRAM="$(echo "$1" | sed 's/-gcc$/-$2/')"
+    echo "$PROGRAM"
+}
+
+CC="$1"
+
+NM="$(find_program "$CC" nm)"
+OBJDUMP="$(find_program "$CC" objdump)"
+if ! have "$NM" && ! have "$OBJDUMP"; then
+    NM=nm
+    OBJDUMP=objdump
+fi
+
+SRC=$(mktemp)
+DEF=$(mktemp)
+OUT=$(mktemp)
+
+echo "void test_export() { } int main() { return 0; }" > "$SRC"
+echo "{ test_export; };" > "$DEF"
+
+if "$CC" -x c -flto=auto -fuse-linker-plugin -fno-fat-lto-objects "-Wl,--dynamic-list=$DEF" -o "$OUT" "$SRC" >/dev/null 2>&1; then
+    if have "$NM"; then
+        if "$NM" --dynamic "$OUT" 2>/dev/null | grep -q "test_export"; then
+            echo "true"
+        fi
+    elif have "$OBJDUMP"; then
+        if "$OBJDUMP" --dynamic-syms "$OUT" 2>/dev/null | grep -q "test_export"; then
+            echo "true"
+        fi
+    fi
+fi
+
+rm -f "$SRC" "$DEF" "$OUT"

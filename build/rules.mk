@@ -132,19 +132,27 @@ else
             ifeq (,$(LTOAR))
                 lto ?= 0
             else
-                lto ?= 1
+                ifeq (true,$(shell $(call inv_path,$(depth))build/have_lto $(CC)))
+                    lto ?= 1
+                else
+                    lto ?= 0
+                endif
             endif
             ifneq ($(lto), 0)
-                AR =  $(LTOAR)
+                ifneq (,$(LTOAR))
+                    AR = $(LTOAR)
+                endif
+                CFLAGS  += -flto -fno-fat-lto-objects
+                LDFLAGS += -ffunction-sections -fdata-sections -flto=auto -fuse-linker-plugin
+                $(info Using LTO)
             endif
         endif
         ifeq ($(UNAME), Darwin)
             lto ?= 1
-        endif
-        lto ?= 0
-        ifneq ($(lto), 0)
-            CFLAGS  += -flto
-            LDFLAGS += -ffunction-sections -fdata-sections -flto
+            ifneq ($(lto), 0)
+                CFLAGS  += -flto
+                LDFLAGS += -ffunction-sections -fdata-sections -flto
+            endif
         endif
     else
         CFLAGS += -O0 -g
@@ -162,7 +170,7 @@ else
         LD_DEFS = -Wl,-exported_symbols_list -Wl,$1.macos.def
     else
         SHARED_LDFLAGS += -shared
-        LD_DEFS = -Wl,-dynamic-list -Wl,$1.gnu.def
+        LD_DEFS = -Wl,--dynamic-list=$1.gnu.def
     endif
 
     STRICTFLAGS = -Wextra -Werror
