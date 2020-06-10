@@ -26,8 +26,6 @@ clean_gcov:
 
 interpreter tests: core modules
 
-modules_ext: interpreter
-
 fuzz: core modules
 	@$(MAKE) -C tests fuzz
 
@@ -42,6 +40,7 @@ time_us: core
 
 ifeq ($(UNAME), Windows)
 $(modules): cldep
+modules_ext: interpreter
 endif
 
 install: interpreter modules_ext
