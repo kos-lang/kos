@@ -312,9 +312,9 @@ c_files   ?=
 d_files = $(call DEPS_FROM_SOURCES,$(cpp_files) $(c_files))
 
 ##############################################################################
-# Declare 'all' as the first/default rule
+# Declare 'default' as the first/default rule
 
-all:
+default:
 
 ##############################################################################
 # Include dependency files
@@ -447,4 +447,4 @@ endif
 ##############################################################################
 # Declare virtual targets
 
-.PHONY: all clean
+.PHONY: default clean

@@ -11,7 +11,7 @@ modules += tests
 include build/rules.mk
 
 # By default, only build the interpreter
-all: interpreter modules_ext
+default: interpreter modules_ext
 
 $(modules):
 	@$(MAKE) -C $@
@@ -29,7 +29,7 @@ interpreter tests: core modules
 fuzz: core modules
 	@$(MAKE) -C tests fuzz
 
-test: all tests
+test: default tests
 	@$(MAKE) -C tests $@
 
 cldep:
@@ -43,14 +43,14 @@ $(modules): cldep
 modules_ext: interpreter
 endif
 
-install: all
+install: default
 	@$(MAKE) -C interpreter $@
 
-doc: all
+doc: default
 	@echo Extract docs
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
 
-defs: all
+defs: default
 	@echo Extract defs
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) build/extract_defs.kos core/kos_lang inc/*h core/kos_const_strings.h
 

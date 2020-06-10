@@ -37,4 +37,4 @@ include ../build/rules.mk
 
 $(eval $(call LINK_STATIC_LIB,kos_lang,$(c_files) $(cpp_files)))
 
-all: $(call LIB_TARGET,kos_lang)
+default: $(call LIB_TARGET,kos_lang)

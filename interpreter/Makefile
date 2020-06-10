@@ -11,7 +11,7 @@ kos_exe = $(out_dir)/kos$(exe_suffix)
 
 LDFLAGS += $(call LD_DEFS,../core/kos_lang)
 
-all: $(kos_exe)
+default: $(kos_exe)
 
 libs =  $(out_dir_base)/modules/$(call LIB_NAME,kos_modules)
 libs += $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
@@ -29,4 +29,4 @@ else
 destdir ?= /usr
 endif
 
-.PHONY: all install
+.PHONY: install

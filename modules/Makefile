@@ -46,7 +46,7 @@ $(eval $(call EXTERNAL_MODULE,math))
 
 $(eval $(call LINK_STATIC_LIB,kos_modules,$(c_files) $(cpp_files)))
 
-all: $(call LIB_TARGET,kos_modules)
+default: $(call LIB_TARGET,kos_modules)
 
 ######################################################################
 # Copy modules for the interpreter
@@ -59,7 +59,7 @@ else
 modules_dir = $(out_dir_base)/share/kos/modules
 endif
 
-all: copy_modules
+default: copy_modules
 
 .PHONY: copy_modules external
 
