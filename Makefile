@@ -29,7 +29,7 @@ interpreter tests: core modules
 fuzz: core modules
 	@$(MAKE) -C tests fuzz
 
-test: interpreter modules_ext tests
+test: all tests
 	@$(MAKE) -C tests $@
 
 cldep:
@@ -43,17 +43,15 @@ $(modules): cldep
 modules_ext: interpreter
 endif
 
-install: interpreter modules_ext
+install: all
 	@$(MAKE) -C interpreter $@
 
-doc: interpreter modules_ext
+doc: all
 	@echo Extract docs
-	@mkdir -p "$(out_dir_base_rel)/doc"
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
 
-defs: interpreter modules_ext
+defs: all
 	@echo Extract defs
-	@mkdir -p "$(out_dir_base_rel)/doc"
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) build/extract_defs.kos core/kos_lang inc/*h core/kos_const_strings.h
 
 .PHONY: cldep clean_gcov defs doc install modules_ext test fuzz time_us $(modules)
