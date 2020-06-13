@@ -110,7 +110,7 @@ try {
             TEST(a.type() == OBJ_VOID);
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "source type is not a void")
+            if (std::string(e.what()) == "invalid type")
                 exception = true;
         }
         TEST(exception);
@@ -141,7 +141,7 @@ try {
             TEST(std::string(a) == "2");
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "source type is not a string")
+            if (std::string(e.what()) == "invalid type")
                 exception = true;
         }
         TEST(exception);
@@ -162,7 +162,7 @@ try {
             TEST(static_cast<int64_t>(a[0]) == 0);
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "source type is not an array")
+            if (std::string(e.what()) == "invalid type")
                 exception = true;
         }
         TEST(exception);
@@ -175,7 +175,7 @@ try {
             TEST(static_cast<char>(a[0]));
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "source type is not a buffer")
+            if (std::string(e.what()) == "invalid type")
                 exception = true;
         }
         TEST(exception);
@@ -195,7 +195,7 @@ try {
             TEST(static_cast<bool>(a[""]));
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "source type is not an object")
+            if (std::string(e.what()) == "invalid type")
                 exception = true;
         }
         TEST(exception);
@@ -208,7 +208,7 @@ try {
             TEST(static_cast<bool>(a()));
         }
         catch (const kos::exception& e) {
-            if (std::string(e.what()) == "source type is not a function")
+            if (std::string(e.what()) == "invalid type")
                 exception = true;
         }
         TEST(exception);

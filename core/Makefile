@@ -31,8 +31,6 @@ c_files += kos_utf8.c
 c_files += kos_utils.c
 c_files += kos_vm.c
 
-cpp_files = kos_cpp_api.cpp
-
 include ../build/rules.mk
 
 $(eval $(call LINK_STATIC_LIB,kos_lang,$(c_files) $(cpp_files)))
