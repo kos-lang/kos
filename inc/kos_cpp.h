@@ -173,7 +173,7 @@ template<typename T>
 T value_from_object_ptr(context ctx, KOS_OBJ_ID obj_id)
 {
     assert( ! IS_BAD_PTR(obj_id));
-    if (GET_OBJ_TYPE(obj_id) != static_cast<KOS_TYPE>(T::id))
+    if (GET_OBJ_TYPE(obj_id) != static_cast<int>(T::id))
         ctx.raise_and_signal_error("invalid type");
 
     return T(ctx, obj_id);
