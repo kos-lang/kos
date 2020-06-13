@@ -464,7 +464,7 @@ static void get_lib_error(KOS_VECTOR *error_cstr)
     if (kos_vector_resize(error_cstr, 11) == KOS_SUCCESS)
         snprintf(error_cstr->buffer, error_cstr->size, "0x%08x", (unsigned)error);
     else {
-        kos_vector_resize(error_cstr, 1);
+        error_cstr->size      = 1;
         error_cstr->buffer[0] = 0;
     }
 }
@@ -477,7 +477,7 @@ static void get_lib_error(KOS_VECTOR *error_cstr)
     if (kos_vector_resize(error_cstr, len + 1) == KOS_SUCCESS)
         memcpy(error_cstr->buffer, error, len + 1);
     else {
-        kos_vector_resize(error_cstr, 1);
+        error_cstr->size      = 1;
         error_cstr->buffer[0] = 0;
     }
 }
