@@ -169,10 +169,8 @@ else
         LD_DEFS = -Wl,-exported_symbols_list -Wl,$1.macos.def
     else
         SHARED_LDFLAGS += -shared
-        ifeq (true,$(shell $(call inv_path,$(depth))build/have_lto $(CC)))
+        ifeq (true,$(shell $(call inv_path,$(depth))build/have_dynamic_list $(CC)))
             LD_DEFS = -Wl,--dynamic-list=$1.gnu.def
-        else
-            LD_DEFS = -rdynamic
         endif
     endif
 
