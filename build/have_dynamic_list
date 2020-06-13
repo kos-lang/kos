@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2020 Chris Dragan
+
+set -e
+
+CC="$1"
+
+SRC=$(mktemp)
+DEF=$(mktemp)
+OUT=$(mktemp)
+
+echo "void test_export() { } int main() { return 0; }" > "$SRC"
+echo "{ test_export; };" > "$DEF"
+
+if "$CC" -x c "-Wl,--dynamic-list=$DEF" -o "$OUT" "$SRC" >/dev/null 2>&1; then
+    echo "true"
+fi
+
+rm -f "$SRC" "$DEF" "$OUT"
