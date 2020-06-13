@@ -179,6 +179,29 @@ T value_from_object_ptr(context ctx, KOS_OBJ_ID obj_id)
     return T(ctx, obj_id);
 }
 
+template<>
+inline KOS_OBJ_ID value_from_object_ptr<KOS_OBJ_ID>(context ctx, KOS_OBJ_ID obj_id)
+{
+    return obj_id;
+}
+
+template<>
+inline std::string value_from_object_ptr<std::string>(context ctx, KOS_OBJ_ID obj_id)
+{
+    assert( ! IS_BAD_PTR(obj_id));
+    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
+        ctx.raise_and_signal_error("source type is not a string");
+
+    const unsigned len = KOS_string_to_utf8(obj_id, 0, 0);
+    if (len == ~0U)
+        ctx.raise_and_signal_error("invalid string");
+
+    std::string str(static_cast<size_t>(len), '\0');
+
+    (void)KOS_string_to_utf8(obj_id, &str[0], len);
+    return str;
+}
+
 class obj_id_converter {
     public:
         obj_id_converter(context ctx, KOS_OBJ_ID obj_id)
@@ -1964,12 +1987,6 @@ array to_object_ptr(context ctx, const std::vector<T>& v)
 // object ptr -> value
 // ===================
 
-template<>
-inline KOS_OBJ_ID value_from_object_ptr<KOS_OBJ_ID>(context ctx, KOS_OBJ_ID obj_id)
-{
-    return obj_id;
-}
-
 namespace detail {
 
     template<typename T>
@@ -2020,35 +2037,11 @@ inline int64_t value_from_object_ptr<int64_t>(context ctx, KOS_OBJ_ID obj_id)
     return detail::numeric_from_object_ptr<int64_t>(ctx, obj_id);
 }
 
-#if 0
-template<>
-integer value_from_object_ptr<integer>(context ctx, KOS_OBJ_ID obj_id)
-{
-    assert( ! IS_BAD_PTR(obj_id));
-    if ( ! IS_SMALL_INT(obj_id) && GET_OBJ_TYPE(obj_id) != OBJ_INTEGER)
-        ctx.raise_and_signal_error("source type is not an integer");
-
-    return integer(ctx, obj_id);
-}
-#endif
-
 template<>
 inline double value_from_object_ptr<double>(context ctx, KOS_OBJ_ID obj_id)
 {
     return detail::numeric_from_object_ptr<double>(ctx, obj_id);
 }
-
-#if 0
-template<>
-floating value_from_object_ptr<floating>(context ctx, KOS_OBJ_ID obj_id)
-{
-    assert( ! IS_BAD_PTR(obj_id));
-    if (GET_OBJ_TYPE(obj_id) != OBJ_FLOAT)
-        ctx.raise_and_signal_error("source type is not a float");
-
-    return floating(ctx, obj_id);
-}
-#endif
 
 template<>
 inline bool value_from_object_ptr<bool>(context ctx, KOS_OBJ_ID obj_id)
@@ -2058,35 +2051,6 @@ inline bool value_from_object_ptr<bool>(context ctx, KOS_OBJ_ID obj_id)
         ctx.raise_and_signal_error("source type is not a boolean");
 
     return !! KOS_get_bool(obj_id);
-}
-
-#if 0
-template<>
-boolean value_from_object_ptr<boolean>(context ctx, KOS_OBJ_ID obj_id)
-{
-    assert( ! IS_BAD_PTR(obj_id));
-    if (GET_OBJ_TYPE(obj_id) != OBJ_BOOLEAN)
-        ctx.raise_and_signal_error("source type is not a boolean");
-
-    return boolean(ctx, obj_id);
-}
-#endif
-
-template<>
-inline std::string value_from_object_ptr<std::string>(context ctx, KOS_OBJ_ID obj_id)
-{
-    assert( ! IS_BAD_PTR(obj_id));
-    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        ctx.raise_and_signal_error("source type is not a string");
-
-    const unsigned len = KOS_string_to_utf8(obj_id, 0, 0);
-    if (len == ~0U)
-        ctx.raise_and_signal_error("invalid string");
-
-    std::string str(static_cast<size_t>(len), '\0');
-
-    (void)KOS_string_to_utf8(obj_id, &str[0], len);
-    return str;
 }
 
 } // namespace kos
