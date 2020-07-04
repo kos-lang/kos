@@ -7,11 +7,13 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_utils.h"
 #include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_try.h"
+#include "../core/kos_utf8.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -188,8 +190,10 @@ static const RE_INSTR_DESC re_instr_descs[] = {
 };
 
 struct RE_CTX {
+    KOS_CONTEXT     ctx; /* For error reporting */
     KOS_STRING_ITER iter;
     int             idx;
+    int             can_be_multiplicity;
     unsigned        num_groups;
     unsigned        group_depth;
     KOS_VECTOR      buf;
@@ -200,6 +204,8 @@ struct RE {
     uint16_t bytecode_size;
     uint16_t bytecode[1];
 };
+
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_long, "regular expression too long");
 
 /* End of regular expression */
 #define EORE (~0U)
@@ -213,14 +219,14 @@ static uint32_t peek_next_char(struct RE_CTX *re_ctx)
 
     code = kos_string_iter_peek_next_code(&re_ctx->iter);
 
-    ++re_ctx->idx;
-
     return code;
 }
 
 static void consume_next_char(struct RE_CTX *re_ctx)
 {
     kos_string_iter_advance(&re_ctx->iter);
+
+    ++re_ctx->idx;
 }
 
 static int emit_instr(struct RE_CTX *re_ctx,
@@ -237,8 +243,10 @@ static int emit_instr(struct RE_CTX *re_ctx,
     if (error)
         return error;
 
-    if (re_ctx->buf.size > 0xFFFFU)
-        return KOS_ERROR_INTERNAL; /* TODO actual error */
+    if (re_ctx->buf.size > 0xFFFFU) {
+        KOS_raise_exception(re_ctx->ctx, KOS_CONST_ID(str_err_too_long));
+        return KOS_ERROR_EXCEPTION;
+    }
 
     dest      = (uint16_t *)(re_ctx->buf.buffer + pos);
     *(dest++) = (uint8_t)code;
@@ -254,6 +262,8 @@ static int emit_instr(struct RE_CTX *re_ctx,
     }
 
     va_end(args);
+
+    re_ctx->can_be_multiplicity = 1;
 
     return KOS_SUCCESS;
 }
@@ -273,10 +283,35 @@ static int emit_instr3(struct RE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg1,
     return emit_instr(re_ctx, code, 3, arg1, arg2, arg3);
 }
 
+static void encode_utf8(uint32_t code, char *buf, size_t buf_size)
+{
+    const unsigned len = kos_utf8_calc_buf_size_32(&code, 1);
+
+    assert(len < buf_size);
+    kos_utf8_encode_32(&code, 1, (uint8_t *)buf);
+    buf[len] = 0;
+}
+
 static int expect_char(struct RE_CTX *re_ctx, char c)
 {
-    if (peek_next_char(re_ctx) != (uint32_t)(uint8_t)c)
-        return KOS_ERROR_INTERNAL; /* TODO actual error */
+    const uint32_t next_char = peek_next_char(re_ctx);
+
+    if (next_char == EORE) {
+        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                         "expected %c at position %d but reached end of regular expression",
+                         c, re_ctx->idx);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    if (next_char != (uint32_t)(uint8_t)c) {
+        char str_next[6];
+
+        encode_utf8(next_char, &str_next[0], sizeof(str_next));
+        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                         "found character %s but expected %c at position %d",
+                         str_next, c, re_ctx->idx);
+        return KOS_ERROR_EXCEPTION;
+    }
 
     consume_next_char(re_ctx);
 
@@ -312,11 +347,19 @@ static int parse_alternative_match_seq(struct RE_CTX *re_ctx);
 
 static int parse_number(struct RE_CTX *re_ctx, uint32_t* number)
 {
-    uint32_t value = 0;
-    uint32_t code  = peek_next_char(re_ctx);
+    uint32_t  value = 0;
+    uint32_t  code  = peek_next_char(re_ctx);
+    const int pos   = re_ctx->idx;
 
-    if (code < '0' || code > '9')
-        return KOS_ERROR_INTERNAL; /* TODO actual error */
+    if (code < '0' || code > '9') {
+        char str_code[6];
+
+        encode_utf8(code, &str_code[0], sizeof(str_code));
+        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                         "found character %s but expected a decimal digit at position %d",
+                         str_code, pos);
+        return KOS_ERROR_EXCEPTION;
+    }
 
     value = code - '0';
 
@@ -333,8 +376,12 @@ static int parse_number(struct RE_CTX *re_ctx, uint32_t* number)
 
         value = (uint32_t)new_value;
 
-        if (value != new_value)
-            return KOS_ERROR_INTERNAL; /* TODO actual error */
+        if (value != new_value) {
+            KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                             "number at position %d too large",
+                             pos);
+            return KOS_ERROR_EXCEPTION;
+        }
     }
 
     return KOS_SUCCESS;
@@ -466,28 +513,39 @@ static int parse_optional_multiplicity(struct RE_CTX *re_ctx, uint32_t begin)
     int            error = KOS_SUCCESS;
     const uint32_t code  = peek_next_char(re_ctx);
 
-    switch (code) {
+    if ((code == '*') || (code == '+') || (code == '?') || (code == '{')) {
 
-        case '*':
-            consume_next_char(re_ctx);
-            error = emit_multiplicity(re_ctx, begin, 0U, ~0U);
-            break;
+        uint32_t min_count = 0U;
+        uint32_t max_count = 0U;
 
-        case '+':
-            consume_next_char(re_ctx);
-            error = emit_multiplicity(re_ctx, begin, 1U, ~0U);
-            break;
+        if ( ! re_ctx->can_be_multiplicity) {
+            char str_code[6];
+            encode_utf8(code, &str_code[0], sizeof(str_code));
+            KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                             "found unexpected character %s at position %d",
+                             str_code, re_ctx->idx);
+            return KOS_ERROR_EXCEPTION;
+        }
 
-        case '?':
-            consume_next_char(re_ctx);
-            error = emit_multiplicity(re_ctx, begin, 0U, 1U);
-            break;
+        consume_next_char(re_ctx);
 
-        case '{':
-            consume_next_char(re_ctx);
-            {
-                uint32_t min_count = 0U;
-                uint32_t max_count = 0U;
+        switch (code) {
+
+            case '*':
+                max_count = ~0U;
+                break;
+
+            case '+':
+                min_count = 1U;
+                max_count = ~0U;
+                break;
+
+            case '?':
+                max_count = 1U;
+                break;
+
+            default:
+                assert(code == '{');
 
                 error = parse_number(re_ctx, &min_count);
                 if (error)
@@ -504,15 +562,13 @@ static int parse_optional_multiplicity(struct RE_CTX *re_ctx, uint32_t begin)
                     max_count = min_count;
 
                 error = expect_char(re_ctx, '}');
-                if (error)
-                    break;
+                break;
+        }
 
-                error = emit_multiplicity(re_ctx, begin, min_count, max_count);
-            }
-            break;
+        if ( ! error)
+            error = emit_multiplicity(re_ctx, begin, min_count, max_count);
 
-        default:
-            break;
+        re_ctx->can_be_multiplicity = 0;
     }
 
     return error;
@@ -547,6 +603,8 @@ static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
     int      error;
     uint32_t code;
 
+    re_ctx->can_be_multiplicity = 0;
+
     TRY(parse_match_seq(re_ctx));
 
     while ((code = peek_next_char(re_ctx)) == '|') {
@@ -570,6 +628,8 @@ static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
 
         fork_offs = (uint32_t)re_ctx->buf.size;
 
+        re_ctx->can_be_multiplicity = 0;
+
         TRY(parse_match_seq(re_ctx));
     }
 
@@ -577,8 +637,15 @@ static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
         patch_jump_offs(re_ctx, jump_offs, (uint32_t)re_ctx->buf.size);
 
     if (code != ')' || ! re_ctx->group_depth) {
-        if (code != EORE)
-            error = KOS_ERROR_INTERNAL; /* TODO actual error */
+        if (code != EORE) {
+            char str_code[6];
+
+            encode_utf8(code, &str_code[0], sizeof(str_code));
+            KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                             "found unexpected character %s at position %d",
+                             str_code, re_ctx->idx);
+            return KOS_ERROR_EXCEPTION;
+        }
     }
 
 cleanup:
@@ -680,9 +747,11 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
 
     TRY(kos_vector_reserve(&re_ctx.buf, KOS_get_string_length(regex_str) * 2U));
 
-    re_ctx.idx         = -1;
-    re_ctx.num_groups  = 0U;
-    re_ctx.group_depth = 0U;
+    re_ctx.ctx                 = ctx;
+    re_ctx.idx                 = 1;
+    re_ctx.can_be_multiplicity = 0;
+    re_ctx.num_groups          = 0U;
+    re_ctx.group_depth         = 0U;
 
     TRY(parse_alternative_match_seq(&re_ctx));
 

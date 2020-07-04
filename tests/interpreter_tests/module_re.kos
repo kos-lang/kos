@@ -19,3 +19,19 @@ do {
 do {
     re.re(r"a+?|(b|^cc)d")
 }
+
+do {
+    expect_fail(() => re.re(r"("))
+    expect_fail(() => re.re(r")"))
+    expect_fail(() => re.re(r"a{1a}"))
+    expect_fail(() => re.re(r"a{a}"))
+    expect_fail(() => re.re(r"a{4294967296}"))
+    expect_fail(() => re.re(r"*"))
+    expect_fail(() => re.re(r"+"))
+    expect_fail(() => re.re(r"?"))
+    expect_fail(() => re.re(r"{1}"))
+    expect_fail(() => re.re(r"a**"))
+    expect_fail(() => re.re(r"a*+"))
+    expect_fail(() => re.re(r"a*??"))
+    expect_fail(() => re.re(r"a*{1}"))
+}
