@@ -221,10 +221,12 @@ if [ "$RUN_GCOV" = "1" ]; then
     export gcov=1
     export debug=1
     export seqfail=1
+    export builtin_modules=0
     runtests c99 c++14
     unset gcov
     unset debug
     unset seqfail
+    unset builtin_modules
 else
     rm -rf Out
 fi
