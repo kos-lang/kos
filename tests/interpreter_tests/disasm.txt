@@ -1,21 +1,32 @@
 ==============================================================================
 
 -- fun() --
-   function
-   num_regs     1
-   closure_size 0
-   min_args     0
-   num_def_args 0
-@disasm.kos:3:
-00000000: 82 00 00                          LOAD.CONST8     r0, 0 # "My String"
+  function
+  num_regs     1
+  closure_size 0
+  min_args     0
+  num_def_args 0
+@disasm.kos:7:
+00000000: 82 00 01                          LOAD.CONST8     r0, 1 # "My String"
 00000003: BE 00 00                          RETURN          0, r0
 
 -- <global>() --
-   function
-   num_regs     1
-   closure_size 0
-   min_args     0
-   num_def_args 0
-@disasm.kos:1:
-00000006: 82 00 01                          LOAD.CONST8     r0, 1 # <function fun @ 0x0>
-00000009: BE 00 00                          RETURN          0, r0
+  function
+  num_regs     2
+  closure_size 0
+  min_args     0
+  num_def_args 0
+@disasm.kos:3:
+00000006: 95 00 02 00 00 00 00 00 00 00     GET.MOD.ELEM    r0, 2, 0
+00000010: 82 01 00                          LOAD.CONST8     r1, 0 # "x*"
+00000013: BC 01 00 01 01                    CALL.FUN        r1, r0, r1, 1
+@disasm.kos:5:
+00000018: 82 00 02                          LOAD.CONST8     r0, 2 # <function fun @ 0x0>
+0000001B: BE 00 00                          RETURN          0, r0
+
+==============================================================================
+Disassembling regular expression: x*
+==============================================================================
+
+00000000: 000A 000C 0000 FFFF GREEDY.COUNT     END, 0, 65535
+00000008: 0000 0078           MATCH.ONE.CHAR   120

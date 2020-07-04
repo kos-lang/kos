@@ -15,3 +15,7 @@ do {
 do {
     re.re("^a.$")
 }
+
+do {
+    re.re(r"a+?|(b|^cc)d")
+}

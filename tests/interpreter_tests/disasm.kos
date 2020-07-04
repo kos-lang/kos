@@ -1,3 +1,7 @@
+import re
+
+re.re("x*")
+
 fun
 {
     return "My String"
