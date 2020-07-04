@@ -629,8 +629,8 @@ static void disassemble(struct RE *re, const char *re_cstr)
             if ( ! i_arg && desc->first_arg_is_offs) {
                 const unsigned target = (unsigned)offs + operand;
 
-                assert(target <= re->bytecode_size * 2);
-                if (target == re->bytecode_size * 2)
+                assert(target <= re->bytecode_size * 2U);
+                if (target == re->bytecode_size * 2U)
                     num_printed = snprintf(mnem_buf, mnem_remaining, "END");
                 else
                     num_printed = snprintf(mnem_buf, mnem_remaining, "%08X", (unsigned)offs + operand);
