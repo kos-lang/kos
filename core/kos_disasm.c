@@ -294,6 +294,79 @@ static int is_constant(KOS_BYTECODE_INSTR instr, int op)
     return 0;
 }
 
+static const char *const str_instr[] = {
+    "BREAKPOINT",
+    "LOAD.INT8",
+    "LOAD.CONST8",
+    "LOAD.CONST",
+    "LOAD.FUN8",
+    "LOAD.FUN",
+    "LOAD.TRUE",
+    "LOAD.FALSE",
+    "LOAD.VOID",
+    "LOAD.ARRAY8",
+    "LOAD.ARRAY",
+    "LOAD.OBJ",
+    "LOAD.OBJ.PROTO",
+    "MOVE",
+    "GET",
+    "GET.ELEM",
+    "GET.RANGE",
+    "GET.PROP8",
+    "GET.PROTO",
+    "GET.GLOBAL",
+    "GET.MOD",
+    "GET.MOD.ELEM",
+    "SET",
+    "SET.ELEM",
+    "SET.PROP8",
+    "SET.GLOBAL",
+    "PUSH",
+    "PUSH.EX",
+    "DEL",
+    "DEL.PROP8",
+    "ADD",
+    "SUB",
+    "MUL",
+    "DIV",
+    "MOD",
+    "SHL",
+    "SHR",
+    "SHRU",
+    "NOT",
+    "AND",
+    "OR",
+    "XOR",
+    "TYPE",
+    "CMP.EQ",
+    "CMP.NE",
+    "CMP.LE",
+    "CMP.LT",
+    "HAS.DP",
+    "HAS.DP.PROP8",
+    "HAS.SH",
+    "HAS.SH.PROP8",
+    "INSTANCEOF",
+    "JUMP",
+    "JUMP.COND",
+    "JUMP.NOT.COND",
+    "BIND",
+    "BIND.SELF",
+    "BIND.DEFAULTS",
+    "CALL",
+    "CALL.N",
+    "CALL.FUN",
+    "CALL.GEN",
+    "RETURN",
+    "TAIL.CALL",
+    "TAIL.CALL.N",
+    "TAIL.CALL.FUN",
+    "YIELD",
+    "THROW",
+    "CATCH",
+    "CANCEL"
+};
+
 void kos_disassemble(const char                           *filename,
                      uint32_t                              offs,
                      const uint8_t                        *bytecode,
@@ -311,80 +384,6 @@ void kos_disassemble(const char                           *filename,
     const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs_end  = func_addrs + num_func_addrs;
     KOS_VECTOR                            const_buf;
     const size_t                          max_const_chars = 32;
-    const size_t                          max_instr_len   = 15;
-
-    static const char *const str_instr[] = {
-        "BREAKPOINT",
-        "LOAD.INT8",
-        "LOAD.CONST8",
-        "LOAD.CONST",
-        "LOAD.FUN8",
-        "LOAD.FUN",
-        "LOAD.TRUE",
-        "LOAD.FALSE",
-        "LOAD.VOID",
-        "LOAD.ARRAY8",
-        "LOAD.ARRAY",
-        "LOAD.OBJ",
-        "LOAD.OBJ.PROTO",
-        "MOVE",
-        "GET",
-        "GET.ELEM",
-        "GET.RANGE",
-        "GET.PROP8",
-        "GET.PROTO",
-        "GET.GLOBAL",
-        "GET.MOD",
-        "GET.MOD.ELEM",
-        "SET",
-        "SET.ELEM",
-        "SET.PROP8",
-        "SET.GLOBAL",
-        "PUSH",
-        "PUSH.EX",
-        "DEL",
-        "DEL.PROP8",
-        "ADD",
-        "SUB",
-        "MUL",
-        "DIV",
-        "MOD",
-        "SHL",
-        "SHR",
-        "SHRU",
-        "NOT",
-        "AND",
-        "OR",
-        "XOR",
-        "TYPE",
-        "CMP.EQ",
-        "CMP.NE",
-        "CMP.LE",
-        "CMP.LT",
-        "HAS.DP",
-        "HAS.DP.PROP8",
-        "HAS.SH",
-        "HAS.SH.PROP8",
-        "INSTANCEOF",
-        "JUMP",
-        "JUMP.COND",
-        "JUMP.NOT.COND",
-        "BIND",
-        "BIND.SELF",
-        "BIND.DEFAULTS",
-        "CALL",
-        "CALL.N",
-        "CALL.FUN",
-        "CALL.GEN",
-        "RETURN",
-        "TAIL.CALL",
-        "TAIL.CALL.N",
-        "TAIL.CALL.FUN",
-        "YIELD",
-        "THROW",
-        "CATCH",
-        "CANCEL"
-    };
 
     kos_vector_init(&const_buf);
 
@@ -451,12 +450,8 @@ void kos_disassemble(const char                           *filename,
         str_opcode   = str_instr[opcode - INSTR_BREAKPOINT];
         num_operands = get_num_operands((KOS_BYTECODE_INSTR)opcode);
 
-        dis[sizeof(dis)-1] = 0;
-        dis_size           = strlen(str_opcode);
-        memcpy(dis, str_opcode, dis_size);
-        while (dis_size < max_instr_len + 1)
-            dis[dis_size++] = ' ';
-        dis[dis_size] = 0;
+        dis[0]   = 0;
+        dis_size = 0;
 
         for (iop = 0; iop < num_operands; iop++) {
             const int opsize = kos_get_operand_size((KOS_BYTECODE_INSTR)opcode, iop);
@@ -527,7 +522,7 @@ void kos_disassemble(const char                           *filename,
             bin[bin_len++] = ' ';
         bin[bin_len] = 0;
 
-        printf("%s%s%s\n", bin, dis, const_str);
+        printf("%s%-15s%s%s\n", bin, str_opcode, dis, const_str);
 
         bytecode += instr_size;
         offs     += instr_size;
