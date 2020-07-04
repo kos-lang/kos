@@ -13,6 +13,7 @@
 #include "../core/kos_memory.h"
 #include "../core/kos_try.h"
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression is not a string");
@@ -161,6 +162,29 @@ enum RE_INSTR {
     INSTR_JUMP,             /* JUMP <offs>                     */
     INSTR_GREEDY_COUNT,     /* GREEDY.COUNT <offs> <min> <max> */
     INSTR_LAZY_COUNT        /* LAZY.COUNT <offs> <min> <max>   */
+};
+
+struct RE_INSTR_DESC_S {
+    const char *str_instr;
+    unsigned    num_args          : 2;
+    unsigned    first_arg_is_offs : 1;
+};
+
+typedef struct RE_INSTR_DESC_S RE_INSTR_DESC;
+
+static const RE_INSTR_DESC re_instr_descs[] = {
+    { "MATCH.ONE.CHAR",   1, 0 },
+    { "MATCH.ANY.CHAR",   0, 0 },
+    { "MATCH.CLASS",      1, 0 },
+    { "MATCH.NOT.CLASS",  1, 0 },
+    { "MATCH.LINE.BEGIN", 0, 0 },
+    { "MATCH.LINE.END",   0, 0 },
+    { "BEGIN.GROUP",      1, 0 },
+    { "END.GROUP",        1, 0 },
+    { "FORK",             1, 1 },
+    { "JUMP",             1, 1 },
+    { "GREEDY.COUNT",     3, 1 },
+    { "LAZY.COUNT",       3, 1 }
 };
 
 struct RE_CTX {
@@ -427,9 +451,11 @@ static int emit_multiplicity(struct RE_CTX *re_ctx,
         instr = INSTR_LAZY_COUNT;
     }
 
-    TRY(emit_instr3(re_ctx, instr, pivot - begin, min_count, max_count));
+    TRY(emit_instr3(re_ctx, instr, 0, min_count, max_count));
 
     rotate_instr(re_ctx, begin, pivot);
+
+    patch_jump_offs(re_ctx, begin, (uint32_t)re_ctx->buf.size);
 
 cleanup:
     return error;
@@ -527,6 +553,8 @@ static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
 
         const uint32_t pivot = (uint32_t)re_ctx->buf.size;
 
+        consume_next_char(re_ctx);
+
         TRY(emit_instr1(re_ctx, INSTR_FORK, 0));
 
         rotate_instr(re_ctx, fork_offs, pivot);
@@ -555,6 +583,81 @@ static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
 
 cleanup:
     return error;
+}
+
+static void disassemble(struct RE *re, const char *re_cstr)
+{
+    const uint16_t       *ptr = re->bytecode;
+    const uint16_t *const end = ptr + re->bytecode_size;
+    char                  buf[79];
+#define MNEMONIC_SIZE 24
+    char                 *bytes = &buf[MNEMONIC_SIZE];
+
+    assert(MNEMONIC_SIZE < sizeof(buf));
+
+    memset(buf, '=', sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = 0;
+    printf("\n%s\nDisassembling regular expression: %s\n%s\n\n", buf, re_cstr, buf);
+
+    while (ptr < end) {
+        const uintptr_t            offs            = (uintptr_t)ptr - (uintptr_t)re->bytecode;
+        const uint16_t             instr           = *(ptr++);
+        const RE_INSTR_DESC *const desc            = &re_instr_descs[instr];
+        const uint16_t      *const instr_end       = ptr + desc->num_args;
+        char                      *mnem_buf        = &buf[0];
+        size_t                     mnem_remaining  = MNEMONIC_SIZE;
+        char                      *bytes_buf       = bytes;
+        size_t                     bytes_remaining = sizeof(buf) - MNEMONIC_SIZE;
+        int                        i_arg           = 0;
+        size_t                     num_printed;
+
+        num_printed = snprintf(bytes_buf, bytes_remaining, " %04X", instr);
+
+        assert(num_printed < bytes_remaining);
+        bytes_buf       += num_printed;
+        bytes_remaining -= num_printed;
+
+        for (; ptr < instr_end; i_arg++) {
+            uint16_t operand = *(ptr++);
+
+            num_printed = snprintf(bytes_buf, bytes_remaining, " %04X", operand);
+
+            assert(num_printed < bytes_remaining);
+            bytes_buf       += num_printed;
+            bytes_remaining -= num_printed;
+
+            if ( ! i_arg && desc->first_arg_is_offs) {
+                const unsigned target = (unsigned)offs + operand;
+
+                assert(target <= re->bytecode_size * 2);
+                if (target == re->bytecode_size * 2)
+                    num_printed = snprintf(mnem_buf, mnem_remaining, "END");
+                else
+                    num_printed = snprintf(mnem_buf, mnem_remaining, "%08X", (unsigned)offs + operand);
+            }
+            else
+                num_printed = snprintf(mnem_buf, mnem_remaining, "%u", operand);
+
+            assert(num_printed <= mnem_remaining);
+            mnem_buf       += num_printed;
+            mnem_remaining -= num_printed;
+
+            if (ptr < instr_end) {
+                assert(mnem_remaining >= 2);
+                mnem_buf[0] = ',';
+                mnem_buf[1] = ' ';
+                mnem_buf       += 2;
+                mnem_remaining -= 2;
+            }
+        }
+
+        assert(bytes_remaining >= 1);
+        *bytes_buf = 0;
+        assert(mnem_remaining >= 1);
+        *mnem_buf = 0;
+
+        printf("%08X:%-20s %-17s%s\n", (unsigned)offs, bytes, desc->str_instr, buf);
+    }
 }
 
 static void finalize(KOS_CONTEXT ctx, void *priv)
@@ -592,6 +695,16 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     re->num_groups    = (uint16_t)re_ctx.num_groups;
     re->bytecode_size = (uint16_t)(re_ctx.buf.size / sizeof(uint16_t));
     memcpy(re->bytecode, re_ctx.buf.buffer, re_ctx.buf.size);
+
+    if (ctx->inst->flags & KOS_INST_DISASM) {
+        const char *re_cstr = "?";
+
+        re_ctx.buf.size = 0;
+        if ( ! KOS_string_to_cstr_vec(ctx, regex_str, &re_ctx.buf))
+            re_cstr = re_ctx.buf.buffer;
+
+        disassemble(re, re_cstr);
+    }
 
     OBJPTR(OBJECT, regex)->finalize = finalize;
 
