@@ -348,7 +348,14 @@ int kos_executable_path(KOS_VECTOR *buf)
 {
     int error = KOS_ERROR_NOT_FOUND;
 
-    TRY(kos_vector_resize(buf, 256U));
+    /* Smaller starting buffer size in debug builds for better test coverage */
+#ifdef NDEBUG
+#   define INITIAL_EXE_SIZE 256U
+#else
+#   define INITIAL_EXE_SIZE 16U
+#endif
+
+    TRY(kos_vector_resize(buf, INITIAL_EXE_SIZE));
 
     for (;;) {
 
@@ -359,7 +366,10 @@ int kos_executable_path(KOS_VECTOR *buf)
         static const char proc_link[] = "/proc/curproc/file";
 #endif
 
-        const ssize_t num_read = readlink(proc_link, buf->buffer, buf->size - 1);
+        ssize_t num_read = readlink(proc_link, buf->buffer, buf->size - 1);
+
+        if (kos_seq_fail())
+            num_read = 0;
 
         if (num_read > 0) {
 
@@ -369,10 +379,8 @@ int kos_executable_path(KOS_VECTOR *buf)
 
             break;
         }
-        else if (num_read == 0)
-            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-        if (buf->size > 16384U)
+        if ((num_read == 0) || (buf->size > 0x7FFFU))
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
         TRY(kos_vector_resize(buf, buf->size * 2U));
