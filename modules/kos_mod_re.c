@@ -557,7 +557,9 @@ static int add_class_range(struct RE_CTX *re_ctx,
                     (void *)&range[end],
                     (desc->num_ranges - end) * sizeof(struct RE_CLASS_RANGE));
 
-        desc->num_ranges -= num_to_delete;
+        assert(num_to_delete < desc->num_ranges);
+
+        desc->num_ranges -= (uint16_t)num_to_delete;
 
         return kos_vector_resize(&re_ctx->class_data,
                                  old_size - num_to_delete * sizeof(struct RE_CLASS_RANGE));
