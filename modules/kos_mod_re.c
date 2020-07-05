@@ -197,6 +197,18 @@ struct RE_CTX {
     unsigned        num_groups;
     unsigned        group_depth;
     KOS_VECTOR      buf;
+    KOS_VECTOR      class_descs;
+    KOS_VECTOR      class_data;
+};
+
+struct RE_CLASS_DESC {
+    uint16_t begin_idx;
+    uint16_t num_ranges;
+};
+
+struct RE_CLASS_RANGE {
+    uint32_t begin_code;
+    uint32_t end_code;
 };
 
 struct RE {
@@ -393,10 +405,244 @@ static int parse_escape_seq(struct RE_CTX *re_ctx)
     return KOS_ERROR_INTERNAL;
 }
 
-static int parse_char_class(struct RE_CTX *re_ctx)
+static int parse_class_char(struct RE_CTX *re_ctx, uint32_t *out_code)
 {
-    /* TODO */
-    return KOS_ERROR_INTERNAL;
+    uint32_t code = peek_next_char(re_ctx);
+
+    if (code == EORE) {
+        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                         "expected a class character at position %d but reached end of regular expression",
+                         re_ctx->idx);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    if ((code == ']') || (code == '-')) {
+        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                         "found character %c but expected a class character at position %d",
+                         (char)(uint8_t)code, re_ctx->idx);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    consume_next_char(re_ctx);
+
+    if (code == '\\') {
+        /* TODO escape */
+        return KOS_ERROR_INTERNAL;
+    }
+
+    *out_code = code;
+
+    return KOS_SUCCESS;
+}
+
+static uint16_t generate_class(struct RE_CTX *re_ctx)
+{
+    struct RE_CLASS_DESC *desc;
+    uint16_t              class_id;
+
+    const size_t   new_size  = re_ctx->class_descs.size + sizeof(struct RE_CLASS_DESC);
+    const uint16_t begin_idx = (uint16_t)(re_ctx->class_data.size / sizeof(struct RE_CLASS_RANGE));
+    const int      error     = kos_vector_resize(&re_ctx->class_descs, new_size);
+
+    if (error) {
+        KOS_raise_exception(re_ctx->ctx, KOS_STR_OUT_OF_MEMORY);
+        return 0xFFFFU;
+    }
+
+    class_id = (uint16_t)(re_ctx->class_descs.size / sizeof(struct RE_CLASS_DESC)) - 1;
+
+    desc = (struct RE_CLASS_DESC *)re_ctx->class_descs.buffer + class_id;
+
+    desc->begin_idx  = begin_idx;
+    desc->num_ranges = 0;
+
+    return class_id;
+}
+
+static int add_class_range(struct RE_CTX *re_ctx,
+                           uint16_t       class_id,
+                           uint32_t       begin_code,
+                           uint32_t       end_code)
+{
+    struct RE_CLASS_DESC  *desc = (struct RE_CLASS_DESC *)re_ctx->class_descs.buffer + class_id;
+    struct RE_CLASS_RANGE *range;
+    size_t                 begin;
+    size_t                 end;
+    const size_t           old_size = re_ctx->class_data.size;
+    const size_t           new_size = old_size + sizeof(struct RE_CLASS_RANGE);
+    const int              error    = kos_vector_resize(&re_ctx->class_data, new_size);
+
+    assert(class_id == (re_ctx->class_descs.size / sizeof(struct RE_CLASS_DESC)) - 1);
+
+    if (error) {
+        KOS_raise_exception(re_ctx->ctx, KOS_STR_OUT_OF_MEMORY);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    assert(begin_code <= end_code);
+
+    range = (struct RE_CLASS_RANGE *)re_ctx->class_data.buffer + desc->begin_idx;
+    begin = 0;
+    end   = desc->num_ranges;
+
+    assert((char *)(range + end + 1) == re_ctx->class_data.buffer + re_ctx->class_data.size);
+
+    while (begin < end) {
+
+        const uint32_t mid      = (begin + end) / 2;
+        const uint32_t mid_code = range[mid].begin_code;
+
+        assert(mid < end);
+
+        if (begin_code == mid_code) {
+            begin = mid;
+            end   = mid;
+            break;
+        }
+
+        if (begin_code < mid_code)
+            end = mid;
+        else
+            begin = mid + 1;
+    }
+
+    if (begin == desc->num_ranges) {
+
+        range += desc->num_ranges - 1;
+
+        assert( ! desc->num_ranges || (begin_code > range->begin_code));
+
+        if (desc->num_ranges && (begin_code <= range->end_code + 1)) {
+
+            range->end_code = end_code;
+
+            return kos_vector_resize(&re_ctx->class_data, old_size);
+        }
+
+        ++range;
+        ++desc->num_ranges;
+
+        range->begin_code = begin_code;
+        range->end_code   = end_code;
+
+        return KOS_SUCCESS;
+    }
+
+    assert(begin_code <= range[begin].begin_code);
+
+    if (begin && (begin_code <= range[begin - 1].end_code + 1))
+        range[--begin].end_code = end_code;
+
+    for ( ; end < desc->num_ranges; ++end)
+        if (end_code + 1 < range[end].begin_code)
+            break;
+
+    if (begin < end) {
+
+        struct RE_CLASS_RANGE *joined_range  = &range[begin];
+        const uint32_t         last_end_code = range[end - 1].end_code;
+        const uint32_t         num_to_delete = end - begin - 1;
+
+        if (begin_code < joined_range->begin_code)
+            joined_range->begin_code = begin_code;
+
+        if (last_end_code > end_code)
+            end_code = last_end_code;
+
+        if (end_code > joined_range->end_code)
+            joined_range->end_code = end_code;
+
+        if (num_to_delete && (end < desc->num_ranges))
+            memmove((void *)(joined_range + 1),
+                    (void *)&range[end],
+                    (desc->num_ranges - end) * sizeof(struct RE_CLASS_RANGE));
+
+        desc->num_ranges -= num_to_delete;
+
+        return kos_vector_resize(&re_ctx->class_data,
+                                 old_size - num_to_delete * sizeof(struct RE_CLASS_RANGE));
+    }
+
+    assert(begin == end);
+    assert(begin < desc->num_ranges);
+    assert(end_code + 1 < range[begin].begin_code);
+
+    range += begin;
+
+    memmove((void *)range,
+            (void *)(range + 1),
+            (desc->num_ranges - end) * sizeof(struct RE_CLASS_RANGE));
+
+    range->begin_code = begin_code;
+    range->end_code   = end_code;
+
+    ++desc->num_ranges;
+
+    return KOS_SUCCESS;
+}
+
+static int parse_class(struct RE_CTX *re_ctx)
+{
+    uint32_t      code     = peek_next_char(re_ctx);
+    enum RE_INSTR instr    = INSTR_MATCH_CLASS;
+    uint16_t      class_id = generate_class(re_ctx);
+
+    if (class_id == 0xFFFFU)
+        return KOS_ERROR_EXCEPTION;
+
+    if (code == '^') {
+        consume_next_char(re_ctx);
+        instr = INSTR_MATCH_NOT_CLASS;
+
+        code = peek_next_char(re_ctx);
+    }
+
+    do {
+
+        int      error;
+        uint32_t end_code;
+        int      pos = re_ctx->idx;
+
+        error = parse_class_char(re_ctx, &code);
+        if (error)
+            return error;
+
+        end_code = peek_next_char(re_ctx);
+
+        if (end_code == '-') {
+
+            consume_next_char(re_ctx);
+
+            error = parse_class_char(re_ctx, &end_code);
+            if (error)
+                return error;
+        }
+        else
+            end_code = code;
+
+        if (code > end_code) {
+            char str_code1[6];
+            char str_code2[6];
+
+            encode_utf8(code, &str_code1[0], sizeof(str_code1));
+            encode_utf8(end_code, &str_code2[0], sizeof(str_code2));
+            KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                             "invalid character range %s-%s at position %d",
+                             str_code1, str_code2, pos);
+            return KOS_ERROR_EXCEPTION;
+        }
+
+        error = add_class_range(re_ctx, class_id, code, end_code);
+        if (error)
+            return error;
+
+        code = peek_next_char(re_ctx);
+
+    } while (code != ']');
+
+    consume_next_char(re_ctx);
+
+    return emit_instr1(re_ctx, instr, class_id);
 }
 
 static int parse_group(struct RE_CTX *re_ctx)
@@ -452,7 +698,7 @@ static int parse_single_match(struct RE_CTX *re_ctx)
 
         case '[':
             consume_next_char(re_ctx);
-            error = parse_char_class(re_ctx);
+            error = parse_class(re_ctx);
             break;
 
         case '(':
@@ -519,11 +765,9 @@ static int parse_optional_multiplicity(struct RE_CTX *re_ctx, uint32_t begin)
         uint32_t max_count = 0U;
 
         if ( ! re_ctx->can_be_multiplicity) {
-            char str_code[6];
-            encode_utf8(code, &str_code[0], sizeof(str_code));
             KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
-                             "found unexpected character %s at position %d",
-                             str_code, re_ctx->idx);
+                             "found unexpected character %c at position %d",
+                             (char)(uint8_t)code, re_ctx->idx);
             return KOS_ERROR_EXCEPTION;
         }
 
@@ -742,6 +986,8 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     kos_init_string_iter(&re_ctx.iter, regex_str);
 
     kos_vector_init(&re_ctx.buf);
+    kos_vector_init(&re_ctx.class_descs);
+    kos_vector_init(&re_ctx.class_data);
 
     /* TODO cache */
 
@@ -780,6 +1026,8 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     KOS_object_set_private_ptr(regex, re);
 
 cleanup:
+    kos_vector_destroy(&re_ctx.class_data);
+    kos_vector_destroy(&re_ctx.class_descs);
     kos_vector_destroy(&re_ctx.buf);
 
     return error;

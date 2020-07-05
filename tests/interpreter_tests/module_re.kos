@@ -34,4 +34,11 @@ do {
     expect_fail(() => re.re(r"a*+"))
     expect_fail(() => re.re(r"a*??"))
     expect_fail(() => re.re(r"a*{1}"))
+    expect_fail(() => re.re(r"["))
+    expect_fail(() => re.re(r"[]"))
+    expect_fail(() => re.re(r"[-]"))
+    expect_fail(() => re.re(r"[a"))
+    expect_fail(() => re.re(r"[0-]"))
+    expect_fail(() => re.re(r"[0--]"))
+    expect_fail(() => re.re(r"[1-0]"))
 }
