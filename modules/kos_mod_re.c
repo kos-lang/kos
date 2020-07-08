@@ -402,7 +402,8 @@ static int parse_number(struct RE_CTX *re_ctx, uint32_t* number)
 static int parse_escape_seq(struct RE_CTX *re_ctx)
 {
     /* TODO */
-    return KOS_ERROR_INTERNAL;
+    KOS_raise_printf(re_ctx->ctx, "escape sequences not implemented yet");
+    return KOS_ERROR_EXCEPTION;
 }
 
 static int parse_class_char(struct RE_CTX *re_ctx, uint32_t *out_code)
@@ -426,8 +427,9 @@ static int parse_class_char(struct RE_CTX *re_ctx, uint32_t *out_code)
     consume_next_char(re_ctx);
 
     if (code == '\\') {
-        /* TODO escape */
-        return KOS_ERROR_INTERNAL;
+        /* TODO */
+        KOS_raise_printf(re_ctx->ctx, "escape sequences in character classes not implemented yet");
+        return KOS_ERROR_EXCEPTION;
     }
 
     *out_code = code;
