@@ -489,7 +489,7 @@ static int add_class_range(struct RE_CTX *re_ctx,
 
     while (begin < end) {
 
-        const uint32_t mid      = (begin + end) / 2;
+        const size_t   mid      = (begin + end) / 2;
         const uint32_t mid_code = range[mid].begin_code;
 
         assert(mid < end);
@@ -541,7 +541,7 @@ static int add_class_range(struct RE_CTX *re_ctx,
 
         struct RE_CLASS_RANGE *joined_range  = &range[begin];
         const uint32_t         last_end_code = range[end - 1].end_code;
-        const uint32_t         num_to_delete = end - begin - 1;
+        const size_t           num_to_delete = end - begin - 1;
 
         if (begin_code < joined_range->begin_code)
             joined_range->begin_code = begin_code;
