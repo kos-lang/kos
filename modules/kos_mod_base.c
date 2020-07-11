@@ -127,7 +127,6 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT                  ctx,
     assert(KOS_get_array_size(regs.o) > 0);
 
     walk.o = KOS_array_read(ctx, regs.o, 0);
-    assert( ! IS_BAD_PTR(walk.o));
     TRY_OBJID(walk.o);
 
     if (GET_OBJ_TYPE(walk.o) != OBJ_OBJECT_WALK) {

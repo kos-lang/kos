@@ -459,7 +459,6 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
 
     for (i = 0; i < num_modules; i++) {
         KOS_OBJ_ID module_obj = KOS_array_read(ctx, inst->modules.modules, (int)i);
-        assert(!IS_BAD_PTR(module_obj));
         if (IS_BAD_PTR(module_obj))
             KOS_clear_exception(ctx);
         else if (GET_OBJ_TYPE(module_obj) == OBJ_MODULE) {

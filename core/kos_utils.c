@@ -237,8 +237,8 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 
             for (i = 0; i < lines; i++) {
                 KOS_OBJ_ID line = KOS_array_read(ctx, exception.o, (int)i);
-                assert(!KOS_is_exception_pending(ctx));
-                if (KOS_string_to_cstr_vec(ctx, line, &cstr))
+
+                if (KOS_is_exception_pending(ctx) || KOS_string_to_cstr_vec(ctx, line, &cstr))
                     break;
                 fprintf(dest, "%s\n", cstr.buffer);
             }

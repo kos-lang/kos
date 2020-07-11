@@ -9,6 +9,7 @@
 #include "../inc/kos_object.h"
 #include "kos_config.h"
 #include "kos_const_strings.h"
+#include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_math.h"
 #include "kos_misc.h"
@@ -226,7 +227,7 @@ KOS_OBJ_ID KOS_array_read(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx)
 
     assert( ! IS_BAD_PTR(obj_id));
 
-    if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
+    if ((GET_OBJ_TYPE(obj_id) != OBJ_ARRAY) || kos_seq_fail())
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
     else {
         const uint32_t size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
