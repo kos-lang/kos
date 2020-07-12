@@ -278,6 +278,10 @@ ifneq ($(mad_gc), 0)
     CFLAGS += -DCONFIG_MAD_GC
 endif
 
+ifdef tracy
+    CFLAGS += -DTRACY_ENABLE -I $(tracy)
+endif
+
 ##############################################################################
 # Optionally treat warnings as errors and add more checks
 

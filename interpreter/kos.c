@@ -13,6 +13,7 @@
 #include "../core/kos_heap.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_parser.h"
+#include "../core/kos_perf.h"
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
 #include <assert.h>
@@ -49,6 +50,8 @@ int main(int argc, char *argv[])
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
     KOS_VECTOR   buf;
+
+    PROF_ZONE_BEGIN_F();
 
     kos_vector_init(&buf);
 
@@ -244,6 +247,8 @@ cleanup:
 
     kos_vector_destroy(&buf);
 
+    PROF_ZONE_END_F();
+
     return error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -292,6 +297,8 @@ static int is_input_complete(KOS_VECTOR *buf,
     int                    error;
     struct KOS_AST_NODE_S *out;
 
+    PROF_ZONE_BEGIN_F();
+
     kos_mempool_init(&mempool);
 
     kos_parser_init(&parser, &mempool, 0, buf->buffer, buf->buffer + buf->size);
@@ -301,6 +308,8 @@ static int is_input_complete(KOS_VECTOR *buf,
     kos_parser_destroy(&parser);
 
     kos_mempool_destroy(&mempool);
+
+    PROF_ZONE_END_F();
 
     return error != KOS_ERROR_PARSE_FAILED || parser.token.type != TT_EOF;
 }
@@ -328,6 +337,8 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     KOS_LOCAL   print_args;
     int         genline_init = 0;
     KOS_VECTOR  tmp_buf;
+
+    PROF_ZONE_BEGIN_F();
 
     kos_vector_init(&tmp_buf);
 
@@ -432,6 +443,8 @@ cleanup:
         kos_getline_destroy(&state);
 
     kos_vector_destroy(&tmp_buf);
+
+    PROF_ZONE_END_F();
 
     return error;
 }

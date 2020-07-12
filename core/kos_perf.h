@@ -11,7 +11,24 @@
 #   undef CONFIG_PERF
 #endif
 
-#ifdef CONFIG_PERF
+#ifdef TRACY_ENABLE
+#   include "TracyC.h"
+#   define PROF_FRAME_START(name)        TracyCFrameMarkStart(name)
+#   define PROF_FRAME_END(name)          TracyCFrameMarkEnd(name)
+#   define PROF_MALLOC(ptr, size)        TracyCAlloc(ptr, size)
+#   define PROF_FREE(ptr)                TracyCFree(ptr)
+#   define PROF_ZONE_BEGIN(name)         TracyCZoneN(tracy_zone_ ## name, #name, 1)
+#   define PROF_ZONE_END(name)           TracyCZoneEnd(tracy_zone_ ## name)
+#   define KOS_PERF_CNT(stat)            (void)0
+#   define KOS_PERF_CNT_ARRAY(stat, idx) (void)0
+#   define KOS_PERF_ADD(stat, num)       (void)0
+#elif defined(CONFIG_PERF)
+#   define PROF_FRAME_START(name)        (void)0
+#   define PROF_FRAME_END(name)          (void)0
+#   define PROF_MALLOC(ptr, size)        (void)0
+#   define PROF_FREE(ptr)                (void)0
+#   define PROF_ZONE_BEGIN(name)         (void)0
+#   define PROF_ZONE_END(name)           (void)0
 #   define KOS_PERF_CNT(stat)            KOS_atomic_add_u64(kos_perf.stat, 1)
 #   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_u64(kos_perf.stat[idx], 1)
 #   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_u64(kos_perf.stat, (num))
@@ -49,9 +66,18 @@ struct KOS_PERF_S {
 extern struct KOS_PERF_S kos_perf;
 
 #else
+#   define PROF_FRAME_START(name)        (void)0
+#   define PROF_FRAME_END(name)          (void)0
+#   define PROF_MALLOC(ptr, size)        (void)0
+#   define PROF_FREE(ptr)                (void)0
+#   define PROF_ZONE_BEGIN(name)         (void)0
+#   define PROF_ZONE_END(name)           (void)0
 #   define KOS_PERF_CNT(stat)            (void)0
 #   define KOS_PERF_CNT_ARRAY(stat, idx) (void)0
 #   define KOS_PERF_ADD(stat, num)       (void)0
 #endif
+
+#define PROF_ZONE_BEGIN_F() PROF_ZONE_BEGIN(__FUNC__)
+#define PROF_ZONE_END_F()   PROF_ZONE_END(__FUNC__)
 
 #endif

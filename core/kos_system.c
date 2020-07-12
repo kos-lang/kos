@@ -6,6 +6,7 @@
 #include "../inc/kos_error.h"
 #include "kos_debug.h"
 #include "kos_memory.h"
+#include "kos_perf.h"
 #include "kos_try.h"
 #include <assert.h>
 #include <errno.h>
@@ -137,7 +138,10 @@ int kos_load_file(const char  *filename,
     if ( ! file_buf->buffer)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
+    PROF_MALLOC((void *)file_buf->buffer, size);
+
     if (size != fread((char *)file_buf->buffer, 1, size, file)) {
+        PROF_FREE((void *)file_buf->buffer);
         free((void *)file_buf->buffer);
         file_buf->buffer = 0;
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
@@ -156,6 +160,7 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
     if (file_buf->buffer) {
+        PROF_FREE((void *)file_buf->buffer);
         free((void *)file_buf->buffer);
         file_buf->buffer = 0;
         file_buf->size   = 0;
@@ -260,6 +265,10 @@ int kos_get_absolute_path(KOS_VECTOR *path)
     resolved_path = realpath(path->buffer, pathbuf);
 #endif
 
+    if (need_free) {
+        PROF_MALLOC((void *)resolved_path, strlen(resolved_path) + 1);
+    }
+
     if (resolved_path) {
 
         const size_t len = strlen(resolved_path) + 1;
@@ -269,8 +278,10 @@ int kos_get_absolute_path(KOS_VECTOR *path)
         if (!error)
             memcpy(path->buffer, resolved_path, len);
 
-        if (need_free)
+        if (need_free) {
+            PROF_FREE((void *)resolved_path);
             free(resolved_path);
+        }
     }
     else
         error = errno_to_error();

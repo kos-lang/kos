@@ -19,6 +19,7 @@
 #include "kos_math.h"
 #include "kos_object_internal.h"
 #include "kos_parser.h"
+#include "kos_perf.h"
 #include "kos_system.h"
 #include "kos_try.h"
 #include "kos_utf8.h"
@@ -1115,6 +1116,8 @@ static int compile_module(KOS_CONTEXT ctx,
     const uint32_t      old_bytecode_size = OBJPTR(MODULE, module_obj)->bytecode_size;
     unsigned            num_opt_passes    = 0;
 
+    PROF_ZONE_BEGIN_F();
+
     time_0 = kos_get_time_us();
 
     KOS_init_local_with(ctx, &module, module_obj);
@@ -1419,6 +1422,7 @@ cleanup:
     kos_parser_destroy(&parser);
     kos_compiler_destroy(&program);
     KOS_destroy_top_local(ctx, &module);
+    PROF_ZONE_END_F();
     return error;
 }
 
@@ -1459,6 +1463,8 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     KOS_INSTANCE   *const inst               = ctx->inst;
     KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
     KOS_FILEBUF           file_buf;
+
+    PROF_ZONE_BEGIN_F();
 
     kos_filebuf_init(&file_buf);
 
@@ -1632,6 +1638,8 @@ cleanup:
         *out_module_idx = module_idx;
         assert(!KOS_is_exception_pending(ctx));
     }
+
+    PROF_ZONE_END_F();
 
     return module.o;
 }

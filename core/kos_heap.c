@@ -2577,6 +2577,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     gc_trace(("GC ctx=%p begin cycle %u\n", (void *)ctx, heap->gc_cycles));
 
     KOS_PERF_CNT(gc_cycles);
+    PROF_FRAME_START("GC");
 
     ++heap->gc_cycles;
 
@@ -2666,6 +2667,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     heap->gc_state = GC_INACTIVE;
 
     release_helper_threads(heap);
+
+    PROF_FRAME_END("GC");
 
     kos_unlock_mutex(&heap->mutex);
 
