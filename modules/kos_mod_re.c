@@ -1107,7 +1107,20 @@ static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    return KOS_VOID;
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL str;
+
+    assert(KOS_get_array_size(args_obj) > 0);
+
+    KOS_init_locals(ctx, 1, &str);
+
+    str.o = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(str.o);
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &str, &str);
+
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
 int kos_module_re_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
