@@ -4,6 +4,7 @@
 
 #include "kos_compiler.h"
 #include "kos_misc.h"
+#include "kos_perf.h"
 #include "kos_try.h"
 #include "../inc/kos_error.h"
 #include <assert.h>
@@ -1936,7 +1937,16 @@ static int visit_node(KOS_COMP_UNIT *program,
 int kos_optimize(KOS_COMP_UNIT *program,
                  KOS_AST_NODE  *ast)
 {
+    int err;
     int t;
+
+    PROF_ZONE_BEGIN();
+
     assert(ast->type == NT_SCOPE);
-    return visit_node(program, ast, &t);
+
+    err = visit_node(program, ast, &t);
+
+    PROF_ZONE_END();
+
+    return err;
 }

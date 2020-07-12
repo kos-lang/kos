@@ -5462,7 +5462,7 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
     unsigned num_passes = 0;
     KOS_REG *reg        = 0;
 
-    PROF_ZONE_BEGIN_F();
+    PROF_ZONE_BEGIN();
 
     TRY(kos_vector_reserve(&program->code_buf,          1024));
     TRY(kos_vector_reserve(&program->code_gen_buf,      1024));
@@ -5488,7 +5488,7 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
         *num_opt_passes = num_passes;
 
 cleanup:
-    PROF_ZONE_END_F();
+    PROF_ZONE_END();
 
     return error;
 }

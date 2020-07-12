@@ -6,6 +6,7 @@
 #include "kos_ast.h"
 #include "kos_config.h"
 #include "kos_memory.h"
+#include "kos_perf.h"
 #include "kos_try.h"
 #include "../inc/kos_error.h"
 #include <assert.h>
@@ -3297,6 +3298,8 @@ int kos_parser_parse(KOS_PARSER    *parser,
     KOS_AST_NODE *root = 0;
     KOS_AST_NODE *node = 0;
 
+    PROF_ZONE_BEGIN();
+
     int error = KOS_SUCCESS;
 
     TRY(new_node(parser, &root, NT_SCOPE));
@@ -3318,6 +3321,8 @@ cleanup:
         *ret = root;
     else if (error == KOS_ERROR_SCANNING_FAILED)
         parser->error_str = parser->lexer.error_str;
+
+    PROF_ZONE_END();
 
     return error;
 }

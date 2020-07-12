@@ -1241,6 +1241,8 @@ static int exec_function(KOS_CONTEXT ctx)
     const uint32_t     num_regs = get_num_regs(stack, regs_idx);
 #endif
 
+    PROF_ZONE_BEGIN();
+
 #if KOS_DISPATCH_TABLE
     uint8_t            jump_offs;
     static void       *dispatch_table[] = {
@@ -3037,6 +3039,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                     store_instr_offs(stack, regs_idx,
                                      (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+                    PROF_ZONE_END();
                     return KOS_SUCCESS;
                 }
 
@@ -3069,6 +3072,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 store_instr_offs(stack, regs_idx,
                                  (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+                PROF_ZONE_END();
                 return KOS_SUCCESS;
             }
 
@@ -3090,6 +3094,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 store_instr_offs(stack, regs_idx,
                                  (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+                PROF_ZONE_END();
                 return KOS_SUCCESS;
             }
 
@@ -3145,8 +3150,10 @@ cleanup:
 
                 catch_offs = get_catch(stack, regs_idx, &catch_reg);
 
-                if (catch_offs == KOS_NO_CATCH)
+                if (catch_offs == KOS_NO_CATCH) {
+                    PROF_ZONE_END();
                     return KOS_ERROR_EXCEPTION;
+                }
 
                 assert(catch_reg < num_regs);
 

@@ -4,6 +4,7 @@
 
 #include "kos_compiler.h"
 #include "kos_ast.h"
+#include "kos_perf.h"
 #include "kos_try.h"
 #include "../inc/kos_error.h"
 #include <assert.h>
@@ -1167,8 +1168,17 @@ void kos_deactivate_vars(KOS_SCOPE *scope)
 int kos_compiler_process_vars(KOS_COMP_UNIT *program,
                               KOS_AST_NODE  *ast)
 {
+    int err;
+
+    PROF_ZONE_BEGIN();
+
     assert(ast->type == NT_SCOPE);
-    return visit_node(program, ast);
+
+    err = visit_node(program, ast);
+
+    PROF_ZONE_END();
+
+    return err;
 }
 
 static int predefine_global(KOS_COMP_UNIT      *program,

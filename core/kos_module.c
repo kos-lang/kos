@@ -1116,7 +1116,7 @@ static int compile_module(KOS_CONTEXT ctx,
     const uint32_t      old_bytecode_size = OBJPTR(MODULE, module_obj)->bytecode_size;
     unsigned            num_opt_passes    = 0;
 
-    PROF_ZONE_BEGIN_F();
+    PROF_ZONE_BEGIN();
 
     time_0 = kos_get_time_us();
 
@@ -1422,7 +1422,7 @@ cleanup:
     kos_parser_destroy(&parser);
     kos_compiler_destroy(&program);
     KOS_destroy_top_local(ctx, &module);
-    PROF_ZONE_END_F();
+    PROF_ZONE_END();
     return error;
 }
 
@@ -1464,7 +1464,7 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
     KOS_FILEBUF           file_buf;
 
-    PROF_ZONE_BEGIN_F();
+    PROF_ZONE_BEGIN();
 
     kos_filebuf_init(&file_buf);
 
@@ -1639,7 +1639,7 @@ cleanup:
         assert(!KOS_is_exception_pending(ctx));
     }
 
-    PROF_ZONE_END_F();
+    PROF_ZONE_END();
 
     return module.o;
 }
