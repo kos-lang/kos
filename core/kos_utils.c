@@ -1495,7 +1495,7 @@ static KOS_OBJ_ID string_vprintf(KOS_CONTEXT ctx,
             vsnprintf(buf.buffer, buf.size, format, args2);
         }
 
-        str = KOS_new_string(ctx, buf.buffer, (size_t)size);
+        str = KOS_new_string(ctx, buf.buffer, (unsigned)size);
     }
     else
         str = KOS_STR_EMPTY;
