@@ -19,7 +19,7 @@ void *kos_malloc(size_t size)
 
     ptr = malloc(size);
 
-    PROF_MALLOC(ptr, size);
+    PROF_MALLOC(ptr, size)
 
     return ptr;
 }
@@ -29,18 +29,18 @@ void *kos_realloc(void *ptr, size_t size)
     if (kos_seq_fail())
         return 0;
 
-    PROF_FREE(ptr);
+    PROF_FREE(ptr)
 
     ptr = realloc(ptr, size);
 
-    PROF_MALLOC(ptr, size);
+    PROF_MALLOC(ptr, size)
 
     return ptr;
 }
 
 void kos_free(void *ptr)
 {
-    PROF_FREE(ptr);
+    PROF_FREE(ptr)
 
     free(ptr);
 }
@@ -55,14 +55,14 @@ void *kos_malloc_aligned(size_t size, size_t alignment)
 
     ptr = _aligned_malloc(size, alignment);
 
-    PROF_MALLOC(ptr, size);
+    PROF_MALLOC(ptr, size)
 
     return ptr;
 }
 
 void kos_free_aligned(void *ptr)
 {
-    PROF_FREE(ptr);
+    PROF_FREE(ptr)
 
     _aligned_free(ptr);
 }
@@ -79,14 +79,14 @@ void *kos_malloc_aligned(size_t size, size_t alignment)
     if (posix_memalign(&ptr, alignment, size))
         return 0;
 
-    PROF_MALLOC(ptr, size);
+    PROF_MALLOC(ptr, size)
 
     return ptr;
 }
 
 void kos_free_aligned(void *ptr)
 {
-    PROF_FREE(ptr);
+    PROF_FREE(ptr)
 
     free(ptr);
 }

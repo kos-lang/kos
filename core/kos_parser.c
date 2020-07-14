@@ -3295,11 +3295,11 @@ void kos_parser_init(KOS_PARSER           *parser,
 int kos_parser_parse(KOS_PARSER    *parser,
                      KOS_AST_NODE **ret)
 {
+    PROF_ZONE(PARSER)
+
     KOS_AST_NODE *root  = 0;
     KOS_AST_NODE *node  = 0;
     int           error = KOS_SUCCESS;
-
-    PROF_ZONE_BEGIN();
 
     TRY(new_node(parser, &root, NT_SCOPE));
 
@@ -3320,8 +3320,6 @@ cleanup:
         *ret = root;
     else if (error == KOS_ERROR_SCANNING_FAILED)
         parser->error_str = parser->lexer.error_str;
-
-    PROF_ZONE_END();
 
     return error;
 }

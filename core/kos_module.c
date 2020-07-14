@@ -1109,6 +1109,8 @@ static int compile_module(KOS_CONTEXT ctx,
                           unsigned    data_size,
                           int         is_repl)
 {
+    PROF_ZONE(MODULE)
+
     uint64_t            time_0;
     uint64_t            time_1;
     uint64_t            time_2;
@@ -1120,8 +1122,6 @@ static int compile_module(KOS_CONTEXT ctx,
     int                 error             = KOS_SUCCESS;
     const uint32_t      old_bytecode_size = OBJPTR(MODULE, module_obj)->bytecode_size;
     unsigned            num_opt_passes    = 0;
-
-    PROF_ZONE_BEGIN();
 
     time_0 = kos_get_time_us();
 
@@ -1427,7 +1427,6 @@ cleanup:
     kos_parser_destroy(&parser);
     kos_compiler_destroy(&program);
     KOS_destroy_top_local(ctx, &module);
-    PROF_ZONE_END();
     return error;
 }
 
@@ -1453,6 +1452,8 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
                                  unsigned    data_size,   /* Data length if data is not 0           */
                                  int        *out_module_idx)
 {
+    PROF_ZONE(MODULE)
+
     static const char     base[]             = "base";
     int                   error              = KOS_SUCCESS;
     int                   module_idx         = -1;
@@ -1469,11 +1470,10 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     KOS_MODULE_LOAD_CHAIN loading            = { 0, 0, 0 };
     KOS_FILEBUF           file_buf;
 
-    PROF_ZONE_BEGIN();
-
     kos_filebuf_init(&file_buf);
 
     get_module_name(module_name, name_size, &loading);
+    PROF_ZONE_NAME(loading.module_name, loading.length)
 
     KOS_init_locals(ctx, 7,
                     &actual_module_name, &module_dir, &module_path, &path_array,
@@ -1644,8 +1644,6 @@ cleanup:
         *out_module_idx = module_idx;
         assert(!KOS_is_exception_pending(ctx));
     }
-
-    PROF_ZONE_END();
 
     return module.o;
 }

@@ -138,10 +138,10 @@ int kos_load_file(const char  *filename,
     if ( ! file_buf->buffer)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
-    PROF_MALLOC((void *)file_buf->buffer, size);
+    PROF_MALLOC((void *)file_buf->buffer, size)
 
     if (size != fread((char *)file_buf->buffer, 1, size, file)) {
-        PROF_FREE((void *)file_buf->buffer);
+        PROF_FREE((void *)file_buf->buffer)
         free((void *)file_buf->buffer);
         file_buf->buffer = 0;
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
@@ -160,7 +160,7 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
     if (file_buf->buffer) {
-        PROF_FREE((void *)file_buf->buffer);
+        PROF_FREE((void *)file_buf->buffer)
         free((void *)file_buf->buffer);
         file_buf->buffer = 0;
         file_buf->size   = 0;
@@ -266,7 +266,7 @@ int kos_get_absolute_path(KOS_VECTOR *path)
 #endif
 
     if (need_free) {
-        PROF_MALLOC((void *)resolved_path, strlen(resolved_path) + 1);
+        PROF_MALLOC((void *)resolved_path, strlen(resolved_path) + 1)
     }
 
     if (resolved_path) {
@@ -279,7 +279,7 @@ int kos_get_absolute_path(KOS_VECTOR *path)
             memcpy(path->buffer, resolved_path, len);
 
         if (need_free) {
-            PROF_FREE((void *)resolved_path);
+            PROF_FREE((void *)resolved_path)
             free(resolved_path);
         }
     }

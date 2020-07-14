@@ -434,10 +434,10 @@ static int visit_child_nodes(KOS_COMP_UNIT *program,
     return error;
 }
 
-typedef struct KOS_IMPORT_INFO_S {
+typedef struct KOS_IMPORT_INFO_V_S {
     KOS_COMP_UNIT      *program;
     const KOS_AST_NODE *node;
-} KOS_IMPORT_INFO;
+} KOS_IMPORT_INFO_V;
 
 static int import_global(const char *global_name,
                          unsigned    global_length,
@@ -446,7 +446,7 @@ static int import_global(const char *global_name,
                          void       *cookie)
 {
     int                 error  = KOS_SUCCESS;
-    KOS_IMPORT_INFO    *info   = (KOS_IMPORT_INFO *)cookie;
+    KOS_IMPORT_INFO_V  *info   = (KOS_IMPORT_INFO_V *)cookie;
     KOS_AST_NODE *const g_node = (KOS_AST_NODE *)
         kos_mempool_alloc(&info->program->allocator, sizeof(KOS_AST_NODE) + global_length);
 
@@ -521,7 +521,7 @@ static int import(KOS_COMP_UNIT *program,
 
     if (node) {
         if (node->token.op == OT_MUL) {
-            KOS_IMPORT_INFO info;
+            KOS_IMPORT_INFO_V info;
 
             info.program = program;
             info.node    = node;
@@ -1168,15 +1168,13 @@ void kos_deactivate_vars(KOS_SCOPE *scope)
 int kos_compiler_process_vars(KOS_COMP_UNIT *program,
                               KOS_AST_NODE  *ast)
 {
-    int err;
+    PROF_ZONE(COMPILER)
 
-    PROF_ZONE_BEGIN();
+    int err;
 
     assert(ast->type == NT_SCOPE);
 
     err = visit_node(program, ast);
-
-    PROF_ZONE_END();
 
     return err;
 }

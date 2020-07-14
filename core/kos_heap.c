@@ -731,6 +731,8 @@ static void *alloc_object(KOS_CONTEXT ctx,
                           KOS_TYPE    object_type,
                           uint32_t    size)
 {
+    PROF_ZONE(HEAP)
+
     KOS_PAGE       *page       = ctx->cur_page;
     const uint32_t  num_slots  = (size + sizeof(KOS_SLOT) - 1) >> KOS_OBJ_ALIGN_BITS;
     unsigned        seek_depth = KOS_MAX_PAGE_SEEK;
@@ -891,6 +893,8 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
                                KOS_TYPE    object_type,
                                uint32_t    size)
 {
+    PROF_ZONE(HEAP)
+
     KOS_OBJ_HEADER   *hdr = 0;
     KOS_HUGE_TRACKER *new_tracker;
     KOS_LOCAL         tracker;
@@ -1122,6 +1126,8 @@ static void set_marking_in_pages(KOS_PAGE             *page,
 
 static void clear_marking(KOS_HEAP *heap)
 {
+    PROF_ZONE(GC)
+
     set_marking_in_pages(heap->used_pages.head, WHITE, 0);
 }
 
@@ -1543,6 +1549,8 @@ static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helpe
 
 static uint32_t gray_to_black(KOS_HEAP *heap)
 {
+    PROF_ZONE(GC)
+
     assert(heap->walk_threads == 0);
     assert(KOS_atomic_read_relaxed_ptr(heap->walk_pages) == 0);
 
@@ -1597,6 +1605,8 @@ static void mark_roots_in_threads(KOS_INSTANCE *inst)
 
 static void mark_roots(KOS_CONTEXT ctx)
 {
+    PROF_ZONE(GC)
+
     KOS_INSTANCE *const inst = ctx->inst;
 
     mark_object_black(inst->prototypes.object_proto);
@@ -2161,6 +2171,8 @@ static void update_threads_after_evacuation(KOS_INSTANCE *inst)
 
 static void update_after_evacuation(KOS_CONTEXT ctx)
 {
+    PROF_ZONE(GC)
+
     KOS_INSTANCE *const inst = ctx->inst;
     KOS_HEAP           *heap = &inst->heap;
 
@@ -2236,6 +2248,8 @@ static int evacuate(KOS_CONTEXT              ctx,
                     KOS_GC_STATS            *out_stats,
                     struct KOS_INCOMPLETE_S *incomplete)
 {
+    PROF_ZONE(GC)
+
     KOS_HEAP    *heap  = get_heap(ctx);
     int          error = KOS_SUCCESS;
     KOS_PAGE    *page  = heap->used_pages.head;
@@ -2546,6 +2560,8 @@ int KOS_resume_context(KOS_CONTEXT ctx)
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
                         KOS_GC_STATS *out_stats)
 {
+    PROF_ZONE(GC)
+
     uint64_t      time_0;
     uint64_t      time_1;
     KOS_HEAP     *heap            = get_heap(ctx);
@@ -2581,7 +2597,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     gc_trace(("GC ctx=%p begin cycle %u\n", (void *)ctx, heap->gc_cycles));
 
     KOS_PERF_CNT(gc_cycles);
-    PROF_FRAME_START("GC");
+    PROF_FRAME_START("GC")
 
     ++heap->gc_cycles;
 
@@ -2672,7 +2688,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     release_helper_threads(heap);
 
-    PROF_FRAME_END("GC");
+    PROF_FRAME_END("GC")
 
     kos_unlock_mutex(&heap->mutex);
 

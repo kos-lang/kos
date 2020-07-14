@@ -11,26 +11,33 @@
 #   undef CONFIG_PERF
 #endif
 
-#ifdef TRACY_ENABLE
-#   include "TracyC.h"
-#   define PROF_FRAME_START(name)        TracyCFrameMarkStart(name)
-#   define PROF_FRAME_END(name)          TracyCFrameMarkEnd(name)
-#   define PROF_MALLOC(ptr, size)        TracyCAlloc(ptr, size)
-#   define PROF_FREE(ptr)                TracyCFree(ptr)
-#   define PROF_ZONE_BEGIN()             TracyCZone(tracy_zone, 1)
-#   define PROF_ZONE_END()               TracyCZoneEnd(tracy_zone)
-#   define PROF_ZONE_NAME(name, size)    TracyCZoneName(tracy_zone, name, size)
+#if defined(__cplusplus) && defined(TRACY_ENABLE)
+#   include "Tracy.hpp"
+#   define PROF_FRAME_START(name)        FrameMarkStart(name)
+#   define PROF_FRAME_END(name)          FrameMarkEnd(name)
+#   define PROF_MALLOC(ptr, size)        TracyAlloc(ptr, size)
+#   define PROF_FREE(ptr)                TracyFree(ptr)
+#   define PROF_ZONE(color)              ZoneScopedC(PROF_ ## color)
+#   define PROF_ZONE_N(color, name)      ZoneScopedNC(#name, PROF_ ## color)
+#   define PROF_ZONE_NAME(name, len)     ZoneName(name, len)
+#   define PROF_PARSER                   0xA0A0A0
+#   define PROF_COMPILER                 0x808080
+#   define PROF_MODULE                   0x909090
+#   define PROF_INSTR                    0x10E010
+#   define PROF_VM                       0xE0E010
+#   define PROF_HEAP                     0x080880
+#   define PROF_GC                       0x1010E0
 #   define KOS_PERF_CNT(stat)            (void)0
 #   define KOS_PERF_CNT_ARRAY(stat, idx) (void)0
 #   define KOS_PERF_ADD(stat, num)       (void)0
 #elif defined(CONFIG_PERF)
-#   define PROF_FRAME_START(name)        (void)0
-#   define PROF_FRAME_END(name)          (void)0
-#   define PROF_MALLOC(ptr, size)        (void)0
-#   define PROF_FREE(ptr)                (void)0
-#   define PROF_ZONE_BEGIN()             (void)0
-#   define PROF_ZONE_END()               (void)0
-#   define PROF_ZONE_NAME(name, size)    (void)0
+#   define PROF_FRAME_START(name)
+#   define PROF_FRAME_END(name)
+#   define PROF_MALLOC(ptr, size)
+#   define PROF_FREE(ptr)
+#   define PROF_ZONE(color)
+#   define PROF_ZONE_N(color, name)
+#   define PROF_ZONE_NAME(name, len)
 #   define KOS_PERF_CNT(stat)            KOS_atomic_add_u64(kos_perf.stat, 1)
 #   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_u64(kos_perf.stat[idx], 1)
 #   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_u64(kos_perf.stat, (num))
@@ -68,13 +75,13 @@ struct KOS_PERF_S {
 extern struct KOS_PERF_S kos_perf;
 
 #else
-#   define PROF_FRAME_START(name)        (void)0
-#   define PROF_FRAME_END(name)          (void)0
-#   define PROF_MALLOC(ptr, size)        (void)0
-#   define PROF_FREE(ptr)                (void)0
-#   define PROF_ZONE_BEGIN()             (void)0
-#   define PROF_ZONE_END()               (void)0
-#   define PROF_ZONE_NAME(name, size)    (void)0
+#   define PROF_FRAME_START(name)
+#   define PROF_FRAME_END(name)
+#   define PROF_MALLOC(ptr, size)
+#   define PROF_FREE(ptr)
+#   define PROF_ZONE(color)
+#   define PROF_ZONE_N(color, name)
+#   define PROF_ZONE_NAME(name, len)
 #   define KOS_PERF_CNT(stat)            (void)0
 #   define KOS_PERF_CNT_ARRAY(stat, idx) (void)0
 #   define KOS_PERF_ADD(stat, num)       (void)0

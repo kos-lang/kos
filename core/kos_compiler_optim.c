@@ -1937,16 +1937,14 @@ static int visit_node(KOS_COMP_UNIT *program,
 int kos_optimize(KOS_COMP_UNIT *program,
                  KOS_AST_NODE  *ast)
 {
+    PROF_ZONE(COMPILER)
+
     int err;
     int t;
-
-    PROF_ZONE_BEGIN();
 
     assert(ast->type == NT_SCOPE);
 
     err = visit_node(program, ast, &t);
-
-    PROF_ZONE_END();
 
     return err;
 }

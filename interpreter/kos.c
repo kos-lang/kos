@@ -40,6 +40,8 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf);
 
 int main(int argc, char *argv[])
 {
+    PROF_ZONE(MODULE)
+
     int          error       = KOS_SUCCESS;
     int          inst_ok     = 0;
     int          is_script   = 0;
@@ -50,8 +52,6 @@ int main(int argc, char *argv[])
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
     KOS_VECTOR   buf;
-
-    PROF_ZONE_BEGIN();
 
     kos_vector_init(&buf);
 
@@ -247,8 +247,6 @@ cleanup:
 
     kos_vector_destroy(&buf);
 
-    PROF_ZONE_END();
-
     return error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -292,12 +290,12 @@ static int is_input_complete(KOS_VECTOR *buf,
                              KOS_VECTOR *tmp,
                              int        *out_error)
 {
+    PROF_ZONE(MODULE)
+
     KOS_PARSER             parser;
     struct KOS_MEMPOOL_S   mempool;
     int                    error;
     struct KOS_AST_NODE_S *out;
-
-    PROF_ZONE_BEGIN();
 
     kos_mempool_init(&mempool);
 
@@ -308,8 +306,6 @@ static int is_input_complete(KOS_VECTOR *buf,
     kos_parser_destroy(&parser);
 
     kos_mempool_destroy(&mempool);
-
-    PROF_ZONE_END();
 
     return error != KOS_ERROR_PARSE_FAILED || parser.token.type != TT_EOF;
 }
@@ -332,13 +328,13 @@ static int enforce_eol(KOS_VECTOR *buf)
 
 static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 {
+    PROF_ZONE(MODULE)
+
     int         error;
     KOS_GETLINE state;
     KOS_LOCAL   print_args;
     int         genline_init = 0;
     KOS_VECTOR  tmp_buf;
-
-    PROF_ZONE_BEGIN();
 
     kos_vector_init(&tmp_buf);
 
@@ -443,8 +439,6 @@ cleanup:
         kos_getline_destroy(&state);
 
     kos_vector_destroy(&tmp_buf);
-
-    PROF_ZONE_END();
 
     return error;
 }

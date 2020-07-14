@@ -507,6 +507,8 @@ static int init_registers(KOS_CONTEXT ctx,
                           unsigned    num_args,
                           KOS_OBJ_ID  this_obj)
 {
+    PROF_ZONE(VM)
+
     int            error            = KOS_SUCCESS;
     uint32_t       reg;
     const uint32_t args_reg         = OBJPTR(FUNCTION, func_obj)->opts.args_reg;
@@ -729,6 +731,8 @@ static int prepare_call(KOS_CONTEXT        ctx,
                         uint32_t           rarg1,
                         unsigned           num_args)
 {
+    PROF_ZONE(VM)
+
     int                error     = KOS_SUCCESS;
     int                state_set = 0;
     KOS_FUNCTION_STATE state;
@@ -1229,6 +1233,8 @@ extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
 
 static int exec_function(KOS_CONTEXT ctx)
 {
+    PROF_ZONE(VM)
+
     const uint8_t     *bytecode;
     KOS_BYTECODE_INSTR instr;
     KOS_OBJ_ID         out      = KOS_BADPTR;
@@ -1241,7 +1247,21 @@ static int exec_function(KOS_CONTEXT ctx)
     const uint32_t     num_regs = get_num_regs(stack, regs_idx);
 #endif
 
-    PROF_ZONE_BEGIN();
+#if defined(__cplusplus) && defined(TRACY_ENABLE)
+    {
+        assert(regs_idx >= 3);
+        const KOS_OBJ_ID func_obj = KOS_atomic_read_relaxed_obj(
+                OBJPTR(STACK, stack)->buf[regs_idx-3]);
+        const KOS_OBJ_ID name = OBJPTR(FUNCTION, func_obj)->name;
+        assert(GET_OBJ_TYPE(name) == OBJ_STRING);
+        /* This works correctly only for KOS_STRING_ELEM_8 and ASCII function names */
+        PROF_ZONE_NAME(
+                (OBJPTR(STRING, name)->header.flags & KOS_STRING_LOCAL)
+                    ? (const char *)&OBJPTR(STRING, name)->local.data[0]
+                    : (const char *)OBJPTR(STRING, name)->ptr.data_ptr,
+                OBJPTR(STRING, name)->header.length);
+    }
+#endif
 
 #if KOS_DISPATCH_TABLE
     uint8_t            jump_offs;
@@ -1276,6 +1296,7 @@ static int exec_function(KOS_CONTEXT ctx)
 #endif
 
             BEGIN_INSTRUCTION(LOAD_CONST8): { /* <r.dest>, <uint8> */
+                PROF_ZONE_N(INSTR, "LOAD.CONST8")
                 const uint8_t value = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1290,6 +1311,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_CONST): { /* <r.dest>, <uint32> */
+                PROF_ZONE_N(INSTR, "LOAD.CONST")
                 const uint32_t value = load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1304,6 +1326,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_FUN8): { /* <r.dest>, <uint8> */
+                PROF_ZONE_N(INSTR, "LOAD.FUN8")
                 const uint8_t value = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1331,6 +1354,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_FUN): { /* <r.dest>, <uint32> */
+                PROF_ZONE_N(INSTR, "LOAD.FUN")
                 const uint32_t value = load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1357,6 +1381,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_INT8): { /* <r.dest>, <int8> */
+                PROF_ZONE_N(INSTR, "LOAD.INT8")
                 const int8_t value = (int8_t)bytecode[2];
 
                 rdest = bytecode[1];
@@ -1368,6 +1393,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_TRUE): { /* <r.dest> */
+                PROF_ZONE_N(INSTR, "LOAD.TRUE")
                 rdest = bytecode[1];
 
                 WRITE_REGISTER(rdest, KOS_TRUE);
@@ -1377,6 +1403,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_FALSE): { /* <r.dest> */
+                PROF_ZONE_N(INSTR, "LOAD.FALSE")
                 rdest = bytecode[1];
 
                 WRITE_REGISTER(rdest, KOS_FALSE);
@@ -1386,6 +1413,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_VOID): { /* <r.dest> */
+                PROF_ZONE_N(INSTR, "LOAD.VOID")
                 rdest = bytecode[1];
 
                 WRITE_REGISTER(rdest, KOS_VOID);
@@ -1395,6 +1423,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_ARRAY8): { /* <r.dest>, <size.uint8> */
+                PROF_ZONE_N(INSTR, "LOAD.ARRAY8")
                 const uint8_t size = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1409,6 +1438,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_ARRAY): { /* <r.dest>, <size.int32> */
+                PROF_ZONE_N(INSTR, "LOAD.ARRAY")
                 const uint32_t size = load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1423,6 +1453,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_OBJ): { /* <r.dest> */
+                PROF_ZONE_N(INSTR, "LOAD.OBJ")
                 rdest = bytecode[1];
 
                 out = KOS_new_object(ctx);
@@ -1435,6 +1466,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(LOAD_OBJ_PROTO): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "LOAD.OBJ.PROTO")
                 const unsigned rsrc = bytecode[2];
 
                 assert(rsrc < num_regs);
@@ -1451,6 +1483,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(MOVE): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "MOVE")
                 const unsigned rsrc = bytecode[2];
 
                 assert(rsrc < num_regs);
@@ -1466,6 +1499,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_PROTO): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "GET.PROTO")
                 const unsigned rsrc = bytecode[2];
                 KOS_OBJ_ID     constr_obj;
 
@@ -1494,6 +1528,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_GLOBAL): { /* <r.dest>, <int32> */
+                PROF_ZONE_N(INSTR, "GET.GLOBAL")
                 const int32_t  idx = (int32_t)load_32(bytecode+2);
 
                 rdest = bytecode[1];
@@ -1508,6 +1543,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SET_GLOBAL): { /* <int32>, <r.src> */
+                PROF_ZONE_N(INSTR, "SET.GLOBAL")
                 const int32_t  idx  = (int32_t)load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
 
@@ -1523,6 +1559,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <int32>, <r.glob> */
+                PROF_ZONE_N(INSTR, "GET.MOD")
                 const int      mod_idx    = (int32_t)load_32(bytecode+2);
                 const unsigned rglob      = bytecode[6];
                 KOS_OBJ_ID     glob_idx;
@@ -1556,6 +1593,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <int32>, <int32> */
+                PROF_ZONE_N(INSTR, "GET.MOD.ELEM")
                 const int  mod_idx    = (int32_t)load_32(bytecode+2);
                 const int  glob_idx   = (int32_t)load_32(bytecode+6);
                 KOS_OBJ_ID module_obj = KOS_array_read(ctx,
@@ -1578,6 +1616,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET): { /* <r.dest>, <r.src>, <r.prop> */
+                PROF_ZONE_N(INSTR, "GET")
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rprop = bytecode[3];
                 KOS_OBJ_ID     src;
@@ -1645,6 +1684,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_ELEM): { /* <r.dest>, <r.src>, <int32> */
+                PROF_ZONE_N(INSTR, "GET.ELEM")
                 const unsigned rsrc = bytecode[2];
                 const int32_t  idx  = (int32_t)load_32(bytecode+3);
                 KOS_OBJ_ID     src;
@@ -1677,6 +1717,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_RANGE): { /* <r.dest>, <r.src>, <r.begin>, <r.end> */
+                PROF_ZONE_N(INSTR, "GET.RANGE")
                 const unsigned rsrc   = bytecode[2];
                 const unsigned rbegin = bytecode[3];
                 const unsigned rend   = bytecode[4];
@@ -1754,6 +1795,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(GET_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
+                PROF_ZONE_N(INSTR, "GET.PROP8")
                 const unsigned rsrc = bytecode[2];
                 const uint8_t  idx  = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -1802,6 +1844,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SET): { /* <r.dest>, <r.prop>, <r.src> */
+                PROF_ZONE_N(INSTR, "SET")
                 const unsigned rprop = bytecode[2];
                 const unsigned rsrc  = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -1877,6 +1920,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SET_ELEM): { /* <r.dest>, <int32>, <r.src> */
+                PROF_ZONE_N(INSTR, "SET.ELEM")
                 const int32_t  idx  = (int32_t)load_32(bytecode+2);
                 const unsigned rsrc = bytecode[6];
                 KOS_OBJ_ID     dest;
@@ -1905,6 +1949,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SET_PROP8): { /* <r.dest>, <str.idx.uint8>, <r.src> */
+                PROF_ZONE_N(INSTR, "SET.PROP8")
                 const uint8_t  idx  = bytecode[2];
                 const unsigned rsrc = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -1967,6 +2012,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(PUSH): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "PUSH")
                 const unsigned rsrc = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1981,6 +2027,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(PUSH_EX): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "PUSH.EX")
                 const unsigned rsrc = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1995,6 +2042,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(DEL): { /* <r.dest>, <r.prop> */
+                PROF_ZONE_N(INSTR, "DEL")
                 const unsigned rprop = bytecode[2];
 
                 rdest = bytecode[1];
@@ -2009,6 +2057,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(DEL_PROP8): { /* <r.dest>, <str.idx.uint8> */
+                PROF_ZONE_N(INSTR, "DEL.PROP8")
                 const uint8_t idx = bytecode[2];
                 KOS_OBJ_ID    prop;
 
@@ -2026,6 +2075,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(ADD): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "ADD")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2083,6 +2133,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SUB): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "SUB")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2123,6 +2174,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(MUL): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "MUL")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2163,6 +2215,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(DIV): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "DIV")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2203,6 +2256,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(MOD): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "MOD")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
 
@@ -2243,6 +2297,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SHL): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "SHL")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2272,6 +2327,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SHR): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "SHR")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2301,6 +2357,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(SHRU): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "SHRU")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2330,6 +2387,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(NOT): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "NOT")
                 const unsigned rsrc = bytecode[2];
                 int64_t        a;
 
@@ -2349,6 +2407,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(AND): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "AND")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2372,6 +2431,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(OR): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "OR")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2395,6 +2455,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(XOR): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "XOR")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 int64_t        a;
@@ -2418,6 +2479,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(TYPE): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "TYPE")
                 const unsigned rsrc  = bytecode[2];
                 KOS_OBJ_ID     src;
                 unsigned       type_idx;
@@ -2466,6 +2528,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(CMP_EQ): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "CMP.EQ")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 KOS_OBJ_ID     src1;
@@ -2487,6 +2550,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(CMP_NE): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "CMP.NE")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 KOS_OBJ_ID     src1;
@@ -2511,6 +2575,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(CMP_LE): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "CMP.LE")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 KOS_OBJ_ID     src1;
@@ -2532,6 +2597,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(CMP_LT): { /* <r.dest>, <r.src1>, <r.src2> */
+                PROF_ZONE_N(INSTR, "CMP.LT")
                 const unsigned rsrc1 = bytecode[2];
                 const unsigned rsrc2 = bytecode[3];
                 KOS_OBJ_ID     src1;
@@ -2553,6 +2619,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(HAS_DP): { /* <r.dest>, <r.src>, <r.prop> */
+                PROF_ZONE_N(INSTR, "HAS.DP")
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rprop = bytecode[3];
 
@@ -2573,6 +2640,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(HAS_DP_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
+                PROF_ZONE_N(INSTR, "HAS.DP.PROP8")
                 const unsigned rsrc  = bytecode[2];
                 const int32_t  idx   = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -2596,6 +2664,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(HAS_SH): { /* <r.dest>, <r.src>, <r.prop> */
+                PROF_ZONE_N(INSTR, "HAS.SH")
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rprop = bytecode[3];
 
@@ -2616,6 +2685,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(HAS_SH_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
+                PROF_ZONE_N(INSTR, "HAS.SH.PROP8")
                 const unsigned rsrc  = bytecode[2];
                 const uint8_t  idx   = bytecode[3];
                 KOS_OBJ_ID     prop;
@@ -2639,6 +2709,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(INSTANCEOF): { /* <r.dest>, <r.src>, <r.func> */
+                PROF_ZONE_N(INSTR, "INSTANCEOF")
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rfunc = bytecode[3];
                 KOS_OBJ_ID     constr_obj;
@@ -2670,6 +2741,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(JUMP): { /* <delta.int32> */
+                PROF_ZONE_N(INSTR, "JUMP")
                 int delta;
 
                 KOS_help_gc(ctx);
@@ -2680,6 +2752,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(JUMP_COND): { /* <delta.int32>, <r.src> */
+                PROF_ZONE_N(INSTR, "JUMP.COND")
                 const int32_t  offs = (int32_t)load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
                 int            delta;
@@ -2697,6 +2770,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(JUMP_NOT_COND): { /* <delta.int32>, <r.src> */
+                PROF_ZONE_N(INSTR, "JUMP.NOT.COND")
                 const int32_t  offs = (int32_t)load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
                 int            delta;
@@ -2716,6 +2790,7 @@ static int exec_function(KOS_CONTEXT ctx)
             BEGIN_INSTRUCTION(BIND_SELF): /* <r.dest>, <slot.idx.uint8> */
                 /* fall through */
             BEGIN_INSTRUCTION(BIND): { /* <r.dest>, <slot.idx.uint8>, <r.src> */
+                PROF_ZONE_N(INSTR, "BIND")
                 const unsigned idx = bytecode[2];
 
                 KOS_LOCAL dest;
@@ -2779,6 +2854,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(BIND_DEFAULTS): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "BIND.DEFAULTS")
                 KOS_OBJ_ID     src;
                 KOS_OBJ_ID     dest;
                 KOS_TYPE       type;
@@ -2812,13 +2888,14 @@ static int exec_function(KOS_CONTEXT ctx)
                 /* fall through */
             BEGIN_INSTRUCTION(TAIL_CALL_FUN): /* <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
-            BEGIN_INSTRUCTION(CALL): /* <r.dest>, <r.func>, <r.this>, <r.args> */
-                /* fall through */
             BEGIN_INSTRUCTION(CALL_N): /* <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
             BEGIN_INSTRUCTION(CALL_FUN): /* <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
-            BEGIN_INSTRUCTION(CALL_GEN): { /* <r.dest>, <r.func>, <r.final> */
+            BEGIN_INSTRUCTION(CALL_GEN): /* <r.dest>, <r.func>, <r.final> */
+                /* fall through */
+            BEGIN_INSTRUCTION(CALL): { /* <r.dest>, <r.func>, <r.this>, <r.args> */
+                PROF_ZONE_N(INSTR, "CALL")
                 const unsigned     rfunc     = bytecode[2];
                 unsigned           rthis     = ~0U;
                 unsigned           rfinal    = ~0U;
@@ -3039,7 +3116,6 @@ static int exec_function(KOS_CONTEXT ctx)
 
                     store_instr_offs(stack, regs_idx,
                                      (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
-                    PROF_ZONE_END();
                     return KOS_SUCCESS;
                 }
 
@@ -3051,6 +3127,7 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(RETURN): { /* <closure.size.uint8>, <r.src> */
+                PROF_ZONE_N(INSTR, "RETURN")
                 const unsigned closure_size = bytecode[1];
                 const unsigned rsrc         = bytecode[2];
 
@@ -3072,11 +3149,11 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 store_instr_offs(stack, regs_idx,
                                  (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
-                PROF_ZONE_END();
                 return KOS_SUCCESS;
             }
 
             BEGIN_INSTRUCTION(YIELD): { /* <r.src> */
+                PROF_ZONE_N(INSTR, "YIELD")
                 const uint8_t rsrc = bytecode[1];
 
                 assert(rsrc < num_regs);
@@ -3094,11 +3171,11 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 store_instr_offs(stack, regs_idx,
                                  (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
-                PROF_ZONE_END();
                 return KOS_SUCCESS;
             }
 
             BEGIN_INSTRUCTION(CATCH): { /* <r.dest>, <delta.int32> */
+                PROF_ZONE_N(INSTR, "CATCH")
                 const int32_t  rel_offs = (int32_t)load_32(bytecode+2);
                 const uint32_t offset   = (uint32_t)((bytecode + 6 + rel_offs) - OBJPTR(MODULE, module)->bytecode);
 
@@ -3114,12 +3191,14 @@ static int exec_function(KOS_CONTEXT ctx)
             }
 
             BEGIN_INSTRUCTION(CANCEL): {
+                PROF_ZONE_N(INSTR, "CANCEL")
                 clear_catch(stack, regs_idx);
                 bytecode += 1;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_BREAKPOINT_INSTRUCTION:
+            BEGIN_BREAKPOINT_INSTRUCTION: {
+                PROF_ZONE_N(INSTR, "BREAKPOINT")
                 assert(instr == INSTR_BREAKPOINT);
                 if (instr != INSTR_BREAKPOINT)
                     RAISE_EXCEPTION_STR(str_err_invalid_instruction);
@@ -3128,8 +3207,10 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 bytecode += 1;
                 NEXT_INSTRUCTION;
+            }
 
             BEGIN_INSTRUCTION(THROW): { /* <r.src> */
+                PROF_ZONE_N(INSTR, "THROW")
                 const unsigned rsrc = bytecode[1];
 
                 assert(rsrc < num_regs);
@@ -3140,6 +3221,7 @@ static int exec_function(KOS_CONTEXT ctx)
 cleanup:
             assert(KOS_is_exception_pending(ctx));
             {
+                PROF_ZONE_N(INSTR, "exception")
                 uint32_t catch_offs;
                 uint8_t  catch_reg;
 
@@ -3150,10 +3232,8 @@ cleanup:
 
                 catch_offs = get_catch(stack, regs_idx, &catch_reg);
 
-                if (catch_offs == KOS_NO_CATCH) {
-                    PROF_ZONE_END();
+                if (catch_offs == KOS_NO_CATCH)
                     return KOS_ERROR_EXCEPTION;
-                }
 
                 assert(catch_reg < num_regs);
 
