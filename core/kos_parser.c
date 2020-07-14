@@ -3295,12 +3295,11 @@ void kos_parser_init(KOS_PARSER           *parser,
 int kos_parser_parse(KOS_PARSER    *parser,
                      KOS_AST_NODE **ret)
 {
-    KOS_AST_NODE *root = 0;
-    KOS_AST_NODE *node = 0;
+    KOS_AST_NODE *root  = 0;
+    KOS_AST_NODE *node  = 0;
+    int           error = KOS_SUCCESS;
 
     PROF_ZONE_BEGIN();
-
-    int error = KOS_SUCCESS;
 
     TRY(new_node(parser, &root, NT_SCOPE));
 
