@@ -382,7 +382,7 @@ int kos_executable_path(KOS_VECTOR *buf)
         if (kos_seq_fail())
             num_read = 0;
 
-        if (num_read > 0) {
+        if ((num_read > 0) && (num_read < (ssize_t)buf->size - 1)) {
 
             TRY(kos_vector_resize(buf, num_read + 1));
 
