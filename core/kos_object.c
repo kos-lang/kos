@@ -770,6 +770,59 @@ int KOS_delete_property(KOS_CONTEXT ctx,
         return KOS_set_property(ctx, obj_id, prop, TOMBSTONE);
 }
 
+static KOS_OBJ_ID new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
+                                           KOS_OBJ_ID           module_obj,
+                                           KOS_OBJ_ID           name_obj,
+                                           KOS_FUNCTION_HANDLER getter,
+                                           KOS_FUNCTION_HANDLER setter)
+{
+    KOS_LOCAL dyn_prop;
+    KOS_LOCAL name;
+
+    assert(getter);
+    assert( ! kos_is_heap_object(module_obj));
+
+    KOS_init_local(     ctx, &dyn_prop);
+    KOS_init_local_with(ctx, &name,     name_obj);
+
+    dyn_prop.o = KOS_new_dynamic_prop(ctx);
+
+    if ( ! IS_BAD_PTR(dyn_prop.o)) {
+
+        KOS_OBJ_ID func_obj = KOS_new_function(ctx);
+
+        if ( ! IS_BAD_PTR(func_obj)) {
+            OBJPTR(FUNCTION, func_obj)->module        = module_obj;
+            OBJPTR(FUNCTION, func_obj)->opts.min_args = 0;
+            OBJPTR(FUNCTION, func_obj)->handler       = getter;
+            OBJPTR(FUNCTION, func_obj)->name          = name.o;
+            OBJPTR(DYNAMIC_PROP, dyn_prop.o)->getter  = func_obj;
+        }
+        else
+            dyn_prop.o = KOS_BADPTR;
+    }
+
+    if ( ! IS_BAD_PTR(dyn_prop.o)) {
+
+        if (setter) {
+
+            KOS_OBJ_ID func_obj = KOS_new_function(ctx);
+
+            if ( ! IS_BAD_PTR(func_obj)) {
+                OBJPTR(FUNCTION, func_obj)->module        = module_obj;
+                OBJPTR(FUNCTION, func_obj)->opts.min_args = 0;
+                OBJPTR(FUNCTION, func_obj)->handler       = setter;
+                OBJPTR(FUNCTION, func_obj)->name          = name.o;
+                OBJPTR(DYNAMIC_PROP, dyn_prop.o)->setter  = func_obj;
+            }
+            else
+                dyn_prop.o = KOS_BADPTR;
+        }
+    }
+
+    return KOS_destroy_top_locals(ctx, &name, &dyn_prop);
+}
+
 int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop_obj,
@@ -786,7 +839,7 @@ int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &prop, prop_obj);
     assert( ! kos_is_heap_object(module_obj));
 
-    dyn_prop = KOS_new_builtin_dynamic_prop(ctx, module_obj, getter, setter);
+    dyn_prop = new_builtin_dynamic_prop(ctx, module_obj, prop.o, getter, setter);
 
     if ( ! IS_BAD_PTR(dyn_prop))
         error = KOS_set_property(ctx, obj.o, prop.o, dyn_prop);

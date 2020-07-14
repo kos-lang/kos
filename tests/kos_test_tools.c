@@ -7,6 +7,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../core/kos_config.h"
+#include "../core/kos_const_strings.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_system.h"
@@ -23,7 +24,7 @@ int create_thread(KOS_CONTEXT          ctx,
 
     KOS_init_local(ctx, &func);
 
-    func.o = KOS_new_builtin_function(ctx, proc, 0);
+    func.o = KOS_new_builtin_function(ctx, KOS_STR_EMPTY, proc, 0);
     TRY_OBJID(func.o);
 
     args_obj = KOS_new_array(ctx, 0);

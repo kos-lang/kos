@@ -142,11 +142,11 @@ class context {
         // Register C++ function in Kos
         // ============================
 
-        function new_function(KOS_FUNCTION_HANDLER handler, int min_args);
+        function new_function(const char* name, KOS_FUNCTION_HANDLER handler, int min_args);
 
         // Something like N3601 (automatic template arg deduction) would simplify this interface
         template<typename T, T fun>
-        function new_function();
+        function new_function(const char* name);
 
 #ifdef KOS_CPP11
         template<typename Ret, typename... Args>
@@ -1272,9 +1272,10 @@ inline buffer context::new_buffer(unsigned size)
     return buffer(*this, check_error(KOS_new_buffer(ctx_, size)));
 }
 
-inline function context::new_function(KOS_FUNCTION_HANDLER handler, int min_args)
+inline function context::new_function(const char* name, KOS_FUNCTION_HANDLER handler, int min_args)
 {
-    return function(*this, check_error(KOS_new_builtin_function(ctx_, handler, min_args)));
+    const KOS_OBJ_ID name_obj = check_error(KOS_new_cstring(ctx_, name));
+    return function(*this, check_error(KOS_new_builtin_function(ctx_, name_obj, handler, min_args)));
 }
 
 template<int i, typename T>
@@ -1768,9 +1769,9 @@ KOS_OBJ_ID wrapper(KOS_CONTEXT frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_o
 }
 
 template<typename T, T fun>
-function context::new_function()
+function context::new_function(const char* name)
 {
-    return new_function(wrapper<T, fun>, num_args(fun));
+    return new_function(name, wrapper<T, fun>, num_args(fun));
 }
 
 // object functions
@@ -2056,7 +2057,7 @@ inline bool value_from_object_ptr<bool>(context ctx, KOS_OBJ_ID obj_id)
 } // namespace kos
 
 #ifdef KOS_CPP11
-#define NEW_FUNCTION(fun) new_function<decltype(fun), (fun)>()
+#define NEW_FUNCTION(fun) new_function<decltype(fun), (fun)>(#fun)
 #endif
 
 #endif

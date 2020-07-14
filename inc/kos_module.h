@@ -85,11 +85,6 @@ unsigned KOS_module_addr_to_func_line(KOS_MODULE *module,
                                       uint32_t    offs);
 
 KOS_API
-KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_CONTEXT ctx,
-                                        KOS_MODULE *module,
-                                        uint32_t    offs);
-
-KOS_API
 uint32_t KOS_module_func_get_num_instr(KOS_MODULE *module,
                                        uint32_t    offs);
 

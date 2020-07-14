@@ -18,7 +18,6 @@ KOS_API_VAR_DEF KOS_DECLARE_CONST_STRING(KOS_str_offset,        "offset");
 KOS_API_VAR_DEF KOS_DECLARE_CONST_STRING(KOS_str_out_of_memory, "out of memory");
 KOS_API_VAR_DEF KOS_DECLARE_CONST_STRING(KOS_str_value,         "value");
 KOS_API_VAR_DEF KOS_DECLARE_CONST_STRING(KOS_str_void,          "void");
-KOS_API_VAR_DEF KOS_DECLARE_CONST_STRING(KOS_str_xbuiltinx,     "<builtin>");
 
 #ifdef __cplusplus
 }

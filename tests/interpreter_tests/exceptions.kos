@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2020 Chris Dragan
 
-import base.exception
+import base: exception, string
 
 # passing assertions
 do {
@@ -283,7 +283,7 @@ do {
     catch const e {
         assert e.backtrace.size        == 3
         assert e.backtrace[0].line     == 0
-        assert e.backtrace[0].function == "<builtin>"
+        assert e.backtrace[0].function == "apply"
         assert e.backtrace[1].line     == l1
         assert e.backtrace[1].function == "native_callee_throws"
         assert e.backtrace[2].line     == l2
@@ -849,4 +849,25 @@ do {
     assert a == 3
     assert b == 4
     assert c == void
+}
+
+# backtrace with a dynamic property
+do {
+    var val     = void
+    var my_line = void
+    var failed  = false
+    try {
+        my_line = __line__ ; val = string.prototype.size
+    }
+    catch const e {
+        failed = true
+        assert e.backtrace.size == 2
+        assert e.backtrace[0].line     == 0
+        assert e.backtrace[0].function == "size"
+        assert e.backtrace[1].line     == my_line
+        assert e.backtrace[1].function == "<global>"
+    }
+    assert failed
+    assert typeof my_line == "integer"
+    assert val == void
 }

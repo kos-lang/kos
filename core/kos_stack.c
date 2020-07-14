@@ -14,8 +14,10 @@
 #include "kos_object_internal.h"
 #include "kos_try.h"
 
-static const char str_err_not_callable[]   = "object is not callable";
-static const char str_err_stack_overflow[] = "stack overflow";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_callable,   "object is not callable");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_stack_overflow, "stack overflow");
+KOS_DECLARE_STATIC_CONST_STRING(str_module,             "module");
+KOS_DECLARE_STATIC_CONST_STRING(str_xbuiltinx,          "<builtin>");
 
 static int push_new_stack(KOS_CONTEXT ctx);
 
@@ -164,7 +166,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &func, func_obj);
 
     if (type != OBJ_FUNCTION && type != OBJ_CLASS)
-        RAISE_EXCEPTION(str_err_not_callable);
+        RAISE_EXCEPTION_STR(str_err_not_callable);
 
     stack      = IS_BAD_PTR(ctx->stack) ? 0 : OBJPTR(STACK, ctx->stack);
     new_stack  = stack;
@@ -178,7 +180,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     room = num_regs + KOS_STACK_EXTRA;
 
     if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
-        RAISE_EXCEPTION(str_err_stack_overflow);
+        RAISE_EXCEPTION_STR(str_err_stack_overflow);
 
     /* Prepare stack for accommodating new stack frame */
     state = KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func.o)->state);
@@ -499,8 +501,6 @@ static int dump_stack(KOS_OBJ_ID stack,
                       uint32_t   frame_size,
                       void      *cookie)
 {
-    KOS_DECLARE_STATIC_CONST_STRING(str_module, "module");
-
     KOS_DUMP_CONTEXT       *dump_ctx    = (KOS_DUMP_CONTEXT *)cookie;
     KOS_CONTEXT             ctx         = dump_ctx->ctx;
     KOS_ATOMIC(KOS_OBJ_ID) *stack_frame = &OBJPTR(STACK, stack)->buf[frame_idx];
@@ -516,22 +516,11 @@ static int dump_stack(KOS_OBJ_ID stack,
     KOS_LOCAL               module_path;
     KOS_LOCAL               frame_desc;
 
-    KOS_init_locals(ctx, 5, &module, &func_name, &module_name, &module_path, &frame_desc);
-
-    module.o      = func->module;
-    module_name.o = KOS_STR_XBUILTINX;
-    module_path.o = KOS_STR_XBUILTINX;
-
-    func_name.o = KOS_module_addr_to_func_name(ctx, IS_BAD_PTR(module.o) ? 0 : OBJPTR(MODULE, module.o), instr_offs);
-    if (IS_BAD_PTR(func_name.o)) {
-        if (KOS_is_exception_pending(ctx))
-            goto cleanup;
-
-        /* TODO add builtin function name */
-        func_name.o = KOS_STR_XBUILTINX;
-    }
-
-    frame_desc.o = KOS_new_object(ctx);
+    KOS_init_local_with(ctx, &module,      func->module);
+    KOS_init_local_with(ctx, &func_name,   func->name);
+    KOS_init_local_with(ctx, &module_name, KOS_CONST_ID(str_xbuiltinx));
+    KOS_init_local_with(ctx, &module_path, KOS_CONST_ID(str_xbuiltinx));
+    KOS_init_local_with(ctx, &frame_desc,  KOS_new_object(ctx));
     TRY_OBJID(frame_desc.o);
 
     assert(dump_ctx->idx < KOS_get_array_size(dump_ctx->backtrace.o));
@@ -553,7 +542,7 @@ static int dump_stack(KOS_OBJ_ID stack,
     ++dump_ctx->idx;
 
 cleanup:
-    KOS_destroy_top_locals(ctx, &module, &frame_desc);
+    KOS_destroy_top_locals(ctx, &frame_desc, &module);
 
     return error;
 }

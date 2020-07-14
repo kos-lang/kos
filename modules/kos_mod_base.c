@@ -242,6 +242,7 @@ static int create_class(KOS_CONTEXT          ctx,
 
     OBJPTR(CLASS, func_obj)->handler = constructor;
     OBJPTR(CLASS, func_obj)->module  = module.o;
+    OBJPTR(CLASS, func_obj)->name    = str_name;
 
     TRY(KOS_module_add_global(ctx,
                               module.o,
@@ -4531,18 +4532,8 @@ static KOS_OBJ_ID get_function_name(KOS_CONTEXT ctx,
     KOS_OBJ_ID     ret  = KOS_BADPTR;
     const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
 
-    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
-
-        KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
-
-        /* TODO add builtin function name */
-        if (IS_BAD_PTR(func->module) || func->instr_offs == ~0U)
-            ret = KOS_STR_XBUILTINX;
-        else
-            ret = KOS_module_addr_to_func_name(ctx,
-                                               OBJPTR(MODULE, func->module),
-                                               func->instr_offs);
-    }
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS)
+        ret = OBJPTR(FUNCTION, this_obj)->name;
     else
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
 

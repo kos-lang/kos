@@ -1379,6 +1379,7 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
         case OBJ_FUNCTION:
             /* TODO make these atomic */
             marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->module,   GRAY);
+            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->name,     GRAY);
             marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->closures, GRAY);
             marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->defaults, GRAY);
             marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->generator_stack_frame, GRAY);
@@ -1389,6 +1390,7 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
             marked += mark_object_black(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props));
             /* TODO make these atomic */
             marked += set_mark_state(OBJPTR(CLASS, obj_id)->module,   GRAY);
+            marked += set_mark_state(OBJPTR(CLASS, obj_id)->name,     GRAY);
             marked += set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
             marked += set_mark_state(OBJPTR(CLASS, obj_id)->defaults, GRAY);
             break;
@@ -2005,6 +2007,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
 
         case OBJ_FUNCTION:
             update_child_ptr(&((KOS_FUNCTION *)hdr)->module);
+            update_child_ptr(&((KOS_FUNCTION *)hdr)->name);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->closures);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->defaults);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->generator_stack_frame);
@@ -2014,6 +2017,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->prototype);
             update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->props);
             update_child_ptr(&((KOS_CLASS *)hdr)->module);
+            update_child_ptr(&((KOS_CLASS *)hdr)->name);
             update_child_ptr(&((KOS_CLASS *)hdr)->closures);
             update_child_ptr(&((KOS_CLASS *)hdr)->defaults);
             break;

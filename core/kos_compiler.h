@@ -171,6 +171,7 @@ typedef struct KOS_COMP_STRING_S {
 typedef struct KOS_COMP_FUNCTION_S {
     KOS_COMP_CONST header;
     uint32_t       offset;       /* Function entry point offset in the module */
+    uint32_t       name_str_idx; /* Index of constant string with function's name */
     uint8_t        flags;        /* KOS_COMP_FUN_* flags */
     uint8_t        num_regs;     /* Number of registers used by the function */
     uint8_t        closure_size; /* Number of registers preserved for a closure */

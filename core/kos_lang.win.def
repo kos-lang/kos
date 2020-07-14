@@ -52,7 +52,6 @@ EXPORTS
     KOS_module_add_global
     KOS_module_add_member_function
     KOS_module_addr_to_func_line
-    KOS_module_addr_to_func_name
     KOS_module_addr_to_line
     KOS_module_func_get_code_size
     KOS_module_func_get_num_instr
@@ -61,7 +60,6 @@ EXPORTS
     KOS_new_array
     KOS_new_buffer
     KOS_new_builtin_class
-    KOS_new_builtin_dynamic_prop
     KOS_new_builtin_function
     KOS_new_class
     KOS_new_const_ascii_cstring
@@ -103,7 +101,6 @@ EXPORTS
     KOS_str_out_of_memory DATA
     KOS_str_value DATA
     KOS_str_void DATA
-    KOS_str_xbuiltinx DATA
     KOS_string_add
     KOS_string_add_n
     KOS_string_compare

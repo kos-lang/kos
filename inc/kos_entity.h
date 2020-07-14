@@ -380,6 +380,7 @@ typedef struct KOS_FUNCTION_S {
     KOS_ATOMIC(uint32_t) state;
     uint32_t             instr_offs;
     KOS_OBJ_ID           module;
+    KOS_OBJ_ID           name;
     KOS_OBJ_ID           closures;
     KOS_OBJ_ID           defaults;
     KOS_FUNCTION_HANDLER handler;
@@ -392,6 +393,7 @@ typedef struct KOS_CLASS_S {
     uint32_t               dummy;
     uint32_t               instr_offs;
     KOS_OBJ_ID             module;
+    KOS_OBJ_ID             name;
     KOS_OBJ_ID             closures;
     KOS_OBJ_ID             defaults;
     KOS_FUNCTION_HANDLER   handler;
@@ -474,22 +476,18 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx,
 
 KOS_API
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
+                                    KOS_OBJ_ID           name_obj,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args);
 
 KOS_API
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
+                                 KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLER handler,
                                  int                  min_args);
 
 KOS_API
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx);
-
-KOS_API
-KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
-                                        KOS_OBJ_ID           module_obj,
-                                        KOS_FUNCTION_HANDLER getter,
-                                        KOS_FUNCTION_HANDLER setter);
 
 #ifdef __cplusplus
 }

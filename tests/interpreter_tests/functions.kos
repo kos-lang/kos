@@ -2125,7 +2125,7 @@ do {
     assert f.size         == 5
     assert f.offset       >  0
 
-    assert base.function.name         == "<builtin>"
+    assert base.function.name         == "function"
     assert base.function.registers    == 0
     assert base.function.instructions == 0
     assert base.function.size         == 0

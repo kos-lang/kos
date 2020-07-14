@@ -30,7 +30,6 @@ static const char str_array_comma[]             = ", ";
 static const char str_array_open[]              = "[";
 static const char str_buffer_close[]            = ">";
 static const char str_buffer_open[]             = "<";
-static const char str_builtin[]                 = "built-in";
 static const char str_class_open[]              = "<class ";
 static const char str_empty_array[]             = "[]";
 static const char str_empty_buffer[]            = "<>";
@@ -935,21 +934,15 @@ static int vector_append_function(KOS_CONTEXT ctx,
     else
         TRY(kos_append_cstr(ctx, cstr_vec, str_class_open, sizeof(str_class_open) - 1));
 
-    if (func->handler) {
-        /* TODO get built-in function name */
-        TRY(kos_append_cstr(ctx, cstr_vec, str_builtin, sizeof(str_builtin) - 1));
+    TRY(vector_append_str(ctx, cstr_vec, func->name, KOS_DONT_QUOTE));
+
+    if (func->handler)
         len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">",
                                  (uint64_t)(uintptr_t)func->handler);
-    }
-    else {
-        KOS_OBJ_ID name_str = KOS_module_addr_to_func_name(ctx,
-                                                           OBJPTR(MODULE, func->module),
-                                                           func->instr_offs);
-        TRY_OBJID(name_str);
-        TRY(vector_append_str(ctx, cstr_vec, name_str, KOS_DONT_QUOTE));
+    else
         len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%X>",
                                  (unsigned)func->instr_offs);
-    }
+
     TRY(kos_append_cstr(ctx, cstr_vec, cstr_ptr, KOS_min(len, (unsigned)(sizeof(cstr_ptr) - 1))));
 
 cleanup:
@@ -983,22 +976,15 @@ static KOS_OBJ_ID function_to_str(KOS_CONTEXT ctx,
         strings[0].o = KOS_CONST_ID(str_open_class);
     }
 
-    if (OBJPTR(FUNCTION, func.o)->handler) {
-        /* TODO get built-in function name */
-        strings[1].o = KOS_new_const_ascii_string(ctx, str_builtin,
-                                                  sizeof(str_builtin) - 1);
-        TRY_OBJID(strings[1].o);
+    strings[1].o = OBJPTR(FUNCTION, func.o)->name;
+
+    if (OBJPTR(FUNCTION, func.o)->handler)
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">",
                  (uint64_t)(uintptr_t)OBJPTR(FUNCTION, func.o)->handler);
-    }
-    else {
-        strings[1].o = KOS_module_addr_to_func_name(ctx,
-                                                    OBJPTR(MODULE, OBJPTR(FUNCTION, func.o)->module),
-                                                    OBJPTR(FUNCTION, func.o)->instr_offs);
-        TRY_OBJID(strings[1].o);
+    else
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>",
                  (unsigned)OBJPTR(FUNCTION, func.o)->instr_offs);
-    }
+
     strings[2].o = KOS_new_cstring(ctx, cstr_ptr);
     TRY_OBJID(strings[2].o);
 

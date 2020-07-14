@@ -51,7 +51,6 @@ _KOS_module_add_function
 _KOS_module_add_global
 _KOS_module_add_member_function
 _KOS_module_addr_to_func_line
-_KOS_module_addr_to_func_name
 _KOS_module_addr_to_line
 _KOS_module_func_get_code_size
 _KOS_module_func_get_num_instr
@@ -60,7 +59,6 @@ _KOS_modules_init
 _KOS_new_array
 _KOS_new_buffer
 _KOS_new_builtin_class
-_KOS_new_builtin_dynamic_prop
 _KOS_new_builtin_function
 _KOS_new_class
 _KOS_new_const_ascii_cstring
@@ -102,7 +100,6 @@ _KOS_str_offset
 _KOS_str_out_of_memory
 _KOS_str_value
 _KOS_str_void
-_KOS_str_xbuiltinx
 _KOS_string_add
 _KOS_string_add_n
 _KOS_string_compare

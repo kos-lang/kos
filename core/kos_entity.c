@@ -8,6 +8,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "kos_const_strings.h"
 #include "kos_heap.h"
 #include "kos_memory.h"
 #include "kos_object_internal.h"
@@ -73,6 +74,7 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->opts.bind_reg     = KOS_NO_REG;
 
         func->module                = KOS_BADPTR;
+        func->name                  = KOS_STR_EMPTY;
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;
         func->handler               = 0;
@@ -112,6 +114,7 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
         dest->opts       = src->opts;
         dest->instr_offs = src->instr_offs;
         dest->module     = src->module;
+        dest->name       = src->name;
         dest->closures   = src->closures;
         dest->defaults   = src->defaults;
         dest->handler    = src->handler;
@@ -204,6 +207,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 
         OBJPTR(CLASS, func.o)->dummy      = KOS_CTOR;
         OBJPTR(CLASS, func.o)->module     = KOS_BADPTR;
+        OBJPTR(CLASS, func.o)->name       = KOS_STR_EMPTY;
         OBJPTR(CLASS, func.o)->closures   = KOS_VOID;
         OBJPTR(CLASS, func.o)->defaults   = KOS_VOID;
         OBJPTR(CLASS, func.o)->handler    = 0;
@@ -226,27 +230,42 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
 }
 
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
+                                    KOS_OBJ_ID           name_obj,
                                     KOS_FUNCTION_HANDLER handler,
                                     int                  min_args)
 {
-    KOS_OBJ_ID func_obj = KOS_new_function(ctx);
+    KOS_OBJ_ID func_obj;
+    KOS_LOCAL  name;
+
+    KOS_init_local_with(ctx, &name, name_obj);
+
+    func_obj = KOS_new_function(ctx);
 
     if ( ! IS_BAD_PTR(func_obj)) {
         assert(min_args >= 0 && min_args < 256);
 
         OBJPTR(FUNCTION, func_obj)->opts.min_args = (uint8_t)min_args;
         OBJPTR(FUNCTION, func_obj)->handler       = handler;
+        OBJPTR(FUNCTION, func_obj)->name          = name.o;
     }
+
+    KOS_destroy_top_local(ctx, &name);
 
     return func_obj;
 }
 
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
+                                 KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLER handler,
                                  int                  min_args)
 {
-    KOS_OBJ_ID func_obj  = KOS_BADPTR;
-    KOS_OBJ_ID proto_obj = KOS_new_object(ctx);
+    KOS_OBJ_ID func_obj = KOS_BADPTR;
+    KOS_OBJ_ID proto_obj;
+    KOS_LOCAL  name;
+
+    KOS_init_local_with(ctx, &name, name_obj);
+
+    proto_obj = KOS_new_object(ctx);
 
     if ( ! IS_BAD_PTR(proto_obj)) {
 
@@ -257,8 +276,11 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
 
             OBJPTR(CLASS, func_obj)->opts.min_args = (uint8_t)min_args;
             OBJPTR(CLASS, func_obj)->handler       = handler;
+            OBJPTR(CLASS, func_obj)->name          = name.o;
         }
     }
+
+    KOS_destroy_top_local(ctx, &name);
 
     return func_obj;
 }
@@ -276,52 +298,6 @@ KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx)
     }
 
     return OBJID(DYNAMIC_PROP, dyn_prop);
-}
-
-KOS_OBJ_ID KOS_new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
-                                        KOS_OBJ_ID           module_obj,
-                                        KOS_FUNCTION_HANDLER getter,
-                                        KOS_FUNCTION_HANDLER setter)
-{
-    KOS_LOCAL dyn_prop;
-
-    assert(getter);
-    assert( ! kos_is_heap_object(module_obj));
-
-    KOS_init_local_with(ctx, &dyn_prop, KOS_new_dynamic_prop(ctx));
-
-    if ( ! IS_BAD_PTR(dyn_prop.o)) {
-
-        KOS_OBJ_ID func_obj = KOS_new_function(ctx);
-
-        if ( ! IS_BAD_PTR(func_obj)) {
-            OBJPTR(FUNCTION, func_obj)->module         = module_obj;
-            OBJPTR(FUNCTION, func_obj)->opts.min_args  = 0;
-            OBJPTR(FUNCTION, func_obj)->handler        = getter;
-            OBJPTR(DYNAMIC_PROP, dyn_prop.o)->getter = func_obj;
-        }
-        else
-            dyn_prop.o = KOS_BADPTR;
-    }
-
-    if ( ! IS_BAD_PTR(dyn_prop.o)) {
-
-        if (setter) {
-
-            KOS_OBJ_ID func_obj = KOS_new_function(ctx);
-
-            if ( ! IS_BAD_PTR(func_obj)) {
-                OBJPTR(FUNCTION, func_obj)->module         = module_obj;
-                OBJPTR(FUNCTION, func_obj)->opts.min_args  = 0;
-                OBJPTR(FUNCTION, func_obj)->handler        = setter;
-                OBJPTR(DYNAMIC_PROP, dyn_prop.o)->setter = func_obj;
-            }
-            else
-                dyn_prop.o = KOS_BADPTR;
-        }
-    }
-
-    return KOS_destroy_top_local(ctx, &dyn_prop);
 }
 
 int kos_is_truthy(KOS_OBJ_ID obj_id)

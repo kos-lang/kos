@@ -1066,22 +1066,17 @@ cleanup:
     return error;
 }
 
-static int append_frame(KOS_COMP_UNIT      *program,
-                        const KOS_AST_NODE *name_node,
-                        uint32_t            const_idx,
-                        int                 fun_start_offs,
-                        size_t              addr2line_start_offs)
+static int append_frame(KOS_COMP_UNIT     *program,
+                        KOS_COMP_FUNCTION *func_constant,
+                        int                fun_start_offs,
+                        size_t             addr2line_start_offs)
 {
-    int               error;
-    const size_t      fun_end_offs = (size_t)program->cur_offs;
-    const size_t      fun_size     = fun_end_offs - fun_start_offs;
-    const size_t      fun_new_offs = program->code_buf.size;
-    const size_t      a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
-    size_t            a2l_new_offs = program->addr2line_buf.size;
-    int               str_idx      = 0;
-    KOS_TOKEN         global;
-    static const char str_global[] = "<global>";
-    const KOS_TOKEN  *name_token;
+    int          error;
+    const size_t fun_end_offs = (size_t)program->cur_offs;
+    const size_t fun_size     = fun_end_offs - fun_start_offs;
+    const size_t fun_new_offs = program->code_buf.size;
+    const size_t a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
+    size_t       a2l_new_offs = program->addr2line_buf.size;
 
     TRY(kos_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
@@ -1100,22 +1095,6 @@ static int append_frame(KOS_COMP_UNIT      *program,
 
     TRY(kos_vector_resize(&program->addr2func_buf,
                           program->addr2func_buf.size + sizeof(struct KOS_COMP_ADDR_TO_FUNC_S)));
-
-    if (name_node) {
-        if (name_node->children)
-            name_token = &name_node->children->token;
-        else
-            name_token = program->cur_frame->fun_token;
-    }
-    else {
-        memset(&global, 0, sizeof(global));
-        global.begin  = str_global;
-        global.length = sizeof(str_global) - 1;
-        global.type   = TT_IDENTIFIER;
-
-        name_token = &global;
-    }
-    TRY(gen_str(program, name_token, &str_idx));
 
     memcpy(program->code_buf.buffer + fun_new_offs,
            program->code_gen_buf.buffer + fun_start_offs,
@@ -1160,8 +1139,8 @@ static int append_frame(KOS_COMP_UNIT      *program,
             ptr->line  = program->cur_frame->fun_token->pos.line;
         else
             ptr->line  = 1;
-        ptr->str_idx   = (uint32_t)str_idx;
-        ptr->fun_idx   = const_idx;
+        ptr->str_idx   = func_constant->name_str_idx;
+        ptr->fun_idx   = func_constant->header.index;
         ptr->num_instr = program->cur_frame->num_instr;
         ptr->code_size = (uint32_t)fun_size;
     }
@@ -1171,7 +1150,8 @@ cleanup:
 }
 
 static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
-                                              KOS_FRAME     *frame)
+                                              KOS_FRAME     *frame,
+                                              uint32_t       str_idx)
 {
     KOS_COMP_FUNCTION *constant;
 
@@ -1184,6 +1164,7 @@ static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
         memset(constant, 0, sizeof(KOS_COMP_FUNCTION));
 
         constant->header.type  = KOS_COMP_CONST_FUNCTION;
+        constant->name_str_idx = str_idx;
         constant->num_regs     = (uint8_t)frame->num_regs;
         constant->load_instr   = INSTR_BREAKPOINT;
         constant->args_reg     = KOS_NO_REG;
@@ -1200,7 +1181,10 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
                                KOS_REG       *reg)
 {
     int                error;
+    int                str_idx;
     KOS_COMP_FUNCTION *constant;
+    KOS_TOKEN          global;
+    static const char  str_global[] = "<global>";
 
     if ( ! reg) {
         TRY(gen_reg(program, &reg));
@@ -1212,7 +1196,14 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
     free_reg(program, reg);
     reg = 0;
 
-    constant = alloc_func_constant(program, program->cur_frame);
+    memset(&global, 0, sizeof(global));
+    global.begin  = str_global;
+    global.length = sizeof(str_global) - 1;
+    global.type   = TT_IDENTIFIER;
+
+    TRY(gen_str(program, &global, &str_idx));
+
+    constant = alloc_func_constant(program, program->cur_frame, (uint32_t)str_idx);
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
@@ -1226,7 +1217,7 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
 
     program->cur_frame->constant = constant;
 
-    TRY(append_frame(program, 0, constant->header.index, 0, 0));
+    TRY(append_frame(program, constant, 0, 0));
 
     assert(program->code_gen_buf.size == 0);
 
@@ -4610,6 +4601,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     int        fun_start_offs;
     size_t     addr2line_start_offs;
     int        last_reg     = -1;
+    int        str_idx;
 
     const KOS_AST_NODE *fun_node  = node;
     const KOS_AST_NODE *open_node;
@@ -4624,8 +4616,21 @@ static int gen_function(KOS_COMP_UNIT      *program,
     if (frame->constant)
         return KOS_SUCCESS;
 
+    {
+        const KOS_TOKEN *name_token;
+
+        assert(name_node);
+        assert(name_node->type == NT_NAME || name_node->type == NT_NAME_CONST);
+        if (name_node->children)
+            name_token = &name_node->children->token;
+        else
+            name_token = &fun_node->token;
+
+        TRY(gen_str(program, name_token, &str_idx));
+    }
+
     /* Create constant template for LOAD.CONST */
-    constant = alloc_func_constant(program, frame);
+    constant = alloc_func_constant(program, frame, (uint32_t)str_idx);
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
@@ -4786,8 +4791,6 @@ static int gen_function(KOS_COMP_UNIT      *program,
         constant->num_binds = args.num_binds;
     }
 
-    assert(name_node);
-    assert(name_node->type == NT_NAME || name_node->type == NT_NAME_CONST);
     node = name_node->next;
     assert(node);
     assert(node->type == NT_PARAMETERS);
@@ -4869,7 +4872,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
              : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST));
 
     /* Move the function code to final code_buf */
-    TRY(append_frame(program, name_node, constant->header.index, fun_start_offs, addr2line_start_offs));
+    TRY(append_frame(program, constant, fun_start_offs, addr2line_start_offs));
 
     program->cur_frame = last_frame;
 

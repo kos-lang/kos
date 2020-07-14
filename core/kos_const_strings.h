@@ -20,7 +20,6 @@ KOS_API extern struct KOS_CONST_STRING_S KOS_str_offset;
 KOS_API extern struct KOS_CONST_STRING_S KOS_str_out_of_memory;
 KOS_API extern struct KOS_CONST_STRING_S KOS_str_value;
 KOS_API extern struct KOS_CONST_STRING_S KOS_str_void;
-KOS_API extern struct KOS_CONST_STRING_S KOS_str_xbuiltinx;
 
 #ifdef __cplusplus
 }
@@ -35,6 +34,5 @@ KOS_API extern struct KOS_CONST_STRING_S KOS_str_xbuiltinx;
 #define KOS_STR_OUT_OF_MEMORY KOS_CONST_ID(KOS_str_out_of_memory)
 #define KOS_STR_VALUE         KOS_CONST_ID(KOS_str_value)
 #define KOS_STR_VOID          KOS_CONST_ID(KOS_str_void)
-#define KOS_STR_XBUILTINX     KOS_CONST_ID(KOS_str_xbuiltinx)
 
 #endif

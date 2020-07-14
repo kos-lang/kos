@@ -709,6 +709,7 @@ static KOS_OBJ_ID alloc_function(KOS_CONTEXT  ctx,
     OBJPTR(FUNCTION, obj_id[0])->instr_offs    = 0;
     OBJPTR(FUNCTION, obj_id[0])->handler       = &handler;
     OBJPTR(FUNCTION, obj_id[0])->module        = obj_id[1];
+    OBJPTR(FUNCTION, obj_id[0])->name          = obj_id[1];
     OBJPTR(FUNCTION, obj_id[0])->closures      = obj_id[2];
     OBJPTR(FUNCTION, obj_id[0])->defaults      = obj_id[3];
     OBJPTR(FUNCTION, obj_id[0])->generator_stack_frame = obj_id[4];
@@ -795,6 +796,7 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
     OBJPTR(CLASS, obj_id[0])->instr_offs    = 0;
     OBJPTR(CLASS, obj_id[0])->handler       = &handler;
     OBJPTR(CLASS, obj_id[0])->module        = obj_id[1];
+    OBJPTR(CLASS, obj_id[0])->name          = obj_id[1];
     OBJPTR(CLASS, obj_id[0])->closures      = obj_id[2];
     OBJPTR(CLASS, obj_id[0])->defaults      = obj_id[3];
     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->prototype, obj_id[4]);

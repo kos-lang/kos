@@ -38,6 +38,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_internal, "internal error");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_stdin,    "failed reading from stdin");
 KOS_DECLARE_STATIC_CONST_STRING(str_format_colon, ":");
 KOS_DECLARE_STATIC_CONST_STRING(str_format_error, ": error: ");
+KOS_DECLARE_STATIC_CONST_STRING(str_global,       "<global>");
 KOS_DECLARE_STATIC_CONST_STRING(str_path_sep,     KOS_PATH_SEPARATOR_STR);
 KOS_DECLARE_STATIC_CONST_STRING(str_script_ext,   ".kos");
 
@@ -627,8 +628,12 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                 func->opts.this_reg     = func_const->this_reg;
                 func->opts.bind_reg     = func_const->bind_reg;
 
-                func->instr_offs   = OBJPTR(MODULE, module.o)->bytecode_size + func_const->offset;
-                func->module       = module.o;
+                func->instr_offs = OBJPTR(MODULE, module.o)->bytecode_size + func_const->offset;
+                func->module     = module.o;
+                func->name       = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)func_const->name_str_idx);
+                TRY_OBJID(func->name);
+
+                assert(GET_OBJ_TYPE(func->name) == OBJ_STRING);
 
                 if (func_const->flags & KOS_COMP_FUN_GENERATOR)
                     func->state = KOS_GEN_INIT;
@@ -1589,6 +1594,7 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
         TRY_OBJID(func_obj);
 
         OBJPTR(FUNCTION, func_obj)->module = module.o;
+        OBJPTR(FUNCTION, func_obj)->name   = KOS_CONST_ID(str_global);
 
         TRY(kos_stack_push(ctx, func_obj));
 
@@ -1929,7 +1935,7 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
-    func_obj = KOS_new_builtin_function(ctx, handler, min_args);
+    func_obj = KOS_new_builtin_function(ctx, name_obj, handler, min_args);
 
     assert(GET_OBJ_TYPE(module.o) == OBJ_MODULE);
 
@@ -1967,7 +1973,7 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
-    func.o = KOS_new_builtin_class(ctx, handler, min_args);
+    func.o = KOS_new_builtin_class(ctx, name_obj, handler, min_args);
     TRY_OBJID(func.o);
 
     OBJPTR(CLASS, func.o)->module = module.o;
@@ -2006,7 +2012,7 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &proto,  proto_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
-    func_obj = KOS_new_builtin_function(ctx, handler, min_args);
+    func_obj = KOS_new_builtin_function(ctx, name_obj, handler, min_args);
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module = module.o;
@@ -2099,26 +2105,6 @@ unsigned KOS_module_addr_to_func_line(KOS_MODULE *module,
         line = addr2func->line;
 
     return line;
-}
-
-KOS_OBJ_ID KOS_module_addr_to_func_name(KOS_CONTEXT ctx,
-                                        KOS_MODULE *module,
-                                        uint32_t    offs)
-{
-    const KOS_FUNC_ADDR *addr2func = addr_to_func(module, offs);
-
-    KOS_DECLARE_STATIC_CONST_STRING(str_global, "global");
-
-    KOS_OBJ_ID ret = KOS_BADPTR;
-
-    if (addr2func) {
-        if (addr2func->str_idx == ~0U)
-            ret = KOS_CONST_ID(str_global);
-        else
-            ret = KOS_array_read(ctx, module->constants, (int)addr2func->str_idx);
-    }
-
-    return ret;
 }
 
 uint32_t KOS_module_func_get_num_instr(KOS_MODULE *module,
