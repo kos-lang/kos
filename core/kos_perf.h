@@ -20,9 +20,11 @@
 #   define PROF_ZONE(color)              ZoneScopedC(PROF_ ## color)
 #   define PROF_ZONE_N(color, name)      ZoneScopedNC(#name, PROF_ ## color)
 #   define PROF_ZONE_NAME(name, len)     ZoneName(name, len)
-#   define PROF_PARSER                   0xA0A0A0
-#   define PROF_COMPILER                 0x808080
-#   define PROF_MODULE                   0x909090
+#   define PROF_PLOT(name, value)        TracyPlot(name, value)
+#   define PROF_PLOT_INIT(name, type)    TracyPlotConfig(name, tracy::PlotFormatType::type)
+#   define PROF_PARSER                   0x80A0A0
+#   define PROF_COMPILER                 0xA08080
+#   define PROF_MODULE                   0x9090A0
 #   define PROF_INSTR                    0x10E010
 #   define PROF_VM                       0xE0E010
 #   define PROF_HEAP                     0x080880
@@ -38,6 +40,8 @@
 #   define PROF_ZONE(color)
 #   define PROF_ZONE_N(color, name)
 #   define PROF_ZONE_NAME(name, len)
+#   define PROF_PLOT(name, value)
+#   define PROF_PLOT_INIT(name, type)
 #   define KOS_PERF_CNT(stat)            KOS_atomic_add_u64(kos_perf.stat, 1)
 #   define KOS_PERF_CNT_ARRAY(stat, idx) KOS_atomic_add_u64(kos_perf.stat[idx], 1)
 #   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_u64(kos_perf.stat, (num))
@@ -82,6 +86,8 @@ extern struct KOS_PERF_S kos_perf;
 #   define PROF_ZONE(color)
 #   define PROF_ZONE_N(color, name)
 #   define PROF_ZONE_NAME(name, len)
+#   define PROF_PLOT(name, value)
+#   define PROF_PLOT_INIT(name, type)
 #   define KOS_PERF_CNT(stat)            (void)0
 #   define KOS_PERF_CNT_ARRAY(stat, idx) (void)0
 #   define KOS_PERF_ADD(stat, num)       (void)0

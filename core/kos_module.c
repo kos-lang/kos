@@ -1588,6 +1588,8 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
 
     /* Run built-in module initialization */
     if ( ! IS_BAD_PTR(mod_init.o)) {
+        PROF_ZONE_N(MODULE, builtin_init)
+
         KOS_OBJ_ID func_obj;
 
         func_obj = KOS_new_function(ctx);

@@ -137,6 +137,9 @@ static inline KOS_HEAP *get_heap(KOS_CONTEXT ctx)
 
 int kos_heap_init(KOS_INSTANCE *inst)
 {
+    PROF_PLOT_INIT("used heap",     Memory)
+    PROF_PLOT_INIT("used off-heap", Memory)
+
     KOS_HEAP *heap = &inst->heap;
     int       error;
 
@@ -884,6 +887,9 @@ static void *alloc_object(KOS_CONTEXT ctx,
         }
     }
 
+    PROF_PLOT("used heap",     (int64_t)heap->used_heap_size)
+    PROF_PLOT("used off-heap", (int64_t)heap->malloc_size)
+
     kos_unlock_mutex(&heap->mutex);
 
     return hdr;
@@ -958,6 +964,9 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
     KOS_PERF_CNT(alloc_huge_object);
 
 cleanup:
+    PROF_PLOT("used heap",     (int64_t)heap->used_heap_size)
+    PROF_PLOT("used off-heap", (int64_t)heap->malloc_size)
+
     kos_unlock_mutex(&heap->mutex);
 
     KOS_destroy_top_local(ctx, &tracker);
@@ -2689,6 +2698,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     release_helper_threads(heap);
 
     PROF_FRAME_END("GC")
+    PROF_PLOT("used heap",     (int64_t)heap->used_heap_size)
+    PROF_PLOT("used off-heap", (int64_t)heap->malloc_size)
 
     kos_unlock_mutex(&heap->mutex);
 
