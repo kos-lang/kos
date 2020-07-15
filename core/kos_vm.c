@@ -52,10 +52,11 @@ static KOS_OBJ_ID add_integer(KOS_CONTEXT ctx,
 {
     KOS_OBJ_ID ret;
 
-    if (IS_SMALL_INT(bobj))
-        ret = KOS_new_int(ctx, a + GET_SMALL_INT(bobj));
+    switch (GET_OBJ_TYPE(bobj)) {
 
-    else switch (GET_OBJ_TYPE(bobj)) {
+        case OBJ_SMALL_INTEGER:
+            ret = KOS_new_int(ctx, a + GET_SMALL_INT(bobj));
+            break;
 
         case OBJ_INTEGER:
             ret = KOS_new_int(ctx, a + OBJPTR(INTEGER, bobj)->value);
@@ -79,10 +80,11 @@ static KOS_OBJ_ID add_float(KOS_CONTEXT ctx,
 {
     double b;
 
-    if (IS_SMALL_INT(bobj))
-        b = (double)GET_SMALL_INT(bobj);
+    switch (GET_OBJ_TYPE(bobj)) {
 
-    else switch (GET_OBJ_TYPE(bobj)) {
+        case OBJ_SMALL_INTEGER:
+            b = (double)GET_SMALL_INT(bobj);
+            break;
 
         case OBJ_INTEGER:
             b = (double)(OBJPTR(INTEGER, bobj)->value);
@@ -106,10 +108,11 @@ static KOS_OBJ_ID sub_integer(KOS_CONTEXT ctx,
 {
     KOS_OBJ_ID ret;
 
-    if (IS_SMALL_INT(bobj))
-        ret = KOS_new_int(ctx, a - GET_SMALL_INT(bobj));
+    switch (GET_OBJ_TYPE(bobj)) {
 
-    else switch (GET_OBJ_TYPE(bobj)) {
+        case OBJ_SMALL_INTEGER:
+            ret = KOS_new_int(ctx, a - GET_SMALL_INT(bobj));
+            break;
 
         case OBJ_INTEGER:
             ret = KOS_new_int(ctx, a - OBJPTR(INTEGER, bobj)->value);
@@ -134,10 +137,11 @@ static KOS_OBJ_ID sub_float(KOS_CONTEXT ctx,
 {
     double b;
 
-    if (IS_SMALL_INT(bobj))
-        b = (double)GET_SMALL_INT(bobj);
+    switch (GET_OBJ_TYPE(bobj)) {
 
-    else switch (GET_OBJ_TYPE(bobj)) {
+        case OBJ_SMALL_INTEGER:
+            b = (double)GET_SMALL_INT(bobj);
+            break;
 
         case OBJ_INTEGER:
             b = (double)(OBJPTR(INTEGER, bobj)->value);
@@ -161,10 +165,11 @@ static KOS_OBJ_ID mul_integer(KOS_CONTEXT ctx,
 {
     KOS_OBJ_ID ret;
 
-    if (IS_SMALL_INT(bobj))
-        ret = KOS_new_int(ctx, a * GET_SMALL_INT(bobj));
+    switch (GET_OBJ_TYPE(bobj)) {
 
-    else switch (GET_OBJ_TYPE(bobj)) {
+        case OBJ_SMALL_INTEGER:
+            ret = KOS_new_int(ctx, a * GET_SMALL_INT(bobj));
+            break;
 
         case OBJ_INTEGER:
             ret = KOS_new_int(ctx, a * OBJPTR(INTEGER, bobj)->value);
@@ -189,10 +194,11 @@ static KOS_OBJ_ID mul_float(KOS_CONTEXT ctx,
 {
     double b;
 
-    if (IS_SMALL_INT(bobj))
-        b = (double)GET_SMALL_INT(bobj);
+    switch (GET_OBJ_TYPE(bobj)) {
 
-    else switch (GET_OBJ_TYPE(bobj)) {
+        case OBJ_SMALL_INTEGER:
+            b = (double)GET_SMALL_INT(bobj);
+            break;
 
         case OBJ_INTEGER:
             b = (double)(OBJPTR(INTEGER, bobj)->value);
@@ -216,25 +222,14 @@ static KOS_OBJ_ID div_integer(KOS_CONTEXT ctx,
 {
     KOS_OBJ_ID ret;
 
-    if (IS_SMALL_INT(bobj)) {
+    switch (GET_OBJ_TYPE(bobj)) {
 
-        const int64_t b = GET_SMALL_INT(bobj);
+        case OBJ_SMALL_INTEGER: {
 
-        if (b)
-            ret = KOS_new_int(ctx, a / b);
-        else {
-            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
-            ret = KOS_BADPTR;
-        }
-    }
-    else switch (GET_OBJ_TYPE(bobj)) {
+            const int64_t b = GET_SMALL_INT(bobj);
 
-        case OBJ_FLOAT: {
-
-            const double b = OBJPTR(FLOAT, bobj)->value;
-
-            if (b != 0)
-                ret = KOS_new_float(ctx, (double)a / b);
+            if (b)
+                ret = KOS_new_int(ctx, a / b);
             else {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
                 ret = KOS_BADPTR;
@@ -248,6 +243,19 @@ static KOS_OBJ_ID div_integer(KOS_CONTEXT ctx,
 
             if (b)
                 ret = KOS_new_int(ctx, a / b);
+            else {
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
+                ret = KOS_BADPTR;
+            }
+            break;
+        }
+
+        case OBJ_FLOAT: {
+
+            const double b = OBJPTR(FLOAT, bobj)->value;
+
+            if (b != 0)
+                ret = KOS_new_float(ctx, (double)a / b);
             else {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
                 ret = KOS_BADPTR;
@@ -271,10 +279,11 @@ static KOS_OBJ_ID div_float(KOS_CONTEXT ctx,
     KOS_OBJ_ID ret;
     double     b;
 
-    if (IS_SMALL_INT(bobj))
-        b = (double)GET_SMALL_INT(bobj);
+    switch (GET_OBJ_TYPE(bobj)) {
 
-    else switch (GET_OBJ_TYPE(bobj)) {
+        case OBJ_SMALL_INTEGER:
+            b = (double)GET_SMALL_INT(bobj);
+            break;
 
         case OBJ_INTEGER:
             b = (double)(OBJPTR(INTEGER, bobj)->value);
@@ -305,25 +314,14 @@ static KOS_OBJ_ID mod_integer(KOS_CONTEXT ctx,
 {
     KOS_OBJ_ID ret;
 
-    if (IS_SMALL_INT(bobj)) {
+    switch (GET_OBJ_TYPE(bobj)) {
 
-        const int64_t b = GET_SMALL_INT(bobj);
+        case OBJ_SMALL_INTEGER: {
 
-        if (b)
-            ret = KOS_new_int(ctx, a % b);
-        else {
-            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
-            ret = KOS_BADPTR;
-        }
-    }
-    else switch (GET_OBJ_TYPE(bobj)) {
+            const int64_t b = GET_SMALL_INT(bobj);
 
-        case OBJ_FLOAT: {
-
-            const double b = OBJPTR(FLOAT, bobj)->value;
-
-            if (b != 0)
-                ret = KOS_new_float(ctx, fmod((double)a, b));
+            if (b)
+                ret = KOS_new_int(ctx, a % b);
             else {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
                 ret = KOS_BADPTR;
@@ -337,6 +335,19 @@ static KOS_OBJ_ID mod_integer(KOS_CONTEXT ctx,
 
             if (b)
                 ret = KOS_new_int(ctx, a % b);
+            else {
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
+                ret = KOS_BADPTR;
+            }
+            break;
+        }
+
+        case OBJ_FLOAT: {
+
+            const double b = OBJPTR(FLOAT, bobj)->value;
+
+            if (b != 0)
+                ret = KOS_new_float(ctx, fmod((double)a, b));
             else {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
                 ret = KOS_BADPTR;
@@ -360,10 +371,11 @@ static KOS_OBJ_ID mod_float(KOS_CONTEXT ctx,
     KOS_OBJ_ID ret;
     double     b;
 
-    if (IS_SMALL_INT(bobj))
-        b = (double)GET_SMALL_INT(bobj);
+    switch (GET_OBJ_TYPE(bobj)) {
 
-    else switch (GET_OBJ_TYPE(bobj)) {
+        case OBJ_SMALL_INTEGER:
+            b = (double)GET_SMALL_INT(bobj);
+            break;
 
         case OBJ_INTEGER:
             b = (double)(OBJPTR(INTEGER, bobj)->value);
@@ -2088,40 +2100,39 @@ static int exec_function(KOS_CONTEXT ctx)
                 src[0].o = REGISTER(rsrc1);
                 src[1].o = REGISTER(rsrc2);
 
-                if (IS_SMALL_INT(src[0].o)) {
-                    const int64_t a = GET_SMALL_INT(src[0].o);
-                    out             = add_integer(ctx, a, src[1].o);
-                }
-                else {
+                switch (GET_OBJ_TYPE(src[0].o)) {
 
-                    switch (GET_OBJ_TYPE(src[0].o)) {
-
-                        case OBJ_INTEGER:
-                            out = add_integer(ctx, OBJPTR(INTEGER, src[0].o)->value, src[1].o);
-                            break;
-
-                        case OBJ_FLOAT:
-                            out = add_float(ctx, OBJPTR(FLOAT, src[0].o)->value, src[1].o);
-                            break;
-
-                        case OBJ_STRING: {
-                            if (GET_OBJ_TYPE(src[1].o) == OBJ_STRING) {
-                                KOS_init_local_with(ctx, &src[0], src[0].o);
-                                KOS_init_local_with(ctx, &src[1], src[1].o);
-
-                                out = KOS_string_add_n(ctx, src, 2);
-
-                                KOS_destroy_top_locals(ctx, &src[1], &src[0]);
-                            }
-                            else
-                                RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
-                            break;
-                        }
-
-                        default:
-                            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
-                            break;
+                    case OBJ_SMALL_INTEGER: {
+                        const int64_t a = GET_SMALL_INT(src[0].o);
+                        out             = add_integer(ctx, a, src[1].o);
+                        break;
                     }
+
+                    case OBJ_INTEGER:
+                        out = add_integer(ctx, OBJPTR(INTEGER, src[0].o)->value, src[1].o);
+                        break;
+
+                    case OBJ_FLOAT:
+                        out = add_float(ctx, OBJPTR(FLOAT, src[0].o)->value, src[1].o);
+                        break;
+
+                    case OBJ_STRING: {
+                        if (GET_OBJ_TYPE(src[1].o) == OBJ_STRING) {
+                            KOS_init_local_with(ctx, &src[0], src[0].o);
+                            KOS_init_local_with(ctx, &src[1], src[1].o);
+
+                            out = KOS_string_add_n(ctx, src, 2);
+
+                            KOS_destroy_top_locals(ctx, &src[1], &src[0]);
+                        }
+                        else
+                            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
+                        break;
+                    }
+
+                    default:
+                        RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
+                        break;
                 }
 
                 TRY_OBJID(out);
@@ -2147,10 +2158,11 @@ static int exec_function(KOS_CONTEXT ctx)
                 src1  = REGISTER(rsrc1);
                 src2  = REGISTER(rsrc2);
 
-                if (IS_SMALL_INT(src1))
-                    out = sub_integer(ctx, GET_SMALL_INT(src1), src2);
+                switch (GET_OBJ_TYPE(src1)) {
 
-                else switch (GET_OBJ_TYPE(src1)) {
+                    case OBJ_SMALL_INTEGER:
+                        out = sub_integer(ctx, GET_SMALL_INT(src1), src2);
+                        break;
 
                     case OBJ_INTEGER:
                         out = sub_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
@@ -2188,10 +2200,11 @@ static int exec_function(KOS_CONTEXT ctx)
                 src1  = REGISTER(rsrc1);
                 src2  = REGISTER(rsrc2);
 
-                if (IS_SMALL_INT(src1))
-                    out = mul_integer(ctx, GET_SMALL_INT(src1), src2);
+                switch (GET_OBJ_TYPE(src1)) {
 
-                else switch (GET_OBJ_TYPE(src1)) {
+                    case OBJ_SMALL_INTEGER:
+                        out = mul_integer(ctx, GET_SMALL_INT(src1), src2);
+                        break;
 
                     case OBJ_INTEGER:
                         out = mul_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
@@ -2229,10 +2242,11 @@ static int exec_function(KOS_CONTEXT ctx)
                 src1  = REGISTER(rsrc1);
                 src2  = REGISTER(rsrc2);
 
-                if (IS_SMALL_INT(src1))
-                    out = div_integer(ctx, GET_SMALL_INT(src1), src2);
+                switch (GET_OBJ_TYPE(src1)) {
 
-                else switch (GET_OBJ_TYPE(src1)) {
+                    case OBJ_SMALL_INTEGER:
+                        out = div_integer(ctx, GET_SMALL_INT(src1), src2);
+                        break;
 
                     case OBJ_INTEGER:
                         out = div_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
@@ -2270,10 +2284,11 @@ static int exec_function(KOS_CONTEXT ctx)
                 src1  = REGISTER(rsrc1);
                 src2  = REGISTER(rsrc2);
 
-                if (IS_SMALL_INT(src1))
-                    out = mod_integer(ctx, GET_SMALL_INT(src1), src2);
+                switch (GET_OBJ_TYPE(src1)) {
 
-                else switch (GET_OBJ_TYPE(src1)) {
+                    case OBJ_SMALL_INTEGER:
+                        out = mod_integer(ctx, GET_SMALL_INT(src1), src2);
+                        break;
 
                     case OBJ_INTEGER:
                         out = mod_integer(ctx, OBJPTR(INTEGER, src1)->value, src2);
