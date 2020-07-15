@@ -111,16 +111,23 @@ else
     ifeq ($(debug), 0)
         CFLAGS += -O3 -DNDEBUG -ffunction-sections -fdata-sections
         CFLAGS += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
-        STRIP  ?= strip
-        ifeq ($(UNAME), Linux)
-            LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
-        endif
-        ifeq ($(UNAME), Darwin)
-            LDFLAGS += -Wl,-dead_strip
-            ifeq ($(STRIP), strip)
-                STRIP += -x
+        symbols ?= 0
+        ifeq ($(symbols), 1)
+            STRIP  ?= true
+            CFLAGS += -ggdb -fno-omit-frame-pointer
+        else
+            STRIP ?= strip
+            ifeq ($(UNAME), Linux)
+                LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
+            endif
+            ifeq ($(UNAME), Darwin)
+                LDFLAGS += -Wl,-dead_strip
+                ifeq ($(STRIP), strip)
+                    STRIP += -x
+                endif
             endif
         endif
+
         ifeq ($(native), 1)
             CFLAGS  += -march=native
             LDFLAGS += -march=native
