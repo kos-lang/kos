@@ -151,14 +151,15 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
     return IS_BAD_PTR(*mod_init) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 
-static int find_module(KOS_CONTEXT ctx,
-                       KOS_OBJ_ID  module_name,
-                       const char *maybe_path,
-                       unsigned    length,
-                       int         is_path,
-                       KOS_OBJ_ID *out_abs_dir,
-                       KOS_OBJ_ID *out_abs_path,
-                       KOS_OBJ_ID *mod_init)
+static int find_module(KOS_CONTEXT            ctx,
+                       KOS_OBJ_ID             module_name,
+                       const char            *maybe_path,
+                       unsigned               length,
+                       int                    is_path,
+                       KOS_MODULE_LOAD_CHAIN *loading,
+                       KOS_OBJ_ID            *out_abs_dir,
+                       KOS_OBJ_ID            *out_abs_path,
+                       KOS_OBJ_ID            *mod_init)
 {
     KOS_LOCAL  path;
     KOS_LOCAL  dir;
@@ -294,6 +295,12 @@ cleanup:
     kos_vector_destroy(&cpath);
 
     assert(error != KOS_ERROR_INTERNAL);
+
+    if (error == KOS_ERROR_NOT_FOUND) {
+        KOS_raise_printf(ctx, "module \"%.*s\" not found",
+                         (int)loading->length, loading->module_name);
+        error = KOS_ERROR_EXCEPTION;
+    }
 
     return error;
 }
@@ -1458,6 +1465,7 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     int                   error              = KOS_SUCCESS;
     int                   module_idx         = -1;
     int                   chain_init         = 0;
+    int                   source_found       = 0;
     KOS_LOCAL             actual_module_name;
     KOS_LOCAL             module_dir;
     KOS_LOCAL             module_path;
@@ -1483,27 +1491,10 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     actual_module_name.o = KOS_new_string(ctx, loading.module_name, loading.length);
     TRY_OBJID(actual_module_name.o);
 
-    /* Find module source file */
     if (data) {
         module_dir.o  = KOS_STR_EMPTY;
         module_path.o = actual_module_name.o;
-    }
-    else
-        error = find_module(ctx,
-                            actual_module_name.o,
-                            module_name,
-                            name_size,
-                            is_path,
-                            (KOS_OBJ_ID *)&module_dir.o,
-                            (KOS_OBJ_ID *)&module_path.o,
-                            (KOS_OBJ_ID *)&mod_init.o);
-    if (error) {
-        if (error == KOS_ERROR_NOT_FOUND) {
-            KOS_raise_printf(ctx, "module \"%.*s\" not found",
-                             (int)loading.length, loading.module_name);
-            error = KOS_ERROR_EXCEPTION;
-        }
-        goto cleanup;
+        source_found  = 1;
     }
 
     /* TODO use global mutex for thread safety */
@@ -1512,6 +1503,20 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     if (KOS_get_array_size(inst->modules.modules) == 0 && strcmp(module_name, base)) {
         int        base_idx;
         KOS_OBJ_ID base_obj;
+
+        /* Find module source file */
+        if ( ! source_found) {
+            TRY(find_module(ctx,
+                            actual_module_name.o,
+                            module_name,
+                            name_size,
+                            is_path,
+                            &loading,
+                            (KOS_OBJ_ID *)&module_dir.o,
+                            (KOS_OBJ_ID *)&module_path.o,
+                            (KOS_OBJ_ID *)&mod_init.o));
+            source_found = 1;
+        }
 
         /* Add search path - path of the topmost module being loaded */
         path_array.o = KOS_new_array(ctx, 1);
@@ -1562,6 +1567,20 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
         }
     }
     KOS_clear_exception(ctx);
+
+    /* Find module source file */
+    if ( ! source_found) {
+        TRY(find_module(ctx,
+                        actual_module_name.o,
+                        module_name,
+                        name_size,
+                        is_path,
+                        &loading,
+                        (KOS_OBJ_ID *)&module_dir.o,
+                        (KOS_OBJ_ID *)&module_path.o,
+                        (KOS_OBJ_ID *)&mod_init.o));
+        source_found = 1;
+    }
 
     if (inst->flags & KOS_INST_VERBOSE)
         print_load_info(ctx, actual_module_name.o, module_path.o);
