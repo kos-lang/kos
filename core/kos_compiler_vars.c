@@ -1170,13 +1170,9 @@ int kos_compiler_process_vars(KOS_COMP_UNIT *program,
 {
     PROF_ZONE(COMPILER)
 
-    int err;
-
     assert(ast->type == NT_SCOPE);
 
-    err = visit_node(program, ast);
-
-    return err;
+    return visit_node(program, ast);
 }
 
 static int predefine_global(KOS_COMP_UNIT      *program,

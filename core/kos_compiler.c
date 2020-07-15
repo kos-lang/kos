@@ -5484,8 +5484,12 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
 
     TRY(kos_allocate_args(program, ast));
 
-    TRY(visit_node(program, ast, &reg));
-    assert(!reg);
+    {
+        PROF_ZONE_N(COMPILER, generate_code)
+
+        TRY(visit_node(program, ast, &reg));
+        assert(!reg);
+    }
 
     if (num_opt_passes)
         *num_opt_passes = num_passes;

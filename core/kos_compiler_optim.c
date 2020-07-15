@@ -1939,12 +1939,9 @@ int kos_optimize(KOS_COMP_UNIT *program,
 {
     PROF_ZONE(COMPILER)
 
-    int err;
     int t;
 
     assert(ast->type == NT_SCOPE);
 
-    err = visit_node(program, ast, &t);
-
-    return err;
+    return visit_node(program, ast, &t);
 }

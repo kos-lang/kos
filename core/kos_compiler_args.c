@@ -4,6 +4,7 @@
 
 #include "kos_compiler.h"
 #include "kos_config.h"
+#include "kos_perf.h"
 #include "kos_try.h"
 #include "../inc/kos_error.h"
 #include <assert.h>
@@ -635,6 +636,9 @@ static int visit_node(KOS_COMP_UNIT *program,
 int kos_allocate_args(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *ast)
 {
+    PROF_ZONE(COMPILER)
+
     assert(ast->type == NT_SCOPE);
+
     return visit_node(program, ast);
 }
