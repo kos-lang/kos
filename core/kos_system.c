@@ -172,7 +172,6 @@ void kos_filebuf_init(KOS_FILEBUF *file_buf)
     assert(file_buf);
     file_buf->buffer = 0;
     file_buf->size   = 0;
-    file_buf->fd     = -1;
 }
 
 int kos_load_file(const char  *filename,
@@ -207,17 +206,12 @@ int kos_load_file(const char  *filename,
         if (addr == MAP_FAILED)
             RAISE_ERROR(errno_to_error());
     }
-    else {
-        close(fd);
-        fd = -1;
-    }
 
     file_buf->buffer = (const char *)addr;
     file_buf->size   = st.st_size;
-    file_buf->fd     = fd;
 
 cleanup:
-    if (error && fd != -1)
+    if (fd != -1)
         close(fd);
 
     return error;
@@ -230,10 +224,6 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
         munmap((void *)file_buf->buffer, file_buf->size);
         file_buf->buffer = 0;
         file_buf->size   = 0;
-    }
-    if (file_buf->fd != -1) {
-        close(file_buf->fd);
-        file_buf->fd = -1;
     }
 }
 #endif

@@ -50,18 +50,10 @@ int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect);
 
 int64_t kos_get_time_us(void);
 
-#if defined(_WIN32) || defined(__HAIKU__)
 struct KOS_FILEBUF_S {
     const char *buffer;
     size_t      size;
 };
-#else
-struct KOS_FILEBUF_S {
-    const char *buffer;
-    size_t      size;
-    int         fd;
-};
-#endif
 
 typedef struct KOS_FILEBUF_S KOS_FILEBUF;
 
