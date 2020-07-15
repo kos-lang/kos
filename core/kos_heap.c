@@ -137,8 +137,8 @@ static inline KOS_HEAP *get_heap(KOS_CONTEXT ctx)
 
 int kos_heap_init(KOS_INSTANCE *inst)
 {
-    PROF_PLOT_INIT("used heap",     Memory)
-    PROF_PLOT_INIT("used off-heap", Memory)
+    PROF_PLOT_INIT("heap",     Memory)
+    PROF_PLOT_INIT("off-heap", Memory)
 
     KOS_HEAP *heap = &inst->heap;
     int       error;
@@ -452,6 +452,8 @@ static void end_page_walk(KOS_HEAP               *heap,
 static KOS_POOL *alloc_pool(KOS_HEAP *heap,
                             uint32_t  alloc_size)
 {
+    PROF_ZONE(HEAP)
+
     KOS_POOL *pool_hdr;
     uint8_t  *pool;
 
@@ -887,8 +889,8 @@ static void *alloc_object(KOS_CONTEXT ctx,
         }
     }
 
-    PROF_PLOT("used heap",     (int64_t)heap->used_heap_size)
-    PROF_PLOT("used off-heap", (int64_t)heap->malloc_size)
+    PROF_PLOT("heap",     (int64_t)heap->used_heap_size)
+    PROF_PLOT("off-heap", (int64_t)heap->malloc_size)
 
     kos_unlock_mutex(&heap->mutex);
 
@@ -964,8 +966,8 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
     KOS_PERF_CNT(alloc_huge_object);
 
 cleanup:
-    PROF_PLOT("used heap",     (int64_t)heap->used_heap_size)
-    PROF_PLOT("used off-heap", (int64_t)heap->malloc_size)
+    PROF_PLOT("heap",     (int64_t)heap->used_heap_size)
+    PROF_PLOT("off-heap", (int64_t)heap->malloc_size)
 
     kos_unlock_mutex(&heap->mutex);
 
@@ -2698,8 +2700,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     release_helper_threads(heap);
 
     PROF_FRAME_END("GC")
-    PROF_PLOT("used heap",     (int64_t)heap->used_heap_size)
-    PROF_PLOT("used off-heap", (int64_t)heap->malloc_size)
+    PROF_PLOT("heap",     (int64_t)heap->used_heap_size)
+    PROF_PLOT("off-heap", (int64_t)heap->malloc_size)
 
     kos_unlock_mutex(&heap->mutex);
 
