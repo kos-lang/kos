@@ -186,7 +186,6 @@ int kos_load_file(const char  *filename,
     assert(file_buf);
     assert( ! file_buf->buffer);
     assert( ! file_buf->size);
-    assert(file_buf->fd == -1);
 
     if (kos_seq_fail())
         RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
