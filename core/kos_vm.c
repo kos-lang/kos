@@ -1243,6 +1243,23 @@ extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
 #   define NEXT_INSTRUCTION             FUZZ_LIMIT(); break
 #endif
 
+#if defined(__cplusplus) && defined(TRACY_ENABLE)
+/* This works correctly only for KOS_STRING_ELEM_8 and ASCII function names */
+#   define PROF_ZONE_NAME_FUN(func_obj_expr)                             \
+    {                                                                    \
+        const KOS_OBJ_ID func_obj = (func_obj_expr);                     \
+        const KOS_OBJ_ID name = OBJPTR(FUNCTION, func_obj)->name;        \
+        assert(GET_OBJ_TYPE(name) == OBJ_STRING);                        \
+        PROF_ZONE_NAME(                                                  \
+                (OBJPTR(STRING, name)->header.flags & KOS_STRING_LOCAL)  \
+                    ? (const char *)&OBJPTR(STRING, name)->local.data[0] \
+                    : (const char *)OBJPTR(STRING, name)->ptr.data_ptr,  \
+                OBJPTR(STRING, name)->header.length);                    \
+    }
+#else
+#   define PROF_ZONE_NAME_FUN(func_obj_expr)
+#endif
+
 static int exec_function(KOS_CONTEXT ctx)
 {
     PROF_ZONE(VM)
@@ -1259,21 +1276,8 @@ static int exec_function(KOS_CONTEXT ctx)
     const uint32_t     num_regs = get_num_regs(stack, regs_idx);
 #endif
 
-#if defined(__cplusplus) && defined(TRACY_ENABLE)
-    {
-        assert(regs_idx >= 3);
-        const KOS_OBJ_ID func_obj = KOS_atomic_read_relaxed_obj(
-                OBJPTR(STACK, stack)->buf[regs_idx-3]);
-        const KOS_OBJ_ID name = OBJPTR(FUNCTION, func_obj)->name;
-        assert(GET_OBJ_TYPE(name) == OBJ_STRING);
-        /* This works correctly only for KOS_STRING_ELEM_8 and ASCII function names */
-        PROF_ZONE_NAME(
-                (OBJPTR(STRING, name)->header.flags & KOS_STRING_LOCAL)
-                    ? (const char *)&OBJPTR(STRING, name)->local.data[0]
-                    : (const char *)OBJPTR(STRING, name)->ptr.data_ptr,
-                OBJPTR(STRING, name)->header.length);
-    }
-#endif
+    PROF_ZONE_NAME_FUN(KOS_atomic_read_relaxed_obj(
+                OBJPTR(STACK, stack)->buf[regs_idx-3]))
 
 #if KOS_DISPATCH_TABLE
     uint8_t            jump_offs;
@@ -3052,6 +3056,9 @@ static int exec_function(KOS_CONTEXT ctx)
                             error = KOS_ERROR_EXCEPTION;
                         }
                         else {
+                            PROF_ZONE(VM)
+                            PROF_ZONE_NAME_FUN(func.o)
+
                             ret_val = OBJPTR(FUNCTION, func.o)->handler(ctx, this_.o, args.o);
 
                             assert(IS_BAD_PTR(ret_val) || GET_OBJ_TYPE(ret_val) <= OBJ_LAST_TYPE);
@@ -3312,6 +3319,9 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
 
     else {
         if (OBJPTR(FUNCTION, func.o)->handler)  {
+            PROF_ZONE(VM)
+            PROF_ZONE_NAME_FUN(func.o)
+
             KOS_OBJ_ID retval = KOS_BADPTR;
 
             retval = OBJPTR(FUNCTION, func.o)->handler(ctx, this_.o, args.o);
