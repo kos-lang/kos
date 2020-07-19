@@ -12,6 +12,7 @@
 #include "../core/kos_object_internal.h"
 #include "../core/kos_malloc.h"
 #include "../core/kos_memory.h"
+#include "../core/kos_misc.h"
 #include "../core/kos_try.h"
 #include "../core/kos_utf8.h"
 #include <stdarg.h>
@@ -217,7 +218,9 @@ struct RE {
     uint16_t bytecode[1];
 };
 
-KOS_DECLARE_STATIC_CONST_STRING(str_err_too_long, "regular expression too long");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string, "object is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_re,      "object is not a regular expression");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_long,   "regular expression too long");
 
 /* End of regular expression */
 #define EORE (~0U)
@@ -1107,18 +1110,55 @@ static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    int       error = KOS_SUCCESS;
-    KOS_LOCAL str;
+    int        error = KOS_SUCCESS;
+    uint32_t   pos   = 0;
+    uint32_t   end_pos;
+    KOS_LOCAL  str;
+    struct RE *re;
 
     assert(KOS_get_array_size(args_obj) > 0);
 
-    KOS_init_locals(ctx, 1, &str);
-
-    str.o = KOS_array_read(ctx, args_obj, 0);
+    KOS_init_local_with(ctx, &str, KOS_array_read(ctx, args_obj, 0));
     TRY_OBJID(str.o);
 
+    if (GET_OBJ_TYPE(str.o) != OBJ_STRING)
+        RAISE_EXCEPTION_STR(str_err_not_string);
+
+    end_pos = KOS_get_string_length(str.o);
+
+    re = (struct RE *)KOS_object_get_private_ptr(this_obj);
+    if ( ! re)
+        RAISE_EXCEPTION_STR(str_err_not_re);
+
+    if (KOS_get_array_size(args_obj) > 1) {
+        KOS_OBJ_ID val = KOS_array_read(ctx, args_obj, 1);
+        int64_t    ival;
+
+        TRY_OBJID(val);
+
+        TRY(KOS_get_integer(ctx, val, &ival));
+
+        ival = (uint32_t)kos_fix_index(ival, end_pos);
+
+        if (KOS_get_array_size(args_obj) > 2) {
+            val = KOS_array_read(ctx, args_obj, 2);
+            TRY_OBJID(val);
+
+            if (val != KOS_VOID) {
+                TRY(KOS_get_integer(ctx, val, &ival));
+
+                end_pos = (uint32_t)kos_fix_index(ival, end_pos);
+            }
+        }
+
+        if (end_pos < pos)
+            end_pos = pos;
+    }
+
+    /* TODO */
+
 cleanup:
-    KOS_destroy_top_locals(ctx, &str, &str);
+    KOS_destroy_top_local(ctx, &str);
 
     return error ? KOS_BADPTR : KOS_VOID;
 }
