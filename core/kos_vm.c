@@ -1236,7 +1236,7 @@ extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
                                         jump_offs = (uint8_t)(instr - INSTR_BREAKPOINT);         \
                                         if (jump_offs >= (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) \
                                             goto OP_BREAKPOINT;                                  \
-                                        goto* dispatch_table[jump_offs];
+                                        goto *dispatch_table[jump_offs];
 #else
 #   define BEGIN_INSTRUCTION(instr)     case INSTR_##instr
 #   define BEGIN_BREAKPOINT_INSTRUCTION default
@@ -2499,18 +2499,18 @@ static int exec_function(KOS_CONTEXT ctx)
 
             BEGIN_INSTRUCTION(TYPE): { /* <r.dest>, <r.src> */
                 PROF_ZONE_N(INSTR, "TYPE")
-                const unsigned rsrc  = bytecode[2];
+                const unsigned rsrc = bytecode[2];
                 KOS_OBJ_ID     src;
                 unsigned       type_idx;
 
-                KOS_DECLARE_STATIC_CONST_STRING(str_integer,  "integer");
-                KOS_DECLARE_STATIC_CONST_STRING(str_float,    "float");
-                KOS_DECLARE_STATIC_CONST_STRING(str_boolean,  "boolean");
-                KOS_DECLARE_STATIC_CONST_STRING(str_string,   "string");
-                KOS_DECLARE_STATIC_CONST_STRING(str_object,   "object");
-                KOS_DECLARE_STATIC_CONST_STRING(str_array,    "array");
-                KOS_DECLARE_STATIC_CONST_STRING(str_buffer,   "buffer");
-                KOS_DECLARE_STATIC_CONST_STRING(str_class,    "class");
+                KOS_DECLARE_STATIC_CONST_STRING(str_integer, "integer");
+                KOS_DECLARE_STATIC_CONST_STRING(str_float,   "float");
+                KOS_DECLARE_STATIC_CONST_STRING(str_boolean, "boolean");
+                KOS_DECLARE_STATIC_CONST_STRING(str_string,  "string");
+                KOS_DECLARE_STATIC_CONST_STRING(str_object,  "object");
+                KOS_DECLARE_STATIC_CONST_STRING(str_array,   "array");
+                KOS_DECLARE_STATIC_CONST_STRING(str_buffer,  "buffer");
+                KOS_DECLARE_STATIC_CONST_STRING(str_class,   "class");
 
                 static const KOS_OBJ_ID obj_type_map[11] = {
                     KOS_CONST_ID(str_integer),
@@ -2526,19 +2526,18 @@ static int exec_function(KOS_CONTEXT ctx)
                     KOS_CONST_ID(str_class)
                 };
 
-                assert(rsrc  < num_regs);
+                assert(rsrc < num_regs);
 
                 rdest = bytecode[1];
                 src   = REGISTER(rsrc);
 
                 assert(!IS_BAD_PTR(src));
 
-                type_idx = GET_OBJ_TYPE(src) >> 1;
+                type_idx = GET_OBJ_TYPE(src);
+                type_idx = (type_idx < 2 * (sizeof(obj_type_map) / sizeof(obj_type_map[0])))
+                           ? type_idx : (unsigned)OBJ_OBJECT;
 
-                if (type_idx >= sizeof(obj_type_map) / sizeof(obj_type_map[0]))
-                    out = KOS_CONST_ID(str_object);
-                else
-                    out = obj_type_map[type_idx];
+                out = obj_type_map[type_idx >> 1];
 
                 WRITE_REGISTER(rdest, out);
 
