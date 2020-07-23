@@ -21,6 +21,7 @@ do {
 }
 
 do {
+    expect_fail(() => re.re())
     expect_fail(() => re.re(r"("))
     expect_fail(() => re.re(r")"))
     expect_fail(() => re.re(r"a{1a}"))
@@ -41,4 +42,74 @@ do {
     expect_fail(() => re.re(r"[0-]"))
     expect_fail(() => re.re(r"[0--]"))
     expect_fail(() => re.re(r"[1-0]"))
+}
+
+do {
+    const r = re.re("^a.b$")
+    assert r.search("acb")
+    assert r.search("aab")
+    assert r.search("abb")
+    assert r.search("a.b")
+    assert r.search("a\x{80}b")
+    assert r.search("a\x{10000}b")
+    assert r.search("xyazbqm", 2, -2)
+    assert r.search("XY\nazb\nqm")
+    assert r.search("") == void
+    assert r.search("aacb") == void
+    assert r.search("acbb") == void
+    assert r.search("ac") == void
+    assert r.search("acB") == void
+    assert r.search("cb") == void
+    assert r.search("Acb") == void
+    assert r.search("xyazbqm", 2) == void
+    assert r.search("xyazbqm", 2, void) == void
+}
+
+do {
+    const r = re.re("x.\x{10000}")
+    assert r.search("xy\x{10000}")
+    assert r.search("xxxxx.\x{10000}\x{10000}\x{10000}")
+    assert r.search("\x{10000}x.\x{10000}xxxx")
+    assert r.search("ABxz\x{10000}qm", 2)
+    assert r.search("ABxz\x{10000}qm", 2, void)
+    assert r.search("ABxz\x{10000}qm", 2, -2)
+    assert r.search("") == void
+    assert r.search("x") == void
+    assert r.search("x\x{80}") == void
+    assert r.search("x\x{10000}") == void
+    assert r.search("xy\x{80}\x{10000}") == void
+    assert r.search("ABxz\x{10000}qm", 3, -2) == void
+    assert r.search("ABxz\x{10000}qm", 2, -3) == void
+}
+
+do {
+    const r = re.re("")
+    assert r.search("")
+    assert r.search("a")
+    assert r.search("abcdefgh")
+}
+
+do {
+    const r = re.re("^")
+    assert r.search("")
+    assert r.search("a")
+    assert r.search("abcdefgh")
+}
+
+do {
+    const r = re.re("$")
+    assert r.search("")
+    assert r.search("a")
+    assert r.search("abcdefgh")
+}
+
+do {
+    const r = re.re("")
+    expect_fail(() => r.search())
+    expect_fail(() => r.search(1))
+    expect_fail(() => r.search(void))
+    expect_fail(() => r.search([]))
+    expect_fail(() => r.search("x", void))
+    expect_fail(() => r.search("x", void, 1))
+    expect_fail(() => r.search("x", 1, ""))
 }

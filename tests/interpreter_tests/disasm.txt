@@ -28,5 +28,5 @@
 Disassembling regular expression: x*
 ==============================================================================
 
-00000000: 000A 000C 0000 FFFF GREEDY.COUNT     END, 0, 65535
+00000000: 000B 000C 0000 FFFF GREEDY.COUNT     END, 0, 65535
 00000008: 0000 0078           MATCH.ONE.CHAR   120
