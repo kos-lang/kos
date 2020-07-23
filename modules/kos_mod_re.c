@@ -239,7 +239,7 @@ static uint32_t peek_prev_char(KOS_STRING_ITER *iter)
 {
     KOS_STRING_ITER prev_iter = *iter;
 
-    prev_iter.ptr -= 1 << prev_iter.elem_size;
+    prev_iter.ptr -= (intptr_t)1 << prev_iter.elem_size;
 
     return kos_string_iter_peek_next_code(&prev_iter);
 }
