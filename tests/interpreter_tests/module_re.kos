@@ -45,6 +45,13 @@ do {
 }
 
 do {
+    const r = re.re("a")
+    assert r instanceof re.re
+    assert ! (void instanceof re.re)
+    assert ! ({} instanceof re.re)
+}
+
+do {
     const r = re.re("^a.b$")
     assert r.search("acb")
     assert r.search("aab")

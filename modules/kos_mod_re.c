@@ -1031,8 +1031,6 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     kos_vector_init(&re_ctx.class_descs);
     kos_vector_init(&re_ctx.class_data);
 
-    /* TODO cache */
-
     TRY(kos_vector_reserve(&re_ctx.buf, KOS_get_string_length(regex_str) * 2U));
 
     re_ctx.ctx                 = ctx;
@@ -1195,6 +1193,12 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
  *
  * `regex` is a string containing a regular expression.
  *
+ * Stores regular expressions in a cache, so subsequent invocations with the
+ * same regular expression string just take the precompiled regular expression
+ * from the cache instead of recompiling it every single time.
+ *
+ * For the uncached version, use `re_uncached`.
+ *
  * Example:
  *
  *     > re("...")
@@ -1325,8 +1329,8 @@ int kos_module_re_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &proto);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "re",     re_ctor,   1, &proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "search", re_search, 1);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "re_uncached", re_ctor,   1, &proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "search",      re_search, 1);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &proto, &module);

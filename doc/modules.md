@@ -180,6 +180,7 @@ Table of Contents
       * [random.prototype.shuffle()](#randomprototypeshuffle)
     * [shuffle()](#shuffle)
   * [re](#re)
+    * [clear\_cache()](#clear_cache)
     * [re()](#re)
       * [re.prototype.search()](#reprototypesearch)
 <!--te-->
@@ -3749,6 +3750,20 @@ Example:
 re
 ==
 
+clear_cache()
+-------------
+
+    clear_cache()
+
+Clears regular expression cache.
+
+The `re` class stores regular expressions in a cache, which can be
+emptied with this function.
+
+Example:
+
+    > clear_cache()
+
 re()
 ----
 
@@ -3757,6 +3772,12 @@ re()
 Regular expression class.
 
 `regex` is a string containing a regular expression.
+
+Stores regular expressions in a cache, so subsequent invocations with the
+same regular expression string just take the precompiled regular expression
+from the cache instead of recompiling it every single time.
+
+For the uncached version, use `re_uncached`.
 
 Example:
 

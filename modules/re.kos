@@ -1,2 +1,39 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2020 Chris Dragan
+
+var cache = { }
+
+public class re
+{
+    constructor(regex) {
+        if regex in cache {
+            this.regex = cache[regex]
+        }
+        else {
+            const re_obj = re_uncached(regex)
+            this.regex = re_obj
+            cache[regex] = re_obj
+        }
+    }
+    search(args...) {
+        return this.regex.search(args...)
+    }
+}
+
+/* @item re clear_cache()
+ *
+ *     clear_cache()
+ *
+ * Clears regular expression cache.
+ *
+ * The `re` class stores regular expressions in a cache, which can be
+ * emptied with this function.
+ *
+ * Example:
+ *
+ *     > clear_cache()
+ */
+public fun clear_cache
+{
+    cache = { }
+}
