@@ -1,6 +1,6 @@
 import re
 
-re.re("x*")
+re.re("x*y{1,2}?")
 
 fun
 {

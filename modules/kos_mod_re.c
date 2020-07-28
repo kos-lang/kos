@@ -164,8 +164,10 @@ enum RE_INSTR {
     INSTR_END_GROUP,        /* END.GROUP <group_id>               */
     INSTR_FORK,             /* FORK <offs>                        */
     INSTR_JUMP,             /* JUMP <offs>                        */
-    INSTR_GREEDY_COUNT,     /* GREEDY.COUNT <offs> <min> <max>    */
-    INSTR_LAZY_COUNT        /* LAZY.COUNT <offs> <min> <max>      */
+    INSTR_GREEDY_COUNT,     /* GREEDY.COUNT <offs>                */
+    INSTR_LAZY_COUNT,       /* LAZY.COUNT <offs> <min>            */
+    INSTR_GREEDY_JUMP,      /* GREEDY.JUMP <offs> <min> <max>     */
+    INSTR_LAZY_JUMP         /* LAZY.JUMP <offs> <min> <max>       */
 };
 
 struct RE_INSTR_DESC_S {
@@ -188,8 +190,10 @@ static const RE_INSTR_DESC re_instr_descs[] = {
     { "END.GROUP",        1, 0 },
     { "FORK",             1, 1 },
     { "JUMP",             1, 1 },
-    { "GREEDY.COUNT",     3, 1 },
-    { "LAZY.COUNT",       3, 1 }
+    { "GREEDY.COUNT",     1, 1 },
+    { "LAZY.COUNT",       2, 1 },
+    { "GREEDY.JUMP",      3, 1 },
+    { "LAZY.JUMP",        3, 1 }
 };
 
 struct RE_CTX {
@@ -410,6 +414,8 @@ static int parse_number(struct RE_CTX *re_ctx, uint32_t* number)
             return KOS_ERROR_EXCEPTION;
         }
     }
+
+    *number = value;
 
     return KOS_SUCCESS;
 }
@@ -753,24 +759,38 @@ static int parse_single_match(struct RE_CTX *re_ctx)
 }
 
 static int emit_multiplicity(struct RE_CTX *re_ctx,
-                             uint32_t       begin,
+                             uint32_t       begin_offs,
                              uint32_t       min_count,
                              uint32_t       max_count)
 {
     int            error;
-    enum RE_INSTR  instr = INSTR_GREEDY_COUNT;
     const uint32_t pivot = (uint32_t)re_ctx->buf.size;
+    const int      lazy  = peek_next_char(&re_ctx->iter) == '?';
+    uint32_t       jump_offs;
+    uint32_t       count_size;
 
-    if (peek_next_char(&re_ctx->iter) == '?') {
+    if (lazy) {
         consume_next_char(re_ctx);
-        instr = INSTR_LAZY_COUNT;
+
+        TRY(emit_instr2(re_ctx, INSTR_LAZY_COUNT, 0, min_count));
     }
+    else
+        TRY(emit_instr1(re_ctx, INSTR_GREEDY_COUNT, 0));
 
-    TRY(emit_instr3(re_ctx, instr, 0, min_count, max_count));
+    count_size = (uint32_t)re_ctx->buf.size - pivot;
 
-    rotate_instr(re_ctx, begin, pivot);
+    rotate_instr(re_ctx, begin_offs, pivot);
 
-    patch_jump_offs(re_ctx, begin, (uint32_t)re_ctx->buf.size);
+    jump_offs = (uint32_t)re_ctx->buf.size;
+
+    TRY(emit_instr3(re_ctx,
+                    lazy ? INSTR_LAZY_JUMP : INSTR_GREEDY_JUMP,
+                    0,
+                    min_count,
+                    max_count));
+
+    patch_jump_offs(re_ctx, begin_offs, (uint32_t)re_ctx->buf.size);
+    patch_jump_offs(re_ctx, jump_offs, begin_offs + count_size);
 
 cleanup:
     return error;
@@ -960,13 +980,13 @@ static void disassemble(struct RE *re, const char *re_cstr)
             bytes_remaining -= num_printed;
 
             if ( ! i_arg && desc->first_arg_is_offs) {
-                const unsigned target = (unsigned)offs + operand;
+                const unsigned target = (unsigned)offs + (int16_t)operand;
 
                 assert(target <= re->bytecode_size * 2U);
                 if (target == re->bytecode_size * 2U)
                     num_printed = snprintf(mnem_buf, mnem_remaining, "END");
                 else
-                    num_printed = snprintf(mnem_buf, mnem_remaining, "%08X", (unsigned)offs + operand);
+                    num_printed = snprintf(mnem_buf, mnem_remaining, "%08X", (unsigned)offs + (int16_t)operand);
             }
             else
                 num_printed = snprintf(mnem_buf, mnem_remaining, "%u", operand);
@@ -1144,7 +1164,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
             /* TODO BEGIN_INSTRUCTION(FORK) */
 
             BEGIN_INSTRUCTION(JUMP): {
-                const uint16_t delta = bytecode[1];
+                const int16_t delta = (int16_t)bytecode[1];
                 bytecode += delta;
                 assert(bytecode <= bytecode_end);
                 NEXT_INSTRUCTION;
@@ -1153,6 +1173,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
             /* TODO BEGIN_INSTRUCTION(GREEDY_COUNT) */
 
             /* TODO BEGIN_INSTRUCTION(LAZY_COUNT) */
+
+            /* TODO BEGIN_INSTRUCTION(GREEDY_JUMP) */
+
+            /* TODO BEGIN_INSTRUCTION(LAZY_JUMP) */
 
             default:
                 KOS_raise_printf(ctx, "unknown instruction 0x%x\n", (unsigned)instr);
