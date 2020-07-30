@@ -26,7 +26,12 @@ do {
     expect_fail(() => re.re(r")"))
     expect_fail(() => re.re(r"a{1a}"))
     expect_fail(() => re.re(r"a{a}"))
+    expect_fail(() => re.re(r"a{65536}"))
     expect_fail(() => re.re(r"a{4294967296}"))
+    expect_fail(() => re.re(r"a{0}"))
+    expect_fail(() => re.re(r"a{0,0}"))
+    expect_fail(() => re.re(r"a{2,1}"))
+    expect_fail(() => re.re(r"a{1,0}"))
     expect_fail(() => re.re(r"*"))
     expect_fail(() => re.re(r"+"))
     expect_fail(() => re.re(r"?"))
@@ -189,4 +194,56 @@ do {
     assert r.search("xabbbbbbbcy") == void
     assert r.search("xbcy") == void
     assert r.search("xaby") == void
+}
+
+do {
+    const r = re.re("ab*c")
+    assert r.search("xacy")
+    assert r.search("xabcy")
+    assert r.search("xabbbbcy")
+    assert r.search("xbcy") == void
+    assert r.search("xaby") == void
+}
+
+do {
+    const r = re.re("ab+c")
+    assert r.search("xacy") == void
+    assert r.search("xabcy")
+    assert r.search("xabbbbcy")
+    assert r.search("xbcy") == void
+    assert r.search("xaby") == void
+}
+
+do {
+    const r = re.re("ab{3,5}c")
+    assert r.search("xacy") == void
+    assert r.search("xabcy") == void
+    assert r.search("xabbcy") == void
+    assert r.search("xabbbcy")
+    assert r.search("xabbbbcy")
+    assert r.search("xabbbbbcy")
+    assert r.search("xabbbbbbcy") == void
+    assert r.search("xabbbbbbbcy") == void
+    assert r.search("xbcy") == void
+    assert r.search("xaby") == void
+}
+
+do {
+    const r = re.re("a(b|cd)??e")
+    assert r.search("xaey")
+    assert r.search("xabey")
+    assert r.search("xacdey")
+    assert r.search("xabbey") == void
+    assert r.search("xabcdey") == void
+    assert r.search("xacdcdey") == void
+}
+
+do {
+    const r = re.re("a(b|cd)?e")
+    assert r.search("xaey")
+    assert r.search("xabey")
+    assert r.search("xacdey")
+    assert r.search("xabbey") == void
+    assert r.search("xabcdey") == void
+    assert r.search("xacdcdey") == void
 }

@@ -164,7 +164,7 @@ enum RE_INSTR {
     INSTR_END_GROUP,        /* END.GROUP <group_id>               */
     INSTR_FORK,             /* FORK <offs>                        */
     INSTR_JUMP,             /* JUMP <offs>                        */
-    INSTR_GREEDY_COUNT,     /* GREEDY.COUNT <offs>                */
+    INSTR_GREEDY_COUNT,     /* GREEDY.COUNT <offs> <min>          */
     INSTR_LAZY_COUNT,       /* LAZY.COUNT <offs> <min>            */
     INSTR_GREEDY_JUMP,      /* GREEDY.JUMP <offs> <min> <max>     */
     INSTR_LAZY_JUMP         /* LAZY.JUMP <offs> <min> <max>       */
@@ -190,7 +190,7 @@ static const RE_INSTR_DESC re_instr_descs[] = {
     { "END.GROUP",        1, 0 },
     { "FORK",             1, 1 },
     { "JUMP",             1, 1 },
-    { "GREEDY.COUNT",     1, 1 },
+    { "GREEDY.COUNT",     2, 1 },
     { "LAZY.COUNT",       2, 1 },
     { "GREEDY.JUMP",      3, 1 },
     { "LAZY.JUMP",        3, 1 }
@@ -397,19 +397,15 @@ static int parse_number(struct RE_CTX *re_ctx, uint32_t* number)
     value = code - '0';
 
     for (;;) {
-        uint64_t new_value;
-
         consume_next_char(re_ctx);
 
         code = peek_next_char(&re_ctx->iter);
         if (code < '0' || code > '9')
             break;
 
-        new_value = ((uint64_t)value * 10U) + (code - '0');
+        value = (value * 10U) + (code - '0');
 
-        value = (uint32_t)new_value;
-
-        if (value != new_value) {
+        if (value > 0xFFFFU) {
             KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
                              "number at position %d too large",
                              pos);
@@ -771,13 +767,10 @@ static int emit_multiplicity(struct RE_CTX *re_ctx,
     uint32_t       jump_offs;
     uint32_t       count_size;
 
-    if (lazy) {
+    if (lazy)
         consume_next_char(re_ctx);
 
-        TRY(emit_instr2(re_ctx, INSTR_LAZY_COUNT, 0, min_count));
-    }
-    else
-        TRY(emit_instr1(re_ctx, INSTR_GREEDY_COUNT, 0));
+    TRY(emit_instr2(re_ctx, lazy ? INSTR_LAZY_COUNT : INSTR_GREEDY_COUNT, 0, min_count));
 
     count_size = (uint32_t)re_ctx->buf.size - pivot;
 
@@ -832,7 +825,9 @@ static int parse_optional_multiplicity(struct RE_CTX *re_ctx, uint32_t begin)
                 max_count = 1U;
                 break;
 
-            default:
+            default: {
+                const int pos = re_ctx->idx;
+
                 assert(code == '{');
 
                 error = parse_number(re_ctx, &min_count);
@@ -845,12 +840,26 @@ static int parse_optional_multiplicity(struct RE_CTX *re_ctx, uint32_t begin)
                     error = parse_number(re_ctx, &max_count);
                     if (error)
                         break;
+
+                    if (max_count < min_count) {
+                        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                                         "invalid count range {%u,%u} at position %d",
+                                         min_count, max_count, pos);
+                        return KOS_ERROR_EXCEPTION;
+                    }
                 }
                 else
                     max_count = min_count;
 
+                if ( ! max_count) {
+                    KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                                     "invalid count %u at position %d", max_count, pos);
+                    return KOS_ERROR_EXCEPTION;
+                }
+
                 error = expect_char(re_ctx, '}');
                 break;
+            }
         }
 
         if ( ! error)
@@ -1152,6 +1161,28 @@ static void pop_possibility(struct RE_POSS_STACK *poss_stack)
         poss_stack->top = 0;
 }
 
+static int duplicate_possibility(struct RE_POSS_STACK *poss_stack,
+                                 KOS_CONTEXT           ctx)
+{
+    const size_t               old_size = poss_stack->buffer.size;
+    struct RE_POSS_STACK_ITEM *old_item;
+    struct RE_POSS_STACK_ITEM *new_item;
+
+    if (kos_vector_resize(&poss_stack->buffer, old_size + sizeof(struct RE_POSS_STACK_ITEM))) {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    new_item = (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + old_size);
+    old_item = new_item - 1;
+
+    *new_item = *old_item;
+
+    poss_stack->top = new_item;
+
+    return KOS_SUCCESS;
+}
+
 #define BEGIN_INSTRUCTION(instr) case INSTR_ ## instr
 #define NEXT_INSTRUCTION         break
 
@@ -1280,7 +1311,18 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
                 NEXT_INSTRUCTION;
             }
 
-            /* TODO BEGIN_INSTRUCTION(GREEDY_COUNT) */
+            BEGIN_INSTRUCTION(GREEDY_COUNT): {
+                const int16_t         delta     = (int16_t)bytecode[1];
+                const uint16_t        min_count = bytecode[2];
+                const enum POSS_STATE active    = min_count ? STATE_INACTIVE : STATE_ACTIVE;
+
+                assert(delta);
+
+                TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter, active));
+
+                bytecode += 3;
+                NEXT_INSTRUCTION;
+            }
 
             BEGIN_INSTRUCTION(LAZY_COUNT): {
                 const int16_t         delta     = (int16_t)bytecode[1];
@@ -1295,7 +1337,33 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
                 NEXT_INSTRUCTION;
             }
 
-            /* TODO BEGIN_INSTRUCTION(GREEDY_JUMP) */
+            BEGIN_INSTRUCTION(GREEDY_JUMP): {
+                const int16_t  delta     = (int16_t)bytecode[1];
+                const uint16_t min_count = bytecode[2];
+                const uint16_t max_count = bytecode[3];
+                unsigned       count;
+
+                assert(delta);
+                assert(poss_stack.top);
+
+                count = ++poss_stack.top->count;
+
+                if (count < min_count)
+                    bytecode += delta;
+                else {
+                    if (count == min_count) {
+                        poss_stack.top->active = STATE_ACTIVE;
+                        set_iter(&poss_stack, &iter);
+                    }
+                    else if (count < max_count) {
+                        TRY(duplicate_possibility(&poss_stack, ctx));
+                        set_iter(&poss_stack, &iter);
+                    }
+                    bytecode += (count < max_count) ? delta : 4;
+                }
+
+                NEXT_INSTRUCTION;
+            }
 
             BEGIN_INSTRUCTION(LAZY_JUMP): {
                 const int16_t  delta     = (int16_t)bytecode[1];
