@@ -1090,10 +1090,10 @@ enum POSS_STATE {
 };
 
 struct RE_POSS_STACK_ITEM {
-    uint16_t        instr_idx;
-    uint16_t        str_end_offs; /* char idx in the string, from the end of the string */
-    uint16_t        count  : 15;
-    enum POSS_STATE active : 1;
+    uint16_t instr_idx;
+    uint16_t str_end_offs; /* char idx in the string, from the end of the string */
+    unsigned count  : 15;
+    unsigned active : 1;
 };
 
 struct RE_POSS_STACK {
